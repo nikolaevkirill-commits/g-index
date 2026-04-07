@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v67</title>
+  <title>G-Index — Космофізичний дашборд v68</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -12,7 +12,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="G-Index" />
-  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="icon192.png" />
 
   <!-- Android / theme -->
   <meta name="theme-color" content="#0b1220" />
@@ -1280,7 +1280,7 @@ Kp: 3-год індекс геомагнітної активності (0–9)
   </div>
 
   <footer>
-    <div class="small">Дані Kp/Ap — NOAA SWPC; Ap↔Kp — GFZ/NOAA table; Dst — Kyoto WDC; Sn — SILSO/ROB; події — ICS; затемнення — Timeanddate/NASA; фази — Astronomy Engine (Meeus). Модель G: R&amp;D / Advisory — у валідації. SignMatch 75.1% (n=169, engine v14.5); G включає Dᵢ (Dst-компонент, синхронно з engine v14.5).</div>
+    <div class="small">Дані Kp/Ap — NOAA SWPC; Ap↔Kp — GFZ/NOAA table; Dst — Kyoto WDC; Sn — SILSO/ROB; події — ICS; затемнення — Timeanddate/NASA; фази — Astronomy Engine (Meeus). Модель G: R&amp;D / Advisory — у валідації. SignMatch 76.3% (n=169, engine v14.6); G включає Dᵢ (Dst-компонент, синхронно з engine v14.6).</div>
   </footer>
 
 <script>
@@ -1510,23 +1510,20 @@ function fetchWithTimeout(url, ms=5000){
   return fetch(url, {cache:'no-store', signal:ctrl.signal}).finally(()=>clearTimeout(tid));
 }
 async function fetchTextWithCORS(url){
-  // 0. Прямий fetch (NOAA JSON підтримує CORS)
+  // 0. Прямий fetch (NOAA JSON підтримує CORS; Netlify proxy видалено — suspended)
   try{
-    const r = await fetchWithTimeout(url, 5000);
+    const r = await fetchWithTimeout(url, 6000);
     if(r.ok) return await r.text();
   }catch(e){}
-  // 1-2. Promise.race: паралельний запит до двох проксі → перший виграє (max ~4s замість 8s)
-  const proxies = [
-    'https://api.allorigins.win/raw?url='+encodeURIComponent(url),
-    'https://corsproxy.io/?url='+encodeURIComponent(url),
-  ];
+  // 2. allorigins
   try{
-    const controllers = proxies.map(()=>new AbortController());
-    const results = await Promise.race(proxies.map((pu,i)=>
-      fetch(pu,{signal:controllers[i].signal})
-        .then(r=>{ if(r.ok){ controllers.forEach((c,j)=>j!==i&&c.abort()); return r.text(); } throw new Error('non-ok'); })
-    ));
-    if(results) return results;
+    const r2 = await fetchWithTimeout('https://api.allorigins.win/raw?url='+encodeURIComponent(url), 4000);
+    if(r2.ok) return await r2.text();
+  }catch(e){}
+  // 3. corsproxy.io (новий формат 2025+: ?url=)
+  try{
+    const r3 = await fetchWithTimeout('https://corsproxy.io/?url='+encodeURIComponent(url), 4000);
+    if(r3.ok) return await r3.text();
   }catch(e){}
   // 3b. corsfix.com
   try{
@@ -1795,13 +1792,13 @@ function autoComputedExtras(dateUTC, kp=0){
 }
 
 // ═══ v26: DST → G-модифікатор (M_DST) ═══
-// DST < -50 нТл = помірна буря (узгоджено з engine v14.5), < -100 = сильна буря
+// DST < -50 нТл = помірна буря (узгоджено з engine v14.6), < -100 = сильна буря
 function computeDstModifier(){
   if(!window._lastDst) return {val:0, tip:'0 — Dst недоступний'};
   const dst = window._lastDst.dst;
   if(!isFinite(dst)) return {val:0, tip:'0 — Dst недоступний'};
   if(dst <= -100) return {val:-2, tip:`-2 — Dst=${dst} нТл (значна буря)`};
-  if(dst <= -50)  return {val:-1, tip:`-1 — Dst=${dst} нТл (помірна буря, engine v14.5)`};
+  if(dst <= -50)  return {val:-1, tip:`-1 — Dst=${dst} нТл (помірна буря, engine v14.6)`};
   return {val:0, tip:`0 — Dst=${dst} нТл (норма)`};
 }
 
@@ -1997,8 +1994,10 @@ function computeAi(dateTimeUTC, kp=0){
     Li = -3;
     lTip = `-3 — Амавасья (29-а тітхі, ΔL≈${phaseDeg.toFixed(0)}°)`;
   } else if (tithiIdxForLi === 14) {
-    Li = 0;  // v14.2: Пурніма нейтральна (engine full_moon→0)
-    lTip = `0 — Пурніма (15-а тітхі, нейтральна v14.2, ΔL≈${phaseDeg.toFixed(0)}°)`;
+    // v14.6: Пурніма підсилює геомагнітний вплив при бурі (Cajochen 2013, Vencloviene 2015)
+    if (kp >= 7)      { Li = -2; lTip = `-2 — Пурніма + G3+ буря (Kp≥7): підсилення геомагн. впливу (v14.6)`; }
+    else if (kp >= 5) { Li = -1; lTip = `-1 — Пурніма + G1-G2 буря (5≤Kp<7): помірне підсилення (v14.6)`; }
+    else              { Li = 0;  lTip = `0 — Пурніма (15-а тітхі, нейтральна при Kp<5 v14.2, ΔL≈${phaseDeg.toFixed(0)}°)`; }
   }
 
   const mres = computeMiFromEclipses(dateTimeUTC);
@@ -2084,10 +2083,14 @@ function computeAi(dateTimeUTC, kp=0){
   }
   const eiTotal = Math.round((ei + horaEi) * 10) / 10;
 
-  // v51: Bz/Vsw — інформаційний контекст, НЕ в canonical G (§13.2 Посібника)
-  const Ai = Math.round((Li + Mi + eiTotal + Pi) * 10) / 10;
+  // Sn>150 корекція — синхронно з engine v14.6 (WEIGHTS.sn_high_pen = -0.4)
+  const _snVal = window._lastWolfSn ? (window._lastWolfSn.sn ?? 0) : 0;
+  const snPen  = _snVal > 150 ? -0.4 : 0;
 
-  // Dᵢ — Dst component (A3+A4: офіційна частина ΣAᵢ, синхронно з engine v14.5)
+  // v51: Bz/Vsw — інформаційний контекст, НЕ в canonical G (§13.2 Посібника)
+  const Ai = Math.round((Li + Mi + eiTotal + Pi + snPen) * 10) / 10;
+
+  // Dᵢ — Dst component (A3+A4: офіційна частина ΣAᵢ, синхронно з engine v14.6)
   // Застосовується тільки для поточного дня — майбутні дати Dst невідомий
   let Di = 0, diTip = '0 — Dst норма';
   const _diDateStr = fmtDate(dateTimeUTC);
@@ -2095,11 +2098,11 @@ function computeAi(dateTimeUTC, kp=0){
   if(_diDateStr === _todayStr && window._lastDst && isFinite(window._lastDst.dst)) {
     const dstVal = window._lastDst.dst;
     if(dstVal <= -100) { Di = -2; diTip = `-2 — Dst=${dstVal} нТл (значна буря, Kp≥7 еквівалент)`; }
-    else if(dstVal <= -50) { Di = -1; diTip = `-1 — Dst=${dstVal} нТл (помірна буря, engine v14.5)`; }
+    else if(dstVal <= -50) { Di = -1; diTip = `-1 — Dst=${dstVal} нТл (помірна буря, engine v14.6)`; }
     else { diTip = `0 — Dst=${dstVal} нТл (норма)`; }
   }
   const AiFull = Math.round((Ai + Di) * 10) / 10;
-  const explain = `\u03a3A\u1d62 = L\u1d62+M\u1d62+e\u1d62+P\u1d62+D\u1d62 = ${Li}+${Mi}+${eiTotal}+${Pi}+${Di} = ${AiFull}` + (bzVal!==0||vswVal!==0?`\n(+Bz=${bzVal}, Vsw=${vswVal} — контекст, не в G)`:'');
+  const explain = `\u03a3A\u1d62 = L\u1d62+M\u1d62+e\u1d62+P\u1d62+D\u1d62 = ${Li}+${Mi}+${eiTotal}+${Pi}+${Di} = ${AiFull}` + (snPen!==0?`\n(Sn=${_snVal}>150: ${snPen} — engine v14.6)`:'') + (bzVal!==0||vswVal!==0?`\n(+Bz=${bzVal}, Vsw=${vswVal} — контекст, не в G)`:'');
 
   return { Ai: AiFull, AiNoDst: Ai, Li, Mi, ei: eiTotal, eiBase: ei, horaEi, Pi, Di, bzVal, vswVal, phaseName, phaseDeg, lTip, mTip, eTip: eTipLines.join('\n'), pTip, diTip, explain };
 }
@@ -2834,8 +2837,8 @@ function renderCurrentPanel(){
     if(ai.ei !== 0 || ai.eTip !== '0 — подій не знайдено') parts.push(`Астрокалендар: ${ai.eTip}`);
     else parts.push(`Астрокалендар: подій не знайдено`);
     if(ai.Pi !== 0) parts.push(`Панчанга (Pᵢ): ${ai.pTip||''}`);
-    if(ai.bzVal !== 0) parts.push(`IMF Bz: ${computeBzModifier(lastBz).tip} → ΔG = ${ai.bzVal}`);
-    if(ai.vswVal !== 0) parts.push(`Vsw: ${computeVswModifier(lastVsw).tip} → ΔG = ${ai.vswVal}`);
+    if(ai.bzVal !== 0) parts.push(`IMF Bz: ${computeBzModifier(lastBz).tip} — контекст (Science Bar)`);
+    if(ai.vswVal !== 0) parts.push(`Vsw: ${computeVswModifier(lastVsw).tip} — контекст (Science Bar)`);
     const dstNow = window._lastDst ? window._lastDst.dst : NaN;
     const stormClass = classifyStorm(kUse, dstNow, lastBz, lastVsw);
     parts.push(`Класифікатор бурі: ${stormClass}`);
@@ -3078,7 +3081,7 @@ function computePanchanga(dateUTC){
     num: yogaIdx + 1,
     name: YOGA_NAMES[yogaIdx],
     score: YOGA_SCORE[yogaIdx],
-    isCritical: yogaIdx === 16 || yogaIdx === 0 || yogaIdx === 26 // Vyatipata(-3), Vishkambha(-2), Vaidhriti(-2)
+    isCritical: yogaIdx === 16 // Vyatipata → retro_end -3
   };
 
   // Karana: 60 каран за місяць (BPHS: 4 фіксовані + 7 рухомих × 8 циклів)
@@ -3121,8 +3124,6 @@ function computePanchanga(dateUTC){
   const rahuStartH = srH + segH * (RAHU_ORDER[wday] - 1); // UTC
   const rahuEndH   = rahuStartH + segH;
   const toHHMM = h => { const hh=Math.floor(h),mm=Math.round((h-hh)*60); return `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}`; };
-  const _utcOff = Math.round(new Date().getTimezoneOffset() / -60); // локальний UTC offset год
-  const toHHMM_loc = h => toHHMM(((h + _utcOff) % 24 + 24) % 24); // UTC → локальний
   // Поточна UTC година
   const nowH = dateUTC.getUTCHours() + dateUTC.getUTCMinutes()/60;
   const rahuActive = nowH >= rahuStartH && nowH < rahuEndH;
@@ -3131,19 +3132,10 @@ function computePanchanga(dateUTC){
     end:   toHHMM(rahuEndH),
     active: rahuActive,
     score: rahuActive ? -1 : 0,
-    note: `UTC (${toHHMM_loc(rahuStartH)}–${toHHMM_loc(rahuEndH)} місц.)`
+    note: `UTC (шир. 50°N апрокс.)`
   };
 
-  // Chandra Rashi (місячний знак зодіаку — sidereal Lahiri)
-  const RASHI_UA = ['Меша','Вришабха','Мітхуна','Карката','Сімха','Канья','Тула','Вришчіка','Дхану','Макара','Кумбха','Міна'];
-  const RASHI_EN_LIST = ['Aries','Taurus','Gemini','Cancer','Leo','Virgo','Libra','Scorpio','Sagittarius','Capricorn','Aquarius','Pisces'];
-  const rashiIdx = Math.min(11, Math.floor(moonLonSid / 30));
-  // Nakshatra Pada (1–4): позиція всередині накшатри (кожна = 13.33°, пада = 3.33°)
-  const nakWidth = 360/27;
-  const nakOffset = moonLonSid % nakWidth;
-  const nakPada = Math.min(4, Math.floor(nakOffset / (nakWidth/4)) + 1);
-  const chandraRashi = { idx: rashiIdx, name: RASHI_UA[rashiIdx], nameEn: RASHI_EN_LIST[rashiIdx], pada: nakPada };
-  return { tithi, vara, nakshatra, yoga, karana, rahu, phaseDeg, chandraRashi };
+  return { tithi, vara, nakshatra, yoga, karana, rahu, phaseDeg };
 }
 
 // Таблиці рекомендацій за параметрами Панчанги
@@ -3309,11 +3301,6 @@ function renderPanchanga(dateUTC){
       val:   p.karana.name,
       sub:   `${p.karana.type} · PCL ${scoreSpan(p.karana.score)}`,
       adv:   kAdv },
-    { score: 0,
-      label: 'Chandra Rashi — місячний знак',
-      val:   p.chandraRashi ? `${p.chandraRashi.name} (${p.chandraRashi.nameEn})` : '—',
-      sub:   p.chandraRashi ? `Pada ${p.chandraRashi.pada} · Місяць ${parseFloat(p.nakshatra.moonLon).toFixed(1)}° sid.` : '',
-      adv:   null },
     { score: p.rahu.active ? -1 : 0,
       label: 'Rahu Kalam',
       val:   p.rahu.active ? '⚠️ Активний зараз' : `${p.rahu.start}–${p.rahu.end} UTC`,
@@ -3389,7 +3376,7 @@ function renderPanchanga(dateUTC){
       return `YOGA — сонячно-місячний резонанс\n` +
         `Що це: 27 Yoga = якість резонансу коли сума довгот Сонця і Місяця\n` +
         `досягає кратного 13°20'. Середня тривалість ~24 год.\n` +
-        `${tip.isCritical ? '⚠️ КРИТИЧНА Yoga (Vyatipata/Vishkambha/Vaidhriti)' : `Вплив: ${tip.score > 0 ? 'сприятлива' : tip.score < 0 ? 'несприятлива' : 'нейтральна'}`}\n` +
+        `${tip.isCritical ? '⚠️ КРИТИЧНА Yoga — retro_end −3' : `Вплив: ${tip.score > 0 ? 'сприятлива' : tip.score < 0 ? 'несприятлива' : 'нейтральна'}`}\n` +
         `PCL ${tip.score > 0 ? '+' : ''}${tip.score}`;
     },
     karana: tip => {
@@ -5297,7 +5284,7 @@ function initPersonalCalc() {
   });
 
   saveBtn.addEventListener('click', () => {
-    // Personal profile — Free tier feature (Phase1: acquisition, not paywall)
+    if (!PAYWALL.isPaid()) { PAYWALL.require('basic', 'персональний профіль'); return; }
     const d = {
       name:    document.getElementById('pName').value.trim(),
       date:    document.getElementById('pDate').value,
@@ -5726,7 +5713,7 @@ function renderGDecomp(G, kp, ai) {
             :                'Нейтральна Панчанга'},
       {name:'🧲 Dᵢ', val:ai.Di,
         desc: ai.Di <= -2 ? `Значна геомагнітна буря (Dst≤−100 нТл)`
-            : ai.Di === -1 ? `Підтверджена буря (Dst≤−50 нТл, engine v14.5)`
+            : ai.Di === -1 ? `Підтверджена буря (Dst≤−50 нТл, engine v14.6)`
             :                'Dst норма — без штрафу'}
     ];
     let thtml = '';
@@ -7065,7 +7052,7 @@ async function handleBacktestFile(input) {
           <li>✓ Factor breakdown</li>
           <li style="color:#4a6080">✗ Архів</li>
           <li style="color:#4a6080">✗ Push alerts</li>
-          <li style="color:#2bd47d">✓ Personal mode</li>
+          <li style="color:#4a6080">✗ Personal mode</li>
         </ul>
         <div style="font-size:11px;color:#4a6080;padding:7px;border-radius:8px;background:#0b1220;border:1px solid #1a2540">Поточний план</div>
       </div>
