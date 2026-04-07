@@ -7,7 +7,8 @@
 
 const SHELL_CACHE  = 'g-index-shell-v67';
 const DATA_CACHE   = 'g-index-data-v1';
-const DATA_TTL_MS  = 3 * 60 * 60 * 1000; // 3 hours
+const DATA_TTL_MS  = 30 * 60 * 1000; // 30 min (компроміс: буря оновлюється частіше)
+
 
 // App shell files to pre-cache on install
 const SHELL_FILES = [

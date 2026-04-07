@@ -1510,20 +1510,23 @@ function fetchWithTimeout(url, ms=5000){
   return fetch(url, {cache:'no-store', signal:ctrl.signal}).finally(()=>clearTimeout(tid));
 }
 async function fetchTextWithCORS(url){
-  // 0. Прямий fetch (NOAA JSON підтримує CORS; Netlify proxy видалено — suspended)
+  // 0. Прямий fetch (NOAA JSON підтримує CORS)
   try{
-    const r = await fetchWithTimeout(url, 6000);
+    const r = await fetchWithTimeout(url, 5000);
     if(r.ok) return await r.text();
   }catch(e){}
-  // 2. allorigins
+  // 1-2. Promise.race: паралельний запит до двох проксі → перший виграє (max ~4s замість 8s)
+  const proxies = [
+    'https://api.allorigins.win/raw?url='+encodeURIComponent(url),
+    'https://corsproxy.io/?url='+encodeURIComponent(url),
+  ];
   try{
-    const r2 = await fetchWithTimeout('https://api.allorigins.win/raw?url='+encodeURIComponent(url), 4000);
-    if(r2.ok) return await r2.text();
-  }catch(e){}
-  // 3. corsproxy.io (новий формат 2025+: ?url=)
-  try{
-    const r3 = await fetchWithTimeout('https://corsproxy.io/?url='+encodeURIComponent(url), 4000);
-    if(r3.ok) return await r3.text();
+    const controllers = proxies.map(()=>new AbortController());
+    const results = await Promise.race(proxies.map((pu,i)=>
+      fetch(pu,{signal:controllers[i].signal})
+        .then(r=>{ if(r.ok){ controllers.forEach((c,j)=>j!==i&&c.abort()); return r.text(); } throw new Error('non-ok'); })
+    ));
+    if(results) return results;
   }catch(e){}
   // 3b. corsfix.com
   try{
@@ -3075,7 +3078,7 @@ function computePanchanga(dateUTC){
     num: yogaIdx + 1,
     name: YOGA_NAMES[yogaIdx],
     score: YOGA_SCORE[yogaIdx],
-    isCritical: yogaIdx === 16 // Vyatipata → retro_end -3
+    isCritical: yogaIdx === 16 || yogaIdx === 0 || yogaIdx === 26 // Vyatipata(-3), Vishkambha(-2), Vaidhriti(-2)
   };
 
   // Karana: 60 каран за місяць (BPHS: 4 фіксовані + 7 рухомих × 8 циклів)
@@ -3118,6 +3121,8 @@ function computePanchanga(dateUTC){
   const rahuStartH = srH + segH * (RAHU_ORDER[wday] - 1); // UTC
   const rahuEndH   = rahuStartH + segH;
   const toHHMM = h => { const hh=Math.floor(h),mm=Math.round((h-hh)*60); return `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}`; };
+  const _utcOff = Math.round(new Date().getTimezoneOffset() / -60); // локальний UTC offset год
+  const toHHMM_loc = h => toHHMM(((h + _utcOff) % 24 + 24) % 24); // UTC → локальний
   // Поточна UTC година
   const nowH = dateUTC.getUTCHours() + dateUTC.getUTCMinutes()/60;
   const rahuActive = nowH >= rahuStartH && nowH < rahuEndH;
@@ -3126,7 +3131,7 @@ function computePanchanga(dateUTC){
     end:   toHHMM(rahuEndH),
     active: rahuActive,
     score: rahuActive ? -1 : 0,
-    note: `UTC (шир. 50°N апрокс.)`
+    note: `UTC (${toHHMM_loc(rahuStartH)}–${toHHMM_loc(rahuEndH)} місц.)`
   };
 
   return { tithi, vara, nakshatra, yoga, karana, rahu, phaseDeg };
@@ -3370,7 +3375,7 @@ function renderPanchanga(dateUTC){
       return `YOGA — сонячно-місячний резонанс\n` +
         `Що це: 27 Yoga = якість резонансу коли сума довгот Сонця і Місяця\n` +
         `досягає кратного 13°20'. Середня тривалість ~24 год.\n` +
-        `${tip.isCritical ? '⚠️ КРИТИЧНА Yoga — retro_end −3' : `Вплив: ${tip.score > 0 ? 'сприятлива' : tip.score < 0 ? 'несприятлива' : 'нейтральна'}`}\n` +
+        `${tip.isCritical ? '⚠️ КРИТИЧНА Yoga (Vyatipata/Vishkambha/Vaidhriti)' : `Вплив: ${tip.score > 0 ? 'сприятлива' : tip.score < 0 ? 'несприятлива' : 'нейтральна'}`}\n` +
         `PCL ${tip.score > 0 ? '+' : ''}${tip.score}`;
     },
     karana: tip => {
