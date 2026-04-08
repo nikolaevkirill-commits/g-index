@@ -5,9 +5,9 @@
    - Everything else → Network-First, no cache
 */
 
-const SHELL_CACHE  = 'g-index-shell-v68';
+const SHELL_CACHE  = 'g-index-shell-v70';
 const DATA_CACHE   = 'g-index-data-v1';
-const DATA_TTL_MS  = 3 * 60 * 60 * 1000; // 3 hours
+const DATA_TTL_MS  = 1 * 60 * 60 * 1000; // 1 hour (Dst оновлюється кожну 1h)
 
 // App shell files to pre-cache on install
 const SHELL_FILES = [
@@ -18,10 +18,18 @@ const SHELL_FILES = [
 ];
 
 // URL patterns that should use Network-First with TTL cache
+// Включає CORS-проксі — вони передають прогнозні дані, не статику
 const DATA_PATTERNS = [
   'services.swpc.noaa.gov',
-  'sidc.be',          // SILSO Wolf numbers
+  'sidc.be',              // SILSO Wolf numbers
   'api.n2yo.com',
+  'allorigins.win',       // CORS proxy → forecast data
+  'corsproxy.io',         // CORS proxy → forecast data
+  'codetabs.com',         // CORS proxy → forecast data
+  'corsfix.com',          // CORS proxy → forecast data
+  'timeanddate.com',      // eclipse scraping
+  'solar-wind',           // Bz/Vsw endpoints (path fragment)
+  'kyoto-dst',            // Dst endpoint (path fragment)
 ];
 
 // ── Install: pre-cache shell ───────────────────────────────────────────────
@@ -47,6 +55,13 @@ self.addEventListener('activate', event => {
   );
 });
 
+// ── Message: SKIP_WAITING (від pwaReload()) ─────────────────────────────────
+self.addEventListener('message', event => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
+
 // ── Fetch ──────────────────────────────────────────────────────────────────
 self.addEventListener('fetch', event => {
   const { request } = event;
@@ -58,7 +73,10 @@ self.addEventListener('fetch', event => {
   // Skip chrome-extension and non-http(s)
   if (!url.protocol.startsWith('http')) return;
 
-  const isDataRequest = DATA_PATTERNS.some(p => url.hostname.includes(p));
+  // Data: match by hostname або path fragment
+  const isDataRequest = DATA_PATTERNS.some(p =>
+    url.hostname.includes(p) || url.pathname.includes(p) || url.href.includes(p)
+  );
 
   if (isDataRequest) {
     event.respondWith(networkFirstWithTTL(request));
@@ -116,6 +134,10 @@ async function networkFirstWithTTL(request) {
       const fetchedAt = parseInt(cached.headers.get('x-sw-fetched-at') || '0', 10);
       if (Date.now() - fetchedAt < DATA_TTL_MS) {
         console.log('[SW] Serving stale data (within TTL):', request.url);
+        // Сигнал дашборду: дані з кешу, не live
+        self.clients.matchAll().then(clients => clients.forEach(c =>
+          c.postMessage({ type: 'SW_STALE_DATA', url: request.url, fetchedAt })
+        ));
         return cached;
       }
     }
