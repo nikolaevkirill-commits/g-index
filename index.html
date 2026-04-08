@@ -576,7 +576,8 @@
 
 
     <!-- ═══ G INDEX TOP ROW ═══ -->
-    <div id="gTopRow" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:8px 0 0;padding:10px 16px;background:var(--card2);border:1px solid var(--border);border-radius:12px">
+    <!-- gTopRow hidden: primary G = nowG in nowCard -->
+    <div id="gTopRow" style="display:none">
       <span id="gTopBadge" class="gbadge" style="font-size:22px;padding:7px 14px;min-width:110px">G …</span>
       <div id="gTopCat" style="font-size:var(--fs-lg);font-weight:600;line-height:1.2">—</div>
       <span id="gTopSummary" style="font-size:var(--fs-md);color:var(--muted);margin-left:4px"></span>
@@ -608,6 +609,16 @@
         <!-- Co-Star: одне речення на день -->
         <div id="costarBanner" style="margin:8px 0 4px;font-size:14px;font-weight:600;line-height:1.35;min-height:20px;white-space:normal;word-break:break-word;overflow-wrap:break-word"></div>
 
+        <!-- ═══ CAUSAL CHAIN ═══ -->
+        <div id="causalChain" style="margin:6px 0;padding:7px 12px;background:#090f1e;border:1px solid #1e2a44;border-radius:8px;font-family:monospace;font-size:12px;display:none">
+          <div style="color:var(--dim);font-size:10px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px">G = Kp − 2 + ΣAᵢ</div>
+          <div style="display:flex;gap:16px;flex-wrap:wrap">
+            <div><span style="color:#6b82aa">Kp:</span> <span id="ccKpVal" style="color:#9bb1dc">—</span> → <span id="ccKpPart" style="font-weight:700">—</span></div>
+            <div><span style="color:#6b82aa">ΣAᵢ:</span> <span id="ccSumAi" style="font-weight:700">—</span></div>
+            <div style="border-left:1px solid #2a3b61;padding-left:16px"><span style="color:#6b82aa">G =</span> <span id="ccG" style="font-weight:800;font-size:14px">—</span></div>
+          </div>
+        </div>
+
         <div class="flex mono" style="margin-top:6px;gap:10px">
           <span id="nowKp" class="kbadge k-ok">Kp …</span>
           <span id="nowAp" class="pill">Ap ≈ —</span>
@@ -634,20 +645,23 @@
         </div>
 
 
-        <!-- PROB LAYER v68 -->
-        <div id="probNowBlock" style="margin-top:8px;display:none">
-          <div class="prob-row" id="probNowRow">
-            <div class="prob-cell" id="probCellSoft">
-              <div class="prob-k">Ризик дня</div>
-              <div class="prob-v" id="riskPctNow">--%</div>
+        <!-- CONFIDENCE (замінює Ризик %) -->
+        <div id="confidenceBlock" style="margin-top:8px;display:none;padding:6px 12px;background:#090f1e;border:1px solid #1e2a44;border-radius:8px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <div>
+            <div style="font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em">Впевненість</div>
+            <div id="confLabel" style="font-weight:700;font-size:14px;color:#9bb1dc">—</div>
+          </div>
+          <div style="flex:1;min-width:120px">
+            <div style="height:5px;background:#1e2a44;border-radius:3px;overflow:hidden">
+              <div id="confBar" style="height:100%;width:0%;background:#9bb1dc;border-radius:3px;transition:width .5s"></div>
             </div>
-            <div class="prob-cell" id="probCellHard">
-              <div class="prob-k">Сильний ризик</div>
-              <div class="prob-v" id="hardRiskPctNow">--%</div>
-            </div>
-            <div class="prob-cell">
-              <div class="prob-k">Статус</div>
-              <div class="prob-v" id="riskLabelNow" style="font-size:12px;padding-top:2px">--</div>
+            <div id="confReason" style="font-size:10px;color:var(--faint);margin-top:3px">—</div>
+          </div>
+          <div id="probNowBlock" style="display:none">
+            <div class="prob-row" id="probNowRow">
+              <div class="prob-cell" id="probCellSoft"><div class="prob-k">P soft</div><div class="prob-v" id="riskPctNow">--%</div></div>
+              <div class="prob-cell" id="probCellHard"><div class="prob-k">P hard</div><div class="prob-v" id="hardRiskPctNow">--%</div></div>
+              <div class="prob-cell"><div class="prob-k">Статус</div><div class="prob-v" id="riskLabelNow" style="font-size:12px;padding-top:2px">--</div></div>
             </div>
           </div>
         </div>
@@ -668,14 +682,20 @@
           <div id="dayForecastSummary" style="font-size:12px;color:#9bb1dc;padding:5px 10px;background:#090f1e;border-radius:8px;border:1px solid #1a2a45;line-height:1.5;white-space:normal;overflow-wrap:break-word;word-break:break-word;overflow:hidden;max-width:100%"></div>
         </div>
 
-        <!-- ═══ G DECOMPOSITION BAR ═══ -->
-        <div id="gDecompBlock" style="margin-top:10px;">
-          <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);margin-bottom:5px">Розклад G‑індексу</div>
+        <!-- ═══ DRIVERS (топ-фактори по |ΔG|) ═══ -->
+        <div id="driversBlock" style="margin-top:10px;display:none">
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);margin-bottom:5px">Ключові фактори</div>
+          <div id="driversNeg" style="margin-bottom:4px"></div>
+          <div id="driversPos"></div>
+        </div>
+
+        <!-- ═══ G DECOMPOSITION (деталі, згорнуто) ═══ -->
+        <details id="gDecompBlock" style="margin-top:10px" open>
+          <summary style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);cursor:pointer;margin-bottom:5px;list-style:none">▸ Розклад G‑індексу</summary>
           <div id="gDecompBar" style="display:flex;align-items:center;gap:4px;min-height:28px;flex-wrap:wrap;overflow:hidden;max-width:100%"></div>
-          <!-- Flow canvas: частинки течуть від chips → G -->
+          <!-- Flow canvas -->
           <canvas id="gFlowCanvas" width="460" height="90" style="width:100%;height:90px;display:block;margin:6px 0 4px;border-radius:8px;background:rgba(10,16,32,0.6);"></canvas>
           <div id="gDecompFactors" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"></div>
-          <!-- Таблиця розкладу G (заповнюється JS) -->
           <table id="gDecompTable" style="width:100%;border-collapse:collapse;font-size:12px;margin-top:10px;table-layout:fixed">
             <colgroup><col style="width:28%"><col style="width:18%"><col style="width:54%"></colgroup>
             <thead><tr style="border-bottom:1px solid #1e2f52">
@@ -685,7 +705,7 @@
             </tr></thead>
             <tbody id="gDecompTableBody"></tbody>
           </table>
-        </div>
+        </details>
 
         <!-- ═══ ЯК ЧИТАТИ G (людський блок) ═══ -->
         <details id="gHowToRead" style="margin-top:8px;font-size:12px;color:#8aaad4">
@@ -3466,52 +3486,55 @@ function renderPanchanga(dateUTC){
     }
   };
 
+  // ΔG helper
+  const dg = score => { if(!score&&score!==0) return '<span style="color:#3a5070">—</span>'; const s=Number(score); const c=s>0?'#2bd47d':s<0?'#ff6b6b':'#3a5070'; return `<span style="font-weight:700;color:${c}">${s>0?'+':''}${s.toFixed(1)}</span>`; };
+
   const html = `<table style="width:100%;border-collapse:collapse;font-size:13px">
-    <colgroup><col style="width:30%"><col style="width:32%"><col style="width:38%"></colgroup>
+    <colgroup><col style="width:32%"><col style="width:52%"><col style="width:16%"></colgroup>
     <tr style="border-bottom:1px solid #1e2f52">
       <th style="padding:3px 6px;font-size:10px;color:var(--dim);font-weight:500;text-align:left">ПАРАМЕТР</th>
       <th style="padding:3px 6px;font-size:10px;color:var(--dim);font-weight:500;text-align:left">СТАН</th>
-      <th style="padding:3px 6px;font-size:10px;color:var(--dim);font-weight:500;text-align:left">РЕКОМЕНДАЦІЯ</th>
+      <th style="padding:3px 6px;font-size:10px;color:var(--dim);font-weight:500;text-align:center" title="Внесок у Pᵢ (Panchanga частина ΣAᵢ)">ΔPᵢ</th>
     </tr>
     <tr>
       <td style="padding:5px 6px;color:#9bb1dc;font-size:11px">
         <span class="hint" tabindex="0" style="cursor:help;font-style:italic;border-bottom:1px dotted var(--faint)">Tithi<span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.tithi(p.tithi))}</span></span>
       </td>
       <td style="padding:5px 6px;font-weight:600"><span class="hint" tabindex="0" style="cursor:help">${scoreIcon(p.tithi.score, _gEarly)} ${p.tithi.name}<br><span style="font-size:10px;color:#7a95b8;font-weight:400">${p.tithi.type}</span><span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.tithi(p.tithi))}</span></span></td>
-      <td style="padding:5px 6px;font-size:11px;color:#b0c4de">${tAdv && tAdv.do ? '✓ '+tAdv.do : ''}</td>
+      <td style="padding:5px 6px;text-align:center">${dg(p.tithi.score)}</td>
     </tr>
     <tr>
       <td style="padding:5px 6px;color:#9bb1dc;font-size:11px">
         <span class="hint" tabindex="0" style="cursor:help;font-style:italic;border-bottom:1px dotted var(--faint)">Vara<span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.vara(p.vara))}</span></span>
       </td>
       <td style="padding:5px 6px;font-weight:600"><span class="hint" tabindex="0" style="cursor:help">${scoreIcon(p.vara.score, _gEarly)} ${p.vara.name}<br><span style="font-size:10px;color:#7a95b8;font-weight:400">${p.vara.planet}</span><span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.vara(p.vara))}</span></span></td>
-      <td style="padding:5px 6px;font-size:11px;color:#b0c4de">${vAdv && vAdv.do ? '✓ '+vAdv.do : ''}</td>
+      <td style="padding:5px 6px;text-align:center">${dg(p.vara.score)}</td>
     </tr>
     <tr>
       <td style="padding:5px 6px;color:#9bb1dc;font-size:11px">
         <span class="hint" tabindex="0" style="cursor:help;font-style:italic;border-bottom:1px dotted var(--faint)">Nakshatra<span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.nakshatra(p.nakshatra))}</span></span>
       </td>
       <td style="padding:5px 6px;font-weight:600"><span class="hint" tabindex="0" style="cursor:help">${scoreIcon(p.nakshatra.score, _gEarly)} ${p.nakshatra.name}<br><span style="font-size:10px;color:#7a95b8;font-weight:400">${p.nakshatra.type} · ${p.nakshatra.regent}</span><span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.nakshatra(p.nakshatra))}</span></span></td>
-      <td style="padding:5px 6px;font-size:11px;color:#b0c4de">${nAdv && nAdv.do ? '✓ '+nAdv.do : ''}</td>
+      <td style="padding:5px 6px;text-align:center">${dg(p.nakshatra.score)}</td>
     </tr>
     <tr>
       <td style="padding:5px 6px;color:#9bb1dc;font-size:11px">
         <span class="hint" tabindex="0" style="cursor:help;font-style:italic;border-bottom:1px dotted var(--faint)">Yoga<span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.yoga(p.yoga))}</span></span>
       </td>
       <td style="padding:5px 6px;font-weight:600"><span class="hint" tabindex="0" style="cursor:help">${scoreIcon(p.yoga.score, _gEarly)} ${p.yoga.name}${p.yoga.isCritical?' ⚠️':''}<br><span style="font-size:10px;color:#7a95b8;font-weight:400">резонанс Сонце–Місяць</span><span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.yoga(p.yoga))}</span></span></td>
-      <td style="padding:5px 6px;font-size:11px;color:#b0c4de">${yAdv && yAdv.do ? '✓ '+yAdv.do : ''}</td>
+      <td style="padding:5px 6px;text-align:center">${dg(p.yoga.score)}</td>
     </tr>
     <tr>
       <td style="padding:5px 6px;color:#9bb1dc;font-size:11px">
         <span class="hint" tabindex="0" style="cursor:help;font-style:italic;border-bottom:1px dotted var(--faint)">Karana<span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.karana(p.karana))}</span></span>
       </td>
       <td style="padding:5px 6px;font-weight:600"><span class="hint" tabindex="0" style="cursor:help">${scoreIcon(p.karana.score, _gEarly)} ${p.karana.name}${p.karana.isVishti?' ⛔':''}<br><span style="font-size:10px;color:#7a95b8;font-weight:400">${p.karana.type}</span><span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.karana(p.karana))}</span></span></td>
-      <td style="padding:5px 6px;font-size:11px;color:#b0c4de">${kAdv && kAdv.do ? '✓ '+kAdv.do : ''}</td>
+      <td style="padding:5px 6px;text-align:center">${dg(p.karana.score)}</td>
     </tr>
     ${_aiEarly.ei !== 0 ? `<tr style="background:rgba(255,100,100,0.05)">
       <td style="padding:5px 6px;color:#ff9f9f;font-size:11px;font-style:italic">eᵢ (події)</td>
       <td style="padding:5px 6px;font-weight:600">${_aiEarly.ei < 0 ? '🔴' : '🟢'} <span style="color:${_aiEarly.ei < 0 ? '#ff9f9f' : '#63be7b'}">${_aiEarly.ei > 0 ? '+' : ''}${_aiEarly.ei}</span><br><span style="font-size:10px;color:#7a95b8;font-weight:400">${escapeHtml((_aiEarly.eTip||'').split('\\n')[0])}</span></td>
-      <td style="padding:5px 6px;font-size:11px;color:#ccaaaa">${_aiEarly.ei < 0 ? '✗ Несприятлива подія знижує G' : '✓ Сприятлива подія'}</td>
+      <td style="padding:5px 6px;text-align:center">${dg(_aiEarly.ei)}</td>
     </tr>` : ''}
     <tr>
       <td style="padding:5px 6px;color:#9bb1dc;font-size:11px">
@@ -5191,9 +5214,9 @@ function renderTaara7d(wrap, natalIdx, nowJDE) {
     </tr>`;
   }
   wrap.innerHTML = `
-    <div style="margin-top:8px">
-      <div style="font-size:11px;font-weight:600;color:#6b82aa;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Taara · 7 днів</div>
-      <table style="width:100%;border-collapse:collapse;margin-top:2px">
+    <details style="margin-top:4px">
+      <summary style="font-size:12px;color:#6b82aa;cursor:pointer;list-style:none">▶ Taara 7 днів</summary>
+      <table style="width:100%;border-collapse:collapse;margin-top:6px">
         <thead><tr>
           <th style="font-size:11px;color:#4a6080;text-align:left;padding:2px 6px">День</th>
           <th style="font-size:11px;color:#4a6080;text-align:left;padding:2px 6px">Taara</th>
@@ -5203,7 +5226,7 @@ function renderTaara7d(wrap, natalIdx, nowJDE) {
         <tbody>${rows}</tbody>
       </table>
       <div class="small muted" style="margin-top:4px">G± = особистий Taara-модифікатор (R&D)</div>
-    </div>`;
+    </details>`;
 }
 function renderTaaraRing(wrap, activeGroup, natalIdx, nowIdx) {
   if (!wrap) return;
@@ -5254,21 +5277,28 @@ function renderTaaraRing(wrap, activeGroup, natalIdx, nowIdx) {
   const mx=cx+R*Math.cos(natalAngle), my=cy+R*Math.sin(natalAngle);
   const markerPts = `${mx.toFixed(1)},${my.toFixed(1)} ${(mx-4).toFixed(1)},${(my-9).toFixed(1)} ${(mx+4).toFixed(1)},${(my-9).toFixed(1)}`;
 
-  const svgW=220, svgH=220;
-  const scale = svgW/180;
-  wrap.innerHTML = `<div style="display:flex;justify-content:center">
-    <svg viewBox="0 0 ${svgW} ${svgH}" xmlns="http://www.w3.org/2000/svg" style="width:${svgW}px;max-width:100%;flex-shrink:0">
+  const svgW=180, svgH=180;
+  wrap.innerHTML = `<div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap">
+    <svg viewBox="0 0 ${svgW} ${svgH}" xmlns="http://www.w3.org/2000/svg" style="width:${svgW}px;max-width:${svgW}px;flex-shrink:0">
       ${paths}${texts}
       <!-- Center label -->
-      <text x="${cx}" y="${cy-7}" text-anchor="middle" fill="#9bb1dc" font-size="9" font-weight="700">Taara</text>
-      <text x="${cx}" y="${cy+8}" text-anchor="middle" fill="${DANGER[activeGroup]?'#ff6b6b':'#2bd47d'}" font-size="13" font-weight="800">${activeGroup}/9</text>
-      <text x="${cx}" y="${cy+20}" text-anchor="middle" fill="${DANGER[activeGroup]?'#ff6b6b':'#2bd47d'}" font-size="7.5">${LABELS[activeGroup]}</text>
+      <text x="${cx}" y="${cy-6}" text-anchor="middle" fill="#9bb1dc" font-size="8.5" font-weight="700">Taara</text>
+      <text x="${cx}" y="${cy+6}" text-anchor="middle" fill="${DANGER[activeGroup]?'#ff6b6b':'#2bd47d'}" font-size="11" font-weight="800">${activeGroup}/9</text>
       <!-- Natal triangle -->
       <polygon points="${markerPts}" fill="#37a7ff" opacity=".9"/>
-      <text x="${mx.toFixed(1)}" y="${(my-12).toFixed(1)}" text-anchor="middle" fill="#37a7ff" font-size="7">▲ народж.</text>
+      <text x="${mx.toFixed(1)}" y="${(my-12).toFixed(1)}" text-anchor="middle" fill="#37a7ff" font-size="7">Janma</text>
     </svg>
-  </div>
-  <div style="text-align:center;font-size:10px;color:var(--faint);margin-top:2px">⚠ = небезпечна позиція · ✓ = сприятлива</div>`;
+    <div style="font-size:11px;color:var(--text3);line-height:1.6;padding-top:4px">
+      <div style="margin-bottom:6px;font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em">Позиції Taara (9-цикл)</div>
+      ${[1,2,3,4,5,6,7,8,9].map(i=>{
+        const isAct=(i===activeGroup), isd=DANGER[i];
+        const c=isAct?(isd?'#ff6b6b':'#2bd47d'):(isd?'#7a3333':'#3a5a48');
+        const fw=isAct?'700':'400';
+        return `<div style="color:${c};font-weight:${fw}">${isd?'⚠':'✓'} ${i}. ${LABELS[i]}${isAct?' ◀':''}</div>`;
+      }).join('')}
+      <div style="margin-top:6px;font-size:10px;color:var(--faint)">▲ = стоянка народження</div>
+    </div>
+  </div>`;
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -5810,6 +5840,74 @@ function renderGDecomp(G, kp, ai) {
     </tr>`;
     tbody.innerHTML = thtml;
   }
+
+  // ── CAUSAL CHAIN ──────────────────────────────────────────────────
+  const cc = document.getElementById('causalChain');
+  if(cc && isFinite(G) && isFinite(kp)) {
+    const kpPart2 = +(kp - 2).toFixed(1);
+    const sumAi   = +(G - kpPart2).toFixed(1);
+    const colKp   = kpPart2 > 0 ? '#2bd47d' : kpPart2 < 0 ? '#ff6b6b' : '#6b82aa';
+    const colAi   = sumAi   > 0 ? '#2bd47d' : sumAi   < 0 ? '#ff6b6b' : '#6b82aa';
+    const colG    = G > 0 ? '#2bd47d' : G < 0 ? '#ff6b6b' : '#6b82aa';
+    document.getElementById('ccKpVal').textContent  = kp.toFixed(1);
+    document.getElementById('ccKpPart').innerHTML   = `<span style="color:${colKp};font-weight:700">${kpPart2>=0?'+':''}${kpPart2}</span>`;
+    document.getElementById('ccSumAi').innerHTML    = `<span style="color:${colAi}">${sumAi>=0?'+':''}${sumAi}</span>`;
+    document.getElementById('ccG').innerHTML        = `<span style="color:${colG}">${G>=0?'+':''}${G.toFixed(1)}</span>`;
+    cc.style.display = 'block';
+  }
+
+  // ── DRIVERS (топ по |ΔG|, відсортовані) ──────────────────────────
+  const dBlock = document.getElementById('driversBlock');
+  if(dBlock && isFinite(G)) {
+    const allFactors = [
+      {name:'Kp−2',      val: isFinite(kp) ? +(kp-2).toFixed(1) : 0, label:'Геомагніт (Kp)'},
+      {name:'Lᵢ',        val: ai.Li,  label:'Місячна фаза'},
+      {name:'Mᵢ',        val: ai.Mi,  label:'Затемнення'},
+      {name:'eᵢ (події)',val: ai.ei,  label:'Jyotish події'},
+      {name:'Pᵢ (PCL)',  val: ai.Pi !== undefined ? +ai.Pi.toFixed(2) : 0, label:'Панчанга'},
+      {name:'Dᵢ (Dst)',  val: ai.Di,  label:'Dst буря'},
+    ].filter(f => f.val !== 0)
+     .sort((a,b) => Math.abs(b.val) - Math.abs(a.val));
+
+    if(allFactors.length > 0) {
+      const neg = allFactors.filter(f => f.val < 0);
+      const pos = allFactors.filter(f => f.val > 0);
+      const row = f => {
+        const c = f.val > 0 ? '#2bd47d' : '#ff6b6b';
+        const sign = f.val > 0 ? '+' : '';
+        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:2px 0;border-bottom:1px solid #0f1a30">
+          <span style="font-size:12px;color:#9bb1dc">${f.label}</span>
+          <span style="font-weight:700;color:${c};font-family:monospace;font-size:12px">${sign}${f.val.toFixed ? f.val.toFixed(1) : f.val}</span>
+        </div>`;
+      };
+      const negEl = document.getElementById('driversNeg');
+      const posEl = document.getElementById('driversPos');
+      if(neg.length && negEl) {
+        negEl.innerHTML = `<div style="font-size:10px;color:#ff6b6b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">▼ Негативний вплив</div>${neg.map(row).join('')}`;
+      }
+      if(pos.length && posEl) {
+        posEl.innerHTML = `<div style="font-size:10px;color:#2bd47d;text-transform:uppercase;letter-spacing:.05em;margin:${neg.length?'6px':0} 0 2px">▲ Позитивний вплив</div>${pos.map(row).join('')}`;
+      }
+      dBlock.style.display = 'block';
+    }
+  }
+
+  // ── CONFIDENCE BLOCK ──────────────────────────────────────────────
+  const confBlock = document.getElementById('confidenceBlock');
+  if(confBlock) {
+    const csEl = document.getElementById('cScoreGrade');
+    const csConf = window._existingCScore ? window._existingCScore.conf : null;
+    const confPct = csConf !== null ? Math.round(csConf * 100) : null;
+    const confLbl = confPct === null ? '—' : confPct >= 75 ? 'Висока' : confPct >= 50 ? 'Середня' : 'Низька';
+    const confCol = confPct === null ? '#6b82aa' : confPct >= 75 ? '#2bd47d' : confPct >= 50 ? '#ffcc00' : '#ff6b6b';
+    const confReason = confPct !== null ? `NOAA Kp${isFinite(kp)?` = ${kp.toFixed(1)}`:''}` : 'Дані завантажуються';
+    document.getElementById('confLabel').innerHTML  = `<span style="color:${confCol}">${confLbl}</span>`;
+    document.getElementById('confBar').style.width  = (confPct||0) + '%';
+    document.getElementById('confBar').style.background = confCol;
+    document.getElementById('confReason').textContent = confReason;
+    confBlock.style.display = 'flex';
+  }
+
   // Запустити flow анімацію
   startGFlowAnimation(G, kp, ai);
 }
@@ -7628,8 +7726,23 @@ function calcProbabilityLayer({G, csConf=1, horizon='now'}={}){
 
 function renderNowProbability(prob){
   if(!prob) return;
+  // probNowBlock прихований (audit: замінено на confidenceBlock)
   const block = document.getElementById('probNowBlock');
-  if(block) block.style.display='block';
+  if(block) block.style.display='none';
+  // Confidence block — показати з оновленим рівнем
+  const confBlock = document.getElementById('confidenceBlock');
+  if(confBlock) {
+    const pct  = Math.round((prob.conf||0)*100);
+    const lbl  = pct >= 75 ? 'Висока' : pct >= 50 ? 'Середня' : 'Низька';
+    const col  = pct >= 75 ? '#2bd47d' : pct >= 50 ? '#ffcc00' : '#ff6b6b';
+    const confLabel = document.getElementById('confLabel');
+    const confBar   = document.getElementById('confBar');
+    const confReas  = document.getElementById('confReason');
+    if(confLabel) confLabel.innerHTML = `<span style="color:${col}">${lbl}</span>`;
+    if(confBar)   { confBar.style.width = pct+'%'; confBar.style.background = col; }
+    if(confReas)  confReas.textContent = `P(ризик) = σ(−0.619 − 0.668·G) = ${prob.pSoftPct}%`;
+    confBlock.style.display = 'flex';
+  }
   const soft  = document.getElementById('riskPctNow');
   const hard  = document.getElementById('hardRiskPctNow');
   const label = document.getElementById('riskLabelNow');
