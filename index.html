@@ -1310,7 +1310,7 @@ Kp: 3-год індекс геомагнітної активності (0–9)
   </div>
 
   <footer>
-    <div class="small">Дані Kp/Ap — NOAA SWPC; Ap↔Kp — GFZ/NOAA table; Dst — Kyoto WDC; Sn — SILSO/ROB; події — ICS; затемнення — Timeanddate/NASA; фази — Astronomy Engine (Meeus). Модель G: R&amp;D / Advisory — у валідації. SignMatch 78.4% holdout (n=51), 68.0% all (n=169), engine v14.8; AUC 0.784.</div>
+    <div class="small">Дані Kp/Ap — NOAA SWPC; Ap↔Kp — GFZ/NOAA table; Dst — Kyoto WDC; Sn — SILSO/ROB; події — ICS; затемнення — Timeanddate/NASA; фази — Astronomy Engine (Meeus). Модель G: R&amp;D / Advisory — у валідації. SignMatch 76.3% (n=169, engine v14.6); G включає Dᵢ (Dst-компонент, синхронно з engine v14.6).</div>
   </footer>
 
 <script>
@@ -5052,18 +5052,13 @@ function renderPersonal() {
   const resEl = document.getElementById('personalResult');
   const nameLabel = document.getElementById('pNameLabel');
   if (!data) {
-    resEl.innerHTML = '<div class="muted small">Натисніть «✎ Дані» і введіть дату народження.</div>';
+    resEl.innerHTML = '<div class="muted small" style="padding:12px 0">Натисніть «✎ Дані» і введіть дату народження.</div>';
     if (nameLabel) nameLabel.textContent = '';
     return;
   }
   if (nameLabel) nameLabel.textContent = '— ' + (data.name || '');
 
-  // Попередження ±1 Nakshatra якщо час народження не вказано (HANDOFF Level 1)
   const noTime = !data.time || data.time.trim() === '';
-  const noTimeWarnHtml = noTime
-    ? `<div style="font-size:11px;color:#e8b84b;background:#1a1400;border-left:3px solid #e8b84b;border-radius:4px;padding:4px 8px;margin-bottom:6px">⚠ Час народження не вказано → розрахунок від 12:00. Можлива похибка ±1 стоянка Місяця. Вкажіть час для точного результату.</div>`
-    : '';
-
   const birthJDE = dateToJDE(data.date, data.time, data.utcOff);
   const nowJDE   = Date.now() / 86400000 + 2440587.5;
 
@@ -5075,7 +5070,6 @@ function renderPersonal() {
   const hora    = calcHora(new Date());
   const transit = calcMoonTransit(nowJDE, nowNak.fraction);
 
-  // Зберегти контекст для планетної анімації (renderPlanetAnimation)
   _lastAstroCtx = {
     taara: { group: taara.group, name: taara.name, danger: !!taara.danger },
     dasa:  { mahaLord: dasa.lordName },
@@ -5083,78 +5077,113 @@ function renderPersonal() {
     nowNak: { idx: nowNak.idx, name: nowNak.name }
   };
 
-  const danger  = taara.danger;
-  const col     = danger ? '#ff6b6b' : '#2bd47d';
+  const danger = taara.danger;
+  const col    = danger ? '#ff6b6b' : '#2bd47d';
+  const colBg  = danger ? 'rgba(255,107,107,.08)' : 'rgba(43,212,125,.08)';
+  const colBd  = danger ? '#3a1a1a' : '#0d2a1a';
+  const slotCol = SLOT_COLORS[_activeSlot] || '#37a7ff';
 
-  // Taara G-mod для сьогодні
-  const taaraGmod = danger ? -1 : (taara.group === 2||taara.group===4||taara.group===6||taara.group===8||taara.group===9) ? +1 : 0;
+  const taaraGmod = danger ? -1 : (taara.group===2||taara.group===4||taara.group===6||taara.group===8||taara.group===9) ? +1 : 0;
+  const gmodSign  = taaraGmod > 0 ? `+${taaraGmod}` : `${taaraGmod}`;
+  const gmodCol   = taaraGmod > 0 ? '#2bd47d' : taaraGmod < 0 ? '#ff6b6b' : '#6b82aa';
 
   const TAARA_INFO = {
-    1: {detail:'Janma — фізичний відпочинок, огляд спорядження, мін. навантажень',  short:'Janma — відпочинок, уникати навантажень'},
-    2: {detail:'Sampat — планувати постачання і логістику, ресурсна фаза',          short:'Sampat — планувати ресурси і логістику'},
-    3: {detail:'Vipat — заборона підписувати накази, не вступати в конфлікти',      short:'Vipat — не підписувати, не конфліктувати'},
-    4: {detail:'Kshema — стабільність: приймати стратегічні рішення',               short:'Kshema — приймати стратегічні рішення'},
-    5: {detail:'Pratyak — зупинити нові ініціативи, очікування і витримка',         short:'Pratyak — зупинитись, не починати нічого нового'},
-    6: {detail:'Sadhana — активна фаза: досягати цілей, наступальні дії',           short:'Sadhana — активно діяти, досягати цілей'},
-    7: {detail:'Naidhana — смерть-таара: уникати операцій, не виходити на передову', short:'Naidhana — жодних активних дій'},
-    8: {detail:'Mitra — координація з союзниками, обмін розвіддaними.',             short:'Mitra — координація і переговори'},
-    9: {detail:'Atimitra — пік сприятливості: діяти сміливо по всіх фронтах',       short:'Atimitra — оптимальний день, діяти по всіх фронтах'},
+    1:{icon:'😴',action:'Відпочинок, мін. навантажень, огляд спорядження'},
+    2:{icon:'📦',action:'Планувати постачання і логістику'},
+    3:{icon:'🚫',action:'Не підписувати накази, не конфліктувати'},
+    4:{icon:'🎯',action:'Приймати стратегічні рішення'},
+    5:{icon:'⏸',action:'Зупинити нові ініціативи, очікувати'},
+    6:{icon:'⚡',action:'Активно діяти, досягати цілей'},
+    7:{icon:'☠',action:'Уникати операцій, не виходити на передову'},
+    8:{icon:'🤝',action:'Координація, переговори, союзники'},
+    9:{icon:'🚀',action:'Пік сприятливості — діяти по всіх фронтах'},
   };
-  const _ti = TAARA_INFO[taara.group];
-  const taaraDetail   = _ti ? _ti.detail : taara.name;
-  const summaryAction = _ti ? _ti.short  : taara.name;
+  const ti = TAARA_INFO[taara.group] || {icon:'◉',action:taara.name};
 
-  // G-mod рядок
-  const slotCol = SLOT_COLORS[_activeSlot] || '#37a7ff';
-  const gmodSign = taaraGmod > 0 ? `+${taaraGmod}` : `${taaraGmod}`;
-  const gmodHtml = taaraGmod !== 0
-    ? `<div style="font-size:11px;color:${col};margin-top:2px">Taara G-mod сьогодні: <strong>${gmodSign}</strong></div>`
-    : '';
+  // ── HERO BANNER (Taara сьогодні) ──
+  const heroBanner = `
+  <div style="background:${colBg};border:1px solid ${colBd};border-radius:10px;padding:12px 14px;margin-bottom:12px;display:flex;align-items:center;gap:12px">
+    <div style="font-size:28px;line-height:1;flex-shrink:0">${ti.icon}</div>
+    <div style="flex:1;min-width:0">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#4a6080;margin-bottom:2px">Taara сьогодні · позиція ${taara.group}/9</div>
+      <div style="font-size:15px;font-weight:700;color:${col};line-height:1.2">${taara.name}</div>
+      <div style="font-size:12px;color:#9bb1dc;margin-top:3px">${ti.action}</div>
+    </div>
+    <div style="text-align:center;flex-shrink:0">
+      <div style="font-size:10px;color:#4a6080;text-transform:uppercase;letter-spacing:.06em">G±</div>
+      <div style="font-size:22px;font-weight:800;color:${gmodCol};line-height:1">${taaraGmod===0?'0':gmodSign}</div>
+      <div style="font-size:9px;color:#4a6080">Taara мод</div>
+    </div>
+  </div>`;
 
-  resEl.innerHTML = `${noTimeWarnHtml}<div style="font-size:13px;font-weight:600;color:${col};padding:6px 10px;background:#0a1428;border-radius:6px;border-left:3px solid ${col};line-height:1.3;display:block">${danger ? '⚠ ' : '✓ '}${summaryAction}${gmodHtml}</div><table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:0">
-      <tr>
-        <td class="muted" style="padding:3px 0;width:45%;border-bottom:1px solid #1a2540">Стоянка народження</td>
-        <td style="padding:3px 0;border-bottom:1px solid #1a2540"><strong>${NAKSHATRA_UA[natal.idx]}</strong> <span class="muted">(${NAKSHATRA_NAMES[natal.idx]}, P${natal.pada})</span></td>
-      </tr>
-      <tr>
-        <td class="muted" style="padding:3px 0;border-bottom:1px solid #1a2540">Стоянка сьогодні</td>
-        <td style="padding:3px 0;border-bottom:1px solid #1a2540"><strong>${NAKSHATRA_UA[nowNak.idx]}</strong> <span class="muted">(${NAKSHATRA_NAMES[nowNak.idx]}, P${nowNak.pada})</span></td>
-      </tr>
-      <tr>
-        <td class="muted" style="padding:3px 0;border-bottom:1px solid #1a2540">Taara (поз. ${taara.group}/9)</td>
-        <td style="padding:3px 0;border-bottom:1px solid #1a2540;color:${col}"><strong>${taaraDetail}</strong></td>
-      </tr>
-      <tr>
-        <td class="muted" style="padding:3px 0;border-bottom:1px solid #1a2540">Маха-даша</td>
-        <td style="padding:3px 0;border-bottom:1px solid #1a2540"><strong>${dasa.lordName}</strong> <span class="muted">(залишок ${dasa.remainStr})</span></td>
-      </tr>
-      <tr>
-        <td class="muted" style="padding:3px 0;border-bottom:1px solid #1a2540">Антар-даша</td>
-        <td style="padding:3px 0;border-bottom:1px solid #1a2540">
-          <strong>${antar.lordName}</strong> <span class="muted">(залишок ${antar.remainStr})</span>
-          <div style="margin-top:3px;background:#0a1428;border-radius:4px;height:5px;width:100%;overflow:hidden">
-            <div style="width:${Math.round(antar.progress*100)}%;height:100%;background:linear-gradient(90deg,#37a7ff,#2bd47d);border-radius:4px;transition:width .4s"></div>
-          </div>
-          <div style="font-size:10px;color:#4a6080;margin-top:1px">${Math.round(antar.progress*100)}% пройдено → ${antar.nextLordName}</div>
-        </td>
-      </tr>
-      <tr>
-        <td class="muted" style="padding:3px 0;border-bottom:1px solid #1a2540">Пратьянтар</td>
-        <td style="padding:3px 0;border-bottom:1px solid #1a2540"><strong>${antar.pratyaLordName}</strong> <span class="muted">(залишок ${antar.pratyaRemStr})</span> <span style="color:#4a6080;font-size:11px">→ ${antar.pratyaNextLordName}</span></td>
-      </tr>
-      <tr>
-        <td class="muted" style="padding:3px 0;border-bottom:1px solid #1a2540">Hora зараз</td>
-        <td style="padding:3px 0;border-bottom:1px solid #1a2540"><strong>${hora.planet}</strong> <span class="muted">(до ${hora.end}, ще ${hora.minLeft}хв)</span></td>
-      </tr>
-      <tr>
-        <td class="muted" style="padding:3px 0;border-bottom:none">Транзит Місяця</td>
-        <td style="padding:3px 0;border-bottom:none">зміна стоянки через <strong>${transit.str}</strong></td>
-      </tr>
-    </table>
-    <div class="small muted" style="margin-top:6px">R&D · Meeus Ch.47 · Lahiri · BPHS · ±0.5 стоянки без точного часу</div>
-    <div id="taaraRingWrap" style="margin-top:10px"></div>
-    <div id="taara7dWrap" style="margin-top:10px"></div>
-  `;
+  // ── MOON SECTION ──
+  const moonSection = `
+  <div style="background:#080f1e;border-radius:8px;padding:10px 12px;margin-bottom:8px">
+    <div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#4a6080;margin-bottom:7px">🌙 Місячна стоянка</div>
+    <div style="display:flex;gap:8px">
+      <div style="flex:1;background:#0c1526;border-radius:6px;padding:8px 10px">
+        <div style="font-size:10px;color:#4a6080;margin-bottom:2px">Народження</div>
+        <div style="font-size:13px;font-weight:700;color:#cfe0ff">${NAKSHATRA_UA[natal.idx]}</div>
+        <div style="font-size:11px;color:#4a6080">${NAKSHATRA_NAMES[natal.idx]} · P${natal.pada}</div>
+      </div>
+      <div style="display:flex;align-items:center;color:#2a3f60;font-size:16px">→</div>
+      <div style="flex:1;background:#0c1526;border-radius:6px;padding:8px 10px;border:1px solid ${colBd}">
+        <div style="font-size:10px;color:#4a6080;margin-bottom:2px">Зараз</div>
+        <div style="font-size:13px;font-weight:700;color:${col}">${NAKSHATRA_UA[nowNak.idx]}</div>
+        <div style="font-size:11px;color:#4a6080">${NAKSHATRA_NAMES[nowNak.idx]} · P${nowNak.pada}</div>
+      </div>
+    </div>
+    <div style="margin-top:6px;font-size:11px;color:#4a6080">
+      Транзит: зміна стоянки через <strong style="color:#7a9acc">${transit.str}</strong>
+      ${noTime ? ' · <span style="color:#e8b84b">⚠ ±1 стоянка (час не вказано)</span>' : ''}
+    </div>
+  </div>`;
+
+  // ── DASA SECTION ──
+  const antarPct = Math.round((antar.progress||0)*100);
+  const dasaSection = `
+  <div style="background:#080f1e;border-radius:8px;padding:10px 12px;margin-bottom:8px">
+    <div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#4a6080;margin-bottom:8px">🪐 Планетарний цикл</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:8px">
+      <div style="background:#0c1526;border-radius:6px;padding:7px 9px">
+        <div style="font-size:9px;color:#4a6080;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px">Маха-даша</div>
+        <div style="font-size:14px;font-weight:700;color:#cfe0ff">${dasa.lordName}</div>
+        <div style="font-size:10px;color:#4a6080">ще ${dasa.remainStr}</div>
+      </div>
+      <div style="background:#0c1526;border-radius:6px;padding:7px 9px">
+        <div style="font-size:9px;color:#4a6080;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px">Антар-даша</div>
+        <div style="font-size:14px;font-weight:700;color:#9bb1dc">${antar.lordName}</div>
+        <div style="font-size:10px;color:#4a6080">ще ${antar.remainStr}</div>
+      </div>
+      <div style="background:#0c1526;border-radius:6px;padding:7px 9px">
+        <div style="font-size:9px;color:#4a6080;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px">Пратьянтар</div>
+        <div style="font-size:14px;font-weight:700;color:#7a9acc">${antar.pratyaLordName}</div>
+        <div style="font-size:10px;color:#4a6080">ще ${antar.pratyaRemStr}</div>
+      </div>
+    </div>
+    <div style="font-size:10px;color:#4a6080;margin-bottom:3px">Антар-даша: ${antarPct}% → <span style="color:#7a9acc">${antar.nextLordName}</span></div>
+    <div style="background:#0c1526;border-radius:4px;height:4px;width:100%;overflow:hidden">
+      <div style="width:${antarPct}%;height:100%;background:linear-gradient(90deg,#37a7ff,#2bd47d);border-radius:4px"></div>
+    </div>
+  </div>`;
+
+  // ── HORA SECTION ──
+  const horaSection = `
+  <div style="background:#080f1e;border-radius:8px;padding:10px 12px;margin-bottom:10px;display:flex;align-items:center;gap:10px">
+    <div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#4a6080;white-space:nowrap">⏱ Hora зараз</div>
+    <div style="flex:1;font-size:13px;font-weight:700;color:#cfe0ff">${hora.planet}</div>
+    <div style="font-size:11px;color:#4a6080">до ${hora.end} · ще ${hora.minLeft}хв</div>
+  </div>`;
+
+  // ── TAARA RING + 7D ──
+  const ringAndForecast = `
+  <div id="taaraRingWrap" style="margin-bottom:8px"></div>
+  <div id="taara7dWrap"></div>`;
+
+  const footer = `<div style="font-size:10px;color:#2a3a50;margin-top:8px">R&D · Meeus Ch.47 · Lahiri · BPHS</div>`;
+
+  resEl.innerHTML = heroBanner + moonSection + dasaSection + horaSection + ringAndForecast + footer;
+
   renderTaaraRing(document.getElementById('taaraRingWrap'), taara.group, natal.idx, nowNak.idx);
   renderTaara7d(document.getElementById('taara7dWrap'), natal.idx, nowJDE);
 }
@@ -5162,57 +5191,50 @@ function renderPersonal() {
 // ─── 7-денний прогноз Taara ─────────────────────────────────────────────────
 function renderTaara7d(wrap, natalIdx, nowJDE) {
   if (!wrap) return;
-  const TAARA_SHORT = {
-    1:'Janma ⚠',2:'Sampat ✓',3:'Vipat ⚠',4:'Kshema ✓',
-    5:'Pratyak ⚠',6:'Sadhana ✓',7:'Naidhana ⚠',8:'Mitra ✓',9:'Atimitra ✓'
-  };
   const TAARA_DANGER_SET = new Set([1,3,5,7]);
+  const TAARA_SHORT = {
+    1:'Janma',2:'Sampat',3:'Vipat',4:'Kshema',
+    5:'Pratyak',6:'Sadhana',7:'Naidhana',8:'Mitra',9:'Atimitra'
+  };
 
-  // Крок: Місяць проходить ~1 накшатру / ~0.9 дня (360°/27/13.2°/day)
-  // Точно: calcNakshatra кожного дня (12:00 UTC)
-  let rows = '';
+  let pills = '';
   for(let d=0;d<7;d++){
-    const jde = nowJDE + d; // полудень +d днів
-    const moonLon = calcMoonLongitude(jde);
-    const nak = calcNakshatra(moonLon, jde);
+    const jde = nowJDE + d;
+    const nak = calcNakshatra(calcMoonLongitude(jde), jde);
     const t = calcTaara(natalIdx, nak.idx);
     const isDanger = TAARA_DANGER_SET.has(t.group);
-    const col = isDanger ? '#ff6b6b' : '#2bd47d';
+    const col  = isDanger ? '#ff6b6b' : '#2bd47d';
+    const bg   = isDanger ? 'rgba(255,107,107,.10)' : 'rgba(43,212,125,.10)';
+    const bd   = isDanger ? '#3a1a1a' : '#0d2a1a';
     const gmod = isDanger ? '−1' : (t.group===2||t.group===4||t.group===6||t.group===8||t.group===9) ? '+1' : '0';
-    const gmodCol = isDanger ? '#ff6b6b' : gmod==='+1' ? '#2bd47d' : '#6b82aa';
-    // Дата
+    const gmodCol = isDanger ? '#ff6b6b' : gmod==='+1' ? '#2bd47d' : '#4a6080';
     const dt = new Date(Date.now() + d*86400000);
-    const ds = dt.toLocaleDateString('uk-UA',{weekday:'short',month:'numeric',day:'numeric'});
-    rows += `<tr>
-      <td style="padding:2px 6px;font-size:12px;color:#9bb1dc;border-bottom:1px solid #1a2540">${d===0?'Сьогодні':ds}</td>
-      <td style="padding:2px 6px;font-size:12px;border-bottom:1px solid #1a2540;color:${col}">${TAARA_SHORT[t.group]||''} (${t.group}/9)</td>
-      <td style="padding:2px 6px;font-size:12px;border-bottom:1px solid #1a2540;color:${gmodCol};font-weight:700">${gmod}</td>
-      <td style="padding:2px 6px;font-size:11px;color:#4a6080;border-bottom:1px solid #1a2540">${NAKSHATRA_UA[nak.idx]}</td>
-    </tr>`;
+    const dayShort = d===0 ? 'Сьогодні' : dt.toLocaleDateString('uk-UA',{weekday:'short'});
+    const dateStr  = dt.toLocaleDateString('uk-UA',{day:'numeric',month:'numeric'});
+    pills += `<div style="flex:1;min-width:0;background:${bg};border:1px solid ${bd};border-radius:8px;padding:7px 6px;text-align:center${d===0?';box-shadow:0 0 0 1.5px '+col+' inset':''}">`
+      + `<div style="font-size:9px;color:#4a6080;margin-bottom:1px">${dayShort}</div>`
+      + `<div style="font-size:9px;color:#3a4f68;margin-bottom:3px">${dateStr}</div>`
+      + `<div style="font-size:11px;font-weight:700;color:${col};margin-bottom:2px">${TAARA_SHORT[t.group]||''}</div>`
+      + `<div style="font-size:9px;color:#4a6080;margin-bottom:4px">${NAKSHATRA_UA[nak.idx]}</div>`
+      + `<div style="font-size:12px;font-weight:800;color:${gmodCol}">${gmod}</div>`
+      + `</div>`;
   }
+
   wrap.innerHTML = `
-    <details style="margin-top:4px">
-      <summary style="font-size:12px;color:#6b82aa;cursor:pointer;list-style:none">▶ Taara 7 днів</summary>
-      <table style="width:100%;border-collapse:collapse;margin-top:6px">
-        <thead><tr>
-          <th style="font-size:11px;color:#4a6080;text-align:left;padding:2px 6px">День</th>
-          <th style="font-size:11px;color:#4a6080;text-align:left;padding:2px 6px">Taara</th>
-          <th style="font-size:11px;color:#4a6080;text-align:left;padding:2px 6px">G±</th>
-          <th style="font-size:11px;color:#4a6080;text-align:left;padding:2px 6px">Накшатра</th>
-        </tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
-      <div class="small muted" style="margin-top:4px">G± = особистий Taara-модифікатор (R&D)</div>
-    </details>`;
+    <div style="background:#080f1e;border-radius:8px;padding:10px 12px">
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#4a6080;margin-bottom:8px">📅 Taara 7 днів · особистий G±</div>
+      <div style="display:flex;gap:4px">${pills}</div>
+      <div style="font-size:10px;color:#2a3a50;margin-top:6px">G± = Taara-модифікатор (R&D · BPHS)</div>
+    </div>`;
 }
 function renderTaaraRing(wrap, activeGroup, natalIdx, nowIdx) {
   if (!wrap) return;
   const LABELS = ['','Janma','Sampat','Vipat','Kshema','Pratyak','Sadhana','Naidhana','Mitra','Atimitra'];
-  const DANGER = [false,true,false,true,false,true,false,true,false,false]; // 1-indexed, pos 1/3/5/7 = danger
+  const DANGER = [false,true,false,true,false,true,false,true,false,false];
   const N = 9;
-  const cx=90, cy=90, R=68, r=34;
+  const cx=110, cy=110, R=82, r=44;
   const slice = (2*Math.PI)/N;
-  const startOffset = -Math.PI/2; // 12 o'clock = position 1 = natal
+  const startOffset = -Math.PI/2;
 
   let paths = '', texts = '';
   for(let i=1; i<=N; i++){
@@ -5221,60 +5243,55 @@ function renderTaaraRing(wrap, activeGroup, natalIdx, nowIdx) {
     const aMid = (a0+a1)/2;
     const isActive = (i === activeGroup);
     const isDanger = DANGER[i];
-    const baseColor = isDanger ? '#5a1a1a' : '#0d3020';
     const activeColor = isDanger ? '#ff6b6b' : '#2bd47d';
-    const strokeColor = isActive ? activeColor : (isDanger ? '#7a2a2a' : '#1a3a28');
-    const fillColor = isActive ? (isDanger ? 'rgba(255,107,107,.25)' : 'rgba(43,212,125,.2)') : baseColor;
-    const sw = isActive ? 2.5 : 1;
+    const baseColor   = isDanger ? (isActive?'rgba(255,107,107,.22)':'#2a0d0d') : (isActive?'rgba(43,212,125,.18)':'#081a10');
+    const strokeColor = isActive ? activeColor : (isDanger ? '#5a1f1f' : '#112a1c');
+    const sw = isActive ? 2 : 0.8;
 
-    // Arc path (donut)
     const x0o=cx+R*Math.cos(a0), y0o=cy+R*Math.sin(a0);
     const x1o=cx+R*Math.cos(a1), y1o=cy+R*Math.sin(a1);
     const x0i=cx+r*Math.cos(a1), y0i=cy+r*Math.sin(a1);
     const x1i=cx+r*Math.cos(a0), y1i=cy+r*Math.sin(a0);
     paths += `<path d="M${x0o},${y0o} A${R},${R} 0 0,1 ${x1o},${y1o} L${x0i},${y0i} A${r},${r} 0 0,0 ${x1i},${y1i} Z"
-      fill="${fillColor}" stroke="${strokeColor}" stroke-width="${sw}" style="transition:fill .3s"/>`;
+      fill="${baseColor}" stroke="${strokeColor}" stroke-width="${sw}"/>`;
 
-    // Label placement (mid-ring radius)
-    const rMid=(R+r)/2+4, tx=cx+rMid*Math.cos(aMid), ty=cy+rMid*Math.sin(aMid);
-    const col = isActive ? activeColor : (isDanger ? '#8a4444' : '#4a7a60');
-    texts += `<text x="${tx.toFixed(1)}" y="${(ty+1).toFixed(1)}" text-anchor="middle" dominant-baseline="middle"
-      fill="${col}" font-size="${isActive?8.5:7.5}" font-weight="${isActive?'700':'400'}">${i}</text>`;
+    // Inner number
+    const rMid=(R+r)/2, tx=cx+rMid*Math.cos(aMid), ty=cy+rMid*Math.sin(aMid);
+    const numCol = isActive ? activeColor : (isDanger ? '#6a3333' : '#2a5a40');
+    texts += `<text x="${tx.toFixed(1)}" y="${(ty+0.5).toFixed(1)}" text-anchor="middle" dominant-baseline="middle"
+      fill="${numCol}" font-size="${isActive?10:8}" font-weight="${isActive?'800':'400'}">${i}</text>`;
 
-    // Outer label (short name) — only active + neighbors
-    if(isActive){
-      const lx=cx+(R+14)*Math.cos(aMid), ly=cy+(R+14)*Math.sin(aMid);
-      texts += `<text x="${lx.toFixed(1)}" y="${(ly+1).toFixed(1)}" text-anchor="middle" dominant-baseline="middle"
-        fill="${activeColor}" font-size="7.5" font-weight="700">${LABELS[i]}</text>`;
-    }
+    // Outer name label (all positions)
+    const rOuter = R+15;
+    const lx=cx+rOuter*Math.cos(aMid), ly=cy+rOuter*Math.sin(aMid);
+    const labelCol = isActive ? activeColor : (isDanger ? '#5a2a2a' : '#2a4a38');
+    const labelFw  = isActive ? '700' : '400';
+    const labelFs  = isActive ? 8 : 7;
+    texts += `<text x="${lx.toFixed(1)}" y="${(ly+0.5).toFixed(1)}" text-anchor="middle" dominant-baseline="middle"
+      fill="${labelCol}" font-size="${labelFs}" font-weight="${labelFw}">${LABELS[i]}</text>`;
   }
 
-  // Natal marker (triangle at 12 o'clock on outer rim)
+  // Center
+  const cActiveColor = DANGER[activeGroup] ? '#ff6b6b' : '#2bd47d';
+  texts += `<text x="${cx}" y="${cy-7}" text-anchor="middle" fill="#6b82aa" font-size="9" font-weight="600">Taara</text>`;
+  texts += `<text x="${cx}" y="${cy+8}" text-anchor="middle" fill="${cActiveColor}" font-size="13" font-weight="800">${activeGroup}/9</text>`;
+
+  // Natal marker (▲ at top, position 1)
   const natalAngle = startOffset;
   const mx=cx+R*Math.cos(natalAngle), my=cy+R*Math.sin(natalAngle);
-  const markerPts = `${mx.toFixed(1)},${my.toFixed(1)} ${(mx-4).toFixed(1)},${(my-9).toFixed(1)} ${(mx+4).toFixed(1)},${(my-9).toFixed(1)}`;
+  const markerPts = `${mx.toFixed(1)},${(my+1).toFixed(1)} ${(mx-5).toFixed(1)},${(my-10).toFixed(1)} ${(mx+5).toFixed(1)},${(my-10).toFixed(1)}`;
+  texts += `<polygon points="${markerPts}" fill="#37a7ff" opacity=".85"/>`;
 
-  const svgW=180, svgH=180;
-  wrap.innerHTML = `<div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap">
-    <svg viewBox="0 0 ${svgW} ${svgH}" xmlns="http://www.w3.org/2000/svg" style="width:${svgW}px;max-width:${svgW}px;flex-shrink:0">
-      ${paths}${texts}
-      <!-- Center label -->
-      <text x="${cx}" y="${cy-6}" text-anchor="middle" fill="#9bb1dc" font-size="8.5" font-weight="700">Taara</text>
-      <text x="${cx}" y="${cy+6}" text-anchor="middle" fill="${DANGER[activeGroup]?'#ff6b6b':'#2bd47d'}" font-size="11" font-weight="800">${activeGroup}/9</text>
-      <!-- Natal triangle -->
-      <polygon points="${markerPts}" fill="#37a7ff" opacity=".9"/>
-      <text x="${mx.toFixed(1)}" y="${(my-12).toFixed(1)}" text-anchor="middle" fill="#37a7ff" font-size="7">Janma</text>
-    </svg>
-    <div style="font-size:11px;color:var(--text3);line-height:1.6;padding-top:4px">
-      <div style="margin-bottom:6px;font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em">Позиції Taara (9-цикл)</div>
-      ${[1,2,3,4,5,6,7,8,9].map(i=>{
-        const isAct=(i===activeGroup), isd=DANGER[i];
-        const c=isAct?(isd?'#ff6b6b':'#2bd47d'):(isd?'#7a3333':'#3a5a48');
-        const fw=isAct?'700':'400';
-        return `<div style="color:${c};font-weight:${fw}">${isd?'⚠':'✓'} ${i}. ${LABELS[i]}${isAct?' ◀':''}</div>`;
-      }).join('')}
-      <div style="margin-top:6px;font-size:10px;color:var(--faint)">▲ = стоянка народження</div>
+  const svgW=220, svgH=220;
+  wrap.innerHTML = `
+  <div style="background:#080f1e;border-radius:8px;padding:10px 12px;margin-bottom:8px">
+    <div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#4a6080;margin-bottom:6px">🔄 Цикл Taara (9 позицій)</div>
+    <div style="display:flex;justify-content:center">
+      <svg viewBox="0 0 ${svgW} ${svgH}" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:240px">
+        ${paths}${texts}
+      </svg>
     </div>
+    <div style="font-size:10px;color:#2a3a50;margin-top:4px;text-align:center">▲ = стоянка народження · ⚠ = небезпечні позиції · ✓ = сприятливі</div>
   </div>`;
 }
 
