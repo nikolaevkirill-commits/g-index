@@ -468,6 +468,16 @@
       #scienceBar { grid-template-columns: 1fr 1fr; gap: 4px; }
       .sci-item { font-size: 10px; padding: 4px 6px; }
     }
+  
+    /* ── Probability Layer ── */
+    .prob-row{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+    .prob-cell{flex:1;min-width:68px;border:1px solid #1e2a44;border-radius:10px;padding:7px 10px;background:#090f1e;text-align:center}
+    .prob-cell .prob-k{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--dim);margin-bottom:3px}
+    .prob-cell .prob-v{font-size:17px;font-weight:800;line-height:1}
+    .risk-low .prob-v{color:#2bd47d}.risk-moderate .prob-v{color:#ffcc00}
+    .risk-elevated .prob-v{color:#fca474}.risk-high .prob-v{color:#ff6b6b}
+    .risk-low{border-color:rgba(43,212,125,.3)}.risk-moderate{border-color:rgba(255,204,0,.3)}
+    .risk-elevated{border-color:rgba(252,164,116,.3)}.risk-high{border-color:rgba(255,107,107,.3)}
   </style>
 
   <meta name="theme-color" content="#0b1220">
@@ -621,6 +631,25 @@
             <div id="cScoreBarFill" style="height:100%;width:0%;background:#9bb1dc;border-radius:3px;transition:width .5s"></div>
           </div>
           <div id="cScoreDrivers" style="display:flex;flex-wrap:wrap;gap:4px"></div>
+        </div>
+
+
+        <!-- PROB LAYER v68 -->
+        <div id="probNowBlock" style="margin-top:8px;display:none">
+          <div class="prob-row" id="probNowRow">
+            <div class="prob-cell" id="probCellSoft">
+              <div class="prob-k">Ризик дня</div>
+              <div class="prob-v" id="riskPctNow">--%</div>
+            </div>
+            <div class="prob-cell" id="probCellHard">
+              <div class="prob-k">Сильний ризик</div>
+              <div class="prob-v" id="hardRiskPctNow">--%</div>
+            </div>
+            <div class="prob-cell">
+              <div class="prob-k">Статус</div>
+              <div class="prob-v" id="riskLabelNow" style="font-size:12px;padding-top:2px">--</div>
+            </div>
+          </div>
         </div>
 
         <!-- DELTA CARD v63 -->
@@ -838,6 +867,7 @@ Kp: 3-год індекс геомагнітної активності (0–9)
             <th class="th-sort col-hide-mobile" data-col="ap">Ap <span class="sort-ico">↕</span></th>
             <th class="col-hide-mobile">Flux 10.7</th>
             <th>Категорія</th>
+            <th class="col-hide-mobile">Ризик%</th>
             <th>Рекомендація</th>
             <th id="th27Gos" style="display:none;color:#c8b4ff" title="G_ос = G + Taara-mod (R&D)">G_ос</th>
           </tr></thead>
@@ -1466,7 +1496,7 @@ const WEIGHT_E_EVENTS = {
   'Таблетка': 2, 'Шприц': 1, 'Сукня': 1,
   'Гуру Пурніма': 1, 'Махашиваратрі': 2, 'Савана Сомвара': 1,
   'Масік Шиваратрі': 1, 'Прадош врат': 1, 'Санкашті': 1, 'Вінаяка': 1,
-  'Наваратрі': 2, 'Діпавалі': 2,  // ARCH NOTE: engine v14.2 використовує мультиплікатор 1.5×; дашборд — адитивне +2 (навмисна різниця моделей)
+  'Наваратрі': 1.5, 'Діпавалі': 2,  // v68: уніфіковано з engine WEIGHTS['navaratri']=1.5
   'Рівнодення (Russell-McPherron)': -2,
   // v30: нові категорії з ICS Vaisnava
   'Пурніма (свято)': 1,        // Gaura Purnima, Bhadra Purnima та ін. — свято, +1
@@ -1480,7 +1510,7 @@ const WEIGHT_E_EVENTS = {
 // ═══ v27: Вбудований Vaisnava-календар (offline base, Kiev 2026) ═══
 // Джерело: https://www.vaisnavacalendar.info/ICS/2026/Kiev%20[Ukraine]-a2026-ICS.ics
 // Завантажено 2026-03-22. Online ICS мерджиться поверх, якщо доступний.
-const BUILTIN_VAISNAVA = [{"d":"2026-01-03","s":"Sri Krsna Pusya Abhiseka"},{"d":"2026-01-07","s":"Sri Ramacandra Kaviraja -- Disappearance"},{"d":"2026-01-07","s":"Srila Gopala Bhatta Gosvami -- Appearance"},{"d":"2026-01-08","s":"Sri Jayadeva Gosvami -- Disappearance"},{"d":"2026-01-09","s":"Sri Locana Dasa Thakura -- Disappearance"},{"d":"2026-01-14","s":"Fasting for Sat-tila Ekadasi"},{"d":"2026-01-14","s":"Ganga Sagara Mela"},{"d":"2026-01-15","s":"Break fast 07:52 (sunrise) - 10:42 (1/3 of daylight) LT"},{"d":"2026-01-23","s":"Vasanta Pancami"},{"d":"2026-01-23","s":"Srimati Visnupriya Devi -- Appearance"},{"d":"2026-01-23","s":"Srila Visvanatha Cakravarti Thakura -- Disappearance"},{"d":"2026-01-23","s":"Sri Pundarika Vidyanidhi -- Appearance"},{"d":"2026-01-23","s":"Sri Raghunandana Thakura -- Appearance"},{"d":"2026-01-23","s":"Srila Raghunatha Dasa Gosvami -- Appearance"},{"d":"2026-01-23","s":"Sarasvati Puja"},{"d":"2026-01-25","s":"Sri Advaita Acarya -- Appearance"},{"d":"2026-01-25","s":"(Fast till noon)"},{"d":"2026-01-26","s":"Bhismastami"},{"d":"2026-01-27","s":"Sri Madhvacarya -- Disappearance"},{"d":"2026-01-28","s":"Sri Ramanujacarya -- Disappearance"},{"d":"2026-01-29","s":"Fasting for Bhaimi Ekadasi"},{"d":"2026-01-29","s":"(Fast till noon for Varahadeva, with feast tomorrow)"},{"d":"2026-01-30","s":"Break fast 07:35 (sunrise) - 07:41 (end of tithi) LT"},{"d":"2026-01-30","s":"Varaha Dvadasi: Appearance of Lord Varahadeva"},{"d":"2026-01-30","s":"(Fasting is done yesterday, today is feast)"},{"d":"2026-01-31","s":"Nityananda Trayodasi: Appearance of Sri Nityananda Prabhu"},{"d":"2026-01-31","s":"(Fast till noon)"},{"d":"2026-02-01","s":"Sri Krsna Madhura Utsava"},{"d":"2026-02-01","s":"Srila Narottama Dasa Thakura -- Appearance"},{"d":"2026-02-06","s":"Srila Bhaktisiddhanta Sarasvati Thakura -- Appearance"},{"d":"2026-02-06","s":"(Fast till noon)"},{"d":"2026-02-06","s":"Sri Purusottama Das Thakura -- Disappearance"},{"d":"2026-02-13","s":"Fasting for Vijaya Ekadasi"},{"d":"2026-02-14","s":"Break fast 07:11 (sunrise) - 10:32 (1/3 of daylight) LT"},{"d":"2026-02-14","s":"Sri Isvara Puri -- Disappearance"},{"d":"2026-02-16","s":"Siva Ratri"},{"d":"2026-02-18","s":"Srila Jagannatha Dasa Babaji -- Disappearance"},{"d":"2026-02-18","s":"Sri Rasikananda -- Disappearance"},{"d":"2026-02-21","s":"Sri Purusottama Dasa Thakura -- Appearance"},{"d":"2026-02-27","s":"Fasting for Amalaki vrata Ekadasi"},{"d":"2026-02-28","s":"Break fast 06:44 (sunrise) - 10:21 (1/3 of daylight) LT"},{"d":"2026-02-28","s":"Sri Madhavendra Puri -- Disappearance"},{"d":"2026-03-03","s":"Gaura Purnima: Appearance of Sri Caitanya Mahaprabhu"},{"d":"2026-03-03","s":"(Fast till moonrise)"},{"d":"2026-03-04","s":"Festival of Jagannatha Misra"},{"d":"2026-03-11","s":"Sri Srivasa Pandita -- Appearance"},{"d":"2026-03-15","s":"Fasting for Papamocani Ekadasi"},{"d":"2026-03-15","s":"Sri Govinda Ghosh -- Disappearance"},{"d":"2026-03-16","s":"Break fast 06:09 (sunrise) - 06:13 (end of tithi) LT"},{"d":"2026-03-23","s":"Sri Ramanujacarya -- Appearance"},{"d":"2026-03-27","s":"Rama Navami: Appearance of Lord Sri Ramacandra"},{"d":"2026-03-27","s":"(Fast till sunset)"},{"d":"2026-03-29","s":"Fasting for Kamada Ekadasi"},{"d":"2026-03-29","s":"Damanakaropana Dvadasi"},{"d":"2026-03-29","s":"First day of Daylight Saving Time"},{"d":"2026-03-30","s":"Break fast 06:39 (sunrise) - 10:54 (1/3 of daylight) DST"},{"d":"2026-04-01","s":"Sri Balarama Rasayatra"},{"d":"2026-04-01","s":"Sri Krsna Vasanta Rasa"},{"d":"2026-04-01","s":"Appearance of Radha Kunda, snana dana"},{"d":"2026-04-01","s":"Sri Vamsivadana Thakura -- Appearance"},{"d":"2026-04-01","s":"Sri Syamananda Prabhu -- Appearance"},{"d":"2026-04-09","s":"Sri Abhirama Thakura -- Disappearance"},{"d":"2026-04-12","s":"Srila Vrndavana Dasa Thakura -- Disappearance"},{"d":"2026-04-13","s":"Fasting for Varuthini Ekadasi"},{"d":"2026-04-14","s":"Break fast 06:06 (sunrise) - 10:41 (1/3 of daylight) DST"},{"d":"2026-04-14","s":"Tulasi Jala Dan begins."},{"d":"2026-04-17","s":"Sri Gadadhara Pandita -- Appearance"},{"d":"2026-04-20","s":"Aksaya Trtiya. Candana Yatra starts. (Continues for 21 days)"},{"d":"2026-04-23","s":"Jahnu Saptami"},{"d":"2026-04-25","s":"Srimati Sita Devi (consort of Lord Sri Rama) -- Appearance"},{"d":"2026-04-25","s":"Sri Madhu Pandita -- Disappearance"},{"d":"2026-04-25","s":"Srimati Jahnava Devi -- Appearance"},{"d":"2026-04-27","s":"Fasting for Mohini Ekadasi"},{"d":"2026-04-28","s":"Break fast 05:38 (sunrise) - 10:30 (1/3 of daylight) DST"},{"d":"2026-04-28","s":"Rukmini Dvadasi"},{"d":"2026-04-29","s":"Sri Jayananda Prabhu -- Disappearance"},{"d":"2026-04-30","s":"Nrsimha Caturdasi: Appearance of Lord Nrsimhadeva"},{"d":"2026-04-30","s":"(Fast till dusk)"},{"d":"2026-05-01","s":"Krsna Phula Dola, Salila Vihara"},{"d":"2026-05-01","s":"Sri Sri Radha-Ramana Devaji -- Appearance"},{"d":"2026-05-01","s":"Sri Paramesvari Dasa Thakura -- Disappearance"},{"d":"2026-05-01","s":"Sri Madhavendra Puri -- Appearance"},{"d":"2026-05-01","s":"Sri Srinivasa Acarya -- Appearance"},{"d":"2026-05-06","s":"Sri Ramananda Raya -- Disappearance"},{"d":"2026-05-13","s":"Fasting for Apara Ekadasi"},{"d":"2026-05-14","s":"Break fast 05:12 (sunrise) - 08:53 (end of tithi) DST"},{"d":"2026-05-14","s":"Srila Vrndavana Dasa Thakura -- Appearance"},{"d":"2026-05-14","s":"Tulasi Jala Dan ends."},{"d":"2026-05-27","s":"Vyanjuli Mahadvadasi"},{"d":"2026-05-27","s":"Fasting for Padmini Ekadasi"},{"d":"2026-05-28","s":"Break fast 04:55 (sunrise) - 05:29 (end of tithi) DST"},{"d":"2026-06-11","s":"Fasting for Parama Ekadasi"},{"d":"2026-06-12","s":"Break fast 04:46 (sunrise) - 10:14 (1/3 of daylight) DST"},{"d":"2026-06-24","s":"Ganga Puja"},{"d":"2026-06-24","s":"Sri Baladeva Vidyabhusana -- Disappearance"},{"d":"2026-06-24","s":"Srimati Gangamata Gosvamini -- Appearance"},{"d":"2026-06-25","s":"Fasting for Pandava Nirjala Ekadasi"},{"d":"2026-06-26","s":"Break fast 04:47 (sunrise) - 10:16 (1/3 of daylight) DST"},{"d":"2026-06-27","s":"Panihati Cida Dahi Utsava"},{"d":"2026-06-29","s":"Snana Yatra"},{"d":"2026-06-29","s":"Sri Mukunda Datta -- Disappearance"},{"d":"2026-06-29","s":"Sri Sridhara Pandita -- Disappearance"},{"d":"2026-06-30","s":"Sri Syamananda Prabhu -- Disappearance"},{"d":"2026-07-05","s":"Sri Vakresvara Pandita -- Appearance"},{"d":"2026-07-10","s":"Sri Srivasa Pandita -- Disappearance"},{"d":"2026-07-11","s":"Fasting for Yogini Ekadasi"},{"d":"2026-07-12","s":"Break fast 05:00 (sunrise) - 10:22 (1/3 of daylight) DST"},{"d":"2026-07-14","s":"Srila Bhaktivinoda Thakura -- Disappearance"},{"d":"2026-07-14","s":"(Fast till noon)"},{"d":"2026-07-14","s":"Sri Gadadhara Pandita -- Disappearance"},{"d":"2026-07-15","s":"Gundica Marjana"},{"d":"2026-07-16","s":"Ratha Yatra"},{"d":"2026-07-16","s":"Sri Svarupa Damodara Gosvami -- Disappearance"},{"d":"2026-07-16","s":"Sri Sivananda Sena -- Disappearance"},{"d":"2026-07-19","s":"Sri Vakresvara Pandita -- Disappearance"},{"d":"2026-07-20","s":"Hera Pancami (4 days after Ratha Yatra)"},{"d":"2026-07-24","s":"Return Ratha (8 days after Ratha Yatra)"},{"d":"2026-07-25","s":"Fasting for Sayana Ekadasi"},{"d":"2026-07-26","s":"Break fast 05:17 (sunrise) - 10:28 (1/3 of daylight) DST"},{"d":"2026-07-29","s":"Guru (Vyasa) Purnima"},{"d":"2026-07-29","s":"Srila Sanatana Gosvami -- Disappearance"},{"d":"2026-07-29","s":"First month of Caturmasya begins [PURNIMA SYSTEM]"},{"d":"2026-07-29","s":"(green leafy vegetable fast for one month)"},{"d":"2026-08-03","s":"Srila Gopala Bhatta Gosvami -- Disappearance"},{"d":"2026-08-06","s":"Srila Lokanatha Gosvami -- Disappearance"},{"d":"2026-08-07","s":"The incorporation of ISKCON in New York"},{"d":"2026-08-09","s":"Trisprsa Mahadvadasi"},{"d":"2026-08-09","s":"Fasting for Kamika Ekadasi"},{"d":"2026-08-10","s":"Break fast 05:38 (sunrise) - 10:34 (1/3 of daylight) DST"},{"d":"2026-08-16","s":"Sri Vamsidasa Babaji -- Disappearance"},{"d":"2026-08-16","s":"Sri Raghunandana Thakura -- Disappearance"},{"d":"2026-08-23","s":"Fasting for Pavitraropana Ekadasi"},{"d":"2026-08-23","s":"Radha Govinda Jhulana Yatra begins"},{"d":"2026-08-24","s":"Break fast 08:20 (1/4 of tithi) - 10:39 (1/3 of daylight) DST"},{"d":"2026-08-24","s":"Srila Rupa Gosvami -- Disappearance"},{"d":"2026-08-24","s":"Sri Gauridasa Pandita -- Disappearance"},{"d":"2026-08-27","s":"Last day of the first Caturmasya month [PURNIMA SYSTEM]"},{"d":"2026-08-28","s":"Lord Balarama -- Appearance"},{"d":"2026-08-28","s":"(Fast till noon)"},{"d":"2026-08-28","s":"Jhulana Yatra ends"},{"d":"2026-08-28","s":"Second month of Caturmasya begins [PURNIMA SYSTEM]"},{"d":"2026-08-28","s":"(yogurt fast for one month)"},{"d":"2026-08-29","s":"Srila Prabhupada's departure for the USA"},{"d":"2026-09-04","s":"Sri Krsna Janmastami: Appearance of Lord Sri Krsna"},{"d":"2026-09-04","s":"(Fast till midnight)"},{"d":"2026-09-05","s":"Nandotsava"},{"d":"2026-09-05","s":"Srila Prabhupada -- Appearance"},{"d":"2026-09-05","s":"(Fast till noon)"},{"d":"2026-09-07","s":"Fasting for Annada Ekadasi"},{"d":"2026-09-08","s":"Break fast 06:22 (sunrise) - 10:44 (1/3 of daylight) DST"},{"d":"2026-09-15","s":"Srimati Sita Thakurani (Sri Advaita's consort) -- Appearance"},{"d":"2026-09-19","s":"Radhastami: Appearance of Srimati Radharani"},{"d":"2026-09-19","s":"(Fast till noon)"},{"d":"2026-09-22","s":"Fasting for Parsva Ekadasi"},{"d":"2026-09-22","s":"(Fast till noon for Vamanadeva, with feast tomorrow)"},{"d":"2026-09-23","s":"Break fast 06:45 (sunrise) - 10:48 (1/3 of daylight) DST"},{"d":"2026-09-23","s":"Sri Vamana Dvadasi: Appearance of Lord Vamanadeva"},{"d":"2026-09-23","s":"(Fasting is done yesterday, today is feast)"},{"d":"2026-09-23","s":"Srila Jiva Gosvami -- Appearance"},{"d":"2026-09-24","s":"Srila Bhaktivinoda Thakura -- Appearance"},{"d":"2026-09-24","s":"(Fast till noon)"},{"d":"2026-09-25","s":"Ananta Caturdasi Vrata"},{"d":"2026-09-25","s":"Srila Haridasa Thakura -- Disappearance"},{"d":"2026-09-25","s":"Last day of the second Caturmasya month [PURNIMA SYSTEM]"},{"d":"2026-09-26","s":"Sri Visvarupa Mahotsava"},{"d":"2026-09-26","s":"Bhadra Purnima"},{"d":"2026-09-26","s":"Acceptance of sannyasa by Srila Prabhupada"},{"d":"2026-09-26","s":"Third month of Caturmasya begins [PURNIMA SYSTEM]"},{"d":"2026-09-26","s":"(milk fast for one month)"},{"d":"2026-10-03","s":"Srila Prabhupada's arrival in the USA"},{"d":"2026-10-06","s":"Fasting for Indira Ekadasi"},{"d":"2026-10-07","s":"Break fast 07:07 (sunrise) - 10:52 (1/3 of daylight) DST"},{"d":"2026-10-17","s":"Durga Puja"},{"d":"2026-10-21","s":"Ramacandra Vijayotsava"},{"d":"2026-10-21","s":"Sri Madhvacarya -- Appearance"},{"d":"2026-10-22","s":"Fasting for Pasankusa Ekadasi"},{"d":"2026-10-23","s":"Break fast 07:33 (sunrise) - 10:59 (1/3 of daylight) DST"},{"d":"2026-10-23","s":"Srila Raghunatha Dasa Gosvami -- Disappearance"},{"d":"2026-10-23","s":"Srila Raghunatha Bhatta Gosvami -- Disappearance"},{"d":"2026-10-23","s":"Srila Krsnadasa Kaviraja Gosvami -- Disappearance"},{"d":"2026-10-24","s":"Last day of Daylight Saving Time"},{"d":"2026-10-25","s":"Last day of the third Caturmasya month [PURNIMA SYSTEM]"},{"d":"2026-10-26","s":"Sri Krsna Saradiya Rasayatra"},{"d":"2026-10-26","s":"Sri Murari Gupta -- Disappearance"},{"d":"2026-10-26","s":"Laksmi Puja"},{"d":"2026-10-26","s":"Fourth month of Caturmasya begins [PURNIMA SYSTEM]"},{"d":"2026-10-26","s":"(urad dal fast for one month)"},{"d":"2026-10-30","s":"Srila Narottama Dasa Thakura -- Disappearance"},{"d":"2026-11-02","s":"Bahulastami"},{"d":"2026-11-03","s":"Sri Virabhadra -- Appearance"},{"d":"2026-11-05","s":"Fasting for Rama Ekadasi"},{"d":"2026-11-06","s":"Break fast 06:56 (sunrise) - 07:02 (end of tithi) LT"},{"d":"2026-11-09","s":"Dipa dana, Dipavali, (Kali Puja)"},{"d":"2026-11-10","s":"Go Puja. Go Krda. Govardhana Puja."},{"d":"2026-11-10","s":"Bali Daityaraja Puja"},{"d":"2026-11-10","s":"Sri Rasikananda -- Appearance"},{"d":"2026-11-11","s":"Sri Vasudeva Ghosh -- Disappearance"},{"d":"2026-11-13","s":"Srila Prabhupada -- Disappearance"},{"d":"2026-11-13","s":"(Fast till noon)"},{"d":"2026-11-17","s":"Gopastami, Gosthastami"},{"d":"2026-11-17","s":"Sri Gadadhara Dasa Gosvami -- Disappearance"},{"d":"2026-11-17","s":"Sri Dhananjaya Pandita -- Disappearance"},{"d":"2026-11-17","s":"Sri Srinivasa Acarya -- Disappearance"},{"d":"2026-11-18","s":"Jagaddhatri Puja"},{"d":"2026-11-20","s":"Fasting for Utthana Ekadasi"},{"d":"2026-11-20","s":"Srila Gaura Kisora Dasa Babaji -- Disappearance"},{"d":"2026-11-20","s":"(Fasting till noon, with feast tomorrow)"},{"d":"2026-11-20","s":"First day of Bhisma Pancaka"},{"d":"2026-11-21","s":"Break fast 08:39 (1/4 of tithi) - 10:16 (1/3 of daylight) LT"},{"d":"2026-11-23","s":"Sri Bhugarbha Gosvami -- Disappearance"},{"d":"2026-11-23","s":"Sri Kasisvara Pandita -- Disappearance"},{"d":"2026-11-23","s":"Last day of the fourth Caturmasya month [PURNIMA SYSTEM]"},{"d":"2026-11-24","s":"Sri Krsna Rasayatra"},{"d":"2026-11-24","s":"Tulasi-Saligrama Vivaha (marriage)"},{"d":"2026-11-24","s":"Sri Nimbarkacarya -- Appearance"},{"d":"2026-11-24","s":"Last day of Bhisma Pancaka"},{"d":"2026-11-25","s":"Katyayani vrata begins"},{"d":"2026-12-04","s":"Fasting for Utpanna Ekadasi"},{"d":"2026-12-04","s":"Sri Narahari Sarakara Thakura -- Disappearance"},{"d":"2026-12-05","s":"Break fast 07:41 (sunrise) - 10:26 (1/3 of daylight) LT"},{"d":"2026-12-05","s":"Sri Kaliya Krsnadasa -- Disappearance"},{"d":"2026-12-06","s":"Sri Saranga Thakura -- Disappearance"},{"d":"2026-12-15","s":"Odana sasthi"},{"d":"2026-12-16","s":"--------- Dhanus Sankranti (Sun enters Sagittarius on 16 Dec, 06:48 LT) ---------"},{"d":"2026-12-20","s":"Fasting for Moksada Ekadasi"},{"d":"2026-12-20","s":"Advent of Srimad Bhagavad-gita"},{"d":"2026-12-21","s":"Break fast 07:55 (sunrise) - 10:35 (1/3 of daylight) LT"},{"d":"2026-12-23","s":"Katyayani vrata ends"},{"d":"2026-12-27","s":"Srila Bhaktisiddhanta Sarasvati Thakura -- Disappearance"},{"d":"2026-12-27","s":"(Fast till noon)"},{"d":"2027-01-02","s":"Fasting for Ekadasi"},{"d":"2027-01-03","s":"Break fast (Ekadasi)"},{"d":"2027-01-07","s":"Amavasya"},{"d":"2027-01-18","s":"Fasting for Ekadasi"},{"d":"2027-01-19","s":"Break fast (Ekadasi)"},{"d":"2027-01-22","s":"Purnima"},{"d":"2027-02-01","s":"Fasting for Ekadasi"},{"d":"2027-02-02","s":"Break fast (Ekadasi)"},{"d":"2027-02-06","s":"Amavasya"},{"d":"2027-02-20","s":"Purnima"},{"d":"2027-03-03","s":"Fasting for Ekadasi"},{"d":"2027-03-04","s":"Break fast (Ekadasi)"},{"d":"2027-03-07","s":"Amavasya"},{"d":"2027-03-18","s":"Fasting for Ekadasi"},{"d":"2027-03-19","s":"Break fast (Ekadasi)"},{"d":"2027-03-22","s":"Gaura Purnima: Appearance of Sri Caitanya Mahaprabhu"},{"d":"2027-03-22","s":"(Fast till moonrise)"},{"d":"2027-04-02","s":"Fasting for Ekadasi"},{"d":"2027-04-03","s":"Break fast (Ekadasi)"},{"d":"2027-04-06","s":"Amavasya"},{"d":"2027-04-16","s":"Rama Navami: Appearance of Lord Sri Ramacandra"},{"d":"2027-04-16","s":"(Fast till sunset)"},{"d":"2027-04-16","s":"Fasting for Ekadasi"},{"d":"2027-04-17","s":"Break fast (Ekadasi)"},{"d":"2027-04-20","s":"Purnima"},{"d":"2027-05-02","s":"Fasting for Ekadasi"},{"d":"2027-05-03","s":"Break fast (Ekadasi)"},{"d":"2027-05-19","s":"Nrsimha Caturdasi: Appearance of Lord Nrsimhadeva"},{"d":"2027-05-19","s":"(Fast till dusk)"},{"d":"2027-05-19","s":"Purnima"},{"d":"2027-05-31","s":"Fasting for Ekadasi"},{"d":"2027-06-01","s":"Break fast (Ekadasi)"},{"d":"2027-06-04","s":"Amavasya"},{"d":"2027-06-14","s":"Fasting for Ekadasi"},{"d":"2027-06-15","s":"Break fast (Ekadasi)"},{"d":"2027-06-18","s":"Purnima"},{"d":"2027-06-30","s":"Fasting for Ekadasi"},{"d":"2027-07-01","s":"Break fast (Ekadasi)"},{"d":"2027-07-03","s":"Amavasya"},{"d":"2027-07-05","s":"Ratha Yatra"},{"d":"2027-07-13","s":"Fasting for Ekadasi"},{"d":"2027-07-14","s":"Break fast (Ekadasi)"},{"d":"2027-07-18","s":"Guru (Vyasa) Purnima"},{"d":"2027-07-18","s":"Purnima"},{"d":"2027-07-29","s":"Fasting for Ekadasi"},{"d":"2027-07-30","s":"Break fast (Ekadasi)"},{"d":"2027-08-12","s":"Fasting for Ekadasi"},{"d":"2027-08-13","s":"Break fast (Ekadasi)"},{"d":"2027-08-16","s":"Purnima"},{"d":"2027-08-23","s":"Sri Krsna Janmastami: Appearance of Lord Sri Krsna"},{"d":"2027-08-23","s":"(Fast till midnight)"},{"d":"2027-08-24","s":"Nandotsava"},{"d":"2027-08-24","s":"Srila Prabhupada -- Appearance"},{"d":"2027-08-27","s":"Fasting for Ekadasi"},{"d":"2027-08-28","s":"Break fast (Ekadasi)"},{"d":"2027-08-31","s":"Amavasya"},{"d":"2027-09-08","s":"Radhastami: Appearance of Srimati Radharani"},{"d":"2027-09-08","s":"(Fast till noon)"},{"d":"2027-09-10","s":"Fasting for Ekadasi"},{"d":"2027-09-11","s":"Break fast (Ekadasi)"},{"d":"2027-09-15","s":"Purnima"},{"d":"2027-09-26","s":"Fasting for Ekadasi"},{"d":"2027-09-27","s":"Break fast (Ekadasi)"},{"d":"2027-09-29","s":"Amavasya"},{"d":"2027-10-10","s":"Fasting for Ekadasi"},{"d":"2027-10-11","s":"Break fast (Ekadasi)"},{"d":"2027-10-15","s":"Purnima"},{"d":"2027-10-25","s":"Fasting for Ekadasi"},{"d":"2027-10-26","s":"Break fast (Ekadasi)"},{"d":"2027-10-29","s":"Dipa dana, Dipavali, (Kali Puja)"},{"d":"2027-10-29","s":"Amavasya"},{"d":"2027-10-30","s":"Govardhana Puja"},{"d":"2027-11-02","s":"Srila Prabhupada -- Disappearance"},{"d":"2027-11-02","s":"(Fast till noon)"},{"d":"2027-11-09","s":"Fasting for Ekadasi"},{"d":"2027-11-10","s":"Break fast (Ekadasi)"},{"d":"2027-11-13","s":"Purnima"},{"d":"2027-11-23","s":"Fasting for Ekadasi"},{"d":"2027-11-24","s":"Break fast (Ekadasi)"},{"d":"2027-11-27","s":"Amavasya"},{"d":"2027-12-08","s":"Fasting for Moksada Ekadasi"},{"d":"2027-12-08","s":"Advent of Srimad Bhagavad-gita"},{"d":"2027-12-09","s":"Fasting for Ekadasi"},{"d":"2027-12-10","s":"Break fast (Ekadasi)"},{"d":"2027-12-13","s":"Purnima"},{"d":"2027-12-23","s":"Fasting for Ekadasi"},{"d":"2027-12-24","s":"Break fast (Ekadasi)"},{"d":"2027-12-27","s":"Amavasya"}];
+const BUILTIN_VAISNAVA = [{"d":"2026-01-03","s":"Sri Krsna Pusya Abhiseka"},{"d":"2026-01-07","s":"Sri Ramacandra Kaviraja -- Disappearance"},{"d":"2026-01-07","s":"Srila Gopala Bhatta Gosvami -- Appearance"},{"d":"2026-01-08","s":"Sri Jayadeva Gosvami -- Disappearance"},{"d":"2026-01-09","s":"Sri Locana Dasa Thakura -- Disappearance"},{"d":"2026-01-14","s":"Fasting for Sat-tila Ekadasi"},{"d":"2026-01-14","s":"Ganga Sagara Mela"},{"d":"2026-01-15","s":"Break fast 07:52 (sunrise) - 10:42 (1/3 of daylight) LT"},{"d":"2026-01-23","s":"Vasanta Pancami"},{"d":"2026-01-23","s":"Srimati Visnupriya Devi -- Appearance"},{"d":"2026-01-23","s":"Srila Visvanatha Cakravarti Thakura -- Disappearance"},{"d":"2026-01-23","s":"Sri Pundarika Vidyanidhi -- Appearance"},{"d":"2026-01-23","s":"Sri Raghunandana Thakura -- Appearance"},{"d":"2026-01-23","s":"Srila Raghunatha Dasa Gosvami -- Appearance"},{"d":"2026-01-23","s":"Sarasvati Puja"},{"d":"2026-01-25","s":"Sri Advaita Acarya -- Appearance"},{"d":"2026-01-25","s":"(Fast till noon)"},{"d":"2026-01-26","s":"Bhismastami"},{"d":"2026-01-27","s":"Sri Madhvacarya -- Disappearance"},{"d":"2026-01-28","s":"Sri Ramanujacarya -- Disappearance"},{"d":"2026-01-29","s":"Fasting for Bhaimi Ekadasi"},{"d":"2026-01-29","s":"(Fast till noon for Varahadeva, with feast tomorrow)"},{"d":"2026-01-30","s":"Break fast 07:35 (sunrise) - 07:41 (end of tithi) LT"},{"d":"2026-01-30","s":"Varaha Dvadasi: Appearance of Lord Varahadeva"},{"d":"2026-01-30","s":"(Fasting is done yesterday, today is feast)"},{"d":"2026-01-31","s":"Nityananda Trayodasi: Appearance of Sri Nityananda Prabhu"},{"d":"2026-01-31","s":"(Fast till noon)"},{"d":"2026-02-01","s":"Sri Krsna Madhura Utsava"},{"d":"2026-02-01","s":"Srila Narottama Dasa Thakura -- Appearance"},{"d":"2026-02-06","s":"Srila Bhaktisiddhanta Sarasvati Thakura -- Appearance"},{"d":"2026-02-06","s":"(Fast till noon)"},{"d":"2026-02-06","s":"Sri Purusottama Das Thakura -- Disappearance"},{"d":"2026-02-13","s":"Fasting for Vijaya Ekadasi"},{"d":"2026-02-14","s":"Break fast 07:11 (sunrise) - 10:32 (1/3 of daylight) LT"},{"d":"2026-02-14","s":"Sri Isvara Puri -- Disappearance"},{"d":"2026-02-16","s":"Siva Ratri"},{"d":"2026-02-18","s":"Srila Jagannatha Dasa Babaji -- Disappearance"},{"d":"2026-02-18","s":"Sri Rasikananda -- Disappearance"},{"d":"2026-02-21","s":"Sri Purusottama Dasa Thakura -- Appearance"},{"d":"2026-02-27","s":"Fasting for Amalaki vrata Ekadasi"},{"d":"2026-02-28","s":"Break fast 06:44 (sunrise) - 10:21 (1/3 of daylight) LT"},{"d":"2026-02-28","s":"Sri Madhavendra Puri -- Disappearance"},{"d":"2026-03-03","s":"Gaura Purnima: Appearance of Sri Caitanya Mahaprabhu"},{"d":"2026-03-03","s":"(Fast till moonrise)"},{"d":"2026-03-04","s":"Festival of Jagannatha Misra"},{"d":"2026-03-11","s":"Sri Srivasa Pandita -- Appearance"},{"d":"2026-03-15","s":"Fasting for Papamocani Ekadasi"},{"d":"2026-03-15","s":"Sri Govinda Ghosh -- Disappearance"},{"d":"2026-03-16","s":"Break fast 06:09 (sunrise) - 06:13 (end of tithi) LT"},{"d":"2026-03-23","s":"Sri Ramanujacarya -- Appearance"},{"d":"2026-03-27","s":"Rama Navami: Appearance of Lord Sri Ramacandra"},{"d":"2026-03-27","s":"(Fast till sunset)"},{"d":"2026-03-29","s":"Fasting for Kamada Ekadasi"},{"d":"2026-03-29","s":"Damanakaropana Dvadasi"},{"d":"2026-03-29","s":"First day of Daylight Saving Time"},{"d":"2026-03-30","s":"Break fast 06:39 (sunrise) - 10:54 (1/3 of daylight) DST"},{"d":"2026-04-01","s":"Sri Balarama Rasayatra"},{"d":"2026-04-01","s":"Sri Krsna Vasanta Rasa"},{"d":"2026-04-01","s":"Appearance of Radha Kunda, snana dana"},{"d":"2026-04-01","s":"Sri Vamsivadana Thakura -- Appearance"},{"d":"2026-04-01","s":"Sri Syamananda Prabhu -- Appearance"},{"d":"2026-04-09","s":"Sri Abhirama Thakura -- Disappearance"},{"d":"2026-04-12","s":"Srila Vrndavana Dasa Thakura -- Disappearance"},{"d":"2026-04-13","s":"Fasting for Varuthini Ekadasi"},{"d":"2026-04-14","s":"Break fast 06:06 (sunrise) - 10:41 (1/3 of daylight) DST"},{"d":"2026-04-14","s":"Tulasi Jala Dan begins."},{"d":"2026-04-17","s":"Sri Gadadhara Pandita -- Appearance"},{"d":"2026-04-20","s":"Aksaya Trtiya. Candana Yatra starts. (Continues for 21 days)"},{"d":"2026-04-23","s":"Jahnu Saptami"},{"d":"2026-04-25","s":"Srimati Sita Devi (consort of Lord Sri Rama) -- Appearance"},{"d":"2026-04-25","s":"Sri Madhu Pandita -- Disappearance"},{"d":"2026-04-25","s":"Srimati Jahnava Devi -- Appearance"},{"d":"2026-04-27","s":"Fasting for Mohini Ekadasi"},{"d":"2026-04-28","s":"Break fast 05:38 (sunrise) - 10:30 (1/3 of daylight) DST"},{"d":"2026-04-28","s":"Rukmini Dvadasi"},{"d":"2026-04-29","s":"Sri Jayananda Prabhu -- Disappearance"},{"d":"2026-04-30","s":"Nrsimha Caturdasi: Appearance of Lord Nrsimhadeva"},{"d":"2026-04-30","s":"(Fast till dusk)"},{"d":"2026-05-01","s":"Krsna Phula Dola, Salila Vihara"},{"d":"2026-05-01","s":"Sri Sri Radha-Ramana Devaji -- Appearance"},{"d":"2026-05-01","s":"Sri Paramesvari Dasa Thakura -- Disappearance"},{"d":"2026-05-01","s":"Sri Madhavendra Puri -- Appearance"},{"d":"2026-05-01","s":"Sri Srinivasa Acarya -- Appearance"},{"d":"2026-05-06","s":"Sri Ramananda Raya -- Disappearance"},{"d":"2026-05-13","s":"Fasting for Apara Ekadasi"},{"d":"2026-05-14","s":"Break fast 05:12 (sunrise) - 08:53 (end of tithi) DST"},{"d":"2026-05-14","s":"Srila Vrndavana Dasa Thakura -- Appearance"},{"d":"2026-05-14","s":"Tulasi Jala Dan ends."},{"d":"2026-05-27","s":"Vyanjuli Mahadvadasi"},{"d":"2026-05-27","s":"Fasting for Padmini Ekadasi"},{"d":"2026-05-28","s":"Break fast 04:55 (sunrise) - 05:29 (end of tithi) DST"},{"d":"2026-06-11","s":"Fasting for Parama Ekadasi"},{"d":"2026-06-12","s":"Break fast 04:46 (sunrise) - 10:14 (1/3 of daylight) DST"},{"d":"2026-06-24","s":"Ganga Puja"},{"d":"2026-06-24","s":"Sri Baladeva Vidyabhusana -- Disappearance"},{"d":"2026-06-24","s":"Srimati Gangamata Gosvamini -- Appearance"},{"d":"2026-06-25","s":"Fasting for Pandava Nirjala Ekadasi"},{"d":"2026-06-26","s":"Break fast 04:47 (sunrise) - 10:16 (1/3 of daylight) DST"},{"d":"2026-06-27","s":"Panihati Cida Dahi Utsava"},{"d":"2026-06-29","s":"Snana Yatra"},{"d":"2026-06-29","s":"Sri Mukunda Datta -- Disappearance"},{"d":"2026-06-29","s":"Sri Sridhara Pandita -- Disappearance"},{"d":"2026-06-30","s":"Sri Syamananda Prabhu -- Disappearance"},{"d":"2026-07-05","s":"Sri Vakresvara Pandita -- Appearance"},{"d":"2026-07-10","s":"Sri Srivasa Pandita -- Disappearance"},{"d":"2026-07-11","s":"Fasting for Yogini Ekadasi"},{"d":"2026-07-12","s":"Break fast 05:00 (sunrise) - 10:22 (1/3 of daylight) DST"},{"d":"2026-07-14","s":"Srila Bhaktivinoda Thakura -- Disappearance"},{"d":"2026-07-14","s":"(Fast till noon)"},{"d":"2026-07-14","s":"Sri Gadadhara Pandita -- Disappearance"},{"d":"2026-07-15","s":"Gundica Marjana"},{"d":"2026-07-16","s":"Ratha Yatra"},{"d":"2026-07-16","s":"Sri Svarupa Damodara Gosvami -- Disappearance"},{"d":"2026-07-16","s":"Sri Sivananda Sena -- Disappearance"},{"d":"2026-07-19","s":"Sri Vakresvara Pandita -- Disappearance"},{"d":"2026-07-20","s":"Hera Pancami (4 days after Ratha Yatra)"},{"d":"2026-07-24","s":"Return Ratha (8 days after Ratha Yatra)"},{"d":"2026-07-25","s":"Fasting for Sayana Ekadasi"},{"d":"2026-07-26","s":"Break fast 05:17 (sunrise) - 10:28 (1/3 of daylight) DST"},{"d":"2026-07-29","s":"Guru (Vyasa) Purnima"},{"d":"2026-07-29","s":"Srila Sanatana Gosvami -- Disappearance"},{"d":"2026-07-29","s":"(green leafy vegetable fast for one month)"},{"d":"2026-08-03","s":"Srila Gopala Bhatta Gosvami -- Disappearance"},{"d":"2026-08-06","s":"Srila Lokanatha Gosvami -- Disappearance"},{"d":"2026-08-07","s":"The incorporation of ISKCON in New York"},{"d":"2026-08-09","s":"Trisprsa Mahadvadasi"},{"d":"2026-08-09","s":"Fasting for Kamika Ekadasi"},{"d":"2026-08-10","s":"Break fast 05:38 (sunrise) - 10:34 (1/3 of daylight) DST"},{"d":"2026-08-16","s":"Sri Vamsidasa Babaji -- Disappearance"},{"d":"2026-08-16","s":"Sri Raghunandana Thakura -- Disappearance"},{"d":"2026-08-23","s":"Fasting for Pavitraropana Ekadasi"},{"d":"2026-08-23","s":"Radha Govinda Jhulana Yatra begins"},{"d":"2026-08-24","s":"Break fast 08:20 (1/4 of tithi) - 10:39 (1/3 of daylight) DST"},{"d":"2026-08-24","s":"Srila Rupa Gosvami -- Disappearance"},{"d":"2026-08-24","s":"Sri Gauridasa Pandita -- Disappearance"},{"d":"2026-08-28","s":"Lord Balarama -- Appearance"},{"d":"2026-08-28","s":"(Fast till noon)"},{"d":"2026-08-28","s":"Jhulana Yatra ends"},{"d":"2026-08-28","s":"(yogurt fast for one month)"},{"d":"2026-08-29","s":"Srila Prabhupada's departure for the USA"},{"d":"2026-09-04","s":"Sri Krsna Janmastami: Appearance of Lord Sri Krsna"},{"d":"2026-09-04","s":"(Fast till midnight)"},{"d":"2026-09-05","s":"Nandotsava"},{"d":"2026-09-05","s":"Srila Prabhupada -- Appearance"},{"d":"2026-09-05","s":"(Fast till noon)"},{"d":"2026-09-07","s":"Fasting for Annada Ekadasi"},{"d":"2026-09-08","s":"Break fast 06:22 (sunrise) - 10:44 (1/3 of daylight) DST"},{"d":"2026-09-15","s":"Srimati Sita Thakurani (Sri Advaita's consort) -- Appearance"},{"d":"2026-09-19","s":"Radhastami: Appearance of Srimati Radharani"},{"d":"2026-09-19","s":"(Fast till noon)"},{"d":"2026-09-22","s":"Fasting for Parsva Ekadasi"},{"d":"2026-09-22","s":"(Fast till noon for Vamanadeva, with feast tomorrow)"},{"d":"2026-09-23","s":"Break fast 06:45 (sunrise) - 10:48 (1/3 of daylight) DST"},{"d":"2026-09-23","s":"Sri Vamana Dvadasi: Appearance of Lord Vamanadeva"},{"d":"2026-09-23","s":"(Fasting is done yesterday, today is feast)"},{"d":"2026-09-23","s":"Srila Jiva Gosvami -- Appearance"},{"d":"2026-09-24","s":"Srila Bhaktivinoda Thakura -- Appearance"},{"d":"2026-09-24","s":"(Fast till noon)"},{"d":"2026-09-25","s":"Ananta Caturdasi Vrata"},{"d":"2026-09-25","s":"Srila Haridasa Thakura -- Disappearance"},{"d":"2026-09-26","s":"Sri Visvarupa Mahotsava"},{"d":"2026-09-26","s":"Bhadra Purnima"},{"d":"2026-09-26","s":"Acceptance of sannyasa by Srila Prabhupada"},{"d":"2026-09-26","s":"(milk fast for one month)"},{"d":"2026-10-03","s":"Srila Prabhupada's arrival in the USA"},{"d":"2026-10-06","s":"Fasting for Indira Ekadasi"},{"d":"2026-10-07","s":"Break fast 07:07 (sunrise) - 10:52 (1/3 of daylight) DST"},{"d":"2026-10-17","s":"Durga Puja"},{"d":"2026-10-21","s":"Ramacandra Vijayotsava"},{"d":"2026-10-21","s":"Sri Madhvacarya -- Appearance"},{"d":"2026-10-22","s":"Fasting for Pasankusa Ekadasi"},{"d":"2026-10-23","s":"Break fast 07:33 (sunrise) - 10:59 (1/3 of daylight) DST"},{"d":"2026-10-23","s":"Srila Raghunatha Dasa Gosvami -- Disappearance"},{"d":"2026-10-23","s":"Srila Raghunatha Bhatta Gosvami -- Disappearance"},{"d":"2026-10-23","s":"Srila Krsnadasa Kaviraja Gosvami -- Disappearance"},{"d":"2026-10-24","s":"Last day of Daylight Saving Time"},{"d":"2026-10-26","s":"Sri Krsna Saradiya Rasayatra"},{"d":"2026-10-26","s":"Sri Murari Gupta -- Disappearance"},{"d":"2026-10-26","s":"Laksmi Puja"},{"d":"2026-10-26","s":"(urad dal fast for one month)"},{"d":"2026-10-30","s":"Srila Narottama Dasa Thakura -- Disappearance"},{"d":"2026-11-02","s":"Bahulastami"},{"d":"2026-11-03","s":"Sri Virabhadra -- Appearance"},{"d":"2026-11-05","s":"Fasting for Rama Ekadasi"},{"d":"2026-11-06","s":"Break fast 06:56 (sunrise) - 07:02 (end of tithi) LT"},{"d":"2026-11-09","s":"Dipa dana, Dipavali, (Kali Puja)"},{"d":"2026-11-10","s":"Go Puja. Go Krda. Govardhana Puja."},{"d":"2026-11-10","s":"Bali Daityaraja Puja"},{"d":"2026-11-10","s":"Sri Rasikananda -- Appearance"},{"d":"2026-11-11","s":"Sri Vasudeva Ghosh -- Disappearance"},{"d":"2026-11-13","s":"Srila Prabhupada -- Disappearance"},{"d":"2026-11-13","s":"(Fast till noon)"},{"d":"2026-11-17","s":"Gopastami, Gosthastami"},{"d":"2026-11-17","s":"Sri Gadadhara Dasa Gosvami -- Disappearance"},{"d":"2026-11-17","s":"Sri Dhananjaya Pandita -- Disappearance"},{"d":"2026-11-17","s":"Sri Srinivasa Acarya -- Disappearance"},{"d":"2026-11-18","s":"Jagaddhatri Puja"},{"d":"2026-11-20","s":"Fasting for Utthana Ekadasi"},{"d":"2026-11-20","s":"Srila Gaura Kisora Dasa Babaji -- Disappearance"},{"d":"2026-11-20","s":"(Fasting till noon, with feast tomorrow)"},{"d":"2026-11-20","s":"First day of Bhisma Pancaka"},{"d":"2026-11-21","s":"Break fast 08:39 (1/4 of tithi) - 10:16 (1/3 of daylight) LT"},{"d":"2026-11-23","s":"Sri Bhugarbha Gosvami -- Disappearance"},{"d":"2026-11-23","s":"Sri Kasisvara Pandita -- Disappearance"},{"d":"2026-11-24","s":"Sri Krsna Rasayatra"},{"d":"2026-11-24","s":"Tulasi-Saligrama Vivaha (marriage)"},{"d":"2026-11-24","s":"Sri Nimbarkacarya -- Appearance"},{"d":"2026-11-24","s":"Last day of Bhisma Pancaka"},{"d":"2026-11-25","s":"Katyayani vrata begins"},{"d":"2026-12-04","s":"Fasting for Utpanna Ekadasi"},{"d":"2026-12-04","s":"Sri Narahari Sarakara Thakura -- Disappearance"},{"d":"2026-12-05","s":"Break fast 07:41 (sunrise) - 10:26 (1/3 of daylight) LT"},{"d":"2026-12-05","s":"Sri Kaliya Krsnadasa -- Disappearance"},{"d":"2026-12-06","s":"Sri Saranga Thakura -- Disappearance"},{"d":"2026-12-15","s":"Odana sasthi"},{"d":"2026-12-16","s":"--------- Dhanus Sankranti (Sun enters Sagittarius on 16 Dec, 06:48 LT) ---------"},{"d":"2026-12-20","s":"Fasting for Moksada Ekadasi"},{"d":"2026-12-20","s":"Advent of Srimad Bhagavad-gita"},{"d":"2026-12-21","s":"Break fast 07:55 (sunrise) - 10:35 (1/3 of daylight) LT"},{"d":"2026-12-23","s":"Katyayani vrata ends"},{"d":"2026-12-27","s":"Srila Bhaktisiddhanta Sarasvati Thakura -- Disappearance"},{"d":"2026-12-27","s":"(Fast till noon)"},{"d":"2027-01-02","s":"Fasting for Ekadasi"},{"d":"2027-01-03","s":"Break fast (Ekadasi)"},{"d":"2027-01-07","s":"Amavasya"},{"d":"2027-01-18","s":"Fasting for Ekadasi"},{"d":"2027-01-19","s":"Break fast (Ekadasi)"},{"d":"2027-02-01","s":"Fasting for Ekadasi"},{"d":"2027-02-02","s":"Break fast (Ekadasi)"},{"d":"2027-02-06","s":"Amavasya"},{"d":"2027-03-03","s":"Fasting for Ekadasi"},{"d":"2027-03-04","s":"Break fast (Ekadasi)"},{"d":"2027-03-07","s":"Amavasya"},{"d":"2027-03-18","s":"Fasting for Ekadasi"},{"d":"2027-03-19","s":"Break fast (Ekadasi)"},{"d":"2027-03-22","s":"Gaura Purnima: Appearance of Sri Caitanya Mahaprabhu"},{"d":"2027-03-22","s":"(Fast till moonrise)"},{"d":"2027-04-02","s":"Fasting for Ekadasi"},{"d":"2027-04-03","s":"Break fast (Ekadasi)"},{"d":"2027-04-06","s":"Amavasya"},{"d":"2027-04-16","s":"Rama Navami: Appearance of Lord Sri Ramacandra"},{"d":"2027-04-16","s":"(Fast till sunset)"},{"d":"2027-04-16","s":"Fasting for Ekadasi"},{"d":"2027-04-17","s":"Break fast (Ekadasi)"},{"d":"2027-05-02","s":"Fasting for Ekadasi"},{"d":"2027-05-03","s":"Break fast (Ekadasi)"},{"d":"2027-05-19","s":"Nrsimha Caturdasi: Appearance of Lord Nrsimhadeva"},{"d":"2027-05-19","s":"(Fast till dusk)"},{"d":"2027-05-31","s":"Fasting for Ekadasi"},{"d":"2027-06-01","s":"Break fast (Ekadasi)"},{"d":"2027-06-04","s":"Amavasya"},{"d":"2027-06-14","s":"Fasting for Ekadasi"},{"d":"2027-06-15","s":"Break fast (Ekadasi)"},{"d":"2027-06-30","s":"Fasting for Ekadasi"},{"d":"2027-07-01","s":"Break fast (Ekadasi)"},{"d":"2027-07-03","s":"Amavasya"},{"d":"2027-07-05","s":"Ratha Yatra"},{"d":"2027-07-13","s":"Fasting for Ekadasi"},{"d":"2027-07-14","s":"Break fast (Ekadasi)"},{"d":"2027-07-18","s":"Guru (Vyasa) Purnima"},{"d":"2027-07-29","s":"Fasting for Ekadasi"},{"d":"2027-07-30","s":"Break fast (Ekadasi)"},{"d":"2027-08-12","s":"Fasting for Ekadasi"},{"d":"2027-08-13","s":"Break fast (Ekadasi)"},{"d":"2027-08-23","s":"Sri Krsna Janmastami: Appearance of Lord Sri Krsna"},{"d":"2027-08-23","s":"(Fast till midnight)"},{"d":"2027-08-24","s":"Nandotsava"},{"d":"2027-08-24","s":"Srila Prabhupada -- Appearance"},{"d":"2027-08-27","s":"Fasting for Ekadasi"},{"d":"2027-08-28","s":"Break fast (Ekadasi)"},{"d":"2027-08-31","s":"Amavasya"},{"d":"2027-09-08","s":"Radhastami: Appearance of Srimati Radharani"},{"d":"2027-09-08","s":"(Fast till noon)"},{"d":"2027-09-10","s":"Fasting for Ekadasi"},{"d":"2027-09-11","s":"Break fast (Ekadasi)"},{"d":"2027-09-26","s":"Fasting for Ekadasi"},{"d":"2027-09-27","s":"Break fast (Ekadasi)"},{"d":"2027-09-29","s":"Amavasya"},{"d":"2027-10-10","s":"Fasting for Ekadasi"},{"d":"2027-10-11","s":"Break fast (Ekadasi)"},{"d":"2027-10-25","s":"Fasting for Ekadasi"},{"d":"2027-10-26","s":"Break fast (Ekadasi)"},{"d":"2027-10-29","s":"Dipa dana, Dipavali, (Kali Puja)"},{"d":"2027-10-29","s":"Amavasya"},{"d":"2027-10-30","s":"Govardhana Puja"},{"d":"2027-11-02","s":"Srila Prabhupada -- Disappearance"},{"d":"2027-11-02","s":"(Fast till noon)"},{"d":"2027-11-09","s":"Fasting for Ekadasi"},{"d":"2027-11-10","s":"Break fast (Ekadasi)"},{"d":"2027-11-23","s":"Fasting for Ekadasi"},{"d":"2027-11-24","s":"Break fast (Ekadasi)"},{"d":"2027-11-27","s":"Amavasya"},{"d":"2027-12-08","s":"Fasting for Moksada Ekadasi"},{"d":"2027-12-08","s":"Advent of Srimad Bhagavad-gita"},{"d":"2027-12-09","s":"Fasting for Ekadasi"},{"d":"2027-12-10","s":"Break fast (Ekadasi)"},{"d":"2027-12-23","s":"Fasting for Ekadasi"},{"d":"2027-12-24","s":"Break fast (Ekadasi)"},{"d":"2027-12-27","s":"Amavasya"}];
 
 function indexBuiltinEvents(){
   let count = 0;
@@ -1765,12 +1795,35 @@ function approxTithiIndex(dateUTC){
   const angle = (moonPhaseAngle(dateUTC) + 360) % 360;
   return Math.min(30, Math.max(1, Math.floor(angle/12) + 1));
 }
+// TECH-2 (v70): Surya Sankranti через sidereal Lahiri — ідентично engine auto_tag v1.1
+// Повертає true якщо dateUTC є днем ingress Сонця в новий sidereal rashi (кратне 30°)
+// Метод: порівняти floor(sunSid/30) за 00:00 і 23:59 UTC поточного дня.
+// Якщо змінився — це день Sankranti (незалежно від конкретного часу ingress).
+function isSuryaSankranti(dateUTC){
+  const jde0 = dateUTC.getTime() / 86400000 + 2440587.5; // 00:00 UTC
+  const jde1 = jde0 + 0.9993; // ~23:59 UTC (23h 59m)
+  function sunSidRashi(jde){
+    const trop = calcSunLongitude(jde);
+    const ayan = lahiriAyanamsha(jde);
+    const sid = ((trop - ayan) % 360 + 360) % 360;
+    return Math.floor(sid / 30);
+  }
+  return sunSidRashi(jde0) !== sunSidRashi(jde1);
+}
+
 function autoComputedExtras(dateUTC, kp=0){
   if(!isFinite(kp)) kp = 0;
   const t = approxTithiIndex(dateUTC);
   const extras = [];
   if(t === 1){
     extras.push({name:'1 місячний день', weight: WEIGHT_E_EVENTS['1 місячний день'], source:'auto', raw:'Pratipada (approx)'});
+  }
+  // TECH-2 (v70): Surya Sankranti — астрономічний розрахунок sidereal Lahiri
+  // Синхронізовано з engine auto_tag_generator.py v1.1 (surya_sankranti тег)
+  // Вага: WEIGHT_E_EVENTS['Сурья Санкранті Перехід Сонця із знаку в інший'] = -2
+  if(isSuryaSankranti(dateUTC)){
+    const sankKey = 'Сурья Санкранті Перехід Сонця із знаку в інший';
+    extras.push({name: sankKey, weight: WEIGHT_E_EVENTS[sankKey], source:'auto', raw:'Sidereal Lahiri ingress (TECH-2)'});
   }
   // v30.1: Rikta tithi видалено з ei — тепер обробляється через часткові Tithi scores в Pi
   // Equinox windows (Russell-McPherron effect): 05 Mar–04 Apr, 07 Sep–07 Oct
@@ -2102,7 +2155,8 @@ function computeAi(dateTimeUTC, kp=0){
     else { diTip = `0 — Dst=${dstVal} нТл (норма)`; }
   }
   const AiFull = Math.round((Ai + Di) * 10) / 10;
-  const explain = `\u03a3A\u1d62 = L\u1d62+M\u1d62+e\u1d62+P\u1d62+D\u1d62 = ${Li}+${Mi}+${eiTotal}+${Pi}+${Di} = ${AiFull}` + (snPen!==0?`\n(Sn=${_snVal}>150: ${snPen} — engine v14.6)`:'') + (bzVal!==0||vswVal!==0?`\n(+Bz=${bzVal}, Vsw=${vswVal} — контекст, не в G)`:'');
+  const _snLabel = snPen !== 0 ? `+Sn` : '';
+  const explain = `\u03a3A\u1d62 = L\u1d62+M\u1d62+e\u1d62+P\u1d62+D\u1d62${snPen!==0?'+Sn':''} = ${Li}+${Mi}+${eiTotal}+${Pi}+${Di}${snPen!==0?'+'+snPen:''} = ${AiFull}` + (snPen!==0?`\n(Sn=${_snVal}>150: kp_pen${snPen} — engine v14.6)`:'') + (bzVal!==0||vswVal!==0?`\n(+Bz=${bzVal}, Vsw=${vswVal} — контекст, не в G)`:'');
 
   return { Ai: AiFull, AiNoDst: Ai, Li, Mi, ei: eiTotal, eiBase: ei, horaEi, Pi, Di, bzVal, vswVal, phaseName, phaseDeg, lTip, mTip, eTip: eTipLines.join('\n'), pTip, diTip, explain };
 }
@@ -2314,12 +2368,22 @@ function parse3DaySafe(json){
 function parseDst(json){
   try{
     const rows = JSON.parse(json);
-    if(!Array.isArray(rows)||rows.length<2) return null;
-    const data = rows.slice(1).filter(r=>r[1]!=null&&r[1]!=='');
+    if(!Array.isArray(rows)||!rows.length) return null;
+    // v68: підтримка обох форматів (масиви і об'єкти — SWPC SCN)
+    if(typeof rows[0]==='object'&&!Array.isArray(rows[0])){
+      const data=rows.filter(r=>r.dst!=null&&r.dst!=='');
+      if(!data.length) return null;
+      const last=data[data.length-1];
+      const dst=parseFloat(last.dst||last.Dst);
+      return isFinite(dst)?{dst,time:(last.time_tag||'')+'UTC'}:null;
+    }
+    // масив масивів з заголовком
+    if(rows.length<2) return null;
+    const data=rows.slice(1).filter(r=>r[1]!=null&&r[1]!=='');
     if(!data.length) return null;
-    const last = data[data.length-1];
-    const dst = parseFloat(last[1]);
-    return isFinite(dst) ? {dst, time: last[0]+'UTC'} : null;
+    const last=data[data.length-1];
+    const dst=parseFloat(last[1]);
+    return isFinite(dst)?{dst,time:last[0]+'UTC'}:null;
   }catch(e){ return null; }
 }
 // Парсер JSON 45-day (45-day-ap-forecast.json)
@@ -2417,7 +2481,7 @@ function draw27dTable(){
     if(th.dataset.col === _27dSortCol) th.classList.add(_27dSortDir);
   });
 
-  if(!data.length){ tbody.innerHTML='<tr><td colspan="13" style="color:#9bb1dc;padding:16px">Немає даних за фільтром</td></tr>'; return; }
+  if(!data.length){ tbody.innerHTML='<tr><td colspan="14" style="color:#9bb1dc;padding:16px">Немає даних за фільтром</td></tr>'; return; }
 
   // G_ос: обчислюємо natal для активного слоту (якщо є)
   let natalIdxFor27 = null;
@@ -2480,6 +2544,7 @@ function draw27dTable(){
       <td class="mono col-hide-mobile">${r.Ap}</td>
       <td class="mono col-hide-mobile">${r.flux}</td>
       <td style="font-size:12px">${classifyG(isFinite(G)?G:0)}</td>
+      <td class="col-hide-mobile" style="font-size:12px">${(()=>{const _p=calcProbabilityLayer({G,csConf:1,horizon:'27day'});return _p?`<span style="font-weight:700;color:${_p.band==='high'?'#ff6b6b':_p.band==='elevated'?'#fca474':_p.band==='moderate'?'#ffcc00':'#2bd47d'}" title="Горизонт 27д — низька точність (×0.55)">~${_p.pSoftPct}%</span>`:'—';})()}</td>
       <td style="font-size:12px;${recommendG(G, kpUsed).style}">${recommendG(G, kpUsed).text}</td>
       ${gosCell}
     </tr>`;
@@ -2512,7 +2577,7 @@ function draw27dTable(){
 
 function render27Day(rows, last3D){
   const tbody = document.getElementById('twentysevenContent');
-  if(!rows||!rows.length){ tbody.innerHTML='<tr><td colspan="13" style="color:#9bb1dc">Немає даних</td></tr>'; return; }
+  if(!rows||!rows.length){ tbody.innerHTML='<tr><td colspan="14" style="color:#9bb1dc">Немає даних</td></tr>'; return; }
   _last27Rows = rows;
   _27dComputed = build27dComputed(rows, last3D);
   draw27dTable();
@@ -2782,6 +2847,13 @@ function renderCurrentPanel(){
       } else if(dcEl){ dcEl.style.display = 'none'; }
     } catch(e){}
   })();
+
+  // ── Probability Layer v68 ────────────────────────────────────────────────
+  if(isFinite(G)){
+    const _probNow = calcProbabilityLayer({G, csConf:_csInline.conf, horizon:'now'});
+    renderNowProbability(_probNow);
+    window._probNow = _probNow;
+  }
 
   // Sync gTopRow (G вище профіль-бару)
   (function(){
@@ -3654,6 +3726,7 @@ function render3Day(parsed3){
     + '<th class="col-3d-ap">Ap (прогноз)</th>'
     + '<th class="col-hide-mobile">Kp слоти (8×3год)</th>'
     + '<th>Категорія</th>'
+    + '<th class="col-hide-mobile">Ризик%</th>'
     + '<th>Рекомендація</th>'
     + '</tr></thead><tbody>';
 
@@ -3687,6 +3760,10 @@ function render3Day(parsed3){
 
     const gTip = gTooltipText('Kp max', (isFinite(kpMax)? kpMax : NaN), ai);
 
+    const _prob3d = calcProbabilityLayer({G, csConf:1, horizon:'3day'});
+    const _riskCell = _prob3d
+      ? `<span style="font-size:12px;font-weight:700;color:${_prob3d.band==='high'?'#ff6b6b':_prob3d.band==='elevated'?'#fca474':_prob3d.band==='moderate'?'#ffcc00':'#2bd47d'}">${_prob3d.pSoftPct}%</span>`
+      : '—';
     html += `<tr style="${rowStyle}${todayStyle}">
       <td class="mono col-date"${isToday?' style="font-weight:700;color:var(--alt)"':''}>${fmtDate(d.date)}${isToday?' <br><span style="color:var(--alt);font-size:10px;white-space:nowrap">◀ сьогодні</span>':''}</td>
       <td><span class="gbadge ${gCls} hint" tabindex="0">G ${isFinite(G)? G.toFixed(2) : '…'}<span class="hint-pop">${escapeHtml(gTip)}</span></span></td>
@@ -3699,6 +3776,7 @@ function render3Day(parsed3){
       <td class="col-3d-ap mono">${apCell}</td>
       <td class="col-hide-mobile">${kpSparkline(d.kp8)}</td>
       <td>${classifyG(isFinite(G)? G:0)}</td>
+      <td class="mono col-hide-mobile">${_riskCell}</td>
       <td style="${recommendG(G, kpMax).style}">${recommendG(G, kpMax).text}</td>
     </tr>`;
   }
@@ -7516,11 +7594,121 @@ document.addEventListener('DOMContentLoaded', () => {
 })();
 </script>
 <script>
-// G-Index PWA — Service Worker registration
+// ═══ Probability Layer v1 (bootstrap logistic, G-Index) ════════════════════
+function sigmoid(x){ return 1/(1+Math.exp(-x)); }
+
+// P_soft: P(несприятливий | G). Якорі: G=0→0.35, G=-3→0.80
+function calcSoftRiskFromG(G){
+  return Math.max(0.001, Math.min(0.999, sigmoid(-0.619 - 0.668*G)));
+}
+// P_hard: P(сильно несприятливий | G). Якорі: G=0→0.10, G=-3→0.60
+function calcHardRiskFromG(G){
+  return Math.max(0.001, Math.min(0.999, sigmoid(-2.197 - 0.868*G)));
+}
+function getRiskBand(p){ return p<0.25?'low':p<0.50?'moderate':p<0.75?'elevated':'high'; }
+function getRiskLabelUA(p){ return p<0.25?'Низький':p<0.50?'Помірний':p<0.75?'Підвищений':'Високий'; }
+
+// calcProbabilityLayer: приймає {G, csConf (0..1), horizon}
+// csConf береться з existingCScore.conf, horizon = 'now'|'3day'|'27day'
+function calcProbabilityLayer({G, csConf=1, horizon='now'}={}){
+  if(!isFinite(G)) return null;
+  const pSoft = calcSoftRiskFromG(G);
+  const pHard = calcHardRiskFromG(G);
+  const hFactor = horizon==='27day'?0.55:horizon==='3day'?0.85:1.00;
+  const conf = Math.max(0.05, Math.min(1, (csConf||1)*hFactor));
+  return {
+    G: Math.round(G*100)/100,
+    pSoft, pSoftPct: Math.round(pSoft*100),
+    pHard, pHardPct: Math.round(pHard*100),
+    conf, confPct: Math.round(conf*100),
+    band: getRiskBand(pSoft),
+    labelUA: getRiskLabelUA(pSoft)
+  };
+}
+
+function renderNowProbability(prob){
+  if(!prob) return;
+  const block = document.getElementById('probNowBlock');
+  if(block) block.style.display='block';
+  const soft  = document.getElementById('riskPctNow');
+  const hard  = document.getElementById('hardRiskPctNow');
+  const label = document.getElementById('riskLabelNow');
+  if(soft)  soft.textContent  = prob.pSoftPct+'%';
+  if(hard)  hard.textContent  = prob.pHardPct+'%';
+  if(label) label.textContent = prob.labelUA;
+  // colour band
+  const cells = ['probCellSoft','probCellHard'];
+  cells.forEach(id=>{
+    const el2 = document.getElementById(id);
+    if(!el2) return;
+    el2.classList.remove('risk-low','risk-moderate','risk-elevated','risk-high');
+    el2.classList.add('risk-'+prob.band);
+  });
+}
+
+// G-Index PWA — Service Worker registration + update UX
+let _swReg = null;
+let _deferredInstall = null;
+
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  _deferredInstall = e;
+  const bar = document.getElementById('pwaInstallBar');
+  if (bar) { bar.style.display = 'flex'; }
+});
+
+function pwaInstall() {
+  if (!_deferredInstall) return;
+  _deferredInstall.prompt();
+  _deferredInstall.userChoice.then(() => { _deferredInstall = null; pwaDismiss(); });
+}
+function pwaDismiss() {
+  const bar = document.getElementById('pwaInstallBar');
+  if (bar) bar.style.display = 'none';
+}
+
+function pwaReload() {
+  if (_swReg && _swReg.waiting) {
+    _swReg.waiting.postMessage({ type: 'SKIP_WAITING' });
+  } else {
+    window.location.reload();
+  }
+}
+
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('sw.js')
-      .then(reg => console.log('[SW] Registered, scope:', reg.scope))
+      .then(reg => {
+        _swReg = reg;
+        console.log('[SW] Registered, scope:', reg.scope);
+
+        // Новий SW встановлюється — показати банер при переході в waiting
+        function checkWaiting(sw) {
+          if (!sw) return;
+          if (sw.state === 'installed' && navigator.serviceWorker.controller) {
+            const bar = document.getElementById('pwaUpdateBar');
+            if (bar) bar.style.display = 'flex';
+          }
+          sw.addEventListener('statechange', () => checkWaiting(sw));
+        }
+
+        if (reg.waiting) {
+          // SW вже чекає (сторінку перезавантажили між перевірками)
+          const bar = document.getElementById('pwaUpdateBar');
+          if (bar) bar.style.display = 'flex';
+        }
+        reg.addEventListener('updatefound', () => {
+          checkWaiting(reg.installing);
+        });
+
+        // Після того як новий SW взяв контроль — перезавантажити сторінку
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          window.location.reload();
+        });
+
+        // Перевіряти оновлення кожні 30 хвилин
+        setInterval(() => reg.update(), 30 * 60 * 1000);
+      })
       .catch(err => console.warn('[SW] Registration failed:', err));
   });
 }
