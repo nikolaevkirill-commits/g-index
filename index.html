@@ -610,14 +610,6 @@
         <div id="costarBanner" style="margin:8px 0 4px;font-size:14px;font-weight:600;line-height:1.35;min-height:20px;white-space:normal;word-break:break-word;overflow-wrap:break-word"></div>
 
         <!-- ═══ CAUSAL CHAIN ═══ -->
-        <div id="causalChain" style="margin:6px 0;padding:7px 12px;background:#090f1e;border:1px solid #1e2a44;border-radius:8px;font-family:monospace;font-size:12px;display:none">
-          <div style="color:var(--dim);font-size:10px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px">G = Kp − 2 + ΣAᵢ</div>
-          <div style="display:flex;gap:16px;flex-wrap:wrap">
-            <div><span style="color:#6b82aa">Kp:</span> <span id="ccKpVal" style="color:#9bb1dc">—</span> → <span id="ccKpPart" style="font-weight:700">—</span></div>
-            <div><span style="color:#6b82aa">ΣAᵢ:</span> <span id="ccSumAi" style="font-weight:700">—</span></div>
-            <div style="border-left:1px solid #2a3b61;padding-left:16px"><span style="color:#6b82aa">G =</span> <span id="ccG" style="font-weight:800;font-size:14px">—</span></div>
-          </div>
-        </div>
 
         <div class="flex mono" style="margin-top:6px;gap:10px">
           <span id="nowKp" class="kbadge k-ok">Kp …</span>
@@ -668,7 +660,7 @@
 
         <!-- DELTA CARD v63 -->
         <div id="deltaCard" style="display:none;margin-top:6px;padding:6px 12px;background:#090f1e;border:1px solid #1e2a44;border-radius:10px;font-size:12px;display:flex;align-items:center;gap:6px">
-          <span style="color:var(--dim);font-size:10px;text-transform:uppercase;letter-spacing:.06em">Δ від учора</span>
+          <span style="color:var(--dim);font-size:10px;text-transform:uppercase;letter-spacing:.06em">ΔG (24h)</span>
           <span id="deltaCardVal" style="font-weight:700"></span>
           <span id="deltaCardDriver" style="color:var(--muted)"></span>
         </div>
@@ -680,6 +672,22 @@
           <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);margin-bottom:5px">📅 Прогноз G на сьогодні · Kp — прогноз NOAA, G nowCard — факт</div>
           <div id="dayForecastSlots" style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px"></div>
           <div id="dayForecastSummary" style="font-size:12px;color:#9bb1dc;padding:5px 10px;background:#090f1e;border-radius:8px;border:1px solid #1a2a45;line-height:1.5;white-space:normal;overflow-wrap:break-word;word-break:break-word;overflow:hidden;max-width:100%"></div>
+        </div>
+
+        <!-- ═══ CAUSAL CHAIN — над таблицею компонентів ═══ -->
+        <div id="causalChain" style="margin:10px 0 0;padding:8px 12px;background:#070d1c;border:1px solid #1a2a44;border-radius:8px;font-family:monospace;font-size:12px;display:none">
+          <div style="color:var(--dim);font-size:10px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Як зібрався G</div>
+          <div style="display:grid;grid-template-columns:auto auto auto auto;gap:4px 12px;align-items:center">
+            <span style="color:#6b82aa">G = (Kp−2)</span>
+            <span style="color:#6b82aa">+</span>
+            <span style="color:#6b82aa">ΣAᵢ</span>
+            <span style="color:#6b82aa">=</span>
+            <span id="ccKpPart" style="font-weight:700;font-size:13px">—</span>
+            <span style="color:#3a5070">+</span>
+            <span id="ccSumAi" style="font-weight:700;font-size:13px">—</span>
+            <span id="ccG" style="font-weight:800;font-size:15px">—</span>
+          </div>
+          <div style="margin-top:4px;font-size:10px;color:#3a5070">Kp = <span id="ccKpVal">—</span></div>
         </div>
 
         <!-- ═══ DRIVERS (топ-фактори по |ΔG|) ═══ -->
@@ -2851,7 +2859,7 @@ function renderCurrentPanel(){
           dcEl.style.gap = '6px';
           if(dvEl) dvEl.innerHTML =
             `<span style="color:${dCol};font-size:13px;font-weight:700">${dSign}${dG.toFixed(2)}</span>` +
-            `<span style="color:var(--dim);font-size:10px;margin-left:2px">від учора G=${yG.toFixed(2)}</span>`;
+            `<span style="color:var(--dim);font-size:10px;margin-left:2px">G вчора: ${yG.toFixed(2)}</span>`;
           if(ddEl){
             if(diffs.length){
               ddEl.innerHTML = diffs.map(d=>{
