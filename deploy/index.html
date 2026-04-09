@@ -169,7 +169,7 @@
     /* Розклад завжди видимий */
     #gDecompBlock { display:block !important; }
     /* Таблиця завжди видима */
-    #gDecompTable { display:table !important; }
+    #gDecompTable { }
     /* Science Bar */
     #scienceBar{ display:flex; flex-wrap:wrap; gap:6px 12px; margin:10px 0 0; padding:8px 12px; background:var(--card2); border:1px solid var(--border); border-radius:10px; font-size:var(--fs-sm) }
     .sci-item{ display:flex; align-items:center; gap:4px; color:var(--dim) }
@@ -569,7 +569,7 @@
             <span style="flex:1;font-size:9px;color:var(--faint);text-align:center" id="grVswLbl">Vsw</span>
           </div>
         </div>
-        <span style="color:var(--faint);font-size:10px">Формула: G = Kp − 2 + Lᵢ + Mᵢ + eᵢ + Pᵢ</span>
+        <span style="color:var(--faint);font-size:10px">Формула: G = Kp − 2 + Lᵢ + Mᵢ + eᵢ + Pᵢ + Dᵢ</span>
         <span style="font-size:10px;color:var(--dim)">Стан джерел: <span id="srcKpObs" title="Kp obs" style="font-family:monospace">…</span> Kp <span id="srcKpFcst" title="Kp fcst" style="font-family:monospace">…</span> 3d <span id="src27Day" title="27-day" style="font-family:monospace">…</span> 27d <span id="srcDst" title="Dst" style="font-family:monospace">…</span> Dst <span id="srcSn" title="Wolf Sn" style="font-family:monospace">…</span> Sn <span id="srcBz" title="Bz" style="font-family:monospace">…</span> Bz</span>
       </div>
     </div>
@@ -622,21 +622,39 @@
           <div id="nowGcat" class="gcat">—</div>
         </div>
 
-        <!-- C-SCORE v63 -->
-        <div id="cScoreBlock" style="margin-top:8px;padding:8px 12px;background:#090f1e;border:1px solid #1e2a44;border-radius:10px;font-size:12px">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px">
-            <span style="color:var(--dim);font-size:10px;text-transform:uppercase;letter-spacing:.06em">C — Впевненість моделі</span>
-            <span id="cScoreGrade" style="font-size:11px;font-weight:700;color:#9bb1dc">…</span>
-          </div>
-          <div id="cScoreBar" style="height:5px;background:#1e2a44;border-radius:3px;overflow:hidden;margin-bottom:5px">
-            <div id="cScoreBarFill" style="height:100%;width:0%;background:#9bb1dc;border-radius:3px;transition:width .5s"></div>
-          </div>
-          <div id="cScoreDrivers" style="display:flex;flex-wrap:wrap;gap:4px"></div>
+        <!-- SUMMARY + ACTION (primary signals first) -->
+        <div id="nowSummary" style="margin-top:6px;font-size:14px;color:#b7c7ea"></div>
+
+        <div id="actionBlock" style="display:none;margin-top:6px;padding:8px 12px;background:#090f1e;border:1px solid #1a2a45;border-radius:10px;font-size:12px;line-height:1.4">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);margin-bottom:4px">🎯 Рекомендація</div>
+          <div id="actionDo" style="margin-bottom:2px"></div>
+          <div id="actionAvoid"></div>
         </div>
 
+        <!-- DELTA (compact) -->
+        <div id="deltaCard" style="display:none;margin-top:6px;padding:4px 10px;background:#090f1e;border:1px solid #1e2a44;border-radius:8px;font-size:11px;display:flex;align-items:center;gap:6px">
+          <span style="color:var(--dim);font-size:9px;text-transform:uppercase;letter-spacing:.05em">Δ учора</span>
+          <span id="deltaCardVal" style="font-weight:700"></span>
+          <span id="deltaCardDriver" style="color:var(--muted)"></span>
+          <span style="color:#1e2a44;margin:0 2px">│</span>
+          <span style="color:var(--dim);font-size:9px;text-transform:uppercase;letter-spacing:.05em">Δ 3г</span>
+          <span id="deltaCard3h" style="display:none;align-items:center;gap:3px;font-size:11px"></span>
+        </div>
+
+        <!-- C-SCORE (secondary) -->
+        <div id="cScoreBlock" style="margin-top:6px;padding:6px 10px;background:#090f1e;border:1px solid #1e2a44;border-radius:8px;font-size:11px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px">
+            <span style="color:var(--dim);font-size:9px;text-transform:uppercase;letter-spacing:.05em">Впевненість</span>
+            <span id="cScoreGrade" style="font-size:10px;font-weight:700;color:#9bb1dc">…</span>
+          </div>
+          <div id="cScoreBar" style="height:4px;background:#1e2a44;border-radius:2px;overflow:hidden;margin-bottom:4px">
+            <div id="cScoreBarFill" style="height:100%;width:0%;background:#9bb1dc;border-radius:2px;transition:width .5s"></div>
+          </div>
+          <div id="cScoreDrivers" style="display:flex;flex-wrap:wrap;gap:3px"></div>
+        </div>
 
         <!-- PROB LAYER v68 -->
-        <div id="probNowBlock" style="margin-top:8px;display:none">
+        <div id="probNowBlock" style="margin-top:6px;display:none">
           <div class="prob-row" id="probNowRow">
             <div class="prob-cell" id="probCellSoft">
               <div class="prob-k">Ризик дня</div>
@@ -653,25 +671,6 @@
           </div>
         </div>
 
-        <!-- DELTA CARD v63 -->
-        <div id="deltaCard" style="display:none;margin-top:6px;padding:6px 12px;background:#090f1e;border:1px solid #1e2a44;border-radius:10px;font-size:12px;display:flex;align-items:center;gap:6px">
-          <span style="color:var(--dim);font-size:10px;text-transform:uppercase;letter-spacing:.06em">Δ від учора</span>
-          <span id="deltaCardVal" style="font-weight:700"></span>
-          <span id="deltaCardDriver" style="color:var(--muted)"></span>
-          <span style="color:#1e2a44;margin:0 2px">│</span>
-          <span style="color:var(--dim);font-size:10px;text-transform:uppercase;letter-spacing:.06em">Δ 3г</span>
-          <span id="deltaCard3h" style="display:none;align-items:center;gap:3px;font-size:12px"></span>
-        </div>
-
-        <div id="nowSummary" style="margin-top:6px;font-size:14px;color:#b7c7ea"></div>
-
-        <!-- ═══ DO / AVOID ACTION BLOCK ═══ -->
-        <div id="actionBlock" style="display:none;margin-top:8px;padding:10px 12px;background:#090f1e;border:1px solid #1a2a45;border-radius:10px;font-size:12px;line-height:1.5">
-          <div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);margin-bottom:6px">🎯 Рекомендація дня</div>
-          <div id="actionDo" style="margin-bottom:4px"></div>
-          <div id="actionAvoid"></div>
-        </div>
-
         <!-- ═══ ПРОГНОЗ НА ДЕНЬ (3h-слоти + підсумок) ═══ -->
         <div id="dayForecastBlock" style="margin-top:10px;display:none">
           <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);margin-bottom:5px">📅 Прогноз G на сьогодні · Kp — прогноз NOAA, G nowCard — факт</div>
@@ -683,19 +682,22 @@
         <div id="gDecompBlock" style="margin-top:10px;">
           <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);margin-bottom:5px">Розклад G‑індексу</div>
           <div id="gDecompBar" style="display:flex;align-items:center;gap:4px;min-height:28px;flex-wrap:wrap;overflow:hidden;max-width:100%"></div>
-          <!-- Flow canvas: частинки течуть від chips → G -->
-          <canvas id="gFlowCanvas" width="460" height="90" style="width:100%;height:90px;display:block;margin:6px 0 4px;border-radius:8px;background:rgba(10,16,32,0.6);"></canvas>
           <div id="gDecompFactors" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"></div>
-          <!-- Таблиця розкладу G (заповнюється JS) -->
-          <table id="gDecompTable" style="width:100%;border-collapse:collapse;font-size:12px;margin-top:10px;table-layout:fixed">
-            <colgroup><col style="width:28%"><col style="width:18%"><col style="width:54%"></colgroup>
-            <thead><tr style="border-bottom:1px solid #1e2f52">
-              <th style="padding:3px 8px;text-align:left;color:var(--dim);font-size:10px;font-weight:500">КОМПОНЕНТ</th>
-              <th style="padding:3px 8px;text-align:center;color:var(--dim);font-size:10px;font-weight:500">ЗНАЧЕННЯ</th>
-              <th style="padding:3px 8px;text-align:left;color:var(--dim);font-size:10px;font-weight:500;word-break:break-word">ЩО ЦЕ</th>
-            </tr></thead>
-            <tbody id="gDecompTableBody"></tbody>
-          </table>
+          <details style="margin-top:6px">
+            <summary style="cursor:pointer;color:var(--dim);font-size:10px;text-transform:uppercase;letter-spacing:.05em">▸ Деталі розкладу</summary>
+            <!-- Flow canvas: частинки течуть від chips → G -->
+            <canvas id="gFlowCanvas" width="460" height="90" style="width:100%;height:90px;display:block;margin:6px 0 4px;border-radius:8px;background:rgba(10,16,32,0.6);"></canvas>
+            <!-- Таблиця розкладу G (заповнюється JS) -->
+            <table id="gDecompTable" style="width:100%;border-collapse:collapse;font-size:12px;margin-top:10px;table-layout:fixed">
+              <colgroup><col style="width:28%"><col style="width:18%"><col style="width:54%"></colgroup>
+              <thead><tr style="border-bottom:1px solid #1e2f52">
+                <th style="padding:3px 8px;text-align:left;color:var(--dim);font-size:10px;font-weight:500">КОМПОНЕНТ</th>
+                <th style="padding:3px 8px;text-align:center;color:var(--dim);font-size:10px;font-weight:500">ЗНАЧЕННЯ</th>
+                <th style="padding:3px 8px;text-align:left;color:var(--dim);font-size:10px;font-weight:500;word-break:break-word">ЩО ЦЕ</th>
+              </tr></thead>
+              <tbody id="gDecompTableBody"></tbody>
+            </table>
+          </details>
         </div>
 
         <!-- ═══ ЯК ЧИТАТИ G (людський блок) ═══ -->
@@ -726,9 +728,12 @@
         </div>
 
         <!-- Гауж + Фаза Місяця -->
-        <div id="gaugeMoonWrap" style="margin-top:10px;display:none">
-          <svg id="gaugeMoonSvg" width="100%" viewBox="0 0 480 90" style="display:block;width:100%;overflow:visible"></svg>
+        <details style="margin-top:8px">
+          <summary style="cursor:pointer;color:var(--dim);font-size:10px;text-transform:uppercase;letter-spacing:.05em">▸ Візуалізація G + Місяць</summary>
+          <div id="gaugeMoonWrap" style="margin-top:6px;display:none">
+            <svg id="gaugeMoonSvg" width="100%" viewBox="0 0 480 90" style="display:block;width:100%;overflow:visible"></svg>
         </div>
+        </details>
 
         <!-- Bar chart Kp removed -->
       </section>
