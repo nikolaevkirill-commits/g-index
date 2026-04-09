@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд</title>
+  <title>G-Index — Космофізичний дашборд v68</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -476,41 +476,14 @@
     .risk-elevated .prob-v{color:#fca474}.risk-high .prob-v{color:#ff6b6b}
     .risk-low{border-color:rgba(43,212,125,.3)}.risk-moderate{border-color:rgba(255,204,0,.3)}
     .risk-elevated{border-color:rgba(252,164,116,.3)}.risk-high{border-color:rgba(255,107,107,.3)}
-  </style>
 
-  <meta name="theme-color" content="#0b1220">
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <!-- Астро бібліотека: фаза Місяця -->
-  <script src="https://cdn.jsdelivr.net/npm/astronomy-engine@2.1.19/astronomy.browser.min.js" defer></script>
-</head>
-<body>
-  <header>
-    <div class="flex" style="gap:12px">
-      <div>
-        <h1 id="headerTitle">Космофізичний дашборд</h1>
-        <div class="sub" id="headerSub">Геомагнітний прогноз · Панчанга · Персональний цикл &nbsp;<span style="color:var(--faint);font-size:10px">R&D / Advisory</span></div>
-      </div>
-      <div class="right flex" style="flex-wrap:wrap;gap:6px">
-        <span id="tierBadge" onclick="PAYWALL.tier()==='free'?PaywallModal.show('G-Index Premium','basic'):null"
-          style="display:inline-block;font-size:11px;font-weight:700;padding:3px 9px;border-radius:6px;
-          vertical-align:middle;letter-spacing:.05em;cursor:pointer;background:#1e2a44;color:#6b82aa">Free</span>
-        <button id="btnRefresh">↻ Оновити</button>
-        <button id="btnShare" title="Поділитись поточним G-станом" onclick="shareGState()" style="background:#1e2a44;color:#9bb1dc;border:1px solid var(--border2)">📤</button>
-        <button class="lang-btn active" id="btnLang" title="Switch language / Змінити мову">UA</button>
-        <button class="lang-btn" id="btnG2Watch" style="border-color:var(--faint);color:var(--dim);font-size:12px" title="Симулятор G — внизу сторінки">🧮</button>
-        <div class="autoref-bar" style="margin-top:0">
-          <span>Авто:</span>
-          <select class="autoref-sel" id="selInterval">
-            <option value="0">Вимк.</option>
-            <option value="5">5 хв</option>
-            <option value="10" selected>10 хв</option>
-            <option value="30">30 хв</option>
-          </select>
-          <span class="autoref-badge off" id="autorefStatus">● вимкн.</span>
-          <span id="dataTimestamp" style="font-size:10px;color:var(--faint);margin-left:4px"></span>
-        </div>
-        <span class="pill" id="stamp" style="font-size:11px">—</span>
+    /* ===== Integrated production layout v78 ===== */
+    .top-shell{display:grid;grid-template-columns:1.45fr .85fr;gap:16px;align-items:start;margin-top:8px}
+    .side-stack{display:grid;gap:16px}
+    .summary-shell{display:grid;gap:16px}
+    .analytics-shell{margin-top:16px}
+    .analytics-tabs{display:flex;gap:4px;flex-wr  <main>
+<span class="pill" id="stamp" style="font-size:11px">—</span>
       </div>
     </div>
   </header>
@@ -562,40 +535,19 @@
           </div>
           <div style="display:flex;gap:4px;margin-top:3px">
             <span style="flex:1;font-size:9px;color:var(--faint);text-align:center" id="grKpLbl">Kp</span>
-            <span style="flex:1;font-size:9px;color:var(--faint);text-align:center" id="grDstLbl">Dst</span>
+            <span style="flex:1;fo
+
+nt-size:9px;color:var(--faint);text-align:center" id="grDstLbl">Dst</span>
             <span style="flex:1;font-size:9px;color:var(--faint);text-align:center" id="grBzLbl">Bz</span>
             <span style="flex:1;font-size:9px;color:var(--faint);text-align:center" id="grVswLbl">Vsw</span>
           </div>
         </div>
         <span style="color:var(--faint);font-size:10px">Формула: G = Kp − 2 + Lᵢ + Mᵢ + eᵢ + Pᵢ</span>
-        <span style="font-size:10px;color:var(--dim)">Стан джерел: <span id="srcKpObs" title="Kp obs" style="font-family:monospace">…</span> Kp <span id="srcKpFcst" title="Kp fcst" style="font-family:monospace">…</span> 3d <span id="src27Day" title="27-day" style="font-family:monospace">…</span> 27d <span id="srcDst" title="Dst" style="font-family:monospace">…</span> Dst <span id="srcSn" title="Wolf Sn" style="font-family:monospace">…</span> Sn <span id="srcBz" title="Bz" style="font-family:monospace">…</span> Bz</span>
-      </div>
-    </div>
+        <span style="font-size:10px;color:var(--dim)">Стан джерел: <span id="srcKpObs" title="Kp obs" style="font-family:monospace">…</span> Kp <span id="srcKpFcst" title="Kp fcst" style="font-family:monospace">…</span> 3d <span id="src27Day" title="27-day" style="font-family:monospace">…</span> 27d <span id="srcDst" title="Dst" style=
 
-
-    <!-- ═══ G INDEX TOP ROW ═══ -->
-    <!-- gTopRow hidden: primary G = nowG in nowCard -->
-    <div id="gTopRow" style="display:none">
-      <span id="gTopBadge" class="gbadge" style="font-size:22px;padding:7px 14px;min-width:110px">G …</span>
-      <div id="gTopCat" style="font-size:var(--fs-lg);font-weight:600;line-height:1.2">—</div>
-      <span id="gTopSummary" style="font-size:var(--fs-md);color:var(--muted);margin-left:4px"></span>
-    </div>
-    <!-- ═══ PROFILE MODE ═══ -->
-    <div id="profileBar">
-      <span style="font-size:11px;color:var(--dim);min-width:60px">Профіль:</span>
-      <button class="profile-btn" data-p="med"  onclick="setProfile('med')" >🏥 Медик</button>
-      <button class="profile-btn" data-p="pilot" onclick="setProfile('pilot')">✈ Пілот</button>
-      <button class="profile-btn" data-p="trader" onclick="setProfile('trader')">📈 Трейдер</button>
-      <button class="profile-btn" data-p="mil"  onclick="setProfile('mil')" >🎖 Військовий</button>
-      <button class="profile-btn" data-p="off"  onclick="setProfile('off')" style="color:#3a5a7a">✕ Вимк.</button>
-    </div>
-    <div id="profileRec"></div>
-
-    <!-- Двоколонковий лейаут: Поточний стан | Панчанга + Особистий -->
-    <div id="mainGrid">
-
-      <!-- ПОТОЧНИЙ СТАН -->
-      <section class="card" id="nowCard">
+    <div class="top-shell">
+      <div class="summary-shell">
+        <section class="card" id="nowCard">
         <div class="now-top">
           <h2 style="margin:0">Поточний стан <span id="nowEffLabel" class="muted" style="font-weight:400">(—)</span></h2>
           <div class="now-right">
@@ -747,9 +699,17 @@
 
         <!-- Bar chart Kp removed -->
       </section>
-
-      <!-- PANCHANGA — компактна права колонка -->
-      <section class="card" id="panchCard">
+      </div>
+      <div class="side-stack">
+        <section class="card science-card">
+          <div class="section-head">
+            <span class="label">Science / context</span>
+            <span class="decision-note">Raw inputs + source freshness</span>
+          </div>
+          <div id="scienceBarProxy"></div>
+          <div id="scienceBarMount"></div>
+        </section>
+        <section class="card" id="panchCard">
         <div class="flex" style="margin-bottom:8px">
           <h2 style="margin:0;font-size:16px">Панчанга <span class="muted" style="font-weight:400;font-size:13px">— хронобіол. стан доби</span></h2>
           <span class="pill right" id="panchDate" style="font-size:12px">—</span>
@@ -759,13 +719,11 @@
         </div>
         <div style="margin-top:6px;font-size:12px" id="panchNote"></div>
       </section>
-
-      <!-- ПЕРСОНАЛЬНИЙ РОЗРАХУНОК — правий стовпець, рядок 2 -->
-      <section class="card" id="personalCard">
+        <section class="card" id="personalCard">
       <!-- Заголовок + кнопка -->
       <div class="flex" style="margin-bottom:8px">
         <div>
-          <h2 style="margin:0;font-size:16px">👤 Особистий прогноз
+          <h2 style="margin:0;font-size:16px">👤 Особистий прогноз <span class="lab-tag">Lab</span>
             <span class="muted" style="font-weight:400;font-size:12px" id="pNameLabel"></span>
           </h2>
           <div class="small muted" style="margin-top:2px" id="personalCardSub">Місячна стоянка · Сприятливість дня · Планетарний цикл</div>
@@ -817,8 +775,18 @@
         <div class="muted small">Натисніть «✎ Дані» і введіть дату народження.</div>
       </div>
     </section>
-    </div><!-- /grid -->
+      </div>
+    </div>
 
+    <section class="analytics-shell">
+      <div class="analytics-tabs">
+        <button class="analytics-tabbtn active" onclick="switchIntegratedTab('3d')" id="itBtn3d">📅 3 дні</button>
+        <button class="analytics-tabbtn" onclick="switchIntegratedTab('27d')" id="itBtn27d">📈 27 днів</button>
+        <button class="analytics-tabbtn" onclick="switchIntegratedTab('backtest')" id="itBtnBacktest">📊 Backtest</button>
+        <button class="analytics-tabbtn" onclick="switchIntegratedTab('sources')" id="itBtnSources">📡 Джерела</button>
+        <button class="analytics-tabbtn" onclick="switchIntegratedTab('tech')" id="itBtnTech">📐 Method</button>
+      </div>
+      <div class="analytics-panel active" id="itPanel3d">
     <!-- 3 ДНІ -->
     <div class="swipe-hint" style="display:none" id="swipeHint3">Прокрутіть таблицю</div>
     <section class="card" id="threeCard">
@@ -843,6 +811,9 @@ Kp: 3-год індекс геомагнітної активності (0–9)
       <div id="threeError" class="err small"></div>
     </section>
 
+
+      </div>
+      <div class="analytics-panel" id="itPanel27d">
     <!-- 45 ДНІВ -->
     <div class="swipe-hint" style="display:none" id="swipeHint27">Прокрутіть таблицю</div>
     <section class="card" id="twentysevenCard">
@@ -904,6 +875,9 @@ Kp: 3-год індекс геомагнітної активності (0–9)
 </div><!-- /table27Wrap -->
       </section>
 
+
+      </div>
+      <div class="analytics-panel" id="itPanelBacktest">
     <!-- ═══ BACKTEST: порівняння G дашборду з Excel ═══ -->
     <details class="card" id="backtestCard">
       <summary><strong>📊 Backtest — порівняння G з Excel-бюлетенем</strong></summary>
@@ -938,6 +912,9 @@ Kp: 3-год індекс геомагнітної активності (0–9)
       </div>
     </details>
 
+
+      </div>
+      <div class="analytics-panel" id="itPanelSources">
     <!-- ═══ ДЖЕРЕЛА ДАНИХ + DISCLAIMER ═══ -->
     <details class="card" open>
       <summary><strong>📡 Джерела даних та статус моделі</strong></summary>
@@ -970,6 +947,9 @@ Kp: 3-год індекс геомагнітної активності (0–9)
       </div>
     </details>
 
+
+      </div>
+      <div class="analytics-panel" id="itPanelTech">
     <details class="card">
       <summary><strong>📐 Технічні деталі методики (для інженерів)</strong></summary>
       <div class="small" style="margin-top:8px">
@@ -1247,8 +1227,10 @@ Kp: 3-год індекс геомагнітної активності (0–9)
 
       </div>
     </details>
-  </main>
 
+      </div>
+    </section>
+  </main>
   <!-- ═══ СИМУЛЯТОР G ═══ -->
   <div id="g2watchPanel" style="max-width:1400px;margin:0 auto 16px;padding:0 16px;display:none">
     <div style="background:#111a2e;border:1px solid #1e2a44;border-radius:16px;padding:20px">
@@ -1336,9 +1318,49 @@ Kp: 3-год індекс геомагнітної активності (0–9)
   </div>
 
   <footer>
-    <div class="small">Дані Kp/Ap — NOAA SWPC; Ap↔Kp — GFZ/NOAA table; Dst — Kyoto WDC; Sn — SILSO/ROB; події — ICS; затемнення — Timeanddate/NASA; фази — Astronomy Engine (Meeus). Модель G: R&amp;D / Advisory — у валідації. SignMatch 76.3% (n=169, engine v14.6); G включає Dᵢ (Dst-компонент, синхронно з engine v14.6).</div>
+    <div class="small">Дані Kp/Ap — NOAA SWPC; Ap↔Kp — GFZ/NOAA table; Dst — Kyoto WDC; Sn — SILSO/ROB; події — ICS; затемнення — Timeanddate/NASA; фази — Astronomy Engine (Meeus). Модель G: R&amp;D / Advisory — у валідації. SignMatch 80.5% (n=169, engine v14.9); G включає Dᵢ (Dst-компонент, синхронно з engine v14.9).</div>
   </footer>
 
+"font-size:12px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em">Pᵢ Панчанга</span>
+            <span style="font-size:15px;font-weight:700" id="g2piVal">0</span>
+          </div>
+          <input type="range" id="g2pi" min="-4.4" max="3.6" step="0.4" value="0" oninput="syncG2()" style="width:100%;accent-color:#2bd47d">
+          <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--faint);margin-top:2px"><span>−4.4</span><span>0</span><span>+3.6</span></div>
+          <div class="small muted" style="margin-top:4px">Tithi+Vara+Nak+Yoga×0.4</div>
+        </div>
+
+      </div>
+
+      <!-- Результат -->
+      <div id="g2watchResult" style="background:#0a1428;border-radius:10px;padding:16px;min-height:60px"></div>
+
+      <div class="small muted" style="margin-top:10px">
+        Формула: G = Kp − 2 + (Lᵢ + Mᵢ + eᵢ + Pᵢ) · Значення розраховуються автоматично при переміщенні слайдерів · <a href="#" style="color:var(--faint)" onclick="el('g2watchPanel').style.display='none';return false">Згорнути</a>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <div class="small">Дані Kp/Ap — NOAA SWPC; Ap↔Kp — GFZ/NOAA table; Dst — Kyoto WDC; Sn — SILSO/ROB; події — ICS; затемнення — Timeanddate/NASA; фази — Astronomy Engine (Meeus). Модель G: R&amp;D / Advisory — у валідації. SignMatch 80.5% (n=169, engine v14.9); G включає Dᵢ (Dst-компонент, синхронно з engine v14.9).</div>
+  </footer>
+
+
+  <script>
+    function switchIntegratedTab(tab){
+      const panels={'3d':'itPanel3d','27d':'itPanel27d','backtest':'itPanelBacktest','sources':'itPanelSources','tech':'itPanelTech'};
+      const btns={'3d':'itBtn3d','27d':'itBtn27d','backtest':'itBtnBacktest','sources':'itBtnSources','tech':'itBtnTech'};
+      Object.entries(panels).forEach(([k,id])=>{const el=document.getElementById(id); if(el) el.classList.toggle('active', k===tab);});
+      Object.entries(btns).forEach(([k,id])=>{const el=document.getElementById(id); if(el) el.classList.toggle('active', k===tab);});
+      if(tab==='27d' && typeof toggle27View==='function'){ setTimeout(()=>toggle27View('chart'),0); }
+    }
+    document.addEventListener('DOMContentLoaded', ()=>{
+      const mount=document.getElementById('scienceBarMount');
+      const source=document.getElementById('scienceBar');
+      if(mount && source){ mount.appendChild(source); }
+      const panel=document.getElementById('sciMorePanel');
+      if(mount && panel){ mount.appendChild(panel); }
+    });
+  </script>
 <script>
 // ═══ v62: PAYWALL + PaywallModal stubs ═══
 const PAYWALL = {
@@ -1871,13 +1893,13 @@ function autoComputedExtras(dateUTC, kp=0){
 }
 
 // ═══ v26: DST → G-модифікатор (M_DST) ═══
-// DST < -50 нТл = помірна буря (узгоджено з engine v14.6), < -100 = сильна буря
+// DST < -50 нТл = помірна буря (узгоджено з engine v14.9), < -100 = сильна буря
 function computeDstModifier(){
   if(!window._lastDst) return {val:0, tip:'0 — Dst недоступний'};
   const dst = window._lastDst.dst;
   if(!isFinite(dst)) return {val:0, tip:'0 — Dst недоступний'};
   if(dst <= -100) return {val:-2, tip:`-2 — Dst=${dst} нТл (значна буря)`};
-  if(dst <= -50)  return {val:-1, tip:`-1 — Dst=${dst} нТл (помірна буря, engine v14.6)`};
+  if(dst <= -50)  return {val:-1, tip:`-1 — Dst=${dst} нТл (помірна буря, engine v14.9)`};
   return {val:0, tip:`0 — Dst=${dst} нТл (норма)`};
 }
 
@@ -2073,9 +2095,9 @@ function computeAi(dateTimeUTC, kp=0){
     Li = -3;
     lTip = `-3 — Амавасья (29-а тітхі, ΔL≈${phaseDeg.toFixed(0)}°)`;
   } else if (tithiIdxForLi === 14) {
-    // v14.6: Пурніма підсилює геомагнітний вплив при бурі (Cajochen 2013, Vencloviene 2015)
-    if (kp >= 7)      { Li = -2; lTip = `-2 — Пурніма + G3+ буря (Kp≥7): підсилення геомагн. впливу (v14.6)`; }
-    else if (kp >= 5) { Li = -1; lTip = `-1 — Пурніма + G1-G2 буря (5≤Kp<7): помірне підсилення (v14.6)`; }
+    // v14.9: Пурніма підсилює геомагнітний вплив при бурі (Cajochen 2013, Vencloviene 2015)
+    if (kp >= 7)      { Li = -2; lTip = `-2 — Пурніма + G3+ буря (Kp≥7): підсилення геомагн. впливу (v14.9)`; }
+    else if (kp >= 5) { Li = -1; lTip = `-1 — Пурніма + G1-G2 буря (5≤Kp<7): помірне підсилення (v14.9)`; }
     else              { Li = 0;  lTip = `0 — Пурніма (15-а тітхі, нейтральна при Kp<5 v14.2, ΔL≈${phaseDeg.toFixed(0)}°)`; }
   }
 
@@ -2162,14 +2184,14 @@ function computeAi(dateTimeUTC, kp=0){
   }
   const eiTotal = Math.round((ei + horaEi) * 10) / 10;
 
-  // Sn>150 корекція — синхронно з engine v14.6 (WEIGHTS.sn_high_pen = -0.4)
+  // Sn>150 корекція — синхронно з engine v14.9 (WEIGHTS.sn_high_pen = -0.4)
   const _snVal = window._lastWolfSn ? (window._lastWolfSn.sn ?? 0) : 0;
   const snPen  = _snVal > 150 ? -0.4 : 0;
 
   // v51: Bz/Vsw — інформаційний контекст, НЕ в canonical G (§13.2 Посібника)
   const Ai = Math.round((Li + Mi + eiTotal + Pi + snPen) * 10) / 10;
 
-  // Dᵢ — Dst component (A3+A4: офіційна частина ΣAᵢ, синхронно з engine v14.6)
+  // Dᵢ — Dst component (A3+A4: офіційна частина ΣAᵢ, синхронно з engine v14.9)
   // Застосовується тільки для поточного дня — майбутні дати Dst невідомий
   let Di = 0, diTip = '0 — Dst норма';
   const _diDateStr = fmtDate(dateTimeUTC);
@@ -2177,12 +2199,12 @@ function computeAi(dateTimeUTC, kp=0){
   if(_diDateStr === _todayStr && window._lastDst && isFinite(window._lastDst.dst)) {
     const dstVal = window._lastDst.dst;
     if(dstVal <= -100) { Di = -2; diTip = `-2 — Dst=${dstVal} нТл (значна буря, Kp≥7 еквівалент)`; }
-    else if(dstVal <= -50) { Di = -1; diTip = `-1 — Dst=${dstVal} нТл (помірна буря, engine v14.6)`; }
+    else if(dstVal <= -50) { Di = -1; diTip = `-1 — Dst=${dstVal} нТл (помірна буря, engine v14.9)`; }
     else { diTip = `0 — Dst=${dstVal} нТл (норма)`; }
   }
   const AiFull = Math.round((Ai + Di) * 10) / 10;
   const _snLabel = snPen !== 0 ? `+Sn` : '';
-  const explain = `\u03a3A\u1d62 = L\u1d62+M\u1d62+e\u1d62+P\u1d62+D\u1d62${snPen!==0?'+Sn':''} = ${Li}+${Mi}+${eiTotal}+${Pi}+${Di}${snPen!==0?'+'+snPen:''} = ${AiFull}` + (snPen!==0?`\n(Sn=${_snVal}>150: kp_pen${snPen} — engine v14.6)`:'') + (bzVal!==0||vswVal!==0?`\n(+Bz=${bzVal}, Vsw=${vswVal} — контекст, не в G)`:'');
+  const explain = `\u03a3A\u1d62 = L\u1d62+M\u1d62+e\u1d62+P\u1d62+D\u1d62${snPen!==0?'+Sn':''} = ${Li}+${Mi}+${eiTotal}+${Pi}+${Di}${snPen!==0?'+'+snPen:''} = ${AiFull}` + (snPen!==0?`\n(Sn=${_snVal}>150: kp_pen${snPen} — engine v14.9)`:'') + (bzVal!==0||vswVal!==0?`\n(+Bz=${bzVal}, Vsw=${vswVal} — контекст, не в G)`:'');
 
   return { Ai: AiFull, AiNoDst: Ai, Li, Mi, ei: eiTotal, eiBase: ei, horaEi, Pi, Di, bzVal, vswVal, phaseName, phaseDeg, lTip, mTip, eTip: eTipLines.join('\n'), pTip, diTip, explain };
 }
@@ -3356,7 +3378,39 @@ function renderPanchanga(dateUTC){
   }
 
 
-
+  const tAdv = "", vAdv = "", nAdv = "", yAdv = "", kAdv = "", rahuAdv = "";
+  const cells = [
+    { score: p.tithi.score,
+      label: 'Tithi — місячний день',
+      val:   p.tithi.name,
+      sub:   `${p.tithi.type} · PCL ${scoreSpan(p.tithi.score)} · ΔL≈${p.tithi.phaseDeg}°`,
+      adv:   tAdv },
+    { score: p.vara.score,
+      label: 'Vara — день тижня',
+      val:   p.vara.name,
+      sub:   `${p.vara.planet} · PCL ${scoreSpan(p.vara.score)}`,
+      adv:   vAdv },
+    { score: p.nakshatra.score,
+      label: 'Nakshatra — місячна стоянка',
+      val:   p.nakshatra.name,
+      sub:   `${p.nakshatra.type} · ${p.nakshatra.regent} · PCL ${scoreSpan(p.nakshatra.score)}`,
+      adv:   nAdv },
+    { score: p.yoga.score,
+      label: 'Yoga — резонанс Сонце–Місяць',
+      val:   p.yoga.name,
+      sub:   `PCL ${scoreSpan(p.yoga.score)}${p.yoga.isCritical?' · ⚠️ retro_end −3':''}`,
+      adv:   yAdv },
+    { score: p.karana.score,
+      label: 'Karana — половина місячного дня',
+      val:   p.karana.name,
+      sub:   `${p.karana.type} · PCL ${scoreSpan(p.karana.score)}`,
+      adv:   kAdv },
+    { score: p.rahu.active ? -1 : 0,
+      label: 'Rahu Kalam',
+      val:   p.rahu.active ? '⚠️ Активний зараз' : `${p.rahu.start}–${p.rahu.end} UTC`,
+      sub:   p.rahu.active ? `PCL ${scoreSpan(-1)} · до ${p.rahu.end} UTC` : `PCL ${scoreSpan(0)} · неактивний`,
+      adv:   rahuAdv }
+  ];
 
   function cellClass(s){
     if(s >= 1)  return 'panch-cell pcl-pos';
@@ -3504,7 +3558,7 @@ function renderPanchanga(dateUTC){
   </table>`;
 
   // Підсумок з усіх 6 параметрів (PCL) + Li/Mi/ei з G
-  const pclOnly = (p.tithi.score||0) + (p.vara.score||0) + (p.nakshatra.score||0) + (p.yoga.score||0) + (p.karana.score||0) + (p.rahu.score||0);
+  const pclOnly = cells.reduce((s,c)=>s+c.score, 0);
   const _kpForPanch = (lastWWV && isFinite(lastWWV.kNow)) ? lastWWV.kNow : (last3D && last3D.days && last3D.days[0] ? last3D.days[0].kpMax : 0);
   // v30: використовуємо noonUTC для узгодженості Pi/G з 3-day таблицею
   // (Panchanga display вище = real-time, але G/Pi summary = noon, як в таблиці)
@@ -5719,7 +5773,7 @@ function renderGDecomp(G, kp, ai) {
             :                'Нейтральна Панчанга'},
       {name:'🧲 Dᵢ', val:ai.Di,
         desc: ai.Di <= -2 ? `Значна геомагнітна буря (Dst≤−100 нТл)`
-            : ai.Di === -1 ? `Підтверджена буря (Dst≤−50 нТл, engine v14.6)`
+            : ai.Di === -1 ? `Підтверджена буря (Dst≤−50 нТл, engine v14.9)`
             :                'Dst норма — без штрафу'}
     ];
     let thtml = '';
@@ -6411,6 +6465,7 @@ function updateScienceBar(kp, ap, sn, ai, phaseName, phaseDeg, f107) {
     const fEl = _el('sciF107');
     const fCol = f107>200?'var(--bad)':f107>150?'var(--warn)':f107>100?'#ffdd88':'var(--ok)';
     fEl.innerHTML = `<span style="color:${fCol};font-weight:700">${f107}</span> sfu`;
+  }
   // P3: GeoRisk Bar update
   (function(){
     function _grColor(norm) {
@@ -6443,7 +6498,6 @@ function updateScienceBar(kp, ap, sn, ai, phaseName, phaseDeg, f107) {
     const _vswN = isFinite(_vswRaw) ? Math.max(0, (_vswRaw - 300) / 500) : 0;
     _setBar('grVsw', 'grVswLbl', _vswN, 'Vsw ' + (isFinite(_vswRaw) ? Math.round(_vswRaw) : '—'));
   })();
-  }
   // v26: M_DST indicator
   const dstMod = computeDstModifier();
   const mdstEl = _el('sciMdst');
@@ -6476,7 +6530,7 @@ const PROFILE_TEXT = {
     // gShift за віком: старший вік → нижчий поріг входу в "обережну" зону
     ageAdj: { '18': 0, '35': -0.3, '45': -0.6, '55': -1.0 },
     recs: {
-      '≤-3': 'СТОП: при G ≤ −3 зафіксовано зростання серцево-судинних подій до +25% (Stoupel 2014). Відкласти планові операції, підсилити моніторинг пацієнтів з аритміями.',
+      '≤-3': 'СТОП: при G ≤ −3 зафіксовано зростання серцево-судинних подій (HR×1.58, Vencloviene 2015, PMID:26068901). Відкласти планові операції, підсилити моніторинг пацієнтів з аритміями.',
       '-2':  'ОБЕРЕЖНО: геомагнітна збурення G2. Збільшити інтервал контролю АТ. Уникати елективних втручань у пацієнтів із коронарною патологією.',
       '-1':  'ПОМІРНО: незначне збурення. Стандартний протокол з підвищеною уважністю до нейрохірургічних пацієнтів.',
        '0':  'НОРМА: геомагнітний фон спокійний. Всі планові операції та процедури — без обмежень.',
@@ -7216,8 +7270,6 @@ async function handleBacktestFile(input) {
 <script>
 
 // ── Safe localStorage (Safari Private Mode guard) ──────────────────────────
-function lsGet(k, def=''){try{return localStorage.getItem(k)??def}catch{return def}}
-function lsSet(k,v){try{localStorage.setItem(k,v)}catch{}}
 function lsRem(k){try{localStorage.removeItem(k)}catch{}}
 
 // ── Mobile Bottom Nav ─────────────────────────────────────
