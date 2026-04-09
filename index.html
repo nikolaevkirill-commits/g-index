@@ -125,8 +125,6 @@
     .panch-score-pos{ color:var(--ok) }
     .panch-score-neg{ color:var(--bad) }
     .panch-score-neu{ color:var(--muted) }
-    .panch-do{ font-size:var(--fs-md); color:#7ec87e; margin-top:3px }
-    .panch-av{ font-size:var(--fs-md); color:#d47a7a; margin-top:2px }
     .autoref-bar{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:6px; font-size:var(--fs-md); color:var(--dim) }
     select.autoref-sel{ background:#0f1a2f; color:var(--text2); border:1px solid var(--border2); border-radius:8px; padding:4px 8px; font-size:var(--fs-md); cursor:pointer }
     .autoref-badge{ font-size:var(--fs-sm); padding:2px 8px; border-radius:999px; border:1px solid var(--border2); background:var(--card2); color:#63be7b }
@@ -3356,24 +3354,7 @@ function renderPanchanga(dateUTC){
     if(s < 0) return `<span class="panch-score-neg">${s}</span>`;
     return `<span class="panch-score-neu">0</span>`;
   }
-  function adviceHtml(adv){
-    if(!adv) return '';
-    const doLine  = adv.do     ? `<div class="panch-do">✓ ${adv.do}</div>`     : '';
-    const avLine  = adv.avoid  ? `<div class="panch-av">✗ ${adv.avoid}</div>`  : '';
-    return doLine + avLine;
-  }
 
-  const tAdv = TITHI_ADVICE[p.tithi.num - 1] || null;
-  const vAdv = VARA_ADVICE[dateUTC.getUTCDay()] || null;
-  const nAdv = NAKSHATRA_ADVICE[p.nakshatra.type] || null;
-  const yAdv = YOGA_ADVICE[p.yoga.num - 1] || null;
-
-  const kAdv = p.karana.isVishti
-    ? {do:'Очікування, спостереження', avoid:'Будь-які активні дії (абсолютне вето)'}
-    : {do: p.karana.note, avoid:''};
-  const rahuAdv = p.rahu.active
-    ? {do:'Оборонні/підтримуючі операції', avoid:'Нові бойові завдання, стратегічні рішення'}
-    : {do:'Обмежень немає', avoid:''};
 
   const cells = [
     { score: p.tithi.score,
@@ -3573,60 +3554,7 @@ function renderPanchanga(dateUTC){
     if(diffs.length) panchDiscrepancy = `<div style="margin-top:4px;font-size:11px;color:#ffa64d">⚠ G-індекс (noon UTC): ${diffs.join('; ')}</div>`;
   } catch(e){}
 
-  // v26: Розумна агрегація порад — пріоритет за PCL score, без протиріч
-  const advSources = [
-    {score: p.tithi.score, adv: tAdv, label:'Tithi'},
-    {score: p.vara.score, adv: vAdv, label:'Vara'},
-    {score: p.nakshatra.score, adv: nAdv, label:'Nakshatra'},
-    {score: p.yoga.score, adv: yAdv, label:'Yoga'},
-    {score: p.karana.score, adv: kAdv, label:'Karana'},
-    {score: p.rahu.active ? -1 : 0, adv: rahuAdv, label:'Rahu'}
-  ].filter(s => s.adv);
 
-  // Збираємо всі avoid-теми для фільтрації протиріч
-  const allAvoidWords = new Set();
-  advSources.forEach(s => {
-    if(s.adv.avoid) s.adv.avoid.split(/[,·]/).map(w=>w.trim().toLowerCase()).filter(Boolean).forEach(w => allAvoidWords.add(w));
-  });
-
-  // ✓ Поради: сортуємо за score (найвищий = найрелевантніший), фільтруємо протиріччя
-  const sortedDo = advSources
-    .filter(s => s.adv.do)
-    .sort((a,b) => b.score - a.score);
-
-  const finalDo = [];
-  const seenDoWords = new Set();
-  for(const s of sortedDo){
-    const doText = s.adv.do;
-    // Перевірка: чи не суперечить якомусь avoid
-    const doWords = doText.toLowerCase();
-    let contradicts = false;
-    for(const av of allAvoidWords){
-      if(av.length > 3 && doWords.includes(av)){ contradicts = true; break; }
-    }
-    if(contradicts) continue;
-    // Дедуплікація
-    const key = doText.slice(0,20).toLowerCase();
-    if(seenDoWords.has(key)) continue;
-    seenDoWords.add(key);
-    finalDo.push(doText);
-    if(finalDo.length >= 2) break; // max 2 поради
-  }
-
-  // ✗ Обмеження: тільки від параметрів з негативним score
-  const finalAvoid = [];
-  const seenAvWords = new Set();
-  for(const s of advSources.filter(x => x.score < 0).sort((a,b) => a.score - b.score)){
-    if(!s.adv.avoid) continue;
-    const key = s.adv.avoid.slice(0,20).toLowerCase();
-    if(seenAvWords.has(key)) continue;
-    seenAvWords.add(key);
-    finalAvoid.push(s.adv.avoid);
-    if(finalAvoid.length >= 2) break; // max 2 обмеження
-  }
-
-  const topDo = finalDo.join(' · ');
-  const topAv = finalAvoid.join(' · ');
 
   // v30: summaryLabel базується на G-індексі (classifyG), а не на totalPCL
   const _gNow = _kpForPanch - 2 + aiNow.Ai;
