@@ -5738,6 +5738,8 @@ function renderGDecomp(G, kp, ai) {
     {name:'Pᵢ', label:'Панчанга',   val:ai.Pi, tip:ai.pTip||''},
     ...(ai.Di !== 0 ? [{name:'Dᵢ', label:'Dst-буря', val:ai.Di, tip:ai.diTip||''}] : [])
   ];
+  // Sort by |contribution| desc — найбільший драйвер першим
+  factors.sort((a,b) => Math.abs(b.val) - Math.abs(a.val));
   let html = '';
   for(let fi=0; fi<factors.length; fi++) {
     const f = factors[fi];
@@ -5801,6 +5803,10 @@ function renderGDecomp(G, kp, ai) {
             :                'Dst норма — без штрафу'}
     ];
     let thtml = '';
+    // Kp-2 завжди першим, решта sorted by |val| desc
+    const kpRow = rows.shift();
+    rows.sort((a,b) => Math.abs(b.val) - Math.abs(a.val));
+    rows.unshift(kpRow);
     for(const r of rows) {
       const c = valCol(r.val);
       thtml += `<tr>
@@ -5817,6 +5823,29 @@ function renderGDecomp(G, kp, ai) {
     </tr>`;
     tbody.innerHTML = thtml;
   }
+
+  // ── Explainability: top driver summary ──
+  let explainEl = document.getElementById('gExplainBlock');
+  if(!explainEl) {
+    explainEl = document.createElement('div');
+    explainEl.id = 'gExplainBlock';
+    explainEl.style.cssText = 'margin-top:8px;padding:8px 12px;background:#090f1e;border:1px solid #1a2a45;border-radius:8px;font-size:12px;color:#9bb1dc;line-height:1.5';
+    block.appendChild(explainEl);
+  }
+  const allDrivers = [
+    {name:'Kp−2', val:kpPart},
+    {name:'Lᵢ Тітхі', val:ai.Li},
+    {name:'Mᵢ Затемн.', val:ai.Mi},
+    {name:'eᵢ Події', val:ai.ei},
+    {name:'Pᵢ Панчанга', val:ai.Pi},
+    {name:'Dᵢ Dst', val:ai.Di}
+  ].filter(d => d.val !== 0).sort((a,b) => Math.abs(b.val) - Math.abs(a.val));
+  const topD = allDrivers[0];
+  const chain = allDrivers.map(d => `<span style="color:${d.val>0?'#2bd47d':'#ff6b6b'}">${d.val>0?'+':''}${typeof d.val==='number'&&!Number.isInteger(d.val)?d.val.toFixed(1):d.val} ${d.name}</span>`).join(' · ');
+  const why = topD
+    ? `<strong style="color:#cfe0ff">Головний драйвер:</strong> ${topD.name} (${topD.val>0?'+':''}${typeof topD.val==='number'&&!Number.isInteger(topD.val)?topD.val.toFixed(1):topD.val})`
+    : 'Усі фактори нейтральні';
+  explainEl.innerHTML = `${why}<br><span style="font-size:11px;color:var(--dim)">${chain}</span>`;
   // Запустити flow анімацію
   startGFlowAnimation(G, kp, ai);
 }
