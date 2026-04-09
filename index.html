@@ -3356,38 +3356,7 @@ function renderPanchanga(dateUTC){
   }
 
 
-  const cells = [
-    { score: p.tithi.score,
-      label: 'Tithi — місячний день',
-      val:   p.tithi.name,
-      sub:   `${p.tithi.type} · PCL ${scoreSpan(p.tithi.score)} · ΔL≈${p.tithi.phaseDeg}°`,
-      adv:   tAdv },
-    { score: p.vara.score,
-      label: 'Vara — день тижня',
-      val:   p.vara.name,
-      sub:   `${p.vara.planet} · PCL ${scoreSpan(p.vara.score)}`,
-      adv:   vAdv },
-    { score: p.nakshatra.score,
-      label: 'Nakshatra — місячна стоянка',
-      val:   p.nakshatra.name,
-      sub:   `${p.nakshatra.type} · ${p.nakshatra.regent} · PCL ${scoreSpan(p.nakshatra.score)}`,
-      adv:   nAdv },
-    { score: p.yoga.score,
-      label: 'Yoga — резонанс Сонце–Місяць',
-      val:   p.yoga.name,
-      sub:   `PCL ${scoreSpan(p.yoga.score)}${p.yoga.isCritical?' · ⚠️ retro_end −3':''}`,
-      adv:   yAdv },
-    { score: p.karana.score,
-      label: 'Karana — половина місячного дня',
-      val:   p.karana.name,
-      sub:   `${p.karana.type} · PCL ${scoreSpan(p.karana.score)}`,
-      adv:   kAdv },
-    { score: p.rahu.active ? -1 : 0,
-      label: 'Rahu Kalam',
-      val:   p.rahu.active ? '⚠️ Активний зараз' : `${p.rahu.start}–${p.rahu.end} UTC`,
-      sub:   p.rahu.active ? `PCL ${scoreSpan(-1)} · до ${p.rahu.end} UTC` : `PCL ${scoreSpan(0)} · неактивний`,
-      adv:   rahuAdv }
-  ];
+
 
   function cellClass(s){
     if(s >= 1)  return 'panch-cell pcl-pos';
@@ -3535,7 +3504,7 @@ function renderPanchanga(dateUTC){
   </table>`;
 
   // Підсумок з усіх 6 параметрів (PCL) + Li/Mi/ei з G
-  const pclOnly = cells.reduce((s,c)=>s+c.score, 0);
+  const pclOnly = (p.tithi.score||0) + (p.vara.score||0) + (p.nakshatra.score||0) + (p.yoga.score||0) + (p.karana.score||0) + (p.rahu.score||0);
   const _kpForPanch = (lastWWV && isFinite(lastWWV.kNow)) ? lastWWV.kNow : (last3D && last3D.days && last3D.days[0] ? last3D.days[0].kpMax : 0);
   // v30: використовуємо noonUTC для узгодженості Pi/G з 3-day таблицею
   // (Panchanga display вище = real-time, але G/Pi summary = noon, як в таблиці)
