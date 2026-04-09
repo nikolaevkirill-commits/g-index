@@ -580,6 +580,7 @@
       <span id="gTopBadge" class="gbadge" style="font-size:22px;padding:7px 14px;min-width:110px">G …</span>
       <div id="gTopCat" style="font-size:var(--fs-lg);font-weight:600;line-height:1.2">—</div>
       <span id="gTopSummary" style="font-size:var(--fs-md);color:var(--muted);margin-left:4px"></span>
+      <span id="dataStatusBadge" style="margin-left:auto;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:700;letter-spacing:.05em;border:1px solid #2a3b61;background:#0a1020;color:#6b82aa">⏳ …</span>
     </div>
     <!-- ═══ PROFILE MODE ═══ -->
     <div id="profileBar">
@@ -657,9 +658,19 @@
           <span style="color:var(--dim);font-size:10px;text-transform:uppercase;letter-spacing:.06em">Δ від учора</span>
           <span id="deltaCardVal" style="font-weight:700"></span>
           <span id="deltaCardDriver" style="color:var(--muted)"></span>
+          <span style="color:#1e2a44;margin:0 2px">│</span>
+          <span style="color:var(--dim);font-size:10px;text-transform:uppercase;letter-spacing:.06em">Δ 3г</span>
+          <span id="deltaCard3h" style="display:none;align-items:center;gap:3px;font-size:12px"></span>
         </div>
 
         <div id="nowSummary" style="margin-top:6px;font-size:14px;color:#b7c7ea"></div>
+
+        <!-- ═══ DO / AVOID ACTION BLOCK ═══ -->
+        <div id="actionBlock" style="display:none;margin-top:8px;padding:10px 12px;background:#090f1e;border:1px solid #1a2a45;border-radius:10px;font-size:12px;line-height:1.5">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);margin-bottom:6px">🎯 Рекомендація дня</div>
+          <div id="actionDo" style="margin-bottom:4px"></div>
+          <div id="actionAvoid"></div>
+        </div>
 
         <!-- ═══ ПРОГНОЗ НА ДЕНЬ (3h-слоти + підсумок) ═══ -->
         <div id="dayForecastBlock" style="margin-top:10px;display:none">
@@ -725,7 +736,7 @@
       <!-- PANCHANGA — компактна права колонка -->
       <section class="card" id="panchCard">
         <div class="flex" style="margin-bottom:8px">
-          <h2 style="margin:0;font-size:16px">Панчанга <span class="muted" style="font-weight:400;font-size:13px">— хронобіол. стан доби</span></h2>
+          <h2 style="margin:0;font-size:16px">Панчанга <span class="muted" style="font-weight:400;font-size:13px">— хронобіол. стан доби · <span style="color:var(--alt)">Pᵢ</span> = зважена сума → ΣAᵢ</span></h2>
           <span class="pill right" id="panchDate" style="font-size:12px">—</span>
         </div>
         <div id="panchGrid">
@@ -2536,7 +2547,7 @@ function draw27dTable(){
       <td class="mono col-date"${isToday?' style="font-weight:700;color:var(--alt)"':''}>${ds}${isToday?' <span style="white-space:nowrap;color:var(--alt)">◀</span>':''}</td>
       <td style="min-width:60px">
         <span class="gbadge ${gcls} hint" tabindex="0" style="font-size:13px;padding:4px 8px;min-width:60px">G ${isFinite(G)?G.toFixed(2):'…'}<span class="hint-pop">${escapeHtml(gTip)}</span></span>
-        <div style="margin-top:2px;height:3px;border-radius:2px;background:#0a1020;overflow:hidden"><div style="height:100%;width:${Math.min(100,Math.max(4,isFinite(G)?(Math.abs(G)/4*100):4)).toFixed(0)}%;background:${G<=-2.5?'#ff4444':G<=-0.5?'#ffaa33':G>=0.5?'#2bd47d':'#9bb1dc'};transition:width .3s"></div></div>
+        <div style="margin-top:2px;height:3px;border-radius:2px;background:#0a1020;overflow:hidden"><div style="height:100%;width:${Math.min(100,Math.max(4,isFinite(G)?(Math.abs(G)/4*100):4)).toFixed(0)}%;background:${gColForG(G)};transition:width .3s"></div></div>
       </td>
       <td><span class="kbadge ${cls}">Kp ${kpUsed.toFixed(2)}${kpSuffix}</span></td>
       ${deltaCell}
@@ -2583,6 +2594,33 @@ function render27Day(rows, last3D){
   draw27dTable();
   draw27Chart();
 
+  // ── 27-day best/worst window insight ──
+  try {
+    const data = [..._27dComputed].sort((a,b) => a.ds < b.ds ? -1 : 1);
+    if (data.length >= 3) {
+      let bestAvg = -Infinity, worstAvg = Infinity, bestStart = 0, worstStart = 0;
+      for (let i = 0; i <= data.length - 3; i++) {
+        const avg = (data[i].G + data[i+1].G + data[i+2].G) / 3;
+        if (avg > bestAvg)  { bestAvg = avg; bestStart = i; }
+        if (avg < worstAvg) { worstAvg = avg; worstStart = i; }
+      }
+      const bFrom = data[bestStart].ds.slice(5), bTo = data[bestStart+2].ds.slice(5);
+      const wFrom = data[worstStart].ds.slice(5), wTo = data[worstStart+2].ds.slice(5);
+      let insightEl = document.getElementById('insight27d');
+      if (!insightEl) {
+        insightEl = document.createElement('div');
+        insightEl.id = 'insight27d';
+        insightEl.style.cssText = 'margin-top:8px;padding:6px 10px;background:#090f1e;border:1px solid #1a2a45;border-radius:8px;font-size:12px;display:flex;gap:12px;flex-wrap:wrap;align-items:center';
+        document.getElementById('twentysevenCard').appendChild(insightEl);
+      }
+      insightEl.innerHTML = `
+        <span style="color:var(--dim);font-size:10px;text-transform:uppercase;letter-spacing:.05em">Вікна 3 дні:</span>
+        <span style="color:#2bd47d">🟢 Найкраще: <b>${bFrom}—${bTo}</b> (G̅=${bestAvg.toFixed(1)})</span>
+        <span style="color:#ff6b6b">🔴 Найгірше: <b>${wFrom}—${wTo}</b> (G̅=${worstAvg.toFixed(1)})</span>
+      `;
+    }
+  } catch(e) { console.warn('27d insight:', e); }
+
   // Сортування по кліку на заголовок
   document.querySelectorAll('.th-sort').forEach(th=>{
     th.onclick = ()=>{
@@ -2620,6 +2658,21 @@ function badgeForK(k){
   const v = Number(k);
   const cls = v>=5 ? 'k-bad' : (v>=4 ? 'k-warn' : 'k-ok');
   return {text:`Kp ${isFinite(v)? v.toFixed(2) : '…'}`, cls:`kbadge ${cls}`};
+}
+// ── Unified G color scale (Point 5: normalize) ──
+function gColForG(g){
+  if(!isFinite(g)) return '#9bb1dc';
+  if(g <= -2.5) return '#ff4444';
+  if(g <= -0.5) return '#ffaa33';
+  if(g >= 0.5)  return '#2bd47d';
+  return '#9bb1dc';
+}
+function gBgForG(g){
+  if(!isFinite(g)) return 'rgba(155,177,220,0.07)';
+  if(g <= -2.5) return 'rgba(255,60,60,0.13)';
+  if(g <= -0.5) return 'rgba(255,160,50,0.10)';
+  if(g >= 0.5)  return 'rgba(43,212,125,0.10)';
+  return 'rgba(155,177,220,0.07)';
 }
 
 // ----------------------------- Рендер поточного -----------------------------
@@ -2790,12 +2843,22 @@ function renderCurrentPanel(){
     // grade label
     const gradeEl = document.getElementById('cScoreGrade');
     if(gradeEl) gradeEl.innerHTML = `<span style="color:${cs.gradeCol}">${cs.gradeLabel}</span> <span style="color:var(--dim);font-weight:400">${cs.pct}%</span>`;
-    // drivers pills
+    // drivers pills + breakdown
     const drEl = document.getElementById('cScoreDrivers');
     if(drEl){
-      drEl.innerHTML = cs.drivers.map(d =>
-        `<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:999px;background:#0f1a2f;border:1px solid ${d.col}22;font-size:10px;color:${d.col}">${d.txt}</span>`
-      ).join('');
+      // Categorize drivers: data quality vs model stability
+      const dataDrivers = cs.drivers.filter(d => /Kp.*джерело|Kp.*синтет|Kp.*27|Kp.*прогноз/.test(d.txt));
+      const modelDrivers = cs.drivers.filter(d => !dataDrivers.includes(d));
+      const dataQ = Math.round((1 - dataDrivers.reduce((s,d)=>s+d.d, 0)) * 100);
+      const modelS = Math.round((1 - modelDrivers.reduce((s,d)=>s+d.d, 0)) * 100);
+      const dqCol = dataQ >= 75 ? '#2bd47d' : dataQ >= 50 ? '#ffcc00' : '#ff6b6b';
+      const msCol = modelS >= 75 ? '#2bd47d' : modelS >= 50 ? '#ffcc00' : '#ff6b6b';
+      drEl.innerHTML =
+        `<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:999px;background:#0f1a2f;border:1px solid ${dqCol}33;font-size:10px;color:${dqCol}">📡 Дані ${dataQ}%</span>` +
+        `<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:999px;background:#0f1a2f;border:1px solid ${msCol}33;font-size:10px;color:${msCol}">🧮 Модель ${modelS}%</span>` +
+        cs.drivers.map(d =>
+          `<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:999px;background:#0f1a2f;border:1px solid ${d.col}22;font-size:10px;color:${d.col}">${d.txt}</span>`
+        ).join('');
     }
     // Delta card v64 — G delta + factor breakdown vs yesterday
     try {
@@ -2919,8 +2982,8 @@ function renderCurrentPanel(){
     if(isFinite(kUse) && kUse >= 5) parts.push(`⚠ Kp=${kUse.toFixed(1)} ≥ 5 → геомагнітна буря`);
     const tipText = parts.join('\n');
     // v26.2: storm override colors
-    const smCol = (isFinite(kUse) && kUse>=5) ? '#ff6b6b' : G<=-2.5?'#ff4444':G<=-1?'#ffaa33':G>=1?'#2bd47d':'#9bb1dc';
-    const smBg  = (isFinite(kUse) && kUse>=5) ? 'rgba(255,60,60,0.13)' : G<=-2.5?'rgba(255,60,60,0.13)':G<=-1?'rgba(255,160,50,0.10)':G>=1?'rgba(43,212,125,0.10)':'rgba(155,177,220,0.07)';
+    const smCol = (isFinite(kUse) && kUse>=5) ? '#ff6b6b' : gColForG(G);
+    const smBg  = (isFinite(kUse) && kUse>=5) ? 'rgba(255,60,60,0.13)' : gBgForG(G);
     const summaryEl = el('nowSummary');
     summaryEl.className = 'hint';
     summaryEl.setAttribute('tabindex','0');
@@ -2971,6 +3034,9 @@ function renderCurrentPanel(){
     updateSafeStateBanner(kUse != null ? kUse : NaN);
     renderDayForecast(last3D, kUse, ai);
     renderGDecomp(G, kUse, ai);
+    renderActionBlock(G, kUse, ai);
+    trackDeltaG3h(G);
+    updateDataStatus(lastWWV);
     renderProfileRec();
   }catch(e){ console.error('extras:', e); }
   // Science bar — окремий try щоб завжди оновлювався
@@ -2996,6 +3062,123 @@ function recommendG(g, kp){
   if(r === 0)  return {text:'➖ Нейтрально', style:'color:#9bb1dc'};
   if(r === 1)  return {text:'✅ Допустимо', style:'color:#63be7b'};
   return {text:'🌟 Оптимально', style:'color:#2bd47d;font-weight:700'};
+}
+
+// ═══ A: DATA STATUS (LIVE / STALE) ═══════════════════════════════════════════
+let _dataFetchedAt = null;
+function updateDataStatus(lastWWV) {
+  _dataFetchedAt = Date.now();
+  const badge = document.getElementById('dataStatusBadge');
+  if (!badge) return;
+  badge.textContent = '🟢 LIVE';
+  badge.style.color = '#2bd47d';
+  badge.style.borderColor = 'rgba(43,212,125,0.4)';
+}
+function markDataStale(minutesAgo) {
+  const badge = document.getElementById('dataStatusBadge');
+  if (!badge) return;
+  badge.textContent = `🟡 STALE (${minutesAgo} хв)`;
+  badge.style.color = '#e8b84b';
+  badge.style.borderColor = 'rgba(232,184,75,0.4)';
+}
+// Periodic check: if no update for 90min → stale
+setInterval(() => {
+  if (!_dataFetchedAt) return;
+  const age = Math.round((Date.now() - _dataFetchedAt) / 60000);
+  if (age >= 90) markDataStale(age);
+}, 60000);
+
+// ═══ C: ΔG 3h TRACKING ═════════════════════════════════════════════════════
+function trackDeltaG3h(G) {
+  if (!isFinite(G)) return;
+  const KEY = 'g_snapshots_3h';
+  const now = Date.now();
+  let snaps = [];
+  try { snaps = JSON.parse(localStorage.getItem(KEY) || '[]'); } catch(e) {}
+  snaps.push({ t: now, G: +G.toFixed(2) });
+  // Keep only last 24h of snapshots
+  const cutoff = now - 24 * 3600000;
+  snaps = snaps.filter(s => s.t > cutoff);
+  localStorage.setItem(KEY, JSON.stringify(snaps));
+  // Find snapshot ~3h ago (closest to 3h ± 30min window)
+  const target3h = now - 3 * 3600000;
+  let best = null, bestDiff = Infinity;
+  for (const s of snaps) {
+    const diff = Math.abs(s.t - target3h);
+    if (diff < 30 * 60000 && diff < bestDiff) { best = s; bestDiff = diff; }
+  }
+  // Update deltaCard with 3h delta
+  const dc3h = document.getElementById('deltaCard3h');
+  if (!dc3h) return;
+  if (best) {
+    const dG = G - best.G;
+    const dSign = dG >= 0 ? '+' : '';
+    const dCol = Math.abs(dG) < 0.1 ? '#6b82aa' : dG > 0 ? '#ff9966' : '#2bd47d';
+    const hAgo = Math.round((now - best.t) / 3600000 * 10) / 10;
+    dc3h.style.display = 'inline-flex';
+    dc3h.innerHTML = `<span style="color:${dCol};font-weight:700">${dSign}${dG.toFixed(2)}</span> <span style="color:var(--dim);font-size:10px">за ${hAgo}г</span>`;
+  } else {
+    dc3h.style.display = 'none';
+  }
+}
+
+// ═══ B: DO / AVOID ACTION BLOCK ═════════════════════════════════════════════
+function renderActionBlock(G, kp, ai) {
+  const block = document.getElementById('actionBlock');
+  if (!block || !isFinite(G)) { if(block) block.style.display='none'; return; }
+
+  const drivers = [
+    {name:'Kp', val:kp-2, emoji:'🌐'},
+    {name:'Фаза Місяця', val:ai.Li, emoji:'🌙'},
+    {name:'Затемнення', val:ai.Mi, emoji:'🌑'},
+    {name:'Події', val:ai.ei, emoji:'📅'},
+    {name:'Панчанга', val:ai.Pi, emoji:'🕉'},
+    {name:'Dst', val:ai.Di, emoji:'🧲'}
+  ].filter(d => d.val !== 0);
+
+  const pos = drivers.filter(d => d.val > 0).sort((a,b) => b.val - a.val);
+  const neg = drivers.filter(d => d.val < 0).sort((a,b) => a.val - b.val);
+
+  let doItems = [], avoidItems = [];
+  const r = Math.round(G);
+
+  // Context-aware recommendations
+  if (r >= 1) {
+    doItems.push('Планові важливі рішення');
+    doItems.push('Складні переговори і зустрічі');
+    if (pos.length) doItems.push(`Сприяє: ${pos.map(d=>d.emoji+d.name).join(', ')}`);
+  } else if (r === 0) {
+    doItems.push('Стандартний режим роботи');
+    doItems.push('Планування без обмежень');
+  } else if (r === -1) {
+    doItems.push('Рутинні задачі');
+    avoidItems.push('Критичні рішення під тиском');
+  } else if (r === -2) {
+    doItems.push('Лише необхідні справи');
+    avoidItems.push('Нові проєкти, ризиковані дії');
+    if (neg.length) avoidItems.push(`Тиснуть: ${neg.map(d=>d.emoji+d.name).join(', ')}`);
+  } else {
+    avoidItems.push('Будь-які важливі рішення');
+    avoidItems.push('Фізичне навантаження, ризик');
+    if (neg.length) avoidItems.push(`Головний фактор: ${neg[0].emoji}${neg[0].name}`);
+  }
+
+  // Storm override
+  if (isFinite(kp) && kp >= 5) {
+    avoidItems = ['Критичні рішення', 'Складні переговори', `⚡ Kp=${kp.toFixed(1)} — геомагнітна буря`];
+    doItems = ['Відпочинок, мінімальний ритм'];
+  }
+
+  const doHTML = doItems.length
+    ? `<span style="color:#2bd47d;font-weight:700;font-size:11px">✅ DO:</span> ${doItems.map(i=>`<span style="color:#9bb1dc">${i}</span>`).join(' · ')}`
+    : '';
+  const avHTML = avoidItems.length
+    ? `<span style="color:#ff6b6b;font-weight:700;font-size:11px">⛔ AVOID:</span> ${avoidItems.map(i=>`<span style="color:#9bb1dc">${i}</span>`).join(' · ')}`
+    : '';
+
+  block.style.display = 'block';
+  document.getElementById('actionDo').innerHTML = doHTML;
+  document.getElementById('actionAvoid').innerHTML = avHTML;
 }
 
 // ----------------------------- Sparkline SVG --------------------------------
@@ -3621,6 +3804,25 @@ function renderPanchanga(dateUTC){
   document.getElementById('panchCard').style.borderColor = _panchBorderColor;
 
   el_('panchGrid').innerHTML = html;
+
+  // ── Panchanga quick stats ──
+  try {
+    const pScores = [p.tithi.score, p.vara.score, p.nakshatra.score, p.yoga.score, p.karana.score, p.rahu.active ? -1 : 0];
+    const nPos = pScores.filter(s => s > 0).length;
+    const nNeg = pScores.filter(s => s < 0).length;
+    const nNeu = pScores.filter(s => s === 0).length;
+    const statsEl = document.createElement('div');
+    statsEl.style.cssText = 'margin-bottom:6px;font-size:11px;display:flex;gap:8px;align-items:center;flex-wrap:wrap';
+    statsEl.innerHTML = `
+      <span style="color:#2bd47d">🟢 ${nPos} сприят.</span>
+      <span style="color:#ff6b6b">🔴 ${nNeg} несприят.</span>
+      <span style="color:#6b82aa">⚪ ${nNeu} нейтр.</span>
+      <span style="color:var(--dim)">│</span>
+      <span style="color:var(--alt);font-weight:700">Pᵢ = ${aiNow.Pi >= 0 ? '+' : ''}${aiNow.Pi}</span>
+    `;
+    const grid = document.getElementById('panchGrid');
+    if (grid && grid.firstChild) grid.insertBefore(statsEl, grid.firstChild);
+  } catch(e) {}
   el_('panchNote').innerHTML = summaryHtml +
     '<div class="small muted" style="margin-top:8px">ℹ️ Підсумок базується на G-індексі = Kp − 2 + ΣAᵢ (Lᵢ + Mᵢ + eᵢ + Pᵢ). R&D: advisory, Kpanch=1.00</div>';
 }
@@ -3782,6 +3984,33 @@ function render3Day(parsed3){
   }
   html += '</tbody></table>';
   el('threeContent').innerHTML = html;
+
+  // ── 3-day trend insight ──
+  try {
+    const gVals = days.map(d => {
+      const kpM = fmtDate(d.date)===fmtDate(new Date()) && lastWWV && isFinite(lastWWV.kNow) ? lastWWV.kNow : d.kpMax;
+      const a = computeAi(noonUTC(d.date), kpM??0);
+      return { date: d.date, G: (isFinite(kpM)?kpM:0) - 2 + a.Ai, kp: kpM };
+    });
+    if (gVals.length >= 2) {
+      const best = gVals.reduce((a,b) => a.G > b.G ? a : b);
+      const worst = gVals.reduce((a,b) => a.G < b.G ? a : b);
+      const trend = gVals[gVals.length-1].G - gVals[0].G;
+      const tArrow = trend > 0.3 ? '↗ покращення' : trend < -0.3 ? '↘ погіршення' : '→ стабільно';
+      const tCol = trend > 0.3 ? '#2bd47d' : trend < -0.3 ? '#ff6b6b' : '#9bb1dc';
+      const bestDay = fmtDate(best.date).slice(5);
+      const worstDay = fmtDate(worst.date).slice(5);
+      const insightEl = document.createElement('div');
+      insightEl.style.cssText = 'margin-top:8px;padding:6px 10px;background:#090f1e;border:1px solid #1a2a45;border-radius:8px;font-size:12px;display:flex;gap:12px;flex-wrap:wrap;align-items:center';
+      insightEl.innerHTML = `
+        <span style="color:${tCol};font-weight:700">${tArrow}</span>
+        <span style="color:#9bb1dc">Найкращий: <b style="color:#2bd47d">${bestDay}</b> G=${best.G.toFixed(1)}</span>
+        <span style="color:#9bb1dc">Найгірший: <b style="color:#ff6b6b">${worstDay}</b> G=${worst.G.toFixed(1)}</span>
+        <span style="color:var(--dim)">Розмах: ${(best.G-worst.G).toFixed(1)}</span>
+      `;
+      el('threeContent').appendChild(insightEl);
+    }
+  } catch(e) { console.warn('3d insight:', e); }
 }
 
 // render45 видалено
@@ -5525,7 +5754,7 @@ function draw27Chart(){
   data.forEach((d,i)=>{
     if(!isFinite(d.G)) return;
     const x = xOf(i), y = yOf(d.G);
-    const col = d.G<=-2.5?'#ff4444':d.G<=-0.5?'#ffaa33':d.G>=0.5?'#2bd47d':'#9bb1dc';
+    const col = gColForG(d.G);
     ctx.fillStyle = col;
     ctx.beginPath();
     ctx.arc(x, y, d.ds===todayStr?4:2.5, 0, Math.PI*2);
@@ -5710,7 +5939,7 @@ function renderGDecomp(G, kp, ai) {
   const aiW = Math.max(12, Math.abs(aiPart) / absMax * 100);
   const kpCol = kpPart >= 0 ? 'rgba(55,167,255,0.7)' : 'rgba(255,107,107,0.6)';
   const aiCol = aiPart >= 0 ? 'rgba(43,212,125,0.6)' : 'rgba(255,170,51,0.6)';
-  const gCol  = G<=-2.5?'#ff4444':G<=-0.5?'#ffaa33':G>=0.5?'#2bd47d':'#9bb1dc';
+  const gCol  = gColForG(G);
   // Анімуємо bar при оновленні
   if(bar._lastG !== undefined && bar._lastG !== G) {
     bar.style.animation = 'none';
@@ -5841,11 +6070,36 @@ function renderGDecomp(G, kp, ai) {
     {name:'Dᵢ Dst', val:ai.Di}
   ].filter(d => d.val !== 0).sort((a,b) => Math.abs(b.val) - Math.abs(a.val));
   const topD = allDrivers[0];
-  const chain = allDrivers.map(d => `<span style="color:${d.val>0?'#2bd47d':'#ff6b6b'}">${d.val>0?'+':''}${typeof d.val==='number'&&!Number.isInteger(d.val)?d.val.toFixed(1):d.val} ${d.name}</span>`).join(' · ');
-  const why = topD
+  const driverList = allDrivers.map(d => {
+    const v = typeof d.val==='number'&&!Number.isInteger(d.val)?d.val.toFixed(1):d.val;
+    return `<span style="color:${d.val>0?'#2bd47d':'#ff6b6b'}">${d.val>0?'+':''}${v} ${d.name}</span>`;
+  }).join(' · ');
+  const topLabel = topD
     ? `<strong style="color:#cfe0ff">Головний драйвер:</strong> ${topD.name} (${topD.val>0?'+':''}${typeof topD.val==='number'&&!Number.isInteger(topD.val)?topD.val.toFixed(1):topD.val})`
     : 'Усі фактори нейтральні';
-  explainEl.innerHTML = `${why}<br><span style="font-size:11px;color:var(--dim)">${chain}</span>`;
+
+  // ── Causal chain: Kp → G_base → +ΣAᵢ → G → Category → Risk ──
+  const cat = classifyG(G);
+  const pSoft = calcSoftRiskFromG(G);
+  const riskPct = Math.round(pSoft*100);
+  const riskLabel = getRiskLabelUA(pSoft);
+  const riskCol = riskPct >= 50 ? '#ff6b6b' : riskPct >= 25 ? '#ffcc00' : '#2bd47d';
+  const stepStyle = 'display:inline-block;padding:2px 7px;border-radius:6px;border:1px solid #1e2f52;background:#0a1020;font-size:11px;white-space:nowrap';
+  const arrowS = '<span style="color:#4a6080;margin:0 3px">→</span>';
+  const chainHTML = `
+    <span style="${stepStyle}">Kp <b>${isFinite(kp)?kp.toFixed(1):'?'}</b></span>${arrowS}
+    <span style="${stepStyle}">Kp−2 = <b style="color:${gColForG(kpPart)}">${kpPart>=0?'+':''}${kpPart.toFixed(1)}</b></span>${arrowS}
+    <span style="${stepStyle}">+ ΣAᵢ <b style="color:${gColForG(aiPart)}">${aiPart>=0?'+':''}${aiPart.toFixed(1)}</b></span>${arrowS}
+    <span style="${stepStyle};border-color:${gColForG(G)}"><b style="color:${gColForG(G)}">G = ${G>=0?'+':''}${G.toFixed(1)}</b></span>${arrowS}
+    <span style="${stepStyle}">${cat}</span>${arrowS}
+    <span style="${stepStyle};border-color:${riskCol}">P(ризик) <b style="color:${riskCol}">${riskPct}%</b> ${riskLabel}</span>
+  `;
+
+  explainEl.innerHTML = `
+    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:2px;margin-bottom:6px">${chainHTML}</div>
+    <div>${topLabel}</div>
+    <div style="font-size:11px;color:var(--dim);margin-top:2px">${driverList}</div>
+  `;
   // Запустити flow анімацію
   startGFlowAnimation(G, kp, ai);
 }
@@ -6442,9 +6696,23 @@ function renderCoStarBanner(G, kp, phaseName, hora) {
 // ========================= SCIENCE BAR UPDATE =========================
 function updateScienceBar(kp, ap, sn, ai, phaseName, phaseDeg, f107) {
   const _el = id => document.getElementById(id) || {textContent:'',innerHTML:''};
-  if(isFinite(kp)) _el('sciKp').textContent = kp.toFixed(2);
-  if(isFinite(ap))  _el('sciAp').textContent = ap;
-  if(sn != null)    _el('sciSn').textContent = sn;
+  // Kp with context
+  if(isFinite(kp)) {
+    const kpCtx = kp >= 7 ? ' ⛔ буря G3+' : kp >= 5 ? ' ⚠ буря' : kp >= 4 ? ' підвищений' : kp >= 2 ? '' : ' спокійний';
+    const kpCol = kp >= 5 ? 'var(--bad)' : kp >= 4 ? 'var(--warn)' : 'var(--ok)';
+    _el('sciKp').innerHTML = `<span style="color:${kpCol};font-weight:700">${kp.toFixed(2)}</span>${kpCtx ? `<span style="color:var(--dim);font-size:10px">${kpCtx}</span>` : ''}`;
+  }
+  // Ap with context
+  if(isFinite(ap)) {
+    const apCtx = ap >= 48 ? ' буря' : ap >= 20 ? ' активний' : '';
+    _el('sciAp').innerHTML = `${ap}${apCtx ? `<span style="color:var(--dim);font-size:10px">${apCtx}</span>` : ''}`;
+  }
+  // Sn with context
+  if(sn != null) {
+    const snCtx = sn > 150 ? ' високий' : sn > 100 ? ' підвищений' : '';
+    const snCol = sn > 150 ? 'var(--warn)' : '';
+    _el('sciSn').innerHTML = `${snCol ? `<span style="color:${snCol}">${sn}</span>` : sn}${snCtx ? `<span style="color:var(--dim);font-size:10px">${snCtx}</span>` : ''}`;
+  }
   // F10.7 Solar Flux
   if(f107 != null && isFinite(f107)){
     const fEl = _el('sciF107');
@@ -7721,9 +7989,10 @@ if ('serviceWorker' in navigator) {
         // SW_STALE_DATA: показати маркер "дані з кешу" в UI (аудит sw.js п.4)
         navigator.serviceWorker.addEventListener('message', event => {
           if (event.data && event.data.type === 'SW_STALE_DATA') {
+            const age = Math.round((Date.now() - event.data.fetchedAt) / 60000);
+            if (typeof markDataStale === 'function') markDataStale(age);
             const el = document.getElementById('swStaleBar');
             if (el) {
-              const age = Math.round((Date.now() - event.data.fetchedAt) / 60000);
               el.textContent = `⚠ Дані з кешу (${age} хв тому) — перевірте з'єднання`;
               el.style.display = 'block';
               setTimeout(() => { el.style.display = 'none'; }, 10000);
