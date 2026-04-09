@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v69</title>
+  <title>G-Index — Космофізичний дашборд</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -125,8 +125,6 @@
     .panch-score-pos{ color:var(--ok) }
     .panch-score-neg{ color:var(--bad) }
     .panch-score-neu{ color:var(--muted) }
-    .panch-do{ font-size:var(--fs-md); color:#7ec87e; margin-top:3px }
-    .panch-av{ font-size:var(--fs-md); color:#d47a7a; margin-top:2px }
     .autoref-bar{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:6px; font-size:var(--fs-md); color:var(--dim) }
     select.autoref-sel{ background:#0f1a2f; color:var(--text2); border:1px solid var(--border2); border-radius:8px; padding:4px 8px; font-size:var(--fs-md); cursor:pointer }
     .autoref-badge{ font-size:var(--fs-sm); padding:2px 8px; border-radius:999px; border:1px solid var(--border2); background:var(--card2); color:#63be7b }
@@ -576,7 +574,8 @@
 
 
     <!-- ═══ G INDEX TOP ROW ═══ -->
-    <div id="gTopRow" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:8px 0 0;padding:10px 16px;background:var(--card2);border:1px solid var(--border);border-radius:12px">
+    <!-- gTopRow hidden: primary G = nowG in nowCard -->
+    <div id="gTopRow" style="display:none">
       <span id="gTopBadge" class="gbadge" style="font-size:22px;padding:7px 14px;min-width:110px">G …</span>
       <div id="gTopCat" style="font-size:var(--fs-lg);font-weight:600;line-height:1.2">—</div>
       <span id="gTopSummary" style="font-size:var(--fs-md);color:var(--muted);margin-left:4px"></span>
@@ -608,6 +607,8 @@
         <!-- Co-Star: одне речення на день -->
         <div id="costarBanner" style="margin:8px 0 4px;font-size:14px;font-weight:600;line-height:1.35;min-height:20px;white-space:normal;word-break:break-word;overflow-wrap:break-word"></div>
 
+        <!-- ═══ CAUSAL CHAIN ═══ -->
+
         <div class="flex mono" style="margin-top:6px;gap:10px">
           <span id="nowKp" class="kbadge k-ok">Kp …</span>
           <span id="nowAp" class="pill">Ap ≈ —</span>
@@ -634,27 +635,30 @@
         </div>
 
 
-        <!-- PROB LAYER v69 -->
-        <div id="probNowBlock" style="margin-top:8px;display:none">
-          <div class="prob-row" id="probNowRow">
-            <div class="prob-cell" id="probCellSoft">
-              <div class="prob-k">Ризик дня</div>
-              <div class="prob-v" id="riskPctNow">--%</div>
+        <!-- CONFIDENCE (замінює Ризик %) -->
+        <div id="confidenceBlock" style="margin-top:8px;display:none;padding:6px 12px;background:#090f1e;border:1px solid #1e2a44;border-radius:8px;align-items:center;gap:12px;flex-wrap:wrap">
+          <div>
+            <div style="font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em">Впевненість</div>
+            <div id="confLabel" style="font-weight:700;font-size:14px;color:#9bb1dc">—</div>
+          </div>
+          <div style="flex:1;min-width:120px">
+            <div style="height:5px;background:#1e2a44;border-radius:3px;overflow:hidden">
+              <div id="confBar" style="height:100%;width:0%;background:#9bb1dc;border-radius:3px;transition:width .5s"></div>
             </div>
-            <div class="prob-cell" id="probCellHard">
-              <div class="prob-k">Сильний ризик</div>
-              <div class="prob-v" id="hardRiskPctNow">--%</div>
-            </div>
-            <div class="prob-cell">
-              <div class="prob-k">Статус</div>
-              <div class="prob-v" id="riskLabelNow" style="font-size:12px;padding-top:2px">--</div>
+            <div id="confReason" style="font-size:10px;color:var(--faint);margin-top:3px">—</div>
+          </div>
+          <div id="probNowBlock" style="display:none">
+            <div class="prob-row" id="probNowRow">
+              <div class="prob-cell" id="probCellSoft"><div class="prob-k">P soft</div><div class="prob-v" id="riskPctNow">--%</div></div>
+              <div class="prob-cell" id="probCellHard"><div class="prob-k">P hard</div><div class="prob-v" id="hardRiskPctNow">--%</div></div>
+              <div class="prob-cell"><div class="prob-k">Статус</div><div class="prob-v" id="riskLabelNow" style="font-size:12px;padding-top:2px">--</div></div>
             </div>
           </div>
         </div>
 
         <!-- DELTA CARD v63 -->
         <div id="deltaCard" style="display:none;margin-top:6px;padding:6px 12px;background:#090f1e;border:1px solid #1e2a44;border-radius:10px;font-size:12px;display:flex;align-items:center;gap:6px">
-          <span style="color:var(--dim);font-size:10px;text-transform:uppercase;letter-spacing:.06em">Δ від учора</span>
+          <span style="color:var(--dim);font-size:10px;text-transform:uppercase;letter-spacing:.06em">ΔG (24h)</span>
           <span id="deltaCardVal" style="font-weight:700"></span>
           <span id="deltaCardDriver" style="color:var(--muted)"></span>
         </div>
@@ -668,14 +672,36 @@
           <div id="dayForecastSummary" style="font-size:12px;color:#9bb1dc;padding:5px 10px;background:#090f1e;border-radius:8px;border:1px solid #1a2a45;line-height:1.5;white-space:normal;overflow-wrap:break-word;word-break:break-word;overflow:hidden;max-width:100%"></div>
         </div>
 
-        <!-- ═══ G DECOMPOSITION BAR ═══ -->
-        <div id="gDecompBlock" style="margin-top:10px;">
-          <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);margin-bottom:5px">Розклад G‑індексу</div>
+        <!-- ═══ CAUSAL CHAIN — над таблицею компонентів ═══ -->
+        <div id="causalChain" style="margin:10px 0 0;padding:8px 12px;background:#070d1c;border:1px solid #1a2a44;border-radius:8px;font-family:monospace;font-size:12px;display:none">
+          <div style="color:var(--dim);font-size:10px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Як зібрався G</div>
+          <div style="display:grid;grid-template-columns:auto auto auto auto;gap:4px 12px;align-items:center">
+            <span style="color:#6b82aa">G = (Kp−2)</span>
+            <span style="color:#6b82aa">+</span>
+            <span style="color:#6b82aa">ΣAᵢ</span>
+            <span style="color:#6b82aa">=</span>
+            <span id="ccKpPart" style="font-weight:700;font-size:13px">—</span>
+            <span style="color:#3a5070">+</span>
+            <span id="ccSumAi" style="font-weight:700;font-size:13px">—</span>
+            <span id="ccG" style="font-weight:800;font-size:15px">—</span>
+          </div>
+          <div style="margin-top:4px;font-size:10px;color:#3a5070">Kp = <span id="ccKpVal">—</span></div>
+        </div>
+
+        <!-- ═══ DRIVERS (топ-фактори по |ΔG|) ═══ -->
+        <div id="driversBlock" style="margin-top:10px;display:none">
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);margin-bottom:5px">Ключові фактори</div>
+          <div id="driversNeg" style="margin-bottom:4px"></div>
+          <div id="driversPos"></div>
+        </div>
+
+        <!-- ═══ G DECOMPOSITION (деталі, згорнуто) ═══ -->
+        <details id="gDecompBlock" style="margin-top:10px" open>
+          <summary style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);cursor:pointer;margin-bottom:5px;list-style:none">▸ Розклад G‑індексу</summary>
           <div id="gDecompBar" style="display:flex;align-items:center;gap:4px;min-height:28px;flex-wrap:wrap;overflow:hidden;max-width:100%"></div>
-          <!-- Flow canvas: частинки течуть від chips → G -->
+          <!-- Flow canvas -->
           <canvas id="gFlowCanvas" width="460" height="90" style="width:100%;height:90px;display:block;margin:6px 0 4px;border-radius:8px;background:rgba(10,16,32,0.6);"></canvas>
           <div id="gDecompFactors" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"></div>
-          <!-- Таблиця розкладу G (заповнюється JS) -->
           <table id="gDecompTable" style="width:100%;border-collapse:collapse;font-size:12px;margin-top:10px;table-layout:fixed">
             <colgroup><col style="width:28%"><col style="width:18%"><col style="width:54%"></colgroup>
             <thead><tr style="border-bottom:1px solid #1e2f52">
@@ -685,7 +711,7 @@
             </tr></thead>
             <tbody id="gDecompTableBody"></tbody>
           </table>
-        </div>
+        </details>
 
         <!-- ═══ ЯК ЧИТАТИ G (людський блок) ═══ -->
         <details id="gHowToRead" style="margin-top:8px;font-size:12px;color:#8aaad4">
@@ -1496,7 +1522,7 @@ const WEIGHT_E_EVENTS = {
   'Таблетка': 2, 'Шприц': 1, 'Сукня': 1,
   'Гуру Пурніма': 1, 'Махашиваратрі': 2, 'Савана Сомвара': 1,
   'Масік Шиваратрі': 1, 'Прадош врат': 1, 'Санкашті': 1, 'Вінаяка': 1,
-  'Наваратрі': 1.5, 'Діпавалі': 2,  // v69: уніфіковано з engine WEIGHTS['navaratri']=1.5
+  'Наваратрі': 1.5, 'Діпавалі': 2,  // v68: уніфіковано з engine WEIGHTS['navaratri']=1.5
   'Рівнодення (Russell-McPherron)': -2,
   // v30: нові категорії з ICS Vaisnava
   'Пурніма (свято)': 1,        // Gaura Purnima, Bhadra Purnima та ін. — свято, +1
@@ -1795,12 +1821,35 @@ function approxTithiIndex(dateUTC){
   const angle = (moonPhaseAngle(dateUTC) + 360) % 360;
   return Math.min(30, Math.max(1, Math.floor(angle/12) + 1));
 }
+// TECH-2 (v70): Surya Sankranti через sidereal Lahiri — ідентично engine auto_tag v1.1
+// Повертає true якщо dateUTC є днем ingress Сонця в новий sidereal rashi (кратне 30°)
+// Метод: порівняти floor(sunSid/30) за 00:00 і 23:59 UTC поточного дня.
+// Якщо змінився — це день Sankranti (незалежно від конкретного часу ingress).
+function isSuryaSankranti(dateUTC){
+  const jde0 = dateUTC.getTime() / 86400000 + 2440587.5; // 00:00 UTC
+  const jde1 = jde0 + 0.9993; // ~23:59 UTC (23h 59m)
+  function sunSidRashi(jde){
+    const trop = calcSunLongitude(jde);
+    const ayan = lahiriAyanamsha(jde);
+    const sid = ((trop - ayan) % 360 + 360) % 360;
+    return Math.floor(sid / 30);
+  }
+  return sunSidRashi(jde0) !== sunSidRashi(jde1);
+}
+
 function autoComputedExtras(dateUTC, kp=0){
   if(!isFinite(kp)) kp = 0;
   const t = approxTithiIndex(dateUTC);
   const extras = [];
   if(t === 1){
     extras.push({name:'1 місячний день', weight: WEIGHT_E_EVENTS['1 місячний день'], source:'auto', raw:'Pratipada (approx)'});
+  }
+  // TECH-2 (v70): Surya Sankranti — астрономічний розрахунок sidereal Lahiri
+  // Синхронізовано з engine auto_tag_generator.py v1.1 (surya_sankranti тег)
+  // Вага: WEIGHT_E_EVENTS['Сурья Санкранті Перехід Сонця із знаку в інший'] = -2
+  if(isSuryaSankranti(dateUTC)){
+    const sankKey = 'Сурья Санкранті Перехід Сонця із знаку в інший';
+    extras.push({name: sankKey, weight: WEIGHT_E_EVENTS[sankKey], source:'auto', raw:'Sidereal Lahiri ingress (TECH-2)'});
   }
   // v30.1: Rikta tithi видалено з ei — тепер обробляється через часткові Tithi scores в Pi
   // Equinox windows (Russell-McPherron effect): 05 Mar–04 Apr, 07 Sep–07 Oct
@@ -2346,7 +2395,7 @@ function parseDst(json){
   try{
     const rows = JSON.parse(json);
     if(!Array.isArray(rows)||!rows.length) return null;
-    // v69: підтримка обох форматів (масиви і об'єкти — SWPC SCN)
+    // v68: підтримка обох форматів (масиви і об'єкти — SWPC SCN)
     if(typeof rows[0]==='object'&&!Array.isArray(rows[0])){
       const data=rows.filter(r=>r.dst!=null&&r.dst!=='');
       if(!data.length) return null;
@@ -2808,7 +2857,7 @@ function renderCurrentPanel(){
           dcEl.style.gap = '6px';
           if(dvEl) dvEl.innerHTML =
             `<span style="color:${dCol};font-size:13px;font-weight:700">${dSign}${dG.toFixed(2)}</span>` +
-            `<span style="color:var(--dim);font-size:10px;margin-left:2px">від учора G=${yG.toFixed(2)}</span>`;
+            `<span style="color:var(--dim);font-size:10px;margin-left:2px">G вчора: ${yG.toFixed(2)}</span>`;
           if(ddEl){
             if(diffs.length){
               ddEl.innerHTML = diffs.map(d=>{
@@ -2825,7 +2874,7 @@ function renderCurrentPanel(){
     } catch(e){}
   })();
 
-  // ── Probability Layer v69 ────────────────────────────────────────────────
+  // ── Probability Layer v68 ────────────────────────────────────────────────
   if(isFinite(G)){
     const _probNow = calcProbabilityLayer({G, csConf:_csInline.conf, horizon:'now'});
     renderNowProbability(_probNow);
@@ -3305,57 +3354,9 @@ function renderPanchanga(dateUTC){
     if(s < 0) return `<span class="panch-score-neg">${s}</span>`;
     return `<span class="panch-score-neu">0</span>`;
   }
-  function adviceHtml(adv){
-    if(!adv) return '';
-    const doLine  = adv.do     ? `<div class="panch-do">✓ ${adv.do}</div>`     : '';
-    const avLine  = adv.avoid  ? `<div class="panch-av">✗ ${adv.avoid}</div>`  : '';
-    return doLine + avLine;
-  }
 
-  const tAdv = TITHI_ADVICE[p.tithi.num - 1] || null;
-  const vAdv = VARA_ADVICE[dateUTC.getUTCDay()] || null;
-  const nAdv = NAKSHATRA_ADVICE[p.nakshatra.type] || null;
-  const yAdv = YOGA_ADVICE[p.yoga.num - 1] || null;
 
-  const kAdv = p.karana.isVishti
-    ? {do:'Очікування, спостереження', avoid:'Будь-які активні дії (абсолютне вето)'}
-    : {do: p.karana.note, avoid:''};
-  const rahuAdv = p.rahu.active
-    ? {do:'Оборонні/підтримуючі операції', avoid:'Нові бойові завдання, стратегічні рішення'}
-    : {do:'Обмежень немає', avoid:''};
 
-  const cells = [
-    { score: p.tithi.score,
-      label: 'Tithi — місячний день',
-      val:   p.tithi.name,
-      sub:   `${p.tithi.type} · PCL ${scoreSpan(p.tithi.score)} · ΔL≈${p.tithi.phaseDeg}°`,
-      adv:   tAdv },
-    { score: p.vara.score,
-      label: 'Vara — день тижня',
-      val:   p.vara.name,
-      sub:   `${p.vara.planet} · PCL ${scoreSpan(p.vara.score)}`,
-      adv:   vAdv },
-    { score: p.nakshatra.score,
-      label: 'Nakshatra — місячна стоянка',
-      val:   p.nakshatra.name,
-      sub:   `${p.nakshatra.type} · ${p.nakshatra.regent} · PCL ${scoreSpan(p.nakshatra.score)}`,
-      adv:   nAdv },
-    { score: p.yoga.score,
-      label: 'Yoga — резонанс Сонце–Місяць',
-      val:   p.yoga.name,
-      sub:   `PCL ${scoreSpan(p.yoga.score)}${p.yoga.isCritical?' · ⚠️ retro_end −3':''}`,
-      adv:   yAdv },
-    { score: p.karana.score,
-      label: 'Karana — половина місячного дня',
-      val:   p.karana.name,
-      sub:   `${p.karana.type} · PCL ${scoreSpan(p.karana.score)}`,
-      adv:   kAdv },
-    { score: p.rahu.active ? -1 : 0,
-      label: 'Rahu Kalam',
-      val:   p.rahu.active ? '⚠️ Активний зараз' : `${p.rahu.start}–${p.rahu.end} UTC`,
-      sub:   p.rahu.active ? `PCL ${scoreSpan(-1)} · до ${p.rahu.end} UTC` : `PCL ${scoreSpan(0)} · неактивний`,
-      adv:   rahuAdv }
-  ];
 
   function cellClass(s){
     if(s >= 1)  return 'panch-cell pcl-pos';
@@ -3443,52 +3444,55 @@ function renderPanchanga(dateUTC){
     }
   };
 
+  // ΔG helper
+  const dg = score => { if(!score&&score!==0) return '<span style="color:#3a5070">—</span>'; const s=Number(score); const c=s>0?'#2bd47d':s<0?'#ff6b6b':'#3a5070'; return `<span style="font-weight:700;color:${c}">${s>0?'+':''}${s.toFixed(1)}</span>`; };
+
   const html = `<table style="width:100%;border-collapse:collapse;font-size:13px">
-    <colgroup><col style="width:30%"><col style="width:32%"><col style="width:38%"></colgroup>
+    <colgroup><col style="width:32%"><col style="width:52%"><col style="width:16%"></colgroup>
     <tr style="border-bottom:1px solid #1e2f52">
       <th style="padding:3px 6px;font-size:10px;color:var(--dim);font-weight:500;text-align:left">ПАРАМЕТР</th>
       <th style="padding:3px 6px;font-size:10px;color:var(--dim);font-weight:500;text-align:left">СТАН</th>
-      <th style="padding:3px 6px;font-size:10px;color:var(--dim);font-weight:500;text-align:left">РЕКОМЕНДАЦІЯ</th>
+      <th style="padding:3px 6px;font-size:10px;color:var(--dim);font-weight:500;text-align:center" title="Внесок у Pᵢ (Panchanga частина ΣAᵢ)">ΔPᵢ</th>
     </tr>
     <tr>
       <td style="padding:5px 6px;color:#9bb1dc;font-size:11px">
         <span class="hint" tabindex="0" style="cursor:help;font-style:italic;border-bottom:1px dotted var(--faint)">Tithi<span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.tithi(p.tithi))}</span></span>
       </td>
       <td style="padding:5px 6px;font-weight:600"><span class="hint" tabindex="0" style="cursor:help">${scoreIcon(p.tithi.score, _gEarly)} ${p.tithi.name}<br><span style="font-size:10px;color:#7a95b8;font-weight:400">${p.tithi.type}</span><span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.tithi(p.tithi))}</span></span></td>
-      <td style="padding:5px 6px;font-size:11px;color:#b0c4de">${tAdv && tAdv.do ? '✓ '+tAdv.do : ''}</td>
+      <td style="padding:5px 6px;text-align:center">${dg(p.tithi.score)}</td>
     </tr>
     <tr>
       <td style="padding:5px 6px;color:#9bb1dc;font-size:11px">
         <span class="hint" tabindex="0" style="cursor:help;font-style:italic;border-bottom:1px dotted var(--faint)">Vara<span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.vara(p.vara))}</span></span>
       </td>
       <td style="padding:5px 6px;font-weight:600"><span class="hint" tabindex="0" style="cursor:help">${scoreIcon(p.vara.score, _gEarly)} ${p.vara.name}<br><span style="font-size:10px;color:#7a95b8;font-weight:400">${p.vara.planet}</span><span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.vara(p.vara))}</span></span></td>
-      <td style="padding:5px 6px;font-size:11px;color:#b0c4de">${vAdv && vAdv.do ? '✓ '+vAdv.do : ''}</td>
+      <td style="padding:5px 6px;text-align:center">${dg(p.vara.score)}</td>
     </tr>
     <tr>
       <td style="padding:5px 6px;color:#9bb1dc;font-size:11px">
         <span class="hint" tabindex="0" style="cursor:help;font-style:italic;border-bottom:1px dotted var(--faint)">Nakshatra<span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.nakshatra(p.nakshatra))}</span></span>
       </td>
       <td style="padding:5px 6px;font-weight:600"><span class="hint" tabindex="0" style="cursor:help">${scoreIcon(p.nakshatra.score, _gEarly)} ${p.nakshatra.name}<br><span style="font-size:10px;color:#7a95b8;font-weight:400">${p.nakshatra.type} · ${p.nakshatra.regent}</span><span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.nakshatra(p.nakshatra))}</span></span></td>
-      <td style="padding:5px 6px;font-size:11px;color:#b0c4de">${nAdv && nAdv.do ? '✓ '+nAdv.do : ''}</td>
+      <td style="padding:5px 6px;text-align:center">${dg(p.nakshatra.score)}</td>
     </tr>
     <tr>
       <td style="padding:5px 6px;color:#9bb1dc;font-size:11px">
         <span class="hint" tabindex="0" style="cursor:help;font-style:italic;border-bottom:1px dotted var(--faint)">Yoga<span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.yoga(p.yoga))}</span></span>
       </td>
       <td style="padding:5px 6px;font-weight:600"><span class="hint" tabindex="0" style="cursor:help">${scoreIcon(p.yoga.score, _gEarly)} ${p.yoga.name}${p.yoga.isCritical?' ⚠️':''}<br><span style="font-size:10px;color:#7a95b8;font-weight:400">резонанс Сонце–Місяць</span><span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.yoga(p.yoga))}</span></span></td>
-      <td style="padding:5px 6px;font-size:11px;color:#b0c4de">${yAdv && yAdv.do ? '✓ '+yAdv.do : ''}</td>
+      <td style="padding:5px 6px;text-align:center">${dg(p.yoga.score)}</td>
     </tr>
     <tr>
       <td style="padding:5px 6px;color:#9bb1dc;font-size:11px">
         <span class="hint" tabindex="0" style="cursor:help;font-style:italic;border-bottom:1px dotted var(--faint)">Karana<span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.karana(p.karana))}</span></span>
       </td>
       <td style="padding:5px 6px;font-weight:600"><span class="hint" tabindex="0" style="cursor:help">${scoreIcon(p.karana.score, _gEarly)} ${p.karana.name}${p.karana.isVishti?' ⛔':''}<br><span style="font-size:10px;color:#7a95b8;font-weight:400">${p.karana.type}</span><span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.karana(p.karana))}</span></span></td>
-      <td style="padding:5px 6px;font-size:11px;color:#b0c4de">${kAdv && kAdv.do ? '✓ '+kAdv.do : ''}</td>
+      <td style="padding:5px 6px;text-align:center">${dg(p.karana.score)}</td>
     </tr>
     ${_aiEarly.ei !== 0 ? `<tr style="background:rgba(255,100,100,0.05)">
       <td style="padding:5px 6px;color:#ff9f9f;font-size:11px;font-style:italic">eᵢ (події)</td>
       <td style="padding:5px 6px;font-weight:600">${_aiEarly.ei < 0 ? '🔴' : '🟢'} <span style="color:${_aiEarly.ei < 0 ? '#ff9f9f' : '#63be7b'}">${_aiEarly.ei > 0 ? '+' : ''}${_aiEarly.ei}</span><br><span style="font-size:10px;color:#7a95b8;font-weight:400">${escapeHtml((_aiEarly.eTip||'').split('\\n')[0])}</span></td>
-      <td style="padding:5px 6px;font-size:11px;color:#ccaaaa">${_aiEarly.ei < 0 ? '✗ Несприятлива подія знижує G' : '✓ Сприятлива подія'}</td>
+      <td style="padding:5px 6px;text-align:center">${dg(_aiEarly.ei)}</td>
     </tr>` : ''}
     <tr>
       <td style="padding:5px 6px;color:#9bb1dc;font-size:11px">
@@ -3500,7 +3504,7 @@ function renderPanchanga(dateUTC){
   </table>`;
 
   // Підсумок з усіх 6 параметрів (PCL) + Li/Mi/ei з G
-  const pclOnly = cells.reduce((s,c)=>s+c.score, 0);
+  const pclOnly = (p.tithi.score||0) + (p.vara.score||0) + (p.nakshatra.score||0) + (p.yoga.score||0) + (p.karana.score||0) + (p.rahu.score||0);
   const _kpForPanch = (lastWWV && isFinite(lastWWV.kNow)) ? lastWWV.kNow : (last3D && last3D.days && last3D.days[0] ? last3D.days[0].kpMax : 0);
   // v30: використовуємо noonUTC для узгодженості Pi/G з 3-day таблицею
   // (Panchanga display вище = real-time, але G/Pi summary = noon, як в таблиці)
@@ -3519,60 +3523,7 @@ function renderPanchanga(dateUTC){
     if(diffs.length) panchDiscrepancy = `<div style="margin-top:4px;font-size:11px;color:#ffa64d">⚠ G-індекс (noon UTC): ${diffs.join('; ')}</div>`;
   } catch(e){}
 
-  // v26: Розумна агрегація порад — пріоритет за PCL score, без протиріч
-  const advSources = [
-    {score: p.tithi.score, adv: tAdv, label:'Tithi'},
-    {score: p.vara.score, adv: vAdv, label:'Vara'},
-    {score: p.nakshatra.score, adv: nAdv, label:'Nakshatra'},
-    {score: p.yoga.score, adv: yAdv, label:'Yoga'},
-    {score: p.karana.score, adv: kAdv, label:'Karana'},
-    {score: p.rahu.active ? -1 : 0, adv: rahuAdv, label:'Rahu'}
-  ].filter(s => s.adv);
 
-  // Збираємо всі avoid-теми для фільтрації протиріч
-  const allAvoidWords = new Set();
-  advSources.forEach(s => {
-    if(s.adv.avoid) s.adv.avoid.split(/[,·]/).map(w=>w.trim().toLowerCase()).filter(Boolean).forEach(w => allAvoidWords.add(w));
-  });
-
-  // ✓ Поради: сортуємо за score (найвищий = найрелевантніший), фільтруємо протиріччя
-  const sortedDo = advSources
-    .filter(s => s.adv.do)
-    .sort((a,b) => b.score - a.score);
-
-  const finalDo = [];
-  const seenDoWords = new Set();
-  for(const s of sortedDo){
-    const doText = s.adv.do;
-    // Перевірка: чи не суперечить якомусь avoid
-    const doWords = doText.toLowerCase();
-    let contradicts = false;
-    for(const av of allAvoidWords){
-      if(av.length > 3 && doWords.includes(av)){ contradicts = true; break; }
-    }
-    if(contradicts) continue;
-    // Дедуплікація
-    const key = doText.slice(0,20).toLowerCase();
-    if(seenDoWords.has(key)) continue;
-    seenDoWords.add(key);
-    finalDo.push(doText);
-    if(finalDo.length >= 2) break; // max 2 поради
-  }
-
-  // ✗ Обмеження: тільки від параметрів з негативним score
-  const finalAvoid = [];
-  const seenAvWords = new Set();
-  for(const s of advSources.filter(x => x.score < 0).sort((a,b) => a.score - b.score)){
-    if(!s.adv.avoid) continue;
-    const key = s.adv.avoid.slice(0,20).toLowerCase();
-    if(seenAvWords.has(key)) continue;
-    seenAvWords.add(key);
-    finalAvoid.push(s.adv.avoid);
-    if(finalAvoid.length >= 2) break; // max 2 обмеження
-  }
-
-  const topDo = finalDo.join(' · ');
-  const topAv = finalAvoid.join(' · ');
 
   // v30: summaryLabel базується на G-індексі (classifyG), а не на totalPCL
   const _gNow = _kpForPanch - 2 + aiNow.Ai;
@@ -3585,12 +3536,6 @@ function renderPanchanga(dateUTC){
       <span style="font-weight:700;color:${summaryColor}">${summaryLabel}</span>
       <span class="muted" style="font-size:12px;margin-left:8px">G = ${_gNow.toFixed(1)} | PCL = ${pclOnly > 0 ? '+' : ''}${pclOnly} | Lᵢ=${aiNow.Li} Mᵢ=${aiNow.Mi} <span class="hint" tabindex="0" style="cursor:help;border-bottom:1px dotted var(--faint)">eᵢ=${aiNow.ei}<span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(aiNow.eTip)}</span></span> <span class="hint" tabindex="0" style="cursor:help;border-bottom:1px dotted var(--faint)">Pᵢ=${aiNow.Pi}<span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(aiNow.pTip||'')}</span></span>${aiNow.Di!==0?` <span style="color:#ff9f9f;font-weight:700" title="${escapeHtml(aiNow.diTip)}">Dᵢ=${aiNow.Di}</span>`:''}</span>
       ${panchDiscrepancy}
-      <div style="margin-top:6px;font-size:13px">
-        ${topDo ? `<span style="color:#63be7b">✓ </span><span style="color:#b0ccaa">${topDo}</span>` : ''}
-      </div>
-      <div style="margin-top:3px;font-size:13px">
-        ${topAv ? `<span style="color:#ff9f9f">✗ </span><span style="color:#ccaaaa">${topAv}</span>` : ''}
-      </div>
     </div>`;
 
   // (c) Колір заголовку картки = колір G поточного дня
@@ -5035,6 +4980,12 @@ function renderPersonal() {
   }
   if (nameLabel) nameLabel.textContent = '— ' + (data.name || '');
 
+  // Попередження ±1 Nakshatra якщо час народження не вказано (HANDOFF Level 1)
+  const noTime = !data.time || data.time.trim() === '';
+  const noTimeWarnHtml = noTime
+    ? `<div style="font-size:11px;color:#e8b84b;background:#1a1400;border-left:3px solid #e8b84b;border-radius:4px;padding:4px 8px;margin-bottom:6px">⚠ Час народження не вказано → розрахунок від 12:00. Можлива похибка ±1 стоянка Місяця. Вкажіть час для точного результату.</div>`
+    : '';
+
   const birthJDE = dateToJDE(data.date, data.time, data.utcOff);
   const nowJDE   = Date.now() / 86400000 + 2440587.5;
 
@@ -5082,7 +5033,7 @@ function renderPersonal() {
     ? `<div style="font-size:11px;color:${col};margin-top:2px">Taara G-mod сьогодні: <strong>${gmodSign}</strong></div>`
     : '';
 
-  resEl.innerHTML = `<div style="font-size:13px;font-weight:600;color:${col};padding:6px 10px;background:#0a1428;border-radius:6px;border-left:3px solid ${col};line-height:1.3;display:block">${danger ? '⚠ ' : '✓ '}${summaryAction}${gmodHtml}</div><table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:0">
+  resEl.innerHTML = `${noTimeWarnHtml}<div style="font-size:13px;font-weight:600;color:${col};padding:6px 10px;background:#0a1428;border-radius:6px;border-left:3px solid ${col};line-height:1.3;display:block">${danger ? '⚠ ' : '✓ '}${summaryAction}${gmodHtml}</div><table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:0">
       <tr>
         <td class="muted" style="padding:3px 0;width:45%;border-bottom:1px solid #1a2540">Стоянка народження</td>
         <td style="padding:3px 0;border-bottom:1px solid #1a2540"><strong>${NAKSHATRA_UA[natal.idx]}</strong> <span class="muted">(${NAKSHATRA_NAMES[natal.idx]}, P${natal.pada})</span></td>
@@ -5162,9 +5113,9 @@ function renderTaara7d(wrap, natalIdx, nowJDE) {
     </tr>`;
   }
   wrap.innerHTML = `
-    <details style="margin-top:4px">
-      <summary style="font-size:12px;color:#6b82aa;cursor:pointer;list-style:none">▶ Taara 7 днів</summary>
-      <table style="width:100%;border-collapse:collapse;margin-top:6px">
+    <div style="margin-top:8px">
+      <div style="font-size:11px;font-weight:600;color:#6b82aa;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Taara · 7 днів</div>
+      <table style="width:100%;border-collapse:collapse;margin-top:2px">
         <thead><tr>
           <th style="font-size:11px;color:#4a6080;text-align:left;padding:2px 6px">День</th>
           <th style="font-size:11px;color:#4a6080;text-align:left;padding:2px 6px">Taara</th>
@@ -5174,7 +5125,7 @@ function renderTaara7d(wrap, natalIdx, nowJDE) {
         <tbody>${rows}</tbody>
       </table>
       <div class="small muted" style="margin-top:4px">G± = особистий Taara-модифікатор (R&D)</div>
-    </details>`;
+    </div>`;
 }
 function renderTaaraRing(wrap, activeGroup, natalIdx, nowIdx) {
   if (!wrap) return;
@@ -5339,7 +5290,7 @@ function initPersonalCalc() {
   });
 
   saveBtn.addEventListener('click', () => {
-    if (!PAYWALL.isPaid()) { PAYWALL.require('basic', 'персональний профіль'); return; }
+    // Level 1 (Free tier): збереження особистого профілю доступне без paywall (HANDOFF 08.04.2026)
     const d = {
       name:    document.getElementById('pName').value.trim(),
       date:    document.getElementById('pDate').value,
@@ -5788,6 +5739,74 @@ function renderGDecomp(G, kp, ai) {
     </tr>`;
     tbody.innerHTML = thtml;
   }
+
+  // ── CAUSAL CHAIN ──────────────────────────────────────────────────
+  const cc = document.getElementById('causalChain');
+  if(cc && isFinite(G) && isFinite(kp)) {
+    const kpPart2 = +(kp - 2).toFixed(1);
+    const sumAi   = +(G - kpPart2).toFixed(1);
+    const colKp   = kpPart2 > 0 ? '#2bd47d' : kpPart2 < 0 ? '#ff6b6b' : '#6b82aa';
+    const colAi   = sumAi   > 0 ? '#2bd47d' : sumAi   < 0 ? '#ff6b6b' : '#6b82aa';
+    const colG    = G > 0 ? '#2bd47d' : G < 0 ? '#ff6b6b' : '#6b82aa';
+    document.getElementById('ccKpVal').textContent  = kp.toFixed(1);
+    document.getElementById('ccKpPart').innerHTML   = `<span style="color:${colKp};font-weight:700">${kpPart2>=0?'+':''}${kpPart2}</span>`;
+    document.getElementById('ccSumAi').innerHTML    = `<span style="color:${colAi}">${sumAi>=0?'+':''}${sumAi}</span>`;
+    document.getElementById('ccG').innerHTML        = `<span style="color:${colG}">${G>=0?'+':''}${G.toFixed(1)}</span>`;
+    cc.style.display = 'block';
+  }
+
+  // ── DRIVERS (топ по |ΔG|, відсортовані) ──────────────────────────
+  const dBlock = document.getElementById('driversBlock');
+  if(dBlock && isFinite(G)) {
+    const allFactors = [
+      {name:'Kp−2',      val: isFinite(kp) ? +(kp-2).toFixed(1) : 0, label:'Геомагніт (Kp)'},
+      {name:'Lᵢ',        val: ai.Li,  label:'Місячна фаза'},
+      {name:'Mᵢ',        val: ai.Mi,  label:'Затемнення'},
+      {name:'eᵢ (події)',val: ai.ei,  label:'Jyotish події'},
+      {name:'Pᵢ (PCL)',  val: ai.Pi !== undefined ? +ai.Pi.toFixed(2) : 0, label:'Панчанга'},
+      {name:'Dᵢ (Dst)',  val: ai.Di,  label:'Dst буря'},
+    ].filter(f => f.val !== 0)
+     .sort((a,b) => Math.abs(b.val) - Math.abs(a.val));
+
+    if(allFactors.length > 0) {
+      const neg = allFactors.filter(f => f.val < 0);
+      const pos = allFactors.filter(f => f.val > 0);
+      const row = f => {
+        const c = f.val > 0 ? '#2bd47d' : '#ff6b6b';
+        const sign = f.val > 0 ? '+' : '';
+        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:2px 0;border-bottom:1px solid #0f1a30">
+          <span style="font-size:12px;color:#9bb1dc">${f.label}</span>
+          <span style="font-weight:700;color:${c};font-family:monospace;font-size:12px">${sign}${f.val.toFixed ? f.val.toFixed(1) : f.val}</span>
+        </div>`;
+      };
+      const negEl = document.getElementById('driversNeg');
+      const posEl = document.getElementById('driversPos');
+      if(neg.length && negEl) {
+        negEl.innerHTML = `<div style="font-size:10px;color:#ff6b6b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">▼ Негативний вплив</div>${neg.map(row).join('')}`;
+      }
+      if(pos.length && posEl) {
+        posEl.innerHTML = `<div style="font-size:10px;color:#2bd47d;text-transform:uppercase;letter-spacing:.05em;margin:${neg.length?'6px':0} 0 2px">▲ Позитивний вплив</div>${pos.map(row).join('')}`;
+      }
+      dBlock.style.display = 'block';
+    }
+  }
+
+  // ── CONFIDENCE BLOCK ──────────────────────────────────────────────
+  const confBlock = document.getElementById('confidenceBlock');
+  if(confBlock) {
+    const csEl = document.getElementById('cScoreGrade');
+    const csConf = window._existingCScore ? window._existingCScore.conf : null;
+    const confPct = csConf !== null ? Math.round(csConf * 100) : null;
+    const confLbl = confPct === null ? '—' : confPct >= 75 ? 'Висока' : confPct >= 50 ? 'Середня' : 'Низька';
+    const confCol = confPct === null ? '#6b82aa' : confPct >= 75 ? '#2bd47d' : confPct >= 50 ? '#ffcc00' : '#ff6b6b';
+    const confReason = confPct !== null ? `NOAA Kp${isFinite(kp)?` = ${kp.toFixed(1)}`:''}` : 'Дані завантажуються';
+    document.getElementById('confLabel').innerHTML  = `<span style="color:${confCol}">${confLbl}</span>`;
+    document.getElementById('confBar').style.width  = (confPct||0) + '%';
+    document.getElementById('confBar').style.background = confCol;
+    document.getElementById('confReason').textContent = confReason;
+    confBlock.style.display = 'flex';
+  }
+
   // Запустити flow анімацію
   startGFlowAnimation(G, kp, ai);
 }
@@ -7068,6 +7087,7 @@ async function handleBacktestFile(input) {
   <button onclick="pwaDismiss()" style="background:transparent;color:#9bb1dc;padding:7px 10px;border-radius:8px;border:1px solid #2a3b61;cursor:pointer">✕</button>
 </div>
 
+<div id="swStaleBar" style="display:none;position:fixed;top:0;left:0;right:0;z-index:10000;background:#2a1a00;border-bottom:1px solid #e8b84b;padding:6px 16px;font-size:12px;color:#e8b84b;text-align:center;"></div>
 <div id="pwaUpdateBar" style="display:none;position:fixed;top:60px;left:0;right:0;z-index:9999;background:#143367;border-bottom:1px solid #37a7ff;padding:10px 16px;align-items:center;gap:12px;font-size:13px;color:#e7efff;">
   <span style="flex:1">🔄 Доступне оновлення G-Index</span>
   <button onclick="pwaReload()" style="background:#37a7ff;color:#001026;padding:6px 12px;border-radius:8px;font-weight:700;border:none;cursor:pointer">Оновити</button>
@@ -7575,14 +7595,12 @@ document.addEventListener('DOMContentLoaded', () => {
 function sigmoid(x){ return 1/(1+Math.exp(-x)); }
 
 // P_soft: P(несприятливий | G). Якорі: G=0→0.35, G=-3→0.80
-// Platt calibration v1 (n=169, train 70%, holdout AUC=0.777)
-// SOFT: P(pdf≤0 | G);  HARD: P(pdf≤-2 | G)
 function calcSoftRiskFromG(G){
-  return Math.max(0.001, Math.min(0.999, sigmoid(0.2459 - 0.5011*G)));
+  return Math.max(0.001, Math.min(0.999, sigmoid(-0.619 - 0.668*G)));
 }
 // P_hard: P(сильно несприятливий | G). Якорі: G=0→0.10, G=-3→0.60
 function calcHardRiskFromG(G){
-  return Math.max(0.001, Math.min(0.999, sigmoid(-0.5988 - 0.6437*G)));
+  return Math.max(0.001, Math.min(0.999, sigmoid(-2.197 - 0.868*G)));
 }
 function getRiskBand(p){ return p<0.25?'low':p<0.50?'moderate':p<0.75?'elevated':'high'; }
 function getRiskLabelUA(p){ return p<0.25?'Низький':p<0.50?'Помірний':p<0.75?'Підвищений':'Високий'; }
@@ -7607,8 +7625,23 @@ function calcProbabilityLayer({G, csConf=1, horizon='now'}={}){
 
 function renderNowProbability(prob){
   if(!prob) return;
+  // probNowBlock прихований (audit: замінено на confidenceBlock)
   const block = document.getElementById('probNowBlock');
-  if(block) block.style.display='block';
+  if(block) block.style.display='none';
+  // Confidence block — показати з оновленим рівнем
+  const confBlock = document.getElementById('confidenceBlock');
+  if(confBlock) {
+    const pct  = Math.round((prob.conf||0)*100);
+    const lbl  = pct >= 75 ? 'Висока' : pct >= 50 ? 'Середня' : 'Низька';
+    const col  = pct >= 75 ? '#2bd47d' : pct >= 50 ? '#ffcc00' : '#ff6b6b';
+    const confLabel = document.getElementById('confLabel');
+    const confBar   = document.getElementById('confBar');
+    const confReas  = document.getElementById('confReason');
+    if(confLabel) confLabel.innerHTML = `<span style="color:${col}">${lbl}</span>`;
+    if(confBar)   { confBar.style.width = pct+'%'; confBar.style.background = col; }
+    if(confReas)  confReas.textContent = `P(ризик) = σ(−0.619 − 0.668·G) = ${prob.pSoftPct}%`;
+    confBlock.style.display = 'flex';
+  }
   const soft  = document.getElementById('riskPctNow');
   const hard  = document.getElementById('hardRiskPctNow');
   const label = document.getElementById('riskLabelNow');
@@ -7660,6 +7693,19 @@ if ('serviceWorker' in navigator) {
       .then(reg => {
         _swReg = reg;
         console.log('[SW] Registered, scope:', reg.scope);
+
+        // SW_STALE_DATA: показати маркер "дані з кешу" в UI (аудит sw.js п.4)
+        navigator.serviceWorker.addEventListener('message', event => {
+          if (event.data && event.data.type === 'SW_STALE_DATA') {
+            const el = document.getElementById('swStaleBar');
+            if (el) {
+              const age = Math.round((Date.now() - event.data.fetchedAt) / 60000);
+              el.textContent = `⚠ Дані з кешу (${age} хв тому) — перевірте з'єднання`;
+              el.style.display = 'block';
+              setTimeout(() => { el.style.display = 'none'; }, 10000);
+            }
+          }
+        });
 
         // Новий SW встановлюється — показати банер при переході в waiting
         function checkWaiting(sw) {
