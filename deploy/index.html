@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v68.1</title>
+  <title>G-Index — Космофізичний дашборд v68.2</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -673,11 +673,11 @@
           <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);margin-bottom:5px">Розклад G‑індексу</div>
           <div id="gDecompBar" style="display:flex;align-items:center;gap:4px;min-height:28px;flex-wrap:wrap;overflow:hidden;max-width:100%"></div>
           <!-- Flow canvas: частинки течуть від chips → G -->
-          <canvas id="gFlowCanvas" width="460" height="90" style="width:100%;height:90px;display:block;margin:6px 0 4px;border-radius:8px;background:rgba(10,16,32,0.6);"></canvas>
+          <canvas id="gFlowCanvas" width="460" height="90" style="width:100%;height:90px;display:none;margin:6px 0 4px;border-radius:8px;background:rgba(10,16,32,0.6);"></canvas>
           <div id="gDecompFactors" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"></div>
           <!-- Таблиця розкладу G (заповнюється JS) -->
           <table id="gDecompTable" style="width:100%;border-collapse:collapse;font-size:12px;margin-top:10px;table-layout:fixed">
-            <colgroup><col style="width:28%"><col style="width:18%"><col style="width:54%"></colgroup>
+            <colgroup><col style="width:30%"><col style="width:18%"><col style="width:52%"></colgroup>
             <thead><tr style="border-bottom:1px solid #1e2f52">
               <th style="padding:3px 8px;text-align:left;color:var(--dim);font-size:10px;font-weight:500">КОМПОНЕНТ</th>
               <th style="padding:3px 8px;text-align:center;color:var(--dim);font-size:10px;font-weight:500">ЗНАЧЕННЯ</th>
@@ -4474,7 +4474,7 @@ function renderPlanetAnimation(kp, moonPhaseDeg, G, panchCtx, astroCtx) {
     if (!wrap) return;
     canv = document.createElement('canvas');
     canv.id = 'planetCanvas';
-    canv.style.cssText = 'display:block;width:100%;max-width:100%;box-sizing:border-box;margin-top:8px;border-radius:10px;background:#060d1a;cursor:crosshair';
+    canv.style.cssText = 'display:block;width:100%;max-width:100%;box-sizing:border-box;margin-top:8px;border-radius:10px;background:#081020;cursor:crosshair';
     wrap.appendChild(canv);
 
     // v54: hover tooltip
@@ -4539,7 +4539,7 @@ function renderPlanetAnimation(kp, moonPhaseDeg, G, panchCtx, astroCtx) {
   // v57: getBoundingClientRect().width точніший ніж offsetWidth на мобільному
   const _bcr = canv.getBoundingClientRect();
   const W = (_bcr.width > 10 ? _bcr.width : (canv.parentElement?.getBoundingClientRect().width || window.innerWidth * 0.9 || 400));
-  const H = Math.round(Math.min(220, window.innerHeight * 0.30)); // v57: cap 220px, 30% висоти
+  const H = Math.round(Math.min(260, Math.max(180, window.innerHeight * 0.30))); // v68.2: min 180, cap 260
   canv.width  = W * dpr;
   canv.height = H * dpr;
   canv.style.height = H + 'px';
@@ -4681,9 +4681,9 @@ function renderPlanetAnimation(kp, moonPhaseDeg, G, panchCtx, astroCtx) {
         ctx.lineWidth = 0.8 + Math.min(1.2, Math.abs(orbitAiVal) * 0.3);
         ctx.setLineDash([]);
       } else {
-        ctx.strokeStyle = 'rgba(30,50,90,0.65)';
-        ctx.lineWidth = 0.6;
-        ctx.setLineDash([2,4]);
+        ctx.strokeStyle = 'rgba(40,70,120,0.8)';
+        ctx.lineWidth = 0.8;
+        ctx.setLineDash([3,4]);
       }
       ctx.stroke();
       ctx.setLineDash([]);
@@ -5770,35 +5770,35 @@ function renderGDecomp(G, kp, ai) {
     const sign = v => v > 0 ? '+' + v : '' + v;
     const rows = [
       {name:'🌐 Kp−2', val:kpPart,
-        desc: kpPart >= 2  ? `Шторм G${Math.round(kp)-4} — висока геомагнітна активність`
-            : kpPart >= 1  ? 'Підвищена геомагнітна активність'
-            : kpPart >= 0  ? 'Геомагніт спокійний'
-            : kpPart >= -1 ? 'Геомагніт нижче норми'
-            :                'Дуже спокійне поле'},
+        desc: kpPart >= 2  ? `Буря G${Math.round(kp)-4}`
+            : kpPart >= 1  ? 'Підвищена активність'
+            : kpPart >= 0  ? 'Спокійно'
+            : kpPart >= -1 ? 'Нижче норми'
+            :                'Дуже спокійно'},
       {name:'🌙 Lᵢ', val:ai.Li,
-        desc: ai.Li === -3 ? `Амавасья — новоління (${ai.phaseName})`
-            : ai.Li === 0  ? `${ai.phaseName} — нейтральна фаза (Purnima=0 v14.2)`
+        desc: ai.Li === -3 ? `Амавасья`
+            : ai.Li === 0  ? `${ai.phaseName}`
             :                `${ai.phaseName}`},
       {name:'🌑 Mᵢ', val:ai.Mi,
-        desc: ai.Mi <= -3 ? 'Активне затемнення (eclipse day)'
-            : ai.Mi === -1 ? 'Залишковий вплив затемнення (±3 дні)'
-            :                'Немає активних затемнень'},
+        desc: ai.Mi <= -3 ? 'Затемнення (день)'
+            : ai.Mi === -1 ? '±3 дні від затемнення'
+            :                'Без затемнень'},
       {name:'📅 eᵢ', val:ai.ei,
-        desc: ai.ei <= -2 ? 'Несприятливий день (екстремальний вплив подій)'
-            : ai.ei === -1 ? 'Помірно несприятливі події'
-            : ai.ei === 0  ? 'Нейтральний день — подій не виявлено'
-            : ai.ei === 1  ? 'Помірно сприятливі події'
-            :                'Сприятливий день (позитивні події)'},
+        desc: ai.ei <= -2 ? 'Негативні події'
+            : ai.ei === -1 ? 'Помірно негативно'
+            : ai.ei === 0  ? 'Без подій'
+            : ai.ei === 1  ? 'Помірно позитивно'
+            :                'Позитивні події'},
       {name:'🕉 Pᵢ', val:ai.Pi,
-        desc: ai.Pi <= -1  ? 'Несприятлива Панчанга (поєднання негативних факторів)'
-            : ai.Pi < -0.3 ? 'Помірно несприятлива Панчанга'
-            : ai.Pi > 1    ? 'Дуже сприятлива Панчанга'
-            : ai.Pi >= 0.3 ? 'Сприятлива Панчанга'
-            :                'Нейтральна Панчанга'},
+        desc: ai.Pi <= -1  ? 'Несприятлива'
+            : ai.Pi < -0.3 ? 'Помірно несприятлива'
+            : ai.Pi > 1    ? 'Дуже сприятлива'
+            : ai.Pi >= 0.3 ? 'Сприятлива'
+            :                'Нейтральна'},
       {name:'🧲 Dᵢ', val:ai.Di,
-        desc: ai.Di <= -2 ? `Значна геомагнітна буря (Dst≤−100 нТл)`
-            : ai.Di === -1 ? `Підтверджена буря (Dst≤−50 нТл, engine v14.9)`
-            :                'Dst норма — без штрафу'}
+        desc: ai.Di <= -2 ? `Dst ≤ −100 нТл`
+            : ai.Di === -1 ? `Dst ≤ −50 нТл`
+            :                'Норма'}
     ];
     let thtml = '';
     for(const r of rows) {
