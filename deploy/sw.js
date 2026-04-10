@@ -1,11 +1,11 @@
 /* G-Index Service Worker v1.0
    Strategy:
    - App shell (HTML/CSS/JS/icons/manifest) → Cache-First
-   - NOAA / SILSO API calls → Network-First, 1h TTL
+   - NOAA / SILSO API calls → Network-First, 3h TTL
    - Everything else → Network-First, no cache
 */
 
-const SHELL_CACHE  = 'g-index-shell-v79';
+const SHELL_CACHE  = 'g-index-shell-v81';
 const DATA_CACHE   = 'g-index-data-v1';
 const DATA_TTL_MS  = 1 * 60 * 60 * 1000; // 1 hour (Dst оновлюється кожну 1h)
 
@@ -105,7 +105,7 @@ async function cacheFirstShell(request) {
   }
 }
 
-// ── Network-First with 1h TTL (data) ──────────────────────────────────────
+// ── Network-First with 3h TTL (data) ──────────────────────────────────────
 async function networkFirstWithTTL(request) {
   const cache = await caches.open(DATA_CACHE);
 

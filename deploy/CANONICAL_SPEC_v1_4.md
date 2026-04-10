@@ -1,9 +1,7 @@
 # G-Index CANONICAL_SPEC v1.4
-**Дата:** 08.04.2026 | **Engine Classic:** v14.9 | **Engine Experimental:** v15.1 | **Dashboard:** v70 | **Status:** FROZEN
+**Дата:** 10.04.2026 | **Engine classic:** v14.9 | **Engine experimental:** v15.3 | **Dashboard:** v81 | **Status:** FROZEN
 
-> Зміни vs v1.3: (1) Додано Engine Experimental v15.1 (адитивна архітектура, SM holdout 76.5%, AUC 0.803); (2) Engine Classic оновлено до v14.9 (FIX-5); (3) Виправлено запис §9 щодо v15.
-
-> Зміни vs v1.2: (1) Виправлено Pᵢ_max 3.6→3.2; (2) Закрито "дірку" Kp 4–5 у таблиці (kp_med покриває 3≤Kp<5); (3) Зафіксовано sampling 12:00 UTC для Panchanga; (4) Формалізовано деградацію eclipse post-2030; (5) new_year: зафіксовано статус числової логіки; (6) Lᵢ домен уточнено; (7) TECH-2: Surya Sankranti в dashboard autoComputedExtras (sidereal Lahiri); (8) Personal module: Free tier (paywall знятий).
+> Зміни vs v1.3: (1) Engine classic→v14.9 (FIX-5: luck+kp_low→−1, SM=80.5% n=169); (2) Engine experimental v15.3 (SM=82.4% n=295, validated on 126 new dates SM=81.7%); (3) Dashboard→v81 (Simple/Pro toggle, 27-day 5-level fallback, SW g-index-shell-v81); (4) Датасет розширено до n=305 (SM=83.0%, 10 нових дат S3); (5) ARCH-1 = 3 алгоритми (dashboard continuous / v14.9 discrete / v15.3 experimental); (6) isCritical Yoga: +Vishkambha(0), +Vaidhriti(26); (7) Pᵢ_max dashboard HTML виправлено 3.6→3.2; (8) Dashboard doc: cos²(φ/2)→sin²(φ/2).
 > Кожен фактор має чіткий статус: **Production** / **Advisory** / **R&D** / **Disabled**.
 > При конфлікті між документами — цей файл має пріоритет.
 
@@ -29,14 +27,17 @@ G ∈ [−12, +16] (реально ≈ −5..+7)
 **wrap360(x) = ((x % 360) + 360) % 360**
 
 **Статус формули: Production**
-**Метрика:** SignMatch 68.6% holdout (n=51), engine v14.9 Classic; 76.5% holdout (n=51) engine v15.1 Experimental, 2024-08–2026-04
+**Метрика:** SignMatch 83.0% all (n=305, engine v14.9+v15.3 mixed), 80.5% classic (n=169, engine v14.9), holdout 78.4% (n=51, engine v14.8)
 
 ### ARCH-1 — Архітектурна розбіжність (задокументована)
 | Контекст | Алгоритм |
 |---|---|
 | Dashboard | Адитивна формула G = Kp−2 + ΣAᵢ (неперервна) |
-| Engine Python | Threshold classifier: `score_day()` → base ∈ {−3..3} |
-| Статус | Обидва коректні для своїх контекстів. НЕ усувати без re-validation |
+| Engine classic (v14.9) | Threshold classifier: `score_day()` → base ∈ {−3..4} |
+| Engine experimental (v15.3) | Threshold classifier з розширеним датасетом |
+| Статус | Три алгоритми під одним ім'ям. НЕ усувати без re-validation |
+
+**Engine SM не включає Pᵢ** — engine threshold classifier не використовує Panchanga scores. Dashboard включає Pᵢ (PCL_SCALE=0.4). Це свідоме рішення ARCH-1.
 
 Pᵢ має статус Advisory, але **включений у Production-формулу dashboard** за рішенням v1.1. Це свідомий компроміс: PCL_SCALE=0.4 обмежує вплив. Умова виведення з Production: окрема 365d валідація Pᵢ з негативним результатом.
 
@@ -120,6 +121,7 @@ Pᵢ має статус Advisory, але **включений у Production-ф�
 | `Удача🟢` + Амавасья | override −3 (місячний блок переважає) | Production (v14.8) |
 | `Удача🟢` + Пурніма + kp_med/high/storm | override −2 | Production (v14.8) |
 | `Нова одежда` + Амавасья | override −3 | Production (v14.8) |
+| `Удача🟢` standalone + kp_low (2<Kp<3), без підсилювачів | override −1 (FIX-5: числова логіка дає хибний 0) | Production (v14.9) |
 
 **Агрегація eᵢ:** сума всіх застосовних ваг. Blocking-override (amavasya, ekadashi, surya, retro_end без позитивного тегу) повертає значення напряму, минаючи суму. Теги не є взаємовиключними, якщо не зазначено інше.
 
@@ -252,7 +254,11 @@ Pᵢ_min ≈ −4.4 (теоретично; реально компоненти �
 
 | Параметр | Значення | Статус |
 |---|---|---|
-| SignMatch all n=169 | 68.0% (115/169) | Validated (engine v14.8) |
+| SignMatch all n=305 | 83.0% (253/305, mixed v14.9+v15.3) | Validated |
+| SignMatch all n=169 (v14.9 classic) | 80.5% (136/169) | Validated |
+| SignMatch all n=295 (v15.3 experimental) | 82.4% | Validated |
+| SignMatch 126 new dates (v15.3) | 81.7% | Validated |
+| SignMatch all n=169 (v14.8 baseline) | 68.0% (115/169) | Reference |
 | SignMatch all n=169 (v14.5 baseline) | 62.7% (106/169) | Reference |
 | SignMatch holdout n=51 | 78.4% (40/51) | Validated (engine v14.8) |
 | Holdout AUC | 0.784 PASS (v14.8) | Validated |
@@ -260,6 +266,8 @@ Pᵢ_min ≈ −4.4 (теоретично; реально компоненти �
 | Ablation Lᵢ / Kp | ΔSM −3.6% кожен | Validated |
 | Platt SOFT AUC | 0.777 (holdout) | Validated |
 | Platt HARD AUC | 0.790 (holdout) | Validated |
+| Датасет | 305 rows, 24.03.2025–19.04.2026 | Primary |
+| Jul 2025 ground truth | 13 дат, source=XL_proxy (не PDF) | Advisory |
 | Публікація методології | Відсутня | R&D |
 
 **SignMatch:** sign(G_engine) == sign(PDF_score) для денної оцінки (G>0 → позитив, G<0 → негатив, G=0 → нейтрал).
@@ -292,14 +300,14 @@ Pᵢ_min ≈ −4.4 (теоретично; реально компоненти �
 
 | Компонент | Канонічна версія | Файл |
 |---|---|---|
-| Engine Classic (Production) | **v14.9** | forecast_engine_v14_9.py |
-| Engine Experimental | **v15.1** | forecast_engine_v15_1.py |
-| Engine alias | — | forecast_engine.py |
-| Dashboard | **v70** | index.html |
-| Service Worker cache | g-index-shell-v70 | sw.js |
+| Engine classic | **v14.9** | forecast_engine_v14_9.py |
+| Engine experimental | **v15.3** | forecast_engine_v15_3.py |
+| Dashboard | **v81** | index.html |
+| Service Worker cache | g-index-shell-v81 | sw.js |
 | auto_tag | v1.1 (sidereal Sankranti) | auto_tag_generator.py |
-| Posibnyk | v3.5.0 | Posibnyk_v3_5_0.md |
+| Posibnyk | v4.0 | Posibnyk_v4_0_full.docx |
 | Canonical Spec | **v1.4** | CANONICAL_SPEC_v1_4.md |
+| Датасет | n=305 | engine_v15_3_vs_pdf_merged.csv |
 
 ---
 
@@ -320,7 +328,7 @@ Pᵢ_min ≈ −4.4 (теоретично; реально компоненти �
 | lunarMod = sin²(φ) | Хибно — пік на квадратурах, не повні |
 | Surya Sankranti tropical | Хибно — Jyotish використовує sidereal |
 | ΣΔeᵢ в G (планетний вплив) | Advisory only — ніколи не в canonical G |
-| forecast_engine v15.1 (адитивна) | Experimental-canonical: SM holdout 76.5%, AUC 0.803; Classic = v14.9 |
+| forecast_engine v15 (зовнішній) | ВІДХИЛЕНО — FullMoon regression |
 | vNext-lite (адитивна формула) | ВІДХИЛЕНО — holdout −1.9%, neg-tags −29% без blocking |
 | retro_end = −3 безумовно | Виправлено v14.7 — з позитивним тегом не blocking |
 | Місячний нов.рік = −3 (без ❤) | Виправлено v14.7 — іде в числову логіку |
@@ -356,4 +364,4 @@ Pᵢ_min ≈ −4.4 (теоретично; реально компоненти �
 
 ---
 
-*CANONICAL_SPEC v1.4 — заморожено 08.04.2026. Попередня версія: v1.3 (08.04.2026). Зміни тільки через нову версію spec.*
+*CANONICAL_SPEC v1.4 — заморожено 10.04.2026. Попередня версія: v1.3 (08.04.2026). Зміни тільки через нову версію spec.*
