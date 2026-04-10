@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v68</title>
+  <title>G-Index — Космофізичний дашборд v68.1</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1022,7 +1022,7 @@ Kp: 3-год індекс геомагнітної активності (0–9)
         </table>
         <p>Kp ∈ [0;&nbsp;9], ΣAᵢ реально лежить у межах <strong>[−10;&nbsp;+9]</strong> (при екстремальному накладанні затемнень, ICS‑подій та несприятливої Панчанги), робочий діапазон за нормальних умов: <strong>ΣAᵢ ≈ −4 … +4</strong>. Теоретичний G ∈ [−12;&nbsp;+16], робочий <strong>G ≈ −5 … +7</strong>.</p>
         <p>Множник <strong>PCL_SCALE = 0.4</strong> для Pᵢ має статус <em>R&D / Advisory</em> і потребує емпіричного калібрування на операційних даних.</p>
-        <p class="small" style="color:var(--muted)">ℹ Функції, реалізовані лише у <strong>forecast_engine v14</strong> (Python/Excel), але <em>відсутні</em> у браузерному дашборді: cos²‑модуль місячної фази (<code>lunar_mod = sin²(φ/2)</code>, реалізовано у v40), автрегресійний контекст (<code>prev_score</code>), довгострокові транзити Jupiter/Rahu. Значення G у дашборді та у бюлетені можуть відрізнятись на ±0.3–0.5.</p>
+        <p class="small" style="color:var(--muted)">ℹ Функції, реалізовані лише у <strong>forecast_engine v14</strong> (Python/Excel), але <em>відсутні</em> у браузерному дашборді: авторегресійний контекст (<code>prev_score</code>), довгострокові транзити Jupiter/Rahu. Функція <code>lunar_mod = sin²(φ/2)</code> реалізована з v40. Значення G у дашборді та у бюлетені можуть відрізнятись на ±0.3–0.5.</p>
         <p>Tithi, що вже враховані в Lᵢ (Пурніма, Амавасья) або eᵢ (Екадаші), виключені з Pᵢ для уникнення подвійного рахування.</p>
 
         <p style="font-weight:600;color:#cfe0ff;margin-bottom:4px">Категорії G‑індексу</p>
@@ -1310,7 +1310,7 @@ Kp: 3-год індекс геомагнітної активності (0–9)
   </div>
 
   <footer>
-    <div class="small">Дані Kp/Ap — NOAA SWPC; Ap↔Kp — GFZ/NOAA table; Dst — Kyoto WDC; Sn — SILSO/ROB; події — ICS; затемнення — Timeanddate/NASA; фази — Astronomy Engine (Meeus). Модель G: R&amp;D / Advisory — у валідації. SignMatch 76.3% (n=169, engine v14.6); G включає Dᵢ (Dst-компонент, синхронно з engine v14.6).</div>
+    <div class="small">Дані Kp/Ap — NOAA SWPC; Ap↔Kp — GFZ/NOAA table; Dst — Kyoto WDC; Sn — SILSO/ROB; події — ICS; затемнення — Timeanddate/NASA; фази — Astronomy Engine (Meeus). Модель G: R&amp;D / Advisory — у валідації. SignMatch 83.0% (n=305, engine v14.9/v15.3); G включає Dᵢ (Dst-компонент, синхронно з engine v14.9).</div>
   </footer>
 
 <script>
@@ -1845,13 +1845,13 @@ function autoComputedExtras(dateUTC, kp=0){
 }
 
 // ═══ v26: DST → G-модифікатор (M_DST) ═══
-// DST < -50 нТл = помірна буря (узгоджено з engine v14.6), < -100 = сильна буря
+// DST < -50 нТл = помірна буря (узгоджено з engine v14.9), < -100 = сильна буря
 function computeDstModifier(){
   if(!window._lastDst) return {val:0, tip:'0 — Dst недоступний'};
   const dst = window._lastDst.dst;
   if(!isFinite(dst)) return {val:0, tip:'0 — Dst недоступний'};
   if(dst <= -100) return {val:-2, tip:`-2 — Dst=${dst} нТл (значна буря)`};
-  if(dst <= -50)  return {val:-1, tip:`-1 — Dst=${dst} нТл (помірна буря, engine v14.6)`};
+  if(dst <= -50)  return {val:-1, tip:`-1 — Dst=${dst} нТл (помірна буря, engine v14.9)`};
   return {val:0, tip:`0 — Dst=${dst} нТл (норма)`};
 }
 
@@ -2136,14 +2136,14 @@ function computeAi(dateTimeUTC, kp=0){
   }
   const eiTotal = Math.round((ei + horaEi) * 10) / 10;
 
-  // Sn>150 корекція — синхронно з engine v14.6 (WEIGHTS.sn_high_pen = -0.4)
+  // Sn>150 корекція — синхронно з engine v14.9 (WEIGHTS.sn_high_pen = -0.4)
   const _snVal = window._lastWolfSn ? (window._lastWolfSn.sn ?? 0) : 0;
   const snPen  = _snVal > 150 ? -0.4 : 0;
 
   // v51: Bz/Vsw — інформаційний контекст, НЕ в canonical G (§13.2 Посібника)
   const Ai = Math.round((Li + Mi + eiTotal + Pi + snPen) * 10) / 10;
 
-  // Dᵢ — Dst component (A3+A4: офіційна частина ΣAᵢ, синхронно з engine v14.6)
+  // Dᵢ — Dst component (A3+A4: офіційна частина ΣAᵢ, синхронно з engine v14.9)
   // Застосовується тільки для поточного дня — майбутні дати Dst невідомий
   let Di = 0, diTip = '0 — Dst норма';
   const _diDateStr = fmtDate(dateTimeUTC);
@@ -2151,12 +2151,12 @@ function computeAi(dateTimeUTC, kp=0){
   if(_diDateStr === _todayStr && window._lastDst && isFinite(window._lastDst.dst)) {
     const dstVal = window._lastDst.dst;
     if(dstVal <= -100) { Di = -2; diTip = `-2 — Dst=${dstVal} нТл (значна буря, Kp≥7 еквівалент)`; }
-    else if(dstVal <= -50) { Di = -1; diTip = `-1 — Dst=${dstVal} нТл (помірна буря, engine v14.6)`; }
+    else if(dstVal <= -50) { Di = -1; diTip = `-1 — Dst=${dstVal} нТл (помірна буря, engine v14.9)`; }
     else { diTip = `0 — Dst=${dstVal} нТл (норма)`; }
   }
   const AiFull = Math.round((Ai + Di) * 10) / 10;
   const _snLabel = snPen !== 0 ? `+Sn` : '';
-  const explain = `\u03a3A\u1d62 = L\u1d62+M\u1d62+e\u1d62+P\u1d62+D\u1d62${snPen!==0?'+Sn':''} = ${Li}+${Mi}+${eiTotal}+${Pi}+${Di}${snPen!==0?'+'+snPen:''} = ${AiFull}` + (snPen!==0?`\n(Sn=${_snVal}>150: kp_pen${snPen} — engine v14.6)`:'') + (bzVal!==0||vswVal!==0?`\n(+Bz=${bzVal}, Vsw=${vswVal} — контекст, не в G)`:'');
+  const explain = `\u03a3A\u1d62 = L\u1d62+M\u1d62+e\u1d62+P\u1d62+D\u1d62${snPen!==0?'+Sn':''} = ${Li}+${Mi}+${eiTotal}+${Pi}+${Di}${snPen!==0?'+'+snPen:''} = ${AiFull}` + (snPen!==0?`\n(Sn=${_snVal}>150: kp_pen${snPen} — engine v14.9)`:'') + (bzVal!==0||vswVal!==0?`\n(+Bz=${bzVal}, Vsw=${vswVal} — контекст, не в G)`:'');
 
   return { Ai: AiFull, AiNoDst: Ai, Li, Mi, ei: eiTotal, eiBase: ei, horaEi, Pi, Di, bzVal, vswVal, phaseName, phaseDeg, lTip, mTip, eTip: eTipLines.join('\n'), pTip, diTip, explain };
 }
@@ -5797,7 +5797,7 @@ function renderGDecomp(G, kp, ai) {
             :                'Нейтральна Панчанга'},
       {name:'🧲 Dᵢ', val:ai.Di,
         desc: ai.Di <= -2 ? `Значна геомагнітна буря (Dst≤−100 нТл)`
-            : ai.Di === -1 ? `Підтверджена буря (Dst≤−50 нТл, engine v14.6)`
+            : ai.Di === -1 ? `Підтверджена буря (Dst≤−50 нТл, engine v14.9)`
             :                'Dst норма — без штрафу'}
     ];
     let thtml = '';
