@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v68.4</title>
+  <title>G-Index — Космофізичний дашборд v68.5</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -46,12 +46,10 @@
     .sub{color:var(--dim); font-size:var(--fs-md)}
     main{max-width:1400px; margin:16px auto; padding:0 16px 40px}
     .row{display:grid; grid-template-columns:repeat(12,1fr); gap:var(--gap)}
-    #mainGrid{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px; align-items:start}
-    #nowCard{}
-    #rightCol{display:grid; gap:16px}
-    #panchCard{}
-    #dataQualityCard{}
-    #personalCard{}
+    #mainGrid{display:grid; grid-template-columns:1fr 1fr; grid-template-rows:auto auto; gap:16px; margin-bottom:16px}
+    #nowCard{grid-column:1; grid-row:1/3}
+    #panchCard{grid-column:2}
+    #personalCard{grid-column:2; grid-row:2}
     .card{grid-column:span 12; background:var(--card); border:1px solid var(--border); border-radius:16px; padding:16px}
     @media (min-width: 860px){ .card.half{grid-column: span 6} }
     button{appearance:none; border:none; background:var(--alt); color:#001026; font-weight:700; padding:8px 14px; border-radius:10px; cursor:pointer; font-size:var(--fs-md)}
@@ -168,6 +166,10 @@
     .gd-flow-arrow { display:inline-block; color:var(--dim); font-size:12px;
       animation:flowArrow 1.8s ease-in-out infinite; margin:0 2px; }
     .hora-seg-active { animation:horaPulse 1.6s ease-in-out infinite !important; border-radius:3px; }
+    /* Розклад завжди видимий */
+    #gDecompBlock { display:block !important; }
+    /* Таблиця завжди видима */
+    #gDecompTable { display:table !important; }
     /* Science Bar */
     #scienceBar{ display:flex; flex-wrap:wrap; gap:6px 12px; margin:10px 0 0; padding:8px 12px; background:var(--card2); border:1px solid var(--border); border-radius:10px; font-size:var(--fs-sm) }
     .sci-item{ display:flex; align-items:center; gap:4px; color:var(--dim) }
@@ -243,7 +245,7 @@
         grid-template-columns: 1fr !important;
         grid-template-rows: auto !important;
       }
-      #nowCard, #panchCard, #dataQualityCard, #personalCard, #rightCol {
+      #nowCard, #panchCard, #personalCard {
         grid-column: 1 !important;
         grid-row: auto !important;
         width: 100%;
@@ -590,13 +592,13 @@
     </div>
     <div id="profileRec"></div>
 
-    <!-- Двоколонковий лейаут: Рішення на зараз | Панчанга + Особистий -->
+    <!-- Двоколонковий лейаут: Поточний стан | Панчанга + Особистий -->
     <div id="mainGrid">
 
       <!-- ПОТОЧНИЙ СТАН -->
       <section class="card" id="nowCard">
         <div class="now-top">
-          <h2 style="margin:0">Рішення на зараз <span id="nowEffLabel" class="muted" style="font-weight:400">(—)</span></h2>
+          <h2 style="margin:0">Поточний стан <span id="nowEffLabel" class="muted" style="font-weight:400">(—)</span></h2>
           <div class="now-right">
             <span class="pill">Локальний час: <span id="localNow">—</span></span>
             <span class="pill">UTC: <span id="utcNow">—</span></span>
@@ -619,22 +621,10 @@
           <div id="nowGcat" class="gcat">—</div>
         </div>
 
-        <!-- ACTION BAR v68.3 -->
-        <div id="actionBar" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
-          <div style="padding:8px 10px;background:rgba(43,212,125,.06);border:1px solid rgba(43,212,125,.2);border-radius:10px">
-            <div style="font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:#7fdca4;margin-bottom:2px">✓ Do</div>
-            <div id="doList" style="font-size:12px;line-height:1.4;color:#d0f5e0">—</div>
-          </div>
-          <div style="padding:8px 10px;background:rgba(255,107,107,.06);border:1px solid rgba(255,107,107,.2);border-radius:10px">
-            <div style="font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:#ff9b9b;margin-bottom:2px">✗ Avoid</div>
-            <div id="avoidList" style="font-size:12px;line-height:1.4;color:#ffdede">—</div>
-          </div>
-        </div>
-
         <!-- C-SCORE v63 -->
         <div id="cScoreBlock" style="margin-top:8px;padding:8px 12px;background:#090f1e;border:1px solid #1e2a44;border-radius:10px;font-size:12px">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px">
-            <span style="color:var(--dim);font-size:10px;text-transform:uppercase;letter-spacing:.06em">C — Надійність сигналу</span>
+            <span style="color:var(--dim);font-size:10px;text-transform:uppercase;letter-spacing:.06em">C — Впевненість моделі</span>
             <span id="cScoreGrade" style="font-size:11px;font-weight:700;color:#9bb1dc">…</span>
           </div>
           <div id="cScoreBar" style="height:5px;background:#1e2a44;border-radius:3px;overflow:hidden;margin-bottom:5px">
@@ -644,48 +634,25 @@
         </div>
 
 
-        <!-- PROB LAYER v68.3: band-only (no %) -->
+        <!-- PROB LAYER v68 -->
         <div id="probNowBlock" style="margin-top:8px;display:none">
           <div class="prob-row" id="probNowRow">
             <div class="prob-cell" id="probCellSoft">
-              <div class="prob-k">Оцінка ризику</div>
-              <div class="prob-v" id="riskPctNow" style="font-size:13px">--</div>
+              <div class="prob-k">Ризик дня</div>
+              <div class="prob-v" id="riskPctNow">--%</div>
             </div>
             <div class="prob-cell" id="probCellHard">
               <div class="prob-k">Сильний ризик</div>
-              <div class="prob-v" id="hardRiskPctNow" style="font-size:13px">--</div>
+              <div class="prob-v" id="hardRiskPctNow">--%</div>
             </div>
             <div class="prob-cell">
               <div class="prob-k">Статус</div>
               <div class="prob-v" id="riskLabelNow" style="font-size:12px;padding-top:2px">--</div>
             </div>
           </div>
-          <div style="font-size:9px;color:#4a6080;text-align:right;margin-top:2px">derived from G</div>
-        </div>
-        <div id="whyTodayBlock" style="margin-top:6px;display:none">
-          <div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);margin-bottom:3px">Чому саме так</div>
-          <div id="whyTodayContent" style="display:flex;gap:6px;flex-wrap:wrap"></div>
         </div>
 
-        <!-- DAY COMPARE v68.3 — yesterday → today → tomorrow -->
-        <div id="dayCompareStrip" style="margin-top:6px;display:none">
-          <div style="display:flex;gap:4px;align-items:center;justify-content:center;font-size:12px">
-            <div id="dcYesterday" style="flex:1;text-align:center;padding:4px 8px;border-radius:8px;background:#090f1e;border:1px solid var(--border)">
-              <div style="font-size:9px;color:var(--dim);text-transform:uppercase">вчора</div>
-              <div id="dcYestG" style="font-weight:700;font-size:14px">—</div>
-            </div>
-            <span style="color:var(--dim)">→</span>
-            <div id="dcToday" style="flex:1;text-align:center;padding:4px 8px;border-radius:8px;background:#0e1a30;border:2px solid var(--alt)">
-              <div style="font-size:9px;color:var(--alt);text-transform:uppercase;font-weight:600">сьогодні</div>
-              <div id="dcTodayG" style="font-weight:800;font-size:16px">—</div>
-            </div>
-            <span style="color:var(--dim)">→</span>
-            <div id="dcTomorrow" style="flex:1;text-align:center;padding:4px 8px;border-radius:8px;background:#090f1e;border:1px solid var(--border)">
-              <div style="font-size:9px;color:var(--dim);text-transform:uppercase">завтра</div>
-              <div id="dcTomorG" style="font-weight:700;font-size:14px">—</div>
-            </div>
-          </div>
-        </div>
+        <!-- DELTA CARD v63 -->
         <div id="deltaCard" style="display:none;margin-top:4px;padding:4px 12px;background:#090f1e;border:1px solid #1e2a44;border-radius:10px;font-size:12px;align-items:center;gap:6px">
           <span style="color:var(--dim);font-size:10px;text-transform:uppercase;letter-spacing:.06em">Δ від учора</span>
           <span id="deltaCardVal" style="font-weight:700"></span>
@@ -703,23 +670,20 @@
 
         <!-- ═══ G DECOMPOSITION BAR ═══ -->
         <div id="gDecompBlock" style="margin-top:6px;">
-          <!-- G AUDIT TRAIL v68.3 — always visible -->
-          <div id="gAuditBlock" style="display:none;margin-top:0;padding:4px 10px;background:#060c18;border:1px solid #1a2540;border-radius:6px;font-family:monospace;font-size:11px;color:#5a7a9a;line-height:1.5">
-            <div id="gAuditContent"></div>
-          </div>
-          <details style="margin-top:6px">
-            <summary style="cursor:pointer;color:var(--dim);font-size:11px">▸ Аудит G (деталі)</summary>
-            <div id="gDecompBar" style="display:none;margin-top:6px"></div>
-            <div id="gDecompFactors" style="display:none"></div>
-            <table id="gDecompTable" style="width:100%;border-collapse:collapse;font-size:12px;margin-top:6px;table-layout:fixed">
-              <colgroup><col style="width:55%"><col style="width:45%"></colgroup>
-              <thead><tr style="border-bottom:1px solid #1e2f52">
-                <th style="padding:3px 8px;text-align:left;color:var(--dim);font-size:10px;font-weight:500">КОМПОНЕНТ</th>
-                <th style="padding:3px 8px;text-align:center;color:var(--dim);font-size:10px;font-weight:500">ЗНАЧЕННЯ</th>
-              </tr></thead>
-              <tbody id="gDecompTableBody"></tbody>
-            </table>
-          </details>
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);margin-bottom:3px">Розклад G</div>
+          <div id="gDecompBar" style="display:none"></div>
+          <!-- Flow canvas: частинки течуть від chips → G -->
+          <canvas id="gFlowCanvas" width="460" height="90" style="width:100%;height:90px;display:none;margin:6px 0 4px;border-radius:8px;background:rgba(10,16,32,0.6);"></canvas>
+          <div id="gDecompFactors" style="display:none"></div>
+          <!-- Таблиця розкладу G (заповнюється JS) -->
+          <table id="gDecompTable" style="width:100%;border-collapse:collapse;font-size:12px;margin-top:6px;table-layout:fixed">
+            <colgroup><col style="width:55%"><col style="width:45%"></colgroup>
+            <thead><tr style="border-bottom:1px solid #1e2f52">
+              <th style="padding:3px 8px;text-align:left;color:var(--dim);font-size:10px;font-weight:500">КОМПОНЕНТ</th>
+              <th style="padding:3px 8px;text-align:center;color:var(--dim);font-size:10px;font-weight:500">ЗНАЧЕННЯ</th>
+            </tr></thead>
+            <tbody id="gDecompTableBody"></tbody>
+          </table>
         </div>
 
         <!-- ═══ ЯК ЧИТАТИ G (людський блок) ═══ -->
@@ -741,24 +705,22 @@
           <div id="bestTimeContent"></div>
         </div>
 
-        <!-- ═══ HORA + GAUGE — collapsed ═══ -->
-        <details style="margin-top:8px">
-          <summary style="cursor:pointer;color:var(--dim);font-size:11px">▸ Hora таймлайн і фаза Місяця</summary>
-          <div id="horaTimelineBlock" style="margin-top:6px">
-            <div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);margin-bottom:3px">Hora <span class="muted" style="font-size:10px;text-transform:none" id="horaCoordLabel">(UTC+2, 50°N)</span></div>
-            <div id="horaTimeline" style="position:relative;height:40px;border-radius:8px;overflow:hidden;background:#0a1428;border:1px solid #1e2f52"></div>
-            <div id="horaAxis" style="position:relative;height:14px;margin-top:1px;font-size:9px;color:#4a6080"></div>
-            <div id="horaLegend" style="margin-top:4px;font-size:11px;color:var(--dim)"></div>
-          </div>
-          <div id="gaugeMoonWrap" style="margin-top:6px;display:none">
-            <svg id="gaugeMoonSvg" width="100%" viewBox="0 0 480 90" style="display:block;width:100%;overflow:visible"></svg>
-          </div>
-        </details>
+        <!-- ═══ HORA ТАЙМЛАЙН ═══ -->
+        <div id="horaTimelineBlock" style="margin-top:8px">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);margin-bottom:3px">Hora <span class="muted" style="font-size:10px;text-transform:none" id="horaCoordLabel">(UTC+2, 50°N)</span></div>
+          <div id="horaTimeline" style="position:relative;height:40px;border-radius:8px;overflow:hidden;background:#0a1428;border:1px solid #1e2f52"></div>
+          <div id="horaAxis" style="position:relative;height:14px;margin-top:1px;font-size:9px;color:#4a6080"></div>
+          <div id="horaLegend" style="margin-top:4px;font-size:11px;color:var(--dim)"></div>
+        </div>
+
+        <!-- Гауж + Фаза Місяця -->
+        <div id="gaugeMoonWrap" style="margin-top:6px;display:none">
+          <svg id="gaugeMoonSvg" width="100%" viewBox="0 0 480 90" style="display:block;width:100%;overflow:visible"></svg>
+        </div>
 
         <!-- Bar chart Kp removed -->
       </section>
 
-      <div id="rightCol">
       <!-- PANCHANGA — компактна права колонка -->
       <section class="card" id="panchCard">
         <div class="flex" style="margin-bottom:8px">
@@ -769,26 +731,6 @@
           <div class="muted small">Завантаження…</div>
         </div>
         <div style="margin-top:6px;font-size:12px" id="panchNote"></div>
-      </section>
-
-      <!-- DATA QUALITY v68.4 -->
-      <section class="card" id="dataQualityCard" style="padding:12px 14px">
-        <h2 style="margin:0 0 8px;font-size:14px">📡 Якість даних</h2>
-        <div style="display:grid;grid-template-columns:1fr auto;gap:4px 12px;font-size:12px">
-          <span style="color:var(--dim)">Kp (спостереження)</span>
-          <span id="dqKpObs" style="font-weight:600">—</span>
-          <span style="color:var(--dim)">Kp (прогноз 3д)</span>
-          <span id="dqKpFcst" style="font-weight:600">—</span>
-          <span style="color:var(--dim)">27-day outlook</span>
-          <span id="dq27Day" style="font-weight:600">—</span>
-          <span style="color:var(--dim)">Panchanga</span>
-          <span style="font-weight:600;color:#2bd47d">✓ Local calc</span>
-          <span style="color:var(--dim)">Engine</span>
-          <span style="font-weight:600;color:#9bb1dc">v14.10.1</span>
-        </div>
-        <div style="margin-top:8px;padding:6px 10px;background:#060c18;border:1px solid #1a2540;border-radius:8px;font-size:11px;color:#5a7a9a">
-          Backtest: SignMatch <strong style="color:#cfe0ff">81.1%</strong> (n=169) · Holdout <strong style="color:#cfe0ff">86.3%</strong> (n=51) · AUC 0.784
-        </div>
       </section>
 
       <!-- ПЕРСОНАЛЬНИЙ РОЗРАХУНОК — правий стовпець, рядок 2 -->
@@ -848,7 +790,6 @@
         <div class="muted small">Натисніть «✎ Дані» і введіть дату народження.</div>
       </div>
     </section>
-    </div><!-- /rightCol -->
     </div><!-- /grid -->
 
     <!-- 3 ДНІ -->
@@ -1362,7 +1303,7 @@ Kp: 3-год індекс геомагнітної активності (0–9)
       <div id="g2watchResult" style="background:#0a1428;border-radius:10px;padding:16px;min-height:60px"></div>
 
       <div class="small muted" style="margin-top:10px">
-        Формула: G = Kp − 2 + (Lᵢ + Mᵢ + eᵢ + Pᵢ + Dᵢ) · Значення розраховуються автоматично при переміщенні слайдерів · <a href="#" style="color:var(--faint)" onclick="el('g2watchPanel').style.display='none';return false">Згорнути</a>
+        Формула: G = Kp − 2 + (Lᵢ + Mᵢ + eᵢ + Pᵢ) · Значення розраховуються автоматично при переміщенні слайдерів · <a href="#" style="color:var(--faint)" onclick="el('g2watchPanel').style.display='none';return false">Згорнути</a>
       </div>
     </div>
   </div>
@@ -1504,14 +1445,12 @@ function moonAgeDays_simple(date){
   return (x + SYNODIC) % SYNODIC;
 }
 function moonPhaseAngle(date){
-  // v68.3 P4: true elongation via Meeus (was: simplified synodic — ~7° error)
   try {
     const jde = date.getTime() / 86400000 + 2440587.5;
     const moonLon = calcMoonLongitude(jde);
     const sunLon  = calcSunLongitude(jde);
     return ((moonLon - sunLon) % 360 + 360) % 360;
   } catch(e) {
-    // ultimate fallback
     const age = moonAgeDays_simple(date);
     return (age / SYNODIC) * 360.0;
   }
@@ -2220,7 +2159,7 @@ function computeAi(dateTimeUTC, kp=0){
   const _snLabel = snPen !== 0 ? `+Sn` : '';
   const explain = `\u03a3A\u1d62 = L\u1d62+M\u1d62+e\u1d62+P\u1d62+D\u1d62${snPen!==0?'+Sn':''} = ${Li}+${Mi}+${eiTotal}+${Pi}+${Di}${snPen!==0?'+'+snPen:''} = ${AiFull}` + (snPen!==0?`\n(Sn=${_snVal}>150: kp_pen${snPen} — engine v14.9)`:'') + (bzVal!==0||vswVal!==0?`\n(+Bz=${bzVal}, Vsw=${vswVal} — контекст, не в G)`:'');
 
-  return { Ai: AiFull, AiNoDst: Ai, Li, Mi, ei: eiTotal, eiBase: ei, horaEi, Pi, Di, snPen, bzVal, vswVal, phaseName, phaseDeg, lTip, mTip, eTip: eTipLines.join('\n'), pTip, diTip, explain };
+  return { Ai: AiFull, AiNoDst: Ai, Li, Mi, ei: eiTotal, eiBase: ei, horaEi, Pi, Di, bzVal, vswVal, phaseName, phaseDeg, lTip, mTip, eTip: eTipLines.join('\n'), pTip, diTip, explain };
 }
 
 // --------------------------- ШКАЛИ / Бейджі для Kp --------------------------
@@ -2606,7 +2545,7 @@ function draw27dTable(){
       <td class="mono col-hide-mobile">${r.Ap}</td>
       <td class="mono col-hide-mobile">${r.flux}</td>
       <td style="font-size:12px">${classifyG(isFinite(G)?G:0)}</td>
-      <td class="col-hide-mobile" style="font-size:12px">${(()=>{const _p=calcProbabilityLayer({G,csConf:1,horizon:'27day'});return _p?`<span style="font-weight:700;color:${_p.band==='high'?'#ff6b6b':_p.band==='elevated'?'#fca474':_p.band==='moderate'?'#ffcc00':'#2bd47d'}" title="Горизонт 27д — низька точність (×0.55)">~${_p.labelUA}</span>`:'—';})()}</td>
+      <td class="col-hide-mobile" style="font-size:12px">${(()=>{const _p=calcProbabilityLayer({G,csConf:1,horizon:'27day'});return _p?`<span style="font-weight:700;color:${_p.band==='high'?'#ff6b6b':_p.band==='elevated'?'#fca474':_p.band==='moderate'?'#ffcc00':'#2bd47d'}" title="Горизонт 27д — низька точність (×0.55)">~${_p.pSoftPct}%</span>`:'—';})()}</td>
       <td style="font-size:12px;${recommendG(G, kpUsed).style}">${recommendG(G, kpUsed).text}</td>
       ${gosCell}
     </tr>`;
@@ -2669,7 +2608,6 @@ function classForG(g){
   return 'g-warn';
 }
 function classifyG(g){
-  // v68.3: unified continuous thresholds (= badge/filter parity)
   if(g <= -2.5) return 'Особливо несприятливий';
   if(g <= -1.5) return 'Несприятливий';
   if(g <= -0.5) return 'Помірно несприятливий';
@@ -2835,9 +2773,9 @@ function renderCurrentPanel(){
   const _csInline = computeCScore(kUse, _lastKpObsJson, ai, G, _kpSrcInline);
   const _cCol = _csInline.gradeCol;
   const _cHtml = isFinite(G)
-    ? ` <span style="font-size:11px;font-weight:500;color:${_cCol};opacity:0.85;letter-spacing:.01em" title="C-score: надійність сигналу ${_csInline.pct}%">C=${_csInline.conf.toFixed(2)}</span>`
+    ? ` <span style="font-size:11px;font-weight:500;color:${_cCol};opacity:0.85;letter-spacing:.01em" title="C-score: впевненість моделі ${_csInline.pct}%">C=${_csInline.conf.toFixed(2)}</span>`
     : '';
-  gEl.innerHTML = `G ${isFinite(G)? G.toFixed(2):'…'}${_gTrendHtml}${_cHtml}${cbHtml}<span class="hint-pop">${escapeHtml(gTipLines)}\n\nC-score (надійність): ${_csInline.pct}%\nConfidence Band: [${gLo} … ${gHi}]\nΔKp(8 obs): ±${cb.kpDelta} · ΔAᵢ: ±0.5</span>`;
+  gEl.innerHTML = `G ${isFinite(G)? G.toFixed(2):'…'}${_gTrendHtml}${_cHtml}${cbHtml}<span class="hint-pop">${escapeHtml(gTipLines)}\n\nC-score (впевненість): ${_csInline.pct}%\nConfidence Band: [${gLo} … ${gHi}]\nΔKp(8 obs): ±${cb.kpDelta} · ΔAᵢ: ±0.5</span>`;
   el('nowGcat').textContent = classifyG(isFinite(G)? G:0);
 
   // ─── C-SCORE render v63 ───────────────────────────────────────
@@ -2910,17 +2848,11 @@ function renderCurrentPanel(){
     } catch(e){}
   })();
 
-  // ── Probability Layer v68.3 ────────────────────────────────────────────────
-  const _isSynthetic = !!(lastWWV && lastWWV._synthetic);
-  const _nowCard = document.getElementById('nowCard');
-  if(_nowCard) _nowCard.style.borderColor = _isSynthetic ? '#fca474' : '';
-  if(isFinite(G) && !_isSynthetic){
+  // ── Probability Layer v68 ────────────────────────────────────────────────
+  if(isFinite(G)){
     const _probNow = calcProbabilityLayer({G, csConf:_csInline.conf, horizon:'now'});
     renderNowProbability(_probNow);
     window._probNow = _probNow;
-  } else {
-    const _pb = document.getElementById('probNowBlock');
-    if(_pb) _pb.style.display = 'none';
   }
 
   // Sync gTopRow (G вище профіль-бару)
@@ -3039,61 +2971,6 @@ function renderCurrentPanel(){
     updateSafeStateBanner(kUse != null ? kUse : NaN);
     renderDayForecast(last3D, kUse, ai);
     renderGDecomp(G, kUse, ai);
-
-    // ── Action Bar v68.3 ──
-    (function(){
-      const doEl = document.getElementById('doList');
-      const avEl = document.getElementById('avoidList');
-      if(!doEl || !avEl) return;
-      if(G >= 1.5) {
-        doEl.textContent = 'Активні дії · стратегічні рішення · нові проєкти';
-        avEl.textContent = 'Надмірна самовпевненість';
-      } else if(G >= 0.5) {
-        doEl.textContent = 'Планування · переговори · будівництво · рутина';
-        avEl.textContent = 'Імпульсивні рішення · ризикові конфігурації';
-      } else if(G >= -0.5) {
-        doEl.textContent = 'Стандартний режим · спокійна робота';
-        avEl.textContent = 'Критичні рішення без перевірки';
-      } else if(G >= -1.5) {
-        doEl.textContent = 'Контроль ризиків · мінімізація навантаження';
-        avEl.textContent = 'Нові починання · ескалація · конфлікти';
-      } else {
-        doEl.textContent = 'Тільки підтримка · оборонний режим';
-        avEl.textContent = 'Будь-які активні дії та нові рішення';
-      }
-    })();
-
-    // ── Day Compare strip v68.3 ──
-    if(last3D && Array.isArray(last3D.days) && last3D.days.length >= 2) {
-      const strip = document.getElementById('dayCompareStrip');
-      if(strip) {
-        strip.style.display = 'block';
-        const today = startUTC(nowUTC);
-        const gCol = g => g <= -2.5 ? '#ff4444' : g <= -0.5 ? '#ffaa33' : g >= 0.5 ? '#2bd47d' : '#9bb1dc';
-        // Today
-        const todayEl = document.getElementById('dcTodayG');
-        if(todayEl && isFinite(G)) {
-          todayEl.textContent = 'G ' + G.toFixed(2);
-          todayEl.style.color = gCol(G);
-        }
-        // Yesterday & tomorrow from 3-day data
-        for(const d of last3D.days) {
-          const dDate = startUTC(d.date);
-          const diff = Math.round((dDate - today) / 86400000);
-          const kpD = isFinite(d.kpMax) ? d.kpMax : 2;
-          const aiD = computeAi(noonUTC(dDate), kpD);
-          const gD = kpD - 2 + aiD.Ai;
-          if(diff === -1) {
-            const el2 = document.getElementById('dcYestG');
-            if(el2) { el2.textContent = 'G ' + gD.toFixed(2); el2.style.color = gCol(gD); }
-          } else if(diff === 1) {
-            const el2 = document.getElementById('dcTomorG');
-            if(el2) { el2.textContent = 'G ' + gD.toFixed(2); el2.style.color = gCol(gD); }
-          }
-        }
-      }
-    }
-
     renderProfileRec();
   }catch(e){ console.error('extras:', e); }
   // Science bar — окремий try щоб завжди оновлювався
@@ -3745,8 +3622,7 @@ function renderPanchanga(dateUTC){
 
   el_('panchGrid').innerHTML = html;
   el_('panchNote').innerHTML = summaryHtml +
-    '<div class="small muted" style="margin-top:8px">ℹ️ Підсумок базується на G-індексі = Kp − 2 + ΣAᵢ (Lᵢ + Mᵢ + eᵢ + Pᵢ + Dᵢ). R&D: advisory, Kpanch=1.00</div>' +
-    '<div class="small" style="margin-top:4px;color:#5a7a9a;font-size:10px;line-height:1.4">В G: Tithi/Vara/Nak/Yoga/Karana → Pᵢ (× PCL_SCALE × lunar_mod). Purnima/Amavasya → Lᵢ. Ekadashi → eᵢ. Rahu Kalam — контекст, не в G.</div>';
+    '<div class="small muted" style="margin-top:8px">ℹ️ Підсумок базується на G-індексі = Kp − 2 + ΣAᵢ (Lᵢ + Mᵢ + eᵢ + Pᵢ). R&D: advisory, Kpanch=1.00</div>';
 }
 
 // ==================== КОМБО-ГРАФІК Kp (факт + прогноз) ====================
@@ -3886,7 +3762,7 @@ function render3Day(parsed3){
 
     const _prob3d = calcProbabilityLayer({G, csConf:1, horizon:'3day'});
     const _riskCell = _prob3d
-      ? `<span style="font-size:12px;font-weight:700;color:${_prob3d.band==='high'?'#ff6b6b':_prob3d.band==='elevated'?'#fca474':_prob3d.band==='moderate'?'#ffcc00':'#2bd47d'}">${_prob3d.labelUA}</span>`
+      ? `<span style="font-size:12px;font-weight:700;color:${_prob3d.band==='high'?'#ff6b6b':_prob3d.band==='elevated'?'#fca474':_prob3d.band==='moderate'?'#ffcc00':'#2bd47d'}">${_prob3d.pSoftPct}%</span>`
       : '—';
     html += `<tr style="${rowStyle}${todayStyle}">
       <td class="mono col-date"${isToday?' style="font-weight:700;color:var(--alt)"':''}>${fmtDate(d.date)}${isToday?' <br><span style="color:var(--alt);font-size:10px;white-space:nowrap">◀ сьогодні</span>':''}</td>
@@ -4663,7 +4539,7 @@ function renderPlanetAnimation(kp, moonPhaseDeg, G, panchCtx, astroCtx) {
   // v57: getBoundingClientRect().width точніший ніж offsetWidth на мобільному
   const _bcr = canv.getBoundingClientRect();
   const W = (_bcr.width > 10 ? _bcr.width : (canv.parentElement?.getBoundingClientRect().width || window.innerWidth * 0.9 || 400));
-  const H = Math.round(Math.min(260, Math.max(180, window.innerHeight * 0.30))); // v68.2: min 180, cap 260
+  const H = Math.round(Math.min(260, Math.max(180, window.innerHeight * 0.30))); // v68.5: min 180, cap 260
   canv.width  = W * dpr;
   canv.height = H * dpr;
   canv.style.height = H + 'px';
@@ -5936,48 +5812,7 @@ function renderGDecomp(G, kp, ai) {
     </tr>`;
     tbody.innerHTML = thtml;
   }
-
-  // ── Why Today: top 3 drivers by |value| ──
-  const wtBlock = document.getElementById('whyTodayBlock');
-  const wtContent = document.getElementById('whyTodayContent');
-  if(wtBlock && wtContent) {
-    const kpPart2 = kp - 2;
-    const drivers = [
-      {name:'Kp−2', val:kpPart2},
-      {name:'Lᵢ', val:ai.Li},
-      {name:'Mᵢ', val:ai.Mi},
-      {name:'eᵢ', val:ai.ei||0},
-      {name:'Pᵢ', val:ai.Pi},
-      {name:'Dᵢ', val:ai.Di||0}
-    ].filter(d => d.val !== 0).sort((a,b) => Math.abs(b.val) - Math.abs(a.val)).slice(0,3);
-    if(drivers.length) {
-      wtBlock.style.display = 'block';
-      wtContent.innerHTML = drivers.map(d => {
-        const col = d.val > 0 ? '#2bd47d' : '#ff6b6b';
-        const sign = d.val > 0 ? '+' : '';
-        return `<div style="padding:3px 10px;border-radius:8px;background:#090f1e;border:1px solid ${col}33;font-size:12px">
-          <span style="color:${col};font-weight:700">${sign}${typeof d.val==='number'&&!Number.isInteger(d.val)?d.val.toFixed(1):d.val}</span>
-          <span style="color:var(--dim);margin-left:3px">${d.name}</span>
-        </div>`;
-      }).join('');
-    }
-  }
-
-  // ── G Audit Trail v68.3 ──
-  const auditBlock = document.getElementById('gAuditBlock');
-  const auditContent = document.getElementById('gAuditContent');
-  if(auditBlock && auditContent && isFinite(G)) {
-    auditBlock.style.display = 'block';
-    const kpP = kp - 2;
-    const sn = ai.snPen || 0;
-    auditContent.innerHTML =
-      `<span style="color:#37a7ff">Kp−2</span>=${kpP>=0?'+':''}${kpP.toFixed(1)} ` +
-      `<span style="color:#6b82aa">|</span> ΣAᵢ=<span style="color:#9bb1dc">${ai.Li}</span>+<span style="color:#9bb1dc">${ai.Mi}</span>+<span style="color:#9bb1dc">${ai.ei}</span>+<span style="color:#9bb1dc">${ai.Pi}</span>+<span style="color:#9bb1dc">${ai.Di}</span>${sn?'+<span style="color:#fca474">'+sn+'</span>':''}` +
-      `=<span style="color:#cfe0ff;font-weight:700">${ai.Ai}</span> ` +
-      `<span style="color:#6b82aa">→</span> <span style="font-weight:800;color:${G>=0.5?'#2bd47d':G<=-0.5?'#ff6b6b':'#9bb1dc'}">G=${G.toFixed(2)}</span>` +
-      ` <span style="color:#4a6080">✓</span>`;
-  }
-
+  // Запустити flow анімацію
   startGFlowAnimation(G, kp, ai);
 }
 
@@ -6478,23 +6313,16 @@ function _setSrcStatus(id, status) {
   const el = document.getElementById(id);
   if (!el) return;
   const map = {
-    ok:        {icon:'✓', col:'#2bd47d', label:'Live'},
-    cache:     {icon:'⊙', col:'#ffcc44', label:'Cached'},
-    synthetic: {icon:'~', col:'#fca474', label:'Synthetic'},
-    error:     {icon:'✗', col:'#ff6b6b', label:'Error'},
-    loading:   {icon:'…', col:'#6b82aa', label:'...'}
+    ok:        {icon:'✓', col:'#2bd47d'},
+    cache:     {icon:'⊙', col:'#ffcc44'},
+    synthetic: {icon:'~', col:'#fca474'},
+    error:     {icon:'✗', col:'#ff6b6b'},
+    loading:   {icon:'…', col:'#6b82aa'}
   };
   const s = map[status] || map.loading;
   el.textContent = s.icon;
   el.style.color = s.col;
   el.title = {ok:'Дані NOAA', cache:'Кешовані дані', synthetic:'Synthetic (NOAA недоступний)', error:'Помилка', loading:'Завантаження...'}[status] || '';
-  // v68.4: update Data Quality card
-  const dqMap = {srcKpObs:'dqKpObs', srcKpFcst:'dqKpFcst', src27Day:'dq27Day'};
-  const dqId = dqMap[id];
-  if(dqId) {
-    const dqEl = document.getElementById(dqId);
-    if(dqEl) { dqEl.textContent = s.icon + ' ' + s.label; dqEl.style.color = s.col; }
-  }
 }
 
 function updateSafeStateBanner(kp) {
@@ -6871,11 +6699,11 @@ el('btnRefresh').addEventListener('click', loadAll);
 // ========================= i18n EN/UA =========================
 const I18N = {
   UA: {
-    headerTitle: 'Космофізичний дашборд — <span class="muted">G = Kp − 2 + ΣAᵢ де ΣAᵢ = Lᵢ + Mᵢ + eᵢ + Pᵢ + Dᵢ</span>',
+    headerTitle: 'Космофізичний дашборд — <span class="muted">G = Kp − 2 + ΣAᵢ де ΣAᵢ = Lᵢ + Mᵢ + eᵢ + Pᵢ</span>',
     headerSub: 'Kp/Ap із NOAA, ΣAᵢ з автоматичним підтягуванням подій (ICS/астроджерела).',
     btnRefresh: 'Оновити дані',
     autoLabel: 'Авто:',
-    nowCardTitle: 'Рішення на зараз',
+    nowCardTitle: 'Поточний стан',
     panchCardTitle: 'Панчанга',
     panchCardSub: '— хронобіол. стан доби',
     personalCardTitle: '👤 Особистий прогноз',
@@ -6889,7 +6717,7 @@ const I18N = {
     utcTime: 'UTC: ',
   },
   EN: {
-    headerTitle: 'Space Weather Dashboard — <span class="muted">G = Kp − 2 + ΣAᵢ where ΣAᵢ = Lᵢ + Mᵢ + eᵢ + Pᵢ + Dᵢ</span>',
+    headerTitle: 'Space Weather Dashboard — <span class="muted">G = Kp − 2 + ΣAᵢ where ΣAᵢ = Lᵢ + Mᵢ + eᵢ + Pᵢ</span>',
     headerSub: 'Kp/Ap from NOAA, ΣAᵢ from ICS/astro sources (auto-loaded).',
     btnRefresh: 'Refresh Data',
     autoLabel: 'Auto:',
@@ -7498,7 +7326,7 @@ document.addEventListener('DOMContentLoaded', () => {
           та <strong style="color:#7c9eff">ведичний Панчанга</strong>.<br><br>
           G &gt; 0 — сприятливий фон.<br>
           G &lt; 0 — підвищене навантаження.<br>
-          C = надійність сигналу.
+          C = впевненість моделі.
         </div>
         <div style="background:#090f1e;border-radius:12px;padding:14px;margin-bottom:8px;font-family:monospace;font-size:18px">
           <span style="color:#2bd47d">G = +1.4</span>
@@ -7807,8 +7635,8 @@ function renderNowProbability(prob){
   const soft  = document.getElementById('riskPctNow');
   const hard  = document.getElementById('hardRiskPctNow');
   const label = document.getElementById('riskLabelNow');
-  if(soft)  soft.textContent  = prob.labelUA;
-  if(hard)  hard.textContent  = getRiskLabelUA(prob.pHard);
+  if(soft)  soft.textContent  = prob.pSoftPct+'%';
+  if(hard)  hard.textContent  = prob.pHardPct+'%';
   if(label) label.textContent = prob.labelUA;
   // colour band
   const cells = ['probCellSoft','probCellHard'];
