@@ -624,7 +624,7 @@
         <!-- C-SCORE v63 -->
         <div id="cScoreBlock" style="margin-top:8px;padding:8px 12px;background:#090f1e;border:1px solid #1e2a44;border-radius:10px;font-size:12px">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px">
-            <span style="color:var(--dim);font-size:10px;text-transform:uppercase;letter-spacing:.06em">C — Впевненість моделі</span>
+            <span style="color:var(--dim);font-size:10px;text-transform:uppercase;letter-spacing:.06em">C — Надійність сигналу</span>
             <span id="cScoreGrade" style="font-size:11px;font-weight:700;color:#9bb1dc">…</span>
           </div>
           <div id="cScoreBar" style="height:5px;background:#1e2a44;border-radius:3px;overflow:hidden;margin-bottom:5px">
@@ -650,9 +650,8 @@
               <div class="prob-v" id="riskLabelNow" style="font-size:12px;padding-top:2px">--</div>
             </div>
           </div>
+          <div style="font-size:9px;color:#4a6080;text-align:right;margin-top:2px">derived from G</div>
         </div>
-
-        <!-- WHY TODAY v68.3 — top 3 drivers -->
         <div id="whyTodayBlock" style="margin-top:6px;display:none">
           <div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);margin-bottom:3px">Чому саме так</div>
           <div id="whyTodayContent" style="display:flex;gap:6px;flex-wrap:wrap"></div>
@@ -706,6 +705,10 @@
             </tr></thead>
             <tbody id="gDecompTableBody"></tbody>
           </table>
+          <!-- G AUDIT TRAIL v68.3 -->
+          <div id="gAuditBlock" style="display:none;margin-top:4px;padding:4px 10px;background:#060c18;border:1px solid #1a2540;border-radius:6px;font-family:monospace;font-size:11px;color:#5a7a9a;line-height:1.5">
+            <div id="gAuditContent"></div>
+          </div>
         </div>
 
         <!-- ═══ ЯК ЧИТАТИ G (людський блок) ═══ -->
@@ -1027,7 +1030,7 @@ Kp: 3-год індекс геомагнітної активності (0–9)
         <p>Для горизонту 27 днів у моделі використовується <em>внутрішня дискретна апроксимація</em> Ap→Kp за табличними порогами NOAA (VLOOKUP‑стиль, найближчий нижчий поріг). Це <strong>не офіційний зворотний стандарт NOAA</strong>, а робоче припущення моделі; отримані G‑значення слід інтерпретувати як якісний індикатор тренду, а не точний 3‑годинний прогноз.</p>
 
         <p style="font-weight:600;color:#cfe0ff;margin-bottom:4px">Склад ΣAᵢ</p>
-        <p><code style="color:#37a7ff">ΣAᵢ = Lᵢ + Mᵢ + eᵢ + Pᵢ + Dᵢ</code></p>
+        <p><code style="color:#37a7ff">ΣAᵢ = Lᵢ + Mᵢ + eᵢ + Pᵢ + Dᵢ + Dᵢ</code></p>
         <table style="font-size:12px;margin:6px 0 10px;border:1px solid #1e2f52;border-radius:6px;overflow:hidden">
           <thead><tr style="background:#0c1526">
             <th style="padding:4px 8px;text-align:left;color:#7a9acc">Компонент</th>
@@ -1325,7 +1328,7 @@ Kp: 3-год індекс геомагнітної активності (0–9)
       <div id="g2watchResult" style="background:#0a1428;border-radius:10px;padding:16px;min-height:60px"></div>
 
       <div class="small muted" style="margin-top:10px">
-        Формула: G = Kp − 2 + (Lᵢ + Mᵢ + eᵢ + Pᵢ) · Значення розраховуються автоматично при переміщенні слайдерів · <a href="#" style="color:var(--faint)" onclick="el('g2watchPanel').style.display='none';return false">Згорнути</a>
+        Формула: G = Kp − 2 + (Lᵢ + Mᵢ + eᵢ + Pᵢ + Dᵢ) · Значення розраховуються автоматично при переміщенні слайдерів · <a href="#" style="color:var(--faint)" onclick="el('g2watchPanel').style.display='none';return false">Згорнути</a>
       </div>
     </div>
   </div>
@@ -2183,7 +2186,7 @@ function computeAi(dateTimeUTC, kp=0){
   const _snLabel = snPen !== 0 ? `+Sn` : '';
   const explain = `\u03a3A\u1d62 = L\u1d62+M\u1d62+e\u1d62+P\u1d62+D\u1d62${snPen!==0?'+Sn':''} = ${Li}+${Mi}+${eiTotal}+${Pi}+${Di}${snPen!==0?'+'+snPen:''} = ${AiFull}` + (snPen!==0?`\n(Sn=${_snVal}>150: kp_pen${snPen} — engine v14.9)`:'') + (bzVal!==0||vswVal!==0?`\n(+Bz=${bzVal}, Vsw=${vswVal} — контекст, не в G)`:'');
 
-  return { Ai: AiFull, AiNoDst: Ai, Li, Mi, ei: eiTotal, eiBase: ei, horaEi, Pi, Di, bzVal, vswVal, phaseName, phaseDeg, lTip, mTip, eTip: eTipLines.join('\n'), pTip, diTip, explain };
+  return { Ai: AiFull, AiNoDst: Ai, Li, Mi, ei: eiTotal, eiBase: ei, horaEi, Pi, Di, snPen, bzVal, vswVal, phaseName, phaseDeg, lTip, mTip, eTip: eTipLines.join('\n'), pTip, diTip, explain };
 }
 
 // --------------------------- ШКАЛИ / Бейджі для Kp --------------------------
@@ -2798,9 +2801,9 @@ function renderCurrentPanel(){
   const _csInline = computeCScore(kUse, _lastKpObsJson, ai, G, _kpSrcInline);
   const _cCol = _csInline.gradeCol;
   const _cHtml = isFinite(G)
-    ? ` <span style="font-size:11px;font-weight:500;color:${_cCol};opacity:0.85;letter-spacing:.01em" title="C-score: впевненість моделі ${_csInline.pct}%">C=${_csInline.conf.toFixed(2)}</span>`
+    ? ` <span style="font-size:11px;font-weight:500;color:${_cCol};opacity:0.85;letter-spacing:.01em" title="C-score: надійність сигналу ${_csInline.pct}%">C=${_csInline.conf.toFixed(2)}</span>`
     : '';
-  gEl.innerHTML = `G ${isFinite(G)? G.toFixed(2):'…'}${_gTrendHtml}${_cHtml}${cbHtml}<span class="hint-pop">${escapeHtml(gTipLines)}\n\nC-score (впевненість): ${_csInline.pct}%\nConfidence Band: [${gLo} … ${gHi}]\nΔKp(8 obs): ±${cb.kpDelta} · ΔAᵢ: ±0.5</span>`;
+  gEl.innerHTML = `G ${isFinite(G)? G.toFixed(2):'…'}${_gTrendHtml}${_cHtml}${cbHtml}<span class="hint-pop">${escapeHtml(gTipLines)}\n\nC-score (надійність): ${_csInline.pct}%\nConfidence Band: [${gLo} … ${gHi}]\nΔKp(8 obs): ±${cb.kpDelta} · ΔAᵢ: ±0.5</span>`;
   el('nowGcat').textContent = classifyG(isFinite(G)? G:0);
 
   // ─── C-SCORE render v63 ───────────────────────────────────────
@@ -3685,7 +3688,8 @@ function renderPanchanga(dateUTC){
 
   el_('panchGrid').innerHTML = html;
   el_('panchNote').innerHTML = summaryHtml +
-    '<div class="small muted" style="margin-top:8px">ℹ️ Підсумок базується на G-індексі = Kp − 2 + ΣAᵢ (Lᵢ + Mᵢ + eᵢ + Pᵢ). R&D: advisory, Kpanch=1.00</div>';
+    '<div class="small muted" style="margin-top:8px">ℹ️ Підсумок базується на G-індексі = Kp − 2 + ΣAᵢ (Lᵢ + Mᵢ + eᵢ + Pᵢ + Dᵢ). R&D: advisory, Kpanch=1.00</div>' +
+    '<div class="small" style="margin-top:4px;color:#5a7a9a;font-size:10px;line-height:1.4">В G: Tithi/Vara/Nak/Yoga/Karana → Pᵢ (× PCL_SCALE × lunar_mod). Purnima/Amavasya → Lᵢ. Ekadashi → eᵢ. Rahu Kalam — контекст, не в G.</div>';
 }
 
 // ==================== КОМБО-ГРАФІК Kp (факт + прогноз) ====================
@@ -5902,6 +5906,21 @@ function renderGDecomp(G, kp, ai) {
     }
   }
 
+  // ── G Audit Trail v68.3 ──
+  const auditBlock = document.getElementById('gAuditBlock');
+  const auditContent = document.getElementById('gAuditContent');
+  if(auditBlock && auditContent && isFinite(G)) {
+    auditBlock.style.display = 'block';
+    const kpP = kp - 2;
+    const sn = ai.snPen || 0;
+    auditContent.innerHTML =
+      `<span style="color:#37a7ff">Kp−2</span>=${kpP>=0?'+':''}${kpP.toFixed(1)} ` +
+      `<span style="color:#6b82aa">|</span> ΣAᵢ=<span style="color:#9bb1dc">${ai.Li}</span>+<span style="color:#9bb1dc">${ai.Mi}</span>+<span style="color:#9bb1dc">${ai.ei}</span>+<span style="color:#9bb1dc">${ai.Pi}</span>+<span style="color:#9bb1dc">${ai.Di}</span>${sn?'+<span style="color:#fca474">'+sn+'</span>':''}` +
+      `=<span style="color:#cfe0ff;font-weight:700">${ai.Ai}</span> ` +
+      `<span style="color:#6b82aa">→</span> <span style="font-weight:800;color:${G>=0.5?'#2bd47d':G<=-0.5?'#ff6b6b':'#9bb1dc'}">G=${G.toFixed(2)}</span>` +
+      ` <span style="color:#4a6080">✓</span>`;
+  }
+
   startGFlowAnimation(G, kp, ai);
 }
 
@@ -6788,7 +6807,7 @@ el('btnRefresh').addEventListener('click', loadAll);
 // ========================= i18n EN/UA =========================
 const I18N = {
   UA: {
-    headerTitle: 'Космофізичний дашборд — <span class="muted">G = Kp − 2 + ΣAᵢ де ΣAᵢ = Lᵢ + Mᵢ + eᵢ + Pᵢ</span>',
+    headerTitle: 'Космофізичний дашборд — <span class="muted">G = Kp − 2 + ΣAᵢ де ΣAᵢ = Lᵢ + Mᵢ + eᵢ + Pᵢ + Dᵢ</span>',
     headerSub: 'Kp/Ap із NOAA, ΣAᵢ з автоматичним підтягуванням подій (ICS/астроджерела).',
     btnRefresh: 'Оновити дані',
     autoLabel: 'Авто:',
@@ -6806,7 +6825,7 @@ const I18N = {
     utcTime: 'UTC: ',
   },
   EN: {
-    headerTitle: 'Space Weather Dashboard — <span class="muted">G = Kp − 2 + ΣAᵢ where ΣAᵢ = Lᵢ + Mᵢ + eᵢ + Pᵢ</span>',
+    headerTitle: 'Space Weather Dashboard — <span class="muted">G = Kp − 2 + ΣAᵢ where ΣAᵢ = Lᵢ + Mᵢ + eᵢ + Pᵢ + Dᵢ</span>',
     headerSub: 'Kp/Ap from NOAA, ΣAᵢ from ICS/astro sources (auto-loaded).',
     btnRefresh: 'Refresh Data',
     autoLabel: 'Auto:',
@@ -7415,7 +7434,7 @@ document.addEventListener('DOMContentLoaded', () => {
           та <strong style="color:#7c9eff">ведичний Панчанга</strong>.<br><br>
           G &gt; 0 — сприятливий фон.<br>
           G &lt; 0 — підвищене навантаження.<br>
-          C = впевненість моделі.
+          C = надійність сигналу.
         </div>
         <div style="background:#090f1e;border-radius:12px;padding:14px;margin-bottom:8px;font-family:monospace;font-size:18px">
           <span style="color:#2bd47d">G = +1.4</span>
