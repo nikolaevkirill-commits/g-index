@@ -659,19 +659,19 @@
           <span id="deltaCardDriver" style="color:var(--muted)"></span>
         </div>
 
-        <div id="nowSummary" style="margin-top:6px;font-size:14px;color:#b7c7ea"></div>
+        <div id="nowSummary" style="display:none"></div>
 
         <!-- ═══ ПРОГНОЗ НА ДЕНЬ (3h-слоти + підсумок) ═══ -->
         <div id="dayForecastBlock" style="margin-top:6px;display:none">
-          <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);margin-bottom:5px">📅 Прогноз G на сьогодні · Kp — прогноз NOAA, G nowCard — факт</div>
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);margin-bottom:3px">📅 G сьогодні · Kp прогноз NOAA</div>
           <div id="dayForecastSlots" style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px"></div>
           <div id="dayForecastSummary" style="font-size:12px;color:#9bb1dc;padding:5px 10px;background:#090f1e;border-radius:8px;border:1px solid #1a2a45;line-height:1.5;white-space:normal;overflow-wrap:break-word;word-break:break-word;overflow:hidden;max-width:100%"></div>
         </div>
 
         <!-- ═══ G DECOMPOSITION BAR ═══ -->
         <div id="gDecompBlock" style="margin-top:6px;">
-          <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);margin-bottom:5px">Розклад G‑індексу</div>
-          <div id="gDecompBar" style="display:flex;align-items:center;gap:4px;min-height:28px;flex-wrap:wrap;overflow:hidden;max-width:100%"></div>
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);margin-bottom:3px">Розклад G</div>
+          <div id="gDecompBar" style="display:none"></div>
           <!-- Flow canvas: частинки течуть від chips → G -->
           <canvas id="gFlowCanvas" width="460" height="90" style="width:100%;height:90px;display:none;margin:6px 0 4px;border-radius:8px;background:rgba(10,16,32,0.6);"></canvas>
           <div id="gDecompFactors" style="display:none"></div>
@@ -687,7 +687,7 @@
         </div>
 
         <!-- ═══ ЯК ЧИТАТИ G (людський блок) ═══ -->
-        <details id="gHowToRead" style="margin-top:4px;font-size:12px;color:#8aaad4">
+        <details id="gHowToRead" style="display:none">
           <summary style="cursor:pointer;color:var(--dim);font-size:11px;text-transform:uppercase;letter-spacing:.06em">ℹ Як читати індекс G</summary>
           <div style="margin-top:6px;padding:8px 10px;background:#090f1e;border:1px solid #1a2a45;border-radius:8px;line-height:1.45;color:#9bb1dc">
             <p style="margin:0 0 6px"><strong style="color:#cfe0ff">G</strong> показує, наскільки «легкий» чи «важкий» сьогоднішній день з точки зору космічної погоди та хронобіології. Значення вище нуля — відносно легкий день; нижче нуля — підвищене невидиме навантаження.</p>
@@ -701,13 +701,13 @@
 
         <!-- ═══ НАЙКРАЩИЙ ЧАС ДІЇ ═══ -->
         <div id="bestTimeBlock" style="margin-top:8px;display:none">
-          <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);margin-bottom:6px">⏱ Найкращий час дії сьогодні</div>
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);margin-bottom:3px">⏱ Найкращий час</div>
           <div id="bestTimeContent"></div>
         </div>
 
         <!-- ═══ HORA ТАЙМЛАЙН ═══ -->
         <div id="horaTimelineBlock" style="margin-top:8px">
-          <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);margin-bottom:5px">Hora — планетарні години доби <span class="muted" style="font-size:10px;text-transform:none" id="horaCoordLabel">(UTC+2, 50°N)</span></div>
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);margin-bottom:3px">Hora <span class="muted" style="font-size:10px;text-transform:none" id="horaCoordLabel">(UTC+2, 50°N)</span></div>
           <div id="horaTimeline" style="position:relative;height:40px;border-radius:8px;overflow:hidden;background:#0a1428;border:1px solid #1e2f52"></div>
           <div id="horaAxis" style="position:relative;height:14px;margin-top:1px;font-size:9px;color:#4a6080"></div>
           <div id="horaLegend" style="margin-top:4px;font-size:11px;color:var(--dim)"></div>
@@ -5003,13 +5003,12 @@ function renderPlanetAnimation(kp, moonPhaseDeg, G, panchCtx, astroCtx) {
         : `<span style="background:#0d2010;color:#2bd47d;border-radius:4px;padding:1px 5px;font-size:10px">\u25b6 норма</span>`;
       const tip = retro ? imp.retro : imp.norm;
       rows += `<tr style="border-bottom:1px solid #0d1a30">
-        <td style="padding:3px 5px;white-space:nowrap">
+        <td style="padding:2px 5px;white-space:nowrap">
           <span style="color:${col};font-size:13px">${p.symbol}</span>
           <span style="color:${col};font-size:11px;margin-left:3px">${p.ua}</span>
         </td>
-        <td style="padding:3px 5px">${statusBadge}</td>
-        <td style="padding:3px 5px;text-align:center">${eiStr}</td>
-        <td style="padding:3px 5px;color:#7a90b0;font-size:10px;max-width:140px">${tip}</td>
+        <td style="padding:2px 5px">${statusBadge}</td>
+        <td style="padding:2px 5px;text-align:center">${eiStr}</td>
       </tr>`;
     }
     const totalCol = totalPlanetEi > 0 ? '#2bd47d' : totalPlanetEi < 0 ? '#ff6b6b' : '#6b82aa';
@@ -5021,17 +5020,15 @@ function renderPlanetAnimation(kp, moonPhaseDeg, G, panchCtx, astroCtx) {
             <th style="padding:2px 5px;text-align:left;font-weight:500">Планета</th>
             <th style="padding:2px 5px;text-align:left;font-weight:500">Статус</th>
             <th style="padding:2px 5px;text-align:center;font-weight:500">\u0394e\u1d62</th>
-            <th style="padding:2px 5px;text-align:left;font-weight:500">Оперативний контекст</th>
           </tr>
         </thead>
         <tbody>${rows}</tbody>
         <tfoot>
           <tr>
-            <td colspan="2" style="padding:3px 5px;color:#6b82aa;font-size:10px">Планетний внесок \u03a3\u0394e\u1d62:</td>
-            <td style="padding:3px 5px;text-align:center;font-size:13px;font-weight:700;color:${totalCol}">${totalStr}</td>
-            <td style="padding:3px 5px;color:#4a6080;font-size:10px">Advisory / R&D \u2014 не впливає на G автоматично</td>
+            <td colspan="2" style="padding:2px 5px;color:#6b82aa;font-size:10px">ΣΔeᵢ:</td>
+            <td style="padding:2px 5px;text-align:center;font-size:13px;font-weight:700;color:${totalCol}">${totalStr}</td>
           </tr>
-          ${(astroCtx && astroCtx.taara.danger && PLANET_DEF.some(pl => isRetrograde(pl.name, now) && pl.name === astroCtx.dasa.mahaLord)) ? `<tr style="background:#1a0808"><td colspan="4" style="padding:3px 8px;color:#ff6b6b;font-size:10px;font-weight:600">\u26a0 Критичне стекування: Taara ${astroCtx.taara.group} (${astroCtx.taara.name}) + Dasa-лорд \u211e \u2014 максимальна обережність</td></tr>` : ''}
+          ${(astroCtx && astroCtx.taara.danger && PLANET_DEF.some(pl => isRetrograde(pl.name, now) && pl.name === astroCtx.dasa.mahaLord)) ? `<tr style="background:#1a0808"><td colspan="3" style="padding:2px 8px;color:#ff6b6b;font-size:10px;font-weight:600">\u26a0 Taara ${astroCtx.taara.group} + Dasa-лорд \u211e — обережність</td></tr>` : ''}
         </tfoot>
       </table>`;
   }
@@ -5151,7 +5148,7 @@ function renderPersonal() {
       </tr>
     </table>
     <div class="small muted" style="margin-top:6px">R&D · Meeus Ch.47 · Lahiri · BPHS · ±0.5 стоянки без точного часу</div>
-    <div id="taaraRingWrap" style="margin-top:10px"></div>
+    <div id="taaraRingWrap" style="margin-top:6px"></div>
     <div id="taara7dWrap" style="margin-top:10px"></div>
   `;
   renderTaaraRing(document.getElementById('taaraRingWrap'), taara.group, natal.idx, nowNak.idx);
