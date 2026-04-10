@@ -7,6 +7,7 @@
 | P1 | `classifyG()` — continuous thresholds (парність з badge/filter) |
 | P2 | Risk % → band-only (Низький/Помірний/Підвищений/Високий) у Now, 3-day, 27-day |
 | P3 | Synthetic mode: orange border на nowCard + risk block прихований |
+| P4 | **CRITICAL:** `moonPhaseAngle()` — true Meeus elongation замість simplified synodic (~7° error). Виправляє Tithi і Karana |
 | SW | Cache: `g-index-shell-v68-3`, коментар TTL 3h→1h виправлений |
 
 ## Файли
@@ -33,3 +34,4 @@ git push
 2. G=0.49 → текст "Нейтральний" (не "Помірно сприятливий")
 3. Risk block: band labels, без %
 4. Відключити мережу → nowCard orange border, risk block hidden
+5. Panchanga 10.04.2026: Tithi=Krishna Ashtami (не Navami), Karana=Kaulava (не Taitila)

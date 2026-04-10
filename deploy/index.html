@@ -1445,13 +1445,17 @@ function moonAgeDays_simple(date){
   return (x + SYNODIC) % SYNODIC;
 }
 function moonPhaseAngle(date){
-  try{
-    if (window.Astronomy && typeof Astronomy.MoonPhase === 'function'){
-      return Astronomy.MoonPhase(date) % 360;
-    }
-  }catch(e){}
-  const age = moonAgeDays_simple(date);
-  return (age / SYNODIC) * 360.0;
+  // v68.3 P4: true elongation via Meeus (was: simplified synodic — ~7° error)
+  try {
+    const jde = date.getTime() / 86400000 + 2440587.5;
+    const moonLon = calcMoonLongitude(jde);
+    const sunLon  = calcSunLongitude(jde);
+    return ((moonLon - sunLon) % 360 + 360) % 360;
+  } catch(e) {
+    // ultimate fallback
+    const age = moonAgeDays_simple(date);
+    return (age / SYNODIC) * 360.0;
+  }
 }
 function phaseNameByAngle(deg){
   // Прив'язка до тітхі: кожна тітхі = 12°, 30 тітхі = 360°
