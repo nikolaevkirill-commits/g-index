@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v68.2</title>
+  <title>G-Index — Космофізичний дашборд v68.4</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -766,6 +766,26 @@
           <div class="muted small">Завантаження…</div>
         </div>
         <div style="margin-top:6px;font-size:12px" id="panchNote"></div>
+      </section>
+
+      <!-- DATA QUALITY v68.4 -->
+      <section class="card" id="dataQualityCard" style="padding:12px 14px">
+        <h2 style="margin:0 0 8px;font-size:14px">📡 Якість даних</h2>
+        <div style="display:grid;grid-template-columns:1fr auto;gap:4px 12px;font-size:12px">
+          <span style="color:var(--dim)">Kp (спостереження)</span>
+          <span id="dqKpObs" style="font-weight:600">—</span>
+          <span style="color:var(--dim)">Kp (прогноз 3д)</span>
+          <span id="dqKpFcst" style="font-weight:600">—</span>
+          <span style="color:var(--dim)">27-day outlook</span>
+          <span id="dq27Day" style="font-weight:600">—</span>
+          <span style="color:var(--dim)">Panchanga</span>
+          <span style="font-weight:600;color:#2bd47d">✓ Local calc</span>
+          <span style="color:var(--dim)">Engine</span>
+          <span style="font-weight:600;color:#9bb1dc">v14.10.1</span>
+        </div>
+        <div style="margin-top:8px;padding:6px 10px;background:#060c18;border:1px solid #1a2540;border-radius:8px;font-size:11px;color:#5a7a9a">
+          Backtest: SignMatch <strong style="color:#cfe0ff">81.1%</strong> (n=169) · Holdout <strong style="color:#cfe0ff">86.3%</strong> (n=51) · AUC 0.784
+        </div>
       </section>
 
       <!-- ПЕРСОНАЛЬНИЙ РОЗРАХУНОК — правий стовпець, рядок 2 -->
@@ -6454,16 +6474,23 @@ function _setSrcStatus(id, status) {
   const el = document.getElementById(id);
   if (!el) return;
   const map = {
-    ok:        {icon:'✓', col:'#2bd47d'},
-    cache:     {icon:'⊙', col:'#ffcc44'},
-    synthetic: {icon:'~', col:'#fca474'},
-    error:     {icon:'✗', col:'#ff6b6b'},
-    loading:   {icon:'…', col:'#6b82aa'}
+    ok:        {icon:'✓', col:'#2bd47d', label:'Live'},
+    cache:     {icon:'⊙', col:'#ffcc44', label:'Cached'},
+    synthetic: {icon:'~', col:'#fca474', label:'Synthetic'},
+    error:     {icon:'✗', col:'#ff6b6b', label:'Error'},
+    loading:   {icon:'…', col:'#6b82aa', label:'...'}
   };
   const s = map[status] || map.loading;
   el.textContent = s.icon;
   el.style.color = s.col;
   el.title = {ok:'Дані NOAA', cache:'Кешовані дані', synthetic:'Synthetic (NOAA недоступний)', error:'Помилка', loading:'Завантаження...'}[status] || '';
+  // v68.4: update Data Quality card
+  const dqMap = {srcKpObs:'dqKpObs', srcKpFcst:'dqKpFcst', src27Day:'dq27Day'};
+  const dqId = dqMap[id];
+  if(dqId) {
+    const dqEl = document.getElementById(dqId);
+    if(dqEl) { dqEl.textContent = s.icon + ' ' + s.label; dqEl.style.color = s.col; }
+  }
 }
 
 function updateSafeStateBanner(kp) {
