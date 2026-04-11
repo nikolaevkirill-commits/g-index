@@ -508,6 +508,28 @@
     @media(max-width:500px){.hero-right{grid-template-columns:1fr}#heroCat{font-size:16px}}
     /* ===== v70.2 RADAR / TRIGGERS ===== */
     #radarCard,#triggerCard{margin:0 0 16px}
+
+    /* v70.3: reduce current state visual weight */
+    #nowCard{opacity:.85}
+
+    /* v70.3: pulse animation for best window */
+    .pulse{box-shadow:0 0 0 0 rgba(43,212,125,.4);animation:pulseGlow 2s infinite}
+    @keyframes pulseGlow{
+      0%{box-shadow:0 0 0 0 rgba(43,212,125,.4)}
+      70%{box-shadow:0 0 0 8px rgba(43,212,125,0)}
+      100%{box-shadow:0 0 0 0 rgba(43,212,125,0)}
+    }
+
+    /* ===== v70.3 OPS GRID ===== */
+    #opsGrid{display:grid;grid-template-columns:1.08fr 0.92fr;gap:12px;margin:0 0 16px}
+    #opsGrid .card{margin:0;padding:12px 14px}
+    #decisionNow{font-size:16px;font-weight:800;line-height:1.2}
+    #decisionNext{font-size:12px;line-height:1.35}
+    #decisionNarrative{font-size:11px;color:var(--muted)}
+    .radar-box{min-height:72px;padding:10px 12px}
+    .radar-main{font-size:14px;line-height:1.25}
+    .radar-sub{font-size:12px;line-height:1.35}
+    @media(max-width:860px){#opsGrid{grid-template-columns:1fr}}
     .radar-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
     .radar-box{background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;min-height:88px}
     .radar-wide{grid-column:1/-1}
@@ -670,53 +692,47 @@
     </div>
     <div id="profileRec"></div>
 
-    <!-- ═══ v70.2 DECISION + STORM STORY ═══ -->
-    <section class="card" id="decisionCard">
-      <div class="flex" style="margin-bottom:8px">
-        <h2 style="margin:0;font-size:16px">Рішення</h2>
-        <span id="decisionMode" class="pill right">Normal</span>
-      </div>
-      <div id="decisionNow">—</div>
-      <div id="decisionNext" class="muted" style="margin-top:6px">—</div>
-      <div id="decisionTags" class="flex" style="margin-top:8px;gap:6px;flex-wrap:wrap"></div>
+    <!-- ═══ v70.3 OPS GRID ═══ -->
+    <section id="opsGrid">
+      <section class="card" id="decisionCard">
+        <div class="flex" style="margin-bottom:6px">
+          <h2 style="margin:0;font-size:16px">Рішення</h2>
+          <span id="decisionMode" class="pill right">Normal</span>
+        </div>
+        <div id="decisionNow">—</div>
+        <div id="decisionNext" class="muted" style="margin-top:4px">—</div>
+        <div id="decisionTags" class="flex" style="margin-top:6px;gap:6px;flex-wrap:wrap"></div>
+        <div id="decisionNarrative" class="small muted" style="margin-top:6px;line-height:1.45">—</div>
+      </section>
+
+      <section class="card" id="radarCard">
+        <div class="flex" style="margin-bottom:6px">
+          <h2 style="margin:0;font-size:16px">Opportunity / Risk</h2>
+          <span class="pill right">live</span>
+        </div>
+        <div class="radar-grid">
+          <div class="radar-box radar-good">
+            <div class="label">Opportunity</div>
+            <div id="radarOpportunity" class="radar-main">—</div>
+          </div>
+          <div class="radar-box radar-bad">
+            <div class="label">Risk</div>
+            <div id="radarRisk" class="radar-main">—</div>
+          </div>
+          <div class="radar-box radar-neutral radar-wide">
+            <div class="label">Window</div>
+            <div id="radarWindow" class="radar-sub">—</div>
+          </div>
+        </div>
+        <div id="radarTriggers" class="trigger-wrap" style="margin-top:10px"></div>
+      </section>
     </section>
 
-    <section class="card" id="stormStoryCard">
-      <div class="flex" style="margin-bottom:8px">
-        <h2 style="margin:0;font-size:16px">Storm Story</h2>
-        <span class="pill right">auto</span>
-      </div>
+    <!-- hidden: data sources for merge -->
+    <section class="card" id="stormStoryCard" style="display:none!important">
       <div id="stormStoryText" class="small">—</div>
     </section>
-
-    <!-- ═══ v70.2 RADAR ═══ -->
-    <section class="card" id="radarCard">
-      <div class="flex" style="margin-bottom:8px">
-        <h2 style="margin:0;font-size:16px">Opportunity / Risk</h2>
-        <span class="pill right">live</span>
-      </div>
-      <div class="radar-grid">
-        <div class="radar-box radar-good">
-          <div class="label">Opportunity</div>
-          <div id="radarOpportunity" class="radar-main">—</div>
-        </div>
-        <div class="radar-box radar-bad">
-          <div class="label">Risk</div>
-          <div id="radarRisk" class="radar-main">—</div>
-        </div>
-        <div class="radar-box radar-neutral radar-wide">
-          <div class="label">Window</div>
-          <div id="radarWindow" class="radar-sub">—</div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ═══ v70.2 TRIGGERS ═══ -->
-    <section class="card" id="triggerCard">
-      <div class="flex" style="margin-bottom:8px">
-        <h2 style="margin:0;font-size:16px">Triggers</h2>
-        <span class="pill right">auto</span>
-      </div>
+    <section class="card" id="triggerCard" style="display:none!important">
       <div id="triggerList" class="trigger-wrap">—</div>
     </section>
 
@@ -3816,12 +3832,14 @@ function renderDayForecast(last3D, kUse, ai) {
   const slotLabels = ['00','03','06','09','12','15','18','21'];
   let slotsHtml = '';
   const gValues = [];
+  window._daySlots = []; // v70.3: expose for Best Window
   for (let i = 0; i < kp8.length; i++) {
     const kp = kp8[i];
     if (!isFinite(kp)) continue;
     const aiSlot = computeAi(todayNoon, kp);
     const G = kp - 2 + aiSlot.Ai;
     gValues.push({ i, kp, G, label: slotLabels[i] || String(i*3) });
+    window._daySlots.push({ i, kp, G, label: slotLabels[i] || String(i*3) });
     const col = G >= 1 ? 'var(--ok)' : G >= -1 ? 'var(--warn)' : 'var(--bad)';
     const bg  = G >= 1 ? 'var(--ok-dim)' : G >= -1 ? 'var(--warn-dim)' : 'var(--bad-dim)';
     const nowH = new Date().getUTCHours();
@@ -4036,23 +4054,26 @@ function syncHero(){
 // --- DECISION ---
 function _decAction(g,kp){
   if(!isFinite(g)) return 'Немає даних';
-  let o=g>=1?'Запускати / діяти зараз':g>=0?'Планувати, без різких рішень':g>-2?'Обережно, знизити темп':'Уникати критичних дій';
-  if(isFinite(kp)&&kp>=5) o+=' · геомагнітна нестабільність';
+  let o=g>=2?'⚡ ДІЙ — оптимальне вікно':g>=1?'ДІЙ зараз':g>=0?'ПЛАНУЙ, без різких рішень':g>-2?'УПОВІЛЬНИСЬ, не запускати':'🔴 СТОП — уникати критичних дій';
+  if(isFinite(kp)&&kp>=5) o+=' · ⚠ геомагнітна буря';
   return o;
 }
 
 function syncDecision(){
   const g=_num(_firstText(el('nowG'))||el('nowG')?.textContent);
   const kp=_num(_firstText(el('nowKp')));
+  const gcat=(el('nowGcat')?.textContent||'').trim();
   const riskLabel=(el('riskLabelNow')?.textContent||'').trim();
-  const daySummary=(el('dayForecastSummary')?.textContent||'').trim();
+  const daySummaryRaw=(el('dayForecastSummary')?.textContent||'').trim();
+  const daySummary=daySummaryRaw.replace(/<[^>]+>/g,'');
   const tag=(el('nowTag')?.textContent||'').trim();
   const regime=(el('nowRegime')?.textContent||'').trim();
 
-  _set('decisionNow',riskLabel||el('nowGcat')?.textContent||'—');
+  // Bug1 fix: gcat first, riskLabel fallback
+  _set('decisionNow',gcat||riskLabel||'—');
 
-  // Next: max 2 sentences
-  const raw=daySummary||(el('nowSummary')?.textContent||'—');
+  // Next: max 2 sentences, strip HTML
+  const raw=daySummary||(el('nowSummary')?.textContent||'').replace(/<[^>]+>/g,'').trim()||'—';
   _set('decisionNext',_short(raw.split(/(?<=\.)\s+/).slice(0,2).join(' '),220));
 
   // Action line (create if missing)
@@ -4067,7 +4088,30 @@ function syncDecision(){
     const box=el('decisionNext');
     if(box){ const d=document.createElement('div'); d.id='decisionWindow'; d.className='small muted'; d.style.marginTop='6px'; box.insertAdjacentElement('afterend',d); }
   }
-  _set('decisionWindow',_short(daySummary||'—',160));
+  // v70.3: Best Window with hora
+  const bw=_getBestWindow();
+  let winTxt=_short(daySummary||'—',160);
+  if(bw&&bw.best){
+    const b=bw.best;
+    const h=parseInt(b.slotLabel||'0');
+    const timeStr=h+':00–'+(h+3)+':00 UTC';
+    const horaStr=b.hora?' · '+b.hora:'';
+    winTxt='🟢 Найкраще: '+timeStr+horaStr+' (Score '+b.score+')';
+    if(bw.worst&&bw.worst.slotLabel!==b.slotLabel){
+      const w=bw.worst;
+      const wh=parseInt(w.slotLabel||'0');
+      winTxt+=' · 🔴 Уникати: '+wh+':00–'+(wh+3)+':00';
+    }
+    // pulse on best if current
+    const nowH=new Date().getUTCHours();
+    const bH=parseInt(b.slotLabel||'0');
+    const decNow=el('decisionNow');
+    if(decNow){
+      if(nowH>=bH&&nowH<bH+3) decNow.classList.add('pulse');
+      else decNow.classList.remove('pulse');
+    }
+  }
+  _set('decisionWindow',winTxt);
 
   // Pills
   const wrap=el('decisionTags');
@@ -4101,38 +4145,55 @@ function syncExplain(){
 
 // --- STORM STORY ---
 function syncStory(){
+  const cat=(el('nowGcat')?.textContent||'').trim();
   const kpM=_firstText(el('nowKp')).match(/\d+\.?\d*/);
-  const kpNum=kpM?kpM[0]:'';
-  const g=(el('nowGcat')?.textContent||'').trim();
-  const regime=(el('nowRegime')?.textContent||'').trim();
-  const delta=_num(el('deltaCardVal')?.textContent);
-  const bits=[];
-  if(g) bits.push('Стан: '+g+'.');
-  if(kpNum) bits.push('Kp '+kpNum+(regime?' ('+regime+')':'')+'.');
-  if(isFinite(delta)){ bits.push(delta>0?'Тренд зростає.':delta<0?'Тренд спадає.':'Без змін.'); }
-  _set('stormStoryText',bits.join(' ')||'—');
+  const kpStr=kpM?'Kp '+kpM[0]:'';
+  const day=(el('dayForecastSummary')?.textContent||'').replace(/<[^>]+>/g,'').trim();
+  const bits=[cat,kpStr].filter(Boolean);
+  // extract trend keyword from day summary
+  if(day){
+    const m=day.match(/стабільний|зростає|спадає/i);
+    if(m) bits.push(m[0]==='стабільний'?'стабільний':'тренд '+m[0]);
+  }
+  const full=bits.join(' · ');
+  _set('stormStoryText',full.length>120?full.slice(0,117)+'…':full||'—');
 }
 
 // --- RADAR ---
 function syncRadar(){
   const g=_num(_firstText(el('nowG'))||el('nowG')?.textContent);
   const delta=_num(el('deltaCardVal')?.textContent);
-  const day=(el('dayForecastSummary')?.textContent||'').trim();
+  const day=(el('dayForecastSummary')?.textContent||'').replace(/<[^>]+>/g,'').trim();
 
   let opp='—', risk='—';
   if(isFinite(g)){
-    if(g>=1) opp='Активність підтримується — добре для запуску і рішень';
+    if(g>=2) opp='Сильна підтримка — оптимально для запуску, рішень і активної дії';
+    else if(g>=1) opp='Активність підтримується — добре для запуску і рішень';
     else if(g>=0) opp='Стабільний фон — добре для планування і рутини';
     else opp='Спокійний режим — мінімізувати критичні навантаження';
   }
   if(isFinite(delta)){
-    if(delta<-0.2) risk='Ослаблення сигналу — далі менш комфортне вікно';
-    else if(delta>0.3) risk='Ріст динаміки — можливий імпульс і нестабільність';
+    if(delta<-0.5) risk='Різке ослаблення — режим погіршується';
+    else if(delta<-0.2) risk='Ослаблення сигналу — далі менш комфортне вікно';
+    else if(delta>0.5) risk='Різкий ріст — можливий імпульс і нестабільність';
+    else if(delta>0.3) risk='Ріст динаміки — можливий імпульс';
     else risk='Різких змін режиму поки не видно';
   }
   _set('radarOpportunity',opp);
   _set('radarRisk',risk);
-  _set('radarWindow',_short(day||'—',180));
+
+  // regime shift hint
+  let winText=_short(day||'—',160);
+  const regimeShift=_getRegimeShift(day);
+  if(regimeShift) winText+=winText!=='—'?' · '+regimeShift:regimeShift;
+  _set('radarWindow',winText);
+}
+
+function _getRegimeShift(daySummary){
+  if(!daySummary) return '';
+  const m=daySummary.match(/(зростає|спадає)\s.*?(вечора|ранку|ночі)/i);
+  if(!m) return '';
+  return m[1]==='зростає'?'Зміна режиму: ↑ до '+m[2]:'Зміна режиму: ↓ до '+m[2];
 }
 
 // --- TRIGGERS ---
@@ -4152,7 +4213,56 @@ function syncTriggers(){
   if(fr.toLowerCase().includes('stale')) items.push({cls:'down',txt:'🔴 Дані застарілі'});
   wrap.innerHTML=items.length
     ? items.map(x=>'<span class="trigger-chip '+x.cls+'">'+x.txt+'</span>').join('')
-    : '<span class="trigger-chip neutral">Немає тригерів</span>';
+    : '<span class="trigger-chip neutral">✓ Стабільний режим</span>';
+}
+
+// --- v70.3 BEST WINDOW ---
+const _HORA_WIN_BONUS = {
+  'Сатурн':0.6,'Юпітер':0.5,'Меркурій':0.4,'Венера':0.2,'Місяць':0,'Сонце':-0.1,'Марс':-0.4
+};
+function _calcWindowScore(slot, nextSlot, horaSlots){
+  const g=slot.G||0, kp=slot.kp||0;
+  // find hora planet for this 3h slot midpoint
+  const midH=slot.i*3+1.5;
+  let horaPlanet='';
+  if(horaSlots&&horaSlots.length){
+    const h=horaSlots.find(s=>s.startH<=midH&&s.endH>midH);
+    if(h) horaPlanet=h.planet;
+  }
+  const horaB=_HORA_WIN_BONUS[horaPlanet]||0;
+  // stability
+  const nextG=(nextSlot&&isFinite(nextSlot.G))?nextSlot.G:g;
+  const diff=Math.abs(nextG-g);
+  const stabB=diff<=0.3?0.3:diff<=0.7?0.1:-0.4;
+  // freshness
+  const fr=(_strip(el('freshnessBadge')?.textContent||'')).toLowerCase();
+  const freshB=fr.includes('stale')?-0.3:fr.includes('cache')?0:0.2;
+  // risk
+  let riskP=0;
+  if(kp>=5) riskP+=1.5; else if(kp>=4) riskP+=0.8; else if(kp>=3.3) riskP+=0.3;
+  return {score:+(g+horaB+stabB+freshB-riskP).toFixed(2), hora:horaPlanet, slotLabel:slot.label};
+}
+
+function _getBestWindow(){
+  const slots=window._daySlots;
+  if(!slots||!slots.length) return null;
+  // get hora slots if available
+  let horaSlots=null;
+  try{ const r=calcAllHoras(new Date()); horaSlots=r.slots; }catch(e){}
+  const scored=slots.map((s,i)=>{
+    const ws=_calcWindowScore(s, slots[i+1]||null, horaSlots);
+    return {...s,...ws};
+  }).sort((a,b)=>b.score-a.score);
+  return {best:scored[0]||null, second:scored[1]||null, worst:scored[scored.length-1]||null};
+}
+
+// --- v70.3 MERGE OPS ---
+function mergeOpsCards(){
+  const story=(el('stormStoryText')?.textContent||'').trim();
+  _set('decisionNarrative',story||'—');
+  const trg=el('triggerList')?.innerHTML||'';
+  const rt=el('radarTriggers');
+  if(rt) rt.innerHTML=trg||'<span class="trigger-chip neutral">✓ Стабільний режим</span>';
 }
 
 // --- MASTER ---
@@ -4163,6 +4273,7 @@ function syncV702UI(){
   try{syncStory();}catch(e){console.warn('syncStory:',e);}
   try{syncRadar();}catch(e){console.warn('syncRadar:',e);}
   try{syncTriggers();}catch(e){console.warn('syncTriggers:',e);}
+  try{mergeOpsCards();}catch(e){console.warn('mergeOpsCards:',e);}
 }
 
 async function loadAll(){
@@ -7648,7 +7759,7 @@ function lsRem(k){try{localStorage.removeItem(k)}catch{}}
 
 // ── Mobile Bottom Nav ─────────────────────────────────────
 const MNAV_SECTIONS = {
-  now:      ['heroCard','decisionCard','stormStoryCard','radarCard','triggerCard','gTopRow','profileBar','profileRec','mainGrid','swipeHint3','threeCard'],
+  now:      ['heroCard','opsGrid','decisionCard','radarCard','gTopRow','profileBar','profileRec','mainGrid','swipeHint3','threeCard'],
   panch:    ['heroCard','gTopRow','panchCard','swipeHint3','threeCard'],
   fcst:     ['heroCard','gTopRow','swipeHint27','twentysevenCard','backtestCard'],
   personal: ['heroCard','personalCard']
@@ -7665,7 +7776,7 @@ function mnavGo(tab, scroll) {
   const show = MNAV_SECTIONS[tab] || [];
 
   // All managed section IDs
-  const all = ['heroCard','decisionCard','stormStoryCard','radarCard','triggerCard','gTopRow','profileBar','profileRec','mainGrid',
+  const all = ['heroCard','opsGrid','decisionCard','radarCard','gTopRow','profileBar','profileRec','mainGrid',
                'swipeHint3','threeCard','swipeHint27','twentysevenCard',
                'backtestCard','panchCard','personalCard','scienceBar'];
 
@@ -7696,7 +7807,7 @@ function mnavGo(tab, scroll) {
 function mnavInit() {
   if (window.innerWidth > 700) {
     // Desktop: show everything
-    ['heroCard','decisionCard','stormStoryCard','radarCard','triggerCard','gTopRow','profileBar','profileRec','mainGrid','threeCard',
+    ['heroCard','opsGrid','decisionCard','radarCard','gTopRow','profileBar','profileRec','mainGrid','threeCard',
      'twentysevenCard','backtestCard','panchCard','scienceBar']
       .forEach(id => { const el = document.getElementById(id); if(el) el.style.display = ''; });
     return;
