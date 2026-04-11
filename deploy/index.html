@@ -563,6 +563,7 @@
     .retro-chip.direct{border-color:rgba(43,212,125,.35);color:#2bd47d}
     #cosmicMapWrap canvas{min-height:220px}
     #gaugeMoonWrapTop svg,#gaugeMoonWrapTop canvas{width:100%;display:block}
+    #gaugeMoonWrapTop{min-height:280px}
     @media(max-width:860px){#astroGrid{grid-template-columns:1fr}#moonCard,#retroCard,#cosmicMapCard{grid-column:auto}}
     #heroCard{margin-bottom:12px;padding:14px 16px}
     #opsGrid{margin:0 0 12px!important}
@@ -4341,22 +4342,22 @@ function _getBestWindow(){
 // --- v70.3 ASTRO TOP LAYER ---
 function renderMoonRetroTop(){
   const now=new Date();
+  const pc=_lastPanchCtx;
+  const ai=pc?.aiComponents;
 
-  // Moon block — pull data from existing DOM
-  const phaseName=(el('sciPhase')?.textContent||'').trim();
-  const liEl=el('sciLi'); // science bar Li
-  const liVal=liEl?(liEl.textContent||'').trim():'—';
-  // Tithi/Nakshatra from panchanga
-  const tithiEl=document.querySelector('#panchGrid .panch-cell:nth-child(5) .panch-val');
-  const nakEl=document.querySelector('#panchGrid .panch-cell:nth-child(3) .panch-val');
+  // Moon block — from JS variables, not DOM
+  const pd=window._lunarPhaseDeg;
+  const phaseName=isFinite(pd)?phaseNameByAngle(pd):'—';
+  const liVal=ai?String(ai.Li):'—';
+  const tithiName=pc?.tithi?.name||'—';
+  const nakName=pc?.nakshatra?.name||'—';
 
-  if(el('moonPhaseNow')) el('moonPhaseNow').textContent=phaseName||'—';
-  if(el('moonTithiNow')) el('moonTithiNow').textContent=tithiEl?.textContent||'—';
+  if(el('moonPhaseNow')) el('moonPhaseNow').textContent=phaseName;
+  if(el('moonTithiNow')) el('moonTithiNow').textContent=tithiName;
   if(el('moonLiNow')) el('moonLiNow').textContent='Lᵢ = '+liVal;
-  if(el('moonNakNow')) el('moonNakNow').textContent=nakEl?.textContent||'—';
+  if(el('moonNakNow')) el('moonNakNow').textContent=nakName;
 
   // Illumination from phaseDeg
-  const pd=window._lunarPhaseDeg;
   if(isFinite(pd)){
     const illum=((1-Math.cos(pd*Math.PI/180))/2*100).toFixed(0);
     if(el('moonIllumNow')) el('moonIllumNow').textContent=illum+'% освітл.';
