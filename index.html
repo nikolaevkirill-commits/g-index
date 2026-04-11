@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index DEBUG v70.5</title>
+  <title>G-Index — Космофізичний дашборд v70.8</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -553,10 +553,9 @@
 
     /* ===== v70.3 PRODUCTION POLISH ===== */
     /* v70.3 ASTRO TOP LAYER */
-    #astroGrid{display:grid!important;grid-template-columns:0.95fr 1.05fr!important;gap:12px!important;margin:0 0 12px!important;width:100%;border:2px dashed rgba(55,167,255,.5);padding:4px}
-    #moonCard{grid-column:1;display:block!important;min-height:140px}
-    #retroCard{grid-column:2;display:block!important;min-height:140px}
-    #cosmicMapCard{grid-column:1/-1;display:block!important;min-height:260px}
+    #astroGrid summary::-webkit-details-marker{display:none}
+    #astroGrid>summary .retro-chip{padding:3px 7px;font-size:11px}
+    #cosmicMapDetails summary::-webkit-details-marker{display:none}
     #moonMiniSvg svg{width:100%;max-width:170px;display:block}
     .retro-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;border:1px solid #2a3b61;background:#0f1a2f;font-size:12px;color:#cfe0ff}
     .retro-chip.rx{border-color:rgba(255,153,102,.45);color:#ff9966}
@@ -564,7 +563,7 @@
     #cosmicMapWrap canvas{min-height:220px}
     #gaugeMoonWrapTop svg,#gaugeMoonWrapTop canvas{width:100%;display:block}
     #gaugeMoonWrapTop{min-height:280px}
-    @media(max-width:860px){#astroGrid{grid-template-columns:1fr}#moonCard,#retroCard,#cosmicMapCard{grid-column:auto}}
+    @media(max-width:860px){#astroGrid .panch-grid{gap:4px}}
     #heroCard{margin-bottom:12px;padding:14px 16px}
     #opsGrid{margin:0 0 12px!important}
     #mainGrid{gap:12px!important;margin-bottom:12px}
@@ -715,47 +714,44 @@
     </section>
 
     <!-- ═══ v70.3 ASTRO TOP LAYER ═══ -->
-    <section id="astroGrid">
-      <section class="card" id="moonCard">
-        <div class="flex" style="margin-bottom:6px">
-          <h2 style="margin:0;font-size:16px">🌙 Moon now</h2>
-          <span class="pill right" id="moonNowStamp">live</span>
-        </div>
-        <div id="moonNowMain" style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap">
-          <div id="moonMiniWrap" style="min-width:140px;max-width:180px;flex:0 0 160px">
+    <!-- ═══ v70.8 ASTRO CONTEXT (collapsed) ═══ -->
+    <details id="astroGrid" style="margin:0 0 12px">
+      <summary class="card" style="cursor:pointer;padding:10px 16px;list-style:none;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <span style="font-size:14px;font-weight:600">🌙 <span id="moonPhaseNow">—</span></span>
+        <span class="small muted" id="moonIllumNow">—</span>
+        <span style="font-size:12px;color:#9bb1dc">Lᵢ=<span id="moonLiNow">—</span></span>
+        <span style="margin-left:auto;font-size:12px" id="retroSummaryLine">🪐 —</span>
+        <span style="font-size:11px;color:var(--dim)">▶ деталі</span>
+      </summary>
+      <div style="padding:0;margin-top:4px">
+        <div class="card" style="padding:12px;margin-bottom:8px;display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
+          <div id="moonMiniWrap" style="min-width:100px;max-width:120px;flex:0 0 110px">
             <div id="moonMiniSvg"></div>
           </div>
           <div style="flex:1;min-width:200px">
-            <div class="panch-grid" style="margin-top:0">
-              <div class="panch-cell"><div class="panch-label">Фаза</div><div class="panch-val" id="moonPhaseNow">—</div><div class="panch-sub" id="moonIllumNow">—</div></div>
-              <div class="panch-cell"><div class="panch-label">Тітхі</div><div class="panch-val" id="moonTithiNow">—</div><div class="panch-sub" id="moonLiNow">Lᵢ = —</div></div>
+            <div class="panch-grid" style="margin:0">
+              <div class="panch-cell"><div class="panch-label">Тітхі</div><div class="panch-val" id="moonTithiNow">—</div></div>
               <div class="panch-cell"><div class="panch-label">Накшатра</div><div class="panch-val" id="moonNakNow">—</div><div class="panch-sub" id="moonNakQualNow">—</div></div>
-              <div class="panch-cell"><div class="panch-label">Наступна зміна</div><div class="panch-val" id="moonNextShift">—</div><div class="panch-sub" id="moonShiftHint">—</div></div>
+              <div class="panch-cell"><div class="panch-label">Зміна</div><div class="panch-val" id="moonNextShift">—</div><div class="panch-sub" id="moonShiftHint">—</div></div>
             </div>
           </div>
+          <div style="flex:1;min-width:200px">
+            <div style="font-size:12px;font-weight:600;margin-bottom:6px">🪐 Ретроградність</div>
+            <div id="retroNowWrap" class="trigger-wrap" style="margin-top:4px"></div>
+            <div id="retroNowNote" class="small muted" style="margin-top:6px;line-height:1.45">—</div>
+          </div>
         </div>
-      </section>
-
-      <section class="card" id="retroCard">
-        <div class="flex" style="margin-bottom:6px">
-          <h2 style="margin:0;font-size:16px">🪐 Retro now</h2>
-          <span class="pill right" id="retroPressure">—</span>
-        </div>
-        <div id="retroNowWrap" class="trigger-wrap" style="margin-top:4px"></div>
-        <div id="retroNowNote" class="small muted" style="margin-top:8px;line-height:1.45">—</div>
-      </section>
-
-      <section class="card" id="cosmicMapCard">
-        <div class="flex" style="margin-bottom:6px">
-          <h2 style="margin:0;font-size:16px">✨ Live cosmic map</h2>
-          <span class="pill right">Sun · Moon · planets</span>
-        </div>
-        <div id="cosmicMapWrap" style="background:#0a1428;border:1px solid #1e2f52;border-radius:12px;padding:10px 12px">
-          <div id="gaugeMoonWrapTop"></div>
-          <div id="planetLegendTop" style="margin-top:8px"></div>
-        </div>
-      </section>
-    </section>
+        <details id="cosmicMapDetails" style="margin-bottom:8px">
+          <summary class="card" style="cursor:pointer;padding:8px 14px;list-style:none;font-size:13px;color:var(--muted)">✨ Космічна карта ▶</summary>
+          <div class="card" style="padding:10px 12px;margin-top:4px">
+            <div id="cosmicMapWrap" style="background:#0a1428;border:1px solid #1e2f52;border-radius:12px;padding:10px 12px">
+              <div id="gaugeMoonWrapTop" style="min-height:280px"></div>
+              <div id="planetLegendTop" style="margin-top:8px"></div>
+            </div>
+          </div>
+        </details>
+      </div>
+    </details>
 
     <!-- ═══ G INDEX TOP ROW ═══ -->
     <div id="gTopRow" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:8px 0 0;padding:10px 16px;background:var(--card2);border:1px solid var(--border);border-radius:12px">
@@ -783,6 +779,7 @@
         </div>
         <div id="decisionNow">—</div>
         <div id="decisionAction" style="margin-top:6px;font-size:14px;font-weight:700">—</div>
+        <div id="decisionWhy" style="margin-top:8px;padding:8px 12px;background:#0a1020;border:1px solid #1a2a44;border-radius:8px;font-size:12px;line-height:1.6;display:none"></div>
         <div id="decisionNext" class="muted" style="margin-top:4px">—</div>
         <div id="decisionWindow" class="small muted" style="margin-top:4px">—</div>
         <div id="decisionTags" class="flex" style="margin-top:6px;gap:6px;flex-wrap:wrap"></div>
@@ -851,7 +848,7 @@
         </div>
 
         <!-- C-SCORE v63 -->
-        <div id="cScoreBlock" style="margin-top:8px;padding:8px 12px;background:#090f1e;border:1px solid #1e2a44;border-radius:10px;font-size:12px">
+        <div id="cScoreBlock" style="margin-top:8px;padding:8px 12px;background:#090f1e;border:1px solid #1e2a44;border-radius:10px;font-size:12px;display:none">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px">
             <span style="color:var(--dim);font-size:10px;text-transform:uppercase;letter-spacing:.06em">C — Впевненість моделі</span>
             <span id="cScoreGrade" style="font-size:11px;font-weight:700;color:#9bb1dc">…</span>
@@ -891,7 +888,7 @@
         <div id="nowSummary" style="margin-top:6px;font-size:14px;color:#b7c7ea"></div>
 
         <!-- v70.2 compact explain -->
-        <div id="compactExplainBlock">
+        <div id="compactExplainBlock" style="display:none">
           <div id="compactExplain" class="mono small">—</div>
           <details style="margin-top:6px">
             <summary class="small muted">Детально</summary>
@@ -973,10 +970,14 @@
           <h2 style="margin:0;font-size:16px">Панчанга <span class="muted" style="font-weight:400;font-size:13px">— хронобіол. стан доби</span></h2>
           <span class="pill right" id="panchDate" style="font-size:12px">—</span>
         </div>
-        <div id="panchGrid">
-          <div class="muted small">Завантаження…</div>
-        </div>
-        <div style="margin-top:6px;font-size:12px" id="panchNote"></div>
+        <div id="panchSummaryLine" style="font-size:13px;margin-bottom:6px;line-height:1.5">—</div>
+        <details id="panchDetails">
+          <summary class="small muted" style="cursor:pointer;font-size:11px">▶ Показати деталі</summary>
+          <div id="panchGrid" style="margin-top:8px">
+            <div class="muted small">Завантаження…</div>
+          </div>
+          <div style="margin-top:6px;font-size:12px" id="panchNote"></div>
+        </details>
       </section>
 
       <!-- ПЕРСОНАЛЬНИЙ РОЗРАХУНОК — правий стовпець, рядок 2 -->
@@ -1058,7 +1059,11 @@
 Kp: 3-год індекс геомагнітної активності (0–9)
 ΣAᵢ = Lᵢ (тітхі) + Mᵢ (затемнення) + eᵢ (події) + Pᵢ (Панчанга×0.4) + Dᵢ (Dst-буря)</span></span>
       </div>
-      <div id="threeContent" style="margin-top:10px">Завантаження…</div>
+      <div id="threeQuick" style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;font-size:13px"></div>
+      <details style="margin-top:6px">
+        <summary class="small muted" style="cursor:pointer;font-size:11px">▶ Детальна таблиця</summary>
+        <div id="threeContent" style="margin-top:8px">Завантаження…</div>
+      </details>
       <div id="threeError" class="err small"></div>
     </section>
 
@@ -1101,6 +1106,7 @@ Kp: 3-год індекс геомагнітної активності (0–9)
         <table id="tbl27">
           <thead><tr>
             <th class="col-date th-sort" data-col="date">Дата (UTC) <span class="sort-ico">↕</span></th>
+            <th title="Якість накшатри дня" style="width:28px">☽</th>
             <th class="th-sort" data-col="g">G <span class="sort-ico">↕</span></th>
             <th>Kp max</th>
             <th class="col-hide-mobile">Δ Kp</th>
@@ -2726,7 +2732,7 @@ function draw27dTable(){
     if(th.dataset.col === _27dSortCol) th.classList.add(_27dSortDir);
   });
 
-  if(!data.length){ tbody.innerHTML='<tr><td colspan="14" style="color:#9bb1dc;padding:16px">Немає даних за фільтром</td></tr>'; return; }
+  if(!data.length){ tbody.innerHTML='<tr><td colspan="15" style="color:#9bb1dc;padding:16px">Немає даних за фільтром</td></tr>'; return; }
 
   // G_ос: обчислюємо natal для активного слоту (якщо є)
   let natalIdxFor27 = null;
@@ -2743,6 +2749,7 @@ function draw27dTable(){
   if(gosHeader) gosHeader.style.display = gosColVisible ? '' : 'none';
 
   let html='';
+  const _panchCache={};
   for(const {r,ds,kpUsed,isOverridden,ai,G,delta,f107mod} of data){
     const isToday = ds === todayStr;
     const gcls = classForG(G);
@@ -2752,7 +2759,11 @@ function draw27dTable(){
     const gTip = f107mod && f107mod.val !== 0 ? gTipBase + '\n⚠ F10.7: ' + f107mod.tip + ' (контекст, не в G)' : gTipBase;
     // Moon phase emoji for Li column
     const _moonEmoji = ai.phaseDeg < 22 ? '🌑' : ai.phaseDeg < 67 ? '🌒' : ai.phaseDeg < 112 ? '🌓' : ai.phaseDeg < 157 ? '🌔' : ai.phaseDeg < 202 ? '🌕' : ai.phaseDeg < 247 ? '🌖' : ai.phaseDeg < 292 ? '🌗' : ai.phaseDeg < 337 ? '🌘' : '🌑';
-    const Lcell  = `<span class="hint mono" tabindex="0">${_moonEmoji}${ai.Li !== 0 ? ' <b>'+ai.Li+'</b>' : ''}<span class="hint-pop">${escapeHtml(ai.lTip)}\n${ai.phaseName} (${ai.phaseDeg.toFixed(0)}°)</span></span>`;
+    // Nakshatra quality dot
+    const _p27 = _panchCache[ds] || (_panchCache[ds]=computePanchanga(r.date));
+    const _nakDot = _p27.nakshatra.score>=1?'🟢':_p27.nakshatra.score<=-1?'🔴':'🟡';
+    const Lcell  = `<span class="hint mono" tabindex="0">${_moonEmoji}${ai.Li !== 0 ? ' <b>'+ai.Li+'</b>' : ''}<span class="hint-pop">${escapeHtml(ai.lTip)}\n${ai.phaseName} (${ai.phaseDeg.toFixed(0)}°)\nНакш.: ${_p27.nakshatra.name} ${_nakDot}</span></span>`;
+    const _nakDotCell = `<td style="font-size:14px;text-align:center" title="${_p27.nakshatra.name} (${_p27.nakshatra.score>=1?'сприятл.':_p27.nakshatra.score<=-1?'несприятл.':'нейтр.'})">${_nakDot}</td>`;
     const Mcell  = `<span class="hint mono" tabindex="0">${ai.Mi}<span class="hint-pop">${escapeHtml(ai.mTip)}</span></span>`;
     // R-M window marker for ei
     const _rmActive = isRussellMcPherron(r.date);
@@ -2784,6 +2795,7 @@ function draw27dTable(){
 
     html += `<tr style="${rowStyle}${todayStyle}">
       <td class="mono col-date"${isToday?' style="font-weight:700;color:var(--alt)"':''}>${ds}${isToday?' <span style="white-space:nowrap;color:var(--alt)">◀</span>':''}</td>
+      ${_nakDotCell}
       <td style="min-width:60px">
         <span class="gbadge ${gcls} hint" tabindex="0" style="font-size:13px;padding:4px 8px;min-width:60px">G ${isFinite(G)?G.toFixed(2):'…'}<span class="hint-pop">${escapeHtml(gTip)}</span></span>
         <div style="margin-top:2px;height:3px;border-radius:2px;background:#0a1020;overflow:hidden"><div style="height:100%;width:${Math.min(100,Math.max(4,isFinite(G)?(Math.abs(G)/4*100):4)).toFixed(0)}%;background:${G<=-2.5?'#ff4444':G<=-0.5?'#ffaa33':G>=0.5?'#2bd47d':'#9bb1dc'};transition:width .3s"></div></div>
@@ -2827,7 +2839,7 @@ function draw27dTable(){
 
 function render27Day(rows, last3D){
   const tbody = document.getElementById('twentysevenContent');
-  if(!rows||!rows.length){ tbody.innerHTML='<tr><td colspan="14" style="color:#9bb1dc">Немає даних</td></tr>'; return; }
+  if(!rows||!rows.length){ tbody.innerHTML='<tr><td colspan="15" style="color:#9bb1dc">Немає даних</td></tr>'; return; }
   _last27Rows = rows;
   _27dComputed = build27dComputed(rows, last3D);
   draw27dTable();
@@ -4060,6 +4072,27 @@ function render3Day(parsed3){
   }
   html += '</tbody></table>';
   el('threeContent').innerHTML = html;
+
+  // Quick summary pills
+  const qw=el('threeQuick');
+  if(qw){
+    let qhtml='';
+    for(const d of days){
+      const kpMax=fmtDate(d.date)===fmtDate(new Date())&&lastWWV&&isFinite(lastWWV.kNow)?lastWWV.kNow:d.kpMax;
+      const ai=computeAi(noonUTC(d.date),kpMax??0);
+      const G=(isFinite(kpMax)?kpMax:0)-2+ai.Ai;
+      const isToday=fmtDate(d.date)===fmtDate(new Date());
+      const cat=G<=-2.5?'уникати':G<=-0.5?'обережно':G>=1.5?'сприятливо':G>=0.5?'добре':'нейтрально';
+      const act=G<=-2.5?'утриматись від рішень':G<=-0.5?'мінімізувати ризики':G>=1.5?'оптимально для дій':G>=0.5?'можна планове':'стандартний режим';
+      const col=G<=-2.5?'#ff6b6b':G<=-0.5?'#ffaa33':G>=0.5?'#2bd47d':'#9bb1dc';
+      const dd=d.date.getUTCDate()+'.'+(d.date.getUTCMonth()+1);
+      qhtml+=`<span style="flex:1;min-width:140px;padding:8px 14px;border-radius:10px;background:${col}15;border:1px solid ${col}40;text-align:center">
+        <div style="font-weight:700;color:${col};font-size:14px">${dd} → ${cat}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">${act}</div>
+      </span>`;
+    }
+    qw.innerHTML=qhtml;
+  }
 }
 
 // render45 видалено
@@ -4100,7 +4133,10 @@ function syncHero(){
     heroG.className='gbadge';
     ['g-ok','g-warn','g-bad','g-good'].forEach(c=>{ if(nowG.classList.contains(c)) heroG.classList.add(c); });
   }
-  _set('heroCat',el('nowGcat')?.textContent||'—');
+  const catText=el('nowGcat')?.textContent||'—';
+  const gVal=_num(_firstText(el('nowG'))||el('nowG')?.textContent);
+  const gInterp=isFinite(gVal)?(gVal<=-2.5?' → високий ризик':gVal<=-0.5?' → слабкий сигнал':gVal>=1.5?' → сильний імпульс':gVal>=0.5?' → помірний підйом':''):'';
+  _set('heroCat',catText+gInterp);
 
   // Delta: parse number, add arrow
   const dvRaw=(el('deltaCardVal')?.textContent||'').trim();
@@ -4263,6 +4299,12 @@ function syncRadar(){
     else risk='Різких змін режиму поки не видно';
   }
   _set('radarOpportunity',opp);
+
+  // Add retro pressure to risk
+  const now=new Date();
+  const rxNames=[];
+  ['Mercury','Venus','Mars','Jupiter','Saturn'].forEach(p=>{try{if(isRetrograde(p,now))rxNames.push(p==='Mercury'?'Меркурій':p==='Venus'?'Венера':p==='Mars'?'Марс':p==='Jupiter'?'Юпітер':'Сатурн')}catch(e){}});
+  if(rxNames.length) risk+=' · Ретро: '+rxNames.join(', ');
   _set('radarRisk',risk);
 
   // regime shift hint
@@ -4345,22 +4387,43 @@ function renderMoonRetroTop(){
   const pc=_lastPanchCtx;
   const ai=pc?.aiComponents;
 
-  // Moon block — from JS variables, not DOM
+  // Moon block — from JS variables
   const pd=window._lunarPhaseDeg;
   const phaseName=isFinite(pd)?phaseNameByAngle(pd):'—';
   const liVal=ai?String(ai.Li):'—';
   const tithiName=pc?.tithi?.name||'—';
+  const tithiNum=pc?.tithi?.num||'';
   const nakName=pc?.nakshatra?.name||'—';
+  const nakScore=pc?.nakshatra?.score;
 
   if(el('moonPhaseNow')) el('moonPhaseNow').textContent=phaseName;
-  if(el('moonTithiNow')) el('moonTithiNow').textContent=tithiName;
-  if(el('moonLiNow')) el('moonLiNow').textContent='Lᵢ = '+liVal;
+  if(el('moonTithiNow')) el('moonTithiNow').textContent=tithiNum?tithiName+' ('+tithiNum+')':tithiName;
+  if(el('moonLiNow')) el('moonLiNow').textContent=liVal;
   if(el('moonNakNow')) el('moonNakNow').textContent=nakName;
 
-  // Illumination from phaseDeg
+  // Nakshatra quality dot
+  if(el('moonNakQualNow')){
+    const dot=nakScore>=1?'🟢':nakScore<=-1?'🔴':'🟡';
+    const label=nakScore>=1?'Сприятлива':nakScore<=-1?'Несприятлива':'Нейтральна';
+    el('moonNakQualNow').textContent=dot+' '+label;
+  }
+
+  // Illumination
   if(isFinite(pd)){
     const illum=((1-Math.cos(pd*Math.PI/180))/2*100).toFixed(0);
     if(el('moonIllumNow')) el('moonIllumNow').textContent=illum+'% освітл.';
+  }
+
+  // Next tithi shift (approx: each tithi ~24h, compute remainder)
+  if(el('moonNextShift')){
+    try{
+      const tNum=pc?.tithi?.num||0;
+      // Approximate: tithi changes every ~24h, next shift in remaining hours
+      const dayFrac=(now.getUTCHours()*60+now.getUTCMinutes())/1440;
+      const remH=Math.max(1,Math.round((1-dayFrac)*24));
+      el('moonNextShift').textContent='~'+remH+'г';
+      if(el('moonShiftHint')) el('moonShiftHint').textContent='Тітхі '+(tNum<30?tNum+1:1);
+    }catch(e){}
   }
 
   // Retro block
@@ -4376,10 +4439,24 @@ function renderMoonRetroTop(){
 
   if(el('retroNowWrap')) el('retroNowWrap').innerHTML=html;
   const n=active.length;
-  if(el('retroPressure')) el('retroPressure').textContent=n>=3?'high':n>=2?'medium':n>=1?'low':'direct';
+  if(el('retroPressure')){
+    const lbl=n>=3?'high':n>=2?'medium':n>=1?'low':'direct';
+    const col=n>=3?'#ff6b6b':n>=2?'#ffaa33':n>=1?'#ffd866':'#2bd47d';
+    el('retroPressure').textContent=lbl;
+    el('retroPressure').style.color=col;
+  }
   if(el('retroNowNote')) el('retroNowNote').textContent=n?'Активні: '+active.join(', '):'Усі планети — прямий рух';
 
-  // Also update old retroNowBadge if exists
+  // Summary line for collapsed astroGrid header
+  if(el('retroSummaryLine')){
+    const shortNames={Mercury:'☿',Venus:'♀',Mars:'♂',Jupiter:'♃',Saturn:'♄'};
+    const rxShort=[];
+    planets.forEach(p=>{try{if(isRetrograde(p,now))rxShort.push(shortNames[p]+'℞')}catch(e){}});
+    el('retroSummaryLine').innerHTML=rxShort.length
+      ?'🪐 <span style="color:#ff9966">'+rxShort.join(' ')+'</span>'
+      :'🪐 <span style="color:#2bd47d">прямий рух</span>';
+  }
+
   const oldBadge=el('retroNowBadge');
   if(oldBadge) oldBadge.style.display='none';
 }
@@ -4393,16 +4470,84 @@ function mergeOpsCards(){
   if(rt) rt.innerHTML=trg||'<span class="trigger-chip neutral">✓ Стабільний режим</span>';
 }
 
+// --- WHY BLOCK (decision-first) ---
+function syncPanchSummary(){
+  const pc=_lastPanchCtx;
+  const s=el('panchSummaryLine');
+  if(!pc||!s) return;
+  const ti=pc.tithi?.name||'—';
+  const ni=pc.nakshatra?.name||'—';
+  const ns=pc.nakshatra?.score;
+  const dot=ns>=1?'🟢':ns<=-1?'🔴':'🟡';
+  const yi=pc.yoga?.name||'';
+  const yc=pc.yoga?.isCritical;
+  const vi=pc.karana?.isVishti;
+  const rh=pc.rahu?.active;
+  const parts=[dot+' '+ni, ti];
+  if(yc) parts.push('⚠ '+yi);
+  if(vi) parts.push('⚠ Вішті');
+  if(rh) parts.push('⚠ Раху-кала');
+  s.innerHTML=parts.map(p=>'<span style="margin-right:12px">'+p+'</span>').join('');
+}
+
+function syncWhy(){
+  const w=el('decisionWhy');
+  if(!w) return;
+  const pc=_lastPanchCtx;
+  const ai=pc?.aiComponents;
+  const pd=window._lunarPhaseDeg;
+  const g=_num(_firstText(el('nowG'))||el('nowG')?.textContent);
+  const now=new Date();
+  const lines=[];
+
+  // Moon interpretation
+  if(isFinite(pd)){
+    const phaseName=phaseNameByAngle(pd);
+    const li=ai?.Li??0;
+    const illum=((1-Math.cos(pd*Math.PI/180))/2*100).toFixed(0);
+    const moonSign=li<0?'↓':'↑';
+    const moonCol=li<0?'#ff9966':li>0?'#2bd47d':'#9bb1dc';
+    const moonEffect=li<=-2?'сильне зниження енергії':li<0?'зниження енергії':li>=2?'підйом енергії':li>0?'помірний підйом':'нейтральний фон';
+    lines.push(`<span style="color:${moonCol}">🌙 ${phaseName} ${illum}% · Lᵢ=${li} → ${moonSign} ${moonEffect}</span>`);
+  }
+
+  // Retro interpretation
+  const planets=['Mercury','Venus','Mars','Jupiter','Saturn'];
+  const retroEffects={Mercury:'помилки, затримки',Venus:'перегляд стосунків',Mars:'імпульсивність',Jupiter:'переоцінка планів',Saturn:'тиск, обмеження'};
+  const rxActive=[];
+  planets.forEach(p=>{try{if(isRetrograde(p,now))rxActive.push(p)}catch(e){}});
+  if(rxActive.length){
+    const effects=rxActive.map(p=>retroEffects[p]||p).join(', ');
+    lines.push(`<span style="color:#ff9966">🪐 Ретро: ${rxActive.length} планет → ${effects}</span>`);
+  }
+
+  // G interpretation
+  if(isFinite(g)){
+    const gCol=g<=-2.5?'#ff6b6b':g<=-0.5?'#ffaa33':g>=0.5?'#2bd47d':'#9bb1dc';
+    const gText=g<=-2.5?'високий ризик':g<=-0.5?'слабкий сигнал':g>=1.5?'сильний імпульс':g>=0.5?'помірний підйом':'нейтрально';
+    lines.push(`<span style="color:${gCol}">📊 G=${g.toFixed(2)} → ${gText}</span>`);
+  }
+
+  if(lines.length){
+    w.innerHTML=lines.join('<br>');
+    w.style.display='block';
+  } else {
+    w.style.display='none';
+  }
+}
+
 // --- MASTER ---
 function syncV702UI(){
   try{syncHero();}catch(e){console.warn('syncHero:',e);}
   try{syncDecision();}catch(e){console.warn('syncDecision:',e);}
+  try{syncWhy();}catch(e){console.warn('syncWhy:',e);}
   try{syncExplain();}catch(e){console.warn('syncExplain:',e);}
   try{syncStory();}catch(e){console.warn('syncStory:',e);}
   try{syncRadar();}catch(e){console.warn('syncRadar:',e);}
   try{syncTriggers();}catch(e){console.warn('syncTriggers:',e);}
   try{mergeOpsCards();}catch(e){console.warn('mergeOpsCards:',e);}
   try{renderMoonRetroTop();}catch(e){console.warn('renderMoonRetroTop:',e);}
+  try{syncPanchSummary();}catch(e){console.warn('syncPanchSummary:',e);}
 }
 
 async function loadAll(){
@@ -5023,11 +5168,26 @@ function renderGaugeMoon(G, phaseDeg, kp, phaseName) {
   `;
 
   svg.innerHTML = moonSvg;
-  wrap.style.display='block';
 
-  // v70.3: duplicate moon SVG to top astroGrid
+  // v70.8: compact moon-only SVG for astroGrid moonCard
   const moonMini = document.getElementById('moonMiniSvg');
-  if(moonMini) moonMini.innerHTML = moonSvg;
+  if(moonMini){
+    const mmSvg = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block">
+      <circle cx="50" cy="50" r="42" fill="#111108"/>
+      ${phaseDeg <= 180
+        ? `<rect x="50" y="8" width="42" height="84" fill="#c0c0b0" clip-path="url(#mmClip)"/>
+           <ellipse cx="50" cy="50" rx="${Math.abs(42*Math.cos(phaseDeg*Math.PI/180)).toFixed(1)}" ry="42" fill="${illum<0.5?'#111108':'#c0c0b0'}" clip-path="url(#mmClip)"/>`
+        : `<rect x="8" y="8" width="42" height="84" fill="#c0c0b0" clip-path="url(#mmClip)"/>
+           <ellipse cx="50" cy="50" rx="${Math.abs(42*Math.cos(phaseDeg*Math.PI/180)).toFixed(1)}" ry="42" fill="${illum<0.5?'#111108':'#c0c0b0'}" clip-path="url(#mmClip)"/>`
+      }
+      <defs><clipPath id="mmClip"><circle cx="50" cy="50" r="42"/></clipPath></defs>
+      <circle cx="50" cy="50" r="42" fill="none" stroke="${moonPhaseWarning?'#ff9933':'#2a3050'}" stroke-width="1.5"/>
+      <circle cx="60" cy="44" r="4" fill="none" stroke="#1a1a15" stroke-width="1" opacity="0.5"/>
+      <circle cx="42" cy="61" r="3" fill="none" stroke="#1a1a15" stroke-width="0.9" opacity="0.45"/>
+      <circle cx="55" cy="65" r="3.5" fill="none" stroke="#1a1a15" stroke-width="0.9" opacity="0.4"/>
+    </svg>`;
+    moonMini.innerHTML = mmSvg;
+  }
 
   // ── Анімація планет — подвійний rAF: 1й — layout reflow, 2й — offsetWidth вже коректний ──
   requestAnimationFrame(() => requestAnimationFrame(() => renderPlanetAnimation(kp, phaseDeg, G, _lastPanchCtx, _lastAstroCtx)));
@@ -8404,19 +8564,6 @@ if ('serviceWorker' in navigator) {
       .catch(err => console.warn('[SW] Registration failed:', err));
   });
 }
-
-// ══ DEBUG v70.5: force astroGrid visibility test ══
-setTimeout(()=>{
-  const ag=document.getElementById('astroGrid');
-  console.log('DEBUG astroGrid:',!!ag, ag?.offsetHeight, ag?.offsetWidth);
-  console.log('DEBUG moonCard:',!!document.getElementById('moonCard'));
-  console.log('DEBUG gaugeMoonWrapTop:',!!document.getElementById('gaugeMoonWrapTop'));
-  if(document.getElementById('moonPhaseNow')) document.getElementById('moonPhaseNow').textContent='DEBUG PHASE';
-  if(document.getElementById('moonTithiNow')) document.getElementById('moonTithiNow').textContent='DEBUG TITHI';
-  if(document.getElementById('retroNowWrap')) document.getElementById('retroNowWrap').innerHTML='<span style="color:#ff9966">DEBUG RETRO</span>';
-  if(document.getElementById('retroPressure')) document.getElementById('retroPressure').textContent='debug';
-  if(document.getElementById('retroNowNote')) document.getElementById('retroNowNote').textContent='DEBUG retro block';
-},1500);
 </script>
 </body>
 </html>
