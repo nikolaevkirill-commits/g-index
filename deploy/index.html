@@ -3935,12 +3935,24 @@ function syncHeroFromNow(){
   if(nowG&&heroG){ heroG.textContent=nowG.textContent; heroG.className=nowG.className; }
   if(el('heroCat')) el('heroCat').textContent=el('nowGcat')?.textContent||'—';
 
-  const dv=(el('deltaCardVal')?.textContent||'').trim();
-  const dd=(el('deltaCardDriver')?.textContent||'').trim();
-  if(el('heroDelta')) el('heroDelta').textContent=dv||'—';
+  // P3: parse delta number only, add arrow
+  const dvRaw=(el('deltaCardVal')?.textContent||'').trim();
+  const dvMatch=dvRaw.match(/-?\d+\.?\d*/);
+  if(el('heroDelta')){
+    if(dvMatch){
+      const n=parseFloat(dvMatch[0]);
+      const arrow=n>0?'↑':n<0?'↓':'→';
+      el('heroDelta').textContent=arrow+' '+(n>0?'+':'')+n.toFixed(2);
+      el('heroDelta').style.color=n>0?'var(--ok)':n<0?'var(--bad)':'var(--muted)';
+    } else {
+      el('heroDelta').textContent=dvRaw||'—';
+    }
+  }
 
-  const cs=(el('cScoreGrade')?.textContent||'').trim();
-  if(el('heroConfidence')) el('heroConfidence').textContent=cs||'—';
+  // P5: confidence — just percentage
+  const csRaw=(el('cScoreGrade')?.textContent||'').trim();
+  const csPct=csRaw.match(/(\d+%)/);
+  if(el('heroConfidence')) el('heroConfidence').textContent=csPct?csPct[1]:csRaw||'—';
 
   const frRaw=_stripDot(el('freshnessBadge')?.textContent||'LIVE');
   const frEl=el('heroFreshness');
@@ -3956,9 +3968,10 @@ function syncHeroFromNow(){
   const stamp=(el('stamp')?.textContent||'').replace('Оновлено:','').trim();
   if(el('heroStamp')) el('heroStamp').textContent=stamp||'—';
 
+  // P2: heroAction — first sentence only
   const summary=(el('nowSummary')?.textContent||'').trim();
-  const action=[summary,dd].filter(Boolean).join(' · ');
-  if(el('heroAction')) el('heroAction').textContent=action||'—';
+  const firstSentence=summary.split(/\.\s/)[0];
+  if(el('heroAction')) el('heroAction').textContent=(firstSentence?firstSentence+'.':'—');
 }
 
 function syncDecisionCard(){
@@ -3969,7 +3982,12 @@ function syncDecisionCard(){
   const tag=(el('nowTag')?.textContent||'').trim();
 
   if(now) now.textContent=riskLabel||(el('nowGcat')?.textContent||'—');
-  if(next) next.textContent=daySummary||(el('nowSummary')?.textContent||'—');
+  // P4-decision: truncate next to first 2 sentences
+  if(next){
+    const raw=daySummary||(el('nowSummary')?.textContent||'—');
+    const sentences=raw.split(/(?<=\.)\s+/).slice(0,2).join(' ');
+    next.textContent=sentences;
+  }
 
   if(tags){
     tags.innerHTML='';
@@ -3987,31 +4005,36 @@ function syncDecisionCard(){
 function syncCompactExplain(){
   const src=el('gDecompTableBody'), dst=el('gDecompTableBodyMirror'), line=el('compactExplain');
   if(src&&dst) dst.innerHTML=src.innerHTML;
-  if(src&&line){
-    const parts=[];
-    src.querySelectorAll('tr').forEach(tr=>{
-      const tds=tr.querySelectorAll('td');
-      if(tds.length>=2){
-        const k=(tds[0].textContent||'').trim(), v=(tds[1].textContent||'').trim();
-        if(k&&v) parts.push(k+' '+v);
-      }
-    });
-    line.textContent=parts.length?parts.join(' · '):'—';
+  // P1: show compact formula "G = Kp−2 + ΣAᵢ = {result}" instead of all rows
+  if(line){
+    const gVal=(el('nowG')?.textContent||'').replace(/[^0-9.\-]/g,'').trim();
+    const kpVal=(el('nowKp')?.textContent||'').trim();
+    const aiVal=(el('nowAi')?.textContent||'').replace('ΣA:','').replace('ΣAᵢ:','').replace('=','').trim();
+    if(gVal&&kpVal){
+      line.textContent='G = '+kpVal+' − 2 + ('+aiVal+') = '+gVal;
+    } else {
+      line.textContent='—';
+    }
   }
 }
 
 function syncStormStory(){
+  // P4: max 3 short sentences
   const kp=(el('nowKp')?.textContent||'').trim();
   const g=(el('nowGcat')?.textContent||'').trim();
-  const sum=(el('nowSummary')?.textContent||'').trim();
-  const nxt=(el('dayForecastSummary')?.textContent||'').trim();
-  const fr=_stripDot(el('freshnessBadge')?.textContent||'LIVE');
+  const regime=(el('nowRegime')?.textContent||'').trim();
   const bits=[];
-  if(kp) bits.push('Головний геофактор зараз: '+kp+'.');
-  if(g) bits.push('Стан дня: '+g+'.');
-  if(sum) bits.push(sum);
-  if(nxt) bits.push('Далі: '+nxt);
-  if(fr) bits.push('Дані: '+fr+'.');
+  if(g) bits.push('Стан: '+g+'.');
+  if(kp) bits.push('Kp '+kp+(regime?' ('+regime+')':'')+'.');
+  // delta summary
+  const dvRaw=(el('deltaCardVal')?.textContent||'').trim();
+  const dvMatch=dvRaw.match(/-?\d+\.?\d*/);
+  if(dvMatch){
+    const n=parseFloat(dvMatch[0]);
+    if(n>0) bits.push('Тренд зростає.');
+    else if(n<0) bits.push('Тренд спадає.');
+    else bits.push('Без змін.');
+  }
   if(el('stormStoryText')) el('stormStoryText').textContent=bits.join(' ')||'—';
 }
 
