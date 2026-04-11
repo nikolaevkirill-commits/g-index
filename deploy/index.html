@@ -503,7 +503,7 @@
     /* safe hide old duplicated top-level UI */
     #gTopRow{display:none !important}
     #deltaCard{display:none !important}
-    #gFlowCanvas{display:none !important}
+    #gFlowCanvas{display:block}
     /* v70.3: merged into opsGrid */
     #stormStoryCard{display:none !important}
     #triggerCard{display:none !important}
@@ -524,15 +524,16 @@
     }
 
     /* ===== v70.3 OPS GRID ===== */
-    #opsGrid{display:grid;grid-template-columns:1.08fr 0.92fr!important;gap:12px;margin:0 0 16px}
-    #opsGrid>#decisionCard,#opsGrid>#radarCard{margin:0!important;padding:12px 14px}
+    #opsGrid{display:flex!important;flex-wrap:wrap;gap:12px;margin:0 0 16px}
+    #opsGrid>#decisionCard{flex:1 1 52%;min-width:280px;margin:0!important;padding:12px 14px}
+    #opsGrid>#radarCard{flex:1 1 40%;min-width:280px;margin:0!important;padding:12px 14px}
     #decisionNow{font-size:16px;font-weight:800;line-height:1.2}
     #decisionNext{font-size:12px;line-height:1.35}
     #decisionNarrative{font-size:11px;color:var(--muted)}
     .radar-box{min-height:72px;padding:10px 12px}
     .radar-main{font-size:14px;line-height:1.25}
     .radar-sub{font-size:12px;line-height:1.35}
-    @media(max-width:600px){#opsGrid{grid-template-columns:1fr}}
+    @media(max-width:600px){#opsGrid>#decisionCard,#opsGrid>#radarCard{flex:1 1 100%}}
     .radar-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
     .radar-box{background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:10px 12px;min-height:72px}
     .radar-wide{grid-column:1/-1}
@@ -850,6 +851,9 @@
           <div id="dayForecastSummary" style="font-size:12px;color:#9bb1dc;padding:5px 10px;background:#090f1e;border-radius:8px;border:1px solid #1a2a45;line-height:1.5;white-space:normal;overflow-wrap:break-word;word-break:break-word;overflow:hidden;max-width:100%"></div>
         </div>
 
+        <!-- v70.3: Retrograde badge -->
+        <div id="retroNowBadge" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;font-size:11px"></div>
+
         <!-- ═══ G DECOMPOSITION BAR ═══ -->
         <details id="nowAdvancedBlock" style="margin-top:10px">
           <summary class="small muted" style="cursor:pointer;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim)">▶ Деталі та розклад</summary>
@@ -896,11 +900,12 @@
           <div id="horaLegend" style="margin-top:4px;font-size:11px;color:var(--dim)"></div>
         </div>
 
+        </details>
+
+        <!-- Moon + Planets (outside collapse) -->
         <div id="gaugeMoonWrap" style="margin-top:10px;display:none">
           <svg id="gaugeMoonSvg" width="100%" viewBox="0 0 480 90" style="display:block;width:100%;overflow:visible"></svg>
         </div>
-
-        </details>
 
         <!-- Bar chart Kp removed -->
       </section>
@@ -4277,6 +4282,23 @@ function _getBestWindow(){
   return {best:scored[0]||null, second:scored[1]||null, worst:scored[scored.length-1]||null};
 }
 
+// --- v70.3 RETRO BADGE ---
+function syncRetroNow(){
+  const badge=el('retroNowBadge');
+  if(!badge) return;
+  const now=new Date();
+  const planets=['Mercury','Venus','Mars','Jupiter','Saturn'];
+  const uaNames={Mercury:'☿ Меркурій',Venus:'♀ Венера',Mars:'♂ Марс',Jupiter:'♃ Юпітер',Saturn:'♄ Сатурн'};
+  const retros=planets.filter(p=>{try{return isRetrograde(p,now)}catch(e){return false}});
+  if(!retros.length){
+    badge.innerHTML='<span style="color:var(--ok);font-size:11px">🪐 Усі планети — прямий рух</span>';
+    return;
+  }
+  badge.innerHTML=retros.map(p=>
+    '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:999px;border:1px solid rgba(255,153,102,.35);background:rgba(255,153,102,.08);color:#ff9966;font-size:11px">℞ '+(uaNames[p]||p)+'</span>'
+  ).join('');
+}
+
 // --- v70.3 MERGE OPS ---
 function mergeOpsCards(){
   const story=(el('stormStoryText')?.textContent||'').trim();
@@ -4295,6 +4317,7 @@ function syncV702UI(){
   try{syncRadar();}catch(e){console.warn('syncRadar:',e);}
   try{syncTriggers();}catch(e){console.warn('syncTriggers:',e);}
   try{mergeOpsCards();}catch(e){console.warn('mergeOpsCards:',e);}
+  try{syncRetroNow();}catch(e){console.warn('syncRetroNow:',e);}
 }
 
 async function loadAll(){
