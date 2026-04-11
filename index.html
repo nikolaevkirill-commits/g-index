@@ -565,6 +565,61 @@
     #gaugeMoonWrapTop{min-height:280px}
     @media(max-width:860px){#astroGrid .panch-grid{gap:4px}}
     #heroCard{margin-bottom:12px;padding:14px 16px}
+
+    /* ═══ v70.8 WOW VISUAL UPGRADE ═══ */
+    @keyframes auroraShift{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+    @keyframes fadeSlideIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes glowPulse{0%,100%{box-shadow:0 0 15px rgba(55,167,255,.15)}50%{box-shadow:0 0 30px rgba(55,167,255,.3)}}
+    @keyframes ringDraw{from{stroke-dashoffset:283}to{stroke-dashoffset:var(--ring-offset,140)}}
+    @keyframes borderGlow{0%,100%{border-color:rgba(55,167,255,.3)}50%{border-color:rgba(55,167,255,.6)}}
+
+    #heroCard{
+      position:relative;overflow:hidden;
+      animation:fadeSlideIn .5s ease both;
+    }
+    #heroCard::before{
+      content:'';position:absolute;inset:0;z-index:0;opacity:.12;
+      background:linear-gradient(135deg,#0a1428,#1a2f5a 30%,#0d1a30 50%,#1a3a2a 70%,#0a1428);
+      background-size:300% 300%;animation:auroraShift 12s ease-in-out infinite;
+    }
+    #heroCard .hero-wrap{position:relative;z-index:1}
+    #heroCard #heroG{
+      font-size:26px;padding:0;background:none;min-width:auto;
+      position:absolute;top:50%;left:45px;transform:translate(-50%,-50%);
+      z-index:2;text-shadow:0 0 20px currentColor;
+    }
+    #heroRing{width:90px;height:90px;flex-shrink:0;position:relative}
+    #heroRing svg{width:90px;height:90px;transform:rotate(-90deg)}
+    #heroRing .ring-bg{fill:none;stroke:#1a2a44;stroke-width:6}
+    #heroRing .ring-val{fill:none;stroke-width:6;stroke-linecap:round;transition:stroke-dashoffset .8s ease,stroke 1s ease;filter:drop-shadow(0 0 6px currentColor)}
+    #heroCat{font-size:18px;font-weight:700;line-height:1.2}
+    #heroAction{font-size:13px;color:var(--muted);line-height:1.4}
+
+    #opsGrid{animation:fadeSlideIn .5s ease .1s both}
+    #decisionCard{animation:glowPulse 3s ease-in-out infinite}
+    #decisionWhy{border:1px solid transparent;background:linear-gradient(#0a1020,#0a1020) padding-box,linear-gradient(135deg,rgba(55,167,255,.3),rgba(43,212,125,.2),rgba(255,153,102,.2)) border-box;background-size:100%,200% 200%;animation:auroraShift 8s ease-in-out infinite}
+    #threeQuick{animation:fadeSlideIn .5s ease .2s both}
+    #threeQuick>span{transition:transform .15s ease,box-shadow .15s ease;cursor:default}
+    #threeQuick>span:hover{transform:translateY(-2px);box-shadow:0 4px 16px rgba(0,0,0,.3)}
+    .card{animation:fadeSlideIn .4s ease both}
+    #nowCard{animation-delay:.15s}
+    #panchCard{animation-delay:.2s}
+    #threeCard{animation-delay:.25s}
+    #twentysevenCard{animation-delay:.3s}
+
+    /* Astro summary glow */
+    #wowOrb{position:absolute;right:22px;top:14px;width:140px;height:140px;pointer-events:none;z-index:0}
+    @media(max-width:860px){#wowOrb{width:96px;height:96px;right:10px;top:10px;opacity:.8}}
+    #wowParticles{position:absolute;inset:0;z-index:0;pointer-events:none;opacity:.9}
+    #cosmicMapWrap{position:relative;overflow:hidden}
+    #cosmicMapWrap>*{position:relative;z-index:1}
+    #heroG::after{content:"";position:absolute;inset:-30%;background:linear-gradient(120deg,transparent 25%,rgba(255,255,255,.13) 50%,transparent 75%);transform:translateX(-140%);animation:heroShimmer 6s linear infinite}
+    @keyframes heroShimmer{0%{transform:translateX(-140%)}100%{transform:translateX(140%)}}
+    #superSignal{transition:border-color .3s ease}
+    #superSignalBadge{font-size:16px;letter-spacing:.05em}
+    #astroGrid>summary{transition:background .2s ease,box-shadow .2s ease}
+    #astroGrid>summary:hover{box-shadow:0 0 20px rgba(55,167,255,.15)}
+    #astroGrid[open]>summary{background:linear-gradient(135deg,rgba(15,26,47,.95),rgba(10,20,40,.95))}
     #opsGrid{margin:0 0 12px!important}
     #mainGrid{gap:12px!important;margin-bottom:12px}
     .card{border-radius:14px}
@@ -683,9 +738,17 @@
 
     <!-- ═══ v70.2 HERO CARD ═══ -->
     <section class="card" id="heroCard">
+      <canvas id="wowOrb" width="140" height="140"></canvas>
       <div class="hero-wrap">
         <div class="hero-left">
-          <span id="heroG" class="gbadge">G …</span>
+          <div id="heroRing">
+            <svg viewBox="0 0 100 100">
+              <circle class="ring-bg" cx="50" cy="50" r="45"/>
+              <circle class="ring-val" id="heroRingVal" cx="50" cy="50" r="45"
+                stroke="#9bb1dc" stroke-dasharray="283" stroke-dashoffset="140"/>
+            </svg>
+            <span id="heroG" class="gbadge">G …</span>
+          </div>
           <div class="hero-maintext">
             <div id="heroCat">—</div>
             <div id="heroAction">—</div>
@@ -745,6 +808,7 @@
           <summary class="card" style="cursor:pointer;padding:8px 14px;list-style:none;font-size:13px;color:var(--muted)">✨ Космічна карта ▶</summary>
           <div class="card" style="padding:10px 12px;margin-top:4px">
             <div id="cosmicMapWrap" style="background:#0a1428;border:1px solid #1e2f52;border-radius:12px;padding:10px 12px">
+            <canvas id="wowParticles"></canvas>
               <div id="gaugeMoonWrapTop" style="min-height:280px"></div>
               <div id="planetLegendTop" style="margin-top:8px"></div>
             </div>
@@ -780,6 +844,11 @@
         <div id="decisionNow">—</div>
         <div id="decisionAction" style="margin-top:6px;font-size:14px;font-weight:700">—</div>
         <div id="decisionWhy" style="margin-top:8px;padding:8px 12px;background:#0a1020;border:1px solid #1a2a44;border-radius:8px;font-size:12px;line-height:1.6;display:none"></div>
+        <div id="superSignal" style="margin-top:8px;padding:10px 12px;border-radius:10px;background:#0a1020;border:1px solid #1a2a44;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <span style="font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em">Signal</span>
+          <span id="superSignalBadge" class="pill" style="font-weight:700;font-size:15px">—</span>
+          <span id="superSignalText" class="small muted" style="flex:1;min-width:160px">—</span>
+        </div>
         <div id="decisionNext" class="muted" style="margin-top:4px">—</div>
         <div id="decisionWindow" class="small muted" style="margin-top:4px">—</div>
         <div id="decisionTags" class="flex" style="margin-top:6px;gap:6px;flex-wrap:wrap"></div>
@@ -1125,6 +1194,7 @@ Kp: 3-год індекс геомагнітної активності (0–9)
           <tbody id="twentysevenContent"><tr><td colspan="6" class="muted">Завантаження…</td></tr></tbody>
         </table>
           <!-- P-ux: 27-day stats bar -->
+  <div id="trend27Summary" style="margin-top:8px;padding:8px 14px;background:#0a1020;border:1px solid #1a2a44;border-radius:10px;font-size:13px;line-height:1.6"></div>
   <div id="stat27" style="margin-top:8px;padding:6px 12px;background:var(--card2);border-radius:8px;border:1px solid var(--border);font-size:11px;display:flex;flex-wrap:wrap;gap:8px 16px;color:var(--muted)"></div>
 </div><!-- /table27Wrap -->
       </section>
@@ -2835,6 +2905,23 @@ function draw27dTable(){
       (_bestDay  ? `<span style="color:#2bd47d">↑ Найкращий: <strong>${_bestDay.ds}</strong> G${_gMax>=0?'+':''}${_gMax.toFixed(1)}</span>` : '') +
       (_worstDay ? `<span style="color:#ff6b6b">↓ Найгірший: <strong>${_worstDay.ds}</strong> G${_gMin>=0?'+':''}${_gMin.toFixed(1)}</span>` : '');
   }
+
+  // Trend summary — quick actionable text
+  const ts=document.getElementById('trend27Summary');
+  if(ts&&data.length){
+    const sorted=[...data].sort((a,b)=>a.ds.localeCompare(b.ds));
+    const next7=sorted.slice(0,7);
+    const badDays=next7.filter(d=>d.G<-0.5);
+    const peakRisk=sorted.reduce((w,d)=>(!w||d.G<w.G)?d:w,null);
+    const peakOk=sorted.reduce((w,d)=>(!w||d.G>w.G)?d:w,null);
+    let txt='';
+    if(!badDays.length) txt=`<span style="color:#2bd47d">✅ Найближчі 7 днів — спокійно</span>`;
+    else if(badDays.length<=2) txt=`<span style="color:#ffaa33">⚠ ${badDays.length} несприятл. день з 7</span>`;
+    else txt=`<span style="color:#ff6b6b">🔴 ${badDays.length} несприятл. днів з 7 — обережно</span>`;
+    if(peakRisk&&peakRisk.G<-0.5) txt+=` · <span style="color:#ff6b6b">Пік ризику: ${peakRisk.ds}</span>`;
+    if(peakOk&&peakOk.G>=0.5) txt+=` · <span style="color:#2bd47d">Найкраще: ${peakOk.ds}</span>`;
+    ts.innerHTML=txt;
+  }
 }
 
 function render27Day(rows, last3D){
@@ -4132,6 +4219,15 @@ function syncHero(){
     heroG.textContent=m?'G '+m[1]:'G …';
     heroG.className='gbadge';
     ['g-ok','g-warn','g-bad','g-good'].forEach(c=>{ if(nowG.classList.contains(c)) heroG.classList.add(c); });
+    // Ring gauge
+    const ring=document.getElementById('heroRingVal');
+    if(ring&&m){
+      const gv=parseFloat(m[1]);
+      const pct=Math.max(0.05,Math.min(1,(gv+4)/8)); // -4..+4 → 0..1
+      const offset=283*(1-pct);
+      ring.style.strokeDashoffset=offset;
+      ring.style.stroke=gv<=-2.5?'#ff4444':gv<=-0.5?'#ffaa33':gv>=1.5?'#2bd47d':gv>=0.5?'#63be7b':'#9bb1dc';
+    }
   }
   const catText=el('nowGcat')?.textContent||'—';
   const gVal=_num(_firstText(el('nowG'))||el('nowG')?.textContent);
@@ -4743,6 +4839,7 @@ async function loadAll(){
   updateFreshnessBadge();
 
   try{ syncV702UI(); }catch(e){ console.warn('syncV702UI:', e); }
+  try{ applyWowFromG(); }catch(e){}
 
   el('btnRefresh').disabled = false;
 }
@@ -8505,6 +8602,58 @@ function pwaReload() {
     window.location.reload();
   }
 }
+
+// ═══ WOW LAYER v71 ═══
+function wowColorByG(g){
+  if(!isFinite(g)) return '#9bb1dc';
+  if(g>=1.5) return '#2bd47d'; if(g>=-0.5) return '#9bb1dc';
+  if(g>=-2.5) return '#ffcc00'; return '#ff6b6b';
+}
+function renderWowOrb(g){
+  const c=document.getElementById('wowOrb'); if(!c) return;
+  const ctx=c.getContext('2d'),w=c.width,h=c.height,cx=w/2,cy=h/2;
+  const col=wowColorByG(g),t=performance.now()/1000,pulse=1+.04*Math.sin(t*2.3);
+  ctx.clearRect(0,0,w,h);
+  for(let i=0;i<4;i++){ctx.beginPath();ctx.arc(cx,cy,(46+i*10)*pulse,0,Math.PI*2);ctx.strokeStyle=col+(i===0?'66':i===1?'33':'18');ctx.lineWidth=i===0?2.2:1.1;ctx.stroke()}
+  const g1=ctx.createRadialGradient(cx,cy,8,cx,cy,44);
+  g1.addColorStop(0,'rgba(255,255,255,.95)');g1.addColorStop(.18,col);g1.addColorStop(.55,col+'66');g1.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=g1;ctx.beginPath();ctx.arc(cx,cy,44*pulse,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.arc(cx,cy,56,0,Math.PI*2);ctx.strokeStyle='rgba(255,255,255,.08)';ctx.lineWidth=1;ctx.stroke();
+  const a=t*0.8,sx=cx+Math.cos(a)*56,sy=cy+Math.sin(a)*56;
+  ctx.beginPath();ctx.arc(sx,sy,3.2,0,Math.PI*2);ctx.fillStyle='#fff';ctx.fill();
+}
+let _wowOrbRAF=null;
+function startWowOrb(g){function loop(){renderWowOrb(g);_wowOrbRAF=requestAnimationFrame(loop)}if(_wowOrbRAF)cancelAnimationFrame(_wowOrbRAF);loop()}
+
+function initWowParticles(){
+  const c=document.getElementById('wowParticles'),host=document.getElementById('cosmicMapWrap');
+  if(!c||!host) return;const ctx=c.getContext('2d');let parts=[];
+  function resize(){const r=host.getBoundingClientRect();c.width=Math.max(200,Math.floor(r.width));c.height=Math.max(160,Math.floor(r.height));
+  parts=Array.from({length:30},()=>({x:Math.random()*c.width,y:Math.random()*c.height,r:Math.random()*1.4+.4,v:Math.random()*.15+.04,a:Math.random()*Math.PI*2}))}
+  function draw(){ctx.clearRect(0,0,c.width,c.height);for(const p of parts){p.x+=Math.cos(p.a)*p.v;p.y+=Math.sin(p.a)*p.v;if(p.x<0)p.x=c.width;if(p.x>c.width)p.x=0;if(p.y<0)p.y=c.height;if(p.y>c.height)p.y=0;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle='rgba(255,255,255,.2)';ctx.fill()}requestAnimationFrame(draw)}
+  resize();draw();window.addEventListener('resize',resize);
+}
+
+function renderSuperSignal(g){
+  const b=document.getElementById('superSignalBadge'),t=document.getElementById('superSignalText');if(!b||!t)return;
+  if(!isFinite(g)){b.textContent='N/A';t.textContent='Недостатньо даних';return}
+  if(g>=1.5){b.textContent='⚡ GO';b.style.color='#2bd47d';b.style.borderColor='#2bd47d44';t.textContent='Сильне вікно для запуску, рішень і активних дій'}
+  else if(g>=-0.5){b.textContent='● STABLE';b.style.color='#9bb1dc';b.style.borderColor='#9bb1dc44';t.textContent='Стандартний режим без вираженого тиску'}
+  else if(g>=-2.5){b.textContent='⚠ CAUTION';b.style.color='#ffcc00';b.style.borderColor='#ffcc0044';t.textContent='Приховане навантаження — діяти обережно'}
+  else{b.textContent='🔴 HOLD';b.style.color='#ff6b6b';b.style.borderColor='#ff6b6b44';t.textContent='Невдале вікно для ризикових рішень'}
+}
+
+function applyWowFromG(){
+  let g=NaN;const h=document.getElementById('heroG');
+  if(h){const m=h.textContent.match(/-?\d+(\.\d+)?/);if(m)g=parseFloat(m[0])}
+  startWowOrb(g);renderSuperSignal(g);
+  const dc=document.getElementById('decisionCard');
+  if(dc){dc.classList.remove('decision-live');void dc.offsetWidth;dc.classList.add('decision-live')}
+}
+
+document.addEventListener('DOMContentLoaded',()=>{
+  setTimeout(()=>{initWowParticles();applyWowFromG()},900);
+});
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
