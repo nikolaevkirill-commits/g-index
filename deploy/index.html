@@ -3932,7 +3932,17 @@ function _stripDot(s){ return String(s||'').replace(/^●\s*/,'').trim(); }
 
 function syncHeroFromNow(){
   const nowG=el('nowG'), heroG=el('heroG');
-  if(nowG&&heroG){ heroG.textContent=nowG.textContent; heroG.className=nowG.className; }
+  if(nowG&&heroG){
+    // Extract just "G X.XX" — nowG has child spans (C-score, tooltip)
+    const gMatch=(nowG.textContent||'').match(/G\s*(-?\d+\.?\d*)/);
+    heroG.textContent=gMatch?'G '+gMatch[1]:'G …';
+    // Copy color class
+    heroG.className='gbadge';
+    if(nowG.classList.contains('g-ok')) heroG.classList.add('g-ok');
+    if(nowG.classList.contains('g-warn')) heroG.classList.add('g-warn');
+    if(nowG.classList.contains('g-bad')) heroG.classList.add('g-bad');
+    if(nowG.classList.contains('g-good')) heroG.classList.add('g-good');
+  }
   if(el('heroCat')) el('heroCat').textContent=el('nowGcat')?.textContent||'—';
 
   // P3: parse delta number only, add arrow
@@ -3968,10 +3978,12 @@ function syncHeroFromNow(){
   const stamp=(el('stamp')?.textContent||'').replace('Оновлено:','').trim();
   if(el('heroStamp')) el('heroStamp').textContent=stamp||'—';
 
-  // P2: heroAction — first sentence only
+  // P2: heroAction — first sentence only, max 120 chars
   const summary=(el('nowSummary')?.textContent||'').trim();
-  const firstSentence=summary.split(/\.\s/)[0];
-  if(el('heroAction')) el('heroAction').textContent=(firstSentence?firstSentence+'.':'—');
+  let action=summary.split(/\.\s/)[0];
+  if(action&&!action.endsWith('.')) action+='.';
+  if(action.length>120) action=action.substring(0,117)+'…';
+  if(el('heroAction')) el('heroAction').textContent=action||'—';
 }
 
 function syncDecisionCard(){
@@ -4005,13 +4017,22 @@ function syncDecisionCard(){
 function syncCompactExplain(){
   const src=el('gDecompTableBody'), dst=el('gDecompTableBodyMirror'), line=el('compactExplain');
   if(src&&dst) dst.innerHTML=src.innerHTML;
-  // P1: show compact formula "G = Kp−2 + ΣAᵢ = {result}" instead of all rows
   if(line){
-    const gVal=(el('nowG')?.textContent||'').replace(/[^0-9.\-]/g,'').trim();
+    // Parse G from nowG (first number after "G")
+    const gMatch=(el('nowG')?.textContent||'').match(/G\s*(-?\d+\.?\d*)/);
+    const gVal=gMatch?gMatch[1]:'?';
+    // Parse Kp from nowKp
     const kpVal=(el('nowKp')?.textContent||'').trim();
-    const aiVal=(el('nowAi')?.textContent||'').replace('ΣA:','').replace('ΣAᵢ:','').replace('=','').trim();
-    if(gVal&&kpVal){
-      line.textContent='G = '+kpVal+' − 2 + ('+aiVal+') = '+gVal;
+    // Parse Ai from nowAi — first text node only (skip tooltip)
+    const aiEl=el('nowAi');
+    let aiNum='0';
+    if(aiEl){
+      const firstText=aiEl.childNodes[0]?.textContent||'';
+      const aiMatch=firstText.match(/-?\d+\.?\d*/);
+      if(aiMatch) aiNum=aiMatch[0];
+    }
+    if(kpVal){
+      line.textContent='G = '+kpVal+' − 2 + ('+aiNum+') = '+gVal;
     } else {
       line.textContent='—';
     }
@@ -4019,14 +4040,18 @@ function syncCompactExplain(){
 }
 
 function syncStormStory(){
-  // P4: max 3 short sentences
-  const kp=(el('nowKp')?.textContent||'').trim();
+  // Parse Kp number from first text in nowKp (skip tooltip)
+  const kpEl=el('nowKp');
+  let kpNum='';
+  if(kpEl){
+    const m=(kpEl.childNodes[0]?.textContent||'').match(/\d+\.?\d*/);
+    if(m) kpNum=m[0];
+  }
   const g=(el('nowGcat')?.textContent||'').trim();
   const regime=(el('nowRegime')?.textContent||'').trim();
   const bits=[];
   if(g) bits.push('Стан: '+g+'.');
-  if(kp) bits.push('Kp '+kp+(regime?' ('+regime+')':'')+'.');
-  // delta summary
+  if(kpNum) bits.push('Kp '+kpNum+(regime?' ('+regime+')':'')+'.');
   const dvRaw=(el('deltaCardVal')?.textContent||'').trim();
   const dvMatch=dvRaw.match(/-?\d+\.?\d*/);
   if(dvMatch){
