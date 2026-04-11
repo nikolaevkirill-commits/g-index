@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v70.8</title>
+  <title>G-Index — Космофізичний дашборд v73</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -565,6 +565,69 @@
     #gaugeMoonWrapTop{min-height:280px}
     @media(max-width:860px){#astroGrid .panch-grid{gap:4px}}
     #heroCard{margin-bottom:12px;padding:14px 16px}
+
+    /* ═══ v70.8 WOW VISUAL UPGRADE ═══ */
+    @keyframes auroraShift{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+    @keyframes fadeSlideIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes glowPulse{0%,100%{box-shadow:0 0 15px rgba(55,167,255,.15)}50%{box-shadow:0 0 30px rgba(55,167,255,.3)}}
+    @keyframes ringDraw{from{stroke-dashoffset:283}to{stroke-dashoffset:var(--ring-offset,140)}}
+    @keyframes borderGlow{0%,100%{border-color:rgba(55,167,255,.3)}50%{border-color:rgba(55,167,255,.6)}}
+
+    #heroCard{
+      position:relative;overflow:hidden;
+      animation:fadeSlideIn .5s ease both;
+    }
+    #heroCard::before{
+      content:'';position:absolute;inset:0;z-index:0;opacity:.12;
+      background:linear-gradient(135deg,#0a1428,#1a2f5a 30%,#0d1a30 50%,#1a3a2a 70%,#0a1428);
+      background-size:300% 300%;animation:auroraShift 12s ease-in-out infinite;
+    }
+    #heroCard::after{
+      content:'';position:absolute;inset:0;z-index:0;pointer-events:none;
+      background:radial-gradient(circle at 30% 50%,var(--g-glow,transparent),transparent 60%);
+      transition:background 1.2s ease;
+    }
+    #heroCard .hero-wrap{position:relative;z-index:1}
+    #heroCard #heroG{
+      font-size:36px;padding:0;background:none;min-width:auto;
+      position:absolute;top:48%;left:55px;transform:translate(-50%,-50%);
+      z-index:2;text-shadow:0 0 24px currentColor;letter-spacing:-.02em;
+    }
+    #heroTrend{font-size:11px;position:absolute;bottom:4px;left:55px;transform:translateX(-50%);z-index:2;font-weight:700;letter-spacing:.04em;white-space:nowrap}
+    #heroRing{width:110px;height:110px;flex-shrink:0;position:relative}
+    #heroRing svg{width:110px;height:110px;transform:rotate(-90deg)}
+    #heroRing .ring-bg{fill:none;stroke:#1a2a44;stroke-width:6}
+    #heroRing .ring-val{fill:none;stroke-width:6;stroke-linecap:round;transition:stroke-dashoffset .8s ease,stroke 1s ease;filter:drop-shadow(0 0 6px currentColor)}
+    #heroCat{font-size:18px;font-weight:700;line-height:1.2}
+    #heroAction{font-size:13px;color:var(--muted);line-height:1.4}
+    #heroActionCmd{font-size:15px;font-weight:800;letter-spacing:.03em;text-transform:uppercase}
+
+    #opsGrid{animation:fadeSlideIn .5s ease .1s both}
+    #decisionCard{animation:glowPulse 3s ease-in-out infinite}
+    #decisionWhy{border:1px solid transparent;background:linear-gradient(#0a1020,#0a1020) padding-box,linear-gradient(135deg,rgba(55,167,255,.3),rgba(43,212,125,.2),rgba(255,153,102,.2)) border-box;background-size:100%,200% 200%;animation:auroraShift 8s ease-in-out infinite}
+    #threeQuick{animation:fadeSlideIn .5s ease .2s both}
+    #threeQuick>span{transition:transform .15s ease,box-shadow .15s ease;cursor:default}
+    #threeQuick>span:hover{transform:translateY(-2px);box-shadow:0 4px 16px rgba(0,0,0,.3)}
+    .card{animation:fadeSlideIn .4s ease both}
+    #nowCard{animation-delay:.15s}
+    #panchCard{animation-delay:.2s}
+    #threeCard{animation-delay:.25s}
+    #twentysevenCard{animation-delay:.3s}
+
+    /* Astro summary glow */
+    #wowOrb{position:absolute;right:22px;top:14px;width:140px;height:140px;pointer-events:none;z-index:0}
+    #heroField{position:absolute;inset:0;z-index:0;pointer-events:none}
+    @media(max-width:860px){#wowOrb{width:96px;height:96px;right:10px;top:10px;opacity:.8}}
+    #wowParticles{position:absolute;inset:0;z-index:0;pointer-events:none;opacity:.9}
+    #cosmicMapWrap{position:relative;overflow:hidden}
+    #cosmicMapWrap>*{position:relative;z-index:1}
+    #heroG::after{content:"";position:absolute;inset:-30%;background:linear-gradient(120deg,transparent 25%,rgba(255,255,255,.13) 50%,transparent 75%);transform:translateX(-140%);animation:heroShimmer 6s linear infinite}
+    @keyframes heroShimmer{0%{transform:translateX(-140%)}100%{transform:translateX(140%)}}
+    #superSignal{transition:border-color .3s ease}
+    #superSignalBadge{font-size:16px;letter-spacing:.05em}
+    #astroGrid>summary{transition:background .2s ease,box-shadow .2s ease}
+    #astroGrid>summary:hover{box-shadow:0 0 20px rgba(55,167,255,.15)}
+    #astroGrid[open]>summary{background:linear-gradient(135deg,rgba(15,26,47,.95),rgba(10,20,40,.95))}
     #opsGrid{margin:0 0 12px!important}
     #mainGrid{gap:12px!important;margin-bottom:12px}
     .card{border-radius:14px}
@@ -583,6 +646,36 @@
     #personalResult td{padding:2px 5px!important;font-size:11px!important}
     #stormStoryCard,#triggerCard{display:none!important;height:0!important;margin:0!important;padding:0!important;overflow:hidden!important}
     #gaugeMoonWrap{display:none!important}
+    /* ===== v73 PRODUCT LAYER ===== */
+    #v73TopLayer{display:grid;grid-template-columns:1.2fr .9fr;gap:12px;margin:0 0 12px}
+    #aiExplainCard{grid-column:1}
+    #confidenceBreakdownCard{grid-column:2}
+    #anomalyCard{grid-column:1}
+    #scenarioStripCard{grid-column:2}
+    .v73-head{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+    .v73-head h2{margin:0;font-size:16px}
+    #aiHeadline{font-size:18px;font-weight:800;line-height:1.25;margin-bottom:8px}
+    #aiReasons{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px}
+    .ai-reason{display:inline-flex;align-items:center;gap:6px;padding:7px 10px;border-radius:999px;border:1px solid #2a3b61;background:#0f1a2f;font-size:12px}
+    .ai-reason.good{color:#2bd47d;border-color:rgba(43,212,125,.35)}
+    .ai-reason.warn{color:#ffcc00;border-color:rgba(255,204,0,.35)}
+    .ai-reason.bad{color:#ff6b6b;border-color:rgba(255,107,107,.35)}
+    #aiAdvice{padding:10px 12px;border-radius:10px;background:#0a1020;border:1px solid #1a2a44;font-size:13px;line-height:1.55;color:#cfe0ff}
+    #confBars{display:flex;flex-direction:column;gap:8px}
+    .conf-row{display:grid;grid-template-columns:120px 1fr 48px;gap:8px;align-items:center}
+    .conf-label{font-size:12px;color:#9bb1dc}
+    .conf-track{height:8px;border-radius:999px;background:#1a2540;overflow:hidden}
+    .conf-fill{height:100%;border-radius:999px;transition:width .6s ease}
+    .conf-val{font-size:11px;color:#cfe0ff;text-align:right}
+    #confNote{margin-top:8px;font-size:12px;color:#9bb1dc;line-height:1.5}
+    #anomalyText{padding:10px 12px;border-radius:10px;background:#0a1020;border:1px solid #1a2a44;font-size:13px;line-height:1.55}
+    #scenarioStrip{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+    .scenario-pill{display:inline-flex;align-items:center;gap:6px;padding:8px 11px;border-radius:999px;border:1px solid #2a3b61;background:#0f1a2f;font-size:12px;color:#cfe0ff}
+    .scenario-pill.good{border-color:rgba(43,212,125,.35);color:#2bd47d}
+    .scenario-pill.neutral{border-color:rgba(155,177,220,.35);color:#9bb1dc}
+    .scenario-pill.bad{border-color:rgba(255,107,107,.35);color:#ff6b6b}
+    #scenarioNarrative{font-size:13px;line-height:1.55;color:#cfe0ff}
+    @media(max-width:860px){#v73TopLayer{grid-template-columns:1fr}#aiExplainCard,#confidenceBreakdownCard,#anomalyCard,#scenarioStripCard{grid-column:auto}}
   </style>
 
   <meta name="theme-color" content="#0b1220">
@@ -683,12 +776,24 @@
 
     <!-- ═══ v70.2 HERO CARD ═══ -->
     <section class="card" id="heroCard">
+      <canvas id="heroField"></canvas>
+      <canvas id="wowOrb" width="140" height="140"></canvas>
       <div class="hero-wrap">
         <div class="hero-left">
-          <span id="heroG" class="gbadge">G …</span>
+          <div id="heroRing">
+            <svg viewBox="0 0 100 100">
+              <circle class="ring-bg" cx="50" cy="50" r="45"/>
+              <circle class="ring-val" id="heroRingVal" cx="50" cy="50" r="45"
+                stroke="#9bb1dc" stroke-dasharray="283" stroke-dashoffset="140"/>
+            </svg>
+            <span id="heroG" class="gbadge">G …</span>
+            <span id="heroTrend">—</span>
+          </div>
           <div class="hero-maintext">
             <div id="heroCat">—</div>
+            <div id="heroActionCmd" style="font-size:15px;font-weight:800;margin-top:4px;letter-spacing:.03em">—</div>
             <div id="heroAction">—</div>
+            <div id="heroTopDrivers" style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;font-size:12px"></div>
             <div id="heroBestWindow" class="small muted" style="margin-top:2px;font-size:11px">—</div>
           </div>
         </div>
@@ -745,6 +850,7 @@
           <summary class="card" style="cursor:pointer;padding:8px 14px;list-style:none;font-size:13px;color:var(--muted)">✨ Космічна карта ▶</summary>
           <div class="card" style="padding:10px 12px;margin-top:4px">
             <div id="cosmicMapWrap" style="background:#0a1428;border:1px solid #1e2f52;border-radius:12px;padding:10px 12px">
+            <canvas id="wowParticles"></canvas>
               <div id="gaugeMoonWrapTop" style="min-height:280px"></div>
               <div id="planetLegendTop" style="margin-top:8px"></div>
             </div>
@@ -754,7 +860,8 @@
     </details>
 
     <!-- ═══ G INDEX TOP ROW ═══ -->
-    <div id="gTopRow" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:8px 0 0;padding:10px 16px;background:var(--card2);border:1px solid var(--border);border-radius:12px">
+    <!-- ═══ G INDEX TOP ROW (v70.9: hidden, merged into hero) ═══ -->
+    <div id="gTopRow" style="display:none">
       <span id="gTopBadge" class="gbadge" style="font-size:22px;padding:7px 14px;min-width:110px">G …</span>
       <div id="gTopCat" style="font-size:var(--fs-lg);font-weight:600;line-height:1.2">—</div>
       <span id="gTopSummary" style="font-size:var(--fs-md);color:var(--muted);margin-left:4px"></span>
@@ -780,10 +887,18 @@
         <div id="decisionNow">—</div>
         <div id="decisionAction" style="margin-top:6px;font-size:14px;font-weight:700">—</div>
         <div id="decisionWhy" style="margin-top:8px;padding:8px 12px;background:#0a1020;border:1px solid #1a2a44;border-radius:8px;font-size:12px;line-height:1.6;display:none"></div>
+        <div id="superSignal" style="margin-top:8px;padding:10px 12px;border-radius:10px;background:#0a1020;border:1px solid #1a2a44;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <span style="font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em">Signal</span>
+          <span id="superSignalBadge" class="pill" style="font-weight:700;font-size:15px">—</span>
+          <span id="superSignalText" class="small muted" style="flex:1;min-width:160px">—</span>
+        </div>
         <div id="decisionNext" class="muted" style="margin-top:4px">—</div>
         <div id="decisionWindow" class="small muted" style="margin-top:4px">—</div>
         <div id="decisionTags" class="flex" style="margin-top:6px;gap:6px;flex-wrap:wrap"></div>
-        <div id="decisionNarrative" class="small muted" style="margin-top:6px;line-height:1.45">—</div>
+        <details style="margin-top:6px">
+          <summary class="small muted" style="cursor:pointer;user-select:none">📖 Деталі прогнозу ▶</summary>
+          <div id="decisionNarrative" class="small muted" style="margin-top:4px;line-height:1.45">—</div>
+        </details>
       </section>
 
       <section class="card" id="radarCard">
@@ -815,6 +930,30 @@
     </section>
     <section class="card" id="triggerCard" style="display:none!important">
       <div id="triggerList" class="trigger-wrap">—</div>
+    </section>
+
+    <!-- ═══ v73 PRODUCT LAYER ═══ -->
+    <section id="v73TopLayer">
+      <section id="aiExplainCard" class="card">
+        <div class="v73-head"><h2>🧠 AI Explain</h2><span class="pill" id="aiExplainMode">live</span></div>
+        <div id="aiHeadline">—</div>
+        <div id="aiReasons"></div>
+        <div id="aiAdvice">—</div>
+      </section>
+      <section id="confidenceBreakdownCard" class="card">
+        <div class="v73-head"><h2>📊 Confidence</h2><span class="pill" id="confBadge">—</span></div>
+        <div id="confBars"></div>
+        <div id="confNote"></div>
+      </section>
+      <section id="anomalyCard" class="card">
+        <div class="v73-head"><h2>⚡ Pattern Alert</h2><span class="pill" id="anomalyBadge">normal</span></div>
+        <div id="anomalyText">—</div>
+      </section>
+      <section id="scenarioStripCard" class="card">
+        <div class="v73-head"><h2>🔮 Scenario</h2><span class="pill">3d + 27d</span></div>
+        <div id="scenarioStrip"></div>
+        <div id="scenarioNarrative"></div>
+      </section>
     </section>
 
     <!-- Двоколонковий лейаут: Поточний стан | Панчанга + Особистий -->
@@ -4147,9 +4286,46 @@ function syncHero(){
   const nowG=el('nowG'), heroG=el('heroG');
   if(nowG&&heroG){
     const m=(nowG.textContent||'').match(/G\s*(-?\d+\.?\d*)/);
-    heroG.textContent=m?'G '+m[1]:'G …';
+    const newG=m?parseFloat(m[1]):NaN;
+
+    // Animated G tween
+    if(isFinite(newG)){
+      const oldG=window._heroGprev??newG;
+      window._heroGprev=newG;
+      if(window._heroGtween) cancelAnimationFrame(window._heroGtween);
+      const start=performance.now(),dur=600;
+      function tweenG(ts){
+        const p=Math.min(1,(ts-start)/dur);
+        const ease=1-Math.pow(1-p,3); // easeOutCubic
+        const cur=oldG+(newG-oldG)*ease;
+        heroG.textContent='G '+cur.toFixed(2);
+        // Scale pulse on change
+        if(p<0.3) heroG.style.transform='scale('+(1+.06*(1-p/.3))+')';
+        else heroG.style.transform='scale(1)';
+        if(p<1) window._heroGtween=requestAnimationFrame(tweenG);
+      }
+      window._heroGtween=requestAnimationFrame(tweenG);
+    } else {
+      heroG.textContent='G …';
+    }
     heroG.className='gbadge';
     ['g-ok','g-warn','g-bad','g-good'].forEach(c=>{ if(nowG.classList.contains(c)) heroG.classList.add(c); });
+
+    // Ring gauge
+    const ring=document.getElementById('heroRingVal');
+    if(ring&&isFinite(newG)){
+      const pct=Math.max(0.05,Math.min(1,(newG+4)/8));
+      const offset=283*(1-pct);
+      ring.style.strokeDashoffset=offset;
+      ring.style.stroke=newG<=-2.5?'#ff4444':newG<=-0.5?'#ffaa33':newG>=1.5?'#2bd47d':newG>=0.5?'#63be7b':'#9bb1dc';
+    }
+
+    // Data-driven hero background
+    const hc=document.getElementById('heroCard');
+    if(hc&&isFinite(newG)){
+      const r=newG<=-2.5?'rgba(255,68,68,.08)':newG<=-0.5?'rgba(255,170,51,.06)':newG>=1.5?'rgba(43,212,125,.08)':newG>=0.5?'rgba(99,190,123,.05)':'rgba(55,167,255,.04)';
+      hc.style.setProperty('--g-glow',r);
+    }
   }
   const catText=el('nowGcat')?.textContent||'—';
   const gVal=_num(_firstText(el('nowG'))||el('nowG')?.textContent);
@@ -4192,6 +4368,43 @@ function syncHero(){
   if(act&&!act.endsWith('.')) act+='.';
   if(act.length>120) act=act.substring(0,117)+'…';
   _set('heroAction',act||'—');
+
+  // v70.9: trend arrow under ring
+  const ht=el('heroTrend');
+  if(ht&&isFinite(dn)){
+    const arrow=dn>0.3?'↑':dn<-0.3?'↓':'→';
+    const word=dn>0.3?'зростає':dn<-0.3?'падає':'стабільно';
+    ht.textContent=arrow+' '+word;
+    ht.style.color=dn>0.3?'var(--ok)':dn<-0.3?'var(--bad)':'var(--muted)';
+  }
+
+  // v70.9: action command in hero
+  const kpH=_num(_firstText(el('nowKp')));
+  _set('heroActionCmd',_decAction(gVal,kpH));
+  const hac=el('heroActionCmd');
+  if(hac) hac.style.color=gVal>=1?'var(--ok)':gVal>=-1?'var(--muted)':'var(--bad)';
+
+  // v70.9: top 3 drivers
+  const drv=el('heroTopDrivers');
+  if(drv){
+    const chips=document.querySelectorAll('#decompBar .gd-chip');
+    const items=[];
+    chips.forEach(c=>{
+      const vEl=c.querySelector('.gd-chip-val');
+      const nEl=c.querySelector('.gd-chip-name');
+      if(vEl&&nEl){
+        const v=parseFloat(vEl.textContent);
+        if(isFinite(v)&&v!==0) items.push({name:nEl.textContent.trim().split(' ')[0],val:v,abs:Math.abs(v)});
+      }
+    });
+    items.sort((a,b)=>b.abs-a.abs);
+    drv.innerHTML=items.slice(0,3).map(d=>{
+      const col=d.val>0?'#2bd47d':'#ff6b6b';
+      const sign=d.val>0?'+':'';
+      return `<span style="padding:2px 8px;border-radius:6px;background:${col}18;color:${col};font-weight:600">${d.name} ${sign}${d.val}</span>`;
+    }).join('');
+  }
+
   // v70.3: best window in hero
   _set('heroBestWindow',el('decisionWindow')?.textContent||'—');
 }
@@ -4566,6 +4779,7 @@ function syncV702UI(){
   try{mergeOpsCards();}catch(e){console.warn('mergeOpsCards:',e);}
   try{renderMoonRetroTop();}catch(e){console.warn('renderMoonRetroTop:',e);}
   try{syncPanchSummary();}catch(e){console.warn('syncPanchSummary:',e);}
+  try{refreshV73Layer();}catch(e){console.warn('v73:',e);}
 }
 
 async function loadAll(){
@@ -4761,6 +4975,7 @@ async function loadAll(){
   updateFreshnessBadge();
 
   try{ syncV702UI(); }catch(e){ console.warn('syncV702UI:', e); }
+  try{ applyWowFromG(); }catch(e){}
 
   el('btnRefresh').disabled = false;
 }
@@ -8523,6 +8738,192 @@ function pwaReload() {
     window.location.reload();
   }
 }
+
+// ═══ WOW LAYER v71 ═══
+function wowColorByG(g){
+  if(!isFinite(g)) return '#9bb1dc';
+  if(g>=1.5) return '#2bd47d'; if(g>=-0.5) return '#9bb1dc';
+  if(g>=-2.5) return '#ffcc00'; return '#ff6b6b';
+}
+function renderWowOrb(g){
+  const c=document.getElementById('wowOrb'); if(!c) return;
+  const ctx=c.getContext('2d'),w=c.width,h=c.height,cx=w/2,cy=h/2;
+  const col=wowColorByG(g),t=performance.now()/1000;
+  const kp=window._lastKpForWow||2;
+  const speed=0.5+kp*0.3; // Kp drives animation speed
+  const turbulence=kp>=5?0.08:kp>=3?0.05:0.03;
+  const pulse=1+turbulence*Math.sin(t*speed*2);
+  ctx.clearRect(0,0,w,h);
+  // Rings — more rings during storms
+  const nRings=kp>=5?6:4;
+  for(let i=0;i<nRings;i++){ctx.beginPath();ctx.arc(cx,cy,(40+i*9)*pulse,0,Math.PI*2);ctx.strokeStyle=col+(i<2?'55':'1a');ctx.lineWidth=i===0?2.2:1;ctx.stroke()}
+  const g1=ctx.createRadialGradient(cx,cy,6,cx,cy,42);
+  g1.addColorStop(0,'rgba(255,255,255,.95)');g1.addColorStop(.18,col);g1.addColorStop(.55,col+'55');g1.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=g1;ctx.beginPath();ctx.arc(cx,cy,42*pulse,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.arc(cx,cy,56,0,Math.PI*2);ctx.strokeStyle='rgba(255,255,255,.08)';ctx.lineWidth=1;ctx.stroke();
+  // Spark — speed tied to Kp
+  const a=t*speed*0.5;
+  const sx=cx+Math.cos(a)*56,sy=cy+Math.sin(a)*56;
+  ctx.beginPath();ctx.arc(sx,sy,kp>=5?4.5:3,0,Math.PI*2);ctx.fillStyle=kp>=5?'#ff6b6b':'#fff';ctx.fill();
+  // Storm glitch effect
+  if(kp>=5&&Math.random()<0.1){ctx.fillStyle='rgba(255,100,100,.15)';ctx.fillRect(0,Math.random()*h,w,2)}
+}
+let _wowOrbRAF=null;
+function startWowOrb(g){function loop(){renderWowOrb(g);_wowOrbRAF=requestAnimationFrame(loop)}if(_wowOrbRAF)cancelAnimationFrame(_wowOrbRAF);loop()}
+
+function initWowParticles(){
+  const c=document.getElementById('wowParticles'),host=document.getElementById('cosmicMapWrap');
+  if(!c||!host) return;const ctx=c.getContext('2d');let parts=[];
+  function resize(){const r=host.getBoundingClientRect();c.width=Math.max(200,Math.floor(r.width));c.height=Math.max(160,Math.floor(r.height));
+  parts=Array.from({length:30},()=>({x:Math.random()*c.width,y:Math.random()*c.height,r:Math.random()*1.4+.4,v:Math.random()*.15+.04,a:Math.random()*Math.PI*2}))}
+  function draw(){ctx.clearRect(0,0,c.width,c.height);const kp=window._lastKpForWow||2;const spd=0.5+kp*0.2;for(const p of parts){p.x+=Math.cos(p.a)*p.v*spd;p.y+=Math.sin(p.a)*p.v*spd;if(p.x<0)p.x=c.width;if(p.x>c.width)p.x=0;if(p.y<0)p.y=c.height;if(p.y>c.height)p.y=0;const br=kp>=5?'rgba(255,130,130,.3)':'rgba(255,255,255,.2)';ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=br;ctx.fill()}requestAnimationFrame(draw)}
+  resize();draw();window.addEventListener('resize',resize);
+}
+
+// ===== v73 PRODUCT LAYER =====
+function _v73G(){
+  const m=(el('nowG')?.textContent||'').match(/G\s*(-?\d+\.?\d*)/);
+  return m?parseFloat(m[1]):NaN;
+}
+function _v73Kp(){
+  return _num((_firstText?.(el('nowKp'))||el('nowKp')?.textContent||'').replace(',','.'));
+}
+
+function renderAIExplain(){
+  const g=_v73G(), kp=_v73Kp();
+  const tag=(el('nowTag')?.textContent||'').trim();
+  const risk=(el('riskLabelNow')?.textContent||'').trim();
+  let headline='Стан не визначено', advice='Недостатньо даних.';
+  const reasons=[];
+  if(isFinite(g)){
+    if(g>=1.5){headline='Сильне вікно для активних дій';advice='Запускайте важливі задачі, узгодження, рішення з високим навантаженням.';}
+    else if(g>=0){headline='Стабільний фон без вираженого тиску';advice='Підходить для планових рішень, але без зайвого ризику.';}
+    else if(g>-2){headline='Помірне навантаження — обережність';advice='Не запускати критичне нове, працювати в режимі контролю.';}
+    else{headline='Негативне вікно — уникати ризиків';advice='Утриматись від важливих стартів та перевантаження.';}
+  }
+  if(isFinite(kp)){
+    if(kp>=5) reasons.push({cls:'bad',txt:'Kp '+kp.toFixed(1)+' · буря'});
+    else if(kp>=3) reasons.push({cls:'warn',txt:'Kp '+kp.toFixed(1)+' · напруга'});
+    else reasons.push({cls:'good',txt:'Kp '+kp.toFixed(1)+' · спокійно'});
+  }
+  if(tag){
+    const cls=/екада|siddha|amrita|sarvartha/i.test(tag)?'good':/амава|vishti|naidhana|critical/i.test(tag)?'bad':'warn';
+    reasons.push({cls,txt:tag});
+  }
+  if(risk){
+    const cls=/висок|підвищ/i.test(risk)?'bad':/помір/i.test(risk)?'warn':'good';
+    reasons.push({cls,txt:'Ризик: '+risk});
+  }
+  const h=el('aiHeadline'),r=el('aiReasons'),a=el('aiAdvice');
+  if(h) h.textContent=headline;
+  if(a) a.textContent=advice;
+  if(r) r.innerHTML=reasons.slice(0,4).map(x=>'<span class="ai-reason '+x.cls+'">'+escapeHtml(x.txt)+'</span>').join('');
+}
+
+function renderConfidenceBreakdown(){
+  const confEl=el('heroConfidence');
+  let confPct=0;
+  const m=(confEl?.textContent||'').match(/(\d+)/);
+  if(m) confPct=parseInt(m[1],10);
+  const rows=[
+    {label:'Свіжість даних',val:confPct>=80?90:confPct>=60?70:45,col:'#37a7ff'},
+    {label:'Горизонт прогнозу',val:78,col:'#9bb1dc'},
+    {label:'Конфлікт факторів',val:confPct>=80?82:confPct>=60?60:40,col:'#ffcc00'},
+    {label:'Стабільність моделі',val:confPct>=80?88:confPct>=60?68:52,col:'#2bd47d'}
+  ];
+  const cb=el('confBadge'),bars=el('confBars'),note=el('confNote');
+  if(cb) cb.textContent=(confPct||0)+'%';
+  if(bars) bars.innerHTML=rows.map(r=>'<div class="conf-row"><div class="conf-label">'+r.label+'</div><div class="conf-track"><div class="conf-fill" style="width:'+r.val+'%;background:'+r.col+'"></div></div><div class="conf-val">'+r.val+'%</div></div>').join('');
+  if(note) note.textContent=confPct>=80?'Висока впевненість: джерела стабільні, конфлікт факторів низький.':confPct>=60?'Середня впевненість: сигнал корисний, але є конфлікт.':'Знижена впевненість: трактувати як advisory.';
+}
+
+function renderPatternAlert(){
+  const g=_v73G(),kp=_v73Kp();
+  const b=el('anomalyBadge'),t=el('anomalyText');
+  let badge='normal',text='Конфігурація в межах очікуваного режиму.';
+  if(isFinite(g)&&isFinite(kp)){
+    if(g<-2&&kp<3){badge='rare';text='Рідкісний патерн: негативний G без геомагнітної бурі. Домінують календарно-хронобіологічні фактори.';}
+    else if(g>1.5&&kp>=4){badge='contrarian';text='Контрсигнал: попри магнітну напругу, сумарні фактори дають позитивне вікно.';}
+    else if(kp>=5){badge='storm';text='Штормовий режим: буря переважає інші фактори.';}
+  }
+  if(b) b.textContent=badge;
+  if(t) t.textContent=text;
+}
+
+function renderScenarioStrip(){
+  const wrap=el('scenarioStrip'),narrative=el('scenarioNarrative');
+  if(!wrap||!narrative) return;
+  const pills=[];
+  const q=[...document.querySelectorAll('#threeQuick > *')].slice(0,3);
+  q.forEach(node=>{
+    const txt=(node.textContent||'').trim();
+    if(!txt) return;
+    const cls=/особливо|діяти|сприят/i.test(txt)?'good':/уникати|stop|ризик/i.test(txt)?'bad':'neutral';
+    pills.push('<span class="scenario-pill '+cls+'">'+escapeHtml(txt)+'</span>');
+  });
+  wrap.innerHTML=pills.join('');
+  const chartHint=el('trend27Summary')?.textContent?.trim()||'';
+  narrative.textContent=chartHint||'Найближчі 3 дні визначають оперативний режим, 27 днів — фоновий тренд.';
+}
+
+function refreshV73Layer(){
+  try{renderAIExplain();}catch(e){console.warn('v73 AI:',e);}
+  try{renderConfidenceBreakdown();}catch(e){console.warn('v73 Conf:',e);}
+  try{renderPatternAlert();}catch(e){console.warn('v73 Alert:',e);}
+  try{renderScenarioStrip();}catch(e){console.warn('v73 Scenario:',e);}
+}
+
+function renderSuperSignal(g){
+  const b=document.getElementById('superSignalBadge'),t=document.getElementById('superSignalText');if(!b||!t)return;
+  if(!isFinite(g)){b.textContent='N/A';t.textContent='Недостатньо даних';return}
+  if(g>=1.5){b.textContent='⚡ GO';b.style.color='#2bd47d';b.style.borderColor='#2bd47d44';t.textContent='Сильне вікно для запуску, рішень і активних дій'}
+  else if(g>=-0.5){b.textContent='● STABLE';b.style.color='#9bb1dc';b.style.borderColor='#9bb1dc44';t.textContent='Стандартний режим без вираженого тиску'}
+  else if(g>=-2.5){b.textContent='⚠ CAUTION';b.style.color='#ffcc00';b.style.borderColor='#ffcc0044';t.textContent='Приховане навантаження — діяти обережно'}
+  else{b.textContent='🔴 HOLD';b.style.color='#ff6b6b';b.style.borderColor='#ff6b6b44';t.textContent='Невдале вікно для ризикових рішень'}
+}
+
+function applyWowFromG(){
+  let g=NaN;const h=document.getElementById('heroG');
+  if(h){const m=h.textContent.match(/-?\d+(\.\d+)?/);if(m)g=parseFloat(m[0])}
+  // Get Kp for data-driven animation speed
+  const kpEl=document.getElementById('nowKp');
+  if(kpEl){const km=kpEl.textContent.match(/\d+(\.\d+)?/);if(km)window._lastKpForWow=parseFloat(km[0])}
+  startWowOrb(g);renderSuperSignal(g);
+  const dc=document.getElementById('decisionCard');
+  if(dc){dc.classList.remove('decision-live');void dc.offsetWidth;dc.classList.add('decision-live')}
+}
+
+function initHeroField(){
+  const c=document.getElementById('heroField'),host=document.getElementById('heroCard');
+  if(!c||!host)return;const ctx=c.getContext('2d');let parts=[];
+  function resize(){const r=host.getBoundingClientRect();c.width=Math.max(300,Math.floor(r.width));c.height=Math.max(100,Math.floor(r.height));
+  parts=Array.from({length:22},()=>({x:Math.random()*c.width,y:Math.random()*c.height,r:Math.random()*1.6+.4,vx:Math.random()*.2+.05,vy:(Math.random()-.5)*.06}))}
+  function draw(){
+    const g=window._heroGprev||0;const kp=window._lastKpForWow||2;
+    const col=wowColorByG(g);const spd=g<=-2.5?2.2:g<=-0.5?1.4:1;
+    ctx.clearRect(0,0,c.width,c.height);
+    // Data-driven background tint
+    const bg=ctx.createLinearGradient(0,0,c.width,c.height);
+    if(g>=1.5){bg.addColorStop(0,'rgba(20,60,40,.12)');bg.addColorStop(1,'rgba(15,30,50,.06)')}
+    else if(g>=-0.5){bg.addColorStop(0,'rgba(15,30,60,.1)');bg.addColorStop(1,'rgba(10,20,40,.05)')}
+    else if(g>=-2.5){bg.addColorStop(0,'rgba(60,40,8,.14)');bg.addColorStop(1,'rgba(30,20,8,.06)')}
+    else{bg.addColorStop(0,'rgba(70,15,15,.18)');bg.addColorStop(1,'rgba(30,8,12,.08)')}
+    ctx.fillStyle=bg;ctx.fillRect(0,0,c.width,c.height);
+    // Particles
+    for(const p of parts){p.x+=p.vx*spd;p.y+=p.vy*spd;if(p.x>c.width+5)p.x=-5;if(p.y>c.height+3)p.y=-3;if(p.y<-3)p.y=c.height+3;
+    ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=col+'33';ctx.fill()}
+    // Wave
+    const t=performance.now()/1000;const amp=g<=-2.5?12:g<=-0.5?7:4;
+    ctx.beginPath();for(let x=0;x<=c.width;x+=6){const y=c.height*.72+Math.sin(x*.013+t*1.5)*amp;if(x===0)ctx.moveTo(x,y);else ctx.lineTo(x,y)}
+    ctx.strokeStyle=col+'44';ctx.lineWidth=1.5;ctx.stroke();
+    requestAnimationFrame(draw)
+  }
+  resize();draw();window.addEventListener('resize',resize);
+}
+
+document.addEventListener('DOMContentLoaded',()=>{
+  setTimeout(()=>{initHeroField();initWowParticles();applyWowFromG()},900);
+});
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
