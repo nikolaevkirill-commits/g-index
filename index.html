@@ -519,14 +519,25 @@
       70%{box-shadow:0 0 0 8px rgba(43,212,125,0)}
       100%{box-shadow:0 0 0 0 rgba(43,212,125,0)}
     }
+
+    /* ===== v70.3 OPS GRID ===== */
+    #opsGrid{display:grid;grid-template-columns:1.08fr 0.92fr!important;gap:12px;margin:0 0 16px}
+    #opsGrid>#decisionCard,#opsGrid>#radarCard{margin:0!important;padding:12px 14px}
+    #decisionNow{font-size:16px;font-weight:800;line-height:1.2}
+    #decisionNext{font-size:12px;line-height:1.35}
+    #decisionNarrative{font-size:11px;color:var(--muted)}
+    .radar-box{min-height:72px;padding:10px 12px}
+    .radar-main{font-size:14px;line-height:1.25}
+    .radar-sub{font-size:12px;line-height:1.35}
+    @media(max-width:600px){#opsGrid{grid-template-columns:1fr}}
     .radar-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    .radar-box{background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;min-height:88px}
+    .radar-box{background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:10px 12px;min-height:72px}
     .radar-wide{grid-column:1/-1}
     .radar-good{border-color:rgba(43,212,125,.35);background:rgba(43,212,125,.06)}
     .radar-bad{border-color:rgba(255,107,107,.35);background:rgba(255,107,107,.06)}
     .radar-neutral{border-color:rgba(155,177,220,.22)}
-    .radar-main{font-size:15px;font-weight:700;line-height:1.35;color:var(--text2)}
-    .radar-sub{font-size:13px;line-height:1.45;color:var(--muted)}
+    .radar-main{font-size:14px;font-weight:700;line-height:1.25;color:var(--text2)}
+    .radar-sub{font-size:12px;line-height:1.35;color:var(--muted)}
     .trigger-wrap{display:flex;flex-wrap:wrap;gap:8px;line-height:1.5}
     .trigger-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;border:1px solid var(--border2);background:#0f1a2f;font-size:12px;color:var(--text2)}
     .trigger-chip.up{border-color:rgba(43,212,125,.35);color:var(--ok)}
@@ -681,53 +692,47 @@
     </div>
     <div id="profileRec"></div>
 
-    <!-- ═══ v70.2 DECISION + STORM STORY ═══ -->
-    <section class="card" id="decisionCard">
-      <div class="flex" style="margin-bottom:8px">
-        <h2 style="margin:0;font-size:16px">Рішення</h2>
-        <span id="decisionMode" class="pill right">Normal</span>
-      </div>
-      <div id="decisionNow">—</div>
-      <div id="decisionNext" class="muted" style="margin-top:6px">—</div>
-      <div id="decisionTags" class="flex" style="margin-top:8px;gap:6px;flex-wrap:wrap"></div>
+    <!-- ═══ v70.3 OPS GRID ═══ -->
+    <section id="opsGrid">
+      <section class="card" id="decisionCard">
+        <div class="flex" style="margin-bottom:6px">
+          <h2 style="margin:0;font-size:16px">Рішення</h2>
+          <span id="decisionMode" class="pill right">Normal</span>
+        </div>
+        <div id="decisionNow">—</div>
+        <div id="decisionNext" class="muted" style="margin-top:4px">—</div>
+        <div id="decisionTags" class="flex" style="margin-top:6px;gap:6px;flex-wrap:wrap"></div>
+        <div id="decisionNarrative" class="small muted" style="margin-top:6px;line-height:1.45">—</div>
+      </section>
+
+      <section class="card" id="radarCard">
+        <div class="flex" style="margin-bottom:6px">
+          <h2 style="margin:0;font-size:16px">Opportunity / Risk</h2>
+          <span class="pill right">live</span>
+        </div>
+        <div class="radar-grid">
+          <div class="radar-box radar-good">
+            <div class="label">Opportunity</div>
+            <div id="radarOpportunity" class="radar-main">—</div>
+          </div>
+          <div class="radar-box radar-bad">
+            <div class="label">Risk</div>
+            <div id="radarRisk" class="radar-main">—</div>
+          </div>
+          <div class="radar-box radar-neutral radar-wide">
+            <div class="label">Window</div>
+            <div id="radarWindow" class="radar-sub">—</div>
+          </div>
+        </div>
+        <div id="radarTriggers" class="trigger-wrap" style="margin-top:10px"></div>
+      </section>
     </section>
 
-    <section class="card" id="stormStoryCard">
-      <div class="flex" style="margin-bottom:8px">
-        <h2 style="margin:0;font-size:16px">Storm Story</h2>
-        <span class="pill right">auto</span>
-      </div>
+    <!-- hidden: data sources for merge -->
+    <section class="card" id="stormStoryCard" style="display:none!important">
       <div id="stormStoryText" class="small">—</div>
     </section>
-
-    <!-- ═══ v70.2 RADAR ═══ -->
-    <section class="card" id="radarCard">
-      <div class="flex" style="margin-bottom:8px">
-        <h2 style="margin:0;font-size:16px">Opportunity / Risk</h2>
-        <span class="pill right">live</span>
-      </div>
-      <div class="radar-grid">
-        <div class="radar-box radar-good">
-          <div class="label">Opportunity</div>
-          <div id="radarOpportunity" class="radar-main">—</div>
-        </div>
-        <div class="radar-box radar-bad">
-          <div class="label">Risk</div>
-          <div id="radarRisk" class="radar-main">—</div>
-        </div>
-        <div class="radar-box radar-neutral radar-wide">
-          <div class="label">Window</div>
-          <div id="radarWindow" class="radar-sub">—</div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ═══ v70.2 TRIGGERS ═══ -->
-    <section class="card" id="triggerCard">
-      <div class="flex" style="margin-bottom:8px">
-        <h2 style="margin:0;font-size:16px">Triggers</h2>
-        <span class="pill right">auto</span>
-      </div>
+    <section class="card" id="triggerCard" style="display:none!important">
       <div id="triggerList" class="trigger-wrap">—</div>
     </section>
 
@@ -4057,15 +4062,18 @@ function _decAction(g,kp){
 function syncDecision(){
   const g=_num(_firstText(el('nowG'))||el('nowG')?.textContent);
   const kp=_num(_firstText(el('nowKp')));
+  const gcat=(el('nowGcat')?.textContent||'').trim();
   const riskLabel=(el('riskLabelNow')?.textContent||'').trim();
-  const daySummary=(el('dayForecastSummary')?.textContent||'').trim();
+  const daySummaryRaw=(el('dayForecastSummary')?.textContent||'').trim();
+  const daySummary=daySummaryRaw.replace(/<[^>]+>/g,'');
   const tag=(el('nowTag')?.textContent||'').trim();
   const regime=(el('nowRegime')?.textContent||'').trim();
 
-  _set('decisionNow',riskLabel||el('nowGcat')?.textContent||'—');
+  // Bug1 fix: gcat first, riskLabel fallback
+  _set('decisionNow',gcat||riskLabel||'—');
 
-  // Next: max 2 sentences
-  const raw=daySummary||(el('nowSummary')?.textContent||'—');
+  // Next: max 2 sentences, strip HTML
+  const raw=daySummary||(el('nowSummary')?.textContent||'').replace(/<[^>]+>/g,'').trim()||'—';
   _set('decisionNext',_short(raw.split(/(?<=\.)\s+/).slice(0,2).join(' '),220));
 
   // Action line (create if missing)
@@ -4089,7 +4097,7 @@ function syncDecision(){
     const timeStr=h+':00–'+(h+3)+':00 UTC';
     const horaStr=b.hora?' · '+b.hora:'';
     winTxt='🟢 Найкраще: '+timeStr+horaStr+' (Score '+b.score+')';
-    if(bw.worst){
+    if(bw.worst&&bw.worst.slotLabel!==b.slotLabel){
       const w=bw.worst;
       const wh=parseInt(w.slotLabel||'0');
       winTxt+=' · 🔴 Уникати: '+wh+':00–'+(wh+3)+':00';
@@ -4138,13 +4146,14 @@ function syncExplain(){
 // --- STORM STORY ---
 function syncStory(){
   const cat=(el('nowGcat')?.textContent||'').trim();
-  const summ=(el('nowSummary')?.textContent||'').trim();
+  const kpM=_firstText(el('nowKp')).match(/\d+\.?\d*/);
+  const kpStr=kpM?'Kp '+kpM[0]:'';
   const day=(el('dayForecastSummary')?.textContent||'').replace(/<[^>]+>/g,'').trim();
-  const bits=[cat,summ].filter(Boolean);
+  const bits=[cat,kpStr].filter(Boolean);
   // extract trend keyword from day summary
   if(day){
     const m=day.match(/стабільний|зростає|спадає/i);
-    if(m) bits.push(m[0]==='стабільний'?'тренд стабільний':'тренд '+m[0]);
+    if(m) bits.push(m[0]==='стабільний'?'стабільний':'тренд '+m[0]);
   }
   const full=bits.join(' · ');
   _set('stormStoryText',full.length>120?full.slice(0,117)+'…':full||'—');
@@ -4247,6 +4256,15 @@ function _getBestWindow(){
   return {best:scored[0]||null, second:scored[1]||null, worst:scored[scored.length-1]||null};
 }
 
+// --- v70.3 MERGE OPS ---
+function mergeOpsCards(){
+  const story=(el('stormStoryText')?.textContent||'').trim();
+  _set('decisionNarrative',story||'—');
+  const trg=el('triggerList')?.innerHTML||'';
+  const rt=el('radarTriggers');
+  if(rt) rt.innerHTML=trg||'<span class="trigger-chip neutral">✓ Стабільний режим</span>';
+}
+
 // --- MASTER ---
 function syncV702UI(){
   try{syncHero();}catch(e){console.warn('syncHero:',e);}
@@ -4255,6 +4273,7 @@ function syncV702UI(){
   try{syncStory();}catch(e){console.warn('syncStory:',e);}
   try{syncRadar();}catch(e){console.warn('syncRadar:',e);}
   try{syncTriggers();}catch(e){console.warn('syncTriggers:',e);}
+  try{mergeOpsCards();}catch(e){console.warn('mergeOpsCards:',e);}
 }
 
 async function loadAll(){
@@ -7740,7 +7759,7 @@ function lsRem(k){try{localStorage.removeItem(k)}catch{}}
 
 // ── Mobile Bottom Nav ─────────────────────────────────────
 const MNAV_SECTIONS = {
-  now:      ['heroCard','decisionCard','stormStoryCard','radarCard','triggerCard','gTopRow','profileBar','profileRec','mainGrid','swipeHint3','threeCard'],
+  now:      ['heroCard','opsGrid','decisionCard','radarCard','gTopRow','profileBar','profileRec','mainGrid','swipeHint3','threeCard'],
   panch:    ['heroCard','gTopRow','panchCard','swipeHint3','threeCard'],
   fcst:     ['heroCard','gTopRow','swipeHint27','twentysevenCard','backtestCard'],
   personal: ['heroCard','personalCard']
@@ -7757,7 +7776,7 @@ function mnavGo(tab, scroll) {
   const show = MNAV_SECTIONS[tab] || [];
 
   // All managed section IDs
-  const all = ['heroCard','decisionCard','stormStoryCard','radarCard','triggerCard','gTopRow','profileBar','profileRec','mainGrid',
+  const all = ['heroCard','opsGrid','decisionCard','radarCard','gTopRow','profileBar','profileRec','mainGrid',
                'swipeHint3','threeCard','swipeHint27','twentysevenCard',
                'backtestCard','panchCard','personalCard','scienceBar'];
 
@@ -7788,7 +7807,7 @@ function mnavGo(tab, scroll) {
 function mnavInit() {
   if (window.innerWidth > 700) {
     // Desktop: show everything
-    ['heroCard','decisionCard','stormStoryCard','radarCard','triggerCard','gTopRow','profileBar','profileRec','mainGrid','threeCard',
+    ['heroCard','opsGrid','decisionCard','radarCard','gTopRow','profileBar','profileRec','mainGrid','threeCard',
      'twentysevenCard','backtestCard','panchCard','scienceBar']
       .forEach(id => { const el = document.getElementById(id); if(el) el.style.display = ''; });
     return;
