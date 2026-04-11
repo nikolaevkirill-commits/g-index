@@ -78,12 +78,36 @@ self.addEventListener('fetch', event => {
     url.hostname.includes(p) || url.pathname.includes(p) || url.href.includes(p)
   );
 
+  // index.html → network-first (avoid stale UI after deploy)
+  const isHTML = url.pathname.endsWith('/') || url.pathname.endsWith('index.html')
+    || url.pathname === '/g-index/deploy/' || url.pathname === '/g-index/deploy/index.html';
+
   if (isDataRequest) {
     event.respondWith(networkFirstWithTTL(request));
+  } else if (isHTML) {
+    event.respondWith(networkFirstHTML(request));
   } else {
     event.respondWith(cacheFirstShell(request));
   }
 });
+
+// ── Network-First (HTML — always try fresh, fallback to cache) ──────────────
+async function networkFirstHTML(request) {
+  try {
+    const response = await fetch(request, { signal: AbortSignal.timeout(5000) });
+    if (response.ok) {
+      const cache = await caches.open(SHELL_CACHE);
+      cache.put(request, response.clone());
+    }
+    return response;
+  } catch (err) {
+    const cached = await caches.match(request, { cacheName: SHELL_CACHE });
+    if (cached) return cached;
+    const fallback = await caches.match('index.html', { cacheName: SHELL_CACHE });
+    if (fallback) return fallback;
+    return new Response('Офлайн — кеш недоступний', { status: 503 });
+  }
+}
 
 // ── Cache-First (shell) ────────────────────────────────────────────────────
 async function cacheFirstShell(request) {

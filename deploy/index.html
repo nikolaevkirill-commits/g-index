@@ -513,6 +513,7 @@
           <span id="dataTimestamp" style="font-size:10px;color:var(--faint);margin-left:4px"></span>
         </div>
         <span class="pill" id="stamp" style="font-size:11px">—</span>
+        <span id="freshnessBadge" style="font-size:10px;padding:2px 6px;border-radius:3px;margin-left:4px;font-weight:600;letter-spacing:0.3px;background:#0a2a15;color:#63be7b">● LIVE</span>
       </div>
     </div>
   </header>
@@ -569,7 +570,7 @@
             <span style="flex:1;font-size:9px;color:var(--faint);text-align:center" id="grVswLbl">Vsw</span>
           </div>
         </div>
-        <span style="color:var(--faint);font-size:10px">Формула: G = Kp − 2 + Lᵢ + Mᵢ + eᵢ + Pᵢ</span>
+        <span style="color:var(--faint);font-size:10px">Формула: G = Kp − 2 + Lᵢ + Mᵢ + eᵢ + Pᵢ + Dᵢ</span>
         <span style="font-size:10px;color:var(--dim)">Стан джерел: <span id="srcKpObs" title="Kp obs" style="font-family:monospace">…</span> Kp <span id="srcKpFcst" title="Kp fcst" style="font-family:monospace">…</span> 3d <span id="src27Day" title="27-day" style="font-family:monospace">…</span> 27d <span id="srcDst" title="Dst" style="font-family:monospace">…</span> Dst <span id="srcSn" title="Wolf Sn" style="font-family:monospace">…</span> Sn <span id="srcBz" title="Bz" style="font-family:monospace">…</span> Bz</span>
       </div>
     </div>
@@ -1048,7 +1049,7 @@ Kp: 3-год індекс геомагнітної активності (0–9)
 
         <!-- v40: SVG G-formula diagram -->
         <p style="font-weight:600;color:#cfe0ff;margin-bottom:4px;margin-top:18px">Схема формули G-індексу</p>
-        <p style="font-size:12px;color:var(--text3);margin-bottom:8px">G = (Kp − 2) + Lᵢ + Mᵢ + eᵢ + Pᵢ. Кожен компонент незалежний; ΣΔeᵢ — інформаційний (рішення командира).</p>
+        <p style="font-size:12px;color:var(--text3);margin-bottom:8px">G = (Kp − 2) + Lᵢ + Mᵢ + eᵢ + Pᵢ + Dᵢ. Кожен компонент незалежний; ΣΔeᵢ — інформаційний (рішення командира).</p>
         <svg viewBox="0 0 520 130" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:520px;display:block;margin:0 0 16px;font-family:system-ui,sans-serif">
           <rect x="0" y="0" width="520" height="130" fill="#090f1e" rx="8"/>
           <!-- Title -->
@@ -1305,7 +1306,7 @@ Kp: 3-год індекс геомагнітної активності (0–9)
       <div id="g2watchResult" style="background:#0a1428;border-radius:10px;padding:16px;min-height:60px"></div>
 
       <div class="small muted" style="margin-top:10px">
-        Формула: G = Kp − 2 + (Lᵢ + Mᵢ + eᵢ + Pᵢ) · Значення розраховуються автоматично при переміщенні слайдерів · <a href="#" style="color:var(--faint)" onclick="el('g2watchPanel').style.display='none';return false">Згорнути</a>
+        Формула: G = Kp − 2 + (Lᵢ + Mᵢ + eᵢ + Pᵢ + Dᵢ) · Значення розраховуються автоматично при переміщенні слайдерів · <a href="#" style="color:var(--faint)" onclick="el('g2watchPanel').style.display='none';return false">Згорнути</a>
       </div>
     </div>
   </div>
@@ -3648,7 +3649,7 @@ function renderPanchanga(dateUTC){
 
   el_('panchGrid').innerHTML = html;
   el_('panchNote').innerHTML = summaryHtml +
-    '<div class="small muted" style="margin-top:8px">ℹ️ Підсумок базується на G-індексі = Kp − 2 + ΣAᵢ (Lᵢ + Mᵢ + eᵢ + Pᵢ). R&D: advisory, Kpanch=1.00</div>';
+    '<div class="small muted" style="margin-top:8px">ℹ️ Підсумок базується на G-індексі = Kp − 2 + ΣAᵢ (Lᵢ + Mᵢ + eᵢ + Pᵢ + Dᵢ). R&D: advisory, Kpanch=1.00</div>';
 }
 
 // ==================== КОМБО-ГРАФІК Kp (факт + прогноз) ====================
@@ -4019,6 +4020,9 @@ async function loadAll(){
     }
   }
   await try27Day();
+
+  // ── Freshness badge ──
+  updateFreshnessBadge();
 
   el('btnRefresh').disabled = false;
 }
@@ -6356,6 +6360,28 @@ function _setSrcStatus(id, status) {
   el.title = {ok:'Дані NOAA', cache:'Кешовані дані', synthetic:'Synthetic (NOAA недоступний)', error:'Помилка', loading:'Завантаження...'}[status] || '';
 }
 
+function updateFreshnessBadge() {
+  const badge = document.getElementById('freshnessBadge');
+  if (!badge) return;
+  const ids = ['srcKpObs','srcKpFcst','srcDst','srcSn','srcBz','src27Day'];
+  let ok=0, cache=0, err=0;
+  ids.forEach(id => {
+    const e = document.getElementById(id);
+    if (!e) return;
+    const t = e.textContent;
+    if (t === '✓') ok++;
+    else if (t === '⊙' || t === '~') cache++;
+    else if (t === '✗') err++;
+  });
+  if (err >= 3) {
+    badge.textContent = '● OFFLINE'; badge.style.background = '#2a1010'; badge.style.color = '#ff6b6b';
+  } else if (cache >= 2 || err >= 1) {
+    badge.textContent = '● CACHED'; badge.style.background = '#2a1a00'; badge.style.color = '#ffcc44';
+  } else {
+    badge.textContent = '● LIVE'; badge.style.background = '#0a2a15'; badge.style.color = '#63be7b';
+  }
+}
+
 function updateSafeStateBanner(kp, ai) {
   const banner = document.getElementById('safeStateBanner');
   const txt    = document.getElementById('safeStateTxt');
@@ -6751,7 +6777,7 @@ el('btnRefresh').addEventListener('click', loadAll);
 // ========================= i18n EN/UA =========================
 const I18N = {
   UA: {
-    headerTitle: 'Космофізичний дашборд — <span class="muted">G = Kp − 2 + ΣAᵢ де ΣAᵢ = Lᵢ + Mᵢ + eᵢ + Pᵢ</span>',
+    headerTitle: 'Космофізичний дашборд — <span class="muted">G = Kp − 2 + ΣAᵢ де ΣAᵢ = Lᵢ + Mᵢ + eᵢ + Pᵢ + Dᵢ</span>',
     headerSub: 'Kp/Ap із NOAA, ΣAᵢ з автоматичним підтягуванням подій (ICS/астроджерела).',
     btnRefresh: 'Оновити дані',
     autoLabel: 'Авто:',
@@ -6769,7 +6795,7 @@ const I18N = {
     utcTime: 'UTC: ',
   },
   EN: {
-    headerTitle: 'Space Weather Dashboard — <span class="muted">G = Kp − 2 + ΣAᵢ where ΣAᵢ = Lᵢ + Mᵢ + eᵢ + Pᵢ</span>',
+    headerTitle: 'Space Weather Dashboard — <span class="muted">G = Kp − 2 + ΣAᵢ where ΣAᵢ = Lᵢ + Mᵢ + eᵢ + Pᵢ + Dᵢ</span>',
     headerSub: 'Kp/Ap from NOAA, ΣAᵢ from ICS/astro sources (auto-loaded).',
     btnRefresh: 'Refresh Data',
     autoLabel: 'Auto:',
@@ -6986,7 +7012,7 @@ function syncG2(scenarioLabel) {
       </div>
       <div style="display:flex;gap:16px;font-size:11px;color:var(--faint);margin-top:3px">
         <span style="color:${kpCol}">■ Kp−2 = ${(kp-2)>=0?'+'+(kp-2).toFixed(1):(kp-2).toFixed(1)}</span>
-        <span style="color:${aiCol}">■ ΣAᵢ = ${sumAi>=0?'+'+sumAi.toFixed(1):sumAi.toFixed(1)} (Lᵢ+Mᵢ+eᵢ+Pᵢ)</span>
+        <span style="color:${aiCol}">■ ΣAᵢ = ${sumAi>=0?'+'+sumAi.toFixed(1):sumAi.toFixed(1)} (Lᵢ+Mᵢ+eᵢ+Pᵢ+Dᵢ)</span>
       </div>
     </div>
 
@@ -7745,6 +7771,11 @@ if ('serviceWorker' in navigator) {
               el.textContent = `⚠ Дані з кешу (${age} хв тому) — перевірте з'єднання`;
               el.style.display = 'block';
               setTimeout(() => { el.style.display = 'none'; }, 10000);
+            }
+            // Update freshness badge
+            const badge = document.getElementById('freshnessBadge');
+            if (badge) {
+              badge.textContent = '● CACHED'; badge.style.background = '#2a1a00'; badge.style.color = '#ffcc44';
             }
           }
         });
