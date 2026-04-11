@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v70</title>
+  <title>G-Index — Космофізичний дашборд v70.2</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -478,6 +478,34 @@
     .risk-elevated .prob-v{color:#fca474}.risk-high .prob-v{color:#ff6b6b}
     .risk-low{border-color:rgba(43,212,125,.3)}.risk-moderate{border-color:rgba(255,204,0,.3)}
     .risk-elevated{border-color:rgba(252,164,116,.3)}.risk-high{border-color:rgba(255,107,107,.3)}
+
+    /* ===== v70.2 HERO / DECISION / COMPACT EXPLAIN ===== */
+    #heroCard{margin-top:10px}
+    #heroCard .hero-wrap{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap}
+    .hero-left{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+    .hero-maintext{display:flex;flex-direction:column;gap:6px;min-width:220px}
+    #heroCat{font-size:18px;font-weight:700;line-height:1.2}
+    #heroAction{font-size:13px;color:var(--muted);line-height:1.4;max-width:540px}
+    .hero-right{display:grid;grid-template-columns:repeat(2,minmax(120px,1fr));gap:10px;min-width:280px;flex:1;max-width:460px}
+    .hero-metric{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:8px 10px}
+    .hero-metric .label{display:block;margin-bottom:3px}
+    #heroDelta,#heroConfidence,#heroFreshness,#heroStamp{font-weight:700;font-variant-numeric:tabular-nums}
+    #heroFreshness.live{color:var(--ok)}
+    #heroFreshness.cached{color:var(--warn)}
+    #heroFreshness.stale{color:var(--bad)}
+    #decisionCard{margin:0 0 16px}
+    #decisionNow{font-size:18px;font-weight:800;line-height:1.2}
+    #decisionNext{font-size:13px;line-height:1.45}
+    #compactExplainBlock{margin-top:8px}
+    #compactExplain{padding:8px 10px;background:var(--card2);border:1px solid var(--border);border-radius:10px;line-height:1.45}
+    #stormStoryCard{margin:0 0 16px}
+    #stormStoryText{line-height:1.5;color:var(--text2)}
+    /* safe hide old duplicated top-level UI */
+    #gTopRow{display:none !important}
+    #deltaCard{display:none !important}
+    #gFlowCanvas{display:none !important}
+    @media(max-width:860px){.hero-right{width:100%;max-width:none;grid-template-columns:1fr 1fr}}
+    @media(max-width:500px){.hero-right{grid-template-columns:1fr}#heroCat{font-size:16px}}
   </style>
 
   <meta name="theme-color" content="#0b1220">
@@ -576,6 +604,37 @@
     </div>
 
 
+    <!-- ═══ v70.2 HERO CARD ═══ -->
+    <section class="card" id="heroCard">
+      <div class="hero-wrap">
+        <div class="hero-left">
+          <span id="heroG" class="gbadge">G …</span>
+          <div class="hero-maintext">
+            <div id="heroCat">—</div>
+            <div id="heroAction">—</div>
+          </div>
+        </div>
+        <div class="hero-right">
+          <div class="hero-metric">
+            <span class="label">Δ від учора</span>
+            <div id="heroDelta">—</div>
+          </div>
+          <div class="hero-metric">
+            <span class="label">Confidence</span>
+            <div id="heroConfidence">—</div>
+          </div>
+          <div class="hero-metric">
+            <span class="label">Стан даних</span>
+            <div id="heroFreshness" class="live">LIVE</div>
+          </div>
+          <div class="hero-metric">
+            <span class="label">Оновлено</span>
+            <div id="heroStamp">—</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- ═══ G INDEX TOP ROW ═══ -->
     <div id="gTopRow" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:8px 0 0;padding:10px 16px;background:var(--card2);border:1px solid var(--border);border-radius:12px">
       <span id="gTopBadge" class="gbadge" style="font-size:22px;padding:7px 14px;min-width:110px">G …</span>
@@ -592,6 +651,25 @@
       <button class="profile-btn" data-p="off"  onclick="setProfile('off')" style="color:#3a5a7a">✕ Вимк.</button>
     </div>
     <div id="profileRec"></div>
+
+    <!-- ═══ v70.2 DECISION + STORM STORY ═══ -->
+    <section class="card" id="decisionCard">
+      <div class="flex" style="margin-bottom:8px">
+        <h2 style="margin:0;font-size:16px">Рішення</h2>
+        <span id="decisionMode" class="pill right">Normal</span>
+      </div>
+      <div id="decisionNow">—</div>
+      <div id="decisionNext" class="muted" style="margin-top:6px">—</div>
+      <div id="decisionTags" class="flex" style="margin-top:8px;gap:6px;flex-wrap:wrap"></div>
+    </section>
+
+    <section class="card" id="stormStoryCard">
+      <div class="flex" style="margin-bottom:8px">
+        <h2 style="margin:0;font-size:16px">Storm Story</h2>
+        <span class="pill right">auto</span>
+      </div>
+      <div id="stormStoryText" class="small">—</div>
+    </section>
 
     <!-- Двоколонковий лейаут: Поточний стан | Панчанга + Особистий -->
     <div id="mainGrid">
@@ -662,6 +740,17 @@
         </div>
 
         <div id="nowSummary" style="margin-top:6px;font-size:14px;color:#b7c7ea"></div>
+
+        <!-- v70.2 compact explain -->
+        <div id="compactExplainBlock">
+          <div id="compactExplain" class="mono small">—</div>
+          <details style="margin-top:6px">
+            <summary class="small muted">Детально</summary>
+            <table style="width:100%;margin-top:6px;border-collapse:collapse">
+              <tbody id="gDecompTableBodyMirror"></tbody>
+            </table>
+          </details>
+        </div>
 
         <!-- ═══ ПРОГНОЗ НА ДЕНЬ (3h-слоти + підсумок) ═══ -->
         <div id="dayForecastBlock" style="margin-top:10px;display:none">
@@ -845,7 +934,7 @@ Kp: 3-год індекс геомагнітної активності (0–9)
               <option value="bad">Несприятливі (G&lt;−0.5)</option>
               <option value="verybad">Особливо несприят. (G≤−2.5)</option>
             </select>
-            <div class="pill">NOAA 27-day</div>
+            <div class="pill hint" tabindex="0" style="cursor:help">NOAA 27-day<span class="hint-pop">Джерело: NOAA SWPC 27-day-outlook.txt\nНОАА публікує щопн ~15:00 UTC.\nΣAᵢ перераховується при кожному оновленні.</span></div>
             <button id="btnCsv" style="font-size:12px;padding:6px 10px">⬇ CSV</button>
           </div>
         </div>
@@ -2507,9 +2596,14 @@ function draw27dTable(){
     const kpLabel = isOverridden ? 'Kp max (3d↑)' : 'Kp max (27d)';
     const gTipBase = gTooltipText(kpLabel, kpUsed, ai);
     const gTip = f107mod && f107mod.val !== 0 ? gTipBase + '\n⚠ F10.7: ' + f107mod.tip + ' (контекст, не в G)' : gTipBase;
-    const Lcell  = `<span class="hint mono" tabindex="0">${ai.Li}<span class="hint-pop">${escapeHtml(ai.lTip)}</span></span>`;
+    // Moon phase emoji for Li column
+    const _moonEmoji = ai.phaseDeg < 22 ? '🌑' : ai.phaseDeg < 67 ? '🌒' : ai.phaseDeg < 112 ? '🌓' : ai.phaseDeg < 157 ? '🌔' : ai.phaseDeg < 202 ? '🌕' : ai.phaseDeg < 247 ? '🌖' : ai.phaseDeg < 292 ? '🌗' : ai.phaseDeg < 337 ? '🌘' : '🌑';
+    const Lcell  = `<span class="hint mono" tabindex="0">${_moonEmoji}${ai.Li !== 0 ? ' <b>'+ai.Li+'</b>' : ''}<span class="hint-pop">${escapeHtml(ai.lTip)}\n${ai.phaseName} (${ai.phaseDeg.toFixed(0)}°)</span></span>`;
     const Mcell  = `<span class="hint mono" tabindex="0">${ai.Mi}<span class="hint-pop">${escapeHtml(ai.mTip)}</span></span>`;
-    const Ecell  = `<span class="hint mono" tabindex="0">${ai.ei}<span class="hint-pop">${escapeHtml(ai.eTip)}</span></span>`;
+    // R-M window marker for ei
+    const _rmActive = isRussellMcPherron(r.date);
+    const _eiLabel = ai.ei !== 0 ? String(ai.ei) : (_rmActive ? '<span style="color:#fca474;font-size:9px" title="Russell-McPherron вікно">R-M</span>' : '0');
+    const Ecell  = `<span class="hint mono" tabindex="0">${_eiLabel}<span class="hint-pop">${escapeHtml(ai.eTip)}${_rmActive?'\n⚠ Russell-McPherron вікно (підвищена геомагн. чутливість)':''}</span></span>`;
     const Pcell  = `<span class="hint mono" tabindex="0">${ai.Pi}<span class="hint-pop">${escapeHtml(ai.pTip||'')}</span></span>`;
     const AiCell = `<span class="hint mono" tabindex="0">${ai.Ai}<span class="hint-pop">${escapeHtml(ai.explain)}</span></span>`;
     const rowStyle = G <= -2.5 ? 'background:rgba(255,107,107,0.1);' : G <= -0.5 ? 'background:rgba(255,204,0,0.05);' : '';
@@ -3771,7 +3865,8 @@ function render3Day(parsed3){
     const rowStyle = G <= -2 ? 'background:rgba(255,107,107,0.08);' : '';
     const todayStyle = isToday ? 'outline:2px solid rgba(55,167,255,0.6);' : '';
 
-    const Lcell  = `<div class="mono" style="font-weight:700"><span class="hint" tabindex="0">${ai.Li}<span class="hint-pop">${escapeHtml(ai.lTip)}</span></span></div>`;
+    const _moonE3 = ai.phaseDeg < 22 ? '🌑' : ai.phaseDeg < 67 ? '🌒' : ai.phaseDeg < 112 ? '🌓' : ai.phaseDeg < 157 ? '🌔' : ai.phaseDeg < 202 ? '🌕' : ai.phaseDeg < 247 ? '🌖' : ai.phaseDeg < 292 ? '🌗' : ai.phaseDeg < 337 ? '🌘' : '🌑';
+    const Lcell  = `<div class="mono" style="font-weight:700"><span class="hint" tabindex="0">${_moonE3}${ai.Li !== 0 ? ' '+ai.Li : ''}<span class="hint-pop">${escapeHtml(ai.lTip)}\n${ai.phaseName} (${ai.phaseDeg.toFixed(0)}°)</span></span></div>`;
     const Mcell  = `<div class="mono" style="font-weight:700"><span class="hint" tabindex="0">${ai.Mi}<span class="hint-pop">${escapeHtml(ai.mTip)}</span></span></div>`;
     const Ecell  = `<div class="mono" style="font-weight:700"><span class="hint" tabindex="0">${ai.ei}<span class="hint-pop">${escapeHtml(ai.eTip)}</span></span></div>`;
     const Pcell  = `<div class="mono" style="font-weight:700"><span class="hint" tabindex="0">${ai.Pi}<span class="hint-pop">${escapeHtml(ai.pTip||'')}</span></span></div>`;
@@ -3830,6 +3925,101 @@ async function preloadEventsAroundNow(){
   const yrs = [now.getUTCFullYear(), now.getUTCFullYear()+1];
   await indexIcsEventsForYears(yrs);
   for(const y of yrs) await ensureEclipsesForYear(y);
+}
+
+// ===== v70.2 HERO / DECISION / EXPLAIN / STORM STORY SYNC =====
+function _stripDot(s){ return String(s||'').replace(/^●\s*/,'').trim(); }
+
+function syncHeroFromNow(){
+  const nowG=el('nowG'), heroG=el('heroG');
+  if(nowG&&heroG){ heroG.textContent=nowG.textContent; heroG.className=nowG.className; }
+  if(el('heroCat')) el('heroCat').textContent=el('nowGcat')?.textContent||'—';
+
+  const dv=(el('deltaCardVal')?.textContent||'').trim();
+  const dd=(el('deltaCardDriver')?.textContent||'').trim();
+  if(el('heroDelta')) el('heroDelta').textContent=dv||'—';
+
+  const cs=(el('cScoreGrade')?.textContent||'').trim();
+  if(el('heroConfidence')) el('heroConfidence').textContent=cs||'—';
+
+  const frRaw=_stripDot(el('freshnessBadge')?.textContent||'LIVE');
+  const frEl=el('heroFreshness');
+  if(frEl){
+    frEl.textContent=frRaw||'LIVE';
+    frEl.classList.remove('live','cached','stale');
+    const low=frRaw.toLowerCase();
+    if(low.includes('stale')) frEl.classList.add('stale');
+    else if(low.includes('cache')) frEl.classList.add('cached');
+    else frEl.classList.add('live');
+  }
+
+  const stamp=(el('stamp')?.textContent||'').replace('Оновлено:','').trim();
+  if(el('heroStamp')) el('heroStamp').textContent=stamp||'—';
+
+  const summary=(el('nowSummary')?.textContent||'').trim();
+  const action=[summary,dd].filter(Boolean).join(' · ');
+  if(el('heroAction')) el('heroAction').textContent=action||'—';
+}
+
+function syncDecisionCard(){
+  const now=el('decisionNow'), next=el('decisionNext'), tags=el('decisionTags');
+  const riskLabel=(el('riskLabelNow')?.textContent||'').trim();
+  const daySummary=(el('dayForecastSummary')?.textContent||'').trim();
+  const regime=(el('nowRegime')?.textContent||'').trim();
+  const tag=(el('nowTag')?.textContent||'').trim();
+
+  if(now) now.textContent=riskLabel||(el('nowGcat')?.textContent||'—');
+  if(next) next.textContent=daySummary||(el('nowSummary')?.textContent||'—');
+
+  if(tags){
+    tags.innerHTML='';
+    [tag,regime].filter(Boolean).forEach(t=>{
+      const s=document.createElement('span'); s.className='pill'; s.textContent=t; tags.appendChild(s);
+    });
+    if(!tags.children.length){
+      ['Планування','Рутина'].forEach(t=>{
+        const s=document.createElement('span'); s.className='pill'; s.textContent=t; tags.appendChild(s);
+      });
+    }
+  }
+}
+
+function syncCompactExplain(){
+  const src=el('gDecompTableBody'), dst=el('gDecompTableBodyMirror'), line=el('compactExplain');
+  if(src&&dst) dst.innerHTML=src.innerHTML;
+  if(src&&line){
+    const parts=[];
+    src.querySelectorAll('tr').forEach(tr=>{
+      const tds=tr.querySelectorAll('td');
+      if(tds.length>=2){
+        const k=(tds[0].textContent||'').trim(), v=(tds[1].textContent||'').trim();
+        if(k&&v) parts.push(k+' '+v);
+      }
+    });
+    line.textContent=parts.length?parts.join(' · '):'—';
+  }
+}
+
+function syncStormStory(){
+  const kp=(el('nowKp')?.textContent||'').trim();
+  const g=(el('nowGcat')?.textContent||'').trim();
+  const sum=(el('nowSummary')?.textContent||'').trim();
+  const nxt=(el('dayForecastSummary')?.textContent||'').trim();
+  const fr=_stripDot(el('freshnessBadge')?.textContent||'LIVE');
+  const bits=[];
+  if(kp) bits.push('Головний геофактор зараз: '+kp+'.');
+  if(g) bits.push('Стан дня: '+g+'.');
+  if(sum) bits.push(sum);
+  if(nxt) bits.push('Далі: '+nxt);
+  if(fr) bits.push('Дані: '+fr+'.');
+  if(el('stormStoryText')) el('stormStoryText').textContent=bits.join(' ')||'—';
+}
+
+function syncV702UI(){
+  syncHeroFromNow();
+  syncDecisionCard();
+  syncCompactExplain();
+  syncStormStory();
 }
 
 async function loadAll(){
@@ -4023,6 +4213,8 @@ async function loadAll(){
 
   // ── Freshness badge ──
   updateFreshnessBadge();
+
+  try{ syncV702UI(); }catch(e){ console.warn('syncV702UI:', e); }
 
   el('btnRefresh').disabled = false;
 }
@@ -6360,6 +6552,14 @@ function _setSrcStatus(id, status) {
   el.title = {ok:'Дані NOAA', cache:'Кешовані дані', synthetic:'Synthetic (NOAA недоступний)', error:'Помилка', loading:'Завантаження...'}[status] || '';
 }
 
+// Russell-McPherron window check (05.03-04.04, 07.09-07.10)
+function isRussellMcPherron(d) {
+  if (!d) return false;
+  const m = d.getUTCMonth() + 1, day = d.getUTCDate();
+  return (m === 3 && day >= 5) || (m === 4 && day <= 4)
+      || (m === 9 && day >= 7) || (m === 10 && day <= 7);
+}
+
 function updateFreshnessBadge() {
   const badge = document.getElementById('freshnessBadge');
   if (!badge) return;
@@ -7305,10 +7505,10 @@ function lsRem(k){try{localStorage.removeItem(k)}catch{}}
 
 // ── Mobile Bottom Nav ─────────────────────────────────────
 const MNAV_SECTIONS = {
-  now:      ['gTopRow','profileBar','profileRec','mainGrid','swipeHint3','threeCard'],
-  panch:    ['gTopRow','panchCard','swipeHint3','threeCard'],
-  fcst:     ['gTopRow','swipeHint27','twentysevenCard','backtestCard'],
-  personal: ['personalCard']
+  now:      ['heroCard','decisionCard','stormStoryCard','gTopRow','profileBar','profileRec','mainGrid','swipeHint3','threeCard'],
+  panch:    ['heroCard','gTopRow','panchCard','swipeHint3','threeCard'],
+  fcst:     ['heroCard','gTopRow','swipeHint27','twentysevenCard','backtestCard'],
+  personal: ['heroCard','personalCard']
 };
 
 function mnavGo(tab, scroll) {
@@ -7322,7 +7522,7 @@ function mnavGo(tab, scroll) {
   const show = MNAV_SECTIONS[tab] || [];
 
   // All managed section IDs
-  const all = ['gTopRow','profileBar','profileRec','mainGrid',
+  const all = ['heroCard','decisionCard','stormStoryCard','gTopRow','profileBar','profileRec','mainGrid',
                'swipeHint3','threeCard','swipeHint27','twentysevenCard',
                'backtestCard','panchCard','personalCard','scienceBar'];
 
@@ -7353,7 +7553,7 @@ function mnavGo(tab, scroll) {
 function mnavInit() {
   if (window.innerWidth > 700) {
     // Desktop: show everything
-    ['gTopRow','profileBar','profileRec','mainGrid','threeCard',
+    ['heroCard','decisionCard','stormStoryCard','gTopRow','profileBar','profileRec','mainGrid','threeCard',
      'twentysevenCard','backtestCard','panchCard','scienceBar']
       .forEach(id => { const el = document.getElementById(id); if(el) el.style.display = ''; });
     return;
@@ -7777,6 +7977,9 @@ if ('serviceWorker' in navigator) {
             if (badge) {
               badge.textContent = '● CACHED'; badge.style.background = '#2a1a00'; badge.style.color = '#ffcc44';
             }
+            // v70.2: sync hero freshness
+            const hf = document.getElementById('heroFreshness');
+            if (hf) { hf.textContent = 'CACHED'; hf.classList.remove('live','stale'); hf.classList.add('cached'); }
           }
         });
 
