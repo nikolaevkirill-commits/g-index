@@ -761,6 +761,7 @@
           style="display:inline-block;font-size:11px;font-weight:700;padding:3px 9px;border-radius:6px;
           vertical-align:middle;letter-spacing:.05em;cursor:pointer;background:#1e2a44;color:#6b82aa">Free</span>
         <button id="btnRefresh">↻ Оновити</button>
+        <button id="btnCacheReset" onclick="navigator.serviceWorker.getRegistrations().then(r=>r.forEach(s=>s.unregister()));caches.keys().then(k=>k.forEach(c=>caches.delete(c)));setTimeout(()=>location.reload(),500)" style="background:#2a1a00;color:#ffcc44;border:1px solid #554400;font-size:11px;padding:2px 8px;border-radius:6px" title="Скинути кеш і перезавантажити">🗑 Кеш</button>
         <button id="btnShare" title="Поділитись поточним G-станом" onclick="shareGState()" style="background:#1e2a44;color:#9bb1dc;border:1px solid var(--border2)">📤</button>
         <button class="lang-btn active" id="btnLang" title="Switch language / Змінити мову">UA</button>
         <button class="lang-btn" id="btnG2Watch" style="border-color:var(--faint);color:var(--dim);font-size:12px" title="Симулятор G — внизу сторінки">🧮</button>
@@ -4823,7 +4824,7 @@ async function loadAll(){
   el('btnRefresh').disabled = true;
   el('nowError').textContent = '';
   el('threeError').textContent = '';
-  
+  try{
   setStamp();
 
   try{
@@ -5011,10 +5012,12 @@ async function loadAll(){
   // ── Freshness badge ──
   updateFreshnessBadge();
 
-  try{ syncV702UI(); }catch(e){ console.warn('syncV702UI:', e); }
+  try{ syncV702UI(); }catch(e){ console.warn('syncV702UI:', e); document.title='[ERR syncV702UI] '+e.message; }
   try{ applyWowFromG(); }catch(e){}
 
   el('btnRefresh').disabled = false;
+  }catch(_loadErr){console.error('loadAll error:',_loadErr);el('nowError').textContent='Помилка: '+_loadErr.message;}
+  finally{el('btnRefresh').disabled=false;}
 }
 
 // ----------------------------- Експорт CSV ----------------------------------
@@ -8311,7 +8314,7 @@ function lsRem(k){try{localStorage.removeItem(k)}catch{}}
 
 // ── Mobile Bottom Nav ─────────────────────────────────────
 const MNAV_SECTIONS = {
-  now:      ['heroCard','astroGrid','opsGrid','decisionCard','radarCard','gTopRow','profileBar','profileRec','mainGrid','swipeHint3','threeCard'],
+  now:      ['heroCard','astroGrid','wfV3','gTopRow','profileBar','profileRec','mainGrid','swipeHint3','threeCard'],
   panch:    ['heroCard','gTopRow','panchCard','swipeHint3','threeCard'],
   fcst:     ['heroCard','gTopRow','swipeHint27','twentysevenCard','backtestCard'],
   personal: ['heroCard','personalCard']
