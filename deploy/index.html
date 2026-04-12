@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v78b</title>
+  <title>G-Index — Космофізичний дашборд v78d</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -46,10 +46,10 @@
     .sub{color:var(--dim); font-size:var(--fs-md)}
     main{max-width:1400px; margin:16px auto; padding:0 16px 40px}
     .row{display:grid; grid-template-columns:repeat(12,1fr); gap:var(--gap)}
-    #mainGrid{display:grid; grid-template-columns:1fr 1fr; grid-template-rows:auto auto; gap:16px; margin-bottom:16px}
-    #nowCard{grid-column:1; grid-row:1/3}
-    #panchCard{grid-column:2}
-    #personalCard{grid-column:2; grid-row:2}
+    #mainGrid{display:grid; grid-template-columns:1fr 1fr; grid-template-rows:auto; gap:12px; margin-bottom:12px}
+    #nowCard{grid-column:1/3; grid-row:2}
+    #panchCard{grid-column:2; grid-row:1}
+    #personalCard{grid-column:1; grid-row:1}
     .card{grid-column:span 12; background:var(--card); border:1px solid var(--border); border-radius:16px; padding:16px}
     @media (min-width: 860px){ .card.half{grid-column: span 6} }
     button{appearance:none; border:none; background:var(--alt); color:#001026; font-weight:700; padding:8px 14px; border-radius:10px; cursor:pointer; font-size:var(--fs-md)}
@@ -482,7 +482,7 @@
     /* ===== v70.2 HERO / DECISION / COMPACT EXPLAIN ===== */
     #heroCard{margin-top:10px}
     #heroCard .hero-wrap{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap}
-    .hero-left{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+    .hero-left{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap}
     .hero-maintext{display:flex;flex-direction:column;gap:4px;min-width:220px}
     /* v78b: heroCat/heroAction removed */
     .hero-right{display:grid;grid-template-columns:repeat(2,minmax(120px,1fr));gap:10px;min-width:280px;flex:1;max-width:460px}
@@ -608,6 +608,8 @@
     #heroRing.ring-good .ring-val{filter:drop-shadow(0 0 8px #63be7b)}
     /* v78b: heroTopDrivers replaced by heroCauseBlock */
     #heroTopDrivers { display:none !important; }
+    /* v78d: cause/time moved to coreGrid */
+    #heroCauseBlock, #heroTimeBlock { display:none !important; }
 
     #opsGrid{animation:fadeSlideIn .5s ease .1s both}
     #decisionCard{animation:glowPulse 3s ease-in-out infinite}
@@ -721,8 +723,57 @@
     #nowCard #compactExplainBlock,
     #nowCard #costarBanner { display:none !important; }
     /* v77: personalCard slim — secondary visual weight */
-    #personalCard { opacity:.85; border-color:rgba(255,255,255,.05); }
+    #personalCard { opacity:.92; border-color:rgba(255,255,255,.05); }
     #personalCardSub { display:none; }
+
+    /* ═══ v78d: 3-level visual hierarchy ═══ */
+    /* Core grid: WHY + TIMING side by side */
+    #coreGrid{display:grid;grid-template-columns:1.15fr 1fr;gap:12px;margin-bottom:12px}
+    @media(max-width:980px){#coreGrid{grid-template-columns:1fr}}
+    .core-card{padding:14px;border-radius:16px;background:linear-gradient(180deg,rgba(12,20,38,.88),rgba(9,15,30,.94));border:1px solid rgba(255,255,255,.08);animation:riseIn .3s ease-out both}
+    @keyframes riseIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+    /* Hero: bigger G */
+    #heroCard #heroG{font-size:44px!important;min-width:150px!important;padding:12px 18px!important;font-weight:900!important}
+    #heroCard #heroActionCmd{font-size:18px!important}
+
+    /* Why block */
+    .why-title,.timing-title{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--dim);margin-bottom:8px;font-weight:600}
+    .why-row{display:grid;grid-template-columns:1fr 60px 20px;gap:6px;align-items:center;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+    .why-row:last-child{border-bottom:none}
+    .why-name{color:var(--text2);font-size:13px}
+    .why-val{font-weight:800;font-size:14px;text-align:right;font-variant-numeric:tabular-nums}
+    .why-dir{text-align:center;font-size:13px}
+    .why-main{margin-top:8px;padding:6px 10px;border-radius:10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);font-size:12px;color:var(--text)}
+    .why-row.is-main{border-radius:8px;background:rgba(55,167,255,.07);border:1px solid rgba(55,167,255,.16);animation:whyGlow 2.6s ease-in-out infinite}
+    @keyframes whyGlow{0%,100%{box-shadow:0 0 0 0 rgba(55,167,255,0)}50%{box-shadow:0 0 12px 2px rgba(55,167,255,.10)}}
+
+    /* Timing block */
+    .timing-row{display:grid;grid-template-columns:80px 44px 1fr;gap:8px;align-items:center;padding:6px 10px;border-radius:10px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.05);margin-bottom:4px}
+    .timing-row:last-child{margin-bottom:0}
+    .timing-time{font-weight:700;font-size:12px;color:var(--text);font-variant-numeric:tabular-nums}
+    .timing-val{font-weight:800;font-size:13px;text-align:right}
+    .timing-label{font-size:12px;color:var(--muted)}
+    .timing-row.is-now{border-color:rgba(43,212,125,.25);background:rgba(43,212,125,.07);animation:timingNowGlow 2.2s ease-in-out infinite}
+    .timing-row.is-next{border-color:rgba(55,167,255,.16);background:rgba(55,167,255,.04)}
+    @keyframes timingNowGlow{0%,100%{box-shadow:0 0 0 0 rgba(43,212,125,0)}50%{box-shadow:0 0 12px 2px rgba(43,212,125,.12)}}
+
+    /* Hero state animations */
+    .hero-state-neutral #heroG{animation:heroBreath 4s ease-in-out infinite}
+    .hero-state-unstable #heroG{animation:heroPulseWarn 2.4s ease-in-out infinite}
+    .hero-state-tense #heroG{animation:heroPulseBad 1.8s ease-in-out infinite}
+    .hero-state-favorable #heroG,.hero-state-good #heroG{filter:drop-shadow(0 0 12px rgba(43,212,125,.3))}
+    @keyframes heroBreath{0%,100%{transform:scale(1);opacity:.95}50%{transform:scale(1.015);opacity:1}}
+    @keyframes heroPulseWarn{0%,100%{box-shadow:0 0 0 0 rgba(255,204,0,0)}50%{box-shadow:0 0 16px 3px rgba(255,204,0,.15)}}
+    @keyframes heroPulseBad{0%,100%{box-shadow:0 0 0 0 rgba(255,107,107,0)}50%{box-shadow:0 0 20px 4px rgba(255,107,107,.2)}}
+
+    /* nowCard demoted to details-level */
+    #nowCard{opacity:.88!important;font-size:13px!important}
+    #nowCard h2{font-size:15px!important}
+    /* Next shift badge */
+    .next-shift-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:999px;font-size:11px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);color:var(--text2);margin-top:6px}
+    .next-shift-badge .live-dot{width:6px;height:6px;border-radius:50%;background:#63be7b;animation:liveDot 1.4s ease-in-out infinite}
+    @keyframes liveDot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.8)}}
   </style>
 
   <meta name="theme-color" content="#0b1220">
@@ -880,6 +931,20 @@
       </div>
     </section>
 
+    <!-- ═══ v78d: CORE GRID — WHY + TIMING ═══ -->
+    <div id="coreGrid">
+      <section id="whyCard" class="core-card">
+        <div class="why-title">Що формує стан</div>
+        <div id="whyRows">—</div>
+        <div id="whyMain" class="why-main">—</div>
+      </section>
+      <section id="timingCard" class="core-card">
+        <div class="timing-title">Критичні вікна (сьогодні)</div>
+        <div id="timingRows">—</div>
+        <div id="timingNextShift"></div>
+      </section>
+    </div>
+
     <!-- ═══ v70.3 ASTRO TOP LAYER ═══ -->
     <!-- ═══ v70.8 ASTRO CONTEXT (collapsed) ═══ -->
     <details id="astroGrid" style="margin:0 0 12px">
@@ -1027,15 +1092,17 @@
     <!-- Двоколонковий лейаут: Поточний стан | Панчанга + Особистий -->
     <div id="mainGrid">
 
-      <!-- ПОТОЧНИЙ СТАН -->
-      <section class="card" id="nowCard">
-        <div class="now-top">
-          <h2 style="margin:0">Поточний стан <span id="nowEffLabel" class="muted" style="font-weight:400">(—)</span></h2>
-          <div class="now-right">
-            <span class="pill">Локальний час: <span id="localNow">—</span></span>
-            <span class="pill">UTC: <span id="utcNow">—</span></span>
+      <!-- ПОТОЧНИЙ СТАН — v78d: demoted to collapsed details -->
+      <details class="card" id="nowCard">
+        <summary class="now-top" style="cursor:pointer;list-style:none">
+          <h2 style="margin:0;display:inline">Технічні дані <span id="nowEffLabel" class="muted" style="font-weight:400">(—)</span></h2>
+          <span style="margin-left:8px;font-size:11px;color:var(--dim)">▶</span>
+          <div class="now-right" style="display:inline-flex;gap:6px;margin-left:auto">
+            <span class="pill" style="font-size:10px">UTC: <span id="utcNow">—</span></span>
           </div>
-        </div>
+        </summary>
+        <div style="margin-top:8px">
+        <div style="font-size:11px;color:var(--dim);margin-bottom:4px">Локальний час: <span id="localNow">—</span></div>
 
         <!-- Co-Star: одне речення на день -->
         <div id="costarBanner" style="margin:8px 0 4px;font-size:14px;font-weight:600;line-height:1.35;min-height:20px;white-space:normal;word-break:break-word;overflow-wrap:break-word"></div>
@@ -1167,7 +1234,8 @@
         <!-- gaugeMoonWrap removed v74 (dead code, moved to astroGrid) -->
 
         <!-- Bar chart Kp removed -->
-      </section>
+      </div>
+      </details>
 
       <!-- PANCHANGA — компактна права колонка -->
       <section class="card" id="panchCard">
@@ -4424,6 +4492,13 @@ function syncHero(){
   const _doEl = el('heroDecisionDo');
   if(_doEl) _doEl.style.color = _st.color;
 
+  // v78d: hero state class for CSS animations
+  const _heroEl = el('heroCard');
+  if(_heroEl){
+    _heroEl.classList.remove('hero-state-neutral','hero-state-unstable','hero-state-tense','hero-state-favorable','hero-state-good');
+    _heroEl.classList.add('hero-state-'+_stKey);
+  }
+
   // v78b: Cause decomposition — show what forms G
   _renderHeroCause(gVal, kpH);
 
@@ -4431,12 +4506,12 @@ function syncHero(){
   _renderHeroTimeWindows();
 }
 
-// ═══ v78b: Hero Cause Decomposition ═══
+// ═══ v78d: Why Card (coreGrid) ═══
 function _renderHeroCause(g, kp) {
-  const wrap = el('heroCauseRows');
-  const driverEl = el('heroCauseDriver');
-  if (!wrap) return;
-  if (!isFinite(g)) { wrap.textContent = 'Дані завантажуються…'; return; }
+  const whyRows = el('whyRows');
+  const whyMain = el('whyMain');
+  if (!whyRows) return;
+  if (!isFinite(g)) { whyRows.innerHTML = '<span style="color:var(--dim)">Дані завантажуються…</span>'; return; }
 
   const chips = [...document.querySelectorAll('#gDecompFactors .gd-chip[data-val]')];
   const factors = [];
@@ -4454,70 +4529,126 @@ function _renderHeroCause(g, kp) {
   }
 
   factors.sort((a, b) => Math.abs(b.val) - Math.abs(a.val));
-  const rows = factors.filter(f => f.val !== 0).slice(0, 5);
+  const mainName = factors[0]?.name;
 
-  if (!rows.length) { wrap.textContent = 'Фактори нейтральні'; if (driverEl) driverEl.textContent = ''; return; }
+  // Show all factors including zeros for completeness
+  // v78d: add panchanga detail to Pᵢ row
+  const pc = window._lastPanchCtx;
+  const panchDetail = pc ? [pc.tithi?.name, pc.karana?.name].filter(Boolean).join(' · ') : '';
+  const panchWarn = pc?.karana?.isVishti ? ' ⛔' : '';
+  // v78d: human Panchanga effect text
+  function _panchEffect(pi) {
+    const v = Number(pi || 0);
+    if (v >= 1.5) return 'підтримує день';
+    if (v <= -1.5) return 'створює напруження';
+    if (v < -0.3) return 'додає нестабільність';
+    if (v > 0.3) return 'сприяє';
+    return 'нейтральна';
+  }
 
-  const maxAbs = Math.max(...rows.map(r => Math.abs(r.val)), 0.5);
-  wrap.innerHTML = rows.map(r => {
-    const col = r.val > 0 ? '#2bd47d' : '#ff6b6b';
-    const sign = r.val > 0 ? '+' : '';
-    const dir = r.val > 0 ? '↑' : '↓';
-    const w = Math.max(6, Math.abs(r.val) / maxAbs * 60);
-    return `<div style="display:flex;align-items:center;gap:6px;margin:1px 0">`
-      + `<span style="min-width:42px;color:${col};font-weight:700;font-variant-numeric:tabular-nums;text-align:right">${sign}${r.val.toFixed(1)}</span>`
-      + `<div style="width:${w}px;height:5px;border-radius:3px;background:${col};opacity:.7"></div>`
-      + `<span style="color:var(--muted)">${r.name}</span>`
-      + `<span style="color:var(--dim);font-size:11px">${dir} ${r.label}</span>`
+  whyRows.innerHTML = factors.slice(0, 6).map(f => {
+    const col = f.val > 0 ? '#2bd47d' : f.val < 0 ? '#ff6b6b' : 'var(--dim)';
+    const sign = f.val > 0 ? '+' : '';
+    const dir = f.val > 0 ? '↑' : f.val < 0 ? '↓' : '•';
+    const isMain = f.name === mainName && f.val !== 0;
+    let detail = '';
+    if (f.name === 'Pᵢ') {
+      const effect = _panchEffect(f.val);
+      detail = panchDetail
+        ? ` <span style="color:var(--faint);font-size:10px">${effect} (${panchDetail}${panchWarn})</span>`
+        : ` <span style="color:var(--faint);font-size:10px">${effect}</span>`;
+    }
+    return `<div class="why-row${isMain ? ' is-main' : ''}">`
+      + `<div class="why-name">${f.name} <span style="color:var(--dim);font-size:11px">${f.label}</span>${detail}</div>`
+      + `<div class="why-val" style="color:${col}">${sign}${f.val.toFixed(1)}</div>`
+      + `<div class="why-dir" style="color:${col}">${dir}</div>`
       + `</div>`;
   }).join('');
 
-  // Main driver sentence
-  const d = rows[0];
-  if (driverEl && d) {
-    const verb = d.val > 0 ? 'підсилює' : 'знижує';
-    driverEl.textContent = `→ Основний драйвер: ${d.label} ${verb} G`;
+  if (whyMain) {
+    const d = factors.find(f => f.val !== 0);
+    if (d) {
+      const verb = d.val > 0 ? 'підсилює' : 'знижує';
+      whyMain.innerHTML = `→ Основний драйвер: <strong>${d.label}</strong> ${verb} G`;
+    } else {
+      whyMain.textContent = 'Усі фактори нейтральні';
+    }
   }
 }
 
-// ═══ v78b: Hero Time Windows ═══
+// ═══ v78d: Timing Card (coreGrid) ═══
 function _renderHeroTimeWindows() {
-  const wrap = el('heroTimeSlots');
+  const wrap = el('timingRows');
+  const shiftEl = el('timingNextShift');
   if (!wrap) return;
   const slots = window._daySlots;
   if (!slots || !slots.length) { wrap.innerHTML = '<span style="color:var(--dim)">Прогноз Kp-слотів недоступний</span>'; return; }
 
   const nowH = new Date().getUTCHours();
   const isPaid = PAYWALL.isPaid();
-  // Free: show current + next slot only; paid: all
   const visibleSlots = isPaid ? slots : slots.filter(s => {
     const h = parseInt(s.label || '0');
     return (nowH >= h && nowH < h + 3) || (h > nowH);
-  }).slice(0, 2);
+  }).slice(0, 3);
+
+  // Find current and next slots
+  let currentIdx = -1, nextIdx = -1;
+  slots.forEach((s, i) => {
+    const h = parseInt(s.label || '0');
+    if (nowH >= h && nowH < h + 3) currentIdx = i;
+  });
+  if (currentIdx >= 0 && currentIdx < slots.length - 1) nextIdx = currentIdx + 1;
+
+  // v78d: Panchanga context for timing
+  const _pc = window._lastPanchCtx;
+  const _panchPi = _pc?.aiComponents?.Pi || 0;
+  const _vishti = _pc?.karana?.isVishti;
+  const _panchTimingNote = _vishti ? 'Vishti підсилює ризик' : (_panchPi <= -1.5 ? (_pc?.karana?.name || 'Панчанга') + ' створює напруження' : _panchPi < -0.3 ? (_pc?.karana?.name || 'Панчанга') + ' додає нестабільність' : '');
+  const _rahuActive = _pc?.rahu?.active;
 
   const lines = visibleSlots.map(s => {
     const h = parseInt(s.label || '0');
     const endH = h + 3;
     const isCurrent = (nowH >= h && nowH < endH);
+    const isNext = (nextIdx >= 0 && slots[nextIdx] === s);
     const g = s.G;
     const col = g >= 1 ? '#2bd47d' : g >= 0 ? '#9bb1dc' : g >= -1 ? '#ffcc00' : '#ff6b6b';
-    const label = g >= 1.5 ? 'активний' : g >= 0.5 ? 'стабільний' : g >= -0.5 ? 'нейтральний' : g >= -1.5 ? 'обережність' : 'ризик';
-    const advice = g >= 1 ? 'OK для рішень' : g >= 0 ? 'рутинна робота' : g >= -1 ? 'без різких кроків' : 'уникати дій';
-    const mark = isCurrent ? ' ◀ зараз' : '';
-    const bold = isCurrent ? 'font-weight:700;' : '';
+    let label = g >= 1 ? 'OK для рішень' : g >= 0 ? 'рутинна робота' : g >= -1 ? 'без різких кроків' : 'уникати дій';
+    // Panchanga overlay
+    if (_panchTimingNote && g < 0.5) label += ` (${_panchTimingNote})`;
+    if (_rahuActive && isCurrent) label += ' · Rahu';
+    const cls = isCurrent ? ' is-now' : isNext ? ' is-next' : '';
     const sign = g >= 0 ? '+' : '';
-    return `<div style="display:flex;gap:6px;align-items:center;${bold}">`
-      + `<span style="min-width:72px;color:var(--dim);font-variant-numeric:tabular-nums">${String(h).padStart(2,'0')}:00–${String(endH).padStart(2,'0')}:00</span>`
-      + `<span style="min-width:38px;color:${col};font-weight:700;text-align:right">${sign}${g.toFixed(1)}</span>`
-      + `<span style="color:var(--muted)">${label} — ${advice}</span>`
-      + `<span style="color:var(--alt);font-size:10px">${mark}</span>`
+    const mark = isCurrent ? '<span style="color:var(--ok);font-size:10px;font-weight:700">◀ зараз</span>' : '';
+    return `<div class="timing-row${cls}">`
+      + `<div class="timing-time">${String(h).padStart(2,'0')}:00–${String(endH).padStart(2,'0')}:00</div>`
+      + `<div class="timing-val" style="color:${col}">${sign}${g.toFixed(1)}</div>`
+      + `<div class="timing-label">${label} ${mark}</div>`
       + `</div>`;
   });
 
-  if (!isPaid && slots.length > 2) {
-    lines.push(`<div style="margin-top:4px;padding:5px 10px;border-radius:8px;border:1px dashed rgba(55,167,255,.25);background:rgba(55,167,255,.05);font-size:11px;color:#8fb5ff;cursor:pointer" onclick="PaywallModal.show('G-Index Plus','basic')">🔒 Повний розклад (${slots.length} вікон) — у Plus</div>`);
+  if (!isPaid && slots.length > 3) {
+    lines.push(`<div style="margin-top:4px;padding:5px 10px;border-radius:8px;border:1px dashed rgba(55,167,255,.22);background:rgba(55,167,255,.04);font-size:11px;color:#8fb5ff;cursor:pointer" onclick="PaywallModal.show('G-Index Plus','basic')">🔒 Повний розклад (${slots.length} вікон) — у Plus</div>`);
   }
   wrap.innerHTML = lines.join('');
+
+  // Next shift badge with countdown
+  if (shiftEl && currentIdx >= 0) {
+    const currentH = parseInt(slots[currentIdx].label || '0');
+    const endMinutes = (currentH + 3) * 60;
+    const nowMinutes = nowH * 60 + new Date().getUTCMinutes();
+    const remaining = endMinutes - nowMinutes;
+    if (remaining > 0 && nextIdx >= 0) {
+      const nextG = slots[nextIdx].G;
+      const dir = nextG > slots[currentIdx].G ? '↑ покращення' : nextG < slots[currentIdx].G ? '↓ погіршення' : '→ без змін';
+      const hrs = Math.floor(remaining / 60);
+      const mins = remaining % 60;
+      const timeStr = hrs > 0 ? `${hrs}г ${mins}хв` : `${mins}хв`;
+      shiftEl.innerHTML = `<div class="next-shift-badge"><span class="live-dot"></span>Зміна через ${timeStr} — ${dir}</div>`;
+    } else {
+      shiftEl.innerHTML = '';
+    }
+  }
 }
 
 // ═══ v78: GLOBAL_STATES — єдиний source of truth для стану ═══
