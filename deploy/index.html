@@ -821,7 +821,8 @@
             <div id="heroCat">—</div>
             <div id="heroActionCmd" style="font-size:15px;font-weight:800;margin-top:4px;letter-spacing:.03em">—</div>
             <div id="heroAction">—</div>
-            <div id="heroTopDrivers" style="margin-top:6px;display:flex;flex-direction:column;gap:3px;font-size:12px;max-width:320px"></div>
+            <div id="heroMainDrag" style="margin-top:6px;font-size:13px;font-weight:700;letter-spacing:.01em"></div>
+            <div id="heroTopDrivers" style="margin-top:4px;display:flex;flex-direction:column;gap:3px;font-size:12px;max-width:320px"></div>
             <div id="heroBestWindow" class="small muted" style="margin-top:2px;font-size:11px">—</div>
           </div>
         </div>
@@ -8871,6 +8872,19 @@ function _renderTopDrivers(g, kp){
   });
   // Sort by |val| descending
   drivers.sort((a,b)=>Math.abs(b.val)-Math.abs(a.val));
+  // v76c: Main Drag indicator
+  const md=el('heroMainDrag');
+  if(md){
+    const d1=drivers.find(d=>d.val!==0);
+    if(d1){
+      const arrow=d1.val>0?'⬆':'⬇';
+      const verb=d1.val>0?'тягне вгору':'тягне вниз';
+      const col=d1.val>0?'#2bd47d':'#ff6b6b';
+      const sign=d1.val>0?'+':'';
+      const vStr=typeof d1.val==='number'&&!Number.isInteger(d1.val)?d1.val.toFixed(1):d1.val;
+      md.innerHTML=`<span style="color:${col}">${arrow} ${d1.name} ${sign}${vStr}</span> <span style="color:var(--muted);font-weight:400">${verb}</span>`;
+    } else { md.innerHTML=''; }
+  }
   const top=drivers.slice(0,4).filter(d=>d.val!==0);
   if(!top.length){wrap.innerHTML='';return;}
   const maxAbs=Math.max(...top.map(d=>Math.abs(d.val)),1);
