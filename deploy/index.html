@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v75</title>
+  <title>G-Index — Космофізичний дашборд v76</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1743,6 +1743,18 @@ Kp: 3-год індекс геомагнітної активності (0–9)
   </footer>
 
 <script>
+// ═══ v76: Global error handler (visible without DevTools) ═══
+window.onerror=function(msg,src,line,col,err){
+  document.title='[ERR] '+msg;
+  var b=document.getElementById('nowError');
+  if(b) b.textContent='JS Error: '+msg+' (line '+line+')';
+  console.error('Global:',msg,src,line);
+};
+window.addEventListener('unhandledrejection',function(e){
+  document.title='[REJ] '+(e.reason?.message||e.reason);
+  var b=document.getElementById('nowError');
+  if(b) b.textContent='Promise Error: '+(e.reason?.message||e.reason);
+});
 // ═══ v62: PAYWALL + PaywallModal stubs ═══
 const PAYWALL = {
   _tier: lsGet('pw_tier') || 'free',
@@ -6023,7 +6035,10 @@ function taaraDangerClass(danger) {
   return danger ? 'color:#ff6b6b;font-weight:600' : 'color:#2bd47d;font-weight:600';
 }
 
-// [v76] duplicate lsGet/lsSet removed — kept v75 version below
+// ═══ v26: Safe localStorage (sandbox/iframe може блокувати) ═══
+function lsGet(key){ try{ return localStorage.getItem(key); }catch(e){ return null; } }
+function lsSet(key, val){ try{ localStorage.setItem(key, val); }catch(e){} }
+function lsRemove(key){ try{ localStorage.removeItem(key); }catch(e){} }
 
 function renderPersonal() {
   const data = getSlotData(_activeSlot);
