@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v78</title>
+  <title>G-Index — Космофізичний дашборд v78b</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -483,9 +483,8 @@
     #heroCard{margin-top:10px}
     #heroCard .hero-wrap{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap}
     .hero-left{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
-    .hero-maintext{display:flex;flex-direction:column;gap:6px;min-width:220px}
-    #heroCat{font-size:18px;font-weight:700;line-height:1.2}
-    #heroAction{font-size:13px;color:var(--muted);line-height:1.4;max-width:540px}
+    .hero-maintext{display:flex;flex-direction:column;gap:4px;min-width:220px}
+    /* v78b: heroCat/heroAction removed */
     .hero-right{display:grid;grid-template-columns:repeat(2,minmax(120px,1fr));gap:10px;min-width:280px;flex:1;max-width:460px}
     .hero-metric{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:8px 10px}
     .hero-metric .label{display:block;margin-bottom:3px}
@@ -508,7 +507,7 @@
     #stormStoryCard{display:none !important}
     #triggerCard{display:none !important}
     @media(max-width:860px){.hero-right{width:100%;max-width:none;grid-template-columns:1fr 1fr}}
-    @media(max-width:500px){.hero-right{grid-template-columns:1fr}#heroCat{font-size:16px}}
+    @media(max-width:500px){.hero-right{grid-template-columns:1fr}}
     /* ===== v70.2 RADAR / TRIGGERS ===== */
     #radarCard,#triggerCard{margin:0 0 16px}
 
@@ -598,9 +597,17 @@
     #heroRing svg{width:110px;height:110px;transform:rotate(-90deg)}
     #heroRing .ring-bg{fill:none;stroke:#1a2a44;stroke-width:6}
     #heroRing .ring-val{fill:none;stroke-width:6;stroke-linecap:round;transition:stroke-dashoffset .8s ease,stroke 1s ease;filter:drop-shadow(0 0 6px currentColor)}
-    #heroCat{font-size:18px;font-weight:700;line-height:1.2}
-    #heroAction{font-size:13px;color:var(--muted);line-height:1.4}
-    #heroActionCmd{font-size:15px;font-weight:800;letter-spacing:.03em;text-transform:uppercase}
+    /* v78b: ring state animation */
+    @keyframes ringBreath{0%,100%{filter:drop-shadow(0 0 4px currentColor)}50%{filter:drop-shadow(0 0 8px currentColor)}}
+    @keyframes ringPulse{0%,100%{filter:drop-shadow(0 0 4px currentColor);stroke-width:6}50%{filter:drop-shadow(0 0 14px currentColor);stroke-width:7}}
+    @keyframes ringWarn{0%,100%{filter:drop-shadow(0 0 6px #ff6b6b);stroke-width:6}50%{filter:drop-shadow(0 0 18px #ff4444);stroke-width:8}}
+    #heroRing.ring-neutral .ring-val{animation:ringBreath 4s ease-in-out infinite}
+    #heroRing.ring-unstable .ring-val{animation:ringPulse 2.5s ease-in-out infinite}
+    #heroRing.ring-tense .ring-val{animation:ringWarn 1.8s ease-in-out infinite}
+    #heroRing.ring-favorable .ring-val{filter:drop-shadow(0 0 10px #2bd47d)}
+    #heroRing.ring-good .ring-val{filter:drop-shadow(0 0 8px #63be7b)}
+    /* v78b: heroTopDrivers replaced by heroCauseBlock */
+    #heroTopDrivers { display:none !important; }
 
     #opsGrid{animation:fadeSlideIn .5s ease .1s both}
     #decisionCard{animation:glowPulse 3s ease-in-out infinite}
@@ -831,22 +838,23 @@
             <span id="heroTrend">—</span>
           </div>
           <div class="hero-maintext">
-            <div id="heroCat">—</div>
-            <div id="heroActionCmd" style="font-size:15px;font-weight:800;margin-top:4px;letter-spacing:.03em">—</div>
-            <div id="heroAction">—</div>
-            <div id="heroMainDrag" style="margin-top:6px;font-size:13px;font-weight:700;letter-spacing:.01em"></div>
-            <!-- v78: Hero Decision Layer -->
-            <div id="heroDecisionBlock" style="margin-top:8px">
-              <div id="heroDecisionDo" style="font-size:14px;font-weight:700;line-height:1.3;color:var(--ok)">—</div>
-              <div id="heroDecisionAvoid" style="font-size:12px;line-height:1.35;color:var(--muted);margin-top:2px">—</div>
+            <div id="heroActionCmd" style="font-size:17px;font-weight:800;letter-spacing:.02em;line-height:1.2">—</div>
+            <div id="heroMainDrag" style="margin-top:4px;font-size:13px;font-weight:700;letter-spacing:.01em"></div>
+            <!-- v78b: DO/AVOID compact -->
+            <div id="heroDecisionBlock" style="margin-top:6px">
+              <div id="heroDecisionDo" style="font-size:13px;font-weight:700;line-height:1.3;color:var(--ok)">—</div>
+              <div id="heroDecisionAvoid" style="font-size:12px;line-height:1.3;color:var(--muted);margin-top:1px">—</div>
             </div>
-            <div id="heroImpactBlock" style="margin-top:6px;padding:7px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03)">
-              <div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);margin-bottom:3px">Практичний вплив</div>
-              <div id="heroImpactText" style="font-size:12px;line-height:1.4;color:#b7c7ea">—</div>
+            <!-- v78b: Cause decomp (inline, replaces heroImpactBlock) -->
+            <div id="heroCauseBlock" style="margin-top:6px;padding:6px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.025)">
+              <div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);margin-bottom:3px">Що формує G</div>
+              <div id="heroCauseRows" style="font-size:12px;line-height:1.5;color:#b7c7ea"></div>
+              <div id="heroCauseDriver" style="font-size:11px;color:var(--dim);margin-top:2px"></div>
             </div>
-            <div id="heroNextBlock" style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
-              <span class="pill" id="heroNextPill" style="font-size:11px">Наступна зміна: <span id="heroNextShift">—</span></span>
-              <span class="pill" id="heroBestPill" style="font-size:11px">Найкраще вікно: <span id="heroBestSlot">—</span></span>
+            <!-- v78b: Time windows -->
+            <div id="heroTimeBlock" style="margin-top:6px;padding:6px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.025)">
+              <div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);margin-bottom:3px">Критичні вікна</div>
+              <div id="heroTimeSlots" style="font-size:12px;line-height:1.55;color:#b7c7ea"></div>
             </div>
             <div id="heroTopDrivers" style="margin-top:4px;display:flex;flex-direction:column;gap:3px;font-size:12px;max-width:320px"></div>
           </div>
@@ -4344,6 +4352,13 @@ function syncHero(){
       const offset=283*(1-pct);
       ring.style.strokeDashoffset=offset;
       ring.style.stroke=newG<=-2.5?'#ff4444':newG<=-0.5?'#ffaa33':newG>=1.5?'#2bd47d':newG>=0.5?'#63be7b':'#9bb1dc';
+      // v78b: ring state animation class
+      const ringWrap=document.getElementById('heroRing');
+      if(ringWrap){
+        ringWrap.classList.remove('ring-neutral','ring-unstable','ring-tense','ring-favorable','ring-good');
+        const rc=classifyStateByG(newG);
+        ringWrap.classList.add('ring-'+rc);
+      }
     }
 
     // Data-driven hero background
@@ -4353,10 +4368,8 @@ function syncHero(){
       hc.style.setProperty('--g-glow',r);
     }
   }
-  const catText=el('nowGcat')?.textContent||'—';
+  // v78b: removed heroCat, heroAction — merged into heroActionCmd
   const gVal=_num(_firstText(el('nowG'))||el('nowG')?.textContent);
-  const gInterp=isFinite(gVal)?(gVal<=-2.5?' → високий ризик':gVal<=-0.5?' → слабкий сигнал':gVal>=1.5?' → сильний імпульс':gVal>=0.5?' → помірний підйом':''):'';
-  _set('heroCat',catText+gInterp);
 
   // Delta: parse number, add arrow
   const dvRaw=(el('deltaCardVal')?.textContent||'').trim();
@@ -4388,13 +4401,6 @@ function syncHero(){
 
   _set('heroStamp',(el('stamp')?.textContent||'').replace('Оновлено:','').trim()||'—');
 
-  // Action: first sentence, max 120
-  const sum=(el('nowSummary')?.textContent||'').trim();
-  let act=sum.split(/\.\s/)[0];
-  if(act&&!act.endsWith('.')) act+='.';
-  if(act.length>120) act=act.substring(0,117)+'…';
-  _set('heroAction',act||'—');
-
   // v70.9: trend arrow under ring
   const ht=el('heroTrend');
   if(ht&&isFinite(dn)){
@@ -4404,50 +4410,114 @@ function syncHero(){
     ht.style.color=dn>0.3?'var(--ok)':dn<-0.3?'var(--bad)':'var(--muted)';
   }
 
-  // v70.9: action command in hero
+  // v78b: action command — single line from GLOBAL_STATES
   const kpH=_num(_firstText(el('nowKp')));
   _set('heroActionCmd',_decAction(gVal,kpH));
   const hac=el('heroActionCmd');
   if(hac) hac.style.color=gVal>=1?'var(--ok)':gVal>=-1?'var(--muted)':'var(--bad)';
 
-  // v70.9: top 3 drivers
-  const drv=el('heroTopDrivers');
-  if(drv){
-    const chips=document.querySelectorAll('#decompBar .gd-chip');
-    const items=[];
-    chips.forEach(c=>{
-      const vEl=c.querySelector('.gd-chip-val');
-      const nEl=c.querySelector('.gd-chip-name');
-      if(vEl&&nEl){
-        const v=parseFloat(vEl.textContent);
-        if(isFinite(v)&&v!==0) items.push({name:nEl.textContent.trim().split(' ')[0],val:v,abs:Math.abs(v)});
-      }
-    });
-    items.sort((a,b)=>b.abs-a.abs);
-    drv.innerHTML=items.slice(0,3).map(d=>{
-      const col=d.val>0?'#2bd47d':'#ff6b6b';
-      const sign=d.val>0?'+':'';
-      return `<span style="padding:2px 8px;border-radius:6px;background:${col}18;color:${col};font-weight:600">${d.name} ${sign}${d.val}</span>`;
-    }).join('');
-  }
-
-  // v78: Hero Decision Layer (GLOBAL_STATES)
-  const _gForState = _num(_firstText(el('nowG'))||el('nowG')?.textContent);
-  const _kpForState = _num(_firstText(el('nowKp')));
-  const _stKey = classifyStateByG(_gForState);
+  // v78b: DO/AVOID from GLOBAL_STATES
+  const _stKey = classifyStateByG(gVal);
   const _st = GLOBAL_STATES[_stKey];
   _set('heroDecisionDo', _st.doText);
   _set('heroDecisionAvoid', _st.avoidText);
   const _doEl = el('heroDecisionDo');
   if(_doEl) _doEl.style.color = _st.color;
-  _set('heroImpactText', _st.impact);
 
-  // Next shift + best window from decisionWindow
-  const _dwText = (el('decisionWindow')?.textContent||'').trim();
-  const _bestMatch = _dwText.match(/Найкраще:\s*([^(]+)/);
-  const _avoidMatch = _dwText.match(/Уникати:\s*([^\s·]+)/);
-  _set('heroBestSlot', _bestMatch ? _bestMatch[1].trim() : 'звичний режим');
-  _set('heroNextShift', _avoidMatch ? 'зміна о ' + _avoidMatch[1].trim() : 'без різкої зміни');
+  // v78b: Cause decomposition — show what forms G
+  _renderHeroCause(gVal, kpH);
+
+  // v78b: Time windows — show critical windows from _daySlots
+  _renderHeroTimeWindows();
+}
+
+// ═══ v78b: Hero Cause Decomposition ═══
+function _renderHeroCause(g, kp) {
+  const wrap = el('heroCauseRows');
+  const driverEl = el('heroCauseDriver');
+  if (!wrap) return;
+  if (!isFinite(g)) { wrap.textContent = 'Дані завантажуються…'; return; }
+
+  const chips = [...document.querySelectorAll('#gDecompFactors .gd-chip[data-val]')];
+  const factors = [];
+  if (isFinite(kp)) factors.push({ name: 'Kp−2', val: Math.round((kp - 2) * 10) / 10, label: 'геомагнітний' });
+  const nameMap = { 'Lᵢ': 'місяць', 'Mᵢ': 'затемнення', 'eᵢ': 'події', 'Pᵢ': 'панчанга', 'Dᵢ': 'DST' };
+  chips.forEach(c => {
+    const v = parseFloat(c.getAttribute('data-val'));
+    const nameEl = c.querySelector('.gd-chip-name');
+    const nm = (nameEl?.textContent || '').split(' ')[0];
+    if (isFinite(v) && nm) factors.push({ name: nm, val: v, label: nameMap[nm] || nm });
+  });
+  if (window._lastAiPi != null && window._lastAiPi !== 0) {
+    const existing = factors.find(f => f.name === 'Pᵢ');
+    if (!existing) factors.push({ name: 'Pᵢ', val: Number(window._lastAiPi), label: 'панчанга' });
+  }
+
+  factors.sort((a, b) => Math.abs(b.val) - Math.abs(a.val));
+  const rows = factors.filter(f => f.val !== 0).slice(0, 5);
+
+  if (!rows.length) { wrap.textContent = 'Фактори нейтральні'; if (driverEl) driverEl.textContent = ''; return; }
+
+  const maxAbs = Math.max(...rows.map(r => Math.abs(r.val)), 0.5);
+  wrap.innerHTML = rows.map(r => {
+    const col = r.val > 0 ? '#2bd47d' : '#ff6b6b';
+    const sign = r.val > 0 ? '+' : '';
+    const dir = r.val > 0 ? '↑' : '↓';
+    const w = Math.max(6, Math.abs(r.val) / maxAbs * 60);
+    return `<div style="display:flex;align-items:center;gap:6px;margin:1px 0">`
+      + `<span style="min-width:42px;color:${col};font-weight:700;font-variant-numeric:tabular-nums;text-align:right">${sign}${r.val.toFixed(1)}</span>`
+      + `<div style="width:${w}px;height:5px;border-radius:3px;background:${col};opacity:.7"></div>`
+      + `<span style="color:var(--muted)">${r.name}</span>`
+      + `<span style="color:var(--dim);font-size:11px">${dir} ${r.label}</span>`
+      + `</div>`;
+  }).join('');
+
+  // Main driver sentence
+  const d = rows[0];
+  if (driverEl && d) {
+    const verb = d.val > 0 ? 'підсилює' : 'знижує';
+    driverEl.textContent = `→ Основний драйвер: ${d.label} ${verb} G`;
+  }
+}
+
+// ═══ v78b: Hero Time Windows ═══
+function _renderHeroTimeWindows() {
+  const wrap = el('heroTimeSlots');
+  if (!wrap) return;
+  const slots = window._daySlots;
+  if (!slots || !slots.length) { wrap.innerHTML = '<span style="color:var(--dim)">Прогноз Kp-слотів недоступний</span>'; return; }
+
+  const nowH = new Date().getUTCHours();
+  const isPaid = PAYWALL.isPaid();
+  // Free: show current + next slot only; paid: all
+  const visibleSlots = isPaid ? slots : slots.filter(s => {
+    const h = parseInt(s.label || '0');
+    return (nowH >= h && nowH < h + 3) || (h > nowH);
+  }).slice(0, 2);
+
+  const lines = visibleSlots.map(s => {
+    const h = parseInt(s.label || '0');
+    const endH = h + 3;
+    const isCurrent = (nowH >= h && nowH < endH);
+    const g = s.G;
+    const col = g >= 1 ? '#2bd47d' : g >= 0 ? '#9bb1dc' : g >= -1 ? '#ffcc00' : '#ff6b6b';
+    const label = g >= 1.5 ? 'активний' : g >= 0.5 ? 'стабільний' : g >= -0.5 ? 'нейтральний' : g >= -1.5 ? 'обережність' : 'ризик';
+    const advice = g >= 1 ? 'OK для рішень' : g >= 0 ? 'рутинна робота' : g >= -1 ? 'без різких кроків' : 'уникати дій';
+    const mark = isCurrent ? ' ◀ зараз' : '';
+    const bold = isCurrent ? 'font-weight:700;' : '';
+    const sign = g >= 0 ? '+' : '';
+    return `<div style="display:flex;gap:6px;align-items:center;${bold}">`
+      + `<span style="min-width:72px;color:var(--dim);font-variant-numeric:tabular-nums">${String(h).padStart(2,'0')}:00–${String(endH).padStart(2,'0')}:00</span>`
+      + `<span style="min-width:38px;color:${col};font-weight:700;text-align:right">${sign}${g.toFixed(1)}</span>`
+      + `<span style="color:var(--muted)">${label} — ${advice}</span>`
+      + `<span style="color:var(--alt);font-size:10px">${mark}</span>`
+      + `</div>`;
+  });
+
+  if (!isPaid && slots.length > 2) {
+    lines.push(`<div style="margin-top:4px;padding:5px 10px;border-radius:8px;border:1px dashed rgba(55,167,255,.25);background:rgba(55,167,255,.05);font-size:11px;color:#8fb5ff;cursor:pointer" onclick="PaywallModal.show('G-Index Plus','basic')">🔒 Повний розклад (${slots.length} вікон) — у Plus</div>`);
+  }
+  wrap.innerHTML = lines.join('');
 }
 
 // ═══ v78: GLOBAL_STATES — єдиний source of truth для стану ═══
@@ -6087,16 +6157,16 @@ function lsRemove(key){ try{ localStorage.removeItem(key); }catch(e){} }
 
 // ═══ v76d: Personal human phrases ═══
 const PERSONAL_HUMAN = {
-  1: {state:'Фон для вас нестабільний.',action:'✖ Не перевантажуйте себе. ✔ Тримайтеся спокійного режиму.'},
-  2: {state:'Фон для вас загалом сприятливий.',action:'✖ Не поспішайте без потреби. ✔ Можна рухатись у звичних справах.'},
-  3: {state:'День для вас напружений.',action:'✖ Уникайте ризику. ✔ Дійте обережно і без різких кроків.'},
-  4: {state:'Фон для вас стабільний.',action:'✖ Не розпорошуйтесь. ✔ Працюйте у звичному режимі.'},
-  5: {state:'Фон для вас нестабільний.',action:'✖ Не починайте нових задач. ✔ Тримайтеся звичних дій.'},
-  6: {state:'Фон для вас робочий.',action:'✖ Не перевантажуйте день зайвим. ✔ Можна рухатись у важливих справах.'},
-  7: {state:'День для вас складний.',action:'✖ Не приймайте важливих рішень. ✔ Обмежтесь тільки необхідним.'},
-  8: {state:'Фон для вас сприятливий.',action:'✖ Не втрачайте темп. ✔ Можна діяти впевнено.'},
-  9: {state:'Фон для вас дуже сприятливий.',action:'✖ Не переоцінюйте сили. ✔ День підходить для активних дій.'},
-  0: {state:'Персональний фон нейтральний.',action:'✖ Уникайте зайвого ризику. ✔ Тримайте звичний режим.'}
+  1: {state:'⚠ Легка нестабільність', work:'✔ OK з обережністю', decisions:'✖ Краще відкласти', comms:'нейтрально'},
+  2: {state:'✔ Загалом сприятливо', work:'✔ OK', decisions:'✔ Можна приймати', comms:'✔ гарний час'},
+  3: {state:'⛔ День напружений', work:'✖ Мінімізувати', decisions:'✖ Уникати', comms:'✖ обережно'},
+  4: {state:'✔ Стабільний фон', work:'✔ OK', decisions:'✔ Стандартно', comms:'✔ нейтрально'},
+  5: {state:'⚠ Нестабільний фон', work:'✔ Тільки звичне', decisions:'✖ Не починати нове', comms:'нейтрально'},
+  6: {state:'✔ Робочий день', work:'✔ OK, можна активно', decisions:'✔ Можна', comms:'✔ гарний час'},
+  7: {state:'⛔ Складний день', work:'✖ Тільки необхідне', decisions:'✖ Не приймати', comms:'✖ уникати'},
+  8: {state:'✔ Сприятливо', work:'✔ OK, діяти впевнено', decisions:'✔ Так', comms:'✔ гарний час'},
+  9: {state:'🌟 Дуже сприятливо', work:'✔ Активно діяти', decisions:'✔ Оптимально', comms:'✔ ідеально'},
+  0: {state:'— Нейтральний фон', work:'✔ Стандартно', decisions:'нейтрально', comms:'нейтрально'}
 };
 function _personalModPhrase(m){
   var n=Number(m||0);
@@ -6178,7 +6248,7 @@ function renderPersonal() {
   const _phBrd = danger ? 'rgba(255,107,107,.22)' : taaraGmod>0 ? 'rgba(43,212,125,.22)' : 'rgba(255,255,255,.08)';
   const _phCol = danger ? '#ff8e8e' : taaraGmod>0 ? '#7fe3a6' : '#cfe0ff';
 
-  resEl.innerHTML = `${noTimeWarnHtml}<div style="padding:8px 10px;border-radius:10px;border:1px solid ${_phBrd};background:${_phBg}"><div style="font-size:13px;font-weight:700;line-height:1.35;color:${_phCol}">${_ph.state}</div><div style="font-size:12px;line-height:1.45;color:#b7c7ea;margin-top:3px">${_ph.action}${_phMod}</div></div><details style="margin-top:6px"><summary class="small muted" style="cursor:pointer;font-size:11px">▶ Показати персональний розклад</summary>${gmodHtml}<table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:6px">
+  resEl.innerHTML = `${noTimeWarnHtml}<div style="padding:8px 10px;border-radius:10px;border:1px solid ${_phBrd};background:${_phBg}"><div style="font-size:14px;font-weight:700;line-height:1.3;color:${_phCol}">${_ph.state}${_phMod}</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 12px;margin-top:6px;font-size:12px;line-height:1.5;color:#b7c7ea"><span style="color:var(--dim)">Робота:</span><span>${_ph.work}</span><span style="color:var(--dim)">Рішення:</span><span>${_ph.decisions}</span><span style="color:var(--dim)">Комунікації:</span><span>${_ph.comms}</span></div></div><details style="margin-top:6px"><summary class="small muted" style="cursor:pointer;font-size:11px">▶ Показати персональний розклад</summary>${gmodHtml}<table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:6px">
       <tr>
         <td class="muted" style="padding:3px 0;width:45%;border-bottom:1px solid #1a2540">Стоянка народження</td>
         <td style="padding:3px 0;border-bottom:1px solid #1a2540"><strong>${NAKSHATRA_UA[natal.idx]}</strong> <span class="muted">(${NAKSHATRA_NAMES[natal.idx]}, P${natal.pada})</span></td>
