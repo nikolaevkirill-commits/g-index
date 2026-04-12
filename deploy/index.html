@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v76b</title>
+  <title>G-Index — Космофізичний дашборд v78</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -631,7 +631,7 @@
     #opsGrid{margin:0 0 12px!important}
     #mainGrid{gap:12px!important;margin-bottom:12px}
     .card{border-radius:14px}
-    #heroBestWindow{margin-top:2px;font-size:11px;color:var(--muted)}
+    /* v78: heroBestWindow removed, replaced by heroNextBlock */
     #nowCard{opacity:.94!important;padding:14px 15px!important}
     #nowAdvancedBlock{margin-top:8px!important;padding-top:6px!important;border-top:1px solid rgba(42,59,97,.42)}
     #nowAdvancedBlock>summary{list-style:none;user-select:none}
@@ -835,8 +835,20 @@
             <div id="heroActionCmd" style="font-size:15px;font-weight:800;margin-top:4px;letter-spacing:.03em">—</div>
             <div id="heroAction">—</div>
             <div id="heroMainDrag" style="margin-top:6px;font-size:13px;font-weight:700;letter-spacing:.01em"></div>
+            <!-- v78: Hero Decision Layer -->
+            <div id="heroDecisionBlock" style="margin-top:8px">
+              <div id="heroDecisionDo" style="font-size:14px;font-weight:700;line-height:1.3;color:var(--ok)">—</div>
+              <div id="heroDecisionAvoid" style="font-size:12px;line-height:1.35;color:var(--muted);margin-top:2px">—</div>
+            </div>
+            <div id="heroImpactBlock" style="margin-top:6px;padding:7px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03)">
+              <div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);margin-bottom:3px">Практичний вплив</div>
+              <div id="heroImpactText" style="font-size:12px;line-height:1.4;color:#b7c7ea">—</div>
+            </div>
+            <div id="heroNextBlock" style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
+              <span class="pill" id="heroNextPill" style="font-size:11px">Наступна зміна: <span id="heroNextShift">—</span></span>
+              <span class="pill" id="heroBestPill" style="font-size:11px">Найкраще вікно: <span id="heroBestSlot">—</span></span>
+            </div>
             <div id="heroTopDrivers" style="margin-top:4px;display:flex;flex-direction:column;gap:3px;font-size:12px;max-width:320px"></div>
-            <div id="heroBestWindow" class="small muted" style="margin-top:2px;font-size:11px">—</div>
           </div>
         </div>
         <div class="hero-right">
@@ -1316,6 +1328,17 @@ Kp: 3-год індекс геомагнітної активності (0–9)
   <div id="stat27" style="margin-top:8px;padding:6px 12px;background:var(--card2);border-radius:8px;border:1px solid var(--border);font-size:11px;display:flex;flex-wrap:wrap;gap:8px 16px;color:var(--muted)"></div>
 </div><!-- /table27Wrap -->
       </section>
+
+    <!-- ═══ v78: PLUS TEASER ═══ -->
+    <div id="plusTeaserCard" style="margin:0 0 12px;padding:10px 14px;border-radius:12px;border:1px solid rgba(55,167,255,.22);background:rgba(55,167,255,.06)">
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#8fb5ff;margin-bottom:3px">G-Index Plus</div>
+      <div style="font-size:14px;font-weight:700;color:#dfe8ff;line-height:1.35;margin-bottom:4px">Знайте заздалегідь, коли день стане кращим або гіршим</div>
+      <div style="font-size:12px;line-height:1.4;color:#b7c7ea">14-денний прогноз · персональні сигнали · ранкові alerts · архів рішень</div>
+      <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <button onclick="PaywallModal.show('G-Index Plus','basic')">Відкрити Plus</button>
+        <span class="pill" style="font-size:11px;color:#8fb5ff;border-color:rgba(55,167,255,.3)">від $5/міс</span>
+      </div>
+    </div>
 
     <!-- ═══ BACKTEST: порівняння G дашборду з Excel ═══ -->
     <details class="card" id="backtestCard">
@@ -3343,7 +3366,7 @@ function renderCurrentPanel(){
   // ── Probability Layer v68 ────────────────────────────────────────────────
   if(isFinite(G)){
     const _probNow = calcProbabilityLayer({G, csConf:_csInline.conf, horizon:'now'});
-    renderNowProbability(_probNow);
+    // v78: renderNowProbability removed (hidden DOM); data kept for pipeline
     window._probNow = _probNow;
   }
 
@@ -3459,9 +3482,8 @@ function renderCurrentPanel(){
     renderHoraTimeline(nowUTC, kUse != null ? kUse : 0, G);
     const hora = calcHora(nowUTC);
     renderBestTime(nowUTC, kUse != null ? kUse : 0, G, 0);
-    renderCoStarBanner(G, kUse != null ? kUse : NaN, ai.phaseName || phaseNameByAngle(lunarPhaseDeg), hora);
-    updateSafeStateBanner(kUse != null ? kUse : NaN, ai.Ai);
-    renderDayForecast(last3D, kUse, ai);
+    // v78: renderCoStarBanner, updateSafeStateBanner removed (CSS-hidden targets)
+    renderDayForecast(last3D, kUse, ai); // v78: stripped to data-only (_daySlots)
     renderGDecomp(G, kUse, ai);
     renderProfileRec();
   }catch(e){ console.error('extras:', e); }
@@ -4118,68 +4140,24 @@ function renderPanchanga(dateUTC){
 }
 
 // ==================== КОМБО-ГРАФІК Kp (факт + прогноз) ====================
-// ─── renderDayForecast (v48) ────────────────────────────────────────────────
+// ─── renderDayForecast (v78: stripped, keep _daySlots data only) ─────────
 function renderDayForecast(last3D, kUse, ai) {
-  const block = el('dayForecastBlock');
-  const slotsEl = el('dayForecastSlots');
-  const summEl = el('dayForecastSummary');
-  if (!block) return;
   const todayStr = new Date().toISOString().slice(0, 10);
   const todayRow = last3D && Array.isArray(last3D.days)
-    ? last3D.days.find(d => fmtDate(d.date) === todayStr)
-    : null;
-  // v62: якщо сьогодні нема — беремо перший доступний день з прогнозу
+    ? last3D.days.find(d => fmtDate(d.date) === todayStr) : null;
   const useRow = todayRow || (last3D && Array.isArray(last3D.days) && last3D.days[0]) || null;
-  if (!useRow || !useRow.kp8 || !useRow.kp8.length) {
-    block.style.display = 'none'; return;
-  }
+  if (!useRow || !useRow.kp8 || !useRow.kp8.length) return;
   const kp8 = useRow.kp8;
   const todayNoon = noonUTC(useRow.date);
   const slotLabels = ['00','03','06','09','12','15','18','21'];
-  let slotsHtml = '';
-  const gValues = [];
-  window._daySlots = []; // v70.3: expose for Best Window
+  window._daySlots = [];
   for (let i = 0; i < kp8.length; i++) {
     const kp = kp8[i];
     if (!isFinite(kp)) continue;
     const aiSlot = computeAi(todayNoon, kp);
     const G = kp - 2 + aiSlot.Ai;
-    gValues.push({ i, kp, G, label: slotLabels[i] || String(i*3) });
     window._daySlots.push({ i, kp, G, label: slotLabels[i] || String(i*3) });
-    const col = G >= 1 ? 'var(--ok)' : G >= -1 ? 'var(--warn)' : 'var(--bad)';
-    const bg  = G >= 1 ? 'var(--ok-dim)' : G >= -1 ? 'var(--warn-dim)' : 'var(--bad-dim)';
-    const nowH = new Date().getUTCHours();
-    const isCurrent = (nowH >= i*3 && nowH < (i+1)*3);
-    const borderStyle = isCurrent ? 'border:2px solid ' + col + ';box-shadow:0 0 6px ' + col + '40;' : 'border:1px solid #1e2f52;';
-    const gSign = G >= 0 ? '+' : '';
-    slotsHtml += '<div style="display:flex;flex-direction:column;align-items:center;min-width:44px;padding:5px 6px;border-radius:8px;background:' + bg + ';' + borderStyle + '">'
-      + '<span style="font-size:10px;color:var(--dim);font-variant-numeric:tabular-nums">' + (slotLabels[i] || i*3) + 'h</span>'
-      + '<span style="font-size:13px;font-weight:700;color:' + col + '">' + gSign + G.toFixed(1) + '</span>'
-      + '<span style="font-size:9px;color:var(--dim)">Kp' + kp.toFixed(1) + '</span>'
-      + (isCurrent ? '<span style="font-size:8px;color:var(--alt)">◀ зараз</span>' : '')
-      + '</div>';
   }
-  let summText = '';
-  if (gValues.length) {
-    const best = gValues.reduce((a, b) => a.G > b.G ? a : b);
-    const worst = gValues.reduce((a, b) => a.G < b.G ? a : b);
-    const first = gValues[0].G, last_ = gValues[gValues.length - 1].G;
-    const trend = last_ - first;
-    const trendStr = Math.abs(trend) < 0.3 ? 'стабільний' : (trend > 0 ? '↗ зростає до вечора' : '↘ спадає до вечора');
-    const bestTime = best.label + ':00–' + (parseInt(best.label) + 3) + ':00 UTC';
-    const worstTime = worst.label + ':00–' + (parseInt(worst.label) + 3) + ':00 UTC';
-    const gAvg = gValues.reduce((s, v) => s + v.G, 0) / gValues.length;
-    const gAvgSign = gAvg >= 0 ? '+' : '';
-    const bSign = best.G >= 0 ? '+' : '';
-    const wSign = worst.G >= 0 ? '+' : '';
-    summText = 'Тренд: <strong>' + trendStr + '</strong> · Середнє G = ' + gAvgSign + gAvg.toFixed(1) + '<br>'
-      + (best.G >= 0 ? '🟢 Найкращий: ' : '🟡 Найменш несприятливий: ') + bestTime + ' (G ' + bSign + best.G.toFixed(1) + ') · '
-      + '🔴 Обережно: ' + worstTime + ' (G ' + wSign + worst.G.toFixed(1) + ')';
-  }
-  slotsEl.innerHTML = slotsHtml
-    + '<div style="width:100%;font-size:10px;color:var(--faint);margin-top:3px">Kp у слотах — прогноз NOAA (видано вранці). Факт Kp = nowCard.</div>';
-  summEl.innerHTML = summText;
-  block.style.display = slotsHtml ? 'block' : 'none';
 }
 
 // renderNowKpChart — видалено v32 (мертвий код, DOM-елементи відсутні)
@@ -4453,14 +4431,78 @@ function syncHero(){
     }).join('');
   }
 
-  // v70.3: best window in hero
-  _set('heroBestWindow',el('decisionWindow')?.textContent||'—');
+  // v78: Hero Decision Layer (GLOBAL_STATES)
+  const _gForState = _num(_firstText(el('nowG'))||el('nowG')?.textContent);
+  const _kpForState = _num(_firstText(el('nowKp')));
+  const _stKey = classifyStateByG(_gForState);
+  const _st = GLOBAL_STATES[_stKey];
+  _set('heroDecisionDo', _st.doText);
+  _set('heroDecisionAvoid', _st.avoidText);
+  const _doEl = el('heroDecisionDo');
+  if(_doEl) _doEl.style.color = _st.color;
+  _set('heroImpactText', _st.impact);
+
+  // Next shift + best window from decisionWindow
+  const _dwText = (el('decisionWindow')?.textContent||'').trim();
+  const _bestMatch = _dwText.match(/Найкраще:\s*([^(]+)/);
+  const _avoidMatch = _dwText.match(/Уникати:\s*([^\s·]+)/);
+  _set('heroBestSlot', _bestMatch ? _bestMatch[1].trim() : 'звичний режим');
+  _set('heroNextShift', _avoidMatch ? 'зміна о ' + _avoidMatch[1].trim() : 'без різкої зміни');
+}
+
+// ═══ v78: GLOBAL_STATES — єдиний source of truth для стану ═══
+const GLOBAL_STATES = {
+  favorable: {
+    cmd: '⚡ ДІЙ — оптимальне вікно',
+    doText: '✔ Можна діяти активно',
+    avoidText: '✖ Не перевантажуйте день без потреби',
+    impact: 'Концентрація і стійкість в межах норми. День підходить для запуску нових задач і планових рішень.',
+    color: 'var(--ok)', badge: '⚡ GO', badgeColor: '#2bd47d'
+  },
+  good: {
+    cmd: 'ДІЙ зараз',
+    doText: '✔ Рухайтесь у важливих справах',
+    avoidText: '✖ Не розпорошуйтесь на дрібниці',
+    impact: 'Фон підтримує активність. Можна приймати рішення і рухатись вперед у ключових напрямках.',
+    color: 'var(--ok)', badge: '● GO', badgeColor: '#63be7b'
+  },
+  neutral: {
+    cmd: 'ПЛАНУЙ, без різких рішень',
+    doText: '✔ Працюйте у стандартному режимі',
+    avoidText: '✖ Не приймайте різких рішень без потреби',
+    impact: 'Фон загалом рівний. Для рутини день нормальний, але важливі рішення краще приймати без поспіху.',
+    color: 'var(--muted)', badge: '● STABLE', badgeColor: '#9bb1dc'
+  },
+  unstable: {
+    cmd: 'УПОВІЛЬНИСЬ, не запускати',
+    doText: '✔ Тримайтеся звичних задач',
+    avoidText: '✖ Не починайте нових дій',
+    impact: 'Ризик помилок і перевантаження вищий за звичайний. Краще менше імпровізації і більше перевірених дій.',
+    color: 'var(--warn)', badge: '⚠ CAUTION', badgeColor: '#ffcc00'
+  },
+  tense: {
+    cmd: '🔴 СТОП — уникати критичних дій',
+    doText: '✔ Мінімізуйте активність',
+    avoidText: '✖ Уникайте важливих рішень і ризику',
+    impact: 'Фон напружений. День краще використовувати для підтримки, спостереження і мінімально необхідних дій.',
+    color: 'var(--bad)', badge: '🔴 HOLD', badgeColor: '#ff6b6b'
+  }
+};
+
+function classifyStateByG(g) {
+  if (!isFinite(g)) return 'neutral';
+  if (g >= 2) return 'favorable';
+  if (g >= 1) return 'good';
+  if (g >= 0) return 'neutral';
+  if (g > -2) return 'unstable';
+  return 'tense';
 }
 
 // --- DECISION ---
 function _decAction(g,kp){
   if(!isFinite(g)) return 'Немає даних';
-  let o=g>=2?'⚡ ДІЙ — оптимальне вікно':g>=1?'ДІЙ зараз':g>=0?'ПЛАНУЙ, без різких рішень':g>-2?'УПОВІЛЬНИСЬ, не запускати':'🔴 СТОП — уникати критичних дій';
+  const st = GLOBAL_STATES[classifyStateByG(g)];
+  let o = st.cmd;
   if(isFinite(kp)&&kp>=5) o+=' · ⚠ геомагнітна буря';
   return o;
 }
@@ -4827,7 +4869,9 @@ function syncV702UI(){
   try{mergeOpsCards();}catch(e){console.warn('mergeOpsCards:',e);}
   try{renderMoonRetroTop();}catch(e){console.warn('renderMoonRetroTop:',e);}
   try{syncPanchSummary();}catch(e){console.warn('syncPanchSummary:',e);}
-  try{refreshV73Layer();}catch(e){console.warn('v73:',e);}
+  // v78: refreshV73Layer removed; live parts called directly
+  try{renderAIExplain();}catch(e){console.warn('topDrivers:',e);}
+  try{renderConfidenceBreakdown();}catch(e){console.warn('confidence:',e);}
   try{renderKpContribution();}catch(e){console.warn("kpContrib:",e);}
   try{renderPanchPiLine();}catch(e){console.warn("panchPi:",e);}
   try{renderWf3();}catch(e){console.warn("wf3:",e);}
@@ -6043,16 +6087,16 @@ function lsRemove(key){ try{ localStorage.removeItem(key); }catch(e){} }
 
 // ═══ v76d: Personal human phrases ═══
 const PERSONAL_HUMAN = {
-  1: {state:'Фон для вас нестабільний.',action:'Краще знизити темп і не перевантажуватись.'},
-  2: {state:'Фон для вас загалом сприятливий.',action:'Можна діяти, але без перевантаження.'},
-  3: {state:'День для вас напружений.',action:'Варто діяти обережно і без ризику.'},
-  4: {state:'Фон для вас стабільний.',action:'Можна працювати у звичному режимі.'},
-  5: {state:'Фон для вас нестабільний.',action:'Краще не починати нічого нового.'},
-  6: {state:'Фон для вас робочий.',action:'Можна рухатись у важливих справах.'},
-  7: {state:'День для вас складний.',action:'Небажано приймати важливі рішення.'},
-  8: {state:'Фон для вас сприятливий.',action:'Можна діяти впевнено.'},
-  9: {state:'Фон для вас дуже сприятливий.',action:'День підходить для активних дій.'},
-  0: {state:'Персональний фон нейтральний.',action:'Можна тримати звичний режим.'}
+  1: {state:'Фон для вас нестабільний.',action:'✖ Не перевантажуйте себе. ✔ Тримайтеся спокійного режиму.'},
+  2: {state:'Фон для вас загалом сприятливий.',action:'✖ Не поспішайте без потреби. ✔ Можна рухатись у звичних справах.'},
+  3: {state:'День для вас напружений.',action:'✖ Уникайте ризику. ✔ Дійте обережно і без різких кроків.'},
+  4: {state:'Фон для вас стабільний.',action:'✖ Не розпорошуйтесь. ✔ Працюйте у звичному режимі.'},
+  5: {state:'Фон для вас нестабільний.',action:'✖ Не починайте нових задач. ✔ Тримайтеся звичних дій.'},
+  6: {state:'Фон для вас робочий.',action:'✖ Не перевантажуйте день зайвим. ✔ Можна рухатись у важливих справах.'},
+  7: {state:'День для вас складний.',action:'✖ Не приймайте важливих рішень. ✔ Обмежтесь тільки необхідним.'},
+  8: {state:'Фон для вас сприятливий.',action:'✖ Не втрачайте темп. ✔ Можна діяти впевнено.'},
+  9: {state:'Фон для вас дуже сприятливий.',action:'✖ Не переоцінюйте сили. ✔ День підходить для активних дій.'},
+  0: {state:'Персональний фон нейтральний.',action:'✖ Уникайте зайвого ризику. ✔ Тримайте звичний режим.'}
 };
 function _personalModPhrase(m){
   var n=Number(m||0);
@@ -7437,106 +7481,8 @@ function updateFreshnessBadge() {
   }
 }
 
-function updateSafeStateBanner(kp, ai) {
-  const banner = document.getElementById('safeStateBanner');
-  const txt    = document.getElementById('safeStateTxt');
-  const kpEl   = document.getElementById('safeStateKp');
-  if (!banner) return;
-  if (!isFinite(kp) || kp < 5) { banner.style.display = 'none'; return; }
-  const kpStr = kp.toFixed(1);
-  const level = kp >= 7 ? 'G3+ (Kp=' + kpStr + ')' : kp >= 6 ? 'G2 (Kp=' + kpStr + ')' : 'G1 (Kp=' + kpStr + ')';
-  // v70 E16-H: storm-positive — calendar signal moderates storm warning
-  const _aiVal = isFinite(ai) ? ai : 0;
-  const stormPos = _aiVal >= 2;
-  const msg = kp >= 7
-    ? (stormPos
-      ? '⚠ БУРЯ ' + level + ' — але календар сприятливий (ΣAᵢ≥2). Обережність, не паніка'
-      : '⛔ ЕКСТРЕМАЛЬНА БУРЯ ' + level + ' — ЗУПИНИТИ критичні операції')
-    : kp >= 6
-    ? (stormPos
-      ? '⚠ БУРЯ ' + level + ' — календар допомагає. Діяти з контролем'
-      : '⛔ СИЛЬНА БУРЯ ' + level + ' — УНИКАТИ активних дій')
-    : (stormPos
-      ? '⚠ БУРЯ ' + level + ' — календар нейтралізує частину ризику'
-      : '⚠ БУРЯ ' + level + ' — підвищена обережність, контроль о/с');
-  const col = kp >= 7 ? (stormPos ? '#fca474' : '#ff4444') : kp >= 6 ? (stormPos ? '#e8d44d' : '#ff6b6b') : '#fca474';
-  txt.textContent = msg;
-  txt.style.color = col;
-  if (kpEl) kpEl.textContent = 'NOAA G-scale: ' + level;
-  banner.style.borderBottomColor = col;
-  banner.style.display = '';
-}
-
-function renderCoStarBanner(G, kp, phaseName, hora) {
-  const el_ = document.getElementById('costarBanner');
-  if(!el_) return;
-
-  let sentence = '';
-  let col = '#9bb1dc';
-
-  const gR = isFinite(G) ? Math.round(G) : 0;
-  const kpStr = isFinite(kp) ? kp.toFixed(1) : '—';
-
-  // v26.2: Storm override — Kp≥5 завжди попередження
-  // v70 E16-H: storm-positive — коли Kp≥5 але ΣAᵢ≥2, пом'якшуємо повідомлення
-  const _aiFromG = isFinite(G) && isFinite(kp) ? G - (kp - 2) : 0;
-  if(isFinite(kp) && kp >= 7) {
-    if(_aiFromG >= 2) {
-      sentence = `⚠ БУРЯ G3+ (Kp = ${kpStr}), але календар сприятливий (ΣAᵢ=${_aiFromG.toFixed(1)}). Обережність потрібна, проте день не втрачений.`;
-      col = '#fca474';
-    } else {
-      sentence = `⛔ БУРЯ G3+ (Kp = ${kpStr}): серйозна геомагнітна буря — утриматись від критичних дій і рішень.`;
-      col = '#ff6b6b';
-    }
-  } else if(isFinite(kp) && kp >= 5) {
-    if(_aiFromG >= 2) {
-      sentence = `⚠ БУРЯ (Kp = ${kpStr}), але календар сприятливий (ΣAᵢ=${_aiFromG.toFixed(1)}). Стандартна обережність, дії допустимі.`;
-      col = '#e8d44d';
-    } else {
-      sentence = `⚠ БУРЯ (Kp = ${kpStr}): геомагнітна буря активна. Підвищена обережність, контроль стану о/с.`;
-      col = '#fca474';
-    }
-  } else if(gR <= -3) {
-    sentence = `⛔ Сьогодні G = ${G.toFixed(1)}: несприятливий астрокалендар (Kp=${kpStr}) — утримайся від будь-яких критичних дій.`;
-    col = '#ff6b6b';
-  } else if(gR === -2) {
-    sentence = `⚠ Kp = ${kpStr}, ${phaseName} — підвищена напруга. Мінімізуй ризики, відклади важливі рішення.`;
-    col = '#fca474';
-  } else if(gR === -1) {
-    sentence = `〽 Помірно несприятливо (G = ${G.toFixed(1)}). Діяти можна, але з підвищеною уважністю.`;
-    col = '#ffcc00';
-  } else if(gR === 0) {
-    sentence = `➖ Нейтральний день: Kp = ${kpStr}, ${phaseName}. Стандартний режим роботи.`;
-    col = '#9bb1dc';
-  } else if(gR === 1) {
-    sentence = `✅ Сприятливо (G = ${G.toFixed(1)}): Kp спокійний, ${hora ? hora.planet + ' Hora' : phaseName} — хороший час для планування.`;
-    col = '#63be7b';
-  } else {
-    sentence = `🌟 Оптимальний день (G = ${G.toFixed(1)}): геомагнетизм та календар сприятливі — час для активних рішень.`;
-    col = '#2bd47d';
-  }
-
-  // G_особистий рядок
-  const gos = calcGPersonal(G, kp);
-  let gosHtml = '';
-  if (gos) {
-    const gosR = Math.round(gos.Gos);
-    const gosCol = gosR <= -2 ? '#ff6b6b' : gosR <= -1 ? '#fca474' : gosR >= 2 ? '#2bd47d' : gosR >= 1 ? '#63be7b' : '#9bb1dc';
-    const partsStr = gos.parts ? ` (G=${isFinite(G)?G.toFixed(1):'—'}, ${gos.parts})` : '';
-    const icon = gos.taara.danger ? '⚠' : '👤';
-    gosHtml = `<div style="margin-top:5px;font-size:12px;color:${gosCol}">${icon} ${gos.name}: G_ос = <strong>${gos.Gos >= 0 ? '+' : ''}${gos.Gos.toFixed(1)}</strong>${partsStr}</div>`;
-  }
-
-  // P2-ux: сезонний бейдж R-M
-  const _rmNow = new Date();
-  const _rmMo = _rmNow.getUTCMonth()+1, _rmDa = _rmNow.getUTCDate();
-  const _inSpringRM = (_rmMo===3 && _rmDa>=5) || (_rmMo===4 && _rmDa<=4);
-  const _inAutumnRM = (_rmMo===9 && _rmDa>=7) || (_rmMo===10 && _rmDa<=7);
-  const _rmBadge = (_inSpringRM || _inAutumnRM)
-    ? `<span title="Russell-McPherron: підвищена вразливість до сонячного вітру" style="display:inline-block;margin-left:8px;padding:1px 7px;border-radius:999px;border:1px solid #b06020;background:#2a1800;color:#ffaa44;font-size:10px;font-weight:600;vertical-align:middle">🌀 R-M вікно ${_inSpringRM?'весна':'осінь'}</span>`
-    : '';
-  el_.innerHTML = `<span style="color:${col}">${sentence}</span>${_rmBadge}${gosHtml}`;
-}
+// v78: updateSafeStateBanner removed (safeStateBanner CSS-hidden)
+// v78: renderCoStarBanner removed (costarBanner CSS-hidden in nowCard)
 
 // ========================= SCIENCE BAR UPDATE =========================
 function updateScienceBar(kp, ap, sn, ai, phaseName, phaseDeg, f107) {
@@ -8762,25 +8708,7 @@ function calcProbabilityLayer({G, csConf=1, horizon='now'}={}){
   };
 }
 
-function renderNowProbability(prob){
-  if(!prob) return;
-  const block = document.getElementById('probNowBlock');
-  if(block) block.style.display='block';
-  const soft  = document.getElementById('riskPctNow');
-  const hard  = document.getElementById('hardRiskPctNow');
-  const label = document.getElementById('riskLabelNow');
-  if(soft)  soft.textContent  = prob.pSoftPct+'%';
-  if(hard)  hard.textContent  = prob.pHardPct+'%';
-  if(label) label.textContent = prob.labelUA;
-  // colour band
-  const cells = ['probCellSoft','probCellHard'];
-  cells.forEach(id=>{
-    const el2 = document.getElementById(id);
-    if(!el2) return;
-    el2.classList.remove('risk-low','risk-moderate','risk-elevated','risk-high');
-    el2.classList.add('risk-'+prob.band);
-  });
-}
+// v78: renderNowProbability removed (targets CSS-hidden probNowBlock)
 
 // G-Index PWA — Service Worker registration + update UX
 let _swReg = null;
@@ -8862,37 +8790,9 @@ function _v73Kp(){
   return _num((_firstText?.(el('nowKp'))||el('nowKp')?.textContent||'').replace(',','.'));
 }
 
+// v78: renderAIExplain stripped — only _renderTopDrivers is live
 function renderAIExplain(){
   const g=_v73G(), kp=_v73Kp();
-  const tag=(el('nowTag')?.textContent||'').trim();
-  const risk=(el('riskLabelNow')?.textContent||'').trim();
-  let headline='Стан не визначено', advice='Недостатньо даних.';
-  const reasons=[];
-  if(isFinite(g)){
-    if(g>=1.5){headline='Сильне вікно для активних дій';advice='Запускайте важливі задачі, узгодження, рішення з високим навантаженням.';}
-    else if(g>=0){headline='Стабільний фон без вираженого тиску';advice='Підходить для планових рішень, але без зайвого ризику.';}
-    else if(g>-2){headline='Помірне навантаження — обережність';advice='Не запускати критичне нове, працювати в режимі контролю.';}
-    else{headline='Негативне вікно — уникати ризиків';advice='Утриматись від важливих стартів та перевантаження.';}
-  }
-  if(isFinite(kp)){
-    if(kp>=5) reasons.push({cls:'bad',txt:'Kp '+kp.toFixed(1)+' · буря'});
-    else if(kp>=3) reasons.push({cls:'warn',txt:'Kp '+kp.toFixed(1)+' · напруга'});
-    else reasons.push({cls:'good',txt:'Kp '+kp.toFixed(1)+' · спокійно'});
-  }
-  if(tag){
-    const cls=/екада|siddha|amrita|sarvartha/i.test(tag)?'good':/амава|vishti|naidhana|critical/i.test(tag)?'bad':'warn';
-    reasons.push({cls,txt:tag});
-  }
-  if(risk){
-    const cls=/висок|підвищ/i.test(risk)?'bad':/помір/i.test(risk)?'warn':'good';
-    reasons.push({cls,txt:'Ризик: '+risk});
-  }
-  const h=el('aiHeadline'),r=el('aiReasons'),a=el('aiAdvice');
-  if(h) h.textContent=headline;
-  if(a) a.textContent=advice;
-  if(r) r.innerHTML=reasons.slice(0,4).map(x=>'<span class="ai-reason '+x.cls+'">'+escapeHtml(x.txt)+'</span>').join('');
-
-  // v74: sorted ΔG top drivers in heroTopDrivers
   _renderTopDrivers(g, kp);
 }
 
@@ -8968,122 +8868,40 @@ function _bindDriverHover(){
   });
 }
 
+// v78: renderConfidenceBreakdown stripped — only heroConfidence is live
 function renderConfidenceBreakdown(){
-  // v74: formula-based confidence from real data
-  const cb=el('confBadge'),bars=el('confBars'),note=el('confNote');
-  if(!bars) return;
-
-  // 1. Data freshness — from SW timestamps or freshness badge
   const fb=el('freshnessBadge');
   const fbText=(fb?.textContent||'').toLowerCase();
   const freshScore = fbText.includes('live')?95 : fbText.includes('cached')?60 : 30;
-
-  // 2. Signal agreement — do Kp and ΣAᵢ agree in direction?
   const g=_v73G(), kp=_v73Kp();
   let agreeScore=70;
   if(isFinite(g)&&isFinite(kp)){
     const kpPart=kp-2, aiPart=g-kpPart;
-    // Same sign = agree
     if((kpPart>=0&&aiPart>=0)||(kpPart<0&&aiPart<0)) agreeScore=90;
-    else if(Math.abs(kpPart-aiPart)>3) agreeScore=35; // strong conflict
+    else if(Math.abs(kpPart-aiPart)>3) agreeScore=35;
     else agreeScore=55;
   }
-
-  // 3. Volatility — high Kp = less predictable
   let volScore=85;
-  if(isFinite(kp)){
-    if(kp>=7) volScore=30; else if(kp>=5) volScore=45; else if(kp>=4) volScore=65;
-  }
-
-  // 4. Missing data — check which sources are loaded
+  if(isFinite(kp)){ if(kp>=7) volScore=30; else if(kp>=5) volScore=45; else if(kp>=4) volScore=65; }
   let missingCount=0;
   ['sciKp','sciDst','sciPhase','sciPi'].forEach(id=>{
     const v=(el(id)?.textContent||'').trim();
     if(!v||v==='—'||v==='…') missingCount++;
   });
   const dataScore = Math.max(20, 100 - missingCount*20);
-
-  const rows=[
-    {label:'Свіжість даних',val:freshScore,col:freshScore>=80?'#2bd47d':freshScore>=60?'#ffcc00':'#ff6b6b'},
-    {label:'Згода сигналів',val:agreeScore,col:agreeScore>=70?'#37a7ff':'#ffcc00'},
-    {label:'Волатильність',val:volScore,col:volScore>=70?'#2bd47d':volScore>=50?'#ffcc00':'#ff6b6b'},
-    {label:'Повнота даних',val:dataScore,col:dataScore>=80?'#2bd47d':'#ff6b6b'}
-  ];
-  const avg=Math.round(rows.reduce((s,r)=>s+r.val,0)/rows.length);
-  if(cb) cb.textContent=avg+'%';
-  if(bars) bars.innerHTML=rows.map(r=>{
-    const pulseClass=r.val<50?' pulse':'';
-    return '<div class="conf-row"><div class="conf-label">'+r.label+'</div><div class="conf-track"><div class="conf-fill'+pulseClass+'" style="width:'+r.val+'%;background:'+r.col+'"></div></div><div class="conf-val">'+r.val+'%</div></div>';
-  }).join('');
-  if(note) note.textContent=avg>=80?'Висока впевненість: всі джерела свіжі, сигнали узгоджені.':avg>=60?'Середня впевненість: є конфлікт або затримка даних.':'Знижена впевненість: стале дані або конфлікт — трактувати як advisory.';
-
-  // Also update hero confidence
+  const avg=Math.round((freshScore+agreeScore+volScore+dataScore)/4);
   const hc=el('heroConfidence');
   if(hc) hc.textContent=avg+'%';
 }
 
-function renderPatternAlert(){
-  const g=_v73G(),kp=_v73Kp();
-  const b=el('anomalyBadge'),t=el('anomalyText');
-  const card=el('anomalyCard');
-  let badge='normal',text='',hasTrigger=false;
-  if(isFinite(g)&&isFinite(kp)){
-    if(g<-2&&kp<3){badge='rare';text='Рідкісний патерн: негативний G без геомагнітної бурі. Домінують календарно-хронобіологічні фактори.';hasTrigger=true;}
-    else if(g>1.5&&kp>=4){badge='contrarian';text='Контрсигнал: попри магнітну напругу, сумарні фактори дають позитивне вікно.';hasTrigger=true;}
-    else if(kp>=5){badge='storm';text='Штормовий режим: буря переважає інші фактори.';hasTrigger=true;}
-    // v75: ΔG deterioration trigger
-    const delta=_getGDelta();
-    if(delta.d3h!=null && delta.d3h<-1.5 && !hasTrigger){badge='deterioration';text='Різке погіршення G за останні 3 год (Δ='+delta.d3h.toFixed(1)+').';hasTrigger=true;}
-  }
-  if(card){
-    if(!hasTrigger){card.style.display='none';}
-    else{card.style.display='';card.open=true;}
-  }
-  if(b) b.textContent=badge;
-  if(t) t.textContent=text;
-}
-
-function renderScenarioStrip(){
-  const wrap=el('scenarioStrip'),narrative=el('scenarioNarrative');
-  if(!wrap||!narrative) return;
-  const pills=[];
-  const q=[...document.querySelectorAll('#threeQuick > *')].slice(0,3);
-  q.forEach(node=>{
-    const txt=(node.textContent||'').trim();
-    if(!txt) return;
-    const cls=/особливо|діяти|сприят/i.test(txt)?'good':/уникати|stop|ризик/i.test(txt)?'bad':'neutral';
-    pills.push('<span class="scenario-pill '+cls+'">'+escapeHtml(txt)+'</span>');
-  });
-  wrap.innerHTML=pills.join('');
-  const chartHint=el('trend27Summary')?.textContent?.trim()||'';
-  narrative.textContent=chartHint||'Найближчі 3 дні визначають оперативний режим, 27 днів — фоновий тренд.';
-}
-
-function refreshV73Layer(){
-  try{renderAIExplain();}catch(e){console.warn('v73 AI:',e);}
-  try{renderConfidenceBreakdown();}catch(e){console.warn('v73 Conf:',e);}
-  try{renderPatternAlert();}catch(e){console.warn('v73 Alert:',e);}
-  try{renderScenarioStrip();}catch(e){console.warn('v73 Scenario:',e);}
-}
-
-function renderSuperSignal(g){
-  const b=document.getElementById('superSignalBadge'),t=document.getElementById('superSignalText');if(!b||!t)return;
-  if(!isFinite(g)){b.textContent='N/A';t.textContent='Недостатньо даних';return}
-  if(g>=1.5){b.textContent='⚡ GO';b.style.color='#2bd47d';b.style.borderColor='#2bd47d44';t.textContent='Сильне вікно для запуску, рішень і активних дій'}
-  else if(g>=-0.5){b.textContent='● STABLE';b.style.color='#9bb1dc';b.style.borderColor='#9bb1dc44';t.textContent='Стандартний режим без вираженого тиску'}
-  else if(g>=-2.5){b.textContent='⚠ CAUTION';b.style.color='#ffcc00';b.style.borderColor='#ffcc0044';t.textContent='Приховане навантаження — діяти обережно'}
-  else{b.textContent='🔴 HOLD';b.style.color='#ff6b6b';b.style.borderColor='#ff6b6b44';t.textContent='Невдале вікно для ризикових рішень'}
-}
+// v78: removed renderPatternAlert, renderScenarioStrip, refreshV73Layer, renderSuperSignal (targets CSS-hidden)
 
 function applyWowFromG(){
   let g=NaN;const h=document.getElementById('heroG');
   if(h){const m=h.textContent.match(/-?\d+(\.\d+)?/);if(m)g=parseFloat(m[0])}
-  // Get Kp for data-driven animation speed
   const kpEl=document.getElementById('nowKp');
   if(kpEl){const km=kpEl.textContent.match(/\d+(\.\d+)?/);if(km)window._lastKpForWow=parseFloat(km[0])}
-  startWowOrb(g);renderSuperSignal(g);
-  const dc=document.getElementById('decisionCard');
-  if(dc){dc.classList.remove('decision-live');void dc.offsetWidth;dc.classList.add('decision-live')}
+  startWowOrb(g);
 }
 
 function initHeroField(){
