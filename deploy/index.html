@@ -701,6 +701,8 @@
     .scenario-pill.bad{border-color:rgba(255,107,107,.35);color:#ff6b6b}
     #scenarioNarrative{font-size:13px;line-height:1.55;color:#cfe0ff}
     @media(max-width:860px){#v73TopLayer{grid-template-columns:1fr}#aiExplainCard,#confidenceBreakdownCard,#anomalyCard,#scenarioStripCard{grid-column:auto}}
+    /* v76c: CSS-hide old blocks — verify before replacing with wf3 */
+    #opsGrid, #v73TopLayer { display:none !important; }
   </style>
 
   <meta name="theme-color" content="#0b1220">
@@ -7546,6 +7548,7 @@ function updateScienceBar(kp, ap, sn, ai, phaseName, phaseDeg, f107) {
     _el('sciMi').textContent = ai.Mi;
     _el('sciEi').textContent = ai.ei;
     _el('sciPi').textContent = ai.Pi;
+    window._lastAiPi = ai.Pi;
   }
 }
 
@@ -9091,7 +9094,8 @@ function renderKpContribution(){
 
 // ═══ v76b: Panchanga Pi line ═══
 function renderPanchPiLine(){
-  var src=el('sciPi')?el('sciPi').textContent.trim():'';
+  var raw=window._lastAiPi;
+  var src=(raw!=null)?String(raw):'';
   var dst=el('panchPiLine');
   if(!dst) return;
   if(!src||src==='\u2014'||src==='\u2026'){dst.textContent='P\u1d62 = \u2014';dst.style.color='';return;}
