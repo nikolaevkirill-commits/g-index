@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v78e</title>
+  <title>G-Index — Космофізичний дашборд v79</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -774,6 +774,12 @@
     .next-shift-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:999px;font-size:11px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);color:var(--text2);margin-top:6px}
     .next-shift-badge .live-dot{width:6px;height:6px;border-radius:50%;background:#63be7b;animation:liveDot 1.4s ease-in-out infinite}
     @keyframes liveDot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.8)}}
+    /* v79: hero alert line */
+    .hero-alert-line{margin-top:6px;padding:6px 10px;border-radius:10px;font-size:12px;line-height:1.4;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03)}
+    .hero-alert-line.level-info{border-color:rgba(102,183,255,.18);color:#a8ccf0}
+    .hero-alert-line.level-watch{border-color:rgba(255,204,82,.2);color:#ffe0a0;background:rgba(255,204,82,.04)}
+    .hero-alert-line.level-warn{border-color:rgba(255,155,82,.22);color:#ffcba0;background:rgba(255,155,82,.05)}
+    .hero-alert-line.level-critical{border-color:rgba(255,107,120,.25);color:#ffc0c8;background:rgba(255,107,120,.07)}
   </style>
 
   <meta name="theme-color" content="#0b1220">
@@ -902,6 +908,8 @@
               <div class="pill" style="flex-direction:column;align-items:flex-start;padding:4px 8px;min-width:70px"><span style="font-size:9px;color:var(--dim)">Ризик</span><span id="heroRiskChip" style="font-size:11px;font-weight:700">—</span></div>
               <div class="pill" style="flex-direction:column;align-items:flex-start;padding:4px 8px;min-width:70px"><span style="font-size:9px;color:var(--dim)">Потенціал</span><span id="heroPotentialChip" style="font-size:11px;font-weight:700">—</span></div>
             </div>
+            <!-- v79: Alert line -->
+            <div id="heroAlertLine" class="hero-alert-line level-info" style="display:none">—</div>
             <!-- v78b: Cause decomp (inline, replaces heroImpactBlock) -->
             <div id="heroCauseBlock" style="margin-top:6px;padding:6px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.025)">
               <div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);margin-bottom:3px">Що формує G</div>
@@ -957,7 +965,7 @@
         <div id="whyMain" class="why-main">—</div>
       </section>
       <section id="timingCard" class="core-card">
-        <div class="timing-title">Критичні вікна (сьогодні)</div>
+        <div class="timing-title" id="timingTitle">Критичні вікна (сьогодні)</div>
         <div id="timingRows">—</div>
         <div id="timingNextShift"></div>
       </section>
@@ -4517,25 +4525,58 @@ function syncHero(){
     _heroEl.classList.add('hero-state-'+_stKey);
   }
 
-  // v78e: IMPACT block
-  const IMPACT_TEXT = {
-    favorable: { good: '→ максимальна продуктивність і якість рішень', bad: '→ втрата оптимального вікна' },
-    good:      { good: '→ стабільний результат, якісні рішення', bad: '→ ризик неоптимальних дій' },
-    neutral:   { good: '→ стабільний результат', bad: '→ ризик помилки ↑' },
-    unstable:  { good: '→ мінімізація ризику', bad: '→ підвищена ймовірність помилок' },
-    tense:     { good: '→ захист від критичних помилок', bad: '→ високий ризик невдалих рішень' }
+  // v79: Trend-aware tone system
+  const _delta = _getGDelta();
+  const _d3h = _delta.d3h || 0;
+  const _trend = Math.abs(_d3h) >= 0.4 ? (_d3h > 0 ? 'worsening_fast' : 'improving_fast')
+    : Math.abs(_d3h) >= 0.1 ? (_d3h > 0 ? 'worsening' : 'improving') : 'flat';
+  const _confNum = parseInt((el('heroConfidence')?.textContent||'75').replace('%','')) || 75;
+  const _confLvl = _confNum >= 80 ? 'high' : _confNum >= 60 ? 'mid' : 'low';
+
+  // v79: Strong HERO text (trend-aware)
+  const HERO_STRONG = {
+    favorable: 'ДІЙ АКТИВНО — СИЛЬНЕ ВІКНО МОЖЛИВОСТЕЙ',
+    good: 'МОЖНА ДІЯТИ — СПРИЯТЛИВИЙ МОМЕНТ',
+    neutral: 'СТАБІЛЬНИЙ ДЕНЬ — БЕЗ РІЗКИХ РІШЕНЬ',
+    unstable: 'НЕ ПОЧИНАЙ НОВЕ — ПІДВИЩЕНИЙ РИЗИК',
+    tense: 'СТОП — ВИСОКИЙ РИЗИК ПОМИЛКИ'
   };
-  const _imp = IMPACT_TEXT[_stKey] || IMPACT_TEXT.neutral;
+  let _heroText = HERO_STRONG[_stKey] || HERO_STRONG.neutral;
+  if (_stKey === 'neutral' && _trend === 'improving') _heroText = 'СТАБІЛЬНО → СТАЄ КРАЩЕ';
+  if (_stKey === 'neutral' && _trend.startsWith('worsening')) _heroText = 'ОБЕРЕЖНО — ФОН ПОГІРШУЄТЬСЯ';
+  if (_stKey === 'unstable' && _trend.startsWith('worsening')) _heroText = 'НЕ ПОЧИНАЙ НОВЕ — СИТУАЦІЯ ПОГІРШУЄТЬСЯ';
+  if (_stKey === 'good' && _trend.startsWith('improving')) _heroText = 'МОМЕНТ ПОСИЛЮЄТЬСЯ — МОЖНА ДІЯТИ';
+  // v79: low confidence handled by alert line, not hero title
+  _set('heroActionCmd', _heroText);
+
+  // v79: Strong IMPACT (trend-aware)
+  const IMPACT_TREND = {
+    worsening: { good: '→ зменшиш ризик погіршення', bad: '→ ситуація може погіршитись швидше' },
+    improving: { good: '→ використаєш покращення ситуації', bad: '→ втратиш момент росту' }
+  };
+  const IMPACT_BASE = {
+    favorable: { good: '→ максимум результату при тих самих зусиллях', bad: '→ втратиш сильне вікно можливостей' },
+    good:      { good: '→ підвищений шанс успішного результату', bad: '→ втратиш можливість росту' },
+    neutral:   { good: '→ стабільний і передбачуваний результат', bad: '→ локальні помилки через поспіх' },
+    unstable:  { good: '→ збережеш контроль над ситуацією', bad: '→ ризик втрат часу та ресурсів ↑' },
+    tense:     { good: '→ зменшиш ризик серйозної помилки', bad: '→ високий шанс неправильного рішення' }
+  };
+  const _imp = _trend.startsWith('worsening') ? IMPACT_TREND.worsening
+    : _trend.startsWith('improving') ? IMPACT_TREND.improving
+    : (IMPACT_BASE[_stKey] || IMPACT_BASE.neutral);
   _set('impactGoodText', _imp.good);
   _set('impactBadText', _imp.bad);
 
-  // v78e: mini-chips (Стан / Ризик / Потенціал)
-  const RISK_MAP = { favorable:'мінімальний', good:'низький', neutral:'низький', unstable:'середній', tense:'високий' };
-  const POT_MAP = { favorable:'високий', good:'середній', neutral:'середній', unstable:'низький', tense:'мінімальний' };
-  const STATE_MAP = { favorable:'сприятливий', good:'стабільний', neutral:'нейтральний', unstable:'нестабільний', tense:'напружений' };
+  // v79: mini-chips with stronger words
+  const RISK_MAP = { favorable:'мінімальний', good:'низький', neutral:'низький', unstable:'підвищений', tense:'високий' };
+  const POT_MAP = { favorable:'максимальний', good:'хороший', neutral:'стандартний', unstable:'обмежений', tense:'мінімальний' };
+  const STATE_MAP = { favorable:'сприятливий', good:'стабільний', neutral:'рівний', unstable:'нестабільний', tense:'напружений' };
   _set('heroStateChip', STATE_MAP[_stKey] || '—');
   _set('heroRiskChip', RISK_MAP[_stKey] || '—');
   _set('heroPotentialChip', POT_MAP[_stKey] || '—');
+
+  // v79: Alert in hero
+  _renderHeroAlert(gVal, _d3h, _confNum, _stKey);
 
   // v78b: Cause decomposition — show what forms G
   _renderHeroCause(gVal, kpH);
@@ -4569,32 +4610,32 @@ function _renderHeroCause(g, kp) {
   factors.sort((a, b) => Math.abs(b.val) - Math.abs(a.val));
   const mainName = factors[0]?.name;
 
-  // Show all factors including zeros for completeness
-  // v78d: add panchanga detail to Pᵢ row
+  // v79: split into active and neutral factors
+  const activeFact = factors.filter(f => Math.abs(f.val) >= 0.05);
+  const neutralFact = factors.filter(f => Math.abs(f.val) < 0.05);
+
   const pc = window._lastPanchCtx;
   const panchDetail = pc ? [pc.tithi?.name, pc.karana?.name].filter(Boolean).join(' · ') : '';
   const panchWarn = pc?.karana?.isVishti ? ' ⛔' : '';
-  // v78d: human Panchanga effect text
   function _panchEffect(pi) {
     const v = Number(pi || 0);
     if (v >= 1.5) return 'підтримує день';
     if (v <= -1.5) return 'створює напруження';
     if (v < -0.3) return 'додає нестабільність';
     if (v > 0.3) return 'сприяє';
-    return 'нейтральна';
+    return 'не впливає';
   }
 
-  whyRows.innerHTML = factors.slice(0, 6).map(f => {
-    const col = f.val > 0 ? '#2bd47d' : f.val < 0 ? '#ff6b6b' : 'var(--dim)';
+  // Active factors with full detail
+  let html = activeFact.map(f => {
+    const col = f.val > 0 ? '#2bd47d' : '#ff6b6b';
     const sign = f.val > 0 ? '+' : '';
-    const dir = f.val > 0 ? '↑' : f.val < 0 ? '↓' : '•';
-    const isMain = f.name === mainName && f.val !== 0;
+    const dir = f.val > 0 ? '↑' : '↓';
+    const isMain = f.name === mainName;
     let detail = '';
     if (f.name === 'Pᵢ') {
       const effect = _panchEffect(f.val);
-      detail = panchDetail
-        ? ` <span style="color:var(--faint);font-size:10px">${effect} (${panchDetail}${panchWarn})</span>`
-        : ` <span style="color:var(--faint);font-size:10px">${effect}</span>`;
+      detail = panchDetail ? ` <span style="color:var(--faint);font-size:10px">${effect} (${panchDetail}${panchWarn})</span>` : '';
     }
     return `<div class="why-row${isMain ? ' is-main' : ''}">`
       + `<div class="why-name">${f.name} <span style="color:var(--dim);font-size:11px">${f.label}</span>${detail}</div>`
@@ -4603,13 +4644,22 @@ function _renderHeroCause(g, kp) {
       + `</div>`;
   }).join('');
 
+  // Neutral factors collapsed into one line
+  if (neutralFact.length > 0) {
+    const names = neutralFact.map(f => f.label).join(', ');
+    html += `<div class="why-row"><div class="why-name" style="color:var(--faint)">${names} — не впливають</div><div class="why-val" style="color:var(--faint)">0.0</div><div class="why-dir" style="color:var(--faint)">•</div></div>`;
+  }
+
+  whyRows.innerHTML = html || '<span style="color:var(--dim)">Усі фактори нейтральні</span>';
+
   if (whyMain) {
-    const d = factors.find(f => f.val !== 0);
+    const d = activeFact[0];
     if (d) {
       const verb = d.val > 0 ? 'підсилює' : 'знижує';
-      whyMain.innerHTML = `→ Основний драйвер: <strong>${d.label}</strong> ${verb} G`;
+      const restNote = neutralFact.length >= 3 ? '; інші фактори не впливають' : '';
+      whyMain.innerHTML = `→ Стан визначає <strong>${d.label}</strong>${restNote}`;
     } else {
-      whyMain.textContent = 'Усі фактори нейтральні';
+      whyMain.textContent = '→ Усі фактори нейтральні — день рівний без вираженого тиску';
     }
   }
 }
@@ -4644,6 +4694,29 @@ function _renderHeroTimeWindows() {
   const _panchTimingNote = _vishti ? 'Vishti підсилює ризик' : (_panchPi <= -1.5 ? (_pc?.karana?.name || 'Панчанга') + ' створює напруження' : _panchPi < -0.3 ? (_pc?.karana?.name || 'Панчанга') + ' додає нестабільність' : '');
   const _rahuActive = _pc?.rahu?.active;
 
+  // v79: detect flat day (all slots within 0.5 of each other)
+  const _gValues = slots.map(s => s.G);
+  const _gSpread = Math.max(..._gValues) - Math.min(..._gValues);
+  const _isFlat = _gSpread < 0.5;
+
+  // v79: update timing title based on day type
+  const _timTitle = el('timingTitle');
+  if (_timTitle) _timTitle.textContent = _isFlat ? 'Локальний ритм (день рівний)' : 'Критичні вікна (сьогодні)';
+
+  // v79: pre-compute hora for each slot when flat
+  const _horaForSlot = {};
+  if (_isFlat) {
+    try {
+      const now = new Date();
+      visibleSlots.forEach(s => {
+        const h = parseInt(s.label || '0');
+        const slotMid = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), h + 1, 30));
+        const hora = calcHora(slotMid);
+        _horaForSlot[h] = hora;
+      });
+    } catch(e) {}
+  }
+
   const lines = visibleSlots.map(s => {
     const h = parseInt(s.label || '0');
     const endH = h + 3;
@@ -4651,7 +4724,16 @@ function _renderHeroTimeWindows() {
     const isNext = (nextIdx >= 0 && slots[nextIdx] === s);
     const g = s.G;
     const col = g >= 1 ? '#2bd47d' : g >= 0 ? '#9bb1dc' : g >= -1 ? '#ffcc00' : '#ff6b6b';
-    let label = g >= 1.5 ? 'активно діяти, приймати рішення' : g >= 0.5 ? 'безпечно працювати' : g >= -0.5 ? 'стандартні задачі' : g >= -1.5 ? 'обережність, без нового' : 'уникати активних дій';
+
+    let label;
+    if (_isFlat && _horaForSlot[h]) {
+      // Flat day: show hora quality instead of generic G label
+      const hora = _horaForSlot[h];
+      const hq = HORA_QUALITY[hora.planet];
+      label = hq ? `${hora.planet} — добре для ${hq.q}` : `${hora.planet} hora`;
+    } else {
+      label = g >= 1.5 ? 'активно діяти, приймати рішення' : g >= 0.5 ? 'безпечно працювати' : g >= -0.5 ? 'стандартні задачі' : g >= -1.5 ? 'обережність, без нового' : 'уникати активних дій';
+    }
     // Panchanga overlay
     if (_panchTimingNote && g < 0.5) label += ` (${_panchTimingNote})`;
     if (_rahuActive && isCurrent) label += ' · Rahu';
@@ -4686,6 +4768,66 @@ function _renderHeroTimeWindows() {
       shiftEl.innerHTML = '';
     }
   }
+}
+
+// ═══ v79: Hero Alert ═══
+const HORA_QUALITY = {
+  'Сонце': {q:'авторитет, лідерство', tone:'good'},
+  'Місяць': {q:'інтуїція, комунікації', tone:'good'},
+  'Марс': {q:'рішучість, ризик', tone:'warn'},
+  'Меркурій': {q:'аналітика, переговори', tone:'good'},
+  'Юпітер': {q:'стратегія, навчання', tone:'best'},
+  'Венера': {q:'креатив, партнерства', tone:'good'},
+  'Сатурн': {q:'фокус, дисципліна', tone:'neutral'}
+};
+
+function _renderHeroAlert(g, d3h, confNum, stKey) {
+  const alertEl = el('heroAlertLine');
+  if (!alertEl) return;
+  const worsening = d3h >= 0.2;
+  const improving = d3h <= -0.2;
+  const absG = Math.abs(g || 0);
+
+  let text = '', level = 'info';
+
+  if (confNum < 60) {
+    text = '◔ Дані неповні або кешовані — оцінку варто читати обережно';
+    level = 'watch';
+  } else if (absG >= 2 && worsening) {
+    text = '⚠ Фон критичний і погіршується — уникайте будь-яких активних дій';
+    level = 'critical';
+  } else if (absG >= 1.5 && worsening) {
+    text = '▲ Фон напружений і погіршується — важливі рішення краще відкласти';
+    level = 'warn';
+  } else if (stKey === 'tense') {
+    text = '⚠ Напружений день — мінімізуйте активність';
+    level = 'warn';
+  } else if (stKey === 'unstable' && worsening) {
+    text = '▲ Нестабільний фон з тенденцією до погіршення';
+    level = 'watch';
+  } else if (improving && stKey !== 'tense') {
+    text = '• Ситуація покращується — скоро відкриється краще вікно';
+    level = 'info';
+  } else if (stKey === 'favorable' || stKey === 'good') {
+    text = '• Сприятливий фон — використовуйте вікно для ключових дій';
+    level = 'info';
+  } else {
+    // neutral + flat — show hora instead of empty alert
+    try {
+      const hora = calcHora(new Date());
+      const hq = HORA_QUALITY[hora.planet];
+      if (hq) {
+        text = `• ${hora.planet} hora — ${hq.q} (ще ${hora.minLeft} хв)`;
+      } else {
+        text = `• ${hora.planet} hora (ще ${hora.minLeft} хв)`;
+      }
+    } catch(e) { text = '• Стан без різких змін'; }
+    level = 'info';
+  }
+
+  alertEl.textContent = text;
+  alertEl.className = 'hero-alert-line level-' + level;
+  alertEl.style.display = text ? '' : 'none';
 }
 
 // ═══ v78: GLOBAL_STATES — єдиний source of truth для стану ═══
