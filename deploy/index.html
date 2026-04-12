@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v73</title>
+  <title>G-Index — Космофізичний дашборд v75</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -645,7 +645,32 @@
     #personalCard h2{font-size:15px!important}
     #personalResult td{padding:2px 5px!important;font-size:11px!important}
     #stormStoryCard,#triggerCard{display:none!important;height:0!important;margin:0!important;padding:0!important;overflow:hidden!important}
-    #gaugeMoonWrap{display:none!important}
+    /* gaugeMoonWrap removed v74 */
+
+    /* ===== v74 PATCHES ===== */
+    /* Chip hover explainability */
+    .gd-chip[data-dg]{cursor:pointer;position:relative}
+    .gd-chip[data-dg]:hover{transform:scale(1.08);z-index:5}
+    .gd-chip[data-dg]:hover::after{content:attr(data-dg);position:absolute;top:-22px;left:50%;transform:translateX(-50%);background:#0a1428;border:1px solid #2a3b61;border-radius:6px;padding:2px 7px;font-size:10px;color:#cfe0ff;white-space:nowrap;z-index:10;pointer-events:none}
+    /* Data freshness indicator */
+    .freshness-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;vertical-align:middle}
+    .freshness-dot.live{background:#2bd47d;box-shadow:0 0 6px #2bd47d88}
+    .freshness-dot.stale{background:#ffcc00;box-shadow:0 0 6px #ffcc0088}
+    .freshness-dot.old{background:#ff6b6b;box-shadow:0 0 6px #ff6b6b88}
+    /* 27-day chart tooltip */
+    #chart27Tooltip{position:absolute;background:rgba(10,20,40,.95);border:1px solid #2a3b61;border-radius:8px;padding:6px 10px;font-size:11px;color:#cfe0ff;pointer-events:none;z-index:20;white-space:nowrap;display:none;box-shadow:0 4px 16px rgba(0,0,0,.4)}
+    /* Top drivers sorted */
+    .driver-row{display:flex;align-items:center;gap:6px;font-size:12px;margin:2px 0}
+    .driver-bar{height:6px;border-radius:3px;min-width:4px;transition:width .4s}
+    .driver-label{min-width:36px;font-weight:700;font-variant-numeric:tabular-nums}
+    /* Confidence formula-based */
+    .conf-fill.pulse{animation:confPulse 2s ease-in-out infinite}
+    @keyframes confPulse{0%,100%{opacity:1}50%{opacity:.7}}
+    /* Pattern/Scenario collapsed */
+    #anomalyCard>summary::-webkit-details-marker{display:none}
+    #scenarioStripCard>summary::-webkit-details-marker{display:none}
+    #anomalyCard[open]>summary .v74-arrow,#scenarioStripCard[open]>summary .v74-arrow{transform:rotate(90deg)}
+
     /* ===== v73 PRODUCT LAYER ===== */
     #v73TopLayer{display:grid;grid-template-columns:1.2fr .9fr;gap:12px;margin:0 0 12px}
     #aiExplainCard{grid-column:1}
@@ -676,6 +701,46 @@
     .scenario-pill.bad{border-color:rgba(255,107,107,.35);color:#ff6b6b}
     #scenarioNarrative{font-size:13px;line-height:1.55;color:#cfe0ff}
     @media(max-width:860px){#v73TopLayer{grid-template-columns:1fr}#aiExplainCard,#confidenceBreakdownCard,#anomalyCard,#scenarioStripCard{grid-column:auto}}
+/* ═══ WF3 v76 ═══ */
+.wf3-shell{display:flex;flex-direction:column;gap:12px;margin:0 0 14px}
+.wf3-hero{display:grid;grid-template-columns:1.3fr .8fr;gap:12px}
+.wf3-hero-left,.wf3-quality,.wf3-card{background:#0f172a;border:1px solid #1e2a44;border-radius:14px;padding:14px}
+.wf3-hero-left{display:flex;gap:14px;align-items:center}
+.wf3-g-wrap{min-width:120px;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.wf3-g{font-size:38px;font-weight:800;line-height:1;color:#ffd166;letter-spacing:-.03em}
+.wf3-trend{margin-top:6px;font-size:11px;color:#8aa0c8}
+.wf3-state{font-size:22px;font-weight:800;line-height:1.15;color:#e7efff}
+.wf3-action{margin-top:6px;font-size:14px;color:#c7d7f5;line-height:1.45}
+.wf3-bullets{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.wf3-chip{display:inline-flex;align-items:center;padding:7px 10px;border-radius:999px;font-size:12px;font-weight:700;border:1px solid #2a3b61;background:#0b1220}
+.wf3-chip.ok{color:#2bd47d;border-color:rgba(43,212,125,.35)}
+.wf3-chip.bad{color:#ff8d8d;border-color:rgba(255,107,107,.35)}
+.wf3-q-head{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:#8aa0c8;margin-bottom:10px}
+.wf3-q-row{display:grid;grid-template-columns:86px 1fr 42px;gap:8px;align-items:center;margin-bottom:8px;font-size:12px}
+.wf3-bar{height:8px;background:#182338;border-radius:999px;overflow:hidden}
+.wf3-fill{height:100%;width:0%;background:#37a7ff;border-radius:999px;transition:width .35s ease}
+.wf3-q-foot{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.wf3-badge{display:inline-flex;align-items:center;padding:5px 9px;border-radius:999px;font-size:11px;border:1px solid #2a3b61;background:#0b1220;color:#cfe0ff}
+.wf3-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.wf3-card-title{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:#8aa0c8;margin-bottom:10px}
+.wf3-drivers{display:flex;flex-direction:column;gap:8px}
+.wf3-driver{display:grid;grid-template-columns:58px 1fr 44px;gap:8px;align-items:center;font-size:13px}
+.wf3-driver-name{color:#d8e4fb;font-weight:700}
+.wf3-driver-track{height:8px;background:#182338;border-radius:999px;overflow:hidden}
+.wf3-driver-fill{height:100%;background:#ffb347;border-radius:999px;width:0%}
+.wf3-driver-val{text-align:right;color:#cfe0ff;font-weight:700}
+.wf3-timeline{display:flex;gap:6px;flex-wrap:wrap}
+.wf3-slot{min-width:60px;padding:8px 6px;border-radius:10px;border:1px solid #223251;background:#0b1220;text-align:center}
+.wf3-slot-time{font-size:11px;color:#8aa0c8}
+.wf3-slot-g{margin-top:4px;font-size:15px;font-weight:800;color:#e7efff}
+.wf3-slot.best{border-color:rgba(43,212,125,.45)}
+.wf3-slot.worst{border-color:rgba(255,107,107,.45)}
+.wf3-meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;font-size:12px;color:#9fb3d9}
+#panchCard{min-height:auto!important;align-self:start}
+#nowCard{padding:12px 14px!important}
+#mainGrid{align-items:start}
+#panchCard,#personalCard{height:auto!important;min-height:auto!important}
+@media(max-width:860px){.wf3-hero,.wf3-grid{grid-template-columns:1fr}.wf3-hero-left{flex-direction:column;align-items:flex-start}}
   </style>
 
   <meta name="theme-color" content="#0b1220">
@@ -793,7 +858,7 @@
             <div id="heroCat">—</div>
             <div id="heroActionCmd" style="font-size:15px;font-weight:800;margin-top:4px;letter-spacing:.03em">—</div>
             <div id="heroAction">—</div>
-            <div id="heroTopDrivers" style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;font-size:12px"></div>
+            <div id="heroTopDrivers" style="display:none!important;margin-top:6px;flex-direction:column;gap:3px;font-size:12px;max-width:320px"></div>
             <div id="heroBestWindow" class="small muted" style="margin-top:2px;font-size:11px">—</div>
           </div>
         </div>
@@ -877,84 +942,55 @@
     </div>
     <div id="profileRec"></div>
 
-    <!-- ═══ v70.3 OPS GRID ═══ -->
-    <section id="opsGrid">
-      <section class="card" id="decisionCard">
-        <div class="flex" style="margin-bottom:6px">
-          <h2 style="margin:0;font-size:16px">Рішення</h2>
-          <span id="decisionMode" class="pill right">Normal</span>
-        </div>
-        <div id="decisionNow">—</div>
-        <div id="decisionAction" style="margin-top:6px;font-size:14px;font-weight:700">—</div>
-        <div id="decisionWhy" style="margin-top:8px;padding:8px 12px;background:#0a1020;border:1px solid #1a2a44;border-radius:8px;font-size:12px;line-height:1.6;display:none"></div>
-        <div id="superSignal" style="margin-top:8px;padding:10px 12px;border-radius:10px;background:#0a1020;border:1px solid #1a2a44;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-          <span style="font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em">Signal</span>
-          <span id="superSignalBadge" class="pill" style="font-weight:700;font-size:15px">—</span>
-          <span id="superSignalText" class="small muted" style="flex:1;min-width:160px">—</span>
-        </div>
-        <div id="decisionNext" class="muted" style="margin-top:4px">—</div>
-        <div id="decisionWindow" class="small muted" style="margin-top:4px">—</div>
-        <div id="decisionTags" class="flex" style="margin-top:6px;gap:6px;flex-wrap:wrap"></div>
-        <details style="margin-top:6px">
-          <summary class="small muted" style="cursor:pointer;user-select:none">📖 Деталі прогнозу ▶</summary>
-          <div id="decisionNarrative" class="small muted" style="margin-top:4px;line-height:1.45">—</div>
-        </details>
-      </section>
-
-      <section class="card" id="radarCard">
-        <div class="flex" style="margin-bottom:6px">
-          <h2 style="margin:0;font-size:16px">Opportunity / Risk</h2>
-          <span class="pill right">live</span>
-        </div>
-        <div class="radar-grid">
-          <div class="radar-box radar-good">
-            <div class="label">Opportunity</div>
-            <div id="radarOpportunity" class="radar-main">—</div>
+    <!-- ═══ WIREFRAME V3 (v76) ═══ -->
+    <section id="wfV3" class="wf3-shell">
+      <section class="wf3-hero">
+        <div class="wf3-hero-left">
+          <div class="wf3-g-wrap">
+            <div id="wf3G" class="wf3-g">G …</div>
+            <div id="wf3Trend" class="wf3-trend">—</div>
           </div>
-          <div class="radar-box radar-bad">
-            <div class="label">Risk</div>
-            <div id="radarRisk" class="radar-main">—</div>
-          </div>
-          <div class="radar-box radar-neutral radar-wide">
-            <div class="label">Window</div>
-            <div id="radarWindow" class="radar-sub">—</div>
+          <div class="wf3-hero-copy">
+            <div id="wf3State" class="wf3-state">—</div>
+            <div id="wf3Action" class="wf3-action">—</div>
+            <div id="wf3MainDrag" class="small" style="margin-top:6px;color:#9bb1dc">Main drag: —</div>
+            <div class="wf3-bullets">
+              <span id="wf3Do" class="wf3-chip ok">—</span>
+              <span id="wf3Avoid" class="wf3-chip bad">—</span>
+            </div>
           </div>
         </div>
-        <div id="radarTriggers" class="trigger-wrap" style="margin-top:10px"></div>
+        <div class="wf3-quality">
+          <div class="wf3-q-head">Data Quality</div>
+          <div class="wf3-q-row"><span>Freshness</span><div class="wf3-bar"><div id="wf3FreshFill" class="wf3-fill"></div></div><strong id="wf3FreshVal">—</strong></div>
+          <div class="wf3-q-row"><span>Agreement</span><div class="wf3-bar"><div id="wf3AgreeFill" class="wf3-fill"></div></div><strong id="wf3AgreeVal">—</strong></div>
+          <div class="wf3-q-row"><span>Stability</span><div class="wf3-bar"><div id="wf3StableFill" class="wf3-fill"></div></div><strong id="wf3StableVal">—</strong></div>
+          <div class="wf3-q-foot">
+            <span id="wf3FreshnessBadge" class="wf3-badge">—</span>
+            <span id="wf3QualityScore" class="wf3-badge">Quality —</span>
+          </div>
+        </div>
+      </section>
+      <section class="wf3-grid">
+        <section class="wf3-card">
+          <div class="wf3-card-title">Top Drivers</div>
+          <div id="wf3Drivers" class="wf3-drivers"></div>
+        </section>
+        <section class="wf3-card">
+          <div class="wf3-card-title">Today Timeline</div>
+          <div id="wf3Timeline" class="wf3-timeline"></div>
+          <div class="wf3-meta">
+            <span id="wf3Best">Best: —</span>
+            <span id="wf3Worst">Worst: —</span>
+            <span id="wf3Delta3">Δ3h: —</span>
+            <span id="wf3Delta24">Δ24h: —</span>
+          </div>
+        </section>
       </section>
     </section>
 
-    <!-- hidden: data sources for merge -->
-    <section class="card" id="stormStoryCard" style="display:none!important">
-      <div id="stormStoryText" class="small">—</div>
-    </section>
-    <section class="card" id="triggerCard" style="display:none!important">
-      <div id="triggerList" class="trigger-wrap">—</div>
-    </section>
 
-    <!-- ═══ v73 PRODUCT LAYER ═══ -->
-    <section id="v73TopLayer">
-      <section id="aiExplainCard" class="card">
-        <div class="v73-head"><h2>🧠 AI Explain</h2><span class="pill" id="aiExplainMode">live</span></div>
-        <div id="aiHeadline">—</div>
-        <div id="aiReasons"></div>
-        <div id="aiAdvice">—</div>
-      </section>
-      <section id="confidenceBreakdownCard" class="card">
-        <div class="v73-head"><h2>📊 Confidence</h2><span class="pill" id="confBadge">—</span></div>
-        <div id="confBars"></div>
-        <div id="confNote"></div>
-      </section>
-      <section id="anomalyCard" class="card">
-        <div class="v73-head"><h2>⚡ Pattern Alert</h2><span class="pill" id="anomalyBadge">normal</span></div>
-        <div id="anomalyText">—</div>
-      </section>
-      <section id="scenarioStripCard" class="card">
-        <div class="v73-head"><h2>🔮 Scenario</h2><span class="pill">3d + 27d</span></div>
-        <div id="scenarioStrip"></div>
-        <div id="scenarioNarrative"></div>
-      </section>
-    </section>
+
 
     <!-- Двоколонковий лейаут: Поточний стан | Панчанга + Особистий -->
     <div id="mainGrid">
@@ -974,6 +1010,7 @@
 
         <div class="flex mono" style="margin-top:6px;gap:10px">
           <span id="nowKp" class="kbadge k-ok">Kp …</span>
+          <span id="nowKpPart" class="pill" style="font-size:11px">Kp−2 = —</span>
           <span id="nowAp" class="pill">Ap ≈ —</span>
           <span id="nowSn" class="pill" style="display:none"></span>
           <span id="nowAi" class="aibadge hint" style="display:none" tabindex="0"></span>
@@ -1095,10 +1132,7 @@
 
         </details>
 
-        <!-- Moon + Planets (moved to astroGrid top) -->
-        <div id="gaugeMoonWrap" style="margin-top:10px;display:none">
-          <svg id="gaugeMoonSvg" width="100%" viewBox="0 0 480 90" style="display:block;width:100%;overflow:visible"></svg>
-        </div>
+        <!-- gaugeMoonWrap removed v74 (dead code, moved to astroGrid) -->
 
         <!-- Bar chart Kp removed -->
       </section>
@@ -1109,9 +1143,11 @@
           <h2 style="margin:0;font-size:16px">Панчанга <span class="muted" style="font-weight:400;font-size:13px">— хронобіол. стан доби</span></h2>
           <span class="pill right" id="panchDate" style="font-size:12px">—</span>
         </div>
-        <div id="panchSummaryLine" style="font-size:13px;margin-bottom:6px;line-height:1.5">—</div>
+        <div id="panchSummaryLine" style="font-size:13px;margin-bottom:4px;line-height:1.4">—</div>
+        <div id="panchPiLine" class="small muted" style="margin-bottom:6px">Pᵢ = —</div>
+        <div id="panchCompactRow" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px"><span id="panchChip1" class="pill" style="font-size:11px;padding:3px 8px">—</span><span id="panchChip2" class="pill" style="font-size:11px;padding:3px 8px">—</span><span id="panchChip3" class="pill" style="font-size:11px;padding:3px 8px">—</span></div>
         <details id="panchDetails">
-          <summary class="small muted" style="cursor:pointer;font-size:11px">▶ Показати деталі</summary>
+          <summary class="small muted" style="cursor:pointer;font-size:11px">▶ Деталі</summary>
           <div id="panchGrid" style="margin-top:8px">
             <div class="muted small">Завантаження…</div>
           </div>
@@ -1238,8 +1274,9 @@ Kp: 3-год індекс геомагнітної активності (0–9)
         </div>
         <div id="twentysevenError" class="err small"></div>
         <!-- Графік G(t) — головний вигляд -->
-        <div id="chart27Wrap" style="display:block;margin:10px 0 4px">
+        <div id="chart27Wrap" style="display:block;margin:10px 0 4px;position:relative">
           <canvas id="chart27" style="width:100%;height:220px"></canvas>
+          <div id="chart27Tooltip"></div>
         </div>
         <div id="table27Wrap" style="display:none">
         <table id="tbl27">
@@ -4770,16 +4807,16 @@ function syncWhy(){
 // --- MASTER ---
 function syncV702UI(){
   try{syncHero();}catch(e){console.warn('syncHero:',e);}
-  try{syncDecision();}catch(e){console.warn('syncDecision:',e);}
-  try{syncWhy();}catch(e){console.warn('syncWhy:',e);}
-  try{syncExplain();}catch(e){console.warn('syncExplain:',e);}
-  try{syncStory();}catch(e){console.warn('syncStory:',e);}
-  try{syncRadar();}catch(e){console.warn('syncRadar:',e);}
-  try{syncTriggers();}catch(e){console.warn('syncTriggers:',e);}
-  try{mergeOpsCards();}catch(e){console.warn('mergeOpsCards:',e);}
   try{renderMoonRetroTop();}catch(e){console.warn('renderMoonRetroTop:',e);}
   try{syncPanchSummary();}catch(e){console.warn('syncPanchSummary:',e);}
-  try{refreshV73Layer();}catch(e){console.warn('v73:',e);}
+  // v76: wf3 wireframe
+  try{syncWf3();}catch(e){console.warn('syncWf3:',e);}
+  try{renderKpContribution();}catch(e){console.warn('kpContrib:',e);}
+  try{renderPanchPiLine();}catch(e){console.warn('panchPi:',e);}
+  try{renderPanchCompact();}catch(e){console.warn('panchCompact:',e);}
+  try{renderMainDrag();}catch(e){console.warn('mainDrag:',e);}
+  // v76: save G to history
+  try{const _gNow=_v73G();if(isFinite(_gNow))_saveGHistory(_gNow);}catch(e){}
 }
 
 async function loadAll(){
@@ -5332,75 +5369,10 @@ function calcMoonTransit(nowJDE, fraction) {
 // Layout: [Місяць 80px зліва] [міні-шкала G + значення справа]
 // Сонце/Земля/орбіта прибрані — є в планетній анімації
 function renderGaugeMoon(G, phaseDeg, kp, phaseName) {
-  const wrap = document.getElementById('gaugeMoonWrap');
-  const svg  = document.getElementById('gaugeMoonSvg');
-  if(!wrap || !svg) return;
-
+  // v75: gauge SVG removed (gaugeMoonWrap dead since v74), keep moonMini + planetAnim
   const toRad = d => d * Math.PI / 180;
   const illum = (1 - Math.cos(toRad(phaseDeg))) / 2;
-
-  // Місяць — компактний 80px (radius=38), центр (45,45)
-  const mbx=45, mby=45, mbr=38;
-  const termX = (mbr * Math.cos(toRad(phaseDeg))).toFixed(1);
-  const gCol = G <= -2.5 ? '#ff4444' : G <= -0.5 ? '#ffaa33' : G >= 1.5 ? '#2bd47d' : G >= 0.5 ? '#63be7b' : '#9bb1dc';
-  const gLabel = G <= -2.5 ? 'НЕБЕЗПЕЧНО' : G <= -0.5 ? 'НЕСПРИЯТЛ.' : G >= 1.5 ? 'СПРИЯТЛИВО' : G >= 0.5 ? 'ПОМІРНО +' : 'НЕЙТРАЛЬНО';
-
-  // Міні G-шкала: 7 кроків від -3 до +3, горизонтальна
-  const SCALE_STEPS = [-3,-2,-1,0,1,2,3];
-  const SCALE_COLS  = ['#ff2222','#ff5555','#ff9933','#9bb1dc','#63be7b','#2bd47d','#1ab86a'];
-  const SX0=120, SY0=45, SW=280, SH=14; // шкала x0, y_center, width, height
-  const stepW = SW / (SCALE_STEPS.length - 1);
-  let scaleBars = '';
-  SCALE_STEPS.forEach((v, i) => {
-    const cx = SX0 + i * stepW;
-    const isActive = (i === 0 && G <= -2.5) || (i === 6 && G >= 2.5) ||
-      (i > 0 && i < 6 && G >= v - 0.5 && G < v + 0.5);
-    const r = isActive ? 7 : 5;
-    scaleBars += `<circle cx="${cx.toFixed(1)}" cy="${SY0}" r="${r}" fill="${SCALE_COLS[i]}" opacity="${isActive?1:0.3}"/>`;
-    scaleBars += `<text x="${cx.toFixed(1)}" y="${SY0+18}" font-size="8" fill="${isActive?SCALE_COLS[i]:'#3a5070'}" text-anchor="middle">${v>0?'+'+v:v}</text>`;
-  });
-  // Лінія шкали
-  let scaleLine = `<line x1="${SX0}" y1="${SY0}" x2="${SX0+SW}" y2="${SY0}" stroke="#1a2f50" stroke-width="2"/>`;
-  // Поточне значення G — стрілка/маркер
-  const gClamped = Math.max(-3, Math.min(3, isFinite(G) ? G : 0));
-  const markerX = SX0 + (gClamped + 3) / 6 * SW;
-  const markerMark = `<polygon points="${markerX.toFixed(1)},${SY0-10} ${(markerX-6).toFixed(1)},${SY0-20} ${(markerX+6).toFixed(1)},${SY0-20}" fill="${gCol}"/>`;
-
   const moonPhaseWarning = (phaseName==='Пурніма (Повня)'||phaseName==='Амавасья');
-
-  const moonSvg = `
-  <defs>
-    <clipPath id="moonBigClip"><circle cx="${mbx}" cy="${mby}" r="${mbr}"/></clipPath>
-  </defs>
-
-  <!-- ── Місяць (компактний) ── -->
-  <circle cx="${mbx}" cy="${mby}" r="${mbr}" fill="#111108"/>
-  ${phaseDeg <= 180
-    ? `<rect x="${mbx}" y="${mby-mbr}" width="${mbr}" height="${mbr*2}" fill="#c0c0b0" clip-path="url(#moonBigClip)"/>
-       <ellipse cx="${mbx}" cy="${mby}" rx="${Math.abs(termX)}" ry="${mbr}" fill="${illum<0.5?'#111108':'#c0c0b0'}" clip-path="url(#moonBigClip)"/>`
-    : `<rect x="${mbx-mbr}" y="${mby-mbr}" width="${mbr}" height="${mbr*2}" fill="#c0c0b0" clip-path="url(#moonBigClip)"/>
-       <ellipse cx="${mbx}" cy="${mby}" rx="${Math.abs(termX)}" ry="${mbr}" fill="${illum<0.5?'#111108':'#c0c0b0'}" clip-path="url(#moonBigClip)"/>`
-  }
-  <circle cx="${mbx}" cy="${mby}" r="${mbr}" fill="none" stroke="${moonPhaseWarning?'#ff9933':'#2a3050'}" stroke-width="${moonPhaseWarning?1.5:1}"/>
-  <!-- кратери -->
-  <circle cx="${mbx+10}" cy="${mby-6}" r="4" fill="none" stroke="#1a1a15" stroke-width="1" opacity="0.5"/>
-  <circle cx="${mbx-8}" cy="${mby+11}" r="2.8" fill="none" stroke="#1a1a15" stroke-width="0.9" opacity="0.45"/>
-  <circle cx="${mbx+5}" cy="${mby+15}" r="3.2" fill="none" stroke="#1a1a15" stroke-width="0.9" opacity="0.4"/>
-  <text x="${mbx}" y="${mby+mbr+11}" font-size="8.5" fill="#9bb1dc" text-anchor="middle">${phaseName}${moonPhaseWarning?' ⚠':''}</text>
-  <text x="${mbx}" y="${mby+mbr+21}" font-size="7.5" fill="#4a6080" text-anchor="middle">${(illum*100).toFixed(0)}% освітл.</text>
-
-  <!-- ── Міні G-шкала ── -->
-  ${scaleLine}
-  ${scaleBars}
-  ${markerMark}
-
-  <!-- G значення та підпис -->
-  <text x="${(SX0 + SW/2).toFixed(1)}" y="22" font-size="9" fill="#4a6080" text-anchor="middle" letter-spacing="1">ІНДЕКС G</text>
-  <text x="${(SX0 + SW/2).toFixed(1)}" y="14" font-size="18" fill="${gCol}" text-anchor="middle" font-weight="800" dy="0">${isFinite(G)?G.toFixed(1):'—'}</text>
-  <text x="${(SX0 + SW*0.75).toFixed(1)}" y="22" font-size="8" fill="${gCol}" text-anchor="middle" opacity="0.85">${gLabel}</text>
-  `;
-
-  svg.innerHTML = moonSvg;
 
   // v70.8: compact moon-only SVG for astroGrid moonCard
   const moonMini = document.getElementById('moonMiniSvg');
@@ -6048,10 +6020,7 @@ function taaraDangerClass(danger) {
   return danger ? 'color:#ff6b6b;font-weight:600' : 'color:#2bd47d;font-weight:600';
 }
 
-// ═══ v26: Safe localStorage (sandbox/iframe може блокувати) ═══
-function lsGet(key){ try{ return localStorage.getItem(key); }catch(e){ return null; } }
-function lsSet(key, val){ try{ localStorage.setItem(key, val); }catch(e){} }
-function lsRemove(key){ try{ localStorage.removeItem(key); }catch(e){} }
+// [v76] duplicate lsGet/lsSet removed — kept v75 version below
 
 function renderPersonal() {
   const data = getSlotData(_activeSlot);
@@ -6528,14 +6497,31 @@ function draw27Chart(){
   ctx.stroke();
 
   // ── Точки з кольором ──
+  // v75: find best/worst
+  let bestIdx=-1, worstIdx=-1, bestG=-Infinity, worstG=Infinity;
+  data.forEach((d,i)=>{
+    if(!isFinite(d.G)) return;
+    if(d.G>bestG){bestG=d.G;bestIdx=i;}
+    if(d.G<worstG){worstG=d.G;worstIdx=i;}
+  });
   data.forEach((d,i)=>{
     if(!isFinite(d.G)) return;
     const x = xOf(i), y = yOf(d.G);
     const col = d.G<=-2.5?'#ff4444':d.G<=-0.5?'#ffaa33':d.G>=0.5?'#2bd47d':'#9bb1dc';
+    const isBest=i===bestIdx, isWorst=i===worstIdx;
     ctx.fillStyle = col;
     ctx.beginPath();
-    ctx.arc(x, y, d.ds===todayStr?4:2.5, 0, Math.PI*2);
+    ctx.arc(x, y, d.ds===todayStr?4:isBest||isWorst?4:2.5, 0, Math.PI*2);
     ctx.fill();
+    // v75: best/worst labels
+    if(isBest){
+      ctx.fillStyle='#2bd47d';ctx.font='bold 9px system-ui';ctx.textAlign='center';
+      ctx.fillText('▲ '+d.G.toFixed(1), x, y-8);
+    }
+    if(isWorst){
+      ctx.fillStyle='#ff4444';ctx.font='bold 9px system-ui';ctx.textAlign='center';
+      ctx.fillText('▼ '+d.G.toFixed(1), x, y+16);
+    }
   });
 
   // ── Вісь X (дати кожні 7 днів) ──
@@ -6548,6 +6534,36 @@ function draw27Chart(){
       ctx.fillText(d.ds.slice(5), x, H-PAD_B+14);
     }
   });
+
+  // v74: hover tooltip
+  canvas.onmousemove = function(evt){
+    const rect=canvas.getBoundingClientRect();
+    const mx=(evt.clientX-rect.left)*(canvas.width/dpr/rect.width);
+    const tip=document.getElementById('chart27Tooltip');
+    if(!tip) return;
+    // Find nearest point
+    let best=-1, bestDist=Infinity;
+    data.forEach((d,i)=>{
+      if(!isFinite(d.G)) return;
+      const dx=Math.abs(xOf(i)-mx);
+      if(dx<bestDist){bestDist=dx;best=i;}
+    });
+    if(best>=0 && bestDist<20){
+      const d=data[best];
+      const cat=d.G>=2?'🟢 Особл.сприятл.':d.G>=0.5?'🟢 Сприятливий':d.G>=-0.5?'⚪ Нейтральний':d.G>=-2.5?'🟠 Несприятл.':'🔴 Особл.несприятл.';
+      tip.innerHTML=`<div style="font-weight:700">${d.ds}</div><div>G = <span style="font-weight:700;color:${d.G>=0.5?'#2bd47d':d.G>=-0.5?'#9bb1dc':d.G>=-2.5?'#ffaa33':'#ff4444'}">${d.G>=0?'+':''}${d.G.toFixed(1)}</span></div><div style="color:#9bb1dc">${cat}</div>`;
+      const tx=evt.clientX-rect.left, ty=evt.clientY-rect.top;
+      tip.style.display='block';
+      tip.style.left=Math.min(tx+12, rect.width-140)+'px';
+      tip.style.top=Math.max(ty-50,0)+'px';
+    } else {
+      tip.style.display='none';
+    }
+  };
+  canvas.onmouseleave=function(){
+    const tip=document.getElementById('chart27Tooltip');
+    if(tip) tip.style.display='none';
+  };
 }
 
 // Хелпер для computeAi: повертає поточну Hora з PCL
@@ -6751,10 +6767,12 @@ function renderGDecomp(G, kp, ai) {
     const col = f.val > 0 ? '#2bd47d' : f.val < 0 ? '#ff6b6b' : '#6b82aa';
     const sign = f.val > 0 ? '+' : '';
     const delay = `animation-delay:${fi*0.08}s`;
-    html += `<div class="gd-chip ${cls} hint animated" tabindex="0" style="${delay}">
+    const gWithout = (G - f.val).toFixed(1);
+    const dgLabel = 'Без цього: G=' + (gWithout>=0?'+':'') + gWithout;
+    html += `<div class="gd-chip ${cls} hint animated" tabindex="0" style="${delay}" data-dg="${dgLabel}" data-val="${f.val}">
       <span class="gd-chip-val" style="color:${col}">${sign}${f.val}</span>
       <span class="gd-chip-name">${f.name} ${f.label}</span>
-      <span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(f.tip)}</span>
+      <span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(f.tip)}\nΔG вклад: ${sign}${f.val} → ${dgLabel}</span>
     </div>`;
     if(fi < factors.length - 1) html += `<span class="gd-flow-arrow">›</span>`;
   }
@@ -6809,7 +6827,8 @@ function renderGDecomp(G, kp, ai) {
     let thtml = '';
     for(const r of rows) {
       const c = valCol(r.val);
-      thtml += `<tr>
+      const rowId='row_'+r.name.replace(/[^a-zA-Z]/g,'');
+      thtml += `<tr id="${rowId}" style="transition:background .2s">
         <td style="padding:3px 8px;border-top:1px solid #1a2540;font-weight:600;color:#cfe0ff">${r.name}</td>
         <td style="padding:3px 8px;border-top:1px solid #1a2540;text-align:center;font-weight:700;color:${c};font-variant-numeric:tabular-nums">${typeof r.val==='number'&&!Number.isInteger(r.val)?sign(r.val.toFixed(1)):sign(r.val)}</td>
         <td style="padding:3px 8px;border-top:1px solid #1a2540;color:#7a9acc;word-break:break-word;overflow-wrap:break-word">${r.desc}</td>
@@ -7334,6 +7353,9 @@ function _setSrcStatus(id, status) {
   el.textContent = s.icon;
   el.style.color = s.col;
   el.title = {ok:'Дані NOAA', cache:'Кешовані дані', synthetic:'Synthetic (NOAA недоступний)', error:'Помилка', loading:'Завантаження...'}[status] || '';
+  // v75: wire per-source freshness
+  const srcKey = {srcKpObs:'kpObs', srcKpFcst:'kpFcst', src27Day:'outlook27', srcDst:'dst', srcSn:'sn', srcBz:'bz'}[id];
+  if(srcKey && status==='ok') updateDataFreshness(srcKey, Date.now());
 }
 
 // Russell-McPherron window check (05.03-04.04, 07.09-07.10)
@@ -8769,14 +8791,15 @@ function renderWowOrb(g){
   if(kp>=5&&Math.random()<0.1){ctx.fillStyle='rgba(255,100,100,.15)';ctx.fillRect(0,Math.random()*h,w,2)}
 }
 let _wowOrbRAF=null;
-function startWowOrb(g){function loop(){renderWowOrb(g);_wowOrbRAF=requestAnimationFrame(loop)}if(_wowOrbRAF)cancelAnimationFrame(_wowOrbRAF);loop()}
+function startWowOrb(g){function loop(){if(!document.hidden)renderWowOrb(g);_wowOrbRAF=requestAnimationFrame(loop)}if(_wowOrbRAF)cancelAnimationFrame(_wowOrbRAF);loop()}
 
 function initWowParticles(){
   const c=document.getElementById('wowParticles'),host=document.getElementById('cosmicMapWrap');
   if(!c||!host) return;const ctx=c.getContext('2d');let parts=[];
   function resize(){const r=host.getBoundingClientRect();c.width=Math.max(200,Math.floor(r.width));c.height=Math.max(160,Math.floor(r.height));
   parts=Array.from({length:30},()=>({x:Math.random()*c.width,y:Math.random()*c.height,r:Math.random()*1.4+.4,v:Math.random()*.15+.04,a:Math.random()*Math.PI*2}))}
-  function draw(){ctx.clearRect(0,0,c.width,c.height);const kp=window._lastKpForWow||2;const spd=0.5+kp*0.2;for(const p of parts){p.x+=Math.cos(p.a)*p.v*spd;p.y+=Math.sin(p.a)*p.v*spd;if(p.x<0)p.x=c.width;if(p.x>c.width)p.x=0;if(p.y<0)p.y=c.height;if(p.y>c.height)p.y=0;const br=kp>=5?'rgba(255,130,130,.3)':'rgba(255,255,255,.2)';ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=br;ctx.fill()}requestAnimationFrame(draw)}
+  let _wowPVisible=false;if(window.IntersectionObserver){new IntersectionObserver(e=>{_wowPVisible=e[0].isIntersecting},{threshold:0}).observe(host)}
+  function draw(){if(!_wowPVisible){requestAnimationFrame(draw);return}ctx.clearRect(0,0,c.width,c.height);const kp=window._lastKpForWow||2;const spd=0.5+kp*0.2;for(const p of parts){p.x+=Math.cos(p.a)*p.v*spd;p.y+=Math.sin(p.a)*p.v*spd;if(p.x<0)p.x=c.width;if(p.x>c.width)p.x=0;if(p.y<0)p.y=c.height;if(p.y>c.height)p.y=0;const br=kp>=5?'rgba(255,130,130,.3)':'rgba(255,255,255,.2)';ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=br;ctx.fill()}requestAnimationFrame(draw)}
   resize();draw();window.addEventListener('resize',resize);
 }
 
@@ -8818,33 +8841,140 @@ function renderAIExplain(){
   if(h) h.textContent=headline;
   if(a) a.textContent=advice;
   if(r) r.innerHTML=reasons.slice(0,4).map(x=>'<span class="ai-reason '+x.cls+'">'+escapeHtml(x.txt)+'</span>').join('');
+
+  // v74: sorted ΔG top drivers in heroTopDrivers
+  _renderTopDrivers(g, kp);
+}
+
+function _renderTopDrivers(g, kp){
+  const wrap=el('heroTopDrivers');
+  if(!wrap) return;
+  // v75: ΔG in heroDelta
+  const delta=_getGDelta();
+  const hd=el('heroDelta');
+  if(hd){
+    const f=v=>{if(v==null)return'—';return(v>0?'+':'')+v.toFixed(1)};
+    const arrow=v=>{if(v==null)return'';return v>0.3?'↗':v<-0.3?'↘':'→'};
+    hd.innerHTML=`<span title="Зміна за 3 год">${arrow(delta.d3h)} Δ3h ${f(delta.d3h)}</span> <span style="margin-left:8px" title="Зміна за 24 год">Δ24h ${f(delta.d24h)}</span>`;
+  }
+  // Collect factor values from decomp chips
+  const chips=[...document.querySelectorAll('#gDecompFactors .gd-chip[data-val]')];
+  const drivers=[];
+  if(isFinite(kp)){
+    const kpPart=kp-2;
+    drivers.push({name:'Kp−2',val:kpPart});
+  }
+  chips.forEach(c=>{
+    const v=parseFloat(c.getAttribute('data-val'));
+    const nameEl=c.querySelector('.gd-chip-name');
+    const name=(nameEl?.textContent||'').split(' ')[0];
+    if(isFinite(v)&&name) drivers.push({name,val:v});
+  });
+  // Sort by |val| descending
+  drivers.sort((a,b)=>Math.abs(b.val)-Math.abs(a.val));
+  const top=drivers.slice(0,4).filter(d=>d.val!==0);
+  if(!top.length){wrap.innerHTML='';return;}
+  const maxAbs=Math.max(...top.map(d=>Math.abs(d.val)),1);
+  wrap.innerHTML=top.map(d=>{
+    const col=d.val>0?'#2bd47d':d.val<0?'#ff6b6b':'#6b82aa';
+    const sign=d.val>0?'+':'';
+    const w=Math.max(8, Math.abs(d.val)/maxAbs*100);
+    return `<div class="driver-row" data-driver="${d.name}" style="cursor:pointer"><span class="driver-label" style="color:${col}">${sign}${typeof d.val==='number'&&!Number.isInteger(d.val)?d.val.toFixed(1):d.val}</span><div class="driver-bar" style="width:${w}%;background:${col}"></div><span style="color:var(--muted)">${d.name}</span></div>`;
+  }).join('');
+  // v75: hover → highlight decomp row
+  _bindDriverHover();
+}
+
+function _bindDriverHover(){
+  const driverMap={'Kp−2':'row_Kp','Lᵢ':'row_L','Mᵢ':'row_M','eᵢ':'row_e','Pᵢ':'row_P','Dᵢ':'row_D','Hora':'row_Hora'};
+  document.querySelectorAll('#heroTopDrivers .driver-row[data-driver]').forEach(dr=>{
+    const name=dr.getAttribute('data-driver');
+    const rowId=driverMap[name];
+    if(!rowId) return;
+    dr.addEventListener('mouseenter',()=>{
+      const row=document.getElementById(rowId);
+      if(row){row.style.background='#1a2a44';row.style.borderLeft='3px solid #37a7ff';}
+      // Open details if closed
+      const details=document.getElementById('nowAdvancedBlock');
+      if(details&&!details.open) details.open=true;
+    });
+    dr.addEventListener('mouseleave',()=>{
+      const row=document.getElementById(rowId);
+      if(row){row.style.background='';row.style.borderLeft='';}
+    });
+  });
 }
 
 function renderConfidenceBreakdown(){
-  const confEl=el('heroConfidence');
-  let confPct=0;
-  const m=(confEl?.textContent||'').match(/(\d+)/);
-  if(m) confPct=parseInt(m[1],10);
-  const rows=[
-    {label:'Свіжість даних',val:confPct>=80?90:confPct>=60?70:45,col:'#37a7ff'},
-    {label:'Горизонт прогнозу',val:78,col:'#9bb1dc'},
-    {label:'Конфлікт факторів',val:confPct>=80?82:confPct>=60?60:40,col:'#ffcc00'},
-    {label:'Стабільність моделі',val:confPct>=80?88:confPct>=60?68:52,col:'#2bd47d'}
-  ];
+  // v74: formula-based confidence from real data
   const cb=el('confBadge'),bars=el('confBars'),note=el('confNote');
-  if(cb) cb.textContent=(confPct||0)+'%';
-  if(bars) bars.innerHTML=rows.map(r=>'<div class="conf-row"><div class="conf-label">'+r.label+'</div><div class="conf-track"><div class="conf-fill" style="width:'+r.val+'%;background:'+r.col+'"></div></div><div class="conf-val">'+r.val+'%</div></div>').join('');
-  if(note) note.textContent=confPct>=80?'Висока впевненість: джерела стабільні, конфлікт факторів низький.':confPct>=60?'Середня впевненість: сигнал корисний, але є конфлікт.':'Знижена впевненість: трактувати як advisory.';
+  if(!bars) return;
+
+  // 1. Data freshness — from SW timestamps or freshness badge
+  const fb=el('freshnessBadge');
+  const fbText=(fb?.textContent||'').toLowerCase();
+  const freshScore = fbText.includes('live')?95 : fbText.includes('cached')?60 : 30;
+
+  // 2. Signal agreement — do Kp and ΣAᵢ agree in direction?
+  const g=_v73G(), kp=_v73Kp();
+  let agreeScore=70;
+  if(isFinite(g)&&isFinite(kp)){
+    const kpPart=kp-2, aiPart=g-kpPart;
+    // Same sign = agree
+    if((kpPart>=0&&aiPart>=0)||(kpPart<0&&aiPart<0)) agreeScore=90;
+    else if(Math.abs(kpPart-aiPart)>3) agreeScore=35; // strong conflict
+    else agreeScore=55;
+  }
+
+  // 3. Volatility — high Kp = less predictable
+  let volScore=85;
+  if(isFinite(kp)){
+    if(kp>=7) volScore=30; else if(kp>=5) volScore=45; else if(kp>=4) volScore=65;
+  }
+
+  // 4. Missing data — check which sources are loaded
+  let missingCount=0;
+  ['sciKp','sciDst','sciPhase','sciPi'].forEach(id=>{
+    const v=(el(id)?.textContent||'').trim();
+    if(!v||v==='—'||v==='…') missingCount++;
+  });
+  const dataScore = Math.max(20, 100 - missingCount*20);
+
+  const rows=[
+    {label:'Свіжість даних',val:freshScore,col:freshScore>=80?'#2bd47d':freshScore>=60?'#ffcc00':'#ff6b6b'},
+    {label:'Згода сигналів',val:agreeScore,col:agreeScore>=70?'#37a7ff':'#ffcc00'},
+    {label:'Волатильність',val:volScore,col:volScore>=70?'#2bd47d':volScore>=50?'#ffcc00':'#ff6b6b'},
+    {label:'Повнота даних',val:dataScore,col:dataScore>=80?'#2bd47d':'#ff6b6b'}
+  ];
+  const avg=Math.round(rows.reduce((s,r)=>s+r.val,0)/rows.length);
+  if(cb) cb.textContent=avg+'%';
+  if(bars) bars.innerHTML=rows.map(r=>{
+    const pulseClass=r.val<50?' pulse':'';
+    return '<div class="conf-row"><div class="conf-label">'+r.label+'</div><div class="conf-track"><div class="conf-fill'+pulseClass+'" style="width:'+r.val+'%;background:'+r.col+'"></div></div><div class="conf-val">'+r.val+'%</div></div>';
+  }).join('');
+  if(note) note.textContent=avg>=80?'Висока впевненість: всі джерела свіжі, сигнали узгоджені.':avg>=60?'Середня впевненість: є конфлікт або затримка даних.':'Знижена впевненість: стале дані або конфлікт — трактувати як advisory.';
+
+  // Also update hero confidence
+  const hc=el('heroConfidence');
+  if(hc) hc.textContent=avg+'%';
 }
 
 function renderPatternAlert(){
   const g=_v73G(),kp=_v73Kp();
   const b=el('anomalyBadge'),t=el('anomalyText');
-  let badge='normal',text='Конфігурація в межах очікуваного режиму.';
+  const card=el('anomalyCard');
+  let badge='normal',text='',hasTrigger=false;
   if(isFinite(g)&&isFinite(kp)){
-    if(g<-2&&kp<3){badge='rare';text='Рідкісний патерн: негативний G без геомагнітної бурі. Домінують календарно-хронобіологічні фактори.';}
-    else if(g>1.5&&kp>=4){badge='contrarian';text='Контрсигнал: попри магнітну напругу, сумарні фактори дають позитивне вікно.';}
-    else if(kp>=5){badge='storm';text='Штормовий режим: буря переважає інші фактори.';}
+    if(g<-2&&kp<3){badge='rare';text='Рідкісний патерн: негативний G без геомагнітної бурі. Домінують календарно-хронобіологічні фактори.';hasTrigger=true;}
+    else if(g>1.5&&kp>=4){badge='contrarian';text='Контрсигнал: попри магнітну напругу, сумарні фактори дають позитивне вікно.';hasTrigger=true;}
+    else if(kp>=5){badge='storm';text='Штормовий режим: буря переважає інші фактори.';hasTrigger=true;}
+    // v75: ΔG deterioration trigger
+    const delta=_getGDelta();
+    if(delta.d3h!=null && delta.d3h<-1.5 && !hasTrigger){badge='deterioration';text='Різке погіршення G за останні 3 год (Δ='+delta.d3h.toFixed(1)+').';hasTrigger=true;}
+  }
+  if(card){
+    if(!hasTrigger){card.style.display='none';}
+    else{card.style.display='';card.open=true;}
   }
   if(b) b.textContent=badge;
   if(t) t.textContent=text;
@@ -8895,30 +9025,302 @@ function applyWowFromG(){
 
 function initHeroField(){
   const c=document.getElementById('heroField'),host=document.getElementById('heroCard');
-  if(!c||!host)return;const ctx=c.getContext('2d');let parts=[];
+  if(!c||!host)return;const ctx=c.getContext('2d');let parts=[];let _heroFieldVisible=true;
+  // v74: IntersectionObserver to pause when offscreen
+  if(window.IntersectionObserver){
+    new IntersectionObserver(entries=>{_heroFieldVisible=entries[0].isIntersecting},{threshold:0.1}).observe(host);
+  }
   function resize(){const r=host.getBoundingClientRect();c.width=Math.max(300,Math.floor(r.width));c.height=Math.max(100,Math.floor(r.height));
   parts=Array.from({length:22},()=>({x:Math.random()*c.width,y:Math.random()*c.height,r:Math.random()*1.6+.4,vx:Math.random()*.2+.05,vy:(Math.random()-.5)*.06}))}
   function draw(){
+    if(!_heroFieldVisible){requestAnimationFrame(draw);return}
     const g=window._heroGprev||0;const kp=window._lastKpForWow||2;
     const col=wowColorByG(g);const spd=g<=-2.5?2.2:g<=-0.5?1.4:1;
     ctx.clearRect(0,0,c.width,c.height);
-    // Data-driven background tint
     const bg=ctx.createLinearGradient(0,0,c.width,c.height);
     if(g>=1.5){bg.addColorStop(0,'rgba(20,60,40,.12)');bg.addColorStop(1,'rgba(15,30,50,.06)')}
     else if(g>=-0.5){bg.addColorStop(0,'rgba(15,30,60,.1)');bg.addColorStop(1,'rgba(10,20,40,.05)')}
     else if(g>=-2.5){bg.addColorStop(0,'rgba(60,40,8,.14)');bg.addColorStop(1,'rgba(30,20,8,.06)')}
     else{bg.addColorStop(0,'rgba(70,15,15,.18)');bg.addColorStop(1,'rgba(30,8,12,.08)')}
     ctx.fillStyle=bg;ctx.fillRect(0,0,c.width,c.height);
-    // Particles
     for(const p of parts){p.x+=p.vx*spd;p.y+=p.vy*spd;if(p.x>c.width+5)p.x=-5;if(p.y>c.height+3)p.y=-3;if(p.y<-3)p.y=c.height+3;
     ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=col+'33';ctx.fill()}
-    // Wave
     const t=performance.now()/1000;const amp=g<=-2.5?12:g<=-0.5?7:4;
     ctx.beginPath();for(let x=0;x<=c.width;x+=6){const y=c.height*.72+Math.sin(x*.013+t*1.5)*amp;if(x===0)ctx.moveTo(x,y);else ctx.lineTo(x,y)}
     ctx.strokeStyle=col+'44';ctx.lineWidth=1.5;ctx.stroke();
     requestAnimationFrame(draw)
   }
   resize();draw();window.addEventListener('resize',resize);
+}
+
+
+// ═══ v75: Data freshness + ΔG history ═══
+window._dataFetchTimestamps = {};
+function updateDataFreshness(source, ts){
+  window._dataFetchTimestamps[source] = ts || Date.now();
+  _renderFreshnessState();
+}
+function _renderFreshnessState(){
+  const ts = window._dataFetchTimestamps;
+  const now = Date.now();
+  const ages = Object.values(ts).filter(t=>typeof t==='number').map(t => now - t);
+  if(!ages.length){
+    // Fallback: read from source badges
+    updateFreshnessBadge();
+    return;
+  }
+  const maxAge = Math.max(...ages);
+  const fb = el('freshnessBadge');
+  const hf = el('heroFreshness');
+  let state, label, col, bgCol;
+  if(maxAge < 15*60*1000){ state='live'; label='● LIVE'; col='#63be7b'; bgCol='#0a2a15'; }
+  else if(maxAge < 60*60*1000){ state='stale'; label='● STALE'; col='#ffcc44'; bgCol='#2a1a00'; }
+  else { state='old'; label='● OLD'; col='#ff6b6b'; bgCol='#2a0808'; }
+  if(fb){ fb.textContent=label; fb.style.color=col; fb.style.background=bgCol; }
+  if(hf){ hf.textContent=state.toUpperCase(); hf.className=''; hf.classList.add(state); }
+}
+
+
+// ═══ WF3 WIREFRAME v76 — JS ═══════════════════════════════════════════════
+
+function wf3Text(id, val){
+  var n=document.getElementById(id);
+  if(n) n.textContent=(val==null?'—':val);
+}
+
+function wf3StateFromG(g){
+  if(!isFinite(g)) return '—';
+  if(g>=2) return 'Особливо сприятливий';
+  if(g>=1) return 'Помірно сприятливий';
+  if(g>=0) return 'Нейтральний';
+  if(g>=-1) return 'Помірно несприятливий';
+  if(g>=-2) return 'Несприятливий';
+  return 'Особливо несприятливий';
+}
+
+function wf3ActionFromG(g, kp){
+  if(!isFinite(g)) return '—';
+  if(isFinite(kp)&&kp>=5) return 'Режим обережності: не запускати критичне';
+  if(g>=2) return 'Можна планувати активні дії';
+  if(g>=1) return 'Працювати у звичайному режимі';
+  if(g>=0) return 'Нейтральний режим без перевантаження';
+  if(g>=-1) return 'Зменшити темп і контролювати помилки';
+  if(g>=-2) return 'Мінімізувати ризики і нові запуски';
+  return 'Утриматись від критичних рішень';
+}
+
+function _wf3ParseG(){
+  var raw=(el('nowG')?el('nowG').textContent:'');
+  var m=raw.match(/G\s*(-?\d+\.?\d*)/);
+  return m?parseFloat(m[1]):NaN;
+}
+
+function renderWf3Drivers(){
+  var wrap=document.getElementById('wf3Drivers');
+  if(!wrap) return;
+  var kp=_num(_firstText(el('nowKp')));
+  var chips=document.querySelectorAll('#gDecompFactors .gd-chip[data-val]');
+  var drivers=[];
+  if(isFinite(kp)) drivers.push({name:'Kp\u22122',val:+(kp-2).toFixed(2)});
+  for(var ci=0;ci<chips.length;ci++){
+    var c=chips[ci];
+    var v=parseFloat(c.getAttribute('data-val'));
+    var nameEl=c.querySelector('.gd-chip-name');
+    var name=nameEl?(nameEl.textContent||'').split(' ')[0]:'';
+    if(isFinite(v)&&name) drivers.push({name:name,val:v});
+  }
+  drivers.sort(function(a,b){return Math.abs(b.val)-Math.abs(a.val)});
+  var top=drivers.slice(0,5).filter(function(d){return d.val!==0});
+  if(!top.length){wrap.innerHTML='<div style="color:#6b82aa;font-size:12px">Очікування даних…</div>';return;}
+  var maxAbs=1;
+  for(var ti=0;ti<top.length;ti++) if(Math.abs(top[ti].val)>maxAbs) maxAbs=Math.abs(top[ti].val);
+  var html='';
+  for(var di=0;di<top.length;di++){
+    var d=top[di];
+    var col=d.val>0?'#2bd47d':d.val<0?'#ff6b6b':'#9bb1dc';
+    var sign=d.val>0?'+':'';
+    var w=Math.max(8,Math.round(Math.abs(d.val)/maxAbs*100));
+    var txt=Number.isInteger(d.val)?sign+d.val:sign+d.val.toFixed(1);
+    html+='<div class="wf3-driver"><span class="wf3-driver-name">'+d.name+'</span><div class="wf3-driver-track"><div class="wf3-driver-fill" style="width:'+w+'%;background:'+col+'"></div></div><span class="wf3-driver-val" style="color:'+col+'">'+txt+'</span></div>';
+  }
+  wrap.innerHTML=html;
+}
+
+function renderWf3Timeline(){
+  var wrap=document.getElementById('wf3Timeline');
+  if(!wrap) return;
+  var bw=(typeof _getBestWindow==='function')?_getBestWindow():null;
+  var delta=(typeof _getGDelta==='function')?_getGDelta():{d3h:null,d24h:null};
+  var host=document.getElementById('dayForecastSlots');
+  var slots=[];
+  if(host&&host.children.length){
+    for(var si=0;si<host.children.length;si++){
+      var item=host.children[si];
+      var txt=(item.textContent||'').replace(/\s+/g,' ').trim();
+      if(!txt) continue;
+      var nums=txt.match(/-?\d+(\.\d+)?/g);
+      if(!nums||!nums.length) continue;
+      var tm=txt.match(/\b(\d{1,2})(?::?00)?\b/);
+      var time=tm?String(tm[1]).padStart(2,'0')+':00':'—';
+      var g=parseFloat(nums[nums.length-1]);
+      if(isFinite(g)) slots.push({time:time,g:g});
+    }
+  }
+  if(!slots.length){
+    wrap.innerHTML='<div style="color:#6b82aa;font-size:12px">Очікування timeline…</div>';
+    wf3Text('wf3Best','Best: —');wf3Text('wf3Worst','Worst: —');
+    wf3Text('wf3Delta3','\u03943h: —');wf3Text('wf3Delta24','\u039424h: —');
+    return;
+  }
+  var bestL=bw&&bw.best&&bw.best.slotLabel!=null?String(bw.best.slotLabel).padStart(2,'0')+':00':null;
+  var worstL=bw&&bw.worst&&bw.worst.slotLabel!=null?String(bw.worst.slotLabel).padStart(2,'0')+':00':null;
+  var h='';
+  for(var j=0;j<slots.length;j++){
+    var s=slots[j];
+    var cls=s.time===bestL?'wf3-slot best':s.time===worstL?'wf3-slot worst':'wf3-slot';
+    var gT=Number.isInteger(s.g)?String(s.g):s.g.toFixed(1);
+    h+='<div class="'+cls+'"><div class="wf3-slot-time">'+s.time+'</div><div class="wf3-slot-g">'+gT+'</div></div>';
+  }
+  wrap.innerHTML=h;
+  if(bw&&bw.best){var hh=parseInt(bw.best.slotLabel,10);wf3Text('wf3Best','Best: '+String(hh).padStart(2,'0')+':00\u2013'+String(hh+3).padStart(2,'0')+':00');}
+  if(bw&&bw.worst){var hw=parseInt(bw.worst.slotLabel,10);wf3Text('wf3Worst','Worst: '+String(hw).padStart(2,'0')+':00\u2013'+String(hw+3).padStart(2,'0')+':00');}
+  var fmt=function(v){return v==null||!isFinite(v)?'—':(v>0?'+':'')+v.toFixed(1)};
+  wf3Text('wf3Delta3','\u03943h: '+fmt(delta.d3h));
+  wf3Text('wf3Delta24','\u039424h: '+fmt(delta.d24h));
+}
+
+function renderWf3Quality(){
+  var ft=(el('heroFreshness')?el('heroFreshness').textContent:'');
+  if(!ft) ft=(el('freshnessBadge')?el('freshnessBadge').textContent:'—');
+  ft=ft.trim();
+  var freshness=50;
+  if(/live/i.test(ft)) freshness=100;
+  else if(/cached|stale/i.test(ft)) freshness=65;
+  else if(/old|offline/i.test(ft)) freshness=35;
+  var agreement=freshness>=100?80:68;
+  var stability=75;
+  var quality=Math.round(0.40*freshness+0.35*agreement+0.25*stability);
+  function sf(id,v){var n=el(id);if(n)n.style.width=Math.min(100,Math.max(0,v))+'%'}
+  sf('wf3FreshFill',freshness);sf('wf3AgreeFill',agreement);sf('wf3StableFill',stability);
+  wf3Text('wf3FreshVal',freshness+'%');wf3Text('wf3AgreeVal',agreement+'%');wf3Text('wf3StableVal',stability+'%');
+  wf3Text('wf3FreshnessBadge',ft);wf3Text('wf3QualityScore','Quality '+quality+'%');
+}
+
+function renderWf3Hero(){
+  var g=_wf3ParseG();
+  var kp=_num(_firstText(el('nowKp')));
+  var gText=(el('nowG')?el('nowG').textContent:'G …').trim();
+  var summary=(el('nowSummary')?el('nowSummary').textContent:'').trim();
+  wf3Text('wf3G',gText||'G …');
+  wf3Text('wf3State',wf3StateFromG(g));
+  wf3Text('wf3Action',summary||wf3ActionFromG(g,kp));
+  var bw=(typeof _getBestWindow==='function')?_getBestWindow():null;
+  if(bw&&bw.best){var hb=parseInt(bw.best.slotLabel,10);wf3Text('wf3Do','Do: '+String(hb).padStart(2,'0')+':00\u2013'+String(hb+3).padStart(2,'0')+':00');}
+  else wf3Text('wf3Do','Do: працювати у спокійному вікні');
+  if(isFinite(kp)&&kp>=5) wf3Text('wf3Avoid','Avoid: буря / Kp\u22655');
+  else if(g<=-2) wf3Text('wf3Avoid','Avoid: нові запуски і критичні рішення');
+  else wf3Text('wf3Avoid','Avoid: перевантаження у слабких слотах');
+  var d=(typeof _getGDelta==='function')?_getGDelta():{d3h:null};
+  var trend=d.d3h==null?'\u2192 стабільно':d.d3h>0.3?'\u2197 посилення':d.d3h<-0.3?'\u2198 ослаблення':'\u2192 стабільно';
+  wf3Text('wf3Trend',trend);
+}
+
+function syncWf3(){renderWf3Hero();renderWf3Quality();renderWf3Drivers();renderWf3Timeline();}
+window.syncWf3=syncWf3;
+
+// ═══ Kp-2 contribution pill ═══
+function renderKpContribution(){
+  var kp=_num(_firstText(el('nowKp')));
+  var n=el('nowKpPart');
+  if(!n) return;
+  if(!isFinite(kp)){n.textContent='Kp\u22122 = —';n.style.color='';return;}
+  var v=Math.round((kp-2)*10)/10;
+  n.textContent='Kp\u22122 = '+(v>0?'+':'')+v.toFixed(1);
+  n.style.color=v>0?'#2bd47d':v<0?'#ff6b6b':'#9bb1dc';
+}
+
+// ═══ Pi line ═══
+function renderPanchPiLine(){
+  var src=el('sciPi')?el('sciPi').textContent.trim():'';
+  var dst=el('panchPiLine');
+  if(!dst) return;
+  if(!src||src==='—'||src==='\u2026'){dst.textContent='P\u1d62 = —';dst.style.color='';return;}
+  var v=parseFloat(src.replace(',','.'));
+  if(!isFinite(v)){dst.textContent='P\u1d62 = '+src;dst.style.color='';return;}
+  dst.textContent='P\u1d62 = '+(v>0?'+':'')+v.toFixed(1);
+  dst.style.color=v>0?'#2bd47d':v<0?'#ff6b6b':'#9bb1dc';
+}
+
+// ═══ Compact panch chips ═══
+function renderPanchCompact(){
+  var c1=el('panchChip1'),c2=el('panchChip2'),c3=el('panchChip3');
+  if(!c1||!c2||!c3) return;
+  c1.textContent=(el('moonTithiNow')?el('moonTithiNow').textContent:'').trim()||'Tithi —';
+  c2.textContent=(el('moonNakNow')?el('moonNakNow').textContent:'').trim()||'Nak —';
+  c3.textContent=(el('moonNakQualNow')?el('moonNakQualNow').textContent:'').trim()||'—';
+}
+
+// ═══ Main drag ═══
+function renderMainDrag(){
+  var n=el('wf3MainDrag');
+  if(!n) return;
+  var chips=document.querySelectorAll('#gDecompFactors .gd-chip[data-val]');
+  var kp=_num(_firstText(el('nowKp')));
+  var drivers=[];
+  if(isFinite(kp)) drivers.push({name:'Kp\u22122',val:kp-2});
+  for(var i=0;i<chips.length;i++){
+    var c=chips[i];
+    var val=parseFloat(c.getAttribute('data-val'));
+    var nameEl=c.querySelector('.gd-chip-name');
+    var name=nameEl?(nameEl.textContent||'').split(' ')[0]:'';
+    if(isFinite(val)&&name) drivers.push({name:name,val:val});
+  }
+  var neg=null;
+  for(var j=0;j<drivers.length;j++){
+    if(drivers[j].val<0&&(!neg||drivers[j].val<neg.val)) neg=drivers[j];
+  }
+  if(!neg){n.textContent='';n.style.color='';return;}
+  n.textContent='Main drag: '+neg.name+' '+neg.val.toFixed(1);
+  n.style.color='#ff6b6b';
+}
+
+
+// ═══ v75: G history for ΔG ═══
+function _saveGHistory(g){
+  if(!isFinite(g)) return;
+  try{
+    const key='g_history_v75';
+    let hist=JSON.parse(localStorage.getItem(key)||'[]');
+    hist.push({g, ts:Date.now()});
+    // Keep last 48h only
+    const cutoff=Date.now()-48*3600*1000;
+    hist=hist.filter(h=>h.ts>cutoff);
+    // Max 200 entries
+    if(hist.length>200) hist=hist.slice(-200);
+    localStorage.setItem(key, JSON.stringify(hist));
+  }catch(e){}
+}
+function _getGDelta(){
+  try{
+    const hist=JSON.parse(localStorage.getItem('g_history_v75')||'[]');
+    if(hist.length<2) return {d3h:null, d24h:null};
+    const now=Date.now();
+    const latest=hist[hist.length-1];
+    // Find closest to 3h ago
+    let best3h=null, best3hDist=Infinity;
+    let best24h=null, best24hDist=Infinity;
+    for(const h of hist){
+      const age=now-h.ts;
+      const d3=Math.abs(age-3*3600*1000);
+      if(d3<best3hDist && d3<2*3600*1000){best3hDist=d3;best3h=h;}
+      const d24=Math.abs(age-24*3600*1000);
+      if(d24<best24hDist && d24<6*3600*1000){best24hDist=d24;best24h=h;}
+    }
+    return {
+      d3h: best3h ? latest.g - best3h.g : null,
+      d24h: best24h ? latest.g - best24h.g : null
+    };
+  }catch(e){return {d3h:null, d24h:null};}
 }
 
 document.addEventListener('DOMContentLoaded',()=>{
