@@ -703,6 +703,16 @@
     @media(max-width:860px){#v73TopLayer{grid-template-columns:1fr}#aiExplainCard,#confidenceBreakdownCard,#anomalyCard,#scenarioStripCard{grid-column:auto}}
     /* v76c: CSS-hide old blocks — verify before replacing with wf3 */
     #opsGrid, #v73TopLayer { display:none !important; }
+    /* v76c: wf3 helpers */
+    .is-hidden { display:none !important; }
+    /* v76c: hide nowCard duplicates — wf3 covers these */
+    #nowCard .gline,
+    #nowCard #cScoreBlock,
+    #nowCard #probNowBlock,
+    #nowCard #deltaCard,
+    #nowCard #nowSummary,
+    #nowCard #compactExplainBlock,
+    #nowCard #costarBanner { display:none !important; }
   </style>
 
   <meta name="theme-color" content="#0b1220">
@@ -905,6 +915,18 @@
       <button class="profile-btn" data-p="off"  onclick="setProfile('off')" style="color:#3a5a7a">✕ Вимк.</button>
     </div>
     <div id="profileRec"></div>
+
+    <!-- ═══ v76c: wf3 Signal Summary ═══ -->
+    <section id="wf3SignalSummary" class="card" style="margin-top:8px;padding:12px 14px" aria-label="Signal Summary">
+      <div id="wf3Formula" style="font-size:14px;color:#dfe8ff;line-height:1.35">G = …</div>
+      <div id="wf3Chips" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"></div>
+      <div id="wf3Driver" style="font-size:13px;color:#b9c8f2;margin-top:6px"></div>
+      <div id="wf3Alert" class="is-hidden" style="margin-top:6px;padding:6px 10px;border-radius:10px;border:1px solid rgba(255,180,0,.24);background:rgba(255,180,0,.08);color:#ffd36b;font-size:12px;line-height:1.3"></div>
+      <div id="wf3Meta" class="is-hidden" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px">
+        <span id="wf3Confidence" class="pill" style="font-size:11px"></span>
+        <span id="wf3Scenario" class="pill" style="font-size:11px"></span>
+      </div>
+    </section>
 
     <!-- ═══ v70.3 OPS GRID ═══ -->
     <section id="opsGrid">
@@ -4811,6 +4833,7 @@ function syncV702UI(){
   try{refreshV73Layer();}catch(e){console.warn('v73:',e);}
   try{renderKpContribution();}catch(e){console.warn("kpContrib:",e);}
   try{renderPanchPiLine();}catch(e){console.warn("panchPi:",e);}
+  try{renderWf3();}catch(e){console.warn("wf3:",e);}
   // v75: save G to history for ΔG
   try{const _gNow=_v73G();if(isFinite(_gNow))_saveGHistory(_gNow);}catch(e){}
 }
@@ -8311,9 +8334,9 @@ function lsRem(k){try{localStorage.removeItem(k)}catch{}}
 
 // ── Mobile Bottom Nav ─────────────────────────────────────
 const MNAV_SECTIONS = {
-  now:      ['heroCard','astroGrid','opsGrid','decisionCard','radarCard','gTopRow','profileBar','profileRec','mainGrid','swipeHint3','threeCard'],
-  panch:    ['heroCard','gTopRow','panchCard','swipeHint3','threeCard'],
-  fcst:     ['heroCard','gTopRow','swipeHint27','twentysevenCard','backtestCard'],
+  now:      ['heroCard','astroGrid','wf3SignalSummary','profileBar','profileRec','mainGrid','swipeHint3','threeCard'],
+  panch:    ['heroCard','wf3SignalSummary','panchCard','swipeHint3','threeCard'],
+  fcst:     ['heroCard','swipeHint27','twentysevenCard','backtestCard'],
   personal: ['heroCard','personalCard']
 };
 
@@ -8328,7 +8351,7 @@ function mnavGo(tab, scroll) {
   const show = MNAV_SECTIONS[tab] || [];
 
   // All managed section IDs
-  const all = ['heroCard','astroGrid','opsGrid','decisionCard','radarCard','gTopRow','profileBar','profileRec','mainGrid',
+  const all = ['heroCard','astroGrid','wf3SignalSummary','profileBar','profileRec','mainGrid',
                'swipeHint3','threeCard','swipeHint27','twentysevenCard',
                'backtestCard','panchCard','personalCard','scienceBar'];
 
@@ -9117,6 +9140,104 @@ function renderPanchPiLine(){
   if(!isFinite(v)){dst.textContent='P\u1d62 = '+src;dst.style.color='';return;}
   dst.textContent='P\u1d62 = '+(v>0?'+':'')+v.toFixed(1);
   dst.style.color=v>0?'#2bd47d':v<0?'#ff6b6b':'#9bb1dc';
+}
+
+// ═══ v76c: wf3 Signal Summary ═══
+function renderWf3(){
+  var g=_v73G(), kp=_v73Kp();
+  if(!isFinite(g)||!isFinite(kp)) return;
+  var kpPart=Math.round((kp-2)*10)/10;
+  // Read ai components from chips
+  var chips=[].slice.call(document.querySelectorAll('#gDecompFactors .gd-chip[data-val]'));
+  var comps={Li:0,Mi:0,ei:0,Pi:0};
+  chips.forEach(function(c){
+    var nameEl=c.querySelector('.gd-chip-name');
+    var name=(nameEl?nameEl.textContent:'').split(' ')[0].replace(/[:\s]/g,'');
+    var v=parseFloat(c.getAttribute('data-val'));
+    if(name&&isFinite(v)&&comps.hasOwnProperty(name)) comps[name]=v;
+  });
+  // Also try window._lastAiPi as fallback
+  if(comps.Pi===0&&window._lastAiPi!=null&&window._lastAiPi!==0) comps.Pi=Number(window._lastAiPi)||0;
+  var sumAi=comps.Li+comps.Mi+comps.ei+comps.Pi;
+
+  function fs(x){var n=Number(x||0);return(n>0?'+':'')+n.toFixed(1);}
+  function sc(x){return x>0?'color:#2bd47d':x<0?'color:#ff6b6b':'color:#9bb1dc';}
+
+  // ROW 1: Formula
+  var fEl=el('wf3Formula');
+  if(fEl) fEl.innerHTML='G = Kp\u22122 + \u03a3A\u1d62 = <span style="'+sc(kpPart)+'">'+fs(kpPart)+'</span> + <span style="'+sc(sumAi)+'">'+fs(sumAi)+'</span> = <strong style="font-size:18px;'+sc(g)+'">'+fs(g)+'</strong>';
+
+  // ROW 2: Chips
+  var chEl=el('wf3Chips');
+  if(chEl){
+    var names=['L\u1d62','M\u1d62','e\u1d62','P\u1d62'];
+    var vals=[comps.Li,comps.Mi,comps.ei,comps.Pi];
+    chEl.innerHTML=names.map(function(n,i){
+      var v=vals[i];
+      return '<span class="pill" style="font-size:11px;'+sc(v)+'">'+n+' '+fs(v)+'</span>';
+    }).join('');
+  }
+
+  // ROW 3: Driver (text only, no bar — bar is in heroMainDrag)
+  var drEl=el('wf3Driver');
+  if(drEl){
+    var drivers=[{k:'Kp\u22122',v:kpPart},{k:'L\u1d62',v:comps.Li},{k:'M\u1d62',v:comps.Mi},{k:'e\u1d62',v:comps.ei},{k:'P\u1d62',v:comps.Pi}];
+    drivers.sort(function(a,b){return Math.abs(b.v)-Math.abs(a.v);});
+    var d=drivers[0];
+    if(d&&d.v!==0){
+      drEl.innerHTML='<span style="opacity:.7">Driver:</span> <span style="font-weight:600;'+sc(d.v)+'">'+d.k+' '+fs(d.v)+'</span>';
+    } else { drEl.innerHTML=''; }
+  }
+
+  // ROW 4: Conditional alert
+  var alEl=el('wf3Alert');
+  if(alEl){
+    var alerts=[];
+    // Data quality
+    var hf=el('heroFreshness');
+    var dataState=(hf?hf.textContent.trim():'LIVE');
+    if(dataState!=='LIVE') alerts.push('\ud83d\udce1 '+dataState);
+    // Pattern alert from anomalyBadge
+    var ab=el('anomalyBadge');
+    var abTxt=ab?ab.textContent.trim():'';
+    if(abTxt&&abTxt!=='normal'&&abTxt!=='—') alerts.push('\u26a1 '+abTxt);
+    if(alerts.length){
+      alEl.textContent=alerts.join(' · ');
+      alEl.classList.remove('is-hidden');
+    } else {
+      alEl.classList.add('is-hidden');
+    }
+  }
+
+  // ROW 5: Conditional meta (confidence + scenario)
+  var metaEl=el('wf3Meta');
+  var confEl=el('wf3Confidence');
+  var scenEl=el('wf3Scenario');
+  if(metaEl&&confEl&&scenEl){
+    // Confidence from heroConfidence
+    var hc=el('heroConfidence');
+    var confTxt=hc?hc.textContent.trim():'';
+    var confNum=parseInt(confTxt)||100;
+    var hf2=el('heroFreshness');
+    var ds2=hf2?hf2.textContent.trim():'LIVE';
+    var showConf=confNum<85||ds2!=='LIVE';
+
+    // Scenario: if near threshold
+    var showScen=Math.abs(g)<=1.0;
+    var scenTxt=showScen?('If Kp +1 \u2192 G '+fs(g+1)):'';
+
+    confEl.textContent=showConf?(confTxt+' \u00b7 '+ds2):'';
+    confEl.style.display=showConf?'inline-flex':'none';
+    scenEl.textContent=scenTxt;
+    scenEl.style.display=showScen?'inline-flex':'none';
+
+    if(showConf||showScen){
+      metaEl.classList.remove('is-hidden');
+      metaEl.style.display='flex';
+    } else {
+      metaEl.classList.add('is-hidden');
+    }
+  }
 }
 
 function _saveGHistory(g){

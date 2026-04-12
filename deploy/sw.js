@@ -5,7 +5,7 @@
    - Everything else → Network-First, no cache
 */
 
-const SHELL_CACHE  = 'g-index-shell-v76c';
+const SHELL_CACHE  = 'g-index-shell-v76d';
 const DATA_CACHE   = 'g-index-data-v1';
 const DATA_TTL_MS  = 1 * 60 * 60 * 1000; // 1 hour TTL (Dst updates hourly, Kp every 3h)
 
