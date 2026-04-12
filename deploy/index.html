@@ -6041,6 +6041,28 @@ function lsGet(key){ try{ return localStorage.getItem(key); }catch(e){ return nu
 function lsSet(key, val){ try{ localStorage.setItem(key, val); }catch(e){} }
 function lsRemove(key){ try{ localStorage.removeItem(key); }catch(e){} }
 
+// ═══ v76d: Personal human phrases ═══
+const PERSONAL_HUMAN = {
+  1: {state:'Фон для вас нестабільний.',action:'Краще знизити темп і не перевантажуватись.'},
+  2: {state:'Фон для вас загалом сприятливий.',action:'Можна діяти, але без перевантаження.'},
+  3: {state:'День для вас напружений.',action:'Варто діяти обережно і без ризику.'},
+  4: {state:'Фон для вас стабільний.',action:'Можна працювати у звичному режимі.'},
+  5: {state:'Фон для вас нестабільний.',action:'Краще не починати нічого нового.'},
+  6: {state:'Фон для вас робочий.',action:'Можна рухатись у важливих справах.'},
+  7: {state:'День для вас складний.',action:'Небажано приймати важливі рішення.'},
+  8: {state:'Фон для вас сприятливий.',action:'Можна діяти впевнено.'},
+  9: {state:'Фон для вас дуже сприятливий.',action:'День підходить для активних дій.'},
+  0: {state:'Персональний фон нейтральний.',action:'Можна тримати звичний режим.'}
+};
+function _personalModPhrase(m){
+  var n=Number(m||0);
+  if(n<=-2)return' Напруга для вас підвищена.';
+  if(n===-1)return' Є легка внутрішня нестабільність.';
+  if(n===1)return' Є додаткова підтримка фону.';
+  if(n>=2)return' Фон для вас особливо сприятливий.';
+  return'';
+}
+
 function renderPersonal() {
   const data = getSlotData(_activeSlot);
   const resEl = document.getElementById('personalResult');
@@ -6102,10 +6124,17 @@ function renderPersonal() {
   const slotCol = SLOT_COLORS[_activeSlot] || '#37a7ff';
   const gmodSign = taaraGmod > 0 ? `+${taaraGmod}` : `${taaraGmod}`;
   const gmodHtml = taaraGmod !== 0
-    ? `<div style="font-size:11px;color:${col};margin-top:2px">Taara G-mod сьогодні: <strong>${gmodSign}</strong></div>`
+    ? `<div style="font-size:11px;color:${col};margin-top:4px">Taara G-mod: <strong>${gmodSign}</strong></div>`
     : '';
 
-  resEl.innerHTML = `${noTimeWarnHtml}<div style="font-size:13px;font-weight:600;color:${col};padding:6px 10px;background:#0a1428;border-radius:6px;border-left:3px solid ${col};line-height:1.3;display:block">${danger ? '⚠ ' : '✓ '}${summaryAction}</div><details style="margin-top:6px"><summary class="small muted" style="cursor:pointer;font-size:11px">▶ Показати персональний розклад</summary>${gmodHtml}<table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:6px">
+  // Human summary
+  const _ph = PERSONAL_HUMAN[taara.group] || PERSONAL_HUMAN[0];
+  const _phMod = _personalModPhrase(taaraGmod);
+  const _phBg = danger ? 'rgba(255,107,107,.08)' : taaraGmod>0 ? 'rgba(43,212,125,.08)' : 'rgba(255,255,255,.03)';
+  const _phBrd = danger ? 'rgba(255,107,107,.22)' : taaraGmod>0 ? 'rgba(43,212,125,.22)' : 'rgba(255,255,255,.08)';
+  const _phCol = danger ? '#ff8e8e' : taaraGmod>0 ? '#7fe3a6' : '#cfe0ff';
+
+  resEl.innerHTML = `${noTimeWarnHtml}<div style="padding:8px 10px;border-radius:10px;border:1px solid ${_phBrd};background:${_phBg}"><div style="font-size:13px;font-weight:700;line-height:1.35;color:${_phCol}">${_ph.state}</div><div style="font-size:12px;line-height:1.45;color:#b7c7ea;margin-top:3px">${_ph.action}${_phMod}</div></div><details style="margin-top:6px"><summary class="small muted" style="cursor:pointer;font-size:11px">▶ Показати персональний розклад</summary>${gmodHtml}<table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:6px">
       <tr>
         <td class="muted" style="padding:3px 0;width:45%;border-bottom:1px solid #1a2540">Стоянка народження</td>
         <td style="padding:3px 0;border-bottom:1px solid #1a2540"><strong>${NAKSHATRA_UA[natal.idx]}</strong> <span class="muted">(${NAKSHATRA_NAMES[natal.idx]}, P${natal.pada})</span></td>
