@@ -713,6 +713,9 @@
     #nowCard #nowSummary,
     #nowCard #compactExplainBlock,
     #nowCard #costarBanner { display:none !important; }
+    /* v77: personalCard slim — secondary visual weight */
+    #personalCard { opacity:.85; border-color:rgba(255,255,255,.05); }
+    #personalCardSub { display:none; }
   </style>
 
   <meta name="theme-color" content="#0b1220">
@@ -6102,7 +6105,7 @@ function renderPersonal() {
     ? `<div style="font-size:11px;color:${col};margin-top:2px">Taara G-mod сьогодні: <strong>${gmodSign}</strong></div>`
     : '';
 
-  resEl.innerHTML = `${noTimeWarnHtml}<div style="font-size:13px;font-weight:600;color:${col};padding:6px 10px;background:#0a1428;border-radius:6px;border-left:3px solid ${col};line-height:1.3;display:block">${danger ? '⚠ ' : '✓ '}${summaryAction}${gmodHtml}</div><table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:0">
+  resEl.innerHTML = `${noTimeWarnHtml}<div style="font-size:13px;font-weight:600;color:${col};padding:6px 10px;background:#0a1428;border-radius:6px;border-left:3px solid ${col};line-height:1.3;display:block">${danger ? '⚠ ' : '✓ '}${summaryAction}</div><details style="margin-top:6px"><summary class="small muted" style="cursor:pointer;font-size:11px">▶ Показати персональний розклад</summary>${gmodHtml}<table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:6px">
       <tr>
         <td class="muted" style="padding:3px 0;width:45%;border-bottom:1px solid #1a2540">Стоянка народження</td>
         <td style="padding:3px 0;border-bottom:1px solid #1a2540"><strong>${NAKSHATRA_UA[natal.idx]}</strong> <span class="muted">(${NAKSHATRA_NAMES[natal.idx]}, P${natal.pada})</span></td>
@@ -6145,6 +6148,7 @@ function renderPersonal() {
     <div class="small muted" style="margin-top:6px">R&D · Meeus Ch.47 · Lahiri · BPHS · ±0.5 стоянки без точного часу</div>
     <div id="taaraRingWrap" style="margin-top:10px"></div>
     <div id="taara7dWrap" style="margin-top:10px"></div>
+    </details>
   `;
   renderTaaraRing(document.getElementById('taaraRingWrap'), taara.group, natal.idx, nowNak.idx);
   renderTaara7d(document.getElementById('taara7dWrap'), natal.idx, nowJDE);
