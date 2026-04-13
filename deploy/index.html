@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v79</title>
+  <title>G-Index — Космофізичний дашборд v79c</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -726,12 +726,38 @@
     #personalCard { opacity:.92; border-color:rgba(255,255,255,.05); }
     #personalCardSub { display:none; }
 
-    /* ═══ v78d: 3-level visual hierarchy ═══ */
-    /* Core grid: WHY + TIMING side by side */
-    #coreGrid{display:grid;grid-template-columns:1.15fr 1fr;gap:12px;margin-bottom:12px}
+    /* ═══ v79c: compressed layout ═══ */
+    /* C6: vertical compression */
+    main{margin:10px auto!important;padding:0 12px 28px!important}
+    #heroCard{margin-bottom:10px!important;padding:14px 16px!important}
+    #impactBlock{gap:10px!important;margin-bottom:8px!important}
+    #impactBlock>div{padding:8px 12px!important}
+    #mainGrid{gap:10px!important;margin-bottom:10px!important}
+    #trustStrip{display:none!important}
+    /* C2: core grid compressed */
+    #coreGrid{display:grid;grid-template-columns:1.2fr .95fr;gap:10px;margin-bottom:10px}
     @media(max-width:980px){#coreGrid{grid-template-columns:1fr}}
-    .core-card{padding:14px;border-radius:16px;background:linear-gradient(180deg,rgba(12,20,38,.88),rgba(9,15,30,.94));border:1px solid rgba(255,255,255,.08);animation:riseIn .3s ease-out both}
+    .core-card{padding:10px 12px;border-radius:14px;background:linear-gradient(180deg,rgba(12,20,38,.88),rgba(9,15,30,.94));border:1px solid rgba(255,255,255,.08);animation:riseIn .3s ease-out both}
     @keyframes riseIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+    .why-title,.timing-title{margin-bottom:6px!important;font-size:10px!important}
+    .why-row{padding:4px 0!important;grid-template-columns:1fr 54px 18px!important}
+    .why-name{font-size:12px!important}
+    .why-val{font-size:13px!important}
+    .why-main{margin-top:6px!important;padding:6px 8px!important;font-size:11px!important;line-height:1.35!important}
+    .timing-row{grid-template-columns:84px 1fr!important;gap:6px!important;padding:5px 8px!important;margin-bottom:3px!important}
+    .timing-time{font-size:11px!important}
+    .timing-label{font-size:11px!important}
+    /* C3: panchanga compact */
+    #panchCard{padding:12px 14px!important}
+    #panchCard .panch-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important}
+    @media(max-width:860px){#panchCard .panch-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+    @media(max-width:520px){#panchCard .panch-grid{grid-template-columns:1fr!important}}
+    #panchCard .panch-cell{min-height:68px!important;padding:8px 10px!important;border-radius:12px!important}
+    #panchCard .panch-label{font-size:10px!important;margin-bottom:2px!important}
+    #panchCard .panch-val{font-size:13px!important;line-height:1.2!important}
+    #panchCard .panch-sub,.panch-do,.panch-av{font-size:11px!important;line-height:1.3!important}
+    #panchPiLine{margin-bottom:4px!important;font-size:11px!important}
+    #panchSummaryLine{font-size:11px!important;margin-bottom:4px!important;line-height:1.3!important}
 
     /* Hero: bigger G */
     #heroCard #heroG{font-size:44px!important;min-width:150px!important;padding:12px 18px!important;font-weight:900!important}
@@ -909,6 +935,13 @@
               <div class="pill" style="flex-direction:column;align-items:flex-start;padding:4px 8px;min-width:70px"><span style="font-size:9px;color:var(--dim)">Потенціал</span><span id="heroPotentialChip" style="font-size:11px;font-weight:700">—</span></div>
             </div>
             <!-- v79: Alert line -->
+            <!-- v79c: meta inline (replaces trust strip) -->
+            <div id="heroMetaInline" style="margin-top:4px;display:flex;flex-wrap:wrap;gap:4px 10px;font-size:11px;color:var(--muted)">
+              <span>Kp−2: <strong id="hmKp" style="color:var(--text2)">—</strong></span>
+              <span>ΣAᵢ: <strong id="hmAi" style="color:var(--text2)">—</strong></span>
+              <span>Драйвер: <strong id="hmDriver" style="color:var(--text2)">—</strong></span>
+              <span>Далі: <strong id="hmShift" style="color:var(--text2)">—</strong></span>
+            </div>
             <div id="heroAlertLine" class="hero-alert-line level-info" style="display:none">—</div>
             <!-- v78b: Cause decomp (inline, replaces heroImpactBlock) -->
             <div id="heroCauseBlock" style="margin-top:6px;padding:6px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.025)">
@@ -5263,7 +5296,6 @@ function syncWhy(){
 // ═══ v79: Trust Strip ═══
 function syncTrustStrip(){
   const tsKp=el('tsKp'), tsAi=el('tsAi'), tsDriver=el('tsDriver'), tsShift=el('tsShift');
-  if(!tsKp) return;
   const kp = _v73Kp();
   const kpPart = isFinite(kp) ? Math.round((kp-2)*10)/10 : NaN;
   const pc = window._lastPanchCtx;
@@ -5274,12 +5306,21 @@ function syncTrustStrip(){
     {n:'Lᵢ',v:ai.Li||0},{n:'Mᵢ',v:ai.Mi||0},{n:'Dᵢ',v:ai.Di||0}
   ].sort((a,b)=>Math.abs(b.v)-Math.abs(a.v));
   const main = drivers[0];
-  tsKp.textContent = isFinite(kpPart) ? (kpPart>0?'+':'')+kpPart.toFixed(1) : '—';
-  tsAi.textContent = isFinite(sumAi) ? (sumAi>0?'+':'')+sumAi.toFixed(1) : '—';
-  tsDriver.textContent = main&&main.v!==0 ? `${main.n} (${main.v>0?'+':''}${main.v.toFixed(1)})` : 'немає';
-  // Next shift from timing badge
+  const kpStr = isFinite(kpPart) ? (kpPart>0?'+':'')+kpPart.toFixed(1) : '—';
+  const aiStr = isFinite(sumAi) ? (sumAi>0?'+':'')+sumAi.toFixed(1) : '—';
+  const drvStr = main&&main.v!==0 ? `${main.n} (${main.v>0?'+':''}${main.v.toFixed(1)})` : 'немає';
   const shiftBadge = el('timingNextShift');
-  tsShift.textContent = shiftBadge?.textContent?.trim()?.replace(/^[•●▲⚠◔]\s*/,'')?.substring(0,40) || '—';
+  const shiftStr = shiftBadge?.textContent?.trim()?.replace(/^[•●▲⚠◔]\s*/,'')?.substring(0,40) || '—';
+  // Populate both trust strip and hero meta inline
+  if(tsKp) tsKp.textContent = kpStr;
+  if(tsAi) tsAi.textContent = aiStr;
+  if(tsDriver) tsDriver.textContent = drvStr;
+  if(tsShift) tsShift.textContent = shiftStr;
+  const hm = id => el(id);
+  if(hm('hmKp')) hm('hmKp').textContent = kpStr;
+  if(hm('hmAi')) hm('hmAi').textContent = aiStr;
+  if(hm('hmDriver')) hm('hmDriver').textContent = drvStr;
+  if(hm('hmShift')) hm('hmShift').textContent = shiftStr;
 }
 
 // --- MASTER ---
