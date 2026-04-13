@@ -647,9 +647,9 @@
     #nowAdvancedBlock>summary::-webkit-details-marker{display:none}
     #nowAdvancedBlock[open]>summary{margin-bottom:6px}
     #cScoreDrivers{display:none!important}
-    #panchCard{padding:12px 14px!important}
-    #panchCard h2{font-size:15px!important}
-    #panchCard th,#panchCard td{padding:6px 8px!important}
+    #panchCard{padding:16px!important}
+    #panchCard h2{font-size:16px!important}
+    #panchCard th,#panchCard td{padding:8px 10px!important}
     #personalCard{padding:12px 14px!important}
     #personalCard h2{font-size:15px!important}
     #personalResult td{padding:2px 5px!important;font-size:11px!important}
@@ -955,6 +955,14 @@
         <div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--dim);margin-bottom:4px">Якщо ігнорувати</div>
         <div id="impactBadText" style="font-size:13px;color:#ffd6db;line-height:1.4">→ ризик помилки ↑</div>
       </div>
+    </div>
+
+    <!-- v79: Trust Strip -->
+    <div id="trustStrip" style="margin:0 0 12px;padding:7px 12px;border:1px solid rgba(255,255,255,.07);border-radius:12px;background:rgba(9,15,30,.6);font-size:11px;color:#9bb1dc;display:flex;flex-wrap:wrap;gap:4px 14px;align-items:center">
+      <span>Kp−2: <strong id="tsKp">—</strong></span>
+      <span>ΣAᵢ: <strong id="tsAi">—</strong></span>
+      <span>Драйвер: <strong id="tsDriver">—</strong></span>
+      <span>Далі: <strong id="tsShift">—</strong></span>
     </div>
 
     <!-- ═══ v78d: CORE GRID — WHY + TIMING ═══ -->
@@ -1271,13 +1279,10 @@
         </div>
         <div id="panchPiLine" class="small muted" style="margin-bottom:6px">Pᵢ = —</div>
         <div id="panchSummaryLine" style="font-size:13px;margin-bottom:6px;line-height:1.5">—</div>
-        <details id="panchDetails">
-          <summary class="small muted" style="cursor:pointer;font-size:11px">▶ Показати деталі</summary>
-          <div id="panchGrid" style="margin-top:8px">
-            <div class="muted small">Завантаження…</div>
-          </div>
-          <div style="margin-top:6px;font-size:12px" id="panchNote"></div>
-        </details>
+        <div id="panchGrid" style="margin-top:8px">
+          <div class="muted small">Завантаження…</div>
+        </div>
+        <div style="margin-top:6px;font-size:12px" id="panchNote"></div>
       </section>
 
       <!-- ПЕРСОНАЛЬНИЙ РОЗРАХУНОК — правий стовпець, рядок 2 -->
@@ -4654,12 +4659,16 @@ function _renderHeroCause(g, kp) {
 
   if (whyMain) {
     const d = activeFact[0];
+    const d2 = activeFact[1];
     if (d) {
-      const verb = d.val > 0 ? 'підсилює' : 'знижує';
-      const restNote = neutralFact.length >= 3 ? '; інші фактори не впливають' : '';
-      whyMain.innerHTML = `→ Стан визначає <strong>${d.label}</strong>${restNote}`;
+      const panchPi = pc?.aiComponents?.Pi || 0;
+      const pTxt = panchPi <= -1 ? 'Панчанга також погіршує фон.'
+                 : panchPi >= 1 ? 'Панчанга частково компенсує тиск.'
+                 : 'Панчанга не змінює картину.';
+      const secondTxt = d2 ? ` ${d2.label} (${d2.val>0?'+':''}${d2.val.toFixed(1)}) теж впливає.` : '';
+      whyMain.innerHTML = `Головна причина: <strong>${d.label}</strong> (${d.val>0?'+':''}${d.val.toFixed(1)}).${secondTxt} ${pTxt}`;
     } else {
-      whyMain.textContent = '→ Усі фактори нейтральні — день рівний без вираженого тиску';
+      whyMain.textContent = 'Усі фактори нейтральні — день рівний без вираженого тиску. ' + (pc?.aiComponents?.Pi != null ? 'Панчанга не змінює картину.' : '');
     }
   }
 }
@@ -4726,13 +4735,18 @@ function _renderHeroTimeWindows() {
     const col = g >= 1 ? '#2bd47d' : g >= 0 ? '#9bb1dc' : g >= -1 ? '#ffcc00' : '#ff6b6b';
 
     let label;
+    // v79: human action label
+    const _actionLabel = g >= 1.5 ? 'активні дії і ключові рішення'
+      : g >= 0.5 ? 'безпечно працювати і планувати'
+      : g >= -0.5 ? 'стандартний темп без форсування'
+      : g >= -1.5 ? 'обережно: тільки перевірені дії'
+      : 'тільки рутина, не приймати рішень';
+
     if (_isFlat && _horaForSlot[h]) {
-      // Flat day: show hora quality instead of generic G label
       const hora = _horaForSlot[h];
-      const hq = HORA_QUALITY[hora.planet];
-      label = hq ? `${hora.planet} — ${hq.q}` : `${hora.planet} hora`;
+      label = `${_actionLabel} · ${hora.planet}`;
     } else {
-      label = g >= 1.5 ? 'активно діяти, приймати рішення' : g >= 0.5 ? 'безпечно працювати' : g >= -0.5 ? 'стандартні задачі' : g >= -1.5 ? 'обережність, без нового' : 'уникати активних дій';
+      label = _actionLabel;
     }
     // Panchanga overlay
     if (_panchTimingNote && g < 0.5) label += ` (${_panchTimingNote})`;
@@ -5175,20 +5189,29 @@ function mergeOpsCards(){
 function syncPanchSummary(){
   const pc=_lastPanchCtx;
   const s=el('panchSummaryLine');
+  const piLine=el('panchPiLine');
   if(!pc||!s) return;
   const ti=pc.tithi?.name||'—';
   const ni=pc.nakshatra?.name||'—';
-  const ns=pc.nakshatra?.score;
-  const dot=ns>=1?'🟢':ns<=-1?'🔴':'🟡';
-  const yi=pc.yoga?.name||'';
-  const yc=pc.yoga?.isCritical;
-  const vi=pc.karana?.isVishti;
-  const rh=pc.rahu?.active;
-  const parts=[dot+' '+ni, ti];
-  if(yc) parts.push('⚠ '+yi);
-  if(vi) parts.push('⚠ Вішті');
-  if(rh) parts.push('⚠ Раху-кала');
-  s.innerHTML=parts.map(p=>'<span style="margin-right:12px">'+p+'</span>').join('');
+  const ns=pc.nakshatra?.score||0;
+  const yi=pc.yoga?.name||'—';
+  const ki=pc.karana?.name||'—';
+  const vi=!!pc.karana?.isVishti;
+  const rh=!!pc.rahu?.active;
+  const pi=pc.aiComponents?.Pi||0;
+  const nakState=ns>=1?'сприятлива':ns<=-1?'напружена':'змішана';
+  const piState=pi>=1?'підтримує день':pi<=-1?'погіршує день':'майже нейтральна';
+  if(piLine) piLine.innerHTML=`Pᵢ = <strong>${pi>0?'+':''}${pi.toFixed(1)}</strong> · ${piState}`;
+  const flags=[];
+  if(pc.yoga?.isCritical) flags.push('⚠ '+yi);
+  if(vi) flags.push('⚠ Вішті');
+  if(rh) flags.push('⚠ Раху-кала');
+  s.innerHTML=`<div style="display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;font-size:12px">`
+    +`<span>Накшатра: <strong>${ni}</strong> · ${nakState}</span>`
+    +`<span>Тітхі: <strong>${ti}</strong></span>`
+    +`<span>Йога: <strong>${yi}</strong></span>`
+    +`<span>Карана: <strong>${ki}</strong></span>`
+    +(flags.length?`<span style="color:#ffcc00">${flags.join(' · ')}</span>`:'')+`</div>`;
 }
 
 function syncWhy(){
@@ -5237,6 +5260,28 @@ function syncWhy(){
   }
 }
 
+// ═══ v79: Trust Strip ═══
+function syncTrustStrip(){
+  const tsKp=el('tsKp'), tsAi=el('tsAi'), tsDriver=el('tsDriver'), tsShift=el('tsShift');
+  if(!tsKp) return;
+  const kp = _v73Kp();
+  const kpPart = isFinite(kp) ? Math.round((kp-2)*10)/10 : NaN;
+  const pc = window._lastPanchCtx;
+  const ai = pc?.aiComponents || {};
+  const sumAi = (ai.Li||0)+(ai.Mi||0)+(ai.ei||0)+(ai.Pi||0)+(ai.Di||0);
+  const drivers = [
+    {n:'eᵢ',v:ai.ei||0},{n:'Kp−2',v:kpPart},{n:'Pᵢ',v:ai.Pi||0},
+    {n:'Lᵢ',v:ai.Li||0},{n:'Mᵢ',v:ai.Mi||0},{n:'Dᵢ',v:ai.Di||0}
+  ].sort((a,b)=>Math.abs(b.v)-Math.abs(a.v));
+  const main = drivers[0];
+  tsKp.textContent = isFinite(kpPart) ? (kpPart>0?'+':'')+kpPart.toFixed(1) : '—';
+  tsAi.textContent = isFinite(sumAi) ? (sumAi>0?'+':'')+sumAi.toFixed(1) : '—';
+  tsDriver.textContent = main&&main.v!==0 ? `${main.n} (${main.v>0?'+':''}${main.v.toFixed(1)})` : 'немає';
+  // Next shift from timing badge
+  const shiftBadge = el('timingNextShift');
+  tsShift.textContent = shiftBadge?.textContent?.trim()?.replace(/^[•●▲⚠◔]\s*/,'')?.substring(0,40) || '—';
+}
+
 // --- MASTER ---
 function syncV702UI(){
   try{syncHero();}catch(e){console.warn('syncHero:',e);}
@@ -5255,6 +5300,8 @@ function syncV702UI(){
   try{renderKpContribution();}catch(e){console.warn("kpContrib:",e);}
   try{renderPanchPiLine();}catch(e){console.warn("panchPi:",e);}
   try{renderWf3();}catch(e){console.warn("wf3:",e);}
+  // v79: trust strip
+  try{syncTrustStrip();}catch(e){console.warn("trustStrip:",e);}
   // v75: save G to history for ΔG
   try{const _gNow=_v73G();if(isFinite(_gNow))_saveGHistory(_gNow);}catch(e){}
 }
