@@ -171,7 +171,7 @@
     /* Таблиця завжди видима */
     #gDecompTable { display:table !important; }
     /* Science Bar */
-    #scienceBar{ display:flex; flex-wrap:wrap; gap:6px 12px; margin:10px 0 0; padding:8px 12px; background:var(--card2); border:1px solid var(--border); border-radius:10px; font-size:var(--fs-sm) }
+    #scienceBar{ display:flex; flex-wrap:wrap; gap:4px 10px; margin:0 0 12px; padding:6px 10px; background:rgba(7,12,24,.85); border:1px solid rgba(60,80,120,.12); border-radius:8px; font-size:10px; opacity:.75 }
     .sci-item{ display:flex; align-items:center; gap:4px; color:var(--dim) }
     .sci-val{ font-weight:700; color:var(--text2); font-variant-numeric:tabular-nums }
     .sci-src{ color:var(--faint); font-size:10px }
@@ -481,12 +481,12 @@
 
     /* ===== v70.2 HERO / DECISION / COMPACT EXPLAIN ===== */
     #heroCard{margin-top:10px}
-    #heroCard .hero-wrap{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap}
-    .hero-left{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap}
-    .hero-maintext{display:flex;flex-direction:column;gap:4px;min-width:220px}
+    #heroCard .hero-wrap{display:grid!important;grid-template-columns:160px minmax(300px,1fr) 240px;gap:16px;align-items:stretch}
+    .hero-left{display:flex!important;align-items:center!important;justify-content:center!important;gap:0!important;flex-wrap:nowrap!important}
+    .hero-maintext{display:flex;flex-direction:column;gap:6px;min-width:0;justify-content:center}
     /* v78b: heroCat/heroAction removed */
-    .hero-right{display:grid;grid-template-columns:repeat(2,minmax(120px,1fr));gap:10px;min-width:280px;flex:1;max-width:460px}
-    .hero-metric{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:8px 10px}
+    .hero-right{display:grid;grid-template-columns:1fr;gap:8px;min-width:0;max-width:none;align-self:start}
+    .hero-metric{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:7px 10px;min-height:52px}
     .hero-metric .label{display:block;margin-bottom:3px}
     #heroDelta,#heroConfidence,#heroFreshness,#heroStamp{font-weight:700;font-variant-numeric:tabular-nums}
     #heroFreshness.live{color:var(--ok)}
@@ -506,8 +506,8 @@
     /* v70.3: merged into opsGrid */
     #stormStoryCard{display:none !important}
     #triggerCard{display:none !important}
-    @media(max-width:860px){.hero-right{width:100%;max-width:none;grid-template-columns:1fr 1fr}}
-    @media(max-width:500px){.hero-right{grid-template-columns:1fr}}
+    @media(max-width:860px){#heroCard .hero-wrap{grid-template-columns:1fr!important}.hero-right{grid-template-columns:1fr 1fr!important;max-width:none!important}}
+    @media(max-width:500px){.hero-right{grid-template-columns:1fr!important}}
     /* ===== v70.2 RADAR / TRIGGERS ===== */
     #radarCard,#triggerCard{margin:0 0 16px}
 
@@ -593,8 +593,8 @@
       z-index:2;text-shadow:0 0 24px currentColor;letter-spacing:-.02em;
     }
     #heroTrend{font-size:11px;position:absolute;bottom:4px;left:55px;transform:translateX(-50%);z-index:2;font-weight:700;letter-spacing:.04em;white-space:nowrap}
-    #heroRing{width:110px;height:110px;flex-shrink:0;position:relative}
-    #heroRing svg{width:110px;height:110px;transform:rotate(-90deg)}
+    #heroRing{width:136px;height:136px;flex-shrink:0;position:relative}
+    #heroRing svg{width:136px;height:136px;transform:rotate(-90deg)}
     #heroRing .ring-bg{fill:none;stroke:#1a2a44;stroke-width:6}
     #heroRing .ring-val{fill:none;stroke-width:6;stroke-linecap:round;transition:stroke-dashoffset .8s ease,stroke 1s ease;filter:drop-shadow(0 0 6px currentColor)}
     /* v78b: ring state animation */
@@ -1424,6 +1424,13 @@
         <div class="small muted" style="margin-top:6px">⚠ Без часу народження точність ±1 стоянка · До 3 профілів</div>
       </div>
 
+      <!-- Patch P: Decision context always visible -->
+      <div id="personalContextCard" style="margin-bottom:8px;padding:10px 12px;border:1px solid rgba(255,255,255,.08);border-radius:12px;background:rgba(255,255,255,.03)">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--dim);margin-bottom:5px">Сьогодні для тебе</div>
+        <div id="personalContextMain" style="font-size:13px;font-weight:700;line-height:1.35;color:#e6ecff">—</div>
+        <div id="personalContextSub" style="margin-top:4px;font-size:11px;line-height:1.4;color:#9bb1dc">—</div>
+      </div>
+
       <div id="personalResult" style="margin-top:0">
         <div class="muted small">Натисніть «✎ Дані» і введіть дату народження.</div>
       </div>
@@ -1431,6 +1438,17 @@
       <div id="dayPlanCard" style="margin-top:10px;padding:10px 12px;border:1px solid rgba(255,255,255,.07);border-radius:12px;background:rgba(255,255,255,.025)">
         <div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--dim);margin-bottom:6px">План дня</div>
         <div id="dayPlanRows" style="display:flex;flex-direction:column;gap:4px"></div>
+      </div>
+      <!-- G3: Hora timeline in left column -->
+      <div style="margin-top:10px;padding:10px 12px;border:1px solid rgba(255,255,255,.07);border-radius:12px;background:rgba(255,255,255,.025)">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+          <span style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--dim)">Планетарний ритм</span>
+          <span class="pill" style="font-size:9px">live</span>
+          <span class="muted" style="font-size:9px" id="horaCoordLabel">(UTC+2, 50°N)</span>
+        </div>
+        <div id="horaTimeline" style="position:relative;height:36px;border-radius:8px;overflow:hidden;background:#0a1428;border:1px solid #1e2f52"></div>
+        <div id="horaAxis" style="position:relative;height:12px;margin-top:1px;font-size:8px;color:#4a6080"></div>
+        <div id="horaLegend" style="margin-top:3px;font-size:10px;color:var(--dim)"></div>
       </div>
     </section>
     </div><!-- /grid -->
@@ -1461,18 +1479,6 @@ Kp: 3-год індекс геомагнітної активності (0–9)
         <div id="threeContent" style="margin-top:8px">Завантаження…</div>
       </details>
       <div id="threeError" class="err small"></div>
-    </section>
-
-    <!-- G3: Планетарний ритм доби (hora timeline) -->
-    <section class="card" id="planetRhythmCard" style="margin-bottom:12px">
-      <div class="flex" style="margin-bottom:6px">
-        <h2 style="margin:0;font-size:15px">Планетарний ритм доби</h2>
-        <span class="pill right" style="font-size:11px">live hora</span>
-        <span class="muted" style="font-size:10px;margin-left:8px" id="horaCoordLabel">(UTC+2, 50°N)</span>
-      </div>
-      <div id="horaTimeline" style="position:relative;height:44px;border-radius:10px;overflow:hidden;background:#0a1428;border:1px solid #1e2f52"></div>
-      <div id="horaAxis" style="position:relative;height:14px;margin-top:1px;font-size:9px;color:#4a6080"></div>
-      <div id="horaLegend" style="margin-top:4px;font-size:11px;color:var(--dim)"></div>
     </section>
 
     <!-- 45 ДНІВ -->
@@ -5365,6 +5371,21 @@ function syncWhy(){
 
 // ═══ v79: Trust Strip ═══
 // ═══ v79c G2: Day Plan Card ═══
+// ═══ Patch P: Personal context (always visible) ═══
+function syncPersonalContext(){
+  const main = el('personalContextMain');
+  const sub = el('personalContextSub');
+  if(!main||!sub) return;
+  const g = _v73G();
+  const stKey = classifyStateByG(g);
+  const st = GLOBAL_STATES[stKey];
+  if(!st) return;
+  main.textContent = st.doText + ' ' + st.avoidText;
+  const hora = (function(){try{return calcHora(new Date())}catch(e){return null}})();
+  const horaText = hora ? ` Зараз ${hora.planet} hora (ще ${hora.minLeft} хв).` : '';
+  sub.textContent = st.impact + horaText;
+}
+
 function syncDayPlanCard(){
   const box = el('dayPlanRows');
   if(!box) return;
@@ -5439,6 +5460,7 @@ function syncV702UI(){
   // v79: trust strip
   try{syncTrustStrip();}catch(e){console.warn("trustStrip:",e);}
   try{syncDayPlanCard();}catch(e){console.warn("dayPlan:",e);}
+  try{syncPersonalContext();}catch(e){console.warn("personalCtx:",e);}
   // v75: save G to history for ΔG
   try{const _gNow=_v73G();if(isFinite(_gNow))_saveGHistory(_gNow);}catch(e){}
 }
