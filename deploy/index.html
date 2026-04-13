@@ -817,6 +817,21 @@
     #heroCard.hero-state-tense{animation:heroCardPulse 3s ease-in-out infinite}
     @keyframes heroCardPulse{0%,100%{box-shadow:0 0 0 0 rgba(255,70,70,.12)}50%{box-shadow:0 0 0 6px rgba(255,70,70,.04)}}
 
+    /* ═══ FIX: Hero isolation ═══ */
+    /* FIX 1: Lock left block */
+    .hero-left{width:160px!important;min-width:160px!important;max-width:160px!important;flex-shrink:0!important;position:relative;z-index:2}
+    #heroRing{overflow:hidden}
+    /* FIX 2: Decision panel backdrop */
+    #heroDecisionPanel{background:linear-gradient(180deg,rgba(10,20,40,.5),rgba(10,20,40,.2));border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:10px 12px;backdrop-filter:blur(4px)}
+    #heroCard.hero-state-tense #heroActionCmd{color:#ffb3b8!important;text-shadow:0 0 12px rgba(255,80,80,.2)}
+    #heroCard.hero-state-favorable #heroActionCmd,#heroCard.hero-state-good #heroActionCmd{color:#b8ffd6!important;text-shadow:0 0 12px rgba(43,212,125,.15)}
+    /* FIX 3: Reduce hero noise */
+    #heroCard::before{opacity:.05!important}
+    /* FIX 4: Trend tighter */
+    #heroTrend{bottom:6px!important;font-size:9px!important;opacity:.8}
+    /* FIX 5: Vertical align center */
+    #heroCard .hero-wrap{align-items:center!important}
+
     /* Hero: bigger G */
     #heroCard #heroG{font-size:44px!important;min-width:150px!important;padding:12px 18px!important;font-weight:900!important}
     #heroCard #heroActionCmd{font-size:18px!important}
@@ -978,29 +993,29 @@
             <span id="heroG" class="gbadge">G …</span>
             <span id="heroTrend">—</span>
           </div>
-          <div class="hero-maintext">
-            <div id="heroActionCmd" style="font-size:17px;font-weight:800;letter-spacing:.02em;line-height:1.2">—</div>
-            <div id="heroMainDrag" style="margin-top:4px;font-size:13px;font-weight:700;letter-spacing:.01em"></div>
-            <!-- v78b: DO/AVOID compact -->
+        </div>
+        <div class="hero-maintext">
+          <div id="heroDecisionPanel">
+            <div id="heroActionCmd" style="font-size:19px;font-weight:900;letter-spacing:.02em;line-height:1.15">—</div>
+            <div id="heroMainDrag" style="margin-top:5px;font-size:13px;font-weight:700;letter-spacing:.01em;color:var(--text2)"></div>
             <div id="heroDecisionBlock" style="margin-top:6px">
               <div id="heroDecisionDo" style="font-size:13px;font-weight:700;line-height:1.3;color:var(--ok)">—</div>
-              <div id="heroDecisionAvoid" style="font-size:12px;line-height:1.3;color:var(--muted);margin-top:1px">—</div>
+              <div id="heroDecisionAvoid" style="font-size:12px;line-height:1.3;color:var(--muted);margin-top:2px">—</div>
             </div>
-            <!-- v78e: mini-chips -->
-            <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
-              <div class="pill" style="flex-direction:column;align-items:flex-start;padding:4px 8px;min-width:70px"><span style="font-size:9px;color:var(--dim)">Стан</span><span id="heroStateChip" style="font-size:11px;font-weight:700">—</span></div>
-              <div class="pill" style="flex-direction:column;align-items:flex-start;padding:4px 8px;min-width:70px"><span style="font-size:9px;color:var(--dim)">Ризик</span><span id="heroRiskChip" style="font-size:11px;font-weight:700">—</span></div>
-              <div class="pill" style="flex-direction:column;align-items:flex-start;padding:4px 8px;min-width:70px"><span style="font-size:9px;color:var(--dim)">Потенціал</span><span id="heroPotentialChip" style="font-size:11px;font-weight:700">—</span></div>
-            </div>
-            <!-- v79: Alert line -->
-            <!-- v79c: meta inline (replaces trust strip) -->
-            <div id="heroMetaInline" style="margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,.07);display:flex;flex-wrap:wrap;gap:4px 10px;font-size:11px;color:var(--muted)">
-              <span>Kp−2: <strong id="hmKp" style="color:var(--text2)">—</strong></span>
-              <span>ΣAᵢ: <strong id="hmAi" style="color:var(--text2)">—</strong></span>
-              <span>Драйвер: <strong id="hmDriver" style="color:var(--text2)">—</strong></span>
-              <span>Далі: <strong id="hmShift" style="color:var(--text2)">—</strong></span>
-            </div>
-            <div id="heroAlertLine" class="hero-alert-line level-info" style="display:none">—</div>
+          </div>
+          <div id="heroAlertLine" class="hero-alert-line level-info" style="display:none;margin-top:6px">—</div>
+          <div id="heroMetaInline" style="margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,.07);display:flex;flex-wrap:wrap;gap:4px 10px;font-size:11px;color:var(--muted)">
+            <span>Kp−2: <strong id="hmKp" style="color:var(--text2)">—</strong></span>
+            <span>ΣAᵢ: <strong id="hmAi" style="color:var(--text2)">—</strong></span>
+            <span>Драйвер: <strong id="hmDriver" style="color:var(--text2)">—</strong></span>
+            <span>Далі: <strong id="hmShift" style="color:var(--text2)">—</strong></span>
+          </div>
+          <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
+            <div class="pill" style="flex-direction:column;align-items:flex-start;padding:4px 8px;min-width:70px"><span style="font-size:9px;color:var(--dim)">Стан</span><span id="heroStateChip" style="font-size:11px;font-weight:700">—</span></div>
+            <div class="pill" style="flex-direction:column;align-items:flex-start;padding:4px 8px;min-width:70px"><span style="font-size:9px;color:var(--dim)">Ризик</span><span id="heroRiskChip" style="font-size:11px;font-weight:700">—</span></div>
+            <div class="pill" style="flex-direction:column;align-items:flex-start;padding:4px 8px;min-width:70px"><span style="font-size:9px;color:var(--dim)">Потенціал</span><span id="heroPotentialChip" style="font-size:11px;font-weight:700">—</span></div>
+          </div>
+        </div>
             <!-- v78b: Cause decomp (inline, replaces heroImpactBlock) -->
             <div id="heroCauseBlock" style="margin-top:6px;padding:6px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.025)">
               <div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);margin-bottom:3px">Що формує G</div>
@@ -1013,7 +1028,6 @@
               <div id="heroTimeSlots" style="font-size:12px;line-height:1.55;color:#b7c7ea"></div>
             </div>
             <div id="heroTopDrivers" style="margin-top:4px;display:flex;flex-direction:column;gap:3px;font-size:12px;max-width:320px"></div>
-          </div>
         </div>
         <div class="hero-right">
           <div class="hero-metric">
@@ -1033,7 +1047,6 @@
             <div id="heroStamp">—</div>
           </div>
         </div>
-      </div>
     </section>
 
     <!-- ═══ v78e: IMPACT BLOCK ═══ -->
