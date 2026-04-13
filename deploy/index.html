@@ -801,6 +801,22 @@
     /* Card hover focus */
     .card:hover,.core-card:hover{border-color:rgba(120,160,255,.28)!important;transition:border-color .2s ease}
 
+    /* ═══ Patch F3: Focus Anchor ═══ */
+    /* WHY main = second focus after hero */
+    #whyMain{font-size:13px!important;font-weight:600!important;color:#fff!important;background:rgba(255,80,80,.08)!important;border:1px solid rgba(255,80,80,.2)!important;border-radius:10px!important;padding:8px 10px!important}
+    /* Timing current row emphasis */
+    .timing-row.is-now{background:rgba(255,80,80,.10)!important;border-left:3px solid #ff6b6b!important;font-weight:600!important}
+    /* Panchanga header lighter */
+    #panchCard h2{opacity:.7!important;font-size:13px!important}
+    /* Core grid flow line */
+    #coreGrid{position:relative}
+    #coreGrid::before{content:"";position:absolute;left:0;right:0;top:-5px;height:1px;background:linear-gradient(to right,transparent,rgba(120,160,255,.2),transparent)}
+    /* Personal even lighter */
+    #personalCard{opacity:.88!important}
+    /* Hero tense subtle pulse */
+    #heroCard.hero-state-tense{animation:heroCardPulse 3s ease-in-out infinite}
+    @keyframes heroCardPulse{0%,100%{box-shadow:0 0 0 0 rgba(255,70,70,.12)}50%{box-shadow:0 0 0 6px rgba(255,70,70,.04)}}
+
     /* Hero: bigger G */
     #heroCard #heroG{font-size:44px!important;min-width:150px!important;padding:12px 18px!important;font-weight:900!important}
     #heroCard #heroActionCmd{font-size:18px!important}
@@ -978,7 +994,7 @@
             </div>
             <!-- v79: Alert line -->
             <!-- v79c: meta inline (replaces trust strip) -->
-            <div id="heroMetaInline" style="margin-top:4px;display:flex;flex-wrap:wrap;gap:4px 10px;font-size:11px;color:var(--muted)">
+            <div id="heroMetaInline" style="margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,.07);display:flex;flex-wrap:wrap;gap:4px 10px;font-size:11px;color:var(--muted)">
               <span>Kp−2: <strong id="hmKp" style="color:var(--text2)">—</strong></span>
               <span>ΣAᵢ: <strong id="hmAi" style="color:var(--text2)">—</strong></span>
               <span>Драйвер: <strong id="hmDriver" style="color:var(--text2)">—</strong></span>
@@ -1331,12 +1347,7 @@
           <div id="bestTimeContent"></div>
         </div>
 
-        <div id="horaTimelineBlock" style="margin-top:12px">
-          <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);margin-bottom:5px">Hora — планетарні години доби <span class="muted" style="font-size:10px;text-transform:none" id="horaCoordLabel">(UTC+2, 50°N)</span></div>
-          <div id="horaTimeline" style="position:relative;height:40px;border-radius:8px;overflow:hidden;background:#0a1428;border:1px solid #1e2f52"></div>
-          <div id="horaAxis" style="position:relative;height:14px;margin-top:1px;font-size:9px;color:#4a6080"></div>
-          <div id="horaLegend" style="margin-top:4px;font-size:11px;color:var(--dim)"></div>
-        </div>
+        <!-- horaTimeline moved to standalone block G3 -->
 
         </details>
 
@@ -1416,6 +1427,11 @@
       <div id="personalResult" style="margin-top:0">
         <div class="muted small">Натисніть «✎ Дані» і введіть дату народження.</div>
       </div>
+      <!-- G2: Day Plan -->
+      <div id="dayPlanCard" style="margin-top:10px;padding:10px 12px;border:1px solid rgba(255,255,255,.07);border-radius:12px;background:rgba(255,255,255,.025)">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--dim);margin-bottom:6px">План дня</div>
+        <div id="dayPlanRows" style="display:flex;flex-direction:column;gap:4px"></div>
+      </div>
     </section>
     </div><!-- /grid -->
 
@@ -1445,6 +1461,18 @@ Kp: 3-год індекс геомагнітної активності (0–9)
         <div id="threeContent" style="margin-top:8px">Завантаження…</div>
       </details>
       <div id="threeError" class="err small"></div>
+    </section>
+
+    <!-- G3: Планетарний ритм доби (hora timeline) -->
+    <section class="card" id="planetRhythmCard" style="margin-bottom:12px">
+      <div class="flex" style="margin-bottom:6px">
+        <h2 style="margin:0;font-size:15px">Планетарний ритм доби</h2>
+        <span class="pill right" style="font-size:11px">live hora</span>
+        <span class="muted" style="font-size:10px;margin-left:8px" id="horaCoordLabel">(UTC+2, 50°N)</span>
+      </div>
+      <div id="horaTimeline" style="position:relative;height:44px;border-radius:10px;overflow:hidden;background:#0a1428;border:1px solid #1e2f52"></div>
+      <div id="horaAxis" style="position:relative;height:14px;margin-top:1px;font-size:9px;color:#4a6080"></div>
+      <div id="horaLegend" style="margin-top:4px;font-size:11px;color:var(--dim)"></div>
     </section>
 
     <!-- 45 ДНІВ -->
@@ -5336,6 +5364,31 @@ function syncWhy(){
 }
 
 // ═══ v79: Trust Strip ═══
+// ═══ v79c G2: Day Plan Card ═══
+function syncDayPlanCard(){
+  const box = el('dayPlanRows');
+  if(!box) return;
+  const rows = [];
+  const tRows = document.querySelectorAll('#timingRows .timing-row');
+  if (tRows.length) {
+    Array.from(tRows).slice(0,3).forEach((row, i) => {
+      const time = row.querySelector('.timing-time')?.textContent?.trim() || '';
+      const label = row.querySelector('.timing-label span')?.textContent?.trim() || row.querySelector('.timing-label')?.textContent?.trim() || '';
+      rows.push({ time, label, cls: i===0 ? 'warn' : 'info' });
+    });
+  }
+  const ns = el('timingNextShift')?.textContent?.trim();
+  if (ns && ns.length > 3) rows.push({ time:'Далі', label: ns.replace(/^[•●▲⚠◔]\s*/,'').substring(0,60), cls:'ok' });
+  if (!rows.length) {
+    rows.push(
+      { time:'Ранок', label:'Тільки рутина без різких рішень', cls:'warn' },
+      { time:'День', label:'Не фіксувати важливі рішення', cls:'warn' },
+      { time:'Вечір', label:'Фон може вирівнятися', cls:'info' }
+    );
+  }
+  box.innerHTML = rows.map(r => `<div style="display:grid;grid-template-columns:68px 1fr;gap:6px;padding:5px 8px;border-radius:8px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.04);border-left:3px solid ${r.cls==='warn'?'#ff6b6b':r.cls==='ok'?'#2bd47d':'#37a7ff'}"><div style="font-size:11px;font-weight:700;color:#cfe0ff">${r.time}</div><div style="font-size:11px;line-height:1.35;color:#e6ecff">${r.label}</div></div>`).join('');
+}
+
 function syncTrustStrip(){
   const tsKp=el('tsKp'), tsAi=el('tsAi'), tsDriver=el('tsDriver'), tsShift=el('tsShift');
   const kp = _v73Kp();
@@ -5385,6 +5438,7 @@ function syncV702UI(){
   try{renderWf3();}catch(e){console.warn("wf3:",e);}
   // v79: trust strip
   try{syncTrustStrip();}catch(e){console.warn("trustStrip:",e);}
+  try{syncDayPlanCard();}catch(e){console.warn("dayPlan:",e);}
   // v75: save G to history for ΔG
   try{const _gNow=_v73G();if(isFinite(_gNow))_saveGHistory(_gNow);}catch(e){}
 }
