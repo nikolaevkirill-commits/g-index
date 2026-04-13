@@ -800,6 +800,40 @@
     #panchHeadline{font-size:14px!important;font-weight:800!important;letter-spacing:.01em}
     #panchAvoidLine,#panchCareLine,#panchDoLine,#panchBestLine{word-break:break-word;overflow-wrap:anywhere}
     @media(max-width:520px){#panchAvoidLine,#panchCareLine,#panchDoLine,#panchBestLine{font-size:11px!important;padding:6px 8px!important}}
+    /* ═══ v81g: Decision Block modes ═══ */
+    #decisionBlock.mode-stop{border-color:rgba(255,90,90,.30)!important;background:linear-gradient(180deg,rgba(42,10,12,.55),rgba(18,8,12,.95))!important}
+    #decisionBlock.mode-safe{border-color:rgba(255,204,0,.24)!important;background:linear-gradient(180deg,rgba(36,24,8,.42),rgba(14,12,10,.95))!important}
+    #decisionBlock.mode-go{border-color:rgba(43,212,125,.24)!important;background:linear-gradient(180deg,rgba(10,32,18,.42),rgba(8,14,12,.95))!important}
+    #decisionBlock.mode-stop #decisionMode{color:#ff6b6b}
+    #decisionBlock.mode-safe #decisionMode{color:#ffcc00}
+    #decisionBlock.mode-go #decisionMode{color:#2bd47d}
+    #decisionBlock{box-shadow:0 0 0 1px rgba(255,255,255,.03) inset,0 10px 28px rgba(0,0,0,.18)}
+    /* body mode dimming */
+    body.mode-stop #personalCard,body.mode-stop #astroGrid,body.mode-stop #nowCard{opacity:.72!important}
+    body.mode-safe #personalCard{opacity:.82!important}
+    /* ═══ v81h: UX polish — spacing, hierarchy, collapse ═══ */
+    :root{--space-2:8px;--space-3:12px;--radius-2:14px}
+    main{max-width:1280px!important}
+    /* Sticky bar */
+    #stickyDecisionBar.mode-stop{border-bottom-color:rgba(255,90,90,.25)}
+    #stickyDecisionBar.mode-safe{border-bottom-color:rgba(255,204,0,.20)}
+    #stickyDecisionBar.mode-go{border-bottom-color:rgba(43,212,125,.18)}
+    @media(max-width:700px){#stickyDecisionBar{top:36px;padding:6px 10px}.sticky-kpi{font-size:9px!important;padding:2px 6px!important}}
+    /* Collapse */
+    .ui-collapsed{max-height:44px;overflow:hidden;position:relative;cursor:pointer}
+    .ui-collapsed::after{content:'▾ розгорнути';position:absolute;right:10px;bottom:6px;color:rgba(255,255,255,.3);font-size:10px}
+    /* Visual weight hierarchy */
+    #decisionBlock{position:relative;z-index:2}
+    #panchCard{box-shadow:0 6px 20px rgba(0,0,0,.14)}
+    #dayPlanCard{box-shadow:0 4px 14px rgba(0,0,0,.10)}
+    #personalCard{filter:saturate(.86)}
+    /* Hero polish */
+    #heroCard{box-shadow:0 8px 28px rgba(0,0,0,.18)}
+    #heroMetaInline{opacity:.78}
+    /* Card hover */
+    .card:hover,.core-card:hover{transform:translateY(-1px);transition:transform .16s ease,border-color .18s ease}
+    @media(max-width:860px){#decisionBlock{padding:10px 12px!important}#decisionMain{font-size:16px!important}#panchHeadline{font-size:13px!important}}
+    @media(max-width:520px){#decisionMain{font-size:15px!important;line-height:1.25!important}}
   </style>
 
   <meta name="theme-color" content="#0b1220">
@@ -854,6 +888,16 @@
   </div>
 
   <main>
+    <!-- v81g: Sticky Decision Bar (shows on scroll past hero) -->
+    <div id="stickyDecisionBar" style="display:none;position:sticky;top:48px;z-index:190;padding:8px 16px;background:rgba(9,15,30,.92);backdrop-filter:blur(12px);border-bottom:1px solid rgba(255,255,255,.06);margin:-8px -12px 10px;box-shadow:0 6px 18px rgba(0,0,0,.14);border-radius:0">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;max-width:1280px;margin:0 auto">
+        <span id="stickyMode" style="font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase">—</span>
+        <span id="stickyAction" style="font-size:13px;font-weight:700;color:#eef4ff;flex:1;min-width:120px">—</span>
+        <span class="sticky-kpi" id="stickyKpiWhy" style="font-size:10px;padding:3px 8px;border-radius:999px;border:1px solid rgba(255,155,82,.18);color:#ffcfb5;background:rgba(255,255,255,.03)">—</span>
+        <span class="sticky-kpi" id="stickyKpiNow" style="font-size:10px;padding:3px 8px;border-radius:999px;border:1px solid rgba(43,212,125,.16);color:#b7ffd0;background:rgba(255,255,255,.03)">—</span>
+        <span class="sticky-kpi" id="stickyKpiNext" style="font-size:10px;padding:3px 8px;border-radius:999px;border:1px solid rgba(55,167,255,.16);color:#abd2ff;background:rgba(255,255,255,.03)">—</span>
+      </div>
+    </div>
     <!-- ═══ SCIENCE BAR ═══ -->
     <div id="scienceBar">
       <!-- Первинні: завжди видно -->
@@ -970,7 +1014,13 @@
 
     <!-- v81: trustStrip removed (duplicates heroMetaInline) -->
 
-    <!-- ═══ v78d: CORE GRID — WHY + TIMING ═══ -->
+    <!-- v81g: Decision Block — single CTA -->
+    <section class="card" id="decisionBlock" style="display:none;margin-bottom:10px;padding:12px 14px;border-radius:14px;border:1px solid rgba(255,255,255,.08);background:linear-gradient(180deg,rgba(14,22,40,.96),rgba(10,16,30,.98))">
+      <div id="decisionMode" style="font-size:11px;letter-spacing:.09em;text-transform:uppercase;font-weight:800;margin-bottom:6px">—</div>
+      <div id="decisionMain" style="font-size:18px;font-weight:800;line-height:1.25;color:#eef4ff;max-width:820px">—</div>
+      <div id="decisionWhy" style="font-size:12px;line-height:1.4;color:var(--muted);margin-top:6px;max-width:920px;opacity:.9">—</div>
+    </section>
+
     <div id="coreGrid">
       <section id="whyCard" class="core-card">
         <div class="why-title">Що формує стан</div>
@@ -1038,7 +1088,8 @@
     <div id="profileRec"></div>
 
     <!-- ═══ v76d: wf3 Signal Summary (compact inline) ═══ -->
-    <div id="wf3SignalSummary" style="margin:8px 0;padding:8px 12px;border:1px solid rgba(255,255,255,.08);border-radius:12px;background:rgba(9,15,30,.72)">
+    <!-- v81h: wf3SignalSummary hidden — duplicates decisionBlock -->
+    <div id="wf3SignalSummary" style="display:none">
       <div id="wf3Top" style="display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;font-size:12px;line-height:1.4"></div>
       <div id="wf3Bottom" style="display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;font-size:11px;margin-top:4px;color:#8a9cc0"></div>
     </div>
@@ -1227,7 +1278,7 @@
 
       <!-- Patch P: Decision context always visible -->
       <div id="personalContextCard" style="margin-bottom:8px;padding:10px 12px;border:1px solid rgba(255,255,255,.08);border-radius:12px;background:rgba(255,255,255,.03)">
-        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--dim);margin-bottom:5px">Що впливає</div>
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--dim);margin-bottom:5px">Сьогодні для тебе</div>
         <div id="personalContextMain" style="font-size:12px;font-weight:600;line-height:1.45;color:#e6ecff">—</div>
       </div>
 
@@ -4948,6 +4999,107 @@ function syncPanchSummary(){
   }
 }
 
+// ═══ v81g: Decision Block — single CTA ═══
+function getDecisionMode(g){
+  if(g<=-4) return 'stop';
+  if(g<=-1) return 'safe';
+  return 'go';
+}
+
+function renderDecisionBlock(){
+  var box=el('decisionBlock'), modeEl=el('decisionMode'), mainEl=el('decisionMain'), whyEl=el('decisionWhy');
+  if(!box||!modeEl||!mainEl||!whyEl) return;
+  var g=Number(_v73G?.()||0);
+  var mode=getDecisionMode(g);
+  var copy={stop:{label:'⛔ STOP',main:'Не приймай важливих рішень. Працюй тільки по рутині.'},safe:{label:'⚠ SAFE MODE',main:'Рухайся обережно. Нове — тільки без ризику.'},go:{label:'✅ GO',main:'Можна просувати підготовлені справи.'}};
+  var c=copy[mode]||copy.go;
+
+  box.classList.remove('mode-stop','mode-safe','mode-go');
+  box.classList.add('mode-'+mode);
+  modeEl.textContent=c.label;
+
+  // Sync with hero if available
+  var heroCmd=el('heroActionCmd')?.textContent?.trim();
+  mainEl.textContent=heroCmd||c.main;
+
+  // Why: main driver + plan hint
+  var driver=el('whyMain')?.textContent?.trim()||el('hmDriver')?.textContent?.trim()||'фон дня';
+  var planRows=Array.from(el('dayPlanRows')?.children||[]);
+  var planHint=planRows.length?(planRows[0]?.textContent||'').replace(/\s+/g,' ').trim():'';
+  whyEl.textContent=planHint?driver+' · Зараз: '+planHint:driver;
+  box.style.display='';
+}
+
+function applyBodyModeClass(){
+  var g=Number(_v73G?.()||0);
+  var mode=getDecisionMode(g);
+  document.body.classList.remove('mode-stop','mode-safe','mode-go');
+  document.body.classList.add('mode-'+mode);
+}
+
+// ═══ v81h: Sticky Decision Bar ═══
+function renderStickyDecisionBar(){
+  var bar=el('stickyDecisionBar');
+  var hero=el('heroCard');
+  if(!bar||!hero) return;
+  var heroBottom=hero.getBoundingClientRect().bottom;
+  if(heroBottom>=10){bar.style.display='none';return;}
+
+  var g=Number(_v73G?.()||0);
+  var mode=getDecisionMode(g);
+  var copy={stop:{label:'⛔ STOP',col:'#ff6b6b'},safe:{label:'⚠ SAFE',col:'#ffcc00'},go:{label:'✅ GO',col:'#2bd47d'}};
+  var c=copy[mode]||copy.go;
+
+  bar.classList.remove('mode-stop','mode-safe','mode-go');
+  bar.classList.add('mode-'+mode);
+
+  var sm=el('stickyMode');if(sm){sm.textContent=c.label;sm.style.color=c.col;}
+  var sa=el('stickyAction');if(sa) sa.textContent=el('heroActionCmd')?.textContent?.trim()||'—';
+
+  var _trim=function(s,mx){s=String(s||'').replace(/\s+/g,' ').trim();return s.length>mx?s.slice(0,mx-1)+'…':s;};
+  var sw=el('stickyKpiWhy');if(sw) sw.textContent=_trim('Причина: '+(el('hmDriver')?.textContent?.trim()||'фон дня'),44);
+  var sn=el('stickyKpiNow');
+  if(sn){var pr=Array.from(el('dayPlanRows')?.children||[]);sn.textContent=_trim('Зараз: '+(pr.length?(pr[0]?.textContent||'').replace(/\s+/g,' ').trim():'базовий режим'),44);}
+  var sx=el('stickyKpiNext');if(sx) sx.textContent=_trim('Далі: '+(el('hmShift')?.textContent?.trim()||'без змін'),44);
+
+  bar.style.display='';
+}
+
+var _stickyTick=false;
+function _onStickyScroll(){
+  if(_stickyTick) return;
+  _stickyTick=true;
+  requestAnimationFrame(function(){renderStickyDecisionBar();_stickyTick=false;});
+}
+
+// ═══ v81h: Collapse by mode ═══
+function collapseByMode(){
+  var g=Number(_v73G?.()||0);
+  var mode=getDecisionMode(g);
+  var personal=el('personalCard');
+  var nowCard=el('nowCard');
+
+  // Remove previous collapse
+  [personal,nowCard].forEach(function(n){if(n)n.classList.remove('ui-collapsed');});
+
+  if(mode==='stop'){
+    if(personal) personal.classList.add('ui-collapsed');
+  } else if(mode==='safe'){
+    if(personal) personal.classList.add('ui-collapsed');
+  }
+  // GO = everything expanded
+}
+
+// ═══ v81h: Enforce content policy (strip action phrases from personal) ═══
+function enforceContentPolicy(){
+  var pm=el('personalContextMain');
+  if(!pm) return;
+  var t=pm.textContent||'';
+  t=t.replace(/не робити:.*$/im,'').replace(/обережно:.*$/im,'')
+     .replace(/добре для:.*$/im,'').replace(/краще вікно:.*$/im,'').trim();
+  if(t!==(pm.textContent||'').trim()) pm.textContent=t;
+}
+
 // ═══ v81f: NFR policy guard — deterministic, role-based ═══
 function _dedupeBlocks(){
   var panchCard = el('panchCard');
@@ -4982,51 +5134,8 @@ function _dedupeBlocks(){
   }
 }
 
-function syncWhy(){
-  const w=el('decisionWhy');
-  if(!w) return;
-  const pc=_lastPanchCtx;
-  const ai=pc?.aiComponents;
-  const pd=window._lunarPhaseDeg;
-  const g=_num(_firstText(el('nowG'))||el('nowG')?.textContent);
-  const now=new Date();
-  const lines=[];
-
-  // Moon interpretation
-  if(isFinite(pd)){
-    const phaseName=phaseNameByAngle(pd);
-    const li=ai?.Li??0;
-    const illum=((1-Math.cos(pd*Math.PI/180))/2*100).toFixed(0);
-    const moonSign=li<0?'↓':'↑';
-    const moonCol=li<0?'#ff9966':li>0?'#2bd47d':'#9bb1dc';
-    const moonEffect=li<=-2?'сильне зниження енергії':li<0?'зниження енергії':li>=2?'підйом енергії':li>0?'помірний підйом':'нейтральний фон';
-    lines.push(`<span style="color:${moonCol}">🌙 ${phaseName} ${illum}% · Lᵢ=${li} → ${moonSign} ${moonEffect}</span>`);
-  }
-
-  // Retro interpretation
-  const planets=['Mercury','Venus','Mars','Jupiter','Saturn'];
-  const retroEffects={Mercury:'помилки, затримки',Venus:'перегляд стосунків',Mars:'імпульсивність',Jupiter:'переоцінка планів',Saturn:'тиск, обмеження'};
-  const rxActive=[];
-  planets.forEach(p=>{try{if(isRetrograde(p,now))rxActive.push(p)}catch(e){}});
-  if(rxActive.length){
-    const effects=rxActive.map(p=>retroEffects[p]||p).join(', ');
-    lines.push(`<span style="color:#ff9966">🪐 Ретро: ${rxActive.length} планет → ${effects}</span>`);
-  }
-
-  // G interpretation
-  if(isFinite(g)){
-    const gCol=g<=-2.5?'#ff6b6b':g<=-0.5?'#ffaa33':g>=0.5?'#2bd47d':'#9bb1dc';
-    const gText=g<=-2.5?'високий ризик':g<=-0.5?'слабкий сигнал':g>=1.5?'сильний імпульс':g>=0.5?'помірний підйом':'нейтрально';
-    lines.push(`<span style="color:${gCol}">📊 G=${g.toFixed(2)} → ${gText}</span>`);
-  }
-
-  if(lines.length){
-    w.innerHTML=lines.join('<br>');
-    w.style.display='block';
-  } else {
-    w.style.display='none';
-  }
-}
+// v81h: syncWhy removed — decisionWhy now owned by renderDecisionBlock
+function syncWhy(){}
 
 // ═══ v79: Trust Strip ═══
 // ═══ v79c G2: Day Plan Card ═══
@@ -5112,13 +5221,18 @@ function syncV702UI(){
   try{renderConfidenceBreakdown();}catch(e){console.warn('confidence:',e);}
   try{renderKpContribution();}catch(e){console.warn("kpContrib:",e);}
   try{renderPanchPiLine();}catch(e){console.warn("panchPi:",e);}
-  try{renderWf3();}catch(e){console.warn("wf3:",e);}
+  // v81h: renderWf3 skipped (wf3SignalSummary hidden — duplicates decisionBlock)
   // v79: trust strip
   try{syncTrustStrip();}catch(e){console.warn("trustStrip:",e);}
   try{syncDayPlanCard();}catch(e){console.warn("dayPlan:",e);}
   try{syncPersonalContext();}catch(e){console.warn("personalCtx:",e);}
   // v81e: role-based dedupe
+  try{enforceContentPolicy();}catch(e){console.warn("enfPolicy:",e);}
   try{_dedupeBlocks();}catch(e){console.warn("dedupe:",e);}
+  // v81g: decision block + body mode + sticky + collapse
+  try{renderDecisionBlock();}catch(e){console.warn("decision:",e);}
+  try{applyBodyModeClass();}catch(e){console.warn("bodyMode:",e);}
+  try{collapseByMode();}catch(e){console.warn("collapse:",e);}
   // v75: save G to history for ΔG
   try{const _gNow=_v73G();if(isFinite(_gNow))_saveGHistory(_gNow);}catch(e){}
 }
@@ -8017,7 +8131,7 @@ function renderProfileRec() {
   el_.innerHTML = `<span style="font-weight:700;color:${prof.color}">${prof.label}:</span> ${rec}${ageLine}`;
 }
 
-addEventListener('load', ()=>{ initGeolocation(); setStamp(); loadAll(); el('btnCsv').addEventListener('click', exportCsv); el('selInterval').addEventListener('change', updateAutoRefStatus); initPersonalCalc(); initLangToggle(); initG2Watch(); });
+addEventListener('load', ()=>{ initGeolocation(); setStamp(); loadAll(); el('btnCsv').addEventListener('click', exportCsv); el('selInterval').addEventListener('change', updateAutoRefStatus); initPersonalCalc(); initLangToggle(); initG2Watch(); window.addEventListener('scroll',_onStickyScroll,{passive:true}); document.addEventListener('click',function(e){var c=e.target.closest('.ui-collapsed');if(c)c.classList.remove('ui-collapsed');}); });
 el('btnRefresh').addEventListener('click', loadAll);
 
 // ========================= i18n EN/UA =========================
@@ -9148,121 +9262,7 @@ function renderPanchPiLine(){
 
 // ═══ v76c: wf3 Signal Summary ═══
 // ═══ v76d: wf3 Human-readable Signal Summary ═══
-var WF3_PHRASES={
-  calm:'Фон стабільний, виражених факторів немає.',
-  kp_up:'Геомагнітний фон дає {s} ріст ({v}).',
-  kp_down:'Геомагнітний фон створює {s} тиск ({v}).',
-  moon_up:'Місячна фаза додає {s} вплив ({v}).',
-  moon_down:'Місячна фаза створює {s} тиск ({v}).',
-  eclipse:'Період затемнення створює нестабільність ({v}).',
-  events:'Події дня дають {s} вплив ({v}).',
-  panchanga:'Панчанга формує {s} фон ({v}).',
-  mixed:'Фактори змішані, чіткого домінування немає.',
-  others_neutral:'Інші фактори нейтральні.',
-  rel_good:'Дані надійні ({c}%).',
-  rel_mid:'Дані прийнятні ({c}%).',
-  rel_low:'Дані обмеженої надійності ({c}%).',
-  cached:'Показано кеш.',
-  live:'Дані актуальні.',
-  stale:'Дані можуть бути застарілими.',
-  scen_up:'Якщо Kp зросте, вплив посилиться до {v}.'
-};
-var WF3_ALERT={
-  storm_high:'Йде геомагнітна буря, небажано планувати критичні дії.',
-  storm_mid:'Геомагнітна активність підвищена, день потребує обережності.',
-  storm_low:'Геомагнітний фон підвищений, варто зменшити навантаження.',
-  eclipse_peak:'Пік впливу затемнення, день краще не перевантажувати.',
-  eclipse_near:'Період затемнення посилює нестабільність фону.',
-  eclipse_far:'Відчувається фоновий вплив періоду затемнення.',
-  amavasya:'Амавасья підсилює внутрішню нестабільність і знижує стійкість.',
-  ekadashi:'Екадаші змінює ритм дня, краще уникати перевантаження.',
-  mixed_hard:'Накладаються кілька несприятливих факторів, день напружений.',
-  mixed_mid:'Фон змішаний, але з перевагою несприятливих факторів.',
-  unstable:'Картина дня неповна, дані слід читати обережно.'
-};
-
-function renderWf3(){
-  var g=_v73G(), kp=_v73Kp();
-  var wrap=el('wf3SignalSummary'), top=el('wf3Top'), bot=el('wf3Bottom');
-  if(!wrap||!top||!bot) return;
-  if(!isFinite(g)||!isFinite(kp)){wrap.style.display='none';return;}
-  var kpPart=Math.round((kp-2)*10)/10;
-  // Read ai components from chips
-  var chips=[].slice.call(document.querySelectorAll('#gDecompFactors .gd-chip[data-val]'));
-  var comps={Li:0,Mi:0,ei:0,Pi:0};
-  chips.forEach(function(c){
-    var nameEl=c.querySelector('.gd-chip-name');
-    var nm=(nameEl?nameEl.textContent:'').split(' ')[0].replace(/[:\s]/g,'');
-    var v=parseFloat(c.getAttribute('data-val'));
-    if(nm&&isFinite(v)&&comps.hasOwnProperty(nm)) comps[nm]=v;
-  });
-  if(comps.Pi===0&&window._lastAiPi!=null&&window._lastAiPi!==0) comps.Pi=Number(window._lastAiPi)||0;
-
-  function fs(x){var n=Number(x||0);return(n>0?'+':'')+n.toFixed(1);}
-  function strength(v){var a=Math.abs(v);return a<0.5?'слабкий':a<1.5?'помірний':'сильний';}
-
-  // Main driver
-  var drivers=[{k:'kp',v:kpPart},{k:'li',v:comps.Li},{k:'mi',v:comps.Mi},{k:'ei',v:comps.ei},{k:'pi',v:comps.Pi}];
-  drivers.sort(function(a,b){return Math.abs(b.v)-Math.abs(a.v);});
-  var d=drivers[0];
-
-  // Line 1: main cause (human text)
-  var line1;
-  if(Math.abs(d.v)<0.15){
-    line1=WF3_PHRASES.calm;
-  } else {
-    var tpl;
-    if(d.k==='kp') tpl=d.v>0?WF3_PHRASES.kp_up:WF3_PHRASES.kp_down;
-    else if(d.k==='li') tpl=d.v>0?WF3_PHRASES.moon_up:WF3_PHRASES.moon_down;
-    else if(d.k==='mi') tpl=WF3_PHRASES.eclipse;
-    else if(d.k==='ei') tpl=WF3_PHRASES.events;
-    else if(d.k==='pi') tpl=WF3_PHRASES.panchanga;
-    else tpl=WF3_PHRASES.mixed;
-    line1=tpl.replace('{s}',strength(d.v)).replace('{v}',fs(d.v));
-  }
-  top.textContent=line1;
-
-  // Line 2: alert OR others + reliability + scenario
-  var parts=[];
-  // Data state
-  var hf=el('heroFreshness');
-  var dataState=(hf?hf.textContent.trim():'LIVE');
-  var hc=el('heroConfidence');
-  var confNum=parseInt(hc?hc.textContent.trim():'')||100;
-
-  // Alert check (priority order)
-  var alert='';
-  if(confNum<60||dataState==='STALE') alert=WF3_ALERT.unstable;
-  else if(kp>=6) alert=WF3_ALERT.storm_high;
-  else if(kp>=5) alert=WF3_ALERT.storm_mid;
-  else if(kp>=4) alert=WF3_ALERT.storm_low;
-  else if(comps.Mi<=-4) alert=WF3_ALERT.eclipse_peak;
-  else if(comps.Mi<=-3) alert=WF3_ALERT.eclipse_near;
-  else if(comps.Mi<=-1) alert=WF3_ALERT.eclipse_far;
-  else if(comps.Li<=-3) alert=WF3_ALERT.amavasya;
-  else if(comps.ei<=-2.5) alert=WF3_ALERT.ekadashi;
-  else {
-    var negCnt=[kpPart,comps.Li,comps.Mi,comps.ei,comps.Pi].filter(function(x){return x<-0.5;}).length;
-    var negSum=[kpPart,comps.Li,comps.Mi,comps.ei,comps.Pi].reduce(function(s,x){return s+Math.min(0,x);},0);
-    if(negCnt>=3||negSum<=-4) alert=WF3_ALERT.mixed_hard;
-    else if(negCnt>=2||negSum<=-2) alert=WF3_ALERT.mixed_mid;
-  }
-
-  if(alert) parts.push(alert);
-  else parts.push(WF3_PHRASES.others_neutral);
-
-  // Reliability
-  var relTpl=confNum>=90?WF3_PHRASES.rel_good:confNum>=75?WF3_PHRASES.rel_mid:WF3_PHRASES.rel_low;
-  var relState=dataState==='LIVE'?WF3_PHRASES.live:dataState==='CACHED'?WF3_PHRASES.cached:WF3_PHRASES.stale;
-  parts.push(relTpl.replace('{c}',confNum)+' '+relState);
-
-  // Scenario (only near threshold)
-  if(Math.abs(g)<=1.0) parts.push(WF3_PHRASES.scen_up.replace('{v}',fs(g+1)));
-
-  bot.textContent=parts.join(' ');
-  bot.style.display='flex';
-  wrap.style.display='';
-}
+// v81h: WF3_PHRASES, WF3_ALERT, renderWf3 removed (wf3SignalSummary hidden since v81h)
 
 function _saveGHistory(g){
   if(!isFinite(g)) return;
