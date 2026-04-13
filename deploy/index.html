@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v81</title>
+  <title>G-Index — Космофізичний дашборд v82b</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -46,11 +46,11 @@
     .sub{color:var(--dim); font-size:var(--fs-md)}
     main{max-width:1400px; margin:16px auto; padding:0 16px 40px}
     .row{display:grid; grid-template-columns:repeat(12,1fr); gap:var(--gap)}
-    #mainGrid{display:grid; grid-template-columns:1fr 1fr; grid-template-rows:auto; gap:12px; margin-bottom:12px}
-    #panchCard{grid-column:1/3; grid-row:1}
-    #dayPlanCard{grid-column:1; grid-row:2}
-    #personalCard{grid-column:2; grid-row:2}
-    #nowCard{grid-column:1/3; grid-row:3}
+    #mainGrid{display:grid; grid-template-columns:1fr; gap:12px; margin-bottom:12px}
+    #duoCard{display:grid; grid-template-columns:1fr 1fr; gap:12px; background:transparent; border:none; padding:0; box-shadow:none; border-radius:0}
+    #duoCard>.card{grid-column:auto; margin:0}
+    #nowCard{grid-column:auto}
+    @media(max-width:860px){#duoCard{grid-template-columns:1fr}}
     .card{grid-column:span 12; background:var(--card); border:1px solid var(--border); border-radius:16px; padding:16px}
     @media (min-width: 860px){ .card.half{grid-column: span 6} }
     button{appearance:none; border:none; background:var(--alt); color:#001026; font-weight:700; padding:8px 14px; border-radius:10px; cursor:pointer; font-size:var(--fs-md)}
@@ -144,7 +144,11 @@
     #nowG { transition:background .4s, color .3s; }
 
     /* ── Flow анімація: компоненти → G ── */
-    /* v81: flowRight removed (unused) */
+    @keyframes flowRight {
+      0%   { opacity:0; transform:translateX(-8px); }
+      60%  { opacity:1; transform:translateX(2px); }
+      100% { opacity:1; transform:translateX(0); }
+    }
     @keyframes chipPop {
       0%   { transform:scale(.85); opacity:.4; }
       70%  { transform:scale(1.08); }
@@ -243,7 +247,7 @@
         grid-template-columns: 1fr !important;
         grid-template-rows: auto !important;
       }
-      #nowCard, #panchCard, #personalCard, #dayPlanCard {
+      #nowCard, #panchCard, #personalCard {
         grid-column: 1 !important;
         grid-row: auto !important;
         width: 100%;
@@ -259,7 +263,9 @@
       .profile-btn { font-size: 10px; padding: 3px 7px }
       .gbadge { font-size: 20px !important; padding: 7px 12px !important; min-width: 100px !important }
       #horaLegend { font-size: 10px }
-      /* v81: gTopRow removed */
+      /* gTopRow: badge + cat en ligne, summary dessous */
+      #gTopRow { flex-wrap: wrap; gap: 8px; padding: 8px 12px }
+      #gTopSummary { width: 100%; margin-left: 0; font-size: 11px }
     }
 
     /* ── 700px: tables scroll, hide cols ── */
@@ -443,7 +449,8 @@
       /* Larger touch targets for table rows */
       #threeCard td, #twentysevenCard td { padding: 10px 8px; }
       /* G badge — prominent on mobile */
-      /* v81: gTopRow/Badge CSS removed */
+      #gTopRow { padding: 12px 14px; border-radius: 10px; }
+      #gTopBadge { font-size: 26px !important; min-width: 90px !important; }
       /* Science bar items — pill style on mobile */
       .sci-item { font-size: 11px; padding: 5px 8px; background: #0b1424; border-radius: 6px; }
       /* Profile bar — touch scroll */
@@ -458,7 +465,7 @@
     }
 
     @media (max-width: 400px) {
-      /* v81: gTopBadge removed */
+      #gTopBadge { font-size: 22px !important; }
       /* Science bar — 2 per row, compact */
       #scienceBar { grid-template-columns: 1fr 1fr; gap: 4px; }
       .sci-item { font-size: 10px; padding: 4px 6px; }
@@ -519,7 +526,9 @@
     /* ═══ v70.8 WOW VISUAL UPGRADE ═══ */
     @keyframes auroraShift{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
     @keyframes fadeSlideIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
-    /* v81: glowPulse, ringDraw, borderGlow removed (unused) */
+    @keyframes glowPulse{0%,100%{box-shadow:0 0 15px rgba(55,167,255,.15)}50%{box-shadow:0 0 30px rgba(55,167,255,.3)}}
+    @keyframes ringDraw{from{stroke-dashoffset:283}to{stroke-dashoffset:var(--ring-offset,140)}}
+    @keyframes borderGlow{0%,100%{border-color:rgba(55,167,255,.3)}50%{border-color:rgba(55,167,255,.6)}}
 
     #heroCard{
       position:relative;overflow:hidden;
@@ -617,7 +626,8 @@
     .driver-bar{height:6px;border-radius:3px;min-width:4px;transition:width .4s}
     .driver-label{min-width:36px;font-weight:700;font-variant-numeric:tabular-nums}
     /* Confidence formula-based */
-    /* v81: .conf-fill.pulse removed (decisionNow deleted) */
+    .conf-fill.pulse{animation:confPulse 2s ease-in-out infinite}
+    @keyframes confPulse{0%,100%{opacity:1}50%{opacity:.7}}
 
     /* v80: v73TopLayer CSS removed (HTML deleted) */
     /* v80: opsGrid/v73TopLayer/dead blocks — all HTML removed */
@@ -636,7 +646,7 @@
     #impactBlock{gap:10px!important;margin-bottom:8px!important}
     #impactBlock>div{padding:8px 12px!important}
     #mainGrid{gap:10px!important;margin-bottom:10px!important}
-    /* v81: trustStrip removed */
+    #trustStrip{display:none!important}
     /* C2: core grid compressed */
     #coreGrid{display:grid;grid-template-columns:1.2fr .95fr;gap:10px;margin-bottom:10px}
     @media(max-width:980px){#coreGrid{grid-template-columns:1fr}}
@@ -788,52 +798,6 @@
     .hero-alert-line.level-watch{border-color:rgba(255,204,82,.2);color:#ffe0a0;background:rgba(255,204,82,.04)}
     .hero-alert-line.level-warn{border-color:rgba(255,155,82,.22);color:#ffcba0;background:rgba(255,155,82,.05)}
     .hero-alert-line.level-critical{border-color:rgba(255,107,120,.25);color:#ffc0c8;background:rgba(255,107,120,.07)}
-    /* ═══ v81c: Product blocks — visual hierarchy ═══ */
-    /* Personal = quiet secondary */
-    #personalContextCard{overflow:hidden;word-break:break-word}
-    #personalContextMain{font-size:12px!important;line-height:1.45!important;word-break:break-word;overflow-wrap:anywhere}
-    /* Day plan = step-by-step */
-    #dayPlanCard{background:linear-gradient(180deg,rgba(15,25,45,.92),rgba(10,18,32,.98))!important;border-color:rgba(120,160,255,.14)!important;border-radius:14px!important}
-    #dayPlanRows>div{overflow:hidden;word-break:break-word}
-    /* Panch decision = primary action block */
-    #panchSummaryLine{border-color:rgba(120,160,255,.14)!important}
-    #panchHeadline{font-size:14px!important;font-weight:800!important;letter-spacing:.01em}
-    #panchAvoidLine,#panchCareLine,#panchDoLine,#panchBestLine{word-break:break-word;overflow-wrap:anywhere}
-    @media(max-width:520px){#panchAvoidLine,#panchCareLine,#panchDoLine,#panchBestLine{font-size:11px!important;padding:6px 8px!important}}
-    /* ═══ v81g: Decision Block modes ═══ */
-    #decisionBlock.mode-stop{border-color:rgba(255,90,90,.30)!important;background:linear-gradient(180deg,rgba(42,10,12,.55),rgba(18,8,12,.95))!important}
-    #decisionBlock.mode-safe{border-color:rgba(255,204,0,.24)!important;background:linear-gradient(180deg,rgba(36,24,8,.42),rgba(14,12,10,.95))!important}
-    #decisionBlock.mode-go{border-color:rgba(43,212,125,.24)!important;background:linear-gradient(180deg,rgba(10,32,18,.42),rgba(8,14,12,.95))!important}
-    #decisionBlock.mode-stop #decisionMode{color:#ff6b6b}
-    #decisionBlock.mode-safe #decisionMode{color:#ffcc00}
-    #decisionBlock.mode-go #decisionMode{color:#2bd47d}
-    #decisionBlock{box-shadow:0 0 0 1px rgba(255,255,255,.03) inset,0 10px 28px rgba(0,0,0,.18)}
-    /* body mode dimming */
-    body.mode-stop #personalCard,body.mode-stop #astroGrid,body.mode-stop #nowCard{opacity:.72!important}
-    body.mode-safe #personalCard{opacity:.82!important}
-    /* ═══ v81h: UX polish — spacing, hierarchy, collapse ═══ */
-    :root{--space-2:8px;--space-3:12px;--radius-2:14px}
-    main{max-width:1280px!important}
-    /* Sticky bar */
-    #stickyDecisionBar.mode-stop{border-bottom-color:rgba(255,90,90,.25)}
-    #stickyDecisionBar.mode-safe{border-bottom-color:rgba(255,204,0,.20)}
-    #stickyDecisionBar.mode-go{border-bottom-color:rgba(43,212,125,.18)}
-    @media(max-width:700px){#stickyDecisionBar{top:36px;padding:6px 10px}.sticky-kpi{font-size:9px!important;padding:2px 6px!important}}
-    /* Collapse */
-    .ui-collapsed{max-height:44px;overflow:hidden;position:relative;cursor:pointer}
-    .ui-collapsed::after{content:'▾ розгорнути';position:absolute;right:10px;bottom:6px;color:rgba(255,255,255,.3);font-size:10px}
-    /* Visual weight hierarchy */
-    #decisionBlock{position:relative;z-index:2}
-    #panchCard{box-shadow:0 6px 20px rgba(0,0,0,.14)}
-    #dayPlanCard{box-shadow:0 4px 14px rgba(0,0,0,.10)}
-    #personalCard{filter:saturate(.86)}
-    /* Hero polish */
-    #heroCard{box-shadow:0 8px 28px rgba(0,0,0,.18)}
-    #heroMetaInline{opacity:.78}
-    /* Card hover */
-    .card:hover,.core-card:hover{transform:translateY(-1px);transition:transform .16s ease,border-color .18s ease}
-    @media(max-width:860px){#decisionBlock{padding:10px 12px!important}#decisionMain{font-size:16px!important}#panchHeadline{font-size:13px!important}}
-    @media(max-width:520px){#decisionMain{font-size:15px!important;line-height:1.25!important}}
   </style>
 
   <meta name="theme-color" content="#0b1220">
@@ -888,16 +852,6 @@
   </div>
 
   <main>
-    <!-- v81g: Sticky Decision Bar (shows on scroll past hero) -->
-    <div id="stickyDecisionBar" style="display:none;position:sticky;top:48px;z-index:190;padding:8px 16px;background:rgba(9,15,30,.92);backdrop-filter:blur(12px);border-bottom:1px solid rgba(255,255,255,.06);margin:-8px -12px 10px;box-shadow:0 6px 18px rgba(0,0,0,.14);border-radius:0">
-      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;max-width:1280px;margin:0 auto">
-        <span id="stickyMode" style="font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase">—</span>
-        <span id="stickyAction" style="font-size:13px;font-weight:700;color:#eef4ff;flex:1;min-width:120px">—</span>
-        <span class="sticky-kpi" id="stickyKpiWhy" style="font-size:10px;padding:3px 8px;border-radius:999px;border:1px solid rgba(255,155,82,.18);color:#ffcfb5;background:rgba(255,255,255,.03)">—</span>
-        <span class="sticky-kpi" id="stickyKpiNow" style="font-size:10px;padding:3px 8px;border-radius:999px;border:1px solid rgba(43,212,125,.16);color:#b7ffd0;background:rgba(255,255,255,.03)">—</span>
-        <span class="sticky-kpi" id="stickyKpiNext" style="font-size:10px;padding:3px 8px;border-radius:999px;border:1px solid rgba(55,167,255,.16);color:#abd2ff;background:rgba(255,255,255,.03)">—</span>
-      </div>
-    </div>
     <!-- ═══ SCIENCE BAR ═══ -->
     <div id="scienceBar">
       <!-- Первинні: завжди видно -->
@@ -1012,15 +966,15 @@
       </div>
     </div>
 
-    <!-- v81: trustStrip removed (duplicates heroMetaInline) -->
+    <!-- v79: Trust Strip -->
+    <div id="trustStrip" style="margin:0 0 12px;padding:7px 12px;border:1px solid rgba(255,255,255,.07);border-radius:12px;background:rgba(9,15,30,.6);font-size:11px;color:#9bb1dc;display:flex;flex-wrap:wrap;gap:4px 14px;align-items:center">
+      <span>Kp−2: <strong id="tsKp">—</strong></span>
+      <span>ΣAᵢ: <strong id="tsAi">—</strong></span>
+      <span>Драйвер: <strong id="tsDriver">—</strong></span>
+      <span>Далі: <strong id="tsShift">—</strong></span>
+    </div>
 
-    <!-- v81g: Decision Block — single CTA -->
-    <section class="card" id="decisionBlock" style="display:none;margin-bottom:10px;padding:12px 14px;border-radius:14px;border:1px solid rgba(255,255,255,.08);background:linear-gradient(180deg,rgba(14,22,40,.96),rgba(10,16,30,.98))">
-      <div id="decisionMode" style="font-size:11px;letter-spacing:.09em;text-transform:uppercase;font-weight:800;margin-bottom:6px">—</div>
-      <div id="decisionMain" style="font-size:18px;font-weight:800;line-height:1.25;color:#eef4ff;max-width:820px">—</div>
-      <div id="decisionWhy" style="font-size:12px;line-height:1.4;color:var(--muted);margin-top:6px;max-width:920px;opacity:.9">—</div>
-    </section>
-
+    <!-- ═══ v78d: CORE GRID — WHY + TIMING ═══ -->
     <div id="coreGrid">
       <section id="whyCard" class="core-card">
         <div class="why-title">Що формує стан</div>
@@ -1088,8 +1042,7 @@
     <div id="profileRec"></div>
 
     <!-- ═══ v76d: wf3 Signal Summary (compact inline) ═══ -->
-    <!-- v81h: wf3SignalSummary hidden — duplicates decisionBlock -->
-    <div id="wf3SignalSummary" style="display:none">
+    <div id="wf3SignalSummary" style="margin:8px 0;padding:8px 12px;border:1px solid rgba(255,255,255,.08);border-radius:12px;background:rgba(9,15,30,.72)">
       <div id="wf3Top" style="display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;font-size:12px;line-height:1.4"></div>
       <div id="wf3Bottom" style="display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;font-size:11px;margin-top:4px;color:#8a9cc0"></div>
     </div>
@@ -1198,7 +1151,10 @@
       </div>
       </details>
 
-      <!-- PANCHANGA — компактна права колонка -->
+      <!-- v82b: DUO CARD — Пачанга (ліворуч) + Особистий (праворуч) -->
+      <div id="duoCard">
+
+      <!-- PANCHANGA — ліва колонка -->
       <section class="card" id="panchCard">
         <div class="flex" style="margin-bottom:8px;align-items:flex-start">
           <div>
@@ -1207,15 +1163,7 @@
           </div>
           <span class="pill right" id="panchDate" style="font-size:12px">—</span>
         </div>
-        <div id="panchSummaryLine" style="font-size:13px;margin-bottom:8px;line-height:1.45;padding:10px 12px;border-radius:12px;border:1px solid rgba(120,160,255,.14);background:linear-gradient(180deg,rgba(14,22,40,.96),rgba(10,16,30,.98));font-weight:600;color:#e6ecff">
-          <div id="panchHeadline" style="font-size:14px;font-weight:800;margin-bottom:8px;letter-spacing:.01em">—</div>
-          <div style="display:grid;grid-template-columns:1fr;gap:5px">
-            <div id="panchAvoidLine" style="padding:7px 10px;border-radius:8px;font-size:12px;line-height:1.4;border:1px solid rgba(255,107,107,.22);background:rgba(255,107,107,.06);color:#ffbcc4">⛔ Не робити: —</div>
-            <div id="panchCareLine" style="padding:7px 10px;border-radius:8px;font-size:12px;line-height:1.4;border:1px solid rgba(255,204,0,.18);background:rgba(255,204,0,.05);color:#ffd79e">⚠ Обережно: —</div>
-            <div id="panchDoLine" style="padding:7px 10px;border-radius:8px;font-size:12px;line-height:1.4;border:1px solid rgba(43,212,125,.18);background:rgba(43,212,125,.05);color:#a9e7ba">✅ Добре для: —</div>
-            <div id="panchBestLine" style="padding:7px 10px;border-radius:8px;font-size:12px;line-height:1.4;border:1px solid rgba(55,167,255,.18);background:rgba(55,167,255,.05);color:#abd2ff">🕒 Краще вікно: —</div>
-          </div>
-        </div>
+        <div id="panchSummaryLine" style="font-size:13px;margin-bottom:8px;line-height:1.45;padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);font-weight:600;color:#e6ecff">—</div>
         <div id="panchPiLine" class="small muted" style="margin-bottom:6px;font-size:11px">Pᵢ = —</div>
         <div id="panchGrid" style="margin-top:8px">
           <div class="muted small">Завантаження…</div>
@@ -1279,11 +1227,17 @@
       <!-- Patch P: Decision context always visible -->
       <div id="personalContextCard" style="margin-bottom:8px;padding:10px 12px;border:1px solid rgba(255,255,255,.08);border-radius:12px;background:rgba(255,255,255,.03)">
         <div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--dim);margin-bottom:5px">Сьогодні для тебе</div>
-        <div id="personalContextMain" style="font-size:12px;font-weight:600;line-height:1.45;color:#e6ecff">—</div>
+        <div id="personalContextMain" style="font-size:13px;font-weight:700;line-height:1.35;color:#e6ecff">—</div>
+        <div id="personalContextSub" style="margin-top:4px;font-size:11px;line-height:1.4;color:#9bb1dc">—</div>
       </div>
 
       <div id="personalResult" style="margin-top:0">
         <div class="muted small">Натисніть «✎ Дані» і введіть дату народження.</div>
+      </div>
+      <!-- G2: Day Plan -->
+      <div id="dayPlanCard" style="margin-top:10px;padding:10px 12px;border:1px solid rgba(255,255,255,.07);border-radius:12px;background:rgba(255,255,255,.025)">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--dim);margin-bottom:6px">План дня</div>
+        <div id="dayPlanRows" style="display:flex;flex-direction:column;gap:4px"></div>
       </div>
       <!-- G3: Hora timeline in left column -->
       <div style="margin-top:10px;padding:10px 12px;border:1px solid rgba(255,255,255,.07);border-radius:12px;background:rgba(255,255,255,.025)">
@@ -1297,14 +1251,8 @@
         <div id="horaLegend" style="margin-top:3px;font-size:10px;color:var(--dim)"></div>
       </div>
     </section>
-
-    <!-- v81e: Day Plan — standalone card between panchCard and personalCard -->
-    <section class="card" id="dayPlanCard" style="padding:12px 14px;background:linear-gradient(180deg,rgba(15,25,45,.92),rgba(10,18,32,.98));border:1px solid rgba(120,160,255,.14);border-radius:14px">
-      <div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--dim);margin-bottom:6px">Що робити</div>
-      <div id="dayPlanRows" style="display:flex;flex-direction:column;gap:4px"></div>
-    </section>
-
-    </div><!-- /grid -->
+    </div><!-- /duoCard -->
+    </div><!-- /mainGrid -->
 
     <!-- 3 ДНІ -->
     <div class="swipe-hint" style="display:none" id="swipeHint3">Прокрутіть таблицю</div>
@@ -3833,8 +3781,8 @@ function renderPanchanga(dateUTC){
   // Rahu active — перевіряємо для поточного часу (не noon)
   const _nowH = new Date().getUTCHours() + new Date().getUTCMinutes()/60;
   const [_rS, _rE] = [p.rahu.start, p.rahu.end].map(t=>{const[h,m]=t.split(':').map(Number);return h+m/60;});
-  const _rahuActive = _nowH >= _rS && _nowH < _rE;
-  const _rahuScore  = _rahuActive ? -1 : 0;
+  p.rahu.active = _nowH >= _rS && _nowH < _rE;
+  p.rahu.score  = p.rahu.active ? -1 : 0;
 
   // Зберегти для планетної анімації
   _lastPanchCtx = {
@@ -3842,7 +3790,7 @@ function renderPanchanga(dateUTC){
     nakshatra:{ idx: p.nakshatra.num, name: p.nakshatra.name, score: p.nakshatra.score },
     yoga:     { name: p.yoga.name, score: p.yoga.score, isCritical: !!(p.yoga.score <= -2) },
     karana:   { name: p.karana.name, isVishti: !!(p.karana.score <= -2) },
-    rahu:     { active: _rahuActive, start: p.rahu.start, end: p.rahu.end }
+    rahu:     { active: p.rahu.active, start: p.rahu.start, end: p.rahu.end }
   };
   const dateStr = fmtDate(dateUTC);
   const el_ = id => document.getElementById(id);
@@ -3876,7 +3824,7 @@ function renderPanchanga(dateUTC){
   const kAdv = p.karana.isVishti
     ? {do:'Очікування, спостереження', avoid:'Будь-які активні дії (абсолютне вето)'}
     : {do: p.karana.note, avoid:''};
-  const rahuAdv = _rahuActive
+  const rahuAdv = p.rahu.active
     ? {do:'Оборонні/підтримуючі операції', avoid:'Нові бойові завдання, стратегічні рішення'}
     : {do:'Обмежень немає', avoid:''};
 
@@ -3906,10 +3854,10 @@ function renderPanchanga(dateUTC){
       val:   p.karana.name,
       sub:   `${p.karana.type} · PCL ${scoreSpan(p.karana.score)}`,
       adv:   kAdv },
-    { score: _rahuActive ? -1 : 0,
+    { score: p.rahu.active ? -1 : 0,
       label: 'Rahu Kalam',
-      val:   _rahuActive ? '⚠️ Активний зараз' : `${p.rahu.start}–${p.rahu.end} UTC`,
-      sub:   _rahuActive ? `PCL ${scoreSpan(-1)} · до ${p.rahu.end} UTC` : `PCL ${scoreSpan(0)} · неактивний`,
+      val:   p.rahu.active ? '⚠️ Активний зараз' : `${p.rahu.start}–${p.rahu.end} UTC`,
+      sub:   p.rahu.active ? `PCL ${scoreSpan(-1)} · до ${p.rahu.end} UTC` : `PCL ${scoreSpan(0)} · неактивний`,
       adv:   rahuAdv }
   ];
 
@@ -3999,32 +3947,61 @@ function renderPanchanga(dateUTC){
     }
   };
 
-  const html = `<div class="panch-grid" style="margin:0">` + cells.map(function(c, idx){
-    var keys = ['tithi','vara','nakshatra','yoga','karana','rahu'];
-    var key = keys[idx] || '';
-    var tip = PANCH_TIPS[key] ? escapeHtml(PANCH_TIPS[key](key==='rahu'?{active:_rahuActive,start:p.rahu.start,end:p.rahu.end}:p[key])) : '';
-    var advs = [tAdv, vAdv, nAdv, yAdv, kAdv, rahuAdv];
-    var adv = advs[idx];
-    var doText = adv && adv.do ? adv.do : '';
-    var avText = adv && adv.avoid ? adv.avoid : '';
-    return `<div class="${cellClass(c.score)}" style="position:relative">
-      <div class="hint" tabindex="0" style="cursor:help">
-        <div class="panch-label">${c.label}</div>
-        <div class="panch-val">${scoreIcon(c.score, _gEarly)} ${c.val}</div>
-        <div class="panch-sub">${c.sub}</div>
-        ${doText ? '<div class="panch-do">✓ '+doText+'</div>' : ''}
-        ${avText ? '<div class="panch-av">✗ '+avText+'</div>' : ''}
-        <span class="hint-pop" style="white-space:pre;font-size:12px">${tip}</span>
-      </div>
-    </div>`;
-  }).join('') +
-  (_aiEarly.ei !== 0 ? `<div class="panch-cell ${_aiEarly.ei < 0 ? 'pcl-bad' : 'pcl-pos'}">
-    <div class="panch-label">eᵢ — події</div>
-    <div class="panch-val">${_aiEarly.ei < 0 ? '🔴' : '🟢'} <span style="color:${_aiEarly.ei < 0 ? '#ff9f9f' : '#63be7b'}">${_aiEarly.ei > 0 ? '+' : ''}${_aiEarly.ei}</span></div>
-    <div class="panch-sub">${escapeHtml((_aiEarly.eTip||'').split('\\n')[0])}</div>
-    <div class="${_aiEarly.ei < 0 ? 'panch-av' : 'panch-do'}">${_aiEarly.ei < 0 ? '✗ Знижує G' : '✓ Підсилює G'}</div>
-  </div>` : '') +
-  `</div>`;
+  const html = `<table style="width:100%;border-collapse:collapse;font-size:13px">
+    <colgroup><col style="width:30%"><col style="width:32%"><col style="width:38%"></colgroup>
+    <tr style="border-bottom:1px solid #1e2f52">
+      <th style="padding:3px 6px;font-size:10px;color:var(--dim);font-weight:500;text-align:left">ЩО ДІЄ</th>
+      <th style="padding:3px 6px;font-size:10px;color:var(--dim);font-weight:500;text-align:left">ВПЛИВ</th>
+      <th style="padding:3px 6px;font-size:10px;color:var(--dim);font-weight:500;text-align:left">КРАЩА ДІЯ</th>
+    </tr>
+    <tr>
+      <td style="padding:5px 6px;color:#9bb1dc;font-size:11px">
+        <span class="hint" tabindex="0" style="cursor:help;font-style:italic;border-bottom:1px dotted var(--faint)">Tithi<span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.tithi(p.tithi))}</span></span>
+      </td>
+      <td style="padding:5px 6px;font-weight:600"><span class="hint" tabindex="0" style="cursor:help">${scoreIcon(p.tithi.score, _gEarly)} ${p.tithi.name}<br><span style="font-size:10px;color:#7a95b8;font-weight:400">${p.tithi.type}</span><span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.tithi(p.tithi))}</span></span></td>
+      <td style="padding:5px 6px;font-size:11px;color:#b0c4de">${tAdv && tAdv.do ? '✓ '+tAdv.do : ''}</td>
+    </tr>
+    <tr>
+      <td style="padding:5px 6px;color:#9bb1dc;font-size:11px">
+        <span class="hint" tabindex="0" style="cursor:help;font-style:italic;border-bottom:1px dotted var(--faint)">Vara<span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.vara(p.vara))}</span></span>
+      </td>
+      <td style="padding:5px 6px;font-weight:600"><span class="hint" tabindex="0" style="cursor:help">${scoreIcon(p.vara.score, _gEarly)} ${p.vara.name}<br><span style="font-size:10px;color:#7a95b8;font-weight:400">${p.vara.planet}</span><span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.vara(p.vara))}</span></span></td>
+      <td style="padding:5px 6px;font-size:11px;color:#b0c4de">${vAdv && vAdv.do ? '✓ '+vAdv.do : ''}</td>
+    </tr>
+    <tr>
+      <td style="padding:5px 6px;color:#9bb1dc;font-size:11px">
+        <span class="hint" tabindex="0" style="cursor:help;font-style:italic;border-bottom:1px dotted var(--faint)">Nakshatra<span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.nakshatra(p.nakshatra))}</span></span>
+      </td>
+      <td style="padding:5px 6px;font-weight:600"><span class="hint" tabindex="0" style="cursor:help">${scoreIcon(p.nakshatra.score, _gEarly)} ${p.nakshatra.name}<br><span style="font-size:10px;color:#7a95b8;font-weight:400">${p.nakshatra.type} · ${p.nakshatra.regent}</span><span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.nakshatra(p.nakshatra))}</span></span></td>
+      <td style="padding:5px 6px;font-size:11px;color:#b0c4de">${nAdv && nAdv.do ? '✓ '+nAdv.do : ''}</td>
+    </tr>
+    <tr>
+      <td style="padding:5px 6px;color:#9bb1dc;font-size:11px">
+        <span class="hint" tabindex="0" style="cursor:help;font-style:italic;border-bottom:1px dotted var(--faint)">Yoga<span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.yoga(p.yoga))}</span></span>
+      </td>
+      <td style="padding:5px 6px;font-weight:600"><span class="hint" tabindex="0" style="cursor:help">${scoreIcon(p.yoga.score, _gEarly)} ${p.yoga.name}${p.yoga.isCritical?' ⚠️':''}<br><span style="font-size:10px;color:#7a95b8;font-weight:400">резонанс Сонце–Місяць</span><span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.yoga(p.yoga))}</span></span></td>
+      <td style="padding:5px 6px;font-size:11px;color:#b0c4de">${yAdv && yAdv.do ? '✓ '+yAdv.do : ''}</td>
+    </tr>
+    <tr>
+      <td style="padding:5px 6px;color:#9bb1dc;font-size:11px">
+        <span class="hint" tabindex="0" style="cursor:help;font-style:italic;border-bottom:1px dotted var(--faint)">Karana<span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.karana(p.karana))}</span></span>
+      </td>
+      <td style="padding:5px 6px;font-weight:600"><span class="hint" tabindex="0" style="cursor:help">${scoreIcon(p.karana.score, _gEarly)} ${p.karana.name}${p.karana.isVishti?' ⛔':''}<br><span style="font-size:10px;color:#7a95b8;font-weight:400">${p.karana.type}</span><span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.karana(p.karana))}</span></span></td>
+      <td style="padding:5px 6px;font-size:11px;color:#b0c4de">${kAdv && kAdv.do ? '✓ '+kAdv.do : ''}</td>
+    </tr>
+    ${_aiEarly.ei !== 0 ? `<tr style="background:rgba(255,100,100,0.05)">
+      <td style="padding:5px 6px;color:#ff9f9f;font-size:11px;font-style:italic">eᵢ (події)</td>
+      <td style="padding:5px 6px;font-weight:600">${_aiEarly.ei < 0 ? '🔴' : '🟢'} <span style="color:${_aiEarly.ei < 0 ? '#ff9f9f' : '#63be7b'}">${_aiEarly.ei > 0 ? '+' : ''}${_aiEarly.ei}</span><br><span style="font-size:10px;color:#7a95b8;font-weight:400">${escapeHtml((_aiEarly.eTip||'').split('\\n')[0])}</span></td>
+      <td style="padding:5px 6px;font-size:11px;color:#ccaaaa">${_aiEarly.ei < 0 ? '✗ Несприятлива подія знижує G' : '✓ Сприятлива подія'}</td>
+    </tr>` : ''}
+    <tr>
+      <td style="padding:5px 6px;color:#9bb1dc;font-size:11px">
+        <span class="hint" tabindex="0" style="cursor:help;font-style:italic;border-bottom:1px dotted var(--faint)">Rahu Kalam<span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.rahu(p.rahu))}</span></span>
+      </td>
+      <td style="padding:5px 6px;font-weight:600"><span class="hint" tabindex="0" style="cursor:help">${p.rahu.active ? '🔴 Активний!' : '🟢 '+p.rahu.start+'–'+p.rahu.end}<span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.rahu(p.rahu))}</span></span></td>
+      <td style="padding:5px 6px;font-size:11px;color:#b0c4de">${p.rahu.active ? '✗ Не починати нових операцій' : '✓ Обмежень немає'}</td>
+    </tr>
+  </table>`;
 
   // Підсумок з усіх 6 параметрів (PCL) + Li/Mi/ei з G
   const pclOnly = cells.reduce((s,c)=>s+c.score, 0);
@@ -4039,11 +4016,11 @@ function renderPanchanga(dateUTC){
   try {
     const pNoon = computePanchanga(noonUTC(dateUTC));
     const diffs = [];
-    if(p.yoga.name !== pNoon.yoga.name) diffs.push(`Yoga: зараз ${p.yoga.name} → полудень ${pNoon.yoga.name}`);
-    if(p.nakshatra.name !== pNoon.nakshatra.name) diffs.push(`Nak: зараз ${p.nakshatra.name} → полудень ${pNoon.nakshatra.name}`);
-    if(p.tithi.name !== pNoon.tithi.name) diffs.push(`Tithi: зараз ${p.tithi.name} → полудень ${pNoon.tithi.name}`);
-    if(p.karana.name !== pNoon.karana.name) diffs.push(`Karana: зараз ${p.karana.name} → полудень ${pNoon.karana.name}`);
-    if(diffs.length) panchDiscrepancy = `<div style="margin-top:6px;padding:6px 10px;border-radius:8px;border:1px solid rgba(255,165,0,.25);background:rgba(255,165,0,.06);font-size:11px;color:#ffc870;line-height:1.4">⚠ Зміна протягом дня: ${diffs.join(' · ')}. G рахується на полудень UTC.</div>`;
+    if(p.yoga.name !== pNoon.yoga.name) diffs.push(`Yoga: зараз ${p.yoga.name}, на полудень ${pNoon.yoga.name}`);
+    if(p.nakshatra.name !== pNoon.nakshatra.name) diffs.push(`Nak: зараз ${p.nakshatra.name}, на полудень ${pNoon.nakshatra.name}`);
+    if(p.tithi.name !== pNoon.tithi.name) diffs.push(`Tithi: зараз ${p.tithi.name}, на полудень ${pNoon.tithi.name}`);
+    if(p.karana.name !== pNoon.karana.name) diffs.push(`Karana: зараз ${p.karana.name}, на полудень ${pNoon.karana.name}`);
+    if(diffs.length) panchDiscrepancy = `<div style="margin-top:4px;font-size:11px;color:#ffa64d">⚠ G-індекс (noon UTC): ${diffs.join('; ')}</div>`;
   } catch(e){}
 
   // v26: Розумна агрегація порад — пріоритет за PCL score, без протиріч
@@ -4053,7 +4030,7 @@ function renderPanchanga(dateUTC){
     {score: p.nakshatra.score, adv: nAdv, label:'Nakshatra'},
     {score: p.yoga.score, adv: yAdv, label:'Yoga'},
     {score: p.karana.score, adv: kAdv, label:'Karana'},
-    {score: _rahuActive ? -1 : 0, adv: rahuAdv, label:'Rahu'}
+    {score: p.rahu.active ? -1 : 0, adv: rahuAdv, label:'Rahu'}
   ].filter(s => s.adv);
 
   // Збираємо всі avoid-теми для фільтрації протиріч
@@ -4773,17 +4750,23 @@ function _decAction(g,kp){
   return o;
 }
 
-// v81: syncDecision removed
+// v80: syncDecision removed (opsGrid HTML deleted)
+function syncDecision(){}
 
 
 // --- COMPACT EXPLAIN ---
-// v81: syncExplain, syncStory removed
+// v80: syncExplain, syncStory removed (targets deleted)
+function syncExplain(){}
+function syncStory(){}
 
 // --- RADAR ---
-// v81: syncRadar, _getRegimeShift removed
+// v80: syncRadar, _getRegimeShift removed (opsGrid HTML deleted)
+function syncRadar(){}
+function _getRegimeShift(){return "";}
 
 // --- TRIGGERS ---
-// v81: syncTriggers removed
+// v80: syncTriggers removed (triggerList HTML deleted)
+function syncTriggers(){}
 
 // --- v70.3 BEST WINDOW ---
 const _HORA_WIN_BONUS = {
@@ -4906,286 +4889,135 @@ function renderMoonRetroTop(){
 }
 
 // --- v70.3 MERGE OPS ---
-// v81: mergeOpsCards removed
+// v80: mergeOpsCards removed (opsGrid targets deleted)
+function mergeOpsCards(){}
 
 // --- WHY BLOCK (decision-first) ---
-// ═══ v81c: Product text dictionaries ═══
-const P_TEXT = {
-  vishti: {
-    summary: '⛔ День не для старту. Краще стримати темп і не форсувати.',
-    avoid: '⛔ Не робити: запуск нового, важливі домовленості, різкі кроки',
-    care:  '⚠ Обережно: тиск, поспіх, спроба "продавити" ситуацію',
-    do_:   '✅ Добре для: доробки, перевірки, спокійної рутини',
-    best:  '🕒 Краще вікно: після завершення жорсткого фону'
-  },
-  rahuActive: {
-    summary: '⚠ Зараз не найкращий час для рішень. Краще не діяти з ходу.',
-    avoid: '⛔ Не робити: важливі рішення, старт нових справ, імпульсивні відповіді',
-    care:  '⚠ Обережно: переговори, конфлікти, фінальні погодження',
-    do_:   '✅ Добре для: фону, підготовки, збору інформації',
-    best:  '🕒 Краще вікно: після завершення Rahu Kalam'
-  },
-  weakNakshatra: {
-    summary: '⚠ Фон дня стискає темп. Менше тиску — кращий результат.',
-    avoid: '⛔ Не робити: форсування, конфліктні розмови, ризиковані кроки',
-    care:  '⚠ Обережно: навантаження, емоційні реакції, перевтома',
-    do_:   '✅ Добре для: тихої роботи, підготовки, структурування',
-    best:  '🕒 Краще вікно: короткі спокійні проміжки без поспіху'
-  },
-  goodDay: {
-    summary: '✅ День підтримує рух. Можна просувати підготовлені справи.',
-    avoid: '⛔ Не робити: зайвий поспіх і надмірний оптимізм',
-    care:  '⚠ Обережно: не розпорошуйся на все одразу',
-    do_:   '✅ Добре для: оформлення, переговорів, завершення важливого',
-    best:  '🕒 Краще вікно: поточний спокійний інтервал'
-  },
-  neutral: {
-    summary: '• День рівний. Працюй без різких маневрів.',
-    avoid: '⛔ Не робити: хаотичні старти без підготовки',
-    care:  '⚠ Обережно: поспіх і перевантаження дрібницями',
-    do_:   '✅ Добре для: звичних задач, перевірки, рутинної роботи',
-    best:  '🕒 Краще вікно: стабільні спокійні години дня'
-  }
-};
-
-function _pickPanchCopy(pc){
-  if(pc?.karana?.isVishti) return P_TEXT.vishti;
-  if(pc?.rahu?.active) return P_TEXT.rahuActive;
-  if((pc?.nakshatra?.score||0)<=-1) return P_TEXT.weakNakshatra;
-  if((pc?.aiComponents?.Pi||0)>=1) return P_TEXT.goodDay;
-  return P_TEXT.neutral;
-}
-
-const PERSONAL_TEXT = {
-  taaraHard: 'Особистий ритм сьогодні напружений — усе відчувається гостріше, ніж зазвичай.',
-  taaraSoft: 'Особистий ритм рівний — день читається спокійніше, без внутрішнього тертя.',
-  heavyGlobal: 'Зовнішній фон важкий, тому навіть прості задачі можуть відчуватись важчими.',
-  neutral: 'Внутрішній ритм без крайнощів — головне не збивати себе зайвим тиском.',
-  noData: 'Введіть дату народження для персонального аналізу.'
-};
-
-const DAYPLAN_TEXT = {
-  rahuBefore: function(end){return 'до '+end+' — не приймай важливих рішень і не запускай нове';},
-  rahuAfter:  function(end){return 'після '+end+' — можна повертатись до підготовлених задач';},
-  vishtiNow:  'зараз — режим доробки, перевірки і стриманого темпу',
-  heavyDay:   'сьогодні — менше ризику, менше конфліктів, короткі цикли роботи',
-  goodDay:    'сьогодні — добре для планових дій, оформлення і завершення справ',
-  neutralDay: 'сьогодні — рівний робочий режим без різких маневрів'
-};
-
 function syncPanchSummary(){
   const pc=_lastPanchCtx;
-  const headline=el('panchHeadline');
+  const s=el('panchSummaryLine');
   const piLine=el('panchPiLine');
-  const avoidEl=el('panchAvoidLine');
-  const careEl=el('panchCareLine');
-  const doEl=el('panchDoLine');
-  const bestEl=el('panchBestLine');
-  if(!pc) return;
-
+  const noteEl=el('panchNote');
+  if(!pc||!s) return;
   const pi=pc.aiComponents?.Pi||0;
-  const piState=pi>=1?'підтримує день':pi<=-1?'погіршує день':'нейтральна';
-  if(piLine) piLine.innerHTML='Pᵢ = <strong>'+(pi>0?'+':'')+pi.toFixed(1)+'</strong> · '+piState;
-
-  const copy = _pickPanchCopy(pc);
-  if(headline) headline.textContent = copy.summary;
-  if(avoidEl) avoidEl.textContent = copy.avoid;
-  if(careEl) careEl.textContent = copy.care;
-  if(doEl) doEl.textContent = copy.do_;
-  if(bestEl){
-    var best = copy.best;
-    if(pc.rahu?.active && pc.rahu?.end) best = '🕒 Краще вікно: після '+pc.rahu.end;
-    bestEl.textContent = best;
+  const ns=pc.nakshatra?.score||0;
+  const ts=pc.tithi?.score||0;
+  const ys=pc.yoga?.score||0;
+  const ks=pc.karana?.score||0;
+  const total=ns+ts+ys+ks;
+  // Pi line
+  const piState=pi>=1?'підтримує день':pi<=-1?'погіршує день':'майже нейтральна';
+  if(piLine) piLine.innerHTML=`Pᵢ = <strong>${pi>0?'+':''}${pi.toFixed(1)}</strong> · ${piState}`;
+  // Product summary
+  const neg=[],pos=[];
+  if(ts<0)neg.push('тітхі');if(ns<0)neg.push('накшатра');if(ys<0)neg.push('йога');if(ks<0)neg.push('карана');
+  if(ts>0)pos.push('тітхі');if(ns>0)pos.push('накшатра');if(ys>0)pos.push('йога');if(ks>0)pos.push('карана');
+  let summary;
+  if(total<=-2) summary=`Фон несприятливий: тиск дають ${neg.join(', ')||'фактори дня'}. Краще не форсувати рішення.`;
+  else if(total<0) summary=`Фон змішаний з перевагою обережності: впливають ${neg.join(', ')||'частина факторів'}.`;
+  else if(total===0) summary='Фон нейтральний: панчанга не підсилює і не погіршує день.';
+  else summary=`Фон підтримує дії: працюють ${pos.join(', ')||'сприятливі фактори'}.`;
+  s.textContent=summary;
+  // Action note
+  if(noteEl){
+    let action;
+    if(total<=-2) action='Краща дія: сповільнитись, не входити у суперечливі задачі.';
+    else if(total<0) action='Краща дія: працювати короткими циклами, без ризикових рішень.';
+    else if(total===0) action='Краща дія: тримати стандартний режим без різких маневрів.';
+    else action='Краща дія: використовувати день для планових запусків і просування.';
+    noteEl.textContent=action;
   }
 }
 
-// ═══ v81g: Decision Block — single CTA ═══
-function getDecisionMode(g){
-  if(g<=-4) return 'stop';
-  if(g<=-1) return 'safe';
-  return 'go';
-}
+function syncWhy(){
+  const w=el('decisionWhy');
+  if(!w) return;
+  const pc=_lastPanchCtx;
+  const ai=pc?.aiComponents;
+  const pd=window._lunarPhaseDeg;
+  const g=_num(_firstText(el('nowG'))||el('nowG')?.textContent);
+  const now=new Date();
+  const lines=[];
 
-function renderDecisionBlock(){
-  var box=el('decisionBlock'), modeEl=el('decisionMode'), mainEl=el('decisionMain'), whyEl=el('decisionWhy');
-  if(!box||!modeEl||!mainEl||!whyEl) return;
-  var g=Number(_v73G?.()||0);
-  var mode=getDecisionMode(g);
-  var copy={stop:{label:'⛔ STOP',main:'Не приймай важливих рішень. Працюй тільки по рутині.'},safe:{label:'⚠ SAFE MODE',main:'Рухайся обережно. Нове — тільки без ризику.'},go:{label:'✅ GO',main:'Можна просувати підготовлені справи.'}};
-  var c=copy[mode]||copy.go;
-
-  box.classList.remove('mode-stop','mode-safe','mode-go');
-  box.classList.add('mode-'+mode);
-  modeEl.textContent=c.label;
-
-  // Sync with hero if available
-  var heroCmd=el('heroActionCmd')?.textContent?.trim();
-  mainEl.textContent=heroCmd||c.main;
-
-  // Why: main driver + plan hint
-  var driver=el('whyMain')?.textContent?.trim()||el('hmDriver')?.textContent?.trim()||'фон дня';
-  var planRows=Array.from(el('dayPlanRows')?.children||[]);
-  var planHint=planRows.length?(planRows[0]?.textContent||'').replace(/\s+/g,' ').trim():'';
-  whyEl.textContent=planHint?driver+' · Зараз: '+planHint:driver;
-  box.style.display='';
-}
-
-function applyBodyModeClass(){
-  var g=Number(_v73G?.()||0);
-  var mode=getDecisionMode(g);
-  document.body.classList.remove('mode-stop','mode-safe','mode-go');
-  document.body.classList.add('mode-'+mode);
-}
-
-// ═══ v81h: Sticky Decision Bar ═══
-function renderStickyDecisionBar(){
-  var bar=el('stickyDecisionBar');
-  var hero=el('heroCard');
-  if(!bar||!hero) return;
-  var heroBottom=hero.getBoundingClientRect().bottom;
-  if(heroBottom>=10){bar.style.display='none';return;}
-
-  var g=Number(_v73G?.()||0);
-  var mode=getDecisionMode(g);
-  var copy={stop:{label:'⛔ STOP',col:'#ff6b6b'},safe:{label:'⚠ SAFE',col:'#ffcc00'},go:{label:'✅ GO',col:'#2bd47d'}};
-  var c=copy[mode]||copy.go;
-
-  bar.classList.remove('mode-stop','mode-safe','mode-go');
-  bar.classList.add('mode-'+mode);
-
-  var sm=el('stickyMode');if(sm){sm.textContent=c.label;sm.style.color=c.col;}
-  var sa=el('stickyAction');if(sa) sa.textContent=el('heroActionCmd')?.textContent?.trim()||'—';
-
-  var _trim=function(s,mx){s=String(s||'').replace(/\s+/g,' ').trim();return s.length>mx?s.slice(0,mx-1)+'…':s;};
-  var sw=el('stickyKpiWhy');if(sw) sw.textContent=_trim('Причина: '+(el('hmDriver')?.textContent?.trim()||'фон дня'),44);
-  var sn=el('stickyKpiNow');
-  if(sn){var pr=Array.from(el('dayPlanRows')?.children||[]);sn.textContent=_trim('Зараз: '+(pr.length?(pr[0]?.textContent||'').replace(/\s+/g,' ').trim():'базовий режим'),44);}
-  var sx=el('stickyKpiNext');if(sx) sx.textContent=_trim('Далі: '+(el('hmShift')?.textContent?.trim()||'без змін'),44);
-
-  bar.style.display='';
-}
-
-var _stickyTick=false;
-function _onStickyScroll(){
-  if(_stickyTick) return;
-  _stickyTick=true;
-  requestAnimationFrame(function(){renderStickyDecisionBar();_stickyTick=false;});
-}
-
-// ═══ v81h: Collapse by mode ═══
-function collapseByMode(){
-  var g=Number(_v73G?.()||0);
-  var mode=getDecisionMode(g);
-  var personal=el('personalCard');
-  var nowCard=el('nowCard');
-
-  // Remove previous collapse
-  [personal,nowCard].forEach(function(n){if(n)n.classList.remove('ui-collapsed');});
-
-  if(mode==='stop'){
-    if(personal) personal.classList.add('ui-collapsed');
-  } else if(mode==='safe'){
-    if(personal) personal.classList.add('ui-collapsed');
-  }
-  // GO = everything expanded
-}
-
-// ═══ v81h: Enforce content policy (strip action phrases from personal) ═══
-function enforceContentPolicy(){
-  var pm=el('personalContextMain');
-  if(!pm) return;
-  var t=pm.textContent||'';
-  t=t.replace(/не робити:.*$/im,'').replace(/обережно:.*$/im,'')
-     .replace(/добре для:.*$/im,'').replace(/краще вікно:.*$/im,'').trim();
-  if(t!==(pm.textContent||'').trim()) pm.textContent=t;
-}
-
-// ═══ v81f: NFR policy guard — deterministic, role-based ═══
-function _dedupeBlocks(){
-  var panchCard = el('panchCard');
-  var planCard = el('dayPlanCard');
-  var personalCard = el('personalContextCard');
-  var personalMain = el('personalContextMain');
-
-  // 1. PANCHANGA = єдине рішення — завжди видиме
-  if(panchCard) panchCard.style.display = '';
-
-  // 2. PERSONAL — чистимо від action-фраз (якщо потрапили)
-  if(personalMain){
-    var t = personalMain.textContent || '';
-    t = t.replace(/не робити:.*$/im, '').replace(/обережно:.*$/im, '')
-         .replace(/добре для:.*$/im, '').replace(/краще вікно:.*$/im, '').trim();
-    if(t !== (personalMain.textContent||'').trim()) personalMain.textContent = t;
+  // Moon interpretation
+  if(isFinite(pd)){
+    const phaseName=phaseNameByAngle(pd);
+    const li=ai?.Li??0;
+    const illum=((1-Math.cos(pd*Math.PI/180))/2*100).toFixed(0);
+    const moonSign=li<0?'↓':'↑';
+    const moonCol=li<0?'#ff9966':li>0?'#2bd47d':'#9bb1dc';
+    const moonEffect=li<=-2?'сильне зниження енергії':li<0?'зниження енергії':li>=2?'підйом енергії':li>0?'помірний підйом':'нейтральний фон';
+    lines.push(`<span style="color:${moonCol}">🌙 ${phaseName} ${illum}% · Lᵢ=${li} → ${moonSign} ${moonEffect}</span>`);
   }
 
-  // 3. PERSONAL — hide якщо: порожній АБО немає персональних даних АБО залишились action-фрази
-  if(personalCard){
-    var pText = (personalMain?.textContent || '').toLowerCase();
-    var hasPersonal = _lastAstroCtx && (_lastAstroCtx.taara || _lastAstroCtx.dasa);
-    var leaksDecision = ['не робити','обережно','добре для','краще вікно'].some(function(w){return pText.includes(w);});
-    personalCard.style.display = (hasPersonal && !leaksDecision && pText.trim()) ? '' : 'none';
+  // Retro interpretation
+  const planets=['Mercury','Venus','Mars','Jupiter','Saturn'];
+  const retroEffects={Mercury:'помилки, затримки',Venus:'перегляд стосунків',Mars:'імпульсивність',Jupiter:'переоцінка планів',Saturn:'тиск, обмеження'};
+  const rxActive=[];
+  planets.forEach(p=>{try{if(isRetrograde(p,now))rxActive.push(p)}catch(e){}});
+  if(rxActive.length){
+    const effects=rxActive.map(p=>retroEffects[p]||p).join(', ');
+    lines.push(`<span style="color:#ff9966">🪐 Ретро: ${rxActive.length} планет → ${effects}</span>`);
   }
 
-  // 4. DAYPLAN — show тільки якщо є часові маркери (інакше це summary, не план)
-  if(planCard){
-    var dpText = el('dayPlanRows')?.textContent || '';
-    var hasTime = /\bдо\b|\bпісля\b|\bзараз\b|\d{1,2}:\d{2}/i.test(dpText);
-    planCard.style.display = (dpText.trim() && hasTime) ? '' : 'none';
+  // G interpretation
+  if(isFinite(g)){
+    const gCol=g<=-2.5?'#ff6b6b':g<=-0.5?'#ffaa33':g>=0.5?'#2bd47d':'#9bb1dc';
+    const gText=g<=-2.5?'високий ризик':g<=-0.5?'слабкий сигнал':g>=1.5?'сильний імпульс':g>=0.5?'помірний підйом':'нейтрально';
+    lines.push(`<span style="color:${gCol}">📊 G=${g.toFixed(2)} → ${gText}</span>`);
+  }
+
+  if(lines.length){
+    w.innerHTML=lines.join('<br>');
+    w.style.display='block';
+  } else {
+    w.style.display='none';
   }
 }
-
-// v81h: syncWhy removed — decisionWhy now owned by renderDecisionBlock
-function syncWhy(){}
 
 // ═══ v79: Trust Strip ═══
 // ═══ v79c G2: Day Plan Card ═══
 // ═══ Patch P: Personal context (always visible) ═══
 function syncPersonalContext(){
   const main = el('personalContextMain');
-  if(!main) return;
-  const astro = _lastAstroCtx;
+  const sub = el('personalContextSub');
+  if(!main||!sub) return;
   const g = _v73G();
-
-  var personalMain = PERSONAL_TEXT.noData;
-  if(astro?.taara?.danger) personalMain = PERSONAL_TEXT.taaraHard;
-  else if(astro?.taara?.name) personalMain = PERSONAL_TEXT.taaraSoft;
-  else if(isFinite(g) && g <= -2) personalMain = PERSONAL_TEXT.heavyGlobal;
-  else if(astro) personalMain = PERSONAL_TEXT.neutral;
-
-  var details = [];
-  if(astro?.taara?.name) details.push('Taara: '+astro.taara.name);
-  if(astro?.dasa?.mahaLord) details.push('Маха-даша: '+astro.dasa.mahaLord);
-  if(astro?.antar?.antarLord) details.push('Антар: '+astro.antar.antarLord);
-
-  main.innerHTML = '<div style="margin-bottom:4px">'+personalMain+'</div>'+(details.length?'<div style="font-size:11px;color:#8ea4c9">'+details.join(' · ')+'</div>':'');
+  const stKey = classifyStateByG(g);
+  const st = GLOBAL_STATES[stKey];
+  if(!st) return;
+  main.textContent = st.doText + ' ' + st.avoidText;
+  const hora = (function(){try{return calcHora(new Date())}catch(e){return null}})();
+  const horaText = hora ? ` Зараз ${hora.planet} hora (ще ${hora.minLeft} хв).` : '';
+  sub.textContent = st.impact + horaText;
 }
 
 function syncDayPlanCard(){
   const box = el('dayPlanRows');
   if(!box) return;
   const rows = [];
-  const pc = _lastPanchCtx;
-  const g = _v73G();
-
-  if(pc?.rahu?.active && pc?.rahu?.end){
-    rows.push({t:'до '+pc.rahu.end, txt:DAYPLAN_TEXT.rahuBefore(pc.rahu.end), tone:'bad'});
-    rows.push({t:'після '+pc.rahu.end, txt:DAYPLAN_TEXT.rahuAfter(pc.rahu.end), tone:'good'});
+  const tRows = document.querySelectorAll('#timingRows .timing-row');
+  if (tRows.length) {
+    Array.from(tRows).slice(0,3).forEach((row, i) => {
+      const time = row.querySelector('.timing-time')?.textContent?.trim() || '';
+      const label = row.querySelector('.timing-label span')?.textContent?.trim() || row.querySelector('.timing-label')?.textContent?.trim() || '';
+      rows.push({ time, label, cls: i===0 ? 'warn' : 'info' });
+    });
   }
-  if(pc?.karana?.isVishti) rows.push({t:'зараз', txt:DAYPLAN_TEXT.vishtiNow, tone:'warn'});
-  if(isFinite(g)){
-    if(g<=-2) rows.push({t:'сьогодні', txt:DAYPLAN_TEXT.heavyDay, tone:'warn'});
-    else if(g>=1) rows.push({t:'сьогодні', txt:DAYPLAN_TEXT.goodDay, tone:'good'});
+  const ns = el('timingNextShift')?.textContent?.trim();
+  if (ns && ns.length > 3) rows.push({ time:'Далі', label: ns.replace(/^[•●▲⚠◔]\s*/,'').substring(0,60), cls:'ok' });
+  if (!rows.length) {
+    rows.push(
+      { time:'Ранок', label:'Тільки рутина без різких рішень', cls:'warn' },
+      { time:'День', label:'Не фіксувати важливі рішення', cls:'warn' },
+      { time:'Вечір', label:'Фон може вирівнятися', cls:'info' }
+    );
   }
-  if(!rows.length) rows.push({t:'сьогодні', txt:DAYPLAN_TEXT.neutralDay, tone:'neu'});
-
-  box.innerHTML = rows.slice(0,4).map(function(r){
-    var border = r.tone==='bad'?'rgba(255,107,107,.25)':r.tone==='warn'?'rgba(255,204,0,.22)':r.tone==='good'?'rgba(43,212,125,.22)':'rgba(255,255,255,.08)';
-    var bg = r.tone==='bad'?'rgba(255,107,107,.06)':r.tone==='warn'?'rgba(255,204,0,.05)':r.tone==='good'?'rgba(43,212,125,.05)':'rgba(255,255,255,.03)';
-    return '<div style="padding:8px 10px;border:1px solid '+border+';background:'+bg+';border-radius:10px"><div style="font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">'+r.t+'</div><div style="font-size:12px;line-height:1.4;color:#e6ecff">'+r.txt+'</div></div>';
-  }).join('');
+  box.innerHTML = rows.map(r => `<div style="display:grid;grid-template-columns:68px 1fr;gap:6px;padding:5px 8px;border-radius:8px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.04);border-left:3px solid ${r.cls==='warn'?'#ff6b6b':r.cls==='ok'?'#2bd47d':'#37a7ff'}"><div style="font-size:11px;font-weight:700;color:#cfe0ff">${r.time}</div><div style="font-size:11px;line-height:1.35;color:#e6ecff">${r.label}</div></div>`).join('');
 }
 
 function syncTrustStrip(){
+  const tsKp=el('tsKp'), tsAi=el('tsAi'), tsDriver=el('tsDriver'), tsShift=el('tsShift');
   const kp = _v73Kp();
   const kpPart = isFinite(kp) ? Math.round((kp-2)*10)/10 : NaN;
   const pc = window._lastPanchCtx;
@@ -5201,7 +5033,11 @@ function syncTrustStrip(){
   const drvStr = main&&main.v!==0 ? `${main.n} (${main.v>0?'+':''}${main.v.toFixed(1)})` : 'немає';
   const shiftBadge = el('timingNextShift');
   const shiftStr = shiftBadge?.textContent?.trim()?.replace(/^[•●▲⚠◔]\s*/,'')?.substring(0,40) || '—';
-  // v81: only heroMetaInline (trustStrip HTML removed)
+  // Populate both trust strip and hero meta inline
+  if(tsKp) tsKp.textContent = kpStr;
+  if(tsAi) tsAi.textContent = aiStr;
+  if(tsDriver) tsDriver.textContent = drvStr;
+  if(tsShift) tsShift.textContent = shiftStr;
   const hm = id => el(id);
   if(hm('hmKp')) hm('hmKp').textContent = kpStr;
   if(hm('hmAi')) hm('hmAi').textContent = aiStr;
@@ -5221,18 +5057,11 @@ function syncV702UI(){
   try{renderConfidenceBreakdown();}catch(e){console.warn('confidence:',e);}
   try{renderKpContribution();}catch(e){console.warn("kpContrib:",e);}
   try{renderPanchPiLine();}catch(e){console.warn("panchPi:",e);}
-  // v81h: renderWf3 skipped (wf3SignalSummary hidden — duplicates decisionBlock)
+  try{renderWf3();}catch(e){console.warn("wf3:",e);}
   // v79: trust strip
   try{syncTrustStrip();}catch(e){console.warn("trustStrip:",e);}
   try{syncDayPlanCard();}catch(e){console.warn("dayPlan:",e);}
   try{syncPersonalContext();}catch(e){console.warn("personalCtx:",e);}
-  // v81e: role-based dedupe
-  try{enforceContentPolicy();}catch(e){console.warn("enfPolicy:",e);}
-  try{_dedupeBlocks();}catch(e){console.warn("dedupe:",e);}
-  // v81g: decision block + body mode + sticky + collapse
-  try{renderDecisionBlock();}catch(e){console.warn("decision:",e);}
-  try{applyBodyModeClass();}catch(e){console.warn("bodyMode:",e);}
-  try{collapseByMode();}catch(e){console.warn("collapse:",e);}
   // v75: save G to history for ΔG
   try{const _gNow=_v73G();if(isFinite(_gNow))_saveGHistory(_gNow);}catch(e){}
 }
@@ -8131,7 +7960,7 @@ function renderProfileRec() {
   el_.innerHTML = `<span style="font-weight:700;color:${prof.color}">${prof.label}:</span> ${rec}${ageLine}`;
 }
 
-addEventListener('load', ()=>{ initGeolocation(); setStamp(); loadAll(); el('btnCsv').addEventListener('click', exportCsv); el('selInterval').addEventListener('change', updateAutoRefStatus); initPersonalCalc(); initLangToggle(); initG2Watch(); window.addEventListener('scroll',_onStickyScroll,{passive:true}); document.addEventListener('click',function(e){var c=e.target.closest('.ui-collapsed');if(c)c.classList.remove('ui-collapsed');}); });
+addEventListener('load', ()=>{ initGeolocation(); setStamp(); loadAll(); el('btnCsv').addEventListener('click', exportCsv); el('selInterval').addEventListener('change', updateAutoRefStatus); initPersonalCalc(); initLangToggle(); initG2Watch(); });
 el('btnRefresh').addEventListener('click', loadAll);
 
 // ========================= i18n EN/UA =========================
@@ -8713,7 +8542,7 @@ function mnavGo(tab, scroll) {
 function mnavInit() {
   if (window.innerWidth > 700) {
     // Desktop: show everything
-    ['heroCard','astroGrid','profileBar','profileRec','mainGrid','threeCard',
+    ['heroCard','astroGrid','opsGrid','decisionCard','radarCard','gTopRow','profileBar','profileRec','mainGrid','threeCard',
      'twentysevenCard','backtestCard','panchCard','scienceBar']
       .forEach(id => { const el = document.getElementById(id); if(el) el.style.display = ''; });
     return;
@@ -9152,7 +8981,10 @@ function _v73Kp(){
   return _num((_firstText?.(el('nowKp'))||el('nowKp')?.textContent||'').replace(',','.'));
 }
 
-// v81: renderAIExplain, _renderTopDrivers, _bindDriverHover removed
+// v80: renderAIExplain, _renderTopDrivers, _bindDriverHover removed (heroTopDrivers no longer in DOM)
+function renderAIExplain(){} // stub
+function _renderTopDrivers(){} // stub
+function _bindDriverHover(){} // stub
 
 // v80: renderConfidenceBreakdown simplified — reads from __uiState.confPct
 function renderConfidenceBreakdown(){
@@ -9262,7 +9094,121 @@ function renderPanchPiLine(){
 
 // ═══ v76c: wf3 Signal Summary ═══
 // ═══ v76d: wf3 Human-readable Signal Summary ═══
-// v81h: WF3_PHRASES, WF3_ALERT, renderWf3 removed (wf3SignalSummary hidden since v81h)
+var WF3_PHRASES={
+  calm:'Фон стабільний, виражених факторів немає.',
+  kp_up:'Геомагнітний фон дає {s} ріст ({v}).',
+  kp_down:'Геомагнітний фон створює {s} тиск ({v}).',
+  moon_up:'Місячна фаза додає {s} вплив ({v}).',
+  moon_down:'Місячна фаза створює {s} тиск ({v}).',
+  eclipse:'Період затемнення створює нестабільність ({v}).',
+  events:'Події дня дають {s} вплив ({v}).',
+  panchanga:'Панчанга формує {s} фон ({v}).',
+  mixed:'Фактори змішані, чіткого домінування немає.',
+  others_neutral:'Інші фактори нейтральні.',
+  rel_good:'Дані надійні ({c}%).',
+  rel_mid:'Дані прийнятні ({c}%).',
+  rel_low:'Дані обмеженої надійності ({c}%).',
+  cached:'Показано кеш.',
+  live:'Дані актуальні.',
+  stale:'Дані можуть бути застарілими.',
+  scen_up:'Якщо Kp зросте, вплив посилиться до {v}.'
+};
+var WF3_ALERT={
+  storm_high:'Йде геомагнітна буря, небажано планувати критичні дії.',
+  storm_mid:'Геомагнітна активність підвищена, день потребує обережності.',
+  storm_low:'Геомагнітний фон підвищений, варто зменшити навантаження.',
+  eclipse_peak:'Пік впливу затемнення, день краще не перевантажувати.',
+  eclipse_near:'Період затемнення посилює нестабільність фону.',
+  eclipse_far:'Відчувається фоновий вплив періоду затемнення.',
+  amavasya:'Амавасья підсилює внутрішню нестабільність і знижує стійкість.',
+  ekadashi:'Екадаші змінює ритм дня, краще уникати перевантаження.',
+  mixed_hard:'Накладаються кілька несприятливих факторів, день напружений.',
+  mixed_mid:'Фон змішаний, але з перевагою несприятливих факторів.',
+  unstable:'Картина дня неповна, дані слід читати обережно.'
+};
+
+function renderWf3(){
+  var g=_v73G(), kp=_v73Kp();
+  var wrap=el('wf3SignalSummary'), top=el('wf3Top'), bot=el('wf3Bottom');
+  if(!wrap||!top||!bot) return;
+  if(!isFinite(g)||!isFinite(kp)){wrap.style.display='none';return;}
+  var kpPart=Math.round((kp-2)*10)/10;
+  // Read ai components from chips
+  var chips=[].slice.call(document.querySelectorAll('#gDecompFactors .gd-chip[data-val]'));
+  var comps={Li:0,Mi:0,ei:0,Pi:0};
+  chips.forEach(function(c){
+    var nameEl=c.querySelector('.gd-chip-name');
+    var nm=(nameEl?nameEl.textContent:'').split(' ')[0].replace(/[:\s]/g,'');
+    var v=parseFloat(c.getAttribute('data-val'));
+    if(nm&&isFinite(v)&&comps.hasOwnProperty(nm)) comps[nm]=v;
+  });
+  if(comps.Pi===0&&window._lastAiPi!=null&&window._lastAiPi!==0) comps.Pi=Number(window._lastAiPi)||0;
+
+  function fs(x){var n=Number(x||0);return(n>0?'+':'')+n.toFixed(1);}
+  function strength(v){var a=Math.abs(v);return a<0.5?'слабкий':a<1.5?'помірний':'сильний';}
+
+  // Main driver
+  var drivers=[{k:'kp',v:kpPart},{k:'li',v:comps.Li},{k:'mi',v:comps.Mi},{k:'ei',v:comps.ei},{k:'pi',v:comps.Pi}];
+  drivers.sort(function(a,b){return Math.abs(b.v)-Math.abs(a.v);});
+  var d=drivers[0];
+
+  // Line 1: main cause (human text)
+  var line1;
+  if(Math.abs(d.v)<0.15){
+    line1=WF3_PHRASES.calm;
+  } else {
+    var tpl;
+    if(d.k==='kp') tpl=d.v>0?WF3_PHRASES.kp_up:WF3_PHRASES.kp_down;
+    else if(d.k==='li') tpl=d.v>0?WF3_PHRASES.moon_up:WF3_PHRASES.moon_down;
+    else if(d.k==='mi') tpl=WF3_PHRASES.eclipse;
+    else if(d.k==='ei') tpl=WF3_PHRASES.events;
+    else if(d.k==='pi') tpl=WF3_PHRASES.panchanga;
+    else tpl=WF3_PHRASES.mixed;
+    line1=tpl.replace('{s}',strength(d.v)).replace('{v}',fs(d.v));
+  }
+  top.textContent=line1;
+
+  // Line 2: alert OR others + reliability + scenario
+  var parts=[];
+  // Data state
+  var hf=el('heroFreshness');
+  var dataState=(hf?hf.textContent.trim():'LIVE');
+  var hc=el('heroConfidence');
+  var confNum=parseInt(hc?hc.textContent.trim():'')||100;
+
+  // Alert check (priority order)
+  var alert='';
+  if(confNum<60||dataState==='STALE') alert=WF3_ALERT.unstable;
+  else if(kp>=6) alert=WF3_ALERT.storm_high;
+  else if(kp>=5) alert=WF3_ALERT.storm_mid;
+  else if(kp>=4) alert=WF3_ALERT.storm_low;
+  else if(comps.Mi<=-4) alert=WF3_ALERT.eclipse_peak;
+  else if(comps.Mi<=-3) alert=WF3_ALERT.eclipse_near;
+  else if(comps.Mi<=-1) alert=WF3_ALERT.eclipse_far;
+  else if(comps.Li<=-3) alert=WF3_ALERT.amavasya;
+  else if(comps.ei<=-2.5) alert=WF3_ALERT.ekadashi;
+  else {
+    var negCnt=[kpPart,comps.Li,comps.Mi,comps.ei,comps.Pi].filter(function(x){return x<-0.5;}).length;
+    var negSum=[kpPart,comps.Li,comps.Mi,comps.ei,comps.Pi].reduce(function(s,x){return s+Math.min(0,x);},0);
+    if(negCnt>=3||negSum<=-4) alert=WF3_ALERT.mixed_hard;
+    else if(negCnt>=2||negSum<=-2) alert=WF3_ALERT.mixed_mid;
+  }
+
+  if(alert) parts.push(alert);
+  else parts.push(WF3_PHRASES.others_neutral);
+
+  // Reliability
+  var relTpl=confNum>=90?WF3_PHRASES.rel_good:confNum>=75?WF3_PHRASES.rel_mid:WF3_PHRASES.rel_low;
+  var relState=dataState==='LIVE'?WF3_PHRASES.live:dataState==='CACHED'?WF3_PHRASES.cached:WF3_PHRASES.stale;
+  parts.push(relTpl.replace('{c}',confNum)+' '+relState);
+
+  // Scenario (only near threshold)
+  if(Math.abs(g)<=1.0) parts.push(WF3_PHRASES.scen_up.replace('{v}',fs(g+1)));
+
+  bot.textContent=parts.join(' ');
+  bot.style.display='flex';
+  wrap.style.display='';
+}
 
 function _saveGHistory(g){
   if(!isFinite(g)) return;
