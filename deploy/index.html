@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v80</title>
+  <title>G-Index — Космофізичний дашборд v81</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -262,9 +262,7 @@
       .profile-btn { font-size: 10px; padding: 3px 7px }
       .gbadge { font-size: 20px !important; padding: 7px 12px !important; min-width: 100px !important }
       #horaLegend { font-size: 10px }
-      /* gTopRow: badge + cat en ligne, summary dessous */
-      #gTopRow { flex-wrap: wrap; gap: 8px; padding: 8px 12px }
-      #gTopSummary { width: 100%; margin-left: 0; font-size: 11px }
+      /* v81: gTopRow removed */
     }
 
     /* ── 700px: tables scroll, hide cols ── */
@@ -448,8 +446,7 @@
       /* Larger touch targets for table rows */
       #threeCard td, #twentysevenCard td { padding: 10px 8px; }
       /* G badge — prominent on mobile */
-      #gTopRow { padding: 12px 14px; border-radius: 10px; }
-      #gTopBadge { font-size: 26px !important; min-width: 90px !important; }
+      /* v81: gTopRow/Badge CSS removed */
       /* Science bar items — pill style on mobile */
       .sci-item { font-size: 11px; padding: 5px 8px; background: #0b1424; border-radius: 6px; }
       /* Profile bar — touch scroll */
@@ -464,7 +461,7 @@
     }
 
     @media (max-width: 400px) {
-      #gTopBadge { font-size: 22px !important; }
+      /* v81: gTopBadge removed */
       /* Science bar — 2 per row, compact */
       #scienceBar { grid-template-columns: 1fr 1fr; gap: 4px; }
       .sci-item { font-size: 10px; padding: 4px 6px; }
@@ -625,8 +622,7 @@
     .driver-bar{height:6px;border-radius:3px;min-width:4px;transition:width .4s}
     .driver-label{min-width:36px;font-weight:700;font-variant-numeric:tabular-nums}
     /* Confidence formula-based */
-    .conf-fill.pulse{animation:confPulse 2s ease-in-out infinite}
-    @keyframes confPulse{0%,100%{opacity:1}50%{opacity:.7}}
+    /* v81: .conf-fill.pulse removed (decisionNow deleted) */
 
     /* v80: v73TopLayer CSS removed (HTML deleted) */
     /* v80: opsGrid/v73TopLayer/dead blocks — all HTML removed */
@@ -645,7 +641,7 @@
     #impactBlock{gap:10px!important;margin-bottom:8px!important}
     #impactBlock>div{padding:8px 12px!important}
     #mainGrid{gap:10px!important;margin-bottom:10px!important}
-    #trustStrip{display:none!important}
+    /* v81: trustStrip removed */
     /* C2: core grid compressed */
     #coreGrid{display:grid;grid-template-columns:1.2fr .95fr;gap:10px;margin-bottom:10px}
     @media(max-width:980px){#coreGrid{grid-template-columns:1fr}}
@@ -965,13 +961,7 @@
       </div>
     </div>
 
-    <!-- v79: Trust Strip -->
-    <div id="trustStrip" style="margin:0 0 12px;padding:7px 12px;border:1px solid rgba(255,255,255,.07);border-radius:12px;background:rgba(9,15,30,.6);font-size:11px;color:#9bb1dc;display:flex;flex-wrap:wrap;gap:4px 14px;align-items:center">
-      <span>Kp−2: <strong id="tsKp">—</strong></span>
-      <span>ΣAᵢ: <strong id="tsAi">—</strong></span>
-      <span>Драйвер: <strong id="tsDriver">—</strong></span>
-      <span>Далі: <strong id="tsShift">—</strong></span>
-    </div>
+    <!-- v81: trustStrip removed (duplicates heroMetaInline) -->
 
     <!-- ═══ v78d: CORE GRID — WHY + TIMING ═══ -->
     <div id="coreGrid">
@@ -3776,8 +3766,8 @@ function renderPanchanga(dateUTC){
   // Rahu active — перевіряємо для поточного часу (не noon)
   const _nowH = new Date().getUTCHours() + new Date().getUTCMinutes()/60;
   const [_rS, _rE] = [p.rahu.start, p.rahu.end].map(t=>{const[h,m]=t.split(':').map(Number);return h+m/60;});
-  p.rahu.active = _nowH >= _rS && _nowH < _rE;
-  p.rahu.score  = p.rahu.active ? -1 : 0;
+  const _rahuActive = _nowH >= _rS && _nowH < _rE;
+  const _rahuScore  = _rahuActive ? -1 : 0;
 
   // Зберегти для планетної анімації
   _lastPanchCtx = {
@@ -3785,7 +3775,7 @@ function renderPanchanga(dateUTC){
     nakshatra:{ idx: p.nakshatra.num, name: p.nakshatra.name, score: p.nakshatra.score },
     yoga:     { name: p.yoga.name, score: p.yoga.score, isCritical: !!(p.yoga.score <= -2) },
     karana:   { name: p.karana.name, isVishti: !!(p.karana.score <= -2) },
-    rahu:     { active: p.rahu.active, start: p.rahu.start, end: p.rahu.end }
+    rahu:     { active: _rahuActive, start: p.rahu.start, end: p.rahu.end }
   };
   const dateStr = fmtDate(dateUTC);
   const el_ = id => document.getElementById(id);
@@ -3819,7 +3809,7 @@ function renderPanchanga(dateUTC){
   const kAdv = p.karana.isVishti
     ? {do:'Очікування, спостереження', avoid:'Будь-які активні дії (абсолютне вето)'}
     : {do: p.karana.note, avoid:''};
-  const rahuAdv = p.rahu.active
+  const rahuAdv = _rahuActive
     ? {do:'Оборонні/підтримуючі операції', avoid:'Нові бойові завдання, стратегічні рішення'}
     : {do:'Обмежень немає', avoid:''};
 
@@ -3849,10 +3839,10 @@ function renderPanchanga(dateUTC){
       val:   p.karana.name,
       sub:   `${p.karana.type} · PCL ${scoreSpan(p.karana.score)}`,
       adv:   kAdv },
-    { score: p.rahu.active ? -1 : 0,
+    { score: _rahuActive ? -1 : 0,
       label: 'Rahu Kalam',
-      val:   p.rahu.active ? '⚠️ Активний зараз' : `${p.rahu.start}–${p.rahu.end} UTC`,
-      sub:   p.rahu.active ? `PCL ${scoreSpan(-1)} · до ${p.rahu.end} UTC` : `PCL ${scoreSpan(0)} · неактивний`,
+      val:   _rahuActive ? '⚠️ Активний зараз' : `${p.rahu.start}–${p.rahu.end} UTC`,
+      sub:   _rahuActive ? `PCL ${scoreSpan(-1)} · до ${p.rahu.end} UTC` : `PCL ${scoreSpan(0)} · неактивний`,
       adv:   rahuAdv }
   ];
 
@@ -3991,10 +3981,10 @@ function renderPanchanga(dateUTC){
     </tr>` : ''}
     <tr>
       <td style="padding:5px 6px;color:#9bb1dc;font-size:11px">
-        <span class="hint" tabindex="0" style="cursor:help;font-style:italic;border-bottom:1px dotted var(--faint)">Rahu Kalam<span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.rahu(p.rahu))}</span></span>
+        <span class="hint" tabindex="0" style="cursor:help;font-style:italic;border-bottom:1px dotted var(--faint)">Rahu Kalam<span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.rahu({active:_rahuActive,start:p.rahu.start,end:p.rahu.end}))}</span></span>
       </td>
-      <td style="padding:5px 6px;font-weight:600"><span class="hint" tabindex="0" style="cursor:help">${p.rahu.active ? '🔴 Активний!' : '🟢 '+p.rahu.start+'–'+p.rahu.end}<span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.rahu(p.rahu))}</span></span></td>
-      <td style="padding:5px 6px;font-size:11px;color:#b0c4de">${p.rahu.active ? '✗ Не починати нових операцій' : '✓ Обмежень немає'}</td>
+      <td style="padding:5px 6px;font-weight:600"><span class="hint" tabindex="0" style="cursor:help">${_rahuActive ? '🔴 Активний!' : '🟢 '+p.rahu.start+'–'+p.rahu.end}<span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.rahu({active:_rahuActive,start:p.rahu.start,end:p.rahu.end}))}</span></span></td>
+      <td style="padding:5px 6px;font-size:11px;color:#b0c4de">${_rahuActive ? '✗ Не починати нових операцій' : '✓ Обмежень немає'}</td>
     </tr>
   </table>`;
 
@@ -4025,7 +4015,7 @@ function renderPanchanga(dateUTC){
     {score: p.nakshatra.score, adv: nAdv, label:'Nakshatra'},
     {score: p.yoga.score, adv: yAdv, label:'Yoga'},
     {score: p.karana.score, adv: kAdv, label:'Karana'},
-    {score: p.rahu.active ? -1 : 0, adv: rahuAdv, label:'Rahu'}
+    {score: _rahuActive ? -1 : 0, adv: rahuAdv, label:'Rahu'}
   ].filter(s => s.adv);
 
   // Збираємо всі avoid-теми для фільтрації протиріч
@@ -4745,23 +4735,17 @@ function _decAction(g,kp){
   return o;
 }
 
-// v80: syncDecision removed (opsGrid HTML deleted)
-function syncDecision(){}
+// v81: syncDecision removed
 
 
 // --- COMPACT EXPLAIN ---
-// v80: syncExplain, syncStory removed (targets deleted)
-function syncExplain(){}
-function syncStory(){}
+// v81: syncExplain, syncStory removed
 
 // --- RADAR ---
-// v80: syncRadar, _getRegimeShift removed (opsGrid HTML deleted)
-function syncRadar(){}
-function _getRegimeShift(){return "";}
+// v81: syncRadar, _getRegimeShift removed
 
 // --- TRIGGERS ---
-// v80: syncTriggers removed (triggerList HTML deleted)
-function syncTriggers(){}
+// v81: syncTriggers removed
 
 // --- v70.3 BEST WINDOW ---
 const _HORA_WIN_BONUS = {
@@ -4884,15 +4868,13 @@ function renderMoonRetroTop(){
 }
 
 // --- v70.3 MERGE OPS ---
-// v80: mergeOpsCards removed (opsGrid targets deleted)
-function mergeOpsCards(){}
+// v81: mergeOpsCards removed
 
 // --- WHY BLOCK (decision-first) ---
 function syncPanchSummary(){
   const pc=_lastPanchCtx;
   const s=el('panchSummaryLine');
   const piLine=el('panchPiLine');
-  const noteEl=el('panchNote');
   if(!pc||!s) return;
   const pi=pc.aiComponents?.Pi||0;
   const ns=pc.nakshatra?.score||0;
@@ -4903,25 +4885,33 @@ function syncPanchSummary(){
   // Pi line
   const piState=pi>=1?'підтримує день':pi<=-1?'погіршує день':'майже нейтральна';
   if(piLine) piLine.innerHTML=`Pᵢ = <strong>${pi>0?'+':''}${pi.toFixed(1)}</strong> · ${piState}`;
-  // Product summary
-  const neg=[],pos=[];
-  if(ts<0)neg.push('тітхі');if(ns<0)neg.push('накшатра');if(ys<0)neg.push('йога');if(ks<0)neg.push('карана');
-  if(ts>0)pos.push('тітхі');if(ns>0)pos.push('накшатра');if(ys>0)pos.push('йога');if(ks>0)pos.push('карана');
+
+  // Build concrete advice line
+  const alerts = [];
+  const goods = [];
+  if(pc.karana?.isVishti) alerts.push('⛔ Vishti — вето на активні дії');
+  if(pc.rahu?.active) alerts.push('⚠ Rahu Kalam — не починати');
+  if(pc.yoga?.isCritical) alerts.push('⚠ Критична Yoga');
+  if(ts <= -1) alerts.push('Тітхі несприятлива');
+  if(ns <= -1) alerts.push('Накшатра обмежує');
+  if(ys <= -1 && !pc.yoga?.isCritical) alerts.push('Yoga знижена');
+  if(ns >= 1) goods.push('Накшатра сприяє');
+  if(ts >= 1) goods.push('Тітхі підтримує');
+  if(ys >= 1) goods.push('Yoga сприятлива');
+
   let summary;
-  if(total<=-2) summary=`Фон несприятливий: тиск дають ${neg.join(', ')||'фактори дня'}. Краще не форсувати рішення.`;
-  else if(total<0) summary=`Фон змішаний з перевагою обережності: впливають ${neg.join(', ')||'частина факторів'}.`;
-  else if(total===0) summary='Фон нейтральний: панчанга не підсилює і не погіршує день.';
-  else summary=`Фон підтримує дії: працюють ${pos.join(', ')||'сприятливі фактори'}.`;
-  s.textContent=summary;
-  // Action note
-  if(noteEl){
-    let action;
-    if(total<=-2) action='Краща дія: сповільнитись, не входити у суперечливі задачі.';
-    else if(total<0) action='Краща дія: працювати короткими циклами, без ризикових рішень.';
-    else if(total===0) action='Краща дія: тримати стандартний режим без різких маневрів.';
-    else action='Краща дія: використовувати день для планових запусків і просування.';
-    noteEl.textContent=action;
+  if(alerts.length >= 2){
+    summary = alerts.slice(0,2).join(' · ') + ' → сповільніться, рутина без ризику';
+  } else if(alerts.length === 1){
+    summary = alerts[0] + ' → обережно з важливими рішеннями';
+  } else if(goods.length >= 2){
+    summary = goods.slice(0,2).join(' · ') + ' → день підходить для дій і рішень';
+  } else if(goods.length === 1){
+    summary = goods[0] + ' → можна рухатись вперед';
+  } else {
+    summary = 'Нейтральний фон — стандартний режим, без різких маневрів';
   }
+  s.textContent = summary;
 }
 
 function syncWhy(){
@@ -4978,41 +4968,70 @@ function syncPersonalContext(){
   const sub = el('personalContextSub');
   if(!main||!sub) return;
   const g = _v73G();
-  const stKey = classifyStateByG(g);
-  const st = GLOBAL_STATES[stKey];
-  if(!st) return;
-  main.textContent = st.doText + ' ' + st.avoidText;
+  const pc = _lastPanchCtx;
   const hora = (function(){try{return calcHora(new Date())}catch(e){return null}})();
-  const horaText = hora ? ` Зараз ${hora.planet} hora (ще ${hora.minLeft} хв).` : '';
-  sub.textContent = st.impact + horaText;
+
+  // Build persona-specific advice from panchanga + G
+  const parts = [];
+  if(pc){
+    if(pc.karana?.isVishti) parts.push('⛔ Зараз Vishti karana — не починай нічого нового');
+    if(pc.rahu?.active) parts.push('⚠ Rahu Kalam — уникай нових справ');
+    if(pc.yoga?.isCritical) parts.push('⚠ Критична Yoga — обережно');
+    if(pc.nakshatra?.score >= 1) parts.push('☽ Накшатра сприяє діям');
+    else if(pc.nakshatra?.score <= -1) parts.push('☽ Накшатра обмежує — менше ризику');
+    if(pc.tithi?.score >= 1) parts.push('Тітхі підтримує');
+    else if(pc.tithi?.score <= -1) parts.push('Тітхі несприятлива');
+  }
+  if(!parts.length){
+    if(g >= 1) parts.push('Фон спокійний — можна діяти');
+    else if(g >= 0) parts.push('Стандартний режим');
+    else parts.push('Фон напружений — менше ризику');
+  }
+  main.textContent = parts.slice(0,2).join(' · ');
+
+  // Sub: hora + shift
+  const horaTxt = hora ? `${hora.planet} hora (ще ${hora.minLeft} хв)` : '';
+  const shiftTxt = el('timingNextShift')?.textContent?.trim()?.replace(/^[•●▲⚠◔]\s*/,'')?.substring(0,50) || '';
+  sub.textContent = [horaTxt, shiftTxt].filter(Boolean).join(' · ') || '—';
 }
 
 function syncDayPlanCard(){
   const box = el('dayPlanRows');
   if(!box) return;
   const rows = [];
-  const tRows = document.querySelectorAll('#timingRows .timing-row');
-  if (tRows.length) {
-    Array.from(tRows).slice(0,3).forEach((row, i) => {
-      const time = row.querySelector('.timing-time')?.textContent?.trim() || '';
-      const label = row.querySelector('.timing-label span')?.textContent?.trim() || row.querySelector('.timing-label')?.textContent?.trim() || '';
-      rows.push({ time, label, cls: i===0 ? 'warn' : 'info' });
-    });
+  const pc = _lastPanchCtx;
+  const g = _v73G();
+
+  // Morning: panchanga + G based
+  if(pc?.rahu?.active === false && pc?.rahu?.start){
+    const [rH] = pc.rahu.start.split(':').map(Number);
+    if(rH >= 6 && rH <= 12) rows.push({time:'До '+pc.rahu.start, label:'Активні дії — до початку Rahu Kalam', cls:'ok'});
   }
+  if(pc?.karana?.isVishti) rows.push({time:'Зараз', label:'Vishti karana — зупиніться, не починайте', cls:'warn'});
+  if(pc?.rahu?.active) rows.push({time:'Зараз', label:'Rahu Kalam — оборонний режим', cls:'warn'});
+
+  // Hora-based
+  const hora = (function(){try{return calcHora(new Date())}catch(e){return null}})();
+  if(hora) rows.push({time:hora.planet+' hora', label:'ще '+hora.minLeft+' хв', cls:'info'});
+
+  // G-based
+  if(isFinite(g)){
+    if(g >= 1) rows.push({time:'Сьогодні', label:'Вікно для важливих рішень', cls:'ok'});
+    else if(g <= -2) rows.push({time:'Сьогодні', label:'Мінімум ризику, рутина', cls:'warn'});
+  }
+
+  // Next shift
   const ns = el('timingNextShift')?.textContent?.trim();
-  if (ns && ns.length > 3) rows.push({ time:'Далі', label: ns.replace(/^[•●▲⚠◔]\s*/,'').substring(0,60), cls:'ok' });
-  if (!rows.length) {
-    rows.push(
-      { time:'Ранок', label:'Тільки рутина без різких рішень', cls:'warn' },
-      { time:'День', label:'Не фіксувати важливі рішення', cls:'warn' },
-      { time:'Вечір', label:'Фон може вирівнятися', cls:'info' }
-    );
+  if(ns && ns.length > 3) rows.push({time:'Далі', label:ns.replace(/^[•●▲⚠◔]\s*/,'').substring(0,55), cls:'info'});
+
+  if(!rows.length){
+    rows.push({time:'—', label:'Немає активних сигналів', cls:'info'});
   }
-  box.innerHTML = rows.map(r => `<div style="display:grid;grid-template-columns:68px 1fr;gap:6px;padding:5px 8px;border-radius:8px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.04);border-left:3px solid ${r.cls==='warn'?'#ff6b6b':r.cls==='ok'?'#2bd47d':'#37a7ff'}"><div style="font-size:11px;font-weight:700;color:#cfe0ff">${r.time}</div><div style="font-size:11px;line-height:1.35;color:#e6ecff">${r.label}</div></div>`).join('');
+
+  box.innerHTML = rows.slice(0,4).map(r => `<div style="display:grid;grid-template-columns:68px 1fr;gap:6px;padding:5px 8px;border-radius:8px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.04);border-left:3px solid ${r.cls==='warn'?'#ff6b6b':r.cls==='ok'?'#2bd47d':'#37a7ff'}"><div style="font-size:11px;font-weight:700;color:#cfe0ff">${r.time}</div><div style="font-size:11px;line-height:1.35;color:#e6ecff">${r.label}</div></div>`).join('');
 }
 
 function syncTrustStrip(){
-  const tsKp=el('tsKp'), tsAi=el('tsAi'), tsDriver=el('tsDriver'), tsShift=el('tsShift');
   const kp = _v73Kp();
   const kpPart = isFinite(kp) ? Math.round((kp-2)*10)/10 : NaN;
   const pc = window._lastPanchCtx;
@@ -5028,11 +5047,7 @@ function syncTrustStrip(){
   const drvStr = main&&main.v!==0 ? `${main.n} (${main.v>0?'+':''}${main.v.toFixed(1)})` : 'немає';
   const shiftBadge = el('timingNextShift');
   const shiftStr = shiftBadge?.textContent?.trim()?.replace(/^[•●▲⚠◔]\s*/,'')?.substring(0,40) || '—';
-  // Populate both trust strip and hero meta inline
-  if(tsKp) tsKp.textContent = kpStr;
-  if(tsAi) tsAi.textContent = aiStr;
-  if(tsDriver) tsDriver.textContent = drvStr;
-  if(tsShift) tsShift.textContent = shiftStr;
+  // v81: only heroMetaInline (trustStrip HTML removed)
   const hm = id => el(id);
   if(hm('hmKp')) hm('hmKp').textContent = kpStr;
   if(hm('hmAi')) hm('hmAi').textContent = aiStr;
@@ -8537,7 +8552,7 @@ function mnavGo(tab, scroll) {
 function mnavInit() {
   if (window.innerWidth > 700) {
     // Desktop: show everything
-    ['heroCard','astroGrid','opsGrid','decisionCard','radarCard','gTopRow','profileBar','profileRec','mainGrid','threeCard',
+    ['heroCard','astroGrid','profileBar','profileRec','mainGrid','threeCard',
      'twentysevenCard','backtestCard','panchCard','scienceBar']
       .forEach(id => { const el = document.getElementById(id); if(el) el.style.display = ''; });
     return;
@@ -8976,10 +8991,7 @@ function _v73Kp(){
   return _num((_firstText?.(el('nowKp'))||el('nowKp')?.textContent||'').replace(',','.'));
 }
 
-// v80: renderAIExplain, _renderTopDrivers, _bindDriverHover removed (heroTopDrivers no longer in DOM)
-function renderAIExplain(){} // stub
-function _renderTopDrivers(){} // stub
-function _bindDriverHover(){} // stub
+// v81: renderAIExplain, _renderTopDrivers, _bindDriverHover removed
 
 // v80: renderConfidenceBreakdown simplified — reads from __uiState.confPct
 function renderConfidenceBreakdown(){
