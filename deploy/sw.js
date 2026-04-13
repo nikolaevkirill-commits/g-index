@@ -5,10 +5,9 @@
    - Everything else → Network-First, no cache
 */
 
-const SHELL_CACHE  = 'g-index-shell-v79c';
+const SHELL_CACHE  = 'g-index-shell-v80';
 const DATA_CACHE   = 'g-index-data-v1';
 const DATA_TTL_MS  = 1 * 60 * 60 * 1000; // 1 hour (Dst оновлюється кожну 1h)
-
 // App shell files to pre-cache on install
 const SHELL_FILES = [
   'index.html',
