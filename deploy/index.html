@@ -171,7 +171,8 @@
     /* Таблиця завжди видима */
     #gDecompTable { display:table !important; }
     /* Science Bar */
-    #scienceBar{ display:flex; flex-wrap:wrap; gap:4px 10px; margin:0 0 12px; padding:6px 10px; background:rgba(7,12,24,.85); border:1px solid rgba(60,80,120,.12); border-radius:8px; font-size:10px; opacity:.75 }
+    #scienceBar{ display:flex; flex-wrap:wrap; gap:3px 8px; margin:0 0 8px; padding:4px 10px; background:rgba(7,12,24,.7); border:1px solid rgba(50,70,100,.10); border-radius:6px; font-size:10px; opacity:.6; transition:opacity .2s }
+    #scienceBar:hover{opacity:.9}
     .sci-item{ display:flex; align-items:center; gap:4px; color:var(--dim) }
     .sci-val{ font-weight:700; color:var(--text2); font-variant-numeric:tabular-nums }
     .sci-src{ color:var(--faint); font-size:10px }
@@ -4922,48 +4923,36 @@ function _renderHeroAlert(g, d3h, confNum, stKey) {
   if (!alertEl) return;
   const worsening = d3h >= 0.2;
   const improving = d3h <= -0.2;
-  const absG = Math.abs(g || 0);
 
   let text = '', level = 'info';
 
+  // Only show alert when it adds NEW info vs hero verdict
   if (confNum < 60) {
-    text = '◔ Дані неповні або кешовані — оцінку варто читати обережно';
+    // Data quality — hero doesn't say this
+    text = '◔ Дані неповні — оцінку варто читати обережно';
     level = 'watch';
-  } else if (absG >= 2 && worsening) {
-    text = '⚠ Фон критичний і погіршується — уникайте будь-яких активних дій';
-    level = 'critical';
-  } else if (absG >= 1.5 && worsening) {
-    text = '▲ Фон напружений і погіршується — важливі рішення краще відкласти';
-    level = 'warn';
-  } else if (stKey === 'tense') {
-    text = '⚠ Напружений день — мінімізуйте активність';
-    level = 'warn';
-  } else if (stKey === 'unstable' && worsening) {
-    text = '▲ Нестабільний фон з тенденцією до погіршення';
+  } else if (worsening && stKey !== 'tense') {
+    // Trend worsening — hero says state but not trend
+    text = '▲ Фон погіршується — далі може стати гірше';
     level = 'watch';
-  } else if (improving && stKey !== 'tense') {
-    text = '• Ситуація покращується — скоро відкриється краще вікно';
-    level = 'info';
-  } else if (stKey === 'favorable' || stKey === 'good') {
-    text = '• Сприятливий фон — використовуйте вікно для ключових дій';
+  } else if (improving) {
+    // Trend improving — useful timing info
+    text = '• Фон покращується — скоро відкриється краще вікно';
     level = 'info';
   } else {
-    // neutral + flat — show hora instead of empty alert
+    // Calm/stable — show hora context (unique info not in hero)
     try {
       const hora = calcHora(new Date());
       const hq = HORA_QUALITY[hora.planet];
-      if (hq) {
-        text = `• ${hora.planet} hora — ${hq.q} (ще ${hora.minLeft} хв)`;
-      } else {
-        text = `• ${hora.planet} hora (ще ${hora.minLeft} хв)`;
-      }
-    } catch(e) { text = '• Стан без різких змін'; }
+      text = hq ? `• ${hora.planet} hora — ${hq.q} (ще ${hora.minLeft} хв)` : `• ${hora.planet} hora (ще ${hora.minLeft} хв)`;
+    } catch(e) { text = ''; }
     level = 'info';
   }
 
+  if (!text) { alertEl.style.display = 'none'; return; }
   alertEl.textContent = text;
   alertEl.className = 'hero-alert-line level-' + level;
-  alertEl.style.display = text ? '' : 'none';
+  alertEl.style.display = '';
 }
 
 // ═══ v78: GLOBAL_STATES — єдиний source of truth для стану ═══
