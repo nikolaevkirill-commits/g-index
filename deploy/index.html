@@ -2603,8 +2603,10 @@ function computeAi(dateTimeUTC, kp=0){
   // Виключаємо Амавасью/Пурніму з eᵢ — вони вже враховані в Lᵢ
   const LI_EXCLUDED = ['Амавасья, день мертвих', 'Amavasya']; // Пурніма (свято) видалено — engine v14.2: Пурніма=0
   const filteredEvents = dayEvents.filter(e => !LI_EXCLUDED.includes(e.name));
+  // v83d: canonical dedupe by name (prevents ICS + auto double-count)
+  const _seenEventKeys = new Set(filteredEvents.map(e => e.name));
   for(const e of autoComputedExtras(dateTimeUTC, kp)){
-    if(!filteredEvents.some(x=>x.name===e.name)) filteredEvents.push(e);
+    if(!_seenEventKeys.has(e.name)){ _seenEventKeys.add(e.name); filteredEvents.push(e); }
   }
   // Обчислюємо ei і eTip за один прохід
   let ei = 0;
@@ -4642,7 +4644,18 @@ function syncHero(){
       {n:'Lᵢ',v:_ui.ai.Li||0},{n:'Mᵢ',v:_ui.ai.Mi||0},{n:'Dᵢ',v:_ui.ai.Di||0}
     ].sort((a,b)=>Math.abs(b.v)-Math.abs(a.v));
     const _md = _drivers[0];
-    if(_md && _md.v!==0) _mainDriverStr = `${_md.n} (${_md.v>0?'+':''}${_md.v.toFixed(1)})`;
+    if(_md && _md.v!==0){
+      // v83d: if driver is eᵢ, resolve to specific event name
+      let _drvLabel = _md.n;
+      if(_md.n === 'eᵢ' && _ui.ai.eTip){
+        const _eL = _ui.ai.eTip.split('\n').filter(l => /^[+-]?\d/.test(l.trim()));
+        if(_eL.length){
+          const _en = _eL[0].replace(/^[+-]?\d+\s*—\s*/, '').replace(/\s*\(≈\).*$/, '').trim();
+          if(_en) _drvLabel = _en;
+        }
+      }
+      _mainDriverStr = `${_drvLabel} (${_md.v>0?'+':''}${_md.v.toFixed(1)})`;
+    }
   }
 
   // 2. Build canonical timing summary (single source of truth)
@@ -4765,6 +4778,15 @@ function _renderHeroCause(g, kp) {
       const effect = _panchEffect(f.val);
       detail = panchDetail ? ` <span style="color:var(--faint);font-size:10px">${effect} (${panchDetail}${panchWarn})</span>` : '';
     }
+    if (f.name === 'eᵢ') {
+      // v83d: show which event caused the eᵢ penalty
+      const _eTip = window.__uiState?.ai?.eTip || '';
+      const _eLines = _eTip.split('\n').filter(l => /^[+-]?\d/.test(l.trim()));
+      if (_eLines.length) {
+        const _eNames = _eLines.map(l => l.replace(/^[+-]?\d+\s*—\s*/, '').replace(/\s*\(≈\).*$/, '').trim()).filter(Boolean);
+        detail = _eNames.length ? ` <span style="color:var(--faint);font-size:10px">${_eNames.join(', ')}</span>` : '';
+      }
+    }
     return `<div class="why-row${isMain ? ' is-main' : ''}">`
       + `<div class="why-name">${f.name} <span style="color:var(--dim);font-size:11px">${f.label}</span>${detail}</div>`
       + `<div class="why-val" style="color:${col}">${sign}${f.val.toFixed(1)}</div>`
@@ -4789,7 +4811,17 @@ function _renderHeroCause(g, kp) {
                  : panchPi >= 1 ? 'Панчанга частково компенсує тиск.'
                  : 'Панчанга не змінює картину.';
       const secondTxt = d2 ? ` ${d2.label} (${d2.val>0?'+':''}${d2.val.toFixed(1)}) теж впливає.` : '';
-      whyMain.innerHTML = `Головна причина: <strong>${d.label}</strong> (${d.val>0?'+':''}${d.val.toFixed(1)}).${secondTxt} ${pTxt}`;
+      // v83d: if driver is eᵢ, show specific event name
+      let dLabel = d.label;
+      if (d.name === 'eᵢ') {
+        const _eTip = window.__uiState?.ai?.eTip || '';
+        const _eLines = _eTip.split('\n').filter(l => /^[+-]?\d/.test(l.trim()));
+        if (_eLines.length) {
+          const _eName = _eLines[0].replace(/^[+-]?\d+\s*—\s*/, '').replace(/\s*\(≈\).*$/, '').trim();
+          if (_eName) dLabel = _eName;
+        }
+      }
+      whyMain.innerHTML = `Головна причина: <strong>${dLabel}</strong> (${d.val>0?'+':''}${d.val.toFixed(1)}).${secondTxt} ${pTxt}`;
     } else {
       whyMain.textContent = 'Усі фактори нейтральні — день рівний без вираженого тиску. ' + (pc?.aiComponents?.Pi != null ? 'Панчанга не змінює картину.' : '');
     }
