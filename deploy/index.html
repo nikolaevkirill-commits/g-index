@@ -935,8 +935,7 @@
 
     <!-- ═══ v70.2 HERO CARD ═══ -->
     <section class="card" id="heroCard">
-      <canvas id="heroField"></canvas>
-      <canvas id="wowOrb" width="140" height="140"></canvas>
+      <!-- wowOrb removed v83f -->
       <div class="hero-wrap">
         <div class="hero-left">
           <div id="heroRing">
@@ -960,8 +959,8 @@
           </div>
           <div id="heroAlertLine" class="hero-alert-line level-info" style="display:none;margin-top:6px">—</div>
           <div id="heroMetaInline" style="margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,.07);display:flex;flex-wrap:wrap;gap:4px 10px;font-size:11px;color:var(--muted)">
-            <span>Kp−2: <strong id="hmKp" style="color:var(--text2)">—</strong></span>
-            <span>ΣAᵢ: <strong id="hmAi" style="color:var(--text2)">—</strong></span>
+            <span style="display:none">Kp−2: <strong id="hmKp" style="color:var(--text2)">—</strong></span>
+            <span style="display:none">ΣAᵢ: <strong id="hmAi" style="color:var(--text2)">—</strong></span>
             <span>Драйвер: <strong id="hmDriver" style="color:var(--text2)">—</strong></span>
             <span>Далі: <strong id="hmShift" style="color:var(--text2)">—</strong></span>
             <span>Зона: <strong id="hmZone" style="color:var(--text2)">—</strong></span>
@@ -1016,13 +1015,7 @@
       </div>
     </div>
 
-    <!-- v79: Trust Strip -->
-    <div id="trustStrip" style="margin:0 0 12px;padding:7px 12px;border:1px solid rgba(255,255,255,.07);border-radius:12px;background:rgba(9,15,30,.6);font-size:11px;color:#9bb1dc;display:flex;flex-wrap:wrap;gap:4px 14px;align-items:center">
-      <span>Kp−2: <strong id="tsKp">—</strong></span>
-      <span>ΣAᵢ: <strong id="tsAi">—</strong></span>
-      <span>Драйвер: <strong id="tsDriver">—</strong></span>
-      <span>Далі: <strong id="tsShift">—</strong></span>
-    </div>
+    <!-- trustStrip removed v83f -->
 
     <!-- ═══ v78d: CORE GRID — WHY + TIMING ═══ -->
     <div id="coreGrid">
@@ -3911,7 +3904,7 @@ function renderPanchanga(dateUTC){
       adv:   kAdv },
     { score: p.rahu.active ? -1 : 0,
       label: 'Rahu Kalam',
-      val:   p.rahu.active ? '⚠️ Активний зараз' : `${p.rahu.start}–${p.rahu.end} UTC`,
+      val:   p.rahu.active ? '⚠️ Активний зараз' : `≈ ${p.rahu.start}–${p.rahu.end} UTC`,
       sub:   p.rahu.active ? `PCL ${scoreSpan(-1)} · до ${p.rahu.end} UTC` : `PCL ${scoreSpan(0)} · неактивний`,
       adv:   rahuAdv }
   ];
@@ -4365,7 +4358,12 @@ function computeTopDrivers(ai, kpNow){
   let mainLabel = main ? main.label : '';
   if(main && main.key === 'ei'){
     const top = parseETipTop(ai.eTip, 1);
-    if(top.length) mainLabel = top[0].label;
+    if(top.length){
+      // v83f: truncate long event names for hero/meta (max 30 chars)
+      let lbl = top[0].label;
+      if(lbl.length > 30) lbl = lbl.slice(0, 28).trim() + '…';
+      mainLabel = lbl;
+    }
   }
   const mainStr = main ? `${mainLabel} (${main.v>0?'+':''}${main.v.toFixed(1)})` : '';
   return { sorted: raw, active, main, mainLabel, mainStr };
