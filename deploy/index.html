@@ -957,7 +957,7 @@
               <div id="heroDecisionAvoid" style="font-size:12px;line-height:1.3;color:var(--muted);margin-top:2px">—</div>
             </div>
           </div>
-          <div id="heroAlertLine" class="hero-alert-line level-info" style="display:none;margin-top:6px">—</div>
+          <!-- heroAlertLine removed v83f -->
           <div id="heroMetaInline" style="margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,.07);display:flex;flex-wrap:wrap;gap:4px 10px;font-size:11px;color:var(--muted)">
             <span style="display:none">Kp−2: <strong id="hmKp" style="color:var(--text2)">—</strong></span>
             <span style="display:none">ΣAᵢ: <strong id="hmAi" style="color:var(--text2)">—</strong></span>
@@ -4337,6 +4337,7 @@ function parseETipTop(eTip, limit=3){
   if(!eTip || typeof eTip!=='string') return [];
   return eTip.split('\n').map(s=>s.trim()).filter(Boolean)
     .filter(s => !s.startsWith('────') && !s.startsWith('eᵢ =') && !s.startsWith('0 —'))
+    .filter(s => !/\bBz\s*=\b|\bVsw\s*=\b/.test(s)) // v83f: exclude space weather context
     .map(line => {
       const m = line.match(/^([+-]?\d+(?:\.\d+)?)\s*—\s*(.+?)(?:\s+\[.*\])?$/);
       if(!m) return null;
@@ -4793,7 +4794,7 @@ function _renderHeroCause(g, kp) {
     if (f.name === 'eᵢ') {
       // v83d: show which event caused the eᵢ penalty
       const _eTip = window.__uiState?.ai?.eTip || '';
-      const _eLines = _eTip.split('\n').filter(l => /^[+-]?\d/.test(l.trim()));
+      const _eLines = _eTip.split('\n').filter(l => /^[+-]?\d/.test(l.trim()) && !/\bBz\s*=\b|\bVsw\s*=\b/.test(l));
       if (_eLines.length) {
         const _eNames = _eLines.map(l => l.replace(/^[+-]?\d+\s*—\s*/, '').replace(/\s*\(≈\).*$/, '').trim()).filter(Boolean);
         detail = _eNames.length ? ` <span style="color:var(--faint);font-size:10px">${_eNames.join(', ')}</span>` : '';
@@ -4950,7 +4951,7 @@ function _renderHeroTimeWindows() {
       const hrs = Math.floor(remaining / 60);
       const mins = remaining % 60;
       const timeStr = hrs > 0 ? `${hrs}г ${mins}хв` : `${mins}хв`;
-      shiftEl.innerHTML = `<div class="next-shift-badge"><span class="live-dot"></span>Зміна через ${timeStr} — ${dir}</div>`;
+      shiftEl.innerHTML = `<div class="next-shift-badge"><span class="live-dot"></span>Зміна через ${timeStr} ${dir}</div>`;
     } else {
       shiftEl.innerHTML = '';
     }
