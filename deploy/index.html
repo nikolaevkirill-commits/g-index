@@ -3847,12 +3847,12 @@ function renderPanchanga(dateUTC){
   p.rahu.active = _nowH >= _rS && _nowH < _rE;
   p.rahu.score  = p.rahu.active ? -1 : 0;
 
-  // Зберегти для планетної анімації
+  // Зберегти для планетної анімації + decision layer (v83d)
   _lastPanchCtx = {
-    tithi:    { num: p.tithi.num, name: p.tithi.name, score: p.tithi.score },
-    nakshatra:{ idx: p.nakshatra.num, name: p.nakshatra.name, score: p.nakshatra.score },
+    tithi:    { num: p.tithi.num, index: p.tithi.num - 1, name: p.tithi.name, score: p.tithi.score },
+    nakshatra:{ idx: p.nakshatra.num, name: p.nakshatra.name, score: p.nakshatra.score, type: p.nakshatra.type },
     yoga:     { name: p.yoga.name, score: p.yoga.score, isCritical: !!(p.yoga.score <= -2) },
-    karana:   { name: p.karana.name, isVishti: !!(p.karana.score <= -2) },
+    karana:   { name: p.karana.name, score: p.karana.score, isVishti: !!(p.karana.score <= -2) },
     rahu:     { active: p.rahu.active, start: p.rahu.start, end: p.rahu.end }
   };
   const dateStr = fmtDate(dateUTC);
@@ -3865,7 +3865,7 @@ function renderPanchanga(dateUTC){
   const _aiEarly = computeAi(noonUTC(dateUTC), _kpEarly);
   const _gEarly  = _kpEarly - 2 + _aiEarly.Ai;
   // v53: aiComponents для кольорів орбіт в анімації
-  _lastPanchCtx.aiComponents = { Li: _aiEarly.Li, Mi: _aiEarly.Mi, ei: _aiEarly.ei, Pi: _aiEarly.Pi };
+  _lastPanchCtx.aiComponents = { Li: _aiEarly.Li, Mi: _aiEarly.Mi, ei: _aiEarly.ei, Pi: _aiEarly.Pi, Di: _aiEarly.Di || 0 };
 
   function scoreSpan(s){
     if(s > 0) return `<span class="panch-score-pos">+${s}</span>`;
@@ -3924,8 +3924,8 @@ function renderPanchanga(dateUTC){
       adv:   rahuAdv }
   ];
 
-  function cellClass(s){
-    if(s >= 1)  return 'panch-cell pcl-pos';
+  function cellClass(s, gCtx){
+    if(s >= 1)  return (gCtx != null && gCtx < -1) ? 'panch-cell' : 'panch-cell pcl-pos';
     if(s === -1) return 'panch-cell pcl-warn';
     if(s === -2) return 'panch-cell pcl-bad';
     if(s <= -3)  return 'panch-cell pcl-vbad';
@@ -4373,9 +4373,10 @@ function buildUnifiedAdvice(state){
     if(pc.karana?.isVishti){ AVOID.push('нові початки (Vishti)'); NOTE.push('Vishti karana — підвищений ризик'); }
     const tIdx = pc.tithi?.index;
     if(tIdx===10||tIdx===25){ DO.push('дисципліна','самоконтроль'); NOTE.push('Екадаші — день стриманості'); }
-    const nq = pc.nakshatra?.quality;
-    if(nq==='fixed') DO.push('структурування','закріплення');
-    if(nq==='sharp') AVOID.push('м\'які переговори');
+    const nType = pc.nakshatra?.type;
+    if(nType==='Стала') DO.push('структурування, закріплення');
+    if(nType==='Жорстка') AVOID.push('м\'які переговори');
+    if(nType==='Легка') DO.push('легкі справи, навчання');
   }
   // Hora inject
   try{
@@ -4391,49 +4392,116 @@ function buildUnifiedAdvice(state){
 function buildDecisionTexts(uiState){
   const g = Number(uiState?.gNow ?? 0);
   let headline='ДЕНЬ СТАБІЛЬНИЙ', sub='Працюй у звичному темпі.';
-  if(g<=-3){ headline='СТОП — високий ризик помилки'; sub='Не приймай важливих рішень до покращення фону.'; }
+  if(g<=-3){ headline='СТОП — високий ризик помилки'; sub='Мінімізуй активність і ризик.'; }
   else if(g<=-1){ headline='ОБЕРЕЖНО — фон нестабільний'; sub='Дій повільно, без різких кроків.'; }
   else if(g<1){ headline='НЕЙТРАЛЬНИЙ ДЕНЬ'; sub='Можна працювати у стандартному режимі.'; }
   else { headline='МОЖНА ДІЯТИ'; sub='Фон підтримує активні дії.'; }
-  const driver=String(uiState?.mainDriver||'').trim();
-  const shift=String(uiState?.nextShift||'').trim();
-  const best=String(uiState?.nextGoodSlot||'').trim();
-  if(driver) sub+=` Головний фактор: ${driver}.`;
-  if(best) sub+=` Найкраще вікно — ${best}.`;
-  else if(shift) sub+=` Далі: ${shift}.`;
+  // heroMainDrag = short, no driver/shift (daySentence has full version)
   return {headline, sub};
 }
 
 function buildDaySentence(uiState){
   const g = Number(uiState?.gNow ?? 0);
   const driver=String(uiState?.mainDriver||'').trim();
-  const best=String(uiState?.nextGoodSlot||'').trim();
-  const shift=String(uiState?.nextShift||'').trim();
-  let mood,action;
-  if(g<=-3){ mood='нестабільний фон'; action='важливі рішення краще відкласти'; }
-  else if(g<=-1){ mood='напружений фон'; action='дій повільно й без різких кроків'; }
-  else if(g<1){ mood='рівний фон'; action='можна тримати звичний темп'; }
-  else { mood='сприятливий фон'; action='можна робити важливі кроки'; }
-  let s=`Сьогодні: ${mood}, ${action}.`;
-  if(driver) s+=` Головний фактор: ${driver}.`;
-  if(best) s+=` Найкраще вікно — ${best}.`;
-  else if(shift) s+=` Далі: ${shift}.`;
-  return s;
+  const ts = uiState?.timingSummary || null;
+  // If no timing data, basic sentence
+  if(!ts || !ts.slots?.length){
+    let mood='рівний фон', action='можна тримати звичний темп';
+    if(g<=-3){ mood='нестабільний фон'; action='важливі рішення краще відкласти'; }
+    else if(g<=-1){ mood='напружений фон'; action='дій повільно й без різких кроків'; }
+    else if(g>=1){ mood='сприятливий фон'; action='можна робити важливі кроки'; }
+    let s=`Сьогодні: ${mood}, ${action}.`;
+    if(driver) s+=` Головний фактор: ${driver}.`;
+    return s;
+  }
+  // Timing-aware sentence
+  if(!ts.hasGoodSlot){
+    let s=`Сьогодні: високий ризик помилки; важливі рішення краще відкласти на весь день.`;
+    if(driver) s+=` Головний фактор: ${driver}.`;
+    return s;
+  }
+  if(g<=-3) return `Сьогодні: нестабільний фон; важливі рішення краще переносити на ${ts.bestSlot.time}.`+(driver?` Головний фактор: ${driver}.`:'');
+  if(g<=-1) return `Сьогодні: фон напружений; діяти краще у вікно ${ts.bestSlot.time}.`+(driver?` Головний фактор: ${driver}.`:'');
+  return `Сьогодні: день керований; найкраще вікно — ${ts.bestSlot.time}.`+(driver?` Головний фактор: ${driver}.`:'');
 }
 
-function buildDecisionTiming(slots){
-  if(!slots||!slots.length) return [];
-  const nowH=new Date().getUTCHours();
-  return slots.map(s=>{
-    const h=parseInt(s.label||'0');
-    const g=s.G;
-    let cls='dt-mid',label='обережно';
-    if(g<=-2){ cls='dt-bad'; label='уникати'; }
-    else if(g<=0){ cls='dt-mid'; label='обережно'; }
-    else { cls='dt-good'; label='можна'; }
-    const isNow=(nowH>=h&&nowH<h+3);
-    return {time:`${String(h).padStart(2,'0')}:00–${String(h+3).padStart(2,'0')}:00`, label, cls, isNow};
+// ═══ v83d: canonical timing system ═══
+const TIMING_THRESHOLDS = { good: 0.5, mid: -0.5 };
+
+function classifySlotScore(score){
+  const s = Number(score ?? 0);
+  if(s >= TIMING_THRESHOLDS.good) return 'good';
+  if(s <= TIMING_THRESHOLDS.mid) return 'bad';
+  return 'mid';
+}
+
+function normalizeDaySlots(slots){
+  if(!Array.isArray(slots)) return [];
+  const nowH = new Date().getUTCHours();
+  return slots.map(s => {
+    const h = parseInt(s.label||'0');
+    const score = Number(s.G ?? 0);
+    const cls = classifySlotScore(score);
+    return {
+      h, score, cls,
+      time: `${String(h).padStart(2,'0')}:00–${String(h+3).padStart(2,'0')}:00`,
+      text: cls==='good' ? 'можна' : cls==='mid' ? 'обережно' : 'уникати',
+      isNow: (nowH>=h && nowH<h+3),
+      isPast: (h+3 <= nowH)
+    };
   });
+}
+
+function findBestSlot(normSlots){
+  const future = normSlots.filter(s => !s.isPast && s.cls === 'good');
+  if(!future.length) return null;
+  future.sort((a,b) => b.score - a.score);
+  return future[0];
+}
+
+function buildTimingSummary(slots){
+  const norm = normalizeDaySlots(slots);
+  const best = findBestSlot(norm);
+  return {
+    slots: norm,
+    bestSlot: best,
+    hasGoodSlot: !!best,
+    allBad: norm.length > 0 && norm.every(s => s.cls === 'bad'),
+    allSame: norm.length > 0 && norm.every(s => s.cls === norm[0].cls)
+  };
+}
+
+function renderDecisionTiming(slots){
+  const summary = buildTimingSummary(slots);
+  const list = el('decisionTimingList');
+  if(!list) return summary;
+  const futureSlots = summary.slots.filter(s => !s.isPast);
+  const visible = futureSlots.length ? futureSlots : summary.slots;
+  if(summary.allSame){
+    list.innerHTML = `<span style="color:var(--dim);font-size:12px">День рівний — усі вікна: ${summary.slots[0]?.text || '—'}. Тримай один темп.</span>`;
+  } else {
+    list.innerHTML = visible.map(s =>
+      `<div class="dt-row dt-${s.cls}${s.isNow?' dt-now':''}">`
+      +`<span class="dt-time">${s.time}</span><span class="dt-label">${s.text}${s.isNow?' ◀ зараз':''}</span></div>`
+    ).join('');
+  }
+  return summary;
+}
+
+function applyTimingToHero(summary, gVal){
+  const heroMain = el('heroMainDrag');
+  if(!heroMain) return;
+  if(!summary || !summary.slots?.length){
+    heroMain.textContent = 'Немає даних по часових вікнах.';
+    return;
+  }
+  if(!summary.hasGoodSlot){
+    if(gVal<=-3) heroMain.textContent = 'Не приймай важливих рішень сьогодні.';
+    else if(gVal<=-1) heroMain.textContent = 'Дій повільно, без різких кроків.';
+    else heroMain.textContent = 'Працюй у звичному темпі.';
+    return;
+  }
+  heroMain.textContent = `Найкраще вікно — ${summary.bestSlot.time}.`;
 }
 
 function formatConfidence(v){
@@ -4562,44 +4630,49 @@ function syncHero(){
   const _confNum = parseInt((el('heroConfidence')?.textContent||'75').replace('%','')) || 75;
   const _confLvl = _confNum >= 80 ? 'high' : _confNum >= 60 ? 'mid' : 'low';
 
-  // v83b: find best slot for decision context
+  // ═══ v83d: canonical timing pipeline ═══
   const _daySlots = window._daySlots || [];
-  let _bestSlotLabel = '';
-  if(_daySlots.length){
-    let bestG=-Infinity, bestH='';
-    _daySlots.forEach(s=>{ if(s.G>bestG){ bestG=s.G; bestH=s.label; } });
-    if(bestH) _bestSlotLabel=String(bestH).padStart(2,'0')+':00–'+String(parseInt(bestH)+3).padStart(2,'0')+':00';
+
+  // 1. Compute driver from __uiState.ai (syncWhy hasn't run yet)
+  let _mainDriverStr = '';
+  if(_ui.ai && isFinite(kpH)){
+    const _kpPart = Math.round((kpH-2)*10)/10;
+    const _drivers = [
+      {n:'eᵢ',v:_ui.ai.ei||0},{n:'Kp−2',v:_kpPart},{n:'Pᵢ',v:_ui.ai.Pi||0},
+      {n:'Lᵢ',v:_ui.ai.Li||0},{n:'Mᵢ',v:_ui.ai.Mi||0},{n:'Dᵢ',v:_ui.ai.Di||0}
+    ].sort((a,b)=>Math.abs(b.v)-Math.abs(a.v));
+    const _md = _drivers[0];
+    if(_md && _md.v!==0) _mainDriverStr = `${_md.n} (${_md.v>0?'+':''}${_md.v.toFixed(1)})`;
   }
 
-  // v83b: decision-first — unified decision texts
-  const _dState = { gNow: gVal, mainDriver: el('hmDriver')?.textContent||'', nextShift: el('hmShift')?.textContent||'', nextGoodSlot: _bestSlotLabel };
-  const _dt = buildDecisionTexts(_dState);
+  // 2. Build canonical timing summary (single source of truth)
+  const _timingSummary = renderDecisionTiming(_daySlots);
+
+  // 3. Hero headline + short sub (from G only, no timing)
+  const _dt = buildDecisionTexts({gNow: gVal});
   _set('heroActionCmd', _dt.headline);
-  _set('heroMainDrag', _dt.sub);
   const hac=el('heroActionCmd');
   if(hac) hac.style.color = gVal>=1?'var(--ok)':gVal>=-1?'var(--muted)':'var(--bad)';
 
-  // v83b: unified advice → decisionStrip 3-col
+  // 4. Hero sub — from timing summary (single source)
+  applyTimingToHero(_timingSummary, gVal);
+
+  // 5. Unified advice → decisionStrip 3-col
+  const _dState = { gNow: gVal, mainDriver: _mainDriverStr, timingSummary: _timingSummary };
   const _adv = buildUnifiedAdvice(_dState);
   _set('decisionDoText', _adv.DO.join(', '));
   _set('decisionAvoidText', _adv.AVOID.join(', '));
+  // NOTE: add "весь день без безпечного вікна" if allBad
+  if(_timingSummary?.allBad) _adv.NOTE.push('весь день без безпечного вікна');
   _set('decisionNoteText', _adv.NOTE.length ? _adv.NOTE.join(', ') : 'без особливостей');
 
-  // v83b: day sentence
+  // 6. Day sentence — from timing summary (single source)
   _set('daySentenceText', buildDaySentence(_dState));
 
-  // v83b: decision timing
-  const _dtRows = buildDecisionTiming(_daySlots);
-  const _dtList = el('decisionTimingList');
-  if(_dtList && _dtRows.length){
-    _dtList.innerHTML = _dtRows.map(t=>`<div class="dt-row ${t.cls}${t.isNow?' dt-now':''}">`
-      +`<span>${t.time}</span><span>${t.label}${t.isNow?' ◀ зараз':''}</span></div>`).join('');
-  } else if(_dtList){ _dtList.innerHTML='<span style="color:var(--dim);font-size:11px">Слоти недоступні</span>'; }
-
-  // v83: G zone label
+  // 7. G zone label
   _set('hmZone', gZoneLabel(gVal));
 
-  // v83: confidence — show only when <95%
+  // 8. Confidence — show only when <95%
   if(el('heroConfidence')) el('heroConfidence').textContent = formatConfidence(_ui.confPct);
   const _confMetric = el('heroConfidence')?.closest('.hero-metric');
   if(_confMetric) _confMetric.style.display = (_ui.confPct >= 95) ? 'none' : '';
@@ -5094,9 +5167,10 @@ function syncPanchSummary(){
   const ys=pc.yoga?.score||0;
   const ks=pc.karana?.score||0;
   const total=ns+ts+ys+ks;
-  // Pi line
+  // Pi line with G contribution context
+  const piCol = pi>=1?'#2bd47d':pi<=-1?'#ff6b6b':'#9bb1dc';
   const piState=pi>=1?'підтримує день':pi<=-1?'погіршує день':'майже нейтральна';
-  if(piLine) piLine.innerHTML=`Pᵢ = <strong>${pi>0?'+':''}${pi.toFixed(1)}</strong> · ${piState}`;
+  if(piLine) piLine.innerHTML=`Pᵢ = <strong style="color:${piCol}">${pi>0?'+':''}${pi.toFixed(1)}</strong> · ${piState} <span style="color:var(--faint);font-size:10px">· внесок у G · noon UTC</span>`;
   // Product summary
   const neg=[],pos=[];
   if(ts<0)neg.push('тітхі');if(ns<0)neg.push('накшатра');if(ys<0)neg.push('йога');if(ks<0)neg.push('карана');
