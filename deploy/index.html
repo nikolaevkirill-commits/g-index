@@ -4610,7 +4610,8 @@ function syncHero(){
     if(isFinite(dn)){
       hd.textContent=(dn>0?'↑ +':dn<0?'↓ ':'→ ')+dn.toFixed(2);
       hd.style.color=dn>0?'var(--ok)':dn<0?'var(--bad)':'var(--muted)';
-    } else { hd.textContent='—'; }
+      hd.style.display='';
+    } else { hd.textContent=''; hd.style.display='none'; }
   }
 
   // Confidence: set by v83 decision block below
@@ -4822,7 +4823,7 @@ function _renderHeroCause(g, kp) {
       const panchPi = pc?.aiComponents?.Pi || 0;
       const pTxt = panchPi <= -1 ? 'Панчанга також погіршує фон.'
                  : panchPi >= 1 ? 'Панчанга частково компенсує тиск.'
-                 : 'Панчанга не змінює картину.';
+                 : 'Панчанга нейтральна.';
       const secondTxt = d2 ? ` ${d2.label} (${d2.val>0?'+':''}${d2.val.toFixed(1)}) теж впливає.` : '';
       // v83e: use shared driver label from computeTopDrivers
       const _td = window._lastTopDrivers;
@@ -4842,7 +4843,7 @@ function _renderHeroCause(g, kp) {
       }
       whyMain.innerHTML = `Головна причина: <strong>${dLabel}</strong> (${d.val>0?'+':''}${d.val.toFixed(1)}).${secondTxt} ${pTxt}${eBreakdownHtml}`;
     } else {
-      whyMain.textContent = 'Усі фактори нейтральні — день рівний без вираженого тиску. ' + (pc?.aiComponents?.Pi != null ? 'Панчанга не змінює картину.' : '');
+      whyMain.textContent = 'Усі фактори нейтральні — день рівний без вираженого тиску. ' + (pc?.aiComponents?.Pi != null ? 'Панчанга нейтральна.' : '');
     }
   }
 }
@@ -5068,7 +5069,6 @@ const GLOBAL_STATES = {
     avoidText: '✖ Уникайте важливих рішень і ризику',
     doList: ['рутина','перевірка','завершення'],
     avoidList: ['ризикові рішення','конфлікти','важливі переговори'],
-    noteExtra: 'високий ризик помилки',
     zone: 'червона',
     mood: 'нестабільний фон', action: 'важливі рішення краще відкласти',
     impact: 'Фон напружений. День краще використовувати для підтримки, спостереження і мінімально необхідних дій.',
