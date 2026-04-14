@@ -487,7 +487,9 @@
     .hero-left{display:flex!important;align-items:center!important;justify-content:center!important;gap:0!important;flex-wrap:nowrap!important}
     .hero-maintext{display:flex;flex-direction:column;gap:6px;min-width:0;justify-content:center}
     /* v78b: heroCat/heroAction removed */
-    .hero-right{display:grid;grid-template-columns:1fr 1fr;gap:6px;min-width:0;max-width:240px;align-self:center}
+    /* v83f: hero-right compact status */
+    .hero-right{justify-content:center}
+    @media(max-width:860px){.hero-right{max-width:none!important;flex-direction:row!important;flex-wrap:wrap!important;gap:8px!important}}
     .hero-metric{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:6px 8px;min-height:44px}
     .hero-metric .label{font-size:9px!important;margin-bottom:2px!important}
     .hero-metric .label{display:block;margin-bottom:3px}
@@ -970,23 +972,13 @@
             <div class="pill" style="flex-direction:column;align-items:flex-start;padding:4px 8px;min-width:70px"><span style="font-size:9px;color:var(--dim)">Потенціал</span><span id="heroPotentialChip" style="font-size:11px;font-weight:700">—</span></div>
           </div>
         </div>
-        <div class="hero-right">
-          <div class="hero-metric">
-            <span class="label">Δ від учора</span>
-            <div id="heroDelta">—</div>
+        <div class="hero-right" style="display:flex;flex-direction:column;gap:6px;min-width:180px;max-width:220px;align-self:center">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span id="heroFreshness" class="live" style="font-size:14px;font-weight:800">LIVE</span>
+            <span id="heroDelta" style="font-size:13px;font-weight:700;color:var(--muted)">—</span>
           </div>
-          <div class="hero-metric">
-            <span class="label">Confidence</span>
-            <div id="heroConfidence">—</div>
-          </div>
-          <div class="hero-metric">
-            <span class="label">Стан даних</span>
-            <div id="heroFreshness" class="live">LIVE</div>
-          </div>
-          <div class="hero-metric">
-            <span class="label">Оновлено</span>
-            <div id="heroStamp">—</div>
-          </div>
+          <div id="heroStamp" style="font-size:11px;color:var(--dim);line-height:1.2">—</div>
+          <div id="heroConfidence" style="font-size:11px;color:var(--dim);display:none">—</div>
         </div>
       </div><!-- /hero-wrap -->
     </section>
@@ -4695,9 +4687,10 @@ function syncHero(){
   _set('hmZone', gZoneLabel(gVal));
 
   // 8. Confidence — show only when <95%
-  if(el('heroConfidence')) el('heroConfidence').textContent = formatConfidence(_ui.confPct);
-  const _confMetric = el('heroConfidence')?.closest('.hero-metric');
-  if(_confMetric) _confMetric.style.display = (_ui.confPct >= 95) ? 'none' : '';
+  if(el('heroConfidence')){
+    el('heroConfidence').textContent = formatConfidence(_ui.confPct);
+    el('heroConfidence').style.display = (_ui.confPct >= 95) ? 'none' : '';
+  }
 
   // v79: Strong IMPACT (trend-aware)
   const IMPACT_TREND = {
