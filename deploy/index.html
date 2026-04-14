@@ -4393,30 +4393,15 @@ function _uniq(arr){ return [...new Set(arr)]; }
 
 function gZoneLabel(g){
   if(!isFinite(g)) return '—';
-  if(g<=-3) return 'червона';
-  if(g<=-1) return 'ризик';
-  if(g<1)   return 'нейтральна';
-  if(g<3)   return 'сприятлива';
-  return 'сильна';
+  return GLOBAL_STATES[classifyStateByG(g)].zone;
 }
 
 function buildUnifiedAdvice(state){
   const g = Number(state?.gNow ?? state?.g ?? 0);
-  let DO=[], AVOID=[], NOTE=[];
-  if(g<=-3){
-    DO.push('рутина','перевірка','завершення');
-    AVOID.push('ризикові рішення','конфлікти','важливі переговори');
-    NOTE.push('високий ризик помилки');
-  } else if(g<=-1){
-    DO.push('планування','спокійна робота');
-    AVOID.push('поспіх','тиск','емоційні рішення');
-  } else if(g<1){
-    DO.push('звичайні задачі','зустрічі');
-    AVOID.push('зайвий ризик');
-  } else {
-    DO.push('активні дії','запуски','домовленості');
-    AVOID.push('хаос','розпорошення');
-  }
+  const st = GLOBAL_STATES[classifyStateByG(g)];
+  let DO = [...(st.doList || [])];
+  let AVOID = [...(st.avoidList || [])];
+  let NOTE = st.noteExtra ? [st.noteExtra] : [];
   // Panchanga inject
   const pc = window._lastPanchCtx;
   if(pc){
@@ -4441,26 +4426,18 @@ function buildUnifiedAdvice(state){
 
 function buildDecisionTexts(uiState){
   const g = Number(uiState?.gNow ?? 0);
-  let headline='ДЕНЬ СТАБІЛЬНИЙ', sub='Працюй у звичному темпі.';
-  if(g<=-3){ headline='СТОП — високий ризик помилки'; sub='Мінімізуй активність і ризик.'; }
-  else if(g<=-1){ headline='ОБЕРЕЖНО — фон нестабільний'; sub='Дій повільно, без різких кроків.'; }
-  else if(g<1){ headline='НЕЙТРАЛЬНИЙ ДЕНЬ'; sub='Можна працювати у стандартному режимі.'; }
-  else { headline='МОЖНА ДІЯТИ'; sub='Фон підтримує активні дії.'; }
-  // heroMainDrag = short, no driver/shift (daySentence has full version)
-  return {headline, sub};
+  const st = GLOBAL_STATES[classifyStateByG(g)];
+  return { headline: st.headline, sub: st.sub };
 }
 
 function buildDaySentence(uiState){
   const g = Number(uiState?.gNow ?? 0);
   const driver=String(uiState?.mainDriver||'').trim();
   const ts = uiState?.timingSummary || null;
+  const st = GLOBAL_STATES[classifyStateByG(g)];
   // If no timing data, basic sentence
   if(!ts || !ts.slots?.length){
-    let mood='рівний фон', action='можна тримати звичний темп';
-    if(g<=-3){ mood='нестабільний фон'; action='важливі рішення краще відкласти'; }
-    else if(g<=-1){ mood='напружений фон'; action='дій повільно й без різких кроків'; }
-    else if(g>=1){ mood='сприятливий фон'; action='можна робити важливі кроки'; }
-    let s=`Сьогодні: ${mood}, ${action}.`;
+    let s=`Сьогодні: ${st.mood}, ${st.action}.`;
     if(driver) s+=` Головний фактор: ${driver}.`;
     return s;
   }
@@ -4470,8 +4447,10 @@ function buildDaySentence(uiState){
     if(driver) s+=` Головний фактор: ${driver}.`;
     return s;
   }
-  if(g<=-3) return `Сьогодні: нестабільний фон; важливі рішення краще переносити на ${ts.bestSlot.time}.`+(driver?` Головний фактор: ${driver}.`:'');
-  if(g<=-1) return `Сьогодні: фон напружений; діяти краще у вікно ${ts.bestSlot.time}.`+(driver?` Головний фактор: ${driver}.`:'');
+  // Has good slot
+  const sk = classifyStateByG(g);
+  if(sk==='tense') return `Сьогодні: ${st.mood}; важливі рішення краще переносити на ${ts.bestSlot.time}.`+(driver?` Головний фактор: ${driver}.`:'');
+  if(sk==='unstable') return `Сьогодні: ${st.mood}; діяти краще у вікно ${ts.bestSlot.time}.`+(driver?` Головний фактор: ${driver}.`:'');
   return `Сьогодні: день керований; найкраще вікно — ${ts.bestSlot.time}.`+(driver?` Головний фактор: ${driver}.`:'');
 }
 
@@ -4541,14 +4520,13 @@ function renderDecisionTiming(slots){
 function applyTimingToHero(summary, gVal){
   const heroMain = el('heroMainDrag');
   if(!heroMain) return;
+  const st = GLOBAL_STATES[classifyStateByG(gVal)];
   if(!summary || !summary.slots?.length){
-    heroMain.textContent = 'Немає даних по часових вікнах.';
+    heroMain.textContent = st.sub;
     return;
   }
   if(!summary.hasGoodSlot){
-    if(gVal<=-3) heroMain.textContent = 'Не приймай важливих рішень сьогодні.';
-    else if(gVal<=-1) heroMain.textContent = 'Дій повільно, без різких кроків.';
-    else heroMain.textContent = 'Працюй у звичному темпі.';
+    heroMain.textContent = st.sub;
     return;
   }
   heroMain.textContent = `Найкраще вікно — ${summary.bestSlot.time}.`;
@@ -4696,7 +4674,7 @@ function syncHero(){
   const _dt = buildDecisionTexts({gNow: gVal});
   _set('heroActionCmd', _dt.headline);
   const hac=el('heroActionCmd');
-  if(hac) hac.style.color = gVal>=1?'var(--ok)':gVal>=-1?'var(--muted)':'var(--bad)';
+  if(hac) hac.style.color = GLOBAL_STATES[classifyStateByG(gVal)].color;
 
   // 4. Hero sub — from timing summary (single source)
   applyTimingToHero(_timingSummary, gVal);
@@ -5028,36 +5006,67 @@ function _renderHeroAlert(g, d3h, confNum, stKey) {
 const GLOBAL_STATES = {
   favorable: {
     cmd: '⚡ ДІЙ — оптимальне вікно',
+    headline: 'МОЖНА ДІЯТИ — СИЛЬНЕ ВІКНО',
+    sub: 'Фон підтримує активні дії.',
     doText: '✔ Можна діяти активно',
     avoidText: '✖ Не перевантажуйте день без потреби',
+    doList: ['активні дії','запуски','домовленості','стратегічні рішення'],
+    avoidList: ['хаос','розпорошення'],
+    zone: 'сильна',
+    mood: 'сприятливий фон', action: 'можна робити важливі кроки',
     impact: 'Концентрація і стійкість в межах норми. День підходить для запуску нових задач і планових рішень.',
     color: 'var(--ok)', badge: '⚡ GO', badgeColor: '#2bd47d'
   },
   good: {
     cmd: 'ДІЙ зараз',
+    headline: 'МОЖНА ДІЯТИ',
+    sub: 'Фон підтримує активні дії.',
     doText: '✔ Рухайтесь у важливих справах',
     avoidText: '✖ Не розпорошуйтесь на дрібниці',
+    doList: ['активні дії','запуски','домовленості'],
+    avoidList: ['хаос','розпорошення'],
+    zone: 'сприятлива',
+    mood: 'сприятливий фон', action: 'можна робити важливі кроки',
     impact: 'Фон підтримує активність. Можна приймати рішення і рухатись вперед у ключових напрямках.',
     color: 'var(--ok)', badge: '● GO', badgeColor: '#63be7b'
   },
   neutral: {
     cmd: 'ПЛАНУЙ, без різких рішень',
+    headline: 'НЕЙТРАЛЬНИЙ ДЕНЬ',
+    sub: 'Можна працювати у стандартному режимі.',
     doText: '✔ Працюйте у стандартному режимі',
     avoidText: '✖ Не приймайте різких рішень без потреби',
+    doList: ['звичайні задачі','зустрічі'],
+    avoidList: ['зайвий ризик'],
+    zone: 'нейтральна',
+    mood: 'рівний фон', action: 'можна тримати звичний темп',
     impact: 'Фон загалом рівний. Для рутини день нормальний, але важливі рішення краще приймати без поспіху.',
     color: 'var(--muted)', badge: '● STABLE', badgeColor: '#9bb1dc'
   },
   unstable: {
     cmd: 'УПОВІЛЬНИСЬ, не запускати',
+    headline: 'ОБЕРЕЖНО — фон нестабільний',
+    sub: 'Дій повільно, без різких кроків.',
     doText: '✔ Тримайтеся звичних задач',
     avoidText: '✖ Не починайте нових дій',
+    doList: ['планування','спокійна робота'],
+    avoidList: ['поспіх','тиск','емоційні рішення'],
+    zone: 'ризик',
+    mood: 'напружений фон', action: 'дій повільно й без різких кроків',
     impact: 'Ризик помилок і перевантаження вищий за звичайний. Краще менше імпровізації і більше перевірених дій.',
     color: 'var(--warn)', badge: '⚠ CAUTION', badgeColor: '#ffcc00'
   },
   tense: {
     cmd: '🔴 СТОП — уникати критичних дій',
+    headline: 'СТОП — високий ризик помилки',
+    sub: 'Мінімізуй активність і ризик.',
     doText: '✔ Мінімізуйте активність',
     avoidText: '✖ Уникайте важливих рішень і ризику',
+    doList: ['рутина','перевірка','завершення'],
+    avoidList: ['ризикові рішення','конфлікти','важливі переговори'],
+    noteExtra: 'високий ризик помилки',
+    zone: 'червона',
+    mood: 'нестабільний фон', action: 'важливі рішення краще відкласти',
     impact: 'Фон напружений. День краще використовувати для підтримки, спостереження і мінімально необхідних дій.',
     color: 'var(--bad)', badge: '🔴 HOLD', badgeColor: '#ff6b6b'
   }
