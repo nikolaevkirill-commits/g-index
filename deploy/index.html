@@ -3162,14 +3162,16 @@ function classForG(g){
   return 'g-warn';
 }
 function classifyG(g){
-  const r = Math.round(g);
-  if(r <= -3) return 'Особливо несприятливий';
-  if(r === -2) return 'Несприятливий';
-  if(r === -1) return 'Помірно несприятливий';
-  if(r === 0)  return 'Нейтральний';
-  if(r === 1)  return 'Помірно сприятливий';
-  if(r === 2)  return 'Сприятливий';
-  return 'Особливо сприятливий';
+  // v83f: aligned with classifyStateByG
+  const sk = classifyStateByG(g);
+  const labels = {
+    tense: 'Несприятливий',
+    unstable: 'Помірно несприятливий',
+    neutral: 'Нейтральний',
+    good: 'Помірно сприятливий',
+    favorable: 'Сприятливий'
+  };
+  return labels[sk] || 'Нейтральний';
 }
 function badgeForK(k){
   const v = Number(k);
@@ -3404,7 +3406,6 @@ function renderCurrentPanel(){
   }
   // Загальний висновок одним реченням
   if(isFinite(G)){
-    const r = Math.round(G);
     // v26.2: Storm override — якщо Kp≥5, показуємо попередження про бурю
     let sm, key;
     if(isFinite(kUse) && kUse >= 7){
@@ -3422,7 +3423,9 @@ function renderCurrentPanel(){
         '1':   {icon:'✅', title:'ДОПУСТИМО', sub:'Планові операції, помірна активність'},
         '≥2':  {icon:'🌟', title:'ОПТИМАЛЬНО', sub:'Час для активних дій і рішень'}
       };
-      key = r <= -3 ? '≤-3' : r >= 2 ? '≥2' : String(r);
+      // v83f: use canonical stateKey
+      const _smKeyMap = { tense:'≤-3', unstable:'-1', neutral:'0', good:'1', favorable:'≥2' };
+      key = _smKeyMap[classifyStateByG(G)] || '0';
       sm = summaryMap[key] || {icon:'➖',title:'НЕЙТРАЛЬНО',sub:''};
     }
     // Пояснення по компонентах для tooltip
@@ -3515,16 +3518,19 @@ function renderCurrentPanel(){
 // ----------------------------- Рекомендація за G ----------------------------
 // v26.2: додано kp параметр — при бурі (Kp≥5) ніколи не показувати "Оптимально"/"Допустимо"
 function recommendG(g, kp){
-  const r = Math.round(g);
   // v26.2: Storm override — Kp≥5 = геомагнітна буря, незалежно від G
   if(isFinite(kp) && kp >= 7) return {text:'⛔ Буря G3+ — утриматись', style:'color:#ff6b6b;font-weight:700'};
   if(isFinite(kp) && kp >= 5) return {text:'⚠️ Буря — обережно', style:'color:#fca474;font-weight:700'};
-  if(r <= -3) return {text:'⛔ Утриматись', style:'color:#ff6b6b;font-weight:700'};
-  if(r === -2) return {text:'⚠️ Обережно', style:'color:#fca474;font-weight:700'};
-  if(r === -1) return {text:'〽️ Помірно', style:'color:#ffcc00'};
-  if(r === 0)  return {text:'➖ Нейтрально', style:'color:#9bb1dc'};
-  if(r === 1)  return {text:'✅ Допустимо', style:'color:#63be7b'};
-  return {text:'🌟 Оптимально', style:'color:#2bd47d;font-weight:700'};
+  // v83f: aligned with classifyStateByG
+  const sk = classifyStateByG(g);
+  const map = {
+    tense:     {text:'⛔ Утриматись', style:'color:#ff6b6b;font-weight:700'},
+    unstable:  {text:'〽️ Помірно', style:'color:#ffcc00'},
+    neutral:   {text:'➖ Нейтрально', style:'color:#9bb1dc'},
+    good:      {text:'✅ Допустимо', style:'color:#63be7b'},
+    favorable: {text:'🌟 Оптимально', style:'color:#2bd47d;font-weight:700'}
+  };
+  return map[sk] || map.neutral;
 }
 
 // ----------------------------- Sparkline SVG --------------------------------
@@ -4128,9 +4134,9 @@ function renderPanchanga(dateUTC){
 
   // v30: summaryLabel базується на G-індексі (classifyG), а не на totalPCL
   const _gNow = _kpForPanch - 2 + aiNow.Ai;
-  const _gRound = Math.round(_gNow);
+  // _gRound removed v83f — summaryColor/borderColor now from GLOBAL_STATES
   const summaryLabel = classifyG(_gNow);
-  const summaryColor = _gRound >= 2 ? '#2bd47d' : _gRound >= 1 ? '#63be7b' : _gRound === 0 ? '#ffcc00' : _gRound === -1 ? '#ffa64d' : '#ff6b6b';
+  const summaryColor = GLOBAL_STATES[classifyStateByG(_gNow)]?.badgeColor || '#9bb1dc';
 
   const summaryHtml = `
     <div class="panch-summary" style="border-top:1px solid #1e2f52;margin-top:12px;padding-top:10px">
@@ -4146,7 +4152,7 @@ function renderPanchanga(dateUTC){
     </div>`;
 
   // (c) Колір заголовку картки = колір G поточного дня
-  const _panchBorderColor = _gRound >= 2 ? '#2bd47d' : _gRound >= 1 ? '#63be7b' : _gRound === 0 ? '#ffcc00' : _gRound === -1 ? '#ffa64d' : _gRound <= -3 ? '#ff4444' : '#ff6b6b';
+  const _panchBorderColor = GLOBAL_STATES[classifyStateByG(_gNow)]?.badgeColor || '#9bb1dc';
   document.getElementById('panchCard').style.borderColor = _panchBorderColor;
 
   el_('panchGrid').innerHTML = html;
@@ -4280,8 +4286,9 @@ function render3Day(parsed3){
       const ai=computeAi(noonUTC(d.date),kpMax??0);
       const G=(isFinite(kpMax)?kpMax:0)-2+ai.Ai;
       const isToday=fmtDate(d.date)===fmtDate(new Date());
-      const cat=G<=-2.5?'уникати':G<=-0.5?'обережно':G>=1.5?'сприятливо':G>=0.5?'добре':'нейтрально';
-      const act=G<=-2.5?'утриматись від рішень':G<=-0.5?'мінімізувати ризики':G>=1.5?'оптимально для дій':G>=0.5?'можна планове':'стандартний режим';
+      // v83f: aligned with classifyStateByG thresholds
+      const cat=G<=-2?'уникати':G<0?'обережно':G>=2?'сприятливо':G>=1?'добре':'нейтрально';
+      const act=G<=-2?'утриматись від рішень':G<0?'мінімізувати ризики':G>=2?'оптимально для дій':G>=1?'можна планове':'стандартний режим';
       const col=G<=-2.5?'#ff6b6b':G<=-0.5?'#ffaa33':G>=0.5?'#2bd47d':'#9bb1dc';
       const dd=d.date.getUTCDate()+'.'+(d.date.getUTCMonth()+1);
       qhtml+=`<span style="flex:1;min-width:140px;padding:8px 14px;border-radius:10px;background:${col}15;border:1px solid ${col}40;text-align:center">
@@ -4390,6 +4397,8 @@ function buildUnifiedAdvice(state){
   let DO = [...(st.doList || [])];
   let AVOID = [...(st.avoidList || [])];
   let NOTE = st.noteExtra ? [st.noteExtra] : [];
+  // v83f: state key for inject guards
+  const _stKey = classifyStateByG(g);
   // Panchanga inject
   const pc = window._lastPanchCtx;
   if(pc){
@@ -4397,18 +4406,23 @@ function buildUnifiedAdvice(state){
     const tIdx = pc.tithi?.index;
     if(tIdx===10||tIdx===25){ DO.push('дисципліна','самоконтроль'); NOTE.push('Екадаші — день стриманості'); }
     const nType = pc.nakshatra?.type;
-    if(nType==='Стала') DO.push('структурування, закріплення');
+    // Nakshatra AVOID always applies; DO only at neutral+
     if(nType==='Жорстка') AVOID.push('м\'які переговори');
-    if(nType==='Легка') DO.push('легкі справи, навчання');
-  }
-  // Hora inject
-  try{
-    const hora = calcHora(new Date());
-    if(hora?.planet){
-      const HORA_DO={'Юпітер':'стратегія, важливі рішення','Меркурій':'комунікація, аналіз','Венера':'креатив, партнерства','Сонце':'лідерські дії','Місяць':'інтуїтивні рішення'};
-      if(HORA_DO[hora.planet]) DO.push(HORA_DO[hora.planet]);
+    if(_stKey !== 'tense' && _stKey !== 'unstable'){
+      if(nType==='Стала') DO.push('структурування, закріплення');
+      if(nType==='Легка') DO.push('легкі справи, навчання');
     }
-  }catch(e){}
+  }
+  // Hora inject — only when state allows active decisions (neutral+)
+  if(_stKey !== 'tense' && _stKey !== 'unstable'){
+    try{
+      const hora = calcHora(new Date());
+      if(hora?.planet){
+        const HORA_DO={'Юпітер':'стратегія, важливі рішення','Меркурій':'комунікація, аналіз','Венера':'креатив, партнерства','Сонце':'лідерські дії','Місяць':'інтуїтивні рішення'};
+        if(HORA_DO[hora.planet]) DO.push(HORA_DO[hora.planet]);
+      }
+    }catch(e){}
+  }
   return { DO:_uniq(DO), AVOID:_uniq(AVOID), NOTE:_uniq(NOTE) };
 }
 
@@ -8200,9 +8214,10 @@ function getTaaraState() {
 function renderMilRec(G, prof) {
   const adj    = getAgeAdj('mil');
   const Geff   = G + adj.gShift;          // ефективний G з поправкою на вік
-  const gR     = Math.round(Geff);
-  const key    = gR <= -3 ? '≤-3' : gR >= 2 ? '≥2' : String(gR);
-  const baseRec = prof.recs[key] || prof.recs['0'];
+  // v83f: use canonical stateKey
+  const _milKeyMap = { tense:'≤-3', unstable:'-1', neutral:'0', good:'1', favorable:'≥2' };
+  const key    = _milKeyMap[classifyStateByG(Geff)] || '0';
+  const baseRec = prof.recs[key] || prof.recs['-2'] || prof.recs['0'];
 
   // Taara + Dasa контекст
   const ps = getTaaraState();
@@ -8275,9 +8290,12 @@ function renderProfileRec() {
   // Всі інші профілі — ageAdj з PROFILE_TEXT
   const adj   = getAgeAdj(_activeProfile);
   const Geff  = G + adj.gShift;
-  const gR    = Math.round(Geff);
-  const key   = gR <= -3 ? '≤-3' : gR >= 2 ? '≥2' : String(gR);
-  const rec   = prof.recs[key] || prof.recs['0'];
+  // v83f: use canonical stateKey for profile rec lookup (aligned with GLOBAL_STATES)
+  const _profStateKey = classifyStateByG(Geff);
+  const _profKeyMap = { tense:'≤-3', unstable:'-1', neutral:'0', good:'1', favorable:'≥2' };
+  const key = _profKeyMap[_profStateKey] || '0';
+  // fallback: if profile doesn't have this key, try nearby
+  const rec = prof.recs[key] || prof.recs['-2'] || prof.recs['0'];
 
   // Вікова мітка (показувати тільки якщо є зсув)
   const ageLine = (adj.gShift !== 0 && adj.label)
@@ -8502,7 +8520,7 @@ function syncG2(scenarioLabel) {
   const hints = [];
   if (kp >= 5) hints.push('⚠ Kp≥5 → можливий вплив на HF-зв\'язок, навігацію, стан особового складу');
   if (mi <= -3) hints.push('🌑 Близько до затемнення → посилений вплив eᵢ+Lᵢ');
-  if (G <= -3)  hints.push('🔴 G≤−3 → рекомендується мінімізувати ініціативні операції (mil), обережність у прийнятті рішень');
+  if (G <= -2)  hints.push('🔴 G≤−2 → рекомендується мінімізувати ініціативні операції (mil), обережність у прийнятті рішень');
   if (G >= 2)   hints.push('🟢 G≥+2 → оптимальний час для активних дій, планування, операцій');
   if (sumAi <= -5) hints.push('⚡ ΣAᵢ = '+sumAi.toFixed(1)+' — накопичення несприятливих факторів');
 
