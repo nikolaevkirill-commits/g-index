@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v82c</title>
+  <title>G-Index — Космофізичний дашборд v83</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -798,6 +798,43 @@
     .hero-alert-line.level-watch{border-color:rgba(255,204,82,.2);color:#ffe0a0;background:rgba(255,204,82,.04)}
     .hero-alert-line.level-warn{border-color:rgba(255,155,82,.22);color:#ffcba0;background:rgba(255,155,82,.05)}
     .hero-alert-line.level-critical{border-color:rgba(255,107,120,.25);color:#ffc0c8;background:rgba(255,107,120,.07)}
+    /* ═══ v83 decision-first patch ═══ */
+    #heroDecisionPanel{padding:12px 14px!important;border-radius:14px!important;background:linear-gradient(180deg,rgba(10,20,40,.62),rgba(10,20,40,.28))!important;border:1px solid rgba(255,255,255,.08)!important}
+    #heroActionCmd{font-size:20px!important;font-weight:900!important;line-height:1.1!important;letter-spacing:.01em!important}
+    #heroMainDrag{margin-top:6px!important;font-size:13px!important;font-weight:700!important;color:var(--text2)!important;opacity:.96!important}
+    #heroAlertLine{display:none!important}
+    #heroMetaInline{margin-top:8px!important;padding-top:8px!important;border-top:1px solid rgba(255,255,255,.06)!important;font-size:11px!important;opacity:.92!important}
+    #heroConfidence{font-size:16px!important;opacity:.82!important}
+    .hero-metric{min-height:58px!important}
+    #heroFreshness{font-size:17px!important}
+    #heroStamp{font-size:12px!important;line-height:1.2!important}
+    @media(max-width:860px){#decisionStrip{grid-template-columns:1fr!important}}
+    /* v83 v3: decision timing rows */
+    .dt-row{display:flex;justify-content:space-between;align-items:center;padding:6px 10px;border-radius:8px;font-size:12px}
+    .dt-row.dt-good{background:rgba(43,212,125,.08);border-left:3px solid #2bd47d}
+    .dt-row.dt-bad{background:rgba(255,107,107,.08);border-left:3px solid #ff6b6b}
+    .dt-row.dt-mid{background:rgba(255,200,80,.08);border-left:3px solid #ffc850}
+    .dt-row.dt-now{outline:1px solid rgba(255,255,255,.25)}
+    .dt-time{font-weight:800;font-variant-numeric:tabular-nums;min-width:110px}
+    .dt-label{font-weight:700}
+    /* v83 P3: timing emphasis */
+    #coreGrid{grid-template-columns:1.05fr 1.15fr!important;gap:12px!important}
+    #timingCard{border:1px solid rgba(55,167,255,.18)!important;background:rgba(15,25,45,.96)!important;box-shadow:0 0 0 1px rgba(55,167,255,.06) inset!important}
+    #timingTitle{font-size:11px!important;letter-spacing:.08em!important}
+    .timing-row{padding:8px 10px!important;border-radius:10px!important;margin-bottom:6px!important}
+    .timing-time{font-size:12px!important;font-weight:800!important}
+    .timing-label{font-size:12px!important;line-height:1.25!important}
+    .timing-row.is-now{border-left:3px solid #ff6b6b!important;background:rgba(255,107,107,.09)!important}
+    .timing-row.is-next{border-left:3px solid #37a7ff!important;background:rgba(55,167,255,.06)!important}
+    /* v83 P4: panch/personal unified style */
+    #panchSummaryLine,#personalContextCard{border-radius:12px!important;border:1px solid rgba(255,255,255,.08)!important;background:rgba(255,255,255,.035)!important}
+    #panchSummaryLine{font-size:13px!important;font-weight:700!important;line-height:1.38!important}
+    #personalContextMain{font-size:13px!important;font-weight:700!important;line-height:1.35!important}
+    #personalContextSub{font-size:11px!important;line-height:1.4!important;color:#9bb1dc!important}
+    /* v83 P7: impactBlock demote */
+    #impactBlock{opacity:.82!important;gap:10px!important;margin-bottom:10px!important}
+    #impactBlock>div{padding:8px 12px!important}
+    #impactGoodText,#impactBadText{font-size:12px!important}
   </style>
 
   <!-- Астро бібліотека: фаза Місяця -->
@@ -925,6 +962,7 @@
             <span>ΣAᵢ: <strong id="hmAi" style="color:var(--text2)">—</strong></span>
             <span>Драйвер: <strong id="hmDriver" style="color:var(--text2)">—</strong></span>
             <span>Далі: <strong id="hmShift" style="color:var(--text2)">—</strong></span>
+            <span>Зона: <strong id="hmZone" style="color:var(--text2)">—</strong></span>
           </div>
           <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
             <div class="pill" style="flex-direction:column;align-items:flex-start;padding:4px 8px;min-width:70px"><span style="font-size:9px;color:var(--dim)">Стан</span><span id="heroStateChip" style="font-size:11px;font-weight:700">—</span></div>
@@ -952,6 +990,31 @@
         </div>
       </div><!-- /hero-wrap -->
     </section>
+    <!-- ═══ v83 v4: Речення дня ═══ -->
+    <div id="daySentenceCard" style="margin:0 0 12px;padding:10px 14px;border-radius:12px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.035)">
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--dim);margin-bottom:4px">Речення дня</div>
+      <div id="daySentenceText" style="font-size:14px;line-height:1.4;font-weight:700;color:#e7efff">—</div>
+    </div>
+    <!-- ═══ v83 v2: Decision Strip — DO / AVOID / NOTE ═══ -->
+    <div id="decisionStrip" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin:0 0 12px">
+      <div class="decision-col good" style="padding:10px 12px;border-radius:12px;border:1px solid rgba(43,212,125,.25);background:rgba(43,212,125,.06)">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--dim);margin-bottom:4px">✔ Можна</div>
+        <div id="decisionDoText" style="font-size:13px;line-height:1.35;color:#d8f7e3;font-weight:700">—</div>
+      </div>
+      <div class="decision-col bad" style="padding:10px 12px;border-radius:12px;border:1px solid rgba(255,107,107,.25);background:rgba(255,107,107,.06)">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--dim);margin-bottom:4px">✖ Не можна</div>
+        <div id="decisionAvoidText" style="font-size:13px;line-height:1.35;color:#ffd5da;font-weight:700">—</div>
+      </div>
+      <div class="decision-col note" style="padding:10px 12px;border-radius:12px;border:1px solid rgba(255,200,80,.25);background:rgba(255,200,80,.06)">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--dim);margin-bottom:4px">• Важливо</div>
+        <div id="decisionNoteText" style="font-size:13px;line-height:1.35;color:#ffe8b0;font-weight:700">—</div>
+      </div>
+    </div>
+    <!-- ═══ v83 v3: Decision Timing ═══ -->
+    <div id="decisionTiming" style="margin:0 0 12px;padding:10px 12px;border-radius:12px;border:1px solid rgba(80,140,255,.18);background:rgba(20,30,55,.6)">
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--dim);margin-bottom:6px">Коли діяти</div>
+      <div id="decisionTimingList" style="display:flex;flex-direction:column;gap:4px"></div>
+    </div>
     <div id="impactBlock" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
       <div id="impactGood" style="padding:10px 14px;border-radius:14px;border:1px solid rgba(43,212,125,.2);background:rgba(43,212,125,.05)">
         <div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--dim);margin-bottom:4px">Якщо слідувати</div>
@@ -4275,6 +4338,111 @@ function _set(id,v){ const n=el(id); if(n) n.textContent=v??'—'; }
 function _firstText(e){ return e?.childNodes?.[0]?.textContent||''; }
 
 // --- HERO ---
+// ═══ v83b: unified decision system ═══
+function _uniq(arr){ return [...new Set(arr)]; }
+
+function gZoneLabel(g){
+  if(!isFinite(g)) return '—';
+  if(g<=-3) return 'червона';
+  if(g<=-1) return 'ризик';
+  if(g<1)   return 'нейтральна';
+  if(g<3)   return 'сприятлива';
+  return 'сильна';
+}
+
+function buildUnifiedAdvice(state){
+  const g = Number(state?.gNow ?? state?.g ?? 0);
+  let DO=[], AVOID=[], NOTE=[];
+  if(g<=-3){
+    DO.push('рутина','перевірка','завершення');
+    AVOID.push('ризикові рішення','конфлікти','важливі переговори');
+    NOTE.push('високий ризик помилки');
+  } else if(g<=-1){
+    DO.push('планування','спокійна робота');
+    AVOID.push('поспіх','тиск','емоційні рішення');
+  } else if(g<1){
+    DO.push('звичайні задачі','зустрічі');
+    AVOID.push('зайвий ризик');
+  } else {
+    DO.push('активні дії','запуски','домовленості');
+    AVOID.push('хаос','розпорошення');
+  }
+  // Panchanga inject
+  const pc = window._lastPanchCtx;
+  if(pc){
+    if(pc.karana?.isVishti){ AVOID.push('нові початки (Vishti)'); NOTE.push('Vishti karana — підвищений ризик'); }
+    const tIdx = pc.tithi?.index;
+    if(tIdx===10||tIdx===25){ DO.push('дисципліна','самоконтроль'); NOTE.push('Екадаші — день стриманості'); }
+    const nq = pc.nakshatra?.quality;
+    if(nq==='fixed') DO.push('структурування','закріплення');
+    if(nq==='sharp') AVOID.push('м\'які переговори');
+  }
+  // Hora inject
+  try{
+    const hora = calcHora(new Date());
+    if(hora?.planet){
+      const HORA_DO={'Юпітер':'стратегія, важливі рішення','Меркурій':'комунікація, аналіз','Венера':'креатив, партнерства','Сонце':'лідерські дії','Місяць':'інтуїтивні рішення'};
+      if(HORA_DO[hora.planet]) DO.push(HORA_DO[hora.planet]);
+    }
+  }catch(e){}
+  return { DO:_uniq(DO), AVOID:_uniq(AVOID), NOTE:_uniq(NOTE) };
+}
+
+function buildDecisionTexts(uiState){
+  const g = Number(uiState?.gNow ?? 0);
+  let headline='ДЕНЬ СТАБІЛЬНИЙ', sub='Працюй у звичному темпі.';
+  if(g<=-3){ headline='СТОП — високий ризик помилки'; sub='Не приймай важливих рішень до покращення фону.'; }
+  else if(g<=-1){ headline='ОБЕРЕЖНО — фон нестабільний'; sub='Дій повільно, без різких кроків.'; }
+  else if(g<1){ headline='НЕЙТРАЛЬНИЙ ДЕНЬ'; sub='Можна працювати у стандартному режимі.'; }
+  else { headline='МОЖНА ДІЯТИ'; sub='Фон підтримує активні дії.'; }
+  const driver=String(uiState?.mainDriver||'').trim();
+  const shift=String(uiState?.nextShift||'').trim();
+  const best=String(uiState?.nextGoodSlot||'').trim();
+  if(driver) sub+=` Головний фактор: ${driver}.`;
+  if(best) sub+=` Найкраще вікно — ${best}.`;
+  else if(shift) sub+=` Далі: ${shift}.`;
+  return {headline, sub};
+}
+
+function buildDaySentence(uiState){
+  const g = Number(uiState?.gNow ?? 0);
+  const driver=String(uiState?.mainDriver||'').trim();
+  const best=String(uiState?.nextGoodSlot||'').trim();
+  const shift=String(uiState?.nextShift||'').trim();
+  let mood,action;
+  if(g<=-3){ mood='нестабільний фон'; action='важливі рішення краще відкласти'; }
+  else if(g<=-1){ mood='напружений фон'; action='дій повільно й без різких кроків'; }
+  else if(g<1){ mood='рівний фон'; action='можна тримати звичний темп'; }
+  else { mood='сприятливий фон'; action='можна робити важливі кроки'; }
+  let s=`Сьогодні: ${mood}, ${action}.`;
+  if(driver) s+=` Головний фактор: ${driver}.`;
+  if(best) s+=` Найкраще вікно — ${best}.`;
+  else if(shift) s+=` Далі: ${shift}.`;
+  return s;
+}
+
+function buildDecisionTiming(slots){
+  if(!slots||!slots.length) return [];
+  const nowH=new Date().getUTCHours();
+  return slots.map(s=>{
+    const h=parseInt(s.label||'0');
+    const g=s.G;
+    let cls='dt-mid',label='обережно';
+    if(g<=-2){ cls='dt-bad'; label='уникати'; }
+    else if(g<=0){ cls='dt-mid'; label='обережно'; }
+    else { cls='dt-good'; label='можна'; }
+    const isNow=(nowH>=h&&nowH<h+3);
+    return {time:`${String(h).padStart(2,'0')}:00–${String(h+3).padStart(2,'0')}:00`, label, cls, isNow};
+  });
+}
+
+function formatConfidence(v){
+  const n = Math.round(Number(v||0));
+  if(n>=95) return 'high';
+  if(n>=75) return n+'%';
+  return n+'%';
+}
+
 function syncHero(){
   const _ui = window.__uiState || {};
   const nowG=el('nowG'), heroG=el('heroG');
@@ -4346,8 +4514,7 @@ function syncHero(){
     } else { hd.textContent='—'; }
   }
 
-  // Confidence: from __uiState
-  _set('heroConfidence', _ui.confPct ? _ui.confPct+'%' : '—');
+  // Confidence: set by v83 decision block below
 
   // Freshness — v80: from __uiState, fallback to DOM
   const _frState = _ui.freshness || (function(){ const t=_strip(el('freshnessBadge')?.textContent||'LIVE').toLowerCase(); return t.includes('stale')?'stale':t.includes('old')?'old':'live'; })();
@@ -4369,12 +4536,8 @@ function syncHero(){
     ht.style.color=dn>0.3?'var(--ok)':dn<-0.3?'var(--bad)':'var(--muted)';
   }
 
-  // v78b: action command — single line from GLOBAL_STATES
-  // v80: kp from __uiState
+  // v83: heroActionCmd set by buildDecisionTexts below
   const kpH = isFinite(_ui.kpNow) ? _ui.kpNow : _num(_firstText(el('nowKp')));
-  _set('heroActionCmd',_decAction(gVal,kpH));
-  const hac=el('heroActionCmd');
-  if(hac) hac.style.color=gVal>=1?'var(--ok)':gVal>=-1?'var(--muted)':'var(--bad)';
 
   // v78b: DO/AVOID from GLOBAL_STATES
   const _stKey = classifyStateByG(gVal);
@@ -4399,21 +4562,47 @@ function syncHero(){
   const _confNum = parseInt((el('heroConfidence')?.textContent||'75').replace('%','')) || 75;
   const _confLvl = _confNum >= 80 ? 'high' : _confNum >= 60 ? 'mid' : 'low';
 
-  // v79: Strong HERO text (trend-aware)
-  const HERO_STRONG = {
-    favorable: 'ДІЙ АКТИВНО — СИЛЬНЕ ВІКНО МОЖЛИВОСТЕЙ',
-    good: 'МОЖНА ДІЯТИ — СПРИЯТЛИВИЙ МОМЕНТ',
-    neutral: 'СТАБІЛЬНИЙ ДЕНЬ — БЕЗ РІЗКИХ РІШЕНЬ',
-    unstable: 'НЕ ПОЧИНАЙ НОВЕ — ПІДВИЩЕНИЙ РИЗИК',
-    tense: 'СТОП — ВИСОКИЙ РИЗИК ПОМИЛКИ'
-  };
-  let _heroText = HERO_STRONG[_stKey] || HERO_STRONG.neutral;
-  if (_stKey === 'neutral' && _trend === 'improving') _heroText = 'СТАБІЛЬНО → СТАЄ КРАЩЕ';
-  if (_stKey === 'neutral' && _trend.startsWith('worsening')) _heroText = 'ОБЕРЕЖНО — ФОН ПОГІРШУЄТЬСЯ';
-  if (_stKey === 'unstable' && _trend.startsWith('worsening')) _heroText = 'НЕ ПОЧИНАЙ НОВЕ — СИТУАЦІЯ ПОГІРШУЄТЬСЯ';
-  if (_stKey === 'good' && _trend.startsWith('improving')) _heroText = 'МОМЕНТ ПОСИЛЮЄТЬСЯ — МОЖНА ДІЯТИ';
-  // v79: low confidence handled by alert line, not hero title
-  _set('heroActionCmd', _heroText);
+  // v83b: find best slot for decision context
+  const _daySlots = window._daySlots || [];
+  let _bestSlotLabel = '';
+  if(_daySlots.length){
+    let bestG=-Infinity, bestH='';
+    _daySlots.forEach(s=>{ if(s.G>bestG){ bestG=s.G; bestH=s.label; } });
+    if(bestH) _bestSlotLabel=String(bestH).padStart(2,'0')+':00–'+String(parseInt(bestH)+3).padStart(2,'0')+':00';
+  }
+
+  // v83b: decision-first — unified decision texts
+  const _dState = { gNow: gVal, mainDriver: el('hmDriver')?.textContent||'', nextShift: el('hmShift')?.textContent||'', nextGoodSlot: _bestSlotLabel };
+  const _dt = buildDecisionTexts(_dState);
+  _set('heroActionCmd', _dt.headline);
+  _set('heroMainDrag', _dt.sub);
+  const hac=el('heroActionCmd');
+  if(hac) hac.style.color = gVal>=1?'var(--ok)':gVal>=-1?'var(--muted)':'var(--bad)';
+
+  // v83b: unified advice → decisionStrip 3-col
+  const _adv = buildUnifiedAdvice(_dState);
+  _set('decisionDoText', _adv.DO.join(', '));
+  _set('decisionAvoidText', _adv.AVOID.join(', '));
+  _set('decisionNoteText', _adv.NOTE.length ? _adv.NOTE.join(', ') : 'без особливостей');
+
+  // v83b: day sentence
+  _set('daySentenceText', buildDaySentence(_dState));
+
+  // v83b: decision timing
+  const _dtRows = buildDecisionTiming(_daySlots);
+  const _dtList = el('decisionTimingList');
+  if(_dtList && _dtRows.length){
+    _dtList.innerHTML = _dtRows.map(t=>`<div class="dt-row ${t.cls}${t.isNow?' dt-now':''}">`
+      +`<span>${t.time}</span><span>${t.label}${t.isNow?' ◀ зараз':''}</span></div>`).join('');
+  } else if(_dtList){ _dtList.innerHTML='<span style="color:var(--dim);font-size:11px">Слоти недоступні</span>'; }
+
+  // v83: G zone label
+  _set('hmZone', gZoneLabel(gVal));
+
+  // v83: confidence — show only when <95%
+  if(el('heroConfidence')) el('heroConfidence').textContent = formatConfidence(_ui.confPct);
+  const _confMetric = el('heroConfidence')?.closest('.hero-metric');
+  if(_confMetric) _confMetric.style.display = (_ui.confPct >= 95) ? 'none' : '';
 
   // v79: Strong IMPACT (trend-aware)
   const IMPACT_TREND = {
@@ -6267,11 +6456,11 @@ function taaraDangerClass(danger) {
   return danger ? 'color:#ff6b6b;font-weight:600' : 'color:#2bd47d;font-weight:600';
 }
 
-// ═══ v82c: Safe localStorage (single definition, unified) ═══
+// ═══ v83: Safe localStorage (single canonical block) ═══
 function lsGet(k, def=''){ try{ const v = localStorage.getItem(k); return v ?? def; }catch(e){ return def; } }
 function lsSet(k, v){ try{ localStorage.setItem(k, v); }catch(e){} }
 function lsRemove(k){ try{ localStorage.removeItem(k); }catch(e){} }
-const lsRem = lsRemove; // shorthand alias (v82c)
+const lsRem = lsRemove; // shorthand alias
 
 // ═══ v76d: Personal human phrases ═══
 const PERSONAL_HUMAN = {
@@ -6545,12 +6734,12 @@ const SLOT_COLORS = ['#37a7ff','#2bd47d','#ffcc00'];
 function getSlotKey(idx){ return `personalData_${idx}`; }
 function getSlotData(idx){ return JSON.parse(lsGet(getSlotKey(idx)) || 'null'); }
 function setSlotData(idx, d){ lsSet(getSlotKey(idx), JSON.stringify(d)); }
-function removeSlotData(idx){ lsRem(getSlotKey(idx)); }
+function removeSlotData(idx){ lsRemove(getSlotKey(idx)); }
 
 // Backward-compat: migrate old 'personalData' to slot 0
 function migratePersonalData(){
   const old = lsGet('personalData');
-  if(old && !lsGet(getSlotKey(0))){ lsSet(getSlotKey(0), old); lsRem('personalData'); }
+  if(old && !lsGet(getSlotKey(0))){ lsSet(getSlotKey(0), old); lsRemove('personalData'); }
 }
 
 function renderSlotTabs(){
@@ -8488,14 +8677,14 @@ async function handleBacktestFile(input) {
 
 <script>
 
-// ── Safe localStorage — визначення в головному блоці (v82c) ──
+// ── Safe localStorage — canonical block is above (v83) ──
 
 // ── Mobile Bottom Nav ─────────────────────────────────────
 const MNAV_SECTIONS = {
-  now:      ['heroCard','astroGrid','wf3SignalSummary','profileBar','profileRec','mainGrid','swipeHint3','threeCard'],
-  panch:    ['heroCard','wf3SignalSummary','panchCard','swipeHint3','threeCard'],
-  fcst:     ['heroCard','swipeHint27','twentysevenCard','backtestCard'],
-  personal: ['heroCard','personalCard']
+  now:      ['heroCard','daySentenceCard','decisionStrip','decisionTiming','impactBlock','astroGrid','wf3SignalSummary','profileBar','profileRec','mainGrid','swipeHint3','threeCard'],
+  panch:    ['heroCard','daySentenceCard','decisionStrip','wf3SignalSummary','panchCard','swipeHint3','threeCard'],
+  fcst:     ['heroCard','daySentenceCard','decisionStrip','swipeHint27','twentysevenCard','backtestCard'],
+  personal: ['heroCard','daySentenceCard','decisionStrip','personalCard']
 };
 
 function mnavGo(tab, scroll) {
