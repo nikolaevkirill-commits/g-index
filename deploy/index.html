@@ -2279,8 +2279,11 @@ function approxTithiIndex(dateUTC){
 // Метод: порівняти floor(sunSid/30) за 00:00 і 23:59 UTC поточного дня.
 // Якщо змінився — це день Sankranti (незалежно від конкретного часу ingress).
 function isSuryaSankranti(dateUTC){
-  const jde0 = dateUTC.getTime() / 86400000 + 2440587.5; // 00:00 UTC
-  const jde1 = jde0 + 0.9993; // ~23:59 UTC (23h 59m)
+  // v82b fix: always use midnight-to-midnight window regardless of input time
+  const y = dateUTC.getUTCFullYear(), m = dateUTC.getUTCMonth(), d = dateUTC.getUTCDate();
+  const d0 = new Date(Date.UTC(y, m, d, 0, 0, 0));
+  const jde0 = d0.getTime() / 86400000 + 2440587.5; // 00:00 UTC
+  const jde1 = jde0 + 0.9993; // ~23:59 UTC
   function sunSidRashi(jde){
     const trop = calcSunLongitude(jde);
     const ayan = lahiriAyanamsha(jde);
