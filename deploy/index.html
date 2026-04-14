@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v82b</title>
+  <title>G-Index — Космофізичний дашборд v82c</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -800,9 +800,6 @@
     .hero-alert-line.level-critical{border-color:rgba(255,107,120,.25);color:#ffc0c8;background:rgba(255,107,120,.07)}
   </style>
 
-  <meta name="theme-color" content="#0b1220">
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-capable" content="yes">
   <!-- Астро бібліотека: фаза Місяця -->
   <script src="https://cdn.jsdelivr.net/npm/astronomy-engine@2.1.19/astronomy.browser.min.js" defer></script>
 </head>
@@ -6270,10 +6267,11 @@ function taaraDangerClass(danger) {
   return danger ? 'color:#ff6b6b;font-weight:600' : 'color:#2bd47d;font-weight:600';
 }
 
-// ═══ v26: Safe localStorage (sandbox/iframe може блокувати) ═══
-function lsGet(key){ try{ return localStorage.getItem(key); }catch(e){ return null; } }
-function lsSet(key, val){ try{ localStorage.setItem(key, val); }catch(e){} }
-function lsRemove(key){ try{ localStorage.removeItem(key); }catch(e){} }
+// ═══ v82c: Safe localStorage (single definition, unified) ═══
+function lsGet(k, def=''){ try{ const v = localStorage.getItem(k); return v ?? def; }catch(e){ return def; } }
+function lsSet(k, v){ try{ localStorage.setItem(k, v); }catch(e){} }
+function lsRemove(k){ try{ localStorage.removeItem(k); }catch(e){} }
+const lsRem = lsRemove; // shorthand alias (v82c)
 
 // ═══ v76d: Personal human phrases ═══
 const PERSONAL_HUMAN = {
@@ -6547,12 +6545,12 @@ const SLOT_COLORS = ['#37a7ff','#2bd47d','#ffcc00'];
 function getSlotKey(idx){ return `personalData_${idx}`; }
 function getSlotData(idx){ return JSON.parse(lsGet(getSlotKey(idx)) || 'null'); }
 function setSlotData(idx, d){ lsSet(getSlotKey(idx), JSON.stringify(d)); }
-function removeSlotData(idx){ lsRemove(getSlotKey(idx)); }
+function removeSlotData(idx){ lsRem(getSlotKey(idx)); }
 
 // Backward-compat: migrate old 'personalData' to slot 0
 function migratePersonalData(){
   const old = lsGet('personalData');
-  if(old && !lsGet(getSlotKey(0))){ lsSet(getSlotKey(0), old); lsRemove('personalData'); }
+  if(old && !lsGet(getSlotKey(0))){ lsSet(getSlotKey(0), old); lsRem('personalData'); }
 }
 
 function renderSlotTabs(){
@@ -8490,10 +8488,7 @@ async function handleBacktestFile(input) {
 
 <script>
 
-// ── Safe localStorage (Safari Private Mode guard) ──────────────────────────
-function lsGet(k, def=''){try{return localStorage.getItem(k)??def}catch{return def}}
-function lsSet(k,v){try{localStorage.setItem(k,v)}catch{}}
-function lsRem(k){try{localStorage.removeItem(k)}catch{}}
+// ── Safe localStorage — визначення в головному блоці (v82c) ──
 
 // ── Mobile Bottom Nav ─────────────────────────────────────
 const MNAV_SECTIONS = {
