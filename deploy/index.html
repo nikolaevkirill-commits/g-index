@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v85a</title>
+  <title>G-Index — Космофізичний дашборд v85b</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -658,7 +658,7 @@
     /* C6: vertical compression */
     main{margin:10px auto!important;padding:0 12px 28px!important}
     #heroCard{margin-bottom:10px!important;padding:12px 14px!important}
-    #impactBlock{gap:10px!important;margin-bottom:8px!important}
+    #impactBlock{gap:10px!important;margin-bottom:8px!important;grid-template-columns:1fr 1fr 1fr!important}
     #impactBlock>div{padding:8px 12px!important}
     #mainGrid{gap:10px!important;margin-bottom:10px!important}
     #trustStrip{display:none!important}
@@ -843,7 +843,7 @@
     /* v83 P7: impactBlock demote */
     #impactBlock{opacity:.82!important;gap:10px!important;margin-bottom:10px!important}
     #impactBlock>div{padding:8px 12px!important}
-    #impactGoodText,#impactBadText{font-size:12px!important}
+    #impactGoodText,#impactBadText,#impactNeutralText{font-size:11px!important}
   </style>
 
   <!-- Астро бібліотека: фаза Місяця -->
@@ -1019,14 +1019,18 @@
       <div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--dim);margin-bottom:6px">Коли діяти</div>
       <div id="decisionTimingList" style="display:flex;flex-direction:column;gap:4px"></div>
     </div>
-    <div id="impactBlock" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
-      <div id="impactGood" style="padding:10px 14px;border-radius:14px;border:1px solid rgba(43,212,125,.2);background:rgba(43,212,125,.05)">
+    <div id="impactBlock" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px">
+      <div id="impactGood" style="padding:10px 12px;border-radius:14px;border:1px solid rgba(43,212,125,.2);background:rgba(43,212,125,.05)">
         <div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--dim);margin-bottom:4px">Якщо слідувати</div>
-        <div id="impactGoodText" style="font-size:13px;color:#d0f5e0;line-height:1.4">→ стабільний результат</div>
+        <div id="impactGoodText" style="font-size:12px;color:#d0f5e0;line-height:1.4">→ стабільний результат</div>
       </div>
-      <div id="impactBad" style="padding:10px 14px;border-radius:14px;border:1px solid rgba(255,107,107,.18);background:rgba(255,107,107,.05)">
+      <div id="impactNeutral" style="padding:10px 12px;border-radius:14px;border:1px solid rgba(155,177,220,.18);background:rgba(155,177,220,.04)">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--dim);margin-bottom:4px">Якщо за інерцією</div>
+        <div id="impactNeutralText" style="font-size:12px;color:#c8d8f0;line-height:1.4">→ стандартний перебіг</div>
+      </div>
+      <div id="impactBad" style="padding:10px 12px;border-radius:14px;border:1px solid rgba(255,107,107,.18);background:rgba(255,107,107,.05)">
         <div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--dim);margin-bottom:4px">Якщо ігнорувати</div>
-        <div id="impactBadText" style="font-size:13px;color:#ffd6db;line-height:1.4">→ ризик помилки ↑</div>
+        <div id="impactBadText" style="font-size:12px;color:#ffd6db;line-height:1.4">→ ризик помилки ↑</div>
       </div>
     </div>
 
@@ -4803,22 +4807,23 @@ function syncHero(){
     el('heroConfidence').style.display = (_ui.confPct >= 95) ? 'none' : '';
   }
 
-  // v79: Strong IMPACT (trend-aware)
+  // v85b-F3: 3-scenario mode (good/neutral/bad)
   const IMPACT_TREND = {
-    worsening: { good: '→ зменшиш ризик погіршення', bad: '→ ситуація може погіршитись швидше' },
-    improving: { good: '→ використаєш покращення ситуації', bad: '→ втратиш момент росту' }
+    worsening: { good: '→ зменшиш ризик погіршення', neutral: '→ поступове погіршення продовжиться', bad: '→ ситуація може погіршитись швидше' },
+    improving: { good: '→ використаєш покращення ситуації', neutral: '→ покращення пройде непоміченим', bad: '→ втратиш момент росту' }
   };
   const IMPACT_BASE = {
-    favorable: { good: '→ максимум результату при тих самих зусиллях', bad: '→ втратиш сильне вікно можливостей' },
-    good:      { good: '→ підвищений шанс успішного результату', bad: '→ втратиш можливість росту' },
-    neutral:   { good: '→ стабільний і передбачуваний результат', bad: '→ локальні помилки через поспіх' },
-    unstable:  { good: '→ збережеш контроль над ситуацією', bad: '→ ризик втрат часу та ресурсів ↑' },
-    tense:     { good: '→ зменшиш ризик серйозної помилки', bad: '→ високий шанс неправильного рішення' }
+    favorable: { good: '→ максимум результату при тих самих зусиллях', neutral: '→ частковий виграш без зусиль', bad: '→ втратиш сильне вікно можливостей' },
+    good:      { good: '→ підвищений шанс успішного результату', neutral: '→ стандартний перебіг дня', bad: '→ втратиш можливість росту' },
+    neutral:   { good: '→ стабільний і передбачуваний результат', neutral: '→ нічого не зміниться', bad: '→ локальні помилки через поспіх' },
+    unstable:  { good: '→ збережеш контроль над ситуацією', neutral: '→ фон тисне, але без гострих наслідків', bad: '→ ризик втрат часу та ресурсів ↑' },
+    tense:     { good: '→ зменшиш ризик серйозної помилки', neutral: '→ дискомфорт і напруження без катастрофи', bad: '→ високий шанс неправильного рішення' }
   };
   const _imp = _trend.startsWith('worsening') ? IMPACT_TREND.worsening
     : _trend.startsWith('improving') ? IMPACT_TREND.improving
     : (IMPACT_BASE[_stKey] || IMPACT_BASE.neutral);
   _set('impactGoodText', _imp.good);
+  _set('impactNeutralText', _imp.neutral);
   _set('impactBadText', _imp.bad);
 
   // v79: mini-chips with stronger words
@@ -9584,15 +9589,10 @@ function renderWf3(){
   if(!wrap||!top||!bot) return;
   if(!isFinite(g)||!isFinite(kp)){wrap.style.display='none';return;}
   var kpPart=Math.round((kp-2)*10)/10;
-  // Read ai components from chips
-  var chips=[].slice.call(document.querySelectorAll('#gDecompFactors .gd-chip[data-val]'));
+  // v85b-p2: read from __uiState.ai instead of DOM (aligned with P7)
+  var _ai=window.__uiState&&window.__uiState.ai;
   var comps={Li:0,Mi:0,ei:0,Pi:0};
-  chips.forEach(function(c){
-    var nameEl=c.querySelector('.gd-chip-name');
-    var nm=(nameEl?nameEl.textContent:'').split(' ')[0].replace(/[:\s]/g,'');
-    var v=parseFloat(c.getAttribute('data-val'));
-    if(nm&&isFinite(v)&&comps.hasOwnProperty(nm)) comps[nm]=v;
-  });
+  if(_ai){ comps.Li=Number(_ai.Li)||0; comps.Mi=Number(_ai.Mi)||0; comps.ei=Number(_ai.ei)||0; comps.Pi=Number(_ai.Pi)||0; }
   if(comps.Pi===0&&window._lastAiPi!=null&&window._lastAiPi!==0) comps.Pi=Number(window._lastAiPi)||0;
 
   function fs(x){var n=Number(x||0);return(n>0?'+':'')+n.toFixed(1);}
