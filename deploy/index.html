@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v83</title>
+  <title>G-Index — Космофізичний дашборд v85a</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -952,6 +952,18 @@
           <div id="heroDecisionPanel">
             <div id="heroActionCmd" style="font-size:19px;font-weight:900;letter-spacing:.02em;line-height:1.15">—</div>
             <div id="heroMainDrag" style="margin-top:5px;font-size:13px;font-weight:700;letter-spacing:.01em;color:var(--text2)"></div>
+            <!-- v84: consequence line -->
+            <div id="heroConsequence" style="margin-top:4px;font-size:12px;line-height:1.35;color:var(--muted);font-style:italic;display:none"></div>
+            <!-- v84: energy bar -->
+            <div style="margin-top:8px;position:relative">
+              <div style="height:6px;border-radius:3px;background:rgba(255,255,255,.06);overflow:hidden">
+                <div id="heroEnergyFill" style="height:100%;border-radius:3px;transition:width .6s ease,background .4s;width:50%;background:#9bb1dc"></div>
+              </div>
+              <div id="heroEnergyPointer" style="position:absolute;top:-3px;width:3px;height:12px;border-radius:2px;background:#fff;box-shadow:0 0 4px rgba(255,255,255,.4);transition:left .6s ease;left:50%"></div>
+              <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--dim);margin-top:2px;padding:0 2px"><span>−5</span><span>0</span><span>+5</span></div>
+            </div>
+            <!-- v84: personal greeting -->
+            <div id="heroGreeting" style="margin-top:4px;font-size:12px;font-style:italic;color:var(--muted);display:none"></div>
             <div id="heroDecisionBlock" style="margin-top:6px">
               <div id="heroDecisionDo" style="font-size:13px;font-weight:700;line-height:1.3;color:var(--ok)">—</div>
               <div id="heroDecisionAvoid" style="font-size:12px;line-height:1.3;color:var(--muted);margin-top:2px">—</div>
@@ -963,6 +975,7 @@
             <span style="display:none">ΣAᵢ: <strong id="hmAi" style="color:var(--text2)">—</strong></span>
             <span>Драйвер: <strong id="hmDriver" style="color:var(--text2)">—</strong></span>
             <span>Далі: <strong id="hmShift" style="color:var(--text2)">—</strong></span>
+            <span>Тренд: <strong id="hmTrend" style="color:var(--muted)">—</strong></span>
             <span>Зона: <strong id="hmZone" style="color:var(--text2)">—</strong></span>
           </div>
           <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
@@ -2535,7 +2548,17 @@ function computeCScore(kpNow, kpObsJson, ai, G, kpSrc){
     reasons.push({ txt:'Амавасья Lᵢ=−3 — фіксований override', col:'#2bd47d', d:0 });
   }
 
-  // 7. Clamp
+  // 7. v84b: Data freshness penalty (SW stale/cached)
+  const _freshness = window.__uiState?.freshness || 'live';
+  if(_freshness === 'stale'){
+    penalty += 0.12;
+    reasons.push({ txt:'Дані з кешу (stale)', col:'#ffcc00', d:0.12 });
+  } else if(_freshness === 'old'){
+    penalty += 0.20;
+    reasons.push({ txt:'Дані застарілі (offline)', col:'#ff6b6b', d:0.20 });
+  }
+
+  // 8. Clamp
   penalty = Math.min(0.85, penalty);
   const conf = Math.round((1 - penalty) * 100) / 100;
 
@@ -3829,8 +3852,8 @@ const YOGA_ADVICE = [
   {do:'Завершення циклів', avoid:'Нові починання (руйнівна)'}                   // 27 Vaidhriti
 ];
 
-function renderPanchanga(dateUTC){
-  // dateUTC = noonUTC(today) — консистентно з G-розрахунком
+// v85b: A3 split — computePanchangaState (pure data) + renderPanchangaCard (DOM)
+function computePanchangaState(dateUTC){
   const p = computePanchanga(dateUTC);
   // Rahu active — перевіряємо для поточного часу (не noon)
   const _nowH = new Date().getUTCHours() + new Date().getUTCMinutes()/60;
@@ -3838,43 +3861,27 @@ function renderPanchanga(dateUTC){
   p.rahu.active = _nowH >= _rS && _nowH < _rE;
   p.rahu.score  = p.rahu.active ? -1 : 0;
 
-  // Зберегти для планетної анімації + decision layer (v83d)
-  _lastPanchCtx = {
+  // Context for downstream (animation, decision layer)
+  const ctx = {
     tithi:    { num: p.tithi.num, index: p.tithi.num - 1, name: p.tithi.name, score: p.tithi.score },
     nakshatra:{ idx: p.nakshatra.num, name: p.nakshatra.name, score: p.nakshatra.score, type: p.nakshatra.type },
     yoga:     { name: p.yoga.name, score: p.yoga.score, isCritical: !!(p.yoga.score <= -2) },
     karana:   { name: p.karana.name, score: p.karana.score, isVishti: !!(p.karana.score <= -2) },
     rahu:     { active: p.rahu.active, start: p.rahu.start, end: p.rahu.end }
   };
-  const dateStr = fmtDate(dateUTC);
-  const el_ = id => document.getElementById(id);
-  el_('panchDate').textContent = dateStr + ' ~12:00 UTC';
 
-  // Ранній розрахунок G для контексту кольорів іконок
+  // Kp/Ai for G context colours
   const _kpEarly = (lastWWV && isFinite(lastWWV.kNow)) ? lastWWV.kNow
                  : (last3D && last3D.days && last3D.days[0] ? last3D.days[0].kpMax : 0);
   const _aiEarly = computeAi(noonUTC(dateUTC), _kpEarly);
   const _gEarly  = _kpEarly - 2 + _aiEarly.Ai;
-  // v53: aiComponents для кольорів орбіт в анімації
-  _lastPanchCtx.aiComponents = { Li: _aiEarly.Li, Mi: _aiEarly.Mi, ei: _aiEarly.ei, Pi: _aiEarly.Pi, Di: _aiEarly.Di || 0 };
+  ctx.aiComponents = { Li: _aiEarly.Li, Mi: _aiEarly.Mi, ei: _aiEarly.ei, Pi: _aiEarly.Pi, Di: _aiEarly.Di || 0 };
 
-  function scoreSpan(s){
-    if(s > 0) return `<span class="panch-score-pos">+${s}</span>`;
-    if(s < 0) return `<span class="panch-score-neg">${s}</span>`;
-    return `<span class="panch-score-neu">0</span>`;
-  }
-  function adviceHtml(adv){
-    if(!adv) return '';
-    const doLine  = adv.do     ? `<div class="panch-do">✓ ${adv.do}</div>`     : '';
-    const avLine  = adv.avoid  ? `<div class="panch-av">✗ ${adv.avoid}</div>`  : '';
-    return doLine + avLine;
-  }
-
+  // Advice sources
   const tAdv = TITHI_ADVICE[p.tithi.num - 1] || null;
   const vAdv = VARA_ADVICE[dateUTC.getUTCDay()] || null;
   const nAdv = NAKSHATRA_ADVICE[p.nakshatra.type] || null;
   const yAdv = YOGA_ADVICE[p.yoga.num - 1] || null;
-
   const kAdv = p.karana.isVishti
     ? {do:'Очікування, спостереження', avoid:'Будь-які активні дії (абсолютне вето)'}
     : {do: p.karana.note, avoid:''};
@@ -3883,37 +3890,104 @@ function renderPanchanga(dateUTC){
     : {do:'Обмежень немає', avoid:''};
 
   const cells = [
-    { score: p.tithi.score,
-      label: 'Tithi — місячний день',
-      val:   p.tithi.name,
-      sub:   `${p.tithi.type} · PCL ${scoreSpan(p.tithi.score)} · ΔL≈${p.tithi.phaseDeg}°`,
-      adv:   tAdv },
-    { score: p.vara.score,
-      label: 'Vara — день тижня',
-      val:   p.vara.name,
-      sub:   `${p.vara.planet} · PCL ${scoreSpan(p.vara.score)}`,
-      adv:   vAdv },
-    { score: p.nakshatra.score,
-      label: 'Nakshatra — місячна стоянка',
-      val:   p.nakshatra.name,
-      sub:   `${p.nakshatra.type} · ${p.nakshatra.regent} · PCL ${scoreSpan(p.nakshatra.score)}`,
-      adv:   nAdv },
-    { score: p.yoga.score,
-      label: 'Yoga — резонанс Сонце–Місяць',
-      val:   p.yoga.name,
-      sub:   `PCL ${scoreSpan(p.yoga.score)}${p.yoga.isCritical?' · ⚠️ retro_end −3':''}`,
-      adv:   yAdv },
-    { score: p.karana.score,
-      label: 'Karana — половина місячного дня',
-      val:   p.karana.name,
-      sub:   `${p.karana.type} · PCL ${scoreSpan(p.karana.score)}`,
-      adv:   kAdv },
-    { score: p.rahu.active ? -1 : 0,
-      label: 'Rahu Kalam',
-      val:   p.rahu.active ? '⚠️ Активний зараз' : `≈ ${p.rahu.start}–${p.rahu.end} UTC`,
-      sub:   p.rahu.active ? `PCL ${scoreSpan(-1)} · до ${p.rahu.end} UTC` : `PCL ${scoreSpan(0)} · неактивний`,
-      adv:   rahuAdv }
+    { score: p.tithi.score, label: 'Tithi — місячний день', val: p.tithi.name,
+      sub: `${p.tithi.type} · ΔL≈${p.tithi.phaseDeg}°`, adv: tAdv, tipKey:'tithi', tipData:p.tithi },
+    { score: p.vara.score, label: 'Vara — день тижня', val: p.vara.name,
+      sub: `${p.vara.planet}`, adv: vAdv, tipKey:'vara', tipData:p.vara },
+    { score: p.nakshatra.score, label: 'Nakshatra — місячна стоянка', val: p.nakshatra.name,
+      sub: `${p.nakshatra.type} · ${p.nakshatra.regent}`, adv: nAdv, tipKey:'nakshatra', tipData:p.nakshatra },
+    { score: p.yoga.score, label: 'Yoga — резонанс Сонце–Місяць', val: p.yoga.name,
+      sub: `${p.yoga.isCritical?'⚠️ retro_end −3':''}`, adv: yAdv, tipKey:'yoga', tipData:p.yoga },
+    { score: p.karana.score, label: 'Karana — половина місячного дня', val: p.karana.name,
+      sub: `${p.karana.type}`, adv: kAdv, tipKey:'karana', tipData:p.karana },
+    { score: p.rahu.active ? -1 : 0, label: 'Rahu Kalam',
+      val: p.rahu.active ? '⚠️ Активний зараз' : `≈ ${p.rahu.start}–${p.rahu.end} UTC`,
+      sub: p.rahu.active ? `до ${p.rahu.end} UTC` : 'неактивний',
+      adv: rahuAdv, tipKey:'rahu', tipData:p.rahu }
   ];
+
+  // Noon Ai for summary
+  const _kpForPanch = _kpEarly;
+  const aiNow = computeAi(noonUTC(dateUTC), _kpForPanch);
+  const pclOnly = cells.reduce((s,c)=>s+c.score, 0);
+
+  // Discrepancy real-time vs noon
+  let panchDiscrepancy = '';
+  try {
+    const pNoon = computePanchanga(noonUTC(dateUTC));
+    const diffs = [];
+    if(p.yoga.name !== pNoon.yoga.name) diffs.push(`Yoga: зараз ${p.yoga.name}, на полудень ${pNoon.yoga.name}`);
+    if(p.nakshatra.name !== pNoon.nakshatra.name) diffs.push(`Nak: зараз ${p.nakshatra.name}, на полудень ${pNoon.nakshatra.name}`);
+    if(p.tithi.name !== pNoon.tithi.name) diffs.push(`Tithi: зараз ${p.tithi.name}, на полудень ${pNoon.tithi.name}`);
+    if(p.karana.name !== pNoon.karana.name) diffs.push(`Karana: зараз ${p.karana.name}, на полудень ${pNoon.karana.name}`);
+    if(diffs.length) panchDiscrepancy = diffs.join('; ');
+  } catch(e){}
+
+  // Aggregated advice (DO/AVOID)
+  const advSources = cells.filter(s => s.adv);
+  const allAvoidWords = new Set();
+  advSources.forEach(s => {
+    if(s.adv.avoid) s.adv.avoid.split(/[,·]/).map(w=>w.trim().toLowerCase()).filter(Boolean).forEach(w => allAvoidWords.add(w));
+  });
+  const sortedDo = advSources.filter(s => s.adv.do).sort((a,b) => b.score - a.score);
+  const finalDo = [];
+  const seenDoWords = new Set();
+  for(const s of sortedDo){
+    const doText = s.adv.do;
+    const doWords = doText.toLowerCase();
+    let contradicts = false;
+    for(const av of allAvoidWords){ if(av.length > 3 && doWords.includes(av)){ contradicts = true; break; } }
+    if(contradicts) continue;
+    const key = doText.slice(0,20).toLowerCase();
+    if(seenDoWords.has(key)) continue;
+    seenDoWords.add(key);
+    finalDo.push(doText);
+    if(finalDo.length >= 2) break;
+  }
+  const finalAvoid = [];
+  const seenAvWords = new Set();
+  for(const s of advSources.filter(x => x.score < 0).sort((a,b) => a.score - b.score)){
+    if(!s.adv.avoid) continue;
+    const key = s.adv.avoid.slice(0,20).toLowerCase();
+    if(seenAvWords.has(key)) continue;
+    seenAvWords.add(key);
+    finalAvoid.push(s.adv.avoid);
+    if(finalAvoid.length >= 2) break;
+  }
+
+  const _gNow = _kpForPanch - 2 + aiNow.Ai;
+
+  return {
+    p, ctx, cells, _gEarly, _kpEarly, _aiEarly, aiNow, pclOnly, panchDiscrepancy,
+    finalDo, finalAvoid, _gNow,
+    dateStr: fmtDate(dateUTC), dateUTC
+  };
+}
+
+function renderPanchangaCard(state){
+  const { p, ctx, cells, _gEarly, aiNow, pclOnly, panchDiscrepancy, finalDo, finalAvoid, _gNow, dateStr, dateUTC } = state;
+  const el_ = id => document.getElementById(id);
+  el_('panchDate').textContent = dateStr + ' ~12:00 UTC';
+
+  function scoreSpan(s){
+    if(s > 0) return `<span class="panch-score-pos">+${s}</span>`;
+    if(s < 0) return `<span class="panch-score-neg">${s}</span>`;
+    return `<span class="panch-score-neu">0</span>`;
+  }
+
+  // Build render-cells with HTML sub (scoreSpan) from state.cells
+  const renderCells = cells.map(c => ({
+    ...c,
+    sub: `${c.sub}${c.sub?' · ':''}PCL ${scoreSpan(c.score)}`
+  }));
+  // Aliases for HTML table (hand-coded references)
+  const tAdv = cells[0]?.adv || null;
+  const vAdv = cells[1]?.adv || null;
+  const nAdv = cells[2]?.adv || null;
+  const yAdv = cells[3]?.adv || null;
+  const kAdv = cells[4]?.adv || null;
+  const rahuAdv = cells[5]?.adv || null;
+  const _aiEarly = state._aiEarly;
 
   function cellClass(s, gCtx){
     if(s >= 1)  return (gCtx != null && gCtx < -1) ? 'panch-cell' : 'panch-cell pcl-pos';
@@ -4057,92 +4131,19 @@ function renderPanchanga(dateUTC){
     </tr>
   </table>`;
 
-  // Підсумок з усіх 6 параметрів (PCL) + Li/Mi/ei з G
-  const pclOnly = cells.reduce((s,c)=>s+c.score, 0);
-  const _kpForPanch = (lastWWV && isFinite(lastWWV.kNow)) ? lastWWV.kNow : (last3D && last3D.days && last3D.days[0] ? last3D.days[0].kpMax : 0);
-  // v30: використовуємо noonUTC для узгодженості Pi/G з 3-day таблицею
-  // (Panchanga display вище = real-time, але G/Pi summary = noon, як в таблиці)
-  const aiNow = computeAi(noonUTC(dateUTC), _kpForPanch);
+  // v85b: pclOnly, aiNow, panchDiscrepancy, finalDo, finalAvoid, _gNow — from state
   const totalPCL = pclOnly + aiNow.Mi;
-
-  // v30: виявлення розбіжності real-time vs noon Panchanga
-  let panchDiscrepancy = '';
-  try {
-    const pNoon = computePanchanga(noonUTC(dateUTC));
-    const diffs = [];
-    if(p.yoga.name !== pNoon.yoga.name) diffs.push(`Yoga: зараз ${p.yoga.name}, на полудень ${pNoon.yoga.name}`);
-    if(p.nakshatra.name !== pNoon.nakshatra.name) diffs.push(`Nak: зараз ${p.nakshatra.name}, на полудень ${pNoon.nakshatra.name}`);
-    if(p.tithi.name !== pNoon.tithi.name) diffs.push(`Tithi: зараз ${p.tithi.name}, на полудень ${pNoon.tithi.name}`);
-    if(p.karana.name !== pNoon.karana.name) diffs.push(`Karana: зараз ${p.karana.name}, на полудень ${pNoon.karana.name}`);
-    if(diffs.length) panchDiscrepancy = `<div style="margin-top:4px;font-size:11px;color:#ffa64d">⚠ G-індекс (noon UTC): ${diffs.join('; ')}</div>`;
-  } catch(e){}
-
-  // v26: Розумна агрегація порад — пріоритет за PCL score, без протиріч
-  const advSources = [
-    {score: p.tithi.score, adv: tAdv, label:'Tithi'},
-    {score: p.vara.score, adv: vAdv, label:'Vara'},
-    {score: p.nakshatra.score, adv: nAdv, label:'Nakshatra'},
-    {score: p.yoga.score, adv: yAdv, label:'Yoga'},
-    {score: p.karana.score, adv: kAdv, label:'Karana'},
-    {score: p.rahu.active ? -1 : 0, adv: rahuAdv, label:'Rahu'}
-  ].filter(s => s.adv);
-
-  // Збираємо всі avoid-теми для фільтрації протиріч
-  const allAvoidWords = new Set();
-  advSources.forEach(s => {
-    if(s.adv.avoid) s.adv.avoid.split(/[,·]/).map(w=>w.trim().toLowerCase()).filter(Boolean).forEach(w => allAvoidWords.add(w));
-  });
-
-  // ✓ Поради: сортуємо за score (найвищий = найрелевантніший), фільтруємо протиріччя
-  const sortedDo = advSources
-    .filter(s => s.adv.do)
-    .sort((a,b) => b.score - a.score);
-
-  const finalDo = [];
-  const seenDoWords = new Set();
-  for(const s of sortedDo){
-    const doText = s.adv.do;
-    // Перевірка: чи не суперечить якомусь avoid
-    const doWords = doText.toLowerCase();
-    let contradicts = false;
-    for(const av of allAvoidWords){
-      if(av.length > 3 && doWords.includes(av)){ contradicts = true; break; }
-    }
-    if(contradicts) continue;
-    // Дедуплікація
-    const key = doText.slice(0,20).toLowerCase();
-    if(seenDoWords.has(key)) continue;
-    seenDoWords.add(key);
-    finalDo.push(doText);
-    if(finalDo.length >= 2) break; // max 2 поради
-  }
-
-  // ✗ Обмеження: тільки від параметрів з негативним score
-  const finalAvoid = [];
-  const seenAvWords = new Set();
-  for(const s of advSources.filter(x => x.score < 0).sort((a,b) => a.score - b.score)){
-    if(!s.adv.avoid) continue;
-    const key = s.adv.avoid.slice(0,20).toLowerCase();
-    if(seenAvWords.has(key)) continue;
-    seenAvWords.add(key);
-    finalAvoid.push(s.adv.avoid);
-    if(finalAvoid.length >= 2) break; // max 2 обмеження
-  }
-
   const topDo = finalDo.join(' · ');
   const topAv = finalAvoid.join(' · ');
-
-  // v30: summaryLabel базується на G-індексі (classifyG), а не на totalPCL
-  const _gNow = _kpForPanch - 2 + aiNow.Ai;
-  // _gRound removed v83f — summaryColor/borderColor now from GLOBAL_STATES
   const summaryLabel = classifyG(_gNow);
   const summaryColor = GLOBAL_STATES[classifyStateByG(_gNow)]?.badgeColor || '#9bb1dc';
+  const _panchDiscHtml = panchDiscrepancy ? `<div style="margin-top:4px;font-size:11px;color:#ffa64d">⚠ G-індекс (noon UTC): ${panchDiscrepancy}</div>` : '';
 
   const summaryHtml = `
     <div class="panch-summary" style="border-top:1px solid #1e2f52;margin-top:12px;padding-top:10px">
       <span style="font-weight:700;color:${summaryColor}">${summaryLabel}</span>
       <span class="muted" style="font-size:12px;margin-left:8px">G = ${_gNow.toFixed(1)} | PCL = ${pclOnly > 0 ? '+' : ''}${pclOnly} | Lᵢ=${aiNow.Li} Mᵢ=${aiNow.Mi} <span class="hint" tabindex="0" style="cursor:help;border-bottom:1px dotted var(--faint)">eᵢ=${aiNow.ei}<span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(aiNow.eTip)}</span></span> <span class="hint" tabindex="0" style="cursor:help;border-bottom:1px dotted var(--faint)">Pᵢ=${aiNow.Pi}<span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(aiNow.pTip||'')}</span></span>${aiNow.Di!==0?` <span style="color:#ff9f9f;font-weight:700" title="${escapeHtml(aiNow.diTip)}">Dᵢ=${aiNow.Di}</span>`:''}</span>
-      ${panchDiscrepancy}
+      ${_panchDiscHtml}
       <div style="margin-top:6px;font-size:13px">
         ${topDo ? `<span style="color:#63be7b">✓ </span><span style="color:#b0ccaa">${topDo}</span>` : ''}
       </div>
@@ -4158,6 +4159,13 @@ function renderPanchanga(dateUTC){
   el_('panchGrid').innerHTML = html;
   el_('panchNote').innerHTML = summaryHtml +
     '<div class="small muted" style="margin-top:6px;font-size:10px;opacity:.75">ℹ️ Формула: G = Kp − 2 + ΣAᵢ. R&D advisory.</div>';
+}
+
+// v85b: renderPanchanga — backward-compatible wrapper
+function renderPanchanga(dateUTC){
+  const state = computePanchangaState(dateUTC);
+  _lastPanchCtx = state.ctx;
+  renderPanchangaCard(state);
 }
 
 // ==================== КОМБО-ГРАФІК Kp (факт + прогноз) ====================
@@ -4435,26 +4443,45 @@ function buildDecisionTexts(uiState){
 
 function buildDaySentence(uiState){
   const g = Number(uiState?.gNow ?? 0);
-  const driver=String(uiState?.mainDriver||'').trim();
+  const driver = String(uiState?.mainDriver||'').trim();
   const ts = uiState?.timingSummary || null;
-  const st = GLOBAL_STATES[classifyStateByG(g)];
-  // If no timing data, basic sentence
-  if(!ts || !ts.slots?.length){
-    let s=`Сьогодні: ${st.mood}, ${st.action}.`;
-    if(driver) s+=` Головний фактор: ${driver}.`;
-    return s;
+  const sk = classifyStateByG(g);
+  const dSuffix = driver ? ` Головний фактор: ${driver}.` : '';
+  // No safe window
+  if(ts && ts.slots?.length && !ts.hasGoodSlot){
+    return 'Безпечних вікон немає — тримай мінімум і контролюй ризик.' + dSuffix;
   }
-  // Timing-aware sentence
-  if(!ts.hasGoodSlot){
-    let s=`Сьогодні: високий ризик помилки; важливі рішення краще відкласти на весь день.`;
-    if(driver) s+=` Головний фактор: ${driver}.`;
-    return s;
+  // Flat day
+  if(ts?.allSame){
+    const flat = {
+      tense: 'День рівний, але напружений — не шукай вікно, просто мінімізуй.',
+      unstable: 'День рівний — не шукай магічний момент, тримай стабільний темп.',
+      neutral: 'Рівний день — результат залежить від дисципліни, не від моменту.',
+      good: 'Стабільний позитивний фон — дій у комфортному ритмі.',
+      favorable: 'Весь день сприятливий — дій коли зручно.'
+    };
+    return (flat[sk] || flat.neutral) + dSuffix;
   }
   // Has good slot
-  const sk = classifyStateByG(g);
-  if(sk==='tense') return `Сьогодні: ${st.mood}; важливі рішення краще переносити на ${ts.bestSlot.time}.`+(driver?` Головний фактор: ${driver}.`:'');
-  if(sk==='unstable') return `Сьогодні: ${st.mood}; діяти краще у вікно ${ts.bestSlot.time}.`+(driver?` Головний фактор: ${driver}.`:'');
-  return `Сьогодні: день керований; найкраще вікно — ${ts.bestSlot.time}.`+(driver?` Головний фактор: ${driver}.`:'');
+  if(ts?.hasGoodSlot){
+    const slot = {
+      tense: `Єдине вікно — ${ts.bestSlot.time}. Решту дня — мінімум.`,
+      unstable: `Найкраще вікно — ${ts.bestSlot.time}. Решту дня — обережно.`,
+      neutral: `Найкраще вікно — ${ts.bestSlot.time}.`,
+      good: `Хороший день. Оптимально — о ${ts.bestSlot.time}.`,
+      favorable: `Сильний день. Пік — ${ts.bestSlot.time}.`
+    };
+    return (slot[sk] || slot.neutral) + dSuffix;
+  }
+  // No timing at all
+  const basic = {
+    tense: 'Важливі рішення краще відкласти.',
+    unstable: 'Діяти повільно, без різких кроків.',
+    neutral: 'Працюй у звичному темпі.',
+    good: 'Хороший час для планових дій.',
+    favorable: 'Оптимальний день — використай повністю.'
+  };
+  return (basic[sk] || basic.neutral) + dSuffix;
 }
 
 // ═══ v83d: canonical timing system ═══
@@ -4673,6 +4700,7 @@ function syncHero(){
 
   // 2. Build canonical timing summary (single source of truth)
   const _timingSummary = renderDecisionTiming(_daySlots);
+  window._lastTimingSummary = _timingSummary; // v85: share with buildDashboardState
 
   // 3. Hero headline + short sub (from G only, no timing)
   const _dt = buildDecisionTexts({gNow: gVal});
@@ -4682,6 +4710,61 @@ function syncHero(){
 
   // 4. Hero sub — from timing summary (single source)
   applyTimingToHero(_timingSummary, gVal);
+
+  // 4b. v84b: Cause-chain — "що відбувається → чому → що робити"
+  try{
+    const _conseq = el('heroConsequence');
+    if(_conseq){
+      const _drKey = _topDrv.main?.key || 'kp';
+      // Cause by driver type
+      const _causes = {
+        kp: { neg:'Геомагнітний тиск → підвищена нервовість → помилки дорожчі.', pos:'Спокійне поле → стабільна концентрація → рішення точніші.' },
+        ei: { neg:'Астроподія → порушення ритму → обережніше з новим.', pos:'Сприятлива подія → підтримка дій.' },
+        pi: { neg:'Панчанга тисне → внутрішня нестабільність → не форсуй.', pos:'Панчанга підтримує → хронобіологічний ресурс є.' },
+        li: { neg:'Місячна фаза → зниження адаптації → мінімізуй навантаження.', pos:'Місячна фаза сприятлива.' },
+        mi: { neg:'Затемнення → підвищена чутливість → уникай різких кроків.', pos:'Без затемнень.' },
+        di: { neg:'Dst-буря → геомагнітний удар → тримай мінімум.', pos:'Dst спокійний.' }
+      };
+      const _drvCause = _causes[_drKey] || _causes.kp;
+      const _text = gVal < 0 ? _drvCause.neg : _drvCause.pos;
+      _conseq.textContent = _text;
+      _conseq.style.display = _text ? '' : 'none';
+    }
+  }catch(e){}
+
+  // 4c. v84: Energy bar
+  try{
+    const _eFill = el('heroEnergyFill');
+    const _ePtr = el('heroEnergyPointer');
+    if(_eFill && _ePtr){
+      const _gCl = Math.max(-5, Math.min(5, gVal));
+      const _pct = ((_gCl + 5) / 10) * 100;
+      const _stCol = GLOBAL_STATES[_stKey]?.badgeColor || '#9bb1dc';
+      _eFill.style.width = _pct + '%';
+      _eFill.style.background = _stCol;
+      _ePtr.style.left = _pct + '%';
+    }
+  }catch(e){}
+
+  // 4d. v84: Personal greeting
+  try{
+    const _greet = el('heroGreeting');
+    if(_greet){
+      const _pData = lsGet('personalSlot_0');
+      const _pName = _pData ? (JSON.parse(_pData).name || '') : '';
+      if(_pName){
+        const _gTexts = {
+          tense: `${_pName}, сьогодні тримай мінімум — фон тисне.`,
+          unstable: `${_pName}, день потребує обережності.`,
+          neutral: `${_pName}, звичайний день — працюй у своєму темпі.`,
+          good: `${_pName}, фон підтримує — дій активніше.`,
+          favorable: `${_pName}, сильний день — використай максимум!`
+        };
+        _greet.textContent = _gTexts[_stKey] || '';
+        _greet.style.display = _gTexts[_stKey] ? '' : 'none';
+      } else { _greet.style.display = 'none'; }
+    }
+  }catch(e){}
 
   // 5. Unified advice → decisionStrip 3-col
   const _dState = { gNow: gVal, mainDriver: _topDrv.mainStr, timingSummary: _timingSummary };
@@ -4697,6 +4780,20 @@ function syncHero(){
 
   // 7. G zone label
   _set('hmZone', gZoneLabel(gVal));
+
+  // 7d. v84b: Trend label
+  try{
+    const _trendLabels = {
+      'improving_fast': { text:'↑ покращується', col:'var(--ok)' },
+      'improving':      { text:'↗ м\'яке покращення', col:'#63be7b' },
+      'flat':           { text:'→ стабільний', col:'var(--muted)' },
+      'worsening':      { text:'↘ м\'яке погіршення', col:'#ffaa33' },
+      'worsening_fast': { text:'↓ погіршується', col:'var(--bad)' }
+    };
+    const _tl = _trendLabels[_trend] || _trendLabels.flat;
+    const _hmT = el('hmTrend');
+    if(_hmT){ _hmT.textContent = _tl.text; _hmT.style.color = _tl.col; }
+  }catch(e){}
 
   // 8. Confidence — show only when <95%
   if(el('heroConfidence')){
@@ -4730,9 +4827,6 @@ function syncHero(){
   _set('heroRiskChip', RISK_MAP[_stKey] || '—');
   _set('heroPotentialChip', POT_MAP[_stKey] || '—');
 
-  // v79: Alert in hero
-  _renderHeroAlert(gVal, _d3h, _confNum, _stKey);
-
   // v78b: Cause decomposition — show what forms G
   _renderHeroCause(gVal, kpH);
 
@@ -4747,19 +4841,22 @@ function _renderHeroCause(g, kp) {
   if (!whyRows) return;
   if (!isFinite(g)) { whyRows.innerHTML = '<span style="color:var(--dim)">Дані завантажуються…</span>'; return; }
 
-  const chips = [...document.querySelectorAll('#gDecompFactors .gd-chip[data-val]')];
+  // v85b: read from __uiState.ai instead of DOM gDecompChips
+  const _ai = window.__uiState?.ai;
   const factors = [];
   if (isFinite(kp)) factors.push({ name: 'Kp−2', val: Math.round((kp - 2) * 10) / 10, label: 'геомагнітний' });
-  const nameMap = { 'Lᵢ': 'місяць', 'Mᵢ': 'затемнення', 'eᵢ': 'події', 'Pᵢ': 'панчанга', 'Dᵢ': 'DST' };
-  chips.forEach(c => {
-    const v = parseFloat(c.getAttribute('data-val'));
-    const nameEl = c.querySelector('.gd-chip-name');
-    const nm = (nameEl?.textContent || '').split(' ')[0];
-    if (isFinite(v) && nm) factors.push({ name: nm, val: v, label: nameMap[nm] || nm });
-  });
-  if (window._lastAiPi != null && window._lastAiPi !== 0) {
-    const existing = factors.find(f => f.name === 'Pᵢ');
-    if (!existing) factors.push({ name: 'Pᵢ', val: Number(window._lastAiPi), label: 'панчанга' });
+  if (_ai) {
+    if (_ai.Li !== 0) factors.push({ name: 'Lᵢ', val: _ai.Li, label: 'місяць' });
+    if (_ai.Mi !== 0) factors.push({ name: 'Mᵢ', val: _ai.Mi, label: 'затемнення' });
+    if (_ai.ei !== 0) factors.push({ name: 'eᵢ', val: _ai.ei, label: 'події' });
+    if (_ai.Pi !== 0) factors.push({ name: 'Pᵢ', val: _ai.Pi, label: 'панчанга' });
+    if ((_ai.Di || 0) !== 0) factors.push({ name: 'Dᵢ', val: _ai.Di, label: 'DST' });
+    // Add zero factors for neutral display
+    const zeroNames = ['Lᵢ','Mᵢ','eᵢ','Pᵢ','Dᵢ'];
+    const zeroLabels = { 'Lᵢ':'місяць', 'Mᵢ':'затемнення', 'eᵢ':'події', 'Pᵢ':'панчанга', 'Dᵢ':'DST' };
+    for (const nm of zeroNames) {
+      if (!factors.find(f => f.name === nm)) factors.push({ name: nm, val: 0, label: zeroLabels[nm] });
+    }
   }
 
   factors.sort((a, b) => Math.abs(b.val) - Math.abs(a.val));
@@ -4970,42 +5067,7 @@ const HORA_QUALITY = {
   'Сатурн': {q:'глибокий фокус, дисципліна, рутина', tone:'neutral'}
 };
 
-function _renderHeroAlert(g, d3h, confNum, stKey) {
-  const alertEl = el('heroAlertLine');
-  if (!alertEl) return;
-  const worsening = d3h >= 0.2;
-  const improving = d3h <= -0.2;
-
-  let text = '', level = 'info';
-
-  // Only show alert when it adds NEW info vs hero verdict
-  if (confNum < 60) {
-    // Data quality — hero doesn't say this
-    text = '◔ Дані неповні — оцінку варто читати обережно';
-    level = 'watch';
-  } else if (worsening && stKey !== 'tense') {
-    // Trend worsening — hero says state but not trend
-    text = '▲ Фон погіршується — далі може стати гірше';
-    level = 'watch';
-  } else if (improving) {
-    // Trend improving — useful timing info
-    text = '• Фон покращується — скоро відкриється краще вікно';
-    level = 'info';
-  } else {
-    // Calm/stable — show hora context (unique info not in hero)
-    try {
-      const hora = calcHora(new Date());
-      const hq = HORA_QUALITY[hora.planet];
-      text = hq ? `• ${hora.planet} hora — ${hq.q} (ще ${hora.minLeft} хв)` : `• ${hora.planet} hora (ще ${hora.minLeft} хв)`;
-    } catch(e) { text = ''; }
-    level = 'info';
-  }
-
-  if (!text) { alertEl.style.display = 'none'; return; }
-  alertEl.textContent = text;
-  alertEl.className = 'hero-alert-line level-' + level;
-  alertEl.style.display = '';
-}
+// v85b: _renderHeroAlert removed — heroAlertLine DOM deleted v83f
 
 // ═══ v78: GLOBAL_STATES — єдиний source of truth для стану ═══
 const GLOBAL_STATES = {
@@ -5331,38 +5393,94 @@ function syncPersonalContext(){
   const stKey = classifyStateByG(g);
   const st = GLOBAL_STATES[stKey];
   if(!st) return;
-  main.textContent = st.doText + ' ' + st.avoidText;
+
+  // v84b: Personal MODIFIER — not global copy
   const hora = (function(){try{return calcHora(new Date())}catch(e){return null}})();
-  const horaText = hora ? ` Зараз ${hora.planet} hora (ще ${hora.minLeft} хв).` : '';
-  sub.textContent = st.impact + horaText;
+  const pc = window._lastPanchCtx;
+  const rahu = pc?.rahu?.active;
+
+  // Build personal-specific text
+  let personalMain = '';
+  let personalSub = '';
+
+  // Hora context — what's special NOW
+  if(rahu){
+    personalMain = '⚠ Rahu Kalam активний — не починати нових справ.';
+  } else if(hora?.planet){
+    const HORA_CONTEXT = {
+      'Юпітер': 'Зараз Юпітер hora — сприяє стратегії і важливим рішенням.',
+      'Меркурій': 'Зараз Меркурій hora — підходить для комунікацій і аналізу.',
+      'Венера': 'Зараз Венера hora — сприяє переговорам і креативу.',
+      'Сонце': 'Зараз Сонце hora — лідерські дії і презентації.',
+      'Місяць': 'Зараз Місяць hora — інтуїція і спостереження.',
+      'Марс': 'Зараз Марс hora — активність і рішучість, але обережно з конфліктами.',
+      'Сатурн': 'Зараз Сатурн hora — дисципліна і системність, не поспішати.'
+    };
+    personalMain = HORA_CONTEXT[hora.planet] || `Зараз ${hora.planet} hora.`;
+    if(stKey === 'tense' || stKey === 'unstable'){
+      personalMain += ' Але загальний фон тисне — дій повільніше.';
+    }
+  } else {
+    personalMain = st.doText + ' ' + st.avoidText;
+  }
+
+  // Sub — what's different for today specifically
+  const piVal = pc?.aiComponents?.Pi || 0;
+  if(piVal >= 1){
+    personalSub = 'Панчанга сьогодні підтримує — це компенсує частину тиску.';
+  } else if(piVal <= -1){
+    personalSub = 'Панчанга додає навантаження — варто бути ще обережнішим.';
+  } else {
+    personalSub = st.impact;
+  }
+  if(hora) personalSub += ` (${hora.planet} ще ${hora.minLeft} хв)`;
+
+  main.textContent = personalMain;
+  sub.textContent = personalSub;
 }
 
 function syncDayPlanCard(){
   const box = el('dayPlanRows');
   if(!box) return;
+  // v85: Build from state, not DOM-readback
+  const slots = window._daySlots || [];
+  const nowH = new Date().getUTCHours();
   const rows = [];
-  const tRows = document.querySelectorAll('#timingRows .timing-row');
-  if (tRows.length) {
-    Array.from(tRows).slice(0,3).forEach((row, i) => {
-      const time = row.querySelector('.timing-time')?.textContent?.trim() || '';
-      const label = row.querySelector('.timing-label span')?.textContent?.trim() || row.querySelector('.timing-label')?.textContent?.trim() || '';
-      rows.push({ time, label, cls: i===0 ? 'warn' : 'info' });
-    });
+  // Future slots only (up to 3)
+  for(const s of slots){
+    const h = parseInt(s.label || '0');
+    if(h + 3 <= nowH) continue; // past
+    const g = Number(s.G ?? 0);
+    const cls = g >= 0.5 ? 'ok' : g >= -0.5 ? 'info' : 'warn';
+    const text = g >= 0.5 ? 'можна діяти' : g >= -0.5 ? 'обережно: перевірені дії' : 'тільки рутина';
+    // Hora context
+    let horaStr = '';
+    try{
+      const slotMid = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate(), h+1, 30));
+      const hora = calcHora(slotMid);
+      if(hora?.planet) horaStr = ` · ${hora.planet}`;
+    }catch(e){}
+    rows.push({ time:`${String(h).padStart(2,'0')}:00–${String(h+3).padStart(2,'0')}:00`, label: text + horaStr, cls });
+    if(rows.length >= 3) break;
   }
-  const ns = el('timingNextShift')?.textContent?.trim();
-  if (ns && ns.length > 3) rows.push({ time:'Далі', label: ns.replace(/^[•●▲⚠◔]\s*/,'').substring(0,60), cls:'ok' });
-  if (!rows.length) {
-    rows.push(
-      { time:'Ранок', label:'Тільки рутина без різких рішень', cls:'warn' },
-      { time:'День', label:'Не фіксувати важливі рішення', cls:'warn' },
-      { time:'Вечір', label:'Фон може вирівнятися', cls:'info' }
-    );
+  // Shift info from state
+  const shiftEl = el('timingNextShift');
+  const ns = shiftEl?.textContent?.trim();
+  if(ns && ns.length > 3) rows.push({ time:'Далі', label: ns.replace(/^[•●▲⚠◔]\s*/,'').substring(0,60), cls:'ok' });
+  // Fallback
+  if(!rows.length){
+    const sk = classifyStateByG(_v73G());
+    if(sk === 'tense' || sk === 'unstable'){
+      rows.push({ time:'Зараз', label:'Тільки рутина, без різких кроків', cls:'warn' });
+    } else {
+      rows.push({ time:'Зараз', label:'Працюй у звичному темпі', cls:'info' });
+    }
   }
   box.innerHTML = rows.map(r => `<div style="display:grid;grid-template-columns:68px 1fr;gap:6px;padding:5px 8px;border-radius:8px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.04);border-left:3px solid ${r.cls==='warn'?'#ff6b6b':r.cls==='ok'?'#2bd47d':'#37a7ff'}"><div style="font-size:11px;font-weight:700;color:#cfe0ff">${r.time}</div><div style="font-size:11px;line-height:1.35;color:#e6ecff">${r.label}</div></div>`).join('');
 }
 
 function syncTrustStrip(){
-  const tsKp=el('tsKp'), tsAi=el('tsAi'), tsDriver=el('tsDriver'), tsShift=el('tsShift');
+  // v85b: tsKp/tsAi/tsDriver/tsShift DOM removed v83f — only hero meta inline remains
   const kp = _v73Kp();
   const kpPart = isFinite(kp) ? Math.round((kp-2)*10)/10 : NaN;
   const pc = window._lastPanchCtx;
@@ -5370,15 +5488,10 @@ function syncTrustStrip(){
   const sumAi = (ai.Li||0)+(ai.Mi||0)+(ai.ei||0)+(ai.Pi||0)+(ai.Di||0);
   const kpStr = isFinite(kpPart) ? (kpPart>0?'+':'')+kpPart.toFixed(1) : '—';
   const aiStr = isFinite(sumAi) ? (sumAi>0?'+':'')+sumAi.toFixed(1) : '—';
-  // v83e: use shared driver from computeTopDrivers (single source)
   const _td = window._lastTopDrivers;
   const drvStr = _td?.mainStr || 'немає';
   const shiftBadge = el('timingNextShift');
   const shiftStr = shiftBadge?.textContent?.trim()?.replace(/^[•●▲⚠◔]\s*/,'')?.substring(0,40) || '—';
-  if(tsKp) tsKp.textContent = kpStr;
-  if(tsAi) tsAi.textContent = aiStr;
-  if(tsDriver) tsDriver.textContent = drvStr;
-  if(tsShift) tsShift.textContent = shiftStr;
   const hm = id => el(id);
   if(hm('hmKp')) hm('hmKp').textContent = kpStr;
   if(hm('hmAi')) hm('hmAi').textContent = aiStr;
@@ -5387,23 +5500,48 @@ function syncTrustStrip(){
 }
 
 // --- MASTER ---
+// v85: buildDashboardState — single source of truth for all render functions
+function buildDashboardState(){
+  const _ui = window.__uiState || {};
+  const g = isFinite(_ui.gNow) ? _ui.gNow : NaN;
+  const kp = _ui.kpNow;
+  const ai = _ui.ai || {};
+  const stKey = classifyStateByG(g);
+  const st = GLOBAL_STATES[stKey] || GLOBAL_STATES.neutral;
+  const pc = window._lastPanchCtx;
+  const topDrv = window._lastTopDrivers || computeTopDrivers(ai, kp);
+  const delta = _getGDelta();
+  const slots = window._daySlots || [];
+  const timingSummary = window._lastTimingSummary || null;
+  const freshness = _ui.freshness || 'live';
+
+  return {
+    g, kp, ai, stKey, st,
+    panchanga: pc,
+    driver: topDrv,
+    delta: { d3h: delta.d3h, d24h: delta.d24h, dayOver: _ui.delta },
+    timing: { slots, summary: timingSummary, isFlat: timingSummary?.allSame, noSafeWindow: timingSummary && timingSummary.slots?.length && !timingSummary.hasGoodSlot },
+    freshness,
+    confPct: _ui.confPct
+  };
+}
+
 function syncV702UI(){
+  // v85: build centralized state first
+  const _ds = buildDashboardState();
+  window.__dashState = _ds; // available for any function
+
   try{syncHero();}catch(e){console.warn('syncHero:',e);}
-  // v80: syncDecision, syncExplain, syncStory, syncRadar, syncTriggers, mergeOpsCards calls removed (stubs)
   try{syncWhy();}catch(e){console.warn('syncWhy:',e);}
   try{renderMoonRetroTop();}catch(e){console.warn('renderMoonRetroTop:',e);}
   try{syncPanchSummary();}catch(e){console.warn('syncPanchSummary:',e);}
-  // v78: refreshV73Layer removed; live parts called directly
-  // v80: renderAIExplain removed (heroTopDrivers no longer exists)
   try{renderConfidenceBreakdown();}catch(e){console.warn('confidence:',e);}
   try{renderKpContribution();}catch(e){console.warn("kpContrib:",e);}
   try{renderPanchPiLine();}catch(e){console.warn("panchPi:",e);}
   try{renderWf3();}catch(e){console.warn("wf3:",e);}
-  // v79: trust strip
   try{syncTrustStrip();}catch(e){console.warn("trustStrip:",e);}
   try{syncDayPlanCard();}catch(e){console.warn("dayPlan:",e);}
   try{syncPersonalContext();}catch(e){console.warn("personalCtx:",e);}
-  // v75: save G to history for ΔG
   try{const _gNow=_v73G();if(isFinite(_gNow))_saveGHistory(_gNow);}catch(e){}
 }
 
@@ -6691,10 +6829,8 @@ function renderPersonal() {
   };
   const _ti = TAARA_INFO[taara.group];
   const taaraDetail   = _ti ? _ti.detail : taara.name;
-  const summaryAction = _ti ? _ti.short  : taara.name;
 
   // G-mod рядок
-  const slotCol = SLOT_COLORS[_activeSlot] || '#37a7ff';
   const gmodSign = taaraGmod > 0 ? `+${taaraGmod}` : `${taaraGmod}`;
   const gmodHtml = taaraGmod !== 0
     ? `<div style="font-size:11px;color:${col};margin-top:4px">Taara G-mod: <strong>${gmodSign}</strong></div>`
@@ -9270,36 +9406,12 @@ function pwaReload() {
 }
 
 // ═══ WOW LAYER v71 ═══
+// v85b: renderWowOrb, startWowOrb removed — wowOrb DOM deleted v83f
 function wowColorByG(g){
   if(!isFinite(g)) return '#9bb1dc';
   if(g>=1.5) return '#2bd47d'; if(g>=-0.5) return '#9bb1dc';
   if(g>=-2.5) return '#ffcc00'; return '#ff6b6b';
 }
-function renderWowOrb(g){
-  const c=document.getElementById('wowOrb'); if(!c) return;
-  const ctx=c.getContext('2d'),w=c.width,h=c.height,cx=w/2,cy=h/2;
-  const col=wowColorByG(g),t=performance.now()/1000;
-  const kp=window._lastKpForWow||2;
-  const speed=0.5+kp*0.3; // Kp drives animation speed
-  const turbulence=kp>=5?0.08:kp>=3?0.05:0.03;
-  const pulse=1+turbulence*Math.sin(t*speed*2);
-  ctx.clearRect(0,0,w,h);
-  // Rings — more rings during storms
-  const nRings=kp>=5?6:4;
-  for(let i=0;i<nRings;i++){ctx.beginPath();ctx.arc(cx,cy,(40+i*9)*pulse,0,Math.PI*2);ctx.strokeStyle=col+(i<2?'55':'1a');ctx.lineWidth=i===0?2.2:1;ctx.stroke()}
-  const g1=ctx.createRadialGradient(cx,cy,6,cx,cy,42);
-  g1.addColorStop(0,'rgba(255,255,255,.95)');g1.addColorStop(.18,col);g1.addColorStop(.55,col+'55');g1.addColorStop(1,'rgba(0,0,0,0)');
-  ctx.fillStyle=g1;ctx.beginPath();ctx.arc(cx,cy,42*pulse,0,Math.PI*2);ctx.fill();
-  ctx.beginPath();ctx.arc(cx,cy,56,0,Math.PI*2);ctx.strokeStyle='rgba(255,255,255,.08)';ctx.lineWidth=1;ctx.stroke();
-  // Spark — speed tied to Kp
-  const a=t*speed*0.5;
-  const sx=cx+Math.cos(a)*56,sy=cy+Math.sin(a)*56;
-  ctx.beginPath();ctx.arc(sx,sy,kp>=5?4.5:3,0,Math.PI*2);ctx.fillStyle=kp>=5?'#ff6b6b':'#fff';ctx.fill();
-  // Storm glitch effect
-  if(kp>=5&&Math.random()<0.1){ctx.fillStyle='rgba(255,100,100,.15)';ctx.fillRect(0,Math.random()*h,w,2)}
-}
-let _wowOrbRAF=null;
-function startWowOrb(g){function loop(){if(!document.hidden)renderWowOrb(g);_wowOrbRAF=requestAnimationFrame(loop)}if(_wowOrbRAF)cancelAnimationFrame(_wowOrbRAF);loop()}
 
 function initWowParticles(){
   const c=document.getElementById('wowParticles'),host=document.getElementById('cosmicMapWrap');
@@ -9340,14 +9452,8 @@ function renderConfidenceBreakdown(){
 
 // v78: removed renderPatternAlert, renderScenarioStrip, refreshV73Layer, renderSuperSignal (targets CSS-hidden)
 
-function applyWowFromG(){
-  const _ui = window.__uiState || {};
-  let g = isFinite(_ui.gNow) ? _ui.gNow : NaN;
-  if(!isFinite(g)){const h=document.getElementById('heroG');if(h){const m=h.textContent.match(/-?\d+(\.\d+)?/);if(m)g=parseFloat(m[0])}}
-  if(isFinite(_ui.kpNow)) window._lastKpForWow=_ui.kpNow;
-  else{const kpEl=document.getElementById('nowKp');if(kpEl){const km=kpEl.textContent.match(/\d+(\.\d+)?/);if(km)window._lastKpForWow=parseFloat(km[0])}}
-  startWowOrb(g);
-}
+// v85b: applyWowFromG removed — wowOrb DOM deleted v83f
+function applyWowFromG(){}
 
 function initHeroField(){
   const c=document.getElementById('heroField'),host=document.getElementById('heroCard');
