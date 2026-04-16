@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v85b-F7</title>
+  <title>G-Index — Космофізичний дашборд v85b-F8</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -998,6 +998,7 @@
         <div class="hero-right">
           <span id="heroFreshness" class="live" style="font-size:13px;font-weight:800">LIVE</span>
           <span id="heroDelta" style="font-size:12px;font-weight:700;color:var(--muted)"></span>
+          <span id="heroNextShiftChip" style="font-size:11px;color:var(--faint);display:none"></span>
           <span id="heroStamp" style="font-size:11px;color:var(--dim)">—</span>
           <span id="heroConfidence" style="font-size:11px;color:var(--dim)"></span>
         </div>
@@ -4632,24 +4633,33 @@ function renderDecisionTiming(slots){
   if(!list) return summary;
   const futureSlots = summary.slots.filter(s => !s.isPast);
   const visible = futureSlots.length ? futureSlots : summary.slots;
-  // v85b-F7: навіть при allSame рендеримо слоти, але з суфіксом "день рівний"
   if(!visible.length){
     list.innerHTML = `<span style="color:var(--dim);font-size:12px">Немає даних по слотах.</span>`;
     return summary;
   }
-  const _extraSuffix = summary.allSame
-    ? (visible[0]?.cls === 'bad' ? ' · весь день без форсування'
-      : visible[0]?.cls === 'mid' ? ' · стабільний рівний фон'
-      : ' · рівний сприятливий фон')
-    : '';
+  // v85b-F8.2+F8.3: при allSame — decision-level (2 рядки), не 6.
+  // Деталі по слотах залишаються у "Локальний ритм" нижче (сенс-розділення ролей).
+  if(summary.allSame){
+    const _first = visible[0];
+    const _cls = _first?.cls || 'mid';
+    const _nowText = _cls === 'bad' ? 'уникати — без форсування'
+                   : _cls === 'mid' ? 'стандартний темп'
+                   : 'сприятливий момент';
+    const _restText = _cls === 'bad' ? 'режим без змін до кінця дня'
+                    : _cls === 'mid' ? 'фон стабільний до кінця дня'
+                    : 'сприятливий фон до кінця дня';
+    list.innerHTML = `
+      <div class="dt-row dt-${_cls} dt-now"><span class="dt-time">Зараз</span><span class="dt-label">${_nowText} ◀</span></div>
+      <div class="dt-row dt-${_cls}" style="opacity:.72"><span class="dt-time">До кінця дня</span><span class="dt-label">${_restText}</span></div>
+      <div style="color:var(--faint);font-size:10px;margin-top:4px">Детальний погодинний розклад — у "Локальний ритм" нижче</div>
+    `;
+    return summary;
+  }
+  // Normal mode (non-flat day) — render all slots as before
   list.innerHTML = visible.map(s =>
     `<div class="dt-row dt-${s.cls}${s.isNow?' dt-now':''}">`
-    +`<span class="dt-time">${s.time}</span><span class="dt-label">${s.text}${_extraSuffix}${s.isNow?' ◀ зараз':''}</span></div>`
+    +`<span class="dt-time">${s.time}</span><span class="dt-label">${s.text}${s.isNow?' ◀ зараз':''}</span></div>`
   ).join('');
-  // При allSame додаємо заголовковий контекст над слотами
-  if(summary.allSame){
-    list.innerHTML = `<div style="color:var(--faint);font-size:11px;margin-bottom:4px">Усі основні вікна дня дають однакову рекомендацію — важливі рішення не приймати:</div>` + list.innerHTML;
-  }
   return summary;
 }
 
@@ -4738,24 +4748,30 @@ function syncHero(){
 
   // Delta: from __uiState or fallback
   // v85b-F7: fallback delta з попереднього G (щоб heroDelta не був порожній)
+  // v85b-F8.1: якщо немає історії — ховати блок (не "ΔG —" placeholder)
   let dn = isFinite(_ui.delta) ? _ui.delta : NaN;
+  let _hasDeltaHistory = false;
   if (!isFinite(dn) && isFinite(gVal)) {
     const _prev = window._prevGforHeroDelta;
-    if (isFinite(_prev)) dn = Math.round((gVal - _prev) * 100) / 100;
+    if (isFinite(_prev)) {
+      dn = Math.round((gVal - _prev) * 100) / 100;
+      _hasDeltaHistory = true;
+    }
     window._prevGforHeroDelta = gVal;
+  } else if (isFinite(dn)) {
+    _hasDeltaHistory = true;
   }
   const hd=el('heroDelta');
   if(hd){
-    if(isFinite(dn)){
+    if(_hasDeltaHistory && isFinite(dn)){
       const _sign = dn > 0 ? '↑ +' : dn < 0 ? '↓ ' : '→ ';
       hd.textContent = _sign + dn.toFixed(2);
       hd.style.color=dn>0.05?'var(--ok)':dn<-0.05?'var(--bad)':'var(--muted)';
       hd.style.display='';
     } else {
-      // v85b-F7: при нестачі попереднього значення — показати статичний плейсхолдер, не ховати
-      hd.textContent='ΔG —';
-      hd.style.color='var(--faint)';
-      hd.style.display='';
+      // Нема історії — ховаємо блок до другого refresh
+      hd.textContent='';
+      hd.style.display='none';
     }
   }
 
@@ -4771,6 +4787,21 @@ function syncHero(){
   }
 
   _set('heroStamp', _ui.stamp || (el('stamp')?.textContent||'').replace('Оновлено:','').trim() || '—');
+
+  // v85b-F8.4: compact next-shift chip in hero-right (mirrors timingNextShift)
+  const _hnsChip = el('heroNextShiftChip');
+  const _nsSource = el('timingNextShift');
+  if (_hnsChip && _nsSource) {
+    const _nsText = (_nsSource.textContent || '').trim();
+    if (_nsText && _nsText.length > 3) {
+      // Normalize: remove leading bullets/emojis, keep core text
+      const _clean = _nsText.replace(/^[·•●▲⚠◔\s]+/, '').substring(0, 60);
+      _hnsChip.textContent = '⇥ ' + _clean;
+      _hnsChip.style.display = '';
+    } else {
+      _hnsChip.style.display = 'none';
+    }
+  }
 
   // v70.9: trend arrow under ring
   const ht=el('heroTrend');
@@ -5118,8 +5149,9 @@ function _renderHeroTimeWindows() {
   const _isFlat = _gSpread < 0.5;
 
   // v79: update timing title based on day type
+  // v85b-F8.3: позначити detail-level на flat-day (decision = вище у "Коли діяти")
   const _timTitle = el('timingTitle');
-  if (_timTitle) _timTitle.textContent = _isFlat ? 'Локальний ритм (день рівний)' : 'Критичні вікна (сьогодні)';
+  if (_timTitle) _timTitle.textContent = _isFlat ? 'Локальний ритм — деталі по слотах' : 'Критичні вікна (сьогодні)';
 
   // v79: pre-compute hora for each slot when flat
   const _horaForSlot = {};
