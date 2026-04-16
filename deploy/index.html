@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v85b</title>
+  <title>G-Index — Космофізичний дашборд v85b-F6</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -844,6 +844,13 @@
     #impactBlock{opacity:.82!important;gap:10px!important;margin-bottom:10px!important}
     #impactBlock>div{padding:8px 12px!important}
     #impactGoodText,#impactBadText,#impactNeutralText{font-size:11px!important}
+
+    /* ═══ v85b-F6 DUPLICATE-DECISION HIDE ═══
+       Ці блоки дублюють Hero-рішення: daySentence/decisionStrip/impactBlock.
+       DOM лишається (showTab navigation у fcst/panch/personal tabs читає ці id),
+       але візуально приховуємо. У v86 — повне видалення.
+    */
+    #daySentenceCard,#decisionStrip,#impactBlock{display:none!important}
   </style>
 
   <!-- Астро бібліотека: фаза Місяця -->
@@ -901,13 +908,16 @@
       <span class="sci-item sci-primary">🛰 <strong>Kp:</strong> <span class="sci-val" id="sciKp">—</span> <span class="sci-src">NOAA</span></span>
       <span class="sci-item sci-primary">🌙 <strong>Фаза:</strong> <span class="sci-val" id="sciPhase">—</span></span>
       <span class="sci-item sci-primary">🧲 <strong>Dst:</strong> <span class="sci-val" id="sciDst">—</span> <span class="sci-src">Kyoto</span></span>
-        <button id="btnCacheReset" onclick="navigator.serviceWorker.getRegistrations().then(r=>r.forEach(s=>s.unregister()));caches.keys().then(k=>k.forEach(c=>caches.delete(c)));setTimeout(()=>location.reload(),500)" style="background:#2a1a00;color:#ffcc44;border:1px solid #554400;font-size:11px;padding:2px 8px;border-radius:6px" title="Скинути кеш і перезавантажити">🗑 Кеш</button>
       <span class="sci-item sci-primary">🌑 <strong>Lᵢ:</strong> <span class="sci-val" id="sciLi">—</span></span>
       <span class="sci-item sci-primary">🌘 <strong>Mᵢ:</strong> <span class="sci-val" id="sciMi">—</span></span>
       <span class="sci-item sci-primary">📅 <strong>eᵢ:</strong> <span class="sci-val" id="sciEi">—</span></span>
       <span class="sci-item sci-primary">🔮 <strong>Pᵢ:</strong> <span class="sci-val" id="sciPi">—</span></span>
-      <!-- Вторинні: кнопка розгортання -->
-      <span id="sciMoreToggle" onclick="toggleSciMore()" style="cursor:pointer;color:var(--faint);font-size:11px;margin-left:auto;white-space:nowrap;user-select:none">▸ детально</span>
+      <span class="sci-item sci-primary">🧲 <strong>Dᵢ:</strong> <span class="sci-val" id="sciDi">—</span></span>
+      <!-- Вторинні: кнопка розгортання + скидання кешу -->
+      <span style="margin-left:auto;display:inline-flex;align-items:center;gap:8px">
+        <span id="sciMoreToggle" onclick="toggleSciMore()" style="cursor:pointer;color:var(--faint);font-size:11px;white-space:nowrap;user-select:none">▸ детально</span>
+        <button id="btnCacheReset" onclick="navigator.serviceWorker.getRegistrations().then(r=>r.forEach(s=>s.unregister()));caches.keys().then(k=>k.forEach(c=>caches.delete(c)));setTimeout(()=>location.reload(),500)" style="background:#2a1a00;color:#ffcc44;border:1px solid #554400;font-size:11px;padding:2px 8px;border-radius:6px" title="Скинути кеш і перезавантажити">🗑 Кеш</button>
+      </span>
     </div>
     <!-- Вторинні показники -->
     <div id="sciMorePanel" style="display:none;margin-top:4px;padding:6px 12px;background:var(--card2);border:1px solid var(--border);border-radius:8px;font-size:var(--fs-sm)">
@@ -973,8 +983,7 @@
             </div>
           </div>
           <div id="heroMetaInline">
-            <span style="display:none">Kp−2: <strong id="hmKp" style="color:var(--text2)">—</strong></span>
-            <span style="display:none">ΣAᵢ: <strong id="hmAi" style="color:var(--text2)">—</strong></span>
+            <!-- v85b-F6 (P10): hmKp / hmAi removed — mertvi hidden spans, logic too nuked below -->
             <span>Драйвер: <strong id="hmDriver" style="color:var(--text2)">—</strong></span>
             <span>Далі: <strong id="hmShift" style="color:var(--text2)">—</strong></span>
             <span>Тренд: <strong id="hmTrend" style="color:var(--muted)">—</strong></span>
@@ -2016,6 +2025,19 @@ function phaseNameByAngle(deg){
 // --------------------- Ваги (1:1 із Excel-словниками) -----------------------
 // Li визначається хардкодом: Amavasya(idx=29)=-3, Purnima(idx=14)=0 (v14.2), решта=0
 
+// v85b-F5 (КРИТ-4): Eclipse type differentiation
+// Раніше: усі затемнення = -4 (переоцінка пенумбральних)
+// Тепер: за типом (NASA Eclipse Catalog taxonomy)
+const ECLIPSE_WEIGHT = {
+  total_solar:    -4,  // Total Solar
+  total_lunar:    -4,  // Total Lunar
+  hybrid_solar:   -4,  // Hybrid (Total+Annular) Solar
+  annular:        -2,  // Annular Solar
+  partial_solar:  -2,  // Partial Solar
+  partial_lunar:  -2,  // Partial Lunar
+  penumbral:      -1,  // Penumbral Lunar (мінімальний геомагнітний ефект)
+  unknown:        -3   // Legacy fallback (Set without type)
+};
 const WEIGHT_M_ECLIPSE = {
   'Сонячне затемнення': -4,
   'Місячне затемнення': -4,
@@ -2072,7 +2094,9 @@ function indexBuiltinEvents(){
 
 // ---------------------- Індекс подій (ICS + затемнення) ---------------------
 const eventIndex = new Map();   // ключ 'YYYY-MM-DD' -> масив {name, weight, source, raw}
-const eclipsesByYear = new Map(); // рік -> Set('YYYY-MM-DD') усі дні затемнень
+const eclipsesByYear = new Map(); // рік -> Map<'YYYY-MM-DD', type> (v85b-F5)
+const ECLIPSE_CATALOG_END_YEAR = 2030; // v85b-F5: СЕРЕД-1 — явна межа каталогу
+const _eclipseCatalogWarned = new Set(); // один warn на рік
 
 // Проксі для CORS (fallback)
 function fetchWithTimeout(url, ms=5000){
@@ -2262,7 +2286,8 @@ async function ensureEclipsesForYear(year){
   }catch(e){ text=''; }
 
   const months = {Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};
-  const set = new Set();
+  // v85b-F5: Map<dateStr, type> instead of Set<dateStr>
+  const set = new Map();
 
   if(text){
     const re = /([A-Z][a-z]{2})\s+(\d{1,2})(?:[–-](\d{1,2}))?/g;
@@ -2273,37 +2298,54 @@ async function ensureEclipsesForYear(year){
       if(d2){
         for(let d=d1; d<=d2; d++){
           const dt = new Date(Date.UTC(year, months[mon], d));
-          set.add(fmtDate(dt));
+          set.set(fmtDate(dt), 'unknown'); // scrape не дає типу — conservative -3
         }
       }else{
         const dt = new Date(Date.UTC(year, months[mon], d1));
-        set.add(fmtDate(dt));
+        set.set(fmtDate(dt), 'unknown');
       }
     }
   }
 
   if(set.size===0 && year===2025){
-    ['2025-03-13','2025-03-14','2025-03-29','2025-09-07','2025-09-08','2025-09-21'].forEach(d=>set.add(d));
+    // NASA Eclipse Catalog 2025
+    set.set('2025-03-13','partial_lunar'); set.set('2025-03-14','total_lunar');
+    set.set('2025-03-29','partial_solar');
+    set.set('2025-09-07','total_lunar'); set.set('2025-09-08','total_lunar');
+    set.set('2025-09-21','partial_solar');
   }
   if(set.size===0 && year===2026){
     // NASA Eclipse Catalog 2026
-    ['2026-02-17','2026-03-03','2026-08-12','2026-08-28'].forEach(d=>set.add(d));
+    set.set('2026-02-17','annular');       // Annular Solar Eclipse
+    set.set('2026-03-03','total_lunar');   // Total Lunar Eclipse
+    set.set('2026-08-12','total_solar');   // Total Solar Eclipse
+    set.set('2026-08-28','partial_lunar'); // Partial Lunar Eclipse
   }
   if(set.size===0 && year===2027){
     // NASA Eclipse Catalog 2027: 06 лют (кільцеподібне сонячне), 02 серп (повне сонячне), 26 груд (часткове місячне)
-    ['2027-02-06','2027-08-02','2027-12-26'].forEach(d=>set.add(d));
+    set.set('2027-02-06','annular');
+    set.set('2027-08-02','total_solar');
+    set.set('2027-12-26','partial_lunar');
   }
   if(set.size===0 && year===2028){
-    // NASA Eclipse Catalog 2028: 26 січ (кільцеподібне сонячне), 22 лип (повне сонячне), 12 серп (часткове місячне), 05 груд (часткове місячне)
-    ['2028-01-26','2028-07-22','2028-08-12','2028-12-05'].forEach(d=>set.add(d));
+    // NASA Eclipse Catalog 2028
+    set.set('2028-01-26','annular');
+    set.set('2028-07-22','total_solar');
+    set.set('2028-08-12','partial_lunar');
+    set.set('2028-12-05','partial_lunar');
   }
   if(set.size===0 && year===2029){
-    // NASA Eclipse Catalog 2029: 14 січ (часткове сонячне), 12 черв (кільцеподібне сонячне), 11 лип (часткове місячне), 05 лип (повне місячне), 05 груд (кільцеподібне сонячне)
-    ['2029-01-14','2029-06-12','2029-07-11','2029-12-05'].forEach(d=>set.add(d));
+    // NASA Eclipse Catalog 2029
+    set.set('2029-01-14','partial_solar');
+    set.set('2029-06-12','annular');
+    set.set('2029-07-11','partial_lunar');
+    set.set('2029-12-05','annular');
   }
   if(set.size===0 && year===2030){
-    // NASA Eclipse Catalog 2030: 01 черв (кільцеподібне сонячне), 25 листоп (кільцеподібне сонячне), 15 черв (часткове місячне)
-    ['2030-06-01','2030-06-15','2030-11-25'].forEach(d=>set.add(d));
+    // NASA Eclipse Catalog 2030
+    set.set('2030-06-01','annular');
+    set.set('2030-06-15','partial_lunar');
+    set.set('2030-11-25','annular');
   }
 
   eclipsesByYear.set(year, set);
@@ -2311,19 +2353,63 @@ async function ensureEclipsesForYear(year){
 function computeMiFromEclipses(dateUTC){
   const y = dateUTC.getUTCFullYear();
   const set = eclipsesByYear.get(y);
-  if(!set || set.size===0) return {Mi:0, mTip:'0 — даних про затемнення на рік немає'};
+
+  // v85b-F5 (СЕРЕД-1): Explicit catalog-end warning
+  if(!set || set.size===0){
+    if(y > ECLIPSE_CATALOG_END_YEAR && !_eclipseCatalogWarned.has(y)){
+      _eclipseCatalogWarned.add(y);
+      console.warn(`[eclipse] Catalog ends ${ECLIPSE_CATALOG_END_YEAR}; year ${y} returns Mi=0 (no data)`);
+    }
+    return {Mi:0, mTip: y > ECLIPSE_CATALOG_END_YEAR
+      ? `0 — каталог закінчується ${ECLIPSE_CATALOG_END_YEAR}`
+      : '0 — даних про затемнення на рік немає'};
+  }
 
   const ds   = fmtDate(dateUTC);
   const dpm1 = fmtDate(addDays(dateUTC,-1));
   const dp1  = fmtDate(addDays(dateUTC,+1));
 
-  if(set.has(ds))   return {Mi: WEIGHT_M_ECLIPSE['Сонячне затемнення'] , mTip:'-4 — день затемнення (сонячне/місячне)'};
-  if(set.has(dpm1) || set.has(dp1)) return {Mi: WEIGHT_M_ECLIPSE['День до/після затемнення'], mTip:'-3 — день до/після затемнення'};
+  // v85b-F5 (КРИТ-4): backward-compat get for both Map and Set
+  const getType = (d) => {
+    if(typeof set.get === 'function') return set.get(d); // Map
+    return set.has(d) ? 'unknown' : undefined;            // Legacy Set
+  };
+  const has = (d) => {
+    if(typeof set.get === 'function') return set.has(d);
+    return set.has(d);
+  };
 
+  // Exact day: weight by eclipse type
+  if(has(ds)){
+    const type = getType(ds) || 'unknown';
+    const w = ECLIPSE_WEIGHT[type] != null ? ECLIPSE_WEIGHT[type] : ECLIPSE_WEIGHT.unknown;
+    const typeLabel = {
+      total_solar:'повне сонячне', total_lunar:'повне місячне',
+      hybrid_solar:'гібридне сонячне',
+      annular:'кільцеподібне сонячне',
+      partial_solar:'часткове сонячне', partial_lunar:'часткове місячне',
+      penumbral:'пенумбральне місячне',
+      unknown:'день затемнення'
+    }[type] || 'затемнення';
+    return {Mi: w, mTip: `${w} — ${typeLabel}`};
+  }
+  // ±1 day around eclipse — lighter effect, scaled from peak
+  if(has(dpm1) || has(dp1)){
+    const peakType = getType(dpm1) || getType(dp1) || 'unknown';
+    const peakW = ECLIPSE_WEIGHT[peakType] != null ? ECLIPSE_WEIGHT[peakType] : ECLIPSE_WEIGHT.unknown;
+    // Scale by ~0.75: penumbral peak -1 → ±1d ≈ 0 (clamp); full peak -4 → -3
+    const adj = Math.round(peakW * 0.75);
+    if(adj === 0) return {Mi:0, mTip:'0 — ±1d від пенумбрального (мінімальний ефект)'};
+    return {Mi: adj, mTip: `${adj} — день до/після затемнення`};
+  }
+
+  // Wider eclipse window: -3..+3 days (-1 fixed)
   for(let k=-3;k<=3;k++){
     if(k===0 || k===-1 || k===1) continue;
     const dd = fmtDate(addDays(dateUTC,k));
-    if(set.has(dd)) return {Mi: WEIGHT_M_ECLIPSE['Період впливу затемнень'], mTip:'-1 — період впливу затемнення'};
+    if(has(dd)){
+      return {Mi: WEIGHT_M_ECLIPSE['Період впливу затемнень'], mTip:'-1 — період впливу затемнення'};
+    }
   }
   return {Mi:0, mTip:'0 — поза періодом затемнень'};
 }
@@ -2692,9 +2778,11 @@ function computeAi(dateTimeUTC, kp=0){
   }
   const eiTotal = Math.round((ei + horaEi) * 10) / 10;
 
-  // Sn>150 корекція — синхронно з engine v17 (WEIGHTS.sn_high_pen = -0.4)
+  // v85b-F5 (СЕРЕД-3): Sn penalty gradation — fixes constant -0.4 drift during Solar Max 2025-2026
+  // Раніше: Sn>150 → -0.4 (бінарно). Solar Max має Sn ~150-200 → постійний шум -0.4.
+  // Тепер: пороги diff (було engine v17 WEIGHTS.sn_high_pen = -0.4 single-threshold)
   const _snVal = window._lastWolfSn ? (window._lastWolfSn.sn ?? 0) : 0;
-  const snPen  = _snVal > 150 ? -0.4 : 0;
+  const snPen  = _snVal > 200 ? -0.4 : _snVal > 150 ? -0.2 : 0;
 
   // v51: Bz/Vsw — інформаційний контекст, НЕ в canonical G (§13.2 Посібника)
   const Ai = Math.round((Li + Mi + eiTotal + Pi + snPen) * 10) / 10;
@@ -4171,6 +4259,8 @@ function renderPanchangaCard(state){
 function renderPanchanga(dateUTC){
   const state = computePanchangaState(dateUTC);
   _lastPanchCtx = state.ctx;
+  // v85b-F4: expose raw panchanga total (ns+ts+ys+ks+rahu) for verdict sync
+  if (_lastPanchCtx) _lastPanchCtx.pclTotal = state.pclOnly;
   renderPanchangaCard(state);
 }
 
@@ -4924,9 +5014,13 @@ function _renderHeroCause(g, kp) {
     const d = activeFact[0];
     const d2 = activeFact[1];
     if (d) {
-      const panchPi = pc?.aiComponents?.Pi || 0;
-      const pTxt = panchPi <= -1 ? 'Панчанга також погіршує фон.'
-                 : panchPi >= 1 ? 'Панчанга частково компенсує тиск.'
+      // v85b-F4: use raw panchanga total (same source as Panchanga card verdict) to avoid desync
+      const panchTotal = (pc && typeof pc.pclTotal === 'number') ? pc.pclTotal
+                       : (pc?.aiComponents?.Pi || 0);
+      const pTxt = panchTotal <= -2 ? 'Панчанга також погіршує фон.'
+                 : panchTotal <= -1 ? 'Панчанга злегка тисне.'
+                 : panchTotal >=  2 ? 'Панчанга посилює день.'
+                 : panchTotal >=  1 ? 'Панчанга частково підтримує.'
                  : 'Панчанга нейтральна.';
       const secondTxt = d2 ? ` ${d2.label} (${d2.val>0?'+':''}${d2.val.toFixed(1)}) теж впливає.` : '';
       // v83e: use shared driver label from computeTopDrivers
@@ -4947,7 +5041,14 @@ function _renderHeroCause(g, kp) {
       }
       whyMain.innerHTML = `Головна причина: <strong>${dLabel}</strong> (${d.val>0?'+':''}${d.val.toFixed(1)}).${secondTxt} ${pTxt}${eBreakdownHtml}`;
     } else {
-      whyMain.textContent = 'Усі фактори нейтральні — день рівний без вираженого тиску. ' + (pc?.aiComponents?.Pi != null ? 'Панчанга нейтральна.' : '');
+      // v85b-F4: pclTotal-aware fallback
+      const _pt = (pc && typeof pc.pclTotal === 'number') ? pc.pclTotal : 0;
+      const _ptTxt = _pt <= -2 ? 'Панчанга несприятлива.'
+                   : _pt <= -1 ? 'Панчанга злегка тисне.'
+                   : _pt >=  2 ? 'Панчанга підтримує день.'
+                   : _pt >=  1 ? 'Панчанга частково підтримує.'
+                   : (pc?.aiComponents?.Pi != null ? 'Панчанга нейтральна.' : '');
+      whyMain.textContent = ('Усі фактори нейтральні — день рівний без вираженого тиску. ' + _ptTxt).trim();
     }
   }
 }
@@ -5034,7 +5135,7 @@ function _renderHeroTimeWindows() {
     const mark = isCurrent ? '<span style="color:var(--ok);font-size:10px;font-weight:700"> ◀ зараз</span>' : '';
     const dot = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${col};flex-shrink:0"></span>`;
     return `<div class="timing-row${cls}">`
-      + `<div class="timing-time">${String(h).padStart(2,'0')}:00–${String(endH).padStart(2,'0')}:00</div>`
+      + `<div class="timing-time">${String(h).padStart(2,'0')}:00–${String(endH).padStart(2,'0')}:00 <span style="color:var(--faint);font-size:10px;font-weight:400">UTC</span></div>`
       + `<div class="timing-label" style="display:flex;align-items:center;gap:6px">${dot}<span>${label}${mark}</span></div>`
       + `</div>`;
   });
@@ -5152,6 +5253,24 @@ function classifyStateByG(g) {
   if (g >= 0) return 'neutral';
   if (g > -2) return 'unstable';
   return 'tense';
+}
+
+// v85b-F6: single-source decision resolver (wraps classifyStateByG + GLOBAL_STATES).
+// Гарантує, що hero / personal / timing читають рішення з одного джерела.
+function resolveDecisionByG(g) {
+  const stKey = classifyStateByG(g);
+  const st = GLOBAL_STATES[stKey] || GLOBAL_STATES.neutral;
+  return {
+    mode: stKey === 'favorable' || stKey === 'good' ? 'action'
+        : stKey === 'tense' || stKey === 'unstable' ? 'risk'
+        : 'neutral',
+    stKey,
+    title: st.verdict || st.label || '',
+    doText: st.doText || '',
+    avoidText: st.avoidText || '',
+    noteText: st.impact || '',
+    cmd: st.cmd || ''
+  };
 }
 
 // --- DECISION ---
@@ -5401,6 +5520,24 @@ function syncPersonalContext(){
   const st = GLOBAL_STATES[stKey];
   if(!st) return;
 
+  // v85b-F6 (CRIT): Personal layer НЕ має права давати optimistic поради при risk-фоні.
+  // Раніше: Юпітер hora при G=-1.33 → "сприяє стратегії і важливим рішенням" (суперечність з hero).
+  // Тепер: при G ≤ -1 особистий шар — тільки про НЕ-дії.
+  if (isFinite(g) && g <= -1) {
+    const hora = (function(){try{return calcHora(new Date())}catch(e){return null}})();
+    const pc = window._lastPanchCtx;
+    const rahu = pc?.rahu?.active;
+    if (rahu) {
+      main.textContent = '⚠ Rahu Kalam + нестабільний фон — не починати нових справ.';
+    } else if (hora?.planet) {
+      main.textContent = `${hora.planet} hora, але загальний фон тисне — без форсування і нових рішень.`;
+    } else {
+      main.textContent = 'Підтримуй рутину, без форсування і конфліктних рішень.';
+    }
+    sub.textContent = 'Персональний шар не перекриває глобальний ризик фону.';
+    return;
+  }
+
   // v84b: Personal MODIFIER — not global copy
   const hora = (function(){try{return calcHora(new Date())}catch(e){return null}})();
   const pc = window._lastPanchCtx;
@@ -5500,8 +5637,7 @@ function syncTrustStrip(){
   const shiftBadge = el('timingNextShift');
   const shiftStr = shiftBadge?.textContent?.trim()?.replace(/^[•●▲⚠◔]\s*/,'')?.substring(0,40) || '—';
   const hm = id => el(id);
-  if(hm('hmKp')) hm('hmKp').textContent = kpStr;
-  if(hm('hmAi')) hm('hmAi').textContent = aiStr;
+  // v85b-F6 (P10): hmKp/hmAi видалено — зайві hidden поля, не читалися UI
   if(hm('hmDriver')) hm('hmDriver').textContent = drvStr;
   if(hm('hmShift')) hm('hmShift').textContent = shiftStr;
 }
@@ -5515,6 +5651,7 @@ function buildDashboardState(){
   const ai = _ui.ai || {};
   const stKey = classifyStateByG(g);
   const st = GLOBAL_STATES[stKey] || GLOBAL_STATES.neutral;
+  const decision = resolveDecisionByG(g); // v85b-F6: single-source decision
   const pc = window._lastPanchCtx;
   const topDrv = window._lastTopDrivers || computeTopDrivers(ai, kp);
   const delta = _getGDelta();
@@ -5524,6 +5661,7 @@ function buildDashboardState(){
 
   return {
     g, kp, ai, stKey, st,
+    decision, // v85b-F6
     panchanga: pc,
     driver: topDrv,
     delta: { d3h: delta.d3h, d24h: delta.d24h, dayOver: _ui.delta },
@@ -5892,9 +6030,10 @@ function calcMoonLongitude(jde) {
 }
 
 function lahiriAyanamsha(jde) {
-  // BUG-2 fix v36: Lahiri ref 23.853° at J2000.0 (JDE 2451545.0), rate 50.2388475"/yr
-  // was: 23.25/2433282.5 → error +5.7 arcmin vs IAU
-  return 23.853 + (50.2388475 / 3600) * (jde - 2451545.0) / 365.25;
+  // v85b-F5 (КРИТ-1): Swiss Ephemeris official Lahiri at J2000.0 = 23°51'23.4" = 23.85650°
+  // Rate 50.27889624"/yr per IAU 2006 precession. Was 23.853 + 50.2388475 — error ~12.6".
+  // Previous note (kept for trace): BUG-2 fix v36 — corrected 23.25/2433282.5 → +5.7 arcmin vs IAU.
+  return 23.85650 + (50.27889624 / 3600) * (jde - 2451545.0) / 365.25;
 }
 
 function dateToJDE(dateStr, timeStr, utcOff) {
@@ -8217,6 +8356,13 @@ function updateScienceBar(kp, ap, sn, ai, phaseName, phaseDeg, f107) {
     _el('sciMi').textContent = ai.Mi;
     _el('sciEi').textContent = ai.ei;
     _el('sciPi').textContent = ai.Pi;
+    const _diEl = _el('sciDi');
+    if (_diEl) {
+      const _di = ai.Di || 0;
+      _diEl.textContent = _di;
+      _diEl.style.color = _di < 0 ? '#ff9f9f' : _di > 0 ? '#7ec87e' : '';
+      _diEl.style.fontWeight = _di !== 0 ? '700' : '';
+    }
     window._lastAiPi = ai.Pi;
   }
 }
