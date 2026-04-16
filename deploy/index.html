@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v85b-F6</title>
+  <title>G-Index — Космофізичний дашборд v85b-F7</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -999,7 +999,7 @@
           <span id="heroFreshness" class="live" style="font-size:13px;font-weight:800">LIVE</span>
           <span id="heroDelta" style="font-size:12px;font-weight:700;color:var(--muted)"></span>
           <span id="heroStamp" style="font-size:11px;color:var(--dim)">—</span>
-          <span id="heroConfidence" style="font-size:11px;color:var(--dim);display:none"></span>
+          <span id="heroConfidence" style="font-size:11px;color:var(--dim)"></span>
         </div>
       </div>
     </section>
@@ -4632,13 +4632,23 @@ function renderDecisionTiming(slots){
   if(!list) return summary;
   const futureSlots = summary.slots.filter(s => !s.isPast);
   const visible = futureSlots.length ? futureSlots : summary.slots;
+  // v85b-F7: навіть при allSame рендеримо слоти, але з суфіксом "день рівний"
+  if(!visible.length){
+    list.innerHTML = `<span style="color:var(--dim);font-size:12px">Немає даних по слотах.</span>`;
+    return summary;
+  }
+  const _extraSuffix = summary.allSame
+    ? (visible[0]?.cls === 'bad' ? ' · весь день без форсування'
+      : visible[0]?.cls === 'mid' ? ' · стабільний рівний фон'
+      : ' · рівний сприятливий фон')
+    : '';
+  list.innerHTML = visible.map(s =>
+    `<div class="dt-row dt-${s.cls}${s.isNow?' dt-now':''}">`
+    +`<span class="dt-time">${s.time}</span><span class="dt-label">${s.text}${_extraSuffix}${s.isNow?' ◀ зараз':''}</span></div>`
+  ).join('');
+  // При allSame додаємо заголовковий контекст над слотами
   if(summary.allSame){
-    list.innerHTML = `<span style="color:var(--dim);font-size:12px">Усі основні вікна дня дають однакову рекомендацію: ${summary.slots[0]?.text === 'уникати' ? 'важливі рішення не приймати' : summary.slots[0]?.text || '—'}.</span>`;
-  } else {
-    list.innerHTML = visible.map(s =>
-      `<div class="dt-row dt-${s.cls}${s.isNow?' dt-now':''}">`
-      +`<span class="dt-time">${s.time}</span><span class="dt-label">${s.text}${s.isNow?' ◀ зараз':''}</span></div>`
-    ).join('');
+    list.innerHTML = `<div style="color:var(--faint);font-size:11px;margin-bottom:4px">Усі основні вікна дня дають однакову рекомендацію — важливі рішення не приймати:</div>` + list.innerHTML;
   }
   return summary;
 }
@@ -4727,14 +4737,26 @@ function syncHero(){
   const gVal = isFinite(_ui.gNow) ? _ui.gNow : _num(_firstText(el('nowG'))||el('nowG')?.textContent);
 
   // Delta: from __uiState or fallback
-  const dn = isFinite(_ui.delta) ? _ui.delta : NaN;
+  // v85b-F7: fallback delta з попереднього G (щоб heroDelta не був порожній)
+  let dn = isFinite(_ui.delta) ? _ui.delta : NaN;
+  if (!isFinite(dn) && isFinite(gVal)) {
+    const _prev = window._prevGforHeroDelta;
+    if (isFinite(_prev)) dn = Math.round((gVal - _prev) * 100) / 100;
+    window._prevGforHeroDelta = gVal;
+  }
   const hd=el('heroDelta');
   if(hd){
     if(isFinite(dn)){
-      hd.textContent=(dn>0?'↑ +':dn<0?'↓ ':'→ ')+dn.toFixed(2);
-      hd.style.color=dn>0?'var(--ok)':dn<0?'var(--bad)':'var(--muted)';
+      const _sign = dn > 0 ? '↑ +' : dn < 0 ? '↓ ' : '→ ';
+      hd.textContent = _sign + dn.toFixed(2);
+      hd.style.color=dn>0.05?'var(--ok)':dn<-0.05?'var(--bad)':'var(--muted)';
       hd.style.display='';
-    } else { hd.textContent=''; hd.style.display='none'; }
+    } else {
+      // v85b-F7: при нестачі попереднього значення — показати статичний плейсхолдер, не ховати
+      hd.textContent='ΔG —';
+      hd.style.color='var(--faint)';
+      hd.style.display='';
+    }
   }
 
   // Confidence: set by v83 decision block below
@@ -5002,10 +5024,17 @@ function _renderHeroCause(g, kp) {
       + `</div>`;
   }).join('');
 
-  // Neutral factors collapsed into one line
+  // v85b-F7: Neutral factors — each as dimmed row (не злита в 1 рядок)
+  // Раніше: 1 collapsed line "місяць, затемнення, ..." — блок виглядав пустим.
+  // Тепер: кожен нульовий фактор — окремий dim-рядок для візуальної повноти.
   if (neutralFact.length > 0) {
-    const names = neutralFact.map(f => f.label).join(', ');
-    html += `<div class="why-row"><div class="why-name" style="color:var(--faint)">${names} — не впливають</div><div class="why-val" style="color:var(--faint)">0.0</div><div class="why-dir" style="color:var(--faint)">•</div></div>`;
+    html += neutralFact.map(f => {
+      return `<div class="why-row" style="opacity:.5">`
+        + `<div class="why-name" style="color:var(--faint)">${f.name} <span style="color:var(--dim);font-size:11px">${f.label}</span></div>`
+        + `<div class="why-val" style="color:var(--faint)">0.0</div>`
+        + `<div class="why-dir" style="color:var(--faint)">•</div>`
+        + `</div>`;
+    }).join('');
   }
 
   whyRows.innerHTML = html || '<span style="color:var(--dim)">Усі фактори нейтральні</span>';
@@ -6989,7 +7018,36 @@ function renderPersonal() {
   const _phBrd = danger ? 'rgba(255,107,107,.22)' : taaraGmod>0 ? 'rgba(43,212,125,.22)' : 'rgba(255,255,255,.08)';
   const _phCol = danger ? '#ff8e8e' : taaraGmod>0 ? '#7fe3a6' : '#cfe0ff';
 
-  resEl.innerHTML = `${noTimeWarnHtml}<div style="padding:8px 10px;border-radius:10px;border:1px solid ${_phBrd};background:${_phBg}"><div style="font-size:14px;font-weight:700;line-height:1.3;color:${_phCol}">${_ph.state}${_phMod}</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 12px;margin-top:6px;font-size:12px;line-height:1.5;color:#b7c7ea"><span style="color:var(--dim)">Робота:</span><span>${_ph.work}</span><span style="color:var(--dim)">Рішення:</span><span>${_ph.decisions}</span><span style="color:var(--dim)">Комунікації:</span><span>${_ph.comms}</span></div></div><details style="margin-top:6px"><summary class="small muted" style="cursor:pointer;font-size:11px">▶ Показати персональний розклад</summary>${gmodHtml}<table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:6px">
+  // v85b-F7 (CRIT): Risk override — коли глобальний G ≤ -1, Taara-optimism не може домінувати.
+  // Показуємо розділений вигляд: "Ваш цикл" + "Глобальний фон" + "Висновок"
+  const _globalG = (function(){try{return _v73G();}catch(e){return NaN;}})();
+  const _globalRisk = isFinite(_globalG) && _globalG <= -1;
+  let _riskBannerHtml = '';
+  let _effectivePhCol = _phCol, _effectivePhBg = _phBg, _effectivePhBrd = _phBrd;
+  let _effectivePhState = _ph.state;
+  let _effectivePhMod = _phMod;
+  let _effectiveWork = _ph.work, _effectiveDec = _ph.decisions, _effectiveComms = _ph.comms;
+  if (_globalRisk) {
+    const _taaraLabel = _ti ? _ti.short.split(' — ')[0] : taara.name;
+    const _cycleIsPositive = taaraGmod > 0 && !danger;
+    _riskBannerHtml = `<div style="padding:8px 12px;margin-bottom:6px;border-radius:10px;border:1px solid rgba(255,165,80,.28);background:rgba(255,165,80,.08);display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;line-height:1.35">
+      <div><div style="color:var(--faint);font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Ваш цикл</div><div style="color:${_cycleIsPositive?'#7fe3a6':danger?'#ff8e8e':'#cfe0ff'};font-weight:700">${_taaraLabel}${_cycleIsPositive?' · позитивний':danger?' · обережний':' · нейтральний'}</div></div>
+      <div><div style="color:var(--faint);font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Глобальний фон</div><div style="color:#ffb36a;font-weight:700">G = ${_globalG.toFixed(1)} · ризик</div></div>
+    </div>`;
+    // Override optimistic state if cycle is positive but global is risk
+    if (_cycleIsPositive) {
+      _effectivePhCol = '#ffd6ad';
+      _effectivePhBg = 'rgba(255,165,80,.06)';
+      _effectivePhBrd = 'rgba(255,165,80,.22)';
+      _effectivePhState = 'Ваш цикл позитивний, але фон тисне';
+      _effectivePhMod = ' Дій повільно, без форсування.';
+      _effectiveWork = 'тільки перевірені дії';
+      _effectiveDec = 'не починати нових важливих кроків';
+      _effectiveComms = 'м\'яко, без конфлікту і тиску';
+    }
+  }
+
+  resEl.innerHTML = `${noTimeWarnHtml}${_riskBannerHtml}<div style="padding:8px 10px;border-radius:10px;border:1px solid ${_effectivePhBrd};background:${_effectivePhBg}"><div style="font-size:14px;font-weight:700;line-height:1.3;color:${_effectivePhCol}">${_effectivePhState}${_effectivePhMod}</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 12px;margin-top:6px;font-size:12px;line-height:1.5;color:#b7c7ea"><span style="color:var(--dim)">Робота:</span><span>${_effectiveWork}</span><span style="color:var(--dim)">Рішення:</span><span>${_effectiveDec}</span><span style="color:var(--dim)">Комунікації:</span><span>${_effectiveComms}</span></div></div><details style="margin-top:6px"><summary class="small muted" style="cursor:pointer;font-size:11px">▶ Показати персональний розклад</summary>${gmodHtml}<table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:6px">
       <tr>
         <td class="muted" style="padding:3px 0;width:45%;border-bottom:1px solid #1a2540">Стоянка народження</td>
         <td style="padding:3px 0;border-bottom:1px solid #1a2540"><strong>${NAKSHATRA_UA[natal.idx]}</strong> <span class="muted">(${NAKSHATRA_NAMES[natal.idx]}, P${natal.pada})</span></td>
