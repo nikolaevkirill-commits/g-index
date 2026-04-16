@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v85b-F8</title>
+  <title>G-Index — Космофізичний дашборд v85b-F9</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -5748,6 +5748,9 @@ function syncV702UI(){
   try{syncTrustStrip();}catch(e){console.warn("trustStrip:",e);}
   try{syncDayPlanCard();}catch(e){console.warn("dayPlan:",e);}
   try{syncPersonalContext();}catch(e){console.warn("personalCtx:",e);}
+  // v85b-F9 (CRIT): re-render Personal block on every G tick, щоб F7-A risk-override спрацьовував
+  // (раніше renderPersonal викликався тільки при input-change → при G-tick глобальний ризик не синхронізувався)
+  try{if(typeof renderPersonal==='function')renderPersonal();}catch(e){console.warn("renderPersonal:",e);}
   try{const _gNow=_v73G();if(isFinite(_gNow))_saveGHistory(_gNow);}catch(e){}
 }
 
@@ -7052,8 +7055,10 @@ function renderPersonal() {
 
   // v85b-F7 (CRIT): Risk override — коли глобальний G ≤ -1, Taara-optimism не може домінувати.
   // Показуємо розділений вигляд: "Ваш цикл" + "Глобальний фон" + "Висновок"
+  // v85b-F9: default-deny — якщо G невідомий, не кидаємо optimistic (безпечно)
   const _globalG = (function(){try{return _v73G();}catch(e){return NaN;}})();
   const _globalRisk = isFinite(_globalG) && _globalG <= -1;
+  const _globalUnknown = !isFinite(_globalG);
   let _riskBannerHtml = '';
   let _effectivePhCol = _phCol, _effectivePhBg = _phBg, _effectivePhBrd = _phBrd;
   let _effectivePhState = _ph.state;
@@ -7077,6 +7082,13 @@ function renderPersonal() {
       _effectiveDec = 'не починати нових важливих кроків';
       _effectiveComms = 'м\'яко, без конфлікту і тиску';
     }
+  } else if (_globalUnknown && taaraGmod > 0 && !danger) {
+    // v85b-F9: при невідомому G — не показувати optimistic (default-deny)
+    _effectivePhCol = '#cfe0ff';
+    _effectivePhBg = 'rgba(255,255,255,.03)';
+    _effectivePhBrd = 'rgba(255,255,255,.08)';
+    _effectivePhState = 'Персональний цикл сприятливий';
+    _effectivePhMod = ' (загальний фон уточнюється)';
   }
 
   resEl.innerHTML = `${noTimeWarnHtml}${_riskBannerHtml}<div style="padding:8px 10px;border-radius:10px;border:1px solid ${_effectivePhBrd};background:${_effectivePhBg}"><div style="font-size:14px;font-weight:700;line-height:1.3;color:${_effectivePhCol}">${_effectivePhState}${_effectivePhMod}</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 12px;margin-top:6px;font-size:12px;line-height:1.5;color:#b7c7ea"><span style="color:var(--dim)">Робота:</span><span>${_effectiveWork}</span><span style="color:var(--dim)">Рішення:</span><span>${_effectiveDec}</span><span style="color:var(--dim)">Комунікації:</span><span>${_effectiveComms}</span></div></div><details style="margin-top:6px"><summary class="small muted" style="cursor:pointer;font-size:11px">▶ Показати персональний розклад</summary>${gmodHtml}<table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:6px">
@@ -7124,6 +7136,22 @@ function renderPersonal() {
     <div id="taara7dWrap" style="margin-top:10px"></div>
     </details>
   `;
+
+  // v85b-F9 PATCH 3: fail-safe regex — навіть якщо override не спрацював (NaN G, race condition,
+  // інші гілки, старий кеш) — прибрати явні optimistic-фрази при глобальному ризику
+  if (_globalRisk || _globalUnknown) {
+    resEl.innerHTML = resEl.innerHTML
+      .replace(/✔\s*Сприятливо(?!\s+є\s+додаткова\s+підтримка\s+фону)/gu, '⚠ Обережно')
+      .replace(/✔\s*Загалом сприятливо/gu, '⚠ Обережно, фон тисне')
+      .replace(/✔\s*Дуже сприятливо/gu, '⚠ Цикл сильний, але фон тисне')
+      .replace(/🌟\s*Дуже сприятливо/gu, '⚠ Цикл сильний, але фон тисне')
+      .replace(/Є додаткова підтримка фону\./gu, 'Глобальний фон обмежує локальну підтримку.')
+      .replace(/Фон для вас особливо сприятливий\./gu, 'Локальна підтримка є, але глобальний фон тисне.')
+      .replace(/OK,\s*діяти впевнено/gu, 'тільки перевірені дії')
+      .replace(/OK,\s*можна активно/gu, 'тільки перевірені дії')
+      .replace(/Активно діяти/gu, 'обережно, без форсування');
+  }
+
   renderTaaraRing(document.getElementById('taaraRingWrap'), taara.group, natal.idx, nowNak.idx);
   renderTaara7d(document.getElementById('taara7dWrap'), natal.idx, nowJDE);
 }
