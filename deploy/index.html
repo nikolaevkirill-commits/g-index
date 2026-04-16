@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v85b-F9</title>
+  <title>G-Index — Космофізичний дашборд v85b-F10</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -551,13 +551,18 @@
       animation:fadeSlideIn .5s ease both;
     }
     #heroCard::before{
-      content:'';position:absolute;inset:0;z-index:0;opacity:.12;
+      /* v85b-F10: opacity знижена (було .12), mask обмежує декор на правій частині hero,
+         щоб не заважати лівій зоні (ring + G). */
+      content:'';position:absolute;inset:0;z-index:0;opacity:.07;
       background:linear-gradient(135deg,#0a1428,#1a2f5a 30%,#0d1a30 50%,#1a3a2a 70%,#0a1428);
       background-size:300% 300%;animation:auroraShift 12s ease-in-out infinite;
+      -webkit-mask:linear-gradient(90deg,transparent 0%,transparent 25%,#000 55%);
+              mask:linear-gradient(90deg,transparent 0%,transparent 25%,#000 55%);
     }
     #heroCard::after{
+      /* v85b-F10: radial glow зміщено з 30% → 70% (правіше), щоб не перекривати ring */
       content:'';position:absolute;inset:0;z-index:0;pointer-events:none;
-      background:radial-gradient(circle at 30% 50%,var(--g-glow,transparent),transparent 60%);
+      background:radial-gradient(circle at 70% 50%,var(--g-glow,transparent),transparent 60%);
       transition:background 1.2s ease;
     }
     #heroCard .hero-wrap{position:relative;z-index:1}
