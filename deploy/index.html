@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v87.3</title>
+  <title>G-Index — Космофізичний дашборд v87.6</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -44,7 +44,7 @@
     h1{font-size:var(--fs-xl); margin:0; font-weight:700; letter-spacing:-.01em}
     h2{margin:0 0 12px; font-size:var(--fs-xl); font-weight:700}
     .sub{color:var(--dim); font-size:var(--fs-md)}
-    main{max-width:1400px; margin:16px auto; padding:0 16px 40px}
+    main{max-width:1760px; margin:16px auto; padding:0 24px 40px}
     .row{display:grid; grid-template-columns:repeat(12,1fr); gap:var(--gap)}
     #mainGrid{display:grid; grid-template-columns:1fr; gap:12px; margin-bottom:12px}
     #duoCard{display:grid; grid-template-columns:1fr 1fr; gap:12px; background:transparent; border:none; padding:0; box-shadow:none; border-radius:0}
@@ -52,6 +52,9 @@
     #nowCard{grid-column:auto}
     @media(max-width:860px){#duoCard{grid-template-columns:1fr}}
     .card{grid-column:span 12; background:var(--card); border:1px solid var(--border); border-radius:16px; padding:16px}
+    /* v87.5 P3: "wow" glass effect + soft hover на статичні картки (не hero — hero має свій pulse) */
+    .card:not(#heroCard):not(#nowCard){background:linear-gradient(180deg,rgba(16,26,50,.78),rgba(12,20,38,.82))!important;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);transition:transform .25s cubic-bezier(.2,.8,.2,1),border-color .25s ease,box-shadow .25s ease}
+    .card:not(#heroCard):not(#nowCard):hover{transform:translateY(-2px);border-color:rgba(120,160,255,.22)!important;box-shadow:0 8px 24px rgba(0,0,0,.28),0 0 0 1px rgba(120,160,255,.08) inset}
     @media (min-width: 860px){ .card.half{grid-column: span 6} }
     button{appearance:none; border:none; background:var(--alt); color:#001026; font-weight:700; padding:8px 14px; border-radius:10px; cursor:pointer; font-size:var(--fs-md)}
     button:disabled{opacity:.6; cursor:default}
@@ -79,7 +82,7 @@
     .flex{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
     .right{margin-left:auto}
     .err{color:#ff9f9f; font-size:var(--fs-md)}
-    footer{max-width:1400px; margin:0 auto; padding:12px 16px 30px; color:var(--dim)}
+    footer{max-width:1760px; margin:0 auto; padding:12px 24px 30px; color:var(--dim)}
     details{margin:8px 0}
     .small{font-size:var(--fs-sm)}
     .label{font-size:var(--fs-sm); color:var(--dim); text-transform:uppercase; letter-spacing:.05em; font-weight:600}
@@ -643,8 +646,26 @@
     #heroDecisionAvoid{background:rgba(255,90,90,.14)!important;border-color:rgba(255,90,90,.30)!important}
 
     /* ═══ v86.5: LOWER BLOCKS CLEANUP ═══ */
-    /* P1: timingRows hidden — heat-strip замінює text cards */
-    #timingRows{display:none!important}
+    /* v87.6 Крок 2: Cause-chain — 3 рядки над pills (фон + arrow) */
+    .why-cause-chain{display:flex;flex-direction:column;gap:4px;margin-bottom:8px;padding:8px 10px;border-radius:8px;background:rgba(12,20,38,.55);border:1px solid rgba(255,255,255,.05)}
+    .why-cause-chain:empty{display:none}
+    .why-cause-row{display:flex;align-items:center;gap:6px;font-size:12px;line-height:1.35;color:var(--text2);font-weight:600}
+    .why-cause-row .wcr-arrow{color:var(--faint);font-size:10px;opacity:.7}
+    .why-cause-row .wcr-cause{color:#cfd8eb}
+    .why-cause-row .wcr-effect{color:#9bb1dc;font-weight:500}
+    .why-cause-row.is-neg .wcr-effect{color:#ff9f9f}
+    .why-cause-row.is-pos .wcr-effect{color:#7fe3a6}
+    /* v87.6b: коли cause-chain показаний → pills і whyMain стають вторинними (ієрархія, не дублювання) */
+    #whyCard:has(.why-cause-chain:not(:empty)) #whyRows{opacity:.65;font-size:11px}
+    #whyCard:has(.why-cause-chain:not(:empty)) #whyRows .why-row{padding:3px 8px!important;font-size:11px!important}
+    #whyCard:has(.why-cause-chain:not(:empty)) #whyMain{opacity:.75;font-size:12px!important;margin-top:4px!important;padding:5px 8px!important;background:rgba(255,255,255,.02)!important;border:none!important;border-left:2px solid rgba(255,255,255,.1)!important;border-radius:0 6px 6px 0!important;color:var(--muted)!important}
+    /* v87.4 P5: timingRows повернуто для балансу висот coreGrid — compact list під heat-strip */
+    #timingRows{display:block!important;margin-top:6px}
+    #timingRows .timing-row{padding:4px 8px!important;margin-bottom:2px!important;border-radius:8px!important;grid-template-columns:82px 1fr!important;gap:6px!important;font-size:11px!important;background:rgba(255,255,255,.025)!important;border:1px solid rgba(255,255,255,.04)!important}
+    #timingRows .timing-row.is-now{background:rgba(43,212,125,.10)!important;border-color:rgba(43,212,125,.22)!important}
+    #timingRows .timing-row.is-next{background:rgba(55,167,255,.06)!important;border-color:rgba(55,167,255,.14)!important}
+    #timingRows .timing-time{font-size:10px!important;color:var(--muted)!important;font-variant-numeric:tabular-nums}
+    #timingRows .timing-label{font-size:11px!important}
     /* P2: whyRows → chips (v87.2: pill layout замість таблиці) */
     #whyRows{display:flex!important;flex-wrap:wrap!important;gap:6px!important}
     .why-row{display:inline-flex!important;align-items:center!important;gap:4px!important;padding:5px 10px!important;border-radius:999px!important;font-size:12px!important;border:1px solid rgba(255,255,255,.08)!important;background:rgba(255,255,255,.04)!important;grid-template-columns:unset!important;border-bottom:none!important}
@@ -668,11 +689,11 @@
     #panchSummaryLine{font-size:12px!important;padding:8px 10px!important}
 
     /* ═══ v86.6: CLEAN DESIGN — менше = сильніше ═══ */
-    /* 1. Hero-chips → показувати як status в hero-right (повернено з v86.6 hide) */
-    .hero-chips{display:flex!important;flex-direction:column!important;gap:4px!important;order:10!important}
-    .hero-chip{padding:6px 10px!important;border-radius:8px!important;font-size:11px!important;background:rgba(255,255,255,.04)!important;border:1px solid rgba(255,255,255,.07)!important}
+    /* v87.3 P4 Balance: Hero-chips → горизонтальні pills в maintext (не вертикальний stack) */
+    .hero-chips{display:flex!important;flex-direction:row!important;flex-wrap:wrap!important;gap:6px!important;order:10!important;margin-top:4px!important}
+    .hero-chip{display:inline-flex!important;align-items:center!important;gap:6px!important;padding:5px 10px!important;border-radius:999px!important;font-size:11px!important;background:rgba(255,255,255,.04)!important;border:1px solid rgba(255,255,255,.08)!important;white-space:nowrap!important}
     .hero-chip .hc-label{font-size:9px!important;text-transform:uppercase!important;letter-spacing:.06em!important;color:var(--dim)!important}
-    .hero-chip .hc-val{font-size:13px!important;font-weight:800!important;display:block!important}
+    .hero-chip .hc-val{font-size:12px!important;font-weight:800!important;display:inline!important;color:var(--text)!important}
     /* 2. Прибрати meta inline (Драйвер/Далі/Тренд/Зона — шум) */
     #heroMetaInline{display:none!important}
     /* 3. Прибрати subtitle "Дій повільно..." — ActionCmd достатньо */
@@ -801,7 +822,7 @@
     #mainGrid{gap:10px!important;margin-bottom:10px!important}
     #trustStrip{display:none!important}
     /* C2: core grid compressed */
-    #coreGrid{display:grid;grid-template-columns:1.2fr .95fr;gap:10px;margin-bottom:10px}
+    #coreGrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px;align-items:stretch}
     @media(max-width:980px){#coreGrid{grid-template-columns:1fr}}
     .core-card{padding:10px 12px;border-radius:14px;background:linear-gradient(180deg,rgba(12,20,38,.88),rgba(9,15,30,.94));border:1px solid rgba(255,255,255,.08);animation:riseIn .3s ease-out both}
     @keyframes riseIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
@@ -819,6 +840,10 @@
     @media(max-width:860px){#panchCard .panch-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
     @media(max-width:520px){#panchCard .panch-grid{grid-template-columns:1fr!important}}
     #panchCard .panch-cell{min-height:68px!important;padding:8px 10px!important;border-radius:12px!important}
+    /* v87.5 Problem 2: G vs Panchanga conflict resolver — коли G негативний, "зелені" локальні клітинки приглушуються */
+    #panchCard.g-tense .panch-cell.pcl-pos,#panchCard.g-unstable .panch-cell.pcl-pos{opacity:.55!important;filter:saturate(.5)!important}
+    #panchCard.g-tense .panch-cell.pcl-pos::after,#panchCard.g-unstable .panch-cell.pcl-pos::after{content:"локально ✓, глобально ⚠";position:absolute;bottom:3px;right:6px;font-size:8px;color:#ffa64d;opacity:.7;pointer-events:none;text-transform:uppercase;letter-spacing:.03em}
+    #panchCard .panch-cell{position:relative}
     #panchCard .panch-label{font-size:10px!important;margin-bottom:2px!important}
     #panchCard .panch-val{font-size:13px!important;line-height:1.2!important}
     #panchCard .panch-sub,.panch-do,.panch-av{font-size:11px!important;line-height:1.3!important}
@@ -885,8 +910,9 @@
 
     /* ═══ FINAL HERO FIX ═══ */
     #heroCard{overflow:visible!important}
-    #heroCard .hero-wrap{display:grid!important;grid-template-columns:220px minmax(0,1fr) minmax(320px,360px)!important;gap:12px!important;align-items:start!important}
-    .hero-left{width:220px!important;min-width:220px!important;max-width:220px!important;display:flex!important;align-items:center!important;justify-content:center!important;overflow:visible!important;position:relative;z-index:2}
+    /* v87.5 P2: Hero = 2 колонки (ring + maintext). Hero-right стає inline status-row внизу maintext */
+    #heroCard .hero-wrap{display:grid!important;grid-template-columns:200px minmax(0,1fr)!important;gap:20px!important;align-items:center!important}
+    .hero-left{width:200px!important;min-width:200px!important;max-width:200px!important;display:flex!important;align-items:center!important;justify-content:center!important;overflow:visible!important;position:relative;z-index:2}
     #heroRing{width:152px!important;height:152px!important;position:relative!important;overflow:visible!important;align-items:center!important;justify-content:center!important;flex-shrink:0!important}
     #heroRing svg{width:152px!important;height:152px!important;overflow:visible!important}
     #heroCard #heroG{position:absolute!important;inset:0!important;left:auto!important;top:auto!important;transform:none!important;display:flex!important;align-items:center!important;justify-content:center!important;width:100%!important;height:100%!important;min-width:0!important;padding:0!important;background:none!important;border:none!important;box-shadow:none!important;font-size:42px!important;font-weight:900!important;line-height:1!important;text-align:center!important;white-space:nowrap!important;z-index:3;pointer-events:none!important}
@@ -895,15 +921,27 @@
     #heroCard.hero-state-tense #heroActionCmd{color:#ffb3b8!important;text-shadow:0 0 12px rgba(255,80,80,.2)}
     #heroCard.hero-state-favorable #heroActionCmd,#heroCard.hero-state-good #heroActionCmd{color:#b8ffd6!important;text-shadow:0 0 12px rgba(43,212,125,.15)}
     #heroCard::before{opacity:.05!important}
-    .hero-maintext{min-width:0!important;display:flex!important;flex-direction:column!important;justify-content:center!important;gap:6px!important}
-    .hero-right{display:grid!important;grid-template-columns:1fr 1fr!important;gap:10px!important;min-width:320px!important;max-width:none!important;align-self:start!important}
-    .hero-metric{min-height:68px!important;padding:10px 12px!important;border-radius:12px!important}
-    .hero-metric .label{font-size:10px!important;margin-bottom:5px!important;opacity:.78!important;text-transform:uppercase!important;letter-spacing:.04em!important}
-    #heroDelta,#heroConfidence,#heroFreshness{font-size:20px!important}
-    #heroStamp{font-size:14px!important;line-height:1.25!important}
-    @media(max-width:1180px){#heroCard .hero-wrap{grid-template-columns:200px minmax(0,1fr)!important}.hero-left{width:200px!important;min-width:200px!important;max-width:200px!important}.hero-right{grid-column:1/-1!important;min-width:0!important}}
-    @media(max-width:860px){#heroCard .hero-wrap{grid-template-columns:1fr!important}.hero-left,.hero-maintext,.hero-right{width:100%!important;min-width:0!important;max-width:none!important}.hero-right{grid-template-columns:1fr 1fr!important}}
-    @media(max-width:560px){.hero-right{grid-template-columns:1fr!important}#heroCard #heroG{font-size:38px!important}#heroRing,#heroRing svg{width:144px!important;height:144px!important}}
+    .hero-maintext{min-width:0!important;display:flex!important;flex-direction:column!important;justify-content:center!important;gap:8px!important}
+    /* v87.5 P2: hero-right = inline horizontal status bar у maintext (не окрема колонка) */
+    .hero-right{display:flex!important;flex-direction:row!important;flex-wrap:wrap!important;align-items:center!important;gap:14px!important;min-width:0!important;max-width:none!important;padding:8px 12px!important;background:rgba(10,20,40,.25)!important;border:1px solid rgba(255,255,255,.05)!important;border-radius:10px!important;margin-top:4px!important;order:99!important}
+    .hero-right > span{display:inline-flex!important;align-items:center!important;gap:6px!important;padding:0!important;background:transparent!important;border:none!important;text-align:left!important;white-space:nowrap!important}
+    .hero-metric{min-height:auto!important;padding:0!important;border-radius:0!important;background:transparent!important;border:none!important}
+    .hero-metric .label{font-size:10px!important;margin-bottom:3px!important;opacity:.7!important;text-transform:uppercase!important;letter-spacing:.05em!important}
+    /* v87.5 P2: компактні шрифти inline, labels inline (не блочні) */
+    #heroDelta,#heroConfidence,#heroFreshness{font-size:13px!important}
+    #heroFreshness{font-size:13px!important;font-weight:800!important;letter-spacing:.06em!important}
+    #heroStamp{font-size:12px!important;line-height:1!important;color:var(--dim)!important;font-variant-numeric:tabular-nums}
+    .hero-right > span[data-label]::before{content:attr(data-label)":";display:inline-block;font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:var(--dim);opacity:.6;margin-right:4px;font-weight:600}
+    .hero-right > span:empty{display:none!important}
+    .hero-right > span[data-label]:not(#heroStamp):not(#heroFreshness):empty::before{display:none}
+    /* v87.5 P2: maintext отримує повну ширину → hero-right переноситься всередину DOM-порядком */
+    /* Hero-right DOM-пересув робиться через CSS grid-area: hero-right перестає бути колонкою */
+    .hero-wrap > .hero-right{grid-column:2!important;grid-row:2!important}
+    .hero-wrap > .hero-maintext{grid-column:2!important;grid-row:1!important}
+    .hero-wrap > .hero-left{grid-column:1!important;grid-row:1 / span 2!important;align-self:center!important}
+    @media(max-width:1180px){#heroCard .hero-wrap{grid-template-columns:180px minmax(0,1fr)!important;gap:14px!important}.hero-left{width:180px!important;min-width:180px!important;max-width:180px!important}}
+    @media(max-width:860px){#heroCard .hero-wrap{grid-template-columns:1fr!important;gap:10px!important}.hero-left,.hero-maintext,.hero-right{width:100%!important;min-width:0!important;max-width:none!important}.hero-wrap > .hero-left{grid-column:1!important;grid-row:1!important}.hero-wrap > .hero-maintext{grid-column:1!important;grid-row:2!important}.hero-wrap > .hero-right{grid-column:1!important;grid-row:3!important}}
+    @media(max-width:560px){#heroCard #heroG{font-size:38px!important}#heroRing,#heroRing svg{width:144px!important;height:144px!important}}
 
     /* Hero action cmd */
     #heroCard #heroActionCmd{font-size:18px!important}
@@ -1163,11 +1201,12 @@
           </div>
         </div>
         <div class="hero-right">
-          <span id="heroFreshness" class="live" style="font-size:13px;font-weight:800">LIVE</span>
-          <span id="heroDelta" style="font-size:12px;font-weight:700;color:var(--muted)"></span>
-          <span id="heroNextShiftChip" style="font-size:11px;color:var(--faint);display:none"></span>
-          <span id="heroStamp" style="font-size:11px;color:var(--dim)">—</span>
-          <span id="heroConfidence" style="font-size:11px;color:var(--dim)"></span>
+          <span id="heroFreshness" class="live" data-label="Статус" style="font-size:13px;font-weight:800">LIVE</span>
+          <span id="heroDelta" data-label="Δ G" style="font-size:12px;font-weight:700;color:var(--muted)"></span>
+          <span id="heroTomorrow" data-label="Завтра" style="font-size:12px;font-weight:700;color:var(--muted)"></span>
+          <span id="heroNextShiftChip" data-label="Далі" style="font-size:11px;color:var(--faint);display:none"></span>
+          <span id="heroStamp" data-label="Оновлено" style="font-size:11px;color:var(--dim)">—</span>
+          <span id="heroConfidence" data-label="Довіра" style="font-size:11px;color:var(--dim)"></span>
         </div>
       </div>
     </section>
@@ -1226,6 +1265,7 @@
     <div id="coreGrid">
       <section id="whyCard" class="core-card">
         <div class="why-title">Що формує стан</div>
+        <div id="whyCauseChain" class="why-cause-chain"></div>
         <div id="whyRows">—</div>
         <div id="whyMain" class="why-main">—</div>
       </section>
@@ -4437,6 +4477,12 @@ function renderPanchangaCard(state){
   // (c) Колір заголовку картки = колір G поточного дня
   const _panchBorderColor = GLOBAL_STATES[classifyStateByG(_gNow)]?.badgeColor || '#9bb1dc';
   document.getElementById('panchCard').style.borderColor = _panchBorderColor;
+  // v87.5 Problem 2: класифікувати panchCard за G для conflict resolver CSS
+  const _panchCard = document.getElementById('panchCard');
+  if (_panchCard) {
+    _panchCard.classList.remove('g-tense','g-unstable','g-neutral','g-good','g-favorable');
+    _panchCard.classList.add('g-' + classifyStateByG(_gNow));
+  }
 
   el_('panchGrid').innerHTML = html;
   el_('panchNote').innerHTML = summaryHtml +
@@ -4573,11 +4619,16 @@ function render3Day(parsed3){
   const qw=el('threeQuick');
   if(qw){
     let qhtml='';
+    // v87.6 Крок 3: зібрати "завтра" для Hero-link
+    let _tomorrowG = null;
+    const _todayStr = fmtDate(new Date());
     for(const d of days){
       const kpMax=fmtDate(d.date)===fmtDate(new Date())&&lastWWV&&isFinite(lastWWV.kNow)?lastWWV.kNow:d.kpMax;
       const ai=computeAi(noonUTC(d.date),kpMax??0);
       const G=(isFinite(kpMax)?kpMax:0)-2+ai.Ai;
       const isToday=fmtDate(d.date)===fmtDate(new Date());
+      // v87.6: перший НЕ-сьогоднішній день = "завтра"
+      if (!isToday && _tomorrowG === null && isFinite(G)) _tomorrowG = G;
       // v83f: aligned with classifyStateByG thresholds
       const cat=G<=-2?'уникати':G<0?'обережно':G>=2?'сприятливо':G>=1?'добре':'нейтрально';
       const act=G<=-2?'утриматись від рішень':G<0?'мінімізувати ризики':G>=2?'оптимально для дій':G>=1?'можна планове':'стандартний режим';
@@ -4589,6 +4640,31 @@ function render3Day(parsed3){
       </span>`;
     }
     qw.innerHTML=qhtml;
+    // v87.6 Крок 3: expose для Hero-link
+    window.__tomorrowG = _tomorrowG;
+    // Оновити heroTomorrow badge одразу
+    try {
+      const _htEl = document.getElementById('heroTomorrow');
+      if (_htEl) {
+        if (isFinite(_tomorrowG)) {
+          // v87.6b: fallback — якщо __uiState ще не готовий, беремо G today з days[0]
+          let _todayG = isFinite(window.__uiState?.gNow) ? window.__uiState.gNow : NaN;
+          if (!isFinite(_todayG) && days[0]) {
+            const _kp0 = fmtDate(days[0].date) === _todayStr && lastWWV && isFinite(lastWWV.kNow) ? lastWWV.kNow : days[0].kpMax;
+            const _ai0 = computeAi(noonUTC(days[0].date), _kp0 ?? 0);
+            _todayG = (isFinite(_kp0) ? _kp0 : 0) - 2 + _ai0.Ai;
+          }
+          const _diff = isFinite(_todayG) ? (_tomorrowG - _todayG) : 0;
+          const _arrow = _diff > 0.3 ? '↑' : _diff < -0.3 ? '↓' : '→';
+          const _hint = _diff > 0.3 ? 'покращення' : _diff < -0.3 ? 'погіршення' : 'без змін';
+          const _sign = _tomorrowG >= 0 ? '+' : '';
+          _htEl.textContent = `G=${_sign}${_tomorrowG.toFixed(1)} ${_arrow} ${_hint}`;
+          _htEl.style.color = _tomorrowG >= 1 ? 'var(--ok)' : _tomorrowG >= 0 ? 'var(--muted)' : _tomorrowG > -2 ? 'var(--warn)' : 'var(--bad)';
+        } else {
+          _htEl.textContent = '';
+        }
+      }
+    } catch(e) { /* noop */ }
   }
 }
 
@@ -5216,7 +5292,16 @@ function syncHero(){
 
   // 3. Hero headline + short sub (from G only, no timing)
   const _dt = buildDecisionTexts({gNow: gVal});
-  _set('heroActionCmd', _dt.headline);
+  // v87.6 Крок 1: TIMING fallback — якщо headline порожній/плейсхолдер, генерувати за G
+  let _headline = _dt.headline;
+  if (!_headline || _headline === '—' || String(_headline).trim() === '') {
+    _headline = isFinite(gVal)
+      ? (gVal < 0 ? 'Не приймай важливих рішень сьогодні.'
+         : gVal > 0 ? 'Можна діяти, але без ризику.'
+         : 'Тримай стабільний темп, без різких рішень.')
+      : 'Дані завантажуються…';
+  }
+  _set('heroActionCmd', _headline);
   const hac=el('heroActionCmd');
   if(hac) hac.style.color = GLOBAL_STATES[classifyStateByG(gVal)].color;
 
@@ -5387,6 +5472,36 @@ function _renderHeroCause(g, kp) {
   // v79: split into active and neutral factors
   const activeFact = factors.filter(f => Math.abs(f.val) >= 0.05);
   const neutralFact = factors.filter(f => Math.abs(f.val) < 0.05);
+
+  // v87.6 Крок 2: Cause-chain — top-3 активних фактори як 3 речення "причина → наслідок"
+  const chainEl = el('whyCauseChain');
+  if (chainEl) {
+    const _effects = {
+      'Kp−2': { neg:'фон нестабільний',     pos:'фон спокійний' },
+      'Lᵢ':   { neg:'місячна фаза тисне',   pos:'місяць у ресурсі' },
+      'Mᵢ':   { neg:'затемнення активне',   pos:'затемнень немає' },
+      'eᵢ':   { neg:'астроподії напружені', pos:'астроподії сприяють' },
+      'Pᵢ':   { neg:'панчанга напружена',   pos:'панчанга підтримує' },
+      'Dᵢ':   { neg:'Dst-буря тисне',       pos:'Dst спокійний' }
+    };
+    const _top3 = activeFact.slice(0, 3);
+    if (_top3.length > 0) {
+      chainEl.innerHTML = _top3.map(f => {
+        const sign = f.val > 0 ? '+' : '';
+        const dir  = f.val > 0 ? '↑' : '↓';
+        const eff  = _effects[f.name] || { neg:'додає ризик', pos:'сприяє' };
+        const txt  = f.val > 0 ? eff.pos : eff.neg;
+        const cls  = f.val > 0 ? 'is-pos' : 'is-neg';
+        return `<div class="why-cause-row ${cls}">`
+             + `<span class="wcr-cause">${f.name} ${dir} ${sign}${f.val.toFixed(1)}</span>`
+             + `<span class="wcr-arrow">→</span>`
+             + `<span class="wcr-effect">${txt}</span>`
+             + `</div>`;
+      }).join('');
+    } else {
+      chainEl.innerHTML = '';
+    }
+  }
 
   const pc = window._lastPanchCtx;
   const panchDetail = pc ? [pc.tithi?.name, pc.karana?.name].filter(Boolean).join(' · ') : '';
