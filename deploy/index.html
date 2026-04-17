@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v87.9</title>
+  <title>G-Index — Космофізичний дашборд v87.12</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -703,6 +703,27 @@
     .pbt-hint{font-size:11px;color:var(--muted);line-height:1.35}
     .pbt-value.is-pos{color:#7fe3a6}
     .pbt-value.is-neg{color:#ff9f9f}
+    /* v87.10: Delta Card — що змінилось з 24h тому */
+    #deltaCard{margin:0 0 12px;padding:10px 14px;border-radius:12px;border:1px solid rgba(55,167,255,.18);background:linear-gradient(180deg,rgba(55,167,255,.06),rgba(55,167,255,.02));display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+    #deltaCard.is-improving{border-color:rgba(43,212,125,.22);background:linear-gradient(180deg,rgba(43,212,125,.06),rgba(43,212,125,.02))}
+    #deltaCard.is-worsening{border-color:rgba(255,107,107,.22);background:linear-gradient(180deg,rgba(255,107,107,.06),rgba(255,107,107,.02))}
+    #deltaCard.is-stable{border-color:rgba(155,177,220,.15);background:linear-gradient(180deg,rgba(155,177,220,.04),rgba(155,177,220,.01))}
+    .dc-icon{font-size:22px;line-height:1}
+    .dc-text{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+    .dc-title{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--dim);font-weight:600}
+    .dc-body{font-size:13px;line-height:1.35;color:var(--text);font-weight:600}
+    .dc-metric{font-variant-numeric:tabular-nums;font-weight:800}
+    .dc-metric.is-pos{color:#7fe3a6}
+    .dc-metric.is-neg{color:#ff9f9f}
+    /* v87.11: Source Health panel — grid 3×2 з бейджами */
+    .source-health{margin-top:10px;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.02)}
+    .source-health-title{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--dim);margin-bottom:6px;font-weight:600}
+    .source-health-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px 10px}
+    @media(max-width:520px){.source-health-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    .source-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2);padding:3px 6px;border-radius:6px;background:rgba(255,255,255,.02)}
+    .source-icon{font-family:monospace;font-weight:700;width:16px;text-align:center;flex-shrink:0}
+    .source-label{font-size:11px;color:var(--muted)}
+    .source-health-legend{margin-top:6px;font-size:9px;color:var(--faint);font-family:monospace;text-align:right}
     /* P4: profile buttons compact */
     #profileBar{padding:6px 12px!important;gap:4px!important}
     .profile-btn{font-size:11px!important;padding:3px 10px!important}
@@ -712,6 +733,11 @@
     /* ═══ v86.6: CLEAN DESIGN — менше = сильніше ═══ */
     /* v87.3 P4 Balance: Hero-chips → горизонтальні pills в maintext (не вертикальний stack) */
     .hero-chips{display:flex!important;flex-direction:row!important;flex-wrap:wrap!important;gap:6px!important;order:10!important;margin-top:4px!important}
+    /* v87.12: hover tooltip для hero-chips — пояснення що означає Стан/Ризик/Потенціал */
+    .hero-chip[data-tt]{position:relative;cursor:help}
+    .hero-chip[data-tt]::after{content:attr(data-tt);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:rgba(10,18,32,.98);border:1px solid rgba(120,160,255,.25);border-radius:8px;padding:8px 10px;font-size:11px;line-height:1.4;color:var(--text);font-weight:500;width:220px;white-space:normal;text-align:left;pointer-events:none;opacity:0;transition:opacity .18s ease .15s;z-index:50;box-shadow:0 4px 20px rgba(0,0,0,.4);letter-spacing:0}
+    .hero-chip[data-tt]::before{content:"";position:absolute;bottom:calc(100% + 1px);left:50%;transform:translateX(-50%);width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:5px solid rgba(120,160,255,.25);opacity:0;transition:opacity .18s ease .15s;z-index:51}
+    .hero-chip[data-tt]:hover::after,.hero-chip[data-tt]:hover::before,.hero-chip[data-tt]:focus::after,.hero-chip[data-tt]:focus::before{opacity:1}
     .hero-chip{display:inline-flex!important;align-items:center!important;gap:6px!important;padding:5px 10px!important;border-radius:999px!important;font-size:11px!important;background:rgba(255,255,255,.04)!important;border:1px solid rgba(255,255,255,.08)!important;white-space:nowrap!important}
     .hero-chip .hc-label{font-size:9px!important;text-transform:uppercase!important;letter-spacing:.06em!important;color:var(--dim)!important}
     .hero-chip .hc-val{font-size:12px!important;font-weight:800!important;display:inline!important;color:var(--text)!important}
@@ -721,8 +747,7 @@
     #heroMainDrag{display:none!important}
     /* 4. Прибрати consequence + greeting */
     #heroConsequence,#heroGreeting{display:none!important}
-    /* 5. Hero-right: confidence hide */
-    #heroConfidence{display:none!important}
+    /* 5. v87.10: Hero-right confidence — unhide (C-score активовано) */
     /* 6. Більше повітря */
     #heroDecisionPanel{gap:10px!important}
     /* 7. Energy bar приглушити */
@@ -1143,7 +1168,19 @@
           </div>
         </div>
         <span style="color:var(--faint);font-size:10px">Формула: G = Kp − 2 + Lᵢ + Mᵢ + eᵢ + Pᵢ + Dᵢ</span>
-        <span style="font-size:10px;color:var(--dim)">Стан джерел: <span id="srcKpObs" title="Kp obs" style="font-family:monospace">…</span> Kp <span id="srcKpFcst" title="Kp fcst" style="font-family:monospace">…</span> 3d <span id="src27Day" title="27-day" style="font-family:monospace">…</span> 27d <span id="srcDst" title="Dst" style="font-family:monospace">…</span> Dst <span id="srcSn" title="Wolf Sn" style="font-family:monospace">…</span> Sn <span id="srcBz" title="Bz" style="font-family:monospace">…</span> Bz</span>
+        <!-- v87.11: Source Health Panel — grid 2×3 замість inline line -->
+        <div class="source-health">
+          <div class="source-health-title">Стан джерел даних</div>
+          <div class="source-health-grid">
+            <div class="source-item"><span id="srcKpObs" class="source-icon">…</span><span class="source-label">Kp (поточний)</span></div>
+            <div class="source-item"><span id="srcKpFcst" class="source-icon">…</span><span class="source-label">Kp (прогноз 3д)</span></div>
+            <div class="source-item"><span id="src27Day" class="source-icon">…</span><span class="source-label">Ap/Kp (27д)</span></div>
+            <div class="source-item"><span id="srcDst" class="source-icon">…</span><span class="source-label">Dst (Kyoto)</span></div>
+            <div class="source-item"><span id="srcSn" class="source-icon">…</span><span class="source-label">Wolf Sn (SILSO)</span></div>
+            <div class="source-item"><span id="srcBz" class="source-icon">…</span><span class="source-label">Bz/Vsw (DSCOVR)</span></div>
+          </div>
+          <div class="source-health-legend">✓ live · ⊙ cache · ~ synthetic · ✗ error</div>
+        </div>
       </div>
     </div>
 
@@ -1216,9 +1253,15 @@
             <span>Зона: <strong id="hmZone" style="color:var(--text2)">—</strong></span>
           </div>
           <div class="hero-chips">
-            <div class="pill hero-chip"><span class="hc-label">Стан</span><span id="heroStateChip" class="hc-val">—</span></div>
-            <div class="pill hero-chip"><span class="hc-label">Ризик</span><span id="heroRiskChip" class="hc-val">—</span></div>
-            <div class="pill hero-chip"><span class="hc-label">Потенціал</span><span id="heroPotentialChip" class="hc-val">—</span></div>
+            <div class="pill hero-chip" data-tt="Поточний стан за G-індексом. Визначає базовий режим дня — спокійний, нестабільний, напружений.">
+              <span class="hc-label">Стан</span><span id="heroStateChip" class="hc-val">—</span>
+            </div>
+            <div class="pill hero-chip" data-tt="Ймовірність помилки рішень через геофізичне/хронобіологічне навантаження. Від низького до критичного.">
+              <span class="hc-label">Ризик</span><span id="heroRiskChip" class="hc-val">—</span>
+            </div>
+            <div class="pill hero-chip" data-tt="Сприятливість для активних дій, планування, стратегічних ініціатив. Протилежність ризику.">
+              <span class="hc-label">Потенціал</span><span id="heroPotentialChip" class="hc-val">—</span>
+            </div>
           </div>
         </div>
         <div class="hero-right">
@@ -1281,6 +1324,9 @@
     </div>
 
     <!-- trustStrip removed v83f -->
+
+    <!-- ═══ v87.10: Delta Card — "що змінилось від учора" ═══ -->
+    <div id="deltaCard" style="display:none"></div>
 
     <!-- ═══ v78d: CORE GRID — WHY + TIMING ═══ -->
     <div id="coreGrid">
@@ -5288,6 +5334,71 @@ function syncHero(){
       hd.style.display='none';
     }
   }
+
+  // v87.10: C-score (Confidence) — довіра моделі на основі свіжості, активних факторів, Dst
+  try {
+    const hc = el('heroConfidence');
+    if (hc && isFinite(gVal)) {
+      let C = 0.85;
+      const _frState = _ui.freshness || 'live';
+      if (_frState === 'stale') C -= 0.15;
+      else if (_frState === 'old') C -= 0.30;
+      // Count active factors (|val| >= 0.5)
+      const _aiC = _ui.ai || {};
+      const _facVals = [
+        isFinite(_ui.kpNow) ? (_ui.kpNow - 2) : 0,
+        _aiC.Li || 0, _aiC.Mi || 0, _aiC.ei || 0, _aiC.Pi || 0, _aiC.Di || 0
+      ];
+      const _activeN = _facVals.filter(v => Math.abs(v) >= 0.5).length;
+      if (_activeN === 0) C -= 0.10;  // all near zero → модель без ясного сигналу
+      else if (_activeN >= 3) C += 0.05;  // багато узгоджених драйверів
+      // Dst storm penalty
+      if ((_aiC.Di || 0) !== 0) C -= 0.15;
+      // Clamp
+      C = Math.max(0.30, Math.min(0.95, C));
+      // Визначити клас
+      const _cClass = C >= 0.80 ? 'is-high' : C >= 0.60 ? 'is-mid' : 'is-low';
+      hc.textContent = Math.round(C * 100) + '%';
+      hc.className = hc.className.replace(/\bis-(high|mid|low)\b/g, '').trim() + ' ' + _cClass;
+      hc.style.color = C >= 0.80 ? 'var(--ok)' : C >= 0.60 ? 'var(--muted)' : 'var(--warn)';
+      window.__cScore = C;
+    }
+  } catch(e) { /* noop */ }
+
+  // v87.10: Delta Card — "що змінилось за 24h"
+  try {
+    const dc = el('deltaCard');
+    if (dc && isFinite(gVal)) {
+      const _gd = _getGDelta();
+      const _d24 = _gd.d24h;
+      if (isFinite(_d24) && Math.abs(_d24) >= 0.3) {
+        const _abs = Math.abs(_d24).toFixed(1);
+        const _sign = _d24 > 0 ? '+' : '−';
+        const _isPos = _d24 > 0;
+        // Класифікуємо — але контекстно: +delta при G>=0 = "покращується", -delta при G<0 = "погіршується"
+        const _state = Math.abs(_d24) < 0.5 ? 'stable' : _isPos ? 'improving' : 'worsening';
+        const _icon = _state === 'improving' ? '📈' : _state === 'worsening' ? '📉' : '➡️';
+        const _title = _state === 'improving' ? 'Покращення з вчорашнього дня'
+                     : _state === 'worsening' ? 'Погіршення з вчорашнього дня'
+                     : 'Стабільно з вчорашнього дня';
+        // Body — людською мовою + маркер ΔG
+        const _body = _state === 'improving'
+          ? `Фон піднявся <span class="dc-metric is-pos">+${_abs}</span> — день зручніший для активних дій, ніж вчора.`
+          : _state === 'worsening'
+          ? `Фон просів <span class="dc-metric is-neg">−${_abs}</span> — треба обережніше з рішеннями, ніж учора.`
+          : `Δ24ч = ${_sign}${_abs} — суттєвих змін немає, день продовжує вчорашній ритм.`;
+        dc.className = 'is-' + _state;
+        dc.innerHTML = `<span class="dc-icon">${_icon}</span>`
+                     + `<div class="dc-text">`
+                     + `<div class="dc-title">${_title}</div>`
+                     + `<div class="dc-body">${_body}</div>`
+                     + `</div>`;
+        dc.style.display = '';
+      } else {
+        dc.style.display = 'none';
+      }
+    }
+  } catch(e) { /* noop */ }
 
   // Confidence: set by v83 decision block below
 
@@ -10170,6 +10281,80 @@ document.addEventListener('DOMContentLoaded', () => {
   document.addEventListener('DOMContentLoaded', () => {
     const el = document.getElementById('nowG');
     if (el) _dataObs.observe(el, { childList: true, characterData: true, subtree: true });
+  });
+
+  // v87.12: Engagement hooks — click/expand events для D7 retention analysis
+  // Throttled щоб не спамити одними й тими ж подіями
+  const _tThrottle = new Map();
+  function _tOnce(key, delayMs, fn){
+    const now = Date.now();
+    const last = _tThrottle.get(key) || 0;
+    if (now - last < delayMs) return;
+    _tThrottle.set(key, now);
+    fn();
+  }
+  document.addEventListener('DOMContentLoaded', () => {
+    // 5. Details expanded (які секції користувач відкриває)
+    document.querySelectorAll('details').forEach(det => {
+      det.addEventListener('toggle', () => {
+        if (det.open) {
+          _tOnce('det_' + (det.id || 'anon'), 30000, () => {
+            window.GT.track('details_expand', { id: det.id || 'anon' });
+          });
+        }
+      });
+    });
+    // 6. Profile switch (який профіль активує)
+    const profSlots = document.getElementById('profileSlots');
+    if (profSlots) {
+      profSlots.addEventListener('click', (e) => {
+        const t = e.target.closest('[data-slot-idx]');
+        if (t) {
+          _tOnce('prof_' + t.dataset.slotIdx, 10000, () => {
+            window.GT.track('profile_switch', { slot: t.dataset.slotIdx });
+          });
+        }
+      });
+    }
+    // 7. Persona profile filter (Медик/Пілот/Трейдер/Військовий)
+    const profBar = document.getElementById('profileBar');
+    if (profBar) {
+      profBar.addEventListener('click', (e) => {
+        const b = e.target.closest('button[data-profile]');
+        if (b) {
+          window.GT.track('persona_filter', { profile: b.dataset.profile });
+        }
+      });
+    }
+    // 8. Refresh button
+    const btnRef = document.getElementById('btnRefresh');
+    if (btnRef) btnRef.addEventListener('click', () => window.GT.track('refresh_manual'));
+    // 9. Tier badge click (показ paywall через badge)
+    const tierB = document.getElementById('tierBadge');
+    if (tierB) tierB.addEventListener('click', () => window.GT.track('tier_badge_click', { tier: (window.PAYWALL && window.PAYWALL.tier()) || 'free' }));
+    // 10. Day plan rows — що користувач дивиться з плану
+    const dpRows = document.getElementById('dayPlanRows');
+    if (dpRows) {
+      dpRows.addEventListener('click', () => {
+        _tOnce('dpRow_click', 30000, () => window.GT.track('dayplan_interact'));
+      });
+    }
+    // 11. 3-day pill click (переходить у деталі прогнозу)
+    const threeQ = document.getElementById('threeQuick');
+    if (threeQ) {
+      threeQ.addEventListener('click', () => {
+        _tOnce('3day_click', 30000, () => window.GT.track('forecast_3d_click'));
+      });
+    }
+  });
+
+  // 12. Session duration — відправляти на unload
+  const _tStart = Date.now();
+  window.addEventListener('beforeunload', () => {
+    try {
+      const sec = Math.round((Date.now() - _tStart) / 1000);
+      if (sec > 3) window.GT.track('session_end', { duration_s: sec });
+    } catch(e) {}
   });
 
 })();
