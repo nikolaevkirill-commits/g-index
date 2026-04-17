@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v87.8</title>
+  <title>G-Index — Космофізичний дашборд v87.9</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -692,6 +692,17 @@
     #panchGrid table td br{display:none}
     #panchGrid table td span[style*="font-size:10px"]{display:inline!important;margin-left:4px!important;font-size:10px!important;color:#7a95b8!important}
     #panchGrid table tr{border-bottom:1px solid rgba(30,47,82,.5)}
+    /* v87.9: Рекомендований час — підсумковий блок Панчанги */
+    .panch-best-time{margin-top:10px;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.06);background:linear-gradient(180deg,rgba(43,212,125,.06),rgba(43,212,125,.02));display:flex;flex-direction:column;gap:8px}
+    .panch-best-time:empty{display:none}
+    .panch-best-time.is-neutral{background:linear-gradient(180deg,rgba(155,177,220,.05),rgba(155,177,220,.02));border-color:rgba(155,177,220,.1)}
+    .panch-best-time.is-tense{background:linear-gradient(180deg,rgba(255,107,107,.06),rgba(255,107,107,.02));border-color:rgba(255,107,107,.15)}
+    .pbt-row{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px}
+    .pbt-label{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);font-weight:600}
+    .pbt-value{font-weight:700;color:var(--text);font-variant-numeric:tabular-nums}
+    .pbt-hint{font-size:11px;color:var(--muted);line-height:1.35}
+    .pbt-value.is-pos{color:#7fe3a6}
+    .pbt-value.is-neg{color:#ff9f9f}
     /* P4: profile buttons compact */
     #profileBar{padding:6px 12px!important;gap:4px!important}
     .profile-btn{font-size:11px!important;padding:3px 10px!important}
@@ -1478,6 +1489,8 @@
           <div class="muted small">Завантаження…</div>
         </div>
         <div style="margin-top:6px;font-size:12px" id="panchNote"></div>
+        <!-- v87.9: Рекомендований час — підсумковий блок, балансує висоту з personalCard -->
+        <div id="panchBestTime" class="panch-best-time"></div>
       </section>
 
       <!-- ПЕРСОНАЛЬНИЙ РОЗРАХУНОК — правий стовпець, рядок 2 -->
@@ -4497,6 +4510,52 @@ function renderPanchangaCard(state){
   el_('panchGrid').innerHTML = html;
   el_('panchNote').innerHTML = summaryHtml +
     '<div class="small muted" style="margin-top:6px;font-size:10px;opacity:.75">ℹ️ Формула: G = Kp − 2 + ΣAᵢ. R&D advisory.</div>';
+
+  // v87.9: Рекомендований час — підсумковий блок знизу Панчанги (балансує висоту з personalCard)
+  try {
+    const bt = document.getElementById('panchBestTime');
+    if (bt) {
+      const slots = window._daySlots || [];
+      if (slots.length >= 2) {
+        // Знайти найкращий (max G) та найгірший (min G) слот
+        const sorted = [...slots].sort((a,b) => b.G - a.G);
+        const best = sorted[0];
+        const worst = sorted[sorted.length - 1];
+        const sameSlot = best.label === worst.label || (best.G - worst.G) < 0.5;
+        // Класифікація всього дня
+        const dayAvg = slots.reduce((s,x) => s + x.G, 0) / slots.length;
+        const stateClass = dayAvg >= 1 ? '' : dayAvg > -1 ? 'is-neutral' : 'is-tense';
+        bt.className = 'panch-best-time ' + stateClass;
+        const _end = (h) => String((h + 3) % 24).padStart(2,'0');
+        const bestRange = `${String(best.label).padStart(2,'0')}:00–${_end(parseInt(best.label))}:00`;
+        const worstRange = `${String(worst.label).padStart(2,'0')}:00–${_end(parseInt(worst.label))}:00`;
+        const bestG = (best.G >= 0 ? '+' : '') + best.G.toFixed(1);
+        const worstG = (worst.G >= 0 ? '+' : '') + worst.G.toFixed(1);
+        const bestCls = best.G > 0 ? 'is-pos' : best.G < 0 ? 'is-neg' : '';
+        const worstCls = worst.G < 0 ? 'is-neg' : '';
+        let html = '';
+        if (sameSlot) {
+          html = `<div class="pbt-row">`
+               + `<span class="pbt-label">Рівний день</span>`
+               + `<span class="pbt-value ${bestCls}">G≈${bestG}</span>`
+               + `</div>`
+               + `<div class="pbt-hint">Без виражених піків — витримуй рутину. Уникай імпульсних рішень.</div>`;
+        } else {
+          html = `<div class="pbt-row">`
+               + `<span class="pbt-label">Найкращий час</span>`
+               + `<span class="pbt-value ${bestCls}">${bestRange} UTC · G=${bestG}</span>`
+               + `</div>`
+               + `<div class="pbt-row">`
+               + `<span class="pbt-label">Уникати</span>`
+               + `<span class="pbt-value ${worstCls}">${worstRange} UTC · G=${worstG}</span>`
+               + `</div>`;
+        }
+        bt.innerHTML = html;
+      } else {
+        bt.innerHTML = '';
+      }
+    }
+  } catch(e) { /* noop */ }
 }
 
 // v85b: renderPanchanga — backward-compatible wrapper
@@ -4527,6 +4586,12 @@ function renderDayForecast(last3D, kUse, ai) {
     const G = kp - 2 + aiSlot.Ai;
     window._daySlots.push({ i, kp, G, label: slotLabels[i] || String(i*3) });
   }
+  // v87.9: якщо Панчанга вже рендерена раніше — оновити panchBestTime з новими slots
+  try {
+    if (document.getElementById('panchBestTime') && typeof _lastPanchCtx !== 'undefined' && _lastPanchCtx) {
+      renderPanchanga(noonUTC(new Date()));
+    }
+  } catch(e) { /* noop */ }
 }
 
 // renderNowKpChart — видалено v32 (мертвий код, DOM-елементи відсутні)
