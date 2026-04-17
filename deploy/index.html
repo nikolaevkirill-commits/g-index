@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v86.7</title>
+  <title>G-Index — Космофізичний дашборд v87.1</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -673,6 +673,14 @@
     /* 7. Energy bar приглушити */
     .hero-energy{opacity:.55!important;margin:4px 0!important}
 
+    /* ═══ v87: ALERT SYSTEM ═══ */
+    @keyframes alertPulse87{0%,100%{opacity:.85;box-shadow:0 0 0 0 rgba(255,70,70,0)}50%{opacity:1;box-shadow:0 0 20px rgba(255,70,70,.15)}}
+
+    /* ═══ v87.1 NFR: Accessibility — reduced motion ═══ */
+    @media(prefers-reduced-motion:reduce){
+      *,*::before,*::after{animation-duration:0.01ms!important;animation-iteration-count:1!important;transition-duration:0.01ms!important}
+    }
+
     /* v86.1: Heat-strip styles */
     #timingHeatStrip{display:grid}
     #timingHeatStrip.v86-hidden{display:none!important}
@@ -1150,7 +1158,16 @@
         </div>
       </div>
     </section>
-    <!-- ═══ v83 v4: Речення дня ═══ -->
+    <!-- ═══ v87: ALERT BANNER ═══ -->
+    <div id="alertBanner" style="display:none;margin:0 0 10px;padding:12px 16px;border-radius:12px;border:1px solid rgba(255,70,70,.4);background:linear-gradient(180deg,rgba(255,50,50,.14),rgba(255,50,50,.06));animation:alertPulse87 2.5s ease-in-out infinite">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:20px">🔴</span>
+        <div>
+          <div id="alertTitle" style="font-size:15px;font-weight:900;color:#ffd2d2;letter-spacing:.01em">—</div>
+          <div id="alertBody" style="font-size:12px;color:#ffb0b0;margin-top:2px">—</div>
+        </div>
+      </div>
+    </div>
     <div id="daySentenceCard" style="margin:0 0 12px;padding:10px 14px;border-radius:12px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.035)">
       <div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--dim);margin-bottom:4px">Речення дня</div>
       <div id="daySentenceText" style="font-size:14px;line-height:1.4;font-weight:700;color:#e7efff">—</div>
@@ -4842,6 +4859,56 @@ function formatConfidence(v){
   return n+'%';
 }
 
+// v87: Alert banner — shows when storm/high-risk detected
+// Triggers: Kp ≥ 5, G ≤ -3, or forecast Kp ≥ 5 in next 6h
+function renderAlertBanner(g, kp){
+  const banner = document.getElementById('alertBanner');
+  const titleEl = document.getElementById('alertTitle');
+  const bodyEl = document.getElementById('alertBody');
+  if (!banner || !titleEl || !bodyEl) return;
+
+  const alerts = [];
+
+  // Current Kp ≥ 5 → geomagnetic storm
+  if (isFinite(kp) && kp >= 5) {
+    const level = kp >= 7 ? 'G3+ СИЛЬНА БУРЯ' : kp >= 6 ? 'G2 ПОМІРНА БУРЯ' : 'G1 СЛАБКА БУРЯ';
+    alerts.push({ title: `⚡ ${level} (Kp=${kp.toFixed(1)})`, body: 'Уникайте важливих рішень, подорожей, переговорів. Чекайте стабілізації.' });
+  }
+
+  // G ≤ -3 → extreme risk
+  if (isFinite(g) && g <= -3) {
+    alerts.push({ title: '🔴 ВИСОКИЙ РИЗИК', body: `G = ${g.toFixed(1)} — критичний рівень. Не приймайте жодних рішень 3-6 годин.` });
+  }
+
+  // Forecast: check _daySlots for future Kp ≥ 5
+  const slots = window._daySlots || [];
+  const nowSlotIdx = Math.floor(new Date().getUTCHours() / 3);
+  const futureStorm = slots.find(s => s.i > nowSlotIdx && isFinite(s.kp) && s.kp >= 5);
+  if (futureStorm && !alerts.length) {
+    const hoursAhead = (futureStorm.i - nowSlotIdx) * 3;
+    alerts.push({ title: `⚠ БУРЯ ОЧІКУЄТЬСЯ через ~${hoursAhead} год`, body: `Прогнозований Kp=${futureStorm.kp.toFixed(1)} о ${futureStorm.label}:00 UTC. Завершіть важливі справи заздалегідь.` });
+  }
+
+  // G ≤ -2 (moderate risk, softer alert)
+  if (isFinite(g) && g <= -2 && g > -3 && !alerts.length) {
+    alerts.push({ title: '⚠ ПІДВИЩЕНИЙ РИЗИК', body: `G = ${g.toFixed(1)} — тиск зростає. Будьте обережні з рішеннями.` });
+  }
+
+  if (alerts.length > 0) {
+    const a = alerts[0]; // show most severe
+    titleEl.textContent = a.title;
+    bodyEl.textContent = a.body;
+    banner.style.display = '';
+    // Color intensity by severity
+    if (alerts[0].title.includes('СИЛЬНА') || alerts[0].title.includes('ВИСОКИЙ')) {
+      banner.style.borderColor = 'rgba(255,40,40,.55)';
+      banner.style.background = 'linear-gradient(180deg,rgba(255,30,30,.18),rgba(255,30,30,.08))';
+    }
+  } else {
+    banner.style.display = 'none';
+  }
+}
+
 // v86-P1: Radial G-decomposition — formula as visual
 // Feature flag: localStorage.v86_radial='1' OR URL ?v86radial=1
 // Рендерить G як 6 сегментів кола (Kp-2, Lᵢ, Mᵢ, eᵢ, Pᵢ, Dᵢ), кожен з унікальним кольором.
@@ -5255,6 +5322,9 @@ function syncHero(){
 
   // v86.1: timing heat-strip (feature flag)
   try { renderHeatStripV86(); } catch(e){ console.warn('v86heat:',e); }
+
+  // v87: Alert banner — storm / high-risk detection
+  try { renderAlertBanner(gVal, kpH); } catch(e){ console.warn('alert:',e); }
 }
 
 // ═══ v78d: Why Card (coreGrid) ═══
@@ -10042,20 +10112,20 @@ function _renderFreshnessState(){
   const now = Date.now();
   const ages = Object.values(ts).filter(t=>typeof t==='number').map(t => now - t);
   if(!ages.length){
-    // Fallback: read from source badges
     updateFreshnessBadge();
     return;
   }
   const maxAge = Math.max(...ages);
   const fb = el('freshnessBadge');
   const hf = el('heroFreshness');
+  // v87.1 NFR: stricter thresholds (LIVE ≤5min, DELAYED ≤30min, STALE ≤60min, OLD >60min)
   let state, label, col, bgCol;
-  if(maxAge < 15*60*1000){ state='live'; label='● LIVE'; col='#63be7b'; bgCol='#0a2a15'; }
-  else if(maxAge < 60*60*1000){ state='stale'; label='● STALE'; col='#ffcc44'; bgCol='#2a1a00'; }
+  if(maxAge < 5*60*1000){ state='live'; label='● LIVE'; col='#63be7b'; bgCol='#0a2a15'; }
+  else if(maxAge < 30*60*1000){ state='delayed'; label='● DELAYED'; col='#ffcc44'; bgCol='#2a1a00'; }
+  else if(maxAge < 60*60*1000){ state='stale'; label='● STALE'; col='#ff9944'; bgCol='#2a1200'; }
   else { state='old'; label='● OLD'; col='#ff6b6b'; bgCol='#2a0808'; }
   if(fb){ fb.textContent=label; fb.style.color=col; fb.style.background=bgCol; }
   if(hf){ hf.textContent=state.toUpperCase(); hf.className=''; hf.classList.add(state); }
-  // v80: wire freshness into __uiState
   if(window.__uiState) window.__uiState.freshness = state;
 }
 
@@ -10242,6 +10312,9 @@ document.addEventListener('DOMContentLoaded',()=>{
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
+    // v87.1 NFR: refresh freshness badge every 60s (дані старіють без оновлення)
+    setInterval(function(){ try{_renderFreshnessState();}catch(e){} }, 60000);
+
     navigator.serviceWorker.register('sw.js')
       .then(reg => {
         _swReg = reg;
