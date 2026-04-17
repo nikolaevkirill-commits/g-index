@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v87.1</title>
+  <title>G-Index — Космофізичний дашборд v87.2</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -645,12 +645,22 @@
     /* ═══ v86.5: LOWER BLOCKS CLEANUP ═══ */
     /* P1: timingRows hidden — heat-strip замінює text cards */
     #timingRows{display:none!important}
-    /* P2: whyRows → compact (менший padding, dimmer нулі) */
-    .why-row{padding:3px 8px!important;font-size:12px!important}
-    .why-row[data-val="0"]{opacity:.4!important}
+    /* P2: whyRows → chips (v87.2: pill layout замість таблиці) */
+    #whyRows{display:flex!important;flex-wrap:wrap!important;gap:6px!important}
+    .why-row{display:inline-flex!important;align-items:center!important;gap:4px!important;padding:5px 10px!important;border-radius:999px!important;font-size:12px!important;border:1px solid rgba(255,255,255,.08)!important;background:rgba(255,255,255,.04)!important;grid-template-columns:unset!important;border-bottom:none!important}
+    .why-row.is-main{border-color:rgba(255,107,107,.25)!important;background:rgba(255,107,107,.10)!important;border-left:none!important;padding-left:10px!important}
+    .why-row:not(.is-main){opacity:.6!important}
+    .why-row .why-name{font-size:11px!important}
+    .why-row .why-name span{display:none!important}
+    .why-row .why-dir{display:none!important}
+    .why-row .why-val{font-weight:800!important;font-size:12px!important}
     /* P3: Панчанга compact */
     #panchCard{font-size:12px!important}
     #panchCard table{font-size:11px!important}
+    /* v87.2: Панчанга таблиця collapsed — summary достатньо */
+    #panchGrid{display:none!important}
+    #panchCard h2{font-size:14px!important}
+    #panchPiLine{display:none!important}
     /* P4: profile buttons compact */
     #profileBar{padding:6px 12px!important;gap:4px!important}
     .profile-btn{font-size:11px!important;padding:3px 10px!important}
@@ -658,8 +668,11 @@
     #panchSummaryLine{font-size:12px!important;padding:8px 10px!important}
 
     /* ═══ v86.6: CLEAN DESIGN — менше = сильніше ═══ */
-    /* 1. Прибрати chips (дублюють ActionCmd) */
-    .hero-chips{display:none!important}
+    /* 1. Hero-chips → показувати як status в hero-right (повернено з v86.6 hide) */
+    .hero-chips{display:flex!important;flex-direction:column!important;gap:4px!important;order:10!important}
+    .hero-chip{padding:6px 10px!important;border-radius:8px!important;font-size:11px!important;background:rgba(255,255,255,.04)!important;border:1px solid rgba(255,255,255,.07)!important}
+    .hero-chip .hc-label{font-size:9px!important;text-transform:uppercase!important;letter-spacing:.06em!important;color:var(--dim)!important}
+    .hero-chip .hc-val{font-size:13px!important;font-weight:800!important;display:block!important}
     /* 2. Прибрати meta inline (Драйвер/Далі/Тренд/Зона — шум) */
     #heroMetaInline{display:none!important}
     /* 3. Прибрати subtitle "Дій повільно..." — ActionCmd достатньо */
