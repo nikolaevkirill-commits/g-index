@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v87.2</title>
+  <title>G-Index — Космофізичний дашборд v87.3</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1098,12 +1098,12 @@
             <div id="heroRingV86" style="position:relative;width:160px;height:160px">
               <svg viewBox="0 0 220 220" style="width:100%;height:100%;transform:rotate(-90deg)">
                 <circle cx="110" cy="110" r="92" fill="none" stroke="rgba(70,96,140,.22)" stroke-width="14"/>
-                <circle id="v86segKp" cx="110" cy="110" r="92" fill="none" stroke="#ffb84d" stroke-width="12" stroke-linecap="round" stroke-dasharray="0 578" style="filter:drop-shadow(0 0 6px #ffb84d);transition:stroke-dasharray .8s ease,stroke-dashoffset .8s ease" stroke-dashoffset="0"/>
-                <circle id="v86segLi" cx="110" cy="110" r="92" fill="none" stroke="#8da2ff" stroke-width="12" stroke-linecap="round" stroke-dasharray="0 578" style="filter:drop-shadow(0 0 6px #8da2ff);transition:stroke-dasharray .8s ease,stroke-dashoffset .8s ease" stroke-dashoffset="0"/>
-                <circle id="v86segMi" cx="110" cy="110" r="92" fill="none" stroke="#ff6b6b" stroke-width="12" stroke-linecap="round" stroke-dasharray="0 578" style="filter:drop-shadow(0 0 6px #ff6b6b);transition:stroke-dasharray .8s ease,stroke-dashoffset .8s ease" stroke-dashoffset="0"/>
-                <circle id="v86segEi" cx="110" cy="110" r="92" fill="none" stroke="#d28cff" stroke-width="12" stroke-linecap="round" stroke-dasharray="0 578" style="filter:drop-shadow(0 0 6px #d28cff);transition:stroke-dasharray .8s ease,stroke-dashoffset .8s ease" stroke-dashoffset="0"/>
-                <circle id="v86segPi" cx="110" cy="110" r="92" fill="none" stroke="#37d39a" stroke-width="12" stroke-linecap="round" stroke-dasharray="0 578" style="filter:drop-shadow(0 0 6px #37d39a);transition:stroke-dasharray .8s ease,stroke-dashoffset .8s ease" stroke-dashoffset="0"/>
-                <circle id="v86segDi" cx="110" cy="110" r="92" fill="none" stroke="#58c7ff" stroke-width="12" stroke-linecap="round" stroke-dasharray="0 578" style="filter:drop-shadow(0 0 6px #58c7ff);transition:stroke-dasharray .8s ease,stroke-dashoffset .8s ease" stroke-dashoffset="0"/>
+                <circle id="v86segKp" cx="110" cy="110" r="92" fill="none" stroke="#ffb84d" stroke-width="12" stroke-linecap="butt" stroke-dasharray="0 578" style="filter:drop-shadow(0 0 6px #ffb84d);transition:stroke-dasharray .8s ease,stroke-dashoffset .8s ease" stroke-dashoffset="0"/>
+                <circle id="v86segLi" cx="110" cy="110" r="92" fill="none" stroke="#8da2ff" stroke-width="12" stroke-linecap="butt" stroke-dasharray="0 578" style="filter:drop-shadow(0 0 6px #8da2ff);transition:stroke-dasharray .8s ease,stroke-dashoffset .8s ease" stroke-dashoffset="0"/>
+                <circle id="v86segMi" cx="110" cy="110" r="92" fill="none" stroke="#ff6b6b" stroke-width="12" stroke-linecap="butt" stroke-dasharray="0 578" style="filter:drop-shadow(0 0 6px #ff6b6b);transition:stroke-dasharray .8s ease,stroke-dashoffset .8s ease" stroke-dashoffset="0"/>
+                <circle id="v86segEi" cx="110" cy="110" r="92" fill="none" stroke="#d28cff" stroke-width="12" stroke-linecap="butt" stroke-dasharray="0 578" style="filter:drop-shadow(0 0 6px #d28cff);transition:stroke-dasharray .8s ease,stroke-dashoffset .8s ease" stroke-dashoffset="0"/>
+                <circle id="v86segPi" cx="110" cy="110" r="92" fill="none" stroke="#37d39a" stroke-width="12" stroke-linecap="butt" stroke-dasharray="0 578" style="filter:drop-shadow(0 0 6px #37d39a);transition:stroke-dasharray .8s ease,stroke-dashoffset .8s ease" stroke-dashoffset="0"/>
+                <circle id="v86segDi" cx="110" cy="110" r="92" fill="none" stroke="#58c7ff" stroke-width="12" stroke-linecap="butt" stroke-dasharray="0 578" style="filter:drop-shadow(0 0 6px #58c7ff);transition:stroke-dasharray .8s ease,stroke-dashoffset .8s ease" stroke-dashoffset="0"/>
               </svg>
               <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none">
                 <div id="v86GVal" style="font-size:36px;font-weight:900;color:#ffd77a;line-height:1;text-shadow:0 0 12px rgba(255,210,110,.3)">—</div>
@@ -5003,23 +5003,39 @@ function renderGRadialV86(g, kp, ai){
     { id:'v86segPi', val: isFinite(safeAi.Pi) ? safeAi.Pi : 0 },
     { id:'v86segDi', val: isFinite(safeAi.Di) ? safeAi.Di : 0 }
   ];
-  const totalAbs = segs.reduce((s,x) => s + Math.abs(x.val), 0) || 1;
+  const rawTotal = segs.reduce((s,x) => s + Math.abs(x.val), 0);
   const R = 92;
   const C = 2 * Math.PI * R; // ≈ 578
+  // v87.3 B3/B6: якщо всі сегменти нульові — показати 6 рівних тьмяних частин (neutral state)
+  const neutral = rawTotal < 0.01;
+  const totalAbs = neutral ? 6 : rawTotal;
+  // v87.3 B2: невеликий розрив між активними сегментами (запобігає злипанню)
+  const GAP_PX = 2;
+  const activeCount = neutral ? 6 : segs.filter(s => Math.abs(s.val) >= 0.05).length;
+  const totalGap = activeCount > 1 ? GAP_PX * activeCount : 0;
+  const usableC = Math.max(C - totalGap, C * 0.5);
   let cursor = 0;
   segs.forEach(s => {
-    const share = Math.abs(s.val) / totalAbs;
-    const segLen = C * share;
+    const absVal = neutral ? 1 : Math.abs(s.val);
+    const share = absVal / totalAbs;
+    const isActive = neutral || absVal >= 0.05;
+    const segLen = isActive ? usableC * share : 0;
     const gap = C - segLen;
     const el = document.getElementById(s.id);
     if (!el) return;
-    // stroke-dasharray: [visible] [gap]
     el.setAttribute('stroke-dasharray', `${segLen.toFixed(2)} ${gap.toFixed(2)}`);
-    // stroke-dashoffset: негативне зсуває початок проти годинникової
     el.setAttribute('stroke-dashoffset', `${(-cursor).toFixed(2)}`);
-    // opacity: neutral (val=0) → приглушений
-    el.style.opacity = Math.abs(s.val) < 0.05 ? '0.15' : '1';
-    cursor += segLen;
+    // v87.3 B1/B5: повний hide нульових сегментів (усуває фантомні крапки)
+    el.style.opacity = neutral ? '0.35' : (isActive ? '1' : '0');
+    // v87.3 B4: візуалізація знаку — негативні сегменти тонші + без glow
+    if (!neutral && isActive) {
+      const isNeg = s.val < 0;
+      el.setAttribute('stroke-width', isNeg ? '8' : '12');
+      el.style.filter = isNeg ? 'none' : el.style.filter || '';
+    } else {
+      el.setAttribute('stroke-width', '12');
+    }
+    if (isActive) cursor += segLen + (activeCount > 1 ? GAP_PX : 0);
   });
   // Central G-value
   const vEl = document.getElementById('v86GVal');
