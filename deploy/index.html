@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v87.6</title>
+  <title>G-Index — Космофізичний дашборд v87.7</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -47,7 +47,7 @@
     main{max-width:1760px; margin:16px auto; padding:0 24px 40px}
     .row{display:grid; grid-template-columns:repeat(12,1fr); gap:var(--gap)}
     #mainGrid{display:grid; grid-template-columns:1fr; gap:12px; margin-bottom:12px}
-    #duoCard{display:grid; grid-template-columns:1fr 1fr; gap:12px; background:transparent; border:none; padding:0; box-shadow:none; border-radius:0}
+    #duoCard{display:grid; grid-template-columns:1fr 1fr; gap:12px; background:transparent; border:none; padding:0; box-shadow:none; border-radius:0; align-items:start}
     #duoCard>.card{grid-column:auto; margin:0}
     #nowCard{grid-column:auto}
     @media(max-width:860px){#duoCard{grid-template-columns:1fr}}
@@ -678,10 +678,18 @@
     /* P3: Панчанга compact */
     #panchCard{font-size:12px!important}
     #panchCard table{font-size:11px!important}
-    /* v87.2: Панчанга таблиця collapsed — summary достатньо */
-    #panchGrid{display:none!important}
+    /* v87.7: видалено v87.2 hide — panchGrid повернуто у compact режимі нижче */
     #panchCard h2{font-size:14px!important}
     #panchPiLine{display:none!important}
+    /* v87.7: panchGrid повернуто в compact-режим (попередній display:none→ картка була занадто коротка) */
+    #panchGrid{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:6px!important;margin-top:8px!important}
+    #panchGrid .panch-cell{padding:6px 8px!important;min-height:auto!important;font-size:11px!important}
+    #panchGrid .panch-label{font-size:9px!important;margin-bottom:1px!important}
+    #panchGrid .panch-val{font-size:12px!important;line-height:1.15!important}
+    #panchGrid .panch-sub{font-size:10px!important;opacity:.75}
+    #panchGrid .panch-do,#panchGrid .panch-av{font-size:10px!important;line-height:1.25!important;margin-top:2px!important}
+    @media(max-width:860px){#panchGrid{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+    @media(max-width:520px){#panchGrid{grid-template-columns:1fr!important}}
     /* P4: profile buttons compact */
     #profileBar{padding:6px 12px!important;gap:4px!important}
     .profile-btn{font-size:11px!important;padding:3px 10px!important}
