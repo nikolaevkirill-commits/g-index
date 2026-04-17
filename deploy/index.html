@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v87.7</title>
+  <title>G-Index — Космофізичний дашборд v87.8</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -47,7 +47,7 @@
     main{max-width:1760px; margin:16px auto; padding:0 24px 40px}
     .row{display:grid; grid-template-columns:repeat(12,1fr); gap:var(--gap)}
     #mainGrid{display:grid; grid-template-columns:1fr; gap:12px; margin-bottom:12px}
-    #duoCard{display:grid; grid-template-columns:1fr 1fr; gap:12px; background:transparent; border:none; padding:0; box-shadow:none; border-radius:0; align-items:start}
+    #duoCard{display:grid; grid-template-columns:1fr 1fr; gap:12px; background:transparent; border:none; padding:0; box-shadow:none; border-radius:0; align-items:stretch}
     #duoCard>.card{grid-column:auto; margin:0}
     #nowCard{grid-column:auto}
     @media(max-width:860px){#duoCard{grid-template-columns:1fr}}
@@ -659,6 +659,8 @@
     #whyCard:has(.why-cause-chain:not(:empty)) #whyRows{opacity:.65;font-size:11px}
     #whyCard:has(.why-cause-chain:not(:empty)) #whyRows .why-row{padding:3px 8px!important;font-size:11px!important}
     #whyCard:has(.why-cause-chain:not(:empty)) #whyMain{opacity:.75;font-size:12px!important;margin-top:4px!important;padding:5px 8px!important;background:rgba(255,255,255,.02)!important;border:none!important;border-left:2px solid rgba(255,255,255,.1)!important;border-radius:0 6px 6px 0!important;color:var(--muted)!important}
+    /* v87.7d: коли cause-chain активний → нульові pills (is-neutral) ховати повністю, щоб не шуміти */
+    #whyCard:has(.why-cause-chain:not(:empty)) #whyRows .why-row.is-neutral{display:none!important}
     /* v87.4 P5: timingRows повернуто для балансу висот coreGrid — compact list під heat-strip */
     #timingRows{display:block!important;margin-top:6px}
     #timingRows .timing-row{padding:4px 8px!important;margin-bottom:2px!important;border-radius:8px!important;grid-template-columns:82px 1fr!important;gap:6px!important;font-size:11px!important;background:rgba(255,255,255,.025)!important;border:1px solid rgba(255,255,255,.04)!important}
@@ -683,9 +685,10 @@
     #panchPiLine{display:none!important}
     /* v87.7: panchGrid unhide — raw <table> structure всередині достатньо для заповнення картки */
     /* v87.7b: ущільнення Панчанга-таблиці — було 100-120px на рядок, стає ~40-55px */
+    /* v87.7c: баланс висот з personalCard — трохи розслаблюємо padding/line-height */
     #panchGrid table{font-size:12px!important}
-    #panchGrid table td{padding:3px 6px!important;line-height:1.25!important;vertical-align:middle!important}
-    #panchGrid table th{padding:2px 6px!important}
+    #panchGrid table td{padding:7px 6px!important;line-height:1.45!important;vertical-align:middle!important}
+    #panchGrid table th{padding:4px 6px!important}
     #panchGrid table td br{display:none}
     #panchGrid table td span[style*="font-size:10px"]{display:inline!important;margin-left:4px!important;font-size:10px!important;color:#7a95b8!important}
     #panchGrid table tr{border-bottom:1px solid rgba(30,47,82,.5)}
@@ -5550,11 +5553,10 @@ function _renderHeroCause(g, kp) {
   }).join('');
 
   // v85b-F7: Neutral factors — each as dimmed row (не злита в 1 рядок)
-  // Раніше: 1 collapsed line "місяць, затемнення, ..." — блок виглядав пустим.
-  // Тепер: кожен нульовий фактор — окремий dim-рядок для візуальної повноти.
+  // v87.7d: маркерний клас is-neutral для CSS auto-hide коли cause-chain активний
   if (neutralFact.length > 0) {
     html += neutralFact.map(f => {
-      return `<div class="why-row" style="opacity:.5">`
+      return `<div class="why-row is-neutral" style="opacity:.5">`
         + `<div class="why-name" style="color:var(--faint)">${f.name} <span style="color:var(--dim);font-size:11px">${f.label}</span></div>`
         + `<div class="why-val" style="color:var(--faint)">0.0</div>`
         + `<div class="why-dir" style="color:var(--faint)">•</div>`
