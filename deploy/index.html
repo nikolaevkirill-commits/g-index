@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v87.12</title>
+  <title>G-Index — Космофізичний дашборд v87.13</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -712,6 +712,8 @@
     .dc-text{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
     .dc-title{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--dim);font-weight:600}
     .dc-body{font-size:13px;line-height:1.35;color:var(--text);font-weight:600}
+    /* v87.13: subline для завтрашнього тренду — менш помітно ніж основний body */
+    .dc-subline{font-size:12px;line-height:1.35;color:var(--muted);margin-top:3px;font-weight:500}
     .dc-metric{font-variant-numeric:tabular-nums;font-weight:800}
     .dc-metric.is-pos{color:#7fe3a6}
     .dc-metric.is-neg{color:#ff9f9f}
@@ -5336,13 +5338,18 @@ function syncHero(){
   }
 
   // v87.10: C-score (Confidence) — довіра моделі на основі свіжості, активних факторів, Dst
+  // v87.13 fix: читати freshness з DOM badge (не з _ui яке заповнюється нижче), обробити 'cached'
   try {
     const hc = el('heroConfidence');
     if (hc && isFinite(gVal)) {
       let C = 0.85;
-      const _frState = _ui.freshness || 'live';
-      if (_frState === 'stale') C -= 0.15;
-      else if (_frState === 'old') C -= 0.30;
+      // Читаємо реальний стан з DOM, не з _ui
+      const _badgeTxt = (el('freshnessBadge')?.textContent || 'LIVE').toLowerCase();
+      let _frReal = 'live';
+      if (_badgeTxt.includes('offline') || _badgeTxt.includes('old')) _frReal = 'old';
+      else if (_badgeTxt.includes('cache') || _badgeTxt.includes('stale')) _frReal = 'cached';
+      if (_frReal === 'cached') C -= 0.15;
+      else if (_frReal === 'old') C -= 0.30;
       // Count active factors (|val| >= 0.5)
       const _aiC = _ui.ai || {};
       const _facVals = [
@@ -5354,8 +5361,8 @@ function syncHero(){
       else if (_activeN >= 3) C += 0.05;  // багато узгоджених драйверів
       // Dst storm penalty
       if ((_aiC.Di || 0) !== 0) C -= 0.15;
-      // Clamp
-      C = Math.max(0.30, Math.min(0.95, C));
+      // Clamp — верхня межа 0.92 щоб ніколи не показувати 100% (нескромно для R&D)
+      C = Math.max(0.30, Math.min(0.92, C));
       // Визначити клас
       const _cClass = C >= 0.80 ? 'is-high' : C >= 0.60 ? 'is-mid' : 'is-low';
       hc.textContent = Math.round(C * 100) + '%';
@@ -5366,6 +5373,7 @@ function syncHero(){
   } catch(e) { /* noop */ }
 
   // v87.10: Delta Card — "що змінилось за 24h"
+  // v87.13: додатково зазначити тренд на завтра щоб уникнути дисонансу з heroTomorrow
   try {
     const dc = el('deltaCard');
     if (dc && isFinite(gVal)) {
@@ -5375,23 +5383,36 @@ function syncHero(){
         const _abs = Math.abs(_d24).toFixed(1);
         const _sign = _d24 > 0 ? '+' : '−';
         const _isPos = _d24 > 0;
-        // Класифікуємо — але контекстно: +delta при G>=0 = "покращується", -delta при G<0 = "погіршується"
         const _state = Math.abs(_d24) < 0.5 ? 'stable' : _isPos ? 'improving' : 'worsening';
         const _icon = _state === 'improving' ? '📈' : _state === 'worsening' ? '📉' : '➡️';
         const _title = _state === 'improving' ? 'Покращення з вчорашнього дня'
                      : _state === 'worsening' ? 'Погіршення з вчорашнього дня'
                      : 'Стабільно з вчорашнього дня';
-        // Body — людською мовою + маркер ΔG
         const _body = _state === 'improving'
           ? `Фон піднявся <span class="dc-metric is-pos">+${_abs}</span> — день зручніший для активних дій, ніж вчора.`
           : _state === 'worsening'
           ? `Фон просів <span class="dc-metric is-neg">−${_abs}</span> — треба обережніше з рішеннями, ніж учора.`
           : `Δ24ч = ${_sign}${_abs} — суттєвих змін немає, день продовжує вчорашній ритм.`;
+        // v87.13: додатковий рядок про завтра (якщо відомо)
+        let _tomorrowLine = '';
+        const _tg = window.__tomorrowG;
+        if (isFinite(_tg)) {
+          const _tDiff = _tg - gVal;
+          if (Math.abs(_tDiff) >= 0.5) {
+            const _tDir = _tDiff > 0 ? 'покращиться' : 'просяде';
+            const _tCls = _tDiff > 0 ? 'is-pos' : 'is-neg';
+            const _tAbs = Math.abs(_tDiff).toFixed(1);
+            _tomorrowLine = `<div class="dc-subline">Завтра: <span class="dc-metric ${_tCls}">${_tg >= 0 ? '+' : ''}${_tg.toFixed(1)}</span> (${_tDir} на ${_tAbs}).</div>`;
+          } else {
+            _tomorrowLine = `<div class="dc-subline">Завтра: <span class="dc-metric">${_tg >= 0 ? '+' : ''}${_tg.toFixed(1)}</span> (без суттєвих змін).</div>`;
+          }
+        }
         dc.className = 'is-' + _state;
         dc.innerHTML = `<span class="dc-icon">${_icon}</span>`
                      + `<div class="dc-text">`
                      + `<div class="dc-title">${_title}</div>`
                      + `<div class="dc-body">${_body}</div>`
+                     + _tomorrowLine
                      + `</div>`;
         dc.style.display = '';
       } else {
