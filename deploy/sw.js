@@ -5,8 +5,8 @@
    - Everything else → Network-First, no cache
 */
 
-const SHELL_CACHE  = 'g-index-shell-v87-13';
-const DATA_CACHE   = 'g-index-data-v87-13';
+const SHELL_CACHE  = 'g-index-shell-v87-18';
+const DATA_CACHE   = 'g-index-data-v87-18';
 const DATA_TTL_MS  = 1 * 60 * 60 * 1000; // 1 hour (Dst оновлюється кожну 1h)
 // App shell files to pre-cache on install
 const SHELL_FILES = [
@@ -26,6 +26,7 @@ const DATA_PATTERNS = [
   'corsproxy.io',         // CORS proxy → forecast data
   'codetabs.com',         // CORS proxy → forecast data
   'corsfix.com',          // CORS proxy → forecast data
+  'thingproxy.freeboard.io', // v87.16 A9: 5th fallback CORS proxy (був у fetchTextWithCORS але відсутній у SW)
   'timeanddate.com',      // eclipse scraping
   'solar-wind',           // Bz/Vsw endpoints (path fragment)
   'kyoto-dst',            // Dst endpoint (path fragment)

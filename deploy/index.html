@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v87.13</title>
+  <title>G-Index — Космофізичний дашборд v87.18</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -658,7 +658,8 @@
     /* v87.6b: коли cause-chain показаний → pills і whyMain стають вторинними (ієрархія, не дублювання) */
     #whyCard:has(.why-cause-chain:not(:empty)) #whyRows{opacity:.65;font-size:11px}
     #whyCard:has(.why-cause-chain:not(:empty)) #whyRows .why-row{padding:3px 8px!important;font-size:11px!important}
-    #whyCard:has(.why-cause-chain:not(:empty)) #whyMain{opacity:.75;font-size:12px!important;margin-top:4px!important;padding:5px 8px!important;background:rgba(255,255,255,.02)!important;border:none!important;border-left:2px solid rgba(255,255,255,.1)!important;border-radius:0 6px 6px 0!important;color:var(--muted)!important}
+    /* v87.17 S2: whyMain повністю ховати коли cause-chain активний — уникаємо дублю */
+    #whyCard:has(.why-cause-chain:not(:empty)) #whyMain{display:none!important}
     /* v87.7d: коли cause-chain активний → нульові pills (is-neutral) ховати повністю, щоб не шуміти */
     #whyCard:has(.why-cause-chain:not(:empty)) #whyRows .why-row.is-neutral{display:none!important}
     /* v87.4 P5: timingRows повернуто для балансу висот coreGrid — compact list під heat-strip */
@@ -717,6 +718,24 @@
     .dc-metric{font-variant-numeric:tabular-nums;font-weight:800}
     .dc-metric.is-pos{color:#7fe3a6}
     .dc-metric.is-neg{color:#ff9f9f}
+    /* v87.18: Decision Layer — конкретні дії "що робити зараз" */
+    #decisionLayer{margin:0 0 12px;padding:12px 14px;border-radius:12px;border:1px solid rgba(120,160,255,.16);background:linear-gradient(180deg,rgba(120,160,255,.05),rgba(120,160,255,.02))}
+    #decisionLayer.is-favorable{border-color:rgba(43,212,125,.25);background:linear-gradient(180deg,rgba(43,212,125,.06),rgba(43,212,125,.02))}
+    #decisionLayer.is-good{border-color:rgba(99,190,123,.22);background:linear-gradient(180deg,rgba(99,190,123,.05),rgba(99,190,123,.02))}
+    #decisionLayer.is-unstable{border-color:rgba(255,170,51,.25);background:linear-gradient(180deg,rgba(255,170,51,.05),rgba(255,170,51,.02))}
+    #decisionLayer.is-tense{border-color:rgba(255,68,68,.28);background:linear-gradient(180deg,rgba(255,68,68,.06),rgba(255,68,68,.02))}
+    .decision-head{display:flex;align-items:baseline;gap:10px;margin-bottom:8px;flex-wrap:wrap}
+    .decision-title{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);font-weight:700}
+    .decision-context{font-size:11px;color:var(--muted);font-weight:500}
+    .decision-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 16px}
+    @media(max-width:640px){.decision-grid{grid-template-columns:1fr}}
+    .decision-col-title{font-size:10px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;font-weight:700}
+    .decision-do .decision-col-title{color:#7fe3a6}
+    .decision-avoid .decision-col-title{color:#ff9f9f}
+    .decision-col ul{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:3px}
+    .decision-col li{font-size:12px;line-height:1.4;color:var(--text);padding:4px 8px;border-radius:6px;background:rgba(255,255,255,.02)}
+    .decision-do li{border-left:2px solid rgba(127,227,166,.4)}
+    .decision-avoid li{border-left:2px solid rgba(255,159,159,.4)}
     /* v87.11: Source Health panel — grid 3×2 з бейджами */
     .source-health{margin-top:10px;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.02)}
     .source-health-title{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--dim);margin-bottom:6px;font-weight:600}
@@ -740,6 +759,12 @@
     .hero-chip[data-tt]::after{content:attr(data-tt);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:rgba(10,18,32,.98);border:1px solid rgba(120,160,255,.25);border-radius:8px;padding:8px 10px;font-size:11px;line-height:1.4;color:var(--text);font-weight:500;width:220px;white-space:normal;text-align:left;pointer-events:none;opacity:0;transition:opacity .18s ease .15s;z-index:50;box-shadow:0 4px 20px rgba(0,0,0,.4);letter-spacing:0}
     .hero-chip[data-tt]::before{content:"";position:absolute;bottom:calc(100% + 1px);left:50%;transform:translateX(-50%);width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:5px solid rgba(120,160,255,.25);opacity:0;transition:opacity .18s ease .15s;z-index:51}
     .hero-chip[data-tt]:hover::after,.hero-chip[data-tt]:hover::before,.hero-chip[data-tt]:focus::after,.hero-chip[data-tt]:focus::before{opacity:1}
+    /* v87.15 S1: chips — вторинні по відношенню до DO/AVOID (приглушені) */
+    .hero-chips{opacity:.72}
+    .hero-chip{padding:3px 8px!important;font-size:10px!important}
+    .hero-chip .hc-val{font-size:11px!important;font-weight:700!important}
+    /* v87.17 S1: повне приховання hero-chips — DO/AVOID уже комунікують рішення, chips дублюють */
+    .hero-chips{display:none!important}
     .hero-chip{display:inline-flex!important;align-items:center!important;gap:6px!important;padding:5px 10px!important;border-radius:999px!important;font-size:11px!important;background:rgba(255,255,255,.04)!important;border:1px solid rgba(255,255,255,.08)!important;white-space:nowrap!important}
     .hero-chip .hc-label{font-size:9px!important;text-transform:uppercase!important;letter-spacing:.06em!important;color:var(--dim)!important}
     .hero-chip .hc-val{font-size:12px!important;font-weight:800!important;display:inline!important;color:var(--text)!important}
@@ -1092,6 +1117,9 @@
           style="display:inline-block;font-size:11px;font-weight:700;padding:3px 9px;border-radius:6px;
           vertical-align:middle;letter-spacing:.05em;cursor:pointer;background:#1e2a44;color:#6b82aa">Free</span>
         <button id="btnRefresh">↻ Оновити</button>
+        <button id="btnHardReset" title="Скинути кеш SW і перезавантажити — якщо бачиш стару версію"
+          onclick="(async function(){try{if('serviceWorker' in navigator){const regs=await navigator.serviceWorker.getRegistrations();await Promise.all(regs.map(r=>r.unregister()));}if('caches' in window){const keys=await caches.keys();await Promise.all(keys.map(k=>caches.delete(k)));}location.reload(true);}catch(e){alert('Reset error: '+e.message);}})()"
+          style="background:#2a1a1a;color:#ff9f9f;border:1px solid #4a2a2a;font-size:11px;padding:3px 8px;border-radius:6px">🗑 Кеш</button>
         <button id="btnShare" title="Поділитись поточним G-станом" onclick="shareGState()" style="background:#1e2a44;color:#9bb1dc;border:1px solid var(--border2)">📤</button>
         <button class="lang-btn active" id="btnLang" title="Switch language / Змінити мову">UA</button>
         <button class="lang-btn" id="btnG2Watch" style="border-color:var(--faint);color:var(--dim);font-size:12px" title="Симулятор G — внизу сторінки">🧮</button>
@@ -1140,8 +1168,9 @@
       <!-- Вторинні: кнопка розгортання + скидання кешу -->
       <span style="margin-left:auto;display:inline-flex;align-items:center;gap:8px">
         <span id="sciMoreToggle" onclick="toggleSciMore()" style="cursor:pointer;color:var(--faint);font-size:11px;white-space:nowrap;user-select:none">▸ детально</span>
-        <button id="btnV86Radial" onclick="(function(){try{const cur=localStorage.getItem('v86_radial')==='1';const next=cur?'0':'1';localStorage.setItem('v86_radial', next);localStorage.setItem('v86_heat', next);location.reload();}catch(e){}})()" style="background:#1a0f2a;color:#d28cff;border:1px solid #4a2a6e;font-size:11px;padding:2px 8px;border-radius:6px" title="Перемкнути v86 features: radial G + heat-strip">✦ v86</button>
-        <button id="btnCacheReset" onclick="navigator.serviceWorker.getRegistrations().then(r=>r.forEach(s=>s.unregister()));caches.keys().then(k=>k.forEach(c=>caches.delete(c)));setTimeout(()=>location.reload(),500)" style="background:#2a1a00;color:#ffcc44;border:1px solid #554400;font-size:11px;padding:2px 8px;border-radius:6px" title="Скинути кеш і перезавантажити">🗑 Кеш</button>
+        <!-- v87.16: dev контроли приховано з production (були ✦ v86 toggle і 🗑 Кеш — доступні через URL ?dev=1) -->
+        <button id="btnV86Radial" onclick="(function(){try{const cur=localStorage.getItem('v86_radial')==='1';const next=cur?'0':'1';localStorage.setItem('v86_radial', next);localStorage.setItem('v86_heat', next);location.reload();}catch(e){}})()" style="display:none;background:#1a0f2a;color:#d28cff;border:1px solid #4a2a6e;font-size:11px;padding:2px 8px;border-radius:6px" title="Перемкнути v86 features: radial G + heat-strip">✦ v86</button>
+        <button id="btnCacheReset" onclick="navigator.serviceWorker.getRegistrations().then(r=>r.forEach(s=>s.unregister()));caches.keys().then(k=>k.forEach(c=>caches.delete(c)));setTimeout(()=>location.reload(),500)" style="display:none;background:#2a1a00;color:#ffcc44;border:1px solid #554400;font-size:11px;padding:2px 8px;border-radius:6px" title="Скинути кеш і перезавантажити">🗑 Кеш</button>
       </span>
     </div>
     <!-- Вторинні показники -->
@@ -1153,6 +1182,8 @@
         <span>🧲 M<sub>DST</sub>: <span class="sci-val" id="sciMdst">0</span> <span class="sci-src">G-mod v30</span></span>
         <span>🌀 IMF Bz: <span class="sci-val" id="sciBz">—</span> <span class="sci-src">DSCOVR</span></span>
         <span>💨 Vsw: <span class="sci-val" id="sciVsw">—</span> <span class="sci-src">DSCOVR</span></span>
+        <!-- v87.15 U6: Solar X-ray flare class (GOES) -->
+        <span>☀ X-ray: <span class="sci-val" id="sciXray">—</span> <span class="sci-src">GOES</span></span>
         <!-- P3: GeoRisk Bar -->
         <div id="geoRiskBar" style="width:100%;margin-top:8px;padding-top:6px;border-top:1px solid var(--border)">
           <div style="font-size:10px;color:var(--dim);margin-bottom:4px;letter-spacing:.04em">⚡ GeoRisk · інтегрований індикатор</div>
@@ -1169,7 +1200,12 @@
             <span style="flex:1;font-size:9px;color:var(--faint);text-align:center" id="grVswLbl">Vsw</span>
           </div>
         </div>
-        <span style="color:var(--faint);font-size:10px">Формула: G = Kp − 2 + Lᵢ + Mᵢ + eᵢ + Pᵢ + Dᵢ</span>
+        <span style="color:var(--faint);font-size:10px">Формула: G = Kp − 2 + Lᵢ + Mᵢ + eᵢ + Pᵢ + Dᵢ <span id="formulaSnAddon" style="display:none;color:#ffa64d">+ Sn<sub>pen</sub></span> <span class="hint" tabindex="0" style="cursor:help;color:var(--dim);border-bottom:1px dotted var(--faint);margin-left:4px">ⓘ<span class="hint-pop" style="white-space:pre;font-size:11px;text-align:left">Sn<sub>pen</sub> активується при Wolf Sn > 150:
+• Sn &gt; 200 → −0.4
+• Sn &gt; 150 → −0.2
+• інакше → 0 (не в сумі)
+
+Науковий бекграунд: солярний max → калібровка engine v17.</span></span></span>
         <!-- v87.11: Source Health Panel — grid 2×3 замість inline line -->
         <div class="source-health">
           <div class="source-health-title">Стан джерел даних</div>
@@ -1179,7 +1215,9 @@
             <div class="source-item"><span id="src27Day" class="source-icon">…</span><span class="source-label">Ap/Kp (27д)</span></div>
             <div class="source-item"><span id="srcDst" class="source-icon">…</span><span class="source-label">Dst (Kyoto)</span></div>
             <div class="source-item"><span id="srcSn" class="source-icon">…</span><span class="source-label">Wolf Sn (SILSO)</span></div>
-            <div class="source-item"><span id="srcBz" class="source-icon">…</span><span class="source-label">Bz/Vsw (DSCOVR)</span></div>
+            <div class="source-item"><span id="srcBz" class="source-icon">…</span><span class="source-label">Bz (DSCOVR)</span></div>
+            <div class="source-item"><span id="srcVsw" class="source-icon">…</span><span class="source-label">Vsw (DSCOVR)</span></div>
+            <div class="source-item"><span id="srcXray" class="source-icon">…</span><span class="source-label">X-ray (GOES)</span></div>
           </div>
           <div class="source-health-legend">✓ live · ⊙ cache · ~ synthetic · ✗ error</div>
         </div>
@@ -1329,6 +1367,24 @@
 
     <!-- ═══ v87.10: Delta Card — "що змінилось від учора" ═══ -->
     <div id="deltaCard" style="display:none"></div>
+
+    <!-- ═══ v87.18: Decision Layer — "Що робити зараз" (конкретні дії) ═══ -->
+    <div id="decisionLayer" style="display:none">
+      <div class="decision-head">
+        <span class="decision-title">Що робити зараз</span>
+        <span class="decision-context" id="decisionContext"></span>
+      </div>
+      <div class="decision-grid">
+        <div class="decision-col decision-do">
+          <div class="decision-col-title">✓ Робіть</div>
+          <ul id="decisionDoList"></ul>
+        </div>
+        <div class="decision-col decision-avoid">
+          <div class="decision-col-title">✕ Уникайте</div>
+          <ul id="decisionAvoidList"></ul>
+        </div>
+      </div>
+    </div>
 
     <!-- ═══ v78d: CORE GRID — WHY + TIMING ═══ -->
     <div id="coreGrid">
@@ -2831,6 +2887,36 @@ async function fetchVswNow(){
   return null;
 }
 
+// v87.15 U6: GOES X-ray flare (long wavelength 0.1–0.8 nm)
+// Повертає {flux, class, time} — class це 'A' | 'B' | 'C' | 'M' | 'X' з номером
+// Letter scale: A = 1e-8, B = 1e-7, C = 1e-6, M = 1e-5, X = 1e-4 W/m²
+async function fetchXrayNow(){
+  const url = 'https://services.swpc.noaa.gov/json/goes/primary/xrays-6-hour.json';
+  let text;
+  try { text = await fetchTextWithCORS(url); } catch(e){ console.warn('[v87.15] Xray fetch failed',e); return null; }
+  try {
+    const rows = JSON.parse(text);
+    if(!Array.isArray(rows)||rows.length===0) return null;
+    // Шукаємо останній long-wave (0.1-0.8nm) запис з валідним flux
+    for(let i=rows.length-1;i>=0;i--){
+      const r = rows[i];
+      if(r.energy === '0.1-0.8nm' && isFinite(parseFloat(r.flux))){
+        const flux = parseFloat(r.flux);
+        // Classify letter
+        let cls='A', mag=flux*1e8;
+        if(flux >= 1e-4){ cls='X'; mag=flux*1e4; }
+        else if(flux >= 1e-5){ cls='M'; mag=flux*1e5; }
+        else if(flux >= 1e-6){ cls='C'; mag=flux*1e6; }
+        else if(flux >= 1e-7){ cls='B'; mag=flux*1e7; }
+        const classStr = cls + mag.toFixed(1);
+        window._lastXray = { flux, class: classStr, time: r.time_tag };
+        return window._lastXray;
+      }
+    }
+  } catch(e){ console.warn('[v87.15] Xray parse failed',e); }
+  return null;
+}
+
 function computeBzModifier(bz){
   if(bz == null || !isFinite(bz)) return {val:0, tip:'Bz: n/a'};
   if(bz > 0)   return {val:0,    tip:`Bz = ${bz.toFixed(1)} нТл (північний)`};
@@ -2940,10 +3026,14 @@ function computeCScore(kpNow, kpObsJson, ai, G, kpSrc){
   }
 
   // 7. v84b: Data freshness penalty (SW stale/cached)
-  const _freshness = window.__uiState?.freshness || 'live';
+  // v87.14 fix: читати з DOM badge — __uiState.freshness заповнюється ПІСЛЯ computeCScore
+  const _fbTxt = (document.getElementById('freshnessBadge')?.textContent || 'LIVE').toLowerCase();
+  let _freshness = 'live';
+  if (_fbTxt.includes('offline') || _fbTxt.includes('old')) _freshness = 'old';
+  else if (_fbTxt.includes('cache') || _fbTxt.includes('stale')) _freshness = 'stale';
   if(_freshness === 'stale'){
     penalty += 0.12;
-    reasons.push({ txt:'Дані з кешу (stale)', col:'#ffcc00', d:0.12 });
+    reasons.push({ txt:'Дані з кешу (stale/cached)', col:'#ffcc00', d:0.12 });
   } else if(_freshness === 'old'){
     penalty += 0.20;
     reasons.push({ txt:'Дані застарілі (offline)', col:'#ff6b6b', d:0.20 });
@@ -2951,6 +3041,9 @@ function computeCScore(kpNow, kpObsJson, ai, G, kpSrc){
 
   // 8. Clamp
   penalty = Math.min(0.85, penalty);
+  // v87.14: also enforce floor penalty — R&D cannot claim 100% (0 penalty)
+  // Мінімум 8% penalty = базова невизначеність моделі (R&D / Advisory)
+  penalty = Math.max(0.08, penalty);
   const conf = Math.round((1 - penalty) * 100) / 100;
 
   // Grade
@@ -3768,6 +3861,8 @@ function renderCurrentPanel(){
   const _kpSrcInline = lastWWV && isFinite(lastWWV.kNow) ? 'obs'
     : (last3D && (last3D.days||[]).length) ? '3d'
     : (_last27Rows && _last27Rows.length) ? '27d' : 'syn';
+  // v87.17 A5 fix: guarantee freshnessBadge reflects actual state before computeCScore reads it
+  try { if (typeof _renderFreshnessState === 'function') _renderFreshnessState(); } catch(e) {}
   const _csInline = computeCScore(kUse, _lastKpObsJson, ai, G, _kpSrcInline);
   const _cCol = _csInline.gradeCol;
   const _cHtml = isFinite(G)
@@ -5018,6 +5113,7 @@ function renderDecisionTiming(slots){
   const list = el('decisionTimingList');
   if(!list) return summary;
   const futureSlots = summary.slots.filter(s => !s.isPast);
+  const pastCount = summary.slots.length - futureSlots.length;
   const visible = futureSlots.length ? futureSlots : summary.slots;
   if(!visible.length){
     list.innerHTML = `<span style="color:var(--dim);font-size:12px">Немає даних по слотах.</span>`;
@@ -5045,7 +5141,8 @@ function renderDecisionTiming(slots){
   list.innerHTML = visible.map(s =>
     `<div class="dt-row dt-${s.cls}${s.isNow?' dt-now':''}">`
     +`<span class="dt-time">${s.time}</span><span class="dt-label">${s.text}${s.isNow?' ◀ зараз':''}</span></div>`
-  ).join('');
+  ).join('')
+  + (pastCount > 0 ? `<div style="color:var(--faint);font-size:10px;margin-top:4px;font-style:italic">Показано ${visible.length} з ${summary.slots.length} слотів (минуло ${pastCount})</div>` : '');
   return summary;
 }
 
@@ -5081,6 +5178,20 @@ function renderAlertBanner(g, kp){
 
   const alerts = [];
 
+  // v87.15 U6: X-ray flare alerts (M/X class) — найвищий пріоритет, миттєвий вплив
+  const xr = window._lastXray;
+  if (xr && xr.class) {
+    const letter = xr.class[0];
+    if (letter === 'X') {
+      alerts.push({ title: `☀ X-КЛАС СПАЛАХ · ${xr.class}`, body: 'Потужний сонячний спалах зареєстровано GOES. Радіо-пропадання, можливі GPS-збої. Очікуйте посилення Kp за 24-48 год.' });
+    } else if (letter === 'M') {
+      const mag = parseFloat(xr.class.slice(1));
+      if (mag >= 5) {
+        alerts.push({ title: `⚠ M-КЛАС СПАЛАХ · ${xr.class}`, body: 'Середньо-потужний спалах. Можлива CME та посилення геомагнітної активності через 1-3 дні.' });
+      }
+    }
+  }
+
   // Current Kp ≥ 5 → geomagnetic storm
   if (isFinite(kp) && kp >= 5) {
     const level = kp >= 7 ? 'G3+ СИЛЬНА БУРЯ' : kp >= 6 ? 'G2 ПОМІРНА БУРЯ' : 'G1 СЛАБКА БУРЯ';
@@ -5112,9 +5223,12 @@ function renderAlertBanner(g, kp){
     bodyEl.textContent = a.body;
     banner.style.display = '';
     // Color intensity by severity
-    if (alerts[0].title.includes('СИЛЬНА') || alerts[0].title.includes('ВИСОКИЙ')) {
+    if (alerts[0].title.includes('СИЛЬНА') || alerts[0].title.includes('ВИСОКИЙ') || alerts[0].title.includes('X-КЛАС')) {
       banner.style.borderColor = 'rgba(255,40,40,.55)';
       banner.style.background = 'linear-gradient(180deg,rgba(255,30,30,.18),rgba(255,30,30,.08))';
+    } else if (alerts[0].title.includes('M-КЛАС')) {
+      banner.style.borderColor = 'rgba(255,150,40,.45)';
+      banner.style.background = 'linear-gradient(180deg,rgba(255,140,20,.14),rgba(255,140,20,.06))';
     }
   } else {
     banner.style.display = 'none';
@@ -5150,10 +5264,13 @@ function renderHeatStripV86(){
   const slots = window._daySlots || [];
   const nowUTC = new Date().getUTCHours();
   const currentSlotIdx = Math.floor(nowUTC / 3); // 0..7
+  // v87.15 S4: визначаємо "рівний день" — варіативність G між слотами <0.3
+  const _gVals = slots.filter(s => isFinite(s.G)).map(s => s.G);
+  const _isFlat = _gVals.length >= 4 && (Math.max(..._gVals) - Math.min(..._gVals)) < 0.3;
   const segs = strip.querySelectorAll('.heat-seg');
   segs.forEach((seg, idx) => {
     // Reset classes
-    seg.classList.remove('heat-good','heat-mid','heat-bad','heat-current');
+    seg.classList.remove('heat-good','heat-mid','heat-bad','heat-current','heat-flat');
     seg.removeAttribute('data-gval');
     // Find matching slot
     const slot = slots.find(s => s.i === idx);
@@ -5168,8 +5285,12 @@ function renderHeatStripV86(){
     else seg.classList.add('heat-mid');
     // Mark current time slot
     if (idx === currentSlotIdx) seg.classList.add('heat-current');
-    // Show G value in corner
-    seg.setAttribute('data-gval', g >= 0 ? '+' + g.toFixed(1) : g.toFixed(1));
+    // Show G value in corner — ТІЛЬКИ якщо день не рівний (інакше +1.3/+1.5/+1.5/... шум)
+    if (!_isFlat) {
+      seg.setAttribute('data-gval', g >= 0 ? '+' + g.toFixed(1) : g.toFixed(1));
+    } else {
+      seg.classList.add('heat-flat');
+    }
   });
 }
 
@@ -5337,40 +5458,9 @@ function syncHero(){
     }
   }
 
-  // v87.10: C-score (Confidence) — довіра моделі на основі свіжості, активних факторів, Dst
-  // v87.13 fix: читати freshness з DOM badge (не з _ui яке заповнюється нижче), обробити 'cached'
-  try {
-    const hc = el('heroConfidence');
-    if (hc && isFinite(gVal)) {
-      let C = 0.85;
-      // Читаємо реальний стан з DOM, не з _ui
-      const _badgeTxt = (el('freshnessBadge')?.textContent || 'LIVE').toLowerCase();
-      let _frReal = 'live';
-      if (_badgeTxt.includes('offline') || _badgeTxt.includes('old')) _frReal = 'old';
-      else if (_badgeTxt.includes('cache') || _badgeTxt.includes('stale')) _frReal = 'cached';
-      if (_frReal === 'cached') C -= 0.15;
-      else if (_frReal === 'old') C -= 0.30;
-      // Count active factors (|val| >= 0.5)
-      const _aiC = _ui.ai || {};
-      const _facVals = [
-        isFinite(_ui.kpNow) ? (_ui.kpNow - 2) : 0,
-        _aiC.Li || 0, _aiC.Mi || 0, _aiC.ei || 0, _aiC.Pi || 0, _aiC.Di || 0
-      ];
-      const _activeN = _facVals.filter(v => Math.abs(v) >= 0.5).length;
-      if (_activeN === 0) C -= 0.10;  // all near zero → модель без ясного сигналу
-      else if (_activeN >= 3) C += 0.05;  // багато узгоджених драйверів
-      // Dst storm penalty
-      if ((_aiC.Di || 0) !== 0) C -= 0.15;
-      // Clamp — верхня межа 0.92 щоб ніколи не показувати 100% (нескромно для R&D)
-      C = Math.max(0.30, Math.min(0.92, C));
-      // Визначити клас
-      const _cClass = C >= 0.80 ? 'is-high' : C >= 0.60 ? 'is-mid' : 'is-low';
-      hc.textContent = Math.round(C * 100) + '%';
-      hc.className = hc.className.replace(/\bis-(high|mid|low)\b/g, '').trim() + ' ' + _cClass;
-      hc.style.color = C >= 0.80 ? 'var(--ok)' : C >= 0.60 ? 'var(--muted)' : 'var(--warn)';
-      window.__cScore = C;
-    }
-  } catch(e) { /* noop */ }
+  // v87.14: прибрано дублікатний C-score writer (v87.10/v87.13) —
+  // computeCScore з fixed freshness reading тепер працює коректно через _ui.confPct.
+  // Блок heroConfidence пишеться нижче на base of _ui.confPct.
 
   // v87.10: Delta Card — "що змінилось за 24h"
   // v87.13: додатково зазначити тренд на завтра щоб уникнути дисонансу з heroTomorrow
@@ -5421,10 +5511,20 @@ function syncHero(){
     }
   } catch(e) { /* noop */ }
 
+  // v87.18: Decision Layer — "Що робити зараз" (конкретні actions)
+  try { renderDecisionLayer(gVal, _ui); } catch(e) { /* noop */ }
+
   // Confidence: set by v83 decision block below
 
   // Freshness — v80: from __uiState, fallback to DOM
-  const _frState = _ui.freshness || (function(){ const t=_strip(el('freshnessBadge')?.textContent||'LIVE').toLowerCase(); return t.includes('stale')?'stale':t.includes('old')?'old':'live'; })();
+  // v87.15 fix A4: читати всі варіанти включно з cached/delayed — раніше hero показував LIVE коли badge CACHED
+  const _frState = _ui.freshness || (function(){
+    const t=_strip(el('freshnessBadge')?.textContent||'LIVE').toLowerCase();
+    if (t.includes('offline') || t.includes('old')) return 'old';
+    if (t.includes('stale')) return 'stale';
+    if (t.includes('cached') || t.includes('delayed')) return 'cached';
+    return 'live';
+  })();
   const hf=el('heroFreshness');
   if(hf){
     hf.textContent=_frState.toUpperCase();
@@ -6527,7 +6627,8 @@ async function loadAll(){
     last3D = { issued: null, predictedAp: [], days: _synDays, _synthetic: true };
     render3Day(last3D);
     _setSrcStatus('srcKpFcst','synthetic');
-    el('threeError').textContent = '⚠ NOAA недоступний — показано synthetic на базі Kp=' + _kpNow.toFixed(1);
+    // v87.17 A7: більш чесна комунікація — NOAA прогноз недоступний, використовується плато на базі останнього Kp
+    el('threeError').innerHTML = '<span style="color:#ff9944">⚠</span> Прогноз NOAA недоступний. Показано плато на базі поточного Kp=' + _kpNow.toFixed(1) + '. <span class="muted" style="font-size:11px">Не справжній прогноз — без динаміки, лише fallback.</span>';
   }
 
   // Dst index
@@ -6566,15 +6667,44 @@ async function loadAll(){
   // v42: Real-time solar wind (DSCOVR Bz + Vsw)
   try { await fetchBzNow();  } catch(_){}
   try { await fetchVswNow(); } catch(_){}
-  // v62: Bz/Vsw localStorage cache
+  // v87.15 U6: GOES X-ray flare — Solar flare monitoring
+  try { await fetchXrayNow(); } catch(_){}
+  // v62: Bz/Vsw localStorage cache + v87.16 A4: separate status indicators
   if (isFinite(lastBz))  { lsSet('last_bz_known', lastBz);  _setSrcStatus('srcBz','ok'); }
   else { const _lbz=parseFloat(lsGet('last_bz_known')); if(isFinite(_lbz)){ lastBz=_lbz; _setSrcStatus('srcBz','cache'); } else _setSrcStatus('srcBz','error'); }
-  if (isFinite(lastVsw)) lsSet('last_vsw_known', lastVsw);
-  else { const _lvsw=parseFloat(lsGet('last_vsw_known')); if(isFinite(_lvsw)) lastVsw=_lvsw; }
+  if (isFinite(lastVsw)) { lsSet('last_vsw_known', lastVsw); _setSrcStatus('srcVsw','ok'); }
+  else { const _lvsw=parseFloat(lsGet('last_vsw_known')); if(isFinite(_lvsw)){ lastVsw=_lvsw; _setSrcStatus('srcVsw','cache'); } else _setSrcStatus('srcVsw','error'); }
   const sciBzEl  = document.getElementById('sciBz');
   if(sciBzEl) sciBzEl.textContent = isFinite(lastBz) ? lastBz.toFixed(1)+' нТл' : '\u2014';
   const sciVswEl = document.getElementById('sciVsw');
   if(sciVswEl) sciVswEl.textContent = isFinite(lastVsw) ? Math.round(lastVsw)+' км/с' : '\u2014';
+  // v87.15 U6: render X-ray flare + localStorage cache + alert if M/X class + source status
+  try {
+    const sciXrayEl = document.getElementById('sciXray');
+    if (sciXrayEl) {
+      const xr = window._lastXray;
+      if (xr && xr.class) {
+        sciXrayEl.textContent = xr.class;
+        const letter = xr.class[0];
+        sciXrayEl.style.color = letter === 'X' ? '#ff4444' : letter === 'M' ? '#ff9944' : letter === 'C' ? '#ffcc44' : '#63be7b';
+        sciXrayEl.style.fontWeight = (letter === 'X' || letter === 'M') ? '800' : '600';
+        lsSet('last_xray_class', xr.class);
+        lsSet('last_xray_flux', xr.flux);
+        _setSrcStatus('srcXray','ok');
+      } else {
+        const cached = lsGet('last_xray_class');
+        if (cached) { sciXrayEl.textContent = cached + ' (кеш)'; sciXrayEl.style.color = 'var(--dim)'; _setSrcStatus('srcXray','cache'); }
+        else _setSrcStatus('srcXray','error');
+      }
+    }
+  } catch(e) { _setSrcStatus('srcXray','error'); }
+
+  // v87.16 A1 fix: показати Sn_pen в формулі UI коли реально активний у розрахунку
+  try {
+    const _snEl = document.getElementById('formulaSnAddon');
+    const _snVal = window._lastWolfSn ? (window._lastWolfSn.sn ?? 0) : 0;
+    if (_snEl) _snEl.style.display = _snVal > 150 ? '' : 'none';
+  } catch(e) { /* noop */ }
 
   try{
     renderCurrentPanel();
@@ -9068,9 +9198,15 @@ function _setSrcStatus(id, status) {
   const s = map[status] || map.loading;
   el.textContent = s.icon;
   el.style.color = s.col;
-  el.title = {ok:'Дані NOAA', cache:'Кешовані дані', synthetic:'Synthetic (NOAA недоступний)', error:'Помилка', loading:'Завантаження...'}[status] || '';
+  el.title = {
+    ok:       {srcKpObs:'Kp спостереження NOAA', srcKpFcst:'Kp прогноз NOAA', src27Day:'NOAA 27-day outlook', srcDst:'Dst Kyoto WDC', srcSn:'Wolf Sn SILSO', srcBz:'Bz DSCOVR', srcVsw:'Vsw DSCOVR', srcXray:'GOES X-ray'}[id] || 'Дані',
+    cache:    'Кешовані дані (offline fallback)',
+    synthetic:'Synthetic (реальне джерело недоступне)',
+    error:    'Помилка завантаження',
+    loading:  'Завантаження...'
+  }[status] || '';
   // v75: wire per-source freshness
-  const srcKey = {srcKpObs:'kpObs', srcKpFcst:'kpFcst', src27Day:'outlook27', srcDst:'dst', srcSn:'sn', srcBz:'bz'}[id];
+  const srcKey = {srcKpObs:'kpObs', srcKpFcst:'kpFcst', src27Day:'outlook27', srcDst:'dst', srcSn:'sn', srcBz:'bz', srcVsw:'vsw', srcXray:'xray'}[id];
   if(srcKey && status==='ok') updateDataFreshness(srcKey, Date.now());
 }
 
@@ -9083,25 +9219,10 @@ function isRussellMcPherron(d) {
 }
 
 function updateFreshnessBadge() {
-  const badge = document.getElementById('freshnessBadge');
-  if (!badge) return;
-  const ids = ['srcKpObs','srcKpFcst','srcDst','srcSn','srcBz','src27Day'];
-  let ok=0, cache=0, err=0;
-  ids.forEach(id => {
-    const e = document.getElementById(id);
-    if (!e) return;
-    const t = e.textContent;
-    if (t === '✓') ok++;
-    else if (t === '⊙' || t === '~') cache++;
-    else if (t === '✗') err++;
-  });
-  if (err >= 3) {
-    badge.textContent = '● OFFLINE'; badge.style.background = '#2a1010'; badge.style.color = '#ff6b6b';
-  } else if (cache >= 2 || err >= 1) {
-    badge.textContent = '● CACHED'; badge.style.background = '#2a1a00'; badge.style.color = '#ffcc44';
-  } else {
-    badge.textContent = '● LIVE'; badge.style.background = '#0a2a15'; badge.style.color = '#63be7b';
-  }
+  // v87.15 fix A6: noop — _renderFreshnessState є єдиним джерелом істини для freshnessBadge.
+  // Попередньо тут був дублікатний writer який перетирав stage з timestamp-based _renderFreshnessState.
+  // Якщо треба fallback — _renderFreshnessState автоматично викликається кожні 60s + після fetch.
+  return;
 }
 
 // v78: updateSafeStateBanner removed (safeStateBanner CSS-hidden)
@@ -10693,6 +10814,142 @@ function renderWf3(){
   wrap.style.display='';
 }
 
+// ═══ v87.18: Decision Layer — конкретні дії "що робити зараз" ═══
+// Залежність: стан G + активні фактори (storm, eclipse, amavasya, Dst) + persona (off/mil/med/pilot/trader)
+// Мета: перейти від "показу даних" до "рекомендації дії"
+const DECISION_BASE = {
+  favorable: {
+    do:    ['Запускати нові ініціативи', 'Укладати угоди, підписувати контракти', 'Проводити важливі переговори', 'Публікувати, виступати, презентувати'],
+    avoid: ['Відкладати рішення без причини', 'Перестраховуватись у важливих питаннях'],
+    ctx:   'Рідкісне вікно продуктивності — використовуйте.'
+  },
+  good: {
+    do:    ['Займатись плановою роботою', 'Приймати рішення середньої ваги', 'Підтримувати стабільні комунікації'],
+    avoid: ['Лізти в конфлікти без потреби', 'Переоцінювати ризики'],
+    ctx:   'Фон підтримує звичні справи.'
+  },
+  neutral: {
+    do:    ['Працювати у стандартному темпі', 'Завершувати розпочате'],
+    avoid: ['Приймати різких рішень без підготовки', 'Починати принципово нове'],
+    ctx:   'Нейтральний день — робіть те, що вже вирішено.'
+  },
+  unstable: {
+    do:    ['Перевіряти деталі двічі', 'Обирати перевірені маршрути і партнерів', 'Зберегти резерв часу'],
+    avoid: ['Імпульсних рішень', 'Конфронтаційних розмов', 'Великих фінансових операцій'],
+    ctx:   'Фон нестабільний — обережніше, ніж зазвичай.'
+  },
+  tense: {
+    do:    ['Виконувати тільки критичне', 'Економити сили і увагу', 'Відкласти не-термінове на завтра'],
+    avoid: ['Підписувати документи', 'Укладати нові домовленості', 'Подорожей без потреби', 'Важливих розмов на високих тонах'],
+    ctx:   'Високий тиск — мінімізуйте рішення.'
+  }
+};
+
+// Persona-specific overrides (заміняють або додають до базових)
+const DECISION_PERSONA = {
+  mil: {  // Військовий
+    tense:    { do:    ['Тримати резерв на критичних точках', 'Уникати рейдових операцій'],
+                avoid: ['Розгортати нові підрозділи', 'Координацію через нестабільні канали'] },
+    unstable: { do:    ['Дублювати зв\'язок', 'Перевіряти координати двічі'],
+                avoid: ['Довгих переходів', 'Складних маневрів'] },
+    favorable:{ do:    ['Активні операції', 'Координація з союзниками', 'Планові навчання'] }
+  },
+  med: {  // Медик
+    tense:    { do:    ['Планові консультації', 'Спостереження пацієнтів'],
+                avoid: ['Планових операцій', 'Складних процедур'] },
+    unstable: { do:    ['Перевіряти вітальні показники частіше'],
+                avoid: ['Експериментальних протоколів'] }
+  },
+  pilot: {  // Пілот
+    tense:    { do:    ['Наземна підготовка, тренажер', 'Дотримання протоколів'],
+                avoid: ['Польотів за нестабільної погоди', 'Довгих трас'] },
+    unstable: { do:    ['Перевіряти навігаційні системи'],
+                avoid: ['Нових маршрутів без ретельного планування'] }
+  },
+  trader: {  // Трейдер
+    tense:    { do:    ['Зменшити експозицію', 'Стопи ближче', 'Хеджувати позиції'],
+                avoid: ['Великих угод', 'Високого leverage', 'Торгівлі на новинах'] },
+    unstable: { do:    ['Чекати підтверджень', 'Торгувати у меншому розмірі'],
+                avoid: ['FOMO-входів', 'Переусереднення'] },
+    favorable:{ do:    ['Реалізовувати запланований сетап', 'Виходити з посередніх позицій'] }
+  }
+};
+
+function renderDecisionLayer(gVal, ui) {
+  const dl = document.getElementById('decisionLayer');
+  const doList = document.getElementById('decisionDoList');
+  const avoidList = document.getElementById('decisionAvoidList');
+  const ctxEl = document.getElementById('decisionContext');
+  if (!dl || !doList || !avoidList || !isFinite(gVal)) { if (dl) dl.style.display='none'; return; }
+
+  // 1. Base за станом G
+  const state = (typeof classifyStateByG === 'function') ? classifyStateByG(gVal) : 'neutral';
+  const base = DECISION_BASE[state] || DECISION_BASE.neutral;
+  let doArr = [...base.do];
+  let avoidArr = [...base.avoid];
+  let ctxTxt = base.ctx;
+
+  // 2. Persona overlay
+  const prof = (typeof _activeProfile !== 'undefined') ? _activeProfile : 'off';
+  if (prof !== 'off' && DECISION_PERSONA[prof] && DECISION_PERSONA[prof][state]) {
+    const po = DECISION_PERSONA[prof][state];
+    if (po.do)    doArr    = [...po.do, ...doArr.slice(0, 2)];   // persona do + top-2 базових
+    if (po.avoid) avoidArr = [...po.avoid, ...avoidArr.slice(0, 1)];
+  }
+
+  // 3. Активні фактори — контекстуальні додатки
+  const ai = ui?.ai || {};
+  const kp = ui?.kpNow;
+  // Буря Kp ≥ 5 → додати "no подорожі"
+  if (isFinite(kp) && kp >= 5) {
+    avoidArr.unshift('Далеких подорожей, авіаперельотів');
+    ctxTxt = `Буря G${Math.min(5, Math.round(kp - 4))} активна. ` + ctxTxt;
+  }
+  // Dst storm
+  if ((ai.Di || 0) <= -1) {
+    avoidArr.unshift('Навантаження на серцево-судинну систему');
+  }
+  // Eclipse window
+  if ((ai.Mi || 0) < 0) {
+    avoidArr.unshift('Стратегічних запусків до закриття вікна затемнення');
+  }
+  // Amavasya
+  if (ai.Li === -3) {
+    doArr.push('Використовувати для очищення, підбиття підсумків');
+    ctxTxt = 'Амавасья (нова Місяць). ' + ctxTxt;
+  }
+  // Purnima
+  if (ai.Li === 0 && ai.lTip && String(ai.lTip).toLowerCase().includes('повн')) {
+    // neutral per v14.2
+  }
+
+  // 4. X-ray flare
+  const xr = window._lastXray;
+  if (xr && xr.class) {
+    const letter = xr.class[0];
+    if (letter === 'X') {
+      avoidArr.unshift('Радіо-залежних операцій (X-клас спалах)');
+      ctxTxt = `X-клас спалах ${xr.class}. ` + ctxTxt;
+    } else if (letter === 'M' && parseFloat(xr.class.slice(1)) >= 5) {
+      avoidArr.push('Критично залежних від точного GPS систем');
+    }
+  }
+
+  // 5. Обмежити довжину (щоб не перенасичувати)
+  doArr = doArr.slice(0, 5);
+  avoidArr = avoidArr.slice(0, 5);
+
+  // 6. Render
+  doList.innerHTML = doArr.map(t => `<li>${t}</li>`).join('');
+  avoidList.innerHTML = avoidArr.map(t => `<li>${t}</li>`).join('');
+  if (ctxEl) ctxEl.textContent = ctxTxt;
+
+  // State class for coloring
+  dl.classList.remove('is-favorable','is-good','is-neutral','is-unstable','is-tense');
+  dl.classList.add('is-' + state);
+  dl.style.display = '';
+}
+
 function _saveGHistory(g){
   if(!isFinite(g)) return;
   try{
@@ -10732,6 +10989,17 @@ function _getGDelta(){
 
 document.addEventListener('DOMContentLoaded',()=>{
   setTimeout(()=>{initHeroField();initWowParticles();applyWowFromG()},900);
+  // v87.16: dev controls — показувати при ?dev=1 або localStorage flag
+  try {
+    const params = new URLSearchParams(location.search);
+    if (params.has('dev') || localStorage.getItem('gindex_dev') === '1') {
+      ['btnV86Radial','btnCacheReset'].forEach(id => {
+        const b = document.getElementById(id);
+        if (b) b.style.display = '';
+      });
+      if (params.get('dev') === '1') localStorage.setItem('gindex_dev','1');
+    }
+  } catch(e) {}
 });
 
 if ('serviceWorker' in navigator) {
