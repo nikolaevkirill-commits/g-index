@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v87.18</title>
+  <title>G-Index — Космофізичний дашборд v87.22</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -28,7 +28,11 @@
       /* Кольори */
       --bg:#0b1220; --card:#111a2e; --card2:#090f1e;
       --text:#e7efff; --text2:#cfe0ff; --text3:#b7c7ea;
-      --muted:#9bb1dc; --dim:#6b82aa; --faint:#4a6080;
+      --muted:#9bb1dc; --dim:#6b82aa; --faint:#7f99c4;
+      /* v87.21: --faint використовується у CSS-контекстах напряму через var(),
+         та як hex-дубль #7f99c4 у SVG fill/stroke атрибутах і Canvas ctx.fillStyle
+         (CSS-variables не підхоплюються SVG attr і Canvas API).
+         При зміні --faint також оновити "#7f99c4" у static SVG labels. */
       --border:#1e2a44; --border2:#2a3b61;
       --ok:#2bd47d; --ok-dim:rgba(43,212,125,.10);
       --warn:#ffcc00; --warn-dim:rgba(255,204,0,.10);
@@ -411,7 +415,7 @@
     .mnav-btn {
       display: flex; flex-direction: column; align-items: center; gap: 3px;
       background: transparent; border: none; cursor: pointer;
-      color: #4a6080; font-size: 10px; padding: 4px 12px;
+      color:var(--faint); font-size: 10px; padding: 4px 12px;
       border-radius: 8px; transition: color .15s;
       -webkit-tap-highlight-color: transparent;
     }
@@ -427,7 +431,7 @@
       /* Swipe hint on tables */
       .swipe-hint {
         display: flex; align-items: center; gap: 6px;
-        font-size: 11px; color: #4a6080;
+        font-size: 11px; color:var(--faint);
         padding: 4px 0 2px; margin-bottom: 4px;
       }
       .swipe-hint::before { content: '←'; font-size: 14px; animation: swiping 2s infinite; }
@@ -603,8 +607,8 @@
     /* 9. Hero chips більші */
     .hero-chip{padding:8px 14px!important;border-radius:12px!important;font-size:12px!important}
     .hero-chip .hc-val{font-size:14px!important;font-weight:800!important}
-    /* 10. Приглушити все нижче Hero */
-    #decisionTimingCard,#coreGrid,#profileBar,.profile-section,#astroGrid{opacity:.88!important;filter:brightness(.93)!important}
+    /* 10. Приглушити все нижче Hero — v87.20: прибрано глобальне затемнення для читабельності */
+    /* #decisionTimingCard,#coreGrid,#profileBar,.profile-section,#astroGrid{opacity:.88!important;filter:brightness(.93)!important} */
     /* 11. heroMetaInline компактніше */
     #heroMetaInline{font-size:10px!important;gap:6px!important;opacity:.75!important}
     /* 12. Energy bar трохи менше */
@@ -622,8 +626,8 @@
     #heroFreshness{font-size:15px!important}
     /* P3b: порожні hero-right cards — ховати (heroDelta, heroNextShiftChip без тексту) */
     #heroDelta:empty,#heroNextShiftChip:empty{display:none!important;padding:0!important;border:none!important;background:none!important}
-    /* P4: Приглушити ВСЕ нижче Hero ще більше */
-    #decisionTimingCard,#coreGrid,#profileBar,.profile-section,#astroGrid,#panchCard,#personalSection,#techDetails{opacity:.78!important;filter:brightness(.87)!important}
+    /* P4: Приглушити ВСЕ нижче Hero ще більше — v87.20: прибрано для accessibility (аудит WCAG) */
+    /* #decisionTimingCard,#coreGrid,#profileBar,.profile-section,#astroGrid,#panchCard,#personalSection,#techDetails{opacity:.78!important;filter:brightness(.87)!important} */
     /* P5: Depth — Hero виділяється тінню і inner glow */
     #heroCard{box-shadow:0 16px 48px rgba(0,0,0,.55),inset 0 0 40px rgba(255,200,80,.04)!important}
 
@@ -736,6 +740,16 @@
     .decision-col li{font-size:12px;line-height:1.4;color:var(--text);padding:4px 8px;border-radius:6px;background:rgba(255,255,255,.02)}
     .decision-do li{border-left:2px solid rgba(127,227,166,.4)}
     .decision-avoid li{border-left:2px solid rgba(255,159,159,.4)}
+    /* v87.19 U4: Best/Worst days block (retention hook) */
+    .best-worst-block{margin:10px 0;padding:10px 14px;border-radius:10px;border:1px solid rgba(120,160,255,.12);background:rgba(120,160,255,.03);display:grid;grid-template-columns:auto 1fr 1fr auto;gap:12px;align-items:center;font-size:12px}
+    .best-worst-block .bw-title{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);font-weight:700}
+    .best-worst-block .bw-item{display:flex;flex-direction:column;gap:1px}
+    .best-worst-block .bw-item .bw-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+    .best-worst-block .bw-item .bw-value{font-weight:700;font-variant-numeric:tabular-nums}
+    .best-worst-block .bw-best .bw-value{color:#7fe3a6}
+    .best-worst-block .bw-worst .bw-value{color:#ff9f9f}
+    .best-worst-block .bw-count{font-size:10px;color:var(--faint);text-align:right}
+    @media(max-width:540px){.best-worst-block{grid-template-columns:1fr 1fr;gap:8px}.best-worst-block .bw-title{grid-column:1/-1}.best-worst-block .bw-count{grid-column:1/-1;text-align:center}}
     /* v87.11: Source Health panel — grid 3×2 з бейджами */
     .source-health{margin-top:10px;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.02)}
     .source-health-title{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--dim);margin-bottom:6px;font-weight:600}
@@ -976,7 +990,8 @@
     #coreGrid{position:relative}
     #coreGrid::before{content:"";position:absolute;left:0;right:0;top:-5px;height:1px;background:linear-gradient(to right,transparent,rgba(120,160,255,.2),transparent)}
     /* Personal even lighter */
-    #personalCard{opacity:.88!important}
+    /* v87.20: прибрано opacity .88 — шкодить читабельності personalCard */
+    /* #personalCard{opacity:.88!important} */
     /* Hero tense subtle pulse */
     #heroCard.hero-state-tense{animation:heroCardPulse 3s ease-in-out infinite}
     @keyframes heroCardPulse{0%,100%{box-shadow:0 0 0 0 rgba(255,70,70,.12)}50%{box-shadow:0 0 0 6px rgba(255,70,70,.04)}}
@@ -1009,9 +1024,12 @@
     .hero-right > span[data-label]:not(#heroStamp):not(#heroFreshness):empty::before{display:none}
     /* v87.5 P2: maintext отримує повну ширину → hero-right переноситься всередину DOM-порядком */
     /* Hero-right DOM-пересув робиться через CSS grid-area: hero-right перестає бути колонкою */
-    .hero-wrap > .hero-right{grid-column:2!important;grid-row:2!important}
+    /* v87.21 C3: hero-right розтягується на ОБИДВІ колонки (повна ширина Hero),
+       hero-left займає тільки row 1 (не span 2), hero-maintext теж row 1.
+       Status bar стелиться повною шириною під ring+maintext. */
+    .hero-wrap > .hero-right{grid-column:1 / -1!important;grid-row:2!important;width:100%!important}
     .hero-wrap > .hero-maintext{grid-column:2!important;grid-row:1!important}
-    .hero-wrap > .hero-left{grid-column:1!important;grid-row:1 / span 2!important;align-self:center!important}
+    .hero-wrap > .hero-left{grid-column:1!important;grid-row:1!important;align-self:center!important}
     @media(max-width:1180px){#heroCard .hero-wrap{grid-template-columns:180px minmax(0,1fr)!important;gap:14px!important}.hero-left{width:180px!important;min-width:180px!important;max-width:180px!important}}
     @media(max-width:860px){#heroCard .hero-wrap{grid-template-columns:1fr!important;gap:10px!important}.hero-left,.hero-maintext,.hero-right{width:100%!important;min-width:0!important;max-width:none!important}.hero-wrap > .hero-left{grid-column:1!important;grid-row:1!important}.hero-wrap > .hero-maintext{grid-column:1!important;grid-row:2!important}.hero-wrap > .hero-right{grid-column:1!important;grid-row:3!important}}
     @media(max-width:560px){#heroCard #heroG{font-size:38px!important}#heroRing,#heroRing svg{width:144px!important;height:144px!important}}
@@ -1050,7 +1068,7 @@
     @keyframes heroPulseBad{0%,100%{box-shadow:0 0 0 0 rgba(255,107,107,0)}50%{box-shadow:0 0 20px 4px rgba(255,107,107,.2)}}
 
     /* nowCard demoted to details-level */
-    #nowCard{opacity:.88!important;font-size:13px!important}
+    #nowCard{font-size:13px!important} /* v87.20: прибрано opacity .88 */
     #nowCard h2{font-size:15px!important}
     /* Next shift badge */
     .next-shift-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:999px;font-size:11px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);color:var(--text2);margin-top:6px}
@@ -1243,7 +1261,9 @@
               </svg>
               <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none">
                 <div id="v86GVal" style="font-size:36px;font-weight:900;color:#ffd77a;line-height:1;text-shadow:0 0 12px rgba(255,210,110,.3)">—</div>
-                <div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:#7f94b8;margin-top:2px">G-індекс</div>
+                <!-- v87.21: inline ΔG trend directly beneath G-value for immediate signal -->
+                <div id="v86DeltaInline" style="font-size:13px;font-weight:800;line-height:1;margin-top:4px;color:var(--muted);letter-spacing:.02em;min-height:13px"></div>
+                <div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);margin-top:2px">G-індекс</div>
               </div>
             </div>
             <!-- v86: inline legend -->
@@ -1583,7 +1603,8 @@
         <div class="flex" style="margin-bottom:8px;align-items:flex-start">
           <div>
             <h2 style="margin:0;font-size:16px">Панчанга дня</h2>
-            <div class="small muted" style="margin-top:2px">Що діє зараз і як це читати</div>
+            <div class="small muted" style="margin-top:2px">Що діє зараз і як це читати <span class="hint" tabindex="0" style="cursor:help;color:var(--dim);font-size:10px;margin-left:4px;border-bottom:1px dotted var(--faint)">ⓘ час відліку<span class="hint-pop" style="white-space:pre;font-size:11px;text-align:left">Тіхі/Вара/Накшатра/Йога/Карана розраховані на 12:00 UTC поточного дня (консистентність з G-формулою 3-day таблиці).
+Для поточної хори дивись блок «Планетарний ритм» у картці особистого прогнозу.</span></span></div>
           </div>
           <span class="pill right" id="panchDate" style="font-size:12px">—</span>
         </div>
@@ -1673,7 +1694,7 @@
           <span class="muted" style="font-size:9px" id="horaCoordLabel">(UTC+2, 50°N)</span>
         </div>
         <div id="horaTimeline" style="position:relative;height:36px;border-radius:8px;overflow:hidden;background:#0a1428;border:1px solid #1e2f52"></div>
-        <div id="horaAxis" style="position:relative;height:12px;margin-top:1px;font-size:8px;color:#4a6080"></div>
+        <div id="horaAxis" style="position:relative;height:12px;margin-top:1px;font-size:8px;color:var(--faint)"></div>
         <div id="horaLegend" style="margin-top:3px;font-size:10px;color:var(--dim)"></div>
       </div>
     </section>
@@ -1739,6 +1760,8 @@ Kp: 3-год індекс геомагнітної активності (0–9)
           </div>
         </div>
         <div id="twentysevenError" class="err small"></div>
+        <!-- v87.19 U4: Best/worst days of last 30 days — retention hook -->
+        <div id="bestWorstDays" class="best-worst-block" style="display:none"></div>
         <!-- Графік G(t) — головний вигляд -->
         <div id="chart27Wrap" style="display:block;margin:10px 0 4px;position:relative">
           <canvas id="chart27" style="width:100%;height:220px"></canvas>
@@ -1802,7 +1825,7 @@ Kp: 3-год індекс геомагнітної активності (0–9)
         </div>
         <div id="btTableWrap" style="overflow-x:auto;margin-top:10px;display:none">
           <table style="width:100%;border-collapse:collapse;font-size:12px">
-            <thead><tr style="color:#4a6080;border-bottom:1px solid #1a2540">
+            <thead><tr style="color:var(--faint);border-bottom:1px solid #1a2540">
               <th style="padding:4px 8px;text-align:left">Дата</th>
               <th style="padding:4px 8px">G dash</th>
               <th style="padding:4px 8px">G excel</th>
@@ -1968,36 +1991,36 @@ Kp: 3-год індекс геомагнітної активності (0–9)
           <rect x="18" y="72" width="76" height="38" rx="5" fill="#0a1c38" stroke="#37a7ff" stroke-width="1.2"/>
           <text x="56" y="87" text-anchor="middle" fill="#37a7ff" font-size="10" font-weight="700">Kp − 2</text>
           <text x="56" y="100" text-anchor="middle" fill="#6b82aa" font-size="7.5">геомагнетизм</text>
-          <text x="56" y="109" text-anchor="middle" fill="#4a6080" font-size="7">NOAA · −2…+7</text>
+          <text x="56" y="109" text-anchor="middle" fill="#7f99c4" font-size="7">NOAA · −2…+7</text>
 
           <!-- Li -->
           <rect x="108" y="72" width="64" height="38" rx="5" fill="#0d1f0d" stroke="#2bd47d" stroke-width="1"/>
           <text x="140" y="87" text-anchor="middle" fill="#2bd47d" font-size="10" font-weight="700">Lᵢ</text>
           <text x="140" y="100" text-anchor="middle" fill="#6b82aa" font-size="7.5">місячна фаза</text>
-          <text x="140" y="109" text-anchor="middle" fill="#4a6080" font-size="7">−3 / 0 (Пурніма=0)</text>
+          <text x="140" y="109" text-anchor="middle" fill="#7f99c4" font-size="7">−3 / 0 (Пурніма=0)</text>
 
           <!-- Mi -->
           <rect x="180" y="72" width="64" height="38" rx="5" fill="#1a1a08" stroke="#ffcc00" stroke-width="1"/>
           <text x="212" y="87" text-anchor="middle" fill="#ffcc00" font-size="10" font-weight="700">Mᵢ</text>
           <text x="212" y="100" text-anchor="middle" fill="#6b82aa" font-size="7.5">магн.бурі·свята</text>
-          <text x="212" y="109" text-anchor="middle" fill="#4a6080" font-size="7">−3…+2</text>
+          <text x="212" y="109" text-anchor="middle" fill="#7f99c4" font-size="7">−3…+2</text>
 
           <!-- ei -->
           <rect x="252" y="72" width="64" height="38" rx="5" fill="#150d1f" stroke="#c084fc" stroke-width="1"/>
           <text x="284" y="87" text-anchor="middle" fill="#c084fc" font-size="10" font-weight="700">eᵢ</text>
           <text x="284" y="100" text-anchor="middle" fill="#6b82aa" font-size="7.5">ICS-події</text>
-          <text x="284" y="109" text-anchor="middle" fill="#4a6080" font-size="7">−3 / 0 / +2</text>
+          <text x="284" y="109" text-anchor="middle" fill="#7f99c4" font-size="7">−3 / 0 / +2</text>
 
           <!-- Pi -->
           <rect x="324" y="72" width="64" height="38" rx="5" fill="#0d1a10" stroke="#4ade80" stroke-width="1"/>
           <text x="356" y="87" text-anchor="middle" fill="#4ade80" font-size="10" font-weight="700">Pᵢ</text>
           <text x="356" y="100" text-anchor="middle" fill="#6b82aa" font-size="7.5">Панчанга PCL</text>
-          <text x="356" y="109" text-anchor="middle" fill="#4a6080" font-size="7">−4.4…+3.6</text>
+          <text x="356" y="109" text-anchor="middle" fill="#7f99c4" font-size="7">−4.4…+3.6</text>
 
           <!-- ΣΔeᵢ advisory -->
-          <rect x="396" y="72" width="106" height="38" rx="5" fill="#111111" stroke="#4a6080" stroke-width="1" stroke-dasharray="4,2"/>
+          <rect x="396" y="72" width="106" height="38" rx="5" fill="#111111" stroke="#7f99c4" stroke-width="1" stroke-dasharray="4,2"/>
           <text x="449" y="87" text-anchor="middle" fill="#6b82aa" font-size="9.5" font-weight="700">ΣΔeᵢ</text>
-          <text x="449" y="99" text-anchor="middle" fill="#4a6080" font-size="7.5">Advisory / R&amp;D</text>
+          <text x="449" y="99" text-anchor="middle" fill="#7f99c4" font-size="7.5">Advisory / R&amp;D</text>
           <text x="449" y="109" text-anchor="middle" fill="#3a5060" font-size="7">рішення командира</text>
 
           <!-- Connector lines from G box down to components -->
@@ -2008,7 +2031,7 @@ Kp: 3-год індекс геомагнітної активності (0–9)
           <line x1="212" y1="66" x2="212" y2="72" stroke="#ffcc00" stroke-width="1"/>
           <line x1="284" y1="66" x2="284" y2="72" stroke="#c084fc" stroke-width="1"/>
           <line x1="356" y1="66" x2="356" y2="72" stroke="#4ade80" stroke-width="1"/>
-          <line x1="449" y1="66" x2="449" y2="72" stroke="#4a6080" stroke-width="1" stroke-dasharray="3,2"/>
+          <line x1="449" y1="66" x2="449" y2="72" stroke="#7f99c4" stroke-width="1" stroke-dasharray="3,2"/>
 
           <!-- Scale bar bottom right -->
           <rect x="18" y="118" width="14" height="7" rx="2" fill="#2bd47d" opacity=".8"/>
@@ -2120,7 +2143,7 @@ Kp: 3-год індекс геомагнітної активності (0–9)
           <text x="481" y="57" text-anchor="middle" fill="#6b82aa" font-size="7.5">17:00</text>
           <line x1="112" y1="18" x2="112" y2="56" stroke="rgba(255,255,255,.55)" stroke-width="1.5" stroke-dasharray="3,2"/>
           <text x="112" y="16" text-anchor="middle" fill="#fff" font-size="7.5" font-weight="700">&#9660; зараз</text>
-          <text x="10" y="76" fill="#4a6080" font-size="8.5">&#9737;Sun  &#9799;Saturn  &#9789;Moon  &#9795;Jupiter  &#9794;Mars  &#9791;Mercury  &#9792;Venus</text>
+          <text x="10" y="76" fill="#7f99c4" font-size="8.5">&#9737;Sun  &#9799;Saturn  &#9789;Moon  &#9795;Jupiter  &#9794;Mars  &#9791;Mercury  &#9792;Venus</text>
           <text x="10" y="84" fill="#3a5070" font-size="7.5">Перша Хора = Vara. Кольоровий таймлайн вгорі дашборду показує поточний час (&#9660;) у реальному часі.</text>
         </svg>
 
@@ -2633,8 +2656,60 @@ async function indexIcsEventsForYears(years){
 }
 
 // ----------------------------- Затемнення (Mᵢ) ------------------------------
+// v87.22: NASA-каталог — Map<year, Map<dateStr, type>>, має пріоритет над scrape.
+// Pre-seed для 2025–2030; scrape активується лише для років поза цим каталогом.
+function _nasaEclipseCatalog(year){
+  const m = new Map();
+  if(year===2025){
+    // NASA Eclipse Catalog 2025
+    m.set('2025-03-13','partial_lunar'); m.set('2025-03-14','total_lunar');
+    m.set('2025-03-29','partial_solar');
+    m.set('2025-09-07','total_lunar'); m.set('2025-09-08','total_lunar');
+    m.set('2025-09-21','partial_solar');
+  } else if(year===2026){
+    // NASA Eclipse Catalog 2026
+    m.set('2026-02-17','annular');       // Annular Solar Eclipse
+    m.set('2026-03-03','total_lunar');   // Total Lunar Eclipse
+    m.set('2026-08-12','total_solar');   // Total Solar Eclipse
+    m.set('2026-08-28','partial_lunar'); // Partial Lunar Eclipse
+  } else if(year===2027){
+    // NASA Eclipse Catalog 2027: 06 лют (кільцеподібне сонячне), 02 серп (повне сонячне), 26 груд (часткове місячне)
+    m.set('2027-02-06','annular');
+    m.set('2027-08-02','total_solar');
+    m.set('2027-12-26','partial_lunar');
+  } else if(year===2028){
+    // NASA Eclipse Catalog 2028
+    m.set('2028-01-26','annular');
+    m.set('2028-07-22','total_solar');
+    m.set('2028-08-12','partial_lunar');
+    m.set('2028-12-05','partial_lunar');
+  } else if(year===2029){
+    // NASA Eclipse Catalog 2029
+    m.set('2029-01-14','partial_solar');
+    m.set('2029-06-12','annular');
+    m.set('2029-07-11','partial_lunar');
+    m.set('2029-12-05','annular');
+  } else if(year===2030){
+    // NASA Eclipse Catalog 2030
+    m.set('2030-06-01','annular');
+    m.set('2030-06-15','partial_lunar');
+    m.set('2030-11-25','annular');
+  }
+  return m.size > 0 ? m : null;
+}
+
 async function ensureEclipsesForYear(year){
   if(eclipsesByYear.has(year)) return;
+
+  // v87.22: NASA-каталог має пріоритет над scrape (scrape "отруював" Map значеннями 'unknown',
+  // що давало -3 замість правильних -4/-2/-1 за типом. Див. HANDOFF v87.22).
+  const nasa = _nasaEclipseCatalog(year);
+  if(nasa){
+    eclipsesByYear.set(year, nasa);
+    return;
+  }
+
+  // Scrape-fallback для років поза NASA-каталогом
   let text = '';
   try{
     text = await fetchTextWithCORS(`https://www.timeanddate.com/eclipse/${year}`);
@@ -2660,47 +2735,6 @@ async function ensureEclipsesForYear(year){
         set.set(fmtDate(dt), 'unknown');
       }
     }
-  }
-
-  if(set.size===0 && year===2025){
-    // NASA Eclipse Catalog 2025
-    set.set('2025-03-13','partial_lunar'); set.set('2025-03-14','total_lunar');
-    set.set('2025-03-29','partial_solar');
-    set.set('2025-09-07','total_lunar'); set.set('2025-09-08','total_lunar');
-    set.set('2025-09-21','partial_solar');
-  }
-  if(set.size===0 && year===2026){
-    // NASA Eclipse Catalog 2026
-    set.set('2026-02-17','annular');       // Annular Solar Eclipse
-    set.set('2026-03-03','total_lunar');   // Total Lunar Eclipse
-    set.set('2026-08-12','total_solar');   // Total Solar Eclipse
-    set.set('2026-08-28','partial_lunar'); // Partial Lunar Eclipse
-  }
-  if(set.size===0 && year===2027){
-    // NASA Eclipse Catalog 2027: 06 лют (кільцеподібне сонячне), 02 серп (повне сонячне), 26 груд (часткове місячне)
-    set.set('2027-02-06','annular');
-    set.set('2027-08-02','total_solar');
-    set.set('2027-12-26','partial_lunar');
-  }
-  if(set.size===0 && year===2028){
-    // NASA Eclipse Catalog 2028
-    set.set('2028-01-26','annular');
-    set.set('2028-07-22','total_solar');
-    set.set('2028-08-12','partial_lunar');
-    set.set('2028-12-05','partial_lunar');
-  }
-  if(set.size===0 && year===2029){
-    // NASA Eclipse Catalog 2029
-    set.set('2029-01-14','partial_solar');
-    set.set('2029-06-12','annular');
-    set.set('2029-07-11','partial_lunar');
-    set.set('2029-12-05','annular');
-  }
-  if(set.size===0 && year===2030){
-    // NASA Eclipse Catalog 2030
-    set.set('2030-06-01','annular');
-    set.set('2030-06-15','partial_lunar');
-    set.set('2030-11-25','annular');
   }
 
   eclipsesByYear.set(year, set);
@@ -5458,6 +5492,24 @@ function syncHero(){
     }
   }
 
+  // v87.21: mirror ΔG inline beneath v86GVal (centre of ring) — main visible signal
+  const _hdi = el('v86DeltaInline');
+  if(_hdi){
+    if(_hasDeltaHistory && isFinite(dn)){
+      const _absd = Math.abs(dn);
+      const _arr = dn > 0.05 ? '↑' : dn < -0.05 ? '↓' : '→';
+      const _sgn = dn > 0 ? '+' : dn < 0 ? '−' : '';
+      _hdi.textContent = _arr + ' ' + _sgn + _absd.toFixed(2);
+      // Колір: сильний сигнал при |Δ|≥0.5, слабкий при 0.1–0.5, нейтральний інакше
+      _hdi.style.color = _absd < 0.1 ? 'var(--muted)'
+                       : dn > 0 ? (_absd >= 0.5 ? 'var(--ok)' : '#9fd7b4')
+                                : (_absd >= 0.5 ? 'var(--bad)' : '#e79a9a');
+      _hdi.style.opacity = _absd < 0.1 ? '.6' : '1';
+    } else {
+      _hdi.textContent = '';
+    }
+  }
+
   // v87.14: прибрано дублікатний C-score writer (v87.10/v87.13) —
   // computeCScore з fixed freshness reading тепер працює коректно через _ui.confPct.
   // Блок heroConfidence пишеться нижче на base of _ui.confPct.
@@ -6546,6 +6598,8 @@ function syncV702UI(){
   // (раніше renderPersonal викликався тільки при input-change → при G-tick глобальний ризик не синхронізувався)
   try{if(typeof renderPersonal==='function')renderPersonal();}catch(e){console.warn("renderPersonal:",e);}
   try{const _gNow=_v73G();if(isFinite(_gNow))_saveGHistory(_gNow);}catch(e){}
+  // v87.19 U4: render best/worst days after history save
+  try{ renderBestWorstDays(); }catch(e){}
 }
 
 async function loadAll(){
@@ -7244,7 +7298,7 @@ function renderPlanetAnimation(kp, moonPhaseDeg, G, panchCtx, astroCtx) {
         const _ret2 = isRetrograde(found.name, new Date());
         const _de = _imp2 ? (_ret2 ? _imp2.eiRetro : _imp2.eiNorm) : 0;
         const _ctx2 = _ret2 ? _imp2?.retro : _imp2?.norm;
-        const _deStr = _de > 0 ? `<span style="color:#2bd47d">+${_de}</span>` : _de < 0 ? `<span style="color:#ff6b6b">${_de}</span>` : `<span style="color:#4a6080">0</span>`;
+        const _deStr = _de > 0 ? `<span style="color:#2bd47d">+${_de}</span>` : _de < 0 ? `<span style="color:#ff6b6b">${_de}</span>` : `<span style="color:var(--faint)">0</span>`;
         _tipDiv.innerHTML = `<b style="color:${found.color}">${found.symbol} ${found.ua}</b><br>ΔEᵢ = ${_deStr}<br><span style="color:#7a90b0">${_ctx2||'—'}</span>${_ret2?'<br><span style="color:'+found.retroColor+'">℞ ретроградна</span>':''}`;
         _tipDiv.style.display = 'block';
         _tipDiv.style.left = (ev.clientX + 14) + 'px';
@@ -7690,7 +7744,7 @@ function renderPlanetAnimation(kp, moonPhaseDeg, G, panchCtx, astroCtx) {
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
     const kpLabel = `Kp ${kp.toFixed(1)}`;
-    ctx.fillStyle = kp >= 5 ? '#ff6b6b' : kp >= 3 ? '#ffcc00' : '#4a6080';
+    ctx.fillStyle = kp >= 5 ? '#ff6b6b' : kp >= 3 ? '#ffcc00' : '#7f99c4';
     ctx.fillText(kpLabel, 8, 8);
 
     // G індекс (правий верхній кут)
@@ -7736,7 +7790,7 @@ function renderPlanetAnimation(kp, moonPhaseDeg, G, panchCtx, astroCtx) {
       const col = retro ? p.retroColor : p.color;
       const eiStr = ei > 0 ? `<span style="color:#2bd47d;font-weight:700">+${ei}</span>`
                   : ei < 0 ? `<span style="color:#ff6b6b;font-weight:700">${ei}</span>`
-                  :          `<span style="color:#4a6080">0</span>`;
+                  :          `<span style="color:var(--faint)">0</span>`;
       const statusBadge = retro
         ? `<span style="background:#3a1a1a;color:${p.retroColor};border-radius:4px;padding:1px 5px;font-size:10px">\u211e ретро</span>`
         : `<span style="background:#0d2010;color:#2bd47d;border-radius:4px;padding:1px 5px;font-size:10px">\u25b6 норма</span>`;
@@ -7756,7 +7810,7 @@ function renderPlanetAnimation(kp, moonPhaseDeg, G, panchCtx, astroCtx) {
     legEl.innerHTML = `
       <table style="width:100%;border-collapse:collapse;font-size:11px">
         <thead>
-          <tr style="color:#4a6080;border-bottom:1px solid #1a2540">
+          <tr style="color:var(--faint);border-bottom:1px solid #1a2540">
             <th style="padding:2px 5px;text-align:left;font-weight:500">Планета</th>
             <th style="padding:2px 5px;text-align:left;font-weight:500">Статус</th>
             <th style="padding:2px 5px;text-align:center;font-weight:500">\u0394e\u1d62</th>
@@ -7768,7 +7822,7 @@ function renderPlanetAnimation(kp, moonPhaseDeg, G, panchCtx, astroCtx) {
           <tr>
             <td colspan="2" style="padding:3px 5px;color:#6b82aa;font-size:10px">Планетний внесок \u03a3\u0394e\u1d62:</td>
             <td style="padding:3px 5px;text-align:center;font-size:13px;font-weight:700;color:${totalCol}">${totalStr}</td>
-            <td style="padding:3px 5px;color:#4a6080;font-size:10px">Advisory / R&D \u2014 не впливає на G автоматично</td>
+            <td style="padding:3px 5px;color:var(--faint);font-size:10px">Advisory / R&D \u2014 не впливає на G автоматично</td>
           </tr>
           ${(astroCtx && astroCtx.taara.danger && PLANET_DEF.some(pl => isRetrograde(pl.name, now) && pl.name === astroCtx.dasa.mahaLord)) ? `<tr style="background:#1a0808"><td colspan="4" style="padding:3px 8px;color:#ff6b6b;font-size:10px;font-weight:600">\u26a0 Критичне стекування: Taara ${astroCtx.taara.group} (${astroCtx.taara.name}) + Dasa-лорд \u211e \u2014 максимальна обережність</td></tr>` : ''}
         </tfoot>
@@ -7939,12 +7993,12 @@ function renderPersonal() {
           <div style="margin-top:3px;background:#0a1428;border-radius:4px;height:5px;width:100%;overflow:hidden">
             <div style="width:${Math.round(antar.progress*100)}%;height:100%;background:linear-gradient(90deg,#37a7ff,#2bd47d);border-radius:4px;transition:width .4s"></div>
           </div>
-          <div style="font-size:10px;color:#4a6080;margin-top:1px">${Math.round(antar.progress*100)}% пройдено → ${antar.nextLordName}</div>
+          <div style="font-size:10px;color:var(--faint);margin-top:1px">${Math.round(antar.progress*100)}% пройдено → ${antar.nextLordName}</div>
         </td>
       </tr>
       <tr>
         <td class="muted" style="padding:3px 0;border-bottom:1px solid #1a2540">Пратьянтар</td>
-        <td style="padding:3px 0;border-bottom:1px solid #1a2540"><strong>${antar.pratyaLordName}</strong> <span class="muted">(залишок ${antar.pratyaRemStr})</span> <span style="color:#4a6080;font-size:11px">→ ${antar.pratyaNextLordName}</span></td>
+        <td style="padding:3px 0;border-bottom:1px solid #1a2540"><strong>${antar.pratyaLordName}</strong> <span class="muted">(залишок ${antar.pratyaRemStr})</span> <span style="color:var(--faint);font-size:11px">→ ${antar.pratyaNextLordName}</span></td>
       </tr>
       <tr>
         <td class="muted" style="padding:3px 0;border-bottom:1px solid #1a2540">Hora зараз</td>
@@ -8008,7 +8062,7 @@ function renderTaara7d(wrap, natalIdx, nowJDE) {
       <td style="padding:2px 6px;font-size:12px;color:#9bb1dc;border-bottom:1px solid #1a2540">${d===0?'Сьогодні':ds}</td>
       <td style="padding:2px 6px;font-size:12px;border-bottom:1px solid #1a2540;color:${col}">${TAARA_SHORT[t.group]||''} (${t.group}/9)</td>
       <td style="padding:2px 6px;font-size:12px;border-bottom:1px solid #1a2540;color:${gmodCol};font-weight:700">${gmod}</td>
-      <td style="padding:2px 6px;font-size:11px;color:#4a6080;border-bottom:1px solid #1a2540">${NAKSHATRA_UA[nak.idx]}</td>
+      <td style="padding:2px 6px;font-size:11px;color:var(--faint);border-bottom:1px solid #1a2540">${NAKSHATRA_UA[nak.idx]}</td>
     </tr>`;
   }
   wrap.innerHTML = `
@@ -8016,10 +8070,10 @@ function renderTaara7d(wrap, natalIdx, nowJDE) {
       <summary style="font-size:12px;color:#6b82aa;cursor:pointer;list-style:none">▶ Taara 7 днів</summary>
       <table style="width:100%;border-collapse:collapse;margin-top:6px">
         <thead><tr>
-          <th style="font-size:11px;color:#4a6080;text-align:left;padding:2px 6px">День</th>
-          <th style="font-size:11px;color:#4a6080;text-align:left;padding:2px 6px">Taara</th>
-          <th style="font-size:11px;color:#4a6080;text-align:left;padding:2px 6px">G±</th>
-          <th style="font-size:11px;color:#4a6080;text-align:left;padding:2px 6px">Накшатра</th>
+          <th style="font-size:11px;color:var(--faint);text-align:left;padding:2px 6px">День</th>
+          <th style="font-size:11px;color:var(--faint);text-align:left;padding:2px 6px">Taara</th>
+          <th style="font-size:11px;color:var(--faint);text-align:left;padding:2px 6px">G±</th>
+          <th style="font-size:11px;color:var(--faint);text-align:left;padding:2px 6px">Накшатра</th>
         </tr></thead>
         <tbody>${rows}</tbody>
       </table>
@@ -8130,7 +8184,7 @@ function renderSlotTabs(){
     const border = isActive ? `2px solid ${col}` : '2px solid #1e2a44';
     const bg = isActive ? `rgba(${hexToRgb(col)},0.12)` : '#0a1428';
     const label = d ? (d.name || `Особа ${i+1}`) : `+ Особа ${i+1}`;
-    const style = `font-size:11px;padding:4px 10px;border-radius:8px;border:${border};background:${bg};color:${d?col:'#4a6080'};cursor:pointer;font-weight:${isActive?700:400}`;
+    const style = `font-size:11px;padding:4px 10px;border-radius:8px;border:${border};background:${bg};color:${d?col:'var(--faint)'};cursor:pointer;font-weight:${isActive?700:400}`;
     html += `<button onclick="switchSlot(${i})" style="${style}">${label}</button>`;
     if(d) hasAny = true;
   }
@@ -8312,7 +8366,7 @@ function draw27Chart(){
   }
 
   // ── Осі Y (мітки) ──
-  ctx.fillStyle = '#4a6080';
+  ctx.fillStyle = '#7f99c4';
   ctx.font = '9px system-ui';
   ctx.textAlign = 'right';
   [-3,-2,-1,0,1,2,3].forEach(v=>{
@@ -8371,7 +8425,7 @@ function draw27Chart(){
   });
 
   // ── Вісь X (дати кожні 7 днів) ──
-  ctx.fillStyle = '#4a6080';
+  ctx.fillStyle = '#7f99c4';
   ctx.font = '9px system-ui';
   ctx.textAlign = 'center';
   data.forEach((d,i)=>{
@@ -8537,7 +8591,7 @@ function renderHoraTimeline(dateUTC, kp, G) {
       : '';
     const favStr = nextFav
       ? `<span style="color:#2bd47d;font-size:10px"> ⏩ Наступна сприятлива: <strong>${HORA_SYMBOLS[nextFav.planet]||''} ${nextFav.planet}</strong> о ${toHHMM_utc(nextFav.startH)} UTC</span>`
-      : `<span style="color:#4a6080;font-size:10px"> — сприятливих більше немає сьогодні</span>`;
+      : `<span style="color:var(--faint);font-size:10px"> — сприятливих більше немає сьогодні</span>`;
     legend.innerHTML = `Зараз: <strong style="color:${col}">${sym} ${cur.planet}</strong> <span style="color:${col};font-size:10px">PCL ${score>0?'+':''}${score}</span> · до ${toHHMM_utc(cur.endH)} UTC (ще <span id="horaCountdown" style="color:${col};font-weight:700">${minLeft}хв</span>)${nxtStr}${horaEiStr}<br>${favStr}`;
     // P2-ux: live Hora countdown
     if (window._horaCountTimer) clearInterval(window._horaCountTimer);
@@ -8794,7 +8848,7 @@ function renderGFlowCanvas(G, kp, ai) {
     ctx.stroke();
 
     // Значення над вузлом
-    ctx.fillStyle = c.val === 0 ? '#4a6080' : col;
+    ctx.fillStyle = c.val === 0 ? '#7f99c4' : col;
     ctx.font = `bold 10px monospace`;
     ctx.textAlign = 'center';
     ctx.fillText(valStr, cx, cy - r - 4);
@@ -9056,7 +9110,7 @@ async function shareGState() {
   ctx.font = 'bold 52px system-ui,-apple-system,sans-serif';
   ctx.fillText('G-INDEX', W/2, 140);
 
-  ctx.fillStyle = '#4a6080';
+  ctx.fillStyle = '#7f99c4';
   ctx.font = '38px system-ui,-apple-system,sans-serif';
   ctx.fillText('Space & Stars', W/2, 200);
 
@@ -9092,7 +9146,7 @@ async function shareGState() {
     ctx.fillText(rmStr, W/2, H*0.69);
   }
 
-  ctx.fillStyle = '#4a6080';
+  ctx.fillStyle = '#7f99c4';
   ctx.font = '34px system-ui,-apple-system,sans-serif';
   ctx.fillText('Advisory / R&D. Не є рекомендацією.', W/2, H*0.88);
 
@@ -9373,6 +9427,11 @@ function setProfile(p) {
     b.classList.toggle('active', b.dataset.p === p);
   });
   renderProfileRec();
+  // v87.19: при зміні persona — одразу оновити Decision Layer (інакше чекає G-tick ~10 хв)
+  try {
+    const _ui = window.__uiState || {};
+    if (isFinite(_ui.gNow)) renderDecisionLayer(_ui.gNow, _ui);
+  } catch(e) {}
 }
 
 // ─── v32: Вікова поправка для mil-профілю ───────────────────────────────────
@@ -9960,16 +10019,16 @@ async function handleBacktestFile(input) {
       <div style="background:#090f1e;border:1px solid #1e2a44;border-radius:14px;padding:14px 10px;text-align:center">
         <div style="font-size:10px;color:#6b82aa;text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px">Free</div>
         <div style="font-size:20px;font-weight:800;color:#e7efff">$0</div>
-        <div style="font-size:9px;color:#4a6080;margin-bottom:10px">назавжди</div>
+        <div style="font-size:9px;color:var(--faint);margin-bottom:10px">назавжди</div>
         <ul style="list-style:none;padding:0;margin:0 0 12px;text-align:left;font-size:11px;color:#9bb1dc;line-height:2">
           <li>✓ G сьогодні</li>
           <li>✓ 3-день прогноз</li>
           <li>✓ Factor breakdown</li>
-          <li style="color:#4a6080">✗ Архів</li>
-          <li style="color:#4a6080">✗ Push alerts</li>
-          <li style="color:#4a6080">✗ Personal mode</li>
+          <li style="color:var(--faint)">✗ Архів</li>
+          <li style="color:var(--faint)">✗ Push alerts</li>
+          <li style="color:var(--faint)">✗ Personal mode</li>
         </ul>
-        <div style="font-size:11px;color:#4a6080;padding:7px;border-radius:8px;background:#0b1220;border:1px solid #1a2540">Поточний план</div>
+        <div style="font-size:11px;color:var(--faint);padding:7px;border-radius:8px;background:#0b1220;border:1px solid #1a2540">Поточний план</div>
       </div>
 
       <!-- Plus — highlighted -->
@@ -9977,14 +10036,14 @@ async function handleBacktestFile(input) {
         <div style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:#37a7ff;color:#001026;font-size:9px;font-weight:800;padding:2px 10px;border-radius:999px;letter-spacing:.05em;white-space:nowrap">POPULAR</div>
         <div style="font-size:10px;color:#37a7ff;text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px">Plus</div>
         <div style="font-size:20px;font-weight:800;color:#e7efff">$7<span style="font-size:11px;font-weight:400;color:#9bb1dc">/міс</span></div>
-        <div style="font-size:9px;color:#4a6080;margin-bottom:10px">або $59/рік</div>
+        <div style="font-size:9px;color:var(--faint);margin-bottom:10px">або $59/рік</div>
         <ul style="list-style:none;padding:0;margin:0 0 12px;text-align:left;font-size:11px;color:#b7c7ea;line-height:2">
           <li>✓ G + C-score</li>
           <li>✓ 14-день прогноз</li>
           <li>✓ Push alerts 7:00</li>
           <li>✓ 1 профіль</li>
           <li>✓ Архів 30 днів</li>
-          <li style="color:#4a6080">✗ Personal/Dasha</li>
+          <li style="color:var(--faint)">✗ Personal/Dasha</li>
         </ul>
         <button onclick="PaywallModal.demoActivate('basic')"
           style="width:100%;background:#37a7ff;color:#001026;border:none;
@@ -9998,7 +10057,7 @@ async function handleBacktestFile(input) {
       <div style="background:#090f1e;border:1px solid #2a3b61;border-radius:14px;padding:14px 10px;text-align:center">
         <div style="font-size:10px;color:#9bb1dc;text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px">Pro</div>
         <div style="font-size:20px;font-weight:800;color:#e7efff">$19<span style="font-size:11px;font-weight:400;color:#9bb1dc">/міс</span></div>
-        <div style="font-size:9px;color:#4a6080;margin-bottom:10px">або $149/рік</div>
+        <div style="font-size:9px;color:var(--faint);margin-bottom:10px">або $149/рік</div>
         <ul style="list-style:none;padding:0;margin:0 0 12px;text-align:left;font-size:11px;color:#b7c7ea;line-height:2">
           <li>✓ Все з Plus</li>
           <li>✓ Personal + Dasha</li>
@@ -10016,7 +10075,7 @@ async function handleBacktestFile(input) {
     </div>
 
     <!-- Footer -->
-    <div style="text-align:center;font-size:11px;color:#4a6080;line-height:1.6">
+    <div style="text-align:center;font-size:11px;color:var(--faint);line-height:1.6">
       🔐 Оплата через Stripe · Скасування в будь-який момент<br>
       <span style="color:#6b82aa">Advisory / R&D інструмент · Не фінансова порада</span>
     </div>
@@ -10178,7 +10237,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <div style="margin-bottom:5px">📅 <strong style="color:#cfe0ff">eᵢ</strong> — події (Russell-McPherron)</div>
           <div>🕉 <strong style="color:#cfe0ff">Pᵢ</strong> — Панчанга (Tithi/Nakshatra/Yoga)</div>
         </div>
-        <div style="font-size:12px;color:#4a6080">Advisory / R&D · Не фінансова порада</div>
+        <div style="font-size:12px;color:var(--faint)">Advisory / R&D · Не фінансова порада</div>
       </div>
 
       <!-- Slide 2: Profile -->
@@ -10213,9 +10272,9 @@ document.addEventListener('DOMContentLoaded', () => {
         <div style="font-size:14px;color:#9bb1dc;line-height:1.65;margin-bottom:20px">
           Дані NOAA та Панчанга завантажуються автоматично.<br>
           Оновлення кожні 3 години.<br><br>
-          <span style="color:#4a6080;font-size:12px">
-            <a href="privacy.html" target="_blank" style="color:#4a6080">Privacy Policy</a> ·
-            <a href="terms.html" target="_blank" style="color:#4a6080">Terms of Use</a>
+          <span style="color:var(--faint);font-size:12px">
+            <a href="privacy.html" target="_blank" style="color:var(--faint)">Privacy Policy</a> ·
+            <a href="terms.html" target="_blank" style="color:var(--faint)">Terms of Use</a>
           </span>
         </div>
       </div>
@@ -10225,7 +10284,7 @@ document.addEventListener('DOMContentLoaded', () => {
     <!-- Nav buttons -->
     <div style="display:flex;gap:10px;padding:16px 28px 24px;align-items:center">
       <button id="obSkip" onclick="onboardFinish()"
-        style="background:transparent;border:none;color:#4a6080;font-size:13px;cursor:pointer;padding:4px 8px">
+        style="background:transparent;border:none;color:var(--faint);font-size:13px;cursor:pointer;padding:4px 8px">
         Пропустити
       </button>
       <div style="flex:1"></div>
@@ -10962,7 +11021,63 @@ function _saveGHistory(g){
     // Max 200 entries
     if(hist.length>200) hist=hist.slice(-200);
     localStorage.setItem(key, JSON.stringify(hist));
+    // v87.19 U4: daily history — зберегти 1 запис на день (noon UTC G) для місячної стати
+    const dayKey='g_history_daily_v1';
+    const todayStr=new Date().toISOString().slice(0,10); // YYYY-MM-DD
+    let daily=JSON.parse(localStorage.getItem(dayKey)||'{}');
+    // Середнє за день (averageу поточне значення з наявним)
+    if (daily[todayStr] === undefined) {
+      daily[todayStr] = g;
+    } else {
+      // Простий running average — 90% старе + 10% нове
+      daily[todayStr] = Math.round((daily[todayStr] * 0.9 + g * 0.1) * 100) / 100;
+    }
+    // Тримати не більше 90 днів
+    const keys = Object.keys(daily).sort();
+    if (keys.length > 90) {
+      for (const k of keys.slice(0, keys.length - 90)) delete daily[k];
+    }
+    localStorage.setItem(dayKey, JSON.stringify(daily));
   }catch(e){}
+}
+
+// v87.19 U4: best/worst days of past 30 days
+function _getBestWorstDays(){
+  try{
+    const daily = JSON.parse(localStorage.getItem('g_history_daily_v1') || '{}');
+    const entries = Object.entries(daily).sort((a,b) => a[0].localeCompare(b[0]));
+    if (entries.length < 3) return null;
+    const last30 = entries.slice(-30);
+    let best = last30[0], worst = last30[0];
+    for (const e of last30) {
+      if (e[1] > best[1]) best = e;
+      if (e[1] < worst[1]) worst = e;
+    }
+    return { best: {date:best[0], g:best[1]}, worst: {date:worst[0], g:worst[1]}, total: last30.length };
+  }catch(e){ return null; }
+}
+
+function renderBestWorstDays(){
+  const block = document.getElementById('bestWorstDays');
+  if (!block) return;
+  const bw = _getBestWorstDays();
+  if (!bw) {
+    block.style.display = 'none';
+    return;
+  }
+  const fmtDate = (d) => {
+    const parts = d.split('-');
+    return `${parts[2]}.${parts[1]}`;
+  };
+  const bSign = bw.best.g >= 0 ? '+' : '';
+  const wSign = bw.worst.g >= 0 ? '+' : '';
+  block.innerHTML = `
+    <div class="bw-title">Історія · 30д</div>
+    <div class="bw-item bw-best"><span class="bw-label">Найкращий день</span><span class="bw-value">${fmtDate(bw.best.date)} · G=${bSign}${bw.best.g.toFixed(1)}</span></div>
+    <div class="bw-item bw-worst"><span class="bw-label">Найгірший день</span><span class="bw-value">${fmtDate(bw.worst.date)} · G=${wSign}${bw.worst.g.toFixed(1)}</span></div>
+    <div class="bw-count">${bw.total} днів у базі</div>
+  `;
+  block.style.display = '';
 }
 function _getGDelta(){
   try{
