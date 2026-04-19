@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v87.30</title>
+  <title>G-Index — Космофізичний дашборд v87.37</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1134,6 +1134,12 @@
         <span id="tierBadge" onclick="PAYWALL.tier()==='free'?PaywallModal.show('G-Index Premium','basic'):null"
           style="display:inline-block;font-size:11px;font-weight:700;padding:3px 9px;border-radius:6px;
           vertical-align:middle;letter-spacing:.05em;cursor:pointer;background:#1e2a44;color:#6b82aa">Free</span>
+        <button id="authBtn" onclick="AuthModal.show()"
+          title="Увійти через magic link (email)"
+          style="background:#1e2a44;color:#9bb1dc;border:1px solid var(--border2);font-size:11px;padding:3px 9px;border-radius:6px;cursor:pointer">🔐 Увійти</button>
+        <button id="pushBtn" onclick="PushModal.show()"
+          title="Push-сповіщення (Plus+)"
+          style="background:#1e2a44;color:#9bb1dc;border:1px solid var(--border2);font-size:11px;padding:3px 9px;border-radius:6px;cursor:pointer">🔔</button>
         <button id="btnRefresh">↻ Оновити</button>
         <button id="btnHardReset" title="Скинути кеш SW і перезавантажити — якщо бачиш стару версію"
           onclick="(async function(){try{if('serviceWorker' in navigator){const regs=await navigator.serviceWorker.getRegistrations();await Promise.all(regs.map(r=>r.unregister()));}if('caches' in window){const keys=await caches.keys();await Promise.all(keys.map(k=>caches.delete(k)));}location.reload(true);}catch(e){alert('Reset error: '+e.message);}})()"
@@ -1770,6 +1776,8 @@ Kp: 3-год індекс геомагнітної активності (0–9)
           <canvas id="chart27" style="width:100%;height:220px"></canvas>
           <div id="chart27Tooltip"></div>
         </div>
+        <!-- v87.34: Forward timeline — інтерактивна 27-day смуга з play-контролом -->
+        <div id="forwardTimelineBlock" style="display:none;margin:6px 0 10px;padding:8px 10px;border:1px solid #1e2a44;border-radius:10px;background:rgba(10,20,40,0.35)"></div>
         <div id="table27Wrap" style="display:none">
         <table id="tbl27">
           <thead><tr>
@@ -2278,6 +2286,367 @@ document.addEventListener('DOMContentLoaded', () => {
   const t = PAYWALL.tier();
   if (tb && t !== 'free') { tb.textContent = t === 'pro' ? 'Pro' : 'Basic'; tb.style.color = '#37a7ff'; }
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// v87.36 SUPABASE BACKEND STUB — inert until window._supabase_url/_key are set.
+// To activate:
+//   1. Add <<<script>>> src="https://esm.sh/@supabase/supabase-js@2" <<</script>>> before this script
+//      OR build-bundle with @supabase/supabase-js@2 npm package
+//   2. Set globals in HTML head (or via env config):
+//         window._supabase_url = 'https://xxxxx.supabase.co';
+//         window._supabase_anon_key = 'eyJ...';
+//   3. SUPA.init() is auto-called; if missing config → silent no-op.
+// ═══════════════════════════════════════════════════════════════════════════
+const SUPA = (function(){
+  let client = null;
+  let user = null;
+  let initialized = false;
+
+  function _log(...a){ try{ console.log('[SUPA]', ...a); }catch(e){} }
+  function _warn(...a){ try{ console.warn('[SUPA]', ...a); }catch(e){} }
+
+  function isConfigured(){
+    return !!(window._supabase_url && window._supabase_anon_key);
+  }
+
+  async function init(){
+    if(initialized) return;
+    initialized = true;
+    if(!isConfigured()){
+      _log('not configured — backend inert (set window._supabase_url + _supabase_anon_key)');
+      return;
+    }
+    // createClient може бути відсутній якщо supabase-js не loaded
+    if(typeof window.supabase === 'undefined' || typeof window.supabase.createClient !== 'function'){
+      _warn('@supabase/supabase-js not loaded — add CDN <\/script> before this');
+      return;
+    }
+    try{
+      client = window.supabase.createClient(window._supabase_url, window._supabase_anon_key, {
+        auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+      });
+      // Restore session
+      const { data } = await client.auth.getSession();
+      user = data?.session?.user || null;
+      if(user) _log('restored session:', user.email);
+      // Listen for auth state changes
+      client.auth.onAuthStateChange((event, session) => {
+        user = session?.user || null;
+        _log('auth event:', event, user?.email || '(signed out)');
+        _updateAuthUI();
+      });
+      _updateAuthUI();
+    }catch(e){
+      _warn('init failed:', e);
+    }
+  }
+
+  async function sendMagicLink(email){
+    if(!client){ throw new Error('Supabase not initialized'); }
+    const { error } = await client.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo: window.location.href }
+    });
+    if(error) throw error;
+    return true;
+  }
+
+  async function signOut(){
+    if(!client) return;
+    await client.auth.signOut();
+    user = null;
+    _updateAuthUI();
+  }
+
+  function currentUser(){ return user; }
+  function getClient(){ return client; }
+
+  function _updateAuthUI(){
+    const btn = document.getElementById('authBtn');
+    if(!btn) return;
+    if(user){
+      const name = user.email ? user.email.split('@')[0] : 'user';
+      btn.textContent = `👤 ${name}`;
+      btn.title = 'Клік для виходу — ' + (user.email || '');
+    }else{
+      btn.textContent = '🔐 Увійти';
+      btn.title = 'Увійти через magic link (email)';
+    }
+  }
+
+  return { init, isConfigured, sendMagicLink, signOut, currentUser, getClient };
+})();
+
+// Auth modal controller (інертний якщо SUPA не init)
+const AuthModal = {
+  show(){
+    if(!SUPA.isConfigured()){
+      alert('Бекенд ще не налаштовано. Скоро!');
+      return;
+    }
+    const u = SUPA.currentUser();
+    if(u){
+      if(confirm(`Вийти з ${u.email}?`)) SUPA.signOut();
+      return;
+    }
+    let ov = document.getElementById('authOverlay');
+    if(!ov){
+      ov = document.createElement('div');
+      ov.id = 'authOverlay';
+      ov.style.cssText = 'position:fixed;inset:0;background:rgba(10,15,25,.85);display:flex;align-items:center;justify-content:center;z-index:1000;padding:20px';
+      ov.innerHTML = `
+        <div style="background:#0f1a2f;border:1px solid #2a3b61;border-radius:12px;padding:24px;max-width:360px;width:100%">
+          <div style="font-size:16px;font-weight:700;color:#cfe0ff;margin-bottom:8px">Увійти в G-Index</div>
+          <div style="font-size:12px;color:#9bb1dc;margin-bottom:16px">Введіть email — надішлемо magic link без пароля.</div>
+          <input id="authEmailInput" type="email" placeholder="your@email.com" autocomplete="email"
+                 style="width:100%;padding:10px;font-size:14px;background:#0a1428;border:1px solid #2a3b61;color:#cfe0ff;border-radius:8px;margin-bottom:12px;box-sizing:border-box">
+          <div id="authMsg" style="font-size:11px;color:#9bb1dc;min-height:16px;margin-bottom:10px"></div>
+          <div style="display:flex;gap:8px;justify-content:flex-end">
+            <button onclick="AuthModal.hide()" style="padding:8px 14px;background:#1e2a44;color:#9bb1dc;border:1px solid #2a3b61;border-radius:6px;cursor:pointer">Скасувати</button>
+            <button onclick="AuthModal.submit()" style="padding:8px 14px;background:#2563eb;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600">Надіслати</button>
+          </div>
+        </div>`;
+      document.body.appendChild(ov);
+    }
+    ov.style.display = 'flex';
+    setTimeout(() => { const i = document.getElementById('authEmailInput'); if(i) i.focus(); }, 50);
+  },
+  hide(){
+    const ov = document.getElementById('authOverlay');
+    if(ov) ov.style.display = 'none';
+  },
+  async submit(){
+    const inp = document.getElementById('authEmailInput');
+    const msg = document.getElementById('authMsg');
+    const email = (inp?.value || '').trim();
+    if(!email || !/.+@.+\..+/.test(email)){
+      if(msg){ msg.textContent = 'Невірний формат email'; msg.style.color = '#ff9955'; }
+      return;
+    }
+    if(msg){ msg.textContent = 'Надсилаю…'; msg.style.color = '#9bb1dc'; }
+    try{
+      await SUPA.sendMagicLink(email);
+      if(msg){ msg.textContent = `✓ Лист надіслано на ${email}. Перевірте пошту.`; msg.style.color = '#2bd47d'; }
+      setTimeout(() => AuthModal.hide(), 3500);
+    }catch(e){
+      if(msg){ msg.textContent = 'Помилка: ' + (e.message || e); msg.style.color = '#ff6b6b'; }
+    }
+  }
+};
+
+// Auto-init SUPA when DOM ready (no-op if not configured)
+document.addEventListener('DOMContentLoaded', () => { try{ SUPA.init(); }catch(e){} });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// v87.37 PUSH NOTIFICATIONS — client side. Inert без VAPID-ключа (window._vapid_public_key).
+// Workflow:
+//   1. User clicks 🔔 bell → PushModal.show()
+//   2. Notification.requestPermission() → 'granted' | 'denied' | 'default'
+//   3. If granted: serviceWorker.pushManager.subscribe({userVisibleOnly:true, applicationServerKey:VAPID})
+//   4. POST subscription to Supabase push_subscriptions (via SUPA.getClient())
+//   5. Server (Edge Function, окремо) може надсилати push через web-push npm lib.
+// ═══════════════════════════════════════════════════════════════════════════
+const PUSH = (function(){
+  function _log(...a){ try{ console.log('[PUSH]', ...a); }catch(e){} }
+  function _warn(...a){ try{ console.warn('[PUSH]', ...a); }catch(e){} }
+
+  function isSupported(){
+    return typeof window !== 'undefined'
+      && 'serviceWorker' in navigator
+      && 'PushManager' in window
+      && 'Notification' in window;
+  }
+
+  function isConfigured(){
+    return !!(window._vapid_public_key && SUPA && SUPA.isConfigured && SUPA.isConfigured());
+  }
+
+  function currentPermission(){
+    if(!isSupported()) return 'unsupported';
+    return Notification.permission; // 'default' | 'granted' | 'denied'
+  }
+
+  async function isSubscribed(){
+    if(!isSupported()) return false;
+    try{
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription();
+      return !!sub;
+    }catch(e){ return false; }
+  }
+
+  // VAPID base64url → Uint8Array (per web-push spec)
+  function _urlBase64ToUint8Array(b64){
+    const padding = '='.repeat((4 - b64.length % 4) % 4);
+    const normalized = (b64 + padding).replace(/-/g,'+').replace(/_/g,'/');
+    const raw = atob(normalized);
+    const out = new Uint8Array(raw.length);
+    for(let i=0;i<raw.length;i++) out[i] = raw.charCodeAt(i);
+    return out;
+  }
+
+  async function subscribe(){
+    if(!isSupported()) throw new Error('Push не підтримується цим браузером');
+    if(!isConfigured()) throw new Error('Push ще не налаштовано на сервері');
+
+    // 1. Запросити дозвіл
+    const perm = await Notification.requestPermission();
+    if(perm !== 'granted') throw new Error('Дозвіл не надано: ' + perm);
+
+    // 2. Отримати SW registration
+    const reg = await navigator.serviceWorker.ready;
+
+    // 3. Підписка (або реюз існуючу)
+    let sub = await reg.pushManager.getSubscription();
+    if(!sub){
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: _urlBase64ToUint8Array(window._vapid_public_key)
+      });
+    }
+
+    // 4. Зберегти у Supabase (якщо залогінений — user_id з auth, інакше guest-fail)
+    const user = SUPA.currentUser();
+    if(!user) throw new Error('Увійдіть в акаунт, щоб увімкнути сповіщення');
+
+    const client = SUPA.getClient();
+    if(!client) throw new Error('Supabase client недоступний');
+
+    const subJson = sub.toJSON();
+    const row = {
+      user_id: user.id,
+      endpoint: subJson.endpoint,
+      p256dh: subJson.keys && subJson.keys.p256dh,
+      auth_secret: subJson.keys && subJson.keys.auth,
+      user_agent: navigator.userAgent,
+      last_seen: new Date().toISOString()
+    };
+
+    // upsert по endpoint (один endpoint унікальний)
+    const { error } = await client.from('push_subscriptions').upsert(row, { onConflict: 'endpoint' });
+    if(error) throw error;
+    _log('subscribed and stored');
+    return sub;
+  }
+
+  async function unsubscribe(){
+    if(!isSupported()) return;
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    if(!sub) return;
+    const endpoint = sub.endpoint;
+    await sub.unsubscribe();
+    // Видалити з DB якщо залогінений
+    if(SUPA.currentUser() && SUPA.getClient()){
+      try{
+        await SUPA.getClient().from('push_subscriptions').delete().eq('endpoint', endpoint);
+      }catch(e){ _warn('DB delete failed:', e); }
+    }
+    _log('unsubscribed');
+  }
+
+  // SW повідомляє про pushsubscriptionchange (browser auto-renewed) — re-subscribe
+  if(typeof navigator !== 'undefined' && 'serviceWorker' in navigator){
+    navigator.serviceWorker.addEventListener && navigator.serviceWorker.addEventListener('message', event => {
+      if(event.data && event.data.type === 'SW_PUSH_SUB_CHANGED'){
+        _log('SW notified subscription changed — re-subscribing');
+        subscribe().catch(e => _warn('auto re-subscribe failed:', e));
+      }
+    });
+  }
+
+  return { isSupported, isConfigured, currentPermission, isSubscribed, subscribe, unsubscribe };
+})();
+
+const PushModal = {
+  async show(){
+    if(!PUSH.isSupported()){
+      alert('Ваш браузер не підтримує push-сповіщення');
+      return;
+    }
+    // Tier-gate: Plus або вище
+    if(PAYWALL.tier() === 'free'){
+      PaywallModal.show('Push-сповіщення', 'plus');
+      return;
+    }
+    if(!PUSH.isConfigured()){
+      alert('Бекенд сповіщень ще не налаштовано. Скоро!');
+      return;
+    }
+    if(!SUPA.currentUser()){
+      alert('Спочатку увійдіть в акаунт (🔐 у хедері)');
+      return;
+    }
+
+    const perm = PUSH.currentPermission();
+    const subscribed = await PUSH.isSubscribed();
+
+    let ov = document.getElementById('pushOverlay');
+    if(!ov){
+      ov = document.createElement('div');
+      ov.id = 'pushOverlay';
+      ov.style.cssText = 'position:fixed;inset:0;background:rgba(10,15,25,.85);display:flex;align-items:center;justify-content:center;z-index:1000;padding:20px';
+      document.body.appendChild(ov);
+    }
+
+    let stateHtml = '';
+    if(perm === 'denied'){
+      stateHtml = `
+        <div style="color:#ff9955;font-size:13px;margin-bottom:14px">⚠ Ви заблокували сповіщення для цього сайту. Дозволити: Налаштування → Сповіщення → дозволити для ${location.hostname}.</div>
+        <button onclick="PushModal.hide()" style="padding:8px 14px;background:#1e2a44;color:#9bb1dc;border:1px solid #2a3b61;border-radius:6px;cursor:pointer">OK</button>`;
+    }else if(subscribed){
+      stateHtml = `
+        <div style="color:#2bd47d;font-size:13px;margin-bottom:14px">✓ Сповіщення увімкнено на цьому пристрої.</div>
+        <div style="font-size:11px;color:#9bb1dc;margin-bottom:12px">Ви отримуватимете попередження про G ≤ −2 та сприятливі вікна.</div>
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+          <button onclick="PushModal.hide()" style="padding:8px 14px;background:#1e2a44;color:#9bb1dc;border:1px solid #2a3b61;border-radius:6px;cursor:pointer">Закрити</button>
+          <button onclick="PushModal.doUnsubscribe()" style="padding:8px 14px;background:#2a1a1a;color:#ff9f9f;border:1px solid #4a2a2a;border-radius:6px;cursor:pointer">Вимкнути</button>
+        </div>`;
+    }else{
+      stateHtml = `
+        <div style="font-size:13px;color:#cfe0ff;margin-bottom:10px">Отримуйте сповіщення про:</div>
+        <ul style="font-size:12px;color:#9bb1dc;margin:0 0 14px 16px;padding:0">
+          <li>🔴 Піки несприятливого G (≤ −2)</li>
+          <li>🟢 Сприятливі вікна дня</li>
+          <li>⚡ Сильні геомагнітні бурі (Kp ≥ 6)</li>
+          <li>🌑 День затемнення</li>
+        </ul>
+        <div id="pushMsg" style="font-size:11px;color:#9bb1dc;min-height:16px;margin-bottom:10px"></div>
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+          <button onclick="PushModal.hide()" style="padding:8px 14px;background:#1e2a44;color:#9bb1dc;border:1px solid #2a3b61;border-radius:6px;cursor:pointer">Скасувати</button>
+          <button onclick="PushModal.doSubscribe()" style="padding:8px 14px;background:#2563eb;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600">🔔 Увімкнути</button>
+        </div>`;
+    }
+
+    ov.innerHTML = `
+      <div style="background:#0f1a2f;border:1px solid #2a3b61;border-radius:12px;padding:24px;max-width:400px;width:100%">
+        <div style="font-size:16px;font-weight:700;color:#cfe0ff;margin-bottom:12px">🔔 Сповіщення G-Index</div>
+        ${stateHtml}
+      </div>`;
+    ov.style.display = 'flex';
+  },
+  hide(){
+    const ov = document.getElementById('pushOverlay');
+    if(ov) ov.style.display = 'none';
+  },
+  async doSubscribe(){
+    const msg = document.getElementById('pushMsg');
+    if(msg){ msg.textContent = 'Підписка…'; msg.style.color = '#9bb1dc'; }
+    try{
+      await PUSH.subscribe();
+      if(msg){ msg.textContent = '✓ Готово!'; msg.style.color = '#2bd47d'; }
+      setTimeout(() => PushModal.show(), 800); // перерендерити у subscribed-стан
+    }catch(e){
+      if(msg){ msg.textContent = 'Помилка: ' + (e.message || e); msg.style.color = '#ff6b6b'; }
+    }
+  },
+  async doUnsubscribe(){
+    try{
+      await PUSH.unsubscribe();
+      setTimeout(() => PushModal.show(), 300);
+    }catch(e){ alert('Помилка відписки: ' + (e.message || e)); }
+  }
+};
 
 // ---------------------------- Налаштування джерел ----------------------------
 // NOAA SWPC
@@ -3793,6 +4162,8 @@ function render27Day(rows, last3D){
 
   // v87.28: compare periods (non-blocking, errors isolated)
   try{ renderComparePeriods(); }catch(e){ console.warn('[comparePeriods]', e); }
+  // v87.34: forward timeline (non-blocking, errors isolated)
+  try{ renderForwardTimeline(); }catch(e){ console.warn('[forwardTimeline]', e); }
 }
 
 // v87.28 Compare periods — цей тиждень vs той самий тиждень рік тому (Σ-ритм only).
@@ -3808,43 +4179,54 @@ function render27Day(rows, last3D){
 // v87.29: DGD parser. Формат (13 токенів після 'YYYY MM DD'):
 //   YYYY MM DD  Ap_mid K1..K8  Ap_hi K1..K8  Ap_pl Kp1..Kp8
 // Беремо ПЛАНЕТАРНІ Kp (останні 8 чисел як float). Повертає Map<'YYYY-MM-DD', daily_max_kp>.
+// v87.33: in-flight guard проти concurrent fetch (rendering триггериться з 2 місць — load + render27Day).
+let _dgdInflight = null;
 async function fetchDGDLast30(){
-  const cacheKey = 'dgd_cache_v1';
-  const cached = lsGet(cacheKey);
-  if(cached){
-    try{
-      const o = JSON.parse(cached);
-      if(o && o.ts && (Date.now() - o.ts < 6*3600*1000) && o.data){
-        return new Map(Object.entries(o.data));
-      }
-    }catch(e){}
+  if(_dgdInflight) return _dgdInflight;
+  _dgdInflight = (async () => {
+    const cacheKey = 'dgd_cache_v1';
+    const cached = lsGet(cacheKey);
+    if(cached){
+      try{
+        const o = JSON.parse(cached);
+        if(o && o.ts && (Date.now() - o.ts < 6*3600*1000) && o.data){
+          return new Map(Object.entries(o.data));
+        }
+      }catch(e){}
+    }
+    let text = '';
+    try{ text = await fetchTextWithCORS('https://services.swpc.noaa.gov/text/daily-geomagnetic-indices.txt'); }
+    catch(e){ console.warn('[DGD] fetch failed', e); return null; }
+    if(!text) return null;
+    const map = new Map();
+    const lines = text.split(/\r?\n/);
+    for(const ln of lines){
+      if(!ln || ln.startsWith(':') || ln.startsWith('#')) continue;
+      const parts = ln.trim().split(/\s+/);
+      if(parts.length < 30) continue; // 3(date) + 9(mid) + 9(hi) + 9(planetary)
+      const y = parseInt(parts[0],10), mo = parseInt(parts[1],10), d = parseInt(parts[2],10);
+      if(!isFinite(y) || !isFinite(mo) || !isFinite(d)) continue;
+      // Планетарні Kp — останні 8 токенів (parts.length-8 .. parts.length-1)
+      const kpVals = parts.slice(parts.length - 8).map(parseFloat).filter(isFinite);
+      if(kpVals.length !== 8) continue;
+      const kpMax = Math.max(...kpVals);
+      const ds = `${y}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      map.set(ds, kpMax);
+    }
+    if(map.size > 0){
+      try{
+        const obj = {}; for(const [k,v] of map.entries()) obj[k]=v;
+        lsSet(cacheKey, JSON.stringify({ts: Date.now(), data: obj}));
+      }catch(e){}
+    }
+    return map;
+  })();
+  try {
+    return await _dgdInflight;
+  } finally {
+    // Скидаємо inflight після завершення (успіх або помилка) — наступний запит піде у cache
+    _dgdInflight = null;
   }
-  let text = '';
-  try{ text = await fetchTextWithCORS('https://services.swpc.noaa.gov/text/daily-geomagnetic-indices.txt'); }
-  catch(e){ console.warn('[DGD] fetch failed', e); return null; }
-  if(!text) return null;
-  const map = new Map();
-  const lines = text.split(/\r?\n/);
-  for(const ln of lines){
-    if(!ln || ln.startsWith(':') || ln.startsWith('#')) continue;
-    const parts = ln.trim().split(/\s+/);
-    if(parts.length < 30) continue; // 3(date) + 9(mid) + 9(hi) + 9(planetary)
-    const y = parseInt(parts[0],10), mo = parseInt(parts[1],10), d = parseInt(parts[2],10);
-    if(!isFinite(y) || !isFinite(mo) || !isFinite(d)) continue;
-    // Планетарні Kp — останні 8 токенів (parts.length-8 .. parts.length-1)
-    const kpVals = parts.slice(parts.length - 8).map(parseFloat).filter(isFinite);
-    if(kpVals.length !== 8) continue;
-    const kpMax = Math.max(...kpVals);
-    const ds = `${y}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    map.set(ds, kpMax);
-  }
-  if(map.size > 0){
-    try{
-      const obj = {}; for(const [k,v] of map.entries()) obj[k]=v;
-      lsSet(cacheKey, JSON.stringify({ts: Date.now(), data: obj}));
-    }catch(e){}
-  }
-  return map;
 }
 
 function renderComparePeriods(){
@@ -4002,6 +4384,203 @@ function _cmpSetMode(m){
   try{ renderComparePeriods(); }catch(e){ console.warn(e); }
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// v87.34 FORWARD TIMELINE — інтерактивна 27-day смуга з play-контролом.
+// Third visual layer між chart27 (графік) та tbl27 (таблиця). Компактніший за таблицю,
+// інтерактивніший за графік. Play-анімація retention hook.
+// v87.35 POLISH — responsive subset на вузьких екранах + play-speed slider (0.5×/1×/2×)
+// ═══════════════════════════════════════════════════════════════════════════
+let _ftSelectedIdx = -1;   // -1 = today (default)
+let _ftPlayTimer = null;   // setInterval handle
+let _ftPlaying = false;
+let _ftPlaySpeed = 1;      // 0.5 | 1 | 2 — multiplier
+
+function _ftGColor(g){
+  if(!isFinite(g)) return '#445';
+  if(g <= -2.5) return '#ff6b6b';   // dark red (severely unfavorable)
+  if(g <= -0.5) return '#ff9955';   // orange (moderately unfavorable)
+  if(g <  0.5)  return '#9bb1dc';   // neutral
+  if(g <  2.5)  return '#2bd47d';   // green (favorable)
+  return '#7fffc4';                  // bright teal (exceptional)
+}
+
+function _ftCategory(g){
+  if(!isFinite(g)) return 'Дані недоступні';
+  if(g <= -2.5) return 'Особливо несприятливий';
+  if(g <= -0.5) return 'Несприятливий';
+  if(g <  0.5)  return 'Нейтральний';
+  if(g <  2.5)  return 'Сприятливий';
+  return 'Особливо сприятливий';
+}
+
+// v87.35: subset helper — на вузьких екранах повертає лише (−3..+10) від сьогодні = 14 днів
+function _ftGetVisibleData(){
+  if(!_27dComputed || !_27dComputed.length) return { data: [], offset: 0, isNarrow: false };
+  const isNarrow = (typeof window !== 'undefined') && window.innerWidth < 480;
+  if(!isNarrow) return { data: _27dComputed, offset: 0, isNarrow: false };
+  const todayStr = fmtDate(new Date());
+  const todayIdx = _27dComputed.findIndex(d => d.ds === todayStr);
+  const tIdx = todayIdx >= 0 ? todayIdx : 0;
+  const start = Math.max(0, tIdx - 3);
+  const end = Math.min(_27dComputed.length, start + 14);
+  return { data: _27dComputed.slice(start, end), offset: start, isNarrow: true };
+}
+
+function renderForwardTimeline(){
+  const wrap = document.getElementById('forwardTimelineBlock');
+  if(!wrap) return;
+  if(!_27dComputed || !_27dComputed.length){ wrap.style.display='none'; return; }
+  wrap.style.display = 'block';
+
+  // v87.35: visible subset на вузьких екранах
+  const { data: visibleData, offset, isNarrow } = _ftGetVisibleData();
+
+  const todayStr = fmtDate(new Date());
+  const todayIdx = _27dComputed.findIndex(d => d.ds === todayStr);
+  const selIdx = _ftSelectedIdx >= 0 ? _ftSelectedIdx : (todayIdx >= 0 ? todayIdx : 0);
+  const sel = _27dComputed[selIdx];
+
+  const gap = 1;
+
+  // Sticks HTML — тільки видимі
+  let sticks = '';
+  for(let i=0;i<visibleData.length;i++){
+    const globalIdx = offset + i;
+    const d = visibleData[i];
+    const g = isFinite(d.G) ? d.G : 0;
+    const col = _ftGColor(d.G);
+    const isToday = (globalIdx === todayIdx);
+    const isSel = (globalIdx === selIdx);
+    const opacity = isSel ? 1 : (isToday ? 0.92 : 0.7);
+    const border = isSel ? `2px solid #fff` : (isToday ? `1.5px solid #9fd1ff` : '1px solid transparent');
+    const hPct = Math.max(18, Math.min(100, Math.abs(g) * 18 + 18));
+    const label = `${d.ds} · G ${g>=0?'+':''}${g.toFixed(2)}`;
+    sticks += `<div class="ft-stick" data-idx="${globalIdx}" title="${label}" style="flex:1;min-width:0;height:${hPct}%;background:${col};opacity:${opacity};border-radius:2px;cursor:pointer;transition:opacity .15s, border .15s;box-sizing:border-box;border:${border}"></div>`;
+  }
+
+  // Detail panel
+  const selG = isFinite(sel.G) ? sel.G : 0;
+  const selCat = _ftCategory(sel.G);
+  const selCol = _ftGColor(sel.G);
+  const gSign = selG >= 0 ? '+' : '';
+  const aiPart = sel.ai ? `ΣAᵢ ${sel.ai.Ai>=0?'+':''}${sel.ai.Ai}` : '';
+  const kpPart = isFinite(sel.kpUsed) ? `Kp ${sel.kpUsed.toFixed(1)}` : '';
+  const relDays = selIdx - (todayIdx >= 0 ? todayIdx : 0);
+  const relTxt = relDays === 0 ? 'сьогодні' : relDays > 0 ? `+${relDays} дн.` : `${relDays} дн.`;
+
+  // v87.35: Speed buttons — active state по _ftPlaySpeed
+  const speedBtn = (val, label) => {
+    const active = (_ftPlaySpeed === val);
+    return `<button onclick="_ftSetSpeed(${val})" style="font-size:10px;padding:2px 7px;border:1px solid ${active?'#37a7ff':'#2a3b61'};background:${active?'rgba(55,167,255,0.15)':'#0f1a2f'};color:${active?'#9fd1ff':'#9bb1dc'};border-radius:5px;cursor:pointer;font-weight:${active?700:400}">${label}</button>`;
+  };
+
+  const narrowHint = isNarrow ? `<span style="font-size:9px;color:var(--faint)">${visibleData.length}/${_27dComputed.length} дн.</span>` : '';
+
+  wrap.innerHTML = `
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;flex-wrap:wrap">
+      <span style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--dim)">Forward timeline</span>
+      <span class="pill" style="font-size:9px">${visibleData.length} дн.</span>
+      ${narrowHint}
+      <span class="hint" tabindex="0" style="font-size:10px;color:var(--faint);cursor:help">ⓘ<span class="hint-pop" style="white-space:pre;font-size:11px">Інтерактивна смуга прогнозу. Клік по стовпчику — вибір дня.
+▶ Play автопрокручує по обраній швидкості. Висота ∝ |G|, колір ∝ категорія.
+${isNarrow?'На вузькому екрані показано 14 днів (−3..+10 від сьогодні).':'Показано всі 27 днів прогнозу.'}</span></span>
+      <span style="margin-left:auto;display:flex;gap:3px;align-items:center">
+        ${speedBtn(0.5, '½×')}
+        ${speedBtn(1, '1×')}
+        ${speedBtn(2, '2×')}
+      </span>
+      <button id="ftPlayBtn" onclick="_ftTogglePlay()" style="font-size:11px;padding:3px 10px;border:1px solid ${_ftPlaying?'#ff9955':'#2a3b61'};background:${_ftPlaying?'rgba(255,153,85,0.15)':'#0f1a2f'};color:${_ftPlaying?'#ffc998':'#9bb1dc'};border-radius:6px;cursor:pointer">${_ftPlaying?'⏸ Pause':'▶ Play'}</button>
+      <button onclick="_ftJumpTo(-1)" style="font-size:11px;padding:3px 8px;border:1px solid #2a3b61;background:#0f1a2f;color:#9bb1dc;border-radius:6px;cursor:pointer" title="Сьогодні">⌖</button>
+    </div>
+    <div id="ftSticksRow" style="display:flex;align-items:flex-end;height:48px;gap:${gap}px;padding:0 2px">${sticks}</div>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:8px;padding-top:8px;border-top:1px solid #1e2a44">
+      <div style="flex:0 0 auto">
+        <div style="font-size:10px;color:var(--faint)">${sel.ds} · ${relTxt}</div>
+        <div class="mono" style="font-size:18px;font-weight:700;color:${selCol}">G ${gSign}${selG.toFixed(2)}</div>
+      </div>
+      <div style="flex:0 0 auto;font-size:11px;color:var(--dim)">
+        <div>${selCat}</div>
+        <div>${[kpPart, aiPart].filter(Boolean).join(' · ')}</div>
+      </div>
+    </div>
+  `;
+
+  // Wire clicks
+  const row = document.getElementById('ftSticksRow');
+  if(row){
+    row.querySelectorAll('.ft-stick').forEach(st => {
+      st.addEventListener('click', () => {
+        const i = parseInt(st.dataset.idx, 10);
+        if(isFinite(i)) _ftJumpTo(i);
+      });
+    });
+  }
+}
+
+function _ftJumpTo(idx){
+  if(!_27dComputed || !_27dComputed.length) return;
+  if(idx < 0){
+    const todayStr = fmtDate(new Date());
+    idx = _27dComputed.findIndex(d => d.ds === todayStr);
+    if(idx < 0) idx = 0;
+  }
+  if(idx < 0 || idx >= _27dComputed.length) return;
+  _ftSelectedIdx = idx;
+  renderForwardTimeline();
+}
+
+// v87.35: speed handler
+function _ftSetSpeed(s){
+  if(![0.5, 1, 2].includes(s)) return;
+  _ftPlaySpeed = s;
+  // Якщо зараз грає — перезапустити таймер з новою швидкістю
+  if(_ftPlaying){
+    if(_ftPlayTimer){ clearInterval(_ftPlayTimer); _ftPlayTimer = null; }
+    const intervalMs = Math.round(1000 / _ftPlaySpeed);
+    _ftPlayTimer = setInterval(_ftPlayTick, intervalMs);
+  }
+  renderForwardTimeline();
+}
+
+// v87.35: виділений tick, щоб не дублювати між toggle і setSpeed
+function _ftPlayTick(){
+  _ftSelectedIdx++;
+  if(_ftSelectedIdx >= _27dComputed.length){
+    _ftPlaying = false;
+    if(_ftPlayTimer){ clearInterval(_ftPlayTimer); _ftPlayTimer = null; }
+    _ftSelectedIdx = _27dComputed.length - 1;
+  }
+  renderForwardTimeline();
+}
+
+function _ftTogglePlay(){
+  if(_ftPlaying){
+    _ftPlaying = false;
+    if(_ftPlayTimer){ clearInterval(_ftPlayTimer); _ftPlayTimer = null; }
+    renderForwardTimeline();
+    return;
+  }
+  if(!_27dComputed || !_27dComputed.length) return;
+  _ftPlaying = true;
+  const todayStr = fmtDate(new Date());
+  const todayIdx = _27dComputed.findIndex(d => d.ds === todayStr);
+  if(_ftSelectedIdx < 0 || _ftSelectedIdx < todayIdx) _ftSelectedIdx = todayIdx >= 0 ? todayIdx : 0;
+  renderForwardTimeline();
+  const intervalMs = Math.round(1000 / _ftPlaySpeed);
+  _ftPlayTimer = setInterval(_ftPlayTick, intervalMs);
+}
+
+// v87.35: re-render timeline on window resize (responsive subset switch)
+(function(){
+  let _ftResizeTimer = null;
+  window.addEventListener('resize', () => {
+    if(_ftResizeTimer) clearTimeout(_ftResizeTimer);
+    _ftResizeTimer = setTimeout(() => {
+      try{ renderForwardTimeline(); }catch(e){}
+    }, 200);
+  });
+})();
+
 // --------------------------- Категоризація G-бейджа ------------------------
 function classForG(g){
   if (g <= -2.5) return 'g-bad';
@@ -4144,9 +4723,10 @@ function renderCurrentPanel(){
       // v37.9: для поточного стану використовуємо kNow, не kpMax — щоб eᵢ відповідав реальному Kp зараз
       const kNowForAi = (lastWWV && isFinite(lastWWV.kNow)) ? lastWWV.kNow : (kUse ?? 0);
       ai = computeAi(nowUTC, kNowForAi);
-      // Зберегти noon-ai для diff
+      // v87.33: aiNoon рахуємо для того самого дня, що `nowUTC`, а не `todayRow.date` —
+      // на межі доби todayRow може бути ВЧОРА (3-day forecast ще не оновив), тоді diff misleading.
       try{
-        const aiNoon = computeAi(noonUTC(todayRow.date), kNowForAi);
+        const aiNoon = computeAi(noonUTC(nowUTC), kNowForAi);
         ai._noonDelta = {
           Ai: Math.round((ai.Ai - aiNoon.Ai) * 10) / 10,
           ei: Math.round((ai.ei - aiNoon.ei) * 10) / 10,
@@ -4866,6 +5446,17 @@ function renderPanchangaCard(state){
     return '⚪';
   };
 
+  // v87.31: visual weight bar — довжина та колір пропорційні |score|
+  // Шкала score у Panchanga: зазвичай -3..+3, іноді -4..+4 (Nak/Yoga)
+  const scoreBar = (s) => {
+    const abs = Math.abs(s||0);
+    if (abs === 0) return '';
+    const maxW = 32; // px, для score=3
+    const w = Math.min(maxW, Math.round(abs / 3 * maxW));
+    const col = s > 0 ? '#2bd47d' : '#ff6b6b';
+    return `<span aria-hidden="true" title="|score|=${abs}" style="display:inline-block;vertical-align:middle;width:${w}px;height:4px;background:${col};opacity:0.55;border-radius:2px;margin-left:4px;margin-right:2px"></span>`;
+  };
+
   // Детальні пояснення для tooltip кожного параметра
   const PANCH_TIPS = {
     tithi: tip => {
@@ -4946,35 +5537,35 @@ function renderPanchangaCard(state){
       <td style="padding:5px 6px;color:#9bb1dc;font-size:11px">
         <span class="hint" tabindex="0" style="cursor:help;font-style:italic;border-bottom:1px dotted var(--faint)">Tithi<span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.tithi(p.tithi))}</span></span>
       </td>
-      <td style="padding:5px 6px;font-weight:600"><span class="hint" tabindex="0" style="cursor:help">${scoreIcon(p.tithi.score, _gEarly)} ${p.tithi.name}<br><span style="font-size:10px;color:#7a95b8;font-weight:400">${p.tithi.type}</span><span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.tithi(p.tithi))}</span></span></td>
+      <td style="padding:5px 6px;font-weight:600"><span class="hint" tabindex="0" style="cursor:help">${scoreIcon(p.tithi.score, _gEarly)}${scoreBar(p.tithi.score)} ${p.tithi.name}<br><span style="font-size:10px;color:#7a95b8;font-weight:400">${p.tithi.type}</span><span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.tithi(p.tithi))}</span></span></td>
       <td style="padding:5px 6px;font-size:11px;color:#b0c4de">${tAdv && tAdv.do ? '✓ '+tAdv.do : ''}</td>
     </tr>
     <tr>
       <td style="padding:5px 6px;color:#9bb1dc;font-size:11px">
         <span class="hint" tabindex="0" style="cursor:help;font-style:italic;border-bottom:1px dotted var(--faint)">Vara<span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.vara(p.vara))}</span></span>
       </td>
-      <td style="padding:5px 6px;font-weight:600"><span class="hint" tabindex="0" style="cursor:help">${scoreIcon(p.vara.score, _gEarly)} ${p.vara.name}<br><span style="font-size:10px;color:#7a95b8;font-weight:400">${p.vara.planet}</span><span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.vara(p.vara))}</span></span></td>
+      <td style="padding:5px 6px;font-weight:600"><span class="hint" tabindex="0" style="cursor:help">${scoreIcon(p.vara.score, _gEarly)}${scoreBar(p.vara.score)} ${p.vara.name}<br><span style="font-size:10px;color:#7a95b8;font-weight:400">${p.vara.planet}</span><span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.vara(p.vara))}</span></span></td>
       <td style="padding:5px 6px;font-size:11px;color:#b0c4de">${vAdv && vAdv.do ? '✓ '+vAdv.do : ''}</td>
     </tr>
     <tr>
       <td style="padding:5px 6px;color:#9bb1dc;font-size:11px">
         <span class="hint" tabindex="0" style="cursor:help;font-style:italic;border-bottom:1px dotted var(--faint)">Nakshatra<span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.nakshatra(p.nakshatra))}</span></span>
       </td>
-      <td style="padding:5px 6px;font-weight:600"><span class="hint" tabindex="0" style="cursor:help">${scoreIcon(p.nakshatra.score, _gEarly)} ${p.nakshatra.name}<br><span style="font-size:10px;color:#7a95b8;font-weight:400">${p.nakshatra.type} · ${p.nakshatra.regent}</span><span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.nakshatra(p.nakshatra))}</span></span></td>
+      <td style="padding:5px 6px;font-weight:600"><span class="hint" tabindex="0" style="cursor:help">${scoreIcon(p.nakshatra.score, _gEarly)}${scoreBar(p.nakshatra.score)} ${p.nakshatra.name}<br><span style="font-size:10px;color:#7a95b8;font-weight:400">${p.nakshatra.type} · ${p.nakshatra.regent}</span><span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.nakshatra(p.nakshatra))}</span></span></td>
       <td style="padding:5px 6px;font-size:11px;color:#b0c4de">${nAdv && nAdv.do ? '✓ '+nAdv.do : ''}</td>
     </tr>
     <tr>
       <td style="padding:5px 6px;color:#9bb1dc;font-size:11px">
         <span class="hint" tabindex="0" style="cursor:help;font-style:italic;border-bottom:1px dotted var(--faint)">Yoga<span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.yoga(p.yoga))}</span></span>
       </td>
-      <td style="padding:5px 6px;font-weight:600"><span class="hint" tabindex="0" style="cursor:help">${scoreIcon(p.yoga.score, _gEarly)} ${p.yoga.name}${p.yoga.isCritical?' ⚠️':''}<br><span style="font-size:10px;color:#7a95b8;font-weight:400">резонанс Сонце–Місяць</span><span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.yoga(p.yoga))}</span></span></td>
+      <td style="padding:5px 6px;font-weight:600"><span class="hint" tabindex="0" style="cursor:help">${scoreIcon(p.yoga.score, _gEarly)}${scoreBar(p.yoga.score)} ${p.yoga.name}${p.yoga.isCritical?' ⚠️':''}<br><span style="font-size:10px;color:#7a95b8;font-weight:400">резонанс Сонце–Місяць</span><span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.yoga(p.yoga))}</span></span></td>
       <td style="padding:5px 6px;font-size:11px;color:#b0c4de">${yAdv && yAdv.do ? '✓ '+yAdv.do : ''}</td>
     </tr>
     <tr>
       <td style="padding:5px 6px;color:#9bb1dc;font-size:11px">
         <span class="hint" tabindex="0" style="cursor:help;font-style:italic;border-bottom:1px dotted var(--faint)">Karana<span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.karana(p.karana))}</span></span>
       </td>
-      <td style="padding:5px 6px;font-weight:600"><span class="hint" tabindex="0" style="cursor:help">${scoreIcon(p.karana.score, _gEarly)} ${p.karana.name}${p.karana.isVishti?' ⛔':''}<br><span style="font-size:10px;color:#7a95b8;font-weight:400">${p.karana.type}</span><span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.karana(p.karana))}</span></span></td>
+      <td style="padding:5px 6px;font-weight:600"><span class="hint" tabindex="0" style="cursor:help">${scoreIcon(p.karana.score, _gEarly)}${scoreBar(p.karana.score)} ${p.karana.name}${p.karana.isVishti?' ⛔':''}<br><span style="font-size:10px;color:#7a95b8;font-weight:400">${p.karana.type}</span><span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.karana(p.karana))}</span></span></td>
       <td style="padding:5px 6px;font-size:11px;color:#b0c4de">${kAdv && kAdv.do ? '✓ '+kAdv.do : ''}</td>
     </tr>
     ${_aiEarly.ei !== 0 ? `<tr style="background:rgba(255,100,100,0.05)">
@@ -8872,10 +9463,30 @@ function draw27Chart(){
 
 // Хелпер для computeAi: повертає поточну Hora з PCL
 function _getCurrentHoraForAi(dateUTC) {
+  // v87.32: fix for night wrap-around. Hora-slots у цій добі UTC можуть починатись після sunrise
+  // (~3-5 UTC для Європи). Якщо nowH < sunrise → активний slot належить ПОПЕРЕДНІЙ добі UTC.
+  // Якщо nowH перевищує останній slot (sunset + 12*segNight) → слот у НАСТУПНІЙ добі UTC.
   try {
-    const { slots } = calcAllHoras(dateUTC);
     const nowH = dateUTC.getUTCHours() + dateUTC.getUTCMinutes()/60;
-    const cur = slots.find(s => nowH >= s.startH && nowH < s.endH) || slots[0];
+    const tryFind = (refDate, timeOffset) => {
+      const r = calcAllHoras(refDate);
+      const hh = nowH + timeOffset;
+      const cur = r.slots.find(s => hh >= s.startH && hh < s.endH);
+      return cur || null;
+    };
+    // 1. Поточна доба
+    let cur = tryFind(dateUTC, 0);
+    // 2. Якщо не знайдено — спробувати попередню добу (nowH у нічному шматку, що почався вчора)
+    if(!cur){
+      const prevDay = new Date(dateUTC.getTime() - 86400000);
+      cur = tryFind(prevDay, 24); // зсув +24 щоб співпасти з endH > 24
+    }
+    // 3. Якщо все ще нема — fallback на перший slot поточної доби (мінімально інвазивно, як раніше)
+    if(!cur){
+      const r = calcAllHoras(dateUTC);
+      cur = r.slots[0];
+    }
+    if(!cur) return null;
     const HORA_SYM = {'Сонце':'☀','Місяць':'☽','Марс':'♂','Меркурій':'☿','Юпітер':'♃','Венера':'♀','Сатурн':'♄'};
     return { planet: cur.planet, pcl: HORA_SCORE_MAP[cur.planet] ?? 0, sym: HORA_SYM[cur.planet] || '' };
   } catch(e) { return null; }

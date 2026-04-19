@@ -5,8 +5,8 @@
    - Everything else → Network-First, no cache
 */
 
-const SHELL_CACHE  = 'g-index-shell-v87-30';
-const DATA_CACHE   = 'g-index-data-v87-30';
+const SHELL_CACHE  = 'g-index-shell-v87-37';
+const DATA_CACHE   = 'g-index-data-v87-37';
 const DATA_TTL_MS  = 1 * 60 * 60 * 1000; // 1 hour (Dst оновлюється кожну 1h)
 // App shell files to pre-cache on install
 const SHELL_FILES = [
@@ -172,3 +172,57 @@ async function networkFirstWithTTL(request) {
     });
   }
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// v87.37 PUSH NOTIFICATIONS — SW-side handler. Inert якщо push-endpoint не підписаний.
+// ═══════════════════════════════════════════════════════════════════════════
+
+self.addEventListener('push', event => {
+  // Payload form (JSON from server): { title, body, icon?, badge?, tag?, url?, data? }
+  let payload = {};
+  try { payload = event.data ? event.data.json() : {}; }
+  catch(e) { payload = { title: 'G-Index', body: event.data ? event.data.text() : '' }; }
+
+  const title = payload.title || 'G-Index';
+  const options = {
+    body: payload.body || '',
+    icon: payload.icon || 'icon192.png',
+    badge: payload.badge || 'icon192.png',
+    tag:   payload.tag  || 'g-index-default',
+    data:  { url: payload.url || '/', ...(payload.data || {}) },
+    requireInteraction: !!payload.requireInteraction,
+    vibrate: payload.vibrate || [120, 40, 120],
+  };
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+// Клік по notification → відкрити відповідний URL або активувати існуючу вкладку
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  const targetUrl = (event.notification.data && event.notification.data.url) || '/';
+  event.waitUntil((async () => {
+    const clientsList = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    // Якщо вже відкрита вкладка з G-Index → фокус на неї
+    for (const c of clientsList) {
+      try {
+        const u = new URL(c.url);
+        if (u.pathname.includes('/g-index/') || u.pathname === '/' || c.url.includes('g-index')) {
+          await c.focus();
+          if (c.navigate && targetUrl !== '/') await c.navigate(targetUrl).catch(() => {});
+          return;
+        }
+      } catch(e) {}
+    }
+    // Інакше відкрити нову
+    if (self.clients.openWindow) await self.clients.openWindow(targetUrl);
+  })());
+});
+
+// Subscription change (browser-initiated renewal)
+self.addEventListener('pushsubscriptionchange', event => {
+  // Повідомити відкриті вкладки — клієнт має перепідписатися і записати новий endpoint у DB
+  event.waitUntil((async () => {
+    const clientsList = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    clientsList.forEach(c => c.postMessage({ type: 'SW_PUSH_SUB_CHANGED' }));
+  })());
+});
