@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v87.42</title>
+  <title>G-Index — Космофізичний дашборд v87.43</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -51,7 +51,7 @@
     main{max-width:1760px; margin:16px auto; padding:0 24px 40px}
     .row{display:grid; grid-template-columns:repeat(12,1fr); gap:var(--gap)}
     #mainGrid{display:grid; grid-template-columns:1fr; gap:12px; margin-bottom:12px}
-    #duoCard{display:grid; grid-template-columns:1fr 1fr; gap:12px; background:transparent; border:none; padding:0; box-shadow:none; border-radius:0; align-items:stretch}
+    #duoCard{display:grid; grid-template-columns:1fr 1fr; gap:12px; background:transparent; border:none; padding:0; box-shadow:none; border-radius:0; align-items:start}
     #duoCard>.card{grid-column:auto; margin:0}
     #nowCard{grid-column:auto}
     @media(max-width:860px){#duoCard{grid-template-columns:1fr}}
@@ -1626,6 +1626,11 @@
         <div style="margin-top:6px;font-size:12px" id="panchNote"></div>
         <!-- v87.9: Рекомендований час — підсумковий блок, балансує висоту з personalCard -->
         <div id="panchBestTime" class="panch-best-time"></div>
+        <!-- v87.43: Найближчі критичні вікна — контент замість пустоти -->
+        <div id="panchUpcomingEvents" style="margin-top:10px;padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.025);display:none">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--dim);margin-bottom:8px">Найближчі критичні вікна</div>
+          <div id="panchUpcomingList" style="font-size:12px"></div>
+        </div>
       </section>
 
       <!-- ПЕРСОНАЛЬНИЙ РОЗРАХУНОК — правий стовпець, рядок 2 -->
@@ -5737,6 +5742,116 @@ function renderPanchangaCard(state){
       }
     }
   } catch(e) { /* noop */ }
+
+  // v87.43: fill "Найближчі критичні вікна" — заповнюємо пустоту корисним контентом
+  try { _renderPanchUpcoming(dateUTC); } catch(e) { /* noop */ }
+}
+
+// v87.43: Render upcoming critical windows block in Panchanga card
+function _renderPanchUpcoming(refDateUTC){
+  const wrap = document.getElementById('panchUpcomingEvents');
+  const list = document.getElementById('panchUpcomingList');
+  if(!wrap || !list) return;
+
+  const items = [];
+
+  // 1. Сканую _27dComputed на найближчу Amavasya / Purnima / Vishti
+  if(typeof _27dComputed !== 'undefined' && _27dComputed && _27dComputed.length){
+    let foundAma = false, foundPurn = false, foundBadDay = false;
+    for(let i = 0; i < _27dComputed.length; i++){
+      const d = _27dComputed[i];
+      if(!d || !d.ds) continue;
+      const daysFromNow = i;
+      const dateRef = new Date(d.ds + 'T12:00:00Z');
+      // Amavasya / Purnima через panchanga на цю дату
+      try {
+        const p = computePanchanga(dateRef);
+        if(!foundAma && p.tithi && p.tithi.idx === 29){
+          items.push({
+            icon: '🌑',
+            label: 'Амавасья (новий місяць)',
+            when: d.ds,
+            rel: daysFromNow === 0 ? 'сьогодні' : daysFromNow === 1 ? 'завтра' : `+${daysFromNow} дн.`,
+            note: 'високий ризик, Mᵢ = −3',
+            cls: 'bad'
+          });
+          foundAma = true;
+        }
+        if(!foundPurn && p.tithi && p.tithi.idx === 14){
+          items.push({
+            icon: '🌕',
+            label: 'Пурніма (повний місяць)',
+            when: d.ds,
+            rel: daysFromNow === 0 ? 'сьогодні' : daysFromNow === 1 ? 'завтра' : `+${daysFromNow} дн.`,
+            note: 'нейтрально',
+            cls: 'neu'
+          });
+          foundPurn = true;
+        }
+      } catch(e){}
+      // Перший день з G ≤ −2 у майбутньому
+      if(!foundBadDay && daysFromNow > 0 && isFinite(d.G) && d.G <= -2){
+        items.push({
+          icon: '⚠',
+          label: `Важкий день (G ${d.G.toFixed(1)})`,
+          when: d.ds,
+          rel: `+${daysFromNow} дн.`,
+          note: 'плануй розвантаження',
+          cls: 'bad'
+        });
+        foundBadDay = true;
+      }
+      if(foundAma && foundPurn && foundBadDay) break;
+    }
+  }
+
+  // 2. Середнє Pᵢ за 3-day window навколо сьогодні — з _last3D
+  try {
+    if(typeof last3D !== 'undefined' && last3D && last3D.days && last3D.days.length >= 3){
+      let sum = 0, n = 0;
+      last3D.days.forEach(d => {
+        try {
+          const ai = computeAi(noonUTC(d.date), 0);
+          if(isFinite(ai.Pi)){ sum += ai.Pi; n++; }
+        } catch(e){}
+      });
+      if(n >= 2){
+        const avg = sum / n;
+        const sgn = avg >= 0 ? '+' : '';
+        const cls = avg >= 0.3 ? 'ok' : avg <= -0.3 ? 'bad' : 'neu';
+        items.unshift({
+          icon: '📈',
+          label: '3-day Pᵢ середнє',
+          when: '',
+          rel: '',
+          note: `${sgn}${avg.toFixed(1)} (панчанга ${avg >= 0.3 ? 'підтримує' : avg <= -0.3 ? 'заважає' : 'нейтральна'})`,
+          cls
+        });
+      }
+    }
+  } catch(e){}
+
+  if(!items.length){ wrap.style.display = 'none'; return; }
+
+  const colorFor = cls =>
+    cls === 'bad' ? '#ff8a7a'
+    : cls === 'ok' ? '#8ce0b0'
+    : '#b7c7ea';
+
+  const html = items.map(it => {
+    const relBlock = it.rel
+      ? `<span style="color:var(--faint);font-size:10px;white-space:nowrap;margin-left:6px">${it.when}${it.rel ? ' · ' + it.rel : ''}</span>`
+      : '';
+    return `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px dashed rgba(139,160,200,.12)">`
+      + `<span style="font-size:14px;flex-shrink:0">${it.icon}</span>`
+      + `<span style="color:${colorFor(it.cls)};font-weight:500;flex-shrink:0">${it.label}</span>`
+      + relBlock
+      + `<span style="color:var(--dim);font-size:11px;margin-left:auto;text-align:right">${it.note}</span>`
+      + `</div>`;
+  }).join('');
+
+  list.innerHTML = html;
+  wrap.style.display = 'block';
 }
 
 // v85b: renderPanchanga — backward-compatible wrapper
