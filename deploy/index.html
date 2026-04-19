@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v87.28</title>
+  <title>G-Index — Космофізичний дашборд v87.30</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -3799,98 +3799,185 @@ function render27Day(rows, last3D){
 // Kp historical недоступний у клієнті, тому показуємо лише ΣAᵢ (Lᵢ+Mᵢ+eᵢ+Pᵢ+Dᵢ) — повністю
 // детерміновану частину з дати. Kp-компонент пропускаємо; це "ритм Панчанги/затемнень/свят/Dst-буря"
 // без геомагнітної невизначеності.
+//
+// v87.29 Upgrade — додано режим "4 тижні назад (Carrington rotation)" з ПОВНИМ G (з Kp):
+// використовує NOAA DGD last-30-days endpoint, який надійно покриває [−28, 0] днів.
+// 4-week compare астрономічно осмислене: Carrington rotation ≈ 27.28 днів,
+// тому той самий геліо-довготний сектор Сонця бачимо.
+
+// v87.29: DGD parser. Формат (13 токенів після 'YYYY MM DD'):
+//   YYYY MM DD  Ap_mid K1..K8  Ap_hi K1..K8  Ap_pl Kp1..Kp8
+// Беремо ПЛАНЕТАРНІ Kp (останні 8 чисел як float). Повертає Map<'YYYY-MM-DD', daily_max_kp>.
+async function fetchDGDLast30(){
+  const cacheKey = 'dgd_cache_v1';
+  const cached = lsGet(cacheKey);
+  if(cached){
+    try{
+      const o = JSON.parse(cached);
+      if(o && o.ts && (Date.now() - o.ts < 6*3600*1000) && o.data){
+        return new Map(Object.entries(o.data));
+      }
+    }catch(e){}
+  }
+  let text = '';
+  try{ text = await fetchTextWithCORS('https://services.swpc.noaa.gov/text/daily-geomagnetic-indices.txt'); }
+  catch(e){ console.warn('[DGD] fetch failed', e); return null; }
+  if(!text) return null;
+  const map = new Map();
+  const lines = text.split(/\r?\n/);
+  for(const ln of lines){
+    if(!ln || ln.startsWith(':') || ln.startsWith('#')) continue;
+    const parts = ln.trim().split(/\s+/);
+    if(parts.length < 30) continue; // 3(date) + 9(mid) + 9(hi) + 9(planetary)
+    const y = parseInt(parts[0],10), mo = parseInt(parts[1],10), d = parseInt(parts[2],10);
+    if(!isFinite(y) || !isFinite(mo) || !isFinite(d)) continue;
+    // Планетарні Kp — останні 8 токенів (parts.length-8 .. parts.length-1)
+    const kpVals = parts.slice(parts.length - 8).map(parseFloat).filter(isFinite);
+    if(kpVals.length !== 8) continue;
+    const kpMax = Math.max(...kpVals);
+    const ds = `${y}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    map.set(ds, kpMax);
+  }
+  if(map.size > 0){
+    try{
+      const obj = {}; for(const [k,v] of map.entries()) obj[k]=v;
+      lsSet(cacheKey, JSON.stringify({ts: Date.now(), data: obj}));
+    }catch(e){}
+  }
+  return map;
+}
+
 function renderComparePeriods(){
   const wrap = document.getElementById('comparePeriodsBlock');
   if(!wrap) return;
 
+  // v87.29: режим у localStorage, default = 'year' (Σ-ритм)
+  const mode = lsGet('cmp_mode','year'); // 'year' | 'carrington'
+
   const today = new Date();
   const todayUTC = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
+  const yearNow = todayUTC.getUTCFullYear();
 
-  // Вікно: -3..+3 від сьогодні (7 днів)
-  const days = [];
-  for(let k=-3;k<=3;k++){
-    const dNow = addDays(todayUTC, k);
-    const dPrev = new Date(Date.UTC(dNow.getUTCFullYear()-1, dNow.getUTCMonth(), dNow.getUTCDate()));
-    // Ai without Kp: передаємо kp=0, беремо тільки Ai (ΣAᵢ)
-    const aiNow  = computeAi(noonUTC(dNow),  0);
-    const aiPrev = computeAi(noonUTC(dPrev), 0);
-    days.push({
-      dNow, dPrev,
-      aiNow:  aiNow.Ai,
-      aiPrev: aiPrev.Ai,
-      aiNowObj:  aiNow,
-      aiPrevObj: aiPrev
+  if(mode === 'year'){
+    // ── РЕЖИМ 1: рік тому (Σ-ритм only) ──
+    const days = [];
+    for(let k=-3;k<=3;k++){
+      const dNow = addDays(todayUTC, k);
+      const dPrev = new Date(Date.UTC(dNow.getUTCFullYear()-1, dNow.getUTCMonth(), dNow.getUTCDate()));
+      const aiNow  = computeAi(noonUTC(dNow),  0);
+      const aiPrev = computeAi(noonUTC(dPrev), 0);
+      days.push({ dNow, dPrev, aiNow: aiNow.Ai, aiPrev: aiPrev.Ai });
+    }
+    _renderCmpBlock(wrap, days, {
+      mode, label1: `Середній Σ ${yearNow}`, label2: `Середній Σ ${yearNow-1}`,
+      unit: 'Σ', pillText: 'Σ-ритм', yearNow, yearPrev: yearNow-1,
+      helpText: `Σ-ритм = ΣAᵢ (Lᵢ+Mᵢ+eᵢ+Pᵢ+Dᵢ) — Панчанга + затемнення + свята + Dst-буря.\nБез Kp-компонента, бо historical Kp за рік недоступний.\nВікно: −3..+3 дні від сьогодні (7 днів).`
     });
+    return;
   }
 
+  // ── РЕЖИМ 2: 4 тижні назад (Carrington rotation) з повним G ──
+  // Placeholder поки DGD вантажиться
+  wrap.style.display = 'block';
+  wrap.innerHTML = `<div style="font-size:12px;color:var(--dim)">Завантаження DGD-архіву…</div>`;
+
+  fetchDGDLast30().then(kpMap => {
+    const days = [];
+    let missing = 0;
+    for(let k=-3;k<=3;k++){
+      const dNow  = addDays(todayUTC, k);
+      const dPrev = addDays(todayUTC, k - 27); // Carrington rotation
+      const dsNow  = fmtDate(dNow);
+      const dsPrev = fmtDate(dPrev);
+      const kpNow  = kpMap ? kpMap.get(dsNow)  : null;
+      const kpPrev = kpMap ? kpMap.get(dsPrev) : null;
+      const aiNow  = computeAi(noonUTC(dNow),  kpNow  || 0);
+      const aiPrev = computeAi(noonUTC(dPrev), kpPrev || 0);
+      // Повний G = Kp − 2 + ΣAᵢ; якщо Kp немає → тільки Σ (позначимо)
+      const gNow  = (kpNow  != null) ? (kpNow  - 2 + aiNow.Ai)  : aiNow.Ai;
+      const gPrev = (kpPrev != null) ? (kpPrev - 2 + aiPrev.Ai) : aiPrev.Ai;
+      if(kpNow == null || kpPrev == null) missing++;
+      days.push({ dNow, dPrev, aiNow: gNow, aiPrev: gPrev, kpNow, kpPrev });
+    }
+    _renderCmpBlock(wrap, days, {
+      mode, label1: 'Середній G (зараз)', label2: 'Середній G (4 тижні тому)',
+      unit: 'G', pillText: 'Carrington rotation', yearNow,
+      helpText: `Повний G = Kp−2+ΣAᵢ. Historical Kp із NOAA DGD (last 30 days).\nВікно: тиждень −3..+3 від сьогодні vs той самий тиждень 27 днів тому.\nCarrington rotation ≈ 27.28 днів — той самий геліо-довготний сектор Сонця.${missing>0?'\n⚠ '+missing+' днів без Kp (використано лише Σ).':''}`
+    });
+  }).catch(err => {
+    wrap.innerHTML = `<div style="font-size:12px;color:#ff9966">Не вдалося завантажити DGD-архів. <a href="#" onclick="_cmpSetMode('year');return false" style="color:#37a7ff">Переключитись на Σ-ритм (рік тому)</a></div>`;
+  });
+}
+
+// Helper: рендерить блок (спільний для обох режимів)
+function _renderCmpBlock(wrap, days, opts){
+  const { mode, label1, label2, unit, pillText, yearNow, yearPrev, helpText } = opts;
   const avgNow  = days.reduce((s,d)=>s+d.aiNow, 0) / days.length;
   const avgPrev = days.reduce((s,d)=>s+d.aiPrev, 0) / days.length;
   const delta = avgNow - avgPrev;
-
   const deltaCol = delta >= 0.3 ? '#2bd47d' : delta <= -0.3 ? '#ff6b6b' : '#9bb1dc';
   const deltaSign = delta >= 0 ? '+' : '';
   const deltaTxt = `${deltaSign}${delta.toFixed(2)}`;
 
-  // Micro-sparkline: 7 стовпчиків по днях, now поверх prev
+  // Sparkline
   const barW = 28, barGap = 6, barMaxH = 34;
-  const maxAbs = Math.max(
-    ...days.flatMap(d => [Math.abs(d.aiNow), Math.abs(d.aiPrev)]),
-    1 // уникнути ділення на 0
-  );
+  const maxAbs = Math.max(...days.flatMap(d => [Math.abs(d.aiNow), Math.abs(d.aiPrev)]), 1);
   const svgW = days.length * (barW + barGap) - barGap;
-  const svgH = barMaxH * 2 + 14; // місце під позитивні + негативні
+  const svgH = barMaxH * 2 + 14;
   const midY = svgH / 2;
   const mkBar = (val, x, col) => {
     const h = Math.abs(val) / maxAbs * barMaxH;
     const y = val >= 0 ? midY - h : midY;
     return `<rect x="${x}" y="${y}" width="${barW-2}" height="${h}" fill="${col}" opacity="0.85" rx="2"/>`;
   };
-  const dayLbls = [];
-  let bars = '';
   const LOC_SHORT = d => {
     const wk = ['Нд','Пн','Вт','Ср','Чт','Пт','Сб'][d.getUTCDay()];
     return `${wk} ${d.getUTCDate()}`;
   };
+  let bars = '';
+  const dayLbls = [];
   for(let i=0;i<days.length;i++){
     const x = i * (barW + barGap);
-    // Prev (фон, приглушений сірий)
     bars += mkBar(days[i].aiPrev, x+1, '#4a5e8c');
-    // Now (передній, яскравий по знаку)
     const nowCol = days[i].aiNow > 0 ? '#2bd47d' : days[i].aiNow < 0 ? '#ff6b6b' : '#6b82aa';
     bars += mkBar(days[i].aiNow, x+3, nowCol);
     dayLbls.push(`<text x="${x + barW/2}" y="${svgH-2}" text-anchor="middle" fill="#7f99c4" font-size="8">${LOC_SHORT(days[i].dNow)}</text>`);
   }
-  // Midline
   bars = `<line x1="0" y1="${midY}" x2="${svgW}" y2="${midY}" stroke="#2a3b61" stroke-width="1"/>` + bars + dayLbls.join('');
 
-  const narrative = delta >= 0.5 ? 'Цьогорічний ритм помітно кращий за торішній'
+  const narrative = delta >= 0.5 ? 'Цьогорічний ритм помітно кращий'
                   : delta >= 0.2 ? 'Цьогорічний ритм трохи кращий'
-                  : delta <= -0.5 ? 'Цьогорічний ритм помітно нижчий за торішній'
+                  : delta <= -0.5 ? 'Цьогорічний ритм помітно нижчий'
                   : delta <= -0.2 ? 'Цьогорічний ритм трохи нижчий'
                   : 'Ритм майже однаковий';
 
-  const yearNow = todayUTC.getUTCFullYear();
-  const yearPrev = yearNow - 1;
+  // Toggle buttons
+  const tgl = (val, txt) => {
+    const active = (val === mode);
+    return `<button onclick="_cmpSetMode('${val}')" style="font-size:10px;padding:3px 8px;border-radius:6px;border:1px solid ${active?'#37a7ff':'#2a3b61'};background:${active?'rgba(55,167,255,0.18)':'#0f1a2f'};color:${active?'#9fd1ff':'#9bb1dc'};cursor:pointer;font-weight:${active?700:400}">${txt}</button>`;
+  };
 
   wrap.style.display = 'block';
   wrap.innerHTML = `
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">
       <span style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--dim)">Порівняння періодів</span>
-      <span class="pill" style="font-size:9px">Σ-ритм</span>
+      <span class="pill" style="font-size:9px">${pillText}</span>
       <span class="hint" tabindex="0" style="font-size:10px;color:var(--faint);cursor:help">
         ⓘ
-        <span class="hint-pop" style="white-space:pre;font-size:11px">Σ-ритм = ΣAᵢ (Lᵢ+Mᵢ+eᵢ+Pᵢ+Dᵢ), тобто Панчанга + затемнення + свята + Dst-буря.
-Без Kp-компонента, бо historical Kp недоступний у клієнті.
-Вікно: −3..+3 дні від сьогодні (7 днів).</span>
+        <span class="hint-pop" style="white-space:pre;font-size:11px">${helpText}</span>
+      </span>
+      <span style="margin-left:auto;display:flex;gap:4px">
+        ${tgl('year','Рік тому (Σ)')}
+        ${tgl('carrington','4 тижні (G)')}
       </span>
     </div>
     <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
       <div style="flex:0 0 auto">
-        <div style="font-size:11px;color:var(--dim)">Середній Σ ${yearNow}</div>
+        <div style="font-size:11px;color:var(--dim)">${label1}</div>
         <div class="mono" style="font-size:18px;font-weight:700;color:${avgNow>=0?'#2bd47d':avgNow<=-0.5?'#ff6b6b':'#9bb1dc'}">${avgNow>=0?'+':''}${avgNow.toFixed(2)}</div>
       </div>
       <div style="flex:0 0 auto">
-        <div style="font-size:11px;color:var(--dim)">Середній Σ ${yearPrev}</div>
+        <div style="font-size:11px;color:var(--dim)">${label2}</div>
         <div class="mono" style="font-size:18px;font-weight:700;color:${avgPrev>=0?'#7fcfa4':'#b07080'};opacity:0.85">${avgPrev>=0?'+':''}${avgPrev.toFixed(2)}</div>
       </div>
       <div style="flex:0 0 auto;border-left:1px solid #2a3b61;padding-left:16px">
@@ -3900,13 +3987,19 @@ function renderComparePeriods(){
       <div style="flex:1 1 auto;min-width:220px">
         <svg viewBox="0 0 ${svgW} ${svgH}" style="width:100%;max-width:${svgW*1.5}px;height:${svgH}px">${bars}</svg>
         <div style="display:flex;gap:10px;font-size:9px;color:var(--faint);margin-top:2px">
-          <span><span style="display:inline-block;width:8px;height:8px;background:#2bd47d;vertical-align:middle;margin-right:3px"></span>${yearNow}</span>
-          <span><span style="display:inline-block;width:8px;height:8px;background:#4a5e8c;vertical-align:middle;margin-right:3px"></span>${yearPrev}</span>
+          <span><span style="display:inline-block;width:8px;height:8px;background:#2bd47d;vertical-align:middle;margin-right:3px"></span>зараз</span>
+          <span><span style="display:inline-block;width:8px;height:8px;background:#4a5e8c;vertical-align:middle;margin-right:3px"></span>${mode==='year' ? (yearPrev||yearNow-1) : '−27 дн.'}</span>
         </div>
       </div>
     </div>
     <div style="font-size:11px;color:var(--dim);margin-top:6px">${narrative}.</div>
   `;
+}
+
+// Toggle handler
+function _cmpSetMode(m){
+  lsSet('cmp_mode', m);
+  try{ renderComparePeriods(); }catch(e){ console.warn(e); }
 }
 
 // --------------------------- Категоризація G-бейджа ------------------------
@@ -4044,21 +4137,55 @@ function renderCurrentPanel(){
   if(last3D && Array.isArray(last3D.days)){
     const todayRow = last3D.days.find(d => fmtDate(d.date) === todayStr3d);
     if(todayRow){
-      // Рахуємо ΣAi для полудня UTC (як у 3-day таблиці) — єдине джерело правди
+      // v87.30 A2-full: Hero використовує ai для ПОТОЧНОГО моменту (реальний hora-слот + real-time Panchanga),
+      // а не noon-UTC як раніше (A2-lite). Це дає користувачу ΣAᵢ, який відповідає зараз.
+      // noon-ai паралельно рахується для diff-disclosure ("Δ vs полудень") в tooltip.
+      // 27-day таблиця, compare periods, персональні slots — залишаються на noon (stable contract).
       // v37.9: для поточного стану використовуємо kNow, не kpMax — щоб eᵢ відповідав реальному Kp зараз
       const kNowForAi = (lastWWV && isFinite(lastWWV.kNow)) ? lastWWV.kNow : (kUse ?? 0);
-      ai = computeAi(noonUTC(todayRow.date), kNowForAi);
+      ai = computeAi(nowUTC, kNowForAi);
+      // Зберегти noon-ai для diff
+      try{
+        const aiNoon = computeAi(noonUTC(todayRow.date), kNowForAi);
+        ai._noonDelta = {
+          Ai: Math.round((ai.Ai - aiNoon.Ai) * 10) / 10,
+          ei: Math.round((ai.ei - aiNoon.ei) * 10) / 10,
+          horaEi: Math.round(((ai.horaEi||0) - (aiNoon.horaEi||0)) * 10) / 10,
+          noonAi: aiNoon.Ai
+        };
+      }catch(e){ ai._noonDelta = null; }
+      ai._isNowBased = true;
     }
   }
-  if(!ai) ai = computeAi(noonUTC(nowUTC), kUse ?? 0); // v37_7: noonUTC для консистентності з таблицею
+  if(!ai){
+    // v87.30: fallback теж на nowUTC (не noonUTC) для консистентної семантики Hero
+    ai = computeAi(nowUTC, kUse ?? 0);
+    try{
+      const aiNoon = computeAi(noonUTC(nowUTC), kUse ?? 0);
+      ai._noonDelta = {
+        Ai: Math.round((ai.Ai - aiNoon.Ai) * 10) / 10,
+        ei: Math.round((ai.ei - aiNoon.ei) * 10) / 10,
+        horaEi: Math.round(((ai.horaEi||0) - (aiNoon.horaEi||0)) * 10) / 10,
+        noonAi: aiNoon.Ai
+      };
+    }catch(e){ ai._noonDelta = null; }
+    ai._isNowBased = true;
+  }
   const aiWrap = el('nowAi');
   aiWrap.style.display = 'inline-flex';
+  // v87.30 A2-full: якщо ai для ПОТОЧНОГО моменту, показати diff vs полудень у tooltip
+  let _noonDiffLine = '';
+  if(ai._noonDelta && Math.abs(ai._noonDelta.Ai) >= 0.1){
+    const d = ai._noonDelta;
+    const sgn = d.Ai >= 0 ? '+' : '';
+    _noonDiffLine = `\n─────\nΔ vs полудень: ΣAᵢ ${sgn}${d.Ai}${Math.abs(d.horaEi||0)>=0.1?` (Hora: ${d.horaEi>=0?'+':''}${d.horaEi})`:''}`;
+  }
   const aiTipHtml = escapeHtml(
     `Lᵢ: ${ai.Li} — ${ai.lTip.replace(/^[-\d]+\s—\s/, '')}\n` +
     `Mᵢ: ${ai.Mi} — ${ai.mTip.replace(/^[-\d]+\s—\s/, '')}\n` +
     `eᵢ: ${ai.ei}\n${ai.eTip}\n` +
     `Pᵢ: ${ai.Pi} — ${(ai.pTip||'').replace(/^[-\d.]+\s—\s/, '')}\n` +
-    `─────\n${ai.explain}`
+    `─────\n${ai.explain}${_noonDiffLine}`
   ).replace(/\n/g, '<br>');
   aiWrap.innerHTML = `ΣAᵢ = ${ai.Ai} <span class="hint-pop" id="nowAiTip">${aiTipHtml}</span>`;
   // aiTip тепер перебудований — беремо свіжу посилання
@@ -9870,7 +9997,7 @@ function renderProfileRec() {
   el_.innerHTML = `<span style="font-weight:700;color:${prof.color}">${prof.label}:</span> ${rec}${ageLine}`;
 }
 
-addEventListener('load', ()=>{ initGeolocation(); setStamp(); loadAll(); el('btnCsv').addEventListener('click', exportCsv); const _bIcs=el('btnIcs'); if(_bIcs) _bIcs.addEventListener('click', exportICS); el('selInterval').addEventListener('change', updateAutoRefStatus); initPersonalCalc(); initLangToggle(); initG2Watch(); });
+addEventListener('load', ()=>{ initGeolocation(); setStamp(); loadAll(); el('btnCsv').addEventListener('click', exportCsv); const _bIcs=el('btnIcs'); if(_bIcs) _bIcs.addEventListener('click', exportICS); el('selInterval').addEventListener('change', updateAutoRefStatus); initPersonalCalc(); initLangToggle(); initG2Watch(); /* v87.28: страхувальний рендер compare periods — не залежить від NOAA */ try{ if(typeof renderComparePeriods === 'function') renderComparePeriods(); }catch(e){} });
 el('btnRefresh').addEventListener('click', loadAll);
 
 // ========================= i18n EN/UA =========================
