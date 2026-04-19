@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v87.43</title>
+  <title>G-Index — Космофізичний дашборд v87.44</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -5747,67 +5747,30 @@ function renderPanchangaCard(state){
   try { _renderPanchUpcoming(dateUTC); } catch(e) { /* noop */ }
 }
 
-// v87.43: Render upcoming critical windows block in Panchanga card
+// v87.43+v87.44: Render upcoming critical windows block in Panchanga card
 function _renderPanchUpcoming(refDateUTC){
   const wrap = document.getElementById('panchUpcomingEvents');
   const list = document.getElementById('panchUpcomingList');
   if(!wrap || !list) return;
 
   const items = [];
+  const today = refDateUTC || new Date();
+  const todayMs = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
 
-  // 1. Сканую _27dComputed на найближчу Amavasya / Purnima / Vishti
-  if(typeof _27dComputed !== 'undefined' && _27dComputed && _27dComputed.length){
-    let foundAma = false, foundPurn = false, foundBadDay = false;
-    for(let i = 0; i < _27dComputed.length; i++){
-      const d = _27dComputed[i];
-      if(!d || !d.ds) continue;
-      const daysFromNow = i;
-      const dateRef = new Date(d.ds + 'T12:00:00Z');
-      // Amavasya / Purnima через panchanga на цю дату
-      try {
-        const p = computePanchanga(dateRef);
-        if(!foundAma && p.tithi && p.tithi.idx === 29){
-          items.push({
-            icon: '🌑',
-            label: 'Амавасья (новий місяць)',
-            when: d.ds,
-            rel: daysFromNow === 0 ? 'сьогодні' : daysFromNow === 1 ? 'завтра' : `+${daysFromNow} дн.`,
-            note: 'високий ризик, Mᵢ = −3',
-            cls: 'bad'
-          });
-          foundAma = true;
-        }
-        if(!foundPurn && p.tithi && p.tithi.idx === 14){
-          items.push({
-            icon: '🌕',
-            label: 'Пурніма (повний місяць)',
-            when: d.ds,
-            rel: daysFromNow === 0 ? 'сьогодні' : daysFromNow === 1 ? 'завтра' : `+${daysFromNow} дн.`,
-            note: 'нейтрально',
-            cls: 'neu'
-          });
-          foundPurn = true;
-        }
-      } catch(e){}
-      // Перший день з G ≤ −2 у майбутньому
-      if(!foundBadDay && daysFromNow > 0 && isFinite(d.G) && d.G <= -2){
-        items.push({
-          icon: '⚠',
-          label: `Важкий день (G ${d.G.toFixed(1)})`,
-          when: d.ds,
-          rel: `+${daysFromNow} дн.`,
-          note: 'плануй розвантаження',
-          cls: 'bad'
-        });
-        foundBadDay = true;
-      }
-      if(foundAma && foundPurn && foundBadDay) break;
-    }
-  }
+  const daysFrom = (dateStr) => {
+    const d = new Date(dateStr + 'T00:00:00Z');
+    return Math.round((d.getTime() - todayMs) / 86400000);
+  };
+  const relTxt = (n) => {
+    if(n < 0) return `${n} дн.`;
+    if(n === 0) return 'сьогодні';
+    if(n === 1) return 'завтра';
+    return `+${n} дн.`;
+  };
 
-  // 2. Середнє Pᵢ за 3-day window навколо сьогодні — з _last3D
+  // 1. 3-day Pᵢ середнє — панчанга тренд
   try {
-    if(typeof last3D !== 'undefined' && last3D && last3D.days && last3D.days.length >= 3){
+    if(typeof last3D !== 'undefined' && last3D && last3D.days && last3D.days.length >= 2){
       let sum = 0, n = 0;
       last3D.days.forEach(d => {
         try {
@@ -5819,14 +5782,114 @@ function _renderPanchUpcoming(refDateUTC){
         const avg = sum / n;
         const sgn = avg >= 0 ? '+' : '';
         const cls = avg >= 0.3 ? 'ok' : avg <= -0.3 ? 'bad' : 'neu';
-        items.unshift({
+        items.push({
           icon: '📈',
           label: '3-day Pᵢ середнє',
           when: '',
           rel: '',
-          note: `${sgn}${avg.toFixed(1)} (панчанга ${avg >= 0.3 ? 'підтримує' : avg <= -0.3 ? 'заважає' : 'нейтральна'})`,
+          note: `${sgn}${avg.toFixed(1)} (${avg >= 0.3 ? 'панчанга підтримує' : avg <= -0.3 ? 'панчанга заважає' : 'панчанга нейтральна'})`,
           cls
         });
+      }
+    }
+  } catch(e){}
+
+  // 2. v87.44: Vaisnava-події з BUILTIN_VAISNAVA (Ekadasi/Amavasya/Purnima)
+  //    Сканую 60 днів вперед — перша кожного типу
+  try {
+    if(typeof BUILTIN_VAISNAVA !== 'undefined' && Array.isArray(BUILTIN_VAISNAVA)){
+      const found = { ekad: false, ama: false, purn: false };
+      const sorted = BUILTIN_VAISNAVA.slice().sort((a,b) => a.d.localeCompare(b.d));
+      for(const ev of sorted){
+        const dd = daysFrom(ev.d);
+        if(dd < 0) continue;
+        if(dd > 60) break;
+        const s = ev.s.toLowerCase();
+        if(!found.ekad && /ekadasi|ekādaśī|ekadashi/i.test(ev.s) && !/break fast/i.test(ev.s)){
+          items.push({
+            icon: '🕉',
+            label: 'Екадаші (11-й тіхі)',
+            when: ev.d,
+            rel: relTxt(dd),
+            note: 'eᵢ = −2, день відречення',
+            cls: 'warn'
+          });
+          found.ekad = true;
+        }
+        if(!found.ama && /\bamavasya\b/i.test(ev.s)){
+          items.push({
+            icon: '🌑',
+            label: 'Амавасья (новий місяць)',
+            when: ev.d,
+            rel: relTxt(dd),
+            note: 'Mᵢ = −3, високий ризик',
+            cls: 'bad'
+          });
+          found.ama = true;
+        }
+        if(!found.purn && /purnima|gaura purnima|guru .{1,10}purnima/i.test(ev.s)){
+          items.push({
+            icon: '🌕',
+            label: 'Пурніма (повний місяць)',
+            when: ev.d,
+            rel: relTxt(dd),
+            note: 'Lᵢ = 0, нейтрально',
+            cls: 'neu'
+          });
+          found.purn = true;
+        }
+        if(found.ekad && found.ama && found.purn) break;
+      }
+    }
+  } catch(e){}
+
+  // 3. v87.44: Найближча Vishti Karana (7-а рухома) — скан 14 днів
+  try {
+    for(let dd = 0; dd <= 14; dd++){
+      const d = new Date(todayMs + dd * 86400000);
+      const p = computePanchanga(d);
+      if(p && p.karana && p.karana.isVishti){
+        items.push({
+          icon: '⛔',
+          label: 'Vishti (Bhadra) Karana',
+          when: d.toISOString().slice(0,10),
+          rel: relTxt(dd),
+          note: 'важливі справи відкласти',
+          cls: 'warn'
+        });
+        break;
+      }
+    }
+  } catch(e){}
+
+  // 4. v87.44: Поточна Nakshatra + орієнтовна зміна
+  try {
+    const pNow = computePanchanga(today);
+    if(pNow && pNow.nakshatra){
+      // Зміна Nakshatra відбувається коли Місяць проходить 13°20' sidereal.
+      // Середня швидкість ~13.18°/доба → ~1 Nakshatra / доба.
+      // Шукаю наступні 48 год, коли idx зміниться.
+      const curIdx = pNow.nakshatra.idx;
+      let shiftHrs = null;
+      for(let h = 1; h <= 48; h++){
+        const t = new Date(today.getTime() + h * 3600000);
+        const p2 = computePanchanga(t);
+        if(p2 && p2.nakshatra && p2.nakshatra.idx !== curIdx){
+          shiftHrs = h;
+          // Взяти наступну Nakshatra
+          const nextNakName = p2.nakshatra.name;
+          const hrs = Math.floor(shiftHrs);
+          const hrsTxt = hrs < 1 ? '<1г' : hrs < 24 ? `${hrs}г` : `${Math.round(hrs/24)}д`;
+          items.push({
+            icon: '✨',
+            label: `Накшатра: ${pNow.nakshatra.name}`,
+            when: '',
+            rel: '',
+            note: `→ ${nextNakName} через ${hrsTxt}`,
+            cls: 'neu'
+          });
+          break;
+        }
       }
     }
   } catch(e){}
@@ -5835,17 +5898,18 @@ function _renderPanchUpcoming(refDateUTC){
 
   const colorFor = cls =>
     cls === 'bad' ? '#ff8a7a'
+    : cls === 'warn' ? '#ffb870'
     : cls === 'ok' ? '#8ce0b0'
     : '#b7c7ea';
 
   const html = items.map(it => {
-    const relBlock = it.rel
-      ? `<span style="color:var(--faint);font-size:10px;white-space:nowrap;margin-left:6px">${it.when}${it.rel ? ' · ' + it.rel : ''}</span>`
+    const whenBlock = it.rel
+      ? `<span style="color:var(--faint);font-size:10px;white-space:nowrap;margin-left:4px">${it.when}${it.when ? ' · ' : ''}${it.rel}</span>`
       : '';
-    return `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px dashed rgba(139,160,200,.12)">`
+    return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px dashed rgba(139,160,200,.12)">`
       + `<span style="font-size:14px;flex-shrink:0">${it.icon}</span>`
       + `<span style="color:${colorFor(it.cls)};font-weight:500;flex-shrink:0">${it.label}</span>`
-      + relBlock
+      + whenBlock
       + `<span style="color:var(--dim);font-size:11px;margin-left:auto;text-align:right">${it.note}</span>`
       + `</div>`;
   }).join('');
