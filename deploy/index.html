@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v87.44</title>
+  <title>G-Index — Космофізичний дашборд v87.45</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1624,13 +1624,13 @@
           <div class="muted small">Завантаження…</div>
         </div>
         <div style="margin-top:6px;font-size:12px" id="panchNote"></div>
-        <!-- v87.9: Рекомендований час — підсумковий блок, балансує висоту з personalCard -->
-        <div id="panchBestTime" class="panch-best-time"></div>
         <!-- v87.43: Найближчі критичні вікна — контент замість пустоти -->
         <div id="panchUpcomingEvents" style="margin-top:10px;padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.025);display:none">
           <div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--dim);margin-bottom:8px">Найближчі критичні вікна</div>
           <div id="panchUpcomingList" style="font-size:12px"></div>
         </div>
+        <!-- v87.9: Рекомендований час / Gc summary — залишається внизу як bottom-line висновок -->
+        <div id="panchBestTime" class="panch-best-time"></div>
       </section>
 
       <!-- ПЕРСОНАЛЬНИЙ РОЗРАХУНОК — правий стовпець, рядок 2 -->
@@ -5862,19 +5862,20 @@ function _renderPanchUpcoming(refDateUTC){
     }
   } catch(e){}
 
-  // 4. v87.44: Поточна Nakshatra + орієнтовна зміна
+  // 4. v87.44+v87.45: Поточна Nakshatra + орієнтовна зміна
+  //    v87.45 fix: computePanchanga повертає nakshatra.num (1-based), не .idx
   try {
     const pNow = computePanchanga(today);
     if(pNow && pNow.nakshatra){
       // Зміна Nakshatra відбувається коли Місяць проходить 13°20' sidereal.
       // Середня швидкість ~13.18°/доба → ~1 Nakshatra / доба.
-      // Шукаю наступні 48 год, коли idx зміниться.
-      const curIdx = pNow.nakshatra.idx;
+      // Шукаю наступні 48 год, коли num зміниться.
+      const curNum = pNow.nakshatra.num;
       let shiftHrs = null;
       for(let h = 1; h <= 48; h++){
         const t = new Date(today.getTime() + h * 3600000);
         const p2 = computePanchanga(t);
-        if(p2 && p2.nakshatra && p2.nakshatra.idx !== curIdx){
+        if(p2 && p2.nakshatra && p2.nakshatra.num !== curNum){
           shiftHrs = h;
           // Взяти наступну Nakshatra
           const nextNakName = p2.nakshatra.name;
