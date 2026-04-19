@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v87.22</title>
+  <title>G-Index — Космофізичний дашборд v87.28</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1757,11 +1757,14 @@ Kp: 3-год індекс геомагнітної активності (0–9)
             </select>
             <div class="pill hint" tabindex="0" style="cursor:help">NOAA 27-day<span class="hint-pop">Джерело: NOAA SWPC 27-day-outlook.txt\nНОАА публікує щопн ~15:00 UTC.\nΣAᵢ перераховується при кожному оновленні.</span></div>
             <button id="btnCsv" style="font-size:12px;padding:6px 10px">⬇ CSV</button>
+            <button id="btnIcs" style="font-size:12px;padding:6px 10px" title="Експорт прогнозу у календарний файл (.ics): імпортуйте у Google/Apple/Outlook для нагадувань">⬇ .ics</button>
           </div>
         </div>
         <div id="twentysevenError" class="err small"></div>
         <!-- v87.19 U4: Best/worst days of last 30 days — retention hook -->
         <div id="bestWorstDays" class="best-worst-block" style="display:none"></div>
+        <!-- v87.28: Compare periods — this week vs same week last year (Σ-rhythm only) -->
+        <div id="comparePeriodsBlock" style="display:none;margin:10px 0;padding:10px 12px;border:1px solid #1e2a44;border-radius:10px;background:rgba(10,20,40,0.4)"></div>
         <!-- Графік G(t) — головний вигляд -->
         <div id="chart27Wrap" style="display:block;margin:10px 0 4px;position:relative">
           <canvas id="chart27" style="width:100%;height:220px"></canvas>
@@ -2310,16 +2313,64 @@ const ICS_HINDU_HOLIDAYS = 'https://ics.calendarlabs.com/48/13d1b419/Hindu_Holid
 // ------------------------------- Утиліти часу -------------------------------
 // v26.2: Geolocation — navigator.geolocation з fallback на Київ (50.45°N, 30.52°E)
 let _userLat = 50.45, _userLon = 30.52;
+
+// v87.26: IANA timezone detection (stable identifier for UI labels + future Panchanga migration).
+// Returns browser's system TZ (e.g. "Europe/Kyiv", "America/Los_Angeles"); fallback "UTC".
+// Note: координати (_userLat/_userLon) та IANA можуть не збігатися, коли user мандрує з ноутбуком —
+// у такому випадку Panchanga/Hora використовують координати, а лейбли показують IANA браузера.
+(function(){
+  try{
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    window._iana = tz || 'UTC';
+  }catch(e){ window._iana = 'UTC'; }
+})();
+
 function initGeolocation(){
   if(!navigator.geolocation) return;
   try{
     navigator.geolocation.getCurrentPosition(
-      pos => { _userLat = pos.coords.latitude; _userLon = pos.coords.longitude; console.log('Geolocation:', _userLat.toFixed(2), _userLon.toFixed(2)); },
+      pos => {
+        _userLat = pos.coords.latitude;
+        _userLon = pos.coords.longitude;
+        console.log('Geolocation:', _userLat.toFixed(2), _userLon.toFixed(2), 'IANA:', window._iana);
+        // v87.26: оновити Hora-лейбл динамічно після GPS
+        try{ _updateHoraCoordLabel(); }catch(e){}
+      },
       () => { /* fallback Kyiv */ },
       { timeout: 5000, maximumAge: 3600000 }
     );
   }catch(e){}
 }
+
+// v87.26: динамічний Hora-лейбл = "(IANA, UTC±HH, lat°N/S)"
+function _updateHoraCoordLabel(){
+  const el = document.getElementById('horaCoordLabel');
+  if(!el) return;
+  const off = -new Date().getTimezoneOffset();
+  const sign = off>=0 ? '+' : '-';
+  const hh = Math.floor(Math.abs(off)/60);
+  const mm = Math.abs(off)%60;
+  const offStr = mm===0 ? `UTC${sign}${hh}` : `UTC${sign}${hh}:${String(mm).padStart(2,'0')}`;
+  const ns = _userLat>=0 ? 'N' : 'S';
+  const iana = (window._iana && window._iana !== 'UTC') ? `${window._iana}, ` : '';
+  el.textContent = `(${iana}${offStr}, ${Math.abs(_userLat).toFixed(0)}°${ns})`;
+}
+
+// v87.26: console helper — `javascript:void(__testTimezone())`
+window.__testTimezone = function(){
+  const now = new Date();
+  const info = {
+    iana: window._iana || '(not set)',
+    offset_minutes: -now.getTimezoneOffset(),
+    offset_label: (()=>{ try{ return tzOffsetLabel(now); }catch(e){ return '?'; } })(),
+    iana_label: (()=>{ try{ return ianaTzLabel(now); }catch(e){ return '?'; } })(),
+    user_lat: _userLat,
+    user_lon: _userLon,
+    hora_label_dom: (document.getElementById('horaCoordLabel')||{}).textContent || '(not rendered)'
+  };
+  console.table(info);
+  return info;
+};
 
 const pad = n => String(n).padStart(2,'0');
 function tzOffsetLabel(d){
@@ -2328,6 +2379,11 @@ function tzOffsetLabel(d){
   const hh = Math.floor(Math.abs(m)/60);
   const mm = Math.abs(m)%60;
   return `UTC${sign}${pad(hh)}:${pad(mm)}`;
+}
+// v87.26: IANA-збагачений лейбл — "Europe/Kyiv (UTC+03:00)"; для tooltip/debug
+function ianaTzLabel(d){
+  const iana = window._iana || 'UTC';
+  return iana === 'UTC' ? tzOffsetLabel(d) : `${iana} (${tzOffsetLabel(d)})`;
 }
 function fmtLocal(d){
   return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())} (${tzOffsetLabel(d)})`;
@@ -2698,6 +2754,33 @@ function _nasaEclipseCatalog(year){
   return m.size > 0 ? m : null;
 }
 
+// v87.25: console test helper — перевірка NASA-каталогу для бистрої діагностики.
+// Запуск з адресної стрічки: javascript:void(__testEclipseCatalog())
+window.__testEclipseCatalog = function(){
+  const cases = [
+    {year: 2024, expect: 'null', note: 'поза каталогом → null'},
+    {year: 2025, expect: 6,      note: '6 затемнень'},
+    {year: 2026, expect: 4,      note: '4 затемнення (17.02 annular, 03.03 total_lunar, 12.08 total_solar, 28.08 partial_lunar)'},
+    {year: 2027, expect: 3,      note: '3 затемнення'},
+    {year: 2028, expect: 4,      note: '4 затемнення'},
+    {year: 2029, expect: 4,      note: '4 затемнення'},
+    {year: 2030, expect: 3,      note: '3 затемнення'},
+    {year: 2031, expect: 'null', note: 'поза каталогом → null'}
+  ];
+  const results = [];
+  let pass = 0, fail = 0;
+  for(const c of cases){
+    const cat = _nasaEclipseCatalog(c.year);
+    const actual = cat === null ? 'null' : cat.size;
+    const ok = (actual === c.expect);
+    results.push({year:c.year, expect:c.expect, actual, ok, note:c.note});
+    if(ok) pass++; else fail++;
+  }
+  console.table(results);
+  console.log(`[eclipse-test] ${pass}/${cases.length} passed, ${fail} failed`);
+  return {pass, fail, total:cases.length, results};
+};
+
 async function ensureEclipsesForYear(year){
   if(eclipsesByYear.has(year)) return;
 
@@ -2780,7 +2863,12 @@ function computeMiFromEclipses(dateUTC){
       penumbral:'пенумбральне місячне',
       unknown:'день затемнення'
     }[type] || 'затемнення';
-    return {Mi: w, mTip: `${w} — ${typeLabel}`};
+    // v87.23: warning-flag коли тип не з NASA-каталогу (scrape/fallback)
+    const unverified = (type === 'unknown');
+    const mTip = unverified
+      ? `${w} — ${typeLabel} ⚠ тип не підтверджено`
+      : `${w} — ${typeLabel}`;
+    return {Mi: w, mTip, eclipseUnverified: unverified};
   }
   // ±1 day around eclipse — lighter effect, scaled from peak
   if(has(dpm1) || has(dp1)){
@@ -2788,8 +2876,12 @@ function computeMiFromEclipses(dateUTC){
     const peakW = ECLIPSE_WEIGHT[peakType] != null ? ECLIPSE_WEIGHT[peakType] : ECLIPSE_WEIGHT.unknown;
     // Scale by ~0.75: penumbral peak -1 → ±1d ≈ 0 (clamp); full peak -4 → -3
     const adj = Math.round(peakW * 0.75);
-    if(adj === 0) return {Mi:0, mTip:'0 — ±1d від пенумбрального (мінімальний ефект)'};
-    return {Mi: adj, mTip: `${adj} — день до/після затемнення`};
+    const unverified = (peakType === 'unknown');
+    if(adj === 0) return {Mi:0, mTip:'0 — ±1d від пенумбрального (мінімальний ефект)', eclipseUnverified: unverified};
+    const mTip = unverified
+      ? `${adj} — день до/після затемнення ⚠ тип не підтверджено`
+      : `${adj} — день до/після затемнення`;
+    return {Mi: adj, mTip, eclipseUnverified: unverified};
   }
 
   // Wider eclipse window: -3..+3 days (-1 fixed)
@@ -3122,6 +3214,7 @@ function computeAi(dateTimeUTC, kp=0){
   const mres = computeMiFromEclipses(dateTimeUTC);
   const Mi   = mres.Mi;
   const mTip = (mres.mTip || (Mi===0?'0 — затемнення не виявлено':`${Mi}`));
+  const eclipseUnverified = mres.eclipseUnverified === true;
 
   const dayEvents = (eventIndex.get(dateStr) || []).slice();
   // Виключаємо Амавасью/Пурніму з eᵢ — вони вже враховані в Lᵢ
@@ -3228,7 +3321,7 @@ function computeAi(dateTimeUTC, kp=0){
   const _snLabel = snPen !== 0 ? `+Sn` : '';
   const explain = `\u03a3A\u1d62 = L\u1d62+M\u1d62+e\u1d62+P\u1d62+D\u1d62${snPen!==0?'+Sn':''} = ${Li}+${Mi}+${eiTotal}+${Pi}+${Di}${snPen!==0?'+'+snPen:''} = ${AiFull}` + (snPen!==0?`\n(Sn=${_snVal}>150: kp_pen${snPen} — engine v17)`:'') + (bzVal!==0||vswVal!==0?`\n(+Bz=${bzVal}, Vsw=${vswVal} — контекст, не в G)`:'');
 
-  return { Ai: AiFull, AiNoDst: Ai, Li, Mi, ei: eiTotal, eiBase: ei, horaEi, Pi, Di, bzVal, vswVal, phaseName, phaseDeg, lTip, mTip, eTip: eTipLines.join('\n'), pTip, diTip, explain };
+  return { Ai: AiFull, AiNoDst: Ai, Li, Mi, ei: eiTotal, eiBase: ei, horaEi, Pi, Di, bzVal, vswVal, phaseName, phaseDeg, lTip, mTip, eTip: eTipLines.join('\n'), pTip, diTip, explain, eclipseUnverified };
 }
 
 // --------------------------- ШКАЛИ / Бейджі для Kp --------------------------
@@ -3583,7 +3676,8 @@ function draw27dTable(){
     const _nakDot = _p27.nakshatra.score>=1?'🟢':_p27.nakshatra.score<=-1?'🔴':'🟡';
     const Lcell  = `<span class="hint mono" tabindex="0">${_moonEmoji}${ai.Li !== 0 ? ' <b>'+ai.Li+'</b>' : ''}<span class="hint-pop">${escapeHtml(ai.lTip)}\n${ai.phaseName} (${ai.phaseDeg.toFixed(0)}°)\nНакш.: ${_p27.nakshatra.name} ${_nakDot}</span></span>`;
     const _nakDotCell = `<td style="font-size:14px;text-align:center" title="${_p27.nakshatra.name} (${_p27.nakshatra.score>=1?'сприятл.':_p27.nakshatra.score<=-1?'несприятл.':'нейтр.'})">${_nakDot}</td>`;
-    const Mcell  = `<span class="hint mono" tabindex="0">${ai.Mi}<span class="hint-pop">${escapeHtml(ai.mTip)}</span></span>`;
+    const _mUnvMark = ai.eclipseUnverified ? '<span style="color:#fca474;margin-left:4px" title="Тип затемнення не підтверджено NASA-каталогом">⚠</span>' : '';
+    const Mcell  = `<span class="hint mono" tabindex="0">${ai.Mi}${_mUnvMark}<span class="hint-pop">${escapeHtml(ai.mTip)}</span></span>`;
     // R-M window marker for ei
     const _rmActive = isRussellMcPherron(r.date);
     const _eiLabel = ai.ei !== 0 ? String(ai.ei) : (_rmActive ? '<span style="color:#fca474;font-size:9px" title="Russell-McPherron вікно">R-M</span>' : '0');
@@ -3696,6 +3790,123 @@ function render27Day(rows, last3D){
 
   // Фільтр
   document.getElementById('sel27Filter').onchange = draw27dTable;
+
+  // v87.28: compare periods (non-blocking, errors isolated)
+  try{ renderComparePeriods(); }catch(e){ console.warn('[comparePeriods]', e); }
+}
+
+// v87.28 Compare periods — цей тиждень vs той самий тиждень рік тому (Σ-ритм only).
+// Kp historical недоступний у клієнті, тому показуємо лише ΣAᵢ (Lᵢ+Mᵢ+eᵢ+Pᵢ+Dᵢ) — повністю
+// детерміновану частину з дати. Kp-компонент пропускаємо; це "ритм Панчанги/затемнень/свят/Dst-буря"
+// без геомагнітної невизначеності.
+function renderComparePeriods(){
+  const wrap = document.getElementById('comparePeriodsBlock');
+  if(!wrap) return;
+
+  const today = new Date();
+  const todayUTC = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
+
+  // Вікно: -3..+3 від сьогодні (7 днів)
+  const days = [];
+  for(let k=-3;k<=3;k++){
+    const dNow = addDays(todayUTC, k);
+    const dPrev = new Date(Date.UTC(dNow.getUTCFullYear()-1, dNow.getUTCMonth(), dNow.getUTCDate()));
+    // Ai without Kp: передаємо kp=0, беремо тільки Ai (ΣAᵢ)
+    const aiNow  = computeAi(noonUTC(dNow),  0);
+    const aiPrev = computeAi(noonUTC(dPrev), 0);
+    days.push({
+      dNow, dPrev,
+      aiNow:  aiNow.Ai,
+      aiPrev: aiPrev.Ai,
+      aiNowObj:  aiNow,
+      aiPrevObj: aiPrev
+    });
+  }
+
+  const avgNow  = days.reduce((s,d)=>s+d.aiNow, 0) / days.length;
+  const avgPrev = days.reduce((s,d)=>s+d.aiPrev, 0) / days.length;
+  const delta = avgNow - avgPrev;
+
+  const deltaCol = delta >= 0.3 ? '#2bd47d' : delta <= -0.3 ? '#ff6b6b' : '#9bb1dc';
+  const deltaSign = delta >= 0 ? '+' : '';
+  const deltaTxt = `${deltaSign}${delta.toFixed(2)}`;
+
+  // Micro-sparkline: 7 стовпчиків по днях, now поверх prev
+  const barW = 28, barGap = 6, barMaxH = 34;
+  const maxAbs = Math.max(
+    ...days.flatMap(d => [Math.abs(d.aiNow), Math.abs(d.aiPrev)]),
+    1 // уникнути ділення на 0
+  );
+  const svgW = days.length * (barW + barGap) - barGap;
+  const svgH = barMaxH * 2 + 14; // місце під позитивні + негативні
+  const midY = svgH / 2;
+  const mkBar = (val, x, col) => {
+    const h = Math.abs(val) / maxAbs * barMaxH;
+    const y = val >= 0 ? midY - h : midY;
+    return `<rect x="${x}" y="${y}" width="${barW-2}" height="${h}" fill="${col}" opacity="0.85" rx="2"/>`;
+  };
+  const dayLbls = [];
+  let bars = '';
+  const LOC_SHORT = d => {
+    const wk = ['Нд','Пн','Вт','Ср','Чт','Пт','Сб'][d.getUTCDay()];
+    return `${wk} ${d.getUTCDate()}`;
+  };
+  for(let i=0;i<days.length;i++){
+    const x = i * (barW + barGap);
+    // Prev (фон, приглушений сірий)
+    bars += mkBar(days[i].aiPrev, x+1, '#4a5e8c');
+    // Now (передній, яскравий по знаку)
+    const nowCol = days[i].aiNow > 0 ? '#2bd47d' : days[i].aiNow < 0 ? '#ff6b6b' : '#6b82aa';
+    bars += mkBar(days[i].aiNow, x+3, nowCol);
+    dayLbls.push(`<text x="${x + barW/2}" y="${svgH-2}" text-anchor="middle" fill="#7f99c4" font-size="8">${LOC_SHORT(days[i].dNow)}</text>`);
+  }
+  // Midline
+  bars = `<line x1="0" y1="${midY}" x2="${svgW}" y2="${midY}" stroke="#2a3b61" stroke-width="1"/>` + bars + dayLbls.join('');
+
+  const narrative = delta >= 0.5 ? 'Цьогорічний ритм помітно кращий за торішній'
+                  : delta >= 0.2 ? 'Цьогорічний ритм трохи кращий'
+                  : delta <= -0.5 ? 'Цьогорічний ритм помітно нижчий за торішній'
+                  : delta <= -0.2 ? 'Цьогорічний ритм трохи нижчий'
+                  : 'Ритм майже однаковий';
+
+  const yearNow = todayUTC.getUTCFullYear();
+  const yearPrev = yearNow - 1;
+
+  wrap.style.display = 'block';
+  wrap.innerHTML = `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">
+      <span style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--dim)">Порівняння періодів</span>
+      <span class="pill" style="font-size:9px">Σ-ритм</span>
+      <span class="hint" tabindex="0" style="font-size:10px;color:var(--faint);cursor:help">
+        ⓘ
+        <span class="hint-pop" style="white-space:pre;font-size:11px">Σ-ритм = ΣAᵢ (Lᵢ+Mᵢ+eᵢ+Pᵢ+Dᵢ), тобто Панчанга + затемнення + свята + Dst-буря.
+Без Kp-компонента, бо historical Kp недоступний у клієнті.
+Вікно: −3..+3 дні від сьогодні (7 днів).</span>
+      </span>
+    </div>
+    <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+      <div style="flex:0 0 auto">
+        <div style="font-size:11px;color:var(--dim)">Середній Σ ${yearNow}</div>
+        <div class="mono" style="font-size:18px;font-weight:700;color:${avgNow>=0?'#2bd47d':avgNow<=-0.5?'#ff6b6b':'#9bb1dc'}">${avgNow>=0?'+':''}${avgNow.toFixed(2)}</div>
+      </div>
+      <div style="flex:0 0 auto">
+        <div style="font-size:11px;color:var(--dim)">Середній Σ ${yearPrev}</div>
+        <div class="mono" style="font-size:18px;font-weight:700;color:${avgPrev>=0?'#7fcfa4':'#b07080'};opacity:0.85">${avgPrev>=0?'+':''}${avgPrev.toFixed(2)}</div>
+      </div>
+      <div style="flex:0 0 auto;border-left:1px solid #2a3b61;padding-left:16px">
+        <div style="font-size:11px;color:var(--dim)">Різниця</div>
+        <div class="mono" style="font-size:18px;font-weight:700;color:${deltaCol}">${deltaTxt}</div>
+      </div>
+      <div style="flex:1 1 auto;min-width:220px">
+        <svg viewBox="0 0 ${svgW} ${svgH}" style="width:100%;max-width:${svgW*1.5}px;height:${svgH}px">${bars}</svg>
+        <div style="display:flex;gap:10px;font-size:9px;color:var(--faint);margin-top:2px">
+          <span><span style="display:inline-block;width:8px;height:8px;background:#2bd47d;vertical-align:middle;margin-right:3px"></span>${yearNow}</span>
+          <span><span style="display:inline-block;width:8px;height:8px;background:#4a5e8c;vertical-align:middle;margin-right:3px"></span>${yearPrev}</span>
+        </div>
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--dim);margin-top:6px">${narrative}.</div>
+  `;
 }
 
 // --------------------------- Категоризація G-бейджа ------------------------
@@ -4829,7 +5040,8 @@ function render3Day(parsed3){
 
     const _moonE3 = ai.phaseDeg < 22 ? '🌑' : ai.phaseDeg < 67 ? '🌒' : ai.phaseDeg < 112 ? '🌓' : ai.phaseDeg < 157 ? '🌔' : ai.phaseDeg < 202 ? '🌕' : ai.phaseDeg < 247 ? '🌖' : ai.phaseDeg < 292 ? '🌗' : ai.phaseDeg < 337 ? '🌘' : '🌑';
     const Lcell  = `<div class="mono" style="font-weight:700"><span class="hint" tabindex="0">${_moonE3}${ai.Li !== 0 ? ' '+ai.Li : ''}<span class="hint-pop">${escapeHtml(ai.lTip)}\n${ai.phaseName} (${ai.phaseDeg.toFixed(0)}°)</span></span></div>`;
-    const Mcell  = `<div class="mono" style="font-weight:700"><span class="hint" tabindex="0">${ai.Mi}<span class="hint-pop">${escapeHtml(ai.mTip)}</span></span></div>`;
+    const _mUnvMark2 = ai.eclipseUnverified ? '<span style="color:#fca474;margin-left:4px" title="Тип затемнення не підтверджено NASA-каталогом">⚠</span>' : '';
+    const Mcell  = `<div class="mono" style="font-weight:700"><span class="hint" tabindex="0">${ai.Mi}${_mUnvMark2}<span class="hint-pop">${escapeHtml(ai.mTip)}</span></span></div>`;
     const Ecell  = `<div class="mono" style="font-weight:700"><span class="hint" tabindex="0">${ai.ei}<span class="hint-pop">${escapeHtml(ai.eTip)}</span></span></div>`;
     const Pcell  = `<div class="mono" style="font-weight:700"><span class="hint" tabindex="0">${ai.Pi}<span class="hint-pop">${escapeHtml(ai.pTip||'')}</span></span></div>`;
     const AiCell = `<div class="mono" style="font-weight:700"><span class="hint" tabindex="0">${ai.Ai}<span class="hint-pop">${escapeHtml(ai.explain)}</span></span></div>`;
@@ -6861,6 +7073,71 @@ function exportCsv(){
   a.click();
 }
 
+// v87.27: ICS calendar export — 27-day G-forecast as all-day events.
+// Сумісно з Google/Apple/Outlook. Імпортується одноразово (не subscription feed).
+function exportICS(){
+  if(!_last27Rows || !_last27Rows.length){ alert('Немає даних для експорту'); return; }
+  const override3D = new Map();
+  if(last3D && Array.isArray(last3D.days)){
+    for(const d of last3D.days) if(isFinite(d.kpMax)) override3D.set(fmtDate(d.date), d.kpMax);
+  }
+  const pad2 = n => String(n).padStart(2,'0');
+  const fmtICSDate = d => `${d.getUTCFullYear()}${pad2(d.getUTCMonth()+1)}${pad2(d.getUTCDate())}`;
+  const fmtICSDateTime = d => `${fmtICSDate(d)}T${pad2(d.getUTCHours())}${pad2(d.getUTCMinutes())}${pad2(d.getUTCSeconds())}Z`;
+  const now = new Date();
+  const dtstamp = fmtICSDateTime(now);
+  // RFC 5545: escape commas, semicolons, newlines, backslashes
+  const esc = s => String(s).replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\n/g,'\\n');
+  // Fold lines >75 octets per RFC 5545 (simple ASCII-safe fold)
+  const fold = s => {
+    const lines = [];
+    for(const line of s.split('\r\n')){
+      if(line.length <= 75){ lines.push(line); continue; }
+      let rest = line;
+      lines.push(rest.slice(0,75));
+      rest = rest.slice(75);
+      while(rest.length > 74){ lines.push(' ' + rest.slice(0,74)); rest = rest.slice(74); }
+      if(rest.length) lines.push(' ' + rest);
+    }
+    return lines.join('\r\n');
+  };
+
+  const out = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//G-Index//Forecast//UK','CALSCALE:GREGORIAN','METHOD:PUBLISH',
+    'X-WR-CALNAME:G-Index Forecast','X-WR-TIMEZONE:UTC','X-WR-CALDESC:Космофізичний прогноз на 27 днів'];
+
+  for(const r of _last27Rows){
+    const ds = fmtDate(r.date);
+    const kpUsed = override3D.has(ds) ? override3D.get(ds) : r.kpMax;
+    if(!isFinite(kpUsed)) continue;
+    const ai = computeAi(noonUTC(r.date), kpUsed);
+    const G = kpUsed - 2 + ai.Ai;
+    const cat = classifyG(isFinite(G)?G:0);
+    const rec = recommendG(G, kpUsed).text || '';
+    const gSign = G >= 0 ? '+' : '';
+    const summary = `G ${gSign}${G.toFixed(2)} — ${cat} (Kp ${kpUsed.toFixed(1)})`;
+    const desc = `Дата: ${ds}\nG = ${gSign}${G.toFixed(2)}\nKp = ${kpUsed.toFixed(2)}\nΣAᵢ = ${ai.Ai} (Lᵢ=${ai.Li}, Mᵢ=${ai.Mi}, eᵢ=${ai.ei}, Pᵢ=${ai.Pi}${ai.Di?`, Dᵢ=${ai.Di}`:''})\nКатегорія: ${cat}\nРекомендація: ${rec}\n\nДжерело: G-Index (NOAA SWPC + Panchanga)`;
+    const dtStart = r.date; // UTC date
+    const dtEnd = new Date(dtStart.getTime() + 86400000);
+    const uid = `gindex-${ds}-${Math.round((kpUsed||0)*100)}@g-index`;
+    out.push('BEGIN:VEVENT');
+    out.push(`UID:${uid}`);
+    out.push(`DTSTAMP:${dtstamp}`);
+    out.push(`DTSTART;VALUE=DATE:${fmtICSDate(dtStart)}`);
+    out.push(`DTEND;VALUE=DATE:${fmtICSDate(dtEnd)}`);
+    out.push(`SUMMARY:${esc(summary)}`);
+    out.push(`DESCRIPTION:${esc(desc)}`);
+    out.push('TRANSP:TRANSPARENT');
+    out.push('END:VEVENT');
+  }
+  out.push('END:VCALENDAR');
+  const ics = fold(out.join('\r\n'));
+  const blob = new Blob([ics], {type:'text/calendar;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `g-index_forecast_${fmtDate(new Date())}.ics`;
+  a.click();
+}
+
 // =====================================================================
 // ПЕРСОНАЛЬНИЙ РОЗРАХУНОК — Meeus Ch.47 + Lahiri + BPHS
 // =====================================================================
@@ -8525,6 +8802,8 @@ function renderHoraTimeline(dateUTC, kp, G) {
   const legend = el('horaLegend');
   const axis = el('horaAxis');
   if(!wrap) return;
+  // v87.26: оновити лейбл координат/TZ при кожному рендері (offset/DST може змінитися)
+  try{ _updateHoraCoordLabel(); }catch(e){}
 
   const HORA_SYMBOLS = {
     'Сонце':'☀','Місяць':'☽','Марс':'♂','Меркурій':'☿','Юпітер':'♃','Венера':'♀','Сатурн':'♄'
@@ -8654,7 +8933,7 @@ function renderGDecomp(G, kp, ai) {
   // ── Factor chips: Lᵢ, Mᵢ, eᵢ, Pᵢ ──
   const factors = [
     {name:'Lᵢ', label:'Тітхі',     val:ai.Li, tip:ai.lTip},
-    {name:'Mᵢ', label:'Затемн.',    val:ai.Mi, tip:ai.mTip},
+    {name:'Mᵢ' + (ai.eclipseUnverified?' ⚠':''), label:'Затемн.',    val:ai.Mi, tip:ai.mTip},
     {name:'eᵢ', label:'Події',      val:ai.ei, tip:ai.eTip},
     ...(ai.horaEi !== 0 ? [{name:'Hora', label:'Hora×0.2', val:ai.horaEi, tip:`Hora внесок у eᵢ (профіль ${_activeProfile})`}] : []),
     {name:'Pᵢ', label:'Панчанга',   val:ai.Pi, tip:ai.pTip||''},
@@ -9232,7 +9511,11 @@ function updateDataTimestamp(whenText) {
     el.textContent = 'дані від ' + whenText;
   } else {
     const now = new Date();
-    el.textContent = 'оновлено ' + now.toLocaleTimeString('uk-UA', {hour:'2-digit',minute:'2-digit'}) + ' UTC+' + (-now.getTimezoneOffset()/60);
+    const off = -now.getTimezoneOffset()/60;
+    const offStr = (Number.isInteger(off) ? off : off.toFixed(1));
+    el.textContent = 'оновлено ' + now.toLocaleTimeString('uk-UA', {hour:'2-digit',minute:'2-digit'}) + ' UTC' + (off>=0?'+':'') + offStr;
+    // v87.26: IANA tooltip
+    try{ el.title = window._iana || ''; }catch(e){}
   }
 }
 
@@ -9587,7 +9870,7 @@ function renderProfileRec() {
   el_.innerHTML = `<span style="font-weight:700;color:${prof.color}">${prof.label}:</span> ${rec}${ageLine}`;
 }
 
-addEventListener('load', ()=>{ initGeolocation(); setStamp(); loadAll(); el('btnCsv').addEventListener('click', exportCsv); el('selInterval').addEventListener('change', updateAutoRefStatus); initPersonalCalc(); initLangToggle(); initG2Watch(); });
+addEventListener('load', ()=>{ initGeolocation(); setStamp(); loadAll(); el('btnCsv').addEventListener('click', exportCsv); const _bIcs=el('btnIcs'); if(_bIcs) _bIcs.addEventListener('click', exportICS); el('selInterval').addEventListener('change', updateAutoRefStatus); initPersonalCalc(); initLangToggle(); initG2Watch(); });
 el('btnRefresh').addEventListener('click', loadAll);
 
 // ========================= i18n EN/UA =========================
