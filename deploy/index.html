@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v87.40</title>
+  <title>G-Index — Космофізичний дашборд v87.41</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -7051,10 +7051,16 @@ function _renderHeroTimeWindows() {
       + `</div>`;
   });
 
+  // v87.41: explicit free-tier hint — без цього "3 з 8 слотів" виглядає як баг.
+  // Додаємо зверху списку pre-пояснення.
+  const _headerHint = (!isPaid && slots.length > visibleSlots.length)
+    ? `<div style="padding:4px 10px 6px;font-size:10px;color:var(--faint);border-bottom:1px dashed rgba(139,160,200,.18);margin-bottom:4px;cursor:pointer" onclick="PaywallModal.show('G-Index Plus','basic')">📍 Показано ${visibleSlots.length} з ${slots.length} слотів (поточне + майбутні) · повний день — у Plus</div>`
+    : '';
+
   if (!isPaid && slots.length > 3) {
     lines.push(`<div style="margin-top:4px;padding:5px 10px;border-radius:8px;border:1px dashed rgba(55,167,255,.22);background:rgba(55,167,255,.04);font-size:11px;color:#8fb5ff;cursor:pointer" onclick="PaywallModal.show('G-Index Plus','basic')">🔒 Повний розклад (${slots.length} вікон) — у Plus</div>`);
   }
-  wrap.innerHTML = lines.join('');
+  wrap.innerHTML = _headerHint + lines.join('');
 
   // Next shift badge with countdown
   if (shiftEl && currentIdx >= 0) {
