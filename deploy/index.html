@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v87.46</title>
+  <title>G-Index — Космофізичний дашборд v87.47</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1423,6 +1423,12 @@
         <div id="whyCauseChain" class="why-cause-chain"></div>
         <div id="whyRows">—</div>
         <div id="whyMain" class="why-main">—</div>
+        <!-- v87.47: 7-day G sparkline — заповнення пустоти + тренд-контекст -->
+        <div id="whyTrendBlock" style="margin-top:10px;display:none">
+          <div style="font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px">Тренд G · 7 днів</div>
+          <svg id="whyTrendSvg" viewBox="0 0 440 90" style="width:100%;height:90px;display:block" aria-label="Графік G за 7 днів"></svg>
+          <div id="whyTrendNote" style="font-size:11px;color:var(--dim);margin-top:4px;line-height:1.35"></div>
+        </div>
       </section>
       <section id="timingCard" class="core-card">
         <div class="timing-title" id="timingTitle">Критичні вікна (сьогодні)</div>
@@ -7141,6 +7147,134 @@ function _renderHeroCause(g, kp) {
       whyMain.textContent = ('Усі фактори нейтральні — день рівний без вираженого тиску. ' + _ptTxt).trim();
     }
   }
+
+  // v87.47: 7-day G sparkline — заповнення whyCard і тренд-контекст
+  try { _renderWhyTrend(); } catch(e){ /* noop */ }
+}
+
+// v87.47: Render 7-day G sparkline inside whyCard
+// Використовує _27dComputed (має всі 27 днів: сьогодні + 23 вперед + 3 назад-вчорашні через last3D)
+function _renderWhyTrend(){
+  const block = document.getElementById('whyTrendBlock');
+  const svg = document.getElementById('whyTrendSvg');
+  const note = document.getElementById('whyTrendNote');
+  if(!block || !svg) return;
+
+  // Збираю 7 днів: -3..+3
+  // _27dComputed починається з сьогодні (індекс 0) і йде вперед.
+  // Минулі 3 дні беру з last3D.days (якщо є) або _ghistory.
+  const days = [];
+  const todayStr = fmtDate(new Date());
+
+  // 1. -3..-1 з last3D або computeAi з історичного Kp
+  try {
+    if(typeof last3D !== 'undefined' && last3D && last3D.days){
+      last3D.days.forEach(d => {
+        if(d.date && d.date < todayStr){
+          days.push({ ds: d.date, G: d.G, isPast: true });
+        }
+      });
+    }
+  } catch(e){}
+
+  // Якщо last3D не дав 3 минулих — заповнюю computeAi (kp=current fallback)
+  if(days.length < 3){
+    for(let i = -3; i <= -1; i++){
+      const ds = fmtDate(addDays(new Date(), i));
+      if(days.find(x => x.ds === ds)) continue;
+      try {
+        const ai = computeAi(noonUTC(addDays(new Date(), i)), 2);
+        days.push({ ds, G: ai.Ai, isPast: true });
+      } catch(e){}
+    }
+  }
+
+  // 2. сьогодні + 3 вперед з _27dComputed
+  if(typeof _27dComputed !== 'undefined' && _27dComputed){
+    for(let i = 0; i < Math.min(4, _27dComputed.length); i++){
+      const d = _27dComputed[i];
+      if(d && d.ds && isFinite(d.G)){
+        days.push({ ds: d.ds, G: d.G, isPast: false, isToday: i === 0 });
+      }
+    }
+  }
+
+  // Sort by date + cap at 7
+  days.sort((a,b) => a.ds.localeCompare(b.ds));
+  if(days.length < 2){ block.style.display = 'none'; return; }
+
+  // Layout
+  const W = 440, H = 90;
+  const padL = 20, padR = 20, padT = 8, padB = 22;
+  const innerW = W - padL - padR;
+  const innerH = H - padT - padB;
+  const Gs = days.map(d => d.G).filter(g => isFinite(g));
+  const gMin = Math.min(-2, ...Gs);
+  const gMax = Math.max(2, ...Gs);
+  const gRange = Math.max(1, gMax - gMin);
+  const xFor = i => padL + (days.length === 1 ? innerW/2 : (i / (days.length - 1)) * innerW);
+  const yFor = g => padT + innerH - ((g - gMin) / gRange) * innerH;
+  const y0 = yFor(0);
+
+  const colorFor = g =>
+    g >= 1.5  ? '#2bd47d'
+    : g >= 0.5 ? '#8ce0b0'
+    : g >= -0.5 ? '#b7c7ea'
+    : g >= -1.5 ? '#ffcc00'
+    : '#ff8a7a';
+
+  // Build SVG
+  let svgHtml = '';
+  // Zero line
+  svgHtml += `<line x1="${padL}" y1="${y0.toFixed(1)}" x2="${W-padR}" y2="${y0.toFixed(1)}" stroke="rgba(139,160,200,.15)" stroke-dasharray="2 3" />`;
+  svgHtml += `<text x="${padL-4}" y="${(y0+3).toFixed(1)}" font-size="9" fill="#5f7293" text-anchor="end">0</text>`;
+
+  // Past segment (solid) + forecast segment (dashed)
+  const pastPts = days.filter(d => d.isPast || d.isToday).map((d,i) => `${xFor(days.indexOf(d)).toFixed(1)},${yFor(d.G).toFixed(1)}`);
+  const futPts  = days.filter(d => !d.isPast).map((d,i) => `${xFor(days.indexOf(d)).toFixed(1)},${yFor(d.G).toFixed(1)}`);
+  if(pastPts.length >= 2){
+    svgHtml += `<polyline points="${pastPts.join(' ')}" fill="none" stroke="#5a7ab0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />`;
+  }
+  if(futPts.length >= 2){
+    svgHtml += `<polyline points="${futPts.join(' ')}" fill="none" stroke="#8ea4c8" stroke-width="1.5" stroke-dasharray="3 3" stroke-linecap="round" />`;
+  }
+
+  // Dots
+  days.forEach((d, i) => {
+    const x = xFor(i), y = yFor(d.G);
+    const col = colorFor(d.G);
+    if(d.isToday){
+      svgHtml += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="6" fill="${col}" stroke="#0a1428" stroke-width="2" />`;
+      svgHtml += `<text x="${x.toFixed(1)}" y="${(y+20).toFixed(1)}" font-size="10" fill="${col}" text-anchor="middle" font-weight="700">зараз</text>`;
+    } else {
+      svgHtml += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${d.isPast ? 3.5 : 4}" fill="${col}" opacity="${d.isPast ? 0.75 : 1}" />`;
+    }
+    // Day label
+    const lbl = d.isToday ? '' : (d.isPast ? `−${todayStr > d.ds ? Math.ceil((new Date(todayStr).getTime() - new Date(d.ds).getTime())/86400000) : 0}д` : `+${Math.ceil((new Date(d.ds).getTime() - new Date(todayStr).getTime())/86400000)}д`);
+    if(lbl){
+      svgHtml += `<text x="${x.toFixed(1)}" y="${(H-6).toFixed(1)}" font-size="9" fill="#5f7293" text-anchor="middle">${lbl}</text>`;
+    }
+  });
+
+  svg.innerHTML = svgHtml;
+
+  // Summary text
+  const todayG = days.find(d => d.isToday)?.G;
+  const futG = days.filter(d => !d.isPast).map(d => d.G);
+  const maxFutG = futG.length ? Math.max(...futG) : null;
+  const trendUp = maxFutG !== null && todayG !== undefined && maxFutG > todayG + 0.5;
+  const trendDown = maxFutG !== null && todayG !== undefined && maxFutG < todayG - 0.5;
+  const arrow = trendUp ? '↗' : trendDown ? '↘' : '→';
+  const trendTxt = trendUp ? 'зростаючий' : trendDown ? 'спадаючий' : 'стабільний';
+  const peakIdx = futG.length ? futG.indexOf(Math.max(...futG)) : -1;
+  const futDays = days.filter(d => !d.isPast);
+  const peak = peakIdx >= 0 ? futDays[peakIdx + 1] : null; // +1 бо futDays[0] = сьогодні
+  const peakStr = peak ? `найвище G ≈ ${peak.G >= 0 ? '+' : ''}${peak.G.toFixed(1)} на ${peak.ds}` : '';
+
+  if(note){
+    note.textContent = `Тренд ${arrow} ${trendTxt}${peakStr ? ' · ' + peakStr : ''}`;
+  }
+  block.style.display = 'block';
 }
 
 // ═══ v78d: Timing Card (coreGrid) ═══
