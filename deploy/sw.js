@@ -5,8 +5,8 @@
    - Everything else → Network-First, no cache
 */
 
-const SHELL_CACHE  = 'g-index-shell-v87-50';
-const DATA_CACHE   = 'g-index-data-v87-50';
+const SHELL_CACHE  = 'g-index-shell-v87-52';
+const DATA_CACHE   = 'g-index-data-v87-52';
 const DATA_TTL_MS  = 1 * 60 * 60 * 1000; // 1 hour (Dst оновлюється кожну 1h)
 // App shell files to pre-cache on install
 const SHELL_FILES = [
@@ -199,16 +199,20 @@ self.addEventListener('push', event => {
 // Клік по notification → відкрити відповідний URL або активувати існуючу вкладку
 self.addEventListener('notificationclick', event => {
   event.notification.close();
-  const targetUrl = (event.notification.data && event.notification.data.url) || '/';
+  // v87.51: дефолтний URL — scope SW (правильно для sub-path деплоїв типу /g-index/deploy/),
+  // а не корневий '/' який у GitHub Pages призводить до nikolaevkirill-commits.github.io/
+  const scope = self.registration.scope || '/';
+  const targetUrl = (event.notification.data && event.notification.data.url) || scope;
   event.waitUntil((async () => {
     const clientsList = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     // Якщо вже відкрита вкладка з G-Index → фокус на неї
     for (const c of clientsList) {
       try {
         const u = new URL(c.url);
-        if (u.pathname.includes('/g-index/') || u.pathname === '/' || c.url.includes('g-index')) {
+        // Перевірка — чи клієнт у тому ж scope
+        if (c.url.startsWith(scope) || u.pathname.includes('/g-index/')) {
           await c.focus();
-          if (c.navigate && targetUrl !== '/') await c.navigate(targetUrl).catch(() => {});
+          if (c.navigate && targetUrl !== scope) await c.navigate(targetUrl).catch(() => {});
           return;
         }
       } catch(e) {}

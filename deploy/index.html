@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v87.50</title>
+  <title>G-Index — Космофізичний дашборд v87.52</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -11618,61 +11618,50 @@ window.__regress = function(opts){
   }, { ei_is_penalty: true, events_found: true, has_ekadashi: true });
 
   // ─── Test 9–11: Eclipse weights (NASA catalog 2025-2030) ───
-  test('T9 · Penumbral eclipse → Mᵢ=-1', () => {
-    // 2026-03-03 Total Lunar Eclipse (per NASA Five Millennium Canon)
-    // Але 2026-08-17 Penumbral — шукаю в катало
-    // Тест: якщо Mᵢ ≠ ±4/±2/±1 — помилка
-    // Прямий доступ через _nasaEclipseCatalog
-    if(typeof _nasaEclipseCatalog === 'function'){
-      const cat = _nasaEclipseCatalog(2026);
-      if(cat){
-        // Шукаю penumbral
-        for(const [dateKey, entry] of cat.entries()){
-          if(entry.type === 'penumbral'){
-            const d = new Date(dateKey + 'T12:00:00Z');
-            window._lastDst = null;
-            const ai = computeAi(d, 2);
-            return { Mi: ai.Mi, type: 'penumbral', date: dateKey };
-          }
-        }
-      }
-    }
-    return { skipped: true };
-  }, { Mi: -1 });
+  // v87.52 fix: правильні типи з catalog (total_solar, total_lunar, partial_lunar, annular)
+  // Penumbral ВІДСУТНІЙ у NASA catalog 2025-2030 — тестуємо через ECLIPSE_WEIGHT константу
 
-  test('T10 · Partial/Annular eclipse → Mᵢ=-2', () => {
-    if(typeof _nasaEclipseCatalog === 'function'){
-      const cat = _nasaEclipseCatalog(2026);
-      if(cat){
-        for(const [dateKey, entry] of cat.entries()){
-          if(entry.type === 'partial' || entry.type === 'annular'){
-            const d = new Date(dateKey + 'T12:00:00Z');
-            window._lastDst = null;
-            const ai = computeAi(d, 2);
-            return { Mi: ai.Mi, type: entry.type, date: dateKey };
-          }
-        }
-      }
+  test('T9 · Penumbral eclipse → Mᵢ=-1 (константа)', () => {
+    // NASA catalog не містить penumbral 2025-2030 (лише значущі eclipse).
+    // Тестуємо напряму що вага penumbral у константі = -1
+    if(typeof ECLIPSE_WEIGHT !== 'object' || !ECLIPSE_WEIGHT){
+      return { skipped: true, reason: 'ECLIPSE_WEIGHT constant not accessible' };
     }
-    return { skipped: true };
+    return { penumbral_weight: ECLIPSE_WEIGHT.penumbral };
+  }, { penumbral_weight: -1 });
+
+  test('T10 · Annular eclipse 2026-02-17 → Mᵢ=-2', () => {
+    // Canonical: NASA catalog 2026 → 2026-02-17 = annular
+    if(typeof _nasaEclipseCatalog !== 'function'){
+      return { skipped: true, reason: '_nasaEclipseCatalog unavailable' };
+    }
+    const d = new Date('2026-02-17T12:00:00Z');
+    window._lastDst = null;
+    const ai = computeAi(d, 2);
+    return { Mi: ai.Mi };
   }, { Mi: -2 });
 
-  test('T11 · Total/Hybrid eclipse → Mᵢ=-4', () => {
-    if(typeof _nasaEclipseCatalog === 'function'){
-      const cat = _nasaEclipseCatalog(2026);
-      if(cat){
-        for(const [dateKey, entry] of cat.entries()){
-          if(entry.type === 'total' || entry.type === 'hybrid'){
-            const d = new Date(dateKey + 'T12:00:00Z');
-            window._lastDst = null;
-            const ai = computeAi(d, 2);
-            return { Mi: ai.Mi, type: entry.type, date: dateKey };
-          }
-        }
-      }
+  test('T11 · Total Lunar 2026-03-03 → Mᵢ=-4', () => {
+    // Canonical: NASA catalog 2026 → 2026-03-03 = total_lunar
+    if(typeof _nasaEclipseCatalog !== 'function'){
+      return { skipped: true, reason: '_nasaEclipseCatalog unavailable' };
     }
-    return { skipped: true };
+    const d = new Date('2026-03-03T12:00:00Z');
+    window._lastDst = null;
+    const ai = computeAi(d, 2);
+    return { Mi: ai.Mi };
   }, { Mi: -4 });
+
+  // ─── Test 11b: Partial Lunar → Mᵢ=-2 (додатковий) ────
+  test('T11b · Partial Lunar 2026-08-28 → Mᵢ=-2', () => {
+    if(typeof _nasaEclipseCatalog !== 'function'){
+      return { skipped: true, reason: '_nasaEclipseCatalog unavailable' };
+    }
+    const d = new Date('2026-08-28T12:00:00Z');
+    window._lastDst = null;
+    const ai = computeAi(d, 2);
+    return { Mi: ai.Mi };
+  }, { Mi: -2 });
 
   // ─── Test 12: Dst=-100 → Di=-2 (сильна буря) ──────────
   test('T12 · Dst=-100 → Dᵢ=-2', () => {
