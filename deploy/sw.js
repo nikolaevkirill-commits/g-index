@@ -5,8 +5,8 @@
    - Everything else → Network-First, no cache
 */
 
-const SHELL_CACHE  = 'g-index-shell-v87-59';
-const DATA_CACHE   = 'g-index-data-v87-59';
+const SHELL_CACHE  = 'g-index-shell-v87-61';
+const DATA_CACHE   = 'g-index-data-v87-61';
 const DATA_TTL_MS  = 1 * 60 * 60 * 1000; // 1 hour (Dst оновлюється кожну 1h)
 // App shell files to pre-cache on install
 const SHELL_FILES = [
@@ -14,6 +14,7 @@ const SHELL_FILES = [
   'manifest.json',
   'icon192.png',
   'icon512.png',
+  'engine_scores.json',
 ];
 
 // URL patterns that should use Network-First with TTL cache

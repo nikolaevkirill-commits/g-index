@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v87.60</title>
+  <title>G-Index — Космофізичний дашборд v87.61</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1333,6 +1333,8 @@
           <span id="heroNextShiftChip" data-label="Далі" style="font-size:11px;color:var(--faint);display:none"></span>
           <span id="heroStamp" data-label="Оновлено" style="font-size:11px;color:var(--dim)">—</span>
           <span id="heroConfidence" data-label="Довіра" style="font-size:11px;color:var(--dim)"></span>
+          <!-- v87.61: Bulletin score — engine v17 threshold classifier for comparison with G-live -->
+          <span id="heroBulletin" data-label="Bulletin" class="hint" tabindex="0" style="font-size:11px;color:var(--dim);cursor:help" title="Engine v17 (rule-based bulletin model). Використовує manual Джйотіш-теги. Dashboard G — real-time геомагнітний сигнал. Різні моделі — різні шкали.">—</span>
         </div>
       </div>
     </section>
@@ -2794,6 +2796,46 @@ function setStamp(){
   el('stamp').textContent  = 'Оновлено: ' + fmtLocal(now);
   el('localNow').textContent = fmtLocal(now);
   el('utcNow').textContent   = fmtUTC(now);
+}
+
+// v87.61: Bulletin (engine v17) score loader — Шлях C (dual-display).
+// Завантажує engine_scores.json (static), показує поряд з G у hero і 3-day.
+let _engineScores = null;
+async function loadEngineScores(){
+  if(_engineScores !== null) return _engineScores;
+  try {
+    const resp = await fetch('engine_scores.json', { cache: 'default' });
+    if(!resp.ok) throw new Error('HTTP ' + resp.status);
+    const data = await resp.json();
+    _engineScores = data.scores || {};
+    console.log('[v87.61] engine_scores loaded: ' + Object.keys(_engineScores).length + ' days, v' + (data.version || '?'));
+    return _engineScores;
+  } catch(e){
+    console.warn('[v87.61] engine_scores.json fetch failed:', e.message);
+    _engineScores = {};
+    return _engineScores;
+  }
+}
+function getEngineScore(dateObj){
+  if(!_engineScores) return null;
+  const ds = fmtDate(dateObj);
+  return _engineScores[ds] || null;
+}
+function renderHeroBulletin(){
+  const elB = el('heroBulletin');
+  if(!elB) return;
+  const entry = getEngineScore(new Date());
+  if(!entry){
+    elB.textContent = '—';
+    elB.title = 'Engine v17 bulletin score. Поточна дата поза validation window (2025-06-16 → 2026-12-31) або JSON не завантажився.';
+    return;
+  }
+  const s = entry.eng;
+  const color = s >= 2 ? 'var(--ok)' : s === 1 ? '#9cd49c' : s === 0 ? 'var(--muted)' : s === -1 ? 'var(--warn)' : s <= -2 ? 'var(--bad)' : 'var(--muted)';
+  elB.innerHTML = `<span style="color:${color};font-weight:700">${s >= 0 ? '+' : ''}${s}</span>`;
+  const synth = entry.kp_synthetic ? ' · Kp synthetic' : '';
+  const pdfStr = (entry.pdf !== null && entry.pdf !== undefined) ? ` · PDF ${entry.pdf >= 0 ? '+' : ''}${entry.pdf}` : '';
+  elB.title = `Engine v17 score: ${s >= 0 ? '+' : ''}${s} (rule-based, threshold classifier).\nТег: ${entry.tag || '—'}\nKp=${entry.kp}${synth}${pdfStr}\nDashboard G (continuous) ≠ Engine score (threshold) — різні моделі за дизайном.`;
 }
 
 // Екранобезпечне екранування HTML у підказках
@@ -6144,9 +6186,21 @@ function render3Day(parsed3){
       const act=G<=-2?'утриматись від рішень':G<0?'мінімізувати ризики':G>=2?'оптимально для дій':G>=1?'можна планове':'стандартний режим';
       const col=G<=-2.5?'#ff6b6b':G<=-0.5?'#ffaa33':G>=0.5?'#2bd47d':'#9bb1dc';
       const dd=d.date.getUTCDate()+'.'+(d.date.getUTCMonth()+1);
+      // v87.61: Bulletin (engine v17) score line if available
+      let _bulletinLine = '';
+      try {
+        const _bs = getEngineScore(d.date);
+        if(_bs && isFinite(_bs.eng)){
+          const _bsSign = _bs.eng >= 0 ? '+' : '';
+          const _bsCol = _bs.eng >= 2 ? '#2bd47d' : _bs.eng === 1 ? '#9cd49c' : _bs.eng === 0 ? 'var(--muted)' : _bs.eng === -1 ? '#ffaa33' : '#ff6b6b';
+          const _synth = _bs.kp_synthetic ? '~' : '';
+          _bulletinLine = `<div style="font-size:10px;color:var(--dim);margin-top:2px">Bulletin: <span style="color:${_bsCol};font-weight:700">${_bsSign}${_bs.eng}${_synth}</span></div>`;
+        }
+      } catch(e){}
       qhtml+=`<span style="flex:1;min-width:140px;padding:8px 14px;border-radius:10px;background:${col}15;border:1px solid ${col}40;text-align:center">
         <div style="font-weight:700;color:${col};font-size:14px">${dd} → ${cat}</div>
         <div style="font-size:11px;color:var(--muted);margin-top:2px">${act}</div>
+        ${_bulletinLine}
       </span>`;
     }
     qw.innerHTML=qhtml;
@@ -10996,6 +11050,8 @@ function renderProfileRec() {
 }
 
 addEventListener('load', ()=>{ initGeolocation(); setStamp(); loadAll(); el('btnCsv').addEventListener('click', exportCsv); const _bIcs=el('btnIcs'); if(_bIcs) _bIcs.addEventListener('click', exportICS); el('selInterval').addEventListener('change', updateAutoRefStatus); initPersonalCalc(); initLangToggle(); initG2Watch(); /* v87.28: страхувальний рендер compare periods — не залежить від NOAA */ try{ if(typeof renderComparePeriods === 'function') renderComparePeriods(); }catch(e){}
+  // v87.61: load engine_scores.json (Bulletin model) + render heroBulletin
+  try { loadEngineScores().then(()=>{ try{ renderHeroBulletin(); }catch(e){} }); } catch(e){}
   // v87.60 Fix #1: live UTC/local tick. setStamp раніше викликався тільки при loadAll (раз на ~10 хв) → UTC-лейбл відставав.
   // Тепер оновлюємо localNow і utcNow кожну секунду. stamp ('Оновлено:') залишається часом останнього fetch — це правильна семантика.
   try {
@@ -11006,6 +11062,8 @@ addEventListener('load', ()=>{ initGeolocation(); setStamp(); loadAll(); el('btn
         const _uEl = el('utcNow');   if(_uEl) _uEl.textContent = fmtUTC(_n);
       } catch(e){}
     }, 1000);
+    // v87.61: re-render Bulletin badge each minute (picks up date change at midnight)
+    setInterval(function(){ try{ renderHeroBulletin(); }catch(e){} }, 60000);
   } catch(e){}
 });
 el('btnRefresh').addEventListener('click', loadAll);
