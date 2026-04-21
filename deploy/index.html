@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v87.56</title>
+  <title>G-Index — Космофізичний дашборд v87.57</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -3179,15 +3179,44 @@ window.__debugG = function(input, kpOverride){
     console.error('[__debugG] invalid date:', input);
     return null;
   }
-  // Kp: override або з live/forecast якщо today, інакше 0
+  // v87.57: sync-preload NASA eclipse catalog for year (fixes "даних немає" у M-tip)
+  try {
+    const y = d.getUTCFullYear();
+    if(!eclipsesByYear.has(y)){
+      const nasa = _nasaEclipseCatalog(y);
+      if(nasa) eclipsesByYear.set(y, nasa);
+    }
+  } catch(e){}
+  // Kp: priority (v87.57 fix):
+  //   1. explicit kpOverride param
+  //   2. _27dComputed entry по ds (охоплює 27 днів — від -3 до +~23 від today)
+  //   3. _lastKp.kp (live) — fallback тільки якщо нема інших
+  //   4. 0 — фінальний fallback
   let kp = 0;
-  if(typeof kpOverride === 'number' && isFinite(kpOverride)) kp = kpOverride;
-  else if(window._lastKp && isFinite(window._lastKp.kp)) kp = window._lastKp.kp;
+  let kpSource = 'fallback=0';
+  if(typeof kpOverride === 'number' && isFinite(kpOverride)) {
+    kp = kpOverride;
+    kpSource = 'override';
+  } else {
+    const ds = fmtDate(d);
+    if(typeof _27dComputed !== 'undefined' && Array.isArray(_27dComputed) && _27dComputed.length){
+      const entry = _27dComputed.find(x => x.ds === ds);
+      if(entry && isFinite(entry.kpUsed)){
+        kp = entry.kpUsed;
+        kpSource = entry.isOverridden ? '3d-forecast' : '27d-forecast';
+      }
+    }
+    if(kpSource === 'fallback=0' && window._lastKp && isFinite(window._lastKp.kp)){
+      kp = window._lastKp.kp;
+      kpSource = 'live';
+    }
+  }
   const r = computeAi(d, kp);
   const G = Math.round((kp - 2 + r.Ai) * 100) / 100;
   const out = {
     date: fmtDate(d),
     Kp: kp,
+    kpSource,
     Li: r.Li, Mi: r.Mi, ei: r.ei, Pi: r.Pi, Di: r.Di,
     G,
     formula: `G = Kp − 2 + L + M + e + P + D = ${kp} − 2 + ${r.Li} + ${r.Mi} + ${r.ei} + ${r.Pi} + ${r.Di} = ${G}`,
@@ -3195,7 +3224,7 @@ window.__debugG = function(input, kpOverride){
     explain: r.explain,
     eclipseUnverified: r.eclipseUnverified
   };
-  console.log(`[__debugG] ${out.date} (Kp=${kp})`);
+  console.log(`[__debugG] ${out.date} (Kp=${kp}, source=${kpSource})`);
   console.log(out.formula);
   console.table({ Li: r.Li, Mi: r.Mi, ei: r.ei, Pi: r.Pi, Di: r.Di, G });
   console.log('Li:', r.lTip);
@@ -3257,9 +3286,10 @@ function computeMiFromEclipses(dateUTC){
       _eclipseCatalogWarned.add(y);
       console.warn(`[eclipse] Catalog ends ${ECLIPSE_CATALOG_END_YEAR}; year ${y} returns Mi=0 (no data)`);
     }
+    // v87.57: clearer tooltips
     return {Mi:0, mTip: y > ECLIPSE_CATALOG_END_YEAR
-      ? `0 — каталог закінчується ${ECLIPSE_CATALOG_END_YEAR}`
-      : '0 — даних про затемнення на рік немає'};
+      ? `0 — каталог NASA ${y} недоступний (закінчується ${ECLIPSE_CATALOG_END_YEAR})`
+      : `0 — каталог затемнень за ${y} ще не завантажено`};
   }
 
   const ds   = fmtDate(dateUTC);
@@ -3317,7 +3347,7 @@ function computeMiFromEclipses(dateUTC){
       return {Mi: WEIGHT_M_ECLIPSE['Період впливу затемнень'], mTip:'-1 — період впливу затемнення'};
     }
   }
-  return {Mi:0, mTip:'0 — поза періодом затемнень'};
+  return {Mi:0, mTip:`0 — поза періодом затемнень (каталог ${y}: ${set.size} ${set.size===1?'подія':'подій'})`};
 }
 
 // ------------------- Додаткові обчислювані події (без Інтернету) ------------
@@ -12814,7 +12844,7 @@ document.addEventListener('DOMContentLoaded',()=>{
           close.onclick = () => { pre.remove(); close.remove(); };
           let out = `=== __debugG dump (${results.length} days) ===\n\n`;
           results.forEach(r => {
-            out += `── ${r.date} ──\n`;
+            out += `── ${r.date} ──  [Kp source: ${r.kpSource || 'unknown'}]\n`;
             out += `${r.formula}\n`;
             out += `  Li=${r.Li}  Mi=${r.Mi}  ei=${r.ei}  Pi=${r.Pi}  Di=${r.Di}  → G=${r.G}\n`;
             if (r.lTip) out += `  L-tip: ${r.lTip}\n`;
