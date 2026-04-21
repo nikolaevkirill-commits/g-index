@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v87.52</title>
+  <title>G-Index — Космофізичний дашборд v87.54</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -270,9 +270,6 @@
       .profile-btn { font-size: 10px; padding: 3px 7px }
       .gbadge { font-size: 20px !important; padding: 7px 12px !important; min-width: 100px !important }
       #horaLegend { font-size: 10px }
-      /* gTopRow: badge + cat en ligne, summary dessous */
-      #gTopRow { flex-wrap: wrap; gap: 8px; padding: 8px 12px }
-      #gTopSummary { width: 100%; margin-left: 0; font-size: 11px }
     }
 
     /* ── 700px: tables scroll, hide cols ── */
@@ -350,8 +347,6 @@
       #taaraRingWrap svg { width: 150px !important; max-width: 150px !important }
       /* G SVG colorbar */
       details svg[viewBox="0 0 520 96"] { overflow: visible }
-      /* gDecomp chips — wrap tighter */
-      #gDecompChips { flex-wrap: wrap }
       .gd-chip { min-width: 40px; padding: 2px 6px; font-size: 10px }
       /* header title */
       h1 { font-size: 13px }
@@ -379,8 +374,6 @@
       #personalForm > div > div { width: 100% !important; min-width: unset !important; flex: unset !important }
       /* g2watch inputs — full available width */
       .g2watch-inp { width: 100% !important; max-width: 90px }
-      /* gd-chips — 3 per row */
-      #gDecompChips { flex-wrap: wrap }
       .gd-chip { min-width: 44px; padding: 3px 7px }
       /* hora SVG illustration — allow scroll */
       details svg { max-width: 100%; overflow-x: auto }
@@ -455,9 +448,6 @@
       main { padding-bottom: 80px !important; }
       /* Larger touch targets for table rows */
       #threeCard td, #twentysevenCard td { padding: 10px 8px; }
-      /* G badge — prominent on mobile */
-      #gTopRow { padding: 12px 14px; border-radius: 10px; }
-      #gTopBadge { font-size: 26px !important; min-width: 90px !important; }
       /* Science bar items — pill style on mobile */
       .sci-item { font-size: 11px; padding: 5px 8px; background: #0b1424; border-radius: 6px; }
       /* Profile bar — touch scroll */
@@ -467,12 +457,10 @@
       .card { padding: 14px 12px; }
       h2 { font-size: 15px; margin-bottom: 10px; }
       /* Best hora slots — stack */
-      #bestSlots { flex-direction: column; gap: 6px; }
       .best-slot { width: 100%; }
     }
 
     @media (max-width: 400px) {
-      #gTopBadge { font-size: 22px !important; }
       /* Science bar — 2 per row, compact */
       #scienceBar { grid-template-columns: 1fr 1fr; gap: 4px; }
       .sci-item { font-size: 10px; padding: 4px 6px; }
@@ -848,8 +836,6 @@
     #cosmicMapWrap>*{position:relative;z-index:1}
     #heroG::after{content:"";position:absolute;inset:-30%;background:linear-gradient(120deg,transparent 25%,rgba(255,255,255,.13) 50%,transparent 75%);transform:translateX(-140%);animation:heroShimmer 6s linear infinite}
     @keyframes heroShimmer{0%{transform:translateX(-140%)}100%{transform:translateX(140%)}}
-    #superSignal{transition:border-color .3s ease}
-    #superSignalBadge{font-size:16px;letter-spacing:.05em}
     #astroGrid>summary{transition:background .2s ease,box-shadow .2s ease}
     #astroGrid>summary:hover{box-shadow:0 0 20px rgba(55,167,255,.15)}
     #astroGrid[open]>summary{background:linear-gradient(135deg,rgba(15,26,47,.95),rgba(10,20,40,.95))}
@@ -911,7 +897,6 @@
     #impactBlock{gap:10px!important;margin-bottom:8px!important;grid-template-columns:1fr 1fr 1fr!important}
     #impactBlock>div{padding:8px 12px!important}
     #mainGrid{gap:10px!important;margin-bottom:10px!important}
-    #trustStrip{display:none!important}
     /* C2: core grid compressed */
     #coreGrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px;align-items:start}
     @media(max-width:980px){#coreGrid{grid-template-columns:1fr}}
@@ -3168,6 +3153,50 @@ window.__testEclipseCatalog = function(){
   console.table(results);
   console.log(`[eclipse-test] ${pass}/${cases.length} passed, ${fail} failed`);
   return {pass, fail, total:cases.length, results};
+};
+
+// v87.53: console debug helper — розкриває компоненти G для заданої дати.
+// Запуск: window.__debugG('2026-04-27') або window.__debugG(new Date())
+// Повертає { Kp, Li, Mi, ei, Pi, Di, G, explain, eTip, pTip, lTip, mTip, diTip }
+// Призначено для діагностики architectural gaps (Q2 audit v87.52: G=-3.9 на 27.04).
+window.__debugG = function(input, kpOverride){
+  let d;
+  if(input instanceof Date){ d = input; }
+  else if(typeof input === 'string'){
+    // Нормалізація YYYY-MM-DD → noon UTC (узгоджено з forward timeline)
+    const m = input.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if(m){ d = new Date(Date.UTC(+m[1], +m[2]-1, +m[3], 12, 0, 0)); }
+    else { d = new Date(input); }
+  } else { d = new Date(); }
+  if(!isFinite(d.getTime())){
+    console.error('[__debugG] invalid date:', input);
+    return null;
+  }
+  // Kp: override або з live/forecast якщо today, інакше 0
+  let kp = 0;
+  if(typeof kpOverride === 'number' && isFinite(kpOverride)) kp = kpOverride;
+  else if(window._lastKp && isFinite(window._lastKp.kp)) kp = window._lastKp.kp;
+  const r = computeAi(d, kp);
+  const G = Math.round((kp - 2 + r.Ai) * 100) / 100;
+  const out = {
+    date: fmtDate(d),
+    Kp: kp,
+    Li: r.Li, Mi: r.Mi, ei: r.ei, Pi: r.Pi, Di: r.Di,
+    G,
+    formula: `G = Kp − 2 + L + M + e + P + D = ${kp} − 2 + ${r.Li} + ${r.Mi} + ${r.ei} + ${r.Pi} + ${r.Di} = ${G}`,
+    lTip: r.lTip, mTip: r.mTip, eTip: r.eTip, pTip: r.pTip, diTip: r.diTip,
+    explain: r.explain,
+    eclipseUnverified: r.eclipseUnverified
+  };
+  console.log(`[__debugG] ${out.date} (Kp=${kp})`);
+  console.log(out.formula);
+  console.table({ Li: r.Li, Mi: r.Mi, ei: r.ei, Pi: r.Pi, Di: r.Di, G });
+  console.log('Li:', r.lTip);
+  console.log('Mi:', r.mTip);
+  console.log('ei:\n' + r.eTip);
+  console.log('Pi:', r.pTip);
+  console.log('Di:', r.diTip);
+  return out;
 };
 
 async function ensureEclipsesForYear(year){
@@ -6683,10 +6712,13 @@ function syncHero(){
       hd.textContent = _sign + dn.toFixed(2);
       hd.style.color=dn>0.05?'var(--ok)':dn<-0.05?'var(--bad)':'var(--muted)';
       hd.style.display='';
+      // v87.53: явно пояснюємо що delta = runtime snapshot (24h), не daily average
+      hd.title = 'Δ G за ~24 год (runtime snapshot, оновлюється кожні 5 хв).\nЦе не daily average — історія у 30-day графіку рахується інакше.';
     } else {
       // Нема історії — ховаємо блок до другого refresh
       hd.textContent='';
       hd.style.display='none';
+      hd.title = '';
     }
   }
 
@@ -6703,8 +6735,11 @@ function syncHero(){
                        : dn > 0 ? (_absd >= 0.5 ? 'var(--ok)' : '#9fd7b4')
                                 : (_absd >= 0.5 ? 'var(--bad)' : '#e79a9a');
       _hdi.style.opacity = _absd < 0.1 ? '.6' : '1';
+      // v87.53: hint про природу delta (runtime 24h, не daily average)
+      _hdi.title = 'Δ G за ~24 год (runtime snapshot).\nРізниться з daily історією — це нормально.';
     } else {
       _hdi.textContent = '';
+      _hdi.title = '';
     }
   }
 
