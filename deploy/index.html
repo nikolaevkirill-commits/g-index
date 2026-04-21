@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v87.58</title>
+  <title>G-Index — Космофізичний дашборд v87.59</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -6969,7 +6969,7 @@ function syncHero(){
   try{
     const _greet = el('heroGreeting');
     if(_greet){
-      const _pData = lsGet('personalSlot_0');
+      const _pData = lsGet('personalData_0');
       const _pName = _pData ? (JSON.parse(_pData).name || '') : '';
       if(_pName){
         const _gTexts = {
@@ -8059,7 +8059,7 @@ async function loadAll(){
   // Wolf Sn
   if(snR.status === 'fulfilled'){
     window._lastWolfSn = parseWolfSn(snR.value);
-    if (window._lastWolfSn) { lsSet('last_sn_known', window._lastWolfSn.sn); _setSrcStatus('srcSn','ok'); } else { _setSrcStatus('srcSn','error'); }
+    if (window._lastWolfSn) { _setSrcStatus('srcSn','ok'); } else { _setSrcStatus('srcSn','error'); }
     if(window._lastWolfSn){
       const snEl = el('nowSn');
       const {sn, dateStr, provisional} = window._lastWolfSn;
@@ -8094,7 +8094,6 @@ async function loadAll(){
         sciXrayEl.style.color = letter === 'X' ? '#ff4444' : letter === 'M' ? '#ff9944' : letter === 'C' ? '#ffcc44' : '#63be7b';
         sciXrayEl.style.fontWeight = (letter === 'X' || letter === 'M') ? '800' : '600';
         lsSet('last_xray_class', xr.class);
-        lsSet('last_xray_flux', xr.flux);
         _setSrcStatus('srcXray','ok');
       } else {
         const cached = lsGet('last_xray_class');
@@ -9653,6 +9652,8 @@ function initPersonalCalc() {
     document.getElementById('pTime').value    = saved.time || '';
     document.getElementById('pUtcOff').value  = saved.utcOff ?? 2;
     document.getElementById('pProfile').value = saved.profile || 'off';
+    // v87.59: відновити _activeProfile зі slot — без цього після reload profile не активний
+    if(saved.profile && saved.profile !== 'off') setProfile(saved.profile);
     renderPersonal();
   } else {
     form.style.display = 'block';
@@ -10838,7 +10839,8 @@ function setProfile(p) {
 // ─── v32: Вікова поправка — читає ageAdj з профілю ─────────────────────────
 function getAgeAdj(profileKey) {
   try {
-    const data = JSON.parse(lsGet('personalData') || 'null');
+    // v87.59: migrated from legacy 'personalData' key to slot API (getSlotData(0))
+    const data = getSlotData(0);
     // Зчитати вік: спочатку явне поле age, потім розрахунок з date
     let age = null;
     if (data && typeof data.age === 'number' && data.age >= 18) {
@@ -12073,7 +12075,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Apply selected profile if any
     if(_obProfile){
       try{
-        localStorage.setItem('gidx_profile', _obProfile);
+        // v87.59: gidx_profile write removed — orphan key (никогда не читалось).
+        // Профіль застосовується через setProfile() нижче + зберігається у getSlotData(0).profile при "Зберегти" у формі.
         // trigger profile change in main app if function exists
         if(typeof setProfile === 'function') setProfile(_obProfile);
         else if(typeof _activeProfile !== 'undefined') window._activeProfile = _obProfile;
