@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v87.59</title>
+  <title>G-Index — Космофізичний дашборд v87.60</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -7474,11 +7474,17 @@ function _renderHeroTimeWindows() {
     const remaining = endMinutes - nowMinutes;
     if (remaining > 0 && nextIdx >= 0) {
       const nextG = slots[nextIdx].G;
-      const dir = nextG > slots[currentIdx].G ? '↑ покращення' : nextG < slots[currentIdx].G ? '↓ погіршення' : '→ без змін';
+      const curG = slots[currentIdx].G;
       const hrs = Math.floor(remaining / 60);
       const mins = remaining % 60;
       const timeStr = hrs > 0 ? `${hrs}г ${mins}хв` : `${mins}хв`;
-      shiftEl.innerHTML = `<div class="next-shift-badge"><span class="live-dot"></span>Зміна через ${timeStr} ${dir}</div>`;
+      // v87.60 Fix #3: уникнути оксюморону "Зміна через X → без змін".
+      // Якщо G не змінюється — говорити про перехід слоту, не про зміну стану.
+      let badgeText;
+      if (nextG > curG)      badgeText = `Зміна через ${timeStr} · ↑ покращення`;
+      else if (nextG < curG) badgeText = `Зміна через ${timeStr} · ↓ погіршення`;
+      else                   badgeText = `Наступний слот через ${timeStr} · фон стабільний`;
+      shiftEl.innerHTML = `<div class="next-shift-badge"><span class="live-dot"></span>${badgeText}</div>`;
     } else {
       shiftEl.innerHTML = '';
     }
@@ -10989,7 +10995,19 @@ function renderProfileRec() {
   el_.innerHTML = `<span style="font-weight:700;color:${prof.color}">${prof.label}:</span> ${rec}${ageLine}`;
 }
 
-addEventListener('load', ()=>{ initGeolocation(); setStamp(); loadAll(); el('btnCsv').addEventListener('click', exportCsv); const _bIcs=el('btnIcs'); if(_bIcs) _bIcs.addEventListener('click', exportICS); el('selInterval').addEventListener('change', updateAutoRefStatus); initPersonalCalc(); initLangToggle(); initG2Watch(); /* v87.28: страхувальний рендер compare periods — не залежить від NOAA */ try{ if(typeof renderComparePeriods === 'function') renderComparePeriods(); }catch(e){} });
+addEventListener('load', ()=>{ initGeolocation(); setStamp(); loadAll(); el('btnCsv').addEventListener('click', exportCsv); const _bIcs=el('btnIcs'); if(_bIcs) _bIcs.addEventListener('click', exportICS); el('selInterval').addEventListener('change', updateAutoRefStatus); initPersonalCalc(); initLangToggle(); initG2Watch(); /* v87.28: страхувальний рендер compare periods — не залежить від NOAA */ try{ if(typeof renderComparePeriods === 'function') renderComparePeriods(); }catch(e){}
+  // v87.60 Fix #1: live UTC/local tick. setStamp раніше викликався тільки при loadAll (раз на ~10 хв) → UTC-лейбл відставав.
+  // Тепер оновлюємо localNow і utcNow кожну секунду. stamp ('Оновлено:') залишається часом останнього fetch — це правильна семантика.
+  try {
+    setInterval(function(){
+      try {
+        const _n = new Date();
+        const _lEl = el('localNow'); if(_lEl) _lEl.textContent = fmtLocal(_n);
+        const _uEl = el('utcNow');   if(_uEl) _uEl.textContent = fmtUTC(_n);
+      } catch(e){}
+    }, 1000);
+  } catch(e){}
+});
 el('btnRefresh').addEventListener('click', loadAll);
 
 // ========================= i18n EN/UA =========================
