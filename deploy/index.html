@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v87.57</title>
+  <title>G-Index — Космофізичний дашборд v87.58</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -3187,11 +3187,13 @@ window.__debugG = function(input, kpOverride){
       if(nasa) eclipsesByYear.set(y, nasa);
     }
   } catch(e){}
-  // Kp: priority (v87.57 fix):
+  // Kp: priority (v87.58 fix — використовуємо реальні змінні з module scope):
   //   1. explicit kpOverride param
   //   2. _27dComputed entry по ds (охоплює 27 днів — від -3 до +~23 від today)
-  //   3. _lastKp.kp (live) — fallback тільки якщо нема інших
-  //   4. 0 — фінальний fallback
+  //   3. last3D entry по ds (3-day forecast, якщо 27d ще не fetched)
+  //   4. lastWWV.kNow (live observation)
+  //   5. localStorage last_kp_known (cached)
+  //   6. 0 — фінальний fallback
   let kp = 0;
   let kpSource = 'fallback=0';
   if(typeof kpOverride === 'number' && isFinite(kpOverride)) {
@@ -3206,9 +3208,22 @@ window.__debugG = function(input, kpOverride){
         kpSource = entry.isOverridden ? '3d-forecast' : '27d-forecast';
       }
     }
-    if(kpSource === 'fallback=0' && window._lastKp && isFinite(window._lastKp.kp)){
-      kp = window._lastKp.kp;
+    if(kpSource === 'fallback=0' && typeof last3D !== 'undefined' && last3D && Array.isArray(last3D.days)){
+      const e3 = last3D.days.find(x => fmtDate(x.date) === ds);
+      if(e3 && isFinite(e3.kpMax)){
+        kp = e3.kpMax;
+        kpSource = '3d-forecast';
+      }
+    }
+    if(kpSource === 'fallback=0' && typeof lastWWV !== 'undefined' && lastWWV && isFinite(lastWWV.kNow)){
+      kp = lastWWV.kNow;
       kpSource = 'live';
+    }
+    if(kpSource === 'fallback=0'){
+      try {
+        const _lsKp = parseFloat(lsGet('last_kp_known'));
+        if(isFinite(_lsKp)){ kp = _lsKp; kpSource = 'ls-cache'; }
+      } catch(e){}
     }
   }
   const r = computeAi(d, kp);
