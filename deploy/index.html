@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v87.54</title>
+  <title>G-Index — Космофізичний дашборд v87.56</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1182,8 +1182,15 @@
       <span style="margin-left:auto;display:inline-flex;align-items:center;gap:8px">
         <span id="sciMoreToggle" onclick="toggleSciMore()" style="cursor:pointer;color:var(--faint);font-size:11px;white-space:nowrap;user-select:none">▸ детально</span>
         <!-- v87.16: dev контроли приховано з production (були ✦ v86 toggle і 🗑 Кеш — доступні через URL ?dev=1) -->
-        <button id="btnV86Radial" onclick="(function(){try{const cur=localStorage.getItem('v86_radial')==='1';const next=cur?'0':'1';localStorage.setItem('v86_radial', next);localStorage.setItem('v86_heat', next);location.reload();}catch(e){}})()" style="display:none;background:#1a0f2a;color:#d28cff;border:1px solid #4a2a6e;font-size:11px;padding:2px 8px;border-radius:6px" title="Перемкнути v86 features: radial G + heat-strip">✦ v86</button>
-        <button id="btnCacheReset" onclick="navigator.serviceWorker.getRegistrations().then(r=>r.forEach(s=>s.unregister()));caches.keys().then(k=>k.forEach(c=>caches.delete(c)));setTimeout(()=>location.reload(),500)" style="display:none;background:#2a1a00;color:#ffcc44;border:1px solid #554400;font-size:11px;padding:2px 8px;border-radius:6px" title="Скинути кеш і перезавантажити">🗑 Кеш</button>
+        <!-- v87.56 Phase 2.1 prep: wrapped into <details id="devMenu"> для масштабування у майбутньому.
+             IDs btnV86Radial / btnCacheReset залишаються як канонічні для JS activation. -->
+        <details id="devMenu" style="display:none;position:relative">
+          <summary style="cursor:pointer;color:var(--faint);font-size:14px;list-style:none;padding:2px 6px;border-radius:4px" title="Dev tools (?dev=1)">⋯</summary>
+          <div id="devMenuPanel" style="position:absolute;right:0;top:100%;margin-top:4px;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:6px;display:flex;flex-direction:column;gap:4px;z-index:50;min-width:140px">
+            <button id="btnV86Radial" onclick="(function(){try{const cur=localStorage.getItem('v86_radial')==='1';const next=cur?'0':'1';localStorage.setItem('v86_radial', next);localStorage.setItem('v86_heat', next);location.reload();}catch(e){}})()" style="background:#1a0f2a;color:#d28cff;border:1px solid #4a2a6e;font-size:11px;padding:4px 8px;border-radius:6px;cursor:pointer;text-align:left" title="Перемкнути v86 features: radial G + heat-strip">✦ v86</button>
+            <button id="btnCacheReset" onclick="navigator.serviceWorker.getRegistrations().then(r=>r.forEach(s=>s.unregister()));caches.keys().then(k=>k.forEach(c=>caches.delete(c)));setTimeout(()=>location.reload(),500)" style="background:#2a1a00;color:#ffcc44;border:1px solid #554400;font-size:11px;padding:4px 8px;border-radius:6px;cursor:pointer;text-align:left" title="Скинути кеш і перезавантажити">🗑 Кеш</button>
+          </div>
+        </details>
       </span>
     </div>
     <!-- Вторинні показники -->
@@ -2171,7 +2178,7 @@ Kp: 3-год індекс геомагнітної активності (0–9)
 
   <!-- ═══ СИМУЛЯТОР G ═══ -->
   <div id="g2watchPanel" style="max-width:1400px;margin:0 auto 16px;padding:0 16px;display:none">
-    <div style="background:#111a2e;border:1px solid #1e2a44;border-radius:16px;padding:20px">
+    <div style="background:var(--card);border:1px solid #1e2a44;border-radius:16px;padding:20px">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
         <span style="font-size:18px;font-weight:700">🧮 Симулятор G</span>
         <span class="muted small">— що буде якщо змінити умови?</span>
@@ -3806,20 +3813,8 @@ const GFZ_AP_TABLE = [
   [8, 179], [8.3, 207],[8.7, 236],[9, 400]
 ]; // [kp, ap]
 
-function apToKpInterp(ap) {
-  if (!isFinite(ap) || ap < 0) return NaN;
-  if (ap <= 0)   return 0;
-  if (ap >= 400) return 9;
-  for (let i = 0; i < GFZ_AP_TABLE.length - 1; i++) {
-    const [kp0, ap0] = GFZ_AP_TABLE[i];
-    const [kp1, ap1] = GFZ_AP_TABLE[i + 1];
-    if (ap >= ap0 && ap < ap1) {
-      const frac = (ap - ap0) / (ap1 - ap0);
-      return Math.round((kp0 + frac * (kp1 - kp0)) * 100) / 100;
-    }
-  }
-  return 9;
-}
+// v87.56: removed apToKpInterp + kpFromApExcel (dead chain, 0 callsites)
+// kpToApInterp kept — used by 27d forecast Ap computation
 
 // Зворотна: Kp → Ap (для 3-day прогнозу)
 function kpToApInterp(kp) {
@@ -3835,9 +3830,6 @@ function kpToApInterp(kp) {
   }
   return 400;
 }
-
-// Залишаємо як alias для сумісності зі старим кодом
-function kpFromApExcel(Ap) { return apToKpInterp(Ap); }
 
 // --------- Нова функція: підказка для G (склад рівно в момент наведення) ----
 function gTooltipText(kLabel, kVal, aiObj){
@@ -5551,13 +5543,7 @@ function renderPanchangaCard(state){
   const rahuAdv = cells[5]?.adv || null;
   const _aiEarly = state._aiEarly;
 
-  function cellClass(s, gCtx){
-    if(s >= 1)  return (gCtx != null && gCtx < -1) ? 'panch-cell' : 'panch-cell pcl-pos';
-    if(s === -1) return 'panch-cell pcl-warn';
-    if(s === -2) return 'panch-cell pcl-bad';
-    if(s <= -3)  return 'panch-cell pcl-vbad';
-    return 'panch-cell';
-  }
+  // v87.56: removed inner cellClass (dead, 0 callsites)
 
   // Компактна таблиця з tooltips по кожному параметру
   // gCtx: при G<-1 зелені елементи показуємо синіми (ок самі по собі, але день поганий)
@@ -6172,7 +6158,6 @@ async function preloadEventsAroundNow(){
 // Hero + Decision + Explain + Story + Radar + Triggers
 function _strip(s){ return String(s||'').replace(/^●\s*/,'').trim(); }
 function _num(s){ const m=String(s||'').replace(',','.').match(/-?\d+(\.\d+)?/); return m?parseFloat(m[0]):NaN; }
-function _short(s,n=180){ s=String(s||'').trim().replace(/\s+/g,' '); return s.length<=n?s:s.slice(0,n-1).trim()+'…'; }
 function _set(id,v){ const n=el(id); if(n) n.textContent=v??'—'; }
 function _firstText(e){ return e?.childNodes?.[0]?.textContent||''; }
 
@@ -7565,72 +7550,10 @@ function resolveDecisionByG(g) {
   };
 }
 
-// --- DECISION ---
-function _decAction(g,kp){
-  if(!isFinite(g)) return 'Немає даних';
-  const st = GLOBAL_STATES[classifyStateByG(g)];
-  let o = st.cmd;
-  if(isFinite(kp)&&kp>=5) o+=' · ⚠ геомагнітна буря';
-  return o;
-}
+// v87.56: DEAD code audit — removed _decAction, _getRegimeShift, v80 noop stubs
+// (syncDecision/syncExplain/syncStory/syncRadar/syncTriggers) — 0 callsites
 
-// v80: syncDecision removed (opsGrid HTML deleted)
-function syncDecision(){}
-
-
-// --- COMPACT EXPLAIN ---
-// v80: syncExplain, syncStory removed (targets deleted)
-function syncExplain(){}
-function syncStory(){}
-
-// --- RADAR ---
-// v80: syncRadar, _getRegimeShift removed (opsGrid HTML deleted)
-function syncRadar(){}
-function _getRegimeShift(){return "";}
-
-// --- TRIGGERS ---
-// v80: syncTriggers removed (triggerList HTML deleted)
-function syncTriggers(){}
-
-// --- v70.3 BEST WINDOW ---
-const _HORA_WIN_BONUS = {
-  'Сатурн':0.6,'Юпітер':0.5,'Меркурій':0.4,'Венера':0.2,'Місяць':0,'Сонце':-0.1,'Марс':-0.4
-};
-function _calcWindowScore(slot, nextSlot, horaSlots){
-  const g=slot.G||0, kp=slot.kp||0;
-  // find hora planet for this 3h slot midpoint
-  const midH=slot.i*3+1.5;
-  let horaPlanet='';
-  if(horaSlots&&horaSlots.length){
-    const h=horaSlots.find(s=>s.startH<=midH&&s.endH>midH);
-    if(h) horaPlanet=h.planet;
-  }
-  const horaB=_HORA_WIN_BONUS[horaPlanet]||0;
-  // stability
-  const nextG=(nextSlot&&isFinite(nextSlot.G))?nextSlot.G:g;
-  const diff=Math.abs(nextG-g);
-  const stabB=diff<=0.3?0.3:diff<=0.7?0.1:-0.4;
-  // freshness — v80: from __uiState
-  const _frS = (window.__uiState?.freshness || 'live');
-  const freshB=_frS==='stale'||_frS==='old'?-0.3:_frS==='cached'?0:0.2;
-  // risk
-  let riskP=0;
-  if(kp>=5) riskP+=1.5; else if(kp>=4) riskP+=0.8; else if(kp>=3.3) riskP+=0.3;
-  return {score:+(g+horaB+stabB+freshB-riskP).toFixed(2), hora:horaPlanet, slotLabel:slot.label};
-}
-
-function _getBestWindow(){
-  const slots=window._daySlots;
-  if(!slots||!slots.length) return null;
-  // get hora slots if available
-  let horaSlots=null;
-  try{ const r=calcAllHoras(new Date()); horaSlots=r.slots; }catch(e){}
-  const scored=slots.map((s,i)=>{
-    const ws=_calcWindowScore(s, slots[i+1]||null, horaSlots);
-    return {...s,...ws};
-  }).sort((a,b)=>b.score-a.score);
-  return {best:scored[0]||null, second:scored[1]||null, worst:scored[scored.length-1]||null};
-}
+// v87.56: removed _HORA_WIN_BONUS + _calcWindowScore + _getBestWindow (dead chain)
 
 // --- v70.3 ASTRO TOP LAYER ---
 function renderMoonRetroTop(){
@@ -7712,9 +7635,7 @@ function renderMoonRetroTop(){
   if(oldBadge) oldBadge.style.display='none';
 }
 
-// --- v70.3 MERGE OPS ---
-// v80: mergeOpsCards removed (opsGrid targets deleted)
-function mergeOpsCards(){}
+// v87.56: removed mergeOpsCards noop (v80 legacy)
 
 // --- WHY BLOCK (decision-first) ---
 function syncPanchSummary(){
@@ -9280,9 +9201,7 @@ function renderPlanetAnimation(kp, moonPhaseDeg, G, panchCtx, astroCtx) {
   }
 }
 
-function taaraDangerClass(danger) {
-  return danger ? 'color:#ff6b6b;font-weight:600' : 'color:#2bd47d;font-weight:600';
-}
+// v87.56: removed taaraDangerClass (dead, 0 callsites)
 
 // ═══ v83: Safe localStorage (single canonical block) ═══
 function lsGet(k, def=''){ try{ const v = localStorage.getItem(k); return v ?? def; }catch(e){ return def; } }
@@ -10480,59 +10399,7 @@ function renderBestTime(dateUTC, kp, G, panchPCL) {
   content.innerHTML = html;
 }
 
-// ========================= G_ОСОБИСТИЙ =========================
-// G_os = G_дня + Δ_Taara + Δ_Dasa + Δ_Hora
-// Kyrylo: https://claude.ai - v39 (backtest Kp from Excel + planet impact panel)
-function calcGPersonal(G, kp) {
-  try {
-    const data = getSlotData(_activeSlot);
-    if (!data || !data.date) return null;
-    const birthJDE = dateToJDE(data.date, data.time, data.utcOff);
-    if (!isFinite(birthJDE)) return null;
-    const nowJDE   = Date.now() / 86400000 + 2440587.5;
-    const natal    = calcNakshatra(calcMoonLongitude(birthJDE), birthJDE);
-    const nowNak   = calcNakshatra(calcMoonLongitude(nowJDE), nowJDE);
-    const taara    = calcTaara(natal.idx, nowNak.idx);
-    const dasa     = calcCurrentDasa(natal.idx, natal.fraction, birthJDE, nowJDE);
-    const hora     = calcHora(new Date());
-
-    // Δ Taara
-    const tDanger = taara.danger;
-    const deltaTaara = tDanger ? -2 : 1;
-
-    // Δ Dasa (Mahadasha)
-    // BUG-6 fix v36: all 9 mahadasha lords (was only 5, Sun sign was wrong)
-    // +: benefic/expansive lords; -: malefic/contracting; 0: neutral
-    const DASA_DELTA = {
-      'Кету'    : -0.5,  // separative, unpredictable
-      'Венера'  : +1.0,  // benefic, comfort, recovery
-      'Сонце'   : -1.0,  // authoritative but stressful, high demand
-      'Місяць'  :  0,    // neutral, mood-dependent
-      'Марс'    : -0.5,  // energy but conflict-prone
-      'Раху'    : -1.0,  // amplifier of chaos/stress
-      'Юпітер'  : +1.0,  // best benefic, wisdom, protection
-      'Сатурн'  : -1.0,  // hardship, discipline, delays
-      'Меркурій': +0.5   // intellect, communication
-    };
-    const deltaDasa = DASA_DELTA[dasa.lordName] ?? 0;
-
-    // Δ Hora (поточна)
-    const HORA_DELTA_GOOD = ['Юпітер','Меркурій','Сонце'];
-    const HORA_DELTA_BAD  = ['Сатурн','Марс'];
-    const deltaHora = HORA_DELTA_GOOD.includes(hora.planet) ? 0.5
-                    : HORA_DELTA_BAD.includes(hora.planet)  ? -0.5 : 0;
-
-    const Gos = Math.max(-5, Math.min(5, G + deltaTaara + deltaDasa + deltaHora));
-    const name = data.name || 'Ви';
-    const parts = [
-      deltaTaara !== 0 ? `Taara ${deltaTaara>0?'+':''}${deltaTaara}` : null,
-      deltaDasa  !== 0 ? `Dasa ${deltaDasa>0?'+':''}${deltaDasa}`    : null,
-      deltaHora  !== 0 ? `Hora ${deltaHora>0?'+':''}${deltaHora}`    : null,
-    ].filter(Boolean).join(', ');
-
-    return { Gos, name, parts, deltaTaara, deltaDasa, deltaHora, taara, dasa };
-  } catch(e) { return null; }
-}
+// v87.56: removed calcGPersonal (legacy v39, 0 callsites; replaced by profile-based Personal system)
 
 // ========================= CO-STAR DAILY BANNER =========================
 // ═══ P3: Safe State Banner ═══
@@ -10663,7 +10530,10 @@ async function shareGState() {
 
 function _copyFallback(text) {
   if (navigator.clipboard) {
-    navigator.clipboard.writeText(text).then(() => _showToast('📋 Скопійовано в буфер'));
+    // v87.56: .catch — Safari/Firefox можуть відмовити у permission-контексті
+    navigator.clipboard.writeText(text)
+      .then(() => _showToast('📋 Скопійовано в буфер'))
+      .catch(() => _showToast('⚠ Не вдалось скопіювати'));
   } else {
     const ta = document.createElement('textarea');
     ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
@@ -11321,8 +11191,7 @@ function syncG2(scenarioLabel) {
   `;
 }
 
-// Залишаємо runG2Watch як alias для сумісності
-function runG2Watch() { syncG2(); }
+// v87.56: removed runG2Watch alias (dead, 0 callsites; syncG2 called directly)
 
 // ═══════════════════════════════════════════════════════════
 // BACKTEST: порівняння G дашборду з Excel prognoz_2025_2026
@@ -11785,7 +11654,7 @@ window.__regressUI = function(){
 
 <!-- PWA disabled v59fix -->
 
-<div id="pwaInstallBar" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:#111a2e;border-top:1px solid #2a3b61;padding:12px 16px;align-items:center;gap:12px;font-size:13px;color:#e7efff;">
+<div id="pwaInstallBar" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:var(--card);border-top:1px solid #2a3b61;padding:12px 16px;align-items:center;gap:12px;font-size:13px;color:#e7efff;">
   <span style="flex:1">📲 <strong>Встановити G-Index</strong> як застосунок</span>
   <button onclick="pwaInstall()" style="background:#37a7ff;color:#001026;padding:7px 14px;border-radius:8px;font-weight:700;border:none;cursor:pointer">Встановити</button>
   <button onclick="pwaDismiss()" style="background:transparent;color:#9bb1dc;padding:7px 10px;border-radius:8px;border:1px solid #2a3b61;cursor:pointer">✕</button>
@@ -11801,7 +11670,7 @@ window.__regressUI = function(){
 <!-- ═══ PAYWALL MODAL v64 ═══════════════════════════════════ -->
 <div id="paywallOverlay" style="display:none;position:fixed;inset:0;z-index:10000;
   background:rgba(5,10,20,.92);align-items:center;justify-content:center;padding:16px">
-  <div style="background:#111a2e;border:1px solid #2a3b61;border-radius:20px;
+  <div style="background:var(--card);border:1px solid #2a3b61;border-radius:20px;
     max-width:480px;width:100%;padding:28px 22px;position:relative;max-height:90vh;overflow-y:auto">
 
     <!-- Close -->
@@ -11999,7 +11868,7 @@ document.addEventListener('DOMContentLoaded', () => {
 <!-- ═══ ONBOARDING v65 ═══════════════════════════════════ -->
 <div id="onboardOverlay" style="display:none;position:fixed;inset:0;z-index:20000;
   background:rgba(5,10,20,.97);align-items:center;justify-content:center;padding:20px">
-  <div style="background:#111a2e;border:1px solid #2a3b61;border-radius:20px;
+  <div style="background:var(--card);border:1px solid #2a3b61;border-radius:20px;
     max-width:400px;width:100%;padding:0;overflow:hidden;position:relative">
 
     <!-- Progress dots -->
@@ -12460,10 +12329,7 @@ function _v73Kp(){
   return _num((_firstText?.(el('nowKp'))||el('nowKp')?.textContent||'').replace(',','.'));
 }
 
-// v80: renderAIExplain, _renderTopDrivers, _bindDriverHover removed (heroTopDrivers no longer in DOM)
-function renderAIExplain(){} // stub
-function _renderTopDrivers(){} // stub
-function _bindDriverHover(){} // stub
+// v87.56: removed renderAIExplain, _renderTopDrivers, _bindDriverHover noop stubs (v80 legacy)
 
 // v80: renderConfidenceBreakdown simplified — reads from __uiState.confPct
 function renderConfidenceBreakdown(){
@@ -12909,15 +12775,64 @@ function _getGDelta(){
 
 document.addEventListener('DOMContentLoaded',()=>{
   setTimeout(()=>{initHeroField();initWowParticles();applyWowFromG()},900);
-  // v87.16: dev controls — показувати при ?dev=1 або localStorage flag
+  // v87.16 + v87.56 Phase 2.1: dev controls — показувати #devMenu при ?dev=1 або localStorage flag
+  // (btnV86Radial / btnCacheReset тепер всередині <details id="devMenu">, IDs preserved)
   try {
     const params = new URLSearchParams(location.search);
     if (params.has('dev') || localStorage.getItem('gindex_dev') === '1') {
+      const dm = document.getElementById('devMenu');
+      if (dm) dm.style.display = '';
+      // Legacy fallback — якщо IDs ще десь наявні окремо (старий DOM), показати їх теж
       ['btnV86Radial','btnCacheReset'].forEach(id => {
         const b = document.getElementById(id);
-        if (b) b.style.display = '';
+        if (b && b.closest('#devMenu') == null) b.style.display = '';
       });
       if (params.get('dev') === '1') localStorage.setItem('gindex_dev','1');
+    }
+    // v87.56: ?debug=1 → запускає __debugG для сьогодні + 7 днів вперед, виводить у DOM block
+    // (для користувачів без доступу до DevTools console). Q2 audit closure.
+    if (params.has('debug')) {
+      // Чекаємо щоб дані (Kp) підвантажились — 2.5с (більше ніж звичайний refresh timeline)
+      setTimeout(() => {
+        try {
+          const days = parseInt(params.get('debug'),10) || 7;
+          const results = [];
+          const today = new Date();
+          for (let i = 0; i <= days; i++) {
+            const d = new Date(today);
+            d.setUTCDate(d.getUTCDate() + i);
+            d.setUTCHours(12, 0, 0, 0);
+            const r = window.__debugG(d);
+            if (r) results.push(r);
+          }
+          // Будуємо DOM block — overlay поверх сторінки, copyable
+          const pre = document.createElement('pre');
+          pre.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;background:#0a0f1e;color:#d5dce8;padding:16px;overflow:auto;font:12px/1.4 monospace;white-space:pre-wrap;margin:0';
+          const close = document.createElement('button');
+          close.textContent = '✕ Закрити';
+          close.style.cssText = 'position:fixed;top:8px;right:8px;z-index:100000;padding:6px 12px;background:#e84b4b;color:#fff;border:0;border-radius:4px;cursor:pointer';
+          close.onclick = () => { pre.remove(); close.remove(); };
+          let out = `=== __debugG dump (${results.length} days) ===\n\n`;
+          results.forEach(r => {
+            out += `── ${r.date} ──\n`;
+            out += `${r.formula}\n`;
+            out += `  Li=${r.Li}  Mi=${r.Mi}  ei=${r.ei}  Pi=${r.Pi}  Di=${r.Di}  → G=${r.G}\n`;
+            if (r.lTip) out += `  L-tip: ${r.lTip}\n`;
+            if (r.mTip) out += `  M-tip: ${r.mTip}\n`;
+            if (r.eTip) out += `  e-tip: ${String(r.eTip).replace(/\n/g,' | ')}\n`;
+            if (r.pTip) out += `  P-tip: ${r.pTip}\n`;
+            if (r.diTip) out += `  D-tip: ${r.diTip}\n`;
+            if (r.eclipseUnverified) out += `  ⚠ eclipse type unverified\n`;
+            out += '\n';
+          });
+          out += '\n(Copy text above and send it. Close with ✕ or ?debug removal from URL.)';
+          pre.textContent = out;
+          document.body.appendChild(pre);
+          document.body.appendChild(close);
+        } catch(err) {
+          console.error('[?debug] dump failed:', err);
+        }
+      }, 2500);
     }
   } catch(e) {}
 });
