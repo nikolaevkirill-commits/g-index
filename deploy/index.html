@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v87.61</title>
+  <title>G-Index — Космофізичний дашборд v87.63</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -23,6 +23,31 @@
   <meta property="og:title" content="G-Index Dashboard" />
   <meta property="og:description" content="Геомагнітна активність + Panchanga у реальному часі" />
   <meta property="og:type" content="website" />
+
+  <!-- v87.63: Supabase backend + VAPID push config -->
+  <script>
+    window._supabase_url      = 'https://hhslrbqyplllleqskpvnx.supabase.co';
+    window._supabase_anon_key = 'sb_publishable_y5WE0OrzEgNXnm5dY1PIYQ_sLVnfCKF';
+    window._vapid_public_key  = 'BLzhwuWEm5MNYnOARVOkXmSvT6ebCrs4OxExGenHzBBrwMai3xHnUMpNmGf7H7iV6VAuNlRJTQlApA0qVECU4IY';
+  </script>
+  <script src="https://esm.sh/@supabase/supabase-js@2?bundle" type="module"></script>
+  <script>
+    // Bridge: @supabase/supabase-js@2 через esm.sh експортує як ES module.
+    // SUPA.init() чекає window.supabase.createClient — підключаємо глобально через dynamic import.
+    (async () => {
+      try {
+        const mod = await import('https://esm.sh/@supabase/supabase-js@2');
+        window.supabase = { createClient: mod.createClient };
+        // Re-trigger init, якщо SUPA уже готовий (DOMContentLoaded міг випередити)
+        if (window.SUPA && typeof window.SUPA.init === 'function') {
+          window.SUPA.init();
+        }
+      } catch (e) {
+        console.warn('[supabase-cdn] failed to load:', e);
+      }
+    })();
+  </script>
+
   <style>
     :root{
       /* Кольори */
@@ -1111,6 +1136,16 @@
 
   <!-- Астро бібліотека: фаза Місяця -->
   <script src="https://cdn.jsdelivr.net/npm/astronomy-engine@2.1.19/astronomy.browser.min.js" defer></script>
+
+  <!-- v87.63: Supabase backend activation -->
+  <script src="https://esm.sh/@supabase/supabase-js@2"></script>
+  <script>
+    // Supabase project: g-index (eu-west-1 Ireland)
+    window._supabase_url      = 'https://hhslrbqyplllleqskpvnx.supabase.co';
+    window._supabase_anon_key = 'sb_publishable_y5WE0OrzEgNXnm5dY1PIYQ_sLVnfCKF';
+    // VAPID public key (для web push) — private НЕ у клієнті
+    window._vapid_public_key  = 'BLzhwuWEm5MNYnOARVOkXmSvT6ebCrs4OxExGenHzBBrwMai3xHnUMpNmGf7H7iV6VAuNlRJTQlApA0qVECU4IY';
+  </script>
 </head>
 <body>
   <header>
@@ -1812,6 +1847,7 @@ Kp: 3-год індекс геомагнітної активності (0–9)
             <th>Категорія</th>
             <th class="col-hide-mobile">Ризик%</th>
             <th>Рекомендація</th>
+            <th title="Engine v17 (rule-based bulletin model). Інша модель — інша шкала. ⚠ означає розбіжність знака з G." style="color:#7ab8d4">Bulletin</th>
             <th id="th27Gos" style="display:none;color:#c8b4ff" title="G_ос = G + Taara-mod (R&D)">G_ос</th>
           </tr></thead>
           <tbody id="twentysevenContent"><tr><td colspan="6" class="muted">Завантаження…</td></tr></tbody>
@@ -2390,6 +2426,9 @@ const SUPA = (function(){
 
   return { init, isConfigured, sendMagicLink, signOut, currentUser, getClient };
 })();
+
+// v87.63: expose на window щоб CDN bridge міг викликати SUPA.init() після dynamic import
+try { window.SUPA = SUPA; } catch(e){}
 
 // Auth modal controller (інертний якщо SUPA не init)
 const AuthModal = {
@@ -4203,6 +4242,25 @@ function draw27dTable(){
       gosCell = `<td style="font-size:12px;font-weight:700;color:${gcol27}" title="G_ос=${sign27}${Gos27.toFixed(2)}: G${isFinite(G)?(G>=0?'+':'')+G.toFixed(2):''} ${gmod27>=0?'+':''}${gmod27} (Taara ${t27.group} ${t27.name})">${sign27}${Gos27.toFixed(2)}</td>`;
     }
 
+    // v87.62: Bulletin cell (engine v17 score) + sign divergence mark
+    let bulletinCell = '<td class="mono muted" style="font-size:12px">—</td>';
+    try {
+      const _bs27 = getEngineScore(r.date);
+      if(_bs27 && isFinite(_bs27.eng)){
+        const _bSign = _bs27.eng >= 0 ? '+' : '';
+        const _bCol = _bs27.eng >= 2 ? '#2bd47d' : _bs27.eng === 1 ? '#9cd49c' : _bs27.eng === 0 ? 'var(--muted)' : _bs27.eng === -1 ? '#ffaa33' : '#ff6b6b';
+        const _bSynth = _bs27.kp_synthetic ? '~' : '';
+        // Sign divergence same rule as 3-day
+        const _gPos27 = G >= 0.5, _gNeg27 = G <= -0.5;
+        const _ePos27 = _bs27.eng > 0, _eNeg27 = _bs27.eng < 0;
+        const _div27 = (_gPos27 && _eNeg27) || (_gNeg27 && _ePos27);
+        const _warn = _div27 ? '<span style="color:#fca474;margin-right:3px" title="Розбіжність знака з G">⚠</span>' : '';
+        const _pdfStr = (_bs27.pdf !== null && _bs27.pdf !== undefined) ? `\nPDF: ${_bs27.pdf>=0?'+':''}${_bs27.pdf}` : '';
+        const _tipB = `Engine v17 score: ${_bSign}${_bs27.eng}\nТег: ${_bs27.tag||'—'}\nKp=${_bs27.kp}${_bs27.kp_synthetic?' (synthetic 2.0)':''}${_pdfStr}${_div27?'\n\n⚠ Знак не співпадає з G — моделі не згодні':''}`;
+        bulletinCell = `<td style="font-size:12px;text-align:center" title="${escapeHtml(_tipB)}">${_warn}<span style="color:${_bCol};font-weight:700">${_bSign}${_bs27.eng}${_bSynth}</span></td>`;
+      }
+    } catch(e){}
+
     html += `<tr style="${rowStyle}${todayStyle}">
       <td class="mono col-date"${isToday?' style="font-weight:700;color:var(--alt)"':''}>${ds}${isToday?' <span style="white-space:nowrap;color:var(--alt)">◀</span>':''}</td>
       ${_nakDotCell}
@@ -4218,6 +4276,7 @@ function draw27dTable(){
       <td style="font-size:12px">${classifyG(isFinite(G)?G:0)}</td>
       <td class="col-hide-mobile" style="font-size:12px">${(()=>{const _p=calcProbabilityLayer({G,csConf:1,horizon:'27day'});return _p?`<span style="font-weight:700;color:${_p.band==='high'?'#ff6b6b':_p.band==='elevated'?'#fca474':_p.band==='moderate'?'#ffcc00':'#2bd47d'}" title="Горизонт 27д — низька точність (×0.55)">~${_p.pSoftPct}%</span>`:'—';})()}</td>
       <td style="font-size:12px;${recommendG(G, kpUsed).style}">${recommendG(G, kpUsed).text}</td>
+      ${bulletinCell}
       ${gosCell}
     </tr>`;
   }
@@ -6187,6 +6246,7 @@ function render3Day(parsed3){
       const col=G<=-2.5?'#ff6b6b':G<=-0.5?'#ffaa33':G>=0.5?'#2bd47d':'#9bb1dc';
       const dd=d.date.getUTCDate()+'.'+(d.date.getUTCMonth()+1);
       // v87.61: Bulletin (engine v17) score line if available
+      // v87.62: + sign divergence alert when G and Bulletin have opposite signs
       let _bulletinLine = '';
       try {
         const _bs = getEngineScore(d.date);
@@ -6194,7 +6254,15 @@ function render3Day(parsed3){
           const _bsSign = _bs.eng >= 0 ? '+' : '';
           const _bsCol = _bs.eng >= 2 ? '#2bd47d' : _bs.eng === 1 ? '#9cd49c' : _bs.eng === 0 ? 'var(--muted)' : _bs.eng === -1 ? '#ffaa33' : '#ff6b6b';
           const _synth = _bs.kp_synthetic ? '~' : '';
-          _bulletinLine = `<div style="font-size:10px;color:var(--dim);margin-top:2px">Bulletin: <span style="color:${_bsCol};font-weight:700">${_bsSign}${_bs.eng}${_synth}</span></div>`;
+          // Sign divergence: G>=0.5 & eng<0, або G<=-0.5 & eng>0. Нейтральний діапазон |G|<0.5 не вважається.
+          const _gPos = G >= 0.5, _gNeg = G <= -0.5;
+          const _ePos = _bs.eng > 0, _eNeg = _bs.eng < 0;
+          const _divergent = (_gPos && _eNeg) || (_gNeg && _ePos);
+          if (_divergent) {
+            _bulletinLine = `<div style="font-size:10px;margin-top:2px;padding:2px 6px;border-radius:4px;background:rgba(255,170,51,.15);border:1px solid rgba(255,170,51,.35)" title="G (live геомагніт) і Bulletin (engine v17 tag-model) показують протилежні знаки. Обережніше з рішеннями — моделі не згодні.">⚠ Bulletin: <span style="color:${_bsCol};font-weight:700">${_bsSign}${_bs.eng}${_synth}</span> <span style="color:var(--faint);font-size:9px">· розбіжність</span></div>`;
+          } else {
+            _bulletinLine = `<div style="font-size:10px;color:var(--dim);margin-top:2px">Bulletin: <span style="color:${_bsCol};font-weight:700">${_bsSign}${_bs.eng}${_synth}</span></div>`;
+          }
         }
       } catch(e){}
       qhtml+=`<span style="flex:1;min-width:140px;padding:8px 14px;border-radius:10px;background:${col}15;border:1px solid ${col}40;text-align:center">
@@ -11051,7 +11119,24 @@ function renderProfileRec() {
 
 addEventListener('load', ()=>{ initGeolocation(); setStamp(); loadAll(); el('btnCsv').addEventListener('click', exportCsv); const _bIcs=el('btnIcs'); if(_bIcs) _bIcs.addEventListener('click', exportICS); el('selInterval').addEventListener('change', updateAutoRefStatus); initPersonalCalc(); initLangToggle(); initG2Watch(); /* v87.28: страхувальний рендер compare periods — не залежить від NOAA */ try{ if(typeof renderComparePeriods === 'function') renderComparePeriods(); }catch(e){}
   // v87.61: load engine_scores.json (Bulletin model) + render heroBulletin
-  try { loadEngineScores().then(()=>{ try{ renderHeroBulletin(); }catch(e){} }); } catch(e){}
+  // v87.62: after scores load, also re-render 3-day pills and 27-day table so Bulletin cells populate.
+  try {
+    loadEngineScores().then(()=>{
+      try{ renderHeroBulletin(); }catch(e){}
+      // Re-draw 27d table if _27dComputed already populated
+      try {
+        if (typeof draw27dTable === 'function' && typeof _27dComputed !== 'undefined' && _27dComputed && _27dComputed.length) {
+          draw27dTable();
+        }
+      } catch(e){}
+      // Re-draw 3-day block if render3Day exists
+      try {
+        if (typeof render3Day === 'function' && typeof last3D !== 'undefined' && last3D) {
+          render3Day(last3D);
+        }
+      } catch(e){}
+    });
+  } catch(e){}
   // v87.60 Fix #1: live UTC/local tick. setStamp раніше викликався тільки при loadAll (раз на ~10 хв) → UTC-лейбл відставав.
   // Тепер оновлюємо localNow і utcNow кожну секунду. stamp ('Оновлено:') залишається часом останнього fetch — це правильна семантика.
   try {
