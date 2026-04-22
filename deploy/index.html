@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v87.63</title>
+  <title>G-Index — Космофізичний дашборд v87.64</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -29,24 +29,43 @@
     window._supabase_url      = 'https://hhslrbqyplllleqskpvnx.supabase.co';
     window._supabase_anon_key = 'sb_publishable_y5WE0OrzEgNXnm5dY1PIYQ_sLVnfCKF';
     window._vapid_public_key  = 'BLzhwuWEm5MNYnOARVOkXmSvT6ebCrs4OxExGenHzBBrwMai3xHnUMpNmGf7H7iV6VAuNlRJTQlApA0qVECU4IY';
+    window._supa_load_log = [];
   </script>
-  <script src="https://esm.sh/@supabase/supabase-js@2?bundle" type="module"></script>
+  <!-- v87.64: multi-CDN fallback chain (UMD builds, не ES module — createClient одразу на window.supabase) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"
+          onload="window._supa_load_log.push('jsdelivr OK'); if(window.SUPA&&window.SUPA.init) window.SUPA.init();"
+          onerror="window._supa_load_log.push('jsdelivr FAIL');"></script>
   <script>
-    // Bridge: @supabase/supabase-js@2 через esm.sh експортує як ES module.
-    // SUPA.init() чекає window.supabase.createClient — підключаємо глобально через dynamic import.
-    (async () => {
-      try {
-        const mod = await import('https://esm.sh/@supabase/supabase-js@2');
-        window.supabase = { createClient: mod.createClient };
-        // Re-trigger init, якщо SUPA уже готовий (DOMContentLoaded міг випередити)
-        if (window.SUPA && typeof window.SUPA.init === 'function') {
-          window.SUPA.init();
-        }
-      } catch (e) {
-        console.warn('[supabase-cdn] failed to load:', e);
+    // Fallback #1: unpkg якщо jsdelivr не спрацював за 2с
+    setTimeout(function(){
+      if (!window.supabase || typeof window.supabase.createClient !== 'function') {
+        window._supa_load_log.push('jsdelivr timeout, trying unpkg');
+        var s = document.createElement('script');
+        s.src = 'https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js';
+        s.onload = function(){ window._supa_load_log.push('unpkg OK'); if(window.SUPA&&window.SUPA.init) window.SUPA.init(); };
+        s.onerror = function(){ window._supa_load_log.push('unpkg FAIL'); };
+        document.head.appendChild(s);
       }
-    })();
+    }, 2000);
+    // Fallback #2: esm.sh через 5с якщо ні UMD не доступний
+    setTimeout(function(){
+      if (!window.supabase || typeof window.supabase.createClient !== 'function') {
+        window._supa_load_log.push('UMD both failed, trying esm.sh dynamic import');
+        (async function(){
+          try {
+            var mod = await import('https://esm.sh/@supabase/supabase-js@2');
+            window.supabase = { createClient: mod.createClient };
+            window._supa_load_log.push('esm.sh OK');
+            if (window.SUPA && window.SUPA.init) window.SUPA.init();
+          } catch(e) {
+            window._supa_load_log.push('esm.sh FAIL: ' + (e.message||e));
+            console.error('[supabase] All CDNs failed. Check network.');
+          }
+        })();
+      }
+    }, 5000);
   </script>
+
 
   <style>
     :root{
@@ -2482,7 +2501,21 @@ const AuthModal = {
       if(msg){ msg.textContent = `✓ Лист надіслано на ${email}. Перевірте пошту.`; msg.style.color = '#2bd47d'; }
       setTimeout(() => AuthModal.hide(), 3500);
     }catch(e){
-      if(msg){ msg.textContent = 'Помилка: ' + (e.message || e); msg.style.color = '#ff6b6b'; }
+      if(msg){
+        let detail = e.message || String(e);
+        // v87.64: якщо Supabase not initialized — показати детальний статус завантаження CDN
+        if (detail.indexOf('not initialized') >= 0 && window._supa_load_log){
+          const _log = window._supa_load_log.join(' → ') || '(CDN ще не викликані)';
+          detail += '\nCDN: ' + _log;
+          if (!window.supabase || !window.supabase.createClient){
+            detail += '\n⚠ Supabase SDK не завантажився (network?)';
+          }
+        }
+        msg.textContent = 'Помилка: ' + detail;
+        msg.style.color = '#ff6b6b';
+        msg.style.whiteSpace = 'pre-wrap';
+        msg.style.fontSize = '10px';
+      }
     }
   }
 };
