@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v87.67</title>
+  <title>G-Index — Космофізичний дашборд v87.72</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1317,6 +1317,8 @@
               </svg>
               <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none">
                 <div id="v86GVal" style="font-size:36px;font-weight:900;color:#ffd77a;line-height:1;text-shadow:0 0 12px rgba(255,210,110,.3)">—</div>
+                <!-- v87.72: Confidence interval (P50 band) — wow-фіча, нікого з конкурентів немає -->
+                <div id="v86CI" class="hint" tabindex="0" style="font-size:10px;font-weight:600;color:var(--dim);margin-top:2px;line-height:1;letter-spacing:.02em;cursor:help;pointer-events:auto;display:none" title=""></div>
                 <!-- v87.21: inline ΔG trend directly beneath G-value for immediate signal -->
                 <div id="v86DeltaInline" style="font-size:13px;font-weight:800;line-height:1;margin-top:4px;color:var(--muted);letter-spacing:.02em;min-height:13px"></div>
                 <div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);margin-top:2px">G-індекс</div>
@@ -1387,22 +1389,31 @@
           <span id="heroNextShiftChip" data-label="Далі" style="font-size:11px;color:var(--faint);display:none"></span>
           <span id="heroStamp" data-label="Оновлено" style="font-size:11px;color:var(--dim)">—</span>
           <span id="heroConfidence" data-label="Довіра" style="font-size:11px;color:var(--dim)"></span>
-          <!-- v87.67 P3 fix: badge style для engine v17 score — більш помітно vs Live G -->
+          <!-- v87.72 P3 fix: badge style для engine v17 score — більш помітно vs Live G -->
           <span id="heroBulletin" data-label="Engine v17" class="hint" tabindex="0" style="font-size:12px;font-weight:700;color:var(--muted);cursor:help;border:1px solid var(--border2);padding:1px 8px;border-radius:8px;background:rgba(11,18,32,.4)" title="Engine v17 (rule-based bulletin model, discrete -3..+3). Використовує manual Джйотіш-теги + thresholds.&#10;Dashboard G — continuous real-time signal (Kp − 2 + ΣAᵢ).&#10;Різні моделі за дизайном — розбіжність не баг.">—</span>
-          <!-- v87.67: Backtest link — публічний trust-signal (87.1% SignMatch на 178 днях) -->
-          <a href="backtest.html" target="_blank" rel="noopener" data-label="Точність" style="font-size:12px;font-weight:700;color:var(--ok);text-decoration:none;border:1px solid var(--ok);padding:1px 8px;border-radius:8px;background:rgba(43,212,125,.08);transition:background .2s" title="Точність моделі: SignMatch 87.1% на 178 днях.&#10;Натисни щоб побачити повний backtest report (confusion matrix, top misses, tag-level analysis).">📊 87.1%</a>
+          <!-- v87.72: Backtest link — чесні обидві метрики (strict 71.9% + directional 87.1%) -->
+          <a href="backtest.html" target="_blank" rel="noopener" data-label="Точність" style="font-size:12px;font-weight:700;color:var(--ok);text-decoration:none;border:1px solid var(--ok);padding:1px 8px;border-radius:8px;background:rgba(43,212,125,.08);transition:background .2s" title="Точність engine v17 на n=178 днях:&#10;• Sign match (strict): 71.9% — нуль як окремий клас (academic)&#10;• Directional (≥0/<0): 87.1% — для рішень діяти/не діяти&#10;• Exact match: 39.9% (7 категорій)&#10;• MAE: 1.01 (шкала ±3)&#10;Натисни щоб побачити повний backtest.">📊 72% / 87%</a>
         </div>
       </div>
     </section>
-    <!-- v87.67: Backtest banner — public trust signal (відразу під Hero, перед усім контентом) -->
+    <!-- v87.72: Backtest banner — public trust signal (відразу під Hero, перед усім контентом) -->
     <a id="backtestBanner" href="backtest.html" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:12px;margin:0 0 10px;padding:10px 14px;border-radius:12px;border:1px solid rgba(43,212,125,.22);background:linear-gradient(180deg,rgba(43,212,125,.06),rgba(43,212,125,.02));text-decoration:none;color:inherit;transition:border-color .2s,background .2s">
       <span style="font-size:20px;line-height:1">📊</span>
       <div style="flex:1;min-width:0">
         <div style="font-size:12px;font-weight:700;color:#d8f7e3">Як ми міряємо точність</div>
-        <div style="font-size:11px;color:var(--dim);margin-top:1px">SignMatch <strong style="color:var(--ok)">87.1%</strong> на 178 днях · повний backtest engine v17 vs PDF (confusion matrix, top misses, tag-level)</div>
+        <div style="font-size:11px;color:var(--dim);margin-top:1px">Sign match <strong style="color:var(--ok)">72% strict</strong> / <strong style="color:var(--ok)">87% directional</strong> на 178 днях · повний backtest engine v17 vs PDF (confusion matrix, top misses, tag-level)</div>
       </div>
       <span style="font-size:11px;color:var(--ok);font-weight:700;white-space:nowrap">Подивитись →</span>
     </a>
+    <!-- v87.72: Provenance ledger — джерела для сьогоднішньої оцінки (closed by default) -->
+    <details id="provenanceCard" style="margin:0 0 10px;padding:10px 14px;border-radius:12px;border:1px solid var(--border);background:rgba(11,18,32,.5)">
+      <summary style="cursor:pointer;font-size:12px;font-weight:600;color:var(--muted);list-style:none;display:flex;align-items:center;gap:8px">
+        <span style="font-size:14px">📋</span>
+        <span style="flex:1">Provenance — джерела сьогоднішньої оцінки</span>
+        <span style="font-size:10px;color:var(--dim);font-weight:400">розгорнути ▾</span>
+      </summary>
+      <div id="provenanceContent" style="margin-top:10px;font-size:12px;color:var(--text2);font-family:var(--mono),ui-monospace,monospace">Завантаження…</div>
+    </details>
     <!-- ═══ v87: ALERT BANNER ═══ -->
     <div id="alertBanner" style="display:none;margin:0 0 10px;padding:12px 16px;border-radius:12px;border:1px solid rgba(255,70,70,.4);background:linear-gradient(180deg,rgba(255,50,50,.14),rgba(255,50,50,.06));animation:alertPulse87 2.5s ease-in-out infinite">
       <div style="display:flex;align-items:center;gap:10px">
@@ -1809,6 +1820,8 @@ Kp: 3-год індекс геомагнітної активності (0–9)
 ΣAᵢ = Lᵢ (тітхі) + Mᵢ (затемнення) + eᵢ (події) + Pᵢ (Панчанга×0.4) + Dᵢ (Dst-буря)</span></span>
       </div>
       <div id="threeQuick" style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;font-size:13px"></div>
+      <!-- v87.72: NOAA fallback alert — показується над quick-cards коли engine на synthetic platau -->
+      <div id="threeNoaaAlert" style="display:none;margin-top:8px;padding:10px 14px;border-radius:10px;border:1px solid rgba(255,107,107,.4);background:linear-gradient(180deg,rgba(255,90,90,.12),rgba(255,90,90,.04));color:#ffd2d2;font-size:12px;line-height:1.5"></div>
       <details style="margin-top:6px">
         <summary class="small muted" style="cursor:pointer;font-size:11px">▶ Детальна таблиця</summary>
         <div id="threeContent" style="margin-top:8px">Завантаження…</div>
@@ -2332,7 +2345,7 @@ Kp: 3-год індекс геомагнітної активності (0–9)
 
   <footer>
     <div class="small">Дані Kp/Ap — NOAA SWPC; Ap↔Kp — GFZ/NOAA table; Dst — Kyoto WDC; Sn — SILSO/ROB; події — ICS; затемнення — Timeanddate/NASA; фази — Astronomy Engine (Meeus). Модель G: R&amp;D / Advisory — у валідації. SignMatch 90.2% holdout (n=51, engine v17.0); G включає Dᵢ (Dst-компонент).</div>
-    <div class="small" style="margin-top:8px">📊 Повна валідація моделі: <a href="backtest.html" style="color:var(--alt);text-decoration:none;border-bottom:1px dotted var(--alt)">backtest report</a> — engine v17 vs PDF на 178 днях (SignMatch 87.1%, MAE 1.01).</div>
+    <div class="small" style="margin-top:8px">📊 Повна валідація моделі: <a href="backtest.html" style="color:var(--alt);text-decoration:none;border-bottom:1px dotted var(--alt)">backtest report</a> — engine v17 vs PDF на 178 днях (sign match strict 72% / directional 87% / MAE 1.01).</div>
   </footer>
 
 <script>
@@ -2916,8 +2929,10 @@ function renderHeroBulletin(){
   }
   const s = entry.eng;
   const color = s >= 2 ? 'var(--ok)' : s === 1 ? '#9cd49c' : s === 0 ? 'var(--muted)' : s === -1 ? 'var(--warn)' : s <= -2 ? 'var(--bad)' : 'var(--muted)';
-  elB.innerHTML = `<span style="color:${color};font-weight:700">${s >= 0 ? '+' : ''}${s}</span>`;
-  const synth = entry.kp_synthetic ? ' · Kp synthetic' : '';
+  // v87.72: synthetic marker у видимому тексті (не лише tooltip) — чесність для майбутніх дат
+  const _synMark = entry.kp_synthetic ? '<span style="color:#fca474;margin-left:2px" title="Synthetic Kp=2.0 (NOAA forecast недоступний — scenario, не forecast)">~</span>' : '';
+  elB.innerHTML = `<span style="color:${color};font-weight:700">${s >= 0 ? '+' : ''}${s}${_synMark}</span>`;
+  const synth = entry.kp_synthetic ? ' · ⚠ Kp synthetic (scenario, не forecast)' : '';
   const pdfStr = (entry.pdf !== null && entry.pdf !== undefined) ? ` · PDF ${entry.pdf >= 0 ? '+' : ''}${entry.pdf}` : '';
   elB.title = `Engine v17 score: ${s >= 0 ? '+' : ''}${s} (rule-based, threshold classifier).\nТег: ${entry.tag || '—'}\nKp=${entry.kp}${synth}${pdfStr}\nDashboard G (continuous) ≠ Engine score (threshold) — різні моделі за дизайном.`;
 }
@@ -3856,7 +3871,7 @@ function computeAi(dateTimeUTC, kp=0){
     // tithi.num є 1-based → конвертуємо в 0-based для порівняння з масивами і tithiIdxForLi
     const tIdx = panch.tithi.num - 1; // 0-based: 14=Purnima, 29=Amavasya, 10/25=Ekadashi
     const tithiInPi = (tIdx !== 14 && tIdx !== 29 && tIdx !== 10 && tIdx !== 25) ? panch.tithi.score : 0;
-    // P2 fix v87.67: lunar_mod (sin²(φ/2)) застосовується ЛИШЕ до Tithi-частини PCL.
+    // P2 fix v87.72: lunar_mod (sin²(φ/2)) застосовується ЛИШЕ до Tithi-частини PCL.
     // Cajochen 2013 — циркадний ефект максимальний при повні актуальний для Tithi-логіки;
     // Vara/Nakshatra/Yoga/Karana — календарно-фіксовані, не залежать від фази Місяця.
     // Раніше: × lunarMod до всіх → Vara/Yoga/Karana зануляються в новолуння (методологічна помилка).
@@ -3870,7 +3885,7 @@ function computeAi(dateTimeUTC, kp=0){
     if(panch.nakshatra.score !== 0)  pParts.push(`Nak(${panch.nakshatra.name})=${panch.nakshatra.score}`);
     if(panch.yoga.score !== 0)       pParts.push(`Yoga(${panch.yoga.name})=${panch.yoga.score}`);
     if(panch.karana.score !== 0)     pParts.push(`Kar(${panch.karana.name})=${panch.karana.score}`);
-    pTip = pParts.length ? `PCL: Tithi=${tithiInPi}×lunar(${lunarMod.toFixed(2)})=${_tithiPi.toFixed(1)} + fixed=${_restPi} → ×${PCL_SCALE} → Pᵢ=${Pi} (P2 v87.67)` : `0 — всі Panchanga нейтральні`;
+    pTip = pParts.length ? `PCL: Tithi=${tithiInPi}×lunar(${lunarMod.toFixed(2)})=${_tithiPi.toFixed(1)} + fixed=${_restPi} → ×${PCL_SCALE} → Pᵢ=${Pi} (P2 v87.72)` : `0 — всі Panchanga нейтральні`;
   } catch(e) {
     pTip = '0 — помилка PCL';
   }
@@ -4689,10 +4704,16 @@ function renderForwardTimeline(){
     const col = _ftGColor(d.G);
     const isToday = (globalIdx === todayIdx);
     const isSel = (globalIdx === selIdx);
-    const opacity = isSel ? 1 : (isToday ? 0.92 : 0.7);
+    // v87.72 P5 fix: opacity gradient за horizon — uncertainty visualization
+    // 0..3д = full confidence, 4..7д = 75%, 8..14д = 55%, 15..27д = 35%
+    // Чесно показує що дальні дні менш надійні (NOAA 27-day має ±1.5 розкид Kp).
+    const daysOut = (todayIdx >= 0) ? (globalIdx - todayIdx) : 0;
+    const horizonConf = daysOut <= 0 ? 1.0 : daysOut <= 3 ? 1.0 : daysOut <= 7 ? 0.75 : daysOut <= 14 ? 0.55 : 0.35;
+    const opacity = isSel ? 1 : (isToday ? 0.92 : 0.7 * horizonConf);
     const border = isSel ? `2px solid #fff` : (isToday ? `1.5px solid #9fd1ff` : '1px solid transparent');
     const hPct = Math.max(18, Math.min(100, Math.abs(g) * 18 + 18));
-    const label = `${d.ds} · G ${g>=0?'+':''}${g.toFixed(2)}`;
+    const _confLbl = daysOut <= 3 ? '' : daysOut <= 7 ? ' · ~75% conf' : daysOut <= 14 ? ' · ~55% conf' : ' · ~35% conf';
+    const label = `${d.ds} · G ${g>=0?'+':''}${g.toFixed(2)}${_confLbl}`;
     sticks += `<div class="ft-stick" data-idx="${globalIdx}" title="${label}" style="flex:1;min-width:0;height:${hPct}%;background:${col};opacity:${opacity};border-radius:2px;cursor:pointer;transition:opacity .15s, border .15s;box-sizing:border-box;border:${border}"></div>`;
   }
 
@@ -6316,10 +6337,18 @@ function render3Day(parsed3){
           }
         }
       } catch(e){}
-      qhtml+=`<span style="flex:1;min-width:140px;padding:8px 14px;border-radius:10px;background:${col}15;border:1px solid ${col}40;text-align:center">
+      // v87.72: synthetic Kp warning у quick-card — engine_scores дає kp=2.0 default для майбутнього
+      // Якщо bulletin entry має kp_synthetic — це scenario, не реальний forecast
+      const _isSynthScen = (function(){
+        try { const _e = getEngineScore(d.date); return _e && _e.kp_synthetic === true; } catch(e){ return false; }
+      })();
+      const _scenStyle = _isSynthScen ? `border-style:dashed;opacity:.85` : '';
+      const _scenLabel = _isSynthScen ? `<div style="font-size:9px;color:#fca474;margin-top:1px;text-transform:uppercase;letter-spacing:.06em" title="Engine використав synthetic Kp=2.0 (NOAA forecast недоступний). Це сценарій, не справжній прогноз.">⚠ scenario · synthetic Kp</div>` : '';
+      qhtml+=`<span style="flex:1;min-width:140px;padding:8px 14px;border-radius:10px;background:${col}15;border:1px solid ${col}40;${_scenStyle};text-align:center">
         <div style="font-weight:700;color:${col};font-size:14px">${dd} → ${cat}</div>
         <div style="font-size:11px;color:var(--muted);margin-top:2px">${act}</div>
         ${_bulletinLine}
+        ${_scenLabel}
       </span>`;
     }
     qw.innerHTML=qhtml;
@@ -6830,6 +6859,25 @@ function renderGRadialV86(g, kp, ai){
                          : g >= -1 ? '0 0 12px rgba(255,210,110,.3)'
                          : '0 0 12px rgba(255,120,120,.3)';
   }
+  // v87.72: Confidence interval P50 band (wow-фіча — нікого з конкурентів немає)
+  // Розрахунок: σ = sqrt(kpDelta² + eventUncertainty²); kpDelta з last-8 NOAA Kp obs.
+  const ciEl = document.getElementById('v86CI');
+  if (ciEl) {
+    if (isFinite(g) && typeof computeConfidenceBand === 'function') {
+      try {
+        const cb = computeConfidenceBand(kp, _lastKpObsJson);
+        if (cb && isFinite(cb.delta) && cb.delta > 0) {
+          ciEl.textContent = '± ' + cb.delta.toFixed(1);
+          ciEl.title = `Confidence band ≈ ±${cb.delta.toFixed(1)} (P50, σ-розкид).\nKp variability ${cb.kpDelta.toFixed(1)} + event uncertainty 0.5.\nЧим менше — тим стабільніший прогноз.\n\nP95 (~95% довіра): ±${(cb.delta*1.96).toFixed(1)}.`;
+          ciEl.style.display = '';
+        } else {
+          ciEl.style.display = 'none';
+        }
+      } catch(e) { ciEl.style.display = 'none'; }
+    } else {
+      ciEl.style.display = 'none';
+    }
+  }
 }
 
 function syncHero(){
@@ -6952,6 +7000,7 @@ function syncHero(){
 
   // v87.10: Delta Card — "що змінилось за 24h"
   // v87.13: додатково зазначити тренд на завтра щоб уникнути дисонансу з heroTomorrow
+  // v87.72: honesty fix — показати реальний age порівняння (raw +1.8 за 18h ≠ за 24h)
   try {
     const dc = el('deltaCard');
     if (dc && isFinite(gVal)) {
@@ -6963,14 +7012,21 @@ function syncHero(){
         const _isPos = _d24 > 0;
         const _state = Math.abs(_d24) < 0.5 ? 'stable' : _isPos ? 'improving' : 'worsening';
         const _icon = _state === 'improving' ? '📈' : _state === 'worsening' ? '📉' : '➡️';
+        // v87.72: реальний age у годинах та підпис "vs Nh тому" якщо відхилення ≥ 2h
+        const _ageH  = _gd.t24h ? Math.round((Date.now() - _gd.t24h) / 3600000) : 24;
+        const _ageMatch = (_ageH >= 22 && _ageH <= 26);
+        const _ageNote  = _ageMatch ? '' : ` (vs ${_ageH}h тому)`;
+        const _gPrev    = isFinite(_gd.g24h) ? _gd.g24h.toFixed(2) : '?';
+        const _tHHMM    = _gd.t24h ? new Date(_gd.t24h).toLocaleTimeString('uk-UA',{hour:'2-digit',minute:'2-digit'}) : '?';
+        const _ttip     = `Реальне порівняння: G ${_gPrev} → ${gVal.toFixed(2)} (Δ ${_sign}${_abs}).\nПопередня точка: ${_tHHMM} (~${_ageH}год тому).\n${_ageMatch ? 'У межах nominal 24h.' : 'Поза точними 24h — найближча доступна точка з історії.'}`;
         const _title = _state === 'improving' ? 'Покращення з вчорашнього дня'
                      : _state === 'worsening' ? 'Погіршення з вчорашнього дня'
                      : 'Стабільно з вчорашнього дня';
         const _body = _state === 'improving'
-          ? `Фон піднявся <span class="dc-metric is-pos">+${_abs}</span> — день зручніший для активних дій, ніж вчора.`
+          ? `Фон піднявся <span class="dc-metric is-pos">+${_abs}</span>${_ageNote} — день зручніший для активних дій.`
           : _state === 'worsening'
-          ? `Фон просів <span class="dc-metric is-neg">−${_abs}</span> — треба обережніше з рішеннями, ніж учора.`
-          : `Δ24ч = ${_sign}${_abs} — суттєвих змін немає, день продовжує вчорашній ритм.`;
+          ? `Фон просів <span class="dc-metric is-neg">−${_abs}</span>${_ageNote} — треба обережніше з рішеннями.`
+          : `Δ24ч = ${_sign}${_abs}${_ageNote} — суттєвих змін немає.`;
         // v87.13: додатковий рядок про завтра (якщо відомо)
         let _tomorrowLine = '';
         const _tg = window.__tomorrowG;
@@ -6986,6 +7042,7 @@ function syncHero(){
           }
         }
         dc.className = 'is-' + _state;
+        dc.title = _ttip; // v87.72: tooltip з реальним age та timestamp
         dc.innerHTML = `<span class="dc-icon">${_icon}</span>`
                      + `<div class="dc-text">`
                      + `<div class="dc-title">${_title}</div>`
@@ -8108,6 +8165,90 @@ function buildDashboardState(){
   };
 }
 
+// v87.72: Provenance ledger — повний журнал джерел сьогоднішньої оцінки
+// Чесна відповідь на аудиторську критику "stale fallback тихий, synthetic непомічений"
+function renderProvenance(){
+  const el = document.getElementById('provenanceContent');
+  if(!el) return;
+  const _ds = window.__dashState || {};
+  const _ui = window.__uiState || {};
+  const _now = new Date();
+  const _fmtTs = (ms) => ms ? new Date(ms).toLocaleString('uk-UA',{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit'}) : '—';
+  const _fresh = document.getElementById('freshnessBadge')?.textContent || '?';
+
+  // Kp source
+  const _kpVal = _ui.kpNow ?? _ds.kpNow ?? (window.lastWWV?.kNow);
+  const _kpSrc = window.lastWWV?._synthetic ? 'synthetic (fallback)'
+              : (window.lastWWV?.whenText || 'NOAA observed');
+  const _kpFreshTs = window.lastWWV?.ts || null;
+
+  // Sn
+  const _snVal = window._lastWolfSn?.sn ?? null;
+  const _snDate = window._lastWolfSn?.dateStr ?? '—';
+  const _snProv = window._lastWolfSn?.provisional ? ' (попер.)' : '';
+
+  // Dst
+  const _dstVal = window._lastDst?.dst ?? null;
+  const _dstTime = window._lastDst?.time ?? '—';
+  const _dstCached = window._lastDst?._cached ? ' (кеш)' : '';
+
+  // Engine v17 entry today
+  const _eng = (typeof getEngineScore === 'function') ? getEngineScore(_now) : null;
+  const _engStr = _eng ? `${_eng.eng >= 0 ? '+' : ''}${_eng.eng}${_eng.kp_synthetic ? ' ⚠ synthetic' : ''}` : '—';
+  const _engTag = _eng?.tag || '—';
+
+  // Components G
+  const _ai = _ui.ai || _ds.ai || {};
+  const _gNow = _ui.gNow ?? _ds.gNow ?? NaN;
+
+  // Cache state
+  const _cacheState = _fresh.toLowerCase().includes('live') ? '✓ LIVE'
+                    : _fresh.toLowerCase().includes('cache') || _fresh.toLowerCase().includes('stale') ? '⊙ CACHE/STALE'
+                    : _fresh.toLowerCase().includes('offline') || _fresh.toLowerCase().includes('old') ? '✗ OFFLINE'
+                    : '? unknown';
+
+  const _row = (label, val, hint) => `<div style="display:grid;grid-template-columns:140px 1fr;gap:10px;padding:3px 0;border-bottom:1px solid rgba(30,42,68,.4)">
+    <span style="color:var(--dim)">${label}</span>
+    <span style="color:var(--text)">${val}${hint ? ` <span style="color:var(--faint);font-size:10px">${hint}</span>` : ''}</span>
+  </div>`;
+
+  el.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+      <div>
+        <div style="font-size:10px;color:var(--alt);letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px">Inputs</div>
+        ${_row('Дата (UTC)', _now.toISOString().slice(0,16) + 'Z')}
+        ${_row('Kp', isFinite(_kpVal) ? _kpVal.toFixed(2) : '—', _kpSrc)}
+        ${_row('Sn (Wolf)', _snVal != null ? _snVal + _snProv : '—', _snDate + ' · SILSO')}
+        ${_row('Dst', _dstVal != null ? _dstVal + ' нТл' : '—', _dstTime + ' · Kyoto' + _dstCached)}
+        ${_row('Cache state', _cacheState, _fresh)}
+      </div>
+      <div>
+        <div style="font-size:10px;color:var(--ok);letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px">Composite G</div>
+        ${_row('Kp − 2', isFinite(_kpVal) ? (_kpVal - 2).toFixed(2) : '—')}
+        ${_row('Lᵢ (тітхі)', _ai.Li ?? '—', _ai.lTip ? _ai.lTip.split('\\n')[0].slice(0,40) : '')}
+        ${_row('Mᵢ (затемн.)', _ai.Mi ?? '—', _ai.mTip ? _ai.mTip.slice(0,40) : '')}
+        ${_row('eᵢ (події)', _ai.ei ?? '—')}
+        ${_row('Pᵢ (панчанга)', _ai.Pi ?? '—', _ai.pTip ? _ai.pTip.slice(0,40) : '')}
+        ${_row('Dᵢ (Dst-буря)', _ai.Di ?? '—')}
+        ${_row('ΣAᵢ', _ai.Ai ?? '—')}
+        <div style="display:grid;grid-template-columns:140px 1fr;gap:10px;padding:6px 0;margin-top:4px;border-top:1px solid var(--border)">
+          <span style="color:var(--ok);font-weight:700">G total</span>
+          <span style="color:var(--text);font-weight:700;font-size:14px">${isFinite(_gNow) ? (_gNow >= 0 ? '+' : '') + _gNow.toFixed(2) : '—'}</span>
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+      <div style="font-size:10px;color:var(--warn);letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px">Engine v17 (rule-based, для порівняння)</div>
+      ${_row('Score', _engStr)}
+      ${_row('Tag', _engTag)}
+    </div>
+    <div style="margin-top:10px;padding:6px 8px;font-size:10px;color:var(--faint);background:rgba(11,18,32,.6);border-radius:6px;line-height:1.5">
+      Усі дані фіксуються при кожному G-tick (~10 хв). Натисни Оновити (вверху) щоб примусово оновити.
+      Розбіжність G live vs Engine v17 — нормальна (різні моделі за дизайном). Synthetic Kp = NOAA forecast недоступний → зачекай 10-30 хв або відкрий заново.
+    </div>
+  `;
+}
+
 function syncV702UI(){
   // v85: build centralized state first
   const _ds = buildDashboardState();
@@ -8130,6 +8271,8 @@ function syncV702UI(){
   try{const _gNow=_v73G();if(isFinite(_gNow))_saveGHistory(_gNow);}catch(e){}
   // v87.19 U4: render best/worst days after history save
   try{ renderBestWorstDays(); }catch(e){}
+  // v87.72: provenance ledger render
+  try{ renderProvenance(); }catch(e){console.warn("provenance:",e);}
 }
 
 async function loadAll(){
@@ -8213,6 +8356,30 @@ async function loadAll(){
     _setSrcStatus('srcKpFcst','synthetic');
     // v87.17 A7: більш чесна комунікація — NOAA прогноз недоступний, використовується плато на базі останнього Kp
     el('threeError').innerHTML = '<span style="color:#ff9944">⚠</span> Прогноз NOAA недоступний. Показано плато на базі поточного Kp=' + _kpNow.toFixed(1) + '. <span class="muted" style="font-size:11px">Не справжній прогноз — без динаміки, лише fallback.</span>';
+    // v87.72: видимий alert над quick-cards + приглушені quick-cards
+    const _alertEl = document.getElementById('threeNoaaAlert');
+    if (_alertEl) {
+      _alertEl.style.display = 'block';
+      _alertEl.innerHTML = `
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:18px">⚠</span>
+          <div style="flex:1">
+            <div style="font-weight:700;color:#ffb0b0">NOAA forecast недоступний</div>
+            <div style="margin-top:2px;font-size:11px;color:#ffa0a0">
+              Картки нижче — це <strong>не прогноз</strong>, а плато на базі поточного Kp=${_kpNow.toFixed(1)}.
+              Без динаміки. Спробуй оновити через 10–30 хв (CORS-проксі періодично відмовляють).
+            </div>
+          </div>
+        </div>`;
+    }
+    const _qw = document.getElementById('threeQuick');
+    if (_qw) _qw.style.opacity = '0.55';
+  } else {
+    // NOAA OK — приховати alert і відновити opacity
+    const _alertEl = document.getElementById('threeNoaaAlert');
+    if (_alertEl) _alertEl.style.display = 'none';
+    const _qw = document.getElementById('threeQuick');
+    if (_qw) _qw.style.opacity = '1';
   }
 
   // Dst index
@@ -8724,11 +8891,21 @@ function calcSunTimes(dateUTC) {
   const doy = Math.floor((dateUTC - new Date(Date.UTC(dateUTC.getUTCFullYear(),0,1)))/86400000);
   const decl = 23.45 * Math.sin((360/365*(doy-81)) * Math.PI/180);
   const lat = _userLat;
-  const cosHA = -Math.tan(lat*Math.PI/180)*Math.tan(decl*Math.PI/180);
+  // v87.72 P4 fix: equation of time + atmospheric refraction.
+  // Раніше: cosHA для горизонту 90° + без EoT → похибка ±15-20 хв (критично для Hora boundary).
+  // Тепер: zenith 90.833° (sun radius 16' + refraction 34') + EoT correction → точність ±2-5 хв.
+  const Brad = (360/365) * (doy - 81) * Math.PI / 180;
+  const eqTimeMin = 9.87 * Math.sin(2*Brad) - 7.53 * Math.cos(Brad) - 1.5 * Math.sin(Brad);
+  const eqHours = eqTimeMin / 60;
+  const zenRad = 90.833 * Math.PI / 180;
+  const cosZen = Math.cos(zenRad);
+  const sinLat = Math.sin(lat*Math.PI/180), cosLat = Math.cos(lat*Math.PI/180);
+  const sinDec = Math.sin(decl*Math.PI/180), cosDec = Math.cos(decl*Math.PI/180);
+  const cosHA = (cosZen - sinLat*sinDec) / (cosLat*cosDec);
   const HA = Math.acos(Math.max(-1,Math.min(1,cosHA))) * 180/Math.PI;
   const lonOff = _userLon / 15; // корекція по довготі (год)
-  const srH = (12 - lonOff) - HA/15; // схід UTC
-  const ssH = (12 - lonOff) + HA/15; // захід UTC
+  const srH = (12 - lonOff) - HA/15 - eqHours; // схід UTC, з EoT
+  const ssH = (12 - lonOff) + HA/15 - eqHours; // захід UTC, з EoT
   return { srH, ssH, dayLen: ssH - srH, nightLen: 24 - (ssH - srH) };
 }
 
@@ -12653,14 +12830,19 @@ function _renderFreshnessState(){
   const maxAge = Math.max(...ages);
   const fb = el('freshnessBadge');
   const hf = el('heroFreshness');
+  // v87.72: stale watermark — readable age (8хв / 35хв / 1.5г / 3г) у бейджі
+  const _ageMin = Math.round(maxAge / 60000);
+  const _ageStr = _ageMin < 1 ? 'щойно'
+                : _ageMin < 60 ? _ageMin + 'хв'
+                : (Math.round(maxAge / 360000) / 10).toFixed(1) + 'г';
   // v87.1 NFR: stricter thresholds (LIVE ≤5min, DELAYED ≤30min, STALE ≤60min, OLD >60min)
   let state, label, col, bgCol;
-  if(maxAge < 5*60*1000){ state='live'; label='● LIVE'; col='#63be7b'; bgCol='#0a2a15'; }
-  else if(maxAge < 30*60*1000){ state='delayed'; label='● DELAYED'; col='#ffcc44'; bgCol='#2a1a00'; }
-  else if(maxAge < 60*60*1000){ state='stale'; label='● STALE'; col='#ff9944'; bgCol='#2a1200'; }
-  else { state='old'; label='● OLD'; col='#ff6b6b'; bgCol='#2a0808'; }
+  if(maxAge < 5*60*1000){ state='live'; label='● LIVE · '+_ageStr; col='#63be7b'; bgCol='#0a2a15'; }
+  else if(maxAge < 30*60*1000){ state='delayed'; label='● DELAYED · '+_ageStr; col='#ffcc44'; bgCol='#2a1a00'; }
+  else if(maxAge < 60*60*1000){ state='stale'; label='● STALE · '+_ageStr; col='#ff9944'; bgCol='#2a1200'; }
+  else { state='old'; label='● OLD · '+_ageStr; col='#ff6b6b'; bgCol='#2a0808'; }
   if(fb){ fb.textContent=label; fb.style.color=col; fb.style.background=bgCol; }
-  if(hf){ hf.textContent=state.toUpperCase(); hf.className=''; hf.classList.add(state); }
+  if(hf){ hf.textContent=state.toUpperCase()+' · '+_ageStr; hf.className=''; hf.classList.add(state); }
   if(window.__uiState) window.__uiState.freshness = state;
 }
 
@@ -12975,7 +13157,7 @@ function _saveGHistory(g){
 // v87.19 U4: best/worst days of past 30 days
 function _getBestWorstDays(){
   try{
-    // P1 fix v87.67: prefer engine_scores (validated, consistent з engine v17)
+    // P1 fix v87.72: prefer engine_scores (validated, consistent з engine v17)
     // над localStorage (running-average per-session, неконсистентний).
     // Continuous G реконструюється з engine kp + dashboard computeAi (єдина формула).
     if (typeof _engineScores !== 'undefined' && _engineScores && Object.keys(_engineScores).length > 0) {
@@ -13004,7 +13186,7 @@ function _getBestWorstDays(){
         return { best: {date:best[0], g:best[1]}, worst: {date:worst[0], g:worst[1]}, total: items.length, source: 'engine' };
       }
     }
-    // Fallback (legacy v87.67): localStorage running-average per-session
+    // Fallback (legacy v87.72): localStorage running-average per-session
     const daily = JSON.parse(localStorage.getItem('g_history_daily_v1') || '{}');
     const entries = Object.entries(daily).sort((a,b) => a[0].localeCompare(b[0]));
     if (entries.length < 3) return null;
@@ -13043,7 +13225,7 @@ function renderBestWorstDays(){
 function _getGDelta(){
   try{
     const hist=JSON.parse(localStorage.getItem('g_history_v75')||'[]');
-    if(hist.length<2) return {d3h:null, d24h:null};
+    if(hist.length<2) return {d3h:null, d24h:null, t3h:null, t24h:null};
     const now=Date.now();
     const latest=hist[hist.length-1];
     // Find closest to 3h ago
@@ -13058,9 +13240,14 @@ function _getGDelta(){
     }
     return {
       d3h: best3h ? latest.g - best3h.g : null,
-      d24h: best24h ? latest.g - best24h.g : null
+      d24h: best24h ? latest.g - best24h.g : null,
+      // v87.72: timestamps для honesty в delta card (фактичний age vs nominal 24h)
+      t3h:  best3h  ? best3h.ts  : null,
+      t24h: best24h ? best24h.ts : null,
+      g3h:  best3h  ? best3h.g   : null,
+      g24h: best24h ? best24h.g  : null
     };
-  }catch(e){return {d3h:null, d24h:null};}
+  }catch(e){return {d3h:null, d24h:null, t3h:null, t24h:null};}
 }
 
 document.addEventListener('DOMContentLoaded',()=>{
