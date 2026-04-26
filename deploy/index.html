@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v87.66</title>
+  <title>G-Index — Космофізичний дашборд v87.67</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1387,11 +1387,22 @@
           <span id="heroNextShiftChip" data-label="Далі" style="font-size:11px;color:var(--faint);display:none"></span>
           <span id="heroStamp" data-label="Оновлено" style="font-size:11px;color:var(--dim)">—</span>
           <span id="heroConfidence" data-label="Довіра" style="font-size:11px;color:var(--dim)"></span>
-          <!-- v87.66 P3 fix: badge style для engine v17 score — більш помітно vs Live G -->
+          <!-- v87.67 P3 fix: badge style для engine v17 score — більш помітно vs Live G -->
           <span id="heroBulletin" data-label="Engine v17" class="hint" tabindex="0" style="font-size:12px;font-weight:700;color:var(--muted);cursor:help;border:1px solid var(--border2);padding:1px 8px;border-radius:8px;background:rgba(11,18,32,.4)" title="Engine v17 (rule-based bulletin model, discrete -3..+3). Використовує manual Джйотіш-теги + thresholds.&#10;Dashboard G — continuous real-time signal (Kp − 2 + ΣAᵢ).&#10;Різні моделі за дизайном — розбіжність не баг.">—</span>
+          <!-- v87.67: Backtest link — публічний trust-signal (87.1% SignMatch на 178 днях) -->
+          <a href="backtest.html" target="_blank" rel="noopener" data-label="Точність" style="font-size:12px;font-weight:700;color:var(--ok);text-decoration:none;border:1px solid var(--ok);padding:1px 8px;border-radius:8px;background:rgba(43,212,125,.08);transition:background .2s" title="Точність моделі: SignMatch 87.1% на 178 днях.&#10;Натисни щоб побачити повний backtest report (confusion matrix, top misses, tag-level analysis).">📊 87.1%</a>
         </div>
       </div>
     </section>
+    <!-- v87.67: Backtest banner — public trust signal (відразу під Hero, перед усім контентом) -->
+    <a id="backtestBanner" href="backtest.html" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:12px;margin:0 0 10px;padding:10px 14px;border-radius:12px;border:1px solid rgba(43,212,125,.22);background:linear-gradient(180deg,rgba(43,212,125,.06),rgba(43,212,125,.02));text-decoration:none;color:inherit;transition:border-color .2s,background .2s">
+      <span style="font-size:20px;line-height:1">📊</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;font-weight:700;color:#d8f7e3">Як ми міряємо точність</div>
+        <div style="font-size:11px;color:var(--dim);margin-top:1px">SignMatch <strong style="color:var(--ok)">87.1%</strong> на 178 днях · повний backtest engine v17 vs PDF (confusion matrix, top misses, tag-level)</div>
+      </div>
+      <span style="font-size:11px;color:var(--ok);font-weight:700;white-space:nowrap">Подивитись →</span>
+    </a>
     <!-- ═══ v87: ALERT BANNER ═══ -->
     <div id="alertBanner" style="display:none;margin:0 0 10px;padding:12px 16px;border-radius:12px;border:1px solid rgba(255,70,70,.4);background:linear-gradient(180deg,rgba(255,50,50,.14),rgba(255,50,50,.06));animation:alertPulse87 2.5s ease-in-out infinite">
       <div style="display:flex;align-items:center;gap:10px">
@@ -2321,6 +2332,7 @@ Kp: 3-год індекс геомагнітної активності (0–9)
 
   <footer>
     <div class="small">Дані Kp/Ap — NOAA SWPC; Ap↔Kp — GFZ/NOAA table; Dst — Kyoto WDC; Sn — SILSO/ROB; події — ICS; затемнення — Timeanddate/NASA; фази — Astronomy Engine (Meeus). Модель G: R&amp;D / Advisory — у валідації. SignMatch 90.2% holdout (n=51, engine v17.0); G включає Dᵢ (Dst-компонент).</div>
+    <div class="small" style="margin-top:8px">📊 Повна валідація моделі: <a href="backtest.html" style="color:var(--alt);text-decoration:none;border-bottom:1px dotted var(--alt)">backtest report</a> — engine v17 vs PDF на 178 днях (SignMatch 87.1%, MAE 1.01).</div>
   </footer>
 
 <script>
@@ -3844,7 +3856,7 @@ function computeAi(dateTimeUTC, kp=0){
     // tithi.num є 1-based → конвертуємо в 0-based для порівняння з масивами і tithiIdxForLi
     const tIdx = panch.tithi.num - 1; // 0-based: 14=Purnima, 29=Amavasya, 10/25=Ekadashi
     const tithiInPi = (tIdx !== 14 && tIdx !== 29 && tIdx !== 10 && tIdx !== 25) ? panch.tithi.score : 0;
-    // P2 fix v87.66: lunar_mod (sin²(φ/2)) застосовується ЛИШЕ до Tithi-частини PCL.
+    // P2 fix v87.67: lunar_mod (sin²(φ/2)) застосовується ЛИШЕ до Tithi-частини PCL.
     // Cajochen 2013 — циркадний ефект максимальний при повні актуальний для Tithi-логіки;
     // Vara/Nakshatra/Yoga/Karana — календарно-фіксовані, не залежать від фази Місяця.
     // Раніше: × lunarMod до всіх → Vara/Yoga/Karana зануляються в новолуння (методологічна помилка).
@@ -3858,7 +3870,7 @@ function computeAi(dateTimeUTC, kp=0){
     if(panch.nakshatra.score !== 0)  pParts.push(`Nak(${panch.nakshatra.name})=${panch.nakshatra.score}`);
     if(panch.yoga.score !== 0)       pParts.push(`Yoga(${panch.yoga.name})=${panch.yoga.score}`);
     if(panch.karana.score !== 0)     pParts.push(`Kar(${panch.karana.name})=${panch.karana.score}`);
-    pTip = pParts.length ? `PCL: Tithi=${tithiInPi}×lunar(${lunarMod.toFixed(2)})=${_tithiPi.toFixed(1)} + fixed=${_restPi} → ×${PCL_SCALE} → Pᵢ=${Pi} (P2 v87.66)` : `0 — всі Panchanga нейтральні`;
+    pTip = pParts.length ? `PCL: Tithi=${tithiInPi}×lunar(${lunarMod.toFixed(2)})=${_tithiPi.toFixed(1)} + fixed=${_restPi} → ×${PCL_SCALE} → Pᵢ=${Pi} (P2 v87.67)` : `0 — всі Panchanga нейтральні`;
   } catch(e) {
     pTip = '0 — помилка PCL';
   }
@@ -12963,7 +12975,7 @@ function _saveGHistory(g){
 // v87.19 U4: best/worst days of past 30 days
 function _getBestWorstDays(){
   try{
-    // P1 fix v87.66: prefer engine_scores (validated, consistent з engine v17)
+    // P1 fix v87.67: prefer engine_scores (validated, consistent з engine v17)
     // над localStorage (running-average per-session, неконсистентний).
     // Continuous G реконструюється з engine kp + dashboard computeAi (єдина формула).
     if (typeof _engineScores !== 'undefined' && _engineScores && Object.keys(_engineScores).length > 0) {
@@ -12992,7 +13004,7 @@ function _getBestWorstDays(){
         return { best: {date:best[0], g:best[1]}, worst: {date:worst[0], g:worst[1]}, total: items.length, source: 'engine' };
       }
     }
-    // Fallback (legacy v87.66): localStorage running-average per-session
+    // Fallback (legacy v87.67): localStorage running-average per-session
     const daily = JSON.parse(localStorage.getItem('g_history_daily_v1') || '{}');
     const entries = Object.entries(daily).sort((a,b) => a[0].localeCompare(b[0]));
     if (entries.length < 3) return null;
