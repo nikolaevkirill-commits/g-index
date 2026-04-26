@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v87.65</title>
+  <title>G-Index — Космофізичний дашборд v87.66</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1387,8 +1387,8 @@
           <span id="heroNextShiftChip" data-label="Далі" style="font-size:11px;color:var(--faint);display:none"></span>
           <span id="heroStamp" data-label="Оновлено" style="font-size:11px;color:var(--dim)">—</span>
           <span id="heroConfidence" data-label="Довіра" style="font-size:11px;color:var(--dim)"></span>
-          <!-- v87.61: Bulletin score — engine v17 threshold classifier for comparison with G-live -->
-          <span id="heroBulletin" data-label="Bulletin" class="hint" tabindex="0" style="font-size:11px;color:var(--dim);cursor:help" title="Engine v17 (rule-based bulletin model). Використовує manual Джйотіш-теги. Dashboard G — real-time геомагнітний сигнал. Різні моделі — різні шкали.">—</span>
+          <!-- v87.66 P3 fix: badge style для engine v17 score — більш помітно vs Live G -->
+          <span id="heroBulletin" data-label="Engine v17" class="hint" tabindex="0" style="font-size:12px;font-weight:700;color:var(--muted);cursor:help;border:1px solid var(--border2);padding:1px 8px;border-radius:8px;background:rgba(11,18,32,.4)" title="Engine v17 (rule-based bulletin model, discrete -3..+3). Використовує manual Джйотіш-теги + thresholds.&#10;Dashboard G — continuous real-time signal (Kp − 2 + ΣAᵢ).&#10;Різні моделі за дизайном — розбіжність не баг.">—</span>
         </div>
       </div>
     </section>
@@ -3844,15 +3844,21 @@ function computeAi(dateTimeUTC, kp=0){
     // tithi.num є 1-based → конвертуємо в 0-based для порівняння з масивами і tithiIdxForLi
     const tIdx = panch.tithi.num - 1; // 0-based: 14=Purnima, 29=Amavasya, 10/25=Ekadashi
     const tithiInPi = (tIdx !== 14 && tIdx !== 29 && tIdx !== 10 && tIdx !== 25) ? panch.tithi.score : 0;
+    // P2 fix v87.66: lunar_mod (sin²(φ/2)) застосовується ЛИШЕ до Tithi-частини PCL.
+    // Cajochen 2013 — циркадний ефект максимальний при повні актуальний для Tithi-логіки;
+    // Vara/Nakshatra/Yoga/Karana — календарно-фіксовані, не залежать від фази Місяця.
+    // Раніше: × lunarMod до всіх → Vara/Yoga/Karana зануляються в новолуння (методологічна помилка).
+    const _tithiPi = tithiInPi * lunarMod;
+    const _restPi  = panch.vara.score + panch.nakshatra.score + panch.yoga.score + panch.karana.score;
     const pclRaw = tithiInPi + panch.vara.score + panch.nakshatra.score + panch.yoga.score + panch.karana.score;
-    Pi = Math.round(pclRaw * PCL_SCALE * lunarMod * 10) / 10; // × lunar_mod sin²(φ/2)
+    Pi = Math.round((_tithiPi + _restPi) * PCL_SCALE * 10) / 10;
     const pParts = [];
     if(tithiInPi !== 0)              pParts.push(`Tithi(${panch.tithi.name})=${tithiInPi}`);
     if(panch.vara.score !== 0)       pParts.push(`Vara(${panch.vara.name})=${panch.vara.score}`);
     if(panch.nakshatra.score !== 0)  pParts.push(`Nak(${panch.nakshatra.name})=${panch.nakshatra.score}`);
     if(panch.yoga.score !== 0)       pParts.push(`Yoga(${panch.yoga.name})=${panch.yoga.score}`);
     if(panch.karana.score !== 0)     pParts.push(`Kar(${panch.karana.name})=${panch.karana.score}`);
-    pTip = pParts.length ? `PCL raw=${pclRaw} × ${PCL_SCALE} × lunar_mod(${lunarMod.toFixed(2)}) = ${Pi}` : `0 — всі Panchanga нейтральні`;
+    pTip = pParts.length ? `PCL: Tithi=${tithiInPi}×lunar(${lunarMod.toFixed(2)})=${_tithiPi.toFixed(1)} + fixed=${_restPi} → ×${PCL_SCALE} → Pᵢ=${Pi} (P2 v87.66)` : `0 — всі Panchanga нейтральні`;
   } catch(e) {
     pTip = '0 — помилка PCL';
   }
@@ -12957,6 +12963,36 @@ function _saveGHistory(g){
 // v87.19 U4: best/worst days of past 30 days
 function _getBestWorstDays(){
   try{
+    // P1 fix v87.66: prefer engine_scores (validated, consistent з engine v17)
+    // над localStorage (running-average per-session, неконсистентний).
+    // Continuous G реконструюється з engine kp + dashboard computeAi (єдина формула).
+    if (typeof _engineScores !== 'undefined' && _engineScores && Object.keys(_engineScores).length > 0) {
+      const nowMs = Date.now();
+      const cutMs = nowMs - 30*86400*1000;
+      const items = [];
+      for (const ds of Object.keys(_engineScores)) {
+        const sc = _engineScores[ds];
+        if (!sc || sc.kp == null || !isFinite(sc.kp)) continue;
+        const t = new Date(ds + 'T12:00:00Z').getTime();
+        if (!isFinite(t) || t > nowMs || t < cutMs) continue;
+        try {
+          const dt = new Date(ds + 'T12:00:00Z');
+          const ai = computeAi(dt, sc.kp);
+          const G = Math.round((sc.kp - 2 + ai.Ai) * 10) / 10;
+          items.push([ds, G]);
+        } catch(e) { /* skip if computeAi fails for this date */ }
+      }
+      if (items.length >= 3) {
+        items.sort((a,b) => a[0].localeCompare(b[0]));
+        let best = items[0], worst = items[0];
+        for (const e of items) {
+          if (e[1] > best[1]) best = e;
+          if (e[1] < worst[1]) worst = e;
+        }
+        return { best: {date:best[0], g:best[1]}, worst: {date:worst[0], g:worst[1]}, total: items.length, source: 'engine' };
+      }
+    }
+    // Fallback (legacy v87.66): localStorage running-average per-session
     const daily = JSON.parse(localStorage.getItem('g_history_daily_v1') || '{}');
     const entries = Object.entries(daily).sort((a,b) => a[0].localeCompare(b[0]));
     if (entries.length < 3) return null;
@@ -12966,7 +13002,7 @@ function _getBestWorstDays(){
       if (e[1] > best[1]) best = e;
       if (e[1] < worst[1]) worst = e;
     }
-    return { best: {date:best[0], g:best[1]}, worst: {date:worst[0], g:worst[1]}, total: last30.length };
+    return { best: {date:best[0], g:best[1]}, worst: {date:worst[0], g:worst[1]}, total: last30.length, source: 'localStorage' };
   }catch(e){ return null; }
 }
 
