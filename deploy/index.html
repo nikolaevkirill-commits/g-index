@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v87.72</title>
+  <title>G-Index — Космофізичний дашборд v87.73</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1317,7 +1317,7 @@
               </svg>
               <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none">
                 <div id="v86GVal" style="font-size:36px;font-weight:900;color:#ffd77a;line-height:1;text-shadow:0 0 12px rgba(255,210,110,.3)">—</div>
-                <!-- v87.72: Confidence interval (P50 band) — wow-фіча, нікого з конкурентів немає -->
+                <!-- v87.73: Confidence interval (P50 band) — wow-фіча, нікого з конкурентів немає -->
                 <div id="v86CI" class="hint" tabindex="0" style="font-size:10px;font-weight:600;color:var(--dim);margin-top:2px;line-height:1;letter-spacing:.02em;cursor:help;pointer-events:auto;display:none" title=""></div>
                 <!-- v87.21: inline ΔG trend directly beneath G-value for immediate signal -->
                 <div id="v86DeltaInline" style="font-size:13px;font-weight:800;line-height:1;margin-top:4px;color:var(--muted);letter-spacing:.02em;min-height:13px"></div>
@@ -1389,14 +1389,14 @@
           <span id="heroNextShiftChip" data-label="Далі" style="font-size:11px;color:var(--faint);display:none"></span>
           <span id="heroStamp" data-label="Оновлено" style="font-size:11px;color:var(--dim)">—</span>
           <span id="heroConfidence" data-label="Довіра" style="font-size:11px;color:var(--dim)"></span>
-          <!-- v87.72 P3 fix: badge style для engine v17 score — більш помітно vs Live G -->
+          <!-- v87.73 P3 fix: badge style для engine v17 score — більш помітно vs Live G -->
           <span id="heroBulletin" data-label="Engine v17" class="hint" tabindex="0" style="font-size:12px;font-weight:700;color:var(--muted);cursor:help;border:1px solid var(--border2);padding:1px 8px;border-radius:8px;background:rgba(11,18,32,.4)" title="Engine v17 (rule-based bulletin model, discrete -3..+3). Використовує manual Джйотіш-теги + thresholds.&#10;Dashboard G — continuous real-time signal (Kp − 2 + ΣAᵢ).&#10;Різні моделі за дизайном — розбіжність не баг.">—</span>
-          <!-- v87.72: Backtest link — чесні обидві метрики (strict 71.9% + directional 87.1%) -->
+          <!-- v87.73: Backtest link — чесні обидві метрики (strict 71.9% + directional 87.1%) -->
           <a href="backtest.html" target="_blank" rel="noopener" data-label="Точність" style="font-size:12px;font-weight:700;color:var(--ok);text-decoration:none;border:1px solid var(--ok);padding:1px 8px;border-radius:8px;background:rgba(43,212,125,.08);transition:background .2s" title="Точність engine v17 на n=178 днях:&#10;• Sign match (strict): 71.9% — нуль як окремий клас (academic)&#10;• Directional (≥0/<0): 87.1% — для рішень діяти/не діяти&#10;• Exact match: 39.9% (7 категорій)&#10;• MAE: 1.01 (шкала ±3)&#10;Натисни щоб побачити повний backtest.">📊 72% / 87%</a>
         </div>
       </div>
     </section>
-    <!-- v87.72: Backtest banner — public trust signal (відразу під Hero, перед усім контентом) -->
+    <!-- v87.73: Backtest banner — public trust signal (відразу під Hero, перед усім контентом) -->
     <a id="backtestBanner" href="backtest.html" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:12px;margin:0 0 10px;padding:10px 14px;border-radius:12px;border:1px solid rgba(43,212,125,.22);background:linear-gradient(180deg,rgba(43,212,125,.06),rgba(43,212,125,.02));text-decoration:none;color:inherit;transition:border-color .2s,background .2s">
       <span style="font-size:20px;line-height:1">📊</span>
       <div style="flex:1;min-width:0">
@@ -1405,7 +1405,7 @@
       </div>
       <span style="font-size:11px;color:var(--ok);font-weight:700;white-space:nowrap">Подивитись →</span>
     </a>
-    <!-- v87.72: Provenance ledger — джерела для сьогоднішньої оцінки (closed by default) -->
+    <!-- v87.73: Provenance ledger — джерела для сьогоднішньої оцінки (closed by default) -->
     <details id="provenanceCard" style="margin:0 0 10px;padding:10px 14px;border-radius:12px;border:1px solid var(--border);background:rgba(11,18,32,.5)">
       <summary style="cursor:pointer;font-size:12px;font-weight:600;color:var(--muted);list-style:none;display:flex;align-items:center;gap:8px">
         <span style="font-size:14px">📋</span>
@@ -1413,6 +1413,17 @@
         <span style="font-size:10px;color:var(--dim);font-weight:400">розгорнути ▾</span>
       </summary>
       <div id="provenanceContent" style="margin-top:10px;font-size:12px;color:var(--text2);font-family:var(--mono),ui-monospace,monospace">Завантаження…</div>
+    </details>
+    <!-- v87.73: Disagreement Alert — показується якщо моделі сильно розбігаються -->
+    <div id="disagreementAlert" style="display:none;margin:0 0 10px;padding:10px 14px;border-radius:12px;border:1px solid rgba(255,170,51,.4);background:linear-gradient(180deg,rgba(255,170,51,.10),rgba(255,170,51,.03))"></div>
+    <!-- v87.73: Counterfactual analysis — collapsible "що якби" блок -->
+    <details id="counterfactualCard" style="margin:0 0 10px;padding:10px 14px;border-radius:12px;border:1px solid var(--border);background:rgba(11,18,32,.5)">
+      <summary style="cursor:pointer;font-size:12px;font-weight:600;color:var(--muted);list-style:none;display:flex;align-items:center;gap:8px">
+        <span style="font-size:14px">🤔</span>
+        <span style="flex:1">Що якби? — counterfactual analysis (top-driver, ablation)</span>
+        <span style="font-size:10px;color:var(--dim);font-weight:400">розгорнути ▾</span>
+      </summary>
+      <div id="counterfactualContent" style="margin-top:10px;font-size:12px;color:var(--text2)">Завантаження…</div>
     </details>
     <!-- ═══ v87: ALERT BANNER ═══ -->
     <div id="alertBanner" style="display:none;margin:0 0 10px;padding:12px 16px;border-radius:12px;border:1px solid rgba(255,70,70,.4);background:linear-gradient(180deg,rgba(255,50,50,.14),rgba(255,50,50,.06));animation:alertPulse87 2.5s ease-in-out infinite">
@@ -1820,7 +1831,7 @@ Kp: 3-год індекс геомагнітної активності (0–9)
 ΣAᵢ = Lᵢ (тітхі) + Mᵢ (затемнення) + eᵢ (події) + Pᵢ (Панчанга×0.4) + Dᵢ (Dst-буря)</span></span>
       </div>
       <div id="threeQuick" style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;font-size:13px"></div>
-      <!-- v87.72: NOAA fallback alert — показується над quick-cards коли engine на synthetic platau -->
+      <!-- v87.73: NOAA fallback alert — показується над quick-cards коли engine на synthetic platau -->
       <div id="threeNoaaAlert" style="display:none;margin-top:8px;padding:10px 14px;border-radius:10px;border:1px solid rgba(255,107,107,.4);background:linear-gradient(180deg,rgba(255,90,90,.12),rgba(255,90,90,.04));color:#ffd2d2;font-size:12px;line-height:1.5"></div>
       <details style="margin-top:6px">
         <summary class="small muted" style="cursor:pointer;font-size:11px">▶ Детальна таблиця</summary>
@@ -2929,7 +2940,7 @@ function renderHeroBulletin(){
   }
   const s = entry.eng;
   const color = s >= 2 ? 'var(--ok)' : s === 1 ? '#9cd49c' : s === 0 ? 'var(--muted)' : s === -1 ? 'var(--warn)' : s <= -2 ? 'var(--bad)' : 'var(--muted)';
-  // v87.72: synthetic marker у видимому тексті (не лише tooltip) — чесність для майбутніх дат
+  // v87.73: synthetic marker у видимому тексті (не лише tooltip) — чесність для майбутніх дат
   const _synMark = entry.kp_synthetic ? '<span style="color:#fca474;margin-left:2px" title="Synthetic Kp=2.0 (NOAA forecast недоступний — scenario, не forecast)">~</span>' : '';
   elB.innerHTML = `<span style="color:${color};font-weight:700">${s >= 0 ? '+' : ''}${s}${_synMark}</span>`;
   const synth = entry.kp_synthetic ? ' · ⚠ Kp synthetic (scenario, не forecast)' : '';
@@ -3871,7 +3882,7 @@ function computeAi(dateTimeUTC, kp=0){
     // tithi.num є 1-based → конвертуємо в 0-based для порівняння з масивами і tithiIdxForLi
     const tIdx = panch.tithi.num - 1; // 0-based: 14=Purnima, 29=Amavasya, 10/25=Ekadashi
     const tithiInPi = (tIdx !== 14 && tIdx !== 29 && tIdx !== 10 && tIdx !== 25) ? panch.tithi.score : 0;
-    // P2 fix v87.72: lunar_mod (sin²(φ/2)) застосовується ЛИШЕ до Tithi-частини PCL.
+    // P2 fix v87.73: lunar_mod (sin²(φ/2)) застосовується ЛИШЕ до Tithi-частини PCL.
     // Cajochen 2013 — циркадний ефект максимальний при повні актуальний для Tithi-логіки;
     // Vara/Nakshatra/Yoga/Karana — календарно-фіксовані, не залежать від фази Місяця.
     // Раніше: × lunarMod до всіх → Vara/Yoga/Karana зануляються в новолуння (методологічна помилка).
@@ -3885,7 +3896,7 @@ function computeAi(dateTimeUTC, kp=0){
     if(panch.nakshatra.score !== 0)  pParts.push(`Nak(${panch.nakshatra.name})=${panch.nakshatra.score}`);
     if(panch.yoga.score !== 0)       pParts.push(`Yoga(${panch.yoga.name})=${panch.yoga.score}`);
     if(panch.karana.score !== 0)     pParts.push(`Kar(${panch.karana.name})=${panch.karana.score}`);
-    pTip = pParts.length ? `PCL: Tithi=${tithiInPi}×lunar(${lunarMod.toFixed(2)})=${_tithiPi.toFixed(1)} + fixed=${_restPi} → ×${PCL_SCALE} → Pᵢ=${Pi} (P2 v87.72)` : `0 — всі Panchanga нейтральні`;
+    pTip = pParts.length ? `PCL: Tithi=${tithiInPi}×lunar(${lunarMod.toFixed(2)})=${_tithiPi.toFixed(1)} + fixed=${_restPi} → ×${PCL_SCALE} → Pᵢ=${Pi} (P2 v87.73)` : `0 — всі Panchanga нейтральні`;
   } catch(e) {
     pTip = '0 — помилка PCL';
   }
@@ -4704,7 +4715,7 @@ function renderForwardTimeline(){
     const col = _ftGColor(d.G);
     const isToday = (globalIdx === todayIdx);
     const isSel = (globalIdx === selIdx);
-    // v87.72 P5 fix: opacity gradient за horizon — uncertainty visualization
+    // v87.73 P5 fix: opacity gradient за horizon — uncertainty visualization
     // 0..3д = full confidence, 4..7д = 75%, 8..14д = 55%, 15..27д = 35%
     // Чесно показує що дальні дні менш надійні (NOAA 27-day має ±1.5 розкид Kp).
     const daysOut = (todayIdx >= 0) ? (globalIdx - todayIdx) : 0;
@@ -6337,7 +6348,7 @@ function render3Day(parsed3){
           }
         }
       } catch(e){}
-      // v87.72: synthetic Kp warning у quick-card — engine_scores дає kp=2.0 default для майбутнього
+      // v87.73: synthetic Kp warning у quick-card — engine_scores дає kp=2.0 default для майбутнього
       // Якщо bulletin entry має kp_synthetic — це scenario, не реальний forecast
       const _isSynthScen = (function(){
         try { const _e = getEngineScore(d.date); return _e && _e.kp_synthetic === true; } catch(e){ return false; }
@@ -6859,7 +6870,7 @@ function renderGRadialV86(g, kp, ai){
                          : g >= -1 ? '0 0 12px rgba(255,210,110,.3)'
                          : '0 0 12px rgba(255,120,120,.3)';
   }
-  // v87.72: Confidence interval P50 band (wow-фіча — нікого з конкурентів немає)
+  // v87.73: Confidence interval P50 band (wow-фіча — нікого з конкурентів немає)
   // Розрахунок: σ = sqrt(kpDelta² + eventUncertainty²); kpDelta з last-8 NOAA Kp obs.
   const ciEl = document.getElementById('v86CI');
   if (ciEl) {
@@ -7000,7 +7011,7 @@ function syncHero(){
 
   // v87.10: Delta Card — "що змінилось за 24h"
   // v87.13: додатково зазначити тренд на завтра щоб уникнути дисонансу з heroTomorrow
-  // v87.72: honesty fix — показати реальний age порівняння (raw +1.8 за 18h ≠ за 24h)
+  // v87.73: honesty fix — показати реальний age порівняння (raw +1.8 за 18h ≠ за 24h)
   try {
     const dc = el('deltaCard');
     if (dc && isFinite(gVal)) {
@@ -7012,7 +7023,7 @@ function syncHero(){
         const _isPos = _d24 > 0;
         const _state = Math.abs(_d24) < 0.5 ? 'stable' : _isPos ? 'improving' : 'worsening';
         const _icon = _state === 'improving' ? '📈' : _state === 'worsening' ? '📉' : '➡️';
-        // v87.72: реальний age у годинах та підпис "vs Nh тому" якщо відхилення ≥ 2h
+        // v87.73: реальний age у годинах та підпис "vs Nh тому" якщо відхилення ≥ 2h
         const _ageH  = _gd.t24h ? Math.round((Date.now() - _gd.t24h) / 3600000) : 24;
         const _ageMatch = (_ageH >= 22 && _ageH <= 26);
         const _ageNote  = _ageMatch ? '' : ` (vs ${_ageH}h тому)`;
@@ -7042,7 +7053,7 @@ function syncHero(){
           }
         }
         dc.className = 'is-' + _state;
-        dc.title = _ttip; // v87.72: tooltip з реальним age та timestamp
+        dc.title = _ttip; // v87.73: tooltip з реальним age та timestamp
         dc.innerHTML = `<span class="dc-icon">${_icon}</span>`
                      + `<div class="dc-text">`
                      + `<div class="dc-title">${_title}</div>`
@@ -8165,7 +8176,7 @@ function buildDashboardState(){
   };
 }
 
-// v87.72: Provenance ledger — повний журнал джерел сьогоднішньої оцінки
+// v87.73: Provenance ledger — повний журнал джерел сьогоднішньої оцінки
 // Чесна відповідь на аудиторську критику "stale fallback тихий, synthetic непомічений"
 function renderProvenance(){
   const el = document.getElementById('provenanceContent');
@@ -8249,6 +8260,182 @@ function renderProvenance(){
   `;
 }
 
+// v87.73: Model Disagreement Alert — показує LOW CONSENSUS коли різні моделі дають розкид
+// Аудиторська рекомендація: "model disagreement як окремий стан, не як дрібний tooltip"
+function renderDisagreement(){
+  const _alert = document.getElementById('disagreementAlert');
+  if(!_alert) return;
+  const _ui = window.__uiState || {};
+  const _gNow = _ui.gNow ?? NaN;
+  const _eng = (typeof getEngineScore === 'function') ? getEngineScore(new Date()) : null;
+  const _engVal = _eng ? _eng.eng : null;
+  const _pdfVal = (_eng && _eng.pdf != null) ? _eng.pdf : null;
+
+  // Σ year ago — historical pattern (без Kp бо historical Kp недоступний)
+  let _sigmaYear = null;
+  try {
+    if(typeof computeAi === 'function' && typeof noonUTC === 'function'){
+      const _ya = new Date();
+      _ya.setUTCFullYear(_ya.getUTCFullYear() - 1);
+      _sigmaYear = computeAi(noonUTC(_ya), 0).Ai;
+    }
+  } catch(e){}
+
+  const _models = [];
+  if(isFinite(_gNow))    _models.push({ name: 'G live',     val: _gNow,      kind: 'continuous' });
+  if(_engVal != null)    _models.push({ name: 'Engine v17', val: _engVal,    kind: 'rule-based' });
+  if(_pdfVal != null)    _models.push({ name: 'PDF',        val: _pdfVal,    kind: 'expert' });
+  if(_sigmaYear != null) _models.push({ name: 'Σ year ago', val: _sigmaYear, kind: 'historical' });
+
+  if(_models.length < 2){ _alert.style.display = 'none'; return; }
+
+  const _vals = _models.map(m => m.val);
+  const _max = Math.max(..._vals), _min = Math.min(..._vals);
+  const _range = _max - _min;
+
+  // Sign mismatch: pos vs neg (нейтрали |val|<0.5 не вважаємо)
+  const _hasPos = _vals.some(v => v > 0.5);
+  const _hasNeg = _vals.some(v => v < -0.5);
+  const _signConflict = _hasPos && _hasNeg;
+
+  // Поріг: LOW CONSENSUS якщо range ≥ 2.5 АБО sign conflict
+  if(_range < 2.5 && !_signConflict){
+    _alert.style.display = 'none';
+    return;
+  }
+
+  const _icon = _signConflict ? '⚠' : '◎';
+  const _title = _signConflict
+    ? 'LOW CONSENSUS · моделі не згодні щодо знаку дня'
+    : `WIDE RANGE · моделі дають Δ=${_range.toFixed(1)} розкид`;
+
+  const _modelsHtml = _models.map(m => {
+    const col = m.val >= 0.5 ? 'var(--ok)' : m.val <= -0.5 ? 'var(--bad)' : 'var(--muted)';
+    const sign = m.val >= 0 ? '+' : '';
+    return `<span style="font-family:var(--mono),ui-monospace,monospace;font-size:11px;white-space:nowrap"><span style="color:var(--dim)">${m.name}:</span> <span style="color:${col};font-weight:700">${sign}${m.val.toFixed(1)}</span></span>`;
+  }).join(' &nbsp;·&nbsp; ');
+
+  const _conf = _signConflict ? 'на ~30%' : _range >= 4 ? 'на ~25%' : 'на ~15%';
+
+  _alert.innerHTML = `
+    <div style="display:flex;align-items:flex-start;gap:10px">
+      <span style="font-size:18px;line-height:1.2">${_icon}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:700;color:#ffd2a0;font-size:13px">${_title}</div>
+        <div style="margin-top:4px;font-size:11px;color:var(--text2);display:flex;flex-wrap:wrap;gap:4px">${_modelsHtml}</div>
+        <div style="margin-top:5px;font-size:10px;color:var(--faint);line-height:1.5" title="Не баг — це чесна mature uncertainty handling. Декілька моделей дивляться на день з різних кутів. Розкид = сигнал.">Mature uncertainty: 4 моделі, 4 кути зору. Знизь довіру до сьогоднішньої оцінки ${_conf} і перевір перед важливими рішеннями.</div>
+      </div>
+    </div>`;
+  _alert.style.display = 'block';
+}
+
+// v87.73: Counterfactual Analyzer — "що якби?" ablation
+// SHAP-style для астрології: показує який компонент формує день, що якби був інакший
+function renderCounterfactual(){
+  const _el = document.getElementById('counterfactualContent');
+  if(!_el) return;
+  const _ui = window.__uiState || {};
+  const _ai = _ui.ai || {};
+  const _gNow = _ui.gNow ?? NaN;
+  const _kpNow = _ui.kpNow ?? NaN;
+
+  if(!isFinite(_gNow) || !isFinite(_kpNow)){
+    _el.innerHTML = '<span style="color:var(--dim)">Дані ще завантажуються…</span>';
+    return;
+  }
+
+  const _Li = _ai.Li || 0;
+  const _Mi = _ai.Mi || 0;
+  const _ei = _ai.ei || 0;
+  const _Pi = _ai.Pi || 0;
+  const _Di = _ai.Di || 0;
+
+  // Top-driver / antitop analysis
+  const _kpPart = _kpNow - 2;
+  const _components = [
+    { name: 'Kp − 2',          val: _kpPart, label: 'геомагнітний фон' },
+    { name: 'Lᵢ',              val: _Li,     label: 'тітхі (місячний день)' },
+    { name: 'Mᵢ',              val: _Mi,     label: 'затемнення/їх вікно' },
+    { name: 'eᵢ',              val: _ei,     label: 'календарні події' },
+    { name: 'Pᵢ',              val: _Pi,     label: 'панчанга (Vara/Nak/Yoga/Karana)' },
+    { name: 'Dᵢ',              val: _Di,     label: 'Dst-буря' }
+  ].filter(c => Math.abs(c.val) >= 0.05);
+  _components.sort((a,b) => Math.abs(b.val) - Math.abs(a.val));
+
+  // Top-driver banner
+  let _topHtml = '';
+  if(_components.length > 0){
+    const _top = _components[0];
+    const _topCol = _top.val > 0 ? 'var(--ok)' : 'var(--bad)';
+    const _topAction = _top.val > 0 ? 'найбільше додає' : 'найбільше тисне';
+    const _sign = _top.val >= 0 ? '+' : '';
+    _topHtml = `<div style="padding:8px 10px;margin-bottom:10px;background:rgba(11,18,32,.7);border-radius:6px;border-left:3px solid ${_topCol};font-size:12px;line-height:1.5">
+      <strong style="color:${_topCol}">${_top.name} ${_topAction}</strong> сьогодні: <span class="mono" style="font-family:var(--mono),ui-monospace,monospace;font-weight:700;color:${_topCol}">${_sign}${_top.val.toFixed(1)}</span>
+      <span style="color:var(--dim)">(${_top.label})</span>
+      ${_components.length >= 2 ? `<br><span style="color:var(--faint);font-size:10px">Другий за впливом: <strong>${_components[1].name}</strong> (${_components[1].val >= 0 ? '+' : ''}${_components[1].val.toFixed(1)})</span>` : ''}
+    </div>`;
+  } else {
+    _topHtml = `<div style="padding:8px 10px;margin-bottom:10px;background:rgba(11,18,32,.7);border-radius:6px;font-size:12px;color:var(--dim)">Усі компоненти близькі до 0 — нейтральний день.</div>`;
+  }
+
+  // Counterfactual scenarios — arithmetic deltas (швидко, без re-running computeAi)
+  const _scenarios = [
+    {
+      icon: '🟦',
+      label: 'Якби Pᵢ був 0 (нейтральна панчанга)',
+      delta: -_Pi,
+      hint: Math.abs(_Pi) < 0.1 ? 'Pᵢ вже ≈0 — без змін' : (_Pi > 0 ? 'Без панчанги було б гірше' : 'Без панчанги було б краще')
+    },
+    {
+      icon: '🌑',
+      label: 'Якби була Амавасья (Lᵢ=−3)',
+      delta: (-3) - _Li,
+      hint: 'Місяць у з\'єднанні з Сонцем — найскладніший lunar день'
+    },
+    {
+      icon: '☄',
+      label: 'Якби було повне затемнення (Mᵢ=−4)',
+      delta: (-4) - _Mi,
+      hint: 'Total eclipse — критичний день за BPHS'
+    },
+    {
+      icon: '⚡',
+      label: 'Якби буря Kp=7 (G3+)',
+      delta: (7 - _kpNow),
+      hint: 'Сильна геомагнітна буря — Kp різко вгору'
+    },
+    {
+      icon: '☀',
+      label: 'Якби Kp був 1 (дуже спокійно)',
+      delta: (1 - _kpNow),
+      hint: 'Спокійне геомагнітне поле'
+    }
+  ];
+
+  let _scenHtml = '<div style="font-size:11px;color:var(--dim);margin-bottom:6px">Що було б, якби один компонент був інакшим:</div>';
+  for(const _s of _scenarios){
+    const _newG = _gNow + _s.delta;
+    const _col = _newG >= 1 ? 'var(--ok)' : _newG >= -1 ? '#ffd77a' : 'var(--bad)';
+    const _dCol = _s.delta > 0.1 ? 'var(--ok)' : _s.delta < -0.1 ? 'var(--bad)' : 'var(--dim)';
+    _scenHtml += `<div style="display:grid;grid-template-columns:24px 1fr 90px;gap:10px;padding:6px 0;border-bottom:1px solid rgba(30,42,68,.4);align-items:center">
+      <span style="font-size:14px;text-align:center">${_s.icon}</span>
+      <div>
+        <div style="font-size:12px;color:var(--text2)">${_s.label}</div>
+        <div style="font-size:10px;color:var(--faint);margin-top:1px">${_s.hint}</div>
+      </div>
+      <div style="text-align:right">
+        <div class="mono" style="font-family:var(--mono),ui-monospace,monospace;font-size:14px;font-weight:700;color:${_col}">G ${_newG >= 0 ? '+' : ''}${_newG.toFixed(2)}</div>
+        <div class="mono" style="font-family:var(--mono),ui-monospace,monospace;font-size:9px;color:${_dCol}">Δ ${_s.delta >= 0 ? '+' : ''}${_s.delta.toFixed(1)}</div>
+      </div>
+    </div>`;
+  }
+
+  _el.innerHTML = _topHtml + _scenHtml +
+    `<div style="margin-top:8px;padding:6px 8px;font-size:10px;color:var(--faint);background:rgba(11,18,32,.6);border-radius:6px;line-height:1.5">
+      Ablation: arithmetic delta з поточної формули G = Kp − 2 + ΣAᵢ. Не враховує вторинних ефектів (lunar_mod на Pᵢ при зміні фази тощо).
+    </div>`;
+}
+
 function syncV702UI(){
   // v85: build centralized state first
   const _ds = buildDashboardState();
@@ -8271,8 +8458,11 @@ function syncV702UI(){
   try{const _gNow=_v73G();if(isFinite(_gNow))_saveGHistory(_gNow);}catch(e){}
   // v87.19 U4: render best/worst days after history save
   try{ renderBestWorstDays(); }catch(e){}
-  // v87.72: provenance ledger render
+  // v87.73: provenance ledger render
   try{ renderProvenance(); }catch(e){console.warn("provenance:",e);}
+  // v87.73: model disagreement alert + counterfactual analysis
+  try{ renderDisagreement(); }catch(e){console.warn("disagreement:",e);}
+  try{ renderCounterfactual(); }catch(e){console.warn("counterfactual:",e);}
 }
 
 async function loadAll(){
@@ -8356,7 +8546,7 @@ async function loadAll(){
     _setSrcStatus('srcKpFcst','synthetic');
     // v87.17 A7: більш чесна комунікація — NOAA прогноз недоступний, використовується плато на базі останнього Kp
     el('threeError').innerHTML = '<span style="color:#ff9944">⚠</span> Прогноз NOAA недоступний. Показано плато на базі поточного Kp=' + _kpNow.toFixed(1) + '. <span class="muted" style="font-size:11px">Не справжній прогноз — без динаміки, лише fallback.</span>';
-    // v87.72: видимий alert над quick-cards + приглушені quick-cards
+    // v87.73: видимий alert над quick-cards + приглушені quick-cards
     const _alertEl = document.getElementById('threeNoaaAlert');
     if (_alertEl) {
       _alertEl.style.display = 'block';
@@ -8891,7 +9081,7 @@ function calcSunTimes(dateUTC) {
   const doy = Math.floor((dateUTC - new Date(Date.UTC(dateUTC.getUTCFullYear(),0,1)))/86400000);
   const decl = 23.45 * Math.sin((360/365*(doy-81)) * Math.PI/180);
   const lat = _userLat;
-  // v87.72 P4 fix: equation of time + atmospheric refraction.
+  // v87.73 P4 fix: equation of time + atmospheric refraction.
   // Раніше: cosHA для горизонту 90° + без EoT → похибка ±15-20 хв (критично для Hora boundary).
   // Тепер: zenith 90.833° (sun radius 16' + refraction 34') + EoT correction → точність ±2-5 хв.
   const Brad = (360/365) * (doy - 81) * Math.PI / 180;
@@ -12830,7 +13020,7 @@ function _renderFreshnessState(){
   const maxAge = Math.max(...ages);
   const fb = el('freshnessBadge');
   const hf = el('heroFreshness');
-  // v87.72: stale watermark — readable age (8хв / 35хв / 1.5г / 3г) у бейджі
+  // v87.73: stale watermark — readable age (8хв / 35хв / 1.5г / 3г) у бейджі
   const _ageMin = Math.round(maxAge / 60000);
   const _ageStr = _ageMin < 1 ? 'щойно'
                 : _ageMin < 60 ? _ageMin + 'хв'
@@ -13157,7 +13347,7 @@ function _saveGHistory(g){
 // v87.19 U4: best/worst days of past 30 days
 function _getBestWorstDays(){
   try{
-    // P1 fix v87.72: prefer engine_scores (validated, consistent з engine v17)
+    // P1 fix v87.73: prefer engine_scores (validated, consistent з engine v17)
     // над localStorage (running-average per-session, неконсистентний).
     // Continuous G реконструюється з engine kp + dashboard computeAi (єдина формула).
     if (typeof _engineScores !== 'undefined' && _engineScores && Object.keys(_engineScores).length > 0) {
@@ -13186,7 +13376,7 @@ function _getBestWorstDays(){
         return { best: {date:best[0], g:best[1]}, worst: {date:worst[0], g:worst[1]}, total: items.length, source: 'engine' };
       }
     }
-    // Fallback (legacy v87.72): localStorage running-average per-session
+    // Fallback (legacy v87.73): localStorage running-average per-session
     const daily = JSON.parse(localStorage.getItem('g_history_daily_v1') || '{}');
     const entries = Object.entries(daily).sort((a,b) => a[0].localeCompare(b[0]));
     if (entries.length < 3) return null;
@@ -13241,7 +13431,7 @@ function _getGDelta(){
     return {
       d3h: best3h ? latest.g - best3h.g : null,
       d24h: best24h ? latest.g - best24h.g : null,
-      // v87.72: timestamps для honesty в delta card (фактичний age vs nominal 24h)
+      // v87.73: timestamps для honesty в delta card (фактичний age vs nominal 24h)
       t3h:  best3h  ? best3h.ts  : null,
       t24h: best24h ? best24h.ts : null,
       g3h:  best3h  ? best3h.g   : null,
