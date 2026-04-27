@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v87.93</title>
+  <title>G-Index — Космофізичний дашборд v87.94</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -658,10 +658,14 @@
     #heroFreshness{font-size:15px!important}
     /* P3b: порожні hero-right cards — ховати (heroDelta, heroNextShiftChip без тексту) */
     #heroDelta:empty,#heroNextShiftChip:empty{display:none!important;padding:0!important;border:none!important;background:none!important}
-    /* v87.92: scenario/offline маркер для heroTomorrow через CSS pseudo-element.
-       Це НЕ можна стерти JS-рендерами (render3Day, _renderFreshnessState) — CSS після textContent. */
-    #heroTomorrow[data-scenario="1"]::after{content:' ⚠ scenario';color:#fca474;font-weight:600;margin-left:4px;font-size:11px;letter-spacing:.02em}
-    #heroTomorrow[data-scenario="offline"]::after{content:' ⚠ offline';color:#ff6b6b;font-weight:600;margin-left:4px;font-size:11px;letter-spacing:.02em}
+    /* v87.94: scenario/offline маркер для heroTomorrow через CSS pseudo-element + sibling DOM fallback.
+       Badge-style: помаранчевий фон з border, uppercase, специфічно видно на тлі hero card. */
+    #heroTomorrow[data-scenario="1"]::after{content:' ⚠ SCENARIO';color:#fca474;font-weight:700;margin-left:6px;font-size:10px;padding:2px 6px;border-radius:4px;background:rgba(252,164,116,.18);border:1px solid rgba(252,164,116,.45);letter-spacing:.06em;text-transform:uppercase;vertical-align:middle;display:inline-block}
+    #heroTomorrow[data-scenario="offline"]::after{content:' ⚠ OFFLINE';color:#ff6b6b;font-weight:700;margin-left:6px;font-size:10px;padding:2px 6px;border-radius:4px;background:rgba(255,107,107,.18);border:1px solid rgba(255,107,107,.45);letter-spacing:.06em;text-transform:uppercase;vertical-align:middle;display:inline-block}
+    /* Sibling DOM fallback — toggled через JS, незалежно від CSS pseudo. */
+    #heroTomorrowScenario{display:none;font-size:10px;font-weight:700;margin-left:6px;padding:2px 6px;border-radius:4px;letter-spacing:.06em;text-transform:uppercase;vertical-align:middle}
+    #heroTomorrowScenario.scenario{display:inline-block;color:#fca474;background:rgba(252,164,116,.18);border:1px solid rgba(252,164,116,.45)}
+    #heroTomorrowScenario.offline{display:inline-block;color:#ff6b6b;background:rgba(255,107,107,.18);border:1px solid rgba(255,107,107,.45)}
     /* P4: Приглушити ВСЕ нижче Hero ще більше — v87.20: прибрано для accessibility (аудит WCAG) */
     /* #decisionTimingCard,#coreGrid,#profileBar,.profile-section,#astroGrid,#panchCard,#personalSection,#techDetails{opacity:.78!important;filter:brightness(.87)!important} */
     /* P5: Depth — Hero виділяється тінню і inner glow */
@@ -1391,6 +1395,7 @@
           <span id="heroFreshness" class="live" data-label="Статус" style="font-size:13px;font-weight:800">LIVE</span>
           <span id="heroDelta" data-label="Δ G" style="font-size:12px;font-weight:700;color:var(--muted)"></span>
           <span id="heroTomorrow" data-label="Завтра" style="font-size:12px;font-weight:700;color:var(--muted)"></span>
+          <span id="heroTomorrowScenario" title="⚠ NOAA forecast недоступний — це плато на базі поточного Kp, не справжній прогноз."></span>
           <span id="heroNextShiftChip" data-label="Далі" style="font-size:11px;color:var(--faint);display:none"></span>
           <span id="heroStamp" data-label="Оновлено" style="font-size:11px;color:var(--dim)">—</span>
           <span id="heroConfidence" data-label="Довіра" style="font-size:11px;color:var(--dim)"></span>
@@ -6480,20 +6485,26 @@ function render3Day(parsed3){
           const _hint = _diff > 0.3 ? 'покращення' : _diff < -0.3 ? 'погіршення' : 'без змін';
           const _sign = _tomorrowG >= 0 ? '+' : '';
           // v87.92 fix: scenario marker через data-attribute + CSS ::after — не можна перетерти JS-рендерами
+          // v87.94: + sibling DOM fallback (heroTomorrowScenario) — окремий elem, не конфліктує з рендерами
           const _isScenario = !!(parsed3 && parsed3._synthetic);
           _htEl.textContent = `G=${_sign}${_tomorrowG.toFixed(1)} ${_arrow} ${_hint}`;
+          const _htSibling = document.getElementById('heroTomorrowScenario');
           if (_isScenario) {
             _htEl.dataset.scenario = '1';
             _htEl.title = '⚠ NOAA forecast недоступний — це плато на базі поточного Kp, не справжній прогноз. Тренд "покращення/погіршення" базується на Aᵢ-факторах календаря (Lᵢ, Mᵢ, Pᵢ), а не на динаміці Kp.';
+            if (_htSibling) { _htSibling.textContent = '⚠ SCENARIO'; _htSibling.className = 'scenario'; }
           } else {
             delete _htEl.dataset.scenario;
             _htEl.title = '';
+            if (_htSibling) { _htSibling.textContent = ''; _htSibling.className = ''; }
           }
           _htEl.style.color = _isScenario ? 'var(--muted)'
             : _tomorrowG >= 1 ? 'var(--ok)' : _tomorrowG >= 0 ? 'var(--muted)' : _tomorrowG > -2 ? 'var(--warn)' : 'var(--bad)';
         } else {
           _htEl.textContent = '';
           delete _htEl.dataset.scenario;
+          const _htSibling = document.getElementById('heroTomorrowScenario');
+          if (_htSibling) { _htSibling.textContent = ''; _htSibling.className = ''; }
         }
       }
     } catch(e) { /* noop */ }
@@ -7232,11 +7243,20 @@ function syncHero(){
   }
   // v87.92: dataset.scenario для heroTomorrow — третя точка синхронізації (після render3Day і _renderFreshnessState).
   // CSS ::after pseudo-element рендерить '⚠ scenario' автоматично.
+  // v87.94: + sibling DOM heroTomorrowScenario для повної надійності
   const _ht = el('heroTomorrow');
+  const _htSib = el('heroTomorrowScenario');
   if (_ht) {
-    if (_dataMode === 'scenario') _ht.dataset.scenario = '1';
-    else if (_dataMode === 'offline') _ht.dataset.scenario = 'offline';
-    else delete _ht.dataset.scenario;
+    if (_dataMode === 'scenario') {
+      _ht.dataset.scenario = '1';
+      if (_htSib) { _htSib.textContent = '⚠ SCENARIO'; _htSib.className = 'scenario'; }
+    } else if (_dataMode === 'offline') {
+      _ht.dataset.scenario = 'offline';
+      if (_htSib) { _htSib.textContent = '⚠ OFFLINE'; _htSib.className = 'offline'; }
+    } else {
+      delete _ht.dataset.scenario;
+      if (_htSib) { _htSib.textContent = ''; _htSib.className = ''; }
+    }
   }
 
   _set('heroStamp', _ui.stamp || (el('stamp')?.textContent||'').replace('Оновлено:','').trim() || '—');
@@ -13673,15 +13693,20 @@ function _renderFreshnessState(){
     // v87.92 fix: маркер heroTomorrow через data-attribute + CSS ::after.
     // Раніше використовував innerHTML.replace, але render3Day переписував все через innerHTML.
     // Тепер dataset stays навіть коли textContent перезаписаний.
+    // v87.94: + sibling DOM fallback
     const _ht = document.getElementById('heroTomorrow');
+    const _htSib = document.getElementById('heroTomorrowScenario');
     if (_ht) {
       if (_dm === 'scenario') {
         _ht.dataset.scenario = '1';
         if (!_ht.title) _ht.title = '⚠ NOAA forecast недоступний — це плато на базі поточного Kp.';
+        if (_htSib) { _htSib.textContent = '⚠ SCENARIO'; _htSib.className = 'scenario'; }
       } else if (_dm === 'offline') {
         _ht.dataset.scenario = 'offline';
+        if (_htSib) { _htSib.textContent = '⚠ OFFLINE'; _htSib.className = 'offline'; }
       } else {
         delete _ht.dataset.scenario;
+        if (_htSib) { _htSib.textContent = ''; _htSib.className = ''; }
       }
     }
   } catch(e) { /* noop */ }
