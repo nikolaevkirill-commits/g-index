@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v88.0</title>
+  <title>G-Index — Космофізичний дашборд v88.2</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -3022,6 +3022,22 @@ function renderHeroBulletin(){
   elB.title = `Engine v17 score: ${s >= 0 ? '+' : ''}${s} (rule-based, threshold classifier).\nТег: ${entry.tag || '—'}\nKp=${entry.kp}${synth}${pdfStr}\nDashboard G (continuous) ≠ Engine score (threshold) — різні моделі за дизайном.`;
 }
 
+// v88.1: BPHS canonical yoga penalties for ADVISORY display only.
+// Tested empirically as hard rule on n=178 (engine_v18 audit, 27.04.2026):
+//   V1 (full BPHS): rescued=1, broken=10, net=-9 → REJECT
+//   V2-V4 (gated):  rescued=0-1, broken=0-3, net≤0 → no promotion possible
+// Engine v17 confirmed local optimum. Yoga shown as read-only metadata in UI.
+const NEGATIVE_YOGAS_BPHS = {
+  6:  {name:'Atiganda',  pen:-2},
+  9:  {name:'Shula',     pen:-1},
+  10: {name:'Ganda',     pen:-1},
+  13: {name:'Vyaghata',  pen:-1},
+  15: {name:'Vajra',     pen:-1},
+  17: {name:'Vyatipata', pen:-3},
+  19: {name:'Parigha',   pen:-1},
+  27: {name:'Vaidhriti', pen:-2},
+};
+
 // v88.0: Astronomical Layer pill (cal_score / Tithi / Nakshatra / Yoga / cal_symbols)
 // Reads engine_scores entry for today and renders compact pill + rich tooltip.
 // Uses TITHI_NAMES, NAKSHATRA_NAMES, YOGA_NAMES (defined later in file — resolved at call time).
@@ -3053,7 +3069,12 @@ function renderHeroAstroLayer(){
   // Rich tooltip with full astronomical context
   const symStr = (Array.isArray(entry.cal_symbols) && entry.cal_symbols.length) ? entry.cal_symbols.join(', ') : '—';
   const artifactWarn = entry.excel_tag_artifact ? `\n⚠ Excel-tag artifact: ${entry.excel_tag_artifact_reason || ''}` : '';
-  elA.title = `Astronomical layer (Swiss Ephemeris · Lahiri ayanamsha)\ncal_score: ${cs >= 0 ? '+' : ''}${cs} (astronomical-derived, не PDF/engine)\nTithi: ${entry.cal_tithi} (${tName})\nNakshatra: ${entry.cal_nakshatra} (${nName})\nYoga: ${entry.cal_yoga} (${yName})\nSymbols: ${symStr}${artifactWarn}\n\ncal_score описує детерміновані astronomical events; engine_score = bulletin-style тегова класифікація. Різні метрики, ~14% exact match expected.`;
+  // v88.1: Yoga advisory (read-only, BPHS canonical penalty for negative yogas)
+  const _ny = NEGATIVE_YOGAS_BPHS[entry.cal_yoga];
+  const yogaAdvisory = _ny
+    ? `\n⚪ BPHS yoga advisory: ${_ny.name} (canonical penalty ${_ny.pen}). Engine v17 не модифікує score (audit n=178: rule REJECTED, net -9 SM).`
+    : '';
+  elA.title = `Astronomical layer (Swiss Ephemeris · Lahiri ayanamsha)\ncal_score: ${cs >= 0 ? '+' : ''}${cs} (astronomical-derived, не PDF/engine)\nTithi: ${entry.cal_tithi} (${tName})\nNakshatra: ${entry.cal_nakshatra} (${nName})\nYoga: ${entry.cal_yoga} (${yName})\nSymbols: ${symStr}${artifactWarn}${yogaAdvisory}\n\ncal_score описує детерміновані astronomical events; engine_score = bulletin-style тегова класифікація. Різні метрики, ~14% exact match expected.`;
   elA.style.display = '';
 }
 
@@ -3114,7 +3135,10 @@ function renderScenarioCard(){
       : '';
     const flags = (synth ? '~' : '') + (artifact ? '⚠' : '');
     const tt = e
-      ? `${d.ds} (${dow})\nengine: ${engStr}${synth ? ' (Kp synthetic)' : ''}\ncal_score: ${calStr || '—'}\nТег: ${tag || '—'}` + (artifact ? `\n⚠ ${e.excel_tag_artifact_reason || 'Excel-tag artifact'}` : '') + `\n\nКлік → деталі у таблиці 27 днів`
+      ? `${d.ds} (${dow})\nengine: ${engStr}${synth ? ' (Kp synthetic)' : ''}\ncal_score: ${calStr || '—'}\nТег: ${tag || '—'}` + (artifact ? `\n⚠ ${e.excel_tag_artifact_reason || 'Excel-tag artifact'}` : '') + ((function(){
+          const _ny2 = (typeof NEGATIVE_YOGAS_BPHS !== 'undefined' && e.cal_yoga) ? NEGATIVE_YOGAS_BPHS[e.cal_yoga] : null;
+          return _ny2 ? `\n⚪ BPHS: ${_ny2.name} (${_ny2.pen}, advisory only)` : '';
+        })()) + `\n\nКлік → деталі у таблиці 27 днів`
       : `${d.ds} (${dow}) — поза validation window`;
     const borderToday = isToday ? '2px solid var(--ok)' : '1px solid var(--border2)';
     const clickAttr = e ? ` onclick="scrollAndHighlight27d('${d.ds}')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();scrollAndHighlight27d('${d.ds}')}"` : '';
@@ -3137,6 +3161,15 @@ function renderScenarioCard(){
     const critTxt = critCount > 0 ? ` · <span style="color:var(--warn);font-weight:700">⚡ ${critCount} ${critWord}</span>` : ` · ${stableWord}`;
     subEl.innerHTML = ` — ${days.length} ${daysWord}${critTxt}`;
   }
+  // v88.2: auto-expand scenarioCard коли crit≥3 з 7 — щоб користувач побачив warning.
+  // Trigger тільки один раз на сесію (per browser session) — не override user manual close.
+  try {
+    const card = document.getElementById('scenarioCard');
+    if(card && critCount >= 3 && !card.open && !sessionStorage.getItem('gix_scenario_auto_expanded')){
+      card.open = true;
+      sessionStorage.setItem('gix_scenario_auto_expanded', '1');
+    }
+  } catch(e){ /* sessionStorage може кинути в private mode — ignore */ }
 }
 
 // v88.0 F3: scroll+highlight target row у 27d table.
