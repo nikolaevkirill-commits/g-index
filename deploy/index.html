@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v87.95</title>
+  <title>G-Index — Космофізичний дашборд v87.97</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -167,10 +167,7 @@
 
     .panch-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:10px; margin-top:10px }
     .panch-cell{ background:var(--card2); border:1px solid #1e2f52; border-radius:var(--r); padding:10px 12px; transition:border-color .2s }
-    .panch-cell.pcl-pos{ border-color:rgba(43,212,125,.35); background:var(--ok-dim) }
-    .panch-cell.pcl-warn{ border-color:rgba(255,204,0,.35); background:var(--warn-dim) }
-    .panch-cell.pcl-bad{ border-color:rgba(255,107,107,.4); background:var(--bad-dim) }
-    .panch-cell.pcl-vbad{ border-color:rgba(255,60,60,.6); background:rgba(255,60,60,.10) }
+    /* v87.97: видалено dead CSS .pcl-{pos,warn,bad,vbad} — жодного classList.add() у JS, конфлікт-резолвер тепер через scoreBar gCtx (v87.96) */
     .panch-label{ font-size:var(--fs-sm); color:var(--dim); text-transform:uppercase; letter-spacing:.05em; margin-bottom:4px; font-weight:600 }
     .panch-val{ font-size:var(--fs-lg); font-weight:700; color:var(--text2) }
     .panch-sub{ font-size:var(--fs-md); color:var(--muted); margin-top:2px }
@@ -968,9 +965,7 @@
     @media(max-width:860px){#panchCard .panch-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
     @media(max-width:520px){#panchCard .panch-grid{grid-template-columns:1fr!important}}
     #panchCard .panch-cell{min-height:68px!important;padding:8px 10px!important;border-radius:12px!important}
-    /* v87.5 Problem 2: G vs Panchanga conflict resolver — коли G негативний, "зелені" локальні клітинки приглушуються */
-    #panchCard.g-tense .panch-cell.pcl-pos,#panchCard.g-unstable .panch-cell.pcl-pos{opacity:.55!important;filter:saturate(.5)!important}
-    #panchCard.g-tense .panch-cell.pcl-pos::after,#panchCard.g-unstable .panch-cell.pcl-pos::after{content:"локально ✓, глобально ⚠";position:absolute;bottom:3px;right:6px;font-size:8px;color:#ffa64d;opacity:.7;pointer-events:none;text-transform:uppercase;letter-spacing:.03em}
+    /* v87.97: видалено dead conflict resolver на .pcl-pos (lines 968-970 v87.95) — селектори не мали DOM-таргетів. Conflict resolution тепер у scoreBar(s, gCtx) gCtx-aware (v87.96). */
     #panchCard .panch-cell{position:relative}
     #panchCard .panch-label{font-size:10px!important;margin-bottom:2px!important}
     #panchCard .panch-val{font-size:13px!important;line-height:1.2!important}
@@ -5893,13 +5888,18 @@ function renderPanchangaCard(state){
 
   // v87.31: visual weight bar — довжина та колір пропорційні |score|
   // Шкала score у Panchanga: зазвичай -3..+3, іноді -4..+4 (Nak/Yoga)
-  const scoreBar = (s) => {
+  // v87.96 fix (баг #5): gCtx parameter — узгоджено з scoreIcon. Коли глобальний G тиснутий
+  // (g < -1), локально позитивні score приглушуються до синього (#7da4d8) замість зеленого,
+  // щоб не створювати видимого конфлікту з червоним Hero (Vara=Soma +1, Yoga=Dhruva +1 тощо).
+  const scoreBar = (s, gCtx) => {
     const abs = Math.abs(s||0);
     if (abs === 0) return '';
     const maxW = 32; // px, для score=3
     const w = Math.min(maxW, Math.round(abs / 3 * maxW));
-    const col = s > 0 ? '#2bd47d' : '#ff6b6b';
-    return `<span aria-hidden="true" title="|score|=${abs}" style="display:inline-block;vertical-align:middle;width:${w}px;height:4px;background:${col};opacity:0.55;border-radius:2px;margin-left:4px;margin-right:2px"></span>`;
+    const _suppressed = (s > 0 && gCtx != null && gCtx < -1);
+    const col = s > 0 ? (_suppressed ? '#7da4d8' : '#2bd47d') : '#ff6b6b';
+    const opacity = _suppressed ? 0.35 : 0.55;
+    return `<span aria-hidden="true" title="|score|=${abs}" style="display:inline-block;vertical-align:middle;width:${w}px;height:4px;background:${col};opacity:${opacity};border-radius:2px;margin-left:4px;margin-right:2px"></span>`;
   };
 
   // Детальні пояснення для tooltip кожного параметра
@@ -5982,35 +5982,35 @@ function renderPanchangaCard(state){
       <td style="padding:5px 6px;color:#9bb1dc;font-size:11px">
         <span class="hint" tabindex="0" style="cursor:help;font-style:italic;border-bottom:1px dotted var(--faint)">Tithi<span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.tithi(p.tithi))}</span></span>
       </td>
-      <td style="padding:5px 6px;font-weight:600"><span class="hint" tabindex="0" style="cursor:help">${scoreIcon(p.tithi.score, _gEarly)}${scoreBar(p.tithi.score)} ${p.tithi.name}<br><span style="font-size:10px;color:#7a95b8;font-weight:400">${p.tithi.type}</span><span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.tithi(p.tithi))}</span></span></td>
+      <td style="padding:5px 6px;font-weight:600"><span class="hint" tabindex="0" style="cursor:help">${scoreIcon(p.tithi.score, _gEarly)}${scoreBar(p.tithi.score, _gEarly)} ${p.tithi.name}<br><span style="font-size:10px;color:#7a95b8;font-weight:400">${p.tithi.type}</span><span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.tithi(p.tithi))}</span></span></td>
       <td style="padding:5px 6px;font-size:11px;color:#b0c4de">${tAdv && tAdv.do ? '✓ '+tAdv.do : ''}</td>
     </tr>
     <tr>
       <td style="padding:5px 6px;color:#9bb1dc;font-size:11px">
         <span class="hint" tabindex="0" style="cursor:help;font-style:italic;border-bottom:1px dotted var(--faint)">Vara<span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.vara(p.vara))}</span></span>
       </td>
-      <td style="padding:5px 6px;font-weight:600"><span class="hint" tabindex="0" style="cursor:help">${scoreIcon(p.vara.score, _gEarly)}${scoreBar(p.vara.score)} ${p.vara.name}<br><span style="font-size:10px;color:#7a95b8;font-weight:400">${p.vara.planet}</span><span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.vara(p.vara))}</span></span></td>
+      <td style="padding:5px 6px;font-weight:600"><span class="hint" tabindex="0" style="cursor:help">${scoreIcon(p.vara.score, _gEarly)}${scoreBar(p.vara.score, _gEarly)} ${p.vara.name}<br><span style="font-size:10px;color:#7a95b8;font-weight:400">${p.vara.planet}</span><span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.vara(p.vara))}</span></span></td>
       <td style="padding:5px 6px;font-size:11px;color:#b0c4de">${vAdv && vAdv.do ? '✓ '+vAdv.do : ''}</td>
     </tr>
     <tr>
       <td style="padding:5px 6px;color:#9bb1dc;font-size:11px">
         <span class="hint" tabindex="0" style="cursor:help;font-style:italic;border-bottom:1px dotted var(--faint)">Nakshatra<span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.nakshatra(p.nakshatra))}</span></span>
       </td>
-      <td style="padding:5px 6px;font-weight:600"><span class="hint" tabindex="0" style="cursor:help">${scoreIcon(p.nakshatra.score, _gEarly)}${scoreBar(p.nakshatra.score)} ${p.nakshatra.name}<br><span style="font-size:10px;color:#7a95b8;font-weight:400">${p.nakshatra.type} · ${p.nakshatra.regent}</span><span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.nakshatra(p.nakshatra))}</span></span></td>
+      <td style="padding:5px 6px;font-weight:600"><span class="hint" tabindex="0" style="cursor:help">${scoreIcon(p.nakshatra.score, _gEarly)}${scoreBar(p.nakshatra.score, _gEarly)} ${p.nakshatra.name}<br><span style="font-size:10px;color:#7a95b8;font-weight:400">${p.nakshatra.type} · ${p.nakshatra.regent}</span><span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.nakshatra(p.nakshatra))}</span></span></td>
       <td style="padding:5px 6px;font-size:11px;color:#b0c4de">${nAdv && nAdv.do ? '✓ '+nAdv.do : ''}</td>
     </tr>
     <tr>
       <td style="padding:5px 6px;color:#9bb1dc;font-size:11px">
         <span class="hint" tabindex="0" style="cursor:help;font-style:italic;border-bottom:1px dotted var(--faint)">Yoga<span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.yoga(p.yoga))}</span></span>
       </td>
-      <td style="padding:5px 6px;font-weight:600"><span class="hint" tabindex="0" style="cursor:help">${scoreIcon(p.yoga.score, _gEarly)}${scoreBar(p.yoga.score)} ${p.yoga.name}${p.yoga.isCritical?' ⚠️':''}<br><span style="font-size:10px;color:#7a95b8;font-weight:400">резонанс Сонце–Місяць</span><span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.yoga(p.yoga))}</span></span></td>
+      <td style="padding:5px 6px;font-weight:600"><span class="hint" tabindex="0" style="cursor:help">${scoreIcon(p.yoga.score, _gEarly)}${scoreBar(p.yoga.score, _gEarly)} ${p.yoga.name}${p.yoga.isCritical?' ⚠️':''}<br><span style="font-size:10px;color:#7a95b8;font-weight:400">резонанс Сонце–Місяць</span><span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.yoga(p.yoga))}</span></span></td>
       <td style="padding:5px 6px;font-size:11px;color:#b0c4de">${yAdv && yAdv.do ? '✓ '+yAdv.do : ''}</td>
     </tr>
     <tr>
       <td style="padding:5px 6px;color:#9bb1dc;font-size:11px">
         <span class="hint" tabindex="0" style="cursor:help;font-style:italic;border-bottom:1px dotted var(--faint)">Karana<span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.karana(p.karana))}</span></span>
       </td>
-      <td style="padding:5px 6px;font-weight:600"><span class="hint" tabindex="0" style="cursor:help">${scoreIcon(p.karana.score, _gEarly)}${scoreBar(p.karana.score)} ${p.karana.name}${p.karana.isVishti?' ⛔':''}<br><span style="font-size:10px;color:#7a95b8;font-weight:400">${p.karana.type}</span><span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.karana(p.karana))}</span></span></td>
+      <td style="padding:5px 6px;font-weight:600"><span class="hint" tabindex="0" style="cursor:help">${scoreIcon(p.karana.score, _gEarly)}${scoreBar(p.karana.score, _gEarly)} ${p.karana.name}${p.karana.isVishti?' ⛔':''}<br><span style="font-size:10px;color:#7a95b8;font-weight:400">${p.karana.type}</span><span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.karana(p.karana))}</span></span></td>
       <td style="padding:5px 6px;font-size:11px;color:#b0c4de">${kAdv && kAdv.do ? '✓ '+kAdv.do : ''}</td>
     </tr>
     ${_aiEarly.ei !== 0 ? `<tr style="background:rgba(255,100,100,0.05)">
