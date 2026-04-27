@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v87.99</title>
+  <title>G-Index — Космофізичний дашборд v88.0</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1406,6 +1406,8 @@
           <span id="heroConfidence" data-label="Довіра" style="font-size:11px;color:var(--dim)"></span>
           <!-- v87.90 P3 fix: badge style для engine v17 score — більш помітно vs Live G -->
           <span id="heroBulletin" data-label="Engine v17" class="hint" tabindex="0" style="font-size:12px;font-weight:700;color:var(--muted);cursor:help;border:1px solid var(--border2);padding:1px 8px;border-radius:8px;background:rgba(11,18,32,.4)" title="Engine v17 (rule-based bulletin model, discrete -3..+3). Використовує manual Джйотіш-теги + thresholds.&#10;Dashboard G — continuous real-time signal (Kp − 2 + ΣAᵢ).&#10;Різні моделі за дизайном — розбіжність не баг.">—</span>
+          <!-- v88.0: Astronomical layer pill (Tithi/Nakshatra/Yoga з cal_score field у engine_scores.json, Swiss Ephemeris Lahiri) -->
+          <span id="heroAstroLayer" data-label="Astro" class="hint" tabindex="0" style="display:none;font-size:12px;font-weight:700;color:var(--muted);cursor:help;border:1px solid var(--border2);padding:1px 8px;border-radius:8px;background:rgba(11,18,32,.4)" title="">—</span>
           <!-- v87.90: Backtest link — чесні обидві метрики (strict 71.9% + directional 87.1%) -->
           <a href="backtest.html" target="_blank" rel="noopener" data-label="Точність" style="font-size:12px;font-weight:700;color:var(--ok);text-decoration:none;border:1px solid var(--ok);padding:1px 8px;border-radius:8px;background:rgba(43,212,125,.08);transition:background .2s" title="Точність engine v17 на n=212 днях:&#10;• Sign match (strict): 71.5% — нуль як окремий клас (academic)&#10;• Directional (≥0/<0): 86.8% — для рішень діяти/не діяти&#10;• Exact match: 44.3% (7 категорій, n=212)&#10;• MAE: 1.01 (шкала ±3)&#10;Натисни щоб побачити повний backtest.">📊 75% / 87%</a>
         </div>
@@ -1422,6 +1424,23 @@
       </div>
       <span style="font-size:11px;color:var(--ok);font-weight:700;white-space:nowrap">Подивитись →</span>
     </a>
+    <!-- v88.0 F3: Scenario card — 7-day forecast strip з engine + cal_score (closed by default) -->
+    <details id="scenarioCard" style="margin:0 0 10px;padding:10px 14px;border-radius:12px;border:1px solid var(--border);background:rgba(11,18,32,.5)">
+      <summary style="cursor:pointer;font-size:12px;font-weight:600;color:var(--muted);list-style:none;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span style="font-size:14px">📅</span>
+        <span style="flex:1;min-width:200px">
+          <span id="scenarioSummaryLabel" style="color:var(--text)">Сценарій на 7 днів</span>
+          <span id="scenarioSummarySub" style="color:var(--dim);font-weight:500"> — engine + astronomical layer</span>
+        </span>
+        <span style="font-size:11px;color:var(--dim)">▾</span>
+      </summary>
+      <div id="scenarioStrip" style="margin-top:10px;display:flex;gap:6px;overflow-x:auto;padding:2px 0">
+        <div style="font-size:11px;color:var(--dim);padding:6px">Завантаження…</div>
+      </div>
+      <div id="scenarioLegend" style="margin-top:8px;font-size:10px;color:var(--dim);line-height:1.5">
+        Кольори = engine_score (−3 червоний / 0 нейтр / +3 зелений). Точка зверху = cal_score (astronomical, Swiss Ephemeris Lahiri). ⚠ = Excel-tag artifact. ~ = synthetic Kp.
+      </div>
+    </details>
     <!-- v87.90: Provenance ledger — джерела для сьогоднішньої оцінки (closed by default) -->
     <details id="provenanceCard" style="margin:0 0 10px;padding:10px 14px;border-radius:12px;border:1px solid var(--border);background:rgba(11,18,32,.5)">
       <summary style="cursor:pointer;font-size:12px;font-weight:600;color:var(--muted);list-style:none;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
@@ -3003,6 +3022,153 @@ function renderHeroBulletin(){
   elB.title = `Engine v17 score: ${s >= 0 ? '+' : ''}${s} (rule-based, threshold classifier).\nТег: ${entry.tag || '—'}\nKp=${entry.kp}${synth}${pdfStr}\nDashboard G (continuous) ≠ Engine score (threshold) — різні моделі за дизайном.`;
 }
 
+// v88.0: Astronomical Layer pill (cal_score / Tithi / Nakshatra / Yoga / cal_symbols)
+// Reads engine_scores entry for today and renders compact pill + rich tooltip.
+// Uses TITHI_NAMES, NAKSHATRA_NAMES, YOGA_NAMES (defined later in file — resolved at call time).
+function renderHeroAstroLayer(){
+  const elA = el('heroAstroLayer');
+  if(!elA) return;
+  const entry = getEngineScore(new Date());
+  if(!entry || entry.cal_tithi === undefined || entry.cal_tithi === null){
+    elA.style.display = 'none';
+    return;
+  }
+  // 1-based → 0-based for arrays
+  const tIdx = Math.max(0, Math.min(29, (entry.cal_tithi|0) - 1));
+  const nIdx = Math.max(0, Math.min(26, (entry.cal_nakshatra|0) - 1));
+  const yIdx = Math.max(0, Math.min(26, (entry.cal_yoga|0) - 1));
+  const tName = (typeof TITHI_NAMES !== 'undefined') ? (TITHI_NAMES[tIdx] || ('T'+entry.cal_tithi)) : ('T'+entry.cal_tithi);
+  const nName = (typeof NAKSHATRA_NAMES !== 'undefined') ? (NAKSHATRA_NAMES[nIdx] || ('N'+entry.cal_nakshatra)) : ('N'+entry.cal_nakshatra);
+  // YOGA_NAMES is local to computePanchanga; redefine inline (BPHS canonical 27 yogas)
+  const _YOGAS = ['Vishkambha','Priti','Ayushman','Saubhagya','Shobhana','Atiganda','Sukarman',
+    'Dhriti','Shula','Ganda','Vriddhi','Dhruva','Vyaghata','Harshana','Vajra',
+    'Siddhi','Vyatipata','Variyan','Parigha','Shiva','Siddha','Sadhya','Shubha',
+    'Shukla','Brahma','Indra','Vaidhriti'];
+  const yName = _YOGAS[yIdx] || ('Y'+entry.cal_yoga);
+  const cs = entry.cal_score;
+  const csColor = (cs >= 2) ? 'var(--ok)' : (cs === 1) ? '#9cd49c' : (cs === 0) ? 'var(--muted)' : (cs === -1) ? 'var(--warn)' : (cs <= -2) ? 'var(--bad)' : 'var(--muted)';
+  const csStr = (cs !== undefined && cs !== null) ? `<span style="color:${csColor};font-weight:700">${cs >= 0 ? '+' : ''}${cs}</span> · ` : '';
+  // Compact label: cal_score · Tithi · first 6 chars Nakshatra
+  elA.innerHTML = `${csStr}🌙 ${tName} · ✨ ${nName.slice(0, 8)}`;
+  // Rich tooltip with full astronomical context
+  const symStr = (Array.isArray(entry.cal_symbols) && entry.cal_symbols.length) ? entry.cal_symbols.join(', ') : '—';
+  const artifactWarn = entry.excel_tag_artifact ? `\n⚠ Excel-tag artifact: ${entry.excel_tag_artifact_reason || ''}` : '';
+  elA.title = `Astronomical layer (Swiss Ephemeris · Lahiri ayanamsha)\ncal_score: ${cs >= 0 ? '+' : ''}${cs} (astronomical-derived, не PDF/engine)\nTithi: ${entry.cal_tithi} (${tName})\nNakshatra: ${entry.cal_nakshatra} (${nName})\nYoga: ${entry.cal_yoga} (${yName})\nSymbols: ${symStr}${artifactWarn}\n\ncal_score описує детерміновані astronomical events; engine_score = bulletin-style тегова класифікація. Різні метрики, ~14% exact match expected.`;
+  elA.style.display = '';
+}
+
+// v88.0 F3: Scenario card — 7-day forecast strip (today + 6 next days)
+// Pure render-only: reuses _engineScores, не зачіпає engine logic.
+function renderScenarioCard(){
+  const elStrip = el('scenarioStrip');
+  if(!elStrip) return;
+  const today = new Date();
+  const days = [];
+  for(let i=0; i<7; i++){
+    const d = new Date(today);
+    d.setDate(today.getDate() + i);
+    const ds = fmtDate(d);
+    const entry = _engineScores ? _engineScores[ds] : null;
+    days.push({ date: d, ds, entry });
+  }
+  // Якщо engine_scores ще не готовий або порожній — показуємо placeholder
+  const haveData = days.some(x => x.entry);
+  if(!haveData){
+    elStrip.innerHTML = '<div style="font-size:11px;color:var(--dim);padding:6px">engine_scores.json не завантажено — оновіть сторінку</div>';
+    return;
+  }
+  const dowUA = ['Нд','Пн','Вт','Ср','Чт','Пт','Сб'];
+  function colorForScore(s){
+    if(s === null || s === undefined) return 'var(--muted)';
+    if(s >= 2) return 'var(--ok)';
+    if(s === 1) return '#9cd49c';
+    if(s === 0) return 'var(--muted)';
+    if(s === -1) return 'var(--warn)';
+    return 'var(--bad)';
+  }
+  function bgForScore(s){
+    if(s === null || s === undefined) return 'rgba(155,177,220,.08)';
+    if(s >= 2) return 'rgba(43,212,125,.18)';
+    if(s === 1) return 'rgba(43,212,125,.10)';
+    if(s === 0) return 'rgba(155,177,220,.10)';
+    if(s === -1) return 'rgba(255,170,51,.15)';
+    return 'rgba(232,80,91,.18)';
+  }
+  let html = '';
+  let critCount = 0; // кiлькiсть днiв з |eng|>=2 у наступнi 7
+  for(const d of days){
+    const e = d.entry;
+    const eng = e ? e.eng : null;
+    const cal = e ? e.cal_score : null;
+    const tag = e ? (e.tag || '') : '';
+    const synth = e && e.kp_synthetic;
+    const artifact = e && e.excel_tag_artifact;
+    const dow = dowUA[d.date.getDay()];
+    const dom = d.date.getDate();
+    const isToday = (d.ds === fmtDate(today));
+    if(eng !== null && eng !== undefined && Math.abs(eng) >= 2) critCount++;
+    const engStr = (eng !== null && eng !== undefined) ? `${eng >= 0 ? '+' : ''}${eng}` : '—';
+    const calStr = (cal !== null && cal !== undefined) ? `${cal >= 0 ? '+' : ''}${cal}` : '';
+    const calDot = (cal !== null && cal !== undefined)
+      ? `<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${colorForScore(cal)};margin-right:3px;vertical-align:middle" title="cal_score ${calStr}"></span>`
+      : '';
+    const flags = (synth ? '~' : '') + (artifact ? '⚠' : '');
+    const tt = e
+      ? `${d.ds} (${dow})\nengine: ${engStr}${synth ? ' (Kp synthetic)' : ''}\ncal_score: ${calStr || '—'}\nТег: ${tag || '—'}` + (artifact ? `\n⚠ ${e.excel_tag_artifact_reason || 'Excel-tag artifact'}` : '') + `\n\nКлік → деталі у таблиці 27 днів`
+      : `${d.ds} (${dow}) — поза validation window`;
+    const borderToday = isToday ? '2px solid var(--ok)' : '1px solid var(--border2)';
+    const clickAttr = e ? ` onclick="scrollAndHighlight27d('${d.ds}')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();scrollAndHighlight27d('${d.ds}')}"` : '';
+    const cursorStyle = e ? 'pointer' : 'help';
+    html += `<div${clickAttr} style="flex:1 0 64px;min-width:64px;padding:6px 4px;border-radius:8px;border:${borderToday};background:${bgForScore(eng)};text-align:center;cursor:${cursorStyle};transition:transform .12s,box-shadow .12s" onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 2px 8px rgba(0,0,0,.3)'" onmouseout="this.style.transform='';this.style.boxShadow=''" title="${escapeHtml(tt)}">`
+      + `<div style="font-size:9px;color:var(--dim);font-weight:700">${dow}</div>`
+      + `<div style="font-size:11px;color:var(--text2);font-weight:600">${dom}</div>`
+      + `<div style="margin-top:2px">${calDot}<span style="font-size:13px;font-weight:800;color:${colorForScore(eng)}">${engStr}</span></div>`
+      + (flags ? `<div style="font-size:9px;color:var(--warn);margin-top:1px;line-height:1">${flags}</div>` : '<div style="height:11px"></div>')
+      + `</div>`;
+  }
+  elStrip.innerHTML = html;
+  // Update summary sub-label (з i18n)
+  const subEl = el('scenarioSummarySub');
+  if(subEl){
+    const _t88 = (typeof I18N !== 'undefined' && typeof _currentLang !== 'undefined' && I18N[_currentLang]) ? I18N[_currentLang] : null;
+    const critWord = (_t88 && _t88.scenarioCritical) ? _t88.scenarioCritical : ((_currentLang === 'EN') ? 'critical' : (critCount===1?'критичний':'критичних'));
+    const stableWord = (_t88 && _t88.scenarioStable) ? _t88.scenarioStable : 'стабільний';
+    const daysWord = (_currentLang === 'EN') ? 'days' : 'днів';
+    const critTxt = critCount > 0 ? ` · <span style="color:var(--warn);font-weight:700">⚡ ${critCount} ${critWord}</span>` : ` · ${stableWord}`;
+    subEl.innerHTML = ` — ${days.length} ${daysWord}${critTxt}`;
+  }
+}
+
+// v88.0 F3: scroll+highlight target row у 27d table.
+// Глобальна (window-scoped) бо викликається з inline onclick у renderScenarioCard.
+window.scrollAndHighlight27d = function(ds){
+  // Розкриваємо table27Wrap якщо було display:none (perfomance gate первинно ховає до compute)
+  const wrap = document.getElementById('table27Wrap');
+  if(wrap && wrap.style.display === 'none'){
+    wrap.style.display = '';
+  }
+  // Чекаємо один tick, щоб layout оновився після показу
+  setTimeout(()=>{
+    const row = document.querySelector(`#twentysevenContent tr[data-ds="${ds}"]`);
+    if(!row){
+      // Дата може бути поза 27d range (далі +6 днів) — fallback: scroll до scenario block
+      const sc = document.getElementById('scenarioCard');
+      if(sc) sc.scrollIntoView({behavior:'smooth', block:'center'});
+      return;
+    }
+    row.scrollIntoView({behavior:'smooth', block:'center'});
+    // Highlight effect: жовте підсвічування на 2с, потім fade
+    const origBg = row.style.background;
+    const origTransition = row.style.transition;
+    row.style.transition = 'background .25s';
+    row.style.background = 'rgba(255,204,0,0.35)';
+    setTimeout(()=>{
+      row.style.background = origBg || '';
+      setTimeout(()=>{ row.style.transition = origTransition || ''; }, 300);
+    }, 1800);
+  }, 50);
+};
+
 // Екранобезпечне екранування HTML у підказках
 function escapeHtml(s){
   return String(s).replace(/[&<>"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));
@@ -4436,7 +4602,7 @@ function draw27dTable(){
       }
     } catch(e){}
 
-    html += `<tr style="${rowStyle}${todayStyle}">
+    html += `<tr data-ds="${ds}" style="${rowStyle}${todayStyle}">
       <td class="mono col-date"${isToday?' style="font-weight:700;color:var(--alt)"':''}>${ds}${isToday?' <span style="white-space:nowrap;color:var(--alt)">◀</span>':''}</td>
       ${_nakDotCell}
       <td style="min-width:60px">
@@ -12075,6 +12241,8 @@ addEventListener('load', ()=>{ initGeolocation(); setStamp(); loadAll(); el('btn
   try {
     loadEngineScores().then(()=>{
       try{ renderHeroBulletin(); }catch(e){}
+      try{ renderHeroAstroLayer(); }catch(e){}
+      try{ renderScenarioCard(); }catch(e){}
       // Re-draw 27d table if _27dComputed already populated
       try {
         if (typeof draw27dTable === 'function' && typeof _27dComputed !== 'undefined' && _27dComputed && _27dComputed.length) {
@@ -12131,6 +12299,14 @@ const I18N = {
     backtestBannerLabel: 'Як ми міряємо точність',
     backtestBannerSub: 'Sign match <strong>75% strict</strong> / <strong>87% directional</strong> на 212 днях · повний backtest engine v17 vs PDF',
     backtestLink: 'Подивитись →',
+    // v88.0 нові ключі (F3 Scenario card + F6 Astro Layer pill)
+    scenarioTitle: 'Сценарій на 7 днів',
+    scenarioSub: 'engine + astronomical layer',
+    scenarioLegend: 'Кольори = engine_score (−3 червоний / 0 нейтр / +3 зелений). Точка зверху = cal_score (astronomical, Swiss Ephemeris Lahiri). ⚠ = Excel-tag artifact. ~ = synthetic Kp.',
+    scenarioCritical: 'критичних',
+    scenarioStable: 'стабільний',
+    scenarioClickHint: 'Клік → деталі у таблиці 27 днів',
+    astroLayerLabel: 'Astro',
     provenanceTitle: 'Provenance — джерела сьогоднішньої оцінки',
     provenanceExpand: 'розгорнути ▾',
     provenanceLoading: 'Завантаження…',
@@ -12186,6 +12362,14 @@ const I18N = {
     backtestBannerLabel: 'How we measure accuracy',
     backtestBannerSub: 'Sign match <strong>75% strict</strong> / <strong>87% directional</strong> on 212 days · full backtest engine v17 vs PDF',
     backtestLink: 'View →',
+    // v88.0 new keys (F3 Scenario card + F6 Astro Layer pill)
+    scenarioTitle: '7-day scenario',
+    scenarioSub: 'engine + astronomical layer',
+    scenarioLegend: 'Colors = engine_score (−3 red / 0 neutral / +3 green). Dot above = cal_score (astronomical, Swiss Ephemeris Lahiri). ⚠ = Excel-tag artifact. ~ = synthetic Kp.',
+    scenarioCritical: 'critical',
+    scenarioStable: 'stable',
+    scenarioClickHint: 'Click → details in 27-day table',
+    astroLayerLabel: 'Astro',
     provenanceTitle: 'Provenance — sources for today\'s score',
     provenanceExpand: 'expand ▾',
     provenanceLoading: 'Loading…',
@@ -12306,6 +12490,17 @@ function applyLang(lang) {
   if(_aSum) _aSum.textContent = t.antiActionTitle;
   const _aExp = document.querySelector('#antiActionCard summary span:nth-child(3)');
   if(_aExp) _aExp.textContent = t.provenanceExpand;
+
+  // v88.0: Scenario card + Astro Layer pill localization
+  const _scLab = document.getElementById('scenarioSummaryLabel');
+  if(_scLab) _scLab.textContent = t.scenarioTitle || _scLab.textContent;
+  const _scLeg = document.getElementById('scenarioLegend');
+  if(_scLeg) _scLeg.textContent = t.scenarioLegend || _scLeg.textContent;
+  const _astro = document.getElementById('heroAstroLayer');
+  if(_astro && t.astroLayerLabel) _astro.setAttribute('data-label', t.astroLayerLabel);
+  // Re-render scenario sub-label (контекст залежить від мови — критичних/critical)
+  try{ if(typeof renderScenarioCard === 'function') renderScenarioCard(); }catch(e){}
+  try{ if(typeof renderHeroAstroLayer === 'function') renderHeroAstroLayer(); }catch(e){}
 
   // Disambig chip
   const _dis = document.getElementById('timingDisambig');
