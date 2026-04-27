@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v88.2</title>
+  <title>G-Index — Космофізичний дашборд v88.3</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1349,7 +1349,7 @@
             </div>
           </div>
           <!-- Legacy ring (default) -->
-          <div id="heroRing">
+          <div id="heroRing" title="Hero G — це raw композитний score (без clip): G = Kp − 2 + ΣAᵢ. Може виходити за межі ±3.&#10;Engine V17 pill справа = дискретна clipped category {−3..+3} через score_day() classifier.&#10;Різниця нормальна: raw composite використовує live NOAA Kp, engine score — reference Kp з validation snapshot.">
             <svg viewBox="0 0 100 100">
               <circle class="ring-bg" cx="50" cy="50" r="45"/>
               <circle class="ring-val" id="heroRingVal" cx="50" cy="50" r="45"
@@ -1409,7 +1409,7 @@
           <!-- v88.0: Astronomical layer pill (Tithi/Nakshatra/Yoga з cal_score field у engine_scores.json, Swiss Ephemeris Lahiri) -->
           <span id="heroAstroLayer" data-label="Astro" class="hint" tabindex="0" style="display:none;font-size:12px;font-weight:700;color:var(--muted);cursor:help;border:1px solid var(--border2);padding:1px 8px;border-radius:8px;background:rgba(11,18,32,.4)" title="">—</span>
           <!-- v87.90: Backtest link — чесні обидві метрики (strict 71.9% + directional 87.1%) -->
-          <a href="backtest.html" target="_blank" rel="noopener" data-label="Точність" style="font-size:12px;font-weight:700;color:var(--ok);text-decoration:none;border:1px solid var(--ok);padding:1px 8px;border-radius:8px;background:rgba(43,212,125,.08);transition:background .2s" title="Точність engine v17 на n=212 днях:&#10;• Sign match (strict): 71.5% — нуль як окремий клас (academic)&#10;• Directional (≥0/<0): 86.8% — для рішень діяти/не діяти&#10;• Exact match: 44.3% (7 категорій, n=212)&#10;• MAE: 1.01 (шкала ±3)&#10;Натисни щоб побачити повний backtest.">📊 75% / 87%</a>
+          <a href="backtest.html" target="_blank" rel="noopener" data-label="Точність" style="font-size:12px;font-weight:700;color:var(--ok);text-decoration:none;border:1px solid var(--ok);padding:1px 8px;border-radius:8px;background:rgba(43,212,125,.08);transition:background .2s" title="Engine v17 валідація · n=205 PDF-rated days&#10;&#10;Holdout (n=62 chronological 30%):&#10;• Sign match strict: 79.0%&#10;• Directional (≥0/<0): 88.7% — для рішень&#10;• AUC: 0.94, MAE: 0.82&#10;&#10;ALL in-sample (n=205):&#10;• Sign match strict: 74.2%&#10;• Directional: 86.8%&#10;• MAE: 1.00&#10;&#10;Натисни → повний backtest report (preprint figures).">📊 79% / 89%</a>
         </div>
       </div>
     </section>
@@ -1420,7 +1420,7 @@
       <span style="font-size:20px;line-height:1">📊</span>
       <div style="flex:1;min-width:0">
         <div style="font-size:12px;font-weight:700;color:#d8f7e3">Як ми міряємо точність</div>
-        <div style="font-size:11px;color:var(--dim);margin-top:1px">Sign match <strong style="color:var(--ok)">75% strict</strong> / <strong style="color:var(--ok)">87% directional</strong> на 212 днях · повний backtest engine v17 vs PDF (confusion matrix, top misses, tag-level)</div>
+        <div style="font-size:11px;color:var(--dim);margin-top:1px">Holdout (n=62): <strong style="color:var(--ok)">79% strict</strong> / <strong style="color:var(--ok)">89% directional</strong> · ALL n=205: 74% / 87% · повний backtest engine v17 vs PDF</div>
       </div>
       <span style="font-size:11px;color:var(--ok);font-weight:700;white-space:nowrap">Подивитись →</span>
     </a>
@@ -2417,7 +2417,7 @@ NOAA публікує лише 27-day Ap outlook (інтегрована гео�
 
   <footer>
     <div class="small">Дані Kp/Ap — NOAA SWPC; Ap↔Kp — GFZ/NOAA table; Dst — Kyoto WDC; Sn — SILSO/ROB; події — ICS; затемнення — Timeanddate/NASA; фази — Astronomy Engine (Meeus). Модель G: R&amp;D / Advisory — у валідації. SignMatch 90.2% holdout (n=51, engine v17.0); G включає Dᵢ (Dst-компонент).</div>
-    <div class="small" style="margin-top:8px">📊 Повна валідація моделі: <a href="backtest.html" style="color:var(--alt);text-decoration:none;border-bottom:1px dotted var(--alt)">backtest report</a> — engine v17 vs PDF на 212 днях (sign match strict 75% / directional 87% / MAE 1.01).</div>
+    <div class="small" style="margin-top:8px">📊 Повна валідація моделі: <a href="backtest.html" style="color:var(--alt);text-decoration:none;border-bottom:1px dotted var(--alt)">backtest report</a> — engine v17 vs PDF на n=205 днях (holdout n=62: strict 79% / directional 89% / MAE 0.82).</div>
   </footer>
 
 <script>
@@ -3320,6 +3320,9 @@ const ECLIPSE_CATALOG_END_YEAR = 2030; // v85b-F5: СЕРЕД-1 — явна м�
 const _eclipseCatalogWarned = new Set(); // один warn на рік
 
 // Проксі для CORS (fallback)
+// v88.3: Cloudflare Worker priority (deploy див. cloudflare-worker-noaa-proxy.js).
+//        Public free proxies нерeliable; власний Worker = robust + ~$0/міс.
+const NOAA_WORKER_URL = 'https://gindex-noaa-proxy.YOUR_USERNAME.workers.dev/?url=';
 function fetchWithTimeout(url, ms=5000){
   const ctrl = new AbortController();
   const tid = setTimeout(()=>ctrl.abort(), ms);
@@ -3331,6 +3334,13 @@ async function fetchTextWithCORS(url){
     const r = await fetchWithTimeout(url, 6000);
     if(r.ok) return await r.text();
   }catch(e){}
+  // 1. v88.3: Cloudflare Worker (own proxy — most reliable when configured)
+  if (NOAA_WORKER_URL && !NOAA_WORKER_URL.includes('YOUR_USERNAME')) {
+    try{
+      const r1 = await fetchWithTimeout(NOAA_WORKER_URL+encodeURIComponent(url), 5000);
+      if(r1.ok) return await r1.text();
+    }catch(e){}
+  }
   // 2. allorigins
   try{
     const r2 = await fetchWithTimeout('https://api.allorigins.win/raw?url='+encodeURIComponent(url), 4000);
@@ -8852,7 +8862,7 @@ function renderDisagreement(){
     name: 'Engine',
     val: _engVal,
     sub: 'правила (рік на 212 днях)',
-    tip: 'Engine v17 — правило-базована модель. Дискретний рейтинг −3..+3 на історичних даних. Sign match 75% strict, 87% directional (n=212).'
+    tip: 'Engine v17 — правило-базована модель. Дискретний рейтинг −3..+3 на історичних даних. Holdout n=62: 79% strict / 89% directional (ALL n=205: 74% / 87%).'
   });
   if(_pdfVal != null)    _models.push({
     name: 'Бюлетень',
@@ -12330,7 +12340,7 @@ const I18N = {
     // v87.90 нові ключі
     backtestBadgeTitle: 'Точність engine v17 на n=212 днях:\n• Sign match (strict): 71.5%\n• Directional (≥0/<0): 86.8%\n• Exact match: 44.3%\n• MAE: 1.01\nНатисни щоб побачити повний backtest.',
     backtestBannerLabel: 'Як ми міряємо точність',
-    backtestBannerSub: 'Sign match <strong>75% strict</strong> / <strong>87% directional</strong> на 212 днях · повний backtest engine v17 vs PDF',
+    backtestBannerSub: 'Holdout (n=62): <strong>79% strict</strong> / <strong>89% directional</strong> · ALL n=205: 74% / 87% · повний backtest engine v17 vs PDF',
     backtestLink: 'Подивитись →',
     // v88.0 нові ключі (F3 Scenario card + F6 Astro Layer pill)
     scenarioTitle: 'Сценарій на 7 днів',
@@ -12393,7 +12403,7 @@ const I18N = {
     // v87.90 EN translations
     backtestBadgeTitle: 'Engine v17 accuracy on n=212 days:\n• Sign match (strict): 71.5%\n• Directional (≥0/<0): 86.8%\n• Exact match: 44.3%\n• MAE: 1.01\nClick for full backtest.',
     backtestBannerLabel: 'How we measure accuracy',
-    backtestBannerSub: 'Sign match <strong>75% strict</strong> / <strong>87% directional</strong> on 212 days · full backtest engine v17 vs PDF',
+    backtestBannerSub: 'Holdout (n=62): <strong>79% strict</strong> / <strong>89% directional</strong> · ALL n=205: 74% / 87% · full engine v17 backtest vs PDF',
     backtestLink: 'View →',
     // v88.0 new keys (F3 Scenario card + F6 Astro Layer pill)
     scenarioTitle: '7-day scenario',
@@ -14277,9 +14287,14 @@ function _getBestWorstDays(){
     // P1 fix v87.90: prefer engine_scores (validated, consistent з engine v17)
     // над localStorage (running-average per-session, неконсистентний).
     // Continuous G реконструюється з engine kp + dashboard computeAi (єдина формула).
+    // v88.3 BUG#1 fix: для сьогоднішнього дня — використовуй live Kp (як Hero),
+    //                 інакше user бачить два різні G (Hero -3.53, History -3.2)
+    //                 коли engine_scores має synthetic Kp=2.0 а NOAA live Kp=1.67.
     if (typeof _engineScores !== 'undefined' && _engineScores && Object.keys(_engineScores).length > 0) {
       const nowMs = Date.now();
       const cutMs = nowMs - 30*86400*1000;
+      const _todayDS = new Date().toISOString().slice(0,10);
+      const _liveKp = (typeof lastWWV!=='undefined' && lastWWV && isFinite(lastWWV.kNow)) ? lastWWV.kNow : null;
       const items = [];
       for (const ds of Object.keys(_engineScores)) {
         const sc = _engineScores[ds];
@@ -14288,8 +14303,10 @@ function _getBestWorstDays(){
         if (!isFinite(t) || t > nowMs || t < cutMs) continue;
         try {
           const dt = new Date(ds + 'T12:00:00Z');
-          const ai = computeAi(dt, sc.kp);
-          const G = Math.round((sc.kp - 2 + ai.Ai) * 10) / 10;
+          // v88.3: сьогодні → live Kp (synced з Hero); інакше → archived/synthetic engine kp
+          const _kpForG = (ds === _todayDS && _liveKp != null) ? _liveKp : sc.kp;
+          const ai = computeAi(dt, _kpForG);
+          const G = Math.round((_kpForG - 2 + ai.Ai) * 10) / 10;
           items.push([ds, G]);
         } catch(e) { /* skip if computeAi fails for this date */ }
       }
