@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v87.91</title>
+  <title>G-Index — Космофізичний дашборд v87.92</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -13632,6 +13632,42 @@ function _renderFreshnessState(){
   if(fb){ fb.textContent=label; fb.style.color=col; fb.style.background=bgCol; }
   if(hf){ hf.textContent=state.toUpperCase()+' · '+_ageStr; hf.className=''; hf.classList.add(state); }
   if(window.__uiState) window.__uiState.freshness = state;
+
+  // v87.91 fix: scenario/offline override — без цього 60-сек таймер перетирав SCENARIO на LIVE
+  // навіть коли syncHero виставив правильний стан. _renderFreshnessState бачить тільки age
+  // даних, але не знає про synthetic forecast (last3D._synthetic).
+  try {
+    const _dm = (typeof resolveDataMode === 'function') ? resolveDataMode() : null;
+    if (_dm === 'scenario' || _dm === 'offline') {
+      const _label2 = (_dm === 'scenario' ? 'SCENARIO' : 'OFFLINE') + ' · ' + _ageStr;
+      const _col2 = _dm === 'offline' ? '#ff6b6b' : '#fca474';
+      const _bgCol2 = _dm === 'offline' ? '#2a0808' : '#2a1500';
+      if (fb) { fb.textContent = '● ' + _label2; fb.style.color = _col2; fb.style.background = _bgCol2; }
+      if (hf) {
+        hf.textContent = _label2;
+        hf.className = '';
+        hf.classList.add('stale');
+        hf.style.color = _col2;
+        hf.title = _dm === 'scenario'
+          ? '⚠ NOAA forecast недоступний. Завтра/3-day показано як плато на базі поточного Kp — це сценарій, не справжній прогноз.'
+          : 'Дані offline: навіть Kp обсервації недоступні. Все, що показано — з кешу.';
+      }
+      if (window.__uiState) window.__uiState.freshness = _dm;
+    }
+    // Також застосовуємо маркер до heroTomorrow (на випадок якщо render3Day виконався раніше за встановлення _synthetic)
+    const _ht = document.getElementById('heroTomorrow');
+    if (_ht) {
+      const _hasMarker = _ht.innerHTML.includes('scenario');
+      if (_dm === 'scenario' && !_hasMarker && _ht.textContent.trim()) {
+        _ht.innerHTML = _ht.innerHTML.replace(/<span[^>]*>⚠[^<]*<\/span>/gi, '').trim()
+          + ' <span style="color:#fca474;font-weight:600">⚠ scenario</span>';
+        _ht.title = '⚠ NOAA forecast недоступний — це плато на базі поточного Kp.';
+      } else if (_dm === 'live' && _hasMarker) {
+        _ht.innerHTML = _ht.innerHTML.replace(/\s*<span[^>]*>⚠[^<]*<\/span>/gi, '');
+        _ht.title = '';
+      }
+    }
+  } catch(e) { /* noop */ }
 }
 
 // ═══ v75: G history for ΔG ═══
