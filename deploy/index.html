@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v87.94</title>
+  <title>G-Index — Космофізичний дашборд v87.95</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1739,7 +1739,7 @@
         <div class="flex" style="margin-bottom:8px;align-items:flex-start">
           <div>
             <h2 style="margin:0;font-size:16px">Панчанга дня</h2>
-            <div class="small muted" style="margin-top:2px">Що діє зараз і як це читати <span class="hint" tabindex="0" style="cursor:help;color:var(--dim);font-size:10px;margin-left:4px;border-bottom:1px dotted var(--faint)">ⓘ час відліку<span class="hint-pop" style="white-space:pre;font-size:11px;text-align:left">Тіхі/Вара/Накшатра/Йога/Карана розраховані на 12:00 UTC поточного дня (консистентність з G-формулою 3-day таблиці).
+            <div class="small muted" style="margin-top:2px">Референс на 12:00 UTC <span class="hint" tabindex="0" style="cursor:help;color:var(--dim);font-size:10px;margin-left:4px;border-bottom:1px dotted var(--faint)">ⓘ час відліку<span class="hint-pop" style="white-space:pre;font-size:11px;text-align:left">Тіхі/Вара/Накшатра/Йога/Карана розраховані на 12:00 UTC поточного дня (консистентність з G-формулою 3-day таблиці).
 Для поточної хори дивись блок «Планетарний ритм» у картці особистого прогнозу.</span></span></div>
           </div>
           <span class="pill right" id="panchDate" style="font-size:12px">—</span>
@@ -1876,7 +1876,12 @@ Kp: 3-год індекс геомагнітної активності (0–9)
     <div class="swipe-hint" style="display:none" id="swipeHint27">Прокрутіть таблицю</div>
     <section class="card" id="twentysevenCard">
         <div class="flex" style="flex-wrap:wrap;gap:8px">
-          <h2 style="margin:0">Прогноз на 27 днів (Ap/Kp)</h2>
+          <h2 style="margin:0">27-денний тренд (Ap → Kp)</h2>
+          <span class="hint" tabindex="0" style="cursor:help;font-size:11px;color:var(--dim);border-bottom:1px dotted #2a3b61">? що це<span class="hint-pop" style="white-space:pre;font-size:12px;text-align:left;max-width:380px">⚠ Це НЕ офіційний 27-day Kp forecast.
+
+NOAA публікує лише 27-day Ap outlook (інтегрована геомагнітна активність за добу). Тут Ap → Kp перерахований через табличну апроксимацію (VLOOKUP-стиль) для тренду, не для оперативних рішень.
+
+Для точного 3-год Kp дивись «Прогноз на 3 дні» вище. Цей блок — широкий контекст і потенційні «вікна» в межах Carrington rotation (~27.28 діб).</span></span>
           <span class="hint" tabindex="0" style="cursor:help;font-size:11px;color:var(--dim);border-bottom:1px dotted #2a3b61">? легенда G<span class="hint-pop" style="white-space:pre;font-size:12px;text-align:left">Категорії G = Kp − 2 + ΣAᵢ:
 Зсув «−2» → Kp=2 (спокійне поле) = G≈0
 
@@ -5021,13 +5026,16 @@ function _ftTogglePlay(){
 
 // --------------------------- Категоризація G-бейджа ------------------------
 function classForG(g){
-  // v87.90→v87.90 fix: повертаю старі пороги (g≥0.5 → ok, g≤-2.5 → bad)
-  // які ближчі до інтуїції користувача (G=0.5 — це позитивний сигнал, не нейтрал).
-  // Узгоджую classifyStateByG до тих самих порогів — дивись нижче.
+  // v87.95: повна узгодженість з classifyStateByG як єдиним джерелом істини про стан G.
+  // Раніше був розрив: при G=−0.5 classForG → 'warn' (жовтий ring), а classifyStateByG → 'neutral'
+  // (Hero text "STABLE / Нейтральний день"). Тепер обидва зчитуються від одного класифікатора.
+  // Map: favorable/good → ok, neutral/unstable → warn (бо unstable = CAUTION жовтий у GLOBAL_STATES),
+  // tense → bad. Це зберігає візуальну палітру v87.90 і додає консистентність.
   if (!isFinite(g)) return 'g-warn';
-  if (g <= -2.5) return 'g-bad';
-  if (g >= 0.5) return 'g-ok';
-  return 'g-warn';
+  const sk = classifyStateByG(g);
+  if (sk === 'tense') return 'g-bad';
+  if (sk === 'good' || sk === 'favorable') return 'g-ok';
+  return 'g-warn'; // neutral і unstable — обидва жовтий ring
 }
 function classifyG(g){
   // v83f: aligned with classifyStateByG
@@ -9031,8 +9039,10 @@ async function loadAll(){
     last3D = { issued: null, predictedAp: [], days: _synDays, _synthetic: true };
     render3Day(last3D);
     _setSrcStatus('srcKpFcst','synthetic');
-    // v87.17 A7: більш чесна комунікація — NOAA прогноз недоступний, використовується плато на базі останнього Kp
-    el('threeError').innerHTML = '<span style="color:#ff9944">⚠</span> Прогноз NOAA недоступний. Показано плато на базі поточного Kp=' + _kpNow.toFixed(1) + '. <span class="muted" style="font-size:11px">Не справжній прогноз — без динаміки, лише fallback.</span>';
+    // v87.95: дублювання видалено. threeError більше не пише "NOAA недоступний" —
+    // це тепер ексклюзивно у threeNoaaAlert (з рамкою, бажовтим іконом). Раніше було видно
+    // повідомлення тричі: банер + threeError text + bulletin sub-label.
+    el('threeError').textContent = '';
     // v87.90: видимий alert над quick-cards + приглушені quick-cards
     const _alertEl = document.getElementById('threeNoaaAlert');
     if (_alertEl) {
@@ -12100,7 +12110,7 @@ const I18N = {
     personalCardTitle: '👤 Особистий прогноз',
     personalCardSub: 'Місячна стоянка · Сприятливість дня · Планетарний цикл',
     threeCardTitle: 'Прогноз на 3 дні',
-    twentysevenCardTitle: 'Прогноз на 27 днів (Ap/Kp)',
+    twentysevenCardTitle: '27-day trend (Ap → Kp)',
     btnG2: '🧮',
     stamp: 'Оновлено: ',
     footerText: 'Дані Kp/Ap — NOAA SWPC; події — ICS (Vaisnava/CalendarLabs); затемнення — Timeanddate/NASA; фази — Astronomy Engine.',
