@@ -16,6 +16,11 @@ const SHELL_FILES = [
   'manifest.json',
   'icon192.png',
   'icon512.png',
+  'backtest.html',         // v88.3: validation report page (linked from banner)
+  'landing.html',          // v88.3: marketing intro page
+  'explainability.html',   // v88.3: worked example
+  'privacy.html',          // v88.3: privacy policy (footer link)
+  'terms.html',            // v88.3: terms of use (footer link)
 ];
 
 // URL patterns that should use Network-First with TTL cache
@@ -30,6 +35,7 @@ const DATA_PATTERNS = [
   'codetabs.com',         // CORS proxy → forecast data
   'corsfix.com',          // CORS proxy → forecast data
   'thingproxy.freeboard.io', // v87.16 A9: 5th fallback CORS proxy (був у fetchTextWithCORS але відсутній у SW)
+  'workers.dev',          // v88.3: own Cloudflare Worker NOAA proxy (when configured)
   'timeanddate.com',      // eclipse scraping
   'solar-wind',           // Bz/Vsw endpoints (path fragment)
   'kyoto-dst',            // Dst endpoint (path fragment)
