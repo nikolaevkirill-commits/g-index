@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v87.90</title>
+  <title>G-Index — Космофізичний дашборд v87.91</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -3753,6 +3753,34 @@ function computeConfidenceBand(kpNow, kpObsJson){
   return { delta: Math.round(totalDelta*10)/10, kpDelta: Math.round(kpDelta*10)/10 };
 }
 
+// ─── DATA MODE RESOLVER (v87.91) ───────────────────────────────────────
+// Єдине джерело істини про режим достовірності даних, що використовується у Hero, Confidence,
+// heroTomorrow і будь-яких індикаторах статусу. Раніше Hero показував LIVE/92% тоді як NOAA
+// forecast був synthetic plateau — головна критика аудиту.
+// Стани:
+//   'live'     — Kp обсервації live + NOAA 3-day forecast доступний
+//   'partial'  — Kp обсервації live, але forecast cached/stale
+//   'scenario' — NOAA forecast недоступний → плато на базі поточного Kp (не справжній прогноз)
+//   'offline'  — навіть Kp обсервації недоступні
+function resolveDataMode(){
+  // Kp обсервації freshness — читаю той самий бейдж, що й heroFreshness
+  const _fbTxt = (document.getElementById('freshnessBadge')?.textContent || 'LIVE').toLowerCase();
+  let _kpFresh = 'live';
+  if (_fbTxt.includes('offline') || _fbTxt.includes('old')) _kpFresh = 'offline';
+  else if (_fbTxt.includes('stale')) _kpFresh = 'stale';
+  else if (_fbTxt.includes('cache') || _fbTxt.includes('delayed')) _kpFresh = 'cached';
+
+  // Forecast synthetic flag — last3D._synthetic ставиться у renderQuick, коли NOAA 3-day упав
+  let _fcastSynthetic = false;
+  try { _fcastSynthetic = !!(typeof last3D !== 'undefined' && last3D && last3D._synthetic); } catch(e){}
+
+  // Логіка пріоритету: offline Kp > scenario forecast > partial freshness > live
+  if (_kpFresh === 'offline') return 'offline';
+  if (_fcastSynthetic) return 'scenario';
+  if (_kpFresh === 'stale' || _kpFresh === 'cached') return 'partial';
+  return 'live';
+}
+
 // ─── C-SCORE (Confidence Index) v63 ───────────────────────────────────────
 // Повертає { conf: 0..1, grade: 'high'|'med'|'low', drivers: [...], bar: html }
 function computeCScore(kpNow, kpObsJson, ai, G, kpSrc){
@@ -3821,6 +3849,16 @@ function computeCScore(kpNow, kpObsJson, ai, G, kpSrc){
   } else if(_freshness === 'old'){
     penalty += 0.20;
     reasons.push({ txt:'Дані застарілі (offline)', col:'#ff6b6b', d:0.20 });
+  }
+
+  // 7b. v87.91: scenario penalty — NOAA 3-day forecast недоступний → плато на базі поточного Kp
+  // Це різна семантика від stale Kp_obs: тут сьогодні може бути live, але "завтра" — synthetic.
+  // Без цього штрафу Hero показував Довіру 92% тоді як прогноз — це fallback.
+  let _fcastSynthetic = false;
+  try { _fcastSynthetic = !!(typeof last3D !== 'undefined' && last3D && last3D._synthetic); } catch(e){}
+  if (_fcastSynthetic) {
+    penalty += 0.22;
+    reasons.push({ txt:'NOAA forecast недоступний — scenario plateau', col:'#ff6b6b', d:0.22 });
   }
 
   // 8. Clamp
@@ -6437,8 +6475,15 @@ function render3Day(parsed3){
           const _arrow = _diff > 0.3 ? '↑' : _diff < -0.3 ? '↓' : '→';
           const _hint = _diff > 0.3 ? 'покращення' : _diff < -0.3 ? 'погіршення' : 'без змін';
           const _sign = _tomorrowG >= 0 ? '+' : '';
-          _htEl.textContent = `G=${_sign}${_tomorrowG.toFixed(1)} ${_arrow} ${_hint}`;
-          _htEl.style.color = _tomorrowG >= 1 ? 'var(--ok)' : _tomorrowG >= 0 ? 'var(--muted)' : _tomorrowG > -2 ? 'var(--warn)' : 'var(--bad)';
+          // v87.91 fix: scenario marker — _tomorrowG обчислений з synthetic Kp=2.0 плато → не реальний прогноз
+          const _isScenario = !!(typeof last3D !== 'undefined' && last3D && last3D._synthetic);
+          const _scenSuffix = _isScenario ? ' <span style="color:#fca474;font-weight:600">⚠ scenario</span>' : '';
+          _htEl.innerHTML = `G=${_sign}${_tomorrowG.toFixed(1)} ${_arrow} ${_hint}${_scenSuffix}`;
+          _htEl.title = _isScenario
+            ? '⚠ NOAA forecast недоступний — це плато на базі поточного Kp, не справжній прогноз. Тренд "покращення/погіршення" базується на Aᵢ-факторах календаря (Lᵢ, Mᵢ, Pᵢ), а не на динаміці Kp.'
+            : '';
+          _htEl.style.color = _isScenario ? 'var(--muted)'
+            : _tomorrowG >= 1 ? 'var(--ok)' : _tomorrowG >= 0 ? 'var(--muted)' : _tomorrowG > -2 ? 'var(--warn)' : 'var(--bad)';
         } else {
           _htEl.textContent = '';
         }
@@ -7143,6 +7188,8 @@ function syncHero(){
 
   // Freshness — v80: from __uiState, fallback to DOM
   // v87.15 fix A4: читати всі варіанти включно з cached/delayed — раніше hero показував LIVE коли badge CACHED
+  // v87.91 fix: тепер пріоритет — resolveDataMode() (live | partial | scenario | offline).
+  // Старий _frState залишено як fallback для tooltips з причинами зниження довіри.
   const _frState = _ui.freshness || (function(){
     const t=_strip(el('freshnessBadge')?.textContent||'LIVE').toLowerCase();
     if (t.includes('offline') || t.includes('old')) return 'old';
@@ -7150,11 +7197,30 @@ function syncHero(){
     if (t.includes('cached') || t.includes('delayed')) return 'cached';
     return 'live';
   })();
+  const _dataMode = (typeof resolveDataMode === 'function') ? resolveDataMode() : 'live';
+  window.__dataMode = _dataMode; // v87.91: глобально доступно для інших рендерів (heroTomorrow тощо)
   const hf=el('heroFreshness');
   if(hf){
-    hf.textContent=_frState.toUpperCase();
+    // Маппинг dataMode → display label
+    const _modeLabel = {
+      live: 'LIVE',
+      partial: 'PARTIAL',
+      scenario: 'SCENARIO',
+      offline: 'OFFLINE'
+    }[_dataMode] || 'LIVE';
+    hf.textContent = _modeLabel;
     hf.classList.remove('live','cached','stale');
-    hf.classList.add(_frState==='old'?'stale':_frState);
+    // Кольорова класа: live=зелений, partial=жовтий (cached), scenario/offline=червоний (stale)
+    if (_dataMode === 'live') hf.classList.add('live');
+    else if (_dataMode === 'partial') hf.classList.add('cached');
+    else hf.classList.add('stale');
+    // Tooltip для пояснення
+    hf.title = ({
+      live: 'Дані live: Kp обсервації + NOAA 3-day forecast доступні.',
+      partial: 'Дані часткові: Kp обсервації live, але forecast cached/delayed. Тренди можуть бути затримані.',
+      scenario: '⚠ NOAA forecast недоступний. Завтра/3-day показано як плато на базі поточного Kp — це сценарій, не справжній прогноз.',
+      offline: 'Дані offline: навіть Kp обсервації недоступні. Все, що показано — з кешу.'
+    })[_dataMode] || '';
   }
 
   _set('heroStamp', _ui.stamp || (el('stamp')?.textContent||'').replace('Оновлено:','').trim() || '—');
@@ -8643,7 +8709,10 @@ function renderIntraDayAlert(){
   if(_dropDelta >= SIGNIFICANT){
     const _minIdx = _today.kp8.indexOf(_minFuture, _curSlot + 1);
     const _minHourUTC = _minIdx * 3;
-    const _localHour = ((_minHourUTC + 3) % 24);
+    // v87.91 fix: був hardcoded UTC+3 (тільки Київ влітку). Беремо реальний локальний час браузера.
+    const _slotDate = new Date(_today.date instanceof Date ? _today.date : new Date());
+    _slotDate.setUTCHours(_minHourUTC, 0, 0, 0);
+    const _localHour = _slotDate.getHours();
     const _hourStr = String(_localHour).padStart(2,'0') + ':00';
     const _gNow = window.__uiState?.gNow ?? NaN;
     const _gFuture = isFinite(_gNow) ? _gNow - _dropDelta : NaN;
@@ -8657,7 +8726,10 @@ function renderIntraDayAlert(){
   } else if(_riseDelta >= SIGNIFICANT){
     const _maxIdx = _today.kp8.indexOf(_maxFuture, _curSlot + 1);
     const _maxHourUTC = _maxIdx * 3;
-    const _localHour = ((_maxHourUTC + 3) % 24);
+    // v87.91 fix: реальний локальний час замість hardcoded UTC+3
+    const _slotDate = new Date(_today.date instanceof Date ? _today.date : new Date());
+    _slotDate.setUTCHours(_maxHourUTC, 0, 0, 0);
+    const _localHour = _slotDate.getHours();
     const _hourStr = String(_localHour).padStart(2,'0') + ':00';
     _msg = {
       icon: '📈',
