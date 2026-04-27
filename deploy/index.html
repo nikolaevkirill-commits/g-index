@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v87.97</title>
+  <title>G-Index — Космофізичний дашборд v87.99</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1154,7 +1154,17 @@
        але візуально приховуємо. У v86 — повне видалення.
     */
     #daySentenceCard,#decisionStrip,#impactBlock{display:none!important}
-  </style>
+  
+/* v87.99 — overflow safety for phase/tithi labels */
+#nowTag, #moonPhaseNow, #sciPhase {
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: inline-block;
+}
+
+</style>
 
   <!-- Астро бібліотека: фаза Місяця -->
   <script src="https://cdn.jsdelivr.net/npm/astronomy-engine@2.1.19/astronomy.browser.min.js" defer></script>
@@ -1397,7 +1407,7 @@
           <!-- v87.90 P3 fix: badge style для engine v17 score — більш помітно vs Live G -->
           <span id="heroBulletin" data-label="Engine v17" class="hint" tabindex="0" style="font-size:12px;font-weight:700;color:var(--muted);cursor:help;border:1px solid var(--border2);padding:1px 8px;border-radius:8px;background:rgba(11,18,32,.4)" title="Engine v17 (rule-based bulletin model, discrete -3..+3). Використовує manual Джйотіш-теги + thresholds.&#10;Dashboard G — continuous real-time signal (Kp − 2 + ΣAᵢ).&#10;Різні моделі за дизайном — розбіжність не баг.">—</span>
           <!-- v87.90: Backtest link — чесні обидві метрики (strict 71.9% + directional 87.1%) -->
-          <a href="backtest.html" target="_blank" rel="noopener" data-label="Точність" style="font-size:12px;font-weight:700;color:var(--ok);text-decoration:none;border:1px solid var(--ok);padding:1px 8px;border-radius:8px;background:rgba(43,212,125,.08);transition:background .2s" title="Точність engine v17 на n=178 днях:&#10;• Sign match (strict): 71.9% — нуль як окремий клас (academic)&#10;• Directional (≥0/<0): 87.1% — для рішень діяти/не діяти&#10;• Exact match: 39.9% (7 категорій)&#10;• MAE: 1.01 (шкала ±3)&#10;Натисни щоб побачити повний backtest.">📊 72% / 87%</a>
+          <a href="backtest.html" target="_blank" rel="noopener" data-label="Точність" style="font-size:12px;font-weight:700;color:var(--ok);text-decoration:none;border:1px solid var(--ok);padding:1px 8px;border-radius:8px;background:rgba(43,212,125,.08);transition:background .2s" title="Точність engine v17 на n=212 днях:&#10;• Sign match (strict): 71.5% — нуль як окремий клас (academic)&#10;• Directional (≥0/<0): 86.8% — для рішень діяти/не діяти&#10;• Exact match: 44.3% (7 категорій, n=212)&#10;• MAE: 1.01 (шкала ±3)&#10;Натисни щоб побачити повний backtest.">📊 75% / 87%</a>
         </div>
       </div>
     </section>
@@ -1408,7 +1418,7 @@
       <span style="font-size:20px;line-height:1">📊</span>
       <div style="flex:1;min-width:0">
         <div style="font-size:12px;font-weight:700;color:#d8f7e3">Як ми міряємо точність</div>
-        <div style="font-size:11px;color:var(--dim);margin-top:1px">Sign match <strong style="color:var(--ok)">72% strict</strong> / <strong style="color:var(--ok)">87% directional</strong> на 178 днях · повний backtest engine v17 vs PDF (confusion matrix, top misses, tag-level)</div>
+        <div style="font-size:11px;color:var(--dim);margin-top:1px">Sign match <strong style="color:var(--ok)">75% strict</strong> / <strong style="color:var(--ok)">87% directional</strong> на 212 днях · повний backtest engine v17 vs PDF (confusion matrix, top misses, tag-level)</div>
       </div>
       <span style="font-size:11px;color:var(--ok);font-weight:700;white-space:nowrap">Подивитись →</span>
     </a>
@@ -2388,7 +2398,7 @@ NOAA публікує лише 27-day Ap outlook (інтегрована гео�
 
   <footer>
     <div class="small">Дані Kp/Ap — NOAA SWPC; Ap↔Kp — GFZ/NOAA table; Dst — Kyoto WDC; Sn — SILSO/ROB; події — ICS; затемнення — Timeanddate/NASA; фази — Astronomy Engine (Meeus). Модель G: R&amp;D / Advisory — у валідації. SignMatch 90.2% holdout (n=51, engine v17.0); G включає Dᵢ (Dst-компонент).</div>
-    <div class="small" style="margin-top:8px">📊 Повна валідація моделі: <a href="backtest.html" style="color:var(--alt);text-decoration:none;border-bottom:1px dotted var(--alt)">backtest report</a> — engine v17 vs PDF на 178 днях (sign match strict 72% / directional 87% / MAE 1.01).</div>
+    <div class="small" style="margin-top:8px">📊 Повна валідація моделі: <a href="backtest.html" style="color:var(--alt);text-decoration:none;border-bottom:1px dotted var(--alt)">backtest report</a> — engine v17 vs PDF на 212 днях (sign match strict 75% / directional 87% / MAE 1.01).</div>
   </footer>
 
 <script>
@@ -8642,8 +8652,8 @@ function renderDisagreement(){
   if(_engVal != null)    _models.push({
     name: 'Engine',
     val: _engVal,
-    sub: 'правила (рік на 178 днях)',
-    tip: 'Engine v17 — правило-базована модель. Дискретний рейтинг −3..+3 на історичних даних. Sign match 72% strict, 87% directional.'
+    sub: 'правила (рік на 212 днях)',
+    tip: 'Engine v17 — правило-базована модель. Дискретний рейтинг −3..+3 на історичних даних. Sign match 75% strict, 87% directional (n=212).'
   });
   if(_pdfVal != null)    _models.push({
     name: 'Бюлетень',
@@ -12117,9 +12127,9 @@ const I18N = {
     localTime: 'Локальний час: ',
     utcTime: 'UTC: ',
     // v87.90 нові ключі
-    backtestBadgeTitle: 'Точність engine v17 на n=178 днях:\n• Sign match (strict): 71.9%\n• Directional (≥0/<0): 87.1%\n• Exact match: 39.9%\n• MAE: 1.01\nНатисни щоб побачити повний backtest.',
+    backtestBadgeTitle: 'Точність engine v17 на n=212 днях:\n• Sign match (strict): 71.5%\n• Directional (≥0/<0): 86.8%\n• Exact match: 44.3%\n• MAE: 1.01\nНатисни щоб побачити повний backtest.',
     backtestBannerLabel: 'Як ми міряємо точність',
-    backtestBannerSub: 'Sign match <strong>72% strict</strong> / <strong>87% directional</strong> на 178 днях · повний backtest engine v17 vs PDF',
+    backtestBannerSub: 'Sign match <strong>75% strict</strong> / <strong>87% directional</strong> на 212 днях · повний backtest engine v17 vs PDF',
     backtestLink: 'Подивитись →',
     provenanceTitle: 'Provenance — джерела сьогоднішньої оцінки',
     provenanceExpand: 'розгорнути ▾',
@@ -12172,9 +12182,9 @@ const I18N = {
     localTime: 'Local time: ',
     utcTime: 'UTC: ',
     // v87.90 EN translations
-    backtestBadgeTitle: 'Engine v17 accuracy on n=178 days:\n• Sign match (strict): 71.9%\n• Directional (≥0/<0): 87.1%\n• Exact match: 39.9%\n• MAE: 1.01\nClick for full backtest.',
+    backtestBadgeTitle: 'Engine v17 accuracy on n=212 days:\n• Sign match (strict): 71.5%\n• Directional (≥0/<0): 86.8%\n• Exact match: 44.3%\n• MAE: 1.01\nClick for full backtest.',
     backtestBannerLabel: 'How we measure accuracy',
-    backtestBannerSub: 'Sign match <strong>72% strict</strong> / <strong>87% directional</strong> on 178 days · full backtest engine v17 vs PDF',
+    backtestBannerSub: 'Sign match <strong>75% strict</strong> / <strong>87% directional</strong> on 212 days · full backtest engine v17 vs PDF',
     backtestLink: 'View →',
     provenanceTitle: 'Provenance — sources for today\'s score',
     provenanceExpand: 'expand ▾',
