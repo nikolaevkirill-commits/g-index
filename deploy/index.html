@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v88.3</title>
+  <title>G-Index — Космофізичний дашборд v88.4</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -3320,7 +3320,7 @@ const ECLIPSE_CATALOG_END_YEAR = 2030; // v85b-F5: СЕРЕД-1 — явна м�
 const _eclipseCatalogWarned = new Set(); // один warn на рік
 
 // Проксі для CORS (fallback)
-// v88.3: Cloudflare Worker priority (deploy див. cloudflare-worker-noaa-proxy.js).
+// v88.4: Cloudflare Worker priority (deploy див. cloudflare-worker-noaa-proxy.js).
 //        Public free proxies нерeliable; власний Worker = robust + ~$0/міс.
 const NOAA_WORKER_URL = 'https://gindex-noaa-proxy.YOUR_USERNAME.workers.dev/?url=';
 function fetchWithTimeout(url, ms=5000){
@@ -3334,7 +3334,7 @@ async function fetchTextWithCORS(url){
     const r = await fetchWithTimeout(url, 6000);
     if(r.ok) return await r.text();
   }catch(e){}
-  // 1. v88.3: Cloudflare Worker (own proxy — most reliable when configured)
+  // 1. v88.4: Cloudflare Worker (own proxy — most reliable when configured)
   if (NOAA_WORKER_URL && !NOAA_WORKER_URL.includes('YOUR_USERNAME')) {
     try{
       const r1 = await fetchWithTimeout(NOAA_WORKER_URL+encodeURIComponent(url), 5000);
@@ -14287,7 +14287,7 @@ function _getBestWorstDays(){
     // P1 fix v87.90: prefer engine_scores (validated, consistent з engine v17)
     // над localStorage (running-average per-session, неконсистентний).
     // Continuous G реконструюється з engine kp + dashboard computeAi (єдина формула).
-    // v88.3 BUG#1 fix: для сьогоднішнього дня — використовуй live Kp (як Hero),
+    // v88.4 BUG#1 fix: для сьогоднішнього дня — використовуй live Kp (як Hero),
     //                 інакше user бачить два різні G (Hero -3.53, History -3.2)
     //                 коли engine_scores має synthetic Kp=2.0 а NOAA live Kp=1.67.
     if (typeof _engineScores !== 'undefined' && _engineScores && Object.keys(_engineScores).length > 0) {
@@ -14303,7 +14303,7 @@ function _getBestWorstDays(){
         if (!isFinite(t) || t > nowMs || t < cutMs) continue;
         try {
           const dt = new Date(ds + 'T12:00:00Z');
-          // v88.3: сьогодні → live Kp (synced з Hero); інакше → archived/synthetic engine kp
+          // v88.4: сьогодні → live Kp (synced з Hero); інакше → archived/synthetic engine kp
           const _kpForG = (ds === _todayDS && _liveKp != null) ? _liveKp : sc.kp;
           const ai = computeAi(dt, _kpForG);
           const G = Math.round((_kpForG - 2 + ai.Ai) * 10) / 10;
