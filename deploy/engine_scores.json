@@ -1,5 +1,5 @@
 {
-  "version": "engine_v17.0_v18ready_clipped_recomputed_artifact_flagged_v88_6_10_noaa_real_kp_27d_outlook",
+  "version": "engine_v17.0_v18ready_clipped_recomputed_artifact_flagged_v88_6_10_noaa_real_kp_27d_outlook+excel_fix_2026_04_29",
   "generated": "2026-04-21T18:14:54Z",
   "source": "engine_v17_vs_pdf_178.csv",
   "coverage_note": "Historical days (2025-06-16 → 2026-04-26): validated vs PDF bulletin. Future days (2026-04-27 → 2026-12-31): engine v17 scores computed from manual Excel tags; Kp values may be synthetic (Kp=2.0 default) where NOAA forecast not available. Use kp_synthetic flag to identify. [v87.99-patch: FIX A: clip eng [-3,+3] in engine v17 source line 130 (was return 4 for Ганеша+Наваратрі, now return 3); FIX A': clip pdf [-3,+3] (1 entry: 2026-04-23, 4→3); FIX B: kp_synthetic=False explicit (178 historical) carried; FIX C: scores sorted carried; FIX D: +137 historical days via forecast_engine_v17_0 (carried); FIX D-pdf: +34 pdf via conservative head-match parser of ПРОГНОЗИ_47_final.pdf (pages 26-47, \"Особливо сприятлив/несприятлив\" only); FIX E: cal_score informational field — astronomical Tithi/Nakshatra/Yoga from Swiss Ephemeris Lahiri ayanamsha. NOT a validation reference; cal_score vs pdf_score: 14% exact (cal=astronomical events, pdf=subjective with Kp). Astronomical alignment audit: engine v17/Excel tags vs Swiss Ephemeris on 45 sample days = 64% exact + 29% near (off-by-1) + 7% wrong = 93% reasonable agreement. [v87.99-patch+1: artifact_flagged: 5 entries with excel_tag_artifact=true (HIGH severity, Excel tag semantically inconsistent with cal_tithi; engine output preserved). 13 LOW-severity off-by-1 cases are NORMAL sunrise shifts and NOT flagged. See excel_tag_artifacts_v87_99.csv for full audit.]",
@@ -3932,7 +3932,7 @@
     "2026-03-03": {
       "eng": -3,
       "pdf": null,
-      "tag": "Амавасья🌑 (лунне затемнення)",
+      "tag": "Повня🌕 (лунне затемнення)",
       "kp": 5.0,
       "kp_synthetic": false,
       "cal_score": -2,
@@ -3944,9 +3944,13 @@
       "cal_tithi": 15,
       "cal_nakshatra": 10,
       "cal_yoga": 7,
-      "excel_tag_artifact": true,
-      "excel_tag_artifact_severity": "HIGH",
-      "excel_tag_artifact_reason": "tag='Амавасья' but cal_tithi=15 (expected 30; semantically wrong)"
+      "fixed_2026_04_29": {
+        "old_tag": "Амавасья🌑 (лунне затемнення)",
+        "old_eng": -3,
+        "new_tag": "Повня🌕 (лунне затемнення)",
+        "new_eng": -3,
+        "reason": "auto_fix_excel_2026.py"
+      }
     },
     "2026-03-04": {
       "eng": 0,
@@ -5809,7 +5813,7 @@
     "2026-07-14": {
       "eng": -3,
       "pdf": null,
-      "tag": "Амавасья🌑 Гуру Пурніма",
+      "tag": "Амавасья🌑",
       "kp": 2.0,
       "kp_synthetic": true,
       "cal_score": -3,
@@ -5819,7 +5823,14 @@
       ],
       "cal_tithi": 30,
       "cal_nakshatra": 7,
-      "cal_yoga": 13
+      "cal_yoga": 13,
+      "fixed_2026_04_29": {
+        "old_tag": "Амавасья🌑 Гуру Пурніма",
+        "old_eng": -3,
+        "new_tag": "Амавасья🌑",
+        "new_eng": -3,
+        "reason": "auto_fix_excel_2026.py"
+      }
     },
     "2026-07-15": {
       "eng": 1,
@@ -6229,7 +6240,7 @@
     "2026-08-12": {
       "eng": -3,
       "pdf": null,
-      "tag": "Амавасья🌑 (лунне затемнення)",
+      "tag": "Амавасья🌑 (сонячне затемнення)",
       "kp": 2.0,
       "kp_synthetic": true,
       "cal_score": -3,
@@ -6241,7 +6252,14 @@
       ],
       "cal_tithi": 30,
       "cal_nakshatra": 8,
-      "cal_yoga": 17
+      "cal_yoga": 17,
+      "fixed_2026_04_29": {
+        "old_tag": "Амавасья🌑 (лунне затемнення)",
+        "old_eng": -3,
+        "new_tag": "Амавасья🌑 (сонячне затемнення)",
+        "new_eng": -3,
+        "reason": "auto_fix_excel_2026.py"
+      }
     },
     "2026-08-13": {
       "eng": 1,
@@ -6272,9 +6290,9 @@
       "cal_yoga": 19
     },
     "2026-08-15": {
-      "eng": -3,
+      "eng": 0,
       "pdf": null,
-      "tag": "💊 Сурья☀",
+      "tag": "💊",
       "kp": 2.0,
       "kp_synthetic": true,
       "cal_score": -1,
@@ -6283,7 +6301,14 @@
       ],
       "cal_tithi": 3,
       "cal_nakshatra": 12,
-      "cal_yoga": 20
+      "cal_yoga": 20,
+      "fixed_2026_04_29": {
+        "old_tag": "💊 Сурья☀",
+        "old_eng": -3,
+        "new_tag": "💊",
+        "new_eng": 0,
+        "reason": "auto_fix_excel_2026.py"
+      }
     },
     "2026-08-16": {
       "eng": -3,
@@ -7865,9 +7890,9 @@
       "cal_yoga": 17
     },
     "2026-11-23": {
-      "eng": -3,
+      "eng": 3,
       "pdf": null,
-      "tag": "Амавасья🌑 ❤",
+      "tag": "❤",
       "kp": 2.0,
       "kp_synthetic": true,
       "cal_score": -1,
@@ -7877,9 +7902,13 @@
       "cal_tithi": 14,
       "cal_nakshatra": 2,
       "cal_yoga": 18,
-      "excel_tag_artifact": true,
-      "excel_tag_artifact_severity": "HIGH",
-      "excel_tag_artifact_reason": "tag='Амавасья' but cal_tithi=14 (expected 30; semantically wrong)"
+      "fixed_2026_04_29": {
+        "old_tag": "Амавасья🌑 ❤",
+        "old_eng": -3,
+        "new_tag": "❤",
+        "new_eng": 3,
+        "reason": "auto_fix_excel_2026.py"
+      }
     },
     "2026-11-24": {
       "eng": 3,
@@ -8453,7 +8482,21 @@
     "count_existing_high": 5,
     "recommendation": "Engine v18 candidate: override based on cal_tithi=30 regardless of tag."
   },
-  "regenerated": "2026-04-29T13:50:00Z",
+  "regenerated": "2026-04-29T14:50:11",
   "noaa_27day_issued": "2026-04-27",
-  "noaa_27day_coverage": "2026-04-27 → 2026-05-23"
+  "noaa_27day_coverage": "2026-04-27 → 2026-05-23",
+  "patches_history": [
+    {
+      "date": "2026-04-29T14:50:11",
+      "reason": "auto_fix_excel_2026.py applied 5 tag fixes",
+      "days_affected": 5,
+      "days": [
+        "2026-03-03",
+        "2026-07-14",
+        "2026-08-12",
+        "2026-08-15",
+        "2026-11-23"
+      ]
+    }
+  ]
 }
