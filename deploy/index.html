@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v88.6.8</title>
+  <title>G-Index — Космофізичний дашборд v88.6.9</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -24,7 +24,7 @@
   <meta property="og:description" content="Геомагнітна активність + Panchanga у реальному часі" />
   <meta property="og:type" content="website" />
 
-  <!-- v88.6.8: Supabase SDK loading видалено — auth мiгрував на Cloudflare Worker (GAuth).
+  <!-- v88.6.9: Supabase SDK loading видалено — auth мiгрував на Cloudflare Worker (GAuth).
        Push backend (push_subscriptions) тимчасово inert через SUPA shim — буде вiдновлено
        коли Cloudflare D1 додасть push table (Phase 2.3). Бачимо ~150KB bandwidth економiї. -->
 
@@ -1126,16 +1126,55 @@
   display: inline-block;
 }
 
+/* v88.6.9: SIMPLE MODE — civilian UX. Show only essentials: Hero + 3-day forecast quick cards.
+   Activated via #btnSimpleMode toggle. Persists у localStorage gindex_simple_mode. */
+body.simple-mode .auto-ref-banner,
+body.simple-mode #unifiedExplain,
+body.simple-mode #panelDecision,
+body.simple-mode #howWeMeasure,
+body.simple-mode #cvLine,
+body.simple-mode #panelImpact,
+body.simple-mode #panelStateExplain,
+body.simple-mode #scenarioCard,
+body.simple-mode #sourceConflictBlock,
+body.simple-mode #counterfactual27,
+body.simple-mode #panchanga,
+body.simple-mode #personalCalc,
+body.simple-mode #planetaryRibbon,
+body.simple-mode #table27,
+body.simple-mode #raw27,
+body.simple-mode #comparePeriodsBlock,
+body.simple-mode #forwardTimelineBlock,
+body.simple-mode #productLayer,
+body.simple-mode #g2watchPanel,
+body.simple-mode #scienceBar,
+body.simple-mode #localTimingsRow,
+body.simple-mode #criticalWindowsCard,
+body.simple-mode #plansCard,
+body.simple-mode #explainStrip,
+body.simple-mode #cosmicMapWrap {
+  display: none !important;
+}
+body.simple-mode #btnSimpleMode {
+  background: rgba(99,190,123,0.12);
+  font-weight: 700;
+}
+body.simple-mode .col-3d-ai,
+body.simple-mode .col-3d-ap,
+body.simple-mode .col-hide-mobile {
+  display: none !important;
+}
+
 </style>
 
   <!-- Астро бібліотека: фаза Місяця -->
-  <!-- v88.6.8: astronomy-engine з multi-CDN fallback (jsdelivr → unpkg)
+  <!-- v88.6.9: astronomy-engine з multi-CDN fallback (jsdelivr → unpkg)
        Якщо jsdelivr DOWN, Panchanga/Tithi обчислення зламаються — потрiбен fallback. -->
   <script src="https://cdn.jsdelivr.net/npm/astronomy-engine@2.1.19/astronomy.browser.min.js"
           onerror="(function(){var s=document.createElement('script');s.src='https://unpkg.com/astronomy-engine@2.1.19/astronomy.browser.min.js';s.onerror=function(){console.error('[astronomy-engine] both CDNs failed — Panchanga unavailable');};document.head.appendChild(s);})()"
           defer></script>
 
-  <!-- v88.6.8: secondary Supabase load видалено разом з primary loader (див. v88.6.8 cleanup). -->
+  <!-- v88.6.9: secondary Supabase load видалено разом з primary loader (див. v88.6.9 cleanup). -->
 </head>
 <body>
   <header>
@@ -1160,6 +1199,8 @@
           style="background:#2a1a1a;color:#ff9f9f;border:1px solid #4a2a2a;font-size:11px;padding:3px 8px;border-radius:6px">🗑 Кеш</button>
         <button id="btnShare" title="Поділитись поточним G-станом" onclick="shareGState()" style="background:#1e2a44;color:#9bb1dc;border:1px solid var(--border2)">📤</button>
         <button class="lang-btn active" id="btnLang" title="Switch language / Змінити мову">UA</button>
+        <button class="lang-btn" id="btnSimpleMode" title="Простий режим (тiльки Hero) / Експертний режим"
+          style="border-color:var(--faint);color:var(--dim);font-size:12px">👁</button>
         <button class="lang-btn" id="btnG2Watch" style="border-color:var(--faint);color:var(--dim);font-size:12px" title="Симулятор G — внизу сторінки">🧮</button>
         <div class="autoref-bar" style="margin-top:0">
           <span>Авто:</span>
@@ -2429,17 +2470,17 @@ document.addEventListener('DOMContentLoaded', () => {
 //   2. Set globals window._supabase_url and window._supabase_anon_key (strings)
 //   3. SUPA.init() is auto-called on DOMContentLoaded; silent no-op if config missing.
 // ═══════════════════════════════════════════════════════════════════════════
-// v88.6.8: Старий Supabase SUPA блок видалено — replaced нашою Cloudflare auth (нижче).
+// v88.6.9: Старий Supabase SUPA блок видалено — replaced нашою Cloudflare auth (нижче).
 // Stub оголошується пізніше у файлі для backward-compat.
 
 // Auth modal controller (інертний якщо SUPA не init)
-// v88.6.8: Cloudflare Auth (replaces Supabase placeholder)
+// v88.6.9: Cloudflare Auth (replaces Supabase placeholder)
 // Worker: https://gindex-auth.nikolaev-kirill.workers.dev
 const GAUTH_WORKER_URL = 'https://gindex-auth.nikolaev-kirill.workers.dev';
 const GAUTH_TOKEN_KEY = 'gindex_session_token';
 const GAUTH_USER_KEY = 'gindex_user';
 
-// v88.6.8: safe localStorage helpers (handle quota / private mode / disabled storage)
+// v88.6.9: safe localStorage helpers (handle quota / private mode / disabled storage)
 function _gauthLsSet(k, v){
   try { localStorage.setItem(k, v); return true; }
   catch(e){ console.warn('[GAuth] localStorage.setItem failed:', k, e.message); return false; }
@@ -2541,7 +2582,7 @@ const AuthModal = {
   show(){
     const u = GAuth.getUser();
     if (u) {
-      // v88.6.8: non-blocking confirm
+      // v88.6.9: non-blocking confirm
       showToastConfirm(`Вийти з ${u.email}?`, () => GAuth.logout());
       return;
     }
@@ -2647,22 +2688,22 @@ if (typeof window !== 'undefined') {
 }
 
 // Legacy SUPA shim — для backward compat коду який ще робить SUPA.currentUser() etc.
-// v88.6.8: Supabase SDK видалений — всi методи що повертали б client тепер возвращают null.
+// v88.6.9: Supabase SDK видалений — всi методи що повертали б client тепер возвращают null.
 // Push subscription flow elegantly degrades через `if(!client) throw` у subscribe().
 const SUPA = {
-  // v88.6.8: isConfigured() повертає false поки push backend не deployed.
+  // v88.6.9: isConfigured() повертає false поки push backend не deployed.
   isConfigured(){ return false; },
   currentUser(){ return GAuth.getUser(); },
-  getClient(){ return null; },           // v88.6.8: завжди null (Supabase removed)
+  getClient(){ return null; },           // v88.6.9: завжди null (Supabase removed)
   signOut(){ GAuth.logout(); },
-  sendMagicLink(){ throw new Error('Magic-link replaced with email/password у v88.6.8'); },
+  sendMagicLink(){ throw new Error('Magic-link replaced with email/password у v88.6.9'); },
   init(){ /* noop */ },
 };
 window.SUPA = SUPA;
 window.GAuth = GAuth;
 window.AuthModal = AuthModal;
 
-// Auto-init SUPA when DOM ready (no-op у v88.6.8 — kept for backward compat)
+// Auto-init SUPA when DOM ready (no-op у v88.6.9 — kept for backward compat)
 document.addEventListener('DOMContentLoaded', () => { try{ SUPA.init(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)} });
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -2889,7 +2930,7 @@ const URL_WOLF_SN_FB = 'https://sidc.be/SILSO/DATA/SN_d_tot_V2.0.json'; // fallb
 const URL_DST_FB   = 'https://services.swpc.noaa.gov/products/geospace/propagated-solar-wind-1-hour.json'; // fallback Dst proxy
 const URL_KP_FCST_FB2 = 'https://services.swpc.noaa.gov/json/planetary_k_index_1m.json'; // fallback fcst via obs
 const URL_DST      = 'https://services.swpc.noaa.gov/products/kyoto-dst.json'; // Dst/SYM-H
-// v88.6.8: UAF Geophysical Institute mirror (Tier-2 fallback when NOAA proxies fail)
+// v88.6.9: UAF Geophysical Institute mirror (Tier-2 fallback when NOAA proxies fail)
 // HTML wrapper навколо NOAA-derived JSON arrays. Updated daily noon UTC (3-day) i щопонеділка (27-day)
 const URL_UAF_AURORA   = 'https://www.gi.alaska.edu/monitors/aurora-forecast';
 
@@ -2930,7 +2971,7 @@ function initGeolocation(){
     console.warn('[geo] navigator.geolocation undefined — using Kyiv default');
     return;
   }
-  // v88.6.8: smart default — якщо IANA timezone iндикує не Kyiv → попередити user
+  // v88.6.9: smart default — якщо IANA timezone iндикує не Kyiv → попередити user
   // що координати все ще Kyiv (бо Hora ι Panchanga залежать вiд lat/lon).
   // Фактичний prompt geolocation буде запитано user-gesture (через тут).
   try{
@@ -2943,7 +2984,7 @@ function initGeolocation(){
         try{ _updateHoraCoordLabel(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
       },
       err => {
-        // v88.6.8: якщо user denied geolocation АЛЕ IANA не Europe/Kyiv — показати warning
+        // v88.6.9: якщо user denied geolocation АЛЕ IANA не Europe/Kyiv — показати warning
         const iana = window._iana || '';
         if(iana && !iana.includes('Kyiv') && !iana.includes('Kiev') && iana !== 'UTC'){
           // Перевiряю чи маю кеш
@@ -3027,7 +3068,7 @@ function fmtUTC(d){
 const fmtDate = d => new Date(d).toISOString().slice(0,10);
 const el = id => document.getElementById(id);
 
-// ═══ v88.6.8: DEBUG flag — silence console.log noise у production ═══
+// ═══ v88.6.9: DEBUG flag — silence console.log noise у production ═══
 // Enable: ?debug=1 в URL, або localStorage.setItem('gindex_debug','1')
 // Production default: console.log/info/debug muted. console.warn/error завжди працюють.
 (function(){
@@ -3042,14 +3083,14 @@ const el = id => document.getElementById(id);
       console.debug = function(){};    // muted
       console.info = function(){};     // muted
       // Один раз показуємо що debug можна enable
-      _origLog('%cG-Index v88.6.8 — debug muted. Enable: ?debug=1 або localStorage.gindex_debug=1', 'color:#9bb1dc;font-size:11px');
+      _origLog('%cG-Index v88.6.9 — debug muted. Enable: ?debug=1 або localStorage.gindex_debug=1', 'color:#9bb1dc;font-size:11px');
     } else {
       console.log('[DEBUG] enabled — verbose logging on');
     }
   } catch(e){ window._DEBUG = false; }
 })();
 
-// ═══ v88.6.8: Non-blocking toast notification system (replaces alert/confirm) ═══
+// ═══ v88.6.9: Non-blocking toast notification system (replaces alert/confirm) ═══
 // Stack: top-right на desktop, bottom на mobile. Auto-dismiss 4s (success), 6s (error/info).
 function _ensureToastContainer(){
   let c = document.getElementById('_toastContainer');
@@ -3157,7 +3198,35 @@ async function loadEngineScores(){
 function getEngineScore(dateObj){
   if(!_engineScores) return null;
   const ds = fmtDate(dateObj);
-  return _engineScores[ds] || null;
+  const snapshot = _engineScores[ds] || null;
+  // v88.6.9 (Engine v18 lite-recalc): якщо snapshot synthetic Kp=2.0 АЛЕ live forecast має real Kp,
+  // recalculate engine score з real Kp через computeAi (та сама формула G = Kp-2+ΣAi що Hero використовує).
+  // Це РОЗВ'ЯЗУЄ Issue B повнiстю — engine завжди узгоджений з live data.
+  if(snapshot && snapshot.kp_synthetic === true && typeof last3D !== 'undefined' && last3D && Array.isArray(last3D.days)){
+    try {
+      const liveDay = last3D.days.find(d => fmtDate(d.date) === ds);
+      // Тiльки якщо live Kp real (не synthetic plateau, не filled-from-27d-default)
+      if(liveDay && isFinite(liveDay.kpMax) && liveDay.kpMax > 0
+         && liveDay._filledFrom !== 'synthetic-kp-now'){
+        // Compute Ai через ту ж саму функцiю що Hero — guarantees consistency
+        const ai = computeAi(noonUTC(liveDay.date), liveDay.kpMax);
+        const G_recalc = liveDay.kpMax - 2 + ai.Ai;
+        // Discrete -3..+3 like engine v17
+        const eng_recalc = Math.max(-3, Math.min(3, Math.round(G_recalc)));
+        return {
+          ...snapshot,
+          eng: eng_recalc,
+          kp: liveDay.kpMax,
+          kp_synthetic: false,           // ← critical: тепер engine має real Kp
+          _recalculatedFromLive: true,   // marker для UI (можна показати iконку)
+          _origEng: snapshot.eng,        // зберiгаємо origin для tooltip
+          _origKp: snapshot.kp,
+          tag: snapshot.tag || ''        // tag-model rules не порт у v88.6.9 lite, залишаємо snapshot tag
+        };
+      }
+    } catch(e) { if(window._DEBUG) console.warn('[v88.6.9 engine recalc]', e.message); }
+  }
+  return snapshot;
 }
 function renderHeroBulletin(){
   const elB = el('heroBulletin');
@@ -3476,7 +3545,7 @@ const ECLIPSE_CATALOG_END_YEAR = 2030; // v85b-F5: СЕРЕД-1 — явна м�
 const _eclipseCatalogWarned = new Set(); // один warn на рік
 
 // Проксі для CORS (fallback)
-// v88.6.8: Cloudflare Worker priority (deploy див. cloudflare-worker-noaa-proxy.js).
+// v88.6.9: Cloudflare Worker priority (deploy див. cloudflare-worker-noaa-proxy.js).
 //        Public free proxies нерeliable; власний Worker = robust + ~$0/міс.
 const NOAA_WORKER_URL = 'https://gindex-noaa-proxy.YOUR_USERNAME.workers.dev/?url=';
 function fetchWithTimeout(url, ms=5000){
@@ -3491,7 +3560,7 @@ async function fetchTextWithCORS(url){
     const r = await fetchWithTimeout(url, 6000);
     if(r.ok) return await r.text();
   }catch(e){ console.warn('[CORS] direct fail:', _shortUrl, e.message); }
-  // 1. v88.6.8: Cloudflare Worker (own proxy — most reliable when configured)
+  // 1. v88.6.9: Cloudflare Worker (own proxy — most reliable when configured)
   if (NOAA_WORKER_URL && !NOAA_WORKER_URL.includes('YOUR_USERNAME')) {
     try{
       const r1 = await fetchWithTimeout(NOAA_WORKER_URL+encodeURIComponent(url), 5000);
@@ -4561,7 +4630,7 @@ function parseWolfSn(json){
 }
 // Парсер JSON прогнозу Kp (noaa-planetary-k-index-forecast.json)
 // Формат: [["time_tag","kp","observed","noaa_scale"],...] з заголовком
-// ─── v88.6.8: UAF Geophysical Institute (Alaska) — Tier-2 fallback ───
+// ─── v88.6.9: UAF Geophysical Institute (Alaska) — Tier-2 fallback ───
 // Витягує JSON arrays з HTML сторінки https://www.gi.alaska.edu/monitors/aurora-forecast
 // Сторінка містить 4 JSON масиви inline (з NOAA SWPC):
 //   [0] 27-day forecast (daily, ~27 entries)        — predicted_time: "YYYY-MM-DD"
@@ -4572,7 +4641,7 @@ function parseWolfSn(json){
 function parseUafAurora(html){
   if(!html || typeof html !== 'string') return null;
   try{
-    // v88.6.8.1: bracket-balanced JSON array extraction (regex з [^[\]] не справляється з nested)
+    // v88.6.9.1: bracket-balanced JSON array extraction (regex з [^[\]] не справляється з nested)
     const matches = [];
     let i = 0;
     while(i < html.length){
@@ -4625,7 +4694,7 @@ function parseUafAurora(html){
         }
       } else if(has3hr){
         // Має slot-час → це або 3-day (future, 24 slots) або historical (past, 180 entries)
-        // v88.6.8 fix H1: classifier тільки за датами (без fuzzy 3-day window):
+        // v88.6.9 fix H1: classifier тільки за датами (без fuzzy 3-day window):
         //   last < today  → historical
         //   first >= today → 3-day (future)
         //   first < today <= last → contains today (mixed) → 3-day
@@ -4659,7 +4728,7 @@ function parseUafAurora(html){
     }
     return (result.kp3Day.length || result.kp27Day.length || result.historical.length) ? result : null;
   }catch(e){
-    console.warn('[v88.6.8 UAF] parse failed:', e.message);
+    console.warn('[v88.6.9 UAF] parse failed:', e.message);
     return null;
   }
 }
@@ -4668,7 +4737,7 @@ function parseUafAurora(html){
 // out: { issued, predictedAp, days: [{date, kp8, kpMax}] }
 function uafTo3DayFormat(uaf){
   if(!uaf) return null;
-  // v88.6.8.1: якщо kp3Day порожнiй, але kp27Day є → беремо з 27-day (less accurate но has data)
+  // v88.6.9.1: якщо kp3Day порожнiй, але kp27Day є → беремо з 27-day (less accurate но has data)
   if(!uaf.kp3Day || !uaf.kp3Day.length){
     if(!uaf.kp27Day || !uaf.kp27Day.length) return null;
     try{
@@ -4721,7 +4790,7 @@ function uafTo3DayFormat(uaf){
       _source: 'uaf-alaska'
     };
   }catch(e){
-    console.warn('[v88.6.8 UAF] uafTo3DayFormat failed:', e.message);
+    console.warn('[v88.6.9 UAF] uafTo3DayFormat failed:', e.message);
     return null;
   }
 }
@@ -4779,7 +4848,7 @@ function parse3DaySafe(json){
     const firstFuture = data.find(r => r[0] && r[0].slice(0,10) >= todayIssuedStr);
     if(firstFuture) out.issued = firstFuture[0];
     else if(data.length) out.issued = data[0][0];
-    // v88.6.8: ГАРАНТУЄМО 3 days — додаємо placeholder days з kpMax=NaN якщо NOAA дав менше.
+    // v88.6.9: ГАРАНТУЄМО 3 days — додаємо placeholder days з kpMax=NaN якщо NOAA дав менше.
     // Fill-up logic у loadAll потiм replace ці placeholders реальними значеннями з 27-day.
     if(out.days.length > 0 && out.days.length < 3){
       const haveDates = new Set(out.days.map(d => fmtDate(d.date)));
@@ -4798,7 +4867,7 @@ function parse3DaySafe(json){
       }
       out.days.sort((a,b) => a.date - b.date);
       out.predictedAp.sort((a,b) => a.date - b.date);
-      console.log('[v88.6.8] parse3DaySafe placeholder added — '+(3 - (3 - out.days.filter(d => d._needsFill).length))+' real days, '+out.days.filter(d => d._needsFill).length+' placeholders awaiting 27-day fill');
+      console.log('[v88.6.9] parse3DaySafe placeholder added — '+(3 - (3 - out.days.filter(d => d._needsFill).length))+' real days, '+out.days.filter(d => d._needsFill).length+' placeholders awaiting 27-day fill');
     }
   }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
   return out;
@@ -4854,7 +4923,7 @@ function parse27Day(text){
     const m = line.match(/(\d{4})\s+(\w{3})\s+(\d{1,2})\s+(\d+)\s+(\d+)\s+(\d+)/);
     if(!m) continue;
     const MONTH_IDX = {Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};
-    // v88.6.8 fix H2: skip line якщо невiдомий месяц (раніше silent fallback на January = data corruption)
+    // v88.6.9 fix H2: skip line якщо невiдомий месяц (раніше silent fallback на January = data corruption)
     const monIdx = MONTH_IDX[m[2]];
     if(monIdx === undefined){
       console.warn('[parse27Day] Невідомий месяць у рядку:', line.slice(0,40));
@@ -5847,7 +5916,7 @@ function renderCurrentPanel(){
   const _cHtml = isFinite(G)
     ? ` <span style="font-size:11px;font-weight:500;color:${_cCol};opacity:0.85;letter-spacing:.01em" title="C-score: впевненість моделі ${_csInline.pct}%">C=${_csInline.conf.toFixed(2)}</span>`
     : '';
-  // v88.6.8 (Issue C): clarify Hero = current moment vs day peak (forecast)
+  // v88.6.9 (Issue C): clarify Hero = current moment vs day peak (forecast)
   // Hero G base = current Kp (=kUse). Forward Timeline base = day peak Kp.
   // Якщо рiзниця >= 1.5 балiв — пояснити user що це РIЗНI семантики, не bug.
   let _peakHintLine = '';
@@ -7044,21 +7113,25 @@ function render3Day(parsed3){
           const _bsSign = _bs.eng >= 0 ? '+' : '';
           const _bsCol = _bs.eng >= 2 ? '#2bd47d' : _bs.eng === 1 ? '#9cd49c' : _bs.eng === 0 ? 'var(--muted)' : _bs.eng === -1 ? '#ffaa33' : '#ff6b6b';
           const _synth = _bs.kp_synthetic ? '~' : '';
+          // v88.6.9: marker для recalculated з live Kp
+          const _recalcMark = _bs._recalculatedFromLive
+            ? `<span style="color:#9fd1ff;font-size:9px;margin-left:3px" title="Engine v17 score recalculated з live NOAA Kp=${_bs.kp.toFixed(1)}. Snapshot було Kp=${_bs._origKp} → ${_bs._origEng>=0?'+':''}${_bs._origEng}, recalc → ${_bsSign}${_bs.eng}.">⟳</span>`
+            : '';
           // Sign divergence: G>=0.5 & eng<0, або G<=-0.5 & eng>0. Нейтральний діапазон |G|<0.5 не вважається.
           const _gPos = G >= 0.5, _gNeg = G <= -0.5;
           const _ePos = _bs.eng > 0, _eNeg = _bs.eng < 0;
           const _divergent = (_gPos && _eNeg) || (_gNeg && _ePos);
           if (_divergent) {
-            _bulletinLine = `<div style="font-size:10px;margin-top:2px;padding:2px 6px;border-radius:4px;background:rgba(255,170,51,.15);border:1px solid rgba(255,170,51,.35)" title="G (live геомагніт) і Bulletin (engine v17 tag-model) показують протилежні знаки. Обережніше з рішеннями — моделі не згодні.">⚠ Bulletin: <span style="color:${_bsCol};font-weight:700">${_bsSign}${_bs.eng}${_synth}</span> <span style="color:var(--faint);font-size:9px">· розбіжність</span></div>`;
+            _bulletinLine = `<div style="font-size:10px;margin-top:2px;padding:2px 6px;border-radius:4px;background:rgba(255,170,51,.15);border:1px solid rgba(255,170,51,.35)" title="G (live геомагніт) і Bulletin (engine v17 tag-model) показують протилежні знаки. Обережніше з рішеннями — моделі не згодні.">⚠ Bulletin: <span style="color:${_bsCol};font-weight:700">${_bsSign}${_bs.eng}${_synth}</span>${_recalcMark} <span style="color:var(--faint);font-size:9px">· розбіжність</span></div>`;
           } else {
-            _bulletinLine = `<div style="font-size:10px;color:var(--dim);margin-top:2px">Bulletin: <span style="color:${_bsCol};font-weight:700">${_bsSign}${_bs.eng}${_synth}</span></div>`;
+            _bulletinLine = `<div style="font-size:10px;color:var(--dim);margin-top:2px">Bulletin: <span style="color:${_bsCol};font-weight:700">${_bsSign}${_bs.eng}${_synth}</span>${_recalcMark}</div>`;
           }
         }
       } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
       // v87.90: synthetic Kp warning у quick-card — engine_scores дає kp=2.0 default для майбутнього
       // Якщо bulletin entry має kp_synthetic — це scenario, не реальний forecast
       // v87.90: посилене виділення — opacity 0.55, dashed 2px з кольором, striped pattern
-      // v88.6.8: розрiзняємо коли live forecast Kp реальний (з NOAA 3-day чи 27-day) vs повнiстю synthetic.
+      // v88.6.9: розрiзняємо коли live forecast Kp реальний (з NOAA 3-day чи 27-day) vs повнiстю synthetic.
       // Якщо last3D має real kpMax для цього дня — engine просто OUTDATED (тренувався на старому snapshot),
       // НЕ scenario. Показуємо iнший label.
       const _isSynthScen = (function(){
@@ -9278,7 +9351,7 @@ function renderDisagreement(){
   const _hasNeg = _vals.some(v => v < -0.5);
   const _signConflict = _hasPos && _hasNeg;
 
-  // v88.6.8: порiг range 2.5 → 3.0 щоб не trigger warning при normal architectural divergence
+  // v88.6.9: порiг range 2.5 → 3.0 щоб не trigger warning при normal architectural divergence
   // (Hero continuous score vs Engine discrete tag-model завжди дають ~2 бали рiзницi navit pri spокiйному днi)
   // Sign conflict (один + iнший −) залишається тригером ВЖИВЕ.
   if(_range < 3.0 && !_signConflict){
@@ -9636,12 +9709,12 @@ async function loadAll(){
   // Kp прогноз 3 дні
   if(kpFcstR.status === 'fulfilled'){
     last3D = parse3DaySafe(kpFcstR.value);
-    // v88.6.8: Fill-up INLINE (перед render3Day) — щоб render викликався ОДИН раз з повним 3-day data.
+    // v88.6.9: Fill-up INLINE (перед render3Day) — щоб render викликався ОДИН раз з повним 3-day data.
     // parse3DaySafe ВЖЕ додав placeholder days з _needsFill=true. Replace їх real Kp з 27-day.
     const _needsFillCount = (last3D && last3D.days) ? last3D.days.filter(d => d._needsFill).length : 0;
     if (_needsFillCount > 0 && t27R.status === 'fulfilled' && t27R.value) {
       try{
-        console.log('[v88.6.8] '+_needsFillCount+' placeholder day(s) — filling з NOAA 27-day-outlook');
+        console.log('[v88.6.9] '+_needsFillCount+' placeholder day(s) — filling з NOAA 27-day-outlook');
         const _r27 = parse27Day(t27R.value);
         if(_r27 && _r27.length){
           for(const d of last3D.days){
@@ -9656,15 +9729,15 @@ async function loadAll(){
               // update predictedAp
               const apEntry = last3D.predictedAp.find(p => fmtDate(p.date) === targetStr);
               if(apEntry) apEntry.Ap = isFinite(r27Entry.Ap) ? r27Entry.Ap : kpToApInterp(r27Entry.kpMax);
-              console.log('[v88.6.8] Filled '+targetStr+' з NOAA 27-day Kp='+r27Entry.kpMax);
+              console.log('[v88.6.9] Filled '+targetStr+' з NOAA 27-day Kp='+r27Entry.kpMax);
             }
           }
         }
       }catch(fillErr){
-        console.warn('[v88.6.8] 27-day fill-up failed:', fillErr.message);
+        console.warn('[v88.6.9] 27-day fill-up failed:', fillErr.message);
       }
     }
-    // v88.6.8: остаточний synthetic fallback для решти placeholder днiв (27-day тоже fail)
+    // v88.6.9: остаточний synthetic fallback для решти placeholder днiв (27-day тоже fail)
     const _stillNeedFill = (last3D && last3D.days) ? last3D.days.filter(d => d._needsFill) : [];
     if(_stillNeedFill.length > 0){
       const _kpFallback = (lastWWV && isFinite(lastWWV.kNow)) ? lastWWV.kNow : 2.0;
@@ -9676,7 +9749,7 @@ async function loadAll(){
         const targetStr = fmtDate(d.date);
         const apEntry = last3D.predictedAp.find(p => fmtDate(p.date) === targetStr);
         if(apEntry) apEntry.Ap = kpToApInterp(_kpFallback);
-        console.log('[v88.6.8] Synthetic fill '+targetStr+' Kp='+_kpFallback);
+        console.log('[v88.6.9] Synthetic fill '+targetStr+' Kp='+_kpFallback);
       }
     }
     render3Day(last3D);  // ← ОДНОРАЗОВИЙ render з повним 3-day data
@@ -9685,10 +9758,10 @@ async function loadAll(){
     _setSrcStatus('srcKpFcst','error');
     el('threeError').textContent = 'Помилка 3-day: ' + (kpFcstR.reason?.message || 'недоступний');
   }
-  // v88.6.8: Tier-2 UAF Geophysical Institute fallback — якщо NOAA 3-day fail
+  // v88.6.9: Tier-2 UAF Geophysical Institute fallback — якщо NOAA 3-day fail
   if (!last3D || !last3D.days || !last3D.days.length || last3D._synthetic) {
     try{
-      console.log('[v88.6.8] NOAA 3-day fail → trying UAF Alaska mirror');
+      console.log('[v88.6.9] NOAA 3-day fail → trying UAF Alaska mirror');
       const _uafHtml = await fetchTextWithCORS(URL_UAF_AURORA);
       const _uaf = parseUafAurora(_uafHtml);
       const _last3DUaf = uafTo3DayFormat(_uaf);
@@ -9696,14 +9769,14 @@ async function loadAll(){
         last3D = _last3DUaf;
         render3Day(last3D);
         _setSrcStatus('srcKpFcst','cache'); // 'cache' indicates secondary source
-        console.log('[v88.6.8] UAF Alaska 3-day OK ('+_last3DUaf.days.length+' days)');
+        console.log('[v88.6.9] UAF Alaska 3-day OK ('+_last3DUaf.days.length+' days)');
         // Cache UAF 27-day для подальшого використання нижче
         if(_uaf && _uaf.kp27Day && _uaf.kp27Day.length){
           window._uafCache27Day = uafTo27DayFormat(_uaf);
         }
       }
     }catch(uafErr){
-      console.warn('[v88.6.8] UAF fallback failed:', uafErr.message);
+      console.warn('[v88.6.9] UAF fallback failed:', uafErr.message);
     }
   }
   // v62: fallback — якщо last3D порожній, генеруємо synthetic з поточного Kp
@@ -9850,7 +9923,7 @@ async function loadAll(){
     } else {
       console.warn('[v43] 27-day fetch failed:', t27R.reason?.message, '— trying UAF fallback');
     }
-    // v88.6.8: Tier-2 UAF Alaska fallback (cached якщо 3-day гілка вже fetched UAF, інакше fetch)
+    // v88.6.9: Tier-2 UAF Alaska fallback (cached якщо 3-day гілка вже fetched UAF, інакше fetch)
     try{
       let r27uaf = window._uafCache27Day;
       if (!r27uaf || !r27uaf.length) {
@@ -9863,11 +9936,11 @@ async function loadAll(){
         render27Day(r27uaf, last3D);
         _setSrcStatus('src27Day','cache');
         el('twentysevenError').textContent = '⚠ NOAA 27-day .txt недоступний — показано UAF Alaska mirror (без F10.7)';
-        console.log('[v88.6.8] 27-day UAF Alaska OK ('+r27uaf.length+' days)');
+        console.log('[v88.6.9] 27-day UAF Alaska OK ('+r27uaf.length+' days)');
         return;
       }
     }catch(uafErr){
-      console.warn('[v88.6.8] UAF 27-day fallback failed:', uafErr.message, '— trying 45-day fallback');
+      console.warn('[v88.6.9] UAF 27-day fallback failed:', uafErr.message, '— trying 45-day fallback');
     }
     // Fallback: 45-day-forecast.json → parse45Day → конвертуємо у формат r27
     try{
@@ -9898,7 +9971,7 @@ async function loadAll(){
       el('twentysevenError').textContent = '⚠ NOAA 27/45-day недоступні — synthetic прогноз (Kp='+_kp27.toFixed(1)+')';
     }
   }
-  // v88.6.8: try27Day у outer try щоб помилка не зламала рендеринг
+  // v88.6.9: try27Day у outer try щоб помилка не зламала рендеринг
   try {
     await try27Day();
   } catch(e) {
@@ -12761,7 +12834,7 @@ function renderProfileRec() {
   el_.innerHTML = `<span style="font-weight:700;color:${prof.color}">${prof.label}:</span> ${rec}${ageLine}`;
 }
 
-addEventListener('load', ()=>{ initGeolocation(); setStamp(); loadAll(); el('btnCsv').addEventListener('click', exportCsv); const _bIcs=el('btnIcs'); if(_bIcs) _bIcs.addEventListener('click', exportICS); el('selInterval').addEventListener('change', updateAutoRefStatus); initPersonalCalc(); initLangToggle(); initG2Watch(); /* v87.28: страхувальний рендер compare periods — не залежить від NOAA */ try{ if(typeof renderComparePeriods === 'function') renderComparePeriods(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+addEventListener('load', ()=>{ initGeolocation(); setStamp(); loadAll(); el('btnCsv').addEventListener('click', exportCsv); const _bIcs=el('btnIcs'); if(_bIcs) _bIcs.addEventListener('click', exportICS); el('selInterval').addEventListener('change', updateAutoRefStatus); initPersonalCalc(); initLangToggle(); initG2Watch(); initSimpleMode(); /* v87.28: страхувальний рендер compare periods — не залежить від NOAA */ try{ if(typeof renderComparePeriods === 'function') renderComparePeriods(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
   // v87.61: load engine_scores.json (Bulletin model) + render heroBulletin
   // v87.62: after scores load, also re-render 3-day pills and 27-day table so Bulletin cells populate.
   try {
@@ -12864,6 +12937,17 @@ const I18N = {
     scenarioLabel: '⚠ scenario · synthetic Kp',
     scenarioTitle: 'Engine використав synthetic Kp=2.0 (NOAA forecast недоступний). Це сценарій, не справжній прогноз.',
     timingDisambig: '3-год Vasara-слоти · не плутай з Hora (60хв) у Планетарному ритмі ↓',
+    // v88.6.9: новi keys для Engine v18 lite-recalc + Simple Mode + Forward Timeline clarity
+    engineOutdated: 'engine outdated · live Kp={kp}',
+    engineOutdatedTitle: 'Engine v17 score обчислений на snapshot часу train. Live NOAA forecast Kp={kp} оновленiший. Engine score може недо-оцiнювати буревий ризик.',
+    engineRecalculated: 'Engine v17 score recalculated з live NOAA Kp={kp}. Snapshot було Kp={origKp} → {origEng}, recalc → {newEng}.',
+    dailyPeak: 'денний пiк',
+    dailyPeakTitle: 'Forward Timeline показує день-пiк (max Kp прогнозу). Hero G показує поточний моменту. Тому для одного дня можуть бути рiзнi значення.',
+    heroPeakDiff: '📊 Зараз (Kp={curKp}): G={curG}\\n📈 Денний пiк (Kp={peakKp}): G={peakG}\\n(Forward Timeline показує пiк, Hero — поточний момент)',
+    simpleModeOn: 'Простий режим увiмкнено',
+    simpleModeOff: 'Експертний режим увiмкнено',
+    simpleModeTitle: 'Простий режим (тiльки Hero) / Експертний режим',
+    simpleModeActiveTitle: 'Простий режим АКТИВНИЙ. Натиснiть для повного експертного UI.'
   },
   EN: {
     headerTitle: 'Space Weather Dashboard — <span class="muted">G = Kp − 2 + ΣAᵢ where ΣAᵢ = Lᵢ + Mᵢ + eᵢ + Pᵢ + Dᵢ</span>',
@@ -12927,6 +13011,17 @@ const I18N = {
     scenarioLabel: '⚠ scenario · synthetic Kp',
     scenarioTitle: 'Engine used synthetic Kp=2.0 (NOAA forecast unavailable). This is a scenario, not real forecast.',
     timingDisambig: '3-hour Vasara slots · do not confuse with 60-min Hora in Planetary rhythm ↓',
+    // v88.6.9: новi keys для Engine v18 lite-recalc + Simple Mode + Forward Timeline clarity
+    engineOutdated: 'engine outdated · live Kp={kp}',
+    engineOutdatedTitle: 'Engine v17 score computed on snapshot. Live NOAA forecast Kp={kp} is fresher. Engine score may underestimate storm risk.',
+    engineRecalculated: 'Engine v17 score recalculated from live NOAA Kp={kp}. Snapshot was Kp={origKp} → {origEng}, recalc → {newEng}.',
+    dailyPeak: 'daily peak',
+    dailyPeakTitle: 'Forward Timeline shows the day peak (max forecast Kp). Hero G shows the current moment. So same day can have different values.',
+    heroPeakDiff: '📊 Now (Kp={curKp}): G={curG}\\n📈 Daily peak (Kp={peakKp}): G={peakG}\\n(Forward Timeline shows peak, Hero — current moment)',
+    simpleModeOn: 'Simple mode enabled',
+    simpleModeOff: 'Expert mode enabled',
+    simpleModeTitle: 'Simple mode (Hero only) / Expert mode',
+    simpleModeActiveTitle: 'Simple mode ACTIVE. Click for full expert UI.'
   }
 };
 
@@ -13059,6 +13154,41 @@ function initG2Watch() {
     if (!visible) {
       panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
       syncG2();
+    }
+  });
+}
+
+// v88.6.9 SIMPLE MODE: toggle для civilian users (Євгенiя). Hide advanced sections, show only Hero + 3-day forecast.
+function initSimpleMode(){
+  const btn = el('btnSimpleMode');
+  if(!btn) return;
+  // Restore стан з localStorage
+  const _savedSimple = (function(){ try { return localStorage.getItem('gindex_simple_mode') === '1'; } catch(e){ return false; } })();
+  if(_savedSimple){
+    document.body.classList.add('simple-mode');
+    btn.classList.add('active');
+    btn.style.borderColor = 'var(--ok)';
+    btn.style.color = 'var(--ok)';
+    btn.title = 'Простий режим АКТИВНИЙ. Натиснiть для повного експертного UI.';
+  }
+  btn.addEventListener('click', () => {
+    const isOn = document.body.classList.toggle('simple-mode');
+    if(isOn){
+      btn.classList.add('active');
+      btn.style.borderColor = 'var(--ok)';
+      btn.style.color = 'var(--ok)';
+      btn.title = 'Простий режим АКТИВНИЙ. Натиснiть для повного експертного UI.';
+      try { localStorage.setItem('gindex_simple_mode', '1'); } catch(e){}
+    } else {
+      btn.classList.remove('active');
+      btn.style.borderColor = 'var(--faint)';
+      btn.style.color = 'var(--dim)';
+      btn.title = 'Простий режим (тiльки Hero) / Експертний режим';
+      try { localStorage.removeItem('gindex_simple_mode'); } catch(e){}
+    }
+    // Toast feedback
+    if(typeof showToast === 'function'){
+      showToast(isOn ? 'Простий режим увiмкнено' : 'Експертний режим увiмкнено', 'info', 2000);
     }
   });
 }
@@ -14770,7 +14900,7 @@ function _getBestWorstDays(){
     // P1 fix v87.90: prefer engine_scores (validated, consistent з engine v17)
     // над localStorage (running-average per-session, неконсистентний).
     // Continuous G реконструюється з engine kp + dashboard computeAi (єдина формула).
-    // v88.6.8 BUG#1 fix: для сьогоднішнього дня — використовуй live Kp (як Hero),
+    // v88.6.9 BUG#1 fix: для сьогоднішнього дня — використовуй live Kp (як Hero),
     //                 інакше user бачить два різні G (Hero -3.53, History -3.2)
     //                 коли engine_scores має synthetic Kp=2.0 а NOAA live Kp=1.67.
     if (typeof _engineScores !== 'undefined' && _engineScores && Object.keys(_engineScores).length > 0) {
@@ -14786,7 +14916,7 @@ function _getBestWorstDays(){
         if (!isFinite(t) || t > nowMs || t < cutMs) continue;
         try {
           const dt = new Date(ds + 'T12:00:00Z');
-          // v88.6.8: сьогодні → live Kp (synced з Hero); інакше → archived/synthetic engine kp
+          // v88.6.9: сьогодні → live Kp (synced з Hero); інакше → archived/synthetic engine kp
           const _kpForG = (ds === _todayDS && _liveKp != null) ? _liveKp : sc.kp;
           const ai = computeAi(dt, _kpForG);
           const G = Math.round((_kpForG - 2 + ai.Ai) * 10) / 10;
