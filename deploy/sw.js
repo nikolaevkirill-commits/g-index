@@ -5,8 +5,8 @@
    - Everything else → Network-First, no cache
 */
 
-const SHELL_CACHE  = 'g-index-shell-v88-6-6';
-const DATA_CACHE   = 'g-index-data-v88-6-6';
+const SHELL_CACHE  = 'g-index-shell-v88-6-7';
+const DATA_CACHE   = 'g-index-data-v88-6-7';
 const DATA_TTL_MS  = 1 * 60 * 60 * 1000; // 1 hour (Dst оновлюється кожну 1h)
 // App shell files to pre-cache on install
 // v87.91: engine_scores.json винесено з shell у DATA — це не статика, оновлюється щотижня.
