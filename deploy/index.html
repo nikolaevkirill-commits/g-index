@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v88.6.1</title>
+  <title>G-Index — Космофізичний дашборд v88.6.5</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -24,47 +24,9 @@
   <meta property="og:description" content="Геомагнітна активність + Panchanga у реальному часі" />
   <meta property="og:type" content="website" />
 
-  <!-- v87.63: Supabase backend + VAPID push config -->
-  <script>
-    window._supabase_url      = 'https://hhslrbqypllleqskpvnx.supabase.co';
-    window._supabase_anon_key = 'sb_publishable_y5WE0OrzEgNXnm5dY1PIYQ_sLVnfCKF';
-    window._vapid_public_key  = 'BLzhwuWEm5MNYnOARVOkXmSvT6ebCrs4OxExGenHzBBrwMai3xHnUMpNmGf7H7iV6VAuNlRJTQlApA0qVECU4IY';
-    window._supa_load_log = [];
-  </script>
-  <!-- v87.64: multi-CDN fallback chain (UMD builds, не ES module — createClient одразу на window.supabase) -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"
-          onload="window._supa_load_log.push('jsdelivr OK'); if(window.SUPA&&window.SUPA.init) window.SUPA.init();"
-          onerror="window._supa_load_log.push('jsdelivr FAIL');"></script>
-  <script>
-    // Fallback #1: unpkg якщо jsdelivr не спрацював за 2с
-    setTimeout(function(){
-      if (!window.supabase || typeof window.supabase.createClient !== 'function') {
-        window._supa_load_log.push('jsdelivr timeout, trying unpkg');
-        var s = document.createElement('script');
-        s.src = 'https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js';
-        s.onload = function(){ window._supa_load_log.push('unpkg OK'); if(window.SUPA&&window.SUPA.init) window.SUPA.init(); };
-        s.onerror = function(){ window._supa_load_log.push('unpkg FAIL'); };
-        document.head.appendChild(s);
-      }
-    }, 2000);
-    // Fallback #2: esm.sh через 5с якщо ні UMD не доступний
-    setTimeout(function(){
-      if (!window.supabase || typeof window.supabase.createClient !== 'function') {
-        window._supa_load_log.push('UMD both failed, trying esm.sh dynamic import');
-        (async function(){
-          try {
-            var mod = await import('https://esm.sh/@supabase/supabase-js@2');
-            window.supabase = { createClient: mod.createClient };
-            window._supa_load_log.push('esm.sh OK');
-            if (window.SUPA && window.SUPA.init) window.SUPA.init();
-          } catch(e) {
-            window._supa_load_log.push('esm.sh FAIL: ' + (e.message||e));
-            console.error('[supabase] All CDNs failed. Check network.');
-          }
-        })();
-      }
-    }, 5000);
-  </script>
+  <!-- v88.6.5: Supabase SDK loading видалено — auth мiгрував на Cloudflare Worker (GAuth).
+       Push backend (push_subscriptions) тимчасово inert через SUPA shim — буде вiдновлено
+       коли Cloudflare D1 додасть push table (Phase 2.3). Бачимо ~150KB bandwidth економiї. -->
 
 
   <style>
@@ -1167,17 +1129,13 @@
 </style>
 
   <!-- Астро бібліотека: фаза Місяця -->
-  <script src="https://cdn.jsdelivr.net/npm/astronomy-engine@2.1.19/astronomy.browser.min.js" defer></script>
+  <!-- v88.6.5: astronomy-engine з multi-CDN fallback (jsdelivr → unpkg)
+       Якщо jsdelivr DOWN, Panchanga/Tithi обчислення зламаються — потрiбен fallback. -->
+  <script src="https://cdn.jsdelivr.net/npm/astronomy-engine@2.1.19/astronomy.browser.min.js"
+          onerror="(function(){var s=document.createElement('script');s.src='https://unpkg.com/astronomy-engine@2.1.19/astronomy.browser.min.js';s.onerror=function(){console.error('[astronomy-engine] both CDNs failed — Panchanga unavailable');};document.head.appendChild(s);})()"
+          defer></script>
 
-  <!-- v87.63: Supabase backend activation -->
-  <script src="https://esm.sh/@supabase/supabase-js@2"></script>
-  <script>
-    // Supabase project: g-index (eu-west-1 Ireland)
-    window._supabase_url      = 'https://hhslrbqypllleqskpvnx.supabase.co';
-    window._supabase_anon_key = 'sb_publishable_y5WE0OrzEgNXnm5dY1PIYQ_sLVnfCKF';
-    // VAPID public key (для web push) — private НЕ у клієнті
-    window._vapid_public_key  = 'BLzhwuWEm5MNYnOARVOkXmSvT6ebCrs4OxExGenHzBBrwMai3xHnUMpNmGf7H7iV6VAuNlRJTQlApA0qVECU4IY';
-  </script>
+  <!-- v88.6.5: secondary Supabase load видалено разом з primary loader (див. v88.6.5 cleanup). -->
 </head>
 <body>
   <header>
@@ -1191,7 +1149,7 @@
           style="display:inline-block;font-size:11px;font-weight:700;padding:3px 9px;border-radius:6px;
           vertical-align:middle;letter-spacing:.05em;cursor:pointer;background:#1e2a44;color:#6b82aa">Free</span>
         <button id="authBtn" onclick="AuthModal.show()"
-          title="Увійти через magic link (email)"
+          title="Увійти / зареєструватись (email + пароль)"
           style="background:#1e2a44;color:#9bb1dc;border:1px solid var(--border2);font-size:11px;padding:3px 9px;border-radius:6px;cursor:pointer">🔐 Увійти</button>
         <button id="pushBtn" onclick="PushModal.show()"
           title="Push-сповіщення (Plus+)"
@@ -1255,7 +1213,7 @@
         <details id="devMenu" style="display:none;position:relative">
           <summary style="cursor:pointer;color:var(--faint);font-size:14px;list-style:none;padding:2px 6px;border-radius:4px" title="Dev tools (?dev=1)">⋯</summary>
           <div id="devMenuPanel" style="position:absolute;right:0;top:100%;margin-top:4px;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:6px;display:flex;flex-direction:column;gap:4px;z-index:50;min-width:140px">
-            <button id="btnV86Radial" onclick="(function(){try{const cur=localStorage.getItem('v86_radial')==='1';const next=cur?'0':'1';localStorage.setItem('v86_radial', next);localStorage.setItem('v86_heat', next);location.reload();}catch(e){}})()" style="background:#1a0f2a;color:#d28cff;border:1px solid #4a2a6e;font-size:11px;padding:4px 8px;border-radius:6px;cursor:pointer;text-align:left" title="Перемкнути v86 features: radial G + heat-strip">✦ v86</button>
+            <button id="btnV86Radial" onclick="(function(){try{const cur=localStorage.getItem('v86_radial')==='1';const next=cur?'0':'1';localStorage.setItem('v86_radial', next);localStorage.setItem('v86_heat', next);location.reload();}catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}})()" style="background:#1a0f2a;color:#d28cff;border:1px solid #4a2a6e;font-size:11px;padding:4px 8px;border-radius:6px;cursor:pointer;text-align:left" title="Перемкнути v86 features: radial G + heat-strip">✦ v86</button>
             <button id="btnCacheReset" onclick="navigator.serviceWorker.getRegistrations().then(r=>r.forEach(s=>s.unregister()));caches.keys().then(k=>k.forEach(c=>caches.delete(c)));setTimeout(()=>location.reload(),500)" style="background:#2a1a00;color:#ffcc44;border:1px solid #554400;font-size:11px;padding:4px 8px;border-radius:6px;cursor:pointer;text-align:left" title="Скинути кеш і перезавантажити">🗑 Кеш</button>
           </div>
         </details>
@@ -2460,7 +2418,7 @@ document.addEventListener('DOMContentLoaded', () => {
         b.classList.toggle('active', b.dataset.p === _activeProfile);
       });
     }
-  } catch(e){}
+  } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -2471,46 +2429,78 @@ document.addEventListener('DOMContentLoaded', () => {
 //   2. Set globals window._supabase_url and window._supabase_anon_key (strings)
 //   3. SUPA.init() is auto-called on DOMContentLoaded; silent no-op if config missing.
 // ═══════════════════════════════════════════════════════════════════════════
-// v88.6.1: Старий Supabase SUPA блок видалено — replaced нашою Cloudflare auth (нижче).
+// v88.6.5: Старий Supabase SUPA блок видалено — replaced нашою Cloudflare auth (нижче).
 // Stub оголошується пізніше у файлі для backward-compat.
 
 // Auth modal controller (інертний якщо SUPA не init)
-// v88.6.1: Cloudflare Auth (replaces Supabase placeholder)
+// v88.6.5: Cloudflare Auth (replaces Supabase placeholder)
 // Worker: https://gindex-auth.nikolaev-kirill.workers.dev
 const GAUTH_WORKER_URL = 'https://gindex-auth.nikolaev-kirill.workers.dev';
 const GAUTH_TOKEN_KEY = 'gindex_session_token';
 const GAUTH_USER_KEY = 'gindex_user';
 
+// v88.6.5: safe localStorage helpers (handle quota / private mode / disabled storage)
+function _gauthLsSet(k, v){
+  try { localStorage.setItem(k, v); return true; }
+  catch(e){ console.warn('[GAuth] localStorage.setItem failed:', k, e.message); return false; }
+}
+function _gauthLsGet(k){
+  try { return localStorage.getItem(k); }
+  catch(e){ console.warn('[GAuth] localStorage.getItem failed:', k, e.message); return null; }
+}
+function _gauthLsRemove(k){
+  try { localStorage.removeItem(k); }
+  catch(e){ console.warn('[GAuth] localStorage.removeItem failed:', k, e.message); }
+}
+
 const GAuth = {
-  getToken(){ return localStorage.getItem(GAUTH_TOKEN_KEY); },
+  getToken(){ return _gauthLsGet(GAUTH_TOKEN_KEY); },
   getUser(){
-    try { return JSON.parse(localStorage.getItem(GAUTH_USER_KEY) || 'null'); }
+    try { return JSON.parse(_gauthLsGet(GAUTH_USER_KEY) || 'null'); }
     catch(e){ return null; }
   },
   isAuthenticated(){ return !!this.getToken(); },
   getTier(){ return this.getUser()?.tier || 'free'; },
 
   async signup(email, password){
-    const r = await fetch(GAUTH_WORKER_URL + '/auth/signup', {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ email, password, locale: (localStorage.getItem('gindex_lang')||'uk') }),
-    });
-    const data = await r.json();
+    let r;
+    try {
+      r = await fetch(GAUTH_WORKER_URL + '/auth/signup', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ email, password, locale: (_gauthLsGet('gindex_lang')||'uk') }),
+      });
+    } catch(netErr){
+      throw new Error('Сервер недоступний. Перевір інтернет і спробуй знову.');
+    }
+    let data;
+    try { data = await r.json(); }
+    catch(parseErr){ throw new Error('Невірна відповідь сервера.'); }
     if (!r.ok) throw new Error(data.error?.message || 'Signup failed');
-    localStorage.setItem(GAUTH_TOKEN_KEY, data.session_token);
-    localStorage.setItem(GAUTH_USER_KEY, JSON.stringify(data.user));
+    if (!_gauthLsSet(GAUTH_TOKEN_KEY, data.session_token)) {
+      throw new Error('Не вдалося зберегти сесію (storage недоступний).');
+    }
+    _gauthLsSet(GAUTH_USER_KEY, JSON.stringify(data.user));
     return data;
   },
 
   async login(email, password){
-    const r = await fetch(GAUTH_WORKER_URL + '/auth/login', {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ email, password }),
-    });
-    const data = await r.json();
+    let r;
+    try {
+      r = await fetch(GAUTH_WORKER_URL + '/auth/login', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ email, password }),
+      });
+    } catch(netErr){
+      throw new Error('Сервер недоступний. Перевір інтернет і спробуй знову.');
+    }
+    let data;
+    try { data = await r.json(); }
+    catch(parseErr){ throw new Error('Невірна відповідь сервера.'); }
     if (!r.ok) throw new Error(data.error?.message || 'Login failed');
-    localStorage.setItem(GAUTH_TOKEN_KEY, data.session_token);
-    localStorage.setItem(GAUTH_USER_KEY, JSON.stringify(data.user));
+    if (!_gauthLsSet(GAUTH_TOKEN_KEY, data.session_token)) {
+      throw new Error('Не вдалося зберегти сесію (storage недоступний).');
+    }
+    _gauthLsSet(GAUTH_USER_KEY, JSON.stringify(data.user));
     return data;
   },
 
@@ -2521,10 +2511,10 @@ const GAuth = {
         await fetch(GAUTH_WORKER_URL + '/auth/logout', {
           method:'POST', headers:{'Authorization': 'Bearer ' + token},
         });
-      } catch(e) { /* ignore */ }
+      } catch(e) { /* ignore — server-side cleanup, кешеві дані видаляємо локально */ }
     }
-    localStorage.removeItem(GAUTH_TOKEN_KEY);
-    localStorage.removeItem(GAUTH_USER_KEY);
+    _gauthLsRemove(GAUTH_TOKEN_KEY);
+    _gauthLsRemove(GAUTH_USER_KEY);
     GAuth.refreshUI();
   },
 
@@ -2551,7 +2541,8 @@ const AuthModal = {
   show(){
     const u = GAuth.getUser();
     if (u) {
-      if (confirm(`Вийти з ${u.email}?`)) GAuth.logout();
+      // v88.6.5: non-blocking confirm
+      showToastConfirm(`Вийти з ${u.email}?`, () => GAuth.logout());
       return;
     }
     let ov = document.getElementById('authOverlay');
@@ -2656,19 +2647,23 @@ if (typeof window !== 'undefined') {
 }
 
 // Legacy SUPA shim — для backward compat коду який ще робить SUPA.currentUser() etc.
+// v88.6.5: Supabase SDK видалений — всi методи що повертали б client тепер возвращают null.
+// Push subscription flow elegantly degrades через `if(!client) throw` у subscribe().
 const SUPA = {
-  isConfigured(){ return true; },
+  // v88.6.5: isConfigured() повертає false поки push backend не deployed.
+  isConfigured(){ return false; },
   currentUser(){ return GAuth.getUser(); },
+  getClient(){ return null; },           // v88.6.5: завжди null (Supabase removed)
   signOut(){ GAuth.logout(); },
-  sendMagicLink(){ throw new Error('Magic-link replaced with email/password у v88.6.1'); },
+  sendMagicLink(){ throw new Error('Magic-link replaced with email/password у v88.6.5'); },
   init(){ /* noop */ },
 };
 window.SUPA = SUPA;
 window.GAuth = GAuth;
 window.AuthModal = AuthModal;
 
-// Auto-init SUPA when DOM ready (no-op у v88.6.1 — kept for backward compat)
-document.addEventListener('DOMContentLoaded', () => { try{ SUPA.init(); }catch(e){} });
+// Auto-init SUPA when DOM ready (no-op у v88.6.5 — kept for backward compat)
+document.addEventListener('DOMContentLoaded', () => { try{ SUPA.init(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)} });
 
 // ═══════════════════════════════════════════════════════════════════════════
 // v87.37 PUSH NOTIFICATIONS — client side. Inert без VAPID-ключа (window._vapid_public_key).
@@ -2680,8 +2675,8 @@ document.addEventListener('DOMContentLoaded', () => { try{ SUPA.init(); }catch(e
 //   5. Server (Edge Function, окремо) може надсилати push через web-push npm lib.
 // ═══════════════════════════════════════════════════════════════════════════
 const PUSH = (function(){
-  function _log(...a){ try{ console.log('[PUSH]', ...a); }catch(e){} }
-  function _warn(...a){ try{ console.warn('[PUSH]', ...a); }catch(e){} }
+  function _log(...a){ try{ console.log('[PUSH]', ...a); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)} }
+  function _warn(...a){ try{ console.warn('[PUSH]', ...a); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)} }
 
   function isSupported(){
     return typeof window !== 'undefined'
@@ -2794,7 +2789,7 @@ const PUSH = (function(){
 const PushModal = {
   async show(){
     if(!PUSH.isSupported()){
-      alert('Ваш браузер не підтримує push-сповіщення');
+      showToast('Ваш браузер не підтримує push-сповіщення', 'warn');
       return;
     }
     // Tier-gate: Plus або вище
@@ -2803,11 +2798,11 @@ const PushModal = {
       return;
     }
     if(!PUSH.isConfigured()){
-      alert('Бекенд сповіщень ще не налаштовано. Скоро!');
+      showToast('Бекенд сповіщень ще не налаштовано. Скоро!', 'info');
       return;
     }
     if(!SUPA.currentUser()){
-      alert('Спочатку увійдіть в акаунт (🔐 у хедері)');
+      showToast('Спочатку увійдіть в акаунт (🔐 у хедері)', 'warn');
       return;
     }
 
@@ -2877,7 +2872,7 @@ const PushModal = {
     try{
       await PUSH.unsubscribe();
       setTimeout(() => PushModal.show(), 300);
-    }catch(e){ alert('Помилка відписки: ' + (e.message || e)); }
+    }catch(e){ showToast('Помилка відписки: ' + (e.message || e), 'error'); }
   }
 };
 
@@ -2894,7 +2889,7 @@ const URL_WOLF_SN_FB = 'https://sidc.be/SILSO/DATA/SN_d_tot_V2.0.json'; // fallb
 const URL_DST_FB   = 'https://services.swpc.noaa.gov/products/geospace/propagated-solar-wind-1-hour.json'; // fallback Dst proxy
 const URL_KP_FCST_FB2 = 'https://services.swpc.noaa.gov/json/planetary_k_index_1m.json'; // fallback fcst via obs
 const URL_DST      = 'https://services.swpc.noaa.gov/products/kyoto-dst.json'; // Dst/SYM-H
-// v88.6.1: UAF Geophysical Institute mirror (Tier-2 fallback when NOAA proxies fail)
+// v88.6.5: UAF Geophysical Institute mirror (Tier-2 fallback when NOAA proxies fail)
 // HTML wrapper навколо NOAA-derived JSON arrays. Updated daily noon UTC (3-day) i щопонеділка (27-day)
 const URL_UAF_AURORA   = 'https://www.gi.alaska.edu/monitors/aurora-forecast';
 
@@ -2931,20 +2926,53 @@ let _userLat = 50.45, _userLon = 30.52;
 })();
 
 function initGeolocation(){
-  if(!navigator.geolocation) return;
+  if(!navigator.geolocation) {
+    console.warn('[geo] navigator.geolocation undefined — using Kyiv default');
+    return;
+  }
+  // v88.6.5: smart default — якщо IANA timezone iндикує не Kyiv → попередити user
+  // що координати все ще Kyiv (бо Hora ι Panchanga залежать вiд lat/lon).
+  // Фактичний prompt geolocation буде запитано user-gesture (через тут).
   try{
     navigator.geolocation.getCurrentPosition(
       pos => {
         _userLat = pos.coords.latitude;
         _userLon = pos.coords.longitude;
-        console.log('Geolocation:', _userLat.toFixed(2), _userLon.toFixed(2), 'IANA:', window._iana);
-        // v87.26: оновити Hora-лейбл динамічно після GPS
-        try{ _updateHoraCoordLabel(); }catch(e){}
+        try { lsSet('last_geo_lat', String(_userLat)); lsSet('last_geo_lon', String(_userLon)); } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+        console.log('[geo] OK:', _userLat.toFixed(2), _userLon.toFixed(2), 'IANA:', window._iana);
+        try{ _updateHoraCoordLabel(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
       },
-      () => { /* fallback Kyiv */ },
+      err => {
+        // v88.6.5: якщо user denied geolocation АЛЕ IANA не Europe/Kyiv — показати warning
+        const iana = window._iana || '';
+        if(iana && !iana.includes('Kyiv') && !iana.includes('Kiev') && iana !== 'UTC'){
+          // Перевiряю чи маю кеш
+          try {
+            const lat = parseFloat(lsGet('last_geo_lat',''));
+            const lon = parseFloat(lsGet('last_geo_lon',''));
+            if(isFinite(lat) && isFinite(lon)){
+              _userLat = lat; _userLon = lon;
+              console.log('[geo] using cached:', lat.toFixed(2), lon.toFixed(2));
+              try{ _updateHoraCoordLabel(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+              return;
+            }
+          } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+          // Нiякого кешу + не у Києвi → показати toast одного разу (sticky 8s)
+          if(typeof showToast === 'function'){
+            setTimeout(() => {
+              showToast(
+                `Використовую Київ як координати за замовчуванням. Hora i Panchanga можуть бути неточнi для ${iana}. Дозволь геолокацiю у налаштуваннях браузера для точностi.`,
+                'info', 8000
+              );
+            }, 1500); // delay щоб toast container встиг створитись
+          }
+        }
+      },
       { timeout: 5000, maximumAge: 3600000 }
     );
-  }catch(e){}
+  }catch(e){
+    console.warn('[geo] navigator.geolocation throw:', e.message);
+  }
 }
 
 // v87.26: динамічний Hora-лейбл = "(IANA, UTC±HH, lat°N/S)"
@@ -2998,6 +3026,89 @@ function fmtUTC(d){
 }
 const fmtDate = d => new Date(d).toISOString().slice(0,10);
 const el = id => document.getElementById(id);
+
+// ═══ v88.6.5: DEBUG flag — silence console.log noise у production ═══
+// Enable: ?debug=1 в URL, або localStorage.setItem('gindex_debug','1')
+// Production default: console.log/info/debug muted. console.warn/error завжди працюють.
+(function(){
+  try {
+    const enabled = location.search.includes('debug=1') 
+                    || localStorage.getItem('gindex_debug') === '1';
+    window._DEBUG = enabled;
+    if(!enabled){
+      // Зберiгаю оригiнальнi для одноразових calls (показуємо version banner)
+      const _origLog = console.log.bind(console);
+      console.log = function(){};      // muted
+      console.debug = function(){};    // muted
+      console.info = function(){};     // muted
+      // Один раз показуємо що debug можна enable
+      _origLog('%cG-Index v88.6.5 — debug muted. Enable: ?debug=1 або localStorage.gindex_debug=1', 'color:#9bb1dc;font-size:11px');
+    } else {
+      console.log('[DEBUG] enabled — verbose logging on');
+    }
+  } catch(e){ window._DEBUG = false; }
+})();
+
+// ═══ v88.6.5: Non-blocking toast notification system (replaces alert/confirm) ═══
+// Stack: top-right на desktop, bottom на mobile. Auto-dismiss 4s (success), 6s (error/info).
+function _ensureToastContainer(){
+  let c = document.getElementById('_toastContainer');
+  if(c) return c;
+  c = document.createElement('div');
+  c.id = '_toastContainer';
+  c.style.cssText = 'position:fixed;top:16px;right:16px;z-index:10000;display:flex;flex-direction:column;gap:8px;max-width:340px;pointer-events:none';
+  // Mobile: bottom-anchored
+  if(window.innerWidth < 600){ c.style.cssText = c.style.cssText.replace('top:16px;right:16px','bottom:16px;left:16px;right:16px;max-width:none'); }
+  document.body.appendChild(c);
+  return c;
+}
+
+// showToast(message, type) — type: 'info'|'success'|'warn'|'error'
+function showToast(message, type='info', timeoutMs=null){
+  const c = _ensureToastContainer();
+  const t = document.createElement('div');
+  const colors = {
+    info:    { bg:'#1e2a44', border:'#2a3b61', text:'#cfe0ff', icon:'ℹ️' },
+    success: { bg:'#0a2a15', border:'#2bd47d', text:'#9ce6c0', icon:'✓' },
+    warn:    { bg:'#2a1f0a', border:'#ffaa33', text:'#ffd99e', icon:'⚠' },
+    error:   { bg:'#2a0808', border:'#ff6b6b', text:'#ff9999', icon:'✗' }
+  };
+  const c_ = colors[type] || colors.info;
+  const ttl = timeoutMs ?? (type === 'error' || type === 'warn' ? 6000 : 4000);
+  t.style.cssText = `background:${c_.bg};border:1px solid ${c_.border};color:${c_.text};padding:10px 14px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.4);font-size:13px;line-height:1.4;display:flex;align-items:flex-start;gap:8px;pointer-events:auto;cursor:pointer;animation:toastSlideIn .2s ease-out`;
+  t.innerHTML = `<span style="flex-shrink:0">${c_.icon}</span><span style="flex:1">${String(message).replace(/</g,'&lt;')}</span><span style="flex-shrink:0;opacity:.5;font-size:16px;line-height:1">×</span>`;
+  t.onclick = () => t.remove();
+  c.appendChild(t);
+  setTimeout(() => { t.style.transition='opacity .25s'; t.style.opacity='0'; setTimeout(()=>t.remove(), 260); }, ttl);
+  return t;
+}
+
+// showToastConfirm(message, onConfirm, onCancel) — non-blocking yes/no dialog
+function showToastConfirm(message, onConfirm, onCancel){
+  const c = _ensureToastContainer();
+  const t = document.createElement('div');
+  t.style.cssText = 'background:#1e2a44;border:1px solid #2a3b61;color:#cfe0ff;padding:14px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.4);font-size:13px;line-height:1.4;pointer-events:auto;animation:toastSlideIn .2s ease-out';
+  t.innerHTML = `<div style="margin-bottom:10px">${String(message).replace(/</g,'&lt;')}</div>
+    <div style="display:flex;gap:6px;justify-content:flex-end">
+      <button class="_tcCancel" style="padding:5px 12px;background:#1e2a44;color:#9bb1dc;border:1px solid #2a3b61;border-radius:5px;cursor:pointer;font-size:12px">Скасувати</button>
+      <button class="_tcOk" style="padding:5px 12px;background:#2bd47d;color:#0a1020;border:none;border-radius:5px;cursor:pointer;font-size:12px;font-weight:700">OK</button>
+    </div>`;
+  c.appendChild(t);
+  t.querySelector('._tcOk').onclick    = () => { t.remove(); if(onConfirm) onConfirm(); };
+  t.querySelector('._tcCancel').onclick = () => { t.remove(); if(onCancel) onCancel(); };
+  return t;
+}
+
+// Inject keyframe (one-time)
+(function(){
+  if(document.getElementById('_toastStyles')) return;
+  const s = document.createElement('style');
+  s.id = '_toastStyles';
+  s.textContent = '@keyframes toastSlideIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}';
+  document.head.appendChild(s);
+})();
+window.showToast = showToast;
+window.showToastConfirm = showToastConfirm;
 const startUTC = d => new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
 const noonUTC  = d => new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 12, 0, 0));
 // v87.90 fix: localWeekday — день тижня у локальній зоні (для Vara/Hora).
@@ -3266,7 +3377,7 @@ function moonPhaseAngle(date){
     if (window.Astronomy && typeof Astronomy.MoonPhase === 'function'){
       return Astronomy.MoonPhase(date) % 360;
     }
-  }catch(e){}
+  }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
   const age = moonAgeDays_simple(date);
   return (age / SYNODIC) * 360.0;
 }
@@ -3365,7 +3476,7 @@ const ECLIPSE_CATALOG_END_YEAR = 2030; // v85b-F5: СЕРЕД-1 — явна м�
 const _eclipseCatalogWarned = new Set(); // один warn на рік
 
 // Проксі для CORS (fallback)
-// v88.6.1: Cloudflare Worker priority (deploy див. cloudflare-worker-noaa-proxy.js).
+// v88.6.5: Cloudflare Worker priority (deploy див. cloudflare-worker-noaa-proxy.js).
 //        Public free proxies нерeliable; власний Worker = robust + ~$0/міс.
 const NOAA_WORKER_URL = 'https://gindex-noaa-proxy.YOUR_USERNAME.workers.dev/?url=';
 function fetchWithTimeout(url, ms=5000){
@@ -3374,44 +3485,45 @@ function fetchWithTimeout(url, ms=5000){
   return fetch(url, {cache:'no-store', signal:ctrl.signal}).finally(()=>clearTimeout(tid));
 }
 async function fetchTextWithCORS(url){
+  const _shortUrl = url.length > 80 ? url.slice(0,77)+'...' : url;
   // 0. Прямий fetch (NOAA JSON підтримує CORS; Netlify proxy видалено — suspended)
   try{
     const r = await fetchWithTimeout(url, 6000);
     if(r.ok) return await r.text();
-  }catch(e){}
-  // 1. v88.6.1: Cloudflare Worker (own proxy — most reliable when configured)
+  }catch(e){ console.warn('[CORS] direct fail:', _shortUrl, e.message); }
+  // 1. v88.6.5: Cloudflare Worker (own proxy — most reliable when configured)
   if (NOAA_WORKER_URL && !NOAA_WORKER_URL.includes('YOUR_USERNAME')) {
     try{
       const r1 = await fetchWithTimeout(NOAA_WORKER_URL+encodeURIComponent(url), 5000);
       if(r1.ok) return await r1.text();
-    }catch(e){}
+    }catch(e){ console.warn('[CORS] worker fail:', e.message); }
   }
   // 2. allorigins
   try{
     const r2 = await fetchWithTimeout('https://api.allorigins.win/raw?url='+encodeURIComponent(url), 4000);
     if(r2.ok) return await r2.text();
-  }catch(e){}
+  }catch(e){ console.warn('[CORS] allorigins fail:', e.message); }
   // 3. corsproxy.io (новий формат 2025+: ?url=)
   try{
     const r3 = await fetchWithTimeout('https://corsproxy.io/?url='+encodeURIComponent(url), 4000);
     if(r3.ok) return await r3.text();
-  }catch(e){}
+  }catch(e){ console.warn('[CORS] corsproxy.io fail:', e.message); }
   // 3b. corsfix.com
   try{
     const r3b = await fetchWithTimeout('https://proxy.corsfix.com/?'+encodeURIComponent(url), 4000);
     if(r3b.ok) return await r3b.text();
-  }catch(e){}
+  }catch(e){ console.warn('[CORS] corsfix fail:', e.message); }
   // 4. codetabs
   try{
     const r4 = await fetchWithTimeout('https://api.codetabs.com/v1/proxy?quest='+encodeURIComponent(url), 4000);
     if(r4.ok) return await r4.text();
-  }catch(e){}
+  }catch(e){ console.warn('[CORS] codetabs fail:', e.message); }
   // 5. thingproxy
   try{
     const r5 = await fetchWithTimeout('https://thingproxy.freeboard.io/fetch/'+url, 4000);
     if(r5.ok) return await r5.text();
-  }catch(e){}
-  throw new Error('Всі проксі недоступні: '+url.slice(0,60));
+  }catch(e){ console.warn('[CORS] thingproxy fail:', e.message); }
+  throw new Error('Всі проксі недоступні: '+_shortUrl);
 }
 
 // ---------------------------- Парсер ICS (простий) --------------------------
@@ -3647,7 +3759,7 @@ window.__debugG = function(input, kpOverride){
       const nasa = _nasaEclipseCatalog(y);
       if(nasa) eclipsesByYear.set(y, nasa);
     }
-  } catch(e){}
+  } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
   // Kp: priority (v87.58 fix — використовуємо реальні змінні з module scope):
   //   1. explicit kpOverride param
   //   2. _27dComputed entry по ds (охоплює 27 днів — від -3 до +~23 від today)
@@ -3684,7 +3796,7 @@ window.__debugG = function(input, kpOverride){
       try {
         const _lsKp = parseFloat(lsGet('last_kp_known'));
         if(isFinite(_lsKp)){ kp = _lsKp; kpSource = 'ls-cache'; }
-      } catch(e){}
+      } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
     }
   }
   const r = computeAi(d, kp);
@@ -4020,7 +4132,7 @@ function computeConfidenceBand(kpNow, kpObsJson){
         }
       }
     }
-  }catch(e){}
+  }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
   const eventUncertainty = 0.5;
   const totalDelta = Math.sqrt(kpDelta*kpDelta + eventUncertainty*eventUncertainty);
   return { delta: Math.round(totalDelta*10)/10, kpDelta: Math.round(kpDelta*10)/10 };
@@ -4045,7 +4157,7 @@ function resolveDataMode(){
 
   // Forecast synthetic flag — last3D._synthetic ставиться у renderQuick, коли NOAA 3-day упав
   let _fcastSynthetic = false;
-  try { _fcastSynthetic = !!(typeof last3D !== 'undefined' && last3D && last3D._synthetic); } catch(e){}
+  try { _fcastSynthetic = !!(typeof last3D !== 'undefined' && last3D && last3D._synthetic); } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
 
   // Логіка пріоритету: offline Kp > scenario forecast > partial freshness > live
   if (_kpFresh === 'offline') return 'offline';
@@ -4128,7 +4240,7 @@ function computeCScore(kpNow, kpObsJson, ai, G, kpSrc){
   // Це різна семантика від stale Kp_obs: тут сьогодні може бути live, але "завтра" — synthetic.
   // Без цього штрафу Hero показував Довіру 92% тоді як прогноз — це fallback.
   let _fcastSynthetic = false;
-  try { _fcastSynthetic = !!(typeof last3D !== 'undefined' && last3D && last3D._synthetic); } catch(e){}
+  try { _fcastSynthetic = !!(typeof last3D !== 'undefined' && last3D && last3D._synthetic); } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
   if (_fcastSynthetic) {
     penalty += 0.22;
     reasons.push({ txt:'NOAA forecast недоступний — scenario plateau', col:'#ff6b6b', d:0.22 });
@@ -4240,7 +4352,6 @@ function computeAi(dateTimeUTC, kp=0){
     // Раніше: × lunarMod до всіх → Vara/Yoga/Karana зануляються в новолуння (методологічна помилка).
     const _tithiPi = tithiInPi * lunarMod;
     const _restPi  = panch.vara.score + panch.nakshatra.score + panch.yoga.score + panch.karana.score;
-    const pclRaw = tithiInPi + panch.vara.score + panch.nakshatra.score + panch.yoga.score + panch.karana.score;
     Pi = Math.round((_tithiPi + _restPi) * PCL_SCALE * 10) / 10;
     const pParts = [];
     if(tithiInPi !== 0)              pParts.push(`Tithi(${panch.tithi.name})=${tithiInPi}`);
@@ -4298,7 +4409,6 @@ function computeAi(dateTimeUTC, kp=0){
     else { diTip = `0 — Dst=${dstVal} нТл (норма)`; }
   }
   const AiFull = Math.round((Ai + Di) * 10) / 10;
-  const _snLabel = snPen !== 0 ? `+Sn` : '';
   const explain = `\u03a3A\u1d62 = L\u1d62+M\u1d62+e\u1d62+P\u1d62+D\u1d62${snPen!==0?'+Sn':''} = ${Li}+${Mi}+${eiTotal}+${Pi}+${Di}${snPen!==0?'+'+snPen:''} = ${AiFull}` + (snPen!==0?`\n(Sn=${_snVal}>150: kp_pen${snPen} — engine v17)`:'') + (bzVal!==0||vswVal!==0?`\n(+Bz=${bzVal}, Vsw=${vswVal} — контекст, не в G)`:'');
 
   return { Ai: AiFull, AiNoDst: Ai, Li, Mi, ei: eiTotal, eiBase: ei, horaEi, Pi, Di, snPen, bzVal, vswVal, phaseName, phaseDeg, lTip, mTip, eTip: eTipLines.join('\n'), pTip, diTip, explain, eclipseUnverified };
@@ -4451,7 +4561,7 @@ function parseWolfSn(json){
 }
 // Парсер JSON прогнозу Kp (noaa-planetary-k-index-forecast.json)
 // Формат: [["time_tag","kp","observed","noaa_scale"],...] з заголовком
-// ─── v88.6.1: UAF Geophysical Institute (Alaska) — Tier-2 fallback ───
+// ─── v88.6.5: UAF Geophysical Institute (Alaska) — Tier-2 fallback ───
 // Витягує JSON arrays з HTML сторінки https://www.gi.alaska.edu/monitors/aurora-forecast
 // Сторінка містить 4 JSON масиви inline (з NOAA SWPC):
 //   [0] 27-day forecast (daily, ~27 entries)        — predicted_time: "YYYY-MM-DD"
@@ -4462,7 +4572,7 @@ function parseWolfSn(json){
 function parseUafAurora(html){
   if(!html || typeof html !== 'string') return null;
   try{
-    // v88.6.1.1: bracket-balanced JSON array extraction (regex з [^[\]] не справляється з nested)
+    // v88.6.5.1: bracket-balanced JSON array extraction (regex з [^[\]] не справляється з nested)
     const matches = [];
     let i = 0;
     while(i < html.length){
@@ -4515,9 +4625,12 @@ function parseUafAurora(html){
         }
       } else if(has3hr){
         // Має slot-час → це або 3-day (future, 24 slots) або historical (past, 180 entries)
-        // Розрiзняємо за ДАТАМИ: якщо last entry < today → historical; якщо first >= today-3d → 3-day
+        // v88.6.5 fix H1: classifier тільки за датами (без fuzzy 3-day window):
+        //   last < today  → historical
+        //   first >= today → 3-day (future)
+        //   first < today <= last → contains today (mixed) → 3-day
         const isHistorical = lastDate < today;
-        const isFuture = firstDate >= today || (firstDate < today && new Date(today) - new Date(firstDate) <= 3*86400*1000);
+        const isFuture = firstDate >= today || (firstDate < today && lastDate >= today);
 
         if(isHistorical){
           if(!result.historical.length){
@@ -4546,7 +4659,7 @@ function parseUafAurora(html){
     }
     return (result.kp3Day.length || result.kp27Day.length || result.historical.length) ? result : null;
   }catch(e){
-    console.warn('[v88.6.1 UAF] parse failed:', e.message);
+    console.warn('[v88.6.5 UAF] parse failed:', e.message);
     return null;
   }
 }
@@ -4555,7 +4668,7 @@ function parseUafAurora(html){
 // out: { issued, predictedAp, days: [{date, kp8, kpMax}] }
 function uafTo3DayFormat(uaf){
   if(!uaf) return null;
-  // v88.6.1.1: якщо kp3Day порожнiй, але kp27Day є → беремо з 27-day (less accurate но has data)
+  // v88.6.5.1: якщо kp3Day порожнiй, але kp27Day є → беремо з 27-day (less accurate но has data)
   if(!uaf.kp3Day || !uaf.kp3Day.length){
     if(!uaf.kp27Day || !uaf.kp27Day.length) return null;
     try{
@@ -4608,7 +4721,7 @@ function uafTo3DayFormat(uaf){
       _source: 'uaf-alaska'
     };
   }catch(e){
-    console.warn('[v88.6.1 UAF] uafTo3DayFormat failed:', e.message);
+    console.warn('[v88.6.5 UAF] uafTo3DayFormat failed:', e.message);
     return null;
   }
 }
@@ -4666,7 +4779,7 @@ function parse3DaySafe(json){
     const firstFuture = data.find(r => r[0] && r[0].slice(0,10) >= todayIssuedStr);
     if(firstFuture) out.issued = firstFuture[0];
     else if(data.length) out.issued = data[0][0];
-  }catch(e){}
+  }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
   return out;
 }
 // Парсер Dst index (kyoto-dst.json) — Формат: [["time_tag","dst"],...] з заголовком
@@ -4706,7 +4819,7 @@ function parse45Day(json){
       const Ap = parseInt(r[1],10);
       if(!isNaN(date.getTime())&&isFinite(Ap)) rows.push({date, Ap});
     }
-  }catch(e){}
+  }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
   return rows;
 }
 
@@ -4720,7 +4833,13 @@ function parse27Day(text){
     const m = line.match(/(\d{4})\s+(\w{3})\s+(\d{1,2})\s+(\d+)\s+(\d+)\s+(\d+)/);
     if(!m) continue;
     const MONTH_IDX = {Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};
-    const date = new Date(Date.UTC(parseInt(m[1],10), MONTH_IDX[m[2]] ?? 0, parseInt(m[3],10)));
+    // v88.6.5 fix H2: skip line якщо невiдомий месяц (раніше silent fallback на January = data corruption)
+    const monIdx = MONTH_IDX[m[2]];
+    if(monIdx === undefined){
+      console.warn('[parse27Day] Невідомий месяць у рядку:', line.slice(0,40));
+      continue;
+    }
+    const date = new Date(Date.UTC(parseInt(m[1],10), monIdx, parseInt(m[3],10)));
     rows.push({date, flux: parseInt(m[4],10), Ap: parseInt(m[5],10), kpMax: parseInt(m[6],10)});
   }
   return rows;
@@ -4796,7 +4915,7 @@ function draw27dTable(){
       const birthJDE = dateToJDE(slotD.date, slotD.time||'12:00', slotD.utcOff??2);
       const natalNak = calcNakshatra(calcMoonLongitude(birthJDE), birthJDE);
       natalIdxFor27 = natalNak.idx;
-    } catch(e) {}
+    } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
   }
   const gosColVisible = natalIdxFor27 !== null;
   const gosHeader = document.getElementById('th27Gos');
@@ -4865,7 +4984,7 @@ function draw27dTable(){
         const _tipB = `Engine v17 score: ${_bSign}${_bs27.eng}\nТег: ${_bs27.tag||'—'}\nKp=${_bs27.kp}${_bs27.kp_synthetic?' (synthetic 2.0)':''}${_pdfStr}${_div27?'\n\n⚠ Знак не співпадає з G — моделі не згодні':''}`;
         bulletinCell = `<td style="font-size:12px;text-align:center" title="${escapeHtml(_tipB)}">${_warn}<span style="color:${_bCol};font-weight:700">${_bSign}${_bs27.eng}${_bSynth}</span></td>`;
       }
-    } catch(e){}
+    } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
 
     html += `<tr data-ds="${ds}" style="${rowStyle}${todayStyle}">
       <td class="mono col-date"${isToday?' style="font-weight:700;color:var(--alt)"':''}>${ds}${isToday?' <span style="white-space:nowrap;color:var(--alt)">◀</span>':''}</td>
@@ -4985,7 +5104,7 @@ async function fetchDGDLast30(){
         if(o && o.ts && (Date.now() - o.ts < 6*3600*1000) && o.data){
           return new Map(Object.entries(o.data));
         }
-      }catch(e){}
+      }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
     }
     let text = '';
     try{ text = await fetchTextWithCORS('https://services.swpc.noaa.gov/text/daily-geomagnetic-indices.txt'); }
@@ -5010,7 +5129,7 @@ async function fetchDGDLast30(){
       try{
         const obj = {}; for(const [k,v] of map.entries()) obj[k]=v;
         lsSet(cacheKey, JSON.stringify({ts: Date.now(), data: obj}));
-      }catch(e){}
+      }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
     }
     return map;
   })();
@@ -5455,7 +5574,7 @@ function _ftTogglePlay(){
   window.addEventListener('resize', () => {
     if(_ftResizeTimer) clearTimeout(_ftResizeTimer);
     _ftResizeTimer = setTimeout(() => {
-      try{ renderForwardTimeline(); }catch(e){}
+      try{ renderForwardTimeline(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
     }, 200);
   });
 })();
@@ -5700,7 +5819,7 @@ function renderCurrentPanel(){
     : (last3D && (last3D.days||[]).length) ? '3d'
     : (_last27Rows && _last27Rows.length) ? '27d' : 'syn';
   // v87.17 A5 fix: guarantee freshnessBadge reflects actual state before computeCScore reads it
-  try { if (typeof _renderFreshnessState === 'function') _renderFreshnessState(); } catch(e) {}
+  try { if (typeof _renderFreshnessState === 'function') _renderFreshnessState(); } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
   const _csInline = computeCScore(kUse, _lastKpObsJson, ai, G, _kpSrcInline);
   const _cCol = _csInline.gradeCol;
   const _cHtml = isFinite(G)
@@ -5728,7 +5847,7 @@ function renderCurrentPanel(){
         if(window.__uiState) window.__uiState.delta = dG;
       }
     }
-  } catch(e){}
+  } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
 
   // ── Probability Layer v68 ────────────────────────────────────────────────
   if(isFinite(G)){
@@ -6248,7 +6367,7 @@ function computePanchangaState(dateUTC){
     if(p.tithi.name !== pNoon.tithi.name) diffs.push(`Tithi: зараз ${p.tithi.name}, на полудень ${pNoon.tithi.name}`);
     if(p.karana.name !== pNoon.karana.name) diffs.push(`Karana: зараз ${p.karana.name}, на полудень ${pNoon.karana.name}`);
     if(diffs.length) panchDiscrepancy = diffs.join('; ');
-  } catch(e){}
+  } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
 
   // Aggregated advice (DO/AVOID)
   const advSources = cells.filter(s => s.adv);
@@ -6582,7 +6701,7 @@ function _renderPanchUpcoming(refDateUTC){
         try {
           const ai = computeAi(noonUTC(d.date), 0);
           if(isFinite(ai.Pi)){ sum += ai.Pi; n++; }
-        } catch(e){}
+        } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
       });
       if(n >= 2){
         const avg = sum / n;
@@ -6598,7 +6717,7 @@ function _renderPanchUpcoming(refDateUTC){
         });
       }
     }
-  } catch(e){}
+  } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
 
   // 2. v87.44: Vaisnava-події з BUILTIN_VAISNAVA (Ekadasi/Amavasya/Purnima)
   //    Сканую 60 днів вперед — перша кожного типу
@@ -6647,7 +6766,7 @@ function _renderPanchUpcoming(refDateUTC){
         if(found.ekad && found.ama && found.purn) break;
       }
     }
-  } catch(e){}
+  } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
 
   // 3. v87.44: Найближча Vishti Karana (7-а рухома) — скан 14 днів
   try {
@@ -6666,7 +6785,7 @@ function _renderPanchUpcoming(refDateUTC){
         break;
       }
     }
-  } catch(e){}
+  } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
 
   // 4. v87.44+v87.45: Поточна Nakshatra + орієнтовна зміна
   //    v87.45 fix: computePanchanga повертає nakshatra.num (1-based), не .idx
@@ -6699,7 +6818,7 @@ function _renderPanchUpcoming(refDateUTC){
         }
       }
     }
-  } catch(e){}
+  } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
 
   if(!items.length){ wrap.style.display = 'none'; return; }
 
@@ -6896,7 +7015,7 @@ function render3Day(parsed3){
             _bulletinLine = `<div style="font-size:10px;color:var(--dim);margin-top:2px">Bulletin: <span style="color:${_bsCol};font-weight:700">${_bsSign}${_bs.eng}${_synth}</span></div>`;
           }
         }
-      } catch(e){}
+      } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
       // v87.90: synthetic Kp warning у quick-card — engine_scores дає kp=2.0 default для майбутнього
       // Якщо bulletin entry має kp_synthetic — це scenario, не реальний forecast
       // v87.90: посилене виділення — opacity 0.55, dashed 2px з кольором, striped pattern
@@ -7081,7 +7200,7 @@ function buildUnifiedAdvice(state){
         const HORA_DO={'Юпітер':'стратегія, важливі рішення','Меркурій':'комунікація, аналіз','Венера':'креатив, партнерства','Сонце':'лідерські дії','Місяць':'інтуїтивні рішення'};
         if(HORA_DO[hora.planet]) DO.push(HORA_DO[hora.planet]);
       }
-    }catch(e){}
+    }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
   }
   return { DO:_uniq(DO), AVOID:_uniq(AVOID), NOTE:_uniq(NOTE) };
 }
@@ -7319,7 +7438,7 @@ function renderAlertBanner(g, kp){
     if (params.get('v86radial') === '0') localStorage.setItem('v86_radial','0');
     if (params.get('v86heat') === '1') localStorage.setItem('v86_heat','1');
     if (params.get('v86heat') === '0') localStorage.setItem('v86_heat','0');
-  } catch(e){}
+  } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
 })();
 
 // v86.1: Timing heat-strip — 24h day at a glance (8 segments × 3 hours each)
@@ -7810,7 +7929,7 @@ function syncHero(){
       _conseq.textContent = _text;
       _conseq.style.display = _text ? '' : 'none';
     }
-  }catch(e){}
+  }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
 
   // 4c. v84: Energy bar
   try{
@@ -7824,7 +7943,7 @@ function syncHero(){
       _eFill.style.background = _stCol;
       _ePtr.style.left = _pct + '%';
     }
-  }catch(e){}
+  }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
 
   // 4d. v84: Personal greeting
   try{
@@ -7844,7 +7963,7 @@ function syncHero(){
         _greet.style.display = _gTexts[_stKey] ? '' : 'none';
       } else { _greet.style.display = 'none'; }
     }
-  }catch(e){}
+  }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
 
   // 5. Unified advice → decisionStrip 3-col
   const _dState = { gNow: gVal, mainDriver: _topDrv.mainStr, timingSummary: _timingSummary };
@@ -7873,7 +7992,7 @@ function syncHero(){
     const _tl = _trendLabels[_trend] || _trendLabels.flat;
     const _hmT = el('hmTrend');
     if(_hmT){ _hmT.textContent = _tl.text; _hmT.style.color = _tl.col; }
-  }catch(e){}
+  }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
 
   // 8. Confidence — show only when <95%
   if(el('heroConfidence')){
@@ -7890,7 +8009,7 @@ function syncHero(){
         el('heroConfidence').style.cursor = 'help';
         el('heroConfidence').style.borderBottom = '1px dotted rgba(155,177,220,0.3)';
       }
-    } catch(e){}
+    } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
   }
 
   // v85b-F3: 3-scenario mode (good/neutral/bad)
@@ -8120,7 +8239,7 @@ function _renderWhyTrend(){
         }
       });
     }
-  } catch(e){}
+  } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
 
   // Якщо last3D не дав 3 минулих — заповнюю computeAi (kp=current fallback)
   if(days.length < 3){
@@ -8130,7 +8249,7 @@ function _renderWhyTrend(){
       try {
         const ai = computeAi(noonUTC(addDays(new Date(), i)), 2);
         days.push({ ds, G: ai.Ai, isPast: true });
-      } catch(e){}
+      } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
     }
   }
 
@@ -8294,7 +8413,7 @@ function _renderHeroTimeWindows() {
         const hora = calcHora(slotMid);
         _horaForSlot[h] = hora;
       });
-    } catch(e) {}
+    } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
   }
 
   const lines = visibleSlots.map(s => {
@@ -8532,7 +8651,7 @@ function renderMoonRetroTop(){
       const remH=Math.max(1,Math.round((1-dayFrac)*24));
       el('moonNextShift').textContent='~'+remH+'г';
       if(el('moonShiftHint')) el('moonShiftHint').textContent='Тітхі '+(tNum<30?tNum+1:1);
-    }catch(e){}
+    }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
   }
 
   // Retro block
@@ -8541,7 +8660,7 @@ function renderMoonRetroTop(){
   const active=[];
   const html=planets.map(p=>{
     let rx=false;
-    try{rx=isRetrograde(p,now)}catch(e){}
+    try{rx=isRetrograde(p,now)}catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
     if(rx) active.push(uaNames[p]||p);
     return '<span class="retro-chip '+(rx?'rx':'direct')+'">'+(rx?'℞':'•')+' '+(uaNames[p]||p)+'</span>';
   }).join('');
@@ -8560,7 +8679,7 @@ function renderMoonRetroTop(){
   if(el('retroSummaryLine')){
     const shortNames={Mercury:'☿',Venus:'♀',Mars:'♂',Jupiter:'♃',Saturn:'♄'};
     const rxShort=[];
-    planets.forEach(p=>{try{if(isRetrograde(p,now))rxShort.push(shortNames[p]+'℞')}catch(e){}});
+    planets.forEach(p=>{try{if(isRetrograde(p,now))rxShort.push(shortNames[p]+'℞')}catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}});
     el('retroSummaryLine').innerHTML=rxShort.length
       ?'🪐 <span style="color:#ff9966">'+rxShort.join(' ')+'</span>'
       :'🪐 <span style="color:#2bd47d">прямий рух</span>';
@@ -8635,7 +8754,7 @@ function syncWhy(){
   const planets=['Mercury','Venus','Mars','Jupiter','Saturn'];
   const retroEffects={Mercury:'помилки, затримки',Venus:'перегляд стосунків',Mars:'імпульсивність',Jupiter:'переоцінка планів',Saturn:'тиск, обмеження'};
   const rxActive=[];
-  planets.forEach(p=>{try{if(isRetrograde(p,now))rxActive.push(p)}catch(e){}});
+  planets.forEach(p=>{try{if(isRetrograde(p,now))rxActive.push(p)}catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}});
   if(rxActive.length){
     const effects=rxActive.map(p=>retroEffects[p]||p).join(', ');
     lines.push(`<span style="color:#ff9966">🪐 Ретро: ${rxActive.length} планет → ${effects}</span>`);
@@ -8754,7 +8873,7 @@ function syncDayPlanCard(){
       const slotMid = new Date(Date.UTC(_now.getUTCFullYear(), _now.getUTCMonth(), _now.getUTCDate(), h+1, 30));
       const hora = calcHora(slotMid);
       if(hora?.planet) horaStr = ` · ${hora.planet}`;
-    }catch(e){}
+    }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
     // v87.90: конвертуємо UTC → локальний для відображення
     const _localStart = ((h + _tzOffH) % 24 + 24) % 24;
     const _localEnd = ((h + 3 + _tzOffH) % 24 + 24) % 24;
@@ -8929,7 +9048,7 @@ function renderAntiAction(){
   // v87.90 fix: використовую noonUTC щоб узгодити з Panchanga картою (раніше Anti-action міг показувати інший Tithi через time-of-day shift)
   const _refDate = (typeof noonUTC === 'function') ? noonUTC(_now) : _now;
   let _panch = null;
-  try { if(typeof computePanchanga === 'function') _panch = computePanchanga(_refDate); } catch(e){}
+  try { if(typeof computePanchanga === 'function') _panch = computePanchanga(_refDate); } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
 
   if(!_panch){
     _el.innerHTML = '<span style="color:var(--dim)">Дані ще завантажуються…</span>';
@@ -8982,7 +9101,7 @@ function renderAntiAction(){
         }
       }
     }
-  } catch(e){}
+  } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
 
   const _avoidItems = _items.filter(i => i.avoid && i.avoid.length > 0);
   const _doItems = _items.filter(i => i.do && i.do.length > 0);
@@ -9000,7 +9119,7 @@ function renderAntiAction(){
         _horaLine = `<div style="font-size:10px;color:var(--faint);margin-bottom:6px;letter-spacing:.04em">⏱ Зараз <strong style="color:var(--muted)">${_h.planet} hora</strong>${_h.minLeft ? ` (ще ${_h.minLeft}хв)` : ''} · враховуй це при timing</div>`;
       }
     }
-  } catch(e){}
+  } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
 
   const _renderItem = (i, kind) => {
     const _col = i.score >= 1 ? 'var(--ok)' : i.score <= -1 ? 'var(--bad)' : 'var(--muted)';
@@ -9071,7 +9190,7 @@ function renderDisagreement(){
       _ya.setUTCFullYear(_ya.getUTCFullYear() - 1);
       _sigmaYear = computeAi(noonUTC(_ya), 0).Ai;
     }
-  } catch(e){}
+  } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
 
   const _models = [];
   if(isFinite(_gNow))    _models.push({
@@ -9387,9 +9506,9 @@ function syncV702UI(){
   // v85b-F9 (CRIT): re-render Personal block on every G tick, щоб F7-A risk-override спрацьовував
   // (раніше renderPersonal викликався тільки при input-change → при G-tick глобальний ризик не синхронізувався)
   try{if(typeof renderPersonal==='function')renderPersonal();}catch(e){console.warn("renderPersonal:",e);}
-  try{const _gNow=_v73G();if(isFinite(_gNow))_saveGHistory(_gNow);}catch(e){}
+  try{const _gNow=_v73G();if(isFinite(_gNow))_saveGHistory(_gNow);}catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
   // v87.19 U4: render best/worst days after history save
-  try{ renderBestWorstDays(); }catch(e){}
+  try{ renderBestWorstDays(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
   // v87.90: provenance ledger render
   try{ renderProvenance(); }catch(e){console.warn("provenance:",e);}
   // v87.90: model disagreement alert + counterfactual analysis
@@ -9470,10 +9589,55 @@ async function loadAll(){
     _setSrcStatus('srcKpFcst','error');
     el('threeError').textContent = 'Помилка 3-day: ' + (kpFcstR.reason?.message || 'недоступний');
   }
-  // v88.6.1: Tier-2 UAF Geophysical Institute fallback — якщо NOAA 3-day fail
+  // v88.6.5: Fill-up logic — якщо primary NOAA дав <3 unique days, доповнити UAF 27-day
+  // (NOAA forecast cycle 22:05 UTC iнодi покриває рiвно 60-72 годин i 3rd day обрiзаний)
+  if (last3D && last3D.days && last3D.days.length > 0 && last3D.days.length < 3 && !last3D._synthetic) {
+    try{
+      console.log('[v88.6.5] NOAA gave only '+last3D.days.length+' days, filling up з UAF 27-day');
+      const _uafHtml = await fetchTextWithCORS(URL_UAF_AURORA);
+      const _uaf = parseUafAurora(_uafHtml);
+      if(_uaf && _uaf.kp27Day && _uaf.kp27Day.length){
+        // Cache 27-day для подальшого використання
+        window._uafCache27Day = uafTo27DayFormat(_uaf);
+        // Знаходимо missing днi (мають бути today, today+1, today+2)
+        const haveDates = new Set(last3D.days.map(d => fmtDate(d.date)));
+        const todayD = new Date(); todayD.setUTCHours(0,0,0,0);
+        for(let offset = 0; offset < 3; offset++){
+          const targetD = new Date(todayD); targetD.setUTCDate(targetD.getUTCDate()+offset);
+          const targetStr = fmtDate(targetD);
+          if(haveDates.has(targetStr)) continue;
+          // Знайти у UAF 27-day
+          const uafEntry = _uaf.kp27Day.find(r => fmtDate(r.date) === targetStr);
+          if(uafEntry && isFinite(uafEntry.kp)){
+            last3D.days.push({
+              date: targetD,
+              kp8: Array(8).fill(uafEntry.kp),  // synthetic 8-slot fill з daily Kp
+              kpMax: uafEntry.kp,
+              _filledFrom: 'uaf-27d'
+            });
+            last3D.predictedAp.push({
+              date: targetD,
+              Ap: kpToApInterp(uafEntry.kp)
+            });
+            console.log('[v88.6.5] Filled '+targetStr+' з UAF 27-day Kp='+uafEntry.kp);
+          }
+        }
+        // Re-sort by date
+        last3D.days.sort((a,b)=>a.date - b.date);
+        last3D.predictedAp.sort((a,b)=>a.date - b.date);
+        // Re-render якщо щось додали
+        if(last3D.days.length >= 3){
+          render3Day(last3D);
+        }
+      }
+    }catch(fillErr){
+      console.warn('[v88.6.5] Fill-up failed:', fillErr.message);
+    }
+  }
+  // v88.6.5: Tier-2 UAF Geophysical Institute fallback — якщо NOAA 3-day fail
   if (!last3D || !last3D.days || !last3D.days.length || last3D._synthetic) {
     try{
-      console.log('[v88.6.1] NOAA 3-day fail → trying UAF Alaska mirror');
+      console.log('[v88.6.5] NOAA 3-day fail → trying UAF Alaska mirror');
       const _uafHtml = await fetchTextWithCORS(URL_UAF_AURORA);
       const _uaf = parseUafAurora(_uafHtml);
       const _last3DUaf = uafTo3DayFormat(_uaf);
@@ -9481,14 +9645,14 @@ async function loadAll(){
         last3D = _last3DUaf;
         render3Day(last3D);
         _setSrcStatus('srcKpFcst','cache'); // 'cache' indicates secondary source
-        console.log('[v88.6.1] UAF Alaska 3-day OK ('+_last3DUaf.days.length+' days)');
+        console.log('[v88.6.5] UAF Alaska 3-day OK ('+_last3DUaf.days.length+' days)');
         // Cache UAF 27-day для подальшого використання нижче
         if(_uaf && _uaf.kp27Day && _uaf.kp27Day.length){
           window._uafCache27Day = uafTo27DayFormat(_uaf);
         }
       }
     }catch(uafErr){
-      console.warn('[v88.6.1] UAF fallback failed:', uafErr.message);
+      console.warn('[v88.6.5] UAF fallback failed:', uafErr.message);
     }
   }
   // v62: fallback — якщо last3D порожній, генеруємо synthetic з поточного Kp
@@ -9565,10 +9729,10 @@ async function loadAll(){
   }
 
   // v42: Real-time solar wind (DSCOVR Bz + Vsw)
-  try { await fetchBzNow();  } catch(_){}
-  try { await fetchVswNow(); } catch(_){}
+  try { await fetchBzNow();  } catch(_){if(window._DEBUG)console.warn('[silent]')}
+  try { await fetchVswNow(); } catch(_){if(window._DEBUG)console.warn('[silent]')}
   // v87.15 U6: GOES X-ray flare — Solar flare monitoring
-  try { await fetchXrayNow(); } catch(_){}
+  try { await fetchXrayNow(); } catch(_){if(window._DEBUG)console.warn('[silent]')}
   // v62: Bz/Vsw localStorage cache + v87.16 A4: separate status indicators
   if (isFinite(lastBz))  { lsSet('last_bz_known', lastBz);  _setSrcStatus('srcBz','ok'); }
   else { const _lbz=parseFloat(lsGet('last_bz_known')); if(isFinite(_lbz)){ lastBz=_lbz; _setSrcStatus('srcBz','cache'); } else _setSrcStatus('srcBz','error'); }
@@ -9635,7 +9799,7 @@ async function loadAll(){
     } else {
       console.warn('[v43] 27-day fetch failed:', t27R.reason?.message, '— trying UAF fallback');
     }
-    // v88.6.1: Tier-2 UAF Alaska fallback (cached якщо 3-day гілка вже fetched UAF, інакше fetch)
+    // v88.6.5: Tier-2 UAF Alaska fallback (cached якщо 3-day гілка вже fetched UAF, інакше fetch)
     try{
       let r27uaf = window._uafCache27Day;
       if (!r27uaf || !r27uaf.length) {
@@ -9648,11 +9812,11 @@ async function loadAll(){
         render27Day(r27uaf, last3D);
         _setSrcStatus('src27Day','cache');
         el('twentysevenError').textContent = '⚠ NOAA 27-day .txt недоступний — показано UAF Alaska mirror (без F10.7)';
-        console.log('[v88.6.1] 27-day UAF Alaska OK ('+r27uaf.length+' days)');
+        console.log('[v88.6.5] 27-day UAF Alaska OK ('+r27uaf.length+' days)');
         return;
       }
     }catch(uafErr){
-      console.warn('[v88.6.1] UAF 27-day fallback failed:', uafErr.message, '— trying 45-day fallback');
+      console.warn('[v88.6.5] UAF 27-day fallback failed:', uafErr.message, '— trying 45-day fallback');
     }
     // Fallback: 45-day-forecast.json → parse45Day → конвертуємо у формат r27
     try{
@@ -9683,20 +9847,26 @@ async function loadAll(){
       el('twentysevenError').textContent = '⚠ NOAA 27/45-day недоступні — synthetic прогноз (Kp='+_kp27.toFixed(1)+')';
     }
   }
-  await try27Day();
+  // v88.6.5: try27Day у outer try щоб помилка не зламала рендеринг
+  try {
+    await try27Day();
+  } catch(e) {
+    console.warn('[loadAll] try27Day failed:', e.message);
+    _setSrcStatus('src27Day','error');
+  }
 
   // ── Freshness badge ──
   updateFreshnessBadge();
 
   try{ syncV702UI(); }catch(e){ console.warn('syncV702UI:', e); }
-  try{ applyWowFromG(); }catch(e){}
+  try{ applyWowFromG(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
 
   el('btnRefresh').disabled = false;
 }
 
 // ----------------------------- Експорт CSV ----------------------------------
 function exportCsv(){
-  if(!_last27Rows||!_last27Rows.length){ alert('Немає даних для експорту'); return; }
+  if(!_last27Rows||!_last27Rows.length){ showToast('Немає даних для експорту', 'warn'); return; }
   const override3D = new Map();
   if(last3D && Array.isArray(last3D.days)){
     for(const d of last3D.days) if(isFinite(d.kpMax)) override3D.set(fmtDate(d.date), d.kpMax);
@@ -9728,7 +9898,7 @@ function exportCsv(){
 // v87.27: ICS calendar export — 27-day G-forecast as all-day events.
 // Сумісно з Google/Apple/Outlook. Імпортується одноразово (не subscription feed).
 function exportICS(){
-  if(!_last27Rows || !_last27Rows.length){ alert('Немає даних для експорту'); return; }
+  if(!_last27Rows || !_last27Rows.length){ showToast('Немає даних для експорту', 'warn'); return; }
   const override3D = new Map();
   if(last3D && Array.isArray(last3D.days)){
     for(const d of last3D.days) if(isFinite(d.kpMax)) override3D.set(fmtDate(d.date), d.kpMax);
@@ -10773,8 +10943,8 @@ function renderPlanetAnimation(kp, moonPhaseDeg, G, panchCtx, astroCtx) {
 
 // ═══ v83: Safe localStorage (single canonical block) ═══
 function lsGet(k, def=''){ try{ const v = localStorage.getItem(k); return v ?? def; }catch(e){ return def; } }
-function lsSet(k, v){ try{ localStorage.setItem(k, v); }catch(e){} }
-function lsRemove(k){ try{ localStorage.removeItem(k); }catch(e){} }
+function lsSet(k, v){ try{ localStorage.setItem(k, v); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)} }
+function lsRemove(k){ try{ localStorage.removeItem(k); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)} }
 const lsRem = lsRemove; // shorthand alias
 
 // ═══ v76d: Personal human phrases ═══
@@ -11199,7 +11369,7 @@ function initPersonalCalc() {
       utcOff:  parseFloat(document.getElementById('pUtcOff').value) || 0,
       profile: document.getElementById('pProfile').value
     };
-    if (!d.date) { alert('Вкажіть дату народження'); return; }
+    if (!d.date) { showToast('Вкажіть дату народження', 'warn'); return; }
     setSlotData(_activeSlot, d);
     form.style.display = 'none';
     renderSlotTabs();
@@ -11494,7 +11664,7 @@ function renderHoraTimeline(dateUTC, kp, G) {
   const axis = el('horaAxis');
   if(!wrap) return;
   // v87.26: оновити лейбл координат/TZ при кожному рендері (offset/DST може змінитися)
-  try{ _updateHoraCoordLabel(); }catch(e){}
+  try{ _updateHoraCoordLabel(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
 
   const HORA_SYMBOLS = {
     'Сонце':'☀','Місяць':'☽','Марс':'♂','Меркурій':'☿','Юпітер':'♃','Венера':'♀','Сатурн':'♄'
@@ -12157,7 +12327,7 @@ function updateDataTimestamp(whenText) {
     const offStr = (Number.isInteger(off) ? off : off.toFixed(1));
     el.textContent = 'оновлено ' + now.toLocaleTimeString('uk-UA', {hour:'2-digit',minute:'2-digit'}) + ' UTC' + (off>=0?'+':'') + offStr;
     // v87.26: IANA tooltip
-    try{ el.title = window._iana || ''; }catch(e){}
+    try{ el.title = window._iana || ''; }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
   }
 }
 
@@ -12364,7 +12534,7 @@ const PROFILE_TEXT = {
 function setProfile(p) {
   _activeProfile = p;
   // v87.90 fix: persistence — без цього після reload юзер втрачає вибір
-  try { localStorage.setItem('gindex_profile', p); } catch(e){}
+  try { localStorage.setItem('gindex_profile', p); } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
   document.querySelectorAll('.profile-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.p === p);
   });
@@ -12373,7 +12543,7 @@ function setProfile(p) {
   try {
     const _ui = window.__uiState || {};
     if (isFinite(_ui.gNow)) renderDecisionLayer(_ui.gNow, _ui);
-  } catch(e) {}
+  } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
 }
 
 // v87.90: відновити профіль з localStorage при load
@@ -12383,7 +12553,7 @@ function setProfile(p) {
     if (_saved && ['med','pilot','trader','mil','off'].includes(_saved)) {
       _activeProfile = _saved;
     }
-  } catch(e){}
+  } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
 })();
 
 // ─── v32: Вікова поправка для mil-профілю ───────────────────────────────────
@@ -12540,28 +12710,28 @@ function renderProfileRec() {
   el_.innerHTML = `<span style="font-weight:700;color:${prof.color}">${prof.label}:</span> ${rec}${ageLine}`;
 }
 
-addEventListener('load', ()=>{ initGeolocation(); setStamp(); loadAll(); el('btnCsv').addEventListener('click', exportCsv); const _bIcs=el('btnIcs'); if(_bIcs) _bIcs.addEventListener('click', exportICS); el('selInterval').addEventListener('change', updateAutoRefStatus); initPersonalCalc(); initLangToggle(); initG2Watch(); /* v87.28: страхувальний рендер compare periods — не залежить від NOAA */ try{ if(typeof renderComparePeriods === 'function') renderComparePeriods(); }catch(e){}
+addEventListener('load', ()=>{ initGeolocation(); setStamp(); loadAll(); el('btnCsv').addEventListener('click', exportCsv); const _bIcs=el('btnIcs'); if(_bIcs) _bIcs.addEventListener('click', exportICS); el('selInterval').addEventListener('change', updateAutoRefStatus); initPersonalCalc(); initLangToggle(); initG2Watch(); /* v87.28: страхувальний рендер compare periods — не залежить від NOAA */ try{ if(typeof renderComparePeriods === 'function') renderComparePeriods(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
   // v87.61: load engine_scores.json (Bulletin model) + render heroBulletin
   // v87.62: after scores load, also re-render 3-day pills and 27-day table so Bulletin cells populate.
   try {
     loadEngineScores().then(()=>{
-      try{ renderHeroBulletin(); }catch(e){}
-      try{ renderHeroAstroLayer(); }catch(e){}
-      try{ renderScenarioCard(); }catch(e){}
+      try{ renderHeroBulletin(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+      try{ renderHeroAstroLayer(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+      try{ renderScenarioCard(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
       // Re-draw 27d table if _27dComputed already populated
       try {
         if (typeof draw27dTable === 'function' && typeof _27dComputed !== 'undefined' && _27dComputed && _27dComputed.length) {
           draw27dTable();
         }
-      } catch(e){}
+      } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
       // Re-draw 3-day block if render3Day exists
       try {
         if (typeof render3Day === 'function' && typeof last3D !== 'undefined' && last3D) {
           render3Day(last3D);
         }
-      } catch(e){}
+      } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
     });
-  } catch(e){}
+  } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
   // v87.60 Fix #1: live UTC/local tick. setStamp раніше викликався тільки при loadAll (раз на ~10 хв) → UTC-лейбл відставав.
   // Тепер оновлюємо localNow і utcNow кожну секунду. stamp ('Оновлено:') залишається часом останнього fetch — це правильна семантика.
   try {
@@ -12570,11 +12740,11 @@ addEventListener('load', ()=>{ initGeolocation(); setStamp(); loadAll(); el('btn
         const _n = new Date();
         const _lEl = el('localNow'); if(_lEl) _lEl.textContent = fmtLocal(_n);
         const _uEl = el('utcNow');   if(_uEl) _uEl.textContent = fmtUTC(_n);
-      } catch(e){}
+      } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
     }, 1000);
     // v87.61: re-render Bulletin badge each minute (picks up date change at midnight)
-    setInterval(function(){ try{ renderHeroBulletin(); }catch(e){} }, 60000);
-  } catch(e){}
+    setInterval(function(){ try{ renderHeroBulletin(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)} }, 60000);
+  } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
 });
 el('btnRefresh').addEventListener('click', loadAll);
 
@@ -12804,18 +12974,18 @@ function applyLang(lang) {
   const _astro = document.getElementById('heroAstroLayer');
   if(_astro && t.astroLayerLabel) _astro.setAttribute('data-label', t.astroLayerLabel);
   // Re-render scenario sub-label (контекст залежить від мови — критичних/critical)
-  try{ if(typeof renderScenarioCard === 'function') renderScenarioCard(); }catch(e){}
-  try{ if(typeof renderHeroAstroLayer === 'function') renderHeroAstroLayer(); }catch(e){}
+  try{ if(typeof renderScenarioCard === 'function') renderScenarioCard(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+  try{ if(typeof renderHeroAstroLayer === 'function') renderHeroAstroLayer(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
 
   // Disambig chip
   const _dis = document.getElementById('timingDisambig');
   if(_dis) _dis.textContent = t.timingDisambig;
 
   // Re-render dynamic content (Disagreement/Counterfactual/AntiAction/Provenance) для оновленої мови
-  try{ if(typeof renderProvenance === 'function') renderProvenance(); }catch(e){}
-  try{ if(typeof renderDisagreement === 'function') renderDisagreement(); }catch(e){}
-  try{ if(typeof renderCounterfactual === 'function') renderCounterfactual(); }catch(e){}
-  try{ if(typeof renderAntiAction === 'function') renderAntiAction(); }catch(e){}
+  try{ if(typeof renderProvenance === 'function') renderProvenance(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+  try{ if(typeof renderDisagreement === 'function') renderDisagreement(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+  try{ if(typeof renderCounterfactual === 'function') renderCounterfactual(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+  try{ if(typeof renderAntiAction === 'function') renderAntiAction(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
 
   // <html lang> attribute для accessibility
   document.documentElement.lang = ua ? 'uk' : 'en';
@@ -13813,7 +13983,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // trigger profile change in main app if function exists
         if(typeof setProfile === 'function') setProfile(_obProfile);
         else if(typeof _activeProfile !== 'undefined') window._activeProfile = _obProfile;
-      }catch(e){}
+      }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
     }
     localStorage.setItem(ONBOARD_KEY, '1');
     const ov = document.getElementById('onboardOverlay');
@@ -13827,7 +13997,7 @@ document.addEventListener('DOMContentLoaded', () => {
       setTimeout(obShow, 600);
       obShowSlide(0);
     }
-  }catch(e){}
+  }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
 })();
 </script>
 <script>
@@ -13851,7 +14021,7 @@ document.addEventListener('DOMContentLoaded', () => {
       arr.push({ ts: Date.now(), session: SESSION, name, ...props });
       if (arr.length > MAX_EVT) arr.splice(0, arr.length - MAX_EVT);
       localStorage.setItem(LS_KEY, JSON.stringify(arr));
-    } catch(e) {}
+    } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
   }
 
   // ── Відправка (заглушка) — замінити на реальний провайдер ───────────────
@@ -13868,7 +14038,7 @@ document.addEventListener('DOMContentLoaded', () => {
   window.GT = {
     // Трекнути довільну подію
     track(name, props) {
-      try { _tSend(name, props || {}); } catch(e) {}
+      try { _tSend(name, props || {}); } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
     },
     // Повернути всі збережені події (для debug/export)
     dump() {
@@ -13876,7 +14046,7 @@ document.addEventListener('DOMContentLoaded', () => {
     },
     // Очистити буфер
     clear() {
-      try { localStorage.removeItem(LS_KEY); } catch(e) {}
+      try { localStorage.removeItem(LS_KEY); } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
     },
     SESSION,
   };
@@ -14010,7 +14180,7 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       const sec = Math.round((Date.now() - _tStart) / 1000);
       if (sec > 3) window.GT.track('session_end', { duration_s: sec });
-    } catch(e) {}
+    } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
   });
 
 })();
@@ -14540,7 +14710,7 @@ function _saveGHistory(g){
       for (const k of keys.slice(0, keys.length - 90)) delete daily[k];
     }
     localStorage.setItem(dayKey, JSON.stringify(daily));
-  }catch(e){}
+  }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
 }
 
 // v87.19 U4: best/worst days of past 30 days
@@ -14549,7 +14719,7 @@ function _getBestWorstDays(){
     // P1 fix v87.90: prefer engine_scores (validated, consistent з engine v17)
     // над localStorage (running-average per-session, неконсистентний).
     // Continuous G реконструюється з engine kp + dashboard computeAi (єдина формула).
-    // v88.6.1 BUG#1 fix: для сьогоднішнього дня — використовуй live Kp (як Hero),
+    // v88.6.5 BUG#1 fix: для сьогоднішнього дня — використовуй live Kp (як Hero),
     //                 інакше user бачить два різні G (Hero -3.53, History -3.2)
     //                 коли engine_scores має synthetic Kp=2.0 а NOAA live Kp=1.67.
     if (typeof _engineScores !== 'undefined' && _engineScores && Object.keys(_engineScores).length > 0) {
@@ -14565,7 +14735,7 @@ function _getBestWorstDays(){
         if (!isFinite(t) || t > nowMs || t < cutMs) continue;
         try {
           const dt = new Date(ds + 'T12:00:00Z');
-          // v88.6.1: сьогодні → live Kp (synced з Hero); інакше → archived/synthetic engine kp
+          // v88.6.5: сьогодні → live Kp (synced з Hero); інакше → archived/synthetic engine kp
           const _kpForG = (ds === _todayDS && _liveKp != null) ? _liveKp : sc.kp;
           const ai = computeAi(dt, _kpForG);
           const G = Math.round((_kpForG - 2 + ai.Ai) * 10) / 10;
@@ -14707,13 +14877,13 @@ document.addEventListener('DOMContentLoaded',()=>{
         }
       }, 2500);
     }
-  } catch(e) {}
+  } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
 });
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     // v87.1 NFR: refresh freshness badge every 60s (дані старіють без оновлення)
-    setInterval(function(){ try{_renderFreshnessState();}catch(e){} }, 60000);
+    setInterval(function(){ try{_renderFreshnessState();}catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)} }, 60000);
 
     navigator.serviceWorker.register('sw.js')
       .then(reg => {
