@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G-Index — Космофізичний дашборд v88.6</title>
+  <title>G-Index — Космофізичний дашборд v88.6.1</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -2471,11 +2471,11 @@ document.addEventListener('DOMContentLoaded', () => {
 //   2. Set globals window._supabase_url and window._supabase_anon_key (strings)
 //   3. SUPA.init() is auto-called on DOMContentLoaded; silent no-op if config missing.
 // ═══════════════════════════════════════════════════════════════════════════
-// v88.6: Старий Supabase SUPA блок видалено — replaced нашою Cloudflare auth (нижче).
+// v88.6.1: Старий Supabase SUPA блок видалено — replaced нашою Cloudflare auth (нижче).
 // Stub оголошується пізніше у файлі для backward-compat.
 
 // Auth modal controller (інертний якщо SUPA не init)
-// v88.6: Cloudflare Auth (replaces Supabase placeholder)
+// v88.6.1: Cloudflare Auth (replaces Supabase placeholder)
 // Worker: https://gindex-auth.nikolaev-kirill.workers.dev
 const GAUTH_WORKER_URL = 'https://gindex-auth.nikolaev-kirill.workers.dev';
 const GAUTH_TOKEN_KEY = 'gindex_session_token';
@@ -2660,14 +2660,14 @@ const SUPA = {
   isConfigured(){ return true; },
   currentUser(){ return GAuth.getUser(); },
   signOut(){ GAuth.logout(); },
-  sendMagicLink(){ throw new Error('Magic-link replaced with email/password у v88.6'); },
+  sendMagicLink(){ throw new Error('Magic-link replaced with email/password у v88.6.1'); },
   init(){ /* noop */ },
 };
 window.SUPA = SUPA;
 window.GAuth = GAuth;
 window.AuthModal = AuthModal;
 
-// Auto-init SUPA when DOM ready (no-op у v88.6 — kept for backward compat)
+// Auto-init SUPA when DOM ready (no-op у v88.6.1 — kept for backward compat)
 document.addEventListener('DOMContentLoaded', () => { try{ SUPA.init(); }catch(e){} });
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -2894,7 +2894,7 @@ const URL_WOLF_SN_FB = 'https://sidc.be/SILSO/DATA/SN_d_tot_V2.0.json'; // fallb
 const URL_DST_FB   = 'https://services.swpc.noaa.gov/products/geospace/propagated-solar-wind-1-hour.json'; // fallback Dst proxy
 const URL_KP_FCST_FB2 = 'https://services.swpc.noaa.gov/json/planetary_k_index_1m.json'; // fallback fcst via obs
 const URL_DST      = 'https://services.swpc.noaa.gov/products/kyoto-dst.json'; // Dst/SYM-H
-// v88.6: UAF Geophysical Institute mirror (Tier-2 fallback when NOAA proxies fail)
+// v88.6.1: UAF Geophysical Institute mirror (Tier-2 fallback when NOAA proxies fail)
 // HTML wrapper навколо NOAA-derived JSON arrays. Updated daily noon UTC (3-day) i щопонеділка (27-day)
 const URL_UAF_AURORA   = 'https://www.gi.alaska.edu/monitors/aurora-forecast';
 
@@ -3365,7 +3365,7 @@ const ECLIPSE_CATALOG_END_YEAR = 2030; // v85b-F5: СЕРЕД-1 — явна м�
 const _eclipseCatalogWarned = new Set(); // один warn на рік
 
 // Проксі для CORS (fallback)
-// v88.6: Cloudflare Worker priority (deploy див. cloudflare-worker-noaa-proxy.js).
+// v88.6.1: Cloudflare Worker priority (deploy див. cloudflare-worker-noaa-proxy.js).
 //        Public free proxies нерeliable; власний Worker = robust + ~$0/міс.
 const NOAA_WORKER_URL = 'https://gindex-noaa-proxy.YOUR_USERNAME.workers.dev/?url=';
 function fetchWithTimeout(url, ms=5000){
@@ -3379,7 +3379,7 @@ async function fetchTextWithCORS(url){
     const r = await fetchWithTimeout(url, 6000);
     if(r.ok) return await r.text();
   }catch(e){}
-  // 1. v88.6: Cloudflare Worker (own proxy — most reliable when configured)
+  // 1. v88.6.1: Cloudflare Worker (own proxy — most reliable when configured)
   if (NOAA_WORKER_URL && !NOAA_WORKER_URL.includes('YOUR_USERNAME')) {
     try{
       const r1 = await fetchWithTimeout(NOAA_WORKER_URL+encodeURIComponent(url), 5000);
@@ -4451,23 +4451,47 @@ function parseWolfSn(json){
 }
 // Парсер JSON прогнозу Kp (noaa-planetary-k-index-forecast.json)
 // Формат: [["time_tag","kp","observed","noaa_scale"],...] з заголовком
-// ─── v88.6: UAF Geophysical Institute (Alaska) — Tier-2 fallback ───
+// ─── v88.6.1: UAF Geophysical Institute (Alaska) — Tier-2 fallback ───
 // Витягує JSON arrays з HTML сторінки https://www.gi.alaska.edu/monitors/aurora-forecast
 // Сторінка містить 4 JSON масиви inline (з NOAA SWPC):
-//   [0] 27-day forecast (daily, ~27 entries)
-//   [1] 27-day forecast duplicate
-//   [2] 3-day forecast (3-hour intervals, ~24 entries)
-//   [3] Historical (180 days actual, daily max)
+//   [0] 27-day forecast (daily, ~27 entries)        — predicted_time: "YYYY-MM-DD"
+//   [1] 27-day forecast duplicate                    — те саме
+//   [2] 3-day forecast (3-hour intervals, 24 entries) — predicted_time: "YYYY-MM-DD HH:MM:SS", future
+//   [3] Historical (180 days actual, daily max)      — predicted_time: "YYYY-MM-DD HH:MM:SS", PAST
 // Returns: { kp3Day: [{time, kp}], kp27Day: [{date, kp}], historical: [{date, kp}] } | null
 function parseUafAurora(html){
   if(!html || typeof html !== 'string') return null;
   try{
-    // Шукаємо JSON arrays з полем "predicted_time" чи "kp"
-    const arrayPattern = /\[\{[^[\]]*?(?:predicted_time|"kp"\s*:)[^[\]]*?\}\]/g;
-    const matches = html.match(arrayPattern) || [];
-    if(matches.length < 2) return null;
+    // v88.6.1.1: bracket-balanced JSON array extraction (regex з [^[\]] не справляється з nested)
+    const matches = [];
+    let i = 0;
+    while(i < html.length){
+      // Шукаємо '[{' — початок JSON array з об'єктами
+      const openIdx = html.indexOf('[{', i);
+      if(openIdx < 0) break;
+      // Балансуємо дужки
+      let depth = 0, end = -1;
+      for(let j = openIdx; j < html.length; j++){
+        const c = html[j];
+        if(c === '[' || c === '{') depth++;
+        else if(c === ']' || c === '}'){
+          depth--;
+          if(depth === 0){ end = j+1; break; }
+        }
+      }
+      if(end < 0){ i = openIdx + 1; continue; }
+      const candidate = html.slice(openIdx, end);
+      // Швидкий check: чи містить кp i predicted_time
+      if(candidate.includes('"kp"') && candidate.includes('predicted_time')){
+        matches.push(candidate);
+      }
+      i = end;
+    }
+    if(matches.length < 1) return null;
 
+    const today = new Date().toISOString().slice(0,10);
     const result = { kp3Day: [], kp27Day: [], historical: [] };
+
     for(const raw of matches){
       let arr;
       try{ arr = JSON.parse(raw); }catch(e){ continue; }
@@ -4475,38 +4499,54 @@ function parseUafAurora(html){
       const first = arr[0];
       if(!first || !first.predicted_time) continue;
 
-      const isDaily = first.predicted_time.length === 10;       // 'YYYY-MM-DD' (27-day)
-      const has3hr = first.predicted_time.includes(' ') &&     // 'YYYY-MM-DD HH:MM:SS'
-                     /\d{2}:\d{2}/.test(first.predicted_time);
-      const dateStr = first.predicted_time.slice(0,10);
-      const today = new Date().toISOString().slice(0,10);
+      const ptStr = String(first.predicted_time);
+      const isDailyOnly = ptStr.length === 10;       // 'YYYY-MM-DD'
+      const has3hr = /\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}/.test(ptStr); // 'YYYY-MM-DD HH:MM:SS'
+      const firstDate = ptStr.slice(0,10);
+      const lastDate = String(arr[arr.length-1].predicted_time).slice(0,10);
 
-      if(isDaily && arr.length >= 20){
-        // 27-day forecast
+      if(isDailyOnly){
+        // 27-day forecast (daily) — only first one wins (skip duplicate)
         if(!result.kp27Day.length){
           result.kp27Day = arr.map(r => ({
             date: new Date(r.predicted_time + 'T00:00:00Z'),
             kp: parseFloat(r.kp)
           })).filter(r => isFinite(r.kp));
         }
-      } else if(has3hr && arr.length <= 30){
-        // 3-day forecast (3-hour slots)
-        result.kp3Day = arr.map(r => ({
-          time: r.predicted_time,        // 'YYYY-MM-DD HH:MM:SS'
-          date: r.predicted_time.slice(0,10),
-          kp: parseFloat(r.kp)
-        })).filter(r => isFinite(r.kp));
-      } else if(arr.length > 30){
-        // Historical (180 days)
-        result.historical = arr.map(r => ({
-          date: r.predicted_time.slice(0,10),
-          kp: parseFloat(r.kp)
-        })).filter(r => isFinite(r.kp));
+      } else if(has3hr){
+        // Має slot-час → це або 3-day (future, 24 slots) або historical (past, 180 entries)
+        // Розрiзняємо за ДАТАМИ: якщо last entry < today → historical; якщо first >= today-3d → 3-day
+        const isHistorical = lastDate < today;
+        const isFuture = firstDate >= today || (firstDate < today && new Date(today) - new Date(firstDate) <= 3*86400*1000);
+
+        if(isHistorical){
+          if(!result.historical.length){
+            result.historical = arr.map(r => ({
+              date: r.predicted_time.slice(0,10),
+              kp: parseFloat(r.kp)
+            })).filter(r => isFinite(r.kp));
+          }
+        } else if(isFuture && !result.kp3Day.length){
+          // 3-day має ~24 entries (8 slots × 3 days). Якщо arr.length > 50, то це навряд 3-day.
+          if(arr.length <= 50){
+            result.kp3Day = arr.map(r => ({
+              time: r.predicted_time,
+              date: r.predicted_time.slice(0,10),
+              kp: parseFloat(r.kp)
+            })).filter(r => isFinite(r.kp));
+          } else {
+            // Великий future array — кладемо у historical як scratch
+            result.historical = arr.map(r => ({
+              date: r.predicted_time.slice(0,10),
+              kp: parseFloat(r.kp)
+            })).filter(r => isFinite(r.kp));
+          }
+        }
       }
     }
-    return (result.kp3Day.length || result.kp27Day.length) ? result : null;
+    return (result.kp3Day.length || result.kp27Day.length || result.historical.length) ? result : null;
   }catch(e){
-    console.warn('[v88.6 UAF] parse failed:', e.message);
+    console.warn('[v88.6.1 UAF] parse failed:', e.message);
     return null;
   }
 }
@@ -4514,7 +4554,34 @@ function parseUafAurora(html){
 // Конвертує UAF 3-day у формат сумісний з parse3DaySafe output
 // out: { issued, predictedAp, days: [{date, kp8, kpMax}] }
 function uafTo3DayFormat(uaf){
-  if(!uaf || !uaf.kp3Day || !uaf.kp3Day.length) return null;
+  if(!uaf) return null;
+  // v88.6.1.1: якщо kp3Day порожнiй, але kp27Day є → беремо з 27-day (less accurate но has data)
+  if(!uaf.kp3Day || !uaf.kp3Day.length){
+    if(!uaf.kp27Day || !uaf.kp27Day.length) return null;
+    try{
+      const todayStr = new Date().toISOString().slice(0,10);
+      const future = uaf.kp27Day
+        .filter(r => fmtDate(r.date) >= todayStr)
+        .slice(0,3);
+      if(!future.length) return null;
+      const days = future.map(r => ({
+        date: r.date,
+        kp8: Array(8).fill(r.kp),  // synthetic 8 slots з daily kp
+        kpMax: r.kp
+      }));
+      const predictedAp = days.map(day => ({
+        date: day.date,
+        Ap: isFinite(day.kpMax) ? kpToApInterp(day.kpMax) : null
+      }));
+      return {
+        issued: fmtDate(future[0].date),
+        predictedAp,
+        days,
+        _source: 'uaf-alaska-27d'
+      };
+    }catch(e){ return null; }
+  }
+  // Звичайний шлях: 3-day data (8 slots/day)
   try{
     const byDay = new Map();
     for(const r of uaf.kp3Day){
@@ -4541,7 +4608,7 @@ function uafTo3DayFormat(uaf){
       _source: 'uaf-alaska'
     };
   }catch(e){
-    console.warn('[v88.6 UAF] uafTo3DayFormat failed:', e.message);
+    console.warn('[v88.6.1 UAF] uafTo3DayFormat failed:', e.message);
     return null;
   }
 }
@@ -9403,10 +9470,10 @@ async function loadAll(){
     _setSrcStatus('srcKpFcst','error');
     el('threeError').textContent = 'Помилка 3-day: ' + (kpFcstR.reason?.message || 'недоступний');
   }
-  // v88.6: Tier-2 UAF Geophysical Institute fallback — якщо NOAA 3-day fail
+  // v88.6.1: Tier-2 UAF Geophysical Institute fallback — якщо NOAA 3-day fail
   if (!last3D || !last3D.days || !last3D.days.length || last3D._synthetic) {
     try{
-      console.log('[v88.6] NOAA 3-day fail → trying UAF Alaska mirror');
+      console.log('[v88.6.1] NOAA 3-day fail → trying UAF Alaska mirror');
       const _uafHtml = await fetchTextWithCORS(URL_UAF_AURORA);
       const _uaf = parseUafAurora(_uafHtml);
       const _last3DUaf = uafTo3DayFormat(_uaf);
@@ -9414,14 +9481,14 @@ async function loadAll(){
         last3D = _last3DUaf;
         render3Day(last3D);
         _setSrcStatus('srcKpFcst','cache'); // 'cache' indicates secondary source
-        console.log('[v88.6] UAF Alaska 3-day OK ('+_last3DUaf.days.length+' days)');
+        console.log('[v88.6.1] UAF Alaska 3-day OK ('+_last3DUaf.days.length+' days)');
         // Cache UAF 27-day для подальшого використання нижче
         if(_uaf && _uaf.kp27Day && _uaf.kp27Day.length){
           window._uafCache27Day = uafTo27DayFormat(_uaf);
         }
       }
     }catch(uafErr){
-      console.warn('[v88.6] UAF fallback failed:', uafErr.message);
+      console.warn('[v88.6.1] UAF fallback failed:', uafErr.message);
     }
   }
   // v62: fallback — якщо last3D порожній, генеруємо synthetic з поточного Kp
@@ -9568,7 +9635,7 @@ async function loadAll(){
     } else {
       console.warn('[v43] 27-day fetch failed:', t27R.reason?.message, '— trying UAF fallback');
     }
-    // v88.6: Tier-2 UAF Alaska fallback (cached якщо 3-day гілка вже fetched UAF, інакше fetch)
+    // v88.6.1: Tier-2 UAF Alaska fallback (cached якщо 3-day гілка вже fetched UAF, інакше fetch)
     try{
       let r27uaf = window._uafCache27Day;
       if (!r27uaf || !r27uaf.length) {
@@ -9581,11 +9648,11 @@ async function loadAll(){
         render27Day(r27uaf, last3D);
         _setSrcStatus('src27Day','cache');
         el('twentysevenError').textContent = '⚠ NOAA 27-day .txt недоступний — показано UAF Alaska mirror (без F10.7)';
-        console.log('[v88.6] 27-day UAF Alaska OK ('+r27uaf.length+' days)');
+        console.log('[v88.6.1] 27-day UAF Alaska OK ('+r27uaf.length+' days)');
         return;
       }
     }catch(uafErr){
-      console.warn('[v88.6] UAF 27-day fallback failed:', uafErr.message, '— trying 45-day fallback');
+      console.warn('[v88.6.1] UAF 27-day fallback failed:', uafErr.message, '— trying 45-day fallback');
     }
     // Fallback: 45-day-forecast.json → parse45Day → конвертуємо у формат r27
     try{
@@ -14482,7 +14549,7 @@ function _getBestWorstDays(){
     // P1 fix v87.90: prefer engine_scores (validated, consistent з engine v17)
     // над localStorage (running-average per-session, неконсистентний).
     // Continuous G реконструюється з engine kp + dashboard computeAi (єдина формула).
-    // v88.6 BUG#1 fix: для сьогоднішнього дня — використовуй live Kp (як Hero),
+    // v88.6.1 BUG#1 fix: для сьогоднішнього дня — використовуй live Kp (як Hero),
     //                 інакше user бачить два різні G (Hero -3.53, History -3.2)
     //                 коли engine_scores має synthetic Kp=2.0 а NOAA live Kp=1.67.
     if (typeof _engineScores !== 'undefined' && _engineScores && Object.keys(_engineScores).length > 0) {
@@ -14498,7 +14565,7 @@ function _getBestWorstDays(){
         if (!isFinite(t) || t > nowMs || t < cutMs) continue;
         try {
           const dt = new Date(ds + 'T12:00:00Z');
-          // v88.6: сьогодні → live Kp (synced з Hero); інакше → archived/synthetic engine kp
+          // v88.6.1: сьогодні → live Kp (synced з Hero); інакше → archived/synthetic engine kp
           const _kpForG = (ds === _todayDS && _liveKp != null) ? _liveKp : sc.kp;
           const ai = computeAi(dt, _kpForG);
           const G = Math.round((_kpForG - 2 + ai.Ai) * 10) / 10;
