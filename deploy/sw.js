@@ -1,8 +1,8 @@
-// G-Index Service Worker v88.6.13b (V25-fu30: title bump + engine expiration warning)
+// G-Index Service Worker v88.6.14 (V25-fu31: MCC added + final audit)
 // Cache strategy: stale-while-revalidate для shell, network-first для data
 
-const SHELL_CACHE = 'g-index-shell-v88-6-13b-v25fu30';
-const DATA_CACHE = 'g-index-data-v88-6-13b-v25fu30';
+const SHELL_CACHE = 'g-index-shell-v88-6-14-v25fu31';
+const DATA_CACHE = 'g-index-data-v88-6-14-v25fu31';
 
 const SHELL_FILES = [
   './',
