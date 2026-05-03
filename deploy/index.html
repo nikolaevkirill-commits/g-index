@@ -3222,6 +3222,51 @@ async function loadEngineScores(){
     const data = await resp.json();
     _engineScores = data.scores || {};
     if(window._DEBUG) console.log('[v87.61] engine_scores loaded: ' + Object.keys(_engineScores).length + ' days, v' + (data.version || '?'));
+    // V25-fu30: check expiration — show banner if scores expire soon
+    try {
+      const today = new Date(); today.setHours(0,0,0,0);
+      const futureDates = Object.keys(_engineScores)
+        .filter(d => { const dt = new Date(d); return !isNaN(dt) && dt >= today; });
+      if(futureDates.length > 0){
+        const maxDate = futureDates.sort().pop();
+        const maxDt = new Date(maxDate);
+        const daysRemaining = Math.floor((maxDt - today) / 86400000);
+        if(daysRemaining < 30 && !document.getElementById('engineExpirationBanner')){
+          const banner = document.createElement('div');
+          banner.id = 'engineExpirationBanner';
+          banner.style.cssText = 'margin:0 0 10px;padding:10px 14px;border-radius:12px;'
+            + 'border:1px solid rgba(255,170,51,.45);'
+            + 'background:linear-gradient(180deg,rgba(255,170,51,.10),rgba(255,170,51,.04));'
+            + 'font-size:12px;color:#ffaa33';
+          banner.innerHTML = '⚠ <strong>Engine scores expire in ' + daysRemaining
+            + ' days</strong> (last covered: ' + maxDate + '). Engine v18.5 has no forecasts beyond this date — extend dataset before expiration.';
+          // Insert after backtestBanner if it exists, else at top of main container
+          const target = document.getElementById('backtestBanner') || document.querySelector('main') || document.body;
+          if(target && target.parentNode){
+            target.parentNode.insertBefore(banner, target.nextSibling);
+          }
+          console.warn('[V25-fu30] Engine scores expire in ' + daysRemaining + ' days');
+        }
+      } else if(Object.keys(_engineScores).length > 0){
+        // No future dates at all — engine fully expired
+        if(!document.getElementById('engineExpirationBanner')){
+          const banner = document.createElement('div');
+          banner.id = 'engineExpirationBanner';
+          banner.style.cssText = 'margin:0 0 10px;padding:10px 14px;border-radius:12px;'
+            + 'border:1px solid rgba(255,107,107,.55);'
+            + 'background:linear-gradient(180deg,rgba(255,107,107,.12),rgba(255,107,107,.04));'
+            + 'font-size:12px;color:#ff6b6b';
+          banner.innerHTML = '🚨 <strong>Engine scores fully expired</strong> — no forecasts available for today or future. Showing live Hero G only.';
+          const target = document.getElementById('backtestBanner') || document.querySelector('main') || document.body;
+          if(target && target.parentNode){
+            target.parentNode.insertBefore(banner, target.nextSibling);
+          }
+          console.error('[V25-fu30] Engine scores fully expired');
+        }
+      }
+    } catch(expErr){
+      console.warn('[V25-fu30] expiration check failed:', expErr.message);
+    }
     return _engineScores;
   } catch(e){
     console.warn('[v87.61] engine_scores.json fetch failed:', e.message);
