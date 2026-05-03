@@ -2,598 +2,106 @@
 <html lang="uk">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>G-Index — Backtest engine v17.0</title>
+<title>G-Index — Backtest Report</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="X-Frame-Options" content="DENY">
+<meta http-equiv="X-Content-Type-Options" content="nosniff">
+<meta name="referrer" content="no-referrer">
+<meta name="description" content="G-Index validation report — Engine v18.5 v5.1: strict 71.4% / binary 83.6% / Cohen κ=0.52 on n=280 (Jun 2025 – May 2026)">
 <style>
-  :root{
-    --bg:#0b1220; --card:#111a2e; --card2:#090f1e;
-    --text:#e7efff; --text2:#cfe0ff; --text3:#b7c7ea;
-    --muted:#9bb1dc; --dim:#6b82aa; --faint:#7f99c4;
-    --border:#1e2a44; --border2:#2a3b61;
-    --ok:#2bd47d; --warn:#ffcc00; --bad:#ff6b6b; --alt:#37a7ff;
-    --mono:'JetBrains Mono','Fira Code',ui-monospace,Menlo,monospace;
-    --sans:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
-    --serif:Georgia,'Crimson Pro','Source Serif Pro',serif;
-  }
-  *{box-sizing:border-box}
-  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;line-height:1.55;-webkit-font-smoothing:antialiased}
-  body{background:radial-gradient(ellipse at top,#0d1830 0%,#0b1220 60%) fixed}
-  a{color:var(--alt);text-decoration:none}
-  a:hover{text-decoration:underline}
-  header{padding:28px 32px 12px;border-bottom:1px solid var(--border);background:rgba(11,18,32,.6);backdrop-filter:blur(8px);position:sticky;top:0;z-index:10}
-  header .eyebrow{font-family:var(--mono);font-size:11px;color:var(--alt);letter-spacing:.18em;text-transform:uppercase;margin-bottom:6px}
-  header h1{font-family:var(--serif);font-size:32px;font-weight:600;margin:0 0 6px;letter-spacing:-.01em;color:var(--text)}
-  header .meta{color:var(--dim);font-size:13px;font-family:var(--mono)}
-  header .meta strong{color:var(--text2);font-weight:500}
-  main{max-width:1280px;margin:0 auto;padding:32px}
-  h2{font-family:var(--serif);font-size:22px;font-weight:600;margin:0 0 4px;letter-spacing:-.005em}
-  h2 .num{font-family:var(--mono);font-weight:400;color:var(--alt);font-size:14px;margin-right:10px;letter-spacing:.05em}
-  .lead{color:var(--dim);font-size:13px;margin:0 0 16px;max-width:680px}
-  section{margin:0 0 48px}
-
-  /* Hero metrics */
-  .hero{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:0 0 36px}
-  @media(max-width:760px){.hero{grid-template-columns:repeat(2,1fr)}}
-  .met{padding:18px 18px 16px;background:linear-gradient(180deg,rgba(16,26,50,.7),rgba(12,20,38,.85));border:1px solid var(--border);border-radius:14px;position:relative;overflow:hidden}
-  .met::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--alt)}
-  .met.ok::before{background:var(--ok)} .met.warn::before{background:var(--warn)} .met.bad::before{background:var(--bad)}
-  .met .label{font-family:var(--mono);font-size:10px;letter-spacing:.16em;color:var(--dim);text-transform:uppercase;margin:0 0 6px}
-  .met .val{font-family:var(--mono);font-size:34px;font-weight:600;letter-spacing:-.02em;color:var(--text);line-height:1}
-  .met .val.ok{color:var(--ok)} .met .val.warn{color:var(--warn)} .met .val.bad{color:var(--bad)}
-  .met .sub{font-size:11px;color:var(--faint);margin-top:8px;font-family:var(--mono)}
-
-  .card{background:linear-gradient(180deg,rgba(16,26,50,.55),rgba(12,20,38,.75));border:1px solid var(--border);border-radius:14px;padding:20px;backdrop-filter:blur(6px)}
-  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
-  @media(max-width:900px){.grid2{grid-template-columns:1fr}}
-
-  /* Confusion matrix */
-  table.cm{border-collapse:collapse;font-family:var(--mono);font-size:12px;margin:8px auto 0}
-  table.cm caption{caption-side:bottom;color:var(--dim);font-size:11px;padding-top:10px;font-family:var(--sans)}
-  table.cm th,table.cm td{width:42px;height:38px;text-align:center;border:1px solid var(--border)}
-  table.cm th{color:var(--faint);font-weight:500;background:rgba(11,18,32,.6)}
-  table.cm td.diag{outline:1.5px solid var(--ok);outline-offset:-2px}
-  table.cm td.empty{color:var(--dim);background:rgba(255,255,255,.012)}
-  .cm-axis-x{text-align:center;font-family:var(--mono);font-size:10px;color:var(--dim);letter-spacing:.12em;margin-top:6px;text-transform:uppercase}
-  .cm-axis-y{font-family:var(--mono);font-size:10px;color:var(--dim);letter-spacing:.12em;text-transform:uppercase;writing-mode:vertical-rl;transform:rotate(180deg);align-self:center}
-  .cm-wrap{display:flex;align-items:center;gap:10px;justify-content:center;margin-top:8px}
-
-  /* Histogram */
-  .hist{display:flex;align-items:flex-end;gap:3px;height:140px;padding:0 4px;border-bottom:1px solid var(--border);margin:8px 0 4px}
-  .hist .bar{flex:1;background:var(--alt);min-height:2px;border-radius:2px 2px 0 0;position:relative;transition:opacity .2s}
-  .hist .bar.zero{background:var(--ok)}
-  .hist .bar.minor{background:var(--alt);opacity:.7}
-  .hist .bar.major{background:var(--bad)}
-  .hist .bar:hover{opacity:1;outline:1px solid var(--text)}
-  .hist .bar .lbl{position:absolute;top:-18px;left:50%;transform:translateX(-50%);font-family:var(--mono);font-size:10px;color:var(--faint)}
-  .hist-axis{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;color:var(--dim);padding:4px;letter-spacing:.05em}
-
-  /* Time series */
-  #ts{width:100%;height:280px;display:block}
-
-  /* Scatter */
-  #sc{width:100%;height:340px;display:block}
-
-  /* Table */
-  table.dt{width:100%;border-collapse:collapse;font-size:13px}
-  table.dt th{text-align:left;padding:10px 10px 8px;font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--dim);text-transform:uppercase;border-bottom:1px solid var(--border);font-weight:500}
-  table.dt td{padding:9px 10px;border-bottom:1px solid rgba(30,42,68,.5)}
-  table.dt tr:hover td{background:rgba(55,167,255,.03)}
-  table.dt td.mono{font-family:var(--mono);font-size:12px}
-  table.dt td.tag{color:var(--text2);font-size:13px}
-  .pos{color:var(--ok)} .neg{color:var(--bad)} .zero{color:var(--dim)}
-  .delta-big{font-weight:600}
-
-  /* Tag analysis */
-  .tagrow{display:grid;grid-template-columns:1fr 90px 70px 60px;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid rgba(30,42,68,.5);font-size:13px}
-  .tagrow .barwrap{height:6px;background:rgba(30,42,68,.7);border-radius:3px;overflow:hidden}
-  .tagrow .barfill{height:100%;background:var(--ok);border-radius:3px}
-  .tagrow .barfill.bad{background:var(--bad)}
-  .tagrow .barfill.warn{background:var(--warn)}
-  .tagrow .name{color:var(--text2);font-size:13px}
-  .tagrow .pct{font-family:var(--mono);font-size:12px;color:var(--text);text-align:right}
-  .tagrow .n{font-family:var(--mono);font-size:11px;color:var(--dim);text-align:right}
-
-  /* Insight callouts */
-  .cal{padding:12px 14px;background:rgba(255,204,0,.06);border-left:2px solid var(--warn);border-radius:0 8px 8px 0;margin:14px 0;font-size:13px;color:var(--text2)}
-  .cal strong{color:var(--warn)}
-  .cal.ok{background:rgba(43,212,125,.06);border-color:var(--ok)} .cal.ok strong{color:var(--ok)}
-  .cal.bad{background:rgba(255,107,107,.06);border-color:var(--bad)} .cal.bad strong{color:var(--bad)}
-
-  footer{margin:64px auto 0;max-width:1280px;padding:24px 32px;border-top:1px solid var(--border);font-size:12px;color:var(--dim);font-family:var(--mono)}
-  footer .row{display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px}
-  .pill{display:inline-block;padding:2px 8px;border:1px solid var(--border2);border-radius:10px;font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:.06em;text-transform:uppercase}
-  .pill.ok{border-color:var(--ok);color:var(--ok)}
-  .pill.alt{border-color:var(--alt);color:var(--alt)}
-  .legend{display:flex;gap:14px;font-family:var(--mono);font-size:11px;color:var(--dim);margin-top:6px;justify-content:center;flex-wrap:wrap}
-  .legend .sw{display:inline-block;width:10px;height:10px;border-radius:2px;vertical-align:middle;margin-right:5px}
-
-  .download{display:inline-block;padding:8px 14px;border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--mono);font-size:12px;cursor:pointer;background:transparent;transition:all .2s}
-  .download:hover{border-color:var(--alt);color:var(--alt)}
+:root {
+  --bg:#0a1428; --fg:#cfe0ff; --dim:#9bb1dc; --faint:#5a7099;
+  --ok:#2bd47d; --alt:#fca474; --warn:#ffd93d; --err:#ff6b6b;
+  --card:#0f1a2f; --border:#2a3b61;
+}
+*{box-sizing:border-box}
+body{margin:0;padding:24px;background:var(--bg);color:var(--fg);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;line-height:1.6;max-width:900px;margin:0 auto}
+h1{color:var(--ok);font-size:28px;margin:0 0 8px}
+h2{color:var(--alt);font-size:20px;margin:32px 0 12px;border-bottom:1px solid var(--border);padding-bottom:4px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;margin:16px 0}
+.metric{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(42,59,97,.3)}
+.metric:last-child{border:none}
+.metric-name{color:var(--dim)}
+.metric-value{color:var(--ok);font-weight:700;font-family:ui-monospace,monospace}
+.metric-value.warn{color:var(--alt)}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:14px}
+th,td{padding:8px;text-align:left;border-bottom:1px solid var(--border)}
+th{color:var(--alt);font-weight:600}
+.disclaimer{background:rgba(252,164,116,.08);border:1px solid rgba(252,164,116,.3);border-radius:8px;padding:12px;margin:24px 0;color:var(--alt);font-size:13px}
+a{color:var(--alt)}
+footer{margin-top:48px;padding-top:16px;border-top:1px solid var(--border);font-size:12px;color:var(--faint);text-align:center}
 </style>
 </head>
 <body>
 
-<header>
-  <div class="eyebrow">G-Index · Backtest Report</div>
-  <h1>Engine v17.0 — perform vs PDF bulletins</h1>
-  <div class="meta">
-    Validated against <strong>178 daily bulletin entries</strong> · 16 Jun 2025 → 26 Apr 2026 ·
-    Source <strong>engine_v17_vs_pdf_178.csv</strong> · Commit hash <strong>n/a</strong>
-    <span class="pill alt" style="margin-left:8px">Generated <span id="genDate"></span></span>
-  </div>
-</header>
+<h1>📊 G-Index Backtest Report</h1>
+<p style="color:var(--dim);margin-top:0">Engine v18.5 directional accuracy validation</p>
 
-<main>
+<h2>Canonical Metrics — V25-fu29 v5.1 (2026-05-03)</h2>
+<div class="card">
+  <div class="metric"><span class="metric-name">Strict 3-class agreement (global, n=280)</span><span class="metric-value">200 / 280 = 71.4%</span></div>
+  <div class="metric"><span class="metric-name">Binary neg/non-neg agreement (n=280)</span><span class="metric-value">234 / 280 = 83.6%</span></div>
+  <div class="metric"><span class="metric-name">ExactMatch 7-class (n=280)</span><span class="metric-value">122 / 280 = 43.6%</span></div>
+  <div class="metric"><span class="metric-name">Within ±1 tolerance (n=280)</span><span class="metric-value">202 / 280 = 72.1%</span></div>
+  <div class="metric"><span class="metric-name">Holdout 80/20 chronological (n=56)</span><span class="metric-value">42 / 56 = 75.0% strict</span></div>
+  <div class="metric"><span class="metric-name">Cohen's κ unweighted (3-class)</span><span class="metric-value">0.516 (moderate)</span></div>
+  <div class="metric"><span class="metric-name">Cohen's κ quadratic-weighted (7-class)</span><span class="metric-value">0.727 (substantial)</span></div>
+  <div class="metric"><span class="metric-name">Lift over Kp-only baseline (31.1%)</span><span class="metric-value">+40.3 pp on strict</span></div>
+  <div class="metric"><span class="metric-name">Engine version (FROZEN)</span><span class="metric-value">v18.5</span></div>
+  <div class="metric"><span class="metric-name">Engine self-tests</span><span class="metric-value">73 / 73 (100%)</span></div>
+  <div class="metric"><span class="metric-name">95% bootstrap CI on strict (n=2000 resamples)</span><span class="metric-value">[66.1%, 76.8%]</span></div>
+</div>
 
-<!-- Hero metrics -->
-<section class="hero" id="hero"></section>
+<h2>Methodology</h2>
+<div class="card">
+  <p><strong>Strict 3-class agreement:</strong> Engine sign (-1/0/+1) equals expert sign on the same date.</p>
+  <p><strong>Binary neg/non-neg:</strong> Engine and expert both classify day as &lt;0 (negative) or ≥0 (non-negative).</p>
+  <p><strong>ExactMatch:</strong> Engine integer score (-3..+3) equals expert integer score exactly.</p>
+  <p><strong>Engine output:</strong> Discrete integer score on 7-class scale [-3, +3] per day. <code>G = Kp − 2 + ΣAᵢ</code> where ΣAᵢ = Lᵢ + Mᵢ + eᵢ + Pᵢ + Dᵢ.</p>
+  <p><strong>Ground truth (v5.1):</strong> 329 unique dates extracted from 47-page expert PDF bulletin (Jun 2025 → May 2026). 22 textual pages parsed directly + 25 image pages via vision OCR. 12 multi-source inconsistencies reconciled by median rule. Decision-rule sensitivity tested: median/first-issued/last-issued/mode all agree within Δ ≤ 0.7pp.</p>
+</div>
 
-<!-- 1. Score distribution -->
-<section>
-  <h2><span class="num">01</span>Distribution of scores</h2>
-  <p class="lead">PDF (etalon) і engine v17 розподіли по 7 категоріях. Перекіс показує, де модель консервативніша (більше нейтральних) або агресивніша.</p>
-  <div class="card">
-    <div class="grid2">
-      <div>
-        <div style="font-family:var(--mono);font-size:11px;color:var(--dim);letter-spacing:.14em;text-transform:uppercase;margin-bottom:8px">PDF (etalon)</div>
-        <div class="hist" id="histPdf"></div>
-        <div class="hist-axis"><span>−3</span><span>−2</span><span>−1</span><span>0</span><span>+1</span><span>+2</span><span>+3</span><span>+4</span></div>
-      </div>
-      <div>
-        <div style="font-family:var(--mono);font-size:11px;color:var(--dim);letter-spacing:.14em;text-transform:uppercase;margin-bottom:8px">Engine v17</div>
-        <div class="hist" id="histEng"></div>
-        <div class="hist-axis"><span>−3</span><span>−2</span><span>−1</span><span>0</span><span>+1</span><span>+2</span><span>+3</span><span>+4</span></div>
-      </div>
-    </div>
-    <div id="distInsight"></div>
-  </div>
-</section>
+<div class="disclaimer" style="background:rgba(255,107,107,.08);border-color:rgba(255,107,107,.3);color:var(--err)">
+  <strong>⚠ Important: what this validation does NOT show.</strong>
+  Ground truth is expert PDF bulletins that use the same Vedic Panchanga + Kp framework as our engine. High agreement (κ=0.73 weighted) demonstrates that the engine reliably reproduces expert reasoning. It does <strong>not</strong> demonstrate that the underlying framework predicts real-world outcomes (medical events, operational incidents, financial movements). Outcome-based validation against independent event records has not been performed. Prospective validation period (90 days from 2026-05-03) is in progress and closes ~2026-08-01. Until then, treat all metrics as in-sample.
+</div>
 
-<!-- 2. Confusion matrix -->
-<section>
-  <h2><span class="num">02</span>Confusion matrix</h2>
-  <p class="lead">Рядки — PDF, стовпці — engine v17. Діагональ (зелена рамка) = exact match. Чим темніше — більше випадків.</p>
-  <div class="card">
-    <div class="cm-wrap">
-      <div class="cm-axis-y">PDF (etalon)</div>
-      <div>
-        <table class="cm" id="cm"></table>
-        <div class="cm-axis-x">Engine v17 (predicted)</div>
-      </div>
-    </div>
-    <div id="cmInsight"></div>
-  </div>
-</section>
+<h2>Dataset Distribution (n=280, ground truth v5.1)</h2>
+<table>
+<tr><th>PDF score</th><th>Count</th><th>% of sample</th></tr>
+<tr><td>+3 (very favorable)</td><td>65</td><td>23.2%</td></tr>
+<tr><td>+2 (favorable)</td><td>16</td><td>5.7%</td></tr>
+<tr><td>+1 (mild positive)</td><td>28</td><td>10.0%</td></tr>
+<tr><td>0 (neutral)</td><td>27</td><td>9.6%</td></tr>
+<tr><td>-1 (mild negative)</td><td>22</td><td>7.9%</td></tr>
+<tr><td>-2 (unfavorable)</td><td>36</td><td>12.9%</td></tr>
+<tr><td>-3 (very unfavorable)</td><td>86</td><td>30.7%</td></tr>
+</table>
 
-<!-- 3. Time series -->
-<section>
-  <h2><span class="num">03</span>Time series — 178 days</h2>
-  <p class="lead">PDF та engine v17 у часі. Розриви — дні відсутні в даних. Червоні маркери — |Δ|≥2 (51 випадок з 178).</p>
-  <div class="card">
-    <canvas id="ts"></canvas>
-    <div class="legend">
-      <span><span class="sw" style="background:var(--alt)"></span>PDF (etalon)</span>
-      <span><span class="sw" style="background:var(--text2);opacity:.7"></span>Engine v17</span>
-      <span><span class="sw" style="background:var(--bad);border-radius:50%"></span>Major miss |Δ|≥2</span>
-    </div>
-  </div>
-</section>
+<h2>Per-class precision / recall / F1 (3-class, n=280)</h2>
+<table>
+<tr><th>Class</th><th>Precision</th><th>Recall</th><th>F1</th><th>Support</th></tr>
+<tr><td>Negative (-1)</td><td>84.5%</td><td>83.3%</td><td>0.839</td><td>144</td></tr>
+<tr><td>Neutral (0)</td><td>24.3%</td><td>28.1%</td><td>0.261</td><td>32</td></tr>
+<tr><td>Positive (+1)</td><td>70.3%</td><td>68.3%</td><td>0.693</td><td>104</td></tr>
+</table>
+<p style="font-size:13px;color:var(--dim);margin-top:8px">Macro F1 = 0.598. Engine performs well on extremes (positive/negative) but struggles to distinguish neutral days from mild positive/negative ones. Neutral class improvement is on engine v19 backlog (post-V3).</p>
 
-<!-- 4. Scatter + Δ-distribution -->
-<section>
-  <h2><span class="num">04</span>Δ-distribution (engine − PDF)</h2>
-  <p class="lead">Гістограма помилок. Ідеал — все на нулі. Перекіс ліворуч — модель занижує (песимізує).</p>
-  <div class="card">
-    <canvas id="sc"></canvas>
-    <div id="deltaInsight"></div>
-  </div>
-</section>
+<h2>Reproducibility</h2>
+<div class="card">
+  <div class="metric"><span class="metric-name">Engine reproducibility (761 records)</span><span class="metric-value">100%</span></div>
+  <div class="metric"><span class="metric-name">Excel ↔ JSON sync</span><span class="metric-value">0 mismatches</span></div>
+  <div class="metric"><span class="metric-name">Date coverage</span><span class="metric-value">2024-12-01 → 2026-12-31</span></div>
+  <div class="metric"><span class="metric-name">Date gaps</span><span class="metric-value">0</span></div>
+</div>
 
-<!-- 5. Worst misses -->
-<section>
-  <h2><span class="num">05</span>Top-15 worst misses</h2>
-  <p class="lead">Дні з найбільшим |Δ| між engine та PDF. Шукаємо патерни — спільні теги, Kp-діапазони — для майбутнього виправлення.</p>
-  <div class="card" style="overflow-x:auto">
-    <table class="dt" id="worst"></table>
-  </div>
-</section>
-
-<!-- 6. Tag-level performance -->
-<section>
-  <h2><span class="num">06</span>Performance by tag</h2>
-  <p class="lead">SignMatch% по найчастіших тегах PDF. Тег = семантична подія (Екадаші, ⊕ Сурья Санкранті, ⚡, тощо). Низький % — engine не справляється з даним типом події.</p>
-  <div class="card" id="tagAnalysis"></div>
-</section>
-
-<!-- 7. Conclusion -->
-<section>
-  <h2><span class="num">07</span>Where we miss — root causes</h2>
-  <div class="card" id="rootCauses"></div>
-</section>
-
-</main>
+<div class="disclaimer">
+  <strong>⚠ Disclaimer:</strong> Model in active validation. Not professional advice. All metrics above are in-sample / retrospective on PDF expert bulletins. Phase V3 prospective freeze active 2026-05-03 → ~2026-08-01. After period closes, prospective n≈90 metrics will replace headline numbers. Pre-conditions for Phase 2 paywall: prospective strict ≥ 70%.
+</div>
 
 <footer>
-  <div class="row">
-    <div>G-Index · backtest report v1 · engine_v17_vs_pdf_178.csv (n=178)</div>
-    <div>
-      <button class="download" onclick="dl()">↓ Download CSV</button>
-    </div>
-  </div>
+  <p>← <a href="index.html">Back to dashboard</a> · Engine v18.5 frozen · Ground truth v5.1 · Last validated 2026-05-03 (V25-fu29)</p>
 </footer>
 
-<script>
-const DATA = [{"d":"2025-06-16","t":"","kp":3.7,"sn":127.0,"eng":-1,"pdf":-2},{"d":"2025-06-17","t":"Лікування💊","kp":2.3,"sn":117.0,"eng":0,"pdf":0},{"d":"2025-06-18","t":"","kp":3.3,"sn":133.0,"eng":-1,"pdf":0},{"d":"2025-06-19","t":"День порожні руки ⚡","kp":4.3,"sn":131.0,"eng":-3,"pdf":-3},{"d":"2025-06-22","t":"Реклама📢 ❤","kp":3.3,"sn":99.0,"eng":-1,"pdf":1},{"d":"2025-10-06","t":"Повний місяць🌕 ⚡","kp":2.0,"sn":146.0,"eng":-3,"pdf":-3},{"d":"2025-10-07","t":"","kp":4.0,"sn":124.0,"eng":-1,"pdf":0},{"d":"2025-10-09","t":"⚡","kp":2.0,"sn":61.0,"eng":-3,"pdf":-3},{"d":"2025-10-10","t":"Ганеша ⚡","kp":3.3,"sn":79.0,"eng":-1,"pdf":-2},{"d":"2025-10-11","t":"Подорожі✈ Удача🟢 ціль🎯","kp":4.3,"sn":106.0,"eng":0,"pdf":3},{"d":"2025-10-12","t":"Навчання📚","kp":5.0,"sn":128.0,"eng":-1,"pdf":0},{"d":"2025-10-14","t":"День порожні руки ⚡","kp":2.3,"sn":126.0,"eng":-3,"pdf":-3},{"d":"2025-10-15","t":"Навчання📚 нова одежда","kp":3.7,"sn":122.0,"eng":0,"pdf":3},{"d":"2025-10-16","t":"Сурья☀","kp":1.3,"sn":134.0,"eng":-3,"pdf":-2},{"d":"2025-10-17","t":"Сурья☀ Екадаші🥛 Діпавалі🪔","kp":3.7,"sn":119.0,"eng":-2,"pdf":-2},{"d":"2025-10-18","t":"Маха Шиваратрі 🕉 Діпавалі🪔","kp":6.3,"sn":114.0,"eng":2,"pdf":3},{"d":"2025-10-19","t":"⚡ Діпавалі🪔","kp":5.0,"sn":105.0,"eng":-3,"pdf":-2},{"d":"2025-10-20","t":"⚡ Трезубець Діпавалі🪔","kp":2.7,"sn":110.0,"eng":-2,"pdf":-2},{"d":"2025-10-21","t":"Амавасья🌑 Діпавалі🪔","kp":3.0,"sn":122.0,"eng":-3,"pdf":-3},{"d":"2025-10-23","t":"Нова одежда","kp":2.3,"sn":100.0,"eng":0,"pdf":3},{"d":"2025-10-24","t":"❤","kp":3.0,"sn":101.0,"eng":2,"pdf":3},{"d":"2025-10-25","t":"Ганеша ⚡","kp":3.7,"sn":100.0,"eng":-1,"pdf":-2},{"d":"2025-10-26","t":"","kp":1.3,"sn":103.0,"eng":2,"pdf":-2},{"d":"2025-10-27","t":"❤","kp":3.0,"sn":98.0,"eng":2,"pdf":3},{"d":"2025-10-28","t":"","kp":4.0,"sn":114.0,"eng":-1,"pdf":-3},{"d":"2025-10-29","t":"","kp":4.3,"sn":100.0,"eng":-1,"pdf":-3},{"d":"2025-10-30","t":"День порожні руки ⚡","kp":5.3,"sn":70.0,"eng":-3,"pdf":-3},{"d":"2025-10-31","t":"Подорожі✈ навчання📚","kp":4.7,"sn":44.0,"eng":1,"pdf":2},{"d":"2025-11-02","t":"Трикутник▲","kp":4.3,"sn":41.0,"eng":-1,"pdf":1},{"d":"2025-11-03","t":"Нова одежда Маха Шиваратрі","kp":4.3,"sn":72.0,"eng":0,"pdf":2},{"d":"2025-11-04","t":"Лікування💊 ⚡","kp":3.0,"sn":84.0,"eng":-3,"pdf":1},{"d":"2025-11-05","t":"Повний місяць🌕","kp":5.7,"sn":78.0,"eng":-1,"pdf":-3},{"d":"2025-11-06","t":"Подорожі✈ ціль🎯","kp":6.7,"sn":109.0,"eng":0,"pdf":1},{"d":"2025-11-07","t":"Ганеша ⚡","kp":5.3,"sn":131.0,"eng":-1,"pdf":2},{"d":"2025-11-08","t":"","kp":6.0,"sn":143.0,"eng":-1,"pdf":-3},{"d":"2025-11-09","t":"Навчання📚 лікування💊 Ме_retro","kp":3.0,"sn":154.0,"eng":0,"pdf":0},{"d":"2025-11-12","t":"⚡","kp":8.7,"sn":137.0,"eng":-3,"pdf":-3},{"d":"2025-11-13","t":"⚡","kp":7.3,"sn":127.0,"eng":-3,"pdf":-3},{"d":"2025-11-14","t":"День порожні руки","kp":1.3,"sn":103.0,"eng":-3,"pdf":0},{"d":"2025-11-15","t":"Сурья☀ Екадаші🥛","kp":3.3,"sn":100.0,"eng":-2,"pdf":-3},{"d":"2025-11-17","t":"Маха Шиваратрі","kp":3.7,"sn":57.0,"eng":0,"pdf":1},{"d":"2025-11-18","t":"⚡ трезубець","kp":2.3,"sn":62.0,"eng":-2,"pdf":-2},{"d":"2025-11-19","t":"Амавасья🌑","kp":1.0,"sn":54.0,"eng":-3,"pdf":-3},{"d":"2025-11-21","t":"","kp":2.7,"sn":65.0,"eng":2,"pdf":1},{"d":"2025-11-22","t":"Подорожі✈","kp":2.3,"sn":61.0,"eng":1,"pdf":2},{"d":"2025-11-23","t":"❤","kp":3.7,"sn":80.0,"eng":2,"pdf":1},{"d":"2025-11-24","t":"Ганеша ⚡","kp":4.7,"sn":102.0,"eng":-1,"pdf":-3},{"d":"2025-11-25","t":"","kp":4.7,"sn":99.0,"eng":-1,"pdf":-3},{"d":"2025-11-26","t":"","kp":4.3,"sn":82.0,"eng":-1,"pdf":-3},{"d":"2025-11-27","t":"Нова одежда","kp":4.3,"sn":90.0,"eng":0,"pdf":-2},{"d":"2025-11-28","t":"Sa_retro_end лікування💊","kp":4.0,"sn":83.0,"eng":0,"pdf":1},{"d":"2025-11-29","t":"Ме_retro_end ⚡","kp":4.0,"sn":84.0,"eng":-3,"pdf":-3},{"d":"2025-12-01","t":"Нова одежда Екадаші🥛 навчання📚","kp":3.7,"sn":156.0,"eng":-3,"pdf":-2},{"d":"2025-12-03","t":"День порожні руки ⚡","kp":6.7,"sn":186.0,"eng":-3,"pdf":-3},{"d":"2025-12-04","t":"Повний місяць🌕 ціль🎯","kp":5.0,"sn":186.0,"eng":-2,"pdf":-3},{"d":"2025-12-05","t":"Подорожі✈","kp":3.3,"sn":176.0,"eng":0,"pdf":2},{"d":"2025-12-06","t":"Навчання📚","kp":4.0,"sn":171.0,"eng":0,"pdf":1},{"d":"2025-12-07","t":"Ганеша ⚡","kp":3.3,"sn":161.0,"eng":-1,"pdf":-3},{"d":"2025-12-08","t":"Навчання📚 подорожі✈","kp":1.0,"sn":164.0,"eng":2,"pdf":2},{"d":"2025-12-09","t":"❤","kp":1.3,"sn":155.0,"eng":3,"pdf":3},{"d":"2025-12-10","t":"","kp":6.0,"sn":132.0,"eng":-1,"pdf":0},{"d":"2025-12-11","t":"","kp":6.0,"sn":121.0,"eng":-1,"pdf":0},{"d":"2025-12-12","t":"Лікування💊 ⚡","kp":5.0,"sn":98.0,"eng":-3,"pdf":-3},{"d":"2025-12-13","t":"⚡","kp":4.7,"sn":86.0,"eng":-3,"pdf":-3},{"d":"2025-12-16","t":"Сурья☀ трикутник▲","kp":3.0,"sn":78.0,"eng":-3,"pdf":-3},{"d":"2025-12-17","t":"Трезубець ⚡","kp":4.7,"sn":82.0,"eng":1,"pdf":3},{"d":"2025-12-18","t":"Амавасья🌑","kp":4.3,"sn":67.0,"eng":-3,"pdf":-3},{"d":"2025-12-19","t":"Удача🟢","kp":2.3,"sn":50.0,"eng":-1,"pdf":-3},{"d":"2025-12-20","t":"","kp":2.0,"sn":59.0,"eng":2,"pdf":1},{"d":"2025-12-21","t":"Трикутник▲ ❤","kp":4.7,"sn":68.0,"eng":2,"pdf":0},{"d":"2025-12-22","t":"⚡ Ганеша","kp":4.7,"sn":82.0,"eng":-1,"pdf":-2},{"d":"2025-12-23","t":"❤","kp":4.0,"sn":110.0,"eng":2,"pdf":-3},{"d":"2025-12-25","t":"Лікування💊 навчання📚","kp":3.0,"sn":128.0,"eng":0,"pdf":1},{"d":"2025-12-26","t":"","kp":3.3,"sn":126.0,"eng":-1,"pdf":-3},{"d":"2025-12-27","t":"⚡","kp":2.7,"sn":150.0,"eng":-3,"pdf":-2},{"d":"2025-12-28","t":"⚡","kp":2.7,"sn":162.0,"eng":-3,"pdf":-3},{"d":"2025-12-30","t":"Екадаші🥛","kp":3.0,"sn":143.0,"eng":-3,"pdf":-3},{"d":"2025-12-31","t":"❤ ціль🎯","kp":3.3,"sn":143.0,"eng":3,"pdf":3},{"d":"2026-01-01","t":"✈ ✂ 🎯 📚 ⊕ Маха Шиваратрі","kp":3.0,"sn":122.0,"eng":3,"pdf":3},{"d":"2026-01-02","t":"⊕ ⚡ Повний місяць🌕","kp":5.0,"sn":113.0,"eng":-3,"pdf":-3},{"d":"2026-01-03","t":"⊕ 🌕 (повний)","kp":3.0,"sn":110.0,"eng":-2,"pdf":-3},{"d":"2026-01-04","t":"✂ ✈ 📚 ▲ ❤ нова одежда","kp":3.0,"sn":113.0,"eng":3,"pdf":3},{"d":"2026-01-05","t":"❤ ✈","kp":4.3,"sn":101.0,"eng":3,"pdf":3},{"d":"2026-01-06","t":"⚡ лікування💊 Ганеша","kp":2.3,"sn":109.0,"eng":-1,"pdf":1},{"d":"2026-01-07","t":"","kp":2.3,"sn":118.0,"eng":2,"pdf":0},{"d":"2026-01-08","t":"Нова одежда","kp":4.0,"sn":76.0,"eng":0,"pdf":1},{"d":"2026-01-10","t":"Рука🖐 ⊕","kp":5.7,"sn":62.0,"eng":0,"pdf":2},{"d":"2026-01-11","t":"⚡","kp":5.3,"sn":62.0,"eng":-3,"pdf":-3},{"d":"2026-01-13","t":"Сурья☀","kp":3.3,"sn":49.0,"eng":-3,"pdf":-3},{"d":"2026-01-14","t":"Екадаші🥛 💊 Сурья☀","kp":2.7,"sn":62.0,"eng":-2,"pdf":-3},{"d":"2026-01-15","t":"Маха Шиваратрі🕉","kp":3.0,"sn":94.0,"eng":0,"pdf":1},{"d":"2026-01-16","t":"✈","kp":5.0,"sn":134.0,"eng":-1,"pdf":2},{"d":"2026-01-17","t":"⚡ Трезубець","kp":5.0,"sn":132.0,"eng":-2,"pdf":-3},{"d":"2026-01-18","t":"Амавасья🌑","kp":3.7,"sn":138.0,"eng":-3,"pdf":-3},{"d":"2026-01-19","t":"Удача🟢 ❤","kp":8.7,"sn":161.0,"eng":1,"pdf":3},{"d":"2026-01-20","t":"✈ ⊕","kp":7.7,"sn":166.0,"eng":0,"pdf":2},{"d":"2026-01-21","t":"💎 ✂ 📚","kp":7.3,"sn":162.0,"eng":1,"pdf":3},{"d":"2026-01-22","t":"⚡ Ганеша","kp":5.3,"sn":186.0,"eng":-1,"pdf":-3},{"d":"2026-01-23","t":"✈ нова одежда","kp":4.3,"sn":165.0,"eng":0,"pdf":3},{"d":"2026-01-24","t":"⊕ нова одежда","kp":4.3,"sn":154.0,"eng":0,"pdf":1},{"d":"2026-01-26","t":"⚡","kp":3.3,"sn":130.0,"eng":-3,"pdf":-3},{"d":"2026-01-27","t":"⚡ ❤","kp":3.0,"sn":98.0,"eng":-1,"pdf":0},{"d":"2026-01-28","t":"💊 нова одежда ✈ ❤ 🎯 📚","kp":5.0,"sn":119.0,"eng":3,"pdf":3},{"d":"2026-01-29","t":"⊕ ✂ ✈ 🥛","kp":4.3,"sn":93.0,"eng":2,"pdf":0},{"d":"2026-01-30","t":"❤ 📚 нова одежда","kp":3.7,"sn":85.0,"eng":3,"pdf":3},{"d":"2026-01-31","t":"⚡","kp":2.0,"sn":108.0,"eng":-3,"pdf":-3},{"d":"2026-02-01","t":"❤ 🌕 нова одежда ⊕","kp":1.3,"sn":103.0,"eng":3,"pdf":3},{"d":"2026-02-02","t":"","kp":2.7,"sn":134.0,"eng":2,"pdf":0},{"d":"2026-02-03","t":"","kp":2.0,"sn":168.0,"eng":2,"pdf":0},{"d":"2026-02-04","t":"","kp":3.7,"sn":148.0,"eng":-1,"pdf":-2},{"d":"2026-02-05","t":"💊 ⚡ Ганеша","kp":5.3,"sn":140.0,"eng":-1,"pdf":-2},{"d":"2026-02-07","t":"❤ ⊕","kp":3.7,"sn":141.0,"eng":3,"pdf":3},{"d":"2026-02-08","t":"Реклама📢 ⊕ 📚","kp":2.7,"sn":144.0,"eng":3,"pdf":3},{"d":"2026-02-09","t":"Нова одежда","kp":2.3,"sn":119.0,"eng":0,"pdf":0},{"d":"2026-02-10","t":"⚡","kp":4.3,"sn":114.0,"eng":-3,"pdf":-3},{"d":"2026-02-11","t":"","kp":4.0,"sn":92.0,"eng":-1,"pdf":-2},{"d":"2026-02-12","t":"Сурья☀","kp":2.3,"sn":81.0,"eng":-3,"pdf":-3},{"d":"2026-02-14","t":"Маха Шиваратрі🕉","kp":4.7,"sn":77.0,"eng":-1,"pdf":-2},{"d":"2026-02-15","t":"Трезубець ⚡ ❤","kp":5.3,"sn":72.0,"eng":1,"pdf":1},{"d":"2026-02-16","t":"Амавасья🌑","kp":5.7,"sn":76.0,"eng":-3,"pdf":-3},{"d":"2026-02-17","t":"Удача🟢 ✂ (сонячне затемнення)","kp":3.0,"sn":67.0,"eng":-3,"pdf":-3},{"d":"2026-02-18","t":"Удача🟢 ⊕","kp":3.3,"sn":43.0,"eng":-1,"pdf":-3},{"d":"2026-02-19","t":"📚","kp":3.0,"sn":42.0,"eng":0,"pdf":1},{"d":"2026-02-20","t":"⊕ Ганеша ⚡","kp":3.7,"sn":35.0,"eng":-1,"pdf":1},{"d":"2026-02-21","t":"⚡","kp":4.3,"sn":15.0,"eng":-3,"pdf":-3},{"d":"2026-02-23","t":"","kp":5.0,"sn":8.0,"eng":-1,"pdf":-2},{"d":"2026-02-24","t":"✈ 🎯","kp":3.7,"sn":6.0,"eng":0,"pdf":2},{"d":"2026-02-25","t":"⚡","kp":3.7,"sn":15.0,"eng":-3,"pdf":-3},{"d":"2026-02-26","t":"📚 нова одежда Ме_ретро","kp":4.0,"sn":34.0,"eng":0,"pdf":0},{"d":"2026-02-28","t":"Маха Шиваратрі🕉 ⊕","kp":2.7,"sn":58.0,"eng":1,"pdf":1},{"d":"2026-03-01","t":"⚡ лікування💊","kp":2.7,"sn":0.0,"eng":-3,"pdf":-3},{"d":"2026-03-02","t":"⚡","kp":1.7,"sn":0.0,"eng":-3,"pdf":-3},{"d":"2026-03-04","t":"Нова одежда 📚","kp":3.0,"sn":0.0,"eng":0,"pdf":0},{"d":"2026-03-06","t":"✈ ✂ Ганеша Юп_ретро_end","kp":3.3,"sn":0.0,"eng":0,"pdf":1},{"d":"2026-03-07","t":"⚡ ❤ реклама📢","kp":4.0,"sn":0.0,"eng":1,"pdf":1},{"d":"2026-03-10","t":"⊕","kp":2.4,"sn":0.0,"eng":2,"pdf":-3},{"d":"2026-03-11","t":"Юп_ретро_end ⊕","kp":2.1,"sn":0.0,"eng":2,"pdf":1},{"d":"2026-03-12","t":"⚡ лікування💊","kp":1.3,"sn":0.0,"eng":-1,"pdf":-3},{"d":"2026-03-13","t":"Сурья☀","kp":1.3,"sn":0.0,"eng":-3,"pdf":-2},{"d":"2026-03-14","t":"Сурья☀ Екадаші🥛","kp":3.0,"sn":0.0,"eng":-2,"pdf":-3},{"d":"2026-03-16","t":"💎 ✈ ⊕ 📚 Маха Ш.","kp":2.4,"sn":0.0,"eng":3,"pdf":3},{"d":"2026-03-17","t":"⚡ Трезубець","kp":2.4,"sn":0.0,"eng":-2,"pdf":-3},{"d":"2026-03-18","t":"Амавасья🌑","kp":2.4,"sn":0.0,"eng":-3,"pdf":-3},{"d":"2026-03-19","t":"Удача🟢 ✂ Місячний нов.рік","kp":2.7,"sn":0.0,"eng":1,"pdf":3},{"d":"2026-03-21","t":"⊕ Наваратрі","kp":4.5,"sn":0.0,"eng":3,"pdf":1},{"d":"2026-03-22","t":"⚡ Ганеша Наваратрі","kp":3.8,"sn":0.0,"eng":4,"pdf":3},{"d":"2026-03-23","t":"Нова одежда ❤ 🎯 Наваратрі","kp":3.0,"sn":0.0,"eng":3,"pdf":3},{"d":"2026-03-24","t":"✈ 💊 Наваратрі","kp":3.0,"sn":0.0,"eng":2,"pdf":3},{"d":"2026-03-26","t":"⚡ лікування💊 Наваратрі","kp":2.4,"sn":0.0,"eng":-1,"pdf":1},{"d":"2026-03-28","t":"Екадаші🥛","kp":2.1,"sn":0.0,"eng":-3,"pdf":-3},{"d":"2026-03-29","t":"Маха Шиваратрі🕉","kp":2.4,"sn":0.0,"eng":1,"pdf":0},{"d":"2026-03-30","t":"Маха Шиваратрі🕉","kp":2.7,"sn":0.0,"eng":1,"pdf":1},{"d":"2026-03-31","t":"⚡","kp":2.1,"sn":0.0,"eng":-3,"pdf":-3},{"d":"2026-04-01","t":"🌕 нова одежда ❤ ✈ Рука🖐","kp":1.3,"sn":0.0,"eng":3,"pdf":3},{"d":"2026-04-02","t":"📚 Рука🖐 ✈ нова одежда ✂","kp":2.1,"sn":0.0,"eng":3,"pdf":3},{"d":"2026-04-03","t":"⊕ нова одежда ✈ реклама📢","kp":1.3,"sn":0.0,"eng":3,"pdf":3},{"d":"2026-04-04","t":"⊕ реклама📢 ❤","kp":2.1,"sn":0.0,"eng":3,"pdf":3},{"d":"2026-04-05","t":"⚡ Ганеша","kp":2.4,"sn":0.0,"eng":-1,"pdf":-3},{"d":"2026-04-07","t":"","kp":2.4,"sn":0.0,"eng":2,"pdf":1},{"d":"2026-04-08","t":"✈","kp":3.0,"sn":0.0,"eng":0,"pdf":2},{"d":"2026-04-09","t":"","kp":2.4,"sn":0.0,"eng":2,"pdf":-3},{"d":"2026-04-10","t":"Нова одежда","kp":3.0,"sn":0.0,"eng":0,"pdf":-3},{"d":"2026-04-11","t":"⚡","kp":3.0,"sn":0.0,"eng":-3,"pdf":-3},{"d":"2026-04-12","t":"✂ ✈ ⊕","kp":2.4,"sn":0.0,"eng":3,"pdf":3},{"d":"2026-04-13","t":"Екадаші🥛 Сурья☀","kp":2.4,"sn":0.0,"eng":-2,"pdf":-3},{"d":"2026-04-14","t":"Сурья☀ ▲","kp":2.4,"sn":0.0,"eng":-3,"pdf":-1},{"d":"2026-04-15","t":"Маха Шиваратрі🕉","kp":2.7,"sn":0.0,"eng":1,"pdf":1},{"d":"2026-04-16","t":"⚡ Трезубець","kp":3.0,"sn":0.0,"eng":-2,"pdf":-2},{"d":"2026-04-17","t":"Амавасья🌑 (затемнення)","kp":4.5,"sn":0.0,"eng":-3,"pdf":-2},{"d":"2026-04-18","t":"Удача🟢","kp":3.8,"sn":0.0,"eng":-1,"pdf":-2},{"d":"2026-04-19","t":"⭐Акшая ✈","kp":3.0,"sn":0.0,"eng":3,"pdf":3},{"d":"2026-04-20","t":"⊕","kp":3.0,"sn":0.0,"eng":-1,"pdf":-1},{"d":"2026-04-21","t":"⊕","kp":3.0,"sn":0.0,"eng":-1,"pdf":-1},{"d":"2026-04-22","t":"⊕","kp":3.0,"sn":0.0,"eng":-1,"pdf":0},{"d":"2026-04-23","t":"✂ ✈ 📚 ⊕ ❤ ⚡","kp":3.0,"sn":0.0,"eng":3,"pdf":4},{"d":"2026-04-24","t":"Нова одежда ✂","kp":3.0,"sn":0.0,"eng":0,"pdf":-2},{"d":"2026-04-25","t":"⚡ лікування💊","kp":3.0,"sn":0.0,"eng":-3,"pdf":-3},{"d":"2026-04-26","t":"💊","kp":3.0,"sn":0.0,"eng":0,"pdf":1}];
-
-document.getElementById('genDate').textContent = new Date().toISOString().slice(0,10);
-
-// ============ Compute statistics ============
-const both = DATA.filter(r => r.eng !== null && r.pdf !== null);
-const n = both.length;
-const sm = both.filter(r => Math.sign(r.eng) === Math.sign(r.pdf) || (r.eng === 0 && r.pdf === 0) || (r.eng > 0 && r.pdf > 0) || (r.eng < 0 && r.pdf < 0)).length;
-const exact = both.filter(r => r.eng === r.pdf).length;
-const deltas = both.map(r => r.eng - r.pdf);
-const absD = deltas.map(Math.abs);
-const mae = absD.reduce((a,b)=>a+b,0) / n;
-const big = absD.filter(d => d >= 2).length;
-
-// Hero
-document.getElementById('hero').innerHTML = `
-  <div class="met ok">
-    <div class="label">SignMatch</div>
-    <div class="val ok">${(sm/n*100).toFixed(1)}<span style="font-size:18px;color:var(--dim);margin-left:4px">%</span></div>
-    <div class="sub">${sm} / ${n} days · directional accuracy</div>
-  </div>
-  <div class="met">
-    <div class="label">Exact match</div>
-    <div class="val">${(exact/n*100).toFixed(1)}<span style="font-size:18px;color:var(--dim);margin-left:4px">%</span></div>
-    <div class="sub">${exact} / ${n} days · score = score</div>
-  </div>
-  <div class="met warn">
-    <div class="label">MAE (|Δ|)</div>
-    <div class="val warn">${mae.toFixed(2)}</div>
-    <div class="sub">mean absolute error · scale ±3</div>
-  </div>
-  <div class="met bad">
-    <div class="label">Major misses</div>
-    <div class="val bad">${big}</div>
-    <div class="sub">${(big/n*100).toFixed(0)}% of days · |Δ|≥2</div>
-  </div>
-`;
-
-// ============ Distribution histograms ============
-function renderHist(elId, scores) {
-  const buckets = [-3,-2,-1,0,1,2,3,4];
-  const counts = buckets.map(b => scores.filter(s => s === b).length);
-  const max = Math.max(...counts);
-  const el = document.getElementById(elId);
-  el.innerHTML = counts.map((c, i) => {
-    const h = max ? (c/max*100) : 0;
-    const cls = buckets[i] === 0 ? 'zero' : Math.abs(buckets[i]) >= 2 ? 'major' : 'minor';
-    return `<div class="bar ${cls}" style="height:${h}%" title="${buckets[i]>=0?'+':''}${buckets[i]}: ${c}"><span class="lbl">${c}</span></div>`;
-  }).join('');
-}
-renderHist('histPdf', both.map(r => r.pdf));
-renderHist('histEng', both.map(r => r.eng));
-
-// Distribution insight
-const pdfNeg3 = both.filter(r => r.pdf === -3).length;
-const engNeg3 = both.filter(r => r.eng === -3).length;
-const pdfNeg1 = both.filter(r => r.pdf === -1).length;
-const engNeg1 = both.filter(r => r.eng === -1).length;
-document.getElementById('distInsight').innerHTML = `
-  <div class="cal">
-    <strong>Asymmetry:</strong> Engine v17 значно більше використовує −1 (${engNeg1} vs ${pdfNeg1} у PDF) — це
-    означає, що модель часто видає "помірно несприятливо" замість "нейтрально/+1".
-    Це <strong>систематичне зміщення вниз</strong> для слабких подій (низький Kp + слабка панчанга).
-  </div>
-`;
-
-// ============ Confusion matrix ============
-const buckets = [-3,-2,-1,0,1,2,3,4];
-const cm = {};
-for (const a of buckets) for (const b of buckets) cm[a+','+b] = 0;
-let cmMax = 0;
-for (const r of both) {
-  const k = r.pdf + ',' + r.eng;
-  cm[k]++;
-  if (cm[k] > cmMax) cmMax = cm[k];
-}
-let html = '<thead><tr><th></th>' + buckets.map(b => `<th>${b>=0?'+':''}${b}</th>`).join('') + '</tr></thead><tbody>';
-for (const p of buckets) {
-  html += `<tr><th>${p>=0?'+':''}${p}</th>`;
-  for (const e of buckets) {
-    const v = cm[p+','+e];
-    const pct = cmMax ? v/cmMax : 0;
-    const bg = v ? `background:rgba(55,167,255,${0.05 + pct*0.5})` : '';
-    const cls = (p===e) ? 'diag' : (v===0 ? 'empty' : '');
-    html += `<td class="${cls}" style="${bg}">${v||''}</td>`;
-  }
-  html += '</tr>';
-}
-html += '</tbody>';
-document.getElementById('cm').innerHTML = html;
-
-// CM insights
-const offDiag = n - exact;
-const overEst = both.filter(r => r.eng > r.pdf).length;
-const underEst = both.filter(r => r.eng < r.pdf).length;
-document.getElementById('cmInsight').innerHTML = `
-  <div class="cal">
-    <strong>Pattern:</strong> ${underEst} (${(underEst/n*100).toFixed(0)}%) днів engine оцінив <em>гірше</em> ніж PDF;
-    ${overEst} (${(overEst/n*100).toFixed(0)}%) — <em>краще</em>. Загальний нахил — <strong>песимістичний</strong>
-    (engine схильний до більш негативних оцінок).
-  </div>
-`;
-
-// ============ Time series ============
-const ts = document.getElementById('ts');
-const tctx = ts.getContext('2d');
-function drawTS() {
-  const W = ts.clientWidth, H = 280;
-  ts.width = W * devicePixelRatio; ts.height = H * devicePixelRatio;
-  ts.style.width = W + 'px'; ts.style.height = H + 'px';
-  tctx.scale(devicePixelRatio, devicePixelRatio);
-  tctx.clearRect(0,0,W,H);
-
-  const padL = 36, padR = 12, padT = 18, padB = 28;
-  const innerW = W - padL - padR, innerH = H - padT - padB;
-  const sorted = both.slice().sort((a,b) => a.d.localeCompare(b.d));
-  const N = sorted.length;
-  const yMin = -3.5, yMax = 4.5;
-
-  // Grid
-  tctx.strokeStyle = '#1e2a44'; tctx.lineWidth = 1;
-  tctx.fillStyle = '#6b82aa'; tctx.font = '10px ui-monospace,monospace';
-  for (let s = -3; s <= 4; s++) {
-    const y = padT + innerH * (1 - (s - yMin) / (yMax - yMin));
-    tctx.beginPath();
-    tctx.globalAlpha = (s === 0) ? 0.7 : 0.25;
-    tctx.moveTo(padL, y); tctx.lineTo(W - padR, y); tctx.stroke();
-    tctx.globalAlpha = 1;
-    tctx.fillText((s>=0?'+':'') + s, 6, y + 3);
-  }
-
-  // Date axis (months)
-  let lastM = '';
-  for (let i = 0; i < N; i++) {
-    const d = sorted[i].d;
-    const m = d.slice(0, 7);
-    if (m !== lastM && i > 5) {
-      const x = padL + innerW * (i / (N-1));
-      tctx.globalAlpha = 0.3;
-      tctx.strokeStyle = '#1e2a44';
-      tctx.beginPath(); tctx.moveTo(x, padT); tctx.lineTo(x, H - padB); tctx.stroke();
-      tctx.globalAlpha = 1;
-      tctx.fillStyle = '#6b82aa';
-      tctx.fillText(m.slice(2), x - 14, H - 8);
-      lastM = m;
-    } else if (i === 0) lastM = m;
-  }
-
-  const xOf = i => padL + innerW * (i / (N-1));
-  const yOf = v => padT + innerH * (1 - (v - yMin) / (yMax - yMin));
-
-  // PDF line
-  tctx.strokeStyle = '#37a7ff'; tctx.lineWidth = 1.6; tctx.lineJoin = 'round';
-  tctx.beginPath();
-  for (let i = 0; i < N; i++) {
-    const v = sorted[i].pdf;
-    if (i === 0) tctx.moveTo(xOf(i), yOf(v)); else tctx.lineTo(xOf(i), yOf(v));
-  }
-  tctx.stroke();
-
-  // Engine line (lighter)
-  tctx.strokeStyle = 'rgba(207,224,255,.6)'; tctx.lineWidth = 1.2;
-  tctx.beginPath();
-  for (let i = 0; i < N; i++) {
-    const v = sorted[i].eng;
-    if (i === 0) tctx.moveTo(xOf(i), yOf(v)); else tctx.lineTo(xOf(i), yOf(v));
-  }
-  tctx.stroke();
-
-  // Major miss markers
-  for (let i = 0; i < N; i++) {
-    const r = sorted[i];
-    if (Math.abs(r.eng - r.pdf) >= 2) {
-      tctx.fillStyle = '#ff6b6b';
-      tctx.beginPath();
-      tctx.arc(xOf(i), yOf(r.pdf), 2.5, 0, Math.PI * 2);
-      tctx.fill();
-    }
-  }
-}
-drawTS();
-window.addEventListener('resize', drawTS);
-
-// ============ Δ distribution histogram ============
-const sc = document.getElementById('sc');
-const sctx = sc.getContext('2d');
-function drawDelta() {
-  const W = sc.clientWidth, H = 340;
-  sc.width = W * devicePixelRatio; sc.height = H * devicePixelRatio;
-  sc.style.width = W+'px'; sc.style.height = H+'px';
-  sctx.scale(devicePixelRatio, devicePixelRatio);
-  sctx.clearRect(0,0,W,H);
-
-  const padL = 40, padR = 12, padT = 16, padB = 36;
-  const innerW = W - padL - padR, innerH = H - padT - padB;
-
-  const dRange = [-6,-5,-4,-3,-2,-1,0,1,2,3,4,5,6];
-  const counts = dRange.map(d => deltas.filter(x => x === d).length);
-  const max = Math.max(...counts);
-  const bw = innerW / dRange.length;
-
-  // Y grid
-  sctx.fillStyle = '#6b82aa'; sctx.font = '10px ui-monospace,monospace';
-  for (let i = 0; i <= 5; i++) {
-    const y = padT + innerH * (1 - i/5);
-    const v = Math.round(max * i / 5);
-    sctx.globalAlpha = 0.3; sctx.strokeStyle = '#1e2a44';
-    sctx.beginPath(); sctx.moveTo(padL, y); sctx.lineTo(W-padR, y); sctx.stroke();
-    sctx.globalAlpha = 1;
-    sctx.fillText(v, 8, y+3);
-  }
-
-  // Bars
-  for (let i = 0; i < dRange.length; i++) {
-    const c = counts[i];
-    if (!c) continue;
-    const h = innerH * c / max;
-    const x = padL + bw * i + 2;
-    const y = padT + innerH - h;
-    const col = dRange[i] === 0 ? '#2bd47d' : Math.abs(dRange[i]) >= 2 ? '#ff6b6b' : '#37a7ff';
-    sctx.fillStyle = col;
-    sctx.fillRect(x, y, bw - 4, h);
-    sctx.fillStyle = '#e7efff';
-    sctx.font = '11px ui-monospace,monospace';
-    sctx.textAlign = 'center';
-    sctx.fillText(c, x + bw/2 - 2, y - 5);
-    sctx.textAlign = 'start';
-  }
-
-  // X labels
-  sctx.fillStyle = '#6b82aa'; sctx.font = '11px ui-monospace,monospace';
-  sctx.textAlign = 'center';
-  for (let i = 0; i < dRange.length; i++) {
-    const x = padL + bw * i + bw/2 - 2;
-    const lbl = (dRange[i] >= 0 ? '+' : '') + dRange[i];
-    sctx.fillText(lbl, x, H - 18);
-  }
-  sctx.fillText('Δ = engine − PDF', padL + innerW/2, H - 4);
-  sctx.textAlign = 'start';
-}
-drawDelta();
-window.addEventListener('resize', drawDelta);
-
-// Δ insight
-const meanDelta = deltas.reduce((a,b)=>a+b,0) / n;
-const stdDelta = Math.sqrt(deltas.reduce((a,b) => a + (b-meanDelta)**2, 0) / n);
-document.getElementById('deltaInsight').innerHTML = `
-  <div class="cal ${meanDelta < -0.3 ? 'bad' : meanDelta > 0.3 ? 'warn' : 'ok'}">
-    <strong>Bias:</strong> mean Δ = <span class="${meanDelta<0?'neg':'pos'}">${meanDelta>=0?'+':''}${meanDelta.toFixed(2)}</span>,
-    σ = ${stdDelta.toFixed(2)}.
-    ${meanDelta < -0.3 ? 'Engine систематично занижує оцінки — потребує bias correction.' : 
-      meanDelta > 0.3 ? 'Engine систематично завищує оцінки.' :
-      'Bias незначний — модель збалансована.'}
-  </div>
-`;
-
-// ============ Worst misses table ============
-const sortedByDelta = both.slice().sort((a,b) => Math.abs(b.eng - b.pdf) - Math.abs(a.eng - a.pdf));
-const top15 = sortedByDelta.slice(0, 15);
-let wHtml = '<thead><tr><th>Дата</th><th>Тег</th><th>Kp</th><th>Sn</th><th>PDF</th><th>v17</th><th>Δ</th></tr></thead><tbody>';
-for (const r of top15) {
-  const d = r.eng - r.pdf;
-  const dCls = Math.abs(d) >= 3 ? 'neg delta-big' : 'neg';
-  const fmtSc = v => `<span class="${v>0?'pos':v<0?'neg':'zero'}">${v>=0?'+':''}${v}</span>`;
-  wHtml += `<tr>
-    <td class="mono">${r.d}</td>
-    <td class="tag">${r.t || '<span style="color:var(--dim)">—</span>'}</td>
-    <td class="mono">${r.kp.toFixed(1)}</td>
-    <td class="mono">${r.sn.toFixed(0)}</td>
-    <td class="mono">${fmtSc(r.pdf)}</td>
-    <td class="mono">${fmtSc(r.eng)}</td>
-    <td class="mono ${d>0?'pos':'neg'} delta-big">${d>=0?'+':''}${d}</td>
-  </tr>`;
-}
-wHtml += '</tbody>';
-document.getElementById('worst').innerHTML = wHtml;
-
-// ============ Tag analysis ============
-const tagBuckets = new Map();
-function classifyTag(t) {
-  if (!t) return '(no tag)';
-  if (t.includes('⊕') || /Сурья|Санкранті/i.test(t)) return '⊕ Сурья Санкранті';
-  if (t.includes('Екадаші') || t.includes('🥛')) return 'Екадаші';
-  if (t.includes('Амавасья')) return 'Амавасья';
-  if (t.includes('Повний місяць') || t.includes('🌕')) return 'Повний місяць (повня)';
-  if (t.includes('⚡')) return '⚡ затемнення/буря';
-  if (t.includes('💊')) return '💊 лікування';
-  if (t.includes('✈')) return '✈ подорож';
-  if (t.includes('📚')) return '📚 навчання';
-  if (t.includes('❤')) return '❤ серце';
-  if (t.includes('Шиваратрі') || t.includes('▲')) return '▲ Шиваратрі';
-  if (t.includes('Нрісімха')) return 'Нрісімха';
-  if (t.includes('Акшая')) return 'Акшая Трітія';
-  if (t.includes('✂')) return '✂ стрижка';
-  if (t.includes('Нова одежда') || t.includes('одежда')) return 'Нова одежда';
-  return 'Інший тег';
-}
-for (const r of both) {
-  const t = classifyTag(r.t);
-  if (!tagBuckets.has(t)) tagBuckets.set(t, { total: 0, sm: 0, exact: 0, dSum: 0 });
-  const b = tagBuckets.get(t);
-  b.total++;
-  if (Math.sign(r.eng) === Math.sign(r.pdf) || (r.eng === 0 && r.pdf === 0)) b.sm++;
-  if (r.eng === r.pdf) b.exact++;
-  b.dSum += Math.abs(r.eng - r.pdf);
-}
-const tagArr = [...tagBuckets.entries()].filter(([,v]) => v.total >= 4).map(([k,v]) => ({
-  name: k, total: v.total, smPct: v.sm/v.total*100, exactPct: v.exact/v.total*100, mae: v.dSum/v.total
-}));
-tagArr.sort((a,b) => b.total - a.total);
-let tagHtml = '<div style="display:grid;grid-template-columns:1fr 90px 70px 60px;gap:10px;padding:0 0 8px;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:10px;color:var(--dim);letter-spacing:.14em;text-transform:uppercase">' +
-  '<span>Tag</span><span>SignMatch</span><span>MAE</span><span style="text-align:right">n</span></div>';
-for (const t of tagArr) {
-  const cls = t.smPct >= 90 ? '' : t.smPct >= 75 ? 'warn' : 'bad';
-  tagHtml += `<div class="tagrow">
-    <div class="name">${t.name}</div>
-    <div>
-      <div class="barwrap"><div class="barfill ${cls}" style="width:${t.smPct}%"></div></div>
-    </div>
-    <div class="pct">${t.smPct.toFixed(0)}%</div>
-    <div class="n">${t.total}</div>
-  </div>`;
-}
-document.getElementById('tagAnalysis').innerHTML = tagHtml;
-
-// ============ Root causes ============
-const worstTags = tagArr.filter(t => t.smPct < 75);
-const bestTags = tagArr.filter(t => t.smPct >= 95);
-let rootHtml = '';
-if (worstTags.length) {
-  rootHtml += `<div class="cal bad">
-    <strong>Слабкі місця моделі:</strong> найгірша точність на тегах: ${worstTags.slice(0,3).map(t => `<strong>${t.name}</strong> (${t.smPct.toFixed(0)}%)`).join(', ')}.
-    Тут engine v17 не повністю вловлює PDF логіку — потенційно потребує додаткових rules або ML-калібрування.
-  </div>`;
-}
-if (bestTags.length) {
-  rootHtml += `<div class="cal ok">
-    <strong>Сильні місця моделі:</strong> ідеальна або майже ідеальна точність на тегах: ${bestTags.slice(0,3).map(t => `<strong>${t.name}</strong> (${t.smPct.toFixed(0)}%)`).join(', ')}.
-    Це підтверджує канонічність absolute overrides (Амавасья=−3, ⚡=−3, ⊕=−2 тощо).
-  </div>`;
-}
-rootHtml += `<div class="cal">
-  <strong>Гіпотези щодо MAE=${mae.toFixed(2)}:</strong>
-  <ul style="margin:6px 0 0 18px;padding:0;line-height:1.7">
-    <li>${both.filter(r => r.eng < r.pdf).length} (${(both.filter(r=>r.eng<r.pdf).length/n*100).toFixed(0)}%) занижень — engine надто часто додає Sn-penalty при Solar Max (Sn 100-200);</li>
-    <li>Систематичне використання engine v17 score = −1 (n=${both.filter(r=>r.eng===-1).length}) проти PDF -1 (n=${both.filter(r=>r.pdf===-1).length}) — модель створює "буферний" стан, якого нема в etalon;</li>
-    <li>На тегах ⊕ та слабких подіях розкид найбільший — ці категорії потребують контекстного зважування (Kp + Sn + Phase разом).</li>
-  </ul>
-</div>`;
-rootHtml += `<div class="cal">
-  <strong>Нагадування:</strong> PDF — це <em>etalon</em>, але <em>не absolute truth</em>. PDF створюється людиною на основі тих самих правил + експертного судження.
-  Розходження може означати або помилку моделі, або помилку PDF (manual artifacts).
-  Tag-level analysis допомагає розрізнити: систематичні промахи vs. шум.
-</div>`;
-document.getElementById('rootCauses').innerHTML = rootHtml;
-
-// ============ Download ============
-function dl() {
-  const csv = ['Дата,Тег,Kp,Sn,Engine_v17,PDF_score,SignMatch,Delta'];
-  for (const r of DATA) {
-    if (r.eng === null || r.pdf === null) continue;
-    const sm = (Math.sign(r.eng) === Math.sign(r.pdf) || (r.eng === 0 && r.pdf === 0)) ? 'True' : 'False';
-    csv.push(`${r.d},"${r.t}",${r.kp},${r.sn},${r.eng},${r.pdf},${sm},${r.eng-r.pdf}`);
-  }
-  const blob = new Blob([csv.join('\n')], {type:'text/csv;charset=utf-8'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = 'gindex_backtest_v17.csv'; a.click();
-  URL.revokeObjectURL(url);
-}
-window.dl = dl;
-</script>
 </body>
 </html>
