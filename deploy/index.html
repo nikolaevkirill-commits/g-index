@@ -1200,15 +1200,17 @@ body.simple-mode .col-hide-mobile {
         <button id="pushBtn" onclick="PushModal.show()"
           title="Push-сповіщення (Plus+)"
           style="background:#1e2a44;color:#9bb1dc;border:1px solid var(--border2);font-size:11px;padding:3px 9px;border-radius:6px;cursor:pointer">🔔</button>
-        <button id="btnRefresh">↻ Оновити</button>
+        <button id="btnRefresh" aria-label="Оновити дані з NOAA">↻ Оновити</button>
         <button id="btnHardReset" title="Скинути кеш SW і перезавантажити — якщо бачиш стару версію"
+          aria-label="Очистити кеш Service Worker і перезавантажити"
           onclick="(async function(){try{if('serviceWorker' in navigator){const regs=await navigator.serviceWorker.getRegistrations();await Promise.all(regs.map(r=>r.unregister()));}if('caches' in window){const keys=await caches.keys();await Promise.all(keys.map(k=>caches.delete(k)));}location.reload(true);}catch(e){alert('Reset error: '+e.message);}})()"
           style="background:#2a1a1a;color:#ff9f9f;border:1px solid #4a2a2a;font-size:11px;padding:3px 8px;border-radius:6px">🗑 Кеш</button>
-        <button id="btnShare" title="Поділитись поточним G-станом" onclick="shareGState()" style="background:#1e2a44;color:#9bb1dc;border:1px solid var(--border2)">📤</button>
-        <button class="lang-btn active" id="btnLang" title="Switch language / Змінити мову">UA</button>
+        <button id="btnShare" title="Поділитись поточним G-станом" aria-label="Поділитись" onclick="shareGState()" style="background:#1e2a44;color:#9bb1dc;border:1px solid var(--border2)">📤</button>
+        <button class="lang-btn active" id="btnLang" title="Switch language / Змінити мову" aria-label="Змінити мову інтерфейсу">UA</button>
         <button class="lang-btn" id="btnSimpleMode" title="Простий режим (тiльки Hero) / Експертний режим"
+          aria-label="Перемкнути простий/експертний режим"
           style="border-color:var(--faint);color:var(--dim);font-size:12px">👁</button>
-        <button class="lang-btn" id="btnG2Watch" style="border-color:var(--faint);color:var(--dim);font-size:12px" title="Симулятор G — внизу сторінки">🧮</button>
+        <button class="lang-btn" id="btnG2Watch" style="border-color:var(--faint);color:var(--dim);font-size:12px" title="Симулятор G — внизу сторінки" aria-label="Відкрити симулятор G">🧮</button>
         <div class="autoref-bar" style="margin-top:0">
           <span>Авто:</span>
           <select class="autoref-sel" id="selInterval">
@@ -1361,7 +1363,7 @@ body.simple-mode .col-hide-mobile {
               <circle class="ring-val" id="heroRingVal" cx="50" cy="50" r="45"
                 stroke="#9bb1dc" stroke-dasharray="283" stroke-dashoffset="140"/>
             </svg>
-            <span id="heroG" class="gbadge">G …</span>
+            <span id="heroG" class="gbadge" role="status" aria-live="polite" aria-label="Поточний G-індекс">G …</span>
             <span id="heroTrend">—</span>
           </div>
         </div>
@@ -1680,7 +1682,7 @@ body.simple-mode .col-hide-mobile {
         </div>
 
         <div class="gline">
-          <span id="nowG" class="gbadge" style="font-size:28px;padding:10px 18px;min-width:140px">G …</span>
+          <span id="nowG" class="gbadge" role="status" aria-live="polite" aria-label="G-індекс зараз" style="font-size:28px;padding:10px 18px;min-width:140px">G …</span>
           <div id="nowGcat" class="gcat">—</div>
         </div>
 
@@ -10802,6 +10804,8 @@ function renderPlanetAnimation(kp, moonPhaseDeg, G, panchCtx, astroCtx) {
   let t0 = null;
 
   function draw(ts) {
+    // v88.7+ (perf audit): pause heavy planet animation when tab hidden (battery saving)
+    if (document.hidden) { _planetAnimFrame = requestAnimationFrame(draw); return; }
     if (!t0) t0 = ts;
     const dt = (ts - t0) / 1000; // секунди від старту
     // v57: recalc W кожен кадр для підтримки повороту екрану
@@ -12343,6 +12347,8 @@ function startGFlowAnimation(G, kp, ai) {
   if(_gFlowAnimId) cancelAnimationFrame(_gFlowAnimId);
   _gFlowState = {G, kp, ai, ...initGFlowParticles(kp, ai)};
   function loop() {
+    // v88.7+ (perf audit): pause when tab hidden
+    if (document.hidden) { _gFlowAnimId = requestAnimationFrame(loop); return; }
     renderGFlowCanvas(_gFlowState.G, _gFlowState.kp, _gFlowState.ai);
     _gFlowAnimId = requestAnimationFrame(loop);
   }
@@ -14612,7 +14618,7 @@ function initWowParticles(){
   function resize(){const r=host.getBoundingClientRect();c.width=Math.max(200,Math.floor(r.width));c.height=Math.max(160,Math.floor(r.height));
   parts=Array.from({length:30},()=>({x:Math.random()*c.width,y:Math.random()*c.height,r:Math.random()*1.4+.4,v:Math.random()*.15+.04,a:Math.random()*Math.PI*2}))}
   let _wowPVisible=false;if(window.IntersectionObserver){new IntersectionObserver(e=>{_wowPVisible=e[0].isIntersecting},{threshold:0}).observe(host)}
-  function draw(){if(!_wowPVisible){requestAnimationFrame(draw);return}ctx.clearRect(0,0,c.width,c.height);const kp=window._lastKpForWow||2;const spd=0.5+kp*0.2;for(const p of parts){p.x+=Math.cos(p.a)*p.v*spd;p.y+=Math.sin(p.a)*p.v*spd;if(p.x<0)p.x=c.width;if(p.x>c.width)p.x=0;if(p.y<0)p.y=c.height;if(p.y>c.height)p.y=0;const br=kp>=5?'rgba(255,130,130,.3)':'rgba(255,255,255,.2)';ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=br;ctx.fill()}requestAnimationFrame(draw)}
+  function draw(){if(!_wowPVisible || document.hidden){requestAnimationFrame(draw);return}ctx.clearRect(0,0,c.width,c.height);const kp=window._lastKpForWow||2;const spd=0.5+kp*0.2;for(const p of parts){p.x+=Math.cos(p.a)*p.v*spd;p.y+=Math.sin(p.a)*p.v*spd;if(p.x<0)p.x=c.width;if(p.x>c.width)p.x=0;if(p.y<0)p.y=c.height;if(p.y>c.height)p.y=0;const br=kp>=5?'rgba(255,130,130,.3)':'rgba(255,255,255,.2)';ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=br;ctx.fill()}requestAnimationFrame(draw)}
   resize();draw();window.addEventListener('resize',resize);
 }
 
@@ -14649,13 +14655,14 @@ function initHeroField(){
   const c=document.getElementById('heroField'),host=document.getElementById('heroCard');
   if(!c||!host)return;const ctx=c.getContext('2d');let parts=[];let _heroFieldVisible=true;
   // v74: IntersectionObserver to pause when offscreen
+  // v88.7+ (perf audit): also pause when tab hidden (battery saving on mobile)
   if(window.IntersectionObserver){
     new IntersectionObserver(entries=>{_heroFieldVisible=entries[0].isIntersecting},{threshold:0.1}).observe(host);
   }
   function resize(){const r=host.getBoundingClientRect();c.width=Math.max(300,Math.floor(r.width));c.height=Math.max(100,Math.floor(r.height));
   parts=Array.from({length:22},()=>({x:Math.random()*c.width,y:Math.random()*c.height,r:Math.random()*1.6+.4,vx:Math.random()*.2+.05,vy:(Math.random()-.5)*.06}))}
   function draw(){
-    if(!_heroFieldVisible){requestAnimationFrame(draw);return}
+    if(!_heroFieldVisible || document.hidden){requestAnimationFrame(draw);return}
     const g=window._heroGprev||0;const kp=window._lastKpForWow||2;
     const col=wowColorByG(g);const spd=g<=-2.5?2.2:g<=-0.5?1.4:1;
     ctx.clearRect(0,0,c.width,c.height);
