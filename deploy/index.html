@@ -1881,12 +1881,11 @@ body.simple-mode .col-hide-mobile {
         <span class="hint" tabindex="0" style="cursor:help;font-size:11px;color:var(--dim);border-bottom:1px dotted #2a3b61;margin-left:8px">? легенда G<span class="hint-pop" style="white-space:pre;font-size:12px;text-align:left">Категорії G = Kp − 2 + ΣAᵢ:
 Зсув «−2» → Kp=2 (спокійне поле) = G≈0
 
-🟢 G ≥ +2   Особливо сприятливий — оптимально для дій
-🟢 G = +1   Помірно сприятливий — допустимо
-⚪ G =  0   Нейтральний — стандартний режим
-🟡 G = −1   Помірно несприятливий — обережно
-🟠 G = −2   Несприятливий — мінімізувати ризики
-🔴 G ≤ −3   Особливо несприятливий — утриматись
+🟢 G ≥ +1.5    Сприятливий — оптимально для дій
+🟢 G ∈ [+0.5, +1.5)   Помірно сприятливий — допустимо
+⚪ G ∈ [−1.0, +0.5)   Нейтральний — стандартний режим
+🟠 G ∈ (−2.5, −1.0)   Помірно несприятливий — обережно
+🔴 G ≤ −2.5    Несприятливий — утриматись
 
 ⚠ При Kp ≥ 5 — попередження незалежно від G
 Kp: 3-год індекс геомагнітної активності (0–9)
@@ -1915,12 +1914,11 @@ NOAA публікує лише 27-day Ap outlook (інтегрована гео�
           <span class="hint" tabindex="0" style="cursor:help;font-size:11px;color:var(--dim);border-bottom:1px dotted #2a3b61">? легенда G<span class="hint-pop" style="white-space:pre;font-size:12px;text-align:left">Категорії G = Kp − 2 + ΣAᵢ:
 Зсув «−2» → Kp=2 (спокійне поле) = G≈0
 
-🟢 G ≥ +2   Особливо сприятливий
-🟢 G = +1   Помірно сприятливий
-⚪ G =  0   Нейтральний
-🟡 G = −1   Помірно несприятливий
-🟠 G = −2   Несприятливий
-🔴 G ≤ −3   Особливо несприятливий
+🟢 G ≥ +1.5    Сприятливий
+🟢 G ∈ [+0.5, +1.5)   Помірно сприятливий
+⚪ G ∈ [−1.0, +0.5)   Нейтральний
+🟠 G ∈ (−2.5, −1.0)   Помірно несприятливий
+🔴 G ≤ −2.5    Несприятливий
 
 ⚠ При Kp ≥ 5 — попередження незалежно від G</span></span>
           <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-left:auto">
@@ -2136,8 +2134,14 @@ NOAA публікує лише 27-day Ap outlook (інтегрована гео�
         <p>Множник <strong>PCL_SCALE = 0.4</strong> для Pᵢ має статус <em>R&D / Advisory</em> і потребує емпіричного калібрування на операційних даних.</p>
         <p class="small" style="color:var(--muted)">ℹ Функції, реалізовані лише у <strong>forecast_engine v17</strong> (Python/Excel), але <em>відсутні</em> у браузерному дашборді: автрегресійний контекст (<code>prev_score</code>), довгострокові транзити Jupiter/Rahu, manual Excel-теги (ритуали/затемнення-маркери). Значення G у дашборді та у бюлетені можуть відрізнятись на ±0.3–0.5.</p>
         <p>Tithi, що вже враховані в Lᵢ (Пурніма, Амавасья) або eᵢ (Екадаші), виключені з Pᵢ для уникнення подвійного рахування.</p>
+        <p class="small" style="color:var(--muted);margin-top:6px;border-left:2px solid #4a5d8e;padding-left:8px">📐 <strong>Engine v14.2 calibration note:</strong> Деякі score-значення відрізняються від theoretical Posibnyk через калібрування на n=280 PDF v5.1 dataset:
+        <br>• <strong>Покнrima (idx 14)</strong>: code score=0 (нейтральна), Posibnyk=−3 (Cajochen 2013) — engine v14.2 BUG-1 fix; при Kp≥7 додається Lᵢ підсилення
+        <br>• <strong>Chaturdashi (idx 13, 28)</strong>: code score=0, Posibnyk=−2 (Рікта) — calibrated for "обережно/бойовий" semantics
+        <br>• <strong>Nakshatra Стала/М'яка/Рухома</strong>: code 1/0/0, Posibnyk ++/+/+ — calibration knock-down ~33% amplitude
+        <br>Калібровочні рішення зафіксовані у V3 freeze (2026-05-03 → ~2026-08-01); revision у V19 backlog якщо outcome-based validation покаже потребу.</p>
 
-        <p style="font-weight:600;color:#cfe0ff;margin-bottom:4px">Категорії G‑індексу</p>
+        <p style="font-weight:600;color:#cfe0ff;margin-bottom:4px">Категорії G‑індексу (discrete, engine v17 pill)</p>
+        <p class="small" style="color:var(--muted);margin:0 0 6px">Hero G — continuous score (raw composite). Engine pill і ця табличка — discrete classifier {−3..+3}. Boundary regions у Hero (continuous): G≥+1.5 favorable; +0.5..+1.5 good; −1..+0.5 neutral; −2.5..−1 unstable; ≤−2.5 tense.</p>
         <table style="font-size:12px;margin:6px 0 10px;border:1px solid #1e2f52;border-radius:6px;overflow:hidden">
           <thead><tr style="background:#0c1526">
             <th style="padding:4px 8px;text-align:left;color:#7a9acc">G</th>
@@ -3554,7 +3558,7 @@ function escapeHtml(s){
 
 // ---------------------------- Локальна фаза Місяця --------------------------
 const SYNODIC = 29.530588853; // діб
-const NEWMOON_EPOCH_JD = 2451550.1; // 2000-01-06 18:14 UT
+const NEWMOON_EPOCH_JD = 2451550.26; // 2000-01-06 18:14 UT (Astronomical Almanac)
 function toJD(date){ return date.getTime()/86400000 + 2440587.5; }
 function moonAgeDays_simple(date){
   const jd = toJD(date);
@@ -6296,8 +6300,8 @@ const TITHI_NOTE = [
   'Транспорт, зрошення','Змішана; уникати весіль','Негативна для більшості дій',
   'Угоди, оголошення','Піст і духовна практика','Дуже сприятлива',
   'Кохання і мистецтво','Бойові справи — обережно','Повня: нейтральна 0 (v14.2)',
-  'Перший день темної половини','','','Рікта','',' ',' ','Змішана','Рікта (темна)',
-  'Угоди','Піст','Сприятлива','','Перед Амавасьєю','Новоління: −3'
+  'Перший день темної половини','Навчання, будівництво (темна)','Перемога, початок справ (темна)','Рікта','Лікування, дипломатія (темна)','Музика, подорожі (темна)','Транспорт, зрошення (темна)','Змішана','Рікта (темна)',
+  'Угоди','Піст','Сприятлива','Кохання і мистецтво (темна)','Перед Амавасьєю','Новоління: −3'
 ];
 
 // Vara: день тижня
@@ -6419,15 +6423,31 @@ function computePanchanga(dateUTC){
   }
 
   // Rahu Kalam: SR + segment * order[weekday], segment = dayLen/8
-  // Апроксимація SR/SS з корекцією по довготі (_userLon)
+  // v88.7+ (deep audit): Spencer 1971 + EoT + refraction (sync з calcSunTimes precision ±2-5 хв)
   const doy = Math.floor((dateUTC - new Date(Date.UTC(dateUTC.getUTCFullYear(),0,1)))/86400000);
-  const decl = 23.45 * Math.sin((360/365*(doy-81)) * Math.PI/180); // схилення Сонця
+  const _gamma = 2 * Math.PI * (doy - 1) / 365;
+  const decl = (180/Math.PI) * (
+      0.006918
+    - 0.399912 * Math.cos(_gamma)
+    + 0.070257 * Math.sin(_gamma)
+    - 0.006758 * Math.cos(2*_gamma)
+    + 0.000907 * Math.sin(2*_gamma)
+    - 0.002697 * Math.cos(3*_gamma)
+    + 0.001480 * Math.sin(3*_gamma)
+  );
   const lat = _userLat;
-  const cosHA = -Math.tan(lat*Math.PI/180)*Math.tan(decl*Math.PI/180);
+  // EoT correction (≈±16 min year-round) + zenith 90.833° (sun radius + refraction)
+  const _Brad = (360/365) * (doy - 81) * Math.PI / 180;
+  const _eqTimeMin = 9.87 * Math.sin(2*_Brad) - 7.53 * Math.cos(_Brad) - 1.5 * Math.sin(_Brad);
+  const _eqHours = _eqTimeMin / 60;
+  const _zenRad = 90.833 * Math.PI / 180;
+  const _sinLat = Math.sin(lat*Math.PI/180), _cosLat = Math.cos(lat*Math.PI/180);
+  const _sinDec = Math.sin(decl*Math.PI/180), _cosDec = Math.cos(decl*Math.PI/180);
+  const cosHA = (Math.cos(_zenRad) - _sinLat*_sinDec) / (_cosLat*_cosDec);
   const HA = Math.acos(Math.max(-1,Math.min(1,cosHA))) * 180/Math.PI;
   const lonOff = _userLon / 15;
-  const srH  = (12 - lonOff) - HA/15; // схід, UTC
-  const ssH  = (12 - lonOff) + HA/15; // захід, UTC
+  const srH  = (12 - lonOff) - HA/15 - _eqHours; // схід, UTC
+  const ssH  = (12 - lonOff) + HA/15 - _eqHours; // захід, UTC
   const dayLenH = ssH - srH;
   const segH = dayLenH / 8;
   const RAHU_ORDER = [7,1,6,4,5,3,2]; // Нд=7,Пн=1,Вт=6,Ср=4,Чт=5,Пт=3,Сб=2
@@ -10480,7 +10500,17 @@ const HORA_DAY_LORD = [0,3,6,2,5,1,4]; // Sun=Сонце,Mon=Місяць,Tue=М
 // Спільна функція: час сходу/заходу Сонця (UTC-годинник) для заданого дня і широти
 function calcSunTimes(dateUTC) {
   const doy = Math.floor((dateUTC - new Date(Date.UTC(dateUTC.getUTCFullYear(),0,1)))/86400000);
-  const decl = 23.45 * Math.sin((360/365*(doy-81)) * Math.PI/180);
+  // v88.7+ (deep audit): Spencer 1971 series — accuracy ±0.05° (vs Cooper 1969 ±0.6°)
+  const _gamma = 2 * Math.PI * (doy - 1) / 365;
+  const decl = (180/Math.PI) * (
+      0.006918
+    - 0.399912 * Math.cos(_gamma)
+    + 0.070257 * Math.sin(_gamma)
+    - 0.006758 * Math.cos(2*_gamma)
+    + 0.000907 * Math.sin(2*_gamma)
+    - 0.002697 * Math.cos(3*_gamma)
+    + 0.001480 * Math.sin(3*_gamma)
+  );
   const lat = _userLat;
   // v87.90 P4 fix: equation of time + atmospheric refraction.
   // Раніше: cosHA для горизонту 90° + без EoT → похибка ±15-20 хв (критично для Hora boundary).
