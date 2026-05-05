@@ -25,11 +25,25 @@
   <meta name="theme-color" content="#0b1220" />
   <meta name="mobile-web-app-capable" content="yes" />
 
+  <!-- v88.7.1 (deep audit): preconnect для critical NOAA endpoints — зменшує cold-load latency ~200ms -->
+  <link rel="preconnect" href="https://services.swpc.noaa.gov" crossorigin />
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+  <link rel="dns-prefetch" href="https://api.allorigins.win" />
+  <link rel="dns-prefetch" href="https://corsproxy.io" />
+
   <!-- SEO / share -->
   <meta name="description" content="Інтегральний G-індекс: геомагнітна активність + Jyotish Panchanga. Advisory / R&D." />
   <meta property="og:title" content="G-Index Dashboard" />
   <meta property="og:description" content="Геомагнітна активність + Panchanga у реальному часі" />
   <meta property="og:type" content="website" />
+  <!-- v88.7.1 (deep audit): full OG card -->
+  <meta property="og:url" content="https://nikolaevkirill-commits.github.io/g-index/deploy/" />
+  <meta property="og:image" content="https://nikolaevkirill-commits.github.io/g-index/deploy/icon512.png" />
+  <meta property="og:locale" content="uk_UA" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="G-Index Dashboard" />
+  <meta name="twitter:description" content="Геомагнітна активність + Panchanga у реальному часі. Advisory / R&D." />
+  <meta name="twitter:image" content="https://nikolaevkirill-commits.github.io/g-index/deploy/icon512.png" />
 
   <!-- v88.6.9: Supabase SDK loading видалено — auth мiгрував на Cloudflare Worker (GAuth).
        Push backend (push_subscriptions) тимчасово inert через SUPA shim — буде вiдновлено
@@ -1172,6 +1186,39 @@ body.simple-mode .col-hide-mobile {
   display: none !important;
 }
 
+/* v88.7.1 (deep audit): Print styles — для PDF export / документів */
+@media print {
+  body { background: #fff !important; color: #000 !important; }
+  header, footer { background: #fff !important; color: #000 !important; }
+  .card, .panchanga-card, [class*="card"] {
+    background: #fff !important;
+    color: #000 !important;
+    border: 1px solid #ccc !important;
+    box-shadow: none !important;
+    page-break-inside: avoid;
+  }
+  /* Сховати інтерактивні елементи що нерелевантні у print */
+  button, .lang-btn, #btnRefresh, #btnHardReset, #btnShare, #btnLang,
+  #btnSimpleMode, #btnG2Watch, .hint-pop, canvas, video,
+  #devMenu, .skip-link, nav {
+    display: none !important;
+  }
+  /* Розкрити всі <details> для повної інформації */
+  details { display: block !important; }
+  details > summary { display: block !important; font-weight: bold; }
+  details[open] > *:not(summary) { display: block !important; }
+  details:not([open]) > *:not(summary) { display: block !important; }
+  /* Hero стається чорним текстом на білому */
+  #heroG, #nowG { color: #000 !important; }
+  a { color: #000 !important; text-decoration: underline; }
+  table { border-collapse: collapse; }
+  table, th, td { border: 1px solid #ccc !important; color: #000 !important; }
+  /* Avoid breaking inside critical blocks */
+  .gbadge, .verdict-banner { page-break-inside: avoid; }
+  /* Footer URL: показуємо у print */
+  footer::after { content: " — https://nikolaevkirill-commits.github.io/g-index/"; font-size: 10px; color: #666; }
+}
+
 </style>
 
   <!-- Астро бібліотека: фаза Місяця -->
@@ -1184,6 +1231,14 @@ body.simple-mode .col-hide-mobile {
   <!-- v88.6.9: secondary Supabase load видалено разом з primary loader (див. v88.6.9 cleanup). -->
 </head>
 <body>
+  <noscript>
+    <div style="background:#1a2540;color:#cfe0ff;padding:20px;margin:20px;border-radius:12px;border:1px solid #2a3b61;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;line-height:1.6">
+      <h2 style="color:#fca474;margin:0 0 8px">⚠ JavaScript потрібен</h2>
+      <p>G-Index Dashboard — інтерактивний інструмент який потребує JavaScript для обчислення Panchanga, Meeus astronomy і fetch NOAA даних у реальному часі.</p>
+      <p>Будь ласка, увімкніть JavaScript у налаштуваннях браузера або використайте сучасний браузер (Chrome/Firefox/Safari/Edge).</p>
+    </div>
+  </noscript>
+  <a href="#mainContent" class="skip-link" style="position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden" onfocus="this.style.position='fixed';this.style.left='10px';this.style.top='10px';this.style.width='auto';this.style.height='auto';this.style.padding='8px 16px';this.style.background='var(--ok)';this.style.color='#000';this.style.zIndex='99999';this.style.borderRadius='6px'" onblur="this.style.position='absolute';this.style.left='-10000px';this.style.width='1px';this.style.height='1px'">Перейти до основного контенту</a>
   <header>
     <div class="flex" style="gap:12px">
       <div>
@@ -1241,7 +1296,7 @@ body.simple-mode .col-hide-mobile {
     </div>
   </div>
 
-  <main>
+  <main id="mainContent">
     <!-- ═══ SCIENCE BAR ═══ -->
     <div id="scienceBar">
       <!-- Первинні: завжди видно -->
@@ -3674,6 +3729,9 @@ const _eclipseCatalogWarned = new Set(); // один warn на рік
 // Проксі для CORS (fallback)
 // v88.6.9: Cloudflare Worker priority (deploy див. cloudflare-worker-noaa-proxy.js).
 //        Public free proxies нерeliable; власний Worker = robust + ~$0/міс.
+// v88.7.1 (deep audit): URL = placeholder. Якщо Worker не deploy'нутий — fallback chain
+//        (allorigins → corsproxy.io → corsfix → thingproxy) активується автоматично.
+//        Для production deploy: replace 'YOUR_USERNAME' на реальний Cloudflare account.
 const NOAA_WORKER_URL = 'https://gindex-noaa-proxy.YOUR_USERNAME.workers.dev/?url=';
 function fetchWithTimeout(url, ms=5000){
   const ctrl = new AbortController();
