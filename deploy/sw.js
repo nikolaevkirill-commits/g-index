@@ -1,8 +1,12 @@
-// G-Index Service Worker v88.6.14 (V25-fu31: MCC added + final audit)
-// Cache strategy: stale-while-revalidate для shell, network-first для data
+// G-Index Service Worker v88.7.0 (deep audit: shell stale-while-revalidate + version sync)
+// v88.7.0 changes (deep audit fixes):
+//   1. Comment-reality match: shell тепер реально stale-while-revalidate (не cache-first)
+//   2. Cache key bumped до v88-7-0 для invalidation старих cache при deploy
+//   3. backtest.html додано до SHELL_FILES
+//   4. cache.put awaited перед SW_FRESH_DATA notify (race fix)
 
-const SHELL_CACHE = 'g-index-shell-v88-6-14-v25fu31';
-const DATA_CACHE = 'g-index-data-v88-6-14-v25fu31';
+const SHELL_CACHE = 'g-index-shell-v88-7-0';
+const DATA_CACHE = 'g-index-data-v88-7-0';
 
 const SHELL_FILES = [
   './',
@@ -10,9 +14,8 @@ const SHELL_FILES = [
   './manifest.json',
   './icon192.png',
   './icon512.png',
+  './backtest.html',
 ];
-
-
 
 // V25-fu18: Service Worker error logging для observability
 self.addEventListener('error', (event) => {
@@ -48,19 +51,17 @@ self.addEventListener('fetch', (event) => {
   if (url.pathname.endsWith('engine_scores.json')) {
     event.respondWith(
       fetch(event.request)
-        .then((resp) => {
+        .then(async (resp) => {
           if (resp.ok) {
             const clone = resp.clone();
-            caches.open(DATA_CACHE).then((cache) => 
-              cache.put(event.request, clone)
-            );
-            // Notify клієнтів про нові data
-            self.clients.matchAll().then((clients) => {
-              clients.forEach((c) => c.postMessage({
-                type: 'SW_FRESH_DATA',
-                fetchedAt: Date.now(),
-              }));
-            });
+            // v88.7.0 race fix: чекаємо на cache.put перед notify клієнтів
+            const cache = await caches.open(DATA_CACHE);
+            await cache.put(event.request, clone);
+            const clients = await self.clients.matchAll();
+            clients.forEach((c) => c.postMessage({
+              type: 'SW_FRESH_DATA',
+              fetchedAt: Date.now(),
+            }));
           }
           return resp;
         })
@@ -84,21 +85,35 @@ self.addEventListener('fetch', (event) => {
     return;
   }
   
-  // Shell files — cache first
-  event.respondWith(
-    caches.match(event.request).then((cached) => {
-      if (cached) return cached;
-      return fetch(event.request).then((resp) => {
-        if (resp.ok && SHELL_FILES.some(f => url.pathname.endsWith(f.replace('./', '')))) {
-          const clone = resp.clone();
-          caches.open(SHELL_CACHE).then((cache) => 
-            cache.put(event.request, clone)
-          );
-        }
-        return resp;
-      });
-    })
-  );
+  // v88.7.0: Shell files — TRUE stale-while-revalidate (раніше було cache-first → stale forever)
+  // Match по pathname (не повний URL), бо origin може варіюватись (localhost vs github.io)
+  const isShell = SHELL_FILES.some(f => {
+    const normalized = f === './' ? '/' : f.replace('./', '/');
+    return url.pathname === normalized || url.pathname.endsWith(normalized);
+  });
+  
+  if (isShell) {
+    event.respondWith(
+      caches.match(event.request).then((cached) => {
+        // Background revalidation (паралельно з cache return)
+        const fetchPromise = fetch(event.request).then((resp) => {
+          if (resp.ok) {
+            const clone = resp.clone();
+            caches.open(SHELL_CACHE).then((cache) => cache.put(event.request, clone));
+          }
+          return resp;
+        }).catch(() => null); // network may fail offline, що OK — cache fallback
+        
+        // Якщо cache є — віддаємо одразу (instant load), 
+        // паралельно fetchPromise оновлює cache для НАСТУПНОГО reload.
+        // Якщо cache немає — чекаємо мережу.
+        return cached || fetchPromise;
+      })
+    );
+    return;
+  }
+  
+  // Інші запити — passthrough (не cache)
 });
 
 // Push notifications support (v88+)
@@ -107,16 +122,20 @@ self.addEventListener('push', (event) => {
   let data = {};
   try { data = event.data.json(); } catch (e) { data = { title: 'G-Index', body: event.data.text() }; }
   
+  // v88.7.0 hardening: clamp текстові поля до safe lengths (prevent abuse)
+  const safeTitle = String(data.title || 'G-Index').slice(0, 80);
+  const safeBody = String(data.body || '').slice(0, 200);
+  
   event.waitUntil(
-    self.registration.showNotification(data.title || 'G-Index', {
-      body: data.body || '',
+    self.registration.showNotification(safeTitle, {
+      body: safeBody,
       icon: './icon192.png',
       badge: './icon192.png',
       data: data.url || './',
       tag: data.tag || 'g-index-default',  // V25-fu14: dedupe — replaces previous notification з same tag
       renotify: data.renotify === true,    // V25-fu14: notify only if explicitly requested (default: silent replace)
       requireInteraction: data.priority === 'high',  // High-priority stays until user interacts
-      actions: data.actions || [],         // Allow custom action buttons
+      actions: Array.isArray(data.actions) ? data.actions.slice(0, 2) : [], // v88.7.0: type-check + max 2 actions
     })
   );
 });

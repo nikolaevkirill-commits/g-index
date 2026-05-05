@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.6.13</title>
+  <title>G-Index — Космофізичний дашборд v88.7.0</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -8861,22 +8861,40 @@ const GLOBAL_STATES = {
   }
 };
 
-function classifyStateByG(g) {
+function classifyStateByG(g, kp) {
   // v87.90 fix: узгоджено з classForG (порог bad: g≤-2.5, ok: g≥0.5).
-  // Раніше були різні пороги — при g=-2.0 одна казала "warn"/жовтий, інша "tense"/червоний.
+  // v88.7+ (deep audit): storm override. Якщо Kp≥5 (G1+ буря) — Hero verdict
+  // не може бути "favorable"/"good", бо Kp пере-overridе будь-який позитивний Pi.
+  // UX gap fix: раніше Kp=5 + Pi=-0.7 → G=+2.3 → "favorable" (зелений) +
+  // одночасно alert "G1 БУРЯ" (червоний). Користувач отримував суперечливі сигнали.
+  // Тепер: при Kp≥7 (G3+ severe) → max 'unstable'; Kp≥5 (G1-G2) → max 'neutral'.
   if (!isFinite(g)) return 'neutral';
-  if (g >= 1.5) return 'favorable';
-  if (g >= 0.5) return 'good';      // узгоджено з g-ok (зелений)
-  if (g >= -1) return 'neutral';
-  if (g > -2.5) return 'unstable';
-  return 'tense';                    // узгоджено з g-bad (червоний) при g≤-2.5
+  let cls;
+  if (g >= 1.5) cls = 'favorable';
+  else if (g >= 0.5) cls = 'good';      // узгоджено з g-ok (зелений)
+  else if (g >= -1) cls = 'neutral';
+  else if (g > -2.5) cls = 'unstable';
+  else cls = 'tense';                    // узгоджено з g-bad (червоний) при g≤-2.5
+  // Storm degradation (only if kp explicitly passed)
+  if (isFinite(kp)) {
+    if (kp >= 7) {
+      // G3+ severe → cap at unstable max
+      if (cls === 'favorable' || cls === 'good' || cls === 'neutral') cls = 'unstable';
+    } else if (kp >= 5) {
+      // G1-G2 → cap at neutral max
+      if (cls === 'favorable' || cls === 'good') cls = 'neutral';
+    }
+  }
+  return cls;
 }
 
 // v85b-F6: single-source decision resolver (wraps classifyStateByG + GLOBAL_STATES).
 // Гарантує, що hero / personal / timing читають рішення з одного джерела.
 // v85b-F10.3 (fix): title читав неіснуюче поле st.verdict → fallback до st.headline (реально є в GLOBAL_STATES)
-function resolveDecisionByG(g) {
-  const stKey = classifyStateByG(g);
+function resolveDecisionByG(g, kp) {
+  // v88.7+: optional kp triggers storm-aware gating in classifyStateByG.
+  // Backward-compatible: existing callsites без kp працюють як раніше.
+  const stKey = classifyStateByG(g, kp);
   const st = GLOBAL_STATES[stKey] || GLOBAL_STATES.neutral;
   return {
     mode: stKey === 'favorable' || stKey === 'good' ? 'action'
@@ -9211,9 +9229,10 @@ function buildDashboardState(){
   const g = isFinite(_ui.gNow) ? _ui.gNow : NaN;
   const kp = _ui.kpNow;
   const ai = _ui.ai || {};
-  const stKey = classifyStateByG(g);
+  // v88.7+ (deep audit): pass kp for storm-aware classification (G1+ buря override)
+  const stKey = classifyStateByG(g, kp);
   const st = GLOBAL_STATES[stKey] || GLOBAL_STATES.neutral;
-  const decision = resolveDecisionByG(g); // v85b-F6: single-source decision
+  const decision = resolveDecisionByG(g, kp); // v85b-F6 single-source + v88.7 storm gating
   const pc = window._lastPanchCtx;
   const topDrv = window._lastTopDrivers || computeTopDrivers(ai, kp);
   const delta = _getGDelta();
@@ -9743,7 +9762,16 @@ function renderCounterfactual(){
   let _scenHtml = `<div style="font-size:11px;color:var(--dim);margin-bottom:6px">${(typeof t === 'function' ? t('counterfactualHeader') : 'Що було б, якби один компонент був інакшим:')}</div>`;
   for(const _s of _scenarios){
     const _newG = _gNow + _s.delta;
-    const _col = _newG >= 1 ? 'var(--ok)' : _newG >= -1 ? '#ffd77a' : 'var(--bad)';
+    // v88.7+ (deep audit): scenarios "storm" і "calm" перевизначають Kp,
+    // тому колір має враховувати модифікований Kp (G3+ storm не може бути зеленим).
+    let _scenKp = _kpNow;
+    if (_s.label && _s.label.includes('Kp=7')) _scenKp = 7;
+    else if (_s.label && _s.label.includes('Kp був 1')) _scenKp = 1;
+    const _scenCls = classifyStateByG(_newG, _scenKp);
+    const _col = (_scenCls === 'favorable' || _scenCls === 'good') ? 'var(--ok)'
+               : _scenCls === 'neutral' ? '#ffd77a'
+               : _scenCls === 'unstable' ? 'var(--warn)'
+               : 'var(--bad)';
     const _dCol = _s.delta > 0.1 ? 'var(--ok)' : _s.delta < -0.1 ? 'var(--bad)' : 'var(--dim)';
     // v87.90: clean format — нуль як "0" замість "+0.0"
     const _newGStr = Math.abs(_newG) < 0.005 ? '0.00' : (_newG > 0 ? '+' : '') + _newG.toFixed(2);
