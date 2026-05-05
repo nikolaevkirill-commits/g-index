@@ -2134,7 +2134,8 @@ NOAA публікує лише 27-day Ap outlook (інтегрована гео�
         </table>
         <p>Kp ∈ [0;&nbsp;9], ΣAᵢ реально лежить у межах <strong>[−10;&nbsp;+9]</strong> (при екстремальному накладанні затемнень, ICS‑подій та несприятливої Панчанги), робочий діапазон за нормальних умов: <strong>ΣAᵢ ≈ −4 … +4</strong>. Теоретичний G ∈ [−12;&nbsp;+16], робочий <strong>G ≈ −5 … +7</strong>.</p>
         <p>Множник <strong>PCL_SCALE = 0.4</strong> для Pᵢ має статус <em>R&D / Advisory</em> і потребує емпіричного калібрування на операційних даних.</p>
-        <p class="small" style="color:var(--muted)">ℹ Функції, реалізовані лише у <strong>forecast_engine v17</strong> (Python/Excel), але <em>відсутні</em> у браузерному дашборді: автрегресійний контекст (<code>prev_score</code>), довгострокові транзити Jupiter/Rahu, manual Excel-теги (ритуали/затемнення-маркери). Значення G у дашборді та у бюлетені можуть відрізнятись на ±0.3–0.5.</p>
+        <p class="small" style="color:var(--muted)">ℹ Функції, реалізовані лише у <strong>forecast_engine v17</strong> (Python/Excel), але <em>відсутні</em> у браузерному дашборді: автрегресійний контекст (<code>prev_score</code>), довгострокові транзити Jupiter/Rahu, manual Excel-теги (ритуали/затемнення-маркери). Дашборд Hero G — <em>continuous unclamped</em> (Kp − 2 + ΣAᵢ); engine pill — <em>discrete clamped</em> {−3…+3} з повним feature-set. Реальні розбіжності (n=30 cross-check 2025-12 — 2026-04): mean |Δ|≈2.2, max |Δ|≈6 (особливо при Kp≥5 коли Hero лінійний, а engine clamps).</p>
+        <p class="small" style="color:var(--muted)">ℹ <strong>Panchanga reference time</strong>: дашборд обчислює tithi/nakshatra/yoga на noon UTC (для уніфікації поза локацією). Engine використовує local sunrise (Vedic convention). Це призводить до систематичного зміщення +1 у ~46% днів на boundary часу. Якщо dashboard показує "Trayodashi" а engine pill "Dwadashi" — це різні reference points, не помилка.</p>
         <p>Tithi, що вже враховані в Lᵢ (Пурніма, Амавасья) або eᵢ (Екадаші), виключені з Pᵢ для уникнення подвійного рахування.</p>
         <p class="small" style="color:var(--muted);margin-top:6px;border-left:2px solid #4a5d8e;padding-left:8px">📐 <strong>Engine v14.2 calibration note:</strong> Деякі score-значення відрізняються від theoretical Posibnyk через калібрування на n=280 PDF v5.1 dataset:
         <br>• <strong>Покнrima (idx 14)</strong>: code score=0 (нейтральна), Posibnyk=−3 (Cajochen 2013) — engine v14.2 BUG-1 fix; при Kp≥7 додається Lᵢ підсилення
@@ -4467,7 +4468,19 @@ function computeCScore(kpNow, kpObsJson, ai, G, kpSrc){
 
 // ------------------------------ Обчислення Aᵢ -------------------------------
 function computeAi(dateTimeUTC, kp=0){
+  // v88.7+ (deep audit): defensive input validation
+  // Раніше: computeAi(null) → TypeError, computeAi(d, 100) → G=+96 (поза spec).
+  // Тепер: graceful NaN return для invalid date, clamp kp до [0..9].
+  if(!dateTimeUTC || typeof dateTimeUTC.getTime !== 'function' || isNaN(dateTimeUTC.getTime())){
+    return { Ai: NaN, AiNoDst: NaN, Li: 0, Mi: 0, ei: 0, eiBase: 0, horaEi: 0,
+             Pi: 0, Di: 0, snPen: 0, bzVal: null, vswVal: null,
+             phaseName: '?', phaseDeg: NaN, lTip: 'Invalid date', mTip: '', eTip: '', pTip: '', diTip: '',
+             explain: 'Invalid date input', eclipseUnverified: false };
+  }
   if(kp == null || !isFinite(kp)) kp = 0;
+  // Clamp kp to physical range [0..9] (Kp index spec defines 0-9 only)
+  if(kp < 0) kp = 0;
+  if(kp > 9) kp = 9;
   const dateStr = fmtDate(dateTimeUTC);
 
   const phaseDeg  = moonPhaseAngle(dateTimeUTC);
