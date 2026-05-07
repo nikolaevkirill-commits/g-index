@@ -1,12 +1,13 @@
-// G-Index Service Worker v88.7.0 (deep audit: shell stale-while-revalidate + version sync)
+// G-Index Service Worker v88.7.1 (deep audit: shell stale-while-revalidate + version sync)
+// v88.7.1 changes: bump cache keys to invalidate v88.7.1 client-side fixes (CSP + title).
 // v88.7.0 changes (deep audit fixes):
 //   1. Comment-reality match: shell тепер реально stale-while-revalidate (не cache-first)
 //   2. Cache key bumped до v88-7-0 для invalidation старих cache при deploy
 //   3. backtest.html додано до SHELL_FILES
 //   4. cache.put awaited перед SW_FRESH_DATA notify (race fix)
 
-const SHELL_CACHE = 'g-index-shell-v88-7-0';
-const DATA_CACHE = 'g-index-data-v88-7-0';
+const SHELL_CACHE = 'g-index-shell-v88-7-1';
+const DATA_CACHE = 'g-index-data-v88-7-1';
 
 const SHELL_FILES = [
   './',
