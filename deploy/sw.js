@@ -1,4 +1,6 @@
-// G-Index Service Worker v88.7.4 (UI consistency: всі engine v17 → engine v18.5 у тексті)
+// G-Index Service Worker v88.7.5 (math audit fix: heroConfidence tooltip honesty)
+// v88.7.5 changes: tooltip «Довіра» виправлений — реальний max=92% by design (v87.14 floor penalty),
+//                  не 100% як невірно сказано у v88.7.3. Деталі: storm/stale/synthetic пеналі.
 // v88.7.4 changes: bulk replace ~35 згадок «engine v17» у UI tooltips/headings/i18n → «engine v18.5»
 //                  (v88.7.3 змінив тільки 1 chip label, а не весь sweep — недопрацювання виправлене).
 // v88.7.3 changes: tooltips on Lᵢ/Mᵢ/eᵢ/Pᵢ/Dᵢ chips + heroConfidence;
@@ -11,8 +13,8 @@
 //   3. backtest.html додано до SHELL_FILES
 //   4. cache.put awaited перед SW_FRESH_DATA notify (race fix)
 
-const SHELL_CACHE = 'g-index-shell-v88-7-4';
-const DATA_CACHE = 'g-index-data-v88-7-4';
+const SHELL_CACHE = 'g-index-shell-v88-7-5';
+const DATA_CACHE = 'g-index-data-v88-7-5';
 
 const SHELL_FILES = [
   './',
