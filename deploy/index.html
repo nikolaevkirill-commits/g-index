@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.7.1</title>
+  <title>G-Index — Космофізичний дашборд v88.7.2</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -3729,10 +3729,10 @@ const _eclipseCatalogWarned = new Set(); // один warn на рік
 // Проксі для CORS (fallback)
 // v88.6.9: Cloudflare Worker priority (deploy див. cloudflare-worker-noaa-proxy.js).
 //        Public free proxies нерeliable; власний Worker = robust + ~$0/міс.
-// v88.7.1 (deep audit): URL = placeholder. Якщо Worker не deploy'нутий — fallback chain
-//        (allorigins → corsproxy.io → corsfix → thingproxy) активується автоматично.
-//        Для production deploy: replace 'YOUR_USERNAME' на реальний Cloudflare account.
-const NOAA_WORKER_URL = 'https://gindex-noaa-proxy.YOUR_USERNAME.workers.dev/?url=';
+// v88.7.2 (P5): NOAA Worker задеплоєний на Cloudflare 2026-05-07.
+//        Primary CORS proxy для NOAA SWPC TXT endpoints (27-day-outlook тощо).
+//        Public proxy chain (allorigins/corsproxy.io/codetabs) залишається tier-2 fallback.
+const NOAA_WORKER_URL = 'https://gindex-noaa-proxy.nikolaev-kirill.workers.dev/?url=';
 function fetchWithTimeout(url, ms=5000){
   const ctrl = new AbortController();
   const tid = setTimeout(()=>ctrl.abort(), ms);
