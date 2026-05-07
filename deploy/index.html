@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.7.2</title>
+  <title>G-Index — Космофізичний дашборд v88.7.4</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1303,12 +1303,12 @@ body.simple-mode .col-hide-mobile {
       <span class="sci-item sci-primary">🛰 <strong>Kp:</strong> <span class="sci-val" id="sciKp">—</span> <span class="sci-src">NOAA</span></span>
       <span class="sci-item sci-primary">🌙 <strong>Фаза:</strong> <span class="sci-val" id="sciPhase">—</span></span>
       <span class="sci-item sci-primary">🧲 <strong>Dst:</strong> <span class="sci-val" id="sciDst">—</span> <span class="sci-src">Kyoto</span></span>
-      <span class="sci-item sci-primary">🌑 <strong>Lᵢ:</strong> <span class="sci-val" id="sciLi">—</span></span>
-      <span class="sci-item sci-primary">🌘 <strong>Mᵢ:</strong> <span class="sci-val" id="sciMi">—</span></span>
-      <span class="sci-item sci-primary">📅 <strong>eᵢ:</strong> <span class="sci-val" id="sciEi">—</span></span>
-      <span class="sci-item sci-primary">🔮 <strong>Pᵢ:</strong> <span class="sci-val" id="sciPi">—</span></span>
+      <span class="sci-item sci-primary" title="Lᵢ — Lunar tithi factor. Вплив поточного місячного дня (тітхі) на психофізичний стан.">🌑 <strong>Lᵢ:</strong> <span class="sci-val" id="sciLi">—</span></span>
+      <span class="sci-item sci-primary" title="Mᵢ — Moon phase modifier. Вплив фази Місяця (Повня / Амавасья / 8-та тітхі — підсилюють негативи).">🌘 <strong>Mᵢ:</strong> <span class="sci-val" id="sciMi">—</span></span>
+      <span class="sci-item sci-primary" title="eᵢ — Events factor. Затемнення, екадаші, релігійні дні, ретрогради планет (з ICS-календарів).">📅 <strong>eᵢ:</strong> <span class="sci-val" id="sciEi">—</span></span>
+      <span class="sci-item sci-primary" title="Pᵢ — Panchanga composite × 0.4. Локальний розрахунок Tithi/Vara/Nakshatra/Yoga/Karana (Lahiri ayanamsha, BPHS).">🔮 <strong>Pᵢ:</strong> <span class="sci-val" id="sciPi">—</span></span>
       <span class="sci-item sci-primary" id="sciSnPenWrap" style="display:none" title="Sn-penalty: при високому числі плям (>150) додає мінус до G. Solar Max 2025-2026.">☀ <strong>Sn:</strong> <span class="sci-val" id="sciSnPen">—</span></span>
-      <span class="sci-item sci-primary">🧲 <strong>Dᵢ:</strong> <span class="sci-val" id="sciDi">—</span></span>
+      <span class="sci-item sci-primary" title="Dᵢ — Dst storm penalty. При Dst < −30 нТл (геомагнітна буря) додає мінус до G.">🧲 <strong>Dᵢ:</strong> <span class="sci-val" id="sciDi">—</span></span>
       <!-- Вторинні: кнопка розгортання + скидання кешу -->
       <span style="margin-left:auto;display:inline-flex;align-items:center;gap:8px">
         <span id="sciMoreToggle" onclick="toggleSciMore()" style="cursor:pointer;color:var(--faint);font-size:11px;white-space:nowrap;user-select:none">▸ детально</span>
@@ -1356,7 +1356,7 @@ body.simple-mode .col-hide-mobile {
 • Sn &gt; 150 → −0.2
 • інакше → 0 (не в сумі)
 
-Науковий бекграунд: солярний max → калібровка engine v17.</span></span></span>
+Науковий бекграунд: солярний max → калібровка engine v18.5.</span></span></span>
         <!-- v87.11: Source Health Panel — grid 2×3 замість inline line -->
         <div class="source-health">
           <div class="source-health-title">Стан джерел даних</div>
@@ -1412,7 +1412,7 @@ body.simple-mode .col-hide-mobile {
             </div>
           </div>
           <!-- Legacy ring (default) -->
-          <div id="heroRing" title="Hero G — це raw композитний score (без clip): G = Kp − 2 + ΣAᵢ. Може виходити за межі ±3.&#10;Engine V17 pill справа = дискретна clipped category {−3..+3} через score_day() classifier.&#10;Різниця нормальна: raw composite використовує live NOAA Kp, engine score — reference Kp з validation snapshot.">
+          <div id="heroRing" title="Hero G — це raw композитний score (без clip): G = Kp − 2 + ΣAᵢ. Може виходити за межі ±3.&#10;Engine V18.5 pill справа = дискретна clipped category {−3..+3} через score_day() classifier.&#10;Різниця нормальна: raw composite використовує live NOAA Kp, engine score — reference Kp з validation snapshot.">
             <svg viewBox="0 0 100 100">
               <circle class="ring-bg" cx="50" cy="50" r="45"/>
               <circle class="ring-val" id="heroRingVal" cx="50" cy="50" r="45"
@@ -1466,9 +1466,9 @@ body.simple-mode .col-hide-mobile {
           <span id="heroTomorrowScenario" title="⚠ NOAA forecast недоступний — це плато на базі поточного Kp, не справжній прогноз."></span>
           <span id="heroNextShiftChip" data-label="Далі" style="font-size:11px;color:var(--faint);display:none"></span>
           <span id="heroStamp" data-label="Оновлено" style="font-size:11px;color:var(--dim)">—</span>
-          <span id="heroConfidence" data-label="Довіра" style="font-size:11px;color:var(--dim)"></span>
-          <!-- v87.90 P3 fix: badge style для engine v17 score — більш помітно vs Live G -->
-          <span id="heroBulletin" data-label="Engine v17" class="hint" tabindex="0" style="font-size:12px;font-weight:700;color:var(--muted);cursor:help;border:1px solid var(--border2);padding:1px 8px;border-radius:8px;background:rgba(11,18,32,.4)" title="Engine v17 (rule-based bulletin model, discrete -3..+3). Використовує manual Джйотіш-теги + thresholds.&#10;Dashboard G — continuous real-time signal (Kp − 2 + ΣAᵢ).&#10;Різні моделі за дизайном — розбіжність не баг.">—</span>
+          <span id="heroConfidence" data-label="Довіра" class="hint" tabindex="0" title="Довіра — confidence score моделі. Вираховується з повноти і свіжості input даних: NOAA Kp (real vs forecast), Dst (real vs missing), Wolf Sn, eclipse cache, Panchanga компонентів. 100% = всі сигнали свіжі і повні; ↓ при stale або частково відсутніх даних." style="font-size:11px;color:var(--dim);cursor:help"></span>
+          <!-- v87.90 P3 fix: badge style для engine v18.5 score — більш помітно vs Live G -->
+          <span id="heroBulletin" data-label="Engine v18.5" class="hint" tabindex="0" style="font-size:12px;font-weight:700;color:var(--muted);cursor:help;border:1px solid var(--border2);padding:1px 8px;border-radius:8px;background:rgba(11,18,32,.4)" title="Engine v18.5 (rule-based bulletin model, discrete -3..+3, FROZEN 2026-05-03 до V3 close ~2026-08-01). Використовує manual Джйотіш-теги + thresholds.&#10;Dashboard G — continuous real-time signal (Kp − 2 + ΣAᵢ).&#10;Різні моделі за дизайном — розбіжність не баг.">—</span>
           <!-- v88.0: Astronomical layer pill (Tithi/Nakshatra/Yoga з cal_score field у engine_scores.json, Swiss Ephemeris Lahiri) -->
           <span id="heroAstroLayer" data-label="Astro" class="hint" tabindex="0" style="display:none;font-size:12px;font-weight:700;color:var(--muted);cursor:help;border:1px solid var(--border2);padding:1px 8px;border-radius:8px;background:rgba(11,18,32,.4)" title="">—</span>
           <!-- V25-fu29 v5.1 (2026-05-03): canonical metrics from VALIDATION_REPORT_v18_5_pdf47_v5.json — n=280 / strict 71.4% / κ=0.52 -->
@@ -1510,7 +1510,7 @@ body.simple-mode .col-hide-mobile {
         <span style="font-size:14px">📋</span>
         <span style="flex:1;min-width:200px">
           <span style="color:var(--text)">Звідки взято сьогоднішню оцінку</span>
-          <span id="provenancePreview" style="font-size:10px;color:var(--faint);font-weight:400;margin-left:8px;display:block;margin-top:2px">NOAA Kp · Kyoto Dst · SILSO Sn · NASA eclipses · Vedic Panchanga — 8 джерел, повний audit trail</span>
+          <span id="provenancePreview" style="font-size:10px;color:var(--faint);font-weight:400;margin-left:8px;display:block;margin-top:2px">NOAA Kp · Kyoto Dst · SILSO Sn · NASA eclipses · Vedic Panchanga — 5 джерел, повний audit trail</span>
         </span>
         <span style="font-size:10px;color:var(--dim);font-weight:400">розгорнути ▾</span>
       </summary>
@@ -2023,7 +2023,7 @@ NOAA публікує лише 27-day Ap outlook (інтегрована гео�
             <th>Категорія</th>
             <th class="col-hide-mobile">Ризик%</th>
             <th>Рекомендація</th>
-            <th title="Engine v17 (rule-based bulletin model). Інша модель — інша шкала. ⚠ означає розбіжність знака з G." style="color:#7ab8d4">Bulletin</th>
+            <th title="Engine v18.5 (rule-based bulletin model). Інша модель — інша шкала. ⚠ означає розбіжність знака з G." style="color:#7ab8d4">Bulletin</th>
             <th id="th27Gos" style="display:none;color:#c8b4ff" title="G_ос = G + Taara-mod (R&D)">G_ос</th>
           </tr></thead>
           <tbody id="twentysevenContent"><tr><td colspan="6" class="muted">Завантаження…</td></tr></tbody>
@@ -2189,7 +2189,7 @@ NOAA публікує лише 27-day Ap outlook (інтегрована гео�
         </table>
         <p>Kp ∈ [0;&nbsp;9], ΣAᵢ реально лежить у межах <strong>[−10;&nbsp;+9]</strong> (при екстремальному накладанні затемнень, ICS‑подій та несприятливої Панчанги), робочий діапазон за нормальних умов: <strong>ΣAᵢ ≈ −4 … +4</strong>. Теоретичний G ∈ [−12;&nbsp;+16], робочий <strong>G ≈ −5 … +7</strong>.</p>
         <p>Множник <strong>PCL_SCALE = 0.4</strong> для Pᵢ має статус <em>R&D / Advisory</em> і потребує емпіричного калібрування на операційних даних.</p>
-        <p class="small" style="color:var(--muted)">ℹ Функції, реалізовані лише у <strong>forecast_engine v17</strong> (Python/Excel), але <em>відсутні</em> у браузерному дашборді: автрегресійний контекст (<code>prev_score</code>), довгострокові транзити Jupiter/Rahu, manual Excel-теги (ритуали/затемнення-маркери). Дашборд Hero G — <em>continuous unclamped</em> (Kp − 2 + ΣAᵢ); engine pill — <em>discrete clamped</em> {−3…+3} з повним feature-set. Реальні розбіжності (n=30 cross-check 2025-12 — 2026-04): mean |Δ|≈2.2, max |Δ|≈6 (особливо при Kp≥5 коли Hero лінійний, а engine clamps).</p>
+        <p class="small" style="color:var(--muted)">ℹ Функції, реалізовані лише у <strong>forecast_engine v18.5</strong> (Python/Excel), але <em>відсутні</em> у браузерному дашборді: автрегресійний контекст (<code>prev_score</code>), довгострокові транзити Jupiter/Rahu, manual Excel-теги (ритуали/затемнення-маркери). Дашборд Hero G — <em>continuous unclamped</em> (Kp − 2 + ΣAᵢ); engine pill — <em>discrete clamped</em> {−3…+3} з повним feature-set. Реальні розбіжності (n=30 cross-check 2025-12 — 2026-04): mean |Δ|≈2.2, max |Δ|≈6 (особливо при Kp≥5 коли Hero лінійний, а engine clamps).</p>
         <p class="small" style="color:var(--muted)">ℹ <strong>Panchanga reference time</strong>: дашборд обчислює tithi/nakshatra/yoga на noon UTC (для уніфікації поза локацією). Engine використовує local sunrise (Vedic convention). Це призводить до систематичного зміщення +1 у ~46% днів на boundary часу. Якщо dashboard показує "Trayodashi" а engine pill "Dwadashi" — це різні reference points, не помилка.</p>
         <p>Tithi, що вже враховані в Lᵢ (Пурніма, Амавасья) або eᵢ (Екадаші), виключені з Pᵢ для уникнення подвійного рахування.</p>
         <p class="small" style="color:var(--muted);margin-top:6px;border-left:2px solid #4a5d8e;padding-left:8px">📐 <strong>Engine v14.2 calibration note:</strong> Деякі score-значення відрізняються від theoretical Posibnyk через калібрування на n=280 PDF v5.1 dataset:
@@ -2198,7 +2198,7 @@ NOAA публікує лише 27-day Ap outlook (інтегрована гео�
         <br>• <strong>Nakshatra Стала/М'яка/Рухома</strong>: code 1/0/0, Posibnyk ++/+/+ — calibration knock-down ~33% amplitude
         <br>Калібровочні рішення зафіксовані у V3 freeze (2026-05-03 → ~2026-08-01); revision у V19 backlog якщо outcome-based validation покаже потребу.</p>
 
-        <p style="font-weight:600;color:#cfe0ff;margin-bottom:4px">Категорії G‑індексу (discrete, engine v17 pill)</p>
+        <p style="font-weight:600;color:#cfe0ff;margin-bottom:4px">Категорії G‑індексу (discrete, engine v18.5 pill)</p>
         <p class="small" style="color:var(--muted);margin:0 0 6px">Hero G — continuous score (raw composite). Engine pill і ця табличка — discrete classifier {−3..+3}. Boundary regions у Hero (continuous): G≥+1.5 favorable; +0.5..+1.5 good; −1..+0.5 neutral; −2.5..−1 unstable; ≤−2.5 tense.</p>
         <table style="font-size:12px;margin:6px 0 10px;border:1px solid #1e2f52;border-radius:6px;overflow:hidden">
           <thead><tr style="background:#0c1526">
@@ -3274,7 +3274,7 @@ function setStamp(){
   el('utcNow').textContent   = fmtUTC(now);
 }
 
-// v87.61: Bulletin (engine v17) score loader — Шлях C (dual-display).
+// v87.61: Bulletin (engine v18.5) score loader — Шлях C (dual-display).
 // Завантажує engine_scores.json (static), показує поряд з G у hero і 3-day.
 let _engineScores = null;
 async function loadEngineScores(){
@@ -3345,7 +3345,7 @@ function getEngineScore(dateObj){
   // Reason: round(Hero G) gives 47% accuracy (PCL_CALIBRATION_REPORT.md);
   // original snapshot gives 75.0% strict on holdout (n=56, v5.1). Recalc погіршує якість.
   // Натомість: показуємо snapshot eng + marker "Kp estimated" коли live Kp != snapshot Kp.
-  // Це чесніше: snapshot — validated tag-based engine v17, recalc — ні.
+  // Це чесніше: snapshot — validated tag-based engine v18.5, recalc — ні.
   if(snapshot && snapshot.kp_synthetic === true && typeof last3D !== 'undefined' && last3D && Array.isArray(last3D.days)){
     try {
       const liveDay = last3D.days.find(d => fmtDate(d.date) === ds);
@@ -3369,7 +3369,7 @@ function renderHeroBulletin(){
   const entry = getEngineScore(new Date());
   if(!entry){
     elB.textContent = '—';
-    elB.title = 'Engine v17 bulletin score. Поточна дата поза validation window (2025-06-16 → 2026-12-31) або JSON не завантажився.';
+    elB.title = 'Engine v18.5 bulletin score. Поточна дата поза validation window (2025-06-16 → 2026-12-31) або JSON не завантажився.';
     return;
   }
   const s = entry.eng;
@@ -3379,14 +3379,14 @@ function renderHeroBulletin(){
   elB.innerHTML = `<span style="color:${color};font-weight:700">${s >= 0 ? '+' : ''}${s}${_synMark}</span>`;
   const synth = entry.kp_synthetic ? ' · ⚠ Kp synthetic (scenario, не forecast)' : '';
   const pdfStr = (entry.pdf !== null && entry.pdf !== undefined) ? ` · PDF ${entry.pdf >= 0 ? '+' : ''}${entry.pdf}` : '';
-  elB.title = `Engine v17 score: ${s >= 0 ? '+' : ''}${s} (rule-based, threshold classifier).\nТег: ${entry.tag || '—'}\nKp=${entry.kp}${synth}${pdfStr}\nDashboard G (continuous) ≠ Engine score (threshold) — різні моделі за дизайном.`;
+  elB.title = `Engine v18.5 score: ${s >= 0 ? '+' : ''}${s} (rule-based, threshold classifier).\nТег: ${entry.tag || '—'}\nKp=${entry.kp}${synth}${pdfStr}\nDashboard G (continuous) ≠ Engine score (threshold) — різні моделі за дизайном.`;
 }
 
 // v88.1: BPHS canonical yoga penalties for ADVISORY display only.
 // Tested empirically as hard rule on n=280 (engine_v18.5 v5.1 audit, V25-fu29 2026-05-03):
 //   V1 (full BPHS): rescued=1, broken=10, net=-9 → REJECT
 //   V2-V4 (gated):  rescued=0-1, broken=0-3, net≤0 → no promotion possible
-// Engine v17 confirmed local optimum. Yoga shown as read-only metadata in UI.
+// Engine v18.5 confirmed local optimum. Yoga shown as read-only metadata in UI.
 const NEGATIVE_YOGAS_BPHS = {
   6:  {name:'Atiganda',  pen:-2},
   9:  {name:'Shula',     pen:-1},
@@ -3479,7 +3479,7 @@ function renderHeroAstroLayer(){
   // v88.1: Yoga advisory (read-only, BPHS canonical penalty for negative yogas)
   const _ny = NEGATIVE_YOGAS_BPHS[entry.cal_yoga];
   const yogaAdvisory = _ny
-    ? `\n⚪ BPHS yoga advisory: ${_ny.name} (canonical penalty ${_ny.pen}). Engine v17 не модифікує score (audit n=280 v5.1: rule REJECTED).`
+    ? `\n⚪ BPHS yoga advisory: ${_ny.name} (canonical penalty ${_ny.pen}). Engine v18.5 не модифікує score (audit n=280 v5.1: rule REJECTED).`
     : '';
   elA.title = `Astronomical layer (Swiss Ephemeris · Lahiri ayanamsha)\ncal_score: ${cs >= 0 ? '+' : ''}${cs} (astronomical-derived, не PDF/engine)\nTithi: ${entry.cal_tithi} (${tName})\nNakshatra: ${entry.cal_nakshatra} (${nName})\nYoga: ${entry.cal_yoga} (${yName})\nSymbols: ${symStr}${artifactWarn}${yogaAdvisory}\n\ncal_score описує детерміновані astronomical events; engine_score = bulletin-style тегова класифікація. Різні метрики, ~14% exact match expected.`;
   elA.style.display = '';
@@ -4253,13 +4253,13 @@ function autoComputedExtras(dateUTC, kp=0){
 }
 
 // ═══ v26: DST → G-модифікатор (M_DST) ═══
-// DST < -50 нТл = помірна буря (узгоджено з engine v17), < -100 = сильна буря
+// DST < -50 нТл = помірна буря (узгоджено з engine v18.5), < -100 = сильна буря
 function computeDstModifier(){
   if(!window._lastDst) return {val:0, tip:'0 — Dst недоступний'};
   const dst = window._lastDst.dst;
   if(!isFinite(dst)) return {val:0, tip:'0 — Dst недоступний'};
   if(dst <= -100) return {val:-2, tip:`-2 — Dst=${dst} нТл (значна буря)`};
-  if(dst <= -50)  return {val:-1, tip:`-1 — Dst=${dst} нТл (помірна буря, engine v17)`};
+  if(dst <= -50)  return {val:-1, tip:`-1 — Dst=${dst} нТл (помірна буря, engine v18.5)`};
   return {val:0, tip:`0 — Dst=${dst} нТл (норма)`};
 }
 
@@ -4659,14 +4659,14 @@ function computeAi(dateTimeUTC, kp=0){
 
   // v85b-F5 (СЕРЕД-3): Sn penalty gradation — fixes constant -0.4 drift during Solar Max 2025-2026
   // Раніше: Sn>150 → -0.4 (бінарно). Solar Max має Sn ~150-200 → постійний шум -0.4.
-  // Тепер: пороги diff (було engine v17 WEIGHTS.sn_high_pen = -0.4 single-threshold)
+  // Тепер: пороги diff (було engine v18.5 WEIGHTS.sn_high_pen = -0.4 single-threshold)
   const _snVal = window._lastWolfSn ? (window._lastWolfSn.sn ?? 0) : 0;
   const snPen  = _snVal > 200 ? -0.4 : _snVal > 150 ? -0.2 : 0;
 
   // v51: Bz/Vsw — інформаційний контекст, НЕ в canonical G (§13.2 Посібника)
   const Ai = Math.round((Li + Mi + eiTotal + Pi + snPen) * 10) / 10;
 
-  // Dᵢ — Dst component (A3+A4: офіційна частина ΣAᵢ, синхронно з engine v17)
+  // Dᵢ — Dst component (A3+A4: офіційна частина ΣAᵢ, синхронно з engine v18.5)
   // Застосовується тільки для поточного дня — майбутні дати Dst невідомий
   let Di = 0, diTip = '0 — Dst норма';
   const _diDateStr = fmtDate(dateTimeUTC);
@@ -4674,11 +4674,11 @@ function computeAi(dateTimeUTC, kp=0){
   if(_diDateStr === _todayStr && window._lastDst && isFinite(window._lastDst.dst)) {
     const dstVal = window._lastDst.dst;
     if(dstVal <= -100) { Di = -2; diTip = `-2 — Dst=${dstVal} нТл (значна буря, Kp≥7 еквівалент)`; }
-    else if(dstVal <= -50) { Di = -1; diTip = `-1 — Dst=${dstVal} нТл (помірна буря, engine v17)`; }
+    else if(dstVal <= -50) { Di = -1; diTip = `-1 — Dst=${dstVal} нТл (помірна буря, engine v18.5)`; }
     else { diTip = `0 — Dst=${dstVal} нТл (норма)`; }
   }
   const AiFull = Math.round((Ai + Di) * 10) / 10;
-  const explain = `\u03a3A\u1d62 = L\u1d62+M\u1d62+e\u1d62+P\u1d62+D\u1d62${snPen!==0?'+Sn':''} = ${Li}+${Mi}+${eiTotal}+${Pi}+${Di}${snPen!==0?'+'+snPen:''} = ${AiFull}` + (snPen!==0?`\n(Sn=${_snVal}>150: kp_pen${snPen} — engine v17)`:'') + (bzVal!==0||vswVal!==0?`\n(+Bz=${bzVal}, Vsw=${vswVal} — контекст, не в G)`:'');
+  const explain = `\u03a3A\u1d62 = L\u1d62+M\u1d62+e\u1d62+P\u1d62+D\u1d62${snPen!==0?'+Sn':''} = ${Li}+${Mi}+${eiTotal}+${Pi}+${Di}${snPen!==0?'+'+snPen:''} = ${AiFull}` + (snPen!==0?`\n(Sn=${_snVal}>150: kp_pen${snPen} — engine v18.5)`:'') + (bzVal!==0||vswVal!==0?`\n(+Bz=${bzVal}, Vsw=${vswVal} — контекст, не в G)`:'');
 
   return { Ai: AiFull, AiNoDst: Ai, Li, Mi, ei: eiTotal, eiBase: ei, horaEi, Pi, Di, snPen, bzVal, vswVal, phaseName, phaseDeg, lTip, mTip, eTip: eTipLines.join('\n'), pTip, diTip, explain, eclipseUnverified };
 }
@@ -5261,7 +5261,7 @@ function draw27dTable(){
       gosCell = `<td style="font-size:12px;font-weight:700;color:${gcol27}" title="G_ос=${sign27}${Gos27.toFixed(2)}: G${isFinite(G)?(G>=0?'+':'')+G.toFixed(2):''} ${gmod27>=0?'+':''}${gmod27} (Taara ${t27.group} ${t27.name})">${sign27}${Gos27.toFixed(2)}</td>`;
     }
 
-    // v87.62: Bulletin cell (engine v17 score) + sign divergence mark
+    // v87.62: Bulletin cell (engine v18.5 score) + sign divergence mark
     let bulletinCell = '<td class="mono muted" style="font-size:12px">—</td>';
     try {
       const _bs27 = getEngineScore(r.date);
@@ -5275,7 +5275,7 @@ function draw27dTable(){
         const _div27 = (_gPos27 && _eNeg27) || (_gNeg27 && _ePos27);
         const _warn = _div27 ? '<span style="color:#fca474;margin-right:3px" title="Розбіжність знака з G">⚠</span>' : '';
         const _pdfStr = (_bs27.pdf !== null && _bs27.pdf !== undefined) ? `\nPDF: ${_bs27.pdf>=0?'+':''}${_bs27.pdf}` : '';
-        const _tipB = `Engine v17 score: ${_bSign}${_bs27.eng}\nТег: ${_bs27.tag||'—'}\nKp=${_bs27.kp}${_bs27.kp_synthetic?' (synthetic 2.0)':''}${_pdfStr}${_div27?'\n\n⚠ Знак не співпадає з G — моделі не згодні':''}`;
+        const _tipB = `Engine v18.5 score: ${_bSign}${_bs27.eng}\nТег: ${_bs27.tag||'—'}\nKp=${_bs27.kp}${_bs27.kp_synthetic?' (synthetic 2.0)':''}${_pdfStr}${_div27?'\n\n⚠ Знак не співпадає з G — моделі не згодні':''}`;
         bulletinCell = `<td style="font-size:12px;text-align:center" title="${escapeHtml(_tipB)}">${_warn}<span style="color:${_bCol};font-weight:700">${_bSign}${_bs27.eng}${_bSynth}</span></td>`;
       }
     } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
@@ -6251,7 +6251,7 @@ function renderCurrentPanel(){
   nearNoteEl2.innerHTML = (baseNote ? `<span>${baseNote}</span> ` : '') + (nearNoteEl2._threshHtml || '');
 
   // lunar_phase_deg: береться з ai.phaseDeg (computeAi вже рахує moonPhaseAngle)
-  // Експортуємо глобально — для forecast_engine v17 інтеграції
+  // Експортуємо глобально — для forecast_engine v18.5 інтеграції
   const lunarPhaseDeg = isFinite(ai.phaseDeg) ? ai.phaseDeg : (moonPhaseAngle(nowUTC) + 360) % 360;
   window._lunarPhaseDeg = lunarPhaseDeg; // forecast_engine: predict(kp, tags, prev_kp, prev_score, date, lunar_phase_deg)
 
@@ -7324,7 +7324,7 @@ function render3Day(parsed3){
       const act=G<=-2?'утриматись від рішень':G<0?'мінімізувати ризики':G>=2?'оптимально для дій':G>=1?'можна планове':'стандартний режим';
       const col=G<=-2.5?'#ff6b6b':G<=-0.5?'#ffaa33':G>=0.5?'#2bd47d':'#9bb1dc';
       const dd=d.date.getUTCDate()+'.'+(d.date.getUTCMonth()+1);
-      // v87.61: Bulletin (engine v17) score line if available
+      // v87.61: Bulletin (engine v18.5) score line if available
       // v87.62: + sign divergence alert when G and Bulletin have opposite signs
       let _bulletinLine = '';
       try {
@@ -7343,7 +7343,7 @@ function render3Day(parsed3){
           const _ePos = _bs.eng > 0, _eNeg = _bs.eng < 0;
           const _divergent = (_gPos && _eNeg) || (_gNeg && _ePos);
           if (_divergent) {
-            _bulletinLine = `<div style="font-size:10px;margin-top:2px;padding:2px 6px;border-radius:4px;background:rgba(255,170,51,.15);border:1px solid rgba(255,170,51,.35)" title="G (live геомагніт) і Bulletin (engine v17 tag-model) показують протилежні знаки. Обережніше з рішеннями — моделі не згодні.">⚠ Bulletin: <span style="color:${_bsCol};font-weight:700">${_bsSign}${_bs.eng}${_synth}</span>${_recalcMark} <span style="color:var(--faint);font-size:9px">· розбіжність</span></div>`;
+            _bulletinLine = `<div style="font-size:10px;margin-top:2px;padding:2px 6px;border-radius:4px;background:rgba(255,170,51,.15);border:1px solid rgba(255,170,51,.35)" title="G (live геомагніт) і Bulletin (engine v18.5 tag-model) показують протилежні знаки. Обережніше з рішеннями — моделі не згодні.">⚠ Bulletin: <span style="color:${_bsCol};font-weight:700">${_bsSign}${_bs.eng}${_synth}</span>${_recalcMark} <span style="color:var(--faint);font-size:9px">· розбіжність</span></div>`;
           } else {
             _bulletinLine = `<div style="font-size:10px;color:var(--dim);margin-top:2px">Bulletin: <span style="color:${_bsCol};font-weight:700">${_bsSign}${_bs.eng}${_synth}</span>${_recalcMark}</div>`;
           }
@@ -7368,7 +7368,7 @@ function render3Day(parsed3){
       if(_engineFullySynth){
         _scenLabel = `<div style="font-size:9px;color:#fca474;margin-top:1px;text-transform:uppercase;letter-spacing:.06em;font-weight:700" title="Engine використав synthetic Kp=2.0 (NOAA forecast недоступний). Це сценарій, не справжній прогноз.">⚠ scenario · synthetic Kp</div>`;
       } else if(_engineOutdatedNotSynth){
-        _scenLabel = `<div style="font-size:9px;color:#9bb1dc;margin-top:1px;text-transform:uppercase;letter-spacing:.06em;font-weight:600" title="Engine v17 score обчислений на snapshot часу train. Live NOAA forecast Kp=${d.kpMax.toFixed(1)} оновленiший. Engine score може недо-оцiнювати буревий ризик.">ⓘ engine outdated · live Kp=${d.kpMax.toFixed(1)}</div>`;
+        _scenLabel = `<div style="font-size:9px;color:#9bb1dc;margin-top:1px;text-transform:uppercase;letter-spacing:.06em;font-weight:600" title="Engine v18.5 score обчислений на snapshot часу train. Live NOAA forecast Kp=${d.kpMax.toFixed(1)} оновленiший. Engine score може недо-оцiнювати буревий ризик.">ⓘ engine outdated · live Kp=${d.kpMax.toFixed(1)}</div>`;
       }
       qhtml+=`<span style="flex:1;min-width:140px;padding:8px 14px;border-radius:10px;${_scenStyle};text-align:center">
         <div style="font-weight:700;color:${col};font-size:14px">${dd} → ${cat}</div>
@@ -9337,7 +9337,7 @@ function renderProvenance(){
   const _dstTime = window._lastDst?.time ?? '—';
   const _dstCached = window._lastDst?._cached ? ' (кеш)' : '';
 
-  // Engine v17 entry today
+  // Engine v18.5 entry today
   const _eng = (typeof getEngineScore === 'function') ? getEngineScore(_now) : null;
   const _engStr = _eng ? `${_eng.eng >= 0 ? '+' : ''}${_eng.eng}${_eng.kp_synthetic ? ' ⚠ synthetic' : ''}` : '—';
   const _engTag = _eng?.tag || '—';
@@ -9389,13 +9389,13 @@ function renderProvenance(){
       </div>
     </div>
     <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
-      <div style="font-size:10px;color:var(--warn);letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px">Engine v17 (rule-based, для порівняння)</div>
+      <div style="font-size:10px;color:var(--warn);letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px">Engine v18.5 (rule-based, для порівняння)</div>
       ${_row('Score', _engStr)}
       ${_row('Tag', _engTag)}
     </div>
     <div style="margin-top:10px;padding:6px 8px;font-size:10px;color:var(--faint);background:rgba(11,18,32,.6);border-radius:6px;line-height:1.5">
       Усі дані фіксуються при кожному G-tick (~10 хв). Натисни Оновити (вверху) щоб примусово оновити.
-      Розбіжність G live vs Engine v17 — нормальна (різні моделі за дизайном). Synthetic Kp = NOAA forecast недоступний → зачекай 10-30 хв або відкрий заново.
+      Розбіжність G live vs Engine v18.5 — нормальна (різні моделі за дизайном). Synthetic Kp = NOAA forecast недоступний → зачекай 10-30 хв або відкрий заново.
     </div>
   `;
 }
@@ -12247,7 +12247,7 @@ function renderGDecomp(G, kp, ai) {
             :                'Нейтральна Панчанга'},
       {name:'🧲 Dᵢ', val:ai.Di,
         desc: ai.Di <= -2 ? `Значна геомагнітна буря (Dst≤−100 нТл)`
-            : ai.Di === -1 ? `Підтверджена буря (Dst≤−50 нТл, engine v17)`
+            : ai.Di === -1 ? `Підтверджена буря (Dst≤−50 нТл, engine v18.5)`
             :                'Dst норма — без штрафу'}
     ];
     let thtml = '';
@@ -13179,8 +13179,8 @@ const I18N = {
     provenanceLoading: 'Завантаження…',
     provenanceInputs: 'Inputs',
     provenanceComposite: 'Composite G',
-    provenanceEngineNote: 'Engine v17 (rule-based, для порівняння)',
-    provenanceFooter: 'Усі дані фіксуються при кожному G-tick (~10 хв). Натисни Оновити (вверху) щоб примусово оновити. Розбіжність G live vs Engine v17 — нормальна (різні моделі за дизайном). Synthetic Kp = NOAA forecast недоступний → зачекай 10-30 хв або відкрий заново.',
+    provenanceEngineNote: 'Engine v18.5 (rule-based, для порівняння)',
+    provenanceFooter: 'Усі дані фіксуються при кожному G-tick (~10 хв). Натисни Оновити (вверху) щоб примусово оновити. Розбіжність G live vs Engine v18.5 — нормальна (різні моделі за дизайном). Synthetic Kp = NOAA forecast недоступний → зачекай 10-30 хв або відкрий заново.',
     disagreementSignConflict: '⚠ Сигнали суперечать одне одному',
     disagreementWideRange: '⚠ Сильний розкид між підходами (Δ={range})',
     disagreementHelp: 'Сьогодні різні методи дають різні оцінки. Це нормально — кожен дивиться під своїм кутом (live-космос, історичні правила, експертний бюлетень, рік тому). Коли вони збігаються — впевненість висока; коли розходяться — потрібна обережність. Знизь довіру {pct} і подвійно перевір перед важливими рішеннями.',
@@ -13207,7 +13207,7 @@ const I18N = {
     timingDisambig: '3-год Vasara-слоти · не плутай з Hora (60хв) у Планетарному ритмі ↓',
     // v88.6.9: новi keys для Engine v18 lite-recalc + Simple Mode + Forward Timeline clarity
     engineOutdated: 'engine outdated · live Kp={kp}',
-    engineOutdatedTitle: 'Engine v17 score обчислений на snapshot часу train. Live NOAA forecast Kp={kp} оновленiший. Engine score може недо-оцiнювати буревий ризик.',
+    engineOutdatedTitle: 'Engine v18.5 score обчислений на snapshot часу train. Live NOAA forecast Kp={kp} оновленiший. Engine score може недо-оцiнювати буревий ризик.',
     engineRecalculated: '⚠ Recalculated engine (lite fallback): snapshot Kp={origKp} → {origEng}, live Kp={kp} → {newEng}. Це round(Hero G), НЕ tag-based engine v18.5. Strict 75.0% holdout валідне для snapshot, не recalc.',
     dailyPeak: 'денний пiк',
     dailyPeakTitle: 'Forward Timeline показує день-пiк (max Kp прогнозу). Hero G показує поточний моменту. Тому для одного дня можуть бути рiзнi значення.',
@@ -13253,8 +13253,8 @@ const I18N = {
     provenanceLoading: 'Loading…',
     provenanceInputs: 'Inputs',
     provenanceComposite: 'Composite G',
-    provenanceEngineNote: 'Engine v17 (rule-based, for comparison)',
-    provenanceFooter: 'All data captured on each G-tick (~10 min). Press Refresh (top) for force-update. G live vs Engine v17 divergence is expected (different models by design). Synthetic Kp = NOAA forecast unavailable → wait 10-30 min or reopen.',
+    provenanceEngineNote: 'Engine v18.5 (rule-based, for comparison)',
+    provenanceFooter: 'All data captured on each G-tick (~10 min). Press Refresh (top) for force-update. G live vs Engine v18.5 divergence is expected (different models by design). Synthetic Kp = NOAA forecast unavailable → wait 10-30 min or reopen.',
     disagreementSignConflict: '⚠ Signals contradict each other',
     disagreementWideRange: '⚠ Wide spread between approaches (Δ={range})',
     disagreementHelp: 'Today different methods give different scores. This is normal — each looks from its angle (live space-weather, historical rules, expert bulletin, one year ago). When they agree — confidence is high; when they diverge — caution needed. Lower today\'s trust {pct} and double-check before important decisions.',
@@ -13281,7 +13281,7 @@ const I18N = {
     timingDisambig: '3-hour Vasara slots · do not confuse with 60-min Hora in Planetary rhythm ↓',
     // v88.6.9: новi keys для Engine v18 lite-recalc + Simple Mode + Forward Timeline clarity
     engineOutdated: 'engine outdated · live Kp={kp}',
-    engineOutdatedTitle: 'Engine v17 score computed on snapshot. Live NOAA forecast Kp={kp} is fresher. Engine score may underestimate storm risk.',
+    engineOutdatedTitle: 'Engine v18.5 score computed on snapshot. Live NOAA forecast Kp={kp} is fresher. Engine score may underestimate storm risk.',
     engineRecalculated: '⚠ Recalculated engine (lite fallback): snapshot Kp={origKp} → {origEng}, live Kp={kp} → {newEng}. This is round(Hero G), NOT tag-based engine v18.5. Strict 75.0% holdout applies to snapshot, not recalc.',
     dailyPeak: 'daily peak',
     dailyPeakTitle: 'Forward Timeline shows the day peak (max forecast Kp). Hero G shows the current moment. So same day can have different values.',
@@ -15171,7 +15171,7 @@ function _saveGHistory(g){
 // v87.19 U4: best/worst days of past 30 days
 function _getBestWorstDays(){
   try{
-    // P1 fix v87.90: prefer engine_scores (validated, consistent з engine v17)
+    // P1 fix v87.90: prefer engine_scores (validated, consistent з engine v18.5)
     // над localStorage (running-average per-session, неконсистентний).
     // Continuous G реконструюється з engine kp + dashboard computeAi (єдина формула).
     // v88.6.9 BUG#1 fix: для сьогоднішнього дня — використовуй live Kp (як Hero),

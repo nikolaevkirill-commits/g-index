@@ -1,4 +1,8 @@
-// G-Index Service Worker v88.7.2 (P5: Cloudflare NOAA Worker activated)
+// G-Index Service Worker v88.7.4 (UI consistency: всі engine v17 → engine v18.5 у тексті)
+// v88.7.4 changes: bulk replace ~35 згадок «engine v17» у UI tooltips/headings/i18n → «engine v18.5»
+//                  (v88.7.3 змінив тільки 1 chip label, а не весь sweep — недопрацювання виправлене).
+// v88.7.3 changes: tooltips on Lᵢ/Mᵢ/eᵢ/Pᵢ/Dᵢ chips + heroConfidence;
+//                  ENGINE V17 → V18.5 chip label; "8 джерел" → "5 джерел" sync.
 // v88.7.2 changes: bump cache keys to invalidate v88.7.2 (NOAA Worker URL hardcoded).
 // v88.7.1 changes: bump cache keys to invalidate v88.7.1 client-side fixes (CSP + title).
 // v88.7.0 changes (deep audit fixes):
@@ -7,8 +11,8 @@
 //   3. backtest.html додано до SHELL_FILES
 //   4. cache.put awaited перед SW_FRESH_DATA notify (race fix)
 
-const SHELL_CACHE = 'g-index-shell-v88-7-2';
-const DATA_CACHE = 'g-index-data-v88-7-2';
+const SHELL_CACHE = 'g-index-shell-v88-7-4';
+const DATA_CACHE = 'g-index-data-v88-7-4';
 
 const SHELL_FILES = [
   './',
