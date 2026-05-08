@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.7.9</title>
+  <title>G-Index — Космофізичний дашборд v88.7.10</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -7703,17 +7703,27 @@ function classifySlotScore(score){
 
 function normalizeDaySlots(slots){
   if(!Array.isArray(slots)) return [];
-  const nowH = new Date().getUTCHours();
+  // v88.7.10 FIX-K: temporal consistency. _daySlots[].label — це UTC година слоту (NOAA Kp publish format).
+  // ЛОГІКА (isNow/isPast) має бути в UTC (для коректного порівняння з UTC даними).
+  // ВІДОБРАЖЕННЯ (s.time) має бути в ЛОКАЛЬНОМУ часі (бо користувач читає годинник у власному TZ).
+  // Раніше label друкувалось як UTC-h без позначки → юзер у Києві (UTC+3) бачив "12-15" і думав що
+  // це 12-15 його часу, тоді як насправді це 15-18. Heat-strip і План дня вже конвертують —
+  // тут sync з ними через той самий _tzOffH = -getTimezoneOffset()/60.
+  const now = new Date();
+  const nowH = now.getUTCHours();
+  const tzOffH = -now.getTimezoneOffset() / 60;
   return slots.map(s => {
-    const h = parseInt(s.label||'0');
+    const utcH = parseInt(s.label||'0');
+    const localStart = ((utcH + tzOffH) % 24 + 24) % 24;
+    const localEnd   = ((utcH + 3 + tzOffH) % 24 + 24) % 24;
     const score = Number(s.G ?? 0);
     const cls = classifySlotScore(score);
     return {
-      h, score, cls,
-      time: `${String(h).padStart(2,'0')}:00–${String(h+3).padStart(2,'0')}:00`,
+      h: utcH, score, cls,
+      time: `${String(Math.floor(localStart)).padStart(2,'0')}:00–${String(Math.floor(localEnd)).padStart(2,'0')}:00`,
       text: cls==='good' ? 'можна' : cls==='mid' ? 'обережно' : 'уникати',
-      isNow: (nowH>=h && nowH<h+3),
-      isPast: (h+3 <= nowH)
+      isNow: (nowH>=utcH && nowH<utcH+3),
+      isPast: (utcH+3 <= nowH)
     };
   });
 }

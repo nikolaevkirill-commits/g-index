@@ -1,12 +1,30 @@
-// G-Index Service Worker v88.7.9 (cleanup pass — no logic changes, comment-only)
+// G-Index Service Worker v88.7.10 (FIX-K: temporal consistency in decisionTimingList)
+// v88.7.10 changes (FIX-K — decision timing labels):
+//   В блоці "Коли діяти" мітки слотів (12:00–15:00) друкувались UTC-години БЕЗ позначки UTC.
+//   Користувач у Києві (UTC+3) читав "12:00–15:00 ◀ зараз" як локальний час, тоді як годинник
+//   показував 15:30 — слот сприймався як минулий, хоча у UTC-логіці він активний.
+//   Heat-strip і План дня вже конвертували в локальний час; decisionTimingList лишався єдиним
+//   місцем, що друкував RAW UTC. Виправлено: normalizeDaySlots() тепер обчислює localStart/End
+//   через _tzOffH (sync з heat-strip), isNow/isPast лишаються в UTC (логіка коректна).
+//   Cache keys bumped до v88-7-10.
+//
 // v88.7.9 changes (cleanup pass — no logic changes, comment-only):
-//   • SYMBOL_WEIGHTS reference у коментарі CAL_SYMBOL_DISPLAY → виправлено на правильну назву.
+// v88.7.10 changes (FIX-K — decision timing labels):
+//   В блоці "Коли діяти" мітки слотів (12:00–15:00) друкувались UTC-години БЕЗ позначки UTC.
+//   Користувач у Києві (UTC+3) читав "12:00–15:00 ◀ зараз" як локальний час, тоді як годинник
+//   показував 15:30 — слот сприймався як минулий, хоча у UTC-логіці він активний.
+//   Heat-strip і План дня вже конвертували в локальний час; decisionTimingList лишався єдиним
+//   місцем, що друкував RAW UTC. Виправлено: normalizeDaySlots() тепер обчислює localStart/End
+//   через _tzOffH (sync з heat-strip), isNow/isPast лишаються в UTC (логіка коректна).
+//   Cache keys bumped до v88-7-10.
+//
+// v88.7.9 changes (cleanup pass — no logic changes, comment-only):
 //   • EVENT_WEIGHTS reference у тестовому коментарі → WEIGHT_E_EVENTS.
 //   • Видалено tombstone-коментарі для функцій що видалені давно (renderNowKpChart,
 //     render45, renderOrbitSvg, gTopRow merge note).
 //   • Скорочено два розлогих v87.97 коментарі про removed CSS — лишився лише суть
 //     поточної логіки (scoreBar gCtx-aware).
-//   Cache keys bumped до v88-7-9.
+//   Cache keys bumped до v88-7-10.
 //
 // v88.7.8 changes (deep audit pass):
 //   FIX-A: Typo «Покнrima» → «Purnima» (видно у Methodology UI).
@@ -26,7 +44,7 @@
 //   FIX-J: Math restructure — один Math.round в кінці замість 3 послідовних (Pi→Ai→AiFull).
 //          Раніше накопичувалась похибка ≤±0.05; тепер ΣAᵢ обчислюється на raw values,
 //          округлення ТІЛЬКИ для UI display (Pi, eiTotal, Ai, AiFull).
-//   Cache keys bumped до v88-7-9.
+//   Cache keys bumped до v88-7-10.
 //
 // v88.7.7 changes:
 //   CRITICAL hot-fix: trend "7 днів" — два прихованих баги:
@@ -52,8 +70,8 @@
 //   3. backtest.html додано до SHELL_FILES.
 //   4. cache.put awaited перед SW_FRESH_DATA notify (race fix).
 
-const SHELL_CACHE = 'g-index-shell-v88-7-9';
-const DATA_CACHE = 'g-index-data-v88-7-9';
+const SHELL_CACHE = 'g-index-shell-v88-7-10';
+const DATA_CACHE = 'g-index-data-v88-7-10';
 
 const SHELL_FILES = [
   './',
