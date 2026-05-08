@@ -1,12 +1,60 @@
-// G-Index Service Worker v88.7.10 (FIX-K: temporal consistency in decisionTimingList)
+// G-Index Service Worker v88.7.12 (FIX-M Рівень 1: Astro chip → live tithi/nakshatra/yoga)
+// v88.7.12 changes (FIX-M — уніфікація Рівень 1):
+//   Hero Astro chip раніше показував tithi/nakshatra/yoga з engine_scores.json
+//   (Swiss Ephemeris, local sunrise reference). Панчанга картка нижче — live
+//   astronomy-engine (noon UTC). На boundary днях (~46%) tithi розходились на 1.
+//   Виправлено: chip ТЕПЕР читає назви з _lastPanchCtx (live, той самий що картка).
+//   Score (cal_score) і символи (cal_symbols — затемнення/Sankranti) — далі з engine_scores.
+//   Engine pill (+3) — frozen для backtest, не змінюється.
+//   Маркер ⊙ біля chip коли engine ≠ live — натяк на tooltip з обома значеннями.
+//   Cache keys bumped до v88-7-12.
+//
+// v88.7.11 changes (FIX-L — cross-script let/const accessibility):
+// v88.7.12 changes (FIX-M — уніфікація Рівень 1):
+//   Hero Astro chip раніше показував tithi/nakshatra/yoga з engine_scores.json
+//   (Swiss Ephemeris, local sunrise reference). Панчанга картка нижче — live
+//   astronomy-engine (noon UTC). На boundary днях (~46%) tithi розходились на 1.
+//   Виправлено: chip ТЕПЕР читає назви з _lastPanchCtx (live, той самий що картка).
+//   Score (cal_score) і символи (cal_symbols — затемнення/Sankranti) — далі з engine_scores.
+//   Engine pill (+3) — frozen для backtest, не змінюється.
+//   Маркер ⊙ біля chip коли engine ≠ live — натяк на tooltip з обома значеннями.
+//   Cache keys bumped до v88-7-12.
+//
+// v88.7.11 changes (FIX-L — cross-script let/const accessibility):
+//   У файлі знайдено 11 сайтів які читали window.X для X що оголошене let/const:
+//     • _lastPanchCtx — 7 reads (syncTrustStrip, buildDashboardState, decision-injects тощо).
+//       Усі повертали undefined → Vishti warnings, Ekadashi notes, Rahu badges не зявлялись.
+//       Виправлено: заміна window._lastPanchCtx → _lastPanchCtx (у тому ж script).
+//     • lastWWV — 4 reads (renderProvenance — журнал джерел).
+//       Заміна window.lastWWV → lastWWV.
+//     • PaywallModal — 9 reads (analytics monkey-patcher у іншому script tag).
+//     • PAYWALL — 2 reads (там само).
+//       Виправлено: window.PAYWALL = PAYWALL; window.PaywallModal = PaywallModal;
+//       (cross-script bridge — name lookup не працює між script tags).
+//   Cache keys bumped до v88-7-12.
+//
 // v88.7.10 changes (FIX-K — decision timing labels):
-//   В блоці "Коли діяти" мітки слотів (12:00–15:00) друкувались UTC-години БЕЗ позначки UTC.
+// v88.7.11 changes (FIX-L — cross-script let/const accessibility):
+//   В JS, top-level let/const у <script> НЕ стають properties of window.
+//   У файлі знайдено 11 сайтів які читали window.X для X що оголошене let/const:
+//     • _lastPanchCtx — 7 reads (syncTrustStrip, buildDashboardState, decision-injects тощо).
+//       Усі повертали undefined → Vishti warnings, Ekadashi notes, Rahu badges не зявлялись.
+//       Виправлено: заміна window._lastPanchCtx → _lastPanchCtx (у тому ж script).
+//     • lastWWV — 4 reads (renderProvenance — журнал джерел).
+//       Заміна window.lastWWV → lastWWV.
+//     • PaywallModal — 9 reads (analytics monkey-patcher у іншому script tag).
+//     • PAYWALL — 2 reads (там само).
+//       Виправлено: window.PAYWALL = PAYWALL; window.PaywallModal = PaywallModal;
+//       (cross-script bridge — name lookup не працює між script tags).
+//   Cache keys bumped до v88-7-12.
+//
+// v88.7.10 changes (FIX-K — decision timing labels):
 //   Користувач у Києві (UTC+3) читав "12:00–15:00 ◀ зараз" як локальний час, тоді як годинник
 //   показував 15:30 — слот сприймався як минулий, хоча у UTC-логіці він активний.
 //   Heat-strip і План дня вже конвертували в локальний час; decisionTimingList лишався єдиним
 //   місцем, що друкував RAW UTC. Виправлено: normalizeDaySlots() тепер обчислює localStart/End
 //   через _tzOffH (sync з heat-strip), isNow/isPast лишаються в UTC (логіка коректна).
-//   Cache keys bumped до v88-7-10.
+//   Cache keys bumped до v88-7-12.
 //
 // v88.7.9 changes (cleanup pass — no logic changes, comment-only):
 // v88.7.10 changes (FIX-K — decision timing labels):
@@ -16,7 +64,7 @@
 //   Heat-strip і План дня вже конвертували в локальний час; decisionTimingList лишався єдиним
 //   місцем, що друкував RAW UTC. Виправлено: normalizeDaySlots() тепер обчислює localStart/End
 //   через _tzOffH (sync з heat-strip), isNow/isPast лишаються в UTC (логіка коректна).
-//   Cache keys bumped до v88-7-10.
+//   Cache keys bumped до v88-7-12.
 //
 // v88.7.9 changes (cleanup pass — no logic changes, comment-only):
 //   • EVENT_WEIGHTS reference у тестовому коментарі → WEIGHT_E_EVENTS.
@@ -24,7 +72,7 @@
 //     render45, renderOrbitSvg, gTopRow merge note).
 //   • Скорочено два розлогих v87.97 коментарі про removed CSS — лишився лише суть
 //     поточної логіки (scoreBar gCtx-aware).
-//   Cache keys bumped до v88-7-10.
+//   Cache keys bumped до v88-7-12.
 //
 // v88.7.8 changes (deep audit pass):
 //   FIX-A: Typo «Покнrima» → «Purnima» (видно у Methodology UI).
@@ -44,7 +92,7 @@
 //   FIX-J: Math restructure — один Math.round в кінці замість 3 послідовних (Pi→Ai→AiFull).
 //          Раніше накопичувалась похибка ≤±0.05; тепер ΣAᵢ обчислюється на raw values,
 //          округлення ТІЛЬКИ для UI display (Pi, eiTotal, Ai, AiFull).
-//   Cache keys bumped до v88-7-10.
+//   Cache keys bumped до v88-7-12.
 //
 // v88.7.7 changes:
 //   CRITICAL hot-fix: trend "7 днів" — два прихованих баги:
@@ -70,8 +118,8 @@
 //   3. backtest.html додано до SHELL_FILES.
 //   4. cache.put awaited перед SW_FRESH_DATA notify (race fix).
 
-const SHELL_CACHE = 'g-index-shell-v88-7-10';
-const DATA_CACHE = 'g-index-data-v88-7-10';
+const SHELL_CACHE = 'g-index-shell-v88-7-12';
+const DATA_CACHE = 'g-index-data-v88-7-12';
 
 const SHELL_FILES = [
   './',
