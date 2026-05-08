@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.7.10</title>
+  <title>G-Index — Космофізичний дашборд v88.7.12</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -2533,6 +2533,12 @@ const PaywallModal = {
     loadAll();
   }
 };
+// v88.7.10 FIX-L: cross-script accessibility. const/let у script-tag НЕ стають властивостями window.
+// Analytics monkey-patcher у наступних script tags (L14660+) читає window.PaywallModal / window.PAYWALL —
+// без цих assignments отримує undefined, tracking не працює.
+// _lastPanchCtx і lastWWV виправлено окремо (заміна window.X → X у тому ж script).
+window.PAYWALL = PAYWALL;
+window.PaywallModal = PaywallModal;
 // Sync tier badge on load
 document.addEventListener('DOMContentLoaded', () => {
   const tb = document.getElementById('tierBadge');
@@ -3454,23 +3460,63 @@ function renderHeroAstroLayer(){
     elA.style.display = 'none';
     return;
   }
-  // 1-based → 0-based for arrays
-  const tIdx = Math.max(0, Math.min(29, (entry.cal_tithi|0) - 1));
-  const nIdx = Math.max(0, Math.min(26, (entry.cal_nakshatra|0) - 1));
-  const yIdx = Math.max(0, Math.min(26, (entry.cal_yoga|0) - 1));
-  const tName = (typeof TITHI_NAMES !== 'undefined') ? (TITHI_NAMES[tIdx] || ('T'+entry.cal_tithi)) : ('T'+entry.cal_tithi);
-  const nName = (typeof NAKSHATRA_NAMES !== 'undefined') ? (NAKSHATRA_NAMES[nIdx] || ('N'+entry.cal_nakshatra)) : ('N'+entry.cal_nakshatra);
-  // YOGA_NAMES is local to computePanchanga; redefine inline (BPHS canonical 27 yogas)
-  const _YOGAS = ['Vishkambha','Priti','Ayushman','Saubhagya','Shobhana','Atiganda','Sukarman',
+  // v88.7.12 FIX-M (Рівень 1 уніфікації): tithi/nakshatra/yoga НАЗВИ беремо з live
+  // _lastPanchCtx (noon UTC astronomy-engine), а cal_score/cal_symbols — з engine_scores.json.
+  // Раніше: chip показував engine_scores.cal_tithi (Swiss Ephemeris, local sunrise reference).
+  // Панчанга картка — live noon UTC. Розбіжність ±1 tithi на boundary днях (~46% часу).
+  // Тепер: обидва показники з ОДНОГО джерела (live), Engine pill (+3) лишається frozen для backtest.
+  // Engine_scores значення (entry.cal_tithi/nakshatra/yoga) показуємо у tooltip для аудиту розбіжностей.
+  const _liveCtx = (typeof _lastPanchCtx !== 'undefined') ? _lastPanchCtx : null;
+  // Live names (primary source після FIX-M)
+  let tName, nName, yName, tNumLive, nNumLive, yNumLive;
+  if(_liveCtx && _liveCtx.tithi && _liveCtx.nakshatra && _liveCtx.yoga){
+    tName = _liveCtx.tithi.name;
+    nName = _liveCtx.nakshatra.name;
+    yName = _liveCtx.yoga.name;
+    tNumLive = _liveCtx.tithi.num;
+    nNumLive = _liveCtx.nakshatra.idx;
+    yNumLive = (_liveCtx.yoga.num !== undefined) ? _liveCtx.yoga.num : null;
+  } else {
+    // Fallback на engine_scores якщо _lastPanchCtx ще не готовий (раннє завантаження)
+    const tIdx = Math.max(0, Math.min(29, (entry.cal_tithi|0) - 1));
+    const nIdx = Math.max(0, Math.min(26, (entry.cal_nakshatra|0) - 1));
+    const yIdx = Math.max(0, Math.min(26, (entry.cal_yoga|0) - 1));
+    tName = (typeof TITHI_NAMES !== 'undefined') ? (TITHI_NAMES[tIdx] || ('T'+entry.cal_tithi)) : ('T'+entry.cal_tithi);
+    nName = (typeof NAKSHATRA_NAMES !== 'undefined') ? (NAKSHATRA_NAMES[nIdx] || ('N'+entry.cal_nakshatra)) : ('N'+entry.cal_nakshatra);
+    const _YOGAS_FB = ['Vishkambha','Priti','Ayushman','Saubhagya','Shobhana','Atiganda','Sukarman',
+      'Dhriti','Shula','Ganda','Vriddhi','Dhruva','Vyaghata','Harshana','Vajra',
+      'Siddhi','Vyatipata','Variyan','Parigha','Shiva','Siddha','Sadhya','Shubha',
+      'Shukla','Brahma','Indra','Vaidhriti'];
+    yName = _YOGAS_FB[yIdx] || ('Y'+entry.cal_yoga);
+    tNumLive = entry.cal_tithi;
+    nNumLive = entry.cal_nakshatra;
+    yNumLive = entry.cal_yoga;
+  }
+  // Engine_scores values (для tooltip — показ розбіжностей)
+  const _engT = entry.cal_tithi;
+  const _engN = entry.cal_nakshatra;
+  const _engY = entry.cal_yoga;
+  // Detect divergence (live vs frozen engine) — корисно для аудиту
+  const _divT = (tNumLive !== _engT);
+  const _divN = (nNumLive !== _engN);
+  const _divY = (yNumLive !== _engY);
+  const _hasDiv = _divT || _divN || _divY;
+  // YOGA names array для конвертації engine yoga number → name (для tooltip)
+  const _YOGA_NAMES_FOR_TIP = ['Vishkambha','Priti','Ayushman','Saubhagya','Shobhana','Atiganda','Sukarman',
     'Dhriti','Shula','Ganda','Vriddhi','Dhruva','Vyaghata','Harshana','Vajra',
     'Siddhi','Vyatipata','Variyan','Parigha','Shiva','Siddha','Sadhya','Shubha',
     'Shukla','Brahma','Indra','Vaidhriti'];
-  const yName = _YOGAS[yIdx] || ('Y'+entry.cal_yoga);
+  const _engTName = (typeof TITHI_NAMES !== 'undefined' && _engT) ? (TITHI_NAMES[Math.max(0, _engT-1)] || ('T'+_engT)) : ('T'+_engT);
+  const _engNName = (typeof NAKSHATRA_NAMES !== 'undefined' && _engN) ? (NAKSHATRA_NAMES[Math.max(0, _engN-1)] || ('N'+_engN)) : ('N'+_engN);
+  const _engYName = _engY ? (_YOGA_NAMES_FOR_TIP[Math.max(0, _engY-1)] || ('Y'+_engY)) : ('Y'+_engY);
+
   const cs = entry.cal_score;
   const csColor = (cs >= 2) ? 'var(--ok)' : (cs === 1) ? '#9cd49c' : (cs === 0) ? 'var(--muted)' : (cs === -1) ? 'var(--warn)' : (cs <= -2) ? 'var(--bad)' : 'var(--muted)';
   const csStr = (cs !== undefined && cs !== null) ? `<span style="color:${csColor};font-weight:700">${cs >= 0 ? '+' : ''}${cs}</span> · ` : '';
-  // Compact label: cal_score · Tithi · first 6 chars Nakshatra
-  elA.innerHTML = `${csStr}🌙 ${tName} · ✨ ${nName.slice(0, 8)}`;
+  // Compact label: cal_score · Tithi (live) · first 8 chars Nakshatra (live)
+  // v88.7.12: маркер ⊙ якщо є розбіжність з engine — натяк, що варто глянути tooltip
+  const _divMark = _hasDiv ? '<span style="color:var(--faint);font-size:9px;margin-left:2px" title="Розбіжність з engine_scores — деталі у tooltip">⊙</span>' : '';
+  elA.innerHTML = `${csStr}🌙 ${tName} · ✨ ${nName.slice(0, 8)}${_divMark}`;
   // Rich tooltip with full astronomical context
   const symStr = formatCalSymbols(entry.cal_symbols);
   const artifactWarn = entry.excel_tag_artifact ? `\n⚠ Excel-tag artifact: ${entry.excel_tag_artifact_reason || ''}` : '';
@@ -3479,7 +3525,20 @@ function renderHeroAstroLayer(){
   const yogaAdvisory = _ny
     ? `\n⚪ BPHS yoga advisory: ${_ny.name} (canonical penalty ${_ny.pen}). Engine v18.5 не модифікує score (audit n=280 v5.1: rule REJECTED).`
     : '';
-  elA.title = `Astronomical layer (Swiss Ephemeris · Lahiri ayanamsha)\ncal_score: ${cs >= 0 ? '+' : ''}${cs} (astronomical-derived, не PDF/engine)\nTithi: ${entry.cal_tithi} (${tName})\nNakshatra: ${entry.cal_nakshatra} (${nName})\nYoga: ${entry.cal_yoga} (${yName})\nSymbols: ${symStr}${artifactWarn}${yogaAdvisory}\n\ncal_score описує детерміновані astronomical events; engine_score = bulletin-style тегова класифікація. Різні метрики, ~14% exact match expected.`;
+  // v88.7.12: показуємо Live + Engine якщо різні, інакше просто єдину пару
+  const _tithiLine = _divT
+    ? `Tithi: ${tNumLive} (${tName}) live · engine: ${_engT} (${_engTName})`
+    : `Tithi: ${tNumLive} (${tName})`;
+  const _nakLine = _divN
+    ? `Nakshatra: ${nNumLive} (${nName}) live · engine: ${_engN} (${_engNName})`
+    : `Nakshatra: ${nNumLive} (${nName})`;
+  const _yogaLine = (_divY && yNumLive)
+    ? `Yoga: ${yNumLive} (${yName}) live · engine: ${_engY} (${_engYName})`
+    : `Yoga: ${yNumLive || _engY} (${yName})`;
+  const _divNote = _hasDiv
+    ? `\n\n⊙ Розбіжність live ↔ engine: live = noon UTC astronomy-engine; engine_scores = local sunrise Swiss Ephemeris (Vedic convention). На boundary днях (~46%) tithi/nakshatra може зсунутись на 1. Bulletin score (+${entry.eng}) не залежить від цього.`
+    : '';
+  elA.title = `Astronomical layer (live names, frozen score)\ncal_score: ${cs >= 0 ? '+' : ''}${cs} (engine_scores.json, не PDF/engine)\n${_tithiLine}\n${_nakLine}\n${_yogaLine}\nSymbols: ${symStr}${artifactWarn}${yogaAdvisory}${_divNote}\n\nv88.7.12: tithi/nakshatra/yoga назви — live (узгоджено з Панчанга-карткою). cal_score/cal_symbols — frozen engine_scores. Engine pill (+3) — frozen v18.5 bulletin.`;
   elA.style.display = '';
 }
 
@@ -7616,7 +7675,7 @@ function buildUnifiedAdvice(state){
   // v83f: state key for inject guards
   const _stKey = classifyStateByG(g);
   // Panchanga inject
-  const pc = window._lastPanchCtx;
+  const pc = _lastPanchCtx;
   if(pc){
     if(pc.karana?.isVishti){ AVOID.push('нові початки (Vishti)'); NOTE.push('Vishti karana — підвищений ризик'); }
     const tIdx = pc.tithi?.index;
@@ -8566,7 +8625,7 @@ function _renderHeroCause(g, kp) {
     }
   }
 
-  const pc = window._lastPanchCtx;
+  const pc = _lastPanchCtx;
   const panchDetail = pc ? [pc.tithi?.name, pc.karana?.name].filter(Boolean).join(' · ') : '';
   const panchWarn = pc?.karana?.isVishti ? ' ⛔' : '';
   function _panchEffect(pi) {
@@ -8874,7 +8933,7 @@ function _renderHeroTimeWindows() {
   if (currentIdx >= 0 && currentIdx < slots.length - 1) nextIdx = currentIdx + 1;
 
   // v78d: Panchanga context for timing
-  const _pc = window._lastPanchCtx;
+  const _pc = _lastPanchCtx;
   const _panchPi = _pc?.aiComponents?.Pi || 0;
   const _vishti = _pc?.karana?.isVishti;
   const _panchTimingNote = _vishti ? 'Vishti підсилює ризик' : (_panchPi <= -1.5 ? (_pc?.karana?.name || 'Панчанга') + ' створює напруження' : _panchPi < -0.3 ? (_pc?.karana?.name || 'Панчанга') + ' додає нестабільність' : '');
@@ -9301,7 +9360,7 @@ function syncPersonalContext(){
   // Тепер: при G ≤ -1 особистий шар — тільки про НЕ-дії.
   if (isFinite(g) && g <= -1) {
     const hora = (function(){try{return calcHora(new Date())}catch(e){return null}})();
-    const pc = window._lastPanchCtx;
+    const pc = _lastPanchCtx;
     const rahu = pc?.rahu?.active;
     if (rahu) {
       main.textContent = '⚠ Rahu Kalam + нестабільний фон — не починати нових справ.';
@@ -9316,7 +9375,7 @@ function syncPersonalContext(){
 
   // v84b: Personal MODIFIER — not global copy
   const hora = (function(){try{return calcHora(new Date())}catch(e){return null}})();
-  const pc = window._lastPanchCtx;
+  const pc = _lastPanchCtx;
   const rahu = pc?.rahu?.active;
 
   // Build personal-specific text
@@ -9411,7 +9470,7 @@ function syncTrustStrip(){
   // v85b: tsKp/tsAi/tsDriver/tsShift DOM removed v83f — only hero meta inline remains
   const kp = _v73Kp();
   const kpPart = isFinite(kp) ? Math.round((kp-2)*10)/10 : NaN;
-  const pc = window._lastPanchCtx;
+  const pc = _lastPanchCtx;
   const ai = pc?.aiComponents || {};
   const sumAi = (ai.Li||0)+(ai.Mi||0)+(ai.ei||0)+(ai.Pi||0)+(ai.Di||0);
   const kpStr = isFinite(kpPart) ? (kpPart>0?'+':'')+kpPart.toFixed(1) : '—';
@@ -9437,7 +9496,7 @@ function buildDashboardState(){
   const stKey = classifyStateByG(g, kp);
   const st = GLOBAL_STATES[stKey] || GLOBAL_STATES.neutral;
   const decision = resolveDecisionByG(g, kp); // v85b-F6 single-source + v88.7 storm gating
-  const pc = window._lastPanchCtx;
+  const pc = _lastPanchCtx;
   const topDrv = window._lastTopDrivers || computeTopDrivers(ai, kp);
   const delta = _getGDelta();
   const slots = window._daySlots || [];
@@ -9468,10 +9527,10 @@ function renderProvenance(){
   const _fresh = document.getElementById('freshnessBadge')?.textContent || '?';
 
   // Kp source
-  const _kpVal = _ui.kpNow ?? _ds.kpNow ?? (window.lastWWV?.kNow);
-  const _kpSrc = window.lastWWV?._synthetic ? 'synthetic (fallback)'
-              : (window.lastWWV?.whenText || 'NOAA observed');
-  const _kpFreshTs = window.lastWWV?.ts || null;
+  const _kpVal = _ui.kpNow ?? _ds.kpNow ?? (lastWWV?.kNow);
+  const _kpSrc = lastWWV?._synthetic ? 'synthetic (fallback)'
+              : (lastWWV?.whenText || 'NOAA observed');
+  const _kpFreshTs = lastWWV?.ts || null;
 
   // Sn
   const _snVal = window._lastWolfSn?.sn ?? null;
