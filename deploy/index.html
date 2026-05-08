@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.7.5</title>
+  <title>G-Index — Космофізичний дашборд v88.7.6</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -4987,12 +4987,15 @@ function uafTo3DayFormat(uaf){
       const avgKp = day.kp8.length ? day.kp8.reduce((a,b)=>a+b,0)/day.kp8.length : NaN;
       return { date: day.date, Ap: isFinite(avgKp) ? kpToApInterp(avgKp) : null };
     });
-    return {
+    const out = {
       issued: future[0][0],
       predictedAp,
       days,
       _source: 'uaf-alaska'
     };
+    // v88.7.6 BUG-2 fix: UAF може повернути 1-2 днів — гарантуємо рівно 3 через спільну функцію.
+    _ensureThreeDays(out);
+    return out;
   }catch(e){
     console.warn('[v88.6.9 UAF] uafTo3DayFormat failed:', e.message);
     return null;
@@ -5012,6 +5015,84 @@ function uafTo27DayFormat(uaf){
       kpMax: r.kp
     }));
   }catch(e){ return []; }
+}
+
+// v88.7.6: спільний fill-up до 3 днів — використовується parse3DaySafe і uafTo3DayFormat.
+// Гарантує, що out.days містить рівно today + 2 наступні дні. Placeholder days мають _needsFill=true,
+// потім loadAll() заповнить їх з NOAA 27-day або synthetic-Kp fallback.
+function _ensureThreeDays(out){
+  if(!out || !out.days || !Array.isArray(out.days)) return out;
+  if(out.days.length >= 3) return out;
+  if(out.days.length === 0) return out; // повний fail — обробляється synthetic fallback в loadAll
+  try{
+    const haveDates = new Set(out.days.map(d => fmtDate(d.date)));
+    const todayD = new Date(); todayD.setUTCHours(0,0,0,0);
+    for(let off = 0; off < 3; off++){
+      const target = new Date(todayD); target.setUTCDate(target.getUTCDate()+off);
+      const targetStr = fmtDate(target);
+      if(haveDates.has(targetStr)) continue;
+      out.days.push({
+        date: target,
+        kp8: [],
+        kpMax: NaN,
+        _needsFill: true
+      });
+      if(out.predictedAp) out.predictedAp.push({date: target, Ap: null});
+    }
+    out.days.sort((a,b) => a.date - b.date);
+    if(out.predictedAp) out.predictedAp.sort((a,b) => a.date - b.date);
+  }catch(e){if(window._DEBUG)console.warn('[_ensureThreeDays]:',e.message)}
+  return out;
+}
+
+// v88.7.6: спільний fill-up для placeholder days — використовується для NOAA і UAF шляхiв.
+// Першочергово пробує NOAA 27-day-outlook (через t27R), потім synthetic-Kp-now fallback.
+function _fillPlaceholderDays(target3D, t27R){
+  if(!target3D || !target3D.days) return;
+  const _needsFillCount = target3D.days.filter(d => d._needsFill).length;
+  if(_needsFillCount === 0) return;
+
+  // Спроба 1: NOAA 27-day outlook
+  if(t27R && t27R.status === 'fulfilled' && t27R.value){
+    try{
+      if(window._DEBUG) console.log('[v88.7.6 fill] '+_needsFillCount+' placeholder day(s) — filling з NOAA 27-day');
+      const _r27 = parse27Day(t27R.value);
+      if(_r27 && _r27.length){
+        for(const d of target3D.days){
+          if(!d._needsFill) continue;
+          const targetStr = fmtDate(d.date);
+          const r27Entry = _r27.find(r => fmtDate(r.date) === targetStr);
+          if(r27Entry && isFinite(r27Entry.kpMax)){
+            d.kp8 = Array(8).fill(r27Entry.kpMax);
+            d.kpMax = r27Entry.kpMax;
+            d._filledFrom = 'noaa-27d';
+            delete d._needsFill;
+            const apEntry = target3D.predictedAp.find(p => fmtDate(p.date) === targetStr);
+            if(apEntry) apEntry.Ap = isFinite(r27Entry.Ap) ? r27Entry.Ap : kpToApInterp(r27Entry.kpMax);
+            if(window._DEBUG) console.log('[v88.7.6 fill] '+targetStr+' з 27-day Kp='+r27Entry.kpMax);
+          }
+        }
+      }
+    }catch(fillErr){
+      console.warn('[v88.7.6 fill] 27-day fill-up failed:', fillErr.message);
+    }
+  }
+
+  // Спроба 2: synthetic Kp-now fallback (якщо 27-day теж не дав)
+  const _stillNeedFill = target3D.days.filter(d => d._needsFill);
+  if(_stillNeedFill.length > 0){
+    const _kpFallback = (typeof lastWWV !== 'undefined' && lastWWV && isFinite(lastWWV.kNow)) ? lastWWV.kNow : 2.0;
+    for(const d of _stillNeedFill){
+      d.kp8 = Array(8).fill(_kpFallback);
+      d.kpMax = _kpFallback;
+      d._filledFrom = 'synthetic-kp-now';
+      delete d._needsFill;
+      const targetStr = fmtDate(d.date);
+      const apEntry = target3D.predictedAp.find(p => fmtDate(p.date) === targetStr);
+      if(apEntry) apEntry.Ap = kpToApInterp(_kpFallback);
+      if(window._DEBUG) console.log('[v88.7.6 fill] synthetic '+targetStr+' Kp='+_kpFallback);
+    }
+  }
 }
 
 function parse3DaySafe(json){
@@ -5052,26 +5133,11 @@ function parse3DaySafe(json){
     const firstFuture = data.find(r => r[0] && r[0].slice(0,10) >= todayIssuedStr);
     if(firstFuture) out.issued = firstFuture[0];
     else if(data.length) out.issued = data[0][0];
-    // v88.6.9: ГАРАНТУЄМО 3 days — додаємо placeholder days з kpMax=NaN якщо NOAA дав менше.
-    // Fill-up logic у loadAll потiм replace ці placeholders реальними значеннями з 27-day.
-    if(out.days.length > 0 && out.days.length < 3){
-      const haveDates = new Set(out.days.map(d => fmtDate(d.date)));
-      const todayD = new Date(); todayD.setUTCHours(0,0,0,0);
-      for(let off = 0; off < 3; off++){
-        const target = new Date(todayD); target.setUTCDate(target.getUTCDate()+off);
-        const targetStr = fmtDate(target);
-        if(haveDates.has(targetStr)) continue;
-        out.days.push({
-          date: target,
-          kp8: [],         // empty — render показує '...'
-          kpMax: NaN,      // unknown — render показує '...'
-          _needsFill: true
-        });
-        out.predictedAp.push({date: target, Ap: null});
-      }
-      out.days.sort((a,b) => a.date - b.date);
-      out.predictedAp.sort((a,b) => a.date - b.date);
-      if(window._DEBUG) console.log('[v88.6.9] parse3DaySafe placeholder added — '+(3 - (3 - out.days.filter(d => d._needsFill).length))+' real days, '+out.days.filter(d => d._needsFill).length+' placeholders awaiting 27-day fill');
+    // v88.7.6: ГАРАНТУЄМО 3 days через спільну функцію _ensureThreeDays.
+    // Раніше була inline-копія цієї логіки тут; тепер єдина імплементація для NOAA + UAF шляхiв.
+    _ensureThreeDays(out);
+    if(window._DEBUG && out.days.filter(d => d._needsFill).length > 0){
+      console.log('[v88.7.6 parse3DaySafe] '+out.days.filter(d => d._needsFill).length+' placeholder day(s) awaiting 27-day fill');
     }
   }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
   return out;
@@ -8576,12 +8642,15 @@ function _renderWhyTrend(){
   const todayStr = fmtDate(new Date());
 
   // 1. -3..-1 з last3D або computeAi з історичного Kp
+  // v88.7.6 BUG-1 fix: обмежуємо до 3 останніх минулих днів через slice(-3),
+  // інакше last3D з 4-day window (іноді буває залежно від часу публікації NOAA) дає 4 точки минулого.
   try {
     if(typeof last3D !== 'undefined' && last3D && last3D.days){
-      last3D.days.forEach(d => {
-        if(d.date && d.date < todayStr){
-          days.push({ ds: d.date, G: d.G, isPast: true });
-        }
+      const _pastFromLast3D = last3D.days
+        .filter(d => d.date && d.date < todayStr)
+        .slice(-3); // тільки 3 останні минулі дні (хронологічно найближчі до today)
+      _pastFromLast3D.forEach(d => {
+        days.push({ ds: d.date, G: d.G, isPast: true });
       });
     }
   } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
@@ -8599,13 +8668,31 @@ function _renderWhyTrend(){
   }
 
   // 2. сьогодні + 3 вперед з _27dComputed
-  if(typeof _27dComputed !== 'undefined' && _27dComputed){
+  // v88.7.6 BUG-1 fix: race-condition guard — якщо _27dComputed ще не готове, fallback на computeAi
+  // з kpNow (для today) і Kp=2 (для майбутнього). Це гарантує, що "зараз" завжди є на тренді.
+  let _todayPlusFutureAdded = 0;
+  if(typeof _27dComputed !== 'undefined' && _27dComputed && _27dComputed.length > 0){
     for(let i = 0; i < Math.min(4, _27dComputed.length); i++){
       const d = _27dComputed[i];
       if(d && d.ds && isFinite(d.G)){
         days.push({ ds: d.ds, G: d.G, isPast: false, isToday: i === 0 });
+        _todayPlusFutureAdded++;
       }
     }
+  }
+  // Race-condition fallback: _27dComputed ще не готове → today + 3 наперед через computeAi.
+  if(_todayPlusFutureAdded === 0){
+    const _kpNow = (typeof lastWWV !== 'undefined' && lastWWV && isFinite(lastWWV.kNow)) ? lastWWV.kNow : 2;
+    for(let i = 0; i <= 3; i++){
+      const ds = fmtDate(addDays(new Date(), i));
+      if(days.find(x => x.ds === ds)) continue;
+      try {
+        const ai = computeAi(noonUTC(addDays(new Date(), i)), i === 0 ? _kpNow : 2);
+        const G = (i === 0 ? _kpNow : 2) - 2 + ai.Ai;
+        days.push({ ds, G, isPast: false, isToday: i === 0 });
+      } catch(e){if(window._DEBUG)console.warn('[silent fallback]:',e.message)}
+    }
+    if(window._DEBUG) console.log('[v88.7.6 trend] _27dComputed not ready → fallback computeAi для today+3');
   }
 
   // Sort by date + cap at 7
@@ -8675,7 +8762,16 @@ function _renderWhyTrend(){
       svgHtml += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${d.isPast ? 3.5 : 4}" fill="${col}" opacity="${d.isPast ? 0.75 : 1}" />`;
     }
     // Day label
-    const lbl = d.isToday ? '' : (d.isPast ? `−${todayStr > d.ds ? Math.ceil((new Date(todayStr).getTime() - new Date(d.ds).getTime())/86400000) : 0}д` : `+${Math.ceil((new Date(d.ds).getTime() - new Date(todayStr).getTime())/86400000)}д`);
+    // v88.7.6 BUG-4 fix: round (не ceil) + noon-UTC anchor — DST-safe день-різниця.
+    // Ceil давав +1 при переходах на/з DST (23-год або 25-год доба).
+    const _msPerDay = 86400000;
+    const _todayMs = new Date(todayStr + 'T12:00:00Z').getTime();
+    const _dsMs    = new Date(d.ds      + 'T12:00:00Z').getTime();
+    const lbl = d.isToday
+      ? ''
+      : d.isPast
+        ? `−${Math.max(0, Math.round((_todayMs - _dsMs)/_msPerDay))}д`
+        : `+${Math.max(0, Math.round((_dsMs - _todayMs)/_msPerDay))}д`;
     if(lbl){
       svgHtml += `<text x="${x.toFixed(1)}" y="${(H-6).toFixed(1)}" font-size="9" fill="#5f7293" text-anchor="middle">${lbl}</text>`;
     }
@@ -9959,50 +10055,9 @@ async function loadAll(){
   // Kp прогноз 3 дні
   if(kpFcstR.status === 'fulfilled'){
     last3D = parse3DaySafe(kpFcstR.value);
-    // v88.6.9: Fill-up INLINE (перед render3Day) — щоб render викликався ОДИН раз з повним 3-day data.
-    // parse3DaySafe ВЖЕ додав placeholder days з _needsFill=true. Replace їх real Kp з 27-day.
-    const _needsFillCount = (last3D && last3D.days) ? last3D.days.filter(d => d._needsFill).length : 0;
-    if (_needsFillCount > 0 && t27R.status === 'fulfilled' && t27R.value) {
-      try{
-        if(window._DEBUG) console.log('[v88.6.9] '+_needsFillCount+' placeholder day(s) — filling з NOAA 27-day-outlook');
-        const _r27 = parse27Day(t27R.value);
-        if(_r27 && _r27.length){
-          for(const d of last3D.days){
-            if(!d._needsFill) continue;
-            const targetStr = fmtDate(d.date);
-            const r27Entry = _r27.find(r => fmtDate(r.date) === targetStr);
-            if(r27Entry && isFinite(r27Entry.kpMax)){
-              d.kp8 = Array(8).fill(r27Entry.kpMax);
-              d.kpMax = r27Entry.kpMax;
-              d._filledFrom = 'noaa-27d';
-              delete d._needsFill;
-              // update predictedAp
-              const apEntry = last3D.predictedAp.find(p => fmtDate(p.date) === targetStr);
-              if(apEntry) apEntry.Ap = isFinite(r27Entry.Ap) ? r27Entry.Ap : kpToApInterp(r27Entry.kpMax);
-              if(window._DEBUG) console.log('[v88.6.9] Filled '+targetStr+' з NOAA 27-day Kp='+r27Entry.kpMax);
-            }
-          }
-        }
-      }catch(fillErr){
-        console.warn('[v88.6.9] 27-day fill-up failed:', fillErr.message);
-      }
-    }
-    // v88.6.9: остаточний synthetic fallback для решти placeholder днiв (27-day тоже fail)
-    const _stillNeedFill = (last3D && last3D.days) ? last3D.days.filter(d => d._needsFill) : [];
-    if(_stillNeedFill.length > 0){
-      const _kpFallback = (lastWWV && isFinite(lastWWV.kNow)) ? lastWWV.kNow : 2.0;
-      for(const d of _stillNeedFill){
-        d.kp8 = Array(8).fill(_kpFallback);
-        d.kpMax = _kpFallback;
-        d._filledFrom = 'synthetic-kp-now';
-        delete d._needsFill;
-        const targetStr = fmtDate(d.date);
-        const apEntry = last3D.predictedAp.find(p => fmtDate(p.date) === targetStr);
-        if(apEntry) apEntry.Ap = kpToApInterp(_kpFallback);
-        if(window._DEBUG) console.log('[v88.6.9] Synthetic fill '+targetStr+' Kp='+_kpFallback);
-      }
-    }
-    render3Day(last3D);  // ← ОДНОРАЗОВИЙ render з повним 3-day data
+    // v88.7.6: Fill-up винесено у спільну функцію — використовується для NOAA і UAF.
+    _fillPlaceholderDays(last3D, t27R);
+    render3Day(last3D);
     _setSrcStatus('srcKpFcst','ok');
   } else {
     _setSrcStatus('srcKpFcst','error');
@@ -10017,9 +10072,11 @@ async function loadAll(){
       const _last3DUaf = uafTo3DayFormat(_uaf);
       if (_last3DUaf && _last3DUaf.days && _last3DUaf.days.length) {
         last3D = _last3DUaf;
+        // v88.7.6 BUG-2 fix: UAF days можуть мати placeholder з _needsFill — заповнюємо перед render.
+        _fillPlaceholderDays(last3D, t27R);
         render3Day(last3D);
         _setSrcStatus('srcKpFcst','cache'); // 'cache' indicates secondary source
-        if(window._DEBUG) console.log('[v88.6.9] UAF Alaska 3-day OK ('+_last3DUaf.days.length+' days)');
+        if(window._DEBUG) console.log('[v88.7.6] UAF Alaska 3-day OK ('+_last3DUaf.days.length+' days, filled)');
         // Cache UAF 27-day для подальшого використання нижче
         if(_uaf && _uaf.kp27Day && _uaf.kp27Day.length){
           window._uafCache27Day = uafTo27DayFormat(_uaf);
@@ -11427,9 +11484,15 @@ function renderPersonal() {
   // v85b-F7 (CRIT): Risk override — коли глобальний G ≤ -1, Taara-optimism не може домінувати.
   // Показуємо розділений вигляд: "Ваш цикл" + "Глобальний фон" + "Висновок"
   // v85b-F9: default-deny — якщо G невідомий, не кидаємо optimistic (безпечно)
+  // v88.7.6 BUG-3 fix (Варіант А): додаємо ІНВЕРСНИЙ випадок — фон сприятливий (G ≥ 0),
+  // але особистий цикл несе ризик (danger=Vipat/Pratyak/Naidhana або taaraGmod ≤ -1).
+  // Раніше при G=+0.7 і Taara=Vipat hero казало "Можна діяти", а personal block — "День напружений".
+  // Без banner оператор бачив суперечність без пояснення, що це різні шари (фон vs особистий).
   const _globalG = (function(){try{return _v73G();}catch(e){return NaN;}})();
   const _globalRisk = isFinite(_globalG) && _globalG <= -1;
+  const _globalSafe = isFinite(_globalG) && _globalG >= 0;
   const _globalUnknown = !isFinite(_globalG);
+  const _personalRisk = danger || taaraGmod <= -1;
   let _riskBannerHtml = '';
   let _effectivePhCol = _phCol, _effectivePhBg = _phBg, _effectivePhBrd = _phBrd;
   let _effectivePhState = _ph.state;
@@ -11453,6 +11516,18 @@ function renderPersonal() {
       _effectiveDec = 'не починати нових важливих кроків';
       _effectiveComms = 'м\'яко, без конфлікту і тиску';
     }
+  } else if (_globalSafe && _personalRisk) {
+    // v88.7.6 BUG-3 (інверсний випадок): фон OK, але особистий цикл небезпечний.
+    // Hero показує "Можна діяти" → personal block показує "День напружений" → потрібне пояснення.
+    const _taaraLabel = _ti ? _ti.short.split(' — ')[0] : taara.name;
+    _riskBannerHtml = `<div style="padding:8px 12px;margin-bottom:6px;border-radius:10px;border:1px solid rgba(180,140,255,.28);background:rgba(180,140,255,.08);display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;line-height:1.35" title="Глобальний фон (Kp + Панчанга) і особистий цикл (Taara від вашої натальної стоянки) — різні шари аналізу. Hero G показує загальний космофізичний фон. Особистий блок показує ваш цикл відносно дня народження. Розбіжність — норма, не баг.">
+      <div><div style="color:var(--faint);font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Глобальний фон</div><div style="color:#7fe3a6;font-weight:700">G = ${_globalG >= 0 ? '+' : ''}${_globalG.toFixed(1)} · сприятливо</div></div>
+      <div><div style="color:var(--faint);font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Ваш цикл</div><div style="color:${danger?'#ff8e8e':'#ffd6ad'};font-weight:700">${_taaraLabel} · ${danger?'обережний':'тиск'}</div></div>
+      <div style="grid-column:1/-1;padding-top:4px;border-top:1px solid rgba(180,140,255,.18);color:#cfb6ff;font-size:11px;line-height:1.4">⚠ Шари дають різний сигнал. Загальні справи — дозволено (фон сприяє). Особисто важливі рішення — відкласти (цикл проти).</div>
+    </div>`;
+    // М'який override: state не перетираємо повністю (це особистий блок),
+    // лише підкреслюємо двозначність у phMod.
+    _effectivePhMod = (_effectivePhMod || '') + ' Загальний фон сприяє, але особисто — обережно.';
   } else if (_globalUnknown && taaraGmod > 0 && !danger) {
     // v85b-F9: при невідомому G — не показувати optimistic (default-deny)
     _effectivePhCol = '#cfe0ff';

@@ -1,10 +1,16 @@
-// G-Index Service Worker v88.7.5 (math audit fix: heroConfidence tooltip honesty)
-// v88.7.5 changes: tooltip «Довіра» виправлений — реальний max=92% by design (v87.14 floor penalty),
-//                  не 100% як невірно сказано у v88.7.3. Деталі: storm/stale/synthetic пеналі.
-// v88.7.4 changes: bulk replace ~35 згадок «engine v17» у UI tooltips/headings/i18n → «engine v18.5»
-//                  (v88.7.3 змінив тільки 1 chip label, а не весь sweep — недопрацювання виправлене).
-// v88.7.3 changes: tooltips on Lᵢ/Mᵢ/eᵢ/Pᵢ/Dᵢ chips + heroConfidence;
-//                  ENGINE V17 → V18.5 chip label; "8 джерел" → "5 джерел" sync.
+// G-Index Service Worker v88.7.6 (math + UX audit: 4 bugs fixed)
+// v88.7.6 changes:
+//   BUG-1: trend "7 днів" sparkline — обмежено last3D до slice(-3) минулих + race-fallback
+//          через computeAi коли _27dComputed ще не готове. Тепер "зараз" завжди на тренді.
+//   BUG-2: 3-day forecast quick-cards — UAF Alaska fallback тепер теж гарантує 3 дні
+//          через спільну функцію _ensureThreeDays + _fillPlaceholderDays.
+//   BUG-3: hero ↔ personal cycle conflict — додано банер "Глобальний фон vs Ваш цикл"
+//          для інверсного випадку (G ≥ 0 + Taara=Vipat/Pratyak/Naidhana).
+//   BUG-4: day-label у тренді — round + noon-UTC anchor (DST-safe; ceil давав +1 при DST).
+//   Cache keys bumped до v88-7-6 для invalidation попередніх версій при deploy.
+// v88.7.5 changes: tooltip «Довіра» виправлений — реальний max=92% by design (v87.14 floor penalty).
+// v88.7.4 changes: bulk replace ~35 згадок «engine v17» у UI tooltips/headings/i18n → «engine v18.5».
+// v88.7.3 changes: tooltips on Lᵢ/Mᵢ/eᵢ/Pᵢ/Dᵢ chips + heroConfidence; "8 джерел" → "5 джерел" sync.
 // v88.7.2 changes: bump cache keys to invalidate v88.7.2 (NOAA Worker URL hardcoded).
 // v88.7.1 changes: bump cache keys to invalidate v88.7.1 client-side fixes (CSP + title).
 // v88.7.0 changes (deep audit fixes):
@@ -13,8 +19,8 @@
 //   3. backtest.html додано до SHELL_FILES
 //   4. cache.put awaited перед SW_FRESH_DATA notify (race fix)
 
-const SHELL_CACHE = 'g-index-shell-v88-7-5';
-const DATA_CACHE = 'g-index-data-v88-7-5';
+const SHELL_CACHE = 'g-index-shell-v88-7-6';
+const DATA_CACHE = 'g-index-data-v88-7-6';
 
 const SHELL_FILES = [
   './',
