@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.7.13</title>
+  <title>G-Index — Космофізичний дашборд v88.7.15</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1278,7 +1278,7 @@ body.simple-mode .col-hide-mobile {
           <span id="dataTimestamp" style="font-size:10px;color:var(--faint);margin-left:4px"></span>
         </div>
         <span class="pill" id="stamp" style="font-size:11px">—</span>
-        <span id="freshnessBadge" style="font-size:10px;padding:2px 6px;border-radius:3px;margin-left:4px;font-weight:600;letter-spacing:0.3px;background:#0a2a15;color:#63be7b">● LIVE</span>
+        <span id="freshnessBadge" tabindex="0" title="Свіжість даних NOAA Kp (за віком останнього fetch):&#10;• LIVE — менше 5 хв (зелений)&#10;• DELAYED — 5–30 хв (жовтий, нормальна затримка)&#10;• STALE — 30–60 хв (помаранчевий)&#10;• OLD — понад 60 хв (червоний, втрачено зв'язок)&#10;• CACHED — офлайн режим / SW проксі-кеш&#10;NOAA Kp endpoints оновлюються кожні ~5–10 хв." style="font-size:10px;padding:2px 6px;border-radius:3px;margin-left:4px;font-weight:600;letter-spacing:0.3px;background:#0a2a15;color:#63be7b;cursor:help">● LIVE</span>
       </div>
     </div>
   </header>
@@ -1435,6 +1435,9 @@ body.simple-mode .col-hide-mobile {
               <div class="hero-energy-labels"><span>−5</span><span>0</span><span>+5</span></div>
             </div>
             <div id="heroGreeting"></div>
+            <!-- v88.7.15 Б: low-confidence marker — engine F1=0.26 на neutral (CANONICAL_METRICS).
+                 Видимий ТІЛЬКИ коли |G| ≤ 1 (зона де engine має слабку точність). -->
+            <div id="heroLowConfBadge" tabindex="0" style="display:none;margin-top:6px;padding:4px 8px;border-radius:6px;font-size:11px;color:#9bb1dc;background:rgba(155,177,220,.06);border:1px dashed rgba(155,177,220,.25);cursor:help" title="Engine v18.5 на нейтральному класі (G ∈ [-1, +1]) має f1=0.26 — низька точність розрізнення нейтральних/слабких днів. Strong negative (F1=0.84) і Strong positive (F1=0.69) — надійні. Для критичних рішень у середній зоні рекомендована експертна перевірка.&#10;Source: CANONICAL_METRICS.md v2.0 (n=280, GT v5.1).">⚪ Низька довіра в нейтральній зоні</div>
             <div id="heroDecisionBlock">
               <div id="heroDecisionDo">—</div>
               <div id="heroDecisionAvoid">—</div>
@@ -1466,7 +1469,7 @@ body.simple-mode .col-hide-mobile {
           <span id="heroTomorrowScenario" title="⚠ NOAA forecast недоступний — це плато на базі поточного Kp, не справжній прогноз."></span>
           <span id="heroNextShiftChip" data-label="Далі" style="font-size:11px;color:var(--faint);display:none"></span>
           <span id="heroStamp" data-label="Оновлено" style="font-size:11px;color:var(--dim)">—</span>
-          <span id="heroConfidence" data-label="Довіра" class="hint" tabindex="0" title="Довіра — confidence score моделі (R&D / Advisory level). Максимум 92% by design — модель завжди має базову невизначеність 8% (v87.14 floor penalty). Зниження від 92%: storm Kp≥5 (-10..-18%), нестабільний Kp (-7..-15%), stale/cached дані (-12..-20%), synthetic NOAA forecast (-22%), затемнення hardcoded ±1д (-8%), сильний Pᵢ R&D (-6%). 92% = найкращий стан системи." style="font-size:11px;color:var(--dim);cursor:help"></span>
+          <span id="heroConfidence" data-label="Довіра" class="hint" tabindex="0" title="Довіра — confidence score моделі (R&D / Advisory level). Максимум 92% by design — модель завжди має базову невизначеність 8% (v87.14 floor penalty). Зниження від 92%: storm Kp≥5 (-10..-18%), нестабільний Kp (-7..-15%), stale/cached дані (-12..-20%), synthetic NOAA forecast (-22%), затемнення hardcoded ±1д (-8%), сильний Pᵢ R&D (-6%). 92% = найкращий стан системи.&#10;&#10;⚠ Posibnyk Part II § II.1 (TU-1-1-GSR-SAFTE): Panchanga модуль (PCL v3.1) — advisory-компонент, НЕ сертифікований за SIL-3. Результати не можуть бути єдиним підґрунтям критичних оперативних рішень. Status у production: CBI=0, Kpanch=1.00 (заморожено)." style="font-size:11px;color:var(--dim);cursor:help"></span>
           <!-- v87.90 P3 fix: badge style для engine v18.5 score — більш помітно vs Live G -->
           <span id="heroBulletin" data-label="Engine v18.5" class="hint" tabindex="0" style="font-size:12px;font-weight:700;color:var(--muted);cursor:help;border:1px solid var(--border2);padding:1px 8px;border-radius:8px;background:rgba(11,18,32,.4)" title="Engine v18.5 (rule-based bulletin model, discrete -3..+3, FROZEN 2026-05-03 до V3 close ~2026-08-01). Використовує manual Джйотіш-теги + thresholds.&#10;Dashboard G — continuous real-time signal (Kp − 2 + ΣAᵢ).&#10;Різні моделі за дизайном — розбіжність не баг.">—</span>
           <!-- v88.0: Astronomical layer pill (Tithi/Nakshatra/Yoga з cal_score field у engine_scores.json, Swiss Ephemeris Lahiri) -->
@@ -3282,6 +3285,35 @@ function setStamp(){
 // v87.61: Bulletin (engine v18.5) score loader — Шлях C (dual-display).
 // Завантажує engine_scores.json (static), показує поряд з G у hero і 3-day.
 let _engineScores = null;
+
+// v88.7.15 Г: експертні overrides (PDF #48 calibration, 14 точкових записів 12.05–24.05).
+// Завантажуються паралельно з engine_scores. Застосовуються у getEngineScore() —
+// якщо дата в overrides → eng замінюється на expert_eng, оригінал зберігається у _engRaw.
+// Frozen partition: engine_scores.json НЕ змінюється (V3 prospective freeze для backtest).
+let _expertOverrides = null; // {date: {expert_eng, tanita_O, tanita_N, category, applied_in}}
+async function loadExpertOverrides(){
+  if(_expertOverrides !== null) return _expertOverrides;
+  try {
+    const resp = await fetch('expert_overrides_v3.json', { cache: 'default' });
+    if(!resp.ok) throw new Error('HTTP ' + resp.status);
+    const data = await resp.json();
+    _expertOverrides = {};
+    if(Array.isArray(data.overrides)){
+      for(const r of data.overrides){
+        if(r && r.date && Number.isFinite(r.expert_eng)){
+          _expertOverrides[r.date] = r;
+        }
+      }
+    }
+    if(window._DEBUG) console.log('[v88.7.15 Г] expert_overrides_v3 loaded: ' + Object.keys(_expertOverrides).length + ' records');
+    return _expertOverrides;
+  } catch(e){
+    if(window._DEBUG) console.warn('[v88.7.15 Г] expert_overrides_v3.json fetch failed:', e.message);
+    _expertOverrides = {};
+    return _expertOverrides;
+  }
+}
+
 async function loadEngineScores(){
   if(_engineScores !== null) return _engineScores;
   try {
@@ -3345,7 +3377,20 @@ async function loadEngineScores(){
 function getEngineScore(dateObj){
   if(!_engineScores) return null;
   const ds = fmtDate(dateObj);
-  const snapshot = _engineScores[ds] || null;
+  let snapshot = _engineScores[ds] || null;
+  // v88.7.15 Г: точкові expert overrides (PDF #48 calibration). Застосовуємо ПЕРЕД kp-marker логікою.
+  // expert_eng замінює engine eng; оригінал зберігається у _engRaw для трасування.
+  if(snapshot && _expertOverrides && _expertOverrides[ds]){
+    const ovr = _expertOverrides[ds];
+    snapshot = {
+      ...snapshot,
+      _engRaw: snapshot.eng,
+      eng: ovr.expert_eng,
+      _expertOverride: true,
+      _overrideCategory: ovr.category || 'manual_expert_override',
+      _overrideAppliedIn: ovr.applied_in || ''
+    };
+  }
   // v88.7 (deep audit 2026-04-30): lite-recalc DEACTIVATED.
   // Reason: round(Hero G) gives 47% accuracy (PCL_CALIBRATION_REPORT.md);
   // original snapshot gives 75.0% strict on holdout (n=56, v5.1). Recalc погіршує якість.
@@ -3381,10 +3426,16 @@ function renderHeroBulletin(){
   const color = s >= 2 ? 'var(--ok)' : s === 1 ? '#9cd49c' : s === 0 ? 'var(--muted)' : s === -1 ? 'var(--warn)' : s <= -2 ? 'var(--bad)' : 'var(--muted)';
   // v87.90: synthetic marker у видимому тексті (не лише tooltip) — чесність для майбутніх дат
   const _synMark = entry.kp_synthetic ? '<span style="color:#fca474;margin-left:2px" title="Synthetic Kp=2.0 (NOAA forecast недоступний — scenario, не forecast)">~</span>' : '';
-  elB.innerHTML = `<span style="color:${color};font-weight:700">${s >= 0 ? '+' : ''}${s}${_synMark}</span>`;
+  // v88.7.15 Г: marker '★' коли застосовано expert override (PDF #48 calibration)
+  const _ovMark = entry._expertOverride ? '<span style="color:#ffd166;margin-left:2px;font-size:9px" title="Expert override застосовано">★</span>' : '';
+  elB.innerHTML = `<span style="color:${color};font-weight:700">${s >= 0 ? '+' : ''}${s}${_synMark}${_ovMark}</span>`;
   const synth = entry.kp_synthetic ? ' · ⚠ Kp synthetic (scenario, не forecast)' : '';
   const pdfStr = (entry.pdf !== null && entry.pdf !== undefined) ? ` · PDF ${entry.pdf >= 0 ? '+' : ''}${entry.pdf}` : '';
-  elB.title = `Engine v18.5 score: ${s >= 0 ? '+' : ''}${s} (rule-based, threshold classifier).\nТег: ${entry.tag || '—'}\nKp=${entry.kp}${synth}${pdfStr}\nDashboard G (continuous) ≠ Engine score (threshold) — різні моделі за дизайном.`;
+  // v88.7.15 Г: рядок про override у tooltip
+  const _ovInfo = entry._expertOverride
+    ? `\n★ Expert override applied: raw engine v18.5 був ${entry._engRaw >= 0 ? '+' : ''}${entry._engRaw}, expert PDF (${entry._overrideAppliedIn || 'PDF #48'}) caliбрував до ${s >= 0 ? '+' : ''}${s}. Категорія: ${entry._overrideCategory || '—'}.`
+    : '';
+  elB.title = `Engine v18.5 score: ${s >= 0 ? '+' : ''}${s} (rule-based, threshold classifier).\nТег: ${entry.tag || '—'}\nKp=${entry.kp}${synth}${pdfStr}${_ovInfo}\nDashboard G (continuous) ≠ Engine score (threshold) — різні моделі за дизайном.`;
 }
 
 // v88.1: BPHS canonical yoga penalties for ADVISORY display only.
@@ -3621,9 +3672,10 @@ function renderScenarioCard(){
     const _t88 = (typeof I18N !== 'undefined' && typeof _currentLang !== 'undefined' && I18N[_currentLang]) ? I18N[_currentLang] : null;
     const critWord = (_t88 && _t88.scenarioCritical) ? _t88.scenarioCritical : ((_currentLang === 'EN') ? 'critical' : (critCount===1?'критичний':'критичних'));
     const stableWord = (_t88 && _t88.scenarioStable) ? _t88.scenarioStable : 'стабільний';
-    const daysWord = (_currentLang === 'EN') ? 'days' : 'днів';
-    const critTxt = critCount > 0 ? ` · <span style="color:var(--warn);font-weight:700">⚡ ${critCount} ${critWord}</span>` : ` · ${stableWord}`;
-    subEl.innerHTML = ` — ${days.length} ${daysWord}${critTxt}`;
+    const critTxt = critCount > 0 ? `<span style="color:var(--warn);font-weight:700">⚡ ${critCount} ${critWord} з ${days.length}</span>` : `${stableWord} тиждень`;
+    // v88.7.14 E1: прибрано дубль "7 днів" — заголовок details уже містить "Сценарій на 7 днів".
+    // Раніше: "Сценарій на 7 днів — 7 днів · 4 критичних". Тепер: "Сценарій на 7 днів — 4 критичних з 7".
+    subEl.innerHTML = ' — ' + critTxt;
   }
   // v88.2: auto-expand scenarioCard коли crit≥3 з 7 — щоб користувач побачив warning.
   // Trigger тільки один раз на сесію (per browser session) — не override user manual close.
@@ -8169,6 +8221,15 @@ function syncHero(){
       else if(newG>=-2) heroG.classList.add('g-warn');
       else heroG.classList.add('g-bad');
     }
+    // v88.7.15 Б: low-confidence badge — видимий тільки у зоні |G| ≤ 1 (engine F1=0.26 на neutral).
+    // Strong negative/positive класи валідовані (F1 0.84/0.69), середня зона — потребує експертного підтвердження.
+    try {
+      const _lcb = document.getElementById('heroLowConfBadge');
+      if (_lcb) {
+        const _isLowConf = isFinite(newG) && Math.abs(newG) <= 1.0;
+        _lcb.style.display = _isLowConf ? '' : 'none';
+      }
+    } catch(e) { /* noop */ }
 
     // Ring gauge
     const ring=document.getElementById('heroRingVal');
@@ -8269,7 +8330,7 @@ function syncHero(){
         const _icon = _state === 'improving' ? '📈' : _state === 'worsening' ? '📉' : '➡️';
         // v87.90: реальний age у годинах та підпис "vs Nh тому" якщо відхилення ≥ 2h
         const _ageH  = _gd.t24h ? Math.round((Date.now() - _gd.t24h) / 3600000) : 24;
-        const _ageMatch = (_ageH >= 22 && _ageH <= 26);
+        const _ageMatch = (_ageH >= 20 && _ageH <= 28); // v88.7.14 E2: розширено з [22, 26] — DST shift і затримки fetch роблять 27-29h типовим, не варто трактувати як аномалію.
         const _ageNote  = _ageMatch ? '' : ` (vs ${_ageH}h тому)`;
         const _gPrev    = isFinite(_gd.g24h) ? _gd.g24h.toFixed(2) : '?';
         const _tHHMM    = _gd.t24h ? new Date(_gd.t24h).toLocaleTimeString('uk-UA',{hour:'2-digit',minute:'2-digit'}) : '?';
@@ -9101,7 +9162,7 @@ const GLOBAL_STATES = {
     doText: '✔ Можна діяти активно',
     avoidText: '○ Підтримуйте темп без хаосу', // v88.7.13 D: ✖→○, без алармізму у зеленій зоні (Excel ТИЖНЕВИЙ favorable: "✅ СПРИЯТЛИВО · Плановий режим" — без застережень)
     doList: ['активні дії','запуски','домовленості','стратегічні рішення'],
-    avoidList: ['хаос','розпорошення'],
+    avoidList: ['розпорошення','імпровізація без плану'], // v88.7.14 E4: 'хаос' → м'якше для зеленої зони, узгоджено з ○ avoidText
     zone: 'сильна',
     mood: 'сприятливий фон', action: 'можна робити важливі кроки',
     impact: 'Концентрація і стійкість в межах норми. День підходить для запуску нових задач і планових рішень.',
@@ -9114,7 +9175,7 @@ const GLOBAL_STATES = {
     doText: '✔ Рухайтесь у важливих справах',
     avoidText: '○ Без розпорошення на дрібниці', // v88.7.13 D: ✖→○, узгоджено з favorable (зелена зона, без алармізму)
     doList: ['активні дії','запуски','домовленості'],
-    avoidList: ['хаос','розпорошення'],
+    avoidList: ['дрібниці','розпорошення'], // v88.7.14 E4: 'хаос' → м'якше для зеленої зони
     zone: 'сприятлива',
     mood: 'сприятливий фон', action: 'можна робити важливі кроки',
     impact: 'Фон підтримує активність. Можна приймати рішення і рухатись вперед у ключових напрямках.',
@@ -13325,8 +13386,9 @@ function renderProfileRec() {
 addEventListener('load', ()=>{ initGeolocation(); setStamp(); loadAll(); el('btnCsv').addEventListener('click', exportCsv); const _bIcs=el('btnIcs'); if(_bIcs) _bIcs.addEventListener('click', exportICS); el('selInterval').addEventListener('change', updateAutoRefStatus); initPersonalCalc(); initLangToggle(); initG2Watch(); initSimpleMode(); /* v87.28: страхувальний рендер compare periods — не залежить від NOAA */ try{ if(typeof renderComparePeriods === 'function') renderComparePeriods(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
   // v87.61: load engine_scores.json (Bulletin model) + render heroBulletin
   // v87.62: after scores load, also re-render 3-day pills and 27-day table so Bulletin cells populate.
+  // v88.7.15 Г: паралельно завантажуємо expert_overrides_v3.json — застосовуються у getEngineScore().
   try {
-    loadEngineScores().then(()=>{
+    Promise.all([loadEngineScores(), loadExpertOverrides()]).then(()=>{
       try{ renderHeroBulletin(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
       try{ renderHeroAstroLayer(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
       try{ renderScenarioCard(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}

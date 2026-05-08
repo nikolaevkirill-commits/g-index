@@ -1,5 +1,50 @@
-// G-Index Service Worker v88.7.13 (UX-копірайтна нормалізація під канон Excel/DOCX/Posibnyk)
-// v88.7.13 changes (4 точкові патчі + 2 tooltip — реєстр А, внутрішньо-оперативний):
+// G-Index Service Worker v88.7.15 (архітектурні допрацювання — Б, В+, Г)
+// v88.7.15 changes (3 архітектурні патчі — продовження після v88.7.14):
+//   Б — Low-confidence badge у Hero (CANONICAL_METRICS f1=0.26 на neutral).
+//      HTML (index.html:~1438): додано <div id="heroLowConfBadge"> у hero-maintext
+//        між heroGreeting і heroDecisionBlock.
+//      JS (syncHero ~8175): показ/ховання залежно від |newG| ≤ 1.0.
+//      Tooltip: tag_to_text.json verdict_low_confidence_classes [-1, 0, 1] +
+//        per-class F1 з CANONICAL_METRICS (Negative 0.84, Neutral 0.26, Positive 0.69).
+//      Закриває критику "дашборд показує G з фейковою точністю у нейтральній зоні".
+//   В+ — Posibnyk Part II SIL-3 disclaimer у heroConfidence tooltip (index.html:1469).
+//      Раніше: тільки "R&D / Advisory level".
+//      Тепер: + дослівне формулювання Posibnyk § II.1: "Panchanga модуль (PCL v3.1) —
+//        advisory-компонент, НЕ сертифікований за SIL-3. Результати не можуть бути
+//        єдиним підґрунтям критичних оперативних рішень. CBI=0, Kpanch=1.00 (заморожено)."
+//      Юридично-захисна функція для військового профілю (Profile: Військовий).
+//   Г — expert_overrides_v3.json інтеграція (PDF #48 calibration, 14 точкових overrides).
+//      Раніше: дашборд НЕ застосовував overrides — engine pill показував raw v18.5
+//        на 14 датах 12.05–24.05, розходячись з PDF expert.
+//      Тепер: 1) loadExpertOverrides() — fetch + parse паралельно з engine_scores;
+//             2) getEngineScore() wrap — якщо date in overrides, eng → expert_eng,
+//                оригінал зберігається у _engRaw для трасування;
+//             3) renderHeroBulletin: маркер ★ + tooltip "Expert override applied:
+//                raw +N → calibrated +M, applied_in PDF #48".
+//      Engine_scores.json НЕ зачеплено (V3 prospective freeze збережено).
+//   Cache keys bumped до v88-7-15.
+//
+// v88.7.14 changes (точкові доопрацювання після v88.7.13):
+//   E1 (index.html:3625-3627): прибрано дубль "7 днів — 7 днів" у scenarioSummarySub.
+//      Раніше: "Сценарій на 7 днів — 7 днів · 4 критичних" (дубль у заголовку details + summary).
+//      Тепер: "Сценарій на 7 днів — 4 критичних з 7" або "— стабільний тиждень".
+//      Також прибрано невикористовувану const daysWord (no-op cleanup).
+//   E2 (index.html:8273): _ageMatch вікно [22, 26] → [20, 28] годин.
+//      Раніше: "Покращення з вчорашнього дня: Фон піднявся +1.9 (vs 29h тому)".
+//      29h випадало з вузького [22, 26] вікна — DST shift і fetch затримки роблять 27-29h
+//      типовим, не аномалією. Тепер у межах [20, 28] note приховано → "vs ≈вчора".
+//   E3 (index.html:1281): tooltip на #freshnessBadge (хедер).
+//      Раніше: БЕЗ title (паралельно з heroFreshness уже має v88.7.13 N3).
+//      Тепер: ідентичний tooltip з 4 канонічними станами (LIVE/DELAYED/STALE/OLD/CACHED)
+//      + tabindex="0" + cursor:help.
+//   E4 (index.html:9099, 9112): avoidList для favorable/good GLOBAL_STATES.
+//      Раніше: ['хаос','розпорошення'] для зелених станів — суперечило v88.7.13 D-патчу
+//      (avoidText ○ м'який, але avoidList ще містив "хаос" — алармістський).
+//      Тепер: favorable=['розпорошення','імпровізація без плану'], good=['дрібниці','розпорошення'].
+//      Узгоджено з ○ реєстром і Excel ТИЖНЕВИЙ "Плановий режим".
+//   Cache keys bumped до v88-7-14.
+//
+// v88.7.13 changes (UX-копірайтна нормалізація під канон Excel/DOCX/Posibnyk):
 //   N1 (index.html:7150-7167): лейбл «Уникати» → 3-станова логіка з об'єктом.
 //      Канон Posibnyk Part II Tab.1: «Уникати важливих дій» (з об'єктом).
 //      worst.G > +0.5  → ховати рядок (зелений день — нема чого «уникати»)
@@ -148,8 +193,8 @@
 //   3. backtest.html додано до SHELL_FILES.
 //   4. cache.put awaited перед SW_FRESH_DATA notify (race fix).
 
-const SHELL_CACHE = 'g-index-shell-v88-7-13';
-const DATA_CACHE = 'g-index-data-v88-7-13';
+const SHELL_CACHE = 'g-index-shell-v88-7-15';
+const DATA_CACHE = 'g-index-data-v88-7-15';
 
 const SHELL_FILES = [
   './',
@@ -188,6 +233,30 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
+  
+  // v88.7.15 Г: expert_overrides_v3.json — network-first з cached fallback (як engine_scores).
+  // Файл оновлюється коли експерт випускає новий PDF (раз на 1-2 тижні).
+  if (url.pathname.endsWith('expert_overrides_v3.json')) {
+    event.respondWith(
+      fetch(event.request)
+        .then(async (resp) => {
+          if (resp.ok) {
+            const clone = resp.clone();
+            const cache = await caches.open(DATA_CACHE);
+            await cache.put(event.request, clone);
+          }
+          return resp;
+        })
+        .catch(() => {
+          return caches.match(event.request).then((cached) => {
+            return cached || new Response('{"overrides":[]}', {
+              headers: { 'Content-Type': 'application/json' }
+            });
+          });
+        })
+    );
+    return;
+  }
   
   if (url.pathname.endsWith('engine_scores.json')) {
     event.respondWith(
