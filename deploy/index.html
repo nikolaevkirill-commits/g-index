@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.7.6</title>
+  <title>G-Index — Космофізичний дашборд v88.7.9</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -45,9 +45,9 @@
   <meta name="twitter:description" content="Геомагнітна активність + Panchanga у реальному часі. Advisory / R&D." />
   <meta name="twitter:image" content="https://nikolaevkirill-commits.github.io/g-index/deploy/icon512.png" />
 
-  <!-- v88.6.9: Supabase SDK loading видалено — auth мiгрував на Cloudflare Worker (GAuth).
-       Push backend (push_subscriptions) тимчасово inert через SUPA shim — буде вiдновлено
-       коли Cloudflare D1 додасть push table (Phase 2.3). Бачимо ~150KB bandwidth економiї. -->
+  <!-- v88.6.9: Supabase SDK loading видалено — auth мігрував на Cloudflare Worker (GAuth).
+       Push backend (push_subscriptions) тимчасово inert через SUPA shim — буде відновлено
+       коли Cloudflare D1 додасть push table (Phase 2.3). Бачимо ~150KB bandwidth економії. -->
 
 
   <style>
@@ -150,7 +150,7 @@
 
     .panch-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:10px; margin-top:10px }
     .panch-cell{ background:var(--card2); border:1px solid #1e2f52; border-radius:var(--r); padding:10px 12px; transition:border-color .2s }
-    /* v87.97: видалено dead CSS .pcl-{pos,warn,bad,vbad} — жодного classList.add() у JS, конфлікт-резолвер тепер через scoreBar gCtx (v87.96) */
+    /* Conflict resolution для score-кольорів — через scoreBar(s, gCtx) gCtx-aware */
     .panch-label{ font-size:var(--fs-sm); color:var(--dim); text-transform:uppercase; letter-spacing:.05em; margin-bottom:4px; font-weight:600 }
     .panch-val{ font-size:var(--fs-lg); font-weight:700; color:var(--text2) }
     .panch-sub{ font-size:var(--fs-md); color:var(--muted); margin-top:2px }
@@ -948,7 +948,7 @@
     @media (max-width: 860px){#panchCard .panch-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
     @media (max-width: 520px){#panchCard .panch-grid{grid-template-columns:1fr!important}}
     #panchCard .panch-cell{min-height:68px!important;padding:8px 10px!important;border-radius:12px!important}
-    /* v87.97: видалено dead conflict resolver на .pcl-pos (lines 968-970 v87.95) — селектори не мали DOM-таргетів. Conflict resolution тепер у scoreBar(s, gCtx) gCtx-aware (v87.96). */
+    /* Conflict resolution через scoreBar(s, gCtx) gCtx-aware */
     #panchCard .panch-cell{position:relative}
     #panchCard .panch-label{font-size:10px!important;margin-bottom:2px!important}
     #panchCard .panch-val{font-size:13px!important;line-height:1.2!important}
@@ -1223,7 +1223,7 @@ body.simple-mode .col-hide-mobile {
 
   <!-- Астро бібліотека: фаза Місяця -->
   <!-- v88.6.9: astronomy-engine з multi-CDN fallback (jsdelivr → unpkg)
-       Якщо jsdelivr DOWN, Panchanga/Tithi обчислення зламаються — потрiбен fallback. -->
+       Якщо jsdelivr DOWN, Panchanga/Tithi обчислення зламаються — потрібен fallback. -->
   <script src="https://cdn.jsdelivr.net/npm/astronomy-engine@2.1.19/astronomy.browser.min.js"
           onerror="(function(){var s=document.createElement('script');s.src='https://unpkg.com/astronomy-engine@2.1.19/astronomy.browser.min.js';s.onerror=function(){console.error('[astronomy-engine] both CDNs failed — Panchanga unavailable');};document.head.appendChild(s);})()"
           defer></script>
@@ -1262,7 +1262,7 @@ body.simple-mode .col-hide-mobile {
           style="background:#2a1a1a;color:#ff9f9f;border:1px solid #4a2a2a;font-size:11px;padding:3px 8px;border-radius:6px">🗑 Кеш</button>
         <button id="btnShare" title="Поділитись поточним G-станом" aria-label="Поділитись" onclick="shareGState()" style="background:#1e2a44;color:#9bb1dc;border:1px solid var(--border2)">📤</button>
         <button class="lang-btn active" id="btnLang" title="Switch language / Змінити мову" aria-label="Змінити мову інтерфейсу">UA</button>
-        <button class="lang-btn" id="btnSimpleMode" title="Простий режим (тiльки Hero) / Експертний режим"
+        <button class="lang-btn" id="btnSimpleMode" title="Простий режим (тільки Hero) / Експертний режим"
           aria-label="Перемкнути простий/експертний режим"
           style="border-color:var(--faint);color:var(--dim);font-size:12px">👁</button>
         <button class="lang-btn" id="btnG2Watch" style="border-color:var(--faint);color:var(--dim);font-size:12px" title="Симулятор G — внизу сторінки" aria-label="Відкрити симулятор G">🧮</button>
@@ -1689,7 +1689,6 @@ body.simple-mode .col-hide-mobile {
       </div>
     </details>
 
-    <!-- v80: gTopRow removed (merged into hero since v70.9) -->
     <!-- ═══ PROFILE MODE ═══ -->
     <div id="profileBar">
       <span style="font-size:11px;color:var(--dim);min-width:60px">Профіль:</span>
@@ -1946,7 +1945,7 @@ body.simple-mode .col-hide-mobile {
 
 ⚠ При Kp ≥ 5 — попередження незалежно від G
 Kp: 3-год індекс геомагнітної активності (0–9)
-ΣAᵢ = Lᵢ (тітхі) + Mᵢ (затемнення) + eᵢ (події) + Pᵢ (Панчанга×0.4) + Dᵢ (Dst-буря)</span></span>
+ΣAᵢ = Lᵢ (тітхі) + Mᵢ (затемнення) + eᵢ (події) + Pᵢ (Панчанга×0.4) + Dᵢ (Dst-буря) + Snᵢ (сонячні плями: 0/−0.2/−0.4)</span></span>
       </div>
       <div id="threeQuick" style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;font-size:13px"></div>
       <!-- v87.90: NOAA fallback alert — показується над quick-cards коли engine на synthetic platau -->
@@ -2173,7 +2172,7 @@ NOAA публікує лише 27-day Ap outlook (інтегрована гео�
         <p>Для горизонту 27 днів у моделі використовується <em>внутрішня дискретна апроксимація</em> Ap→Kp за табличними порогами NOAA (VLOOKUP‑стиль, найближчий нижчий поріг). Це <strong>не офіційний зворотний стандарт NOAA</strong>, а робоче припущення моделі; отримані G‑значення слід інтерпретувати як якісний індикатор тренду, а не точний 3‑годинний прогноз.</p>
 
         <p style="font-weight:600;color:#cfe0ff;margin-bottom:4px">Склад ΣAᵢ</p>
-        <p><code style="color:#37a7ff">ΣAᵢ = Lᵢ + Mᵢ + eᵢ + Pᵢ + Dᵢ</code></p>
+        <p><code style="color:#37a7ff">ΣAᵢ = Lᵢ + Mᵢ + eᵢ + Pᵢ + Dᵢ + Snᵢ</code></p>
         <table style="font-size:12px;margin:6px 0 10px;border:1px solid #1e2f52;border-radius:6px;overflow:hidden">
           <thead><tr style="background:#0c1526">
             <th style="padding:4px 8px;text-align:left;color:#7a9acc">Компонент</th>
@@ -2193,7 +2192,7 @@ NOAA публікує лише 27-day Ap outlook (інтегрована гео�
         <p class="small" style="color:var(--muted)">ℹ <strong>Panchanga reference time</strong>: дашборд обчислює tithi/nakshatra/yoga на noon UTC (для уніфікації поза локацією). Engine використовує local sunrise (Vedic convention). Це призводить до систематичного зміщення +1 у ~46% днів на boundary часу. Якщо dashboard показує "Trayodashi" а engine pill "Dwadashi" — це різні reference points, не помилка.</p>
         <p>Tithi, що вже враховані в Lᵢ (Пурніма, Амавасья) або eᵢ (Екадаші), виключені з Pᵢ для уникнення подвійного рахування.</p>
         <p class="small" style="color:var(--muted);margin-top:6px;border-left:2px solid #4a5d8e;padding-left:8px">📐 <strong>Engine v14.2 calibration note:</strong> Деякі score-значення відрізняються від theoretical Posibnyk через калібрування на n=280 PDF v5.1 dataset:
-        <br>• <strong>Покнrima (idx 14)</strong>: code score=0 (нейтральна), Posibnyk=−3 (Cajochen 2013) — engine v14.2 BUG-1 fix; при Kp≥7 додається Lᵢ підсилення
+        <br>• <strong>Purnima (idx 14)</strong>: code score=0 (нейтральна), Posibnyk=−3 (Cajochen 2013) — engine v14.2 BUG-1 fix; при Kp≥7 додається Lᵢ підсилення
         <br>• <strong>Chaturdashi (idx 13, 28)</strong>: code score=0, Posibnyk=−2 (Рікта) — calibrated for "обережно/бойовий" semantics
         <br>• <strong>Nakshatra Стала/М'яка/Рухома</strong>: code 1/0/0, Posibnyk ++/+/+ — calibration knock-down ~33% amplitude
         <br>Калібровочні рішення зафіксовані у V3 freeze (2026-05-03 → ~2026-08-01); revision у V19 backlog якщо outcome-based validation покаже потребу.</p>
@@ -2221,7 +2220,7 @@ NOAA публікує лише 27-day Ap outlook (інтегрована гео�
 
         <!-- v40: SVG G-formula diagram -->
         <p style="font-weight:600;color:#cfe0ff;margin-bottom:4px;margin-top:18px">Схема формули G-індексу</p>
-        <p style="font-size:12px;color:var(--text3);margin-bottom:8px">G = (Kp − 2) + Lᵢ + Mᵢ + eᵢ + Pᵢ + Dᵢ. Кожен компонент незалежний; ΣΔeᵢ — інформаційний (рішення командира).</p>
+        <p style="font-size:12px;color:var(--text3);margin-bottom:8px">G = (Kp − 2) + Lᵢ + Mᵢ + eᵢ + Pᵢ + Dᵢ + Snᵢ. Кожен компонент незалежний; ΣΔeᵢ — інформаційний (рішення командира).</p>
         <svg viewBox="0 0 520 130" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:520px;display:block;margin:0 0 16px;font-family:system-ui,sans-serif">
           <rect x="0" y="0" width="520" height="130" fill="#090f1e" rx="8"/>
           <!-- Title -->
@@ -2478,7 +2477,7 @@ NOAA публікує лише 27-day Ap outlook (інтегрована гео�
       <div id="g2watchResult" style="background:#0a1428;border-radius:10px;padding:16px;min-height:60px"></div>
 
       <div class="small muted" style="margin-top:10px">
-        Формула: G = Kp − 2 + (Lᵢ + Mᵢ + eᵢ + Pᵢ + Dᵢ) · Значення розраховуються автоматично при переміщенні слайдерів · <a href="#" style="color:var(--faint)" onclick="el('g2watchPanel').style.display='none';return false">Згорнути</a>
+        Формула: G = Kp − 2 + (Lᵢ + Mᵢ + eᵢ + Pᵢ + Dᵢ + Snᵢ) · Значення розраховуються автоматично при переміщенні слайдерів · <a href="#" style="color:var(--faint)" onclick="el('g2watchPanel').style.display='none';return false">Згорнути</a>
       </div>
     </div>
   </div>
@@ -3069,7 +3068,7 @@ function initGeolocation(){
     return;
   }
   // v88.6.9: smart default — якщо IANA timezone iндикує не Kyiv → попередити user
-  // що координати все ще Kyiv (бо Hora ι Panchanga залежать вiд lat/lon).
+  // що координати все ще Kyiv (бо Hora ι Panchanga залежать від lat/lon).
   // Фактичний prompt geolocation буде запитано user-gesture (через тут).
   try{
     navigator.geolocation.getCurrentPosition(
@@ -3084,7 +3083,7 @@ function initGeolocation(){
         // v88.6.9: якщо user denied geolocation АЛЕ IANA не Europe/Kyiv — показати warning
         const iana = window._iana || '';
         if(iana && !iana.includes('Kyiv') && !iana.includes('Kiev') && iana !== 'UTC'){
-          // Перевiряю чи маю кеш
+          // Перевіряю чи маю кеш
           try {
             const lat = parseFloat(lsGet('last_geo_lat',''));
             const lon = parseFloat(lsGet('last_geo_lon',''));
@@ -3095,11 +3094,11 @@ function initGeolocation(){
               return;
             }
           } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
-          // Нiякого кешу + не у Києвi → показати toast одного разу (sticky 8s)
+          // Ніякого кешу + не у Києвi → показати toast одного разу (sticky 8s)
           if(typeof showToast === 'function'){
             setTimeout(() => {
               showToast(
-                `Використовую Київ як координати за замовчуванням. Hora i Panchanga можуть бути неточнi для ${iana}. Дозволь геолокацiю у налаштуваннях браузера для точностi.`,
+                `Використовую Київ як координати за замовчуванням. Hora i Panchanga можуть бути неточнi для ${iana}. Дозволь геолокацію у налаштуваннях браузера для точностi.`,
                 'info', 8000
               );
             }, 1500); // delay щоб toast container встиг створитись
@@ -3174,7 +3173,7 @@ const el = id => document.getElementById(id);
                     || localStorage.getItem('gindex_debug') === '1';
     window._DEBUG = enabled;
     if(!enabled){
-      // Зберiгаю оригiнальнi для одноразових calls (показуємо version banner)
+      // Зберігаю оригiнальнi для одноразових calls (показуємо version banner)
       const _origLog = console.log.bind(console);
       console.log = function(){};      // muted
       console.debug = function(){};    // muted
@@ -3398,8 +3397,7 @@ const NEGATIVE_YOGAS_BPHS = {
   27: {name:'Vaidhriti', pen:-2},
 };
 
-// v88.6.11 (deep audit V8): Symbol display catalog для UI rendering
-// 34 symbols у SYMBOL_WEIGHTS → ім'я+іконка
+// Symbol display catalog для UI rendering (34 символи).
 // Замість generic comma-list "amavasya, mercury_retro" — показуємо "🌑 Амавасья, ☿ Меркурій ретро"
 const CAL_SYMBOL_DISPLAY = {
   amavasya: {name:'Амавасья', icon:'🌑'},
@@ -3523,7 +3521,7 @@ function renderScenarioCard(){
     return 'rgba(232,80,91,.18)';
   }
   let html = '';
-  let critCount = 0; // кiлькiсть днiв з |eng|>=2 у наступнi 7
+  let critCount = 0; // кiлькiсть днів з |eng|>=2 у наступнi 7
   for(const d of days){
     const e = d.entry;
     const eng = e ? e.eng : null;
@@ -4171,8 +4169,11 @@ function computeMiFromEclipses(dateUTC){
   if(has(dpm1) || has(dp1)){
     const peakType = getType(dpm1) || getType(dp1) || 'unknown';
     const peakW = ECLIPSE_WEIGHT[peakType] != null ? ECLIPSE_WEIGHT[peakType] : ECLIPSE_WEIGHT.unknown;
-    // Scale by ~0.75: penumbral peak -1 → ±1d ≈ 0 (clamp); full peak -4 → -3
-    const adj = Math.round(peakW * 0.75);
+    // v88.7.7 FIX-B: trunc замість round — Math.round(-0.75)=-1 (не 0!) у JS,
+    // тоді penumbral peak −1 × 0.75 = −0.75 → round → −1 (всупереч коментарю-обіцянці).
+    // Math.trunc(−0.75) = 0 → коректно clamp до 0 для слабких penumbral ±1d.
+    // Total −4 × 0.75 = −3 → trunc(−3) = −3 ✓; Partial −2 × 0.75 = −1.5 → trunc = −1 ✓.
+    const adj = Math.trunc(peakW * 0.75);
     const unverified = (peakType === 'unknown');
     if(adj === 0) return {Mi:0, mTip:'0 — ±1d від пенумбрального (мінімальний ефект)', eclipseUnverified: unverified};
     const mTip = unverified
@@ -4601,7 +4602,7 @@ function computeAi(dateTimeUTC, kp=0){
   // Джерело: Cajochen 2013 — циркадний ефект максимальний при повні. R&D.
   const _phiRad = phaseDeg * Math.PI / 180;
   const lunarMod = Math.pow(Math.sin(_phiRad / 2), 2); // sin²(φ/2)
-  let Pi = 0, pTip = '';
+  let Pi = 0, PiRaw = 0, pTip = '';
   try {
     // v87.90 fix: panchanga для Pᵢ обчислюється на NOON UTC цього ж дня
     // (узгоджено з Panchanga карткою, ant-action, decision timing).
@@ -4621,7 +4622,9 @@ function computeAi(dateTimeUTC, kp=0){
     // Раніше: × lunarMod до всіх → Vara/Yoga/Karana зануляються в новолуння (методологічна помилка).
     const _tithiPi = tithiInPi * lunarMod;
     const _restPi  = panch.vara.score + panch.nakshatra.score + panch.yoga.score + panch.karana.score;
-    Pi = Math.round((_tithiPi + _restPi) * PCL_SCALE * 10) / 10;
+    // v88.7.8 FIX-J: PiRaw зберігається у повній точності для AiRaw, Pi округлюється тільки для UI.
+    PiRaw = (_tithiPi + _restPi) * PCL_SCALE;
+    Pi = Math.round(PiRaw * 10) / 10;
     const pParts = [];
     if(tithiInPi !== 0)              pParts.push(`Tithi(${panch.tithi.name})=${tithiInPi}`);
     if(panch.vara.score !== 0)       pParts.push(`Vara(${panch.vara.name})=${panch.vara.score}`);
@@ -4642,12 +4645,14 @@ function computeAi(dateTimeUTC, kp=0){
   if(vswVal !== 0) { eTipLines.push(`${vswVal.toFixed(1)} \u2014 ${vswMod.tip}`); }
 
   // Hora contribution: mil і trader ×0.2 (R&D, профільна, §14 Посібника v3.5.1)
+  // v88.7.8 FIX-J: horaEiRaw — без round для AiRaw, horaEi для UI/tip округлений.
   const HORA_ENABLED_PROFILES = ['mil','trader'];
-  let horaEi = 0, horaTip = '';
+  let horaEiRaw = 0, horaEi = 0, horaTip = '';
   if(HORA_ENABLED_PROFILES.includes(_activeProfile)){
     const curHora = _getCurrentHoraForAi(dateTimeUTC);
     if(curHora){
-      horaEi = Math.round(curHora.pcl * 0.2 * 10) / 10;
+      horaEiRaw = curHora.pcl * 0.2;
+      horaEi = Math.round(horaEiRaw * 10) / 10;
       horaTip = `${horaEi >= 0 ? '+' : ''}${horaEi} — Hora ${curHora.sym} ${curHora.planet} ×0.2 (${_activeProfile})`;
       if(horaEi !== 0){
         eTipLines.push('');
@@ -4655,7 +4660,8 @@ function computeAi(dateTimeUTC, kp=0){
       }
     }
   }
-  const eiTotal = Math.round((ei + horaEi) * 10) / 10;
+  const eiTotalRaw = ei + horaEiRaw;
+  const eiTotal = Math.round(eiTotalRaw * 10) / 10;
 
   // v85b-F5 (СЕРЕД-3): Sn penalty gradation — fixes constant -0.4 drift during Solar Max 2025-2026
   // Раніше: Sn>150 → -0.4 (бінарно). Solar Max має Sn ~150-200 → постійний шум -0.4.
@@ -4663,22 +4669,27 @@ function computeAi(dateTimeUTC, kp=0){
   const _snVal = window._lastWolfSn ? (window._lastWolfSn.sn ?? 0) : 0;
   const snPen  = _snVal > 200 ? -0.4 : _snVal > 150 ? -0.2 : 0;
 
-  // v51: Bz/Vsw — інформаційний контекст, НЕ в canonical G (§13.2 Посібника)
-  const Ai = Math.round((Li + Mi + eiTotal + Pi + snPen) * 10) / 10;
-
   // Dᵢ — Dst component (A3+A4: офіційна частина ΣAᵢ, синхронно з engine v18.5)
-  // Застосовується тільки для поточного дня — майбутні дати Dst невідомий
+  // v88.7.8 FIX-I: викликаємо computeDstModifier() — спільне джерело істини з Science Bar.
+  // Раніше: дублювали порогову логіку (-100, -50) в обох місцях. Тепер один владу.
+  // Date-обмеження зберігаємо: Dᵢ застосовується ТІЛЬКИ для today (майбутні Dst невідомі).
   let Di = 0, diTip = '0 — Dst норма';
   const _diDateStr = fmtDate(dateTimeUTC);
   const _todayStr  = fmtDate(new Date());
-  if(_diDateStr === _todayStr && window._lastDst && isFinite(window._lastDst.dst)) {
-    const dstVal = window._lastDst.dst;
-    if(dstVal <= -100) { Di = -2; diTip = `-2 — Dst=${dstVal} нТл (значна буря, Kp≥7 еквівалент)`; }
-    else if(dstVal <= -50) { Di = -1; diTip = `-1 — Dst=${dstVal} нТл (помірна буря, engine v18.5)`; }
-    else { diTip = `0 — Dst=${dstVal} нТл (норма)`; }
+  if(_diDateStr === _todayStr) {
+    const _dstMod = computeDstModifier();
+    Di = _dstMod.val;
+    diTip = _dstMod.tip;
   }
-  const AiFull = Math.round((Ai + Di) * 10) / 10;
-  const explain = `\u03a3A\u1d62 = L\u1d62+M\u1d62+e\u1d62+P\u1d62+D\u1d62${snPen!==0?'+Sn':''} = ${Li}+${Mi}+${eiTotal}+${Pi}+${Di}${snPen!==0?'+'+snPen:''} = ${AiFull}` + (snPen!==0?`\n(Sn=${_snVal}>150: kp_pen${snPen} — engine v18.5)`:'') + (bzVal!==0||vswVal!==0?`\n(+Bz=${bzVal}, Vsw=${vswVal} — контекст, не в G)`:'');
+
+  // v51: Bz/Vsw — інформаційний контекст, НЕ в canonical G (§13.2 Посібника)
+  // v88.7.8 FIX-J: один Math.round в кінці на повній сумі AiRaw — раніше було 3 послідовних
+  // round (Pi → Ai → AiFull) що накопичувало похибку до ±0.05. Тепер ΣAᵢ точна, UI-округлення лише раз.
+  const AiNoDstRaw = Li + Mi + eiTotalRaw + PiRaw + snPen;
+  const AiFullRaw  = AiNoDstRaw + Di;
+  const Ai     = Math.round(AiNoDstRaw * 10) / 10; // legacy field name AiNoDst
+  const AiFull = Math.round(AiFullRaw  * 10) / 10;
+  const explain = `\u03a3A\u1d62 = L\u1d62+M\u1d62+e\u1d62+P\u1d62+D\u1d62${snPen!==0?'+Sn\u1d62':''} = ${Li}+${Mi}+${eiTotal}+${Pi}+${Di}${snPen!==0?'+'+snPen:''} = ${AiFull}` + (snPen!==0?`\n(Sn=${_snVal}>150: kp_pen${snPen} — engine v18.5)`:'') + (bzVal!==0||vswVal!==0?`\n(+Bz=${bzVal}, Vsw=${vswVal} — контекст, не в G)`:'');
 
   return { Ai: AiFull, AiNoDst: Ai, Li, Mi, ei: eiTotal, eiBase: ei, horaEi, Pi, Di, snPen, bzVal, vswVal, phaseName, phaseDeg, lTip, mTip, eTip: eTipLines.join('\n'), pTip, diTip, explain, eclipseUnverified };
 }
@@ -4941,7 +4952,7 @@ function parseUafAurora(html){
 // out: { issued, predictedAp, days: [{date, kp8, kpMax}] }
 function uafTo3DayFormat(uaf){
   if(!uaf) return null;
-  // v88.6.9.1: якщо kp3Day порожнiй, але kp27Day є → беремо з 27-day (less accurate но has data)
+  // v88.6.9.1: якщо kp3Day порожній, але kp27Day є → беремо з 27-day (less accurate но has data)
   if(!uaf.kp3Day || !uaf.kp3Day.length){
     if(!uaf.kp27Day || !uaf.kp27Day.length) return null;
     try{
@@ -5045,7 +5056,7 @@ function _ensureThreeDays(out){
   return out;
 }
 
-// v88.7.6: спільний fill-up для placeholder days — використовується для NOAA і UAF шляхiв.
+// v88.7.6: спільний fill-up для placeholder days — використовується для NOAA і UAF шляхів.
 // Першочергово пробує NOAA 27-day-outlook (через t27R), потім synthetic-Kp-now fallback.
 function _fillPlaceholderDays(target3D, t27R){
   if(!target3D || !target3D.days) return;
@@ -5134,7 +5145,7 @@ function parse3DaySafe(json){
     if(firstFuture) out.issued = firstFuture[0];
     else if(data.length) out.issued = data[0][0];
     // v88.7.6: ГАРАНТУЄМО 3 days через спільну функцію _ensureThreeDays.
-    // Раніше була inline-копія цієї логіки тут; тепер єдина імплементація для NOAA + UAF шляхiв.
+    // Раніше була inline-копія цієї логіки тут; тепер єдина імплементація для NOAA + UAF шляхів.
     _ensureThreeDays(out);
     if(window._DEBUG && out.days.filter(d => d._needsFill).length > 0){
       console.log('[v88.7.6 parse3DaySafe] '+out.days.filter(d => d._needsFill).length+' placeholder day(s) awaiting 27-day fill');
@@ -5193,7 +5204,7 @@ function parse27Day(text){
     const m = line.match(/(\d{4})\s+(\w{3})\s+(\d{1,2})\s+(\d+)\s+(\d+)\s+(\d+)/);
     if(!m) continue;
     const MONTH_IDX = {Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};
-    // v88.6.9 fix H2: skip line якщо невiдомий месяц (раніше silent fallback на January = data corruption)
+    // v88.6.9 fix H2: skip line якщо невідомий месяц (раніше silent fallback на January = data corruption)
     const monIdx = MONTH_IDX[m[2]];
     if(monIdx === undefined){
       console.warn('[parse27Day] Невідомий месяць у рядку:', line.slice(0,40));
@@ -5415,6 +5426,10 @@ function render27Day(rows, last3D){
   _27dComputed = build27dComputed(rows, last3D);
   draw27dTable();
   draw27Chart();
+  // v88.7.7 BUG-1 fix: повторно малюємо 7-day trend з whyCard, бо _27dComputed щойно готове.
+  // Перший виклик _renderWhyTrend з _renderHeroCause міг спрацювати до build27dComputed →
+  // тренд побудувався race-fallback (computeAi з kp=2). Зараз — точний з 27-day Kp.
+  try { if(typeof _renderWhyTrend === 'function') _renderWhyTrend(); } catch(e){if(window._DEBUG)console.warn('[silent _renderWhyTrend rerender]:',e.message)}
 
   // Сортування по кліку на заголовок
   document.querySelectorAll('.th-sort').forEach(th=>{
@@ -5782,7 +5797,7 @@ ${isNarrow?'На вузькому екрані показано 14 днів (−
       <div style="flex:0 0 auto">
         <div style="font-size:10px;color:var(--faint)">${sel.ds} · ${relTxt}</div>
         <div class="mono" style="font-size:18px;font-weight:700;color:${selCol}">G ${gSign}${selG.toFixed(2)}</div>
-        <div style="font-size:9px;color:var(--faint);margin-top:1px" title="Forward Timeline показує день-пiк (max Kp прогнозу). Hero G показує поточний моменту. Тому для одного дня можуть бути рiзнi значення.">денний пiк</div>
+        <div style="font-size:9px;color:var(--faint);margin-top:1px" title="Forward Timeline показує день-пік (max Kp прогнозу). Hero G показує поточний моменту. Тому для одного дня можуть бути рiзнi значення.">денний пік</div>
       </div>
       <div style="flex:0 0 auto;font-size:11px;color:var(--dim)">
         <div>${selCat}</div>
@@ -6188,7 +6203,7 @@ function renderCurrentPanel(){
     : '';
   // v88.6.9 (Issue C): clarify Hero = current moment vs day peak (forecast)
   // Hero G base = current Kp (=kUse). Forward Timeline base = day peak Kp.
-  // Якщо рiзниця >= 1.5 балiв — пояснити user що це РIЗНI семантики, не bug.
+  // Якщо різниця >= 1.5 балів — пояснити user що це РIЗНI семантики, не bug.
   let _peakHintLine = '';
   try {
     const _todayStr = fmtDate(new Date());
@@ -6199,7 +6214,7 @@ function renderCurrentPanel(){
       const _peakG = _peakKp - 2 + ai.Ai;
       const _gDiff = Math.abs(_peakG - G);
       if(_gDiff >= 1.5){
-        _peakHintLine = `\n─────\n📊 Зараз (Kp=${kUse.toFixed(1)}): G=${G.toFixed(2)}\n📈 Денний пiк (Kp=${_peakKp.toFixed(1)}): G=${_peakG >= 0 ? '+' : ''}${_peakG.toFixed(1)}\n(Forward Timeline показує пiк, Hero — поточний момент)`;
+        _peakHintLine = `\n─────\n📊 Зараз (Kp=${kUse.toFixed(1)}): G=${G.toFixed(2)}\n📈 Денний пік (Kp=${_peakKp.toFixed(1)}): G=${_peakG >= 0 ? '+' : ''}${_peakG.toFixed(1)}\n(Forward Timeline показує пік, Hero — поточний момент)`;
       }
     }
   } catch(_pHE) { /* tooltip augment, не критично */ }
@@ -6428,6 +6443,12 @@ const TITHI_TYPE = [
   'Нанда','Бхадра','Джая','Рікта','Пурна',
   'Нанда','Бхадра','Джая','Рікта','—'
 ];
+// v88.7.7 audit note: TITHI_SCORE свідомо НЕ є чистою функцією TITHI_TYPE:
+//   • Ashtami (idx 7, 22, тип Джая) = 0 а не +1 → BPHS змішана природа («уникати весіль»)
+//   • Chaturdashi (idx 13, 28, тип Рікта) = 0 а не -2 → «бойові справи — обережно», softer than full Rikta
+//   • Ekadashi (idx 10, 25, тип Нанда) = -2 а не +1 → день посту, виключено з Pᵢ і так
+//   • Purnima (idx 14) = 0 (v14.2) а не +1 (Пурна) → Cajochen 2013 calibration; підсилення в Lᵢ при Kp≥7
+//   • Amavasya (idx 29) = -3 → у Pᵢ виключено через tIdx!==29; залишається тільки для UI scoreBar
 const TITHI_SCORE = [
   1, 1, 1,-2, 1, 1, 1, 0,-2, 1,
  -2, 1, 1, 0, 0, 1, 1, 1,-2, 1,  // idx14=Purnima→0 (нейтральна v14.2)
@@ -6546,7 +6567,9 @@ function computePanchanga(dateUTC){
   const KAR_MOV_UA = ['Бава','Балава','Каулава','Тайтіла','Гараджа','Ваніджа','Вішті (Бхадра)'];
   const KAR_MOV_NOTE=['Постійні справи','Фінансові операції','Союзи','Договори, весілля','Нейтральна','Торгівля, логістика','⚠️ ВЕТО — уникати всіх дій'];
   const KAR_MOV_SC  = [0,0,0,0,0,0,-2];
-  const karK = Math.floor(phaseDeg / 6) % 60; // 0..59
+  // v88.7.7 FIX-F: %60 зайвий — phaseDeg ∈ [0,360), /6 ∈ [0,60), floor → 0..59 вже у range.
+  // Залишаємо clamp Math.min(59, ...) як defensive guard для floating-point edge case при φ=359.999...
+  const karK = Math.min(59, Math.floor(phaseDeg / 6));
   let karana;
   if (karK === 0) {
     karana = {name:'Кімстугна',nameEn:'Kimstughna',type:'Стала',score:0,note:'Нейтральна',isVishti:false};
@@ -6911,9 +6934,14 @@ function renderPanchangaCard(state){
         `PCL ${tip.score > 0 ? '+' : ''}${tip.score}`;
     },
     karana: tip => {
+      // v88.7.7 FIX-D: показуємо note з типу карани (Bava=Постійні справи, Vanija=Торгівля...).
+      // Раніше для не-Vishti завжди було "Вплив: нейтральний" — втрата інформації BPHS.
+      const _impactTxt = tip.isVishti
+        ? '⛔ VISHTI (Bhadra) — традиційно вето: уникати важливих активних дій (PCL ' + tip.score + ')'
+        : `Тип: ${tip.type}\nПризначення: ${tip.note || 'нейтральне'}\nВплив: ${tip.score > 0 ? 'сприятливий' : tip.score < 0 ? 'несприятливий' : 'нейтральний'}`;
       return `KARANA — половина місячного дня\n` +
         `Що це: час, за який ΔL збільшується на 6°. Кожна тітхі = 2 карани.\n` +
-        `${tip.isVishti ? '⛔ VISHTI (Bhadra) — абсолютне вето: уникати будь-яких активних дій!' : `Тип: ${tip.type}\nВплив: нейтральний`}\n` +
+        `${_impactTxt}\n` +
         `PCL ${tip.score > 0 ? '+' : ''}${tip.score}`;
     },
     rahu: tip => {
@@ -7274,7 +7302,6 @@ function renderDayForecast(last3D, kUse, ai) {
   } catch(e) { /* noop */ }
 }
 
-// renderNowKpChart — видалено v32 (мертвий код, DOM-елементи відсутні)
 
 // ==================== АВТО-ОНОВЛЕННЯ ====================
 let _autoRefTimer = null;
@@ -7418,7 +7445,7 @@ function render3Day(parsed3){
       // v87.90: synthetic Kp warning у quick-card — engine_scores дає kp=2.0 default для майбутнього
       // Якщо bulletin entry має kp_synthetic — це scenario, не реальний forecast
       // v87.90: посилене виділення — opacity 0.55, dashed 2px з кольором, striped pattern
-      // v88.6.9: розрiзняємо коли live forecast Kp реальний (з NOAA 3-day чи 27-day) vs повнiстю synthetic.
+      // v88.6.9: розрізняємо коли live forecast Kp реальний (з NOAA 3-day чи 27-day) vs повністю synthetic.
       // Якщо last3D має real kpMax для цього дня — engine просто OUTDATED (тренувався на старому snapshot),
       // НЕ scenario. Показуємо iнший label.
       const _isSynthScen = (function(){
@@ -7434,7 +7461,7 @@ function render3Day(parsed3){
       if(_engineFullySynth){
         _scenLabel = `<div style="font-size:9px;color:#fca474;margin-top:1px;text-transform:uppercase;letter-spacing:.06em;font-weight:700" title="Engine використав synthetic Kp=2.0 (NOAA forecast недоступний). Це сценарій, не справжній прогноз.">⚠ scenario · synthetic Kp</div>`;
       } else if(_engineOutdatedNotSynth){
-        _scenLabel = `<div style="font-size:9px;color:#9bb1dc;margin-top:1px;text-transform:uppercase;letter-spacing:.06em;font-weight:600" title="Engine v18.5 score обчислений на snapshot часу train. Live NOAA forecast Kp=${d.kpMax.toFixed(1)} оновленiший. Engine score може недо-оцiнювати буревий ризик.">ⓘ engine outdated · live Kp=${d.kpMax.toFixed(1)}</div>`;
+        _scenLabel = `<div style="font-size:9px;color:#9bb1dc;margin-top:1px;text-transform:uppercase;letter-spacing:.06em;font-weight:600" title="Engine v18.5 score обчислений на snapshot часу train. Live NOAA forecast Kp=${d.kpMax.toFixed(1)} оновленіший. Engine score може недо-оцінювати буревий ризик.">ⓘ engine outdated · live Kp=${d.kpMax.toFixed(1)}</div>`;
       }
       qhtml+=`<span style="flex:1;min-width:140px;padding:8px 14px;border-radius:10px;${_scenStyle};text-align:center">
         <div style="font-weight:700;color:${col};font-size:14px">${dd} → ${cat}</div>
@@ -7490,7 +7517,6 @@ function render3Day(parsed3){
   }
 }
 
-// render45 видалено
 
 // ------------------------------- Завантаження -------------------------------
 async function fetchText(u){
@@ -8483,9 +8509,11 @@ function _renderHeroCause(g, kp) {
     if (_ai.ei !== 0) factors.push({ name: 'eᵢ', val: _ai.ei, label: 'події' });
     if (_ai.Pi !== 0) factors.push({ name: 'Pᵢ', val: _ai.Pi, label: 'панчанга' });
     if ((_ai.Di || 0) !== 0) factors.push({ name: 'Dᵢ', val: _ai.Di, label: 'DST' });
+    // v88.7.8 FIX-H: Snᵢ (sunspot penalty) — раніше схований у tooltip, тепер повноцінний chip.
+    if ((_ai.snPen || 0) !== 0) factors.push({ name: 'Snᵢ', val: _ai.snPen, label: 'плями' });
     // Add zero factors for neutral display
-    const zeroNames = ['Lᵢ','Mᵢ','eᵢ','Pᵢ','Dᵢ'];
-    const zeroLabels = { 'Lᵢ':'місяць', 'Mᵢ':'затемнення', 'eᵢ':'події', 'Pᵢ':'панчанга', 'Dᵢ':'DST' };
+    const zeroNames = ['Lᵢ','Mᵢ','eᵢ','Pᵢ','Dᵢ','Snᵢ'];
+    const zeroLabels = { 'Lᵢ':'місяць', 'Mᵢ':'затемнення', 'eᵢ':'події', 'Pᵢ':'панчанга', 'Dᵢ':'DST', 'Snᵢ':'плями' };
     for (const nm of zeroNames) {
       if (!factors.find(f => f.name === nm)) factors.push({ name: nm, val: 0, label: zeroLabels[nm] });
     }
@@ -8644,13 +8672,16 @@ function _renderWhyTrend(){
   // 1. -3..-1 з last3D або computeAi з історичного Kp
   // v88.7.6 BUG-1 fix: обмежуємо до 3 останніх минулих днів через slice(-3),
   // інакше last3D з 4-day window (іноді буває залежно від часу публікації NOAA) дає 4 точки минулого.
+  // v88.7.7 CRITICAL fix: фільтр через fmtDate(d.date) — раніше було d.date < todayStr,
+  // що завжди false (Date < string → JS coerce string→NaN → comparison undefined → false).
+  // Тому last3D ніколи не використовувалось у тренді — це був прихований баг із оригіналу.
   try {
     if(typeof last3D !== 'undefined' && last3D && last3D.days){
       const _pastFromLast3D = last3D.days
-        .filter(d => d.date && d.date < todayStr)
+        .filter(d => d.date && fmtDate(d.date) < todayStr)
         .slice(-3); // тільки 3 останні минулі дні (хронологічно найближчі до today)
       _pastFromLast3D.forEach(d => {
-        days.push({ ds: d.date, G: d.G, isPast: true });
+        days.push({ ds: fmtDate(d.date), G: d.G, isPast: true });
       });
     }
   } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
@@ -8668,19 +8699,28 @@ function _renderWhyTrend(){
   }
 
   // 2. сьогодні + 3 вперед з _27dComputed
-  // v88.7.6 BUG-1 fix: race-condition guard — якщо _27dComputed ще не готове, fallback на computeAi
-  // з kpNow (для today) і Kp=2 (для майбутнього). Це гарантує, що "зараз" завжди є на тренді.
+  // v88.7.6 BUG-1 fix: race-condition guard — якщо _27dComputed ще не готове, fallback на computeAi.
+  // v88.7.7 CRITICAL fix: _27dComputed[0] НЕ обов'язково today!
+  // NOAA 27-day-outlook публікується щопонеділка → у четвер _27dComputed[0]=monday=today-3.
+  // Раніше брав індекси [0..3] → у четвер це були 4 МИНУЛІ дні (понеділок..середа), today випадало з тренду.
+  // Зараз шукаємо індекс today через findIndex і беремо [idxToday..idxToday+3].
   let _todayPlusFutureAdded = 0;
   if(typeof _27dComputed !== 'undefined' && _27dComputed && _27dComputed.length > 0){
-    for(let i = 0; i < Math.min(4, _27dComputed.length); i++){
-      const d = _27dComputed[i];
-      if(d && d.ds && isFinite(d.G)){
-        days.push({ ds: d.ds, G: d.G, isPast: false, isToday: i === 0 });
-        _todayPlusFutureAdded++;
+    const idxToday = _27dComputed.findIndex(d => d && d.ds === todayStr);
+    if(idxToday >= 0){
+      for(let i = 0; i < 4; i++){
+        const d = _27dComputed[idxToday + i];
+        if(d && d.ds && isFinite(d.G)){
+          days.push({ ds: d.ds, G: d.G, isPast: false, isToday: i === 0 });
+          _todayPlusFutureAdded++;
+        }
       }
+      if(window._DEBUG) console.log('[v88.7.7 trend] _27dComputed today at idx='+idxToday+', added '+_todayPlusFutureAdded+' day(s)');
+    } else if(window._DEBUG){
+      console.warn('[v88.7.7 trend] today '+todayStr+' not found in _27dComputed (length='+_27dComputed.length+', first ds='+(_27dComputed[0]?.ds||'?')+')');
     }
   }
-  // Race-condition fallback: _27dComputed ще не готове → today + 3 наперед через computeAi.
+  // Race-condition fallback: _27dComputed ще не готове ABO today не знайдено → today + 3 наперед через computeAi.
   if(_todayPlusFutureAdded === 0){
     const _kpNow = (typeof lastWWV !== 'undefined' && lastWWV && isFinite(lastWWV.kNow)) ? lastWWV.kNow : 2;
     for(let i = 0; i <= 3; i++){
@@ -8692,7 +8732,7 @@ function _renderWhyTrend(){
         days.push({ ds, G, isPast: false, isToday: i === 0 });
       } catch(e){if(window._DEBUG)console.warn('[silent fallback]:',e.message)}
     }
-    if(window._DEBUG) console.log('[v88.7.6 trend] _27dComputed not ready → fallback computeAi для today+3');
+    if(window._DEBUG) console.log('[v88.7.7 trend] race fallback computeAi для today+3');
   }
 
   // Sort by date + cap at 7
@@ -9688,7 +9728,7 @@ function renderDisagreement(){
   const _hasNeg = _vals.some(v => v < -0.5);
   const _signConflict = _hasPos && _hasNeg;
 
-  // v88.6.9: порiг range 2.5 → 3.0 щоб не trigger warning при normal architectural divergence
+  // v88.6.9: поріг range 2.5 → 3.0 щоб не trigger warning при normal architectural divergence
   // (Hero continuous score vs Engine discrete tag-model завжди дають ~2 бали рiзницi navit pri spокiйному днi)
   // Sign conflict (один + iнший −) залишається тригером ВЖИВЕ.
   if(_range < 3.0 && !_signConflict){
@@ -10726,7 +10766,6 @@ function calcMoonTransit(nowJDE, fraction) {
 }
 
 // ===================== SVG ОРБІТАЛЬНА СХЕМА =====================
-// renderOrbitSvg — видалено v32 (мертвий код, DOM-елементи відсутні)
 
 
 // ===================== ГАУЖ G + ФАЗА МІСЯЦЯ (compact v54) =====================
@@ -11462,7 +11501,7 @@ function renderPersonal() {
     5: {detail:'Pratyak — зупинити нові ініціативи, очікування і витримка',         short:'Pratyak — зупинитись, не починати нічого нового'},
     6: {detail:'Sadhana — активна фаза: досягати цілей, наступальні дії',           short:'Sadhana — активно діяти, досягати цілей'},
     7: {detail:'Naidhana — смерть-таара: уникати операцій, не виходити на передову', short:'Naidhana — жодних активних дій'},
-    8: {detail:'Mitra — координація з союзниками, обмін розвіддaними.',             short:'Mitra — координація і переговори'},
+    8: {detail:'Mitra — координація з союзниками, обмін розвідданими.',             short:'Mitra — координація і переговори'},
     9: {detail:'Atimitra — пік сприятливості: діяти сміливо по всіх фронтах',       short:'Atimitra — оптимальний день, діяти по всіх фронтах'},
   };
   const _ti = TAARA_INFO[taara.group];
@@ -13220,7 +13259,7 @@ el('btnRefresh').addEventListener('click', loadAll);
 // (Disagreement, Counterfactual, Provenance, Anti-action, banner, scenarios)
 const I18N = {
   UA: {
-    headerTitle: 'Космофізичний дашборд — <span class="muted">G = Kp − 2 + ΣAᵢ де ΣAᵢ = Lᵢ + Mᵢ + eᵢ + Pᵢ + Dᵢ</span>',
+    headerTitle: 'Космофізичний дашборд — <span class="muted">G = Kp − 2 + ΣAᵢ де ΣAᵢ = Lᵢ + Mᵢ + eᵢ + Pᵢ + Dᵢ + Snᵢ</span>',
     headerSub: 'Kp/Ap із NOAA, ΣAᵢ з автоматичним підтягуванням подій (ICS/астроджерела).',
     btnRefresh: 'Оновити дані',
     autoLabel: 'Авто:',
@@ -13282,18 +13321,18 @@ const I18N = {
     timingDisambig: '3-год Vasara-слоти · не плутай з Hora (60хв) у Планетарному ритмі ↓',
     // v88.6.9: новi keys для Engine v18 lite-recalc + Simple Mode + Forward Timeline clarity
     engineOutdated: 'engine outdated · live Kp={kp}',
-    engineOutdatedTitle: 'Engine v18.5 score обчислений на snapshot часу train. Live NOAA forecast Kp={kp} оновленiший. Engine score може недо-оцiнювати буревий ризик.',
+    engineOutdatedTitle: 'Engine v18.5 score обчислений на snapshot часу train. Live NOAA forecast Kp={kp} оновленіший. Engine score може недо-оцінювати буревий ризик.',
     engineRecalculated: '⚠ Recalculated engine (lite fallback): snapshot Kp={origKp} → {origEng}, live Kp={kp} → {newEng}. Це round(Hero G), НЕ tag-based engine v18.5. Strict 75.0% holdout валідне для snapshot, не recalc.',
-    dailyPeak: 'денний пiк',
-    dailyPeakTitle: 'Forward Timeline показує день-пiк (max Kp прогнозу). Hero G показує поточний моменту. Тому для одного дня можуть бути рiзнi значення.',
-    heroPeakDiff: '📊 Зараз (Kp={curKp}): G={curG}\\n📈 Денний пiк (Kp={peakKp}): G={peakG}\\n(Forward Timeline показує пiк, Hero — поточний момент)',
-    simpleModeOn: 'Простий режим увiмкнено',
-    simpleModeOff: 'Експертний режим увiмкнено',
-    simpleModeTitle: 'Простий режим (тiльки Hero) / Експертний режим',
-    simpleModeActiveTitle: 'Простий режим АКТИВНИЙ. Натиснiть для повного експертного UI.'
+    dailyPeak: 'денний пік',
+    dailyPeakTitle: 'Forward Timeline показує день-пік (max Kp прогнозу). Hero G показує поточний моменту. Тому для одного дня можуть бути рiзнi значення.',
+    heroPeakDiff: '📊 Зараз (Kp={curKp}): G={curG}\\n📈 Денний пік (Kp={peakKp}): G={peakG}\\n(Forward Timeline показує пік, Hero — поточний момент)',
+    simpleModeOn: 'Простий режим увімкнено',
+    simpleModeOff: 'Експертний режим увімкнено',
+    simpleModeTitle: 'Простий режим (тільки Hero) / Експертний режим',
+    simpleModeActiveTitle: 'Простий режим АКТИВНИЙ. Натисніть для повного експертного UI.'
   },
   EN: {
-    headerTitle: 'Space Weather Dashboard — <span class="muted">G = Kp − 2 + ΣAᵢ where ΣAᵢ = Lᵢ + Mᵢ + eᵢ + Pᵢ + Dᵢ</span>',
+    headerTitle: 'Space Weather Dashboard — <span class="muted">G = Kp − 2 + ΣAᵢ where ΣAᵢ = Lᵢ + Mᵢ + eᵢ + Pᵢ + Dᵢ + Snᵢ</span>',
     headerSub: 'Kp/Ap from NOAA, ΣAᵢ from ICS/astro sources (auto-loaded).',
     btnRefresh: 'Refresh Data',
     autoLabel: 'Auto:',
@@ -13501,7 +13540,7 @@ function initG2Watch() {
   });
 }
 
-// v88.6.9 SIMPLE MODE: toggle для civilian users (Євгенiя). Hide advanced sections, show only Hero + 3-day forecast.
+// v88.6.9 SIMPLE MODE: toggle для civilian users (Євгенія). Hide advanced sections, show only Hero + 3-day forecast.
 function initSimpleMode(){
   const btn = el('btnSimpleMode');
   if(!btn) return;
@@ -13512,7 +13551,7 @@ function initSimpleMode(){
     btn.classList.add('active');
     btn.style.borderColor = 'var(--ok)';
     btn.style.color = 'var(--ok)';
-    btn.title = 'Простий режим АКТИВНИЙ. Натиснiть для повного експертного UI.';
+    btn.title = 'Простий режим АКТИВНИЙ. Натисніть для повного експертного UI.';
   }
   btn.addEventListener('click', () => {
     const isOn = document.body.classList.toggle('simple-mode');
@@ -13520,18 +13559,18 @@ function initSimpleMode(){
       btn.classList.add('active');
       btn.style.borderColor = 'var(--ok)';
       btn.style.color = 'var(--ok)';
-      btn.title = 'Простий режим АКТИВНИЙ. Натиснiть для повного експертного UI.';
+      btn.title = 'Простий режим АКТИВНИЙ. Натисніть для повного експертного UI.';
       try { localStorage.setItem('gindex_simple_mode', '1'); } catch(e){}
     } else {
       btn.classList.remove('active');
       btn.style.borderColor = 'var(--faint)';
       btn.style.color = 'var(--dim)';
-      btn.title = 'Простий режим (тiльки Hero) / Експертний режим';
+      btn.title = 'Простий режим (тільки Hero) / Експертний режим';
       try { localStorage.removeItem('gindex_simple_mode'); } catch(e){}
     }
     // Toast feedback
     if(typeof showToast === 'function'){
-      showToast(isOn ? 'Простий режим увiмкнено' : 'Експертний режим увiмкнено', 'info', 2000);
+      showToast(isOn ? 'Простий режим увімкнено' : 'Експертний режим увімкнено', 'info', 2000);
     }
   });
 }
@@ -13972,7 +14011,7 @@ window.__regress = function(opts){
 
   // ─── Test 8: Ekadashi → eᵢ має штраф ──────────────────
   // Canonical case: 27.04.2026 Mohini Ekadasi (з BUILTIN_VAISNAVA)
-  // Очікуване: eᵢ = -2 (вага 'Екадаші' з EVENT_WEIGHTS)
+  // Очікуване: eᵢ = -2 (вага 'Екадаші' з WEIGHT_E_EVENTS)
   test('T8 · Mohini Ekadasi 27.04.2026 → eᵢ ≤ -2', () => {
     // Defensive: check eventIndex is populated
     if(typeof eventIndex === 'undefined' || !eventIndex || eventIndex.size === 0){
