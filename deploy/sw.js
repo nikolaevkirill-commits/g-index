@@ -1,4 +1,34 @@
-// G-Index Service Worker v88.7.12 (FIX-M Рівень 1: Astro chip → live tithi/nakshatra/yoga)
+// G-Index Service Worker v88.7.13 (UX-копірайтна нормалізація під канон Excel/DOCX/Posibnyk)
+// v88.7.13 changes (4 точкові патчі + 2 tooltip — реєстр А, внутрішньо-оперативний):
+//   N1 (index.html:7150-7167): лейбл «Уникати» → 3-станова логіка з об'єктом.
+//      Канон Posibnyk Part II Tab.1: «Уникати важливих дій» (з об'єктом).
+//      worst.G > +0.5  → ховати рядок (зелений день — нема чого «уникати»)
+//      worst.G ∈ (-0.5, +0.5] → «Менш сприятливий час» (без алармізму)
+//      worst.G ≤ -0.5  → «Уникати важливих рішень» (Posibnyk-канон)
+//      Усуває UX-конфлікт «Уникати: 15:00–18:00 G=+0.4» бачений на скрінах v88.7.12.
+//   N2 (index.html:7121-7138): UTC → локальний час у Панчанга-блоці panchBestTime.
+//      Sync з v88.7.10 FIX-K canonical pattern (_tzOffH).
+//      Раніше: «Найкращий час: 06:00–09:00 UTC · G=+2.7» — користувач у Києві (UTC+3)
+//      читав 15:00 UTC як локальне. Тепер локальний час, оригінальний UTC у title.
+//   B (index.html:3583, 3594): поріг «критичних» |eng|≥2 → eng≤-2.
+//      На CSV n=294 старий поріг давав 58.8% днів і 7/7 «критичних» на зеленому тижні —
+//      слово втрачало семантику небезпеки. Новий поріг 32.0% даних, 7/7 неможливе.
+//      Узгоджено з Excel ТИЖНЕВИЙ_ПРОГНОЗ «🔴 КРИТИЧНО» = реальна загроза.
+//      i18n keys (`scenarioCritical`) збережено — слово «критичний» канонічне в реєстрі А.
+//   D (index.html:9097, 9110): GLOBAL_STATES.favorable.avoidText / .good.avoidText.
+//      ✖ → ○, м'якіші формулювання («Підтримуйте темп без хаосу» / «Без розпорошення на дрібниці»).
+//      Узгоджено з Excel ТИЖНЕВИЙ для зелених станів («✅ СПРИЯТЛИВО · Плановий режим»).
+//      Канонічна градація іконок: ○ — пасивна порада (зелена/нейтральна), ✖ — заборона (червона).
+//      neutral/unstable/tense — без змін (контроль).
+//   N3 (index.html:1463): tooltip на #heroFreshness (раніше БЕЗ title).
+//      LIVE/STALE/CACHED/OFFLINE поясннено: 5хв/5хв-1год/проксі/немає підключення.
+//      + tabindex="0" для keyboard-доступу + cursor:help.
+//   N4 (index.html:7191-7322): tooltip на «3-day Pᵢ середнє» row у panchUpcoming.
+//      Додано `tip:` field в items.push (опційно, для майбутніх items теж).
+//      Render використовує it.tip → title attr через escapeHtml + cursor:help.
+//      Текст: формула Pᵢ, пороги класифікації, джерело (live noon UTC).
+//   Cache keys bumped до v88-7-13.
+//
 // v88.7.12 changes (FIX-M — уніфікація Рівень 1):
 //   Hero Astro chip раніше показував tithi/nakshatra/yoga з engine_scores.json
 //   (Swiss Ephemeris, local sunrise reference). Панчанга картка нижче — live
@@ -118,8 +148,8 @@
 //   3. backtest.html додано до SHELL_FILES.
 //   4. cache.put awaited перед SW_FRESH_DATA notify (race fix).
 
-const SHELL_CACHE = 'g-index-shell-v88-7-12';
-const DATA_CACHE = 'g-index-data-v88-7-12';
+const SHELL_CACHE = 'g-index-shell-v88-7-13';
+const DATA_CACHE = 'g-index-data-v88-7-13';
 
 const SHELL_FILES = [
   './',

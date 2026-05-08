@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.7.12</title>
+  <title>G-Index — Космофізичний дашборд v88.7.13</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1460,7 +1460,7 @@ body.simple-mode .col-hide-mobile {
           </div>
         </div>
         <div class="hero-right">
-          <span id="heroFreshness" class="live" data-label="Статус" style="font-size:13px;font-weight:800">LIVE</span>
+          <span id="heroFreshness" class="live" data-label="Статус" tabindex="0" title="Свіжість даних NOAA Kp (за віком останнього fetch):&#10;• LIVE — менше 5 хв (зелений #63be7b)&#10;• DELAYED — 5–30 хв (жовтий #ffcc44, нормальна затримка)&#10;• STALE — 30–60 хв (помаранчевий #ff9944)&#10;• OLD — понад 60 хв (червоний #ff6b6b, втрачено зв'язок)&#10;• CACHED — офлайн режим / SW проксі-кеш (окрема гілка)&#10;NOAA Kp endpoints оновлюються кожні ~5–10 хв." style="font-size:13px;font-weight:800;cursor:help">LIVE</span>
           <span id="heroDelta" data-label="Δ G" style="font-size:12px;font-weight:700;color:var(--muted)"></span>
           <span id="heroTomorrow" data-label="Завтра" style="font-size:12px;font-weight:700;color:var(--muted)"></span>
           <span id="heroTomorrowScenario" title="⚠ NOAA forecast недоступний — це плато на базі поточного Kp, не справжній прогноз."></span>
@@ -3580,7 +3580,7 @@ function renderScenarioCard(){
     return 'rgba(232,80,91,.18)';
   }
   let html = '';
-  let critCount = 0; // кiлькiсть днів з |eng|>=2 у наступнi 7
+  let critCount = 0; // v88.7.13 B: кiлькiсть РЕАЛЬНО критичних днів (eng<=-2) у наступнi 7. Раніше |eng|>=2 — на CSV n=294 давало 58.8% днів і 7/7 на зеленому тижні (слово втрачало семантику небезпеки). Тепер узгоджено з Excel ТИЖНЕВИЙ_ПРОГНОЗ "🔴 КРИТИЧНО" = реальна загроза.
   for(const d of days){
     const e = d.entry;
     const eng = e ? e.eng : null;
@@ -3591,7 +3591,7 @@ function renderScenarioCard(){
     const dow = dowUA[d.date.getDay()];
     const dom = d.date.getDate();
     const isToday = (d.ds === fmtDate(today));
-    if(eng !== null && eng !== undefined && Math.abs(eng) >= 2) critCount++;
+    if(eng !== null && eng !== undefined && eng <= -2) critCount++;
     const engStr = (eng !== null && eng !== undefined) ? `${eng >= 0 ? '+' : ''}${eng}` : '—';
     const calStr = (cal !== null && cal !== undefined) ? `${cal >= 0 ? '+' : ''}${cal}` : '';
     const calDot = (cal !== null && cal !== undefined)
@@ -7118,9 +7118,24 @@ function renderPanchangaCard(state){
         const dayAvg = slots.reduce((s,x) => s + x.G, 0) / slots.length;
         const stateClass = dayAvg >= 1 ? '' : dayAvg > -1 ? 'is-neutral' : 'is-tense';
         bt.className = 'panch-best-time ' + stateClass;
-        const _end = (h) => String((h + 3) % 24).padStart(2,'0');
-        const bestRange = `${String(best.label).padStart(2,'0')}:00–${_end(parseInt(best.label))}:00`;
-        const worstRange = `${String(worst.label).padStart(2,'0')}:00–${_end(parseInt(worst.label))}:00`;
+        // v88.7.13 N2: UTC → локальний час (sync з v88.7.10 FIX-K canonical pattern: _tzOffH).
+        // Раніше: ${bestRange} UTC · G=... — користувач у Києві (UTC+3) читав 15:00 як локальне.
+        // Тепер: локальний час у label, оригінальний UTC у title для трасування.
+        const _tzOffH = -new Date().getTimezoneOffset() / 60;
+        const _toLocalRange = (utcLabel) => {
+          const h = parseInt(utcLabel);
+          const ls = ((h + _tzOffH) % 24 + 24) % 24;
+          const le = ((h + 3 + _tzOffH) % 24 + 24) % 24;
+          return `${String(Math.floor(ls)).padStart(2,'0')}:00–${String(Math.floor(le)).padStart(2,'0')}:00`;
+        };
+        const _utcRange = (utcLabel) => {
+          const h = parseInt(utcLabel);
+          return `${String(h).padStart(2,'0')}:00–${String((h + 3) % 24).padStart(2,'0')}:00`;
+        };
+        const bestRange = _toLocalRange(best.label);
+        const worstRange = _toLocalRange(worst.label);
+        const bestRangeUTC = _utcRange(best.label);
+        const worstRangeUTC = _utcRange(worst.label);
         const bestG = (best.G >= 0 ? '+' : '') + best.G.toFixed(1);
         const worstG = (worst.G >= 0 ? '+' : '') + worst.G.toFixed(1);
         const bestCls = best.G > 0 ? 'is-pos' : best.G < 0 ? 'is-neg' : '';
@@ -7133,14 +7148,31 @@ function renderPanchangaCard(state){
                + `</div>`
                + `<div class="pbt-hint">Без виражених піків — витримуй рутину. Уникай імпульсних рішень.</div>`;
         } else {
+          // v88.7.13 N1: лейбл «Уникати» з об'єктом + ховання залежно від worst.G.
+          // Канон Posibnyk Part II Tab.1: «Уникати важливих дій» (завжди з об'єктом).
+          // Реєстр А (внутрішньо-оперативний, узгоджений з Excel ТИЖНЕВИЙ_ПРОГНОЗ).
+          //   worst.G > +0.5  → ховати рядок (зелений день — нема чого «уникати»)
+          //   worst.G ∈ (-0.5, +0.5] → «Менш сприятливий час» (нейтрально, без алармізму)
+          //   worst.G ≤ -0.5  → «Уникати важливих рішень» (Posibnyk-канон)
+          let _worstLabel = '';
+          let _showWorst = true;
+          if (worst.G > 0.5) {
+            _showWorst = false;
+          } else if (worst.G > -0.5) {
+            _worstLabel = 'Менш сприятливий час';
+          } else {
+            _worstLabel = 'Уникати важливих рішень';
+          }
           html = `<div class="pbt-row">`
                + `<span class="pbt-label">Найкращий час</span>`
-               + `<span class="pbt-value ${bestCls}">${bestRange} UTC · G=${bestG}</span>`
-               + `</div>`
-               + `<div class="pbt-row">`
-               + `<span class="pbt-label">Уникати</span>`
-               + `<span class="pbt-value ${worstCls}">${worstRange} UTC · G=${worstG}</span>`
+               + `<span class="pbt-value ${bestCls}" title="UTC: ${bestRangeUTC}">${bestRange} · G=${bestG}</span>`
                + `</div>`;
+          if (_showWorst) {
+            html += `<div class="pbt-row">`
+                 + `<span class="pbt-label">${_worstLabel}</span>`
+                 + `<span class="pbt-value ${worstCls}" title="UTC: ${worstRangeUTC}">${worstRange} · G=${worstG}</span>`
+                 + `</div>`;
+          }
         }
         bt.innerHTML = html;
       } else {
@@ -7194,7 +7226,9 @@ function _renderPanchUpcoming(refDateUTC){
           when: '',
           rel: '',
           note: `${sgn}${avg.toFixed(1)} (${avg >= 0.3 ? 'панчанга підтримує' : avg <= -0.3 ? 'панчанга заважає' : 'панчанга нейтральна'})`,
-          cls
+          cls,
+          // v88.7.13 N4: tooltip — пояснення формули та порогів класифікації
+          tip: 'Середнє арифметичне Pᵢ за наступні 3 дні (включно з сьогодні).\nPᵢ = (Tithi×lunar_mod + Vara + Nakshatra + Yoga + Karana) × PCL_SCALE,\nде PCL_SCALE = 0.4 (calibrated V25-fu29 v5.1 на n=280, optimal).\nВиключення: tіхі 11 (Ekadashi), 15 (Purnima), 26 (Krishna Ekadashi), 30 (Amavasya)\n  → обробляються в eᵢ (events), не в Pᵢ.\nКласифікація 3-day середнього:\n  ≥ +0.3 — «панчанга підтримує»\n  ≤ -0.3 — «панчанга заважає»\n  інше    — «нейтральна»\nДжерело: live noon UTC (astronomy-engine), не frozen engine_scores.'
         });
       }
     }
@@ -7313,7 +7347,10 @@ function _renderPanchUpcoming(refDateUTC){
     const whenBlock = it.rel
       ? `<span style="color:var(--faint);font-size:10px;white-space:nowrap;margin-left:4px">${it.when}${it.when ? ' · ' : ''}${it.rel}</span>`
       : '';
-    return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px dashed rgba(139,160,200,.12)">`
+    // v88.7.13 N4: опційний tooltip на item якщо .tip заповнено (поки використовується для 3-day Pᵢ)
+    const _titleAttr = it.tip ? ` title="${escapeHtml(it.tip)}"` : '';
+    const _cursor = it.tip ? ';cursor:help' : '';
+    return `<div${_titleAttr} style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px dashed rgba(139,160,200,.12)${_cursor}">`
       + `<span style="font-size:14px;flex-shrink:0">${it.icon}</span>`
       + `<span style="color:${colorFor(it.cls)};font-weight:500;flex-shrink:0">${it.label}</span>`
       + whenBlock
@@ -9062,7 +9099,7 @@ const GLOBAL_STATES = {
     headline: 'МОЖНА ДІЯТИ — СИЛЬНЕ ВІКНО',
     sub: 'Фон підтримує активні дії.',
     doText: '✔ Можна діяти активно',
-    avoidText: '✖ Не перевантажуйте день без потреби',
+    avoidText: '○ Підтримуйте темп без хаосу', // v88.7.13 D: ✖→○, без алармізму у зеленій зоні (Excel ТИЖНЕВИЙ favorable: "✅ СПРИЯТЛИВО · Плановий режим" — без застережень)
     doList: ['активні дії','запуски','домовленості','стратегічні рішення'],
     avoidList: ['хаос','розпорошення'],
     zone: 'сильна',
@@ -9075,7 +9112,7 @@ const GLOBAL_STATES = {
     headline: 'МОЖНА ДІЯТИ',
     sub: 'Фон підтримує активні дії.',
     doText: '✔ Рухайтесь у важливих справах',
-    avoidText: '✖ Не розпорошуйтесь на дрібниці',
+    avoidText: '○ Без розпорошення на дрібниці', // v88.7.13 D: ✖→○, узгоджено з favorable (зелена зона, без алармізму)
     doList: ['активні дії','запуски','домовленості'],
     avoidList: ['хаос','розпорошення'],
     zone: 'сприятлива',
