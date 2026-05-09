@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.1</title>
+  <title>G-Index — Космофізичний дашборд v88.8.2</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -15775,6 +15775,9 @@ function _saveGHistory(g){
 }
 
 // v87.19 U4: best/worst days of past 30 days
+// v88.8.2: + forecast peak (next 7 days) — раніше блок показував лише історію,
+// а на 27-day графіку видно майбутній пік (наприклад 13.05 G=+4.6 з expert override).
+// Тепер доступний ще і "Очікуваний пік (7д)" — попередження що ще буде.
 function _getBestWorstDays(){
   try{
     // P1 fix v87.90: prefer engine_scores (validated, consistent з engine v18.5)
@@ -15786,21 +15789,30 @@ function _getBestWorstDays(){
     if (typeof _engineScores !== 'undefined' && _engineScores && Object.keys(_engineScores).length > 0) {
       const nowMs = Date.now();
       const cutMs = nowMs - 30*86400*1000;
+      const fwdMs = nowMs + 7*86400*1000;
       const _todayDS = new Date().toISOString().slice(0,10);
       const _liveKp = (typeof lastWWV!=='undefined' && lastWWV && isFinite(lastWWV.kNow)) ? lastWWV.kNow : null;
       const items = [];
+      const fwdItems = []; // v88.8.2: forecast next 7 days
       for (const ds of Object.keys(_engineScores)) {
-        const sc = _engineScores[ds];
+        // v88.8.2: getEngineScore() щоб expert overrides застосувались — раніше прямий доступ ігнорував їх
+        const sc = (typeof getEngineScore === 'function') ? getEngineScore(new Date(ds + 'T12:00:00Z')) : _engineScores[ds];
         if (!sc || sc.kp == null || !isFinite(sc.kp)) continue;
         const t = new Date(ds + 'T12:00:00Z').getTime();
-        if (!isFinite(t) || t > nowMs || t < cutMs) continue;
+        if (!isFinite(t)) continue;
         try {
           const dt = new Date(ds + 'T12:00:00Z');
-          // v88.6.9: сьогодні → live Kp (synced з Hero); інакше → archived/synthetic engine kp
           const _kpForG = (ds === _todayDS && _liveKp != null) ? _liveKp : sc.kp;
           const ai = computeAi(dt, _kpForG);
           const G = Math.round((_kpForG - 2 + ai.Ai) * 10) / 10;
-          items.push([ds, G]);
+          // History: past 30 days (excluding today)
+          if (t <= nowMs && t >= cutMs) {
+            items.push([ds, G]);
+          }
+          // Forecast: next 7 days (excluding today)
+          else if (t > nowMs && t <= fwdMs) {
+            fwdItems.push([ds, G]);
+          }
         } catch(e) { /* skip if computeAi fails for this date */ }
       }
       if (items.length >= 3) {
@@ -15810,7 +15822,16 @@ function _getBestWorstDays(){
           if (e[1] > best[1]) best = e;
           if (e[1] < worst[1]) worst = e;
         }
-        return { best: {date:best[0], g:best[1]}, worst: {date:worst[0], g:worst[1]}, total: items.length, source: 'engine' };
+        // v88.8.2: forecast peak (max forward-7d G)
+        let fwdPeak = null;
+        if(fwdItems.length){
+          let maxItem = fwdItems[0];
+          for (const e of fwdItems) {
+            if (e[1] > maxItem[1]) maxItem = e;
+          }
+          fwdPeak = { date: maxItem[0], g: maxItem[1] };
+        }
+        return { best: {date:best[0], g:best[1]}, worst: {date:worst[0], g:worst[1]}, total: items.length, source: 'engine', fwdPeak };
       }
     }
     // Fallback (legacy v87.90): localStorage running-average per-session
@@ -15823,7 +15844,7 @@ function _getBestWorstDays(){
       if (e[1] > best[1]) best = e;
       if (e[1] < worst[1]) worst = e;
     }
-    return { best: {date:best[0], g:best[1]}, worst: {date:worst[0], g:worst[1]}, total: last30.length, source: 'localStorage' };
+    return { best: {date:best[0], g:best[1]}, worst: {date:worst[0], g:worst[1]}, total: last30.length, source: 'localStorage', fwdPeak: null };
   }catch(e){ return null; }
 }
 
@@ -15842,9 +15863,10 @@ function renderBestWorstDays(){
   const bSign = bw.best.g >= 0 ? '+' : '';
   const wSign = bw.worst.g >= 0 ? '+' : '';
   block.innerHTML = `
-    <div class="bw-title">Історія · 30д</div>
+    <div class="bw-title">Історія · 30д ${bw.fwdPeak ? '<span style="color:var(--faint);font-weight:400;font-size:10px;margin-left:6px">+ прогноз 7д</span>' : ''}</div>
     <div class="bw-item bw-best"><span class="bw-label">Найкращий день</span><span class="bw-value">${fmtDate(bw.best.date)} · G=${bSign}${bw.best.g.toFixed(1)}</span></div>
     <div class="bw-item bw-worst"><span class="bw-label">Найгірший день</span><span class="bw-value">${fmtDate(bw.worst.date)} · G=${wSign}${bw.worst.g.toFixed(1)}</span></div>
+    ${bw.fwdPeak ? `<div class="bw-item bw-fwd" style="color:#9bb1dc"><span class="bw-label" style="color:#9bb1dc">Очікуваний пік (7д)</span><span class="bw-value">${fmtDate(bw.fwdPeak.date)} · G=${bw.fwdPeak.g >= 0 ? '+' : ''}${bw.fwdPeak.g.toFixed(1)}</span></div>` : ''}
     <div class="bw-count">${bw.total} днів у базі</div>
   `;
   block.style.display = '';

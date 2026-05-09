@@ -1,5 +1,20 @@
-// G-Index Service Worker v88.8.1 (Аутентичні Vedic доповнення + Г-fix-1)
-// v88.8.1 changes (4 покращення):
+// G-Index Service Worker v88.8.2 (Forecast peak у history blok + Г-fix-2)
+// v88.8.2 changes:
+//   FORECAST-PEAK (index.html:_getBestWorstDays + renderBestWorstDays).
+//      Раніше блок "Історія · 30д" показував лише past 30 days best/worst.
+//      На скріні v88.8.1: "Найкращий день 20.04 G=+5.3" (історія), а на 27-day графіку
+//      видно forecast peak ▲4.6 на 13.05 (з expert override). Користувач читав
+//      "найкращий 20.04" і не помічав що ще буде сильніший день у майбутньому.
+//      Тепер: + рядок "Очікуваний пік (7д) 13.05 · G=+4.6" якщо forecast > 0.
+//      Заголовок розширено: "Історія · 30д + прогноз 7д".
+//
+//   Г-FIX-2 (index.html:_getBestWorstDays). _getBestWorstDays() теж використовує
+//      getEngineScore() замість прямого _engineScores[ds] → expert overrides
+//      застосовуються до history-блоку (раніше 12.05–24.05 показували raw eng).
+//
+//   Cache keys bumped до v88-8-2.
+//
+// v88.8.1 changes (Аутентичні Vedic доповнення + Г-fix-1):
 //   Г-FIX-1 (index.html:3617): renderScenarioCard 7-day strip використовує getEngineScore()
 //      замість прямого _engineScores[ds]. Раніше: на 12.05–24.05 strip показував raw
 //      v18.5 eng, а Hero pill — expert override. Тепер 7-day strip узгоджений з Hero.
@@ -272,8 +287,8 @@
 //   3. backtest.html додано до SHELL_FILES.
 //   4. cache.put awaited перед SW_FRESH_DATA notify (race fix).
 
-const SHELL_CACHE = 'g-index-shell-v88-8-1';
-const DATA_CACHE = 'g-index-data-v88-8-1';
+const SHELL_CACHE = 'g-index-shell-v88-8-2';
+const DATA_CACHE = 'g-index-data-v88-8-2';
 
 const SHELL_FILES = [
   './',
