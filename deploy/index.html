@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.7.15</title>
+  <title>G-Index — Космофізичний дашборд v88.8.1</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1844,6 +1844,17 @@ body.simple-mode .col-hide-mobile {
           <div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--dim);margin-bottom:8px">Найближчі критичні вікна</div>
           <div id="panchUpcomingList" style="font-size:12px"></div>
         </div>
+        <!-- v88.8.0: Сонячний ритм — sunrise/sunset, Abhijit Muhurta, Choghadiya. Аутентичні Vedic канонічні елементи Панчанги. -->
+        <div id="panchSolarRhythm" style="margin-top:10px;padding:10px 12px;border-radius:12px;border:1px solid rgba(255,206,84,.15);background:linear-gradient(180deg,rgba(255,206,84,.04),rgba(255,206,84,.01));display:none">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--dim);margin-bottom:8px">☀ Сонячний ритм <span style="text-transform:none;font-size:10px;color:var(--faint);letter-spacing:0">· канон BPHS</span></div>
+          <div id="panchSolarTimes" style="display:flex;gap:14px;flex-wrap:wrap;font-size:12px;margin-bottom:6px"></div>
+          <div id="panchRashis" style="display:flex;gap:14px;flex-wrap:wrap;font-size:12px;margin-bottom:6px;color:var(--text2)"></div>
+          <div id="panchAbhijit" style="font-size:12px;margin-bottom:8px"></div>
+          <details id="panchChoghadiyaDetails" style="margin-top:6px">
+            <summary style="cursor:pointer;font-size:11px;color:var(--text2);user-select:none">📜 Чогхадія — 16 муhурт дня (натиснути)</summary>
+            <div id="panchChoghadiya" style="margin-top:8px;font-size:11px"></div>
+          </details>
+        </div>
         <!-- v87.9: Рекомендований час / Gc summary — залишається внизу як bottom-line висновок -->
         <div id="panchBestTime" class="panch-best-time"></div>
       </section>
@@ -3604,7 +3615,10 @@ function renderScenarioCard(){
     const d = new Date(today);
     d.setDate(today.getDate() + i);
     const ds = fmtDate(d);
-    const entry = _engineScores ? _engineScores[ds] : null;
+    // v88.8.1: getEngineScore() замість прямого _engineScores[ds] — застосовує expert overrides
+    // (Г-патч v88.7.15) до 7-денного scenario strip. Раніше: прямий доступ → на 7 днях
+    // 12.05–24.05 strip показував raw engine v18.5, не expert PDF #48 calibrated.
+    const entry = (typeof getEngineScore === 'function') ? getEngineScore(d) : (_engineScores ? _engineScores[ds] : null);
     days.push({ date: d, ds, entry });
   }
   // Якщо engine_scores ще не готовий або порожній — показуємо placeholder
@@ -7170,18 +7184,27 @@ function renderPanchangaCard(state){
         const dayAvg = slots.reduce((s,x) => s + x.G, 0) / slots.length;
         const stateClass = dayAvg >= 1 ? '' : dayAvg > -1 ? 'is-neutral' : 'is-tense';
         bt.className = 'panch-best-time ' + stateClass;
-        // v88.7.13 N2: UTC → локальний час (sync з v88.7.10 FIX-K canonical pattern: _tzOffH).
-        // Раніше: ${bestRange} UTC · G=... — користувач у Києві (UTC+3) читав 15:00 як локальне.
-        // Тепер: локальний час у label, оригінальний UTC у title для трасування.
-        const _tzOffH = -new Date().getTimezoneOffset() / 60;
+        // v88.7.16 N2-fix: robust UTC→локальний через Date.getHours() (нативно local).
+        // Раніше (v88.7.13): _tzOffH = -getTimezoneOffset()/60. У браузері Kyrylo
+        // в production цей розрахунок чомусь повертав 0 → label лишався UTC ('06:00–09:00'
+        // замість '09:00–12:00' у Києві UTC+3). Можлива причина: privacy extension override
+        // на Date.prototype.getTimezoneOffset.
+        // Новий шлях: створюємо Date з UTC години → .getHours() повертає локальну.
+        // Це не залежить від getTimezoneOffset() — використовує внутрішній timezone DB browser.
+        const _refDate = (dateUTC instanceof Date) ? dateUTC : new Date();
+        const _refMs = Date.UTC(_refDate.getUTCFullYear(), _refDate.getUTCMonth(), _refDate.getUTCDate());
         const _toLocalRange = (utcLabel) => {
-          const h = parseInt(utcLabel);
-          const ls = ((h + _tzOffH) % 24 + 24) % 24;
-          const le = ((h + 3 + _tzOffH) % 24 + 24) % 24;
-          return `${String(Math.floor(ls)).padStart(2,'0')}:00–${String(Math.floor(le)).padStart(2,'0')}:00`;
+          const h = parseInt(utcLabel, 10);
+          if (!isFinite(h)) return `${utcLabel}:00–??:00`;
+          const dStart = new Date(_refMs + h * 3600000);
+          const dEnd = new Date(_refMs + (h + 3) * 3600000);
+          const ls = dStart.getHours();
+          const le = dEnd.getHours();
+          return `${String(ls).padStart(2,'0')}:00–${String(le).padStart(2,'0')}:00`;
         };
         const _utcRange = (utcLabel) => {
-          const h = parseInt(utcLabel);
+          const h = parseInt(utcLabel, 10);
+          if (!isFinite(h)) return `${utcLabel}:00–??:00`;
           return `${String(h).padStart(2,'0')}:00–${String((h + 3) % 24).padStart(2,'0')}:00`;
         };
         const bestRange = _toLocalRange(best.label);
@@ -7226,6 +7249,27 @@ function renderPanchangaCard(state){
                  + `</div>`;
           }
         }
+        // v88.8.1: hint про поточний Choghadiya — інтеграція 5 angas + muhurta shastra.
+        // Геомагнітний G і Vedic Choghadiya — РІЗНІ шари. Користувач отримує обидва.
+        try {
+          const _sr = _calcSunRiseSet(dateUTC);
+          if(_sr){
+            const _chog = _calcChoghadiya(dateUTC, _sr.sunrise, _sr.sunset);
+            if(_chog){
+              const _now = new Date();
+              const _all = [..._chog.day, ..._chog.night];
+              const _cur = _all.find(s => _now >= s.start && _now < s.end);
+              if(_cur){
+                const _scoreColor = _cur.score >= 1 ? '#7be88a' : _cur.score === 0 ? 'var(--text2)' : '#e89c7b';
+                html += `<div class="pbt-row" style="margin-top:4px;padding-top:4px;border-top:1px dashed rgba(255,255,255,.08);font-size:11px">`
+                     + `<span class="pbt-label" style="font-size:10px;color:var(--faint)">Чогхадія зараз</span>`
+                     + `<span style="color:${_scoreColor}" title="${_cur.ua} — ${_cur.hint}. До ${_fmtLocalHM(_cur.end)}.">`
+                     + `${_cur.icon} ${_cur.name} <span style="color:var(--faint);font-size:10px">· до ${_fmtLocalHM(_cur.end)}</span>`
+                     + `</span></div>`;
+              }
+            }
+          }
+        } catch(e) { /* noop */ }
         bt.innerHTML = html;
       } else {
         bt.innerHTML = '';
@@ -7235,6 +7279,8 @@ function renderPanchangaCard(state){
 
   // v87.43: fill "Найближчі критичні вікна" — заповнюємо пустоту корисним контентом
   try { _renderPanchUpcoming(dateUTC); } catch(e) { /* noop */ }
+  // v88.8.0: Сонячний ритм — Sunrise/Sunset, Abhijit Muhurta, Choghadiya (16 muhurta).
+  try { _renderSolarRhythm(dateUTC); } catch(e) { /* noop */ }
 }
 
 // v87.43+v87.44: Render upcoming critical windows block in Panchanga card
@@ -7414,6 +7460,277 @@ function _renderPanchUpcoming(refDateUTC){
   wrap.style.display = 'block';
 }
 
+// ════════════════════════════════════════════════════════════════════════
+// v88.8.0: Сонячний ритм Панчанги (Sunrise/Sunset, Abhijit Muhurta, Choghadiya)
+// ════════════════════════════════════════════════════════════════════════
+// Канон BPHS: всі muhurta-розрахунки прив'язані до місцевого sunrise/sunset.
+// Vedic день = sunrise → sunset (denна частина) → next sunrise (нічна).
+// 8 муhурт day + 8 night = 16 choghadiya per добу.
+// Кожна 7-cyclic за weekday (Sun..Sat).
+// Auspiciousness: Amrit/Shubh/Labh = good, Char = neutral, Udveg/Rog/Kaal = avoid.
+
+const _CHOG_DAY = [
+  ['Udveg','Char','Labh','Amrit','Kaal','Shubh','Rog','Udveg'],   // Sunday
+  ['Amrit','Kaal','Shubh','Rog','Udveg','Char','Labh','Amrit'],   // Monday
+  ['Rog','Udveg','Char','Labh','Amrit','Kaal','Shubh','Rog'],     // Tuesday
+  ['Labh','Amrit','Kaal','Shubh','Rog','Udveg','Char','Labh'],    // Wednesday
+  ['Shubh','Rog','Udveg','Char','Labh','Amrit','Kaal','Shubh'],   // Thursday
+  ['Char','Labh','Amrit','Kaal','Shubh','Rog','Udveg','Char'],    // Friday
+  ['Kaal','Shubh','Rog','Udveg','Char','Labh','Amrit','Kaal']     // Saturday
+];
+const _CHOG_NIGHT = [
+  ['Shubh','Amrit','Char','Rog','Kaal','Labh','Udveg','Shubh'],   // Sunday
+  ['Char','Rog','Kaal','Labh','Udveg','Shubh','Amrit','Char'],    // Monday
+  ['Kaal','Labh','Udveg','Shubh','Amrit','Char','Rog','Kaal'],    // Tuesday
+  ['Udveg','Shubh','Amrit','Char','Rog','Kaal','Labh','Udveg'],   // Wednesday
+  ['Amrit','Char','Rog','Kaal','Labh','Udveg','Shubh','Amrit'],   // Thursday
+  ['Rog','Kaal','Labh','Udveg','Shubh','Amrit','Char','Rog'],     // Friday
+  ['Labh','Udveg','Shubh','Amrit','Char','Rog','Kaal','Labh']     // Saturday
+];
+const _CHOG_META = {
+  // {score, icon, ua_label, hint}
+  'Amrit': { score:  2, icon:'★★★', ua:'Амріта',   hint:'нектар; найкраще для важливих справ' },
+  'Shubh': { score:  1, icon:'★★',  ua:'Шубха',    hint:'сприятливо; для добрих починань' },
+  'Labh':  { score:  1, icon:'★★',  ua:'Лабха',    hint:'успіх, прибуток; гарне для бізнесу' },
+  'Char':  { score:  0, icon:'○',   ua:'Чара',     hint:'нейтрально; підходить для подорожей' },
+  'Udveg': { score: -1, icon:'✗',   ua:'Удвега',   hint:'тривога; уникати важливих рішень' },
+  'Rog':   { score: -1, icon:'✗',   ua:'Рога',     hint:'хвороба; не починати нове' },
+  'Kaal':  { score: -2, icon:'✗✗',  ua:'Кала',     hint:'смерть; найгірше — лише захисні дії' }
+};
+
+// Розрахунок sunrise/sunset через astronomy-engine (з fallback якщо лівра не завантажилась)
+// v88.8.1: кеш по даті — sunrise міняється раз на добу, не треба перераховувати на кожен render.
+const _sunRiseSetCache = new Map(); // key: 'YYYY-MM-DD', value: {sunrise, sunset} | null
+function _calcSunRiseSet(dateUTC){
+  if(!window.Astronomy || typeof Astronomy.SearchRiseSet !== 'function'){
+    return null; // fallback нижче
+  }
+  const cacheKey = `${dateUTC.getUTCFullYear()}-${dateUTC.getUTCMonth()}-${dateUTC.getUTCDate()}-${_userLat.toFixed(2)}-${_userLon.toFixed(2)}`;
+  if(_sunRiseSetCache.has(cacheKey)) return _sunRiseSetCache.get(cacheKey);
+  try {
+    const observer = new Astronomy.Observer(_userLat, _userLon, 0);
+    const dayStart = new Date(Date.UTC(
+      dateUTC.getUTCFullYear(), dateUTC.getUTCMonth(), dateUTC.getUTCDate(), 0, 0, 0
+    ));
+    const rise = Astronomy.SearchRiseSet('Sun', observer, +1, dayStart, 1);
+    const set  = Astronomy.SearchRiseSet('Sun', observer, -1, dayStart, 1);
+    if(!rise || !set){ _sunRiseSetCache.set(cacheKey, null); return null; }
+    const result = { sunrise: rise.date, sunset: set.date };
+    _sunRiseSetCache.set(cacheKey, result);
+    // Lim розмір кеша щоб не зростав вічно при заміні координат
+    if(_sunRiseSetCache.size > 30) {
+      const firstKey = _sunRiseSetCache.keys().next().value;
+      _sunRiseSetCache.delete(firstKey);
+    }
+    return result;
+  } catch(e) {
+    if(window._DEBUG) console.warn('[v88.8.0 SunRiseSet]', e.message);
+    return null;
+  }
+}
+
+// Helper: формат HH:MM локально
+function _fmtLocalHM(date){
+  if(!(date instanceof Date) || isNaN(date.getTime())) return '—';
+  return `${String(date.getHours()).padStart(2,'0')}:${String(date.getMinutes()).padStart(2,'0')}`;
+}
+
+// v88.8.1: Sidereal Sun/Moon rashi (Vedic знак зодіаку через Lahiri ayanamsha)
+// Reuses calcSunLongitude / calcMoonLongitude / lahiriAyanamsha — вже у файлі.
+const _RASHI_NAMES = [
+  // 12 sidereal знаків з регентами (графа джйотіша)
+  { ua:'Овен',     en:'Aries',     skr:'Mesha',      lord:'Марс' },
+  { ua:'Телець',   en:'Taurus',    skr:'Vrishabha',  lord:'Венера' },
+  { ua:'Близнюки', en:'Gemini',    skr:'Mithuna',    lord:'Меркурій' },
+  { ua:'Рак',      en:'Cancer',    skr:'Karka',      lord:'Місяць' },
+  { ua:'Лев',      en:'Leo',       skr:'Simha',      lord:'Сонце' },
+  { ua:'Діва',     en:'Virgo',     skr:'Kanya',      lord:'Меркурій' },
+  { ua:'Терези',   en:'Libra',     skr:'Tula',       lord:'Венера' },
+  { ua:'Скорпіон', en:'Scorpio',   skr:'Vrischika',  lord:'Марс' },
+  { ua:'Стрілець', en:'Sagittarius',skr:'Dhanus',    lord:'Юпітер' },
+  { ua:'Козеріг',  en:'Capricorn', skr:'Makara',     lord:'Сатурн' },
+  { ua:'Водолій',  en:'Aquarius',  skr:'Kumbha',     lord:'Сатурн' },
+  { ua:'Риби',     en:'Pisces',    skr:'Meena',      lord:'Юпітер' }
+];
+function _calcRashis(dateUTC){
+  if(typeof calcSunLongitude !== 'function' || typeof calcMoonLongitude !== 'function'
+     || typeof lahiriAyanamsha !== 'function') return null;
+  try {
+    const jde = dateUTC.getTime() / 86400000 + 2440587.5;
+    const ayan = lahiriAyanamsha(jde);
+    const sunSid = ((calcSunLongitude(jde) - ayan) % 360 + 360) % 360;
+    const moonSid = ((calcMoonLongitude(jde) - ayan) % 360 + 360) % 360;
+    const sunIdx = Math.floor(sunSid / 30);
+    const moonIdx = Math.floor(moonSid / 30);
+    return {
+      sun: { idx: sunIdx, deg: sunSid - sunIdx*30, ..._RASHI_NAMES[sunIdx] },
+      moon: { idx: moonIdx, deg: moonSid - moonIdx*30, ..._RASHI_NAMES[moonIdx] }
+    };
+  } catch(e) {
+    if(window._DEBUG) console.warn('[v88.8.1 Rashis]', e.message);
+    return null;
+  }
+}
+
+// Choghadiya для дати: повертає {day:[8 slots], night:[8 slots]}
+// slot = {name, score, icon, ua, hint, start:Date, end:Date}
+function _calcChoghadiya(dateUTC, sunrise, sunset){
+  if(!sunrise || !sunset) return null;
+  const wday = sunrise.getDay(); // 0=Sun..6=Sat (LOCAL day)
+  const dayMs = sunset.getTime() - sunrise.getTime();
+  const nightMs = (24 * 3600000) - dayMs; // приблизно — наступний sunrise ≈ same offset
+  const daySlotMs = dayMs / 8;
+  const nightSlotMs = nightMs / 8;
+  const dayNames = _CHOG_DAY[wday];
+  const nightNames = _CHOG_NIGHT[wday];
+  const day = dayNames.map((nm, i) => {
+    const m = _CHOG_META[nm] || { score:0, icon:'?', ua:nm, hint:'' };
+    return {
+      name: nm, score: m.score, icon: m.icon, ua: m.ua, hint: m.hint,
+      start: new Date(sunrise.getTime() + i * daySlotMs),
+      end:   new Date(sunrise.getTime() + (i+1) * daySlotMs)
+    };
+  });
+  const night = nightNames.map((nm, i) => {
+    const m = _CHOG_META[nm] || { score:0, icon:'?', ua:nm, hint:'' };
+    return {
+      name: nm, score: m.score, icon: m.icon, ua: m.ua, hint: m.hint,
+      start: new Date(sunset.getTime() + i * nightSlotMs),
+      end:   new Date(sunset.getTime() + (i+1) * nightSlotMs)
+    };
+  });
+  return { day, night };
+}
+
+// Abhijit Muhurta: solar noon ± 24хв (8-а денна muhurta з 15)
+// Solar noon = (sunrise + sunset) / 2
+// Дослівно: Abhijit = single auspicious muhurta даного дня крім вівторка.
+function _calcAbhijit(sunrise, sunset){
+  if(!sunrise || !sunset) return null;
+  const noonMs = (sunrise.getTime() + sunset.getTime()) / 2;
+  return {
+    start: new Date(noonMs - 24 * 60000),
+    end:   new Date(noonMs + 24 * 60000),
+    isTuesday: sunrise.getDay() === 2  // вівторок — Abhijit неактивний (BPHS)
+  };
+}
+
+function _renderSolarRhythm(refDateUTC){
+  const wrap = document.getElementById('panchSolarRhythm');
+  const elTimes = document.getElementById('panchSolarTimes');
+  const elAbh = document.getElementById('panchAbhijit');
+  const elChog = document.getElementById('panchChoghadiya');
+  if(!wrap || !elTimes || !elAbh || !elChog) return;
+
+  const date = refDateUTC || new Date();
+  const sr = _calcSunRiseSet(date);
+  if(!sr){
+    wrap.style.display = 'none';
+    return;
+  }
+  const { sunrise, sunset } = sr;
+  // Solar noon
+  const solarNoonMs = (sunrise.getTime() + sunset.getTime()) / 2;
+  const solarNoon = new Date(solarNoonMs);
+  const dayLengthMin = Math.round((sunset.getTime() - sunrise.getTime()) / 60000);
+  const dayLenH = Math.floor(dayLengthMin / 60);
+  const dayLenM = dayLengthMin % 60;
+
+  // 1. Sunrise/Sunset/Solar Noon
+  elTimes.innerHTML = `
+    <span title="Місцевий схід Сонця (geo: ${_userLat.toFixed(2)}°, ${_userLon.toFixed(2)}°)">
+      <span style="color:#ffce54;font-weight:700">↑</span> Схід <strong>${_fmtLocalHM(sunrise)}</strong>
+    </span>
+    <span title="Місцевий захід Сонця">
+      <span style="color:#ff7e54;font-weight:700">↓</span> Захід <strong>${_fmtLocalHM(sunset)}</strong>
+    </span>
+    <span style="color:var(--dim)" title="Solar noon = (Схід + Захід) / 2">
+      ☀ Полудень <strong>${_fmtLocalHM(solarNoon)}</strong>
+    </span>
+    <span style="color:var(--faint);font-size:11px" title="Тривалість світлового дня">
+      (день ${dayLenH}г ${String(dayLenM).padStart(2,'0')}хв)
+    </span>
+  `;
+
+  // v88.8.1: 1b. Sun/Moon Rashi (sidereal Vedic знак)
+  try {
+    const rashis = _calcRashis(date);
+    if(rashis){
+      const elRashis = document.getElementById('panchRashis');
+      if(elRashis){
+        elRashis.innerHTML = `
+          <span title="Surya Rashi — поточний sidereal знак Сонця (Lahiri ayanamsha). Сонце міняє знак раз на ~30 днів.">
+            <span style="color:#ffce54">☉ Сонце</span>
+            у <strong>${rashis.sun.ua}</strong>
+            <span style="color:var(--faint);font-size:10px">(${rashis.sun.skr}, ${rashis.sun.deg.toFixed(1)}°, регент: ${rashis.sun.lord})</span>
+          </span>
+          <span title="Chandra Rashi — поточний sidereal знак Місяця. Міняється кожні ~2.5 дні. Базис для janma rashi і muhurta.">
+            <span style="color:#9bb1dc">☽ Місяць</span>
+            у <strong>${rashis.moon.ua}</strong>
+            <span style="color:var(--faint);font-size:10px">(${rashis.moon.skr}, ${rashis.moon.deg.toFixed(1)}°, регент: ${rashis.moon.lord})</span>
+          </span>
+        `;
+      }
+    }
+  } catch(e) { /* noop */ }
+
+  // 2. Abhijit Muhurta
+  const abh = _calcAbhijit(sunrise, sunset);
+  if(abh){
+    const now = new Date();
+    const isNow = now >= abh.start && now < abh.end;
+    const isPast = now >= abh.end;
+    const isTue = abh.isTuesday;
+    const tueNote = isTue ? ' <span style="color:var(--warn);font-size:10px">(вівторок — Abhijit неактивний за BPHS)</span>' : '';
+    const status = isTue ? '⚠' : (isNow ? '🟢 зараз' : (isPast ? '✓ минула' : '⏳ ще буде'));
+    const color = isTue ? 'var(--warn)' : (isNow ? 'var(--ok)' : (isPast ? 'var(--dim)' : '#ffce54'));
+    elAbh.innerHTML = `
+      <span title="Abhijit Muhurta = solar noon ± 24хв. Універсально-сприятливе вікно дня (за BPHS, окрім вівторка). Ідеально для важливих рішень, переговорів, запусків.">
+        <span style="color:${color};font-weight:700">⏱ Абгіджит-мухурта</span>
+        <strong>${_fmtLocalHM(abh.start)}–${_fmtLocalHM(abh.end)}</strong>
+        <span style="color:${color};font-size:11px">· ${status}</span>${tueNote}
+      </span>
+    `;
+  } else {
+    elAbh.innerHTML = '';
+  }
+
+  // 3. Choghadiya
+  const chog = _calcChoghadiya(date, sunrise, sunset);
+  if(chog){
+    const now = new Date();
+    const renderRow = (slot, idx, half) => {
+      const isNow = now >= slot.start && now < slot.end;
+      const isPast = now >= slot.end;
+      const colorMap = {
+        2:'#7be88a',  1:'#a8d97a',  0:'var(--text2)',
+        '-1':'#e89c7b','-2':'#ff7b7b'
+      };
+      const c = colorMap[slot.score] ?? 'var(--text2)';
+      const opacity = isPast ? '0.42' : '1';
+      const bg = isNow ? 'rgba(123,232,138,.10)' : 'transparent';
+      const nowMark = isNow ? '<span style="color:var(--ok);font-weight:700;margin-left:4px">◄ зараз</span>' : '';
+      return `<div style="display:flex;align-items:center;gap:6px;padding:3px 6px;border-radius:4px;background:${bg};opacity:${opacity}" title="${slot.ua} — ${slot.hint}">
+        <span style="color:var(--faint);font-size:10px;width:14px;text-align:right">${idx+1}</span>
+        <span style="color:var(--faint);font-size:10px;width:78px">${_fmtLocalHM(slot.start)}–${_fmtLocalHM(slot.end)}</span>
+        <span style="color:${c};font-weight:600;width:60px">${slot.name}</span>
+        <span style="color:${c};font-size:10px;width:32px">${slot.icon}</span>
+        <span style="color:var(--dim);font-size:10px">${slot.hint}${nowMark}</span>
+      </div>`;
+    };
+    elChog.innerHTML = `
+      <div style="font-size:10px;color:var(--faint);margin-bottom:4px;letter-spacing:0.04em">☀ ДЕНЬ (${_fmtLocalHM(sunrise)} → ${_fmtLocalHM(sunset)})</div>
+      ${chog.day.map((s,i) => renderRow(s, i, 'day')).join('')}
+      <div style="font-size:10px;color:var(--faint);margin:8px 0 4px;letter-spacing:0.04em">🌙 НІЧ (${_fmtLocalHM(sunset)} → +наступн. схід)</div>
+      ${chog.night.map((s,i) => renderRow(s, i, 'night')).join('')}
+    `;
+  } else {
+    elChog.innerHTML = '<span class="muted">Choghadiya недоступна без sunrise/sunset.</span>';
+  }
+
+  wrap.style.display = 'block';
+}
+
 // v85b: renderPanchanga — backward-compatible wrapper
 function renderPanchanga(dateUTC){
   const state = computePanchangaState(dateUTC);
@@ -7421,6 +7738,13 @@ function renderPanchanga(dateUTC){
   // v85b-F4: expose raw panchanga total (ns+ts+ys+ks+rahu) for verdict sync
   if (_lastPanchCtx) _lastPanchCtx.pclTotal = state.pclOnly;
   renderPanchangaCard(state);
+  // v88.7.16: re-render hero Astro chip ПІСЛЯ оновлення _lastPanchCtx.
+  // Раніше: chip рендерився після loadEngineScores (init), коли _lastPanchCtx міг бути
+  // null або stale. На boundary днях (~46% часу) chip показував frozen engine tithi
+  // замість live (наприклад: chip "Saptami K" + картка "Ashtami K" одночасно).
+  // Тепер: chip оновлюється на КОЖЕН renderPanchanga → синхронізація гарантована.
+  try { if (typeof renderHeroAstroLayer === 'function') renderHeroAstroLayer(); }
+  catch(e) { /* noop */ }
 }
 
 // ==================== КОМБО-ГРАФІК Kp (факт + прогноз) ====================

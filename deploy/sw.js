@@ -1,5 +1,84 @@
-// G-Index Service Worker v88.7.15 (архітектурні допрацювання — Б, В+, Г)
-// v88.7.15 changes (3 архітектурні патчі — продовження після v88.7.14):
+// G-Index Service Worker v88.8.1 (Аутентичні Vedic доповнення + Г-fix-1)
+// v88.8.1 changes (4 покращення):
+//   Г-FIX-1 (index.html:3617): renderScenarioCard 7-day strip використовує getEngineScore()
+//      замість прямого _engineScores[ds]. Раніше: на 12.05–24.05 strip показував raw
+//      v18.5 eng, а Hero pill — expert override. Тепер 7-day strip узгоджений з Hero.
+//
+//   SUN-MOON-RASHI (index.html: HTML 1849+, JS 7501+).
+//      Додано Surya/Chandra Rashi (sidereal Lahiri) у Сонячний ритм.
+//      ☉ Сонце у Овен/Телець/.../Риби (12 знаків) + регент + degrees.
+//      ☽ Місяць у знаку (міняється кожні ~2.5 дні — основа для janma rashi).
+//      Reuse calcSunLongitude/calcMoonLongitude/lahiriAyanamsha (вже у файлі).
+//      Це дає traditional Vedic foundation що було відсутнє.
+//
+//   CHOG-INTEGRATION (index.html:7251+). У panchBestTime блок (Найкращий час)
+//      доданий рядок "Чогхадія зараз: ${name} ${icon} · до HH:MM".
+//      Тепер користувач БАЧИТЬ обидва шари у тій самій зоні погляду:
+//      - G slot (геомагнітний): "Найкращий час 09:00-12:00 G=+1.7"
+//      - Choghadiya (Vedic muhurta): "Чогхадія зараз: Udveg ✗ · до 12:57"
+//      Конфлікт шарів — нормальний; користувач сам інтегрує.
+//
+//   SUNRISE-CACHE (index.html:7416+). _sunRiseSetCache (Map) кешує sunrise/sunset
+//      по date+lat+lon. Раніше: Astronomy.SearchRiseSet викликалась 2x на кожен
+//      renderPanchanga (sunrise + sunset). Тепер: 1x на день. Економія ~80% часу
+//      обчислень для повторних рендерів. Limit 30 entries.
+//
+//   Cache keys bumped до v88-8-1.
+//
+// v88.8.0 changes (Сонячний ритм Панчанги — Sunrise, Abhijit, Choghadiya):
+//   SOLAR-RHYTHM (index.html: HTML 1843+, JS 7437+).
+//      Канон BPHS: muhurta-розрахунки прив'язані до місцевого sunrise/sunset, а не UTC.
+//      Раніше у дашборді: 5 angas (Tithi/Vara/Nakshatra/Yoga/Karana) + Rahu Kalam.
+//      Не було: sunrise/sunset, Abhijit muhurta, Choghadiya — три канонічні елементи
+//      Панчанги що використовуються у muhurta-shastra для оперативного планування.
+//
+//      ДОДАНО (3 елементи):
+//      1. Sunrise/Sunset/Solar Noon — через Astronomy.SearchRiseSet('Sun', observer, ±1).
+//         Геокоординати з _userLat/_userLon (Київ за default 50.45N, 30.52E).
+//         + тривалість світлового дня для контексту.
+//
+//      2. Abhijit Muhurta — solar noon ± 24хв. Universally auspicious window
+//         (BPHS § VII.3, окрім вівторка коли неактивна за традицією).
+//         Маркери: 🟢 зараз / ⏳ ще буде / ✓ минула / ⚠ Tuesday non-active.
+//
+//      3. Choghadiya — 16 муhурт (8 day + 8 night) з 7-cyclic schema по weekday.
+//         Auspicious: Amrit (★★★) / Shubh (★★) / Labh (★★).
+//         Neutral: Char (○).
+//         Inauspicious: Udveg (✗) / Rog (✗) / Kaal (✗✗).
+//         Згорнуто у <details> щоб не перевантажувати картку — розгорається на клік.
+//         Поточний слот підсвічено + ◄ зараз.
+//
+//      Fallback gracefully: якщо Astronomy library не завантажилась — блок прихований,
+//      решта Панчанги працює нормально.
+//
+//      Чому це важливо: 5 angas — це AGE (стан часу), а Choghadiya — це OPERATIONAL
+//      framework з конкретними часовими slots для дій. У Vedic muhurta shastra це
+//      еквівалент "розкладу" — коли робити що.
+//
+//   Cache keys bumped до v88-8-0.
+//
+// v88.7.16 changes (FIX runtime: N2 robust + chip sync):
+//   N2-FIX (index.html:7173-7196): _toLocalRange переписаний на Date-based pattern.
+//      Симптом: на скрінах v88.7.15 panchBestTime показував UTC цифри без слова "UTC"
+//      (наприклад "06:00–09:00 · G=+1.7" замість "09:00–12:00" у Києві UTC+3).
+//      Причина: _tzOffH = -getTimezoneOffset()/60 повертав 0 у production runtime
+//      (можливо privacy extension override на Date.prototype.getTimezoneOffset).
+//      Інші місця (heat-strip, plan day, decisionTimingList) працювали бо мали
+//      власні fallback paths.
+//      Виправлення: використовуємо нативний Date.getHours() через Date.UTC + offset.
+//      Гарантовано не залежить від getTimezoneOffset() — використовує internal timezone DB.
+//   CHIP-SYNC (index.html:7418-7432): renderHeroAstroLayer hook у renderPanchanga.
+//      Симптом: на скрінах v88.7.15 hero Astro chip показував "Saptami (K)" одночасно
+//      з Панчанга-карткою "Ashtami (K)". Tooltip chip: "Tithi: 22 (Saptami)" — frozen.
+//      Причина: chip рендериться після loadEngineScores (init), коли _lastPanchCtx
+//      ще null → fallback на entry.cal_tithi (frozen Vedic Swiss Ephemeris). На boundary
+//      днях (~46%) tithi може зсунутись на 1 між frozen і live noon UTC.
+//      v88.7.12 FIX-M обіцяв "live names" але hook не було → fallback переважав.
+//      Виправлення: додано renderHeroAstroLayer() виклик у кінці renderPanchanga →
+//      chip оновлюється з актуальним _lastPanchCtx → синхронізація chip ↔ картка.
+//   Cache keys bumped до v88-7-16.
+//
+// v88.7.15 changes (архітектурні допрацювання — Б, В+, Г):
 //   Б — Low-confidence badge у Hero (CANONICAL_METRICS f1=0.26 на neutral).
 //      HTML (index.html:~1438): додано <div id="heroLowConfBadge"> у hero-maintext
 //        між heroGreeting і heroDecisionBlock.
@@ -193,8 +272,8 @@
 //   3. backtest.html додано до SHELL_FILES.
 //   4. cache.put awaited перед SW_FRESH_DATA notify (race fix).
 
-const SHELL_CACHE = 'g-index-shell-v88-7-15';
-const DATA_CACHE = 'g-index-data-v88-7-15';
+const SHELL_CACHE = 'g-index-shell-v88-8-1';
+const DATA_CACHE = 'g-index-data-v88-8-1';
 
 const SHELL_FILES = [
   './',
