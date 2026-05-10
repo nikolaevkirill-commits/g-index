@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.6</title>
+  <title>G-Index — Космофізичний дашборд v88.8.8</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -6911,9 +6911,18 @@ function computePanchangaState(dateUTC){
   const kAdv = p.karana.isVishti
     ? {do:'Очікування, спостереження', avoid:'Будь-які активні дії (абсолютне вето)'}
     : {do: p.karana.note, avoid:''};
+  // v88.8.7 БАГ#1 fix: 3-state Rahu Kalam advice (active / upcoming / past).
+  // Раніше: 'Обмежень немає' для всіх не-active випадків — wrong, treats upcoming
+  // window як неіснуюче. Тепер: окрема hint якщо ще буде сьогодні.
+  const _rNh = new Date().getUTCHours() + new Date().getUTCMinutes()/60;
+  const _rRsParts = p.rahu.start.split(':').map(Number);
+  const _rRsH = _rRsParts[0] + (_rRsParts[1]||0)/60;
+  const _rIsUpcoming = !p.rahu.active && _rNh < _rRsH;
   const rahuAdv = p.rahu.active
     ? {do:'Оборонні/підтримуючі операції', avoid:'Нові бойові завдання, стратегічні рішення'}
-    : {do:'Обмежень немає', avoid:''};
+    : (_rIsUpcoming
+      ? {do:`Звичайні справи; ${p.rahu.start}–${p.rahu.end} — пауза`, avoid:`Не стартувати нове у вікні ${p.rahu.start}–${p.rahu.end}`}
+      : {do:'Вікно минуло — обмежень немає', avoid:''});
 
   const cells = [
     { score: p.tithi.score, label: 'Tithi — місячний день', val: p.tithi.name,
@@ -7175,8 +7184,42 @@ function renderPanchangaCard(state){
       <td style="padding:5px 6px;color:#9bb1dc;font-size:11px">
         <span class="hint" tabindex="0" style="cursor:help;font-style:italic;border-bottom:1px dotted var(--faint)">Rahu Kalam<span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.rahu(p.rahu))}</span></span>
       </td>
-      <td style="padding:5px 6px;font-weight:600"><span class="hint" tabindex="0" style="cursor:help">${p.rahu.active ? '🔴 Активний!' : '🟢 '+p.rahu.start+'–'+p.rahu.end}<span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.rahu(p.rahu))}</span></span></td>
-      <td style="padding:5px 6px;font-size:11px;color:#b0c4de">${p.rahu.active ? '✗ Не починати нових операцій' : '✓ Обмежень немає'}</td>
+      ${(() => {
+        // v88.8.7 БАГ#1 fix: 3-state Rahu Kalam замість 2-state.
+        // Раніше: only 'active' / 'not active'. "Не active" → 🟢 'Обмежень немає' — wrong,
+        // бо Rahu Kalam щодня є, просто може бути в майбутньому або вже минулим.
+        // Тепер: 🔴 active / 🟡 upcoming / ⚪ past — користувач бачить статус коректно.
+        // v88.8.7 БАГ#2 fix: час Rahu Kalam — у локальному часі (раніше UTC без позначки → плутанина).
+        const _nh = new Date().getUTCHours() + new Date().getUTCMinutes()/60;
+        const _rs = p.rahu.start.split(':').map(Number);
+        const _re = p.rahu.end.split(':').map(Number);
+        const _rsH = _rs[0] + (_rs[1]||0)/60;
+        const _reH = _re[0] + (_re[1]||0)/60;
+        // Convert UTC HH:MM → local через Date.UTC + getHours()
+        const _today = new Date();
+        const _toLocal = (utcStr) => {
+          const [h, m] = utcStr.split(':').map(Number);
+          if (!isFinite(h) || !isFinite(m)) return utcStr;
+          const d = new Date(Date.UTC(_today.getUTCFullYear(), _today.getUTCMonth(), _today.getUTCDate(), h, m, 0));
+          return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+        };
+        const _rsLocal = _toLocal(p.rahu.start);
+        const _reLocal = _toLocal(p.rahu.end);
+        let _rIcon, _rText, _rAdvice;
+        if (p.rahu.active) {
+          _rIcon = '🔴'; _rText = 'Активний!';
+          _rAdvice = '✗ Не починати нових операцій';
+        } else if (_nh < _rsH) {
+          _rIcon = '🟡'; _rText = `${_rsLocal}–${_reLocal} (буде)`;
+          _rAdvice = `⏳ Уникати важливих рішень з ${_rsLocal}`;
+        } else {
+          _rIcon = '⚪'; _rText = `${_rsLocal}–${_reLocal} (минув)`;
+          _rAdvice = '✓ Вікно вже минуло';
+        }
+        const _utcTip = `UTC: ${p.rahu.start}–${p.rahu.end}`;
+        return `<td style="padding:5px 6px;font-weight:600"><span class="hint" tabindex="0" style="cursor:help" title="${_utcTip}">${_rIcon} ${_rText}<span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.rahu(p.rahu))}</span></span></td>
+      <td style="padding:5px 6px;font-size:11px;color:#b0c4de">${_rAdvice}</td>`;
+      })()}
     </tr>
   </table>`;
 
@@ -9964,7 +10007,11 @@ function syncDayPlanCard(){
     if(h + 3 <= nowH) continue; // past
     const g = Number(s.G ?? 0);
     const cls = g >= 0.5 ? 'ok' : g >= -0.5 ? 'info' : 'warn';
-    const text = g >= 0.5 ? 'можна діяти' : g >= -0.5 ? 'обережно: перевірені дії' : 'тільки рутина';
+    // v88.8.8 БАГ#4 fix: узгоджую термінологію з 'КОЛИ ДІЯТИ' timing labels.
+    // Раніше: 'тільки рутина' для g<-0.5, але timing labels кажуть 'уникати'.
+    // Юзер бачив 'тільки рутина · Венера' в плані і одночасно 'уникати' у timing —
+    // суперечливі повідомлення. Тепер один лексикон: можна / обережно / уникати.
+    const text = g >= 0.5 ? 'можна діяти' : g >= -0.5 ? 'обережно: перевірені дії' : 'уникати: тільки рутина';
     // Hora context
     let horaStr = '';
     try{
@@ -15650,7 +15697,7 @@ var WF3_PHRASES={
   cached:'Показано кеш.',
   live:'Дані актуальні.',
   stale:'Дані можуть бути застарілими.',
-  scen_up:'Якщо Kp зросте, вплив посилиться до {v}.'
+  scen_up:'Якщо Kp зросте на 1, G стане {v}.'
 };
 var WF3_ALERT={
   storm_high:'Йде геомагнітна буря, небажано планувати критичні дії.',

@@ -1,5 +1,54 @@
-// G-Index Service Worker v88.8.6 (Lunar phase у hero + чистка)
-// v88.8.6 changes:
+// G-Index Service Worker v88.8.8 (UX-консистенція — 2 точкових fixes)
+// v88.8.8 changes (зі скрінів v88.8.6 — другий аудит):
+//   БАГ#3 (index.html:15696): WF3 'scen_up' phrasing вводить в оману.
+//      Раніше: 'Якщо Kp зросте, вплив посилиться до +0.3.'
+//      Проблема: при поточному G=-0.7 і Kp=1.33, формула G=Kp-2+ΣAᵢ дає
+//      що при +1 до Kp → G стане -0.7+1=+0.3 (ПОКРАЩЕННЯ).
+//      Але слово 'посилиться' семантично = 'погіршиться'.
+//      Юзер бачить '+0.3' (краще) разом з 'посилиться' (гірше) → cognitive disonance.
+//      Тепер: 'Якщо Kp зросте на 1, G стане {v}.' (нейтрально, точно).
+//
+//   БАГ#4 (index.html:10010): Personal plan vs timing labels — різний лексикон.
+//      Раніше: Personal plan для g<-0.5 → 'тільки рутина · Венера'
+//              КОЛИ ДІЯТИ timing labels для g≤-0.5 → 'уникати'
+//      Один і той самий G давав ДВА слова: 'тільки рутина' / 'уникати'.
+//      Юзер плутався: 'що ж насправді — обережно чи stop?'
+//      Тепер: один лексикон 'можна / обережно / уникати'. Personal plan
+//      використовує 'уникати: тільки рутина' (matches КОЛИ ДІЯТИ + додає рутинну
+//      деталізацію).
+//
+//   ПЕРЕВІРЕНО (НЕ потребує fix):
+//   • Yoga 'Brahma' на 10.05 — правильно (idx 24, score +1, зелений) ✅
+//   • '3 критичних з 7' — точно 3 (10.05 -3, 15.05 -3, 16.05 -3) ✅
+//   • Engine -3 без override (overrides з 11.05) ✅
+//   • Hora '5хв' vs '6хв' — race condition двох рендерів, не критично
+//
+//   Cache keys bumped до v88-8-8.
+//
+// v88.8.7 changes (КРИТИЧНІ Rahu Kalam fixes):
+//   БАГ#1 (index.html:7178+, 6914+): Rahu Kalam labeling.
+//      Раніше: 2-state логіка active/not-active.
+//        active=false → '🟢 13:42–15:35' + '✓ Обмежень немає' (зелена кнопка)
+//        Це WRONG — Rahu Kalam щодня є, просто упшеr / past / active.
+//        Зелений колір + 'Обмежень немає' плутає юзера: він думає що Rahu Kalam
+//        у цей день немає взагалі, і не очікує паузу через 4 години.
+//      Тепер: 3-state логіка:
+//        🔴 'Активний!' + '✗ Не починати нових операцій' (під час)
+//        🟡 'HH:MM–HH:MM (буде)' + '⏳ Уникати важливих рішень з HH:MM' (попереду)
+//        ⚪ 'HH:MM–HH:MM (минув)' + '✓ Вікно вже минуло' (позаду)
+//      Той самий fix у rahuAdv (cells advice).
+//
+//   БАГ#2 (index.html:7178+): Rahu Kalam часи у UTC без позначки.
+//      Раніше: '13:42–15:35' — це UTC, але без 'UTC' label у table cell.
+//        Користувач у Києві бачить '13:42' і думає що це 13:42 за київським часом.
+//        Реально 13:42 UTC = 16:42 Київ (DST UTC+3).
+//      Тепер: показую LOCAL час '16:42–18:35', UTC у tooltip 'UTC: 13:42–15:35'.
+//      Конвертація через Date.UTC() + getHours() — той самий robust pattern як
+//      N2-fix v88.7.16 (не залежний від getTimezoneOffset privacy quirks).
+//
+//   Cache keys bumped до v88-8-7.
+//
+// v88.8.6 changes (Lunar phase у hero + чистка):
 //   Д1 LUNAR-PHASE-HERO (index.html:HTML 1424+, JS 11402+).
 //      Раніше: phase візуалізація лише у astroGrid <details> (схована за кліком "▶ деталі").
 //      Тепер: компактна 32x32 SVG під G ring у hero — постійно видима.
@@ -394,8 +443,8 @@
 //   3. backtest.html додано до SHELL_FILES.
 //   4. cache.put awaited перед SW_FRESH_DATA notify (race fix).
 
-const SHELL_CACHE = 'g-index-shell-v88-8-6';
-const DATA_CACHE = 'g-index-data-v88-8-6';
+const SHELL_CACHE = 'g-index-shell-v88-8-8';
+const DATA_CACHE = 'g-index-data-v88-8-8';
 
 const SHELL_FILES = [
   './',
