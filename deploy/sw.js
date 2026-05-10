@@ -1,5 +1,37 @@
-// G-Index Service Worker v88.8.16 (Audit fixes — Panchak detection + GM canonical details)
-// v88.8.16 changes — додаткові канонічні елементи знайдені під час аудиту v88.8.15:
+// G-Index Service Worker v88.8.17 (Pancha Pakshi visualization + tick для Sun Rhythm)
+// v88.8.17 changes — після audit скрінів v88.8.16:
+//   FEATURE: Pancha Pakshi 5-birds visualization у Personal section
+//     Заповнює "empty space" що був на скріні v88.8.16 праворуч під Planetary Rhythm.
+//     5 emoji великих (🦅🦉🐦‍⬛🐓🦚), поточний підсвічений (за nakshatra).
+//     Active bird: scale 1.35x, glow color, full opacity.
+//     Inactive: scale 1.0x, opacity 0.35.
+//     Footer: "Павич · через Dhanishtha · Краса, мистецтво, гармонія"
+//
+//   BUGFIX: Sun Rhythm stale status (помічений на v88.8.16 скріні)
+//     Vijaya 15:27-16:28 показано 🟡 (буде) хоча на 17:10 уже минула (мало бути ⚪).
+//     Причина: _renderSolarRhythm викликається тільки при data refresh,
+//     не на тікер. Між refreshes статус застарілий.
+//     ВИПРАВЛЕНО: setInterval _sunRhythmTickTimer = 60000ms (1 раз/хвилину).
+//     Тепер Brahma/Vijaya/Godhuli/Nishita/Abhijit/Choghadiya статуси
+//     оновлюються щохвилини без data refresh.
+//
+//   ВЕРИФІКАЦІЯ скрінів v88.8.16:
+//   ✅ G=-0.90 при Kp=1.00 (точно)
+//   ✅ Lunar phase 43% (phaseDeg 278.2°)
+//   ✅ DELAYED · 7хв коректно
+//   ✅ Heat strip slot 15 = -0.3, 'обережно ◄ зараз'
+//   ✅ Nakshatra: Dhanishtha [⚠ PK Roga] · Рухома · Марс · 🐦 Павич
+//   ✅ Rahu Kalam 18:35-20:29 (slot 8 canon)
+//   ✅ Yamagandam 12:55-14:48 (минув)
+//   ✅ Gulika Kaal 16:42-18:35 (минув)
+//   ✅ Brahma 03:16-04:17 (минула)
+//   ⚠ Vijaya stale → виправлено tick
+//   ✅ Godhuli 20:01-21:02 (буде)
+//   ✅ Nishita 00:37-01:12 (буде)
+//
+//   Cache keys bumped до v88-8-17.
+//
+// v88.8.16 changes (Audit fixes — Panchak detection + GM canonical details):
 //   FEATURE 1: GANDA_MOOL_DETAILS canonical mapping (Drikpanchang)
 //     Subtype/Ruler/Effect для кожної з 6 GM nakshatras:
 //       Moola type (Ketu-ruled): Ashwini, Magha, Mula → Father
@@ -702,8 +734,8 @@
 //   3. backtest.html додано до SHELL_FILES.
 //   4. cache.put awaited перед SW_FRESH_DATA notify (race fix).
 
-const SHELL_CACHE = 'g-index-shell-v88-8-16';
-const DATA_CACHE = 'g-index-data-v88-8-16';
+const SHELL_CACHE = 'g-index-shell-v88-8-17';
+const DATA_CACHE = 'g-index-data-v88-8-17';
 
 const SHELL_FILES = [
   './',
