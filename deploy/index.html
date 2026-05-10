@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.12</title>
+  <title>G-Index — Космофізичний дашборд v88.8.16</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1859,6 +1859,8 @@ body.simple-mode .col-hide-mobile {
           <div id="panchSolarTimes" style="display:flex;gap:14px;flex-wrap:wrap;font-size:12px;margin-bottom:6px"></div>
           <div id="panchRashis" style="display:flex;gap:14px;flex-wrap:wrap;font-size:12px;margin-bottom:6px;color:var(--text2)"></div>
           <div id="panchAbhijit" style="font-size:12px;margin-bottom:8px"></div>
+          <!-- v88.8.14: канонічні auspicious muhurta — Brahma/Vijaya/Godhuli/Nishita -->
+          <div id="panchAuspiciousMuhurta" style="font-size:11px;margin-bottom:8px;display:flex;flex-wrap:wrap;gap:10px;color:var(--text2)"></div>
           <details id="panchChoghadiyaDetails" style="margin-top:6px">
             <summary style="cursor:pointer;font-size:11px;color:var(--text2);user-select:none">📜 Чогхадія — 16 муhурт дня (натиснути)</summary>
             <div id="panchChoghadiya" style="margin-top:8px;font-size:11px"></div>
@@ -6665,6 +6667,67 @@ const NAKSHATRA_REGENT = [
   'Сатурн','Меркурій'
 ];
 
+// v88.8.15: GANDA MOOL NAKSHATRA (BPHS Ch.4 v.13)
+// 6 особливих junction-накшатр (стики ракші), де народжені діти потребують
+// особливих shanti ритуалів (Mool Shanti) у перші 27 днів життя.
+// Канон: Ashwini, Ashlesha, Magha, Jyeshtha, Mula, Revati
+// Це не "погані" накшатри в загальному, але мають кармічний індикатор.
+// 0-based indices у NAKSHATRA_NAMES.
+const GANDA_MOOL_INDICES = [0, 8, 9, 17, 18, 26];
+const GANDA_MOOL_NAMES = ['Ashwini','Ashlesha','Magha','Jyeshtha','Mula','Revati'];
+// v88.8.16: Drikpanchang canonical subtype/effect mapping
+// Moola type (Ketu-ruled): Ashwini, Magha, Moola → effect on Father
+// Ganda type (Mercury-ruled): Ashlesha, Jyeshtha, Revati → effect on Mother/Younger siblings
+const GANDA_MOOL_DETAILS = {
+  0:  { subtype: 'Moola', ruler: 'Ketu',    effect: 'Father' },             // Ashwini
+  8:  { subtype: 'Ganda', ruler: 'Mercury', effect: 'Mother' },             // Ashlesha
+  9:  { subtype: 'Moola', ruler: 'Ketu',    effect: 'Father' },             // Magha
+  17: { subtype: 'Ganda', ruler: 'Mercury', effect: 'Younger siblings' },   // Jyeshtha
+  18: { subtype: 'Moola', ruler: 'Ketu',    effect: 'Father / Grandfather' }, // Mula
+  26: { subtype: 'Ganda', ruler: 'Mercury', effect: 'Mother' }              // Revati
+};
+
+// v88.8.15: PANCHA PAKSHI (5 птахів) — Tamil Vedic tradition
+// Кожна з 27 nakshatras належить до одного з 5 птахів (~5-6 nakshatras кожен).
+// Птах визначає natal "spirit animal" і activity cycle (Eat/Walk/Rule/Sleep/Die).
+// Спрощена версія: показуємо тільки ruling bird для janma nakshatra.
+// Активність cycle потребує birth time + day-of-week — поза scope v88.8.15.
+// 0-based indices: значення = ID птаха (0=Vulture, 1=Owl, 2=Crow, 3=Cock, 4=Peacock)
+const PANCHA_PAKSHI_BIRD = [
+  3, 0, 1, 2, 0,  // 0-4: Ashwini=Cock, Bharani=Vulture, Krittika=Owl, Rohini=Crow, Mrigashira=Vulture
+  2, 1, 0, 1, 1,  // 5-9: Ardra=Crow, Punarvasu=Owl, Pushya=Vulture, Ashlesha=Owl, Magha=Owl
+  3, 3, 0, 3, 4,  // 10-14: PPhalguni=Cock, UPhalguni=Cock, Hasta=Vulture, Chitra=Cock, Swati=Peacock
+  0, 1, 2, 3, 2,  // 15-19: Vishakha=Vulture, Anuradha=Owl, Jyeshtha=Crow, Mula=Cock, PAshadha=Crow (canon)
+  3, 2, 4, 4, 4,  // 20-24: UAshadha=Cock (canon), Shravana=Crow, Dhanishtha=Peacock, Shatabhisha=Peacock, PBhadrapada=Peacock
+  4, 2            // 25-26: UBhadrapada=Peacock, Revati=Crow
+];
+const PANCHA_PAKSHI_NAMES = ['Гриф','Сова','Ворона','Півень','Павич'];
+const PANCHA_PAKSHI_NAMES_EN = ['Vulture','Owl','Crow','Cock','Peacock'];
+const PANCHA_PAKSHI_QUALITIES = [
+  'Сила, рішучість, лідерство',          // Vulture
+  'Інтуїція, мудрість, відчуття часу',   // Owl
+  'Адаптивність, спостережливість',       // Crow
+  'Активність, голос, влада',            // Cock
+  'Краса, мистецтво, гармонія'           // Peacock
+];
+
+// v88.8.16: PANCHAK detection (Drikpanchang canon)
+// 5 nakshatras коли Місяць у Aquarius/Pisces утворюють Panchak —
+// 5-денний канонічний інаусп. період заборони важливих справ
+// (marriage, mundan, housewarming, business start, travel south).
+// Канон: Dhanishtha (друга половина), Shatabhisha, P.Bhadrapada, U.Bhadrapada, Revati
+// Спрощення: ціла Dhanishtha (idx 22). Точніше = degrees check у нащаристих cycle.
+const PANCHAK_INDICES = [22, 23, 24, 25, 26];
+const PANCHAK_TYPES_BY_WEEKDAY = {
+  0: 'Roga Panchak',  // Sunday — disease
+  1: 'Raja Panchak',  // Monday — royal favor (НЕ інаусп!)
+  2: 'Agni Panchak',  // Tuesday — fire risk
+  3: '',              // Wednesday — no special name
+  4: '',              // Thursday — no special name (some say Raja)
+  5: 'Chor Panchak',  // Friday — theft risk
+  6: 'Mrityu Panchak' // Saturday — death risk (most severe)
+};
+
 function computePanchanga(dateUTC){
   const phaseDeg = (moonPhaseAngle(dateUTC) + 360) % 360;
 
@@ -6694,13 +6757,34 @@ function computePanchanga(dateUTC){
   const sunLon = calcSunLongitude(jde_meeus);
   const nakIdx = Math.min(26, Math.floor(moonLonSid / (360/27)));
   const nakshatraType = NAKSHATRA_TYPE[nakIdx];
+  // v88.8.15: Ganda Mool detection — junction nakshatra (BPHS Ch.4 v.13)
+  // v88.8.16: extended з canonical subtype/effect details (Drikpanchang)
+  const isGandaMool = GANDA_MOOL_INDICES.includes(nakIdx);
+  const gandaMoolDetails = isGandaMool ? GANDA_MOOL_DETAILS[nakIdx] : null;
+  // v88.8.16: Panchak detection
+  const isPanchak = PANCHAK_INDICES.includes(nakIdx);
+  const panchakWeekday = localWeekday(dateUTC);
+  const panchakType = isPanchak ? (PANCHAK_TYPES_BY_WEEKDAY[panchakWeekday] || '') : '';
+  // v88.8.15: Pancha Pakshi bird ID
+  const birdId = PANCHA_PAKSHI_BIRD[nakIdx];
   const nakshatra = {
     num: nakIdx + 1,
     name: NAKSHATRA_NAMES[nakIdx],
     type: nakshatraType,
     regent: NAKSHATRA_REGENT[nakIdx],
     score: NAKSHATRA_SCORE_MAP[nakshatraType] ?? 0,
-    moonLon: moonLonSid.toFixed(1)
+    moonLon: moonLonSid.toFixed(1),
+    // v88.8.15: канонічні розширення
+    isGandaMool: isGandaMool,
+    gandaMoolDetails: gandaMoolDetails,  // v88.8.16: subtype/ruler/effect (null якщо не GM)
+    isPanchak: isPanchak,                // v88.8.16: Aquarius/Pisces 5-day inauspicious zone
+    panchakType: panchakType,            // v88.8.16: weekday-specific name (Roga/Raja/Agni/Chor/Mrityu)
+    panchaPakshi: {
+      birdId: birdId,
+      birdUa: PANCHA_PAKSHI_NAMES[birdId],
+      birdEn: PANCHA_PAKSHI_NAMES_EN[birdId],
+      quality: PANCHA_PAKSHI_QUALITIES[birdId]
+    }
   };
 
   // Yoga: floor((sunLon + moonLon) % 360 / 13.333)
@@ -7129,12 +7213,25 @@ function renderPanchangaCard(state){
         'Жорстка':'Жорстка — деструктивна енергія; обережно.',
         'Змішана':'Змішана — нейтральна, помірна активність.'
       };
+      // v88.8.15: розширений tooltip — Ganda Mool + Pancha Pakshi канон
+      // v88.8.16: + canonical subtype/effect details (Drikpanchang)
+      const gandaMoolNote = tip.isGandaMool
+        ? `\n⚠ GANDA MOOL — junction nakshatra (BPHS Ch.4 v.13).\n  ${tip.gandaMoolDetails ? `Тип: ${tip.gandaMoolDetails.subtype} (${tip.gandaMoolDetails.ruler}-ruled). Вплив на: ${tip.gandaMoolDetails.effect}.\n  ` : ''}Народжені сьогодні традиційно проходять Mool Shanti (27-денний ритуал).`
+        : '';
+      // v88.8.16: Panchak warn
+      const panchakNote = tip.isPanchak
+        ? `\n⚠ PANCHAK — Місяць у Aquarius/Pisces 5-day інаусп. зоні${tip.panchakType ? ` (${tip.panchakType})` : ''}.\n  Канон Drikpanchang: уникати весілля, новосілля, бізнес-старту, південних подорожей.`
+        : '';
+      const ppNote = tip.panchaPakshi
+        ? `\n🐦 Pancha Pakshi: ${tip.panchaPakshi.birdUa} (${tip.panchaPakshi.birdEn})\n  Якості: ${tip.panchaPakshi.quality}`
+        : '';
       return `NAKSHATRA — місячна стоянка\n` +
         `Що це: 27 стоянок Місяця по 13°20' екліптики.\n` +
         `Місяць проходить всі 27 за ~27,3 доби.\n` +
         `Регент: ${tip.regent}\n` +
         `${typeDesc[tip.type] || tip.type}\n` +
-        `Вплив: PCL ${tip.score > 0 ? '+' : ''}${tip.score}`;
+        `Вплив: PCL ${tip.score > 0 ? '+' : ''}${tip.score}` +
+        gandaMoolNote + panchakNote + ppNote;
     },
     yoga: tip => {
       return `YOGA — сонячно-місячний резонанс\n` +
@@ -7188,7 +7285,7 @@ function renderPanchangaCard(state){
       <td style="padding:5px 6px;color:#9bb1dc;font-size:11px">
         <span class="hint" tabindex="0" style="cursor:help;font-style:italic;border-bottom:1px dotted var(--faint)">Nakshatra<span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.nakshatra(p.nakshatra))}</span></span>
       </td>
-      <td style="padding:5px 6px;font-weight:600"><span class="hint" tabindex="0" style="cursor:help">${scoreIcon(p.nakshatra.score, _gEarly)}${scoreBar(p.nakshatra.score, _gEarly)} ${p.nakshatra.name}<br><span style="font-size:10px;color:#7a95b8;font-weight:400">${p.nakshatra.type} · ${p.nakshatra.regent}</span><span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.nakshatra(p.nakshatra))}</span></span></td>
+      <td style="padding:5px 6px;font-weight:600"><span class="hint" tabindex="0" style="cursor:help">${scoreIcon(p.nakshatra.score, _gEarly)}${scoreBar(p.nakshatra.score, _gEarly)} ${p.nakshatra.name}${p.nakshatra.isGandaMool ? ' <span style="color:#ffaa33;font-size:10px;font-weight:700" title="Ganda Mool junction nakshatra">⚠ GM</span>' : ''}${p.nakshatra.isPanchak ? ` <span style="color:#ff8866;font-size:10px;font-weight:700" title="Panchak — інаусп. 5-day window">⚠ PK${p.nakshatra.panchakType ? ' '+p.nakshatra.panchakType.split(' ')[0] : ''}</span>` : ''}<br><span style="font-size:10px;color:#7a95b8;font-weight:400">${p.nakshatra.type} · ${p.nakshatra.regent}${p.nakshatra.panchaPakshi ? ` · 🐦 ${p.nakshatra.panchaPakshi.birdUa}` : ''}</span><span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.nakshatra(p.nakshatra))}</span></span></td>
       <td style="padding:5px 6px;font-size:11px;color:#b0c4de">${nAdv && nAdv.do ? '✓ '+nAdv.do : ''}</td>
     </tr>
     <tr>
@@ -7251,6 +7348,39 @@ function renderPanchangaCard(state){
       <td style="padding:5px 6px;font-size:11px;color:#b0c4de">${_rAdvice}</td>`;
       })()}
     </tr>
+    ${(() => {
+      // v88.8.13: Yamagandam + Gulika Kaal — додаткові канонічні inauspicious windows.
+      // Всі три (Rahu/Yama/Gulika) — обов'язкова канонічна triada за Surya Siddhanta.
+      // UI зменшено: ті самі 3 стани (active/upcoming/past), мінімізована вага.
+      // Якщо subobjects відсутні (legacy panchanga) — гасимо без exception.
+      if (!p.rahu.yamagandam || !p.rahu.gulika) return '';
+      const _today2 = new Date();
+      const _nh2 = _today2.getUTCHours() + _today2.getUTCMinutes()/60;
+      const _toLocal2 = (utcStr) => {
+        const [h, m] = utcStr.split(':').map(Number);
+        if (!isFinite(h) || !isFinite(m)) return utcStr;
+        const d = new Date(Date.UTC(_today2.getUTCFullYear(), _today2.getUTCMonth(), _today2.getUTCDate(), h, m, 0));
+        return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+      };
+      const _renderWindow = (label, w, _iconColor) => {
+        const _ws = w.start.split(':').map(Number);
+        const _wsH = _ws[0] + (_ws[1]||0)/60;
+        const _wsLocal = _toLocal2(w.start);
+        const _weLocal = _toLocal2(w.end);
+        let _ic, _tx, _adv;
+        if (w.active) { _ic = '🔴'; _tx = `${_wsLocal}–${_weLocal} зараз`; _adv = '✗ Уникати важливих справ'; }
+        else if (_nh2 < _wsH) { _ic = '🟡'; _tx = `${_wsLocal}–${_weLocal}`; _adv = `⏳ З ${_wsLocal} обережно`; }
+        else { _ic = '⚪'; _tx = `${_wsLocal}–${_weLocal} (минув)`; _adv = '✓ Минув'; }
+        return `<tr>
+          <td style="padding:5px 6px;color:#9bb1dc;font-size:11px">
+            <span class="hint" tabindex="0" style="cursor:help;font-style:italic;border-bottom:1px dotted var(--faint)">${label}<span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(label === 'Yamagandam' ? 'Канонічне інаусп. вікно (Surya Siddhanta).\\nДруге за важливістю після Rahu Kalam.\\nIST canon: Sun=5, Mon=4, Tue=3, Wed=2, Thu=1, Fri=7, Sat=6.\\nUTC: ' + w.start + '–' + w.end : 'Канонічне інаусп. вікно (син Сатурна).\\nТретє після Rahu+Yama.\\nIST canon: Sun=7, Mon=6, Tue=5, Wed=4, Thu=3, Fri=2, Sat=1.\\nUTC: ' + w.start + '–' + w.end)}</span></span>
+          </td>
+          <td style="padding:5px 6px;font-weight:600;font-size:12px">${_ic} ${_tx}</td>
+          <td style="padding:5px 6px;font-size:11px;color:#b0c4de">${_adv}</td>
+        </tr>`;
+      };
+      return _renderWindow('Yamagandam', p.rahu.yamagandam) + _renderWindow('Gulika Kaal', p.rahu.gulika);
+    })()}
   </table>`;
 
   // v85b: pclOnly, aiNow, panchDiscrepancy, finalDo, finalAvoid, _gNow — from state
@@ -7768,6 +7898,53 @@ function _calcAbhijit(sunrise, sunset){
   };
 }
 
+// v88.8.14: канонічні auspicious muhurta (Drik Panchang / BPHS Ch.4):
+//   Brahma Muhurta:  sunrise - 96min → sunrise - 48min (2 muhurta до сходу)
+//                    Найкращий час для духовних практик, медитації, навчання.
+//   Vijaya Muhurta:  11-та з 15 muhurta дня
+//                    "Час перемоги" — успіх у важких задачах, переговори.
+//   Godhuli Muhurta: sunset ± 24min (1 muhurta навколо заходу)
+//                    "Час корови повертається" — gentle transitions, молитви.
+//   Nishita Muhurta: midnight ± half_night_muhurta (8-ма з 15 night muhurta)
+//                    Північна muhurta — meditation, midnight rituals.
+// Канон BPHS Ch.4 v.5 + Drik Panchang Houston cross-validation.
+function _calcAuspiciousMuhurtas(sunrise, sunset, nextSunrise){
+  if(!sunrise || !sunset) return null;
+  const dayMs = sunset.getTime() - sunrise.getTime();
+  const muhurtaMs = dayMs / 15;
+  const halfMuhurta = muhurtaMs / 2;
+  // Brahma: 2 muhurta до sunrise (sunrise -96min до -48min для 12h day)
+  const brahmaStart = new Date(sunrise.getTime() - 2 * muhurtaMs);
+  const brahmaEnd   = new Date(sunrise.getTime() - 1 * muhurtaMs);
+  // Vijaya: 11-та muhurta дня (start = sunrise + 10*muhurta)
+  const vijayaStart = new Date(sunrise.getTime() + 10 * muhurtaMs);
+  const vijayaEnd   = new Date(sunrise.getTime() + 11 * muhurtaMs);
+  // Godhuli: sunset ± half_muhurta (1 muhurta навколо заходу)
+  const godhuliStart = new Date(sunset.getTime() - halfMuhurta);
+  const godhuliEnd   = new Date(sunset.getTime() + halfMuhurta);
+  // Nishita: 8-ма з 15 night muhurta. Якщо nextSunrise немає — apprx через +24h-dayLen
+  let nishitaStart, nishitaEnd;
+  if(nextSunrise){
+    const nightMs = nextSunrise.getTime() - sunset.getTime();
+    const nMuhurta = nightMs / 15;
+    nishitaStart = new Date(sunset.getTime() + 7 * nMuhurta);
+    nishitaEnd   = new Date(sunset.getTime() + 8 * nMuhurta);
+  } else {
+    // Approx: night ≈ 24h - dayLen, midnight = sunset + nightMs/2
+    const approxNightMs = 24*3600*1000 - dayMs;
+    const approxMidnight = new Date(sunset.getTime() + approxNightMs/2);
+    const approxNMuhurta = approxNightMs / 15;
+    nishitaStart = new Date(approxMidnight.getTime() - approxNMuhurta/2);
+    nishitaEnd   = new Date(approxMidnight.getTime() + approxNMuhurta/2);
+  }
+  return {
+    brahma:  { start: brahmaStart,  end: brahmaEnd  },
+    vijaya:  { start: vijayaStart,  end: vijayaEnd  },
+    godhuli: { start: godhuliStart, end: godhuliEnd },
+    nishita: { start: nishitaStart, end: nishitaEnd }
+  };
+}
+
 function _renderSolarRhythm(refDateUTC){
   const wrap = document.getElementById('panchSolarRhythm');
   const elTimes = document.getElementById('panchSolarTimes');
@@ -7847,6 +8024,43 @@ function _renderSolarRhythm(refDateUTC){
   } else {
     elAbh.innerHTML = '';
   }
+
+  // v88.8.14: 2b. Auspicious Muhurta block (Brahma/Vijaya/Godhuli/Nishita)
+  // Виклик з nextSunrise (наступний день) для точного Nishita.
+  try {
+    const elAusp = document.getElementById('panchAuspiciousMuhurta');
+    if (elAusp) {
+      // Наступний sunrise через _calcSunRiseSet(date+1d)
+      const nextDay = new Date(date.getTime() + 24*3600*1000);
+      let nextSunrise = null;
+      try { const nsr = _calcSunRiseSet(nextDay); if(nsr) nextSunrise = nsr.sunrise; } catch(_e) {}
+      const ausp = _calcAuspiciousMuhurtas(sunrise, sunset, nextSunrise);
+      if (ausp) {
+        const now = new Date();
+        const _renderAuspBlock = (label, w, hint) => {
+          const isNow = now >= w.start && now < w.end;
+          const isPast = now >= w.end;
+          const status = isNow ? '🟢' : isPast ? '⚪' : '🟡';
+          const color = isNow ? 'var(--ok)' : isPast ? 'var(--dim)' : '#ffce54';
+          const opacity = isPast ? '0.55' : '1';
+          return `<span title="${escapeHtml(hint)}" style="display:inline-flex;gap:4px;align-items:center;opacity:${opacity}">
+            <span style="color:${color};font-weight:600">${status} ${label}</span>
+            <strong style="color:var(--text2)">${_fmtLocalHM(w.start)}–${_fmtLocalHM(w.end)}</strong>
+          </span>`;
+        };
+        elAusp.innerHTML = [
+          _renderAuspBlock('Brahma', ausp.brahma,
+            'Brahma Muhurta = 2 muhurta до сходу (~96-48 хв до sunrise). Канон BPHS — найкращий час для духовних практик, медитації, навчання.'),
+          _renderAuspBlock('Vijaya', ausp.vijaya,
+            'Vijaya Muhurta = 11-та з 15 muhurta дня. Канон Drik Panchang — "час перемоги": успіх у складних задачах, переговори, дебати.'),
+          _renderAuspBlock('Godhuli', ausp.godhuli,
+            'Godhuli Muhurta = sunset ± 0.5 muhurta. "Час повернення корови" — gentle transitions, вечірні молитви, зосередження.'),
+          _renderAuspBlock('Nishita', ausp.nishita,
+            'Nishita Muhurta = 8-ма з 15 night muhurta (північна). Канон BPHS — meditation, midnight rituals, deep contemplation.')
+        ].join('');
+      }
+    }
+  } catch(_e) { /* noop */ }
 
   // 3. Choghadiya
   const chog = _calcChoghadiya(date, sunrise, sunset);
