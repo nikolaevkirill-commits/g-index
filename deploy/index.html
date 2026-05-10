@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.8</title>
+  <title>G-Index — Космофізичний дашборд v88.8.12</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -6775,20 +6775,50 @@ function computePanchanga(dateUTC){
   const ssH  = (12 - lonOff) + HA/15 - _eqHours; // захід, UTC
   const dayLenH = ssH - srH;
   const segH = dayLenH / 8;
-  const RAHU_ORDER = [7,1,6,4,5,3,2]; // Нд=7,Пн=1,Вт=6,Ср=4,Чт=5,Пт=3,Сб=2
+  // v88.8.11 КАНОН-БАГ#9 fix: Rahu Kalam позиції (1-based slot номери з 8).
+  // Раніше: RAHU_ORDER = [7,1,6,4,5,3,2] — 0-based offsets, з формулою (val-1).
+  // Це давало slot НАЗАД на 1 muhurta (Sunday=7-й замість 8-го за каноном).
+  // Канон BPHS / Drik Panchanga / Surya Siddhanta:
+  //   Sunday=8 (last muhurta), Monday=2, Tuesday=7, Wednesday=5,
+  //   Thursday=6, Friday=4, Saturday=3.
+  //   "Rahu Kalam never falls on the 1st muhurta" — code порушував це для Monday.
+  // Перевірено реальними даними Image 3 (10.05.2026 Sunday Київ):
+  //   Code result: 16:42-18:35 (7-й slot)
+  //   Canon expect: 18:38-20:32 (8-й slot — 'in the evening' як прямо каже канон).
+  const RAHU_ORDER = [8,2,7,5,6,4,3]; // Нд=8,Пн=2,Вт=7,Ср=5,Чт=6,Пт=4,Сб=3 (1-based slot номери)
+  // v88.8.12: Yamagandam (Yama window) + Gulika Kaal (Saturn's son window)
+  // Канонічні inauspicious periods за Surya Siddhanta — як Rahu Kalam, але інші позиції.
+  // Підтверджено зовнішніми джерелами:
+  //   Sunday: Rahu=8, Yama=5, Gulika=7 (Chengam.in Tamil canon, mpanchang.com)
+  //   Friday: Rahu=4, Yama=7, Gulika=2 (Drikpanchang.com Houston)
+  // Канон 1-based slot номери (з 8 muhurta дня):
+  //   Yama:   Sun=5, Mon=4, Tue=3, Wed=2, Thu=1, Fri=7, Sat=6
+  //   Gulika: Sun=7, Mon=6, Tue=5, Wed=4, Thu=3, Fri=2, Sat=1
+  // Усі три (Rahu/Yama/Gulika) — інаусп. Tradition: avoid important work.
+  const YAMA_ORDER = [5,4,3,2,1,7,6];
+  const GULIKA_ORDER = [7,6,5,4,3,2,1];
   const wday = localWeekday(dateUTC); // v87.90: локальний день
   const rahuStartH = srH + segH * (RAHU_ORDER[wday] - 1); // UTC
   const rahuEndH   = rahuStartH + segH;
+  const yamaStartH = srH + segH * (YAMA_ORDER[wday] - 1);
+  const yamaEndH   = yamaStartH + segH;
+  const gulikaStartH = srH + segH * (GULIKA_ORDER[wday] - 1);
+  const gulikaEndH   = gulikaStartH + segH;
   const toHHMM = h => { const hh=Math.floor(h),mm=Math.round((h-hh)*60); return `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}`; };
   // Поточна UTC година
   const nowH = dateUTC.getUTCHours() + dateUTC.getUTCMinutes()/60;
   const rahuActive = nowH >= rahuStartH && nowH < rahuEndH;
+  const yamaActive = nowH >= yamaStartH && nowH < yamaEndH;
+  const gulikaActive = nowH >= gulikaStartH && nowH < gulikaEndH;
   const rahu = {
     start: toHHMM(rahuStartH),
     end:   toHHMM(rahuEndH),
     active: rahuActive,
     score: rahuActive ? -1 : 0,
-    note: `UTC (шир. 50°N апрокс.)`
+    note: `UTC (шир. 50°N апрокс.)`,
+    // v88.8.12: додаткові канонічні windows для повної панчанги
+    yamagandam: { start: toHHMM(yamaStartH), end: toHHMM(yamaEndH), active: yamaActive },
+    gulika:     { start: toHHMM(gulikaStartH), end: toHHMM(gulikaEndH), active: gulikaActive }
   };
 
   return { tithi, vara, nakshatra, yoga, karana, rahu, phaseDeg };
@@ -7263,13 +7293,24 @@ function renderPanchangaCard(state){
     const bt = document.getElementById('panchBestTime');
     if (bt) {
       const slots = window._daySlots || [];
-      if (slots.length >= 2) {
-        // Знайти найкращий (max G) та найгірший (min G) слот
-        const sorted = [...slots].sort((a,b) => b.G - a.G);
+      // v88.8.9 БАГ#6 fix + v88.8.10 edge fix: фільтрую тільки майбутні + поточний слот.
+      // Раніше (v88.8.9): fallback на всі slots коли future.length<2 → знову показувало
+      // минулі slots о 21:00+. Тепер: якщо тільки 1 future slot — показуємо його як
+      // "Рівний день" (best=worst), без fallback на минулі.
+      const _nowUtcH = new Date().getUTCHours();
+      const _futureSlots = slots.filter(s => {
+        const _slotUtcH = parseInt(s.label, 10);
+        return isFinite(_slotUtcH) && _slotUtcH + 3 > _nowUtcH; // включно з поточним
+      });
+      const _activeSlots = _futureSlots; // НЕ fallback — якщо все минуло, краще не показати ніж показати минуле
+      if (_activeSlots.length >= 2 || _activeSlots.length === 1) {
+        // Знайти найкращий (max G) та найгірший (min G) слот у actionable set
+        const sorted = [..._activeSlots].sort((a,b) => b.G - a.G);
         const best = sorted[0];
         const worst = sorted[sorted.length - 1];
-        const sameSlot = best.label === worst.label || (best.G - worst.G) < 0.5;
-        // Класифікація всього дня
+        // sameSlot true коли тільки 1 slot, або різниця G < 0.5
+        const sameSlot = _activeSlots.length === 1 || best.label === worst.label || (best.G - worst.G) < 0.5;
+        // Класифікація всього дня (всі слоти, не лише майбутні — для day average)
         const dayAvg = slots.reduce((s,x) => s + x.G, 0) / slots.length;
         const stateClass = dayAvg >= 1 ? '' : dayAvg > -1 ? 'is-neutral' : 'is-tense';
         bt.className = 'panch-best-time ' + stateClass;
@@ -7709,13 +7750,20 @@ function _calcChoghadiya(dateUTC, sunrise, sunset){
 
 // Abhijit Muhurta: solar noon ± 24хв (8-а денна muhurta з 15)
 // Solar noon = (sunrise + sunset) / 2
+// v88.8.11 КАНОН-БАГ#10 fix: Abhijit = 8-ма muhurta з 15-ти, кожна = dayLen/15.
+// Раніше: фіксовано noon ± 24 min (48-min muhurta — true тільки для 12h day).
+// Канон BPHS Ch.4 v.5: muhurta length proportional to daylight.
+// Для 15h day (Київ травень): muhurta=60min, Abhijit=noon±30min, не ±24min.
 // Дослівно: Abhijit = single auspicious muhurta даного дня крім вівторка.
 function _calcAbhijit(sunrise, sunset){
   if(!sunrise || !sunset) return null;
   const noonMs = (sunrise.getTime() + sunset.getTime()) / 2;
+  const dayMs = sunset.getTime() - sunrise.getTime();
+  const muhurtaMs = dayMs / 15; // канонічна 1 muhurta = 1/15 daylight
+  const halfMuhurta = muhurtaMs / 2;
   return {
-    start: new Date(noonMs - 24 * 60000),
-    end:   new Date(noonMs + 24 * 60000),
+    start: new Date(noonMs - halfMuhurta),
+    end:   new Date(noonMs + halfMuhurta),
     isTuesday: sunrise.getDay() === 2  // вівторок — Abhijit неактивний (BPHS)
   };
 }
@@ -7990,9 +8038,30 @@ function render3Day(parsed3){
       // v87.6: перший НЕ-сьогоднішній день = "завтра"
       if (!isToday && _tomorrowG === null && isFinite(G)) _tomorrowG = G;
       // v83f: aligned with classifyStateByG thresholds
-      const cat=G<=-2?'уникати':G<0?'обережно':G>=2?'сприятливо':G>=1?'добре':'нейтрально';
-      const act=G<=-2?'утриматись від рішень':G<0?'мінімізувати ризики':G>=2?'оптимально для дій':G>=1?'можна планове':'стандартний режим';
-      const col=G<=-2.5?'#ff6b6b':G<=-0.5?'#ffaa33':G>=0.5?'#2bd47d':'#9bb1dc';
+      // v88.8.9 БАГ#5 fix: повне узгодження з classifyStateByG.
+      // Раніше: G<0 → 'обережно' плутало бо classifyStateByG для G ∈ [-1, +0.5)
+      // дає 'нейтральний'. Юзер бачив у Hero 'НЕЙТРАЛЬНИЙ ДЕНЬ' і одночасно у
+      // 3-day card на сьогодні 'обережно' — суперечливі повідомлення.
+      // Тепер один поріг: classifyStateByG → label.
+      const _stateKey = (typeof classifyStateByG === 'function') ? classifyStateByG(G, kpMax) : 'neutral';
+      const _stateLabels = {
+        favorable: { cat:'сприятливо',  act:'оптимально для дій' },
+        good:      { cat:'добре',       act:'можна планове' },
+        neutral:   { cat:'нейтрально',  act:'стандартний режим' },
+        unstable:  { cat:'обережно',    act:'мінімізувати ризики' },
+        tense:     { cat:'уникати',     act:'утриматись від рішень' }
+      };
+      const _slbl = _stateLabels[_stateKey] || _stateLabels.neutral;
+      const cat = _slbl.cat;
+      const act = _slbl.act;
+      // v88.8.10: колір узгоджено з _stateKey (а не з G напряму).
+      // Раніше: для G ∈ [-1, -0.5] помаранчевий колір але cat='нейтрально' — конфлікт.
+      // Тепер: tense=червоний, unstable=помаранчевий, good/favorable=зелений, neutral=сірий.
+      const _stateColors = {
+        favorable: '#2bd47d', good: '#2bd47d',
+        neutral: '#9bb1dc', unstable: '#ffaa33', tense: '#ff6b6b'
+      };
+      const col = _stateColors[_stateKey] || '#9bb1dc';
       const dd=d.date.getUTCDate()+'.'+(d.date.getUTCMonth()+1);
       // v87.61: Bulletin (engine v18.5) score line if available
       // v87.62: + sign divergence alert when G and Bulletin have opposite signs

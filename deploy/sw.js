@@ -1,5 +1,130 @@
-// G-Index Service Worker v88.8.8 (UX-консистенція — 2 точкових fixes)
-// v88.8.8 changes (зі скрінів v88.8.6 — другий аудит):
+// G-Index Service Worker v88.8.12 (Yamagandam + Gulika Kaal — повна канонічна triada)
+// v88.8.12 changes — додано 2 канонічні inauspicious периоди (BPHS / Surya Siddhanta):
+//   FEATURE: Yamagandam (Yama window) — інаусп. period другої важливості після Rahu.
+//   FEATURE: Gulika Kaal (Saturn's son) — третій канонічний інаусп. period.
+//   Тепер дашборд має повну канонічну triadu: Rahu + Yama + Gulika.
+//
+//   Канонічні позиції (1-based slot номери з 8 muhurta дня):
+//     Rahu:   Sun=8, Mon=2, Tue=7, Wed=5, Thu=6, Fri=4, Sat=3
+//     Yama:   Sun=5, Mon=4, Tue=3, Wed=2, Thu=1, Fri=7, Sat=6
+//     Gulika: Sun=7, Mon=6, Tue=5, Wed=4, Thu=3, Fri=2, Sat=1
+//
+//   Self-audit fix (під час розробки v88.8.12):
+//     Початковий YAMA_ORDER = [4,3,2,1,7,6,5] був помилковий.
+//     Перевірив проти Chengam.in (Tamil canon) Sunday Yama 12:00-13:30 = slot 5.
+//     Перевірив проти Drikpanchang.com (Houston Friday) Yama 15:27-16:54 = slot 7.
+//     Виправлено на канонічну послідовність [5,4,3,2,1,7,6].
+//     Аналогічно GULIKA_ORDER виправлено [7,6,5,4,3,2,1].
+//
+//   ЗОВНІШНЯ ВЕРИФІКАЦІЯ (повний канон-аудит v88.8.11+12):
+//   • Tithi/Nakshatra/Yoga/Karana — Chennai canon ✓
+//   • Choghadiya 7-cyclic Sunday — muhuratam.in Hyderabad pixel-precise ✓
+//   • Hora 24-h Chaldean chain — BPHS canon ✓
+//   • Sunrise/Sunset точність ±1 хв — dateandtime.info ✓
+//   • Lahiri ayanamsha 23.85650° + 50.27889624"/yr — Swiss Ephemeris ✓
+//   • Eclipse catalog 2026 (4/4) — NASA ✓
+//   • Vimsottari Dasa 9 lords sum=120 — BPHS Ch.97-100 ✓
+//   • Rahu/Yama/Gulika weekday positions — Drikpanchang ✓
+//
+//   API розширено: panchanga.rahu тепер містить .yamagandam і .gulika subobjects:
+//     { start, end, active } для кожного з трьох inauspicious windows.
+//   UI consumers (panchTable etc) використовують legacy panchanga.rahu без змін.
+//   Для відображення Yama/Gulika consumer повинен явно прочитати rahu.yamagandam.*
+//
+//   Cache keys bumped до v88-8-12.
+//
+// v88.8.11 changes (КАНОН-БАГИ Rahu Kalam позиції + Abhijit duration):
+//   КАНОН-БАГ#9 (index.html:6778+): Rahu Kalam offset зміщено на -1 muhurta для ВСІХ weekdays.
+//      Раніше: RAHU_ORDER = [7,1,6,4,5,3,2] (0-based offsets) + формула (val-1) → дає -1 додатково.
+//      Канон Drik Panchanga / BPHS / Surya Siddhanta:
+//        Sunday=8 ("evening", last muhurta), Monday=2, Tuesday=7, Wednesday=5,
+//        Thursday=6, Friday=4, Saturday=3 (1-based slot номери з 8).
+//      Verified web search: prokerala.com, mpanchang.com, drikpanchang.com,
+//        grahajoy.squarespace.com, omai.app — всі підтвердили.
+//      Реальний скрін Image 3 (10.05.2026 Sunday Київ):
+//        Code: 16:42-18:35 (slot 7-th — невірно)
+//        Canon: 18:38-20:32 (slot 8-th — "evening" як прямо каже канон)
+//      Тепер: RAHU_ORDER = [8,2,7,5,6,4,3] (1-based slot numbers)
+//
+//   КАНОН-БАГ#10 (index.html:_calcAbhijit): Abhijit Muhurta тривалість фіксована.
+//      Раніше: noon ± 24min (= 48-min muhurta — true ТІЛЬКИ для 12h day).
+//      Канон BPHS Ch.4 v.5: Day = 15 muhurta, Abhijit = 8-ма, muhurta=dayLen/15.
+//      Для 15h day (Київ травень): 60-min muhurta, Abhijit=noon±30min.
+//      Для 10.05.2026 Київ (sunrise 05:18, sunset 20:32, dayLen 15h14min):
+//        Code: 12:31-13:19 (48min)
+//        Canon: 12:24-13:25 (60.93min)
+//      Тепер: пропорційна тривалість через dayMs/15.
+//
+//   ПЕРЕВІРЕНО (нічого не змінювати):
+//   • TITHI_NAMES (30): Pratipada → Amavasya — канон BPHS ✅
+//   • NAKSHATRA_NAMES (27): Ashwini → Revati — канон ✅
+//   • YOGA_NAMES (27): всі 27 збігів ✅
+//   • KARANA: Vishti/Bhadra detection ✅
+//   • Choghadiya DAY pattern (7-cyclic schema): 0 помилок ✅
+//   • Choghadiya NIGHT pattern: 0 помилок ✅
+//   • Hora 24-hour Chaldean chain: HORA_DAY_LORD = [0,3,6,2,5,1,4] ✅
+//   • Tuesday Abhijit виняток: isTuesday: getDay() === 2 ✅
+//   • Lahiri ayanamsha v85b-F5: Swiss Ephemeris official 23.85650° at J2000.0,
+//     rate 50.27889624"/yr per IAU 2006 precession ✅
+//
+//   Cache keys bumped до v88-8-11.
+//
+// v88.8.10 changes (Self-audit fix-of-fix):
+//   БАГ#7 (мій же v88.8.9 fallback fix): _futureSlots fallback на legacy slots.
+//      v88.8.9: const _activeSlots = _futureSlots.length >= 2 ? _futureSlots : slots;
+//      Проблема: о 21:00+ UTC лишається тільки 1 future slot (slot 21).
+//      Fallback повертав ВСІ 8 slots, тому 'Найкращий час' знов показував минулі!
+//      Тепер: _activeSlots = _futureSlots напряму. Працює навіть з 1 slot
+//      (показуємо як "Рівний день"). Коли всі минули — НЕ показуємо взагалі.
+//
+//   БАГ#8 (мій же v88.8.9 color logic): кольорова розбіжність з cat label.
+//      v88.8.9: col=G<=-2.5?'#ff6b6b':G<=-0.5?'#ffaa33':G>=0.5?'#2bd47d':'#9bb1dc';
+//      Проблема: для G ∈ [-1, -0.5] помаранчевий колір але cat='нейтрально' (з classifyStateByG).
+//      Юзер бачить 'нейтрально' з тривожним помаранчевим — конфлікт сигналів.
+//      Тепер: _stateColors mapping — favorable/good=зелений, neutral=сірий,
+//      unstable=помаранчевий, tense=червоний. Узгоджено з cat label 1-в-1.
+//
+//   ПЕРЕВІРЕНО (semantic regression тест на 17 точках G ∈ [-3.5, +2.5]):
+//   • 9 точок: ідентичні OLD vs NEW → no regression ✅
+//   • 8 точок: ЗМІНИЛОСЬ — у всіх випадках NEW узгоджено з Hero classifyStateByG
+//     (це і є ціль БАГ#5). Ні в одному випадку labels не "слабкіший" ніж canonical.
+//
+//   Cache keys bumped до v88-8-10.
+//
+// v88.8.9 changes (КРИТИЧНІ classification + actionable fixes):
+//   БАГ#5 (index.html:7993+): 3-day card categorization розбіжна з Hero.
+//      Раніше: 3-day card cat = G<0 ? 'обережно' : ...
+//      Hero: classifyStateByG → -1 < G < 0.5 → 'neutral'
+//      Для G=-0.67 (поточний день):
+//        Hero: 'НЕЙТРАЛЬНИЙ ДЕНЬ' (зелено-жовтий)
+//        3-day card на сьогодні: 'обережно' (оранжевий)
+//      Користувач бачив СУПЕРЕЧЛИВІ повідомлення для одного й того ж дня.
+//      Тепер: 3-day card викликає classifyStateByG → той самий поріг.
+//      Mapping: favorable→'сприятливо', good→'добре', neutral→'нейтрально',
+//               unstable→'обережно', tense→'уникати'.
+//      Будь-який день показує однакову категорію в Hero і 3-day.
+//
+//   БАГ#6 (index.html:7263+): 'Найкращий час' включав МИНУЛІ слоти.
+//      Раніше: sorted всіх 8 слотів дня (включно з минулими).
+//      О 12:08 'Найкращий час 03:00–06:00' — це slot який уже минув!
+//      Користувач не може діяти у ВЧОРАШНЬОМУ слоті.
+//      Тепер: фільтрую slots де slot_start + 3 > current_UTC_hour.
+//      Включно з поточним слотом (3-год вікно ще активне).
+//      Fallback на legacy (всі слоти) якщо <2 майбутніх (рідкісний edge case
+//      ввечері коли вже всі минули).
+//
+//   ПЕРЕВІРЕНО (НЕ потребує fix — попередні fix працюють):
+//   • v88.8.7 БАГ#1 Rahu 3-state: '16:42-18:35 (буде)' видно ✅
+//   • v88.8.7 БАГ#2 Rahu UTC→local: 16:42 local ✅
+//   • v88.8.8 БАГ#3 scen_up: 'G стане +0.3' ✅
+//   • v88.8.8 БАГ#4 Plan vocab: 'уникати: тільки рутина' ✅
+//   • Lunar 45% освітл (phaseDeg 275.7°) — formula correct ✅
+//   • Verdict 7 (-1) Помірно несприятливий ✅
+//   • Forecast peak 15.05 G=+1.8 (з overrides) ✅
+//
+//   Cache keys bumped до v88-8-9.
+//
+// v88.8.8 changes (UX-консистенція — 2 точкових fixes):
 //   БАГ#3 (index.html:15696): WF3 'scen_up' phrasing вводить в оману.
 //      Раніше: 'Якщо Kp зросте, вплив посилиться до +0.3.'
 //      Проблема: при поточному G=-0.7 і Kp=1.33, формула G=Kp-2+ΣAᵢ дає
@@ -443,8 +568,8 @@
 //   3. backtest.html додано до SHELL_FILES.
 //   4. cache.put awaited перед SW_FRESH_DATA notify (race fix).
 
-const SHELL_CACHE = 'g-index-shell-v88-8-8';
-const DATA_CACHE = 'g-index-data-v88-8-8';
+const SHELL_CACHE = 'g-index-shell-v88-8-12';
+const DATA_CACHE = 'g-index-data-v88-8-12';
 
 const SHELL_FILES = [
   './',
