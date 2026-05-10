@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.17</title>
+  <title>G-Index — Космофізичний дашборд v88.8.18</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1257,6 +1257,10 @@ body.simple-mode .col-hide-mobile {
         <button id="pushBtn" onclick="PushModal.show()"
           title="Push-сповіщення (Plus+)"
           style="background:#1e2a44;color:#9bb1dc;border:1px solid var(--border2);font-size:11px;padding:3px 9px;border-radius:6px;cursor:pointer">🔔</button>
+        <button id="soundBtn" onclick="GIndexSound.toggle()"
+          title="Звукові сповіщення — м'які тони на канонічних transition-точках"
+          aria-label="Toggle звукові сповіщення"
+          style="background:#1e2a44;color:#9bb1dc;border:1px solid var(--border2);font-size:11px;padding:3px 9px;border-radius:6px;cursor:pointer">🔊</button>
         <button id="btnRefresh" aria-label="Оновити дані з NOAA">↻ Оновити</button>
         <button id="btnHardReset" title="Скинути кеш SW і перезавантажити — якщо бачиш стару версію"
           aria-label="Очистити кеш Service Worker і перезавантажити"
@@ -1958,6 +1962,41 @@ body.simple-mode .col-hide-mobile {
         <div id="panchaPakshiBirds" style="display:flex;justify-content:space-around;align-items:flex-end;gap:8px;margin:8px 0"></div>
         <div id="panchaPakshiActive" style="margin-top:8px;padding:8px 10px;border-radius:8px;background:rgba(255,206,84,.06);border:1px solid rgba(255,206,84,.15);font-size:11px;color:var(--text2);text-align:center"></div>
       </div>
+      <!-- v88.8.18: Pancha Pakshi Personal — натальний птах + activity matrix -->
+      <details id="ppProfileBlock" style="margin-top:10px;padding:0;border:1px solid rgba(155,177,220,.12);border-radius:12px;background:linear-gradient(135deg,rgba(155,177,220,.04),rgba(252,164,116,.02))">
+        <summary style="cursor:pointer;padding:10px 14px;list-style:none;font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--dim);display:flex;align-items:center;gap:8px">
+          <span>🪶 Натальний птах · activity cycle</span>
+          <span style="font-size:10px;color:var(--faint);font-weight:400;text-transform:none;letter-spacing:0">▼ розкрити</span>
+        </summary>
+        <div style="padding:0 14px 14px 14px">
+          <!-- Profile form -->
+          <div id="ppForm" style="display:flex;flex-direction:column;gap:6px;font-size:11px;margin-bottom:10px">
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+              <label style="color:var(--dim);min-width:54px">Ім'я:</label>
+              <input type="text" id="ppName" placeholder="Кирило" maxlength="40"
+                style="flex:1;min-width:120px;background:#0a1428;color:var(--text);border:1px solid var(--border2);border-radius:6px;padding:5px 9px;font-size:11px">
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+              <label style="color:var(--dim);min-width:54px">Дата:</label>
+              <input type="date" id="ppDate" min="1900-01-01" max="2099-12-31"
+                style="background:#0a1428;color:var(--text);border:1px solid var(--border2);border-radius:6px;padding:5px 9px;font-size:11px">
+              <input type="time" id="ppTime"
+                style="background:#0a1428;color:var(--text);border:1px solid var(--border2);border-radius:6px;padding:5px 9px;font-size:11px">
+              <span style="color:var(--faint);font-size:10px">(час опц.)</span>
+            </div>
+            <div style="display:flex;gap:6px;margin-top:4px">
+              <button onclick="GIndexPPProfile.saveAndRender()"
+                style="background:var(--accent);color:#0a1428;border:none;border-radius:6px;padding:5px 12px;font-size:11px;cursor:pointer;font-weight:600">💾 Зберегти</button>
+              <button onclick="GIndexPPProfile.clear()"
+                style="background:#1e2a44;color:#9bb1dc;border:1px solid var(--border2);border-radius:6px;padding:5px 10px;font-size:11px;cursor:pointer">✕ Очистити</button>
+            </div>
+          </div>
+          <!-- Birth bird display -->
+          <div id="ppBirthBird" style="display:none;padding:10px 12px;border-radius:8px;background:rgba(252,164,116,.06);border:1px solid rgba(252,164,116,.2);margin-bottom:10px"></div>
+          <!-- Activity matrix -->
+          <div id="ppActivityMatrix" style="display:none"></div>
+        </div>
+      </details>
     </section>
     </div><!-- /duoCard -->
     </div><!-- /mainGrid -->
@@ -2849,6 +2888,393 @@ window.AuthModal = AuthModal;
 
 // Auto-init SUPA when DOM ready (no-op у v88.6.9 — kept for backward compat)
 document.addEventListener('DOMContentLoaded', () => { try{ SUPA.init(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)} });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// v88.8.18 SOUND NOTIFICATIONS — м'які тони через Web Audio API
+// Opt-in через 🔊 button у header. Default OFF (localStorage gindex_sound_enabled).
+// 6 tone-сигнатур: sunrise, abhijit, brahma, hora, rahu, critical (G-score crossing).
+// Без external assets — генерація через OscillatorNode + ADSR envelope.
+// Hook: GIndexSound.fire('sunrise') викликається з existing event handlers.
+// ═══════════════════════════════════════════════════════════════════════════
+const GIndexSound = {
+  ctx: null,
+  enabled: false,
+  _lastG: null,        // для critical detection (G-score crossing 0)
+
+  _initCtx() {
+    if (this.ctx) return this.ctx;
+    try {
+      this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    } catch(e) { return null; }
+    return this.ctx;
+  },
+
+  _playTone({freq=440, duration=0.6, type='sine', volume=0.12}) {
+    const ctx = this._initCtx();
+    if (!ctx) return;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = type;
+    osc.frequency.value = freq;
+    const t = ctx.currentTime;
+    gain.gain.setValueAtTime(0, t);
+    gain.gain.linearRampToValueAtTime(volume, t + 0.04);
+    gain.gain.exponentialRampToValueAtTime(volume * 0.7, t + 0.15);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + duration);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(t);
+    osc.stop(t + duration + 0.05);
+  },
+
+  _playSequence(notes, gap=0.08) {
+    let t = 0;
+    for (const n of notes) {
+      setTimeout(() => this._playTone(n), t * 1000);
+      t += (n.duration || 0.4) * 0.5 + gap;
+    }
+  },
+
+  // Tone library — канонічні сигнатури
+  TONES: {
+    sunrise:  () => GIndexSound._playSequence([
+      {freq: 523.25, duration: 0.7, volume: 0.12},
+      {freq: 659.25, duration: 0.7, volume: 0.12},
+      {freq: 783.99, duration: 0.9, volume: 0.10},
+    ], 0.05),
+    abhijit:  () => GIndexSound._playSequence([
+      {freq: 659.25, duration: 0.5, volume: 0.14},
+      {freq: 1318.51, duration: 0.7, volume: 0.10},
+    ], 0.08),
+    brahma:   () => GIndexSound._playSequence([
+      {freq: 293.66, duration: 1.2, volume: 0.10},
+      {freq: 349.23, duration: 1.2, volume: 0.08},
+      {freq: 440.00, duration: 1.4, volume: 0.07},
+    ], 0.20),
+    hora:     () => GIndexSound._playSequence([
+      {freq: 880, duration: 0.18, volume: 0.10, type: 'triangle'},
+      {freq: 1108.73, duration: 0.22, volume: 0.08, type: 'triangle'},
+    ], 0.04),
+    rahu:     () => GIndexSound._playSequence([
+      {freq: 220, duration: 0.5, volume: 0.13},
+      {freq: 261.63, duration: 0.6, volume: 0.13},
+      {freq: 220, duration: 0.7, volume: 0.10},
+    ], 0.05),
+    critical: () => GIndexSound._playSequence([
+      {freq: 880, duration: 0.18, volume: 0.16},
+      {freq: 880, duration: 0.18, volume: 0.16},
+      {freq: 1174.66, duration: 0.30, volume: 0.16},
+    ], 0.04),
+  },
+
+  // Public: trigger a named event tone (no-op якщо disabled)
+  fire(eventKey) {
+    if (!this.enabled) return;
+    if (this.TONES[eventKey]) {
+      try { this.TONES[eventKey](); } catch(e) {
+        if (window._DEBUG) console.warn('[GIndexSound]:', e.message);
+      }
+    }
+  },
+
+  // Toggle button handler
+  toggle() {
+    this.enabled = !this.enabled;
+    try { localStorage.setItem('gindex_sound_enabled', this.enabled ? '1' : '0'); } catch(e) {}
+    if (this.enabled) {
+      const ctx = this._initCtx();
+      if (ctx && ctx.state === 'suspended') ctx.resume();
+      this.fire('hora');  // confirmation tone
+    }
+    this._refreshButton();
+  },
+
+  // Update button visual state
+  _refreshButton() {
+    const btn = document.getElementById('soundBtn');
+    if (!btn) return;
+    btn.style.background = this.enabled ? '#2a4a1a' : '#1e2a44';
+    btn.style.color = this.enabled ? '#9bd49e' : '#9bb1dc';
+    btn.style.borderColor = this.enabled ? '#3a6a2a' : 'var(--border2)';
+    btn.title = this.enabled
+      ? 'Звукові сповіщення УВІМКНЕНО — клікни щоб вимкнути'
+      : 'Звукові сповіщення — клікни щоб увімкнути (м\'які тони)';
+  },
+
+  // Hook: викликати з G-score update flow для critical detection
+  checkCritical(currentG) {
+    if (!this.enabled || !isFinite(currentG)) { this._lastG = currentG; return; }
+    if (this._lastG !== null && isFinite(this._lastG)) {
+      // Crossing 0 (з favorable у unfavorable або навпаки)
+      const crossed = (this._lastG > 0 && currentG <= 0) || (this._lastG <= 0 && currentG > 0);
+      if (crossed) this.fire('critical');
+    }
+    this._lastG = currentG;
+  },
+
+  // Hook: track event activation transition (false → true). Fires correspondent tone.
+  // Викликати з event-tracking функцій (Abhijit/Brahma/Rahu/etc).
+  // Усе через memoized state; кожна подія має власний "last" в _trackedStates.
+  _track(eventKey, isActive) {
+    if (!this._trackedStates) this._trackedStates = {};
+    const last = this._trackedStates[eventKey];
+    this._trackedStates[eventKey] = !!isActive;
+    if (!this.enabled) return;
+    if (last === false && isActive === true) {
+      this.fire(eventKey);
+    }
+  },
+
+  // Init from localStorage on DOM ready
+  init() {
+    try {
+      this.enabled = localStorage.getItem('gindex_sound_enabled') === '1';
+    } catch(e) { this.enabled = false; }
+    this._refreshButton();
+  },
+};
+window.GIndexSound = GIndexSound;
+document.addEventListener('DOMContentLoaded', () => { try { GIndexSound.init(); } catch(e) {} });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// v88.8.18 PANCHA PAKSHI PROFILE — натальний птах + activity matrix
+// Birth chart input → Janma Nakshatra → Birth Bird → 5×5 activity cycle.
+// PANCHA_PAKSHI_BIRD canon 1:1 з v88.8.17 line 6705 (Tamil ведійська традиція).
+// Storage: localStorage.gindex_pp_profile (single slot для v88.8.18).
+// Lunar calc: Meeus simplified (synodic 29.530588853, J2000 epoch).
+// Точність: ±1 nakshatra без birth time. Phase B (~v88.8.19): Lahiri sidereal.
+// ═══════════════════════════════════════════════════════════════════════════
+const GIndexPPProfile = {
+  // Canon 1:1 з PANCHA_PAKSHI_BIRD (line 6705+ у v88.8.17)
+  BIRDS: [
+    3, 0, 1, 2, 0, 2, 1, 0, 1, 1,
+    3, 3, 0, 3, 4, 0, 1, 2, 3, 2,
+    3, 2, 4, 4, 4, 4, 2
+  ],
+  NAKSHATRA_NAMES: [
+    'Ashwini','Bharani','Krittika','Rohini','Mrigashira',
+    'Ardra','Punarvasu','Pushya','Ashlesha','Magha',
+    'P.Phalguni','U.Phalguni','Hasta','Chitra','Swati',
+    'Vishakha','Anuradha','Jyeshtha','Mula','P.Ashadha',
+    'U.Ashadha','Shravana','Dhanishtha','Shatabhisha','P.Bhadrapada',
+    'U.Bhadrapada','Revati'
+  ],
+  NAMES_UA: ['Гриф','Сова','Ворона','Півень','Павич'],
+  NAMES_EN: ['Vulture','Owl','Crow','Cock','Peacock'],
+  ICONS:    ['🦅','🦉','🐦‍⬛','🐓','🦚'],
+  QUALITIES: [
+    'Сила, рішучість, лідерство',
+    'Інтуїція, мудрість, відчуття часу',
+    'Адаптивність, спостережливість',
+    'Активність, голос, влада',
+    'Краса, мистецтво, гармонія'
+  ],
+  ACTIVITIES_UA: ['Їсть','Гуляє','Править','Спить','Помирає'],
+  ACTIVITY_KEYS: ['eat','walk','rule','sleep','die'],
+  // Day rulers per Tamil canon (Drik tradition)
+  DAY_RULER: { 0:0, 1:1, 2:2, 3:3, 4:4, 5:3, 6:0 },
+
+  KNOWN_NEW_MOON: Date.UTC(2000, 0, 6, 18, 14, 0),
+  SYNODIC: 29.530588853,
+  SUNRISE_MIN: 6 * 60,           // 06:00 (simplified — Phase B: per geo)
+  WAKING_MIN: 12 * 60,           // 12 hours waking
+  CELLS: 25,                     // 5 birds × 5 activities
+
+  lunarAge(date) {
+    const days = (date.getTime() - this.KNOWN_NEW_MOON) / 86400000;
+    return ((days % this.SYNODIC) + this.SYNODIC) % this.SYNODIC;
+  },
+
+  nakshatraFromDate(date) {
+    // v88.8.18 Phase D: prefer canonical Lahiri sidereal calc (existing in dashboard).
+    // Fallback to synodic estimate якщо computePanchanga ще не готовий (early load).
+    try {
+      if (typeof computePanchanga === 'function') {
+        const p = computePanchanga(date);
+        if (p && p.nakshatra && isFinite(p.nakshatra.num)) {
+          return Math.max(0, Math.min(26, p.nakshatra.num - 1));
+        }
+      }
+    } catch(e) { /* fall through */ }
+    // Fallback: synodic-based (~±1 nakshatra accuracy)
+    const fraction = this.lunarAge(date) / this.SYNODIC;
+    return Math.max(0, Math.min(26, Math.floor(fraction * 27)));
+  },
+
+  load() {
+    try {
+      const raw = localStorage.getItem('gindex_pp_profile');
+      return raw ? JSON.parse(raw) : null;
+    } catch(e) { return null; }
+  },
+
+  save(profile) {
+    try { localStorage.setItem('gindex_pp_profile', JSON.stringify(profile)); }
+    catch(e) {}
+  },
+
+  clear() {
+    try { localStorage.removeItem('gindex_pp_profile'); } catch(e) {}
+    document.getElementById('ppName').value = '';
+    document.getElementById('ppDate').value = '';
+    document.getElementById('ppTime').value = '';
+    document.getElementById('ppBirthBird').style.display = 'none';
+    document.getElementById('ppActivityMatrix').style.display = 'none';
+  },
+
+  saveAndRender() {
+    const name = (document.getElementById('ppName').value || '').trim();
+    const date = document.getElementById('ppDate').value;
+    const time = document.getElementById('ppTime').value || '';
+    if (!date) {
+      alert('Вкажіть дату народження');
+      return;
+    }
+    const profile = { name, date, time };
+    this.save(profile);
+    this.render();
+  },
+
+  render() {
+    const p = this.load();
+    if (!p || !p.date) return;
+    const birthDate = new Date(`${p.date}T${p.time || '12:00'}:00`);
+    if (!isFinite(birthDate.getTime())) return;
+    const nakIdx = this.nakshatraFromDate(birthDate);
+    const birdId = this.BIRDS[nakIdx];
+
+    // Birth bird display
+    const elBird = document.getElementById('ppBirthBird');
+    if (elBird) {
+      elBird.style.display = 'block';
+      elBird.innerHTML = `
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="font-size:32px">${this.ICONS[birdId]}</div>
+          <div style="flex:1">
+            <div style="font-size:14px;font-weight:700;color:var(--accent)">${this.NAMES_UA[birdId]}</div>
+            <div style="font-size:10px;color:var(--dim)">${this.NAMES_EN[birdId]} · ${this.NAKSHATRA_NAMES[nakIdx]} #${nakIdx + 1}/27</div>
+            <div style="font-size:10px;color:var(--text2);margin-top:3px;font-style:italic">${this.QUALITIES[birdId]}</div>
+          </div>
+        </div>
+        <div style="margin-top:6px;font-size:10px;color:var(--faint)">
+          ${p.name ? p.name + ' · ' : ''}${p.date}${p.time ? ' ' + p.time : ' (12:00)'}
+          ${!p.time ? ' <span style="color:var(--warn)">⚠ ±1 nakshatra без часу</span>' : ''}
+        </div>
+      `;
+    }
+
+    this.renderMatrix(birdId);
+  },
+
+  renderMatrix(birthBirdId) {
+    const el = document.getElementById('ppActivityMatrix');
+    if (!el) return;
+    const now = new Date();
+    const weekday = now.getDay();
+    const rulerBird = this.DAY_RULER[weekday];
+
+    // v88.8.18 Phase D: per-geo sunrise/sunset через existing _calcSunRiseSet.
+    // Fallback: simplified 06:00 → 18:00 якщо ephemeris недоступний.
+    let sunriseMin = this.SUNRISE_MIN, wakingMin = this.WAKING_MIN, isFallback = true;
+    try {
+      if (typeof _calcSunRiseSet === 'function') {
+        const sr = _calcSunRiseSet(now);
+        if (sr && sr.sunrise && sr.sunset) {
+          sunriseMin = sr.sunrise.getHours() * 60 + sr.sunrise.getMinutes();
+          const sunsetMin = sr.sunset.getHours() * 60 + sr.sunset.getMinutes();
+          wakingMin = sunsetMin - sunriseMin;
+          isFallback = false;
+        }
+      }
+    } catch(e) { /* fall through to fallback */ }
+
+    const targetMin = now.getHours() * 60 + now.getMinutes();
+    const cellDur = wakingMin / this.CELLS;  // ~28.8 хв (varies з днем)
+
+    // Bird order: starts with day ruler
+    const birdOrder = [];
+    for (let i = 0; i < 5; i++) birdOrder.push((rulerBird + i) % 5);
+
+    // Determine current cell
+    let currentBird = null, currentAct = null, timeToNext = null;
+    if (targetMin >= sunriseMin && targetMin < sunriseMin + wakingMin) {
+      const elapsed = targetMin - sunriseMin;
+      const cellIdx = Math.floor(elapsed / cellDur);
+      const bIdx = Math.floor(cellIdx / 5);
+      const aIdx = cellIdx % 5;
+      currentBird = birdOrder[bIdx];
+      currentAct = aIdx;
+      const cellEnd = sunriseMin + (cellIdx + 1) * cellDur;
+      timeToNext = Math.ceil(cellEnd - targetMin);
+    }
+
+    // Build matrix HTML
+    const actColors = {0:'#5dd49e', 1:'#9bd49e', 2:'#ffd93d', 3:'#9bb1dc', 4:'#ff8866'};
+    let html = `<div style="font-size:10px;color:var(--dim);margin-bottom:6px">
+      ${['Неділя','Понеділок','Вівторок','Середа','Четвер','Пʼятниця','Субота'][weekday]} ·
+      ruler: ${this.ICONS[rulerBird]} ${this.NAMES_UA[rulerBird]}
+      ${currentBird !== null ? '· зараз: <strong style="color:var(--accent)">' + this.ICONS[currentBird] + ' ' + this.ACTIVITIES_UA[currentAct] + '</strong> (зміна через ' + timeToNext + ' хв)' : '· поза waking-вікном'}
+    </div>`;
+    html += '<div style="display:grid;grid-template-columns:62px repeat(5, 1fr);gap:2px;font-size:9px">';
+    // Header
+    html += '<div style="color:var(--faint);font-size:9px;text-align:center;padding:3px">↓ Птах</div>';
+    for (let a = 0; a < 5; a++) {
+      html += `<div style="color:var(--faint);font-size:9px;text-align:center;padding:3px">${this.ACTIVITIES_UA[a]}</div>`;
+    }
+    // Rows
+    for (let b = 0; b < birdOrder.length; b++) {
+      const bird = birdOrder[b];
+      const isBirthRow = bird === birthBirdId;
+      html += `<div style="padding:4px 5px;color:${isBirthRow ? 'var(--accent)' : 'var(--text)'};font-weight:${isBirthRow ? '700' : '500'};font-size:10px;display:flex;align-items:center;gap:3px"><span style="font-size:14px">${this.ICONS[bird]}</span><span>${this.NAMES_UA[bird]}</span></div>`;
+      for (let a = 0; a < 5; a++) {
+        const cellIdx = b * 5 + a;
+        const isCurrent = (cellIdx === Math.floor((targetMin - sunriseMin) / cellDur)) && (targetMin >= sunriseMin && targetMin < sunriseMin + wakingMin);
+        const startMin = sunriseMin + cellIdx * cellDur;
+        const startH = Math.floor(startMin / 60);
+        const startM = Math.floor(startMin % 60);
+        const bg = isCurrent ? 'rgba(252,164,116,.16)' : 'transparent';
+        const border = isCurrent ? '1px solid var(--accent)' : '1px solid rgba(42,59,97,.4)';
+        const boxShadow = isCurrent ? 'box-shadow:0 0 0 1px rgba(252,164,116,.4)' : '';
+        html += `<div style="padding:3px 4px;border-radius:4px;background:${bg};border:${border};border-left:2px solid ${actColors[a]};text-align:center;font-size:9px;${boxShadow}">
+          <div style="color:${isCurrent ? 'var(--accent)' : 'var(--text2)'};font-weight:${isCurrent ? '700' : '400'}">${this.ACTIVITIES_UA[a]}</div>
+          <div style="color:var(--faint);font-size:8px">${String(startH).padStart(2,'0')}:${String(Math.floor(startM)).padStart(2,'0')}</div>
+        </div>`;
+      }
+    }
+    html += '</div>';
+    const srH = Math.floor(sunriseMin / 60), srM = Math.floor(sunriseMin % 60);
+    const ssH = Math.floor((sunriseMin + wakingMin) / 60), ssM = Math.floor((sunriseMin + wakingMin) % 60);
+    html += `<div style="margin-top:6px;font-size:9px;color:var(--faint);font-style:italic">
+      ${isFallback ? 'Спрощено: sunrise=06:00 (fallback)' : 'Sunrise ' + String(srH).padStart(2,'0') + ':' + String(srM).padStart(2,'0') + ' → sunset ' + String(ssH).padStart(2,'0') + ':' + String(ssM).padStart(2,'0') + ' (per-geo)'},
+      ${cellDur.toFixed(1)} хв/cell. Канон Tamil 25 cells × 5 birds.
+    </div>`;
+
+    el.innerHTML = html;
+    el.style.display = 'block';
+  },
+
+  init() {
+    const p = this.load();
+    if (p) {
+      const elName = document.getElementById('ppName');
+      const elDate = document.getElementById('ppDate');
+      const elTime = document.getElementById('ppTime');
+      if (elName) elName.value = p.name || '';
+      if (elDate) elDate.value = p.date || '';
+      if (elTime) elTime.value = p.time || '';
+      this.render();
+    }
+    // Auto-refresh matrix кожну хвилину
+    if (window._ppMatrixTimer) clearInterval(window._ppMatrixTimer);
+    window._ppMatrixTimer = setInterval(() => {
+      try {
+        const cur = this.load();
+        if (cur && cur.date) this.render();
+      } catch(e) {}
+    }, 60000);
+  },
+};
+window.GIndexPPProfile = GIndexPPProfile;
+document.addEventListener('DOMContentLoaded', () => { try { GIndexPPProfile.init(); } catch(e) {} });
 
 // ═══════════════════════════════════════════════════════════════════════════
 // v87.37 PUSH NOTIFICATIONS — client side. Inert без VAPID-ключа (window._vapid_public_key).
@@ -6529,6 +6955,8 @@ function renderCurrentPanel(){
 
   try{
     renderGaugeMoon(G, lunarPhaseDeg, kUse!=null?kUse:0, ai.phaseName || phaseNameByAngle(lunarPhaseDeg));
+    // v88.8.18: sound notification — G-score crossing 0 (favorable ↔ unfavorable).
+    if (window.GIndexSound) window.GIndexSound.checkCritical(G);
   }catch(e){ console.error('gauge:', e); }
 
   // Hora таймлайн + найкращий час + Co-Star + Science bar + Profile
@@ -7009,6 +7437,8 @@ function computePanchangaState(dateUTC){
   const [_rS, _rE] = [p.rahu.start, p.rahu.end].map(t=>{const[h,m]=t.split(':').map(Number);return h+m/60;});
   p.rahu.active = _nowH >= _rS && _nowH < _rE;
   p.rahu.score  = p.rahu.active ? -1 : 0;
+  // v88.8.18: sound notification — track Rahu Kalam transition (false → true).
+  if (window.GIndexSound) window.GIndexSound._track('rahu', p.rahu.active);
 
   // Context for downstream (animation, decision layer)
   const ctx = {
@@ -8033,6 +8463,15 @@ function _renderSolarRhythm(refDateUTC){
   const dayLenH = Math.floor(dayLengthMin / 60);
   const dayLenM = dayLengthMin % 60;
 
+  // v88.8.18: sound notification — sunrise event (within ±60s window).
+  // Track як boolean "currently in sunrise minute" — fires once при transition false→true.
+  if (window.GIndexSound) {
+    const _now = Date.now();
+    const _sr = sunrise.getTime();
+    const _inSunriseWindow = (_now >= _sr - 60000 && _now <= _sr + 60000);
+    window.GIndexSound._track('sunrise', _inSunriseWindow);
+  }
+
   // 1. Sunrise/Sunset/Solar Noon
   elTimes.innerHTML = `
     <span title="Місцевий схід Сонця (geo: ${_userLat.toFixed(2)}°, ${_userLon.toFixed(2)}°)">
@@ -8078,6 +8517,8 @@ function _renderSolarRhythm(refDateUTC){
     const isNow = now >= abh.start && now < abh.end;
     const isPast = now >= abh.end;
     const isTue = abh.isTuesday;
+    // v88.8.18: sound notification — Abhijit transition (false → true). Skip Tuesday (canon: Abhijit неактивний).
+    if (window.GIndexSound && !isTue) window.GIndexSound._track('abhijit', isNow);
     const tueNote = isTue ? ' <span style="color:var(--warn);font-size:10px">(вівторок — Abhijit неактивний за BPHS)</span>' : '';
     const status = isTue ? '⚠' : (isNow ? '🟢 зараз' : (isPast ? '✓ минула' : '⏳ ще буде'));
     const color = isTue ? 'var(--warn)' : (isNow ? 'var(--ok)' : (isPast ? 'var(--dim)' : '#ffce54'));
@@ -8104,9 +8545,11 @@ function _renderSolarRhythm(refDateUTC){
       const ausp = _calcAuspiciousMuhurtas(sunrise, sunset, nextSunrise);
       if (ausp) {
         const now = new Date();
-        const _renderAuspBlock = (label, w, hint) => {
+        const _renderAuspBlock = (label, w, hint, eventKey) => {
           const isNow = now >= w.start && now < w.end;
           const isPast = now >= w.end;
+          // v88.8.18: sound notification — track muhurta activation (false → true).
+          if (eventKey && window.GIndexSound) window.GIndexSound._track(eventKey, isNow);
           const status = isNow ? '🟢' : isPast ? '⚪' : '🟡';
           const color = isNow ? 'var(--ok)' : isPast ? 'var(--dim)' : '#ffce54';
           const opacity = isPast ? '0.55' : '1';
@@ -8117,7 +8560,8 @@ function _renderSolarRhythm(refDateUTC){
         };
         elAusp.innerHTML = [
           _renderAuspBlock('Brahma', ausp.brahma,
-            'Brahma Muhurta = 2 muhurta до сходу (~96-48 хв до sunrise). Канон BPHS — найкращий час для духовних практик, медитації, навчання.'),
+            'Brahma Muhurta = 2 muhurta до сходу (~96-48 хв до sunrise). Канон BPHS — найкращий час для духовних практик, медитації, навчання.',
+            'brahma'),
           _renderAuspBlock('Vijaya', ausp.vijaya,
             'Vijaya Muhurta = 11-та з 15 muhurta дня. Канон Drik Panchang — "час перемоги": успіх у складних задачах, переговори, дебати.'),
           _renderAuspBlock('Godhuli', ausp.godhuli,
