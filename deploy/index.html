@@ -1969,6 +1969,15 @@ body.simple-mode .col-hide-mobile {
           <span style="font-size:10px;color:var(--faint);font-weight:400;text-transform:none;letter-spacing:0">▼ розкрити</span>
         </summary>
         <div style="padding:0 14px 14px 14px">
+          <!-- v88.8.18 Phase E: 3-slot tabs -->
+          <div id="ppSlotTabs" style="display:flex;gap:4px;margin-bottom:10px;border-bottom:1px solid var(--border2);padding-bottom:6px">
+            <button class="ppSlotTab" data-slot="0" onclick="GIndexPPProfile.switchSlot(0)"
+              style="flex:1;background:rgba(252,164,116,.18);color:var(--accent);border:1px solid var(--accent);border-radius:6px;padding:5px 8px;font-size:11px;cursor:pointer;font-weight:600">Слот 1</button>
+            <button class="ppSlotTab" data-slot="1" onclick="GIndexPPProfile.switchSlot(1)"
+              style="flex:1;background:#1e2a44;color:#9bb1dc;border:1px solid var(--border2);border-radius:6px;padding:5px 8px;font-size:11px;cursor:pointer">Слот 2</button>
+            <button class="ppSlotTab" data-slot="2" onclick="GIndexPPProfile.switchSlot(2)"
+              style="flex:1;background:#1e2a44;color:#9bb1dc;border:1px solid var(--border2);border-radius:6px;padding:5px 8px;font-size:11px;cursor:pointer">Слот 3</button>
+          </div>
           <!-- Profile form -->
           <div id="ppForm" style="display:flex;flex-direction:column;gap:6px;font-size:11px;margin-bottom:10px">
             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
@@ -3101,24 +3110,92 @@ const GIndexPPProfile = {
   },
 
   load() {
+    // v88.8.18 Phase E: multi-slot. Storage key 'gindex_pp_profiles' = array[3].
+    // Migration з legacy 'gindex_pp_profile' (single profile) — копіюється у slot 0.
     try {
-      const raw = localStorage.getItem('gindex_pp_profile');
-      return raw ? JSON.parse(raw) : null;
-    } catch(e) { return null; }
+      let raw = localStorage.getItem('gindex_pp_profiles');
+      if (raw) {
+        const arr = JSON.parse(raw);
+        if (Array.isArray(arr) && arr.length === 3) return arr;
+      }
+      // Legacy migration
+      const legacy = localStorage.getItem('gindex_pp_profile');
+      if (legacy) {
+        const single = JSON.parse(legacy);
+        const arr = [single, null, null];
+        localStorage.setItem('gindex_pp_profiles', JSON.stringify(arr));
+        return arr;
+      }
+    } catch(e) {}
+    return [null, null, null];
+  },
+
+  loadSlot(slotIdx) {
+    const all = this.load();
+    return all[slotIdx] || null;
+  },
+
+  // Backward-compat alias (some tests/external callers may use it)
+  loadCurrent() {
+    return this.loadSlot(this.currentSlot || 0);
   },
 
   save(profile) {
-    try { localStorage.setItem('gindex_pp_profile', JSON.stringify(profile)); }
-    catch(e) {}
+    try {
+      const all = this.load();
+      const slot = this.currentSlot || 0;
+      all[slot] = profile;
+      localStorage.setItem('gindex_pp_profiles', JSON.stringify(all));
+    } catch(e) {}
   },
 
   clear() {
-    try { localStorage.removeItem('gindex_pp_profile'); } catch(e) {}
+    try {
+      const all = this.load();
+      const slot = this.currentSlot || 0;
+      all[slot] = null;
+      localStorage.setItem('gindex_pp_profiles', JSON.stringify(all));
+    } catch(e) {}
     document.getElementById('ppName').value = '';
     document.getElementById('ppDate').value = '';
     document.getElementById('ppTime').value = '';
     document.getElementById('ppBirthBird').style.display = 'none';
     document.getElementById('ppActivityMatrix').style.display = 'none';
+    this._refreshSlotTabs();
+  },
+
+  switchSlot(slotIdx) {
+    if (slotIdx < 0 || slotIdx > 2) return;
+    this.currentSlot = slotIdx;
+    const p = this.loadSlot(slotIdx);
+    document.getElementById('ppName').value = (p && p.name) || '';
+    document.getElementById('ppDate').value = (p && p.date) || '';
+    document.getElementById('ppTime').value = (p && p.time) || '';
+    if (p && p.date) {
+      this.render();
+    } else {
+      document.getElementById('ppBirthBird').style.display = 'none';
+      document.getElementById('ppActivityMatrix').style.display = 'none';
+    }
+    this._refreshSlotTabs();
+  },
+
+  _refreshSlotTabs() {
+    const all = this.load();
+    const tabs = document.querySelectorAll('.ppSlotTab');
+    tabs.forEach((tab, idx) => {
+      const isActive = idx === (this.currentSlot || 0);
+      const hasData = !!all[idx];
+      const baseTitle = `Слот ${idx + 1}`;
+      const labelText = hasData && all[idx].name
+        ? `${baseTitle}: ${all[idx].name.slice(0, 8)}${all[idx].name.length > 8 ? '…' : ''}`
+        : (hasData ? `${baseTitle} ●` : `${baseTitle}`);
+      tab.textContent = labelText;
+      tab.style.background = isActive ? 'rgba(252,164,116,.18)' : '#1e2a44';
+      tab.style.color = isActive ? 'var(--accent)' : (hasData ? '#cfe0ff' : '#9bb1dc');
+      tab.style.borderColor = isActive ? 'var(--accent)' : 'var(--border2)';
+      tab.style.fontWeight = isActive ? '600' : '400';
+    });
   },
 
   saveAndRender() {
@@ -3132,10 +3209,11 @@ const GIndexPPProfile = {
     const profile = { name, date, time };
     this.save(profile);
     this.render();
+    this._refreshSlotTabs();
   },
 
   render() {
-    const p = this.load();
+    const p = this.loadSlot(this.currentSlot || 0);
     if (!p || !p.date) return;
     const birthDate = new Date(`${p.date}T${p.time || '12:00'}:00`);
     if (!isFinite(birthDate.getTime())) return;
@@ -3253,21 +3331,14 @@ const GIndexPPProfile = {
   },
 
   init() {
-    const p = this.load();
-    if (p) {
-      const elName = document.getElementById('ppName');
-      const elDate = document.getElementById('ppDate');
-      const elTime = document.getElementById('ppTime');
-      if (elName) elName.value = p.name || '';
-      if (elDate) elDate.value = p.date || '';
-      if (elTime) elTime.value = p.time || '';
-      this.render();
-    }
+    // v88.8.18 Phase E: multi-slot init. currentSlot = 0 (slot 1).
+    this.currentSlot = 0;
+    this.switchSlot(0);
     // Auto-refresh matrix кожну хвилину
     if (window._ppMatrixTimer) clearInterval(window._ppMatrixTimer);
     window._ppMatrixTimer = setInterval(() => {
       try {
-        const cur = this.load();
+        const cur = this.loadSlot(this.currentSlot || 0);
         if (cur && cur.date) this.render();
       } catch(e) {}
     }, 60000);
@@ -11159,7 +11230,7 @@ function renderDisagreement(){
     name: 'Σ Рік тому',
     val: _sigmaYear,
     sub: 'тільки астро (без Kp)',
-    tip: 'Σ year ago — single-day обчислення ΣAᵢ для тої ж дати рік тому (тільки Lᵢ+Mᵢ+eᵢ+Pᵢ компоненти, БЕЗ Kp бо historical Kp недоступний). Інша одиниця ніж G! НЕ плутай з 7-day mean у "Прогноз на 27 днів".'
+    tip: '⏳ ІСТОРИЧНІ ДАНІ — не порівнюй з G напряму!\n\nΣ Year ago — обчислення ΣAᵢ для тої самої дати РІК ТОМУ.\n• Тільки Lᵢ+Mᵢ+eᵢ+Pᵢ компоненти (БЕЗ Kp — historical Kp недоступний).\n• Інша одиниця ніж G (G = Kp − 2 + ΣAᵢ).\n• Інша дата — не сьогодні, а та сама календарна точка минулого року.\n\nЦе reference для річного астро-ритму — порівняння поточних астро-факторів з тими, що були рік тому. НЕ є "ще одне джерело сьогоднішньої оцінки".\n\nНЕ плутай з 7-day mean у "Прогноз на 27 днів".'
   });
 
   if(_models.length < 2){ _alert.style.display = 'none'; return; }
@@ -11168,8 +11239,12 @@ function renderDisagreement(){
   const _max = Math.max(..._vals), _min = Math.min(..._vals);
   const _range = _max - _min;
 
-  const _hasPos = _vals.some(v => v > 0.5);
-  const _hasNeg = _vals.some(v => v < -0.5);
+  // v88.8.18 Bug fix: Σ Рік тому — історичні астро-дані (інша дата, без Kp).
+  // НЕ повинно тригерити "протилежні знаки сьогодні" warning, бо це не сьогоднішнє джерело.
+  // Range залишається з усіх моделей (для оцінки spread), sign conflict — лише з today's.
+  const _todayVals = _models.filter(m => m.name !== 'Σ Рік тому').map(m => m.val);
+  const _hasPos = _todayVals.some(v => v > 0.5);
+  const _hasNeg = _todayVals.some(v => v < -0.5);
   const _signConflict = _hasPos && _hasNeg;
 
   // v88.6.9: поріг range 2.5 → 3.0 щоб не trigger warning при normal architectural divergence
@@ -11205,8 +11280,13 @@ function renderDisagreement(){
     else if (Number.isInteger(m.val)) valStr = (m.val > 0 ? '+' : '') + m.val;
     else valStr = (m.val > 0 ? '+' : '') + m.val.toFixed(2);
     const _tip = m.tip ? ` title="${m.tip.replace(/"/g,'&quot;')}"` : '';
-    return `<div${_tip} style="flex:1;min-width:90px;padding:6px 8px;border-radius:6px;background:rgba(11,18,32,.55);border:1px solid rgba(255,170,51,.15);cursor:help;display:flex;flex-direction:column;gap:1px;align-items:flex-start">
-      <span style="font-size:10px;color:var(--dim);letter-spacing:.04em;text-transform:uppercase">${m.name}</span>
+    // v88.8.18 Bug fix: Σ Рік тому — distinct styling (історичні дані, інша одиниця).
+    const _isHist = m.name === 'Σ Рік тому';
+    const _bg = _isHist ? 'rgba(70,90,130,.25)' : 'rgba(11,18,32,.55)';
+    const _bd = _isHist ? '1px dashed rgba(155,177,220,.45)' : '1px solid rgba(255,170,51,.15)';
+    const _histBadge = _isHist ? '<span style="font-size:8px;color:#9bb1dc;background:rgba(155,177,220,.18);padding:1px 4px;border-radius:3px;margin-left:4px;font-weight:600">⏳ ІСТОРІЯ</span>' : '';
+    return `<div${_tip} style="flex:1;min-width:90px;padding:6px 8px;border-radius:6px;background:${_bg};border:${_bd};cursor:help;display:flex;flex-direction:column;gap:1px;align-items:flex-start">
+      <span style="font-size:10px;color:var(--dim);letter-spacing:.04em;text-transform:uppercase">${m.name}${_histBadge}</span>
       <span style="font-family:var(--mono),ui-monospace,monospace;font-size:16px;font-weight:700;color:${col}">${valStr}</span>
       <span style="font-size:9px;color:var(--faint);line-height:1.3">${m.sub}</span>
     </div>`;
