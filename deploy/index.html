@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.2</title>
+  <title>G-Index — Космофізичний дашборд v88.8.6</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -32,6 +32,8 @@
   <link rel="dns-prefetch" href="https://corsproxy.io" />
 
   <!-- SEO / share -->
+  <!-- v88.8.4: canonical URL для SEO (запобігає duplicate content якщо PWA доступна на різних шляхах) -->
+  <link rel="canonical" href="https://nikolaevkirill-commits.github.io/g-index/deploy/" />
   <meta name="description" content="Інтегральний G-індекс: геомагнітна активність + Jyotish Panchanga. Advisory / R&D." />
   <meta property="og:title" content="G-Index Dashboard" />
   <meta property="og:description" content="Геомагнітна активність + Panchanga у реальному часі" />
@@ -1313,7 +1315,7 @@ body.simple-mode .col-hide-mobile {
       <span style="margin-left:auto;display:inline-flex;align-items:center;gap:8px">
         <span id="sciMoreToggle" onclick="toggleSciMore()" style="cursor:pointer;color:var(--faint);font-size:11px;white-space:nowrap;user-select:none">▸ детально</span>
         <!-- v87.16: dev контроли приховано з production (були ✦ v86 toggle і 🗑 Кеш — доступні через URL ?dev=1) -->
-        <!-- v87.56 Phase 2.1 prep: wrapped into <details id="devMenu"> для масштабування у майбутньому.
+        <!-- v87.56 Phase 2.1 prep: wrapped into details (id=devMenu) для масштабування у майбутньому.
              IDs btnV86Radial / btnCacheReset залишаються як канонічні для JS activation. -->
         <details id="devMenu" style="display:none;position:relative">
           <summary style="cursor:pointer;color:var(--faint);font-size:14px;list-style:none;padding:2px 6px;border-radius:4px" title="Dev tools (?dev=1)">⋯</summary>
@@ -1421,6 +1423,11 @@ body.simple-mode .col-hide-mobile {
             <span id="heroG" class="gbadge" role="status" aria-live="polite" aria-label="Поточний G-індекс">G …</span>
             <span id="heroTrend">—</span>
           </div>
+          <!-- v88.8.6 Д1: компактна lunar phase іконка під heroRing — постійно видима. -->
+          <div id="heroMoonPhaseIcon" tabindex="0" style="display:none;margin-top:6px;text-align:center;font-size:10px;color:var(--dim);cursor:help" title="">
+            <div id="heroMoonSvg" style="display:flex;justify-content:center;height:32px;align-items:center"></div>
+            <div id="heroMoonLabel" style="margin-top:2px;font-size:9px;color:var(--faint);line-height:1"></div>
+          </div>
         </div>
         <div class="hero-maintext">
           <div id="heroDecisionPanel">
@@ -1438,6 +1445,8 @@ body.simple-mode .col-hide-mobile {
             <!-- v88.7.15 Б: low-confidence marker — engine F1=0.26 на neutral (CANONICAL_METRICS).
                  Видимий ТІЛЬКИ коли |G| ≤ 1 (зона де engine має слабку точність). -->
             <div id="heroLowConfBadge" tabindex="0" style="display:none;margin-top:6px;padding:4px 8px;border-radius:6px;font-size:11px;color:#9bb1dc;background:rgba(155,177,220,.06);border:1px dashed rgba(155,177,220,.25);cursor:help" title="Engine v18.5 на нейтральному класі (G ∈ [-1, +1]) має f1=0.26 — низька точність розрізнення нейтральних/слабких днів. Strong negative (F1=0.84) і Strong positive (F1=0.69) — надійні. Для критичних рішень у середній зоні рекомендована експертна перевірка.&#10;Source: CANONICAL_METRICS.md v2.0 (n=280, GT v5.1).">⚪ Низька довіра в нейтральній зоні</div>
+            <!-- v88.8.4: 7-class verdict badge — canonical lexicon (tag_to_text.json verdict_text). Показується завжди коли G визначений. -->
+            <div id="heroVerdict7Badge" tabindex="0" style="display:none;margin-top:6px;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:600;cursor:help" title="Канонічна 7-класова градація (з tag_to_text.json verdict_text). Використовується в DOCX/PDF звітах, Excel, експертних бюлетенях. UI-стани (МОЖНА/НЕЙТРАЛЬНО/СТОП) — 5-classна спрощена модель. Це паралельні вимірювання того самого G, не суперечать."></div>
             <div id="heroDecisionBlock">
               <div id="heroDecisionDo">—</div>
               <div id="heroDecisionAvoid">—</div>
@@ -1475,7 +1484,7 @@ body.simple-mode .col-hide-mobile {
           <!-- v88.0: Astronomical layer pill (Tithi/Nakshatra/Yoga з cal_score field у engine_scores.json, Swiss Ephemeris Lahiri) -->
           <span id="heroAstroLayer" data-label="Astro" class="hint" tabindex="0" style="display:none;font-size:12px;font-weight:700;color:var(--muted);cursor:help;border:1px solid var(--border2);padding:1px 8px;border-radius:8px;background:rgba(11,18,32,.4)" title="">—</span>
           <!-- V25-fu29 v5.1 (2026-05-03): canonical metrics from VALIDATION_REPORT_v18_5_pdf47_v5.json — n=280 / strict 71.4% / κ=0.52 -->
-          <a href="backtest.html" target="_blank" rel="noopener" data-label="Точність" style="font-size:12px;font-weight:700;color:var(--ok);text-decoration:none;border:1px solid var(--ok);padding:1px 8px;border-radius:8px;background:rgba(43,212,125,.08);transition:background .2s" title="Engine v18.5 validation · n=280 PDF v5.1 (Jun 2025 → May 2026)&#10;&#10;Holdout 80/20 (n=56 chronological):&#10;• Strict 3-class agreement: 75.0%&#10;• Binary (neg/non-neg): 82.1%&#10;&#10;Global (n=280): Strict 71.4% [CI 66.1–76.8%] · Binary 83.6% [CI 79.3–87.9%]&#10;Cohen's κ = 0.52 (moderate); weighted κ = 0.73 (substantial)&#10;Lift over Kp-only baseline (31.1%): +40 pp on strict 3-class&#10;&#10;⚠ Caveat: ground truth = expert PDF bulletins using same Vedic Panchanga + Kp framework. Validates engine reproduces expert reasoning, NOT predictive validity vs real outcomes.&#10;&#10;Status: V3 prospective freeze 2026-05-03 → ~2026-08-01&#10;&#10;Натисни → повний backtest report.">📊 71.4% strict / 83.6% binary</a>
+          <a href="backtest.html" target="_blank" rel="noopener" data-label="Точність" style="font-size:12px;font-weight:700;color:var(--ok);text-decoration:none;border:1px solid var(--ok);padding:1px 8px;border-radius:8px;background:rgba(43,212,125,.08);transition:background .2s" title="Engine v18.5 validation · n=280 PDF v5.1 (Jun 2025 → May 2026)&#10;&#10;Holdout 80/20 (n=56 chronological):&#10;• Strict 3-class agreement: 75.0%&#10;• Binary (neg/non-neg): 82.1%&#10;&#10;Global (n=280): Strict 71.4% [CI 66.1–76.8%] · Binary 83.6% [CI 79.3–87.9%]&#10;ExactMatch (7-class): 43.6% · Within ±1: 72.1%&#10;&#10;Inter-rater agreement:&#10;• Cohen's κ (3-class): 0.52 moderate&#10;• Weighted κ (7-class): 0.73 substantial&#10;• MCC 3-class: 0.52 (moderate, узгоджено з κ)&#10;• MCC binary: 0.67 (strong)&#10;• MCC 7-class: 0.33 (weak — 7-class fine-grain важко)&#10;&#10;Per-class F1:&#10;• Negative (-1): 0.84 (strong)&#10;• Positive (+1): 0.69&#10;• Neutral (0): 0.26 (weak — Б-патч &quot;low confidence&quot; band)&#10;&#10;Lift over Kp-only baseline (31.1%): +40 pp on strict&#10;&#10;⚠ Caveat: ground truth = expert PDF bulletins using same Vedic Panchanga + Kp framework. Validates engine reproduces expert reasoning, NOT predictive validity vs real outcomes.&#10;&#10;Status: V3 prospective freeze 2026-05-03 → ~2026-08-01&#10;Source: CANONICAL_METRICS.md v2.0&#10;&#10;Натисни → повний backtest report.">📊 71.4% strict / 83.6% binary</a>
         </div>
       </div>
     </section>
@@ -2504,6 +2513,24 @@ NOAA публікує лише 27-day Ap outlook (інтегрована гео�
 
 <script>
 
+  // v88.8.3 fix-2: Production console muting.
+  // Раніше: 42 unguarded console.log/warn → noise у production консолі (затримки fetch,
+  // CORS fallback chain, geo info). Користувач відкривав F12 і бачив завал dev-логів.
+  // Тепер: log/warn/debug мовчать у production; error — завжди (критичні події).
+  // Активувати dev-режим: window._DEBUG = true (у консолі або URL ?debug=1).
+  (function(){
+    try {
+      if(location.search.indexOf('debug=1') >= 0) window._DEBUG = true;
+    } catch(e) { /* noop */ }
+    if (!window._DEBUG) {
+      const _origLog = console.log, _origWarn = console.warn, _origDebug = console.debug;
+      console.log = function(){ if(window._DEBUG) _origLog.apply(console, arguments); };
+      console.warn = function(){ if(window._DEBUG) _origWarn.apply(console, arguments); };
+      console.debug = function(){ if(window._DEBUG) _origDebug.apply(console, arguments); };
+      // console.error не чіпаємо — важливі critical events (engine scores expired, schema violation)
+    }
+  })();
+
   // V25-fu19: Visibility-aware interval helper
   // Auto-pauses when tab hidden (saves battery), resumes when visible.
   // Usage: const id = SAFE_INTERVAL(() => doStuff(), 5000); ... clearInterval(id) when done.
@@ -3302,11 +3329,16 @@ let _engineScores = null;
 // якщо дата в overrides → eng замінюється на expert_eng, оригінал зберігається у _engRaw.
 // Frozen partition: engine_scores.json НЕ змінюється (V3 prospective freeze для backtest).
 let _expertOverrides = null; // {date: {expert_eng, tanita_O, tanita_N, category, applied_in}}
+// v88.8.5 В2: diagnostic flag для трасування deploy issues
+window._expertOverridesLoadStatus = 'pending'; // 'pending' | 'loaded' | 'missing' | 'invalid' | 'http_error'
 async function loadExpertOverrides(){
   if(_expertOverrides !== null) return _expertOverrides;
   try {
     const resp = await fetch('expert_overrides_v3.json', { cache: 'default' });
-    if(!resp.ok) throw new Error('HTTP ' + resp.status);
+    if(!resp.ok) {
+      window._expertOverridesLoadStatus = 'http_error_' + resp.status;
+      throw new Error('HTTP ' + resp.status);
+    }
     const data = await resp.json();
     _expertOverrides = {};
     if(Array.isArray(data.overrides)){
@@ -3315,11 +3347,17 @@ async function loadExpertOverrides(){
           _expertOverrides[r.date] = r;
         }
       }
+      window._expertOverridesLoadStatus = 'loaded';
+    } else {
+      window._expertOverridesLoadStatus = 'invalid'; // file fetched, але не має overrides[]
     }
     if(window._DEBUG) console.log('[v88.7.15 Г] expert_overrides_v3 loaded: ' + Object.keys(_expertOverrides).length + ' records');
     return _expertOverrides;
   } catch(e){
-    if(window._DEBUG) console.warn('[v88.7.15 Г] expert_overrides_v3.json fetch failed:', e.message);
+    if(window._expertOverridesLoadStatus === 'pending') {
+      window._expertOverridesLoadStatus = 'missing'; // 404 або інша помилка
+    }
+    if(window._DEBUG) console.warn('[v88.7.15 Г] expert_overrides_v3.json fetch failed:', e.message, '(status: ' + window._expertOverridesLoadStatus + ')');
     _expertOverrides = {};
     return _expertOverrides;
   }
@@ -7014,9 +7052,17 @@ function renderPanchangaCard(state){
         'Рікта':'Рікта (порожня) — уникати важливих рішень і активних дій.',
         'Пурна':'Пурна (повна) — сприятлива для завершення і дипломатії.'
       };
+      // v88.8.4: paksha (світла/темна половина) + lunar day number — для контексту
+      const isKrishna = (tip.name || '').includes('(K)') || (tip.name || '') === 'Amavasya';
+      const pakshaDesc = isKrishna
+        ? 'Krishna paksha (темна половина) — Місяць убуває, енергія йде до завершення.'
+        : 'Shukla paksha (світла половина) — Місяць росте, енергія йде до зростання.';
+      const lunarDayLine = (tip.num !== undefined && isFinite(tip.num)) ? `Місячний день: ${tip.num} з 30\n` : '';
       return `TITHI — місячний день\n` +
         `Що це: час, за який Місяць відстає від Сонця на 12°.\n` +
         `Місяць = 30 тітхі (15 світлих + 15 темних).\n` +
+        lunarDayLine +
+        `Paksha: ${pakshaDesc}\n` +
         `Тип: ${typeDesc[tip.type] || tip.type}\n` +
         `Вплив: ${tip.score > 0 ? 'сприятливий' : tip.score < 0 ? 'несприятливий' : 'нейтральний'} (PCL ${tip.score > 0 ? '+' : ''}${tip.score})`;
     },
@@ -7251,6 +7297,7 @@ function renderPanchangaCard(state){
         }
         // v88.8.1: hint про поточний Choghadiya — інтеграція 5 angas + muhurta shastra.
         // Геомагнітний G і Vedic Choghadiya — РІЗНІ шари. Користувач отримує обидва.
+        // v88.8.3: + "наступний сприятливий" — actionable info для планування.
         try {
           const _sr = _calcSunRiseSet(dateUTC);
           if(_sr){
@@ -7266,6 +7313,18 @@ function renderPanchangaCard(state){
                      + `<span style="color:${_scoreColor}" title="${_cur.ua} — ${_cur.hint}. До ${_fmtLocalHM(_cur.end)}.">`
                      + `${_cur.icon} ${_cur.name} <span style="color:var(--faint);font-size:10px">· до ${_fmtLocalHM(_cur.end)}</span>`
                      + `</span></div>`;
+                // v88.8.3: наступний сприятливий слот (Amrit/Shubh/Labh) — actionable
+                if(_cur.score < 1){
+                  const _nextGood = _all.find(s => s.start > _now && s.score >= 1);
+                  if(_nextGood){
+                    html += `<div class="pbt-row" style="font-size:11px">`
+                         + `<span class="pbt-label" style="font-size:10px;color:var(--faint)">Наступне сприятливе</span>`
+                         + `<span style="color:#7be88a" title="${_nextGood.ua} — ${_nextGood.hint}">`
+                         + `${_nextGood.icon} ${_nextGood.name} `
+                         + `<span style="color:var(--faint);font-size:10px">· з ${_fmtLocalHM(_nextGood.start)}</span>`
+                         + `</span></div>`;
+                  }
+                }
               }
             }
           }
@@ -7576,13 +7635,16 @@ function _calcRashis(dateUTC){
 // slot = {name, score, icon, ua, hint, start:Date, end:Date}
 function _calcChoghadiya(dateUTC, sunrise, sunset){
   if(!sunrise || !sunset) return null;
-  const wday = sunrise.getDay(); // 0=Sun..6=Sat (LOCAL day)
+  // v88.8.5 Г2: defensive guard — wday в межах [0..6]
+  const wday = ((sunrise.getDay() % 7) + 7) % 7; // 0=Sun..6=Sat (LOCAL day), завжди 0-6
   const dayMs = sunset.getTime() - sunrise.getTime();
+  // Захист від negative/zero — якщо sunrise після sunset (полярна область чи bug), return null
+  if (dayMs <= 0 || !isFinite(dayMs)) return null;
   const nightMs = (24 * 3600000) - dayMs; // приблизно — наступний sunrise ≈ same offset
   const daySlotMs = dayMs / 8;
   const nightSlotMs = nightMs / 8;
-  const dayNames = _CHOG_DAY[wday];
-  const nightNames = _CHOG_NIGHT[wday];
+  const dayNames = _CHOG_DAY[wday] || _CHOG_DAY[0]; // fallback на Sunday якщо wday некоректний
+  const nightNames = _CHOG_NIGHT[wday] || _CHOG_NIGHT[0];
   const day = dayNames.map((nm, i) => {
     const m = _CHOG_META[nm] || { score:0, icon:'?', ua:nm, hint:'' };
     return {
@@ -7908,7 +7970,9 @@ function render3Day(parsed3){
           const _ePos = _bs.eng > 0, _eNeg = _bs.eng < 0;
           const _divergent = (_gPos && _eNeg) || (_gNeg && _ePos);
           if (_divergent) {
-            _bulletinLine = `<div style="font-size:10px;margin-top:2px;padding:2px 6px;border-radius:4px;background:rgba(255,170,51,.15);border:1px solid rgba(255,170,51,.35)" title="G (live геомагніт) і Bulletin (engine v18.5 tag-model) показують протилежні знаки. Обережніше з рішеннями — моделі не згодні.">⚠ Bulletin: <span style="color:${_bsCol};font-weight:700">${_bsSign}${_bs.eng}${_synth}</span>${_recalcMark} <span style="color:var(--faint);font-size:9px">· розбіжність</span></div>`;
+            // v88.8.5 Б2: розширений tooltip — пояснює ЧОМУ розбіжність і ЩО робити.
+            // Раніше: загальне 'обережніше з рішеннями'. Тепер: причини + actionable hint.
+            _bulletinLine = `<div style="font-size:10px;margin-top:2px;padding:2px 6px;border-radius:4px;background:rgba(255,170,51,.15);border:1px solid rgba(255,170,51,.35);cursor:help" title="⚠ G (live continuous) і Bulletin (engine discrete) показують різні знаки.&#10;&#10;Чому це буває:&#10;• Engine — frozen tag-based за snapshot Kp; G — live з реальним Kp.&#10;• На boundary days Vedic Panchanga зсувається, Engine snapshot ще не оновлено.&#10;• Engine clamps до ±3, G — continuous (-5..+7).&#10;• На експертних PDF днях override може давати +3, навіть якщо Kp низький.&#10;&#10;Що робити: знизь довіру до автоматичної оцінки на 15%. Перевір 1-2 додаткові сигнали (NOAA SWPC, Panchanga вкладка, локальне самопочуття) перед важливим рішенням.">⚠ Bulletin: <span style="color:${_bsCol};font-weight:700">${_bsSign}${_bs.eng}${_synth}</span>${_recalcMark} <span style="color:var(--faint);font-size:9px">· розбіжність</span></div>`;
           } else {
             _bulletinLine = `<div style="font-size:10px;color:var(--dim);margin-top:2px">Bulletin: <span style="color:${_bsCol};font-weight:700">${_bsSign}${_bs.eng}${_synth}</span>${_recalcMark}</div>`;
           }
@@ -8552,6 +8616,28 @@ function syncHero(){
       if (_lcb) {
         const _isLowConf = isFinite(newG) && Math.abs(newG) <= 1.0;
         _lcb.style.display = _isLowConf ? '' : 'none';
+      }
+    } catch(e) { /* noop */ }
+
+    // v88.8.4: 7-class verdict badge — canonical label з tag_to_text.json.
+    // Показується завжди коли G визначений. Текст = full canonical verdict (наприклад
+    // "Особливо несприятливий день", "Помірно сприятливий день").
+    // Цвет background — з verdict_colors. Foreground — світлий для контрасту.
+    try {
+      const _vb = document.getElementById('heroVerdict7Badge');
+      if (_vb && typeof classifyVerdict7Class === 'function') {
+        const v7 = classifyVerdict7Class(newG);
+        if (v7) {
+          _vb.style.display = '';
+          _vb.style.background = v7.color + '22'; // ~13% opacity background
+          _vb.style.borderLeft = `3px solid ${v7.color}`;
+          _vb.style.color = v7.color;
+          // Format: "ENGINE: Помірно сприятливий день (+1)"
+          const _engineLabel = (typeof _currentLang !== 'undefined' && _currentLang === 'EN') ? 'Engine' : 'Engine';
+          _vb.innerHTML = `<span style="color:var(--faint);font-weight:400;font-size:10px">${_engineLabel} (7-class):</span> ${v7.label} <span style="color:var(--faint);font-weight:500;font-size:10px">(${v7.score >= 0 ? '+' : ''}${v7.score})</span>`;
+        } else {
+          _vb.style.display = 'none';
+        }
       }
     } catch(e) { /* noop */ }
 
@@ -9573,6 +9659,28 @@ function classifyStateByG(g, kp) {
   return cls;
 }
 
+// v88.8.4: 7-class verdict_text mapping (canonical, з tag_to_text.json).
+// Дашборд має 5-стейтну UI модель (favorable/good/neutral/unstable/tense),
+// але DOCX/PDF канон використовує 7-class на ціле score. Ця функція дає
+// canonical label для бейджа поряд з GLOBAL_STATES.headline — щоб користувач
+// бачив і UI-state і canonical verdict одночасно.
+const VERDICT_7CLASS = {
+  '-3': { label: 'Особливо несприятливий день', color: '#d32f2f', short: '−3 крайній' },
+  '-2': { label: 'Несприятливий день',           color: '#e64a19', short: '−2 несприятл.' },
+  '-1': { label: 'Помірно несприятливий день',   color: '#fbc02d', short: '−1 помірно' },
+  '0':  { label: 'Нейтральний день',             color: '#bdbdbd', short: '0 нейтрал.' },
+  '1':  { label: 'Помірно сприятливий день',     color: '#aed581', short: '+1 помірно' },
+  '2':  { label: 'Сприятливий день',             color: '#7cb342', short: '+2 сприятл.' },
+  '3':  { label: 'Особливо сприятливий день',    color: '#388e3c', short: '+3 особлив.' }
+};
+function classifyVerdict7Class(g){
+  if (!isFinite(g)) return null;
+  // Round до найближчого integer (continuous G → 7-class). Engine_scores використовує
+  // strict thresholds; UI continuous → simple round.
+  const sc = Math.max(-3, Math.min(3, Math.round(g)));
+  return { score: sc, ...VERDICT_7CLASS[String(sc)] };
+}
+
 // v85b-F6: single-source decision resolver (wraps classifyStateByG + GLOBAL_STATES).
 // Гарантує, що hero / personal / timing читають рішення з одного джерела.
 // v85b-F10.3 (fix): title читав неіснуюче поле st.verdict → fallback до st.headline (реально є в GLOBAL_STATES)
@@ -10203,10 +10311,14 @@ function renderDisagreement(){
     tip: 'PDF-бюлетень — manual оцінка експерта з історичних бюлетенів. Дискретна шкала −3..+3.'
   });
   if(_sigmaYear != null) _models.push({
-    name: 'Рік тому',
+    // v88.8.5 Б1 fix: явний label "Σ Рік тому" (не "Рік тому") — щоб користувач
+    // одразу бачив що це астро-сума ΣAᵢ, а не G рік тому. Раніше "+1.20" поряд
+    // з "Engine +3" виглядав як G у тих самих одиницях, але насправді це
+    // тільки Lᵢ+Mᵢ+eᵢ+Pᵢ (без Kp компонента).
+    name: 'Σ Рік тому',
     val: _sigmaYear,
-    sub: 'та сама дата 2025',
-    tip: 'Σ year ago — single-day обчислення для тої ж дати рік тому (без Kp, тільки астрокомпоненти Lᵢ+Mᵢ+eᵢ+Pᵢ). НЕ плутай з 7-day mean у "Прогноз на 27 днів".'
+    sub: 'тільки астро (без Kp)',
+    tip: 'Σ year ago — single-day обчислення ΣAᵢ для тої ж дати рік тому (тільки Lᵢ+Mᵢ+eᵢ+Pᵢ компоненти, БЕЗ Kp бо historical Kp недоступний). Інша одиниця ніж G! НЕ плутай з 7-day mean у "Прогноз на 27 днів".'
   });
 
   if(_models.length < 2){ _alert.style.display = 'none'; return; }
@@ -11286,6 +11398,34 @@ function renderGaugeMoon(G, phaseDeg, kp, phaseName) {
       <circle cx="55" cy="65" r="3.5" fill="none" stroke="#1a1a15" stroke-width="0.9" opacity="0.4"/>
     </svg>`;
     moonMini.innerHTML = mmSvg;
+  }
+
+  // v88.8.6 Д1: компактна lunar phase іконка у hero (під G ring) — постійно видима.
+  // Той самий phaseDeg/illum алгоритм як moonMini, але 32x32 розмір.
+  const heroMoon = document.getElementById('heroMoonPhaseIcon');
+  const heroMoonSvg = document.getElementById('heroMoonSvg');
+  const heroMoonLabel = document.getElementById('heroMoonLabel');
+  if (heroMoon && heroMoonSvg && heroMoonLabel && isFinite(phaseDeg)) {
+    const phaseShort = (phaseName || '?').length > 14
+      ? (phaseName || '?').substring(0, 13) + '…'
+      : (phaseName || '?');
+    const illumPct = Math.round(illum * 100);
+    const compactSvg = `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" style="width:32px;height:32px">
+      <circle cx="16" cy="16" r="14" fill="#0a0a08" stroke="${moonPhaseWarning?'#ff9933':'#2a3050'}" stroke-width="1"/>
+      ${phaseDeg <= 180
+        ? `<rect x="16" y="2" width="14" height="28" fill="#c0c0b0" clip-path="url(#hmpClip)"/>
+           <ellipse cx="16" cy="16" rx="${Math.abs(14*Math.cos(phaseDeg*Math.PI/180)).toFixed(1)}" ry="14" fill="${illum<0.5?'#0a0a08':'#c0c0b0'}" clip-path="url(#hmpClip)"/>`
+        : `<rect x="2" y="2" width="14" height="28" fill="#c0c0b0" clip-path="url(#hmpClip)"/>
+           <ellipse cx="16" cy="16" rx="${Math.abs(14*Math.cos(phaseDeg*Math.PI/180)).toFixed(1)}" ry="14" fill="${illum<0.5?'#0a0a08':'#c0c0b0'}" clip-path="url(#hmpClip)"/>`
+      }
+      <defs><clipPath id="hmpClip"><circle cx="16" cy="16" r="14"/></clipPath></defs>
+    </svg>`;
+    heroMoonSvg.innerHTML = compactSvg;
+    heroMoonLabel.innerHTML = `${illumPct}% освітл.`;
+    heroMoon.title = `🌙 ${phaseName || '—'}\nОсвітлення: ${illumPct}%\nКут фази: ${phaseDeg.toFixed(1)}°\n\nВплив на Lᵢ (геомагніт-чутливість):\n• Молодик / Амавасья → Lᵢ=−3 (high-risk, Stoupel 2014)\n• Перша / Остання чверть → Lᵢ=0\n• Повня (Пурніма) → Lᵢ=0 (нейтральна, Cajochen 2013)\n• Решта днів → Lᵢ=+1`;
+    heroMoon.style.display = '';
+  } else if (heroMoon) {
+    heroMoon.style.display = 'none';
   }
 
   // ── Анімація планет — подвійний rAF: 1й — layout reflow, 2й — offsetWidth вже коректний ──
@@ -13233,13 +13373,14 @@ async function shareGState() {
 
   ctx.fillStyle = '#37a7ff';
   ctx.font = '36px system-ui,-apple-system,sans-serif';
-  ctx.fillText('kyrylo-ua.github.io/g-index', W/2, H*0.92);
+  // v88.8.3 fix-1: правильний canonical URL — раніше було kyrylo-ua.github.io (помилка)
+  ctx.fillText('nikolaevkirill-commits.github.io/g-index', W/2, H*0.92);
 
   ctx.fillStyle = '#2a3b61';
   ctx.font = '30px system-ui,-apple-system,sans-serif';
   ctx.fillText('G-Index · Cosmophysical Dashboard', W/2, H*0.96);
 
-  const fallbackText = `G-Index · ${dateStr}\nG = ${gStr} (${cat})\nKp = ${kpStr} · ${phase}${rmStr ? '\n' + rmStr : ''}\n\uD83D\uDD17 https://kyrylo-ua.github.io/g-index`;
+  const fallbackText = `G-Index · ${dateStr}\nG = ${gStr} (${cat})\nKp = ${kpStr} · ${phase}${rmStr ? '\n' + rmStr : ''}\n\uD83D\uDD17 https://nikolaevkirill-commits.github.io/g-index/deploy/`;
 
   try {
     const blob = await new Promise(res => cv.toBlob(res, 'image/png'));
@@ -15902,7 +16043,7 @@ function _getGDelta(){
 document.addEventListener('DOMContentLoaded',()=>{
   setTimeout(()=>{initHeroField();initWowParticles();applyWowFromG()},900);
   // v87.16 + v87.56 Phase 2.1: dev controls — показувати #devMenu при ?dev=1 або localStorage flag
-  // (btnV86Radial / btnCacheReset тепер всередині <details id="devMenu">, IDs preserved)
+  // (btnV86Radial / btnCacheReset тепер всередині details devMenu, IDs preserved)
   try {
     const params = new URLSearchParams(location.search);
     if (params.has('dev') || localStorage.getItem('gindex_dev') === '1') {

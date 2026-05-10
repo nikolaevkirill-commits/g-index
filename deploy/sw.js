@@ -1,5 +1,112 @@
-// G-Index Service Worker v88.8.2 (Forecast peak у history blok + Г-fix-2)
-// v88.8.2 changes:
+// G-Index Service Worker v88.8.6 (Lunar phase у hero + чистка)
+// v88.8.6 changes:
+//   Д1 LUNAR-PHASE-HERO (index.html:HTML 1424+, JS 11402+).
+//      Раніше: phase візуалізація лише у astroGrid <details> (схована за кліком "▶ деталі").
+//      Тепер: компактна 32x32 SVG під G ring у hero — постійно видима.
+//      Показує: фазу (illuminated portion), warning border при Покнт/Амавасья,
+//      підпис "{N}% освітл.", повний tooltip з phase name + кутом + Lᵢ-таблицею.
+//      Reuse phaseDeg/phaseName/illum змінних з renderGaugeMoon — нульова дублікація логіки.
+//
+//   ВИКЛЮЧЕНО З ПЕРЕЛІКУ (зроблене раніше або не потрібне):
+//   • A2 backtest.html — вже має canonical metrics (MCC + per-class F1 + κ_w + lift).
+//     Скопійовано з /mnt/project/ у outputs для повного deploy bundle.
+//   • A3 Hindu holidays ICS — вже інтегровані через ICS_HINDU_HOLIDAYS + parseICS +
+//     classifyEvent (рядки 3091, 4061). Працює.
+//
+//   ЧИСТКА (косметика):
+//   • Видалено id="devMenu" з 2 коментарів (HTML + JS) → залишився єдиний реальний
+//     <details id="devMenu"> у DOM. Тепер raw count = stripped count = 1 (чистий audit).
+//
+//   Cache keys bumped до v88-8-6.
+//
+// v88.8.5 changes (Closing the gap — невиконане з попередніх turns):
+//   Б1 (index.html:10293+): "Рік тому" label clarity.
+//      Раніше: name='Рік тому', val=+1.20 — користувач плутав з G рік тому.
+//      Тепер: name='Σ Рік тому', sub='тільки астро (без Kp)'.
+//      Розширений tooltip: "Інша одиниця ніж G! НЕ плутай з 7-day mean".
+//
+//   Б2 (index.html:7954+): розбіжність 'Bulletin' tooltip — actionable hint.
+//      Раніше: загальне 'обережніше з рішеннями'.
+//      Тепер: 4 причини чому буває + actionable: "знизь довіру 15%, перевір
+//      1-2 додаткові сигнали (NOAA SWPC, Panchanga, самопочуття)".
+//
+//   A4 (index.html:1482): canonical metrics у backtest-badge tooltip.
+//      Раніше: показував лише κ=0.52 і weighted κ=0.73.
+//      Тепер: + MCC 3-class 0.52, MCC binary 0.67, MCC 7-class 0.33,
+//      ExactMatch 43.6%, Within ±1: 72.1%, per-class F1 (Negative 0.84,
+//      Positive 0.69, Neutral 0.26 — basis Б-патчу).
+//      Source attribution: CANONICAL_METRICS.md v2.0.
+//
+//   Г2 (index.html:_calcChoghadiya): defensive coding.
+//      wday wrap modulo (захист outside [0..6]); dayMs validation (zero/negative
+//      → null); fallback на _CHOG_DAY[0] якщо wday некоректний.
+//      На полярних широтах (sunrise > sunset) функція повертає null gracefully.
+//
+//   В2 (index.html:loadExpertOverrides): diagnostic flag.
+//      window._expertOverridesLoadStatus: 'pending' | 'loaded' | 'missing' |
+//      'invalid' | 'http_error_404'. Допомагає Kyrylo діагностувати чи файл
+//      справді задеплоєний на GitHub Pages.
+//      У DevTools: window._expertOverridesLoadStatus → 'missing' = файл не
+//      знайдено (треба перевірити деплой).
+//
+//   Cache keys bumped до v88-8-5.
+//
+// v88.8.4 changes (7-class verdict + SEO + Tithi paksha tooltip):
+//   VERDICT-7-BADGE (index.html: HTML 1442+, JS classifyVerdict7Class).
+//      Архітектурне A: дашборд має 5-class UI модель (favorable/good/neutral/unstable/tense),
+//      а DOCX/PDF канон використовує 7-class verdict_text:
+//         -3 'Особливо несприятливий день'
+//         -2 'Несприятливий день'                 ← UI: tense (вже у favorable)
+//         -1 'Помірно несприятливий день'
+//          0 'Нейтральний день'                   ← UI: neutral
+//         +1 'Помірно сприятливий день'
+//         +2 'Сприятливий день'                   ← UI: good
+//         +3 'Особливо сприятливий день для справ, дій'
+//      4 з 7 canonical labels були ВІДСУТНІ у UI. Тепер новий бейдж #heroVerdict7Badge
+//      показує full canonical label поряд з UI-state. Користувач отримує і коротку
+//      команду (МОЖНА/НЕЙТРАЛЬНО/СТОП) і повну canonical назву.
+//      Format: "Engine (7-class): Помірно сприятливий день (+1)"
+//      Колір background — з verdict_colors (t2t.json), 13% opacity + left-border 3px.
+//      Tooltip: пояснює що це паралельні вимірювання, не конфлікт.
+//
+//   SEO-CANONICAL (index.html:35). Додано <link rel="canonical"> — раніше відсутнє,
+//      що могло призводити до duplicate content якщо PWA доступна на різних шляхах.
+//
+//   TITHI-PAKSHA-TIP (index.html:7039+). Покращено Tithi tooltip:
+//      Додано рядок "Місячний день: N з 30" + "Paksha: Shukla/Krishna (опис)".
+//      Раніше: tooltip не пояснював що "(K)" = Krishna paksha (waning Moon).
+//      Тепер: явно "Krishna paksha (темна половина) — Місяць убуває, енергія йде
+//      до завершення" або "Shukla paksha (світла половина) — Місяць росте...".
+//
+//   Cache keys bumped до v88-8-4.
+//
+// v88.8.3 changes (Bugs fix + UX polish):
+//   FIX-1 SHARE-URL (index.html:13266+13270): старий URL у share-image canvas.
+//      Storm Story export друкував "kyrylo-ua.github.io/g-index" і fallbackText
+//      містив той самий URL. Користувач, який ділиться через WhatsApp/Telegram,
+//      посилав посилання на неіснуючу сторінку.
+//      Тепер: "nikolaevkirill-commits.github.io/g-index/deploy/" (canonical).
+//
+//   FIX-2 CONSOLE-MUTING (index.html:2507+): production noise.
+//      Раніше у консолі юзера сипалось 42 unguarded console.log/warn:
+//      [geo] OK, [CORS] direct fail, [v88.7.6 parse3DaySafe] placeholders,
+//      engine_scores expire warnings — це dev info, не для production.
+//      Тепер: глобальний override на console.log/warn/debug; активний тільки
+//      якщо window._DEBUG=true або URL містить ?debug=1.
+//      console.error НЕ зачеплений — критичні події (engine expired, schema violation)
+//      завжди видимі.
+//
+//   FIX-3 CHOGHADIYA-NEXT (index.html:7290+): "Наступне сприятливе" actionable hint.
+//      Раніше Choghadiya hint у panchBestTime показував лише поточний слот:
+//        "Чогхадія зараз: ✗ Udveg · до 12:57"
+//      Користувач бачить що "зараз погано" але не знає коли стане ОК.
+//      Тепер: якщо поточний slot.score < 1, додається другий рядок:
+//        "Наступне сприятливе: ★★ Labh · з 14:50"
+//      Actionable — користувач може спланувати важливі дії.
+//
+//   Cache keys bumped до v88-8-3.
+//
+// v88.8.2 changes (Forecast peak у history blok + Г-fix-2):
 //   FORECAST-PEAK (index.html:_getBestWorstDays + renderBestWorstDays).
 //      Раніше блок "Історія · 30д" показував лише past 30 days best/worst.
 //      На скріні v88.8.1: "Найкращий день 20.04 G=+5.3" (історія), а на 27-day графіку
@@ -287,8 +394,8 @@
 //   3. backtest.html додано до SHELL_FILES.
 //   4. cache.put awaited перед SW_FRESH_DATA notify (race fix).
 
-const SHELL_CACHE = 'g-index-shell-v88-8-2';
-const DATA_CACHE = 'g-index-data-v88-8-2';
+const SHELL_CACHE = 'g-index-shell-v88-8-6';
+const DATA_CACHE = 'g-index-data-v88-8-6';
 
 const SHELL_FILES = [
   './',
