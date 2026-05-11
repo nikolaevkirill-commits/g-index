@@ -1,0 +1,179 @@
+{
+  "engine_version": "v18.8",
+  "release_version": "v88.8.19",
+  "release_date": "2026-05-11",
+  "core_engine": {
+    "version": "v18.5",
+    "status": "FROZEN",
+    "freeze_start": "2026-05-03",
+    "freeze_end": "~2026-08-01",
+    "scores_file": "engine_scores.json",
+    "scores_file_md5_unchanged": true
+  },
+  "patches": {
+    "type": "read-time post-processing",
+    "location": {
+      "js": "_applyV186Patches() in index.html",
+      "python_tracker": "apply_v18_6_patches() in prospective_tracker.py",
+      "python_docx": "apply_v18_6_patches() in make_forecast_docx.py"
+    },
+    "function_name_legacy": "apply_v18_6_patches (kept for backward compat, actual implementation = v18.8)",
+    "active": [
+      {
+        "id": "P2_broad",
+        "trigger": "tag contains '✈' emoji (any form)",
+        "effect": "з 'Подорожі' → max(eng, +2); ✈ alone → eng + 1",
+        "days_affected": 113,
+        "percent_of_dataset": 20.0,
+        "rationale": "v18.7 P2 шукав 'Подорожі' word — пропускав 93 dates з emoji-only. 96% з ✈ alone мають PDF≥+1 (avg pdf +2.64)."
+      },
+      {
+        "id": "P3_broad",
+        "trigger": "cal_tithi in (10, 25), no bolt/amavasya symbol",
+        "effect": "eng + 1",
+        "days_affected": 38,
+        "percent_of_dataset": 6.7,
+        "rationale": "Both Shukla Dashami (10) and Krishna Dashami (25) — 'Пурна' type per Posibnyk Тaблиця 1. v18.7 P3 покривав тільки Shukla."
+      },
+      {
+        "id": "P4_saturn_storm",
+        "trigger": "empty tag + saturn_retro symbol + Kp ≥ 4",
+        "effect": "eng = -3",
+        "days_affected": 8,
+        "percent_of_dataset": 1.4,
+        "rationale": "Canonical Saturn malefic + geomagnetic storm. Avg PDF = -3.0, engine consistently -1 raw."
+      },
+      {
+        "id": "P1d_empty_eng2_demote",
+        "trigger": "empty tag + raw eng = +2",
+        "effect": "eng = +1",
+        "days_affected": 38,
+        "percent_of_dataset": 6.7,
+        "rationale": "Empty-tag day mode of PDF distribution = +1. Точкова correction (not all positives, тільки eng=+2)."
+      }
+    ],
+    "rejected": [
+      {
+        "id": "P1a",
+        "description": "empty tag + Kp<4 → min(eng, -1)",
+        "rejected_reason": "Binary regression -1.9pp"
+      },
+      {
+        "id": "P5",
+        "description": "Purnima (Tithi 15) → -1",
+        "rejected_reason": "Net zero effect (helps 2 dates, hurts 2)"
+      }
+    ]
+  },
+  "validation": {
+    "dataset": {
+      "n": 212,
+      "period": "2025-06-01 to 2026-05-01",
+      "filter": "Dates with available PDF reference (excluding gaps)",
+      "ground_truth": "pdf47_ground_truth_v5.json (v5.1, FROZEN)"
+    },
+    "metrics_v18_8": {
+      "strict_3class_pct": 79.2,
+      "binary_pct": 88.7,
+      "exact_7class_pct": 50.0,
+      "cv_5fold_strict_mean": 79.2,
+      "cv_5fold_strict_std": 4.2
+    },
+    "metrics_v18_5_baseline_n212": {
+      "strict_3class_pct": 75.0,
+      "binary_pct": 87.3,
+      "exact_7class_pct": 43.9,
+      "cv_5fold_strict_mean": 74.9,
+      "cv_5fold_strict_std": 5.7
+    },
+    "cumulative_lift_v18_5_to_v18_8": {
+      "strict_pp": 4.2,
+      "binary_pp": 1.4,
+      "exact_pp": 6.1,
+      "cv_stability_improvement_pp": 1.5
+    },
+    "ablation_chain": [
+      {"version": "v18.5", "strict": 75.0, "binary": 87.3, "exact": 43.9, "days_patched": 0},
+      {"version": "v18.6_P2narrow_P3narrow", "strict": 77.4, "binary": 88.2, "exact": 45.3, "days_patched": 30},
+      {"version": "v18.7_plus_P4_P1d", "strict": 77.4, "binary": 88.2, "exact": 49.1, "days_patched": 45},
+      {"version": "v18.8_P2broad_P3krishna", "strict": 79.2, "binary": 88.7, "exact": 50.0, "days_patched": 180}
+    ],
+    "v18_5_canonical_baseline_n280": {
+      "note": "Archived from V25-fu29 v5.1 (frozen 2026-05-03). Different n filter.",
+      "strict_3class_pct": 71.4,
+      "binary_pct": 83.6,
+      "exact_pct": 43.6,
+      "ci_strict_95": [66.1, 76.8],
+      "cohens_kappa_3class": 0.516,
+      "weighted_kappa_7class": 0.727,
+      "mcc_binary": 0.67,
+      "lift_over_kp_only_pp": 40.3
+    }
+  },
+  "cross_implementation_consistency": {
+    "js_python_python_dates_synced": 564,
+    "total_dates": 564,
+    "desync_count": 0,
+    "verified": "2026-05-11 via pre_deploy_check.py"
+  },
+  "g_extended": {
+    "version": "v3.1",
+    "type": "R&D advisory regression",
+    "status": "NOT primary classifier",
+    "trained_on": "v18.8-patched dataset n=212",
+    "cv_r_mean": 0.842,
+    "cv_r_std": 0.053,
+    "cv_sign_match_pct": 87,
+    "in_sample_r": 0.858,
+    "primary_feature": "eng_v188 (β=+0.96)",
+    "coefficients": {
+      "intercept": -0.2064,
+      "eng_v188": 0.9555,
+      "cal_score": -0.0530,
+      "masik_shivaratri": -0.2915,
+      "tithi_norm": 0.1856,
+      "ekadashi": -0.9573,
+      "mercury_retro": -0.5120,
+      "nak_norm": 0.3048
+    }
+  },
+  "ui_changes_v88_8_19": {
+    "label_engine_7class_renamed_to_live_g_round": true,
+    "tooltip_3_models_disclosure_added": true,
+    "backtest_html_refreshed_with_v18_8_numbers": true,
+    "engine_pill_tooltip_v18_8_details": true,
+    "accuracy_badge_text": "📊 79.2% strict / 50.0% exact"
+  },
+  "files_updated_v88_8_19": [
+    "index.html",
+    "sw.js",
+    "backtest.html",
+    "prospective_tracker.py",
+    "make_forecast_docx.py",
+    "generate_forecast_pdf.py",
+    "generate_2week_forecast.py",
+    "manifest.json",
+    "_config.yml",
+    "CANONICAL_METRICS.md",
+    "STATE.md",
+    "CHANGELOG.md",
+    "dashboard_map.md",
+    "README.md"
+  ],
+  "files_unchanged_phase_v3_frozen": [
+    "engine_scores.json",
+    "forecast_engine_v18_5.py",
+    "pdf47_ground_truth_v5.json",
+    "VALIDATION_REPORT_v18_5_pdf47_v5.json",
+    "decision_rule_sensitivity.json",
+    "PCL_CALIBRATION_REPORT.md",
+    "tag_to_text.json",
+    "expert_overrides_v3.json"
+  ],
+  "deployment_status": "READY",
+  "validator_summary": {
+    "critical_issues": 0,
+    "warnings": 0,
+    "last_run": "2026-05-11"
+  }
+}

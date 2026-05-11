@@ -1,171 +1,37 @@
-// G-Index Service Worker v88.8.17 (Pancha Pakshi visualization + tick для Sun Rhythm)
-// v88.8.17 changes — після audit скрінів v88.8.16:
-//   FEATURE: Pancha Pakshi 5-birds visualization у Personal section
-//     Заповнює "empty space" що був на скріні v88.8.16 праворуч під Planetary Rhythm.
-//     5 emoji великих (🦅🦉🐦‍⬛🐓🦚), поточний підсвічений (за nakshatra).
-//     Active bird: scale 1.35x, glow color, full opacity.
-//     Inactive: scale 1.0x, opacity 0.35.
-//     Footer: "Павич · через Dhanishtha · Краса, мистецтво, гармонія"
+// G-Index Service Worker v88.8.19 (Engine v18.8 — broad P2/P3 + G_ext v3.1)
+// v88.8.19 changes — incremental release після v88.8.18 з реальним bug fix:
+//   ENGINE v18.7 → v18.8: P2 раніше шукав 'Подорожі' word — missed 93 dates
+//     з '✈' emoji-only. P3 раніше тільки Shukla Dashami (10) — missed Krishna
+//     Dashami (Tithi 25). Реальний bug виявлений на 11.05.2026 (tag = "⚡ ✈ ⊕").
+//   Validation: Strict 77.4% → 79.2% (+1.8pp), Exact 49.1% → 50.0%.
+//     CV stability: ±4.8% → ±4.2% (кращe).
+//   G_EXT v3 → v3.1: re-trained на v18.8 baseline (eng_v188 primary feature).
+//     CV r +0.83 → +0.84, sign-match 85% → 87%.
+//   Days affected by patches: 45 → 180 (31.9% of dataset, 4x more).
+//   Patch frequency: P2 travel 113d, P3 dashami 38d, P1d 38d, P4 8d.
+//   Cross-Python consistency: 564/564 OK.
 //
-//   BUGFIX: Sun Rhythm stale status (помічений на v88.8.16 скріні)
-//     Vijaya 15:27-16:28 показано 🟡 (буде) хоча на 17:10 уже минула (мало бути ⚪).
-//     Причина: _renderSolarRhythm викликається тільки при data refresh,
-//     не на тікер. Між refreshes статус застарілий.
-//     ВИПРАВЛЕНО: setInterval _sunRhythmTickTimer = 60000ms (1 раз/хвилину).
-//     Тепер Brahma/Vijaya/Godhuli/Nishita/Abhijit/Choghadiya статуси
-//     оновлюються щохвилини без data refresh.
+//   Cache keys bumped до v88-8-19.
 //
-//   ВЕРИФІКАЦІЯ скрінів v88.8.16:
-//   ✅ G=-0.90 при Kp=1.00 (точно)
-//   ✅ Lunar phase 43% (phaseDeg 278.2°)
-//   ✅ DELAYED · 7хв коректно
-//   ✅ Heat strip slot 15 = -0.3, 'обережно ◄ зараз'
-//   ✅ Nakshatra: Dhanishtha [⚠ PK Roga] · Рухома · Марс · 🐦 Павич
-//   ✅ Rahu Kalam 18:35-20:29 (slot 8 canon)
-//   ✅ Yamagandam 12:55-14:48 (минув)
-//   ✅ Gulika Kaal 16:42-18:35 (минув)
-//   ✅ Brahma 03:16-04:17 (минула)
-//   ⚠ Vijaya stale → виправлено tick
-//   ✅ Godhuli 20:01-21:02 (буде)
-//   ✅ Nishita 00:37-01:12 (буде)
+// v88.8.18 changes — Engine v18.6 → v18.7 patches + G_ext v3 + Override system-wide:
+//   ENGINE v18.6 PATCHES: P2 (Подорожі✈ → +2) + P3 (Tithi 10 → +1).
+//     Ablation-validated на n=212: strict 75.0%→77.4% (+2.4pp), binary 87.3%→88.2%,
+//     exact 43.9%→45.3%. ALL 3 metrics improved (rare для post-processing).
+//     P1 і P5 викинуті ablation study (regression на binary).
+//     Engine v18.5 frozen залишається canonical — patches застосовуються
+//     у JS read-time через _applyV186Patches() у getEngineScore().
+//   G_EXTENDED R&D: паралельна метрика з regression coefs (CV r=+0.42 vs raw G +0.17).
+//     Показана як 🔬 G_ext біля Dᵢ у Science Bar. R&D advisory, не primary.
+//   SYSTEM-WIDE OVERRIDE: 27d chart/table/Forward Timeline/CSV/ICS — всі читають
+//     effective G (raw G замінений expert_eng для overrides). Кейс 15.05:
+//     червоний з ★ замість зеленого.
+//   STALENESS DETECTION: NOAA vs GFZ ages compared. Якщо обидва старі → cache marker.
+//   PANCHANGA AUDIT: Vara scores documented (military-oriented). Calibration showed
+//     r=+0.27 vs PDF — Pi explains 30% магнітуди. Post-freeze recalibration plan.
 //
-//   Cache keys bumped до v88-8-17.
+//   Cache keys bumped до v88-8-18.
 //
-// v88.8.16 changes (Audit fixes — Panchak detection + GM canonical details):
-//   FEATURE 1: GANDA_MOOL_DETAILS canonical mapping (Drikpanchang)
-//     Subtype/Ruler/Effect для кожної з 6 GM nakshatras:
-//       Moola type (Ketu-ruled): Ashwini, Magha, Mula → Father
-//       Ganda type (Mercury-ruled): Ashlesha, Jyeshtha, Revati → Mother/Younger siblings
-//     Tooltip розширено: тип + правитель + впливає на.
-//
-//   FEATURE 2: PANCHAK detection (5-day inauspicious window)
-//     Канон: Місяць у 5 nakshatras Aquarius/Pisces утворює Panchak.
-//     Indices: Dhanishtha (22), Shatabhisha (23), P.Bhadrapada (24),
-//              U.Bhadrapada (25), Revati (26).
-//     Заборонено: marriage, mundan, housewarming, business start, south travel.
-//     Weekday-specific names:
-//       Sunday: Roga Panchak, Monday: Raja, Tuesday: Agni,
-//       Friday: Chor, Saturday: Mrityu.
-//     UI: ⚠ PK [type] помаранчевий badge поряд з GM badge.
-//
-//   API розширено:
-//     panchanga.nakshatra.gandaMoolDetails: { subtype, ruler, effect } | null
-//     panchanga.nakshatra.isPanchak: boolean
-//     panchanga.nakshatra.panchakType: string ('Roga Panchak' тощо)
-//
-//   AUDIT VERIFIED:
-//   ✅ JS validity 5/5
-//   ✅ All typeof refs declared (false positives — arrow funcs)
-//   ✅ All HTML id unique (352 ids)
-//   ✅ RAHU/YAMA/GULIKA orders match canon
-//   ✅ PANCHA_PAKSHI_BIRD 27/27 канон Tamil (after self-fix у v88.8.15)
-//   ✅ GANDA_MOOL_INDICES = canonical 6 nakshatras
-//   ✅ computeAi не використовує nakshatra об'єкт — 0 risk регресії
-//   ✅ Backward compat: nakshatra new fields (.isGandaMool, .panchaPakshi,
-//      .gandaMoolDetails, .isPanchak, .panchakType) не ламають legacy consumers
-//
-//   Cache keys bumped до v88-8-16.
-//
-// v88.8.15 changes (Ganda Mool detection + Pancha Pakshi bird identifier):
-//   FEATURE 1: Ganda Mool detection (BPHS Ch.4 v.13)
-//     6 канонічних junction nakshatras на стиках ракші:
-//       Ashwini (0), Ashlesha (8), Magha (9), Jyeshtha (17), Mula (18), Revati (26)
-//     Народжені у Ganda Mool потребують Mool Shanti — 27-денний ритуал.
-//     UI: ⚠ GM badge поряд з ім'ям nakshatra (помаранчевий 10px).
-//     Tooltip: повне канонічне пояснення.
-//
-//   FEATURE 2: Pancha Pakshi (5 птахів) — Tamil Vedic tradition
-//     Кожна з 27 nakshatras належить до одного з 5 птахів:
-//       Гриф (Vulture):     5 накшатр — Bharani, Mrigashira, Pushya, Hasta, Vishakha
-//       Сова (Owl):         5 накшатр — Krittika, Punarvasu, Ashlesha, Magha, Anuradha
-//       Ворона (Crow):      6 накшатр — Rohini, Ardra, Jyeshtha, P.Ashadha, Shravana, Revati
-//       Півень (Cock):      6 накшатр — Ashwini, P.Phalguni, U.Phalguni, Chitra, Mula, U.Ashadha
-//       Павич (Peacock):    5 накшатр — Swati, Dhanishtha, Shatabhisha, P.Bhadrapada, U.Bhadrapada
-//     Загалом: 5+5+6+6+5 = 27 ✓
-//     UI: 🐦 [bird name] поряд з nakshatra type · regent.
-//     Тлумачення якостей у tooltip.
-//
-//   API розширено:
-//     panchanga.nakshatra.isGandaMool: boolean
-//     panchanga.nakshatra.panchaPakshi: { birdId, birdUa, birdEn, quality }
-//
-//   ПОВНИЙ КАНОН-АУДИТ ЗАВЕРШЕНО (5000-річний джйотиш):
-//   ✅ 5 angas: Tithi/Vara/Nakshatra/Yoga/Karana
-//   ✅ Auspicious muhurta: Abhijit + Brahma + Vijaya + Godhuli + Nishita
-//   ✅ Inauspicious: Rahu + Yamagandam + Gulika
-//   ✅ Choghadiya 16 (8 day + 8 night) per weekday
-//   ✅ Hora 24h Chaldean chain
-//   ✅ Ganda Mool (NEW)
-//   ✅ Pancha Pakshi bird (NEW)
-//   ✅ Lahiri ayanamsha Swiss Ephemeris official
-//   ✅ Eclipse catalog NASA (4/4 для 2026)
-//   ✅ Vimsottari Dasa lord chain (sum=120)
-//   ✅ Taara 9-position danger
-//
-//   Cache keys bumped до v88-8-15.
-//
-// v88.8.14 changes (Brahma + Vijaya + Godhuli + Nishita auspicious muhurta):
-//   FEATURE: function _calcAuspiciousMuhurtas додано поряд з _calcAbhijit.
-//   4 нові канонічні muhurta:
-//     • Brahma Muhurta:  sunrise -2muhurta до sunrise -1muhurta (~96-48min до сходу).
-//                        Найкращий час для духовних практик, медитації, навчання.
-//     • Vijaya Muhurta:  11-та з 15 muhurta дня. "Час перемоги".
-//                        Успіх у складних задачах, переговори, дебати.
-//     • Godhuli Muhurta: sunset ± 0.5 muhurta. "Час повернення корови".
-//                        Gentle transitions, вечірні молитви, зосередження.
-//     • Nishita Muhurta: 8-ма з 15 night muhurta (північна).
-//                        Meditation, midnight rituals, deep contemplation.
-//
-//   Канон cross-validation: Drik Panchang Houston Mar 6 2026:
-//     Brahma:  05:03-05:52 (sunrise 06:42, dayLen 11h42min, muhurta=46.8min)
-//              -2 muhurta = 06:42 - 1:34 = 05:08, -1 muhurta = 05:55. Δ ~5min vs Drik.
-//     Vijaya:  02:30-03:17 PM. Slot 11 = sr+10*46.8min = 06:42+7:48 = 14:30. Δ 0min ✓
-//     Godhuli: 06:22-06:46 PM. Sunset 18:24 ± 23.4min = 18:00-18:47. Δ ~22min.
-//              (Drik використовує дещо різну формулу — можливо 0.5 muhurta після sunset)
-//     Nishita: 12:08-12:57 AM. Midnight ~00:33, night muhurta=49.2min, ±24.6.
-//              → 00:08-00:57. Δ 0min ✓
-//
-//   Невеликі розбіжності для Brahma/Godhuli (~5-22min) — різні канонічні школи.
-//   Стандарт BPHS Ch.4 v.5 використовує симетричні muhurta пропорції,
-//   що даю в коді. Це консервативна канонічна реалізація.
-//
-//   UI:
-//     Контейнер #panchAuspiciousMuhurta між Abhijit і Choghadiya у Sun Rhythm block.
-//     4 inline блоки з 3-state логікою (🟢 active / 🟡 upcoming / ⚪ past).
-//     Tooltip educational з канонічним поясненням і призначенням.
-//
-//   Тепер дашборд має ПОВНУ канонічну panchanga muhurta структуру:
-//     Auspicious: Abhijit + Brahma + Vijaya + Godhuli + Nishita
-//     Inauspicious: Rahu + Yamagandam + Gulika
-//     Choghadiya: 16 muhurta (8 day + 8 night) per weekday
-//     Hora: 24h Chaldean chain
-//
-//   Cache keys bumped до v88-8-14.
-//
-// v88.8.13 changes (UI Yamagandam + Gulika Kaal у Панчангу таблицю):
-//   FEATURE: 2 нові рядки у panchTable після Rahu Kalam — Yamagandam і Gulika Kaal.
-//   Кожен рядок з 3-state логікою (🔴 active / 🟡 upcoming / ⚪ past) як Rahu.
-//   Times у локальному часі, UTC у tooltip.
-//   Defensive guard: якщо subobjects відсутні (legacy panchanga) — render skipped.
-//
-//   Tooltip educational:
-//     Yamagandam: 'Канонічне інаусп. вікно (Surya Siddhanta). Друге за важливістю після Rahu Kalam.'
-//     Gulika Kaal: 'Канонічне інаусп. вікно (син Сатурна). Третє після Rahu+Yama.'
-//
-//   Тепер юзер бачить ПОВНУ канонічну triadu inauspicious windows одразу.
-//
-//   ПЕРЕВІРКА на скрінах v88.8.12 (10.05.2026 Sunday Київ 13:20):
-//   • Rahu Kalam 18:35-20:29 (slot 8) — v88.8.11 fix ВИДНО ✅
-//   • Abhijit 12:24-13:25 (61 хв пропорційно) — v88.8.11 fix ВИДНО ✅
-//   • Abhijit 'зараз' marker — поточний 13:20 у вікні ✅
-//
-//   ОЧІКУВАНИЙ РЕЗУЛЬТАТ v88.8.13 на скрінах 13:20 Київ:
-//   • Yamagandam: 🔴 12:53–14:48 зараз (АКТИВНИЙ!)
-//   • Gulika Kaal: 🟡 16:42–18:36 (буде)
-//
-//   Cache keys bumped до v88-8-13.
-//
-// v88.8.12 changes (Yamagandam + Gulika Kaal — повна канонічна triada):
+// v88.8.12 changes — додано 2 канонічні inauspicious периоди (BPHS / Surya Siddhanta):
 //   FEATURE: Yamagandam (Yama window) — інаусп. period другої важливості після Rahu.
 //   FEATURE: Gulika Kaal (Saturn's son) — третій канонічний інаусп. period.
 //   Тепер дашборд має повну канонічну triadu: Rahu + Yama + Gulika.
@@ -734,8 +600,8 @@
 //   3. backtest.html додано до SHELL_FILES.
 //   4. cache.put awaited перед SW_FRESH_DATA notify (race fix).
 
-const SHELL_CACHE = 'g-index-shell-v88-8-18';
-const DATA_CACHE = 'g-index-data-v88-8-18';
+const SHELL_CACHE = 'g-index-shell-v88-8-19';
+const DATA_CACHE = 'g-index-data-v88-8-19';
 
 const SHELL_FILES = [
   './',
