@@ -11235,14 +11235,13 @@ function renderDisagreement(){
 
   if(_models.length < 2){ _alert.style.display = 'none'; return; }
 
-  const _vals = _models.map(m => m.val);
-  const _max = Math.max(..._vals), _min = Math.min(..._vals);
-  const _range = _max - _min;
-
   // v88.8.18 Bug fix: Σ Рік тому — історичні астро-дані (інша дата, без Kp).
-  // НЕ повинно тригерити "протилежні знаки сьогодні" warning, бо це не сьогоднішнє джерело.
-  // Range залишається з усіх моделей (для оцінки spread), sign conflict — лише з today's.
+  // НЕ повинно тригерити warnings про "сьогоднішній розкид/конфлікт", бо це не сьогоднішнє джерело.
+  // Range і sign conflict — лише з today's моделей. Σ Рік тому показується окремо як reference.
   const _todayVals = _models.filter(m => m.name !== 'Σ Рік тому').map(m => m.val);
+  const _todayMax = _todayVals.length ? Math.max(..._todayVals) : 0;
+  const _todayMin = _todayVals.length ? Math.min(..._todayVals) : 0;
+  const _todayRange = _todayMax - _todayMin;
   const _hasPos = _todayVals.some(v => v > 0.5);
   const _hasNeg = _todayVals.some(v => v < -0.5);
   const _signConflict = _hasPos && _hasNeg;
@@ -11250,7 +11249,8 @@ function renderDisagreement(){
   // v88.6.9: поріг range 2.5 → 3.0 щоб не trigger warning при normal architectural divergence
   // (Hero continuous score vs Engine discrete tag-model завжди дають ~2 бали рiзницi navit pri spокiйному днi)
   // Sign conflict (один + iнший −) залишається тригером ВЖИВЕ.
-  if(_range < 3.0 && !_signConflict){
+  // v88.8.18: trigger тільки якщо today's range ≥3 (БЕЗ Σ Рік тому, бо то інша одиниця).
+  if(_todayRange < 3.0 && !_signConflict){
     _alert.style.display = 'none';
     return;
   }
@@ -11262,13 +11262,13 @@ function renderDisagreement(){
 
   const _title = _signConflict
     ? '⚠ Різні джерела дають протилежні знаки сьогодні'
-    : `⚠ Великий розкид між джерелами (різниця ${_range.toFixed(1)} балів)`;
+    : `⚠ Великий розкид між джерелами (різниця ${_todayRange.toFixed(1)} балів)`;
 
   const _why = _signConflict
     ? 'Одне джерело каже «сьогодні +», інше «сьогодні −». Це означає що день має змішану природу — частина факторів сприятлива, частина проблемна.'
-    : `Усі джерела вказують у тому самому напрямку, але з різною силою. Розкид у ${_range.toFixed(1)} бала — суттєвий, означає невпевненість у точному рівні.`;
+    : `Сьогоднішні джерела (Зараз, Engine${_pdfVal != null ? ', Бюлетень' : ''}) вказують у тому самому напрямку, але з різною силою. Розкид у ${_todayRange.toFixed(1)} бала — суттєвий, означає невпевненість у точному рівні.`;
 
-  const _conf = _signConflict ? '~30%' : _range >= 4 ? '~25%' : '~15%';
+  const _conf = _signConflict ? '~30%' : _todayRange >= 4 ? '~25%' : '~15%';
 
   const _action = `Знизь довіру до сьогоднішньої оцінки <strong style="color:#ffd2a0">${_conf}</strong>. Якщо плануєш важливе рішення — звір з 1–2 додатковими сигналами (NOAA SWPC, Panchanga ↓, локальне самопочуття).`;
 
