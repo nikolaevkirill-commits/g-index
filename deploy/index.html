@@ -10238,6 +10238,24 @@ function _renderWhyTrend(){
     d.isPast  = (d.ds <  todayStr);
   });
 
+  // v88.8.18 ★ FIX: anotate days з expert overrides — щоб видно було розбіжність
+  // між астро G (раw 27d) і експертною оцінкою для тих самих дат.
+  // На скрін Image 3 vs Image 5: завтра G=+0.8 (астро), але expert=+3 (PDF bulletin).
+  // Без цього маркера тренд "спадаючий до -0.9 на 13.05" вводить в оману, бо
+  // експертний прогноз для 13.05 = +3 (рятуючий день).
+  days.forEach(d => {
+    d.overrideEng = null;
+    try {
+      if(typeof _expertOverrides !== 'undefined' && _expertOverrides && _expertOverrides[d.ds]){
+        d.overrideEng = _expertOverrides[d.ds].expert_eng;
+      } else if(typeof _engineScores !== 'undefined' && _engineScores && _engineScores[d.ds]){
+        // Engine snapshot теж — для повної консистенції з bulletin рядком
+        const _eng = _engineScores[d.ds];
+        if(_eng && isFinite(_eng.eng)) d.engineEng = _eng.eng;
+      }
+    } catch(e){if(window._DEBUG)console.warn('[silent overrideAnnot]:',e.message)}
+  });
+
   if(days.length < 2){ block.style.display = 'none'; return; }
 
   // Layout
@@ -10280,11 +10298,23 @@ function _renderWhyTrend(){
   days.forEach((d, i) => {
     const x = xFor(i), y = yFor(d.G);
     const col = colorFor(d.G);
+    // v88.8.18 ★ FIX: tooltip для кожної точки — показує raw G + expert (якщо є)
+    let _dotTip = `${d.ds}: G=${d.G >= 0 ? '+' : ''}${d.G.toFixed(2)}`;
+    if(Number.isFinite(d.overrideEng)){
+      _dotTip += ` · ⚠ Експерт ${d.overrideEng >= 0 ? '+' : ''}${d.overrideEng} (PDF override)`;
+    } else if(Number.isFinite(d.engineEng)){
+      _dotTip += ` · Engine v18.5: ${d.engineEng >= 0 ? '+' : ''}${d.engineEng}`;
+    }
+    const _titleAttr = `<title>${_dotTip}</title>`;
     if(d.isToday){
-      svgHtml += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="6" fill="${col}" stroke="#0a1428" stroke-width="2" />`;
+      svgHtml += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="6" fill="${col}" stroke="#0a1428" stroke-width="2">${_titleAttr}</circle>`;
       svgHtml += `<text x="${x.toFixed(1)}" y="${(y+20).toFixed(1)}" font-size="10" fill="${col}" text-anchor="middle" font-weight="700">зараз</text>`;
     } else {
-      svgHtml += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${d.isPast ? 3.5 : 4}" fill="${col}" opacity="${d.isPast ? 0.75 : 1}" />`;
+      svgHtml += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${d.isPast ? 3.5 : 4}" fill="${col}" opacity="${d.isPast ? 0.75 : 1}">${_titleAttr}</circle>`;
+    }
+    // v88.8.18 ★ FIX: marker ★ над точкою з expert override — щоб видно невідповідність астро G vs PDF expert
+    if(Number.isFinite(d.overrideEng) && !d.isPast){
+      svgHtml += `<text x="${x.toFixed(1)}" y="${(y-9).toFixed(1)}" font-size="11" fill="#ffd166" text-anchor="middle" font-weight="700" style="filter:drop-shadow(0 0 2px rgba(0,0,0,.7))"><title>Експертна оцінка з PDF: ${d.overrideEng >= 0 ? '+' : ''}${d.overrideEng} (відрізняється від астро G ${d.G >= 0 ? '+' : ''}${d.G.toFixed(1)})</title>★</text>`;
     }
     // Day label
     // v88.7.6 BUG-4 fix: round (не ceil) + noon-UTC anchor — DST-safe день-різниця.
@@ -10320,7 +10350,21 @@ function _renderWhyTrend(){
   const peakStr = peak ? `до ${peak.G >= 0 ? '+' : ''}${peak.G.toFixed(1)} на ${peak.ds.slice(5)}` : '';
 
   if(note){
-    note.textContent = `Тренд ${arrow} ${trendTxt}${peakStr ? ' · ' + peakStr : ''}`;
+    // v88.8.18 ★ FIX: попередження якщо future days мають expert overrides
+    // зі значним розходженням з астро G.
+    const _futWithOverride = days.filter(d =>
+      !d.isPast && !d.isToday && Number.isFinite(d.overrideEng)
+    );
+    const _maxDelta = _futWithOverride.length
+      ? Math.max(..._futWithOverride.map(d => Math.abs(d.overrideEng - d.G)))
+      : 0;
+    let _overrideWarn = '';
+    if(_futWithOverride.length && _maxDelta >= 2){
+      const _firstOv = _futWithOverride[0];
+      const _diff = _firstOv.overrideEng - _firstOv.G;
+      _overrideWarn = ` · <span style="color:#ffd166" title="На графіку показано raw астро G (Kp + ΣAᵢ). Експертні PDF бюлетені для майбутніх днів дають інші оцінки (★ маркер). Делта до ${_maxDelta.toFixed(1)} балів — перевір 3-day forecast блок нижче для правильних значень.">★ є експертні корекції (Δ до ${_maxDelta.toFixed(1)})</span>`;
+    }
+    note.innerHTML = `Тренд ${arrow} ${trendTxt}${peakStr ? ' · ' + peakStr : ''}${_overrideWarn}`;
   }
   block.style.display = 'block';
 }
