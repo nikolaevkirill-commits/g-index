@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta http-equiv="X-Frame-Options" content="DENY" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://*.supabase.co https://*.nikolaev-kirill.workers.dev https://services.swpc.noaa.gov https://corsproxy.io https://api.allorigins.win https://api.codetabs.com https://corsfix.com https://thingproxy.freeboard.io; manifest-src 'self'; worker-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://*.supabase.co https://*.nikolaev-kirill.workers.dev https://services.swpc.noaa.gov https://kp.gfz.de https://corsproxy.io https://api.allorigins.win https://api.codetabs.com https://corsfix.com https://thingproxy.freeboard.io; manifest-src 'self'; worker-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'" />
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
@@ -30,6 +30,7 @@
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <link rel="dns-prefetch" href="https://api.allorigins.win" />
   <link rel="dns-prefetch" href="https://corsproxy.io" />
+  <link rel="dns-prefetch" href="https://kp.gfz.de" />
 
   <!-- SEO / share -->
   <!-- v88.8.4: canonical URL для SEO (запобігає duplicate content якщо PWA доступна на різних шляхах) -->
@@ -3631,6 +3632,13 @@ const URL_KP_OBS_FB   = 'https://services.swpc.noaa.gov/json/planetary_k_index_1
 const URL_KP_FCST     = 'https://services.swpc.noaa.gov/products/noaa-planetary-k-index-forecast.json';
 const URL_27DAY       = 'https://services.swpc.noaa.gov/text/27-day-outlook.txt';
 const URL_45DAY_FB    = 'https://services.swpc.noaa.gov/json/45-day-forecast.json'; // fallback P0
+// v88.8.18 ★ NOAA SWPC STALENESS FIX: NOAA SWPC /products/ endpoints не оновлюються
+// з 28.03.2026 (verified 11.05.2026 — 6+ тижнів простою). GFZ Potsdam — canonical
+// Kp source за IAGA, оновлюється кожні 3 години. Це primary alternative tier.
+// Format: ?start=YYYY-MM-DDTHH:mm:ssZ&end=...&index=Kp&status=def (definitive)
+//          або status=now (nowcast — швидше, але менш точно)
+const URL_GFZ_KP_NOW  = 'https://kp.gfz.de/app/json/?index=Kp&status=now'; // (з start/end)
+const URL_GFZ_KP_DEF  = 'https://kp.gfz.de/app/json/?index=Kp&status=def';
 const URL_WOLF_SN  = 'https://sidc.be/SILSO/DATA/EISN_current.json';
 const URL_WOLF_SN_FB = 'https://sidc.be/SILSO/DATA/SN_d_tot_V2.0.json'; // fallback: total SN
 const URL_DST_FB   = 'https://services.swpc.noaa.gov/products/geospace/propagated-solar-wind-1-hour.json'; // fallback Dst proxy
@@ -5521,6 +5529,40 @@ function gTooltipText(kLabel, kVal, aiObj){
 // ----------------------------- Парсери NOAA ------------------------------
 // Парсер JSON спостережень Kp (noaa-planetary-k-index.json)
 // Формат: [["time_tag","kp","a_running","station_count"],...] або з заголовком
+// v88.8.18 ★ GFZ POTSDAM FALLBACK: Kp index у канонічному форматі IAGA.
+// API: https://kp.gfz.de/app/json/?start=ISO&end=ISO&index=Kp&status=now|def
+// Response format: { datetime: [...], Kp: [...], status: [...] }
+// Конвертуємо в NOAA-сумісний формат [["time_tag","Kp"],...] для parseKpObsJSON.
+async function fetchGfzKpAsNoaaFormat(daysBack){
+  const _days = isFinite(daysBack) ? daysBack : 3;
+  const end = new Date();
+  const start = new Date(end.getTime() - _days * 86400000);
+  // ISO without ms для GFZ API
+  const _fmt = d => d.toISOString().slice(0,19) + 'Z';
+  const url = `https://kp.gfz.de/app/json/?start=${_fmt(start)}&end=${_fmt(end)}&index=Kp&status=now`;
+  const text = await fetchTextWithCORS(url);
+  let data;
+  try { data = JSON.parse(text); } catch(e) { throw new Error('GFZ JSON parse: '+e.message); }
+  if (!data || !Array.isArray(data.datetime) || !Array.isArray(data.Kp)) {
+    throw new Error('GFZ format invalid (no datetime/Kp arrays)');
+  }
+  if (data.datetime.length !== data.Kp.length) {
+    throw new Error('GFZ length mismatch: '+data.datetime.length+' vs '+data.Kp.length);
+  }
+  // Build NOAA-compatible rows
+  const out = [['time_tag','Kp','a_running']];
+  for (let i = 0; i < data.datetime.length; i++) {
+    const t = data.datetime[i];
+    const k = parseFloat(data.Kp[i]);
+    if (!t || !isFinite(k) || k < 0) continue;
+    // GFZ datetime: "2026-05-11T06:00:00Z" → NOAA: "2026-05-11 06:00:00"
+    const tNoaa = String(t).replace('T',' ').replace('Z','').replace(/\.\d+/,'');
+    out.push([tNoaa, k, null]);
+  }
+  if (out.length < 2) throw new Error('GFZ empty after filter');
+  return JSON.stringify(out);
+}
+
 function parseKpObsJSON(json){
   let rows;
   try{ rows = JSON.parse(json); }catch(e){ return {kNow:null,aNow:null,whenText:null,kPrev3h:null,kp24hAgo:null}; }
@@ -11691,12 +11733,54 @@ async function loadAll(){
   if(kpObsR.status === 'fulfilled'){
     _lastKpObsJson = kpObsR.value;
     lastWWV = parseKpObsJSON(kpObsR.value);
-    _setSrcStatus('srcKpObs','ok');
+    // v88.8.18 ★ STALENESS CHECK: NOAA /products/ файли не оновлюються з 28.03.2026.
+    // Якщо primary fetched OK, але last data point > 24h тому — replace з GFZ.
+    let _stale = false;
+    try {
+      if (lastWWV && lastWWV.whenText) {
+        const _tsStr = lastWWV.whenText.replace(' UTC', '').replace(' ', 'T') + 'Z';
+        const _tsMs = new Date(_tsStr).getTime();
+        if (isFinite(_tsMs) && (Date.now() - _tsMs) > 24 * 3600 * 1000) {
+          _stale = true;
+          console.warn('[v88.8.18] NOAA Kp data stale ('+Math.round((Date.now()-_tsMs)/3600000)+'h old) — trying GFZ');
+        }
+      }
+    } catch(eStale){ /* silent */ }
+
+    if (_stale) {
+      try {
+        const gfzVal = await fetchGfzKpAsNoaaFormat(3);
+        const gfzParsed = parseKpObsJSON(gfzVal);
+        if (gfzParsed && isFinite(gfzParsed.kNow)) {
+          _lastKpObsJson = gfzVal;
+          lastWWV = gfzParsed;
+          _setSrcStatus('srcKpObs','ok');
+          if(window._DEBUG) console.log('[v88.8.18] Replaced stale NOAA з GFZ (Kp='+lastWWV.kNow+')');
+        }
+      } catch(eGfz){
+        console.warn('[v88.8.18] GFZ replacement failed, keeping stale NOAA:', eGfz.message);
+      }
+    } else {
+      _setSrcStatus('srcKpObs','ok');
+    }
     if (lastWWV && isFinite(lastWWV.kNow)) lsSet('last_kp_known', lastWWV.kNow);
     if(window._DEBUG) console.log('[v43] KP_OBS OK (primary)');
   } else {
     console.warn('[v43] KP_OBS primary failed, trying fallback:', kpObsR.reason?.message);
+    // v88.8.18 ★ NEW: GFZ Potsdam Kp як tier-1 fallback (NOAA stale since 2026-03-28)
+    let _gfzOK = false;
     try{
+      const gfzVal = await fetchGfzKpAsNoaaFormat(3);
+      _lastKpObsJson = gfzVal;
+      lastWWV = parseKpObsJSON(gfzVal);
+      _setSrcStatus('srcKpObs','ok');
+      if (lastWWV && isFinite(lastWWV.kNow)) lsSet('last_kp_known', lastWWV.kNow);
+      _gfzOK = true;
+      if(window._DEBUG) console.log('[v88.8.18] KP_OBS GFZ Potsdam fallback OK (Kp='+lastWWV.kNow+')');
+    }catch(eGfz){
+      console.warn('[v88.8.18] GFZ fallback failed:', eGfz.message);
+    }
+    if (!_gfzOK) try{
       const fbVal = await fetchTextWithCORS(URL_KP_OBS_FB);
       // planetary_k_index_1m.json: [{time_tag,kp,kp_index,...}]
       // Конвертуємо у формат noaa-planetary-k-index.json: [["time_tag","Kp"],...]
@@ -11710,17 +11794,19 @@ async function loadAll(){
       lastWWV = parseKpObsJSON(converted);
       if(window._DEBUG) console.log('[v43] KP_OBS fallback OK (1m)');
     }catch(e2){
-      console.warn('[v43] KP_OBS fallback also failed:', e2.message);
-      // v62: synthetic Kp з localStorage (останнє відоме значення)
-      const _lsKp = parseFloat(lsGet('last_kp_known'));
-      if (isFinite(_lsKp)) {
-        lastWWV = {kNow:_lsKp, aNow:null, whenText:'(кеш)', kPrev3h:null, kp24hAgo:null, _cached:true};
-        _setSrcStatus('srcKpObs','cache');
-        if(window._DEBUG) console.log('[v62] KP_OBS: using localStorage cache Kp='+_lsKp);
-      } else {
-        lastWWV = {kNow:2.0, aNow:null, whenText:'(synthetic)', kPrev3h:null, kp24hAgo:null, _synthetic:true};
-        _setSrcStatus('srcKpObs','synthetic');
-        if(window._DEBUG) console.log('[v62] KP_OBS: full fallback to synthetic Kp=2.0');
+      if (!_gfzOK) {
+        console.warn('[v43] KP_OBS fallback also failed:', e2.message);
+        // v62: synthetic Kp з localStorage (останнє відоме значення)
+        const _lsKp = parseFloat(lsGet('last_kp_known'));
+        if (isFinite(_lsKp)) {
+          lastWWV = {kNow:_lsKp, aNow:null, whenText:'(кеш)', kPrev3h:null, kp24hAgo:null, _cached:true};
+          _setSrcStatus('srcKpObs','cache');
+          if(window._DEBUG) console.log('[v62] KP_OBS: using localStorage cache Kp='+_lsKp);
+        } else {
+          lastWWV = {kNow:2.0, aNow:null, whenText:'(synthetic)', kPrev3h:null, kp24hAgo:null, _synthetic:true};
+          _setSrcStatus('srcKpObs','synthetic');
+          if(window._DEBUG) console.log('[v62] KP_OBS: full fallback to synthetic Kp=2.0');
+        }
       }
     }
   }
