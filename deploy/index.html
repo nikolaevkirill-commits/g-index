@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.20</title>
+  <title>G-Index — Космофізичний дашборд v88.8.21</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -2008,6 +2008,61 @@ body.simple-mode .col-hide-mobile {
           <div id="ppBirthBird" style="display:none;padding:10px 12px;border-radius:8px;background:rgba(252,164,116,.06);border:1px solid rgba(252,164,116,.2);margin-bottom:10px"></div>
           <!-- Activity matrix -->
           <div id="ppActivityMatrix" style="display:none"></div>
+        </div>
+      </details>
+      <!-- v88.8.21: CHRONO JOURNAL — щоденний самозвіт + кореляція з G (outcome validation pilot). -->
+      <!-- LocalStorage-only. No backend. CSV export для analysis. -->
+      <details id="chronoJournalBlock" style="margin-top:10px;padding:0;border:1px solid rgba(43,212,125,.18);border-radius:12px;background:linear-gradient(135deg,rgba(43,212,125,.04),rgba(155,177,220,.02))">
+        <summary style="cursor:pointer;padding:10px 14px;list-style:none;font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--dim);display:flex;align-items:center;gap:8px">
+          <span>📊 Мій журнал · outcome pilot</span>
+          <span id="chronoBadge" style="font-size:10px;color:var(--faint);font-weight:400;text-transform:none;letter-spacing:0;margin-left:auto">▼ розкрити</span>
+        </summary>
+        <div style="padding:0 14px 14px 14px">
+          <div style="font-size:10px;color:var(--faint);margin-bottom:8px;line-height:1.4">
+            Щодня 1 хв: оцінка стану. <strong>30+ записів</strong> → бачиш кореляцію свого тіла з G.<br>
+            <span style="color:var(--dim)">Зберігається локально (твій браузер). Backend не задіяний. Експорт CSV доступний.</span>
+          </div>
+          <!-- Today entry form -->
+          <div id="chronoForm" style="display:flex;flex-direction:column;gap:7px;font-size:11px;margin-bottom:10px">
+            <div style="display:grid;grid-template-columns:80px 1fr 30px;gap:6px;align-items:center">
+              <label style="color:var(--dim)">😴 Сон</label>
+              <input type="range" id="chSleep" min="1" max="10" value="7" oninput="GChrono._oninput('Sleep', this.value)" style="width:100%">
+              <span id="chSleepV" style="color:var(--accent);font-weight:700;text-align:center">7</span>
+            </div>
+            <div style="display:grid;grid-template-columns:80px 1fr 30px;gap:6px;align-items:center">
+              <label style="color:var(--dim)">⚡ Енергія</label>
+              <input type="range" id="chEnergy" min="1" max="10" value="7" oninput="GChrono._oninput('Energy', this.value)" style="width:100%">
+              <span id="chEnergyV" style="color:var(--accent);font-weight:700;text-align:center">7</span>
+            </div>
+            <div style="display:grid;grid-template-columns:80px 1fr 30px;gap:6px;align-items:center">
+              <label style="color:var(--dim)">🙂 Настрій</label>
+              <input type="range" id="chMood" min="1" max="10" value="7" oninput="GChrono._oninput('Mood', this.value)" style="width:100%">
+              <span id="chMoodV" style="color:var(--accent);font-weight:700;text-align:center">7</span>
+            </div>
+            <div style="display:grid;grid-template-columns:80px 1fr 30px;gap:6px;align-items:center">
+              <label style="color:var(--dim)">😰 Стрес</label>
+              <input type="range" id="chStress" min="1" max="10" value="4" oninput="GChrono._oninput('Stress', this.value)" style="width:100%">
+              <span id="chStressV" style="color:var(--accent);font-weight:700;text-align:center">4</span>
+            </div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px;font-size:10px;color:var(--dim)">
+              <label><input type="checkbox" id="chTagAlc"> алкоголь</label>
+              <label><input type="checkbox" id="chTagCaf"> кофеїн&nbsp;після&nbsp;14:00</label>
+              <label><input type="checkbox" id="chTagExe"> інтенс.&nbsp;тренування</label>
+              <label><input type="checkbox" id="chTagIll"> застуда/біль</label>
+              <label><input type="checkbox" id="chTagTrv"> перельот/часовий&nbsp;пояс</label>
+            </div>
+            <input type="number" step="0.1" id="chHrv" placeholder="HRV (RMSSD ms) — опційно з wearable"
+              style="background:#0a1428;color:var(--text);border:1px solid var(--border2);border-radius:6px;padding:5px 9px;font-size:11px;width:100%">
+            <textarea id="chNotes" placeholder="Замітки (опц.)" maxlength="200" rows="2"
+              style="background:#0a1428;color:var(--text);border:1px solid var(--border2);border-radius:6px;padding:5px 9px;font-size:11px;resize:vertical"></textarea>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:2px">
+              <button onclick="GChrono.saveToday()" style="background:#2bd47d;color:#0a1428;border:none;border-radius:6px;padding:5px 12px;font-size:11px;cursor:pointer;font-weight:700">💾 Зберегти сьогодні</button>
+              <button onclick="GChrono.exportCSV()" style="background:#1e2a44;color:#9bb1dc;border:1px solid var(--border2);border-radius:6px;padding:5px 10px;font-size:11px;cursor:pointer">📥 CSV</button>
+              <button onclick="GChrono.clearAll()" style="background:#1e2a44;color:#ff9999;border:1px solid var(--border2);border-radius:6px;padding:5px 10px;font-size:11px;cursor:pointer">✕ Очистити все</button>
+            </div>
+          </div>
+          <!-- Stats / correlation -->
+          <div id="chronoStats" style="padding:10px 12px;border-radius:8px;background:rgba(43,212,125,.06);border:1px solid rgba(43,212,125,.18);font-size:11px;color:var(--text2);line-height:1.5"></div>
         </div>
       </details>
     </section>
@@ -8003,6 +8058,8 @@ function computePanchangaState(dateUTC){
   }
 
   const _gNow = _kpForPanch - 2 + aiNow.Ai;
+  // v88.8.21: expose live G для GChrono journal capture
+  try { window.__lastG = _gNow; } catch(e){}
 
   return {
     p, ctx, cells, _gEarly, _kpEarly, _aiEarly, aiNow, pclOnly, panchDiscrepancy,
@@ -16323,6 +16380,287 @@ window.__regressUI = function(){
     btn.textContent = '🔬 Прогнати regression check';
   }, 50);
 };
+
+// ═══════════════════════════════════════════════════════════════════════════
+// v88.8.21 CHRONO JOURNAL — outcome validation pilot, browser-only.
+// Daily self-report (sleep/energy/mood/stress) + optional HRV → Pearson r vs G.
+// Storage: localStorage `gindex_chrono_v1`. Schema: {date, sleep, energy, mood,
+// stress, hrv, tags:{alc,caf,exe,ill,trv}, notes, gAtSave}.
+// ═══════════════════════════════════════════════════════════════════════════
+const GChrono = (function(){
+  const LS_KEY = 'gindex_chrono_v1';
+  const MIN_N = 30; // мінімум для r-claims (Bonferroni-safe ~r≥0.35)
+
+  function _todayDateStr(){
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  }
+
+  function _lsLoad(){
+    try { return JSON.parse(localStorage.getItem(LS_KEY) || '[]'); }
+    catch(e){ return []; }
+  }
+  function _lsSave(arr){
+    try { localStorage.setItem(LS_KEY, JSON.stringify(arr)); return true; }
+    catch(e){ console.warn('[GChrono] save failed:', e.message); return false; }
+  }
+
+  function _gnow(){
+    // Спроба прочитати поточний live G з window state (set by main render).
+    try { return (typeof window.__lastG === 'number' && isFinite(window.__lastG)) ? window.__lastG : null; }
+    catch(e){ return null; }
+  }
+
+  function _pearson(xs, ys){
+    const n = Math.min(xs.length, ys.length);
+    if(n < 3) return null;
+    let sx=0,sy=0,sxx=0,syy=0,sxy=0;
+    for(let i=0;i<n;i++){
+      const x=+xs[i], y=+ys[i];
+      if(!isFinite(x) || !isFinite(y)) return null;
+      sx+=x; sy+=y; sxx+=x*x; syy+=y*y; sxy+=x*y;
+    }
+    const num = n*sxy - sx*sy;
+    const den = Math.sqrt((n*sxx - sx*sx) * (n*syy - sy*sy));
+    if(den === 0) return null;
+    return num/den;
+  }
+
+  function saveToday(){
+    const e = {
+      date: _todayDateStr(),
+      sleep:  +(document.getElementById('chSleep')?.value || 0),
+      energy: +(document.getElementById('chEnergy')?.value || 0),
+      mood:   +(document.getElementById('chMood')?.value || 0),
+      stress: +(document.getElementById('chStress')?.value || 0),
+      hrv:    parseFloat(document.getElementById('chHrv')?.value || '') || null,
+      tags: {
+        alc: !!document.getElementById('chTagAlc')?.checked,
+        caf: !!document.getElementById('chTagCaf')?.checked,
+        exe: !!document.getElementById('chTagExe')?.checked,
+        ill: !!document.getElementById('chTagIll')?.checked,
+        trv: !!document.getElementById('chTagTrv')?.checked
+      },
+      notes: (document.getElementById('chNotes')?.value || '').slice(0, 200),
+      gAtSave: _gnow(),
+      ts: Date.now()
+    };
+    const arr = _lsLoad();
+    // Replace if same date exists
+    const idx = arr.findIndex(x => x.date === e.date);
+    if(idx >= 0) arr[idx] = e; else arr.push(e);
+    arr.sort((a,b) => a.date.localeCompare(b.date));
+    if(_lsSave(arr)) renderStats();
+    else _setStatsHTML('<span style="color:#ff9999">⚠ Не вдалось зберегти (localStorage недоступний)</span>');
+  }
+
+  function clearAll(){
+    if(!confirm('Видалити ВСІ записи журналу? Цього не можна скасувати.')) return;
+    try { localStorage.removeItem(LS_KEY); } catch(e){}
+    renderStats();
+    _prefillToday();
+  }
+
+  function exportCSV(){
+    const arr = _lsLoad();
+    if(!arr.length){ alert('Журнал порожній'); return; }
+    const rows = [['date','sleep','energy','mood','stress','hrv','alc','caf','exe','ill','trv','g_at_save','notes']];
+    arr.forEach(e => rows.push([
+      e.date, e.sleep, e.energy, e.mood, e.stress,
+      (e.hrv ?? ''),
+      (e.tags?.alc?'1':'0'), (e.tags?.caf?'1':'0'), (e.tags?.exe?'1':'0'),
+      (e.tags?.ill?'1':'0'), (e.tags?.trv?'1':'0'),
+      (e.gAtSave ?? ''),
+      (e.notes || '').replace(/"/g,'""').replace(/[\r\n]+/g,' ')
+    ]));
+    const csv = rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n');
+    const blob = new Blob(['\ufeff'+csv], {type:'text/csv;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'gindex_chrono_' + _todayDateStr() + '.csv';
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
+  }
+
+  function _setStatsHTML(html){
+    const el = document.getElementById('chronoStats');
+    if(el) el.innerHTML = html;
+  }
+
+  function renderStats(){
+    const arr = _lsLoad();
+    const n = arr.length;
+    const badgeEl = document.getElementById('chronoBadge');
+    if(badgeEl) badgeEl.textContent = n ? `▼ ${n} запис${n===1?'':(n<5?'и':'ів')}` : '▼ розкрити';
+
+    if(n === 0){
+      _setStatsHTML(`<div style="color:var(--faint)">Поки записів немає. Заповни форму вище і натисни «💾 Зберегти сьогодні».</div>
+        <div style="margin-top:6px;font-size:10px;color:var(--dim)">Через 30 днів → побачиш кореляцію свого стану з G.</div>`);
+      return;
+    }
+
+    // Stats: середні + кореляція з g_at_save (якщо доступне)
+    const withG = arr.filter(e => isFinite(e.gAtSave));
+    const lines = [];
+    lines.push(`<strong style="color:#2bd47d">${n}</strong> запис${n===1?'':(n<5?'и':'ів')} · ` +
+               `остан. ${arr[arr.length-1].date}`);
+
+    if(withG.length >= 3){
+      const G = withG.map(e => e.gAtSave);
+      const metrics = [['sleep','😴 Сон'], ['energy','⚡ Енергія'], ['mood','🙂 Настрій'], ['stress','😰 Стрес']];
+      const rs = metrics.map(([k, lbl]) => {
+        const ys = withG.map(e => e[k]);
+        const r = _pearson(G, ys);
+        return { k, lbl, r, n: withG.length };
+      }).filter(x => x.r !== null);
+
+      if(rs.length){
+        const fmt = r => (r >= 0 ? '+' : '') + r.toFixed(2);
+        const cls = r => Math.abs(r) >= 0.3 ? '#2bd47d' : Math.abs(r) >= 0.15 ? '#ffaa33' : 'var(--faint)';
+        lines.push(`<div style="margin-top:6px;font-size:10px;color:var(--dim)">Кореляція Pearson r(G ↔ метрика):</div>`);
+        lines.push(`<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:4px 12px;margin-top:3px">` +
+          rs.map(x => `<span>${x.lbl}: <strong style="color:${cls(x.r)}">${fmt(x.r)}</strong></span>`).join('') +
+          `</div>`);
+      }
+
+      if(withG.length < MIN_N){
+        lines.push(`<div style="margin-top:6px;font-size:10px;color:#ffaa33">⚠ n=${withG.length} < ${MIN_N}. Це попередні значення. Жодних висновків про достовірність до n≥${MIN_N}.</div>`);
+      } else {
+        lines.push(`<div style="margin-top:6px;font-size:10px;color:#2bd47d">✓ n=${withG.length} ≥ ${MIN_N}. Кореляція статистично читабельна (але не доводить причинність).</div>`);
+      }
+    } else {
+      lines.push(`<div style="margin-top:6px;font-size:10px;color:var(--dim)">Збери ще мінімум ${3-withG.length} запис${3-withG.length===1?'':(3-withG.length<5?'и':'ів')} з валідним G для кореляції.</div>`);
+    }
+
+    _setStatsHTML(lines.join(''));
+  }
+
+  function _oninput(name, v){
+    const el = document.getElementById('ch'+name+'V');
+    if(el) el.textContent = v;
+  }
+
+  function _prefillToday(){
+    // Якщо є запис за сьогодні — підставити, інакше defaults
+    const arr = _lsLoad();
+    const today = arr.find(e => e.date === _todayDateStr());
+    const set = (id, v) => { const el = document.getElementById(id); if(el) el.value = v; };
+    const setCh = (id, v) => { const el = document.getElementById(id); if(el) el.checked = !!v; };
+    if(today){
+      set('chSleep', today.sleep || 7);  _oninput('Sleep', today.sleep || 7);
+      set('chEnergy', today.energy || 7); _oninput('Energy', today.energy || 7);
+      set('chMood', today.mood || 7);     _oninput('Mood', today.mood || 7);
+      set('chStress', today.stress || 4); _oninput('Stress', today.stress || 4);
+      set('chHrv', today.hrv ?? '');
+      set('chNotes', today.notes || '');
+      setCh('chTagAlc', today.tags?.alc); setCh('chTagCaf', today.tags?.caf);
+      setCh('chTagExe', today.tags?.exe); setCh('chTagIll', today.tags?.ill);
+      setCh('chTagTrv', today.tags?.trv);
+    } else {
+      set('chSleep', 7); _oninput('Sleep', 7);
+      set('chEnergy', 7); _oninput('Energy', 7);
+      set('chMood', 7); _oninput('Mood', 7);
+      set('chStress', 4); _oninput('Stress', 4);
+      set('chHrv', ''); set('chNotes', '');
+      setCh('chTagAlc', false); setCh('chTagCaf', false);
+      setCh('chTagExe', false); setCh('chTagIll', false); setCh('chTagTrv', false);
+    }
+  }
+
+  // Init on DOM ready
+  function init(){
+    _prefillToday();
+    renderStats();
+  }
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    setTimeout(init, 100);
+  }
+
+  return { saveToday, clearAll, exportCSV, renderStats, _oninput };
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+// v88.8.21 NOAA EVENTS FETCHER — independent ground truth для outcome validation.
+// API: services.swpc.noaa.gov/products/alerts.json (CORS-enabled).
+// Returns published alerts: G-storms (G1-G5), solar flares (M/X), radio blackouts.
+// Cache 1h у localStorage. Не блокує main render.
+// ═══════════════════════════════════════════════════════════════════════════
+const NoaaEvents = (function(){
+  const URL_ALERTS = 'https://services.swpc.noaa.gov/products/alerts.json';
+  const LS_KEY = 'gindex_noaa_events_v1';
+  const TTL_MS = 60 * 60 * 1000; // 1h
+
+  async function fetchAlerts(){
+    // Try cache
+    try {
+      const cached = JSON.parse(localStorage.getItem(LS_KEY) || 'null');
+      if(cached && (Date.now() - cached.ts) < TTL_MS){
+        return cached.data;
+      }
+    } catch(e){}
+
+    try {
+      const r = await fetch(URL_ALERTS, {cache:'no-cache'});
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      const raw = await r.json();
+      // raw = array of {product_id, issue_datetime, message}
+      // Parse message into structured events
+      const events = (Array.isArray(raw) ? raw : []).slice(0, 200).map(a => {
+        const msg = String(a.message || '');
+        // Extract type from message
+        let type = 'other', level = null;
+        const gm = msg.match(/G(\d)\b/);    if(gm){ type='geomagnetic'; level='G'+gm[1]; }
+        const xm = msg.match(/X(\d(?:\.\d)?)\b/); if(xm && /flare/i.test(msg)){ type='flare'; level='X'+xm[1]; }
+        const mm = msg.match(/\bM(\d(?:\.\d)?)\b/); if(mm && /flare/i.test(msg) && !level){ type='flare'; level='M'+mm[1]; }
+        const rm = msg.match(/R(\d)\b/);    if(rm && /radio/i.test(msg)){ type='radio'; level='R'+rm[1]; }
+        const sm = msg.match(/S(\d)\b/);    if(sm && /radiation|particle/i.test(msg)){ type='radiation'; level='S'+sm[1]; }
+        return {
+          id: a.product_id || '',
+          issued: a.issue_datetime || '',
+          type, level,
+          summary: msg.split('\n')[0].slice(0, 120)
+        };
+      });
+      try { localStorage.setItem(LS_KEY, JSON.stringify({ts: Date.now(), data: events})); } catch(e){}
+      return events;
+    } catch(e){
+      console.warn('[NoaaEvents] fetch failed:', e.message);
+      // Return stale cache if available
+      try {
+        const stale = JSON.parse(localStorage.getItem(LS_KEY) || 'null');
+        if(stale) return stale.data;
+      } catch(_){}
+      return [];
+    }
+  }
+
+  // Return dates (YYYY-MM-DD) which had any G1+ storm OR M/X flare OR R/S event
+  function getStormDates(events){
+    const dates = new Set();
+    (events || []).forEach(e => {
+      if(!e.issued) return;
+      const d = e.issued.slice(0, 10);
+      if(e.type === 'geomagnetic' && /^G[1-5]$/.test(e.level || '')) dates.add(d);
+      else if(e.type === 'flare' && /^[MX]/.test(e.level || '')) dates.add(d);
+      else if(e.type === 'radio' && /^R[2-5]$/.test(e.level || '')) dates.add(d);
+      else if(e.type === 'radiation' && /^S[1-5]$/.test(e.level || '')) dates.add(d);
+    });
+    return dates;
+  }
+
+  return { fetchAlerts, getStormDates };
+})();
+
+// Trigger initial NOAA events fetch (non-blocking)
+setTimeout(() => {
+  try { NoaaEvents.fetchAlerts().then(ev => {
+    if(window._DEBUG) console.log('[NoaaEvents] loaded', (ev||[]).length, 'alerts');
+    window.__noaaEvents = ev;
+    window.__noaaStormDates = NoaaEvents.getStormDates(ev);
+  }); } catch(e){}
+}, 3000);
 
 </script>
 
