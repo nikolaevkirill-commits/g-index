@@ -3348,6 +3348,61 @@ window.GIndexPPProfile = GIndexPPProfile;
 document.addEventListener('DOMContentLoaded', () => { try { GIndexPPProfile.init(); } catch(e) {} });
 
 // ═══════════════════════════════════════════════════════════════════════════
+// v88.8.18 ★ HELPER: getEffectiveGForDate — централізує override detection
+// для будь-якого UI який показує G для дати.
+//
+// Архітектура проблема: у dashboard є два треки оцінки:
+//   1) Astro track (computeAi → Kp + ΣAᵢ) — continuous G з live NOAA
+//   2) Bulletin track (getEngineScore → expert PDF override) — discrete eng -3..+3
+// Будь-який UI який показує G для майбутнього дня має врахувати, що bulletin
+// може давати інше число. Без цього user бачить суперечливу інформацію
+// в різних місцях dashboard (heroTomorrow, тренд графік, 3-day pills).
+//
+// Usage:
+//   const eff = getEffectiveGForDate(dateObj, rawG);
+//   // returns: { rawG, override, hasOverride, delta, marker, tooltip }
+//   if (eff.hasOverride) showStar();
+//
+// Returns:
+//   rawG:        original computed G (Kp + ΣAᵢ)
+//   override:    expert eng з PDF override, або null
+//   hasOverride: true якщо є override з meaningful delta (|delta| >= 1.5)
+//   delta:       |override - rawG|, або 0
+//   marker:      ' ★' для inline append, або ''
+//   tooltip:     додатковий текст для tooltip
+// ═══════════════════════════════════════════════════════════════════════════
+function getEffectiveGForDate(dateObj, rawG, minDelta) {
+  const _minDelta = isFinite(minDelta) ? minDelta : 1.5;
+  const out = {
+    rawG: isFinite(rawG) ? rawG : null,
+    override: null,
+    hasOverride: false,
+    delta: 0,
+    marker: '',
+    tooltip: '',
+  };
+  if (!dateObj || !isFinite(rawG)) return out;
+  try {
+    if (typeof getEngineScore !== 'function') return out;
+    const score = getEngineScore(dateObj);
+    if (!score || !score._expertOverride || !isFinite(score.eng)) return out;
+    out.override = score.eng;
+    out.delta = Math.abs(score.eng - rawG);
+    if (out.delta >= _minDelta) {
+      out.hasOverride = true;
+      out.marker = ' ★';
+      const _sign = score.eng >= 0 ? '+' : '';
+      out.tooltip = `\n\n★ PDF EXPERT: ${_sign}${score.eng} (delta ${out.delta.toFixed(1)} від raw G ${rawG >= 0 ? '+' : ''}${rawG.toFixed(1)}).\n`
+        + 'Raw G — астро з NOAA Kp + ΣAᵢ.\n'
+        + 'Експертний PDF — manual оцінка з тіхі/накшатри.\n'
+        + 'Перев 3-day forecast блок для деталей.';
+    }
+  } catch(e) { /* silent */ }
+  return out;
+}
+window.getEffectiveGForDate = getEffectiveGForDate;
+
+// ═══════════════════════════════════════════════════════════════════════════
 // v87.37 PUSH NOTIFICATIONS — client side. Inert без VAPID-ключа (window._vapid_public_key).
 // Workflow:
 //   1. User clicks 🔔 bell → PushModal.show()
@@ -8937,23 +8992,13 @@ function render3Day(parsed3){
           // v87.94: + sibling DOM fallback (heroTomorrowScenario) — окремий elem, не конфліктує з рендерами
           const _isScenario = !!(parsed3 && parsed3._synthetic);
 
-          // v88.8.18 ★ FIX: check if tomorrow has expert override з PDF — якщо так,
-          // raw G може значно відрізнятися від експертної оцінки. Показуємо marker.
-          let _tomorrowOverride = null;
-          try {
-            const _tomDate = days.find(dd => fmtDate(dd.date) !== _todayStr);
-            if (_tomDate) {
-              const _tomScore = getEngineScore(_tomDate.date);
-              if (_tomScore && _tomScore._expertOverride && isFinite(_tomScore.eng)) {
-                _tomorrowOverride = _tomScore.eng;
-              }
-            }
-          } catch(e) { /* silent */ }
-          const _ovDelta = (_tomorrowOverride !== null && isFinite(_tomorrowG))
-            ? Math.abs(_tomorrowOverride - _tomorrowG) : 0;
-          const _hasMeaningfulOverride = _tomorrowOverride !== null && _ovDelta >= 1.5;
+          // v88.8.18 ★ FIX: централізована override detection через helper.
+          const _tomDate = days.find(dd => fmtDate(dd.date) !== _todayStr);
+          const _tomEff = (typeof getEffectiveGForDate === 'function' && _tomDate)
+            ? getEffectiveGForDate(_tomDate.date, _tomorrowG)
+            : { hasOverride: false, marker: '', tooltip: '' };
 
-          _htEl.textContent = `G=${_sign}${_tomorrowG.toFixed(1)} ${_arrow} ${_hint}${_hasMeaningfulOverride ? ' ★' : ''}`;
+          _htEl.textContent = `G=${_sign}${_tomorrowG.toFixed(1)} ${_arrow} ${_hint}${_tomEff.marker}`;
           const _htSibling = document.getElementById('heroTomorrowScenario');
           if (_isScenario) {
             _htEl.dataset.scenario = '1';
@@ -8962,11 +9007,8 @@ function render3Day(parsed3){
           } else {
             delete _htEl.dataset.scenario;
             // v88.7 (deep audit): tooltip пояснює чому "Завтра G" може відрізнятися від Forward Timeline peak
-            // v88.8.18 ★ FIX: якщо є expert override з PDF — у tooltip пояснюємо delta
-            const _ovInfo = _hasMeaningfulOverride
-              ? `\n\n★ PDF EXPERT для завтра: ${_tomorrowOverride >= 0 ? '+' : ''}${_tomorrowOverride} (delta ${_ovDelta.toFixed(1)} від raw G).\nRaw G — астро з NOAA forecast Kp. Expert PDF — manual оцінка з тіхі/накшатри. На цей день експерт каже інше.\nПерев 3-day forecast блок для деталей.`
-              : '';
-            _htEl.title = `G завтра = ${_sign}${_tomorrowG.toFixed(1)} (Kp_max з NOAA 3-day forecast + Aᵢ календар).\n\nFlash-tip: Forward Timeline (нижче) показує денний пік Kp з 27-day NOAA outlook — інше джерело, інша часова роздільність. Розходження 0.5-1.0 — норма.\n\nКольори:\n● зелений: G ≥ 1 (сприятливо)\n● сірий: 0 ≤ G < 1 (нейтрально)\n● жовтий: -2 < G < 0 (помірний фон)\n● червоний: G ≤ -2 (буря)${_ovInfo}`;
+            // v88.8.18 ★ FIX: helper повертає override info як tooltip приставку
+            _htEl.title = `G завтра = ${_sign}${_tomorrowG.toFixed(1)} (Kp_max з NOAA 3-day forecast + Aᵢ календар).\n\nFlash-tip: Forward Timeline (нижче) показує денний пік Kp з 27-day NOAA outlook — інше джерело, інша часова роздільність. Розходження 0.5-1.0 — норма.\n\nКольори:\n● зелений: G ≥ 1 (сприятливо)\n● сірий: 0 ≤ G < 1 (нейтрально)\n● жовтий: -2 < G < 0 (помірний фон)\n● червоний: G ≤ -2 (буря)${_tomEff.tooltip}`;
             if (_htSibling) { _htSibling.textContent = ''; _htSibling.className = ''; }
           }
           _htEl.style.color = _isScenario ? 'var(--muted)'
@@ -10259,20 +10301,22 @@ function _renderWhyTrend(){
     d.isPast  = (d.ds <  todayStr);
   });
 
-  // v88.8.18 ★ FIX: anotate days з expert overrides — щоб видно було розбіжність
-  // між астро G (раw 27d) і експертною оцінкою для тих самих дат.
+  // v88.8.18 ★ FIX: anotate days з expert overrides — через централізований helper.
   // На скрін Image 3 vs Image 5: завтра G=+0.8 (астро), але expert=+3 (PDF bulletin).
-  // Без цього маркера тренд "спадаючий до -0.9 на 13.05" вводить в оману, бо
-  // експертний прогноз для 13.05 = +3 (рятуючий день).
+  // Без цього маркера тренд "спадаючий до -0.9 на 13.05" вводить в оману.
   days.forEach(d => {
     d.overrideEng = null;
+    d.engineEng = null;
     try {
-      if(typeof _expertOverrides !== 'undefined' && _expertOverrides && _expertOverrides[d.ds]){
-        d.overrideEng = _expertOverrides[d.ds].expert_eng;
-      } else if(typeof _engineScores !== 'undefined' && _engineScores && _engineScores[d.ds]){
-        // Engine snapshot теж — для повної консистенції з bulletin рядком
+      if (typeof getEffectiveGForDate === 'function' && !d.isPast){
+        // Для future days: помічаємо override
+        const _eff = getEffectiveGForDate(new Date(d.ds + 'T12:00:00Z'), d.G, 0); // delta=0 — anyone override
+        if (_eff.override !== null) d.overrideEng = _eff.override;
+      }
+      // Engine snapshot — навіть для days без expert override (для tooltip info)
+      if (typeof _engineScores !== 'undefined' && _engineScores && _engineScores[d.ds]){
         const _eng = _engineScores[d.ds];
-        if(_eng && isFinite(_eng.eng)) d.engineEng = _eng.eng;
+        if (_eng && isFinite(_eng.eng)) d.engineEng = _eng.eng;
       }
     } catch(e){if(window._DEBUG)console.warn('[silent overrideAnnot]:',e.message)}
   });
