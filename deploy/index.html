@@ -8936,7 +8936,24 @@ function render3Day(parsed3){
           // v87.92 fix: scenario marker через data-attribute + CSS ::after — не можна перетерти JS-рендерами
           // v87.94: + sibling DOM fallback (heroTomorrowScenario) — окремий elem, не конфліктує з рендерами
           const _isScenario = !!(parsed3 && parsed3._synthetic);
-          _htEl.textContent = `G=${_sign}${_tomorrowG.toFixed(1)} ${_arrow} ${_hint}`;
+
+          // v88.8.18 ★ FIX: check if tomorrow has expert override з PDF — якщо так,
+          // raw G може значно відрізнятися від експертної оцінки. Показуємо marker.
+          let _tomorrowOverride = null;
+          try {
+            const _tomDate = days.find(dd => fmtDate(dd.date) !== _todayStr);
+            if (_tomDate) {
+              const _tomScore = getEngineScore(_tomDate.date);
+              if (_tomScore && _tomScore._expertOverride && isFinite(_tomScore.eng)) {
+                _tomorrowOverride = _tomScore.eng;
+              }
+            }
+          } catch(e) { /* silent */ }
+          const _ovDelta = (_tomorrowOverride !== null && isFinite(_tomorrowG))
+            ? Math.abs(_tomorrowOverride - _tomorrowG) : 0;
+          const _hasMeaningfulOverride = _tomorrowOverride !== null && _ovDelta >= 1.5;
+
+          _htEl.textContent = `G=${_sign}${_tomorrowG.toFixed(1)} ${_arrow} ${_hint}${_hasMeaningfulOverride ? ' ★' : ''}`;
           const _htSibling = document.getElementById('heroTomorrowScenario');
           if (_isScenario) {
             _htEl.dataset.scenario = '1';
@@ -8945,7 +8962,11 @@ function render3Day(parsed3){
           } else {
             delete _htEl.dataset.scenario;
             // v88.7 (deep audit): tooltip пояснює чому "Завтра G" може відрізнятися від Forward Timeline peak
-            _htEl.title = `G завтра = ${_sign}${_tomorrowG.toFixed(1)} (Kp_max з NOAA 3-day forecast + Aᵢ календар).\n\nFlash-tip: Forward Timeline (нижче) показує денний пік Kp з 27-day NOAA outlook — інше джерело, інша часова роздільність. Розходження 0.5-1.0 — норма.\n\nКольори:\n● зелений: G ≥ 1 (сприятливо)\n● сірий: 0 ≤ G < 1 (нейтрально)\n● жовтий: -2 < G < 0 (помірний фон)\n● червоний: G ≤ -2 (буря)`;
+            // v88.8.18 ★ FIX: якщо є expert override з PDF — у tooltip пояснюємо delta
+            const _ovInfo = _hasMeaningfulOverride
+              ? `\n\n★ PDF EXPERT для завтра: ${_tomorrowOverride >= 0 ? '+' : ''}${_tomorrowOverride} (delta ${_ovDelta.toFixed(1)} від raw G).\nRaw G — астро з NOAA forecast Kp. Expert PDF — manual оцінка з тіхі/накшатри. На цей день експерт каже інше.\nПерев 3-day forecast блок для деталей.`
+              : '';
+            _htEl.title = `G завтра = ${_sign}${_tomorrowG.toFixed(1)} (Kp_max з NOAA 3-day forecast + Aᵢ календар).\n\nFlash-tip: Forward Timeline (нижче) показує денний пік Kp з 27-day NOAA outlook — інше джерело, інша часова роздільність. Розходження 0.5-1.0 — норма.\n\nКольори:\n● зелений: G ≥ 1 (сприятливо)\n● сірий: 0 ≤ G < 1 (нейтрально)\n● жовтий: -2 < G < 0 (помірний фон)\n● червоний: G ≤ -2 (буря)${_ovInfo}`;
             if (_htSibling) { _htSibling.textContent = ''; _htSibling.className = ''; }
           }
           _htEl.style.color = _isScenario ? 'var(--muted)'
