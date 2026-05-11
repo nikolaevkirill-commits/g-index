@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.19</title>
+  <title>G-Index — Космофізичний дашборд v88.8.20</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -6813,8 +6813,8 @@ ${isNarrow?'На вузькому екрані показано 14 днів (−
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:8px;padding-top:8px;border-top:1px solid #1e2a44">
       <div style="flex:0 0 auto">
         <div style="font-size:10px;color:var(--faint)">${sel.ds} · ${relTxt}</div>
-        <div class="mono" style="font-size:18px;font-weight:700;color:${selCol}">G ${gSign}${selG.toFixed(2)}</div>
-        <div style="font-size:9px;color:var(--faint);margin-top:1px" title="Forward Timeline показує день-пік (max Kp прогнозу). Hero G показує поточний моменту. Тому для одного дня можуть бути рiзнi значення.">денний пік</div>
+        <div class="mono" style="cursor:help;font-size:18px;font-weight:700;color:${selCol}" title="G ${gSign}${selG.toFixed(2)} — денний пік (max Kp прогнозу + ΣAᵢ доби).&#10;Hero G згори показує LIVE 3-год слот.&#10;Різниця нормальна: peak ≠ now.">G ${gSign}${selG.toFixed(2)}</div>
+        <div style="font-size:10px;color:var(--dim);margin-top:1px" title="Forward Timeline показує day-peak G (max Kp прогнозу × ΣAᵢ). Hero G показує live 3-год слот. Різниця нормальна.">денний пік · не live</div>
       </div>
       <div style="flex:0 0 auto;font-size:11px;color:var(--dim)">
         <div>${selCat}</div>
@@ -8230,9 +8230,12 @@ function renderPanchangaCard(state){
         };
         const _rsLocal = _toLocal(p.rahu.start);
         const _reLocal = _toLocal(p.rahu.end);
+        // v88.8.20 fix: active rerender від ПОТОЧНОГО _nh, не від p.rahu.active
+        // (p.rahu.active заморожений на reference noon UTC у computePanchanga — застаріває протягом дня).
+        const _isRahuNow = (_nh >= _rsH) && (_nh < _reH);
         let _rIcon, _rText, _rAdvice;
-        if (p.rahu.active) {
-          _rIcon = '🔴'; _rText = 'Активний!';
+        if (_isRahuNow) {
+          _rIcon = '🔴'; _rText = `${_rsLocal}–${_reLocal} зараз`;
           _rAdvice = '✗ Не починати нових операцій';
         } else if (_nh < _rsH) {
           _rIcon = '🟡'; _rText = `${_rsLocal}–${_reLocal} (буде)`;
@@ -8262,11 +8265,16 @@ function renderPanchangaCard(state){
       };
       const _renderWindow = (label, w, _iconColor) => {
         const _ws = w.start.split(':').map(Number);
+        const _we = w.end.split(':').map(Number);
         const _wsH = _ws[0] + (_ws[1]||0)/60;
+        const _weH = _we[0] + (_we[1]||0)/60;
         const _wsLocal = _toLocal2(w.start);
         const _weLocal = _toLocal2(w.end);
+        // v88.8.20 fix: active rerender від ПОТОЧНОГО _nh2, не від w.active
+        // (w.active заморожений у computePanchanga на reference noon UTC — застаріває).
+        const _isActiveNow = (_nh2 >= _wsH) && (_nh2 < _weH);
         let _ic, _tx, _adv;
-        if (w.active) { _ic = '🔴'; _tx = `${_wsLocal}–${_weLocal} зараз`; _adv = '✗ Уникати важливих справ'; }
+        if (_isActiveNow) { _ic = '🔴'; _tx = `${_wsLocal}–${_weLocal} зараз`; _adv = '✗ Уникати важливих справ'; }
         else if (_nh2 < _wsH) { _ic = '🟡'; _tx = `${_wsLocal}–${_weLocal}`; _adv = `⏳ З ${_wsLocal} обережно`; }
         else { _ic = '⚪'; _tx = `${_wsLocal}–${_weLocal} (минув)`; _adv = '✓ Минув'; }
         return `<tr>
@@ -17520,9 +17528,9 @@ function renderBestWorstDays(){
   const wSign = bw.worst.g >= 0 ? '+' : '';
   block.innerHTML = `
     <div class="bw-title">Історія · 30д ${bw.fwdPeak ? '<span style="color:var(--faint);font-weight:400;font-size:10px;margin-left:6px">+ прогноз 7д</span>' : ''}</div>
-    <div class="bw-item bw-best"><span class="bw-label">Найкращий день</span><span class="bw-value">${fmtDate(bw.best.date)} · G=${bSign}${bw.best.g.toFixed(1)}</span></div>
-    <div class="bw-item bw-worst"><span class="bw-label">Найгірший день</span><span class="bw-value">${fmtDate(bw.worst.date)} · G=${wSign}${bw.worst.g.toFixed(1)}</span></div>
-    ${bw.fwdPeak ? `<div class="bw-item bw-fwd" style="color:#9bb1dc"><span class="bw-label" style="color:#9bb1dc">Очікуваний пік (7д)</span><span class="bw-value">${fmtDate(bw.fwdPeak.date)} · G=${bw.fwdPeak.g >= 0 ? '+' : ''}${bw.fwdPeak.g.toFixed(1)}</span></div>` : ''}
+    <div class="bw-item bw-best" title="З історії минулих 30 днів — реальний максимум G"><span class="bw-label">Найкращий день</span><span class="bw-value">${fmtDate(bw.best.date)} · G=${bSign}${bw.best.g.toFixed(1)}</span></div>
+    <div class="bw-item bw-worst" title="З історії минулих 30 днів — реальний мінімум G"><span class="bw-label">Найгірший день</span><span class="bw-value">${fmtDate(bw.worst.date)} · G=${wSign}${bw.worst.g.toFixed(1)}</span></div>
+    ${bw.fwdPeak ? `<div class="bw-item bw-fwd" style="color:#9bb1dc" title="З прогнозу наступних 7 днів — очікуваний пік за NOAA + ΣAᵢ"><span class="bw-label" style="color:#9bb1dc">Очікуваний пік (7д)</span><span class="bw-value">${fmtDate(bw.fwdPeak.date)} · G=${bw.fwdPeak.g >= 0 ? '+' : ''}${bw.fwdPeak.g.toFixed(1)}</span></div>` : ''}
     <div class="bw-count">${bw.total} днів у базі</div>
   `;
   block.style.display = '';
