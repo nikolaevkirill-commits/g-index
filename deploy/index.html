@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.28</title>
+  <title>G-Index — Космофізичний дашборд v88.8.30</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -3407,8 +3407,8 @@ window.GIndexPPProfile = GIndexPPProfile;
 document.addEventListener('DOMContentLoaded', () => { try { GIndexPPProfile.init(); } catch(e) {} });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// v88.8.18 ★ HELPER: getEffectiveGForDate — централізує override detection
-// для будь-якого UI який показує G для дати.
+// v88.8.30 ★ HELPER: getEffectiveGForDate — legacy marker helper only
+// Не підміняє raw G. Повертає PDF/Engine day score як окремий overlay для UI.
 //
 // Архітектура проблема: у dashboard є два треки оцінки:
 //   1) Astro track (computeAi → Kp + ΣAᵢ) — continuous G з live NOAA
@@ -3424,7 +3424,7 @@ document.addEventListener('DOMContentLoaded', () => { try { GIndexPPProfile.init
 //
 // Returns:
 //   rawG:        original computed G (Kp + ΣAᵢ)
-//   override:    expert eng з PDF override, або null
+//   override:    PDF/Engine day score, або null
 //   hasOverride: true якщо є override з meaningful delta (|delta| >= 1.5)
 //   delta:       |override - rawG|, або 0
 //   marker:      ' ★' для inline append, або ''
@@ -3452,9 +3452,9 @@ function getEffectiveGForDate(dateObj, rawG, minDelta) {
       out.marker = ' ★';
       const _sign = score.eng >= 0 ? '+' : '';
       out.tooltip = `\n\n★ PDF EXPERT: ${_sign}${score.eng} (delta ${out.delta.toFixed(1)} від raw G ${rawG >= 0 ? '+' : ''}${rawG.toFixed(1)}).\n`
-        + 'Raw G — астро з NOAA Kp + ΣAᵢ.\n'
-        + 'Експертний PDF — manual оцінка з тіхі/накшатри.\n'
-        + 'Перев 3-day forecast блок для деталей.';
+        + 'Raw G — окремий live/astro індекс: NOAA Kp + ΣAᵢ.\n'
+        + 'PDF/Engine — окремий денний score, НЕ G і не заміна G.\n'
+        + 'Дії зараз рахуються за live-guard; прогноз дня — за PDF/Engine.';
     }
   } catch(e) { /* silent */ }
   return out;
@@ -3959,14 +3959,14 @@ let _engineScores = null;
 // Frozen partition: engine_scores.json НЕ змінюється (V3 prospective freeze для backtest).
 let _expertOverrides = null; // {date: {expert_eng, tanita_O, tanita_N, category, applied_in}}
 
-// v88.8.28: VERIFIED SOURCE GATE
+// v88.8.30: VERIFIED SOURCE GATE
 // Latest forecast source is supplied and verified: +11.5-24.5_ПРОГНОЗ.pdf.
 // PDF48 overrides for 2026-05-11..2026-05-24 are therefore allowed to replace engine_scores.eng.
 // Engine raw remains visible in _engRaw for audit; expert_eng becomes the day verdict.
 const EXPERT_OVERRIDE_SOURCE_STATUS_V88828 = {
   PDF48: { verified: true, reason: 'Verified by +11.5-24.5_ПРОГНОЗ.pdf uploaded 2026-05-13: forecast window 2026-05-11..2026-05-24 confirms PDF48 expert verdicts.' }
 };
-// v88.8.28: HARD VERIFIED FALLBACK from the latest supplied forecast PDF.
+// v88.8.30: HARD VERIFIED FALLBACK from the latest supplied forecast PDF.
 // This prevents stale/missing expert_overrides_v3.json from reverting 11.05–24.05
 // to raw engine scores. Source of truth: +11.5-24.5_ПРОГНОЗ.pdf, page 1.
 const LATEST_PDF48_VERIFIED_OVERRIDES_V88828 = Object.freeze({
@@ -4029,7 +4029,7 @@ async function loadExpertOverrides(){
           _expertOverrides[r.date] = r;
         }
       }
-      // v88.8.28: latest supplied PDF is the hard source of truth for 11.05–24.05.
+      // v88.8.30: latest supplied PDF is the hard source of truth for 11.05–24.05.
       // Merge after JSON load so a stale JSON cannot revert PDF48 values.
       _expertOverrides = { ..._expertOverrides, ..._latestPdf48FallbackOverrides_v88828() };
       window._expertOverridesLoadStatus = 'loaded_plus_pdf48_verified_fallback';
@@ -4213,7 +4213,7 @@ function getEngineScore(dateObj){
   if(!_engineScores) return null;
   const ds = fmtDate(dateObj);
   let snapshot = _engineScores[ds] || null;
-  // v88.8.28: verified-source expert overrides.
+  // v88.8.30: verified-source expert overrides.
   // If applied_in points to the verified PDF48 window, expert_eng becomes the primary day verdict.
   // Raw engine remains in _engRaw for audit and tooltip explanations.
   if(snapshot && _expertOverrides && _expertOverrides[ds]){
@@ -4231,6 +4231,9 @@ function getEngineScore(dateObj){
     };
     if(_verified){
       snapshot.eng = ovr.expert_eng;
+      // v88.8.30: pdf field becomes the verified PDF score for audit/disagreement panels.
+      // Raw frozen engine remains in _engRaw. This avoids pretending that Engine alone produced +3.
+      snapshot.pdf = ovr.expert_eng;
       snapshot._expertOverride = true;
     } else {
       snapshot._expertOverride = false;
@@ -5682,7 +5685,7 @@ function computeAi(dateTimeUTC, kp=0){
 
 // --------------------------- ШКАЛИ / Бейджі для Kp --------------------------
 
-// ─── v88.8.28 G_EXTENDED v2 (R&D advisory, weak signal) ────────────────
+// ─── v88.8.30 G_EXTENDED v2 (R&D advisory, weak signal) ────────────────
 // The deployed coefficient file is g_extended_v2_coefs.json, not v3.1.
 // v2 metrics: trained_on_n=212, CV r=+0.42±0.16, CV sign-match=63.7%, strict=48.6%.
 // Therefore this is kept as a secondary diagnostic only.
@@ -6314,13 +6317,10 @@ function build27dComputed(rows, last3D){
     const delta = prevKp !== null ? (kpUsed - prevKp) : null;
     prevKp = kpUsed;
 
-    // v88.8.18 ★ EXPERT OVERRIDE INTEGRATION: для дат з PDF expert calibration
-    // (expert_overrides_v3.json) і значним відхиленням від raw G (>1.5)
-    // — використовуємо expert_eng як EFFECTIVE G для UI display.
-    // Raw G зберігається у `G` (контекст у tooltip), effectiveG — primary показ.
-    // Знайдена систематична проблема: 8 з 14 overrides конфліктували з raw G на 2+ балів.
-    // Користувач Кирило 11.05.2026: "15 число червоний день, а тут зелене" —
-    // expert=-3 на 15.05, raw G=+0.1 — це систематичне розходження бюлетеня з астро.
+    // v88.8.30 ★ TWO-RAIL FIX:
+    // G = raw continuous G only: Kp − 2 + ΣAᵢ.
+    // PDF/Engine score is a separate day-score overlay and must never replace G.
+    // _effectiveG is kept only as a backward-compatible alias equal to G.
     let _effectiveG = G;
     let _expertEng = null;
     let _hasOverride = false;
@@ -6329,7 +6329,7 @@ function build27dComputed(rows, last3D){
         const _ovEng = _expertOverrides[ds].expert_eng;
         if (Number.isFinite(_ovEng)) {
           _expertEng = _ovEng;
-          // v88.8.28: do NOT replace raw continuous G with discrete expert score.
+          // v88.8.30: do NOT replace raw continuous G with discrete expert score.
           // 27-day chart/table remains homogeneous raw-G; expert/PDF is overlay metadata only.
           _hasOverride = true;
         }
@@ -6349,16 +6349,16 @@ function draw27dTable(){
 
   let data = [..._27dComputed];
 
-  // Фільтр (v88.8.18: фільтруємо по effectiveG для consistency з display)
-  if(filterVal === 'good')    data = data.filter(d => (isFinite(d._effectiveG)?d._effectiveG:d.G) >= 0.5);
-  if(filterVal === 'neutral') data = data.filter(d => {const _g=isFinite(d._effectiveG)?d._effectiveG:d.G; return _g > -0.5 && _g < 0.5;});
-  if(filterVal === 'bad')     data = data.filter(d => (isFinite(d._effectiveG)?d._effectiveG:d.G) < -0.5);
-  if(filterVal === 'verybad') data = data.filter(d => (isFinite(d._effectiveG)?d._effectiveG:d.G) <= -2.5);
+  // v88.8.30: фільтр тільки по raw continuous G. PDF/Engine — overlay, не заміна G.
+  if(filterVal === 'good')    data = data.filter(d => d.G >= 0.5);
+  if(filterVal === 'neutral') data = data.filter(d => d.G > -0.5 && d.G < 0.5);
+  if(filterVal === 'bad')     data = data.filter(d => d.G < -0.5);
+  if(filterVal === 'verybad') data = data.filter(d => d.G <= -2.5);
 
-  // Сортування (v88.8.18: sort за effectiveG для G колонки — consistency з display)
+  // v88.8.30: sort за raw continuous G. PDF/Engine score не змішується з G.
   data.sort((a,b)=>{
     let va, vb;
-    if(_27dSortCol==='g')    { va=isFinite(a._effectiveG)?a._effectiveG:a.G; vb=isFinite(b._effectiveG)?b._effectiveG:b.G; }
+    if(_27dSortCol==='g')    { va=a.G; vb=b.G; }
     else if(_27dSortCol==='ap') { va=a.r.Ap; vb=b.r.Ap; }
     else                     { va=a.ds;     vb=b.ds; }
     if(va < vb) return _27dSortDir==='asc' ? -1 : 1;
@@ -6390,18 +6390,17 @@ function draw27dTable(){
 
   let html='';
   const _panchCache={};
-  for(const {r,ds,kpUsed,isOverridden,ai,G,delta,f107mod,_effectiveG,_expertEng,_hasOverride} of data){
+  for(const {r,ds,kpUsed,isOverridden,ai,G,delta,f107mod,_expertEng,_hasOverride} of data){
     const isToday = ds === todayStr;
-    // v88.8.18 ★ EXPERT OVERRIDE: для класифікації/кольору використовуємо effectiveG
-    // (raw G if no override, expert_eng if |delta|>=1.5). G_display це effectiveG.
-    const G_display = G; // v88.8.28: raw-G table value; expert score is overlay, not replacement
+    // v88.8.30: raw-G table value; expert score is overlay, not replacement.
+    const G_display = G;
     const gcls = classForG(G_display);
     const cls  = kpUsed>=5 ? 'k-bad' : (kpUsed>=4 ? 'k-warn' : 'k-ok');
     const kpLabel = isOverridden ? 'Kp max (3d↑)' : 'Kp max (27d)';
     const gTipBase = gTooltipText(kpLabel, kpUsed, ai);
     let gTip = f107mod && f107mod.val !== 0 ? gTipBase + '\n⚠ F10.7: ' + f107mod.tip + ' (контекст, не в G)' : gTipBase;
     if (_hasOverride && Number.isFinite(_expertEng)) {
-      gTip += `\n\n★ PDF EXPERT override: ${_expertEng>=0?'+':''}${_expertEng}\n(astro G був ${G>=0?'+':''}${G.toFixed(2)}, delta ${(_expertEng-G).toFixed(1)})`;
+      gTip += `\n\n★ PDF/Engine day score: ${_expertEng>=0?'+':''}${_expertEng}\n(raw G був ${G>=0?'+':''}${G.toFixed(2)}, delta ${(_expertEng-G).toFixed(1)})`;
     }
     // Moon phase emoji for Li column
     const _moonEmoji = ai.phaseDeg < 22 ? '🌑' : ai.phaseDeg < 67 ? '🌒' : ai.phaseDeg < 112 ? '🌓' : ai.phaseDeg < 157 ? '🌔' : ai.phaseDeg < 202 ? '🌕' : ai.phaseDeg < 247 ? '🌖' : ai.phaseDeg < 292 ? '🌗' : ai.phaseDeg < 337 ? '🌘' : '🌑';
@@ -6483,8 +6482,8 @@ function draw27dTable(){
   // ── Статистика 27-day ──
   const _s27el = document.getElementById('stat27');
   if (_s27el && data.length) {
-    // v88.8.18: статистика по _effectiveG для consistency з графіком
-    const _gOf = d => isFinite(d._effectiveG) ? d._effectiveG : d.G;
+    // v88.8.30: статистика тільки по raw continuous G. PDF/Engine score не входить у G statistics.
+    const _gOf = d => d.G;
     const _gVals = data.map(_gOf).filter(g => isFinite(g));
     const _nGood = _gVals.filter(g => g >= 0.5).length;
     const _nBad  = _gVals.filter(g => g < -0.5).length;
@@ -6506,10 +6505,10 @@ function draw27dTable(){
   }
 
   // Trend summary — quick actionable text
-  // v88.8.18: операції на _effectiveG (де є expert override) для consistency з графіком
+  // v88.8.30: trend summary тільки по raw continuous G.
   const ts=document.getElementById('trend27Summary');
   if(ts&&data.length){
-    const _gOf = d => isFinite(d._effectiveG) ? d._effectiveG : d.G;
+    const _gOf = d => d.G;
     const sorted=[...data].sort((a,b)=>a.ds.localeCompare(b.ds));
     const next7=sorted.slice(0,7);
     const badDays=next7.filter(d=>_gOf(d)<-0.5);
@@ -6840,8 +6839,8 @@ function renderForwardTimeline(){
   for(let i=0;i<visibleData.length;i++){
     const globalIdx = offset + i;
     const d = visibleData[i];
-    // v88.8.18 ★: используємо _effectiveG (raw G replaced expert_eng для overrides)
-    const _gEff = isFinite(d._effectiveG) ? d._effectiveG : d.G;
+    // v88.8.30: raw continuous G only; PDF/Engine score is only a marker/tooltip
+    const _gEff = d.G;
     const g = isFinite(_gEff) ? _gEff : 0;
     const col = _ftGColor(_gEff);
     const isToday = (globalIdx === todayIdx);
@@ -6856,16 +6855,16 @@ function renderForwardTimeline(){
     const border = isSel ? `2px solid #fff` : (isToday ? `1.5px solid #9fd1ff` : d._hasOverride ? '1px solid #ffd166' : '1px solid transparent');
     const hPct = Math.max(18, Math.min(100, Math.abs(g) * 18 + 18));
     const _confLbl = daysOut <= 3 ? '' : daysOut <= 7 ? ' · ~75% conf' : daysOut <= 14 ? ' · ~55% conf' : ' · ~35% conf';
-    const _ovLbl = d._hasOverride ? ` · ★ expert (raw G=${d.G.toFixed(1)})` : '';
+    const _ovLbl = d._hasOverride ? ` · ★ PDF day score (G raw=${d.G.toFixed(1)})` : '';
     const label = `${d.ds} · G ${g>=0?'+':''}${g.toFixed(2)}${_confLbl}${_ovLbl}`;
     sticks += `<div class="ft-stick" data-idx="${globalIdx}" title="${label}" style="flex:1;min-width:0;height:${hPct}%;background:${col};opacity:${opacity};border-radius:2px;cursor:pointer;transition:opacity .15s, border .15s;box-sizing:border-box;border:${border}"></div>`;
   }
 
   // Detail panel
-  const _selG_eff = isFinite(sel._effectiveG) ? sel._effectiveG : sel.G;
-  const selG = isFinite(_selG_eff) ? _selG_eff : 0;
-  const selCat = _ftCategory(_selG_eff);
-  const selCol = _ftGColor(_selG_eff);
+  const _selG_raw = sel.G;
+  const selG = isFinite(_selG_raw) ? _selG_raw : 0;
+  const selCat = _ftCategory(_selG_raw);
+  const selCol = _ftGColor(_selG_raw);
   const gSign = selG >= 0 ? '+' : '';
   const aiPart = sel.ai ? `ΣAᵢ ${sel.ai.Ai>=0?'+':''}${sel.ai.Ai}` : '';
   const kpPart = isFinite(sel.kpUsed) ? `Kp ${sel.kpUsed.toFixed(1)}` : '';
@@ -6886,7 +6885,7 @@ function renderForwardTimeline(){
       <span class="pill" style="font-size:9px">${visibleData.length} дн.</span>
       ${narrowHint}
       <span class="hint" tabindex="0" style="font-size:10px;color:var(--faint);cursor:help">ⓘ<span class="hint-pop" style="white-space:pre;font-size:11px">Інтерактивна смуга прогнозу. Клік по стовпчику — вибір дня.
-▶ Play автопрокручує по обраній швидкості. Висота ∝ |G|, колір ∝ категорія.
+▶ Play автопрокручує по обраній швидкості. Висота ∝ |raw G|, колір ∝ raw-G категорія. PDF/Engine позначається ★ окремо.
 ${isNarrow?'На вузькому екрані показано 14 днів (−3..+10 від сьогодні).':'Показано всі 27 днів прогнозу.'}</span></span>
       <span style="margin-left:auto;display:flex;gap:3px;align-items:center">
         ${speedBtn(0.5, '½×')}
@@ -6925,8 +6924,8 @@ ${isNarrow?'На вузькому екрані показано 14 днів (−
       const i = parseInt(st.dataset.idx, 10);
       const d = isFinite(i) ? _27dComputed[i] : null;
       if(d){
-        // v88.8.18: ARIA label використовує effective G
-        const _gEff = isFinite(d._effectiveG) ? d._effectiveG : d.G;
+        // v88.8.30: ARIA label використовує raw continuous G
+        const _gEff = d.G; // v88.8.30: raw continuous G only
         const gTxt = isFinite(_gEff) ? _gEff.toFixed(2) : 'н/д';
         const _ovTxt = d._hasOverride ? ', expert override' : '';
         st.setAttribute('role', 'button');
@@ -9971,7 +9970,7 @@ function renderGRadialV86(g, kp, ai){
 }
 
 
-// ═══ v88.8.28: Operational Signal Hierarchy ═══
+// ═══ v88.8.30: Operational Signal Hierarchy ═══
 // Root cause fix: Hero command must not be a raw Live-G command when
 // Engine/PDF gives the day verdict. Day verdict = Engine + override;
 // operational permission = day verdict gated by current Live G / Kp.
@@ -10035,13 +10034,19 @@ function resolveHeroSignalHierarchy_v88824(liveG, kp){
 
 function heroHeadlineFromHierarchy_v88824(sig){
   if(!sig || !sig.hasEngine) return null;
-  if(sig.guard === 'unverified_override_large_delta') return 'ОБЕРЕЖНО — ДЖЕРЕЛО +3 НЕ ПІДТВЕРДЖЕНЕ';
-  if(sig.dayScore >= 2 && (sig.guard === 'live_unstable' || sig.guard === 'live_tense')) return `ДЕНЬ +${sig.dayScore}, АЛЕ ЗАРАЗ ОБЕРЕЖНО`;
-  if(sig.dayScore >= 3) return 'МОЖНА ДІЯТИ — СИЛЬНЕ ВІКНО';
-  if(sig.dayScore >= 1) return 'МОЖНА ДІЯТИ — ПОМІРНО';
-  if(sig.dayScore === 0) return sig.liveKey === 'tense' ? 'НЕЙТРАЛЬНИЙ ДЕНЬ, АЛЕ ФОН ТИСНЕ' : 'НЕЙТРАЛЬНИЙ ДЕНЬ';
-  if(sig.dayScore === -1) return 'ОБЕРЕЖНО — ДЕНЬ НЕСТІЙКИЙ';
-  return 'СТОП — НЕСПРИЯТЛИВИЙ ДЕНЬ';
+  if(sig.guard === 'unverified_override_large_delta') return 'ЗАРАЗ ОБЕРЕЖНО — PDF-ДЖЕРЕЛО НЕ ПІДТВЕРДЖЕНЕ';
+
+  // v88.8.30: Hero headline is an OPERATIONAL command for the current moment.
+  // Day PDF/Engine score is shown as context, not as a command.
+  // This prevents the wrong reading: "day +3" while all live windows say avoid.
+  const ds = isFinite(sig.dayScore) ? (sig.dayScore >= 0 ? '+' + sig.dayScore : String(sig.dayScore)) : '—';
+  if(sig.dayScore >= 2 && sig.guard === 'live_tense') return `ЗАРАЗ СТОП — день ${ds} за PDF, але live-фон блокує`;
+  if(sig.dayScore >= 2 && sig.guard === 'live_unstable') return `ЗАРАЗ ОБЕРЕЖНО — день ${ds} за PDF`;
+  if(sig.dayScore >= 3) return 'ЗАРАЗ МОЖНА ДІЯТИ — сильний день за PDF';
+  if(sig.dayScore >= 1) return 'ЗАРАЗ МОЖНА ПЛАНОВО — день сприятливий';
+  if(sig.dayScore === 0) return sig.liveKey === 'tense' ? 'ЗАРАЗ ОБЕРЕЖНО — нейтральний день, фон тисне' : 'ЗАРАЗ СТАНДАРТНИЙ РЕЖИМ';
+  if(sig.dayScore === -1) return 'ЗАРАЗ ОБЕРЕЖНО — день нестійкий';
+  return 'ЗАРАЗ УНИКАТИ — несприятливий день';
 }
 
 function heroLayerNoteFromHierarchy_v88824(sig){
@@ -10055,7 +10060,7 @@ function heroLayerNoteFromHierarchy_v88824(sig){
     const cand = isFinite(sig.entry?._expertEngCandidate) ? (sig.entry._expertEngCandidate >= 0 ? '+' : '') + sig.entry._expertEngCandidate : '—';
     return `PDF#48 override не активовано: source не підтверджений. Raw engine=${raw}, candidate=${cand}. Фон зараз G=${lg}.`;
   }
-  if(sig.dayScore >= 2 && (sig.guard === 'live_unstable' || sig.guard === 'live_tense')) return `Прогноз дня: ${ds} (${src}) · Фон зараз G=${lg} — зараз фон слабший, тому діємо обережно.`;
+  if(sig.dayScore >= 2 && (sig.guard === 'live_unstable' || sig.guard === 'live_tense')) return `Денний PDF/Engine прогноз: ${ds} (${src}) · Live-фон зараз G=${lg}. Команда зверху рахується від live-обмеження, не від зеленого дня.`;
   return `Прогноз дня: ${ds} (${src}) · Фон зараз G=${lg}.`;
 }
 
@@ -10215,7 +10220,7 @@ function syncHero(){
           // Цей classifier бере round(continuous Hero G) — це НЕ engine v18.8 (frozen+patches).
           // Engine pill показано окремо справа у hero. G_ext (R&D advisory) — третя модель.
           const _liveLabel = (typeof _currentLang !== 'undefined' && _currentLang === 'EN') ? 'Live G' : 'Live G';
-          _vb.innerHTML = `<span style="color:var(--faint);font-weight:400;font-size:10px" title="Класифікатор для Engine/PDF override, якщо доступний. Live G показаний у кільці як фон зараз.\n\nЦе НЕ engine v18.8 score (показано окремо у engine pill).\n3 моделі в hero за дизайном:\n• Live G — continuous (Kp−2+ΣAᵢ), real-time, classified тут\n• Engine v18.8 pill — discrete (-3..+3), frozen+patches, +override\n• G_ext — R&D advisory regression (нижче у sci-bar)\nРізні значення = різні моделі, не баг.">Прогноз дня:</span> ${v7.label} <span style="color:var(--faint);font-weight:500;font-size:10px">(${v7.score >= 0 ? '+' : ''}${v7.score})</span>`;
+          _vb.innerHTML = `<span style="color:var(--faint);font-weight:400;font-size:10px" title="Класифікатор для Engine/PDF override, якщо доступний. Live G показаний у кільці як фон зараз.\n\nЦе НЕ engine v18.8 score (показано окремо у engine pill).\n3 моделі в hero за дизайном:\n• Live G — continuous (Kp−2+ΣAᵢ), real-time, classified тут\n• Engine v18.8 pill — discrete (-3..+3), frozen+patches, +override\n• G_ext — R&D advisory regression (нижче у sci-bar)\nРізні значення = різні моделі, не баг.">PDF/Engine день:</span> ${v7.label} <span style="color:var(--faint);font-weight:500;font-size:10px">(${v7.score >= 0 ? '+' : ''}${v7.score})</span>`;
         } else {
           _vb.style.display = 'none';
         }
@@ -11925,15 +11930,15 @@ function renderDisagreement(){
 
   const _models = [];
   if(isFinite(_gNow))    _models.push({
-    name: 'Зараз',
+    name: 'Live G',
     val: _gNow,
-    sub: 'live: Kp + панчанга',
+    sub: 'фон зараз: Kp−2+ΣAᵢ',
     tip: 'Поточна continuous-оцінка на основі реального Kp NOAA + Vedic Panchanga компонентів. Continuous score (-5..+7).'
   });
   if(_engVal != null)    _models.push({
-    name: 'Engine',
+    name: (_eng && _eng._expertOverride) ? 'PDF/Engine' : 'Engine',
     val: _engVal,
-    sub: 'правила (рік на 212 днях)',
+    sub: (_eng && _eng._expertOverride) ? 'прогноз дня з PDF' : 'правила engine',
     tip: 'Engine v18.5 — правило-базована модель. Дискретний рейтинг −3..+3 на історичних даних. Holdout (n=56): 75.0% strict / 82.1% binary · Global (n=280): 71.4% strict / 83.6% binary · Cohen κ=0.52. R&D / Advisory — V3 prospective freeze 2026-05-03 → ~2026-08-01.'
   });
   if(_pdfVal != null)    _models.push({
@@ -11981,16 +11986,18 @@ function renderDisagreement(){
   // Section 3: Що робити (1-2 чіткі дії)
 
   const _title = _signConflict
-    ? '⚠ Різні джерела дають протилежні знаки сьогодні'
-    : `⚠ Великий розкид між джерелами (різниця ${_todayRange.toFixed(1)} балів)`;
+    ? 'ℹ Два контури: прогноз дня і фон зараз різні'
+    : `ℹ Різна сила сигналів (розкид ${_todayRange.toFixed(1)} балів)`;
 
   const _why = _signConflict
-    ? 'Одне джерело каже «сьогодні +», інше «сьогодні −». Це означає що день має змішану природу — частина факторів сприятлива, частина проблемна.'
-    : `Сьогоднішні джерела (Зараз, Engine${_pdfVal != null ? ', Бюлетень' : ''}) вказують у тому самому напрямку, але з різною силою. Розкид у ${_todayRange.toFixed(1)} бала — суттєвий, означає невпевненість у точному рівні.`;
+    ? 'PDF/Engine дає денний прогноз, а Live G показує тактичний фон зараз. Це не математичний конфлікт: це дві різні шкали, тому діємо за live-guard, але прогноз дня лишається PDF/Engine.'
+    : `Сьогоднішні контури (Live G, Engine/PDF${_pdfVal != null ? ', Бюлетень' : ''}) вказують в одному напрямку, але з різною силою. Розкид ${_todayRange.toFixed(1)} бала — це невизначеність сили, не зміна знаку.`;
 
   const _conf = _signConflict ? '~30%' : _todayRange >= 4 ? '~25%' : '~15%';
 
-  const _action = `Знизь довіру до сьогоднішньої оцінки <strong style="color:#ffd2a0">${_conf}</strong>. Якщо плануєш важливе рішення — звір з 1–2 додатковими сигналами (NOAA SWPC, Panchanga ↓, локальне самопочуття).`;
+  const _action = _signConflict
+    ? `Не змішуй індекси: <strong style="color:#ffd2a0">PDF/Engine = прогноз дня</strong>, <strong style="color:#ffd2a0">Live G = дія зараз</strong>. Якщо Live G негативний — не стартуй нове, навіть коли день у PDF позитивний.`
+    : `Рівень сили не однаковий. Для важливого рішення звір 1–2 додаткові сигнали (NOAA SWPC, Panchanga, локальне самопочуття).`;
 
   // Кожна модель — окремий блок з name + value + subtitle (хто це)
   const _modelsHtml = _models.map(m => {
@@ -12644,40 +12651,45 @@ function exportCsv(){
   if(last3D && Array.isArray(last3D.days)){
     for(const d of last3D.days) if(isFinite(d.kpMax)) override3D.set(fmtDate(d.date), d.kpMax);
   }
-  const header = ['Дата','G_raw','G_effective','Expert_eng','Kp','Li','Mi','ei','Pi','SumAi','Ap','Flux','Категорія','Рекомендація'];
+  // v88.8.30: two-rail export. Never mix discrete PDF/Engine day score into G.
+  // G_raw = continuous physical/advisory index: Kp−2+ΣAᵢ.
+  // Day_score = discrete PDF/Engine score: −3..+3.
+  const header = ['Дата','G_raw_live','Day_score_PDF_Engine','Day_score_source','Kp','Li','Mi','ei','Pi','Di','SumAi','Ap','Flux','G_raw_category','Operational_recommendation'];
   const lines = [header.join(',')];
   for(const r of _last27Rows){
     const ds = fmtDate(r.date);
     const kpUsed = override3D.has(ds) ? override3D.get(ds) : r.kpMax;
+    if(!isFinite(kpUsed)) continue;
     const ai = computeAi(noonUTC(r.date), kpUsed);
     const G = kpUsed - 2 + ai.Ai;
-    // v88.8.18 ★ EXPERT OVERRIDE: експортуємо raw + effective + expert разом
-    let _exp = '', _effG = isFinite(G) ? G : 0;
+    let dayScore = '', daySource = 'raw_only';
     try {
-      if (typeof _expertOverrides !== 'undefined' && _expertOverrides && _expertOverrides[ds]) {
-        const _ovEng = _expertOverrides[ds].expert_eng;
-        if (Number.isFinite(_ovEng)) {
-          _exp = _ovEng;
-          if (Math.abs(_ovEng - G) >= 1.5) _effG = _ovEng;
-        }
+      const e = getEngineScore(r.date);
+      if(e && Number.isFinite(e.eng)){
+        dayScore = e.eng;
+        daySource = e._expertOverride ? 'verified_pdf_override' : 'engine_v18_8';
       }
     } catch(e) {}
+    const sig = (typeof resolveDaySignal_v88825 === 'function')
+      ? resolveDaySignal_v88825(r.date, G, kpUsed, {isToday: ds===fmtDate(new Date())})
+      : null;
+    const rec = sig?.recommendation?.text || recommendG(G, kpUsed).text || '';
     lines.push([
       ds,
       isFinite(G)?G.toFixed(2):'',
-      isFinite(_effG)?_effG.toFixed(2):'',
-      _exp,
+      dayScore,
+      daySource,
       kpUsed.toFixed(2),
-      ai.Li, ai.Mi, ai.ei, ai.Pi, ai.Ai,
-      r.Ap, r.flux,
-      classifyG(isFinite(_effG)?_effG:0),
-      recommendG(_effG, kpUsed).text.replace(/[^\w\s\u0400-\u04FF]/g,'').trim()
+      ai.Li, ai.Mi, ai.ei, ai.Pi, ai.Di, ai.Ai,
+      r.Ap ?? '', r.flux ?? '',
+      classifyG(isFinite(G)?G:0),
+      String(rec).replace(/[\r\n,]+/g,' ').trim()
     ].join(','));
   }
   const blob = new Blob(['\uFEFF'+lines.join('\r\n')], {type:'text/csv;charset=utf-8'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `kp_forecast_${fmtDate(new Date())}.csv`;
+  a.download = `gindex_two_rail_${fmtDate(new Date())}.csv`;
   a.click();
 }
 
@@ -12694,9 +12706,7 @@ function exportICS(){
   const fmtICSDateTime = d => `${fmtICSDate(d)}T${pad2(d.getUTCHours())}${pad2(d.getUTCMinutes())}${pad2(d.getUTCSeconds())}Z`;
   const now = new Date();
   const dtstamp = fmtICSDateTime(now);
-  // RFC 5545: escape commas, semicolons, newlines, backslashes
   const esc = s => String(s).replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\n/g,'\\n');
-  // Fold lines >75 octets per RFC 5545 (simple ASCII-safe fold)
   const fold = s => {
     const lines = [];
     for(const line of s.split('\r\n')){
@@ -12711,7 +12721,7 @@ function exportICS(){
   };
 
   const out = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//G-Index//Forecast//UK','CALSCALE:GREGORIAN','METHOD:PUBLISH',
-    'X-WR-CALNAME:G-Index Forecast','X-WR-TIMEZONE:UTC','X-WR-CALDESC:Космофізичний прогноз на 27 днів'];
+    'X-WR-CALNAME:G-Index Forecast','X-WR-TIMEZONE:UTC','X-WR-CALDESC:Two-rail forecast: Day_score PDF/Engine + Live G raw'];
 
   for(const r of _last27Rows){
     const ds = fmtDate(r.date);
@@ -12719,27 +12729,22 @@ function exportICS(){
     if(!isFinite(kpUsed)) continue;
     const ai = computeAi(noonUTC(r.date), kpUsed);
     const G = kpUsed - 2 + ai.Ai;
-    // v88.8.18 ★ EXPERT OVERRIDE для ICS: використовуємо effective G для category/recommendation
-    let _expEng = null, _effG = isFinite(G) ? G : 0, _hasOv = false;
+    let dayScore = null, daySource = 'raw_only';
     try {
-      if (typeof _expertOverrides !== 'undefined' && _expertOverrides && _expertOverrides[ds]) {
-        const _ovEng = _expertOverrides[ds].expert_eng;
-        if (Number.isFinite(_ovEng)) {
-          _expEng = _ovEng;
-          if (Math.abs(_ovEng - G) >= 1.5) { _effG = _ovEng; _hasOv = true; }
-        }
+      const e = getEngineScore(r.date);
+      if(e && Number.isFinite(e.eng)){
+        dayScore = e.eng;
+        daySource = e._expertOverride ? 'PDF' : 'Engine';
       }
     } catch(e) {}
-    const cat = classifyG(isFinite(_effG)?_effG:0);
-    const rec = recommendG(_effG, kpUsed).text || '';
-    const gSign = _effG >= 0 ? '+' : '';
-    const _ovSummary = _hasOv ? ' ★' : '';
-    const summary = `G ${gSign}${_effG.toFixed(2)}${_ovSummary} — ${cat} (Kp ${kpUsed.toFixed(1)})`;
-    const _ovDesc = _hasOv
-      ? `\n★ PDF EXPERT override: ${_expEng>=0?'+':''}${_expEng} (астро G був ${G>=0?'+':''}${G.toFixed(2)})`
-      : (_expEng!==null ? `\nEngine: ${_expEng>=0?'+':''}${_expEng} (узгоджено з G)` : '');
-    const desc = `Дата: ${ds}\nG = ${gSign}${_effG.toFixed(2)}${_ovSummary}\nKp = ${kpUsed.toFixed(2)}\nΣAᵢ = ${ai.Ai} (Lᵢ=${ai.Li}, Mᵢ=${ai.Mi}, eᵢ=${ai.ei}, Pᵢ=${ai.Pi}${ai.Di?`, Dᵢ=${ai.Di}`:''})${_ovDesc}\nКатегорія: ${cat}\nРекомендація: ${rec}\n\nДжерело: G-Index (NOAA SWPC + Panchanga + PDF #48 expert)`;
-    const dtStart = r.date; // UTC date
+    const sig = (typeof resolveDaySignal_v88825 === 'function')
+      ? resolveDaySignal_v88825(r.date, G, kpUsed, {isToday: ds===fmtDate(new Date())})
+      : null;
+    const dayTxt = Number.isFinite(dayScore) ? `${dayScore>=0?'+':''}${dayScore} ${daySource}` : '—';
+    const gSign = G >= 0 ? '+' : '';
+    const summary = `Day ${dayTxt}; Live G ${gSign}${G.toFixed(2)} — ${sig?.title || classifyG(G)}`;
+    const desc = `Дата: ${ds}\nDay_score = ${dayTxt} (дискретний прогноз дня, НЕ G)\nLive G_raw = ${gSign}${G.toFixed(2)}\nKp = ${kpUsed.toFixed(2)}\nΣAᵢ = ${ai.Ai} (Lᵢ=${ai.Li}, Mᵢ=${ai.Mi}, eᵢ=${ai.ei}, Pᵢ=${ai.Pi}, Dᵢ=${ai.Di})\nОпераційна рекомендація: ${sig?.recommendation?.text || recommendG(G,kpUsed).text || ''}\n\nДжерело: G-Index two-rail (NOAA SWPC + Panchanga + verified PDF forecast where available).`;
+    const dtStart = r.date;
     const dtEnd = new Date(dtStart.getTime() + 86400000);
     const uid = `gindex-${ds}-${Math.round((kpUsed||0)*100)}@g-index`;
     out.push('BEGIN:VEVENT');
@@ -12757,7 +12762,7 @@ function exportICS(){
   const blob = new Blob([ics], {type:'text/calendar;charset=utf-8'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `g-index_forecast_${fmtDate(new Date())}.ics`;
+  a.download = `g-index_two_rail_${fmtDate(new Date())}.ics`;
   a.click();
 }
 
@@ -14297,9 +14302,8 @@ function draw27Chart(){
 
   // Масштаб
   const PAD_L=42, PAD_R=16, PAD_T=18, PAD_B=36;
-  // v88.8.18 ★: масштаб обчислюється з _effectiveG (де є expert override) — інакше
-  // лінія може виходити за межі canvas. Якщо expert=-3, raw=+0.5, замінено на -3 → потрібно gMin<=-3.
-  const gValues = data.map(d=>isFinite(d._effectiveG) ? d._effectiveG : d.G).filter(v=>isFinite(v));
+  // v88.8.30: масштаб обчислюється тільки з raw continuous G. PDF/Engine score — overlay, не вісь G.
+  const gValues = data.map(d=>d.G).filter(v=>isFinite(v)); // v88.8.30 raw continuous G only
   const gMin = Math.min(-3, ...gValues) - 0.5;
   const gMax = Math.max(3,  ...gValues) + 0.5;
   const xOf = i => PAD_L + (i/(n-1)) * (W - PAD_L - PAD_R);
@@ -14357,10 +14361,7 @@ function draw27Chart(){
   });
 
   // ── Лінія G ──
-  // v88.8.18 ★ EXPERT OVERRIDE: лінія малюється через _effectiveG (raw G replaced
-  // expert_eng для дат з PDF override і |delta|>=1.5). Це системно змішує два
-  // signal-и: continuous астро для дат БЕЗ override, discrete expert calibration
-  // для днів з PDF #48 override. Користувач бачить ефективну оцінку, не астро-only.
+  // v88.8.30: лінія малюється тільки по raw continuous G. PDF/Engine day-score — overlay marker only.
   ctx.lineWidth = 2;
   ctx.lineJoin = 'round';
   // Градієнт по кольору
@@ -14372,7 +14373,7 @@ function draw27Chart(){
   ctx.beginPath();
   let first = true;
   data.forEach((d,i)=>{
-    const _gForChart = isFinite(d._effectiveG) ? d._effectiveG : d.G;
+    const _gForChart = d.G; // v88.8.30: raw continuous G only
     if(!isFinite(_gForChart)) return;
     const x = xOf(i), y = yOf(_gForChart);
     if(first){ ctx.moveTo(x,y); first=false; } else ctx.lineTo(x,y);
@@ -14380,16 +14381,16 @@ function draw27Chart(){
   ctx.stroke();
 
   // ── Точки з кольором ──
-  // v75: find best/worst (по _effectiveG, не raw G)
+  // v88.8.30: find best/worst по raw G
   let bestIdx=-1, worstIdx=-1, bestG=-Infinity, worstG=Infinity;
   data.forEach((d,i)=>{
-    const _gForChart = isFinite(d._effectiveG) ? d._effectiveG : d.G;
+    const _gForChart = d.G; // v88.8.30: raw continuous G only
     if(!isFinite(_gForChart)) return;
     if(_gForChart>bestG){bestG=_gForChart;bestIdx=i;}
     if(_gForChart<worstG){worstG=_gForChart;worstIdx=i;}
   });
   data.forEach((d,i)=>{
-    const _gForChart = isFinite(d._effectiveG) ? d._effectiveG : d.G;
+    const _gForChart = d.G; // v88.8.30: raw continuous G only
     if(!isFinite(_gForChart)) return;
     const x = xOf(i), y = yOf(_gForChart);
     const col = _gForChart<=-2.5?'#ff4444':_gForChart<=-0.5?'#ffaa33':_gForChart>=0.5?'#2bd47d':'#9bb1dc';
@@ -14438,22 +14439,22 @@ function draw27Chart(){
     const mx=(evt.clientX-rect.left)*(canvas.width/dpr/rect.width);
     const tip=document.getElementById('chart27Tooltip');
     if(!tip) return;
-    // Find nearest point (v88.8.18: за _effectiveG)
+    // Find nearest point by raw G
     let best=-1, bestDist=Infinity;
     data.forEach((d,i)=>{
-      const _gEff = isFinite(d._effectiveG) ? d._effectiveG : d.G;
+      const _gEff = d.G; // v88.8.30: raw continuous G only
       if(!isFinite(_gEff)) return;
       const dx=Math.abs(xOf(i)-mx);
       if(dx<bestDist){bestDist=dx;best=i;}
     });
     if(best>=0 && bestDist<20){
       const d=data[best];
-      const _gEff = isFinite(d._effectiveG) ? d._effectiveG : d.G;
+      const _gEff = d.G; // v88.8.30: raw continuous G only
       const cat=_gEff>=2?'🟢 Особл.сприятл.':_gEff>=0.5?'🟢 Сприятливий':_gEff>=-0.5?'⚪ Нейтральний':_gEff>=-2.5?'🟠 Несприятл.':'🔴 Особл.несприятл.';
       const _ovInfo = d._hasOverride
-        ? `<div style="color:#ffd166;font-size:10px;margin-top:2px">★ PDF EXPERT (raw G=${d.G>=0?'+':''}${d.G.toFixed(2)})</div>`
+        ? `<div style="color:#ffd166;font-size:10px;margin-top:2px">★ PDF day score (raw G=${d.G>=0?'+':''}${d.G.toFixed(2)})</div>`
         : '';
-      tip.innerHTML=`<div style="font-weight:700">${d.ds}</div><div>G = <span style="font-weight:700;color:${_gEff>=0.5?'#2bd47d':_gEff>=-0.5?'#9bb1dc':_gEff>=-2.5?'#ffaa33':'#ff4444'}">${_gEff>=0?'+':''}${_gEff.toFixed(1)}</span>${d._hasOverride?' ★':''}</div><div style="color:#9bb1dc">${cat}</div>${_ovInfo}`;
+      tip.innerHTML=`<div style="font-weight:700">${d.ds}</div><div>G(raw) = <span style="font-weight:700;color:${_gEff>=0.5?'#2bd47d':_gEff>=-0.5?'#9bb1dc':_gEff>=-2.5?'#ffaa33':'#ff4444'}">${_gEff>=0?'+':''}${_gEff.toFixed(1)}</span>${d._hasOverride?' ★':''}</div><div style="color:#9bb1dc">${cat}</div>${_ovInfo}`;
       const tx=evt.clientX-rect.left, ty=evt.clientY-rect.top;
       tip.style.display='block';
       tip.style.left=Math.min(tx+12, rect.width-140)+'px';
@@ -15587,7 +15588,7 @@ function renderMilRec(G, prof) {
   let ageLine = '';
   if (adj.label) {
     const shiftSign = adj.gShift > 0 ? `+${adj.gShift}` : adj.gShift < 0 ? `${adj.gShift}` : '±0';
-    const effStr    = Geff !== G ? ` → G_eff=${Geff.toFixed(1)}` : '';
+    const effStr    = Geff !== G ? ` → G_personal=${Geff.toFixed(1)}` : ''; // personal/profile adjusted, not raw G
     ageLine = `<div style="margin-top:4px;font-size:11px;color:var(--faint)">${adj.label} | поправка: G${shiftSign}${effStr}</div>`;
   }
 
@@ -15630,7 +15631,7 @@ function renderProfileRec() {
 
   // Вікова мітка (показувати тільки якщо є зсув)
   const ageLine = (adj.gShift !== 0 && adj.label)
-    ? `<div style="margin-top:4px;font-size:11px;color:var(--faint)">${adj.label} | поправка G${adj.gShift > 0 ? '+'+adj.gShift : adj.gShift} → G_eff=${Geff.toFixed(1)}</div>`
+    ? `<div style="margin-top:4px;font-size:11px;color:var(--faint)">${adj.label} | поправка G${adj.gShift > 0 ? '+'+adj.gShift : adj.gShift} → G_personal=${Geff.toFixed(1)}</div>`
     : '';
 
   el_.innerHTML = `<span style="font-weight:700;color:${prof.color}">${prof.label}:</span> ${rec}${ageLine}`;
