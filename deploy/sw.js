@@ -1,5 +1,5 @@
-// v88.8.33: Math truth / index labels fix — cache bump to avoid stale v88.8.23 hero logic.
-// G-Index Service Worker v88.8.33 (Math truth / index labels fix)
+// v88.8.34: Math truth / index labels fix — cache bump to avoid stale v88.8.23 hero logic.
+// G-Index Service Worker v88.8.34 (Math truth / index labels fix)
 // v88.8.19 changes — incremental release після v88.8.18 з реальним bug fix:
 //   ENGINE v18.7 → v18.8: P2 раніше шукав 'Подорожі' word — missed 93 dates
 //     з '✈' emoji-only. P3 раніше тільки Shukla Dashami (10) — missed Krishna
@@ -12,7 +12,7 @@
 //   Patch frequency: P2 travel 113d, P3 dashami 38d, P1d 38d, P4 8d.
 //   Cross-Python consistency: 564/564 OK.
 //
-//   Cache keys bumped до v88-8-33.
+//   Cache keys bumped до v88-8-34.
 //
 // v88.8.18 changes — Engine v18.6 → v18.7 patches + G_ext v3 + Override system-wide:
 //   ENGINE v18.6 PATCHES: P2 (Подорожі✈ → +2) + P3 (Tithi 10 → +1).
@@ -30,7 +30,7 @@
 //   PANCHANGA AUDIT: Vara scores documented (military-oriented). Calibration showed
 //     r=+0.27 vs PDF — Pi explains 30% магнітуди. Post-freeze recalibration plan.
 //
-//   Cache keys bumped до v88-8-33.
+//   Cache keys bumped до v88-8-34.
 //
 // v88.8.12 changes — додано 2 канонічні inauspicious периоди (BPHS / Surya Siddhanta):
 //   FEATURE: Yamagandam (Yama window) — інаусп. period другої важливості після Rahu.
@@ -64,7 +64,7 @@
 //   UI consumers (panchTable etc) використовують legacy panchanga.rahu без змін.
 //   Для відображення Yama/Gulika consumer повинен явно прочитати rahu.yamagandam.*
 //
-//   Cache keys bumped до v88-8-33.
+//   Cache keys bumped до v88-8-34.
 //
 // v88.8.11 changes (КАНОН-БАГИ Rahu Kalam позиції + Abhijit duration):
 //   КАНОН-БАГ#9 (index.html:6778+): Rahu Kalam offset зміщено на -1 muhurta для ВСІХ weekdays.
@@ -100,7 +100,7 @@
 //   • Lahiri ayanamsha v85b-F5: Swiss Ephemeris official 23.85650° at J2000.0,
 //     rate 50.27889624"/yr per IAU 2006 precession ✅
 //
-//   Cache keys bumped до v88-8-33.
+//   Cache keys bumped до v88-8-34.
 //
 // v88.8.10 changes (Self-audit fix-of-fix):
 //   БАГ#7 (мій же v88.8.9 fallback fix): _futureSlots fallback на legacy slots.
@@ -122,7 +122,7 @@
 //   • 8 точок: ЗМІНИЛОСЬ — у всіх випадках NEW узгоджено з Hero classifyStateByG
 //     (це і є ціль БАГ#5). Ні в одному випадку labels не "слабкіший" ніж canonical.
 //
-//   Cache keys bumped до v88-8-33.
+//   Cache keys bumped до v88-8-34.
 //
 // v88.8.9 changes (КРИТИЧНІ classification + actionable fixes):
 //   БАГ#5 (index.html:7993+): 3-day card categorization розбіжна з Hero.
@@ -155,7 +155,7 @@
 //   • Verdict 7 (-1) Помірно несприятливий ✅
 //   • Forecast peak 15.05 G=+1.8 (з overrides) ✅
 //
-//   Cache keys bumped до v88-8-33.
+//   Cache keys bumped до v88-8-34.
 //
 // v88.8.8 changes (UX-консистенція — 2 точкових fixes):
 //   БАГ#3 (index.html:15696): WF3 'scen_up' phrasing вводить в оману.
@@ -181,7 +181,7 @@
 //   • Engine -3 без override (overrides з 11.05) ✅
 //   • Hora '5хв' vs '6хв' — race condition двох рендерів, не критично
 //
-//   Cache keys bumped до v88-8-33.
+//   Cache keys bumped до v88-8-34.
 //
 // v88.8.7 changes (КРИТИЧНІ Rahu Kalam fixes):
 //   БАГ#1 (index.html:7178+, 6914+): Rahu Kalam labeling.
@@ -204,7 +204,7 @@
 //      Конвертація через Date.UTC() + getHours() — той самий robust pattern як
 //      N2-fix v88.7.16 (не залежний від getTimezoneOffset privacy quirks).
 //
-//   Cache keys bumped до v88-8-33.
+//   Cache keys bumped до v88-8-34.
 //
 // v88.8.6 changes (Lunar phase у hero + чистка):
 //   Д1 LUNAR-PHASE-HERO (index.html:HTML 1424+, JS 11402+).
@@ -224,7 +224,7 @@
 //   • Видалено id="devMenu" з 2 коментарів (HTML + JS) → залишився єдиний реальний
 //     <details id="devMenu"> у DOM. Тепер raw count = stripped count = 1 (чистий audit).
 //
-//   Cache keys bumped до v88-8-33.
+//   Cache keys bumped до v88-8-34.
 //
 // v88.8.5 changes (Closing the gap — невиконане з попередніх turns):
 //   Б1 (index.html:10293+): "Рік тому" label clarity.
@@ -256,7 +256,7 @@
 //      У DevTools: window._expertOverridesLoadStatus → 'missing' = файл не
 //      знайдено (треба перевірити деплой).
 //
-//   Cache keys bumped до v88-8-33.
+//   Cache keys bumped до v88-8-34.
 //
 // v88.8.4 changes (7-class verdict + SEO + Tithi paksha tooltip):
 //   VERDICT-7-BADGE (index.html: HTML 1442+, JS classifyVerdict7Class).
@@ -285,7 +285,7 @@
 //      Тепер: явно "Krishna paksha (темна половина) — Місяць убуває, енергія йде
 //      до завершення" або "Shukla paksha (світла половина) — Місяць росте...".
 //
-//   Cache keys bumped до v88-8-33.
+//   Cache keys bumped до v88-8-34.
 //
 // v88.8.3 changes (Bugs fix + UX polish):
 //   FIX-1 SHARE-URL (index.html:13266+13270): старий URL у share-image canvas.
@@ -311,7 +311,7 @@
 //        "Наступне сприятливе: ★★ Labh · з 14:50"
 //      Actionable — користувач може спланувати важливі дії.
 //
-//   Cache keys bumped до v88-8-33.
+//   Cache keys bumped до v88-8-34.
 //
 // v88.8.2 changes (Forecast peak у history blok + Г-fix-2):
 //   FORECAST-PEAK (index.html:_getBestWorstDays + renderBestWorstDays).
@@ -326,7 +326,7 @@
 //      getEngineScore() замість прямого _engineScores[ds] → expert overrides
 //      застосовуються до history-блоку (раніше 12.05–24.05 показували raw eng).
 //
-//   Cache keys bumped до v88-8-33.
+//   Cache keys bumped до v88-8-34.
 //
 // v88.8.1 changes (Аутентичні Vedic доповнення + Г-fix-1):
 //   Г-FIX-1 (index.html:3617): renderScenarioCard 7-day strip використовує getEngineScore()
@@ -352,7 +352,7 @@
 //      renderPanchanga (sunrise + sunset). Тепер: 1x на день. Економія ~80% часу
 //      обчислень для повторних рендерів. Limit 30 entries.
 //
-//   Cache keys bumped до v88-8-33.
+//   Cache keys bumped до v88-8-34.
 //
 // v88.8.0 changes (Сонячний ритм Панчанги — Sunrise, Abhijit, Choghadiya):
 //   SOLAR-RHYTHM (index.html: HTML 1843+, JS 7437+).
@@ -384,7 +384,7 @@
 //      framework з конкретними часовими slots для дій. У Vedic muhurta shastra це
 //      еквівалент "розкладу" — коли робити що.
 //
-//   Cache keys bumped до v88-8-33.
+//   Cache keys bumped до v88-8-34.
 //
 // v88.7.16 changes (FIX runtime: N2 robust + chip sync):
 //   N2-FIX (index.html:7173-7196): _toLocalRange переписаний на Date-based pattern.
@@ -601,8 +601,8 @@
 //   3. backtest.html додано до SHELL_FILES.
 //   4. cache.put awaited перед SW_FRESH_DATA notify (race fix).
 
-const SHELL_CACHE = 'g-index-shell-v88-8-33';
-const DATA_CACHE = 'g-index-data-v88-8-33';
+const SHELL_CACHE = 'g-index-shell-v88-8-34';
+const DATA_CACHE = 'g-index-data-v88-8-34';
 
 const SHELL_FILES = [
   './',
