@@ -1429,6 +1429,8 @@ body.simple-mode .col-hide-mobile {
             <span id="heroG" class="gbadge" role="status" aria-live="polite" aria-label="Поточний G-індекс">G …</span>
             <span id="heroTrend">—</span>
           </div>
+          <!-- v88.8.35-fp2 (B): inline scale label під heroRing — щоб не плутати з PDF/Engine -->
+          <div id="heroScaleNote" tabindex="0" style="margin-top:4px;text-align:center;font-size:9px;color:var(--faint);line-height:1.2;letter-spacing:.02em;cursor:help" title="G_now = Kp_live − 2 + ΣAᵢ(live). Це фон у поточний момент.&#10;Не плутати з Day_score (PDF/Engine, прогноз дня) і з G_day raw (27-day chart, середній фон доби).">live-фон зараз, не прогноз дня</div>
           <!-- v88.8.6 Д1: компактна lunar phase іконка під heroRing — постійно видима. -->
           <div id="heroMoonPhaseIcon" tabindex="0" style="display:none;margin-top:6px;text-align:center;font-size:10px;color:var(--dim);cursor:help" title="">
             <div id="heroMoonSvg" style="display:flex;justify-content:center;height:32px;align-items:center"></div>
@@ -1536,7 +1538,36 @@ body.simple-mode .col-hide-mobile {
       </summary>
       <div id="provenanceContent" style="margin-top:10px;font-size:12px;color:var(--text2);font-family:var(--mono),ui-monospace,monospace">Завантаження…</div>
     </details>
-    <!-- v87.90: Disagreement Alert — показується якщо моделі сильно розбігаються -->
+    <!-- v88.8.35-fp2 (C): мінімалістичний пояснювач "Три шкали" — без важкої плашки -->
+    <details id="threeRailsCard" style="margin:0 0 10px;padding:8px 14px;border-radius:12px;border:1px solid var(--border);background:rgba(11,18,32,.5)">
+      <summary style="cursor:pointer;font-size:12px;font-weight:600;color:var(--muted);list-style:none;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span style="font-size:14px">🧭</span>
+        <span style="flex:1;min-width:200px">
+          <span style="color:var(--text)">Три шкали — три питання</span>
+          <span style="font-size:10px;color:var(--faint);font-weight:400;margin-left:8px;display:block;margin-top:2px">G_now = зараз · PDF/Engine = день · G_day raw = добовий фон</span>
+        </span>
+        <span style="font-size:10px;color:var(--dim);font-weight:400">розгорнути ▾</span>
+      </summary>
+      <div style="margin-top:8px;font-size:12px;color:var(--text2);line-height:1.5">
+        <div style="display:grid;grid-template-columns:1fr;gap:6px">
+          <div style="padding:6px 10px;border-radius:6px;background:rgba(155,177,220,.06);border-left:3px solid #9bb1dc">
+            <strong style="color:#9bb1dc">G_now</strong> · live-фон зараз<br>
+            <span style="color:var(--dim);font-size:11px">Kp_live − 2 + ΣAᵢ(live). Hero ring. Continuous (−5..+7). Питання: «що з фоном у цю годину?»</span>
+          </div>
+          <div style="padding:6px 10px;border-radius:6px;background:rgba(99,190,123,.06);border-left:3px solid #63be7b">
+            <strong style="color:#63be7b">PDF/Engine Day_score</strong> · оцінка дня за PDF<br>
+            <span style="color:var(--dim);font-size:11px">expert_eng з PDF-бюлетеня. 3-day quick cards. Discrete (−3..+3). Питання: «що каже експерт про якість дня для дій?»</span>
+          </div>
+          <div style="padding:6px 10px;border-radius:6px;background:rgba(252,164,116,.06);border-left:3px solid #fca474">
+            <strong style="color:#fca474">G_day raw</strong> · середній raw-фон доби<br>
+            <span style="color:var(--dim);font-size:11px">Kp_day(max/approx) − 2 + ΣAᵢ(noon UTC). 27-day chart. Continuous. Питання: «який середній фон за всю добу?»</span>
+          </div>
+        </div>
+        <div style="margin-top:8px;padding:6px 10px;border-radius:6px;background:rgba(255,170,51,.06);border:1px solid rgba(255,170,51,.2);font-size:11px;color:var(--text2)">
+          <strong style="color:#ffaa33">Чому числа різняться?</strong> Це різні питання, не помилка. Приклад: 13.05.2026 → G_now −1.83 (live тисне), G_day raw −0.8 (нейтрально за добу), PDF +3 (експерт назвав «особливо сприятливий»). Усі три коректні. Команда зверху Hero: «обережно зараз, день +3 за PDF» — це two-rail combo.
+        </div>
+      </div>
+    </details>
     <div id="disagreementAlert" style="display:none;margin:0 0 10px;padding:10px 14px;border-radius:12px;border:1px solid rgba(255,170,51,.4);background:linear-gradient(180deg,rgba(255,170,51,.10),rgba(255,170,51,.03))"></div>
     <!-- v87.90: Counterfactual analysis — collapsible "що якби" блок -->
     <details id="counterfactualCard" style="margin:0 0 10px;padding:10px 14px;border-radius:12px;border:1px solid rgba(55,167,255,.25);background:linear-gradient(180deg,rgba(55,167,255,.04),rgba(11,18,32,.5))">
@@ -2089,6 +2120,8 @@ Kp: 3-год індекс геомагнітної активності (0–9)
 ΣAᵢ = Lᵢ (тітхі) + Mᵢ (затемнення) + eᵢ (події) + Pᵢ (Панчанга×0.4) + Dᵢ (Dst-буря) + Snᵢ (сонячні плями: 0/−0.2/−0.4)</span></span>
       </div>
       <div id="threeQuick" style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;font-size:13px"></div>
+      <!-- v88.8.35-fp2 (B): inline scale label під 3-day quick cards -->
+      <div tabindex="0" style="margin-top:4px;font-size:10px;color:var(--faint);line-height:1.2;cursor:help" title="Day_score = дискретна оцінка дня з PDF/Engine у діапазоні [−3..+3].&#10;На карточках видно `день +N` — це Day_score.&#10;Це окрема шкала від G_now (Hero, live зараз) і G_day raw (27-day chart, середній фон доби).&#10;PDF Day_score не входить у графіки G — він overlay-маркер.">↳ <strong style="color:var(--muted)">Day_score (PDF/Engine)</strong> · оцінка дня за PDF · discrete [−3..+3] — не плутати з G_now і G_day raw</div>
       <!-- v87.90: NOAA fallback alert — показується над quick-cards коли engine на synthetic platau -->
       <div id="threeNoaaAlert" style="display:none;margin-top:8px;padding:10px 14px;border-radius:10px;border:1px solid rgba(255,107,107,.4);background:linear-gradient(180deg,rgba(255,90,90,.12),rgba(255,90,90,.04));color:#ffd2d2;font-size:12px;line-height:1.5"></div>
       <details style="margin-top:6px">
@@ -2103,6 +2136,7 @@ Kp: 3-год індекс геомагнітної активності (0–9)
     <section class="card" id="twentysevenCard">
         <div class="flex" style="flex-wrap:wrap;gap:8px">
           <h2 style="margin:0">27-денний G_day raw (Ap → Kp → G_day)</h2>
+          <span tabindex="0" style="font-size:10px;color:var(--faint);line-height:1.2;cursor:help;align-self:center" title="G_day raw = Kp_day(max/approx) − 2 + ΣAᵢ(noon UTC). Continuous, діапазон ≈ [−5..+7].&#10;Це середній фон доби, не PDF/Engine Day_score і не Hero G_now.&#10;PDF/Engine score на цьому графіку показано окремо як ★-маркер, не входить у криву.">↳ <strong style="color:var(--muted)">G_day raw</strong> · середній raw-фон доби · continuous — не PDF</span>
           <span class="hint" tabindex="0" style="cursor:help;font-size:11px;color:var(--dim);border-bottom:1px dotted #2a3b61">? що це<span class="hint-pop" style="white-space:pre;font-size:12px;text-align:left;max-width:380px">⚠ Це НЕ офіційний 27-day Kp forecast.
 
 NOAA публікує лише 27-day Ap outlook (інтегрована геомагнітна активність за добу). Тут Ap → Kp перерахований через табличну апроксимацію (VLOOKUP-стиль).
