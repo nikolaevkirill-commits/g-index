@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.23</title>
+  <title>G-Index — Космофізичний дашборд v88.8.24</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1406,7 +1406,7 @@ body.simple-mode .col-hide-mobile {
                 <div id="v86CI" class="hint" tabindex="0" style="font-size:10px;font-weight:600;color:var(--dim);margin-top:2px;line-height:1;letter-spacing:.02em;cursor:help;pointer-events:auto;display:none" title=""></div>
                 <!-- v87.21: inline ΔG trend directly beneath G-value for immediate signal -->
                 <div id="v86DeltaInline" style="font-size:13px;font-weight:800;line-height:1;margin-top:4px;color:var(--muted);letter-spacing:.02em;min-height:13px"></div>
-                <div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);margin-top:2px">фон зараз</div>
+                <div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);margin-top:2px">G-індекс</div>
               </div>
             </div>
             <!-- v86: inline legend -->
@@ -4223,55 +4223,6 @@ function renderHeroBulletin(){
     ? `\nψ v18.6 patches: ${entry._v186Patches.join(', ')} (raw v18.5: ${entry._engV185Raw>=0?'+':''}${entry._engV185Raw})`
     : '';
   elB.title = `Engine v18.6 score: ${s >= 0 ? '+' : ''}${s} (v18.5 frozen + v88.8.18 patches).\nТег: ${entry.tag || '—'}\nKp=${entry.kp}${synth}${pdfStr}${_ovInfo}${_patchInfo}\nDashboard G (continuous) ≠ Engine score (threshold) — різні моделі за дизайном.`;
-}
-
-
-// v88.8.23: Hero Signal Hierarchy.
-// Primary verdict = Engine v18.8 + expert override. Live G = secondary real-time background.
-function _stateFromEngineScore(score, kp){
-  if(!isFinite(score)) return 'neutral';
-  let cls = score >= 2 ? 'favorable'
-          : score === 1 ? 'good'
-          : score === 0 ? 'neutral'
-          : score === -1 ? 'unstable'
-          : 'tense';
-  if(isFinite(kp)){
-    if(kp >= 7 && (cls === 'favorable' || cls === 'good' || cls === 'neutral')) cls = 'unstable';
-    else if(kp >= 5 && (cls === 'favorable' || cls === 'good')) cls = 'neutral';
-  }
-  return cls;
-}
-function resolveHeroPrimaryVerdict(liveG, kp){
-  const entry = (typeof getEngineScore === 'function') ? getEngineScore(new Date()) : null;
-  const eng = entry && isFinite(entry.eng) ? Number(entry.eng) : NaN;
-  const stKey = isFinite(eng) ? _stateFromEngineScore(eng, kp) : classifyStateByG(liveG, kp);
-  const liveRound = isFinite(liveG) ? Math.max(-3, Math.min(3, Math.round(liveG))) : NaN;
-  const drift = (isFinite(liveRound) && isFinite(eng)) ? liveRound - eng : NaN;
-  return { entry, score: isFinite(eng) ? eng : liveRound, stKey, hasEngine: isFinite(eng),
-    source: entry?._expertOverride ? 'PDF override' : (isFinite(eng) ? 'Engine v18.8' : 'Live G fallback'),
-    raw: entry?._engRaw, drift, liveRound };
-}
-function renderHeroLayerNote(vd, liveG){
-  try{
-    let n = document.getElementById('heroLayerNote');
-    const anchor = document.getElementById('heroVerdict7Badge') || document.getElementById('heroLowConfBadge') || document.getElementById('heroDecisionBlock');
-    if(!n && anchor){
-      n = document.createElement('div'); n.id = 'heroLayerNote';
-      n.style.cssText = 'margin-top:6px;padding:6px 8px;border-radius:8px;font-size:11px;line-height:1.35;color:var(--text2);background:rgba(55,167,255,.06);border:1px solid rgba(55,167,255,.16)';
-      anchor.parentNode.insertBefore(n, anchor.nextSibling);
-    }
-    if(!n) return;
-    const parts = [];
-    if(vd.hasEngine){
-      parts.push(`<strong style="color:var(--text)">Прогноз дня:</strong> ${vd.score>=0?'+':''}${vd.score} · ${vd.source}`);
-      if(vd.entry?._expertOverride && isFinite(vd.raw)) parts.push(`<span style="color:#ffd166">★ raw ${vd.raw>=0?'+':''}${vd.raw} → override ${vd.score>=0?'+':''}${vd.score}</span>`);
-    } else parts.push('<strong style="color:var(--text)">Прогноз дня:</strong> немає engine score · fallback по Live G');
-    if(isFinite(liveG)) parts.push(`<strong style="color:var(--text)">Фон зараз:</strong> G ${liveG>=0?'+':''}${liveG.toFixed(2)}`);
-    if(isFinite(vd.drift) && Math.abs(vd.drift) >= 3) parts.push('<span style="color:#fca474">миттєвий фон сильно відрізняється від денного прогнозу</span>');
-    n.innerHTML = parts.join(' · ');
-    n.title = 'Ієрархія сигналів v88.8.23: команди Hero беруться з Engine/override. Live G — оперативний фон зараз, не вердикт дня.';
-    n.style.display = '';
-  }catch(e){ if(window._DEBUG) console.warn('[heroLayerNote]', e.message); }
 }
 
 // v88.1: BPHS canonical yoga penalties for ADVISORY display only.
@@ -9993,6 +9944,75 @@ function renderGRadialV86(g, kp, ai){
   }
 }
 
+
+// ═══ v88.8.24: Operational Signal Hierarchy ═══
+// Root cause fix: Hero command must not be a raw Live-G command when
+// Engine/PDF gives the day verdict. Day verdict = Engine + override;
+// operational permission = day verdict gated by current Live G / Kp.
+// This is not a "conflict mode". It is explicit hierarchy:
+//   1) dayScore: Engine v18.8 + expert override = forecast of the day
+//   2) liveG: Kp−2+ΣAᵢ = current background / tactical guard
+//   3) opKey: actual command shown in Hero / decision blocks
+function _engineScoreToStateKey_v88824(score, kp){
+  const s = Number(score);
+  if(!isFinite(s)) return null;
+  let key = s >= 3 ? 'favorable'
+          : s >= 2 ? 'good'
+          : s >= 1 ? 'good'
+          : s === 0 ? 'neutral'
+          : s === -1 ? 'unstable'
+          : 'tense';
+  // Same storm cap as classifyStateByG: geomagnetic storm can cap action mode.
+  if(isFinite(kp)){
+    if(kp >= 7 && (key==='favorable'||key==='good'||key==='neutral')) key='unstable';
+    else if(kp >= 5 && (key==='favorable'||key==='good')) key='neutral';
+  }
+  return key;
+}
+function _stateKeyToRepresentativeG_v88824(key){
+  return ({favorable:2.2, good:1.0, neutral:0, unstable:-1.2, tense:-3})[key] ?? 0;
+}
+function resolveHeroSignalHierarchy_v88824(liveG, kp){
+  let entry = null;
+  try { if(typeof getEngineScore === 'function') entry = getEngineScore(new Date()); } catch(e) { entry = null; }
+  const hasEngine = !!(entry && isFinite(entry.eng));
+  const dayScore = hasEngine ? Number(entry.eng) : NaN;
+  const liveKey = classifyStateByG(liveG, kp);
+  const dayKey = hasEngine ? _engineScoreToStateKey_v88824(dayScore, kp) : liveKey;
+  let opKey = dayKey || liveKey;
+  let guard = 'none';
+
+  // Current Live-G is a tactical guard. It can downgrade a positive day,
+  // but it must not erase the day forecast label.
+  if(hasEngine && dayScore >= 2){
+    if(liveKey === 'tense') { opKey = 'tense'; guard = 'live_tense'; }
+    else if(liveKey === 'unstable') { opKey = 'unstable'; guard = 'live_unstable'; }
+  }
+  if(hasEngine && dayScore <= -2){
+    opKey = 'tense'; guard = guard === 'none' ? 'day_negative' : guard;
+  }
+  const commandG = _stateKeyToRepresentativeG_v88824(opKey);
+  return { entry, hasEngine, dayScore, dayKey, liveG, liveKey, opKey, commandG, guard };
+}
+function heroHeadlineFromHierarchy_v88824(sig){
+  const sign = sig.hasEngine && isFinite(sig.dayScore) ? (sig.dayScore >= 0 ? '+' : '') : '';
+  if(sig.hasEngine && sig.dayScore >= 2 && sig.guard === 'live_tense') return `ДЕНЬ ${sign}${sig.dayScore}, АЛЕ ЗАРАЗ СТОП`;
+  if(sig.hasEngine && sig.dayScore >= 2 && sig.guard === 'live_unstable') return `ДЕНЬ ${sign}${sig.dayScore}, АЛЕ ЗАРАЗ ОБЕРЕЖНО`;
+  if(sig.hasEngine && sig.dayScore >= 2) return 'МОЖНА ДІЯТИ — ДЕНЬ СПРИЯТЛИВИЙ';
+  if(sig.hasEngine && sig.dayScore <= -2) return 'СТОП — ДЕНЬ НЕСПРИЯТЛИВИЙ';
+  return (GLOBAL_STATES[sig.opKey] || GLOBAL_STATES.neutral).headline;
+}
+function heroLayerNoteFromHierarchy_v88824(sig){
+  if(!sig || !isFinite(sig.liveG)) return '';
+  const liveTxt = `Фон зараз G=${sig.liveG >= 0 ? '+' : ''}${sig.liveG.toFixed(2)}`;
+  if(!sig.hasEngine) return liveTxt;
+  const dayTxt = `Прогноз дня ${sig.dayScore >= 0 ? '+' : ''}${sig.dayScore}`;
+  let src = sig.entry?._expertOverride ? 'PDF override' : 'Engine';
+  let raw = (sig.entry?._expertOverride && isFinite(sig.entry?._engRaw)) ? ` · raw ${sig.entry._engRaw >= 0 ? '+' : ''}${sig.entry._engRaw}` : '';
+  if(sig.guard === 'live_unstable' || sig.guard === 'live_tense') return `${dayTxt} (${src}${raw}) · ${liveTxt} — зараз фон слабший, тому діємо обережно.`;
+  return `${dayTxt} (${src}${raw}) · ${liveTxt} — live-фон є другорядним контролем.`;
+}
+
 function syncHero(){
   const _ui = window.__uiState || {};
   const nowG=el('nowG'), heroG=el('heroG');
@@ -10047,19 +10067,17 @@ function syncHero(){
     try {
       const _vb = document.getElementById('heroVerdict7Badge');
       if (_vb && typeof classifyVerdict7Class === 'function') {
-        const _vdTmp = (typeof resolveHeroPrimaryVerdict === 'function') ? resolveHeroPrimaryVerdict(newG, _ui.kpNow) : null;
-        const _scoreTmp = _vdTmp && isFinite(_vdTmp.score) ? _vdTmp.score : newG;
-        const v7 = classifyVerdict7Class(_scoreTmp);
+        const v7 = classifyVerdict7Class(_heroSig.hasEngine ? _heroSig.dayScore : newG);
         if (v7) {
           _vb.style.display = '';
           _vb.style.background = v7.color + '22';
           _vb.style.borderLeft = `3px solid ${v7.color}`;
           _vb.style.color = v7.color;
-          const _srcTmp = _vdTmp?.source || 'Live G fallback';
-          _vb.innerHTML = `<span style="color:var(--faint);font-weight:400;font-size:10px" title="Primary Hero verdict v88.8.23.
-Командний вердикт дня базується на Engine v18.8 + expert override.
-Live G лишається оперативним фоном зараз.
-G_ext — R&D advisory, не primary.">Прогноз дня:</span> ${v7.label} <span style="color:var(--faint);font-weight:500;font-size:10px">(${v7.score >= 0 ? '+' : ''}${v7.score}, ${_srcTmp})</span>`;
+          // Format: "Live G (round): Помірно сприятливий день (+1)"
+          // Цей classifier бере round(continuous Hero G) — це НЕ engine v18.8 (frozen+patches).
+          // Engine pill показано окремо справа у hero. G_ext (R&D advisory) — третя модель.
+          const _liveLabel = (typeof _currentLang !== 'undefined' && _currentLang === 'EN') ? 'Live G' : 'Live G';
+          _vb.innerHTML = `<span style="color:var(--faint);font-weight:400;font-size:10px" title="Класифікатор для Engine/PDF override, якщо доступний. Live G показаний у кільці як фон зараз.\n\nЦе НЕ engine v18.8 score (показано окремо у engine pill).\n3 моделі в hero за дизайном:\n• Live G — continuous (Kp−2+ΣAᵢ), real-time, classified тут\n• Engine v18.8 pill — discrete (-3..+3), frozen+patches, +override\n• G_ext — R&D advisory regression (нижче у sci-bar)\nРізні значення = різні моделі, не баг.">Прогноз дня:</span> ${v7.label} <span style="color:var(--faint);font-weight:500;font-size:10px">(${v7.score >= 0 ? '+' : ''}${v7.score})</span>`;
         } else {
           _vb.style.display = 'none';
         }
@@ -10091,6 +10109,9 @@ G_ext — R&D advisory, не primary.">Прогноз дня:</span> ${v7.label}
   }
   // v80: read from __uiState instead of DOM
   const gVal = isFinite(_ui.gNow) ? _ui.gNow : _num(_firstText(el('nowG'))||el('nowG')?.textContent);
+  const kpH = isFinite(_ui.kpNow) ? _ui.kpNow : _num(_firstText(el('nowKp')));
+  const _heroSig = resolveHeroSignalHierarchy_v88824(gVal, kpH);
+  const _heroCmdG = _heroSig.commandG;
 
   // Delta: from __uiState or fallback
   // v85b-F7: fallback delta з попереднього G (щоб heroDelta не був порожній)
@@ -10208,7 +10229,7 @@ G_ext — R&D advisory, не primary.">Прогноз дня:</span> ${v7.label}
   } catch(e) { /* noop */ }
 
   // v87.18: Decision Layer — "Що робити зараз" (конкретні actions)
-  try { renderDecisionLayer(gVal, _ui); } catch(e) { /* noop */ }
+  try { renderDecisionLayer(_heroCmdG, _ui); } catch(e) { /* noop */ }
 
   // Confidence: set by v83 decision block below
 
@@ -10293,20 +10314,22 @@ G_ext — R&D advisory, не primary.">Прогноз дня:</span> ${v7.label}
   }
 
   // v83: heroActionCmd set by buildDecisionTexts below
-  const kpH = isFinite(_ui.kpNow) ? _ui.kpNow : _num(_firstText(el('nowKp')));
-
-  // v88.8.23: DO/AVOID from PRIMARY daily verdict = Engine v18.8 + expert override.
-  // Live G remains visible as current background, but it no longer drives imperative Hero commands.
-  const _heroVerdict = (typeof resolveHeroPrimaryVerdict === 'function') ? resolveHeroPrimaryVerdict(gVal, kpH) : null;
-  const _stKey = _heroVerdict?.stKey || classifyStateByG(gVal, kpH);
-  const _st = GLOBAL_STATES[_stKey] || GLOBAL_STATES.neutral;
+  // v78b: DO/AVOID from operational hierarchy (Engine day verdict guarded by Live G)
+  const _stKey = _heroSig.opKey || classifyStateByG(gVal, kpH);
+  const _st = GLOBAL_STATES[_stKey];
   _set('heroDecisionDo', _st.doText);
   _set('heroDecisionAvoid', _st.avoidText);
   const _doEl = el('heroDecisionDo');
   if(_doEl) _doEl.style.color = _st.color;
-  try { renderHeroLayerNote(_heroVerdict || {}, gVal); } catch(e) { /* noop */ }
+  try {
+    const _avoidEl = el('heroDecisionAvoid');
+    const _note = heroLayerNoteFromHierarchy_v88824(_heroSig);
+    if(_avoidEl && _note){
+      _avoidEl.innerHTML = `${_st.avoidText}<br><span style="font-size:10px;color:var(--faint);font-weight:600">${_note}</span>`;
+    }
+  } catch(e) { /* noop */ }
 
-  // v78d: hero state class for CSS animations follows PRIMARY verdict, not Live G.
+  // v78d: hero state class for CSS animations
   const _heroEl = el('heroCard');
   if(_heroEl){
     _heroEl.classList.remove('hero-state-neutral','hero-state-unstable','hero-state-tense','hero-state-favorable','hero-state-good');
@@ -10334,21 +10357,17 @@ G_ext — R&D advisory, не primary.">Прогноз дня:</span> ${v7.label}
   const _timingSummary = renderDecisionTiming(_daySlots);
   window._lastTimingSummary = _timingSummary; // v85: share with buildDashboardState
 
-  // 3. Hero headline = PRIMARY daily verdict (Engine v18.8 + expert override), not Live G.
-  let _headline = _st?.headline || '';
-  if (!_headline || _headline === '—' || String(_headline).trim() === '') {
-    _headline = isFinite(_heroVerdict?.score)
-      ? (_heroVerdict.score < 0 ? 'Обережно — денний прогноз несприятливий.'
-         : _heroVerdict.score > 0 ? 'День підтримує активні дії.'
-         : 'Нейтральний день — тримай стабільний темп.')
-      : 'Дані завантажуються…';
-  }
+  // 3. Hero headline: day verdict from Engine/override, guarded by current Live G.
+  // This fixes v88.8.23 contradiction: Engine +3 + Live G negative no longer says
+  // "МОЖНА ДІЯТИ — СИЛЬНЕ ВІКНО" while timing rows say "уникати".
+  const _dt = { headline: heroHeadlineFromHierarchy_v88824(_heroSig), sub: (GLOBAL_STATES[_stKey] || GLOBAL_STATES.neutral).sub };
+  let _headline = _dt.headline || 'Дані завантажуються…';
   _set('heroActionCmd', _headline);
   const hac=el('heroActionCmd');
-  if(hac) hac.style.color = _st.color;
+  if(hac) hac.style.color = (GLOBAL_STATES[_stKey] || GLOBAL_STATES.neutral).color;
 
-  // 4. Hero sub — secondary timing/live context only. Do not override primary command.
-  applyTimingToHero(_timingSummary, gVal);
+  // 4. Hero sub — from timing summary, but operationally gated by hierarchy.
+  applyTimingToHero(_timingSummary, _heroCmdG);
 
   // 4b. v84b: Cause-chain — "що відбувається → чому → що робити"
   try{
@@ -10406,7 +10425,7 @@ G_ext — R&D advisory, не primary.">Прогноз дня:</span> ${v7.label}
   }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
 
   // 5. Unified advice → decisionStrip 3-col
-  const _dState = { gNow: gVal, mainDriver: _topDrv.mainStr, timingSummary: _timingSummary };
+  const _dState = { gNow: _heroCmdG, mainDriver: _topDrv.mainStr, timingSummary: _timingSummary };
   const _adv = buildUnifiedAdvice(_dState);
   _set('decisionDoText', _adv.DO.join(', '));
   _set('decisionAvoidText', _adv.AVOID.join(', '));
@@ -10418,7 +10437,7 @@ G_ext — R&D advisory, не primary.">Прогноз дня:</span> ${v7.label}
   _set('daySentenceText', buildDaySentence(_dState));
 
   // 7. G zone label
-  _set('hmZone', gZoneLabel(gVal));
+  _set('hmZone', (GLOBAL_STATES[_stKey] || GLOBAL_STATES.neutral).zone);
 
   // 7d. v84b: Trend label
   try{
@@ -15487,6 +15506,7 @@ addEventListener('load', ()=>{ initGeolocation(); setStamp(); loadAll(); el('btn
   try {
     Promise.all([loadEngineScores(), loadExpertOverrides()]).then(()=>{
       try{ renderHeroBulletin(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+      try{ syncHero(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
       try{ renderHeroAstroLayer(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
       try{ renderScenarioCard(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
       // Re-draw 27d table if _27dComputed already populated
