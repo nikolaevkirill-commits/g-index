@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.28</title>
+  <title>G-Index — Космофізичний дашборд v88.8.21</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1316,7 +1316,7 @@ body.simple-mode .col-hide-mobile {
       <span class="sci-item sci-primary" title="Pᵢ — Panchanga composite × 0.4. Локальний розрахунок Tithi/Vara/Nakshatra/Yoga/Karana (Lahiri ayanamsha, BPHS).&#10;&#10;⚠ R&D advisory (v88.8.18 calibration check):&#10;• Корелює з expert bulletin r ≈ +0.27 (PDF), +0.20 (Engine v18.5)&#10;• Sign-match 58% — слабкий predictor окремо&#10;• Pi explains ~30% експертної магнітуди&#10;• Engine v18.5 validation (71.4% strict) — це загальний G з усіма компонентами,&#10;  Pi окремо НЕ validated як standalone predictor.&#10;• Vara scores: military-oriented (Mon=-1, Thu=+2). BPHS-standard версія дає&#10;  схожу кореляцію (+0.03 delta — non-significant).&#10;• Post-freeze (2026-08-01+): planned recalibration з більшим datasetом.">🔮 <strong>Pᵢ:</strong> <span class="sci-val" id="sciPi">—</span></span>
       <span class="sci-item sci-primary" id="sciSnPenWrap" style="display:none" title="Sn-penalty: при високому числі плям (>150) додає мінус до G. Solar Max 2025-2026.">☀ <strong>Sn:</strong> <span class="sci-val" id="sciSnPen">—</span></span>
       <span class="sci-item sci-primary" title="Dᵢ — Dst storm penalty. При Dst < −30 нТл (геомагнітна буря) додає мінус до G.">🧲 <strong>Dᵢ:</strong> <span class="sci-val" id="sciDi">—</span></span>
-      <span class="sci-item sci-primary" title="G_ext v2 — R&D advisory метрика (паралельна, НЕ замінює G і НЕ є primary verdict).&#10;&#10;Фактичний файл у цьому пакеті: g_extended_v2_coefs.json&#10;Validation (trained_on_n=212):&#10;• CV Pearson r = +0.42 ± 0.16&#10;• CV sign-match = 63.7%&#10;• strict 3-class = 48.6%&#10;&#10;Висновок: слабкий R&D-сигнал. Показувати лише як додатковий індикатор, не як команду дня.&#10;Primary: Engine v18.5/v18.8 + verified source gate; Live G — поточний фон." style="color:#ff9944;border-left:2px solid #ff9944;padding-left:6px">🔬 <strong>G<sub>ext</sub> v2:</strong> <span class="sci-val" id="sciGext">—</span></span></span>
+      <span class="sci-item sci-primary" title="G_ext (v3) — R&D advisory метрика (паралельна, не замінює G).&#10;&#10;Re-trained на v18.7-patched dataset 2026-05-11:&#10;G_ext = -0.13 + 0.95×eng_v187 + 0.28×T_norm + 0.24×N_norm&#10;        - 0.95×ekadashi - 0.47×merc_retro - 0.44×masik_shivaratri&#10;&#10;Validation (5-fold CV, n=212):&#10;• Pearson r = +0.83 ± 0.06 (vs raw G: +0.17 — lift +0.66!)&#10;• Sign-match 85% (vs raw G 53%)&#10;• Almost doubled correlation vs v2 (+0.42 → +0.83)&#10;&#10;Top feature: eng_v187 r=+0.84 alone&#10;Engine v18.7 strict=77.4% залишається primary classifier.&#10;Post-freeze (2026-08-01+): candidate для Engine v19 integration." style="color:#ff9944;border-left:2px solid #ff9944;padding-left:6px">🔬 <strong>G<sub>ext</sub>:</strong> <span class="sci-val" id="sciGext">—</span></span>
       <!-- Вторинні: кнопка розгортання + скидання кешу -->
       <span style="margin-left:auto;display:inline-flex;align-items:center;gap:8px">
         <span id="sciMoreToggle" onclick="toggleSciMore()" style="cursor:pointer;color:var(--faint);font-size:11px;white-space:nowrap;user-select:none">▸ детально</span>
@@ -3958,59 +3958,6 @@ let _engineScores = null;
 // якщо дата в overrides → eng замінюється на expert_eng, оригінал зберігається у _engRaw.
 // Frozen partition: engine_scores.json НЕ змінюється (V3 prospective freeze для backtest).
 let _expertOverrides = null; // {date: {expert_eng, tanita_O, tanita_N, category, applied_in}}
-
-// v88.8.28: VERIFIED SOURCE GATE
-// Latest forecast source is supplied and verified: +11.5-24.5_ПРОГНОЗ.pdf.
-// PDF48 overrides for 2026-05-11..2026-05-24 are therefore allowed to replace engine_scores.eng.
-// Engine raw remains visible in _engRaw for audit; expert_eng becomes the day verdict.
-const EXPERT_OVERRIDE_SOURCE_STATUS_V88828 = {
-  PDF48: { verified: true, reason: 'Verified by +11.5-24.5_ПРОГНОЗ.pdf uploaded 2026-05-13: forecast window 2026-05-11..2026-05-24 confirms PDF48 expert verdicts.' }
-};
-// v88.8.28: HARD VERIFIED FALLBACK from the latest supplied forecast PDF.
-// This prevents stale/missing expert_overrides_v3.json from reverting 11.05–24.05
-// to raw engine scores. Source of truth: +11.5-24.5_ПРОГНОЗ.pdf, page 1.
-const LATEST_PDF48_VERIFIED_OVERRIDES_V88828 = Object.freeze({
-  '2026-05-11': { expert_eng:  2, label: 'Сприятливий день', source: '+11.5-24.5_ПРОГНОЗ.pdf' },
-  '2026-05-12': { expert_eng:  3, label: 'Особливо сприятливий день для справ, дій', source: '+11.5-24.5_ПРОГНОЗ.pdf' },
-  '2026-05-13': { expert_eng:  3, label: 'Особливо сприятливий день', source: '+11.5-24.5_ПРОГНОЗ.pdf' },
-  '2026-05-14': { expert_eng: -1, label: 'Помірно несприятливий день для нових справ', source: '+11.5-24.5_ПРОГНОЗ.pdf' },
-  '2026-05-15': { expert_eng: -3, label: 'Особливо несприятливий день для нових справ', source: '+11.5-24.5_ПРОГНОЗ.pdf' },
-  '2026-05-16': { expert_eng: -3, label: 'Особливо несприятливий день', source: '+11.5-24.5_ПРОГНОЗ.pdf' },
-  '2026-05-17': { expert_eng:  3, label: 'Особливо сприятливий день для дій', source: '+11.5-24.5_ПРОГНОЗ.pdf' },
-  '2026-05-18': { expert_eng:  3, label: 'Особливо сприятливий день для справ, дій', source: '+11.5-24.5_ПРОГНОЗ.pdf' },
-  '2026-05-19': { expert_eng: -1, label: 'Помірно несприятливий день', source: '+11.5-24.5_ПРОГНОЗ.pdf' },
-  '2026-05-20': { expert_eng:  3, label: 'Особливо сприятливий день', source: '+11.5-24.5_ПРОГНОЗ.pdf' },
-  '2026-05-21': { expert_eng:  3, label: 'Один з найкращих днів на рік', source: '+11.5-24.5_ПРОГНОЗ.pdf' },
-  '2026-05-22': { expert_eng:  1, label: 'Помірно сприятливий день', source: '+11.5-24.5_ПРОГНОЗ.pdf' },
-  '2026-05-23': { expert_eng: -2, label: 'Несприятливий день', source: '+11.5-24.5_ПРОГНОЗ.pdf' },
-  '2026-05-24': { expert_eng: -3, label: 'Особливо несприятливий день', source: '+11.5-24.5_ПРОГНОЗ.pdf' }
-});
-function _latestPdf48FallbackOverrides_v88828(){
-  const out = {};
-  for(const [date, v] of Object.entries(LATEST_PDF48_VERIFIED_OVERRIDES_V88828)){
-    out[date] = {
-      date,
-      expert_eng: v.expert_eng,
-      pdf_label: v.label,
-      category: 'expert_pdf48_verified_latest_pdf_fallback',
-      applied_in: '_11_05-24_05_PDF48',
-      verified_source: v.source,
-      source: v.source,
-      ts: '2026-05-13T08:30:00Z'
-    };
-  }
-  return out;
-}
-function _isExpertOverrideVerified_v88828(ovr){
-  const src = String(ovr?.applied_in || '').toUpperCase();
-  if(src.includes('PDF48') || src.includes('11_05') || src.includes('24_05')) return !!EXPERT_OVERRIDE_SOURCE_STATUS_V88828.PDF48.verified;
-  return ovr?.category === 'manual_verified_override';
-}
-function _overrideSourceReason_v88828(ovr){
-  const src = String(ovr?.applied_in || '').toUpperCase();
-  if(src.includes('PDF48') || src.includes('11_05') || src.includes('24_05')) return EXPERT_OVERRIDE_SOURCE_STATUS_V88828.PDF48.reason;
-  return 'Override source is not marked as verified.';
-}
 // v88.8.5 В2: diagnostic flag для трасування deploy issues
 window._expertOverridesLoadStatus = 'pending'; // 'pending' | 'loaded' | 'missing' | 'invalid' | 'http_error'
 async function loadExpertOverrides(){
@@ -4029,13 +3976,9 @@ async function loadExpertOverrides(){
           _expertOverrides[r.date] = r;
         }
       }
-      // v88.8.28: latest supplied PDF is the hard source of truth for 11.05–24.05.
-      // Merge after JSON load so a stale JSON cannot revert PDF48 values.
-      _expertOverrides = { ..._expertOverrides, ..._latestPdf48FallbackOverrides_v88828() };
-      window._expertOverridesLoadStatus = 'loaded_plus_pdf48_verified_fallback';
+      window._expertOverridesLoadStatus = 'loaded';
     } else {
-      _expertOverrides = _latestPdf48FallbackOverrides_v88828();
-      window._expertOverridesLoadStatus = 'invalid_using_pdf48_verified_fallback'; // file fetched, але не має overrides[]
+      window._expertOverridesLoadStatus = 'invalid'; // file fetched, але не має overrides[]
     }
     if(window._DEBUG) console.log('[v88.7.15 Г] expert_overrides_v3 loaded: ' + Object.keys(_expertOverrides).length + ' records');
     return _expertOverrides;
@@ -4044,8 +3987,7 @@ async function loadExpertOverrides(){
       window._expertOverridesLoadStatus = 'missing'; // 404 або інша помилка
     }
     if(window._DEBUG) console.warn('[v88.7.15 Г] expert_overrides_v3.json fetch failed:', e.message, '(status: ' + window._expertOverridesLoadStatus + ')');
-    _expertOverrides = _latestPdf48FallbackOverrides_v88828();
-    window._expertOverridesLoadStatus = 'fallback_pdf48_verified';
+    _expertOverrides = {};
     return _expertOverrides;
   }
 }
@@ -4213,31 +4155,20 @@ function getEngineScore(dateObj){
   if(!_engineScores) return null;
   const ds = fmtDate(dateObj);
   let snapshot = _engineScores[ds] || null;
-  // v88.8.28: verified-source expert overrides.
-  // If applied_in points to the verified PDF48 window, expert_eng becomes the primary day verdict.
-  // Raw engine remains in _engRaw for audit and tooltip explanations.
+  // v88.7.15 Г: точкові expert overrides (PDF #48 calibration). Застосовуємо ПЕРЕД kp-marker логікою.
+  // expert_eng замінює engine eng; оригінал зберігається у _engRaw для трасування.
   if(snapshot && _expertOverrides && _expertOverrides[ds]){
     const ovr = _expertOverrides[ds];
-    const _verified = _isExpertOverrideVerified_v88828(ovr);
     snapshot = {
       ...snapshot,
       _engRaw: snapshot.eng,
-      _expertOverrideAvailable: true,
-      _expertOverrideVerified: _verified,
-      _expertEngCandidate: ovr.expert_eng,
+      eng: ovr.expert_eng,
+      _expertOverride: true,
       _overrideCategory: ovr.category || 'manual_expert_override',
-      _overrideAppliedIn: ovr.applied_in || '',
-      _overrideSourceReason: _verified ? 'verified' : _overrideSourceReason_v88828(ovr)
+      _overrideAppliedIn: ovr.applied_in || ''
     };
-    if(_verified){
-      snapshot.eng = ovr.expert_eng;
-      snapshot._expertOverride = true;
-    } else {
-      snapshot._expertOverride = false;
-      snapshot._sourceGated = true;
-    }
   }
-  // v88.8.18: v18.8 patches (after expert override check — не зачіпає overrides)
+  // v88.8.18: v18.6 patches (after expert override check — не зачіпає overrides)
   snapshot = _applyV186Patches(snapshot);
   // v88.7 (deep audit 2026-04-30): lite-recalc DEACTIVATED.
   // Reason: round(Hero G) gives 47% accuracy (PCL_CALIBRATION_REPORT.md);
@@ -4274,29 +4205,24 @@ function renderHeroBulletin(){
   const color = s >= 2 ? 'var(--ok)' : s === 1 ? '#9cd49c' : s === 0 ? 'var(--muted)' : s === -1 ? 'var(--warn)' : s <= -2 ? 'var(--bad)' : 'var(--muted)';
   // v87.90: synthetic marker у видимому тексті (не лише tooltip) — чесність для майбутніх дат
   const _synMark = entry.kp_synthetic ? '<span style="color:#fca474;margin-left:2px" title="Synthetic Kp=2.0 (NOAA forecast недоступний — scenario, не forecast)">~</span>' : '';
-  // v88.7.15 Г: marker '★' коли застосовано expert override; '?' коли candidate є, але source не підтверджений.
-  const _unv = entry._expertOverrideAvailable && entry._expertOverrideVerified === false && isFinite(entry._expertEngCandidate);
-  const _ovMark = entry._expertOverride ? '<span style="color:#ffd166;margin-left:2px;font-size:9px" title="Expert override застосовано">★</span>' : (_unv ? '<span style="color:#ffcc00;margin-left:2px;font-size:9px" title="PDF override candidate НЕ застосовано: source не підтверджений">?</span>' : '');
-  // v88.8.18: marker 'ψ' (психо-trinity) коли v18.8 patches застосовано
+  // v88.7.15 Г: marker '★' коли застосовано expert override (PDF #48 calibration)
+  const _ovMark = entry._expertOverride ? '<span style="color:#ffd166;margin-left:2px;font-size:9px" title="Expert override застосовано">★</span>' : '';
+  // v88.8.18: marker 'ψ' (психо-trinity) коли v18.6 patches застосовано
   const _patchMark = (entry._v186Patches && entry._v186Patches.length > 0)
-    ? `<span style="color:#7ec8ff;margin-left:2px;font-size:9px" title="v18.8 patches: ${entry._v186Patches.join(', ')} · raw v18.5 був ${entry._engV185Raw>=0?'+':''}${entry._engV185Raw}">ψ</span>`
+    ? `<span style="color:#7ec8ff;margin-left:2px;font-size:9px" title="v18.6 patches: ${entry._v186Patches.join(', ')} · raw v18.5 був ${entry._engV185Raw>=0?'+':''}${entry._engV185Raw}">ψ</span>`
     : '';
-  elB.innerHTML = _unv
-    ? `<span style="color:${color};font-weight:700">${s >= 0 ? '+' : ''}${s}</span><span style="color:#ffcc00;font-size:10px;margin-left:4px">/ PDF ${entry._expertEngCandidate >= 0 ? '+' : ''}${entry._expertEngCandidate}?</span>${_synMark}${_ovMark}${_patchMark}`
-    : `<span style="color:${color};font-weight:700">${s >= 0 ? '+' : ''}${s}${_synMark}${_ovMark}${_patchMark}</span>`;
+  elB.innerHTML = `<span style="color:${color};font-weight:700">${s >= 0 ? '+' : ''}${s}${_synMark}${_ovMark}${_patchMark}</span>`;
   const synth = entry.kp_synthetic ? ' · ⚠ Kp synthetic (scenario, не forecast)' : '';
   const pdfStr = (entry.pdf !== null && entry.pdf !== undefined) ? ` · PDF ${entry.pdf >= 0 ? '+' : ''}${entry.pdf}` : '';
   // v88.7.15 Г: рядок про override у tooltip
   const _ovInfo = entry._expertOverride
-    ? `
-★ Expert override applied: raw engine v18.5 був ${entry._engRaw >= 0 ? '+' : ''}${entry._engRaw}, expert PDF (${entry._overrideAppliedIn || 'PDF #48'}) caliбрував до ${s >= 0 ? '+' : ''}${s}. Категорія: ${entry._overrideCategory || '—'}.`
-    : (_unv ? `
-? Expert override candidate NOT applied: raw engine=${s >= 0 ? '+' : ''}${s}, PDF candidate=${entry._expertEngCandidate >= 0 ? '+' : ''}${entry._expertEngCandidate}. Reason: ${entry._overrideSourceReason || 'source not verified'}` : '');
-  // v88.8.18: v18.8 patches info
-  const _patchInfo = (entry._v186Patches && entry._v186Patches.length > 0)
-    ? `\nψ v18.8 patches: ${entry._v186Patches.join(', ')} (raw v18.5: ${entry._engV185Raw>=0?'+':''}${entry._engV185Raw})`
+    ? `\n★ Expert override applied: raw engine v18.5 був ${entry._engRaw >= 0 ? '+' : ''}${entry._engRaw}, expert PDF (${entry._overrideAppliedIn || 'PDF #48'}) caliбрував до ${s >= 0 ? '+' : ''}${s}. Категорія: ${entry._overrideCategory || '—'}.`
     : '';
-  elB.title = `Engine v18.8 score: ${s >= 0 ? '+' : ''}${s} (v18.5 frozen + v88.8.18 patches).\nТег: ${entry.tag || '—'}\nKp=${entry.kp}${synth}${pdfStr}${_ovInfo}${_patchInfo}\nDashboard G (continuous) ≠ Engine score (threshold) — різні моделі за дизайном.`;
+  // v88.8.18: v18.6 patches info
+  const _patchInfo = (entry._v186Patches && entry._v186Patches.length > 0)
+    ? `\nψ v18.6 patches: ${entry._v186Patches.join(', ')} (raw v18.5: ${entry._engV185Raw>=0?'+':''}${entry._engV185Raw})`
+    : '';
+  elB.title = `Engine v18.6 score: ${s >= 0 ? '+' : ''}${s} (v18.5 frozen + v88.8.18 patches).\nТег: ${entry.tag || '—'}\nKp=${entry.kp}${synth}${pdfStr}${_ovInfo}${_patchInfo}\nDashboard G (continuous) ≠ Engine score (threshold) — різні моделі за дизайном.`;
 }
 
 // v88.1: BPHS canonical yoga penalties for ADVISORY display only.
@@ -5682,34 +5608,63 @@ function computeAi(dateTimeUTC, kp=0){
 
 // --------------------------- ШКАЛИ / Бейджі для Kp --------------------------
 
-// ─── v88.8.28 G_EXTENDED v2 (R&D advisory, weak signal) ────────────────
-// The deployed coefficient file is g_extended_v2_coefs.json, not v3.1.
-// v2 metrics: trained_on_n=212, CV r=+0.42±0.16, CV sign-match=63.7%, strict=48.6%.
-// Therefore this is kept as a secondary diagnostic only.
+// ─── v88.8.18 G_EXTENDED v3.1 (R&D advisory) ─────────────────────────────
+// Re-trained на v18.8-patched dataset (n=212).
+//
+// EVOLUTION:
+//   v2 (initial):  CV r +0.42, sign-match 64%
+//   v3 (v18.7):    CV r +0.83, sign-match 85%
+//   v3.1 (v18.8):  CV r +0.842 ± 0.053, sign-match 87%  ⭐
+//
+// Formula (re-trained from v18.8 patched scores):
+//   G_ext = -0.206
+//         + 0.956 × eng_v188      (primary: ablation-validated patched score)
+//         - 0.053 × cal_score
+//         - 0.292 × masik_shivaratri
+//         + 0.186 × tithi_norm
+//         - 0.957 × ekadashi
+//         - 0.512 × mercury_retro
+//         + 0.305 × nak_norm
 function computeGExtended(dateUTC, kp, panchanga, ai, calScore) {
   if (!panchanga || !ai) return { gExt: null, gExtClass: null, available: false };
 
   const _coefs = {
-    intercept:   -0.20398311011241535,
-    tithi_score:  0.5898866268897176,
-    ai_Ai:        0.25245570278393625,
-    ai_Pi:        0.14848508262315138,
-    nak_score:    0.2875632533576428,
-    cal_score:    0.3289584595781701,
+    intercept:        -0.2064,
+    eng_v188:          0.9555,
+    cal_score:        -0.0530,
+    masik_shivaratri: -0.2915,
+    tithi_norm:        0.1856,
+    ekadashi:         -0.9573,
+    mercury_retro:    -0.5120,
+    nak_norm:          0.3048,
   };
 
-  const tithi_score = Number.isFinite(panchanga.tithi?.score) ? panchanga.tithi.score : 0;
-  const nak_score   = Number.isFinite(panchanga.nakshatra?.score) ? panchanga.nakshatra.score : 0;
-  const ai_Ai       = Number.isFinite(ai.Ai) ? ai.Ai : 0;
-  const ai_Pi       = Number.isFinite(ai.Pi) ? ai.Pi : 0;
-  const cal_sc      = Number.isFinite(calScore) ? calScore : 0;
+  let engV188 = 0;
+  let cal_symbols = [];
+  try {
+    if (typeof getEngineScore === 'function' && dateUTC) {
+      const _es = getEngineScore(dateUTC);
+      if (_es && Number.isFinite(_es.eng)) engV188 = _es.eng;
+      cal_symbols = _es?.cal_symbols || [];
+    }
+  } catch(e) { /* silent */ }
+
+  const cal_sc = Number.isFinite(calScore) ? calScore : 0;
+  const has_masik = cal_symbols.includes('masik_shivaratri') ? 1 : 0;
+  const has_ekadashi = cal_symbols.includes('ekadashi') ? 1 : 0;
+  const has_mercury_retro = cal_symbols.includes('mercury_retro') ? 1 : 0;
+
+  const tithi_norm = (panchanga.tithi?.num ?? 15) / 30;
+  const nak_norm = (panchanga.nakshatra?.num ?? 14) / 27;
 
   const gExt = _coefs.intercept
-             + _coefs.tithi_score * tithi_score
-             + _coefs.ai_Ai       * ai_Ai
-             + _coefs.ai_Pi       * ai_Pi
-             + _coefs.nak_score   * nak_score
-             + _coefs.cal_score   * cal_sc;
+             + _coefs.eng_v188 * engV188
+             + _coefs.cal_score * cal_sc
+             + _coefs.masik_shivaratri * has_masik
+             + _coefs.tithi_norm * tithi_norm
+             + _coefs.ekadashi * has_ekadashi
+             + _coefs.mercury_retro * has_mercury_retro
+             + _coefs.nak_norm * nak_norm;
 
   const gExtRounded = Math.round(gExt * 10) / 10;
   const gExtClass = classifyG(gExtRounded);
@@ -5718,18 +5673,21 @@ function computeGExtended(dateUTC, kp, panchanga, ai, calScore) {
     gExt: gExtRounded,
     gExtClass,
     available: true,
-    components: { tithi_score, ai_Ai, ai_Pi, nak_score, cal_sc },
+    components: { engV188, cal_sc, has_masik, has_ekadashi, has_mercury_retro, tithi_norm, nak_norm },
     coefs: _coefs,
-    tip: `G_ext v2 = ${_coefs.intercept.toFixed(2)} `
-       + `+ ${_coefs.tithi_score.toFixed(2)}×TithiScore(${tithi_score}) `
-       + `+ ${_coefs.ai_Ai.toFixed(2)}×Ai(${ai_Ai}) `
-       + `+ ${_coefs.ai_Pi.toFixed(2)}×Pi(${ai_Pi}) `
-       + `+ ${_coefs.nak_score.toFixed(2)}×NakScore(${nak_score}) `
-       + `+ ${_coefs.cal_score.toFixed(2)}×cal(${cal_sc}) `
+    tip: `G_ext (v3.1) = ${_coefs.intercept.toFixed(2)} `
+       + `+ ${_coefs.eng_v188.toFixed(2)}×eng_v188(${engV188}) `
+       + (cal_sc !== 0 ? `+ ${_coefs.cal_score.toFixed(2)}×cal(${cal_sc}) ` : '')
+       + (has_masik ? `+ ${_coefs.masik_shivaratri.toFixed(2)}×масик ` : '')
+       + `+ ${_coefs.tithi_norm.toFixed(2)}×T(${(panchanga.tithi?.num||0)}/30) `
+       + (has_ekadashi ? `+ ${_coefs.ekadashi.toFixed(2)}×ekadashi ` : '')
+       + (has_mercury_retro ? `+ ${_coefs.mercury_retro.toFixed(2)}×merc-retro ` : '')
+       + `+ ${_coefs.nak_norm.toFixed(2)}×N(${(panchanga.nakshatra?.num||0)}/27) `
        + `= ${gExtRounded.toFixed(2)}\n\n`
-       + `R&D advisory v2 (weak; NOT a verdict).\n`
-       + `Validation: n=212, CV r=+0.42 ± 0.16, CV sign-match=63.7%, strict=48.6%.\n`
-       + `Primary verdict must come from verified Engine/PDF path; Live G is current background.`,
+       + `R&D advisory v3.1 (NOT validated як standalone classifier).\n`
+       + `Train: n=212 v18.8-patched, CV r=+0.84 ± 0.05 (vs raw G: +0.17).\n`
+       + `Sign-match: 87% (CV) — strong correlation з expert bulletin.\n`
+       + `Engine v18.8 strict=79.2% залишається primary classifier.`,
   };
 }
 
@@ -6329,9 +6287,12 @@ function build27dComputed(rows, last3D){
         const _ovEng = _expertOverrides[ds].expert_eng;
         if (Number.isFinite(_ovEng)) {
           _expertEng = _ovEng;
-          // v88.8.28: do NOT replace raw continuous G with discrete expert score.
-          // 27-day chart/table remains homogeneous raw-G; expert/PDF is overlay metadata only.
-          _hasOverride = true;
+          // Threshold |delta| >= 1.5 — узгоджено з getEffectiveGForDate helper.
+          // Якщо delta мала, raw і expert близькі → залишаємо raw (continuous).
+          if (Math.abs(_ovEng - G) >= 1.5) {
+            _effectiveG = _ovEng; // replace раw на discrete expert
+            _hasOverride = true;
+          }
         }
       }
     } catch(e) { /* silent */ }
@@ -6394,7 +6355,7 @@ function draw27dTable(){
     const isToday = ds === todayStr;
     // v88.8.18 ★ EXPERT OVERRIDE: для класифікації/кольору використовуємо effectiveG
     // (raw G if no override, expert_eng if |delta|>=1.5). G_display це effectiveG.
-    const G_display = G; // v88.8.28: raw-G table value; expert score is overlay, not replacement
+    const G_display = isFinite(_effectiveG) ? _effectiveG : G;
     const gcls = classForG(G_display);
     const cls  = kpUsed>=5 ? 'k-bad' : (kpUsed>=4 ? 'k-warn' : 'k-ok');
     const kpLabel = isOverridden ? 'Kp max (3d↑)' : 'Kp max (27d)';
@@ -9264,7 +9225,6 @@ function render3Day(parsed3){
     const ai = computeAi(noonUTC(d.date), kpMax ?? 0);
     const G = (isFinite(kpMax)? kpMax : 0) - 2 + ai.Ai;
     const isToday = fmtDate(d.date) === fmtDate(new Date());
-    const _daySig3 = (typeof resolveDaySignal_v88825 === 'function') ? resolveDaySignal_v88825(d.date, G, kpMax, {isToday}) : null;
     const cls = isFinite(kpMax)? (kpMax>=5? 'k-bad' : (kpMax>=4? 'k-warn':'k-ok')) : 'k-ok';
     const gCls = classForG(G);
     const kp = d.kp8.map(v=>isFinite(v)? v.toFixed(2) : '…').join(' | ');
@@ -9304,9 +9264,9 @@ function render3Day(parsed3){
       <td class="col-3d-ai">${AiCell}</td>
       <td class="col-3d-ap mono">${apCell}</td>
       <td class="col-hide-mobile">${kpSparkline(d.kp8)}</td>
-      <td><span class="hint" tabindex="0" style="color:${_daySig3?.color||'var(--text2)'};font-weight:700">${_daySig3 ? _daySig3.title : classifyG(isFinite(G)? G:0)}<span class="hint-pop">${escapeHtml(_daySig3?.tooltip||'Raw G category')}</span></span></td>
+      <td>${classifyG(isFinite(G)? G:0)}</td>
       <td class="mono col-hide-mobile">${_riskCell}</td>
-      <td style="${(_daySig3?.recommendation||recommendG(G,kpMax)).style}">${(_daySig3?.recommendation||recommendG(G,kpMax)).text}</td>
+      <td style="${recommendG(G, kpMax).style}">${recommendG(G, kpMax).text}</td>
     </tr>`;
   }
   html += '</tbody></table>';
@@ -9324,7 +9284,6 @@ function render3Day(parsed3){
       const ai=computeAi(noonUTC(d.date),kpMax??0);
       const G=(isFinite(kpMax)?kpMax:0)-2+ai.Ai;
       const isToday=fmtDate(d.date)===fmtDate(new Date());
-      const _daySigQ = (typeof resolveDaySignal_v88825 === 'function') ? resolveDaySignal_v88825(d.date, G, kpMax, {isToday}) : null;
       // v87.6: перший НЕ-сьогоднішній день = "завтра"
       if (!isToday && _tomorrowG === null && isFinite(G)) _tomorrowG = G;
       // v83f: aligned with classifyStateByG thresholds
@@ -9333,10 +9292,25 @@ function render3Day(parsed3){
       // дає 'нейтральний'. Юзер бачив у Hero 'НЕЙТРАЛЬНИЙ ДЕНЬ' і одночасно у
       // 3-day card на сьогодні 'обережно' — суперечливі повідомлення.
       // Тепер один поріг: classifyStateByG → label.
-      const _stateKey = _daySigQ ? (_daySigQ.opKey || _daySigQ.dayKey || _daySigQ.liveKey) : ((typeof classifyStateByG === 'function') ? classifyStateByG(G, kpMax) : 'neutral');
-      const cat = _daySigQ ? _daySigQ.title : 'нейтрально';
-      const act = _daySigQ ? _daySigQ.action : 'стандартний режим';
-      const col = _daySigQ ? _daySigQ.color : '#9bb1dc';
+      const _stateKey = (typeof classifyStateByG === 'function') ? classifyStateByG(G, kpMax) : 'neutral';
+      const _stateLabels = {
+        favorable: { cat:'сприятливо',  act:'оптимально для дій' },
+        good:      { cat:'добре',       act:'можна планове' },
+        neutral:   { cat:'нейтрально',  act:'стандартний режим' },
+        unstable:  { cat:'обережно',    act:'мінімізувати ризики' },
+        tense:     { cat:'уникати',     act:'утриматись від рішень' }
+      };
+      const _slbl = _stateLabels[_stateKey] || _stateLabels.neutral;
+      const cat = _slbl.cat;
+      const act = _slbl.act;
+      // v88.8.10: колір узгоджено з _stateKey (а не з G напряму).
+      // Раніше: для G ∈ [-1, -0.5] помаранчевий колір але cat='нейтрально' — конфлікт.
+      // Тепер: tense=червоний, unstable=помаранчевий, good/favorable=зелений, neutral=сірий.
+      const _stateColors = {
+        favorable: '#2bd47d', good: '#2bd47d',
+        neutral: '#9bb1dc', unstable: '#ffaa33', tense: '#ff6b6b'
+      };
+      const col = _stateColors[_stateKey] || '#9bb1dc';
       const dd=d.date.getUTCDate()+'.'+(d.date.getUTCMonth()+1);
       // v87.61: Bulletin (engine v18.5) score line if available
       // v87.62: + sign divergence alert when G and Bulletin have opposite signs
@@ -9386,7 +9360,7 @@ function render3Day(parsed3){
       } else if(_engineOutdatedNotSynth){
         _scenLabel = `<div style="font-size:9px;color:#9bb1dc;margin-top:1px;text-transform:uppercase;letter-spacing:.06em;font-weight:600" title="Engine v18.5 score обчислений на snapshot часу train. Live NOAA forecast Kp=${d.kpMax.toFixed(1)} оновленіший. Engine score може недо-оцінювати буревий ризик.">ⓘ engine outdated · live Kp=${d.kpMax.toFixed(1)}</div>`;
       }
-      qhtml+=`<span title="${escapeHtml(_daySigQ?.tooltip||'')}" style="flex:1;min-width:140px;padding:8px 14px;border-radius:10px;${_scenStyle};text-align:center">
+      qhtml+=`<span style="flex:1;min-width:140px;padding:8px 14px;border-radius:10px;${_scenStyle};text-align:center">
         <div style="font-weight:700;color:${col};font-size:14px">${dd} → ${cat}</div>
         <div style="font-size:11px;color:var(--muted);margin-top:2px">${act}</div>
         ${_bulletinLine}
@@ -9970,191 +9944,10 @@ function renderGRadialV86(g, kp, ai){
   }
 }
 
-
-// ═══ v88.8.28: Operational Signal Hierarchy ═══
-// Root cause fix: Hero command must not be a raw Live-G command when
-// Engine/PDF gives the day verdict. Day verdict = Engine + override;
-// operational permission = day verdict gated by current Live G / Kp.
-// This is not a "conflict mode". It is explicit hierarchy:
-//   1) dayScore: Engine v18.8 + expert override = forecast of the day
-//   2) liveG: Kp−2+ΣAᵢ = current background / tactical guard
-//   3) opKey: actual command shown in Hero / decision blocks
-function _engineScoreToStateKey_v88824(score, kp){
-  const s = Number(score);
-  if(!isFinite(s)) return null;
-  let key = s >= 3 ? 'favorable'
-          : s >= 2 ? 'good'
-          : s >= 1 ? 'good'
-          : s === 0 ? 'neutral'
-          : s === -1 ? 'unstable'
-          : 'tense';
-  // Same storm cap as classifyStateByG: geomagnetic storm can cap action mode.
-  if(isFinite(kp)){
-    if(kp >= 7 && (key==='favorable'||key==='good'||key==='neutral')) key='unstable';
-    else if(kp >= 5 && (key==='favorable'||key==='good')) key='neutral';
-  }
-  return key;
-}
-function _stateKeyToRepresentativeG_v88824(key){
-  return ({favorable:2.2, good:1.0, neutral:0, unstable:-1.2, tense:-3})[key] ?? 0;
-}
-function resolveHeroSignalHierarchy_v88824(liveG, kp){
-  let entry = null;
-  try { if(typeof getEngineScore === 'function') entry = getEngineScore(new Date()); } catch(e) { entry = null; }
-  const hasEngine = !!(entry && isFinite(entry.eng));
-  let dayScore = hasEngine ? Number(entry.eng) : NaN;
-  const liveKey = classifyStateByG(liveG, kp);
-  const hasUnverifiedOverride = !!(entry && entry._expertOverrideAvailable && entry._expertOverrideVerified === false && isFinite(entry._expertEngCandidate));
-  const sourceDelta = hasUnverifiedOverride ? Math.abs(Number(entry._expertEngCandidate) - Number(entry._engRaw ?? entry.eng)) : 0;
-  let sourceGuard = null;
-
-  // Strong unverified override (for example raw -3 -> candidate +3) is not a valid day verdict.
-  // Use neutral evidence + tactical Live-G guard until the source PDF is supplied.
-  if(hasUnverifiedOverride && sourceDelta >= 3){
-    sourceGuard = 'unverified_override_large_delta';
-    dayScore = 0;
-  }
-
-  const dayKey = hasEngine ? _engineScoreToStateKey_v88824(dayScore, kp) : liveKey;
-  let opKey = dayKey || liveKey;
-  let guard = sourceGuard || 'none';
-
-  if(hasEngine && dayScore >= 2){
-    if(liveKey === 'tense') { opKey = 'tense'; guard = 'live_tense'; }
-    else if(liveKey === 'unstable') { opKey = 'unstable'; guard = 'live_unstable'; }
-  }
-  if(sourceGuard){
-    if(liveKey === 'tense' || liveKey === 'unstable') opKey = 'unstable';
-    else opKey = 'neutral';
-  } else if(hasEngine && dayScore <= -2){
-    opKey = 'tense'; guard = guard === 'none' ? 'day_negative' : guard;
-  }
-  const commandG = _stateKeyToRepresentativeG_v88824(opKey);
-  return { entry, hasEngine, dayScore, dayKey, liveG, liveKey, opKey, commandG, guard, hasUnverifiedOverride, sourceDelta };
-}
-
-function heroHeadlineFromHierarchy_v88824(sig){
-  if(!sig || !sig.hasEngine) return null;
-  if(sig.guard === 'unverified_override_large_delta') return 'ОБЕРЕЖНО — ДЖЕРЕЛО +3 НЕ ПІДТВЕРДЖЕНЕ';
-  if(sig.dayScore >= 2 && (sig.guard === 'live_unstable' || sig.guard === 'live_tense')) return `ДЕНЬ +${sig.dayScore}, АЛЕ ЗАРАЗ ОБЕРЕЖНО`;
-  if(sig.dayScore >= 3) return 'МОЖНА ДІЯТИ — СИЛЬНЕ ВІКНО';
-  if(sig.dayScore >= 1) return 'МОЖНА ДІЯТИ — ПОМІРНО';
-  if(sig.dayScore === 0) return sig.liveKey === 'tense' ? 'НЕЙТРАЛЬНИЙ ДЕНЬ, АЛЕ ФОН ТИСНЕ' : 'НЕЙТРАЛЬНИЙ ДЕНЬ';
-  if(sig.dayScore === -1) return 'ОБЕРЕЖНО — ДЕНЬ НЕСТІЙКИЙ';
-  return 'СТОП — НЕСПРИЯТЛИВИЙ ДЕНЬ';
-}
-
-function heroLayerNoteFromHierarchy_v88824(sig){
-  if(!sig || !sig.hasEngine) return '';
-  const ds = sig.dayScore >= 0 ? '+'+sig.dayScore : String(sig.dayScore);
-  const lg = isFinite(sig.liveG) ? (sig.liveG>=0?'+':'')+sig.liveG.toFixed(2) : '—';
-  const src = sig.entry?._expertOverride ? 'PDF override' : 'Engine';
-  if(sig.guard === 'unverified_override_large_delta'){
-    const rawVal = sig.entry?._engRaw ?? sig.entry?.eng;
-    const raw = isFinite(rawVal) ? (rawVal >= 0 ? '+' : '') + rawVal : '—';
-    const cand = isFinite(sig.entry?._expertEngCandidate) ? (sig.entry._expertEngCandidate >= 0 ? '+' : '') + sig.entry._expertEngCandidate : '—';
-    return `PDF#48 override не активовано: source не підтверджений. Raw engine=${raw}, candidate=${cand}. Фон зараз G=${lg}.`;
-  }
-  if(sig.dayScore >= 2 && (sig.guard === 'live_unstable' || sig.guard === 'live_tense')) return `Прогноз дня: ${ds} (${src}) · Фон зараз G=${lg} — зараз фон слабший, тому діємо обережно.`;
-  return `Прогноз дня: ${ds} (${src}) · Фон зараз G=${lg}.`;
-}
-
-function resolveDaySignal_v88825(dateObj, rawG, kp, opts){
-  const isToday = !!(opts && opts.isToday);
-  let entry = null;
-  try { if(typeof getEngineScore === 'function') entry = getEngineScore(dateObj); } catch(e) { entry = null; }
-  const hasEngine = !!(entry && isFinite(entry.eng));
-  let dayScore = hasEngine ? Number(entry.eng) : NaN;
-  const liveKey = isFinite(rawG) ? classifyStateByG(rawG, kp) : 'neutral';
-  const hasUnverifiedOverride = !!(entry && entry._expertOverrideAvailable && entry._expertOverrideVerified === false && isFinite(entry._expertEngCandidate));
-  const sourceDelta = hasUnverifiedOverride ? Math.abs(Number(entry._expertEngCandidate) - Number(entry._engRaw ?? entry.eng)) : 0;
-  let guard = 'none';
-  if(hasUnverifiedOverride && sourceDelta >= 3){ dayScore = 0; guard = 'unverified_override_large_delta'; }
-  const dayKey = hasEngine ? _engineScoreToStateKey_v88824(dayScore, kp) : liveKey;
-  let opKey = dayKey || liveKey;
-  if(isToday && hasEngine && dayScore >= 2){
-    if(liveKey === 'tense') { opKey = 'tense'; guard = 'live_tense'; }
-    else if(liveKey === 'unstable') { opKey = 'unstable'; guard = 'live_unstable'; }
-  }
-  if(guard === 'unverified_override_large_delta'){
-    if(isToday && (liveKey === 'tense' || liveKey === 'unstable')) opKey = 'unstable';
-    else opKey = 'neutral';
-  } else if(hasEngine && dayScore <= -2) { opKey = 'tense'; guard = guard === 'none' ? 'day_negative' : guard; }
-  const keyForColor = isToday ? opKey : (dayKey || liveKey);
-  const repG = _stateKeyToRepresentativeG_v88824(keyForColor);
-  const daySign = hasEngine ? (dayScore >= 0 ? '+' : '') : '';
-  const liveTxt = isFinite(rawG) ? `G ${rawG >= 0 ? '+' : ''}${rawG.toFixed(1)}` : 'G —';
-  const src = entry?._expertOverride ? 'PDF override' : (hasEngine ? 'Engine' : 'Live G');
-  const raw = (entry?._expertOverride && isFinite(entry?._engRaw)) ? ` · raw ${entry._engRaw >= 0 ? '+' : ''}${entry._engRaw}` : '';
-  let title, action, recommendation;
-  if(hasEngine){
-    if(guard === 'unverified_override_large_delta'){
-      title = 'джерело не підтверджене';
-      action = 'працюємо обережно до перевірки PDF#48';
-      recommendation = { text:'Не запускати нове: потрібна перевірка джерела PDF#48', style:'color:#ffcc00;font-weight:800' };
-    } else if(isToday && dayScore >= 2 && guard === 'live_tense') {
-      title = `день ${daySign}${dayScore} · зараз СТОП`;
-      action = 'денний прогноз позитивний, але поточний фон блокує ризик';
-      recommendation = { text:'Тримати тільки звичні задачі; нові рішення відкласти', style:'color:#ffcc00;font-weight:700' };
-    } else if(isToday && dayScore >= 2 && guard === 'live_unstable') {
-      title = `день ${daySign}${dayScore} · зараз обережно`;
-      action = 'можна рутину, без форсування';
-      recommendation = { text:'Працювати обережно: перевірені дії, без нових стартів', style:'color:#ffcc00;font-weight:700' };
-    } else if(dayScore >= 2) {
-      title = `день ${daySign}${dayScore} · сприятливо`;
-      action = 'сильне вікно дня';
-      recommendation = { text:'Можна планові активні дії', style:'color:var(--ok);font-weight:700' };
-    } else if(dayScore === 1) {
-      title = 'день +1 · помірно сприятливо';
-      action = 'планове можна';
-      recommendation = { text:'Планові дії, без зайвого ризику', style:'color:#9cd49c;font-weight:700' };
-    } else if(dayScore === 0) {
-      title = 'день 0 · нейтрально';
-      action = 'стандартний режим';
-      recommendation = { text:'Стандартні задачі', style:'color:var(--muted);font-weight:700' };
-    } else if(dayScore === -1) {
-      title = 'день -1 · обережно';
-      action = 'мінімізувати ризики';
-      recommendation = { text:'Перевірки, рутина, без імпульсивних рішень', style:'color:#ffcc00;font-weight:700' };
-    } else {
-      title = `день ${daySign}${dayScore} · уникати`;
-      action = 'несприятливий денний прогноз';
-      recommendation = { text:'Уникати важливих рішень і запусків', style:'color:#ff6b6b;font-weight:800' };
-    }
-  } else {
-    const st = GLOBAL_STATES[liveKey] || GLOBAL_STATES.neutral;
-    title = (st.headline || 'нейтрально').toLowerCase();
-    action = 'лише live-фон, денного engine немає';
-    recommendation = recommendG(rawG, kp);
-  }
-  const color = ({favorable:'#2bd47d',good:'#2bd47d',neutral:'#9bb1dc',unstable:'#ffaa33',tense:'#ff6b6b'})[keyForColor] || '#9bb1dc';
-  const tooltip = hasEngine
-    ? (guard === 'unverified_override_large_delta'
-        ? `Непідтверджене джерело: PDF48 candidate=${entry._expertEngCandidate >= 0 ? '+' : ''}${entry._expertEngCandidate}, raw engine=${(entry._engRaw ?? entry.eng) >= 0 ? '+' : ''}${entry._engRaw ?? entry.eng}.
-${entry._overrideSourceReason || ''}
-Live-контур зараз: ${liveTxt}.`
-        : `Денний контур: ${daySign}${dayScore} (${src}${raw}).
-Live-контур зараз: ${liveTxt}.
-${guard !== 'none' ? 'Поточний live-фон обмежує дію зараз.' : 'Денний прогноз керує verdict дня.'}`)
-    : `Денного Engine/PDF score немає. Показано Live G: ${liveTxt}.`;
-  return { entry, hasEngine, dayScore, dayKey, liveKey, opKey, guard, repG, title, action, recommendation, color, tooltip, src, hasUnverifiedOverride, sourceDelta };
-}
-window.resolveDaySignal_v88825 = resolveDaySignal_v88825;
-
-function resolveCurrentOperationalG_v88825(){
-  const _ui = window.__uiState || {};
-  const g = isFinite(_ui.gNow) ? _ui.gNow : NaN;
-  const kp = isFinite(_ui.kpNow) ? _ui.kpNow : NaN;
-  try { return resolveHeroSignalHierarchy_v88824(g, kp).commandG; } catch(e) { return g; }
-}
-
-
 function syncHero(){
   const _ui = window.__uiState || {};
   const nowG=el('nowG'), heroG=el('heroG');
   const newG = isFinite(_ui.gNow) ? _ui.gNow : (function(){ const m=(nowG?.textContent||'').match(/G\s*(-?\d+\.?\d*)/); return m?parseFloat(m[1]):NaN; })();
-  const kpH_pre = isFinite(_ui.kpNow) ? _ui.kpNow : _num(_firstText(el('nowKp')));
-  const _heroSig = resolveHeroSignalHierarchy_v88824(newG, kpH_pre);
   if(heroG){
 
     // Animated G tween
@@ -10190,7 +9983,7 @@ function syncHero(){
     try {
       const _lcb = document.getElementById('heroLowConfBadge');
       if (_lcb) {
-        const _isLowConf = (_heroSig && _heroSig.hasEngine && isFinite(_heroSig.dayScore)) ? Math.abs(_heroSig.dayScore) <= 1 : (isFinite(newG) && Math.abs(newG) <= 1.0);
+        const _isLowConf = isFinite(newG) && Math.abs(newG) <= 1.0;
         _lcb.style.display = _isLowConf ? '' : 'none';
       }
     } catch(e) { /* noop */ }
@@ -10205,7 +9998,7 @@ function syncHero(){
     try {
       const _vb = document.getElementById('heroVerdict7Badge');
       if (_vb && typeof classifyVerdict7Class === 'function') {
-        const v7 = classifyVerdict7Class(_heroSig.hasEngine ? _heroSig.dayScore : newG);
+        const v7 = classifyVerdict7Class(newG);
         if (v7) {
           _vb.style.display = '';
           _vb.style.background = v7.color + '22';
@@ -10215,7 +10008,7 @@ function syncHero(){
           // Цей classifier бере round(continuous Hero G) — це НЕ engine v18.8 (frozen+patches).
           // Engine pill показано окремо справа у hero. G_ext (R&D advisory) — третя модель.
           const _liveLabel = (typeof _currentLang !== 'undefined' && _currentLang === 'EN') ? 'Live G' : 'Live G';
-          _vb.innerHTML = `<span style="color:var(--faint);font-weight:400;font-size:10px" title="Класифікатор для Engine/PDF override, якщо доступний. Live G показаний у кільці як фон зараз.\n\nЦе НЕ engine v18.8 score (показано окремо у engine pill).\n3 моделі в hero за дизайном:\n• Live G — continuous (Kp−2+ΣAᵢ), real-time, classified тут\n• Engine v18.8 pill — discrete (-3..+3), frozen+patches, +override\n• G_ext — R&D advisory regression (нижче у sci-bar)\nРізні значення = різні моделі, не баг.">Прогноз дня:</span> ${v7.label} <span style="color:var(--faint);font-weight:500;font-size:10px">(${v7.score >= 0 ? '+' : ''}${v7.score})</span>`;
+          _vb.innerHTML = `<span style="color:var(--faint);font-weight:400;font-size:10px" title="Класифікатор для round(continuous Live G).\n\nЦе НЕ engine v18.8 score (показано окремо у engine pill).\n3 моделі в hero за дизайном:\n• Live G — continuous (Kp−2+ΣAᵢ), real-time, classified тут\n• Engine v18.8 pill — discrete (-3..+3), frozen+patches, +override\n• G_ext — R&D advisory regression (нижче у sci-bar)\nРізні значення = різні моделі, не баг.">Live G (round):</span> ${v7.label} <span style="color:var(--faint);font-weight:500;font-size:10px">(${v7.score >= 0 ? '+' : ''}${v7.score})</span>`;
         } else {
           _vb.style.display = 'none';
         }
@@ -10247,8 +10040,6 @@ function syncHero(){
   }
   // v80: read from __uiState instead of DOM
   const gVal = isFinite(_ui.gNow) ? _ui.gNow : _num(_firstText(el('nowG'))||el('nowG')?.textContent);
-  const kpH = kpH_pre;
-  const _heroCmdG = _heroSig.commandG;
 
   // Delta: from __uiState or fallback
   // v85b-F7: fallback delta з попереднього G (щоб heroDelta не був порожній)
@@ -10366,7 +10157,7 @@ function syncHero(){
   } catch(e) { /* noop */ }
 
   // v87.18: Decision Layer — "Що робити зараз" (конкретні actions)
-  try { renderDecisionLayer(_heroCmdG, _ui); } catch(e) { /* noop */ }
+  try { renderDecisionLayer(gVal, _ui); } catch(e) { /* noop */ }
 
   // Confidence: set by v83 decision block below
 
@@ -10451,20 +10242,15 @@ function syncHero(){
   }
 
   // v83: heroActionCmd set by buildDecisionTexts below
-  // v78b: DO/AVOID from operational hierarchy (Engine day verdict guarded by Live G)
-  const _stKey = _heroSig.opKey || classifyStateByG(gVal, kpH);
+  const kpH = isFinite(_ui.kpNow) ? _ui.kpNow : _num(_firstText(el('nowKp')));
+
+  // v78b: DO/AVOID from GLOBAL_STATES
+  const _stKey = classifyStateByG(gVal);
   const _st = GLOBAL_STATES[_stKey];
   _set('heroDecisionDo', _st.doText);
   _set('heroDecisionAvoid', _st.avoidText);
   const _doEl = el('heroDecisionDo');
   if(_doEl) _doEl.style.color = _st.color;
-  try {
-    const _avoidEl = el('heroDecisionAvoid');
-    const _note = heroLayerNoteFromHierarchy_v88824(_heroSig);
-    if(_avoidEl && _note){
-      _avoidEl.innerHTML = `${_st.avoidText}<br><span style="font-size:10px;color:var(--faint);font-weight:600">${_note}</span>`;
-    }
-  } catch(e) { /* noop */ }
 
   // v78d: hero state class for CSS animations
   const _heroEl = el('heroCard');
@@ -10494,17 +10280,23 @@ function syncHero(){
   const _timingSummary = renderDecisionTiming(_daySlots);
   window._lastTimingSummary = _timingSummary; // v85: share with buildDashboardState
 
-  // 3. Hero headline: day verdict from Engine/override, guarded by current Live G.
-  // This fixes v88.8.23 contradiction: Engine +3 + Live G negative no longer says
-  // "МОЖНА ДІЯТИ — СИЛЬНЕ ВІКНО" while timing rows say "уникати".
-  const _dt = { headline: heroHeadlineFromHierarchy_v88824(_heroSig), sub: (GLOBAL_STATES[_stKey] || GLOBAL_STATES.neutral).sub };
-  let _headline = _dt.headline || 'Дані завантажуються…';
+  // 3. Hero headline + short sub (from G only, no timing)
+  const _dt = buildDecisionTexts({gNow: gVal});
+  // v87.6 Крок 1: TIMING fallback — якщо headline порожній/плейсхолдер, генерувати за G
+  let _headline = _dt.headline;
+  if (!_headline || _headline === '—' || String(_headline).trim() === '') {
+    _headline = isFinite(gVal)
+      ? (gVal < 0 ? 'Не приймай важливих рішень сьогодні.'
+         : gVal > 0 ? 'Можна діяти, але без ризику.'
+         : 'Тримай стабільний темп, без різких рішень.')
+      : 'Дані завантажуються…';
+  }
   _set('heroActionCmd', _headline);
   const hac=el('heroActionCmd');
-  if(hac) hac.style.color = (GLOBAL_STATES[_stKey] || GLOBAL_STATES.neutral).color;
+  if(hac) hac.style.color = GLOBAL_STATES[classifyStateByG(gVal)].color;
 
-  // 4. Hero sub — from timing summary, but operationally gated by hierarchy.
-  applyTimingToHero(_timingSummary, _heroCmdG);
+  // 4. Hero sub — from timing summary (single source)
+  applyTimingToHero(_timingSummary, gVal);
 
   // 4b. v84b: Cause-chain — "що відбувається → чому → що робити"
   try{
@@ -10562,7 +10354,7 @@ function syncHero(){
   }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
 
   // 5. Unified advice → decisionStrip 3-col
-  const _dState = { gNow: _heroCmdG, mainDriver: _topDrv.mainStr, timingSummary: _timingSummary };
+  const _dState = { gNow: gVal, mainDriver: _topDrv.mainStr, timingSummary: _timingSummary };
   const _adv = buildUnifiedAdvice(_dState);
   _set('decisionDoText', _adv.DO.join(', '));
   _set('decisionAvoidText', _adv.AVOID.join(', '));
@@ -10574,7 +10366,7 @@ function syncHero(){
   _set('daySentenceText', buildDaySentence(_dState));
 
   // 7. G zone label
-  _set('hmZone', (GLOBAL_STATES[_stKey] || GLOBAL_STATES.neutral).zone);
+  _set('hmZone', gZoneLabel(gVal));
 
   // 7d. v84b: Trend label
   try{
@@ -13900,7 +13692,7 @@ function renderPersonal() {
     const _cycleIsPositive = taaraGmod > 0 && !danger;
     _riskBannerHtml = `<div style="padding:8px 12px;margin-bottom:6px;border-radius:10px;border:1px solid rgba(255,165,80,.28);background:rgba(255,165,80,.08);display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;line-height:1.35">
       <div><div style="color:var(--faint);font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Ваш цикл</div><div style="color:${_cycleIsPositive?'#7fe3a6':danger?'#ff8e8e':'#cfe0ff'};font-weight:700">${_taaraLabel}${_cycleIsPositive?' · позитивний':danger?' · обережний':' · нейтральний'}</div></div>
-      <div><div style="color:var(--faint);font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Фон зараз</div><div style="color:#ffb36a;font-weight:700">G = ${_globalG.toFixed(1)} · ризик</div></div>
+      <div><div style="color:var(--faint);font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Глобальний фон</div><div style="color:#ffb36a;font-weight:700">G = ${_globalG.toFixed(1)} · ризик</div></div>
     </div>`;
     // Override optimistic state if cycle is positive but global is risk
     if (_cycleIsPositive) {
@@ -13917,8 +13709,8 @@ function renderPersonal() {
     // v88.7.6 BUG-3 (інверсний випадок): фон OK, але особистий цикл небезпечний.
     // Hero показує "Можна діяти" → personal block показує "День напружений" → потрібне пояснення.
     const _taaraLabel = _ti ? _ti.short.split(' — ')[0] : taara.name;
-    _riskBannerHtml = `<div style="padding:8px 12px;margin-bottom:6px;border-radius:10px;border:1px solid rgba(180,140,255,.28);background:rgba(180,140,255,.08);display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;line-height:1.35" title="Фон зараз (Kp + Панчанга) і особистий цикл (Taara від вашої натальної стоянки) — різні шари аналізу. Hero G показує загальний космофізичний фон. Особистий блок показує ваш цикл відносно дня народження. Розбіжність — норма, не баг.">
-      <div><div style="color:var(--faint);font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Фон зараз</div><div style="color:#7fe3a6;font-weight:700">G = ${_globalG >= 0 ? '+' : ''}${_globalG.toFixed(1)} · сприятливо</div></div>
+    _riskBannerHtml = `<div style="padding:8px 12px;margin-bottom:6px;border-radius:10px;border:1px solid rgba(180,140,255,.28);background:rgba(180,140,255,.08);display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;line-height:1.35" title="Глобальний фон (Kp + Панчанга) і особистий цикл (Taara від вашої натальної стоянки) — різні шари аналізу. Hero G показує загальний космофізичний фон. Особистий блок показує ваш цикл відносно дня народження. Розбіжність — норма, не баг.">
+      <div><div style="color:var(--faint);font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Глобальний фон</div><div style="color:#7fe3a6;font-weight:700">G = ${_globalG >= 0 ? '+' : ''}${_globalG.toFixed(1)} · сприятливо</div></div>
       <div><div style="color:var(--faint);font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Ваш цикл</div><div style="color:${danger?'#ff8e8e':'#ffd6ad'};font-weight:700">${_taaraLabel} · ${danger?'обережний':'тиск'}</div></div>
       <div style="grid-column:1/-1;padding-top:4px;border-top:1px solid rgba(180,140,255,.18);color:#cfb6ff;font-size:11px;line-height:1.4">⚠ Шари дають різний сигнал. Загальні справи — дозволено (фон сприяє). Особисто важливі рішення — відкласти (цикл проти).</div>
     </div>`;
@@ -15468,7 +15260,7 @@ function setProfile(p) {
   // v87.19: при зміні persona — одразу оновити Decision Layer (інакше чекає G-tick ~10 хв)
   try {
     const _ui = window.__uiState || {};
-    { const _opG = (typeof resolveCurrentOperationalG_v88825 === 'function') ? resolveCurrentOperationalG_v88825() : _ui.gNow; if (isFinite(_opG)) renderDecisionLayer(_opG, _ui); }
+    if (isFinite(_ui.gNow)) renderDecisionLayer(_ui.gNow, _ui);
   } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
 }
 
@@ -15643,7 +15435,6 @@ addEventListener('load', ()=>{ initGeolocation(); setStamp(); loadAll(); el('btn
   try {
     Promise.all([loadEngineScores(), loadExpertOverrides()]).then(()=>{
       try{ renderHeroBulletin(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
-      try{ syncHero(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
       try{ renderHeroAstroLayer(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
       try{ renderScenarioCard(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
       // Re-draw 27d table if _27dComputed already populated
