@@ -600,8 +600,13 @@
 //   3. backtest.html додано до SHELL_FILES.
 //   4. cache.put awaited перед SW_FRESH_DATA notify (race fix).
 
-const SHELL_CACHE = 'g-index-shell-v88-8-21';
-const DATA_CACHE = 'g-index-data-v88-8-21';
+// v88.8.23 changes:
+//   HERO SIGNAL HIERARCHY: Hero command verdict now uses Engine v18.8 + expert override
+//   as primary daily forecast. Live G remains visible as current real-time background.
+//   This removes semantic conflict without adding fake conflict mode.
+//
+const SHELL_CACHE = 'g-index-shell-v88-8-23';
+const DATA_CACHE = 'g-index-data-v88-8-23';
 
 const SHELL_FILES = [
   './',
