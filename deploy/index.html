@@ -2226,6 +2226,13 @@ G_day тут = денний raw-фон: Kp_day(max/approx) − 2 + ΣAᵢ(noon U
       <summary><strong>📡 Джерела даних та статус моделі</strong></summary>
       <div class="small" style="margin-top:8px">
 
+        <!-- v88.8.35-fp1: PDF override regression badge (single source of truth check) -->
+        <div style="margin:0 0 8px;padding:6px 10px;background:rgba(99,190,123,.05);border:1px solid rgba(99,190,123,.25);border-radius:6px;display:flex;align-items:center;gap:8px;font-size:12px">
+          <span style="color:var(--dim)">PDF override:</span>
+          <span id="pdfOverrideRegressionBadge" tabindex="0" style="font-weight:800;cursor:help;font-variant-numeric:tabular-nums" title="Перевіряється після завантаження expert_overrides_v3.json">—</span>
+          <span style="color:var(--faint);margin-left:auto;font-size:11px">single source of truth = expert_overrides_v3.json</span>
+        </div>
+
         <table style="font-size:12px;margin:6px 0 10px;border:1px solid #1e2f52;border-radius:6px;overflow:hidden">
           <thead><tr style="background:#0c1526">
             <th style="padding:4px 8px;text-align:left;color:#7a9acc">Компонент</th>
@@ -3988,6 +3995,42 @@ async function loadExpertOverrides(){
       _expertOverrides = {};
       window._expertOverridesLoadStatus = 'invalid'; // файл є, але без overrides[]
     }
+    // v88.8.35-fp1: regression-check для PDF override.
+    // Експортуємо count + window для тех-бейджа і ручної регресійної перевірки.
+    try {
+      const _dates = Object.keys(_expertOverrides).sort();
+      const _expected = Array.isArray(data.overrides) ? data.overrides.length : 0;
+      const _loaded = _dates.length;
+      window._pdfOverrideRegression = {
+        ok: (_loaded === _expected && _loaded > 0),
+        loaded: _loaded,
+        expected: _expected,
+        window: (data && data.window) || ((_dates[0] || '?') + '..' + (_dates[_dates.length-1] || '?')),
+        source: (data && data.source) || '—',
+        version: (data && data.version) || '—',
+        updated_at: (data && data.updated_at) || '—'
+      };
+      // Render у тех-бейдж, якщо існує DOM-таргет (рендер створює його лінивно)
+      const _renderBadge = () => {
+        const tgt = document.getElementById('pdfOverrideRegressionBadge');
+        if(!tgt) return;
+        const reg = window._pdfOverrideRegression;
+        const ok = reg && reg.ok;
+        tgt.textContent = `PDF override ${ok ? 'OK' : 'FAIL'}: ${reg.loaded}/${reg.expected}`;
+        tgt.style.color = ok ? '#63be7b' : '#ff6b6b';
+        tgt.title = `expert_overrides_v3.json v${reg.version}\n`
+                  + `Вікно: ${reg.window}\n`
+                  + `Джерело: ${reg.source}\n`
+                  + `Оновлено: ${reg.updated_at}\n`
+                  + `Завантажено ${reg.loaded} з ${reg.expected} записів`
+                  + (ok ? '' : '\n⚠ Кількість не збігається — перевір JSON');
+      };
+      if(document.readyState === 'loading'){
+        document.addEventListener('DOMContentLoaded', _renderBadge);
+      } else {
+        _renderBadge();
+      }
+    } catch(_regErr){ /* non-fatal */ }
     if(window._DEBUG) console.log('[v88.8.35] expert_overrides_v3 loaded: ' + Object.keys(_expertOverrides).length + ' records');
     return _expertOverrides;
   } catch(e){
@@ -10121,7 +10164,8 @@ function syncHero(){
         const p=Math.min(1,(ts-start)/dur);
         const ease=1-Math.pow(1-p,3); // easeOutCubic
         const cur=oldG+(newG-oldG)*ease;
-        heroG.textContent='G '+cur.toFixed(2);
+        // v88.8.35-fp1: явний label "G_now" замість просто "G" — щоб не плутати з PDF/Engine Day_score
+        heroG.textContent='G_now '+cur.toFixed(2);
         // Scale pulse on change
         if(p<0.3) heroG.style.transform='scale('+(1+.06*(1-p/.3))+')';
         else heroG.style.transform='scale(1)';
@@ -10129,7 +10173,7 @@ function syncHero(){
       }
       window._heroGtween=requestAnimationFrame(tweenG);
     } else {
-      heroG.textContent='G …';
+      heroG.textContent='G_now …';
     }
     heroG.className='gbadge';
     // v80: derive class from value, not DOM
@@ -10355,7 +10399,7 @@ function syncHero(){
     // Tooltip для пояснення
     hf.title = ({
       live: 'Дані live: Kp обсервації + NOAA 3-day forecast доступні.',
-      partial: 'Дані часткові: Kp обсервації live, але forecast cached/delayed. Тренди можуть бути затримані.',
+      partial: 'PARTIAL = частина live-джерел недоступна або застаріла (Kp обсервації live, але forecast cached/delayed). Це НЕ помилка розрахунку: frozen engine score і PDF/Engine override продовжують працювати незалежно від live-шару. Затримуються лише Kp-залежні тренди (G_now, 3-day forecast).',
       scenario: '⚠ NOAA forecast недоступний. Завтра/3-day показано як плато на базі поточного Kp — це сценарій, не справжній прогноз.',
       offline: 'Дані offline: навіть Kp обсервації недоступні. Все, що показано — з кешу.'
     })[_dataMode] || '';
