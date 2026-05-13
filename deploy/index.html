@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.34</title>
+  <title>G-Index — Космофізичний дашборд v88.8.35</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -3961,58 +3961,10 @@ let _engineScores = null;
 // Frozen partition: engine_scores.json НЕ змінюється (V3 prospective freeze для backtest).
 let _expertOverrides = null; // {date: {expert_eng, tanita_O, tanita_N, category, applied_in}}
 
-// v88.8.34: VERIFIED SOURCE GATE
-// Latest forecast source is supplied and verified: +11.5-24.5_ПРОГНОЗ.pdf.
-// PDF48 overrides for 2026-05-11..2026-05-24 are therefore allowed to replace engine_scores.eng.
-// Engine raw remains visible in _engRaw for audit; expert_eng becomes the day verdict.
-const EXPERT_OVERRIDE_SOURCE_STATUS_V88828 = {
-  PDF48: { verified: true, reason: 'Verified by +11.5-24.5_ПРОГНОЗ.pdf uploaded 2026-05-13: forecast window 2026-05-11..2026-05-24 confirms PDF48 expert verdicts.' }
-};
-// v88.8.34: HARD VERIFIED FALLBACK from the latest supplied forecast PDF.
-// This prevents stale/missing expert_overrides_v3.json from reverting 11.05–24.05
-// to raw engine scores. Source of truth: +11.5-24.5_ПРОГНОЗ.pdf, page 1.
-const LATEST_PDF48_VERIFIED_OVERRIDES_V88828 = Object.freeze({
-  '2026-05-11': { expert_eng:  2, label: 'Сприятливий день', source: '+11.5-24.5_ПРОГНОЗ.pdf' },
-  '2026-05-12': { expert_eng:  3, label: 'Особливо сприятливий день для справ, дій', source: '+11.5-24.5_ПРОГНОЗ.pdf' },
-  '2026-05-13': { expert_eng:  3, label: 'Особливо сприятливий день', source: '+11.5-24.5_ПРОГНОЗ.pdf' },
-  '2026-05-14': { expert_eng: -1, label: 'Помірно несприятливий день для нових справ', source: '+11.5-24.5_ПРОГНОЗ.pdf' },
-  '2026-05-15': { expert_eng: -3, label: 'Особливо несприятливий день для нових справ', source: '+11.5-24.5_ПРОГНОЗ.pdf' },
-  '2026-05-16': { expert_eng: -3, label: 'Особливо несприятливий день', source: '+11.5-24.5_ПРОГНОЗ.pdf' },
-  '2026-05-17': { expert_eng:  3, label: 'Особливо сприятливий день для дій', source: '+11.5-24.5_ПРОГНОЗ.pdf' },
-  '2026-05-18': { expert_eng:  3, label: 'Особливо сприятливий день для справ, дій', source: '+11.5-24.5_ПРОГНОЗ.pdf' },
-  '2026-05-19': { expert_eng: -1, label: 'Помірно несприятливий день', source: '+11.5-24.5_ПРОГНОЗ.pdf' },
-  '2026-05-20': { expert_eng:  3, label: 'Особливо сприятливий день', source: '+11.5-24.5_ПРОГНОЗ.pdf' },
-  '2026-05-21': { expert_eng:  3, label: 'Один з найкращих днів на рік', source: '+11.5-24.5_ПРОГНОЗ.pdf' },
-  '2026-05-22': { expert_eng:  1, label: 'Помірно сприятливий день', source: '+11.5-24.5_ПРОГНОЗ.pdf' },
-  '2026-05-23': { expert_eng: -2, label: 'Несприятливий день', source: '+11.5-24.5_ПРОГНОЗ.pdf' },
-  '2026-05-24': { expert_eng: -3, label: 'Особливо несприятливий день', source: '+11.5-24.5_ПРОГНОЗ.pdf' }
-});
-function _latestPdf48FallbackOverrides_v88828(){
-  const out = {};
-  for(const [date, v] of Object.entries(LATEST_PDF48_VERIFIED_OVERRIDES_V88828)){
-    out[date] = {
-      date,
-      expert_eng: v.expert_eng,
-      pdf_label: v.label,
-      category: 'expert_pdf48_verified_latest_pdf_fallback',
-      applied_in: '_11_05-24_05_PDF48',
-      verified_source: v.source,
-      source: v.source,
-      ts: '2026-05-13T08:30:00Z'
-    };
-  }
-  return out;
-}
-function _isExpertOverrideVerified_v88828(ovr){
-  const src = String(ovr?.applied_in || '').toUpperCase();
-  if(src.includes('PDF48') || src.includes('11_05') || src.includes('24_05')) return !!EXPERT_OVERRIDE_SOURCE_STATUS_V88828.PDF48.verified;
-  return ovr?.category === 'manual_verified_override';
-}
-function _overrideSourceReason_v88828(ovr){
-  const src = String(ovr?.applied_in || '').toUpperCase();
-  if(src.includes('PDF48') || src.includes('11_05') || src.includes('24_05')) return EXPERT_OVERRIDE_SOURCE_STATUS_V88828.PDF48.reason;
-  return 'Override source is not marked as verified.';
-}
+// v88.8.35: SINGLE SOURCE OF TRUTH policy.
+// expert_overrides_v3.json — єдине джерело expert_eng для дат-overrides.
+// engine_scores.json лишається frozen (V3 prospective freeze 2026-05-03..~2026-08-01) — НЕ модифікується.
+// Hardcoded fallback з v88.8.34 видалено: оновлення JSON тепер одразу видно у дашборді.
 // v88.8.5 В2: diagnostic flag для трасування deploy issues
 window._expertOverridesLoadStatus = 'pending'; // 'pending' | 'loaded' | 'missing' | 'invalid' | 'http_error'
 async function loadExpertOverrides(){
@@ -4031,23 +3983,19 @@ async function loadExpertOverrides(){
           _expertOverrides[r.date] = r;
         }
       }
-      // v88.8.34: latest supplied PDF is the hard source of truth for 11.05–24.05.
-      // Merge after JSON load so a stale JSON cannot revert PDF48 values.
-      _expertOverrides = { ..._expertOverrides, ..._latestPdf48FallbackOverrides_v88828() };
-      window._expertOverridesLoadStatus = 'loaded_plus_pdf48_verified_fallback';
+      window._expertOverridesLoadStatus = 'loaded';
     } else {
-      _expertOverrides = _latestPdf48FallbackOverrides_v88828();
-      window._expertOverridesLoadStatus = 'invalid_using_pdf48_verified_fallback'; // file fetched, але не має overrides[]
+      _expertOverrides = {};
+      window._expertOverridesLoadStatus = 'invalid'; // файл є, але без overrides[]
     }
-    if(window._DEBUG) console.log('[v88.7.15 Г] expert_overrides_v3 loaded: ' + Object.keys(_expertOverrides).length + ' records');
+    if(window._DEBUG) console.log('[v88.8.35] expert_overrides_v3 loaded: ' + Object.keys(_expertOverrides).length + ' records');
     return _expertOverrides;
   } catch(e){
     if(window._expertOverridesLoadStatus === 'pending') {
       window._expertOverridesLoadStatus = 'missing'; // 404 або інша помилка
     }
-    if(window._DEBUG) console.warn('[v88.7.15 Г] expert_overrides_v3.json fetch failed:', e.message, '(status: ' + window._expertOverridesLoadStatus + ')');
-    _expertOverrides = _latestPdf48FallbackOverrides_v88828();
-    window._expertOverridesLoadStatus = 'fallback_pdf48_verified';
+    if(window._DEBUG) console.warn('[v88.8.35] expert_overrides_v3.json fetch failed:', e.message, '(status: ' + window._expertOverridesLoadStatus + ')');
+    _expertOverrides = {};
     return _expertOverrides;
   }
 }
@@ -4215,32 +4163,26 @@ function getEngineScore(dateObj){
   if(!_engineScores) return null;
   const ds = fmtDate(dateObj);
   let snapshot = _engineScores[ds] || null;
-  // v88.8.34: verified-source expert overrides.
-  // If applied_in points to the verified PDF48 window, expert_eng becomes the primary day verdict.
-  // Raw engine remains in _engRaw for audit and tooltip explanations.
+  // v88.8.35: single source of truth.
+  // Якщо запис існує в expert_overrides_v3.json — він і є verified verdict дня.
+  // Frozen raw eng зберігаємо в _engRaw для audit і tooltip explanations.
   if(snapshot && _expertOverrides && _expertOverrides[ds]){
     const ovr = _expertOverrides[ds];
-    const _verified = _isExpertOverrideVerified_v88828(ovr);
     snapshot = {
       ...snapshot,
       _engRaw: snapshot.eng,
       _expertOverrideAvailable: true,
-      _expertOverrideVerified: _verified,
+      _expertOverrideVerified: true,
       _expertEngCandidate: ovr.expert_eng,
       _overrideCategory: ovr.category || 'manual_expert_override',
-      _overrideAppliedIn: ovr.applied_in || '',
-      _overrideSourceReason: _verified ? 'verified' : _overrideSourceReason_v88828(ovr)
+      _overrideAppliedIn: ovr.applied_in || ovr.source || '',
+      _overrideSourceReason: 'verified_via_expert_overrides_v3_json'
     };
-    if(_verified){
-      snapshot.eng = ovr.expert_eng;
-      // v88.8.34: pdf field becomes the verified PDF score for audit/disagreement panels.
-      // Raw frozen engine remains in _engRaw. This avoids pretending that Engine alone produced +3.
-      snapshot.pdf = ovr.expert_eng;
-      snapshot._expertOverride = true;
-    } else {
-      snapshot._expertOverride = false;
-      snapshot._sourceGated = true;
-    }
+    snapshot.eng = ovr.expert_eng;
+    // v88.8.35: pdf field shows the expert verdict for audit/disagreement panels.
+    // Raw frozen engine remains in _engRaw. This avoids pretending that Engine alone produced +3.
+    snapshot.pdf = ovr.expert_eng;
+    snapshot._expertOverride = true;
   }
   // v88.8.18: v18.8 patches (after expert override check — не зачіпає overrides)
   snapshot = _applyV186Patches(snapshot);
