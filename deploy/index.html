@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.35</title>
+  <title>G-Index — Космофізичний дашборд v88.8.35-fp3b</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1429,8 +1429,6 @@ body.simple-mode .col-hide-mobile {
             <span id="heroG" class="gbadge" role="status" aria-live="polite" aria-label="Поточний G-індекс">G …</span>
             <span id="heroTrend">—</span>
           </div>
-          <!-- v88.8.35-fp2 (B): inline scale label під heroRing — щоб не плутати з PDF/Engine -->
-          <div id="heroScaleNote" tabindex="0" style="margin-top:4px;text-align:center;font-size:9px;color:var(--faint);line-height:1.2;letter-spacing:.02em;cursor:help" title="G_now = Kp_live − 2 + ΣAᵢ(live). Це фон у поточний момент.&#10;Не плутати з Day_score (PDF/Engine, прогноз дня) і з G_day raw (27-day chart, середній фон доби).">live-фон зараз, не прогноз дня</div>
           <!-- v88.8.6 Д1: компактна lunar phase іконка під heroRing — постійно видима. -->
           <div id="heroMoonPhaseIcon" tabindex="0" style="display:none;margin-top:6px;text-align:center;font-size:10px;color:var(--dim);cursor:help" title="">
             <div id="heroMoonSvg" style="display:flex;justify-content:center;height:32px;align-items:center"></div>
@@ -1490,8 +1488,6 @@ body.simple-mode .col-hide-mobile {
           <!-- v87.90 P3 fix: badge style для engine v18.5 score — більш помітно vs Live G -->
           <!-- v88.8.18: v18.8 patches applied — see _applyV186Patches() -->
           <span id="heroBulletin" data-label="Engine v18.8" class="hint" tabindex="0" style="font-size:12px;font-weight:700;color:var(--muted);cursor:help;border:1px solid var(--border2);padding:1px 8px;border-radius:8px;background:rgba(11,18,32,.4)" title="Engine v18.8 = v18.5 frozen core + v88.8.18 ablation-validated patches (discrete -3..+3).&#10;&#10;v18.8 patches (4 active, P1a/P5 rejected by ablation):&#10;• P2 broad: ANY '✈' emoji → +1, з 'Подорожі' → max(eng, +2)&#10;• P3 broad: Dashami (Tithi 10 OR 25) → +1: 30+ days&#10;• P4 empty+saturn_retro+Kp≥4 → −3: Saturn malefic canon&#10;• P1d empty+eng=+2 → +1: точкова exact correction&#10;&#10;v18.7 → v18.8 fix: P2 раніше шукав 'Подорожі' word — missed 93 dates з emoji-only.&#10;P3 раніше тільки Shukla Dashami — пропускав Krishna Dashami (Tithi 25).&#10;&#10;Phase V3 freeze respected: engine_scores.json НЕ модифікується.&#10;Patches застосовуються JS read-time у _applyV186Patches().&#10;&#10;Validation (n=212 ablation-validated):&#10;• Strict 3-class: 75.0% → 79.2% (+4.2pp)&#10;• Binary neg/non-neg: 87.3% → 88.7% (+1.4pp)&#10;• Exact 7-class: 43.9% → 50.0% (+6.1pp) ⭐&#10;• 5-fold CV strict: 79.2% ± 4.2% (stable, кращий vs v18.7 ±4.8%)&#10;&#10;ALL 3 metrics improved.&#10;Engine v18.5 frozen залишається canonical scoring core.&#10;Dashboard G — continuous real-time signal (Kp − 2 + ΣAᵢ).&#10;Різні моделі за дизайном — розбіжність не баг.">—</span>
-          <!-- v88.8.35-fp3: PDF override regression badge — перенесено на верхній status row для постійної видимості -->
-          <span id="pdfOverrideRegressionBadge" data-label="PDF" tabindex="0" style="font-size:12px;font-weight:700;color:var(--muted);cursor:help;border:1px solid var(--border2);padding:1px 8px;border-radius:8px;background:rgba(11,18,32,.4);font-variant-numeric:tabular-nums" title="Перевіряється після завантаження expert_overrides_v3.json">—</span>
           <!-- v88.0: Astronomical layer pill (Tithi/Nakshatra/Yoga з cal_score field у engine_scores.json, Swiss Ephemeris Lahiri) -->
           <span id="heroAstroLayer" data-label="Astro" class="hint" tabindex="0" style="display:none;font-size:12px;font-weight:700;color:var(--muted);cursor:help;border:1px solid var(--border2);padding:1px 8px;border-radius:8px;background:rgba(11,18,32,.4)" title="">—</span>
           <!-- V25-fu29 v5.1 (2026-05-03): canonical metrics from VALIDATION_REPORT_v18_5_pdf47_v5.json — n=280 / strict 71.4% / κ=0.52 -->
@@ -1540,36 +1536,7 @@ body.simple-mode .col-hide-mobile {
       </summary>
       <div id="provenanceContent" style="margin-top:10px;font-size:12px;color:var(--text2);font-family:var(--mono),ui-monospace,monospace">Завантаження…</div>
     </details>
-    <!-- v88.8.35-fp2 (C): мінімалістичний пояснювач "Три шкали" — без важкої плашки -->
-    <details id="threeRailsCard" style="margin:0 0 10px;padding:8px 14px;border-radius:12px;border:1px solid var(--border);background:rgba(11,18,32,.5)">
-      <summary style="cursor:pointer;font-size:12px;font-weight:600;color:var(--muted);list-style:none;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-        <span style="font-size:14px">🧭</span>
-        <span style="flex:1;min-width:200px">
-          <span style="color:var(--text)">Три шкали — три питання</span>
-          <span style="font-size:10px;color:var(--faint);font-weight:400;margin-left:8px;display:block;margin-top:2px">G_now = зараз · PDF/Engine = день · G_day raw = добовий фон</span>
-        </span>
-        <span style="font-size:10px;color:var(--dim);font-weight:400">розгорнути ▾</span>
-      </summary>
-      <div style="margin-top:8px;font-size:12px;color:var(--text2);line-height:1.5">
-        <div style="display:grid;grid-template-columns:1fr;gap:6px">
-          <div style="padding:6px 10px;border-radius:6px;background:rgba(155,177,220,.06);border-left:3px solid #9bb1dc">
-            <strong style="color:#9bb1dc">G_now</strong> · live-фон зараз<br>
-            <span style="color:var(--dim);font-size:11px">Kp_live − 2 + ΣAᵢ(live). Hero ring. Continuous (−5..+7). Питання: «що з фоном у цю годину?»</span>
-          </div>
-          <div style="padding:6px 10px;border-radius:6px;background:rgba(99,190,123,.06);border-left:3px solid #63be7b">
-            <strong style="color:#63be7b">PDF/Engine Day_score</strong> · оцінка дня за PDF<br>
-            <span style="color:var(--dim);font-size:11px">expert_eng з PDF-бюлетеня. 3-day quick cards. Discrete (−3..+3). Питання: «що каже експерт про якість дня для дій?»</span>
-          </div>
-          <div style="padding:6px 10px;border-radius:6px;background:rgba(252,164,116,.06);border-left:3px solid #fca474">
-            <strong style="color:#fca474">G_day raw</strong> · середній raw-фон доби<br>
-            <span style="color:var(--dim);font-size:11px">Kp_day(max/approx) − 2 + ΣAᵢ(noon UTC). 27-day chart. Continuous. Питання: «який середній фон за всю добу?»</span>
-          </div>
-        </div>
-        <div style="margin-top:8px;padding:6px 10px;border-radius:6px;background:rgba(255,170,51,.06);border:1px solid rgba(255,170,51,.2);font-size:11px;color:var(--text2)">
-          <strong style="color:#ffaa33">Чому числа різняться?</strong> Це різні питання, не помилка. Приклад: 13.05.2026 → G_now −1.83 (live тисне), G_day raw −0.8 (нейтрально за добу), PDF +3 (експерт назвав «особливо сприятливий»). Усі три коректні. Команда зверху Hero: «обережно зараз, день +3 за PDF» — це two-rail combo.
-        </div>
-      </div>
-    </details>
+    <!-- v87.90: Disagreement Alert — показується якщо моделі сильно розбігаються -->
     <div id="disagreementAlert" style="display:none;margin:0 0 10px;padding:10px 14px;border-radius:12px;border:1px solid rgba(255,170,51,.4);background:linear-gradient(180deg,rgba(255,170,51,.10),rgba(255,170,51,.03))"></div>
     <!-- v87.90: Counterfactual analysis — collapsible "що якби" блок -->
     <details id="counterfactualCard" style="margin:0 0 10px;padding:10px 14px;border-radius:12px;border:1px solid rgba(55,167,255,.25);background:linear-gradient(180deg,rgba(55,167,255,.04),rgba(11,18,32,.5))">
@@ -1676,8 +1643,8 @@ body.simple-mode .col-hide-mobile {
         <div id="whyMain" class="why-main">—</div>
         <!-- v87.47: 7-day G sparkline — заповнення пустоти + тренд-контекст -->
         <div id="whyTrendBlock" style="margin-top:10px;display:none">
-          <div style="font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px">Тренд G · 7 днів</div>
-          <svg id="whyTrendSvg" viewBox="0 0 440 90" style="width:100%;height:90px;display:block" aria-label="Графік G за 7 днів"></svg>
+          <div style="font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px">Тренд G_day · 7 днів <span style="font-weight:500;color:var(--faint);text-transform:none;letter-spacing:0">(з експертними Δ)</span></div>
+          <svg id="whyTrendSvg" viewBox="0 0 440 90" style="width:100%;height:90px;display:block" aria-label="Графік G_day за 7 днів з експертними дельтами"></svg>
           <div id="whyTrendNote" style="font-size:11px;color:var(--dim);margin-top:4px;line-height:1.35"></div>
         </div>
       </section>
@@ -2122,8 +2089,6 @@ Kp: 3-год індекс геомагнітної активності (0–9)
 ΣAᵢ = Lᵢ (тітхі) + Mᵢ (затемнення) + eᵢ (події) + Pᵢ (Панчанга×0.4) + Dᵢ (Dst-буря) + Snᵢ (сонячні плями: 0/−0.2/−0.4)</span></span>
       </div>
       <div id="threeQuick" style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;font-size:13px"></div>
-      <!-- v88.8.35-fp2 (B): inline scale label під 3-day quick cards -->
-      <div tabindex="0" style="margin-top:4px;font-size:10px;color:var(--faint);line-height:1.2;cursor:help" title="Day_score = дискретна оцінка дня з PDF/Engine у діапазоні [−3..+3].&#10;На карточках видно `день +N` — це Day_score.&#10;Це окрема шкала від G_now (Hero, live зараз) і G_day raw (27-day chart, середній фон доби).&#10;PDF Day_score не входить у графіки G — він overlay-маркер.">↳ <strong style="color:var(--muted)">Day_score (PDF/Engine)</strong> · оцінка дня за PDF · discrete [−3..+3] — не плутати з G_now і G_day raw</div>
       <!-- v87.90: NOAA fallback alert — показується над quick-cards коли engine на synthetic platau -->
       <div id="threeNoaaAlert" style="display:none;margin-top:8px;padding:10px 14px;border-radius:10px;border:1px solid rgba(255,107,107,.4);background:linear-gradient(180deg,rgba(255,90,90,.12),rgba(255,90,90,.04));color:#ffd2d2;font-size:12px;line-height:1.5"></div>
       <details style="margin-top:6px">
@@ -2138,7 +2103,6 @@ Kp: 3-год індекс геомагнітної активності (0–9)
     <section class="card" id="twentysevenCard">
         <div class="flex" style="flex-wrap:wrap;gap:8px">
           <h2 style="margin:0">27-денний G_day raw (Ap → Kp → G_day)</h2>
-          <span tabindex="0" style="font-size:10px;color:var(--faint);line-height:1.2;cursor:help;align-self:center" title="G_day raw = Kp_day(max/approx) − 2 + ΣAᵢ(noon UTC). Continuous, діапазон ≈ [−5..+7].&#10;Це середній фон доби, не PDF/Engine Day_score і не Hero G_now.&#10;PDF/Engine score на цьому графіку показано окремо як ★-маркер, не входить у криву.">↳ <strong style="color:var(--muted)">G_day raw</strong> · середній raw-фон доби · continuous — не PDF</span>
           <span class="hint" tabindex="0" style="cursor:help;font-size:11px;color:var(--dim);border-bottom:1px dotted #2a3b61">? що це<span class="hint-pop" style="white-space:pre;font-size:12px;text-align:left;max-width:380px">⚠ Це НЕ офіційний 27-day Kp forecast.
 
 NOAA публікує лише 27-day Ap outlook (інтегрована геомагнітна активність за добу). Тут Ap → Kp перерахований через табличну апроксимацію (VLOOKUP-стиль).
@@ -2171,6 +2135,7 @@ G_day тут = денний raw-фон: Kp_day(max/approx) − 2 + ΣAᵢ(noon U
             <button id="btnIcs" style="font-size:12px;padding:6px 10px" title="Експорт прогнозу у календарний файл (.ics): імпортуйте у Google/Apple/Outlook для нагадувань">⬇ .ics</button>
           </div>
         </div>
+        <div class="rail-legend-27 small" style="margin:6px 0 2px;color:var(--dim);font-size:11px;line-height:1.45">● Лінія: <strong>G_day raw</strong> (Ap→Kp, без експерта) · ★ Зірка: <strong>PDF/Engine score</strong> (експертна оцінка дня)</div>
         <div id="twentysevenError" class="err small"></div>
         <!-- v87.19 U4: Best/worst days of last 30 days — retention hook -->
         <div id="bestWorstDays" class="best-worst-block" style="display:none"></div>
@@ -4024,49 +3989,6 @@ async function loadExpertOverrides(){
       _expertOverrides = {};
       window._expertOverridesLoadStatus = 'invalid'; // файл є, але без overrides[]
     }
-    // v88.8.35-fp1: regression-check для PDF override.
-    // Експортуємо count + window для тех-бейджа і ручної регресійної перевірки.
-    try {
-      const _dates = Object.keys(_expertOverrides).sort();
-      const _expected = Array.isArray(data.overrides) ? data.overrides.length : 0;
-      const _loaded = _dates.length;
-      window._pdfOverrideRegression = {
-        ok: (_loaded === _expected && _loaded > 0),
-        loaded: _loaded,
-        expected: _expected,
-        window: (data && data.window) || ((_dates[0] || '?') + '..' + (_dates[_dates.length-1] || '?')),
-        source: (data && data.source) || '—',
-        version: (data && data.version) || '—',
-        updated_at: (data && data.updated_at) || '—'
-      };
-      // Render у тех-бейдж, якщо існує DOM-таргет (рендер створює його лінивно)
-      const _renderBadge = () => {
-        const tgt = document.getElementById('pdfOverrideRegressionBadge');
-        if(!tgt) return;
-        const reg = window._pdfOverrideRegression;
-        const ok = reg && reg.ok;
-        // v88.8.35-fp3: compact pill style в Hero status row.
-        // Короткий текст "PDF +N/N", колір через border/background, не через text-color (зберігаємо pill-look).
-        tgt.textContent = `${ok ? '✓' : '⚠'} PDF ${reg.loaded}/${reg.expected}`;
-        tgt.style.color = ok ? '#63be7b' : '#ff6b6b';
-        tgt.style.borderColor = ok ? 'rgba(99,190,123,.4)' : 'rgba(255,107,107,.4)';
-        tgt.style.background = ok ? 'rgba(99,190,123,.08)' : 'rgba(255,107,107,.08)';
-        tgt.title = `PDF override regression check\n`
-                  + `Завантажено ${reg.loaded} з ${reg.expected} записів з expert_overrides_v3.json\n\n`
-                  + `Версія: ${reg.version}\n`
-                  + `Вікно: ${reg.window}\n`
-                  + `Джерело: ${reg.source}\n`
-                  + `Оновлено: ${reg.updated_at}\n\n`
-                  + (ok
-                      ? '✓ Усі записи завантажено. Single source of truth = expert_overrides_v3.json.'
-                      : '⚠ Кількість не збігається — перевір JSON.');
-      };
-      if(document.readyState === 'loading'){
-        document.addEventListener('DOMContentLoaded', _renderBadge);
-      } else {
-        _renderBadge();
-      }
-    } catch(_regErr){ /* non-fatal */ }
     if(window._DEBUG) console.log('[v88.8.35] expert_overrides_v3 loaded: ' + Object.keys(_expertOverrides).length + ' records');
     return _expertOverrides;
   } catch(e){
@@ -4540,10 +4462,10 @@ function renderScenarioCard(){
       : '';
     const flags = (synth ? '~' : '') + (artifact ? '⚠' : '');
     const tt = e
-      ? `${d.ds} (${dow})\nDay_score PDF/Engine: ${engStr}${synth ? ' (Kp synthetic)' : ''}\ncal_score: ${calStr || '—'}\nТег: ${tag || '—'}` + (artifact ? `\n⚠ ${e.excel_tag_artifact_reason || 'Excel-tag artifact'}` : '') + ((function(){
+      ? `${d.ds} (${dow})\nPDF/Engine Day_score: ${engStr}${synth ? ' (Kp synthetic)' : ''}\ncal_score: ${calStr || '—'}\nТег: ${tag || '—'}` + (artifact ? `\n⚠ ${e.excel_tag_artifact_reason || 'Excel-tag artifact'}` : '') + ((function(){
           const _ny2 = (typeof NEGATIVE_YOGAS_BPHS !== 'undefined' && e.cal_yoga) ? NEGATIVE_YOGAS_BPHS[e.cal_yoga] : null;
           return _ny2 ? `\n⚪ BPHS: ${_ny2.name} (${_ny2.pen}, advisory only)` : '';
-        })()) + `\n\nКлік → деталі у таблиці 27 днів. Це Day_score PDF/Engine, не G_now і не G_day raw`
+        })()) + `\n\nКлік → деталі у таблиці 27 днів. Це PDF/Engine Day_score, не G_now і не G_day raw`
       : `${d.ds} (${dow}) — поза validation window`;
     const borderToday = isToday ? '2px solid var(--ok)' : '1px solid var(--border2)';
     const clickAttr = e ? ` onclick="scrollAndHighlight27d('${d.ds}')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();scrollAndHighlight27d('${d.ds}')}"` : '';
@@ -6428,7 +6350,7 @@ function draw27dTable(){
     const gTipBase = gTooltipText(kpLabel, kpUsed, ai);
     let gTip = f107mod && f107mod.val !== 0 ? gTipBase + '\n⚠ F10.7: ' + f107mod.tip + ' (контекст, не в G)' : gTipBase;
     if (_hasOverride && Number.isFinite(_expertEng)) {
-      gTip += `\n\n★ Day_score PDF/Engine: ${_expertEng>=0?'+':''}${_expertEng}\n(G_day raw = ${G>=0?'+':''}${G.toFixed(2)}, delta ${(_expertEng-G).toFixed(1)})`;
+      gTip += `\n\n★ PDF/Engine Day_score: ${_expertEng>=0?'+':''}${_expertEng}\n(G_day raw = ${G>=0?'+':''}${G.toFixed(2)}, delta ${(_expertEng-G).toFixed(1)})`;
     }
     // Moon phase emoji for Li column
     const _moonEmoji = ai.phaseDeg < 22 ? '🌑' : ai.phaseDeg < 67 ? '🌒' : ai.phaseDeg < 112 ? '🌓' : ai.phaseDeg < 157 ? '🌔' : ai.phaseDeg < 202 ? '🌕' : ai.phaseDeg < 247 ? '🌖' : ai.phaseDeg < 292 ? '🌗' : ai.phaseDeg < 337 ? '🌘' : '🌑';
@@ -6481,7 +6403,7 @@ function draw27dTable(){
         const _div27 = (_gPos27 && _eNeg27) || (_gNeg27 && _ePos27);
         const _warn = _div27 ? '<span style="color:#fca474;margin-right:3px" title="Розбіжність знака з G">⚠</span>' : '';
         const _pdfStr = (_bs27.pdf !== null && _bs27.pdf !== undefined) ? `\nPDF: ${_bs27.pdf>=0?'+':''}${_bs27.pdf}` : '';
-        const _tipB = `Day_score PDF/Engine: ${_bSign}${_bs27.eng}\nТег: ${_bs27.tag||'—'}\nKp=${_bs27.kp}${_bs27.kp_synthetic?' (synthetic 2.0)':''}${_pdfStr}${_div27?'\n\n⚠ Знак не співпадає з G — моделі не згодні':''}`;
+        const _tipB = `PDF/Engine Day_score: ${_bSign}${_bs27.eng}\nТег: ${_bs27.tag||'—'}\nKp=${_bs27.kp}${_bs27.kp_synthetic?' (synthetic 2.0)':''}${_pdfStr}${_div27?'\n\n⚠ Знак не співпадає з G — моделі не згодні':''}`;
         bulletinCell = `<td style="font-size:12px;text-align:center" title="${escapeHtml(_tipB)}">${_warn}<span style="color:${_bCol};font-weight:700">${_bSign}${_bs27.eng}${_bSynth}</span></td>`;
       }
     } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
@@ -9386,9 +9308,9 @@ function render3Day(parsed3){
           if (_divergent) {
             // v88.8.5 Б2: розширений tooltip — пояснює ЧОМУ розбіжність і ЩО робити.
             // Раніше: загальне 'обережніше з рішеннями'. Тепер: причини + actionable hint.
-            _bulletinLine = `<div style="font-size:10px;margin-top:2px;padding:2px 6px;border-radius:4px;background:rgba(255,170,51,.15);border:1px solid rgba(255,170,51,.35);cursor:help" title="⚠ G_now/G_day raw і PDF/Engine Day_score показують різні знаки.&#10;&#10;Чому це буває:&#10;• Engine — frozen tag-based за snapshot Kp; G — live з реальним Kp.&#10;• На boundary days Vedic Panchanga зсувається, Engine snapshot ще не оновлено.&#10;• Engine clamps до ±3, G — continuous (-5..+7).&#10;• На експертних PDF днях override може давати +3, навіть якщо Kp низький.&#10;&#10;Що робити: знизь довіру до автоматичної оцінки на 15%. Перевір 1-2 додаткові сигнали (NOAA SWPC, Panchanga вкладка, локальне самопочуття) перед важливим рішенням.">⚠ Day_score: <span style="color:${_bsCol};font-weight:700">${_bsSign}${_bs.eng}${_synth}</span>${_recalcMark} <span style="color:var(--faint);font-size:9px">· розбіжність</span></div>`;
+            _bulletinLine = `<div style="font-size:10px;margin-top:2px;padding:2px 6px;border-radius:4px;background:rgba(255,170,51,.15);border:1px solid rgba(255,170,51,.35);cursor:help" title="⚠ G_now/G_day raw і PDF/Engine Day_score показують різні знаки.&#10;&#10;Чому це буває:&#10;• Engine — frozen tag-based за snapshot Kp; G — live з реальним Kp.&#10;• На boundary days Vedic Panchanga зсувається, Engine snapshot ще не оновлено.&#10;• Engine clamps до ±3, G — continuous (-5..+7).&#10;• На експертних PDF днях override може давати +3, навіть якщо Kp низький.&#10;&#10;Що робити: знизь довіру до автоматичної оцінки на 15%. Перевір 1-2 додаткові сигнали (NOAA SWPC, Panchanga вкладка, локальне самопочуття) перед важливим рішенням.">⚠ PDF/Engine: <span style="color:${_bsCol};font-weight:700">${_bsSign}${_bs.eng}${_synth}</span>${_recalcMark} <span style="color:var(--faint);font-size:9px">· розбіжність</span></div>`;
           } else {
-            _bulletinLine = `<div style="font-size:10px;color:var(--dim);margin-top:2px">Day_score: <span style="color:${_bsCol};font-weight:700">${_bsSign}${_bs.eng}${_synth}</span>${_recalcMark}</div>`;
+            _bulletinLine = `<div style="font-size:10px;color:var(--dim);margin-top:2px">PDF/Engine: <span style="color:${_bsCol};font-weight:700">${_bsSign}${_bs.eng}${_synth}</span>${_recalcMark}</div>`;
           }
         }
       } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
@@ -10089,7 +10011,8 @@ function heroLayerNoteFromHierarchy_v88824(sig){
     return `PDF#48 override не активовано: source не підтверджений. Raw engine=${raw}, candidate=${cand}. Фон зараз G=${lg}.`;
   }
   if(sig.dayScore >= 2 && (sig.guard === 'live_unstable' || sig.guard === 'live_tense')) return `Денний PDF/Engine прогноз: ${ds} (${src}) · Live-фон зараз G=${lg}. Команда зверху рахується від live-обмеження, не від зеленого дня.`;
-  return `Прогноз дня: ${ds} (${src}) · Фон зараз G=${lg}.`;
+  const liveZone = (GLOBAL_STATES[sig.liveKey] && GLOBAL_STATES[sig.liveKey].zone) ? GLOBAL_STATES[sig.liveKey].zone : 'фон';
+  return `Verdict із PDF/Engine: ${ds} (${src}). Фон зараз: ${liveZone} (G_now ${lg}).`;
 }
 
 function resolveDaySignal_v88825(dateObj, rawG, kp, opts){
@@ -10200,8 +10123,7 @@ function syncHero(){
         const p=Math.min(1,(ts-start)/dur);
         const ease=1-Math.pow(1-p,3); // easeOutCubic
         const cur=oldG+(newG-oldG)*ease;
-        // v88.8.35-fp1: явний label "G_now" замість просто "G" — щоб не плутати з PDF/Engine Day_score
-        heroG.textContent='G_now '+cur.toFixed(2);
+        heroG.textContent='G '+cur.toFixed(2);
         // Scale pulse on change
         if(p<0.3) heroG.style.transform='scale('+(1+.06*(1-p/.3))+')';
         else heroG.style.transform='scale(1)';
@@ -10209,7 +10131,7 @@ function syncHero(){
       }
       window._heroGtween=requestAnimationFrame(tweenG);
     } else {
-      heroG.textContent='G_now …';
+      heroG.textContent='G …';
     }
     heroG.className='gbadge';
     // v80: derive class from value, not DOM
@@ -10435,7 +10357,7 @@ function syncHero(){
     // Tooltip для пояснення
     hf.title = ({
       live: 'Дані live: Kp обсервації + NOAA 3-day forecast доступні.',
-      partial: 'PARTIAL = частина live-джерел недоступна або застаріла (Kp обсервації live, але forecast cached/delayed). Це НЕ помилка розрахунку: frozen engine score і PDF/Engine override продовжують працювати незалежно від live-шару. Затримуються лише Kp-залежні тренди (G_now, 3-day forecast).',
+      partial: 'Дані часткові: Kp обсервації live, але forecast cached/delayed. Тренди можуть бути затримані.',
       scenario: '⚠ NOAA forecast недоступний. Завтра/3-day показано як плато на базі поточного Kp — це сценарій, не справжній прогноз.',
       offline: 'Дані offline: навіть Kp обсервації недоступні. Все, що показано — з кешу.'
     })[_dataMode] || '';
@@ -12750,7 +12672,7 @@ function exportICS(){
   };
 
   const out = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//G-Index//Forecast//UK','CALSCALE:GREGORIAN','METHOD:PUBLISH',
-    'X-WR-CALNAME:G-Index Forecast','X-WR-TIMEZONE:UTC','X-WR-CALDESC:Two-rail forecast: Day_score PDF/Engine + Live G raw'];
+    'X-WR-CALNAME:G-Index Forecast','X-WR-TIMEZONE:UTC','X-WR-CALDESC:Two-rail forecast: PDF/Engine Day_score + Live G raw'];
 
   for(const r of _last27Rows){
     const ds = fmtDate(r.date);
@@ -14481,7 +14403,7 @@ function draw27Chart(){
       const _gEff = d.G; // v88.8.34: raw continuous G only
       const cat=_gEff>=2?'🟢 raw-фон сильний':_gEff>=0.5?'🟢 raw-фон сприятливий':_gEff>=-0.5?'⚪ raw-фон нейтральний':_gEff>=-2.5?'🟠 raw-фон обережний':'🔴 raw-фон важкий';
       const _ovInfo = d._hasOverride
-        ? `<div style="color:#ffd166;font-size:10px;margin-top:2px">★ Day_score PDF/Engine: ${d._expertEng>=0?'+':''}${d._expertEng} · G_day raw=${d.G>=0?'+':''}${d.G.toFixed(2)}</div>`
+        ? `<div style="color:#ffd166;font-size:10px;margin-top:2px">★ PDF/Engine Day_score: ${d._expertEng>=0?'+':''}${d._expertEng} · G_day raw=${d.G>=0?'+':''}${d.G.toFixed(2)}</div>`
         : '';
       tip.innerHTML=`<div style="font-weight:700">${d.ds}</div><div>G_day raw = <span style="font-weight:700;color:${_gEff>=0.5?'#2bd47d':_gEff>=-0.5?'#9bb1dc':_gEff>=-2.5?'#ffaa33':'#ff4444'}">${_gEff>=0?'+':''}${_gEff.toFixed(1)}</span>${d._hasOverride?' ★':''}</div><div style="color:#9bb1dc">${cat}</div>${_ovInfo}`;
       const tx=evt.clientX-rect.left, ty=evt.clientY-rect.top;
@@ -15738,7 +15660,7 @@ const I18N = {
     scenarioLegend: 'Кольори = engine_score (−3 червоний / 0 нейтр / +3 зелений). Точка зверху = cal_score (astronomical, Swiss Ephemeris Lahiri). ⚠ = Excel-tag artifact. ~ = synthetic Kp.',
     scenarioCritical: 'критичних',
     scenarioStable: 'стабільний',
-    scenarioClickHint: 'Клік → деталі у таблиці 27 днів. Це Day_score PDF/Engine, не G_now і не G_day raw',
+    scenarioClickHint: 'Клік → деталі у таблиці 27 днів. Це PDF/Engine Day_score, не G_now і не G_day raw',
     astroLayerLabel: 'Astro',
     provenanceTitle: 'Provenance — джерела сьогоднішньої оцінки',
     provenanceExpand: 'розгорнути ▾',
