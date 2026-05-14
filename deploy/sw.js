@@ -1,5 +1,5 @@
-// v88.8.35-fp3b: Rail labels UX patch + real cache bump (fp3 had no-op cache keys).
-// G-Index Service Worker v88.8.35-fp3b (Math truth / index labels fix)
+// v88.8.35-fp4: Rail labels UX patch + PDF 18.05-31.05 overrides JSON update + real cache bump.
+// G-Index Service Worker v88.8.35-fp4 (Math truth / index labels fix)
 // v88.8.19 changes — incremental release після v88.8.18 з реальним bug fix:
 //   ENGINE v18.7 → v18.8: P2 раніше шукав 'Подорожі' word — missed 93 dates
 //     з '✈' emoji-only. P3 раніше тільки Shukla Dashami (10) — missed Krishna
@@ -601,8 +601,8 @@
 //   3. backtest.html додано до SHELL_FILES.
 //   4. cache.put awaited перед SW_FRESH_DATA notify (race fix).
 
-const SHELL_CACHE = 'g-index-shell-v88-8-35-fp3b';
-const DATA_CACHE = 'g-index-data-v88-8-35-fp3b';
+const SHELL_CACHE = 'g-index-shell-v88-8-35-fp4';
+const DATA_CACHE = 'g-index-data-v88-8-35-fp4';
 
 const SHELL_FILES = [
   './',
