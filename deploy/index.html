@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.35-fp7</title>
+  <title>G-Index — Космофізичний дашборд v88.8.35-fp8</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -9637,11 +9637,28 @@ function renderDecisionTiming(slots){
   const summary = buildTimingSummary(slots);
   const list = el('decisionTimingList');
   if(!list) return summary;
+  // v88.8.35-fp8 M: попередження якщо live-дані затримані — щоб користувач не приймав
+  // зелені слоти як актуальну рекомендацію.
+  let _delayWarn = '';
+  try {
+    const _dm = (typeof window !== 'undefined' && window.__dataMode)
+              || (typeof resolveDataMode === 'function' ? resolveDataMode() : 'live');
+    if (_dm !== 'live') {
+      const _wTxt = ({
+        partial:  '⚠ Live-дані затримані (DELAYED/PARTIAL). Слоти орієнтовні — перед важливою дією перевір через 5–10 хв.',
+        scenario: '⚠ NOAA forecast недоступний. Слоти показані за сценарієм поточного Kp — не реальний прогноз.',
+        offline:  '⚠ Дані з кешу (OFFLINE). Слоти можуть бути неактуальними; для рішень — PDF/Engine.'
+      })[_dm] || '';
+      if (_wTxt) {
+        _delayWarn = `<div style="color:#ffd2a0;font-size:11px;padding:4px 8px;margin-bottom:6px;background:rgba(255,170,51,.08);border-left:2px solid #ffaa33;border-radius:4px">${_wTxt}</div>`;
+      }
+    }
+  } catch(e) { /* silent */ }
   const futureSlots = summary.slots.filter(s => !s.isPast);
   const pastCount = summary.slots.length - futureSlots.length;
   const visible = futureSlots.length ? futureSlots : summary.slots;
   if(!visible.length){
-    list.innerHTML = `<span style="color:var(--dim);font-size:12px">Немає даних по слотах.</span>`;
+    list.innerHTML = _delayWarn + `<span style="color:var(--dim);font-size:12px">Немає даних по слотах.</span>`;
     return summary;
   }
   // v85b-F8.2+F8.3: при allSame — decision-level (2 рядки), не 6.
@@ -9655,7 +9672,7 @@ function renderDecisionTiming(slots){
     const _restText = _cls === 'bad' ? 'режим без змін до кінця дня'
                     : _cls === 'mid' ? 'фон стабільний до кінця дня'
                     : 'сприятливий фон до кінця дня';
-    list.innerHTML = `
+    list.innerHTML = _delayWarn + `
       <div class="dt-row dt-${_cls} dt-now"><span class="dt-time">Зараз</span><span class="dt-label">${_nowText} ◀</span></div>
       <div class="dt-row dt-${_cls}" style="opacity:.72"><span class="dt-time">До кінця дня</span><span class="dt-label">${_restText}</span></div>
       <div style="color:var(--faint);font-size:10px;margin-top:4px">Детальний погодинний розклад — у "Локальний ритм" нижче</div>
@@ -9663,7 +9680,7 @@ function renderDecisionTiming(slots){
     return summary;
   }
   // Normal mode (non-flat day) — render all slots as before
-  list.innerHTML = visible.map(s =>
+  list.innerHTML = _delayWarn + visible.map(s =>
     `<div class="dt-row dt-${s.cls}${s.isNow?' dt-now':''}">`
     +`<span class="dt-time">${s.time}</span><span class="dt-label">${s.text}${s.isNow?' ◀ зараз':''}</span></div>`
   ).join('')
@@ -10389,6 +10406,35 @@ function syncHero(){
     // Native title як accessibility fallback (screen readers + tab focus)
     hf.title = _modeTip;
   }
+  // v88.8.35-fp8 L: синхронізація heroRingLabel з _dataMode.
+  // Раніше (fp7 G) label завжди писав "G_now · live", навіть коли heroFreshness = DELAYED/PARTIAL.
+  // Це створювало конфлікт довіри. Тепер слово після крапки відповідає реальному стану джерела.
+  try {
+    const _hrl = document.getElementById('heroRingLabel');
+    if (_hrl) {
+      const _ringMode = ({
+        live:     'live',
+        partial:  'delayed',
+        scenario: 'scenario',
+        offline:  'offline'
+      })[_dataMode] || 'live';
+      const _ringTip = ({
+        live:     'Hero ring показує live-фон зараз. Verdict дня — у PDF/Engine pill справа.',
+        partial:  'Hero ring використовує затримані live-дані (DELAYED/PARTIAL). Фон орієнтовний — перед діями перевір PDF/Engine.',
+        scenario: 'NOAA forecast недоступний; ring показує сценарій на базі поточного Kp, не реальний live.',
+        offline:  'Дані з кешу — ring не оновлюється з NOAA. Не покладайся на live-фон для рішень.'
+      })[_dataMode] || '';
+      _hrl.textContent = 'G_now · ' + _ringMode;
+      _hrl.title = _ringTip;
+      // Кольоровий контраст: live=сірий dim (default), partial=amber, scenario/offline=red
+      _hrl.style.color = (_ringMode === 'live') ? 'var(--dim)'
+                       : (_ringMode === 'delayed') ? '#ffaa33'
+                       : '#ff8888';
+      _hrl.style.borderColor = (_ringMode === 'live') ? 'rgba(155,177,220,.18)'
+                             : (_ringMode === 'delayed') ? 'rgba(255,170,51,.32)'
+                             : 'rgba(255,136,136,.32)';
+    }
+  } catch(e) { /* silent */ }
   // v87.92: dataset.scenario для heroTomorrow — третя точка синхронізації (після render3Day і _renderFreshnessState).
   // CSS ::after pseudo-element рендерить '⚠ scenario' автоматично.
   // v87.94: + sibling DOM heroTomorrowScenario для повної надійності
@@ -15015,10 +15061,11 @@ function renderBestTime(dateUTC, kp, G, panchPCL) {
       .sort((a,b) => b.G - a.G);
     if(future7.length && future7[0].G > 0) {
       const best = future7[0];
-      html += `<div style="margin-top:8px;font-size:12px;color:#7a9acc">
+      html += `<div style="margin-top:8px;font-size:12px;color:#7a9acc" title="G_day raw — добовий continuous фон (Kp_day − 2 + ΣAᵢ). Це НЕ PDF/Engine експертна оцінка дня. Для рішень дня перевір PDF/Engine card.">
         📅 Найкращий день (7 днів): <strong style="color:#2bd47d">${best.ds}</strong>
-        G = <strong style="color:#2bd47d">${best.G.toFixed(1)}</strong>
+        G_day raw = <strong style="color:#2bd47d">${best.G.toFixed(1)}</strong>
         · ${classifyG(best.G)}
+        <span style="color:var(--faint);font-size:10px">· не PDF/Engine verdict</span>
       </div>`;
     }
   }
