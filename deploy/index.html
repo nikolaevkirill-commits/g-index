@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.35-fp8</title>
+  <title>G-Index — Космофізичний дашборд v88.8.35-fp9</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1431,7 +1431,7 @@ body.simple-mode .col-hide-mobile {
               <circle class="ring-val" id="heroRingVal" cx="50" cy="50" r="45"
                 stroke="#9bb1dc" stroke-dasharray="283" stroke-dashoffset="140"/>
             </svg>
-            <span id="heroG" class="gbadge" role="status" aria-live="polite" aria-label="Поточний G-індекс">G …</span>
+            <span id="heroG" class="gbadge" role="status" aria-live="polite" aria-label="Поточний G-індекс">…</span>
             <span id="heroTrend">—</span>
           </div>
           <!-- v88.8.6 Д1: компактна lunar phase іконка під heroRing — постійно видима. -->
@@ -8457,12 +8457,12 @@ function renderPanchangaCard(state){
           }
           html = `<div class="pbt-row">`
                + `<span class="pbt-label">Найкращий час</span>`
-               + `<span class="pbt-value ${bestCls}" title="UTC: ${bestRangeUTC}">${bestRange} · G=${bestG}</span>`
+               + `<span class="pbt-value ${bestCls}" title="UTC: ${bestRangeUTC}. G_day raw — continuous фон доби (Kp_day − 2 + ΣAᵢ). НЕ PDF/Engine експертний verdict.">${bestRange} · G_day raw=${bestG} <span style="color:var(--faint);font-size:9px">· не PDF/Engine</span></span>`
                + `</div>`;
           if (_showWorst) {
             html += `<div class="pbt-row">`
                  + `<span class="pbt-label">${_worstLabel}</span>`
-                 + `<span class="pbt-value ${worstCls}" title="UTC: ${worstRangeUTC}">${worstRange} · G=${worstG}</span>`
+                 + `<span class="pbt-value ${worstCls}" title="UTC: ${worstRangeUTC}. G_day raw — continuous фон доби. НЕ PDF/Engine експертний verdict.">${worstRange} · G_day raw=${worstG} <span style="color:var(--faint);font-size:9px">· не PDF/Engine</span></span>`
                  + `</div>`;
           }
         }
@@ -10146,7 +10146,10 @@ function syncHero(){
         const p=Math.min(1,(ts-start)/dur);
         const ease=1-Math.pow(1-p,3); // easeOutCubic
         const cur=oldG+(newG-oldG)*ease;
-        heroG.textContent='G '+cur.toFixed(2);
+        // v88.8.35-fp9 P: всередині кільця — тільки число (з знаком), без 'G' префікса.
+        // Малий статичний label 'G_now · live/delayed/...' над кільцем (fp7 G) тримає семантику.
+        // Це уникає переповнення кола, коли writer хотів би писати "G_now -2.45".
+        heroG.textContent=(cur>=0?'+':'')+cur.toFixed(2);
         // Scale pulse on change
         if(p<0.3) heroG.style.transform='scale('+(1+.06*(1-p/.3))+')';
         else heroG.style.transform='scale(1)';
@@ -10154,7 +10157,7 @@ function syncHero(){
       }
       window._heroGtween=requestAnimationFrame(tweenG);
     } else {
-      heroG.textContent='G …';
+      heroG.textContent='…';
     }
     heroG.className='gbadge';
     // v80: derive class from value, not DOM
@@ -10381,9 +10384,11 @@ function syncHero(){
   const hf=el('heroFreshness');
   if(hf){
     // Маппинг dataMode → display label
+    // v88.8.35-fp9 O: 'partial' рендериться як DELAYED для словесної консистентності з top freshnessBadge
+    // (раніше Hero казав PARTIAL, top — DELAYED, користувач плутався).
     const _modeLabel = {
       live: 'LIVE',
-      partial: 'PARTIAL',
+      partial: 'DELAYED',
       scenario: 'SCENARIO',
       offline: 'OFFLINE'
     }[_dataMode] || 'LIVE';
@@ -11141,11 +11146,25 @@ function _renderHeroTimeWindows() {
 
     let label;
     // v79: human action label
-    const _actionLabel = g >= 1.5 ? 'активні дії і ключові рішення'
+    // v88.8.35-fp9 Q: PDF/Engine для дня має пріоритет — якщо денний verdict < 0,
+    // не дозволяємо зеленим слотам рекомендувати "ключові рішення / безпечно планувати".
+    // Це уникає конфлікту "Hero каже обережно" vs "timing каже ключові рішення".
+    let _dayEngForGate = null;
+    try {
+      const _e = (typeof getEngineScore === 'function') ? getEngineScore(new Date()) : null;
+      if (_e && isFinite(_e.eng)) _dayEngForGate = Number(_e.eng);
+    } catch(e){ _dayEngForGate = null; }
+    const _pdfNeg = (_dayEngForGate !== null && _dayEngForGate < 0);
+    let _actionLabel = g >= 1.5 ? 'активні дії і ключові рішення'
       : g >= 0.5 ? 'безпечно працювати і планувати'
       : g >= -0.5 ? 'стандартний темп без форсування'
       : g >= -1.5 ? 'обережно: тільки перевірені дії'
       : 'тільки рутина, не приймати рішень';
+    if (_pdfNeg && g >= 0.5) {
+      // Денний прогноз негативний → softened wording для зелених слотів
+      _actionLabel = g >= 1.5 ? 'звичайні задачі і планування (день PDF/Engine негативний)'
+        : 'перевірені дії, не ключові рішення (день PDF/Engine негативний)';
+    }
 
     if (_isFlat && _horaForSlot[h]) {
       const hora = _horaForSlot[h];
@@ -17675,8 +17694,30 @@ function _renderFreshnessState(){
   else if(maxAge < 30*60*1000){ state='delayed'; label='● DELAYED · '+_ageStr; col='#ffcc44'; bgCol='#2a1a00'; }
   else if(maxAge < 60*60*1000){ state='stale'; label='● STALE · '+_ageStr; col='#ff9944'; bgCol='#2a1200'; }
   else { state='old'; label='● OLD · '+_ageStr; col='#ff6b6b'; bgCol='#2a0808'; }
+  // v88.8.35-fp9 O: content-age override — fetch може бути щойно, але JSON всередині застарілий
+  // (NOAA SWPC issue 2026-03-28). Тоді ми вважалися LIVE, але resolveDataMode вже бачив partial.
+  // Тепер обидва writer-и узгоджені: top status теж downgrade до DELAYED+content-stale.
+  let _contentOverride = false;
+  try {
+    const _src = window._kpSourceFreshness;
+    if (_src && isFinite(_src.ageHours)) {
+      if (_src.ageHours > 24 * 7 && state !== 'old') {
+        state='old'; label='● OLD · контент >1 тиж'; col='#ff6b6b'; bgCol='#2a0808'; _contentOverride=true;
+      } else if (_src.ageHours > 24 && state !== 'old' && state !== 'stale') {
+        state='stale'; label='● STALE · контент >1 дн'; col='#ff9944'; bgCol='#2a1200'; _contentOverride=true;
+      } else if (_src.ageHours > 1 && state === 'live') {
+        // fetch свіжий, але JSON всередині старий >1h → понижуємо до delayed із вказівкою
+        state='delayed'; label='● DELAYED · контент '+_src.ageHours.toFixed(1)+'г'; col='#ffcc44'; bgCol='#2a1a00'; _contentOverride=true;
+      }
+    }
+  } catch(e) { /* silent */ }
   if(fb){ fb.textContent=label; fb.style.color=col; fb.style.background=bgCol; }
-  if(hf){ hf.textContent=state.toUpperCase()+' · '+_ageStr; hf.className=''; hf.classList.add(state); }
+  if(hf){
+    // v88.8.35-fp9 O: для heroFreshness теж зберігаємо вирівняний стан + позначка контенту якщо overridden.
+    const _hfLabel = state.toUpperCase() + (_contentOverride ? ' · контент' : ' · ' + _ageStr);
+    hf.textContent = _hfLabel;
+    hf.className=''; hf.classList.add(state);
+  }
   if(window.__uiState) window.__uiState.freshness = state;
 
   // v87.91 fix: scenario/offline override — без цього 60-сек таймер перетирав SCENARIO на LIVE
