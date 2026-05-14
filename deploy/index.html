@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.35-fp4</title>
+  <title>G-Index — Космофізичний дашборд v88.8.35-fp5</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -10288,23 +10288,37 @@ function syncHero(){
                      : _state === 'worsening' ? 'Погіршення з вчорашнього дня'
                      : 'Стабільно з вчорашнього дня';
         const _body = _state === 'improving'
-          ? `Фон піднявся <span class="dc-metric is-pos">+${_abs}</span>${_ageNote} — день зручніший для активних дій.`
+          ? `Фон піднявся <span class="dc-metric is-pos">+${_abs}</span>${_ageNote} — фон став легший; рішення дня дивись у PDF/Engine.`
           : _state === 'worsening'
-          ? `Фон просів <span class="dc-metric is-neg">−${_abs}</span>${_ageNote} — треба обережніше з рішеннями.`
+          ? `Фон просів <span class="dc-metric is-neg">−${_abs}</span>${_ageNote} — фон важчий; рішення дня дивись у PDF/Engine.`
           : `Δ24ч = ${_sign}${_abs}${_ageNote} — суттєвих змін немає.`;
         // v87.13: додатковий рядок про завтра (якщо відомо)
+        // v88.8.35-fp5: додати поряд PDF/Engine score для завтра + override semantics
+        // якщо PDF/Engine ≤ −2 завтра, забороняємо позитивні фрази у _body.
         let _tomorrowLine = '';
+        let _tomEngScore = null;
+        try {
+          const _tomDate = new Date(Date.now() + 86400000);
+          const _tomEntry = (typeof getEngineScore === 'function') ? getEngineScore(_tomDate) : null;
+          if (_tomEntry && isFinite(_tomEntry.eng)) _tomEngScore = Number(_tomEntry.eng);
+        } catch(e){ _tomEngScore = null; }
         const _tg = window.__tomorrowG;
         if (isFinite(_tg)) {
           const _tDiff = _tg - gVal;
+          const _engStr = (_tomEngScore !== null) ? ` · PDF/Engine: <span class="dc-metric ${_tomEngScore >= 0 ? 'is-pos' : 'is-neg'}">${_tomEngScore >= 0 ? '+' : ''}${_tomEngScore}</span>` : '';
           if (Math.abs(_tDiff) >= 0.5) {
             const _tDir = _tDiff > 0 ? 'покращиться' : 'просяде';
             const _tCls = _tDiff > 0 ? 'is-pos' : 'is-neg';
             const _tAbs = Math.abs(_tDiff).toFixed(1);
-            _tomorrowLine = `<div class="dc-subline">Завтра: <span class="dc-metric ${_tCls}">${_tg >= 0 ? '+' : ''}${_tg.toFixed(1)}</span> (${_tDir} на ${_tAbs}).</div>`;
+            _tomorrowLine = `<div class="dc-subline">Завтра G_day raw: <span class="dc-metric ${_tCls}">${_tg >= 0 ? '+' : ''}${_tg.toFixed(1)}</span> (${_tDir} на ${_tAbs})${_engStr}.</div>`;
           } else {
-            _tomorrowLine = `<div class="dc-subline">Завтра: <span class="dc-metric">${_tg >= 0 ? '+' : ''}${_tg.toFixed(1)}</span> (без суттєвих змін).</div>`;
+            _tomorrowLine = `<div class="dc-subline">Завтра G_day raw: <span class="dc-metric">${_tg >= 0 ? '+' : ''}${_tg.toFixed(1)}</span> (без суттєвих змін)${_engStr}.</div>`;
           }
+        }
+        // v88.8.35-fp5: якщо завтра PDF/Engine ≤ −2 і блок зараз "improving" — downgrade до stable
+        // і додати застереження. Це усуває конфлікт "фон піднявся +3.7" vs "15.05 PDF/Engine −3".
+        if (_tomEngScore !== null && _tomEngScore <= -2) {
+          _tomorrowLine += `<div class="dc-subline" style="color:#ffaa33;font-size:11px">⚠ PDF/Engine для завтра ≤ −2 — рішення дня має пріоритет над live-фоном.</div>`;
         }
         dc.className = 'is-' + _state;
         dc.title = _ttip; // v87.90: tooltip з реальним age та timestamp
