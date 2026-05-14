@@ -1490,6 +1490,8 @@ body.simple-mode .col-hide-mobile {
           <!-- v87.90 P3 fix: badge style для engine v18.5 score — більш помітно vs Live G -->
           <!-- v88.8.18: v18.8 patches applied — see _applyV186Patches() -->
           <span id="heroBulletin" data-label="Engine v18.8" class="hint" tabindex="0" style="font-size:12px;font-weight:700;color:var(--muted);cursor:help;border:1px solid var(--border2);padding:1px 8px;border-radius:8px;background:rgba(11,18,32,.4)" title="Engine v18.8 = v18.5 frozen core + v88.8.18 ablation-validated patches (discrete -3..+3).&#10;&#10;v18.8 patches (4 active, P1a/P5 rejected by ablation):&#10;• P2 broad: ANY '✈' emoji → +1, з 'Подорожі' → max(eng, +2)&#10;• P3 broad: Dashami (Tithi 10 OR 25) → +1: 30+ days&#10;• P4 empty+saturn_retro+Kp≥4 → −3: Saturn malefic canon&#10;• P1d empty+eng=+2 → +1: точкова exact correction&#10;&#10;v18.7 → v18.8 fix: P2 раніше шукав 'Подорожі' word — missed 93 dates з emoji-only.&#10;P3 раніше тільки Shukla Dashami — пропускав Krishna Dashami (Tithi 25).&#10;&#10;Phase V3 freeze respected: engine_scores.json НЕ модифікується.&#10;Patches застосовуються JS read-time у _applyV186Patches().&#10;&#10;Validation (n=212 ablation-validated):&#10;• Strict 3-class: 75.0% → 79.2% (+4.2pp)&#10;• Binary neg/non-neg: 87.3% → 88.7% (+1.4pp)&#10;• Exact 7-class: 43.9% → 50.0% (+6.1pp) ⭐&#10;• 5-fold CV strict: 79.2% ± 4.2% (stable, кращий vs v18.7 ±4.8%)&#10;&#10;ALL 3 metrics improved.&#10;Engine v18.5 frozen залишається canonical scoring core.&#10;Dashboard G — continuous real-time signal (Kp − 2 + ΣAᵢ).&#10;Різні моделі за дизайном — розбіжність не баг.">—</span>
+          <!-- v88.8.35-fp3: PDF override regression badge — перенесено на верхній status row для постійної видимості -->
+          <span id="pdfOverrideRegressionBadge" data-label="PDF" tabindex="0" style="font-size:12px;font-weight:700;color:var(--muted);cursor:help;border:1px solid var(--border2);padding:1px 8px;border-radius:8px;background:rgba(11,18,32,.4);font-variant-numeric:tabular-nums" title="Перевіряється після завантаження expert_overrides_v3.json">—</span>
           <!-- v88.0: Astronomical layer pill (Tithi/Nakshatra/Yoga з cal_score field у engine_scores.json, Swiss Ephemeris Lahiri) -->
           <span id="heroAstroLayer" data-label="Astro" class="hint" tabindex="0" style="display:none;font-size:12px;font-weight:700;color:var(--muted);cursor:help;border:1px solid var(--border2);padding:1px 8px;border-radius:8px;background:rgba(11,18,32,.4)" title="">—</span>
           <!-- V25-fu29 v5.1 (2026-05-03): canonical metrics from VALIDATION_REPORT_v18_5_pdf47_v5.json — n=280 / strict 71.4% / κ=0.52 -->
@@ -2259,13 +2261,6 @@ G_day тут = денний raw-фон: Kp_day(max/approx) − 2 + ΣAᵢ(noon U
     <details class="card" open>
       <summary><strong>📡 Джерела даних та статус моделі</strong></summary>
       <div class="small" style="margin-top:8px">
-
-        <!-- v88.8.35-fp1: PDF override regression badge (single source of truth check) -->
-        <div style="margin:0 0 8px;padding:6px 10px;background:rgba(99,190,123,.05);border:1px solid rgba(99,190,123,.25);border-radius:6px;display:flex;align-items:center;gap:8px;font-size:12px">
-          <span style="color:var(--dim)">PDF override:</span>
-          <span id="pdfOverrideRegressionBadge" tabindex="0" style="font-weight:800;cursor:help;font-variant-numeric:tabular-nums" title="Перевіряється після завантаження expert_overrides_v3.json">—</span>
-          <span style="color:var(--faint);margin-left:auto;font-size:11px">single source of truth = expert_overrides_v3.json</span>
-        </div>
 
         <table style="font-size:12px;margin:6px 0 10px;border:1px solid #1e2f52;border-radius:6px;overflow:hidden">
           <thead><tr style="background:#0c1526">
@@ -4050,14 +4045,21 @@ async function loadExpertOverrides(){
         if(!tgt) return;
         const reg = window._pdfOverrideRegression;
         const ok = reg && reg.ok;
-        tgt.textContent = `PDF override ${ok ? 'OK' : 'FAIL'}: ${reg.loaded}/${reg.expected}`;
+        // v88.8.35-fp3: compact pill style в Hero status row.
+        // Короткий текст "PDF +N/N", колір через border/background, не через text-color (зберігаємо pill-look).
+        tgt.textContent = `${ok ? '✓' : '⚠'} PDF ${reg.loaded}/${reg.expected}`;
         tgt.style.color = ok ? '#63be7b' : '#ff6b6b';
-        tgt.title = `expert_overrides_v3.json v${reg.version}\n`
+        tgt.style.borderColor = ok ? 'rgba(99,190,123,.4)' : 'rgba(255,107,107,.4)';
+        tgt.style.background = ok ? 'rgba(99,190,123,.08)' : 'rgba(255,107,107,.08)';
+        tgt.title = `PDF override regression check\n`
+                  + `Завантажено ${reg.loaded} з ${reg.expected} записів з expert_overrides_v3.json\n\n`
+                  + `Версія: ${reg.version}\n`
                   + `Вікно: ${reg.window}\n`
                   + `Джерело: ${reg.source}\n`
-                  + `Оновлено: ${reg.updated_at}\n`
-                  + `Завантажено ${reg.loaded} з ${reg.expected} записів`
-                  + (ok ? '' : '\n⚠ Кількість не збігається — перевір JSON');
+                  + `Оновлено: ${reg.updated_at}\n\n`
+                  + (ok
+                      ? '✓ Усі записи завантажено. Single source of truth = expert_overrides_v3.json.'
+                      : '⚠ Кількість не збігається — перевір JSON.');
       };
       if(document.readyState === 'loading'){
         document.addEventListener('DOMContentLoaded', _renderBadge);
