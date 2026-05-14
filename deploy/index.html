@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.35-fp5</title>
+  <title>G-Index — Космофізичний дашборд v88.8.35-fp6</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -10362,19 +10362,24 @@ function syncHero(){
       scenario: 'SCENARIO',
       offline: 'OFFLINE'
     }[_dataMode] || 'LIVE';
-    hf.textContent = _modeLabel;
-    hf.classList.remove('live','cached','stale');
-    // Кольорова класа: live=зелений, partial=жовтий (cached), scenario/offline=червоний (stale)
-    if (_dataMode === 'live') hf.classList.add('live');
-    else if (_dataMode === 'partial') hf.classList.add('cached');
-    else hf.classList.add('stale');
-    // Tooltip для пояснення
-    hf.title = ({
+    // v88.8.35-fp6 F: додати hint-pop popup для миттєвої видимості пояснення.
+    // Тримаємо native title як accessibility fallback.
+    const _modeTip = ({
       live: 'Дані live: Kp обсервації + NOAA 3-day forecast доступні.',
       partial: 'Дані часткові: Kp обсервації live, але forecast cached/delayed. Тренди можуть бути затримані.',
       scenario: '⚠ NOAA forecast недоступний. Завтра/3-day показано як плато на базі поточного Kp — це сценарій, не справжній прогноз.',
       offline: 'Дані offline: навіть Kp обсервації недоступні. Все, що показано — з кешу.'
     })[_dataMode] || '';
+    // Інжектимо label + hint-pop, не перетираємо весь innerHTML інших слотів
+    hf.innerHTML = _modeLabel + (_modeTip ? `<span class="hint-pop" style="white-space:pre-line;font-size:12px;text-align:left;max-width:280px">${_modeTip}</span>` : '');
+    if (!hf.classList.contains('hint')) hf.classList.add('hint');
+    hf.classList.remove('live','cached','stale');
+    // Кольорова класа: live=зелений, partial=жовтий (cached), scenario/offline=червоний (stale)
+    if (_dataMode === 'live') hf.classList.add('live');
+    else if (_dataMode === 'partial') hf.classList.add('cached');
+    else hf.classList.add('stale');
+    // Native title як accessibility fallback (screen readers + tab focus)
+    hf.title = _modeTip;
   }
   // v87.92: dataset.scenario для heroTomorrow — третя точка синхронізації (після render3Day і _renderFreshnessState).
   // CSS ::after pseudo-element рендерить '⚠ scenario' автоматично.
@@ -11976,7 +11981,7 @@ function renderDisagreement(){
     const _isHist = m.name === 'Σ Рік тому';
     const _bg = _isHist ? 'rgba(70,90,130,.25)' : 'rgba(11,18,32,.55)';
     const _bd = _isHist ? '1px dashed rgba(155,177,220,.45)' : '1px solid rgba(255,170,51,.15)';
-    const _histBadge = _isHist ? '<span style="font-size:8px;color:#9bb1dc;background:rgba(155,177,220,.18);padding:1px 4px;border-radius:3px;margin-left:4px;font-weight:600">⏳ ІСТОРІЯ</span>' : '';
+    const _histBadge = _isHist ? '<span style="font-size:10px;color:#ffaa33;background:rgba(255,170,51,.18);padding:2px 6px;border-radius:4px;margin-left:4px;font-weight:700;letter-spacing:.04em" title="Це історичні дані — інша дата (та сама календарна точка минулого року). НЕ сьогоднішня оцінка.">⏳ ІНША ДАТА</span>' : '';
     return `<div${_tip} style="flex:1;min-width:90px;padding:6px 8px;border-radius:6px;background:${_bg};border:${_bd};cursor:help;display:flex;flex-direction:column;gap:1px;align-items:flex-start">
       <span style="font-size:10px;color:var(--dim);letter-spacing:.04em;text-transform:uppercase">${m.name}${_histBadge}</span>
       <span style="font-family:var(--mono),ui-monospace,monospace;font-size:16px;font-weight:700;color:${col}">${valStr}</span>
@@ -14923,11 +14928,30 @@ function renderBestTime(dateUTC, kp, G, panchPCL) {
   const content = document.getElementById('bestTimeContent');
   if(!wrap || !content) return;
 
+  // v88.8.35-fp6 D: paralelno з G перевіряємо PDF/Engine для дня — якщо PDF/Engine ≤ −2,
+  // навіть при G_now > −1.5 показуємо попередження і НЕ рекомендуємо позитивні слоти.
+  let _todayEng = null;
+  try {
+    const _e = (typeof getEngineScore === 'function') ? getEngineScore(dateUTC) : null;
+    if (_e && isFinite(_e.eng)) _todayEng = Number(_e.eng);
+  } catch(e){ _todayEng = null; }
+
   // Якщо G < -1 — взагалі несприятливо, показуємо попередження
   if(isFinite(G) && G <= -1.5) {
     wrap.style.display = 'block';
-    content.innerHTML = `<div style="color:#ff9f9f;font-size:13px;padding:6px 10px;background:rgba(255,80,80,0.08);border-left:3px solid #ff6b6b;border-radius:6px">⚠ Сьогодні G = ${G.toFixed(1)} — рекомендується утриматись від активних дій увесь день.</div>`;
+    const _engNote = (_todayEng !== null)
+      ? ` PDF/Engine для дня: ${_todayEng >= 0 ? '+' : ''}${_todayEng}.`
+      : '';
+    content.innerHTML = `<div style="color:#ff9f9f;font-size:13px;padding:6px 10px;background:rgba(255,80,80,0.08);border-left:3px solid #ff6b6b;border-radius:6px">⚠ Сьогодні G_now = ${G.toFixed(1)} — фон важкий, утриматись від активних дій.${_engNote}</div>`;
     return;
+  }
+
+  // v88.8.35-fp6 D: новий gate — якщо PDF/Engine ≤ −2 (експертно несприятливий день),
+  // не показуємо зелені слоти першорядно, навіть якщо live-фон зараз позитивний.
+  // Зберігаємо warning як префікс — content.innerHTML встановиться нижче з усім html.
+  let _pdfEngineWarn = '';
+  if (_todayEng !== null && _todayEng <= -2) {
+    _pdfEngineWarn = `<div style="color:#ffd2a0;font-size:13px;padding:6px 10px;background:rgba(255,170,51,0.08);border-left:3px solid #ffaa33;border-radius:6px;margin-bottom:8px">⚠ PDF/Engine для дня: ${_todayEng >= 0 ? '+' : ''}${_todayEng} (експертна оцінка). Фон зараз G_now = ${isFinite(G) ? (G >= 0 ? '+' : '') + G.toFixed(1) : '—'} — live-фон може дозволяти точкові дії, але рішення дня лишається за PDF/Engine. Hora-вікна нижче — тільки для тактичних задач, не для важливих рішень.</div>`;
   }
 
   const { slots, srH, ssH } = calcAllHoras(dateUTC);
@@ -14948,7 +14972,7 @@ function renderBestTime(dateUTC, kp, G, panchPCL) {
   wrap.style.display = 'block';
 
   if(!scored.length) {
-    content.innerHTML = `<div class="muted small">Сьогодні немає явно сприятливих Hora-вікон. Оберіть Юпітера (Чт) або Меркурія (Ср) у наступний день.</div>`;
+    content.innerHTML = _pdfEngineWarn + `<div class="muted small">Сьогодні немає явно сприятливих Hora-вікон. Оберіть Юпітера (Чт) або Меркурія (Ср) у наступний день.</div>`;
     return;
   }
 
@@ -14988,7 +15012,7 @@ function renderBestTime(dateUTC, kp, G, panchPCL) {
     }
   }
 
-  content.innerHTML = html;
+  content.innerHTML = _pdfEngineWarn + html;
 }
 
 // v87.56: removed calcGPersonal (legacy v39, 0 callsites; replaced by profile-based Personal system)
