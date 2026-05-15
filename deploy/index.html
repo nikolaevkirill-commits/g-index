@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.35-fp9</title>
+  <title>G-Index — Космофізичний дашборд v88.8.35-fp10</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1288,7 +1288,7 @@ body.simple-mode .col-hide-mobile {
           <span id="dataTimestamp" style="font-size:10px;color:var(--faint);margin-left:4px"></span>
         </div>
         <span class="pill" id="stamp" style="font-size:11px">—</span>
-        <span id="freshnessBadge" tabindex="0" title="Свіжість даних NOAA Kp (за віком останнього fetch):&#10;• LIVE — менше 5 хв (зелений)&#10;• DELAYED — 5–30 хв (жовтий, нормальна затримка)&#10;• STALE — 30–60 хв (помаранчевий)&#10;• OLD — понад 60 хв (червоний, втрачено зв'язок)&#10;• CACHED — офлайн режим / SW проксі-кеш&#10;NOAA Kp endpoints оновлюються кожні ~5–10 хв." style="font-size:10px;padding:2px 6px;border-radius:3px;margin-left:4px;font-weight:600;letter-spacing:0.3px;background:#0a2a15;color:#63be7b;cursor:help">● LIVE</span>
+        <span id="freshnessBadge" tabindex="0" title="Свіжість даних NOAA Kp (за віком останнього fetch + content-age):&#10;• LIVE — менше 5 хв (зелений)&#10;• DELAYED — 5–30 хв АБО контент >1г (жовтий, нормальна затримка)&#10;• STALE — 30–60 хв АБО контент >1 дн (помаранчевий)&#10;• OLD — понад 60 хв АБО контент >1 тиж (червоний, втрачено зв'язок)&#10;• CACHED — офлайн режим / SW проксі-кеш&#10;&#10;NOAA Kp endpoints оновлюються кожні ~5–10 хв.&#10;PDF/Engine і frozen engine_scores працюють штатно — це обмеження лише для live/raw rail-ів." style="font-size:10px;padding:2px 6px;border-radius:3px;margin-left:4px;font-weight:600;letter-spacing:0.3px;background:#0a2a15;color:#63be7b;cursor:help">● LIVE</span>
       </div>
     </div>
   </header>
@@ -10396,9 +10396,9 @@ function syncHero(){
     // Тримаємо native title як accessibility fallback.
     const _modeTip = ({
       live: 'Дані live: Kp обсервації + NOAA 3-day forecast доступні.',
-      partial: 'Дані часткові: Kp обсервації live, але forecast cached/delayed. Тренди можуть бути затримані.',
-      scenario: '⚠ NOAA forecast недоступний. Завтра/3-day показано як плато на базі поточного Kp — це сценарій, не справжній прогноз.',
-      offline: 'Дані offline: навіть Kp обсервації недоступні. Все, що показано — з кешу.'
+      partial: 'Дані часткові: Kp обсервації live, але forecast cached/delayed. Тренди можуть бути затримані.\nPDF/Engine і frozen engine_scores працюють штатно — це обмеження стосується лише live/raw rail-ів.',
+      scenario: '⚠ NOAA forecast недоступний. Завтра/3-day показано як плато на базі поточного Kp — це сценарій, не справжній прогноз.\nPDF/Engine і frozen engine_scores працюють штатно — рішення дня бери звідти.',
+      offline: 'Дані offline: навіть Kp обсервації недоступні. Все, що показано — з кешу.\nPDF/Engine і frozen engine_scores працюють штатно — рішення дня бери звідти.'
     })[_dataMode] || '';
     // Інжектимо label + hint-pop, не перетираємо весь innerHTML інших слотів
     hf.innerHTML = _modeLabel + (_modeTip ? `<span class="hint-pop" style="white-space:pre-line;font-size:12px;text-align:left;max-width:280px">${_modeTip}</span>` : '');
@@ -13985,7 +13985,22 @@ function renderPersonal() {
     _effectivePhMod = ' (загальний фон уточнюється)';
   }
 
-  resEl.innerHTML = `${noTimeWarnHtml}${_riskBannerHtml}<div style="padding:8px 10px;border-radius:10px;border:1px solid ${_effectivePhBrd};background:${_effectivePhBg}"><div style="font-size:14px;font-weight:700;line-height:1.3;color:${_effectivePhCol}">${_effectivePhState}${_effectivePhMod}</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 12px;margin-top:6px;font-size:12px;line-height:1.5;color:#b7c7ea"><span style="color:var(--dim)">Робота:</span><span>${_effectiveWork}</span><span style="color:var(--dim)">Рішення:</span><span>${_effectiveDec}</span><span style="color:var(--dim)">Комунікації:</span><span>${_effectiveComms}</span></div></div><details style="margin-top:6px"><summary class="small muted" style="cursor:pointer;font-size:11px">▶ Показати персональний розклад</summary>${gmodHtml}<table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:6px">
+  // v88.8.35-fp10 T: якщо PDF/Engine для дня негативний (≤-1), а персональний блок
+  // зеленіть → додати явну note що персональна підтримка НЕ скасовує PDF/Engine денний verdict.
+  // Це усуває хибне відчуття "персональний блок каже OK, отже день добрий".
+  let _pdfOverrideNote = '';
+  try {
+    const _eTd = (typeof getEngineScore === 'function') ? getEngineScore(new Date()) : null;
+    const _eTdScore = (_eTd && isFinite(_eTd.eng)) ? Number(_eTd.eng) : null;
+    // Тригер: PDF/Engine ≤ -1 AND персональний state виглядає сприятливо (зелений колір)
+    const _personalLooksGreen = (_effectivePhCol === '#2bd47d' || _effectivePhCol === '#63be7b'
+                                || (typeof _effectivePhState === 'string' && _effectivePhState.includes('сприятлив')));
+    if (_eTdScore !== null && _eTdScore <= -1 && _personalLooksGreen) {
+      _pdfOverrideNote = `<div style="margin-top:6px;padding:6px 8px;border-radius:6px;background:rgba(255,170,51,.08);border-left:3px solid #ffaa33;font-size:11px;color:#ffd2a0;line-height:1.4">⚠ Персональна підтримка не скасовує PDF/Engine дня (${_eTdScore >= 0 ? '+' : ''}${_eTdScore}). Особистий цикл — це додатковий шар, не заміна денного verdict-у.</div>`;
+    }
+  } catch(e) { /* silent */ }
+
+  resEl.innerHTML = `${noTimeWarnHtml}${_riskBannerHtml}<div style="padding:8px 10px;border-radius:10px;border:1px solid ${_effectivePhBrd};background:${_effectivePhBg}"><div style="font-size:14px;font-weight:700;line-height:1.3;color:${_effectivePhCol}">${_effectivePhState}${_effectivePhMod}</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 12px;margin-top:6px;font-size:12px;line-height:1.5;color:#b7c7ea"><span style="color:var(--dim)">Робота:</span><span>${_effectiveWork}</span><span style="color:var(--dim)">Рішення:</span><span>${_effectiveDec}</span><span style="color:var(--dim)">Комунікації:</span><span>${_effectiveComms}</span></div>${_pdfOverrideNote}</div><details style="margin-top:6px"><summary class="small muted" style="cursor:pointer;font-size:11px">▶ Показати персональний розклад</summary>${gmodHtml}<table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:6px">
       <tr>
         <td class="muted" style="padding:3px 0;width:45%;border-bottom:1px solid #1a2540">Стоянка народження</td>
         <td style="padding:3px 0;border-bottom:1px solid #1a2540"><strong>${NAKSHATRA_UA[natal.idx]}</strong> <span class="muted">(${NAKSHATRA_NAMES[natal.idx]}, P${natal.pada})</span></td>
@@ -18174,9 +18189,9 @@ function renderBestWorstDays(){
   const wSign = bw.worst.g >= 0 ? '+' : '';
   block.innerHTML = `
     <div class="bw-title">Історія · 30д ${bw.fwdPeak ? '<span style="color:var(--faint);font-weight:400;font-size:10px;margin-left:6px">+ прогноз 7д</span>' : ''}</div>
-    <div class="bw-item bw-best" title="З історії/видимої raw-серії — максимум G_day raw. PDF/Engine Day_score не входить."><span class="bw-label">Макс G_day raw</span><span class="bw-value">${fmtDate(bw.best.date)} · G_day=${bSign}${bw.best.g.toFixed(1)}</span></div>
-    <div class="bw-item bw-worst" title="З історії/видимої raw-серії — мінімум G_day raw. PDF/Engine Day_score не входить."><span class="bw-label">Мін G_day raw</span><span class="bw-value">${fmtDate(bw.worst.date)} · G_day=${wSign}${bw.worst.g.toFixed(1)}</span></div>
-    ${bw.fwdPeak ? `<div class="bw-item bw-fwd" style="color:#9bb1dc" title="З тієї самої _27dComputed raw-серії, що й графік. Це G_day raw, не PDF/Engine Day_score."><span class="bw-label" style="color:#9bb1dc">Пік G_day raw (7д)</span><span class="bw-value">${fmtDate(bw.fwdPeak.date)} · G_day=${bw.fwdPeak.g >= 0 ? '+' : ''}${bw.fwdPeak.g.toFixed(1)}</span></div>` : ''}
+    <div class="bw-item bw-best" title="З видимої raw-серії минулих 30 днів (до сьогодні) — максимум G_day raw. PDF/Engine Day_score не входить. Окремо нижче — Пік G_day raw (7д) для майбутнього."><span class="bw-label">Макс G_day raw <span style="color:var(--faint);font-size:9px">(до сьогодні)</span></span><span class="bw-value">${fmtDate(bw.best.date)} · G_day=${bSign}${bw.best.g.toFixed(1)}</span></div>
+    <div class="bw-item bw-worst" title="З видимої raw-серії минулих 30 днів (до сьогодні) — мінімум G_day raw. PDF/Engine Day_score не входить."><span class="bw-label">Мін G_day raw <span style="color:var(--faint);font-size:9px">(до сьогодні)</span></span><span class="bw-value">${fmtDate(bw.worst.date)} · G_day=${wSign}${bw.worst.g.toFixed(1)}</span></div>
+    ${bw.fwdPeak ? `<div class="bw-item bw-fwd" style="color:#9bb1dc" title="З тієї самої _27dComputed raw-серії, що й графік. Це G_day raw, не PDF/Engine Day_score. Окрема вибірка — наступні 7 днів."><span class="bw-label" style="color:#9bb1dc">Пік G_day raw <span style="color:var(--faint);font-size:9px">(прогноз 7д)</span></span><span class="bw-value">${fmtDate(bw.fwdPeak.date)} · G_day=${bw.fwdPeak.g >= 0 ? '+' : ''}${bw.fwdPeak.g.toFixed(1)}</span></div>` : ''}
     <div class="bw-count">${bw.total} днів у базі</div>
   `;
   block.style.display = '';
