@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.35-fp11</title>
+  <title>G-Index — Космофізичний дашборд v88.8.35-fp12</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -9692,20 +9692,35 @@ function renderDecisionTiming(slots){
     `;
     return summary;
   }
-  // v88.8.35-fp11 X: при DELAYED/STALE/SCENARIO — додати "(орієнтовно)" до зелених слотів,
-  // щоб користувач не приймав затриманий live-сигнал як актуальну рекомендацію на дію.
+  // v88.8.35-fp11 X + fp12 Y: DELAYED/STALE/SCENARIO → префікс "орієнтовно".
+  // АЛЕ якщо PDF/Engine для дня ≤ -2 (критичний день), переписуємо ВЕСЬ текст
+  // зелених/нейтральних слотів на "тільки рутина", а не залишаємо "орієнтовно: сприятливо".
+  // Це усуває звучання "орієнтовно: можна" як дозвіл на дію.
   let _slotPrefixDelayed = '';
+  let _pdfHardForList = null;
   try {
     const _dm2 = (typeof window !== 'undefined' && window.__dataMode)
                || (typeof resolveDataMode === 'function' ? resolveDataMode() : 'live');
     if (_dm2 !== 'live') _slotPrefixDelayed = 'орієнтовно: ';
+    const _eTd = (typeof getEngineScore === 'function') ? getEngineScore(new Date()) : null;
+    const _eTdS = (_eTd && isFinite(_eTd.eng)) ? Number(_eTd.eng) : null;
+    if (_eTdS !== null && _eTdS <= -2) _pdfHardForList = _eTdS;
   } catch(e) { /* silent */ }
   // Normal mode (non-flat day) — render all slots as before
   list.innerHTML = _delayWarn + visible.map(s => {
-    // Префікс "орієнтовно" застосовуємо лише до good/mid слотів — для 'bad' це зайве (вже застереження).
-    const _pfx = (_slotPrefixDelayed && s.cls !== 'bad') ? _slotPrefixDelayed : '';
-    return `<div class="dt-row dt-${s.cls}${s.isNow?' dt-now':''}">`
-    +`<span class="dt-time">${s.time}</span><span class="dt-label">${_pfx}${s.text}${s.isNow?' ◀ зараз':''}</span></div>`;
+    let _displayText = s.text;
+    let _displayCls = s.cls;
+    if (_pdfHardForList !== null && s.cls !== 'bad') {
+      // PDF/Engine ≤ -2: жорстко переписуємо текст і клас на негативний — DELAYED префікс не потрібен,
+      // бо вже зрозуміло що це "тільки рутина".
+      _displayText = `тільки рутина (день PDF/Engine = ${_pdfHardForList})`;
+      _displayCls = 'bad';
+    } else if (_slotPrefixDelayed && s.cls !== 'bad') {
+      // DELAYED/STALE без критичного PDF/Engine: тільки префікс "орієнтовно".
+      _displayText = _slotPrefixDelayed + s.text;
+    }
+    return `<div class="dt-row dt-${_displayCls}${s.isNow?' dt-now':''}">`
+    +`<span class="dt-time">${s.time}</span><span class="dt-label">${_displayText}${s.isNow?' ◀ зараз':''}</span></div>`;
   }).join('')
   + (pastCount > 0 ? `<div style="color:var(--faint);font-size:10px;margin-top:4px;font-style:italic">Показано ${visible.length} з ${summary.slots.length} слотів (минуло ${pastCount})</div>` : '');
   return summary;
@@ -10419,9 +10434,9 @@ function syncHero(){
     // Тримаємо native title як accessibility fallback.
     const _modeTip = ({
       live: 'Дані live: Kp обсервації + NOAA 3-day forecast доступні.',
-      partial: 'Дані часткові: Kp обсервації live, але forecast cached/delayed. Тренди можуть бути затримані.\nPDF/Engine і frozen engine_scores працюють штатно — це обмеження стосується лише live/raw rail-ів.',
-      scenario: '⚠ NOAA forecast недоступний. Завтра/3-day показано як плато на базі поточного Kp — це сценарій, не справжній прогноз.\nPDF/Engine і frozen engine_scores працюють штатно — рішення дня бери звідти.',
-      offline: 'Дані offline: навіть Kp обсервації недоступні. Все, що показано — з кешу.\nPDF/Engine і frozen engine_scores працюють штатно — рішення дня бери звідти.'
+      partial: 'Затримані live-дані; PDF/Engine день актуальний.\n\nДеталі: Kp обсервації live, але forecast cached/delayed. Тренди можуть бути затримані.\nPDF/Engine і frozen engine_scores працюють штатно — це обмеження стосується лише live/raw rail-ів.',
+      scenario: '⚠ Без NOAA forecast; PDF/Engine день актуальний.\n\nДеталі: Завтра/3-day показано як плато на базі поточного Kp — це сценарій, не справжній прогноз.\nPDF/Engine і frozen engine_scores працюють штатно — рішення дня бери звідти.',
+      offline: '⚠ Дані з кешу; PDF/Engine день актуальний.\n\nДеталі: навіть Kp обсервації недоступні. Все, що показано — з кешу.\nPDF/Engine і frozen engine_scores працюють штатно — рішення дня бери звідти.'
     })[_dataMode] || '';
     // Інжектимо label + hint-pop, не перетираємо весь innerHTML інших слотів
     hf.innerHTML = _modeLabel + (_modeTip ? `<span class="hint-pop" style="white-space:pre-line;font-size:12px;text-align:left;max-width:280px">${_modeTip}</span>` : '');
@@ -11031,12 +11046,13 @@ function _renderWhyTrend(){
   days.forEach((d, i) => {
     const x = xFor(i), y = yFor(d.G);
     const col = colorFor(d.G);
-    // v88.8.18 ★ FIX: tooltip для кожної точки — показує raw G + expert (якщо є)
-    let _dotTip = `${d.ds}: G=${d.G >= 0 ? '+' : ''}${d.G.toFixed(2)}`;
+    // v88.8.18 ★ FIX + fp12 BB: tooltip явно розрізняє Raw G_day vs PDF/Engine, щоб користувач
+    // не плутав точки raw-серії зі зірками PDF expert overlay.
+    let _dotTip = `${d.ds}\nRaw G_day: ${d.G >= 0 ? '+' : ''}${d.G.toFixed(2)}`;
     if(Number.isFinite(d.overrideEng)){
-      _dotTip += ` · ⚠ Експерт ${d.overrideEng >= 0 ? '+' : ''}${d.overrideEng} (PDF override)`;
+      _dotTip += `\nPDF Engine: ${d.overrideEng >= 0 ? '+' : ''}${d.overrideEng} (експертна оцінка)`;
     } else if(Number.isFinite(d.engineEng)){
-      _dotTip += ` · Engine v18.5: ${d.engineEng >= 0 ? '+' : ''}${d.engineEng}`;
+      _dotTip += `\nPDF Engine: ${d.engineEng >= 0 ? '+' : ''}${d.engineEng} (v18.5)`;
     }
     const _titleAttr = `<title>${_dotTip}</title>`;
     if(d.isToday){
@@ -11045,9 +11061,9 @@ function _renderWhyTrend(){
     } else {
       svgHtml += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${d.isPast ? 3.5 : 4}" fill="${col}" opacity="${d.isPast ? 0.75 : 1}">${_titleAttr}</circle>`;
     }
-    // v88.8.18 ★ FIX: marker ★ над точкою з expert override — щоб видно невідповідність астро G vs PDF expert
+    // v88.8.18 ★ FIX + fp12 BB: marker ★ над точкою з expert override — tooltip розводить дві шкали.
     if(Number.isFinite(d.overrideEng) && !d.isPast){
-      svgHtml += `<text x="${x.toFixed(1)}" y="${(y-9).toFixed(1)}" font-size="11" fill="#ffd166" text-anchor="middle" font-weight="700" style="filter:drop-shadow(0 0 2px rgba(0,0,0,.7))"><title>Експертна оцінка з PDF: ${d.overrideEng >= 0 ? '+' : ''}${d.overrideEng} (відрізняється від астро G ${d.G >= 0 ? '+' : ''}${d.G.toFixed(1)})</title>★</text>`;
+      svgHtml += `<text x="${x.toFixed(1)}" y="${(y-9).toFixed(1)}" font-size="11" fill="#ffd166" text-anchor="middle" font-weight="700" style="filter:drop-shadow(0 0 2px rgba(0,0,0,.7))"><title>${d.ds}\nPDF Engine: ${d.overrideEng >= 0 ? '+' : ''}${d.overrideEng} (експертна оцінка дня)\nRaw G_day: ${d.G >= 0 ? '+' : ''}${d.G.toFixed(1)} (астро без експерта)</title>★</text>`;
     }
     // Day label
     // v88.7.6 BUG-4 fix: round (не ceil) + noon-UTC anchor — DST-safe день-різниця.
@@ -12172,6 +12188,15 @@ function renderIntraDayAlert(){
       body: `За кілька годин геомагнітний фон підсилиться на ${_riseDelta.toFixed(1)} пункти. Поточний спокій тимчасовий.`,
       action: _maxFuture >= 5 ? 'Готуйся до G1+ бурі. Перенеси критичні комунікації.' : 'Активніше використовуй спокійні години зараз.'
     };
+    // v88.8.35-fp12 Z: PDF/Engine ≤ -2 hard-cap — навіть якщо локально Kp дозволяє "активніше",
+    // загальний день критичний. Переписуємо action на "тільки для рутини / підготовки".
+    try {
+      const _eTd = (typeof getEngineScore === 'function') ? getEngineScore(new Date()) : null;
+      const _eTdS = (_eTd && isFinite(_eTd.eng)) ? Number(_eTd.eng) : null;
+      if (_eTdS !== null && _eTdS <= -2 && _maxFuture < 5) {
+        _msg.action = `Використовуй спокійні години тільки для рутини й підготовки (день PDF/Engine = ${_eTdS}).`;
+      }
+    } catch(e) { /* silent */ }
     _col = _maxFuture >= 5 ? '#ff6b6b' : '#ffaa33';
   } else {
     _alert.style.display = 'none';
