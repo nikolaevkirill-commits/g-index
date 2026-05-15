@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.35-fp10</title>
+  <title>G-Index — Космофізичний дашборд v88.8.35-fp11</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -9666,24 +9666,47 @@ function renderDecisionTiming(slots){
   if(summary.allSame){
     const _first = visible[0];
     const _cls = _first?.cls || 'mid';
-    const _nowText = _cls === 'bad' ? 'уникати — без форсування'
-                   : _cls === 'mid' ? 'стандартний темп'
-                   : 'сприятливий момент';
-    const _restText = _cls === 'bad' ? 'режим без змін до кінця дня'
-                    : _cls === 'mid' ? 'фон стабільний до кінця дня'
-                    : 'сприятливий фон до кінця дня';
+    // v88.8.35-fp11 W: PDF/Engine hard-cap — якщо денний verdict ≤ -2, заборонити
+    // позитивні фрази "сприятливий момент / стандартний темп" навіть при `_cls === 'good'`.
+    let _ttHardCap = null;
+    try {
+      const _eTd = (typeof getEngineScore === 'function') ? getEngineScore(new Date()) : null;
+      const _eTdScore = (_eTd && isFinite(_eTd.eng)) ? Number(_eTd.eng) : null;
+      if (_eTdScore !== null && _eTdScore <= -2) _ttHardCap = _eTdScore;
+    } catch(e){ /* silent */ }
+    const _nowText = _ttHardCap !== null
+                   ? `тільки рутина · день PDF/Engine = ${_ttHardCap}`
+                   : (_cls === 'bad' ? 'уникати — без форсування'
+                     : _cls === 'mid' ? 'стандартний темп'
+                     : 'сприятливий момент');
+    const _restText = _ttHardCap !== null
+                    ? `без нових рішень до кінця дня`
+                    : (_cls === 'bad' ? 'режим без змін до кінця дня'
+                      : _cls === 'mid' ? 'фон стабільний до кінця дня'
+                      : 'сприятливий фон до кінця дня');
+    const _clsForRender = _ttHardCap !== null ? 'bad' : _cls;
     list.innerHTML = _delayWarn + `
-      <div class="dt-row dt-${_cls} dt-now"><span class="dt-time">Зараз</span><span class="dt-label">${_nowText} ◀</span></div>
-      <div class="dt-row dt-${_cls}" style="opacity:.72"><span class="dt-time">До кінця дня</span><span class="dt-label">${_restText}</span></div>
+      <div class="dt-row dt-${_clsForRender} dt-now"><span class="dt-time">Зараз</span><span class="dt-label">${_nowText} ◀</span></div>
+      <div class="dt-row dt-${_clsForRender}" style="opacity:.72"><span class="dt-time">До кінця дня</span><span class="dt-label">${_restText}</span></div>
       <div style="color:var(--faint);font-size:10px;margin-top:4px">Детальний погодинний розклад — у "Локальний ритм" нижче</div>
     `;
     return summary;
   }
+  // v88.8.35-fp11 X: при DELAYED/STALE/SCENARIO — додати "(орієнтовно)" до зелених слотів,
+  // щоб користувач не приймав затриманий live-сигнал як актуальну рекомендацію на дію.
+  let _slotPrefixDelayed = '';
+  try {
+    const _dm2 = (typeof window !== 'undefined' && window.__dataMode)
+               || (typeof resolveDataMode === 'function' ? resolveDataMode() : 'live');
+    if (_dm2 !== 'live') _slotPrefixDelayed = 'орієнтовно: ';
+  } catch(e) { /* silent */ }
   // Normal mode (non-flat day) — render all slots as before
-  list.innerHTML = _delayWarn + visible.map(s =>
-    `<div class="dt-row dt-${s.cls}${s.isNow?' dt-now':''}">`
-    +`<span class="dt-time">${s.time}</span><span class="dt-label">${s.text}${s.isNow?' ◀ зараз':''}</span></div>`
-  ).join('')
+  list.innerHTML = _delayWarn + visible.map(s => {
+    // Префікс "орієнтовно" застосовуємо лише до good/mid слотів — для 'bad' це зайве (вже застереження).
+    const _pfx = (_slotPrefixDelayed && s.cls !== 'bad') ? _slotPrefixDelayed : '';
+    return `<div class="dt-row dt-${s.cls}${s.isNow?' dt-now':''}">`
+    +`<span class="dt-time">${s.time}</span><span class="dt-label">${_pfx}${s.text}${s.isNow?' ◀ зараз':''}</span></div>`;
+  }).join('')
   + (pastCount > 0 ? `<div style="color:var(--faint);font-size:10px;margin-top:4px;font-style:italic">Показано ${visible.length} з ${summary.slots.length} слотів (минуло ${pastCount})</div>` : '');
   return summary;
 }
@@ -11146,22 +11169,30 @@ function _renderHeroTimeWindows() {
 
     let label;
     // v79: human action label
-    // v88.8.35-fp9 Q: PDF/Engine для дня має пріоритет — якщо денний verdict < 0,
-    // не дозволяємо зеленим слотам рекомендувати "ключові рішення / безпечно планувати".
-    // Це уникає конфлікту "Hero каже обережно" vs "timing каже ключові рішення".
+    // v88.8.35-fp9 Q + fp11 W: PDF/Engine для дня має пріоритет — якщо денний verdict ≤ -2 (особливо
+    // несприятливий), softening застосовується до ВСІХ live-слотів, не тільки g >= 0.5.
+    // Це усуває "стандартний темп без форсування" при PDF/Engine = -3 — теж занадто м'яко.
     let _dayEngForGate = null;
     try {
       const _e = (typeof getEngineScore === 'function') ? getEngineScore(new Date()) : null;
       if (_e && isFinite(_e.eng)) _dayEngForGate = Number(_e.eng);
     } catch(e){ _dayEngForGate = null; }
-    const _pdfNeg = (_dayEngForGate !== null && _dayEngForGate < 0);
+    const _pdfNeg = (_dayEngForGate !== null && _dayEngForGate < 0);   // м'який gate (fp9 Q)
+    const _pdfHard = (_dayEngForGate !== null && _dayEngForGate <= -2); // жорсткий cap (fp11 W)
     let _actionLabel = g >= 1.5 ? 'активні дії і ключові рішення'
       : g >= 0.5 ? 'безпечно працювати і планувати'
       : g >= -0.5 ? 'стандартний темп без форсування'
       : g >= -1.5 ? 'обережно: тільки перевірені дії'
       : 'тільки рутина, не приймати рішень';
-    if (_pdfNeg && g >= 0.5) {
-      // Денний прогноз негативний → softened wording для зелених слотів
+    if (_pdfHard) {
+      // PDF/Engine ≤ -2 — день критичний, ніяких позитивних формулювань.
+      _actionLabel = g >= 1.5 ? 'тільки перевірені дії, без нових рішень (день PDF/Engine критичний)'
+        : g >= 0.5 ? 'рутина і відомі задачі (день PDF/Engine критичний)'
+        : g >= -0.5 ? 'мінімум активних дій (день PDF/Engine критичний)'
+        : g >= -1.5 ? 'обережно: тільки перевірені дії (день PDF/Engine критичний)'
+        : 'тільки рутина, не приймати рішень (день PDF/Engine критичний)';
+    } else if (_pdfNeg && g >= 0.5) {
+      // PDF/Engine = -1 → softened wording для зелених слотів (старий fp9 Q)
       _actionLabel = g >= 1.5 ? 'звичайні задачі і планування (день PDF/Engine негативний)'
         : 'перевірені дії, не ключові рішення (день PDF/Engine негативний)';
     }
@@ -13985,20 +14016,49 @@ function renderPersonal() {
     _effectivePhMod = ' (загальний фон уточнюється)';
   }
 
-  // v88.8.35-fp10 T: якщо PDF/Engine для дня негативний (≤-1), а персональний блок
-  // зеленіть → додати явну note що персональна підтримка НЕ скасовує PDF/Engine денний verdict.
-  // Це усуває хибне відчуття "персональний блок каже OK, отже день добрий".
-  let _pdfOverrideNote = '';
+  // v88.8.35-fp11 V: PDF/Engine hard-cap для Personal block.
+  // Якщо денний verdict ≤ -2 (особливо несприятливий), переписуємо effective Work/Dec/Comms
+  // на рутину. Без цього при сприятливому Taara/Dasa бачимо "Активно діяти / Оптимально / ідеально"
+  // при PDF/Engine = -3 — прямий конфлікт із Hero/3-day.
+  // Тригер на PDF/Engine ≤ -2 (не -1), щоб не перетирати помірний день.
+  let _pdfHardCapApplied = false;
+  let _pdfHardCapScore = null;
   try {
     const _eTd = (typeof getEngineScore === 'function') ? getEngineScore(new Date()) : null;
     const _eTdScore = (_eTd && isFinite(_eTd.eng)) ? Number(_eTd.eng) : null;
-    // Тригер: PDF/Engine ≤ -1 AND персональний state виглядає сприятливо (зелений колір)
-    const _personalLooksGreen = (_effectivePhCol === '#2bd47d' || _effectivePhCol === '#63be7b'
-                                || (typeof _effectivePhState === 'string' && _effectivePhState.includes('сприятлив')));
-    if (_eTdScore !== null && _eTdScore <= -1 && _personalLooksGreen) {
-      _pdfOverrideNote = `<div style="margin-top:6px;padding:6px 8px;border-radius:6px;background:rgba(255,170,51,.08);border-left:3px solid #ffaa33;font-size:11px;color:#ffd2a0;line-height:1.4">⚠ Персональна підтримка не скасовує PDF/Engine дня (${_eTdScore >= 0 ? '+' : ''}${_eTdScore}). Особистий цикл — це додатковий шар, не заміна денного verdict-у.</div>`;
+    if (_eTdScore !== null && _eTdScore <= -2) {
+      _pdfHardCapScore = _eTdScore;
+      _pdfHardCapApplied = true;
+      // Жорстко перетираємо рекомендації — особистий шар не може дозволити дію, яку забороняє денний verdict.
+      _effectivePhCol = '#ffb36a';
+      _effectivePhBg = 'rgba(255,107,107,.08)';
+      _effectivePhBrd = 'rgba(255,107,107,.28)';
+      _effectivePhState = 'Персональна підтримка є, але день критичний';
+      _effectivePhMod = ` (PDF/Engine = ${_eTdScore})`;
+      _effectiveWork = 'тільки рутина і відомі задачі';
+      _effectiveDec = 'важливі рішення відкласти';
+      _effectiveComms = 'обмежено, без нових домовленостей';
     }
   } catch(e) { /* silent */ }
+
+  // v88.8.35-fp10 T: якщо PDF/Engine для дня негативний (≤-1), а персональний блок
+  // зеленіть → додати явну note що персональна підтримка НЕ скасовує PDF/Engine денний verdict.
+  // v88.8.35-fp11 V: показуємо note ТІЛЬКИ якщо hard-cap (PDF/Engine ≤ -2) НЕ спрацював,
+  // інакше дублювання (hard-cap уже переписав state і Work/Dec/Comms).
+  let _pdfOverrideNote = '';
+  if (!_pdfHardCapApplied) {
+    try {
+      const _eTd = (typeof getEngineScore === 'function') ? getEngineScore(new Date()) : null;
+      const _eTdScore = (_eTd && isFinite(_eTd.eng)) ? Number(_eTd.eng) : null;
+      // Тригер: PDF/Engine = -1 AND персональний state виглядає сприятливо (зелений колір).
+      // Випадок ≤ -2 уже накритий hard-cap вище.
+      const _personalLooksGreen = (_effectivePhCol === '#2bd47d' || _effectivePhCol === '#63be7b'
+                                  || (typeof _effectivePhState === 'string' && _effectivePhState.includes('сприятлив')));
+      if (_eTdScore !== null && _eTdScore === -1 && _personalLooksGreen) {
+        _pdfOverrideNote = `<div style="margin-top:6px;padding:6px 8px;border-radius:6px;background:rgba(255,170,51,.08);border-left:3px solid #ffaa33;font-size:11px;color:#ffd2a0;line-height:1.4">⚠ Персональна підтримка не скасовує PDF/Engine дня (${_eTdScore >= 0 ? '+' : ''}${_eTdScore}). Особистий цикл — це додатковий шар, не заміна денного verdict-у.</div>`;
+      }
+    } catch(e) { /* silent */ }
+  }
 
   resEl.innerHTML = `${noTimeWarnHtml}${_riskBannerHtml}<div style="padding:8px 10px;border-radius:10px;border:1px solid ${_effectivePhBrd};background:${_effectivePhBg}"><div style="font-size:14px;font-weight:700;line-height:1.3;color:${_effectivePhCol}">${_effectivePhState}${_effectivePhMod}</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 12px;margin-top:6px;font-size:12px;line-height:1.5;color:#b7c7ea"><span style="color:var(--dim)">Робота:</span><span>${_effectiveWork}</span><span style="color:var(--dim)">Рішення:</span><span>${_effectiveDec}</span><span style="color:var(--dim)">Комунікації:</span><span>${_effectiveComms}</span></div>${_pdfOverrideNote}</div><details style="margin-top:6px"><summary class="small muted" style="cursor:pointer;font-size:11px">▶ Показати персональний розклад</summary>${gmodHtml}<table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:6px">
       <tr>
