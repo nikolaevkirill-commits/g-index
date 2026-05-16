@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.35-fp12</title>
+  <title>G-Index — Космофізичний дашборд v88.8.35-fp13</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -10760,13 +10760,17 @@ function _renderHeroCause(g, kp) {
   // v87.6 Крок 2: Cause-chain — top-3 активних фактори як 3 речення "причина → наслідок"
   const chainEl = el('whyCauseChain');
   if (chainEl) {
+    // v88.8.35-fp13 EE: семантика Kp−2.
+    // Kp−2 — це ВКЛАД у композитний G. f.val > 0 ⇒ Kp > 2 (тобто збурений геомагнітний фон).
+    // Раніше pos писалось "фон спокійний" → семантично хибно, бо при Kp = 5.3 ВКЛАД +3.3 — це G1-буря.
+    // Тепер тексти описують реальний фізичний стан, а не знак вкладу:
     const _effects = {
-      'Kp−2': { neg:'фон нестабільний',     pos:'фон спокійний' },
-      'Lᵢ':   { neg:'місячна фаза тисне',   pos:'місяць у ресурсі' },
-      'Mᵢ':   { neg:'затемнення активне',   pos:'затемнень немає' },
-      'eᵢ':   { neg:'астроподії напружені', pos:'астроподії сприяють' },
-      'Pᵢ':   { neg:'панчанга напружена',   pos:'панчанга підтримує' },
-      'Dᵢ':   { neg:'Dst-буря тисне',       pos:'Dst спокійний' }
+      'Kp−2': { neg:'геомагнітний фон спокійний',   pos:'геомагнітний фон активний/збурений' },
+      'Lᵢ':   { neg:'місячна фаза тисне',           pos:'місяць у ресурсі' },
+      'Mᵢ':   { neg:'затемнення активне',           pos:'затемнень немає' },
+      'eᵢ':   { neg:'астроподії напружені',         pos:'астроподії сприяють' },
+      'Pᵢ':   { neg:'панчанга напружена',           pos:'панчанга підтримує' },
+      'Dᵢ':   { neg:'Dst-буря тисне',               pos:'Dst спокійний' }
     };
     const _top3 = activeFact.slice(0, 3);
     if (_top3.length > 0) {
@@ -10774,7 +10778,13 @@ function _renderHeroCause(g, kp) {
         const sign = f.val > 0 ? '+' : '';
         const dir  = f.val > 0 ? '↑' : '↓';
         const eff  = _effects[f.name] || { neg:'додає ризик', pos:'сприяє' };
-        const txt  = f.val > 0 ? eff.pos : eff.neg;
+        // Для Kp−2 інверсна семантика: f.val > 0 (вище за 2) = негативний геомагнітний стан.
+        // Хоч у формулі це додатний вклад у G (бо ваш G = Kp − 2 + ΣAᵢ — більше Kp ⇒ більше G).
+        // Класс CSS залишаємо за знаком вкладу (для color), але текст — фізично коректний.
+        const isKp = f.name === 'Kp−2';
+        const txt  = isKp
+                   ? (f.val > 0 ? eff.pos : eff.neg)  // словник Kp−2 уже інверсно сформульовано: pos = "активний/збурений"
+                   : (f.val > 0 ? eff.pos : eff.neg);
         const cls  = f.val > 0 ? 'is-pos' : 'is-neg';
         return `<div class="why-cause-row ${cls}">`
              + `<span class="wcr-cause">${f.name} ${dir} ${sign}${f.val.toFixed(1)}</span>`
@@ -11407,11 +11417,28 @@ function classifyVerdict7Class(g){
 // v85b-F6: single-source decision resolver (wraps classifyStateByG + GLOBAL_STATES).
 // Гарантує, що hero / personal / timing читають рішення з одного джерела.
 // v85b-F10.3 (fix): title читав неіснуюче поле st.verdict → fallback до st.headline (реально є в GLOBAL_STATES)
+// v88.8.35-fp13 DD: PDF/Engine ≤ -2 noteText override. classifyStateByG може повернути 'neutral' при
+// G_now ~0 навіть на критичному дні (PDF/Engine = -3). Тоді GLOBAL_STATES.neutral.impact видає
+// "Фон загалом рівний... важливі рішення можна приймати без поспіху" — конфлікт із Hero rationale.
+// Override ТІЛЬКИ noteText (impact-рядок), щоб не ламати stKey-залежну логіку (CSS, hero color).
 function resolveDecisionByG(g, kp) {
   // v88.7+: optional kp triggers storm-aware gating in classifyStateByG.
   // Backward-compatible: existing callsites без kp працюють як раніше.
   const stKey = classifyStateByG(g, kp);
   const st = GLOBAL_STATES[stKey] || GLOBAL_STATES.neutral;
+  // PDF/Engine ≤ -2 noteText override (fp13 DD)
+  let _noteText = st.impact || '';
+  if (stKey === 'favorable' || stKey === 'good' || stKey === 'neutral') {
+    try {
+      const _eTd = (typeof getEngineScore === 'function') ? getEngineScore(new Date()) : null;
+      const _eTdS = (_eTd && isFinite(_eTd.eng)) ? Number(_eTd.eng) : null;
+      if (_eTdS !== null && _eTdS <= -2) {
+        _noteText = `Live-фон зараз ${stKey === 'neutral' ? 'рівний' : 'позитивний'}, але PDF/Engine для дня = ${_eTdS} (критичний). Важливі рішення відкласти; live-вікна — тільки для рутини й перевірених дій.`;
+      } else if (_eTdS !== null && _eTdS === -1 && (stKey === 'favorable' || stKey === 'good')) {
+        _noteText = `Live-фон зараз позитивний, але PDF/Engine для дня = -1 (помірно несприятливий). Для важливих рішень — додаткова обережність.`;
+      }
+    } catch(e) { /* silent */ }
+  }
   return {
     mode: stKey === 'favorable' || stKey === 'good' ? 'action'
         : stKey === 'tense' || stKey === 'unstable' ? 'risk'
@@ -11420,7 +11447,7 @@ function resolveDecisionByG(g, kp) {
     title: st.headline || st.verdict || st.label || '',
     doText: st.doText || '',
     avoidText: st.avoidText || '',
-    noteText: st.impact || '',
+    noteText: _noteText,
     cmd: st.cmd || ''
   };
 }
@@ -12205,6 +12232,17 @@ function renderIntraDayAlert(){
 
   _alert.style.borderColor = _col + '80';
   _alert.style.background = `linear-gradient(180deg,${_col}1a,${_col}06)`;
+  // v88.8.35-fp13 CC: якщо forecast застарілий (DELAYED/STALE/SCENARIO) — додати застереження.
+  // Banner будує прогноз з last3D.days[0].kp8; якщо ці дані не свіжі, видимий "Kp впаде 5.3→3.3"
+  // може не відповідати поточному NOAA feed.
+  let _staleNote = '';
+  try {
+    const _dm = (typeof window !== 'undefined' && window.__dataMode)
+              || (typeof resolveDataMode === 'function' ? resolveDataMode() : 'live');
+    if (_dm !== 'live') {
+      _staleNote = `<div style="margin-top:4px;font-size:10px;color:#ffd2a0;font-style:italic">⚠ Прогноз будується із ${_dm === 'scenario' ? 'сценарного' : 'затриманого'} NOAA 3-day feed — звірте з swpc.noaa.gov перед рішенням.</div>`;
+    }
+  } catch(e) { /* silent */ }
   _alert.innerHTML = `
     <div style="display:flex;align-items:flex-start;gap:10px">
       <span style="font-size:20px;line-height:1.1;flex:0 0 auto">${_msg.icon}</span>
@@ -12214,6 +12252,7 @@ function renderIntraDayAlert(){
         <div style="margin-top:6px;padding:6px 9px;border-radius:6px;background:rgba(11,18,32,.5);border-left:2px solid ${_col};font-size:11px;color:var(--text2);line-height:1.5">
           <strong style="color:${_col}">Що робити:</strong> ${_msg.action}
         </div>
+        ${_staleNote}
       </div>
     </div>`;
   _alert.style.display = 'block';
