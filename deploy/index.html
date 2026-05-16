@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.35-fp13</title>
+  <title>G-Index — Космофізичний дашборд v88.8.35-fp14</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -8957,7 +8957,19 @@ function _renderPanchaPakshi(refDateUTC){
   const activeBird = BIRDS_META[activeId];
   const quality = panch.nakshatra.panchaPakshi.quality;
   const nakName = panch.nakshatra.name;
-  elActive.innerHTML = `<span style="color:${activeBird.color};font-weight:700">${activeBird.emoji} ${activeBird.name}</span> · через <em style="color:var(--text2)">${nakName}</em><br><span style="color:var(--dim);font-size:10px;font-style:italic">${quality}</span>`;
+  // v88.8.35-fp14 CC: на критичному дні (PDF/Engine ≤ −2) додаємо disclaimer,
+  // що показані якості — це канон птаха-носія nakshatra, не оперативна порада.
+  // Без цього на скрін "Сила, рішучість, лідерство" на дні з verdict=−3 виглядає
+  // як порада діяти всупереч hard-cap.
+  let _ppDisclaimer = '';
+  try {
+    const _eToday = (typeof getEngineScore === 'function') ? getEngineScore(refDateUTC || new Date()) : null;
+    const _eVal = (_eToday && isFinite(_eToday.eng)) ? Number(_eToday.eng) : null;
+    if (_eVal !== null && _eVal <= -2) {
+      _ppDisclaimer = `<div style="margin-top:6px;padding:4px 6px;border-radius:4px;background:rgba(255,107,107,.08);border:1px solid rgba(255,107,107,.25);font-size:9px;color:#ffaa99;font-style:italic;text-align:center;line-height:1.35">⚠ Це канонічні якості птаха-носія nakshatra, не порада дня. День PDF/Engine = ${_eVal} — рішення дивись у верхній картці.</div>`;
+    }
+  } catch(e) { /* silent */ }
+  elActive.innerHTML = `<span style="color:${activeBird.color};font-weight:700">${activeBird.emoji} ${activeBird.name}</span> · через <em style="color:var(--text2)">${nakName}</em><br><span style="color:var(--dim);font-size:10px;font-style:italic">${quality}</span>${_ppDisclaimer}`;
 }
 
 function _renderSolarRhythm(refDateUTC){
@@ -10368,15 +10380,33 @@ function syncHero(){
         } catch(e){ _tomEngScore = null; }
         const _tg = window.__tomorrowG;
         if (isFinite(_tg)) {
-          const _tDiff = _tg - gVal;
+          // v88.8.35-fp14 AA: КРИТИЧНА правка шкал.
+          // Раніше _tDiff = _tg - gVal міксував G_day_raw_завтра (доба) з G_now (live 3-год слот).
+          // Це давало "покращиться на 5.7", де реальний intra-day swing G_now → G_day був ~1-2.
+          // Беремо G_day_raw_сьогодні (з _27dComputed або engine recalc) як baseline.
+          // Якщо немає — fallback на gVal з помітним застереженням про мікс шкал.
+          let _todayGdayRaw = NaN;
+          try {
+            if (typeof _27dComputed !== 'undefined' && Array.isArray(_27dComputed)) {
+              const _todayStrDC = fmtDate(new Date());
+              const _todayEntry = _27dComputed.find(d => d && d.ds === _todayStrDC);
+              if (_todayEntry && isFinite(_todayEntry.G)) _todayGdayRaw = _todayEntry.G;
+            }
+          } catch(e) { /* silent */ }
+          const _hasGdayBaseline = isFinite(_todayGdayRaw);
+          const _baseline = _hasGdayBaseline ? _todayGdayRaw : gVal;
+          const _tDiff = _tg - _baseline;
           const _engStr = (_tomEngScore !== null) ? ` · PDF/Engine: <span class="dc-metric ${_tomEngScore >= 0 ? 'is-pos' : 'is-neg'}">${_tomEngScore >= 0 ? '+' : ''}${_tomEngScore}</span>` : '';
+          const _scaleHint = _hasGdayBaseline
+            ? ` <span class="hint" tabindex="0" style="cursor:help;color:var(--faint);font-size:9px;border-bottom:1px dotted var(--faint)">ⓘ<span class="hint-pop" style="white-space:pre;font-size:10px">G_day_raw_завтра (${_tg>=0?'+':''}${_tg.toFixed(1)}) − G_day_raw_сьогодні (${_todayGdayRaw>=0?'+':''}${_todayGdayRaw.toFixed(1)}) = Δ ${_tDiff>=0?'+':''}${_tDiff.toFixed(1)}.\nОбидві величини у одній шкалі G_day_raw (доба).</span></span>`
+            : ` <span class="hint" tabindex="0" style="cursor:help;color:#ffaa33;font-size:9px;border-bottom:1px dotted #ffaa33">⚠<span class="hint-pop" style="white-space:pre;font-size:10px">G_day_raw_сьогодні недоступний — використано G_now (live слот) як приблизний baseline. Реальна різниця доба-до-доби може відрізнятись.</span></span>`;
           if (Math.abs(_tDiff) >= 0.5) {
             const _tDir = _tDiff > 0 ? 'покращиться' : 'просяде';
             const _tCls = _tDiff > 0 ? 'is-pos' : 'is-neg';
             const _tAbs = Math.abs(_tDiff).toFixed(1);
-            _tomorrowLine = `<div class="dc-subline">Завтра G_day raw: <span class="dc-metric ${_tCls}">${_tg >= 0 ? '+' : ''}${_tg.toFixed(1)}</span> (${_tDir} на ${_tAbs})${_engStr}.</div>`;
+            _tomorrowLine = `<div class="dc-subline">Завтра G_day raw: <span class="dc-metric ${_tCls}">${_tg >= 0 ? '+' : ''}${_tg.toFixed(1)}</span> (${_tDir} на ${_tAbs}${_scaleHint})${_engStr}.</div>`;
           } else {
-            _tomorrowLine = `<div class="dc-subline">Завтра G_day raw: <span class="dc-metric">${_tg >= 0 ? '+' : ''}${_tg.toFixed(1)}</span> (без суттєвих змін)${_engStr}.</div>`;
+            _tomorrowLine = `<div class="dc-subline">Завтра G_day raw: <span class="dc-metric">${_tg >= 0 ? '+' : ''}${_tg.toFixed(1)}</span> (без суттєвих змін${_scaleHint})${_engStr}.</div>`;
           }
         }
         // v88.8.35-fp5: якщо завтра PDF/Engine ≤ −2 і блок зараз "improving" — downgrade до stable
@@ -14584,17 +14614,42 @@ function draw27Chart(){
     ctx.beginPath();
     ctx.arc(x, y, d.ds===todayStr?4:isBest||isWorst?4:2.5, 0, Math.PI*2);
     ctx.fill();
-    // v88.8.18 ★ EXPERT OVERRIDE marker: золоте кільце навколо точки + ★ зверху
+    // v88.8.18 ★ EXPERT OVERRIDE marker (v88.8.35-fp14 BB FIX): зірка PDF/Engine
+    // повинна стояти на власній y-координаті expert_eng (бо легенда обіцяє
+    // "★ Зірка: PDF/Engine score (експертна оцінка дня)").
+    // До fp14: малювалась `y-10` від raw точки → візуально expert=−3 збігався з raw=−1.4
+    // і користувач не міг прочитати реальний експертний verdict з графіка.
     if (d._hasOverride) {
+      // Золоте кільце залишаємо на raw точці — це маркер "тут є override"
       ctx.strokeStyle = '#ffd166';
       ctx.lineWidth = 1.5;
       ctx.beginPath();
       ctx.arc(x, y, 5.5, 0, Math.PI*2);
       ctx.stroke();
+      // Зірка — на координаті expert_eng (clamped до видимого діапазону графіка)
+      let _starY = y - 10; // fallback на старе positionування
+      if (Number.isFinite(d._expertEng)) {
+        const _expClamped = Math.max(gMin, Math.min(gMax, d._expertEng));
+        _starY = yOf(_expClamped);
+        // Якщо raw і expert майже збігаються — зсунемо зірку на 10 пікс вгору, щоб не злилась з точкою
+        if (Math.abs(_starY - y) < 6) _starY = y - 10;
+      }
       ctx.fillStyle = '#ffd166';
-      ctx.font = 'bold 10px system-ui';
+      ctx.font = 'bold 11px system-ui';
       ctx.textAlign = 'center';
-      ctx.fillText('★', x, y-10);
+      ctx.fillText('★', x, _starY + 4);
+      // Тонка пунктирна вертикальна лінія від raw до expert (тільки якщо різниця ≥1 пункт)
+      if (Number.isFinite(d._expertEng) && Math.abs(d._expertEng - _gForChart) >= 1) {
+        ctx.save();
+        ctx.strokeStyle = 'rgba(255,209,102,0.45)';
+        ctx.setLineDash([2,3]);
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x, _starY);
+        ctx.stroke();
+        ctx.restore();
+      }
     }
     // v75: best/worst labels
     if(isBest){
