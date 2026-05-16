@@ -1288,7 +1288,7 @@ body.simple-mode .col-hide-mobile {
           <span id="dataTimestamp" style="font-size:10px;color:var(--faint);margin-left:4px"></span>
         </div>
         <span class="pill" id="stamp" style="font-size:11px">—</span>
-        <span id="freshnessBadge" tabindex="0" title="Свіжість даних NOAA Kp (за віком останнього fetch + content-age):&#10;• LIVE — менше 5 хв (зелений)&#10;• DELAYED — 5–30 хв АБО контент >1г (жовтий, нормальна затримка)&#10;• STALE — 30–60 хв АБО контент >1 дн (помаранчевий)&#10;• OLD — понад 60 хв АБО контент >1 тиж (червоний, втрачено зв'язок)&#10;• CACHED — офлайн режим / SW проксі-кеш&#10;&#10;NOAA Kp endpoints оновлюються кожні ~5–10 хв.&#10;PDF/Engine і frozen engine_scores працюють штатно — це обмеження лише для live/raw rail-ів." style="font-size:10px;padding:2px 6px;border-radius:3px;margin-left:4px;font-weight:600;letter-spacing:0.3px;background:#0a2a15;color:#63be7b;cursor:help">● LIVE</span>
+        <span id="freshnessBadge" tabindex="0" title="Свіжість даних NOAA Kp (за віком останнього fetch + content-age):&#10;• LIVE — менше 5 хв (зелений)&#10;• ESTIMATED — контент 1–12год, forecast реальний (синювато-сірий, надійно)&#10;• DELAYED — 5–30 хв АБО контент &gt;12год (жовтий, затримка)&#10;• STALE — 30–60 хв АБО контент &gt;1 дн (помаранчевий)&#10;• OLD — понад 60 хв АБО контент &gt;1 тиж (червоний, втрачено зв'язок)&#10;• SCENARIO — NOAA forecast synthetic (плато Kp)&#10;&#10;NOAA Kp endpoints оновлюються кожні ~5–10 хв.&#10;PDF/Engine і frozen engine_scores працюють штатно незалежно від стану Kp." style="font-size:10px;padding:2px 6px;border-radius:3px;margin-left:4px;font-weight:600;letter-spacing:0.3px;background:#0a2a15;color:#63be7b;cursor:help">● LIVE</span>
       </div>
     </div>
   </header>
@@ -10468,7 +10468,7 @@ function syncHero(){
   // Freshness — v80: from __uiState, fallback to DOM
   // v87.15 fix A4: читати всі варіанти включно з cached/delayed — раніше hero показував LIVE коли badge CACHED
   // v87.91 fix: тепер пріоритет — resolveDataMode() (live | partial | scenario | offline).
-  // Старий _frState залишено як fallback для tooltips з причинами зниження довіри.
+  // v88.8.35-fp16 II: використовуємо resolveDataModeExtended() щоб відрізнити ESTIMATED від PARTIAL.
   const _frState = _ui.freshness || (function(){
     const t=_strip(el('freshnessBadge')?.textContent||'LIVE').toLowerCase();
     if (t.includes('offline') || t.includes('old')) return 'old';
@@ -10476,64 +10476,72 @@ function syncHero(){
     if (t.includes('cached') || t.includes('delayed')) return 'cached';
     return 'live';
   })();
-  const _dataMode = (typeof resolveDataMode === 'function') ? resolveDataMode() : 'live';
+  const _dataMode = (typeof resolveDataModeExtended === 'function')
+    ? resolveDataModeExtended()
+    : (typeof resolveDataMode === 'function') ? resolveDataMode() : 'live';
   window.__dataMode = _dataMode; // v87.91: глобально доступно для інших рендерів (heroTomorrow тощо)
   const hf=el('heroFreshness');
   if(hf){
     // Маппинг dataMode → display label
     // v88.8.35-fp9 O: 'partial' рендериться як DELAYED для словесної консистентності з top freshnessBadge
-    // (раніше Hero казав PARTIAL, top — DELAYED, користувач плутався).
+    // v88.8.35-fp16 II: 'estimated' → ESTIMATED (новий стан: cached ≤12h, forecast real)
     const _modeLabel = {
-      live: 'LIVE',
-      partial: 'DELAYED',
-      scenario: 'SCENARIO',
-      offline: 'OFFLINE'
+      live:      'LIVE',
+      estimated: 'ESTIMATED',
+      partial:   'DELAYED',
+      scenario:  'SCENARIO',
+      offline:   'OFFLINE'
     }[_dataMode] || 'LIVE';
     // v88.8.35-fp6 F: додати hint-pop popup для миттєвої видимості пояснення.
     // Тримаємо native title як accessibility fallback.
     const _modeTip = ({
-      live: 'Дані live: Kp обсервації + NOAA 3-day forecast доступні.',
-      partial: 'Затримані live-дані; PDF/Engine день актуальний.\n\nДеталі: Kp обсервації live, але forecast cached/delayed. Тренди можуть бути затримані.\nPDF/Engine і frozen engine_scores працюють штатно — це обмеження стосується лише live/raw rail-ів.',
-      scenario: '⚠ Без NOAA forecast; PDF/Engine день актуальний.\n\nДеталі: Завтра/3-day показано як плато на базі поточного Kp — це сценарій, не справжній прогноз.\nPDF/Engine і frozen engine_scores працюють штатно — рішення дня бери звідти.',
-      offline: '⚠ Дані з кешу; PDF/Engine день актуальний.\n\nДеталі: навіть Kp обсервації недоступні. Все, що показано — з кешу.\nPDF/Engine і frozen engine_scores працюють штатно — рішення дня бери звідти.'
+      live:      'Дані live: Kp обсервації + NOAA 3-day forecast доступні.',
+      estimated: 'Дані незначно затримані (≤12год), але forecast реальний.\n\nKp обсервації cached, NOAA 3-day forecast актуальний. Тренди і PDF/Engine — надійні.\nПеред критичним рішенням можна звірити з swpc.noaa.gov.',
+      partial:   'Затримані live-дані; PDF/Engine день актуальний.\n\nДеталі: Kp обсервації live, але forecast cached/delayed. Тренди можуть бути затримані.\nPDF/Engine і frozen engine_scores працюють штатно — це обмеження стосується лише live/raw rail-ів.',
+      scenario:  '⚠ Без NOAA forecast; PDF/Engine день актуальний.\n\nДеталі: Завтра/3-day показано як плато на базі поточного Kp — це сценарій, не справжній прогноз.\nPDF/Engine і frozen engine_scores працюють штатно — рішення дня бери звідти.',
+      offline:   '⚠ Дані з кешу; PDF/Engine день актуальний.\n\nДеталі: навіть Kp обсервації недоступні. Все, що показано — з кешу.\nPDF/Engine і frozen engine_scores працюють штатно — рішення дня бери звідти.'
     })[_dataMode] || '';
     // Інжектимо label + hint-pop, не перетираємо весь innerHTML інших слотів
     hf.innerHTML = _modeLabel + (_modeTip ? `<span class="hint-pop" style="white-space:pre-line;font-size:12px;text-align:left;max-width:280px">${_modeTip}</span>` : '');
     if (!hf.classList.contains('hint')) hf.classList.add('hint');
-    hf.classList.remove('live','cached','stale');
-    // Кольорова класа: live=зелений, partial=жовтий (cached), scenario/offline=червоний (stale)
-    if (_dataMode === 'live') hf.classList.add('live');
-    else if (_dataMode === 'partial') hf.classList.add('cached');
+    hf.classList.remove('live','cached','stale','estimated');
+    // Кольорова класа: live=зелений, estimated=синювато-сірий, partial=жовтий, scenario/offline=червоний
+    if (_dataMode === 'live')      hf.classList.add('live');
+    else if (_dataMode === 'estimated') { hf.style.color = '#a8d5e0'; hf.style.background = 'rgba(168,213,224,.12)'; }
+    else if (_dataMode === 'partial')   hf.classList.add('cached');
     else hf.classList.add('stale');
     // Native title як accessibility fallback (screen readers + tab focus)
     hf.title = _modeTip;
   }
   // v88.8.35-fp8 L: синхронізація heroRingLabel з _dataMode.
-  // Раніше (fp7 G) label завжди писав "G_now · live", навіть коли heroFreshness = DELAYED/PARTIAL.
-  // Це створювало конфлікт довіри. Тепер слово після крапки відповідає реальному стану джерела.
+  // v88.8.35-fp16 II: + підтримка 'estimated'
   try {
     const _hrl = document.getElementById('heroRingLabel');
     if (_hrl) {
       const _ringMode = ({
-        live:     'live',
-        partial:  'delayed',
-        scenario: 'scenario',
-        offline:  'offline'
+        live:      'live',
+        estimated: 'estimated',
+        partial:   'delayed',
+        scenario:  'scenario',
+        offline:   'offline'
       })[_dataMode] || 'live';
       const _ringTip = ({
-        live:     'Hero ring показує live-фон зараз. Verdict дня — у PDF/Engine pill справа.',
-        partial:  'Hero ring використовує затримані live-дані (DELAYED/PARTIAL). Фон орієнтовний — перед діями перевір PDF/Engine.',
-        scenario: 'NOAA forecast недоступний; ring показує сценарій на базі поточного Kp, не реальний live.',
-        offline:  'Дані з кешу — ring не оновлюється з NOAA. Не покладайся на live-фон для рішень.'
+        live:      'Hero ring показує live-фон зараз. Verdict дня — у PDF/Engine pill справа.',
+        estimated: 'Дані незначно затримані (≤12год), forecast актуальний. Ring орієнтовний, PDF/Engine — пріоритет.',
+        partial:   'Hero ring використовує затримані live-дані (DELAYED/PARTIAL). Фон орієнтовний — перед діями перевір PDF/Engine.',
+        scenario:  'NOAA forecast недоступний; ring показує сценарій на базі поточного Kp, не реальний live.',
+        offline:   'Дані з кешу — ring не оновлюється з NOAA. Не покладайся на live-фон для рішень.'
       })[_dataMode] || '';
       _hrl.textContent = 'G_now · ' + _ringMode;
       _hrl.title = _ringTip;
-      // Кольоровий контраст: live=сірий dim (default), partial=amber, scenario/offline=red
-      _hrl.style.color = (_ringMode === 'live') ? 'var(--dim)'
-                       : (_ringMode === 'delayed') ? '#ffaa33'
+      // Кольоровий контраст
+      _hrl.style.color = (_ringMode === 'live')      ? 'var(--dim)'
+                       : (_ringMode === 'estimated') ? '#a8d5e0'
+                       : (_ringMode === 'delayed')   ? '#ffaa33'
                        : '#ff8888';
-      _hrl.style.borderColor = (_ringMode === 'live') ? 'rgba(155,177,220,.18)'
-                             : (_ringMode === 'delayed') ? 'rgba(255,170,51,.32)'
+      _hrl.style.borderColor = (_ringMode === 'live')      ? 'rgba(155,177,220,.18)'
+                             : (_ringMode === 'estimated') ? 'rgba(168,213,224,.28)'
+                             : (_ringMode === 'delayed')   ? 'rgba(255,170,51,.32)'
                              : 'rgba(255,136,136,.32)';
     }
   } catch(e) { /* silent */ }
