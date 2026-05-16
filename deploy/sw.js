@@ -1,5 +1,5 @@
-// v88.8.35-fp14: AA Δ-завтра шкали (G_day_raw baseline), BB зірка PDF/Engine на y(expert_eng), CC Pancha Pakshi disclaimer.
-// G-Index Service Worker v88.8.35-fp14 (UI consistency)
+// v88.8.35-fp15: GG ESTIMATED стан (cached ≤12h + real forecast), HH Largest Kp (правда vs Ap→Kp).
+// G-Index Service Worker v88.8.35-fp15
 // v88.8.19 changes — incremental release після v88.8.18 з реальним bug fix:
 //   ENGINE v18.7 → v18.8: P2 раніше шукав 'Подорожі' word — missed 93 dates
 //     з '✈' emoji-only. P3 раніше тільки Shukla Dashami (10) — missed Krishna
@@ -601,8 +601,8 @@
 //   3. backtest.html додано до SHELL_FILES.
 //   4. cache.put awaited перед SW_FRESH_DATA notify (race fix).
 
-const SHELL_CACHE = 'g-index-shell-v88-8-35-fp14';
-const DATA_CACHE = 'g-index-data-v88-8-35-fp14';
+const SHELL_CACHE = 'g-index-shell-v88-8-35-fp15';
+const DATA_CACHE = 'g-index-data-v88-8-35-fp15';
 
 const SHELL_FILES = [
   './',

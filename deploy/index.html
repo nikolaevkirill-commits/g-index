@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.35-fp14</title>
+  <title>G-Index — Космофізичний дашборд v88.8.35-fp15</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -2080,7 +2080,7 @@ body.simple-mode .col-hide-mobile {
     <section class="card" id="threeCard">
       <div class="flex">
         <h2 style="margin:0">Прогноз на 3 дні</h2>
-        <div class="pill right">3-day-geomag-forecast.txt + ΣAᵢ</div>
+        <div class="pill right" title="Пріоритет джерел verdict дня:&#10;1) PDF/Engine Day_score (експертний override з PDF або engine v18.8) — якщо є.&#10;2) NOAA 3-day Kp forecast + ΣAᵢ (raw fallback) — якщо PDF/Engine відсутній.&#10;Окремий бейдж 'PDF/Engine: ±N' показує справжнє джерело для кожного дня.">PDF/Engine (з fallback на NOAA 3-day + ΣAᵢ)</div>
         <span class="hint" tabindex="0" style="cursor:help;font-size:11px;color:var(--dim);border-bottom:1px dotted #2a3b61;margin-left:8px">? легенда G<span class="hint-pop" style="white-space:pre;font-size:12px;text-align:left">Категорії G = Kp − 2 + ΣAᵢ:
 Зсув «−2» → Kp=2 (спокійне поле) = G≈0
 
@@ -2108,14 +2108,21 @@ Kp: 3-год індекс геомагнітної активності (0–9)
     <div class="swipe-hint" style="display:none" id="swipeHint27">Прокрутіть таблицю</div>
     <section class="card" id="twentysevenCard">
         <div class="flex" style="flex-wrap:wrap;gap:8px">
-          <h2 style="margin:0">27-денний G_day raw (Ap → Kp → G_day)</h2>
-          <span class="hint" tabindex="0" style="cursor:help;font-size:11px;color:var(--dim);border-bottom:1px dotted #2a3b61">? що це<span class="hint-pop" style="white-space:pre;font-size:12px;text-align:left;max-width:380px">⚠ Це НЕ офіційний 27-day Kp forecast.
+          <h2 style="margin:0">27-денний G_day raw (Largest Kp → G_day)</h2>
+          <span class="hint" tabindex="0" style="cursor:help;font-size:11px;color:var(--dim);border-bottom:1px dotted #2a3b61">? що це<span class="hint-pop" style="white-space:pre;font-size:12px;text-align:left;max-width:380px">Це НЕ G_now і НЕ PDF/Engine — це окремий індекс raw-фону доби.
 
-NOAA публікує лише 27-day Ap outlook (інтегрована геомагнітна активність за добу). Тут Ap → Kp перерахований через табличну апроксимацію (VLOOKUP-стиль).
+Основний шлях (NOAA 27-day-outlook.txt):
+• NOAA публікує таблицю на 27 днів: F10.7 flux, Ap, Largest Kp.
+• Беремо Largest Kp НАПРЯМУ як kpMax доби.
+• G_day = Largest Kp − 2 + ΣAᵢ(noon UTC).
+• Жодного Ap→Kp перетворення тут не виконується.
 
-G_day тут = денний raw-фон: Kp_day(max/approx) − 2 + ΣAᵢ(noon UTC). Це окремий індекс: НЕ G_now у Hero і НЕ PDF/Engine Day_score.
+Fallback (NOAA 45-day-forecast.json):
+• Якщо 27-day-outlook.txt недоступний — переходимо на 45-day.
+• 45-day дає тільки Ap, без Kp → робимо Ap→Kp табличну апроксимацію.
+• Точність нижча — позначається у статусі джерела.
 
-Для поточного рішення дивись Hero/Коли діяти. Для точного 3-год Kp дивись «Прогноз на 3 дні». Цей блок — контекст raw-фону. Якщо є PDF/Engine, він показується ★ окремо і не входить у G_day.</span></span>
+Для поточного рішення дивись Hero/Коли діяти. Для точного 3-год Kp — «Прогноз на 3 дні». Цей блок — контекст raw-фону на майбутнє. PDF/Engine ★ показується окремо як overlay.</span></span>
           <span class="hint" tabindex="0" style="cursor:help;font-size:11px;color:var(--dim);border-bottom:1px dotted #2a3b61">? легенда G<span class="hint-pop" style="white-space:pre;font-size:12px;text-align:left">Категорії G = Kp − 2 + ΣAᵢ:
 Зсув «−2» → Kp=2 (спокійне поле) = G≈0
 
@@ -2141,7 +2148,7 @@ G_day тут = денний raw-фон: Kp_day(max/approx) − 2 + ΣAᵢ(noon U
             <button id="btnIcs" style="font-size:12px;padding:6px 10px" title="Експорт прогнозу у календарний файл (.ics): імпортуйте у Google/Apple/Outlook для нагадувань">⬇ .ics</button>
           </div>
         </div>
-        <div class="rail-legend-27 small" style="margin:6px 0 2px;color:var(--dim);font-size:11px;line-height:1.45">● Лінія: <strong>G_day raw</strong> (Ap→Kp, без експерта) · ★ Зірка: <strong>PDF/Engine score</strong> (експертна оцінка дня)</div>
+        <div class="rail-legend-27 small" style="margin:6px 0 2px;color:var(--dim);font-size:11px;line-height:1.45">● Лінія: <strong>G_day raw</strong> (Largest Kp, без експерта) · ★ Зірка: <strong>PDF/Engine score</strong> (експертна оцінка дня)</div>
         <div id="twentysevenError" class="err small"></div>
         <!-- v87.19 U4: Best/worst days of last 30 days — retention hook -->
         <div id="bestWorstDays" class="best-worst-block" style="display:none"></div>
@@ -2319,7 +2326,7 @@ G_day тут = денний raw-фон: Kp_day(max/approx) − 2 + ΣAᵢ(noon U
         27‑добовий продукт (27-Day Outlook) містить прогноз добового Ap, Kp max і F10.7 на ~1 місяць, що відображає обертальний цикл Сонця (~27 діб) і пов'язані магнітні структури.
         Відмінності між секціями дашборду природні: Kp відображає пікові 3‑годинні збурення, Ap — усереднений добовий фон.</p>
 
-        <p>Для горизонту 27 днів у моделі використовується <em>внутрішня дискретна апроксимація</em> Ap→Kp за табличними порогами NOAA (VLOOKUP‑стиль, найближчий нижчий поріг). Це <strong>не офіційний зворотний стандарт NOAA</strong>, а робоче припущення моделі; отримані G‑значення слід інтерпретувати як якісний індикатор тренду, а не точний 3‑годинний прогноз.</p>
+        <p>Для горизонту 27 днів модель бере <strong>Largest Kp напряму</strong> з NOAA 27-Day Outlook (6-те поле в `27-day-outlook.txt`) — без жодних перетворень. У fallback-режимі (NOAA 27-day недоступний → переходимо на 45-day-forecast.json) застосовується <em>внутрішня дискретна апроксимація</em> Ap→Kp за табличними порогами NOAA (VLOOKUP-стиль, найближчий нижчий поріг). Це <strong>не офіційний зворотний стандарт NOAA</strong>, а робоче припущення моделі; G-значення з fallback-режиму слід інтерпретувати як якісний індикатор тренду, а не точний 3-годинний прогноз.</p>
 
         <p style="font-weight:600;color:#cfe0ff;margin-bottom:4px">Склад ΣAᵢ</p>
         <p><code style="color:#37a7ff">ΣAᵢ = Lᵢ + Mᵢ + eᵢ + Pᵢ + Dᵢ + Snᵢ</code></p>
@@ -5360,6 +5367,28 @@ function resolveDataMode(){
   if (_kpFresh === 'stale' || _kpFresh === 'cached') return 'partial';
   return 'live';
 }
+
+// v88.8.35-fp15 GG: розширена версія resolveDataMode з проміжним станом ESTIMATED.
+// Контекст: коли Kp застарілий 1-12h АЛЕ last3D forecast реальний (не synthetic),
+// дані ще достатньо точні — це НЕ повноцінний DELAYED/PARTIAL.
+// Старий resolveDataMode залишається без змін для backward-сумісності всіх existing call sites.
+// Нові UI рендери (freshness badge, alert, banner) можуть використовувати extended якщо їм треба нюанс.
+// Повертає: 'live' | 'estimated' | 'partial' | 'scenario' | 'offline'.
+function resolveDataModeExtended(){
+  const _base = resolveDataMode();
+  if (_base === 'live' || _base === 'offline' || _base === 'scenario') return _base;
+  // _base === 'partial' — розщеплюємо на 'estimated' vs 'partial':
+  // - 'estimated' = forecast real (last3D not synthetic) AND content ≤ 12h
+  // - 'partial'   = всі інші випадки stale/cached
+  try {
+    const _fcastSynth = !!(typeof last3D !== 'undefined' && last3D && last3D._synthetic);
+    const _src = window._kpSourceFreshness;
+    const _ageH = (_src && isFinite(_src.ageHours)) ? _src.ageHours : null;
+    if (!_fcastSynth && _ageH !== null && _ageH <= 12) return 'estimated';
+  } catch(e) { /* silent */ }
+  return 'partial';
+}
+window.resolveDataModeExtended = resolveDataModeExtended;
 
 // ─── C-SCORE (Confidence Index) v63 ───────────────────────────────────────
 // Повертає { conf: 0..1, grade: 'high'|'med'|'low', drivers: [...], bar: html }
@@ -11101,9 +11130,20 @@ function _renderWhyTrend(){
     } else {
       svgHtml += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${d.isPast ? 3.5 : 4}" fill="${col}" opacity="${d.isPast ? 0.75 : 1}">${_titleAttr}</circle>`;
     }
-    // v88.8.18 ★ FIX + fp12 BB: marker ★ над точкою з expert override — tooltip розводить дві шкали.
+    // v88.8.18 ★ FIX + fp12 BB + fp14 EE: marker ★ на y(expert_eng), а не приклеєний над точкою.
+    // До fp14 EE: зірка стояла на y-9 від raw — користувач не міг прочитати реальний expert_eng з графіка.
+    // Тепер зірка на y(expert_eng) clamped до gMin/gMax. Якщо raw і expert близько — зсуваємо ★ на 9px вгору щоб не злилось.
+    // Для today: зірка теж малюється (раніше !d.isPast — today попадав, бо isPast=false). Залишаємо як є.
     if(Number.isFinite(d.overrideEng) && !d.isPast){
-      svgHtml += `<text x="${x.toFixed(1)}" y="${(y-9).toFixed(1)}" font-size="11" fill="#ffd166" text-anchor="middle" font-weight="700" style="filter:drop-shadow(0 0 2px rgba(0,0,0,.7))"><title>${d.ds}\nPDF Engine: ${d.overrideEng >= 0 ? '+' : ''}${d.overrideEng} (експертна оцінка дня)\nRaw G_day: ${d.G >= 0 ? '+' : ''}${d.G.toFixed(1)} (астро без експерта)</title>★</text>`;
+      const _ovClamped = Math.max(gMin, Math.min(gMax, d.overrideEng));
+      let _starY = yFor(_ovClamped);
+      if (Math.abs(_starY - y) < 6) _starY = y - 9; // fallback щоб не перекривало точку
+      // Пунктирна вертикаль raw↔expert якщо реальна |Δ|≥1
+      if (Math.abs(d.overrideEng - d.G) >= 1) {
+        const _y1 = Math.min(y, _starY), _y2 = Math.max(y, _starY);
+        svgHtml += `<line x1="${x.toFixed(1)}" y1="${_y1.toFixed(1)}" x2="${x.toFixed(1)}" y2="${_y2.toFixed(1)}" stroke="rgba(255,209,102,0.45)" stroke-width="1" stroke-dasharray="2 3" />`;
+      }
+      svgHtml += `<text x="${x.toFixed(1)}" y="${(_starY+4).toFixed(1)}" font-size="11" fill="#ffd166" text-anchor="middle" font-weight="700" style="filter:drop-shadow(0 0 2px rgba(0,0,0,.7))"><title>${d.ds}\nPDF Engine: ${d.overrideEng >= 0 ? '+' : ''}${d.overrideEng} (експертна оцінка дня)\nRaw G_day: ${d.G >= 0 ? '+' : ''}${d.G.toFixed(1)} (астро без експерта)</title>★</text>`;
     }
     // Day label
     // v88.7.6 BUG-4 fix: round (не ceil) + noon-UTC anchor — DST-safe день-різниця.
@@ -12262,15 +12302,23 @@ function renderIntraDayAlert(){
 
   _alert.style.borderColor = _col + '80';
   _alert.style.background = `linear-gradient(180deg,${_col}1a,${_col}06)`;
-  // v88.8.35-fp13 CC: якщо forecast застарілий (DELAYED/STALE/SCENARIO) — додати застереження.
+  // v88.8.35-fp13 CC + fp15 GG: якщо forecast застарілий — додати застереження.
+  // fp15 GG: розрізняємо ESTIMATED (real forecast, ≤12h затримка) від PARTIAL (severe).
   // Banner будує прогноз з last3D.days[0].kp8; якщо ці дані не свіжі, видимий "Kp впаде 5.3→3.3"
   // може не відповідати поточному NOAA feed.
   let _staleNote = '';
   try {
-    const _dm = (typeof window !== 'undefined' && window.__dataMode)
+    const _dmExt = (typeof resolveDataModeExtended === 'function') ? resolveDataModeExtended() : null;
+    const _dm = _dmExt || (typeof window !== 'undefined' && window.__dataMode)
               || (typeof resolveDataMode === 'function' ? resolveDataMode() : 'live');
     if (_dm !== 'live') {
-      _staleNote = `<div style="margin-top:4px;font-size:10px;color:#ffd2a0;font-style:italic">⚠ Прогноз будується із ${_dm === 'scenario' ? 'сценарного' : 'затриманого'} NOAA 3-day feed — звірте з swpc.noaa.gov перед рішенням.</div>`;
+      let _srcLabel = 'затриманого';
+      let _noteColor = '#ffd2a0';
+      if (_dm === 'scenario')      { _srcLabel = 'сценарного'; _noteColor = '#ff9966'; }
+      else if (_dm === 'estimated'){ _srcLabel = 'злегка-несвіжого (≤12год) реального'; _noteColor = '#a8d5e0'; }
+      else if (_dm === 'partial')  { _srcLabel = 'застарілого (>12год) реального'; _noteColor = '#ffd2a0'; }
+      else if (_dm === 'offline')  { _srcLabel = 'OFFLINE — старі кешовані'; _noteColor = '#ff8a7a'; }
+      _staleNote = `<div style="margin-top:4px;font-size:10px;color:${_noteColor};font-style:italic">⚠ Прогноз будується із ${_srcLabel} NOAA 3-day feed — звірте з swpc.noaa.gov перед рішенням.</div>`;
     }
   } catch(e) { /* silent */ }
   _alert.innerHTML = `
@@ -15952,7 +16000,7 @@ const I18N = {
     personalCardTitle: '👤 Особистий прогноз',
     personalCardSub: 'Місячна стоянка · Сприятливість дня · Планетарний цикл',
     threeCardTitle: 'Прогноз на 3 дні',
-    twentysevenCardTitle: '27-day trend (Ap → Kp)',
+    twentysevenCardTitle: '27-day trend (Largest Kp)',
     btnG2: '🧮',
     stamp: 'Оновлено: ',
     footerText: 'Дані Kp/Ap — NOAA SWPC; події — ICS (Vaisnava/CalendarLabs); затемнення — Timeanddate/NASA; фази — Astronomy Engine.',
@@ -17900,8 +17948,16 @@ function _renderFreshnessState(){
       } else if (_src.ageHours > 24 && state !== 'old' && state !== 'stale') {
         state='stale'; label='● STALE · контент >1 дн'; col='#ff9944'; bgCol='#2a1200'; _contentOverride=true;
       } else if (_src.ageHours > 1 && state === 'live') {
-        // fetch свіжий, але JSON всередині старий >1h → понижуємо до delayed із вказівкою
-        state='delayed'; label='● DELAYED · контент '+_src.ageHours.toFixed(1)+'г'; col='#ffcc44'; bgCol='#2a1a00'; _contentOverride=true;
+        // fetch свіжий, але JSON всередині старий >1h → понижуємо
+        // v88.8.35-fp15 GG: розрізняємо ESTIMATED (≤12h, forecast real) від DELAYED (більш агресивний).
+        // _kpSourceFreshness тут вже >1h. Перевіряємо чи forecast (last3D) реальний.
+        const _last3Fake = !!(typeof last3D !== 'undefined' && last3D && last3D._synthetic);
+        if (!_last3Fake && _src.ageHours <= 12) {
+          // ESTIMATED — спокійний синювато-сірий колір, без тривожного жовтого
+          state='estimated'; label='● ESTIMATED · контент '+_src.ageHours.toFixed(1)+'г'; col='#a8d5e0'; bgCol='#0e1f2a'; _contentOverride=true;
+        } else {
+          state='delayed'; label='● DELAYED · контент '+_src.ageHours.toFixed(1)+'г'; col='#ffcc44'; bgCol='#2a1a00'; _contentOverride=true;
+        }
       }
     }
   } catch(e) { /* silent */ }
