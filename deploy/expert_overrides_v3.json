@@ -1,304 +1,93 @@
 {
-  "_schema": "expert_overrides_v3",
-  "_version": "3.2_2026-05-14_pdf48_pdf49_json_only",
-  "_freeze_phase": "V3_prospective_2026-05-03_to_2026-08-01",
-  "_purpose": "Overrides проти Engine v18.5/v18.8 frozen. PDF-корекції застосовуються post-engine тільки через expert_overrides_v3.json; index.html не містить hardcoded дат.",
-  "_methodology": {
-    "primary_source": "Expert PDFs: +11.5-24.5_ПРОГНОЗ.pdf and +18.5-31.5_ПРОГНОЗ.pdf — direct expert calibration",
-    "secondary_source": "Excel-Tаніта col O (n=761 days)",
-    "tertiary_source": "pdf48_ground_truth_v6.json (n=343, тепер з PDF#48)",
-    "quaternary_source": "Engine v18.5 reproducibility (sanity check only)",
-    "calibration_map_excel_O_to_score": {
-      "🟢Сприятливий": "+3 (n=16)",
-      "✅Сприятливий": "+3 (n=74)",
-      "⚪Нейтральний": "0 broad, requires tag-discriminator (n=136)",
-      "🟡Помірно несприятл": "−3 (n=1)",
-      "⚡Порожній": "−2 soft, but R0 →−3 if pos=0 (n=86)",
-      "🔴Несприятливий": "−3 (n=16)"
-    },
-    "canon_version": "forecast_canon.md v1.3 (rollback to simple)",
-    "rules_applied_pdf48": "Точкові expert calibrations за PDF#48; не глобальні правила. PDF#48 має 7 нестандартних калібровок (vs simple base_from_O) + 1 manual.",
-    "rules_applied_pdf49": "Точкові expert calibrations за PDF +18.5-31.5_ПРОГНОЗ.pdf; дати 18–24 підтверджують попередній PDF, 25–31 додають нове вікно."
-  },
-  "_audit_summary": {
-    "total_overrides": 21,
-    "period_covered": "2026-05-11 to 2026-05-31",
-    "source_windows": [
-      {
-        "source": "+11.5-24.5_ПРОГНОЗ.pdf",
-        "dates": "2026-05-11..2026-05-24"
-      },
-      {
-        "source": "+18.5-31.5_ПРОГНОЗ.pdf",
-        "dates": "2026-05-18..2026-05-31",
-        "note": "18–24 overlap confirmed, 25–31 added"
-      }
-    ],
-    "pdf49_scores": {
-      "2026-05-18": 3,
-      "2026-05-19": -1,
-      "2026-05-20": 3,
-      "2026-05-21": 3,
-      "2026-05-22": 1,
-      "2026-05-23": -2,
-      "2026-05-24": -3,
-      "2026-05-25": 3,
-      "2026-05-26": 0,
-      "2026-05-27": 2,
-      "2026-05-28": 3,
-      "2026-05-29": -3,
-      "2026-05-30": -3,
-      "2026-05-31": 0
-    },
-    "single_source_policy": "expert_overrides_v3.json is the only source for PDF/Engine day overrides; engine_scores.json remains frozen."
-  },
-  "schema": {
-    "date": "ISO 8601",
-    "expert_eng": "tanita-calibrated final score (PDF#48 source)",
-    "tanita_O": "Excel column O classification",
-    "tanita_N": "Excel column N tag",
-    "category": "expert_pdf48_calibration | manual_expert_override",
-    "applied_in": "Identifier of the forecast/PDF that consumed this override",
-    "ts": "ISO 8601 UTC timestamp коли запис створено"
-  },
+  "version": "v3.1",
+  "updated_at": "2026-05-13T11:15:00Z",
+  "source": "+11.5-24.5_ПРОГНОЗ.pdf",
+  "window": "2026-05-11..2026-05-24",
+  "policy": "single_source_of_truth — dashboard reads from this JSON only; engine_scores.json remains frozen; no hardcoded fallback in index.html",
   "overrides": [
     {
       "date": "2026-05-11",
       "expert_eng": 2,
-      "tanita_O": "⚡Порожній",
-      "tanita_N": "⚡ ✈ ⊕",
-      "category": "expert_pdf48_calibration",
-      "applied_in": "_11_05-24_05_PDF48",
-      "ts": "2026-05-07T11:30:00Z"
+      "pdf_label": "Сприятливий день, зокрема для логістики, лікування, прийому ліків, початку тренувань, навчань; день прибирання",
+      "source": "+11.5-24.5_ПРОГНОЗ.pdf"
     },
     {
       "date": "2026-05-12",
       "expert_eng": 3,
-      "tanita_O": "⚪Нейтральний",
-      "tanita_N": "❤ нова одежда",
-      "category": "expert_pdf48_calibration",
-      "applied_in": "_11_05-24_05_PDF48",
-      "ts": "2026-05-07T11:30:00Z"
+      "pdf_label": "Особливо сприятливий день для справ, дій",
+      "source": "+11.5-24.5_ПРОГНОЗ.pdf"
     },
     {
       "date": "2026-05-13",
       "expert_eng": 3,
-      "tanita_O": "⚪Нейтральний",
-      "tanita_N": "Екадаші🥛 📚 нова одежда",
-      "category": "expert_pdf48_calibration",
-      "applied_in": "_11_05-24_05_PDF48",
-      "ts": "2026-05-07T11:30:00Z"
+      "pdf_label": "Особливо сприятливий день для початку тренувань, навчань, освоєння спорядження, логістики; підбиття підсумків",
+      "source": "+11.5-24.5_ПРОГНОЗ.pdf"
     },
     {
       "date": "2026-05-14",
       "expert_eng": -1,
-      "tanita_O": "⚪Нейтральний",
-      "tanita_N": "Маха Ш. Сурья☀ ⚡",
-      "category": "expert_pdf48_calibration",
-      "applied_in": "_11_05-24_05_PDF48",
-      "ts": "2026-05-07T11:30:00Z"
+      "pdf_label": "Помірно несприятливий день для нових справ; день молитов",
+      "source": "+11.5-24.5_ПРОГНОЗ.pdf"
     },
     {
       "date": "2026-05-15",
       "expert_eng": -3,
-      "tanita_O": "⚡Порожній",
-      "tanita_N": "Сурья☀ ⚡ Трезубець",
-      "category": "expert_pdf48_calibration",
-      "applied_in": "_11_05-24_05_PDF48",
-      "ts": "2026-05-07T11:30:00Z"
+      "pdf_label": "Особливо несприятливий день для нових справ; день прибирання; день посилення пильності",
+      "source": "+11.5-24.5_ПРОГНОЗ.pdf"
     },
     {
       "date": "2026-05-16",
       "expert_eng": -3,
-      "tanita_O": "🔴Несприятливий",
-      "tanita_N": "Амавасья🌑",
-      "category": "expert_pdf48_calibration",
-      "applied_in": "_11_05-24_05_PDF48",
-      "ts": "2026-05-07T11:30:00Z"
+      "pdf_label": "Особливо несприятливий день; день вшанування загиблих",
+      "source": "+11.5-24.5_ПРОГНОЗ.pdf"
     },
     {
       "date": "2026-05-17",
       "expert_eng": 3,
-      "tanita_O": "✅Сприятливий",
-      "tanita_N": "✈ нова одежда 📚 🎯",
-      "category": "expert_pdf48_calibration",
-      "applied_in": "_11_05-24_05_PDF48",
-      "ts": "2026-05-07T11:30:00Z"
+      "pdf_label": "Особливо сприятливий день для дій, спорядження, логістики; дуже сприятливий для планування",
+      "source": "+11.5-24.5_ПРОГНОЗ.pdf"
     },
     {
       "date": "2026-05-18",
       "expert_eng": 3,
-      "tanita_O": "🟢Сприятливий",
-      "tanita_N": "✂ ✈ ⊕ 📚 ❤ 🟢",
-      "category": "expert_pdf49_calibration",
-      "applied_in": "_18_05-31_05_PDF49",
-      "ts": "2026-05-14T11:10:00Z",
-      "source": "+18.5-31.5_ПРОГНОЗ.pdf",
-      "source_page": 1,
-      "pdf_label": "Особливо сприятливий день для справ, дій, логістики, тренувань, навчань, лікування, прийому ліків",
-      "previous_applied_in": "_11_05-24_05_PDF48"
+      "pdf_label": "Особливо сприятливий день для справ, дій, логістики, навчань, лікування",
+      "source": "+11.5-24.5_ПРОГНОЗ.pdf"
     },
     {
       "date": "2026-05-19",
       "expert_eng": -1,
-      "tanita_O": "⚡Порожній",
-      "tanita_N": "⚡ Ганеша лікування💊",
-      "category": "expert_pdf49_calibration",
-      "applied_in": "_18_05-31_05_PDF49",
-      "ts": "2026-05-14T11:10:00Z",
-      "source": "+18.5-31.5_ПРОГНОЗ.pdf",
-      "source_page": 1,
-      "pdf_label": "Помірно несприятливий день. День прибирання, молитов",
-      "previous_applied_in": "_11_05-24_05_PDF48"
+      "pdf_label": "Помірно несприятливий день; день прибирання; день молитов",
+      "source": "+11.5-24.5_ПРОГНОЗ.pdf"
     },
     {
       "date": "2026-05-20",
       "expert_eng": 3,
-      "tanita_O": "⚡Порожній",
-      "tanita_N": "⊕ ✂ нова одежда ⚡",
-      "category": "expert_pdf49_calibration",
-      "applied_in": "_18_05-31_05_PDF49",
-      "ts": "2026-05-14T11:10:00Z",
-      "source": "+18.5-31.5_ПРОГНОЗ.pdf",
-      "source_page": 1,
-      "pdf_label": "Особливо сприятливий день: прибирання, лікування, прийом ліків, тренування, навчання, спорядження, техніка, логістика",
-      "previous_applied_in": "_11_05-24_05_PDF48"
+      "pdf_label": "Особливо сприятливий день; прибирання, лікування, тренування, спорядження; сприятливий для логістики",
+      "source": "+11.5-24.5_ПРОГНОЗ.pdf"
     },
     {
       "date": "2026-05-21",
       "expert_eng": 3,
-      "tanita_O": "✅Сприятливий",
-      "tanita_N": "❤ нова одежда ✈ ⊕ 🌑(очей провидіння)",
-      "category": "expert_pdf49_calibration",
-      "applied_in": "_18_05-31_05_PDF49",
-      "ts": "2026-05-14T11:10:00Z",
-      "source": "+18.5-31.5_ПРОГНОЗ.pdf",
-      "source_page": 1,
-      "pdf_label": "Один з найкращих днів на рік для планування, всіх справ і дій, тренувань, навчань, логістики, лікування, прийому ліків",
-      "previous_applied_in": "_11_05-24_05_PDF48"
+      "pdf_label": "Один з найкращих днів на рік для планування і справ",
+      "source": "+11.5-24.5_ПРОГНОЗ.pdf"
     },
     {
       "date": "2026-05-22",
       "expert_eng": 1,
-      "tanita_O": "⚪Нейтральний",
-      "tanita_N": "📚",
-      "category": "expert_pdf49_calibration",
-      "applied_in": "_18_05-31_05_PDF49",
-      "ts": "2026-05-14T11:10:00Z",
-      "source": "+18.5-31.5_ПРОГНОЗ.pdf",
-      "source_page": 1,
-      "pdf_label": "Помірно сприятливий день. День початку тренувань, навчань",
-      "previous_applied_in": "_11_05-24_05_PDF48"
+      "pdf_label": "Помірно сприятливий день; день початку тренувань, навчань",
+      "source": "+11.5-24.5_ПРОГНОЗ.pdf"
     },
     {
       "date": "2026-05-23",
       "expert_eng": -2,
-      "tanita_O": "⚪Нейтральний",
-      "tanita_N": "",
-      "category": "expert_pdf49_calibration",
-      "applied_in": "_18_05-31_05_PDF49",
-      "ts": "2026-05-14T11:10:00Z",
-      "source": "+18.5-31.5_ПРОГНОЗ.pdf",
-      "source_page": 1,
       "pdf_label": "Несприятливий день",
-      "previous_applied_in": "_11_05-24_05_PDF48"
+      "source": "+11.5-24.5_ПРОГНОЗ.pdf"
     },
     {
       "date": "2026-05-24",
       "expert_eng": -3,
-      "tanita_O": "⚡Порожній",
-      "tanita_N": "⚡",
-      "category": "expert_pdf49_calibration",
-      "applied_in": "_18_05-31_05_PDF49",
-      "ts": "2026-05-14T11:10:00Z",
-      "source": "+18.5-31.5_ПРОГНОЗ.pdf",
-      "source_page": 1,
-      "pdf_label": "Особливо несприятливий день. Підходить для прибирання",
-      "previous_applied_in": "_11_05-24_05_PDF48"
-    },
-    {
-      "date": "2026-05-25",
-      "expert_eng": 3,
-      "category": "expert_pdf49_calibration",
-      "applied_in": "_18_05-31_05_PDF49",
-      "source": "+18.5-31.5_ПРОГНОЗ.pdf",
-      "source_page": 1,
-      "pdf_label": "Особливо сприятливий день. Початок тренувань, навчань; освоєння нового спорядження, техніки",
-      "ts": "2026-05-14T11:10:00Z",
-      "tanita_O": null,
-      "tanita_N": null
-    },
-    {
-      "date": "2026-05-26",
-      "expert_eng": 0,
-      "category": "expert_pdf49_calibration",
-      "applied_in": "_18_05-31_05_PDF49",
-      "source": "+18.5-31.5_ПРОГНОЗ.pdf",
-      "source_page": 1,
-      "pdf_label": "Нейтральний день. Підбиття підсумків, аналіз; посилення пильності; лікування, прийом ліків",
-      "ts": "2026-05-14T11:10:00Z",
-      "tanita_O": null,
-      "tanita_N": null
-    },
-    {
-      "date": "2026-05-27",
-      "expert_eng": 2,
-      "category": "expert_pdf49_calibration",
-      "applied_in": "_18_05-31_05_PDF49",
-      "source": "+18.5-31.5_ПРОГНОЗ.pdf",
-      "source_page": 1,
-      "pdf_label": "Сприятливий день. Початок тренувань, навчань; спорядження, техніка; лікування, прийом ліків",
-      "ts": "2026-05-14T11:10:00Z",
-      "tanita_O": null,
-      "tanita_N": null
-    },
-    {
-      "date": "2026-05-28",
-      "expert_eng": 3,
-      "category": "expert_pdf49_calibration",
-      "applied_in": "_18_05-31_05_PDF49",
-      "source": "+18.5-31.5_ПРОГНОЗ.pdf",
-      "source_page": 1,
-      "pdf_label": "Особливо сприятливий день. Тренування, навчання; лікування, прийом ліків; старт інформкампаній, стратком; молитви",
-      "ts": "2026-05-14T11:10:00Z",
-      "tanita_O": null,
-      "tanita_N": null
-    },
-    {
-      "date": "2026-05-29",
-      "expert_eng": -3,
-      "category": "expert_pdf49_calibration",
-      "applied_in": "_18_05-31_05_PDF49",
-      "source": "+18.5-31.5_ПРОГНОЗ.pdf",
-      "source_page": 1,
-      "pdf_label": "Особливо несприятливий день. Підходить для прибирання",
-      "ts": "2026-05-14T11:10:00Z",
-      "tanita_O": null,
-      "tanita_N": null
-    },
-    {
-      "date": "2026-05-30",
-      "expert_eng": -3,
-      "category": "expert_pdf49_calibration",
-      "applied_in": "_18_05-31_05_PDF49",
-      "source": "+18.5-31.5_ПРОГНОЗ.pdf",
-      "source_page": 1,
-      "pdf_label": "Повня. Особливо несприятливий день. Підходить для лікування, прийому ліків",
-      "ts": "2026-05-14T11:10:00Z",
-      "tanita_O": null,
-      "tanita_N": null
-    },
-    {
-      "date": "2026-05-31",
-      "expert_eng": 0,
-      "category": "expert_pdf49_calibration",
-      "applied_in": "_18_05-31_05_PDF49",
-      "source": "+18.5-31.5_ПРОГНОЗ.pdf",
-      "source_page": 1,
-      "pdf_label": "Повня. Нейтральний день. Освоєння спорядження, техніки; лікування, прийом ліків; сприятливий для логістики",
-      "ts": "2026-05-14T11:10:00Z",
-      "tanita_O": null,
-      "tanita_N": null
+      "pdf_label": "Особливо несприятливий день; підходить для прибирання",
+      "source": "+11.5-24.5_ПРОГНОЗ.pdf"
     }
   ]
 }
