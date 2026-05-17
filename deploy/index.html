@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.35-fp23</title>
+  <title>G-Index — Космофізичний дашборд v88.8.35-fp25</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1543,6 +1543,8 @@ body.simple-mode .col-hide-mobile {
     </details>
     <!-- v87.90: Disagreement Alert — показується якщо моделі сильно розбігаються -->
     <div id="disagreementAlert" style="display:none;margin:0 0 10px;padding:10px 14px;border-radius:12px;border:1px solid rgba(255,170,51,.4);background:linear-gradient(180deg,rgba(255,170,51,.10),rgba(255,170,51,.03))"></div>
+    <!-- fp25: decisionWhy — Moon/Retro/G summary, populated by syncWhy() -->
+    <div id="decisionWhy" style="display:none;margin:0 0 8px;padding:8px 14px;border-radius:10px;border:1px solid var(--border);background:rgba(11,18,32,.4);font-size:11px;line-height:1.6"></div>
     <!-- v87.90: Counterfactual analysis — collapsible "що якби" блок -->
     <details id="counterfactualCard" style="margin:0 0 10px;padding:10px 14px;border-radius:12px;border:1px solid rgba(55,167,255,.25);background:linear-gradient(180deg,rgba(55,167,255,.04),rgba(11,18,32,.5))">
       <summary style="cursor:pointer;font-size:12px;font-weight:600;color:var(--muted);list-style:none;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
@@ -1700,6 +1702,8 @@ body.simple-mode .col-hide-mobile {
             <div style="font-size:12px;font-weight:600;margin-bottom:6px">🪐 Ретроградність</div>
             <div id="retroNowWrap" class="trigger-wrap" style="margin-top:4px"></div>
             <div id="retroNowNote" class="small muted" style="margin-top:6px;line-height:1.45">—</div>
+            <!-- fp25: retroPressure label (low/medium/high/direct) populated by renderMoonRetroTop -->
+            <div style="margin-top:4px;font-size:10px;color:var(--dim)">Тиск: <span id="retroPressure" style="font-weight:600">—</span></div>
           </div>
         </div>
         <details id="cosmicMapDetails" style="margin-bottom:8px">
@@ -9238,6 +9242,8 @@ function renderDayForecast(last3D, kUse, ai) {
       renderPanchanga(noonUTC(new Date()));
     }
   } catch(e) { /* noop */ }
+  // fp24: heat strip must re-render from same _daySlots as panchBestTime — avoids stale data-gval mismatch
+  try { if (typeof renderHeatStripV86 === 'function') renderHeatStripV86(); } catch(e) { /* noop */ }
 }
 
 
