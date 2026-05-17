@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.35-fp22</title>
+  <title>G-Index — Космофізичний дашборд v88.8.35-fp23</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -10144,6 +10144,12 @@ function heroHeadlineFromHierarchy_v88824(sig){
   const ds = isFinite(sig.dayScore) ? (sig.dayScore >= 0 ? '+' + sig.dayScore : String(sig.dayScore)) : '—';
   if(sig.dayScore >= 2 && sig.guard === 'live_tense') return `ЗАРАЗ СТОП — день ${ds} за PDF, але live-фон блокує`;
   if(sig.dayScore >= 2 && sig.guard === 'live_unstable') return `ЗАРАЗ ОБЕРЕЖНО — день ${ds} за PDF`;
+  // fp23: якщо live-дані не свіжі — headline явно вказує на це
+  try {
+    const _dm = (typeof resolveDataModeExtended === 'function') ? resolveDataModeExtended() : null;
+    if(sig.dayScore >= 3 && (_dm === 'estimated' || _dm === 'partial' || _dm === 'offline' || _dm === 'scenario'))
+      return 'МОЖНА ДІЯТИ за PDF · live-фон estimated — перевір перед критичною дією';
+  } catch(e) { /* silent */ }
   if(sig.dayScore >= 3) return 'ЗАРАЗ МОЖНА ДІЯТИ — сильний день за PDF';
   if(sig.dayScore >= 1) return 'ЗАРАЗ МОЖНА ПЛАНОВО — день сприятливий';
   if(sig.dayScore === 0) return sig.liveKey === 'tense' ? 'ЗАРАЗ ОБЕРЕЖНО — нейтральний день, фон тисне' : 'ЗАРАЗ СТАНДАРТНИЙ РЕЖИМ';
@@ -12176,7 +12182,7 @@ function renderAntiAction(){
       const parts = [];
       if(_avoidItems.length > 0) parts.push(`<strong style="color:var(--bad)">${_avoidItems.length} уникати</strong>`);
       if(_doItems.length > 0) parts.push(`<strong style="color:var(--ok)">${_doItems.length} сприятливо</strong>`);
-      _aPrev.innerHTML = `Панчанга/часові обмеження: ${parts.join(' · ')} · не Day_score`;
+      _aPrev.innerHTML = `Панчанга: ${parts.join(' · ')} · не змінює PDF-рішення дня`;
     }
   }
 }
