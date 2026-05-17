@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.35-fp25</title>
+  <title>G-Index — Космофізичний дашборд v88.8.35-fp26</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -11071,19 +11071,37 @@ function _renderWhyTrend(){
         .filter(d => d.date && fmtDate(d.date) < todayStr)
         .slice(-3); // тільки 3 останні минулі дні (хронологічно найближчі до today)
       _pastFromLast3D.forEach(d => {
-        days.push({ ds: fmtDate(d.date), G: d.G, isPast: true });
+        // fp26: last3D.days[].G never assigned (parse3DaySafe тільки {date, kp8, kpMax}).
+        // Раніше days.push({G: d.G}) → G=undefined → fallback на kp=2 placeholder спрацьовував завжди.
+        // Тепер: рахуємо G inline з реального kpMax.
+        let _Gpast;
+        try {
+          const _kp = isFinite(d.kpMax) ? d.kpMax : 2;
+          const _ai = computeAi(noonUTC(d.date), _kp);
+          _Gpast = _kp - 2 + _ai.Ai;
+        } catch(_e) { _Gpast = undefined; }
+        if (isFinite(_Gpast)) days.push({ ds: fmtDate(d.date), G: _Gpast, isPast: true });
       });
     }
   } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
 
-  // Якщо last3D не дав 3 минулих — заповнюю computeAi (kp=current fallback)
+  // Якщо last3D не дав 3 минулих — заповнюю computeAi з реального Kp.
+  // fp26: був hardcoded kp=2 → 7-day chart показував штучні G (нижчі за реальні).
+  // Тепер: спершу _engineScores[ds].kp (історичний снапшот), потім lastWWV.kNow, в крайньому — 2.
   if(days.length < 3){
     for(let i = -3; i <= -1; i++){
       const ds = fmtDate(addDays(new Date(), i));
       if(days.find(x => x.ds === ds)) continue;
       try {
-        const ai = computeAi(noonUTC(addDays(new Date(), i)), 2);
-        days.push({ ds, G: ai.Ai, isPast: true });
+        let _kpPast = 2;
+        if (typeof _engineScores !== 'undefined' && _engineScores && _engineScores[ds] && isFinite(_engineScores[ds].kp)) {
+          _kpPast = _engineScores[ds].kp;
+        } else if (typeof lastWWV !== 'undefined' && lastWWV && isFinite(lastWWV.kNow)) {
+          _kpPast = lastWWV.kNow;
+        }
+        const ai = computeAi(noonUTC(addDays(new Date(), i)), _kpPast);
+        const _Gpast = _kpPast - 2 + ai.Ai;
+        days.push({ ds, G: _Gpast, isPast: true });
       } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
     }
   }
