@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.35-fp19</title>
+  <title>G-Index — Космофізичний дашборд v88.8.35-fp20</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -10167,7 +10167,17 @@ function heroLayerNoteFromHierarchy_v88824(sig){
   }
   if(sig.dayScore >= 2 && (sig.guard === 'live_unstable' || sig.guard === 'live_tense')) return `Денний PDF/Engine прогноз: ${ds} (${src}) · Live-фон зараз G=${lg}. Команда зверху рахується від live-обмеження, не від зеленого дня.`;
   const liveZone = (GLOBAL_STATES[sig.liveKey] && GLOBAL_STATES[sig.liveKey].zone) ? GLOBAL_STATES[sig.liveKey].zone : 'фон';
-  return `Verdict із PDF/Engine: ${ds} (${src}). Фон зараз: ${liveZone} (G_now ${lg}).`;
+  // v88.8.35-fp20: live-guard для DELAYED/ESTIMATED при позитивному дні.
+  // Якщо source data затримана + PDF >=+2, користувач може помилково взяти live-G як надійний
+  // і "активно діяти" на estimated-числі. Додаємо явне попередження.
+  let _staleWarn = '';
+  try {
+    const _mode = (typeof resolveDataModeExtended === 'function') ? resolveDataModeExtended() : null;
+    if (sig.dayScore >= 2 && (_mode === 'estimated' || _mode === 'partial' || _mode === 'offline' || _mode === 'scenario')) {
+      _staleWarn = ` · ⚠ Live-дані ${_mode.toUpperCase()} — перед важливою дією оновити через 5–10 хв.`;
+    }
+  } catch(e) { /* silent */ }
+  return `Verdict із PDF/Engine: ${ds} (${src}). Фон зараз: ${liveZone} (G_now ${lg}).${_staleWarn}`;
 }
 
 function resolveDaySignal_v88825(dateObj, rawG, kp, opts){
@@ -10647,6 +10657,21 @@ function syncHero(){
     const _note = heroLayerNoteFromHierarchy_v88824(_heroSig);
     if(_avoidEl && _note){
       _avoidEl.innerHTML = `${_st.avoidText}<br><span style="font-size:10px;color:var(--faint);font-weight:600">${_note}</span>`;
+    }
+    // v88.8.35-fp20 fix: avoid block при позитивному дні (favorable/good) — нейтральний фон,
+    // не червоний. Інакше "Підтримуйте темп без хаосу" виглядає алармовано на сприятливому дні.
+    if(_avoidEl){
+      const _isPositive = (_stKey === 'favorable' || _stKey === 'good');
+      if(_isPositive){
+        _avoidEl.style.setProperty('background','rgba(155,177,220,.08)','important');
+        _avoidEl.style.setProperty('border-color','rgba(155,177,220,.22)','important');
+        _avoidEl.style.setProperty('color','#cfe0ff','important');
+      } else {
+        // Скинути inline-стилі для не-позитивних станів (повертаємо CSS-defaults)
+        _avoidEl.style.removeProperty('background');
+        _avoidEl.style.removeProperty('border-color');
+        _avoidEl.style.removeProperty('color');
+      }
     }
   } catch(e) { /* noop */ }
 
