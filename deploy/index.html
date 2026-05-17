@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.35-fp21</title>
+  <title>G-Index — Космофізичний дашборд v88.8.35-fp22</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -4182,11 +4182,11 @@ function getEngineScore(dateObj){
   // Frozen raw eng зберігаємо в _engRaw для audit і tooltip explanations.
   if(snapshot && _expertOverrides && _expertOverrides[ds]){
     const ovr = _expertOverrides[ds];
-    // v88.8.35-fp19: verification gate. Тільки overrides з verified:true + source_pdf + snippet_hash
-    // отримують hard-cap у Hero/timing. Без верифікації — candidate-only, показуємо як попередження.
+    // v88.8.35-fp22-C13: snippet_hash must be a real sha256 hex (≥16 chars), not "pending_*".
+    const _hashOk = /^sha256:[0-9a-f]{16,64}$/i.test(String(ovr.snippet_hash || ''));
     const _isVerified = ovr.verified === true
       && typeof ovr.source_pdf === 'string' && ovr.source_pdf.length > 0
-      && typeof ovr.snippet_hash === 'string' && ovr.snippet_hash.length > 0;
+      && _hashOk;
     snapshot = {
       ...snapshot,
       _engRaw: snapshot.eng,
@@ -18438,7 +18438,8 @@ function _getBestWorstDays(){
       for (const d of _27dComputed) {
         if(!d || !d.ds || !isFinite(d.G)) continue;
         const t = new Date(d.ds + 'T12:00:00Z').getTime();
-        if(t <= nowMs && t >= cutMs) items.push([d.ds, Math.round(d.G*10)/10, '27dComputed']);
+        // fp22-C14: compare by date string so today's noon-UTC point is always included
+        if(d.ds <= todayStr && t >= cutMs) items.push([d.ds, Math.round(d.G*10)/10, '27dComputed']);
       }
     }
 
@@ -18451,7 +18452,8 @@ function _getBestWorstDays(){
         const sc = (typeof getEngineScore === 'function') ? getEngineScore(new Date(ds + 'T12:00:00Z')) : _engineScores[ds];
         if (!sc || sc.kp == null || !isFinite(sc.kp)) continue;
         const t = new Date(ds + 'T12:00:00Z').getTime();
-        if (!isFinite(t) || t > nowMs || t < cutMs) continue;
+        // fp22-C14: use ds-string comparison so today is included
+        if (!isFinite(t) || ds > todayStr || t < cutMs) continue;
         try {
           const dt = new Date(ds + 'T12:00:00Z');
           const _kpForG = (ds === _todayDS && _liveKp != null) ? _liveKp : sc.kp;

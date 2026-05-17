@@ -1,5 +1,5 @@
-// v88.8.35-fp16: expert_overrides_v3 v3.2 (16/17 May fix, 25-31 May додано з PDF49).
-// G-Index Service Worker v88.8.35-fp16
+// v88.8.35-fp22: C13 verified hash gate; C14 27-day summary today-inclusive.
+// G-Index Service Worker v88.8.35-fp22
 // v88.8.19 changes — incremental release після v88.8.18 з реальним bug fix:
 //   ENGINE v18.7 → v18.8: P2 раніше шукав 'Подорожі' word — missed 93 dates
 //     з '✈' emoji-only. P3 раніше тільки Shukla Dashami (10) — missed Krishna
@@ -601,8 +601,8 @@
 //   3. backtest.html додано до SHELL_FILES.
 //   4. cache.put awaited перед SW_FRESH_DATA notify (race fix).
 
-const SHELL_CACHE = 'g-index-shell-v88-8-35-fp21';
-const DATA_CACHE = 'g-index-data-v88-8-35-fp21';
+const SHELL_CACHE = 'g-index-shell-v88-8-35-fp22';
+const DATA_CACHE = 'g-index-data-v88-8-35-fp22';
 
 const SHELL_FILES = [
   './',
