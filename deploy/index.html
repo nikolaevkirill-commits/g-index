@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.35-fp18</title>
+  <title>G-Index — Космофізичний дашборд v88.8.35-fp19</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -4182,21 +4182,39 @@ function getEngineScore(dateObj){
   // Frozen raw eng зберігаємо в _engRaw для audit і tooltip explanations.
   if(snapshot && _expertOverrides && _expertOverrides[ds]){
     const ovr = _expertOverrides[ds];
+    // v88.8.35-fp19: verification gate. Тільки overrides з verified:true + source_pdf + snippet_hash
+    // отримують hard-cap у Hero/timing. Без верифікації — candidate-only, показуємо як попередження.
+    const _isVerified = ovr.verified === true
+      && typeof ovr.source_pdf === 'string' && ovr.source_pdf.length > 0
+      && typeof ovr.snippet_hash === 'string' && ovr.snippet_hash.length > 0;
     snapshot = {
       ...snapshot,
       _engRaw: snapshot.eng,
       _expertOverrideAvailable: true,
-      _expertOverrideVerified: true,
+      _expertOverrideVerified: _isVerified,
       _expertEngCandidate: ovr.expert_eng,
       _overrideCategory: ovr.category || 'manual_expert_override',
-      _overrideAppliedIn: ovr.applied_in || ovr.source || '',
-      _overrideSourceReason: 'verified_via_expert_overrides_v3_json'
+      _overrideAppliedIn: ovr.applied_in || ovr.source_pdf || ovr.source || '',
+      _overrideSourceReason: _isVerified
+        ? 'verified_with_source_pdf_and_snippet_hash'
+        : 'candidate_override_unverified',
+      _overrideSnippetHash: ovr.snippet_hash || null,
+      _overrideSourcePdf: ovr.source_pdf || ovr.source || null,
+      _overrideSourcePage: ovr.source_page || null
     };
-    snapshot.eng = ovr.expert_eng;
-    // v88.8.35: pdf field shows the expert verdict for audit/disagreement panels.
-    // Raw frozen engine remains in _engRaw. This avoids pretending that Engine alone produced +3.
-    snapshot.pdf = ovr.expert_eng;
-    snapshot._expertOverride = true;
+    // ВЕРИФІКОВАНИЙ → повний override eng/pdf і виставляємо _expertOverride для downstream gates.
+    // НЕВЕРИФІКОВАНИЙ → НЕ переписуємо eng/pdf; зберігаємо як candidate у _expertEngCandidate.
+    //   resolveHeroSignalHierarchy_v88824 і renderDecisionLayer бачать що override unverified
+    //   і не застосовують hard-cap, лише soft-warning.
+    if (_isVerified) {
+      snapshot.eng = ovr.expert_eng;
+      snapshot.pdf = ovr.expert_eng;
+      snapshot._expertOverride = true;
+    } else {
+      // candidate-only: видно у audit панелі, але не блокує live decision rails
+      snapshot._expertOverride = false;
+      snapshot._expertOverrideCandidate = true;
+    }
   }
   // v88.8.18: v18.8 patches (after expert override check — не зачіпає overrides)
   snapshot = _applyV186Patches(snapshot);
