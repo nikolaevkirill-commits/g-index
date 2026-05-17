@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.35-fp17</title>
+  <title>G-Index — Космофізичний дашборд v88.8.35-fp18</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -7324,7 +7324,17 @@ function renderCurrentPanel(){
     if (typeof getEffectiveGForDate === 'function' && isFinite(G)) {
       const _heroEff = getEffectiveGForDate(new Date(), G, 1.5);
       if (_heroEff.hasOverride) {
-        _heroOverrideMark = '<span style="color:#ffd166;font-size:14px;margin-left:4px;text-shadow:0 0 4px rgba(0,0,0,.5)">★</span>';
+        // v88.8.35-fp18: знаковий конфлікт raw G vs PDF override → червоний ⚠ замість жовтого ★.
+        // Симетрично з heroTomorrow fix. Користувач має одразу бачити що "позитивний live"
+        // не означає "позитивний день" коли експерт каже інакше.
+        const _ovr = _heroEff.override;
+        const _signConflict = isFinite(_ovr)
+          && ((G > 0.3 && _ovr < -0.3) || (G < -0.3 && _ovr > 0.3));
+        if (_signConflict) {
+          _heroOverrideMark = '<span style="color:#ff6b6b;font-size:14px;margin-left:4px;text-shadow:0 0 4px rgba(0,0,0,.5)" title="Конфлікт знаків raw vs PDF override">⚠</span>';
+        } else {
+          _heroOverrideMark = '<span style="color:#ffd166;font-size:14px;margin-left:4px;text-shadow:0 0 4px rgba(0,0,0,.5)">★</span>';
+        }
         _heroOverrideTip = _heroEff.tooltip;
       }
     }
@@ -8323,7 +8333,7 @@ function renderPanchangaCard(state){
           _rAdvice = `⏳ Уникати важливих рішень з ${_rsLocal}`;
         } else {
           _rIcon = '⚪'; _rText = `${_rsLocal}–${_reLocal} (минув)`;
-          _rAdvice = '✓ Вікно вже минуло';
+          _rAdvice = '✓ Минув';
         }
         const _utcTip = `UTC: ${p.rahu.start}–${p.rahu.end}`;
         return `<td style="padding:5px 6px;font-weight:600"><span class="hint" tabindex="0" style="cursor:help" title="${_utcTip}">${_rIcon} ${_rText}<span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.rahu(p.rahu))}</span></span></td>
@@ -9407,7 +9417,7 @@ function render3Day(parsed3){
           }
           const _diff = isFinite(_todayG) ? (_tomorrowG - _todayG) : 0;
           const _arrow = _diff > 0.3 ? '↑' : _diff < -0.3 ? '↓' : '→';
-          const _hint = _diff > 0.3 ? 'покращення' : _diff < -0.3 ? 'погіршення' : 'без змін';
+          let _hint = _diff > 0.3 ? 'покращення' : _diff < -0.3 ? 'погіршення' : 'без змін';
           const _sign = _tomorrowG >= 0 ? '+' : '';
           // v87.92 fix: scenario marker через data-attribute + CSS ::after — не можна перетерти JS-рендерами
           // v87.94: + sibling DOM fallback (heroTomorrowScenario) — окремий elem, не конфліктує з рендерами
@@ -9417,9 +9427,28 @@ function render3Day(parsed3){
           const _tomDate = days.find(dd => fmtDate(dd.date) !== _todayStr);
           const _tomEff = (typeof getEffectiveGForDate === 'function' && _tomDate)
             ? getEffectiveGForDate(_tomDate.date, _tomorrowG)
-            : { hasOverride: false, marker: '', tooltip: '' };
+            : { hasOverride: false, marker: '', tooltip: '', override: null };
 
-          _htEl.textContent = `G=${_sign}${_tomorrowG.toFixed(1)} ${_arrow} ${_hint}${_tomEff.marker}`;
+          // v88.8.35-fp18 fix: КОНФЛІКТ ЗНАКІВ raw vs PDF override.
+          // Раніше показували "↑ покращення ★" навіть коли raw=+4.7 а override=-3.
+          // Тепер: якщо знаки протилежні І override помітний (delta≥1.5) → переписуємо hint
+          // на "конфлікт: PDF -3" з червоним стрілкою-попередженням замість оптимістичного "↑".
+          let _displayArrow = _arrow;
+          let _conflictOverride = false;
+          if (_tomEff.hasOverride && isFinite(_tomEff.override)) {
+            const _rawPositive = _tomorrowG > 0.3;
+            const _ovrNegative = _tomEff.override < -0.3;
+            const _rawNegative = _tomorrowG < -0.3;
+            const _ovrPositive = _tomEff.override > 0.3;
+            if ((_rawPositive && _ovrNegative) || (_rawNegative && _ovrPositive)) {
+              _conflictOverride = true;
+              const _ovrSign = _tomEff.override >= 0 ? '+' : '';
+              _hint = `конфлікт: PDF ${_ovrSign}${_tomEff.override}`;
+              _displayArrow = '⚠';
+            }
+          }
+
+          _htEl.textContent = `G=${_sign}${_tomorrowG.toFixed(1)} ${_displayArrow} ${_hint}${_tomEff.marker}`;
           const _htSibling = document.getElementById('heroTomorrowScenario');
           if (_isScenario) {
             _htEl.dataset.scenario = '1';
@@ -9432,7 +9461,9 @@ function render3Day(parsed3){
             _htEl.title = `G завтра = ${_sign}${_tomorrowG.toFixed(1)} (Kp_max з NOAA 3-day forecast + Aᵢ календар).\n\nFlash-tip: Forward Timeline (нижче) показує денний пік Kp з 27-day NOAA outlook — інше джерело, інша часова роздільність. Розходження 0.5-1.0 — норма.\n\nКольори:\n● зелений: G ≥ 1 (сприятливо)\n● сірий: 0 ≤ G < 1 (нейтрально)\n● жовтий: -2 < G < 0 (помірний фон)\n● червоний: G ≤ -2 (буря)${_tomEff.tooltip}`;
             if (_htSibling) { _htSibling.textContent = ''; _htSibling.className = ''; }
           }
+          // v88.8.35-fp18: при sign conflict — червоний попереджувальний колір, незалежно від raw G.
           _htEl.style.color = _isScenario ? 'var(--muted)'
+            : _conflictOverride ? 'var(--bad)'
             : _tomorrowG >= 1 ? 'var(--ok)' : _tomorrowG >= 0 ? 'var(--muted)' : _tomorrowG > -2 ? 'var(--warn)' : 'var(--bad)';
         } else {
           _htEl.textContent = '';
@@ -10099,6 +10130,9 @@ function heroHeadlineFromHierarchy_v88824(sig){
   if(sig.dayScore >= 1) return 'ЗАРАЗ МОЖНА ПЛАНОВО — день сприятливий';
   if(sig.dayScore === 0) return sig.liveKey === 'tense' ? 'ЗАРАЗ ОБЕРЕЖНО — нейтральний день, фон тисне' : 'ЗАРАЗ СТАНДАРТНИЙ РЕЖИМ';
   if(sig.dayScore === -1) return 'ЗАРАЗ ОБЕРЕЖНО — день нестійкий';
+  // v88.8.35-fp18: -3 ескалація — окремий headline для "особливо несприятливий"
+  // (раніше -2 і -3 давали однаковий "ЗАРАЗ УНИКАТИ").
+  if(sig.dayScore <= -3) return 'ЗАРАЗ КАТЕГОРИЧНО УНИКАТИ — особливо несприятливий день';
   return 'ЗАРАЗ УНИКАТИ — несприятливий день';
 }
 
@@ -11276,13 +11310,22 @@ function _renderHeroTimeWindows() {
     } catch(e){ _dayEngForGate = null; }
     const _pdfNeg = (_dayEngForGate !== null && _dayEngForGate < 0);   // м'який gate (fp9 Q)
     const _pdfHard = (_dayEngForGate !== null && _dayEngForGate <= -2); // жорсткий cap (fp11 W)
+    // v88.8.35-fp18: окремий tier для eng<=-3 → "категорично уникати" замість "обережно".
+    const _pdfCrit = (_dayEngForGate !== null && _dayEngForGate <= -3);
     let _actionLabel = g >= 1.5 ? 'активні дії і ключові рішення'
       : g >= 0.5 ? 'безпечно працювати і планувати'
       : g >= -0.5 ? 'стандартний темп без форсування'
       : g >= -1.5 ? 'обережно: тільки перевірені дії'
       : 'тільки рутина, не приймати рішень';
-    if (_pdfHard) {
-      // PDF/Engine ≤ -2 — день критичний, ніяких позитивних формулювань.
+    if (_pdfCrit) {
+      // PDF/Engine = -3 — Особливо несприятливий день. Жорсткіше за -2.
+      _actionLabel = g >= 1.5 ? 'мінімум активності, без жодних рішень (день PDF/Engine особливо несприятливий)'
+        : g >= 0.5 ? 'тільки рутина, без нових ініціатив (день PDF/Engine особливо несприятливий)'
+        : g >= -0.5 ? 'категорично уникати рішень (день PDF/Engine особливо несприятливий)'
+        : g >= -1.5 ? 'категорично уникати, тільки невідкладне (день PDF/Engine особливо несприятливий)'
+        : 'припинити всі активні дії (день PDF/Engine особливо несприятливий)';
+    } else if (_pdfHard) {
+      // PDF/Engine = -2 — несприятливий день.
       _actionLabel = g >= 1.5 ? 'тільки перевірені дії, без нових рішень (день PDF/Engine критичний)'
         : g >= 0.5 ? 'рутина і відомі задачі (день PDF/Engine критичний)'
         : g >= -0.5 ? 'мінімум активних дій (день PDF/Engine критичний)'
