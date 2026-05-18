@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.35-fp39</title>
+  <title>G-Index — Космофізичний дашборд v88.8.35-fp40</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -9695,25 +9695,31 @@ function classifySlotScore(score){
 
 function normalizeDaySlots(slots){
   if(!Array.isArray(slots)) return [];
-  // v88.7.10 FIX-K: temporal consistency. _daySlots[].label — це UTC година слоту (NOAA Kp publish format).
-  // ЛОГІКА (isNow/isPast) має бути в UTC (для коректного порівняння з UTC даними).
-  // ВІДОБРАЖЕННЯ (s.time) має бути в ЛОКАЛЬНОМУ часі (бо користувач читає годинник у власному TZ).
-  // Раніше label друкувалось як UTC-h без позначки → юзер у Києві (UTC+3) бачив "12-15" і думав що
-  // це 12-15 його часу, тоді як насправді це 15-18. Heat-strip і План дня вже конвертують —
-  // тут sync з ними через той самий _tzOffH = -getTimezoneOffset()/60.
   const now = new Date();
   const nowH = now.getUTCHours();
   const tzOffH = -now.getTimezoneOffset() / 60;
+  // fp40: storm hard cap — slots at or after storm-start hour → force bad/mid
+  const _sw40 = window._stormWindow;
+  const _stormStartH = (_sw40 && isFinite(_sw40.kp) && _sw40.kp >= 5)
+    ? parseInt(_sw40.label, 10) : null;
   return slots.map(s => {
     const utcH = parseInt(s.label||'0');
     const localStart = ((utcH + tzOffH) % 24 + 24) % 24;
     const localEnd   = ((utcH + 3 + tzOffH) % 24 + 24) % 24;
     const score = Number(s.G ?? 0);
-    const cls = classifySlotScore(score);
+    // fp40: if slot kp>=5 OR slot starts at/after storm hour → cap to bad
+    const _slotKp = isFinite(s.kp) ? s.kp : 0;
+    const _isStormSlot = (_stormStartH !== null) && (utcH >= _stormStartH || _slotKp >= 5);
+    let cls = classifySlotScore(score);
+    let text = cls==='good' ? 'можна' : cls==='mid' ? 'обережно' : 'уникати';
+    if (_isStormSlot) {
+      cls = 'bad';
+      text = 'тільки рутина · Kp≥5';
+    }
     return {
       h: utcH, score, cls,
       time: `${String(Math.floor(localStart)).padStart(2,'0')}:00–${String(Math.floor(localEnd)).padStart(2,'0')}:00`,
-      text: cls==='good' ? 'можна' : cls==='mid' ? 'обережно' : 'уникати',
+      text,
       isNow: (nowH>=utcH && nowH<utcH+3),
       isPast: (utcH+3 <= nowH)
     };
@@ -9931,7 +9937,13 @@ function renderAlertBanner(g, kp){
   const nowSlotIdx = Math.floor(new Date().getUTCHours() / 3);
   const futureStorm = slots.find(s => s.i > nowSlotIdx && isFinite(s.kp) && s.kp >= 5);
   // fp27: expose to window so heroHeadline storm-guard can read it without re-scanning slots
-  window._stormWindow = futureStorm ? { kp: futureStorm.kp, label: futureStorm.label, hoursAhead: (futureStorm.i - nowSlotIdx) * 3 } : null;
+  // fp40: ETA fix — exact minutes from now to storm start, not (slotIndex delta)*3 hours
+  const _nowUTCms = Date.now();
+  const _stormUTCms = futureStorm
+    ? (() => { const d = new Date(); d.setUTCHours(futureStorm.i * 3, 0, 0, 0); return d > new Date() ? d.getTime() : d.getTime() + 86400000; })()
+    : null;
+  const _etaHours = _stormUTCms ? Math.max(0, (_stormUTCms - _nowUTCms) / 3600000) : null;
+  window._stormWindow = futureStorm ? { kp: futureStorm.kp, label: futureStorm.label, hoursAhead: _etaHours ? +_etaHours.toFixed(1) : 0 } : null;
   if (futureStorm && !alerts.length) {
     const hoursAhead = (futureStorm.i - nowSlotIdx) * 3;
     // fp31: show both UTC and local (Kiev UTC+3)
@@ -10889,10 +10901,16 @@ function syncHero(){
     const _fStormS = _daySlotsForStorm.find(s => s.i > _nowSlotIdxS && isFinite(s.kp) && s.kp >= 5);
     const _todayStrS = new Date().toISOString().slice(0,10);
     const _noaaStormTodayS = !_fStormS && Array.isArray(window.__noaaStormDates) && window.__noaaStormDates.includes(_todayStrS);
+    // fp40: exact ETA in hours (not slot-index*3)
+    const _etaExact = _fStormS ? (() => {
+      const _d = new Date(); _d.setUTCHours(_fStormS.i * 3, 0, 0, 0);
+      const _t = _d > new Date() ? _d.getTime() : _d.getTime() + 86400000;
+      return +Math.max(0, (_t - Date.now()) / 3600000).toFixed(1);
+    })() : null;
     window._stormWindow = _fStormS
-      ? { kp: _fStormS.kp, label: _fStormS.label, hoursAhead: (_fStormS.i - _nowSlotIdxS) * 3 }
+      ? { kp: _fStormS.kp, label: _fStormS.label, hoursAhead: _etaExact ?? 0 }
       : _noaaStormTodayS
-        ? { kp: 5, label: '18', hoursAhead: Math.max(0, (18 - new Date().getUTCHours())) }
+        ? { kp: 5, label: '18', hoursAhead: +Math.max(0, (18 - new Date().getUTCHours() - new Date().getUTCMinutes()/60)).toFixed(1) }
         : (_kpNowLiveS >= 5 ? { kp: _kpNowLiveS, label: String(_nowSlotIdxS * 3), hoursAhead: 0 } : null);
   } catch(_eS) { window._stormWindow = window._stormWindow || null; }
   // fp30-A: storm-guard on heroDecisionDo — override positive doText when storm incoming
@@ -18749,22 +18767,22 @@ function _getBestWorstDays(){
       }
     }
 
-    // 2) Fallback historical reconstruction from engine_scores only if chart did not provide enough past points.
-    if (items.length < 3 && typeof _engineScores !== 'undefined' && _engineScores && Object.keys(_engineScores).length > 0) {
+    // 2) fp40: engineScores fallback REMOVED for history (may contain dates outside visible 27d).
+    //    If _27dComputed gives < 3 points, show "недостатньо даних" rather than stale max from full cache.
+    // NOTE: forward 7d peak still uses _27dComputed only (see below).
+    if (items.length < 1 && typeof _engineScores !== 'undefined' && _engineScores) {
+      // Emergency minimal fallback: only dates guaranteed in 27d window, no full-cache scan.
       const _todayDS = todayStr;
-      const _liveKp = (typeof lastWWV!=='undefined' && lastWWV && isFinite(lastWWV.kNow)) ? lastWWV.kNow : null;
       for (const ds of Object.keys(_engineScores)) {
-        if(items.find(x=>x[0]===ds)) continue;
-        const sc = (typeof getEngineScore === 'function') ? getEngineScore(new Date(ds + 'T12:00:00Z')) : _engineScores[ds];
-        if (!sc || sc.kp == null || !isFinite(sc.kp)) continue;
+        if (items.find(x=>x[0]===ds)) continue;
         const t = new Date(ds + 'T12:00:00Z').getTime();
-        // fp22-C14: use ds-string comparison so today is included
-        if (!isFinite(t) || ds > todayStr || t < cutMs) continue;
+        if (!isFinite(t) || ds > todayStr || t < cutMs) continue; // strict 27d
         try {
           const dt = new Date(ds + 'T12:00:00Z');
-          const _kpForG = (ds === _todayDS && _liveKp != null) ? _liveKp : sc.kp;
-          const ai = computeAi(dt, _kpForG);
-          const G = Math.round((_kpForG - 2 + ai.Ai) * 10) / 10;
+          const sc = _engineScores[ds];
+          if (!sc || !isFinite(sc.kp)) continue;
+          const ai = computeAi(dt, sc.kp);
+          const G = Math.round((sc.kp - 2 + ai.Ai) * 10) / 10;
           items.push([ds, G, 'engineRecalc']);
         } catch(e) { /* skip */ }
       }
