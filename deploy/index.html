@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.35-fp34</title>
+  <title>G-Index — Космофізичний дашборд v88.8.35-fp35</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -9998,7 +9998,85 @@ function renderAlertBanner(g, kp){
   } else {
     banner.style.display = 'none';
   }
+  // fp35: always call standalone storm-guard, regardless of banner state
+  try { _applyStormGuardDOM(); } catch(e) { /* silent */ }
 }
+
+// fp35: STANDALONE storm-guard DOM patcher.
+// Runs independent of renderAlertBanner. Reads window._stormWindow and patches
+// stale DOM elements (heroActionCmd, heroDecisionDo, heroMainDrag, decisionTimingList, timingRows, whyRows).
+// Called from: syncRender end, NoaaEvents.fetchAlerts.then(), setInterval(30s).
+function _applyStormGuardDOM(){
+  const _sw = window._stormWindow;
+  if (!_sw || !isFinite(_sw.kp) || _sw.kp < 5) return;
+  const _utcL = String(_sw.label).padStart(2,'0');
+  const _kyivL = String((parseInt(_sw.label,10) + 3) % 24).padStart(2,'0');
+
+  // 1. heroActionCmd (hero headline) — replace generic "ЗАРАЗ МОЖНА ДІЯТИ"
+  try {
+    const _ac = document.getElementById('heroActionCmd');
+    if (_ac) {
+      const _t = (_ac.textContent || '').trim();
+      if (_t === 'ЗАРАЗ МОЖНА ДІЯТИ — сильний день за PDF' ||
+          _t === 'ЗАРАЗ МОЖНА ПЛАНОВО — день сприятливий' ||
+          _t === 'МОЖНА ДІЯТИ за PDF · live-фон estimated — перевір перед критичною дією') {
+        _ac.textContent = `PDF день сильний, але буря Kp=${_sw.kp.toFixed(1)} через ~${_sw.hoursAhead}г — важливе закрити до ${_utcL}:00 UTC / ${_kyivL}:00 Київ`;
+      }
+    }
+  } catch(_e) { /* silent */ }
+
+  // 2. heroDecisionDo — storm-aware DO text
+  try {
+    const _doEl = document.getElementById('heroDecisionDo');
+    if (_doEl) {
+      const _t = (_doEl.textContent || '').trim();
+      if (_t.includes('Можна діяти активно') || _t.includes('Рухайтесь у важливих справах') || _t === '—' || _t === '') {
+        _doEl.textContent = `✔ Дійте зараз — важливе закрити до ${_utcL}:00 UTC / ${_kyivL}:00 Київ`;
+      }
+    }
+  } catch(_e) { /* silent */ }
+
+  // 3. heroMainDrag — timing line
+  try {
+    const _hm = document.getElementById('heroMainDrag');
+    if (_hm) {
+      const _t = (_hm.textContent || '').trim();
+      if (!_t || _t.includes('Фон підтримує') || _t.includes('Найкраще вікно') || _t === '—') {
+        _hm.textContent = `Дійте до ${_utcL}:00 UTC / ${_kyivL}:00 Київ — після тільки рутина.`;
+      }
+    }
+  } catch(_e) { /* silent */ }
+
+  // 4. decisionTimingList — replace "Немає даних" with storm fallback
+  try {
+    const _dtl = document.getElementById('decisionTimingList');
+    if (_dtl && _dtl.textContent && _dtl.textContent.includes('Немає даних')) {
+      _dtl.innerHTML = `
+        <div class="dt-row dt-good dt-now"><span class="dt-time">Зараз</span><span class="dt-label">орієнтовно можна — дійте до ${_utcL}:00 UTC ◀</span></div>
+        <div class="dt-row dt-bad" style="opacity:.85"><span class="dt-time">До ${_utcL}:00 UTC / ${_kyivL}:00 Київ</span><span class="dt-label">закрити важливе</span></div>
+        <div class="dt-row dt-bad" style="opacity:.72"><span class="dt-time">Після бурі</span><span class="dt-label">тільки рутина / без критичних рішень</span></div>
+        <div style="color:var(--faint);font-size:10px;margin-top:4px">⚡ Storm fallback — Kp=${_sw.kp.toFixed(1)} о ${_utcL}:00 UTC. Слоти підтягуються…</div>
+      `;
+    }
+  } catch(_e) { /* silent */ }
+
+  // 5. timingRows — replace "Прогноз Kp-слотів недоступний" with storm info
+  try {
+    const _tr = document.getElementById('timingRows');
+    if (_tr && _tr.textContent && (_tr.textContent.includes('недоступний') || _tr.textContent.includes('Прогноз Kp'))) {
+      _tr.innerHTML = `<span style="color:#ffd2a0;font-size:11px">⚡ Kp-слоти підтягуються. Відомо: буря Kp=${_sw.kp.toFixed(1)} о ${_utcL}:00 UTC / ${_kyivL}:00 Київ</span>`;
+    }
+  } catch(_e) { /* silent */ }
+}
+
+// fp35: schedule storm-guard auto-patch every 30s as safety net for async race conditions
+try {
+  if (!window.__stormGuardTimer) {
+    window.__stormGuardTimer = setInterval(() => {
+      try { _applyStormGuardDOM(); } catch(e) { /* silent */ }
+    }, 30000);
+  }
+} catch(e) { /* silent */ }
 
 // v86-P1: Radial G-decomposition — formula as visual
 // Feature flag: localStorage.v86_radial='1' OR URL ?v86radial=1
@@ -10993,6 +11071,8 @@ function syncHero(){
 
   // v87: Alert banner — storm / high-risk detection
   try { renderAlertBanner(gVal, kpH); } catch(e){ console.warn('alert:',e); }
+  // fp35: extra safety net — apply storm-guard patches at very end of render
+  try { _applyStormGuardDOM(); } catch(e) { /* silent */ }
 }
 
 // ═══ v78d: Why Card (coreGrid) ═══
@@ -17439,6 +17519,16 @@ setTimeout(() => {
     if(window._DEBUG) console.log('[NoaaEvents] loaded', (ev||[]).length, 'alerts');
     window.__noaaEvents = ev;
     window.__noaaStormDates = NoaaEvents.getStormDates(ev);
+    // fp35: re-compute _stormWindow now that NoaaEvents data is in, then patch stale DOM.
+    try {
+      const _todayStr = new Date().toISOString().slice(0,10);
+      const _kpNow = (typeof lastWWV !== 'undefined' && lastWWV && isFinite(lastWWV.kNow)) ? lastWWV.kNow : 0;
+      const _hasNoaaStorm = Array.isArray(window.__noaaStormDates) && window.__noaaStormDates.includes(_todayStr);
+      if (!window._stormWindow && _hasNoaaStorm) {
+        window._stormWindow = { kp: 5, label: '18', hoursAhead: Math.max(0, (18 - new Date().getUTCHours())) };
+      }
+      if (typeof _applyStormGuardDOM === 'function') _applyStormGuardDOM();
+    } catch(_e) { /* silent */ }
   }); } catch(e){}
 }, 3000);
 
