@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.35-fp35</title>
+  <title>G-Index — Космофізичний дашборд v88.8.35-fp37</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1111,13 +1111,13 @@
     #heroStamp{font-size:11px!important;line-height:1.2!important}
     @media (max-width: 860px){#decisionStrip{grid-template-columns:1fr!important}}
     /* v83 v3: decision timing rows */
-    .dt-row{display:flex;justify-content:space-between;align-items:center;padding:6px 10px;border-radius:8px;font-size:12px}
+    .dt-row{display:flex;justify-content:space-between;align-items:center;padding:6px 10px;border-radius:8px;font-size:12px;gap:8px;flex-wrap:wrap}
     .dt-row.dt-good{background:rgba(43,212,125,.08);border-left:3px solid #2bd47d}
     .dt-row.dt-bad{background:rgba(255,107,107,.08);border-left:3px solid #ff6b6b}
     .dt-row.dt-mid{background:rgba(255,200,80,.08);border-left:3px solid #ffc850}
     .dt-row.dt-now{outline:1px solid rgba(255,255,255,.25)}
-    .dt-time{font-weight:800;font-variant-numeric:tabular-nums;min-width:110px}
-    .dt-label{font-weight:700}
+    .dt-time{font-weight:800;font-variant-numeric:tabular-nums;min-width:90px;white-space:nowrap}
+    .dt-label{font-weight:700;flex:1;text-align:right;min-width:0;word-break:break-word}
     /* v83 P3: timing emphasis */
     #coreGrid{grid-template-columns:1.05fr 1.15fr!important;gap:12px!important}
     #timingCard{border:1px solid rgba(55,167,255,.18)!important;background:rgba(15,25,45,.96)!important;box-shadow:0 0 0 1px rgba(55,167,255,.06) inset!important}
@@ -9999,7 +9999,7 @@ function renderAlertBanner(g, kp){
     banner.style.display = 'none';
   }
   // fp35: always call standalone storm-guard, regardless of banner state
-  try { _applyStormGuardDOM(); } catch(e) { /* silent */ }
+  try { _applyStormGuardDOM(); _patchStaleLoadingDOM(); } catch(e) { /* silent */ }
 }
 
 // fp35: STANDALONE storm-guard DOM patcher.
@@ -10020,7 +10020,8 @@ function _applyStormGuardDOM(){
       if (_t === 'ЗАРАЗ МОЖНА ДІЯТИ — сильний день за PDF' ||
           _t === 'ЗАРАЗ МОЖНА ПЛАНОВО — день сприятливий' ||
           _t === 'МОЖНА ДІЯТИ за PDF · live-фон estimated — перевір перед критичною дією') {
-        _ac.textContent = `PDF день сильний, але буря Kp=${_sw.kp.toFixed(1)} через ~${_sw.hoursAhead}г — важливе закрити до ${_utcL}:00 UTC / ${_kyivL}:00 Київ`;
+        // fp37: shorter — fits one line even on mobile (~380px)
+        _ac.textContent = `PDF +3 · буря Kp=${_sw.kp.toFixed(1)} через ~${_sw.hoursAhead}г — закрити до ${_utcL}:00 UTC`;
       }
     }
   } catch(_e) { /* silent */ }
@@ -10031,7 +10032,8 @@ function _applyStormGuardDOM(){
     if (_doEl) {
       const _t = (_doEl.textContent || '').trim();
       if (_t.includes('Можна діяти активно') || _t.includes('Рухайтесь у важливих справах') || _t === '—' || _t === '') {
-        _doEl.textContent = `✔ Дійте зараз — важливе закрити до ${_utcL}:00 UTC / ${_kyivL}:00 Київ`;
+        // fp37: shorter
+        _doEl.textContent = `✔ Діяти до ${_utcL}:00 UTC (${_kyivL}:00 Київ)`;
       }
     }
   } catch(_e) { /* silent */ }
@@ -10042,7 +10044,8 @@ function _applyStormGuardDOM(){
     if (_hm) {
       const _t = (_hm.textContent || '').trim();
       if (!_t || _t.includes('Фон підтримує') || _t.includes('Найкраще вікно') || _t === '—') {
-        _hm.textContent = `Дійте до ${_utcL}:00 UTC / ${_kyivL}:00 Київ — після тільки рутина.`;
+        // fp37: shorter
+        _hm.textContent = `До ${_utcL}:00 UTC — можна; після — рутина.`;
       }
     }
   } catch(_e) { /* silent */ }
@@ -10051,11 +10054,12 @@ function _applyStormGuardDOM(){
   try {
     const _dtl = document.getElementById('decisionTimingList');
     if (_dtl && _dtl.textContent && _dtl.textContent.includes('Немає даних')) {
+      // fp37: shorter labels for dt-time column (min-width:110px)
       _dtl.innerHTML = `
-        <div class="dt-row dt-good dt-now"><span class="dt-time">Зараз</span><span class="dt-label">орієнтовно можна — дійте до ${_utcL}:00 UTC ◀</span></div>
-        <div class="dt-row dt-bad" style="opacity:.85"><span class="dt-time">До ${_utcL}:00 UTC / ${_kyivL}:00 Київ</span><span class="dt-label">закрити важливе</span></div>
-        <div class="dt-row dt-bad" style="opacity:.72"><span class="dt-time">Після бурі</span><span class="dt-label">тільки рутина / без критичних рішень</span></div>
-        <div style="color:var(--faint);font-size:10px;margin-top:4px">⚡ Storm fallback — Kp=${_sw.kp.toFixed(1)} о ${_utcL}:00 UTC. Слоти підтягуються…</div>
+        <div class="dt-row dt-good dt-now"><span class="dt-time">Зараз</span><span class="dt-label">можна — до ${_utcL}:00 UTC ◀</span></div>
+        <div class="dt-row dt-bad" style="opacity:.85"><span class="dt-time">До ${_utcL}:00 UTC</span><span class="dt-label">закрити важливе</span></div>
+        <div class="dt-row dt-bad" style="opacity:.72"><span class="dt-time">Після ${_utcL}:00</span><span class="dt-label">тільки рутина</span></div>
+        <div style="color:var(--faint);font-size:10px;margin-top:4px">⚡ Storm — Kp=${_sw.kp.toFixed(1)} о ${_utcL}:00 UTC (${_kyivL}:00 Київ). Слоти підтягуються…</div>
       `;
     }
   } catch(_e) { /* silent */ }
@@ -10064,7 +10068,58 @@ function _applyStormGuardDOM(){
   try {
     const _tr = document.getElementById('timingRows');
     if (_tr && _tr.textContent && (_tr.textContent.includes('недоступний') || _tr.textContent.includes('Прогноз Kp'))) {
-      _tr.innerHTML = `<span style="color:#ffd2a0;font-size:11px">⚡ Kp-слоти підтягуються. Відомо: буря Kp=${_sw.kp.toFixed(1)} о ${_utcL}:00 UTC / ${_kyivL}:00 Київ</span>`;
+      // fp37: shorter
+      _tr.innerHTML = `<span style="color:#ffd2a0;font-size:11px">⚡ Слоти підтягуються. Буря Kp=${_sw.kp.toFixed(1)} о ${_utcL}:00 UTC (${_kyivL}:00 Київ)</span>`;
+    }
+  } catch(_e) { /* silent */ }
+
+  // 6. fp36: heroDecisionAvoid storm-aware
+  try {
+    const _avEl = document.getElementById('heroDecisionAvoid');
+    if (_avEl) {
+      const _t = (_avEl.textContent || '').trim();
+      if (_t.startsWith('○ Підтримуйте темп') || _t.startsWith('○ Без розпорошення') || _t === '—' || _t === '') {
+        // fp37: shorter
+        _avEl.textContent = `✖ Не починати нове після ${_utcL}:00 UTC`;
+      }
+    }
+  } catch(_e) { /* silent */ }
+}
+
+// fp36: separate stale-DOM patcher for non-storm placeholders (whyRows, timingRows).
+// Runs in same interval/triggers as storm-guard so loading text doesn't get stuck.
+function _patchStaleLoadingDOM() {
+  // a) whyRows "Дані завантажуються…" — re-trigger _renderHeroCause if data is available now
+  try {
+    const _wr = document.getElementById('whyRows');
+    if (_wr && _wr.textContent && _wr.textContent.includes('Дані завантажуються')) {
+      const _gNow = window.__uiState?.gNow;
+      const _kp = (typeof lastWWV !== 'undefined' && lastWWV && isFinite(lastWWV.kNow)) ? lastWWV.kNow : NaN;
+      if (isFinite(_gNow) && typeof _renderHeroCause === 'function') {
+        _renderHeroCause(_gNow, _kp);
+      }
+    }
+  } catch(_e) { /* silent */ }
+
+  // b) timingRows "Прогноз Kp-слотів недоступний" — re-trigger if _daySlots populated now
+  try {
+    const _tr = document.getElementById('timingRows');
+    if (_tr && _tr.textContent && _tr.textContent.includes('недоступний')) {
+      if (Array.isArray(window._daySlots) && window._daySlots.length > 0
+          && typeof _renderHeroTimeWindows === 'function') {
+        _renderHeroTimeWindows();
+      }
+    }
+  } catch(_e) { /* silent */ }
+
+  // c) decisionTimingList "Немає даних по слотах" — re-trigger renderDecisionTiming
+  try {
+    const _dtl = document.getElementById('decisionTimingList');
+    if (_dtl && _dtl.textContent && _dtl.textContent.includes('Немає даних')) {
+      if (Array.isArray(window._daySlots) && window._daySlots.length > 0
+          && typeof renderDecisionTiming === 'function') {
+        renderDecisionTiming(window._daySlots);
+      }
     }
   } catch(_e) { /* silent */ }
 }
@@ -10073,7 +10128,7 @@ function _applyStormGuardDOM(){
 try {
   if (!window.__stormGuardTimer) {
     window.__stormGuardTimer = setInterval(() => {
-      try { _applyStormGuardDOM(); } catch(e) { /* silent */ }
+      try { _applyStormGuardDOM(); _patchStaleLoadingDOM(); } catch(e) { /* silent */ }
     }, 30000);
   }
 } catch(e) { /* silent */ }
@@ -11072,7 +11127,7 @@ function syncHero(){
   // v87: Alert banner — storm / high-risk detection
   try { renderAlertBanner(gVal, kpH); } catch(e){ console.warn('alert:',e); }
   // fp35: extra safety net — apply storm-guard patches at very end of render
-  try { _applyStormGuardDOM(); } catch(e) { /* silent */ }
+  try { _applyStormGuardDOM(); _patchStaleLoadingDOM(); } catch(e) { /* silent */ }
 }
 
 // ═══ v78d: Why Card (coreGrid) ═══
@@ -17527,7 +17582,7 @@ setTimeout(() => {
       if (!window._stormWindow && _hasNoaaStorm) {
         window._stormWindow = { kp: 5, label: '18', hoursAhead: Math.max(0, (18 - new Date().getUTCHours())) };
       }
-      if (typeof _applyStormGuardDOM === 'function') _applyStormGuardDOM();
+      if (typeof _applyStormGuardDOM === 'function') _applyStormGuardDOM(); if (typeof _patchStaleLoadingDOM === 'function') _patchStaleLoadingDOM();
     } catch(_e) { /* silent */ }
   }); } catch(e){}
 }, 3000);
