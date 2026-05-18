@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.35-fp42</title>
+  <title>G-Index — Космофізичний дашборд v88.8.35-fp43</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -9686,6 +9686,45 @@ function buildDaySentence(uiState){
 // ═══ v83d: canonical timing system ═══
 const TIMING_THRESHOLDS = { good: 0.5, mid: -0.5 };
 
+// ─── fp43: CANONICAL storm resolver ──────────────────────────────────────────
+// Single source of truth. All storm reads use this. No inline _stormWindow computes.
+// Hierarchy: observed kpNow >= 5 → active; forecast slot >= nowSlotIdx with kp>=5 → incoming.
+function resolveStormWindow(now, slots, kpNow) {
+  now   = now   || new Date();
+  slots = slots || window._daySlots || [];
+  kpNow = isFinite(kpNow) ? kpNow : (typeof lastWWV !== 'undefined' && lastWWV && isFinite(lastWWV.kNow) ? lastWWV.kNow : NaN);
+  const nowSlotIdx = Math.floor(now.getUTCHours() / 3);
+
+  // 1. Observed kp already storm-level → active immediately
+  const kpNowStorm = isFinite(kpNow) && kpNow >= 5;
+
+  // 2. Forecast slot with kp>=5, current or future
+  const slot = slots.find(s =>
+    Number.isFinite(s.kp) && s.kp >= 5 &&
+    Number.isFinite(s.i)  && s.i >= nowSlotIdx
+  );
+
+  if (!slot && !kpNowStorm) return null;
+
+  const label = slot
+    ? String(slot.label).padStart(2, '0')
+    : String(nowSlotIdx * 3).padStart(2, '0');
+  const slotKp  = slot ? slot.kp : kpNow;
+  const startMs = (() => { const d = new Date(now); d.setUTCHours(parseInt(label, 10), 0, 0, 0); return d.getTime(); })();
+  const active  = kpNowStorm || (now.getTime() >= startMs);
+  const etaHours = active ? 0 : Math.max(0, (startMs - now.getTime()) / 3600000);
+
+  return {
+    kp:       slotKp,
+    label,
+    active,
+    hoursAhead: +etaHours.toFixed(1),
+    etaLabel:   active ? 'ЗАРАЗ' : `~${etaHours.toFixed(1)}г`,
+    source:     slot ? 'forecast' : 'observed'
+  };
+}
+window.resolveStormWindow = resolveStormWindow;
+
 function classifySlotScore(score){
   const s = Number(score ?? 0);
   if(s >= TIMING_THRESHOLDS.good) return 'good';
@@ -9933,33 +9972,19 @@ function renderAlertBanner(g, kp){
   }
 
   // Forecast: check _daySlots for future Kp ≥ 5
-  const slots = window._daySlots || [];
-  const nowSlotIdx = Math.floor(new Date().getUTCHours() / 3);
-  // fp42: include current slot (s.i >= nowSlotIdx) — previously s.i > nowSlotIdx missed storm
-  // that already started. If we're inside the storm slot (kp>=5), _stormWindow must be non-null.
-  const futureStorm = slots.find(s => s.i >= nowSlotIdx && isFinite(s.kp) && s.kp >= 5);
-  // fp27: expose to window so heroHeadline storm-guard can read it without re-scanning slots
-  // fp40: ETA fix — exact minutes from now to storm start, not (slotIndex delta)*3 hours
-  const _nowUTCms = Date.now();
-  const _stormUTCms = futureStorm
-    ? (() => { const d = new Date(); d.setUTCHours(futureStorm.i * 3, 0, 0, 0); return d.getTime(); })()
-    : null;
-  const _etaHours = _stormUTCms !== null ? Math.max(0, (_stormUTCms - _nowUTCms) / 3600000) : null;
-  // fp42: active=true when storm slot already started (hoursAhead≈0)
-  const _stormActive = _etaHours !== null && _etaHours < 0.1;
-  const _etaLabel = _stormActive ? 'ЗАРАЗ' : (_etaHours !== null ? `~${_etaHours.toFixed(1)}г` : null);
-  window._stormWindow = futureStorm ? { kp: futureStorm.kp, label: futureStorm.label, hoursAhead: +(_etaHours ?? 0).toFixed(1), etaLabel: _etaLabel, active: _stormActive } : null;
-  if (futureStorm && !alerts.length) {
-    // fp42: use exact etaLabel (ЗАРАЗ / ~Xг), not old slot-index formula
-    const _utcH = parseInt(futureStorm.label, 10);
+  // fp43: use canonical resolveStormWindow() — single source of truth
+  window._stormWindow = resolveStormWindow(new Date(), window._daySlots || [], kp);
+  const _sw43 = window._stormWindow;
+  if (_sw43 && !alerts.length) {
+    const _utcH = parseInt(_sw43.label, 10);
     const _kyivH = (_utcH + 3) % 24;
     const _kyivStr = String(_kyivH).padStart(2,'0') + ':00';
-    const _alertTitle = _stormActive
-      ? `⚡ БУРЯ АКТИВНА ЗАРАЗ — Kp=${futureStorm.kp.toFixed(1)}`
-      : `⚠ БУРЯ ОЧІКУЄТЬСЯ через ${_etaLabel}`;
-    const _alertBody = _stormActive
-      ? `Геомагнітна буря Kp=${futureStorm.kp.toFixed(1)} зараз активна. Тільки рутина, без критичних рішень.`
-      : `Прогнозований Kp=${futureStorm.kp.toFixed(1)} о ${futureStorm.label}:00 UTC / ${_kyivStr} Київ. Завершіть важливі справи заздалегідь.`;
+    const _alertTitle = _sw43.active
+      ? `⚡ БУРЯ АКТИВНА ЗАРАЗ — Kp=${_sw43.kp.toFixed(1)}`
+      : `⚠ БУРЯ ОЧІКУЄТЬСЯ через ${_sw43.etaLabel}`;
+    const _alertBody = _sw43.active
+      ? `Геомагнітна буря Kp=${_sw43.kp.toFixed(1)} зараз активна. Тільки рутина, без критичних рішень.`
+      : `Прогнозований Kp=${_sw43.kp.toFixed(1)} о ${_sw43.label}:00 UTC / ${_kyivStr} Київ. Завершіть важливі справи заздалегідь.`;
     alerts.push({ title: _alertTitle, body: _alertBody });
   }
 
@@ -10001,51 +10026,51 @@ function _applyStormGuardDOM(){
   const _utcL = String(_sw.label).padStart(2,'0');
   const _kyivL = String((parseInt(_sw.label,10) + 3) % 24).padStart(2,'0');
 
-  // 1. heroActionCmd (hero headline) — replace generic "ЗАРАЗ МОЖНА ДІЯТИ"
-  //    fp39: only overwrite POSITIVE fallback texts. If headline is already storm-aware (from fp27),
-  //    leave it alone — fp27 produces the canonical short form already.
+  // 1. heroActionCmd
   try {
     const _ac = document.getElementById('heroActionCmd');
     if (_ac) {
       const _t = (_ac.textContent || '').trim();
-      const _isStormAware = _t.includes('буря Kp=') || _t.includes('Kp-буря') || _t.includes('закрити до') || _t.includes('АКТИВНА');
+      const _isStormAware = _t.includes('буря Kp=') || _t.includes('АКТИВНА') || _t.includes('до ${');
       if (!_isStormAware && (
           _t === 'ЗАРАЗ МОЖНА ДІЯТИ — сильний день за PDF' ||
           _t === 'ЗАРАЗ МОЖНА ПЛАНОВО — день сприятливий' ||
           _t === 'МОЖНА ДІЯТИ за PDF · live-фон estimated — перевір перед критичною дією')) {
-        const _etaStr42 = _sw.etaLabel || `~${_sw.hoursAhead}г`;
+        const _etaStr43 = _sw.etaLabel || `~${_sw.hoursAhead}г`;
         _ac.textContent = _sw.active
-          ? `PDF +3 · буря Kp=${_sw.kp.toFixed(1)} АКТИВНА — тільки рутина`
-          : `PDF +3 · буря Kp=${_sw.kp.toFixed(1)} через ${_etaStr42} — закрити до ${_utcL}:00 UTC (${_kyivL}:00 Київ)`;
+          ? `PDF · буря Kp=${_sw.kp.toFixed(1)} АКТИВНА — тільки рутина`
+          : `PDF · буря Kp=${_sw.kp.toFixed(1)} ${_etaStr43} — до ${_utcL}:00 UTC`;
       }
     }
   } catch(_e) { /* silent */ }
 
-  // 2. heroDecisionDo — storm-aware DO text
-  //    fp39: skip if already storm-aware (fp30-A wrote canonical short form)
+  // 2. heroDecisionDo
   try {
     const _doEl = document.getElementById('heroDecisionDo');
     if (_doEl) {
       const _t = (_doEl.textContent || '').trim();
-      const _isStormAware = _t.includes('Діяти до') || _t.includes('закрити до');
+      const _isStormAware = _t.includes('Діяти до') || _t.includes('АКТИВНА') || _t.includes('тільки рутина');
       if (!_isStormAware && (
           _t.includes('Можна діяти активно') ||
           _t.includes('Рухайтесь у важливих справах') ||
           _t === '—' || _t === '')) {
-        _doEl.textContent = `✔ Діяти до ${_utcL}:00 UTC (${_kyivL}:00 Київ)`;
+        _doEl.textContent = _sw.active
+          ? `✖ Kp=${_sw.kp.toFixed(1)} АКТИВНА — тільки рутина`
+          : `✔ Діяти до ${_utcL}:00 UTC (${_kyivL}:00 Київ)`;
       }
     }
   } catch(_e) { /* silent */ }
 
-  // 3. heroMainDrag — timing line
-  //    fp39: skip if already storm-aware
+  // 3. heroMainDrag
   try {
     const _hm = document.getElementById('heroMainDrag');
     if (_hm) {
       const _t = (_hm.textContent || '').trim();
-      const _isStormAware = _t.includes('UTC') && _t.includes('рутина');
+      const _isStormAware = _t.includes('UTC') && (_t.includes('рутина') || _t.includes('АКТИВНА'));
       if (!_isStormAware && (!_t || _t.includes('Фон підтримує') || _t.includes('Найкраще вікно') || _t === '—')) {
-        _hm.textContent = `До ${_utcL}:00 UTC — можна; після — рутина.`;
+        _hm.textContent = _sw.active
+          ? `Буря активна — тільки рутина, без нових рішень.`
+          : `До ${_utcL}:00 UTC — можна; після — рутина.`;
       }
     }
   } catch(_e) { /* silent */ }
@@ -10909,34 +10934,21 @@ function syncHero(){
   // v78b: DO/AVOID from operational hierarchy (Engine day verdict guarded by Live G)
   const _stKey = _heroSig.opKey || classifyStateByG(gVal, kpH);
   const _st = GLOBAL_STATES[_stKey];
-  // fp33: compute _stormWindow HERE — BEFORE fp30-A reads it. Previously fp29 was below
-  // L10800, after fp30-A on L10756, so first-render storm-guard always read null.
+  // fp43: use canonical resolveStormWindow() — replaces fp33/fp40/fp42 inline computes
   try {
-    const _daySlotsForStorm = window._daySlots || [];
-    const _nowSlotIdxS = Math.floor(new Date().getUTCHours() / 3);
-    const _kpNowLiveS = (typeof lastWWV !== 'undefined' && lastWWV && isFinite(lastWWV.kNow)) ? lastWWV.kNow : 0;
-    // fp42: >= includes current slot when storm already started (was > which missed active storms)
-    const _fStormS = _daySlotsForStorm.find(s => s.i >= _nowSlotIdxS && isFinite(s.kp) && s.kp >= 5);
-    const _todayStrS = new Date().toISOString().slice(0,10);
-    const _noaaStormTodayS = !_fStormS && Array.isArray(window.__noaaStormDates) && window.__noaaStormDates.includes(_todayStrS);
-    // fp40: exact ETA in hours (not slot-index*3)
-    const _etaExact = _fStormS ? (() => {
-      const _d = new Date(); _d.setUTCHours(_fStormS.i * 3, 0, 0, 0);
-      const _t = _d > new Date() ? _d.getTime() : _d.getTime() + 86400000;
-      return +Math.max(0, (_t - Date.now()) / 3600000).toFixed(1);
-    })() : null;
-    window._stormWindow = _fStormS
-      ? { kp: _fStormS.kp, label: _fStormS.label, hoursAhead: _etaExact ?? 0 }
-      : _noaaStormTodayS
-        ? { kp: 5, label: '18', hoursAhead: +Math.max(0, (18 - new Date().getUTCHours() - new Date().getUTCMinutes()/60)).toFixed(1) }
-        : (_kpNowLiveS >= 5 ? { kp: _kpNowLiveS, label: String(_nowSlotIdxS * 3), hoursAhead: 0 } : null);
+    window._stormWindow = resolveStormWindow(new Date(), window._daySlots || [], kpH);
   } catch(_eS) { window._stormWindow = window._stormWindow || null; }
   // fp30-A: storm-guard on heroDecisionDo — override positive doText when storm incoming
-  // fp39: short text with Kyiv time, fits mobile
+  // fp43: active storm → full block regardless of _stKey
   const _sw30 = window._stormWindow;
-  const _stormDoText = (_sw30 && isFinite(_sw30.kp) && _sw30.kp >= 5 && (_stKey === 'favorable' || _stKey === 'good'))
-    ? `✔ Діяти до ${String(_sw30.label).padStart(2,'0')}:00 UTC (${String((parseInt(_sw30.label,10)+3)%24).padStart(2,'0')}:00 Київ)`
-    : _st.doText;
+  let _stormDoText;
+  if (_sw30 && isFinite(_sw30.kp) && _sw30.kp >= 5) {
+    _stormDoText = _sw30.active
+      ? `✖ Kp=${_sw30.kp.toFixed(1)} АКТИВНА — тільки рутина`
+      : `✔ Діяти до ${String(_sw30.label).padStart(2,'0')}:00 UTC (${String((parseInt(_sw30.label,10)+3)%24).padStart(2,'0')}:00 Київ)`;
+  } else {
+    _stormDoText = _st.doText;
+  }
   _set('heroDecisionDo', _stormDoText);
   _set('heroDecisionAvoid', _st.avoidText);
   const _doEl = el('heroDecisionDo');
@@ -17596,15 +17608,11 @@ setTimeout(() => {
     if(window._DEBUG) console.log('[NoaaEvents] loaded', (ev||[]).length, 'alerts');
     window.__noaaEvents = ev;
     window.__noaaStormDates = NoaaEvents.getStormDates(ev);
-    // fp35: re-compute _stormWindow now that NoaaEvents data is in, then patch stale DOM.
+    // fp43: re-resolve via canonical function now that NoaaEvents data is available
     try {
-      const _todayStr = new Date().toISOString().slice(0,10);
-      const _kpNow = (typeof lastWWV !== 'undefined' && lastWWV && isFinite(lastWWV.kNow)) ? lastWWV.kNow : 0;
-      const _hasNoaaStorm = Array.isArray(window.__noaaStormDates) && window.__noaaStormDates.includes(_todayStr);
-      if (!window._stormWindow && _hasNoaaStorm) {
-        window._stormWindow = { kp: 5, label: '18', hoursAhead: Math.max(0, (18 - new Date().getUTCHours())) };
-      }
-      if (typeof _applyStormGuardDOM === 'function') _applyStormGuardDOM(); if (typeof _patchStaleLoadingDOM === 'function') _patchStaleLoadingDOM();
+      window._stormWindow = resolveStormWindow();
+      if (typeof _applyStormGuardDOM === 'function') _applyStormGuardDOM();
+      if (typeof _patchStaleLoadingDOM === 'function') _patchStaleLoadingDOM();
     } catch(_e) { /* silent */ }
   }); } catch(e){}
 }, 3000);
