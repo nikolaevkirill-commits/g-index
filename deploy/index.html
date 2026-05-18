@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.35-fp37</title>
+  <title>G-Index — Космофізичний дашборд v88.8.35-fp38</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -10051,9 +10051,11 @@ function _applyStormGuardDOM(){
   } catch(_e) { /* silent */ }
 
   // 4. decisionTimingList — replace "Немає даних" with storm fallback
+  //    fp38: ONLY if _daySlots is still empty. If populated → let normal render handle it.
   try {
     const _dtl = document.getElementById('decisionTimingList');
-    if (_dtl && _dtl.textContent && _dtl.textContent.includes('Немає даних')) {
+    const _slotsReady = Array.isArray(window._daySlots) && window._daySlots.length > 0;
+    if (_dtl && _dtl.textContent && _dtl.textContent.includes('Немає даних') && !_slotsReady) {
       // fp37: shorter labels for dt-time column (min-width:110px)
       _dtl.innerHTML = `
         <div class="dt-row dt-good dt-now"><span class="dt-time">Зараз</span><span class="dt-label">можна — до ${_utcL}:00 UTC ◀</span></div>
@@ -10065,9 +10067,13 @@ function _applyStormGuardDOM(){
   } catch(_e) { /* silent */ }
 
   // 5. timingRows — replace "Прогноз Kp-слотів недоступний" with storm info
+  //    fp38: ONLY if _daySlots is still empty. If populated → let _renderHeroTimeWindows render real slots.
   try {
     const _tr = document.getElementById('timingRows');
-    if (_tr && _tr.textContent && (_tr.textContent.includes('недоступний') || _tr.textContent.includes('Прогноз Kp'))) {
+    const _slotsReady = Array.isArray(window._daySlots) && window._daySlots.length > 0;
+    if (_tr && _tr.textContent &&
+        (_tr.textContent.includes('недоступний') || _tr.textContent.includes('Прогноз Kp')) &&
+        !_slotsReady) {
       // fp37: shorter
       _tr.innerHTML = `<span style="color:#ffd2a0;font-size:11px">⚡ Слоти підтягуються. Буря Kp=${_sw.kp.toFixed(1)} о ${_utcL}:00 UTC (${_kyivL}:00 Київ)</span>`;
     }
@@ -10101,10 +10107,11 @@ function _patchStaleLoadingDOM() {
     }
   } catch(_e) { /* silent */ }
 
-  // b) timingRows "Прогноз Kp-слотів недоступний" — re-trigger if _daySlots populated now
+  // b) timingRows "Прогноз Kp-слотів недоступний" OR stale storm fallback — re-trigger if _daySlots populated
   try {
     const _tr = document.getElementById('timingRows');
-    if (_tr && _tr.textContent && _tr.textContent.includes('недоступний')) {
+    if (_tr && _tr.textContent &&
+        (_tr.textContent.includes('недоступний') || _tr.textContent.includes('Слоти підтягуються'))) {
       if (Array.isArray(window._daySlots) && window._daySlots.length > 0
           && typeof _renderHeroTimeWindows === 'function') {
         _renderHeroTimeWindows();
@@ -10112,10 +10119,11 @@ function _patchStaleLoadingDOM() {
     }
   } catch(_e) { /* silent */ }
 
-  // c) decisionTimingList "Немає даних по слотах" — re-trigger renderDecisionTiming
+  // c) decisionTimingList "Немає даних по слотах" OR stale storm fallback — re-trigger if _daySlots populated
   try {
     const _dtl = document.getElementById('decisionTimingList');
-    if (_dtl && _dtl.textContent && _dtl.textContent.includes('Немає даних')) {
+    if (_dtl && _dtl.textContent &&
+        (_dtl.textContent.includes('Немає даних') || _dtl.textContent.includes('Storm — Kp=') || _dtl.textContent.includes('Storm fallback'))) {
       if (Array.isArray(window._daySlots) && window._daySlots.length > 0
           && typeof renderDecisionTiming === 'function') {
         renderDecisionTiming(window._daySlots);
