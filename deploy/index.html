@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.35-fp26</title>
+  <title>G-Index — Космофізичний дашборд v88.8.35-fp27</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -9884,6 +9884,8 @@ function renderAlertBanner(g, kp){
   const slots = window._daySlots || [];
   const nowSlotIdx = Math.floor(new Date().getUTCHours() / 3);
   const futureStorm = slots.find(s => s.i > nowSlotIdx && isFinite(s.kp) && s.kp >= 5);
+  // fp27: expose to window so heroHeadline storm-guard can read it without re-scanning slots
+  window._stormWindow = futureStorm ? { kp: futureStorm.kp, label: futureStorm.label, hoursAhead: (futureStorm.i - nowSlotIdx) * 3 } : null;
   if (futureStorm && !alerts.length) {
     const hoursAhead = (futureStorm.i - nowSlotIdx) * 3;
     alerts.push({ title: `⚠ БУРЯ ОЧІКУЄТЬСЯ через ~${hoursAhead} год`, body: `Прогнозований Kp=${futureStorm.kp.toFixed(1)} о ${futureStorm.label}:00 UTC. Завершіть важливі справи заздалегідь.` });
@@ -10143,6 +10145,20 @@ function resolveHeroSignalHierarchy_v88824(liveG, kp){
 function heroHeadlineFromHierarchy_v88824(sig){
   if(!sig || !sig.hasEngine) return null;
   if(sig.guard === 'unverified_override_large_delta') return 'ЗАРАЗ ОБЕРЕЖНО — PDF-ДЖЕРЕЛО НЕ ПІДТВЕРДЖЕНЕ';
+
+  // fp27: storm-guard — if forecast Kp≥5 within same calendar day, downgrade positive headline.
+  // PDF +3 does NOT override a storm window. Priority: storm > live_guard > PDF.
+  try {
+    const _sw = window._stormWindow;
+    if (_sw && isFinite(_sw.kp) && _sw.kp >= 5 && sig.dayScore >= 2) {
+      const _utcLabel = String(_sw.label).padStart(2,'0');
+      return `PDF день сильний (+${sig.dayScore}), але буря Kp=${_sw.kp.toFixed(1)} через ~${_sw.hoursAhead}г — важливе закрити до ${_utcLabel}:00 UTC`;
+    }
+    // Current Kp ≥ 5 (already storming)
+    const _kpNow = (typeof lastWWV !== 'undefined' && lastWWV && isFinite(lastWWV.kNow)) ? lastWWV.kNow : 0;
+    if (_kpNow >= 5 && sig.dayScore >= 2)
+      return `PDF ${sig.dayScore>=0?'+':''}${sig.dayScore} за PDF, але Kp=${_kpNow.toFixed(1)} — буря активна — уникайте критичного`;
+  } catch(e) { /* silent */ }
 
   // v88.8.34: Hero headline is an OPERATIONAL command for the current moment.
   // Day PDF/Engine score is shown as context, not as a command.
