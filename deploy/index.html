@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.35-fp43</title>
+  <title>G-Index — Космофізичний дашборд v88.8.35-fp44</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -10110,8 +10110,10 @@ function _applyStormGuardDOM(){
     if (_avEl) {
       const _t = (_avEl.textContent || '').trim();
       if (_t.startsWith('○ Підтримуйте темп') || _t.startsWith('○ Без розпорошення') || _t === '—' || _t === '') {
-        // fp37: shorter
-        _avEl.textContent = `✖ Не починати нове після ${_utcL}:00 UTC`;
+        // fp44: active storm → full block message
+        _avEl.textContent = _sw.active
+          ? `✖ Kp=${_sw.kp.toFixed(1)} активна — не починати нічого нового`
+          : `✖ Не починати нове після ${_utcL}:00 UTC`;
       }
     }
   } catch(_e) { /* silent */ }
@@ -10224,7 +10226,14 @@ function renderHeatStripV86(){
     }
     seg.style.opacity = '1';
     const g = slot.G;
-    if (g >= 0.5) seg.classList.add('heat-good');
+    // fp44: storm hard cap — if storm active and slot at/after storm start → heat-bad
+    const _sw44h = window._stormWindow;
+    const _stormStartHh = (_sw44h && isFinite(_sw44h.kp) && _sw44h.kp >= 5) ? parseInt(_sw44h.label, 10) : null;
+    const _isStormSlotH = _stormStartHh !== null && (idx * 3 >= _stormStartHh || (isFinite(slot.kp) && slot.kp >= 5));
+    if (_isStormSlotH) {
+      seg.classList.add('heat-bad');
+      seg.setAttribute('data-gval', `⚡Kp≥5`);
+    } else if (g >= 0.5) seg.classList.add('heat-good');
     else if (g <= -0.5) seg.classList.add('heat-bad');
     else seg.classList.add('heat-mid');
     // Mark current time slot
@@ -12212,12 +12221,18 @@ function syncDayPlanCard(){
     const h = parseInt(s.label || '0'); // UTC година початку слоту
     if(h + 3 <= nowH) continue; // past
     const g = Number(s.G ?? 0);
-    const cls = g >= 0.5 ? 'ok' : g >= -0.5 ? 'info' : 'warn';
-    // v88.8.8 БАГ#4 fix: узгоджую термінологію з 'КОЛИ ДІЯТИ' timing labels.
-    // Раніше: 'тільки рутина' для g<-0.5, але timing labels кажуть 'уникати'.
-    // Юзер бачив 'тільки рутина · Венера' в плані і одночасно 'уникати' у timing —
-    // суперечливі повідомлення. Тепер один лексикон: можна / обережно / уникати.
-    const text = g >= 0.5 ? 'можна діяти' : g >= -0.5 ? 'обережно: перевірені дії' : 'уникати: тільки рутина';
+    // fp44: storm hard cap for plan dня
+    const _sw44p = window._stormWindow;
+    const _stormStartHp = (_sw44p && isFinite(_sw44p.kp) && _sw44p.kp >= 5) ? parseInt(_sw44p.label, 10) : null;
+    const _isStormSlotP = _stormStartHp !== null && h >= _stormStartHp;
+    let cls, text;
+    if (_isStormSlotP) {
+      cls = 'warn';
+      text = `тільки рутина · Kp≥5`;
+    } else {
+      cls = g >= 0.5 ? 'ok' : g >= -0.5 ? 'info' : 'warn';
+      text = g >= 0.5 ? 'можна діяти' : g >= -0.5 ? 'обережно: перевірені дії' : 'уникати: тільки рутина';
+    }
     // Hora context
     let horaStr = '';
     try{
@@ -18684,10 +18699,26 @@ function renderDecisionLayer(gVal, ui) {
   // 3. Активні фактори — контекстуальні додатки
   const ai = ui?.ai || {};
   const kp = ui?.kpNow;
-  // Буря Kp ≥ 5 → додати "no подорожі"
-  if (isFinite(kp) && kp >= 5) {
-    avoidArr.unshift('Далеких подорожей, авіаперельотів');
-    ctxTxt = `Буря G${Math.min(5, Math.round(kp - 4))} активна. ` + ctxTxt;
+
+  // fp44: storm hard cap — active storm (kp>=5 OR _stormWindow.active) overrides DO list
+  const _sw44 = window._stormWindow;
+  const _stormActive44 = (_sw44 && _sw44.active) || (isFinite(kp) && kp >= 5);
+  if (_stormActive44) {
+    const _kp44 = _sw44 ? _sw44.kp : kp;
+    doArr = ['Рутинні завдання без критичних рішень', 'Завершити розпочате'];
+    avoidArr = [
+      `Нових ініціатив та запусків (Kp=${_kp44?.toFixed(1)} активна)`,
+      'Підписання угод, фінансових операцій',
+      'Важливих переговорів та презентацій',
+      'Далеких подорожей, авіаперельотів',
+    ];
+    ctxTxt = `Геомагнітна буря Kp=${_kp44?.toFixed(1)} активна. Тільки рутина. ${ctxTxt}`;
+  } else {
+    // Буря Kp ≥ 5 incoming → додати "no подорожі"
+    if (isFinite(kp) && kp >= 5) {
+      avoidArr.unshift('Далеких подорожей, авіаперельотів');
+      ctxTxt = `Буря G${Math.min(5, Math.round(kp - 4))} активна. ` + ctxTxt;
+    }
   }
   // Dst storm
   if ((ai.Di || 0) <= -1) {
