@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.35-fp28</title>
+  <title>G-Index — Космофізичний дашборд v88.8.35-fp29</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -10736,6 +10736,17 @@ function syncHero(){
 
   // ═══ v83d: canonical timing pipeline ═══
   const _daySlots = window._daySlots || [];
+
+  // fp29: compute _stormWindow HERE — before heroHeadline — so storm-guard reads correct value.
+  // Previously _stormWindow was set inside renderAlertBanner() which runs AFTER heroHeadline.
+  try {
+    const _nowSlotIdx = Math.floor(new Date().getUTCHours() / 3);
+    const _kpNowLive = (typeof lastWWV !== 'undefined' && lastWWV && isFinite(lastWWV.kNow)) ? lastWWV.kNow : 0;
+    const _fStorm = _daySlots.find(s => s.i > _nowSlotIdx && isFinite(s.kp) && s.kp >= 5);
+    window._stormWindow = _fStorm
+      ? { kp: _fStorm.kp, label: _fStorm.label, hoursAhead: (_fStorm.i - _nowSlotIdx) * 3 }
+      : (_kpNowLive >= 5 ? { kp: _kpNowLive, label: _nowSlotIdx * 3, hoursAhead: 0 } : null);
+  } catch(_e) { window._stormWindow = window._stormWindow || null; }
 
   // 1. Compute driver from __uiState.ai (syncWhy hasn't run yet)
   // v83e: driver computation moved to computeTopDrivers
