@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.35-fp27</title>
+  <title>G-Index — Космофізичний дашборд v88.8.35-fp28</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -9622,6 +9622,15 @@ function buildUnifiedAdvice(state){
       }
     }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
   }
+  // fp28: storm-guard — if storm incoming today, add timing constraint regardless of PDF score
+  try {
+    const _sw28b = window._stormWindow;
+    if (_sw28b && isFinite(_sw28b.kp) && _sw28b.kp >= 5) {
+      const _utcL = String(_sw28b.label).padStart(2,'0');
+      DO.unshift(`важливе — завершити до ${_utcL}:00 UTC`);
+      AVOID.push(`нові критичні дії після ${_utcL}:00 UTC (Kp-буря)`);
+    }
+  } catch(e) { /* silent */ }
   return { DO:_uniq(DO), AVOID:_uniq(AVOID), NOTE:_uniq(NOTE) };
 }
 
@@ -9776,12 +9785,19 @@ function renderDecisionTiming(slots){
                    : (_cls === 'bad' ? 'уникати — без форсування'
                      : _cls === 'mid' ? 'стандартний темп'
                      : 'сприятливий момент');
+    // fp28: storm-guard для "До кінця дня" — якщо є storm window, фон не може бути "сприятливий" до кінця
+    const _sw28 = window._stormWindow;
+    const _stormRestText = (_sw28 && isFinite(_sw28.kp) && _sw28.kp >= 5)
+      ? `до ${String(_sw28.label).padStart(2,'0')}:00 UTC — можна; після — тільки рутина (Kp-буря)`
+      : null;
     const _restText = _ttHardCap !== null
                     ? `без нових рішень до кінця дня`
+                    : _stormRestText
+                    ? _stormRestText
                     : (_cls === 'bad' ? 'режим без змін до кінця дня'
                       : _cls === 'mid' ? 'фон стабільний до кінця дня'
                       : 'сприятливий фон до кінця дня');
-    const _clsForRender = _ttHardCap !== null ? 'bad' : _cls;
+    const _clsForRender = (_ttHardCap !== null || _stormRestText) ? 'bad' : _cls;
     list.innerHTML = _delayWarn + `
       <div class="dt-row dt-${_clsForRender} dt-now"><span class="dt-time">Зараз</span><span class="dt-label">${_nowText} ◀</span></div>
       <div class="dt-row dt-${_clsForRender}" style="opacity:.72"><span class="dt-time">До кінця дня</span><span class="dt-label">${_restText}</span></div>

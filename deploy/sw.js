@@ -1,5 +1,5 @@
-// v88.8.35-fp27: storm-guard priority in heroHeadline (Kp>=5 overrides PDF+3 headline).
-// G-Index Service Worker v88.8.35-fp27
+// v88.8.35-fp28: storm-guard in timing block + DO/AVOID lists (Kp>=5 overrides positive EOD).
+// G-Index Service Worker v88.8.35-fp28
 // v88.8.19 changes — incremental release після v88.8.18 з реальним bug fix:
 //   ENGINE v18.7 → v18.8: P2 раніше шукав 'Подорожі' word — missed 93 dates
 //     з '✈' emoji-only. P3 раніше тільки Shukla Dashami (10) — missed Krishna
@@ -601,8 +601,8 @@
 //   3. backtest.html додано до SHELL_FILES.
 //   4. cache.put awaited перед SW_FRESH_DATA notify (race fix).
 
-const SHELL_CACHE = 'g-index-shell-v88-8-35-fp27';
-const DATA_CACHE = 'g-index-data-v88-8-35-fp27';
+const SHELL_CACHE = 'g-index-shell-v88-8-35-fp28';
+const DATA_CACHE = 'g-index-data-v88-8-35-fp28';
 
 const SHELL_FILES = [
   './',
