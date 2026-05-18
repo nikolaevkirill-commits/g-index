@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.35-fp31</title>
+  <title>G-Index — Космофізичний дашборд v88.8.35-fp33</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -9764,7 +9764,20 @@ function renderDecisionTiming(slots){
   const pastCount = summary.slots.length - futureSlots.length;
   const visible = futureSlots.length ? futureSlots : summary.slots;
   if(!visible.length){
-    list.innerHTML = _delayWarn + `<span style="color:var(--dim);font-size:12px">Немає даних по слотах.</span>`;
+    // fp32: if no slots but storm window known — show storm fallback instead of "немає даних"
+    const _sw32t = window._stormWindow;
+    if (_sw32t && isFinite(_sw32t.kp) && _sw32t.kp >= 5) {
+      const _utcL32t = String(_sw32t.label).padStart(2,'0');
+      const _kyivL32t = String((parseInt(_sw32t.label,10) + 3) % 24).padStart(2,'0');
+      list.innerHTML = _delayWarn + `
+        <div class="dt-row dt-good dt-now"><span class="dt-time">Зараз</span><span class="dt-label">орієнтовно можна — дійте до ${_utcL32t}:00 UTC ◀</span></div>
+        <div class="dt-row dt-bad" style="opacity:.85"><span class="dt-time">До ${_utcL32t}:00 UTC / ${_kyivL32t}:00 Київ</span><span class="dt-label">закрити важливе</span></div>
+        <div class="dt-row dt-bad" style="opacity:.72"><span class="dt-time">Після бурі</span><span class="dt-label">тільки рутина / без критичних рішень</span></div>
+        <div style="color:var(--faint);font-size:10px;margin-top:4px">⚡ Storm fallback — Kp=${_sw32t.kp.toFixed(1)} о ${_utcL32t}:00 UTC. Слоти недоступні.</div>
+      `;
+    } else {
+      list.innerHTML = _delayWarn + `<span style="color:var(--dim);font-size:12px">Немає даних по слотах.</span>`;
+    }
     return summary;
   }
   // v85b-F8.2+F8.3: при allSame — decision-level (2 рядки), не 6.
@@ -9946,6 +9959,28 @@ function renderAlertBanner(g, kp){
       banner.style.borderColor = 'rgba(255,150,40,.45)';
       banner.style.background = 'linear-gradient(180deg,rgba(255,140,20,.14),rgba(255,140,20,.06))';
     }
+    // fp32: storm confirmed → directly patch hero DO text and heroMainDrag.
+    // This runs AFTER initial render so async NOAA data is available.
+    // Only overrides positive states (favorable/good) — negative states already warn.
+    try {
+      const _sw32 = window._stormWindow;
+      if (_sw32 && isFinite(_sw32.kp) && _sw32.kp >= 5) {
+        const _utcL32 = String(_sw32.label).padStart(2,'0');
+        const _kyivL32 = String((parseInt(_sw32.label,10) + 3) % 24).padStart(2,'0');
+        const _doEl32 = document.getElementById('heroDecisionDo');
+        if (_doEl32 && _doEl32.textContent && (
+          _doEl32.textContent.includes('Можна діяти') ||
+          _doEl32.textContent.includes('Рухайтесь') ||
+          _doEl32.textContent === '—'
+        )) {
+          _doEl32.textContent = `✔ Дійте зараз — важливе закрити до ${_utcL32}:00 UTC / ${_kyivL32}:00 Київ`;
+        }
+        const _hmEl32 = document.getElementById('heroMainDrag');
+        if (_hmEl32 && (!_hmEl32.textContent || _hmEl32.textContent.includes('Фон підтримує') || _hmEl32.textContent.includes('Найкраще вікно'))) {
+          _hmEl32.textContent = `Дійте до ${_utcL32}:00 UTC / ${_kyivL32}:00 Київ — після тільки рутина.`;
+        }
+      }
+    } catch(_e32) { /* silent */ }
   } else {
     banner.style.display = 'none';
   }
@@ -10713,6 +10748,21 @@ function syncHero(){
   // v78b: DO/AVOID from operational hierarchy (Engine day verdict guarded by Live G)
   const _stKey = _heroSig.opKey || classifyStateByG(gVal, kpH);
   const _st = GLOBAL_STATES[_stKey];
+  // fp33: compute _stormWindow HERE — BEFORE fp30-A reads it. Previously fp29 was below
+  // L10800, after fp30-A on L10756, so first-render storm-guard always read null.
+  try {
+    const _daySlotsForStorm = window._daySlots || [];
+    const _nowSlotIdxS = Math.floor(new Date().getUTCHours() / 3);
+    const _kpNowLiveS = (typeof lastWWV !== 'undefined' && lastWWV && isFinite(lastWWV.kNow)) ? lastWWV.kNow : 0;
+    const _fStormS = _daySlotsForStorm.find(s => s.i > _nowSlotIdxS && isFinite(s.kp) && s.kp >= 5);
+    const _todayStrS = new Date().toISOString().slice(0,10);
+    const _noaaStormTodayS = !_fStormS && Array.isArray(window.__noaaStormDates) && window.__noaaStormDates.includes(_todayStrS);
+    window._stormWindow = _fStormS
+      ? { kp: _fStormS.kp, label: _fStormS.label, hoursAhead: (_fStormS.i - _nowSlotIdxS) * 3 }
+      : _noaaStormTodayS
+        ? { kp: 5, label: '18', hoursAhead: Math.max(0, (18 - new Date().getUTCHours())) }
+        : (_kpNowLiveS >= 5 ? { kp: _kpNowLiveS, label: String(_nowSlotIdxS * 3), hoursAhead: 0 } : null);
+  } catch(_eS) { window._stormWindow = window._stormWindow || null; }
   // fp30-A: storm-guard on heroDecisionDo — override positive doText when storm incoming
   const _sw30 = window._stormWindow;
   const _stormDoText = (_sw30 && isFinite(_sw30.kp) && _sw30.kp >= 5 && (_stKey === 'favorable' || _stKey === 'good'))
@@ -10762,22 +10812,7 @@ function syncHero(){
 
   // ═══ v83d: canonical timing pipeline ═══
   const _daySlots = window._daySlots || [];
-
-  // fp29: compute _stormWindow HERE — before heroHeadline — so storm-guard reads correct value.
-  // fp31: also check window.__noaaStormDates (NoaaEvents alerts) as fallback when _daySlots has no Kp>=5
-  try {
-    const _nowSlotIdx = Math.floor(new Date().getUTCHours() / 3);
-    const _kpNowLive = (typeof lastWWV !== 'undefined' && lastWWV && isFinite(lastWWV.kNow)) ? lastWWV.kNow : 0;
-    const _fStorm = _daySlots.find(s => s.i > _nowSlotIdx && isFinite(s.kp) && s.kp >= 5);
-    // fp31: fallback — check noaaStormDates from alerts API
-    const _todayStr = new Date().toISOString().slice(0,10);
-    const _noaaStormToday = !_fStorm && Array.isArray(window.__noaaStormDates) && window.__noaaStormDates.includes(_todayStr);
-    window._stormWindow = _fStorm
-      ? { kp: _fStorm.kp, label: _fStorm.label, hoursAhead: (_fStorm.i - _nowSlotIdx) * 3 }
-      : _noaaStormToday
-        ? { kp: 5, label: '18', hoursAhead: Math.max(0, (18 - new Date().getUTCHours())) }  // conservative estimate
-        : (_kpNowLive >= 5 ? { kp: _kpNowLive, label: String(_nowSlotIdx * 3), hoursAhead: 0 } : null);
-  } catch(_e) { window._stormWindow = window._stormWindow || null; }
+  // fp33: _stormWindow already computed above (before heroDecisionDo). No re-compute here.
 
   // 1. Compute driver from __uiState.ai (syncWhy hasn't run yet)
   // v83e: driver computation moved to computeTopDrivers
@@ -11386,7 +11421,18 @@ function _renderHeroTimeWindows() {
   const shiftEl = el('timingNextShift');
   if (!wrap) return;
   const slots = window._daySlots;
-  if (!slots || !slots.length) { wrap.innerHTML = '<span style="color:var(--dim)">Прогноз Kp-слотів недоступний</span>'; return; }
+  if (!slots || !slots.length) {
+    // fp32: if storm known, show storm info instead of generic "недоступний"
+    const _sw32c = window._stormWindow;
+    if (_sw32c && isFinite(_sw32c.kp) && _sw32c.kp >= 5) {
+      const _utcLc = String(_sw32c.label).padStart(2,'0');
+      const _kyivLc = String((parseInt(_sw32c.label,10) + 3) % 24).padStart(2,'0');
+      wrap.innerHTML = `<span style="color:#ffd2a0;font-size:11px">⚡ Kp-слоти недоступні, але відомо: буря Kp=${_sw32c.kp.toFixed(1)} о ${_utcLc}:00 UTC / ${_kyivLc}:00 Київ</span>`;
+    } else {
+      wrap.innerHTML = '<span style="color:var(--dim)">Прогноз Kp-слотів недоступний</span>';
+    }
+    return;
+  }
 
   const nowH = new Date().getUTCHours();
   const isPaid = PAYWALL.isPaid();
