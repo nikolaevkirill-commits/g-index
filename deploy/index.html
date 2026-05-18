@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.35-fp38</title>
+  <title>G-Index — Космофізичний дашборд v88.8.35-fp39</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -9959,42 +9959,9 @@ function renderAlertBanner(g, kp){
       banner.style.borderColor = 'rgba(255,150,40,.45)';
       banner.style.background = 'linear-gradient(180deg,rgba(255,140,20,.14),rgba(255,140,20,.06))';
     }
-    // fp32: storm confirmed → directly patch hero DO text and heroMainDrag.
-    // This runs AFTER initial render so async NOAA data is available.
-    // Only overrides positive states (favorable/good) — negative states already warn.
-    try {
-      const _sw32 = window._stormWindow;
-      if (_sw32 && isFinite(_sw32.kp) && _sw32.kp >= 5) {
-        const _utcL32 = String(_sw32.label).padStart(2,'0');
-        const _kyivL32 = String((parseInt(_sw32.label,10) + 3) % 24).padStart(2,'0');
-        const _doEl32 = document.getElementById('heroDecisionDo');
-        if (_doEl32 && _doEl32.textContent && (
-          _doEl32.textContent.includes('Можна діяти') ||
-          _doEl32.textContent.includes('Рухайтесь') ||
-          _doEl32.textContent === '—'
-        )) {
-          _doEl32.textContent = `✔ Дійте зараз — важливе закрити до ${_utcL32}:00 UTC / ${_kyivL32}:00 Київ`;
-        }
-        const _hmEl32 = document.getElementById('heroMainDrag');
-        if (_hmEl32 && (!_hmEl32.textContent || _hmEl32.textContent.includes('Фон підтримує') || _hmEl32.textContent.includes('Найкраще вікно'))) {
-          _hmEl32.textContent = `Дійте до ${_utcL32}:00 UTC / ${_kyivL32}:00 Київ — після тільки рутина.`;
-        }
-        // fp34: also patch timing card "Немає даних" / "недоступний" fallbacks if they're shown
-        const _dtl34 = document.getElementById('decisionTimingList');
-        if (_dtl34 && _dtl34.textContent && _dtl34.textContent.includes('Немає даних')) {
-          _dtl34.innerHTML = `
-            <div class="dt-row dt-good dt-now"><span class="dt-time">Зараз</span><span class="dt-label">орієнтовно можна — дійте до ${_utcL32}:00 UTC ◀</span></div>
-            <div class="dt-row dt-bad" style="opacity:.85"><span class="dt-time">До ${_utcL32}:00 UTC / ${_kyivL32}:00 Київ</span><span class="dt-label">закрити важливе</span></div>
-            <div class="dt-row dt-bad" style="opacity:.72"><span class="dt-time">Після бурі</span><span class="dt-label">тільки рутина / без критичних рішень</span></div>
-            <div style="color:var(--faint);font-size:10px;margin-top:4px">⚡ Storm fallback — Kp=${_sw32.kp.toFixed(1)} о ${_utcL32}:00 UTC. Слоти підтягуються…</div>
-          `;
-        }
-        const _tr34 = document.getElementById('timingRows');
-        if (_tr34 && _tr34.textContent && (_tr34.textContent.includes('недоступний') || _tr34.textContent.includes('Прогноз Kp'))) {
-          _tr34.innerHTML = `<span style="color:#ffd2a0;font-size:11px">⚡ Kp-слоти підтягуються. Відомо: буря Kp=${_sw32.kp.toFixed(1)} о ${_utcL32}:00 UTC / ${_kyivL32}:00 Київ</span>`;
-        }
-      }
-    } catch(_e32) { /* silent */ }
+    // fp39: fp32 inline patches REMOVED. _applyStormGuardDOM (called below) handles all DOM patches
+    // with short, consistent texts. fp32 inline was duplicating work AND writing LONG texts that
+    // _applyStormGuardDOM's trigger logic couldn't overwrite (it only catches fallback placeholders).
   } else {
     banner.style.display = 'none';
   }
@@ -10013,38 +9980,46 @@ function _applyStormGuardDOM(){
   const _kyivL = String((parseInt(_sw.label,10) + 3) % 24).padStart(2,'0');
 
   // 1. heroActionCmd (hero headline) — replace generic "ЗАРАЗ МОЖНА ДІЯТИ"
+  //    fp39: only overwrite POSITIVE fallback texts. If headline is already storm-aware (from fp27),
+  //    leave it alone — fp27 produces the canonical short form already.
   try {
     const _ac = document.getElementById('heroActionCmd');
     if (_ac) {
       const _t = (_ac.textContent || '').trim();
-      if (_t === 'ЗАРАЗ МОЖНА ДІЯТИ — сильний день за PDF' ||
+      const _isStormAware = _t.includes('буря Kp=') || _t.includes('Kp-буря') || _t.includes('закрити до');
+      if (!_isStormAware && (
+          _t === 'ЗАРАЗ МОЖНА ДІЯТИ — сильний день за PDF' ||
           _t === 'ЗАРАЗ МОЖНА ПЛАНОВО — день сприятливий' ||
-          _t === 'МОЖНА ДІЯТИ за PDF · live-фон estimated — перевір перед критичною дією') {
-        // fp37: shorter — fits one line even on mobile (~380px)
-        _ac.textContent = `PDF +3 · буря Kp=${_sw.kp.toFixed(1)} через ~${_sw.hoursAhead}г — закрити до ${_utcL}:00 UTC`;
+          _t === 'МОЖНА ДІЯТИ за PDF · live-фон estimated — перевір перед критичною дією')) {
+        _ac.textContent = `PDF +3 · буря Kp=${_sw.kp.toFixed(1)} через ~${_sw.hoursAhead}г — закрити до ${_utcL}:00 UTC (${_kyivL}:00 Київ)`;
       }
     }
   } catch(_e) { /* silent */ }
 
   // 2. heroDecisionDo — storm-aware DO text
+  //    fp39: skip if already storm-aware (fp30-A wrote canonical short form)
   try {
     const _doEl = document.getElementById('heroDecisionDo');
     if (_doEl) {
       const _t = (_doEl.textContent || '').trim();
-      if (_t.includes('Можна діяти активно') || _t.includes('Рухайтесь у важливих справах') || _t === '—' || _t === '') {
-        // fp37: shorter
+      const _isStormAware = _t.includes('Діяти до') || _t.includes('закрити до');
+      if (!_isStormAware && (
+          _t.includes('Можна діяти активно') ||
+          _t.includes('Рухайтесь у важливих справах') ||
+          _t === '—' || _t === '')) {
         _doEl.textContent = `✔ Діяти до ${_utcL}:00 UTC (${_kyivL}:00 Київ)`;
       }
     }
   } catch(_e) { /* silent */ }
 
   // 3. heroMainDrag — timing line
+  //    fp39: skip if already storm-aware
   try {
     const _hm = document.getElementById('heroMainDrag');
     if (_hm) {
       const _t = (_hm.textContent || '').trim();
-      if (!_t || _t.includes('Фон підтримує') || _t.includes('Найкраще вікно') || _t === '—') {
-        // fp37: shorter
+      const _isStormAware = _t.includes('UTC') && _t.includes('рутина');
+      if (!_isStormAware && (!_t || _t.includes('Фон підтримує') || _t.includes('Найкраще вікно') || _t === '—')) {
         _hm.textContent = `До ${_utcL}:00 UTC — можна; після — рутина.`;
       }
     }
@@ -10379,7 +10354,9 @@ function heroHeadlineFromHierarchy_v88824(sig){
     const _sw = window._stormWindow;
     if (_sw && isFinite(_sw.kp) && _sw.kp >= 5 && sig.dayScore >= 2) {
       const _utcLabel = String(_sw.label).padStart(2,'0');
-      return `PDF день сильний (+${sig.dayScore}), але буря Kp=${_sw.kp.toFixed(1)} через ~${_sw.hoursAhead}г — важливе закрити до ${_utcLabel}:00 UTC`;
+      const _kyivLabel = String((parseInt(_sw.label,10) + 3) % 24).padStart(2,'0');
+      // fp39: shorter, mobile-fit
+      return `PDF +${sig.dayScore} · буря Kp=${_sw.kp.toFixed(1)} через ~${_sw.hoursAhead}г — закрити до ${_utcLabel}:00 UTC (${_kyivLabel}:00 Київ)`;
     }
     // Current Kp ≥ 5 (already storming)
     const _kpNow = (typeof lastWWV !== 'undefined' && lastWWV && isFinite(lastWWV.kNow)) ? lastWWV.kNow : 0;
@@ -10919,9 +10896,10 @@ function syncHero(){
         : (_kpNowLiveS >= 5 ? { kp: _kpNowLiveS, label: String(_nowSlotIdxS * 3), hoursAhead: 0 } : null);
   } catch(_eS) { window._stormWindow = window._stormWindow || null; }
   // fp30-A: storm-guard on heroDecisionDo — override positive doText when storm incoming
+  // fp39: short text with Kyiv time, fits mobile
   const _sw30 = window._stormWindow;
   const _stormDoText = (_sw30 && isFinite(_sw30.kp) && _sw30.kp >= 5 && (_stKey === 'favorable' || _stKey === 'good'))
-    ? `✔ Можна діяти зараз — важливе закрити до ${String(_sw30.label).padStart(2,'0')}:00 UTC`
+    ? `✔ Діяти до ${String(_sw30.label).padStart(2,'0')}:00 UTC (${String((parseInt(_sw30.label,10)+3)%24).padStart(2,'0')}:00 Київ)`
     : _st.doText;
   _set('heroDecisionDo', _stormDoText);
   _set('heroDecisionAvoid', _st.avoidText);
