@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.35-fp33</title>
+  <title>G-Index — Космофізичний дашборд v88.8.35-fp34</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -9979,6 +9979,20 @@ function renderAlertBanner(g, kp){
         if (_hmEl32 && (!_hmEl32.textContent || _hmEl32.textContent.includes('Фон підтримує') || _hmEl32.textContent.includes('Найкраще вікно'))) {
           _hmEl32.textContent = `Дійте до ${_utcL32}:00 UTC / ${_kyivL32}:00 Київ — після тільки рутина.`;
         }
+        // fp34: also patch timing card "Немає даних" / "недоступний" fallbacks if they're shown
+        const _dtl34 = document.getElementById('decisionTimingList');
+        if (_dtl34 && _dtl34.textContent && _dtl34.textContent.includes('Немає даних')) {
+          _dtl34.innerHTML = `
+            <div class="dt-row dt-good dt-now"><span class="dt-time">Зараз</span><span class="dt-label">орієнтовно можна — дійте до ${_utcL32}:00 UTC ◀</span></div>
+            <div class="dt-row dt-bad" style="opacity:.85"><span class="dt-time">До ${_utcL32}:00 UTC / ${_kyivL32}:00 Київ</span><span class="dt-label">закрити важливе</span></div>
+            <div class="dt-row dt-bad" style="opacity:.72"><span class="dt-time">Після бурі</span><span class="dt-label">тільки рутина / без критичних рішень</span></div>
+            <div style="color:var(--faint);font-size:10px;margin-top:4px">⚡ Storm fallback — Kp=${_sw32.kp.toFixed(1)} о ${_utcL32}:00 UTC. Слоти підтягуються…</div>
+          `;
+        }
+        const _tr34 = document.getElementById('timingRows');
+        if (_tr34 && _tr34.textContent && (_tr34.textContent.includes('недоступний') || _tr34.textContent.includes('Прогноз Kp'))) {
+          _tr34.innerHTML = `<span style="color:#ffd2a0;font-size:11px">⚡ Kp-слоти підтягуються. Відомо: буря Kp=${_sw32.kp.toFixed(1)} о ${_utcL32}:00 UTC / ${_kyivL32}:00 Київ</span>`;
+        }
       }
     } catch(_e32) { /* silent */ }
   } else {
@@ -10986,7 +11000,16 @@ function _renderHeroCause(g, kp) {
   const whyRows = el('whyRows');
   const whyMain = el('whyMain');
   if (!whyRows) return;
-  if (!isFinite(g)) { whyRows.innerHTML = '<span style="color:var(--dim)">Дані завантажуються…</span>'; return; }
+  // fp34: don't overwrite real content with "Дані завантажуються" placeholder.
+  // Only write placeholder on FIRST render (when whyRows is empty/—).
+  // Otherwise keep previous render so user doesn't see "loading" while data exists.
+  if (!isFinite(g)) {
+    const _curTxt = (whyRows.textContent || '').trim();
+    if (!_curTxt || _curTxt === '—' || _curTxt === '') {
+      whyRows.innerHTML = '<span style="color:var(--dim)">Дані завантажуються…</span>';
+    }
+    return;
+  }
 
   // v85b: read from __uiState.ai instead of DOM gDecompChips
   const _ai = window.__uiState?.ai;
@@ -18580,7 +18603,9 @@ function _getBestWorstDays(){
     // This prevents top summary saying e.g. G_day=+4.0 while the plotted point shows +5.0.
     const todayStr = fmtDate(new Date());
     const nowMs = Date.now();
-    const cutMs = nowMs - 30*86400*1000;
+    // fp34: was 30 days, but visible chart is 27 days back + 7 forward. Sync window to chart
+    // so summary "Макс/Мін" never references a date outside the rendered curve.
+    const cutMs = nowMs - 27*86400*1000;
     const items = [];
 
     // 1) Historical window: prefer _27dComputed entries that are actually past/today and visible in chart.
@@ -18669,9 +18694,9 @@ function renderBestWorstDays(){
   const bSign = bw.best.g >= 0 ? '+' : '';
   const wSign = bw.worst.g >= 0 ? '+' : '';
   block.innerHTML = `
-    <div class="bw-title">Історія · 30д ${bw.fwdPeak ? '<span style="color:var(--faint);font-weight:400;font-size:10px;margin-left:6px">+ прогноз 7д</span>' : ''}</div>
-    <div class="bw-item bw-best" title="З видимої raw-серії минулих 30 днів (до сьогодні) — максимум G_day raw. PDF/Engine Day_score не входить. Окремо нижче — Пік G_day raw (7д) для майбутнього."><span class="bw-label">Макс G_day raw <span style="color:var(--faint);font-size:9px">(у 30-денній базі)</span></span><span class="bw-value">${fmtDate(bw.best.date)} · G_day=${bSign}${bw.best.g.toFixed(1)}</span></div>
-    <div class="bw-item bw-worst" title="З видимої raw-серії минулих 30 днів (до сьогодні) — мінімум G_day raw. PDF/Engine Day_score не входить."><span class="bw-label">Мін G_day raw <span style="color:var(--faint);font-size:9px">(у 30-денній базі)</span></span><span class="bw-value">${fmtDate(bw.worst.date)} · G_day=${wSign}${bw.worst.g.toFixed(1)}</span></div>
+    <div class="bw-title">Історія · 27д ${bw.fwdPeak ? '<span style="color:var(--faint);font-weight:400;font-size:10px;margin-left:6px">+ прогноз 7д</span>' : ''}</div>
+    <div class="bw-item bw-best" title="З видимої raw-серії минулих 27 днів (до сьогодні) — максимум G_day raw. PDF/Engine Day_score не входить. Окремо нижче — Пік G_day raw (7д) для майбутнього."><span class="bw-label">Макс G_day raw <span style="color:var(--faint);font-size:9px">(у видимих 27 днях)</span></span><span class="bw-value">${fmtDate(bw.best.date)} · G_day=${bSign}${bw.best.g.toFixed(1)}</span></div>
+    <div class="bw-item bw-worst" title="З видимої raw-серії минулих 27 днів (до сьогодні) — мінімум G_day raw. PDF/Engine Day_score не входить."><span class="bw-label">Мін G_day raw <span style="color:var(--faint);font-size:9px">(у видимих 27 днях)</span></span><span class="bw-value">${fmtDate(bw.worst.date)} · G_day=${wSign}${bw.worst.g.toFixed(1)}</span></div>
     ${bw.fwdPeak ? `<div class="bw-item bw-fwd" style="color:#9bb1dc" title="З тієї самої _27dComputed raw-серії, що й графік. Це G_day raw, не PDF/Engine Day_score. Окрема вибірка — наступні 7 днів."><span class="bw-label" style="color:#9bb1dc">Пік G_day raw <span style="color:var(--faint);font-size:9px">(прогноз наступних 7д)</span></span><span class="bw-value">${fmtDate(bw.fwdPeak.date)} · G_day=${bw.fwdPeak.g >= 0 ? '+' : ''}${bw.fwdPeak.g.toFixed(1)}</span></div>` : ''}
     <div class="bw-count">${bw.total} днів у базі</div>
   `;
