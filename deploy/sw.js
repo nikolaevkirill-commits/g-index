@@ -1,5 +1,5 @@
-// v88.8.35-fp44: storm hard cap for DO list; heat strip; plan дня; avoid active text.
-// G-Index Service Worker v88.8.35-fp44
+// v88.8.35-fp45: index.html network-first SW; DELAYED prefix on heroDecisionDo.
+// G-Index Service Worker v88.8.35-fp45
 // v88.8.19 changes — incremental release після v88.8.18 з реальним bug fix:
 //   ENGINE v18.7 → v18.8: P2 раніше шукав 'Подорожі' word — missed 93 dates
 //     з '✈' emoji-only. P3 раніше тільки Shukla Dashami (10) — missed Krishna
@@ -601,16 +601,16 @@
 //   3. backtest.html додано до SHELL_FILES.
 //   4. cache.put awaited перед SW_FRESH_DATA notify (race fix).
 
-const SHELL_CACHE = 'g-index-shell-v88-8-35-fp44';
-const DATA_CACHE = 'g-index-data-v88-8-35-fp44';
+const SHELL_CACHE = 'g-index-shell-v88-8-35-fp45';
+const DATA_CACHE = 'g-index-data-v88-8-35-fp45';
 
 const SHELL_FILES = [
-  './',
-  './index.html',
   './manifest.json',
   './icon192.png',
   './icon512.png',
   './backtest.html',
+  // fp45: index.html REMOVED from SHELL_FILES — must be network-first so deploys take effect immediately.
+  // './index.html' — intentionally excluded; handled separately below as network-first.
 ];
 
 self.addEventListener('error', (event) => {
@@ -701,6 +701,24 @@ self.addEventListener('fetch', (event) => {
     return;
   }
   
+  // fp45: index.html and navigation requests — NETWORK-FIRST.
+  // Critical: cache-first caused stale UI after deploys. New version must always be served fresh.
+  const isIndexHtml = url.pathname === '/' || url.pathname.endsWith('/index.html') || url.pathname.endsWith('/.') || event.request.mode === 'navigate';
+  if (isIndexHtml) {
+    event.respondWith(
+      fetch(event.request)
+        .then((resp) => {
+          if (resp.ok) {
+            const clone = resp.clone();
+            caches.open(SHELL_CACHE).then((cache) => cache.put(event.request, clone));
+          }
+          return resp;
+        })
+        .catch(() => caches.match(event.request).then((cached) => cached || caches.match('./index.html')))
+    );
+    return;
+  }
+
   const isShell = SHELL_FILES.some(f => {
     const normalized = f === './' ? '/' : f.replace('./', '/');
     return url.pathname === normalized || url.pathname.endsWith(normalized);

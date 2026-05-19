@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.35-fp44</title>
+  <title>G-Index — Космофізичний дашборд v88.8.35-fp45</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -10949,14 +10949,17 @@ function syncHero(){
   } catch(_eS) { window._stormWindow = window._stormWindow || null; }
   // fp30-A: storm-guard on heroDecisionDo — override positive doText when storm incoming
   // fp43: active storm → full block regardless of _stKey
+  // fp45: DELAYED mode → prefix "орієнтовно"
   const _sw30 = window._stormWindow;
+  const _dm45 = (typeof resolveDataMode === 'function') ? resolveDataMode() : 'live';
+  const _delayedPrefix = (_dm45 !== 'live') ? 'орієнтовно: ' : '';
   let _stormDoText;
   if (_sw30 && isFinite(_sw30.kp) && _sw30.kp >= 5) {
     _stormDoText = _sw30.active
       ? `✖ Kp=${_sw30.kp.toFixed(1)} АКТИВНА — тільки рутина`
-      : `✔ Діяти до ${String(_sw30.label).padStart(2,'0')}:00 UTC (${String((parseInt(_sw30.label,10)+3)%24).padStart(2,'0')}:00 Київ)`;
+      : `${_delayedPrefix}✔ Діяти до ${String(_sw30.label).padStart(2,'0')}:00 UTC (${String((parseInt(_sw30.label,10)+3)%24).padStart(2,'0')}:00 Київ)`;
   } else {
-    _stormDoText = _st.doText;
+    _stormDoText = _delayedPrefix + _st.doText;
   }
   _set('heroDecisionDo', _stormDoText);
   _set('heroDecisionAvoid', _st.avoidText);
