@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.35-fp45</title>
+  <title>G-Index — Космофізичний дашборд v88.8.35-fp46</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -11022,6 +11022,12 @@ function syncHero(){
   // "МОЖНА ДІЯТИ — СИЛЬНЕ ВІКНО" while timing rows say "уникати".
   const _dt = { headline: heroHeadlineFromHierarchy_v88824(_heroSig), sub: (GLOBAL_STATES[_stKey] || GLOBAL_STATES.neutral).sub };
   let _headline = _dt.headline || 'Дані завантажуються…';
+  // fp46: DELAYED prefix on heroActionCmd — if data not live and headline not storm-aware
+  const _dm46 = (typeof resolveDataMode === 'function') ? resolveDataMode() : 'live';
+  const _headlineStormAware = _headline.includes('буря') || _headline.includes('АКТИВНА') || _headline.includes('БУРЯ');
+  if (_dm46 !== 'live' && !_headlineStormAware) {
+    _headline = 'МОЖНА ДІЯТИ за PDF · live-фон estimated — перевір перед критичною дією';
+  }
   _set('heroActionCmd', _headline);
   const hac=el('heroActionCmd');
   if(hac) hac.style.color = (GLOBAL_STATES[_stKey] || GLOBAL_STATES.neutral).color;
@@ -18827,26 +18833,11 @@ function _getBestWorstDays(){
       }
     }
 
-    // 2) fp40: engineScores fallback REMOVED for history (may contain dates outside visible 27d).
-    //    If _27dComputed gives < 3 points, show "недостатньо даних" rather than stale max from full cache.
-    // NOTE: forward 7d peak still uses _27dComputed only (see below).
-    if (items.length < 1 && typeof _engineScores !== 'undefined' && _engineScores) {
-      // Emergency minimal fallback: only dates guaranteed in 27d window, no full-cache scan.
-      const _todayDS = todayStr;
-      for (const ds of Object.keys(_engineScores)) {
-        if (items.find(x=>x[0]===ds)) continue;
-        const t = new Date(ds + 'T12:00:00Z').getTime();
-        if (!isFinite(t) || ds > todayStr || t < cutMs) continue; // strict 27d
-        try {
-          const dt = new Date(ds + 'T12:00:00Z');
-          const sc = _engineScores[ds];
-          if (!sc || !isFinite(sc.kp)) continue;
-          const ai = computeAi(dt, sc.kp);
-          const G = Math.round((sc.kp - 2 + ai.Ai) * 10) / 10;
-          items.push([ds, G, 'engineRecalc']);
-        } catch(e) { /* skip */ }
-      }
-    }
+    // 2) fp40/fp46: engineScores fallback COMPLETELY REMOVED.
+    //    Even the emergency < 1 points path caused stale dates (e.g. 27.04, 30.04) appearing
+    //    in summary while the chart viewport shows only May–June.
+    //    If _27dComputed gives no past points → show "недостатньо даних" in bw-title.
+    // (No engineScores scan here.)
 
     if (items.length < 3) {
       const daily = JSON.parse(localStorage.getItem('g_history_daily_v1') || '{}');
@@ -18903,9 +18894,9 @@ function renderBestWorstDays(){
   const bSign = bw.best.g >= 0 ? '+' : '';
   const wSign = bw.worst.g >= 0 ? '+' : '';
   block.innerHTML = `
-    <div class="bw-title">Графік 27д: Історія + Прогноз 7д</div>
-    <div class="bw-item bw-best" title="Максимум G_day raw за минулі 27 днів від сьогодні (прокрути графік ліворуч щоб побачити). PDF/Engine Day_score окремо у ★ маркерах."><span class="bw-label">Макс G_day raw <span style="color:var(--faint);font-size:9px">(27д від сьогодні)</span></span><span class="bw-value">${fmtDate(bw.best.date)} · G_day=${bSign}${bw.best.g.toFixed(1)}</span></div>
-    <div class="bw-item bw-worst" title="Мінімум G_day raw за минулі 27 днів від сьогодні. Може бути лівіше видимої зони — прокрути графік."><span class="bw-label">Мін G_day raw <span style="color:var(--faint);font-size:9px">(27д від сьогодні)</span></span><span class="bw-value">${fmtDate(bw.worst.date)} · G_day=${wSign}${bw.worst.g.toFixed(1)}</span></div>
+    <div class="bw-title">Графік 27д: Історія + Прогноз 7д <span style="color:var(--faint);font-size:9px;font-weight:400;margin-left:4px">← прокрути щоб побачити всі дати</span></div>
+    <div class="bw-item bw-best" title="Максимум G_day raw за минулі 27 днів від сьогодні. Може бути лівіше поточного viewport — прокрути графік."><span class="bw-label">Макс G_day raw <span style="color:var(--faint);font-size:9px">(27д від сьогодні)</span></span><span class="bw-value">${fmtDate(bw.best.date)} · G_day=${bSign}${bw.best.g.toFixed(1)}</span></div>
+    <div class="bw-item bw-worst" title="Мінімум G_day raw за минулі 27 днів від сьогодні. Може бути лівіше поточного viewport — прокрути графік."><span class="bw-label">Мін G_day raw <span style="color:var(--faint);font-size:9px">(27д від сьогодні)</span></span><span class="bw-value">${fmtDate(bw.worst.date)} · G_day=${wSign}${bw.worst.g.toFixed(1)}</span></div>
     ${bw.fwdPeak ? `<div class="bw-item bw-fwd" style="color:#9bb1dc" title="З тієї самої _27dComputed raw-серії, що й графік. Це G_day raw, не PDF/Engine Day_score. Окрема вибірка — наступні 7 днів."><span class="bw-label" style="color:#9bb1dc">Пік G_day raw <span style="color:var(--faint);font-size:9px">(прогноз наступних 7д)</span></span><span class="bw-value">${fmtDate(bw.fwdPeak.date)} · G_day=${bw.fwdPeak.g >= 0 ? '+' : ''}${bw.fwdPeak.g.toFixed(1)}</span></div>` : ''}
     <div class="bw-count">${bw.total} точок · джерело: NOAA 27-day + розрахунок G</div>
   `;
