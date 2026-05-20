@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.35-fp50</title>
+  <title>G-Index — Космофізичний дашборд v88.8.35-fp51</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -2112,7 +2112,7 @@ Kp: 3-год індекс геомагнітної активності (0–9)
     <div class="swipe-hint" style="display:none" id="swipeHint27">Прокрутіть таблицю</div>
     <section class="card" id="twentysevenCard">
         <div class="flex" style="flex-wrap:wrap;gap:8px">
-          <h2 style="margin:0">27-денний G_day raw (Largest Kp → G_day)</h2>
+          <h2 style="margin:0">27-денний G_day raw <span style="font-size:13px;font-weight:400;color:var(--dim)">(NOAA 27-day Largest Kp → G_day)</span></h2>
           <span class="hint" tabindex="0" style="cursor:help;font-size:11px;color:var(--dim);border-bottom:1px dotted #2a3b61">? що це<span class="hint-pop" style="white-space:pre;font-size:12px;text-align:left;max-width:380px">Це НЕ G_now і НЕ PDF/Engine — це окремий індекс raw-фону доби.
 
 Основний шлях (NOAA 27-day-outlook.txt):
@@ -9426,7 +9426,21 @@ function render3Day(parsed3){
         <div style="font-weight:700;color:${col};font-size:14px">${dd} → ${cat}</div>
         <div style="font-size:11px;color:var(--muted);margin-top:2px">${act}</div>
         ${_bulletinLine}
-        <div style="font-size:10px;color:var(--faint);margin-top:3px" title="G_day raw (3d) = Kp_max з NOAA 3-day forecast (${isFinite(kpMax)?kpMax.toFixed(1):'?'}) − 2 + ΣAᵢ. Джерело: NOAA 3-day. Може відрізнятися від 27-day outlook.">G_day (3d): ${isFinite(G)?(G>=0?'+':'')+G.toFixed(1):'—'}</div>
+        <div style="font-size:10px;color:var(--faint);margin-top:3px" title="G_day raw (3d) = Kp_max з NOAA 3-day forecast (${isFinite(kpMax)?kpMax.toFixed(1):'?'}) − 2 + ΣAᵢ. Джерело: NOAA 3-day. Може відрізнятися від 27-day outlook.">G_day (3d): ${isFinite(G)?(G>=0?'+':'')+G.toFixed(1):'—'}${(() => {
+          // fp51: show G_day 27D alongside 3D and delta
+          try {
+            const _ds51 = typeof fmtDate === 'function' ? fmtDate(d.date) : d.date.toISOString().slice(0,10);
+            const _e27 = Array.isArray(window._27dComputed) ? window._27dComputed.find(e => e.ds === _ds51) : null;
+            if (_e27 && isFinite(_e27.G)) {
+              const _delta = G - _e27.G;
+              const _deltaStr = (_delta >= 0 ? '+' : '') + _delta.toFixed(1);
+              const _27str = (_e27.G >= 0 ? '+' : '') + _e27.G.toFixed(1);
+              const _deltaColor = Math.abs(_delta) >= 0.3 ? '#ffaa33' : 'var(--faint)';
+              return ` · <span style="color:var(--faint)">27d: ${_27str}</span><span style="color:${_deltaColor};font-size:9px"> Δ${_deltaStr}</span>`;
+            }
+          } catch(_e) {}
+          return '';
+        })()}</div>
         ${_scenLabel}
       </span>`;
     }
@@ -18907,7 +18921,7 @@ function renderBestWorstDays(){
   const wSign = bw.worst.g >= 0 ? '+' : '';
   block.innerHTML = `
     <div class="bw-title">Графік 27д: Історія + Прогноз 7д <span style="color:var(--faint);font-size:9px;font-weight:400;margin-left:4px">← прокрути щоб побачити всі дати</span></div>
-    <div style="color:var(--faint);font-size:9px;line-height:1.4;grid-column:1/-1;margin-bottom:4px" title="Чому Hero G_now і G_day на графіку різні: Hero показує live 3-годинний Kp_observed (зараз), а графік — Kp_max добового прогнозу NOAA. Різниця нормальна. Зірки = PDF/Engine Day_score (±3).">ⓘ Кільце Hero = G_now live (Kp спостер.) &middot; Лінія = G_day raw (Kp_max добовий) &middot; ★ = PDF/Engine ±3 &mdash; три різних числа, це нормально</div>
+    <div style="color:var(--faint);font-size:9px;line-height:1.5;grid-column:1/-1;margin-bottom:4px;border:1px solid rgba(155,177,220,.12);border-radius:6px;padding:4px 8px" title="Три числа, три різних NOAA-джерела Kp:&#10;G_now = observed/delayed Kp (live 3-год слот NOAA JSON)&#10;G_day 3D = NOAA 3-day forecast daily Kp_max&#10;G_day 27D = NOAA 27-day outlook Largest Kp&#10;Всі три рахуються за однією формулою G = Kp − 2 + ΣAᵢ, але Kp з різних файлів → різні числа для однієї дати є нормальними.">ⓘ <strong>G_now</strong> (кільце) = Kp NOAA observed · <strong>G_day 3D</strong> (картки) = Kp NOAA 3-day forecast · <strong>G_day 27D</strong> (ця лінія) = Kp NOAA 27-day outlook · <strong>★</strong> = PDF/Engine ±3 — різні Kp-джерела → різні числа для однієї дати є нормальними</div>
     <div class="bw-item bw-best" title="Максимум G_day raw за минулі 27 днів від сьогодні. Може бути лівіше поточного viewport — прокрути графік."><span class="bw-label">Макс G_day raw <span style="color:var(--faint);font-size:9px">(27д від сьогодні)</span></span><span class="bw-value">${fmtDate(bw.best.date)} · G_day=${bSign}${bw.best.g.toFixed(1)}</span></div>
     <div class="bw-item bw-worst" title="Мінімум G_day raw за минулі 27 днів від сьогодні. Може бути лівіше поточного viewport — прокрути графік."><span class="bw-label">Мін G_day raw <span style="color:var(--faint);font-size:9px">(27д від сьогодні)</span></span><span class="bw-value">${fmtDate(bw.worst.date)} · G_day=${wSign}${bw.worst.g.toFixed(1)}</span></div>
     ${bw.fwdPeak ? `<div class="bw-item bw-fwd" style="color:#9bb1dc" title="З тієї самої _27dComputed raw-серії, що й графік. Це G_day raw, не PDF/Engine Day_score. Окрема вибірка — наступні 7 днів."><span class="bw-label" style="color:#9bb1dc">Пік G_day raw <span style="color:var(--faint);font-size:9px">(прогноз наступних 7д)</span></span><span class="bw-value">${fmtDate(bw.fwdPeak.date)} · G_day=${bw.fwdPeak.g >= 0 ? '+' : ''}${bw.fwdPeak.g.toFixed(1)}</span></div>` : ''}
