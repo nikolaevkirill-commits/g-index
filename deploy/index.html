@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.35-fp46</title>
+  <title>G-Index — Космофізичний дашборд v88.8.35-fp48</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -11022,11 +11022,13 @@ function syncHero(){
   // "МОЖНА ДІЯТИ — СИЛЬНЕ ВІКНО" while timing rows say "уникати".
   const _dt = { headline: heroHeadlineFromHierarchy_v88824(_heroSig), sub: (GLOBAL_STATES[_stKey] || GLOBAL_STATES.neutral).sub };
   let _headline = _dt.headline || 'Дані завантажуються…';
-  // fp46: DELAYED prefix on heroActionCmd — if data not live and headline not storm-aware
-  const _dm46 = (typeof resolveDataMode === 'function') ? resolveDataMode() : 'live';
-  const _headlineStormAware = _headline.includes('буря') || _headline.includes('АКТИВНА') || _headline.includes('БУРЯ');
-  if (_dm46 !== 'live' && !_headlineStormAware) {
-    _headline = 'МОЖНА ДІЯТИ за PDF · live-фон estimated — перевір перед критичною дією';
+  // fp47: DELAYED mode appends disclaimer to the REAL headline (not replace it).
+  // fp46 replaced entire headline → broke PDF -1 days (showed "МОЖНА ДІЯТИ" for cautious days).
+  // Rule: real headline from hierarchy always shows; DELAYED adds suffix note.
+  const _dm47 = (typeof resolveDataMode === 'function') ? resolveDataMode() : 'live';
+  const _headlineStormAware47 = _headline.includes('буря') || _headline.includes('АКТИВНА');
+  if (_dm47 !== 'live' && !_headlineStormAware47 && !_headline.includes('estimated')) {
+    _headline = _headline + ' · live-фон estimated';
   }
   _set('heroActionCmd', _headline);
   const hac=el('heroActionCmd');
@@ -18895,6 +18897,7 @@ function renderBestWorstDays(){
   const wSign = bw.worst.g >= 0 ? '+' : '';
   block.innerHTML = `
     <div class="bw-title">Графік 27д: Історія + Прогноз 7д <span style="color:var(--faint);font-size:9px;font-weight:400;margin-left:4px">← прокрути щоб побачити всі дати</span></div>
+    <div style="color:var(--faint);font-size:9px;line-height:1.4;grid-column:1/-1;margin-bottom:4px" title="Чому Hero G_now і G_day на графіку різні: Hero показує live 3-годинний Kp_observed (зараз), а графік — Kp_max добового прогнозу NOAA. Різниця нормальна. Зірки = PDF/Engine Day_score (±3).">ⓘ Кільце Hero = G_now live (Kp спостер.) &middot; Лінія = G_day raw (Kp_max добовий) &middot; ★ = PDF/Engine ±3 &mdash; три різних числа, це нормально</div>
     <div class="bw-item bw-best" title="Максимум G_day raw за минулі 27 днів від сьогодні. Може бути лівіше поточного viewport — прокрути графік."><span class="bw-label">Макс G_day raw <span style="color:var(--faint);font-size:9px">(27д від сьогодні)</span></span><span class="bw-value">${fmtDate(bw.best.date)} · G_day=${bSign}${bw.best.g.toFixed(1)}</span></div>
     <div class="bw-item bw-worst" title="Мінімум G_day raw за минулі 27 днів від сьогодні. Може бути лівіше поточного viewport — прокрути графік."><span class="bw-label">Мін G_day raw <span style="color:var(--faint);font-size:9px">(27д від сьогодні)</span></span><span class="bw-value">${fmtDate(bw.worst.date)} · G_day=${wSign}${bw.worst.g.toFixed(1)}</span></div>
     ${bw.fwdPeak ? `<div class="bw-item bw-fwd" style="color:#9bb1dc" title="З тієї самої _27dComputed raw-серії, що й графік. Це G_day raw, не PDF/Engine Day_score. Окрема вибірка — наступні 7 днів."><span class="bw-label" style="color:#9bb1dc">Пік G_day raw <span style="color:var(--faint);font-size:9px">(прогноз наступних 7д)</span></span><span class="bw-value">${fmtDate(bw.fwdPeak.date)} · G_day=${bw.fwdPeak.g >= 0 ? '+' : ''}${bw.fwdPeak.g.toFixed(1)}</span></div>` : ''}
