@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.35-fp52</title>
+  <title>G-Index — Космофізичний дашборд v88.8.35-fp54</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -10469,7 +10469,13 @@ function heroHeadlineFromHierarchy_v88824(sig){
     if(sig.dayScore >= 3 && (_dm === 'estimated' || _dm === 'partial' || _dm === 'offline' || _dm === 'scenario'))
       return 'МОЖНА ДІЯТИ за PDF · live-фон estimated — перевір перед критичною дією';
   } catch(e) { /* silent */ }
-  if(sig.dayScore >= 3) return 'ЗАРАЗ МОЖНА ДІЯТИ — сильний день за PDF';
+  if(sig.dayScore >= 3) {
+    // fp54-B: if live G is negative despite positive PDF — show divergence note
+    if (isFinite(sig.liveG) && sig.liveG < -0.3 && sig.guard === 'none') {
+      return `ЗАРАЗ МОЖНА ДІЯТИ — PDF день +${sig.dayScore}, але фон зараз слабкий (G${sig.liveG.toFixed(1)})`;
+    }
+    return 'ЗАРАЗ МОЖНА ДІЯТИ — сильний день за PDF';
+  }
   if(sig.dayScore >= 1) return 'ЗАРАЗ МОЖНА ПЛАНОВО — день сприятливий';
   if(sig.dayScore === 0) return sig.liveKey === 'tense' ? 'ЗАРАЗ ОБЕРЕЖНО — нейтральний день, фон тисне' : 'ЗАРАЗ СТАНДАРТНИЙ РЕЖИМ';
   if(sig.dayScore === -1) return 'ЗАРАЗ ОБЕРЕЖНО — день нестійкий';
@@ -11052,17 +11058,21 @@ function syncHero(){
   // "МОЖНА ДІЯТИ — СИЛЬНЕ ВІКНО" while timing rows say "уникати".
   const _dt = { headline: heroHeadlineFromHierarchy_v88824(_heroSig), sub: (GLOBAL_STATES[_stKey] || GLOBAL_STATES.neutral).sub };
   let _headline = _dt.headline || 'Дані завантажуються…';
-  // fp47: DELAYED mode appends disclaimer to the REAL headline (not replace it).
-  // fp52-P3: stronger wording — prepend "ОРІЄНТОВНО" for estimated/delayed, not just suffix
+  // fp47/fp52-P3/fp53-A: DELAYED prefix on headline.
+  // Problem: heroHeadlineFromHierarchy already returns 'МОЖНА ДІЯТИ за PDF · live-фон estimated...'
+  // which contains 'estimated' → fp52 condition blocked the fix.
+  // fp53-A: handle both cases: with and without 'estimated' in headline.
   const _dm47 = (typeof resolveDataMode === 'function') ? resolveDataMode() : 'live';
   const _headlineStormAware47 = _headline.includes('буря') || _headline.includes('АКТИВНА');
-  if (_dm47 !== 'live' && !_headlineStormAware47 && !_headline.includes('estimated') && !_headline.includes('ОРІЄНТОВНО')) {
-    // Replace strong action words but keep PDF verdict
-    if (_headline.startsWith('ЗАРАЗ МОЖНА ДІЯТИ')) {
+  if (_dm47 !== 'live' && !_headlineStormAware47 && !_headline.startsWith('ОРІЄНТОВНО')) {
+    if (_headline === 'МОЖНА ДІЯТИ за PDF · live-фон estimated — перевір перед критичною дією') {
+      // Already has estimated suffix but lacks ОРІЄНТОВНО prefix
+      _headline = 'ОРІЄНТОВНО МОЖНА ДІЯТИ за PDF · live-фон — перевір перед критичною дією';
+    } else if (_headline.startsWith('ЗАРАЗ МОЖНА ДІЯТИ')) {
       _headline = 'ОРІЄНТОВНО МОЖНА ДІЯТИ' + _headline.slice('ЗАРАЗ МОЖНА ДІЯТИ'.length) + ' · live-фон estimated';
     } else if (_headline.startsWith('ЗАРАЗ МОЖНА ПЛАНОВО')) {
       _headline = 'ОРІЄНТОВНО ' + _headline.slice('ЗАРАЗ '.length) + ' · live-фон estimated';
-    } else {
+    } else if (!_headline.includes('estimated')) {
       _headline = _headline + ' · live-фон estimated';
     }
   }
@@ -13114,6 +13124,7 @@ async function loadAll(){
   // Kp прогноз 3 дні
   if(kpFcstR.status === 'fulfilled'){
     last3D = parse3DaySafe(kpFcstR.value);
+    window._gIndex_last3D = last3D;  // fp53-B: store globally for post-27day re-render
     // v88.7.6: Fill-up винесено у спільну функцію — використовується для NOAA і UAF.
     _fillPlaceholderDays(last3D, t27R);
     render3Day(last3D);
@@ -13284,6 +13295,12 @@ async function loadAll(){
         const r27today = r27.find(r=>fmtDate(r.date)===todayStr) || r27[0];
         window._lastF107 = r27today && isFinite(r27today.flux) ? r27today.flux : null;
         render27Day(r27, last3D);
+    // fp53-B: re-render 3-day quick cards AFTER _27dComputed is populated so delta lookup works.
+    // render3Day ran earlier when _27dComputed was empty → delta column showed nothing.
+    try {
+      const _l3d = window._gIndex_last3D || last3D;
+      if (_l3d && typeof render3Day === 'function') render3Day(_l3d);
+    } catch(_e) { /* silent */ }
         _setSrcStatus('src27Day','ok');
         if(window._DEBUG) console.log('[v43] 27-day OK (primary .txt)');
         return;
@@ -13353,6 +13370,12 @@ async function loadAll(){
   updateFreshnessBadge();
 
   try{ syncV702UI(); }catch(e){ console.warn('syncV702UI:', e); }
+  // fp54-A: _daySlots may now be populated (from renderDayForecast earlier in the cycle)
+  // Final pass to patch any stale "Немає даних по слотах" placeholders.
+  setTimeout(() => {
+    try { if(typeof _patchStaleLoadingDOM === 'function') _patchStaleLoadingDOM(); } catch(_e){}
+    try { if(typeof _applyStormGuardDOM === 'function') _applyStormGuardDOM(); } catch(_e){}
+  }, 400);
   try{ applyWowFromG(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
 
   el('btnRefresh').disabled = false;
@@ -18771,6 +18794,21 @@ function renderDecisionLayer(gVal, ui) {
       ctxTxt = `Буря G${Math.min(5, Math.round(kp - 4))} активна. ` + ctxTxt;
     }
   }
+  // fp54-C: Personal cycle conflict — if personal verdict is negative, modify DO list and add note
+  try {
+    const _persEl = document.getElementById('personalVerdictBadge') || document.querySelector('.personal-verdict');
+    const _persTxt = (_persEl?.textContent || '').toLowerCase();
+    const _persNeg = _persTxt.includes('обережний') || _persTxt.includes('не починати') || _persTxt.includes('складний');
+    const _dayPos = gVal > 0 || (ui?.dayScore || 0) >= 1;
+    if (_persNeg && _dayPos && !_stormActive44) {
+      // Global day positive but personal cycle negative
+      doArr = doArr.filter(d => !d.includes('нові ініціативи') && !d.includes('Запускати нові') && !d.includes('нові старти'));
+      doArr.unshift('Контрольовані планові дії (особисто — без нових стартів)');
+      avoidArr.unshift('Нових ініціатив особисто — цикл несприятливий');
+      ctxTxt = 'Глобально день сильний, але персональний цикл — тільки контрольовані дії. ' + ctxTxt;
+    }
+  } catch(_eCyc) { /* silent */ }
+
   // Dst storm
   if ((ai.Di || 0) <= -1) {
     avoidArr.unshift('Навантаження на серцево-судинну систему');
