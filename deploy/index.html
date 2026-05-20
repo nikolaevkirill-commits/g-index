@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.35-fp51</title>
+  <title>G-Index — Космофізичний дашборд v88.8.35-fp52</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -6835,6 +6835,16 @@ function renderForwardTimeline(){
   if(!wrap) return;
   if(!_27dComputed || !_27dComputed.length){ wrap.style.display='none'; return; }
   wrap.style.display = 'block';
+  // fp52-P7: ensure header explains source = NOAA 27-day (same as chart line, NOT 3-day forecast)
+  const _ftHeader = wrap.querySelector('.ft-source-note');
+  if (!_ftHeader) {
+    const _note = document.createElement('div');
+    _note.className = 'ft-source-note';
+    _note.style.cssText = 'font-size:9px;color:var(--faint);margin-bottom:4px';
+    _note.title = 'Forward timeline використовує NOAA 27-day outlook — той самий масив що й графік 27D. Може відрізнятися від 3-day forecast.';
+    _note.textContent = 'ⓘ Джерело: NOAA 27-day Largest Kp (≠ NOAA 3-day forecast)';
+    wrap.insertBefore(_note, wrap.firstChild);
+  }
 
   // v87.35: visible subset на вузьких екранах
   const { data: visibleData, offset, isNarrow } = _ftGetVisibleData();
@@ -11043,12 +11053,18 @@ function syncHero(){
   const _dt = { headline: heroHeadlineFromHierarchy_v88824(_heroSig), sub: (GLOBAL_STATES[_stKey] || GLOBAL_STATES.neutral).sub };
   let _headline = _dt.headline || 'Дані завантажуються…';
   // fp47: DELAYED mode appends disclaimer to the REAL headline (not replace it).
-  // fp46 replaced entire headline → broke PDF -1 days (showed "МОЖНА ДІЯТИ" for cautious days).
-  // Rule: real headline from hierarchy always shows; DELAYED adds suffix note.
+  // fp52-P3: stronger wording — prepend "ОРІЄНТОВНО" for estimated/delayed, not just suffix
   const _dm47 = (typeof resolveDataMode === 'function') ? resolveDataMode() : 'live';
   const _headlineStormAware47 = _headline.includes('буря') || _headline.includes('АКТИВНА');
-  if (_dm47 !== 'live' && !_headlineStormAware47 && !_headline.includes('estimated')) {
-    _headline = _headline + ' · live-фон estimated';
+  if (_dm47 !== 'live' && !_headlineStormAware47 && !_headline.includes('estimated') && !_headline.includes('ОРІЄНТОВНО')) {
+    // Replace strong action words but keep PDF verdict
+    if (_headline.startsWith('ЗАРАЗ МОЖНА ДІЯТИ')) {
+      _headline = 'ОРІЄНТОВНО МОЖНА ДІЯТИ' + _headline.slice('ЗАРАЗ МОЖНА ДІЯТИ'.length) + ' · live-фон estimated';
+    } else if (_headline.startsWith('ЗАРАЗ МОЖНА ПЛАНОВО')) {
+      _headline = 'ОРІЄНТОВНО ' + _headline.slice('ЗАРАЗ '.length) + ' · live-фон estimated';
+    } else {
+      _headline = _headline + ' · live-фон estimated';
+    }
   }
   _set('heroActionCmd', _headline);
   const hac=el('heroActionCmd');
@@ -12564,7 +12580,7 @@ function renderAntiAction(){
       const parts = [];
       if(_avoidItems.length > 0) parts.push(`<strong style="color:var(--bad)">${_avoidItems.length} уникати</strong>`);
       if(_doItems.length > 0) parts.push(`<strong style="color:var(--ok)">${_doItems.length} сприятливо</strong>`);
-      _aPrev.innerHTML = `Панчанга: ${parts.join(' · ')} · не змінює PDF-рішення дня`;
+      _aPrev.innerHTML = `Панчанга: ${parts.join(' · ')} <span style="color:var(--faint);font-size:10px">· advisory layer, не змінює PDF/Engine verdict</span>`;
     }
   }
 }
@@ -18922,8 +18938,8 @@ function renderBestWorstDays(){
   block.innerHTML = `
     <div class="bw-title">Графік 27д: Історія + Прогноз 7д <span style="color:var(--faint);font-size:9px;font-weight:400;margin-left:4px">← прокрути щоб побачити всі дати</span></div>
     <div style="color:var(--faint);font-size:9px;line-height:1.5;grid-column:1/-1;margin-bottom:4px;border:1px solid rgba(155,177,220,.12);border-radius:6px;padding:4px 8px" title="Три числа, три різних NOAA-джерела Kp:&#10;G_now = observed/delayed Kp (live 3-год слот NOAA JSON)&#10;G_day 3D = NOAA 3-day forecast daily Kp_max&#10;G_day 27D = NOAA 27-day outlook Largest Kp&#10;Всі три рахуються за однією формулою G = Kp − 2 + ΣAᵢ, але Kp з різних файлів → різні числа для однієї дати є нормальними.">ⓘ <strong>G_now</strong> (кільце) = Kp NOAA observed · <strong>G_day 3D</strong> (картки) = Kp NOAA 3-day forecast · <strong>G_day 27D</strong> (ця лінія) = Kp NOAA 27-day outlook · <strong>★</strong> = PDF/Engine ±3 — різні Kp-джерела → різні числа для однієї дати є нормальними</div>
-    <div class="bw-item bw-best" title="Максимум G_day raw за минулі 27 днів від сьогодні. Може бути лівіше поточного viewport — прокрути графік."><span class="bw-label">Макс G_day raw <span style="color:var(--faint);font-size:9px">(27д від сьогодні)</span></span><span class="bw-value">${fmtDate(bw.best.date)} · G_day=${bSign}${bw.best.g.toFixed(1)}</span></div>
-    <div class="bw-item bw-worst" title="Мінімум G_day raw за минулі 27 днів від сьогодні. Може бути лівіше поточного viewport — прокрути графік."><span class="bw-label">Мін G_day raw <span style="color:var(--faint);font-size:9px">(27д від сьогодні)</span></span><span class="bw-value">${fmtDate(bw.worst.date)} · G_day=${wSign}${bw.worst.g.toFixed(1)}</span></div>
+    <div class="bw-item bw-best" title="Максимум G_day raw за минулі 27 днів від сьогодні (тільки МИНУЛЕ). Може бути лівіше поточного viewport — прокрути графік."><span class="bw-label">Макс G_day raw <span style="color:var(--faint);font-size:9px">(27д NOAA 27-day · минуле)</span></span><span class="bw-value">${fmtDate(bw.best.date)} · G_day=${bSign}${bw.best.g.toFixed(1)}</span></div>
+    <div class="bw-item bw-worst" title="Мінімум G_day raw за минулі 27 днів від сьогодні (тільки МИНУЛЕ). Може бути лівіше поточного viewport — прокрути графік."><span class="bw-label">Мін G_day raw <span style="color:var(--faint);font-size:9px">(27д NOAA 27-day · минуле)</span></span><span class="bw-value">${fmtDate(bw.worst.date)} · G_day=${wSign}${bw.worst.g.toFixed(1)}</span></div>
     ${bw.fwdPeak ? `<div class="bw-item bw-fwd" style="color:#9bb1dc" title="З тієї самої _27dComputed raw-серії, що й графік. Це G_day raw, не PDF/Engine Day_score. Окрема вибірка — наступні 7 днів."><span class="bw-label" style="color:#9bb1dc">Пік G_day raw <span style="color:var(--faint);font-size:9px">(прогноз наступних 7д)</span></span><span class="bw-value">${fmtDate(bw.fwdPeak.date)} · G_day=${bw.fwdPeak.g >= 0 ? '+' : ''}${bw.fwdPeak.g.toFixed(1)}</span></div>` : ''}
     <div class="bw-count">${bw.total} точок · джерело: NOAA 27-day + розрахунок G</div>
   `;
