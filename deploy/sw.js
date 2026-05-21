@@ -1,5 +1,5 @@
-// v88.8.35-fp54: headline G_now<0 divergence; slots race fix; personal cycle conflict DO.
-// G-Index Service Worker v88.8.35-fp54
+// v88.8.35-fp55-P7: P1 slots + P4 hierarchy + P5 dedup + P2 Kp-labels + P3 Kp×Vedic-window reconcile.
+// G-Index Service Worker v88.8.35-fp55-P7
 // v88.8.19 changes — incremental release після v88.8.18 з реальним bug fix:
 //   ENGINE v18.7 → v18.8: P2 раніше шукав 'Подорожі' word — missed 93 dates
 //     з '✈' emoji-only. P3 раніше тільки Shukla Dashami (10) — missed Krishna
@@ -601,8 +601,8 @@
 //   3. backtest.html додано до SHELL_FILES.
 //   4. cache.put awaited перед SW_FRESH_DATA notify (race fix).
 
-const SHELL_CACHE = 'g-index-shell-v88-8-35-fp54';
-const DATA_CACHE = 'g-index-data-v88-8-35-fp54';
+const SHELL_CACHE = 'g-index-shell-v88-8-35-fp55-p7';
+const DATA_CACHE = 'g-index-data-v88-8-35-fp55-p7';
 
 const SHELL_FILES = [
   './manifest.json',

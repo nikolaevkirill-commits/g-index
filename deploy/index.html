@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.35-fp54</title>
+  <title>G-Index — Космофізичний дашборд v88.8.35-fp55-P7</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1442,6 +1442,8 @@ body.simple-mode .col-hide-mobile {
         </div>
         <div class="hero-maintext">
           <div id="heroDecisionPanel">
+            <!-- v88.8.35-fp55-P7: explicit decision hierarchy. РІШЕННЯ ДНЯ (PDF/Engine) ≠ ФОН ЗАРАЗ (G_now) ≠ ЯКІСТЬ. Filled by _renderHeroHierarchy() from existing globals. -->
+            <div id="heroHierarchy" style="display:none;margin-bottom:8px;border:1px solid var(--border);border-radius:10px;overflow:hidden;background:rgba(11,18,32,.35)"></div>
             <div id="heroActionCmd" style="font-size:18px;font-weight:900;letter-spacing:.02em;line-height:1.15">—</div>
             <div id="heroMainDrag" style="margin-top:4px;font-size:12px;font-weight:700;color:var(--text2)"></div>
             <div id="heroConsequence"></div>
@@ -1599,10 +1601,13 @@ body.simple-mode .col-hide-mobile {
       </div>
     </div>
     <!-- ═══ v83 v3: Decision Timing ═══ -->
-    <div id="decisionTiming" style="margin:0 0 12px;padding:10px 12px;border-radius:12px;border:1px solid rgba(80,140,255,.18);background:rgba(20,30,55,.6)">
-      <div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--dim);margin-bottom:2px">Коли діяти</div>
-      <div style="font-size:10px;color:var(--dim);margin-bottom:6px;font-style:italic">Live-вікна за G_now / G_day raw. Рішення дня — за PDF/Engine.</div>
-      <div id="decisionTimingList" style="display:flex;flex-direction:column;gap:4px"></div>
+    <!-- v88.8.35-fp55-P7: visible "Коли діяти" card REMOVED — it duplicated «Критичні вікна» (timingRows)
+         and produced the "Немає даних по слотах" ↔ filled-windows contradiction. Single source of truth
+         for slots is now «Критичні вікна». #decisionTiming / #decisionTimingList kept as a hidden stub so
+         renderDecisionTiming() still computes its summary (window._lastTimingSummary → buildDashboardState)
+         and every guard (_patchStaleLoadingDOM / _applyStormGuardDOM) stays null-safe. No JS dependency removed. -->
+    <div id="decisionTiming" style="display:none">
+      <div id="decisionTimingList"></div>
     </div>
     <div id="impactBlock" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px">
       <div id="impactGood" style="padding:10px 12px;border-radius:14px;border:1px solid rgba(43,212,125,.2);background:rgba(43,212,125,.05)">
@@ -9815,6 +9820,15 @@ function buildTimingSummary(slots){
 }
 
 function renderDecisionTiming(slots){
+  // v88.8.35-fp55-P7: self-heal at the SOURCE. Previous patches (fp24/32/37/38/40/54-A)
+  // tried to fix the "Немає даних по слотах" + filled "Критичні вікна" contradiction
+  // AFTER render, via DOM. Root cause is a race: the hero pipeline can pass a stale
+  // empty _daySlots snapshot here while timingRows renders from a fresher one.
+  // Fix: if called with an empty/invalid snapshot but the global _daySlots already has
+  // data, use the live global slots. No timing/threshold logic changed — only the input.
+  if ((!Array.isArray(slots) || !slots.length) && Array.isArray(window._daySlots) && window._daySlots.length) {
+    slots = window._daySlots;
+  }
   const summary = buildTimingSummary(slots);
   const list = el('decisionTimingList');
   if(!list) return summary;
@@ -10149,6 +10163,67 @@ function _applyStormGuardDOM(){
   } catch(_e) { /* silent */ }
 }
 
+// v88.8.35-fp55-P7: render the explicit 3-level decision hierarchy at the top of hero.
+// PRESENTATION-ONLY. Reads existing globals (getEngineScore = override>engine day verdict,
+// window.__uiState.gNow = live composite background, resolveDataMode = data quality).
+// No formula/threshold/headline logic is changed — this only LABELS what each number is,
+// so the user no longer confuses РІШЕННЯ ДНЯ (PDF/Engine) with ФОН ЗАРАЗ (G_now).
+function _renderHeroHierarchy(){
+  try{
+    const box = (typeof el==='function') ? el('heroHierarchy') : document.getElementById('heroHierarchy');
+    if(!box) return;
+    // 1) Рішення дня — PDF/Engine (override-aware, canonical day verdict)
+    let decHtml = '<span style="color:var(--dim)">завантаження…</span>';
+    try{
+      const snap = (typeof getEngineScore==='function') ? getEngineScore(new Date()) : null;
+      if(snap && isFinite(snap.eng)){
+        const sc  = Math.max(-3, Math.min(3, Math.round(Number(snap.eng))));
+        const v   = (typeof VERDICT_7CLASS!=='undefined') ? VERDICT_7CLASS[String(sc)] : null;
+        const star= snap._expertOverride ? ' <span title="Expert override застосовано" style="color:#ffd166">★</span>' : '';
+        const col = v ? v.color : 'var(--text2)';
+        const lab = v ? v.label : '';
+        decHtml = `<span style="font-weight:800;color:${col}">${sc>=0?'+':''}${sc}</span> <span style="color:var(--text2)">${lab}</span>${star}`;
+      }
+    }catch(e){ /* silent */ }
+    // 2) Фон зараз — G_now (live composite Kp−2+ΣAᵢ)
+    let gHtml = '<span style="color:var(--dim)">—</span>';
+    try{
+      const g = (window.__uiState && isFinite(window.__uiState.gNow)) ? Number(window.__uiState.gNow) : NaN;
+      const kpN = (window.__uiState && isFinite(window.__uiState.kpNow)) ? Number(window.__uiState.kpNow) : NaN;
+      if(isFinite(g)){
+        const word = g>=2?'сильний фон':g>=0.5?'сприятливий':g>-0.5?'нейтральний':g>-2?'слабкий':'важкий';
+        const col  = g>=0.5?'var(--ok)':g<=-2?'#ff6b6b':g<=-0.5?'#ffaa33':'var(--muted)';
+        const kpTxt= isFinite(kpN) ? ` <span style="color:var(--faint);font-size:11px">· live Kp ${kpN.toFixed(2)}</span>` : '';
+        gHtml = `<span style="font-weight:800;color:${col}">${g>=0?'+':''}${g.toFixed(2)}</span> <span style="color:var(--muted)">${word}</span>${kpTxt}`;
+      }
+    }catch(e){ /* silent */ }
+    // 3) Якість даних — dataMode (live/partial/scenario/offline)
+    let qLab='—', qCol='var(--dim)';
+    try{
+      const dm = (window.__dataMode) || (typeof resolveDataMode==='function'?resolveDataMode():'live');
+      const map = {
+        live:    ['LIVE · дані актуальні','var(--ok)'],
+        partial: ['DELAYED · орієнтовно — перевір перед важливою дією','#ffcc44'],
+        scenario:['SCENARIO · не реальний прогноз, лише плато за поточним Kp','#ff9944'],
+        offline: ['OFFLINE · з кешу, можливо застаріле','#ff6b6b']
+      };
+      const m = map[dm] || map.live; qLab=m[0]; qCol=m[1];
+    }catch(e){ /* silent */ }
+    const row = (k,v,kc)=>`<div style="display:flex;gap:8px;align-items:baseline;padding:6px 10px;border-top:1px solid var(--border)">`
+      + `<span style="flex:0 0 150px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:${kc||'var(--dim)'}">${k}</span>`
+      + `<span style="flex:1;font-size:13px;line-height:1.25">${v}</span></div>`;
+    box.innerHTML =
+        `<div style="display:flex;gap:8px;align-items:baseline;padding:7px 10px;background:rgba(43,212,125,.06)">`
+      + `<span style="flex:0 0 150px;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--ok)">Рішення дня · PDF/Engine</span>`
+      + `<span style="flex:1;font-size:14px;font-weight:700;line-height:1.25">${decHtml}</span></div>`
+      + row('Фон зараз · G_now (live)', gHtml)
+      + row('Якість даних', `<span style="font-weight:700;color:${qCol}">${qLab}</span>`)
+      + `<div style="padding:6px 10px;border-top:1px solid var(--border);font-size:10px;color:var(--faint);line-height:1.4">`
+      + `G_now рахується з <b style="color:var(--muted)">live Kp</b>. Прогноз (G_day · 7д · 27д) — з <b style="color:var(--muted)">денного Kp</b>, тому числа різняться. Це не помилка, а різні горизонти.</div>`;
+    box.style.display='block';
+  }catch(e){ /* silent */ }
+}
+
 // fp36: separate stale-DOM patcher for non-storm placeholders (whyRows, timingRows).
 // Runs in same interval/triggers as storm-guard so loading text doesn't get stuck.
 function _patchStaleLoadingDOM() {
@@ -10187,6 +10262,9 @@ function _patchStaleLoadingDOM() {
       }
     }
   } catch(_e) { /* silent */ }
+
+  // v88.8.35-fp55-P7: keep the explicit decision hierarchy (РІШЕННЯ ДНЯ / ФОН ЗАРАЗ / ЯКІСТЬ) in sync.
+  try { if (typeof _renderHeroHierarchy === 'function') _renderHeroHierarchy(); } catch(_e) { /* silent */ }
 }
 
 // fp35: schedule storm-guard auto-patch every 30s as safety net for async race conditions
@@ -11796,7 +11874,27 @@ function _renderHeroTimeWindows() {
     }
     // Panchanga overlay
     if (_panchTimingNote && g < 0.5) label += ` (${_panchTimingNote})`;
-    if (_rahuActive && isCurrent) label += ' · Rahu';
+    // v88.8.35-fp55-P3: reconcile Kp-slot vs Vedic inauspicious windows (Rahu/Yama/Gulika).
+    // Time-overlap in UTC from _pc.rahu.{start/end, yamagandam, gulika} — NOT the noon-frozen .active
+    // flag (per v88.8.20 rule). A green Kp window that overlaps an inauspicious window no longer
+    // silently contradicts Panchanga; it is marked "частково обережно". Kp class itself is unchanged.
+    try {
+      const _R = _pc && _pc.rahu;
+      if (_R) {
+        const _toH = t => { const _p2 = String(t||'').split(':').map(Number); return _p2.length===2 ? _p2[0]+_p2[1]/60 : NaN; };
+        const _wins = [
+          ['Rahu',   _R.start, _R.end],
+          ['Yama',   _R.yamagandam && _R.yamagandam.start, _R.yamagandam && _R.yamagandam.end],
+          ['Gulika', _R.gulika && _R.gulika.start, _R.gulika && _R.gulika.end]
+        ];
+        const _hit = [];
+        _wins.forEach(([_nm, _st, _en]) => {
+          const _a = _toH(_st), _b = _toH(_en);
+          if (isFinite(_a) && isFinite(_b) && Math.max(h, _a) < Math.min(endH, _b)) _hit.push(`${_nm} ${_st}–${_en} UTC`);
+        });
+        if (_hit.length) label += ` · <span style="color:#ffcc44">⚠ частково обережно (${_hit.join(', ')})</span>`;
+      }
+    } catch(_e) { /* silent */ }
     const cls = isCurrent ? ' is-now' : isNext ? ' is-next' : '';
     const mark = isCurrent ? '<span style="color:var(--ok);font-size:10px;font-weight:700"> ◀ зараз</span>' : '';
     const dot = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${col};flex-shrink:0"></span>`;
