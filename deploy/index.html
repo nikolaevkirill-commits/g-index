@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.35-fp55-P7</title>
+  <title>G-Index — Космофізичний дашборд v88.8.35-fp55-P8</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1442,7 +1442,7 @@ body.simple-mode .col-hide-mobile {
         </div>
         <div class="hero-maintext">
           <div id="heroDecisionPanel">
-            <!-- v88.8.35-fp55-P7: explicit decision hierarchy. РІШЕННЯ ДНЯ (PDF/Engine) ≠ ФОН ЗАРАЗ (G_now) ≠ ЯКІСТЬ. Filled by _renderHeroHierarchy() from existing globals. -->
+            <!-- v88.8.35-fp55-P8: explicit decision hierarchy. РІШЕННЯ ДНЯ (PDF/Engine) ≠ ФОН ЗАРАЗ (G_now) ≠ ЯКІСТЬ. Filled by _renderHeroHierarchy() from existing globals. -->
             <div id="heroHierarchy" style="display:none;margin-bottom:8px;border:1px solid var(--border);border-radius:10px;overflow:hidden;background:rgba(11,18,32,.35)"></div>
             <div id="heroActionCmd" style="font-size:18px;font-weight:900;letter-spacing:.02em;line-height:1.15">—</div>
             <div id="heroMainDrag" style="margin-top:4px;font-size:12px;font-weight:700;color:var(--text2)"></div>
@@ -1601,7 +1601,7 @@ body.simple-mode .col-hide-mobile {
       </div>
     </div>
     <!-- ═══ v83 v3: Decision Timing ═══ -->
-    <!-- v88.8.35-fp55-P7: visible "Коли діяти" card REMOVED — it duplicated «Критичні вікна» (timingRows)
+    <!-- v88.8.35-fp55-P8: visible "Коли діяти" card REMOVED — it duplicated «Критичні вікна» (timingRows)
          and produced the "Немає даних по слотах" ↔ filled-windows contradiction. Single source of truth
          for slots is now «Критичні вікна». #decisionTiming / #decisionTimingList kept as a hidden stub so
          renderDecisionTiming() still computes its summary (window._lastTimingSummary → buildDashboardState)
@@ -9820,7 +9820,7 @@ function buildTimingSummary(slots){
 }
 
 function renderDecisionTiming(slots){
-  // v88.8.35-fp55-P7: self-heal at the SOURCE. Previous patches (fp24/32/37/38/40/54-A)
+  // v88.8.35-fp55-P8: self-heal at the SOURCE. Previous patches (fp24/32/37/38/40/54-A)
   // tried to fix the "Немає даних по слотах" + filled "Критичні вікна" contradiction
   // AFTER render, via DOM. Root cause is a race: the hero pipeline can pass a stale
   // empty _daySlots snapshot here while timingRows renders from a fresher one.
@@ -10163,7 +10163,7 @@ function _applyStormGuardDOM(){
   } catch(_e) { /* silent */ }
 }
 
-// v88.8.35-fp55-P7: render the explicit 3-level decision hierarchy at the top of hero.
+// v88.8.35-fp55-P8: render the explicit 3-level decision hierarchy at the top of hero.
 // PRESENTATION-ONLY. Reads existing globals (getEngineScore = override>engine day verdict,
 // window.__uiState.gNow = live composite background, resolveDataMode = data quality).
 // No formula/threshold/headline logic is changed — this only LABELS what each number is,
@@ -10263,7 +10263,7 @@ function _patchStaleLoadingDOM() {
     }
   } catch(_e) { /* silent */ }
 
-  // v88.8.35-fp55-P7: keep the explicit decision hierarchy (РІШЕННЯ ДНЯ / ФОН ЗАРАЗ / ЯКІСТЬ) in sync.
+  // v88.8.35-fp55-P8: keep the explicit decision hierarchy (РІШЕННЯ ДНЯ / ФОН ЗАРАЗ / ЯКІСТЬ) in sync.
   try { if (typeof _renderHeroHierarchy === 'function') _renderHeroHierarchy(); } catch(_e) { /* silent */ }
 }
 
@@ -10586,7 +10586,10 @@ function heroLayerNoteFromHierarchy_v88824(sig){
       _staleWarn = ` · ⚠ Live-дані ${_mode.toUpperCase()} — перед важливою дією оновити через 5–10 хв.`;
     }
   } catch(e) { /* silent */ }
-  return `Verdict із PDF/Engine: ${ds} (${src}). Фон зараз: ${liveZone} (G_now ${lg}).${_staleWarn}`;
+  // v88.8.35-fp55-P8: default verdict note removed — it is now fully duplicated by #heroHierarchy
+  // (Рішення дня / Фон зараз / Якість + live/daily Kp note). The unique divergence & guard branches
+  // above (unverified override, live_unstable/live_tense) are kept — they carry info not in the hierarchy.
+  return '';
 }
 
 function resolveDaySignal_v88825(dateObj, rawG, kp, opts){
@@ -11082,8 +11085,10 @@ function syncHero(){
   try {
     const _avoidEl = el('heroDecisionAvoid');
     const _note = heroLayerNoteFromHierarchy_v88824(_heroSig);
-    if(_avoidEl && _note){
-      _avoidEl.innerHTML = `${_st.avoidText}<br><span style="font-size:10px;color:var(--faint);font-weight:600">${_note}</span>`;
+    if(_avoidEl){
+      _avoidEl.innerHTML = _note
+        ? `${_st.avoidText}<br><span style="font-size:10px;color:var(--faint);font-weight:600">${_note}</span>`
+        : _st.avoidText;
     }
     // v88.8.35-fp20 fix: avoid block при позитивному дні (favorable/good) — нейтральний фон,
     // не червоний. Інакше "Підтримуйте темп без хаосу" виглядає алармовано на сприятливому дні.
@@ -11819,6 +11824,29 @@ function _renderHeroTimeWindows() {
     } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
   }
 
+  // v88.8.35-fp55-P3 (fix): inauspicious windows (UTC) computed ONCE before the slot loop.
+  // _lastPanchCtx.rahu is a reduced object (active/start/end only) — gulika/yamagandam live only on
+  // the full computePanchanga() result, so recompute at noonUTC (stable; sunrise-based windows don't
+  // depend on time-of-day). Fallback to _pc.rahu (Rahu-only) if recompute is unavailable.
+  let _inauspWins = [];
+  try {
+    let _R = null;
+    if (typeof computePanchanga === 'function' && typeof noonUTC === 'function') {
+      try { _R = computePanchanga(noonUTC(new Date())).rahu; } catch(_e){ _R = null; }
+    }
+    if (!_R || !_R.gulika) _R = (_pc && _pc.rahu) ? _pc.rahu : _R;
+    if (_R) {
+      const _toH = t => { const _p2 = String(t||'').split(':').map(Number); return _p2.length===2 ? _p2[0]+_p2[1]/60 : NaN; };
+      [['Rahu', _R.start, _R.end],
+       ['Yama', _R.yamagandam && _R.yamagandam.start, _R.yamagandam && _R.yamagandam.end],
+       ['Gulika', _R.gulika && _R.gulika.start, _R.gulika && _R.gulika.end]
+      ].forEach(([_nm, _st, _en]) => {
+        const _a = _toH(_st), _b = _toH(_en);
+        if (isFinite(_a) && isFinite(_b)) _inauspWins.push({ nm: _nm, st: _st, en: _en, a: _a, b: _b });
+      });
+    }
+  } catch(_e) { /* silent */ }
+
   const lines = visibleSlots.map(s => {
     const h = parseInt(s.label || '0'); // UTC година початку
     const endH = h + 3;
@@ -11875,26 +11903,15 @@ function _renderHeroTimeWindows() {
     // Panchanga overlay
     if (_panchTimingNote && g < 0.5) label += ` (${_panchTimingNote})`;
     // v88.8.35-fp55-P3: reconcile Kp-slot vs Vedic inauspicious windows (Rahu/Yama/Gulika).
-    // Time-overlap in UTC from _pc.rahu.{start/end, yamagandam, gulika} — NOT the noon-frozen .active
-    // flag (per v88.8.20 rule). A green Kp window that overlaps an inauspicious window no longer
-    // silently contradicts Panchanga; it is marked "частково обережно". Kp class itself is unchanged.
-    try {
-      const _R = _pc && _pc.rahu;
-      if (_R) {
-        const _toH = t => { const _p2 = String(t||'').split(':').map(Number); return _p2.length===2 ? _p2[0]+_p2[1]/60 : NaN; };
-        const _wins = [
-          ['Rahu',   _R.start, _R.end],
-          ['Yama',   _R.yamagandam && _R.yamagandam.start, _R.yamagandam && _R.yamagandam.end],
-          ['Gulika', _R.gulika && _R.gulika.start, _R.gulika && _R.gulika.end]
-        ];
-        const _hit = [];
-        _wins.forEach(([_nm, _st, _en]) => {
-          const _a = _toH(_st), _b = _toH(_en);
-          if (isFinite(_a) && isFinite(_b) && Math.max(h, _a) < Math.min(endH, _b)) _hit.push(`${_nm} ${_st}–${_en} UTC`);
-        });
-        if (_hit.length) label += ` · <span style="color:#ffcc44">⚠ частково обережно (${_hit.join(', ')})</span>`;
-      }
-    } catch(_e) { /* silent */ }
+    // Time-overlap in UTC against _inauspWins (computed once above from full panchanga). Kp class is
+    // unchanged; an overlapping green window is surfaced as "частково обережно" instead of silently
+    // contradicting Panchanga.
+    if (_inauspWins.length) {
+      const _hit = _inauspWins
+        .filter(w => Math.max(h, w.a) < Math.min(endH, w.b))
+        .map(w => `${w.nm} ${w.st}–${w.en} UTC`);
+      if (_hit.length) label += ` · <span style="color:#ffcc44">⚠ частково обережно (${_hit.join(', ')})</span>`;
+    }
     const cls = isCurrent ? ' is-now' : isNext ? ' is-next' : '';
     const mark = isCurrent ? '<span style="color:var(--ok);font-size:10px;font-weight:700"> ◀ зараз</span>' : '';
     const dot = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${col};flex-shrink:0"></span>`;
