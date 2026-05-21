@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.35-fp55-P8</title>
+  <title>G-Index — Космофізичний дашборд v88.8.35-fp55-P9</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1442,7 +1442,7 @@ body.simple-mode .col-hide-mobile {
         </div>
         <div class="hero-maintext">
           <div id="heroDecisionPanel">
-            <!-- v88.8.35-fp55-P8: explicit decision hierarchy. РІШЕННЯ ДНЯ (PDF/Engine) ≠ ФОН ЗАРАЗ (G_now) ≠ ЯКІСТЬ. Filled by _renderHeroHierarchy() from existing globals. -->
+            <!-- v88.8.35-fp55-P9: explicit decision hierarchy. РІШЕННЯ ДНЯ (PDF/Engine) ≠ ФОН ЗАРАЗ (G_now) ≠ ЯКІСТЬ. Filled by _renderHeroHierarchy() from existing globals. -->
             <div id="heroHierarchy" style="display:none;margin-bottom:8px;border:1px solid var(--border);border-radius:10px;overflow:hidden;background:rgba(11,18,32,.35)"></div>
             <div id="heroActionCmd" style="font-size:18px;font-weight:900;letter-spacing:.02em;line-height:1.15">—</div>
             <div id="heroMainDrag" style="margin-top:4px;font-size:12px;font-weight:700;color:var(--text2)"></div>
@@ -1601,7 +1601,7 @@ body.simple-mode .col-hide-mobile {
       </div>
     </div>
     <!-- ═══ v83 v3: Decision Timing ═══ -->
-    <!-- v88.8.35-fp55-P8: visible "Коли діяти" card REMOVED — it duplicated «Критичні вікна» (timingRows)
+    <!-- v88.8.35-fp55-P9: visible "Коли діяти" card REMOVED — it duplicated «Критичні вікна» (timingRows)
          and produced the "Немає даних по слотах" ↔ filled-windows contradiction. Single source of truth
          for slots is now «Критичні вікна». #decisionTiming / #decisionTimingList kept as a hidden stub so
          renderDecisionTiming() still computes its summary (window._lastTimingSummary → buildDashboardState)
@@ -9820,7 +9820,7 @@ function buildTimingSummary(slots){
 }
 
 function renderDecisionTiming(slots){
-  // v88.8.35-fp55-P8: self-heal at the SOURCE. Previous patches (fp24/32/37/38/40/54-A)
+  // v88.8.35-fp55-P9: self-heal at the SOURCE. Previous patches (fp24/32/37/38/40/54-A)
   // tried to fix the "Немає даних по слотах" + filled "Критичні вікна" contradiction
   // AFTER render, via DOM. Root cause is a race: the hero pipeline can pass a stale
   // empty _daySlots snapshot here while timingRows renders from a fresher one.
@@ -10163,7 +10163,7 @@ function _applyStormGuardDOM(){
   } catch(_e) { /* silent */ }
 }
 
-// v88.8.35-fp55-P8: render the explicit 3-level decision hierarchy at the top of hero.
+// v88.8.35-fp55-P9: render the explicit 3-level decision hierarchy at the top of hero.
 // PRESENTATION-ONLY. Reads existing globals (getEngineScore = override>engine day verdict,
 // window.__uiState.gNow = live composite background, resolveDataMode = data quality).
 // No formula/threshold/headline logic is changed — this only LABELS what each number is,
@@ -10263,7 +10263,7 @@ function _patchStaleLoadingDOM() {
     }
   } catch(_e) { /* silent */ }
 
-  // v88.8.35-fp55-P8: keep the explicit decision hierarchy (РІШЕННЯ ДНЯ / ФОН ЗАРАЗ / ЯКІСТЬ) in sync.
+  // v88.8.35-fp55-P9: keep the explicit decision hierarchy (РІШЕННЯ ДНЯ / ФОН ЗАРАЗ / ЯКІСТЬ) in sync.
   try { if (typeof _renderHeroHierarchy === 'function') _renderHeroHierarchy(); } catch(_e) { /* silent */ }
 }
 
@@ -10586,7 +10586,7 @@ function heroLayerNoteFromHierarchy_v88824(sig){
       _staleWarn = ` · ⚠ Live-дані ${_mode.toUpperCase()} — перед важливою дією оновити через 5–10 хв.`;
     }
   } catch(e) { /* silent */ }
-  // v88.8.35-fp55-P8: default verdict note removed — it is now fully duplicated by #heroHierarchy
+  // v88.8.35-fp55-P9: default verdict note removed — it is now fully duplicated by #heroHierarchy
   // (Рішення дня / Фон зараз / Якість + live/daily Kp note). The unique divergence & guard branches
   // above (unverified override, live_unstable/live_tense) are kept — they carry info not in the hierarchy.
   return '';
@@ -11902,15 +11902,18 @@ function _renderHeroTimeWindows() {
     }
     // Panchanga overlay
     if (_panchTimingNote && g < 0.5) label += ` (${_panchTimingNote})`;
-    // v88.8.35-fp55-P3: reconcile Kp-slot vs Vedic inauspicious windows (Rahu/Yama/Gulika).
-    // Time-overlap in UTC against _inauspWins (computed once above from full panchanga). Kp class is
-    // unchanged; an overlapping green window is surfaced as "частково обережно" instead of silently
-    // contradicting Panchanga.
+    // v88.8.35-fp55-P9: reconcile Kp-slot vs Vedic inauspicious windows (Rahu/Yama/Gulika).
+    // Overlap in UTC against _inauspWins (computed once above). Compact inline tag (⚠ Name) — the
+    // previous inline "частково обережно (Name HH:MM–HH:MM UTC)" was long AND placed UTC times next to
+    // the row's LOCAL times, reading as inconsistent. Full UTC window now lives in the tooltip.
+    // Kp class itself is unchanged.
     if (_inauspWins.length) {
-      const _hit = _inauspWins
-        .filter(w => Math.max(h, w.a) < Math.min(endH, w.b))
-        .map(w => `${w.nm} ${w.st}–${w.en} UTC`);
-      if (_hit.length) label += ` · <span style="color:#ffcc44">⚠ частково обережно (${_hit.join(', ')})</span>`;
+      const _hits = _inauspWins.filter(w => Math.max(h, w.a) < Math.min(endH, w.b));
+      if (_hits.length) {
+        const _names = _hits.map(w => w.nm).join('/');
+        const _tip = _hits.map(w => `${w.nm} ${w.st}–${w.en} UTC`).join(', ');
+        label += ` · <span style="color:#ffcc44;cursor:help" title="Канонічне інаусп. вікно — ${_tip}. Перетин із цим Kp-слотом → частково обережно (Kp-клас не змінюється).">⚠ ${_names}</span>`;
+      }
     }
     const cls = isCurrent ? ' is-now' : isNext ? ' is-next' : '';
     const mark = isCurrent ? '<span style="color:var(--ok);font-size:10px;font-weight:700"> ◀ зараз</span>' : '';
