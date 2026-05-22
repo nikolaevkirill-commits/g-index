@@ -1,5 +1,5 @@
-// v88.8.35-fp55-P12: hide heroVerdict7Badge (duplicated by РІШЕННЯ ДНЯ in hierarchy). fp55 UX cleanup complete.
-// G-Index Service Worker v88.8.35-fp55-P12
+// v88.8.35-fp55-P13: hero G_now uses canonical classifyStateByG (storm-override restored) + P3 panchanga recompute cached by date.
+// G-Index Service Worker v88.8.35-fp55-P13
 // v88.8.19 changes — incremental release після v88.8.18 з реальним bug fix:
 //   ENGINE v18.7 → v18.8: P2 раніше шукав 'Подорожі' word — missed 93 dates
 //     з '✈' emoji-only. P3 раніше тільки Shukla Dashami (10) — missed Krishna
@@ -601,8 +601,8 @@
 //   3. backtest.html додано до SHELL_FILES.
 //   4. cache.put awaited перед SW_FRESH_DATA notify (race fix).
 
-const SHELL_CACHE = 'g-index-shell-v88-8-35-fp55-p12';
-const DATA_CACHE = 'g-index-data-v88-8-35-fp55-p12';
+const SHELL_CACHE = 'g-index-shell-v88-8-35-fp55-p13';
+const DATA_CACHE = 'g-index-data-v88-8-35-fp55-p13';
 
 const SHELL_FILES = [
   './manifest.json',
