@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.35-fp55-P13</title>
+  <title>G-Index — Космофізичний дашборд v88.8.35-fp55-P16</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -213,6 +213,11 @@
     .sci-src{ color:var(--faint); font-size:10px }
     /* Sci bar: primary items завжди видно, secondary — за потребою */
     .sci-primary{}
+    /* v88.8.35-fp55-P16: declutter the top science bar — keep only Kp/Фаза/G_ext on first paint,
+       fold Lᵢ/Mᵢ/eᵢ/Pᵢ/Dᵢ/Dst/Sn behind «детально». Same #sci* IDs, JS still writes textContent into
+       them while hidden; no element removed. Toggling adds .sci-expanded to reveal. */
+    #scienceBar .sci-secondary{ display:none }
+    #scienceBar.sci-expanded .sci-secondary{ display:flex }
     .sci-secondary{ opacity:.75 }
     /* Profile Bar */
     .profile-btn{ appearance:none; border:1px solid var(--border2); background:#0f1a2f; color:var(--muted); font-size:var(--fs-sm); font-weight:600; padding:5px 11px; border-radius:8px; cursor:pointer; transition:all .15s }
@@ -1312,13 +1317,13 @@ body.simple-mode .col-hide-mobile {
       <!-- Первинні: завжди видно -->
       <span class="sci-item sci-primary">🛰 <strong>Kp:</strong> <span class="sci-val" id="sciKp">—</span> <span class="sci-src">NOAA</span></span>
       <span class="sci-item sci-primary">🌙 <strong>Фаза:</strong> <span class="sci-val" id="sciPhase">—</span></span>
-      <span class="sci-item sci-primary">🧲 <strong>Dst:</strong> <span class="sci-val" id="sciDst">—</span> <span class="sci-src">Kyoto</span></span>
-      <span class="sci-item sci-primary" title="Lᵢ — Lunar tithi factor. Вплив поточного місячного дня (тітхі) на психофізичний стан.">🌑 <strong>Lᵢ:</strong> <span class="sci-val" id="sciLi">—</span></span>
-      <span class="sci-item sci-primary" title="Mᵢ — Moon phase modifier. Вплив фази Місяця (Повня / Амавасья / 8-та тітхі — підсилюють негативи).">🌘 <strong>Mᵢ:</strong> <span class="sci-val" id="sciMi">—</span></span>
-      <span class="sci-item sci-primary" title="eᵢ — Events factor. Затемнення, екадаші, релігійні дні, ретрогради планет (з ICS-календарів).">📅 <strong>eᵢ:</strong> <span class="sci-val" id="sciEi">—</span></span>
-      <span class="sci-item sci-primary" title="Pᵢ — Panchanga composite × 0.4. Локальний розрахунок Tithi/Vara/Nakshatra/Yoga/Karana (Lahiri ayanamsha, BPHS).&#10;&#10;⚠ R&D advisory (v88.8.18 calibration check):&#10;• Корелює з expert bulletin r ≈ +0.27 (PDF), +0.20 (Engine v18.5)&#10;• Sign-match 58% — слабкий predictor окремо&#10;• Pi explains ~30% експертної магнітуди&#10;• Engine v18.5 validation (71.4% strict) — це загальний G з усіма компонентами,&#10;  Pi окремо НЕ validated як standalone predictor.&#10;• Vara scores: military-oriented (Mon=-1, Thu=+2). BPHS-standard версія дає&#10;  схожу кореляцію (+0.03 delta — non-significant).&#10;• Post-freeze (2026-08-01+): planned recalibration з більшим datasetом.">🔮 <strong>Pᵢ:</strong> <span class="sci-val" id="sciPi">—</span></span>
+      <span class="sci-item sci-primary sci-secondary">🧲 <strong>Dst:</strong> <span class="sci-val" id="sciDst">—</span> <span class="sci-src">Kyoto</span></span>
+      <span class="sci-item sci-primary sci-secondary" title="Lᵢ — Lunar tithi factor. Вплив поточного місячного дня (тітхі) на психофізичний стан.">🌑 <strong>Lᵢ:</strong> <span class="sci-val" id="sciLi">—</span></span>
+      <span class="sci-item sci-primary sci-secondary" title="Mᵢ — Moon phase modifier. Вплив фази Місяця (Повня / Амавасья / 8-та тітхі — підсилюють негативи).">🌘 <strong>Mᵢ:</strong> <span class="sci-val" id="sciMi">—</span></span>
+      <span class="sci-item sci-primary sci-secondary" title="eᵢ — Events factor. Затемнення, екадаші, релігійні дні, ретрогради планет (з ICS-календарів).">📅 <strong>eᵢ:</strong> <span class="sci-val" id="sciEi">—</span></span>
+      <span class="sci-item sci-primary sci-secondary" title="Pᵢ — Panchanga composite × 0.4. Локальний розрахунок Tithi/Vara/Nakshatra/Yoga/Karana (Lahiri ayanamsha, BPHS).&#10;&#10;⚠ R&D advisory (v88.8.18 calibration check):&#10;• Корелює з expert bulletin r ≈ +0.27 (PDF), +0.20 (Engine v18.5)&#10;• Sign-match 58% — слабкий predictor окремо&#10;• Pi explains ~30% експертної магнітуди&#10;• Engine v18.5 validation (71.4% strict) — це загальний G з усіма компонентами,&#10;  Pi окремо НЕ validated як standalone predictor.&#10;• Vara scores: military-oriented (Mon=-1, Thu=+2). BPHS-standard версія дає&#10;  схожу кореляцію (+0.03 delta — non-significant).&#10;• Post-freeze (2026-08-01+): planned recalibration з більшим datasetом.">🔮 <strong>Pᵢ:</strong> <span class="sci-val" id="sciPi">—</span></span>
       <span class="sci-item sci-primary" id="sciSnPenWrap" style="display:none" title="Sn-penalty: при високому числі плям (>150) додає мінус до G. Solar Max 2025-2026.">☀ <strong>Sn:</strong> <span class="sci-val" id="sciSnPen">—</span></span>
-      <span class="sci-item sci-primary" title="Dᵢ — Dst storm penalty. При Dst < −30 нТл (геомагнітна буря) додає мінус до G.">🧲 <strong>Dᵢ:</strong> <span class="sci-val" id="sciDi">—</span></span>
+      <span class="sci-item sci-primary sci-secondary" title="Dᵢ — Dst storm penalty. При Dst < −30 нТл (геомагнітна буря) додає мінус до G.">🧲 <strong>Dᵢ:</strong> <span class="sci-val" id="sciDi">—</span></span>
       <span class="sci-item sci-primary" title="G_ext v2 — R&D advisory метрика (паралельна, НЕ замінює G і НЕ є primary verdict).&#10;&#10;Фактичний файл у цьому пакеті: g_extended_v2_coefs.json&#10;Validation (trained_on_n=212):&#10;• CV Pearson r = +0.42 ± 0.16&#10;• CV sign-match = 63.7%&#10;• strict 3-class = 48.6%&#10;&#10;Висновок: слабкий R&D-сигнал. Показувати лише як додатковий індикатор, не як команду дня.&#10;Primary: Engine v18.5/v18.8 + verified source gate; Live G — поточний фон." style="color:#ff9944;border-left:2px solid #ff9944;padding-left:6px">🔬 <strong>G<sub>ext</sub> v2:</strong> <span class="sci-val" id="sciGext">—</span></span></span>
       <!-- Вторинні: кнопка розгортання + скидання кешу -->
       <span style="margin-left:auto;display:inline-flex;align-items:center;gap:8px">
@@ -1442,7 +1447,7 @@ body.simple-mode .col-hide-mobile {
         </div>
         <div class="hero-maintext">
           <div id="heroDecisionPanel">
-            <!-- v88.8.35-fp55-P13: explicit decision hierarchy. РІШЕННЯ ДНЯ (PDF/Engine) ≠ ФОН ЗАРАЗ (G_now) ≠ ЯКІСТЬ. Filled by _renderHeroHierarchy() from existing globals. -->
+            <!-- v88.8.35-fp55-P16: explicit decision hierarchy. РІШЕННЯ ДНЯ (PDF/Engine) ≠ ФОН ЗАРАЗ (G_now) ≠ ЯКІСТЬ. Filled by _renderHeroHierarchy() from existing globals. -->
             <div id="heroHierarchy" style="display:none;margin-bottom:8px;border:1px solid var(--border);border-radius:10px;overflow:hidden;background:rgba(11,18,32,.35)"></div>
             <div id="heroActionCmd" style="font-size:18px;font-weight:900;letter-spacing:.02em;line-height:1.15">—</div>
             <div id="heroMainDrag" style="margin-top:4px;font-size:12px;font-weight:700;color:var(--text2)"></div>
@@ -1601,7 +1606,7 @@ body.simple-mode .col-hide-mobile {
       </div>
     </div>
     <!-- ═══ v83 v3: Decision Timing ═══ -->
-    <!-- v88.8.35-fp55-P13: visible "Коли діяти" card REMOVED — it duplicated «Критичні вікна» (timingRows)
+    <!-- v88.8.35-fp55-P16: visible "Коли діяти" card REMOVED — it duplicated «Критичні вікна» (timingRows)
          and produced the "Немає даних по слотах" ↔ filled-windows contradiction. Single source of truth
          for slots is now «Критичні вікна». #decisionTiming / #decisionTimingList kept as a hidden stub so
          renderDecisionTiming() still computes its summary (window._lastTimingSummary → buildDashboardState)
@@ -1824,6 +1829,15 @@ body.simple-mode .col-hide-mobile {
             <p style="margin:0 0 6px"><strong style="color:#cfe0ff">G</strong> показує, наскільки «легкий» чи «важкий» сьогоднішній день з точки зору космічної погоди та хронобіології. Значення вище нуля — відносно легкий день; нижче нуля — підвищене невидиме навантаження.</p>
             <p style="margin:0 0 6px">Кольори шкали від 🟢 до 🔴 допомагають швидко оцінити стан: <span style="color:#2bd47d">зелений</span> — сприятливий фон, <span style="color:#ffcc00">жовтий</span>/<span style="color:#fca474">помаранчевий</span> — варто бути обережнішим, <span style="color:#ff6b6b">червоний</span> — максимальне зовнішнє навантаження.</p>
             <p style="margin:0"><strong style="color:#cfe0ff">Kp−2</strong> — це геомагнітна частина (космічна погода). <strong style="color:#cfe0ff">ΣAᵢ</strong> — хронобіологічна (Місяць, затемнення, свята, Панчанга). Разом вони дають G.</p>
+            <!-- v88.8.35-fp55-P16: scale/horizon legend folded into the single existing «Як читати» block
+                 (no separate widget) so all number-reading help lives in one place. -->
+            <div style="margin-top:8px;padding-top:8px;border-top:1px dashed rgba(139,160,200,.22)">
+              <p style="margin:0 0 5px;color:#cfe0ff;font-weight:600">Чому на екрані кілька різних чисел</p>
+              <p style="margin:0 0 4px"><strong style="color:#9cd49c">Рішення дня</strong> (PDF/Engine, шкала −3…+3) — головний вердикт на цілий день. <strong>Це орієнтир №1.</strong></p>
+              <p style="margin:0 0 4px"><strong style="color:#9cd49c">Фон зараз</strong> (G_now, з десятковими) — поточний момент, рахується з <em>live Kp</em>. Може відрізнятись від рішення дня — це нормально.</p>
+              <p style="margin:0 0 4px"><strong style="color:#9cd49c">Прогноз 7 / 27 днів</strong> (G_day raw) — тренд уперед, рахується з <em>денного Kp</em> (NOAA 3-day / 27-day). Це не «зараз», а горизонт.</p>
+              <p style="margin:0">Тобто одна дата може мати різні числа в різних блоках — бо це різні горизонти й різні джерела Kp, а не помилка.</p>
+            </div>
           </div>
         </details>
 
@@ -3959,12 +3973,17 @@ const addDays = (dateUTC, n)=> new Date(Date.UTC(dateUTC.getUTCFullYear(), dateU
 
 // Статусний штамп
 function toggleSciMore() {
-  const panel  = document.getElementById('sciMorePanel');
+  // v88.8.35-fp55-P16: now also toggles .sci-expanded on #scienceBar to reveal the secondary
+  // metrics (Lᵢ/Mᵢ/eᵢ/Pᵢ/Dᵢ/Dst) that are hidden by default for a cleaner first paint.
+  // The legacy #sciMorePanel toggle is preserved for backward compatibility.
+  const bar = document.getElementById('scienceBar');
   const toggle = document.getElementById('sciMoreToggle');
-  if (!panel || !toggle) return;
-  const open = panel.style.display === 'block';
-  panel.style.display = open ? 'none' : 'block';
-  toggle.textContent  = open ? '▸ детально' : '▴ згорнути';
+  const panel  = document.getElementById('sciMorePanel');
+  if (!toggle) return;
+  const willOpen = bar ? !bar.classList.contains('sci-expanded') : (panel && panel.style.display !== 'block');
+  if (bar) bar.classList.toggle('sci-expanded', willOpen);
+  if (panel) panel.style.display = willOpen ? 'block' : 'none';
+  toggle.textContent = willOpen ? '▴ згорнути' : '▸ детально';
 }
 
 function setStamp(){
@@ -9430,17 +9449,24 @@ function render3Day(parsed3){
       const _engineFullySynth      = _isSynthScen && !_hasRealLiveKp;
       const _scenStyle = _engineFullySynth
         ? `border:2px dashed rgba(252,164,116,.6);opacity:.55;background:repeating-linear-gradient(45deg,rgba(252,164,116,.08),rgba(252,164,116,.08) 6px,${col}10 6px,${col}10 12px)`
+        : _engineOutdatedNotSynth
+        ? `border:1px dashed rgba(155,177,220,.55);opacity:.7;background:${col}12`
         : `background:${col}15;border:1px solid ${col}40`;
       let _scenLabel = '';
       let _scenBanner = '';
       if(_engineFullySynth){
-        // v88.8.35-fp55-P13: make a synthetic-Kp SCENARIO card unmistakably weaker than a real
+        // v88.8.35-fp55-P16: make a synthetic-Kp SCENARIO card unmistakably weaker than a real
         // forecast. The dashed/opacity styling alone read too similar to a real card (user confusion).
         // Add an explicit top banner + stronger label. Numbers/logic unchanged — presentation only.
         _scenBanner = `<div style="font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#fca474;background:rgba(252,164,116,.18);border:1px solid rgba(252,164,116,.5);border-radius:6px;padding:2px 6px;margin-bottom:5px;text-align:center" title="NOAA не дає реального forecast Kp на цю дату (за межами 3-денного вікна). Підставлено synthetic Kp=2.0. Це ймовірний сценарій «якщо нічого не зміниться», НЕ прогноз.">⚠ Сценарій, не прогноз</div>`;
         _scenLabel = `<div style="font-size:9px;color:#fca474;margin-top:2px;line-height:1.3" title="Engine використав synthetic Kp=2.0 (NOAA forecast недоступний). Це сценарій, не справжній прогноз.">ймовірний сценарій за поточним Kp · synthetic</div>`;
       } else if(_engineOutdatedNotSynth){
-        _scenLabel = `<div style="font-size:9px;color:#9bb1dc;margin-top:1px;text-transform:uppercase;letter-spacing:.06em;font-weight:600" title="Engine v18.5 score обчислений на snapshot часу train. Live NOAA forecast Kp=${d.kpMax.toFixed(1)} оновленіший. Engine score може недо-оцінювати буревий ризик.">ⓘ engine outdated · live Kp=${d.kpMax.toFixed(1)}</div>`;
+        // v88.8.35-fp55-P16: engine-outdated is DIFFERENT from synthetic-scenario — here live Kp is
+        // REAL (=${d.kpMax}) but the engine score was computed on an older snapshot. Give it its own
+        // explicit (blue, not orange) banner so the card no longer reads as a normal forecast, while
+        // still distinguishing it from the synthetic-Kp scenario case above. Numbers unchanged.
+        _scenBanner = `<div style="font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#9bb1dc;background:rgba(155,177,220,.15);border:1px solid rgba(155,177,220,.45);border-radius:6px;padding:2px 6px;margin-bottom:5px;text-align:center" title="Live NOAA forecast Kp=${d.kpMax.toFixed(1)} свіжіший за engine-score (рахований на старому snapshot). Engine може недо-оцінювати буревий ризик — звіряйся з live.">ⓘ Engine застарів · live Kp свіжіший</div>`;
+        _scenLabel = `<div style="font-size:9px;color:#9bb1dc;margin-top:2px;line-height:1.3" title="Engine v18.5 score обчислений на snapshot часу train. Live NOAA forecast Kp=${d.kpMax.toFixed(1)} оновленіший. Engine score може недо-оцінювати буревий ризик.">пріоритет — live Kp=${d.kpMax.toFixed(1)}, не engine</div>`;
       }
       qhtml+=`<span title="${escapeHtml(_daySigQ?.tooltip||'')}" style="flex:1;min-width:140px;padding:8px 14px;border-radius:10px;${_scenStyle};text-align:center">
         ${_scenBanner}
@@ -9826,7 +9852,7 @@ function buildTimingSummary(slots){
 }
 
 function renderDecisionTiming(slots){
-  // v88.8.35-fp55-P13: self-heal at the SOURCE. Previous patches (fp24/32/37/38/40/54-A)
+  // v88.8.35-fp55-P16: self-heal at the SOURCE. Previous patches (fp24/32/37/38/40/54-A)
   // tried to fix the "Немає даних по слотах" + filled "Критичні вікна" contradiction
   // AFTER render, via DOM. Root cause is a race: the hero pipeline can pass a stale
   // empty _daySlots snapshot here while timingRows renders from a fresher one.
@@ -10169,7 +10195,7 @@ function _applyStormGuardDOM(){
   } catch(_e) { /* silent */ }
 }
 
-// v88.8.35-fp55-P13: render the explicit 3-level decision hierarchy at the top of hero.
+// v88.8.35-fp55-P16: render the explicit 3-level decision hierarchy at the top of hero.
 // PRESENTATION-ONLY. Reads existing globals (getEngineScore = override>engine day verdict,
 // window.__uiState.gNow = live composite background, resolveDataMode = data quality).
 // No formula/threshold/headline logic is changed — this only LABELS what each number is,
@@ -10197,7 +10223,7 @@ function _renderHeroHierarchy(){
       const g = (window.__uiState && isFinite(window.__uiState.gNow)) ? Number(window.__uiState.gNow) : NaN;
       const kpN = (window.__uiState && isFinite(window.__uiState.kpNow)) ? Number(window.__uiState.kpNow) : NaN;
       if(isFinite(g)){
-        // v88.8.35-fp55-P13: use canonical classifyStateByG(g, kp) — the single source of truth for
+        // v88.8.35-fp55-P16: use canonical classifyStateByG(g, kp) — the single source of truth for
         // G-state (see its v87.90/v88.7 notes). The previous P4 code had its OWN thresholds
         // (g>=2 / g>-0.5 / g>-2) AND ignored the storm-override, so during a Kp≥5 storm the hero
         // background could read "сильний фон" green while the rest of the UI warned about the storm —
@@ -10282,7 +10308,7 @@ function _patchStaleLoadingDOM() {
     }
   } catch(_e) { /* silent */ }
 
-  // v88.8.35-fp55-P13: keep the explicit decision hierarchy (РІШЕННЯ ДНЯ / ФОН ЗАРАЗ / ЯКІСТЬ) in sync.
+  // v88.8.35-fp55-P16: keep the explicit decision hierarchy (РІШЕННЯ ДНЯ / ФОН ЗАРАЗ / ЯКІСТЬ) in sync.
   try { if (typeof _renderHeroHierarchy === 'function') _renderHeroHierarchy(); } catch(_e) { /* silent */ }
 }
 
@@ -10605,7 +10631,7 @@ function heroLayerNoteFromHierarchy_v88824(sig){
       _staleWarn = ` · ⚠ Live-дані ${_mode.toUpperCase()} — перед важливою дією оновити через 5–10 хв.`;
     }
   } catch(e) { /* silent */ }
-  // v88.8.35-fp55-P13: default verdict note removed — it is now fully duplicated by #heroHierarchy
+  // v88.8.35-fp55-P16: default verdict note removed — it is now fully duplicated by #heroHierarchy
   // (Рішення дня / Фон зараз / Якість + live/daily Kp note). The unique divergence & guard branches
   // above (unverified override, live_unstable/live_tense) are kept — they carry info not in the hierarchy.
   return '';
@@ -10762,7 +10788,7 @@ function syncHero(){
       if (_vb && typeof classifyVerdict7Class === 'function') {
         const v7 = classifyVerdict7Class(_heroSig.hasEngine ? _heroSig.dayScore : newG);
         if (v7) {
-          // v88.8.35-fp55-P13: badge kept hidden — its content (7-class label + score) is now fully
+          // v88.8.35-fp55-P16: badge kept hidden — its content (7-class label + score) is now fully
           // duplicated by «РІШЕННЯ ДНЯ» in #heroHierarchy (P4). innerHTML still built below so the
           // element can be re-enabled instantly if ever needed; only the display toggle is forced off.
           _vb.style.display = 'none';
@@ -11854,7 +11880,7 @@ function _renderHeroTimeWindows() {
   try {
     let _R = null;
     if (typeof computePanchanga === 'function' && typeof noonUTC === 'function') {
-      // v88.8.35-fp55-P13: cache the recompute by UTC date — _renderHeroTimeWindows runs on the 30s
+      // v88.8.35-fp55-P16: cache the recompute by UTC date — _renderHeroTimeWindows runs on the 30s
       // guard timer, and these sunrise-based windows only change once per day, so recomputing the full
       // panchanga every tick was wasted work.
       try {
@@ -11935,7 +11961,7 @@ function _renderHeroTimeWindows() {
     }
     // Panchanga overlay
     if (_panchTimingNote && g < 0.5) label += ` (${_panchTimingNote})`;
-    // v88.8.35-fp55-P13: reconcile Kp-slot vs Vedic inauspicious windows (Rahu/Yama/Gulika).
+    // v88.8.35-fp55-P16: reconcile Kp-slot vs Vedic inauspicious windows (Rahu/Yama/Gulika).
     // Overlap in UTC against _inauspWins (computed once above). Compact inline tag (⚠ Name) — the
     // previous inline "частково обережно (Name HH:MM–HH:MM UTC)" was long AND placed UTC times next to
     // the row's LOCAL times, reading as inconsistent. Full UTC window now lives in the tooltip.
