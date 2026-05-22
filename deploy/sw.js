@@ -1,5 +1,5 @@
-// v88.8.35-fp55-P17: suppress divergence mark when a scenario/outdated banner already shows — no double yellow markers on one card. fp55 cycle complete.
-// G-Index Service Worker v88.8.35-fp55-P17
+// v88.8.35-fp55-P20: a11y — keyboard-accessible «детально» toggle (role/tabindex/aria-expanded/Enter+Space) + aria-labels on icon-only close buttons.
+// G-Index Service Worker v88.8.35-fp55-P20
 // v88.8.19 changes — incremental release після v88.8.18 з реальним bug fix:
 //   ENGINE v18.7 → v18.8: P2 раніше шукав 'Подорожі' word — missed 93 dates
 //     з '✈' emoji-only. P3 раніше тільки Shukla Dashami (10) — missed Krishna
@@ -601,8 +601,8 @@
 //   3. backtest.html додано до SHELL_FILES.
 //   4. cache.put awaited перед SW_FRESH_DATA notify (race fix).
 
-const SHELL_CACHE = 'g-index-shell-v88-8-35-fp55-p17';
-const DATA_CACHE = 'g-index-data-v88-8-35-fp55-p17';
+const SHELL_CACHE = 'g-index-shell-v88-8-35-fp55-p20';
+const DATA_CACHE = 'g-index-data-v88-8-35-fp55-p20';
 
 const SHELL_FILES = [
   './manifest.json',
