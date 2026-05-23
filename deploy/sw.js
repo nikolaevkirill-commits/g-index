@@ -1,5 +1,5 @@
-// v88.8.35-fp55-P28: NOAA pipeline — optional body validator in fetchTextWithCORS; a proxy returning 200+garbage no longer masks working proxies (JSON sources only, 27day txt untouched).
-// G-Index Service Worker v88.8.35-fp55-P28
+// v88.8.35-fp55-P29: parseDst rejects Kyoto no-data sentinels (9999) + non-physical values, walks back to last valid row. Fixes "Dst 9999 нТл" display.
+// G-Index Service Worker v88.8.35-fp55-P29
 // v88.8.19 changes — incremental release після v88.8.18 з реальним bug fix:
 //   ENGINE v18.7 → v18.8: P2 раніше шукав 'Подорожі' word — missed 93 dates
 //     з '✈' emoji-only. P3 раніше тільки Shukla Dashami (10) — missed Krishna
@@ -601,8 +601,8 @@
 //   3. backtest.html додано до SHELL_FILES.
 //   4. cache.put awaited перед SW_FRESH_DATA notify (race fix).
 
-const SHELL_CACHE = 'g-index-shell-v88-8-35-fp55-p28';
-const DATA_CACHE = 'g-index-data-v88-8-35-fp55-p28';
+const SHELL_CACHE = 'g-index-shell-v88-8-35-fp55-p29';
+const DATA_CACHE = 'g-index-data-v88-8-35-fp55-p29';
 
 const SHELL_FILES = [
   './manifest.json',
