@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.35-fp55-P27</title>
+  <title>G-Index — Космофізичний дашборд v88.8.35-fp55-P28</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -126,7 +126,7 @@
     .gcat{line-height:1.15; font-size:var(--fs-lg)}
 
     /* ===== Tooltip ===== */
-    /* v88.8.35-fp55-P27 a11y: global keyboard-focus ring. :focus-visible fires only on keyboard
+    /* v88.8.35-fp55-P28 a11y: global keyboard-focus ring. :focus-visible fires only on keyboard
        (Tab) navigation, never on mouse click — so it adds orientation for keyboard/screen-reader
        users without changing the look for mouse users. Applies to native + role="button" elements. */
     button:focus-visible, a:focus-visible, [role="button"]:focus-visible,
@@ -220,7 +220,7 @@
     .sci-src{ color:var(--faint); font-size:10px }
     /* Sci bar: primary items завжди видно, secondary — за потребою */
     .sci-primary{}
-    /* v88.8.35-fp55-P27: declutter the top science bar — keep only Kp/Фаза/G_ext on first paint,
+    /* v88.8.35-fp55-P28: declutter the top science bar — keep only Kp/Фаза/G_ext on first paint,
        fold Lᵢ/Mᵢ/eᵢ/Pᵢ/Dᵢ/Dst/Sn behind «детально». Same #sci* IDs, JS still writes textContent into
        them while hidden; no element removed. Toggling adds .sci-expanded to reveal. */
     #scienceBar .sci-secondary{ display:none }
@@ -1454,7 +1454,7 @@ body.simple-mode .col-hide-mobile {
         </div>
         <div class="hero-maintext">
           <div id="heroDecisionPanel">
-            <!-- v88.8.35-fp55-P27: explicit decision hierarchy. РІШЕННЯ ДНЯ (PDF/Engine) ≠ ФОН ЗАРАЗ (G_now) ≠ ЯКІСТЬ. Filled by _renderHeroHierarchy() from existing globals. -->
+            <!-- v88.8.35-fp55-P28: explicit decision hierarchy. РІШЕННЯ ДНЯ (PDF/Engine) ≠ ФОН ЗАРАЗ (G_now) ≠ ЯКІСТЬ. Filled by _renderHeroHierarchy() from existing globals. -->
             <div id="heroHierarchy" role="status" aria-live="polite" aria-label="Зведення дня: рішення, фон зараз, якість даних" style="display:none;margin-bottom:8px;border:1px solid var(--border);border-radius:10px;overflow:hidden;background:rgba(11,18,32,.35)"></div>
             <div id="heroActionCmd" style="font-size:18px;font-weight:900;letter-spacing:.02em;line-height:1.15">—</div>
             <div id="heroMainDrag" style="margin-top:4px;font-size:12px;font-weight:700;color:var(--text2)"></div>
@@ -1613,7 +1613,7 @@ body.simple-mode .col-hide-mobile {
       </div>
     </div>
     <!-- ═══ v83 v3: Decision Timing ═══ -->
-    <!-- v88.8.35-fp55-P27: visible "Коли діяти" card REMOVED — it duplicated «Критичні вікна» (timingRows)
+    <!-- v88.8.35-fp55-P28: visible "Коли діяти" card REMOVED — it duplicated «Критичні вікна» (timingRows)
          and produced the "Немає даних по слотах" ↔ filled-windows contradiction. Single source of truth
          for slots is now «Критичні вікна». #decisionTiming / #decisionTimingList kept as a hidden stub so
          renderDecisionTiming() still computes its summary (window._lastTimingSummary → buildDashboardState)
@@ -1836,7 +1836,7 @@ body.simple-mode .col-hide-mobile {
             <p style="margin:0 0 6px"><strong style="color: var(--text2)">G</strong> показує, наскільки «легкий» чи «важкий» сьогоднішній день з точки зору космічної погоди та хронобіології. Значення вище нуля — відносно легкий день; нижче нуля — підвищене невидиме навантаження.</p>
             <p style="margin:0 0 6px">Кольори шкали від 🟢 до 🔴 допомагають швидко оцінити стан: <span style="color: var(--ok)">зелений</span> — сприятливий фон, <span style="color: var(--warn)">жовтий</span>/<span style="color:#fca474">помаранчевий</span> — варто бути обережнішим, <span style="color: var(--bad)">червоний</span> — максимальне зовнішнє навантаження.</p>
             <p style="margin:0"><strong style="color: var(--text2)">Kp−2</strong> — це геомагнітна частина (космічна погода). <strong style="color: var(--text2)">ΣAᵢ</strong> — хронобіологічна (Місяць, затемнення, свята, Панчанга). Разом вони дають G.</p>
-            <!-- v88.8.35-fp55-P27: scale/horizon legend folded into the single existing «Як читати» block
+            <!-- v88.8.35-fp55-P28: scale/horizon legend folded into the single existing «Як читати» block
                  (no separate widget) so all number-reading help lives in one place. -->
             <div style="margin-top:8px;padding-top:8px;border-top:1px dashed rgba(139,160,200,.22)">
               <p style="margin:0 0 5px;color: var(--text2);font-weight:600">Чому на екрані кілька різних чисел</p>
@@ -2690,7 +2690,7 @@ Fallback (NOAA 45-day-forecast.json):
       const _origLog = console.log, _origDebug = console.debug;
       console.log = function(){ if(window._DEBUG) _origLog.apply(console, arguments); };
       console.debug = function(){ if(window._DEBUG) _origDebug.apply(console, arguments); };
-      // v88.8.35-fp55-P27: console.warn NO LONGER muted here — это глушило 174 важливі попередження
+      // v88.8.35-fp55-P28: console.warn NO LONGER muted here — это глушило 174 важливі попередження
       // у проді. Узгоджено з другим guard (~L3925), який теж лишає warn/error. error теж не чіпаємо.
     }
   })();
@@ -2725,11 +2725,11 @@ const PaywallModal = {
     const ov = document.getElementById('paywallOverlay');
     if (ov) {
       ov.style.display = 'flex';
-      // v88.8.35-fp55-P27: if show() is called again without an intervening hide() (user clicks a
+      // v88.8.35-fp55-P28: if show() is called again without an intervening hide() (user clicks a
       // second paywall trigger), detach the previous keydown handler first — otherwise it leaks and
       // Esc/Tab-trap fire twice.
       try { if (PaywallModal._keyHandler) ov.removeEventListener('keydown', PaywallModal._keyHandler); } catch(_e) {}
-      // v88.8.35-fp55-P27 a11y: remember opener, trap focus inside the dialog, allow Esc to close.
+      // v88.8.35-fp55-P28 a11y: remember opener, trap focus inside the dialog, allow Esc to close.
       try {
         PaywallModal._opener = document.activeElement;
         const focusables = ov.querySelectorAll('button, [href], [tabindex]:not([tabindex="-1"]), input, select');
@@ -2751,7 +2751,7 @@ const PaywallModal = {
     const ov = document.getElementById('paywallOverlay');
     if (ov) {
       ov.style.display = 'none';
-      // v88.8.35-fp55-P27 a11y: tear down trap + return focus to whatever opened the dialog.
+      // v88.8.35-fp55-P28 a11y: tear down trap + return focus to whatever opened the dialog.
       try {
         if (PaywallModal._keyHandler) { ov.removeEventListener('keydown', PaywallModal._keyHandler); PaywallModal._keyHandler = null; }
         if (PaywallModal._opener && typeof PaywallModal._opener.focus === 'function') PaywallModal._opener.focus();
@@ -4010,7 +4010,7 @@ const addDays = (dateUTC, n)=> new Date(Date.UTC(dateUTC.getUTCFullYear(), dateU
 
 // Статусний штамп
 function toggleSciMore() {
-  // v88.8.35-fp55-P27: now also toggles .sci-expanded on #scienceBar to reveal the secondary
+  // v88.8.35-fp55-P28: now also toggles .sci-expanded on #scienceBar to reveal the secondary
   // metrics (Lᵢ/Mᵢ/eᵢ/Pᵢ/Dᵢ/Dst) that are hidden by default for a cleaner first paint.
   // The legacy #sciMorePanel toggle is preserved for backward compatibility.
   const bar = document.getElementById('scienceBar');
@@ -4020,7 +4020,7 @@ function toggleSciMore() {
   const willOpen = bar ? !bar.classList.contains('sci-expanded') : (panel && panel.style.display !== 'block');
   if (bar) bar.classList.toggle('sci-expanded', willOpen);
   if (panel) panel.style.display = willOpen ? 'block' : 'none';
-  toggle.setAttribute('aria-expanded', willOpen ? 'true' : 'false'); // v88.8.35-fp55-P27 a11y
+  toggle.setAttribute('aria-expanded', willOpen ? 'true' : 'false'); // v88.8.35-fp55-P28 a11y
   toggle.textContent = willOpen ? '▴ згорнути' : '▸ детально';
 }
 
@@ -4756,47 +4756,55 @@ function fetchWithTimeout(url, ms=5000){
   const tid = setTimeout(()=>ctrl.abort(), ms);
   return fetch(url, {cache:'no-store', signal:ctrl.signal}).finally(()=>clearTimeout(tid));
 }
-async function fetchTextWithCORS(url){
+async function fetchTextWithCORS(url, validate){
+  // v88.8.35-fp55-P28: optional body validator. Some public proxies return 200 OK with an HTML
+  // error page or empty body instead of failing — that used to "succeed" and STOP the chain,
+  // masking working proxies downstream. When a validator is passed (e.g. _looksLikeJson for NOAA
+  // endpoints), a 200 with a bad body is treated as a miss and the chain continues. Default
+  // (no validator) keeps the old behavior — safe for HTML consumers like timeanddate eclipse.
+  const _ok = (txt) => { if (typeof txt !== 'string' || !txt.length) return false; if (typeof validate === 'function') { try { return validate(txt); } catch(_e) { return false; } } return true; };
   const _shortUrl = url.length > 80 ? url.slice(0,77)+'...' : url;
   // 0. Прямий fetch (NOAA JSON підтримує CORS; Netlify proxy видалено — suspended)
   try{
     const r = await fetchWithTimeout(url, 6000);
-    if(r.ok) return await r.text();
+    if(r.ok){ const _t = await r.text(); if(_ok(_t)) return _t; }
   }catch(e){ console.warn('[CORS] direct fail:', _shortUrl, e.message); }
   // 1. v88.6.9: Cloudflare Worker (own proxy — most reliable when configured)
   if (NOAA_WORKER_URL && !NOAA_WORKER_URL.includes('YOUR_USERNAME')) {
     try{
       const r1 = await fetchWithTimeout(NOAA_WORKER_URL+encodeURIComponent(url), 5000);
-      if(r1.ok) return await r1.text();
+      if(r1.ok){ const _t = await r1.text(); if(_ok(_t)) return _t; }
     }catch(e){ console.warn('[CORS] worker fail:', e.message); }
   }
   // 2. allorigins
   try{
     const r2 = await fetchWithTimeout('https://api.allorigins.win/raw?url='+encodeURIComponent(url), 4000);
-    if(r2.ok) return await r2.text();
+    if(r2.ok){ const _t = await r2.text(); if(_ok(_t)) return _t; }
   }catch(e){ console.warn('[CORS] allorigins fail:', e.message); }
   // 3. corsproxy.io (новий формат 2025+: ?url=)
   try{
     const r3 = await fetchWithTimeout('https://corsproxy.io/?url='+encodeURIComponent(url), 4000);
-    if(r3.ok) return await r3.text();
+    if(r3.ok){ const _t = await r3.text(); if(_ok(_t)) return _t; }
   }catch(e){ console.warn('[CORS] corsproxy.io fail:', e.message); }
   // 3b. corsfix.com
   try{
     const r3b = await fetchWithTimeout('https://proxy.corsfix.com/?'+encodeURIComponent(url), 4000);
-    if(r3b.ok) return await r3b.text();
+    if(r3b.ok){ const _t = await r3b.text(); if(_ok(_t)) return _t; }
   }catch(e){ console.warn('[CORS] corsfix fail:', e.message); }
   // 4. codetabs
   try{
     const r4 = await fetchWithTimeout('https://api.codetabs.com/v1/proxy?quest='+encodeURIComponent(url), 4000);
-    if(r4.ok) return await r4.text();
+    if(r4.ok){ const _t = await r4.text(); if(_ok(_t)) return _t; }
   }catch(e){ console.warn('[CORS] codetabs fail:', e.message); }
   // 5. thingproxy
   try{
     const r5 = await fetchWithTimeout('https://thingproxy.freeboard.io/fetch/'+url, 4000);
-    if(r5.ok) return await r5.text();
+    if(r5.ok){ const _t = await r5.text(); if(_ok(_t)) return _t; }
   }catch(e){ console.warn('[CORS] thingproxy fail:', e.message); }
   throw new Error('Всі проксі недоступні: '+_shortUrl);
 }
+// v88.8.35-fp55-P28: lightweight JSON sniff — body starts with [ or { after trimming.
+function _looksLikeJson(txt){ const t = String(txt).trim(); return t.length>1 && (t[0]==='[' || t[0]==='{'); }
 
 // ---------------------------- Парсер ICS (простий) --------------------------
 function unfoldIcs(text){
@@ -7448,7 +7456,7 @@ function renderCurrentPanel(){
     const todayKey = 'gPrev_' + new Date().toISOString().slice(0,10);
     if(isFinite(G) && ai){
       const snap = JSON.stringify({ G: +G.toFixed(2), kp: +(kUse||0).toFixed(2), Li: ai.Li, Mi: ai.Mi, ei: ai.ei, Pi: ai.Pi });
-      try { localStorage.setItem(todayKey, snap); } catch(_e) { /* private mode — silent */ } // v88.8.35-fp55-P27
+      try { localStorage.setItem(todayKey, snap); } catch(_e) { /* private mode — silent */ } // v88.8.35-fp55-P28
     }
     const yRaw = localStorage.getItem(yKey);
     if(yRaw && isFinite(G) && ai){
@@ -7806,7 +7814,7 @@ const PANCHAK_TYPES_BY_WEEKDAY = {
 };
 
 function computePanchanga(dateUTC){
-  // v88.8.35-fp55-P27 perf: memoize by minute. computePanchanga is the heaviest function in the
+  // v88.8.35-fp55-P28 perf: memoize by minute. computePanchanga is the heaviest function in the
   // app (~13 trig/ephemeris ops incl. Meeus moon/sun series) and is called 6+ times per render
   // tick on the SAME noon date by different sub-renderers. Panchanga is effectively constant within
   // a minute, so cache by minute-rounded timestamp. Cache is tiny (1–2 keys/tick) and self-trims.
@@ -8098,7 +8106,7 @@ const YOGA_ADVICE = [
 // v85b: A3 split — computePanchangaState (pure data) + renderPanchangaCard (DOM)
 function computePanchangaState(dateUTC){
   const p = computePanchanga(dateUTC);
-  // v88.8.35-fp55-P27: computePanchanga now memoizes and returns a SHARED object. This function
+  // v88.8.35-fp55-P28: computePanchanga now memoizes and returns a SHARED object. This function
   // mutates p.rahu.active/score for the current time, so clone rahu first — otherwise the mutation
   // would corrupt the cached result for other callers in the same minute.
   p.rahu = Object.assign({}, p.rahu);
@@ -8525,7 +8533,7 @@ function renderPanchangaCard(state){
 
   // (c) Колір заголовку картки = колір G поточного дня
   const _panchBorderColor = GLOBAL_STATES[classifyStateByG(_gNow)]?.badgeColor || '#9bb1dc';
-  // v88.8.35-fp55-P27: guard the borderColor write — the very next block already null-checks
+  // v88.8.35-fp55-P28: guard the borderColor write — the very next block already null-checks
   // _panchCard, so this direct deref was an inconsistent crash risk when panchCard is absent
   // (simple-mode / alt layout). Render no longer throws if the card isn't in the DOM.
   const _panchCard = document.getElementById('panchCard');
@@ -9519,13 +9527,13 @@ function render3Day(parsed3){
       let _scenLabel = '';
       let _scenBanner = '';
       if(_engineFullySynth){
-        // v88.8.35-fp55-P27: make a synthetic-Kp SCENARIO card unmistakably weaker than a real
+        // v88.8.35-fp55-P28: make a synthetic-Kp SCENARIO card unmistakably weaker than a real
         // forecast. The dashed/opacity styling alone read too similar to a real card (user confusion).
         // Add an explicit top banner + stronger label. Numbers/logic unchanged — presentation only.
         _scenBanner = `<div style="font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#fca474;background:rgba(252,164,116,.18);border:1px solid rgba(252,164,116,.5);border-radius:6px;padding:2px 6px;margin-bottom:5px;text-align:center" title="NOAA не дає реального forecast Kp на цю дату (за межами 3-денного вікна). Підставлено synthetic Kp=2.0. Це ймовірний сценарій «якщо нічого не зміниться», НЕ прогноз.">⚠ Сценарій, не прогноз</div>`;
         _scenLabel = `<div style="font-size:9px;color:#fca474;margin-top:2px;line-height:1.3" title="Engine використав synthetic Kp=2.0 (NOAA forecast недоступний). Це сценарій, не справжній прогноз.">ймовірний сценарій за поточним Kp · synthetic</div>`;
       } else if(_engineOutdatedNotSynth){
-        // v88.8.35-fp55-P27: engine-outdated is DIFFERENT from synthetic-scenario — here live Kp is
+        // v88.8.35-fp55-P28: engine-outdated is DIFFERENT from synthetic-scenario — here live Kp is
         // REAL (=${d.kpMax}) but the engine score was computed on an older snapshot. Give it its own
         // explicit (blue, not orange) banner so the card no longer reads as a normal forecast, while
         // still distinguishing it from the synthetic-Kp scenario case above. Numbers unchanged.
@@ -9916,7 +9924,7 @@ function buildTimingSummary(slots){
 }
 
 function renderDecisionTiming(slots){
-  // v88.8.35-fp55-P27: self-heal at the SOURCE. Previous patches (fp24/32/37/38/40/54-A)
+  // v88.8.35-fp55-P28: self-heal at the SOURCE. Previous patches (fp24/32/37/38/40/54-A)
   // tried to fix the "Немає даних по слотах" + filled "Критичні вікна" contradiction
   // AFTER render, via DOM. Root cause is a race: the hero pipeline can pass a stale
   // empty _daySlots snapshot here while timingRows renders from a fresher one.
@@ -10259,7 +10267,7 @@ function _applyStormGuardDOM(){
   } catch(_e) { /* silent */ }
 }
 
-// v88.8.35-fp55-P27: render the explicit 3-level decision hierarchy at the top of hero.
+// v88.8.35-fp55-P28: render the explicit 3-level decision hierarchy at the top of hero.
 // PRESENTATION-ONLY. Reads existing globals (getEngineScore = override>engine day verdict,
 // window.__uiState.gNow = live composite background, resolveDataMode = data quality).
 // No formula/threshold/headline logic is changed — this only LABELS what each number is,
@@ -10287,7 +10295,7 @@ function _renderHeroHierarchy(){
       const g = (window.__uiState && isFinite(window.__uiState.gNow)) ? Number(window.__uiState.gNow) : NaN;
       const kpN = (window.__uiState && isFinite(window.__uiState.kpNow)) ? Number(window.__uiState.kpNow) : NaN;
       if(isFinite(g)){
-        // v88.8.35-fp55-P27: use canonical classifyStateByG(g, kp) — the single source of truth for
+        // v88.8.35-fp55-P28: use canonical classifyStateByG(g, kp) — the single source of truth for
         // G-state (see its v87.90/v88.7 notes). The previous P4 code had its OWN thresholds
         // (g>=2 / g>-0.5 / g>-2) AND ignored the storm-override, so during a Kp≥5 storm the hero
         // background could read "сильний фон" green while the rest of the UI warned about the storm —
@@ -10328,7 +10336,7 @@ function _renderHeroHierarchy(){
       + row('Фон зараз · G_now (live)', gHtml)
       + row('Якість даних', `<span style="font-weight:700;color:${qCol}">${qLab}</span>`)
       + (function(){
-          // v88.8.35-fp55-P27: only show the «different horizons» explainer when the numbers actually
+          // v88.8.35-fp55-P28: only show the «different horizons» explainer when the numbers actually
           // diverge (|G_now − рішення дня| ≥ 1). When they agree it was redundant noise on every paint.
           // The fuller sign-conflict block (#heroLayerExplainer) covers the strong-divergence case.
           try {
@@ -10384,7 +10392,7 @@ function _patchStaleLoadingDOM() {
     }
   } catch(_e) { /* silent */ }
 
-  // v88.8.35-fp55-P27: keep the explicit decision hierarchy (РІШЕННЯ ДНЯ / ФОН ЗАРАЗ / ЯКІСТЬ) in sync.
+  // v88.8.35-fp55-P28: keep the explicit decision hierarchy (РІШЕННЯ ДНЯ / ФОН ЗАРАЗ / ЯКІСТЬ) in sync.
   try { if (typeof _renderHeroHierarchy === 'function') _renderHeroHierarchy(); } catch(_e) { /* silent */ }
 }
 
@@ -10707,7 +10715,7 @@ function heroLayerNoteFromHierarchy_v88824(sig){
       _staleWarn = ` · ⚠ Live-дані ${_mode.toUpperCase()} — перед важливою дією оновити через 5–10 хв.`;
     }
   } catch(e) { /* silent */ }
-  // v88.8.35-fp55-P27: default verdict note removed — it is now fully duplicated by #heroHierarchy
+  // v88.8.35-fp55-P28: default verdict note removed — it is now fully duplicated by #heroHierarchy
   // (Рішення дня / Фон зараз / Якість + live/daily Kp note). The unique divergence & guard branches
   // above (unverified override, live_unstable/live_tense) are kept — they carry info not in the hierarchy.
   return '';
@@ -10864,7 +10872,7 @@ function syncHero(){
       if (_vb && typeof classifyVerdict7Class === 'function') {
         const v7 = classifyVerdict7Class(_heroSig.hasEngine ? _heroSig.dayScore : newG);
         if (v7) {
-          // v88.8.35-fp55-P27: badge kept hidden — its content (7-class label + score) is now fully
+          // v88.8.35-fp55-P28: badge kept hidden — its content (7-class label + score) is now fully
           // duplicated by «РІШЕННЯ ДНЯ» in #heroHierarchy (P4). innerHTML still built below so the
           // element can be re-enabled instantly if ever needed; only the display toggle is forced off.
           _vb.style.display = 'none';
@@ -11956,7 +11964,7 @@ function _renderHeroTimeWindows() {
   try {
     let _R = null;
     if (typeof computePanchanga === 'function' && typeof noonUTC === 'function') {
-      // v88.8.35-fp55-P27: cache the recompute by UTC date — _renderHeroTimeWindows runs on the 30s
+      // v88.8.35-fp55-P28: cache the recompute by UTC date — _renderHeroTimeWindows runs on the 30s
       // guard timer, and these sunrise-based windows only change once per day, so recomputing the full
       // panchanga every tick was wasted work.
       try {
@@ -12037,7 +12045,7 @@ function _renderHeroTimeWindows() {
     }
     // Panchanga overlay
     if (_panchTimingNote && g < 0.5) label += ` (${_panchTimingNote})`;
-    // v88.8.35-fp55-P27: reconcile Kp-slot vs Vedic inauspicious windows (Rahu/Yama/Gulika).
+    // v88.8.35-fp55-P28: reconcile Kp-slot vs Vedic inauspicious windows (Rahu/Yama/Gulika).
     // Overlap in UTC against _inauspWins (computed once above). Compact inline tag (⚠ Name) — the
     // previous inline "частково обережно (Name HH:MM–HH:MM UTC)" was long AND placed UTC times next to
     // the row's LOCAL times, reading as inconsistent. Full UTC window now lives in the tooltip.
@@ -13271,11 +13279,11 @@ async function loadAll(){
 
   // ═══ Паралельне завантаження всіх джерел (v26: Promise.allSettled) ═══
   const [kpObsR, kpFcstR, t27R, dstR, snR] = await Promise.allSettled([
-    fetchTextWithCORS(URL_KP_OBS),
-    fetchTextWithCORS(URL_KP_FCST),
+    fetchTextWithCORS(URL_KP_OBS, _looksLikeJson),
+    fetchTextWithCORS(URL_KP_FCST, _looksLikeJson),
     fetchTextWithCORS(URL_27DAY),
-    fetchTextWithCORS(URL_DST),
-    fetchTextWithCORS(URL_WOLF_SN)
+    fetchTextWithCORS(URL_DST, _looksLikeJson),
+    fetchTextWithCORS(URL_WOLF_SN, _looksLikeJson)
   ]);
 
   // Kp спостереження (P0: fallback на planetary_k_index_1m.json)
@@ -16546,7 +16554,7 @@ function setProfile(p) {
   document.querySelectorAll('.profile-btn').forEach(b => {
     const _on = b.dataset.p === p;
     b.classList.toggle('active', _on);
-    b.setAttribute('aria-pressed', _on ? 'true' : 'false'); // v88.8.35-fp55-P27 a11y
+    b.setAttribute('aria-pressed', _on ? 'true' : 'false'); // v88.8.35-fp55-P28 a11y
   });
   renderProfileRec();
   // v87.19: при зміні persona — одразу оновити Decision Layer (інакше чекає G-tick ~10 хв)
@@ -18346,7 +18354,7 @@ document.addEventListener('DOMContentLoaded', () => {
         else if(typeof _activeProfile !== 'undefined') window._activeProfile = _obProfile;
       }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
     }
-    try { localStorage.setItem(ONBOARD_KEY, '1'); } catch(_e) { /* private mode — silent */ } // v88.8.35-fp55-P27
+    try { localStorage.setItem(ONBOARD_KEY, '1'); } catch(_e) { /* private mode — silent */ } // v88.8.35-fp55-P28
     const ov = document.getElementById('onboardOverlay');
     if(ov){ ov.style.opacity='0'; ov.style.transition='opacity .4s'; setTimeout(()=>ov.style.display='none',400); }
   };
