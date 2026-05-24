@@ -1,5 +1,5 @@
-// v88.8.35-fp55-P31: rail-semantics lock — G_ext labeled R&D, 27d "raw rail" badge, soften "Engine застарів"->"PDF/Engine пріоритет".
-// G-Index Service Worker v88.8.35-fp55-P31
+// v88.8.35-fp55-P32: hero shows PDF/Engine-priority phrase on divergence; fp55 stable milestone (+ CHANGELOG + regression checklist).
+// G-Index Service Worker v88.8.35-fp55-P32
 // v88.8.19 changes — incremental release після v88.8.18 з реальним bug fix:
 //   ENGINE v18.7 → v18.8: P2 раніше шукав 'Подорожі' word — missed 93 dates
 //     з '✈' emoji-only. P3 раніше тільки Shukla Dashami (10) — missed Krishna
@@ -601,8 +601,8 @@
 //   3. backtest.html додано до SHELL_FILES.
 //   4. cache.put awaited перед SW_FRESH_DATA notify (race fix).
 
-const SHELL_CACHE = 'g-index-shell-v88-8-35-fp55-p31';
-const DATA_CACHE = 'g-index-data-v88-8-35-fp55-p31';
+const SHELL_CACHE = 'g-index-shell-v88-8-35-fp55-p32';
+const DATA_CACHE = 'g-index-data-v88-8-35-fp55-p32';
 
 const SHELL_FILES = [
   './manifest.json',
