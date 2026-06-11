@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.35-fp56-P8</title>
+  <title>G-Index — Космофізичний дашборд v88.8.36-fp56-P9</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -5838,7 +5838,14 @@ function computeAi(dateTimeUTC, kp=0){
   // v88.7.8 FIX-J: horaEiRaw — без round для AiRaw, horaEi для UI/tip округлений.
   const HORA_ENABLED_PROFILES = ['mil','trader'];
   let horaEiRaw = 0, horaEi = 0, horaTip = '';
-  if(HORA_ENABLED_PROFILES.includes(_activeProfile)){
+  // v88.8.36-fp56-P9 FIX: hora — ІНТРАДЕННИЙ сигнал (планетна година поточного моменту).
+  // Раніше: hora додавалась у БУДЬ-ЯКИЙ виклик computeAi для mil/trader, включно з noonUTC
+  // day-scores → 27-денна "NOAA raw" рейка та fallback-тренд ставали профіль-залежними (до ±0.6).
+  // Тепер: hora застосовується лише для live-викликів (|t−now|<5 хв) — Hero G_now реального часу.
+  // Day-рейки (noon UTC) профіль-нейтральні. Edge: виклик noonUTC рівно опівдні UTC ±5 хв
+  // трактується як live — у цей момент noon-hora і є поточною, семантично коректно.
+  const _isLiveCall = Math.abs(dateTimeUTC.getTime() - Date.now()) < 300000;
+  if(_isLiveCall && HORA_ENABLED_PROFILES.includes(_activeProfile)){
     const curHora = _getCurrentHoraForAi(dateTimeUTC);
     if(curHora){
       horaEiRaw = curHora.pcl * 0.2;
@@ -5879,7 +5886,7 @@ function computeAi(dateTimeUTC, kp=0){
   const AiFullRaw  = AiNoDstRaw + Di;
   const Ai     = Math.round(AiNoDstRaw * 10) / 10; // legacy field name AiNoDst
   const AiFull = Math.round(AiFullRaw  * 10) / 10;
-  const explain = `\u03a3A\u1d62 = L\u1d62+M\u1d62+e\u1d62+P\u1d62+D\u1d62${snPen!==0?'+Sn\u1d62':''} = ${Li}+${Mi}+${eiTotal}+${Pi}+${Di}${snPen!==0?'+'+snPen:''} = ${AiFull}` + (snPen!==0?`\n(Sn=${_snVal}>150: kp_pen${snPen} — engine v18.5)`:'') + (bzVal!==0||vswVal!==0?`\n(+Bz=${bzVal}, Vsw=${vswVal} — контекст, не в G)`:'');
+  const explain = `\u03a3A\u1d62 = L\u1d62+M\u1d62+e\u1d62+P\u1d62+D\u1d62${snPen!==0?'+Sn\u1d62':''} = ${Li}+${Mi}+${eiTotal}+${Pi}+${Di}${snPen!==0?'+'+snPen:''} = ${AiFull}` + (snPen!==0?`\n(Sn=${_snVal}>150: kp_pen${snPen} — engine v18.5${_diDateStr !== _todayStr ? ' · поточне Sn як наближення для цієї дати' : ''})`:'') + (bzVal!==0||vswVal!==0?`\n(+Bz=${bzVal}, Vsw=${vswVal} — контекст, не в G)`:'');
 
   return { Ai: AiFull, AiNoDst: Ai, Li, Mi, ei: eiTotal, eiBase: ei, horaEi, Pi, Di, snPen, bzVal, vswVal, phaseName, phaseDeg, lTip, mTip, eTip: eTipLines.join('\n'), pTip, diTip, explain, eclipseUnverified };
 }
