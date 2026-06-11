@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.36-fp56-P9</title>
+  <title>G-Index — Космофізичний дашборд v88.8.36-fp56-P10</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -10463,12 +10463,14 @@ function _renderHeroHierarchy(){
         // background could read "сильний фон" green while the rest of the UI warned about the storm —
         // exactly the contradiction classifyStateByG was written to prevent.
         const _cls = (typeof classifyStateByG==='function') ? classifyStateByG(g, kpN) : null;
+        // v88.8.36-fp56-P10: лейбли = канонічна шкала classifyG (lowercase). Раніше good='сприятливий'
+        // → конфліктувало з classifyG good='Помірно сприятливий' (G=+0.73 показувало «сприятливий»).
         const _map = {
-          favorable:['сильний фон','var(--ok)'],
-          good:     ['сприятливий','var(--ok)'],
+          favorable:['сприятливий','var(--ok)'],
+          good:     ['помірно сприятливий','var(--ok)'],
           neutral:  ['нейтральний','var(--muted)'],
-          unstable: ['слабкий','#ffaa33'],
-          tense:    ['важкий','#ff6b6b']
+          unstable: ['помірно несприятливий','#ffaa33'],
+          tense:    ['несприятливий','#ff6b6b']
         };
         const _m = (_cls && _map[_cls]) ? _map[_cls] : ['нейтральний','var(--muted)'];
         const word = _m[0], col = _m[1];
@@ -15068,6 +15070,11 @@ function renderPersonal() {
   const _globalRisk = isFinite(_globalG) && _globalG <= -1;
   const _globalSafe = isFinite(_globalG) && _globalG >= 0;
   const _globalUnknown = !isFinite(_globalG);
+  // v88.8.36-fp56-P10: слово фону — з канонічної шкали (раніше хардкоди «ризик»/«сприятливо»
+  // розходились із classifyG: G=+0.2 = 'neutral', а напис казав «сприятливо»).
+  const _gWord = (typeof classifyStateByG==='function')
+    ? ({favorable:'сприятливий',good:'помірно сприятливий',neutral:'нейтральний',unstable:'помірно несприятливий',tense:'несприятливий'})[classifyStateByG(_globalG)] || 'нейтральний'
+    : (_globalSafe ? 'сприятливий' : 'несприятливий');
   const _personalRisk = danger || taaraGmod <= -1;
   let _riskBannerHtml = '';
   let _effectivePhCol = _phCol, _effectivePhBg = _phBg, _effectivePhBrd = _phBrd;
@@ -15079,7 +15086,7 @@ function renderPersonal() {
     const _cycleIsPositive = taaraGmod > 0 && !danger;
     _riskBannerHtml = `<div style="padding:8px 12px;margin-bottom:6px;border-radius:10px;border:1px solid rgba(255,165,80,.28);background:rgba(255,165,80,.08);display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;line-height:1.35">
       <div><div style="color:var(--faint);font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Ваш цикл</div><div style="color:${_cycleIsPositive?'#7fe3a6':danger?'#ff8e8e':'#cfe0ff'};font-weight:700">${_taaraLabel}${_cycleIsPositive?' · позитивний':danger?' · обережний':' · нейтральний'}</div></div>
-      <div><div style="color:var(--faint);font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Фон зараз</div><div style="color:#ffb36a;font-weight:700">G = ${_globalG.toFixed(1)} · ризик</div></div>
+      <div><div style="color:var(--faint);font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Фон зараз</div><div style="color:#ffb36a;font-weight:700">G = ${_globalG.toFixed(1)} · ${_gWord}</div></div>
     </div>`;
     // Override optimistic state if cycle is positive but global is risk
     if (_cycleIsPositive) {
@@ -15097,7 +15104,7 @@ function renderPersonal() {
     // Hero показує "Можна діяти" → personal block показує "День напружений" → потрібне пояснення.
     const _taaraLabel = _ti ? _ti.short.split(' — ')[0] : taara.name;
     _riskBannerHtml = `<div style="padding:8px 12px;margin-bottom:6px;border-radius:10px;border:1px solid rgba(180,140,255,.28);background:rgba(180,140,255,.08);display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;line-height:1.35" title="Фон зараз (Kp + Панчанга) і особистий цикл (Taara від вашої натальної стоянки) — різні шари аналізу. Hero G показує загальний космофізичний фон. Особистий блок показує ваш цикл відносно дня народження. Розбіжність — норма, не баг.">
-      <div><div style="color:var(--faint);font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Фон зараз</div><div style="color:#7fe3a6;font-weight:700">G = ${_globalG >= 0 ? '+' : ''}${_globalG.toFixed(1)} · сприятливо</div></div>
+      <div><div style="color:var(--faint);font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Фон зараз</div><div style="color:#7fe3a6;font-weight:700">G = ${_globalG >= 0 ? '+' : ''}${_globalG.toFixed(1)} · ${_gWord}</div></div>
       <div><div style="color:var(--faint);font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Ваш цикл</div><div style="color:${danger?'#ff8e8e':'#ffd6ad'};font-weight:700">${_taaraLabel} · ${danger?'обережний':'тиск'}</div></div>
       <div style="grid-column:1/-1;padding-top:4px;border-top:1px solid rgba(180,140,255,.18);color:#cfb6ff;font-size:11px;line-height:1.4">⚠ Шари дають різний сигнал. Загальні справи — дозволено (фон сприяє). Особисто важливі рішення — відкласти (цикл проти).</div>
     </div>`;
