@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.36-fp56-P11c</title>
+  <title>G-Index — Космофізичний дашборд v88.8.36-fp56-P12</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -2743,9 +2743,9 @@ Fallback (NOAA 45-day-forecast.json):
   </div>
 
   <footer>
-    <div class="small">Дані Kp/Ap — NOAA SWPC; Ap↔Kp — GFZ/NOAA table; Dst — Kyoto WDC; Sn — SILSO/ROB; події — ICS; затемнення — Timeanddate/NASA; фази — Astronomy Engine (Meeus). Модель G: R&amp;D / Advisory — V3 prospective freeze 2026-05-03 → ~2026-08-01. Strict 71.4% holdout (n=56, engine v18.5 v5.1, κ=0.52); G включає Dᵢ (Dst-компонент).</div>
-    <div class="small" style="margin-top:8px">📊 Повна валідація моделі: <a href="backtest.html" style="color:var(--alt);text-decoration:none;border-bottom:1px dotted var(--alt)">backtest report</a> — engine v18.5 vs PDF v5.1 на n=280 днях (holdout n=56: Strict 75.0% · Global 71.4% / 83.6% binary · κ=0.52 / weighted κ=0.73).</div>
-    <div class="small" style="margin-top:8px;color:var(--faint);border-left:2px solid var(--warn);padding-left:8px">⚠ Caveat: ground truth = експертні PDF-бюлетені з тим же Vedic Panchanga + Kp framework. Метрики 71.4% / κ=0.52 валідують <strong>відтворення експертної логіки</strong>, НЕ предиктивну валідність vs реальні outcomes (медичні/операційні події). Outcome-based validation — pilot план у V19-E.</div>
+    <div class="small">Дані Kp/Ap — NOAA SWPC; Ap↔Kp — GFZ/NOAA table; Dst — Kyoto WDC; Sn — SILSO/ROB; події — ICS; затемнення — Timeanddate/NASA; фази — Astronomy Engine (Meeus). Модель G: R&amp;D / Advisory — V3 prospective freeze 2026-05-03 → ~2026-08-01. Engine v18.8: Strict 79.2% · Binary 88.7% (n=212, ablation-validated; frozen core v18.5: 71.4% holdout n=56, κ=0.52); G включає Dᵢ (Dst-компонент).</div>
+    <div class="small" style="margin-top:8px">📊 Повна валідація моделі: <a href="backtest.html" style="color:var(--alt);text-decoration:none;border-bottom:1px dotted var(--alt)">backtest report</a> — engine v18.8 (frozen core v18.5 + ablation-патчі) vs PDF: n=212 — Strict 79.2% · Binary 88.7% · Exact 50.0%. Baseline v18.5: n=280, holdout n=56 — Strict 75.0% · κ=0.52 / weighted κ=0.73.</div>
+    <div class="small" style="margin-top:8px;color:var(--faint);border-left:2px solid var(--warn);padding-left:8px">⚠ Caveat: ground truth = експертні PDF-бюлетені з тим же Vedic Panchanga + Kp framework. Метрики 79.2% / 88.7% валідують <strong>відтворення експертної логіки</strong>, НЕ предиктивну валідність vs реальні outcomes (медичні/операційні події). Outcome-based validation — pilot план у V19-E.</div>
   </footer>
 
 <script>
@@ -9650,9 +9650,11 @@ function render3Day(parsed3){
             ? `<span style="color:#ffaa33;font-size:11px;font-weight:700;margin-left:4px;cursor:help" title="⚠ Engine score з snapshot (validated tag-based)&#10;Snapshot Kp=${_bs.kp.toFixed(1)} (estimated/synthetic)&#10;Live NOAA Kp=${_bs._liveKp.toFixed(1)}&#10;&#10;Engine v18.5 score не перерахований — це tag-based прогноз.&#10;Якщо live Kp значно інший — звертайтесь до Hero G для real-time оцінки.&#10;&#10;Why no recalc? Round(Hero G) дає 47% accuracy. Snapshot — 75.0% strict holdout (κ=0.52). Краще показати validated.">⚠</span>`
             : '';
           // Sign divergence: G>=0.5 & eng<0, або G<=-0.5 & eng>0. Нейтральний діапазон |G|<0.5 не вважається.
+          // v88.8.36-fp56-P12: + другий тригер — ВЕЛИКА дельта |G−eng|≥2.5 навіть без знакового конфлікту
+          // (кейс 13.06: raw +0.2 vs PDF −3, Δ=3.2 — проходив без попередження через deadzone).
           const _gPos = G >= 0.5, _gNeg = G <= -0.5;
           const _ePos = _bs.eng > 0, _eNeg = _bs.eng < 0;
-          const _divergent = (_gPos && _eNeg) || (_gNeg && _ePos);
+          const _divergent = (_gPos && _eNeg) || (_gNeg && _ePos) || Math.abs(G - _bs.eng) >= 2.5;
           if (_divergent) {
             // v88.8.5 Б2: розширений tooltip — пояснює ЧОМУ розбіжність і ЩО робити.
             // Раніше: загальне 'обережніше з рішеннями'. Тепер: причини + actionable hint.
@@ -12696,6 +12698,15 @@ function syncPersonalContext(){
     personalSub = 'Панчанга додає навантаження — варто бути ще обережнішим.';
   } else {
     personalSub = st.impact;
+    // v88.8.36-fp56-P12: критичний день — st.impact для good/favorable каже «можна приймати рішення
+    // і рухатись вперед», що прямо суперечило червоному блоку «важливі рішення відкласти» нижче.
+    // Той самий guard, що fp13 DD у resolveDecisionByG (там був, тут — обхід через пряме st.impact).
+    try {
+      const _eP = (typeof getEngineScore === 'function') ? getEngineScore(new Date()) : null;
+      if (_eP && isFinite(_eP.eng) && Number(_eP.eng) <= -2) {
+        personalSub = `Hora підтримує лише рутину й перевірені дії: день критичний (PDF/Engine ${_eP.eng}), важливі рішення відкласти.`;
+      }
+    } catch(_e){ /* silent */ }
   }
   if(hora) personalSub += ` (${hora.planet} ще ${hora.minLeft} хв)`;
 
