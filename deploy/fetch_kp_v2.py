@@ -51,35 +51,51 @@ def fetch_url(url, timeout=15):
         print(f"  [WARN] {url}: {e}", file=sys.stderr)
         return None
 
+# ─── УНІВЕРСАЛЬНИЙ ПАРСЕР NOAA ───────────────────────────────────────
+def _noaa_daily(raw, keys, valid=None, date_min=None):
+    """fp56 (звірено з живими ендпоінтами 11.06.2026): NOAA SWPC products тепер
+    віддають масиви ОБ'ЄКТІВ ({"time_tag","Kp"/"kp"/"dst",...}), а не масиви
+    масивів із заголовком. Старий формат лишаємо як legacy-гілку.
+    raw → {date: [floats]}; keys = пріоритет ключів значення; valid = фільтр."""
+    daily = {}
+    if not raw: return daily
+    try: rows = json.loads(raw)
+    except json.JSONDecodeError: return daily
+    if not isinstance(rows, list) or not rows: return daily
+
+    def _push(ts, v):
+        if v is None or not ts: return
+        try:
+            d = date.fromisoformat(str(ts)[:10])
+            f = float(v)
+        except (ValueError, TypeError): return
+        if valid and not valid(f): return
+        if date_min and d < date_min: return
+        daily.setdefault(d, []).append(f)
+
+    if isinstance(rows[0], dict):                  # формат 2026: об'єкти
+        for it in rows:
+            v = None
+            for k in keys:
+                if it.get(k) is not None: v = it[k]; break
+            _push(it.get('time_tag'), v)
+    elif isinstance(rows[0], list):                # legacy: масиви + заголовок
+        for row in rows[1:]:
+            try: _push(row[0], row[1])
+            except IndexError: continue
+    return daily
+
 # ─── KP ФАКТ ─────────────────────────────────────────────────────────
 def get_kp_fact():
-    raw = fetch_url(KP_FACT_URL)
-    if not raw: return {}
-    try: rows = json.loads(raw)
-    except: return {}
-    daily = {}
-    for row in rows[1:]:
-        try:
-            d = date.fromisoformat(str(row[0])[:10])
-            daily.setdefault(d, []).append(float(row[1]))
-        except: continue
+    daily = _noaa_daily(fetch_url(KP_FACT_URL), ['Kp', 'kp', 'kp_index'],
+                        valid=lambda v: 0 <= v <= 9)
     return {d: {'avg': round(sum(v)/len(v),2), 'max': round(max(v),2)}
             for d, v in daily.items()}
 
 # ─── KP ПРОГНОЗ ──────────────────────────────────────────────────────
 def get_kp_forecast():
-    raw = fetch_url(KP_FORECAST_URL)
-    if not raw: return {}
-    try: rows = json.loads(raw)
-    except: return {}
-    today = date.today()
-    daily = {}
-    for row in rows[1:]:
-        try:
-            d = date.fromisoformat(str(row[0])[:10])
-            if d >= today:
-                daily.setdefault(d, []).append(float(row[1]))
-        except: continue
+    daily = _noaa_daily(fetch_url(KP_FORECAST_URL), ['kp', 'Kp'],
+                        valid=lambda v: 0 <= v <= 9, date_min=date.today())
     return {d: {'avg': round(sum(v)/len(v),2), 'max': round(max(v),2)}
             for d, v in daily.items()}
 
@@ -122,38 +138,15 @@ def _dst_valid(v):
 
 def get_dst():
     """
-    Основне: kyoto-dst.json (масив масивів, заголовок: ["time_tag","dst"]) — те саме
-    джерело, що в дашборді. Fallback: geospace_dst_1m.json (масив об'єктів) — давав 404.
+    Основне: kyoto-dst.json — живий формат (звірено 11.06.2026): масив об'єктів
+    [{"time_tag":"...","dst":5},...]. Fallback: geospace_dst_1m.json (давав 404).
+    _noaa_daily парсить обидва можливі формати будь-якого з URL.
     Повертає {date: {'avg': float, 'min': float}} — добові агрегати (нТл)
     Dst < 0: негативна → буря; мінімум = пік бурі
     """
-    daily = {}
-    raw = fetch_url(DST_URL)
-    if raw:
-        try:
-            rows = json.loads(raw)
-            # формат масив-масивів з заголовком
-            if rows and isinstance(rows[0], list):
-                for row in rows[1:]:
-                    try:
-                        ts = str(row[0])[:10]
-                        if _dst_valid(row[1]) and ts:
-                            daily.setdefault(date.fromisoformat(ts), []).append(float(row[1]))
-                    except (ValueError, IndexError): continue
-        except (json.JSONDecodeError, TypeError): pass
+    daily = _noaa_daily(fetch_url(DST_URL), ['dst', 'Dst'], valid=_dst_valid)
     if not daily:
-        raw = fetch_url(DST_URL_FALLBACK)
-        if not raw: return {}
-        try: data = json.loads(raw)
-        except json.JSONDecodeError: return {}
-        for item in data:
-            try:
-                ts  = str(item.get('time_tag', ''))[:10]
-                dst = item.get('dst') if item.get('dst') is not None else item.get('Dst')
-                if _dst_valid(dst) and ts:
-                    daily.setdefault(date.fromisoformat(ts), []).append(float(dst))
-            except (ValueError, AttributeError): continue
-
+        daily = _noaa_daily(fetch_url(DST_URL_FALLBACK), ['dst', 'Dst'], valid=_dst_valid)
     return {d: {'avg': round(sum(v)/len(v), 1),
                 'min': round(min(v), 1)}
             for d, v in daily.items()}
