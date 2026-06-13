@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.36-fp56-P12</title>
+  <title>G-Index — Космофізичний дашборд v88.8.36-fp56-P12f</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -9658,7 +9658,7 @@ function render3Day(parsed3){
           if (_divergent) {
             // v88.8.5 Б2: розширений tooltip — пояснює ЧОМУ розбіжність і ЩО робити.
             // Раніше: загальне 'обережніше з рішеннями'. Тепер: причини + actionable hint.
-            _bulletinLine = `<div style="font-size:10px;margin-top:2px;padding:2px 6px;border-radius:4px;background:rgba(255,170,51,.15);border:1px solid rgba(255,170,51,.35);cursor:help" title="⚠ G_now/G_day raw і PDF/Engine Day_score показують різні знаки.&#10;&#10;Чому це буває:&#10;• Engine — frozen tag-based за snapshot Kp; G — live з реальним Kp.&#10;• На boundary days Vedic Panchanga зсувається, Engine snapshot ще не оновлено.&#10;• Engine clamps до ±3, G — continuous (-5..+7).&#10;• На експертних PDF днях override може давати +3, навіть якщо Kp низький.&#10;&#10;Що робити: знизь довіру до автоматичної оцінки на 15%. Перевір 1-2 додаткові сигнали (NOAA SWPC, Panchanga вкладка, локальне самопочуття) перед важливим рішенням.">⚠ PDF/Engine: <span style="color:${_bsCol};font-weight:700">${_bsSign}${_bs.eng}${_synth}</span>${_recalcMark} <span style="color:var(--faint);font-size:9px">· розбіжність</span></div>`;
+            _bulletinLine = `<div style="font-size:10px;margin-top:2px;padding:2px 6px;border-radius:4px;background:rgba(255,170,51,.15);border:1px solid rgba(255,170,51,.35);cursor:help" title="⚠ G_now/G_day raw і PDF/Engine Day_score: різні знаки АБО велика розбіжність (Δ≥2.5).&#10;&#10;Чому це буває:&#10;• Engine — frozen tag-based за snapshot Kp; G — live з реальним Kp.&#10;• На boundary days Vedic Panchanga зсувається, Engine snapshot ще не оновлено.&#10;• Engine clamps до ±3, G — continuous (-5..+7).&#10;• На експертних PDF днях override може давати +3, навіть якщо Kp низький.&#10;&#10;Що робити: знизь довіру до автоматичної оцінки на 15%. Перевір 1-2 додаткові сигнали (NOAA SWPC, Panchanga вкладка, локальне самопочуття) перед важливим рішенням.">⚠ PDF/Engine: <span style="color:${_bsCol};font-weight:700">${_bsSign}${_bs.eng}${_synth}</span>${_recalcMark} <span style="color:var(--faint);font-size:9px">· розбіжність</span></div>`;
           } else {
             _bulletinLine = `<div style="font-size:10px;color:var(--dim);margin-top:2px">PDF/Engine: <span style="color:${_bsCol};font-weight:700">${_bsSign}${_bs.eng}${_synth}</span>${_recalcMark}</div>`;
           }
@@ -12738,8 +12738,16 @@ function syncDayPlanCard(){
       cls = 'warn';
       text = `тільки рутина · Kp≥5`;
     } else {
+      // v88.8.36-fp56-P12d: guard критичного дня (той самий принцип, що P12-C в особистому блоці).
+      // Раніше: «можна діяти · Сатурн» ×3 на дні PDF/Engine=−2 прямо під hora-guard «лише рутина».
+      let _dayCrit = false;
+      try {
+        const _eD = (typeof getEngineScore === 'function') ? getEngineScore(new Date()) : null;
+        _dayCrit = !!(_eD && isFinite(_eD.eng) && Number(_eD.eng) <= -2);
+      } catch(_e){ /* silent */ }
       cls = g >= 0.5 ? 'ok' : g >= -0.5 ? 'info' : 'warn';
       text = g >= 0.5 ? 'можна діяти' : g >= -0.5 ? 'обережно: перевірені дії' : 'уникати: тільки рутина';
+      if (_dayCrit && g >= 0.5) { cls = 'info'; text = 'рутина й перевірені дії (день критичний)'; }
     }
     // Hora context
     let horaStr = '';
@@ -19303,6 +19311,21 @@ function renderDecisionLayer(gVal, ui) {
       ctxTxt = `Буря G${Math.min(5, Math.round(kp - 4))} активна. ` + ctxTxt;
     }
   }
+  // v88.8.36-fp56-P12f: guard критичного дня для списку «Робіть/Уникайте» (4-й рендерер з обходом).
+  // Раніше фільтрувався лише персональний цикл (fp54-C) і буря, але НЕ критичний day-score:
+  // якщо PDF/Engine=−2 а live-фон позитивний → «Робіть: Запускати нові ініціативи» проскакувало.
+  try {
+    const _eDoG = (typeof getEngineScore === 'function') ? getEngineScore(new Date()) : null;
+    if (_eDoG && isFinite(_eDoG.eng) && Number(_eDoG.eng) <= -2 && !_stormActive44) {
+      doArr = doArr.filter(d => !d.includes('нові ініціативи') && !d.includes('Запускати нові')
+                              && !d.includes('нові старти') && !d.includes('Укладати') && !d.includes('контракт'));
+      if (!doArr.some(d => d.includes('критичне') || d.includes('рутин')))
+        doArr.unshift('Тільки критичне й перевірені задачі');
+      avoidArr.unshift(`Важливих рішень і запусків (день критичний, PDF/Engine ${_eDoG.eng})`);
+      ctxTxt = `День критичний за PDF/Engine (${_eDoG.eng}) — навіть за спокійного фону тримати рутину. ` + ctxTxt;
+    }
+  } catch(_eDay) { /* silent */ }
+
   // fp54-C: Personal cycle conflict — if personal verdict is negative, modify DO list and add note
   try {
     const _persEl = document.getElementById('personalVerdictBadge') || document.querySelector('.personal-verdict');
