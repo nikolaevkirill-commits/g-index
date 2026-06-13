@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.36-fp56-P12f</title>
+  <title>G-Index — Космофізичний дашборд v88.8.36-fp56-P12g</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -13114,8 +13114,11 @@ function renderDisagreement(){
   const _todayMax = _todayVals.length ? Math.max(..._todayVals) : 0;
   const _todayMin = _todayVals.length ? Math.min(..._todayVals) : 0;
   const _todayRange = _todayMax - _todayMin;
-  const _hasPos = _todayVals.some(v => v > 0.5);
-  const _hasNeg = _todayVals.some(v => v < -0.5);
+  // v88.8.36-fp56-P12g: поріг конфлікту знаків знижено 0.5→0.1. Кейс 13.06: LIVE +0.20 vs PDF −3
+  // не тригерив _signConflict (бо +0.20 < 0.5 не вважалось «позитивним») → блок казав «в одному
+  // напрямку», хоча знаки протилежні. 0.1 відсікає лише істинний нуль, не реальний слабкий плюс.
+  const _hasPos = _todayVals.some(v => v > 0.1);
+  const _hasNeg = _todayVals.some(v => v < -0.1);
   const _signConflict = _hasPos && _hasNeg;
 
   // v88.6.9: поріг range 2.5 → 3.0 щоб не trigger warning при normal architectural divergence
