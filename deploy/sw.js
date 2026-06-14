@@ -1,5 +1,5 @@
-// v88.8.35-fp56-P8: future_kp.json — real Kp from NOAA 27DO replaces synthetic Kp=2.0 on future dates.
-// G-Index Service Worker v88.8.35-fp56-P8
+// v88.8.36-fp56-P13: future_kp+annual cached — real Kp from NOAA 27DO replaces synthetic Kp=2.0 on future dates.
+// G-Index Service Worker v88.8.36-fp56-P13
 // v88.8.19 changes — incremental release після v88.8.18 з реальним bug fix:
 //   ENGINE v18.7 → v18.8: P2 раніше шукав 'Подорожі' word — missed 93 dates
 //     з '✈' emoji-only. P3 раніше тільки Shukla Dashami (10) — missed Krishna
@@ -666,6 +666,46 @@ self.addEventListener('fetch', (event) => {
     return;
   }
   
+  // fp56-P13: future_kp.json — network-first з cached fallback.
+  // Оновлюється щопонеділка після NOAA 27DO (~15:00 UTC). Офлайн: остання версія.
+  if (url.pathname.endsWith('future_kp.json')) {
+    event.respondWith(
+      fetch(event.request)
+        .then(async (resp) => {
+          if (resp.ok) {
+            const clone = resp.clone();
+            const cache = await caches.open(DATA_CACHE);
+            await cache.put(event.request, clone);
+          }
+          return resp;
+        })
+        .catch(() =>
+          caches.match(event.request).then((cached) =>
+            cached || new Response('{"kp":{}}', { headers: { 'Content-Type': 'application/json' } })
+          )
+        )
+    );
+    return;
+  }
+
+  // fp56-P13: annual_2026_27.json — cache-first (статичний, змінюється рідко).
+  if (url.pathname.endsWith('annual_2026_27.json')) {
+    event.respondWith(
+      caches.match(event.request).then((cached) => {
+        const fetchPromise = fetch(event.request).then(async (resp) => {
+          if (resp.ok) {
+            const clone = resp.clone();
+            const cache = await caches.open(DATA_CACHE);
+            await cache.put(event.request, clone);
+          }
+          return resp;
+        }).catch(() => null);
+        return cached || fetchPromise;
+      })
+    );
+    return;
+  }
+
   if (url.pathname.endsWith('engine_scores.json')) {
     event.respondWith(
       fetch(event.request)
