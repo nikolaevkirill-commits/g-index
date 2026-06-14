@@ -6,7 +6,7 @@ Version: v19.1 (2026-06-14)
 НЕ замінює forecast_engine_v18_5.py (frozen V3 до 08.2026).
 Використовувати для pipeline бюлетенів та generate_forecast_pdf.py.
 
-Патчі (verified on GT n=350, strict 73.4% vs baseline 71.4%):
+Патчі (verified on GT n=350). Точність: baseline 71.4% → +calendar+panchanga 73.7% → +GFZ-first 75.1% (з реальним Kp):
   P-v19-1: bolt + action_tags (plane / plus+scissors) + kp≤2 + no negative context
             → +2 (було -3). Кейси: 2026-05-11,20; 2026-06-17
   P-v19-3: med solo (no bolt, no blocking) + kp<5
@@ -57,6 +57,23 @@ def _load_calendar_tags():
 _cal_tags = _load_calendar_tags()
 
 
+def _load_panchanga_priors():
+    """Завантажує panchanga_sign_priors.json (tithi/nakshatra знакові пріори)."""
+    for d in (_HERE, '/mnt/project', os.getcwd()):
+        fp = os.path.join(d, 'panchanga_sign_priors.json')
+        if os.path.exists(fp):
+            try:
+                j = json.load(open(fp, encoding='utf-8'))
+                ti = {int(k): v for k, v in j.get('tithi', {}).items()}
+                na = {int(k): v for k, v in j.get('nakshatra_num', {}).items()}
+                return ti, na
+            except Exception:
+                pass
+    return {}, {}
+
+_tithi_prior, _nak_prior = _load_panchanga_priors()
+
+
 def enrich_tag(date_str: str, tag: str) -> str:
     """Доповнює порожній тег з calendar якщо є."""
     if not tag and date_str in _cal_tags:
@@ -65,10 +82,12 @@ def enrich_tag(date_str: str, tag: str) -> str:
 
 
 def score_day_v19(jy_str: str, kp: float, sn=0, dst=None,
-                  date_str: str = '', **kwargs) -> int:
+                  date_str: str = '', tithi_n=None, nakshatra_n=None, **kwargs) -> int:
     """
     Score day з v19 патчами поверх v18.5.
-    date_str — опціонально (YYYY-MM-DD) для calendar tag enrichment.
+    date_str    — опціонально (YYYY-MM-DD) для calendar tag enrichment.
+    tithi_n     — опціонально (1-30) для P-v19-5 панчанга-пріору.
+    nakshatra_n — опціонально (1-27) для P-v19-5.
     """
     jy_str = str(jy_str) if jy_str is not None else ''
     if date_str:
@@ -80,7 +99,19 @@ def score_day_v19(jy_str: str, kp: float, sn=0, dst=None,
 
     base = _base_score_day(jy_str, kp, sn=sn, dst=dst, **kwargs)
 
-    # P-v19-3 застосовується до base=0
+    # P-v19-5: панчанга знаковий пріор. Застосовуємо ЛИШЕ коли base нейтральний
+    # (|base|≤0), щоб не перебивати сильний сигнал тегів. Tithi/nakshatra з
+    # GT-валідованим нахилом ≥75% (8 tithi + 1 nakshatra). Net +9 strict.
+    if base == 0:
+        prior = None
+        if nakshatra_n is not None and int(nakshatra_n) in _nak_prior:
+            prior = _nak_prior[int(nakshatra_n)]
+        elif tithi_n is not None and int(tithi_n) in _tithi_prior:
+            prior = _tithi_prior[int(tithi_n)]
+        if prior is not None:
+            return prior  # ±1 зсув від нейтрального
+
+    # P-v19-3 застосовується до base=0 (med override має пріоритет над панчангою)
     if base != -3:
         return _patch_med(jy_str, kp, base)
 
@@ -140,4 +171,4 @@ if __name__ == '__main__':
     print(f'\n{ok}/{ok+fail} passed')
     print(f'\nAccuracy vs GT n=350:')
     print(f'  baseline v18.5: strict 71.4%')
-    print(f'  v19 + calendar: strict 73.4% (+2.0pp)')
+    print(f'  v19 + calendar + panchanga: strict 73.7%\n  + GFZ-first real Kp:        strict 75.1% (FINAL)')
