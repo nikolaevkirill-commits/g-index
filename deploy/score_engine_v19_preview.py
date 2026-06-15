@@ -6,7 +6,7 @@ Version: v19.1 (2026-06-14)
 НЕ замінює forecast_engine_v18_5.py (frozen V3 до 08.2026).
 Використовувати для pipeline бюлетенів та generate_forecast_pdf.py.
 
-Патчі (verified on GT n=350). Точність: baseline 71.4% → +calendar+panchanga 73.7% → +GFZ-first 75.1% (з реальним Kp):
+Патчі (verified on GT n=350, strict 73.4% vs baseline 71.4%):
   P-v19-1: bolt + action_tags (plane / plus+scissors) + kp≤2 + no negative context
             → +2 (було -3). Кейси: 2026-05-11,20; 2026-06-17
   P-v19-3: med solo (no bolt, no blocking) + kp<5
@@ -171,4 +171,4 @@ if __name__ == '__main__':
     print(f'\n{ok}/{ok+fail} passed')
     print(f'\nAccuracy vs GT n=350:')
     print(f'  baseline v18.5: strict 71.4%')
-    print(f'  v19 + calendar + panchanga: strict 73.7%\n  + GFZ-first real Kp:        strict 75.1% (FINAL)')
+    print(f'  v19 + calendar: strict 73.4% (+2.0pp)')
