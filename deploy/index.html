@@ -1345,6 +1345,7 @@ body.simple-mode .col-hide-mobile {
           onclick="(async function(){try{if('serviceWorker' in navigator){const regs=await navigator.serviceWorker.getRegistrations();await Promise.all(regs.map(r=>r.unregister()));}if('caches' in window){const keys=await caches.keys();await Promise.all(keys.map(k=>caches.delete(k)));}location.reload(true);}catch(e){alert('Reset error: '+e.message);}})()"
           style="background:#2a1a1a;color:#ff9f9f;border:1px solid #4a2a2a;font-size:11px;padding:3px 8px;border-radius:6px">🗑 Кеш</button>
         <button id="btnShare" title="Поділитись поточним G-станом" aria-label="Поділитись" onclick="shareGState()" style="background: var(--border);color: var(--muted);border:1px solid var(--border2)">📤</button>
+        <button id="btnChronoExport" title="Експорт Chrono Journal" onclick="(function(){try{var d=localStorage.getItem('gindex_chrono_v1')||'[]';prompt('CHRONO JSON:',d);}catch(e){alert('Помилка: '+e.message);}})()" style="background:#0a2a1a;color:#44ffaa;border:1px solid #1a6644;font-size:11px;padding:3px 8px;border-radius:6px">📊</button>
         <button class="lang-btn active" id="btnLang" title="Switch language / Змінити мову" aria-label="Змінити мову інтерфейсу">UA</button>
         <button class="lang-btn" id="btnSimpleMode" title="Простий режим (тільки головне) / Експертний режим"
           aria-label="Перемкнути простий/експертний режим" aria-pressed="false"
@@ -1405,7 +1406,6 @@ body.simple-mode .col-hide-mobile {
           <div id="devMenuPanel" style="position:absolute;right:0;top:100%;margin-top:4px;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:6px;display:flex;flex-direction:column;gap:4px;z-index:50;min-width:140px">
             <button id="btnV86Radial" onclick="(function(){try{const cur=localStorage.getItem('v86_radial')==='1';const next=cur?'0':'1';localStorage.setItem('v86_radial', next);localStorage.setItem('v86_heat', next);location.reload();}catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}})()" style="background:#1a0f2a;color:#d28cff;border:1px solid #4a2a6e;font-size:11px;padding:4px 8px;border-radius:6px;cursor:pointer;text-align:left" title="Перемкнути v86 features: radial G + heat-strip">✦ v86</button>
             <button id="btnCacheReset" onclick="navigator.serviceWorker.getRegistrations().then(r=>r.forEach(s=>s.unregister()));caches.keys().then(k=>k.forEach(c=>caches.delete(c)));setTimeout(()=>location.reload(),500)" style="background:#2a1a00;color:#ffcc44;border:1px solid #554400;font-size:11px;padding:4px 8px;border-radius:6px;cursor:pointer;text-align:left" title="Скинути кеш і перезавантажити">🗑 Кеш</button>
-            <button id="btnChronoExport" onclick="(function(){try{var d=localStorage.getItem('gindex_chrono_v1')||'[]';prompt('CHRONO JSON (копіюй все):', d);}catch(e){alert('Помилка: '+e.message);}})()" style="background:#0a2a1a;color:#44ffaa;border:1px solid #1a6644;font-size:11px;padding:4px 8px;border-radius:6px;cursor:pointer;text-align:left" title="Експорт Chrono Journal для аналізу">📊 Chrono</button>
           </div>
         </details>
       </span>
