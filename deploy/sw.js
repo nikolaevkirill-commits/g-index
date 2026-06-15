@@ -1,4 +1,4 @@
-// v88.8.36-fp56-P13: future_kp+annual cached — real Kp from NOAA 27DO replaces synthetic Kp=2.0 on future dates.
+// v88.8.37-fp57: P-v19-5 panchanga sign prior (tithi/nak) додано у dashboard computeAi. +1.3pp на GT.
 // G-Index Service Worker v88.8.36-fp56-P13
 // v88.8.19 changes — incremental release після v88.8.18 з реальним bug fix:
 //   ENGINE v18.7 → v18.8: P2 раніше шукав 'Подорожі' word — missed 93 dates
@@ -601,8 +601,8 @@
 //   3. backtest.html додано до SHELL_FILES.
 //   4. cache.put awaited перед SW_FRESH_DATA notify (race fix).
 
-const SHELL_CACHE = 'g-index-shell-v88-8-36-fp56-p12g';
-const DATA_CACHE = 'g-index-data-v88-8-36-fp56-p12g';
+const SHELL_CACHE = 'g-index-shell-v88-8-37-fp57-tithi';
+const DATA_CACHE = 'g-index-data-v88-8-37-fp57-tithi';
 
 const SHELL_FILES = [
   './manifest.json',

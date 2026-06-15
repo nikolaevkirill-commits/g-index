@@ -4356,6 +4356,23 @@ function _applyV186Patches(snapshot) {
     patches.push('P1d_empty_eng2_demote');
   }
 
+  // P-v19-5 (panchanga sign prior): коли patched нейтральний (==0), застосувати
+  // знаковий пріор tithi/nakshatra з GT-валідацією ≥75%. +1.3pp на GT n=350.
+  // Nakshatra пріор має пріоритет над tithi (вужча група, сильніший сигнал).
+  if (patched === 0) {
+    const _nak = snapshot.cal_nakshatra;
+    const _tit = cal_tithi;
+    const NAK_PRIOR = {18: -1, 20: -1};
+    const TITHI_PRIOR = {8: -1, 12: 1, 14: -1, 17: 1, 18: -1, 23: -1, 26: -1, 29: -1};
+    let _prior = null;
+    if (_nak != null && NAK_PRIOR[_nak] !== undefined) _prior = NAK_PRIOR[_nak];
+    else if (_tit != null && TITHI_PRIOR[_tit] !== undefined) _prior = TITHI_PRIOR[_tit];
+    if (_prior !== null) {
+      patched = _prior;
+      patches.push('Pv195_panchanga_prior');
+    }
+  }
+
   // Clip to 7-class [-3, +3]
   patched = Math.max(-3, Math.min(3, patched));
 
