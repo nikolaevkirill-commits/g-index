@@ -1,5 +1,5 @@
 // v88.8.37-fp57: P-v19-5 panchanga sign prior (tithi/nak) додано у dashboard computeAi. +1.3pp на GT.
-// G-Index Service Worker v88.8.36-fp56-P13
+// G-Index Service Worker v88.8.37-fp57-tithi
 // v88.8.19 changes — incremental release після v88.8.18 з реальним bug fix:
 //   ENGINE v18.7 → v18.8: P2 раніше шукав 'Подорожі' word — missed 93 dates
 //     з '✈' emoji-only. P3 раніше тільки Shukla Dashami (10) — missed Krishna
