@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.37-fp59</title>
+  <title>G-Index — Космофізичний дашборд v88.8.37-fp61</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1405,7 +1405,7 @@ body.simple-mode .col-hide-mobile {
           <summary style="cursor:pointer;color:var(--faint);font-size:14px;list-style:none;padding:2px 6px;border-radius:4px" title="Dev tools (?dev=1)">⋯</summary>
           <div id="devMenuPanel" style="position:absolute;right:0;top:100%;margin-top:4px;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:6px;display:flex;flex-direction:column;gap:4px;z-index:50;min-width:140px">
             <button id="btnV86Radial" onclick="(function(){try{const cur=localStorage.getItem('v86_radial')==='1';const next=cur?'0':'1';localStorage.setItem('v86_radial', next);localStorage.setItem('v86_heat', next);location.reload();}catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}})()" style="background:#1a0f2a;color:#d28cff;border:1px solid #4a2a6e;font-size:11px;padding:4px 8px;border-radius:6px;cursor:pointer;text-align:left" title="Перемкнути v86 features: radial G + heat-strip">✦ v86</button>
-            <button id="btnCacheReset" onclick="(async function(){try{const regs=await navigator.serviceWorker.getRegistrations();await Promise.all(regs.map(r=>r.unregister()));const keys=await caches.keys();await Promise.all(keys.map(k=>caches.delete(k)));setTimeout(()=>location.href=location.pathname+'?nocache=fp59',300);}catch(e){location.reload(true);}})()" style="background:#2a1a00;color:#ffcc44;border:1px solid #554400;font-size:11px;padding:4px 8px;border-radius:6px;cursor:pointer;text-align:left" title="Скинути кеш і перезавантажити (fp58)">🗑 Кеш</button>
+            <button id="btnCacheReset" onclick="(async function(){try{const regs=await navigator.serviceWorker.getRegistrations();await Promise.all(regs.map(r=>r.unregister()));const keys=await caches.keys();await Promise.all(keys.map(k=>caches.delete(k)));setTimeout(()=>location.href=location.pathname+'?nocache=fp61',300);}catch(e){location.reload(true);}})()" style="background:#2a1a00;color:#ffcc44;border:1px solid #554400;font-size:11px;padding:4px 8px;border-radius:6px;cursor:pointer;text-align:left" title="Скинути кеш і перезавантажити (fp58)">🗑 Кеш</button>
           </div>
         </details>
       </span>
@@ -4616,7 +4616,16 @@ function renderHeroAstroLayer(){
 
   const cs = entry.cal_score;
   const csColor = (cs >= 2) ? 'var(--ok)' : (cs === 1) ? '#9cd49c' : (cs === 0) ? 'var(--muted)' : (cs === -1) ? 'var(--warn)' : (cs <= -2) ? 'var(--bad)' : 'var(--muted)';
-  const csStr = (cs !== undefined && cs !== null) ? `<span style="color:${csColor};font-weight:700">${cs >= 0 ? '+' : ''}${cs}</span> · ` : '';
+  // v88.8.37-fp61-B: коли frozen cal_score розходиться зі знаком LIVE-панчанги
+  // (boundary day, frozen nak ≠ live nak), голе число −2 поряд з live назвами
+  // створює протиріччя з панчанга-текстом «фон підтримує». Тому при розбіжності
+  // ховаємо число, лишаємо ⊙ маркер (деталі у tooltip). cal_score лишається frozen reference.
+  const _liveTotal = (_liveCtx && _liveCtx.tithi && _liveCtx.nakshatra && _liveCtx.yoga)
+    ? ((_liveCtx.tithi.score||0)+(_liveCtx.nakshatra.score||0)+(_liveCtx.yoga.score||0)) : null;
+  const _csConflict = (_liveTotal !== null && cs !== undefined && cs !== null &&
+                       Math.sign(cs) !== 0 && Math.sign(_liveTotal) !== 0 &&
+                       Math.sign(cs) !== Math.sign(_liveTotal));
+  const csStr = (cs !== undefined && cs !== null && !_csConflict) ? `<span style="color:${csColor};font-weight:700">${cs >= 0 ? '+' : ''}${cs}</span> · ` : '';
   // Compact label: cal_score · Tithi (live) · first 8 chars Nakshatra (live)
   // v88.7.12: маркер ⊙ якщо є розбіжність з engine — натяк, що варто глянути tooltip
   const _divMark = _hasDiv ? '<span style="color:var(--faint);font-size:9px;margin-left:2px" title="Розбіжність з engine_scores — деталі у tooltip">⊙</span>' : '';
@@ -8686,7 +8695,7 @@ function renderPanchangaCard(state){
   const totalPCL = pclOnly + aiNow.Mi;
   const topDo = finalDo.join(' · ');
   const topAv = finalAvoid.join(' · ');
-  // v88.8.37-fp59: панчанга БІЛЬШЕ НЕ має власного verdict/кольору.
+  // v88.8.37-fp61: панчанга БІЛЬШЕ НЕ має власного verdict/кольору.
   // Канонічний verdict дня = PDF/Engine (Hero). Панчанга = ПОЯСНЕННЯ внеску, не картка.
   // Раніше: summaryLabel='сприятливо/обережно' + summaryColor від G_now → дублювало Hero
   // і створювало конфлікт «зелений бордюр vs червоні крапки» (Тип А аудиту 16.06).
@@ -8710,7 +8719,7 @@ function renderPanchangaCard(state){
       </div>
     </div>`;
 
-  // v88.8.37-fp59: бордюр панчанги БІЛЬШЕ не фарбується за G_now — нейтральний.
+  // v88.8.37-fp61: бордюр панчанги БІЛЬШЕ не фарбується за G_now — нейтральний.
   // Колір сторінки/вердикт = ТІЛЬКИ Hero (PDF/Engine). Панчанга = пояснення.
   const _panchBorderColor = '#1e2f52'; // нейтральний бордер, без verdict-семантики
   // v88.8.35-fp56-P8: guard the borderColor write — the very next block already null-checks
@@ -8718,7 +8727,7 @@ function renderPanchangaCard(state){
   // (simple-mode / alt layout). Render no longer throws if the card isn't in the DOM.
   const _panchCard = document.getElementById('panchCard');
   if (_panchCard) _panchCard.style.borderColor = _panchBorderColor;
-  // v88.8.37-fp59: панчанга-картка БІЛЬШЕ не класифікується за G (g-* класи).
+  // v88.8.37-fp61: панчанга-картка БІЛЬШЕ не класифікується за G (g-* класи).
   // Прибираємо verdict-семантику кольору — картка нейтральна, це блок-пояснення.
   if (_panchCard) {
     _panchCard.classList.remove('g-tense','g-unstable','g-neutral','g-good','g-favorable');
@@ -9727,7 +9736,7 @@ function render3Day(parsed3){
         <div style="font-weight:700;color:${col};font-size:14px">${dd} → ${cat}</div>
         <div style="font-size:11px;color:var(--muted);margin-top:2px">${act}</div>
         ${_scenBanner ? '' : _bulletinLine}
-        <div class="card3d-numeric" style="font-size:10px;color:var(--faint);margin-top:3px" title="G_day raw (3d) = Kp_max з NOAA 3-day forecast (${isFinite(kpMax)?kpMax.toFixed(1):'?'}) − 2 + ΣAᵢ. Джерело: NOAA 3-day. Може відрізнятися від 27-day outlook.">G_day (3d): ${isFinite(G)?(G>=0?'+':'')+G.toFixed(1):'—'}${(() => {
+        <div class="card3d-numeric" style="font-size:10px;color:var(--faint);margin-top:3px" title="Довідкові raw-числа (НЕ вердикт дня). G_day raw (3d) = Kp_max з NOAA 3-day forecast (${isFinite(kpMax)?kpMax.toFixed(1):'?'}) − 2 + ΣAᵢ. Вердикт дня вгорі = PDF/Engine (експерт), він головний. Raw показує лише сирий геомагнітний фон.">${isFinite(G)?'<span style="color:var(--faint);font-size:9px">довідково · raw </span>'+(G>=0?'+':'')+G.toFixed(1):'—'}${(() => {
           // fp51: show G_day 27D alongside 3D and delta
           try {
             const _ds51 = typeof fmtDate === 'function' ? fmtDate(d.date) : d.date.toISOString().slice(0,10);
@@ -10518,15 +10527,36 @@ function _renderHeroHierarchy(){
       };
       const m = map[dm] || map.live; qLab=m[0]; qCol=m[1];
     }catch(e){ /* silent */ }
-    const row = (k,v,kc)=>`<div style="display:flex;gap:8px;align-items:baseline;padding:6px 10px;border-top:1px solid var(--border)">`
+    const row = (k,v,kc,timeTag)=>{
+      // v88.8.37-fp61-C: явний часовий префікс (ЗАРАЗ/СЬОГОДНІ/ЗАВТРА) — головне джерело
+      // плутанини був змішаний часовий горизонт. Тепер кожен рядок підписаний коли він діє.
+      const _tt = timeTag ? `<span style="flex:0 0 62px;font-size:8px;font-weight:800;letter-spacing:.06em;color:var(--faint);text-transform:uppercase">${timeTag}</span>` : '<span style="flex:0 0 62px"></span>';
+      return `<div style="display:flex;gap:8px;align-items:baseline;padding:6px 10px;border-top:1px solid var(--border)">`
+      + _tt
       + `<span style="flex:0 0 150px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:${kc||'var(--dim)'}">${k}</span>`
       + `<span style="flex:1;font-size:13px;line-height:1.25">${v}</span></div>`;
+    };
+    // 4) ЗАВТРА — forecast (G_day raw + PDF/Engine якщо є)
+    let tomoHtml = '<span style="color:var(--dim)">—</span>';
+    try{
+      const _tm = new Date(); _tm.setUTCDate(_tm.getUTCDate()+1);
+      const _tsn = (typeof getEngineScore==='function') ? getEngineScore(_tm) : null;
+      if(_tsn && isFinite(_tsn.eng)){
+        const _tsc = Math.max(-3,Math.min(3,Math.round(Number(_tsn.eng))));
+        const _tv = (typeof VERDICT_7CLASS!=='undefined') ? VERDICT_7CLASS[String(_tsc)] : null;
+        const _tcol = _tv ? _tv.color : 'var(--text2)';
+        const _tlab = _tv ? _tv.label : '';
+        tomoHtml = `<span style="font-weight:800;color:${_tcol}">${_tsc>=0?'+':''}${_tsc}</span> <span style="color:var(--text2)">${_tlab}</span> <span style="color:var(--faint);font-size:10px">· прогноз</span>`;
+      }
+    }catch(e){ /* silent */ }
     box.innerHTML =
         `<div style="display:flex;gap:8px;align-items:baseline;padding:7px 10px;background:rgba(43,212,125,.06)">`
+      + `<span style="flex:0 0 62px;font-size:8px;font-weight:800;letter-spacing:.06em;color:#9cd49c;text-transform:uppercase">Сьогодні</span>`
       + `<span class="hero-label" data-basic="Сьогодні" style="flex:0 0 150px;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--ok)">Рішення дня · PDF/Engine</span>`
       + `<span style="flex:1;font-size:14px;font-weight:700;line-height:1.25">${decHtml}</span></div>`
       + row('Фон зараз · G_now (live)', gHtml, null, 'Зараз')
-      + row('Якість даних', `<span style="font-weight:700;color:${qCol}">${qLab}</span>`)
+      + row('Прогноз дня · PDF/Engine', tomoHtml, null, 'Завтра')
+      + row('Якість даних', `<span style="font-weight:700;color:${qCol}">${qLab}</span>`, null, '')
       + (function(){
           // v88.8.35-fp56-P8: when day-verdict and live background diverge (|Δ|≥1), explain BOTH
           // that they're different horizons AND which one leads decisions. Closes the "−3 vs −1.10
@@ -11238,7 +11268,7 @@ function syncHero(){
           const _hasGdayBaseline = isFinite(_todayGdayRaw);
           const _baseline = _hasGdayBaseline ? _todayGdayRaw : gVal;
           const _tDiff = _tg - _baseline;
-          const _engStr = (_tomEngScore !== null) ? ` · PDF/Engine: <span class="dc-metric ${_tomEngScore >= 0 ? 'is-pos' : 'is-neg'}">${_tomEngScore >= 0 ? '+' : ''}${_tomEngScore}</span>` : '';
+          // v88.8.37-fp61: _engStr видалено — PDF/Engine тепер інлайниться в _engMain.
           const _scaleHint = _hasGdayBaseline
             ? ` <span class="hint" tabindex="0" style="cursor:help;color:var(--faint);font-size:9px;border-bottom:1px dotted var(--faint)">ⓘ<span class="hint-pop" style="white-space:pre;font-size:10px">G_day_raw_завтра (${_tg>=0?'+':''}${_tg.toFixed(1)}) − G_day_raw_сьогодні (${_todayGdayRaw>=0?'+':''}${_todayGdayRaw.toFixed(1)}) = Δ ${_tDiff>=0?'+':''}${_tDiff.toFixed(1)}.\nОбидві величини у одній шкалі G_day_raw (доба).</span></span>`
             : ` <span class="hint" tabindex="0" style="cursor:help;color:#ffaa33;font-size:9px;border-bottom:1px dotted #ffaa33">⚠<span class="hint-pop" style="white-space:pre;font-size:10px">G_day_raw_сьогодні недоступний — використано G_now (live слот) як приблизний baseline. Реальна різниця доба-до-доби може відрізнятись.</span></span>`;
@@ -11246,9 +11276,20 @@ function syncHero(){
             const _tDir = _tDiff > 0 ? 'покращиться' : 'просяде';
             const _tCls = _tDiff > 0 ? 'is-pos' : 'is-neg';
             const _tAbs = Math.abs(_tDiff).toFixed(1);
-            _tomorrowLine = `<div class="dc-subline">Завтра G_day raw: <span class="dc-metric ${_tCls}">${_tg >= 0 ? '+' : ''}${_tg.toFixed(1)}</span> (${_tDir} на ${_tAbs} <span style="color:var(--faint);font-size:10px">за шкалою дня, не G_now</span>${_scaleHint})${_engStr}.</div>`;
+            // v88.8.37-fp61: PDF/Engine = головний прогноз дня, raw — довідковий фон у дужках.
+            // Раніше raw йшов першим → користувач читав 2 рівноправні числа на завтра.
+            const _engMain = (_tomEngScore !== null)
+              ? `Завтра: <span class="dc-metric ${_tomEngScore >= 0 ? 'is-pos' : 'is-neg'}">${_tomEngScore >= 0 ? '+' : ''}${_tomEngScore}</span> <span style="color:var(--faint);font-size:10px">PDF/Engine — прогноз дня</span>`
+              : `Завтра G_day raw: <span class="dc-metric ${_tCls}">${_tg >= 0 ? '+' : ''}${_tg.toFixed(1)}</span>`;
+            const _rawRef = (_tomEngScore !== null)
+              ? ` <span style="color:var(--faint);font-size:10px">· фон ${_tDir} на ${_tAbs} (raw ${_tg >= 0 ? '+' : ''}${_tg.toFixed(1)})${_scaleHint}</span>`
+              : ` (${_tDir} на ${_tAbs}${_scaleHint})`;
+            _tomorrowLine = `<div class="dc-subline">${_engMain}${_rawRef}.</div>`;
           } else {
-            _tomorrowLine = `<div class="dc-subline">Завтра G_day raw: <span class="dc-metric">${_tg >= 0 ? '+' : ''}${_tg.toFixed(1)}</span> (без суттєвих змін${_scaleHint})${_engStr}.</div>`;
+            const _engMain = (_tomEngScore !== null)
+              ? `Завтра: <span class="dc-metric ${_tomEngScore >= 0 ? 'is-pos' : 'is-neg'}">${_tomEngScore >= 0 ? '+' : ''}${_tomEngScore}</span> <span style="color:var(--faint);font-size:10px">PDF/Engine — прогноз дня</span> <span style="color:var(--faint);font-size:10px">· raw ${_tg >= 0 ? '+' : ''}${_tg.toFixed(1)} без суттєвих змін${_scaleHint}</span>`
+              : `Завтра G_day raw: <span class="dc-metric">${_tg >= 0 ? '+' : ''}${_tg.toFixed(1)}</span> (без суттєвих змін${_scaleHint})`;
+            _tomorrowLine = `<div class="dc-subline">${_engMain}.</div>`;
           }
         }
         // v88.8.35-fp5: якщо завтра PDF/Engine ≤ −2 і блок зараз "improving" — downgrade до stable
@@ -13097,7 +13138,7 @@ function renderDisagreement(){
       const _ya = new Date();
       const _mBefore = _ya.getUTCMonth();
       _ya.setUTCFullYear(_ya.getUTCFullYear() - 1);
-      // v88.8.37-fp59: leap-day guard. 29.02 → setUTCFullYear(-1) на невисокосний
+      // v88.8.37-fp61: leap-day guard. 29.02 → setUTCFullYear(-1) на невисокосний
       // рік дає 01.03 (місяць зсувається з 1 на 2). Відкочуємо на 28.02 щоб
       // year-ago лишалось у тому самому місяці (коректна календарна точка).
       if(_ya.getUTCMonth() !== _mBefore){
