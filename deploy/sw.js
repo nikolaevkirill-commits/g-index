@@ -1,5 +1,5 @@
-// v88.8.37-fp57: title+tithi/nak prior. Попередня спроба не деплоїлась бо title не оновив.
-// G-Index Service Worker v88.8.37-fp57
+// v88.8.37-fp58: leap-day guard year-ago + nocache bypass + cache key fp58.
+// G-Index Service Worker v88.8.37-fp58
 // v88.8.19 changes — incremental release після v88.8.18 з реальним bug fix:
 //   ENGINE v18.7 → v18.8: P2 раніше шукав 'Подорожі' word — missed 93 dates
 //     з '✈' emoji-only. P3 раніше тільки Shukla Dashami (10) — missed Krishna
