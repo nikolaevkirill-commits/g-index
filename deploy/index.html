@@ -13087,7 +13087,14 @@ function renderDisagreement(){
   try {
     if(typeof computeAi === 'function' && typeof noonUTC === 'function'){
       const _ya = new Date();
+      const _mBefore = _ya.getUTCMonth();
       _ya.setUTCFullYear(_ya.getUTCFullYear() - 1);
+      // v88.8.37-fp58: leap-day guard. 29.02 → setUTCFullYear(-1) на невисокосний
+      // рік дає 01.03 (місяць зсувається з 1 на 2). Відкочуємо на 28.02 щоб
+      // year-ago лишалось у тому самому місяці (коректна календарна точка).
+      if(_ya.getUTCMonth() !== _mBefore){
+        _ya.setUTCDate(_ya.getUTCDate() - 1);
+      }
       _sigmaYear = computeAi(noonUTC(_ya), 0).Ai;
     }
   } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
