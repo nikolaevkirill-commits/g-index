@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.37-fp58</title>
+  <title>G-Index — Космофізичний дашборд v88.8.37-fp59</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1405,7 +1405,7 @@ body.simple-mode .col-hide-mobile {
           <summary style="cursor:pointer;color:var(--faint);font-size:14px;list-style:none;padding:2px 6px;border-radius:4px" title="Dev tools (?dev=1)">⋯</summary>
           <div id="devMenuPanel" style="position:absolute;right:0;top:100%;margin-top:4px;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:6px;display:flex;flex-direction:column;gap:4px;z-index:50;min-width:140px">
             <button id="btnV86Radial" onclick="(function(){try{const cur=localStorage.getItem('v86_radial')==='1';const next=cur?'0':'1';localStorage.setItem('v86_radial', next);localStorage.setItem('v86_heat', next);location.reload();}catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}})()" style="background:#1a0f2a;color:#d28cff;border:1px solid #4a2a6e;font-size:11px;padding:4px 8px;border-radius:6px;cursor:pointer;text-align:left" title="Перемкнути v86 features: radial G + heat-strip">✦ v86</button>
-            <button id="btnCacheReset" onclick="(async function(){try{const regs=await navigator.serviceWorker.getRegistrations();await Promise.all(regs.map(r=>r.unregister()));const keys=await caches.keys();await Promise.all(keys.map(k=>caches.delete(k)));setTimeout(()=>location.href=location.pathname+'?nocache=fp58',300);}catch(e){location.reload(true);}})()" style="background:#2a1a00;color:#ffcc44;border:1px solid #554400;font-size:11px;padding:4px 8px;border-radius:6px;cursor:pointer;text-align:left" title="Скинути кеш і перезавантажити (fp58)">🗑 Кеш</button>
+            <button id="btnCacheReset" onclick="(async function(){try{const regs=await navigator.serviceWorker.getRegistrations();await Promise.all(regs.map(r=>r.unregister()));const keys=await caches.keys();await Promise.all(keys.map(k=>caches.delete(k)));setTimeout(()=>location.href=location.pathname+'?nocache=fp59',300);}catch(e){location.reload(true);}})()" style="background:#2a1a00;color:#ffcc44;border:1px solid #554400;font-size:11px;padding:4px 8px;border-radius:6px;cursor:pointer;text-align:left" title="Скинути кеш і перезавантажити (fp58)">🗑 Кеш</button>
           </div>
         </details>
       </span>
@@ -8686,14 +8686,21 @@ function renderPanchangaCard(state){
   const totalPCL = pclOnly + aiNow.Mi;
   const topDo = finalDo.join(' · ');
   const topAv = finalAvoid.join(' · ');
-  const summaryLabel = classifyG(_gNow);
-  const summaryColor = GLOBAL_STATES[classifyStateByG(_gNow)]?.badgeColor || '#9bb1dc';
+  // v88.8.37-fp59: панчанга БІЛЬШЕ НЕ має власного verdict/кольору.
+  // Канонічний verdict дня = PDF/Engine (Hero). Панчанга = ПОЯСНЕННЯ внеску, не картка.
+  // Раніше: summaryLabel='сприятливо/обережно' + summaryColor від G_now → дублювало Hero
+  // і створювало конфлікт «зелений бордюр vs червоні крапки» (Тип А аудиту 16.06).
+  // Тепер: показуємо астро-внесок (Pi) як НЕЙТРАЛЬНУ метрику без verdict-слова.
+  const _pclSign = pclOnly > 0 ? '+' : '';
+  const _pclLabel = pclOnly >= 1 ? 'календар сприяє' : pclOnly <= -1 ? 'календар тисне' : 'календар нейтральний';
+  const summaryLabel = `Астро-внесок: ${_pclSign}${pclOnly}`;
+  const summaryColor = '#9bb1dc'; // нейтральний — НЕ verdict-колір
   const _panchDiscHtml = panchDiscrepancy ? `<div style="margin-top:4px;font-size:11px;color:#ffa64d">⚠ G-індекс (noon UTC): ${panchDiscrepancy}</div>` : '';
 
   const summaryHtml = `
     <div class="panch-summary" style="border-top:1px solid #1e2f52;margin-top:12px;padding-top:10px">
       <span style="font-weight:700;color:${summaryColor}">${summaryLabel}</span>
-      <span class="muted" style="font-size:12px;margin-left:8px">G = ${_gNow.toFixed(1)} | PCL = ${pclOnly > 0 ? '+' : ''}${pclOnly} | Lᵢ=${aiNow.Li} Mᵢ=${aiNow.Mi} <span class="hint" tabindex="0" style="cursor:help;border-bottom:1px dotted var(--faint)">eᵢ=${aiNow.ei}<span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(aiNow.eTip)}</span></span> <span class="hint" tabindex="0" style="cursor:help;border-bottom:1px dotted var(--faint)">Pᵢ=${aiNow.Pi}<span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(aiNow.pTip||'')}</span></span>${aiNow.Di!==0?` <span style="color:#ff9f9f;font-weight:700" title="${escapeHtml(aiNow.diTip)}">Dᵢ=${aiNow.Di}</span>`:''}</span>
+      <span class="muted" style="font-size:12px;margin-left:8px">${_pclLabel} · фон зараз G=${_gNow.toFixed(1)} (тактичний, не вердикт дня) | Lᵢ=${aiNow.Li} Mᵢ=${aiNow.Mi} <span class="hint" tabindex="0" style="cursor:help;border-bottom:1px dotted var(--faint)">eᵢ=${aiNow.ei}<span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(aiNow.eTip)}</span></span> <span class="hint" tabindex="0" style="cursor:help;border-bottom:1px dotted var(--faint)">Pᵢ=${aiNow.Pi}<span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(aiNow.pTip||'')}</span></span>${aiNow.Di!==0?` <span style="color:#ff9f9f;font-weight:700" title="${escapeHtml(aiNow.diTip)}">Dᵢ=${aiNow.Di}</span>`:''}</span>
       ${_panchDiscHtml}
       <div style="margin-top:6px;font-size:13px">
         ${topDo ? `<span style="color:#63be7b">✓ </span><span style="color:#b0ccaa">${topDo}</span>` : ''}
@@ -8703,17 +8710,18 @@ function renderPanchangaCard(state){
       </div>
     </div>`;
 
-  // (c) Колір заголовку картки = колір G поточного дня
-  const _panchBorderColor = GLOBAL_STATES[classifyStateByG(_gNow)]?.badgeColor || '#9bb1dc';
+  // v88.8.37-fp59: бордюр панчанги БІЛЬШЕ не фарбується за G_now — нейтральний.
+  // Колір сторінки/вердикт = ТІЛЬКИ Hero (PDF/Engine). Панчанга = пояснення.
+  const _panchBorderColor = '#1e2f52'; // нейтральний бордер, без verdict-семантики
   // v88.8.35-fp56-P8: guard the borderColor write — the very next block already null-checks
   // _panchCard, so this direct deref was an inconsistent crash risk when panchCard is absent
   // (simple-mode / alt layout). Render no longer throws if the card isn't in the DOM.
   const _panchCard = document.getElementById('panchCard');
   if (_panchCard) _panchCard.style.borderColor = _panchBorderColor;
-  // v87.5 Problem 2: класифікувати panchCard за G для conflict resolver CSS
+  // v88.8.37-fp59: панчанга-картка БІЛЬШЕ не класифікується за G (g-* класи).
+  // Прибираємо verdict-семантику кольору — картка нейтральна, це блок-пояснення.
   if (_panchCard) {
     _panchCard.classList.remove('g-tense','g-unstable','g-neutral','g-good','g-favorable');
-    _panchCard.classList.add('g-' + classifyStateByG(_gNow));
   }
 
   el_('panchGrid').innerHTML = html;
@@ -13089,7 +13097,7 @@ function renderDisagreement(){
       const _ya = new Date();
       const _mBefore = _ya.getUTCMonth();
       _ya.setUTCFullYear(_ya.getUTCFullYear() - 1);
-      // v88.8.37-fp58: leap-day guard. 29.02 → setUTCFullYear(-1) на невисокосний
+      // v88.8.37-fp59: leap-day guard. 29.02 → setUTCFullYear(-1) на невисокосний
       // рік дає 01.03 (місяць зсувається з 1 на 2). Відкочуємо на 28.02 щоб
       // year-ago лишалось у тому самому місяці (коректна календарна точка).
       if(_ya.getUTCMonth() !== _mBefore){
