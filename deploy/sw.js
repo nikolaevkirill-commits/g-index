@@ -641,7 +641,14 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
-  
+
+  // v88.8.37-fp58: ?nocache= bypass — завжди network, SW кеш ігнорується.
+  // Використовується кнопкою 🗑 Кеш для примусового оновлення після деплою.
+  if (url.searchParams.has('nocache')) {
+    event.respondWith(fetch(event.request.url.split('?')[0], { cache: 'no-store' }));
+    return;
+  }
+
   // v88.7.15 Г: expert_overrides_v3.json — network-first з cached fallback (як engine_scores).
   // Файл оновлюється коли експерт випускає новий PDF (раз на 1-2 тижні).
   if (url.pathname.endsWith('expert_overrides_v3.json')) {
