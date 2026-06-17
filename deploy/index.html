@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.37-fp69</title>
+  <title>G-Index — Космофізичний дашборд v88.8.37-fp70</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -350,7 +350,7 @@
       main { padding: 0 8px 30px }
       .card { padding: 10px; border-radius: 12px }
       h2 { font-size: 15px }
-      /* v88.8.37-fp69: Time Layer — стискаємо фіксовані колонки, щоб value
+      /* v88.8.37-fp70: Time Layer — стискаємо фіксовані колонки, щоб value
          не ламався на ≤360px (на 320px було лише 72px під текст). */
       #heroHierarchy > div > span:first-child { flex-basis: 48px !important }
       #heroHierarchy > div > span:nth-child(2) { flex-basis: 96px !important; font-size: 8px !important }
@@ -1409,7 +1409,7 @@ body.simple-mode .col-hide-mobile {
           <summary style="cursor:pointer;color:var(--faint);font-size:14px;list-style:none;padding:2px 6px;border-radius:4px" title="Dev tools (?dev=1)">⋯</summary>
           <div id="devMenuPanel" style="position:absolute;right:0;top:100%;margin-top:4px;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:6px;display:flex;flex-direction:column;gap:4px;z-index:50;min-width:140px">
             <button id="btnV86Radial" onclick="(function(){try{const cur=localStorage.getItem('v86_radial')==='1';const next=cur?'0':'1';localStorage.setItem('v86_radial', next);localStorage.setItem('v86_heat', next);location.reload();}catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}})()" style="background:#1a0f2a;color:#d28cff;border:1px solid #4a2a6e;font-size:11px;padding:4px 8px;border-radius:6px;cursor:pointer;text-align:left" title="Перемкнути v86 features: radial G + heat-strip">✦ v86</button>
-            <button id="btnCacheReset" onclick="(async function(){try{const regs=await navigator.serviceWorker.getRegistrations();await Promise.all(regs.map(r=>r.unregister()));const keys=await caches.keys();await Promise.all(keys.map(k=>caches.delete(k)));setTimeout(()=>location.href=location.pathname+'?nocache=fp69',300);}catch(e){location.reload(true);}})()" style="background:#2a1a00;color:#ffcc44;border:1px solid #554400;font-size:11px;padding:4px 8px;border-radius:6px;cursor:pointer;text-align:left" title="Скинути кеш і перезавантажити (fp58)">🗑 Кеш</button>
+            <button id="btnCacheReset" onclick="(async function(){try{const regs=await navigator.serviceWorker.getRegistrations();await Promise.all(regs.map(r=>r.unregister()));const keys=await caches.keys();await Promise.all(keys.map(k=>caches.delete(k)));setTimeout(()=>location.href=location.pathname+'?nocache=fp70',300);}catch(e){location.reload(true);}})()" style="background:#2a1a00;color:#ffcc44;border:1px solid #554400;font-size:11px;padding:4px 8px;border-radius:6px;cursor:pointer;text-align:left" title="Скинути кеш і перезавантажити (fp58)">🗑 Кеш</button>
           </div>
         </details>
       </span>
@@ -1601,13 +1601,13 @@ body.simple-mode .col-hide-mobile {
       </div>
       <span style="font-size:11px;color:var(--ok);font-weight:700;white-space:nowrap">Подивитись →</span>
     </a>
-    <!-- v88.8.37-fp69: GNSS / UAV Risk Layer — окремий модуль, НЕ змішується з G-Index day score.
+    <!-- v88.8.37-fp70: GNSS / UAV Risk Layer — окремий модуль, НЕ змішується з G-Index day score.
          Джерело: NOAA G-Scale (public), Groves & Akala Radio Science 2012.
          Дані: kp live (lastWWV), Dst (computeDstModifier), local_hour, _userLat. -->
     <div id="gnssCard" style="margin:0 0 10px;padding:10px 14px;border-radius:12px;border:1px solid rgba(55,167,255,.22);background:rgba(10,20,40,.5);display:none"></div>
-    <!-- v88.8.37-fp69: Тема дня — детермінована з PDF/tag/panch, без LLM -->
+    <!-- v88.8.37-fp70: Тема дня — детермінована з PDF/tag/panch, без LLM -->
     <div id="dayThemeCard" style="margin:0 0 10px;padding:12px 16px;border-radius:12px;border:1px solid var(--border);background:rgba(11,18,32,.45);display:none"></div>
-    <!-- v88.8.37-fp69: 7-day Summary — мінімалістичний рядковий огляд тижня (завжди видно, без кліку) -->
+    <!-- v88.8.37-fp70: 7-day Summary — мінімалістичний рядковий огляд тижня (завжди видно, без кліку) -->
     <div id="weekSummaryBar" style="margin:0 0 6px;padding:8px 12px;border-radius:10px;border:1px solid var(--border);background:rgba(11,18,32,.4);display:none"></div>
     <!-- v88.0 F3: Scenario card — 7-day forecast strip з engine + cal_score (closed by default) -->
     <details id="scenarioCard" style="margin:0 0 10px;padding:10px 14px;border-radius:12px;border:1px solid var(--border);background:rgba(11,18,32,.5)">
@@ -4628,7 +4628,7 @@ function renderHeroAstroLayer(){
 
   const cs = entry.cal_score;
   const csColor = (cs >= 2) ? 'var(--ok)' : (cs === 1) ? '#9cd49c' : (cs === 0) ? 'var(--muted)' : (cs === -1) ? 'var(--warn)' : (cs <= -2) ? 'var(--bad)' : 'var(--muted)';
-  // v88.8.37-fp69-B: коли frozen cal_score розходиться зі знаком LIVE-панчанги
+  // v88.8.37-fp70-B: коли frozen cal_score розходиться зі знаком LIVE-панчанги
   // (boundary day, frozen nak ≠ live nak), голе число −2 поряд з live назвами
   // створює протиріччя з панчанга-текстом «фон підтримує». Тому при розбіжності
   // ховаємо число, лишаємо ⊙ маркер (деталі у tooltip). cal_score лишається frozen reference.
@@ -5449,7 +5449,7 @@ function autoComputedExtras(dateUTC, kp=0){
   return extras;
 }
 
-// ═══ v88.8.37-fp69: Тема дня — детермінована генерація ═══
+// ═══ v88.8.37-fp70: Тема дня — детермінована генерація ═══
 // Відповідає на питання «Яка головна ідея дня?» — одне речення.
 // Без LLM: виводиться детерміновано з PDF/Engine score + тегів + панчанги.
 function renderDayTheme(){
@@ -5462,7 +5462,7 @@ function renderDayTheme(){
   const tag = eng.tag || '';
   const kp = (typeof lastWWV!=='undefined' && lastWWV && isFinite(lastWWV.kNow)) ? lastWWV.kNow : 2;
   const TONES = {
-    // v88.8.37-fp69: Тема дня = ІНТЕРПРЕТАЦІЯ (Co-Star pattern), НЕ повтор Hero-статусу.
+    // v88.8.37-fp70: Тема дня = ІНТЕРПРЕТАЦІЯ (Co-Star pattern), НЕ повтор Hero-статусу.
     // Hero каже ЩО (сприятливий/несприятливий), Тема каже ЯК САМЕ використати.
     '3':  ['Просувай і запускай.',         'Сьогодні добре відкривати нові ініціативи, укладати домовленості та просувати ключові проєкти.'],
     '2':  ['Планування і просування.',     'Добрий момент для підготовки, зустрічей і завершення відкладених справ.'],
@@ -5483,7 +5483,7 @@ function renderDayTheme(){
   card.innerHTML=`<div style="font-size:9px;font-weight:800;letter-spacing:.1em;color:var(--faint);text-transform:uppercase;margin-bottom:6px">Тема дня</div><div style="font-size:15px;font-weight:700;color:${labelCol};line-height:1.3;margin-bottom:4px">${tone}</div><div style="font-size:13px;color:var(--text2);line-height:1.5">${action}${themeStr?' '+themeStr:''}${kpNote?' '+kpNote:''}</div>`;
 }
 
-// ═══ v88.8.37-fp69: Week Narrative — сценарій тижня замість цифрового рядка ═══
+// ═══ v88.8.37-fp70: Week Narrative — сценарій тижня замість цифрового рядка ═══
 // Co-Star pattern: не числа, а сценарій. Що відбувається, коли діяти, коли обережніше.
 function renderWeekSummary(){
   const bar = document.getElementById('weekSummaryBar');
@@ -5518,8 +5518,9 @@ function renderWeekSummary(){
 
   // Загальний тон тижня
   const weekTone = red>=3?['🔴','Складний тиждень','Обережно з рішеннями']:
-                   green>=3?['🟢','Сприятливий тиждень','Гарне вікно для дій']:
-                   green>=2?['🟢','Переважно сприятливо','Використай активні дні']:
+                   green>=4?['🟢','Сприятливий тиждень','Гарне вікно для дій']:
+                   green>=2&&green>red?['🟢','Більше сприятливих, ніж складних','Використай активні дні']:
+                   red>=2&&red>green?['🟡','Обережний тиждень','Більше завершень, менше запусків']:
                    redL>=3?['🟡','Обережний тиждень','Більше завершень, менше запусків']:
                    (green===0&&red===0&&redL===0&&greenL===0)?['⚪','Нейтральний тиждень','Стабільний темп без різких кроків']:
                    ['⚪','Змішаний тиждень','Тримай стабільний темп'];
@@ -5551,7 +5552,7 @@ function renderWeekSummary(){
     <div style="display:flex;gap:1px">${rowHtml}</div>`;
 }
 
-// ═══ v88.8.37-fp69: GNSS / UAV Risk Layer ═══
+// ═══ v88.8.37-fp70: GNSS / UAV Risk Layer ═══
 // Базується на NOAA Space Weather Scale (G-Scale, public domain).
 // Фізика: Groves & Akala et al., Radio Science 47(4), 2012.
 // Окремий модуль — НЕ впливає на G-Index day score / PDF/Engine.
@@ -5591,7 +5592,7 @@ function renderGnssRisk(){
   }
   const score = Math.min(4, base + mods);
 
-  // v88.8.37-fp69: GNSS card — прихований при score 0-1 (не впливає на рішення),
+  // v88.8.37-fp70: GNSS card — прихований при score 0-1 (не впливає на рішення),
   // компактний при score 2, повний при score 3+.
   if(score <= 1){
     card.style.display = 'none';
@@ -7018,11 +7019,11 @@ function render27Day(rows, last3D){
   try{ renderComparePeriods(); }catch(e){ console.warn('[comparePeriods]', e); }
   // v87.34: forward timeline (non-blocking, errors isolated)
   try{ renderForwardTimeline(); }catch(e){ console.warn('[forwardTimeline]', e); }
-  // v88.8.37-fp69: Тема дня
+  // v88.8.37-fp70: Тема дня
   try{ renderDayTheme(); }catch(e){ console.warn('[dayTheme]', e); }
-  // v88.8.37-fp69: GNSS/UAV Risk Layer
+  // v88.8.37-fp70: GNSS/UAV Risk Layer
   try{ renderGnssRisk(); }catch(e){ console.warn('[gnssRisk]', e); }
-  // v88.8.37-fp69: 7-day Summary
+  // v88.8.37-fp70: 7-day Summary
   try{ renderWeekSummary(); }catch(e){ console.warn('[weekSummary]', e); }
 }
 
@@ -7385,7 +7386,7 @@ ${isNarrow?'На вузькому екрані показано 14 днів (−
       <div style="flex:0 0 auto">
         <div style="font-size:10px;color:var(--faint)">${sel.ds} · ${relTxt}</div>
         ${(() => {
-          // v88.8.37-fp69: PDF/Engine verdict = ГОЛОВНИЙ (великий), raw = довідковий (малий).
+          // v88.8.37-fp70: PDF/Engine verdict = ГОЛОВНИЙ (великий), raw = довідковий (малий).
           // Раніше було навпаки: G_day raw 18px bold, verdict 10px — порушувало правило fp61
           // (expert головний, raw довідка). Тепер 27-day узгоджено з Hero.
           try {
@@ -8915,7 +8916,7 @@ function renderPanchangaCard(state){
   const totalPCL = pclOnly + aiNow.Mi;
   const topDo = finalDo.join(' · ');
   const topAv = finalAvoid.join(' · ');
-  // v88.8.37-fp69: панчанга БІЛЬШЕ НЕ має власного verdict/кольору.
+  // v88.8.37-fp70: панчанга БІЛЬШЕ НЕ має власного verdict/кольору.
   // Канонічний verdict дня = PDF/Engine (Hero). Панчанга = ПОЯСНЕННЯ внеску, не картка.
   // Раніше: summaryLabel='сприятливо/обережно' + summaryColor від G_now → дублювало Hero
   // і створювало конфлікт «зелений бордюр vs червоні крапки» (Тип А аудиту 16.06).
@@ -8939,7 +8940,7 @@ function renderPanchangaCard(state){
       </div>
     </div>`;
 
-  // v88.8.37-fp69: бордюр панчанги БІЛЬШЕ не фарбується за G_now — нейтральний.
+  // v88.8.37-fp70: бордюр панчанги БІЛЬШЕ не фарбується за G_now — нейтральний.
   // Колір сторінки/вердикт = ТІЛЬКИ Hero (PDF/Engine). Панчанга = пояснення.
   const _panchBorderColor = '#1e2f52'; // нейтральний бордер, без verdict-семантики
   // v88.8.35-fp56-P8: guard the borderColor write — the very next block already null-checks
@@ -8947,7 +8948,7 @@ function renderPanchangaCard(state){
   // (simple-mode / alt layout). Render no longer throws if the card isn't in the DOM.
   const _panchCard = document.getElementById('panchCard');
   if (_panchCard) _panchCard.style.borderColor = _panchBorderColor;
-  // v88.8.37-fp69: панчанга-картка БІЛЬШЕ не класифікується за G (g-* класи).
+  // v88.8.37-fp70: панчанга-картка БІЛЬШЕ не класифікується за G (g-* класи).
   // Прибираємо verdict-семантику кольору — картка нейтральна, це блок-пояснення.
   if (_panchCard) {
     _panchCard.classList.remove('g-tense','g-unstable','g-neutral','g-good','g-favorable');
@@ -10497,7 +10498,7 @@ function applyTimingToHero(summary, gVal){
 }
 
 function formatConfidence(v){
-  // v88.8.37-fp69: замінено % на словесний рівень — 92% щодня виглядало нереалістично
+  // v88.8.37-fp70: замінено % на словесний рівень — 92% щодня виглядало нереалістично
   // і суперечило ESTIMATED/DELAYED статусу (якщо дані estimated — не може бути 92%).
   // Висока ≥85%: live дані, Kp стабільний, немає бурі.
   // Середня 65-84%: estimated/delayed/storm/synthetic.
@@ -10738,7 +10739,10 @@ function _renderHeroHierarchy(){
         const _m = (_cls && _map[_cls]) ? _map[_cls] : ['нейтральний','var(--muted)'];
         const word = _m[0], col = _m[1];
         const kpTxt= isFinite(kpN) ? ` <span style="color:var(--faint);font-size:11px">· live Kp ${kpN.toFixed(2)}</span>` : '';
-        gHtml = `<span style="font-weight:800;color:${col}">${g>=0?'+':''}${g.toFixed(2)}</span> <span style="color:var(--muted)">${word}</span>${kpTxt}`;
+        // v88.8.37-fp70: видимий підпис шкали — юзер бачить +1.93 і +3.6 у 27-day без пояснення.
+        // «поточна хвиля» vs «денний пік» — два різних виміри, не конфлікт.
+        const _scaleNote = `<span style="font-size:9px;color:var(--faint);margin-left:4px" title="G_now = поточний live-фон (оновлюється щогодини). G_day raw у 27-day = денний пік (max Kp прогнозу). Різниця нормальна — це різні часові горизонти.">· поточна хвиля</span>`;
+        gHtml = `<span style="font-weight:800;color:${col}">${g>=0?'+':''}${g.toFixed(2)}</span> <span style="color:var(--muted)">${word}</span>${kpTxt}${_scaleNote}`;
       }
     }catch(e){ /* silent */ }
     // 3) Якість даних — dataMode (live/partial/scenario/offline)
@@ -10754,7 +10758,7 @@ function _renderHeroHierarchy(){
       const m = map[dm] || map.live; qLab=m[0]; qCol=m[1];
     }catch(e){ /* silent */ }
     const row = (k,v,kc,timeTag)=>{
-      // v88.8.37-fp69-C: явний часовий префікс (ЗАРАЗ/СЬОГОДНІ/ЗАВТРА) — головне джерело
+      // v88.8.37-fp70-C: явний часовий префікс (ЗАРАЗ/СЬОГОДНІ/ЗАВТРА) — головне джерело
       // плутанини був змішаний часовий горизонт. Тепер кожен рядок підписаний коли він діє.
       const _tt = timeTag ? `<span style="flex:0 0 62px;font-size:8px;font-weight:800;letter-spacing:.06em;color:var(--faint);text-transform:uppercase">${timeTag}</span>` : '<span style="flex:0 0 62px"></span>';
       return `<div style="display:flex;gap:8px;align-items:baseline;padding:6px 10px;border-top:1px solid var(--border)">`
@@ -11136,7 +11140,7 @@ function heroHeadlineFromHierarchy_v88824(sig){
   try {
     const _dm = (typeof resolveDataModeExtended === 'function') ? resolveDataModeExtended() : null;
     if(sig.dayScore >= 3 && (_dm === 'estimated' || _dm === 'partial' || _dm === 'offline' || _dm === 'scenario')) {
-      // v88.8.37-fp69: навіть при estimated зберігаємо застереження про слабкий фон,
+      // v88.8.37-fp70: навіть при estimated зберігаємо застереження про слабкий фон,
       // якщо G_now негативний. Раніше estimated-гілка обходила live-guard і губила
       // інформацію «фон слабкий» — юзер бачив «МОЖНА ДІЯТИ» при PDF+3 і фоні −1.
       if (isFinite(sig.liveG) && sig.liveG < -0.3) {
@@ -11153,7 +11157,7 @@ function heroHeadlineFromHierarchy_v88824(sig){
     return 'Сьогодні сильний, сприятливий день';
   }
   if(sig.dayScore >= 1) {
-    // v88.8.37-fp69: симетрія з гілкою +3 — якщо фон зараз сильно негативний,
+    // v88.8.37-fp70: симетрія з гілкою +3 — якщо фон зараз сильно негативний,
     // банер не каже беззастережно «діяти планово». Раніше тільки +3 мав цей guard,
     // через що PDF=+1/+2 з G_now≤−1 давали оптимістичний банер без застереження.
     if (isFinite(sig.liveG) && sig.liveG <= -1 && sig.guard === 'none') {
@@ -11166,7 +11170,7 @@ function heroHeadlineFromHierarchy_v88824(sig){
   // v88.8.35-fp18: -3 ескалація — окремий headline для "особливо несприятливий"
   // (раніше -2 і -3 давали однаковий "ЗАРАЗ УНИКАТИ").
   if(sig.dayScore <= -3) return 'Сьогодні особливо несприятливий день — краще без важливих кроків';
-  // v88.8.37-fp69: командні слова (ЗАРАЗ СТОП/УНИКАТИ) → людська мова.
+  // v88.8.37-fp70: командні слова (ЗАРАЗ СТОП/УНИКАТИ) → людська мова.
   // Слово «ЗАРАЗ» дублювалось із time-рядком «ЗАРАЗ +0.13» і плуталось.
   return 'Сьогодні без різких кроків — несприятливий день';
 }
@@ -11466,7 +11470,9 @@ function syncHero(){
         const _abs = Math.abs(_d24).toFixed(1);
         const _sign = _d24 > 0 ? '+' : '−';
         const _isPos = _d24 > 0;
-        const _state = Math.abs(_d24) < 0.5 ? 'stable' : _isPos ? 'improving' : 'worsening';
+        // v88.8.37-fp70: поріг підвищено 0.5→1.0 — зміна <1.0 є шумом і не змінює рішення.
+        // Раніше +0.5 показувалось як «піднявся» — мало сенсу для користувача.
+        const _state = Math.abs(_d24) < 1.0 ? 'stable' : _isPos ? 'improving' : 'worsening';
         const _icon = _state === 'improving' ? '📈' : _state === 'worsening' ? '📉' : '➡️';
         // v87.90: реальний age у годинах та підпис "vs Nh тому" якщо відхилення ≥ 2h
         const _ageH  = _gd.t24h ? Math.round((Date.now() - _gd.t24h) / 3600000) : 24;
@@ -11511,7 +11517,7 @@ function syncHero(){
           const _hasGdayBaseline = isFinite(_todayGdayRaw);
           const _baseline = _hasGdayBaseline ? _todayGdayRaw : gVal;
           const _tDiff = _tg - _baseline;
-          // v88.8.37-fp69: _engStr видалено — PDF/Engine тепер інлайниться в _engMain.
+          // v88.8.37-fp70: _engStr видалено — PDF/Engine тепер інлайниться в _engMain.
           const _scaleHint = _hasGdayBaseline
             ? ` <span class="hint" tabindex="0" style="cursor:help;color:var(--faint);font-size:9px;border-bottom:1px dotted var(--faint)">ⓘ<span class="hint-pop" style="white-space:pre;font-size:10px">G_day_raw_завтра (${_tg>=0?'+':''}${_tg.toFixed(1)}) − G_day_raw_сьогодні (${_todayGdayRaw>=0?'+':''}${_todayGdayRaw.toFixed(1)}) = Δ ${_tDiff>=0?'+':''}${_tDiff.toFixed(1)}.\nОбидві величини у одній шкалі G_day_raw (доба).</span></span>`
             : ` <span class="hint" tabindex="0" style="cursor:help;color:#ffaa33;font-size:9px;border-bottom:1px dotted #ffaa33">⚠<span class="hint-pop" style="white-space:pre;font-size:10px">G_day_raw_сьогодні недоступний — використано G_now (live слот) як приблизний baseline. Реальна різниця доба-до-доби може відрізнятись.</span></span>`;
@@ -11519,7 +11525,7 @@ function syncHero(){
             const _tDir = _tDiff > 0 ? 'покращиться' : 'просяде';
             const _tCls = _tDiff > 0 ? 'is-pos' : 'is-neg';
             const _tAbs = Math.abs(_tDiff).toFixed(1);
-            // v88.8.37-fp69: PDF/Engine = головний прогноз дня, raw — довідковий фон у дужках.
+            // v88.8.37-fp70: PDF/Engine = головний прогноз дня, raw — довідковий фон у дужках.
             // Раніше raw йшов першим → користувач читав 2 рівноправні числа на завтра.
             const _engMain = (_tomEngScore !== null)
               ? `Завтра: <span class="dc-metric ${_tomEngScore >= 0 ? 'is-pos' : 'is-neg'}">${_tomEngScore >= 0 ? '+' : ''}${_tomEngScore}</span> <span style="color:var(--faint);font-size:10px">PDF/Engine — прогноз дня</span>`
@@ -11741,7 +11747,10 @@ function syncHero(){
   const _d3h = _delta.d3h || 0;
   const _trend = Math.abs(_d3h) >= 0.4 ? (_d3h > 0 ? 'worsening_fast' : 'improving_fast')
     : Math.abs(_d3h) >= 0.1 ? (_d3h > 0 ? 'worsening' : 'improving') : 'flat';
-  const _confNum = parseInt((el('heroConfidence')?.textContent||'75').replace('%','')) || 75;
+  // v88.8.37-fp70: після fp69 heroConfidence показує 'Висока/Середня/Низька' замість '%'.
+  // parseInt('Висока') = NaN → fallback до реального confPct з _ui замість тексту.
+  const _confNum = (typeof _ui !== 'undefined' && _ui.confPct) ? Math.round(_ui.confPct) :
+    parseInt((el('heroConfidence')?.textContent||'75').replace(/[^\d]/g,'')) || 75;
   const _confLvl = _confNum >= 80 ? 'high' : _confNum >= 60 ? 'mid' : 'low';
 
   // ═══ v83d: canonical timing pipeline ═══
@@ -11804,7 +11813,7 @@ function syncHero(){
       };
       const _drvCause = _causes[_drKey] || _causes.kp;
       let _text = gVal < 0 ? _drvCause.neg : _drvCause.pos;
-      // v88.8.37-fp69: явне пояснення коли фон зараз і оцінка дня розходяться знаком.
+      // v88.8.37-fp70: явне пояснення коли фон зараз і оцінка дня розходяться знаком.
       // Замінює потребу в окремому блоці «два контури» для типового користувача.
       try {
         const _liveG = isFinite(_heroSig?.liveG) ? _heroSig.liveG : null;
@@ -13394,7 +13403,7 @@ function renderDisagreement(){
       const _ya = new Date();
       const _mBefore = _ya.getUTCMonth();
       _ya.setUTCFullYear(_ya.getUTCFullYear() - 1);
-      // v88.8.37-fp69: leap-day guard. 29.02 → setUTCFullYear(-1) на невисокосний
+      // v88.8.37-fp70: leap-day guard. 29.02 → setUTCFullYear(-1) на невисокосний
       // рік дає 01.03 (місяць зсувається з 1 на 2). Відкочуємо на 28.02 щоб
       // year-ago лишалось у тому самому місяці (коректна календарна точка).
       if(_ya.getUTCMonth() !== _mBefore){
@@ -13501,7 +13510,7 @@ function renderDisagreement(){
     </div>`;
   }).join('');
 
-  // v88.8.37-fp69: «Два контури» згорнуто у <details> — компактний рядок завжди видно,
+  // v88.8.37-fp70: «Два контури» згорнуто у <details> — компактний рядок завжди видно,
   // технічні деталі (4 моделі + дія) розгортаються кліком. 95% юзерів не читають аудит-рівень,
   // тому за замовчуванням згорнуто. Summary = одне речення суті.
   const _summaryLine = _signConflict
@@ -19679,6 +19688,15 @@ function renderDecisionLayer(gVal, ui) {
       doArr.unshift('Контрольовані планові дії (особисто — без нових стартів)');
       avoidArr.unshift('Нових ініціатив особисто — цикл несприятливий');
       ctxTxt = 'Глобально день сильний, але персональний цикл — тільки контрольовані дії. ' + ctxTxt;
+    }
+    // v88.8.37-fp70: Personal hora/window conflict — якщо поточна hora обмежує
+    // (інтуїція/спостереження/молитва) але день глобально активний → bridge текст
+    const _horaEl = document.querySelector('[data-hora-type]') || document.getElementById('personalHoraNote');
+    const _horaTxt = (_horaEl?.textContent || document.querySelector('#personalBlock .hora-note')?.textContent || '').toLowerCase();
+    const _horaPassive = _horaTxt.includes('інтуїція') || _horaTxt.includes('спостереження') || _horaTxt.includes('молитва') || _horaTxt.includes('відпочинок');
+    if (_horaPassive && _dayPos && !_persNeg) {
+      // Глобальний день добрий, hora пасивна — ієрархічний bridge
+      ctxTxt = 'День активний глобально. Поточна година краща для аналізу і спостережень — дочекайся активного слота. ' + ctxTxt;
     }
   } catch(_eCyc) { /* silent */ }
 
