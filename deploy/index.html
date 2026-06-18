@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.37-fp72</title>
+  <title>G-Index — Космофізичний дашборд v88.8.37-fp72a</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1588,7 +1588,7 @@ body.simple-mode .col-hide-mobile {
           <!-- v88.8.18: v18.8 patches — broad P2 (✈ emoji) + broad P3 (Krishna Dashami) -->
           <a href="backtest.html" target="_blank" rel="noopener" data-label="Точність" style="font-size:12px;font-weight:700;color:var(--ok);text-decoration:none;border:1px solid var(--ok);padding:1px 8px;border-radius:8px;background:rgba(43,212,125,.08);transition:background .2s" title="Engine v18.8 = v18.5 frozen + v88.8.18 ablation-validated patches&#10;&#10;Validation (n=212 full PDF-valid, Jun 2025 → May 2026):&#10;• Strict 3-class: 79.2% (v18.5 was 75.0%, +4.2pp)&#10;• Binary neg/non-neg: 88.7% (v18.5 was 87.3%, +1.4pp)&#10;• Exact 7-class: 50.0% (v18.5 was 43.9%, +6.1pp) ⭐&#10;• 5-fold CV strict: 79.2% ± 4.2% (kraschuye stability vs v18.7 ±4.8%)&#10;&#10;v18.7 → v18.8 bug fix:&#10;• P2 раніше шукав 'Подорожі' word — missed 93 dates з '✈' emoji-only&#10;• P3 раніше тільки Shukla Dashami (10) — missed Krishna Dashami (25)&#10;&#10;v18.8 final patches (4 ablation-validated):&#10;• P2 broad: ANY '✈' → +1, з 'Подорожі' → max(+2)&#10;• P3 broad: Dashami (Tithi 10 OR 25) → +1&#10;• P4 empty+saturn_retro+Kp≥4 → −3 (Saturn malefic canon)&#10;• P1d empty+eng=2 → 1 (точкова exact)&#10;&#10;v18.5 frozen baseline (canonical, n=280 v5.1):&#10;• Strict 71.4% [CI 66.1–76.8%]&#10;• Binary 83.6% [CI 79.3–87.9%]&#10;• Cohen's κ = 0.52, Weighted κ = 0.73&#10;&#10;⚠ Caveat: ground truth = expert PDF bulletins using same Vedic Panchanga + Kp framework. Validates engine reproduces expert reasoning, NOT predictive validity vs real outcomes.&#10;&#10;Status: Phase V3 prospective freeze 2026-05-03 → ~2026-08-01&#10;Patches applied at read-time — frozen engine_scores.json unchanged.&#10;Sources: CANONICAL_METRICS.md v2.0, ablation audit 2026-05-11&#10;&#10;Натисни → повний backtest report.">📊 79.2% strict / 50.0% exact</a>
           <!-- v88.8.37-fp72: Audit toggle button -->
-          <button id="auditToggleBtn" onclick="(function(){const c=document.getElementById('auditCard');const b=document.getElementById('auditToggleBtn');if(!c)return;if(c.style.display==='none'||!c.style.display){try{renderAuditCard();}catch(e){} c.style.display='';b.textContent='Аудит ▾';}else{c.style.display='none';b.textContent='Аудит ▸';}})()" style="font-size:11px;font-weight:600;color:var(--muted);background:none;border:1px solid var(--border2);border-radius:6px;padding:1px 8px;cursor:pointer;line-height:1.6" aria-label="Показати розкладку висновку">Аудит ▸</button>
+          <button id="auditToggleBtn" onclick="(function(){const c=document.getElementById('auditCard');const b=document.getElementById('auditToggleBtn');if(!c)return;if(c.style.display==='none'||!c.style.display){try{renderAuditCard({silent:false});}catch(e){} c.style.display='';b.textContent='Аудит ▾';}else{c.style.display='none';b.textContent='Аудит ▸';}})()" style="font-size:11px;font-weight:600;color:var(--muted);background:none;border:1px solid var(--border2);border-radius:6px;padding:1px 8px;cursor:pointer;line-height:1.6" aria-label="Показати розкладку висновку">Аудит ▸</button>
         </div>
       </div>
     </section>
@@ -5556,11 +5556,14 @@ function renderWeekSummary(){
     <div style="display:flex;gap:1px">${rowHtml}</div>`;
 }
 
-// ═══ v88.8.37-fp72: Audit Card — «Чому такий висновок?» ═══
+// ═══ v88.8.37-fp72a: Audit Card — «Чому такий висновок?» ═══
 // Джерела: window.__uiState (gNow, kpNow, ai, confPct, confGrade),
-//          resolveHeroSignalHierarchy_v88824, window.__p3RahuCache
+//          _lastPanchCtx / window.__p3RahuCache (Rahu fallback chain),
+//          resolveDataModeExtended (data-mode у Conf)
 // НЕ впливає на engine/freeze/канон.
-function renderAuditCard(){
+// silent=true → тільки оновлює innerHTML, НЕ змінює display (default: silent).
+function renderAuditCard(opts){
+  const silent = !opts || opts.silent !== false; // default silent=true
   const card = document.getElementById('auditCard');
   if(!card) return;
 
@@ -5589,16 +5592,30 @@ function renderAuditCard(){
   const Di = isFinite(ai.Di) ? +ai.Di : 0;
   const Ai = isFinite(ai.Ai) ? +ai.Ai.toFixed(2) : '?';
 
-  // Rahu
+  // Rahu — fallback chain: _lastPanchCtx → __p3RahuCache → computePanchanga
   let rahuStr = '—';
   try {
-    const _R = window.__p3RahuCache && window.__p3RahuCache.rahu;
+    let _R = null;
+    if(typeof _lastPanchCtx !== 'undefined' && _lastPanchCtx && _lastPanchCtx.rahu && _lastPanchCtx.rahu.start)
+      _R = _lastPanchCtx.rahu;
+    if(!_R && window.__p3RahuCache && window.__p3RahuCache.rahu && window.__p3RahuCache.rahu.start)
+      _R = window.__p3RahuCache.rahu;
+    if(!_R && typeof computePanchanga === 'function'){
+      const _pc = computePanchanga(noonUTC(new Date()));
+      if(_pc && _pc.rahu && _pc.rahu.start) _R = _pc.rahu;
+    }
     if(_R && _R.start && _R.end) rahuStr = `${_R.start}–${_R.end}`;
   } catch(_){}
 
-  // Confidence
+  // Confidence + data-mode
   const confPct   = isFinite(ui.confPct) ? Math.round(ui.confPct) : '?';
   const confGrade = ui.confGrade || '—';
+  let dmLabel = '';
+  try {
+    const _dm = (typeof resolveDataModeExtended === 'function') ? resolveDataModeExtended() : 'live';
+    const _dmMap = { live:'LIVE', estimated:'ESTIMATED', partial:'DELAYED', scenario:'SCENARIO', offline:'OFFLINE' };
+    if(_dm && _dm !== 'live') dmLabel = ', ' + (_dmMap[_dm] || _dm.toUpperCase());
+  } catch(_){}
 
   const _fmt = v => (typeof v === 'number') ? (v >= 0 ? '+'+v.toFixed(2) : v.toFixed(2)) : String(v);
 
@@ -5609,17 +5626,18 @@ function renderAuditCard(){
   </div>
   <pre style="margin:0;font-family:ui-monospace,monospace;font-size:11px;line-height:1.7;white-space:pre-wrap;color:var(--dim)">──────────────────────────────────────
 ${hasPdf ? `G_day  ${dayScore >= 0 ? '+' : ''}${dayScore}  (${pdfSrc})` : 'G_day  ?  (PDF не завантажено)'}
-P      ${_fmt(Ai)} = Lᵢ${_fmt(Li)} + Mᵢ${_fmt(Mi)} + eᵢ${_fmt(ei)} + Pᵢ${_fmt(Pi)} + Dᵢ${_fmt(Di)}
+ΣAᵢ    ${_fmt(Ai)} = Lᵢ${_fmt(Li)} + Mᵢ${_fmt(Mi)} + eᵢ${_fmt(ei)} + Pᵢ${_fmt(Pi)} + Dᵢ${_fmt(Di)}
 Kp     ${_fmt(kpMod)} (Kp=${kp.toFixed(1)}, modifier=Kp−2)
 Rahu   ${rahuStr}
-Conf   ${confGrade} (${confPct}%)
+Conf   ${confGrade} (${confPct}%${dmLabel})
 ─────────────────────────────
-G_now  ${isFinite(gNow) ? (gNow >= 0 ? '+' : '') + gNow.toFixed(2) : '?'} = (Kp−2) + P = ${_fmt(kpMod)} + ${_fmt(Ai)}
+G_now  ${isFinite(gNow) ? (gNow >= 0 ? '+' : '') + gNow.toFixed(2) : '?'} = (Kp−2) + ΣAᵢ = ${_fmt(kpMod)} + ${_fmt(Ai)}
 ──────────────────────────────────────</pre>
 </div>`;
 
   card.innerHTML = html;
-  card.style.display = '';
+  // fp72a: silent=true → не змінюємо display (користувач керує через toggle)
+  if(!silent) card.style.display = '';
 
   // Close button handler
   const _cl = document.getElementById('auditCardClose');
