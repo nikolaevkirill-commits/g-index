@@ -1,5 +1,6 @@
-// v88.8.37-fp72a: Audit Card silent mode + Rahu fallback + data-mode. Cache key fp72a.
-// G-Index Service Worker v88.8.37-fp72a
+// v88.8.38-fp73: forecast_confidence read-time markers on scenario strip (HIGH/WEAK/LOW). Freeze-safe, no engine change. Based on FINAL_FALSIFICATION + EPISTEMIC audits 2026-06-21.
+// v88.8.38-fp73: Audit Card silent mode + Rahu fallback + data-mode. Cache key fp73.
+// G-Index Service Worker v88.8.38-fp73
 // v88.8.19 changes — incremental release після v88.8.18 з реальним bug fix:
 //   ENGINE v18.7 → v18.8: P2 раніше шукав 'Подорожі' word — missed 93 dates
 //     з '✈' emoji-only. P3 раніше тільки Shukla Dashami (10) — missed Krishna
@@ -601,8 +602,8 @@
 //   3. backtest.html додано до SHELL_FILES.
 //   4. cache.put awaited перед SW_FRESH_DATA notify (race fix).
 
-const SHELL_CACHE = 'g-index-shell-v88-8-37-fp72a';
-const DATA_CACHE = 'g-index-data-v88-8-37-fp72a';
+const SHELL_CACHE = 'g-index-shell-v88-8-38-fp73';
+const DATA_CACHE = 'g-index-data-v88-8-38-fp73';
 
 const SHELL_FILES = [
   './manifest.json',
