@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.38-fp73</title>
+  <title>G-Index — Космофізичний дашборд v88.8.39-fp74</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -4765,7 +4765,14 @@ function renderScenarioCard(){
         })()) + ((function(){
           // v88.8.38: forecast_confidence note (read-only, freeze-safe)
           const _fc = (typeof forecastConfidence === 'function') ? forecastConfidence(e) : null;
-          return (_fc && _fc.note) ? `\n\n🎯 Довіра: ${_fc.level} — ${_fc.note}` : '';
+          // v88.8.39: cal/eng sign-consistency hint (ABLATION: agree→85% strict, neutral→43%). Read-only.
+          const _sg = x => x>0?1:(x<0?-1:0);
+          const _cs = _sg(e.cal_score), _es = _sg(e.eng);
+          const _cons = (_cs!==0 && _es!==0)
+            ? (_cs===_es ? '\n✓ cal↔engine напрям збігається (надійніше, ~85% strict)'
+                         : '\n⚠ cal↔engine напрям РОЗХОДИТЬСЯ (можливий editorial overlay)')
+            : '\n○ cal або engine нейтральний (слабша роздільність)';
+          return (_fc && _fc.note) ? `\n\n🎯 Довіра: ${_fc.level} — ${_fc.note}${_cons}` : '';
         })()) + `\n\nКлік → деталі у таблиці 27 днів. Це PDF/Engine Day_score, не G_now і не G_day raw`
       : `${d.ds} (${dow}) — поза validation window`;
     const borderToday = isToday ? '2px solid var(--ok)' : '1px solid var(--border2)';
@@ -5598,7 +5605,7 @@ function renderWeekSummary(){
     <div style="display:flex;gap:1px">${rowHtml}</div>`;
 }
 
-// ═══ v88.8.38-fp73: Audit Card — «Чому такий висновок?» ═══
+// ═══ v88.8.39-fp74: Audit Card — «Чому такий висновок?» ═══
 // Джерела: window.__uiState (gNow, kpNow, ai, confPct, confGrade),
 //          _lastPanchCtx / window.__p3RahuCache (Rahu fallback chain),
 //          resolveDataModeExtended (data-mode у Conf)
@@ -5678,7 +5685,7 @@ G_now  ${isFinite(gNow) ? (gNow >= 0 ? '+' : '') + gNow.toFixed(2) : '?'} = (Kp�
 </div>`;
 
   card.innerHTML = html;
-  // fp72a/fp73: silent=true → не змінюємо display (користувач керує через toggle)
+  // fp72a/fp73/fp74: silent=true → не змінюємо display (користувач керує через toggle)
   if(!silent) card.style.display = '';
 
   // Close button handler
