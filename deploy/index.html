@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.39-fp74</title>
+  <title>G-Index — Космофізичний дашборд v88.8.38-fp74</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1627,7 +1627,7 @@ body.simple-mode .col-hide-mobile {
         <div style="font-size:11px;color:var(--dim);padding:6px">Завантаження…</div>
       </div>
       <div id="scenarioLegend" style="margin-top:8px;font-size:10px;color:var(--dim);line-height:1.5">
-        Кольори = engine_score (−3 червоний / 0 нейтр / +3 зелений). Точка зверху = cal_score (astronomical, Swiss Ephemeris Lahiri). ⚠ = Excel-tag artifact. ~ = synthetic Kp. <span style="color:var(--ok)">●</span> = надійний (±3, PPV ~92%). <span style="color:var(--warn)">!</span> = клас +2 калібрувально слабкий (≈ нейтральний). <span style="color:var(--dim)">○</span> = слабкий сигнал (0 тегів / нейтр).
+        Кольори = engine_score (−3 червоний / 0 нейтр / +3 зелений). Точка зверху = cal_score (astronomical, Swiss Ephemeris Lahiri). ⚠ = Excel-tag artifact. ~ = synthetic Kp. <span style="color:var(--ok)">●</span> = HIGH (±3, PPV ~92%). <span style="color:var(--warn)">!</span> = WEAK (+2 miscalibrated). <span style="color:var(--dim)">○</span> = LOW (0 тегів / нейтр).
       </div>
     </details>
     <!-- v87.90: Provenance ledger — джерела для сьогоднішньої оцінки (closed by default) -->
@@ -4673,30 +4673,20 @@ function renderHeroAstroLayer(){
 
 // v88.0 F3: Scenario card — 7-day forecast strip (today + 6 next days)
 // Pure render-only: reuses _engineScores, не зачіпає engine logic.
-// v88.8.38: forecast_confidence — read-only derivation from engine_scores fields.
-// Based on FINAL_FALSIFICATION_AUDIT + EPISTEMIC_AUDIT (2026-06-21):
-//   • Pred=±3 → PPV_strict 92-93% (HIGH reliability)
-//   • Pred=+2 → mean_GT=+0.13, PPV_exact 3.2% (MISCALIBRATED — show neutral, not positive)
-//   • n_tags=0 → engine failure mode (43% strict, worse than cal 57%)
-//   • Signal driver = tags (+18pp), NOT Kp (+4pp ns)
-// NO engine change — pure read-time classification of frozen engine_scores.json.
+// v88.8.38-fp74: forecastConfidence — canonical guardrails only. Freeze-safe.
+// Based on FINAL_FALSIFICATION + EPISTEMIC audits (2026-06-21). Read-only.
+// Canonical (confirmed in handoff): ±3=HIGH, +2=WEAK, n_tags=0=LOW, 0=LOW.
+// V3 candidate (n_tags≥3+|eng|≥2=HIGH◆) = post-hoc, not pre-registered → V19 only.
 function forecastConfidence(entry){
   if(!entry) return { level:'NONE', note:'' };
   const eng = entry.eng;
-  const cal = (entry.cal_score !== undefined && entry.cal_score !== null) ? entry.cal_score : 0;
   const tag = (entry.tag || '').trim();
   const nTags = tag ? tag.split(/\s+/).filter(Boolean).length : 0;
-  const synth = !!entry.kp_synthetic;
-  // Miscalibrated +2 class (audit: mean_GT=+0.13 ≈ neutral)
-  if(eng === 2) return { level:'WEAK', note:'Клас +2 калібрувально слабкий (факт ≈ нейтральний). Не трактувати як впевнено позитивний день.' };
-  // Extreme days = high precision
-  if(eng === 3 || eng === -3) return { level:'HIGH', note:'±3 = надійний directional сигнал (PPV ~92–93% на історії).' };
-  // No tags = engine failure mode
-  if(nTags === 0) return { level:'LOW', note:'0 тегів — engine у Kp-режимі без Panchanga-контексту (слабко). Ігнорувати або дисконтувати.' };
-  // Neutral
-  if(eng === 0) return { level:'LOW', note:'Нейтральний клас — низька роздільність (≈ випадковий). Дисконтувати.' };
-  // ±1 = weak directional
-  if(eng === 1 || eng === -1) return { level:'MED', note:'±1 = слабкий напрямний сигнал (~67–69% strict). М’яка підказка.' };
+  if(eng === 2) return { level:'WEAK', note:'Клас +2 розкалібрований (GT≈+0.13 нейтр). Не трактувати як позитивний.' };
+  if(eng === 3 || eng === -3) return { level:'HIGH', note:'±3 = найнадійніший: ~92-93% strict (PPV canonical).' };
+  if(nTags === 0) return { level:'LOW', note:'0 тегів — engine Kp-only (43% strict). Ігнорувати.' };
+  if(eng === 0) return { level:'LOW', note:'Нейтральний: 24% strict ≈ random. Ігнорувати.' };
+  if(eng === 1 || eng === -1) return { level:'MED', note:'±1 = слабкий directional (~67-70% strict).' };
   return { level:'MED', note:'' };
 }
 window.forecastConfidence = forecastConfidence;
@@ -4765,27 +4755,27 @@ function renderScenarioCard(){
         })()) + ((function(){
           // v88.8.38: forecast_confidence note (read-only, freeze-safe)
           const _fc = (typeof forecastConfidence === 'function') ? forecastConfidence(e) : null;
-          // v88.8.39: cal/eng sign-consistency hint (ABLATION: agree→85% strict, neutral→43%). Read-only.
+          // v88.8.39: cal/eng sign diagnostic (AUDIT-ONLY; partly construction-dependent — eng derives from cal, NOT an independent reliability metric). Tooltip only, does not drive badge.
           const _sg = x => x>0?1:(x<0?-1:0);
           const _cs = _sg(e.cal_score), _es = _sg(e.eng);
           const _cons = (_cs!==0 && _es!==0)
-            ? (_cs===_es ? '\n✓ cal↔engine напрям збігається (надійніше, ~85% strict)'
-                         : '\n⚠ cal↔engine напрям РОЗХОДИТЬСЯ (можливий editorial overlay)')
-            : '\n○ cal або engine нейтральний (слабша роздільність)';
+            ? (_cs===_es ? '\nAudit: cal↔engine напрям збігається (внутрішня узгодженість, не незалежний показник)'
+                         : '\nAudit: cal↔engine розходяться — можливий editorial overlay')
+            : '';
           return (_fc && _fc.note) ? `\n\n🎯 Довіра: ${_fc.level} — ${_fc.note}${_cons}` : '';
         })()) + `\n\nКлік → деталі у таблиці 27 днів. Це PDF/Engine Day_score, не G_now і не G_day raw`
       : `${d.ds} (${dow}) — поза validation window`;
     const borderToday = isToday ? '2px solid var(--ok)' : '1px solid var(--border2)';
     const clickAttr = e ? ` onclick="scrollAndHighlight27d('${d.ds}')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();scrollAndHighlight27d('${d.ds}')}"` : '';
     const cursorStyle = e ? 'pointer' : 'help';
-    // v88.8.38: confidence marker — small badge top-right (HIGH=●, WEAK/LOW=○, ±2 miscal=!)
+    // v88.8.38-fp74: confidence badge — canonical guardrails only (HIGH=●, WEAK=!, LOW=○)
     const _fc = (e && typeof forecastConfidence === 'function') ? forecastConfidence(e) : null;
     const confBadge = (_fc && _fc.level === 'HIGH')
-      ? `<span style="position:absolute;top:2px;right:3px;font-size:8px;color:var(--ok)" title="HIGH confidence">●</span>`
+      ? `<span style="position:absolute;top:2px;right:3px;font-size:8px;color:var(--ok)" title="HIGH: ±3 ~92-93% strict">●</span>`
       : (_fc && _fc.level === 'WEAK')
-      ? `<span style="position:absolute;top:2px;right:3px;font-size:9px;color:var(--warn);font-weight:800" title="Miscalibrated +2">!</span>`
+      ? `<span style="position:absolute;top:2px;right:3px;font-size:9px;color:var(--warn);font-weight:800" title="WEAK: +2 miscalibrated">!</span>`
       : (_fc && _fc.level === 'LOW')
-      ? `<span style="position:absolute;top:2px;right:3px;font-size:8px;color:var(--dim)" title="LOW confidence">○</span>`
+      ? `<span style="position:absolute;top:2px;right:3px;font-size:8px;color:var(--dim)" title="LOW: engine failure / ignore">○</span>`
       : '';
     html += `<div${clickAttr} style="position:relative;flex:1 0 64px;min-width:64px;padding:6px 4px;border-radius:8px;border:${borderToday};background:${bgForScore(eng)};text-align:center;cursor:${cursorStyle};transition:transform .12s,box-shadow .12s" onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 2px 8px rgba(0,0,0,.3)'" onmouseout="this.style.transform='';this.style.boxShadow=''" title="${escapeHtml(tt)}">`
       + confBadge
@@ -5605,7 +5595,7 @@ function renderWeekSummary(){
     <div style="display:flex;gap:1px">${rowHtml}</div>`;
 }
 
-// ═══ v88.8.39-fp74: Audit Card — «Чому такий висновок?» ═══
+// ═══ v88.8.38-fp74: Audit Card — «Чому такий висновок?» ═══
 // Джерела: window.__uiState (gNow, kpNow, ai, confPct, confGrade),
 //          _lastPanchCtx / window.__p3RahuCache (Rahu fallback chain),
 //          resolveDataModeExtended (data-mode у Conf)
@@ -5685,7 +5675,7 @@ G_now  ${isFinite(gNow) ? (gNow >= 0 ? '+' : '') + gNow.toFixed(2) : '?'} = (Kp�
 </div>`;
 
   card.innerHTML = html;
-  // fp72a/fp73/fp74: silent=true → не змінюємо display (користувач керує через toggle)
+  // fp72a/fp73/fp74/fp75: silent=true → не змінюємо display (користувач керує через toggle)
   if(!silent) card.style.display = '';
 
   // Close button handler
