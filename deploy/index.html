@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.39-fp79</title>
+  <title>G-Index — Космофізичний дашборд v88.8.39-fp80</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -11754,7 +11754,8 @@ function syncHero(){
     if (t.includes('cached') || t.includes('delayed')) return 'cached';
     return 'live';
   })();
-  const _dataMode = (typeof resolveDataMode === 'function') ? resolveDataMode() : 'live';
+  // fp79 FIX: resolveDataModeExtended → 'estimated' для нормального NOAA 3h циклу (не DELAYED)
+  const _dataMode = (typeof resolveDataModeExtended === 'function') ? resolveDataModeExtended() : 'live';
   window.__dataMode = _dataMode; // v87.91: глобально доступно для інших рендерів (heroTomorrow тощо)
   const hf=el('heroFreshness');
   if(hf){
@@ -11762,25 +11763,24 @@ function syncHero(){
     // v88.8.35-fp9 O: 'partial' рендериться як DELAYED для словесної консистентності з top freshnessBadge
     // (раніше Hero казав PARTIAL, top — DELAYED, користувач плутався).
     const _modeLabel = {
-      live: 'LIVE',
-      partial: 'DELAYED',
-      scenario: 'SCENARIO',
-      offline: 'OFFLINE'
+      live:      'LIVE',
+      estimated: 'LIVE',
+      partial:   'DELAYED',
+      scenario:  'SCENARIO',
+      offline:   'OFFLINE'
     }[_dataMode] || 'LIVE';
-    // v88.8.35-fp6 F: додати hint-pop popup для миттєвої видимості пояснення.
-    // Тримаємо native title як accessibility fallback.
     const _modeTip = ({
-      live: 'Дані live: Kp обсервації + NOAA 3-day forecast доступні.',
-      partial: 'Затримані live-дані; PDF/Engine день актуальний.\n\nДеталі: Kp обсервації live, але forecast cached/delayed. Тренди можуть бути затримані.\nPDF/Engine і frozen engine_scores працюють штатно — це обмеження стосується лише live/raw rail-ів.',
-      scenario: '⚠ Без NOAA forecast; PDF/Engine день актуальний.\n\nДеталі: Завтра/3-day показано як плато на базі поточного Kp — це сценарій, не справжній прогноз.\nPDF/Engine і frozen engine_scores працюють штатно — рішення дня бери звідти.',
-      offline: '⚠ Дані з кешу; PDF/Engine день актуальний.\n\nДеталі: навіть Kp обсервації недоступні. Все, що показано — з кешу.\nPDF/Engine і frozen engine_scores працюють штатно — рішення дня бери звідти.'
+      live:      'Дані live: Kp обсервації + NOAA 3-day forecast доступні.',
+      estimated: 'Kp ≤12год (норма циклу NOAA 3год). Forecast реальний. PDF/Engine актуальний.',
+      partial:   'Затримані live-дані; PDF/Engine день актуальний.\n\nДеталі: Kp обсервації live, але forecast cached/delayed. Тренди можуть бути затримані.\nPDF/Engine і frozen engine_scores працюють штатно — це обмеження стосується лише live/raw rail-ів.',
+      scenario:  '⚠ Без NOAA forecast; PDF/Engine день актуальний.\n\nДеталі: Завтра/3-day показано як плато на базі поточного Kp — це сценарій, не справжній прогноз.\nPDF/Engine і frozen engine_scores працюють штатно — рішення дня бери звідти.',
+      offline:   '⚠ Дані з кешу; PDF/Engine день актуальний.\n\nДеталі: навіть Kp обсервації недоступні. Все, що показано — з кешу.\nPDF/Engine і frozen engine_scores працюють штатно — рішення дня бери звідти.'
     })[_dataMode] || '';
     // Інжектимо label + hint-pop, не перетираємо весь innerHTML інших слотів
     hf.innerHTML = _modeLabel + (_modeTip ? `<span class="hint-pop" style="white-space:pre-line;font-size:12px;text-align:left;max-width:280px">${_modeTip}</span>` : '');
     if (!hf.classList.contains('hint')) hf.classList.add('hint');
     hf.classList.remove('live','cached','stale');
-    // Кольорова класа: live=зелений, partial=жовтий (cached), scenario/offline=червоний (stale)
-    if (_dataMode === 'live') hf.classList.add('live');
+    if (_dataMode === 'live' || _dataMode === 'estimated') hf.classList.add('live');
     else if (_dataMode === 'partial') hf.classList.add('cached');
     else hf.classList.add('stale');
     // Native title як accessibility fallback (screen readers + tab focus)
@@ -11793,16 +11793,18 @@ function syncHero(){
     const _hrl = document.getElementById('heroRingLabel');
     if (_hrl) {
       const _ringMode = ({
-        live:     'live',
-        partial:  'delayed',
-        scenario: 'scenario',
-        offline:  'offline'
+        live:      'live',
+        estimated: 'live',
+        partial:   'delayed',
+        scenario:  'scenario',
+        offline:   'offline'
       })[_dataMode] || 'live';
       const _ringTip = ({
-        live:     'Hero ring показує live-фон зараз. Verdict дня — у PDF/Engine pill справа.',
-        partial:  'Hero ring використовує затримані live-дані (DELAYED/PARTIAL). Фон орієнтовний — перед діями перевір PDF/Engine.',
-        scenario: 'NOAA forecast недоступний; ring показує сценарій на базі поточного Kp, не реальний live.',
-        offline:  'Дані з кешу — ring не оновлюється з NOAA. Не покладайся на live-фон для рішень.'
+        live:      'Hero ring показує live-фон зараз. Verdict дня — у PDF/Engine pill справа.',
+        estimated: 'Hero ring: Kp ≤12год (норма циклу NOAA 3год). Forecast реальний.',
+        partial:   'Hero ring використовує затримані live-дані (DELAYED). Фон орієнтовний — перед діями перевір PDF/Engine.',
+        scenario:  'NOAA forecast недоступний; ring показує сценарій на базі поточного Kp, не реальний live.',
+        offline:   'Дані з кешу — ring не оновлюється з NOAA. Не покладайся на live-фон для рішень.'
       })[_dataMode] || '';
       _hrl.textContent = 'G_now · ' + _ringMode;
       _hrl.title = _ringTip;
@@ -11951,9 +11953,10 @@ function syncHero(){
   // Problem: heroHeadlineFromHierarchy already returns 'МОЖНА ДІЯТИ за PDF · live-фон estimated...'
   // which contains 'estimated' → fp52 condition blocked the fix.
   // fp53-A: handle both cases: with and without 'estimated' in headline.
-  const _dm47 = (typeof resolveDataMode === 'function') ? resolveDataMode() : 'live';
+  // fp79 FIX: use resolveDataModeExtended — 'estimated' (Kp ≤12h, норм. цикл NOAA) не показує ОРІЄНТОВНО.
+  const _dm47 = (typeof resolveDataModeExtended === 'function') ? resolveDataModeExtended() : 'live';
   const _headlineStormAware47 = _headline.includes('буря') || _headline.includes('АКТИВНА');
-  if (_dm47 !== 'live' && !_headlineStormAware47 && !_headline.startsWith('ОРІЄНТОВНО')) {
+  if ((_dm47 === 'partial' || _dm47 === 'offline' || _dm47 === 'scenario') && !_headlineStormAware47 && !_headline.startsWith('ОРІЄНТОВНО')) {
     if (_headline === 'МОЖНА ДІЯТИ за PDF · live-фон estimated — перевір перед критичною дією') {
       // Already has estimated suffix but lacks ОРІЄНТОВНО prefix
       _headline = 'ОРІЄНТОВНО МОЖНА ДІЯТИ за PDF · live-фон — перевір перед критичною дією';
