@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.39-fp77</title>
+  <title>G-Index — Космофізичний дашборд v88.8.39-fp78</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -2466,7 +2466,7 @@ Fallback (NOAA 45-day-forecast.json):
         <p>Kp ∈ [0;&nbsp;9], ΣAᵢ реально лежить у межах <strong>[−10;&nbsp;+9]</strong> (при екстремальному накладанні затемнень, ICS‑подій та несприятливої Панчанги), робочий діапазон за нормальних умов: <strong>ΣAᵢ ≈ −4 … +4</strong>. Теоретичний G ∈ [−12;&nbsp;+16], робочий <strong>G ≈ −5 … +7</strong>.</p>
         <p>Множник <strong>PCL_SCALE = 0.4</strong> для Pᵢ має статус <em>R&D / Advisory</em> і потребує емпіричного калібрування на операційних даних.</p>
         <p class="small" style="color:var(--muted)">ℹ Функції, реалізовані лише у <strong>forecast_engine v18.5</strong> (Python/Excel), але <em>відсутні</em> у браузерному дашборді: автрегресійний контекст (<code>prev_score</code>), довгострокові транзити Jupiter/Rahu, manual Excel-теги (ритуали/затемнення-маркери). Дашборд Hero G — <em>continuous unclamped</em> (Kp − 2 + ΣAᵢ); engine pill — <em>discrete clamped</em> {−3…+3} з повним feature-set. Реальні розбіжності (n=30 cross-check 2025-12 — 2026-04): mean |Δ|≈2.2, max |Δ|≈6 (особливо при Kp≥5 коли Hero лінійний, а engine clamps).</p>
-        <p class="small" style="color:var(--muted)">ℹ <strong>Panchanga reference time</strong>: дашборд обчислює tithi/nakshatra/yoga на noon UTC (для уніфікації поза локацією). Engine використовує local sunrise (Vedic convention). Це призводить до систематичного зміщення +1 у ~46% днів на boundary часу. Якщо dashboard показує "Trayodashi" а engine pill "Dwadashi" — це різні reference points, не помилка.</p>
+        <p class="small" style="color:var(--muted)">ℹ <strong>Panchanga reference time</strong>: Hero та Panchanga-панель використовують noon UTC (annual_2026_27.json, звірено drikpanchang). Engine_scores.json = 00:30 UTC. Розбіжність ±1 tithi/nakshatra на boundary днях (~46%) — нормально, обидва відображення з одного джерела (noon UTC) починаючи з fp78.</p>
         <p>Tithi, що вже враховані в Lᵢ (Пурніма, Амавасья) або eᵢ (Екадаші), виключені з Pᵢ для уникнення подвійного рахування.</p>
         <p class="small" style="color:var(--muted);margin-top:6px;border-left:2px solid #4a5d8e;padding-left:8px">📐 <strong>Engine v14.2 calibration note:</strong> Деякі score-значення відрізняються від theoretical Posibnyk через калібрування на n=280 PDF v5.1 dataset:
         <br>• <strong>Purnima (idx 14)</strong>: code score=0 (нейтральна), Posibnyk=−3 (Cajochen 2013) — engine v14.2 BUG-1 fix; при Kp≥7 додається Lᵢ підсилення
@@ -4608,16 +4608,26 @@ function renderHeroAstroLayer(){
     elA.style.display = 'none';
     return;
   }
-  // v88.7.12 FIX-M (Рівень 1 уніфікації): tithi/nakshatra/yoga НАЗВИ беремо з live
-  // _lastPanchCtx (noon UTC astronomy-engine), а cal_score/cal_symbols — з engine_scores.json.
-  // Раніше: chip показував engine_scores.cal_tithi (Swiss Ephemeris, local sunrise reference).
-  // Панчанга картка — live noon UTC. Розбіжність ±1 tithi на boundary днях (~46% часу).
-  // Тепер: обидва показники з ОДНОГО джерела (live), Engine pill (+3) лишається frozen для backtest.
-  // Engine_scores значення (entry.cal_tithi/nakshatra/yoga) показуємо у tooltip для аудиту розбіжностей.
+  // fp78 FIX: annual_2026_27.json (noon UTC, drikpanchang-verified) = canonical Panchanga display.
+  // Unified with Panchanga panel. Previously used _liveCtx (current moment) which diverged from
+  // panel when user viewed dashboard before tithi boundary (e.g. 09:00 UTC → Navami while panel=Dashami).
+  // _liveCtx kept as fallback only when annual data absent.
   const _liveCtx = (typeof _lastPanchCtx !== 'undefined') ? _lastPanchCtx : null;
-  // Live names (primary source після FIX-M)
+  const _YOGAS_FB = ['Vishkambha','Priti','Ayushman','Saubhagya','Shobhana','Atiganda','Sukarman',
+    'Dhriti','Shula','Ganda','Vriddhi','Dhruva','Vyaghata','Harshana','Vajra',
+    'Siddhi','Vyatipata','Variyan','Parigha','Shiva','Siddha','Sadhya','Shubha',
+    'Shukla','Brahma','Indra','Vaidhriti'];
   let tName, nName, yName, tNumLive, nNumLive, yNumLive;
-  if(_liveCtx && _liveCtx.tithi && _liveCtx.nakshatra && _liveCtx.yoga){
+  if(entry.annual_tithi && entry.annual_nakshatra){
+    // PRIMARY: noon UTC pre-computed (annual_2026_27.json, drikpanchang-verified)
+    tName = entry.annual_tithi.replace(/\s*\([SK]\)\s*/,'');  // "Dashami (S)" → "Dashami"
+    nName = entry.annual_nakshatra;
+    yName = entry.annual_yoga ? (_YOGAS_FB[(entry.annual_yoga|0)-1] || ('Y'+entry.annual_yoga)) : '—';
+    tNumLive = entry.cal_tithi;
+    nNumLive = entry.cal_nakshatra;
+    yNumLive = entry.annual_yoga;
+  } else if(_liveCtx && _liveCtx.tithi && _liveCtx.nakshatra && _liveCtx.yoga){
+    // FALLBACK: live current moment (when annual not enriched)
     tName = _liveCtx.tithi.name;
     nName = _liveCtx.nakshatra.name;
     yName = _liveCtx.yoga.name;
@@ -4625,16 +4635,12 @@ function renderHeroAstroLayer(){
     nNumLive = _liveCtx.nakshatra.idx;
     yNumLive = (_liveCtx.yoga.num !== undefined) ? _liveCtx.yoga.num : null;
   } else {
-    // Fallback на engine_scores якщо _lastPanchCtx ще не готовий (раннє завантаження)
+    // FALLBACK: engine_scores fields (early load before annual ready)
     const tIdx = Math.max(0, Math.min(29, (entry.cal_tithi|0) - 1));
     const nIdx = Math.max(0, Math.min(26, (entry.cal_nakshatra|0) - 1));
     const yIdx = Math.max(0, Math.min(26, (entry.cal_yoga|0) - 1));
     tName = (typeof TITHI_NAMES !== 'undefined') ? (TITHI_NAMES[tIdx] || ('T'+entry.cal_tithi)) : ('T'+entry.cal_tithi);
     nName = (typeof NAKSHATRA_NAMES !== 'undefined') ? (NAKSHATRA_NAMES[nIdx] || ('N'+entry.cal_nakshatra)) : ('N'+entry.cal_nakshatra);
-    const _YOGAS_FB = ['Vishkambha','Priti','Ayushman','Saubhagya','Shobhana','Atiganda','Sukarman',
-      'Dhriti','Shula','Ganda','Vriddhi','Dhruva','Vyaghata','Harshana','Vajra',
-      'Siddhi','Vyatipata','Variyan','Parigha','Shiva','Siddha','Sadhya','Shubha',
-      'Shukla','Brahma','Indra','Vaidhriti'];
     yName = _YOGAS_FB[yIdx] || ('Y'+entry.cal_yoga);
     tNumLive = entry.cal_tithi;
     nNumLive = entry.cal_nakshatra;
@@ -4693,7 +4699,7 @@ function renderHeroAstroLayer(){
     ? `Yoga: ${yNumLive} (${yName}) live · engine: ${_engY} (${_engYName})`
     : `Yoga: ${yNumLive || _engY} (${yName})`;
   const _divNote = _hasDiv
-    ? `\n\n⊙ Розбіжність live ↔ engine: live = noon UTC astronomy-engine; engine_scores = local sunrise Swiss Ephemeris (Vedic convention). На boundary днях (~46%) tithi/nakshatra може зсунутись на 1. Bulletin score (+${entry.eng}) не залежить від цього.`
+    ? `\n\n⊙ Розбіжність pill ↔ engine: pill = noon UTC (annual_2026_27.json, drikpanchang-verified); engine_scores = 00:30 UTC Swiss Ephemeris. На boundary днях (~46%) tithi/nakshatra може зсунутись на 1. Bulletin score не залежить від цього.`
     : '';
   elA.title = `Astronomical layer (live names, frozen score)\ncal_score: ${cs >= 0 ? '+' : ''}${cs} (engine_scores.json, не PDF/engine)\n${_tithiLine}\n${_nakLine}\n${_yogaLine}\nSymbols: ${symStr}${artifactWarn}${yogaAdvisory}${_divNote}\n\nv88.7.12: tithi/nakshatra/yoga назви — live (узгоджено з Панчанга-карткою). cal_score/cal_symbols — frozen engine_scores. Engine pill (+3) — frozen v18.5 bulletin.`;
   elA.style.display = '';
