@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.39-fp75</title>
+  <title>G-Index — Космофізичний дашборд v88.8.39-fp77</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1627,7 +1627,7 @@ body.simple-mode .col-hide-mobile {
         <div style="font-size:11px;color:var(--dim);padding:6px">Завантаження…</div>
       </div>
       <div id="scenarioLegend" style="margin-top:8px;font-size:10px;color:var(--dim);line-height:1.5">
-        Кольори = engine_score (−3 червоний / 0 нейтр / +3 зелений). Точка зверху = cal_score (astronomical, Swiss Ephemeris Lahiri). ⚠ = Excel-tag artifact. ~ = synthetic Kp. <span style="color:var(--ok)">●</span> = HIGH (±3, PPV ~92%). <span style="color:var(--warn)">!</span> = WEAK (+2 miscalibrated). <span style="color:var(--dim)">○</span> = LOW (0 тегів / нейтр).
+        Кольори = engine_score (−3 червоний / 0 нейтр / +3 зелений). Точка зверху = cal_score (astronomical, Swiss Ephemeris Lahiri). ⚠ = Excel-tag artifact. ~ = synthetic Kp. <span style="color:var(--ok)">●</span> = HIGH (±3, PPV ~92%). <span style="color:var(--warn)">!</span> = WEAK (±2 miscalibrated). <span style="color:var(--dim)">○</span> = LOW (0 тегів / нейтр).
       </div>
     </details>
     <!-- v87.90: Provenance ledger — джерела для сьогоднішньої оцінки (closed by default) -->
@@ -4222,17 +4222,42 @@ async function loadEngineScores(){
       const ar = await fetch('annual_2026_27.json', { cache: 'default' });
       if(ar.ok){
         const aj = await ar.json();
-        let _added = 0;
+        // fp77: nakshatra name→number (1-27). annual_2026_27 uses abbreviated forms.
+        const _NAK_MAP = {
+          'Ashwini':1,'Bharani':2,'Krittika':3,'Rohini':4,'Mrigashira':5,
+          'Ardra':6,'Punarvasu':7,'Pushya':8,'Ashlesha':9,'Magha':10,
+          'P.Phalguni':11,'Purva Phalguni':11,'U.Phalguni':12,'Uttara Phalguni':12,
+          'Hasta':13,'Chitra':14,'Swati':15,'Vishakha':16,'Anuradha':17,
+          'Jyeshtha':18,'Mula':19,
+          'P.Ashadha':20,'Purva Ashadha':20,'U.Ashadha':21,'Uttara Ashadha':21,
+          'Shravana':22,'Dhanishta':23,'Dhanishtha':23,'Shatabhisha':24,
+          'P.Bhadrapada':25,'Purva Bhadrapada':25,'U.Bhadrapada':26,'Uttara Bhadrapada':26,
+          'Revati':27
+        };
+        let _added = 0, _enriched = 0;
         for(const day of (aj.days||[])){
+          const _nakNum = _NAK_MAP[day.nakshatra] || null;
           if(!_engineScores[day.date]){
             _engineScores[day.date] = { eng: day.cal_score, pdf: null, tag: '',
               kp: null, kp_synthetic: false, annual_fallback: true,
               cal_score: day.cal_score, cal_symbols: day.symbols||[],
-              cal_tithi: day.tithi_n, annual_tithi: day.tithi, annual_nakshatra: day.nakshatra };
+              cal_tithi: day.tithi_n, cal_nakshatra: _nakNum,
+              annual_tithi: day.tithi, annual_nakshatra: day.nakshatra };
             _added++;
+          } else {
+            // fp77: enrich existing entries with Panchanga display fields.
+            // Does NOT override eng/pdf/tag/kp/cal_score/cal_symbols (freeze-safe).
+            const e = _engineScores[day.date];
+            if(!e.annual_tithi)     e.annual_tithi    = day.tithi;
+            if(!e.annual_nakshatra) e.annual_nakshatra = day.nakshatra;
+            if(!e.cal_tithi)        e.cal_tithi       = day.tithi_n;
+            if(!e.cal_nakshatra && _nakNum) e.cal_nakshatra = _nakNum;
+            if(!e.annual_yoga)      e.annual_yoga      = day.yoga;
+            if(!e.annual_phrases)   e.annual_phrases   = day.phrases||[];
+            _enriched++;
           }
         }
-        if(window._DEBUG && _added) console.log('[fp56-P8] annual fallback: +' + _added + ' days (2027+)');
+        if(window._DEBUG) console.log('[fp77] annual: +' + _added + ' fallback, +' + _enriched + ' enriched (nak+tithi added)');
       }
     } catch(_e){ if(window._DEBUG) console.warn('[fp56-P8] annual load failed:', _e.message); }
     // V25-fu30: check expiration — show banner if scores expire soon
@@ -4676,16 +4701,17 @@ function renderHeroAstroLayer(){
 
 // v88.0 F3: Scenario card — 7-day forecast strip (today + 6 next days)
 // Pure render-only: reuses _engineScores, не зачіпає engine logic.
-// v88.8.39-fp75: forecastConfidence — canonical guardrails only. Freeze-safe.
+// v88.8.39-fp76: forecastConfidence — canonical guardrails only. Freeze-safe.
 // Based on FINAL_FALSIFICATION + EPISTEMIC audits (2026-06-21). Read-only.
-// Canonical (confirmed in handoff): ±3=HIGH, +2=WEAK, n_tags=0=LOW, 0=LOW.
+// Canonical (confirmed in handoff): ±3=HIGH, ±2=WEAK, n_tags=0=LOW, 0=LOW.
 // V3 candidate (n_tags≥3+|eng|≥2=HIGH◆) = post-hoc, not pre-registered → V19 only.
+// fp76 FIX: eng===-2 was missing WEAK (fell to MED). PPV ±2 = miscalibrated per CALIBRATION_AUDIT.
 function forecastConfidence(entry){
   if(!entry) return { level:'NONE', note:'' };
   const eng = entry.eng;
   const tag = (entry.tag || '').trim();
   const nTags = tag ? tag.split(/\s+/).filter(Boolean).length : 0;
-  if(eng === 2) return { level:'WEAK', note:'Клас +2 розкалібрований (GT≈+0.13 нейтр). Не трактувати як позитивний.' };
+  if(Math.abs(eng) === 2) return { level:'WEAK', note:'Клас ±2 розкалібрований (GT≈+0.13 нейтр). Не трактувати як надійний сигнал.' };
   if(eng === 3 || eng === -3) return { level:'HIGH', note:'±3 = найнадійніший: ~92-93% strict (PPV canonical).' };
   if(nTags === 0) return { level:'LOW', note:'0 тегів — engine Kp-only (43% strict). Ігнорувати.' };
   if(eng === 0) return { level:'LOW', note:'Нейтральний: 24% strict ≈ random. Ігнорувати.' };
@@ -4771,12 +4797,12 @@ function renderScenarioCard(){
     const borderToday = isToday ? '2px solid var(--ok)' : '1px solid var(--border2)';
     const clickAttr = e ? ` onclick="scrollAndHighlight27d('${d.ds}')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();scrollAndHighlight27d('${d.ds}')}"` : '';
     const cursorStyle = e ? 'pointer' : 'help';
-    // v88.8.39-fp75: confidence badge — canonical guardrails only (HIGH=●, WEAK=!, LOW=○)
+    // v88.8.39-fp76: confidence badge — canonical guardrails only (HIGH=●, WEAK=!, LOW=○)
     const _fc = (e && typeof forecastConfidence === 'function') ? forecastConfidence(e) : null;
     const confBadge = (_fc && _fc.level === 'HIGH')
       ? `<span style="position:absolute;top:2px;right:3px;font-size:8px;color:var(--ok)" title="HIGH: ±3 ~92-93% strict">●</span>`
       : (_fc && _fc.level === 'WEAK')
-      ? `<span style="position:absolute;top:2px;right:3px;font-size:9px;color:var(--warn);font-weight:800" title="WEAK: +2 miscalibrated">!</span>`
+      ? `<span style="position:absolute;top:2px;right:3px;font-size:9px;color:var(--warn);font-weight:800" title="WEAK: ±2 miscalibrated (PPV ~3%, GT≈neutral)">!</span>`
       : (_fc && _fc.level === 'LOW')
       ? `<span style="position:absolute;top:2px;right:3px;font-size:8px;color:var(--dim)" title="LOW: engine failure / ignore">○</span>`
       : '';
@@ -5598,7 +5624,7 @@ function renderWeekSummary(){
     <div style="display:flex;gap:1px">${rowHtml}</div>`;
 }
 
-// ═══ v88.8.39-fp75: Audit Card — «Чому такий висновок?» ═══
+// ═══ v88.8.39-fp76: Audit Card — «Чому такий висновок?» ═══
 // Джерела: window.__uiState (gNow, kpNow, ai, confPct, confGrade),
 //          _lastPanchCtx / window.__p3RahuCache (Rahu fallback chain),
 //          resolveDataModeExtended (data-mode у Conf)
