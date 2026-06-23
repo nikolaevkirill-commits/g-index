@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.39-fp78</title>
+  <title>G-Index — Космофізичний дашборд v88.8.39-fp79</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -10918,14 +10918,17 @@ function _renderHeroHierarchy(){
       }
     }catch(e){ /* silent */ }
     // 3) Якість даних — dataMode (live/partial/scenario/offline)
+    // fp79 FIX: використовуємо resolveDataModeExtended() щоб розрізнити 'estimated' (Kp ≤12h, нормальний
+    // 3-годинний цикл NOAA) від 'partial' (справжній delay). Раніше обидва показували "DELAYED".
     let qLab='—', qCol='var(--dim)';
     try{
-      const dm = (window.__dataMode) || (typeof resolveDataMode==='function'?resolveDataMode():'live');
+      const dm = (typeof resolveDataModeExtended==='function'?resolveDataModeExtended():'live');
       const map = {
-        live:    ['LIVE · дані актуальні','var(--ok)'],
-        partial: ['DELAYED · орієнтовно — перевір перед важливою дією','#ffcc44'],
-        scenario:['SCENARIO · не реальний прогноз, лише плато за поточним Kp','#ff9944'],
-        offline: ['OFFLINE · з кешу, можливо застаріле','#ff6b6b']
+        live:      ['LIVE · дані актуальні','var(--ok)'],
+        estimated: ['ESTIMATED · Kp ≤12год (норма циклу NOAA 3год)','#a8d5e0'],
+        partial:   ['DELAYED · орієнтовно — перевір перед важливою дією','#ffcc44'],
+        scenario:  ['SCENARIO · не реальний прогноз, лише плато за поточним Kp','#ff9944'],
+        offline:   ['OFFLINE · з кешу, можливо застаріле','#ff6b6b']
       };
       const m = map[dm] || map.live; qLab=m[0]; qCol=m[1];
     }catch(e){ /* silent */ }
