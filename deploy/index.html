@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.39-fp82</title>
+  <title>G-Index — Космофізичний дашборд v88.8.39-fp83</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -17511,6 +17511,9 @@ addEventListener('load', ()=>{ initGeolocation(); setStamp(); loadAll(); el('btn
       // Without this call, UI shows raw engine_scores.eng (+3 for 2026-06-24) instead of
       // override expert_eng (-3). Re-running after Promise.all ensures correct verdict.
       try{ syncV702UI(); }catch(e){if(window._DEBUG)console.warn('[fp82 syncV702UI post-overrides]:',e.message)}
+      // fp83: renderWeekSummary also runs before _expertOverrides loads (via render27Day→try27Day).
+      // Re-run after overrides to fix week summary row showing raw engine instead of PDF override.
+      try{ renderWeekSummary(); }catch(e){if(window._DEBUG)console.warn('[fp83 renderWeekSummary post-overrides]:',e.message)}
     });
   } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
   // v87.60 Fix #1: live UTC/local tick. setStamp раніше викликався тільки при loadAll (раз на ~10 хв) → UTC-лейбл відставав.
