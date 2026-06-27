@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.39-fp83</title>
+  <title>G-Index — Космофізичний дашборд v88.8.39-fp86</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -4707,26 +4707,22 @@ function renderHeroAstroLayer(){
 
 // v88.0 F3: Scenario card — 7-day forecast strip (today + 6 next days)
 // Pure render-only: reuses _engineScores, не зачіпає engine logic.
-// v88.8.39-fp85: forecastConfidence — canonical guardrails + 3-class precision badges.
-// Canonical: ±3=HIGH, ±2=WEAK, n_tags=0=LOW, 0=LOW.
-// fp85 ADD: 3-class precision from bootstrap CI (neg 88% / pos 86% / neu 32%).
-// fp76 FIX: eng===-2 was missing WEAK (fell to MED).
+// v88.8.39-fp76: forecastConfidence — canonical guardrails only. Freeze-safe.
+// Based on FINAL_FALSIFICATION + EPISTEMIC audits (2026-06-21). Read-only.
+// Canonical (confirmed in handoff): ±3=HIGH, ±2=WEAK, n_tags=0=LOW, 0=LOW.
+// V3 candidate (n_tags≥3+|eng|≥2=HIGH◆) = post-hoc, not pre-registered → V19 only.
+// fp76 FIX: eng===-2 was missing WEAK (fell to MED). PPV ±2 = miscalibrated per CALIBRATION_AUDIT.
 function forecastConfidence(entry){
-  if(!entry) return { level:'NONE', note:'', precision: null };
+  if(!entry) return { level:'NONE', note:'' };
   const eng = entry.eng;
   const tag = (entry.tag || '').trim();
   const nTags = tag ? tag.split(/\s+/).filter(Boolean).length : 0;
-  const dir3 = eng > 0 ? 'pos' : (eng < 0 ? 'neg' : 'neu');
-  // 3-class precision (bootstrap CI, n=362, sealed)
-  const precisionMap = { neg: '88%', pos: '86%', neu: '32%' };
-  const precisionNote = { neg: 'neg precision 88% (sign reliable)', pos: 'pos precision 86% (sign reliable)', neu: 'neu precision 32% ≈ noise — ігнор' };
-  const precision = precisionMap[dir3];
-  if(Math.abs(eng) === 2) return { level:'WEAK', note:'Клас ±2 розкалібрований (GT≈+0.13 нейтр). Не трактувати як надійний сигнал.', precision };
-  if(eng === 3 || eng === -3) return { level:'HIGH', note:`±3 найнадійніший. ${precisionNote[dir3]}.`, precision };
-  if(nTags === 0) return { level:'LOW', note:'0 тегів — engine Kp-only (43% strict). Ігнорувати.', precision };
-  if(eng === 0) return { level:'LOW', note:`Нейтральний: ${precision} precision ≈ шум. Ігнорувати.`, precision };
-  if(eng === 1 || eng === -1) return { level:'MED', note:`±1 слабкий directional. ${precisionNote[dir3]}.`, precision };
-  return { level:'MED', note:'', precision };
+  if(Math.abs(eng) === 2) return { level:'WEAK', note:'Клас ±2 розкалібрований (GT≈+0.13 нейтр). Не трактувати як надійний сигнал.' };
+  if(eng === 3 || eng === -3) return { level:'HIGH', note:'±3 = найнадійніший: ~92-93% strict (PPV canonical).' };
+  if(nTags === 0) return { level:'LOW', note:'0 тегів — engine Kp-only (43% strict). Ігнорувати.' };
+  if(eng === 0) return { level:'LOW', note:'Нейтральний: 24% strict ≈ random. Ігнорувати.' };
+  if(eng === 1 || eng === -1) return { level:'MED', note:'±1 = слабкий directional (~67-70% strict).' };
+  return { level:'MED', note:'' };
 }
 window.forecastConfidence = forecastConfidence;
 
@@ -4809,14 +4805,12 @@ function renderScenarioCard(){
     const cursorStyle = e ? 'pointer' : 'help';
     // v88.8.39-fp76: confidence badge — canonical guardrails only (HIGH=●, WEAK=!, LOW=○)
     const _fc = (e && typeof forecastConfidence === 'function') ? forecastConfidence(e) : null;
-    // fp85: precision badge — 3-class (neg 88% / pos 86% / neu 32%), sealed bootstrap CI
-    const _prec = (_fc && _fc.precision) ? _fc.precision : '';
     const confBadge = (_fc && _fc.level === 'HIGH')
-      ? `<span style="position:absolute;top:2px;right:3px;font-size:8px;color:var(--ok)" title="HIGH: ±3 надійний · ${_prec} precision (3-class sealed)">●${_prec}</span>`
+      ? `<span style="position:absolute;top:2px;right:3px;font-size:8px;color:var(--ok)" title="HIGH: ±3 ~92-93% strict">●</span>`
       : (_fc && _fc.level === 'WEAK')
-      ? `<span style="position:absolute;top:2px;right:3px;font-size:9px;color:var(--warn);font-weight:800" title="WEAK: ±2 розкалібрований · ${_prec} precision">!${_prec}</span>`
+      ? `<span style="position:absolute;top:2px;right:3px;font-size:9px;color:var(--warn);font-weight:800" title="WEAK: ±2 miscalibrated (PPV ~3%, GT≈neutral)">!</span>`
       : (_fc && _fc.level === 'LOW')
-      ? `<span style="position:absolute;top:2px;right:3px;font-size:8px;color:var(--dim)" title="LOW: нейтральний / нуль тегів · ${_prec} precision — ігнор">○</span>`
+      ? `<span style="position:absolute;top:2px;right:3px;font-size:8px;color:var(--dim)" title="LOW: engine failure / ignore">○</span>`
       : '';
     html += `<div${clickAttr} style="position:relative;flex:1 0 64px;min-width:64px;padding:6px 4px;border-radius:8px;border:${borderToday};background:${bgForScore(eng)};text-align:center;cursor:${cursorStyle};transition:transform .12s,box-shadow .12s" onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 2px 8px rgba(0,0,0,.3)'" onmouseout="this.style.transform='';this.style.boxShadow=''" title="${escapeHtml(tt)}">`
       + confBadge
