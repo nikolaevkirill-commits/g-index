@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.39-fp87</title>
+  <title>G-Index — Космофізичний дашборд v88.8.39-fp88</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1603,7 +1603,7 @@ body.simple-mode .col-hide-mobile {
       </div>
       <span style="font-size:11px;color:var(--ok);font-weight:700;white-space:nowrap">Подивитись →</span>
     </a>
-    <!-- v88.8.39-fp87: Regime cards (M2) — score+regime+confidence+space-weather. daily_master.json -->
+    <!-- v88.8.39-fp88: Regime cards (M2) — score+regime+confidence+space-weather. daily_master.json -->
     <div id="regimeCards" style="display:none;margin:0 0 10px;gap:8px;grid-template-columns:repeat(4,1fr)">
       <div id="rcScore" style="padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:rgba(11,18,32,.5);text-align:center">
         <div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em">Оцінка дня</div>
@@ -1630,7 +1630,7 @@ body.simple-mode .col-hide-mobile {
          Джерело: NOAA G-Scale (public), Groves & Akala Radio Science 2012.
          Дані: kp live (lastWWV), Dst (computeDstModifier), local_hour, _userLat. -->
     <div id="gnssCard" style="margin:0 0 10px;padding:10px 14px;border-radius:12px;border:1px solid rgba(55,167,255,.22);background:rgba(10,20,40,.5);display:none"></div>
-    <!-- v88.8.39-fp87: Bulletin v2 (M3) — режим+впевненість+причина+контекст+дія. bulletin_v2.json -->
+    <!-- v88.8.39-fp88: Bulletin v2 (M3) — режим+впевненість+причина+контекст+дія. bulletin_v2.json -->
     <details id="bulletinV2Card" style="margin:0 0 10px;padding:10px 14px;border-radius:12px;border:1px solid var(--border);background:rgba(11,18,32,.5);display:none">
       <summary style="cursor:pointer;font-size:12px;font-weight:600;color:var(--muted);list-style:none;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <span style="font-size:14px">📋</span>
@@ -1640,7 +1640,7 @@ body.simple-mode .col-hide-mobile {
       <div id="bulletinV2List" style="margin-top:10px;display:flex;flex-direction:column;gap:8px"></div>
       <div style="margin-top:8px;font-size:10px;color:var(--dim);line-height:1.5">Відтворює редакторську логіку Tarita, НЕ реальні події. Engine v18.5 frozen.</div>
     </details>
-    <!-- v88.8.39-fp87: Chrono panel (M4) — НЕЗАЛЕЖНИЙ outcome target. НЕ змішувати з Tarita GT. -->
+    <!-- v88.8.39-fp88: Chrono panel (M4) — НЕЗАЛЕЖНИЙ outcome target. НЕ змішувати з Tarita GT. -->
     <details id="chronoPanelCard" style="margin:0 0 10px;padding:10px 14px;border-radius:12px;border:1px solid rgba(155,177,220,.22);background:rgba(11,18,32,.5);display:none">
       <summary style="cursor:pointer;font-size:12px;font-weight:600;color:var(--muted);list-style:none;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <span style="font-size:14px">📓</span>
@@ -4229,7 +4229,7 @@ async function loadExpertOverrides(){
   }
 }
 
-// v88.8.39-fp87: daily_master.json loader + regime cards (M2). Freeze-safe, read-only.
+// v88.8.39-fp88: daily_master.json loader + regime cards (M2). Freeze-safe, read-only.
 let _dailyMaster = null;
 async function loadDailyMaster(){
   if(_dailyMaster !== null) return _dailyMaster;
@@ -4279,11 +4279,15 @@ function renderRegimeCards(){
   const rv=el('rcRegimeVal'), rd=el('rcRegimeDesc'), rc=el('rcRegime');
   if(rv){ rv.textContent=reg.t; rv.style.color=reg.c; rd.textContent=reg.d;
     rc.title='Режим: '+reg.t+'. '+reg.d+'. Надійність: '+reg.conf+'.\nРежими розрізнені за LATENT_REGIME_AUDIT: extreme=детермінований астро (~85%), editorial=Tarita uplift, neutral=змішаний (true/hidden polarity).'; }
-  // Confidence card
+  // Confidence card — ПРОСПЕКТИВНА надійність (non-circular), не лише sealed precision
   const cv=el('rcConfVal'), cp=el('rcConfPrec'), cc=el('rcConf');
   if(cv){ cv.textContent=CONF_LABEL[m.confidence]||'—'; cv.style.color=CONF_COLOR[m.confidence]||'#9bb1dc';
-    cp.textContent='precision '+Math.round((m.precision||0)*100)+'%';
-    cc.title='Впевненість '+CONF_LABEL[m.confidence]+'. 3-class precision для цього класу: '+Math.round((m.precision||0)*100)+'%.\nКалібровано (sealed): neg 88% / pos 86% / neu 32%.'; }
+    const relP = m.reliability_prospective!=null ? Math.round(m.reliability_prospective*100)+'%' : '';
+    const stable = m.regime_stable===true ? ' ✓стаб' : (m.regime_stable===false ? ' ⚠зсув' : '');
+    cp.textContent = relP ? ('надійн. '+relP+stable) : ('precision '+Math.round((m.precision||0)*100)+'%');
+    cc.title='Впевненість '+CONF_LABEL[m.confidence]+'. ПРОСПЕКТИВНА надійність режиму (post-freeze, non-circular): '+relP+'.\n'+
+      (m.regime_stable===false?'⚠ Режим нестаціонарний — точність змінюється в часі (π_k(t)).\n':'')+
+      'extreme_positive 93% стабільний · extreme_negative 71% зсув · neutral 21% шум.\nНа відміну від sealed precision, це міряно на датах ПІСЛЯ заморозки engine.'; }
   // Space weather card
   const spv=el('rcSpaceVal'), spd=el('rcSpaceDesc');
   if(spv){
@@ -4298,7 +4302,7 @@ function renderRegimeCards(){
 }
 window.renderRegimeCards = renderRegimeCards;
 
-// v88.8.39-fp87: Bulletin v2 (M3) — render режим+впевненість+причина+контекст+дія
+// v88.8.39-fp88: Bulletin v2 (M3) — render режим+впевненість+причина+контекст+дія
 let _bulletinV2 = null;
 async function loadBulletinV2(){
   if(_bulletinV2 !== null) return _bulletinV2;
@@ -4331,7 +4335,7 @@ function renderBulletinV2(){
 }
 window.renderBulletinV2 = renderBulletinV2;
 
-// v88.8.39-fp87: Chrono panel (M4) — окремий outcome target, r заблоковано при n<10
+// v88.8.39-fp88: Chrono panel (M4) — окремий outcome target, r заблоковано при n<10
 let _chronoPanel = null;
 async function loadChronoPanel(){
   if(_chronoPanel !== null) return _chronoPanel;
