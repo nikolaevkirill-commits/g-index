@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.39-fp86</title>
+  <title>G-Index — Космофізичний дашборд v88.8.39-fp87</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1603,10 +1603,52 @@ body.simple-mode .col-hide-mobile {
       </div>
       <span style="font-size:11px;color:var(--ok);font-weight:700;white-space:nowrap">Подивитись →</span>
     </a>
+    <!-- v88.8.39-fp87: Regime cards (M2) — score+regime+confidence+space-weather. daily_master.json -->
+    <div id="regimeCards" style="display:none;margin:0 0 10px;gap:8px;grid-template-columns:repeat(4,1fr)">
+      <div id="rcScore" style="padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:rgba(11,18,32,.5);text-align:center">
+        <div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em">Оцінка дня</div>
+        <div id="rcScoreVal" style="font-size:22px;font-weight:800;margin-top:2px">—</div>
+        <div id="rcScoreCls" style="font-size:10px;color:var(--dim)"></div>
+      </div>
+      <div id="rcRegime" tabindex="0" style="padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:rgba(11,18,32,.5);text-align:center;cursor:help">
+        <div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em">Режим</div>
+        <div id="rcRegimeVal" style="font-size:13px;font-weight:700;margin-top:4px">—</div>
+        <div id="rcRegimeDesc" style="font-size:10px;color:var(--dim);margin-top:1px"></div>
+      </div>
+      <div id="rcConf" tabindex="0" style="padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:rgba(11,18,32,.5);text-align:center;cursor:help">
+        <div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em">Впевненість</div>
+        <div id="rcConfVal" style="font-size:15px;font-weight:800;margin-top:3px">—</div>
+        <div id="rcConfPrec" style="font-size:10px;color:var(--dim);margin-top:1px"></div>
+      </div>
+      <div id="rcSpace" tabindex="0" style="padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:rgba(11,18,32,.5);text-align:center;cursor:help" title="Космічна погода — контекст, НЕ частина score. Kp/Dst впливають на режим надійності.">
+        <div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em">Космопогода</div>
+        <div id="rcSpaceVal" style="font-size:13px;font-weight:700;margin-top:4px">—</div>
+        <div id="rcSpaceDesc" style="font-size:10px;color:var(--dim);margin-top:1px"></div>
+      </div>
+    </div>
     <!-- v88.8.37-fp70: GNSS / UAV Risk Layer — окремий модуль, НЕ змішується з G-Index day score.
          Джерело: NOAA G-Scale (public), Groves & Akala Radio Science 2012.
          Дані: kp live (lastWWV), Dst (computeDstModifier), local_hour, _userLat. -->
     <div id="gnssCard" style="margin:0 0 10px;padding:10px 14px;border-radius:12px;border:1px solid rgba(55,167,255,.22);background:rgba(10,20,40,.5);display:none"></div>
+    <!-- v88.8.39-fp87: Bulletin v2 (M3) — режим+впевненість+причина+контекст+дія. bulletin_v2.json -->
+    <details id="bulletinV2Card" style="margin:0 0 10px;padding:10px 14px;border-radius:12px;border:1px solid var(--border);background:rgba(11,18,32,.5);display:none">
+      <summary style="cursor:pointer;font-size:12px;font-weight:600;color:var(--muted);list-style:none;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span style="font-size:14px">📋</span>
+        <span style="flex:1;min-width:200px"><span style="color:var(--text)">Бюлетень v2</span> <span style="color:var(--dim);font-weight:500">— режим + впевненість + дія на 14 днів</span></span>
+        <span style="font-size:11px;color:var(--dim)">▾</span>
+      </summary>
+      <div id="bulletinV2List" style="margin-top:10px;display:flex;flex-direction:column;gap:8px"></div>
+      <div style="margin-top:8px;font-size:10px;color:var(--dim);line-height:1.5">Відтворює редакторську логіку Tarita, НЕ реальні події. Engine v18.5 frozen.</div>
+    </details>
+    <!-- v88.8.39-fp87: Chrono panel (M4) — НЕЗАЛЕЖНИЙ outcome target. НЕ змішувати з Tarita GT. -->
+    <details id="chronoPanelCard" style="margin:0 0 10px;padding:10px 14px;border-radius:12px;border:1px solid rgba(155,177,220,.22);background:rgba(11,18,32,.5);display:none">
+      <summary style="cursor:pointer;font-size:12px;font-weight:600;color:var(--muted);list-style:none;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span style="font-size:14px">📓</span>
+        <span style="flex:1;min-width:200px"><span style="color:var(--text)">Chrono</span> <span style="color:var(--dim);font-weight:500">— реальні outcomes (окремий target)</span></span>
+        <span id="chronoProgress" style="font-size:11px;color:var(--dim)">—</span>
+      </summary>
+      <div id="chronoPanelBody" style="margin-top:10px;font-size:11px;color:var(--dim);line-height:1.6"></div>
+    </details>
     <!-- v88.8.37-fp70: Тема дня — детермінована з PDF/tag/panch, без LLM -->
     <div id="dayThemeCard" style="margin:0 0 10px;padding:12px 16px;border-radius:12px;border:1px solid var(--border);background:rgba(11,18,32,.45);display:none"></div>
     <!-- v88.8.37-fp72: Audit Card — «Чому такий висновок?» toggle, показує розкладку G -->
@@ -4186,6 +4228,145 @@ async function loadExpertOverrides(){
     return _expertOverrides;
   }
 }
+
+// v88.8.39-fp87: daily_master.json loader + regime cards (M2). Freeze-safe, read-only.
+let _dailyMaster = null;
+async function loadDailyMaster(){
+  if(_dailyMaster !== null) return _dailyMaster;
+  try {
+    const resp = await fetch('daily_master.json', { cache: 'default' });
+    if(!resp.ok) throw new Error('HTTP ' + resp.status);
+    const data = await resp.json();
+    _dailyMaster = data.days || {};
+    if(window._DEBUG) console.log('[fp87] daily_master loaded: ' + Object.keys(_dailyMaster).length + ' days');
+  } catch(e){
+    if(window._DEBUG) console.warn('[fp87] daily_master.json not available:', e.message);
+    _dailyMaster = {};
+  }
+  return _dailyMaster;
+}
+
+const REGIME_LABEL = {
+  extreme_negative: { t:'Екстремум −', d:'сильний негатив', c:'#ff6b6b', conf:'надійний (~88%)' },
+  extreme_positive: { t:'Екстремум +', d:'сильний позитив', c:'#2bd47d', conf:'надійний (~86%)' },
+  editorial_uplift: { t:'Редакторський', d:'позитив-активність', c:'#9cd49c', conf:'engine занижує' },
+  hidden_polarity:  { t:'Прихована полярність', d:'0, але є нахил', c:'#ffaa33', conf:'низька' },
+  true_neutral:     { t:'Нейтральний', d:'справді 0', c:'#9bb1dc', conf:'низька (~32%)' },
+  baseline:         { t:'Базовий', d:'слабкий сигнал', c:'#9bb1dc', conf:'середня' },
+};
+const CONF_COLOR = { high:'#2bd47d', medium:'#ffaa33', low:'#9bb1dc' };
+const CONF_LABEL = { high:'Висока', medium:'Середня', low:'Низька' };
+
+function renderRegimeCards(){
+  const wrap = el('regimeCards');
+  if(!wrap || !_dailyMaster) return;
+  const today = (typeof fmtDate==='function') ? fmtDate(new Date()) : new Date().toISOString().slice(0,10);
+  const m = _dailyMaster[today];
+  if(!m){ wrap.style.display='none'; return; }
+  wrap.style.display='grid';
+
+  // Score card
+  const sv=el('rcScoreVal'), sc=el('rcScoreCls');
+  if(sv){
+    const s=m.score;
+    sv.textContent=(s>0?'+':'')+s;
+    const clsCol = m.class3==='positive'?'#2bd47d':(m.class3==='negative'?'#ff6b6b':'#9bb1dc');
+    sv.style.color=clsCol;
+    sc.textContent=m.class3==='positive'?'позитивний':(m.class3==='negative'?'негативний':'нейтральний');
+  }
+  // Regime card
+  const reg=REGIME_LABEL[m.regime_type]||REGIME_LABEL.baseline;
+  const rv=el('rcRegimeVal'), rd=el('rcRegimeDesc'), rc=el('rcRegime');
+  if(rv){ rv.textContent=reg.t; rv.style.color=reg.c; rd.textContent=reg.d;
+    rc.title='Режим: '+reg.t+'. '+reg.d+'. Надійність: '+reg.conf+'.\nРежими розрізнені за LATENT_REGIME_AUDIT: extreme=детермінований астро (~85%), editorial=Tarita uplift, neutral=змішаний (true/hidden polarity).'; }
+  // Confidence card
+  const cv=el('rcConfVal'), cp=el('rcConfPrec'), cc=el('rcConf');
+  if(cv){ cv.textContent=CONF_LABEL[m.confidence]||'—'; cv.style.color=CONF_COLOR[m.confidence]||'#9bb1dc';
+    cp.textContent='precision '+Math.round((m.precision||0)*100)+'%';
+    cc.title='Впевненість '+CONF_LABEL[m.confidence]+'. 3-class precision для цього класу: '+Math.round((m.precision||0)*100)+'%.\nКалібровано (sealed): neg 88% / pos 86% / neu 32%.'; }
+  // Space weather card
+  const spv=el('rcSpaceVal'), spd=el('rcSpaceDesc');
+  if(spv){
+    const kp=m.kp, dst=m.dst_min, syn=m.kp_synthetic;
+    let regime='спокій', col='#2bd47d';
+    if(dst!=null && dst<=-30){ regime='буря'; col='#ff6b6b'; }
+    else if(kp>=5){ regime='збурення'; col='#ffaa33'; }
+    spv.textContent='Kp '+(kp!=null?kp:'—')+(syn?'*':'');
+    spv.style.color=col;
+    spd.textContent=(dst!=null?'Dst '+dst+' · ':'')+regime;
+  }
+}
+window.renderRegimeCards = renderRegimeCards;
+
+// v88.8.39-fp87: Bulletin v2 (M3) — render режим+впевненість+причина+контекст+дія
+let _bulletinV2 = null;
+async function loadBulletinV2(){
+  if(_bulletinV2 !== null) return _bulletinV2;
+  try {
+    const resp = await fetch('bulletin_v2.json', { cache: 'default' });
+    if(!resp.ok) throw new Error('HTTP ' + resp.status);
+    const data = await resp.json();
+    _bulletinV2 = data.days || [];
+  } catch(e){
+    if(window._DEBUG) console.warn('[fp87] bulletin_v2.json not available:', e.message);
+    _bulletinV2 = [];
+  }
+  return _bulletinV2;
+}
+function renderBulletinV2(){
+  const card = el('bulletinV2Card'), list = el('bulletinV2List');
+  if(!card || !list || !_bulletinV2 || !_bulletinV2.length){ if(card) card.style.display='none'; return; }
+  card.style.display='block';
+  const clsCol = c => c==='positive'?'#2bd47d':(c==='negative'?'#ff6b6b':'#9bb1dc');
+  list.innerHTML = _bulletinV2.map(b=>{
+    const col = clsCol(b.class3);
+    const s = (b.score>0?'+':'')+b.score;
+    return `<div style="padding:8px 10px;border-radius:8px;border:1px solid var(--border2);background:rgba(11,18,32,.4);border-left:3px solid ${col}">
+      <div style="font-size:12px;font-weight:700;color:var(--text)">${b.weekday} ${b.headline}</div>
+      <div style="font-size:11px;color:var(--dim);margin-top:2px">Причина: ${b.reason}</div>
+      <div style="font-size:11px;color:var(--dim)">Контекст: ${b.context}</div>
+      <div style="font-size:11px;color:${col};margin-top:2px">→ ${b.action}</div>
+    </div>`;
+  }).join('');
+}
+window.renderBulletinV2 = renderBulletinV2;
+
+// v88.8.39-fp87: Chrono panel (M4) — окремий outcome target, r заблоковано при n<10
+let _chronoPanel = null;
+async function loadChronoPanel(){
+  if(_chronoPanel !== null) return _chronoPanel;
+  try {
+    const resp = await fetch('chrono_panel.json', { cache: 'default' });
+    if(!resp.ok) throw new Error('HTTP ' + resp.status);
+    _chronoPanel = await resp.json();
+  } catch(e){
+    if(window._DEBUG) console.warn('[fp87] chrono_panel.json not available:', e.message);
+    _chronoPanel = null;
+  }
+  return _chronoPanel;
+}
+function renderChronoPanel(){
+  const card = el('chronoPanelCard'), body = el('chronoPanelBody'), prog = el('chronoProgress');
+  if(!card || !_chronoPanel){ if(card) card.style.display='none'; return; }
+  card.style.display='block';
+  const m = _chronoPanel.meta || {};
+  const nv = m.n_valid || 0;
+  if(prog) prog.textContent = 'n=' + nv + '/30';
+  const rBlocked = nv < 10;
+  let html = `<div style="margin-bottom:6px">Chrono — <b>незалежний</b> target реальних подій, окремо від Tarita GT.</div>`;
+  html += `<div>Зібрано валідних записів: <b style="color:${nv>=10?'var(--ok)':'var(--warn)'}">${nv}/30</b></div>`;
+  if(rBlocked){
+    html += `<div style="margin-top:4px;color:var(--warn)">⚠ Кореляція r заблокована (n&lt;10) — захист від p-hacking.</div>`;
+    html += `<div style="margin-top:4px;color:var(--dim)">Заповнюй щовечора: add_chrono_day.py. Перший аналіз при n=10, основний тест при n=30.</div>`;
+  } else {
+    const days=(_chronoPanel.days||[]).filter(d=>d.valid);
+    const tm=days.filter(d=>d.tarita_match===true).length;
+    const cm=days.filter(d=>d.chrono_vs_engine===true).length;
+    html += `<div style="margin-top:4px">Tarita-match: ${tm}/${days.length} · Engine-match: ${cm}/${days.length}</div>`;
+  }
+  body.innerHTML = html;
+}
+window.renderChronoPanel = renderChronoPanel;
 
 async function loadEngineScores(){
   if(_engineScores !== null) return _engineScores;
@@ -17489,11 +17670,14 @@ addEventListener('load', ()=>{ initGeolocation(); setStamp(); loadAll(); el('btn
   // v87.62: after scores load, also re-render 3-day pills and 27-day table so Bulletin cells populate.
   // v88.7.15 Г: паралельно завантажуємо expert_overrides_v3.json — застосовуються у getEngineScore().
   try {
-    Promise.all([loadEngineScores(), loadExpertOverrides()]).then(()=>{
+    Promise.all([loadEngineScores(), loadExpertOverrides(), loadDailyMaster(), loadBulletinV2(), loadChronoPanel()]).then(()=>{
       try{ renderHeroBulletin(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
       try{ syncHero(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
       try{ renderHeroAstroLayer(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
       try{ renderScenarioCard(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+      try{ renderRegimeCards(); }catch(e){if(window._DEBUG)console.warn('[fp87 regimeCards]:',e.message)}
+      try{ renderBulletinV2(); }catch(e){if(window._DEBUG)console.warn('[fp87 bulletinV2]:',e.message)}
+      try{ renderChronoPanel(); }catch(e){if(window._DEBUG)console.warn('[fp87 chronoPanel]:',e.message)}
       // Re-draw 27d table if _27dComputed already populated
       try {
         if (typeof draw27dTable === 'function' && typeof _27dComputed !== 'undefined' && _27dComputed && _27dComputed.length) {
