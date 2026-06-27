@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ПРОГНОЗ — G-Index Dashboard</title>
+<style>
+:root{
+  --neg:#F8696B;--neg-bg:#fff0f0;
+  --pos:#63BE7B;--pos-bg:#f0fff4;
+  --neu:#adb5bd;--neu-bg:#f8f9fa;
+  --high:#103e2b;--med:#8a5a00;--low:#888;
+  --ink:#1b1f24;--mut:#6b7480;--bg:#f2f4f7;
+  --card:#fff;--border:#e4e8ec;
+  --warn:#b54708;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font:14px/1.5 system-ui,sans-serif;background:var(--bg);color:var(--ink);padding:16px}
+/* HEADER */
+.header{display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap}
+.header h1{font-size:18px;font-weight:700}
+.header .sub{font-size:12px;color:var(--mut)}
+/* TODAY HERO */
+.hero{background:var(--card);border-radius:14px;border:1px solid var(--border);padding:20px 24px;margin-bottom:16px;display:grid;grid-template-columns:1fr auto;gap:16px;align-items:center}
+.hero-dir{font-size:36px;font-weight:800;letter-spacing:-1px}
+.hero-dir.pos{color:var(--pos)}.hero-dir.neg{color:var(--neg)}.hero-dir.neu{color:var(--neu)}
+.hero-badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:700;padding:4px 10px;border-radius:20px}
+.b-high{background:var(--high);color:#fff}
+.b-med{background:#fde9c8;color:var(--med)}
+.b-low{background:#ececec;color:var(--low)}
+.b-neg{background:var(--neg-bg);color:#c0392b;border:1px solid #ffcdd2}
+.b-pos{background:var(--pos-bg);color:#1a7a40;border:1px solid #c8f0d5}
+.b-neu{background:var(--neu-bg);color:var(--mut);border:1px solid var(--border)}
+.hero-tags{font-size:12px;color:var(--mut);margin-top:8px}
+.hero-right{text-align:right}
+.hero-date{font-size:22px;font-weight:700}
+.hero-kp{font-size:13px;color:var(--mut);margin-top:4px}
+.hero-disc{font-size:11px;color:var(--warn);margin-top:8px;max-width:260px;line-height:1.4}
+/* WEEK GRID */
+.week-title{font-size:13px;font-weight:600;color:var(--mut);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:8px;margin-bottom:18px}
+.card{background:var(--card);border-radius:10px;padding:10px 12px;border:1px solid var(--border);cursor:pointer;transition:box-shadow .15s}
+.card:hover{box-shadow:0 2px 8px rgba(0,0,0,.1)}
+.card.pos{border-left:4px solid var(--pos)}.card.neg{border-left:4px solid var(--neg)}.card.neu{border-left:4px solid #ddd}
+.card.today{box-shadow:0 0 0 2px #2b50b0}
+.c-date{font-weight:600;font-size:12px;color:var(--mut)}
+.c-dir{font-size:16px;font-weight:700;margin:3px 0}
+.c-dir.pos{color:var(--pos)}.c-dir.neg{color:var(--neg)}.c-dir.neu{color:var(--neu)}
+.c-badges{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px}
+.c-tags{font-size:10px;color:var(--mut);margin-top:5px;line-height:1.3}
+.flag{font-size:10px;padding:2px 6px;border-radius:5px}
+.flag-con{background:#fff3cd;color:#8a5a00}
+.flag-syn{background:#eef3ff;color:#2b50b0}
+/* LEGEND */
+.legend{font-size:11px;color:var(--mut);background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 16px;margin-bottom:14px;display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.legend strong{color:var(--ink)}
+/* DISCLAIMER */
+.disc{font-size:11px;color:var(--mut);border-top:1px solid var(--border);padding-top:12px;margin-top:4px;line-height:1.5}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>ПРОГНОЗ · G-Index</h1>
+    <div class="sub">Джерело: Календар Таніти (теги N) + Kp (GFZ/NOAA) · Frozen engine v18.5</div>
+  </div>
+</div>
+
+<div class="legend">
+  <strong>Надійність:</strong>
+  <span class="badge b-high">● high</span> neg/pos, precision ~88/86% — діяти
+  <span class="badge b-med">● med</span> ~60% — обережно  
+  <span class="badge b-low">● low</span> neu (32%) або конфлікт — ігнор
+</div>
+
+<div class="hero" id="hero"></div>
+
+<div class="week-title">Активне вікно</div>
+<div class="grid" id="grid"></div>
+
+<div class="disc">
+  ⚠ Модель у проспективній валідації (V3 freeze до 01.08.2026) · 3-клас directional 70.6% sealed · Відтворює міркування експерта, НЕ реальні події · Outcome-validity: ρ=−0.018 (n=394)
+</div>
+
+<script>
+const TODAY = new Date().toISOString().slice(0,10);
+
+// Data injected from excel_scored.json window
+const DAYS = [{"date": "2026-06-27", "weekday": "Субота", "week_num": 26, "loss_irrecov": null, "loss_sanit": null, "loss_miss": null, "loss_pris": null, "loss_total": null, "enemy_loss": null, "kp": null, "storm": null, "sn": null, "kp_norm": null, "jyotish_raw": "✈ ⊕ Маха Ш.", "rating_raw": "✅Сприятливий", "weekly_forecast": null, "notes": null, "ibase": null, "kgeom": null, "kneuro": null, "result": null, "lindex": null, "cat_w": null, "O5": "good", "O3": "pos", "tags": ["maha_shiva", "podorozhi"], "ab": 3, "pub": 3, "direction": "pos", "kp_pen": 0, "tag_sum": 3, "reliability": "med"}, {"date": "2026-06-28", "weekday": "Неділя", "week_num": 26, "loss_irrecov": null, "loss_sanit": null, "loss_miss": null, "loss_pris": null, "loss_total": null, "enemy_loss": null, "kp": null, "storm": null, "sn": null, "kp_norm": null, "jyotish_raw": "⚡ лікування💊", "rating_raw": "⚡Порожній", "weekly_forecast": null, "notes": null, "ibase": null, "kgeom": null, "kneuro": null, "result": null, "lindex": null, "cat_w": null, "O5": "empty", "O3": "neg", "tags": ["likuvannia", "porozhni_ruky"], "ab": -3, "pub": -3, "direction": "neg", "kp_pen": 0, "tag_sum": -3, "reliability": "med"}, {"date": "2026-06-29", "weekday": "Понеділок", "week_num": 27, "loss_irrecov": null, "loss_sanit": null, "loss_miss": null, "loss_pris": null, "loss_total": null, "enemy_loss": null, "kp": null, "storm": null, "sn": null, "kp_norm": null, "jyotish_raw": "🌕 Ме_ретро Гуру Пурніма", "rating_raw": "⚪Нейтральний", "weekly_forecast": null, "notes": null, "ibase": null, "kgeom": null, "kneuro": null, "result": null, "lindex": null, "cat_w": null, "O5": "neutral", "O3": "neu", "tags": ["povnia"], "ab": -3, "pub": -3, "direction": "neg", "kp_pen": 0, "tag_sum": -3, "reliability": "med"}, {"date": "2026-06-30", "weekday": "Вівторок", "week_num": 27, "loss_irrecov": null, "loss_sanit": null, "loss_miss": null, "loss_pris": null, "loss_total": null, "enemy_loss": null, "kp": null, "storm": null, "sn": null, "kp_norm": null, "jyotish_raw": null, "rating_raw": "⚪Нейтральний", "weekly_forecast": null, "notes": null, "ibase": null, "kgeom": null, "kneuro": null, "result": null, "lindex": null, "cat_w": null, "O5": "neutral", "O3": "neu", "tags": [], "ab": 0, "pub": 0, "direction": "neu", "kp_pen": 0, "tag_sum": 0, "reliability": "low"}, {"date": "2026-07-01", "weekday": "Середа", "week_num": 27, "loss_irrecov": null, "loss_sanit": null, "loss_miss": null, "loss_pris": null, "loss_total": null, "enemy_loss": null, "kp": null, "storm": null, "sn": null, "kp_norm": null, "jyotish_raw": "Нова одежда 📚", "rating_raw": "⚪Нейтральний", "weekly_forecast": null, "notes": null, "ibase": null, "kgeom": null, "kneuro": null, "result": null, "lindex": null, "cat_w": null, "O5": "neutral", "O3": "neu", "tags": ["navchannia", "nova_odezha"], "ab": 3, "pub": 3, "direction": "pos", "kp_pen": 0, "tag_sum": 3, "reliability": "med"}, {"date": "2026-07-02", "weekday": "Четвер", "week_num": 27, "loss_irrecov": null, "loss_sanit": null, "loss_miss": null, "loss_pris": null, "loss_total": null, "enemy_loss": null, "kp": null, "storm": null, "sn": null, "kp_norm": null, "jyotish_raw": "✂ ✈ ⊕", "rating_raw": "✅Сприятливий", "weekly_forecast": null, "notes": null, "ibase": null, "kgeom": null, "kneuro": null, "result": null, "lindex": null, "cat_w": null, "O5": "good", "O3": "pos", "tags": ["podorozhi", "strizhka"], "ab": 5, "pub": 3, "direction": "pos", "kp_pen": 0, "tag_sum": 5, "reliability": "med"}, {"date": "2026-07-03", "weekday": "П'ятниця", "week_num": 27, "loss_irrecov": null, "loss_sanit": null, "loss_miss": null, "loss_pris": null, "loss_total": null, "enemy_loss": null, "kp": null, "storm": null, "sn": null, "kp_norm": null, "jyotish_raw": "⚡ Ганеша", "rating_raw": "⚡Порожній", "weekly_forecast": null, "notes": null, "ibase": null, "kgeom": null, "kneuro": null, "result": null, "lindex": null, "cat_w": null, "O5": "empty", "O3": "neg", "tags": ["ganesha", "porozhni_ruky"], "ab": -7, "pub": -3, "direction": "neg", "kp_pen": 0, "tag_sum": -7, "reliability": "med"}, {"date": "2026-07-04", "weekday": "Субота", "week_num": 27, "loss_irrecov": null, "loss_sanit": null, "loss_miss": null, "loss_pris": null, "loss_total": null, "enemy_loss": null, "kp": null, "storm": null, "sn": null, "kp_norm": null, "jyotish_raw": "⊕", "rating_raw": "✅Сприятливий", "weekly_forecast": null, "notes": null, "ibase": null, "kgeom": null, "kneuro": null, "result": null, "lindex": null, "cat_w": null, "O5": "good", "O3": "pos", "tags": [], "ab": 0, "pub": 0, "direction": "neu", "kp_pen": 0, "tag_sum": 0, "reliability": "low"}, {"date": "2026-07-05", "weekday": "Неділя", "week_num": 27, "loss_irrecov": null, "loss_sanit": null, "loss_miss": null, "loss_pris": null, "loss_total": null, "enemy_loss": null, "kp": null, "storm": null, "sn": null, "kp_norm": null, "jyotish_raw": "⊕", "rating_raw": "✅Сприятливий", "weekly_forecast": null, "notes": null, "ibase": null, "kgeom": null, "kneuro": null, "result": null, "lindex": null, "cat_w": null, "O5": "good", "O3": "pos", "tags": [], "ab": 0, "pub": 0, "direction": "neu", "kp_pen": 0, "tag_sum": 0, "reliability": "low"}, {"date": "2026-07-06", "weekday": "Понеділок", "week_num": 28, "loss_irrecov": null, "loss_sanit": null, "loss_miss": null, "loss_pris": null, "loss_total": null, "enemy_loss": null, "kp": null, "storm": null, "sn": null, "kp_norm": null, "jyotish_raw": "📚 нова одежда", "rating_raw": "⚪Нейтральний", "weekly_forecast": null, "notes": null, "ibase": null, "kgeom": null, "kneuro": null, "result": null, "lindex": null, "cat_w": null, "O5": "neutral", "O3": "neu", "tags": ["navchannia", "nova_odezha"], "ab": 3, "pub": 3, "direction": "pos", "kp_pen": 0, "tag_sum": 3, "reliability": "med"}, {"date": "2026-07-07", "weekday": "Вівторок", "week_num": 28, "loss_irrecov": null, "loss_sanit": null, "loss_miss": null, "loss_pris": null, "loss_total": null, "enemy_loss": null, "kp": null, "storm": null, "sn": null, "kp_norm": null, "jyotish_raw": "❤ ⊕", "rating_raw": "✅Сприятливий", "weekly_forecast": null, "notes": null, "ibase": null, "kgeom": null, "kneuro": null, "result": null, "lindex": null, "cat_w": null, "O5": "good", "O3": "pos", "tags": ["nova_odezha_fav"], "ab": 3, "pub": 3, "direction": "pos", "kp_pen": 0, "tag_sum": 3, "reliability": "med"}, {"date": "2026-07-08", "weekday": "Середа", "week_num": 28, "loss_irrecov": null, "loss_sanit": null, "loss_miss": null, "loss_pris": null, "loss_total": null, "enemy_loss": null, "kp": null, "storm": null, "sn": null, "kp_norm": null, "jyotish_raw": "⚡", "rating_raw": "⚡Порожній", "weekly_forecast": null, "notes": null, "ibase": null, "kgeom": null, "kneuro": null, "result": null, "lindex": null, "cat_w": null, "O5": "empty", "O3": "neg", "tags": ["porozhni_ruky"], "ab": -4, "pub": -3, "direction": "neg", "kp_pen": 0, "tag_sum": -4, "reliability": "med"}, {"date": "2026-07-09", "weekday": "Четвер", "week_num": 28, "loss_irrecov": null, "loss_sanit": null, "loss_miss": null, "loss_pris": null, "loss_total": null, "enemy_loss": null, "kp": null, "storm": null, "sn": null, "kp_norm": null, "jyotish_raw": "✂ ✈ нова одежда ❤ 📚", "rating_raw": "✅Сприятливий", "weekly_forecast": null, "notes": null, "ibase": null, "kgeom": null, "kneuro": null, "result": null, "lindex": null, "cat_w": null, "O5": "good", "O3": "pos", "tags": ["navchannia", "nova_odezha", "nova_odezha_fav", "podorozhi", "strizhka"], "ab": 11, "pub": 3, "direction": "pos", "kp_pen": 0, "tag_sum": 11, "reliability": "med"}, {"date": "2026-07-10", "weekday": "П'ятниця", "week_num": 28, "loss_irrecov": null, "loss_sanit": null, "loss_miss": null, "loss_pris": null, "loss_total": null, "enemy_loss": null, "kp": null, "storm": null, "sn": null, "kp_norm": null, "jyotish_raw": "Екадаші🥛 💊", "rating_raw": "⚪Нейтральний", "weekly_forecast": null, "notes": null, "ibase": null, "kgeom": null, "kneuro": null, "result": null, "lindex": null, "cat_w": null, "O5": "neutral", "O3": "neu", "tags": ["ekadashi", "likuvannia"], "ab": 1, "pub": 1, "direction": "pos", "kp_pen": 0, "tag_sum": 1, "reliability": "med"}, {"date": "2026-07-11", "weekday": "Субота", "week_num": 28, "loss_irrecov": null, "loss_sanit": null, "loss_miss": null, "loss_pris": null, "loss_total": null, "enemy_loss": null, "kp": null, "storm": null, "sn": null, "kp_norm": null, "jyotish_raw": "❤ 🟢 🎯", "rating_raw": "🟢Сприятливий", "weekly_forecast": null, "notes": null, "ibase": null, "kgeom": null, "kneuro": null, "result": null, "lindex": null, "cat_w": null, "O5": "great", "O3": "pos", "tags": ["nova_odezha_fav", "tsil", "udacha"], "ab": 11, "pub": 3, "direction": "pos", "kp_pen": 0, "tag_sum": 11, "reliability": "med"}, {"date": "2026-07-12", "weekday": "Неділя", "week_num": 28, "loss_irrecov": null, "loss_sanit": null, "loss_miss": null, "loss_pris": null, "loss_total": null, "enemy_loss": null, "kp": null, "storm": null, "sn": null, "kp_norm": null, "jyotish_raw": "✂ ✈ ⊕ Маха Ш. нова одежда ⚡", "rating_raw": "⚡Порожній", "weekly_forecast": null, "notes": null, "ibase": null, "kgeom": null, "kneuro": null, "result": null, "lindex": null, "cat_w": null, "O5": "empty", "O3": "neg", "tags": ["maha_shiva", "nova_odezha", "podorozhi", "porozhni_ruky", "strizhka"], "ab": 2, "pub": 2, "direction": "pos", "kp_pen": 0, "tag_sum": 2, "reliability": "med"}, {"date": "2026-07-13", "weekday": "Понеділок", "week_num": 29, "loss_irrecov": null, "loss_sanit": null, "loss_miss": null, "loss_pris": null, "loss_total": null, "enemy_loss": null, "kp": null, "storm": null, "sn": null, "kp_norm": null, "jyotish_raw": "⚡ Трезубець лікування💊", "rating_raw": "⚡Порожній", "weekly_forecast": null, "notes": null, "ibase": null, "kgeom": null, "kneuro": null, "result": null, "lindex": null, "cat_w": null, "O5": "empty", "O3": "neg", "tags": ["likuvannia", "porozhni_ruky", "trishula"], "ab": -7, "pub": -3, "direction": "neg", "kp_pen": 0, "tag_sum": -7, "reliability": "med"}, {"date": "2026-07-14", "weekday": "Вівторок", "week_num": 29, "loss_irrecov": null, "loss_sanit": null, "loss_miss": null, "loss_pris": null, "loss_total": null, "enemy_loss": null, "kp": null, "storm": null, "sn": null, "kp_norm": null, "jyotish_raw": "Амавасья🌑", "rating_raw": "🔴Несприятливий", "weekly_forecast": null, "notes": null, "ibase": null, "kgeom": null, "kneuro": null, "result": null, "lindex": null, "cat_w": null, "O5": "bad", "O3": "neg", "tags": ["amavasya"], "ab": -4, "pub": -3, "direction": "neg", "kp_pen": 0, "tag_sum": -4, "reliability": "med"}, {"date": "2026-07-15", "weekday": "Середа", "week_num": 29, "loss_irrecov": null, "loss_sanit": null, "loss_miss": null, "loss_pris": null, "loss_total": null, "enemy_loss": null, "kp": null, "storm": null, "sn": null, "kp_norm": null, "jyotish_raw": "✂ Удача🟢", "rating_raw": "🟢Сприятливий", "weekly_forecast": null, "notes": null, "ibase": null, "kgeom": null, "kneuro": null, "result": null, "lindex": null, "cat_w": null, "O5": "great", "O3": "pos", "tags": ["strizhka", "udacha"], "ab": 7, "pub": 3, "direction": "pos", "kp_pen": 0, "tag_sum": 7, "reliability": "med"}, {"date": "2026-07-16", "weekday": "Четвер", "week_num": 29, "loss_irrecov": null, "loss_sanit": null, "loss_miss": null, "loss_pris": null, "loss_total": null, "enemy_loss": null, "kp": null, "storm": null, "sn": null, "kp_norm": null, "jyotish_raw": "Сурья☀", "rating_raw": "⚪Нейтральний", "weekly_forecast": null, "notes": null, "ibase": null, "kgeom": null, "kneuro": null, "result": null, "lindex": null, "cat_w": null, "O5": "neutral", "O3": "neu", "tags": ["surya"], "ab": -1, "pub": -1, "direction": "neg", "kp_pen": 0, "tag_sum": -1, "reliability": "med"}, {"date": "2026-07-17", "weekday": "П'ятниця", "week_num": 29, "loss_irrecov": null, "loss_sanit": null, "loss_miss": null, "loss_pris": null, "loss_total": null, "enemy_loss": null, "kp": null, "storm": null, "sn": null, "kp_norm": null, "jyotish_raw": "Сурья☀ ⚡ Ганеша", "rating_raw": "⚡Порожній", "weekly_forecast": null, "notes": null, "ibase": null, "kgeom": null, "kneuro": null, "result": null, "lindex": null, "cat_w": null, "O5": "empty", "O3": "neg", "tags": ["ganesha", "porozhni_ruky", "surya"], "ab": -8, "pub": -3, "direction": "neg", "kp_pen": 0, "tag_sum": -8, "reliability": "med"}, {"date": "2026-07-18", "weekday": "Субота", "week_num": 29, "loss_irrecov": null, "loss_sanit": null, "loss_miss": null, "loss_pris": null, "loss_total": null, "enemy_loss": null, "kp": null, "storm": null, "sn": null, "kp_norm": null, "jyotish_raw": null, "rating_raw": "⚪Нейтральний", "weekly_forecast": null, "notes": null, "ibase": null, "kgeom": null, "kneuro": null, "result": null, "lindex": null, "cat_w": null, "O5": "neutral", "O3": "neu", "tags": [], "ab": 0, "pub": 0, "direction": "neu", "kp_pen": 0, "tag_sum": 0, "reliability": "low"}];
+
+const DIR_UA = {pos:'сприятливий', neg:'несприятливий', neu:'нейтральний'};
+const REL_LABEL = {high:'діяти', med:'слабко', low:'ігнор'};
+const REL_CLS = {high:'b-high', med:'b-med', low:'b-low'};
+const DIR_CLS = {pos:'b-pos', neg:'b-neg', neu:'b-neu'};
+
+function renderCard(d, isHero=false) {
+  const dir = d.direction || 'neu';
+  const rel = d.reliability || 'low';
+  const tags = (d.tags||[]).slice(0,4).join(' · ') || '—';
+  const kpStr = d.kp != null ? `Kp=${d.kp}${d.kp_synthetic?'*':''}` : 'Kp—';
+  const conflict = d.conflict_master_vs_engine ? '<span class="flag flag-con">конфлікт</span>' : '';
+  const syn = d.kp_synthetic ? '<span class="flag flag-syn">Kp синт.</span>' : '';
+  
+  if(isHero) {
+    document.getElementById('hero').innerHTML = `
+      <div>
+        <div class="hero-dir ${dir}">${DIR_UA[dir]}</div>
+        <div class="hero-badges">
+          <span class="badge ${REL_CLS[rel]}">${REL_LABEL[rel]}</span>
+          <span class="badge ${DIR_CLS[dir]}">${dir==='pos'?'86%':dir==='neg'?'88%':'32%'} precision</span>
+          ${conflict}${syn}
+        </div>
+        <div class="hero-tags">${tags}</div>
+        ${rel==='low'?'<div class="hero-disc">⚠ низька надійність — не будувати плани на цей сигнал</div>':''}
+      </div>
+      <div class="hero-right">
+        <div class="hero-date">${d.date}</div>
+        <div class="hero-kp">${kpStr} · AB=${d.ab??'—'}</div>
+      </div>`;
+    return;
+  }
+  return `<div class="card ${dir}${d.date===TODAY?' today':''}">
+    <div class="c-date">${d.date}</div>
+    <div class="c-dir ${dir}">${DIR_UA[dir]}</div>
+    <div class="c-badges">
+      <span class="badge ${REL_CLS[rel]}">${REL_LABEL[rel]}</span>
+      ${conflict}${syn}
+    </div>
+    <div class="c-tags">${tags}</div>
+  </div>`;
+}
+
+// Render
+const todayData = DAYS.find(d=>d.date===TODAY) || DAYS[0];
+renderCard(todayData, true);
+
+const grid = document.getElementById('grid');
+DAYS.forEach(d => { grid.insertAdjacentHTML('beforeend', renderCard(d)); });
+</script>
+</body></html>
