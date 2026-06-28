@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.39-fp88</title>
+  <title>G-Index — Космофізичний дашборд v88.8.39-fp89</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1349,7 +1349,7 @@ body.simple-mode .col-hide-mobile {
           onclick="(async function(){try{if('serviceWorker' in navigator){const regs=await navigator.serviceWorker.getRegistrations();await Promise.all(regs.map(r=>r.unregister()));}if('caches' in window){const keys=await caches.keys();await Promise.all(keys.map(k=>caches.delete(k)));}location.reload(true);}catch(e){alert('Reset error: '+e.message);}})()"
           style="background:#2a1a1a;color:#ff9f9f;border:1px solid #4a2a2a;font-size:11px;padding:3px 8px;border-radius:6px">🗑 Кеш</button>
         <button id="btnShare" title="Поділитись поточним G-станом" aria-label="Поділитись" onclick="shareGState()" style="background: var(--border);color: var(--muted);border:1px solid var(--border2)">📤</button>
-        <button id="btnChronoExport" title="Експорт Chrono Journal" onclick="(function(){try{var d=localStorage.getItem('gindex_chrono_v1')||'[]';prompt('CHRONO JSON:',d);}catch(e){alert('Помилка: '+e.message);}})()" style="background:#0a2a1a;color:#44ffaa;border:1px solid #1a6644;font-size:11px;padding:3px 8px;border-radius:6px">📊</button>
+        <button id="btnChronoExport" title="Експорт Chrono Journal" onclick="(function(){try{var d=localStorage.getItem('gindex_chrono_v2_abcd')||'[]';prompt('CHRONO JSON (A/B/C/D):',d);}catch(e){alert('Помилка: '+e.message);}})()" style="background:#0a2a1a;color:#44ffaa;border:1px solid #1a6644;font-size:11px;padding:3px 8px;border-radius:6px">📊</button>
         <button class="lang-btn active" id="btnLang" title="Switch language / Змінити мову" aria-label="Змінити мову інтерфейсу">UA</button>
         <button class="lang-btn" id="btnSimpleMode" title="Простий режим (тільки головне) / Експертний режим"
           aria-label="Перемкнути простий/експертний режим" aria-pressed="false"
@@ -1603,7 +1603,7 @@ body.simple-mode .col-hide-mobile {
       </div>
       <span style="font-size:11px;color:var(--ok);font-weight:700;white-space:nowrap">Подивитись →</span>
     </a>
-    <!-- v88.8.39-fp88: Regime cards (M2) — score+regime+confidence+space-weather. daily_master.json -->
+    <!-- v88.8.39-fp89: Regime cards (M2) — score+regime+confidence+space-weather. daily_master.json -->
     <div id="regimeCards" style="display:none;margin:0 0 10px;gap:8px;grid-template-columns:repeat(4,1fr)">
       <div id="rcScore" style="padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:rgba(11,18,32,.5);text-align:center">
         <div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em">Оцінка дня</div>
@@ -1630,7 +1630,7 @@ body.simple-mode .col-hide-mobile {
          Джерело: NOAA G-Scale (public), Groves & Akala Radio Science 2012.
          Дані: kp live (lastWWV), Dst (computeDstModifier), local_hour, _userLat. -->
     <div id="gnssCard" style="margin:0 0 10px;padding:10px 14px;border-radius:12px;border:1px solid rgba(55,167,255,.22);background:rgba(10,20,40,.5);display:none"></div>
-    <!-- v88.8.39-fp88: Bulletin v2 (M3) — режим+впевненість+причина+контекст+дія. bulletin_v2.json -->
+    <!-- v88.8.39-fp89: Bulletin v2 (M3) — режим+впевненість+причина+контекст+дія. bulletin_v2.json -->
     <details id="bulletinV2Card" style="margin:0 0 10px;padding:10px 14px;border-radius:12px;border:1px solid var(--border);background:rgba(11,18,32,.5);display:none">
       <summary style="cursor:pointer;font-size:12px;font-weight:600;color:var(--muted);list-style:none;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <span style="font-size:14px">📋</span>
@@ -1640,7 +1640,7 @@ body.simple-mode .col-hide-mobile {
       <div id="bulletinV2List" style="margin-top:10px;display:flex;flex-direction:column;gap:8px"></div>
       <div style="margin-top:8px;font-size:10px;color:var(--dim);line-height:1.5">Відтворює редакторську логіку Tarita, НЕ реальні події. Engine v18.5 frozen.</div>
     </details>
-    <!-- v88.8.39-fp88: Chrono panel (M4) — НЕЗАЛЕЖНИЙ outcome target. НЕ змішувати з Tarita GT. -->
+    <!-- v88.8.39-fp89: Chrono panel (M4) — НЕЗАЛЕЖНИЙ outcome target. НЕ змішувати з Tarita GT. -->
     <details id="chronoPanelCard" style="margin:0 0 10px;padding:10px 14px;border-radius:12px;border:1px solid rgba(155,177,220,.22);background:rgba(11,18,32,.5);display:none">
       <summary style="cursor:pointer;font-size:12px;font-weight:600;color:var(--muted);list-style:none;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <span style="font-size:14px">📓</span>
@@ -2184,49 +2184,51 @@ body.simple-mode .col-hide-mobile {
         </summary>
         <div style="padding:0 14px 14px 14px">
           <div style="font-size:10px;color:var(--faint);margin-bottom:8px;line-height:1.4">
-            Щодня 1 хв: оцінка стану. <strong>30+ записів</strong> → бачиш кореляцію свого тіла з G.<br>
-            <span style="color:var(--dim)">Зберігається локально (твій браузер). Backend не задіяний. Експорт CSV доступний.</span>
+            Щовечора 1 хв: оціни день −3..+3 <strong>ДО</strong> перегляду G (blind). <strong>30 записів</strong> → перший формальний тест.<br>
+            <span style="color:var(--dim)">Схема A/B/C/D (preregistration locked). Локально. Export у chrono_daily.json.</span>
           </div>
-          <!-- Today entry form -->
+          <!-- Today entry form — A/B/C/D −3..+3 (preregistration schema) -->
           <div id="chronoForm" style="display:flex;flex-direction:column;gap:7px;font-size:11px;margin-bottom:10px">
-            <div style="display:grid;grid-template-columns:80px 1fr 30px;gap:6px;align-items:center">
-              <label style="color:var(--dim)">😴 Сон</label>
-              <input type="range" id="chSleep" min="1" max="10" value="7" oninput="GChrono._oninput('Sleep', this.value)" style="width:100%">
-              <span id="chSleepV" style="color:var(--accent);font-weight:700;text-align:center">7</span>
+            <div style="display:grid;grid-template-columns:140px 1fr 30px;gap:6px;align-items:center">
+              <label style="color:var(--dim)">A · стан/настрій</label>
+              <input type="range" id="chA" min="-3" max="3" value="0" oninput="GChrono._oninput('A', this.value)" style="width:100%">
+              <span id="chAV" style="color:var(--accent);font-weight:700;text-align:center">0</span>
             </div>
-            <div style="display:grid;grid-template-columns:80px 1fr 30px;gap:6px;align-items:center">
-              <label style="color:var(--dim)">⚡ Енергія</label>
-              <input type="range" id="chEnergy" min="1" max="10" value="7" oninput="GChrono._oninput('Energy', this.value)" style="width:100%">
-              <span id="chEnergyV" style="color:var(--accent);font-weight:700;text-align:center">7</span>
+            <div style="display:grid;grid-template-columns:140px 1fr 30px;gap:6px;align-items:center">
+              <label style="color:var(--dim)">B · продуктивність</label>
+              <input type="range" id="chB" min="-3" max="3" value="0" oninput="GChrono._oninput('B', this.value)" style="width:100%">
+              <span id="chBV" style="color:var(--accent);font-weight:700;text-align:center">0</span>
             </div>
-            <div style="display:grid;grid-template-columns:80px 1fr 30px;gap:6px;align-items:center">
-              <label style="color:var(--dim)">🙂 Настрій</label>
-              <input type="range" id="chMood" min="1" max="10" value="7" oninput="GChrono._oninput('Mood', this.value)" style="width:100%">
-              <span id="chMoodV" style="color:var(--accent);font-weight:700;text-align:center">7</span>
+            <div style="display:grid;grid-template-columns:140px 1fr 30px;gap:6px;align-items:center">
+              <label style="color:var(--dim)">C · фізичний стан</label>
+              <input type="range" id="chC" min="-3" max="3" value="0" oninput="GChrono._oninput('C', this.value)" style="width:100%">
+              <span id="chCV" style="color:var(--accent);font-weight:700;text-align:center">0</span>
             </div>
-            <div style="display:grid;grid-template-columns:80px 1fr 30px;gap:6px;align-items:center">
-              <label style="color:var(--dim)">😰 Стрес</label>
-              <input type="range" id="chStress" min="1" max="10" value="4" oninput="GChrono._oninput('Stress', this.value)" style="width:100%">
-              <span id="chStressV" style="color:var(--accent);font-weight:700;text-align:center">4</span>
+            <div style="display:grid;grid-template-columns:140px 1fr 30px;gap:6px;align-items:center">
+              <label style="color:var(--dim)">D · зовнішні події</label>
+              <input type="range" id="chD" min="-3" max="3" value="0" oninput="GChrono._oninput('D', this.value)" style="width:100%">
+              <span id="chDV" style="color:var(--accent);font-weight:700;text-align:center">0</span>
             </div>
-            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px;font-size:10px;color:var(--dim)">
-              <label><input type="checkbox" id="chTagAlc"> алкоголь</label>
-              <label><input type="checkbox" id="chTagCaf"> кофеїн&nbsp;після&nbsp;14:00</label>
-              <label><input type="checkbox" id="chTagExe"> інтенс.&nbsp;тренування</label>
-              <label><input type="checkbox" id="chTagIll"> застуда/біль</label>
-              <label><input type="checkbox" id="chTagTrv"> перельот/часовий&nbsp;пояс</label>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px;font-size:10px;color:var(--dim);align-items:center">
+              <label>exposure:
+                <select id="chExposure" style="background:#0a1428;color:var(--text);border:1px solid var(--border2);border-radius:5px;padding:2px 6px;font-size:10px">
+                  <option value="active">active</option>
+                  <option value="passive">passive</option>
+                  <option value="none">none</option>
+                  <option value="invalid">invalid</option>
+                </select>
+              </label>
+              <label><input type="checkbox" id="chDelayed"> відкладена подія</label>
             </div>
-            <input type="number" step="0.1" id="chHrv" placeholder="HRV (RMSSD ms) — опційно з wearable"
-              style="background:#0a1428;color:var(--text);border:1px solid var(--border2);border-radius:6px;padding:5px 9px;font-size:11px;width:100%">
             <textarea id="chNotes" placeholder="Замітки (опц.)" maxlength="200" rows="2"
               style="background:#0a1428;color:var(--text);border:1px solid var(--border2);border-radius:6px;padding:5px 9px;font-size:11px;resize:vertical"></textarea>
             <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:2px">
-              <button onclick="GChrono.saveToday()" style="background: var(--ok);color:#0a1428;border:none;border-radius:6px;padding:5px 12px;font-size:11px;cursor:pointer;font-weight:700">💾 Зберегти сьогодні</button>
-              <button onclick="GChrono.exportCSV()" style="background: var(--border);color: var(--muted);border:1px solid var(--border2);border-radius:6px;padding:5px 10px;font-size:11px;cursor:pointer">📥 CSV</button>
+              <button onclick="GChrono.saveToday()" style="background: var(--ok);color:#0a1428;border:none;border-radius:6px;padding:5px 12px;font-size:11px;cursor:pointer;font-weight:700">💾 Зберегти (blind)</button>
+              <button onclick="GChrono.exportJSON()" style="background: var(--border);color: var(--muted);border:1px solid var(--border2);border-radius:6px;padding:5px 10px;font-size:11px;cursor:pointer">📥 JSON</button>
               <button onclick="GChrono.clearAll()" style="background: var(--border);color:#ff9999;border:1px solid var(--border2);border-radius:6px;padding:5px 10px;font-size:11px;cursor:pointer">✕ Очистити все</button>
             </div>
           </div>
-          <!-- Stats / correlation -->
+          <!-- Stats -->
           <div id="chronoStats" style="padding:10px 12px;border-radius:8px;background:rgba(43,212,125,.06);border:1px solid rgba(43,212,125,.18);font-size:11px;color:var(--text2);line-height:1.5"></div>
         </div>
       </details>
@@ -4229,7 +4231,7 @@ async function loadExpertOverrides(){
   }
 }
 
-// v88.8.39-fp88: daily_master.json loader + regime cards (M2). Freeze-safe, read-only.
+// v88.8.39-fp89: daily_master.json loader + regime cards (M2). Freeze-safe, read-only.
 let _dailyMaster = null;
 async function loadDailyMaster(){
   if(_dailyMaster !== null) return _dailyMaster;
@@ -4302,7 +4304,7 @@ function renderRegimeCards(){
 }
 window.renderRegimeCards = renderRegimeCards;
 
-// v88.8.39-fp88: Bulletin v2 (M3) — render режим+впевненість+причина+контекст+дія
+// v88.8.39-fp89: Bulletin v2 (M3) — render режим+впевненість+причина+контекст+дія
 let _bulletinV2 = null;
 async function loadBulletinV2(){
   if(_bulletinV2 !== null) return _bulletinV2;
@@ -4335,7 +4337,7 @@ function renderBulletinV2(){
 }
 window.renderBulletinV2 = renderBulletinV2;
 
-// v88.8.39-fp88: Chrono panel (M4) — окремий outcome target, r заблоковано при n<10
+// v88.8.39-fp89: Chrono panel (M4) — окремий outcome target, r заблоковано при n<10
 let _chronoPanel = null;
 async function loadChronoPanel(){
   if(_chronoPanel !== null) return _chronoPanel;
@@ -18649,197 +18651,113 @@ window.__regressUI = function(){
 // stress, hrv, tags:{alc,caf,exe,ill,trv}, notes, gAtSave}.
 // ═══════════════════════════════════════════════════════════════════════════
 const GChrono = (function(){
-  const LS_KEY = 'gindex_chrono_v1';
-  const MIN_N = 30; // мінімум для r-claims (Bonferroni-safe ~r≥0.35)
+  // v88.8.39-fp89: A/B/C/D −3..+3 (CHRONO_PREREGISTRATION locked). Blind mode. Export chrono_daily.json.
+  const LS_KEY = 'gindex_chrono_v2_abcd';  // new key — old Sleep/Energy schema NOT mixed
+  const MIN_R = 10;   // r не дивитись при n<10 (preregistration)
+  const MIN_TEST = 30; // формальний тест
 
   function _todayDateStr(){
     const d = new Date();
     return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
   }
-
-  function _lsLoad(){
-    try { return JSON.parse(localStorage.getItem(LS_KEY) || '[]'); }
-    catch(e){ return []; }
-  }
-  function _lsSave(arr){
-    try { localStorage.setItem(LS_KEY, JSON.stringify(arr)); return true; }
-    catch(e){ console.warn('[GChrono] save failed:', e.message); return false; }
-  }
-
-  function _gnow(){
-    // Спроба прочитати поточний live G з window state (set by main render).
-    try { return (typeof window.__lastG === 'number' && isFinite(window.__lastG)) ? window.__lastG : null; }
-    catch(e){ return null; }
-  }
-
-  function _pearson(xs, ys){
-    const n = Math.min(xs.length, ys.length);
-    if(n < 3) return null;
-    let sx=0,sy=0,sxx=0,syy=0,sxy=0;
-    for(let i=0;i<n;i++){
-      const x=+xs[i], y=+ys[i];
-      if(!isFinite(x) || !isFinite(y)) return null;
-      sx+=x; sy+=y; sxx+=x*x; syy+=y*y; sxy+=x*y;
-    }
-    const num = n*sxy - sx*sy;
-    const den = Math.sqrt((n*sxx - sx*sx) * (n*syy - sy*sy));
-    if(den === 0) return null;
-    return num/den;
-  }
+  function _lsLoad(){ try { return JSON.parse(localStorage.getItem(LS_KEY) || '[]'); } catch(e){ return []; } }
+  function _lsSave(arr){ try { localStorage.setItem(LS_KEY, JSON.stringify(arr)); return true; } catch(e){ return false; } }
 
   function saveToday(){
-    const e = {
-      date: _todayDateStr(),
-      sleep:  +(document.getElementById('chSleep')?.value || 0),
-      energy: +(document.getElementById('chEnergy')?.value || 0),
-      mood:   +(document.getElementById('chMood')?.value || 0),
-      stress: +(document.getElementById('chStress')?.value || 0),
-      hrv:    parseFloat(document.getElementById('chHrv')?.value || '') || null,
-      tags: {
-        alc: !!document.getElementById('chTagAlc')?.checked,
-        caf: !!document.getElementById('chTagCaf')?.checked,
-        exe: !!document.getElementById('chTagExe')?.checked,
-        ill: !!document.getElementById('chTagIll')?.checked,
-        trv: !!document.getElementById('chTagTrv')?.checked
-      },
-      notes: (document.getElementById('chNotes')?.value || '').slice(0, 200),
-      gAtSave: _gnow(),
-      ts: Date.now()
+    const A=+(document.getElementById('chA')?.value||0);
+    const B=+(document.getElementById('chB')?.value||0);
+    const C=+(document.getElementById('chC')?.value||0);
+    const D=+(document.getElementById('chD')?.value||0);
+    const mean=Math.round(((A+B+C+D)/4)*100)/100;
+    const e={
+      date:_todayDateStr(), axis_a:A, axis_b:B, axis_c:C, axis_d:D, chrono_mean:mean,
+      exposure:(document.getElementById('chExposure')?.value||'active'),
+      delayed_major_event:(document.getElementById('chDelayed')?.checked?1:0),
+      note:(document.getElementById('chNotes')?.value||'').slice(0,200),
+      locked:true, locked_at:new Date().toISOString().slice(0,16)+'Z', ts:Date.now()
     };
-    const arr = _lsLoad();
-    // Replace if same date exists
-    const idx = arr.findIndex(x => x.date === e.date);
-    if(idx >= 0) arr[idx] = e; else arr.push(e);
-    arr.sort((a,b) => a.date.localeCompare(b.date));
-    if(_lsSave(arr)) renderStats();
-    else _setStatsHTML('<span style="color:#ff9999">⚠ Не вдалось зберегти (localStorage недоступний)</span>');
+    const arr=_lsLoad();
+    const idx=arr.findIndex(x=>x.date===e.date);
+    // lock: if already saved & locked, block re-edit (preregistration)
+    if(idx>=0 && arr[idx].locked){ alert('Запис за '+e.date+' вже залочено (blind protocol). Корекція — лише через note у Python.'); return; }
+    if(idx>=0) arr[idx]=e; else arr.push(e);
+    arr.sort((a,b)=>a.date.localeCompare(b.date));
+    if(_lsSave(arr)){ renderStats(); }
+    else { _setStatsHTML('<span style="color:#ff9999">⚠ localStorage недоступний</span>'); }
   }
 
   function clearAll(){
-    if(!confirm('Видалити ВСІ записи журналу? Цього не можна скасувати.')) return;
+    if(!confirm('Видалити ВСІ записи журналу? Незворотно.')) return;
     try { localStorage.removeItem(LS_KEY); } catch(e){}
-    renderStats();
-    _prefillToday();
+    renderStats(); _prefillToday();
   }
 
-  function exportCSV(){
-    const arr = _lsLoad();
+  function exportJSON(){
+    const arr=_lsLoad();
     if(!arr.length){ alert('Журнал порожній'); return; }
-    const rows = [['date','sleep','energy','mood','stress','hrv','alc','caf','exe','ill','trv','g_at_save','notes']];
-    arr.forEach(e => rows.push([
-      e.date, e.sleep, e.energy, e.mood, e.stress,
-      (e.hrv ?? ''),
-      (e.tags?.alc?'1':'0'), (e.tags?.caf?'1':'0'), (e.tags?.exe?'1':'0'),
-      (e.tags?.ill?'1':'0'), (e.tags?.trv?'1':'0'),
-      (e.gAtSave ?? ''),
-      (e.notes || '').replace(/"/g,'""').replace(/[\r\n]+/g,' ')
-    ]));
-    const csv = rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n');
-    const blob = new Blob(['\ufeff'+csv], {type:'text/csv;charset=utf-8'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = 'gindex_chrono_' + _todayDateStr() + '.csv';
+    // chrono_daily.json compatible format
+    const entries={};
+    arr.forEach(e=>{ entries[e.date]=e; });
+    const out={_meta:{schema:'chrono_v1.2',exported:new Date().toISOString().slice(0,19)+'Z',source:'dashboard_blind',
+      axes:{A:'стан/настрій',B:'продуктивність',C:'фізичний',D:'зовнішні події'}},entries:entries};
+    const blob=new Blob([JSON.stringify(out,null,2)],{type:'application/json'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a'); a.href=url; a.download='chrono_daily_'+_todayDateStr()+'.json';
     document.body.appendChild(a); a.click();
-    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
+    setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(url);},100);
   }
 
-  function _setStatsHTML(html){
-    const el = document.getElementById('chronoStats');
-    if(el) el.innerHTML = html;
-  }
+  function _setStatsHTML(html){ const el=document.getElementById('chronoStats'); if(el) el.innerHTML=html; }
 
   function renderStats(){
-    const arr = _lsLoad();
-    const n = arr.length;
-    const badgeEl = document.getElementById('chronoBadge');
-    if(badgeEl) badgeEl.textContent = n ? `▼ ${n} запис${n===1?'':(n<5?'и':'ів')}` : '▼ розкрити';
-
-    if(n === 0){
-      _setStatsHTML(`<div style="color:var(--faint)">Поки записів немає. Заповни форму вище і натисни «💾 Зберегти сьогодні».</div>
-        <div style="margin-top:6px;font-size:10px;color:var(--dim)">Через 30 днів → побачиш кореляцію свого стану з G.</div>`);
+    const arr=_lsLoad();
+    const valid=arr.filter(e=>e.exposure!=='invalid' && e.axis_a!=null);
+    const n=valid.length;
+    const badge=document.getElementById('chronoBadge');
+    if(badge) badge.textContent=n?('▼ n='+n+'/30'):'▼ розкрити';
+    if(arr.length===0){
+      _setStatsHTML('<div style="color:var(--faint)">Записів немає. Оціни A/B/C/D −3..+3 ДО перегляду G і натисни «Зберегти (blind)».</div>'+
+        '<div style="margin-top:6px;font-size:10px;color:var(--dim)">n=10 → перша перевірка. n=30 → формальний тест Mann-Whitney.</div>');
       return;
     }
-
-    // Stats: середні + кореляція з g_at_save (якщо доступне)
-    const withG = arr.filter(e => isFinite(e.gAtSave));
-    const lines = [];
-    lines.push(`<strong style="color: var(--ok)">${n}</strong> запис${n===1?'':(n<5?'и':'ів')} · ` +
-               `остан. ${arr[arr.length-1].date}`);
-
-    if(withG.length >= 3){
-      const G = withG.map(e => e.gAtSave);
-      const metrics = [['sleep','😴 Сон'], ['energy','⚡ Енергія'], ['mood','🙂 Настрій'], ['stress','😰 Стрес']];
-      const rs = metrics.map(([k, lbl]) => {
-        const ys = withG.map(e => e[k]);
-        const r = _pearson(G, ys);
-        return { k, lbl, r, n: withG.length };
-      }).filter(x => x.r !== null);
-
-      if(rs.length){
-        const fmt = r => (r >= 0 ? '+' : '') + r.toFixed(2);
-        const cls = r => Math.abs(r) >= 0.3 ? '#2bd47d' : Math.abs(r) >= 0.15 ? '#ffaa33' : 'var(--faint)';
-        lines.push(`<div style="margin-top:6px;font-size:10px;color:var(--dim)">Кореляція Pearson r(G ↔ метрика):</div>`);
-        lines.push(`<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:4px 12px;margin-top:3px">` +
-          rs.map(x => `<span>${x.lbl}: <strong style="color:${cls(x.r)}">${fmt(x.r)}</strong></span>`).join('') +
-          `</div>`);
-      }
-
-      if(withG.length < MIN_N){
-        lines.push(`<div style="margin-top:6px;font-size:10px;color:#ffaa33">⚠ n=${withG.length} < ${MIN_N}. Це попередні значення. Жодних висновків про достовірність до n≥${MIN_N}.</div>`);
-      } else {
-        lines.push(`<div style="margin-top:6px;font-size:10px;color: var(--ok)">✓ n=${withG.length} ≥ ${MIN_N}. Кореляція статистично читабельна (але не доводить причинність).</div>`);
-      }
+    const L=[];
+    L.push('<strong style="color:var(--ok)">'+n+'</strong> валідних / '+arr.length+' усього · остан. '+arr[arr.length-1].date);
+    if(n<MIN_R){
+      L.push('<div style="margin-top:6px;font-size:10px;color:#ffaa33">🔒 Кореляція r ЗАБЛОКОВАНА (n='+n+'&lt;'+MIN_R+') — захист від p-hacking (preregistration).</div>');
+      L.push('<div style="margin-top:4px;font-size:10px;color:var(--dim)">Залишилось до першої перевірки: '+(MIN_R-n)+' записів.</div>');
     } else {
-      lines.push(`<div style="margin-top:6px;font-size:10px;color:var(--dim)">Збери ще мінімум ${3-withG.length} запис${3-withG.length===1?'':(3-withG.length<5?'и':'ів')} з валідним G для кореляції.</div>`);
+      // r allowed: chrono_mean vs g_at_save not stored here (blind) — show progress only
+      L.push('<div style="margin-top:6px;font-size:10px;color:var(--ok)">✓ n≥'+MIN_R+' — можна рахувати r у Python pipeline. Експортуй JSON.</div>');
+      if(n>=MIN_TEST) L.push('<div style="margin-top:4px;font-size:10px;color:var(--ok)">✓ n≥30 — формальний Mann-Whitney тест доступний.</div>');
+      else L.push('<div style="margin-top:4px;font-size:10px;color:var(--dim)">До формального тесту: '+(MIN_TEST-n)+' записів.</div>');
     }
-
-    _setStatsHTML(lines.join(''));
+    _setStatsHTML(L.join(''));
   }
 
-  function _oninput(name, v){
-    const el = document.getElementById('ch'+name+'V');
-    if(el) el.textContent = v;
-  }
+  function _oninput(name,v){ const el=document.getElementById('ch'+name+'V'); if(el) el.textContent=v; }
 
   function _prefillToday(){
-    // Якщо є запис за сьогодні — підставити, інакше defaults
-    const arr = _lsLoad();
-    const today = arr.find(e => e.date === _todayDateStr());
-    const set = (id, v) => { const el = document.getElementById(id); if(el) el.value = v; };
-    const setCh = (id, v) => { const el = document.getElementById(id); if(el) el.checked = !!v; };
-    if(today){
-      set('chSleep', today.sleep || 7);  _oninput('Sleep', today.sleep || 7);
-      set('chEnergy', today.energy || 7); _oninput('Energy', today.energy || 7);
-      set('chMood', today.mood || 7);     _oninput('Mood', today.mood || 7);
-      set('chStress', today.stress || 4); _oninput('Stress', today.stress || 4);
-      set('chHrv', today.hrv ?? '');
-      set('chNotes', today.notes || '');
-      setCh('chTagAlc', today.tags?.alc); setCh('chTagCaf', today.tags?.caf);
-      setCh('chTagExe', today.tags?.exe); setCh('chTagIll', today.tags?.ill);
-      setCh('chTagTrv', today.tags?.trv);
+    const arr=_lsLoad();
+    const today=arr.find(e=>e.date===_todayDateStr());
+    const set=(id,v)=>{const el=document.getElementById(id); if(el) el.value=v;};
+    if(today && today.locked){
+      // already locked — show values read-only-ish
+      set('chA',today.axis_a); _oninput('A',today.axis_a);
+      set('chB',today.axis_b); _oninput('B',today.axis_b);
+      set('chC',today.axis_c); _oninput('C',today.axis_c);
+      set('chD',today.axis_d); _oninput('D',today.axis_d);
+      set('chNotes',today.note||'');
     } else {
-      set('chSleep', 7); _oninput('Sleep', 7);
-      set('chEnergy', 7); _oninput('Energy', 7);
-      set('chMood', 7); _oninput('Mood', 7);
-      set('chStress', 4); _oninput('Stress', 4);
-      set('chHrv', ''); set('chNotes', '');
-      setCh('chTagAlc', false); setCh('chTagCaf', false);
-      setCh('chTagExe', false); setCh('chTagIll', false); setCh('chTagTrv', false);
+      ['A','B','C','D'].forEach(k=>{ set('ch'+k,0); _oninput(k,0); });
+      set('chNotes','');
     }
   }
 
-  // Init on DOM ready
-  function init(){
-    _prefillToday();
-    renderStats();
-  }
-  if(document.readyState === 'loading'){
-    document.addEventListener('DOMContentLoaded', init);
-  } else {
-    setTimeout(init, 100);
-  }
+  function init(){ _prefillToday(); renderStats(); }
+  if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded',init); }
+  else { setTimeout(init,100); }
 
-  return { saveToday, clearAll, exportCSV, renderStats, _oninput };
+  return { saveToday, clearAll, exportJSON, renderStats, _oninput };
 })();
 
 // ═══════════════════════════════════════════════════════════════════════════
