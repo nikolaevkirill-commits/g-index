@@ -607,7 +607,7 @@
 //   3. backtest.html додано до SHELL_FILES.
 //   4. cache.put awaited перед SW_FRESH_DATA notify (race fix).
 
-const SHELL_CACHE = 'g-index-shell-v88-8-39-fp97';
+const SHELL_CACHE = 'g-index-shell-v88-8-39-fp98';
 const DATA_CACHE = 'g-index-data-v88-8-39-fp83';
 
 const SHELL_FILES = [
