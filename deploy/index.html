@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.39-fp95</title>
+  <title>G-Index — Космофізичний дашборд v88.8.39-fp96</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1537,7 +1537,7 @@ body.simple-mode .col-hide-mobile {
               </div>
             </details>
             <div id="heroActionCmd" style="font-size:18px;font-weight:900;letter-spacing:.02em;line-height:1.15">—</div>
-            <!-- v88.8.39-fp95: regime-first pill — режим домінує над score -->
+            <!-- v88.8.39-fp96: regime-first pill — режим домінує над score -->
             <div id="heroRegimePill" style="display:none;margin-top:5px;font-size:11px;font-weight:700;letter-spacing:.04em;opacity:.85"></div>
             <div id="heroMainDrag" style="margin-top:4px;font-size:12px;font-weight:700;color:var(--text2)"></div>
             <div id="heroConsequence"></div>
@@ -1557,6 +1557,10 @@ body.simple-mode .col-hide-mobile {
             <div id="heroDecisionBlock">
               <div id="heroDecisionDo">—</div>
               <div id="heroDecisionAvoid">—</div>
+            </div>
+            <!-- fp95b: event-triggered decision log button -->
+            <div style="margin-top:8px">
+              <button onclick="GDecisionLog.open()" style="background:rgba(255,204,68,.12);color:#ffd24f;border:1px solid rgba(255,204,68,.3);border-radius:8px;padding:5px 12px;font-size:11px;cursor:pointer;font-weight:600;letter-spacing:.03em">⚡ Змінив рішення через прогноз</button>
             </div>
           </div>
           <div id="heroMetaInline">
@@ -1610,7 +1614,7 @@ body.simple-mode .col-hide-mobile {
       </div>
       <span style="font-size:11px;color:var(--ok);font-weight:700;white-space:nowrap">Подивитись →</span>
     </a>
-    <!-- v88.8.39-fp95: Regime cards (M2) — score+regime+confidence+space-weather. daily_master.json -->
+    <!-- v88.8.39-fp96: Regime cards (M2) — score+regime+confidence+space-weather. daily_master.json -->
     <div id="regimeCards" style="display:none;margin:0 0 10px;gap:8px;grid-template-columns:repeat(4,1fr)">
       <div id="rcScore" style="padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:rgba(11,18,32,.5);text-align:center">
         <div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em">Оцінка дня</div>
@@ -1637,7 +1641,7 @@ body.simple-mode .col-hide-mobile {
          Джерело: NOAA G-Scale (public), Groves & Akala Radio Science 2012.
          Дані: kp live (lastWWV), Dst (computeDstModifier), local_hour, _userLat. -->
     <div id="gnssCard" style="margin:0 0 10px;padding:10px 14px;border-radius:12px;border:1px solid rgba(55,167,255,.22);background:rgba(10,20,40,.5);display:none"></div>
-    <!-- v88.8.39-fp95: Bulletin v2 (M3) — режим+впевненість+причина+контекст+дія. bulletin_v2.json -->
+    <!-- v88.8.39-fp96: Bulletin v2 (M3) — режим+впевненість+причина+контекст+дія. bulletin_v2.json -->
     <details id="bulletinV2Card" style="margin:0 0 10px;padding:10px 14px;border-radius:12px;border:1px solid var(--border);background:rgba(11,18,32,.5);display:none">
       <summary style="cursor:pointer;font-size:12px;font-weight:600;color:var(--muted);list-style:none;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <span style="font-size:14px">📋</span>
@@ -1647,7 +1651,7 @@ body.simple-mode .col-hide-mobile {
       <div id="bulletinV2List" style="margin-top:10px;display:flex;flex-direction:column;gap:8px"></div>
       <div style="margin-top:8px;font-size:10px;color:var(--dim);line-height:1.5">Відтворює редакторську логіку Tarita, НЕ реальні події. Engine v18.5 frozen.</div>
     </details>
-    <!-- v88.8.39-fp95: Chrono panel (M4) — НЕЗАЛЕЖНИЙ outcome target. НЕ змішувати з Tarita GT. -->
+    <!-- v88.8.39-fp96: Chrono panel (M4) — НЕЗАЛЕЖНИЙ outcome target. НЕ змішувати з Tarita GT. -->
     <details id="chronoPanelCard" style="margin:0 0 10px;padding:10px 14px;border-radius:12px;border:1px solid rgba(155,177,220,.22);background:rgba(11,18,32,.5);display:none">
       <summary style="cursor:pointer;font-size:12px;font-weight:600;color:var(--muted);list-style:none;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <span style="font-size:14px">📓</span>
@@ -1728,6 +1732,10 @@ body.simple-mode .col-hide-mobile {
           <div id="alertBody" style="font-size:12px;color:#ffb0b0;margin-top:2px">—</div>
         </div>
       </div>
+    </div>
+    <!-- fp96: Sanity Watchdog banner (yellow, non-critical) -->
+    <div id="sanityBanner" style="display:none;margin:0 0 10px;padding:10px 14px;border-radius:10px;border:1px solid rgba(255,204,68,.35);background:linear-gradient(180deg,rgba(255,204,68,.08),rgba(255,204,68,.02))">
+      <div id="sanityItems" style="display:flex;flex-direction:column;gap:5px;font-size:11px;color:#ffe08a"></div>
     </div>
     <div id="daySentenceCard" style="margin:0 0 12px;padding:10px 14px;border-radius:12px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.035)">
       <div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--dim);margin-bottom:4px">Речення дня</div>
@@ -4256,7 +4264,7 @@ async function loadExpertOverrides(){
   }
 }
 
-// v88.8.39-fp95: daily_master.json loader + regime cards (M2). Freeze-safe, read-only.
+// v88.8.39-fp96: daily_master.json loader + regime cards (M2). Freeze-safe, read-only.
 let _dailyMaster = null;
 async function loadDailyMaster(){
   if(_dailyMaster !== null) return _dailyMaster;
@@ -4327,7 +4335,7 @@ function renderRegimeCards(){
     spd.textContent=(dst!=null?'Dst '+dst+' · ':'')+regime;
   }
 }
-// v88.8.39-fp95: regime-first hero pill — режим показується під headline, домінує над score
+// v88.8.39-fp96: regime-first hero pill — режим показується під headline, домінує над score
 function renderHeroRegimePill(){
   const pill=el('heroRegimePill');
   if(!pill || !_dailyMaster) return;
@@ -4344,7 +4352,7 @@ function renderHeroRegimePill(){
 }
 window.renderHeroRegimePill=renderHeroRegimePill;
 
-// v88.8.39-fp95: Bulletin v2 (M3) — render режим+впевненість+причина+контекст+дія
+// v88.8.39-fp96: Bulletin v2 (M3) — render режим+впевненість+причина+контекст+дія
 let _bulletinV2 = null;
 async function loadBulletinV2(){
   if(_bulletinV2 !== null) return _bulletinV2;
@@ -4377,7 +4385,7 @@ function renderBulletinV2(){
 }
 window.renderBulletinV2 = renderBulletinV2;
 
-// v88.8.39-fp95: Chrono panel (M4) — окремий outcome target, r заблоковано при n<10
+// v88.8.39-fp96: Chrono panel (M4) — окремий outcome target, r заблоковано при n<10
 let _chronoPanel = null;
 async function loadChronoPanel(){
   if(_chronoPanel !== null) return _chronoPanel;
@@ -11035,6 +11043,82 @@ function formatConfidence(v){
 
 // v87: Alert banner — shows when storm/high-risk detected
 // Triggers: Kp ≥ 5, G ≤ -3, or forecast Kp ≥ 5 in next 6h
+// fp96: + Sanity Watchdog rules (physics inconsistency, jump anomaly, stale feed, confidence paradox)
+// fp96: Sanity Watchdog — uses confirmed globals only
+function _runSanityWatchdog(g, kp){
+  const warns = [];
+
+  // Rule 1: Physics inconsistency — Kp calm but Dst stormy
+  try {
+    const dstObj = window._lastDst;
+    const dstV = dstObj && isFinite(dstObj.dst) ? dstObj.dst : null;
+    if(isFinite(kp) && kp < 2 && dstV !== null && dstV < -80){
+      warns.push({ icon:'🔬', title:'Фізична суперечність', body:'Kp='+kp.toFixed(1)+' (спокій) але Dst='+dstV+' nT (буря). Дані з різних зрізів — перевір перед рішенням.' });
+    }
+  } catch(e){}
+
+  // Rule 2: Score jump ≥5 without storm/eclipse — uses real getEngineScore
+  try {
+    if(typeof getEngineScore === 'function'){
+      var todayD = new Date();
+      var tomD = new Date(todayD); tomD.setDate(tomD.getDate()+1);
+      var eT = getEngineScore(todayD);
+      var eTom = getEngineScore(tomD);
+      var sT = eT ? (eT.final_score != null ? eT.final_score : eT.eng) : null;
+      var sTom = eTom ? (eTom.final_score != null ? eTom.final_score : eTom.eng) : null;
+      if(sT !== null && sTom !== null){
+        var jump = Math.abs(sTom - sT);
+        var noStorm = !(isFinite(kp) && kp >= 5);
+        var calS = (eT && eT.cal_symbols) ? eT.cal_symbols : [];
+        var noEclipse = !calS.some(function(s){ return /eclipse|amavasya|purnima/.test(s); });
+        if(jump >= 5 && noStorm && noEclipse){
+          warns.push({ icon:'⚡', title:'Аномальний стрибок score', body:'Сьогодні '+(sT>=0?'+':'')+sT+', завтра '+(sTom>=0?'+':'')+sTom+' (Δ='+jump+'). Без бурі — перевір теги.' });
+        }
+      }
+    }
+  } catch(e){}
+
+  // Rule 3: NOAA feed stale > 3h
+  try {
+    var src = window._kpSourceFreshness;
+    if(src && src.ageHours != null && src.ageHours > 3){
+      warns.push({ icon:'📡', title:'Дані застарілі ('+src.ageHours+'г)', body:'NOAA Kp не оновлювався '+src.ageHours+' год. Натисни «Оновити».' });
+    }
+  } catch(e){}
+
+  // Rule 4: Confidence paradox — high quality% but engine↔PDF sign conflict
+  try {
+    if(typeof getEngineScore === 'function'){
+      var eTd = getEngineScore(new Date());
+      if(eTd){
+        var engS = eTd.eng != null ? eTd.eng : null;
+        var pdfS = eTd.pdf != null ? eTd.pdf : null;
+        var qEl = document.getElementById('heroConfidence');
+        var q = qEl ? parseInt(qEl.textContent||'0') : 0;
+        var conflict = engS !== null && pdfS !== null &&
+          Math.sign(engS) !== 0 && Math.sign(pdfS) !== 0 &&
+          Math.sign(engS) !== Math.sign(pdfS);
+        if(q >= 85 && conflict){
+          warns.push({ icon:'🤔', title:'Парадокс впевненості', body:'Якість '+q+'% але engine↔PDF знаки різні ('+engS+' vs '+pdfS+'). Впевненість завищена.' });
+        }
+      }
+    }
+  } catch(e){}
+
+  // Rule 5: Alert fatigue — >40% of recent logged days were high-risk (min 7 entries)
+  try {
+    var dl = JSON.parse(localStorage.getItem('gindex_decision_log_v1')||'[]');
+    var cutoff = Date.now() - 14*86400000;
+    var recent = dl.filter(function(e){ try{ return new Date(e.ts).getTime() > cutoff; }catch(){ return false; }});
+    var alertDays = recent.filter(function(e){ return e.g_at_save != null && e.g_at_save <= -2; }).length;
+    if(recent.length >= 7 && alertDays/recent.length > 0.4){
+      warns.push({ icon:'😴', title:'Alert fatigue', body:alertDays+' з '+recent.length+' останніх записів — high-risk. Поріг може бути занадто чутливим.' });
+    }
+  } catch(e){}
+
+  return warns;
+}
+
 function renderAlertBanner(g, kp){
   const banner = document.getElementById('alertBanner');
   const titleEl = document.getElementById('alertTitle');
@@ -11111,6 +11195,23 @@ function renderAlertBanner(g, kp){
   }
   // fp35: always call standalone storm-guard, regardless of banner state
   try { _applyStormGuardDOM(); _patchStaleLoadingDOM(); } catch(e) { /* silent */ }
+
+  // fp96: Sanity Watchdog — yellow non-critical warnings
+  try {
+    const sWarns = _runSanityWatchdog(g, kp);
+    const sb = document.getElementById('sanityBanner');
+    const si = document.getElementById('sanityItems');
+    if(sb && si){
+      if(sWarns.length > 0){
+        si.innerHTML = sWarns.map(w =>
+          `<div><strong>${w.icon} ${w.title}:</strong> ${w.body}</div>`
+        ).join('');
+        sb.style.display = '';
+      } else {
+        sb.style.display = 'none';
+      }
+    }
+  } catch(e){ /* silent */ }
 }
 
 // fp35: STANDALONE storm-guard DOM patcher.
@@ -18822,7 +18923,7 @@ window.__regressUI = function(){
 // stress, hrv, tags:{alc,caf,exe,ill,trv}, notes, gAtSave}.
 // ═══════════════════════════════════════════════════════════════════════════
 const GChrono = (function(){
-  // v88.8.39-fp95: A/B/C/D −3..+3 (CHRONO_PREREGISTRATION locked). Blind mode. Export chrono_daily.json.
+  // v88.8.39-fp96: A/B/C/D −3..+3 (CHRONO_PREREGISTRATION locked). Blind mode. Export chrono_daily.json.
   const LS_KEY = 'gindex_chrono_v2_abcd';  // new key — old Sleep/Energy schema NOT mixed
   const MIN_R = 10;   // r не дивитись при n<10 (preregistration)
   const MIN_TEST = 30; // формальний тест
@@ -20505,6 +20606,111 @@ if ('serviceWorker' in navigator) {
       .catch(err => console.warn('[SW] Registration failed:', err));
   });
 }
+</script>
+<!-- fp95b: Decision Log Modal -->
+<div id="gdlModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.7);align-items:center;justify-content:center">
+  <div style="background:#0d1a2e;border:1px solid rgba(255,204,68,.35);border-radius:14px;padding:20px 22px;max-width:420px;width:92%;box-shadow:0 8px 32px rgba(0,0,0,.6)">
+    <div style="font-size:13px;font-weight:700;color:#ffd24f;margin-bottom:14px">⚡ Лог рішення · Decision Log</div>
+    <div style="font-size:10px;color:var(--faint);margin-bottom:12px">Заповни в момент події — не ввечері.</div>
+
+    <div style="display:flex;flex-direction:column;gap:10px;font-size:11px">
+      <!-- Тип рішення -->
+      <div>
+        <div style="color:var(--dim);margin-bottom:5px">Тип рішення</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px" id="gdlTypes">
+          <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" value="фінанси"> фінанси</label>
+          <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" value="робота"> робота</label>
+          <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" value="здоров'я"> здоров'я</label>
+          <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" value="поїздка"> поїздка</label>
+          <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" value="інше"> інше</label>
+        </div>
+      </div>
+
+      <!-- Що планував -->
+      <div>
+        <div style="color:var(--dim);margin-bottom:4px">Що планував зробити?</div>
+        <input id="gdlPlanned" type="text" maxlength="120" placeholder="конкретно: підписати договір, поїхати, зателефонувати..."
+          style="width:100%;box-sizing:border-box;background:#0a1428;color:var(--text);border:1px solid var(--border2);border-radius:6px;padding:5px 9px;font-size:11px">
+      </div>
+
+      <!-- Що зробив -->
+      <div>
+        <div style="color:var(--dim);margin-bottom:5px">Рішення змінене через прогноз?</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap" id="gdlActions">
+          <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="radio" name="gdlAction" value="no"> ні, діяв як планував</label>
+          <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="radio" name="gdlAction" value="delayed"> відклав</label>
+          <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="radio" name="gdlAction" value="cancelled"> скасував</label>
+          <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="radio" name="gdlAction" value="modified"> змінив</label>
+        </div>
+      </div>
+
+      <!-- Що саме відклав -->
+      <div>
+        <div style="color:var(--dim);margin-bottom:4px">Що саме відклав / скасував / змінив?</div>
+        <input id="gdlAvoided" type="text" maxlength="120" placeholder="або none"
+          style="width:100%;box-sizing:border-box;background:#0a1428;color:var(--text);border:1px solid var(--border2);border-radius:6px;padding:5px 9px;font-size:11px">
+      </div>
+    </div>
+
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button onclick="GDecisionLog.save()" style="background:var(--ok);color:#0a1428;border:none;border-radius:7px;padding:6px 16px;font-size:11px;cursor:pointer;font-weight:700">💾 Зберегти</button>
+      <button onclick="GDecisionLog.close()" style="background:var(--border);color:var(--muted);border:1px solid var(--border2);border-radius:7px;padding:6px 12px;font-size:11px;cursor:pointer">Скасувати</button>
+    </div>
+    <div id="gdlStatus" style="font-size:10px;color:var(--ok);margin-top:8px;min-height:14px"></div>
+  </div>
+</div>
+
+<script>
+// fp95b: GDecisionLog — event-triggered causal logging
+window.GDecisionLog = (function(){
+  const LS_KEY = 'gindex_decision_log_v1';
+  function _load(){ try{ return JSON.parse(localStorage.getItem(LS_KEY)||'[]'); }catch(e){ return []; } }
+  function _save(arr){ try{ localStorage.setItem(LS_KEY,JSON.stringify(arr)); return true; }catch(e){ return false; } }
+  function _today(){ return new Date().toISOString().slice(0,10); }
+  function _getG(){
+    try{
+      const el=document.getElementById('heroGval')||document.getElementById('gNowVal');
+      return el ? (parseFloat(el.textContent)||null) : null;
+    }catch(e){ return null; }
+  }
+
+  function open(){
+    const m=document.getElementById('gdlModal');
+    if(m){ m.style.display='flex'; document.getElementById('gdlStatus').textContent=''; }
+  }
+  function close(){
+    const m=document.getElementById('gdlModal');
+    if(m) m.style.display='none';
+  }
+  function save(){
+    const planned=(document.getElementById('gdlPlanned')?.value||'').trim();
+    const avoided=(document.getElementById('gdlAvoided')?.value||'').trim();
+    const actionEl=document.querySelector('input[name="gdlAction"]:checked');
+    const action=actionEl?actionEl.value:'';
+    const types=[...document.querySelectorAll('#gdlTypes input:checked')].map(i=>i.value);
+
+    if(!planned){ document.getElementById('gdlStatus').textContent='⚠ Заповни "що планував"'; return; }
+    if(!action){ document.getElementById('gdlStatus').textContent='⚠ Обери що зробив'; return; }
+
+    const entry={
+      date:_today(),
+      ts:new Date().toISOString(),
+      g_at_save:_getG(),
+      types,
+      planned_action:planned,
+      action_changed:action,
+      avoided_event:avoided||'none',
+      forecast_seen:true
+    };
+    const arr=_load();
+    arr.push(entry);
+    _save(arr);
+    document.getElementById('gdlStatus').textContent='✓ Збережено';
+    setTimeout(close, 800);
+  }
+
+  return { open, close, save };
+})();
 </script>
 </body>
 </html>
