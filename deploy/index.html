@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.39-fp94b</title>
+  <title>G-Index — Космофізичний дашборд v88.8.39-fp95</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1537,7 +1537,7 @@ body.simple-mode .col-hide-mobile {
               </div>
             </details>
             <div id="heroActionCmd" style="font-size:18px;font-weight:900;letter-spacing:.02em;line-height:1.15">—</div>
-            <!-- v88.8.39-fp94b: regime-first pill — режим домінує над score -->
+            <!-- v88.8.39-fp95: regime-first pill — режим домінує над score -->
             <div id="heroRegimePill" style="display:none;margin-top:5px;font-size:11px;font-weight:700;letter-spacing:.04em;opacity:.85"></div>
             <div id="heroMainDrag" style="margin-top:4px;font-size:12px;font-weight:700;color:var(--text2)"></div>
             <div id="heroConsequence"></div>
@@ -1610,7 +1610,7 @@ body.simple-mode .col-hide-mobile {
       </div>
       <span style="font-size:11px;color:var(--ok);font-weight:700;white-space:nowrap">Подивитись →</span>
     </a>
-    <!-- v88.8.39-fp94b: Regime cards (M2) — score+regime+confidence+space-weather. daily_master.json -->
+    <!-- v88.8.39-fp95: Regime cards (M2) — score+regime+confidence+space-weather. daily_master.json -->
     <div id="regimeCards" style="display:none;margin:0 0 10px;gap:8px;grid-template-columns:repeat(4,1fr)">
       <div id="rcScore" style="padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:rgba(11,18,32,.5);text-align:center">
         <div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em">Оцінка дня</div>
@@ -1637,7 +1637,7 @@ body.simple-mode .col-hide-mobile {
          Джерело: NOAA G-Scale (public), Groves & Akala Radio Science 2012.
          Дані: kp live (lastWWV), Dst (computeDstModifier), local_hour, _userLat. -->
     <div id="gnssCard" style="margin:0 0 10px;padding:10px 14px;border-radius:12px;border:1px solid rgba(55,167,255,.22);background:rgba(10,20,40,.5);display:none"></div>
-    <!-- v88.8.39-fp94b: Bulletin v2 (M3) — режим+впевненість+причина+контекст+дія. bulletin_v2.json -->
+    <!-- v88.8.39-fp95: Bulletin v2 (M3) — режим+впевненість+причина+контекст+дія. bulletin_v2.json -->
     <details id="bulletinV2Card" style="margin:0 0 10px;padding:10px 14px;border-radius:12px;border:1px solid var(--border);background:rgba(11,18,32,.5);display:none">
       <summary style="cursor:pointer;font-size:12px;font-weight:600;color:var(--muted);list-style:none;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <span style="font-size:14px">📋</span>
@@ -1647,7 +1647,7 @@ body.simple-mode .col-hide-mobile {
       <div id="bulletinV2List" style="margin-top:10px;display:flex;flex-direction:column;gap:8px"></div>
       <div style="margin-top:8px;font-size:10px;color:var(--dim);line-height:1.5">Відтворює редакторську логіку Tarita, НЕ реальні події. Engine v18.5 frozen.</div>
     </details>
-    <!-- v88.8.39-fp94b: Chrono panel (M4) — НЕЗАЛЕЖНИЙ outcome target. НЕ змішувати з Tarita GT. -->
+    <!-- v88.8.39-fp95: Chrono panel (M4) — НЕЗАЛЕЖНИЙ outcome target. НЕ змішувати з Tarita GT. -->
     <details id="chronoPanelCard" style="margin:0 0 10px;padding:10px 14px;border-radius:12px;border:1px solid rgba(155,177,220,.22);background:rgba(11,18,32,.5);display:none">
       <summary style="cursor:pointer;font-size:12px;font-weight:600;color:var(--muted);list-style:none;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <span style="font-size:14px">📓</span>
@@ -2226,6 +2226,24 @@ body.simple-mode .col-hide-mobile {
                 </select>
               </label>
               <label><input type="checkbox" id="chDelayed"> відкладена подія</label>
+              <label><input type="checkbox" id="chHasDecision" onchange="GChrono._toggleDecision(this.checked)"> 📋 було важливе рішення</label>
+            </div>
+            <!-- fp95-lite: Decision logging (conditional, only when chHasDecision=true) -->
+            <div id="chDecisionBlock" style="display:none;flex-direction:column;gap:6px;padding:8px 10px;border:1px solid rgba(155,177,220,.2);border-radius:8px;background:rgba(155,177,220,.04);font-size:10px">
+              <div style="color:var(--dim);margin-bottom:2px;font-size:10px;font-weight:600">DECISION LOG (counterfactual)</div>
+              <input id="chPlannedAction" type="text" placeholder="Що планувалось зробити?" maxlength="120"
+                style="background:#0a1428;color:var(--text);border:1px solid var(--border2);border-radius:5px;padding:4px 8px;font-size:10px;width:100%;box-sizing:border-box">
+              <div style="display:flex;gap:12px;align-items:center">
+                <label style="color:var(--dim)">рішення змінено через G?
+                  <select id="chActionChanged" style="background:#0a1428;color:var(--text);border:1px solid var(--border2);border-radius:5px;padding:2px 6px;font-size:10px;margin-left:4px">
+                    <option value="">-</option>
+                    <option value="yes">так</option>
+                    <option value="no">ні</option>
+                  </select>
+                </label>
+              </div>
+              <input id="chAvoidedEvent" type="text" placeholder="Що відкладено / скасовано (або none)" maxlength="120"
+                style="background:#0a1428;color:var(--text);border:1px solid var(--border2);border-radius:5px;padding:4px 8px;font-size:10px;width:100%;box-sizing:border-box">
             </div>
             <textarea id="chNotes" placeholder="Замітки (опц.)" maxlength="200" rows="2"
               style="background:#0a1428;color:var(--text);border:1px solid var(--border2);border-radius:6px;padding:5px 9px;font-size:11px;resize:vertical"></textarea>
@@ -4238,7 +4256,7 @@ async function loadExpertOverrides(){
   }
 }
 
-// v88.8.39-fp94b: daily_master.json loader + regime cards (M2). Freeze-safe, read-only.
+// v88.8.39-fp95: daily_master.json loader + regime cards (M2). Freeze-safe, read-only.
 let _dailyMaster = null;
 async function loadDailyMaster(){
   if(_dailyMaster !== null) return _dailyMaster;
@@ -4309,7 +4327,7 @@ function renderRegimeCards(){
     spd.textContent=(dst!=null?'Dst '+dst+' · ':'')+regime;
   }
 }
-// v88.8.39-fp94b: regime-first hero pill — режим показується під headline, домінує над score
+// v88.8.39-fp95: regime-first hero pill — режим показується під headline, домінує над score
 function renderHeroRegimePill(){
   const pill=el('heroRegimePill');
   if(!pill || !_dailyMaster) return;
@@ -4326,7 +4344,7 @@ function renderHeroRegimePill(){
 }
 window.renderHeroRegimePill=renderHeroRegimePill;
 
-// v88.8.39-fp94b: Bulletin v2 (M3) — render режим+впевненість+причина+контекст+дія
+// v88.8.39-fp95: Bulletin v2 (M3) — render режим+впевненість+причина+контекст+дія
 let _bulletinV2 = null;
 async function loadBulletinV2(){
   if(_bulletinV2 !== null) return _bulletinV2;
@@ -4359,7 +4377,7 @@ function renderBulletinV2(){
 }
 window.renderBulletinV2 = renderBulletinV2;
 
-// v88.8.39-fp94b: Chrono panel (M4) — окремий outcome target, r заблоковано при n<10
+// v88.8.39-fp95: Chrono panel (M4) — окремий outcome target, r заблоковано при n<10
 let _chronoPanel = null;
 async function loadChronoPanel(){
   if(_chronoPanel !== null) return _chronoPanel;
@@ -18804,7 +18822,7 @@ window.__regressUI = function(){
 // stress, hrv, tags:{alc,caf,exe,ill,trv}, notes, gAtSave}.
 // ═══════════════════════════════════════════════════════════════════════════
 const GChrono = (function(){
-  // v88.8.39-fp94b: A/B/C/D −3..+3 (CHRONO_PREREGISTRATION locked). Blind mode. Export chrono_daily.json.
+  // v88.8.39-fp95: A/B/C/D −3..+3 (CHRONO_PREREGISTRATION locked). Blind mode. Export chrono_daily.json.
   const LS_KEY = 'gindex_chrono_v2_abcd';  // new key — old Sleep/Energy schema NOT mixed
   const MIN_R = 10;   // r не дивитись при n<10 (preregistration)
   const MIN_TEST = 30; // формальний тест
@@ -18822,6 +18840,7 @@ const GChrono = (function(){
     const C=+(document.getElementById('chC')?.value||0);
     const D=+(document.getElementById('chD')?.value||0);
     const mean=Math.round(((A+B+C+D)/4)*100)/100;
+    const hasDecision=document.getElementById('chHasDecision')?.checked||false;
     const e={
       date:_todayDateStr(), axis_a:A, axis_b:B, axis_c:C, axis_d:D, chrono_mean:mean,
       exposure:(document.getElementById('chExposure')?.value||'active'),
@@ -18829,6 +18848,15 @@ const GChrono = (function(){
       note:(document.getElementById('chNotes')?.value||'').slice(0,200),
       locked:true, locked_at:new Date().toISOString().slice(0,16)+'Z', ts:Date.now()
     };
+    // fp95-lite: decision log (only when checkbox active)
+    if(hasDecision){
+      e.decision={
+        planned_action:(document.getElementById('chPlannedAction')?.value||'').slice(0,120),
+        action_changed:(document.getElementById('chActionChanged')?.value||''),
+        avoided_event:(document.getElementById('chAvoidedEvent')?.value||'').slice(0,120),
+        forecast_seen:true  // implied: user is in the app
+      };
+    }
     const arr=_lsLoad();
     const idx=arr.findIndex(x=>x.date===e.date);
     // lock: if already saved & locked, block re-edit (preregistration)
@@ -18837,6 +18865,11 @@ const GChrono = (function(){
     arr.sort((a,b)=>a.date.localeCompare(b.date));
     if(_lsSave(arr)){ renderStats(); }
     else { _setStatsHTML('<span style="color:#ff9999">⚠ localStorage недоступний</span>'); }
+  }
+
+  function _toggleDecision(on){
+    const b=document.getElementById('chDecisionBlock');
+    if(b) b.style.display=on?'flex':'none';
   }
 
   function clearAll(){
@@ -18910,7 +18943,7 @@ const GChrono = (function(){
   if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded',init); }
   else { setTimeout(init,100); }
 
-  return { saveToday, clearAll, exportJSON, renderStats, _oninput };
+  return { saveToday, clearAll, exportJSON, renderStats, _oninput, _toggleDecision };
 })();
 
 // ═══════════════════════════════════════════════════════════════════════════
