@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.39-fp103</title>
+  <title>G-Index — Космофізичний дашборд v88.8.39-fp105</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1537,7 +1537,7 @@ body.simple-mode .col-hide-mobile {
               </div>
             </details>
             <div id="heroActionCmd" style="font-size:18px;font-weight:900;letter-spacing:.02em;line-height:1.15">—</div>
-            <!-- v88.8.39-fp103: regime-first pill — режим домінує над score -->
+            <!-- v88.8.39-fp105: regime-first pill — режим домінує над score -->
             <div id="heroRegimePill" style="display:none;margin-top:5px;font-size:11px;font-weight:700;letter-spacing:.04em;opacity:.85"></div>
             <div id="heroMainDrag" style="margin-top:4px;font-size:12px;font-weight:700;color:var(--text2)"></div>
             <div id="heroConsequence"></div>
@@ -1614,7 +1614,7 @@ body.simple-mode .col-hide-mobile {
       </div>
       <span style="font-size:11px;color:var(--ok);font-weight:700;white-space:nowrap">Подивитись →</span>
     </a>
-    <!-- v88.8.39-fp103: Regime cards (M2) — score+regime+confidence+space-weather. daily_master.json -->
+    <!-- v88.8.39-fp105: Regime cards (M2) — score+regime+confidence+space-weather. daily_master.json -->
     <div id="regimeCards" style="display:none;margin:0 0 10px;gap:8px;grid-template-columns:repeat(4,1fr)">
       <div id="rcScore" style="padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:rgba(11,18,32,.5);text-align:center">
         <div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em">Оцінка дня</div>
@@ -1641,7 +1641,7 @@ body.simple-mode .col-hide-mobile {
          Джерело: NOAA G-Scale (public), Groves & Akala Radio Science 2012.
          Дані: kp live (lastWWV), Dst (computeDstModifier), local_hour, _userLat. -->
     <div id="gnssCard" style="margin:0 0 10px;padding:10px 14px;border-radius:12px;border:1px solid rgba(55,167,255,.22);background:rgba(10,20,40,.5);display:none"></div>
-    <!-- v88.8.39-fp103: Bulletin v2 (M3) — режим+впевненість+причина+контекст+дія. bulletin_v2.json -->
+    <!-- v88.8.39-fp105: Bulletin v2 (M3) — режим+впевненість+причина+контекст+дія. bulletin_v2.json -->
     <details id="bulletinV2Card" style="margin:0 0 10px;padding:10px 14px;border-radius:12px;border:1px solid var(--border);background:rgba(11,18,32,.5);display:none">
       <summary style="cursor:pointer;font-size:12px;font-weight:600;color:var(--muted);list-style:none;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <span style="font-size:14px">📋</span>
@@ -1651,7 +1651,7 @@ body.simple-mode .col-hide-mobile {
       <div id="bulletinV2List" style="margin-top:10px;display:flex;flex-direction:column;gap:8px"></div>
       <div style="margin-top:8px;font-size:10px;color:var(--dim);line-height:1.5">Відтворює редакторську логіку Tarita, НЕ реальні події. Engine v18.5 frozen.</div>
     </details>
-    <!-- v88.8.39-fp103: Chrono panel (M4) — НЕЗАЛЕЖНИЙ outcome target. НЕ змішувати з Tarita GT. -->
+    <!-- v88.8.39-fp105: Chrono panel (M4) — НЕЗАЛЕЖНИЙ outcome target. НЕ змішувати з Tarita GT. -->
     <details id="chronoPanelCard" style="margin:0 0 10px;padding:10px 14px;border-radius:12px;border:1px solid rgba(155,177,220,.22);background:rgba(11,18,32,.5);display:none">
       <summary style="cursor:pointer;font-size:12px;font-weight:600;color:var(--muted);list-style:none;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <span style="font-size:14px">📓</span>
@@ -1680,7 +1680,7 @@ body.simple-mode .col-hide-mobile {
         <div style="font-size:11px;color:var(--dim);padding:6px">Завантаження…</div>
       </div>
       <div id="scenarioLegend" style="margin-top:8px;font-size:10px;color:var(--dim);line-height:1.5">
-        Кольори = engine_score (−3 червоний / 0 нейтр / +3 зелений). Точка зверху = cal_score (astronomical, Swiss Ephemeris Lahiri). ⚠ = Excel-tag artifact. ~ = synthetic Kp. <span style="color:var(--ok)">●</span> = HIGH (±3, PPV ~92%). <span style="color:var(--warn)">!</span> = WEAK (±2 miscalibrated). <span style="color:var(--dim)">○</span> = LOW (0 тегів / нейтр).
+        Кольори = engine_score (−3 червоний / 0 нейтр / +3 зелений). Точка зверху = cal_score (astronomical, Swiss Ephemeris Lahiri). ⚠ = Excel-tag artifact. ~ = synthetic Kp. <span style="color:var(--ok)">●</span> = HIGH (±3, ~88% strict). <span style="color:var(--warn)">!</span> = WEAK (±2, ~59% strict — directional, не шум). <span style="color:var(--dim)">○</span> = LOW (0 тегів / нейтр, ~29% strict).
       </div>
     </details>
     <!-- v87.90: Provenance ledger — джерела для сьогоднішньої оцінки (closed by default) -->
@@ -4264,7 +4264,7 @@ async function loadExpertOverrides(){
   }
 }
 
-// v88.8.39-fp103: daily_master.json loader + regime cards (M2). Freeze-safe, read-only.
+// v88.8.39-fp105: daily_master.json loader + regime cards (M2). Freeze-safe, read-only.
 let _dailyMaster = null;
 async function loadDailyMaster(){
   if(_dailyMaster !== null) return _dailyMaster;
@@ -4335,7 +4335,7 @@ function renderRegimeCards(){
     spd.textContent=(dst!=null?'Dst '+dst+' · ':'')+regime;
   }
 }
-// v88.8.39-fp103: regime-first hero pill — режим показується під headline, домінує над score
+// v88.8.39-fp105: regime-first hero pill — режим показується під headline, домінує над score
 function renderHeroRegimePill(){
   const pill=el('heroRegimePill');
   if(!pill || !_dailyMaster) return;
@@ -4352,7 +4352,7 @@ function renderHeroRegimePill(){
 }
 window.renderHeroRegimePill=renderHeroRegimePill;
 
-// v88.8.39-fp103: Bulletin v2 (M3) — render режим+впевненість+причина+контекст+дія
+// v88.8.39-fp105: Bulletin v2 (M3) — render режим+впевненість+причина+контекст+дія
 let _bulletinV2 = null;
 async function loadBulletinV2(){
   if(_bulletinV2 !== null) return _bulletinV2;
@@ -4385,7 +4385,7 @@ function renderBulletinV2(){
 }
 window.renderBulletinV2 = renderBulletinV2;
 
-// v88.8.39-fp103: Chrono panel (M4) — окремий outcome target, r заблоковано при n<10
+// v88.8.39-fp105: Chrono panel (M4) — окремий outcome target, r заблоковано при n<10
 let _chronoPanel = null;
 async function loadChronoPanel(){
   if(_chronoPanel !== null) return _chronoPanel;
@@ -5077,11 +5077,16 @@ function forecastConfidence(entry){
   const eng = entry.eng;
   const tag = (entry.tag || '').trim();
   const nTags = tag ? tag.split(/\s+/).filter(Boolean).length : 0;
-  if(Math.abs(eng) === 2) return { level:'WEAK', note:'Клас ±2 розкалібрований (GT≈+0.13 нейтр). Не трактувати як надійний сигнал.' };
-  if(eng === 3 || eng === -3) return { level:'HIGH', note:'±3 = найнадійніший: ~92-93% strict (PPV canonical).' };
-  if(nTags === 0) return { level:'LOW', note:'0 тегів — engine Kp-only (43% strict). Ігнорувати.' };
-  if(eng === 0) return { level:'LOW', note:'Нейтральний: 24% strict ≈ random. Ігнорувати.' };
-  if(eng === 1 || eng === -1) return { level:'MED', note:'±1 = слабкий directional (~67-70% strict).' };
+  // v88.8.41-fp105: ВИПРАВЛЕНО Audit β (run_candidate_tests.py, canonical n=313).
+  // Старе твердження "WEAK ≈13% strict" було НЕВІРНЕ — фактичний hit rate=59.3%,
+  // різниця +46pp. WEAK bucket насправді працює майже як MED (69.3%), не як шум.
+  // Monotonicity LOW(29%)<WEAK(59%)<MED(69%)<HIGH(88%) підтверджена — ranking
+  // правильний, тільки конкретні числа в тексті були помилкові.
+  if(Math.abs(eng) === 2) return { level:'WEAK', note:'Клас ±2: ~59% strict (canonical n=313, Audit β 2026-06-30). Помірний directional сигнал, не ігнорувати повністю.' };
+  if(eng === 3 || eng === -3) return { level:'HIGH', note:'±3 = найнадійніший: ~88% strict (canonical n=313).' };
+  if(nTags === 0) return { level:'LOW', note:'0 тегів — engine Kp-only: ~29% strict (canonical n=313). Ігнорувати.' };
+  if(eng === 0) return { level:'LOW', note:'Нейтральний: ~29% strict (canonical n=313). Ігнорувати.' };
+  if(eng === 1 || eng === -1) return { level:'MED', note:'±1 = directional: ~69% strict (canonical n=313).' };
   return { level:'MED', note:'' };
 }
 window.forecastConfidence = forecastConfidence;
@@ -10349,7 +10354,7 @@ function _renderSolarRhythm(refDateUTC){
       if (_curSlot) {
         const _ccol = _curSlot.score > 0.3 ? '#7ee787' : _curSlot.score < -0.3 ? '#ff9999' : 'var(--dim)';
         const _csign = _curSlot.score > 0 ? '+' : '';
-        _chogNowLine = `<div style="margin-bottom:6px;padding:4px 6px;border-radius:4px;background:rgba(255,255,255,.03);font-size:11px">Зараз: <strong style="color:${_ccol}">${_curSlot.ua} (${_curSlot.name})</strong> <span style="color:${_ccol};font-weight:700">${_csign}${_curSlot.score} PCL</span> · до ${_fmtLocalHM(_curSlot.end)} — ${_curSlot.hint}</div>`;
+        _chogNowLine = `<div style="margin-bottom:6px;padding:4px 6px;border-radius:4px;background:rgba(255,255,255,.03);font-size:11px">Зараз: <strong style="color:${_ccol}">${_curSlot.ua} (${_curSlot.name})</strong> <span style="color:${_ccol};font-weight:700">${_csign}${_curSlot.score} PCL-preview</span> <span style="font-size:9px;color:var(--faint)" title="Advisory display only — НЕ входить у canonical G/Pᵢ/final_score">(не в G)</span> · до ${_fmtLocalHM(_curSlot.end)} — ${_curSlot.hint}</div>`;
       }
     } catch(e) { /* silent */ }
     elChog.innerHTML = `
@@ -12313,6 +12318,25 @@ function syncHero(){
         if (_hasPdfConflict) {
           _tomorrowLine += `<div class="dc-subline" style="color:#ffaa33;font-size:11px">⚠ PDF/Engine для завтра ≤ −2 — рішення дня має пріоритет над live-фоном.</div>`;
         }
+        // v88.8.41-fp104: РЯДОК "Сьогодні G_day raw" — усуває конфлікт Hero(G_now) vs 27-day graph(G_day_raw).
+        // Раніше показувався тільки G_now (live) у Hero, а G_day_raw сьогодні видно лише
+        // прокрутивши до 27-day секції — звідси скарга "+3.8 в графіку, -0.5 в hero = баг".
+        let _todayRawLine = '';
+        try {
+          let _tdGRaw = NaN;
+          if (typeof _27dComputed !== 'undefined' && Array.isArray(_27dComputed)) {
+            const _todayStr2 = fmtDate(new Date());
+            const _todayEntry2 = _27dComputed.find(d => d && d.ds === _todayStr2);
+            if (_todayEntry2 && isFinite(_todayEntry2.G)) _tdGRaw = _todayEntry2.G;
+          }
+          if (isFinite(_tdGRaw) && isFinite(gVal) && Math.abs(_tdGRaw - gVal) >= 0.5) {
+            _todayRawLine = `<div class="dc-subline" style="font-size:10px;color:var(--faint)">
+              ℹ Це <strong>live G_now</strong> (поточний 3-год слот). Daily potential (G_day raw, 27-day графік) сьогодні:
+              <span style="color:${_tdGRaw>=0?'#7ee787':'#ff9999'};font-weight:700">${_tdGRaw>=0?'+':''}${_tdGRaw.toFixed(1)}</span>
+              — це різні шкали: live vs daily aggregate, не помилка.
+            </div>`;
+          }
+        } catch(e) { /* silent */ }
         dc.className = (_hasPdfConflict ? 'is-conflict ' : '') + 'is-' + _state;
         dc.title = _ttip; // v87.90: tooltip з реальним age та timestamp
         dc.innerHTML = `<span class="dc-icon">${_icon}</span>`
@@ -12320,6 +12344,7 @@ function syncHero(){
                      + `<div class="dc-title">${_title}</div>`
                      + `<div class="dc-body">${_body}</div>`
                      + _tomorrowLine
+                     + _todayRawLine
                      + `</div>`;
         dc.style.display = '';
       } else {
@@ -16370,7 +16395,7 @@ function renderPersonal() {
           const _note = PLANET_PCL_NOTE[antar.lord] || '';
           const _col2 = _w > 0.3 ? '#7ee787' : _w < -0.3 ? '#ff9999' : 'var(--dim)';
           const _sign2 = _w > 0 ? '+' : '';
-          return `<span style="color:${_col2};font-weight:700">${_sign2}${_w.toFixed(1)} PCL</span> <span class="muted" style="font-size:11px">· ${_note}</span> <span style="font-size:9px;color:var(--faint)">(R&D, Posibnyk §II.3.1)</span>`;
+          return `<span style="color:${_col2};font-weight:700">${_sign2}${_w.toFixed(1)} PCL-preview</span> <span class="muted" style="font-size:11px">· ${_note}</span> <span style="font-size:9px;color:var(--faint)" title="Advisory display only — НЕ входить у canonical G/Pᵢ/final_score. Джерело: Posibnyk §II.3.1">(не в G · advisory)</span>`;
         })()}</td>
       </tr>
       <tr>
@@ -19104,7 +19129,7 @@ window.__regressUI = function(){
 // stress, hrv, tags:{alc,caf,exe,ill,trv}, notes, gAtSave}.
 // ═══════════════════════════════════════════════════════════════════════════
 const GChrono = (function(){
-  // v88.8.39-fp103: A/B/C/D −3..+3 (CHRONO_PREREGISTRATION locked). Blind mode. Export chrono_daily.json.
+  // v88.8.39-fp105: A/B/C/D −3..+3 (CHRONO_PREREGISTRATION locked). Blind mode. Export chrono_daily.json.
   const LS_KEY = 'gindex_chrono_v2_abcd';  // new key — old Sleep/Energy schema NOT mixed
   const MIN_R = 10;   // r не дивитись при n<10 (preregistration)
   const MIN_TEST = 30; // формальний тест
