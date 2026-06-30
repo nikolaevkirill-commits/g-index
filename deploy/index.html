@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.39-fp100</title>
+  <title>G-Index — Космофізичний дашборд v88.8.39-fp102</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1537,7 +1537,7 @@ body.simple-mode .col-hide-mobile {
               </div>
             </details>
             <div id="heroActionCmd" style="font-size:18px;font-weight:900;letter-spacing:.02em;line-height:1.15">—</div>
-            <!-- v88.8.39-fp100: regime-first pill — режим домінує над score -->
+            <!-- v88.8.39-fp102: regime-first pill — режим домінує над score -->
             <div id="heroRegimePill" style="display:none;margin-top:5px;font-size:11px;font-weight:700;letter-spacing:.04em;opacity:.85"></div>
             <div id="heroMainDrag" style="margin-top:4px;font-size:12px;font-weight:700;color:var(--text2)"></div>
             <div id="heroConsequence"></div>
@@ -1614,7 +1614,7 @@ body.simple-mode .col-hide-mobile {
       </div>
       <span style="font-size:11px;color:var(--ok);font-weight:700;white-space:nowrap">Подивитись →</span>
     </a>
-    <!-- v88.8.39-fp100: Regime cards (M2) — score+regime+confidence+space-weather. daily_master.json -->
+    <!-- v88.8.39-fp102: Regime cards (M2) — score+regime+confidence+space-weather. daily_master.json -->
     <div id="regimeCards" style="display:none;margin:0 0 10px;gap:8px;grid-template-columns:repeat(4,1fr)">
       <div id="rcScore" style="padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:rgba(11,18,32,.5);text-align:center">
         <div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em">Оцінка дня</div>
@@ -1641,7 +1641,7 @@ body.simple-mode .col-hide-mobile {
          Джерело: NOAA G-Scale (public), Groves & Akala Radio Science 2012.
          Дані: kp live (lastWWV), Dst (computeDstModifier), local_hour, _userLat. -->
     <div id="gnssCard" style="margin:0 0 10px;padding:10px 14px;border-radius:12px;border:1px solid rgba(55,167,255,.22);background:rgba(10,20,40,.5);display:none"></div>
-    <!-- v88.8.39-fp100: Bulletin v2 (M3) — режим+впевненість+причина+контекст+дія. bulletin_v2.json -->
+    <!-- v88.8.39-fp102: Bulletin v2 (M3) — режим+впевненість+причина+контекст+дія. bulletin_v2.json -->
     <details id="bulletinV2Card" style="margin:0 0 10px;padding:10px 14px;border-radius:12px;border:1px solid var(--border);background:rgba(11,18,32,.5);display:none">
       <summary style="cursor:pointer;font-size:12px;font-weight:600;color:var(--muted);list-style:none;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <span style="font-size:14px">📋</span>
@@ -1651,7 +1651,7 @@ body.simple-mode .col-hide-mobile {
       <div id="bulletinV2List" style="margin-top:10px;display:flex;flex-direction:column;gap:8px"></div>
       <div style="margin-top:8px;font-size:10px;color:var(--dim);line-height:1.5">Відтворює редакторську логіку Tarita, НЕ реальні події. Engine v18.5 frozen.</div>
     </details>
-    <!-- v88.8.39-fp100: Chrono panel (M4) — НЕЗАЛЕЖНИЙ outcome target. НЕ змішувати з Tarita GT. -->
+    <!-- v88.8.39-fp102: Chrono panel (M4) — НЕЗАЛЕЖНИЙ outcome target. НЕ змішувати з Tarita GT. -->
     <details id="chronoPanelCard" style="margin:0 0 10px;padding:10px 14px;border-radius:12px;border:1px solid rgba(155,177,220,.22);background:rgba(11,18,32,.5);display:none">
       <summary style="cursor:pointer;font-size:12px;font-weight:600;color:var(--muted);list-style:none;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <span style="font-size:14px">📓</span>
@@ -4264,7 +4264,7 @@ async function loadExpertOverrides(){
   }
 }
 
-// v88.8.39-fp100: daily_master.json loader + regime cards (M2). Freeze-safe, read-only.
+// v88.8.39-fp102: daily_master.json loader + regime cards (M2). Freeze-safe, read-only.
 let _dailyMaster = null;
 async function loadDailyMaster(){
   if(_dailyMaster !== null) return _dailyMaster;
@@ -4335,7 +4335,7 @@ function renderRegimeCards(){
     spd.textContent=(dst!=null?'Dst '+dst+' · ':'')+regime;
   }
 }
-// v88.8.39-fp100: regime-first hero pill — режим показується під headline, домінує над score
+// v88.8.39-fp102: regime-first hero pill — режим показується під headline, домінує над score
 function renderHeroRegimePill(){
   const pill=el('heroRegimePill');
   if(!pill || !_dailyMaster) return;
@@ -4352,7 +4352,7 @@ function renderHeroRegimePill(){
 }
 window.renderHeroRegimePill=renderHeroRegimePill;
 
-// v88.8.39-fp100: Bulletin v2 (M3) — render режим+впевненість+причина+контекст+дія
+// v88.8.39-fp102: Bulletin v2 (M3) — render режим+впевненість+причина+контекст+дія
 let _bulletinV2 = null;
 async function loadBulletinV2(){
   if(_bulletinV2 !== null) return _bulletinV2;
@@ -4385,7 +4385,7 @@ function renderBulletinV2(){
 }
 window.renderBulletinV2 = renderBulletinV2;
 
-// v88.8.39-fp100: Chrono panel (M4) — окремий outcome target, r заблоковано при n<10
+// v88.8.39-fp102: Chrono panel (M4) — окремий outcome target, r заблоковано при n<10
 let _chronoPanel = null;
 async function loadChronoPanel(){
   if(_chronoPanel !== null) return _chronoPanel;
@@ -8707,19 +8707,37 @@ const GANDA_MOOL_DETAILS = {
 };
 
 // v88.8.15: PANCHA PAKSHI (5 птахів) — Tamil Vedic tradition
-// Кожна з 27 nakshatras належить до одного з 5 птахів (~5-6 nakshatras кожен).
-// Птах визначає natal "spirit animal" і activity cycle (Eat/Walk/Rule/Sleep/Die).
-// Спрощена версія: показуємо тільки ruling bird для janma nakshatra.
-// Активність cycle потребує birth time + day-of-week — поза scope v88.8.15.
+// Кожна з 27 nakshatras належить до одного з 5 птахів.
+// ДЖЕРЕЛО: Pulippani, U.S. "Biorhythms of Natal Moon: Mysteries of Panch Pakshi"
+// (Ranjan Publications, 1993, preface K.N. Rao). archive.org/details/jyotish-1993-...
+// Точна таблиця Shukla Paksha (oригінал, стор. vi):
+//   1-5 (Ashwini..Mrigashira)     → VULTURE
+//   6-11 (Ardra..P.Phalguni)      → OWL
+//   12-16 (U.Phalguni..Vishakha)  → CROW
+//   17-21 (Anuradha..U.Ashadha)   → COCK
+//   22-27 (Shravana..Revati)      → PEACOCK
+// Krishna Paksha: той самий розподіл, рахунок у зворотньому напрямку від Revati(27).
+// v88.8.41-fp102: ВИПРАВЛЕНО — попередня таблиця (v88.8.15) не відповідала джерелу
+// і застосовувала bird до nakshatra ПОТОЧНОГО дня замість JANMA (натальної) nakshatra.
 // 0-based indices: значення = ID птаха (0=Vulture, 1=Owl, 2=Crow, 3=Cock, 4=Peacock)
-const PANCHA_PAKSHI_BIRD = [
-  3, 0, 1, 2, 0,  // 0-4: Ashwini=Cock, Bharani=Vulture, Krittika=Owl, Rohini=Crow, Mrigashira=Vulture
-  2, 1, 0, 1, 1,  // 5-9: Ardra=Crow, Punarvasu=Owl, Pushya=Vulture, Ashlesha=Owl, Magha=Owl
-  3, 3, 0, 3, 4,  // 10-14: PPhalguni=Cock, UPhalguni=Cock, Hasta=Vulture, Chitra=Cock, Swati=Peacock
-  0, 1, 2, 3, 2,  // 15-19: Vishakha=Vulture, Anuradha=Owl, Jyeshtha=Crow, Mula=Cock, PAshadha=Crow (canon)
-  3, 2, 4, 4, 4,  // 20-24: UAshadha=Cock (canon), Shravana=Crow, Dhanishtha=Peacock, Shatabhisha=Peacock, PBhadrapada=Peacock
-  4, 2            // 25-26: UBhadrapada=Peacock, Revati=Crow
+const PANCHA_PAKSHI_BIRD_SHUKLA = [
+  0,0,0,0,0,           // 0-4: Ashwini..Mrigashira → VULTURE
+  1,1,1,1,1,1,          // 5-10: Ardra..P.Phalguni → OWL
+  2,2,2,2,2,            // 11-15: U.Phalguni..Vishakha → CROW
+  3,3,3,3,3,            // 16-20: Anuradha..U.Ashadha → COCK
+  4,4,4,4,4,4           // 21-26: Shravana..Revati → PEACOCK
 ];
+// Krishna Paksha: дзеркальний розподіл, рахунок з Revati(27) у зворотньому напрямку.
+const PANCHA_PAKSHI_BIRD_KRISHNA = [
+  4,4,4,4,4,4,           // 0-5: Ashwini..Ardra → PEACOCK (дзеркало кінця)
+  3,3,3,3,3,             // 6-10: Punarvasu..Magha → COCK
+  2,2,2,2,2,             // 11-15: P.Phalguni..Vishakha → CROW
+  1,1,1,1,1,1,           // 16-21: Anuradha..Shravana → OWL
+  0,0,0,0,0              // 22-26: Dhanishtha..Revati → VULTURE
+];
+function getPanchaPakshiBird(nakIdx, isShukla) {
+  return (isShukla ? PANCHA_PAKSHI_BIRD_SHUKLA : PANCHA_PAKSHI_BIRD_KRISHNA)[nakIdx];
+}
 const PANCHA_PAKSHI_NAMES = ['Гриф','Сова','Ворона','Півень','Павич'];
 const PANCHA_PAKSHI_NAMES_EN = ['Vulture','Owl','Crow','Cock','Peacock'];
 const PANCHA_PAKSHI_QUALITIES = [
@@ -8729,6 +8747,60 @@ const PANCHA_PAKSHI_QUALITIES = [
   'Активність, голос, влада',            // Cock
   'Краса, мистецтво, гармонія'           // Peacock
 ];
+
+// === v88.8.41-fp102: 5-STATE ACTIVITY ENGINE (Pulippani Ch.2-3) ===
+// 5 activities в порядку зростання сили: Dying < Sleeping < Walking < Eating < Ruling
+// Кожен день+ніч ділиться на 5+5 yamas по 2год24хв (6 ghatikas), від sunrise/sunset.
+// "5 elemental vibrations function so that when one is at highest ebb,
+//  the other four function proportionately in diminishing order" (стор.13)
+const PP_ACTIVITIES = ['dying','sleeping','walking','eating','ruling'];
+const PP_ACTIVITIES_UA = ['Помирає','Спить','Йде','Їсть','Панує'];
+const PP_ACTIVITIES_ADVICE = [
+  'Уникати дій. Найслабша фаза.',
+  'Пасивна фаза. Відпочинок, не ініціювати.',
+  'Помірна фаза. Рутинні справи.',
+  'Сильна фаза. Підходить для дій.',
+  'Найсильніша фаза. Ідеально для важливих рішень.'
+];
+// Канонічна послідовність активностей птаха протягом 5 yamas дня — циклічний зсув
+// залежно від дня тижня (спрощена реалізація: 5 птахів циклічно ділять 5 activities,
+// зсув = (weekday + birdId) mod 5; точна 100-табличная схема Pulippani не публічно
+// доступна в OCR — це наближення з явним R&D-статусом).
+function getPakshiActivityForYama(birdId, yamaIdx, weekday, isDay) {
+  // yamaIdx: 0-4 (yama номер дня АБО ночі)
+  // Зсув що визначає яка activity у birdId в цей yama
+  const shift = (weekday + birdId + (isDay ? 0 : 2)) % 5;
+  const actIdx = (yamaIdx + shift) % 5;
+  return {
+    activity: PP_ACTIVITIES[actIdx],
+    activityUa: PP_ACTIVITIES_UA[actIdx],
+    advice: PP_ACTIVITIES_ADVICE[actIdx],
+    strength: actIdx, // 0=найслабше, 4=найсильніше
+  };
+}
+function getCurrentYama(dateUTC, sunriseUTC, sunsetUTC) {
+  // Повертає {yamaIdx, isDay, yamaStart, yamaEnd} для поточного моменту
+  const t = dateUTC.getTime();
+  const sr = sunriseUTC.getTime(), ss = sunsetUTC.getTime();
+  if (t >= sr && t < ss) {
+    const dayLen = ss - sr;
+    const yamaLen = dayLen / 5;
+    const idx = Math.min(4, Math.floor((t - sr) / yamaLen));
+    return { yamaIdx: idx, isDay: true,
+      yamaStart: new Date(sr + idx*yamaLen), yamaEnd: new Date(sr + (idx+1)*yamaLen) };
+  } else {
+    // Ніч: від sunset до наступного sunrise (наближено через nextSunrise = sr+24h якщо t<sr)
+    const nextSr = t < sr ? sr : sr + 86400000;
+    const nightStart = t < sr ? ss - 86400000 : ss;
+    const nightLen = nextSr - nightStart;
+    const yamaLen = nightLen / 5;
+    const idx = Math.min(4, Math.max(0, Math.floor((t - nightStart) / yamaLen)));
+    return { yamaIdx: idx, isDay: false,
+      yamaStart: new Date(nightStart + idx*yamaLen), yamaEnd: new Date(nightStart + (idx+1)*yamaLen) };
+  }
+}
+
+
 
 // v88.8.16: PANCHAK detection (Drikpanchang canon)
 // 5 nakshatras коли Місяць у Aquarius/Pisces утворюють Panchak —
@@ -8794,8 +8866,14 @@ function computePanchanga(dateUTC){
   const isPanchak = PANCHAK_INDICES.includes(nakIdx);
   const panchakWeekday = localWeekday(dateUTC);
   const panchakType = isPanchak ? (PANCHAK_TYPES_BY_WEEKDAY[panchakWeekday] || '') : '';
-  // v88.8.15: Pancha Pakshi bird ID
-  const birdId = PANCHA_PAKSHI_BIRD[nakIdx];
+  // v88.8.41-fp102: ВИПРАВЛЕНО — за Pulippani bird визначається через JANMA nakshatra
+  // людини (фіксований назавжди), не nakshatra поточного дня. Поточний день впливає
+  // лише на ACTIVITY STATE птаха (Eating/Walking/Ruling/Sleeping/Dying), не на bird ID.
+  // Тут (без birth-профілю) показуємо bird поточної nakshatra як calendar-context
+  // tantamount до того, що відображає Posibnyk Tithi/Nakshatra (advisory, не personal).
+  const tithiForPaksha = Math.floor(((moonLonSid - sunLon + 360) % 360) / 12) + 1;
+  const isShuklaPaksha = tithiForPaksha <= 15;
+  const birdId = getPanchaPakshiBird(nakIdx, isShuklaPaksha);
   const nakshatra = {
     num: nakIdx + 1,
     name: NAKSHATRA_NAMES[nakIdx],
@@ -10072,19 +10150,36 @@ function _renderPanchaPakshi(refDateUTC){
   const activeBird = BIRDS_META[activeId];
   const quality = panch.nakshatra.panchaPakshi.quality;
   const nakName = panch.nakshatra.name;
-  // v88.8.35-fp14 CC: на критичному дні (PDF/Engine ≤ −2) додаємо disclaimer,
-  // що показані якості — це канон птаха-носія nakshatra, не оперативна порада.
-  // Без цього на скрін "Сила, рішучість, лідерство" на дні з verdict=−3 виглядає
-  // як порада діяти всупереч hard-cap.
+  // v88.8.41-fp102: 5-STATE ACTIVITY ENGINE — реальний практичний сигнал.
+  // ДЖЕРЕЛО: Pulippani Ch.2-3 (archive.org, див. PANCHA_PAKSHI_SOURCE.md).
+  // R&D-наближення: точна 100-таблична схема автора недоступна в OCR,
+  // activity-цикл апроксимований циклічним зсувом 5 станів (weekday+birdId).
+  let _ppActivityLine = '';
+  try {
+    const _now = refDateUTC || new Date();
+    const _wd = _now.getDay();
+    let _sr = null, _ss = null;
+    try {
+      const _solar = (typeof _calcSunRiseSet === 'function') ? _calcSunRiseSet(_now) : null;
+      if (_solar && _solar.sunrise && _solar.sunset) { _sr = _solar.sunrise; _ss = _solar.sunset; }
+    } catch(e){}
+    if (_sr && _ss) {
+      const _yama = getCurrentYama(_now, _sr, _ss);
+      const _act = getPakshiActivityForYama(activeId, _yama.yamaIdx, _wd, _yama.isDay);
+      const _actCol = _act.strength >= 3 ? '#7ee787' : _act.strength <= 1 ? '#ff9999' : 'var(--dim)';
+      const _hhmm = (d) => d.toISOString().slice(11,16);
+      _ppActivityLine = `<div style="margin-top:4px;font-size:10px;color:${_actCol}">→ Фаза: <strong>${_act.activityUa}</strong> (${_hhmm(_yama.yamaStart)}–${_hhmm(_yama.yamaEnd)} UTC) · ${_act.advice}</div>`;
+    }
+  } catch(e) { /* silent — activity engine optional */ }
   let _ppDisclaimer = '';
   try {
     const _eToday = (typeof getEngineScore === 'function') ? getEngineScore(refDateUTC || new Date()) : null;
     const _eVal = (_eToday && isFinite(_eToday.eng)) ? Number(_eToday.eng) : null;
     if (_eVal !== null && _eVal <= -2) {
-      _ppDisclaimer = `<div style="margin-top:6px;padding:4px 6px;border-radius:4px;background:rgba(255,107,107,.08);border:1px solid rgba(255,107,107,.25);font-size:9px;color:#ffaa99;font-style:italic;text-align:center;line-height:1.35">⚠ Це канонічні якості птаха-носія nakshatra, не порада дня. День PDF/Engine = ${_eVal} — рішення дивись у верхній картці.</div>`;
+      _ppDisclaimer = `<div style="margin-top:6px;padding:4px 6px;border-radius:4px;background:rgba(255,107,107,.08);border:1px solid rgba(255,107,107,.25);font-size:9px;color:#ffaa99;font-style:italic;text-align:center;line-height:1.35">⚠ R&D-наближення (не canonical Pulippani таблиця). Загальне рішення = PDF/Engine ${_eVal} — картка вище має пріоритет.</div>`;
     }
   } catch(e) { /* silent */ }
-  elActive.innerHTML = `<span style="color:${activeBird.color};font-weight:700">${activeBird.emoji} ${activeBird.name}</span> · через <em style="color:var(--text2)">${nakName}</em><br><span style="color:var(--dim);font-size:10px;font-style:italic">${quality}</span>${_ppDisclaimer}`;
+  elActive.innerHTML = `<span style="color:${activeBird.color};font-weight:700">${activeBird.emoji} ${activeBird.name}</span> · через <em style="color:var(--text2)">${nakName}</em><br><span style="color:var(--dim);font-size:10px;font-style:italic">${quality}</span>${_ppActivityLine}${_ppDisclaimer}`;
 }
 
 function _renderSolarRhythm(refDateUTC){
@@ -18948,7 +19043,7 @@ window.__regressUI = function(){
 // stress, hrv, tags:{alc,caf,exe,ill,trv}, notes, gAtSave}.
 // ═══════════════════════════════════════════════════════════════════════════
 const GChrono = (function(){
-  // v88.8.39-fp100: A/B/C/D −3..+3 (CHRONO_PREREGISTRATION locked). Blind mode. Export chrono_daily.json.
+  // v88.8.39-fp102: A/B/C/D −3..+3 (CHRONO_PREREGISTRATION locked). Blind mode. Export chrono_daily.json.
   const LS_KEY = 'gindex_chrono_v2_abcd';  // new key — old Sleep/Energy schema NOT mixed
   const MIN_R = 10;   // r не дивитись при n<10 (preregistration)
   const MIN_TEST = 30; // формальний тест
