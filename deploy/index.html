@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.39-fp102</title>
+  <title>G-Index — Космофізичний дашборд v88.8.39-fp103</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1537,7 +1537,7 @@ body.simple-mode .col-hide-mobile {
               </div>
             </details>
             <div id="heroActionCmd" style="font-size:18px;font-weight:900;letter-spacing:.02em;line-height:1.15">—</div>
-            <!-- v88.8.39-fp102: regime-first pill — режим домінує над score -->
+            <!-- v88.8.39-fp103: regime-first pill — режим домінує над score -->
             <div id="heroRegimePill" style="display:none;margin-top:5px;font-size:11px;font-weight:700;letter-spacing:.04em;opacity:.85"></div>
             <div id="heroMainDrag" style="margin-top:4px;font-size:12px;font-weight:700;color:var(--text2)"></div>
             <div id="heroConsequence"></div>
@@ -1614,7 +1614,7 @@ body.simple-mode .col-hide-mobile {
       </div>
       <span style="font-size:11px;color:var(--ok);font-weight:700;white-space:nowrap">Подивитись →</span>
     </a>
-    <!-- v88.8.39-fp102: Regime cards (M2) — score+regime+confidence+space-weather. daily_master.json -->
+    <!-- v88.8.39-fp103: Regime cards (M2) — score+regime+confidence+space-weather. daily_master.json -->
     <div id="regimeCards" style="display:none;margin:0 0 10px;gap:8px;grid-template-columns:repeat(4,1fr)">
       <div id="rcScore" style="padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:rgba(11,18,32,.5);text-align:center">
         <div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em">Оцінка дня</div>
@@ -1641,7 +1641,7 @@ body.simple-mode .col-hide-mobile {
          Джерело: NOAA G-Scale (public), Groves & Akala Radio Science 2012.
          Дані: kp live (lastWWV), Dst (computeDstModifier), local_hour, _userLat. -->
     <div id="gnssCard" style="margin:0 0 10px;padding:10px 14px;border-radius:12px;border:1px solid rgba(55,167,255,.22);background:rgba(10,20,40,.5);display:none"></div>
-    <!-- v88.8.39-fp102: Bulletin v2 (M3) — режим+впевненість+причина+контекст+дія. bulletin_v2.json -->
+    <!-- v88.8.39-fp103: Bulletin v2 (M3) — режим+впевненість+причина+контекст+дія. bulletin_v2.json -->
     <details id="bulletinV2Card" style="margin:0 0 10px;padding:10px 14px;border-radius:12px;border:1px solid var(--border);background:rgba(11,18,32,.5);display:none">
       <summary style="cursor:pointer;font-size:12px;font-weight:600;color:var(--muted);list-style:none;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <span style="font-size:14px">📋</span>
@@ -1651,7 +1651,7 @@ body.simple-mode .col-hide-mobile {
       <div id="bulletinV2List" style="margin-top:10px;display:flex;flex-direction:column;gap:8px"></div>
       <div style="margin-top:8px;font-size:10px;color:var(--dim);line-height:1.5">Відтворює редакторську логіку Tarita, НЕ реальні події. Engine v18.5 frozen.</div>
     </details>
-    <!-- v88.8.39-fp102: Chrono panel (M4) — НЕЗАЛЕЖНИЙ outcome target. НЕ змішувати з Tarita GT. -->
+    <!-- v88.8.39-fp103: Chrono panel (M4) — НЕЗАЛЕЖНИЙ outcome target. НЕ змішувати з Tarita GT. -->
     <details id="chronoPanelCard" style="margin:0 0 10px;padding:10px 14px;border-radius:12px;border:1px solid rgba(155,177,220,.22);background:rgba(11,18,32,.5);display:none">
       <summary style="cursor:pointer;font-size:12px;font-weight:600;color:var(--muted);list-style:none;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <span style="font-size:14px">📓</span>
@@ -4264,7 +4264,7 @@ async function loadExpertOverrides(){
   }
 }
 
-// v88.8.39-fp102: daily_master.json loader + regime cards (M2). Freeze-safe, read-only.
+// v88.8.39-fp103: daily_master.json loader + regime cards (M2). Freeze-safe, read-only.
 let _dailyMaster = null;
 async function loadDailyMaster(){
   if(_dailyMaster !== null) return _dailyMaster;
@@ -4335,7 +4335,7 @@ function renderRegimeCards(){
     spd.textContent=(dst!=null?'Dst '+dst+' · ':'')+regime;
   }
 }
-// v88.8.39-fp102: regime-first hero pill — режим показується під headline, домінує над score
+// v88.8.39-fp103: regime-first hero pill — режим показується під headline, домінує над score
 function renderHeroRegimePill(){
   const pill=el('heroRegimePill');
   if(!pill || !_dailyMaster) return;
@@ -4352,7 +4352,7 @@ function renderHeroRegimePill(){
 }
 window.renderHeroRegimePill=renderHeroRegimePill;
 
-// v88.8.39-fp102: Bulletin v2 (M3) — render режим+впевненість+причина+контекст+дія
+// v88.8.39-fp103: Bulletin v2 (M3) — render режим+впевненість+причина+контекст+дія
 let _bulletinV2 = null;
 async function loadBulletinV2(){
   if(_bulletinV2 !== null) return _bulletinV2;
@@ -4385,7 +4385,7 @@ function renderBulletinV2(){
 }
 window.renderBulletinV2 = renderBulletinV2;
 
-// v88.8.39-fp102: Chrono panel (M4) — окремий outcome target, r заблоковано при n<10
+// v88.8.39-fp103: Chrono panel (M4) — окремий outcome target, r заблоковано при n<10
 let _chronoPanel = null;
 async function loadChronoPanel(){
   if(_chronoPanel !== null) return _chronoPanel;
@@ -10327,8 +10327,9 @@ function _renderSolarRhythm(refDateUTC){
       const c = colorMap[slot.score] ?? 'var(--text2)';
       const opacity = isPast ? '0.42' : '1';
       const bg = isNow ? 'rgba(123,232,138,.10)' : 'transparent';
-      const nowMark = isNow ? '<span style="color:var(--ok);font-weight:700;margin-left:4px">◄ зараз</span>' : '';
-      return `<div style="display:flex;align-items:center;gap:6px;padding:3px 6px;border-radius:4px;background:${bg};opacity:${opacity}" title="${slot.ua} — ${slot.hint}">
+      const scoreStr = `PCL ${slot.score > 0 ? '+' : ''}${slot.score}`;
+      const nowMark = isNow ? `<span style="color:var(--ok);font-weight:700;margin-left:4px">◄ зараз · ${scoreStr}</span>` : '';
+      return `<div style="display:flex;align-items:center;gap:6px;padding:3px 6px;border-radius:4px;background:${bg};opacity:${opacity}" title="${slot.ua} — ${slot.hint} (${scoreStr})">
         <span style="color:var(--faint);font-size:10px;width:14px;text-align:right">${idx+1}</span>
         <span style="color:var(--faint);font-size:10px;width:78px">${_fmtLocalHM(slot.start)}–${_fmtLocalHM(slot.end)}</span>
         <span style="color:${c};font-weight:600;width:60px">${slot.name}</span>
@@ -10336,7 +10337,23 @@ function _renderSolarRhythm(refDateUTC){
         <span style="color:var(--dim);font-size:10px">${slot.hint}${nowMark}</span>
       </div>`;
     };
+    // v88.8.41-fp103: явний поточний слот з PCL-числом — раніше Choghadiya показувала
+    // колір/timeline, але не explicit число (на відміну від Hora "PCL +X").
+    // ⚠ FREEZE COMPLIANCE: ADVISORY DISPLAY ONLY. _curSlot.score НЕ передається
+    // в computeAi()/G/Pᵢ. Джерело score: _CHOG_META (вже існувало до fp103,
+    // тут лише виведено explicit число в UI, логіка розрахунку не змінена).
+    let _chogNowLine = '';
+    try {
+      const _allSlots = [...chog.day, ...chog.night];
+      const _curSlot = _allSlots.find(s => now >= s.start && now < s.end);
+      if (_curSlot) {
+        const _ccol = _curSlot.score > 0.3 ? '#7ee787' : _curSlot.score < -0.3 ? '#ff9999' : 'var(--dim)';
+        const _csign = _curSlot.score > 0 ? '+' : '';
+        _chogNowLine = `<div style="margin-bottom:6px;padding:4px 6px;border-radius:4px;background:rgba(255,255,255,.03);font-size:11px">Зараз: <strong style="color:${_ccol}">${_curSlot.ua} (${_curSlot.name})</strong> <span style="color:${_ccol};font-weight:700">${_csign}${_curSlot.score} PCL</span> · до ${_fmtLocalHM(_curSlot.end)} — ${_curSlot.hint}</div>`;
+      }
+    } catch(e) { /* silent */ }
     elChog.innerHTML = `
+      ${_chogNowLine}
       <div style="font-size:10px;color:var(--faint);margin-bottom:4px;letter-spacing:0.04em">☀ ДЕНЬ (${_fmtLocalHM(sunrise)} → ${_fmtLocalHM(sunset)})</div>
       ${chog.day.map((s,i) => renderRow(s, i, 'day')).join('')}
       <div style="font-size:10px;color:var(--faint);margin:8px 0 4px;letter-spacing:0.04em">🌙 НІЧ (${_fmtLocalHM(sunset)} → +наступн. схід)</div>
@@ -15201,6 +15218,40 @@ const NAKSHATRA_UA = [
   'Уттара Бхадрапада','Реваті'
 ];
 const NAKSHATRA_LORDS_UA = ['Кету','Венера','Сонце','Місяць','Марс','Раху','Юпітер','Сатурн','Меркурій'];
+
+// v88.8.41-fp103: PLANET_PCL_WEIGHT — ваги планет для Dasha/Antardasha modifier.
+// ⚠ FREEZE COMPLIANCE: це ADVISORY DISPLAY MODIFIER, не canonical engine input.
+// PLANET_PCL_WEIGHT НЕ передається в computeAi(), НЕ впливає на G/Pᵢ/final_score.
+// Використовується ЛИШЕ у display HTML (Personal block, рядок "Вплив Антар-даша").
+// Якщо в майбутньому (post-V19) це підключається до canonical score — оновити
+// METRIC_REGISTRY.md і провалідувати окремо, бо це змінить backtest accuracy.
+// ДЖЕРЕЛО: Posibnyk_Part2_Jyotish.docx, § II.3.1, Таблиця 2 "Оперативна інтерпретація Вари"
+// (та сама таблиця вже використовується для Vara/день тижня — тут застосовуємо
+// ідентичну планетарну логіку до Antardasha lord, бо це теж "хто керує моментом").
+// Раху/Кету відсутні в оригінальній Vara-таблиці (7 класичних планет) — додано
+// окремо як R&D-наближення на основі їх класичної malefic/transformative природи.
+const PLANET_PCL_WEIGHT = {
+  0: -0.5,  // Кету — невизначеність, відсторонення (R&D-наближення, не в Vara-таблиці)
+  1: +1,    // Венера — відновлення, дипломатія (Шукравара)
+  2: +0.5,  // Сонце — лідерство, влада, здоров'я (Равівара, "умовно +1/0")
+  3: -1,    // Місяць — погіршує сон, розвідка/раптові дії (Сомавара)
+  4: 0,     // Марс — хірургія, бойові дії, мужність (Мангалавара, "0/+1")
+  5: -0.5,  // Раху — хаос, оману (R&D-наближення)
+  6: +2,    // Юпітер — стратегія, навчання, найкращий для рішень (Гурувара)
+  7: -0.5,  // Сатурн — дисципліна, стрес (Шанівара, "0/-1")
+  8: +1,    // Меркурій — комунікації, переговори, аналіз (Будхавара)
+};
+const PLANET_PCL_NOTE = {
+  0: 'невизначеність, відсторонення',
+  1: 'відновлення, дипломатія',
+  2: 'лідерство, здоров\'я',
+  3: 'емоційна нестабільність, погіршує сон',
+  4: 'енергія дій, але імпульсивність',
+  5: 'хаос, оману, нестабільність',
+  6: 'стратегія, навчання — найкраще для рішень',
+  7: 'дисципліна, стрес, обмеження',
+  8: 'комунікації, аналіз, переговори',
+};
 const DASA_YEARS = [7,20,6,10,7,18,16,19,17];
 const TAARA_UA = ['','Janma (небезп.)','Sampat (благо)','Vipat (небезп.)','Kshema (благо)',
   'Pratyak (небезп.)','Sadhana (благо)','Naidhana (небезп.)','Mitra (благо)','Atimitra (благо)'];
@@ -16311,6 +16362,16 @@ function renderPersonal() {
           </div>
           <div style="font-size:10px;color:var(--faint);margin-top:1px">${Math.round(antar.progress*100)}% пройдено → ${antar.nextLordName}</div>
         </td>
+      </tr>
+      <tr>
+        <td class="muted" style="padding:3px 0;border-bottom:1px solid #1a2540">→ Вплив Антар-даша</td>
+        <td style="padding:3px 0;border-bottom:1px solid #1a2540">${(() => {
+          const _w = PLANET_PCL_WEIGHT[antar.lord];
+          const _note = PLANET_PCL_NOTE[antar.lord] || '';
+          const _col2 = _w > 0.3 ? '#7ee787' : _w < -0.3 ? '#ff9999' : 'var(--dim)';
+          const _sign2 = _w > 0 ? '+' : '';
+          return `<span style="color:${_col2};font-weight:700">${_sign2}${_w.toFixed(1)} PCL</span> <span class="muted" style="font-size:11px">· ${_note}</span> <span style="font-size:9px;color:var(--faint)">(R&D, Posibnyk §II.3.1)</span>`;
+        })()}</td>
       </tr>
       <tr>
         <td class="muted" style="padding:3px 0;border-bottom:1px solid #1a2540">Пратьянтар</td>
@@ -19043,7 +19104,7 @@ window.__regressUI = function(){
 // stress, hrv, tags:{alc,caf,exe,ill,trv}, notes, gAtSave}.
 // ═══════════════════════════════════════════════════════════════════════════
 const GChrono = (function(){
-  // v88.8.39-fp102: A/B/C/D −3..+3 (CHRONO_PREREGISTRATION locked). Blind mode. Export chrono_daily.json.
+  // v88.8.39-fp103: A/B/C/D −3..+3 (CHRONO_PREREGISTRATION locked). Blind mode. Export chrono_daily.json.
   const LS_KEY = 'gindex_chrono_v2_abcd';  // new key — old Sleep/Energy schema NOT mixed
   const MIN_R = 10;   // r не дивитись при n<10 (preregistration)
   const MIN_TEST = 30; // формальний тест
