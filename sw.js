@@ -1,11 +1,11 @@
-// v88.8.39-fp81: annual_2026_27.json enrichment — existing engine_scores entries now get cal_nakshatra+cal_tithi from annual data. Scenario strip no longer shows N0/Ashwini for future dates.
+// v88.8.39-fp83: annual_2026_27.json enrichment — existing engine_scores entries now get cal_nakshatra+cal_tithi from annual data. Scenario strip no longer shows N0/Ashwini for future dates.
 // v88.8.39-fp76: BUG FIX — forecastConfidence eng===-2 → WEAK (was MED). Both ±2 miscalibrated per CALIBRATION_AUDIT. Badge legend ±2 fixed.
 // v88.8.39-fp75: disable _applyV186Patches (freeze compliance); canonical v18.5 labels; heroConfidence→Якість даних; CALIBRATION_AUDIT fixed.
 // v88.8.40-fp74: forecastConfidence v3 per-class calibration (EXTREME/HIGH/MISCAL/LOW/IGNORE). Badge renderer v3. Freeze-safe read-only.
 // v88.8.40-fp74: +cal/eng sign-consistency hint in scenario tooltip (read-only, ABLATION-validated 85% vs 43% strict). Freeze-safe.
 // v88.8.40-fp74: forecast_confidence read-time markers on scenario strip (HIGH/WEAK/LOW). Freeze-safe, no engine change. Based on FINAL_FALSIFICATION + EPISTEMIC audits 2026-06-21.
 // v88.8.40-fp74: Audit Card silent mode + Rahu fallback + data-mode. Cache key fp76.
-// G-Index Service Worker v88.8.39-fp81
+// G-Index Service Worker v88.8.39-fp83
 // v88.8.19 changes — incremental release після v88.8.18 з реальним bug fix:
 //   ENGINE v18.7 → v18.8: P2 раніше шукав 'Подорожі' word — missed 93 dates
 //     з '✈' emoji-only. P3 раніше тільки Shukla Dashami (10) — missed Krishna
@@ -607,8 +607,8 @@
 //   3. backtest.html додано до SHELL_FILES.
 //   4. cache.put awaited перед SW_FRESH_DATA notify (race fix).
 
-const SHELL_CACHE = 'g-index-shell-v88-8-39-fp81';
-const DATA_CACHE = 'g-index-data-v88-8-39-fp81';
+const SHELL_CACHE = 'g-index-shell-v88-8-39-fp106';
+const DATA_CACHE = 'g-index-data-v88-8-39-fp83';
 
 const SHELL_FILES = [
   './manifest.json',
