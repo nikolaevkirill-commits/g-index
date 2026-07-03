@@ -5,7 +5,7 @@
 // v88.8.40-fp74: +cal/eng sign-consistency hint in scenario tooltip (read-only, ABLATION-validated 85% vs 43% strict). Freeze-safe.
 // v88.8.40-fp74: forecast_confidence read-time markers on scenario strip (HIGH/WEAK/LOW). Freeze-safe, no engine change. Based on FINAL_FALSIFICATION + EPISTEMIC audits 2026-06-21.
 // v88.8.40-fp74: Audit Card silent mode + Rahu fallback + data-mode. Cache key fp76.
-// G-Index Service Worker v88.8.39-fp83
+// G-Index Service Worker v88.8.39-fp117
 // v88.8.19 changes — incremental release після v88.8.18 з реальним bug fix:
 //   ENGINE v18.7 → v18.8: P2 раніше шукав 'Подорожі' word — missed 93 dates
 //     з '✈' emoji-only. P3 раніше тільки Shukla Dashami (10) — missed Krishna
@@ -607,7 +607,7 @@
 //   3. backtest.html додано до SHELL_FILES.
 //   4. cache.put awaited перед SW_FRESH_DATA notify (race fix).
 
-const SHELL_CACHE = 'g-index-shell-v88-8-39-fp116';
+const SHELL_CACHE = 'g-index-shell-v88-8-39-fp117';
 const DATA_CACHE = 'g-index-data-v88-8-39-fp83';
 
 const SHELL_FILES = [
