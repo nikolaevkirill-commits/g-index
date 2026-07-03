@@ -1,11 +1,11 @@
-// v88.8.39-fp83: annual_2026_27.json enrichment — existing engine_scores entries now get cal_nakshatra+cal_tithi from annual data. Scenario strip no longer shows N0/Ashwini for future dates.
-// v88.8.39-fp76: BUG FIX — forecastConfidence eng===-2 → WEAK (was MED). Both ±2 miscalibrated per CALIBRATION_AUDIT. Badge legend ±2 fixed.
-// v88.8.39-fp75: disable _applyV186Patches (freeze compliance); canonical v18.5 labels; heroConfidence→Якість даних; CALIBRATION_AUDIT fixed.
-// v88.8.40-fp74: forecastConfidence v3 per-class calibration (EXTREME/HIGH/MISCAL/LOW/IGNORE). Badge renderer v3. Freeze-safe read-only.
-// v88.8.40-fp74: +cal/eng sign-consistency hint in scenario tooltip (read-only, ABLATION-validated 85% vs 43% strict). Freeze-safe.
-// v88.8.40-fp74: forecast_confidence read-time markers on scenario strip (HIGH/WEAK/LOW). Freeze-safe, no engine change. Based on FINAL_FALSIFICATION + EPISTEMIC audits 2026-06-21.
-// v88.8.40-fp74: Audit Card silent mode + Rahu fallback + data-mode. Cache key fp76.
-// G-Index Service Worker v88.8.39-fp83
+// v88.8.39-fp113: annual_2026_27.json enrichment — existing engine_scores entries now get cal_nakshatra+cal_tithi from annual data. Scenario strip no longer shows N0/Ashwini for future dates.
+// v88.8.39-fp113: BUG FIX — forecastConfidence eng===-2 → WEAK (was MED). Both ±2 miscalibrated per CALIBRATION_AUDIT. Badge legend ±2 fixed.
+// v88.8.39-fp113: disable _applyV186Patches (freeze compliance); canonical v18.5 labels; heroConfidence→Якість даних; CALIBRATION_AUDIT fixed.
+// v88.8.40-fp113: forecastConfidence v3 per-class calibration (EXTREME/HIGH/MISCAL/LOW/IGNORE). Badge renderer v3. Freeze-safe read-only.
+// v88.8.40-fp113: +cal/eng sign-consistency hint in scenario tooltip (read-only, ABLATION-validated 85% vs 43% strict). Freeze-safe.
+// v88.8.40-fp113: forecast_confidence read-time markers on scenario strip (HIGH/WEAK/LOW). Freeze-safe, no engine change. Based on FINAL_FALSIFICATION + EPISTEMIC audits 2026-06-21.
+// v88.8.40-fp113: Audit Card silent mode + Rahu fallback + data-mode. Cache key fp113.
+// G-Index Service Worker v88.8.39-fp113
 // v88.8.19 changes — incremental release після v88.8.18 з реальним bug fix:
 //   ENGINE v18.7 → v18.8: P2 раніше шукав 'Подорожі' word — missed 93 dates
 //     з '✈' emoji-only. P3 раніше тільки Shukla Dashami (10) — missed Krishna
@@ -607,15 +607,15 @@
 //   3. backtest.html додано до SHELL_FILES.
 //   4. cache.put awaited перед SW_FRESH_DATA notify (race fix).
 
-const SHELL_CACHE = 'g-index-shell-v88-8-39-fp112';
-const DATA_CACHE = 'g-index-data-v88-8-39-fp83';
+const SHELL_CACHE = 'g-index-shell-v88-8-39-fp113';
+const DATA_CACHE = 'g-index-data-v88-8-39-fp113';
 
 const SHELL_FILES = [
   './manifest.json',
   './icon192.png',
   './icon512.png',
   './backtest.html',
-  // fp45: index.html REMOVED from SHELL_FILES — must be network-first so deploys take effect immediately.
+  // fp113: index.html REMOVED from SHELL_FILES — must be network-first so deploys take effect immediately.
   // './index.html' — intentionally excluded; handled separately below as network-first.
 ];
 
@@ -648,7 +648,7 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // v88.8.37-fp72: ?nocache= bypass — завжди network, SW кеш ігнорується.
+  // v88.8.37-fp113: ?nocache= bypass — завжди network, SW кеш ігнорується.
   // Використовується кнопкою 🗑 Кеш для примусового оновлення після деплою.
   if (url.searchParams.has('nocache')) {
     event.respondWith(fetch(event.request.url.split('?')[0], { cache: 'no-store' }));
@@ -679,7 +679,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
   
-  // fp56-P13: future_kp.json — network-first з cached fallback.
+  // fp113-P13: future_kp.json — network-first з cached fallback.
   // Оновлюється щопонеділка після NOAA 27DO (~15:00 UTC). Офлайн: остання версія.
   if (url.pathname.endsWith('future_kp.json')) {
     event.respondWith(
@@ -701,7 +701,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // fp56-P13: annual_2026_27.json — cache-first (статичний, змінюється рідко).
+  // fp113-P13: annual_2026_27.json — cache-first (статичний, змінюється рідко).
   if (url.pathname.endsWith('annual_2026_27.json')) {
     event.respondWith(
       caches.match(event.request).then((cached) => {
@@ -754,7 +754,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
   
-  // fp45: index.html and navigation requests — NETWORK-FIRST.
+  // fp113: index.html and navigation requests — NETWORK-FIRST.
   // Critical: cache-first caused stale UI after deploys. New version must always be served fresh.
   const isIndexHtml = url.pathname === '/' || url.pathname.endsWith('/index.html') || url.pathname.endsWith('/.') || event.request.mode === 'navigate';
   if (isIndexHtml) {
