@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.39-fp117</title>
+  <title>G-Index — Космофізичний дашборд v88.8.42-fp119</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1583,7 +1583,7 @@ body.simple-mode .col-hide-mobile {
               </div>
             </details>
             <div id="heroActionCmd" style="font-size:18px;font-weight:900;letter-spacing:.02em;line-height:1.15">—</div>
-            <!-- v88.8.39-fp117: regime-first pill — режим домінує над score -->
+            <!-- v88.8.42-fp119: regime-first pill — режим домінує над score -->
             <div id="heroRegimePill" style="display:none;margin-top:5px;font-size:11px;font-weight:700;letter-spacing:.04em;opacity:.85"></div>
             <div id="heroMainDrag" style="margin-top:4px;font-size:12px;font-weight:700;color:var(--text2)"></div>
             <div id="heroConsequence"></div>
@@ -1660,7 +1660,7 @@ body.simple-mode .col-hide-mobile {
       </div>
       <span style="font-size:11px;color:var(--ok);font-weight:700;white-space:nowrap">Подивитись →</span>
     </a>
-    <!-- v88.8.39-fp117: Regime cards (M2) — score+regime+confidence+space-weather. daily_master.json -->
+    <!-- v88.8.42-fp119: Regime cards (M2) — score+regime+confidence+space-weather. daily_master.json -->
     <div id="regimeCards" style="display:none;margin:0 0 10px;gap:8px;grid-template-columns:repeat(4,1fr)">
       <div id="rcScore" style="padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:rgba(11,18,32,.5);text-align:center">
         <div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em">Оцінка дня</div>
@@ -1687,7 +1687,7 @@ body.simple-mode .col-hide-mobile {
          Джерело: NOAA G-Scale (public), Groves & Akala Radio Science 2012.
          Дані: kp live (lastWWV), Dst (computeDstModifier), local_hour, _userLat. -->
     <div id="gnssCard" style="margin:0 0 10px;padding:10px 14px;border-radius:12px;border:1px solid rgba(55,167,255,.22);background:rgba(10,20,40,.5);display:none"></div>
-    <!-- v88.8.39-fp117: Bulletin v2 (M3) — режим+впевненість+причина+контекст+дія. bulletin_v2.json -->
+    <!-- v88.8.42-fp119: Bulletin v2 (M3) — режим+впевненість+причина+контекст+дія. bulletin_v2.json -->
     <details id="bulletinV2Card" style="margin:0 0 10px;padding:10px 14px;border-radius:12px;border:1px solid var(--border);background:rgba(11,18,32,.5);display:none">
       <summary style="cursor:pointer;font-size:12px;font-weight:600;color:var(--muted);list-style:none;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <span style="font-size:14px">📋</span>
@@ -1697,7 +1697,7 @@ body.simple-mode .col-hide-mobile {
       <div id="bulletinV2List" style="margin-top:10px;display:flex;flex-direction:column;gap:8px"></div>
       <div style="margin-top:8px;font-size:10px;color:var(--dim);line-height:1.5">Відтворює редакторську логіку Tarita, НЕ реальні події. Engine v18.5 frozen.</div>
     </details>
-    <!-- v88.8.39-fp117: Chrono panel (M4) — НЕЗАЛЕЖНИЙ outcome target. НЕ змішувати з Tarita GT. -->
+    <!-- v88.8.42-fp119: Chrono panel (M4) — НЕЗАЛЕЖНИЙ outcome target. НЕ змішувати з Tarita GT. -->
     <details id="chronoPanelCard" style="margin:0 0 10px;padding:10px 14px;border-radius:12px;border:1px solid rgba(155,177,220,.22);background:rgba(11,18,32,.5);display:none">
       <summary style="cursor:pointer;font-size:12px;font-weight:600;color:var(--muted);list-style:none;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <span style="font-size:14px">📓</span>
@@ -3401,12 +3401,15 @@ document.addEventListener('DOMContentLoaded', () => { try { GIndexSound.init(); 
 // Точність: ±1 nakshatra без birth time. Phase B (~v88.8.19): Lahiri sidereal.
 // ═══════════════════════════════════════════════════════════════════════════
 const GIndexPPProfile = {
-  // Canon 1:1 з PANCHA_PAKSHI_BIRD (line 6705+ у v88.8.17)
-  BIRDS: [
-    3, 0, 1, 2, 0, 2, 1, 0, 1, 1,
-    3, 3, 0, 3, 4, 0, 1, 2, 3, 2,
-    3, 2, 4, 4, 4, 4, 2
-  ],
+  // v88.8.42-fp119 BUGFIX: стара BIRDS-таблиця (без paksha) не збігалась з канонічною
+  // Shukla/Krishna таблицею календарного блоку (PANCHA_PAKSHI_BIRD_SHUKLA/KRISHNA, line ~8779) —
+  // давала іншого птаха для тієї ж Nakshatra. Тепер birdFromNakshatra() використовує ту саму
+  // канонічну таблицю + paksha народження (без paksha birth bird визначити неможливо за книгою).
+  birdFromNakshatra(nakIdx, isShukla) {
+    if (typeof getPanchaPakshiBird === 'function') return getPanchaPakshiBird(nakIdx, isShukla);
+    // fallback якщо календарний блок ще не завантажений (не мало б статись — той самий файл)
+    return Math.floor(nakIdx / 5.4) % 5;
+  },
   NAKSHATRA_NAMES: [
     'Ashwini','Bharani','Krittika','Rohini','Mrigashira',
     'Ardra','Punarvasu','Pushya','Ashlesha','Magha',
@@ -3455,6 +3458,18 @@ const GIndexPPProfile = {
     // Fallback: synodic-based (~±1 nakshatra accuracy)
     const fraction = this.lunarAge(date) / this.SYNODIC;
     return Math.max(0, Math.min(26, Math.floor(fraction * 27)));
+  },
+
+  // v88.8.42-fp119: paksha народження — потрібно для коректного birdFromNakshatra()
+  // (без paksha birth bird визначити неможливо, книга дає окремі Shukla/Krishna таблиці).
+  pakshaFromDate(date) {
+    try {
+      if (typeof computePanchanga === 'function') {
+        const p = computePanchanga(date);
+        if (p && p.tithi && isFinite(p.tithi.num)) return p.tithi.num <= 15;
+      }
+    } catch(e) { /* fall through */ }
+    return true; // fallback: невідомо → консервативно Shukla (задокументовано як припущення)
   },
 
   load() {
@@ -3566,7 +3581,8 @@ const GIndexPPProfile = {
     const birthDate = new Date(`${p.date}T${p.time || '12:00'}:00`);
     if (!isFinite(birthDate.getTime())) return;
     const nakIdx = this.nakshatraFromDate(birthDate);
-    const birdId = this.BIRDS[nakIdx];
+    const isShukla = this.pakshaFromDate(birthDate);
+    const birdId = this.birdFromNakshatra(nakIdx, isShukla);
 
     // Birth bird display
     const elBird = document.getElementById('ppBirthBird');
@@ -3577,7 +3593,7 @@ const GIndexPPProfile = {
           <div style="font-size:32px">${this.ICONS[birdId]}</div>
           <div style="flex:1">
             <div style="font-size:14px;font-weight:700;color:var(--accent)">${this.NAMES_UA[birdId]}</div>
-            <div style="font-size:10px;color:var(--dim)">${this.NAMES_EN[birdId]} · ${this.NAKSHATRA_NAMES[nakIdx]} #${nakIdx + 1}/27</div>
+            <div style="font-size:10px;color:var(--dim)">${this.NAMES_EN[birdId]} · ${this.NAKSHATRA_NAMES[nakIdx]} #${nakIdx + 1}/27 · ${isShukla ? 'Шукла (зрост.)' : 'Крішна (спад.)'} пакша</div>
             <div style="font-size:10px;color:var(--text2);margin-top:3px;font-style:italic">${this.QUALITIES[birdId]}</div>
           </div>
         </div>
@@ -3596,86 +3612,61 @@ const GIndexPPProfile = {
     if (!el) return;
     const now = new Date();
     const weekday = now.getDay();
-    const rulerBird = this.DAY_RULER[weekday];
+    // v88.8.42-fp119: поточна paksha (не народження!) — активність птаха залежить від
+    // поточної фази місяця "зараз", народжена paksha визначає лише сам birthBirdId.
+    const isShukla = this.pakshaFromDate(now);
 
-    // v88.8.18 Phase D: per-geo sunrise/sunset через existing _calcSunRiseSet.
-    // Fallback: simplified 06:00 → 18:00 якщо ephemeris недоступний.
-    let sunriseMin = this.SUNRISE_MIN, wakingMin = this.WAKING_MIN, isFallback = true;
+    // v88.8.42-fp119: реальний схід/захід + ДОДАНО нічний цикл (раніше рахувався лише день).
+    let sunrise = null, sunset = null, isFallback = true;
     try {
       if (typeof _calcSunRiseSet === 'function') {
         const sr = _calcSunRiseSet(now);
-        if (sr && sr.sunrise && sr.sunset) {
-          sunriseMin = sr.sunrise.getHours() * 60 + sr.sunrise.getMinutes();
-          const sunsetMin = sr.sunset.getHours() * 60 + sr.sunset.getMinutes();
-          wakingMin = sunsetMin - sunriseMin;
-          isFallback = false;
-        }
+        if (sr && sr.sunrise && sr.sunset) { sunrise = sr.sunrise; sunset = sr.sunset; isFallback = false; }
       }
     } catch(e) { /* fall through to fallback */ }
-
-    const targetMin = now.getHours() * 60 + now.getMinutes();
-    const cellDur = wakingMin / this.CELLS;  // ~28.8 хв (varies з днем)
-
-    // Bird order: starts with day ruler
-    const birdOrder = [];
-    for (let i = 0; i < 5; i++) birdOrder.push((rulerBird + i) % 5);
-
-    // Determine current cell
-    let currentBird = null, currentAct = null, timeToNext = null;
-    if (targetMin >= sunriseMin && targetMin < sunriseMin + wakingMin) {
-      const elapsed = targetMin - sunriseMin;
-      const cellIdx = Math.floor(elapsed / cellDur);
-      const bIdx = Math.floor(cellIdx / 5);
-      const aIdx = cellIdx % 5;
-      currentBird = birdOrder[bIdx];
-      currentAct = aIdx;
-      const cellEnd = sunriseMin + (cellIdx + 1) * cellDur;
-      timeToNext = Math.ceil(cellEnd - targetMin);
+    if (!sunrise || !sunset) {
+      sunrise = new Date(now); sunrise.setHours(6,0,0,0);
+      sunset = new Date(now); sunset.setHours(18,0,0,0);
     }
 
-    // Build matrix HTML
-    const actColors = {0:'#5dd49e', 1:'#9bd49e', 2:'#ffd93d', 3:'#9bb1dc', 4:'#ff8866'};
+    let yamaInfo = null;
+    try { if (typeof getCurrentYama === 'function') yamaInfo = getCurrentYama(now, sunrise, sunset); } catch(e) {}
+
+    let currentAct = null, timeToNext = null;
+    if (yamaInfo && typeof getPakshiActivityForYama === 'function') {
+      currentAct = getPakshiActivityForYama(birthBirdId, yamaInfo.yamaIdx, weekday, yamaInfo.isDay, isShukla);
+      timeToNext = Math.ceil((yamaInfo.yamaEnd.getTime() - now.getTime()) / 60000);
+    }
+
+    const actColors = {0:'#ff6b6b', 1:'#9bb1dc', 2:'#ffd93d', 3:'#9bd49e', 4:'#5dd49e'}; // dying..ruling
+
     let html = `<div style="font-size:10px;color:var(--dim);margin-bottom:6px">
       ${['Неділя','Понеділок','Вівторок','Середа','Четвер','Пʼятниця','Субота'][weekday]} ·
-      ruler: ${this.ICONS[rulerBird]} ${this.NAMES_UA[rulerBird]}
-      ${currentBird !== null ? '· зараз: <strong style="color:var(--accent)">' + this.ICONS[currentBird] + ' ' + this.ACTIVITIES_UA[currentAct] + '</strong> (зміна через ' + timeToNext + ' хв)' : '· поза waking-вікном'}
+      ${isShukla ? 'Шукла (зрост.)' : 'Крішна (спад.)'} пакша
+      ${currentAct ? ' · <strong style="color:var(--accent)">' + this.ICONS[birthBirdId] + ' ' + currentAct.activityUa + '</strong> (' + (yamaInfo.isDay ? 'день' : 'ніч') + ', yama ' + (yamaInfo.yamaIdx+1) + '/5, зміна через ' + timeToNext + ' хв)' : ' · дані yama недоступні'}
+      ${currentAct && currentAct.verified === false ? ' <span style="color:var(--warn)" title="Формула звірена зі сканів книги лише для Bright Half. Dark Half тимчасово тією ж формулою — неперевірено.">⚠ Dark Half неперевірено</span>' : ''}
+      ${isFallback ? ' <span style="color:var(--faint)">(схід/захід: fallback 06:00–18:00)</span>' : ''}
     </div>`;
-    html += '<div style="display:grid;grid-template-columns:62px repeat(5, 1fr);gap:2px;font-size:9px">';
-    // Header
-    html += '<div style="color:var(--faint);font-size:9px;text-align:center;padding:3px">↓ Птах</div>';
-    for (let a = 0; a < 5; a++) {
-      html += `<div style="color:var(--faint);font-size:9px;text-align:center;padding:3px">${this.ACTIVITIES_UA[a]}</div>`;
-    }
-    // Rows
-    for (let b = 0; b < birdOrder.length; b++) {
-      const bird = birdOrder[b];
-      const isBirthRow = bird === birthBirdId;
-      html += `<div style="padding:4px 5px;color:${isBirthRow ? 'var(--accent)' : 'var(--text)'};font-weight:${isBirthRow ? '700' : '500'};font-size:10px;display:flex;align-items:center;gap:3px"><span style="font-size:14px">${this.ICONS[bird]}</span><span>${this.NAMES_UA[bird]}</span></div>`;
-      for (let a = 0; a < 5; a++) {
-        const cellIdx = b * 5 + a;
-        const isCurrent = (cellIdx === Math.floor((targetMin - sunriseMin) / cellDur)) && (targetMin >= sunriseMin && targetMin < sunriseMin + wakingMin);
-        const startMin = sunriseMin + cellIdx * cellDur;
-        const startH = Math.floor(startMin / 60);
-        const startM = Math.floor(startMin % 60);
-        const bg = isCurrent ? 'rgba(252,164,116,.16)' : 'transparent';
-        const border = isCurrent ? '1px solid var(--accent)' : '1px solid rgba(42,59,97,.4)';
-        const boxShadow = isCurrent ? 'box-shadow:0 0 0 1px rgba(252,164,116,.4)' : '';
-        html += `<div style="padding:3px 4px;border-radius:4px;background:${bg};border:${border};border-left:2px solid ${actColors[a]};text-align:center;font-size:9px;${boxShadow}">
-          <div style="color:${isCurrent ? 'var(--accent)' : 'var(--text2)'};font-weight:${isCurrent ? '700' : '400'}">${this.ACTIVITIES_UA[a]}</div>
-          <div style="color:var(--faint);font-size:8px">${String(startH).padStart(2,'0')}:${String(Math.floor(startM)).padStart(2,'0')}</div>
-        </div>`;
+    html += '<div style="display:grid;grid-template-columns:56px repeat(10, 1fr);gap:2px;font-size:9px">';
+    html += '<div></div>';
+    for (let y=0;y<5;y++) html += `<div style="color:var(--faint);text-align:center;padding:2px">Д${y+1}</div>`;
+    for (let y=0;y<5;y++) html += `<div style="color:var(--faint);text-align:center;padding:2px">Н${y+1}</div>`;
+    for (let b=0;b<5;b++) {
+      const isBirthRow = b === birthBirdId;
+      html += `<div style="padding:3px 4px;color:${isBirthRow?'var(--accent)':'var(--text)'};font-weight:${isBirthRow?'700':'500'};display:flex;align-items:center;gap:3px"><span style="font-size:13px">${this.ICONS[b]}</span><span style="font-size:9px">${this.NAMES_UA[b]}</span></div>`;
+      for (let dn=0; dn<2; dn++) {
+        const isDay = dn===0;
+        for (let y=0;y<5;y++) {
+          const act = getPakshiActivityForYama(b, y, weekday, isDay, isShukla);
+          const isCurrentCell = !!(yamaInfo && yamaInfo.isDay===isDay && yamaInfo.yamaIdx===y && b===birthBirdId);
+          html += `<div title="${this.NAMES_UA[b]}: ${act.activityUa}" style="text-align:center;padding:3px 1px;background:${actColors[act.strength]}${isCurrentCell?'':'2e'};border:${isCurrentCell?'1.5px solid var(--accent)':'none'};border-radius:2px;font-size:8px;color:${isCurrentCell?'#fff':'var(--dim)'}">${act.activityUa[0]}</div>`;
+        }
       }
     }
     html += '</div>';
-    const srH = Math.floor(sunriseMin / 60), srM = Math.floor(sunriseMin % 60);
-    const ssH = Math.floor((sunriseMin + wakingMin) / 60), ssM = Math.floor((sunriseMin + wakingMin) % 60);
-    html += `<div style="margin-top:6px;font-size:9px;color:var(--faint);font-style:italic">
-      ${isFallback ? 'Спрощено: sunrise=06:00 (fallback)' : 'Sunrise ' + String(srH).padStart(2,'0') + ':' + String(srM).padStart(2,'0') + ' → sunset ' + String(ssH).padStart(2,'0') + ':' + String(ssM).padStart(2,'0') + ' (per-geo)'},
-      ${cellDur.toFixed(1)} хв/cell. Канон Tamil 25 cells × 5 birds.
-    </div>`;
+    html += `<div style="font-size:8px;color:var(--faint);margin-top:4px">Д=день, Н=ніч · жирний рядок — твій натальний птах · формула: Pulippani, скани стор.66-71 (Bright Half верифіковано)</div>`;
 
     el.innerHTML = html;
-    el.style.display = 'block';
   },
 
   init() {
@@ -4310,7 +4301,7 @@ async function loadExpertOverrides(){
   }
 }
 
-// v88.8.39-fp117: daily_master.json loader + regime cards (M2). Freeze-safe, read-only.
+// v88.8.42-fp119: daily_master.json loader + regime cards (M2). Freeze-safe, read-only.
 let _dailyMaster = null;
 async function loadDailyMaster(){
   if(_dailyMaster !== null) return _dailyMaster;
@@ -4372,16 +4363,21 @@ function renderRegimeCards(){
   // Space weather card
   const spv=el('rcSpaceVal'), spd=el('rcSpaceDesc');
   if(spv){
-    const kp=m.kp, dst=m.dst_min, syn=m.kp_synthetic;
+    // v88.8.40: BUGFIX — раніше брали m.kp зі застарілого _dailyMaster snapshot (часто synthetic 2.0),
+    // тому картка показувала "Kp 2 спокій" навіть коли live Kp=6-7 (шторм). Пріоритет — live NOAA (lastWWV.kNow).
+    const _liveKpSW = (typeof lastWWV!=='undefined' && lastWWV && isFinite(lastWWV.kNow)) ? lastWWV.kNow : null;
+    const kp = _liveKpSW!=null ? _liveKpSW : m.kp;
+    const dst=m.dst_min, syn = _liveKpSW!=null ? false : m.kp_synthetic;
     let regime='спокій', col='#2bd47d';
     if(dst!=null && dst<=-30){ regime='буря'; col='#ff6b6b'; }
+    else if(kp>=6){ regime='буря'; col='#ff6b6b'; }
     else if(kp>=5){ regime='збурення'; col='#ffaa33'; }
-    spv.textContent='Kp '+(kp!=null?kp:'—')+(syn?'*':'');
+    spv.textContent='Kp '+(kp!=null?kp.toFixed(2).replace(/\.?0+$/,''):'—')+(syn?'*':'');
     spv.style.color=col;
     spd.textContent=(dst!=null?'Dst '+dst+' · ':'')+regime;
   }
 }
-// v88.8.39-fp117: regime-first hero pill — режим показується під headline, домінує над score
+// v88.8.42-fp119: regime-first hero pill — режим показується під headline, домінує над score
 function renderHeroRegimePill(){
   const pill=el('heroRegimePill');
   if(!pill || !_dailyMaster) return;
@@ -4398,7 +4394,7 @@ function renderHeroRegimePill(){
 }
 window.renderHeroRegimePill=renderHeroRegimePill;
 
-// v88.8.39-fp117: Bulletin v2 (M3) — render режим+впевненість+причина+контекст+дія
+// v88.8.42-fp119: Bulletin v2 (M3) — render режим+впевненість+причина+контекст+дія
 let _bulletinV2 = null;
 async function loadBulletinV2(){
   if(_bulletinV2 !== null) return _bulletinV2;
@@ -4431,7 +4427,7 @@ function renderBulletinV2(){
 }
 window.renderBulletinV2 = renderBulletinV2;
 
-// v88.8.39-fp117: Chrono panel (M4) — окремий outcome target, r заблоковано при n<10
+// v88.8.42-fp119: Chrono panel (M4) — окремий outcome target, r заблоковано при n<10
 let _chronoPanel = null;
 async function loadChronoPanel(){
   if(_chronoPanel !== null) return _chronoPanel;
@@ -8799,7 +8795,7 @@ const PANCHA_PAKSHI_QUALITIES = [
   'Краса, мистецтво, гармонія'           // Peacock
 ];
 
-// === v88.8.41-fp102: 5-STATE ACTIVITY ENGINE (Pulippani Ch.2-3) ===
+// === v88.8.42-fp119: 5-STATE ACTIVITY ENGINE — ТОЧНА формула (Pulippani, скани стор.66-71) ===
 // 5 activities в порядку зростання сили: Dying < Sleeping < Walking < Eating < Ruling
 // Кожен день+ніч ділиться на 5+5 yamas по 2год24хв (6 ghatikas), від sunrise/sunset.
 // "5 elemental vibrations function so that when one is at highest ebb,
@@ -8813,20 +8809,33 @@ const PP_ACTIVITIES_ADVICE = [
   'Сильна фаза. Підходить для дій.',
   'Найсильніша фаза. Ідеально для важливих рішень.'
 ];
-// Канонічна послідовність активностей птаха протягом 5 yamas дня — циклічний зсув
-// залежно від дня тижня (спрощена реалізація: 5 птахів циклічно ділять 5 activities,
-// зсув = (weekday + birdId) mod 5; точна 100-табличная схема Pulippani не публічно
-// доступна в OCR — це наближення з явним R&D-статусом).
-function getPakshiActivityForYama(birdId, yamaIdx, weekday, isDay) {
-  // yamaIdx: 0-4 (yama номер дня АБО ночі)
-  // Зсув що визначає яка activity у birdId в цей yama
-  const shift = (weekday + birdId + (isDay ? 0 : 2)) % 5;
-  const actIdx = (yamaIdx + shift) % 5;
+// v88.8.42: ТОЧНА формула для BRIGHT HALF, звірена вручну зі сканами оригіналу
+// (стор.66-71: Vulture, Sun-Tue/Mon-Wed/Thu/Fri, день+ніч) — 30/30 точок збіглися.
+// День: порядок Eat→Walk→Rule→Sleep→Death. Ніч: порядок Eat→Rule→Death→Walk→Sleep.
+// groupIndex по дню тижня (JS getDay): Нд=0,Пн=1,Вт=0,Ср=1,Чт=2,Пт=3,Сб=4.
+// DARK HALF: сканів ще немає — тимчасово та сама формула, статус R&D-неперевірено (див. isShukla).
+const PP_GROUP_INDEX_BY_WEEKDAY = {0:0, 1:1, 2:0, 3:1, 4:2, 5:3, 6:4};
+const PP_DAY_ORDER_TO_PPIDX   = [3,2,4,1,0]; // position(Eat,Walk,Rule,Sleep,Death) → PP_ACTIVITIES idx
+const PP_NIGHT_ORDER_TO_PPIDX = [3,4,0,2,1]; // position(Eat,Rule,Death,Walk,Sleep) → PP_ACTIVITIES idx
+function getPakshiActivityForYama(birdId, yamaIdx, weekday, isDay, isShukla) {
+  // birdId: 0=Vulture,1=Owl,2=Crow,3=Cock,4=Peacock (канон 1:1 з PANCHA_PAKSHI_NAMES)
+  // yamaIdx: 0-4. weekday: JS getDay() 0=Нд..6=Сб.
+  const g = PP_GROUP_INDEX_BY_WEEKDAY[weekday] ?? 0;
+  let actIdx;
+  if (isDay) {
+    const pos = (((birdId + yamaIdx - g) % 5) + 5) % 5;
+    actIdx = PP_DAY_ORDER_TO_PPIDX[pos];
+  } else {
+    const k = (2 + g + yamaIdx) % 5;
+    const pos = (((k - birdId) % 5) + 5) % 5;
+    actIdx = PP_NIGHT_ORDER_TO_PPIDX[pos];
+  }
   return {
     activity: PP_ACTIVITIES[actIdx],
     activityUa: PP_ACTIVITIES_UA[actIdx],
     advice: PP_ACTIVITIES_ADVICE[actIdx],
     strength: actIdx, // 0=найслабше, 4=найсильніше
+    verified: isShukla !== false, // Bright Half = верифіковано зі сканів; Dark Half = та сама формула, R&D-неперевірено
   };
 }
 function getCurrentYama(dateUTC, sunriseUTC, sunsetUTC) {
@@ -19199,7 +19208,7 @@ window.__regressUI = function(){
 // stress, hrv, tags:{alc,caf,exe,ill,trv}, notes, gAtSave}.
 // ═══════════════════════════════════════════════════════════════════════════
 const GChrono = (function(){
-  // v88.8.39-fp117: A/B/C/D −3..+3 (CHRONO_PREREGISTRATION locked). Blind mode. Export chrono_daily.json.
+  // v88.8.42-fp119: A/B/C/D −3..+3 (CHRONO_PREREGISTRATION locked). Blind mode. Export chrono_daily.json.
   const LS_KEY = 'gindex_chrono_v2_abcd';  // new key — old Sleep/Energy schema NOT mixed
   const MIN_R = 10;   // r не дивитись при n<10 (preregistration)
   const MIN_TEST = 30; // формальний тест
