@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.42-fp119</title>
+  <title>G-Index — Космофізичний дашборд v88.8.44-fp121</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1583,7 +1583,7 @@ body.simple-mode .col-hide-mobile {
               </div>
             </details>
             <div id="heroActionCmd" style="font-size:18px;font-weight:900;letter-spacing:.02em;line-height:1.15">—</div>
-            <!-- v88.8.42-fp119: regime-first pill — режим домінує над score -->
+            <!-- v88.8.44-fp121: regime-first pill — режим домінує над score -->
             <div id="heroRegimePill" style="display:none;margin-top:5px;font-size:11px;font-weight:700;letter-spacing:.04em;opacity:.85"></div>
             <div id="heroMainDrag" style="margin-top:4px;font-size:12px;font-weight:700;color:var(--text2)"></div>
             <div id="heroConsequence"></div>
@@ -1660,7 +1660,7 @@ body.simple-mode .col-hide-mobile {
       </div>
       <span style="font-size:11px;color:var(--ok);font-weight:700;white-space:nowrap">Подивитись →</span>
     </a>
-    <!-- v88.8.42-fp119: Regime cards (M2) — score+regime+confidence+space-weather. daily_master.json -->
+    <!-- v88.8.44-fp121: Regime cards (M2) — score+regime+confidence+space-weather. daily_master.json -->
     <div id="regimeCards" style="display:none;margin:0 0 10px;gap:8px;grid-template-columns:repeat(4,1fr)">
       <div id="rcScore" style="padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:rgba(11,18,32,.5);text-align:center">
         <div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em">Оцінка дня</div>
@@ -1687,7 +1687,7 @@ body.simple-mode .col-hide-mobile {
          Джерело: NOAA G-Scale (public), Groves & Akala Radio Science 2012.
          Дані: kp live (lastWWV), Dst (computeDstModifier), local_hour, _userLat. -->
     <div id="gnssCard" style="margin:0 0 10px;padding:10px 14px;border-radius:12px;border:1px solid rgba(55,167,255,.22);background:rgba(10,20,40,.5);display:none"></div>
-    <!-- v88.8.42-fp119: Bulletin v2 (M3) — режим+впевненість+причина+контекст+дія. bulletin_v2.json -->
+    <!-- v88.8.44-fp121: Bulletin v2 (M3) — режим+впевненість+причина+контекст+дія. bulletin_v2.json -->
     <details id="bulletinV2Card" style="margin:0 0 10px;padding:10px 14px;border-radius:12px;border:1px solid var(--border);background:rgba(11,18,32,.5);display:none">
       <summary style="cursor:pointer;font-size:12px;font-weight:600;color:var(--muted);list-style:none;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <span style="font-size:14px">📋</span>
@@ -1697,7 +1697,7 @@ body.simple-mode .col-hide-mobile {
       <div id="bulletinV2List" style="margin-top:10px;display:flex;flex-direction:column;gap:8px"></div>
       <div style="margin-top:8px;font-size:10px;color:var(--dim);line-height:1.5">Відтворює редакторську логіку Tarita, НЕ реальні події. Engine v18.5 frozen.</div>
     </details>
-    <!-- v88.8.42-fp119: Chrono panel (M4) — НЕЗАЛЕЖНИЙ outcome target. НЕ змішувати з Tarita GT. -->
+    <!-- v88.8.44-fp121: Chrono panel (M4) — НЕЗАЛЕЖНИЙ outcome target. НЕ змішувати з Tarita GT. -->
     <details id="chronoPanelCard" style="margin:0 0 10px;padding:10px 14px;border-radius:12px;border:1px solid rgba(155,177,220,.22);background:rgba(11,18,32,.5);display:none">
       <summary style="cursor:pointer;font-size:12px;font-weight:600;color:var(--muted);list-style:none;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <span style="font-size:14px">📓</span>
@@ -3401,7 +3401,7 @@ document.addEventListener('DOMContentLoaded', () => { try { GIndexSound.init(); 
 // Точність: ±1 nakshatra без birth time. Phase B (~v88.8.19): Lahiri sidereal.
 // ═══════════════════════════════════════════════════════════════════════════
 const GIndexPPProfile = {
-  // v88.8.42-fp119 BUGFIX: стара BIRDS-таблиця (без paksha) не збігалась з канонічною
+  // v88.8.44-fp121 BUGFIX: стара BIRDS-таблиця (без paksha) не збігалась з канонічною
   // Shukla/Krishna таблицею календарного блоку (PANCHA_PAKSHI_BIRD_SHUKLA/KRISHNA, line ~8779) —
   // давала іншого птаха для тієї ж Nakshatra. Тепер birdFromNakshatra() використовує ту саму
   // канонічну таблицю + paksha народження (без paksha birth bird визначити неможливо за книгою).
@@ -3460,7 +3460,7 @@ const GIndexPPProfile = {
     return Math.max(0, Math.min(26, Math.floor(fraction * 27)));
   },
 
-  // v88.8.42-fp119: paksha народження — потрібно для коректного birdFromNakshatra()
+  // v88.8.44-fp121: paksha народження — потрібно для коректного birdFromNakshatra()
   // (без paksha birth bird визначити неможливо, книга дає окремі Shukla/Krishna таблиці).
   pakshaFromDate(date) {
     try {
@@ -3612,11 +3612,11 @@ const GIndexPPProfile = {
     if (!el) return;
     const now = new Date();
     const weekday = now.getDay();
-    // v88.8.42-fp119: поточна paksha (не народження!) — активність птаха залежить від
+    // v88.8.44-fp121: поточна paksha (не народження!) — активність птаха залежить від
     // поточної фази місяця "зараз", народжена paksha визначає лише сам birthBirdId.
     const isShukla = this.pakshaFromDate(now);
 
-    // v88.8.42-fp119: реальний схід/захід + ДОДАНО нічний цикл (раніше рахувався лише день).
+    // v88.8.44-fp121: реальний схід/захід + ДОДАНО нічний цикл (раніше рахувався лише день).
     let sunrise = null, sunset = null, isFallback = true;
     try {
       if (typeof _calcSunRiseSet === 'function') {
@@ -3667,6 +3667,7 @@ const GIndexPPProfile = {
     html += `<div style="font-size:8px;color:var(--faint);margin-top:4px">Д=день, Н=ніч · жирний рядок — твій натальний птах · формула: Pulippani, скани стор.66-71 (Bright Half верифіковано)</div>`;
 
     el.innerHTML = html;
+    el.style.display = 'block';
   },
 
   init() {
@@ -4301,7 +4302,7 @@ async function loadExpertOverrides(){
   }
 }
 
-// v88.8.42-fp119: daily_master.json loader + regime cards (M2). Freeze-safe, read-only.
+// v88.8.44-fp121: daily_master.json loader + regime cards (M2). Freeze-safe, read-only.
 let _dailyMaster = null;
 async function loadDailyMaster(){
   if(_dailyMaster !== null) return _dailyMaster;
@@ -4377,7 +4378,7 @@ function renderRegimeCards(){
     spd.textContent=(dst!=null?'Dst '+dst+' · ':'')+regime;
   }
 }
-// v88.8.42-fp119: regime-first hero pill — режим показується під headline, домінує над score
+// v88.8.44-fp121: regime-first hero pill — режим показується під headline, домінує над score
 function renderHeroRegimePill(){
   const pill=el('heroRegimePill');
   if(!pill || !_dailyMaster) return;
@@ -4394,7 +4395,7 @@ function renderHeroRegimePill(){
 }
 window.renderHeroRegimePill=renderHeroRegimePill;
 
-// v88.8.42-fp119: Bulletin v2 (M3) — render режим+впевненість+причина+контекст+дія
+// v88.8.44-fp121: Bulletin v2 (M3) — render режим+впевненість+причина+контекст+дія
 let _bulletinV2 = null;
 async function loadBulletinV2(){
   if(_bulletinV2 !== null) return _bulletinV2;
@@ -4427,7 +4428,7 @@ function renderBulletinV2(){
 }
 window.renderBulletinV2 = renderBulletinV2;
 
-// v88.8.42-fp119: Chrono panel (M4) — окремий outcome target, r заблоковано при n<10
+// v88.8.44-fp121: Chrono panel (M4) — окремий outcome target, r заблоковано при n<10
 let _chronoPanel = null;
 async function loadChronoPanel(){
   if(_chronoPanel !== null) return _chronoPanel;
@@ -8795,7 +8796,7 @@ const PANCHA_PAKSHI_QUALITIES = [
   'Краса, мистецтво, гармонія'           // Peacock
 ];
 
-// === v88.8.42-fp119: 5-STATE ACTIVITY ENGINE — ТОЧНА формула (Pulippani, скани стор.66-71) ===
+// === v88.8.44-fp121: 5-STATE ACTIVITY ENGINE — ТОЧНА формула (Pulippani, скани стор.66-71) ===
 // 5 activities в порядку зростання сили: Dying < Sleeping < Walking < Eating < Ruling
 // Кожен день+ніч ділиться на 5+5 yamas по 2год24хв (6 ghatikas), від sunrise/sunset.
 // "5 elemental vibrations function so that when one is at highest ebb,
@@ -12198,26 +12199,41 @@ function syncHero(){
       }
     } catch(e) { /* noop */ }
 
+    // v88.8.44-fp121: спільна класифікація для кільця й фону картки (з kp + verdict cap)
+    let _heroSharedCls = null;
+    if (isFinite(newG)) {
+      _heroSharedCls = classifyStateByG(newG, kpH_pre);
+      if (_heroSig && _heroSig.hasEngine && isFinite(_heroSig.dayScore)) {
+        const _vCls = _heroSig.dayScore <= -2.5 ? 'tense' : _heroSig.dayScore <= -1 ? 'unstable' : null;
+        const _ord = {favorable:4, good:3, neutral:2, unstable:1, tense:0};
+        if (_vCls && _ord[_vCls] < _ord[_heroSharedCls]) _heroSharedCls = _vCls;
+      }
+    }
     // Ring gauge
     const ring=document.getElementById('heroRingVal');
     if(ring&&isFinite(newG)){
       const pct=Math.max(0.05,Math.min(1,(newG+4)/8));
       const offset=283*(1-pct);
       ring.style.strokeDashoffset=offset;
-      ring.style.stroke=newG<=-2.5?'#ff4444':newG<=-0.5?'#ffaa33':newG>=1.5?'#2bd47d':newG>=0.5?'#63be7b':'#9bb1dc';
+      // v88.8.44-fp121 BUGFIX: раніше колір рахувався окремою формулою тільки по newG,
+      // без kp — тому storm-override у classifyStateByG (Kp≥5/7 не дає 'favorable'/'good')
+      // ніколи не спрацьовував для кольору кільця. Наслідок: під час шторму (Kp=7.3)
+      // кільце було ЗЕЛЕНИМ при G_now=+4.03, хоча вердикт дня — "особливо несприятливий".
+      // Тепер колір і клас кільця рахуються з ОДНІЄЇ класифікації (з kp + verdict cap).
+      const _heroRingColor = {favorable:'#2bd47d', good:'#63be7b', neutral:'#9bb1dc', unstable:'#ffaa33', tense:'#ff4444'}[_heroSharedCls] || '#9bb1dc';
+      ring.style.stroke=_heroRingColor;
       // v78b: ring state animation class
       const ringWrap=document.getElementById('heroRing');
       if(ringWrap){
         ringWrap.classList.remove('ring-neutral','ring-unstable','ring-tense','ring-favorable','ring-good');
-        const rc=classifyStateByG(newG);
-        ringWrap.classList.add('ring-'+rc);
+        ringWrap.classList.add('ring-'+_heroSharedCls);
       }
     }
 
     // Data-driven hero background
     const hc=document.getElementById('heroCard');
     if(hc&&isFinite(newG)){
-      const r=newG<=-2.5?'rgba(255,68,68,.08)':newG<=-0.5?'rgba(255,170,51,.06)':newG>=1.5?'rgba(43,212,125,.08)':newG>=0.5?'rgba(99,190,123,.05)':'rgba(55,167,255,.04)';
+      const r=({tense:'rgba(255,68,68,.08)', unstable:'rgba(255,170,51,.06)', favorable:'rgba(43,212,125,.08)', good:'rgba(99,190,123,.05)', neutral:'rgba(55,167,255,.04)'})[_heroSharedCls] || 'rgba(55,167,255,.04)';
       hc.style.setProperty('--g-glow',r);
     }
   }
@@ -19208,7 +19224,7 @@ window.__regressUI = function(){
 // stress, hrv, tags:{alc,caf,exe,ill,trv}, notes, gAtSave}.
 // ═══════════════════════════════════════════════════════════════════════════
 const GChrono = (function(){
-  // v88.8.42-fp119: A/B/C/D −3..+3 (CHRONO_PREREGISTRATION locked). Blind mode. Export chrono_daily.json.
+  // v88.8.44-fp121: A/B/C/D −3..+3 (CHRONO_PREREGISTRATION locked). Blind mode. Export chrono_daily.json.
   const LS_KEY = 'gindex_chrono_v2_abcd';  // new key — old Sleep/Energy schema NOT mixed
   const MIN_R = 10;   // r не дивитись при n<10 (preregistration)
   const MIN_TEST = 30; // формальний тест
