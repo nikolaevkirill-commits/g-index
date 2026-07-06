@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.51-fp128</title>
+  <title>G-Index — Космофізичний дашборд v88.8.55-fp129</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -4397,10 +4397,9 @@ function renderRegimeCards(){
     else if(kp>=5){ regime='збурення'; col='#ffaa33'; }
     spv.textContent='Kp '+(kp!=null?kp.toFixed(2).replace(/\.?0+$/,''):'—')+(syn?'*':'');
     spv.style.color=col;
-    // v88.8.51-fp128 TEMP DEBUG (без F12): видимо показати lastWWV.kNow vs m.kp, щоб
-    // з'ясувати чому картка не оновлюється навіть в інкогніто. Прибрати після діагностики.
-    const _dbgLW = (typeof lastWWV!=='undefined' && lastWWV) ? JSON.stringify({kNow:lastWWV.kNow, syn:lastWWV._synthetic||false, cached:lastWWV._cached||false, when:lastWWV.whenText}) : 'lastWWV=undefined/null';
-    spd.textContent=(dst!=null?'Dst '+dst+' · ':'')+regime+' [dbg: '+_dbgLW+' | m.kp='+m.kp+']';
+    // v88.8.55: дебаг-рядок [dbg:...] прибрано (fp128 TEMP DEBUG підтверджено стабільним
+    // на fp123, 2026-07-04 → 2026-07-06, діагностика завершена).
+    spd.textContent=(dst!=null?'Dst '+dst+' · ':'')+regime;
   }
 }
 // v88.8.51-fp128: ЄДИНА ПАНЕЛЬ ІНДЕКСІВ — Панчанга + Kp + G_now (сирий сигнал) + PDF/Engine (вердикт)
