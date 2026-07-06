@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.55-fp129</title>
+  <title>G-Index — Космофізичний дашборд v88.8.57-fp131</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1563,6 +1563,12 @@ body.simple-mode .col-hide-mobile {
             </svg>
             <span id="heroG" class="gbadge" role="status" aria-live="polite" aria-label="Поточний G-індекс">…</span>
             <span id="heroTrend">—</span>
+          </div>
+          <!-- v88.8.56: завжди видимий пояснювальний рядок (не лише title-тултіп) —
+               Kyrylo explicit ask після аудиту 2026-07-06: hero-число плутали з G_now. -->
+          <div id="heroLegendCaption" style="margin-top:4px;text-align:center;font-size:9px;line-height:1.4;color:var(--faint)">
+            Головне число: <b style="color:var(--dim)">PDF/Engine verdict</b><br>
+            Live G_now — показано нижче як фон
           </div>
           <!-- v88.8.6 Д1: компактна lunar phase іконка під heroRing — постійно видима. -->
           <div id="heroMoonPhaseIcon" tabindex="0" style="display:none;margin-top:6px;text-align:center;font-size:10px;color:var(--dim);cursor:help" title="">
@@ -11641,6 +11647,14 @@ function _renderHeroHierarchy(){
         const col = v ? v.color : 'var(--text2)';
         const lab = v ? v.label : '';
         decHtml = `<span style="font-weight:800;color:${col}">${sc>=0?'+':''}${sc}</span> <span style="color:var(--text2)">${lab}</span>${star}`;
+        // v88.8.55: гарантований ресинк hero-кільця в ту саму мить, коли ми ВЖЕ підтвердили
+        // (тут, вище) що snap.eng доступний. Раніше syncHero() покладався на окремий
+        // getEngineScore()-виклик усередині resolveHeroSignalHierarchy_v88824() і на 400ms
+        // delayed retry "навмання" (fp128) — якщо той конкретний виклик встигав РАНІШЕ за
+        // момент, коли дані реально прийшли, кільце застрягало на G_now (fallback) без
+        // гарантії самокорекції. Тепер ресинк прив'язаний до підтвердженого факту наявності
+        // даних, а не до таймауту.
+        try{ if(typeof syncHero==='function') syncHero(); }catch(_e){}
       }
     }catch(e){ /* silent */ }
     // 2) Фон зараз — G_now (live composite Kp−2+ΣAᵢ)
@@ -12248,6 +12262,18 @@ function syncHero(){
       ? Math.max(-3, Math.min(3, Math.round(Number(_heroSig.dayScore))))
       : newG;
     const _heroDisplayVal = _verdictVal;
+    // v88.8.56: підпис під кільцем відповідає РЕАЛЬНОМУ стану — якщо engine недоступний
+    // і йде fallback на G_now, підпис має це чесно показувати, а не завжди стверджувати
+    // "PDF/Engine verdict" (інакше сам підпис стане джерелом тієї ж плутанини, що його
+    // мали виправити).
+    try{
+      const _capEl = document.getElementById('heroLegendCaption');
+      if(_capEl){
+        _capEl.innerHTML = _hasVerdict
+          ? 'Головне число: <b style="color:var(--dim)">PDF/Engine verdict</b><br>Live G_now — показано нижче як фон'
+          : 'Engine недоступний — тимчасово показано <b style="color:var(--dim)">Live G_now</b>';
+      }
+    }catch(_e){}
 
     // Animated G tween
     if(isFinite(_heroDisplayVal)){
@@ -20475,9 +20501,9 @@ var WF3_PHRASES={
   panchanga:'Панчанга формує {s} фон ({v}).',
   mixed:'Фактори змішані, чіткого домінування немає.',
   others_neutral:'Інші фактори нейтральні.',
-  rel_good:'Дані надійні ({c}%).',
-  rel_mid:'Дані прийнятні ({c}%).',
-  rel_low:'Дані обмеженої надійності ({c}%).',
+  rel_good:'Вхідні дані повні ({c}%).',
+  rel_mid:'Вхідні дані частково повні ({c}%).',
+  rel_low:'Вхідні дані неповні ({c}%).',
   cached:'Показано кеш.',
   live:'Дані актуальні.',
   stale:'Дані можуть бути застарілими.',
