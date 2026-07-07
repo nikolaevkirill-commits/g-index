@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.73-fp149</title>
+  <title>G-Index — Космофізичний дашборд v88.8.74-fp150</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -15773,7 +15773,7 @@ async function loadAllLite(){
       const tc=document.getElementById('threeContent'); if(tc) tc.innerHTML='<span class="muted">SAFE BOOT: повний прогноз не запускається автоматично. Натисни «Оновити».</span>';
       const ts=document.getElementById('dataTimestamp'); if(ts) ts.textContent='SAFE BOOT fp149 · live fetch manual';
       const btn=document.getElementById('btnRefresh');
-      if(btn){ btn.disabled=false; btn.onclick=function(ev){ ev.preventDefault(); try{ loadAll(); }catch(e){ console.error(e); } }; }
+      if(btn){ btn.disabled=false; btn.onclick=function(ev){ ev.preventDefault(); window.__gIndexUserRefreshed = true; try{ loadAll(); }catch(e){ console.error(e); } }; }
     }catch(_e){ console.warn('[fp149 safe shell]', _e && _e.message); }
     return;
     try{ render3Day(last3D); }catch(e){ console.warn('[fp138 lite render3Day]', e.message); }
@@ -19405,7 +19405,14 @@ function bootGIndexOnce(_reason){
   // v87.62: after scores load, also re-render 3-day pills and 27-day table so Bulletin cells populate.
   // v88.7.15 Г: паралельно завантажуємо expert_overrides_v3.json — застосовуються у getEngineScore().
   try {
+    // fp150 HARD SAFE BOOT (частина 2): цей Promise.all().then() — ДРУГИЙ незалежний
+    // тригер важкого render-ланцюга (12+ render-викликів), пропущений у fp149. Саме він
+    // фризив сторінку ПІСЛЯ того, як SAFE-shell уже намалювався. Гейтуємо тим самим
+    // прапорцем: на автоматичному старті fetch'і йдуть (легкі), але важкі рендери в .then()
+    // не запускаються, доки не буде ?live=1 або ручного "Оновити" (loadAll).
+    const _fp150_liveMode = new URLSearchParams(location.search||'').get('live')==='1';
     Promise.all([loadEngineScores(), loadExpertOverrides(), loadDailyMaster(), loadBulletinV2(), loadChronoPanel()]).then(()=>{
+      if(!_fp150_liveMode && !window.__gIndexUserRefreshed) return;
       try{ renderHeroBulletin(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
       try{ syncHero(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
       try{ renderHeroAstroLayer(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
