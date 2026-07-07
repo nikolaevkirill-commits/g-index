@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.72-fp148-MINIMAL-DIAG</title>
+  <title>G-Index — Космофізичний дашборд v88.8.73-fp149</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1326,12 +1326,9 @@ body.simple-mode .col-hide-mobile {
   };
   window._nativeIsFinite = _nativeIsFinite;
 })();
-try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line1329';}catch(e){}
 </script>
 </head>
 <body>
-<div id="__cpPanel" style="position:fixed;top:0;left:0;z-index:2147483647;background:#000;color:#0f0;font:11px monospace;padding:6px 10px;white-space:pre;pointer-events:none">CP0: body start</div>
-<script>document.getElementById('__cpPanel').textContent += '\nCP1: inline marker script ran';</script>
 <!-- v88.8.58: пароль-гейт видалено (Kyrylo — власник, гейт не потрібен; блокував доступ/зависав) -->
   <noscript>
     <div style="background:#1a2540;color: var(--text2);padding:20px;margin:20px;border-radius:12px;border:1px solid #2a3b61;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;line-height:1.6">
@@ -3771,7 +3768,6 @@ if (false && 'serviceWorker' in navigator) {
       .catch(err => console.warn('[SW] Registration failed:', err));
   });
 }
-try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line3773';}catch(e){}
 </script>
 
 <script>
@@ -15755,11 +15751,36 @@ async function loadAllLite(){
     });
     last3D = { issued:null, predictedAp:[], days:_synDays, _synthetic:true };
     window._gIndex_last3D = last3D;
+    // fp149 HARD SAFE BOOT (Kyrylo): на старті НЕ запускаємо жоден важкий render/computeAi-
+    // ланцюг (render3Day/renderCurrentPanel/render27Day/renderComparePeriods/syncV702UI).
+    // fp148-мінімальний-тест підтвердив: голий boot без цих викликів не фризить.
+    // Малюємо тільки легкий shell; повний live-рендер — вручну через "Оновити" (loadAll)
+    // або ?live=1. computeAi-кеш (fp145) і pointer-events-фікс (fp146) лишаються активними
+    // для моменту, коли повний рендер таки викликається.
+    try{
+      const gs = (kp0 - 2 >= 0 ? '+' : '') + (kp0 - 2).toFixed(1);
+      const txt = (id, s) => { const n=document.getElementById(id); if(n) n.textContent = s; };
+      txt('v86GVal', gs);
+      txt('heroG', gs);
+      txt('heroTrend', 'SAFE');
+      txt('heroActionCmd', 'SAFE BOOT — без live-обрахунків');
+      txt('heroDecisionDo', 'Натисни «Оновити» для повного live-розрахунку.');
+      txt('heroFreshness', 'SAFE');
+      txt('heroConfidence', 'manual');
+      txt('stamp', 'SAFE BOOT fp149');
+      const fb=document.getElementById('freshnessBadge');
+      if(fb){ fb.textContent='● SAFE'; fb.style.background='#1a2540'; fb.style.color='#9bb1dc'; fb.title='Safe boot: важкі обрахунки вимкнено на старті. Натисни Оновити для live-розрахунку.'; }
+      const tc=document.getElementById('threeContent'); if(tc) tc.innerHTML='<span class="muted">SAFE BOOT: повний прогноз не запускається автоматично. Натисни «Оновити».</span>';
+      const ts=document.getElementById('dataTimestamp'); if(ts) ts.textContent='SAFE BOOT fp149 · live fetch manual';
+      const btn=document.getElementById('btnRefresh');
+      if(btn){ btn.disabled=false; btn.onclick=function(ev){ ev.preventDefault(); try{ loadAll(); }catch(e){ console.error(e); } }; }
+    }catch(_e){ console.warn('[fp149 safe shell]', _e && _e.message); }
+    return;
     try{ render3Day(last3D); }catch(e){ console.warn('[fp138 lite render3Day]', e.message); }
     try{ renderCurrentPanel(); }catch(e){ console.warn('[fp138 lite current]', e.message); }
     // fp145 FIX: решта рендерів робить десятки синхронних computeAi (кожен смикає астро-
     // бібліотеку). Кумулятивно це блокувало головний потік на 1.5-2с → "Сторінка не
-    // відповідає" + кнопки не встигали навіситись. Виносимо у чергу з yield між кроками:
+    // відповідає" + кнопки не встигали навіститись. Виносимо у чергу з yield між кроками:
     // потік звільняється, UI лишається чутливим, важкі обрахунки дорахуються поетапно.
     const _yield = () => new Promise(r => (typeof requestIdleCallback==='function' ? requestIdleCallback(()=>r(), {timeout:500}) : setTimeout(r,0)));
     (async () => {
@@ -19362,17 +19383,80 @@ function renderProfileRec() {
 function bootGIndexOnce(_reason){
   if(window.__gIndexBooted) return;
   window.__gIndexBooted = true;
-  var cp = function(n){ try{ document.getElementById('__cpPanel').textContent += '\nCP-BOOT-'+n; }catch(e){} };
-  cp(1);
-  try{ initGeolocation(); }catch(e){} cp(2);
-  try{ setStamp(); }catch(e){} cp(3);
-  // fp148 MINIMAL DIAG: НЕ викликаємо loadAll/loadAllLite взагалі — жодного рендеру.
-  // Якщо фриз стається навіть тут — причина ПОЗА boot-ланцюгом (десь у топ-рівневих IIFE).
-  try{ initPersonalCalc(); }catch(e){} cp(4);
-  try{ initLangToggle(); }catch(e){} cp(5);
-  try{ initG2Watch(); }catch(e){} cp(6);
-  try{ initSimpleMode(); }catch(e){} cp(7);
-  cp('DONE-minimal-boot');
+  try{ initGeolocation(); }catch(e){if(window._DEBUG)console.warn('[boot initGeolocation]:',e.message)}
+  try{ setStamp(); }catch(e){if(window._DEBUG)console.warn('[boot setStamp]:',e.message)}
+  try{ if(new URLSearchParams(location.search||'').get('live')==='1') loadAll(); else loadAllLite(); }catch(e){console.error('[boot safe load]', e)}
+  try{ const _csv=el('btnCsv'); if(_csv) _csv.addEventListener('click', exportCsv); }catch(e){if(window._DEBUG)console.warn('[boot csv]:',e.message)}
+  try{ const _bIcs=el('btnIcs'); if(_bIcs) _bIcs.addEventListener('click', exportICS); }catch(e){if(window._DEBUG)console.warn('[boot ics]:',e.message)}
+  try{ const _sel=el('selInterval'); if(_sel) _sel.addEventListener('change', updateAutoRefStatus); }catch(e){if(window._DEBUG)console.warn('[boot interval]:',e.message)}
+  try{ initPersonalCalc(); }catch(e){if(window._DEBUG)console.warn('[boot personal]:',e.message)}
+  try{ initLangToggle(); }catch(e){if(window._DEBUG)console.warn('[boot lang]:',e.message)}
+  try{ initG2Watch(); }catch(e){if(window._DEBUG)console.warn('[boot g2]:',e.message)}
+  try{ initSimpleMode(); }catch(e){if(window._DEBUG)console.warn('[boot simple]:',e.message)}
+  /* v88.8.62-fp138: boot no longer waits for window.load. External CDN scripts/icons can stall
+     load for minutes; app shell must start as soon as this bottom script is parsed. */
+  // fp144 FIX: renderComparePeriods робить 14× computeAi (кожен смикає астро-бібліотеку) —
+  // синхронно це блокувало головний потік ~1.7с і давало "Сторінка не відповідає".
+  // Відкладаємо у idle-callback: boot завершується миттєво, порівняння дорендериться потім.
+  const _deferCompare = () => { try{ if(typeof renderComparePeriods === 'function') renderComparePeriods(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)} };
+  if (typeof requestIdleCallback === 'function') requestIdleCallback(_deferCompare, { timeout: 2000 });
+  else setTimeout(_deferCompare, 50);
+  // v87.61: load engine_scores.json (Bulletin model) + render heroBulletin
+  // v87.62: after scores load, also re-render 3-day pills and 27-day table so Bulletin cells populate.
+  // v88.7.15 Г: паралельно завантажуємо expert_overrides_v3.json — застосовуються у getEngineScore().
+  try {
+    Promise.all([loadEngineScores(), loadExpertOverrides(), loadDailyMaster(), loadBulletinV2(), loadChronoPanel()]).then(()=>{
+      try{ renderHeroBulletin(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+      try{ syncHero(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+      try{ renderHeroAstroLayer(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+      try{ renderScenarioCard(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+      try{ renderRegimeCards(); }catch(e){if(window._DEBUG)console.warn('[fp87 regimeCards]:',e.message)}
+      try{ if(typeof renderUnifiedIndicesPanel === 'function') renderUnifiedIndicesPanel(); }catch(e){if(window._DEBUG)console.warn('[fp126 unifiedIndices init]:',e.message)}
+      try{ renderHeroRegimePill(); }catch(e){if(window._DEBUG)console.warn('[fp91 regimePill]:',e.message)}
+      try{ renderBulletinV2(); }catch(e){if(window._DEBUG)console.warn('[fp87 bulletinV2]:',e.message)}
+      try{ renderChronoPanel(); }catch(e){if(window._DEBUG)console.warn('[fp87 chronoPanel]:',e.message)}
+      // Re-draw 27d table if _27dComputed already populated
+      try {
+        if (typeof draw27dTable === 'function' && typeof _27dComputed !== 'undefined' && _27dComputed && _27dComputed.length) {
+          draw27dTable();
+        }
+      } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+      // Re-draw 3-day block if render3Day exists
+      try {
+        if (typeof render3Day === 'function' && typeof last3D !== 'undefined' && last3D) {
+          render3Day(last3D);
+        }
+      } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+      // fp82: re-run syncV702UI after overrides load to fix race condition.
+      // syncV702UI fires synchronously after NOAA fetch, before _expertOverrides is populated.
+      // Without this call, UI shows raw engine_scores.eng (+3 for 2026-06-24) instead of
+      // override expert_eng (-3). Re-running after Promise.all ensures correct verdict.
+      try{ syncV702UI(); }catch(e){if(window._DEBUG)console.warn('[fp82 syncV702UI post-overrides]:',e.message)}
+      // fp83: renderWeekSummary also runs before _expertOverrides loads (via render27Day→try27Day).
+      // Re-run after overrides to fix week summary row showing raw engine instead of PDF override.
+      try{ renderWeekSummary(); }catch(e){if(window._DEBUG)console.warn('[fp83 renderWeekSummary post-overrides]:',e.message)}
+      // fp108: THIRD race condition instance (same disease as fp82/fp83).
+      // renderCurrentPanel + _renderHeroHierarchy run synchronously BEFORE engine_scores loads:
+      // "Рішення дня" freezes on "завантаження…" (getEngineScore=null at call time),
+      // "Фон зараз" shows "—" (__uiState.gNow set by renderCurrentPanel which ran too early).
+      // Re-run both after Promise.all so Hero hierarchy renders with actual data.
+      try{ renderCurrentPanel(); }catch(e){if(window._DEBUG)console.warn('[fp108 renderCurrentPanel post-load]:',e.message)}
+      try{ if(typeof _renderHeroHierarchy==='function') _renderHeroHierarchy(); }catch(e){if(window._DEBUG)console.warn('[fp108 heroHierarchy post-load]:',e.message)}
+    });
+  } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+  // v87.60 Fix #1: live UTC/local tick. setStamp раніше викликався тільки при loadAll (раз на ~10 хв) → UTC-лейбл відставав.
+  // Тепер оновлюємо localNow і utcNow кожну секунду. stamp ('Оновлено:') залишається часом останнього fetch — це правильна семантика.
+  try {
+    SAFE_INTERVAL(function(){
+      try {
+        const _n = new Date();
+        const _lEl = el('localNow'); if(_lEl) _lEl.textContent = fmtLocal(_n);
+        const _uEl = el('utcNow');   if(_uEl) _uEl.textContent = fmtUTC(_n);
+      } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+    }, 1000);
+    // v87.61: re-render Bulletin badge each minute (picks up date change at midnight)
+    SAFE_INTERVAL(function(){ try{ renderHeroBulletin(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)} }, 60000).start();
+  } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
 }
 // fp138: start immediately after parser reaches this script, not after external resources finish.
 setTimeout(function(){ bootGIndexOnce('timer0'); }, 0);
@@ -20529,7 +20613,6 @@ setTimeout(() => {
   }); } catch(e){}
 }, 3000);
 
-try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line20593';}catch(e){}
 </script>
 
 <!-- PWA disabled v59fix -->
@@ -20743,7 +20826,6 @@ window.addEventListener('resize', () => {
 document.addEventListener('DOMContentLoaded', () => {
   setTimeout(mnavInit, 100); // after dashboard renders
 });
-try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line20806';}catch(e){}
 </script>
 
 <!-- ═══ ONBOARDING v65 ═══════════════════════════════════ -->
@@ -20951,7 +21033,6 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line208
     }
   }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
 })();
-try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line21013';}catch(e){}
 </script>
 <script>
 /* ── G-Index Telemetry stub v1.0 ──────────────────────────────────────────
@@ -21137,7 +21218,6 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line210
   });
 
 })();
-try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line21198';}catch(e){}
 </script>
 <!-- fp95b: Decision Log Modal -->
 <div id="gdlModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.7);align-items:center;justify-content:center">
@@ -21243,7 +21323,6 @@ window.GDecisionLog = (function(){
 
   return { open, close, save };
 })();
-try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line21303';}catch(e){}
 </script>
 </body>
 </html>
