@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.58-fp132</title>
+  <title>G-Index — Космофізичний дашборд v88.8.58-fp133</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -5620,8 +5620,15 @@ function classifyEvent(summary){
 
 // ----------------------- Завантаження подій (ICS) ---------------------------
 async function indexIcsEventsForYears(years){
-  // v27: спершу builtin (offline base), потім online ICS мерджить/перезаписує
+  // v88.8.58-fp133: ONLINE ICS вимкнено за замовчуванням.
+  // Причина: public ICS/CORS endpoints (vaisnavacalendar/calendarlabs/proxies) дають 403/pending
+  // і створюють видиме "зависання" першого рендера, хоча builtin calendar уже покриває 2026-2027.
+  // Для ручного R&D-оновлення можна увімкнути ?onlineics=1.
   indexBuiltinEvents();
+  try {
+    const _qs = new URLSearchParams(location.search || '');
+    if (_qs.get('onlineics') !== '1') return;
+  } catch(_e) { return; }
 
   const urls = [];
   for(const y of years){
@@ -10855,16 +10862,20 @@ async function fetchText(u){
 async function preloadEventsAroundNow(){
   const now = new Date();
   const yrs = [now.getUTCFullYear(), now.getUTCFullYear()+1];
-  // fp97: жорсткий таймаут 8с — ICS не повинен блокувати NOAA fetch
-  const timeout = new Promise((_,rej) => setTimeout(()=>rej(new Error('ICS timeout')), 8000));
+  // v88.8.58-fp133: події не мають права блокувати NOAA/live render.
+  // Синхронно: тільки builtin events + NASA eclipse catalog (локально, швидко).
+  // Online ICS — тільки якщо явно ?onlineics=1 у indexIcsEventsForYears().
   try {
-    await Promise.race([
-      (async()=>{ await indexIcsEventsForYears(yrs); for(const y of yrs) await ensureEclipsesForYear(y); })(),
-      timeout
-    ]);
+    indexBuiltinEvents();
+    for(const y of yrs) await ensureEclipsesForYear(y);
+    try {
+      const _qs = new URLSearchParams(location.search || '');
+      if (_qs.get('onlineics') === '1') {
+        setTimeout(()=>indexIcsEventsForYears(yrs).catch(e=>{ if(window._DEBUG) console.warn('[ICS bg]', e.message); }), 0);
+      }
+    } catch(_e){}
   } catch(e) {
-    // ICS недоступний — builtin events вже завантажені в indexIcsEventsForYears
-    if(window._DEBUG) console.warn('[ICS] preload timeout/fail:', e.message);
+    if(window._DEBUG) console.warn('[ICS] builtin/eclipse preload failed:', e.message);
   }
 }
 
