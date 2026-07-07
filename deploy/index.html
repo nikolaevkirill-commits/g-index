@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.60-fp136</title>
+  <title>G-Index — Космофізичний дашборд v88.8.61-fp137</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -5465,7 +5465,7 @@ function fetchWithTimeout(url, ms=5000){
   const tid = setTimeout(()=>ctrl.abort(), ms);
   return fetch(url, {cache:'no-store', signal:ctrl.signal}).finally(()=>clearTimeout(tid));
 }
-// v88.8.60-fp136: bounded-wait wrapper для sequential fallback-ланцюжків.
+// v88.8.61-fp137: bounded-wait wrapper для sequential fallback-ланцюжків.
 // Проблема: fetchTextWithCORS сам по собі — до 36с на виклик (worker+direct+4 проксі).
 // Коли кілька таких викликів йдуть послідовно (GFZ→KP_OBS_FB→UAF→45-day),
 // сумарний worst-case = кілька хвилин (fp131/fp132 hang, підтверджено 2026-07-07).
@@ -5633,7 +5633,7 @@ function classifyEvent(summary){
 
 // ----------------------- Завантаження подій (ICS) ---------------------------
 async function indexIcsEventsForYears(years){
-  // v88.8.60-fp136: ONLINE ICS вимкнено за замовчуванням.
+  // v88.8.61-fp137: ONLINE ICS вимкнено за замовчуванням.
   // Причина: public ICS/CORS endpoints (vaisnavacalendar/calendarlabs/proxies) дають 403/pending
   // і створюють видиме "зависання" першого рендера, хоча builtin calendar уже покриває 2026-2027.
   // Для ручного R&D-оновлення можна увімкнути ?onlineics=1.
@@ -10875,7 +10875,7 @@ async function fetchText(u){
 async function preloadEventsAroundNow(){
   const now = new Date();
   const yrs = [now.getUTCFullYear(), now.getUTCFullYear()+1];
-  // v88.8.60-fp136: події не мають права блокувати NOAA/live render.
+  // v88.8.61-fp137: події не мають права блокувати NOAA/live render.
   // Синхронно: тільки builtin events + NASA eclipse catalog (локально, швидко).
   // Online ICS — тільки якщо явно ?onlineics=1 у indexIcsEventsForYears().
   try {
@@ -14836,7 +14836,7 @@ async function loadAll(){
   }
 
   // ═══ Паралельне завантаження всіх джерел (v26: Promise.allSettled) ═══
-  // v88.8.60-fp136: primary source fetches MUST be bounded too.
+  // v88.8.61-fp137: primary source fetches MUST be bounded too.
   // fp134 only bounded fallback calls; primary Promise.allSettled still waited for the full
   // CORS chain of every source and could freeze perceived startup. Each rail now gets a
   // hard 5s wait budget; stale/dead sources fall through to existing cache/synthetic logic.
@@ -15057,7 +15057,7 @@ async function loadAll(){
   }
 
   // v42: Real-time solar wind (DSCOVR Bz + Vsw)
-  // v88.8.60-fp136: secondary live rails are non-critical; never let them block startup.
+  // v88.8.61-fp137: secondary live rails are non-critical; never let them block startup.
   try { await withTimeout(fetchBzNow(), 3500, 'Bz live');  } catch(_){if(window._DEBUG)console.warn('[silent]')}
   try { await withTimeout(fetchVswNow(), 3500, 'Vsw live'); } catch(_){if(window._DEBUG)console.warn('[silent]')}
   // v87.15 U6: GOES X-ray flare — Solar flare monitoring
@@ -18393,7 +18393,22 @@ function renderProfileRec() {
                 + (_activeProfile === 'pilot' ? renderAviationSwxLine() : ''); // fp56-P11
 }
 
-addEventListener('load', ()=>{ initGeolocation(); setStamp(); loadAll(); el('btnCsv').addEventListener('click', exportCsv); const _bIcs=el('btnIcs'); if(_bIcs) _bIcs.addEventListener('click', exportICS); el('selInterval').addEventListener('change', updateAutoRefStatus); initPersonalCalc(); initLangToggle(); initG2Watch(); initSimpleMode(); /* v87.28: страхувальний рендер compare periods — не залежить від NOAA */ try{ if(typeof renderComparePeriods === 'function') renderComparePeriods(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+function bootGIndexOnce(_reason){
+  if(window.__gIndexBooted) return;
+  window.__gIndexBooted = true;
+  try{ initGeolocation(); }catch(e){if(window._DEBUG)console.warn('[boot initGeolocation]:',e.message)}
+  try{ setStamp(); }catch(e){if(window._DEBUG)console.warn('[boot setStamp]:',e.message)}
+  try{ loadAll(); }catch(e){console.error('[boot loadAll]', e)}
+  try{ const _csv=el('btnCsv'); if(_csv) _csv.addEventListener('click', exportCsv); }catch(e){if(window._DEBUG)console.warn('[boot csv]:',e.message)}
+  try{ const _bIcs=el('btnIcs'); if(_bIcs) _bIcs.addEventListener('click', exportICS); }catch(e){if(window._DEBUG)console.warn('[boot ics]:',e.message)}
+  try{ const _sel=el('selInterval'); if(_sel) _sel.addEventListener('change', updateAutoRefStatus); }catch(e){if(window._DEBUG)console.warn('[boot interval]:',e.message)}
+  try{ initPersonalCalc(); }catch(e){if(window._DEBUG)console.warn('[boot personal]:',e.message)}
+  try{ initLangToggle(); }catch(e){if(window._DEBUG)console.warn('[boot lang]:',e.message)}
+  try{ initG2Watch(); }catch(e){if(window._DEBUG)console.warn('[boot g2]:',e.message)}
+  try{ initSimpleMode(); }catch(e){if(window._DEBUG)console.warn('[boot simple]:',e.message)}
+  /* v88.8.61-fp137: boot no longer waits for window.load. External CDN scripts/icons can stall
+     load for minutes; app shell must start as soon as this bottom script is parsed. */
+  try{ if(typeof renderComparePeriods === 'function') renderComparePeriods(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
   // v87.61: load engine_scores.json (Bulletin model) + render heroBulletin
   // v87.62: after scores load, also re-render 3-day pills and 27-day table so Bulletin cells populate.
   // v88.7.15 Г: паралельно завантажуємо expert_overrides_v3.json — застосовуються у getEngineScore().
@@ -18450,8 +18465,16 @@ addEventListener('load', ()=>{ initGeolocation(); setStamp(); loadAll(); el('btn
     // v87.61: re-render Bulletin badge each minute (picks up date change at midnight)
     SAFE_INTERVAL(function(){ try{ renderHeroBulletin(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)} }, 60000).start();
   } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
-});
-el('btnRefresh').addEventListener('click', loadAll);
+}
+// fp137: start immediately after parser reaches this script, not after external resources finish.
+setTimeout(function(){ bootGIndexOnce('timer0'); }, 0);
+if(document.readyState === 'interactive' || document.readyState === 'complete') {
+  setTimeout(function(){ bootGIndexOnce('readyState'); }, 0);
+} else {
+  document.addEventListener('DOMContentLoaded', function(){ bootGIndexOnce('DOMContentLoaded'); }, {once:true});
+}
+addEventListener('load', function(){ bootGIndexOnce('load'); }, {once:true});
+try{ const _br=el('btnRefresh'); if(_br) _br.addEventListener('click', loadAll); }catch(e){if(window._DEBUG)console.warn('[boot refresh]:',e.message)}
 
 // ========================= i18n EN/UA =========================
 // v87.90: розширено для покриття всіх нових компонентів v87.66-77
@@ -20006,7 +20029,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 500);
   }; // end obNext click handler
 
-  // v88.8.60-fp136: do NOT auto-open onboarding on production load.
+  // v88.8.61-fp137: do NOT auto-open onboarding on production load.
   // It was not the root data bug, but it magnified hangs by placing a modal over a half-rendered UI.
   // Keep onboarding functions for manual/dev use; mark as done by default for existing users/hard resets.
   try{
@@ -21012,7 +21035,16 @@ document.addEventListener('DOMContentLoaded',()=>{
   } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
 });
 
-if ('serviceWorker' in navigator) {
+// fp137 emergency: unregister any old Service Worker immediately. Current issue is runtime hang / stale cache;
+// dashboard must run network-only until startup is stable.
+try{
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.getRegistrations().then(function(regs){ regs.forEach(function(r){ try{r.unregister();}catch(e){} }); });
+  }
+  if(window.caches){ caches.keys().then(function(keys){ keys.forEach(function(k){ try{caches.delete(k);}catch(e){} }); }); }
+}catch(e){}
+if (false && 'serviceWorker' in navigator) {
+  // fp137: SW disabled emergency; auto-unregister below is replaced by early cleanup.
   // fp106: auto-unregister old SW versions on load
   const _swKey = 'g-index-shell-v88-8-39-fp117';
   navigator.serviceWorker.getRegistrations().then(regs => {
