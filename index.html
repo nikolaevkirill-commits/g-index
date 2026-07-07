@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.68-fp144</title>
+  <title>G-Index — Космофізичний дашборд v88.8.69-fp145</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -7589,7 +7589,25 @@ function computeCScore(kpNow, kpObsJson, ai, G, kpSrc){
 }
 
 // ------------------------------ Обчислення Aᵢ -------------------------------
+// fp145 PERF FIX: computeAi викликається 40+ разів на boot (render27Day, renderComparePeriods,
+// renderWeekSummary...), багато — на однакові дати. Кожен виклик робить важкий астро-обрахунок
+// (Astronomy.MoonPhase). Кеш за ключем (дата+kp) усуває повтори — головна причина фризу ~1.7с.
+const _computeAiCache = new Map();
 function computeAi(dateTimeUTC, kp=0){
+  try{
+    if(dateTimeUTC && typeof dateTimeUTC.getTime === 'function' && !isNaN(dateTimeUTC.getTime())){
+      const _k = dateTimeUTC.getTime() + '|' + (isFinite(kp)?kp:0);
+      const _hit = _computeAiCache.get(_k);
+      if(_hit) return _hit;
+      const _res = _computeAiRaw(dateTimeUTC, kp);
+      if(_computeAiCache.size > 500) _computeAiCache.clear(); // захист від розростання
+      _computeAiCache.set(_k, _res);
+      return _res;
+    }
+  }catch(e){}
+  return _computeAiRaw(dateTimeUTC, kp);
+}
+function _computeAiRaw(dateTimeUTC, kp=0){
   // v88.7+ (deep audit): defensive input validation
   // Раніше: computeAi(null) → TypeError, computeAi(d, 100) → G=+96 (поза spec).
   // Тепер: graceful NaN return для invalid date, clamp kp до [0..9].
@@ -15827,24 +15845,35 @@ async function loadAllLite(){
     try{ render3Day(last3D); }catch(e){ console.warn('[fp138 lite render3Day]', e.message); }
     if(window._MARK)window._MARK('lite:renderCurrentPanel');
     try{ renderCurrentPanel(); }catch(e){ console.warn('[fp138 lite current]', e.message); }
-    if(window._MARK)window._MARK('lite:renderPanchanga');
-    try{ renderPanchanga(noonUTC(new Date())); }catch(e){ console.warn('[fp138 lite panch]', e.message); }
-    if(window._MARK)window._MARK('lite:render27Day');
-    try{
-      const _syn27 = Array.from({length:27},(_,i)=>{ const d=new Date(); d.setUTCHours(0,0,0,0); d.setUTCDate(d.getUTCDate()+i-7); return {date:d, flux:null, Ap:null, kpMax:kp0, _synthetic:true}; });
-      render27Day(_syn27, last3D);
-    }catch(e){ console.warn('[fp138 lite 27d]', e.message); }
-    if(window._MARK)window._MARK('lite:updateFreshnessBadge');
-    try{ updateFreshnessBadge(); }catch(e){}
-    if(window._MARK)window._MARK('lite:syncV702UI');
-    try{ syncV702UI(); }catch(e){ console.warn('[fp138 lite sync]', e.message); }
-    if(window._MARK)window._MARK('lite:renderRegimeCards');
-    try{ if(typeof renderRegimeCards==='function') renderRegimeCards(); }catch(e){}
-    if(window._MARK)window._MARK('lite:renderUnifiedIndicesPanel');
-    try{ if(typeof renderUnifiedIndicesPanel==='function') renderUnifiedIndicesPanel(); }catch(e){}
-    if(window._MARK)window._MARK('lite:_patchStaleLoadingDOM');
-    try{ if(typeof _patchStaleLoadingDOM==='function') _patchStaleLoadingDOM(); }catch(e){}
-    if(window._MARK)window._MARK('lite:done-render-block');
+    // fp145 FIX: решта рендерів робить десятки синхронних computeAi (кожен смикає астро-
+    // бібліотеку). Кумулятивно це блокувало головний потік на 1.5-2с → "Сторінка не
+    // відповідає" + кнопки не встигали навіситись. Виносимо у чергу з yield між кроками:
+    // потік звільняється, UI лишається чутливим, важкі обрахунки дорахуються поетапно.
+    const _yield = () => new Promise(r => (typeof requestIdleCallback==='function' ? requestIdleCallback(()=>r(), {timeout:500}) : setTimeout(r,0)));
+    (async () => {
+      await _yield();
+      if(window._MARK)window._MARK('lite:renderPanchanga');
+      try{ renderPanchanga(noonUTC(new Date())); }catch(e){ console.warn('[fp138 lite panch]', e.message); }
+      await _yield();
+      if(window._MARK)window._MARK('lite:render27Day');
+      try{
+        const _syn27 = Array.from({length:27},(_,i)=>{ const d=new Date(); d.setUTCHours(0,0,0,0); d.setUTCDate(d.getUTCDate()+i-7); return {date:d, flux:null, Ap:null, kpMax:kp0, _synthetic:true}; });
+        render27Day(_syn27, last3D);
+      }catch(e){ console.warn('[fp138 lite 27d]', e.message); }
+      await _yield();
+      if(window._MARK)window._MARK('lite:updateFreshnessBadge');
+      try{ updateFreshnessBadge(); }catch(e){}
+      if(window._MARK)window._MARK('lite:syncV702UI');
+      try{ syncV702UI(); }catch(e){ console.warn('[fp138 lite sync]', e.message); }
+      await _yield();
+      if(window._MARK)window._MARK('lite:renderRegimeCards');
+      try{ if(typeof renderRegimeCards==='function') renderRegimeCards(); }catch(e){}
+      if(window._MARK)window._MARK('lite:renderUnifiedIndicesPanel');
+      try{ if(typeof renderUnifiedIndicesPanel==='function') renderUnifiedIndicesPanel(); }catch(e){}
+      if(window._MARK)window._MARK('lite:_patchStaleLoadingDOM');
+      try{ if(typeof _patchStaleLoadingDOM==='function') _patchStaleLoadingDOM(); }catch(e){}
+      if(window._MARK)window._MARK('lite:done-render-block');
+    })();
     try{
       const st=document.getElementById('freshnessBadge');
       if(st){ st.textContent='● SAFE'; st.style.background='#1a2540'; st.style.color='#9bb1dc'; st.title='Safe boot: live NOAA fetch вимкнено на старті, щоб сторінка не зависала. Натисни Оновити або відкрий ?live=1 для live fetch.'; }
