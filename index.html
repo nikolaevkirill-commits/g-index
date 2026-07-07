@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.66-fp142</title>
+  <title>G-Index — Космофізичний дашборд v88.8.67-fp143</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1362,17 +1362,51 @@ body.simple-mode .col-hide-mobile {
         var f = function(){ (document.body||document.documentElement).appendChild(panel); };
         if(document.body) f(); else document.addEventListener('DOMContentLoaded', f);
       }
+      var prevStepHtml = '';
+      try {
+        if (window.__prevBootStep) {
+          prevStepHtml = '<b style="color:#ffd166">⛔ ЗАВИС НА КРОЦІ (мин. сеанс):</b><br><span style="color:#fff;font-size:12px">' + window.__prevBootStep + '</span><br>';
+          if (window.__prevBootHist && window.__prevBootHist.length) {
+            prevStepHtml += '<span style="color:#8899aa">останні кроки:<br>' + window.__prevBootHist.slice(-6).join('<br>') + '</span><hr style="border-color:#333">';
+          } else {
+            prevStepHtml += '<hr style="border-color:#333">';
+          }
+        }
+      } catch(e){}
       var prevHtml = _prevSession.length
-        ? ('<b style="color:#ff6b6b">ДО ФРИЗУ (мин. сеанс):</b><br>' + _prevSession.slice(-10).map(function(e){return e.dur+'ms @'+e.t+'ms';}).join('<br>') + '<hr style="border-color:#333">')
+        ? ('<b style="color:#ff6b6b">longtask ДО ФРИЗУ:</b><br>' + _prevSession.slice(-6).map(function(e){return e.dur+'ms @'+e.t+'ms';}).join('<br>') + '<hr style="border-color:#333">')
         : '';
       var curHtml = log.length
         ? ('<b>Цей сеанс (' + log.length + '):</b><br>' + log.slice(-8).map(function(e){return e.dur+'ms @'+e.t+'ms';}).join('<br>'))
         : 'Цей сеанс: довгих задач ще нема';
-      panel.innerHTML = '<b>⏱ longtask diag (fp142)</b><br>' + prevHtml + curHtml;
+      panel.innerHTML = '<b>⏱ boot diag (fp143)</b><br>' + prevStepHtml + prevHtml + curHtml;
     }catch(e){}
   }
   document.addEventListener('DOMContentLoaded', renderPanel);
   window.addEventListener('load', renderPanel);
+})();
+// fp143 DIAG: синхронний трасувальник кроків boot. _MARK пише крок у localStorage
+// СИНХРОННО перед кожним важким викликом. Якщо код зависне — останній збережений
+// крок вкаже точну функцію-винуватця. Показуємо у diag-панелі.
+(function(){
+  var STEP_KEY = '__bootStep';
+  var HIST_KEY = '__bootStepHist';
+  // Зчитуємо крок з ПОПЕРЕДНЬОГО (завислого) сеансу ДО того як перезапишемо
+  window.__prevBootStep = null;
+  window.__prevBootHist = [];
+  try { window.__prevBootStep = localStorage.getItem(STEP_KEY); } catch(e){}
+  try { window.__prevBootHist = JSON.parse(localStorage.getItem(HIST_KEY) || '[]'); } catch(e){ window.__prevBootHist = []; }
+  var hist = [];
+  window._MARK = function(name){
+    try{
+      var line = Math.round(performance.now()) + 'ms: ' + name;
+      hist.push(line);
+      if (hist.length > 60) hist = hist.slice(-60);
+      localStorage.setItem(STEP_KEY, line);
+      localStorage.setItem(HIST_KEY, JSON.stringify(hist));
+    }catch(e){}
+  };
+  window._MARK('boot script parsed');
 })();
 </script>
 </head>
@@ -15789,18 +15823,28 @@ async function loadAllLite(){
     });
     last3D = { issued:null, predictedAp:[], days:_synDays, _synthetic:true };
     window._gIndex_last3D = last3D;
+    if(window._MARK)window._MARK('lite:render3Day');
     try{ render3Day(last3D); }catch(e){ console.warn('[fp138 lite render3Day]', e.message); }
+    if(window._MARK)window._MARK('lite:renderCurrentPanel');
     try{ renderCurrentPanel(); }catch(e){ console.warn('[fp138 lite current]', e.message); }
+    if(window._MARK)window._MARK('lite:renderPanchanga');
     try{ renderPanchanga(noonUTC(new Date())); }catch(e){ console.warn('[fp138 lite panch]', e.message); }
+    if(window._MARK)window._MARK('lite:render27Day');
     try{
       const _syn27 = Array.from({length:27},(_,i)=>{ const d=new Date(); d.setUTCHours(0,0,0,0); d.setUTCDate(d.getUTCDate()+i-7); return {date:d, flux:null, Ap:null, kpMax:kp0, _synthetic:true}; });
       render27Day(_syn27, last3D);
     }catch(e){ console.warn('[fp138 lite 27d]', e.message); }
+    if(window._MARK)window._MARK('lite:updateFreshnessBadge');
     try{ updateFreshnessBadge(); }catch(e){}
+    if(window._MARK)window._MARK('lite:syncV702UI');
     try{ syncV702UI(); }catch(e){ console.warn('[fp138 lite sync]', e.message); }
+    if(window._MARK)window._MARK('lite:renderRegimeCards');
     try{ if(typeof renderRegimeCards==='function') renderRegimeCards(); }catch(e){}
+    if(window._MARK)window._MARK('lite:renderUnifiedIndicesPanel');
     try{ if(typeof renderUnifiedIndicesPanel==='function') renderUnifiedIndicesPanel(); }catch(e){}
+    if(window._MARK)window._MARK('lite:_patchStaleLoadingDOM');
     try{ if(typeof _patchStaleLoadingDOM==='function') _patchStaleLoadingDOM(); }catch(e){}
+    if(window._MARK)window._MARK('lite:done-render-block');
     try{
       const st=document.getElementById('freshnessBadge');
       if(st){ st.textContent='● SAFE'; st.style.background='#1a2540'; st.style.color='#9bb1dc'; st.title='Safe boot: live NOAA fetch вимкнено на старті, щоб сторінка не зависала. Натисни Оновити або відкрий ?live=1 для live fetch.'; }
@@ -19385,16 +19429,25 @@ function renderProfileRec() {
 function bootGIndexOnce(_reason){
   if(window.__gIndexBooted) return;
   window.__gIndexBooted = true;
+  if(window._MARK)window._MARK('boot:start('+_reason+')');
   try{ initGeolocation(); }catch(e){if(window._DEBUG)console.warn('[boot initGeolocation]:',e.message)}
+  if(window._MARK)window._MARK('boot:setStamp');
   try{ setStamp(); }catch(e){if(window._DEBUG)console.warn('[boot setStamp]:',e.message)}
+  if(window._MARK)window._MARK('boot:loadAllLite');
   try{ if(new URLSearchParams(location.search||'').get('live')==='1') loadAll(); else loadAllLite(); }catch(e){console.error('[boot safe load]', e)}
+  if(window._MARK)window._MARK('boot:after-load');
   try{ const _csv=el('btnCsv'); if(_csv) _csv.addEventListener('click', exportCsv); }catch(e){if(window._DEBUG)console.warn('[boot csv]:',e.message)}
   try{ const _bIcs=el('btnIcs'); if(_bIcs) _bIcs.addEventListener('click', exportICS); }catch(e){if(window._DEBUG)console.warn('[boot ics]:',e.message)}
   try{ const _sel=el('selInterval'); if(_sel) _sel.addEventListener('change', updateAutoRefStatus); }catch(e){if(window._DEBUG)console.warn('[boot interval]:',e.message)}
+  if(window._MARK)window._MARK('boot:initPersonalCalc');
   try{ initPersonalCalc(); }catch(e){if(window._DEBUG)console.warn('[boot personal]:',e.message)}
+  if(window._MARK)window._MARK('boot:initLangToggle');
   try{ initLangToggle(); }catch(e){if(window._DEBUG)console.warn('[boot lang]:',e.message)}
+  if(window._MARK)window._MARK('boot:initG2Watch');
   try{ initG2Watch(); }catch(e){if(window._DEBUG)console.warn('[boot g2]:',e.message)}
+  if(window._MARK)window._MARK('boot:initSimpleMode');
   try{ initSimpleMode(); }catch(e){if(window._DEBUG)console.warn('[boot simple]:',e.message)}
+  if(window._MARK)window._MARK('boot:renderComparePeriods');
   /* v88.8.62-fp138: boot no longer waits for window.load. External CDN scripts/icons can stall
      load for minutes; app shell must start as soon as this bottom script is parsed. */
   try{ if(typeof renderComparePeriods === 'function') renderComparePeriods(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
