@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.62-fp138</title>
+  <title>G-Index — Космофізичний дашборд v88.8.66-fp142</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1325,6 +1325,54 @@ body.simple-mode .col-hide-mobile {
     return Number.isFinite(Number(v));
   };
   window._nativeIsFinite = _nativeIsFinite;
+})();
+// fp142 DIAG: longtask-моніторинг блокування головного потоку — без F12.
+// Лог переживає фриз (localStorage) + видима на екрані панель.
+(function(){
+  var LOG_KEY = '__longtaskLog';
+  var log = [];
+  try { log = JSON.parse(localStorage.getItem(LOG_KEY) || '[]'); } catch(e){ log = []; }
+  var _prevSession = log.slice(); // те, що лишилось з ПОПЕРЕДНЬОГО завантаження (до фризу)
+  log = []; // цей сеанс пишемо з нуля, старе показуємо окремо як "до фризу"
+  function persist(){
+    try{
+      if (log.length > 100) log = log.slice(-100);
+      localStorage.setItem(LOG_KEY, JSON.stringify(log));
+    }catch(e){}
+  }
+  if ('PerformanceObserver' in window){
+    try{
+      var po = new PerformanceObserver(function(list){
+        list.getEntries().forEach(function(entry){
+          log.push({ t: Math.round(entry.startTime), dur: Math.round(entry.duration), name: entry.name||'self' });
+        });
+        persist();
+        renderPanel();
+      });
+      po.observe({ type:'longtask', buffered:true });
+    }catch(e){ console.warn('[DIAG fp142] longtask observer недоступний:', e.message); }
+  }
+  var panel = null;
+  function renderPanel(){
+    try{
+      if(!panel){
+        panel = document.createElement('div');
+        panel.id = '__diagPanel';
+        panel.style.cssText = 'position:fixed;bottom:0;right:0;z-index:99998;background:#0a1420;color:#7fdbff;font:10px/1.4 monospace;padding:6px 10px;max-width:320px;max-height:35vh;overflow:auto;border-top:2px solid #2bd47d;border-left:2px solid #2bd47d;opacity:.92';
+        var f = function(){ (document.body||document.documentElement).appendChild(panel); };
+        if(document.body) f(); else document.addEventListener('DOMContentLoaded', f);
+      }
+      var prevHtml = _prevSession.length
+        ? ('<b style="color:#ff6b6b">ДО ФРИЗУ (мин. сеанс):</b><br>' + _prevSession.slice(-10).map(function(e){return e.dur+'ms @'+e.t+'ms';}).join('<br>') + '<hr style="border-color:#333">')
+        : '';
+      var curHtml = log.length
+        ? ('<b>Цей сеанс (' + log.length + '):</b><br>' + log.slice(-8).map(function(e){return e.dur+'ms @'+e.t+'ms';}).join('<br>'))
+        : 'Цей сеанс: довгих задач ще нема';
+      panel.innerHTML = '<b>⏱ longtask diag (fp142)</b><br>' + prevHtml + curHtml;
+    }catch(e){}
+  }
+  document.addEventListener('DOMContentLoaded', renderPanel);
+  window.addEventListener('load', renderPanel);
 })();
 </script>
 </head>
@@ -2874,6 +2922,901 @@ Fallback (NOAA 45-day-forecast.json):
     <div class="small" style="margin-top:8px">📊 Повна валідація моделі: <a href="backtest.html" style="color:var(--alt);text-decoration:none;border-bottom:1px dotted var(--alt)">backtest report</a> — engine v18.5 canonical vs PDF: N=280 — Strict 70.6% · Binary 83.6% · Exact 43.0% (N=280 GT v5.1: Strict 71.4%, κ=0.52 / weighted κ=0.73). V18.8 patches disabled — V3 freeze active.</div>
     <div class="small" style="margin-top:8px;color:var(--faint);border-left:2px solid var(--warn);padding-left:8px">⚠ Caveat: ground truth = експертні PDF-бюлетені з тим же Vedic Panchanga + Kp framework. Метрики 79.2% / 88.7% валідують <strong>відтворення експертної логіки</strong>, НЕ предиктивну валідність vs реальні outcomes (медичні/операційні події). Outcome-based validation — pilot план у V19-E.</div>
   </footer>
+
+<script>
+// ═══ Probability Layer v1 (bootstrap logistic, G-Index) ════════════════════
+function sigmoid(x){ return 1/(1+Math.exp(-x)); }
+
+// P_soft: P(несприятливий | G). Якорі: G=0→0.35, G=-3→0.80
+function calcSoftRiskFromG(G){
+  return Math.max(0.001, Math.min(0.999, sigmoid(-0.619 - 0.668*G)));
+}
+// P_hard: P(сильно несприятливий | G). Якорі: G=0→0.10, G=-3→0.60
+function calcHardRiskFromG(G){
+  return Math.max(0.001, Math.min(0.999, sigmoid(-2.197 - 0.868*G)));
+}
+function getRiskBand(p){ return p<0.25?'low':p<0.50?'moderate':p<0.75?'elevated':'high'; }
+function getRiskLabelUA(p){ return p<0.25?'Низький':p<0.50?'Помірний':p<0.75?'Підвищений':'Високий'; }
+
+// calcProbabilityLayer: приймає {G, csConf (0..1), horizon}
+// csConf береться з existingCScore.conf, horizon = 'now'|'3day'|'27day'
+function calcProbabilityLayer({G, csConf=1, horizon='now'}={}){
+  if(!isFinite(G)) return null;
+  const pSoft = calcSoftRiskFromG(G);
+  const pHard = calcHardRiskFromG(G);
+  const hFactor = horizon==='27day'?0.55:horizon==='3day'?0.85:1.00;
+  const conf = Math.max(0.05, Math.min(1, (csConf||1)*hFactor));
+  return {
+    G: Math.round(G*100)/100,
+    pSoft, pSoftPct: Math.round(pSoft*100),
+    pHard, pHardPct: Math.round(pHard*100),
+    conf, confPct: Math.round(conf*100),
+    band: getRiskBand(pSoft),
+    labelUA: getRiskLabelUA(pSoft)
+  };
+}
+
+// v78: renderNowProbability removed (targets CSS-hidden probNowBlock)
+
+// G-Index PWA — Service Worker registration + update UX
+let _swReg = null;
+let _deferredInstall = null;
+
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  _deferredInstall = e;
+  const bar = document.getElementById('pwaInstallBar');
+  if (bar) { bar.style.display = 'flex'; }
+});
+
+function pwaInstall() {
+  if (!_deferredInstall) return;
+  _deferredInstall.prompt();
+  _deferredInstall.userChoice.then(() => { _deferredInstall = null; pwaDismiss(); });
+}
+function pwaDismiss() {
+  const bar = document.getElementById('pwaInstallBar');
+  if (bar) bar.style.display = 'none';
+}
+
+function pwaReload() {
+  if (_swReg && _swReg.waiting) {
+    _swReg.waiting.postMessage({ type: 'SKIP_WAITING' });
+  } else {
+    window.location.reload();
+  }
+}
+
+// ═══ WOW LAYER v71 ═══
+// v85b: renderWowOrb, startWowOrb removed — wowOrb DOM deleted v83f
+function wowColorByG(g){
+  if(!isFinite(g)) return '#9bb1dc';
+  if(g>=1.5) return '#2bd47d'; if(g>=-0.5) return '#9bb1dc';
+  if(g>=-2.5) return '#ffcc00'; return '#ff6b6b';
+}
+
+function initWowParticles(){
+  const c=document.getElementById('wowParticles'),host=document.getElementById('cosmicMapWrap');
+  if(!c||!host) return;const ctx=c.getContext('2d');let parts=[];
+  function resize(){const r=host.getBoundingClientRect();c.width=Math.max(200,Math.floor(r.width));c.height=Math.max(160,Math.floor(r.height));
+  parts=Array.from({length:30},()=>({x:Math.random()*c.width,y:Math.random()*c.height,r:Math.random()*1.4+.4,v:Math.random()*.15+.04,a:Math.random()*Math.PI*2}))}
+  let _wowPVisible=false;if(window.IntersectionObserver){new IntersectionObserver(e=>{_wowPVisible=e[0].isIntersecting},{threshold:0}).observe(host)}
+  function draw(){if(!_wowPVisible || document.hidden){requestAnimationFrame(draw);return}ctx.clearRect(0,0,c.width,c.height);const kp=window._lastKpForWow||2;const spd=0.5+kp*0.2;for(const p of parts){p.x+=Math.cos(p.a)*p.v*spd;p.y+=Math.sin(p.a)*p.v*spd;if(p.x<0)p.x=c.width;if(p.x>c.width)p.x=0;if(p.y<0)p.y=c.height;if(p.y>c.height)p.y=0;const br=kp>=5?'rgba(255,130,130,.3)':'rgba(255,255,255,.2)';ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=br;ctx.fill()}requestAnimationFrame(draw)}
+  resize();draw();window.addEventListener('resize',resize);
+}
+
+// ===== v73 PRODUCT LAYER =====
+function _v73G(){
+  const _ui = window.__uiState;
+  if(_ui && isFinite(_ui.gNow)) return _ui.gNow;
+  const m=(el('nowG')?.textContent||'').match(/G\s*(-?\d+\.?\d*)/);
+  return m?parseFloat(m[1]):NaN;
+}
+function _v73Kp(){
+  const _ui = window.__uiState;
+  if(_ui && isFinite(_ui.kpNow)) return _ui.kpNow;
+  return _num((_firstText?.(el('nowKp'))||el('nowKp')?.textContent||'').replace(',','.'));
+}
+
+// v87.56: removed renderAIExplain, _renderTopDrivers, _bindDriverHover noop stubs (v80 legacy)
+
+// v80: renderConfidenceBreakdown simplified — reads from __uiState.confPct
+function renderConfidenceBreakdown(){
+  const _ui = window.__uiState;
+  if(_ui && _ui.confPct){
+    const hc=el('heroConfidence');
+    if(hc) hc.textContent=_ui.confPct+'%';
+  }
+}
+
+// v78: removed renderPatternAlert, renderScenarioStrip, refreshV73Layer, renderSuperSignal (targets CSS-hidden)
+
+// v85b: applyWowFromG removed — wowOrb DOM deleted v83f
+function applyWowFromG(){}
+
+function initHeroField(){
+  const c=document.getElementById('heroField'),host=document.getElementById('heroCard');
+  if(!c||!host)return;const ctx=c.getContext('2d');let parts=[];let _heroFieldVisible=true;
+  // v74: IntersectionObserver to pause when offscreen
+  // v88.7+ (perf audit): also pause when tab hidden (battery saving on mobile)
+  if(window.IntersectionObserver){
+    new IntersectionObserver(entries=>{_heroFieldVisible=entries[0].isIntersecting},{threshold:0.1}).observe(host);
+  }
+  function resize(){const r=host.getBoundingClientRect();c.width=Math.max(300,Math.floor(r.width));c.height=Math.max(100,Math.floor(r.height));
+  parts=Array.from({length:22},()=>({x:Math.random()*c.width,y:Math.random()*c.height,r:Math.random()*1.6+.4,vx:Math.random()*.2+.05,vy:(Math.random()-.5)*.06}))}
+  function draw(){
+    if(!_heroFieldVisible || document.hidden){requestAnimationFrame(draw);return}
+    const g=window._heroGprev||0;const kp=window._lastKpForWow||2;
+    const col=wowColorByG(g);const spd=g<=-2.5?2.2:g<=-0.5?1.4:1;
+    ctx.clearRect(0,0,c.width,c.height);
+    const bg=ctx.createLinearGradient(0,0,c.width,c.height);
+    if(g>=1.5){bg.addColorStop(0,'rgba(20,60,40,.12)');bg.addColorStop(1,'rgba(15,30,50,.06)')}
+    else if(g>=-0.5){bg.addColorStop(0,'rgba(15,30,60,.1)');bg.addColorStop(1,'rgba(10,20,40,.05)')}
+    else if(g>=-2.5){bg.addColorStop(0,'rgba(60,40,8,.14)');bg.addColorStop(1,'rgba(30,20,8,.06)')}
+    else{bg.addColorStop(0,'rgba(70,15,15,.18)');bg.addColorStop(1,'rgba(30,8,12,.08)')}
+    ctx.fillStyle=bg;ctx.fillRect(0,0,c.width,c.height);
+    for(const p of parts){p.x+=p.vx*spd;p.y+=p.vy*spd;if(p.x>c.width+5)p.x=-5;if(p.y>c.height+3)p.y=-3;if(p.y<-3)p.y=c.height+3;
+    ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=col+'33';ctx.fill()}
+    const t=performance.now()/1000;const amp=g<=-2.5?12:g<=-0.5?7:4;
+    ctx.beginPath();for(let x=0;x<=c.width;x+=6){const y=c.height*.72+Math.sin(x*.013+t*1.5)*amp;if(x===0)ctx.moveTo(x,y);else ctx.lineTo(x,y)}
+    ctx.strokeStyle=col+'44';ctx.lineWidth=1.5;ctx.stroke();
+    requestAnimationFrame(draw)
+  }
+  resize();draw();window.addEventListener('resize',resize);
+}
+
+
+// ═══ v75: Data freshness + ΔG history ═══
+window._dataFetchTimestamps = {};
+function updateDataFreshness(source, ts){
+  window._dataFetchTimestamps[source] = ts || Date.now();
+  _renderFreshnessState();
+}
+function _renderFreshnessState(){
+  const ts = window._dataFetchTimestamps;
+  const now = Date.now();
+  const ages = Object.values(ts).filter(t=>typeof t==='number').map(t => now - t);
+  if(!ages.length){
+    updateFreshnessBadge();
+    return;
+  }
+  const maxAge = Math.max(...ages);
+  const fb = el('freshnessBadge');
+  const hf = el('heroFreshness');
+  // v87.90: stale watermark — readable age (8хв / 35хв / 1.5г / 3г) у бейджі
+  const _ageMin = Math.round(maxAge / 60000);
+  const _ageStr = _ageMin < 1 ? 'щойно'
+                : _ageMin < 60 ? _ageMin + 'хв'
+                : (Math.round(maxAge / 360000) / 10).toFixed(1) + 'г';
+  // v87.1 NFR: stricter thresholds (LIVE ≤5min, DELAYED ≤30min, STALE ≤60min, OLD >60min)
+  let state, label, col, bgCol;
+  if(maxAge < 5*60*1000){ state='live'; label='● LIVE · '+_ageStr; col='#63be7b'; bgCol='#0a2a15'; }
+  else if(maxAge < 30*60*1000){ state='delayed'; label='● DELAYED · '+_ageStr; col='#ffcc44'; bgCol='#2a1a00'; }
+  else if(maxAge < 60*60*1000){ state='stale'; label='● STALE · '+_ageStr; col='#ff9944'; bgCol='#2a1200'; }
+  else { state='old'; label='● OLD · '+_ageStr; col='#ff6b6b'; bgCol='#2a0808'; }
+  // v88.8.35-fp9 O: content-age override — fetch може бути щойно, але JSON всередині застарілий
+  // (NOAA SWPC issue 2026-03-28). Тоді ми вважалися LIVE, але resolveDataMode вже бачив partial.
+  // Тепер обидва writer-и узгоджені: top status теж downgrade до DELAYED+content-stale.
+  let _contentOverride = false;
+  try {
+    const _src = window._kpSourceFreshness;
+    if (_src && isFinite(_src.ageHours)) {
+      if (_src.ageHours > 24 * 7 && state !== 'old') {
+        state='old'; label='● OLD · контент >1 тиж'; col='#ff6b6b'; bgCol='#2a0808'; _contentOverride=true;
+      } else if (_src.ageHours > 24 && state !== 'old' && state !== 'stale') {
+        state='stale'; label='● STALE · контент >1 дн'; col='#ff9944'; bgCol='#2a1200'; _contentOverride=true;
+      } else if (_src.ageHours > 1 && (state === 'live' || state === 'delayed')) {
+        // fetch свіжий АБО незначно затриманий, але JSON всередині старий >1h → понижуємо
+        // v88.8.35-fp16 GG: розрізняємо ESTIMATED (≤12h, forecast real) від DELAYED (більш агресивний).
+        // _kpSourceFreshness тут вже >1h. Перевіряємо чи forecast (last3D) реальний.
+        // v88.8.35-fp17 fix: дозволяємо також state==='delayed' (fetch 5-30хв) — інакше badge показує
+        // DELAYED, а resolveDataModeExtended повертає 'estimated' → два writer-и розсинхронізовані.
+        const _last3Fake = !!(typeof last3D !== 'undefined' && last3D && last3D._synthetic);
+        if (!_last3Fake && _src.ageHours <= 12) {
+          // ESTIMATED — спокійний синювато-сірий колір, без тривожного жовтого
+          state='estimated'; label='● ESTIMATED · контент '+_src.ageHours.toFixed(1)+'г'; col='#a8d5e0'; bgCol='#0e1f2a'; _contentOverride=true;
+        } else {
+          state='delayed'; label='● DELAYED · контент '+_src.ageHours.toFixed(1)+'г'; col='#ffcc44'; bgCol='#2a1a00'; _contentOverride=true;
+        }
+      }
+    }
+  } catch(e) { /* silent */ }
+  if(fb){ fb.textContent=label; fb.style.color=col; fb.style.background=bgCol; }
+  if(hf){
+    // v88.8.35-fp9 O: для heroFreshness теж зберігаємо вирівняний стан + позначка контенту якщо overridden.
+    // v88.8.35-fp17 fix: ЯВНИЙ reset inline-стилів — попередній scenario/offline рендер міг
+    // залишити hf.style.color, який не перебивається класами при поверненні у live/estimated.
+    const _hfLabel = state.toUpperCase() + (_contentOverride ? ' · контент' : ' · ' + _ageStr);
+    hf.textContent = _hfLabel;
+    hf.className=''; hf.classList.add(state);
+    hf.style.color = ''; hf.style.background = '';
+  }
+  if(window.__uiState) window.__uiState.freshness = state;
+
+  // v87.91 fix: scenario/offline override — без цього 60-сек таймер перетирав SCENARIO на LIVE
+  // навіть коли syncHero виставив правильний стан. _renderFreshnessState бачить тільки age
+  // даних, але не знає про synthetic forecast (last3D._synthetic).
+  try {
+    const _dm = (typeof resolveDataMode === 'function') ? resolveDataMode() : null;
+    if (_dm === 'scenario' || _dm === 'offline') {
+      const _label2 = (_dm === 'scenario' ? 'SCENARIO' : 'OFFLINE') + ' · ' + _ageStr;
+      const _col2 = _dm === 'offline' ? '#ff6b6b' : '#fca474';
+      const _bgCol2 = _dm === 'offline' ? '#2a0808' : '#2a1500';
+      if (fb) { fb.textContent = '● ' + _label2; fb.style.color = _col2; fb.style.background = _bgCol2; }
+      if (hf) {
+        hf.textContent = _label2;
+        hf.className = '';
+        hf.classList.add('stale');
+        hf.style.color = _col2;
+        hf.title = _dm === 'scenario'
+          ? '⚠ NOAA forecast недоступний. Завтра/3-day показано як плато на базі поточного Kp — це сценарій, не справжній прогноз.'
+          : 'Дані offline: навіть Kp обсервації недоступні. Все, що показано — з кешу.';
+      }
+      if (window.__uiState) window.__uiState.freshness = _dm;
+    }
+    // v87.92 fix: маркер heroTomorrow через data-attribute + CSS ::after.
+    // Раніше використовував innerHTML.replace, але render3Day переписував все через innerHTML.
+    // Тепер dataset stays навіть коли textContent перезаписаний.
+    // v87.94: + sibling DOM fallback
+    const _ht = document.getElementById('heroTomorrow');
+    const _htSib = document.getElementById('heroTomorrowScenario');
+    if (_ht) {
+      if (_dm === 'scenario') {
+        _ht.dataset.scenario = '1';
+        if (!_ht.title) _ht.title = '⚠ NOAA forecast недоступний — це плато на базі поточного Kp.';
+        if (_htSib) { _htSib.textContent = '⚠ SCENARIO'; _htSib.className = 'scenario'; }
+      } else if (_dm === 'offline') {
+        _ht.dataset.scenario = 'offline';
+        if (_htSib) { _htSib.textContent = '⚠ OFFLINE'; _htSib.className = 'offline'; }
+      } else {
+        delete _ht.dataset.scenario;
+        if (_htSib) { _htSib.textContent = ''; _htSib.className = ''; }
+      }
+    }
+  } catch(e) { /* noop */ }
+}
+
+// ═══ v75: G history for ΔG ═══
+
+// ═══ v76b: Kp-2 contribution pill ═══
+function renderKpContribution(){
+  var _ui=window.__uiState||{};
+  var kp=isFinite(_ui.kpNow)?_ui.kpNow:_num(_firstText(el('nowKp')));
+  var n=el('nowKpPart');
+  if(!n) return;
+  if(!isFinite(kp)){n.textContent='Kp\u22122 = \u2014';n.style.color='';return;}
+  var v=Math.round((kp-2)*10)/10;
+  n.textContent='Kp\u22122 = '+(v>0?'+':'')+v.toFixed(1);
+  n.style.color=v>0?'#2bd47d':v<0?'#ff6b6b':'#9bb1dc';
+}
+
+// ═══ v76b: Panchanga Pi line ═══
+function renderPanchPiLine(){
+  var raw=window._lastAiPi;
+  var src=(raw!=null)?String(raw):'';
+  var dst=el('panchPiLine');
+  if(!dst) return;
+  if(!src||src==='\u2014'||src==='\u2026'){dst.textContent='P\u1d62 = \u2014';dst.style.color='';return;}
+  var v=parseFloat(src.replace(',','.'));
+  if(!isFinite(v)){dst.textContent='P\u1d62 = '+src;dst.style.color='';return;}
+  dst.textContent='P\u1d62 = '+(v>0?'+':'')+v.toFixed(1);
+  dst.style.color=v>0?'#2bd47d':v<0?'#ff6b6b':'#9bb1dc';
+}
+
+// ═══ v76c: wf3 Signal Summary ═══
+// ═══ v76d: wf3 Human-readable Signal Summary ═══
+var WF3_PHRASES={
+  calm:'Фон стабільний, виражених факторів немає.',
+  kp_up:'Геомагнітний фон дає {s} ріст ({v}).',
+  kp_down:'Геомагнітний фон створює {s} тиск ({v}).',
+  moon_up:'Місячна фаза додає {s} вплив ({v}).',
+  moon_down:'Місячна фаза створює {s} тиск ({v}).',
+  eclipse:'Період затемнення створює нестабільність ({v}).',
+  events:'Live-шар подій дає {s} вплив ({v}).',
+  panchanga:'Панчанга формує {s} фон ({v}).',
+  mixed:'Фактори змішані, чіткого домінування немає.',
+  others_neutral:'Інші фактори нейтральні.',
+  rel_good:'Вхідні дані повні ({c}%).',
+  rel_mid:'Вхідні дані частково повні ({c}%).',
+  rel_low:'Вхідні дані неповні ({c}%).',
+  cached:'Показано кеш.',
+  live:'Дані актуальні.',
+  stale:'Дані можуть бути застарілими.',
+  scen_up:'Якщо Kp зросте на 1, G стане {v}.'
+};
+var WF3_ALERT={
+  storm_high:'Йде геомагнітна буря, небажано планувати критичні дії.',
+  storm_mid:'Геомагнітна активність підвищена, день потребує обережності.',
+  storm_low:'Геомагнітний фон підвищений, варто зменшити навантаження.',
+  eclipse_peak:'Пік впливу затемнення, день краще не перевантажувати.',
+  eclipse_near:'Період затемнення посилює нестабільність фону.',
+  eclipse_far:'Відчувається фоновий вплив періоду затемнення.',
+  amavasya:'Амавасья підсилює внутрішню нестабільність і знижує стійкість.',
+  ekadashi:'Екадаші змінює ритм дня, краще уникати перевантаження.',
+  mixed_hard:'Накладаються кілька несприятливих факторів, день напружений.',
+  mixed_mid:'Live-фон змішаний, з перевагою несприятливих факторів.',
+  unstable:'Картина дня неповна, дані слід читати обережно.'
+};
+
+function renderWf3(){
+  var g=_v73G(), kp=_v73Kp();
+  var wrap=el('wf3SignalSummary'), top=el('wf3Top'), bot=el('wf3Bottom');
+  if(!wrap||!top||!bot) return;
+  if(!isFinite(g)||!isFinite(kp)){wrap.style.display='none';return;}
+  var kpPart=Math.round((kp-2)*10)/10;
+  // v85b-p2: read from __uiState.ai instead of DOM (aligned with P7)
+  var _ai=window.__uiState&&window.__uiState.ai;
+  var comps={Li:0,Mi:0,ei:0,Pi:0};
+  if(_ai){ comps.Li=Number(_ai.Li)||0; comps.Mi=Number(_ai.Mi)||0; comps.ei=Number(_ai.ei)||0; comps.Pi=Number(_ai.Pi)||0; }
+  // v87.90 fix: видалено stale fallback `if(Pi===0) Pi=_lastAiPi`
+  // Раніше: коли реальний Pᵢ був 0 (напр. Ekadashi виключена), display показував
+  // СТАРЕ значення (Dashami 0.3) — створювало розбіжність із G обчисленням.
+  // Тепер: 0 = 0, реальне значення завжди.
+
+  function fs(x){var n=Number(x||0);return(n>0?'+':'')+n.toFixed(1);}
+  function strength(v){var a=Math.abs(v);return a<0.5?'слабкий':a<1.5?'помірний':'сильний';}
+
+  // Main driver
+  var drivers=[{k:'kp',v:kpPart},{k:'li',v:comps.Li},{k:'mi',v:comps.Mi},{k:'ei',v:comps.ei},{k:'pi',v:comps.Pi}];
+  drivers.sort(function(a,b){return Math.abs(b.v)-Math.abs(a.v);});
+  var d=drivers[0];
+
+  // Line 1: main cause (human text)
+  var line1;
+  if(Math.abs(d.v)<0.15){
+    line1=WF3_PHRASES.calm;
+  } else {
+    var tpl;
+    if(d.k==='kp') tpl=d.v>0?WF3_PHRASES.kp_up:WF3_PHRASES.kp_down;
+    else if(d.k==='li') tpl=d.v>0?WF3_PHRASES.moon_up:WF3_PHRASES.moon_down;
+    else if(d.k==='mi') tpl=WF3_PHRASES.eclipse;
+    else if(d.k==='ei') tpl=WF3_PHRASES.events;
+    else if(d.k==='pi') tpl=WF3_PHRASES.panchanga;
+    else tpl=WF3_PHRASES.mixed;
+    line1=tpl.replace('{s}',strength(d.v)).replace('{v}',fs(d.v));
+  }
+  top.textContent=line1;
+
+  // Line 2: alert OR others + reliability + scenario
+  var parts=[];
+  // Data state
+  var hf=el('heroFreshness');
+  var dataState=(hf?hf.textContent.trim():'LIVE');
+  var hc=el('heroConfidence');
+  var confNum=parseInt(hc?hc.textContent.trim():'')||100;
+
+  // Alert check (priority order)
+  var alert='';
+  if(confNum<60||dataState==='STALE') alert=WF3_ALERT.unstable;
+  else if(kp>=6) alert=WF3_ALERT.storm_high;
+  else if(kp>=5) alert=WF3_ALERT.storm_mid;
+  else if(kp>=4) alert=WF3_ALERT.storm_low;
+  else if(comps.Mi<=-4) alert=WF3_ALERT.eclipse_peak;
+  else if(comps.Mi<=-3) alert=WF3_ALERT.eclipse_near;
+  else if(comps.Mi<=-1) alert=WF3_ALERT.eclipse_far;
+  else if(comps.Li<=-3) alert=WF3_ALERT.amavasya;
+  else if(comps.ei<=-2.5) alert=WF3_ALERT.ekadashi;
+  else {
+    var negCnt=[kpPart,comps.Li,comps.Mi,comps.ei,comps.Pi].filter(function(x){return x<-0.5;}).length;
+    var negSum=[kpPart,comps.Li,comps.Mi,comps.ei,comps.Pi].reduce(function(s,x){return s+Math.min(0,x);},0);
+    if(negCnt>=3||negSum<=-4) alert=WF3_ALERT.mixed_hard;
+    else if(negCnt>=2||negSum<=-2) alert=WF3_ALERT.mixed_mid;
+  }
+
+  if(alert) parts.push(alert);
+  else parts.push(WF3_PHRASES.others_neutral);
+
+  // Reliability
+  var relTpl=confNum>=90?WF3_PHRASES.rel_good:confNum>=75?WF3_PHRASES.rel_mid:WF3_PHRASES.rel_low;
+  var relState=dataState==='LIVE'?WF3_PHRASES.live:dataState==='CACHED'?WF3_PHRASES.cached:WF3_PHRASES.stale;
+  parts.push(relTpl.replace('{c}',confNum)+' '+relState);
+
+  // Scenario (only near threshold)
+  if(Math.abs(g)<=1.0) parts.push(WF3_PHRASES.scen_up.replace('{v}',fs(g+1)));
+
+  bot.textContent=parts.join(' ');
+  bot.style.display='flex';
+  wrap.style.display='';
+}
+
+// ═══ v87.18: Decision Layer — конкретні дії "що робити зараз" ═══
+// Залежність: стан G + активні фактори (storm, eclipse, amavasya, Dst) + persona (off/mil/med/pilot/trader)
+// Мета: перейти від "показу даних" до "рекомендації дії"
+const DECISION_BASE = {
+  favorable: {
+    do:    ['Запускати нові ініціативи', 'Укладати угоди, підписувати контракти', 'Проводити важливі переговори', 'Публікувати, виступати, презентувати'],
+    avoid: ['Відкладати рішення без причини', 'Перестраховуватись у важливих питаннях'],
+    ctx:   'Рідкісне вікно продуктивності — використовуйте.'
+  },
+  good: {
+    do:    ['Займатись плановою роботою', 'Приймати рішення середньої ваги', 'Підтримувати стабільні комунікації'],
+    avoid: ['Лізти в конфлікти без потреби', 'Переоцінювати ризики'],
+    ctx:   'Фон підтримує звичні справи.'
+  },
+  neutral: {
+    do:    ['Працювати у стандартному темпі', 'Завершувати розпочате'],
+    avoid: ['Приймати різких рішень без підготовки', 'Починати принципово нове'],
+    ctx:   'Нейтральний день — робіть те, що вже вирішено.'
+  },
+  unstable: {
+    do:    ['Перевіряти деталі двічі', 'Обирати перевірені маршрути і партнерів', 'Зберегти резерв часу'],
+    avoid: ['Імпульсних рішень', 'Конфронтаційних розмов', 'Великих фінансових операцій'],
+    ctx:   'Фон нестабільний — обережніше, ніж зазвичай.'
+  },
+  tense: {
+    do:    ['Виконувати тільки критичне', 'Економити сили і увагу', 'Відкласти не-термінове на завтра'],
+    avoid: ['Підписувати документи', 'Укладати нові домовленості', 'Подорожей без потреби', 'Важливих розмов на високих тонах'],
+    ctx:   'Високий тиск — мінімізуйте рішення.'
+  }
+};
+
+// Persona-specific overrides (заміняють або додають до базових)
+const DECISION_PERSONA = {
+  mil: {  // Військовий
+    tense:    { do:    ['Тримати резерв на критичних точках', 'Уникати рейдових операцій'],
+                avoid: ['Розгортати нові підрозділи', 'Координацію через нестабільні канали'] },
+    unstable: { do:    ['Дублювати зв\'язок', 'Перевіряти координати двічі'],
+                avoid: ['Довгих переходів', 'Складних маневрів'] },
+    favorable:{ do:    ['Активні операції', 'Координація з союзниками', 'Планові навчання'] }
+  },
+  med: {  // Медик
+    tense:    { do:    ['Планові консультації', 'Спостереження пацієнтів'],
+                avoid: ['Планових операцій', 'Складних процедур'] },
+    unstable: { do:    ['Перевіряти вітальні показники частіше'],
+                avoid: ['Експериментальних протоколів'] }
+  },
+  pilot: {  // Пілот
+    tense:    { do:    ['Наземна підготовка, тренажер', 'Дотримання протоколів'],
+                avoid: ['Польотів за нестабільної погоди', 'Довгих трас'] },
+    unstable: { do:    ['Перевіряти навігаційні системи'],
+                avoid: ['Нових маршрутів без ретельного планування'] }
+  },
+  trader: {  // Трейдер
+    tense:    { do:    ['Зменшити експозицію', 'Стопи ближче', 'Хеджувати позиції'],
+                avoid: ['Великих угод', 'Високого leverage', 'Торгівлі на новинах'] },
+    unstable: { do:    ['Чекати підтверджень', 'Торгувати у меншому розмірі'],
+                avoid: ['FOMO-входів', 'Переусереднення'] },
+    favorable:{ do:    ['Реалізовувати запланований сетап', 'Виходити з посередніх позицій'] }
+  }
+};
+
+function renderDecisionLayer(gVal, ui) {
+  const dl = document.getElementById('decisionLayer');
+  const doList = document.getElementById('decisionDoList');
+  const avoidList = document.getElementById('decisionAvoidList');
+  const ctxEl = document.getElementById('decisionContext');
+  if (!dl || !doList || !avoidList || !isFinite(gVal)) { if (dl) dl.style.display='none'; return; }
+
+  // 1. Base за станом G
+  const state = (typeof classifyStateByG === 'function') ? classifyStateByG(gVal) : 'neutral';
+  const base = DECISION_BASE[state] || DECISION_BASE.neutral;
+  let doArr = [...base.do];
+  let avoidArr = [...base.avoid];
+  let ctxTxt = base.ctx;
+
+  // 2. Persona overlay
+  const prof = (typeof _activeProfile !== 'undefined') ? _activeProfile : 'off';
+  if (prof !== 'off' && DECISION_PERSONA[prof] && DECISION_PERSONA[prof][state]) {
+    const po = DECISION_PERSONA[prof][state];
+    if (po.do)    doArr    = [...po.do, ...doArr.slice(0, 2)];   // persona do + top-2 базових
+    if (po.avoid) avoidArr = [...po.avoid, ...avoidArr.slice(0, 1)];
+  }
+
+  // 3. Активні фактори — контекстуальні додатки
+  const ai = ui?.ai || {};
+  const kp = ui?.kpNow;
+
+  // fp44: storm hard cap — active storm (kp>=5 OR _stormWindow.active) overrides DO list
+  const _sw44 = window._stormWindow;
+  const _stormActive44 = (_sw44 && _sw44.active) || (isFinite(kp) && kp >= 5);
+  if (_stormActive44) {
+    const _kp44 = _sw44 ? _sw44.kp : kp;
+    doArr = ['Рутинні завдання без критичних рішень', 'Завершити розпочате'];
+    avoidArr = [
+      `Нових ініціатив та запусків (Kp=${_kp44?.toFixed(1)} активна)`,
+      'Підписання угод, фінансових операцій',
+      'Важливих переговорів та презентацій',
+      'Далеких подорожей, авіаперельотів',
+    ];
+    ctxTxt = `Геомагнітна буря Kp=${_kp44?.toFixed(1)} активна. Тільки рутина. ${ctxTxt}`;
+  } else {
+    // Буря Kp ≥ 5 incoming → додати "no подорожі"
+    if (isFinite(kp) && kp >= 5) {
+      avoidArr.unshift('Далеких подорожей, авіаперельотів');
+      ctxTxt = `Буря G${Math.min(5, Math.round(kp - 4))} активна. ` + ctxTxt;
+    }
+  }
+  // v88.8.36-fp56-P12f: guard критичного дня для списку «Робіть/Уникайте» (4-й рендерер з обходом).
+  // Раніше фільтрувався лише персональний цикл (fp54-C) і буря, але НЕ критичний day-score:
+  // якщо PDF/Engine=−2 а live-фон позитивний → «Робіть: Запускати нові ініціативи» проскакувало.
+  try {
+    const _eDoG = (typeof getEngineScore === 'function') ? getEngineScore(new Date()) : null;
+    if (_eDoG && isFinite(_eDoG.eng) && Number(_eDoG.eng) <= -2 && !_stormActive44) {
+      doArr = doArr.filter(d => !d.includes('нові ініціативи') && !d.includes('Запускати нові')
+                              && !d.includes('нові старти') && !d.includes('Укладати') && !d.includes('контракт'));
+      if (!doArr.some(d => d.includes('критичне') || d.includes('рутин')))
+        doArr.unshift('Тільки критичне й перевірені задачі');
+      avoidArr.unshift(`Важливих рішень і запусків (день критичний, PDF/Engine ${_eDoG.eng})`);
+      ctxTxt = `День критичний за PDF/Engine (${_eDoG.eng}) — навіть за спокійного фону тримати рутину. ` + ctxTxt;
+    }
+  } catch(_eDay) { /* silent */ }
+
+  // fp54-C: Personal cycle conflict — if personal verdict is negative, modify DO list and add note
+  try {
+    const _persEl = document.getElementById('personalVerdictBadge') || document.querySelector('.personal-verdict');
+    const _persTxt = (_persEl?.textContent || '').toLowerCase();
+    const _persNeg = _persTxt.includes('обережний') || _persTxt.includes('не починати') || _persTxt.includes('складний');
+    const _dayPos = gVal > 0 || (ui?.dayScore || 0) >= 1;
+    if (_persNeg && _dayPos && !_stormActive44) {
+      // Global day positive but personal cycle negative
+      doArr = doArr.filter(d => !d.includes('нові ініціативи') && !d.includes('Запускати нові') && !d.includes('нові старти'));
+      doArr.unshift('Контрольовані планові дії (особисто — без нових стартів)');
+      avoidArr.unshift('Нових ініціатив особисто — цикл несприятливий');
+      ctxTxt = 'Глобально день сильний, але персональний цикл — тільки контрольовані дії. ' + ctxTxt;
+    }
+    // v88.8.37-fp70: Personal hora/window conflict — якщо поточна hora обмежує
+    // (інтуїція/спостереження/молитва) але день глобально активний → bridge текст
+    const _horaEl = document.querySelector('[data-hora-type]') || document.getElementById('personalHoraNote');
+    const _horaTxt = (_horaEl?.textContent || document.querySelector('#personalBlock .hora-note')?.textContent || '').toLowerCase();
+    const _horaPassive = _horaTxt.includes('інтуїція') || _horaTxt.includes('спостереження') || _horaTxt.includes('молитва') || _horaTxt.includes('відпочинок');
+    if (_horaPassive && _dayPos && !_persNeg) {
+      // Глобальний день добрий, hora пасивна — ієрархічний bridge
+      ctxTxt = 'День активний глобально. Поточна година краща для аналізу і спостережень — дочекайся активного слота. ' + ctxTxt;
+    }
+  } catch(_eCyc) { /* silent */ }
+
+  // Dst storm
+  if ((ai.Di || 0) <= -1) {
+    avoidArr.unshift('Навантаження на серцево-судинну систему');
+  }
+  // Eclipse window
+  if ((ai.Mi || 0) < 0) {
+    avoidArr.unshift('Стратегічних запусків до закриття вікна затемнення');
+  }
+  // Amavasya
+  if (ai.Li === -3) {
+    doArr.push('Використовувати для очищення, підбиття підсумків');
+    ctxTxt = 'Амавасья (нова Місяць). ' + ctxTxt;
+  }
+  // Purnima
+  if (ai.Li === 0 && ai.lTip && String(ai.lTip).toLowerCase().includes('повн')) {
+    // neutral per v14.2
+  }
+
+  // 4. X-ray flare
+  const xr = window._lastXray;
+  if (xr && xr.class) {
+    const letter = xr.class[0];
+    if (letter === 'X') {
+      avoidArr.unshift('Радіо-залежних операцій (X-клас спалах)');
+      ctxTxt = `X-клас спалах ${xr.class}. ` + ctxTxt;
+    } else if (letter === 'M' && parseFloat(xr.class.slice(1)) >= 5) {
+      avoidArr.push('Критично залежних від точного GPS систем');
+    }
+  }
+
+  // 5. Обмежити довжину (щоб не перенасичувати)
+  doArr = doArr.slice(0, 5);
+  avoidArr = avoidArr.slice(0, 5);
+
+  // 6. Render
+  doList.innerHTML = doArr.map(t => `<li>${t}</li>`).join('');
+  avoidList.innerHTML = avoidArr.map(t => `<li>${t}</li>`).join('');
+  if (ctxEl) ctxEl.textContent = ctxTxt;
+
+  // State class for coloring
+  dl.classList.remove('is-favorable','is-good','is-neutral','is-unstable','is-tense');
+  dl.classList.add('is-' + state);
+  dl.style.display = '';
+}
+
+function _saveGHistory(g){
+  if(!isFinite(g)) return;
+  try{
+    const key='g_history_v75';
+    let hist=JSON.parse(localStorage.getItem(key)||'[]');
+    hist.push({g, ts:Date.now()});
+    // Keep last 48h only
+    const cutoff=Date.now()-48*3600*1000;
+    hist=hist.filter(h=>h.ts>cutoff);
+    // Max 200 entries
+    if(hist.length>200) hist=hist.slice(-200);
+    localStorage.setItem(key, JSON.stringify(hist));
+    // v87.19 U4: daily history — зберегти 1 запис на день (noon UTC G) для місячної стати
+    const dayKey='g_history_daily_v1';
+    const todayStr=new Date().toISOString().slice(0,10); // YYYY-MM-DD
+    let daily=JSON.parse(localStorage.getItem(dayKey)||'{}');
+    // Середнє за день (averageу поточне значення з наявним)
+    if (daily[todayStr] === undefined) {
+      daily[todayStr] = g;
+    } else {
+      // Простий running average — 90% старе + 10% нове
+      daily[todayStr] = Math.round((daily[todayStr] * 0.9 + g * 0.1) * 100) / 100;
+    }
+    // Тримати не більше 90 днів
+    const keys = Object.keys(daily).sort();
+    if (keys.length > 90) {
+      for (const k of keys.slice(0, keys.length - 90)) delete daily[k];
+    }
+    localStorage.setItem(dayKey, JSON.stringify(daily));
+  }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+}
+
+// v87.19 U4: best/worst days of past 30 days
+// v88.8.2: + forecast peak (next 7 days) — раніше блок показував лише історію,
+// а на 27-day графіку видно майбутній пік (наприклад 13.05 G=+4.6 з expert override).
+// Тепер доступний ще і "Очікуваний пік (7д)" — попередження що ще буде.
+function _getBestWorstDays(){
+  try{
+    // v88.8.34 CONSISTENCY FIX:
+    // - history best/worst may use local/engine reconstructed raw G for past 30d;
+    // - forward 7d peak MUST use the same _27dComputed raw series as the visible 27-day chart.
+    // This prevents top summary saying e.g. G_day=+4.0 while the plotted point shows +5.0.
+    const todayStr = fmtDate(new Date());
+    const nowMs = Date.now();
+    // fp34: was 30 days, but visible chart is 27 days back + 7 forward. Sync window to chart
+    // so summary "Макс/Мін" never references a date outside the rendered curve.
+    const cutMs = nowMs - 27*86400*1000;
+    const items = [];
+
+    // 1) Historical window: prefer _27dComputed entries that are actually past/today and visible in chart.
+    if (typeof _27dComputed !== 'undefined' && Array.isArray(_27dComputed) && _27dComputed.length) {
+      for (const d of _27dComputed) {
+        if(!d || !d.ds || !isFinite(d.G)) continue;
+        const t = new Date(d.ds + 'T12:00:00Z').getTime();
+        // fp22-C14: compare by date string so today's noon-UTC point is always included
+        if(d.ds <= todayStr && t >= cutMs) items.push([d.ds, Math.round(d.G*10)/10, '27dComputed']);
+      }
+    }
+
+    // 2) fp40/fp46: engineScores fallback COMPLETELY REMOVED.
+    //    Even the emergency < 1 points path caused stale dates (e.g. 27.04, 30.04) appearing
+    //    in summary while the chart viewport shows only May–June.
+    //    If _27dComputed gives no past points → show "недостатньо даних" in bw-title.
+    // (No engineScores scan here.)
+
+    if (items.length < 3) {
+      const daily = JSON.parse(localStorage.getItem('g_history_daily_v1') || '{}');
+      for(const [ds,g] of Object.entries(daily)){
+        const t = new Date(ds + 'T12:00:00Z').getTime();
+        if(isFinite(t) && t <= nowMs && t >= cutMs && isFinite(+g)) items.push([ds, Math.round((+g)*10)/10, 'localStorage']);
+      }
+    }
+
+    if (items.length < 3) return null;
+
+    // Dedupe by ds, preserving most chart-native source if present.
+    const map = new Map();
+    for(const it of items){
+      const prev = map.get(it[0]);
+      if(!prev || prev[2] !== '27dComputed') map.set(it[0], it);
+    }
+    const hist = [...map.values()].sort((a,b)=>a[0].localeCompare(b[0]));
+    let best = hist[0], worst = hist[0];
+    for (const e of hist) {
+      if (e[1] > best[1]) best = e;
+      if (e[1] < worst[1]) worst = e;
+    }
+
+    // Forward 7-day peak from _27dComputed ONLY, same series as visible chart.
+    let fwdPeak = null;
+    if (typeof _27dComputed !== 'undefined' && Array.isArray(_27dComputed) && _27dComputed.length) {
+      const fwd = _27dComputed
+        .filter(d => d && d.ds && isFinite(d.G) && d.ds > todayStr)
+        .slice(0, 7);
+      if (fwd.length) {
+        let maxD = fwd[0];
+        for(const d of fwd){ if(d.G > maxD.G) maxD = d; }
+        fwdPeak = { date: maxD.ds, g: Math.round(maxD.G*10)/10, source: '_27dComputed' };
+      }
+    }
+
+    return { best: {date:best[0], g:best[1]}, worst: {date:worst[0], g:worst[1]}, total: hist.length, source: hist.some(x=>x[2]==='27dComputed') ? '_27dComputed' : hist[0][2], fwdPeak };
+  }catch(e){ return null; }
+}
+
+function renderBestWorstDays(){
+  const block = document.getElementById('bestWorstDays');
+  if (!block) return;
+  const bw = _getBestWorstDays();
+  if (!bw) {
+    block.style.display = 'none';
+    return;
+  }
+  const fmtDate = (d) => {
+    const parts = d.split('-');
+    return `${parts[2]}.${parts[1]}`;
+  };
+  const bSign = bw.best.g >= 0 ? '+' : '';
+  const wSign = bw.worst.g >= 0 ? '+' : '';
+  block.innerHTML = `
+    <div class="bw-title">Графік 27д: Історія + Прогноз 7д <span style="color:var(--faint);font-size:9px;font-weight:400;margin-left:4px">← прокрути щоб побачити всі дати</span></div>
+    <div style="color:var(--faint);font-size:9px;line-height:1.5;grid-column:1/-1;margin-bottom:4px;border:1px solid rgba(155,177,220,.12);border-radius:6px;padding:4px 8px" title="Три числа, три різних NOAA-джерела Kp:&#10;G_now = observed/delayed Kp (live 3-год слот NOAA JSON)&#10;G_day 3D = NOAA 3-day forecast daily Kp_max&#10;G_day 27D = NOAA 27-day outlook Largest Kp&#10;Всі три рахуються за однією формулою G = Kp − 2 + ΣAᵢ, але Kp з різних файлів → різні числа для однієї дати є нормальними.">ⓘ <strong>G_now</strong> (кільце) = Kp NOAA observed · <strong>G_day 3D</strong> (картки) = Kp NOAA 3-day forecast · <strong>G_day 27D</strong> (ця лінія) = Kp NOAA 27-day outlook · <strong>★</strong> = PDF/Engine ±3 — різні Kp-джерела → різні числа для однієї дати є нормальними</div>
+    <div class="bw-item bw-best" title="Максимум G_day raw за минулі 27 днів від сьогодні (тільки МИНУЛЕ). Може бути лівіше поточного viewport — прокрути графік."><span class="bw-label">Макс G_day raw <span style="color:var(--faint);font-size:9px">(27д NOAA 27-day · минуле)</span></span><span class="bw-value">${fmtDate(bw.best.date)} · G_day=${bSign}${bw.best.g.toFixed(1)}</span></div>
+    <div class="bw-item bw-worst" title="Мінімум G_day raw за минулі 27 днів від сьогодні (тільки МИНУЛЕ). Може бути лівіше поточного viewport — прокрути графік."><span class="bw-label">Мін G_day raw <span style="color:var(--faint);font-size:9px">(27д NOAA 27-day · минуле)</span></span><span class="bw-value">${fmtDate(bw.worst.date)} · G_day=${wSign}${bw.worst.g.toFixed(1)}</span></div>
+    ${bw.fwdPeak ? `<div class="bw-item bw-fwd" style="color: var(--muted)" title="З тієї самої _27dComputed raw-серії, що й графік. Це G_day raw, не PDF/Engine Day_score. Окрема вибірка — наступні 7 днів."><span class="bw-label" style="color: var(--muted)">Пік G_day raw <span style="color:var(--faint);font-size:9px">(прогноз наступних 7д)</span></span><span class="bw-value">${fmtDate(bw.fwdPeak.date)} · G_day=${bw.fwdPeak.g >= 0 ? '+' : ''}${bw.fwdPeak.g.toFixed(1)}</span></div>` : ''}
+    <div class="bw-count">${bw.total} точок · джерело: NOAA 27-day + розрахунок G</div>
+  `;
+  block.style.display = '';
+}
+function _getGDelta(){
+  try{
+    const hist=JSON.parse(localStorage.getItem('g_history_v75')||'[]');
+    if(hist.length<2) return {d3h:null, d24h:null, t3h:null, t24h:null};
+    const now=Date.now();
+    const latest=hist[hist.length-1];
+    // Find closest to 3h ago
+    let best3h=null, best3hDist=Infinity;
+    let best24h=null, best24hDist=Infinity;
+    for(const h of hist){
+      const age=now-h.ts;
+      const d3=Math.abs(age-3*3600*1000);
+      if(d3<best3hDist && d3<2*3600*1000){best3hDist=d3;best3h=h;}
+      const d24=Math.abs(age-24*3600*1000);
+      if(d24<best24hDist && d24<6*3600*1000){best24hDist=d24;best24h=h;}
+    }
+    return {
+      d3h: best3h ? latest.g - best3h.g : null,
+      d24h: best24h ? latest.g - best24h.g : null,
+      // v87.90: timestamps для honesty в delta card (фактичний age vs nominal 24h)
+      t3h:  best3h  ? best3h.ts  : null,
+      t24h: best24h ? best24h.ts : null,
+      g3h:  best3h  ? best3h.g   : null,
+      g24h: best24h ? best24h.g  : null
+    };
+  }catch(e){return {d3h:null, d24h:null, t3h:null, t24h:null};}
+}
+
+document.addEventListener('DOMContentLoaded',()=>{
+  setTimeout(()=>{initHeroField();initWowParticles();applyWowFromG()},900);
+  // v87.16 + v87.56 Phase 2.1: dev controls — показувати #devMenu при ?dev=1 або localStorage flag
+  // (btnV86Radial / btnCacheReset тепер всередині details devMenu, IDs preserved)
+  try {
+    const params = new URLSearchParams(location.search);
+    if (params.has('dev') || localStorage.getItem('gindex_dev') === '1') {
+      const dm = document.getElementById('devMenu');
+      if (dm) dm.style.display = '';
+      // Legacy fallback — якщо IDs ще десь наявні окремо (старий DOM), показати їх теж
+      ['btnV86Radial','btnCacheReset'].forEach(id => {
+        const b = document.getElementById(id);
+        if (b && b.closest('#devMenu') == null) b.style.display = '';
+      });
+      if (params.get('dev') === '1') localStorage.setItem('gindex_dev','1');
+    }
+    // v87.56: ?debug=1 → запускає __debugG для сьогодні + 7 днів вперед, виводить у DOM block
+    // (для користувачів без доступу до DevTools console). Q2 audit closure.
+    if (params.has('debug')) {
+      // Чекаємо щоб дані (Kp) підвантажились — 2.5с (більше ніж звичайний refresh timeline)
+      setTimeout(() => {
+        try {
+          const days = parseInt(params.get('debug'),10) || 7;
+          const results = [];
+          const today = new Date();
+          for (let i = 0; i <= days; i++) {
+            const d = new Date(today);
+            d.setUTCDate(d.getUTCDate() + i);
+            d.setUTCHours(12, 0, 0, 0);
+            const r = window.__debugG(d);
+            if (r) results.push(r);
+          }
+          // Будуємо DOM block — overlay поверх сторінки, copyable
+          const pre = document.createElement('pre');
+          pre.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;background:#0a0f1e;color:#d5dce8;padding:16px;overflow:auto;font:12px/1.4 monospace;white-space:pre-wrap;margin:0';
+          const close = document.createElement('button');
+          close.textContent = '✕ Закрити';
+          close.style.cssText = 'position:fixed;top:8px;right:8px;z-index:100000;padding:6px 12px;background:#e84b4b;color:#fff;border:0;border-radius:4px;cursor:pointer';
+          close.onclick = () => { pre.remove(); close.remove(); };
+          let out = `=== __debugG dump (${results.length} days) ===\n\n`;
+          results.forEach(r => {
+            out += `── ${r.date} ──  [Kp source: ${r.kpSource || 'unknown'}]\n`;
+            out += `${r.formula}\n`;
+            out += `  Li=${r.Li}  Mi=${r.Mi}  ei=${r.ei}  Pi=${r.Pi}  Di=${r.Di}  → G=${r.G}\n`;
+            if (r.lTip) out += `  L-tip: ${r.lTip}\n`;
+            if (r.mTip) out += `  M-tip: ${r.mTip}\n`;
+            if (r.eTip) out += `  e-tip: ${String(r.eTip).replace(/\n/g,' | ')}\n`;
+            if (r.pTip) out += `  P-tip: ${r.pTip}\n`;
+            if (r.diTip) out += `  D-tip: ${r.diTip}\n`;
+            if (r.eclipseUnverified) out += `  ⚠ eclipse type unverified\n`;
+            out += '\n';
+          });
+          out += '\n(Copy text above and send it. Close with ✕ or ?debug removal from URL.)';
+          pre.textContent = out;
+          document.body.appendChild(pre);
+          document.body.appendChild(close);
+        } catch(err) {
+          console.error('[?debug] dump failed:', err);
+        }
+      }, 2500).start();
+    }
+  } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+});
+
+// fp138 emergency: unregister any old Service Worker immediately. Current issue is runtime hang / stale cache;
+// dashboard must run network-only until startup is stable.
+try{
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.getRegistrations().then(function(regs){ regs.forEach(function(r){ try{r.unregister();}catch(e){} }); });
+  }
+  if(window.caches){ caches.keys().then(function(keys){ keys.forEach(function(k){ try{caches.delete(k);}catch(e){} }); }); }
+}catch(e){}
+if (false && 'serviceWorker' in navigator) {
+  // fp138: SW disabled emergency; auto-unregister below is replaced by early cleanup.
+  // fp106: auto-unregister old SW versions on load
+  const _swKey = 'g-index-shell-v88-8-39-fp117';
+  navigator.serviceWorker.getRegistrations().then(regs => {
+    regs.forEach(r => {
+      if(!r.active || !r.active.scriptURL.includes(_swKey)) r.unregister();
+    });
+  });
+  if(window.caches) caches.keys().then(ks => ks.forEach(k => { if(!k.includes(_swKey)) caches.delete(k); }));
+  window.addEventListener('load', () => {
+    // v87.1 NFR: refresh freshness badge every 60s (дані старіють без оновлення)
+    SAFE_INTERVAL(function(){ try{_renderFreshnessState();}catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)} }, 60000).start();
+
+    // fp117: use explicit relative SW path and swallow async update rejections (404 should not surface as UI error)
+    navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' })
+      .then(reg => {
+        _swReg = reg;
+        if(window._DEBUG) console.log('[SW] Registered, scope:', reg.scope);
+        // fp116: auto-check for SW updates every 5 minutes — ensures new deploys activate without manual cache clear
+        setInterval(() => { try { const p = reg.update(); if(p && p.catch) p.catch(()=>{}); } catch(e) {} }, 5 * 60 * 1000);
+        // fp116: force update check on visibility change (user returns to tab)
+        document.addEventListener('visibilitychange', () => {
+          if (!document.hidden) { try { const p = reg.update(); if(p && p.catch) p.catch(()=>{}); } catch(e) {} }
+        }, { once: false });
+
+        // SW_STALE_DATA: показати маркер "дані з кешу" в UI (аудит sw.js п.4)
+        navigator.serviceWorker.addEventListener('message', event => {
+          if (event.data && event.data.type === 'SW_STALE_DATA') {
+            const el = document.getElementById('swStaleBar');
+            if (el) {
+              const age = Math.round((Date.now() - event.data.fetchedAt) / 60000);
+              el.textContent = `⚠ Дані з кешу (${age} хв тому) — перевірте з'єднання`;
+              el.style.display = 'block';
+              setTimeout(() => { el.style.display = 'none'; }, 10000);
+            }
+            // Update freshness badge
+            const badge = document.getElementById('freshnessBadge');
+            if (badge) {
+              badge.textContent = '● CACHED'; badge.style.background = '#2a1a00'; badge.style.color = '#ffcc44';
+            }
+            // v70.2: sync hero freshness
+            const hf = document.getElementById('heroFreshness');
+            if (hf) { hf.textContent = 'CACHED'; hf.classList.remove('live','stale'); hf.classList.add('cached'); }
+          }
+        });
+
+        // Новий SW встановлюється — показати банер при переході в waiting
+        function checkWaiting(sw) {
+          if (!sw) return;
+          if (sw.state === 'installed' && navigator.serviceWorker.controller) {
+            const bar = document.getElementById('pwaUpdateBar');
+            if (bar) bar.style.display = 'flex';
+          }
+          sw.addEventListener('statechange', () => checkWaiting(sw));
+        }
+
+        if (reg.waiting) {
+          // SW вже чекає (сторінку перезавантажили між перевірками)
+          const bar = document.getElementById('pwaUpdateBar');
+          if (bar) bar.style.display = 'flex';
+        }
+        reg.addEventListener('updatefound', () => {
+          checkWaiting(reg.installing);
+        });
+
+        // Після того як новий SW взяв контроль — перезавантажити сторінку
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          window.location.reload();
+        });
+
+        // Перевіряти оновлення кожні 30 хвилин
+        SAFE_INTERVAL(() => { try { const p = reg.update(); if(p && p.catch) p.catch(()=>{}); } catch(e) {} }, 30 * 60 * 1000).start();
+      })
+      .catch(err => console.warn('[SW] Registration failed:', err));
+  });
+}
+</script>
 
 <script>
 
@@ -5460,6 +6403,10 @@ const _eclipseCatalogWarned = new Set(); // один warn на рік
 //        Primary CORS proxy для NOAA SWPC TXT endpoints (27-day-outlook тощо).
 //        Public proxy chain (allorigins/corsproxy.io/codetabs) залишається tier-2 fallback.
 const NOAA_WORKER_URL = 'https://gindex-noaa-proxy.nikolaev-kirill.workers.dev/?url=';
+// TEMP DIAGNOSTIC (fp141): ?diag_offline=1 у URL → усі live fetch миттєво fail,
+// перевіряємо чи фриз зникає без мережі. Прибрати після діагностики зависання.
+window._DIAG_FORCE_OFFLINE = new URLSearchParams(location.search).get('diag_offline') === '1';
+if (window._DIAG_FORCE_OFFLINE) console.warn('[DIAG fp141] force-offline mode ON — усі live fetch вимкнені');
 function fetchWithTimeout(url, ms=5000){
   const ctrl = new AbortController();
   const tid = setTimeout(()=>ctrl.abort(), ms);
@@ -5479,6 +6426,10 @@ function withTimeout(promise, ms, label){
   ]);
 }
 async function fetchTextWithCORS(url, validate){
+  // TEMP DIAGNOSTIC (fp141, Kyrylo+Claude 2026-07-07): форсований offline-режим
+  // для ізоляції причини зависання. true = усі live fetch миттєво падають,
+  // код іде по вже існуючих fallback/synthetic шляхах. Прибрати після діагностики.
+  if (window._DIAG_FORCE_OFFLINE) throw new Error('[DIAG fp141] force-offline: fetch skipped');
   // v88.8.35-fp56-P8: optional body validator. Some public proxies return 200 OK with an HTML
   // error page or empty body instead of failing — that used to "succeed" and STOP the chain,
   // masking working proxies downstream. When a validator is passed (e.g. _looksLikeJson for NOAA
@@ -11219,6 +12170,8 @@ function renderDecisionTiming(slots){
       const _eTdScore = (_eTd && isFinite(_eTd.eng)) ? Number(_eTd.eng) : null;
       if (_eTdScore !== null && _eTdScore <= -2) _ttHardCap = _eTdScore;
     } catch(e){ /* silent */ }
+    // fp28: storm-guard для "До кінця дня" — якщо є storm window, фон не може бути "сприятливий" до кінця
+    const _sw28 = window._stormWindow;
     const _nowText = _ttHardCap !== null
                    ? `тільки рутина · день PDF/Engine = ${_ttHardCap}`
                    : (_sw28 && isFinite(_sw28.kp) && _sw28.kp >= 5 && _cls !== 'bad')
@@ -11226,8 +12179,6 @@ function renderDecisionTiming(slots){
                      : (_cls === 'bad' ? 'уникати — без форсування'
                        : _cls === 'mid' ? 'стандартний темп'
                        : 'сприятливий момент');
-    // fp28: storm-guard для "До кінця дня" — якщо є storm window, фон не може бути "сприятливий" до кінця
-    const _sw28 = window._stormWindow;
     const _stormRestText = (_sw28 && isFinite(_sw28.kp) && _sw28.kp >= 5)
       ? `до ${String(_sw28.label).padStart(2,'0')}:00 UTC — можна; після — тільки рутина (Kp-буря)`
       : null;
@@ -20264,900 +21215,6 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
 })();
-</script>
-<script>
-// ═══ Probability Layer v1 (bootstrap logistic, G-Index) ════════════════════
-function sigmoid(x){ return 1/(1+Math.exp(-x)); }
-
-// P_soft: P(несприятливий | G). Якорі: G=0→0.35, G=-3→0.80
-function calcSoftRiskFromG(G){
-  return Math.max(0.001, Math.min(0.999, sigmoid(-0.619 - 0.668*G)));
-}
-// P_hard: P(сильно несприятливий | G). Якорі: G=0→0.10, G=-3→0.60
-function calcHardRiskFromG(G){
-  return Math.max(0.001, Math.min(0.999, sigmoid(-2.197 - 0.868*G)));
-}
-function getRiskBand(p){ return p<0.25?'low':p<0.50?'moderate':p<0.75?'elevated':'high'; }
-function getRiskLabelUA(p){ return p<0.25?'Низький':p<0.50?'Помірний':p<0.75?'Підвищений':'Високий'; }
-
-// calcProbabilityLayer: приймає {G, csConf (0..1), horizon}
-// csConf береться з existingCScore.conf, horizon = 'now'|'3day'|'27day'
-function calcProbabilityLayer({G, csConf=1, horizon='now'}={}){
-  if(!isFinite(G)) return null;
-  const pSoft = calcSoftRiskFromG(G);
-  const pHard = calcHardRiskFromG(G);
-  const hFactor = horizon==='27day'?0.55:horizon==='3day'?0.85:1.00;
-  const conf = Math.max(0.05, Math.min(1, (csConf||1)*hFactor));
-  return {
-    G: Math.round(G*100)/100,
-    pSoft, pSoftPct: Math.round(pSoft*100),
-    pHard, pHardPct: Math.round(pHard*100),
-    conf, confPct: Math.round(conf*100),
-    band: getRiskBand(pSoft),
-    labelUA: getRiskLabelUA(pSoft)
-  };
-}
-
-// v78: renderNowProbability removed (targets CSS-hidden probNowBlock)
-
-// G-Index PWA — Service Worker registration + update UX
-let _swReg = null;
-let _deferredInstall = null;
-
-window.addEventListener('beforeinstallprompt', e => {
-  e.preventDefault();
-  _deferredInstall = e;
-  const bar = document.getElementById('pwaInstallBar');
-  if (bar) { bar.style.display = 'flex'; }
-});
-
-function pwaInstall() {
-  if (!_deferredInstall) return;
-  _deferredInstall.prompt();
-  _deferredInstall.userChoice.then(() => { _deferredInstall = null; pwaDismiss(); });
-}
-function pwaDismiss() {
-  const bar = document.getElementById('pwaInstallBar');
-  if (bar) bar.style.display = 'none';
-}
-
-function pwaReload() {
-  if (_swReg && _swReg.waiting) {
-    _swReg.waiting.postMessage({ type: 'SKIP_WAITING' });
-  } else {
-    window.location.reload();
-  }
-}
-
-// ═══ WOW LAYER v71 ═══
-// v85b: renderWowOrb, startWowOrb removed — wowOrb DOM deleted v83f
-function wowColorByG(g){
-  if(!isFinite(g)) return '#9bb1dc';
-  if(g>=1.5) return '#2bd47d'; if(g>=-0.5) return '#9bb1dc';
-  if(g>=-2.5) return '#ffcc00'; return '#ff6b6b';
-}
-
-function initWowParticles(){
-  const c=document.getElementById('wowParticles'),host=document.getElementById('cosmicMapWrap');
-  if(!c||!host) return;const ctx=c.getContext('2d');let parts=[];
-  function resize(){const r=host.getBoundingClientRect();c.width=Math.max(200,Math.floor(r.width));c.height=Math.max(160,Math.floor(r.height));
-  parts=Array.from({length:30},()=>({x:Math.random()*c.width,y:Math.random()*c.height,r:Math.random()*1.4+.4,v:Math.random()*.15+.04,a:Math.random()*Math.PI*2}))}
-  let _wowPVisible=false;if(window.IntersectionObserver){new IntersectionObserver(e=>{_wowPVisible=e[0].isIntersecting},{threshold:0}).observe(host)}
-  function draw(){if(!_wowPVisible || document.hidden){requestAnimationFrame(draw);return}ctx.clearRect(0,0,c.width,c.height);const kp=window._lastKpForWow||2;const spd=0.5+kp*0.2;for(const p of parts){p.x+=Math.cos(p.a)*p.v*spd;p.y+=Math.sin(p.a)*p.v*spd;if(p.x<0)p.x=c.width;if(p.x>c.width)p.x=0;if(p.y<0)p.y=c.height;if(p.y>c.height)p.y=0;const br=kp>=5?'rgba(255,130,130,.3)':'rgba(255,255,255,.2)';ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=br;ctx.fill()}requestAnimationFrame(draw)}
-  resize();draw();window.addEventListener('resize',resize);
-}
-
-// ===== v73 PRODUCT LAYER =====
-function _v73G(){
-  const _ui = window.__uiState;
-  if(_ui && isFinite(_ui.gNow)) return _ui.gNow;
-  const m=(el('nowG')?.textContent||'').match(/G\s*(-?\d+\.?\d*)/);
-  return m?parseFloat(m[1]):NaN;
-}
-function _v73Kp(){
-  const _ui = window.__uiState;
-  if(_ui && isFinite(_ui.kpNow)) return _ui.kpNow;
-  return _num((_firstText?.(el('nowKp'))||el('nowKp')?.textContent||'').replace(',','.'));
-}
-
-// v87.56: removed renderAIExplain, _renderTopDrivers, _bindDriverHover noop stubs (v80 legacy)
-
-// v80: renderConfidenceBreakdown simplified — reads from __uiState.confPct
-function renderConfidenceBreakdown(){
-  const _ui = window.__uiState;
-  if(_ui && _ui.confPct){
-    const hc=el('heroConfidence');
-    if(hc) hc.textContent=_ui.confPct+'%';
-  }
-}
-
-// v78: removed renderPatternAlert, renderScenarioStrip, refreshV73Layer, renderSuperSignal (targets CSS-hidden)
-
-// v85b: applyWowFromG removed — wowOrb DOM deleted v83f
-function applyWowFromG(){}
-
-function initHeroField(){
-  const c=document.getElementById('heroField'),host=document.getElementById('heroCard');
-  if(!c||!host)return;const ctx=c.getContext('2d');let parts=[];let _heroFieldVisible=true;
-  // v74: IntersectionObserver to pause when offscreen
-  // v88.7+ (perf audit): also pause when tab hidden (battery saving on mobile)
-  if(window.IntersectionObserver){
-    new IntersectionObserver(entries=>{_heroFieldVisible=entries[0].isIntersecting},{threshold:0.1}).observe(host);
-  }
-  function resize(){const r=host.getBoundingClientRect();c.width=Math.max(300,Math.floor(r.width));c.height=Math.max(100,Math.floor(r.height));
-  parts=Array.from({length:22},()=>({x:Math.random()*c.width,y:Math.random()*c.height,r:Math.random()*1.6+.4,vx:Math.random()*.2+.05,vy:(Math.random()-.5)*.06}))}
-  function draw(){
-    if(!_heroFieldVisible || document.hidden){requestAnimationFrame(draw);return}
-    const g=window._heroGprev||0;const kp=window._lastKpForWow||2;
-    const col=wowColorByG(g);const spd=g<=-2.5?2.2:g<=-0.5?1.4:1;
-    ctx.clearRect(0,0,c.width,c.height);
-    const bg=ctx.createLinearGradient(0,0,c.width,c.height);
-    if(g>=1.5){bg.addColorStop(0,'rgba(20,60,40,.12)');bg.addColorStop(1,'rgba(15,30,50,.06)')}
-    else if(g>=-0.5){bg.addColorStop(0,'rgba(15,30,60,.1)');bg.addColorStop(1,'rgba(10,20,40,.05)')}
-    else if(g>=-2.5){bg.addColorStop(0,'rgba(60,40,8,.14)');bg.addColorStop(1,'rgba(30,20,8,.06)')}
-    else{bg.addColorStop(0,'rgba(70,15,15,.18)');bg.addColorStop(1,'rgba(30,8,12,.08)')}
-    ctx.fillStyle=bg;ctx.fillRect(0,0,c.width,c.height);
-    for(const p of parts){p.x+=p.vx*spd;p.y+=p.vy*spd;if(p.x>c.width+5)p.x=-5;if(p.y>c.height+3)p.y=-3;if(p.y<-3)p.y=c.height+3;
-    ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=col+'33';ctx.fill()}
-    const t=performance.now()/1000;const amp=g<=-2.5?12:g<=-0.5?7:4;
-    ctx.beginPath();for(let x=0;x<=c.width;x+=6){const y=c.height*.72+Math.sin(x*.013+t*1.5)*amp;if(x===0)ctx.moveTo(x,y);else ctx.lineTo(x,y)}
-    ctx.strokeStyle=col+'44';ctx.lineWidth=1.5;ctx.stroke();
-    requestAnimationFrame(draw)
-  }
-  resize();draw();window.addEventListener('resize',resize);
-}
-
-
-// ═══ v75: Data freshness + ΔG history ═══
-window._dataFetchTimestamps = {};
-function updateDataFreshness(source, ts){
-  window._dataFetchTimestamps[source] = ts || Date.now();
-  _renderFreshnessState();
-}
-function _renderFreshnessState(){
-  const ts = window._dataFetchTimestamps;
-  const now = Date.now();
-  const ages = Object.values(ts).filter(t=>typeof t==='number').map(t => now - t);
-  if(!ages.length){
-    updateFreshnessBadge();
-    return;
-  }
-  const maxAge = Math.max(...ages);
-  const fb = el('freshnessBadge');
-  const hf = el('heroFreshness');
-  // v87.90: stale watermark — readable age (8хв / 35хв / 1.5г / 3г) у бейджі
-  const _ageMin = Math.round(maxAge / 60000);
-  const _ageStr = _ageMin < 1 ? 'щойно'
-                : _ageMin < 60 ? _ageMin + 'хв'
-                : (Math.round(maxAge / 360000) / 10).toFixed(1) + 'г';
-  // v87.1 NFR: stricter thresholds (LIVE ≤5min, DELAYED ≤30min, STALE ≤60min, OLD >60min)
-  let state, label, col, bgCol;
-  if(maxAge < 5*60*1000){ state='live'; label='● LIVE · '+_ageStr; col='#63be7b'; bgCol='#0a2a15'; }
-  else if(maxAge < 30*60*1000){ state='delayed'; label='● DELAYED · '+_ageStr; col='#ffcc44'; bgCol='#2a1a00'; }
-  else if(maxAge < 60*60*1000){ state='stale'; label='● STALE · '+_ageStr; col='#ff9944'; bgCol='#2a1200'; }
-  else { state='old'; label='● OLD · '+_ageStr; col='#ff6b6b'; bgCol='#2a0808'; }
-  // v88.8.35-fp9 O: content-age override — fetch може бути щойно, але JSON всередині застарілий
-  // (NOAA SWPC issue 2026-03-28). Тоді ми вважалися LIVE, але resolveDataMode вже бачив partial.
-  // Тепер обидва writer-и узгоджені: top status теж downgrade до DELAYED+content-stale.
-  let _contentOverride = false;
-  try {
-    const _src = window._kpSourceFreshness;
-    if (_src && isFinite(_src.ageHours)) {
-      if (_src.ageHours > 24 * 7 && state !== 'old') {
-        state='old'; label='● OLD · контент >1 тиж'; col='#ff6b6b'; bgCol='#2a0808'; _contentOverride=true;
-      } else if (_src.ageHours > 24 && state !== 'old' && state !== 'stale') {
-        state='stale'; label='● STALE · контент >1 дн'; col='#ff9944'; bgCol='#2a1200'; _contentOverride=true;
-      } else if (_src.ageHours > 1 && (state === 'live' || state === 'delayed')) {
-        // fetch свіжий АБО незначно затриманий, але JSON всередині старий >1h → понижуємо
-        // v88.8.35-fp16 GG: розрізняємо ESTIMATED (≤12h, forecast real) від DELAYED (більш агресивний).
-        // _kpSourceFreshness тут вже >1h. Перевіряємо чи forecast (last3D) реальний.
-        // v88.8.35-fp17 fix: дозволяємо також state==='delayed' (fetch 5-30хв) — інакше badge показує
-        // DELAYED, а resolveDataModeExtended повертає 'estimated' → два writer-и розсинхронізовані.
-        const _last3Fake = !!(typeof last3D !== 'undefined' && last3D && last3D._synthetic);
-        if (!_last3Fake && _src.ageHours <= 12) {
-          // ESTIMATED — спокійний синювато-сірий колір, без тривожного жовтого
-          state='estimated'; label='● ESTIMATED · контент '+_src.ageHours.toFixed(1)+'г'; col='#a8d5e0'; bgCol='#0e1f2a'; _contentOverride=true;
-        } else {
-          state='delayed'; label='● DELAYED · контент '+_src.ageHours.toFixed(1)+'г'; col='#ffcc44'; bgCol='#2a1a00'; _contentOverride=true;
-        }
-      }
-    }
-  } catch(e) { /* silent */ }
-  if(fb){ fb.textContent=label; fb.style.color=col; fb.style.background=bgCol; }
-  if(hf){
-    // v88.8.35-fp9 O: для heroFreshness теж зберігаємо вирівняний стан + позначка контенту якщо overridden.
-    // v88.8.35-fp17 fix: ЯВНИЙ reset inline-стилів — попередній scenario/offline рендер міг
-    // залишити hf.style.color, який не перебивається класами при поверненні у live/estimated.
-    const _hfLabel = state.toUpperCase() + (_contentOverride ? ' · контент' : ' · ' + _ageStr);
-    hf.textContent = _hfLabel;
-    hf.className=''; hf.classList.add(state);
-    hf.style.color = ''; hf.style.background = '';
-  }
-  if(window.__uiState) window.__uiState.freshness = state;
-
-  // v87.91 fix: scenario/offline override — без цього 60-сек таймер перетирав SCENARIO на LIVE
-  // навіть коли syncHero виставив правильний стан. _renderFreshnessState бачить тільки age
-  // даних, але не знає про synthetic forecast (last3D._synthetic).
-  try {
-    const _dm = (typeof resolveDataMode === 'function') ? resolveDataMode() : null;
-    if (_dm === 'scenario' || _dm === 'offline') {
-      const _label2 = (_dm === 'scenario' ? 'SCENARIO' : 'OFFLINE') + ' · ' + _ageStr;
-      const _col2 = _dm === 'offline' ? '#ff6b6b' : '#fca474';
-      const _bgCol2 = _dm === 'offline' ? '#2a0808' : '#2a1500';
-      if (fb) { fb.textContent = '● ' + _label2; fb.style.color = _col2; fb.style.background = _bgCol2; }
-      if (hf) {
-        hf.textContent = _label2;
-        hf.className = '';
-        hf.classList.add('stale');
-        hf.style.color = _col2;
-        hf.title = _dm === 'scenario'
-          ? '⚠ NOAA forecast недоступний. Завтра/3-day показано як плато на базі поточного Kp — це сценарій, не справжній прогноз.'
-          : 'Дані offline: навіть Kp обсервації недоступні. Все, що показано — з кешу.';
-      }
-      if (window.__uiState) window.__uiState.freshness = _dm;
-    }
-    // v87.92 fix: маркер heroTomorrow через data-attribute + CSS ::after.
-    // Раніше використовував innerHTML.replace, але render3Day переписував все через innerHTML.
-    // Тепер dataset stays навіть коли textContent перезаписаний.
-    // v87.94: + sibling DOM fallback
-    const _ht = document.getElementById('heroTomorrow');
-    const _htSib = document.getElementById('heroTomorrowScenario');
-    if (_ht) {
-      if (_dm === 'scenario') {
-        _ht.dataset.scenario = '1';
-        if (!_ht.title) _ht.title = '⚠ NOAA forecast недоступний — це плато на базі поточного Kp.';
-        if (_htSib) { _htSib.textContent = '⚠ SCENARIO'; _htSib.className = 'scenario'; }
-      } else if (_dm === 'offline') {
-        _ht.dataset.scenario = 'offline';
-        if (_htSib) { _htSib.textContent = '⚠ OFFLINE'; _htSib.className = 'offline'; }
-      } else {
-        delete _ht.dataset.scenario;
-        if (_htSib) { _htSib.textContent = ''; _htSib.className = ''; }
-      }
-    }
-  } catch(e) { /* noop */ }
-}
-
-// ═══ v75: G history for ΔG ═══
-
-// ═══ v76b: Kp-2 contribution pill ═══
-function renderKpContribution(){
-  var _ui=window.__uiState||{};
-  var kp=isFinite(_ui.kpNow)?_ui.kpNow:_num(_firstText(el('nowKp')));
-  var n=el('nowKpPart');
-  if(!n) return;
-  if(!isFinite(kp)){n.textContent='Kp\u22122 = \u2014';n.style.color='';return;}
-  var v=Math.round((kp-2)*10)/10;
-  n.textContent='Kp\u22122 = '+(v>0?'+':'')+v.toFixed(1);
-  n.style.color=v>0?'#2bd47d':v<0?'#ff6b6b':'#9bb1dc';
-}
-
-// ═══ v76b: Panchanga Pi line ═══
-function renderPanchPiLine(){
-  var raw=window._lastAiPi;
-  var src=(raw!=null)?String(raw):'';
-  var dst=el('panchPiLine');
-  if(!dst) return;
-  if(!src||src==='\u2014'||src==='\u2026'){dst.textContent='P\u1d62 = \u2014';dst.style.color='';return;}
-  var v=parseFloat(src.replace(',','.'));
-  if(!isFinite(v)){dst.textContent='P\u1d62 = '+src;dst.style.color='';return;}
-  dst.textContent='P\u1d62 = '+(v>0?'+':'')+v.toFixed(1);
-  dst.style.color=v>0?'#2bd47d':v<0?'#ff6b6b':'#9bb1dc';
-}
-
-// ═══ v76c: wf3 Signal Summary ═══
-// ═══ v76d: wf3 Human-readable Signal Summary ═══
-var WF3_PHRASES={
-  calm:'Фон стабільний, виражених факторів немає.',
-  kp_up:'Геомагнітний фон дає {s} ріст ({v}).',
-  kp_down:'Геомагнітний фон створює {s} тиск ({v}).',
-  moon_up:'Місячна фаза додає {s} вплив ({v}).',
-  moon_down:'Місячна фаза створює {s} тиск ({v}).',
-  eclipse:'Період затемнення створює нестабільність ({v}).',
-  events:'Live-шар подій дає {s} вплив ({v}).',
-  panchanga:'Панчанга формує {s} фон ({v}).',
-  mixed:'Фактори змішані, чіткого домінування немає.',
-  others_neutral:'Інші фактори нейтральні.',
-  rel_good:'Вхідні дані повні ({c}%).',
-  rel_mid:'Вхідні дані частково повні ({c}%).',
-  rel_low:'Вхідні дані неповні ({c}%).',
-  cached:'Показано кеш.',
-  live:'Дані актуальні.',
-  stale:'Дані можуть бути застарілими.',
-  scen_up:'Якщо Kp зросте на 1, G стане {v}.'
-};
-var WF3_ALERT={
-  storm_high:'Йде геомагнітна буря, небажано планувати критичні дії.',
-  storm_mid:'Геомагнітна активність підвищена, день потребує обережності.',
-  storm_low:'Геомагнітний фон підвищений, варто зменшити навантаження.',
-  eclipse_peak:'Пік впливу затемнення, день краще не перевантажувати.',
-  eclipse_near:'Період затемнення посилює нестабільність фону.',
-  eclipse_far:'Відчувається фоновий вплив періоду затемнення.',
-  amavasya:'Амавасья підсилює внутрішню нестабільність і знижує стійкість.',
-  ekadashi:'Екадаші змінює ритм дня, краще уникати перевантаження.',
-  mixed_hard:'Накладаються кілька несприятливих факторів, день напружений.',
-  mixed_mid:'Live-фон змішаний, з перевагою несприятливих факторів.',
-  unstable:'Картина дня неповна, дані слід читати обережно.'
-};
-
-function renderWf3(){
-  var g=_v73G(), kp=_v73Kp();
-  var wrap=el('wf3SignalSummary'), top=el('wf3Top'), bot=el('wf3Bottom');
-  if(!wrap||!top||!bot) return;
-  if(!isFinite(g)||!isFinite(kp)){wrap.style.display='none';return;}
-  var kpPart=Math.round((kp-2)*10)/10;
-  // v85b-p2: read from __uiState.ai instead of DOM (aligned with P7)
-  var _ai=window.__uiState&&window.__uiState.ai;
-  var comps={Li:0,Mi:0,ei:0,Pi:0};
-  if(_ai){ comps.Li=Number(_ai.Li)||0; comps.Mi=Number(_ai.Mi)||0; comps.ei=Number(_ai.ei)||0; comps.Pi=Number(_ai.Pi)||0; }
-  // v87.90 fix: видалено stale fallback `if(Pi===0) Pi=_lastAiPi`
-  // Раніше: коли реальний Pᵢ був 0 (напр. Ekadashi виключена), display показував
-  // СТАРЕ значення (Dashami 0.3) — створювало розбіжність із G обчисленням.
-  // Тепер: 0 = 0, реальне значення завжди.
-
-  function fs(x){var n=Number(x||0);return(n>0?'+':'')+n.toFixed(1);}
-  function strength(v){var a=Math.abs(v);return a<0.5?'слабкий':a<1.5?'помірний':'сильний';}
-
-  // Main driver
-  var drivers=[{k:'kp',v:kpPart},{k:'li',v:comps.Li},{k:'mi',v:comps.Mi},{k:'ei',v:comps.ei},{k:'pi',v:comps.Pi}];
-  drivers.sort(function(a,b){return Math.abs(b.v)-Math.abs(a.v);});
-  var d=drivers[0];
-
-  // Line 1: main cause (human text)
-  var line1;
-  if(Math.abs(d.v)<0.15){
-    line1=WF3_PHRASES.calm;
-  } else {
-    var tpl;
-    if(d.k==='kp') tpl=d.v>0?WF3_PHRASES.kp_up:WF3_PHRASES.kp_down;
-    else if(d.k==='li') tpl=d.v>0?WF3_PHRASES.moon_up:WF3_PHRASES.moon_down;
-    else if(d.k==='mi') tpl=WF3_PHRASES.eclipse;
-    else if(d.k==='ei') tpl=WF3_PHRASES.events;
-    else if(d.k==='pi') tpl=WF3_PHRASES.panchanga;
-    else tpl=WF3_PHRASES.mixed;
-    line1=tpl.replace('{s}',strength(d.v)).replace('{v}',fs(d.v));
-  }
-  top.textContent=line1;
-
-  // Line 2: alert OR others + reliability + scenario
-  var parts=[];
-  // Data state
-  var hf=el('heroFreshness');
-  var dataState=(hf?hf.textContent.trim():'LIVE');
-  var hc=el('heroConfidence');
-  var confNum=parseInt(hc?hc.textContent.trim():'')||100;
-
-  // Alert check (priority order)
-  var alert='';
-  if(confNum<60||dataState==='STALE') alert=WF3_ALERT.unstable;
-  else if(kp>=6) alert=WF3_ALERT.storm_high;
-  else if(kp>=5) alert=WF3_ALERT.storm_mid;
-  else if(kp>=4) alert=WF3_ALERT.storm_low;
-  else if(comps.Mi<=-4) alert=WF3_ALERT.eclipse_peak;
-  else if(comps.Mi<=-3) alert=WF3_ALERT.eclipse_near;
-  else if(comps.Mi<=-1) alert=WF3_ALERT.eclipse_far;
-  else if(comps.Li<=-3) alert=WF3_ALERT.amavasya;
-  else if(comps.ei<=-2.5) alert=WF3_ALERT.ekadashi;
-  else {
-    var negCnt=[kpPart,comps.Li,comps.Mi,comps.ei,comps.Pi].filter(function(x){return x<-0.5;}).length;
-    var negSum=[kpPart,comps.Li,comps.Mi,comps.ei,comps.Pi].reduce(function(s,x){return s+Math.min(0,x);},0);
-    if(negCnt>=3||negSum<=-4) alert=WF3_ALERT.mixed_hard;
-    else if(negCnt>=2||negSum<=-2) alert=WF3_ALERT.mixed_mid;
-  }
-
-  if(alert) parts.push(alert);
-  else parts.push(WF3_PHRASES.others_neutral);
-
-  // Reliability
-  var relTpl=confNum>=90?WF3_PHRASES.rel_good:confNum>=75?WF3_PHRASES.rel_mid:WF3_PHRASES.rel_low;
-  var relState=dataState==='LIVE'?WF3_PHRASES.live:dataState==='CACHED'?WF3_PHRASES.cached:WF3_PHRASES.stale;
-  parts.push(relTpl.replace('{c}',confNum)+' '+relState);
-
-  // Scenario (only near threshold)
-  if(Math.abs(g)<=1.0) parts.push(WF3_PHRASES.scen_up.replace('{v}',fs(g+1)));
-
-  bot.textContent=parts.join(' ');
-  bot.style.display='flex';
-  wrap.style.display='';
-}
-
-// ═══ v87.18: Decision Layer — конкретні дії "що робити зараз" ═══
-// Залежність: стан G + активні фактори (storm, eclipse, amavasya, Dst) + persona (off/mil/med/pilot/trader)
-// Мета: перейти від "показу даних" до "рекомендації дії"
-const DECISION_BASE = {
-  favorable: {
-    do:    ['Запускати нові ініціативи', 'Укладати угоди, підписувати контракти', 'Проводити важливі переговори', 'Публікувати, виступати, презентувати'],
-    avoid: ['Відкладати рішення без причини', 'Перестраховуватись у важливих питаннях'],
-    ctx:   'Рідкісне вікно продуктивності — використовуйте.'
-  },
-  good: {
-    do:    ['Займатись плановою роботою', 'Приймати рішення середньої ваги', 'Підтримувати стабільні комунікації'],
-    avoid: ['Лізти в конфлікти без потреби', 'Переоцінювати ризики'],
-    ctx:   'Фон підтримує звичні справи.'
-  },
-  neutral: {
-    do:    ['Працювати у стандартному темпі', 'Завершувати розпочате'],
-    avoid: ['Приймати різких рішень без підготовки', 'Починати принципово нове'],
-    ctx:   'Нейтральний день — робіть те, що вже вирішено.'
-  },
-  unstable: {
-    do:    ['Перевіряти деталі двічі', 'Обирати перевірені маршрути і партнерів', 'Зберегти резерв часу'],
-    avoid: ['Імпульсних рішень', 'Конфронтаційних розмов', 'Великих фінансових операцій'],
-    ctx:   'Фон нестабільний — обережніше, ніж зазвичай.'
-  },
-  tense: {
-    do:    ['Виконувати тільки критичне', 'Економити сили і увагу', 'Відкласти не-термінове на завтра'],
-    avoid: ['Підписувати документи', 'Укладати нові домовленості', 'Подорожей без потреби', 'Важливих розмов на високих тонах'],
-    ctx:   'Високий тиск — мінімізуйте рішення.'
-  }
-};
-
-// Persona-specific overrides (заміняють або додають до базових)
-const DECISION_PERSONA = {
-  mil: {  // Військовий
-    tense:    { do:    ['Тримати резерв на критичних точках', 'Уникати рейдових операцій'],
-                avoid: ['Розгортати нові підрозділи', 'Координацію через нестабільні канали'] },
-    unstable: { do:    ['Дублювати зв\'язок', 'Перевіряти координати двічі'],
-                avoid: ['Довгих переходів', 'Складних маневрів'] },
-    favorable:{ do:    ['Активні операції', 'Координація з союзниками', 'Планові навчання'] }
-  },
-  med: {  // Медик
-    tense:    { do:    ['Планові консультації', 'Спостереження пацієнтів'],
-                avoid: ['Планових операцій', 'Складних процедур'] },
-    unstable: { do:    ['Перевіряти вітальні показники частіше'],
-                avoid: ['Експериментальних протоколів'] }
-  },
-  pilot: {  // Пілот
-    tense:    { do:    ['Наземна підготовка, тренажер', 'Дотримання протоколів'],
-                avoid: ['Польотів за нестабільної погоди', 'Довгих трас'] },
-    unstable: { do:    ['Перевіряти навігаційні системи'],
-                avoid: ['Нових маршрутів без ретельного планування'] }
-  },
-  trader: {  // Трейдер
-    tense:    { do:    ['Зменшити експозицію', 'Стопи ближче', 'Хеджувати позиції'],
-                avoid: ['Великих угод', 'Високого leverage', 'Торгівлі на новинах'] },
-    unstable: { do:    ['Чекати підтверджень', 'Торгувати у меншому розмірі'],
-                avoid: ['FOMO-входів', 'Переусереднення'] },
-    favorable:{ do:    ['Реалізовувати запланований сетап', 'Виходити з посередніх позицій'] }
-  }
-};
-
-function renderDecisionLayer(gVal, ui) {
-  const dl = document.getElementById('decisionLayer');
-  const doList = document.getElementById('decisionDoList');
-  const avoidList = document.getElementById('decisionAvoidList');
-  const ctxEl = document.getElementById('decisionContext');
-  if (!dl || !doList || !avoidList || !isFinite(gVal)) { if (dl) dl.style.display='none'; return; }
-
-  // 1. Base за станом G
-  const state = (typeof classifyStateByG === 'function') ? classifyStateByG(gVal) : 'neutral';
-  const base = DECISION_BASE[state] || DECISION_BASE.neutral;
-  let doArr = [...base.do];
-  let avoidArr = [...base.avoid];
-  let ctxTxt = base.ctx;
-
-  // 2. Persona overlay
-  const prof = (typeof _activeProfile !== 'undefined') ? _activeProfile : 'off';
-  if (prof !== 'off' && DECISION_PERSONA[prof] && DECISION_PERSONA[prof][state]) {
-    const po = DECISION_PERSONA[prof][state];
-    if (po.do)    doArr    = [...po.do, ...doArr.slice(0, 2)];   // persona do + top-2 базових
-    if (po.avoid) avoidArr = [...po.avoid, ...avoidArr.slice(0, 1)];
-  }
-
-  // 3. Активні фактори — контекстуальні додатки
-  const ai = ui?.ai || {};
-  const kp = ui?.kpNow;
-
-  // fp44: storm hard cap — active storm (kp>=5 OR _stormWindow.active) overrides DO list
-  const _sw44 = window._stormWindow;
-  const _stormActive44 = (_sw44 && _sw44.active) || (isFinite(kp) && kp >= 5);
-  if (_stormActive44) {
-    const _kp44 = _sw44 ? _sw44.kp : kp;
-    doArr = ['Рутинні завдання без критичних рішень', 'Завершити розпочате'];
-    avoidArr = [
-      `Нових ініціатив та запусків (Kp=${_kp44?.toFixed(1)} активна)`,
-      'Підписання угод, фінансових операцій',
-      'Важливих переговорів та презентацій',
-      'Далеких подорожей, авіаперельотів',
-    ];
-    ctxTxt = `Геомагнітна буря Kp=${_kp44?.toFixed(1)} активна. Тільки рутина. ${ctxTxt}`;
-  } else {
-    // Буря Kp ≥ 5 incoming → додати "no подорожі"
-    if (isFinite(kp) && kp >= 5) {
-      avoidArr.unshift('Далеких подорожей, авіаперельотів');
-      ctxTxt = `Буря G${Math.min(5, Math.round(kp - 4))} активна. ` + ctxTxt;
-    }
-  }
-  // v88.8.36-fp56-P12f: guard критичного дня для списку «Робіть/Уникайте» (4-й рендерер з обходом).
-  // Раніше фільтрувався лише персональний цикл (fp54-C) і буря, але НЕ критичний day-score:
-  // якщо PDF/Engine=−2 а live-фон позитивний → «Робіть: Запускати нові ініціативи» проскакувало.
-  try {
-    const _eDoG = (typeof getEngineScore === 'function') ? getEngineScore(new Date()) : null;
-    if (_eDoG && isFinite(_eDoG.eng) && Number(_eDoG.eng) <= -2 && !_stormActive44) {
-      doArr = doArr.filter(d => !d.includes('нові ініціативи') && !d.includes('Запускати нові')
-                              && !d.includes('нові старти') && !d.includes('Укладати') && !d.includes('контракт'));
-      if (!doArr.some(d => d.includes('критичне') || d.includes('рутин')))
-        doArr.unshift('Тільки критичне й перевірені задачі');
-      avoidArr.unshift(`Важливих рішень і запусків (день критичний, PDF/Engine ${_eDoG.eng})`);
-      ctxTxt = `День критичний за PDF/Engine (${_eDoG.eng}) — навіть за спокійного фону тримати рутину. ` + ctxTxt;
-    }
-  } catch(_eDay) { /* silent */ }
-
-  // fp54-C: Personal cycle conflict — if personal verdict is negative, modify DO list and add note
-  try {
-    const _persEl = document.getElementById('personalVerdictBadge') || document.querySelector('.personal-verdict');
-    const _persTxt = (_persEl?.textContent || '').toLowerCase();
-    const _persNeg = _persTxt.includes('обережний') || _persTxt.includes('не починати') || _persTxt.includes('складний');
-    const _dayPos = gVal > 0 || (ui?.dayScore || 0) >= 1;
-    if (_persNeg && _dayPos && !_stormActive44) {
-      // Global day positive but personal cycle negative
-      doArr = doArr.filter(d => !d.includes('нові ініціативи') && !d.includes('Запускати нові') && !d.includes('нові старти'));
-      doArr.unshift('Контрольовані планові дії (особисто — без нових стартів)');
-      avoidArr.unshift('Нових ініціатив особисто — цикл несприятливий');
-      ctxTxt = 'Глобально день сильний, але персональний цикл — тільки контрольовані дії. ' + ctxTxt;
-    }
-    // v88.8.37-fp70: Personal hora/window conflict — якщо поточна hora обмежує
-    // (інтуїція/спостереження/молитва) але день глобально активний → bridge текст
-    const _horaEl = document.querySelector('[data-hora-type]') || document.getElementById('personalHoraNote');
-    const _horaTxt = (_horaEl?.textContent || document.querySelector('#personalBlock .hora-note')?.textContent || '').toLowerCase();
-    const _horaPassive = _horaTxt.includes('інтуїція') || _horaTxt.includes('спостереження') || _horaTxt.includes('молитва') || _horaTxt.includes('відпочинок');
-    if (_horaPassive && _dayPos && !_persNeg) {
-      // Глобальний день добрий, hora пасивна — ієрархічний bridge
-      ctxTxt = 'День активний глобально. Поточна година краща для аналізу і спостережень — дочекайся активного слота. ' + ctxTxt;
-    }
-  } catch(_eCyc) { /* silent */ }
-
-  // Dst storm
-  if ((ai.Di || 0) <= -1) {
-    avoidArr.unshift('Навантаження на серцево-судинну систему');
-  }
-  // Eclipse window
-  if ((ai.Mi || 0) < 0) {
-    avoidArr.unshift('Стратегічних запусків до закриття вікна затемнення');
-  }
-  // Amavasya
-  if (ai.Li === -3) {
-    doArr.push('Використовувати для очищення, підбиття підсумків');
-    ctxTxt = 'Амавасья (нова Місяць). ' + ctxTxt;
-  }
-  // Purnima
-  if (ai.Li === 0 && ai.lTip && String(ai.lTip).toLowerCase().includes('повн')) {
-    // neutral per v14.2
-  }
-
-  // 4. X-ray flare
-  const xr = window._lastXray;
-  if (xr && xr.class) {
-    const letter = xr.class[0];
-    if (letter === 'X') {
-      avoidArr.unshift('Радіо-залежних операцій (X-клас спалах)');
-      ctxTxt = `X-клас спалах ${xr.class}. ` + ctxTxt;
-    } else if (letter === 'M' && parseFloat(xr.class.slice(1)) >= 5) {
-      avoidArr.push('Критично залежних від точного GPS систем');
-    }
-  }
-
-  // 5. Обмежити довжину (щоб не перенасичувати)
-  doArr = doArr.slice(0, 5);
-  avoidArr = avoidArr.slice(0, 5);
-
-  // 6. Render
-  doList.innerHTML = doArr.map(t => `<li>${t}</li>`).join('');
-  avoidList.innerHTML = avoidArr.map(t => `<li>${t}</li>`).join('');
-  if (ctxEl) ctxEl.textContent = ctxTxt;
-
-  // State class for coloring
-  dl.classList.remove('is-favorable','is-good','is-neutral','is-unstable','is-tense');
-  dl.classList.add('is-' + state);
-  dl.style.display = '';
-}
-
-function _saveGHistory(g){
-  if(!isFinite(g)) return;
-  try{
-    const key='g_history_v75';
-    let hist=JSON.parse(localStorage.getItem(key)||'[]');
-    hist.push({g, ts:Date.now()});
-    // Keep last 48h only
-    const cutoff=Date.now()-48*3600*1000;
-    hist=hist.filter(h=>h.ts>cutoff);
-    // Max 200 entries
-    if(hist.length>200) hist=hist.slice(-200);
-    localStorage.setItem(key, JSON.stringify(hist));
-    // v87.19 U4: daily history — зберегти 1 запис на день (noon UTC G) для місячної стати
-    const dayKey='g_history_daily_v1';
-    const todayStr=new Date().toISOString().slice(0,10); // YYYY-MM-DD
-    let daily=JSON.parse(localStorage.getItem(dayKey)||'{}');
-    // Середнє за день (averageу поточне значення з наявним)
-    if (daily[todayStr] === undefined) {
-      daily[todayStr] = g;
-    } else {
-      // Простий running average — 90% старе + 10% нове
-      daily[todayStr] = Math.round((daily[todayStr] * 0.9 + g * 0.1) * 100) / 100;
-    }
-    // Тримати не більше 90 днів
-    const keys = Object.keys(daily).sort();
-    if (keys.length > 90) {
-      for (const k of keys.slice(0, keys.length - 90)) delete daily[k];
-    }
-    localStorage.setItem(dayKey, JSON.stringify(daily));
-  }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
-}
-
-// v87.19 U4: best/worst days of past 30 days
-// v88.8.2: + forecast peak (next 7 days) — раніше блок показував лише історію,
-// а на 27-day графіку видно майбутній пік (наприклад 13.05 G=+4.6 з expert override).
-// Тепер доступний ще і "Очікуваний пік (7д)" — попередження що ще буде.
-function _getBestWorstDays(){
-  try{
-    // v88.8.34 CONSISTENCY FIX:
-    // - history best/worst may use local/engine reconstructed raw G for past 30d;
-    // - forward 7d peak MUST use the same _27dComputed raw series as the visible 27-day chart.
-    // This prevents top summary saying e.g. G_day=+4.0 while the plotted point shows +5.0.
-    const todayStr = fmtDate(new Date());
-    const nowMs = Date.now();
-    // fp34: was 30 days, but visible chart is 27 days back + 7 forward. Sync window to chart
-    // so summary "Макс/Мін" never references a date outside the rendered curve.
-    const cutMs = nowMs - 27*86400*1000;
-    const items = [];
-
-    // 1) Historical window: prefer _27dComputed entries that are actually past/today and visible in chart.
-    if (typeof _27dComputed !== 'undefined' && Array.isArray(_27dComputed) && _27dComputed.length) {
-      for (const d of _27dComputed) {
-        if(!d || !d.ds || !isFinite(d.G)) continue;
-        const t = new Date(d.ds + 'T12:00:00Z').getTime();
-        // fp22-C14: compare by date string so today's noon-UTC point is always included
-        if(d.ds <= todayStr && t >= cutMs) items.push([d.ds, Math.round(d.G*10)/10, '27dComputed']);
-      }
-    }
-
-    // 2) fp40/fp46: engineScores fallback COMPLETELY REMOVED.
-    //    Even the emergency < 1 points path caused stale dates (e.g. 27.04, 30.04) appearing
-    //    in summary while the chart viewport shows only May–June.
-    //    If _27dComputed gives no past points → show "недостатньо даних" in bw-title.
-    // (No engineScores scan here.)
-
-    if (items.length < 3) {
-      const daily = JSON.parse(localStorage.getItem('g_history_daily_v1') || '{}');
-      for(const [ds,g] of Object.entries(daily)){
-        const t = new Date(ds + 'T12:00:00Z').getTime();
-        if(isFinite(t) && t <= nowMs && t >= cutMs && isFinite(+g)) items.push([ds, Math.round((+g)*10)/10, 'localStorage']);
-      }
-    }
-
-    if (items.length < 3) return null;
-
-    // Dedupe by ds, preserving most chart-native source if present.
-    const map = new Map();
-    for(const it of items){
-      const prev = map.get(it[0]);
-      if(!prev || prev[2] !== '27dComputed') map.set(it[0], it);
-    }
-    const hist = [...map.values()].sort((a,b)=>a[0].localeCompare(b[0]));
-    let best = hist[0], worst = hist[0];
-    for (const e of hist) {
-      if (e[1] > best[1]) best = e;
-      if (e[1] < worst[1]) worst = e;
-    }
-
-    // Forward 7-day peak from _27dComputed ONLY, same series as visible chart.
-    let fwdPeak = null;
-    if (typeof _27dComputed !== 'undefined' && Array.isArray(_27dComputed) && _27dComputed.length) {
-      const fwd = _27dComputed
-        .filter(d => d && d.ds && isFinite(d.G) && d.ds > todayStr)
-        .slice(0, 7);
-      if (fwd.length) {
-        let maxD = fwd[0];
-        for(const d of fwd){ if(d.G > maxD.G) maxD = d; }
-        fwdPeak = { date: maxD.ds, g: Math.round(maxD.G*10)/10, source: '_27dComputed' };
-      }
-    }
-
-    return { best: {date:best[0], g:best[1]}, worst: {date:worst[0], g:worst[1]}, total: hist.length, source: hist.some(x=>x[2]==='27dComputed') ? '_27dComputed' : hist[0][2], fwdPeak };
-  }catch(e){ return null; }
-}
-
-function renderBestWorstDays(){
-  const block = document.getElementById('bestWorstDays');
-  if (!block) return;
-  const bw = _getBestWorstDays();
-  if (!bw) {
-    block.style.display = 'none';
-    return;
-  }
-  const fmtDate = (d) => {
-    const parts = d.split('-');
-    return `${parts[2]}.${parts[1]}`;
-  };
-  const bSign = bw.best.g >= 0 ? '+' : '';
-  const wSign = bw.worst.g >= 0 ? '+' : '';
-  block.innerHTML = `
-    <div class="bw-title">Графік 27д: Історія + Прогноз 7д <span style="color:var(--faint);font-size:9px;font-weight:400;margin-left:4px">← прокрути щоб побачити всі дати</span></div>
-    <div style="color:var(--faint);font-size:9px;line-height:1.5;grid-column:1/-1;margin-bottom:4px;border:1px solid rgba(155,177,220,.12);border-radius:6px;padding:4px 8px" title="Три числа, три різних NOAA-джерела Kp:&#10;G_now = observed/delayed Kp (live 3-год слот NOAA JSON)&#10;G_day 3D = NOAA 3-day forecast daily Kp_max&#10;G_day 27D = NOAA 27-day outlook Largest Kp&#10;Всі три рахуються за однією формулою G = Kp − 2 + ΣAᵢ, але Kp з різних файлів → різні числа для однієї дати є нормальними.">ⓘ <strong>G_now</strong> (кільце) = Kp NOAA observed · <strong>G_day 3D</strong> (картки) = Kp NOAA 3-day forecast · <strong>G_day 27D</strong> (ця лінія) = Kp NOAA 27-day outlook · <strong>★</strong> = PDF/Engine ±3 — різні Kp-джерела → різні числа для однієї дати є нормальними</div>
-    <div class="bw-item bw-best" title="Максимум G_day raw за минулі 27 днів від сьогодні (тільки МИНУЛЕ). Може бути лівіше поточного viewport — прокрути графік."><span class="bw-label">Макс G_day raw <span style="color:var(--faint);font-size:9px">(27д NOAA 27-day · минуле)</span></span><span class="bw-value">${fmtDate(bw.best.date)} · G_day=${bSign}${bw.best.g.toFixed(1)}</span></div>
-    <div class="bw-item bw-worst" title="Мінімум G_day raw за минулі 27 днів від сьогодні (тільки МИНУЛЕ). Може бути лівіше поточного viewport — прокрути графік."><span class="bw-label">Мін G_day raw <span style="color:var(--faint);font-size:9px">(27д NOAA 27-day · минуле)</span></span><span class="bw-value">${fmtDate(bw.worst.date)} · G_day=${wSign}${bw.worst.g.toFixed(1)}</span></div>
-    ${bw.fwdPeak ? `<div class="bw-item bw-fwd" style="color: var(--muted)" title="З тієї самої _27dComputed raw-серії, що й графік. Це G_day raw, не PDF/Engine Day_score. Окрема вибірка — наступні 7 днів."><span class="bw-label" style="color: var(--muted)">Пік G_day raw <span style="color:var(--faint);font-size:9px">(прогноз наступних 7д)</span></span><span class="bw-value">${fmtDate(bw.fwdPeak.date)} · G_day=${bw.fwdPeak.g >= 0 ? '+' : ''}${bw.fwdPeak.g.toFixed(1)}</span></div>` : ''}
-    <div class="bw-count">${bw.total} точок · джерело: NOAA 27-day + розрахунок G</div>
-  `;
-  block.style.display = '';
-}
-function _getGDelta(){
-  try{
-    const hist=JSON.parse(localStorage.getItem('g_history_v75')||'[]');
-    if(hist.length<2) return {d3h:null, d24h:null, t3h:null, t24h:null};
-    const now=Date.now();
-    const latest=hist[hist.length-1];
-    // Find closest to 3h ago
-    let best3h=null, best3hDist=Infinity;
-    let best24h=null, best24hDist=Infinity;
-    for(const h of hist){
-      const age=now-h.ts;
-      const d3=Math.abs(age-3*3600*1000);
-      if(d3<best3hDist && d3<2*3600*1000){best3hDist=d3;best3h=h;}
-      const d24=Math.abs(age-24*3600*1000);
-      if(d24<best24hDist && d24<6*3600*1000){best24hDist=d24;best24h=h;}
-    }
-    return {
-      d3h: best3h ? latest.g - best3h.g : null,
-      d24h: best24h ? latest.g - best24h.g : null,
-      // v87.90: timestamps для honesty в delta card (фактичний age vs nominal 24h)
-      t3h:  best3h  ? best3h.ts  : null,
-      t24h: best24h ? best24h.ts : null,
-      g3h:  best3h  ? best3h.g   : null,
-      g24h: best24h ? best24h.g  : null
-    };
-  }catch(e){return {d3h:null, d24h:null, t3h:null, t24h:null};}
-}
-
-document.addEventListener('DOMContentLoaded',()=>{
-  setTimeout(()=>{initHeroField();initWowParticles();applyWowFromG()},900);
-  // v87.16 + v87.56 Phase 2.1: dev controls — показувати #devMenu при ?dev=1 або localStorage flag
-  // (btnV86Radial / btnCacheReset тепер всередині details devMenu, IDs preserved)
-  try {
-    const params = new URLSearchParams(location.search);
-    if (params.has('dev') || localStorage.getItem('gindex_dev') === '1') {
-      const dm = document.getElementById('devMenu');
-      if (dm) dm.style.display = '';
-      // Legacy fallback — якщо IDs ще десь наявні окремо (старий DOM), показати їх теж
-      ['btnV86Radial','btnCacheReset'].forEach(id => {
-        const b = document.getElementById(id);
-        if (b && b.closest('#devMenu') == null) b.style.display = '';
-      });
-      if (params.get('dev') === '1') localStorage.setItem('gindex_dev','1');
-    }
-    // v87.56: ?debug=1 → запускає __debugG для сьогодні + 7 днів вперед, виводить у DOM block
-    // (для користувачів без доступу до DevTools console). Q2 audit closure.
-    if (params.has('debug')) {
-      // Чекаємо щоб дані (Kp) підвантажились — 2.5с (більше ніж звичайний refresh timeline)
-      setTimeout(() => {
-        try {
-          const days = parseInt(params.get('debug'),10) || 7;
-          const results = [];
-          const today = new Date();
-          for (let i = 0; i <= days; i++) {
-            const d = new Date(today);
-            d.setUTCDate(d.getUTCDate() + i);
-            d.setUTCHours(12, 0, 0, 0);
-            const r = window.__debugG(d);
-            if (r) results.push(r);
-          }
-          // Будуємо DOM block — overlay поверх сторінки, copyable
-          const pre = document.createElement('pre');
-          pre.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;background:#0a0f1e;color:#d5dce8;padding:16px;overflow:auto;font:12px/1.4 monospace;white-space:pre-wrap;margin:0';
-          const close = document.createElement('button');
-          close.textContent = '✕ Закрити';
-          close.style.cssText = 'position:fixed;top:8px;right:8px;z-index:100000;padding:6px 12px;background:#e84b4b;color:#fff;border:0;border-radius:4px;cursor:pointer';
-          close.onclick = () => { pre.remove(); close.remove(); };
-          let out = `=== __debugG dump (${results.length} days) ===\n\n`;
-          results.forEach(r => {
-            out += `── ${r.date} ──  [Kp source: ${r.kpSource || 'unknown'}]\n`;
-            out += `${r.formula}\n`;
-            out += `  Li=${r.Li}  Mi=${r.Mi}  ei=${r.ei}  Pi=${r.Pi}  Di=${r.Di}  → G=${r.G}\n`;
-            if (r.lTip) out += `  L-tip: ${r.lTip}\n`;
-            if (r.mTip) out += `  M-tip: ${r.mTip}\n`;
-            if (r.eTip) out += `  e-tip: ${String(r.eTip).replace(/\n/g,' | ')}\n`;
-            if (r.pTip) out += `  P-tip: ${r.pTip}\n`;
-            if (r.diTip) out += `  D-tip: ${r.diTip}\n`;
-            if (r.eclipseUnverified) out += `  ⚠ eclipse type unverified\n`;
-            out += '\n';
-          });
-          out += '\n(Copy text above and send it. Close with ✕ or ?debug removal from URL.)';
-          pre.textContent = out;
-          document.body.appendChild(pre);
-          document.body.appendChild(close);
-        } catch(err) {
-          console.error('[?debug] dump failed:', err);
-        }
-      }, 2500).start();
-    }
-  } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
-});
-
-// fp138 emergency: unregister any old Service Worker immediately. Current issue is runtime hang / stale cache;
-// dashboard must run network-only until startup is stable.
-try{
-  if('serviceWorker' in navigator){
-    navigator.serviceWorker.getRegistrations().then(function(regs){ regs.forEach(function(r){ try{r.unregister();}catch(e){} }); });
-  }
-  if(window.caches){ caches.keys().then(function(keys){ keys.forEach(function(k){ try{caches.delete(k);}catch(e){} }); }); }
-}catch(e){}
-if (false && 'serviceWorker' in navigator) {
-  // fp138: SW disabled emergency; auto-unregister below is replaced by early cleanup.
-  // fp106: auto-unregister old SW versions on load
-  const _swKey = 'g-index-shell-v88-8-39-fp117';
-  navigator.serviceWorker.getRegistrations().then(regs => {
-    regs.forEach(r => {
-      if(!r.active || !r.active.scriptURL.includes(_swKey)) r.unregister();
-    });
-  });
-  if(window.caches) caches.keys().then(ks => ks.forEach(k => { if(!k.includes(_swKey)) caches.delete(k); }));
-  window.addEventListener('load', () => {
-    // v87.1 NFR: refresh freshness badge every 60s (дані старіють без оновлення)
-    SAFE_INTERVAL(function(){ try{_renderFreshnessState();}catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)} }, 60000).start();
-
-    // fp117: use explicit relative SW path and swallow async update rejections (404 should not surface as UI error)
-    navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' })
-      .then(reg => {
-        _swReg = reg;
-        if(window._DEBUG) console.log('[SW] Registered, scope:', reg.scope);
-        // fp116: auto-check for SW updates every 5 minutes — ensures new deploys activate without manual cache clear
-        setInterval(() => { try { const p = reg.update(); if(p && p.catch) p.catch(()=>{}); } catch(e) {} }, 5 * 60 * 1000);
-        // fp116: force update check on visibility change (user returns to tab)
-        document.addEventListener('visibilitychange', () => {
-          if (!document.hidden) { try { const p = reg.update(); if(p && p.catch) p.catch(()=>{}); } catch(e) {} }
-        }, { once: false });
-
-        // SW_STALE_DATA: показати маркер "дані з кешу" в UI (аудит sw.js п.4)
-        navigator.serviceWorker.addEventListener('message', event => {
-          if (event.data && event.data.type === 'SW_STALE_DATA') {
-            const el = document.getElementById('swStaleBar');
-            if (el) {
-              const age = Math.round((Date.now() - event.data.fetchedAt) / 60000);
-              el.textContent = `⚠ Дані з кешу (${age} хв тому) — перевірте з'єднання`;
-              el.style.display = 'block';
-              setTimeout(() => { el.style.display = 'none'; }, 10000);
-            }
-            // Update freshness badge
-            const badge = document.getElementById('freshnessBadge');
-            if (badge) {
-              badge.textContent = '● CACHED'; badge.style.background = '#2a1a00'; badge.style.color = '#ffcc44';
-            }
-            // v70.2: sync hero freshness
-            const hf = document.getElementById('heroFreshness');
-            if (hf) { hf.textContent = 'CACHED'; hf.classList.remove('live','stale'); hf.classList.add('cached'); }
-          }
-        });
-
-        // Новий SW встановлюється — показати банер при переході в waiting
-        function checkWaiting(sw) {
-          if (!sw) return;
-          if (sw.state === 'installed' && navigator.serviceWorker.controller) {
-            const bar = document.getElementById('pwaUpdateBar');
-            if (bar) bar.style.display = 'flex';
-          }
-          sw.addEventListener('statechange', () => checkWaiting(sw));
-        }
-
-        if (reg.waiting) {
-          // SW вже чекає (сторінку перезавантажили між перевірками)
-          const bar = document.getElementById('pwaUpdateBar');
-          if (bar) bar.style.display = 'flex';
-        }
-        reg.addEventListener('updatefound', () => {
-          checkWaiting(reg.installing);
-        });
-
-        // Після того як новий SW взяв контроль — перезавантажити сторінку
-        navigator.serviceWorker.addEventListener('controllerchange', () => {
-          window.location.reload();
-        });
-
-        // Перевіряти оновлення кожні 30 хвилин
-        SAFE_INTERVAL(() => { try { const p = reg.update(); if(p && p.catch) p.catch(()=>{}); } catch(e) {} }, 30 * 60 * 1000).start();
-      })
-      .catch(err => console.warn('[SW] Registration failed:', err));
-  });
-}
 </script>
 <!-- fp95b: Decision Log Modal -->
 <div id="gdlModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.7);align-items:center;justify-content:center">
