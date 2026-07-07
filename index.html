@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.64-fp140</title>
+  <title>G-Index — Космофізичний дашборд v88.8.65-fp141</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -6355,6 +6355,10 @@ const _eclipseCatalogWarned = new Set(); // один warn на рік
 //        Primary CORS proxy для NOAA SWPC TXT endpoints (27-day-outlook тощо).
 //        Public proxy chain (allorigins/corsproxy.io/codetabs) залишається tier-2 fallback.
 const NOAA_WORKER_URL = 'https://gindex-noaa-proxy.nikolaev-kirill.workers.dev/?url=';
+// TEMP DIAGNOSTIC (fp141): ?diag_offline=1 у URL → усі live fetch миттєво fail,
+// перевіряємо чи фриз зникає без мережі. Прибрати після діагностики зависання.
+window._DIAG_FORCE_OFFLINE = new URLSearchParams(location.search).get('diag_offline') === '1';
+if (window._DIAG_FORCE_OFFLINE) console.warn('[DIAG fp141] force-offline mode ON — усі live fetch вимкнені');
 function fetchWithTimeout(url, ms=5000){
   const ctrl = new AbortController();
   const tid = setTimeout(()=>ctrl.abort(), ms);
@@ -6374,6 +6378,10 @@ function withTimeout(promise, ms, label){
   ]);
 }
 async function fetchTextWithCORS(url, validate){
+  // TEMP DIAGNOSTIC (fp141, Kyrylo+Claude 2026-07-07): форсований offline-режим
+  // для ізоляції причини зависання. true = усі live fetch миттєво падають,
+  // код іде по вже існуючих fallback/synthetic шляхах. Прибрати після діагностики.
+  if (window._DIAG_FORCE_OFFLINE) throw new Error('[DIAG fp141] force-offline: fetch skipped');
   // v88.8.35-fp56-P8: optional body validator. Some public proxies return 200 OK with an HTML
   // error page or empty body instead of failing — that used to "succeed" and STOP the chain,
   // masking working proxies downstream. When a validator is passed (e.g. _looksLikeJson for NOAA
