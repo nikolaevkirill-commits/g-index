@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.57-fp131</title>
+  <title>G-Index — Космофізичний дашборд v88.8.59-fp134</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1329,43 +1329,7 @@ body.simple-mode .col-hide-mobile {
 </script>
 </head>
 <body>
-<!-- v88.8.35-fp56-GATE: investor password gate. Remove this block to disable.
-     Change PWD constant to set your own password. Uses sessionStorage — re-asks each browser session. -->
-<script>(function(){
-  const PWD='GIndex2026';
-  const KEY='gidx_gate_v1';
-  if(sessionStorage.getItem(KEY)==='1') return;
-  const g=document.createElement('div');
-  g.id='_pwGate';
-  g.style.cssText='position:fixed;inset:0;z-index:99999;background:#060d1a;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;font-family:system-ui,sans-serif';
-  g.innerHTML=`
-    <div style="max-width:340px;width:100%;text-align:center">
-      <div style="font-size:28px;margin-bottom:8px">🌌</div>
-      <div style="font-size:20px;font-weight:700;color:#cfe0ff;margin-bottom:4px">G-Index</div>
-      <div style="font-size:12px;color:#6b82aa;margin-bottom:28px">Space &amp; Stars Forecast · Demo Access</div>
-      <input id="_pwInput" type="password" placeholder="Введіть пароль доступу"
-        style="width:100%;box-sizing:border-box;padding:12px 14px;border-radius:10px;border:1px solid #2a3b61;background:#0b1220;color:#e7efff;font-size:15px;outline:none;margin-bottom:12px">
-      <button id="_pwBtn"
-        style="width:100%;padding:12px;border-radius:10px;border:none;background:#37a7ff;color:#fff;font-size:15px;font-weight:700;cursor:pointer">
-        Увійти →
-      </button>
-      <div id="_pwErr" style="color:#ff6b6b;font-size:12px;margin-top:10px;display:none">Невірний пароль</div>
-    </div>`;
-  document.body.appendChild(g);
-  function check(){
-    if(document.getElementById('_pwInput').value===PWD){
-      sessionStorage.setItem(KEY,'1');
-      document.getElementById('_pwGate').remove();
-    } else {
-      document.getElementById('_pwErr').style.display='block';
-      document.getElementById('_pwInput').value='';
-      document.getElementById('_pwInput').focus();
-    }
-  }
-  document.getElementById('_pwBtn').addEventListener('click',check);
-  document.getElementById('_pwInput').addEventListener('keydown',e=>{ if(e.key==='Enter') check(); });
-  setTimeout(()=>document.getElementById('_pwInput')?.focus(),100);
-})();</script>
+<!-- v88.8.58: пароль-гейт видалено (Kyrylo — власник, гейт не потрібен; блокував доступ/зависав) -->
   <noscript>
     <div style="background:#1a2540;color: var(--text2);padding:20px;margin:20px;border-radius:12px;border:1px solid #2a3b61;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;line-height:1.6">
       <h2 style="color:#fca474;margin:0 0 8px">⚠ JavaScript потрібен</h2>
@@ -5501,6 +5465,19 @@ function fetchWithTimeout(url, ms=5000){
   const tid = setTimeout(()=>ctrl.abort(), ms);
   return fetch(url, {cache:'no-store', signal:ctrl.signal}).finally(()=>clearTimeout(tid));
 }
+// v88.8.59-fp134: bounded-wait wrapper для sequential fallback-ланцюжків.
+// Проблема: fetchTextWithCORS сам по собі — до 36с на виклик (worker+direct+4 проксі).
+// Коли кілька таких викликів йдуть послідовно (GFZ→KP_OBS_FB→UAF→45-day),
+// сумарний worst-case = кілька хвилин (fp131/fp132 hang, підтверджено 2026-07-07).
+// withTimeout НЕ скасовує сам fetch (немає AbortController на цьому рівні) —
+// він лише обмежує, скільки loadAll() ЧЕКАЄ відповідь, перш ніж піти далі по
+// ланцюжку fallback/synthetic. Занедбаний запит долетить у фоні без впливу на UI.
+function withTimeout(promise, ms, label){
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(()=>reject(new Error('[fp134 timeout] '+(label||'')+' >'+ms+'ms')), ms))
+  ]);
+}
 async function fetchTextWithCORS(url, validate){
   // v88.8.35-fp56-P8: optional body validator. Some public proxies return 200 OK with an HTML
   // error page or empty body instead of failing — that used to "succeed" and STOP the chain,
@@ -5656,8 +5633,15 @@ function classifyEvent(summary){
 
 // ----------------------- Завантаження подій (ICS) ---------------------------
 async function indexIcsEventsForYears(years){
-  // v27: спершу builtin (offline base), потім online ICS мерджить/перезаписує
+  // v88.8.59-fp134: ONLINE ICS вимкнено за замовчуванням.
+  // Причина: public ICS/CORS endpoints (vaisnavacalendar/calendarlabs/proxies) дають 403/pending
+  // і створюють видиме "зависання" першого рендера, хоча builtin calendar уже покриває 2026-2027.
+  // Для ручного R&D-оновлення можна увімкнути ?onlineics=1.
   indexBuiltinEvents();
+  try {
+    const _qs = new URLSearchParams(location.search || '');
+    if (_qs.get('onlineics') !== '1') return;
+  } catch(_e) { return; }
 
   const urls = [];
   for(const y of years){
@@ -10891,16 +10875,20 @@ async function fetchText(u){
 async function preloadEventsAroundNow(){
   const now = new Date();
   const yrs = [now.getUTCFullYear(), now.getUTCFullYear()+1];
-  // fp97: жорсткий таймаут 8с — ICS не повинен блокувати NOAA fetch
-  const timeout = new Promise((_,rej) => setTimeout(()=>rej(new Error('ICS timeout')), 8000));
+  // v88.8.59-fp134: події не мають права блокувати NOAA/live render.
+  // Синхронно: тільки builtin events + NASA eclipse catalog (локально, швидко).
+  // Online ICS — тільки якщо явно ?onlineics=1 у indexIcsEventsForYears().
   try {
-    await Promise.race([
-      (async()=>{ await indexIcsEventsForYears(yrs); for(const y of yrs) await ensureEclipsesForYear(y); })(),
-      timeout
-    ]);
+    indexBuiltinEvents();
+    for(const y of yrs) await ensureEclipsesForYear(y);
+    try {
+      const _qs = new URLSearchParams(location.search || '');
+      if (_qs.get('onlineics') === '1') {
+        setTimeout(()=>indexIcsEventsForYears(yrs).catch(e=>{ if(window._DEBUG) console.warn('[ICS bg]', e.message); }), 0);
+      }
+    } catch(_e){}
   } catch(e) {
-    // ICS недоступний — builtin events вже завантажені в indexIcsEventsForYears
-    if(window._DEBUG) console.warn('[ICS] preload timeout/fail:', e.message);
+    if(window._DEBUG) console.warn('[ICS] builtin/eclipse preload failed:', e.message);
   }
 }
 
@@ -14877,7 +14865,7 @@ async function loadAll(){
       // NOAA stale → пробуємо GFZ і порівнюємо ages
       console.warn('[v88.8.18] NOAA Kp data stale ('+_noaaAgeH+'h old) — comparing з GFZ');
       try {
-        const gfzVal = await fetchGfzKpAsNoaaFormat(3);
+        const gfzVal = await withTimeout(fetchGfzKpAsNoaaFormat(3), 8000, 'GFZ-compare');
         const gfzParsed = parseKpObsJSON(gfzVal);
         let _gfzAgeH = null;
         if (gfzParsed && gfzParsed.whenText) {
@@ -14911,7 +14899,7 @@ async function loadAll(){
     // v88.8.18 ★ NEW: GFZ Potsdam Kp як tier-1 fallback (NOAA stale since 2026-03-28)
     let _gfzOK = false;
     try{
-      const gfzVal = await fetchGfzKpAsNoaaFormat(3);
+      const gfzVal = await withTimeout(fetchGfzKpAsNoaaFormat(3), 8000, 'GFZ-fallback');
       _lastKpObsJson = gfzVal;
       lastWWV = parseKpObsJSON(gfzVal);
       _setSrcStatus('srcKpObs','ok');
@@ -14922,7 +14910,7 @@ async function loadAll(){
       console.warn('[v88.8.18] GFZ fallback failed:', eGfz.message);
     }
     if (!_gfzOK) try{
-      const fbVal = await fetchTextWithCORS(URL_KP_OBS_FB);
+      const fbVal = await withTimeout(fetchTextWithCORS(URL_KP_OBS_FB), 8000, 'KP_OBS_FB');
       // planetary_k_index_1m.json: [{time_tag,kp,kp_index,...}]
       // Конвертуємо у формат noaa-planetary-k-index.json: [["time_tag","Kp"],...]
       const fbData = JSON.parse(fbVal);
@@ -14972,7 +14960,7 @@ async function loadAll(){
   if (!last3D || !last3D.days || !last3D.days.length || last3D._synthetic) {
     try{
       if(window._DEBUG) console.log('[v88.6.9] NOAA 3-day fail → trying UAF Alaska mirror');
-      const _uafHtml = await fetchTextWithCORS(URL_UAF_AURORA);
+      const _uafHtml = await withTimeout(fetchTextWithCORS(URL_UAF_AURORA), 8000, 'UAF-3day');
       const _uaf = parseUafAurora(_uafHtml);
       const _last3DUaf = uafTo3DayFormat(_uaf);
       if (_last3DUaf && _last3DUaf.days && _last3DUaf.days.length) {
@@ -15147,7 +15135,7 @@ async function loadAll(){
     try{
       let r27uaf = window._uafCache27Day;
       if (!r27uaf || !r27uaf.length) {
-        const _uafHtml = await fetchTextWithCORS(URL_UAF_AURORA);
+        const _uafHtml = await withTimeout(fetchTextWithCORS(URL_UAF_AURORA), 8000, 'UAF-27day');
         const _uaf = parseUafAurora(_uafHtml);
         r27uaf = uafTo27DayFormat(_uaf);
       }
@@ -15164,7 +15152,7 @@ async function loadAll(){
     }
     // Fallback: 45-day-forecast.json → parse45Day → конвертуємо у формат r27
     try{
-      const fb45 = await fetchTextWithCORS(URL_45DAY_FB);
+      const fb45 = await withTimeout(fetchTextWithCORS(URL_45DAY_FB), 8000, '45-day-fallback');
       const rows45 = parse45Day(fb45);
       if(!rows45.length) throw new Error('45-day: порожній масив');
       // Конвертуємо {date,Ap} → {date, flux:null, Ap, kpMax: Ap→Kp approx}
