@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.73-fp152-BASELINE</title>
+  <title>G-Index — Космофізичний дашборд v88.8.74-fp153-CPPANEL-FIX</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1330,8 +1330,7 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
 </script>
 </head>
 <body>
-<div id="__cpPanel" style="position:fixed;top:0;left:0;z-index:2147483647;background:#000;color:#0f0;font:11px monospace;padding:6px 10px;white-space:pre;pointer-events:none">CP0: body start</div>
-<script>document.getElementById('__cpPanel').textContent += '\nCP1: inline marker script ran';</script>
+<!-- fp153: __cpPanel boot-трасувальник видалено — залишався видимим на екрані постійно (fp148-152 регресія). cp()-виклики лишились у коді, безпечно no-op через try/catch. -->
 <!-- v88.8.58: пароль-гейт видалено (Kyrylo — власник, гейт не потрібен; блокував доступ/зависав) -->
   <noscript>
     <div style="background:#1a2540;color: var(--text2);padding:20px;margin:20px;border-radius:12px;border:1px solid #2a3b61;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;line-height:1.6">
@@ -3697,7 +3696,7 @@ try{
 if (false && 'serviceWorker' in navigator) {
   // fp138: SW disabled emergency; auto-unregister below is replaced by early cleanup.
   // fp106: auto-unregister old SW versions on load
-  const _swKey = 'g-index-shell-v88-8-73-fp152';
+  const _swKey = 'g-index-shell-v88-8-74-fp153';
   navigator.serviceWorker.getRegistrations().then(regs => {
     regs.forEach(r => {
       if(!r.active || !r.active.scriptURL.includes(_swKey)) r.unregister();
