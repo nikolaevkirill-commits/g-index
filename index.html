@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.67-fp143</title>
+  <title>G-Index — Космофізичний дашборд v88.8.68-fp144</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -19450,7 +19450,13 @@ function bootGIndexOnce(_reason){
   if(window._MARK)window._MARK('boot:renderComparePeriods');
   /* v88.8.62-fp138: boot no longer waits for window.load. External CDN scripts/icons can stall
      load for minutes; app shell must start as soon as this bottom script is parsed. */
-  try{ if(typeof renderComparePeriods === 'function') renderComparePeriods(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+  if(window._MARK)window._MARK('boot:renderComparePeriods(deferred)');
+  // fp144 FIX: renderComparePeriods робить 14× computeAi (кожен смикає астро-бібліотеку) —
+  // синхронно це блокувало головний потік ~1.7с і давало "Сторінка не відповідає".
+  // Відкладаємо у idle-callback: boot завершується миттєво, порівняння дорендериться потім.
+  const _deferCompare = () => { try{ if(typeof renderComparePeriods === 'function') renderComparePeriods(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)} };
+  if (typeof requestIdleCallback === 'function') requestIdleCallback(_deferCompare, { timeout: 2000 });
+  else setTimeout(_deferCompare, 50);
   // v87.61: load engine_scores.json (Bulletin model) + render heroBulletin
   // v87.62: after scores load, also re-render 3-day pills and 27-day table so Bulletin cells populate.
   // v88.7.15 Г: паралельно завантажуємо expert_overrides_v3.json — застосовуються у getEngineScore().
