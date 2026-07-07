@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.65-fp141</title>
+  <title>G-Index — Космофізичний дашборд v88.8.66-fp142</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1325,6 +1325,54 @@ body.simple-mode .col-hide-mobile {
     return Number.isFinite(Number(v));
   };
   window._nativeIsFinite = _nativeIsFinite;
+})();
+// fp142 DIAG: longtask-моніторинг блокування головного потоку — без F12.
+// Лог переживає фриз (localStorage) + видима на екрані панель.
+(function(){
+  var LOG_KEY = '__longtaskLog';
+  var log = [];
+  try { log = JSON.parse(localStorage.getItem(LOG_KEY) || '[]'); } catch(e){ log = []; }
+  var _prevSession = log.slice(); // те, що лишилось з ПОПЕРЕДНЬОГО завантаження (до фризу)
+  log = []; // цей сеанс пишемо з нуля, старе показуємо окремо як "до фризу"
+  function persist(){
+    try{
+      if (log.length > 100) log = log.slice(-100);
+      localStorage.setItem(LOG_KEY, JSON.stringify(log));
+    }catch(e){}
+  }
+  if ('PerformanceObserver' in window){
+    try{
+      var po = new PerformanceObserver(function(list){
+        list.getEntries().forEach(function(entry){
+          log.push({ t: Math.round(entry.startTime), dur: Math.round(entry.duration), name: entry.name||'self' });
+        });
+        persist();
+        renderPanel();
+      });
+      po.observe({ type:'longtask', buffered:true });
+    }catch(e){ console.warn('[DIAG fp142] longtask observer недоступний:', e.message); }
+  }
+  var panel = null;
+  function renderPanel(){
+    try{
+      if(!panel){
+        panel = document.createElement('div');
+        panel.id = '__diagPanel';
+        panel.style.cssText = 'position:fixed;bottom:0;right:0;z-index:99998;background:#0a1420;color:#7fdbff;font:10px/1.4 monospace;padding:6px 10px;max-width:320px;max-height:35vh;overflow:auto;border-top:2px solid #2bd47d;border-left:2px solid #2bd47d;opacity:.92';
+        var f = function(){ (document.body||document.documentElement).appendChild(panel); };
+        if(document.body) f(); else document.addEventListener('DOMContentLoaded', f);
+      }
+      var prevHtml = _prevSession.length
+        ? ('<b style="color:#ff6b6b">ДО ФРИЗУ (мин. сеанс):</b><br>' + _prevSession.slice(-10).map(function(e){return e.dur+'ms @'+e.t+'ms';}).join('<br>') + '<hr style="border-color:#333">')
+        : '';
+      var curHtml = log.length
+        ? ('<b>Цей сеанс (' + log.length + '):</b><br>' + log.slice(-8).map(function(e){return e.dur+'ms @'+e.t+'ms';}).join('<br>'))
+        : 'Цей сеанс: довгих задач ще нема';
+      panel.innerHTML = '<b>⏱ longtask diag (fp142)</b><br>' + prevHtml + curHtml;
+    }catch(e){}
+  }
+  document.addEventListener('DOMContentLoaded', renderPanel);
+  window.addEventListener('load', renderPanel);
 })();
 </script>
 </head>
