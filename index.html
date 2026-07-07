@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.63-fp139</title>
+  <title>G-Index — Космофізичний дашборд v88.8.64-fp140</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -12114,6 +12114,8 @@ function renderDecisionTiming(slots){
       const _eTdScore = (_eTd && isFinite(_eTd.eng)) ? Number(_eTd.eng) : null;
       if (_eTdScore !== null && _eTdScore <= -2) _ttHardCap = _eTdScore;
     } catch(e){ /* silent */ }
+    // fp28: storm-guard для "До кінця дня" — якщо є storm window, фон не може бути "сприятливий" до кінця
+    const _sw28 = window._stormWindow;
     const _nowText = _ttHardCap !== null
                    ? `тільки рутина · день PDF/Engine = ${_ttHardCap}`
                    : (_sw28 && isFinite(_sw28.kp) && _sw28.kp >= 5 && _cls !== 'bad')
@@ -12121,8 +12123,6 @@ function renderDecisionTiming(slots){
                      : (_cls === 'bad' ? 'уникати — без форсування'
                        : _cls === 'mid' ? 'стандартний темп'
                        : 'сприятливий момент');
-    // fp28: storm-guard для "До кінця дня" — якщо є storm window, фон не може бути "сприятливий" до кінця
-    const _sw28 = window._stormWindow;
     const _stormRestText = (_sw28 && isFinite(_sw28.kp) && _sw28.kp >= 5)
       ? `до ${String(_sw28.label).padStart(2,'0')}:00 UTC — можна; після — тільки рутина (Kp-буря)`
       : null;
