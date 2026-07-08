@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.75-fp154-DARKHALF-PP</title>
+  <title>G-Index — Космофізичний дашборд v88.8.76-fp155-3DAY-FUTUREKP-FALLBACK</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -3696,7 +3696,7 @@ try{
 if (false && 'serviceWorker' in navigator) {
   // fp138: SW disabled emergency; auto-unregister below is replaced by early cleanup.
   // fp106: auto-unregister old SW versions on load
-  const _swKey = 'g-index-shell-v88-8-75-fp154';
+  const _swKey = 'g-index-shell-v88-8-76-fp155';
   navigator.serviceWorker.getRegistrations().then(regs => {
     regs.forEach(r => {
       if(!r.active || !r.active.scriptURL.includes(_swKey)) r.unregister();
@@ -11538,9 +11538,13 @@ function updateAutoRefStatus(){
 function render3Day(parsed3){
   const days = parsed3.days || [];
   if(!days.length){ el('threeContent').innerHTML = '<span class="muted">Немає даних у 3-добовому продукті.</span>'; return; }
-  const hdr = parsed3._synthetic
+  const hdr = parsed3._partialReal
+    ? `<div style="margin-bottom:4px;font-size:11px;color:#fca474">⚠ Живий NOAA частково недоступний — частина днів із future_kp.json (реальний прогноз), решта — плато поточного Kp</div>`
+    : parsed3._synthetic
     ? `<div style="margin-bottom:4px;font-size:11px;color:#fca474">⚠ NOAA недоступний — розрахунок на базі поточного Kp (synthetic)</div>`
-    : (parsed3.issued ? `<div class="muted small" style="margin-bottom:4px">Прогноз NOAA: ${parsed3.issued.slice(0,10)}</div>` : '');
+    : (parsed3.days.some(d=>d._fromFutureKp)
+        ? `<div style="margin-bottom:4px;font-size:11px;color:#9bd49e">ℹ Живий NOAA недоступний — показано future_kp.json (реальний резервний прогноз, не плато)</div>`
+        : (parsed3.issued ? `<div class="muted small" style="margin-bottom:4px">Прогноз NOAA: ${parsed3.issued.slice(0,10)}</div>` : ''));
   let html = hdr + '<table><thead><tr>'
     + '<th class="col-date">Дата (UTC)</th>'
     + '<th>G</th>'
@@ -15984,13 +15988,29 @@ async function loadAll(){
   // v62: fallback — якщо last3D порожній, генеруємо synthetic з поточного Kp
   if (!last3D || !last3D.days || !last3D.days.length) {
     const _kpNow = (lastWWV && isFinite(lastWWV.kNow)) ? lastWWV.kNow : 2.0;
+    // v88.8.76-fp155: ПЕРЕД плато — пробуємо future_kp.json (вже задеплоєний реальний
+    // NOAA_forecast з локального update_kp.bat, окремий канал від живого браузерного CORS-фетчу
+    // що зараз впав). Якщо для дня є реальні дані (kp_synthetic:false) — використовуємо їх
+    // замість плаского повтору поточного Kp. Раніше: живий CORS впав → плато-заглушка,
+    // навіть коли свіжіший реальний прогноз уже лежав у репо. Знайдено 2026-07-08 (аудит
+    // невідповідності "3-day спадає" vs "future_kp.json зростає").
+    let _fkp = {};
+    try { _fkp = await loadFutureKp() || {}; } catch(_e){ _fkp = {}; }
+    let _usedReal = 0;
     const _synDays = [0,1,2].map(offset => {
       const d = new Date(); d.setUTCHours(0,0,0,0); d.setUTCDate(d.getUTCDate()+offset);
+      const ds = fmtDate(d);
+      const fEntry = _fkp[ds];
+      if (fEntry && isFinite(fEntry.kp) && fEntry.kp_synthetic === false) {
+        _usedReal++;
+        return { date:d, kp8: Array(8).fill(fEntry.kp), kpMax: fEntry.kp, _fromFutureKp: true, _kpSource: fEntry.source };
+      }
       return { date:d, kp8: Array(8).fill(_kpNow), kpMax: _kpNow };
     });
-    last3D = { issued: null, predictedAp: [], days: _synDays, _synthetic: true };
+    const _allReal = _usedReal === _synDays.length;
+    last3D = { issued: null, predictedAp: [], days: _synDays, _synthetic: !_allReal, _partialReal: _usedReal > 0 && !_allReal };
     render3Day(last3D);
-    _setSrcStatus('srcKpFcst','synthetic');
+    _setSrcStatus('srcKpFcst', _allReal ? 'cache' : (_usedReal > 0 ? 'cache' : 'synthetic'));
     // v87.95: дублювання видалено. threeError більше не пише "NOAA недоступний" —
     // це тепер ексклюзивно у threeNoaaAlert (з рамкою, бажовтим іконом). Раніше було видно
     // повідомлення тричі: банер + threeError text + bulletin sub-label.
@@ -15998,21 +16018,49 @@ async function loadAll(){
     // v87.90: видимий alert над quick-cards + приглушені quick-cards
     const _alertEl = document.getElementById('threeNoaaAlert');
     if (_alertEl) {
-      _alertEl.style.display = 'block';
-      _alertEl.innerHTML = `
-        <div style="display:flex;align-items:center;gap:10px">
-          <span style="font-size:18px">⚠</span>
-          <div style="flex:1">
-            <div style="font-weight:700;color:#ffb0b0">NOAA forecast недоступний</div>
-            <div style="margin-top:2px;font-size:11px;color:#ffa0a0">
-              Картки нижче — це <strong>не прогноз</strong>, а плато на базі поточного Kp=${isFinite(_kpNow) ? _kpNow.toFixed(1) : '?'}.
-              Без динаміки. Спробуй оновити через 10–30 хв (CORS-проксі періодично відмовляють).
+      if (_allReal) {
+        // v88.8.76-fp155: усі 3 дні покриті реальним future_kp.json — це вже не плато,
+        // приховуємо тривожний банер, лишаємо нейтральну примітку джерела.
+        _alertEl.style.display = 'block';
+        _alertEl.innerHTML = `
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="font-size:16px">ℹ</span>
+            <div style="flex:1">
+              <div style="font-weight:700;color:#9bd49e">Живий браузерний NOAA-фетч недоступний — показано резервні дані з future_kp.json</div>
+              <div style="margin-top:2px;font-size:11px;color:var(--dim)">
+                Це реальний NOAA 3-day forecast, збережений локальним update_kp.bat (не плато на поточному Kp). Онови сторінку, щоб спробувати живий CORS ще раз.
+              </div>
             </div>
-          </div>
-        </div>`;
+          </div>`;
+      } else if (_usedReal > 0) {
+        _alertEl.style.display = 'block';
+        _alertEl.innerHTML = `
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="font-size:18px">⚠</span>
+            <div style="flex:1">
+              <div style="font-weight:700;color:#fca474">NOAA forecast частково недоступний</div>
+              <div style="margin-top:2px;font-size:11px;color:#ffcc99">
+                ${_usedReal} з ${_synDays.length} днів — реальний прогноз з future_kp.json, решта — плато на поточному Kp=${isFinite(_kpNow) ? _kpNow.toFixed(1) : '?'}. Спробуй оновити через 10–30 хв.
+              </div>
+            </div>
+          </div>`;
+      } else {
+        _alertEl.style.display = 'block';
+        _alertEl.innerHTML = `
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="font-size:18px">⚠</span>
+            <div style="flex:1">
+              <div style="font-weight:700;color:#ffb0b0">NOAA forecast недоступний</div>
+              <div style="margin-top:2px;font-size:11px;color:#ffa0a0">
+                Картки нижче — це <strong>не прогноз</strong>, а плато на базі поточного Kp=${isFinite(_kpNow) ? _kpNow.toFixed(1) : '?'}.
+                Без динаміки. Спробуй оновити через 10–30 хв (CORS-проксі періодично відмовляють).
+              </div>
+            </div>
+          </div>`;
+      }
     }
     const _qw = document.getElementById('threeQuick');
-    if (_qw) _qw.style.opacity = '0.55';
+    if (_qw) _qw.style.opacity = _allReal ? '1' : '0.55';
   } else {
     // NOAA OK — приховати alert і відновити opacity
     const _alertEl = document.getElementById('threeNoaaAlert');
