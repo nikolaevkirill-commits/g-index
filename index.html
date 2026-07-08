@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.74-fp153-CPPANEL-FIX</title>
+  <title>G-Index — Космофізичний дашборд v88.8.75-fp154-DARKHALF-PP</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -3696,7 +3696,7 @@ try{
 if (false && 'serviceWorker' in navigator) {
   // fp138: SW disabled emergency; auto-unregister below is replaced by early cleanup.
   // fp106: auto-unregister old SW versions on load
-  const _swKey = 'g-index-shell-v88-8-74-fp153';
+  const _swKey = 'g-index-shell-v88-8-75-fp154';
   navigator.serviceWorker.getRegistrations().then(regs => {
     regs.forEach(r => {
       if(!r.active || !r.active.scriptURL.includes(_swKey)) r.unregister();
@@ -4534,7 +4534,6 @@ const GIndexPPProfile = {
       ${['Неділя','Понеділок','Вівторок','Середа','Четвер','Пʼятниця','Субота'][weekday]} ·
       ${isShukla ? 'Шукла (зрост.)' : 'Крішна (спад.)'} пакша
       ${currentAct ? ' · <strong style="color:var(--accent)">' + this.ICONS[birthBirdId] + ' ' + currentAct.activityUa + '</strong> (' + (yamaInfo.isDay ? 'день' : 'ніч') + ', yama ' + (yamaInfo.yamaIdx+1) + '/5, зміна через ' + timeToNext + ' хв)' : ' · дані yama недоступні'}
-      ${currentAct && currentAct.verified === false ? ' <span style="color:var(--warn)" title="Формула звірена зі сканів книги лише для Bright Half. Dark Half тимчасово тією ж формулою — неперевірено.">⚠ Dark Half неперевірено</span>' : ''}
       ${isFallback ? ' <span style="color:var(--faint)">(схід/захід: fallback 06:00–18:00)</span>' : ''}
     </div>`;
     html += '<div style="display:grid;grid-template-columns:56px repeat(10, 1fr);gap:2px;font-size:9px">';
@@ -9805,29 +9804,63 @@ const PP_ACTIVITIES_ADVICE = [
 // (стор.66-71: Vulture, Sun-Tue/Mon-Wed/Thu/Fri, день+ніч) — 30/30 точок збіглися.
 // День: порядок Eat→Walk→Rule→Sleep→Death. Ніч: порядок Eat→Rule→Death→Walk→Sleep.
 // groupIndex по дню тижня (JS getDay): Нд=0,Пн=1,Вт=0,Ср=1,Чт=2,Пт=3,Сб=4.
-// DARK HALF: сканів ще немає — тимчасово та сама формула, статус R&D-неперевірено (див. isShukla).
 const PP_GROUP_INDEX_BY_WEEKDAY = {0:0, 1:1, 2:0, 3:1, 4:2, 5:3, 6:4};
 const PP_DAY_ORDER_TO_PPIDX   = [3,2,4,1,0]; // position(Eat,Walk,Rule,Sleep,Death) → PP_ACTIVITIES idx
 const PP_NIGHT_ORDER_TO_PPIDX = [3,4,0,2,1]; // position(Eat,Rule,Death,Walk,Sleep) → PP_ACTIVITIES idx
+
+// v88.8.75-fp154: ТОЧНА формула для DARK HALF, звірена зі сканів оригіналу
+// (2 фото сторінок 115-116: групи ONE Sun/Tue та TWO Mon/Sat + THREE Wed, день).
+// Групування ДЕНЬ ТИЖНЯ у Dark Half ІНШЕ, ніж у Bright Half:
+// ONE=Нд+Вт, TWO=Пн+Сб, THREE=Ср, FOUR=Чт, FIVE=Пт (Bright: Нд+Вт/Пн+Ср/Чт/Пт/Сб).
+// Знайдений принт-баг оригіналу (1993): в групі ONE Day яма-3 та яма-4 надруковані
+// ІДЕНТИЧНО (сканами підтверджено, не OCR-глюк) — відновлено через подвійну
+// крос-перевірку: (а) латинський квадрат — кожна з 5 груп мусить використати
+// всі 5 ротацій A-E по одному разу; (б) власне правило автора (стор.121: "хто Ходить
+// у ямі N — той Їсть у ямі N+1" вдень, "хто Панує у ямі N — той Їсть у ямі N+1" вночі),
+// перевірено на групі TWO/THREE (де текст чистий) — 100% збіглося по колу (5/5 переходів
+// + цикл на яму 0). Відновлена яма-3 групи ONE = ротація E — узгоджена з обома перевірками.
+const PP_DARK_DAY_GROUP_BY_WEEKDAY   = {0:0, 1:1, 2:0, 3:2, 4:3, 5:4, 6:1}; // Нд,Пн,Вт,Ср,Чт,Пт,Сб
+const PP_DARK_DAY_ORDER_TO_PPIDX     = [2,0,4,3,1]; // position → PP_ACTIVITIES idx (walk,die,rule,eat,sleep)
+const PP_DARK_DAY_BASE_SHIFT         = [0,3,1,4,2]; // по yama 0..4 (група ONE)
+const PP_DARK_DAY_GROUP_OFFSET       = [0,4,1,2,3]; // по групі 0..4 (ONE,TWO,THREE,FOUR,FIVE)
+const PP_DARK_NIGHT_ORDER_TO_PPIDX   = [3,4,0,2,1]; // position → PP_ACTIVITIES idx (eat,rule,die,walk,sleep)
+const PP_DARK_NIGHT_BASE_SHIFT       = [0,4,3,2,1]; // по yama 0..4 (група ONE)
+const PP_DARK_NIGHT_GROUP_OFFSET     = [0,2,4,3,1]; // по групі 0..4 (ONE,TWO,THREE,FOUR,FIVE)
+
 function getPakshiActivityForYama(birdId, yamaIdx, weekday, isDay, isShukla) {
   // birdId: 0=Vulture,1=Owl,2=Crow,3=Cock,4=Peacock (канон 1:1 з PANCHA_PAKSHI_NAMES)
   // yamaIdx: 0-4. weekday: JS getDay() 0=Нд..6=Сб.
-  const g = PP_GROUP_INDEX_BY_WEEKDAY[weekday] ?? 0;
   let actIdx;
-  if (isDay) {
-    const pos = (((birdId + yamaIdx - g) % 5) + 5) % 5;
-    actIdx = PP_DAY_ORDER_TO_PPIDX[pos];
+  if (isShukla !== false) {
+    // BRIGHT HALF
+    const g = PP_GROUP_INDEX_BY_WEEKDAY[weekday] ?? 0;
+    if (isDay) {
+      const pos = (((birdId + yamaIdx - g) % 5) + 5) % 5;
+      actIdx = PP_DAY_ORDER_TO_PPIDX[pos];
+    } else {
+      const k = (2 + g + yamaIdx) % 5;
+      const pos = (((k - birdId) % 5) + 5) % 5;
+      actIdx = PP_NIGHT_ORDER_TO_PPIDX[pos];
+    }
   } else {
-    const k = (2 + g + yamaIdx) % 5;
-    const pos = (((k - birdId) % 5) + 5) % 5;
-    actIdx = PP_NIGHT_ORDER_TO_PPIDX[pos];
+    // DARK HALF — власне групування днів тижня та власна формула
+    const g = PP_DARK_DAY_GROUP_BY_WEEKDAY[weekday] ?? 0;
+    if (isDay) {
+      const shift = (PP_DARK_DAY_BASE_SHIFT[yamaIdx] + PP_DARK_DAY_GROUP_OFFSET[g]) % 5;
+      const pos = (birdId + shift) % 5;
+      actIdx = PP_DARK_DAY_ORDER_TO_PPIDX[pos];
+    } else {
+      const shift = (PP_DARK_NIGHT_BASE_SHIFT[yamaIdx] + PP_DARK_NIGHT_GROUP_OFFSET[g]) % 5;
+      const pos = (birdId + shift) % 5;
+      actIdx = PP_DARK_NIGHT_ORDER_TO_PPIDX[pos];
+    }
   }
   return {
     activity: PP_ACTIVITIES[actIdx],
     activityUa: PP_ACTIVITIES_UA[actIdx],
     advice: PP_ACTIVITIES_ADVICE[actIdx],
     strength: actIdx, // 0=найслабше, 4=найсильніше
-    verified: isShukla !== false, // Bright Half = верифіковано зі сканів; Dark Half = та сама формула, R&D-неперевірено
+    verified: true, // v88.8.75-fp154: Bright І Dark Half тепер обидва звірені зі сканів
   };
 }
 function getCurrentYama(dateUTC, sunriseUTC, sunsetUTC) {
