@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.76-fp155-3DAY-FUTUREKP-FALLBACK</title>
+  <title>G-Index — Космофізичний дашборд v88.8.77-fp156-CHRONO-CSV-CANONICAL</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -3696,7 +3696,7 @@ try{
 if (false && 'serviceWorker' in navigator) {
   // fp138: SW disabled emergency; auto-unregister below is replaced by early cleanup.
   // fp106: auto-unregister old SW versions on load
-  const _swKey = 'g-index-shell-v88-8-76-fp155';
+  const _swKey = 'g-index-shell-v88-8-77-fp156';
   navigator.serviceWorker.getRegistrations().then(regs => {
     regs.forEach(r => {
       if(!r.active || !r.active.scriptURL.includes(_swKey)) r.unregister();
@@ -20515,9 +20515,53 @@ const GChrono = (function(){
     }
   }
 
-  function init(){ _prefillToday(); renderStats(); }
+  function init(){ _prefillToday(); renderStats(); _renderCanonicalN(); }
   if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded',init); }
   else { setTimeout(init,100); }
+
+  // v88.8.77-fp156: chrono_v1.csv — КАНОНІЧНЕ джерело правди для n (вирішено відкрите
+  // питання з 03.07: localStorage прив'язаний до браузера/пристрою, Telegram-бот пише
+  // окремо — вони розходяться. chrono_v1.csv — єдиний файл, який бот і дашборд мають
+  // ділити. localStorage/цей UI лишається лише механізмом швидкого вводу на цьому
+  // пристрої, НЕ джерелом істини для офіційного n.
+  let _chronoCsvCache;
+  async function _loadChronoCsv(){
+    if(_chronoCsvCache !== undefined) return _chronoCsvCache;
+    try {
+      const resp = await fetch('chrono_v1.csv', { cache: 'default' });
+      if(!resp.ok) throw new Error('HTTP ' + resp.status);
+      const text = await resp.text();
+      const lines = text.split('\n').map(l=>l.replace(/\r$/,'')).filter(l => l.trim() && !l.startsWith('#'));
+      if(!lines.length) throw new Error('empty csv');
+      const header = lines[0].split(',');
+      const idxA = header.indexOf('axis_a');
+      const idxDate = header.indexOf('date');
+      const rows = lines.slice(1).map(l => l.split(','));
+      const completed = rows.filter(r => idxA >= 0 && r[idxA] !== undefined && r[idxA].trim() !== '');
+      _chronoCsvCache = {
+        totalRows: rows.length,
+        completedN: completed.length,
+        lastDate: rows.length ? rows[rows.length - 1][idxDate] : null
+      };
+    } catch(e) {
+      if(window._DEBUG) console.warn('[chrono-csv] недоступний:', e.message);
+      _chronoCsvCache = null;
+    }
+    return _chronoCsvCache;
+  }
+  async function _renderCanonicalN(){
+    const csv = await _loadChronoCsv();
+    const box = document.getElementById('chronoStats');
+    if(!box) return;
+    const note = document.createElement('div');
+    note.style.cssText = 'margin-top:8px;padding-top:6px;border-top:1px dashed var(--border);font-size:10px;color:var(--dim)';
+    if(csv){
+      note.innerHTML = '📄 Канонічно (chrono_v1.csv, спільний з Telegram-ботом): <strong style="color:var(--ok)">n=' + csv.completedN + '</strong> заповнених / ' + csv.totalRows + ' рядків · остан. ' + (csv.lastDate || '—') + '. Це офіційний n, а не лічильник вище (той — лише цей браузер).';
+    } else {
+      note.innerHTML = '⚠ chrono_v1.csv не знайдено поруч з index.html у деплої — канонічний n недоступний, лічильник вище показує тільки цей браузер.';
+    }
+    box.appendChild(note);
+  }
 
   return { saveToday, clearAll, exportJSON, renderStats, _oninput, _toggleDecision };
 })();
