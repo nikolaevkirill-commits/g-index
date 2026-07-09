@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.79-fp158-KP4-ELEVATED-BADGE</title>
+  <title>G-Index — Космофізичний дашборд v88.8.80-fp159-HERO-HIERARCHY-STALE-FIX</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -3696,7 +3696,7 @@ try{
 if (false && 'serviceWorker' in navigator) {
   // fp138: SW disabled emergency; auto-unregister below is replaced by early cleanup.
   // fp106: auto-unregister old SW versions on load
-  const _swKey = 'g-index-shell-v88-8-79-fp158';
+  const _swKey = 'g-index-shell-v88-8-80-fp159';
   navigator.serviceWorker.getRegistrations().then(regs => {
     regs.forEach(r => {
       if(!r.active || !r.active.scriptURL.includes(_swKey)) r.unregister();
@@ -12635,6 +12635,14 @@ function _renderHeroHierarchy(){
         gHtml = `<span style="font-weight:800;color:${col}">${g>=0?'+':''}${g.toFixed(2)}</span> <span style="color:var(--muted)">${word}</span>${kpTxt}${_breakdown}${_scaleNote}`;
       }
     }catch(e){ /* silent */ }
+    // v88.8.80-fp159: якщо решта пайплайну ВЖЕ має дані (G_now визначений), а decHtml
+    // усе ще на дефолтному "завантаження…" — це означає, що Engine/PDF ГЕНУЇННО відсутній
+    // (V3 freeze / немає бюлетеня на сьогодні), а НЕ "ще не встиг завантажитись". Раніше
+    // цей рядок міг залипати на "завантаження…" назавжди, створюючи враження зламаного
+    // рендеру поруч із Hero, що вже показує "можна діяти" з живих даних — плутанина.
+    if (decHtml.includes('завантаження') && isFinite((window.__uiState||{}).gNow)) {
+      decHtml = '<span style="color:var(--faint)">PDF/Engine недоступний на сьогодні — Hero нижче показує live-фон, НЕ вердикт дня</span>';
+    }
     // 3) Якість даних — dataMode (live/partial/scenario/offline)
     // fp79 FIX: використовуємо resolveDataModeExtended() щоб розрізнити 'estimated' (Kp ≤12h, нормальний
     // 3-годинний цикл NOAA) від 'partial' (справжній delay). Раніше обидва показували "DELAYED".
