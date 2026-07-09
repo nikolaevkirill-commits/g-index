@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.77-fp156-CHRONO-CSV-CANONICAL</title>
+  <title>G-Index — Космофізичний дашборд v88.8.79-fp158-KP4-ELEVATED-BADGE</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1406,7 +1406,7 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
     <!-- ═══ SCIENCE BAR ═══ -->
     <div id="scienceBar">
       <!-- Первинні: завжди видно -->
-      <span class="sci-item sci-primary">🛰 <strong>Kp:</strong> <span class="sci-val" id="sciKp">—</span> <span class="sci-src">NOAA</span></span>
+      <span class="sci-item sci-primary">🛰 <strong>Kp:</strong> <span class="sci-val" id="sciKp">—</span> <a class="sci-src" href="https://www.spaceweather.gov/products/planetary-k-index" target="_blank" rel="noopener" title="Звірити з офіційним графіком NOAA (не з новинними сайтами)" style="text-decoration:underline dotted;cursor:pointer">NOAA ↗</a></span>
       <span class="sci-item sci-primary">🌙 <strong>Фаза:</strong> <span class="sci-val" id="sciPhase">—</span></span>
       <span class="sci-item sci-primary sci-secondary">🧲 <strong>Dst:</strong> <span class="sci-val" id="sciDst">—</span> <span class="sci-src">Kyoto</span></span>
       <span class="sci-item sci-primary sci-secondary" title="Lᵢ — Lunar tithi factor. Вплив поточного місячного дня (тітхі) на психофізичний стан.">🌑 <strong>Lᵢ:</strong> <span class="sci-val" id="sciLi">—</span></span>
@@ -3696,7 +3696,7 @@ try{
 if (false && 'serviceWorker' in navigator) {
   // fp138: SW disabled emergency; auto-unregister below is replaced by early cleanup.
   // fp106: auto-unregister old SW versions on load
-  const _swKey = 'g-index-shell-v88-8-77-fp156';
+  const _swKey = 'g-index-shell-v88-8-79-fp158';
   navigator.serviceWorker.getRegistrations().then(regs => {
     regs.forEach(r => {
       if(!r.active || !r.active.scriptURL.includes(_swKey)) r.unregister();
@@ -6386,33 +6386,33 @@ async function fetchTextWithCORS(url, validate){
   // 0. Cloudflare Worker (власний proxy — найнадійніший, завжди перший)
   if (NOAA_WORKER_URL && !NOAA_WORKER_URL.includes('YOUR_USERNAME')) {
     try{
-      const r0 = await fetchWithTimeout(NOAA_WORKER_URL+encodeURIComponent(url), 6000);
+      const r0 = await fetchWithTimeout(NOAA_WORKER_URL+encodeURIComponent(url), 3000);
       if(r0.ok){ const _t = await r0.text(); if(_ok(_t)) return _t; }
     }catch(e){ console.warn('[CORS] worker fail:', e.message); }
   }
   // 1. Прямий fetch (NOAA JSON підтримує CORS)
   try{
-    const r = await fetchWithTimeout(url, 10000);
+    const r = await fetchWithTimeout(url, 4000);
     if(r.ok){ const _t = await r.text(); if(_ok(_t)) return _t; }
   }catch(e){ console.warn('[CORS] direct fail:', _shortUrl, e.message); }
   // 2. allorigins
   try{
-    const r2 = await fetchWithTimeout('https://api.allorigins.win/raw?url='+encodeURIComponent(url), 5000);
+    const r2 = await fetchWithTimeout('https://api.allorigins.win/raw?url='+encodeURIComponent(url), 2500);
     if(r2.ok){ const _t = await r2.text(); if(_ok(_t)) return _t; }
   }catch(e){ console.warn('[CORS] allorigins fail:', e.message); }
   // 3. corsproxy.io
   try{
-    const r3 = await fetchWithTimeout('https://corsproxy.io/?url='+encodeURIComponent(url), 5000);
+    const r3 = await fetchWithTimeout('https://corsproxy.io/?url='+encodeURIComponent(url), 2500);
     if(r3.ok){ const _t = await r3.text(); if(_ok(_t)) return _t; }
   }catch(e){ console.warn('[CORS] corsproxy.io fail:', e.message); }
   // 4. corsfix.com
   try{
-    const r4 = await fetchWithTimeout('https://proxy.corsfix.com/?'+encodeURIComponent(url), 5000);
+    const r4 = await fetchWithTimeout('https://proxy.corsfix.com/?'+encodeURIComponent(url), 2500);
     if(r4.ok){ const _t = await r4.text(); if(_ok(_t)) return _t; }
   }catch(e){ console.warn('[CORS] corsfix fail:', e.message); }
   // 5. codetabs
   try{
-    const r5 = await fetchWithTimeout('https://api.codetabs.com/v1/proxy?quest='+encodeURIComponent(url), 5000);
+    const r5 = await fetchWithTimeout('https://api.codetabs.com/v1/proxy?quest='+encodeURIComponent(url), 2500);
     if(r5.ok){ const _t = await r5.text(); if(_ok(_t)) return _t; }
   }catch(e){ console.warn('[CORS] codetabs fail:', e.message); }
   throw new Error('Всі проксі недоступні: '+_shortUrl);
@@ -19047,7 +19047,24 @@ function updateFreshnessBadge() {
 // ========================= SCIENCE BAR UPDATE =========================
 function updateScienceBar(kp, ap, sn, ai, phaseName, phaseDeg, f107) {
   const _el = id => document.getElementById(id) || {textContent:'',innerHTML:''};
-  if(isFinite(kp)) _el('sciKp').textContent = kp.toFixed(2);
+  if(isFinite(kp)) {
+    const kpEl = _el('sciKp');
+    kpEl.textContent = kp.toFixed(2);
+    // v88.8.79-fp158: Kp∈[4,5) — "підвищена активність", нижче офіційного G1(Kp≥5),
+    // але це саме поріг, на якому практичні UAV/GPS-додатки (UAV Forecast та подібні)
+    // вже сповіщають користувача — GPS/радіозв'язок може деградувати ДО формального G1.
+    // Суто інформаційний бейдж, НЕ чіпає G-формулу/engine/storm-guard (kp>=5 логіка нижче).
+    if (kp >= 5) {
+      kpEl.style.color = '';
+      kpEl.title = '';
+    } else if (kp >= 4) {
+      kpEl.style.color = '#ffb347';
+      kpEl.title = 'Kp≥4: підвищена геомагнітна активність (нижче офіційного G1=Kp5, але GPS/радіозв\'язок вже можуть деградувати — так само сповіщають UAV/дрон-додатки)';
+    } else {
+      kpEl.style.color = '';
+      kpEl.title = '';
+    }
+  }
   if(isFinite(ap))  _el('sciAp').textContent = ap;
   if(sn != null)    _el('sciSn').textContent = sn;
   // F10.7 Solar Flux
