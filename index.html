@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.84-fp163-CONFIDENCE-CHANGELOG-AUDIT-OPEN</title>
+  <title>G-Index — Космофізичний дашборд v88.8.86-fp165-NAMED-CHANGELOG</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1530,6 +1530,30 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
             <span id="heroG" class="gbadge" role="status" aria-live="polite" aria-label="Поточний G-індекс">…</span>
             <span id="heroTrend">—</span>
           </div>
+          <!-- v88.8.85-fp164: Speed Boot крок1 — миттєвий paint останнього відомого G
+               з localStorage ДО будь-яких мережевих фетчів (не чекає loadAll/CORS-ланцюг).
+               Безпечно: лише тимчасовий placeholder, пізніший реальний рендер (heroG/heroRingVal)
+               перепише це так само, як і раніше — жодна async-логіка не змінена. -->
+          <script>
+          (function(){
+            try {
+              var hist = JSON.parse(localStorage.getItem('g_history_v75')||'[]');
+              if(hist.length){
+                var last = hist[hist.length-1];
+                if (isFinite(last.g)) {
+                  var hg = document.getElementById('heroG');
+                  if (hg) hg.innerHTML = (last.g>=0?'+':'') + last.g.toFixed(1) +
+                    '<span style="font-size:9px;opacity:.55;display:block;font-weight:400">кеш · оновлюється…</span>';
+                  var hr = document.getElementById('heroRingVal');
+                  if (hr) {
+                    var pct = Math.max(0, Math.min(1, (last.g + 5) / 10)); // -5..+5 → 0..1
+                    hr.setAttribute('stroke-dashoffset', String(283 * (1 - pct)));
+                  }
+                }
+              }
+            } catch(e){}
+          })();
+          </script>
           <!-- v88.8.56: завжди видимий пояснювальний рядок (не лише title-тултіп) —
                Kyrylo explicit ask після аудиту 2026-07-06: hero-число плутали з G_now. -->
           <div id="heroLegendCaption" style="margin-top:4px;text-align:center;font-size:9px;line-height:1.4;color:var(--faint)">
@@ -3490,7 +3514,8 @@ function _saveGHistory(g){
       Di: window.__uiState.ai.Di
     } : null;
     const _snapKp = (window.__uiState && isFinite(window.__uiState.kpNow)) ? window.__uiState.kpNow : null;
-    hist.push({g, ts:Date.now(), kp:_snapKp, ai:_snapAi});
+    const _snapPanch = window.__lastPanchNames || null;
+    hist.push({g, ts:Date.now(), kp:_snapKp, ai:_snapAi, panch:_snapPanch});
     // Keep last 48h only
     const cutoff=Date.now()-48*3600*1000;
     hist=hist.filter(h=>h.ts>cutoff);
@@ -3699,6 +3724,7 @@ function _renderComponentDeltaCard(){
 // нові дані, а не через помилку". Без нового окремого логера (менший ризик) — витягує
 // значні стрибки (|ΔG|≥0.8 або |ΔKp|≥0.8 між сусідніми точками) з уже існуючої історії
 // g_history_v75, яку веде _saveGHistory() на кожен тік.
+const _PANCH_LABEL = {tithi:'Тітхі', nakshatra:'Накшатра', yoga:'Йога', karana:'Карана'};
 function _renderChangeLog(){
   const box = document.getElementById('changeLogCard');
   if(!box) return;
@@ -3710,8 +3736,16 @@ function _renderChangeLog(){
       const prev = hist[i-1], cur = hist[i];
       const dG = isFinite(prev.g) && isFinite(cur.g) ? cur.g - prev.g : null;
       const dKp = isFinite(prev.kp) && isFinite(cur.kp) ? cur.kp - prev.kp : null;
-      if((dG!=null && Math.abs(dG)>=0.8) || (dKp!=null && Math.abs(dKp)>=0.8)){
-        events.push({ts:cur.ts, dG, dKp, kpFrom:prev.kp, kpTo:cur.kp, gFrom:prev.g, gTo:cur.g});
+      const panchChanges = [];
+      if(prev.panch && cur.panch){
+        ['tithi','nakshatra','yoga','karana'].forEach(k=>{
+          if(prev.panch[k] && cur.panch[k] && prev.panch[k] !== cur.panch[k]){
+            panchChanges.push({k, from:prev.panch[k], to:cur.panch[k]});
+          }
+        });
+      }
+      if((dG!=null && Math.abs(dG)>=0.8) || (dKp!=null && Math.abs(dKp)>=0.8) || panchChanges.length){
+        events.push({ts:cur.ts, dG, dKp, kpFrom:prev.kp, kpTo:cur.kp, gFrom:prev.g, gTo:cur.g, panchChanges});
       }
     }
     if(!events.length){ box.style.display='none'; return; }
@@ -3728,6 +3762,7 @@ function _renderChangeLog(){
               <span style="color:var(--dim)">${_fmtT(e.ts)}</span>
               ${e.kpFrom!=null && e.kpTo!=null ? ` · Kp ${_fmt2(e.kpFrom)} → ${_fmt2(e.kpTo)}` : ''}
               ${e.gFrom!=null && e.gTo!=null ? ` · G ${_fmt2(e.gFrom)} → ${_fmt2(e.gTo)}` : ''}
+              ${e.panchChanges && e.panchChanges.length ? e.panchChanges.map(pc=>`<br><span style="color:var(--faint);font-size:10px">${_PANCH_LABEL[pc.k]||pc.k}: ${_escHtml(pc.from)} → ${_escHtml(pc.to)}</span>`).join('') : ''}
             </div>`).join('')}
           <div style="margin-top:4px;font-size:10px;color:var(--faint)">Показано останні 5 з ${events.length} стрибків ≥0.8 за 48г. Це реальні зміни вхідних даних (NOAA), не збій програми.</div>
         </div>
@@ -3810,7 +3845,7 @@ try{
 if (false && 'serviceWorker' in navigator) {
   // fp138: SW disabled emergency; auto-unregister below is replaced by early cleanup.
   // fp106: auto-unregister old SW versions on load
-  const _swKey = 'g-index-shell-v88-8-84-fp163';
+  const _swKey = 'g-index-shell-v88-8-86-fp165';
   navigator.serviceWorker.getRegistrations().then(regs => {
     regs.forEach(r => {
       if(!r.active || !r.active.scriptURL.includes(_swKey)) r.unregister();
@@ -5394,6 +5429,12 @@ function renderUnifiedIndicesPanel(){
     const p = (typeof computePanchanga==='function') ? computePanchanga(now) : null;
     if(!p) { box.style.display='none'; return; }
     box.style.display='block';
+    // v88.8.86-fp165: снепшот НАЗВ (не тільки чисел) для Change Log — запит Kyrylo/аудит:
+    // "Тітхі: Dashami → Ekadashi", а не просто "-0.8". _saveGHistory() підхопить це поле.
+    window.__lastPanchNames = {
+      tithi: p.tithi?.name || null, nakshatra: p.nakshatra?.name || null,
+      yoga: p.yoga?.name || null, karana: p.karana?.name || null
+    };
 
     const rowEl = el('uipPanchangaRow');
     if(rowEl){
