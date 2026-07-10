@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.82-fp161-SOLARWIND-INFO-TOOLTIPS</title>
+  <title>G-Index — Космофізичний дашборд v88.8.84-fp163-CONFIDENCE-CHANGELOG-AUDIT-OPEN</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1725,12 +1725,12 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
       </div>
     </details>
     <!-- v87.90: Provenance ledger — джерела для сьогоднішньої оцінки (closed by default) -->
-    <details id="provenanceCard" style="margin:0 0 10px;padding:10px 14px;border-radius:12px;border:1px solid var(--border);background:rgba(11,18,32,.5)">
+    <details id="provenanceCard" open style="margin:0 0 10px;padding:10px 14px;border-radius:12px;border:1px solid var(--border);background:rgba(11,18,32,.5)">
       <summary style="cursor:pointer;font-size:12px;font-weight:600;color:var(--muted);list-style:none;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <span style="font-size:14px">📋</span>
         <span style="flex:1;min-width:200px">
-          <span style="color:var(--text)">Звідки взято сьогоднішню оцінку</span>
-          <span id="provenancePreview" style="font-size:10px;color:var(--faint);font-weight:400;margin-left:8px;display:block;margin-top:2px">NOAA Kp · Kyoto Dst · SILSO Sn · NASA eclipses · Vedic Panchanga — 5 джерел, повний audit trail</span>
+          <span style="color:var(--text)">🔍 З чого складається G сьогодні (Formula Audit)</span>
+          <span id="provenancePreview" style="font-size:10px;color:var(--faint);font-weight:400;margin-left:8px;display:block;margin-top:2px">Kp · Dst · Sn · Тітхі · Затемнення · Панчанга — повний розклад G, не тільки підсумок</span>
         </span>
         <span style="font-size:10px;color:var(--dim);font-weight:400">розгорнути ▾</span>
       </summary>
@@ -1825,6 +1825,8 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
 
     <!-- ═══ v87.10: Delta Card — "що змінилось від учора" ═══ -->
     <div id="deltaCard" style="display:none"></div>
+    <div id="componentDeltaCard" style="display:none"></div>
+    <div id="changeLogCard" style="display:none;margin-top:8px"></div>
 
     <!-- ═══ v87.18: Decision Layer — "Що робити зараз" (конкретні дії) ═══ -->
     <div id="decisionLayer" style="display:none">
@@ -2985,7 +2987,10 @@ function renderConfidenceBreakdown(){
   const _ui = window.__uiState;
   if(_ui && _ui.confPct){
     const hc=el('heroConfidence');
-    if(hc) hc.textContent=_ui.confPct+'%';
+    // v88.8.84-fp163: світлофор 🟢/🟡/🔴 — швидка візуальна оцінка довіри без читання %.
+    // Пороги узгоджені з існуючою шкалою (92% = стеля by design, floor penalty v87.14).
+    const dot = _ui.confPct >= 75 ? '🟢' : _ui.confPct >= 55 ? '🟡' : '🔴';
+    if(hc) hc.textContent = _ui.confPct + '% ' + dot;
   }
 }
 
@@ -3475,7 +3480,17 @@ function _saveGHistory(g){
   try{
     const key='g_history_v75';
     let hist=JSON.parse(localStorage.getItem(key)||'[]');
-    hist.push({g, ts:Date.now()});
+    // v88.8.83-fp162: додано снапшот компонентів формули поруч з G — потрібно для
+    // per-component day-over-day diff (запит Kyrylo: "чому G змінився" по кожному
+    // фактору окремо, не тільки total). Не ламає стару історію — старі записи без
+    // .kp/.ai просто ігноруються при diff (isFinite-перевірка).
+    const _snapAi = (window.__uiState && window.__uiState.ai) ? {
+      Li: window.__uiState.ai.Li, Mi: window.__uiState.ai.Mi,
+      ei: window.__uiState.ai.ei, Pi: window.__uiState.ai.Pi,
+      Di: window.__uiState.ai.Di
+    } : null;
+    const _snapKp = (window.__uiState && isFinite(window.__uiState.kpNow)) ? window.__uiState.kpNow : null;
+    hist.push({g, ts:Date.now(), kp:_snapKp, ai:_snapAi});
     // Keep last 48h only
     const cutoff=Date.now()-48*3600*1000;
     hist=hist.filter(h=>h.ts>cutoff);
@@ -3627,6 +3642,99 @@ function _getGDelta(){
   }catch(e){return {d3h:null, d24h:null, t3h:null, t24h:null};}
 }
 
+// v88.8.83-fp162: per-component day-over-day diff — запит Kyrylo "Formula Audit":
+// показати Kp/Тітхі/Затемнення/Панчанга/Dst окремо, а не тільки total G. Без цього
+// будь-яка зміна фону виглядає як "алгоритм бреше". Знаходить ~24h-тому запис з
+// компонентами (старі записи без .ai просто пропускаються — не ламає стару історію).
+function _getComponentDelta(){
+  try{
+    const hist=JSON.parse(localStorage.getItem('g_history_v75')||'[]');
+    const withAi = hist.filter(h => h.ai && isFinite(h.kp));
+    if(withAi.length<1) return null;
+    const now=Date.now();
+    let best=null, bestDist=Infinity;
+    for(const h of withAi){
+      const d=Math.abs((now-h.ts)-24*3600*1000);
+      if(d<bestDist && d<8*3600*1000){bestDist=d;best=h;}
+    }
+    if(!best) return null;
+    const _ui = window.__uiState || {};
+    const curAi = _ui.ai || {};
+    const curKp = isFinite(_ui.kpNow) ? _ui.kpNow : null;
+    if(curKp==null) return null;
+    const _d = (a,b) => (isFinite(a) && isFinite(b)) ? (a-b) : null;
+    return {
+      ageH: Math.round((now-best.ts)/3600000),
+      kp:  _d(curKp, best.kp),
+      Li:  _d(curAi.Li, best.ai.Li),
+      Mi:  _d(curAi.Mi, best.ai.Mi),
+      ei:  _d(curAi.ei, best.ai.ei),
+      Pi:  _d(curAi.Pi, best.ai.Pi),
+      Di:  _d(curAi.Di, best.ai.Di)
+    };
+  }catch(e){ return null; }
+}
+function _renderComponentDeltaCard(){
+  const box = document.getElementById('componentDeltaCard');
+  if(!box) return;
+  const d = _getComponentDelta();
+  if(!d){ box.style.display='none'; return; }
+  const rows = [
+    ['Kp', d.kp], ['Тітхі (Lᵢ)', d.Li], ['Затемнення (Mᵢ)', d.Mi],
+    ['Події (eᵢ)', d.ei], ['Панчанга (Pᵢ)', d.Pi], ['Dst-буря (Dᵢ)', d.Di]
+  ].filter(([_,v]) => v!=null && Math.abs(v) >= 0.05);
+  if(!rows.length){ box.style.display='none'; return; }
+  const _fmt = v => (v>0?'+':'') + v.toFixed(2);
+  const _col = v => v>0 ? 'var(--ok)' : v<0 ? '#ff8866' : 'var(--muted)';
+  box.style.display = 'block';
+  box.innerHTML = `
+    <div style="padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:rgba(11,18,32,.35);font-size:11px">
+      <div style="font-weight:700;color:var(--text2);margin-bottom:6px">🔍 Чому змінилось за ~${d.ageH}г — по факторах</div>
+      ${rows.map(([label,v]) => `<div style="display:flex;justify-content:space-between;padding:2px 0"><span style="color:var(--dim)">${label}</span><span style="color:${_col(v)};font-weight:600">${_fmt(v)}</span></div>`).join('')}
+      <div style="margin-top:4px;font-size:10px;color:var(--faint)">Кожен рядок — незалежний фактор. Кілька факторів можуть змінитись одночасно й випадково збігтись.</div>
+    </div>`;
+}
+
+// v88.8.84-fp163: Change Log — запит Kyrylo "щоб було видно, що прогноз змінився через
+// нові дані, а не через помилку". Без нового окремого логера (менший ризик) — витягує
+// значні стрибки (|ΔG|≥0.8 або |ΔKp|≥0.8 між сусідніми точками) з уже існуючої історії
+// g_history_v75, яку веде _saveGHistory() на кожен тік.
+function _renderChangeLog(){
+  const box = document.getElementById('changeLogCard');
+  if(!box) return;
+  try{
+    const hist = JSON.parse(localStorage.getItem('g_history_v75') || '[]');
+    if(hist.length < 2){ box.style.display='none'; return; }
+    const events = [];
+    for(let i = 1; i < hist.length; i++){
+      const prev = hist[i-1], cur = hist[i];
+      const dG = isFinite(prev.g) && isFinite(cur.g) ? cur.g - prev.g : null;
+      const dKp = isFinite(prev.kp) && isFinite(cur.kp) ? cur.kp - prev.kp : null;
+      if((dG!=null && Math.abs(dG)>=0.8) || (dKp!=null && Math.abs(dKp)>=0.8)){
+        events.push({ts:cur.ts, dG, dKp, kpFrom:prev.kp, kpTo:cur.kp, gFrom:prev.g, gTo:cur.g});
+      }
+    }
+    if(!events.length){ box.style.display='none'; return; }
+    const last5 = events.slice(-5).reverse();
+    const _fmtT = ts => new Date(ts).toLocaleTimeString('uk-UA',{hour:'2-digit',minute:'2-digit'});
+    const _fmt2 = v => isFinite(v) ? v.toFixed(2) : '?';
+    box.style.display = 'block';
+    box.innerHTML = `
+      <details style="padding:8px 10px;border:1px solid var(--border);border-radius:10px;background:rgba(11,18,32,.3);font-size:11px">
+        <summary style="cursor:pointer;color:var(--text2);font-weight:700;list-style:none">📜 Change Log — останні значні зміни (${events.length})</summary>
+        <div style="margin-top:6px">
+          ${last5.map(e => `
+            <div style="padding:4px 0;border-top:1px solid rgba(30,42,68,.4)">
+              <span style="color:var(--dim)">${_fmtT(e.ts)}</span>
+              ${e.kpFrom!=null && e.kpTo!=null ? ` · Kp ${_fmt2(e.kpFrom)} → ${_fmt2(e.kpTo)}` : ''}
+              ${e.gFrom!=null && e.gTo!=null ? ` · G ${_fmt2(e.gFrom)} → ${_fmt2(e.gTo)}` : ''}
+            </div>`).join('')}
+          <div style="margin-top:4px;font-size:10px;color:var(--faint)">Показано останні 5 з ${events.length} стрибків ≥0.8 за 48г. Це реальні зміни вхідних даних (NOAA), не збій програми.</div>
+        </div>
+      </details>`;
+  }catch(e){ box.style.display='none'; }
+}
+
 document.addEventListener('DOMContentLoaded',()=>{
   setTimeout(()=>{initHeroField();initWowParticles();applyWowFromG()},900);
   // v87.16 + v87.56 Phase 2.1: dev controls — показувати #devMenu при ?dev=1 або localStorage flag
@@ -3702,7 +3810,7 @@ try{
 if (false && 'serviceWorker' in navigator) {
   // fp138: SW disabled emergency; auto-unregister below is replaced by early cleanup.
   // fp106: auto-unregister old SW versions on load
-  const _swKey = 'g-index-shell-v88-8-82-fp161';
+  const _swKey = 'g-index-shell-v88-8-84-fp163';
   navigator.serviceWorker.getRegistrations().then(regs => {
     regs.forEach(r => {
       if(!r.active || !r.active.scriptURL.includes(_swKey)) r.unregister();
@@ -15790,6 +15898,8 @@ function syncV702UI(){
   // (раніше renderPersonal викликався тільки при input-change → при G-tick глобальний ризик не синхронізувався)
   try{if(typeof renderPersonal==='function')renderPersonal();}catch(e){console.warn("renderPersonal:",e);}
   try{const _gNow=_v73G();if(isFinite(_gNow))_saveGHistory(_gNow);}catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+  try{ _renderComponentDeltaCard(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+  try{ _renderChangeLog(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
   // v87.19 U4: render best/worst days after history save
   try{ renderBestWorstDays(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
   // v87.90: provenance ledger render
@@ -20710,13 +20820,13 @@ function _renderSolarWindBadge(data){
     </div>`;
 }
 
-// Trigger initial fetch + періодичне оновлення (5хв, ті самі дані живуть 5хв у кеші)
+// Trigger initial fetch (без окремого setInterval — щоб не додавати ще один
+// паралельний цикл фетчів поверх основного loadAll(); v88.8.83-fp162: прибрано
+// після аудиту "занадто багато одночасних fetch" — 5хв TTL кешу вистачає, оновлення
+// відбудеться природньо при наступному ручному/авто-оновленні сторінки)
 setTimeout(() => {
   try { SolarWind.fetchLatest().then(d => { window.__solarWind = d; _renderSolarWindBadge(d); }); } catch(e){}
 }, 3500);
-setInterval(() => {
-  try { SolarWind.fetchLatest().then(d => { window.__solarWind = d; _renderSolarWindBadge(d); }); } catch(e){}
-}, 5*60*1000);
 
 const NoaaEvents = (function(){
   const URL_ALERTS = 'https://services.swpc.noaa.gov/products/alerts.json';
