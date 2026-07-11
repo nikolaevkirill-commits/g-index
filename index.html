@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.77-fp156-CHRONO-CSV-CANONICAL</title>
+  <title>G-Index — Космофізичний дашборд v88.8.86-fp165-NAMED-CHANGELOG</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1406,7 +1406,7 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
     <!-- ═══ SCIENCE BAR ═══ -->
     <div id="scienceBar">
       <!-- Первинні: завжди видно -->
-      <span class="sci-item sci-primary">🛰 <strong>Kp:</strong> <span class="sci-val" id="sciKp">—</span> <span class="sci-src">NOAA</span></span>
+      <span class="sci-item sci-primary">🛰 <strong>Kp:</strong> <span class="sci-val" id="sciKp">—</span> <span class="hint" tabindex="0" style="cursor:help;color:var(--faint);border:1px solid var(--faint);border-radius:50%;width:11px;height:11px;display:inline-flex;align-items:center;justify-content:center;font-size:7px;font-style:normal;margin:0 2px;vertical-align:middle">і<span class="hint-pop">Планетарний геомагнітний індекс (0-9), NOAA. Вимірює збурення магнітного поля Землі від сонячного вітру.<br><br>Сонячна активність може впливати на психофізичний стан: зміну артеріального тиску, загострення серцево-судинних захворювань, головний біль, запаморочення, безсоння, дратівливість і тривожність, погіршення настрою, зміну гормонального фону.<br><span style="opacity:.6;font-size:10px">Джерело формулювання: офіційний бюлетень Tarita. Рекомендаційний характер, не медичний діагноз.</span></span></span> <a class="sci-src" href="https://www.spaceweather.gov/products/planetary-k-index" target="_blank" rel="noopener" title="Звірити з офіційним графіком NOAA (не з новинними сайтами)" style="text-decoration:underline dotted;cursor:pointer">NOAA ↗</a></span>
       <span class="sci-item sci-primary">🌙 <strong>Фаза:</strong> <span class="sci-val" id="sciPhase">—</span></span>
       <span class="sci-item sci-primary sci-secondary">🧲 <strong>Dst:</strong> <span class="sci-val" id="sciDst">—</span> <span class="sci-src">Kyoto</span></span>
       <span class="sci-item sci-primary sci-secondary" title="Lᵢ — Lunar tithi factor. Вплив поточного місячного дня (тітхі) на психофізичний стан.">🌑 <strong>Lᵢ:</strong> <span class="sci-val" id="sciLi">—</span></span>
@@ -1530,6 +1530,30 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
             <span id="heroG" class="gbadge" role="status" aria-live="polite" aria-label="Поточний G-індекс">…</span>
             <span id="heroTrend">—</span>
           </div>
+          <!-- v88.8.85-fp164: Speed Boot крок1 — миттєвий paint останнього відомого G
+               з localStorage ДО будь-яких мережевих фетчів (не чекає loadAll/CORS-ланцюг).
+               Безпечно: лише тимчасовий placeholder, пізніший реальний рендер (heroG/heroRingVal)
+               перепише це так само, як і раніше — жодна async-логіка не змінена. -->
+          <script>
+          (function(){
+            try {
+              var hist = JSON.parse(localStorage.getItem('g_history_v75')||'[]');
+              if(hist.length){
+                var last = hist[hist.length-1];
+                if (isFinite(last.g)) {
+                  var hg = document.getElementById('heroG');
+                  if (hg) hg.innerHTML = (last.g>=0?'+':'') + last.g.toFixed(1) +
+                    '<span style="font-size:9px;opacity:.55;display:block;font-weight:400">кеш · оновлюється…</span>';
+                  var hr = document.getElementById('heroRingVal');
+                  if (hr) {
+                    var pct = Math.max(0, Math.min(1, (last.g + 5) / 10)); // -5..+5 → 0..1
+                    hr.setAttribute('stroke-dashoffset', String(283 * (1 - pct)));
+                  }
+                }
+              }
+            } catch(e){}
+          })();
+          </script>
           <!-- v88.8.56: завжди видимий пояснювальний рядок (не лише title-тултіп) —
                Kyrylo explicit ask після аудиту 2026-07-06: hero-число плутали з G_now. -->
           <div id="heroLegendCaption" style="margin-top:4px;text-align:center;font-size:9px;line-height:1.4;color:var(--faint)">
@@ -1546,6 +1570,12 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
           <div id="heroDecisionPanel">
             <!-- v88.8.35-fp56-P8: explicit decision hierarchy. РІШЕННЯ ДНЯ (PDF/Engine) ≠ ФОН ЗАРАЗ (G_now) ≠ ЯКІСТЬ. Filled by _renderHeroHierarchy() from existing globals. -->
             <div id="heroHierarchy" role="status" aria-live="polite" aria-label="Зведення дня: рішення, фон зараз, якість даних" style="display:none;margin-bottom:8px;border:1px solid var(--border);border-radius:10px;overflow:hidden;background:rgba(11,18,32,.35)"></div>
+            <!-- v88.8.81-fp160: НОАА real-time alerts (не прогноз — офіційне сповіщення в момент
+                 фіксації). Дані вже фетчились NoaaEvents.fetchAlerts() і раніше йшли ТІЛЬКИ у
+                 storm-guard (Kp≥5), назовні ніде не було видно. Тепер видимий банер, якщо є
+                 подія за останні 48г, незалежно від того чи вона зачепила storm-guard поріг. -->
+            <div id="noaaAlertBanner" style="display:none;margin-bottom:8px"></div>
+            <div id="solarWindBadge" style="display:none;margin-bottom:8px"></div>
             <!-- v88.8.35-fp56-P8: «Чому?» accordion — only visible in Basic Mode.
                  Shows a 1-click plain-language reason without formulas. -->
             <details id="heroWhyBasic" style="display:none;margin-bottom:6px;font-size:11px">
@@ -1719,12 +1749,12 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
       </div>
     </details>
     <!-- v87.90: Provenance ledger — джерела для сьогоднішньої оцінки (closed by default) -->
-    <details id="provenanceCard" style="margin:0 0 10px;padding:10px 14px;border-radius:12px;border:1px solid var(--border);background:rgba(11,18,32,.5)">
+    <details id="provenanceCard" open style="margin:0 0 10px;padding:10px 14px;border-radius:12px;border:1px solid var(--border);background:rgba(11,18,32,.5)">
       <summary style="cursor:pointer;font-size:12px;font-weight:600;color:var(--muted);list-style:none;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <span style="font-size:14px">📋</span>
         <span style="flex:1;min-width:200px">
-          <span style="color:var(--text)">Звідки взято сьогоднішню оцінку</span>
-          <span id="provenancePreview" style="font-size:10px;color:var(--faint);font-weight:400;margin-left:8px;display:block;margin-top:2px">NOAA Kp · Kyoto Dst · SILSO Sn · NASA eclipses · Vedic Panchanga — 5 джерел, повний audit trail</span>
+          <span style="color:var(--text)">🔍 З чого складається G сьогодні (Formula Audit)</span>
+          <span id="provenancePreview" style="font-size:10px;color:var(--faint);font-weight:400;margin-left:8px;display:block;margin-top:2px">Kp · Dst · Sn · Тітхі · Затемнення · Панчанга — повний розклад G, не тільки підсумок</span>
         </span>
         <span style="font-size:10px;color:var(--dim);font-weight:400">розгорнути ▾</span>
       </summary>
@@ -1819,6 +1849,8 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
 
     <!-- ═══ v87.10: Delta Card — "що змінилось від учора" ═══ -->
     <div id="deltaCard" style="display:none"></div>
+    <div id="componentDeltaCard" style="display:none"></div>
+    <div id="changeLogCard" style="display:none;margin-top:8px"></div>
 
     <!-- ═══ v87.18: Decision Layer — "Що робити зараз" (конкретні дії) ═══ -->
     <div id="decisionLayer" style="display:none">
@@ -2979,7 +3011,10 @@ function renderConfidenceBreakdown(){
   const _ui = window.__uiState;
   if(_ui && _ui.confPct){
     const hc=el('heroConfidence');
-    if(hc) hc.textContent=_ui.confPct+'%';
+    // v88.8.84-fp163: світлофор 🟢/🟡/🔴 — швидка візуальна оцінка довіри без читання %.
+    // Пороги узгоджені з існуючою шкалою (92% = стеля by design, floor penalty v87.14).
+    const dot = _ui.confPct >= 75 ? '🟢' : _ui.confPct >= 55 ? '🟡' : '🔴';
+    if(hc) hc.textContent = _ui.confPct + '% ' + dot;
   }
 }
 
@@ -3469,7 +3504,18 @@ function _saveGHistory(g){
   try{
     const key='g_history_v75';
     let hist=JSON.parse(localStorage.getItem(key)||'[]');
-    hist.push({g, ts:Date.now()});
+    // v88.8.83-fp162: додано снапшот компонентів формули поруч з G — потрібно для
+    // per-component day-over-day diff (запит Kyrylo: "чому G змінився" по кожному
+    // фактору окремо, не тільки total). Не ламає стару історію — старі записи без
+    // .kp/.ai просто ігноруються при diff (isFinite-перевірка).
+    const _snapAi = (window.__uiState && window.__uiState.ai) ? {
+      Li: window.__uiState.ai.Li, Mi: window.__uiState.ai.Mi,
+      ei: window.__uiState.ai.ei, Pi: window.__uiState.ai.Pi,
+      Di: window.__uiState.ai.Di
+    } : null;
+    const _snapKp = (window.__uiState && isFinite(window.__uiState.kpNow)) ? window.__uiState.kpNow : null;
+    const _snapPanch = window.__lastPanchNames || null;
+    hist.push({g, ts:Date.now(), kp:_snapKp, ai:_snapAi, panch:_snapPanch});
     // Keep last 48h only
     const cutoff=Date.now()-48*3600*1000;
     hist=hist.filter(h=>h.ts>cutoff);
@@ -3621,6 +3667,109 @@ function _getGDelta(){
   }catch(e){return {d3h:null, d24h:null, t3h:null, t24h:null};}
 }
 
+// v88.8.83-fp162: per-component day-over-day diff — запит Kyrylo "Formula Audit":
+// показати Kp/Тітхі/Затемнення/Панчанга/Dst окремо, а не тільки total G. Без цього
+// будь-яка зміна фону виглядає як "алгоритм бреше". Знаходить ~24h-тому запис з
+// компонентами (старі записи без .ai просто пропускаються — не ламає стару історію).
+function _getComponentDelta(){
+  try{
+    const hist=JSON.parse(localStorage.getItem('g_history_v75')||'[]');
+    const withAi = hist.filter(h => h.ai && isFinite(h.kp));
+    if(withAi.length<1) return null;
+    const now=Date.now();
+    let best=null, bestDist=Infinity;
+    for(const h of withAi){
+      const d=Math.abs((now-h.ts)-24*3600*1000);
+      if(d<bestDist && d<8*3600*1000){bestDist=d;best=h;}
+    }
+    if(!best) return null;
+    const _ui = window.__uiState || {};
+    const curAi = _ui.ai || {};
+    const curKp = isFinite(_ui.kpNow) ? _ui.kpNow : null;
+    if(curKp==null) return null;
+    const _d = (a,b) => (isFinite(a) && isFinite(b)) ? (a-b) : null;
+    return {
+      ageH: Math.round((now-best.ts)/3600000),
+      kp:  _d(curKp, best.kp),
+      Li:  _d(curAi.Li, best.ai.Li),
+      Mi:  _d(curAi.Mi, best.ai.Mi),
+      ei:  _d(curAi.ei, best.ai.ei),
+      Pi:  _d(curAi.Pi, best.ai.Pi),
+      Di:  _d(curAi.Di, best.ai.Di)
+    };
+  }catch(e){ return null; }
+}
+function _renderComponentDeltaCard(){
+  const box = document.getElementById('componentDeltaCard');
+  if(!box) return;
+  const d = _getComponentDelta();
+  if(!d){ box.style.display='none'; return; }
+  const rows = [
+    ['Kp', d.kp], ['Тітхі (Lᵢ)', d.Li], ['Затемнення (Mᵢ)', d.Mi],
+    ['Події (eᵢ)', d.ei], ['Панчанга (Pᵢ)', d.Pi], ['Dst-буря (Dᵢ)', d.Di]
+  ].filter(([_,v]) => v!=null && Math.abs(v) >= 0.05);
+  if(!rows.length){ box.style.display='none'; return; }
+  const _fmt = v => (v>0?'+':'') + v.toFixed(2);
+  const _col = v => v>0 ? 'var(--ok)' : v<0 ? '#ff8866' : 'var(--muted)';
+  box.style.display = 'block';
+  box.innerHTML = `
+    <div style="padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:rgba(11,18,32,.35);font-size:11px">
+      <div style="font-weight:700;color:var(--text2);margin-bottom:6px">🔍 Чому змінилось за ~${d.ageH}г — по факторах</div>
+      ${rows.map(([label,v]) => `<div style="display:flex;justify-content:space-between;padding:2px 0"><span style="color:var(--dim)">${label}</span><span style="color:${_col(v)};font-weight:600">${_fmt(v)}</span></div>`).join('')}
+      <div style="margin-top:4px;font-size:10px;color:var(--faint)">Кожен рядок — незалежний фактор. Кілька факторів можуть змінитись одночасно й випадково збігтись.</div>
+    </div>`;
+}
+
+// v88.8.84-fp163: Change Log — запит Kyrylo "щоб було видно, що прогноз змінився через
+// нові дані, а не через помилку". Без нового окремого логера (менший ризик) — витягує
+// значні стрибки (|ΔG|≥0.8 або |ΔKp|≥0.8 між сусідніми точками) з уже існуючої історії
+// g_history_v75, яку веде _saveGHistory() на кожен тік.
+const _PANCH_LABEL = {tithi:'Тітхі', nakshatra:'Накшатра', yoga:'Йога', karana:'Карана'};
+function _renderChangeLog(){
+  const box = document.getElementById('changeLogCard');
+  if(!box) return;
+  try{
+    const hist = JSON.parse(localStorage.getItem('g_history_v75') || '[]');
+    if(hist.length < 2){ box.style.display='none'; return; }
+    const events = [];
+    for(let i = 1; i < hist.length; i++){
+      const prev = hist[i-1], cur = hist[i];
+      const dG = isFinite(prev.g) && isFinite(cur.g) ? cur.g - prev.g : null;
+      const dKp = isFinite(prev.kp) && isFinite(cur.kp) ? cur.kp - prev.kp : null;
+      const panchChanges = [];
+      if(prev.panch && cur.panch){
+        ['tithi','nakshatra','yoga','karana'].forEach(k=>{
+          if(prev.panch[k] && cur.panch[k] && prev.panch[k] !== cur.panch[k]){
+            panchChanges.push({k, from:prev.panch[k], to:cur.panch[k]});
+          }
+        });
+      }
+      if((dG!=null && Math.abs(dG)>=0.8) || (dKp!=null && Math.abs(dKp)>=0.8) || panchChanges.length){
+        events.push({ts:cur.ts, dG, dKp, kpFrom:prev.kp, kpTo:cur.kp, gFrom:prev.g, gTo:cur.g, panchChanges});
+      }
+    }
+    if(!events.length){ box.style.display='none'; return; }
+    const last5 = events.slice(-5).reverse();
+    const _fmtT = ts => new Date(ts).toLocaleTimeString('uk-UA',{hour:'2-digit',minute:'2-digit'});
+    const _fmt2 = v => isFinite(v) ? v.toFixed(2) : '?';
+    box.style.display = 'block';
+    box.innerHTML = `
+      <details style="padding:8px 10px;border:1px solid var(--border);border-radius:10px;background:rgba(11,18,32,.3);font-size:11px">
+        <summary style="cursor:pointer;color:var(--text2);font-weight:700;list-style:none">📜 Change Log — останні значні зміни (${events.length})</summary>
+        <div style="margin-top:6px">
+          ${last5.map(e => `
+            <div style="padding:4px 0;border-top:1px solid rgba(30,42,68,.4)">
+              <span style="color:var(--dim)">${_fmtT(e.ts)}</span>
+              ${e.kpFrom!=null && e.kpTo!=null ? ` · Kp ${_fmt2(e.kpFrom)} → ${_fmt2(e.kpTo)}` : ''}
+              ${e.gFrom!=null && e.gTo!=null ? ` · G ${_fmt2(e.gFrom)} → ${_fmt2(e.gTo)}` : ''}
+              ${e.panchChanges && e.panchChanges.length ? e.panchChanges.map(pc=>`<br><span style="color:var(--faint);font-size:10px">${_PANCH_LABEL[pc.k]||pc.k}: ${_escHtml(pc.from)} → ${_escHtml(pc.to)}</span>`).join('') : ''}
+            </div>`).join('')}
+          <div style="margin-top:4px;font-size:10px;color:var(--faint)">Показано останні 5 з ${events.length} стрибків ≥0.8 за 48г. Це реальні зміни вхідних даних (NOAA), не збій програми.</div>
+        </div>
+      </details>`;
+  }catch(e){ box.style.display='none'; }
+}
+
 document.addEventListener('DOMContentLoaded',()=>{
   setTimeout(()=>{initHeroField();initWowParticles();applyWowFromG()},900);
   // v87.16 + v87.56 Phase 2.1: dev controls — показувати #devMenu при ?dev=1 або localStorage flag
@@ -3696,7 +3845,7 @@ try{
 if (false && 'serviceWorker' in navigator) {
   // fp138: SW disabled emergency; auto-unregister below is replaced by early cleanup.
   // fp106: auto-unregister old SW versions on load
-  const _swKey = 'g-index-shell-v88-8-77-fp156';
+  const _swKey = 'g-index-shell-v88-8-86-fp165';
   navigator.serviceWorker.getRegistrations().then(regs => {
     regs.forEach(r => {
       if(!r.active || !r.active.scriptURL.includes(_swKey)) r.unregister();
@@ -5280,9 +5429,26 @@ function renderUnifiedIndicesPanel(){
     const p = (typeof computePanchanga==='function') ? computePanchanga(now) : null;
     if(!p) { box.style.display='none'; return; }
     box.style.display='block';
+    // v88.8.86-fp165: снепшот НАЗВ (не тільки чисел) для Change Log — запит Kyrylo/аудит:
+    // "Тітхі: Dashami → Ekadashi", а не просто "-0.8". _saveGHistory() підхопить це поле.
+    window.__lastPanchNames = {
+      tithi: p.tithi?.name || null, nakshatra: p.nakshatra?.name || null,
+      yoga: p.yoga?.name || null, karana: p.karana?.name || null
+    };
 
     const rowEl = el('uipPanchangaRow');
     if(rowEl){
+      // v88.8.82-fp161: ⓘ-підказка на кожен індекс — що це і який традиційний вплив
+      // (запит Kyrylo: наведення на символ → буква "і" з поясненням). Джерело формулювань:
+      // Posibnyk_Part2_Jyotish.docx + BPHS (vol1/2), той самий канон що вже використовує
+      // дашборд для рекомендацій "краща дія". Це традиційна ведична асоціація,
+      // НЕ медичний діагноз — так само як і решта дашборду.
+      const EXPLAIN = {
+        'Тітхі': 'Місячний день (1 з 30, за кутовою відстанню Місяць−Сонце). Традиційно пов\'язується із загальним емоційним тонусом дня. Несприятливі тітхі (4, 6, 8, 9, 12, 14, 29, 30) вважаються менш вдалими для нових справ.',
+        'Накшатра': '1 з 27 "місячних сузір\'їв" (по 13°20\'), де зараз Місяць. У ведичній традиції впливає на характер дня — окремі накшатри вважаються сприятливими для конкретних типів справ (переговори, лікування, подорожі тощо).',
+        'Йога': 'Сума довгот Сонця+Місяця, поділена на 27 частин. Показує загальне поєднання сонячної й місячної енергії дня — окремі йоги традиційно сприятливі, окремі несприятливі.',
+        'Карана': 'Половина тітхі (60 у місяці). Рухомі карани (Бава/Балава/Каулава/Тайтіла/Ваніджа) традиційно сприятливі для активних справ; нерухомі — для завершення й стабільних справ.'
+      };
       const items = [
         ['Тітхі', p.tithi?.name, p.tithi?.score],
         ['Накшатра', p.nakshatra?.name, p.nakshatra?.score],
@@ -5292,8 +5458,11 @@ function renderUnifiedIndicesPanel(){
       rowEl.innerHTML = items.map(([label, name, score])=>{
         if(name==null) return '';
         const col = score>0 ? 'var(--ok)' : score<0 ? '#ff8866' : 'var(--muted)';
+        const expl = EXPLAIN[label] || '';
         return `<div style="padding:5px 6px;border-radius:6px;background:rgba(255,255,255,.03);text-align:center">
-          <div style="font-size:8px;color:var(--faint);text-transform:uppercase">${label}</div>
+          <div style="font-size:8px;color:var(--faint);text-transform:uppercase">${label}
+            <span class="hint" tabindex="0" style="cursor:help;color:var(--faint);border:1px solid var(--faint);border-radius:50%;width:11px;height:11px;display:inline-flex;align-items:center;justify-content:center;font-size:7px;font-style:normal;margin-left:2px;vertical-align:middle">і<span class="hint-pop">${_escHtml(expl)}<br><span style="opacity:.6;font-size:10px">Традиційна ведична асоціація, не медичний діагноз.</span></span></span>
+          </div>
           <div style="font-size:11px;font-weight:600;color:${col}">${name}</div>
         </div>`;
       }).join('');
@@ -6386,33 +6555,33 @@ async function fetchTextWithCORS(url, validate){
   // 0. Cloudflare Worker (власний proxy — найнадійніший, завжди перший)
   if (NOAA_WORKER_URL && !NOAA_WORKER_URL.includes('YOUR_USERNAME')) {
     try{
-      const r0 = await fetchWithTimeout(NOAA_WORKER_URL+encodeURIComponent(url), 6000);
+      const r0 = await fetchWithTimeout(NOAA_WORKER_URL+encodeURIComponent(url), 3000);
       if(r0.ok){ const _t = await r0.text(); if(_ok(_t)) return _t; }
     }catch(e){ console.warn('[CORS] worker fail:', e.message); }
   }
   // 1. Прямий fetch (NOAA JSON підтримує CORS)
   try{
-    const r = await fetchWithTimeout(url, 10000);
+    const r = await fetchWithTimeout(url, 4000);
     if(r.ok){ const _t = await r.text(); if(_ok(_t)) return _t; }
   }catch(e){ console.warn('[CORS] direct fail:', _shortUrl, e.message); }
   // 2. allorigins
   try{
-    const r2 = await fetchWithTimeout('https://api.allorigins.win/raw?url='+encodeURIComponent(url), 5000);
+    const r2 = await fetchWithTimeout('https://api.allorigins.win/raw?url='+encodeURIComponent(url), 2500);
     if(r2.ok){ const _t = await r2.text(); if(_ok(_t)) return _t; }
   }catch(e){ console.warn('[CORS] allorigins fail:', e.message); }
   // 3. corsproxy.io
   try{
-    const r3 = await fetchWithTimeout('https://corsproxy.io/?url='+encodeURIComponent(url), 5000);
+    const r3 = await fetchWithTimeout('https://corsproxy.io/?url='+encodeURIComponent(url), 2500);
     if(r3.ok){ const _t = await r3.text(); if(_ok(_t)) return _t; }
   }catch(e){ console.warn('[CORS] corsproxy.io fail:', e.message); }
   // 4. corsfix.com
   try{
-    const r4 = await fetchWithTimeout('https://proxy.corsfix.com/?'+encodeURIComponent(url), 5000);
+    const r4 = await fetchWithTimeout('https://proxy.corsfix.com/?'+encodeURIComponent(url), 2500);
     if(r4.ok){ const _t = await r4.text(); if(_ok(_t)) return _t; }
   }catch(e){ console.warn('[CORS] corsfix fail:', e.message); }
   // 5. codetabs
   try{
-    const r5 = await fetchWithTimeout('https://api.codetabs.com/v1/proxy?quest='+encodeURIComponent(url), 5000);
+    const r5 = await fetchWithTimeout('https://api.codetabs.com/v1/proxy?quest='+encodeURIComponent(url), 2500);
     if(r5.ok){ const _t = await r5.text(); if(_ok(_t)) return _t; }
   }catch(e){ console.warn('[CORS] codetabs fail:', e.message); }
   throw new Error('Всі проксі недоступні: '+_shortUrl);
@@ -12635,6 +12804,14 @@ function _renderHeroHierarchy(){
         gHtml = `<span style="font-weight:800;color:${col}">${g>=0?'+':''}${g.toFixed(2)}</span> <span style="color:var(--muted)">${word}</span>${kpTxt}${_breakdown}${_scaleNote}`;
       }
     }catch(e){ /* silent */ }
+    // v88.8.80-fp159: якщо решта пайплайну ВЖЕ має дані (G_now визначений), а decHtml
+    // усе ще на дефолтному "завантаження…" — це означає, що Engine/PDF ГЕНУЇННО відсутній
+    // (V3 freeze / немає бюлетеня на сьогодні), а НЕ "ще не встиг завантажитись". Раніше
+    // цей рядок міг залипати на "завантаження…" назавжди, створюючи враження зламаного
+    // рендеру поруч із Hero, що вже показує "можна діяти" з живих даних — плутанина.
+    if (decHtml.includes('завантаження') && isFinite((window.__uiState||{}).gNow)) {
+      decHtml = '<span style="color:var(--faint)">PDF/Engine недоступний на сьогодні — Hero нижче показує live-фон, НЕ вердикт дня</span>';
+    }
     // 3) Якість даних — dataMode (live/partial/scenario/offline)
     // fp79 FIX: використовуємо resolveDataModeExtended() щоб розрізнити 'estimated' (Kp ≤12h, нормальний
     // 3-годинний цикл NOAA) від 'partial' (справжній delay). Раніше обидва показували "DELAYED".
@@ -15762,6 +15939,8 @@ function syncV702UI(){
   // (раніше renderPersonal викликався тільки при input-change → при G-tick глобальний ризик не синхронізувався)
   try{if(typeof renderPersonal==='function')renderPersonal();}catch(e){console.warn("renderPersonal:",e);}
   try{const _gNow=_v73G();if(isFinite(_gNow))_saveGHistory(_gNow);}catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+  try{ _renderComponentDeltaCard(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+  try{ _renderChangeLog(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
   // v87.19 U4: render best/worst days after history save
   try{ renderBestWorstDays(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
   // v87.90: provenance ledger render
@@ -19047,7 +19226,24 @@ function updateFreshnessBadge() {
 // ========================= SCIENCE BAR UPDATE =========================
 function updateScienceBar(kp, ap, sn, ai, phaseName, phaseDeg, f107) {
   const _el = id => document.getElementById(id) || {textContent:'',innerHTML:''};
-  if(isFinite(kp)) _el('sciKp').textContent = kp.toFixed(2);
+  if(isFinite(kp)) {
+    const kpEl = _el('sciKp');
+    kpEl.textContent = kp.toFixed(2);
+    // v88.8.79-fp158: Kp∈[4,5) — "підвищена активність", нижче офіційного G1(Kp≥5),
+    // але це саме поріг, на якому практичні UAV/GPS-додатки (UAV Forecast та подібні)
+    // вже сповіщають користувача — GPS/радіозв'язок може деградувати ДО формального G1.
+    // Суто інформаційний бейдж, НЕ чіпає G-формулу/engine/storm-guard (kp>=5 логіка нижче).
+    if (kp >= 5) {
+      kpEl.style.color = '';
+      kpEl.title = '';
+    } else if (kp >= 4) {
+      kpEl.style.color = '#ffb347';
+      kpEl.title = 'Kp≥4: підвищена геомагнітна активність (нижче офіційного G1=Kp5, але GPS/радіозв\'язок вже можуть деградувати — так само сповіщають UAV/дрон-додатки)';
+    } else {
+      kpEl.style.color = '';
+      kpEl.title = '';
+    }
+  }
   if(isFinite(ap))  _el('sciAp').textContent = ap;
   if(sn != null)    _el('sciSn').textContent = sn;
   // F10.7 Solar Flux
@@ -20572,6 +20768,107 @@ const GChrono = (function(){
 // Returns published alerts: G-storms (G1-G5), solar flares (M/X), radio blackouts.
 // Cache 1h у localStorage. Не блокує main render.
 // ═══════════════════════════════════════════════════════════════════════════
+// v88.8.82-fp161: Варіант B з роадмапу "раннє попередження" — Bz (напрям міжпланетного
+// магнітного поля) + швидкість сонячного вітру з супутника DSCOVR (точка L1, 1.5 млн км
+// від Землі). Це дає 15-60хв попередження ДО того, як Kp відреагує — Kp сам по собі
+// ретроспективний (готовий 3-годинний зріз), не попереджувальний. Суто інформаційний шар,
+// НЕ чіпає G-формулу/engine/freeze.
+const SolarWind = (function(){
+  const URL_MAG = 'https://services.swpc.noaa.gov/products/solar-wind/mag-1-day.json';
+  const URL_PLASMA = 'https://services.swpc.noaa.gov/products/solar-wind/plasma-1-day.json';
+  const LS_KEY = 'gindex_solarwind_v1';
+  const TTL_MS = 5 * 60 * 1000; // 5хв — швидкозмінні дані, коротший TTL ніж alerts
+
+  function _lastValidRow(rows){
+    // rows[0] = заголовок, далі дані. Беремо останній рядок без null/порожніх значень.
+    if(!Array.isArray(rows) || rows.length < 2) return null;
+    for(let i = rows.length - 1; i >= 1; i--){
+      const r = rows[i];
+      if(r && r.every(v => v !== null && v !== '')) return r;
+    }
+    return null;
+  }
+
+  async function fetchLatest(){
+    try {
+      const cached = JSON.parse(localStorage.getItem(LS_KEY) || 'null');
+      if(cached && (Date.now() - cached.ts) < TTL_MS) return cached.data;
+    } catch(e){}
+
+    try {
+      const [magTxt, plasmaTxt] = await Promise.all([
+        fetchTextWithCORS(URL_MAG),
+        fetchTextWithCORS(URL_PLASMA)
+      ]);
+      const magRows = JSON.parse(magTxt);
+      const plasmaRows = JSON.parse(plasmaTxt);
+      const magRow = _lastValidRow(magRows);
+      const plasmaRow = _lastValidRow(plasmaRows);
+      if(!magRow || !plasmaRow) throw new Error('no valid rows');
+      // mag: [time_tag, bx_gsm, by_gsm, bz_gsm, lon_gsm, lat_gsm, bt]
+      // plasma: [time_tag, density, speed, temperature]
+      const data = {
+        time: magRow[0],
+        bz: parseFloat(magRow[3]),
+        bt: parseFloat(magRow[6]),
+        speed: parseFloat(plasmaRow[2]),
+        density: parseFloat(plasmaRow[1])
+      };
+      try { localStorage.setItem(LS_KEY, JSON.stringify({ts: Date.now(), data})); } catch(e){}
+      return data;
+    } catch(e){
+      console.warn('[SolarWind] fetch failed:', e.message);
+      try {
+        const stale = JSON.parse(localStorage.getItem(LS_KEY) || 'null');
+        if(stale) return stale.data;
+      } catch(_){}
+      return null;
+    }
+  }
+
+  return { fetchLatest };
+})();
+
+function _renderSolarWindBadge(data){
+  const box = document.getElementById('solarWindBadge');
+  if(!box) return;
+  if(!data || !isFinite(data.bz) || !isFinite(data.speed)){
+    box.style.display = 'none';
+    return;
+  }
+  // Раннє попередження: південний (від'ємний) Bz + швидкий вітер = ризик росте
+  // ДО того, як Kp це покаже. Пороги — загальновживані в space weather com'юніті
+  // (не наукова точна межа, орієнтовний рівень).
+  let level, color, note;
+  if (data.bz <= -10 && data.speed >= 500) {
+    level = 'ВИСОКИЙ'; color = '#ff6b6b';
+    note = 'Південний Bz + швидкий вітер — умови сприятливі для бурі найближчими годинами, ще ДО зростання Kp.';
+  } else if (data.bz <= -5 || data.speed >= 500) {
+    level = 'ПОМІТНИЙ'; color = '#ffb347';
+    note = 'Один із факторів (південний Bz або швидкий вітер) підвищений — варто стежити.';
+  } else {
+    level = 'НИЗЬКИЙ'; color = '#9bd49e';
+    note = 'IMF і швидкість вітру в спокійному діапазоні.';
+  }
+  const minsAgo = data.time ? Math.round((Date.now() - new Date(data.time.replace(' ','T')+'Z').getTime())/60000) : null;
+  box.style.display = 'block';
+  box.innerHTML = `
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid ${color}55;border-radius:8px;background:${color}10;font-size:11px">
+      <span>🌊</span>
+      <span style="font-weight:700;color:${color}">${level}</span>
+      <span style="color:var(--dim)">Bz ${data.bz>=0?'+':''}${data.bz.toFixed(1)}nT · вітер ${Math.round(data.speed)}км/с${minsAgo!=null && minsAgo<60 ? ' · '+minsAgo+'хв тому' : ''}</span>
+      <span class="hint" tabindex="0" style="cursor:help;color:var(--faint);border:1px solid var(--faint);border-radius:50%;width:11px;height:11px;display:inline-flex;align-items:center;justify-content:center;font-size:7px;font-style:normal;margin-left:auto;flex:0 0 auto">і<span class="hint-pop">${_escHtml(note)}<br><br>Bz — напрям міжпланетного магнітного поля (супутник DSCOVR, точка L1). Південний (від'ємний) Bz "відкриває" магнітосферу Землі для сонячного вітру — це попереджає про бурю за 15-60хв ДО того, як Kp відреагує (Kp — ретроспективний 3-год індекс, не прогноз).<br><span style="opacity:.6;font-size:10px">Джерело: NOAA SWPC DSCOVR real-time. Довідковий рівень, не точна наукова межа.</span></span></span>
+    </div>`;
+}
+
+// Trigger initial fetch (без окремого setInterval — щоб не додавати ще один
+// паралельний цикл фетчів поверх основного loadAll(); v88.8.83-fp162: прибрано
+// після аудиту "занадто багато одночасних fetch" — 5хв TTL кешу вистачає, оновлення
+// відбудеться природньо при наступному ручному/авто-оновленні сторінки)
+setTimeout(() => {
+  try { SolarWind.fetchLatest().then(d => { window.__solarWind = d; _renderSolarWindBadge(d); }); } catch(e){}
+}, 3500);
+
 const NoaaEvents = (function(){
   const URL_ALERTS = 'https://services.swpc.noaa.gov/products/alerts.json';
   const LS_KEY = 'gindex_noaa_events_v1';
@@ -20650,8 +20947,54 @@ setTimeout(() => {
       if (typeof _applyStormGuardDOM === 'function') _applyStormGuardDOM();
       if (typeof _patchStaleLoadingDOM === 'function') _patchStaleLoadingDOM();
     } catch(_e) { /* silent */ }
+    // v88.8.81-fp160: показати банер, якщо є реальна подія за останні 48г
+    try { _renderNoaaAlertBanner(ev); } catch(_e) { /* silent */ }
   }); } catch(e){}
 }, 3000);
+
+// v88.8.81-fp160: видимий банер для NOAA real-time alerts (Варіант A з роадмапу
+// "раннє попередження" — дані вже фетчились, просто ніде не показувались назовні).
+// Показує НАЙНОВІШУ подію за останні 48г, якщо вона є. Не чіпає G-формулу/engine —
+// суто інформаційний шар.
+const _NOAA_LEVEL_STYLE = {
+  geomagnetic: { icon:'🧲', label:'Геомагнітна буря' },
+  flare:       { icon:'☀️', label:'Спалах на Сонці' },
+  radio:       { icon:'📻', label:'Радіозавади' },
+  radiation:   { icon:'☢️', label:'Радіаційний шторм' },
+  other:       { icon:'ℹ️', label:'Подія' }
+};
+function _noaaSeverityColor(level){
+  // G/M/X/R/S завжди мають цифру в кінці — беремо як грубу оцінку тяжкості 1-5
+  const n = parseInt((level||'').replace(/[^0-9.]/g,''), 10) || 1;
+  if (n >= 4) return '#ff6b6b';   // критично
+  if (n >= 2) return '#ffb347';   // помітно
+  return '#9bd49e';               // низько, інформаційно
+}
+function _renderNoaaAlertBanner(events){
+  const box = document.getElementById('noaaAlertBanner');
+  if (!box) return;
+  const cutoff = Date.now() - 48*3600*1000;
+  const recent = (events || [])
+    .filter(e => e.issued && new Date(e.issued).getTime() >= cutoff)
+    .filter(e => e.type !== 'other') // 'other' занадто шумний для банера
+    .sort((a,b) => new Date(b.issued) - new Date(a.issued));
+  if (!recent.length) { box.style.display = 'none'; box.innerHTML = ''; return; }
+  const top = recent[0];
+  const meta = _NOAA_LEVEL_STYLE[top.type] || _NOAA_LEVEL_STYLE.other;
+  const color = _noaaSeverityColor(top.level);
+  const hoursAgo = Math.round((Date.now() - new Date(top.issued).getTime()) / 3600000);
+  const moreCount = recent.length - 1;
+  box.style.display = 'block';
+  box.innerHTML = `
+    <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:1px solid ${color}55;border-radius:10px;background:${color}14">
+      <span style="font-size:18px;line-height:1">${meta.icon}</span>
+      <div style="flex:1">
+        <div style="font-weight:700;color:${color}">${meta.label}${top.level ? ' '+top.level : ''} — офіційне сповіщення NOAA, не прогноз</div>
+        <div style="margin-top:2px;font-size:11px;color:var(--dim)">${_escHtml(top.summary || '')} · ${hoursAgo<1?'щойно':hoursAgo+'г тому'}${moreCount>0 ? ' · ще '+moreCount+' поді'+(moreCount===1?'я':'й')+' за 48г' : ''}</div>
+      </div>
+    </div>`;
+}
+function _escHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
 try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line20593';}catch(e){}
 </script>
