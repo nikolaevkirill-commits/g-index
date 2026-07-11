@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.88-fp167-ENGINE-SCORES-BOOT-FIX</title>
+  <title>G-Index — Космофізичний дашборд v88.8.87-fp166b-ROLLBACK-FROM-fp167</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -19666,30 +19666,17 @@ function bootGIndexOnce(_reason){
   try{ initLangToggle(); }catch(e){} cp(5);
   try{ initG2Watch(); }catch(e){} cp(6);
   try{ initSimpleMode(); }catch(e){} cp(7);
-  // fp167: loadEngineScores/loadExpertOverrides/loadDailyMaster/loadBulletinV2/
-  // loadChronoPanel had ZERO call sites anywhere in the file (confirmed via full
-  // orphan-function scan, 2026-07-11) — this is why "PDF/Engine недоступний"
-  // showed permanently regardless of engine_scores.json date coverage, and why
-  // the M2/M3/M4 regime/bulletin-v2/chrono cards never appeared. Loading them
-  // BEFORE loadAll() ensures _renderHeroHierarchy() (called multiple times
-  // inside loadAll) has real data on its first render, not just on some later
-  // manual refresh.
-  Promise.all([
-    (typeof loadEngineScores === 'function' ? loadEngineScores() : Promise.resolve()),
-    (typeof loadExpertOverrides === 'function' ? loadExpertOverrides() : Promise.resolve()),
-    (typeof loadDailyMaster === 'function' ? loadDailyMaster() : Promise.resolve()),
-    (typeof loadBulletinV2 === 'function' ? loadBulletinV2() : Promise.resolve()),
-    (typeof loadChronoPanel === 'function' ? loadChronoPanel() : Promise.resolve())
-  ]).catch(function(e){ if(window._DEBUG) console.warn('[fp167 boot data]', e); })
-    .finally(function(){
-      loadAll().catch(function(e){ if(window._DEBUG) console.warn('[fp167 boot loadAll]', e); });
-      try{ updateAutoRefStatus(); }catch(e){}
-      try{ if(typeof renderRegimeCards==='function') renderRegimeCards(); }catch(e){}
-      try{ if(typeof renderHeroRegimePill==='function') renderHeroRegimePill(); }catch(e){}
-      try{ if(typeof renderBulletinV2==='function') renderBulletinV2(); }catch(e){}
-      try{ if(typeof renderChronoPanel==='function') renderChronoPanel(); }catch(e){}
-    });
-  cp(8);
+  // fp166: fp148 diag confirmed loadAll() had ZERO automatic trigger anywhere
+  // in the file (static analysis 2026-07-11) — dashboard only ever showed a
+  // stale localStorage cache-paint (fp164) labeled "оновлюється..." that
+  // never actually updated. Restoring the real call here.
+  // fp167 (loadEngineScores/loadExpertOverrides boot-wiring) ROLLED BACK
+  // 2026-07-11 — caused a real page hang on live deploy, cause not yet
+  // isolated (jsdom simulation with realistic 564-entry engine_scores.json
+  // did NOT reproduce it — likely real-browser/network-timing specific).
+  // Investigate fresh in a new session before re-attempting.
+  loadAll().catch(function(e){ if(window._DEBUG) console.warn('[fp166 boot loadAll]', e); });
+  try{ updateAutoRefStatus(); }catch(e){} cp(8);
   cp('DONE-minimal-boot');
 }
 // fp138: start immediately after parser reaches this script, not after external resources finish.
