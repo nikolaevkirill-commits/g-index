@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.89-fp168-MINIMAL-ENGINE-FIX</title>
+  <title>G-Index — Космофізичний дашборд v88.8.90-fp169-BIRD-LEGEND-FIX</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -4689,6 +4689,10 @@ const GIndexPPProfile = {
     html += '<div></div>';
     for (let y=0;y<5;y++) html += `<div style="color:var(--faint);text-align:center;padding:2px">Д${y+1}</div>`;
     for (let y=0;y<5;y++) html += `<div style="color:var(--faint);text-align:center;padding:2px">Н${y+1}</div>`;
+    // v88.8.90-fp169: single-letter codes were AMBIGUOUS — "Помирає" (worst)
+    // and "Панує" (best) both start with "П", making the grid unreadable
+    // without color. Fixed to distinct 2-letter codes + added a legend.
+    const ACT_CODE_UA = {0:'Пм', 1:'Сп', 2:'Йд', 3:'Їс', 4:'Пн'}; // dying,sleeping,walking,eating,ruling
     for (let b=0;b<5;b++) {
       const isBirthRow = b === birthBirdId;
       html += `<div style="padding:3px 4px;color:${isBirthRow?'var(--accent)':'var(--text)'};font-weight:${isBirthRow?'700':'500'};display:flex;align-items:center;gap:3px"><span style="font-size:13px">${this.ICONS[b]}</span><span style="font-size:9px">${this.NAMES_UA[b]}</span></div>`;
@@ -4697,12 +4701,19 @@ const GIndexPPProfile = {
         for (let y=0;y<5;y++) {
           const act = getPakshiActivityForYama(b, y, weekday, isDay, isShukla);
           const isCurrentCell = !!(yamaInfo && yamaInfo.isDay===isDay && yamaInfo.yamaIdx===y && b===birthBirdId);
-          html += `<div title="${this.NAMES_UA[b]}: ${act.activityUa}" style="text-align:center;padding:3px 1px;background:${actColors[act.strength]}${isCurrentCell?'':'2e'};border:${isCurrentCell?'1.5px solid var(--accent)':'none'};border-radius:2px;font-size:8px;color:${isCurrentCell?'#fff':'var(--dim)'}">${act.activityUa[0]}</div>`;
+          html += `<div title="${this.NAMES_UA[b]}: ${act.activityUa}" style="text-align:center;padding:3px 1px;background:${actColors[act.strength]}${isCurrentCell?'':'2e'};border:${isCurrentCell?'1.5px solid var(--accent)':'none'};border-radius:2px;font-size:8px;color:${isCurrentCell?'#fff':'var(--dim)'}">${ACT_CODE_UA[act.strength] || act.activityUa[0]}</div>`;
         }
       }
     }
     html += '</div>';
-    html += `<div style="font-size:8px;color:var(--faint);margin-top:4px">Д=день, Н=ніч · жирний рядок — твій натальний птах · формула: Pulippani, скани стор.66-71 (Bright Half верифіковано)</div>`;
+    html += `<div style="font-size:8px;color:var(--faint);margin-top:4px">Д=день, Н=ніч (Д1-Д5/Н1-Н5 = 5 yama по 2г24хв від сходу/заходу) · жирний рядок — твій натальний птах · формула: Pulippani, скани стор.66-71 (Bright Half верифіковано)</div>`;
+    html += `<div style="font-size:8px;color:var(--faint);margin-top:2px;display:flex;gap:8px;flex-wrap:wrap">
+      <span><span style="display:inline-block;width:8px;height:8px;background:${actColors[0]};border-radius:2px;vertical-align:middle"></span> Пм=Помирає (найслабше)</span>
+      <span><span style="display:inline-block;width:8px;height:8px;background:${actColors[1]};border-radius:2px;vertical-align:middle"></span> Сп=Спить</span>
+      <span><span style="display:inline-block;width:8px;height:8px;background:${actColors[2]};border-radius:2px;vertical-align:middle"></span> Йд=Йде</span>
+      <span><span style="display:inline-block;width:8px;height:8px;background:${actColors[3]};border-radius:2px;vertical-align:middle"></span> Їс=Їсть</span>
+      <span><span style="display:inline-block;width:8px;height:8px;background:${actColors[4]};border-radius:2px;vertical-align:middle"></span> Пн=Панує (найсильніше)</span>
+    </div>`;
 
     el.innerHTML = html;
     el.style.display = 'block';
@@ -19675,20 +19686,17 @@ function bootGIndexOnce(_reason){
   // isolated (jsdom simulation with realistic 564-entry engine_scores.json
   // did NOT reproduce it — likely real-browser/network-timing specific).
   // Investigate fresh in a new session before re-attempting.
-  // fp168: MINIMAL retry after fp167 hang (rolled back to fp166b). Only the
-  // 2 CONFIRMED-CRITICAL loaders (loadEngineScores/loadExpertOverrides — root
-  // cause of permanent "PDF/Engine недоступний"), SEQUENTIAL not parallel,
-  // NO extra render calls (renderRegimeCards etc. already run inside loadAll
-  // itself). Deliberately NOT re-adding loadDailyMaster/loadBulletinV2/
-  // loadChronoPanel or the 4 render calls from fp167 — those are still
-  // suspect for the hang and need separate, careful investigation.
-  (async function fp168BootData(){
-    try{ if(typeof loadEngineScores === 'function') await loadEngineScores(); }
-    catch(e){ if(window._DEBUG) console.warn('[fp168 loadEngineScores]', e); }
-    try{ if(typeof loadExpertOverrides === 'function') await loadExpertOverrides(); }
-    catch(e){ if(window._DEBUG) console.warn('[fp168 loadExpertOverrides]', e); }
-    loadAll().catch(function(e){ if(window._DEBUG) console.warn('[fp168 boot loadAll]', e); });
-  })();
+  // fp169: fp168 (sequential loadEngineScores/loadExpertOverrides at boot)
+  // ALSO hung the real page (2026-07-12 morning) despite passing jsdom
+  // simulation. Two consecutive boot-time attempts (parallel fp167, sequential
+  // fp168) both hung in the real browser but NOT in simulation — strongly
+  // suggests the cause is something jsdom cannot model: most likely
+  // interaction with sw.js (network-first SW added same session, intercepts
+  // the engine_scores.json fetch) or real CORS/network timing. NOT retrying
+  // boot-time engine score loading blindly a third time. See memory for
+  // diagnostic plan (test in Incognito = no SW, isolate before next attempt).
+  loadAll().catch(function(e){ if(window._DEBUG) console.warn('[fp169 boot loadAll]', e); });
+  try{ updateAutoRefStatus(); }catch(e){}
   try{ updateAutoRefStatus(); }catch(e){} cp(8);
   cp('DONE-minimal-boot');
 }
