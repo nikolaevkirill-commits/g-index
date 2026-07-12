@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.86-fp165-NAMED-CHANGELOG</title>
+  <title>G-Index — Космофізичний дашборд v88.8.87-fp166b-ROLLBACK-FROM-fp167</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1374,7 +1374,7 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
         <button class="lang-btn" id="btnG2Watch" style="border-color:var(--faint);color:var(--dim);font-size:12px" title="Симулятор G — внизу сторінки" aria-label="Відкрити симулятор G">🧮</button>
         <div class="autoref-bar" style="margin-top:0">
           <span>Авто:</span>
-          <select class="autoref-sel" id="selInterval">
+          <select class="autoref-sel" id="selInterval" onchange="updateAutoRefStatus()">
             <option value="0">Вимк.</option>
             <option value="5">5 хв</option>
             <option value="10" selected>10 хв</option>
@@ -5243,6 +5243,24 @@ window.showToast = showToast;
 window.showToastConfirm = showToastConfirm;
 const startUTC = d => new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
 const noonUTC  = d => new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 12, 0, 0));
+// fp166: Panchanga sunrise timing fix (Kyrylo request 2026-07-11).
+// Sunrise, not noon, is the traditional Vedic day-boundary convention that
+// Tarita's bulletins use (drikpanchang-style). This replaces noonUTC as the
+// day-anchor for all Ai/Panchanga score computations across the dashboard
+// (today card, 3-day table, 27-day chart, heat-strip, sigma-year calibration
+// — 27 call sites, see fp166 changelog). Reuses the existing, already-tested
+// _calcSunRiseSet() (Astronomy Engine, real ephemeris) used elsewhere for
+// Rahu Kalam / Pakshi Pankti. Falls back to Kyiv approx sunrise (~03:51 UTC)
+// if the Astronomy lib or geolocation isn't available yet.
+const sunriseUTC = d => {
+  try {
+    if (typeof _calcSunRiseSet === 'function') {
+      const sr = _calcSunRiseSet(d);
+      if (sr && sr.sunrise instanceof Date && !isNaN(sr.sunrise.getTime())) return sr.sunrise;
+    }
+  } catch(e) { /* fall through to fallback */ }
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 3, 51, 0));
+};
 // v87.90 fix: localWeekday — день тижня у локальній зоні (для Vara/Hora).
 // Раніше використовувався dateUTC.getUTCDay() — це баг для юзерів, які перетинають межі дня:
 // Київ 02:00 ночі понеділка = UTC 23:00 неділі → getUTCDay()=0 (Sun), а має бути 1 (Mon).
@@ -7219,7 +7237,7 @@ function renderAuditCard(opts){
     if(!_R && window.__p3RahuCache && window.__p3RahuCache.rahu && window.__p3RahuCache.rahu.start)
       _R = window.__p3RahuCache.rahu;
     if(!_R && typeof computePanchanga === 'function'){
-      const _pc = computePanchanga(noonUTC(new Date()));
+      const _pc = computePanchanga(sunriseUTC(new Date()));
       if(_pc && _pc.rahu && _pc.rahu.start) _R = _pc.rahu;
     }
     if(_R && _R.start && _R.end) rahuStr = `${_R.start}–${_R.end}`;
@@ -7770,7 +7788,7 @@ function _computeAiRaw(dateTimeUTC, kp=0){
     // (узгоджено з Panchanga карткою, ant-action, decision timing).
     // Раніше: computePanchanga(dateTimeUTC) → tithi міг не збігатися з картою.
     // Це призводило до Pᵢ-стрибків коли Hero перетинала межу tithi всередині дня.
-    const _dayRef = (typeof noonUTC === 'function') ? noonUTC(dateTimeUTC) : dateTimeUTC;
+    const _dayRef = (typeof sunriseUTC === 'function') ? sunriseUTC(dateTimeUTC) : dateTimeUTC;
     const panch = computePanchanga(_dayRef);
     // v30.1: часткові Tithi scores додані в Pi
     // Amavasya(idx=29,score=-3) і Purnima(idx=14,score=0,нейтральна v14.2) виключені — вже в Li
@@ -8500,7 +8518,7 @@ function build27dComputed(rows, last3D){
     const ds = fmtDate(r.date);
     const kpUsed = override3D.has(ds) ? override3D.get(ds) : r.kpMax;
     const isOverridden = override3D.has(ds) && kpUsed !== r.kpMax;
-    const ai = computeAi(noonUTC(r.date), kpUsed);
+    const ai = computeAi(sunriseUTC(r.date), kpUsed);
     // v26: F10.7 — лише індикатор у tooltip, НЕ впливає на G (єдина формула: G = Kp − 2 + Ai)
     const f107mod = computeF107Modifier(r.flux);
     const G  = kpUsed - 2 + ai.Ai;
@@ -8841,8 +8859,8 @@ function renderComparePeriods(){
     for(let k=-3;k<=3;k++){
       const dNow = addDays(todayUTC, k);
       const dPrev = new Date(Date.UTC(dNow.getUTCFullYear()-1, dNow.getUTCMonth(), dNow.getUTCDate()));
-      const aiNow  = computeAi(noonUTC(dNow),  0);
-      const aiPrev = computeAi(noonUTC(dPrev), 0);
+      const aiNow  = computeAi(sunriseUTC(dNow),  0);
+      const aiPrev = computeAi(sunriseUTC(dPrev), 0);
       days.push({ dNow, dPrev, aiNow: aiNow.Ai, aiPrev: aiPrev.Ai });
     }
     _renderCmpBlock(wrap, days, {
@@ -8868,8 +8886,8 @@ function renderComparePeriods(){
       const dsPrev = fmtDate(dPrev);
       const kpNow  = kpMap ? kpMap.get(dsNow)  : null;
       const kpPrev = kpMap ? kpMap.get(dsPrev) : null;
-      const aiNow  = computeAi(noonUTC(dNow),  kpNow  || 0);
-      const aiPrev = computeAi(noonUTC(dPrev), kpPrev || 0);
+      const aiNow  = computeAi(sunriseUTC(dNow),  kpNow  || 0);
+      const aiPrev = computeAi(sunriseUTC(dPrev), kpPrev || 0);
       // Повний G = Kp − 2 + ΣAᵢ; якщо Kp немає → тільки Σ (позначимо)
       const gNow  = (kpNow  != null) ? (kpNow  - 2 + aiNow.Ai)  : aiNow.Ai;
       const gPrev = (kpPrev != null) ? (kpPrev - 2 + aiPrev.Ai) : aiPrev.Ai;
@@ -9453,7 +9471,7 @@ function renderCurrentPanel(){
       // v87.33: aiNoon рахуємо для того самого дня, що `nowUTC`, а не `todayRow.date` —
       // на межі доби todayRow може бути ВЧОРА (3-day forecast ще не оновив), тоді diff misleading.
       try{
-        const aiNoon = computeAi(noonUTC(nowUTC), kNowForAi);
+        const aiNoon = computeAi(sunriseUTC(nowUTC), kNowForAi);
         ai._noonDelta = {
           Ai: Math.round((ai.Ai - aiNoon.Ai) * 10) / 10,
           ei: Math.round((ai.ei - aiNoon.ei) * 10) / 10,
@@ -9468,7 +9486,7 @@ function renderCurrentPanel(){
     // v87.30: fallback теж на nowUTC (не noonUTC) для консистентної семантики Hero
     ai = computeAi(nowUTC, kUse ?? 0);
     try{
-      const aiNoon = computeAi(noonUTC(nowUTC), kUse ?? 0);
+      const aiNoon = computeAi(sunriseUTC(nowUTC), kUse ?? 0);
       ai._noonDelta = {
         Ai: Math.round((ai.Ai - aiNoon.Ai) * 10) / 10,
         ei: Math.round((ai.ei - aiNoon.ei) * 10) / 10,
@@ -10396,7 +10414,7 @@ function computePanchangaState(dateUTC){
   // Kp/Ai for G context colours
   const _kpEarly = (lastWWV && isFinite(lastWWV.kNow)) ? lastWWV.kNow
                  : (last3D && last3D.days && last3D.days[0] ? last3D.days[0].kpMax : 0);
-  const _aiEarly = computeAi(noonUTC(dateUTC), _kpEarly);
+  const _aiEarly = computeAi(sunriseUTC(dateUTC), _kpEarly);
   const _gEarly  = _kpEarly - 2 + _aiEarly.Ai;
   ctx.aiComponents = { Li: _aiEarly.Li, Mi: _aiEarly.Mi, ei: _aiEarly.ei, Pi: _aiEarly.Pi, Di: _aiEarly.Di || 0 };
 
@@ -10440,13 +10458,13 @@ function computePanchangaState(dateUTC){
 
   // Noon Ai for summary
   const _kpForPanch = _kpEarly;
-  const aiNow = computeAi(noonUTC(dateUTC), _kpForPanch);
+  const aiNow = computeAi(sunriseUTC(dateUTC), _kpForPanch);
   const pclOnly = cells.reduce((s,c)=>s+c.score, 0);
 
   // Discrepancy real-time vs noon
   let panchDiscrepancy = '';
   try {
-    const pNoon = computePanchanga(noonUTC(dateUTC));
+    const pNoon = computePanchanga(sunriseUTC(dateUTC));
     const diffs = [];
     if(p.yoga.name !== pNoon.yoga.name) diffs.push(`Yoga: зараз ${p.yoga.name}, на полудень ${pNoon.yoga.name}`);
     if(p.nakshatra.name !== pNoon.nakshatra.name) diffs.push(`Nak: зараз ${p.nakshatra.name}, на полудень ${pNoon.nakshatra.name}`);
@@ -10996,7 +11014,7 @@ function _renderPanchUpcoming(refDateUTC){
       let sum = 0, n = 0;
       last3D.days.forEach(d => {
         try {
-          const ai = computeAi(noonUTC(d.date), 0);
+          const ai = computeAi(sunriseUTC(d.date), 0);
           if(isFinite(ai.Pi)){ sum += ai.Pi; n++; }
         } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
       });
@@ -11665,7 +11683,7 @@ function renderDayForecast(last3D, kUse, ai) {
   const useRow = todayRow || (last3D && Array.isArray(last3D.days) && last3D.days[0]) || null;
   if (!useRow || !useRow.kp8 || !useRow.kp8.length) return;
   const kp8 = useRow.kp8;
-  const todayNoon = noonUTC(useRow.date);
+  const todayNoon = sunriseUTC(useRow.date);
   const slotLabels = ['00','03','06','09','12','15','18','21'];
   window._daySlots = [];
   for (let i = 0; i < kp8.length; i++) {
@@ -11678,7 +11696,7 @@ function renderDayForecast(last3D, kUse, ai) {
   // v87.9: якщо Панчанга вже рендерена раніше — оновити panchBestTime з новими slots
   try {
     if (document.getElementById('panchBestTime') && typeof _lastPanchCtx !== 'undefined' && _lastPanchCtx) {
-      renderPanchanga(noonUTC(new Date()));
+      renderPanchanga(sunriseUTC(new Date()));
     }
   } catch(e) { /* noop */ }
   // fp24: heat strip must re-render from same _daySlots as panchBestTime — avoids stale data-gval mismatch
@@ -11735,7 +11753,7 @@ function render3Day(parsed3){
     // v52: визначаємо kpMax ПЕРЕД computeAi — щоб ai і G використовували однаковий kp
     const kpMax = fmtDate(d.date) === fmtDate(new Date()) && lastWWV && isFinite(lastWWV.kNow)
       ? lastWWV.kNow : d.kpMax;
-    const ai = computeAi(noonUTC(d.date), kpMax ?? 0);
+    const ai = computeAi(sunriseUTC(d.date), kpMax ?? 0);
     const G = (isFinite(kpMax)? kpMax : 0) - 2 + ai.Ai;
     const isToday = fmtDate(d.date) === fmtDate(new Date());
     const _daySig3 = (typeof resolveDaySignal_v88825 === 'function') ? resolveDaySignal_v88825(d.date, G, kpMax, {isToday}) : null;
@@ -11795,7 +11813,7 @@ function render3Day(parsed3){
     const _todayStr = fmtDate(new Date());
     for(const d of days){
       const kpMax=fmtDate(d.date)===fmtDate(new Date())&&lastWWV&&isFinite(lastWWV.kNow)?lastWWV.kNow:d.kpMax;
-      const ai=computeAi(noonUTC(d.date),kpMax??0);
+      const ai=computeAi(sunriseUTC(d.date),kpMax??0);
       const G=(isFinite(kpMax)?kpMax:0)-2+ai.Ai;
       const isToday=fmtDate(d.date)===fmtDate(new Date());
       const _daySigQ = (typeof resolveDaySignal_v88825 === 'function') ? resolveDaySignal_v88825(d.date, G, kpMax, {isToday}) : null;
@@ -11909,7 +11927,7 @@ function render3Day(parsed3){
           let _todayG = isFinite(window.__uiState?.gNow) ? window.__uiState.gNow : NaN;
           if (!isFinite(_todayG) && days[0]) {
             const _kp0 = fmtDate(days[0].date) === _todayStr && lastWWV && isFinite(lastWWV.kNow) ? lastWWV.kNow : days[0].kpMax;
-            const _ai0 = computeAi(noonUTC(days[0].date), _kp0 ?? 0);
+            const _ai0 = computeAi(sunriseUTC(days[0].date), _kp0 ?? 0);
             _todayG = (isFinite(_kp0) ? _kp0 : 0) - 2 + _ai0.Ai;
           }
           const _diff = isFinite(_todayG) ? (_tomorrowG - _todayG) : 0;
@@ -14307,7 +14325,7 @@ function _renderWhyTrend(){
         let _Gpast;
         try {
           const _kp = isFinite(d.kpMax) ? d.kpMax : 2;
-          const _ai = computeAi(noonUTC(d.date), _kp);
+          const _ai = computeAi(sunriseUTC(d.date), _kp);
           _Gpast = _kp - 2 + _ai.Ai;
         } catch(_e) { _Gpast = undefined; }
         if (isFinite(_Gpast)) days.push({ ds: fmtDate(d.date), G: _Gpast, isPast: true });
@@ -14329,7 +14347,7 @@ function _renderWhyTrend(){
         } else if (typeof lastWWV !== 'undefined' && lastWWV && isFinite(lastWWV.kNow)) {
           _kpPast = lastWWV.kNow;
         }
-        const ai = computeAi(noonUTC(addDays(new Date(), i)), _kpPast);
+        const ai = computeAi(sunriseUTC(addDays(new Date(), i)), _kpPast);
         const _Gpast = _kpPast - 2 + ai.Ai;
         days.push({ ds, G: _Gpast, isPast: true });
       } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
@@ -14365,7 +14383,7 @@ function _renderWhyTrend(){
       const ds = fmtDate(addDays(new Date(), i));
       if(days.find(x => x.ds === ds)) continue;
       try {
-        const ai = computeAi(noonUTC(addDays(new Date(), i)), i === 0 ? _kpNow : 2);
+        const ai = computeAi(sunriseUTC(addDays(new Date(), i)), i === 0 ? _kpNow : 2);
         const G = (i === 0 ? _kpNow : 2) - 2 + ai.Ai;
         days.push({ ds, G, isPast: false, isToday: i === 0 });
       } catch(e){if(window._DEBUG)console.warn('[silent fallback]:',e.message)}
@@ -14611,7 +14629,7 @@ function _renderHeroTimeWindows() {
   let _inauspWins = [];
   try {
     let _R = null;
-    if (typeof computePanchanga === 'function' && typeof noonUTC === 'function') {
+    if (typeof computePanchanga === 'function' && typeof sunriseUTC === 'function') {
       // v88.8.35-fp56-P8: cache the recompute by UTC date — _renderHeroTimeWindows runs on the 30s
       // guard timer, and these sunrise-based windows only change once per day, so recomputing the full
       // panchanga every tick was wasted work.
@@ -14620,7 +14638,7 @@ function _renderHeroTimeWindows() {
         if (window.__p3RahuCache && window.__p3RahuCache.dk === _dk) {
           _R = window.__p3RahuCache.rahu;
         } else {
-          _R = computePanchanga(noonUTC(new Date())).rahu;
+          _R = computePanchanga(sunriseUTC(new Date())).rahu;
           window.__p3RahuCache = { dk: _dk, rahu: _R };
         }
       } catch(_e){ _R = null; }
@@ -15400,7 +15418,7 @@ function renderAntiAction(){
 
   const _now = new Date();
   // v87.90 fix: використовую noonUTC щоб узгодити з Panchanga картою (раніше Anti-action міг показувати інший Tithi через time-of-day shift)
-  const _refDate = (typeof noonUTC === 'function') ? noonUTC(_now) : _now;
+  const _refDate = (typeof sunriseUTC === 'function') ? sunriseUTC(_now) : _now;
   let _panch = null;
   try { if(typeof computePanchanga === 'function') _panch = computePanchanga(_refDate); } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
 
@@ -15539,7 +15557,7 @@ function renderDisagreement(){
   // Σ year ago — historical pattern (без Kp бо historical Kp недоступний)
   let _sigmaYear = null;
   try {
-    if(typeof computeAi === 'function' && typeof noonUTC === 'function'){
+    if(typeof computeAi === 'function' && typeof sunriseUTC === 'function'){
       const _ya = new Date();
       const _mBefore = _ya.getUTCMonth();
       _ya.setUTCFullYear(_ya.getUTCFullYear() - 1);
@@ -15549,7 +15567,7 @@ function renderDisagreement(){
       if(_ya.getUTCMonth() !== _mBefore){
         _ya.setUTCDate(_ya.getUTCDate() - 1);
       }
-      _sigmaYear = computeAi(noonUTC(_ya), 0).Ai;
+      _sigmaYear = computeAi(sunriseUTC(_ya), 0).Ai;
     }
   } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
 
@@ -15979,7 +15997,7 @@ async function loadAllLite(){
     const _yield = () => new Promise(r => (typeof requestIdleCallback==='function' ? requestIdleCallback(()=>r(), {timeout:500}) : setTimeout(r,0)));
     (async () => {
       await _yield();
-      try{ renderPanchanga(noonUTC(new Date())); }catch(e){ console.warn('[fp138 lite panch]', e.message); }
+      try{ renderPanchanga(sunriseUTC(new Date())); }catch(e){ console.warn('[fp138 lite panch]', e.message); }
       await _yield();
       try{
         const _syn27 = Array.from({length:27},(_,i)=>{ const d=new Date(); d.setUTCHours(0,0,0,0); d.setUTCDate(d.getUTCDate()+i-7); return {date:d, flux:null, Ap:null, kpMax:kp0, _synthetic:true}; });
@@ -16333,7 +16351,7 @@ async function loadAll(){
   }
 
   try{
-    renderPanchanga(noonUTC(new Date())); // v37.6: noon для консистентності з G
+    renderPanchanga(sunriseUTC(new Date())); // v37.6: noon для консистентності з G
   }catch(e){ console.error('renderPanchanga error:', e); }
 
   // 27-day (P0: fallback на 45-day-forecast.json)
@@ -16463,7 +16481,7 @@ function exportCsv(){
     const ds = fmtDate(r.date);
     const kpUsed = override3D.has(ds) ? override3D.get(ds) : r.kpMax;
     if(!isFinite(kpUsed)) continue;
-    const ai = computeAi(noonUTC(r.date), kpUsed);
+    const ai = computeAi(sunriseUTC(r.date), kpUsed);
     const G = kpUsed - 2 + ai.Ai;
     let dayScore = '', daySource = 'raw_only';
     try {
@@ -16530,7 +16548,7 @@ function exportICS(){
     const ds = fmtDate(r.date);
     const kpUsed = override3D.has(ds) ? override3D.get(ds) : r.kpMax;
     if(!isFinite(kpUsed)) continue;
-    const ai = computeAi(noonUTC(r.date), kpUsed);
+    const ai = computeAi(sunriseUTC(r.date), kpUsed);
     const G = kpUsed - 2 + ai.Ai;
     let dayScore = null, daySource = 'raw_only';
     try {
@@ -19328,7 +19346,7 @@ function updateScienceBar(kp, ap, sn, ai, phaseName, phaseDeg, f107) {
     if (_gExtEl) {
       try {
         const _nowD = new Date();
-        const _panch = computePanchanga(noonUTC(_nowD));
+        const _panch = computePanchanga(sunriseUTC(_nowD));
         // cal_score from engine snapshot if available
         let _calSc = 0;
         try {
@@ -19648,6 +19666,17 @@ function bootGIndexOnce(_reason){
   try{ initLangToggle(); }catch(e){} cp(5);
   try{ initG2Watch(); }catch(e){} cp(6);
   try{ initSimpleMode(); }catch(e){} cp(7);
+  // fp166: fp148 diag confirmed loadAll() had ZERO automatic trigger anywhere
+  // in the file (static analysis 2026-07-11) — dashboard only ever showed a
+  // stale localStorage cache-paint (fp164) labeled "оновлюється..." that
+  // never actually updated. Restoring the real call here.
+  // fp167 (loadEngineScores/loadExpertOverrides boot-wiring) ROLLED BACK
+  // 2026-07-11 — caused a real page hang on live deploy, cause not yet
+  // isolated (jsdom simulation with realistic 564-entry engine_scores.json
+  // did NOT reproduce it — likely real-browser/network-timing specific).
+  // Investigate fresh in a new session before re-attempting.
+  loadAll().catch(function(e){ if(window._DEBUG) console.warn('[fp166 boot loadAll]', e); });
+  try{ updateAutoRefStatus(); }catch(e){} cp(8);
   cp('DONE-minimal-boot');
 }
 // fp138: start immediately after parser reaches this script, not after external resources finish.
