@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.87-fp166b-ROLLBACK-FROM-fp167</title>
+  <title>G-Index — Космофізичний дашборд v88.8.89-fp168-MINIMAL-ENGINE-FIX</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -19675,7 +19675,20 @@ function bootGIndexOnce(_reason){
   // isolated (jsdom simulation with realistic 564-entry engine_scores.json
   // did NOT reproduce it — likely real-browser/network-timing specific).
   // Investigate fresh in a new session before re-attempting.
-  loadAll().catch(function(e){ if(window._DEBUG) console.warn('[fp166 boot loadAll]', e); });
+  // fp168: MINIMAL retry after fp167 hang (rolled back to fp166b). Only the
+  // 2 CONFIRMED-CRITICAL loaders (loadEngineScores/loadExpertOverrides — root
+  // cause of permanent "PDF/Engine недоступний"), SEQUENTIAL not parallel,
+  // NO extra render calls (renderRegimeCards etc. already run inside loadAll
+  // itself). Deliberately NOT re-adding loadDailyMaster/loadBulletinV2/
+  // loadChronoPanel or the 4 render calls from fp167 — those are still
+  // suspect for the hang and need separate, careful investigation.
+  (async function fp168BootData(){
+    try{ if(typeof loadEngineScores === 'function') await loadEngineScores(); }
+    catch(e){ if(window._DEBUG) console.warn('[fp168 loadEngineScores]', e); }
+    try{ if(typeof loadExpertOverrides === 'function') await loadExpertOverrides(); }
+    catch(e){ if(window._DEBUG) console.warn('[fp168 loadExpertOverrides]', e); }
+    loadAll().catch(function(e){ if(window._DEBUG) console.warn('[fp168 boot loadAll]', e); });
+  })();
   try{ updateAutoRefStatus(); }catch(e){} cp(8);
   cp('DONE-minimal-boot');
 }
