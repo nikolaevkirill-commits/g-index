@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.90-fp169-BIRD-LEGEND-FIX</title>
+  <title>G-Index — Космофізичний дашборд v88.8.91-fp171-G1-BANNER-EXPLAIN</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -21020,6 +21020,46 @@ function _noaaSeverityColor(level){
   if (n >= 2) return '#ffb347';   // помітно
   return '#9bd49e';               // низько, інформаційно
 }
+// v88.8.90-fp171: banner showed NOAA's raw internal header line ("Space
+// Weather Message Code: WATA20") as the MAIN text — that line is always a
+// product code, never human-readable content (the actual description is
+// later in the message, which we don't fetch). Kyrylo couldn't understand
+// what it meant. Fixed: generate a plain-language explanation from the
+// parsed type+level instead, keep raw NOAA text as a small footnote.
+const _NOAA_LEVEL_EXPLAIN = {
+  G: ['Геомагнітна буря', [
+    'найслабший рівень (шкала G1-G5). Незначні коливання магнітного поля, зазвичай непомітні без приладів.',
+    'помітний рівень. Можливі невеликі збої в роботі супутників, слабке північне сяйво на високих широтах.',
+    'середній рівень. Можливі проблеми з навігацією/радіозв\'язком, північне сяйво помітне значно південніше звичного.',
+    'сильний рівень. Можливі перебої в електромережах, супутниковому зв\'язку.',
+    'екстремальний рівень (найвищий). Серйозний ризик для енергомереж і супутників — рідкісна подія.'
+  ]],
+  X: ['Спалах на Сонці', [
+    'клас M — помірний спалах. Можливі короткі радіозавади на освітленому боці Землі.',
+    'клас X — сильний спалах. Можливі значні радіозавади й ризик для супутників.',
+  ]],
+  M: ['Спалах на Сонці', [
+    'клас M — помірний спалах. Можливі короткі радіозавади на освітленому боці Землі.',
+  ]],
+  R: ['Радіозавади', [
+    'слабкий рівень. Незначні короткочасні перебої HF-радіозв\'язку.',
+    'помітний рівень. Часткова втрата HF-радіозв\'язку на освітленому боці Землі.',
+    'сильний рівень. Значні перебої радіозв\'язку й навігації на кілька годин.',
+  ]],
+  S: ['Радіаційний шторм', [
+    'слабкий рівень. Зазвичай без помітного впливу.',
+    'помітний рівень. Можливий незначний ризик для астронавтів/високоширотних авіарейсів.',
+    'сильний рівень. Підвищений ризик радіаційного опромінення на висоті/в космосі.',
+  ]],
+};
+function _noaaPlainExplain(type, level){
+  const letter = (level||'').charAt(0);
+  const num = parseInt((level||'').replace(/[^0-9]/g,''),10) || 1;
+  const entry = _NOAA_LEVEL_EXPLAIN[letter];
+  if(!entry) return 'Офіційне повідомлення NOAA про космічну погоду.';
+  const idx = Math.min(num-1, entry[1].length-1);
+  return entry[1][idx] || 'Офіційне повідомлення NOAA про космічну погоду.';
+}
 function _renderNoaaAlertBanner(events){
   const box = document.getElementById('noaaAlertBanner');
   if (!box) return;
@@ -21035,12 +21075,14 @@ function _renderNoaaAlertBanner(events){
   const hoursAgo = Math.round((Date.now() - new Date(top.issued).getTime()) / 3600000);
   const moreCount = recent.length - 1;
   box.style.display = 'block';
+  const plainExplain = _noaaPlainExplain(top.type, top.level);
   box.innerHTML = `
     <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:1px solid ${color}55;border-radius:10px;background:${color}14">
       <span style="font-size:18px;line-height:1">${meta.icon}</span>
       <div style="flex:1">
-        <div style="font-weight:700;color:${color}">${meta.label}${top.level ? ' '+top.level : ''} — офіційне сповіщення NOAA, не прогноз</div>
-        <div style="margin-top:2px;font-size:11px;color:var(--dim)">${_escHtml(top.summary || '')} · ${hoursAgo<1?'щойно':hoursAgo+'г тому'}${moreCount>0 ? ' · ще '+moreCount+' поді'+(moreCount===1?'я':'й')+' за 48г' : ''}</div>
+        <div style="font-weight:700;color:${color}">${meta.label}${top.level ? ' '+top.level : ''} — ${plainExplain}</div>
+        <div style="margin-top:2px;font-size:11px;color:var(--dim)">Офіційне сповіщення NOAA (не прогноз G-Index) · ${hoursAgo<1?'щойно':hoursAgo+'г тому'}${moreCount>0 ? ' · ще '+moreCount+' поді'+(moreCount===1?'я':'й')+' за 48г' : ''}</div>
+        <div style="margin-top:2px;font-size:9px;color:var(--faint)">Код бюлетеня NOAA: ${_escHtml(top.summary || '')}</div>
       </div>
     </div>`;
 }
