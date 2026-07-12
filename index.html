@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.91-fp171-G1-BANNER-EXPLAIN</title>
+  <title>G-Index — Космофізичний дашборд v88.8.92-fp172-STALE-LOADING-FIX</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -12925,7 +12925,17 @@ function _patchStaleLoadingDOM() {
   try {
     const _wr = document.getElementById('whyRows');
     if (_wr && _wr.textContent && _wr.textContent.includes('Дані завантажуються')) {
-      const _gNow = window.__uiState?.gNow;
+      // v88.8.91-fp172: __uiState.gNow alone was unreliable (stays NaN if it
+      // was set during an early render pass before Kp arrived, and never
+      // gets refreshed until the next full loadAll() cycle). Falling back to
+      // reading the already-rendered #nowG DOM text — same pattern used
+      // elsewhere in the file (gVal computation) — since that value is
+      // confirmed correct on screen even when __uiState.gNow is stale.
+      let _gNow = window.__uiState?.gNow;
+      if (!isFinite(_gNow)) {
+        const _nowGEl = document.getElementById('nowG');
+        _gNow = _num(_firstText(_nowGEl) || _nowGEl?.textContent);
+      }
       const _kp = (typeof lastWWV !== 'undefined' && lastWWV && isFinite(lastWWV.kNow)) ? lastWWV.kNow : NaN;
       if (isFinite(_gNow) && typeof _renderHeroCause === 'function') {
         _renderHeroCause(_gNow, _kp);
