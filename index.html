@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.93-fp173-CSV-ICS-BUTTONS</title>
+  <title>G-Index — Космофізичний дашборд v88.8.94-fp174-STORM-OVERRIDE-EXPLAIN</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -14764,11 +14764,20 @@ function _renderHeroTimeWindows() {
       + `</div>`;
   });
 
+  // v88.8.93-fp174: Kyrylo couldn't tell why slots with a POSITIVE G value
+  // (+3.8 etc) were shown in red "avoid" boxes — the storm hard-cap (Kp>=5
+  // forces all slots to 'bad' regardless of the underlying G number) was
+  // undocumented on screen, reading as a contradiction. Added explicit note.
+  const _sw174 = window._stormWindow;
+  const _stormNote174 = (_sw174 && isFinite(_sw174.kp) && _sw174.kp >= 5)
+    ? `<div style="padding:4px 10px 6px;font-size:10px;color:#ffb86c;border-bottom:1px dashed rgba(255,184,108,.25);margin-bottom:4px">⚠ Червоне з ${_sw174.label}:00 UTC — через прогноз Kp≥5 (буря), НЕ через погане число G. Число залишається реальним, але рекомендація навмисно ставиться на "тільки рутина" заради безпеки під час бурі.</div>`
+    : '';
+
   // v87.41: explicit free-tier hint — без цього "3 з 8 слотів" виглядає як баг.
   // Додаємо зверху списку pre-пояснення.
-  const _headerHint = (!isPaid && slots.length > visibleSlots.length)
+  const _headerHint = _stormNote174 || ((!isPaid && slots.length > visibleSlots.length)
     ? `<div role="button" tabindex="0" aria-label="Відкрити повний розклад слотів у Plus" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();PaywallModal.show('G-Index Plus','basic');}" style="padding:4px 10px 6px;font-size:10px;color:var(--faint);border-bottom:1px dashed rgba(139,160,200,.18);margin-bottom:4px;cursor:pointer" onclick="PaywallModal.show('G-Index Plus','basic')">📍 Показано ${visibleSlots.length} з ${slots.length} слотів (поточне + майбутні) · повний день — у Plus</div>`
-    : '';
+    : '');
 
   if (!isPaid && slots.length > 3) {
     lines.push(`<div role="button" tabindex="0" aria-label="Відкрити повний розклад вікон у Plus" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();PaywallModal.show('G-Index Plus','basic');}" style="margin-top:4px;padding:5px 10px;border-radius:8px;border:1px dashed rgba(55,167,255,.22);background:rgba(55,167,255,.04);font-size:11px;color:#8fb5ff;cursor:pointer" onclick="PaywallModal.show('G-Index Plus','basic')">🔒 Повний розклад (${slots.length} вікон) — у Plus</div>`);
