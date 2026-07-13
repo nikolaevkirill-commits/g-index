@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.01-fp181-TREND-SOURCE-EXPLAIN</title>
+  <title>G-Index — Космофізичний дашборд v88.9.02-fp183-TITHI-WARNING</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -10169,13 +10169,29 @@ function computePanchanga(dateUTC){
   // tithiIdx: 0-based (0..29). tithi.num = tithiIdx+1 (1-based, для зовнішнього API).
   // Усі масиви TITHI_NAMES/SCORE/TYPE індексуються 0-based через tithiIdx.
   const tithiIdx = Math.min(29, Math.floor(phaseDeg / 12));
+  // v88.9.01-fp183: hours until next tithi boundary + preview of what's coming,
+  // so a discrete jump (e.g. into Amavasya, ΣAi=-4) isn't a total surprise —
+  // Kyrylo caught G_now jumping ~5 points with no warning (2026-07-13).
+  let hoursToNextTithi = null, nextTithiIdx = null;
+  try {
+    const _phaseDegPlus1h = (moonPhaseAngle(new Date(dateUTC.getTime() + 3600000)) + 360) % 360;
+    let _rate = _phaseDegPlus1h - phaseDeg;
+    if (_rate < 0) _rate += 360;
+    if (_rate < 0.01) _rate = 0.508; // safety fallback (~average deg/hour), avoid div-by-~0
+    const _degToNext = ((tithiIdx + 1) * 12) - phaseDeg;
+    hoursToNextTithi = _degToNext / _rate;
+    nextTithiIdx = (tithiIdx + 1) % 30;
+  } catch(_e) { /* leave null, non-critical enhancement */ }
   const tithi = {
     num: tithiIdx + 1,  // 1-based: використовується в TITHI_ADVICE і Pi (tIdx = num-1)
     name: TITHI_NAMES[tithiIdx],
     type: TITHI_TYPE[tithiIdx],
     score: TITHI_SCORE[tithiIdx],
     note: TITHI_NOTE[tithiIdx] || '',
-    phaseDeg: phaseDeg.toFixed(1)
+    phaseDeg: phaseDeg.toFixed(1),
+    hoursToNext: hoursToNextTithi,
+    nextName: nextTithiIdx !== null ? TITHI_NAMES[nextTithiIdx] : null,
+    nextScore: nextTithiIdx !== null ? TITHI_SCORE[nextTithiIdx] : null,
   };
 
   // Vara: v87.90 fix — локальний день тижня (раніше getUTCDay() давав неправильний результат вночі)
@@ -10503,7 +10519,11 @@ function computePanchangaState(dateUTC){
 
   const cells = [
     { score: p.tithi.score, label: 'Tithi — місячний день', val: p.tithi.name,
-      sub: `${p.tithi.type} · ΔL≈${p.tithi.phaseDeg}°`, adv: tAdv, tipKey:'tithi', tipData:p.tithi },
+      sub: `${p.tithi.type} · ΔL≈${p.tithi.phaseDeg}°`
+           + ((isFinite(p.tithi.hoursToNext) && p.tithi.hoursToNext <= 6 && p.tithi.nextScore <= -2)
+              ? ` · ⚠ через ~${Math.round(p.tithi.hoursToNext)}г → ${p.tithi.nextName} (${p.tithi.nextScore >= 0 ? '+' : ''}${p.tithi.nextScore})`
+              : ''),
+      adv: tAdv, tipKey:'tithi', tipData:p.tithi },
     { score: p.vara.score, label: 'Vara — день тижня', val: p.vara.name,
       sub: `${p.vara.planet}`, adv: vAdv, tipKey:'vara', tipData:p.vara },
     { score: p.nakshatra.score, label: 'Nakshatra — місячна стоянка', val: p.nakshatra.name,
@@ -14463,10 +14483,24 @@ function _renderWhyTrend(){
   if(typeof _27dComputed !== 'undefined' && _27dComputed && _27dComputed.length > 0){
     const idxToday = _27dComputed.findIndex(d => d && d.ds === todayStr);
     if(idxToday >= 0){
+      // v88.9.01-fp182: "today" (i===0) used _27dComputed's d.G — the NOAA
+      // 27-day OUTLOOK forecast Kp (published weekly on Monday), NOT live
+      // observed Kp. This made "today" in this chart disagree with the main
+      // G_now ring in sign, with no visible reason (Kyrylo caught this
+      // 2026-07-14). The fallback path below already correctly used live
+      // Kp for today — this just brings the primary path in line with it.
+      const _kpLiveToday = (typeof lastWWV !== 'undefined' && lastWWV && isFinite(lastWWV.kNow)) ? lastWWV.kNow : null;
       for(let i = 0; i < 4; i++){
         const d = _27dComputed[idxToday + i];
         if(d && d.ds && isFinite(d.G)){
-          days.push({ ds: d.ds, G: d.G, isPast: false, isToday: i === 0 });
+          let _gForDay = d.G;
+          if (i === 0 && _kpLiveToday !== null) {
+            try {
+              const _aiLive = computeAi(sunriseUTC(new Date()), _kpLiveToday);
+              _gForDay = _kpLiveToday - 2 + _aiLive.Ai;
+            } catch(e) { _gForDay = d.G; /* keep forecast value if live calc fails */ }
+          }
+          days.push({ ds: d.ds, G: _gForDay, isPast: false, isToday: i === 0 });
           _todayPlusFutureAdded++;
         }
       }
