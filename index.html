@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.02-fp183-TITHI-WARNING</title>
+  <title>G-Index — Космофізичний дашборд v88.9.04-fp185-MOONLINOW-FIX</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -15104,7 +15104,12 @@ function renderMoonRetroTop(){
   // Moon block — from JS variables
   const pd=window._lunarPhaseDeg;
   const phaseName=isFinite(pd)?phaseNameByAngle(pd):'—';
-  const liVal=ai?String(ai.Li):'—';
+  // v88.9.03-fp185: same stale-cache bug as fp184 — moonLiNow ("Now" in the
+  // id!) was reading ai.Li from _lastPanchCtx (noon-UTC-referenced cache),
+  // not live. Recompute Amavasya case live from pd, matching computeAi's
+  // canonical formula, same as syncWhy()'s fix.
+  const _tithiIdxForLi185 = isFinite(pd) ? Math.min(29, Math.floor(((pd % 360) + 360) % 360 / 12)) : null;
+  const liVal = _tithiIdxForLi185 === 29 ? '-3' : (ai?String(ai.Li):'—');
   const tithiName=pc?.tithi?.name||'—';
   const tithiNum=pc?.tithi?.num||'';
   const nakName=pc?.nakshatra?.name||'—';
@@ -15228,7 +15233,15 @@ function syncWhy(){
   // Moon interpretation
   if(isFinite(pd)){
     const phaseName=phaseNameByAngle(pd);
-    const li=ai?.Li??0;
+    // v88.9.02-fp184: was `ai?.Li??0` — read from _lastPanchCtx, a CACHED
+    // context object not guaranteed fresh at the exact moment tithi crosses
+    // a boundary (same bug class as fp180's stale refDateUTC). Confirmed by
+    // Kyrylo: screenshot showed "Амавасья ... Lᵢ=0" here while the "ЩО
+    // ФОРМУЄ СТАН" panel correctly showed Lᵢ=-3.0 for the same moment.
+    // Fixed to recompute Li live from pd, matching computeAi's canonical
+    // tithi-based formula (Amavasya = 0-based tithiIdx 29 -> Li=-3).
+    const _tithiIdxForLi = Math.min(29, Math.floor(((pd % 360) + 360) % 360 / 12));
+    const li = _tithiIdxForLi === 29 ? -3 : (ai?.Li ?? 0);
     const illum=((1-Math.cos(pd*Math.PI/180))/2*100).toFixed(0);
     const moonSign=li<0?'↓':'↑';
     const moonCol=li<0?'#ff9966':li>0?'#2bd47d':'#9bb1dc';
