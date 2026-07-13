@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.99-fp179-BIRD-CARD-COLOR-ACTION</title>
+  <title>G-Index — Космофізичний дашборд v88.9.01-fp181-TREND-SOURCE-EXPLAIN</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1879,7 +1879,8 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
         <div id="whyMain" class="why-main">—</div>
         <!-- v87.47: 7-day G sparkline — заповнення пустоти + тренд-контекст -->
         <div id="whyTrendBlock" style="margin-top:10px;display:none">
-          <div style="font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px">Тренд G_day · 7 днів <span style="font-weight:500;color:var(--faint);text-transform:none;letter-spacing:0">(з експертними Δ)</span></div>
+          <div style="font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.07em;margin-bottom:2px">Тренд G_day · 7 днів <span style="font-weight:500;color:var(--faint);text-transform:none;letter-spacing:0">(з експертними Δ)</span></div>
+          <div style="font-size:9px;color:var(--faint);margin-bottom:6px">ⓘ тут "сьогодні" = Kp з щотижневого NOAA 27-day outlook (публікується щопонеділка), НЕ живий Kp з кільця вище — різні числа для одного дня є нормальними.</div>
           <svg id="whyTrendSvg" viewBox="0 0 440 90" style="width:100%;height:90px;display:block" aria-label="Графік G_day за 7 днів з експертними дельтами"></svg>
           <div id="whyTrendNote" style="font-size:11px;color:var(--dim);margin-top:4px;line-height:1.35"></div>
         </div>
@@ -11489,7 +11490,17 @@ function _renderPanchaPakshi(refDateUTC){
   // activity-цикл: точна формула Bright Half (верифіковано зі сканів), Dark Half — та сама формула, R&D.
   let _ppActivityLine = '';
   try {
-    const _now = refDateUTC || new Date();
+    // v88.8.99-fp180: BUG FOUND — this used `refDateUTC` (the day's fixed
+    // noon-UTC reference, same as panchDate "~12:00 UTC"), NOT the actual
+    // live moment. Result: the displayed "current phase" time window
+    // (e.g. "02:01-05:14 UTC") never matched the real current time shown
+    // elsewhere on the dashboard (Kyrylo caught this 2026-07-13 comparing
+    // it against the personal natal-bird card, which correctly uses
+    // new Date()). The bird-of-the-day itself (nakshatra->bird, computed
+    // above via panch/refDateUTC) is correctly day-referenced and left
+    // untouched — only the "what phase is it RIGHT NOW" line needs the
+    // real clock time.
+    const _now = new Date();
     const _wd = _now.getDay();
     let _sr = null, _ss = null;
     try {
