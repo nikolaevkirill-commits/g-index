@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.98-fp178-HEROACTIONCMD-FIX</title>
+  <title>G-Index — Космофізичний дашборд v88.8.99-fp179-BIRD-CARD-COLOR-ACTION</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -2252,9 +2252,14 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
             </div>
           </div>
           <!-- Birth bird display -->
-          <div id="ppBirthBird" style="display:none;padding:10px 12px;border-radius:8px;background:rgba(252,164,116,.06);border:1px solid rgba(252,164,116,.2);margin-bottom:10px"></div>
-          <!-- Activity matrix -->
-          <div id="ppActivityMatrix" style="display:none"></div>
+          <div id="ppBirthBird" style="display:none;padding:10px 12px;border-radius:8px;border:1px solid rgba(252,164,116,.2);margin-bottom:10px"></div>
+          <!-- Activity matrix — v88.8.98-fp179: own collapsible wrapper so the
+               table can be folded independently once the summary card above
+               already shows color+action (Kyrylo request 2026-07-13). -->
+          <details id="ppMatrixDetails" style="margin-top:2px">
+            <summary style="cursor:pointer;font-size:10px;color:var(--faint);list-style:none;user-select:none">▸ Детальний розклад доби (Activity Cycle)</summary>
+            <div id="ppActivityMatrix" style="margin-top:6px"></div>
+          </details>
         </div>
       </details>
       <!-- v88.8.21: CHRONO JOURNAL — щоденний самозвіт + кореляція з G (outcome validation pilot). -->
@@ -4626,7 +4631,37 @@ const GIndexPPProfile = {
     // Birth bird display
     const elBird = document.getElementById('ppBirthBird');
     if (elBird) {
+      // v88.8.98-fp179: compute current activity state HERE (same logic as
+      // renderMatrix below) so the summary card itself can show color +
+      // action, not just the plain name — Kyrylo couldn't tell at a glance
+      // whether "Їсть" was good or bad without reading the whole grid.
+      const _now179 = new Date();
+      const _weekday179 = _now179.getDay();
+      const _isShukla179 = this.pakshaFromDate(_now179);
+      let _sunrise179 = null, _sunset179 = null;
+      try {
+        if (typeof _calcSunRiseSet === 'function') {
+          const _sr179 = _calcSunRiseSet(_now179);
+          if (_sr179 && _sr179.sunrise && _sr179.sunset) { _sunrise179 = _sr179.sunrise; _sunset179 = _sr179.sunset; }
+        }
+      } catch(e) { /* fall through to fallback */ }
+      if (!_sunrise179 || !_sunset179) {
+        _sunrise179 = new Date(_now179); _sunrise179.setHours(6,0,0,0);
+        _sunset179 = new Date(_now179); _sunset179.setHours(18,0,0,0);
+      }
+      let _yamaInfo179 = null;
+      try { if (typeof getCurrentYama === 'function') _yamaInfo179 = getCurrentYama(_now179, _sunrise179, _sunset179); } catch(e) {}
+      let _currentAct179 = null;
+      if (_yamaInfo179 && typeof getPakshiActivityForYama === 'function') {
+        _currentAct179 = getPakshiActivityForYama(birdId, _yamaInfo179.yamaIdx, _weekday179, _yamaInfo179.isDay, _isShukla179);
+      }
+      const _actColors179 = {0:'#ff6b6b', 1:'#9bb1dc', 2:'#ffd93d', 3:'#9bd49e', 4:'#5dd49e'};
+      const _cardColor = _currentAct179 ? _actColors179[_currentAct179.strength] : '#9bb1dc';
+      const _advice = _currentAct179 ? this.ACT_ADVICE[_currentAct179.strength] : '';
+
       elBird.style.display = 'block';
+      elBird.style.background = _cardColor + '14';
+      elBird.style.borderColor = _cardColor + '55';
       elBird.innerHTML = `
         <div style="display:flex;align-items:center;gap:12px">
           <div style="font-size:32px">${this.ICONS[birdId]}</div>
@@ -4636,6 +4671,10 @@ const GIndexPPProfile = {
             <div style="font-size:10px;color:var(--text2);margin-top:3px;font-style:italic">${this.QUALITIES[birdId]}</div>
           </div>
         </div>
+        ${_currentAct179 ? `<div style="margin-top:8px;padding:6px 8px;border-radius:6px;background:${_cardColor}22;border-left:3px solid ${_cardColor}">
+          <div style="font-size:11px;font-weight:700;color:${_cardColor}">Зараз: ${_currentAct179.activityUa}</div>
+          <div style="font-size:10px;color:var(--text2);margin-top:2px">${_advice}</div>
+        </div>` : ''}
         <div style="margin-top:6px;font-size:10px;color:var(--faint)">
           ${p.name ? p.name + ' · ' : ''}${p.date}${p.time ? ' ' + p.time : ' (12:00)'}
           ${!p.time ? ' <span style="color:var(--warn)">⚠ ±1 nakshatra без часу</span>' : ''}
@@ -4644,6 +4683,17 @@ const GIndexPPProfile = {
     }
 
     this.renderMatrix(birdId);
+  },
+
+  // v88.8.98-fp179: plain-language action advice per activity strength,
+  // shown directly on the birth-bird card (Kyrylo request 2026-07-13:
+  // color the card by situation + state the actual action, not just a name).
+  ACT_ADVICE: {
+    0: 'Найслабша фаза. Уникай важливих рішень і нових справ — перечекай.',
+    1: 'Пасивна фаза. Відпочинок, планування — не ініціюй нове.',
+    2: 'Помірна фаза. Рутинні справи, підготовка — можна діяти обережно.',
+    3: 'Гарна фаза. Можна активно діяти, вести перемовини.',
+    4: 'Найсильніша фаза. Найкращий час для важливих рішень і нових починань.',
   },
 
   renderMatrix(birthBirdId) {
