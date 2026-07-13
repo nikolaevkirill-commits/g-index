@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.95-fp175-BADGE-TOOLTIPS</title>
+  <title>G-Index — Космофізичний дашборд v88.8.96-fp176-STALE-LOADING-FIX-v2</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -12931,7 +12931,16 @@ function _patchStaleLoadingDOM() {
       // reading the already-rendered #nowG DOM text — same pattern used
       // elsewhere in the file (gVal computation) — since that value is
       // confirmed correct on screen even when __uiState.gNow is stale.
+      // v88.8.95-fp176: fp172 fix used the WRONG element id ('nowG', a separate/
+      // possibly legacy badge) — the ring's actual visible number lives in
+      // '#heroG' (confirmed: cache-paint comment at L1535 explicitly names
+      // "heroG/heroRingVal" as the real render targets). Fixed to read the
+      // right element. Also try both as a defensive fallback.
       let _gNow = window.__uiState?.gNow;
+      if (!isFinite(_gNow)) {
+        const _heroGEl = document.getElementById('heroG');
+        _gNow = _num(_firstText(_heroGEl) || _heroGEl?.textContent);
+      }
       if (!isFinite(_gNow)) {
         const _nowGEl = document.getElementById('nowG');
         _gNow = _num(_firstText(_nowGEl) || _nowGEl?.textContent);
