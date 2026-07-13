@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.96-fp176-STALE-LOADING-FIX-v2</title>
+  <title>G-Index — Космофізичний дашборд v88.8.97-fp177-DIAGNOSTIC</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -14150,10 +14150,22 @@ function _renderHeroCause(g, kp) {
   // Only write placeholder on FIRST render (when whyRows is empty/—).
   // Otherwise keep previous render so user doesn't see "loading" while data exists.
   if (!isFinite(g)) {
-    const _curTxt = (whyRows.textContent || '').trim();
-    if (!_curTxt || _curTxt === '—' || _curTxt === '') {
-      whyRows.innerHTML = '<span style="color:var(--dim)">Дані завантажуються…</span>';
-    }
+    // v88.8.96-fp177 TEMP DIAGNOSTIC: show real internal state instead of a
+    // plain placeholder, so Kyrylo can see the actual cause on-screen
+    // without needing DevTools. Remove once root cause is found — this
+    // deliberately bypasses the normal "write once" guard so the debug
+    // line reflects the LATEST call, not the first.
+    window.__whyRowsCallCount = (window.__whyRowsCallCount || 0) + 1;
+    const _dbgHeroG = document.getElementById('heroG');
+    const _dbgNowG = document.getElementById('nowG');
+    whyRows.innerHTML = '<span style="color:var(--dim)">Дані завантажуються…</span>' +
+      '<div style="margin-top:6px;font-size:9px;color:#888;font-family:monospace;line-height:1.5">' +
+      'DEBUG викликів: ' + window.__whyRowsCallCount +
+      ' · __uiState.gNow=' + (window.__uiState?.gNow) +
+      ' · heroG.text="' + (_dbgHeroG?.textContent || 'null') + '"' +
+      ' · nowG.text="' + (_dbgNowG?.textContent || 'null') + '"' +
+      ' · __gIndexBooted=' + window.__gIndexBooted +
+      '</div>';
     return;
   }
 
