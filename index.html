@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.04-fp185-MOONLINOW-FIX</title>
+  <title>G-Index — Космофізичний дашборд v88.9.05-fp186-LABEL-DISAMBIG</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -3711,8 +3711,8 @@ function _renderComponentDeltaCard(){
   const d = _getComponentDelta();
   if(!d){ box.style.display='none'; return; }
   const rows = [
-    ['Kp', d.kp], ['Тітхі (Lᵢ)', d.Li], ['Затемнення (Mᵢ)', d.Mi],
-    ['Події (eᵢ)', d.ei], ['Панчанга (Pᵢ)', d.Pi], ['Dst-буря (Dᵢ)', d.Di]
+    ['Δ Kp', d.kp], ['Δ Тітхі (Lᵢ)', d.Li], ['Δ Затемнення (Mᵢ)', d.Mi],
+    ['Δ Події (eᵢ)', d.ei], ['Δ Панчанга (Pᵢ)', d.Pi], ['Δ Dst-буря (Dᵢ)', d.Di]
   ].filter(([_,v]) => v!=null && Math.abs(v) >= 0.05);
   if(!rows.length){ box.style.display='none'; return; }
   const _fmt = v => (v>0?'+':'') + v.toFixed(2);
@@ -14303,7 +14303,7 @@ function _renderHeroCause(g, kp) {
                    : (f.val > 0 ? eff.pos : eff.neg);
         const cls  = f.val > 0 ? 'is-pos' : 'is-neg';
         return `<div class="why-cause-row ${cls}">`
-             + `<span class="wcr-cause">${f.name} ${dir} ${sign}${f.val.toFixed(1)}</span>`
+             + `<span class="wcr-cause">${f.name} (зараз) ${dir} ${sign}${f.val.toFixed(1)}</span>`
              + `<span class="wcr-arrow">→</span>`
              + `<span class="wcr-effect">${txt}</span>`
              + `</div>`;
@@ -14346,7 +14346,7 @@ function _renderHeroCause(g, kp) {
       }
     }
     return `<div class="why-row${isMain ? ' is-main' : ''}">`
-      + `<div class="why-name">${f.name} <span style="color:var(--dim);font-size:11px">${f.label}</span>${detail}</div>`
+      + `<div class="why-name">${f.name} <span style="color:var(--dim);font-size:11px">${f.label} (зараз)</span>${detail}</div>`
       + `<div class="why-val" style="color:${col}">${sign}${f.val.toFixed(1)}</div>`
       + `<div class="why-dir" style="color:${col}">${dir}</div>`
       + `</div>`;
