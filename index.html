@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.08-fp189-CLARITY-GUARDS</title>
+  <title>G-Index — Космофізичний дашборд v88.9.09-fp190-BANNER-RETICK</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -13102,6 +13102,11 @@ try {
   if (!window.__stormGuardTimer) {
     window.__stormGuardTimer = setInterval(() => {
       try { _applyStormGuardDOM(); _patchStaleLoadingDOM(); } catch(e) { /* silent */ }
+      // v88.9.09-fp190: банер NOAA рендерився ОДИН раз через 3с після load,
+      // коли window.__uiState.kpNow ще не готовий → примітка "буря не активна
+      // зараз" (fp188) ніколи не з'являлась (підтверджено скріном 14.07).
+      // Перерендер тут — коли Kp вже відомий, примітка додається.
+      try { if (window.__noaaEvents && typeof _renderNoaaAlertBanner === 'function') _renderNoaaAlertBanner(window.__noaaEvents); } catch(e) { /* silent */ }
     }, 30000);
   }
 } catch(e) { /* silent */ }
