@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.06-fp187-LIVE-TITHI-EVERYWHERE</title>
+  <title>G-Index — Космофізичний дашборд v88.9.08-fp189-CLARITY-GUARDS</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -3435,6 +3435,23 @@ function renderDecisionLayer(gVal, ui) {
       ctxTxt = `День критичний за PDF/Engine (${_eDoG.eng}) — навіть за спокійного фону тримати рутину. ` + ctxTxt;
     }
   } catch(_eDay) { /* silent */ }
+
+  // v88.9.08-fp189: НЕЗАЛЕЖНИЙ від engine day-guard. Guard вище (fp56-P12f)
+  // потребує getEngineScore — а він null поки loadEngineScores на паузі, тож
+  // ніколи не спрацьовував. 14.07: live G=+1.6 (пік після молодика 12:44) дав
+  // «Рідкісне вікно — укладати угоди», хоча день за сходом сонця = Амавасья
+  // (експерт: -2). Використовуємо _lastPanchCtx СВІДОМО як sunrise-референс —
+  // для ДЕННОЇ конвенції кеш якраз коректний (на відміну від live-стрічок).
+  try {
+    const _pcT = window._lastPanchCtx?.tithi;
+    const _isAmavDay = _pcT && (Number(_pcT.num) === 30 || /amavasya|амавась/i.test(String(_pcT.name || '')));
+    if (_isAmavDay && !_stormActive44 && (state === 'favorable' || state === 'good')) {
+      doArr = doArr.filter(d => !d.includes('Запускати нові') && !d.includes('Укладати') && !d.includes('контракт') && !d.includes('нові старти'));
+      if (!doArr.length) doArr = ['Планова робота без критичних рішень', 'Завершувати розпочате'];
+      avoidArr.unshift('Важливих запусків і угод (день Амавасьї — live-вікно тактичне)');
+      ctxTxt = 'День Амавасьї (тітхі на схід сонця). Live-фон може давати короткий пік, але це тактичне вікно, не стратегічне. ' + ctxTxt;
+    }
+  } catch(_eAmav) { /* silent */ }
 
   // fp54-C: Personal cycle conflict — if personal verdict is negative, modify DO list and add note
   try {
@@ -7706,7 +7723,10 @@ function computeCScore(kpNow, kpObsJson, ai, G, kpSrc){
   const _fbTxt = (document.getElementById('freshnessBadge')?.textContent || 'LIVE').toLowerCase();
   let _freshness = 'live';
   if (_fbTxt.includes('offline') || _fbTxt.includes('old')) _freshness = 'old';
-  else if (_fbTxt.includes('cache') || _fbTxt.includes('stale')) _freshness = 'stale';
+  // v88.9.08-fp189: DEGRADED (фід >3г / фізична суперечність) не матчився ЖОДНОЮ
+  // гілкою → штраф 0 → "Якість даних: Висока" поруч зі статусом DEGRADED на одному
+  // екрані (скрін Kyrylo 14.07). Тепер degraded = штраф як stale (0.12).
+  else if (_fbTxt.includes('cache') || _fbTxt.includes('stale') || _fbTxt.includes('degraded')) _freshness = 'stale';
   if(_freshness === 'stale'){
     penalty += 0.12;
     reasons.push({ txt:'Дані з кешу (stale/cached)', col:'#ffcc00', d:0.12 });
@@ -11002,9 +11022,19 @@ function renderPanchangaCard(state){
           } else {
             _worstLabel = 'Уникати важливих рішень';
           }
+          // v88.9.08-fp189: дзеркально до worst-лейбла (v88.7.13 N1) — best-лейбл
+          // завжди писав «Найкращий час», навіть коли ВСІ слоти від'ємні (14.07:
+          // best=-2.1 «найкращий» поруч із «уникати 12:00-15:00» у Плані дня).
+          //   best.G ≥ +0.5 → «Найкращий час»
+          //   best.G ∈ (-0.5, +0.5) → «Відносно кращий час»
+          //   best.G ≤ -0.5 → «Найменш ризиковий час (весь день у мінусі)»
+          const _bestLabelPbt = best.G >= 0.5 ? 'Найкращий час'
+                              : best.G > -0.5 ? 'Відносно кращий час'
+                              : 'Найменш ризиковий час';
+          const _bestSuffix = best.G <= -0.5 ? ' <span style="color:#ffaa33;font-size:9px">· весь день у мінусі</span>' : '';
           html = `<div class="pbt-row">`
-               + `<span class="pbt-label">Найкращий час</span>`
-               + `<span class="pbt-value ${bestCls}" title="UTC: ${bestRangeUTC}. G_day raw — continuous фон доби (Kp_day − 2 + ΣAᵢ). НЕ PDF/Engine експертний verdict.">${bestRange} · G_day raw=${bestG} <span style="color:var(--faint);font-size:9px">· не PDF/Engine</span></span>`
+               + `<span class="pbt-label">${_bestLabelPbt}</span>`
+               + `<span class="pbt-value ${bestCls}" title="UTC: ${bestRangeUTC}. G_day raw — continuous фон доби (Kp_day − 2 + ΣAᵢ). НЕ PDF/Engine експертний verdict.">${bestRange} · G_day raw=${bestG}${_bestSuffix} <span style="color:var(--faint);font-size:9px">· не PDF/Engine</span></span>`
                + `</div>`;
           if (_showWorst) {
             html += `<div class="pbt-row">`
@@ -15115,7 +15145,13 @@ function renderMoonRetroTop(){
   // not live. Recompute Amavasya case live from pd, matching computeAi's
   // canonical formula, same as syncWhy()'s fix.
   const _tithiIdxForLi185 = isFinite(pd) ? Math.min(29, Math.floor(((pd % 360) + 360) % 360 / 12)) : null;
-  const liVal = _tithiIdxForLi185 === 29 ? '-3' : (ai?String(ai.Li):'—');
+  // v88.9.07-fp188: той самий дзеркальний баг що в syncWhy — fallback (ai.Li)
+  // читав кеш (sunrise-референс) коли live-тітхі вже НЕ Амавасья. Рахуємо live.
+  const _kpLive185 = (window.__uiState && isFinite(window.__uiState.kpNow)) ? window.__uiState.kpNow : 0;
+  const liVal = _tithiIdxForLi185 === null ? (ai?String(ai.Li):'—')
+              : String(_tithiIdxForLi185 === 29 ? -3
+                : _tithiIdxForLi185 === 14 ? (_kpLive185 >= 7 ? -2 : _kpLive185 >= 5 ? -1 : 0)
+                : 0);
   // v88.9.05-fp187: same live-vs-cached-noon bug as Li — tithiName came from
   // _lastPanchCtx (stale), while _tithiIdxForLi185 (live, from pd) was
   // already computed right here for the Li fix. Reuse it for the name too.
@@ -15256,7 +15292,16 @@ function syncWhy(){
     // Fixed to recompute Li live from pd, matching computeAi's canonical
     // tithi-based formula (Amavasya = 0-based tithiIdx 29 -> Li=-3).
     const _tithiIdxForLi = Math.min(29, Math.floor(((pd % 360) + 360) % 360 / 12));
-    const li = _tithiIdxForLi === 29 ? -3 : (ai?.Li ?? 0);
+    // v88.9.07-fp188: дзеркальний баг fp184 — fallback (ai?.Li) читав КЕШ
+    // (_lastPanchCtx, sunrise-референс). У день Амавасьї ПІСЛЯ моменту молодика
+    // live-тітхі вже Pratipada (idx 0, Li=0), а кеш тримав Li=-3 → стрічка
+    // показувала "Lᵢ=-3 сильне зниження" поруч із G=+1.6 (внутрішня суперечність).
+    // Рахуємо Li повністю live за канонічною формулою computeAi:
+    // idx29→-3; idx14 (Пурніма) kp-залежно (-2 при Kp≥7, -1 при Kp≥5); решта 0.
+    const _kpLiveLi = (window.__uiState && isFinite(window.__uiState.kpNow)) ? window.__uiState.kpNow : 0;
+    const li = _tithiIdxForLi === 29 ? -3
+             : _tithiIdxForLi === 14 ? (_kpLiveLi >= 7 ? -2 : _kpLiveLi >= 5 ? -1 : 0)
+             : 0;
     const illum=((1-Math.cos(pd*Math.PI/180))/2*100).toFixed(0);
     const moonSign=li<0?'↓':'↑';
     const moonCol=li<0?'#ff9966':li>0?'#2bd47d':'#9bb1dc';
@@ -21236,6 +21281,13 @@ function _renderNoaaAlertBanner(events){
   const meta = _NOAA_LEVEL_STYLE[top.type] || _NOAA_LEVEL_STYLE.other;
   const color = _noaaSeverityColor(top.level);
   const hoursAgo = Math.round((Date.now() - new Date(top.issued).getTime()) / 3600000);
+  // v88.9.07-fp188: подія 40+г тому виглядала як ПОТОЧНА буря (Kyrylo: "чому +,
+  // коли сьогодні буря" — а бурі вже не було, Kp=2.0). Якщо сповіщення старе
+  // (≥6г) і поточний Kp < 5 — явно кажемо, що буря не активна зараз.
+  const _kpNowB = (window.__uiState && isFinite(window.__uiState.kpNow)) ? window.__uiState.kpNow : NaN;
+  const _notActiveNote = (hoursAgo >= 6 && isFinite(_kpNowB) && _kpNowB < 5)
+    ? `<div style="margin-top:3px;font-size:11px;color:#9bd49e">Зараз Kp=${_kpNowB.toFixed(1)} — буря не активна в цей момент. Це сповіщення про подію ${hoursAgo}г тому (вікно показу 48г).</div>`
+    : '';
   const moreCount = recent.length - 1;
   box.style.display = 'block';
   const plainExplain = _noaaPlainExplain(top.type, top.level);
@@ -21244,7 +21296,7 @@ function _renderNoaaAlertBanner(events){
       <span style="font-size:18px;line-height:1">${meta.icon}</span>
       <div style="flex:1">
         <div style="font-weight:700;color:${color}">${meta.label}${top.level ? ' '+top.level : ''} — ${plainExplain}</div>
-        <div style="margin-top:2px;font-size:11px;color:var(--dim)">Офіційне сповіщення NOAA (не прогноз G-Index) · ${hoursAgo<1?'щойно':hoursAgo+'г тому'}${moreCount>0 ? ' · ще '+moreCount+' поді'+(moreCount===1?'я':'й')+' за 48г' : ''}</div>
+        <div style="margin-top:2px;font-size:11px;color:var(--dim)">Офіційне сповіщення NOAA (не прогноз G-Index) · ${hoursAgo<1?'щойно':hoursAgo+'г тому'}${moreCount>0 ? ' · ще '+moreCount+' поді'+(moreCount===1?'я':'й')+' за 48г' : ''}</div>${_notActiveNote}
         <div style="margin-top:2px;font-size:9px;color:var(--faint)">Код бюлетеня NOAA: ${_escHtml(top.summary || '')}</div>
       </div>
     </div>`;
