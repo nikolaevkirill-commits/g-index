@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.13-fp194-RECURSION-FIXED</title>
+  <title>G-Index — Космофізичний дашборд v88.9.14-fp195-RING-VERDICT</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1505,7 +1505,7 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
                 <div id="v86CI" class="hint" tabindex="0" style="font-size:10px;font-weight:600;color:var(--dim);margin-top:2px;line-height:1;letter-spacing:.02em;cursor:help;pointer-events:auto;display:none" title=""></div>
                 <!-- v87.21: inline ΔG trend directly beneath G-value for immediate signal -->
                 <div id="v86DeltaInline" style="font-size:13px;font-weight:800;line-height:1;margin-top:4px;color:var(--muted);letter-spacing:.02em;min-height:13px"></div>
-                <div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);margin-top:2px">G_now</div>
+                <div id="v86GLabel" style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);margin-top:2px">G_now</div>
               </div>
             </div>
             <!-- v86: inline legend -->
@@ -13270,11 +13270,20 @@ function renderGRadialV86(g, kp, ai){
   // Central G-value
   const vEl = document.getElementById('v86GVal');
   if (vEl) {
-    vEl.textContent = isFinite(g) ? (g >= 0 ? '+' : '') + g.toFixed(1) : '—';
-    vEl.style.color = g >= 1 ? '#7fe3a6' : g >= -1 ? '#ffd77a' : '#ff9f9f';
-    vEl.style.textShadow = g >= 1 ? '0 0 12px rgba(127,227,166,.3)'
-                         : g >= -1 ? '0 0 12px rgba(255,210,110,.3)'
+    // v88.9.14-fp195: те саме число, що і в heroG — вердикт дня, якщо він є
+    // (ціле, -3..+3), інакше live G_now з десятковою. Колір — від показаного значення.
+    const _vd = window.__heroVerdictDisplay;
+    const _shown = (_vd && _vd.hasVerdict && isFinite(_vd.val)) ? Math.round(Number(_vd.val)) : g;
+    const _isVerdictShown = !!(_vd && _vd.hasVerdict && isFinite(_vd.val));
+    vEl.textContent = isFinite(_shown) ? (_shown >= 0 ? '+' : '') + (_isVerdictShown ? String(_shown) : _shown.toFixed(1)) : '—';
+    vEl.style.color = _shown >= 1 ? '#7fe3a6' : _shown >= -1 ? '#ffd77a' : '#ff9f9f';
+    vEl.style.textShadow = _shown >= 1 ? '0 0 12px rgba(127,227,166,.3)'
+                         : _shown >= -1 ? '0 0 12px rgba(255,210,110,.3)'
                          : '0 0 12px rgba(255,120,120,.3)';
+    try {
+      const _lbl = document.getElementById('v86GLabel');
+      if (_lbl) _lbl.textContent = _isVerdictShown ? 'ВЕРДИКТ ДНЯ' : 'G_NOW';
+    } catch(_e){}
   }
   // v87.90: Confidence interval P50 band (wow-фіча — нікого з конкурентів немає)
   // Розрахунок: σ = sqrt(kpDelta² + eventUncertainty²); kpDelta з last-8 NOAA Kp obs.
@@ -13564,6 +13573,11 @@ function syncHero(){
       ? Math.max(-3, Math.min(3, Math.round(Number(_heroSig.dayScore))))
       : newG;
     const _heroDisplayVal = _verdictVal;
+    // v88.9.14-fp195: v86-кільце (canvas/SVG центр) малюється ОКРЕМО від heroG
+    // (legacy heroG прихований display:none) і завжди писало G_now — тому після
+    // fp194 верхній блок казав "-2", а велике кільце далі показувало "+1.6".
+    // Публікуємо verdict-стан для renderGRadialV86.
+    window.__heroVerdictDisplay = { hasVerdict: _hasVerdict, val: _heroDisplayVal };
     // v88.8.56: підпис під кільцем відповідає РЕАЛЬНОМУ стану — якщо engine недоступний
     // і йде fallback на G_now, підпис має це чесно показувати, а не завжди стверджувати
     // "PDF/Engine verdict" (інакше сам підпис стане джерелом тієї ж плутанини, що його
