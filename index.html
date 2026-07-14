@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.10-fp191-DAY-VERDICT-LITE</title>
+  <title>G-Index — Космофізичний дашборд v88.9.11-fp192-HANG-DIAG</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -21200,52 +21200,88 @@ const NoaaEvents = (function(){
 
 // Trigger initial NOAA events fetch (non-blocking)
 
-// ═══ v88.9.10-fp191: DAY-VERDICT LITE ═══════════════════════════════════════
-// Проблема: "PDF/Engine недоступний" — loadEngineScores()/loadExpertOverrides()
-// не підключені до boot (3 спроби fp167/168/170test вішали Chrome на 98.6% CPU;
-// корінь невідомий, підозра — важкі рендери render27Day/heatStrip на 564 датах).
-// Цей шлях СВІДОМО ІНШИЙ:
-//   1. НЕ викликає render27Day / M2-M4 / heatStrip — взагалі жодного разового
-//      важкого рендера. Дані підхоплять періодичні тики, які вже працюють.
-//   2. _engineScores обрізається до вікна ±16 днів (макс ~33 записи замість 564)
-//      — навіть якщо якийсь тик-рендер ітерує все сховище, обсяг мізерний.
-//   3. Kill-switch: додай ?verdict=off до URL — блок повністю вимкнено.
-//   4. Відкладений старт 6с — після стабілізації boot.
-// Діагностика: window.__verdictLiteStatus у консолі.
-window.__verdictLiteStatus = 'pending';
-setTimeout(async function _dayVerdictLite(){
+// ═══ v88.9.11-fp192: HANG DIAGNOSTIC (замінює fp191 lite) ═══════════════════
+// fp191 довів: висне НЕ render27Day і НЕ обсяг даних (32 записи теж вішали).
+// Спільний знаменник 4 зависань — якась тик-функція поводиться інакше з даними.
+// За замовчуванням блок ВИМКНЕНО (сторінка = поведінка fp190). Запуск ТІЛЬКИ
+// вручну з ?diag=1: дані завантажуються і 22 функції syncV702UI викликаються
+// ПО ОДНІЙ з паузою 800мс; ім'я кожної пишеться в localStorage ПЕРЕД викликом
+// (синхронний запис переживає вбивство вкладки). Коли одна зависне: закрити
+// вкладку → відкрити сайт БЕЗ параметра → червоний банер назве винну функцію.
+(function _vlDiag(){
+  const KEY = '__vlDiag_last';
   try {
-    if (/[?&]verdict=off/.test(location.search)) { window.__verdictLiteStatus = 'disabled'; return; }
-    window.__verdictLiteStatus = 'loading';
-    // Overrides: крихітний файл; loadExpertOverrides = чистий fetch+словник, без рендерів.
-    try { await loadExpertOverrides(); } catch(e){ /* status у _expertOverridesLoadStatus */ }
-    // Engine: власний мінімальний fetch (НЕ loadEngineScores — той тягне future_kp+annual ланцюг).
-    if (_engineScores === null) {
-      const resp = await fetch('engine_scores.json', { cache: 'default' });
-      if (resp.ok) {
-        const data = await resp.json();
-        const all = (data && data.scores) || {};
-        const nowMs = Date.now(), MS = 86400000, win = {};
-        for (const ds in all) {
-          const t = Date.parse(ds + 'T00:00:00Z');
-          if (isFinite(t) && Math.abs(t - nowMs) <= 16 * MS) win[ds] = all[ds];
-        }
-        _engineScores = win;
-        window.__verdictLiteStatus = 'loaded_' + Object.keys(win).length + 'days';
-      } else {
-        window.__verdictLiteStatus = 'engine_http_' + resp.status;
-      }
-    } else {
-      window.__verdictLiteStatus = 'already_loaded';
+    const last = localStorage.getItem(KEY);
+    if (last && !last.endsWith('_ok') && !/[?&]diag=1/.test(location.search)) {
+      const d = document.createElement('div');
+      d.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#7a1020;color:#fff;font:700 13px/1.4 monospace;padding:8px 12px;text-align:center;cursor:pointer';
+      d.textContent = '🔍 ДІАГНОСТИКА: минулий прогін завис у функції « ' + last + ' » — скинь це Claude. (клік = закрити)';
+      d.onclick = function(){ try{localStorage.removeItem(KEY);}catch(_e){} d.remove(); };
+      (document.body || document.documentElement).appendChild(d);
     }
-    // Один звичайний UI-sync — та сама функція, що виконується кожен G-тик і 3 дні
-    // працює стабільно; з даними вона робить лише словникові lookup-и.
-    try { if (typeof syncV702UI === 'function') syncV702UI(); } catch(e){ /* silent */ }
-  } catch(e) {
-    window.__verdictLiteStatus = 'error_' + ((e && e.message) || 'unknown');
-  }
-}, 6000);
-// ═══ /fp191 ═════════════════════════════════════════════════════════════════
+  } catch(_e){}
+  if (!/[?&]diag=1/.test(location.search)) return;
+  setTimeout(async function(){
+    const st = document.createElement('div');
+    st.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:99999;background:#0a2a12;color:#8f8;font:12px monospace;padding:6px 12px';
+    st.textContent = 'diag: завантажую дані…';
+    document.body.appendChild(st);
+    try {
+      await loadExpertOverrides();
+      if (_engineScores === null) {
+        const resp = await fetch('engine_scores.json', { cache: 'default' });
+        if (resp.ok) {
+          const data = await resp.json();
+          const all = (data && data.scores) || {};
+          const nowMs = Date.now(), MS = 86400000, win = {};
+          for (const ds in all) {
+            const t = Date.parse(ds + 'T00:00:00Z');
+            if (isFinite(t) && Math.abs(t - nowMs) <= 16 * MS) win[ds] = all[ds];
+          }
+          _engineScores = win;
+        }
+      }
+      st.textContent = 'diag: дані є (' + Object.keys(_engineScores || {}).length + ' днів). Тестую функції по одній…';
+      const fns = ['buildDashboardState','syncHero','syncWhy','renderMoonRetroTop','syncPanchSummary',
+        'renderConfidenceBreakdown','renderKpContribution','renderPanchPiLine','renderWf3','syncTrustStrip',
+        'syncDayPlanCard','syncPersonalContext','renderPersonal','_v73G_saveHist','_renderComponentDeltaCard',
+        '_renderChangeLog','renderBestWorstDays','renderProvenance','renderDisagreement','renderCounterfactual',
+        'renderAntiAction','renderIntraDayAlert'];
+      let i = 0;
+      (function step(){
+        if (i >= fns.length) {
+          localStorage.setItem(KEY, 'ALL_PASSED_ok');
+          st.textContent = 'diag: ✅ УСІ ' + fns.length + ' пройшли БЕЗ зависання — скинь це Claude.';
+          st.style.background = '#0a3a12';
+          return;
+        }
+        const name = fns[i++];
+        localStorage.setItem(KEY, name); // синхронно, ПЕРЕД викликом
+        st.textContent = 'diag [' + i + '/' + fns.length + ']: ' + name + ' …';
+        setTimeout(function(){
+          try {
+            if (name === 'buildDashboardState') { window.__dashState = buildDashboardState(); }
+            else if (name === '_v73G_saveHist') { const g = _v73G(); if (isFinite(g)) _saveGHistory(g); }
+            else if (name === 'buildDashboardState' || false) { /* unreachable */ }
+            else {
+              let f = null;
+              try { f = eval(name); } catch(_e){}
+              if (typeof f === 'function') f();
+            }
+            localStorage.setItem(KEY, name + '_ok');
+          } catch(e) {
+            localStorage.setItem(KEY, name + '_ok'); // exception ≠ зависання, нас цікавить тільки freeze
+          }
+          setTimeout(step, 800);
+        }, 50);
+      })();
+    } catch(e) {
+      st.textContent = 'diag: помилка завантаження даних: ' + ((e && e.message) || '?');
+    }
+  }, 6000);
+})();
+// ═══ /fp192 ═════════════════════════════════════════════════════════════════
+
 
 setTimeout(() => {
   try { NoaaEvents.fetchAlerts().then(ev => {
