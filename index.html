@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.09-fp190-BANNER-RETICK</title>
+  <title>G-Index — Космофізичний дашборд v88.9.10-fp191-DAY-VERDICT-LITE</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -21199,6 +21199,54 @@ const NoaaEvents = (function(){
 })();
 
 // Trigger initial NOAA events fetch (non-blocking)
+
+// ═══ v88.9.10-fp191: DAY-VERDICT LITE ═══════════════════════════════════════
+// Проблема: "PDF/Engine недоступний" — loadEngineScores()/loadExpertOverrides()
+// не підключені до boot (3 спроби fp167/168/170test вішали Chrome на 98.6% CPU;
+// корінь невідомий, підозра — важкі рендери render27Day/heatStrip на 564 датах).
+// Цей шлях СВІДОМО ІНШИЙ:
+//   1. НЕ викликає render27Day / M2-M4 / heatStrip — взагалі жодного разового
+//      важкого рендера. Дані підхоплять періодичні тики, які вже працюють.
+//   2. _engineScores обрізається до вікна ±16 днів (макс ~33 записи замість 564)
+//      — навіть якщо якийсь тик-рендер ітерує все сховище, обсяг мізерний.
+//   3. Kill-switch: додай ?verdict=off до URL — блок повністю вимкнено.
+//   4. Відкладений старт 6с — після стабілізації boot.
+// Діагностика: window.__verdictLiteStatus у консолі.
+window.__verdictLiteStatus = 'pending';
+setTimeout(async function _dayVerdictLite(){
+  try {
+    if (/[?&]verdict=off/.test(location.search)) { window.__verdictLiteStatus = 'disabled'; return; }
+    window.__verdictLiteStatus = 'loading';
+    // Overrides: крихітний файл; loadExpertOverrides = чистий fetch+словник, без рендерів.
+    try { await loadExpertOverrides(); } catch(e){ /* status у _expertOverridesLoadStatus */ }
+    // Engine: власний мінімальний fetch (НЕ loadEngineScores — той тягне future_kp+annual ланцюг).
+    if (_engineScores === null) {
+      const resp = await fetch('engine_scores.json', { cache: 'default' });
+      if (resp.ok) {
+        const data = await resp.json();
+        const all = (data && data.scores) || {};
+        const nowMs = Date.now(), MS = 86400000, win = {};
+        for (const ds in all) {
+          const t = Date.parse(ds + 'T00:00:00Z');
+          if (isFinite(t) && Math.abs(t - nowMs) <= 16 * MS) win[ds] = all[ds];
+        }
+        _engineScores = win;
+        window.__verdictLiteStatus = 'loaded_' + Object.keys(win).length + 'days';
+      } else {
+        window.__verdictLiteStatus = 'engine_http_' + resp.status;
+      }
+    } else {
+      window.__verdictLiteStatus = 'already_loaded';
+    }
+    // Один звичайний UI-sync — та сама функція, що виконується кожен G-тик і 3 дні
+    // працює стабільно; з даними вона робить лише словникові lookup-и.
+    try { if (typeof syncV702UI === 'function') syncV702UI(); } catch(e){ /* silent */ }
+  } catch(e) {
+    window.__verdictLiteStatus = 'error_' + ((e && e.message) || 'unknown');
+  }
+}, 6000);
+// ═══ /fp191 ═════════════════════════════════════════════════════════════════
+
 setTimeout(() => {
   try { NoaaEvents.fetchAlerts().then(ev => {
     if(window._DEBUG) console.log('[NoaaEvents] loaded', (ev||[]).length, 'alerts');
