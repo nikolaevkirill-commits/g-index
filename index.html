@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.12-fp193-HANG-DIAG2</title>
+  <title>G-Index — Космофізичний дашборд v88.9.13-fp194-RECURSION-FIXED</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -12910,7 +12910,21 @@ function _renderHeroHierarchy(){
         // момент, коли дані реально прийшли, кільце застрягало на G_now (fallback) без
         // гарантії самокорекції. Тепер ресинк прив'язаний до підтвердженого факту наявності
         // даних, а не до таймауту.
-        try{ if(typeof syncHero==='function') syncHero(); }catch(_e){}
+        // v88.9.13-fp194: ═══ КОРІНЬ 4-х ЗАВИСАНЬ (fp167/168/170test/191) ═══
+        // Цей "гарантований ресинк" (v88.8.55) замикав нескінченну взаємну рекурсію:
+        // syncHero → (останній рядок) _patchStaleLoadingDOM → _renderHeroHierarchy →
+        // → syncHero → … Коло замикалось ЛИШЕ коли getEngineScore повертав дані
+        // (isFinite(snap.eng)) — тому дашборд був стабільний без engine-даних і
+        // миттєво висів (98.6% CPU) при будь-якій спробі їх завантажити.
+        // Відтворено в jsdom: 3865 повних проходів syncHero за 45с (194К чекпойнтів).
+        // Guard обмежує глибину: легітимний одноразовий ресинк зберігається,
+        // повторний вхід із власного ж ланцюга — блокується.
+        try{
+          if(typeof syncHero==='function' && !window.__heroResyncActive){
+            window.__heroResyncActive = true;
+            try { syncHero(); } finally { window.__heroResyncActive = false; }
+          }
+        }catch(_e){}
       }
     }catch(e){ /* silent */ }
     // 2) Фон зараз — G_now (live composite Kp−2+ΣAᵢ)
@@ -21290,6 +21304,32 @@ const NoaaEvents = (function(){
   }, 6000);
 })();
 // ═══ /fp192 ═════════════════════════════════════════════════════════════════
+
+// ═══ v88.9.13-fp194: DAY-VERDICT LOADER (fp191 повернуто після розриву рекурсії)
+// Корінь зависань виправлено guard-ом у _renderHeroHierarchy (див. рядок ~12913).
+// Kill-switch на випадок неочікуваного: ?verdict=off
+setTimeout(async function _dayVerdictLoad(){
+  try {
+    if (/[?&](verdict=off|diag=1)/.test(location.search)) return; // diag має власний завантажувач
+    await loadExpertOverrides();
+    if (_engineScores === null) {
+      const resp = await fetch('engine_scores.json', { cache: 'default' });
+      if (resp.ok) {
+        const data = await resp.json();
+        const all = (data && data.scores) || {};
+        const nowMs = Date.now(), MS = 86400000, win = {};
+        for (const ds in all) {
+          const t = Date.parse(ds + 'T00:00:00Z');
+          if (isFinite(t) && Math.abs(t - nowMs) <= 16 * MS) win[ds] = all[ds];
+        }
+        _engineScores = win;
+      }
+    }
+    try { if (typeof syncV702UI === 'function') syncV702UI(); } catch(e){ /* silent */ }
+    try { if (typeof _renderHeroHierarchy === 'function') _renderHeroHierarchy(); } catch(e){ /* silent */ }
+  } catch(e) { /* silent — сторінка живе на live-фоні як раніше */ }
+}, 6000);
+// ═══ /fp194 ═════════════════════════════════════════════════════════════════
 
 
 setTimeout(() => {
