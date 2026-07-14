@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.8.95-fp175-BADGE-TOOLTIPS</title>
+  <title>G-Index — Космофізичний дашборд v88.9.06-fp187-LIVE-TITHI-EVERYWHERE</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1879,7 +1879,8 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
         <div id="whyMain" class="why-main">—</div>
         <!-- v87.47: 7-day G sparkline — заповнення пустоти + тренд-контекст -->
         <div id="whyTrendBlock" style="margin-top:10px;display:none">
-          <div style="font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px">Тренд G_day · 7 днів <span style="font-weight:500;color:var(--faint);text-transform:none;letter-spacing:0">(з експертними Δ)</span></div>
+          <div style="font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.07em;margin-bottom:2px">Тренд G_day · 7 днів <span style="font-weight:500;color:var(--faint);text-transform:none;letter-spacing:0">(з експертними Δ)</span></div>
+          <div style="font-size:9px;color:var(--faint);margin-bottom:6px">ⓘ тут "сьогодні" = Kp з щотижневого NOAA 27-day outlook (публікується щопонеділка), НЕ живий Kp з кільця вище — різні числа для одного дня є нормальними.</div>
           <svg id="whyTrendSvg" viewBox="0 0 440 90" style="width:100%;height:90px;display:block" aria-label="Графік G_day за 7 днів з експертними дельтами"></svg>
           <div id="whyTrendNote" style="font-size:11px;color:var(--dim);margin-top:4px;line-height:1.35"></div>
         </div>
@@ -2252,9 +2253,14 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
             </div>
           </div>
           <!-- Birth bird display -->
-          <div id="ppBirthBird" style="display:none;padding:10px 12px;border-radius:8px;background:rgba(252,164,116,.06);border:1px solid rgba(252,164,116,.2);margin-bottom:10px"></div>
-          <!-- Activity matrix -->
-          <div id="ppActivityMatrix" style="display:none"></div>
+          <div id="ppBirthBird" style="display:none;padding:10px 12px;border-radius:8px;border:1px solid rgba(252,164,116,.2);margin-bottom:10px"></div>
+          <!-- Activity matrix — v88.8.98-fp179: own collapsible wrapper so the
+               table can be folded independently once the summary card above
+               already shows color+action (Kyrylo request 2026-07-13). -->
+          <details id="ppMatrixDetails" style="margin-top:2px">
+            <summary style="cursor:pointer;font-size:10px;color:var(--faint);list-style:none;user-select:none">▸ Детальний розклад доби (Activity Cycle)</summary>
+            <div id="ppActivityMatrix" style="margin-top:6px"></div>
+          </details>
         </div>
       </details>
       <!-- v88.8.21: CHRONO JOURNAL — щоденний самозвіт + кореляція з G (outcome validation pilot). -->
@@ -3705,8 +3711,8 @@ function _renderComponentDeltaCard(){
   const d = _getComponentDelta();
   if(!d){ box.style.display='none'; return; }
   const rows = [
-    ['Kp', d.kp], ['Тітхі (Lᵢ)', d.Li], ['Затемнення (Mᵢ)', d.Mi],
-    ['Події (eᵢ)', d.ei], ['Панчанга (Pᵢ)', d.Pi], ['Dst-буря (Dᵢ)', d.Di]
+    ['Δ Kp', d.kp], ['Δ Тітхі (Lᵢ)', d.Li], ['Δ Затемнення (Mᵢ)', d.Mi],
+    ['Δ Події (eᵢ)', d.ei], ['Δ Панчанга (Pᵢ)', d.Pi], ['Δ Dst-буря (Dᵢ)', d.Di]
   ].filter(([_,v]) => v!=null && Math.abs(v) >= 0.05);
   if(!rows.length){ box.style.display='none'; return; }
   const _fmt = v => (v>0?'+':'') + v.toFixed(2);
@@ -4626,7 +4632,37 @@ const GIndexPPProfile = {
     // Birth bird display
     const elBird = document.getElementById('ppBirthBird');
     if (elBird) {
+      // v88.8.98-fp179: compute current activity state HERE (same logic as
+      // renderMatrix below) so the summary card itself can show color +
+      // action, not just the plain name — Kyrylo couldn't tell at a glance
+      // whether "Їсть" was good or bad without reading the whole grid.
+      const _now179 = new Date();
+      const _weekday179 = _now179.getDay();
+      const _isShukla179 = this.pakshaFromDate(_now179);
+      let _sunrise179 = null, _sunset179 = null;
+      try {
+        if (typeof _calcSunRiseSet === 'function') {
+          const _sr179 = _calcSunRiseSet(_now179);
+          if (_sr179 && _sr179.sunrise && _sr179.sunset) { _sunrise179 = _sr179.sunrise; _sunset179 = _sr179.sunset; }
+        }
+      } catch(e) { /* fall through to fallback */ }
+      if (!_sunrise179 || !_sunset179) {
+        _sunrise179 = new Date(_now179); _sunrise179.setHours(6,0,0,0);
+        _sunset179 = new Date(_now179); _sunset179.setHours(18,0,0,0);
+      }
+      let _yamaInfo179 = null;
+      try { if (typeof getCurrentYama === 'function') _yamaInfo179 = getCurrentYama(_now179, _sunrise179, _sunset179); } catch(e) {}
+      let _currentAct179 = null;
+      if (_yamaInfo179 && typeof getPakshiActivityForYama === 'function') {
+        _currentAct179 = getPakshiActivityForYama(birdId, _yamaInfo179.yamaIdx, _weekday179, _yamaInfo179.isDay, _isShukla179);
+      }
+      const _actColors179 = {0:'#ff6b6b', 1:'#9bb1dc', 2:'#ffd93d', 3:'#9bd49e', 4:'#5dd49e'};
+      const _cardColor = _currentAct179 ? _actColors179[_currentAct179.strength] : '#9bb1dc';
+      const _advice = _currentAct179 ? this.ACT_ADVICE[_currentAct179.strength] : '';
+
       elBird.style.display = 'block';
+      elBird.style.background = _cardColor + '14';
+      elBird.style.borderColor = _cardColor + '55';
       elBird.innerHTML = `
         <div style="display:flex;align-items:center;gap:12px">
           <div style="font-size:32px">${this.ICONS[birdId]}</div>
@@ -4636,6 +4672,10 @@ const GIndexPPProfile = {
             <div style="font-size:10px;color:var(--text2);margin-top:3px;font-style:italic">${this.QUALITIES[birdId]}</div>
           </div>
         </div>
+        ${_currentAct179 ? `<div style="margin-top:8px;padding:6px 8px;border-radius:6px;background:${_cardColor}22;border-left:3px solid ${_cardColor}">
+          <div style="font-size:11px;font-weight:700;color:${_cardColor}">Зараз: ${_currentAct179.activityUa}</div>
+          <div style="font-size:10px;color:var(--text2);margin-top:2px">${_advice}</div>
+        </div>` : ''}
         <div style="margin-top:6px;font-size:10px;color:var(--faint)">
           ${p.name ? p.name + ' · ' : ''}${p.date}${p.time ? ' ' + p.time : ' (12:00)'}
           ${!p.time ? ' <span style="color:var(--warn)">⚠ ±1 nakshatra без часу</span>' : ''}
@@ -4644,6 +4684,17 @@ const GIndexPPProfile = {
     }
 
     this.renderMatrix(birdId);
+  },
+
+  // v88.8.98-fp179: plain-language action advice per activity strength,
+  // shown directly on the birth-bird card (Kyrylo request 2026-07-13:
+  // color the card by situation + state the actual action, not just a name).
+  ACT_ADVICE: {
+    0: 'Найслабша фаза. Уникай важливих рішень і нових справ — перечекай.',
+    1: 'Пасивна фаза. Відпочинок, планування — не ініціюй нове.',
+    2: 'Помірна фаза. Рутинні справи, підготовка — можна діяти обережно.',
+    3: 'Гарна фаза. Можна активно діяти, вести перемовини.',
+    4: 'Найсильніша фаза. Найкращий час для важливих рішень і нових починань.',
   },
 
   renderMatrix(birthBirdId) {
@@ -10118,13 +10169,29 @@ function computePanchanga(dateUTC){
   // tithiIdx: 0-based (0..29). tithi.num = tithiIdx+1 (1-based, для зовнішнього API).
   // Усі масиви TITHI_NAMES/SCORE/TYPE індексуються 0-based через tithiIdx.
   const tithiIdx = Math.min(29, Math.floor(phaseDeg / 12));
+  // v88.9.01-fp183: hours until next tithi boundary + preview of what's coming,
+  // so a discrete jump (e.g. into Amavasya, ΣAi=-4) isn't a total surprise —
+  // Kyrylo caught G_now jumping ~5 points with no warning (2026-07-13).
+  let hoursToNextTithi = null, nextTithiIdx = null;
+  try {
+    const _phaseDegPlus1h = (moonPhaseAngle(new Date(dateUTC.getTime() + 3600000)) + 360) % 360;
+    let _rate = _phaseDegPlus1h - phaseDeg;
+    if (_rate < 0) _rate += 360;
+    if (_rate < 0.01) _rate = 0.508; // safety fallback (~average deg/hour), avoid div-by-~0
+    const _degToNext = ((tithiIdx + 1) * 12) - phaseDeg;
+    hoursToNextTithi = _degToNext / _rate;
+    nextTithiIdx = (tithiIdx + 1) % 30;
+  } catch(_e) { /* leave null, non-critical enhancement */ }
   const tithi = {
     num: tithiIdx + 1,  // 1-based: використовується в TITHI_ADVICE і Pi (tIdx = num-1)
     name: TITHI_NAMES[tithiIdx],
     type: TITHI_TYPE[tithiIdx],
     score: TITHI_SCORE[tithiIdx],
     note: TITHI_NOTE[tithiIdx] || '',
-    phaseDeg: phaseDeg.toFixed(1)
+    phaseDeg: phaseDeg.toFixed(1),
+    hoursToNext: hoursToNextTithi,
+    nextName: nextTithiIdx !== null ? TITHI_NAMES[nextTithiIdx] : null,
+    nextScore: nextTithiIdx !== null ? TITHI_SCORE[nextTithiIdx] : null,
   };
 
   // Vara: v87.90 fix — локальний день тижня (раніше getUTCDay() давав неправильний результат вночі)
@@ -10452,7 +10519,11 @@ function computePanchangaState(dateUTC){
 
   const cells = [
     { score: p.tithi.score, label: 'Tithi — місячний день', val: p.tithi.name,
-      sub: `${p.tithi.type} · ΔL≈${p.tithi.phaseDeg}°`, adv: tAdv, tipKey:'tithi', tipData:p.tithi },
+      sub: `${p.tithi.type} · ΔL≈${p.tithi.phaseDeg}°`
+           + ((isFinite(p.tithi.hoursToNext) && p.tithi.hoursToNext <= 6 && p.tithi.nextScore <= -2)
+              ? ` · ⚠ через ~${Math.round(p.tithi.hoursToNext)}г → ${p.tithi.nextName} (${p.tithi.nextScore >= 0 ? '+' : ''}${p.tithi.nextScore})`
+              : ''),
+      adv: tAdv, tipKey:'tithi', tipData:p.tithi },
     { score: p.vara.score, label: 'Vara — день тижня', val: p.vara.name,
       sub: `${p.vara.planet}`, adv: vAdv, tipKey:'vara', tipData:p.vara },
     { score: p.nakshatra.score, label: 'Nakshatra — місячна стоянка', val: p.nakshatra.name,
@@ -11439,7 +11510,17 @@ function _renderPanchaPakshi(refDateUTC){
   // activity-цикл: точна формула Bright Half (верифіковано зі сканів), Dark Half — та сама формула, R&D.
   let _ppActivityLine = '';
   try {
-    const _now = refDateUTC || new Date();
+    // v88.8.99-fp180: BUG FOUND — this used `refDateUTC` (the day's fixed
+    // noon-UTC reference, same as panchDate "~12:00 UTC"), NOT the actual
+    // live moment. Result: the displayed "current phase" time window
+    // (e.g. "02:01-05:14 UTC") never matched the real current time shown
+    // elsewhere on the dashboard (Kyrylo caught this 2026-07-13 comparing
+    // it against the personal natal-bird card, which correctly uses
+    // new Date()). The bird-of-the-day itself (nakshatra->bird, computed
+    // above via panch/refDateUTC) is correctly day-referenced and left
+    // untouched — only the "what phase is it RIGHT NOW" line needs the
+    // real clock time.
+    const _now = new Date();
     const _wd = _now.getDay();
     let _sr = null, _ss = null;
     try {
@@ -12125,7 +12206,13 @@ function buildUnifiedAdvice(state){
   const pc = _lastPanchCtx;
   if(pc){
     if(pc.karana?.isVishti){ AVOID.push('нові початки (Vishti)'); NOTE.push('Vishti karana — підвищений ризик'); }
-    const tIdx = pc.tithi?.index;
+    // v88.9.05-fp187: same stale-cache bug as Li/tithiName fixes — pc.tithi.index
+    // could reflect the tithi active AT NOON (day reference), not right now.
+    // Recompute live from window._lunarPhaseDeg when available, so an
+    // Ekadashi-based recommendation doesn't linger for hours after the
+    // tithi has actually already moved on (or start too early).
+    const _pdAdv = window._lunarPhaseDeg;
+    const tIdx = isFinite(_pdAdv) ? Math.min(29, Math.floor(((_pdAdv % 360) + 360) % 360 / 12)) : pc.tithi?.index;
     if(tIdx===10||tIdx===25){ DO.push('дисципліна','самоконтроль'); NOTE.push('Екадаші — день стриманості'); }
     const nType = pc.nakshatra?.type;
     // Nakshatra AVOID always applies; DO only at neutral+
@@ -12931,7 +13018,16 @@ function _patchStaleLoadingDOM() {
       // reading the already-rendered #nowG DOM text — same pattern used
       // elsewhere in the file (gVal computation) — since that value is
       // confirmed correct on screen even when __uiState.gNow is stale.
+      // v88.8.95-fp176: fp172 fix used the WRONG element id ('nowG', a separate/
+      // possibly legacy badge) — the ring's actual visible number lives in
+      // '#heroG' (confirmed: cache-paint comment at L1535 explicitly names
+      // "heroG/heroRingVal" as the real render targets). Fixed to read the
+      // right element. Also try both as a defensive fallback.
       let _gNow = window.__uiState?.gNow;
+      if (!isFinite(_gNow)) {
+        const _heroGEl = document.getElementById('heroG');
+        _gNow = _num(_firstText(_heroGEl) || _heroGEl?.textContent);
+      }
       if (!isFinite(_gNow)) {
         const _nowGEl = document.getElementById('nowG');
         _gNow = _num(_firstText(_nowGEl) || _nowGEl?.textContent);
@@ -13945,7 +14041,15 @@ function syncHero(){
   // This fixes v88.8.23 contradiction: Engine +3 + Live G negative no longer says
   // "МОЖНА ДІЯТИ — СИЛЬНЕ ВІКНО" while timing rows say "уникати".
   const _dt = { headline: heroHeadlineFromHierarchy_v88824(_heroSig), sub: (GLOBAL_STATES[_stKey] || GLOBAL_STATES.neutral).sub };
-  let _headline = _dt.headline || 'Дані завантажуються…';
+  // v88.8.97-fp178: ROOT CAUSE FOUND — heroHeadlineFromHierarchy_v88824 returns
+  // null whenever !sig.hasEngine, which is ALWAYS true right now because
+  // loadEngineScores() is deliberately not wired into boot (rolled back after
+  // real hang on 2026-07-12, see memory). This is the SAME root cause as the
+  // "PDF/Engine недоступний" message elsewhere on screen — NOT a separate
+  // "still loading" state that will resolve itself. The old fallback text
+  // ("Дані завантажуються…") was misleading (implied temporary loading);
+  // fixed to state the actual, accurate situation.
+  let _headline = _dt.headline || 'PDF/Engine недоступний — показано лише живий фон нижче';
   // fp47/fp52-P3/fp53-A: DELAYED prefix on headline.
   // Problem: heroHeadlineFromHierarchy already returns 'МОЖНА ДІЯТИ за PDF · live-фон estimated...'
   // which contains 'estimated' → fp52 condition blocked the fix.
@@ -14205,7 +14309,7 @@ function _renderHeroCause(g, kp) {
                    : (f.val > 0 ? eff.pos : eff.neg);
         const cls  = f.val > 0 ? 'is-pos' : 'is-neg';
         return `<div class="why-cause-row ${cls}">`
-             + `<span class="wcr-cause">${f.name} ${dir} ${sign}${f.val.toFixed(1)}</span>`
+             + `<span class="wcr-cause">${f.name} (зараз) ${dir} ${sign}${f.val.toFixed(1)}</span>`
              + `<span class="wcr-arrow">→</span>`
              + `<span class="wcr-effect">${txt}</span>`
              + `</div>`;
@@ -14248,7 +14352,7 @@ function _renderHeroCause(g, kp) {
       }
     }
     return `<div class="why-row${isMain ? ' is-main' : ''}">`
-      + `<div class="why-name">${f.name} <span style="color:var(--dim);font-size:11px">${f.label}</span>${detail}</div>`
+      + `<div class="why-name">${f.name} <span style="color:var(--dim);font-size:11px">${f.label} (зараз)</span>${detail}</div>`
       + `<div class="why-val" style="color:${col}">${sign}${f.val.toFixed(1)}</div>`
       + `<div class="why-dir" style="color:${col}">${dir}</div>`
       + `</div>`;
@@ -14385,10 +14489,24 @@ function _renderWhyTrend(){
   if(typeof _27dComputed !== 'undefined' && _27dComputed && _27dComputed.length > 0){
     const idxToday = _27dComputed.findIndex(d => d && d.ds === todayStr);
     if(idxToday >= 0){
+      // v88.9.01-fp182: "today" (i===0) used _27dComputed's d.G — the NOAA
+      // 27-day OUTLOOK forecast Kp (published weekly on Monday), NOT live
+      // observed Kp. This made "today" in this chart disagree with the main
+      // G_now ring in sign, with no visible reason (Kyrylo caught this
+      // 2026-07-14). The fallback path below already correctly used live
+      // Kp for today — this just brings the primary path in line with it.
+      const _kpLiveToday = (typeof lastWWV !== 'undefined' && lastWWV && isFinite(lastWWV.kNow)) ? lastWWV.kNow : null;
       for(let i = 0; i < 4; i++){
         const d = _27dComputed[idxToday + i];
         if(d && d.ds && isFinite(d.G)){
-          days.push({ ds: d.ds, G: d.G, isPast: false, isToday: i === 0 });
+          let _gForDay = d.G;
+          if (i === 0 && _kpLiveToday !== null) {
+            try {
+              const _aiLive = computeAi(sunriseUTC(new Date()), _kpLiveToday);
+              _gForDay = _kpLiveToday - 2 + _aiLive.Ai;
+            } catch(e) { _gForDay = d.G; /* keep forecast value if live calc fails */ }
+          }
+          days.push({ ds: d.ds, G: _gForDay, isPast: false, isToday: i === 0 });
           _todayPlusFutureAdded++;
         }
       }
@@ -14992,9 +15110,20 @@ function renderMoonRetroTop(){
   // Moon block — from JS variables
   const pd=window._lunarPhaseDeg;
   const phaseName=isFinite(pd)?phaseNameByAngle(pd):'—';
-  const liVal=ai?String(ai.Li):'—';
-  const tithiName=pc?.tithi?.name||'—';
-  const tithiNum=pc?.tithi?.num||'';
+  // v88.9.03-fp185: same stale-cache bug as fp184 — moonLiNow ("Now" in the
+  // id!) was reading ai.Li from _lastPanchCtx (noon-UTC-referenced cache),
+  // not live. Recompute Amavasya case live from pd, matching computeAi's
+  // canonical formula, same as syncWhy()'s fix.
+  const _tithiIdxForLi185 = isFinite(pd) ? Math.min(29, Math.floor(((pd % 360) + 360) % 360 / 12)) : null;
+  const liVal = _tithiIdxForLi185 === 29 ? '-3' : (ai?String(ai.Li):'—');
+  // v88.9.05-fp187: same live-vs-cached-noon bug as Li — tithiName came from
+  // _lastPanchCtx (stale), while _tithiIdxForLi185 (live, from pd) was
+  // already computed right here for the Li fix. Reuse it for the name too.
+  // nakName is NOT fixed here — would need moon sidereal longitude, which
+  // isn't exposed as a global in this scope; documented, deferred, not
+  // guessed at with a risky new global variable right now.
+  const tithiName = _tithiIdxForLi185 !== null ? TITHI_NAMES[_tithiIdxForLi185] : (pc?.tithi?.name||'—');
+  const tithiNum = _tithiIdxForLi185 !== null ? _tithiIdxForLi185 + 1 : (pc?.tithi?.num||'');
   const nakName=pc?.nakshatra?.name||'—';
   const nakScore=pc?.nakshatra?.score;
 
@@ -15019,7 +15148,10 @@ function renderMoonRetroTop(){
   // Next tithi shift (approx: each tithi ~24h, compute remainder)
   if(el('moonNextShift')){
     try{
-      const tNum=pc?.tithi?.num||0;
+      // v88.9.05-fp187: same stale-cache pattern — use live tithi number
+      // (window._lunarPhaseDeg) instead of cached pc.tithi.num.
+      const _pdShift = window._lunarPhaseDeg;
+      const tNum = isFinite(_pdShift) ? (Math.min(29, Math.floor(((_pdShift % 360) + 360) % 360 / 12)) + 1) : (pc?.tithi?.num||0);
       // Approximate: tithi changes every ~24h, next shift in remaining hours
       const dayFrac=(now.getUTCHours()*60+now.getUTCMinutes())/1440;
       const remH=Math.max(1,Math.round((1-dayFrac)*24));
@@ -15116,7 +15248,15 @@ function syncWhy(){
   // Moon interpretation
   if(isFinite(pd)){
     const phaseName=phaseNameByAngle(pd);
-    const li=ai?.Li??0;
+    // v88.9.02-fp184: was `ai?.Li??0` — read from _lastPanchCtx, a CACHED
+    // context object not guaranteed fresh at the exact moment tithi crosses
+    // a boundary (same bug class as fp180's stale refDateUTC). Confirmed by
+    // Kyrylo: screenshot showed "Амавасья ... Lᵢ=0" here while the "ЩО
+    // ФОРМУЄ СТАН" panel correctly showed Lᵢ=-3.0 for the same moment.
+    // Fixed to recompute Li live from pd, matching computeAi's canonical
+    // tithi-based formula (Amavasya = 0-based tithiIdx 29 -> Li=-3).
+    const _tithiIdxForLi = Math.min(29, Math.floor(((pd % 360) + 360) % 360 / 12));
+    const li = _tithiIdxForLi === 29 ? -3 : (ai?.Li ?? 0);
     const illum=((1-Math.cos(pd*Math.PI/180))/2*100).toFixed(0);
     const moonSign=li<0?'↓':'↑';
     const moonCol=li<0?'#ff9966':li>0?'#2bd47d':'#9bb1dc';
