@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.11-fp192-HANG-DIAG</title>
+  <title>G-Index — Космофізичний дашборд v88.9.12-fp193-HANG-DIAG2</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -21215,7 +21215,11 @@ const NoaaEvents = (function(){
     if (last && !last.endsWith('_ok') && !/[?&]diag=1/.test(location.search)) {
       const d = document.createElement('div');
       d.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#7a1020;color:#fff;font:700 13px/1.4 monospace;padding:8px 12px;text-align:center;cursor:pointer';
-      d.textContent = '🔍 ДІАГНОСТИКА: минулий прогін завис у функції « ' + last + ' » — скинь це Claude. (клік = закрити)';
+      d.textContent = '🔍 ДІАГНОСТИКА: ' + (last.endsWith('_invoking')
+        ? 'завис УСЕРЕДИНІ функції « ' + last.replace('_invoking','') + ' »'
+        : last.endsWith('_queued')
+          ? 'завис у ПАУЗІ перед « ' + last.replace('_queued','') + ' » (винен async-хвіст попередніх)'
+          : 'checkpoint « ' + last + ' »') + ' — скинь це Claude. (клік = закрити)';
       d.onclick = function(){ try{localStorage.removeItem(KEY);}catch(_e){} d.remove(); };
       (document.body || document.documentElement).appendChild(d);
     }
@@ -21256,13 +21260,18 @@ const NoaaEvents = (function(){
           return;
         }
         const name = fns[i++];
-        localStorage.setItem(KEY, name); // синхронно, ПЕРЕД викликом
+        // v88.9.12-fp193: три checkpoint-и замість одного, щоб розрізнити:
+        //   «X_queued»   = зависло у 50мс-ПАУЗІ перед X → винен async-хвіст
+        //                  ПОПЕРЕДНІХ функцій (таймер/rAF, який вони запланували);
+        //   «X_invoking» = зависло ВСЕРЕДИНІ самої X;
+        //   «X_ok»       = X пройшла.
+        localStorage.setItem(KEY, name + '_queued');
         st.textContent = 'diag [' + i + '/' + fns.length + ']: ' + name + ' …';
         setTimeout(function(){
+          localStorage.setItem(KEY, name + '_invoking'); // синхронно, впритул перед викликом
           try {
             if (name === 'buildDashboardState') { window.__dashState = buildDashboardState(); }
             else if (name === '_v73G_saveHist') { const g = _v73G(); if (isFinite(g)) _saveGHistory(g); }
-            else if (name === 'buildDashboardState' || false) { /* unreachable */ }
             else {
               let f = null;
               try { f = eval(name); } catch(_e){}
