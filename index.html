@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.18-fp199-CONF-RACE-FIX</title>
+  <title>G-Index — Космофізичний дашборд v88.9.25-fp206-FULL-SWEEP</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -3425,7 +3425,7 @@ function renderDecisionLayer(gVal, ui) {
   // Раніше фільтрувався лише персональний цикл (fp54-C) і буря, але НЕ критичний day-score:
   // якщо PDF/Engine=−2 а live-фон позитивний → «Робіть: Запускати нові ініціативи» проскакувало.
   try {
-    const _eDoG = (typeof getEngineScore === 'function') ? getEngineScore(new Date()) : null;
+    const _eDoG = (typeof getEngineScore === 'function') ? getEngineScore(new Date(todayKyivStr()+'T12:00:00Z')) : null;
     if (_eDoG && isFinite(_eDoG.eng) && Number(_eDoG.eng) <= -2 && !_stormActive44) {
       doArr = doArr.filter(d => !d.includes('нові ініціативи') && !d.includes('Запускати нові')
                               && !d.includes('нові старти') && !d.includes('Укладати') && !d.includes('контракт'));
@@ -3547,7 +3547,7 @@ function _saveGHistory(g){
     localStorage.setItem(key, JSON.stringify(hist));
     // v87.19 U4: daily history — зберегти 1 запис на день (noon UTC G) для місячної стати
     const dayKey='g_history_daily_v1';
-    const todayStr=new Date().toISOString().slice(0,10); // YYYY-MM-DD
+    const todayStr=todayKyivStr(); // YYYY-MM-DD
     let daily=JSON.parse(localStorage.getItem(dayKey)||'{}');
     // Середнє за день (averageу поточне значення з наявним)
     if (daily[todayStr] === undefined) {
@@ -3575,7 +3575,7 @@ function _getBestWorstDays(){
     // - history best/worst may use local/engine reconstructed raw G for past 30d;
     // - forward 7d peak MUST use the same _27dComputed raw series as the visible 27-day chart.
     // This prevents top summary saying e.g. G_day=+4.0 while the plotted point shows +5.0.
-    const todayStr = fmtDate(new Date());
+    const todayStr = todayKyivStr();
     const nowMs = Date.now();
     // fp34: was 30 days, but visible chart is 27 days back + 7 forward. Sync window to chart
     // so summary "Макс/Мін" never references a date outside the rendered curve.
@@ -3817,7 +3817,7 @@ document.addEventListener('DOMContentLoaded',()=>{
         try {
           const days = parseInt(params.get('debug'),10) || 7;
           const results = [];
-          const today = new Date();
+          const today = new Date(todayKyivStr()+'T12:00:00Z');
           for (let i = 0; i <= days; i++) {
             const d = new Date(today);
             d.setUTCDate(d.getUTCDate() + i);
@@ -5236,6 +5236,19 @@ function fmtUTC(d){
   return `${d.getUTCFullYear()}-${pad(d.getUTCMonth()+1)}-${pad(d.getUTCDate())} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())} (UTC)`;
 }
 const fmtDate = d => new Date(d).toISOString().slice(0,10);
+// fp201 (2026-07-16): todayKyivStr() використовувався в 26 місцях для "сьогодні",
+// АЛЕ fmtDate = UTC ISO-дата. Київ = UTC+3 (літо) — з 00:00 до 02:59 за Києвом UTC-дата
+// ще вчорашня, тому дашборд у цьому вікні показував учорашній день як "сьогодні".
+// todayKyivStr() — єдине джерело істини для "сьогодні", рахує в Europe/Kyiv напряму
+// (без хардкоду +3, через Intl — коректно і взимку/влітку).
+function todayKyivStr(){
+  try {
+    return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Kyiv',
+      year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+  } catch(e) {
+    return fmtDate(new Date()); // fallback якщо Intl/timeZone недоступний
+  }
+}
 const el = id => document.getElementById(id);
 
 // ═══ v88.6.9: DEBUG flag — silence console.log noise у production ═══
@@ -5490,7 +5503,7 @@ const CONF_LABEL = { high:'Висока', medium:'Середня', low:'Низь
 function renderRegimeCards(){
   const wrap = el('regimeCards');
   if(!wrap || !_dailyMaster) return;
-  const today = (typeof fmtDate==='function') ? fmtDate(new Date()) : new Date().toISOString().slice(0,10);
+  const today = (typeof fmtDate==='function') ? todayKyivStr() : todayKyivStr();
   const m = _dailyMaster[today];
   if(!m){ wrap.style.display='none'; return; }
   wrap.style.display='grid';
@@ -5544,7 +5557,7 @@ function renderUnifiedIndicesPanel(){
   const box = el('unifiedIndicesPanel');
   if(!box) return;
   try{
-    const now = new Date();
+    const now = new Date(todayKyivStr()+'T12:00:00Z');
     const p = (typeof computePanchanga==='function') ? computePanchanga(now) : null;
     if(!p) { box.style.display='none'; return; }
     box.style.display='block';
@@ -5622,7 +5635,7 @@ function renderUnifiedIndicesPanel(){
 function renderHeroRegimePill(){
   const pill=el('heroRegimePill');
   if(!pill || !_dailyMaster) return;
-  const today=(typeof fmtDate==='function')?fmtDate(new Date()):new Date().toISOString().slice(0,10);
+  const today=(typeof fmtDate==='function')?todayKyivStr():todayKyivStr();
   const m=_dailyMaster[today];
   if(!m){pill.style.display='none';return;}
   const reg=REGIME_LABEL[m.regime_type]||REGIME_LABEL.baseline;
@@ -5692,7 +5705,7 @@ function renderChronoPanel(){
 
   const valid=entries.filter(e=>e.exposure!=='invalid' && e.axis_a!=null && e.locked);
   const nv=valid.length;
-  const today=new Date().toISOString().slice(0,10);
+  const today=todayKyivStr();
   const todayEntry=entries.find(e=>e.date===today);
 
   if(prog) prog.textContent='n='+nv+'/30';
@@ -5905,7 +5918,7 @@ async function loadEngineScores(){
     } catch(_e){ if(window._DEBUG) console.warn('[fp56-P8] annual load failed:', _e.message); }
     // V25-fu30: check expiration — show banner if scores expire soon
     try {
-      const today = new Date(); today.setHours(0,0,0,0);
+      const today = new Date(todayKyivStr()+'T00:00:00'); today.setHours(0,0,0,0);
       const futureDates = Object.keys(_engineScores)
         .filter(d => { const dt = new Date(d); return !isNaN(dt) && dt >= today; });
       if(futureDates.length > 0){
@@ -6079,7 +6092,11 @@ function getEngineScore(dateObj){
   // Frozen raw eng зберігаємо в _engRaw для audit і tooltip explanations.
   if(snapshot && _expertOverrides && _expertOverrides[ds]){
     const ovr = _expertOverrides[ds];
-    // v88.8.35-fp22-C13: snippet_hash must be a real sha256 hex (≥16 chars), not "pending_*".
+    // v88.8.35-fp22-C13: snippet_hash формат sha256:hex(16-64) — це перевірка ФОРМАТУ
+    // поля, НЕ перерахунок SHA256 від тексту PDF (крипто-верифікації контенту нема).
+    // Реальна гарантія коректності — людина, що ставить verified:true, звірила з PDF
+    // сама. fp200: перейменовано з "verified" на чесніше "gate_passed" у внутрішніх
+    // полях нижче, щоб не створювати оманливе відчуття автоматичної крипто-перевірки.
     const _hashOk = /^sha256:[0-9a-f]{16,64}$/i.test(String(ovr.snippet_hash || ''));
     const _isVerified = ovr.verified === true
       && typeof ovr.source_pdf === 'string' && ovr.source_pdf.length > 0
@@ -6127,25 +6144,13 @@ function getEngineScore(dateObj){
       _expertCalcRawSum: _expertCalc[ds].raw_sum
     };
   }
-  // fp197: Сурья-solo correction (audit 2026-07-16). v17.0 absolute-redefiner
-  // повертає -3 для 'сурья'/'☀' соло (без наваратрі/серце/екадаші), АЛЕ
-  // WEIGHT_E_EVENTS у ЦЬОМУ Ж файлі (рядок ~6607) для того самого символу
-  // задає -2 — і саме -2 підтверджено джерелом (expert_symbol_table.json,
-  // аркуш "ШКАЛА", рядок 47: 'Сурья Санкранті...' = -2). Read-time фікс,
-  // frozen engine_scores.json НЕ модифікується. Пріоритет нижче за
-  // expert_override і expert_calc (не застосовується якщо вони вже спрацювали).
-  if(snapshot && !snapshot._expertOverride && !snapshot._expertCalcApplied
-     && snapshot.eng === -3 && typeof snapshot.tag === 'string'){
-    const _sl = snapshot.tag.toLowerCase();
-    const _isSurya = _sl.includes('сурья') || snapshot.tag.includes('☀');
-    const _isNavaratri = _sl.includes('наваратрі');
-    const _isHeart = snapshot.tag.includes('❤');
-    const _isEkadashi = _sl.includes('екадаші');
-    if(_isSurya && !_isNavaratri && !_isHeart && !_isEkadashi){
-      snapshot = { ...snapshot, _engRawPreSurya: snapshot.eng, eng: -2, _suryaWeightFixed: true };
-      if(snapshot.pdf === -3) snapshot.pdf = -2;
-    }
-  }
+  // fp197 REVERTED (fp200, 2026-07-16): "Сурья-solo correction" видалено.
+  // Причина: базувався на сирій адитивній таблиці ваг (ШКАЛА), яку той самий
+  // аудит уже показав ГІРШОЮ за rule-tree на holdout (40-48% vs 51-66%).
+  // Реальний PDF-бюлетень (_13_7-26_7_ПРОГНОЗ.pdf, наданий Kyrylo) підтверджує
+  // 16.07.2026 = "Особливо несприятливий день" = -3, ЗБІГАЄТЬСЯ з frozen
+  // engine (-3), а не з -2 як хибно "виправляв" fp197. Урок: не патчити
+  // rule-tree на основі відхиленої гіпотези без свіжої перевірки джерелом.
   // v88.8.18: v18.8 patches (after expert override check — не зачіпає overrides)
   // FP74-FREEZE: _applyV186Patches() disabled — read-time scoring change violates V3 freeze.
   // Canonical: engine_scores.json v18.5, N=272, 70.6% strict / 43.0% exact.
@@ -6176,7 +6181,7 @@ function getEngineScore(dateObj){
 function renderHeroBulletin(){
   const elB = el('heroBulletin');
   if(!elB) return;
-  const entry = getEngineScore(new Date());
+  const entry = getEngineScore(new Date(todayKyivStr()+'T12:00:00Z'));
   if(!entry){
     elB.textContent = '—';
     elB.title = 'Engine v18.5 bulletin score. Поточна дата поза validation window (2025-06-16 → 2026-12-31) або JSON не завантажився.';
@@ -6279,7 +6284,7 @@ function formatCalSymbols(symbols){
 function renderHeroAstroLayer(){
   const elA = el('heroAstroLayer');
   if(!elA) return;
-  const entry = getEngineScore(new Date());
+  const entry = getEngineScore(new Date(todayKyivStr()+'T12:00:00Z'));
   if(!entry || entry.cal_tithi === undefined || entry.cal_tithi === null){
     elA.style.display = 'none';
     return;
@@ -6410,11 +6415,11 @@ window.forecastConfidence = forecastConfidence;
 function renderScenarioCard(){
   const elStrip = el('scenarioStrip');
   if(!elStrip) return;
-  const today = new Date();
+  const today = new Date(todayKyivStr()+'T12:00:00Z');
   const days = [];
   for(let i=0; i<7; i++){
     const d = new Date(today);
-    d.setDate(today.getDate() + i);
+    d.setUTCDate(today.getUTCDate() + i);
     const ds = fmtDate(d);
     // v88.8.1: getEngineScore() замість прямого _engineScores[ds] — застосовує expert overrides
     // (Г-патч v88.7.15) до 7-денного scenario strip. Раніше: прямий доступ → на 7 днях
@@ -7229,7 +7234,7 @@ function autoComputedExtras(dateUTC, kp=0){
 function renderDayTheme(){
   const card = document.getElementById('dayThemeCard');
   if(!card) return;
-  const today = fmtDate(new Date());
+  const today = todayKyivStr();
   const eng = (typeof getEngineScore==='function') ? getEngineScore(today) : null;
   if(!eng || !isFinite(eng.eng)){ card.style.display='none'; return; }
   const score = Math.max(-3, Math.min(3, Math.round(eng.eng)));
@@ -7262,7 +7267,7 @@ function renderDayTheme(){
 function renderWeekSummary(){
   const bar = document.getElementById('weekSummaryBar');
   if(!bar) return;
-  const today = new Date();
+  const today = new Date(todayKyivStr()+'T12:00:00Z');
   const days = [];
   for(let i=0;i<7;i++){
     const d = new Date(today);
@@ -7346,7 +7351,7 @@ function renderAuditCard(opts){
   // Engine day score
   let dayScore = null, hasPdf = false, pdfSrc = '—';
   try {
-    const _e = (typeof getEngineScore === 'function') ? getEngineScore(new Date()) : null;
+    const _e = (typeof getEngineScore === 'function') ? getEngineScore(new Date(todayKyivStr()+'T12:00:00Z')) : null;
     if(_e && isFinite(_e.eng)){
       dayScore = +_e.eng;
       hasPdf   = true;
@@ -7371,7 +7376,7 @@ function renderAuditCard(opts){
     if(!_R && window.__p3RahuCache && window.__p3RahuCache.rahu && window.__p3RahuCache.rahu.start)
       _R = window.__p3RahuCache.rahu;
     if(!_R && typeof computePanchanga === 'function'){
-      const _pc = computePanchanga(sunriseUTC(new Date()));
+      const _pc = computePanchanga(sunriseUTC(new Date(todayKyivStr()+'T12:00:00Z')));
       if(_pc && _pc.rahu && _pc.rahu.start) _R = _pc.rahu;
     }
     if(_R && _R.start && _R.end) rahuStr = `${_R.start}–${_R.end}`;
@@ -8016,7 +8021,7 @@ function _computeAiRaw(dateTimeUTC, kp=0){
   // Date-обмеження зберігаємо: Dᵢ застосовується ТІЛЬКИ для today (майбутні Dst невідомі).
   let Di = 0, diTip = '0 — Dst норма';
   const _diDateStr = fmtDate(dateTimeUTC);
-  const _todayStr  = fmtDate(new Date());
+  const _todayStr  = todayKyivStr();
   if(_diDateStr === _todayStr) {
     const _dstMod = computeDstModifier();
     Di = _dstMod.val;
@@ -8310,7 +8315,7 @@ function parseUafAurora(html){
     }
     if(matches.length < 1) return null;
 
-    const today = new Date().toISOString().slice(0,10);
+    const today = todayKyivStr();
     const result = { kp3Day: [], kp27Day: [], historical: [] };
 
     for(const raw of matches){
@@ -8383,7 +8388,7 @@ function uafTo3DayFormat(uaf){
   if(!uaf.kp3Day || !uaf.kp3Day.length){
     if(!uaf.kp27Day || !uaf.kp27Day.length) return null;
     try{
-      const todayStr = new Date().toISOString().slice(0,10);
+      const todayStr = todayKyivStr();
       const future = uaf.kp27Day
         .filter(r => fmtDate(r.date) >= todayStr)
         .slice(0,3);
@@ -8413,7 +8418,7 @@ function uafTo3DayFormat(uaf){
       byDay.get(r.date).push(r.kp);
     }
     const sorted = Array.from(byDay.entries()).sort((a,b)=>a[0]<b[0]?-1:1);
-    const todayStr = new Date().toISOString().slice(0,10);
+    const todayStr = todayKyivStr();
     const future = sorted.filter(([d])=>d>=todayStr).slice(0,3);
     if(!future.length) return null;
     const days = future.map(([d, kps])=>({
@@ -8464,7 +8469,7 @@ function _ensureThreeDays(out){
   if(out.days.length === 0) return out; // повний fail — обробляється synthetic fallback в loadAll
   try{
     const haveDates = new Set(out.days.map(d => fmtDate(d.date)));
-    const todayD = new Date(); todayD.setUTCHours(0,0,0,0);
+    const todayD = new Date(todayKyivStr()+'T12:00:00Z'); todayD.setUTCHours(0,0,0,0);
     for(let off = 0; off < 3; off++){
       const target = new Date(todayD); target.setUTCDate(target.getUTCDate()+off);
       const targetStr = fmtDate(target);
@@ -8548,7 +8553,7 @@ function parse3DaySafe(json){
     }
     const sorted = Array.from(byDay.entries()).sort((a,b)=>a[0]<b[0]?-1:1);
     // Беремо 3 наступні доби
-    const todayStr = new Date().toISOString().slice(0,10);
+    const todayStr = todayKyivStr();
     // v62: включаємо сьогоднішній день завжди (навіть якщо частина слотів минула)
     const future = sorted.filter(([d])=>d>=todayStr).slice(0,3);
     // якщо сьогоднішнього немає — додаємо з усіх доступних
@@ -8567,7 +8572,7 @@ function parse3DaySafe(json){
       return {date: day.date, Ap: isFinite(avgKp) ? kpToApInterp(avgKp) : null};
     });
     // issued = дата першого майбутнього слоту (не минулого)
-    const todayIssuedStr = new Date().toISOString().slice(0,10);
+    const todayIssuedStr = todayKyivStr();
     const firstFuture = data.find(r => r[0] && r[0].slice(0,10) >= todayIssuedStr);
     if(firstFuture) out.issued = firstFuture[0];
     else if(data.length) out.issued = data[0][0];
@@ -8687,14 +8692,20 @@ function build27dComputed(rows, last3D){
     let _expertEng = null;
     let _hasOverride = false;
     try {
-      if (typeof _expertOverrides !== 'undefined' && _expertOverrides && _expertOverrides[ds]) {
-        const _ovEng = _expertOverrides[ds].expert_eng;
-        if (Number.isFinite(_ovEng)) {
-          _expertEng = _ovEng;
-          // v88.8.34: do NOT replace raw continuous G with discrete expert score.
-          // 27-day chart/table remains homogeneous raw-G; expert/PDF is overlay metadata only.
+      // fp200 (2026-07-16): раніше читало _expertOverrides[ds].expert_eng НАПРЯМУ,
+      // в обхід verified/source_pdf/snippet_hash gate у getEngineScore(). Це друга,
+      // окрема від fp198 (рядок ~14691) точка обходу — та сама причина розсинхрону
+      // (Hero через getEngineScore бачив gate, 27-day — ні). Тепер обидва через
+      // одну функцію.
+      if (typeof getEngineScore === 'function') {
+        const _snap = getEngineScore(new Date(ds + 'T12:00:00Z'));
+        if (_snap && Number.isFinite(_snap.eng) && _snap._expertOverride) {
+          _expertEng = _snap.eng;
           _hasOverride = true;
         }
+      } else if (typeof _expertOverrides !== 'undefined' && _expertOverrides && _expertOverrides[ds]) {
+        const _ovEng = _expertOverrides[ds].expert_eng;
+        if (Number.isFinite(_ovEng)) { _expertEng = _ovEng; _hasOverride = true; }
       }
     } catch(e) { /* silent */ }
 
@@ -8706,7 +8717,7 @@ function build27dComputed(rows, last3D){
 
 function draw27dTable(){
   const tbody = document.getElementById('twentysevenContent');
-  const todayStr = fmtDate(new Date());
+  const todayStr = todayKyivStr();
   const filterVal = document.getElementById('sel27Filter').value;
 
   let data = [..._27dComputed];
@@ -9003,7 +9014,7 @@ function renderComparePeriods(){
   // v87.29: режим у localStorage, default = 'year' (Σ-ритм)
   const mode = lsGet('cmp_mode','year'); // 'year' | 'carrington'
 
-  const today = new Date();
+  const today = new Date(todayKyivStr()+'T12:00:00Z');
   const todayUTC = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
   const yearNow = todayUTC.getUTCFullYear();
 
@@ -9185,7 +9196,7 @@ function _ftGetVisibleData(){
   if(!_27dComputed || !_27dComputed.length) return { data: [], offset: 0, isNarrow: false };
   const isNarrow = (typeof window !== 'undefined') && window.innerWidth < 480;
   if(!isNarrow) return { data: _27dComputed, offset: 0, isNarrow: false };
-  const todayStr = fmtDate(new Date());
+  const todayStr = todayKyivStr();
   const todayIdx = _27dComputed.findIndex(d => d.ds === todayStr);
   const tIdx = todayIdx >= 0 ? todayIdx : 0;
   const start = Math.max(0, tIdx - 3);
@@ -9212,7 +9223,7 @@ function renderForwardTimeline(){
   // v87.35: visible subset на вузьких екранах
   const { data: visibleData, offset, isNarrow } = _ftGetVisibleData();
 
-  const todayStr = fmtDate(new Date());
+  const todayStr = todayKyivStr();
   const todayIdx = _27dComputed.findIndex(d => d.ds === todayStr);
   const selIdx = _ftSelectedIdx >= 0 ? _ftSelectedIdx : (todayIdx >= 0 ? todayIdx : 0);
   const sel = _27dComputed[selIdx];
@@ -9407,7 +9418,7 @@ ${isNarrow?'На вузькому екрані показано 14 днів (−
 function _ftJumpTo(idx){
   if(!_27dComputed || !_27dComputed.length) return;
   if(idx < 0){
-    const todayStr = fmtDate(new Date());
+    const todayStr = todayKyivStr();
     idx = _27dComputed.findIndex(d => d.ds === todayStr);
     if(idx < 0) idx = 0;
   }
@@ -9449,7 +9460,7 @@ function _ftTogglePlay(){
   }
   if(!_27dComputed || !_27dComputed.length) return;
   _ftPlaying = true;
-  const todayStr = fmtDate(new Date());
+  const todayStr = todayKyivStr();
   const todayIdx = _27dComputed.findIndex(d => d.ds === todayStr);
   if(_ftSelectedIdx < 0 || _ftSelectedIdx < todayIdx) _ftSelectedIdx = todayIdx >= 0 ? todayIdx : 0;
   renderForwardTimeline();
@@ -9724,7 +9735,7 @@ function renderCurrentPanel(){
   // Якщо різниця >= 1.5 балів — пояснити user що це РIЗНI семантики, не bug.
   let _peakHintLine = '';
   try {
-    const _todayStr = fmtDate(new Date());
+    const _todayStr = todayKyivStr();
     const _todayRow = (last3D && Array.isArray(last3D.days)) 
       ? last3D.days.find(d => fmtDate(d.date) === _todayStr) : null;
     if(_todayRow && isFinite(_todayRow.kpMax) && isFinite(kUse)){
@@ -9764,9 +9775,9 @@ function renderCurrentPanel(){
 
   // ─── v80: delta computation (cScore DOM writes removed — data in __uiState) ───
   try {
-    const yesterday = new Date(); yesterday.setDate(yesterday.getDate()-1);
+    const yesterday = new Date(todayKyivStr()+'T12:00:00Z'); yesterday.setUTCDate(yesterday.getUTCDate()-1);
     const yKey = 'gPrev_' + yesterday.toISOString().slice(0,10);
-    const todayKey = 'gPrev_' + new Date().toISOString().slice(0,10);
+    const todayKey = 'gPrev_' + todayKyivStr();
     if(isFinite(G) && ai){
       const snap = JSON.stringify({ G: +G.toFixed(2), kp: +(kUse||0).toFixed(2), Li: ai.Li, Mi: ai.Mi, ei: ai.ei, Pi: ai.Pi });
       try { localStorage.setItem(todayKey, snap); } catch(_e) { /* private mode — silent */ } // v88.8.35-fp56-P8
@@ -11178,7 +11189,7 @@ function _renderPanchUpcoming(refDateUTC){
   if(!wrap || !list) return;
 
   const items = [];
-  const today = refDateUTC || new Date();
+  const today = refDateUTC || new Date(todayKyivStr()+'T12:00:00Z');
   const todayMs = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
 
   const daysFrom = (dateStr) => {
@@ -11871,7 +11882,7 @@ function renderPanchanga(dateUTC){
 // ==================== КОМБО-ГРАФІК Kp (факт + прогноз) ====================
 // ─── renderDayForecast (v78: stripped, keep _daySlots data only) ─────────
 function renderDayForecast(last3D, kUse, ai) {
-  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayStr = todayKyivStr();
   const todayRow = last3D && Array.isArray(last3D.days)
     ? last3D.days.find(d => fmtDate(d.date) === todayStr) : null;
   const useRow = todayRow || (last3D && Array.isArray(last3D.days) && last3D.days[0]) || null;
@@ -11890,7 +11901,7 @@ function renderDayForecast(last3D, kUse, ai) {
   // v87.9: якщо Панчанга вже рендерена раніше — оновити panchBestTime з новими slots
   try {
     if (document.getElementById('panchBestTime') && typeof _lastPanchCtx !== 'undefined' && _lastPanchCtx) {
-      renderPanchanga(sunriseUTC(new Date()));
+      renderPanchanga(sunriseUTC(new Date(todayKyivStr()+'T12:00:00Z')));
     }
   } catch(e) { /* noop */ }
   // fp24: heat strip must re-render from same _daySlots as panchBestTime — avoids stale data-gval mismatch
@@ -11945,11 +11956,11 @@ function render3Day(parsed3){
   for(const d of days){
     const apEntry = parsed3.predictedAp.find(x=> fmtDate(x.date)===fmtDate(d.date)) ?? null;
     // v52: визначаємо kpMax ПЕРЕД computeAi — щоб ai і G використовували однаковий kp
-    const kpMax = fmtDate(d.date) === fmtDate(new Date()) && lastWWV && isFinite(lastWWV.kNow)
+    const kpMax = fmtDate(d.date) === todayKyivStr() && lastWWV && isFinite(lastWWV.kNow)
       ? lastWWV.kNow : d.kpMax;
     const ai = computeAi(sunriseUTC(d.date), kpMax ?? 0);
     const G = (isFinite(kpMax)? kpMax : 0) - 2 + ai.Ai;
-    const isToday = fmtDate(d.date) === fmtDate(new Date());
+    const isToday = fmtDate(d.date) === todayKyivStr();
     const _daySig3 = (typeof resolveDaySignal_v88825 === 'function') ? resolveDaySignal_v88825(d.date, G, kpMax, {isToday}) : null;
     const cls = isFinite(kpMax)? (kpMax>=5? 'k-bad' : (kpMax>=4? 'k-warn':'k-ok')) : 'k-ok';
     const gCls = classForG(G);
@@ -12004,12 +12015,12 @@ function render3Day(parsed3){
     let qhtml='';
     // v87.6 Крок 3: зібрати "завтра" для Hero-link
     let _tomorrowG = null;
-    const _todayStr = fmtDate(new Date());
+    const _todayStr = todayKyivStr();
     for(const d of days){
-      const kpMax=fmtDate(d.date)===fmtDate(new Date())&&lastWWV&&isFinite(lastWWV.kNow)?lastWWV.kNow:d.kpMax;
+      const kpMax=fmtDate(d.date)===todayKyivStr()&&lastWWV&&isFinite(lastWWV.kNow)?lastWWV.kNow:d.kpMax;
       const ai=computeAi(sunriseUTC(d.date),kpMax??0);
       const G=(isFinite(kpMax)?kpMax:0)-2+ai.Ai;
-      const isToday=fmtDate(d.date)===fmtDate(new Date());
+      const isToday=fmtDate(d.date)===todayKyivStr();
       const _daySigQ = (typeof resolveDaySignal_v88825 === 'function') ? resolveDaySignal_v88825(d.date, G, kpMax, {isToday}) : null;
       // v87.6: перший НЕ-сьогоднішній день = "завтра"
       if (!isToday && _tomorrowG === null && isFinite(G)) _tomorrowG = G;
@@ -12555,7 +12566,7 @@ function renderDecisionTiming(slots){
     // позитивні фрази "сприятливий момент / стандартний темп" навіть при `_cls === 'good'`.
     let _ttHardCap = null;
     try {
-      const _eTd = (typeof getEngineScore === 'function') ? getEngineScore(new Date()) : null;
+      const _eTd = (typeof getEngineScore === 'function') ? getEngineScore(new Date(todayKyivStr()+'T12:00:00Z')) : null;
       const _eTdScore = (_eTd && isFinite(_eTd.eng)) ? Number(_eTd.eng) : null;
       if (_eTdScore !== null && _eTdScore <= -2) _ttHardCap = _eTdScore;
     } catch(e){ /* silent */ }
@@ -12604,7 +12615,7 @@ function renderDecisionTiming(slots){
     const _dm2 = (typeof window !== 'undefined' && window.__dataMode)
                || (typeof resolveDataMode === 'function' ? resolveDataMode() : 'live');
     if (_dm2 !== 'live') _slotPrefixDelayed = 'орієнтовно: ';
-    const _eTd = (typeof getEngineScore === 'function') ? getEngineScore(new Date()) : null;
+    const _eTd = (typeof getEngineScore === 'function') ? getEngineScore(new Date(todayKyivStr()+'T12:00:00Z')) : null;
     const _eTdS = (_eTd && isFinite(_eTd.eng)) ? Number(_eTd.eng) : null;
     if (_eTdS !== null && _eTdS <= -2) _pdfHardForList = _eTdS;
   } catch(e) { /* silent */ }
@@ -12681,8 +12692,8 @@ function _runSanityWatchdog(g, kp){
   // Rule 2: Score jump ≥5 without storm/eclipse — uses real getEngineScore
   try {
     if(typeof getEngineScore === 'function'){
-      var todayD = new Date();
-      var tomD = new Date(todayD); tomD.setDate(tomD.getDate()+1);
+      var todayD = new Date(todayKyivStr()+'T12:00:00Z');
+      var tomD = new Date(todayD); tomD.setUTCDate(todayD.getUTCDate()+1);
       var eT = getEngineScore(todayD);
       var eTom = getEngineScore(tomD);
       var sT = eT ? (eT.final_score != null ? eT.final_score : eT.eng) : null;
@@ -12710,7 +12721,7 @@ function _runSanityWatchdog(g, kp){
   // Rule 4: Confidence paradox — high quality% but engine↔PDF sign conflict
   try {
     if(typeof getEngineScore === 'function'){
-      var eTd = getEngineScore(new Date());
+      var eTd = getEngineScore(new Date(todayKyivStr()+'T12:00:00Z'));
       if(eTd){
         var engS = eTd.eng != null ? eTd.eng : null;
         var pdfS = eTd.pdf != null ? eTd.pdf : null;
@@ -12979,7 +12990,7 @@ function _renderHeroHierarchy(){
     // 1) Рішення дня — PDF/Engine (override-aware, canonical day verdict)
     let decHtml = '<span style="color:var(--dim)">завантаження…</span>';
     try{
-      const snap = (typeof getEngineScore==='function') ? getEngineScore(new Date()) : null;
+      const snap = (typeof getEngineScore==='function') ? getEngineScore(new Date(todayKyivStr()+'T12:00:00Z')) : null;
       if(snap && isFinite(snap.eng)){
         const sc  = Math.max(-3, Math.min(3, Math.round(Number(snap.eng))));
         const v   = (typeof VERDICT_7CLASS!=='undefined') ? VERDICT_7CLASS[String(sc)] : null;
@@ -13083,7 +13094,7 @@ function _renderHeroHierarchy(){
     // 4) ЗАВТРА — forecast (G_day raw + PDF/Engine якщо є)
     let tomoHtml = '<span style="color:var(--dim)">—</span>';
     try{
-      const _tm = new Date(); _tm.setUTCDate(_tm.getUTCDate()+1);
+      const _tm = new Date(todayKyivStr()+'T12:00:00Z'); _tm.setUTCDate(_tm.getUTCDate()+1);
       const _tsn = (typeof getEngineScore==='function') ? getEngineScore(_tm) : null;
       if(_tsn && isFinite(_tsn.eng)){
         const _tsc = Math.max(-3,Math.min(3,Math.round(Number(_tsn.eng))));
@@ -13106,7 +13117,7 @@ function _renderHeroHierarchy(){
           // that they're different horizons AND which one leads decisions. Closes the "−3 vs −1.10
           // looks contradictory" confusion right in the hero, not only in the collapsed legend.
           try {
-            const _sn = (typeof getEngineScore==='function') ? getEngineScore(new Date()) : null;
+            const _sn = (typeof getEngineScore==='function') ? getEngineScore(new Date(todayKyivStr()+'T12:00:00Z')) : null;
             const _eng = (_sn && isFinite(_sn.eng)) ? Number(_sn.eng) : NaN;
             if (isFinite(g) && isFinite(_eng) && Math.abs(g - _eng) >= 1) {
               return `<div style="padding:6px 10px;border-top:1px solid var(--border);font-size:10px;color:var(--faint);line-height:1.4">`
@@ -13123,7 +13134,7 @@ function _renderHeroHierarchy(){
       const _why = document.getElementById('heroWhyText');
       if (_why) {
         const _kpPart = isFinite(kp) ? (kp < 2 ? 'Геомагнітний фон спокійний' : kp < 4 ? 'Геомагнітний фон помірний' : 'Геомагнітний фон активний') : '';
-        const _pSnap = (typeof computePanchanga === 'function') ? computePanchanga(new Date()) : null;
+        const _pSnap = (typeof computePanchanga === 'function') ? computePanchanga(new Date(todayKyivStr()+'T12:00:00Z')) : null;
         const _nak = _pSnap?.nakshatra?.name || '';
         const _rahu = (_pSnap?.rahu?.active) ? ' + зараз несприятливий час доби (Раху Калам)' : '';
         const _dayLabel = snap?.eng <= -2 ? 'несприятливий вплив на самопочуття та рішення' : snap?.eng >= 2 ? 'сприятливий фон для важливих справ' : 'нейтральний або змішаний фон';
@@ -13420,7 +13431,7 @@ function _stateKeyToRepresentativeG_v88824(key){
 }
 function resolveHeroSignalHierarchy_v88824(liveG, kp){
   let entry = null;
-  try { if(typeof getEngineScore === 'function') entry = getEngineScore(new Date()); } catch(e) { entry = null; }
+  try { if(typeof getEngineScore === 'function') entry = getEngineScore(new Date(todayKyivStr()+'T12:00:00Z')); } catch(e) { entry = null; }
   const hasEngine = !!(entry && isFinite(entry.eng));
   let dayScore = hasEngine ? Number(entry.eng) : NaN;
   const liveKey = classifyStateByG(liveG, kp);
@@ -13904,7 +13915,7 @@ function syncHero(){
           let _todayGdayRaw = NaN;
           try {
             if (typeof _27dComputed !== 'undefined' && Array.isArray(_27dComputed)) {
-              const _todayStrDC = fmtDate(new Date());
+              const _todayStrDC = todayKyivStr();
               const _todayEntry = _27dComputed.find(d => d && d.ds === _todayStrDC);
               if (_todayEntry && isFinite(_todayEntry.G)) _todayGdayRaw = _todayEntry.G;
             }
@@ -13950,7 +13961,7 @@ function syncHero(){
         try {
           let _tdGRaw = NaN;
           if (typeof _27dComputed !== 'undefined' && Array.isArray(_27dComputed)) {
-            const _todayStr2 = fmtDate(new Date());
+            const _todayStr2 = todayKyivStr();
             const _todayEntry2 = _27dComputed.find(d => d && d.ds === _todayStr2);
             if (_todayEntry2 && isFinite(_todayEntry2.G)) _tdGRaw = _todayEntry2.G;
           }
@@ -14577,7 +14588,7 @@ function _renderWhyTrend(){
   // _27dComputed починається з сьогодні (індекс 0) і йде вперед.
   // Минулі 3 дні беру з last3D.days (якщо є) або _ghistory.
   const days = [];
-  const todayStr = fmtDate(new Date());
+  const todayStr = todayKyivStr();
 
   // 1. -3..-1 з last3D або computeAi з історичного Kp
   // v88.7.6 BUG-1 fix: обмежуємо до 3 останніх минулих днів через slice(-3),
@@ -14610,7 +14621,7 @@ function _renderWhyTrend(){
   // Тепер: спершу _engineScores[ds].kp (історичний снапшот), потім lastWWV.kNow, в крайньому — 2.
   if(days.length < 3){
     for(let i = -3; i <= -1; i++){
-      const ds = fmtDate(addDays(new Date(), i));
+      const ds = fmtDate(addDays(new Date(todayKyivStr()+'T12:00:00Z'), i));
       if(days.find(x => x.ds === ds)) continue;
       try {
         let _kpPast = 2;
@@ -14619,7 +14630,7 @@ function _renderWhyTrend(){
         } else if (typeof lastWWV !== 'undefined' && lastWWV && isFinite(lastWWV.kNow)) {
           _kpPast = lastWWV.kNow;
         }
-        const ai = computeAi(sunriseUTC(addDays(new Date(), i)), _kpPast);
+        const ai = computeAi(sunriseUTC(addDays(new Date(todayKyivStr()+'T12:00:00Z'), i)), _kpPast);
         const _Gpast = _kpPast - 2 + ai.Ai;
         days.push({ ds, G: _Gpast, isPast: true });
       } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
@@ -14649,7 +14660,7 @@ function _renderWhyTrend(){
           let _gForDay = d.G;
           if (i === 0 && _kpLiveToday !== null) {
             try {
-              const _aiLive = computeAi(sunriseUTC(new Date()), _kpLiveToday);
+              const _aiLive = computeAi(sunriseUTC(new Date(todayKyivStr()+'T12:00:00Z')), _kpLiveToday);
               _gForDay = _kpLiveToday - 2 + _aiLive.Ai;
             } catch(e) { _gForDay = d.G; /* keep forecast value if live calc fails */ }
           }
@@ -14666,10 +14677,10 @@ function _renderWhyTrend(){
   if(_todayPlusFutureAdded === 0){
     const _kpNow = (typeof lastWWV !== 'undefined' && lastWWV && isFinite(lastWWV.kNow)) ? lastWWV.kNow : 2;
     for(let i = 0; i <= 3; i++){
-      const ds = fmtDate(addDays(new Date(), i));
+      const ds = fmtDate(addDays(new Date(todayKyivStr()+'T12:00:00Z'), i));
       if(days.find(x => x.ds === ds)) continue;
       try {
-        const ai = computeAi(sunriseUTC(addDays(new Date(), i)), i === 0 ? _kpNow : 2);
+        const ai = computeAi(sunriseUTC(addDays(new Date(todayKyivStr()+'T12:00:00Z'), i)), i === 0 ? _kpNow : 2);
         const G = (i === 0 ? _kpNow : 2) - 2 + ai.Ai;
         days.push({ ds, G, isPast: false, isToday: i === 0 });
       } catch(e){if(window._DEBUG)console.warn('[silent fallback]:',e.message)}
@@ -14927,11 +14938,11 @@ function _renderHeroTimeWindows() {
       // guard timer, and these sunrise-based windows only change once per day, so recomputing the full
       // panchanga every tick was wasted work.
       try {
-        const _dk = new Date().toISOString().slice(0,10);
+        const _dk = todayKyivStr();
         if (window.__p3RahuCache && window.__p3RahuCache.dk === _dk) {
           _R = window.__p3RahuCache.rahu;
         } else {
-          _R = computePanchanga(sunriseUTC(new Date())).rahu;
+          _R = computePanchanga(sunriseUTC(new Date(todayKyivStr()+'T12:00:00Z'))).rahu;
           window.__p3RahuCache = { dk: _dk, rahu: _R };
         }
       } catch(_e){ _R = null; }
@@ -14956,7 +14967,7 @@ function _renderHeroTimeWindows() {
     const isNext = (nextIdx >= 0 && slots[nextIdx] === s);
     const g = s.G;
     let _dayNegFlag = false;
-    try { const _de=getEngineScore(new Date()); if(_de&&isFinite(_de.eng)) _dayNegFlag=Number(_de.eng)<=-2; } catch(e){}
+    try { const _de=getEngineScore(new Date(todayKyivStr()+'T12:00:00Z')); if(_de&&isFinite(_de.eng)) _dayNegFlag=Number(_de.eng)<=-2; } catch(e){}
     const col = _dayNegFlag
       ? (g >= 0 ? '#ffaa33' : g >= -1 ? '#ff9944' : '#ff6b6b')
       : (g >= 1 ? '#2bd47d' : g >= 0 ? '#9bb1dc' : g >= -1 ? '#ffcc00' : '#ff6b6b');
@@ -14968,7 +14979,7 @@ function _renderHeroTimeWindows() {
     // Це усуває "стандартний темп без форсування" при PDF/Engine = -3 — теж занадто м'яко.
     let _dayEngForGate = null;
     try {
-      const _e = (typeof getEngineScore === 'function') ? getEngineScore(new Date()) : null;
+      const _e = (typeof getEngineScore === 'function') ? getEngineScore(new Date(todayKyivStr()+'T12:00:00Z')) : null;
       if (_e && isFinite(_e.eng)) _dayEngForGate = Number(_e.eng);
     } catch(e){ _dayEngForGate = null; }
     const _pdfNeg = (_dayEngForGate !== null && _dayEngForGate < 0);   // м'який gate (fp9 Q)
@@ -15228,7 +15239,7 @@ function resolveDecisionByG(g, kp) {
   let _noteText = st.impact || '';
   if (stKey === 'favorable' || stKey === 'good' || stKey === 'neutral') {
     try {
-      const _eTd = (typeof getEngineScore === 'function') ? getEngineScore(new Date()) : null;
+      const _eTd = (typeof getEngineScore === 'function') ? getEngineScore(new Date(todayKyivStr()+'T12:00:00Z')) : null;
       const _eTdS = (_eTd && isFinite(_eTd.eng)) ? Number(_eTd.eng) : null;
       if (_eTdS !== null && _eTdS <= -2) {
         _noteText = `Live-фон зараз ${stKey === 'neutral' ? 'рівний' : 'позитивний'}, але PDF/Engine для дня = ${_eTdS} (критичний). Важливі рішення відкласти; live-вікна — тільки для рутини й перевірених дій.`;
@@ -15530,7 +15541,7 @@ function syncPersonalContext(){
     // і рухатись вперед», що прямо суперечило червоному блоку «важливі рішення відкласти» нижче.
     // Той самий guard, що fp13 DD у resolveDecisionByG (там був, тут — обхід через пряме st.impact).
     try {
-      const _eP = (typeof getEngineScore === 'function') ? getEngineScore(new Date()) : null;
+      const _eP = (typeof getEngineScore === 'function') ? getEngineScore(new Date(todayKyivStr()+'T12:00:00Z')) : null;
       if (_eP && isFinite(_eP.eng) && Number(_eP.eng) <= -2) {
         personalSub = `Hora підтримує лише рутину й перевірені дії: день критичний (PDF/Engine ${_eP.eng}), важливі рішення відкласти.`;
       }
@@ -15570,7 +15581,7 @@ function syncDayPlanCard(){
       // Раніше: «можна діяти · Сатурн» ×3 на дні PDF/Engine=−2 прямо під hora-guard «лише рутина».
       let _dayCrit = false;
       try {
-        const _eD = (typeof getEngineScore === 'function') ? getEngineScore(new Date()) : null;
+        const _eD = (typeof getEngineScore === 'function') ? getEngineScore(new Date(todayKyivStr()+'T12:00:00Z')) : null;
         _dayCrit = !!(_eD && isFinite(_eD.eng) && Number(_eD.eng) <= -2);
       } catch(_e){ /* silent */ }
       cls = g >= 0.5 ? 'ok' : g >= -0.5 ? 'info' : 'warn';
@@ -15755,7 +15766,7 @@ function renderAntiAction(){
   const _ds = window.__dashState || {};
   const _ai = (window.__uiState && window.__uiState.ai) || _ds.ai || {};
 
-  const _now = new Date();
+  const _now = new Date(todayKyivStr()+'T12:00:00Z');
   // v87.90 fix: використовую noonUTC щоб узгодити з Panchanga картою (раніше Anti-action міг показувати інший Tithi через time-of-day shift)
   const _refDate = (typeof sunriseUTC === 'function') ? sunriseUTC(_now) : _now;
   let _panch = null;
@@ -15889,7 +15900,7 @@ function renderDisagreement(){
   if(!_alert) return;
   const _ui = window.__uiState || {};
   const _gNow = _ui.gNow ?? NaN;
-  const _eng = (typeof getEngineScore === 'function') ? getEngineScore(new Date()) : null;
+  const _eng = (typeof getEngineScore === 'function') ? getEngineScore(new Date(todayKyivStr()+'T12:00:00Z')) : null;
   const _engVal = _eng ? _eng.eng : null;
   const _pdfVal = (_eng && _eng.pdf != null) ? _eng.pdf : null;
 
@@ -16095,7 +16106,7 @@ function renderIntraDayAlert(){
     // v88.8.35-fp12 Z: PDF/Engine ≤ -2 hard-cap — навіть якщо локально Kp дозволяє "активніше",
     // загальний день критичний. Переписуємо action на "тільки для рутини / підготовки".
     try {
-      const _eTd = (typeof getEngineScore === 'function') ? getEngineScore(new Date()) : null;
+      const _eTd = (typeof getEngineScore === 'function') ? getEngineScore(new Date(todayKyivStr()+'T12:00:00Z')) : null;
       const _eTdS = (_eTd && isFinite(_eTd.eng)) ? Number(_eTd.eng) : null;
       if (_eTdS !== null && _eTdS <= -2 && _maxFuture < 5) {
         _msg.action = `Використовуй спокійні години тільки для рутини й підготовки (день PDF/Engine = ${_eTdS}).`;
@@ -16322,7 +16333,7 @@ async function loadAllLite(){
     const kp0 = Number.isFinite(kpCached) ? kpCached : 2.0;
     lastWWV = {kNow:kp0, aNow:null, whenText:'SAFE BOOT / synthetic', kPrev3h:null, kp24hAgo:null, _synthetic:true};
     const _synDays = [0,1,2].map(offset => {
-      const d = new Date(); d.setUTCHours(0,0,0,0); d.setUTCDate(d.getUTCDate()+offset);
+      const d = new Date(todayKyivStr()+'T12:00:00Z'); d.setUTCHours(0,0,0,0); d.setUTCDate(d.getUTCDate()+offset);
       return { date:d, kp8:Array(8).fill(kp0), kpMax:kp0, _synthetic:true };
     });
     last3D = { issued:null, predictedAp:[], days:_synDays, _synthetic:true };
@@ -16336,10 +16347,10 @@ async function loadAllLite(){
     const _yield = () => new Promise(r => (typeof requestIdleCallback==='function' ? requestIdleCallback(()=>r(), {timeout:500}) : setTimeout(r,0)));
     (async () => {
       await _yield();
-      try{ renderPanchanga(sunriseUTC(new Date())); }catch(e){ console.warn('[fp138 lite panch]', e.message); }
+      try{ renderPanchanga(sunriseUTC(new Date(todayKyivStr()+'T12:00:00Z'))); }catch(e){ console.warn('[fp138 lite panch]', e.message); }
       await _yield();
       try{
-        const _syn27 = Array.from({length:27},(_,i)=>{ const d=new Date(); d.setUTCHours(0,0,0,0); d.setUTCDate(d.getUTCDate()+i-7); return {date:d, flux:null, Ap:null, kpMax:kp0, _synthetic:true}; });
+        const _syn27 = Array.from({length:27},(_,i)=>{ const d=new Date(todayKyivStr()+'T12:00:00Z'); d.setUTCHours(0,0,0,0); d.setUTCDate(d.getUTCDate()+i-7); return {date:d, flux:null, Ap:null, kpMax:kp0, _synthetic:true}; });
         render27Day(_syn27, last3D);
       }catch(e){ console.warn('[fp138 lite 27d]', e.message); }
       await _yield();
@@ -16534,7 +16545,7 @@ async function loadAll(){
     try { _fkp = await loadFutureKp() || {}; } catch(_e){ _fkp = {}; }
     let _usedReal = 0;
     const _synDays = [0,1,2].map(offset => {
-      const d = new Date(); d.setUTCHours(0,0,0,0); d.setUTCDate(d.getUTCDate()+offset);
+      const d = new Date(todayKyivStr()+'T12:00:00Z'); d.setUTCHours(0,0,0,0); d.setUTCDate(d.getUTCDate()+offset);
       const ds = fmtDate(d);
       const fEntry = _fkp[ds];
       if (fEntry && isFinite(fEntry.kp) && fEntry.kp_synthetic === false) {
@@ -16690,7 +16701,7 @@ async function loadAll(){
   }
 
   try{
-    renderPanchanga(sunriseUTC(new Date())); // v37.6: noon для консистентності з G
+    renderPanchanga(sunriseUTC(new Date(todayKyivStr()+'T12:00:00Z'))); // v37.6: noon для консистентності з G
   }catch(e){ console.error('renderPanchanga error:', e); }
 
   // 27-day (P0: fallback на 45-day-forecast.json)
@@ -16699,7 +16710,7 @@ async function loadAll(){
       try{
         const r27 = parse27Day(t27R.value);
         if(r27.length === 0) throw new Error('порожній результат');
-        const todayStr = new Date().toISOString().slice(0,10);
+        const todayStr = todayKyivStr();
         const r27today = r27.find(r=>fmtDate(r.date)===todayStr) || r27[0];
         window._lastF107 = r27today && isFinite(r27today.flux) ? r27today.flux : null;
         render27Day(r27, last3D);
@@ -16745,7 +16756,7 @@ async function loadAll(){
       // Конвертуємо {date,Ap} → {date, flux:null, Ap, kpMax: Ap→Kp approx}
       function ap2kp(ap){ const t=[0,2,3,4,5,6,7,9,12,15,18,22,27,32,39,48,56,67,80,94,111,132,154,179,207,236,300,400,Infinity]; for(let i=0;i<t.length-1;i++) if(ap<=t[i+1]) return i/3; return 9; }
       const r27fb = rows45.map(r=>({date:r.date, flux:null, Ap:r.Ap, kpMax:ap2kp(r.Ap)}));
-      const todayStr = new Date().toISOString().slice(0,10);
+      const todayStr = todayKyivStr();
       const r27today = r27fb.find(r=>fmtDate(r.date)===todayStr) || r27fb[0];
       window._lastF107 = null; // flux unavailable from 45-day
       render27Day(r27fb, last3D);
@@ -16758,7 +16769,7 @@ async function loadAll(){
       const _kp27 = (lastWWV && isFinite(lastWWV.kNow)) ? lastWWV.kNow
                   : parseFloat(lsGet('last_kp_known')) || 2.0;
       const _syn27 = Array.from({length:27},(_,i)=>{
-        const d=new Date(); d.setUTCHours(0,0,0,0); d.setUTCDate(d.getUTCDate()+i);
+        const d=new Date(todayKyivStr()+'T12:00:00Z'); d.setUTCHours(0,0,0,0); d.setUTCDate(d.getUTCDate()+i);
         return {date:d, flux:null, Ap:null, kpMax:_kp27, _synthetic:true};
       });
       render27Day(_syn27, last3D);
@@ -16831,7 +16842,7 @@ function exportCsv(){
       }
     } catch(e) {}
     const sig = (typeof resolveDaySignal_v88825 === 'function')
-      ? resolveDaySignal_v88825(r.date, G, kpUsed, {isToday: ds===fmtDate(new Date())})
+      ? resolveDaySignal_v88825(r.date, G, kpUsed, {isToday: ds===todayKyivStr()})
       : null;
     const rec = sig?.recommendation?.text || recommendG(G, kpUsed).text || '';
     lines.push([
@@ -16849,7 +16860,7 @@ function exportCsv(){
   const blob = new Blob(['\uFEFF'+lines.join('\r\n')], {type:'text/csv;charset=utf-8'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `gindex_two_rail_${fmtDate(new Date())}.csv`;
+  a.download = `gindex_two_rail_${todayKyivStr()}.csv`;
   a.click();
 }
 
@@ -16898,7 +16909,7 @@ function exportICS(){
       }
     } catch(e) {}
     const sig = (typeof resolveDaySignal_v88825 === 'function')
-      ? resolveDaySignal_v88825(r.date, G, kpUsed, {isToday: ds===fmtDate(new Date())})
+      ? resolveDaySignal_v88825(r.date, G, kpUsed, {isToday: ds===todayKyivStr()})
       : null;
     const dayTxt = Number.isFinite(dayScore) ? `${dayScore>=0?'+':''}${dayScore} ${daySource}` : '—';
     const gSign = G >= 0 ? '+' : '';
@@ -16922,7 +16933,7 @@ function exportICS(){
   const blob = new Blob([ics], {type:'text/calendar;charset=utf-8'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `g-index_two_rail_${fmtDate(new Date())}.ics`;
+  a.download = `g-index_two_rail_${todayKyivStr()}.ics`;
   a.click();
 }
 
@@ -18146,7 +18157,7 @@ function renderPersonal() {
   let _pdfHardCapApplied = false;
   let _pdfHardCapScore = null;
   try {
-    const _eTd = (typeof getEngineScore === 'function') ? getEngineScore(new Date()) : null;
+    const _eTd = (typeof getEngineScore === 'function') ? getEngineScore(new Date(todayKyivStr()+'T12:00:00Z')) : null;
     const _eTdScore = (_eTd && isFinite(_eTd.eng)) ? Number(_eTd.eng) : null;
     if (_eTdScore !== null && _eTdScore <= -2) {
       _pdfHardCapScore = _eTdScore;
@@ -18170,7 +18181,7 @@ function renderPersonal() {
   let _pdfOverrideNote = '';
   if (!_pdfHardCapApplied) {
     try {
-      const _eTd = (typeof getEngineScore === 'function') ? getEngineScore(new Date()) : null;
+      const _eTd = (typeof getEngineScore === 'function') ? getEngineScore(new Date(todayKyivStr()+'T12:00:00Z')) : null;
       const _eTdScore = (_eTd && isFinite(_eTd.eng)) ? Number(_eTd.eng) : null;
       // Тригер: PDF/Engine = -1 AND персональний state виглядає сприятливо (зелений колір).
       // Випадок ≤ -2 уже накритий hard-cap вище.
@@ -18549,7 +18560,7 @@ function draw27Chart(){
   ctx.scale(dpr, dpr);
 
   const data = [..._27dComputed].sort((a,b)=>a.ds<b.ds?-1:1);
-  const todayStr = fmtDate(new Date());
+  const todayStr = todayKyivStr();
   const n = data.length;
   if(!n) return;
 
@@ -19318,7 +19329,7 @@ function renderBestTime(dateUTC, kp, G, panchPCL) {
 
   // Align27-стиль: найкращий день найближчих 7 днів
   if(_27dComputed && _27dComputed.length) {
-    const todayStr = fmtDate(new Date());
+    const todayStr = todayKyivStr();
     const future7 = _27dComputed
       .filter(d => d.ds >= todayStr)
       .slice(0, 7)
@@ -19449,7 +19460,7 @@ async function shareGState() {
 
   try {
     const blob = await new Promise(res => cv.toBlob(res, 'image/png'));
-    const fname = 'g-index-' + new Date().toISOString().slice(0,10) + '.png';
+    const fname = 'g-index-' + todayKyivStr() + '.png';
     const file = new File([blob], fname, { type: 'image/png' });
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
       await navigator.share({ title: 'G-Index Storm Story', text: fallbackText, files: [file] });
@@ -19684,7 +19695,7 @@ function updateScienceBar(kp, ap, sn, ai, phaseName, phaseDeg, f107) {
     const _gExtEl = _el('sciGext');
     if (_gExtEl) {
       try {
-        const _nowD = new Date();
+        const _nowD = new Date(todayKyivStr()+'T12:00:00Z');
         const _panch = computePanchanga(sunriseUTC(_nowD));
         // cal_score from engine snapshot if available
         let _calSc = 0;
@@ -20918,7 +20929,7 @@ window.__regress = function(opts){
     if(typeof _27dComputed === 'undefined' || !_27dComputed || !_27dComputed.length){
       return { skipped: true };
     }
-    const todayStr = fmtDate(new Date());
+    const todayStr = todayKyivStr();
     const todayEntries = _27dComputed.filter(d => d && d.ds === todayStr);
     return { dedup_ok: todayEntries.length === 1, count: todayEntries.length };
   }, { dedup_ok: true });
@@ -20982,6 +20993,13 @@ const GChrono = (function(){
   const MIN_TEST = 30; // формальний тест
 
   function _todayDateStr(){
+    // fp204 (2026-07-16): раніше — локальний час БРАУЗЕРА (getFullYear/Month/Date без TZ),
+    // окремий від todayKyivStr(). Якщо браузер Kyrylo не в Europe/Kyiv (подорож, невірний
+    // системний час) — Chrono Journal (date:_todayDateStr(), пошук "сьогоднішнього" запису
+    // arr.find(e=>e.date===_todayDateStr())) розсинхронізується з рештою дашборду, який
+    // тепер всюди на todayKyivStr(). Той самий клас проблеми що й решта fp201-203 —
+    // кілька паралельних "сьогодні" замість одного джерела істини.
+    if(typeof todayKyivStr === 'function') return todayKyivStr();
     const d = new Date();
     return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
   }
@@ -22217,7 +22235,7 @@ window.GDecisionLog = (function(){
   const LS_KEY = 'gindex_decision_log_v1';
   function _load(){ try{ return JSON.parse(localStorage.getItem(LS_KEY)||'[]'); }catch(e){ return []; } }
   function _save(arr){ try{ localStorage.setItem(LS_KEY,JSON.stringify(arr)); return true; }catch(e){ return false; } }
-  function _today(){ return new Date().toISOString().slice(0,10); }
+  function _today(){ return todayKyivStr(); }
   function _getG(){
     try{
       const el=document.getElementById('heroGval')||document.getElementById('gNowVal');
