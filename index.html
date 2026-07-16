@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.25-fp206-FULL-SWEEP</title>
+  <title>G-Index — Космофізичний дашборд v88.9.27-fp208-OVERRIDE-GATE-FIX</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -6098,9 +6098,16 @@ function getEngineScore(dateObj){
     // сама. fp200: перейменовано з "verified" на чесніше "gate_passed" у внутрішніх
     // полях нижче, щоб не створювати оманливе відчуття автоматичної крипто-перевірки.
     const _hashOk = /^sha256:[0-9a-f]{16,64}$/i.test(String(ovr.snippet_hash || ''));
+    // fp208 (2026-07-16, реальний expert_overrides_v3.json від Kyrylo): 35/84 записів
+    // мають verified_by_pdf_reading:true (людина звірила з PDF текстом), БЕЗ snippet_hash —
+    // це інша, старіша, теж легітимна форма підтвердження, не помилка даних. Gate вимагав
+    // ЛИШЕ hash-шлях і мовчки відкидав усі 35 записів (напр. 2026-07-18: expert_eng=0,
+    // verified_by_pdf_reading=true — відкидалось, dashboard показував engine fallback +2).
+    const _pdfReadingOk = ovr.verified_by_pdf_reading === true
+      && typeof ovr.snippet === 'string' && ovr.snippet.length > 0;
     const _isVerified = ovr.verified === true
       && typeof ovr.source_pdf === 'string' && ovr.source_pdf.length > 0
-      && _hashOk;
+      && (_hashOk || _pdfReadingOk);
     snapshot = {
       ...snapshot,
       _engRaw: snapshot.eng,
@@ -13204,6 +13211,10 @@ function _patchStaleLoadingDOM() {
 
   // v88.8.35-fp56-P8: keep the explicit decision hierarchy (РІШЕННЯ ДНЯ / ФОН ЗАРАЗ / ЯКІСТЬ) in sync.
   try { if (typeof _renderHeroHierarchy === 'function') _renderHeroHierarchy(); } catch(_e) { /* silent */ }
+  // fp207 (2026-07-16): renderHeroBulletin() існувала, але НІКОЛИ не викликалась — той самий
+  // клас багу, що loadEngineScores/loadExpertOverrides орфани з історії проєкту.
+  // Тому 'ENGINE V18.5:' badge завжди показував '—' незалежно від наявності даних.
+  try { if (typeof renderHeroBulletin === 'function') renderHeroBulletin(); } catch(_e) { /* silent */ }
 }
 
 // fp35: schedule storm-guard auto-patch every 30s as safety net for async race conditions
@@ -21452,6 +21463,7 @@ setTimeout(async function _dayVerdictLoad(){
     }
     try { if (typeof syncV702UI === 'function') syncV702UI(); } catch(e){ /* silent */ }
     try { if (typeof _renderHeroHierarchy === 'function') _renderHeroHierarchy(); } catch(e){ /* silent */ }
+    try { if (typeof renderHeroBulletin === 'function') renderHeroBulletin(); } catch(e){ /* silent */ }
   } catch(e) { /* silent — сторінка живе на live-фоні як раніше */ }
 }, 6000);
 // ═══ /fp194 ═════════════════════════════════════════════════════════════════
