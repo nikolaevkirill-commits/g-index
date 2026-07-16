@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.17-fp198-SYNC-FIX</title>
+  <title>G-Index — Космофізичний дашборд v88.9.18-fp199-CONF-RACE-FIX</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -12842,6 +12842,18 @@ function renderAlertBanner(g, kp){
           if(hf && !hf.textContent.includes('STALE') && !hf.textContent.includes('OLD')){
             hf.textContent = 'DEGRADED';
             hf.style.color = '#ff9944';
+          }
+          // fp199 (2026-07-16, скрін Kyrylo): computeCScore() рахує heroConfidence
+          // РАНІШЕ, ніж window._lastDst/_kpSourceFreshness взагалі приходять (async,
+          // pre-fetch) — тому мій fp198-мірор-фікс не встигав спрацювати, і
+          // "ЯКІСТЬ ДАНИХ: Висока" лишалась поруч з щойно виставленим DEGRADED.
+          // Це ЄДИНЕ місце, де ми ТОЧНО знаємо факт DEGRADED в момент його появи —
+          // форсуємо узгодження тут напряму, без залежності від порядку computeCScore.
+          const hcEl = document.getElementById('heroConfidence');
+          if(hcEl && !hcEl.textContent.includes('Низька')){
+            hcEl.textContent = 'Середня';
+            hcEl.style.color = '#ffcc00';
+            hcEl.title = (hcEl.title||'') + '\n\n⚠ fp199: знижено з "Висока" — статус DEGRADED виявлено після початкового розрахунку якості.';
           }
         }
       } else {
