@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.14-fp195-RING-VERDICT</title>
+  <title>G-Index — Космофізичний дашборд v88.9.16-fp197-SURYA-DEGRADED-FIX</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -5397,6 +5397,28 @@ async function loadFutureKp(){
 // якщо дата в overrides → eng замінюється на expert_eng, оригінал зберігається у _engRaw.
 // Frozen partition: engine_scores.json НЕ змінюється (V3 prospective freeze для backtest).
 let _expertOverrides = null; // {date: {expert_eng, tanita_O, tanita_N, category, applied_in}}
+// fp196: expert_calc layer (ШКАЛА+(2) direct calc, 495 днів, audit 2026-07-15:
+// 65.0% exact / 80.5% strict3 на n=406 GT vs 51.1%/75.5% v18.5-only).
+// Пріоритет: verified expert_override > expert_calc > engine_v18.5 > cal_score.
+let _expertCalc = null; // {date: {score, raw_sum, kp_her}}
+window._expertCalcLoadStatus = 'pending';
+async function loadExpertCalc(){
+  if(_expertCalc !== null) return _expertCalc;
+  try {
+    const resp = await fetch('expert_calc_scores.json', { cache: 'default' });
+    if(!resp.ok) { window._expertCalcLoadStatus = 'http_error_' + resp.status; throw new Error('HTTP ' + resp.status); }
+    const data = await resp.json();
+    _expertCalc = (data && data.scores && typeof data.scores === 'object') ? data.scores : {};
+    window._expertCalcLoadStatus = Object.keys(_expertCalc).length ? 'loaded' : 'invalid';
+    if(window._DEBUG) console.log('[fp196] expert_calc loaded: ' + Object.keys(_expertCalc).length + ' records');
+    return _expertCalc;
+  } catch(e){
+    if(window._expertCalcLoadStatus === 'pending') window._expertCalcLoadStatus = 'missing';
+    if(window._DEBUG) console.warn('[fp196] expert_calc_scores.json fetch failed:', e.message);
+    _expertCalc = {};
+    return _expertCalc;
+  }
+}
 
 // v88.8.35: SINGLE SOURCE OF TRUTH policy.
 // expert_overrides_v3.json — єдине джерело expert_eng для дат-overrides.
@@ -6089,6 +6111,39 @@ function getEngineScore(dateObj){
       // candidate-only: видно у audit панелі, але не блокує live decision rails
       snapshot._expertOverride = false;
       snapshot._expertOverrideCandidate = true;
+    }
+  }
+  // fp196: expert_calc middle-priority layer (audit 2026-07-15).
+  // Застосовується ТІЛЬКИ якщо немає verified expert_override (він вищий).
+  // Read-time, frozen engine_scores.json НЕ модифікується.
+  if(snapshot && !snapshot._expertOverride && _expertCalc && _expertCalc[ds]
+     && Number.isFinite(_expertCalc[ds].score)){
+    snapshot = {
+      ...snapshot,
+      _engRawPreCalc: snapshot.eng,
+      eng: _expertCalc[ds].score,
+      pdf: (snapshot.pdf === null || snapshot.pdf === undefined) ? _expertCalc[ds].score : snapshot.pdf,
+      _expertCalcApplied: true,
+      _expertCalcRawSum: _expertCalc[ds].raw_sum
+    };
+  }
+  // fp197: Сурья-solo correction (audit 2026-07-16). v17.0 absolute-redefiner
+  // повертає -3 для 'сурья'/'☀' соло (без наваратрі/серце/екадаші), АЛЕ
+  // WEIGHT_E_EVENTS у ЦЬОМУ Ж файлі (рядок ~6607) для того самого символу
+  // задає -2 — і саме -2 підтверджено джерелом (expert_symbol_table.json,
+  // аркуш "ШКАЛА", рядок 47: 'Сурья Санкранті...' = -2). Read-time фікс,
+  // frozen engine_scores.json НЕ модифікується. Пріоритет нижче за
+  // expert_override і expert_calc (не застосовується якщо вони вже спрацювали).
+  if(snapshot && !snapshot._expertOverride && !snapshot._expertCalcApplied
+     && snapshot.eng === -3 && typeof snapshot.tag === 'string'){
+    const _sl = snapshot.tag.toLowerCase();
+    const _isSurya = _sl.includes('сурья') || snapshot.tag.includes('☀');
+    const _isNavaratri = _sl.includes('наваратрі');
+    const _isHeart = snapshot.tag.includes('❤');
+    const _isEkadashi = _sl.includes('екадаші');
+    if(_isSurya && !_isNavaratri && !_isHeart && !_isEkadashi){
+      snapshot = { ...snapshot, _engRawPreSurya: snapshot.eng, eng: -2, _suryaWeightFixed: true };
+      if(snapshot.pdf === -3) snapshot.pdf = -2;
     }
   }
   // v88.8.18: v18.8 patches (after expert override check — не зачіпає overrides)
@@ -7725,9 +7780,17 @@ function computeCScore(kpNow, kpObsJson, ai, G, kpSrc){
   if (_fbTxt.includes('offline') || _fbTxt.includes('old')) _freshness = 'old';
   // v88.9.08-fp189: DEGRADED (фід >3г / фізична суперечність) не матчився ЖОДНОЮ
   // гілкою → штраф 0 → "Якість даних: Висока" поруч зі статусом DEGRADED на одному
-  // екрані (скрін Kyrylo 14.07). Тепер degraded = штраф як stale (0.12).
-  else if (_fbTxt.includes('cache') || _fbTxt.includes('stale') || _fbTxt.includes('degraded')) _freshness = 'stale';
-  if(_freshness === 'stale'){
+  // екрані (скрін Kyrylo 14.07). Fixed: degraded = штраф як stale (0.12).
+  // fp197 (2026-07-16, скрін Kyrylo): 0.12 було НЕДОСТАТНЬО — conf=1-0.12=0.88
+  // все одно ≥0.75 поріг "Висока", тому суперечність "DEGRADED + Висока" лишалась
+  // на екрані (той самий скрін показує обидва). DEGRADED тепер окремо, з
+  // штрафом що гарантовано виводить з "high"-порогу (0.28 → conf≈0.72 → 'med').
+  else if (_fbTxt.includes('degraded')) _freshness = 'degraded';
+  else if (_fbTxt.includes('cache') || _fbTxt.includes('stale')) _freshness = 'stale';
+  if(_freshness === 'degraded'){
+    penalty += 0.28;
+    reasons.push({ txt:'DEGRADED — фід >3г або фізична суперечність джерел', col:'#ff6b6b', d:0.28 });
+  } else if(_freshness === 'stale'){
     penalty += 0.12;
     reasons.push({ txt:'Дані з кешу (stale/cached)', col:'#ffcc00', d:0.12 });
   } else if(_freshness === 'old'){
@@ -21260,6 +21323,7 @@ const NoaaEvents = (function(){
     document.body.appendChild(st);
     try {
       await loadExpertOverrides();
+    await loadExpertCalc();
       if (_engineScores === null) {
         const resp = await fetch('engine_scores.json', { cache: 'default' });
         if (resp.ok) {
@@ -21326,6 +21390,7 @@ setTimeout(async function _dayVerdictLoad(){
   try {
     if (/[?&](verdict=off|diag=1)/.test(location.search)) return; // diag має власний завантажувач
     await loadExpertOverrides();
+    await loadExpertCalc();
     if (_engineScores === null) {
       const resp = await fetch('engine_scores.json', { cache: 'default' });
       if (resp.ok) {
