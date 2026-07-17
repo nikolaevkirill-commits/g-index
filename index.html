@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.29-fp210-DELTA-KPTEXT-FIX</title>
+  <title>G-Index — Космофізичний дашборд v88.9.31-fp212-AUDIT2-KPBOUNDS-SW-CACHEBUG-FIX</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1501,7 +1501,7 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
               </svg>
               <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none">
                 <div id="v86GVal" style="font-size:36px;font-weight:900;color:#ffd77a;line-height:1;text-shadow:0 0 12px rgba(255,210,110,.3)">—</div>
-                <!-- v87.90: Confidence interval (P50 band) — wow-фіча, нікого з конкурентів немає -->
+                <!-- v88.9.31-fp212: евристичний діапазон мінливості G_now (не статистичний CI, див. renderGRadialV86) -->
                 <div id="v86CI" class="hint" tabindex="0" style="font-size:10px;font-weight:600;color:var(--dim);margin-top:2px;line-height:1;letter-spacing:.02em;cursor:help;pointer-events:auto;display:none" title=""></div>
                 <!-- v87.21: inline ΔG trend directly beneath G-value for immediate signal -->
                 <div id="v86DeltaInline" style="font-size:13px;font-weight:800;line-height:1;margin-top:4px;color:var(--muted);letter-spacing:.02em;min-height:13px"></div>
@@ -3181,8 +3181,24 @@ function renderKpContribution(){
   if(!n) return;
   if(!isFinite(kp)){n.textContent='Kp\u22122 = \u2014';n.style.color='';return;}
   var v=Math.round((kp-2)*10)/10;
-  n.textContent='Kp\u22122 = '+(v>0?'+':'')+v.toFixed(1);
-  n.style.color=v>0?'#2bd47d':v<0?'#ff6b6b':'#9bb1dc';
+  // v88.9.31-fp212 FIX (аудит-проблема 2, доопрацювання): попередня версія мала
+  // словесний перетин меж (\u226 43 / 3\u20135 / \u226 55 — 3 і 5 в двох групах одночасно),
+  // хоча тернарний ланцюг у коді фактично однозначний (перша умова, що спрацювала,
+  // забирає значення). Тепер межі явним if/else if, без жодної двозначності:
+  //   Kp <  3  → спокійно
+  //   3 <= Kp < 5 → підвищено
+  //   Kp >= 5  → буря
+  var _kpState, _kpColor;
+  if (kp < 3) { _kpState = 'спокійно'; _kpColor = '#2bd47d'; }
+  else if (kp < 5) { _kpState = 'підвищено'; _kpColor = '#9bb1dc'; }
+  else { _kpState = 'буря'; _kpColor = '#ff6b6b'; }
+  // v88.9.31-fp212: явно розділяємо ЧИСЛО (legacy-компонент формули G_now,
+  // арифметика Kp-2 не змінена, канонічна) і КОЛІР/ЛЕЙБЛ (фізичний стан Kp).
+  // Раніше залишалась суперечність "зелений бейдж, а число -1.33" — тепер
+  // текст поруч із числом явно каже, що це два різних виміри.
+  n.textContent='Kp\u22122 = '+(v>0?'+':'')+v.toFixed(1)+' ('+_kpState+')';
+  n.style.color=_kpColor;
+  n.title='Число '+(v>0?'+':'')+v.toFixed(1)+' — legacy-компонент формули G_now (Kp\u22122, канонічна арифметика, не змінена).\nСлово і колір — фізичний стан Kp: <3 спокійно, 3\u20135 підвищено, \u22655 буря.\nЦе НЕ те саме вимірювання: число може бути від\'ємним при фізично спокійному Kp (Kp<2) — так влаштована формула G = Kp\u22122+\u03a3A\u1d62, її зміна не в межах цього патча.';
 }
 
 // ═══ v76b: Panchanga Pi line ═══
@@ -3861,24 +3877,39 @@ document.addEventListener('DOMContentLoaded',()=>{
   } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
 });
 
-// fp138 emergency: unregister any old Service Worker immediately. Current issue is runtime hang / stale cache;
-// dashboard must run network-only until startup is stable.
+// v88.9.31-fp212 FIX-CRITICAL (аудит-проблема 5, знайдено при перевірці fp211):
+// _swKeyBoot='gindex-shell-fp211-v1' матчив ТІЛЬКИ SHELL_CACHE. DATA_CACHE
+// (gindex-data-fp211-v1) НЕ містить підрядка 'gindex-shell-fp211-v1' —
+// keys().forEach(k => k.includes(_swKeyBoot)) повертав false для DATA_CACHE,
+// тобто кеш даних (і офлайн-fallback) видалявся на КОЖНОМУ завантаженні
+// сторінки. Виправлено: звіряємо лише версійний суфікс ('fp212-v1'), який
+// спільний для gindex-shell-* і gindex-data-*.
+// Реєстрація SW.register('./sw.js', {updateViaCache:'none'}) вже примушує
+// браузер щоразу тягнути свіжий sw.js з мережі (ігноруючи HTTP-кеш) — тому
+// ручний versioned-URL (?v=fp212-v1), запропонований в аудиті, зайвий:
+// updateViaCache:'none' вирішує ту саму задачу штатним механізмом браузера.
+const _swVersionBoot = 'fp212-v1'; // тримати синхронно з sw.js CACHE_VERSION
 try{
   if('serviceWorker' in navigator){
-    navigator.serviceWorker.getRegistrations().then(function(regs){ regs.forEach(function(r){ try{r.unregister();}catch(e){} }); });
+    navigator.serviceWorker.getRegistrations().then(function(regs){
+      regs.forEach(function(r){
+        try{ if(!r.active || !r.active.scriptURL.includes('sw.js')) r.unregister(); }catch(e){}
+      });
+    });
   }
-  if(window.caches){ caches.keys().then(function(keys){ keys.forEach(function(k){ try{caches.delete(k);}catch(e){} }); }); }
+  if(window.caches){
+    caches.keys().then(function(keys){
+      keys.forEach(function(k){ try{ if(!k.includes(_swVersionBoot)) caches.delete(k); }catch(e){} });
+    });
+  }
 }catch(e){}
-if (false && 'serviceWorker' in navigator) {
-  // fp138: SW disabled emergency; auto-unregister below is replaced by early cleanup.
-  // fp106: auto-unregister old SW versions on load
-  const _swKey = 'g-index-shell-v88-8-86-fp165';
+if ('serviceWorker' in navigator) {
   navigator.serviceWorker.getRegistrations().then(regs => {
     regs.forEach(r => {
-      if(!r.active || !r.active.scriptURL.includes(_swKey)) r.unregister();
+      if(!r.active || !r.active.scriptURL.includes('sw.js')) r.unregister();
     });
   });
-  if(window.caches) caches.keys().then(ks => ks.forEach(k => { if(!k.includes(_swKey)) caches.delete(k); }));
+  if(window.caches) caches.keys().then(ks => ks.forEach(k => { if(!k.includes(_swVersionBoot)) caches.delete(k); }));
   window.addEventListener('load', () => {
     // v87.1 NFR: refresh freshness badge every 60s (дані старіють без оновлення)
     SAFE_INTERVAL(function(){ try{_renderFreshnessState();}catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)} }, 60000).start();
@@ -3935,8 +3966,19 @@ if (false && 'serviceWorker' in navigator) {
           checkWaiting(reg.installing);
         });
 
-        // Після того як новий SW взяв контроль — перезавантажити сторінку
+        // Після того як новий SW взяв контроль — перезавантажити сторінку.
+        // v88.9.31-fp212: без живого браузерного тесту не можу гарантувати, що
+        // controllerchange не спрацює повторно (напр. якщо register() викликається
+        // повторно при кожному boot-cleanup). Захист: не більше 1 авто-reload
+        // на вкладку за сесію — далі просто оновлюємо контент без reload.
         navigator.serviceWorker.addEventListener('controllerchange', () => {
+          try {
+            if (sessionStorage.getItem('_swReloadedOnce') === '1') {
+              if(window._DEBUG) console.warn('[SW] controllerchange again — skipping reload (guard)');
+              return;
+            }
+            sessionStorage.setItem('_swReloadedOnce', '1');
+          } catch(e) { /* sessionStorage недоступний — реєструємо reload без guard */ }
           window.location.reload();
         });
 
@@ -13328,6 +13370,13 @@ function renderGRadialV86(g, kp, ai){
   v86Wrap.classList.remove('v86-hidden');
   legacyWrap.style.display = 'none';
 
+  // v88.9.31-fp212 (аудит-проблема 3, доопрацювання): раніше сегменти
+  // малювались завжди, а при показі вердикту лише притлумлювались (opacity)
+  // — користувач усе одно міг сприймати дуги як розклад вердикту. Тепер
+  // перевіряємо ДО малювання: якщо в центрі буде вердикт, сегменти взагалі
+  // не малюємо (display:none), а не притлумлюємо.
+  const _verdictWillShow = !!(window.__heroVerdictDisplay && window.__heroVerdictDisplay.hasVerdict && isFinite(window.__heroVerdictDisplay.val));
+
   // Values (absolute for segment size, sign for visual direction later)
   // v86.0.1: NaN-safety — якщо ai undefined, robust fallback
   const safeAi = ai || {};
@@ -13362,6 +13411,15 @@ function renderGRadialV86(g, kp, ai){
     if (!el) return;
     el.setAttribute('stroke-dasharray', `${segLen.toFixed(2)} ${gap.toFixed(2)}`);
     el.setAttribute('stroke-dashoffset', `${(-cursor).toFixed(2)}`);
+    // v88.9.31-fp212: коли центр показує вердикт — сегменти повністю сховані
+    // (display:none), не притлумлені. Це запобігає прочитанню дуг як пояснення
+    // числа-вердикту, яке вони не декомпозують (див. коментар вище про
+    // _verdictWillShow).
+    if (_verdictWillShow) {
+      el.style.display = 'none';
+      return;
+    }
+    el.style.display = '';
     // v87.3 B1/B5: повний hide нульових сегментів (усуває фантомні крапки)
     el.style.opacity = neutral ? '0.35' : (isActive ? '1' : '0');
     // v87.3 B4: візуалізація знаку — негативні сегменти тонші + без glow
@@ -13387,21 +13445,37 @@ function renderGRadialV86(g, kp, ai){
     vEl.style.textShadow = _shown >= 1 ? '0 0 12px rgba(127,227,166,.3)'
                          : _shown >= -1 ? '0 0 12px rgba(255,210,110,.3)'
                          : '0 0 12px rgba(255,120,120,.3)';
+    // v88.9.31-fp212 (аудит-проблема 3, фінально): сегменти повністю ховаються
+    // (display:none) ще ДО малювання, у циклі segs.forEach вище (_verdictWillShow) —
+    // не притлумленням opacity, як було у fp211. Тут лишається тільки підпис.
     try {
       const _lbl = document.getElementById('v86GLabel');
       if (_lbl) _lbl.textContent = _isVerdictShown ? 'ВЕРДИКТ ДНЯ' : 'G_NOW';
     } catch(_e){}
   }
-  // v87.90: Confidence interval P50 band (wow-фіча — нікого з конкурентів немає)
+  // v88.9.31-fp212: евристичний діапазон мінливості G_now (НЕ калібрований статистичний CI —
+  // не плутати з реальним 95% CI engine v18.5 backtest у backtestBadgeTitle, той — справжній
+  // біноміальний ДІ на n=280, залишено без змін).
   // Розрахунок: σ = sqrt(kpDelta² + eventUncertainty²); kpDelta з last-8 NOAA Kp obs.
   const ciEl = document.getElementById('v86CI');
   if (ciEl) {
     if (isFinite(g) && typeof computeConfidenceBand === 'function') {
       try {
         const cb = computeConfidenceBand(kp, _lastKpObsJson);
-        if (cb && isFinite(cb.delta) && cb.delta > 0) {
+        // v88.9.30-fp211 (аудит-проблема 3): цей діапазон рахується з live Kp/подій
+        // (G_now-шар). Коли центр показує дискретний вердикт (_isVerdictShown), не
+        // показуємо його — раніше він читався як "довірчий інтервал вердикту",
+        // яким не є.
+        const _vd2 = window.__heroVerdictDisplay;
+        const _verdictNow = !!(_vd2 && _vd2.hasVerdict && isFinite(_vd2.val));
+        if (cb && isFinite(cb.delta) && cb.delta > 0 && !_verdictNow) {
           ciEl.textContent = '± ' + cb.delta.toFixed(1);
-          ciEl.title = `Confidence band ≈ ±${cb.delta.toFixed(1)} (P50, σ-розкид).\nKp variability ${cb.kpDelta.toFixed(1)} + event uncertainty 0.5.\nЧим менше — тим стабільніший прогноз.\n\nP95 (~95% довіра): ±${(cb.delta*1.96).toFixed(1)}.`;
+          // v88.9.30-fp211 FIX (аудит-проблема 4): "P50"/"P95"/"95% довіра" — статистичні
+          // терміни з конкретним означенням (калібрований перцентиль розподілу похибки),
+          // якого тут немає: це euristика σ=sqrt(kpDelta²+0.5²) з мінливості Kp, а не
+          // відкалібрований розподіл залишків проти GT. Перейменовано, щоб не завищувати
+          // довіру до показника.
+          ciEl.title = `Евристичний діапазон мінливості ≈ ±${cb.delta.toFixed(1)}.\nKp variability ${cb.kpDelta.toFixed(1)} + event uncertainty 0.5.\nЧим менше — тим стабільніший прогноз.\nШирший діапазон (×1.96) ≈ ±${(cb.delta*1.96).toFixed(1)}.\n\n⚠ Це НЕ калібрований статистичний довірчий інтервал — емпіричної калібровки проти GT ще не проведено.`;
           ciEl.style.display = '';
         } else {
           ciEl.style.display = 'none';
