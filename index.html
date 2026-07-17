@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.39-fp221-RING-ALWAYS-GNOW</title>
+  <title>G-Index — Космофізичний дашборд v88.9.40-fp222-SOURCESTATE-UNIFIED</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -3084,6 +3084,34 @@ function updateDataFreshness(source, ts){
   window._dataFetchTimestamps[source] = ts || Date.now();
   _renderFreshnessState();
 }
+// v88.9.40-fp222 (аудит-раунд-9, Problem 4): єдиний об'єкт стану джерела даних.
+// Раніше 4 незалежні функції (_renderFreshnessState, Sanity Watchdog, SW_STALE_DATA
+// listener, hero mode-mapper нижче) писали статус ЛИШЕ як DOM-текст різних елементів
+// (freshnessBadge/heroFreshness), і інші функції (напр. Formula Audit) мусили
+// вгадувати реальний стан через .includes('degraded')/.includes('live') на тексті
+// ОСТАННЬОГО writer'а, що записав туди — це і є "гонка станів". Повністю переписувати
+// внутрішню логіку кожного writer'а (коли саме LIVE/DELAYED/STALE/DEGRADED) — ризиковано
+// без живих тестів (значна частина тонких edge-кейсів формувалась саме через ітеративні
+// фікси в цих 4 місцях). Натомість: кожен writer ДОДАТКОВО (не замість DOM-запису)
+// публікує свій шматок у window.__sourceState через цей helper — спільне, надійне
+// джерело поруч зі старим DOM-текстом, який лишається fallback-ом для сумісності.
+function _updateSourceState(partial){
+  try {
+    if (!window.__sourceState) {
+      window.__sourceState = {
+        mode: null,          // 'live' | 'estimated' | 'delayed' | 'stale' | 'old' | 'scenario' | 'offline' | 'degraded'
+        contentAgeHours: null,
+        fetchAgeMinutes: null,
+        cached: false,
+        degraded: false,
+        reason: null,
+        updatedAt: null
+      };
+    }
+    Object.assign(window.__sourceState, partial, { updatedAt: Date.now() });
+  } catch(_e) { /* silent — це допоміжний шар, не критичний шлях рендеру */ }
+}
+
 function _renderFreshnessState(){
   const ts = window._dataFetchTimestamps;
   const now = Date.now();
@@ -3144,6 +3172,14 @@ function _renderFreshnessState(){
     hf.style.color = ''; hf.style.background = '';
   }
   if(window.__uiState) window.__uiState.freshness = state;
+  _updateSourceState({
+    mode: state,
+    contentAgeHours: (window._kpSourceFreshness && isFinite(window._kpSourceFreshness.ageHours)) ? window._kpSourceFreshness.ageHours : null,
+    fetchAgeMinutes: _ageMin,
+    cached: false,
+    degraded: (state === 'old' || state === 'stale'),
+    reason: _contentOverride ? 'content_age_override' : null
+  });
 
   // v87.91 fix: scenario/offline override — без цього 60-сек таймер перетирав SCENARIO на LIVE
   // навіть коли syncHero виставив правильний стан. _renderFreshnessState бачить тільки age
@@ -3165,6 +3201,12 @@ function _renderFreshnessState(){
           : 'Дані offline: навіть Kp обсервації недоступні. Все, що показано — з кешу.';
       }
       if (window.__uiState) window.__uiState.freshness = _dm;
+      _updateSourceState({
+        mode: _dm,
+        cached: _dm === 'offline',
+        degraded: false,
+        reason: _dm === 'scenario' ? 'no_noaa_forecast' : 'offline_cache_only'
+      });
     }
     // v87.92 fix: маркер heroTomorrow через data-attribute + CSS ::after.
     // Раніше використовував innerHTML.replace, але render3Day переписував все через innerHTML.
@@ -3949,6 +3991,15 @@ if ('serviceWorker' in navigator) {
               el.textContent = `⚠ Дані з кешу (${_ageTxt}) — перевірте з'єднання`;
               el.style.display = 'block';
               setTimeout(() => { el.style.display = 'none'; }, 10000);
+            }
+            // v88.9.40-fp222 (Problem 4, writer 3/4): SW_STALE_DATA публікує в __sourceState.
+            if (typeof _updateSourceState === 'function') {
+              _updateSourceState({
+                mode: 'offline',
+                cached: true,
+                fetchAgeMinutes: (event.data.fetchedAt != null) ? Math.round((Date.now() - event.data.fetchedAt) / 60000) : null,
+                reason: 'sw_offline_fallback'
+              });
             }
             // Update freshness badge
             const badge = document.getElementById('freshnessBadge');
@@ -12845,6 +12896,7 @@ function _runSanityWatchdog(g, kp){
   // залипне true назавжди після першого виявлення DEGRADED, навіть коли стан
   // вже видужав.
   window.__isDegraded = false;
+  _updateSourceState({ degraded: false, reason: null });
 
   // Rule 1: Physics inconsistency — Kp calm but Dst stormy
   try {
@@ -13020,14 +13072,18 @@ function renderAlertBanner(g, kp){
             // вже зробив fp199-коментар нижче про heroConfidence). Публікуємо це
             // напряму як прапор, а не лише як текст бейджа — Formula Audit тепер
             // може читати РЕАЛЬНИЙ стан замість вгадування через .includes('degraded')
-            // на тексті іншого елемента (повний єдиний window.__sourceState —
-            // більший рефакторинг усіх freshness-writer'ів, не зроблено в цьому патчі).
+            // на тексті іншого елемента.
+            // v88.9.40-fp222 (Problem 4): розширено до повного window.__sourceState
+            // через _updateSourceState — той самий helper, що вже використовують
+            // інші 3 writer'и.
             window.__isDegraded = true;
+            _updateSourceState({ mode: 'degraded', degraded: true, reason: hasPhysics ? 'physics_conflict' : 'stale_feed' });
           }
           if(hf && !hf.textContent.includes('STALE') && !hf.textContent.includes('OLD')){
             hf.textContent = 'DEGRADED';
             hf.style.color = '#ff9944';
             window.__isDegraded = true;
+            _updateSourceState({ mode: 'degraded', degraded: true, reason: hasPhysics ? 'physics_conflict' : 'stale_feed' });
           }
           // fp199 (2026-07-16, скрін Kyrylo): computeCScore() рахує heroConfidence
           // РАНІШЕ, ніж window._lastDst/_kpSourceFreshness взагалі приходять (async,
@@ -14256,6 +14312,17 @@ function syncHero(){
   // fp79 FIX: resolveDataModeExtended → 'estimated' для нормального NOAA 3h циклу (не DELAYED)
   const _dataMode = (typeof resolveDataModeExtended === 'function') ? resolveDataModeExtended() : 'live';
   window.__dataMode = _dataMode; // v87.91: глобально доступно для інших рендерів (heroTomorrow тощо)
+  // v88.9.40-fp222 (Problem 4, writer 4/4): публікуємо в __sourceState. Guard: не
+  // перезаписуємо mode='degraded' мовчки — resolveDataModeExtended() не знає про
+  // DEGRADED (окрема детекція watchdog'а), тому без guard'а цей writer міг би
+  // тихо "повернути" стан назад до estimated/live одразу після того, як watchdog
+  // щойно виявив DEGRADED — відтворивши ту саму гонку станів у новому об'єкті.
+  if (typeof _updateSourceState === 'function') {
+    const _curMode = window.__sourceState && window.__sourceState.mode;
+    if (_curMode !== 'degraded' || window.__isDegraded !== true) {
+      _updateSourceState({ mode: _dataMode });
+    }
+  }
   const hf=el('heroFreshness');
   if(hf){
     // Маппинг dataMode → display label
@@ -15985,13 +16052,14 @@ function renderProvenance(){
   // (live/cache/stale/offline/old) не матчила цей рядок — падало в "? unknown",
   // хоча стан насправді ВІДОМИЙ (просто відсутня гілка). Додано явну гілку.
   const _freshLower = _fresh.toLowerCase();
-  // v88.9.34-fp215 FIX (аудит-раунд-5, Problem 7): раніше єдиним джерелом було
-  // .includes('degraded') на тексті чужого елемента — крихко (три різні функції
-  // пишуть у freshnessBadge, останній запис "перемагає" незалежно від того, чи
-  // він досі актуальний). Тепер window.__isDegraded (реальний прапор, fp215) —
-  // перше і надійніше джерело; текстовий парсинг — fallback, якщо прапор
-  // недоступний (напр. до першого проходу watchdog).
-  const _cacheState = window.__isDegraded === true ? '⚠ DEGRADED'
+  // v88.9.40-fp222 (Problem 4, фінально): тепер window.__sourceState.mode —
+  // перше джерело (єдиний canonical об'єкт, у який пишуть усі 4 writer'и).
+  // window.__isDegraded — другий пріоритет (той самий прапор з fp215, лишається
+  // для сумісності). Текстовий парсинг freshnessBadge — останній fallback.
+  const _srcMode = window.__sourceState && window.__sourceState.mode;
+  const _modeToLabel = { live:'✓ LIVE', estimated:'✓ ESTIMATED', delayed:'⊙ DELAYED', stale:'⊙ CACHE/STALE', old:'✗ OFFLINE', scenario:'⚠ SCENARIO', offline:'✗ OFFLINE', degraded:'⚠ DEGRADED' };
+  const _cacheState = _modeToLabel[_srcMode] ? _modeToLabel[_srcMode]
+                    : window.__isDegraded === true ? '⚠ DEGRADED'
                     : _freshLower.includes('degraded') ? '⚠ DEGRADED'
                     : _freshLower.includes('live') ? '✓ LIVE'
                     : _freshLower.includes('cache') || _freshLower.includes('stale') ? '⊙ CACHE/STALE'
