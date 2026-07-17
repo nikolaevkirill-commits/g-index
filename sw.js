@@ -21,7 +21,7 @@
 // GitHub Pages проєктів на тому самому домені. Тепер видаляємо лише ключі з
 // власним префіксом 'gindex-', що не є поточною версією.
 
-const CACHE_VERSION = 'fp215-v1'; // bump this string on every deploy
+const CACHE_VERSION = 'fp216-v1'; // bump this string on every deploy
 const CACHE_PREFIX = 'gindex-'; // власний namespace — НІКОЛИ не чіпати ключі без цього префікса
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${CACHE_VERSION}`;
 const DATA_CACHE = `${CACHE_PREFIX}data-${CACHE_VERSION}`;
@@ -83,21 +83,34 @@ self.addEventListener('fetch', (event) => {
         if (!fresh.ok) {
           throw new Error(`HTTP ${fresh.status} for ${req.url}`);
         }
-        // v88.9.34-fp215 FIX-CRITICAL (аудит-раунд-5, Problem 8): раніше
-        // кешували fresh.clone() як є, без запису моменту кешування. При
-        // offline-fallback SW слав SW_STALE_DATA з fetchedAt=Date.now() —
-        // тобто МОМЕНТОМ FALLBACK, а не реальним віком кешованої відповіді.
-        // Дворічний кеш виглядав би для UI як щойно отриманий. Тепер реальний
-        // час запису зберігається в заголовку відповіді ПІД ЧАС cache.put().
-        const _stampedHeaders = new Headers(fresh.headers);
-        _stampedHeaders.set('x-gindex-cached-at', String(Date.now()));
-        const _body = await fresh.clone().arrayBuffer();
-        const _stamped = new Response(_body, {
-          status: fresh.status,
-          statusText: fresh.statusText,
-          headers: _stampedHeaders
-        });
-        cache.put(req, _stamped).catch(() => {});
+        // v88.9.35-fp216 FIX-CRITICAL (справжня причина "кеш не оновлюється,
+        // показує помилку"): попередня версія (fp215) РЕКОНСТРУЮВАЛА Response
+        // через `new Response(body, {status, ...})` для запису timestamp-заголовка.
+        // Конструктор Response КИДАЄ ВИНЯТОК для статусів 204/205/304 (заборонено
+        // мати тіло за specification) і для opaque cross-origin відповідей
+        // (status стає 0). Цей виняток ловився зовнішнім catch — а якщо в кеші
+        // ще нічого не було (типово для НОВОГО деплою з бампнутим CACHE_VERSION,
+        // де DATA_CACHE щойно створений і порожній), catch перекидав помилку
+        // далі (`throw e`), і event.respondWith() провалювався — саме "показує
+        // помилку", а кеш при цьому так і не оновлювався, бо кешування впало
+        // ДО збереження. Тепер реконструкція — в окремому try/catch: будь-яка
+        // проблема з нею падає назад на звичайне кешування без timestamp-штампа
+        // (стара, гарантовано робоча поведінка fp213), а не рве весь запит.
+        try {
+          const _stampedHeaders = new Headers(fresh.headers);
+          _stampedHeaders.set('x-gindex-cached-at', String(Date.now()));
+          const _body = await fresh.clone().arrayBuffer();
+          const _stamped = new Response(_body, {
+            status: fresh.status,
+            statusText: fresh.statusText,
+            headers: _stampedHeaders
+          });
+          await cache.put(req, _stamped);
+        } catch (_stampErr) {
+          // Фолбек: звичайне кешування без timestamp-штампа. SW_STALE_DATA
+          // тоді покаже "вік невідомий" для цього запису — чесно, не крашить.
+          try { await cache.put(req, fresh.clone()); } catch (_e2) { /* best-effort */ }
+        }
         return fresh;
       } catch (e) {
         // v88.9.34-fp215 (аудит-раунд-5, Problem 8): глобальний caches.match(req)
