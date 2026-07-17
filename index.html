@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.35-fp217-INLINE-URL-SCOPE-FIX</title>
+  <title>G-Index — Космофізичний дашборд v88.9.37-fp219-PDF-OVERRIDE-HONESTY</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -6315,8 +6315,16 @@ function renderHeroBulletin(){
   // вердикт з PDF, а ~ (synthetic Kp) стосується RAW engine snapshot ПІД override,
   // який до цього значення не має відношення. Тепер лейбл перемикається явно.
   elB.dataset.label = entry._expertOverride ? 'PDF override' : 'Engine v18.5';
+  // v88.9.37-fp219 FIX-CRITICAL (аудит-раунд-6, Problem 1): ~ (synthetic Kp)
+  // стосується RAW engine snapshot, а не PDF override — override узагалі не
+  // рахується з якогось Kp, це ручний вердикт людини з тексту PDF. Але synMark
+  // формувався БЕЗУМОВНО з entry.kp_synthetic, тому "PDF OVERRIDE: −3 ~★"
+  // все одно приписував synthetic Kp значенню −3, яке від нього не залежить.
+  // Тепер ~ (і ◌/✓, той самий клас маркерів) показуються ТІЛЬКИ коли число —
+  // реальний розрахунок engine, не override.
+  const _isPdfOverride = entry._expertOverride === true;
   // v87.90: synthetic marker у видимому тексті (не лише tooltip) — чесність для майбутніх дат
-  const _synMark = entry.annual_fallback ? '<span style="color:#9bb1dc;margin-left:2px" title="Річний астрономічний каркас (Swiss Ephemeris) — попередній бал, очікує бюлетеня">◌</span>' : (entry.kp_synthetic ? '<span style="color:#fca474;margin-left:2px" title="Synthetic Kp=2.0 (NOAA 27DO недоступний — очікує бюлетеня або оновлення даних)">~</span>' : (entry.kp_real_from_future ? '<span style="color:#63be7b;margin-left:2px" title="Реальний Kp з NOAA 27-day-outlook (не synthetic)">✓</span>' : ''));
+  const _synMark = _isPdfOverride ? '' : (entry.annual_fallback ? '<span style="color:#9bb1dc;margin-left:2px" title="Річний астрономічний каркас (Swiss Ephemeris) — попередній бал, очікує бюлетеня">◌</span>' : (entry.kp_synthetic ? '<span style="color:#fca474;margin-left:2px" title="Synthetic Kp=2.0 (NOAA 27DO недоступний — очікує бюлетеня або оновлення даних)">~</span>' : (entry.kp_real_from_future ? '<span style="color:#63be7b;margin-left:2px" title="Реальний Kp з NOAA 27-day-outlook (не synthetic)">✓</span>' : '')));
   // v88.7.15 Г: marker '★' коли застосовано expert override; '?' коли candidate є, але source не підтверджений.
   const _unv = entry._expertOverrideAvailable && entry._expertOverrideVerified === false && isFinite(entry._expertEngCandidate);
   const _ovMark = entry._expertOverride ? '<span style="color:#ffd166;margin-left:2px;font-size:9px" title="Expert override застосовано">★</span>' : (_unv ? '<span style="color: var(--warn);margin-left:2px;font-size:9px" title="PDF override candidate НЕ застосовано: source не підтверджений">?</span>' : '');
@@ -6339,7 +6347,9 @@ function renderHeroBulletin(){
   const _patchInfo = (entry._v186Patches && entry._v186Patches.length > 0)
     ? `\nψ v18.5 canonical (patches disabled in freeze) (raw v18.5: ${entry._engV185Raw>=0?'+':''}${entry._engV185Raw})`
     : '';
-  elB.title = `Engine v18.5 canonical score: ${s >= 0 ? '+' : ''}${s} (V3 freeze active, patches disabled).\nТег: ${entry.tag || '—'}\nKp=${entry.kp}${synth}${pdfStr}${_ovInfo}${_patchInfo}\nDashboard G (continuous) ≠ Engine score (threshold) — різні моделі за дизайном.`;
+  elB.title = _isPdfOverride
+    ? `PDF override: ${s >= 0 ? '+' : ''}${s} (verified expert verdict, джерело: ${entry._overrideSourcePdf || entry._overrideAppliedIn || 'PDF'}).\nRaw Engine v18.5 (для порівняння): ${isFinite(entry._engRaw) ? (entry._engRaw >= 0 ? '+' : '') + entry._engRaw : 'недоступний'}.\nТег: ${entry.tag || '—'}\nDashboard G (continuous) ≠ PDF/Engine score (threshold) — різні моделі за дизайном.`
+    : `Engine v18.5 canonical score: ${s >= 0 ? '+' : ''}${s} (V3 freeze active, patches disabled).\nТег: ${entry.tag || '—'}\nKp=${entry.kp}${synth}${pdfStr}${_ovInfo}${_patchInfo}\nDashboard G (continuous) ≠ Engine score (threshold) — різні моделі за дизайном.`;
 }
 
 // v88.1: BPHS canonical yoga penalties for ADVISORY display only.
@@ -12317,7 +12327,18 @@ function render3Day(parsed3){
             const _os = _tomEff.override >= 0 ? '+' : '';
             _pdfPart = ` · PDF: ${_os}${_tomEff.override}`;
           }
-          _htEl.textContent = `G=${_sign}${_tomorrowG.toFixed(1)} ${_displayArrow} ${_hint}${_pdfPart}${_tomEff.marker}`;
+          // v88.9.37-fp219 (аудит-раунд-6, Problem 3): раніше текст завжди
+          // починався з raw G ("G=+0.9 ↑ покращення · PDF: +0★") — користувач
+          // першим читав "покращення", хоча головне рішення для дня — PDF-
+          // вердикт (тут 0, нейтрально), а "покращення" стосується ЛИШЕ
+          // переходу live-фону G_now→G_raw, не вердикту. Коли override існує,
+          // PDF-вердикт тепер іде першим, фон — другим, явно підписаний "фон".
+          if (_tomEff.hasOverride && isFinite(_tomEff.override) && !_conflictOverride) {
+            const _os2 = _tomEff.override >= 0 ? '+' : '';
+            _htEl.textContent = `PDF: ${_os2}${_tomEff.override} · фон ${_sign}${_tomorrowG.toFixed(1)} ${_displayArrow}${_tomEff.marker}`;
+          } else {
+            _htEl.textContent = `G=${_sign}${_tomorrowG.toFixed(1)} ${_displayArrow} ${_hint}${_pdfPart}${_tomEff.marker}`;
+          }
           const _htSibling = document.getElementById('heroTomorrowScenario');
           if (_isScenario) {
             _htEl.dataset.scenario = '1';
@@ -13580,7 +13601,14 @@ function renderGRadialV86(g, kp, ai){
         if (_isVerdictShown) {
           let _srcLbl = 'ВЕРДИКТ ДНЯ';
           try {
-            const _es = (typeof getEngineScore === 'function') ? getEngineScore(new Date()) : null;
+            // v88.9.37-fp219 FIX (аудит-раунд-6, Problem 5): getEngineScore(new Date())
+            // бере реальний UTC-момент браузера, а канонічний вердикт дня рахується
+            // через todayKyivStr()+'T12:00:00Z' (Kyiv-дата опівдні). У вікні
+            // 00:00–02:59 за Києвом (UTC ще попередній день) ці два виклики можуть
+            // повернути РІЗНІ дати — лейбл підписував джерело не того дня, що
+            // реально в центрі кільця. Тепер та сама Kyiv-дата, що й скрізь.
+            const _esDate = (typeof todayKyivStr === 'function') ? new Date(todayKyivStr()+'T12:00:00Z') : new Date();
+            const _es = (typeof getEngineScore === 'function') ? getEngineScore(_esDate) : null;
             if (_es && _es._expertOverride) _srcLbl = 'PDF OVERRIDE';
             else if (_es) _srcLbl = 'ENGINE V18.5';
           } catch(_e2) {}
@@ -14051,9 +14079,21 @@ function syncHero(){
   // після toFixed(2) давали "↓ -0.00" / "→ −0.00", що виглядало як помилка.
   // Все з |Δ| < 0.005 показуємо як рівно 0 (стрілка "→ 0.00").
   if (isFinite(dn) && Math.abs(dn) < 0.005) dn = 0;
+  // v88.9.36-fp218 FIX-CRITICAL (той самий баг Problem 2, пропущений в fp215):
+  // heroDelta ("Δ G" у статус-рядку) — той самий live G_now дельта dn, що й
+  // v86DeltaInline під кільцем. У fp215 я сховав ЛИШЕ v86DeltaInline при показі
+  // вердикту, забувши про heroDelta — тому "Δ G: → 0.00" далі стояло поруч зі
+  // статус-рядком, де показано PDF override −3, створюючи ту саму
+  // "вердикт стабільний" плутанину, яку fp215 мав закрити повністю.
+  // Обчислюємо прапор ОДИН раз тут, використовуємо для обох елементів нижче.
+  const _verdictShownForDelta = !!(window.__heroVerdictDisplay && window.__heroVerdictDisplay.hasVerdict && isFinite(window.__heroVerdictDisplay.val));
   const hd=el('heroDelta');
   if(hd){
-    if(_hasDeltaHistory && isFinite(dn)){
+    if(_verdictShownForDelta){
+      hd.textContent='';
+      hd.style.display='none';
+      hd.title = '';
+    } else if(_hasDeltaHistory && isFinite(dn)){
       const _sign = dn > 0 ? '↑ +' : dn < 0 ? '↓ ' : '→ ';
       hd.textContent = _sign + dn.toFixed(2);
       hd.style.color=dn>0.05?'var(--ok)':dn<-0.05?'var(--bad)':'var(--muted)';
@@ -14073,8 +14113,7 @@ function syncHero(){
   // центральним числом кільця НЕЗАЛЕЖНО від того, що там показано. Коли центр
   // показує PDF-вердикт (−3), а під ним "→ 0.00" — це дельта G_now, не
   // вердикту, хоча виглядає як "вердикт стабільний". Ховаємо за тим самим
-  // прапором, що вже використаний для сегментів/легенди кільця.
-  const _verdictShownForDelta = !!(window.__heroVerdictDisplay && window.__heroVerdictDisplay.hasVerdict && isFinite(window.__heroVerdictDisplay.val));
+  // прапором, що вже використаний вище для heroDelta (не дублюємо оголошення).
   const _hdi = el('v86DeltaInline');
   if(_hdi){
     if(_verdictShownForDelta){
@@ -15952,8 +15991,17 @@ function renderProvenance(){
 
   // Engine v18.5 entry today
   const _eng = (typeof getEngineScore === 'function') ? getEngineScore(_now) : null;
-  const _engStr = _eng ? `${_eng.eng >= 0 ? '+' : ''}${_eng.eng}${_eng.kp_synthetic ? ' ⚠ synthetic' : ''}` : '—';
+  // v88.9.37-fp219 FIX-CRITICAL (аудит-раунд-6, Problem 2): той самий баг, що
+  // і Problem 1 (heroBulletin) — synthetic-мітка була безумовною, а заголовок
+  // блоку жорстко "Engine v18.5" навіть коли _eng.eng — PDF override, не
+  // розрахунок engine. Formula Audit — саме те місце, де користувач очікує
+  // найточнішу provenance-інформацію, тому цю плутанину тут особливо критично
+  // було залишити. Тепер явно розділено.
+  const _engIsOverride = !!(_eng && _eng._expertOverride);
+  const _engStr = _eng ? `${_eng.eng >= 0 ? '+' : ''}${_eng.eng}${(!_engIsOverride && _eng.kp_synthetic) ? ' ⚠ synthetic' : ''}` : '—';
   const _engTag = _eng?.tag || '—';
+  const _engRawStr = (_eng && isFinite(_eng._engRaw)) ? `${_eng._engRaw >= 0 ? '+' : ''}${_eng._engRaw}${_eng.kp_synthetic ? ' ⚠ synthetic' : ''}` : (_engIsOverride ? 'недоступний' : '—');
+  const _engSourcePdf = _eng?._overrideSourcePdf || _eng?._overrideAppliedIn || '—';
 
   // Components G
   const _ai = _ui.ai || _ds.ai || {};
@@ -16018,9 +16066,18 @@ function renderProvenance(){
       </div>
     </div>
     <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+      ${_engIsOverride ? `
+      <div style="font-size:10px;color:#ffd166;letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px">PDF override (verified expert verdict)</div>
+      ${_row('Score', _engStr)}
+      ${_row('Джерело', escapeHtml(String(_engSourcePdf)))}
+      <div style="font-size:10px;color:var(--warn);letter-spacing:.12em;text-transform:uppercase;margin:10px 0 6px">Raw Engine v18.5 (для порівняння, НЕ застосовано)</div>
+      ${_row('Score', _engRawStr)}
+      ${_row('Tag', _engTag)}
+      ` : `
       <div style="font-size:10px;color:var(--warn);letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px">Engine v18.5 (rule-based, для порівняння)</div>
       ${_row('Score', _engStr)}
       ${_row('Tag', _engTag)}
+      `}
     </div>
     <div style="margin-top:10px;padding:6px 8px;font-size:10px;color:var(--faint);background:rgba(11,18,32,.6);border-radius:6px;line-height:1.5">
       Усі дані фіксуються при кожному G-tick (~10 хв). Натисни Оновити (вверху) щоб примусово оновити.
