@@ -15,7 +15,7 @@
 //  - Static shell assets (icons, manifest.json): CACHE-FIRST. These rarely
 //    change and cache-first here is safe and fast.
 
-const CACHE_VERSION = 'fp208-v1'; // bump this string on every deploy
+const CACHE_VERSION = 'fp209-v1'; // bump this string on every deploy
 const SHELL_CACHE = `gindex-shell-${CACHE_VERSION}`;
 const DATA_CACHE = `gindex-data-${CACHE_VERSION}`;
 

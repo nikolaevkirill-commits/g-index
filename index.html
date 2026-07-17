@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.27-fp208-OVERRIDE-GATE-FIX</title>
+  <title>G-Index — Космофізичний дашборд v88.9.28-fp209-GNOW-FALLBACK-FIX</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -13160,20 +13160,17 @@ function _patchStaleLoadingDOM() {
     if (_wr && _wr.textContent && _wr.textContent.includes('Дані завантажуються')) {
       // v88.8.91-fp172: __uiState.gNow alone was unreliable (stays NaN if it
       // was set during an early render pass before Kp arrived, and never
-      // gets refreshed until the next full loadAll() cycle). Falling back to
-      // reading the already-rendered #nowG DOM text — same pattern used
-      // elsewhere in the file (gVal computation) — since that value is
-      // confirmed correct on screen even when __uiState.gNow is stale.
-      // v88.8.95-fp176: fp172 fix used the WRONG element id ('nowG', a separate/
-      // possibly legacy badge) — the ring's actual visible number lives in
-      // '#heroG' (confirmed: cache-paint comment at L1535 explicitly names
-      // "heroG/heroRingVal" as the real render targets). Fixed to read the
-      // right element. Also try both as a defensive fallback.
+      // gets refreshed until the next full loadAll() cycle).
+      // v88.8.95-fp176: fp172 fallback read '#heroG' — WRONG. Виправлено fp209:
+      // #heroG — це велике кільце, і після fp128/fp208 воно показує PDF/Engine
+      // ВЕРДИКТ (дискретне -3..+3), не G_now (безперервний фон). Змішування цих
+      // двох метрик у fallback означало: якщо __uiState.gNow ще NaN на момент
+      // рендеру, функція могла взяти -3 (вердикт) і трактувати його як "поточний
+      // G_now" у поясненні "Чому сьогодні такий день?" — показуючи неправильну
+      // причину користувачу. #nowG — окремий бейдж "G-індекс зараз", використовується
+      // як надійне джерело G_now у 5+ інших місцях файлу (рядки 3004, 13669, 13817,
+      // 15426, 19370) — тепер єдиний fallback тут теж.
       let _gNow = window.__uiState?.gNow;
-      if (!isFinite(_gNow)) {
-        const _heroGEl = document.getElementById('heroG');
-        _gNow = _num(_firstText(_heroGEl) || _heroGEl?.textContent);
-      }
       if (!isFinite(_gNow)) {
         const _nowGEl = document.getElementById('nowG');
         _gNow = _num(_firstText(_nowGEl) || _nowGEl?.textContent);
