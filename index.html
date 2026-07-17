@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.31-fp212-AUDIT2-KPBOUNDS-SW-CACHEBUG-FIX</title>
+  <title>G-Index — Космофізичний дашборд v88.9.33-fp214-TOMORROW-CACHESTATE-HEROCSS-FIX</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -525,8 +525,16 @@
     .hero-left{display:flex!important;align-items:center!important;justify-content:center!important;gap:0!important;flex-wrap:nowrap!important}
     .hero-maintext{display:flex;flex-direction:column;gap:4px;min-width:0;justify-content:center}
     /* v83f: hero-right compact inline status */
+    /* v88.9.33-fp214 (аудит-раунд-4): НЕЙТРАЛІЗОВАНО — конфліктувало з
+       "═══ FINAL HERO FIX ═══" (v87.5/v87.21, нижче в каскаді, останнє
+       визначення .hero-right у файлі). Це один із 3 історичних шарів
+       (v85b/v86.2-3/v87.5-21), що одночасно задавали .hero-right — суміш
+       їхніх !important-правил давала непередбачуваний результат (бейджі
+       −3/—/★ ставали вузькою вертикальною колонкою замість рядка).
+       Тепер єдине джерело правди — блок "FINAL HERO FIX".
     .hero-right{justify-content:flex-end;gap:6px!important;font-size:12px}
     @media (max-width: 860px){.hero-right{justify-content:flex-start!important}}
+    */
     .hero-metric{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:6px 8px;min-height:44px}
     .hero-metric .label{font-size:9px!important;margin-bottom:2px!important;display:block}
     #heroDelta,#heroConfidence,#heroFreshness,#heroStamp{font-weight:700;font-variant-numeric:tabular-nums}
@@ -632,8 +640,14 @@
     /* 7. Hero action cmd великий */
     #heroActionCmd{font-size:24px!important;line-height:1.1!important;color:#ffd24f!important}
     /* 8. Hero-right — status cards style */
+    /* v88.9.33-fp214 (аудит-раунд-4): НЕЙТРАЛІЗОВАНО — display:block!important
+       тут був ГОЛОВНОЮ причиною вертикальної колонки бейджів (−3/—/★): span
+       ставав блочним елементом на всю ширину, тому кожен наступний бейдж
+       падав на новий рядок замість стояти в ряд. Див. коментар біля v83f вище —
+       той самий консолідаційний фікс, єдине джерело правди тепер "FINAL HERO FIX".
     .hero-right{gap:8px!important;min-width:160px!important}
     .hero-right span{display:block!important;padding:8px 10px!important;border-radius:10px!important;background:rgba(255,255,255,.04)!important;border:1px solid rgba(255,255,255,.06)!important;text-align:left!important}
+    */
     #heroFreshness{border-color:rgba(43,212,125,.3)!important;background:rgba(43,212,125,.08)!important}
     /* 9. Hero chips більші */
     .hero-chip{padding:8px 14px!important;border-radius:12px!important;font-size:12px!important}
@@ -652,8 +666,11 @@
     #heroDecisionDo,#heroDecisionAvoid{font-size:17px!important;padding:14px 16px!important;letter-spacing:.01em!important}
     #heroActionCmd{font-size:28px!important}
     /* P3: Hero-right = premium status panel */
+    /* v88.9.33-fp214 (аудит-раунд-4): НЕЙТРАЛІЗОВАНО — той самий консолідаційний
+       фікс, що і два коментарі вище. "FINAL HERO FIX" — єдине джерело правди.
     .hero-right span{padding:10px 12px!important;background:rgba(255,255,255,.06)!important;border:1px solid rgba(255,255,255,.09)!important}
     .hero-right span strong,.hero-right span#heroFreshness{font-size:15px!important;font-weight:800!important}
+    */
     #heroFreshness{font-size:15px!important}
     /* P3b: порожні hero-right cards — ховати (heroDelta, heroNextShiftChip без тексту) */
     #heroDelta:empty,#heroNextShiftChip:empty{display:none!important;padding:0!important;border:none!important;background:none!important}
@@ -1363,7 +1380,7 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
         <button id="btnRefresh" aria-label="Оновити дані з NOAA">↻ Оновити</button>
         <button id="btnHardReset" title="Скинути кеш SW і перезавантажити — якщо бачиш стару версію"
           aria-label="Очистити кеш Service Worker і перезавантажити"
-          onclick="(async function(){try{if('serviceWorker' in navigator){const regs=await navigator.serviceWorker.getRegistrations();await Promise.all(regs.map(r=>r.unregister()));}if('caches' in window){const keys=await caches.keys();await Promise.all(keys.map(k=>caches.delete(k)));}location.reload(true);}catch(e){alert('Reset error: '+e.message);}})()"
+          onclick="(async function(){try{if('serviceWorker' in navigator){const _s=new URL('.', location.href).href;const regs=await navigator.serviceWorker.getRegistrations();await Promise.all(regs.filter(r=>r.scope===_s).map(r=>r.unregister()));}if('caches' in window){const keys=await caches.keys();await Promise.all(keys.filter(k=>k.startsWith('gindex-')).map(k=>caches.delete(k)));}location.reload(true);}catch(e){alert('Reset error: '+e.message);}})()"
           style="background:#2a1a1a;color:#ff9f9f;border:1px solid #4a2a2a;font-size:11px;padding:3px 8px;border-radius:6px">🗑 Кеш</button>
         <button id="btnShare" title="Поділитись поточним G-станом" aria-label="Поділитись" onclick="shareGState()" style="background: var(--border);color: var(--muted);border:1px solid var(--border2)">📤</button>
         <button id="btnChronoExport" title="Експорт Chrono Journal" onclick="(function(){try{var d=localStorage.getItem('gindex_chrono_v2_abcd')||'[]';prompt('CHRONO JSON (A/B/C/D):',d);}catch(e){alert('Помилка: '+e.message);}})()" style="background:#0a2a1a;color:#44ffaa;border:1px solid #1a6644;font-size:11px;padding:3px 8px;border-radius:6px">📊</button>
@@ -1426,7 +1443,7 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
           <summary style="cursor:pointer;color:var(--faint);font-size:14px;list-style:none;padding:2px 6px;border-radius:4px" title="Dev tools (?dev=1)">⋯</summary>
           <div id="devMenuPanel" style="position:absolute;right:0;top:100%;margin-top:4px;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:6px;display:flex;flex-direction:column;gap:4px;z-index:50;min-width:140px">
             <button id="btnV86Radial" onclick="(function(){try{const cur=localStorage.getItem('v86_radial')==='1';const next=cur?'0':'1';localStorage.setItem('v86_radial', next);localStorage.setItem('v86_heat', next);location.reload();}catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}})()" style="background:#1a0f2a;color:#d28cff;border:1px solid #4a2a6e;font-size:11px;padding:4px 8px;border-radius:6px;cursor:pointer;text-align:left" title="Перемкнути v86 features: radial G + heat-strip">✦ v86</button>
-            <button id="btnCacheReset" onclick="(async function(){try{const regs=await navigator.serviceWorker.getRegistrations();await Promise.all(regs.map(r=>r.unregister()));const keys=await caches.keys();await Promise.all(keys.map(k=>caches.delete(k)));setTimeout(()=>location.href=location.pathname+'?nocache=fp70',300);}catch(e){location.reload(true);}})()" style="background:#2a1a00;color:#ffcc44;border:1px solid #554400;font-size:11px;padding:4px 8px;border-radius:6px;cursor:pointer;text-align:left" title="Скинути кеш і перезавантажити (fp58)">🗑 Кеш</button>
+            <button id="btnCacheReset" onclick="(async function(){try{const _s=new URL('.', location.href).href;const regs=await navigator.serviceWorker.getRegistrations();await Promise.all(regs.filter(r=>r.scope===_s).map(r=>r.unregister()));const keys=await caches.keys();await Promise.all(keys.filter(k=>k.startsWith('gindex-')).map(k=>caches.delete(k)));setTimeout(()=>location.href=location.pathname+'?nocache=fp70',300);}catch(e){location.reload(true);}})()" style="background:#2a1a00;color:#ffcc44;border:1px solid #554400;font-size:11px;padding:4px 8px;border-radius:6px;cursor:pointer;text-align:left" title="Скинути кеш і перезавантажити (fp58)">🗑 Кеш</button>
           </div>
         </details>
       </span>
@@ -3877,39 +3894,31 @@ document.addEventListener('DOMContentLoaded',()=>{
   } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
 });
 
-// v88.9.31-fp212 FIX-CRITICAL (аудит-проблема 5, знайдено при перевірці fp211):
-// _swKeyBoot='gindex-shell-fp211-v1' матчив ТІЛЬКИ SHELL_CACHE. DATA_CACHE
-// (gindex-data-fp211-v1) НЕ містить підрядка 'gindex-shell-fp211-v1' —
-// keys().forEach(k => k.includes(_swKeyBoot)) повертав false для DATA_CACHE,
-// тобто кеш даних (і офлайн-fallback) видалявся на КОЖНОМУ завантаженні
-// сторінки. Виправлено: звіряємо лише версійний суфікс ('fp212-v1'), який
-// спільний для gindex-shell-* і gindex-data-*.
-// Реєстрація SW.register('./sw.js', {updateViaCache:'none'}) вже примушує
-// браузер щоразу тягнути свіжий sw.js з мережі (ігноруючи HTTP-кеш) — тому
-// ручний versioned-URL (?v=fp212-v1), запропонований в аудиті, зайвий:
-// updateViaCache:'none' вирішує ту саму задачу штатним механізмом браузера.
-const _swVersionBoot = 'fp212-v1'; // тримати синхронно з sw.js CACHE_VERSION
+// v88.9.32-fp213 FIX-CRITICAL (аудит-раунд-3, Problem 1): попередня версія
+// видаляла БУДЬ-ЯКУ SW-реєстрацію, чий scriptURL не містить "sw.js", і БУДЬ-
+// ЯКИЙ cache-ключ без версійного суфікса — обидва origin-wide (CacheStorage і
+// список SW-реєстрацій спільні для ВСЬОГО nikolaevkirill-commits.github.io,
+// а не лише для /g-index/). Це могло видалити SW/кеші ІНШИХ GitHub Pages
+// проєктів на тому самому домені.
+// Тепер:
+//  (a) реєстрації фільтруються за ВЛАСНИМ SCOPE (директорія поточної сторінки)
+//      — чужі реєстрації мають інший scope і НІКОЛИ не розглядаються;
+//  (b) page-level видалення кешів прибрано повністю — це робить ЛИШЕ
+//      sw.js activate handler, який тепер сам фільтрує за префіксом 'gindex-'.
 try{
   if('serviceWorker' in navigator){
+    const _ownScope = new URL('.', location.href).href;
     navigator.serviceWorker.getRegistrations().then(function(regs){
       regs.forEach(function(r){
-        try{ if(!r.active || !r.active.scriptURL.includes('sw.js')) r.unregister(); }catch(e){}
+        try{
+          if (r.scope !== _ownScope) return; // чужий проєкт — НІКОЛИ не чіпаємо
+          if (!r.active || !r.active.scriptURL.endsWith('/sw.js')) r.unregister();
+        }catch(e){}
       });
-    });
-  }
-  if(window.caches){
-    caches.keys().then(function(keys){
-      keys.forEach(function(k){ try{ if(!k.includes(_swVersionBoot)) caches.delete(k); }catch(e){} });
     });
   }
 }catch(e){}
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.getRegistrations().then(regs => {
-    regs.forEach(r => {
-      if(!r.active || !r.active.scriptURL.includes('sw.js')) r.unregister();
-    });
-  });
-  if(window.caches) caches.keys().then(ks => ks.forEach(k => { if(!k.includes(_swVersionBoot)) caches.delete(k); }));
   window.addEventListener('load', () => {
     // v87.1 NFR: refresh freshness badge every 60s (дані старіють без оновлення)
     SAFE_INTERVAL(function(){ try{_renderFreshnessState();}catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)} }, 60000).start();
@@ -3967,18 +3976,20 @@ if ('serviceWorker' in navigator) {
         });
 
         // Після того як новий SW взяв контроль — перезавантажити сторінку.
-        // v88.9.31-fp212: без живого браузерного тесту не можу гарантувати, що
-        // controllerchange не спрацює повторно (напр. якщо register() викликається
-        // повторно при кожному boot-cleanup). Захист: не більше 1 авто-reload
-        // на вкладку за сесію — далі просто оновлюємо контент без reload.
+        // v88.9.32-fp213 FIX-CRITICAL (аудит-раунд-3, Problem 3): sessionStorage
+        // переживає reload — після ПЕРШОГО controllerchange-reload прапор лишався
+        // '1' назавжди в цій вкладці, тому ВСІ наступні реальні SW-оновлення
+        // більше не перезавантажували сторінку: новий SW ставав активним, але
+        // 1.4MB inline JS/HTML лишались старими без перезавантаження. In-memory
+        // прапор природно скидається при кожному reload — саме та поведінка,
+        // яка потрібна (не більше 1 reload ЗА ОДИН controllerchange-цикл, але
+        // кожен новий цикл після наступного reload — знову дозволений).
         navigator.serviceWorker.addEventListener('controllerchange', () => {
-          try {
-            if (sessionStorage.getItem('_swReloadedOnce') === '1') {
-              if(window._DEBUG) console.warn('[SW] controllerchange again — skipping reload (guard)');
-              return;
-            }
-            sessionStorage.setItem('_swReloadedOnce', '1');
-          } catch(e) { /* sessionStorage недоступний — реєструємо reload без guard */ }
+          if (window._swReloading) {
+            if(window._DEBUG) console.warn('[SW] controllerchange again in same cycle — skipping reload (guard)');
+            return;
+          }
+          window._swReloading = true;
           window.location.reload();
         });
 
@@ -12181,12 +12192,21 @@ function render3Day(parsed3){
       const _htEl = document.getElementById('heroTomorrow');
       if (_htEl) {
         if (isFinite(_tomorrowG)) {
-          // v87.6b: fallback — якщо __uiState ще не готовий, беремо G today з days[0]
+          // v88.9.33-fp214 FIX-CRITICAL (аудит-раунд-4, "завтра" desync):
+          // Раніше фолбек, коли __uiState.gNow ще NaN (race — рендер heroTomorrow
+          // може відпрацювати до loadAll()), ПЕРЕРАХОВУВАВ today G через
+          // days[0].kpMax (денний ПІК прогнозу Kp) — інша величина, ніж live
+          // поточний Kp. Це давало інший today-baseline, ніж той, що бачить
+          // користувач у кільці/Formula Audit (#nowG), і могло перевернути
+          // напрям стрілки "завтра" (напр. показати "↓ погіршення" там, де
+          // проти РЕАЛЬНОГО G_now це насправді покращення).
+          // Виправлено: той самий канонічний #nowG DOM-fallback, що вже
+          // застосований у _patchStaleLoadingDOM (fp172/fp209) — єдине надійне
+          // джерело G_now у файлі, а не окрема формула з іншою семантикою.
           let _todayG = isFinite(window.__uiState?.gNow) ? window.__uiState.gNow : NaN;
-          if (!isFinite(_todayG) && days[0]) {
-            const _kp0 = fmtDate(days[0].date) === _todayStr && lastWWV && isFinite(lastWWV.kNow) ? lastWWV.kNow : days[0].kpMax;
-            const _ai0 = computeAi(sunriseUTC(days[0].date), _kp0 ?? 0);
-            _todayG = (isFinite(_kp0) ? _kp0 : 0) - 2 + _ai0.Ai;
+          if (!isFinite(_todayG)) {
+            const _nowGEl2 = document.getElementById('nowG');
+            _todayG = _num(_firstText(_nowGEl2) || _nowGEl2?.textContent);
           }
           const _diff = isFinite(_todayG) ? (_tomorrowG - _todayG) : 0;
           const _arrow = _diff > 0.3 ? '↑' : _diff < -0.3 ? '↓' : '→';
@@ -13155,6 +13175,16 @@ function _renderHeroHierarchy(){
         const _tcol = _tv ? _tv.color : 'var(--text2)';
         const _tlab = _tv ? _tv.label : '';
         tomoHtml = `<span style="font-weight:800;color:${_tcol}">${_tsc>=0?'+':''}${_tsc}</span> <span style="color:var(--text2)">${_tlab}</span> <span style="color:var(--faint);font-size:10px">· прогноз</span>`;
+        // v88.9.33-fp214 (аудит-раунд-4): за тим самим принципом, що й "сьогодні"
+        // нижче (fp56-P8) — коли дискретний вердикт ЗАВТРА (тут, округлено -3..+3)
+        // і неперервний live-тренд G_raw (бейдж heroTomorrow, статус-рядок) різняться
+        // напрямом/знаком, явно позначаємо це прямо в рядку, а не лише в hover-title.
+        try {
+          const _tgRaw = window.__tomorrowG;
+          if (isFinite(_tgRaw) && Math.abs(Math.round(_tgRaw) - _tsc) >= 1) {
+            tomoHtml += ` <span style="color:var(--faint);font-size:9px" title="Дискретний вердикт (округлено, ліворуч) і неперервний G_now-прогноз (статус-рядок нижче) — різні метрики й можуть розходитись напрямом.">· G_raw=${_tgRaw>=0?'+':''}${_tgRaw.toFixed(1)} ⚠ різні метрики</span>`;
+          }
+        } catch(_e) {}
       }
     }catch(e){ /* silent */ }
     box.innerHTML =
@@ -13376,6 +13406,14 @@ function renderGRadialV86(g, kp, ai){
   // перевіряємо ДО малювання: якщо в центрі буде вердикт, сегменти взагалі
   // не малюємо (display:none), а не притлумлюємо.
   const _verdictWillShow = !!(window.__heroVerdictDisplay && window.__heroVerdictDisplay.hasVerdict && isFinite(window.__heroVerdictDisplay.val));
+  // v88.9.32-fp213 (аудит-раунд-3, Problem 5): легенда компонентів (Kp−2, Lᵢ,
+  // Mᵢ, eᵢ, Pᵢ, Dᵢ) досі лишалась видимою навіть коли самі сегменти сховані —
+  // створювала те саме хибне враження "ці компоненти пояснюють вердикт".
+  // Ховаємо разом із сегментами.
+  try {
+    const _legendEl = document.getElementById('v86Legend');
+    if (_legendEl) _legendEl.style.display = _verdictWillShow ? 'none' : 'grid';
+  } catch(_e) {}
 
   // Values (absolute for segment size, sign for visual direction later)
   // v86.0.1: NaN-safety — якщо ai undefined, robust fallback
@@ -13470,12 +13508,13 @@ function renderGRadialV86(g, kp, ai){
         const _verdictNow = !!(_vd2 && _vd2.hasVerdict && isFinite(_vd2.val));
         if (cb && isFinite(cb.delta) && cb.delta > 0 && !_verdictNow) {
           ciEl.textContent = '± ' + cb.delta.toFixed(1);
-          // v88.9.30-fp211 FIX (аудит-проблема 4): "P50"/"P95"/"95% довіра" — статистичні
-          // терміни з конкретним означенням (калібрований перцентиль розподілу похибки),
-          // якого тут немає: це euristика σ=sqrt(kpDelta²+0.5²) з мінливості Kp, а не
-          // відкалібрований розподіл залишків проти GT. Перейменовано, щоб не завищувати
-          // довіру до показника.
-          ciEl.title = `Евристичний діапазон мінливості ≈ ±${cb.delta.toFixed(1)}.\nKp variability ${cb.kpDelta.toFixed(1)} + event uncertainty 0.5.\nЧим менше — тим стабільніший прогноз.\nШирший діапазон (×1.96) ≈ ±${(cb.delta*1.96).toFixed(1)}.\n\n⚠ Це НЕ калібрований статистичний довірчий інтервал — емпіричної калібровки проти GT ще не проведено.`;
+          // Статистичні терміни з конкретним означенням (калібрований перцентиль
+          // розподілу похибки) сюди не підходять: це евристика
+          // σ=sqrt(kpDelta²+0.5²) з мінливості Kp, не відкалібрований розподіл
+          // залишків проти GT. Тому в назві/title лишається тільки нейтральне
+          // "евристичний діапазон мінливості", без множників нормального
+          // розподілу (раніше тут був і "×1.96" — теж прибрано, fp213).
+          ciEl.title = `Евристичний діапазон мінливості ≈ ±${cb.delta.toFixed(1)}.\nKp variability ${cb.kpDelta.toFixed(1)} + event uncertainty 0.5.\nЧим менше — тим стабільніший прогноз.\n\n⚠ Це НЕ статистичний довірчий інтервал — емпіричної калібровки проти GT ще не проведено.`;
           ciEl.style.display = '';
         } else {
           ciEl.style.display = 'none';
@@ -15798,10 +15837,19 @@ function renderProvenance(){
   const _gNow = _ui.gNow ?? _ds.gNow ?? NaN;
 
   // Cache state
-  const _cacheState = _fresh.toLowerCase().includes('live') ? '✓ LIVE'
-                    : _fresh.toLowerCase().includes('cache') || _fresh.toLowerCase().includes('stale') ? '⊙ CACHE/STALE'
-                    : _fresh.toLowerCase().includes('offline') || _fresh.toLowerCase().includes('old') ? '✗ OFFLINE'
-                    : '? unknown';
+  // v88.9.33-fp214 FIX (аудит-раунд-4): freshnessBadge може показувати "DEGRADED"
+  // (задокументовано в його ж title/tooltip: "NOAA-фід не оновлювався понад 3г
+  // АБО фізична суперечність між джерелами"), але жодна з попередніх гілок
+  // (live/cache/stale/offline/old) не матчила цей рядок — падало в "? unknown",
+  // хоча стан насправді ВІДОМИЙ (просто відсутня гілка). Додано явну гілку.
+  const _freshLower = _fresh.toLowerCase();
+  const _cacheState = _freshLower.includes('degraded') ? '⚠ DEGRADED'
+                    : _freshLower.includes('live') ? '✓ LIVE'
+                    : _freshLower.includes('cache') || _freshLower.includes('stale') ? '⊙ CACHE/STALE'
+                    : _freshLower.includes('offline') || _freshLower.includes('old') ? '✗ OFFLINE'
+                    : _freshLower.includes('delay') ? '⊙ DELAYED'
+                    : _freshLower.includes('estimat') ? '✓ ESTIMATED'
+                    : `? unknown (raw: ${_fresh})`;
 
   const _row = (label, val, hint) => `<div style="display:grid;grid-template-columns:140px 1fr;gap:10px;padding:3px 0;border-bottom:1px solid rgba(30,42,68,.4)">
     <span style="color:var(--dim)">${label}</span>

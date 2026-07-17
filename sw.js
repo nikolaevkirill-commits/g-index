@@ -14,10 +14,17 @@
 //    cache-first HTML serving to happen together.
 //  - Static shell assets (icons, manifest.json): CACHE-FIRST. These rarely
 //    change and cache-first here is safe and fast.
+//
+// v88.9.32-fp213 FIX-CRITICAL (аудит-раунд-3): activate раніше видаляв БУДЬ-ЯКИЙ
+// cache key, що не є нашими двома поточними — CacheStorage спільний для ВСЬОГО
+// origin nikolaevkirill-commits.github.io, тому це могло знищити кеші ІНШИХ
+// GitHub Pages проєктів на тому самому домені. Тепер видаляємо лише ключі з
+// власним префіксом 'gindex-', що не є поточною версією.
 
-const CACHE_VERSION = 'fp212-v1'; // bump this string on every deploy
-const SHELL_CACHE = `gindex-shell-${CACHE_VERSION}`;
-const DATA_CACHE = `gindex-data-${CACHE_VERSION}`;
+const CACHE_VERSION = 'fp214-v1'; // bump this string on every deploy
+const CACHE_PREFIX = 'gindex-'; // власний namespace — НІКОЛИ не чіпати ключі без цього префікса
+const SHELL_CACHE = `${CACHE_PREFIX}shell-${CACHE_VERSION}`;
+const DATA_CACHE = `${CACHE_PREFIX}data-${CACHE_VERSION}`;
 
 const SHELL_ASSETS = [
   './manifest.json',
@@ -38,7 +45,9 @@ self.addEventListener('activate', (event) => {
     const keys = await caches.keys();
     await Promise.all(
       keys
-        .filter((k) => k !== SHELL_CACHE && k !== DATA_CACHE)
+        // v88.9.32-fp213: ТІЛЬКИ власні застарілі кеші — чужі (без префікса
+        // CACHE_PREFIX) ніколи не чіпаємо, навіть якщо вони старі/невідомі.
+        .filter((k) => k.startsWith(CACHE_PREFIX) && k !== SHELL_CACHE && k !== DATA_CACHE)
         .map((k) => caches.delete(k))
     );
     await self.clients.claim();
@@ -66,12 +75,32 @@ self.addEventListener('fetch', (event) => {
     event.respondWith((async () => {
       try {
         const fresh = await fetch(req);
+        // v88.9.32-fp213 FIX-CRITICAL: fetch() НЕ кидає exception на 404/500 —
+        // без цієї перевірки тимчасовий збій GitHub Pages записувався в кеш
+        // як валідні "свіжі" дані ("cache poisoning"), і offline-fallback потім
+        // повертав саме цю помилкову відповідь. Кешуємо лише response.ok.
+        if (!fresh.ok) {
+          throw new Error(`HTTP ${fresh.status} for ${req.url}`);
+        }
         const cache = await caches.open(DATA_CACHE);
         cache.put(req, fresh.clone()).catch(() => {});
         return fresh;
       } catch (e) {
         const cached = await caches.match(req);
-        if (cached) return cached;
+        if (cached) {
+          // v88.9.32-fp213: реалізовано SW_STALE_DATA — index.html уже мав
+          // listener на це повідомлення (двічі), але sw.js його ніколи не
+          // надсилав, тому UI не перемикався на бейдж CACHED при offline
+          // fallback. Тепер надсилаємо реальний timestamp кешованої відповіді.
+          try {
+            const clients = await self.clients.matchAll({ type: 'window' });
+            const fetchedAt = Date.now();
+            clients.forEach((c) => {
+              c.postMessage({ type: 'SW_STALE_DATA', fetchedAt, url: req.url });
+            });
+          } catch (_e) { /* postMessage best-effort, не блокуємо відповідь */ }
+          return cached;
+        }
         throw e;
       }
     })());
