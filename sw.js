@@ -21,7 +21,7 @@
 // GitHub Pages проєктів на тому самому домені. Тепер видаляємо лише ключі з
 // власним префіксом 'gindex-', що не є поточною версією.
 
-const CACHE_VERSION = 'fp214-v1'; // bump this string on every deploy
+const CACHE_VERSION = 'fp215-v1'; // bump this string on every deploy
 const CACHE_PREFIX = 'gindex-'; // власний namespace — НІКОЛИ не чіпати ключі без цього префікса
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${CACHE_VERSION}`;
 const DATA_CACHE = `${CACHE_PREFIX}data-${CACHE_VERSION}`;
@@ -73,6 +73,7 @@ self.addEventListener('fetch', (event) => {
 
   if (isHtmlOrData) {
     event.respondWith((async () => {
+      const cache = await caches.open(DATA_CACHE);
       try {
         const fresh = await fetch(req);
         // v88.9.32-fp213 FIX-CRITICAL: fetch() НЕ кидає exception на 404/500 —
@@ -82,21 +83,38 @@ self.addEventListener('fetch', (event) => {
         if (!fresh.ok) {
           throw new Error(`HTTP ${fresh.status} for ${req.url}`);
         }
-        const cache = await caches.open(DATA_CACHE);
-        cache.put(req, fresh.clone()).catch(() => {});
+        // v88.9.34-fp215 FIX-CRITICAL (аудит-раунд-5, Problem 8): раніше
+        // кешували fresh.clone() як є, без запису моменту кешування. При
+        // offline-fallback SW слав SW_STALE_DATA з fetchedAt=Date.now() —
+        // тобто МОМЕНТОМ FALLBACK, а не реальним віком кешованої відповіді.
+        // Дворічний кеш виглядав би для UI як щойно отриманий. Тепер реальний
+        // час запису зберігається в заголовку відповіді ПІД ЧАС cache.put().
+        const _stampedHeaders = new Headers(fresh.headers);
+        _stampedHeaders.set('x-gindex-cached-at', String(Date.now()));
+        const _body = await fresh.clone().arrayBuffer();
+        const _stamped = new Response(_body, {
+          status: fresh.status,
+          statusText: fresh.statusText,
+          headers: _stampedHeaders
+        });
+        cache.put(req, _stamped).catch(() => {});
         return fresh;
       } catch (e) {
-        const cached = await caches.match(req);
+        // v88.9.34-fp215 (аудит-раунд-5, Problem 8): глобальний caches.match(req)
+        // шукає по ВСІХ кешах цього SW (включно з SHELL_CACHE) — неточно для
+        // даних. Звужено до DATA_CACHE.match(req), як прямо рекомендовано.
+        const cached = await cache.match(req);
         if (cached) {
-          // v88.9.32-fp213: реалізовано SW_STALE_DATA — index.html уже мав
-          // listener на це повідомлення (двічі), але sw.js його ніколи не
-          // надсилав, тому UI не перемикався на бейдж CACHED при offline
-          // fallback. Тепер надсилаємо реальний timestamp кешованої відповіді.
+          // v88.9.34-fp215: реальний timestamp кешування з заголовка, а не
+          // момент fallback. Якщо заголовка немає (запис із старішої версії
+          // SW, до цього фіксу) — чесно позначаємо як невідомий вік, а не
+          // видаємо Date.now() за реальний.
           try {
             const clients = await self.clients.matchAll({ type: 'window' });
-            const fetchedAt = Date.now();
+            const _cachedAtHeader = cached.headers.get('x-gindex-cached-at');
+            const fetchedAt = _cachedAtHeader ? parseInt(_cachedAtHeader, 10) : null;
             clients.forEach((c) => {
-              c.postMessage({ type: 'SW_STALE_DATA', fetchedAt, url: req.url });
+              c.postMessage({ type: 'SW_STALE_DATA', fetchedAt, url: req.url, ageUnknown: !_cachedAtHeader });
             });
           } catch (_e) { /* postMessage best-effort, не блокуємо відповідь */ }
           return cached;
