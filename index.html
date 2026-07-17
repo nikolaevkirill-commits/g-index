@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.37-fp219-PDF-OVERRIDE-HONESTY</title>
+  <title>G-Index — Космофізичний дашборд v88.9.39-fp221-RING-ALWAYS-GNOW</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -13332,6 +13332,29 @@ function _renderHeroHierarchy(){
 // fp36: separate stale-DOM patcher for non-storm placeholders (whyRows, timingRows).
 // Runs in same interval/triggers as storm-guard so loading text doesn't get stuck.
 function _patchStaleLoadingDOM() {
+  // a0) heroTomorrow стрілка "→" через race (render3Day виконується ДО
+  // renderCurrentPanel() у тому самому проході loadAll(), тому #nowG/uiState.gNow
+  // ще не заповнені на момент першого обчислення тренду "завтра" — diff завжди
+  // рахується як 0, стрілка завжди нейтральна "→", навіть коли реальна різниця
+  // велика). v88.9.38-fp220 FIX (аудит-раунд-7): той самий "re-trigger коли дані
+  // з'явились" патерн, що вже використаний нижче для whyRows/timingRows/
+  // decisionTimingList — застосований тепер і сюди.
+  try {
+    const _htChk = document.getElementById('heroTomorrow');
+    if (_htChk && _htChk.dataset._arrowNeutral !== '0'
+        && (_htChk.textContent || '').includes('→')
+        && isFinite(window.__uiState?.gNow)
+        && Array.isArray(window._gIndex_last3D?.days)
+        && typeof render3Day === 'function') {
+      render3Day(window._gIndex_last3D);
+      // Позначаємо, що ре-тригер уже відбувся для цього G_now — не заходити в
+      // цикл повторних викликів, якщо реальний стан ЛИШИВСЯ нейтральним.
+      if (document.getElementById('heroTomorrow')) {
+        document.getElementById('heroTomorrow').dataset._arrowNeutral = '0';
+      }
+    }
+  } catch(_e0) { /* silent */ }
+
   // a) whyRows "Дані завантажуються…" — re-trigger _renderHeroCause if data is available now
   try {
     const _wr = document.getElementById('whyRows');
@@ -13502,20 +13525,17 @@ function renderGRadialV86(g, kp, ai){
   v86Wrap.classList.remove('v86-hidden');
   legacyWrap.style.display = 'none';
 
-  // v88.9.31-fp212 (аудит-проблема 3, доопрацювання): раніше сегменти
-  // малювались завжди, а при показі вердикту лише притлумлювались (opacity)
-  // — користувач усе одно міг сприймати дуги як розклад вердикту. Тепер
-  // перевіряємо ДО малювання: якщо в центрі буде вердикт, сегменти взагалі
-  // не малюємо (display:none), а не притлумлюємо.
-  const _verdictWillShow = !!(window.__heroVerdictDisplay && window.__heroVerdictDisplay.hasVerdict && isFinite(window.__heroVerdictDisplay.val));
-  // v88.9.32-fp213 (аудит-раунд-3, Problem 5): легенда компонентів (Kp−2, Lᵢ,
-  // Mᵢ, eᵢ, Pᵢ, Dᵢ) досі лишалась видимою навіть коли самі сегменти сховані —
-  // створювала те саме хибне враження "ці компоненти пояснюють вердикт".
-  // Ховаємо разом із сегментами.
-  try {
-    const _legendEl = document.getElementById('v86Legend');
-    if (_legendEl) _legendEl.style.display = _verdictWillShow ? 'none' : 'grid';
-  } catch(_e) {}
+  // v88.9.39-fp221 АРХІТЕКТУРНА ЗМІНА (аудит-раунд-8): fp212–fp219 ховали
+  // сегменти/легенду/дельту кільця, коли є PDF-вердикт — намір був не давати
+  // хибне враження, що дуги розкладають вердикт. Але наслідок: коли вердикт
+  // є (а він є майже завжди, бо expert_overrides покриває майже кожен день),
+  // кільце ставало порожнім сірим колом — сам індикатор переставав працювати.
+  // Нове рішення: кільце ЗАВЖДИ показує G_now (live, неперервний) з повною
+  // декомпозицією сегментів. PDF-вердикт НІКОЛИ не змішується з цим кільцем —
+  // він живе окремо в heroHierarchy ("СЬОГОДНІ" рядок), heroBulletin
+  // (статус-рядок "PDF OVERRIDE: −3★") і великому текстовому вердикті під
+  // індексами дня. Кільце більше НЕ читає window.__heroVerdictDisplay.
+  // Сегменти й легенда — завжди видимі.
 
   // Values (absolute for segment size, sign for visual direction later)
   // v86.0.1: NaN-safety — якщо ai undefined, robust fallback
@@ -13551,14 +13571,8 @@ function renderGRadialV86(g, kp, ai){
     if (!el) return;
     el.setAttribute('stroke-dasharray', `${segLen.toFixed(2)} ${gap.toFixed(2)}`);
     el.setAttribute('stroke-dashoffset', `${(-cursor).toFixed(2)}`);
-    // v88.9.31-fp212: коли центр показує вердикт — сегменти повністю сховані
-    // (display:none), не притлумлені. Це запобігає прочитанню дуг як пояснення
-    // числа-вердикту, яке вони не декомпозують (див. коментар вище про
-    // _verdictWillShow).
-    if (_verdictWillShow) {
-      el.style.display = 'none';
-      return;
-    }
+    // v88.9.39-fp221: сегменти більше НЕ ховаються за вердиктом — кільце
+    // завжди показує G_now-декомпозицію (див. коментар на початку функції).
     el.style.display = '';
     // v87.3 B1/B5: повний hide нульових сегментів (усуває фантомні крапки)
     el.style.opacity = neutral ? '0.35' : (isActive ? '1' : '0');
@@ -13575,48 +13589,23 @@ function renderGRadialV86(g, kp, ai){
   // Central G-value
   const vEl = document.getElementById('v86GVal');
   if (vEl) {
-    // v88.9.14-fp195: те саме число, що і в heroG — вердикт дня, якщо він є
-    // (ціле, -3..+3), інакше live G_now з десятковою. Колір — від показаного значення.
-    const _vd = window.__heroVerdictDisplay;
-    const _shown = (_vd && _vd.hasVerdict && isFinite(_vd.val)) ? Math.round(Number(_vd.val)) : g;
-    const _isVerdictShown = !!(_vd && _vd.hasVerdict && isFinite(_vd.val));
-    vEl.textContent = isFinite(_shown) ? (_shown >= 0 ? '+' : '') + (_isVerdictShown ? String(_shown) : _shown.toFixed(1)) : '—';
+    // v88.9.39-fp221 АРХІТЕКТУРНА ЗМІНА (аудит-раунд-8): раніше центр показував
+    // PDF-вердикт, якщо він є (window.__heroVerdictDisplay), інакше G_now —
+    // саме це змішування і призводило до того, що кільце або показувало
+    // невідповідне сегментам число, або (після fp212 hide-фіксу) лишалось
+    // порожнім. Тепер центр ЗАВЖДИ = g (live G_now, той самий, що й сегменти
+    // під ним) — кільце й число всередині завжди одна метрика. PDF-вердикт
+    // живе окремо (heroHierarchy/heroBulletin/статус-рядок), сюди більше не
+    // потрапляє. window.__heroVerdictDisplay тут більше не читається.
+    const _shown = g;
+    vEl.textContent = isFinite(_shown) ? (_shown >= 0 ? '+' : '') + _shown.toFixed(1) : '—';
     vEl.style.color = _shown >= 1 ? '#7fe3a6' : _shown >= -1 ? '#ffd77a' : '#ff9f9f';
     vEl.style.textShadow = _shown >= 1 ? '0 0 12px rgba(127,227,166,.3)'
                          : _shown >= -1 ? '0 0 12px rgba(255,210,110,.3)'
                          : '0 0 12px rgba(255,120,120,.3)';
-    // v88.9.31-fp212 (аудит-проблема 3, фінально): сегменти повністю ховаються
-    // (display:none) ще ДО малювання, у циклі segs.forEach вище (_verdictWillShow) —
-    // не притлумленням opacity, як було у fp211. Тут лишається тільки підпис.
     try {
       const _lbl = document.getElementById('v86GLabel');
-      if (_lbl) {
-        // v88.9.34-fp215 (аудит-раунд-5, Problem 1, частковий безпечний фікс):
-        // лейбл завжди казав узагальнено "ВЕРДИКТ ДНЯ" незалежно від того, чи
-        // число −3 — це verified PDF override (людина звірила з PDF), чи
-        // реальний розрахунок engine v18.5. Тепер джерело явне. Повне
-        // розділення кільця на "G_now" і окрему картку "PDF override" —
-        // більша UI-задача (потребує макету), тут НЕ зроблено — це лише
-        // чесніший підпис під тим самим кільцем.
-        if (_isVerdictShown) {
-          let _srcLbl = 'ВЕРДИКТ ДНЯ';
-          try {
-            // v88.9.37-fp219 FIX (аудит-раунд-6, Problem 5): getEngineScore(new Date())
-            // бере реальний UTC-момент браузера, а канонічний вердикт дня рахується
-            // через todayKyivStr()+'T12:00:00Z' (Kyiv-дата опівдні). У вікні
-            // 00:00–02:59 за Києвом (UTC ще попередній день) ці два виклики можуть
-            // повернути РІЗНІ дати — лейбл підписував джерело не того дня, що
-            // реально в центрі кільця. Тепер та сама Kyiv-дата, що й скрізь.
-            const _esDate = (typeof todayKyivStr === 'function') ? new Date(todayKyivStr()+'T12:00:00Z') : new Date();
-            const _es = (typeof getEngineScore === 'function') ? getEngineScore(_esDate) : null;
-            if (_es && _es._expertOverride) _srcLbl = 'PDF OVERRIDE';
-            else if (_es) _srcLbl = 'ENGINE V18.5';
-          } catch(_e2) {}
-          _lbl.textContent = _srcLbl;
-        } else {
-          _lbl.textContent = 'G_NOW';
-        }
-      }
+      if (_lbl) _lbl.textContent = 'G_NOW';
     } catch(_e){}
   }
   // v88.9.31-fp212: евристичний діапазон мінливості G_now (НЕ калібрований статистичний CI —
@@ -13628,13 +13617,11 @@ function renderGRadialV86(g, kp, ai){
     if (isFinite(g) && typeof computeConfidenceBand === 'function') {
       try {
         const cb = computeConfidenceBand(kp, _lastKpObsJson);
-        // v88.9.30-fp211 (аудит-проблема 3): цей діапазон рахується з live Kp/подій
-        // (G_now-шар). Коли центр показує дискретний вердикт (_isVerdictShown), не
-        // показуємо його — раніше він читався як "довірчий інтервал вердикту",
-        // яким не є.
-        const _vd2 = window.__heroVerdictDisplay;
-        const _verdictNow = !!(_vd2 && _vd2.hasVerdict && isFinite(_vd2.val));
-        if (cb && isFinite(cb.delta) && cb.delta > 0 && !_verdictNow) {
+        // v88.9.39-fp221: кільце тепер ЗАВЖДИ показує G_now (не вердикт) —
+        // цей діапазон завжди про той самий G_now, що в центрі, тому гейтинг
+        // за вердиктом більше не потрібен (раніше ховали, коли центр
+        // показував вердикт; тепер центр ніколи не показує вердикт).
+        if (cb && isFinite(cb.delta) && cb.delta > 0) {
           ciEl.textContent = '± ' + cb.delta.toFixed(1);
           // Статистичні терміни з конкретним означенням (калібрований перцентиль
           // розподілу похибки) сюди не підходять: це евристика
@@ -14079,21 +14066,13 @@ function syncHero(){
   // після toFixed(2) давали "↓ -0.00" / "→ −0.00", що виглядало як помилка.
   // Все з |Δ| < 0.005 показуємо як рівно 0 (стрілка "→ 0.00").
   if (isFinite(dn) && Math.abs(dn) < 0.005) dn = 0;
-  // v88.9.36-fp218 FIX-CRITICAL (той самий баг Problem 2, пропущений в fp215):
-  // heroDelta ("Δ G" у статус-рядку) — той самий live G_now дельта dn, що й
-  // v86DeltaInline під кільцем. У fp215 я сховав ЛИШЕ v86DeltaInline при показі
-  // вердикту, забувши про heroDelta — тому "Δ G: → 0.00" далі стояло поруч зі
-  // статус-рядком, де показано PDF override −3, створюючи ту саму
-  // "вердикт стабільний" плутанину, яку fp215 мав закрити повністю.
-  // Обчислюємо прапор ОДИН раз тут, використовуємо для обох елементів нижче.
-  const _verdictShownForDelta = !!(window.__heroVerdictDisplay && window.__heroVerdictDisplay.hasVerdict && isFinite(window.__heroVerdictDisplay.val));
+  // v88.9.39-fp221: heroDelta і v86DeltaInline — обидва завжди про G_now.
+  // Кільце тепер ЗАВЖДИ показує G_now (fp221, вище), ніколи не вердикт —
+  // тому гейтинг "ховати дельту, коли центр показує вердикт" (fp215/fp218)
+  // більше не потрібен: центр і дельта завжди одна метрика.
   const hd=el('heroDelta');
   if(hd){
-    if(_verdictShownForDelta){
-      hd.textContent='';
-      hd.style.display='none';
-      hd.title = '';
-    } else if(_hasDeltaHistory && isFinite(dn)){
+    if(_hasDeltaHistory && isFinite(dn)){
       const _sign = dn > 0 ? '↑ +' : dn < 0 ? '↓ ' : '→ ';
       hd.textContent = _sign + dn.toFixed(2);
       hd.style.color=dn>0.05?'var(--ok)':dn<-0.05?'var(--bad)':'var(--muted)';
@@ -14108,18 +14087,10 @@ function syncHero(){
     }
   }
 
-  // v88.9.34-fp215 FIX-CRITICAL (аудит-раунд-5, Problem 2): v86DeltaInline —
-  // дельта LIVE G_now (той самий dn, що і heroDelta) — рендерилась під
-  // центральним числом кільця НЕЗАЛЕЖНО від того, що там показано. Коли центр
-  // показує PDF-вердикт (−3), а під ним "→ 0.00" — це дельта G_now, не
-  // вердикту, хоча виглядає як "вердикт стабільний". Ховаємо за тим самим
-  // прапором, що вже використаний вище для heroDelta (не дублюємо оголошення).
+  // v88.9.39-fp221: v86DeltaInline — той самий принцип, завжди про G_now.
   const _hdi = el('v86DeltaInline');
   if(_hdi){
-    if(_verdictShownForDelta){
-      _hdi.textContent = '';
-      _hdi.title = '';
-    } else if(_hasDeltaHistory && isFinite(dn)){
+    if(_hasDeltaHistory && isFinite(dn)){
       const _absd = Math.abs(dn);
       const _arr = dn > 0.05 ? '↑' : dn < -0.05 ? '↓' : '→';
       const _sgn = dn > 0 ? '+' : dn < 0 ? '−' : '';
