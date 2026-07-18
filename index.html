@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.44-fp226-OBSERVED-DELAYED-LABEL</title>
+  <title>G-Index — Космофізичний дашборд v88.9.45-fp227-UNIFIED-SOURCE-LABEL</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -3098,6 +3098,47 @@ function updateDataFreshness(source, ts){
 // фікси в цих 4 місцях). Натомість: кожен writer ДОДАТКОВО (не замість DOM-запису)
 // публікує свій шматок у window.__sourceState через цей helper — спільне, надійне
 // джерело поруч зі старим DOM-текстом, який лишається fallback-ом для сумісності.
+// v88.9.45-fp227 FIX-CRITICAL (аудит-раунд-14): раніше КОЖНЕ з 5 місць UI
+// (верхній freshnessBadge, heroFreshness, рядок "Якість даних" в ієрархії,
+// Formula Audit, лейбл "G_now (live)") рахувало свою ВЛАСНУ версію
+// observed-vs-forecast + свіжість — fp226 виправив ЛИШЕ Formula Audit,
+// решта 4 місця лишились неузгодженими (підтверджено скріном: одночасно
+// "ESTIMATED" вгорі, "OBSERVED · DELAYED" в Formula Audit, "(live)" у
+// підписі). Тепер ОДНА функція — єдине джерело правди для ВСІХ 5 місць.
+function resolveSourceLabel(){
+  try {
+    const _src = window._kpSourceFreshness;
+    const _isRealObserved = !!(typeof lastWWV !== 'undefined' && lastWWV && isFinite(lastWWV.kNow) && !lastWWV._synthetic);
+    const _ageH = (_src && isFinite(_src.ageHours)) ? _src.ageHours : null;
+    let typeLabel, freshnessLabel, combined, shortCombined, color, isLive;
+    if (_isRealObserved && _ageH != null) {
+      typeLabel = 'OBSERVED';
+      if (_ageH < 1) {
+        freshnessLabel = 'LIVE'; combined = 'OBSERVED · LIVE'; shortCombined = 'LIVE'; color = '#63be7b'; isLive = true;
+      } else if (_ageH <= 12) {
+        freshnessLabel = 'DELAYED';
+        combined = `OBSERVED · DELAYED ${_ageH.toFixed(1)}г`;
+        shortCombined = `OBSERVED DELAYED`;
+        color = '#a8d5e0'; isLive = false;
+      } else {
+        freshnessLabel = 'STALE';
+        combined = `OBSERVED · STALE ${_ageH.toFixed(1)}г`;
+        shortCombined = 'OBSERVED STALE';
+        color = '#ff9944'; isLive = false;
+      }
+    } else {
+      typeLabel = 'FORECAST';
+      freshnessLabel = 'ESTIMATED';
+      combined = 'FORECAST · ESTIMATED' + (_ageH != null ? ` (контент ${_ageH.toFixed(1)}г)` : '');
+      shortCombined = 'FORECAST ESTIMATED';
+      color = '#a8d5e0'; isLive = false;
+    }
+    return { typeLabel, freshnessLabel, combined, shortCombined, color, isRealObserved: _isRealObserved, ageHours: _ageH, isLive };
+  } catch(_e) {
+    return { typeLabel:'—', freshnessLabel:'—', combined:'—', shortCombined:'—', color:'var(--dim)', isRealObserved:false, ageHours:null, isLive:false };
+  }
+}
+
 function _updateSourceState(partial){
   try {
     if (!window.__sourceState) {
@@ -3157,23 +3198,14 @@ function _renderFreshnessState(){
         // DELAYED, а resolveDataModeExtended повертає 'estimated' → два writer-и розсинхронізовані.
         const _last3Fake = !!(typeof last3D !== 'undefined' && last3D && last3D._synthetic);
         if (!_last3Fake && _src.ageHours <= 12) {
-          // v88.9.44-fp226 FIX-CRITICAL (аудит-раунд-13): "ESTIMATED" писалось
-          // ЛИШЕ за віком контенту (>1г, ≤12г), незалежно від ТИПУ джерела —
-          // затримане, але РЕАЛЬНЕ observed-вимірювання (Kp з NOAA спостережень,
-          // просто на кілька годин старіше) називалось так само, як справжній
-          // forecast/оцінка. "ESTIMATED" читається як "модель вгадала", хоча
-          // насправді це просто затримка доставки реального значення. Тепер
-          // видимий текст розрізняє джерело: якщо lastWWV.kNow (реальний
-          // observed Kp) доступний — "OBSERVED · DELAYED", інакше — "ESTIMATED"
-          // (справжній forecast/fallback). Внутрішній ключ стану (state=
-          // 'estimated') НЕ змінено — забагато коду читає саме цей рядок,
-          // перейменування самого ключа — окрема, ризикованіша задача.
-          _isRealObserved = !!(typeof lastWWV !== 'undefined' && lastWWV && isFinite(lastWWV.kNow) && !lastWWV._synthetic);
+          // v88.9.45-fp227 (аудит-раунд-14): замінено bespoke-розрахунок на
+          // єдину функцію resolveSourceLabel() — тепер той самий вивід, що й
+          // усюди інде (Formula Audit, ЯКІСТЬ ДАНИХ, "Фон зараз").
+          const _rsl = resolveSourceLabel();
+          _isRealObserved = _rsl.isRealObserved;
           state='estimated';
-          label = _isRealObserved
-            ? '● OBSERVED · DELAYED '+_src.ageHours.toFixed(1)+'г'
-            : '● ESTIMATED · контент '+_src.ageHours.toFixed(1)+'г';
-          col='#a8d5e0'; bgCol='#0e1f2a'; _contentOverride=true;
+          label = '● ' + _rsl.combined;
+          col = _rsl.color; bgCol='#0e1f2a'; _contentOverride=true;
         } else {
           state='delayed'; label='● DELAYED · контент '+_src.ageHours.toFixed(1)+'г'; col='#ffcc44'; bgCol='#2a1a00'; _contentOverride=true;
         }
@@ -3186,7 +3218,7 @@ function _renderFreshnessState(){
     // v88.8.35-fp17 fix: ЯВНИЙ reset inline-стилів — попередній scenario/offline рендер міг
     // залишити hf.style.color, який не перебивається класами при поверненні у live/estimated.
     const _hfLabel = (state === 'estimated' && _isRealObserved)
-      ? ('OBSERVED · DELAYED' + (_contentOverride ? ' · контент' : ' · ' + _ageStr))
+      ? resolveSourceLabel().combined
       : (state.toUpperCase() + (_contentOverride ? ' · контент' : ' · ' + _ageStr));
     hf.textContent = _hfLabel;
     hf.className=''; hf.classList.add(state);
@@ -8036,6 +8068,20 @@ function computeCScore(kpNow, kpObsJson, ai, G, kpSrc){
   } else if(_freshness === 'old'){
     penalty += 0.20;
     reasons.push({ txt:'Дані застарілі (offline)', col:'#ff6b6b', d:0.20 });
+  } else {
+    // v88.9.45-fp227 FIX-CRITICAL (аудит-раунд-14, Помилка 3): раніше НЕ було
+    // штрафу для "затримано, але ще не DEGRADED" (напр. observed Kp затримка
+    // 5г, поріг DEGRADED — 12г) — тому "Якість даних: Висока" (92%) стояла
+    // поруч із OBSERVED·DELAYED 5.0г. Тепер будь-яке НЕ-live джерело (delayed
+    // observed або forecast/estimated) отримує помірний штраф, що опускає
+    // якість максимум до "Середня" — точно як рекомендовано аудитом.
+    try {
+      const _rslPenalty = (typeof resolveSourceLabel === 'function') ? resolveSourceLabel() : null;
+      if (_rslPenalty && !_rslPenalty.isLive) {
+        penalty += 0.10;
+        reasons.push({ txt:`${_rslPenalty.combined} — не live`, col:'#a8d5e0', d:0.10 });
+      }
+    } catch(_ePen) { /* silent */ }
   }
 
   // 7b. v87.91: scenario penalty — NOAA 3-day forecast недоступний → плато на базі поточного Kp
@@ -13387,9 +13433,18 @@ function _renderHeroHierarchy(){
     let qLab='—', qCol='var(--dim)';
     try{
       const dm = (typeof resolveDataModeExtended==='function'?resolveDataModeExtended():'live');
+      // v88.9.45-fp227 (аудит-раунд-14, Помилки 1 і 4): раніше 'estimated' тут
+      // завжди писав generic "ESTIMATED · Kp ≤12год (норма циклу NOAA 3год)" —
+      // (а) незалежно від того, реальний observed чи справжній forecast, і
+      // (б) слово "норма" для 5-годинної затримки при 3-годинному циклі NOAA
+      // маніпулятивно применшувало факт як мінімум одного пропущеного циклу.
+      // Тепер: для observed-гілки — resolveSourceLabel() (та сама функція, що
+      // й Formula Audit/heroFreshness/верхній бейдж); формулювання "норма"
+      // замінено на чесніше "допустиме fallback-вікно".
+      const _rslQ = (dm === 'estimated') ? resolveSourceLabel() : null;
       const map = {
         live:      ['LIVE · дані актуальні','var(--ok)'],
-        estimated: ['ESTIMATED · Kp ≤12год (норма циклу NOAA 3год)','#a8d5e0'],
+        estimated: _rslQ ? [_rslQ.combined + ' · допустиме fallback-вікно до 12г', _rslQ.color] : ['ESTIMATED · допустиме fallback-вікно до 12г','#a8d5e0'],
         partial:   ['DELAYED · орієнтовно — перевір перед важливою дією','#ffcc44'],
         scenario:  ['SCENARIO · не реальний прогноз, лише плато за поточним Kp','#ff9944'],
         offline:   ['OFFLINE · з кешу, можливо застаріле','#ff6b6b']
@@ -13433,7 +13488,7 @@ function _renderHeroHierarchy(){
       + `<span style="flex:0 0 62px;font-size:8px;font-weight:800;letter-spacing:.06em;color:#9cd49c;text-transform:uppercase">Сьогодні</span>`
       + `<span class="hero-label" data-basic="Сьогодні" style="flex:0 0 150px;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--ok)">Рішення дня · PDF/Engine</span>`
       + `<span style="flex:1;font-size:14px;font-weight:700;line-height:1.25">${decHtml}</span></div>`
-      + row('Фон зараз · G_now (live)', gHtml, null, 'Зараз')
+      + row('Фон зараз · G_now' + (function(){ try { const _r = resolveSourceLabel(); return _r.isLive ? ' (live)' : ' (' + _r.freshnessLabel.toLowerCase() + ')'; } catch(_e){ return ' (live)'; } })(), gHtml, null, 'Зараз')
       + row('Прогноз дня · PDF/Engine', tomoHtml, null, 'Завтра')
       + row('Якість даних', `<span style="font-weight:700;color:${qCol}">${qLab}</span>`, null, '')
       + (function(){
@@ -13826,7 +13881,11 @@ function renderGRadialV86(g, kp, ai){
       // нульових значень — але явний приклад аудиту хоче бачити "Lᵢ +0.00"
       // завжди, не лише для помітних значень. Товщина сама по собі недостатньо
       // передає знак — число обов'язкове завжди.
-      if (_valEl) _valEl.textContent = ' ' + (s.val >= 0 ? '+' : '') + s.val.toFixed(2);
+      // v88.9.45-fp227 (аудит-раунд-14, Помилка 5): притлумлений відтінок
+      // кольору (fp224) сам по собі недостатньо помітний на 6px крапці —
+      // користувач все одно міг читати "зелений=позитивний". Додано явний
+      // ▼/▲ перед числом — однозначний незалежно від сприйняття кольору.
+      if (_valEl) _valEl.textContent = ' ' + (s.val >= 0 ? '▲+' : '▼') + s.val.toFixed(2);
     });
   } catch(_eLg) {}
   // Central G-value
@@ -16276,7 +16335,11 @@ function renderProvenance(){
   // window.__isDegraded — другий пріоритет (той самий прапор з fp215, лишається
   // для сумісності). Текстовий парсинг freshnessBadge — останній fallback.
   const _srcMode = window.__sourceState && window.__sourceState.mode;
-  const _modeToLabel = { live:'✓ LIVE', estimated:'✓ ESTIMATED', delayed:'⊙ DELAYED', stale:'⊙ CACHE/STALE', old:'✗ OFFLINE', scenario:'⚠ SCENARIO', offline:'✗ OFFLINE', degraded:'⚠ DEGRADED' };
+  // v88.9.45-fp227 (аудит-раунд-14): для 'estimated' основний лейбл тепер теж
+  // явно каже OBSERVED/FORECAST через resolveSourceLabel() — раніше показував
+  // generic "✓ ESTIMATED", і лише hint (_fresh) містив деталізацію.
+  const _estimatedLabel = (function(){ try { const _r = resolveSourceLabel(); return _r.isRealObserved ? ('✓ ' + _r.combined) : '✓ ESTIMATED'; } catch(_e){ return '✓ ESTIMATED'; } })();
+  const _modeToLabel = { live:'✓ LIVE', estimated:_estimatedLabel, delayed:'⊙ DELAYED', stale:'⊙ CACHE/STALE', old:'✗ OFFLINE', scenario:'⚠ SCENARIO', offline:'✗ OFFLINE', degraded:'⚠ DEGRADED' };
   const _cacheState = _modeToLabel[_srcMode] ? _modeToLabel[_srcMode]
                     : window.__isDegraded === true ? '⚠ DEGRADED'
                     : _freshLower.includes('degraded') ? '⚠ DEGRADED'
