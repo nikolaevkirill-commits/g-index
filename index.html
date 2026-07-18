@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.41-fp223-RING-SIGN-COLOR</title>
+  <title>G-Index — Космофізичний дашборд v88.9.42-fp224-OVERRIDE-INDEPENDENCE-2</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1527,12 +1527,12 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
             </div>
             <!-- v86: inline legend -->
             <div id="v86Legend" style="display:grid;grid-template-columns:repeat(3,auto);gap:2px 10px;font-size:9px;color: var(--muted);line-height:1.3;margin-top:2px;width:100%">
-              <span><span data-seg="v86segKp" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#8b93a8;margin-right:3px"></span>Kp−2</span>
-              <span><span data-seg="v86segLi" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#8b93a8;margin-right:3px"></span>Lᵢ</span>
-              <span><span data-seg="v86segMi" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#8b93a8;margin-right:3px"></span>Mᵢ</span>
-              <span><span data-seg="v86segEi" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#8b93a8;margin-right:3px"></span>eᵢ</span>
-              <span><span data-seg="v86segPi" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#8b93a8;margin-right:3px"></span>Pᵢ</span>
-              <span><span data-seg="v86segDi" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#8b93a8;margin-right:3px"></span>Dᵢ</span>
+              <span><span data-seg="v86segKp" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#8b93a8;margin-right:3px"></span>Kp−2<span data-segval="v86segKp"></span></span>
+              <span><span data-seg="v86segLi" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#8b93a8;margin-right:3px"></span>Lᵢ<span data-segval="v86segLi"></span></span>
+              <span><span data-seg="v86segMi" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#8b93a8;margin-right:3px"></span>Mᵢ<span data-segval="v86segMi"></span></span>
+              <span><span data-seg="v86segEi" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#8b93a8;margin-right:3px"></span>eᵢ<span data-segval="v86segEi"></span></span>
+              <span><span data-seg="v86segPi" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#8b93a8;margin-right:3px"></span>Pᵢ<span data-segval="v86segPi"></span></span>
+              <span><span data-seg="v86segDi" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#8b93a8;margin-right:3px"></span>Dᵢ<span data-segval="v86segDi"></span></span>
             </div>
           </div>
           <!-- Legacy ring (default) -->
@@ -2408,7 +2408,9 @@ Fallback (NOAA 45-day-forecast.json):
 • 45-day дає тільки Ap, без Kp → робимо Ap→Kp табличну апроксимацію.
 • Точність нижча — позначається у статусі джерела.
 
-Для поточного рішення дивись Hero/Коли діяти. Для точного 3-год Kp — «Прогноз на 3 дні». Цей блок — контекст raw-фону на майбутнє. PDF/Engine ★ показується окремо як overlay.</span></span>
+Для поточного рішення дивись Hero/Коли діяти. Для точного 3-год Kp — «Прогноз на 3 дні». Цей блок — контекст raw-фону на майбутнє. PDF/Engine ★ показується окремо як overlay.
+
+⚠ Назва "NOAA 27-day" стосується ЛИШЕ джерела Largest Kp, не всього значення G_day. Коли Largest Kp низький (напр. Kp=2 → внесок Kp−2=0), майже все число G_day формує ΣAᵢ (Панчанга), не NOAA. Наведіть курсор на точку графіка, щоб побачити розбивку Kp-внеску окремо від ΣAᵢ.</span></span>
           <span class="hint" tabindex="0" style="cursor:help;font-size:11px;color:var(--dim);border-bottom:1px dotted #2a3b61">? легенда G<span class="hint-pop" style="white-space:pre;font-size:12px;text-align:left">Категорії G = Kp − 2 + ΣAᵢ:
 Зсув «−2» → Kp=2 (спокійне поле) = G≈0
 
@@ -9215,10 +9217,18 @@ function renderComparePeriods(){
       const aiPrev = computeAi(sunriseUTC(dPrev), 0);
       days.push({ dNow, dPrev, aiNow: aiNow.Ai, aiPrev: aiPrev.Ai });
     }
+    // v88.9.42-fp224 (аудит-раунд-11, Problem 11): "Середній Σ 2026/2025" без
+    // видимого пояснення читалось як річне/місячне середнє, хоча це 7-денне
+    // вікно (-3..+3 дні від сьогодні) БЕЗ Kp-компонента (historical Kp
+    // недоступний) — пояснення було лише в hover title, не у видимому лейблі.
+    const _cmpFrom = fmtDate(days[0].dNow), _cmpTo = fmtDate(days[days.length-1].dNow);
+    const _cmpFromP = fmtDate(days[0].dPrev), _cmpToP = fmtDate(days[days.length-1].dPrev);
+    const _cmpLabel1 = `Середній ΣAᵢ ${_cmpFrom}–${_cmpTo}`;
+    const _cmpLabel2 = `проти ${_cmpFromP}–${_cmpToP} · Kp не враховано`;
     _renderCmpBlock(wrap, days, {
-      mode, label1: `Середній Σ ${yearNow}`, label2: `Середній Σ ${yearNow-1}`,
+      mode, label1: _cmpLabel1, label2: _cmpLabel2,
       unit: 'Σ', pillText: 'Σ-ритм', yearNow, yearPrev: yearNow-1,
-      helpText: `Σ-ритм = ΣAᵢ (Lᵢ+Mᵢ+eᵢ+Pᵢ+Dᵢ) — Панчанга + затемнення + свята + Dst-буря.\nБез Kp-компонента, бо historical Kp за рік недоступний.\nВікно: −3..+3 дні від сьогодні (7 днів).`
+      helpText: `Σ-ритм = ΣAᵢ (Lᵢ+Mᵢ+eᵢ+Pᵢ+Dᵢ) — Панчанга + затемнення + свята + Dst-буря.\nБез Kp-компонента, бо historical Kp за рік недоступний.\nВікно: -3..+3 дні від сьогодні (7 днів), НЕ річне чи місячне середнє.`
     });
     return;
   }
@@ -12012,7 +12022,7 @@ function _renderSolarRhythm(refDateUTC){
       const opacity = isPast ? '0.42' : '1';
       const bg = isNow ? 'rgba(123,232,138,.10)' : 'transparent';
       const scoreStr = `PCL ${slot.score > 0 ? '+' : ''}${slot.score}`;
-      const nowMark = isNow ? `<span style="color:var(--ok);font-weight:700;margin-left:4px">◄ зараз · ${scoreStr}</span>` : '';
+      const nowMark = isNow ? `<span style="color:var(--ok);font-weight:700;margin-left:4px">◄ поточний слот · ${scoreStr}</span>` : '';
       return `<div style="display:flex;align-items:center;gap:6px;padding:3px 6px;border-radius:4px;background:${bg};opacity:${opacity}" title="${slot.ua} — ${slot.hint} (${scoreStr})">
         <span style="color:var(--faint);font-size:10px;width:14px;text-align:right">${idx+1}</span>
         <span style="color:var(--faint);font-size:10px;width:78px">${_fmtLocalHM(slot.start)}–${_fmtLocalHM(slot.end)}</span>
@@ -12257,20 +12267,44 @@ function render3Day(parsed3){
       // v88.6.9: розрізняємо коли live forecast Kp реальний (з NOAA 3-day чи 27-day) vs повністю synthetic.
       // Якщо last3D має real kpMax для цього дня — engine просто OUTDATED (тренувався на старому snapshot),
       // НЕ scenario. Показуємо iнший label.
-      const _isSynthScen = (function(){
+      // v88.9.42-fp224 FIX-CRITICAL (аудит-раунд-11, Problem 2/3): раніше
+      // _isSynthScen перевіряв ЛИШЕ entry.kp_synthetic — прапор, що лишається
+      // від СИРОГО snapshot навіть після застосування override (override
+      // переписує тільки eng/pdf/_expertOverride, не kp_synthetic — по дизайну,
+      // щоб можна було показати "raw engine snapshot мав synthetic Kp" в
+      // tooltip). Але картка не розрізняла "override existс" від "override
+      // absent" — тому 20.07 (verified PDF +3, застосований поверх snapshot
+      // з synthetic Kp) все одно рендерився як "⚠ Сценарій, не прогноз",
+      // приховуючи реальний PDF override. Тепер перевіряємо override ПЕРШИМ.
+      const _hasVerifiedOverride = (function(){
+        try { const _e = getEngineScore(d.date); return !!(_e && _e._expertOverride === true); } catch(e){ return false; }
+      })();
+      const _isSynthScen = _hasVerifiedOverride ? false : (function(){
         try { const _e = getEngineScore(d.date); return _e && _e.kp_synthetic === true; } catch(e){ return false; }
       })();
       const _hasRealLiveKp = isFinite(d.kpMax) && d.kpMax > 0 && !d._filledFrom;
       const _engineOutdatedNotSynth = _isSynthScen && _hasRealLiveKp;
       const _engineFullySynth      = _isSynthScen && !_hasRealLiveKp;
-      const _scenStyle = _engineFullySynth
+      const _scenStyle = _hasVerifiedOverride
+        ? `border:1px solid rgba(255,209,102,.5);background:rgba(255,209,102,.08)`
+        : _engineFullySynth
         ? `border:2px dashed rgba(252,164,116,.6);opacity:.55;background:repeating-linear-gradient(45deg,rgba(252,164,116,.08),rgba(252,164,116,.08) 6px,${col}10 6px,${col}10 12px)`
         : _engineOutdatedNotSynth
         ? `border:1px dashed rgba(155,177,220,.55);opacity:.7;background:${col}12`
         : `background:${col}15;border:1px solid ${col}40`;
       let _scenLabel = '';
       let _scenBanner = '';
-      if(_engineFullySynth){
+      // v88.9.42-fp224 (Problem 2/3, продовження): override поверх snapshot із
+      // synthetic Kp (типовий кейс для дат за межами NOAA 3-day вікна, напр.
+      // 20.07) НЕ підпадав ні під _engineFullySynth, ні під _engineOutdatedNotSynth
+      // (обидва стали false одразу як з'явився _hasVerifiedOverride вище) —
+      // banner просто не рендерився. Тепер окрема, найвищий пріоритет гілка:
+      // будь-який verified override завжди явно позначений, незалежно від
+      // стану Kp у сирому snapshot під ним.
+      if (_hasVerifiedOverride) {
+        const _engRawForBanner = (function(){ try { const _es = getEngineScore(d.date); return isFinite(_es?._engRaw) ? _es._engRaw : null; } catch(_e){ return null; } })();
+        _scenBanner = `<div style="font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#ffd166;background:rgba(255,209,102,.15);border:1px solid rgba(255,209,102,.45);border-radius:6px;padding:2px 6px;margin-bottom:5px;text-align:center" title="Це значення — ручний verified PDF-вердикт (expert override), НЕ розрахунок engine v18.5.${_engRawForBanner!=null ? ' Raw engine v18.5 snapshot: '+(_engRawForBanner>=0?'+':'')+_engRawForBanner+'.' : ''} Фон NOAA (raw, окремо, довідково) — рядок нижче.">★ PDF OVERRIDE · НЕ ENGINE V18.5</div>`;
+      } else if(_engineFullySynth){
         // v88.8.35-fp56-P8: make a synthetic-Kp SCENARIO card unmistakably weaker than a real
         // forecast. The dashed/opacity styling alone read too similar to a real card (user confusion).
         // Add an explicit top banner + stronger label. Numbers/logic unchanged — presentation only.
@@ -12846,7 +12880,7 @@ function renderDecisionTiming(slots){
       _displayText = _slotPrefixDelayed + s.text;
     }
     return `<div class="dt-row dt-${_displayCls}${s.isNow?' dt-now':''}">`
-    +`<span class="dt-time">${s.time}</span><span class="dt-label">${_displayText}${s.isNow?' ◀ зараз':''}</span></div>`;
+    +`<span class="dt-time">${s.time}</span><span class="dt-label">${_displayText}${s.isNow?' ◀ поточний слот':''}</span></div>`;
   }).join('')
   + (pastCount > 0 ? `<div style="color:var(--faint);font-size:10px;margin-top:4px;font-style:italic">Показано ${visible.length} з ${summary.slots.length} слотів (минуло ${pastCount})</div>` : '');
   return summary;
@@ -12928,10 +12962,17 @@ function _runSanityWatchdog(g, kp){
     }
   } catch(e){}
 
-  // Rule 3: NOAA feed stale > 3h
+  // Rule 3: NOAA feed stale > 12h (узгоджено з "нормою циклу NOAA")
+  // v88.9.42-fp224 FIX-CRITICAL (аудит-раунд-11, Problem 9): раніше поріг був
+  // >3г — але "ESTIMATED · Kp ≤12год (норма циклу NOAA 3год)" деінде в цьому
+  // ж файлі прямо каже, що затримка ДО 12г — це нормальний, очікуваний стан
+  // циклу, не збій. Тобто один звичайний пропущений 3-годинний слот (напр.
+  // публікація на 5 хвилин пізніше розкладу) одразу підпалював тривожний
+  // DEGRADED, який суперечив сусідньому ESTIMATED-бейджу. DEGRADED тепер — це
+  // справді відмова (>12г), а не звичайний цикл очікування.
   try {
     var src = window._kpSourceFreshness;
-    if(src && src.ageHours != null && src.ageHours > 3){
+    if(src && src.ageHours != null && src.ageHours > 12){
       warns.push({ icon:'📡', title:'Дані застарілі ('+src.ageHours+'г)', body:'NOAA Kp не оновлювався '+src.ageHours+' год. Натисни «Оновити».' });
     }
   } catch(e){}
@@ -13615,7 +13656,19 @@ function renderGRadialV86(g, kp, ai){
   const GAP_PX = 2;
   const activeCount = neutral ? 6 : segs.filter(s => Math.abs(s.val) >= 0.05).length;
   const totalGap = activeCount > 1 ? GAP_PX * activeCount : 0;
-  const usableC = Math.max(C - totalGap, C * 0.5);
+  // v88.9.42-fp224 FIX-CRITICAL (аудит-раунд-11, Problem 5): раніше довжина
+  // дуг залежала ЛИШЕ від пропорції компонента в сумі |значень| — тобто навіть
+  // при G=−0.43 (майже нейтрально) сегменти заповнювали ~95% кола (лишався
+  // тільки GAP_PX-розрив), бо пропорції рахувались НЕЗАЛЕЖНО від абсолютної
+  // сили G. Кільце виглядало як максимальна небезпека при слабкому стані.
+  // Тепер довжина ВСІЄЇ заповненої дуги масштабується за |G|/5 (5 — приблизна
+  // верхня межа "сильного" G_now в цій системі), з мінімальною видимою
+  // підлогою 8%, щоб навіть G≈0 не зникало візуально повністю. Пропорції
+  // МІЖ сегментами всередині заповненої частини лишаються тими самими —
+  // структура внесків не змінена, змінена лише загальна "сила" кільця.
+  const _gMagnitude = isFinite(g) ? Math.abs(g) : 0;
+  const _magnitudeScale = neutral ? 1 : Math.max(0.08, Math.min(1, _gMagnitude / 5));
+  const usableC = Math.max(C - totalGap, C * 0.5) * _magnitudeScale;
   const _segLabels = { v86segKp:'Kp−2 (геомагнітний)', v86segLi:'Lᵢ (місяць)', v86segMi:'Mᵢ (затемнення)', v86segEi:'eᵢ (події)', v86segPi:'Pᵢ (панчанга)', v86segDi:'Dᵢ (Dst-буря)' };
   let cursor = 0;
   segs.forEach(s => {
@@ -13641,12 +13694,23 @@ function renderGRadialV86(g, kp, ai){
     // ЗАВЖДИ кодує знак: зелений=позитивний, червоний/помаранчевий=негативний,
     // сірий=нейтральний(~0). Тип компонента лишається впізнаваним через
     // легенду (підписи назв) і title-tooltip на самому сегменті.
+    // v88.9.42-fp224 FIX (аудит-раунд-11, Problem 6): fp223 прибрав власний
+    // колір типу компонента на користь суто знакового (зелений/червоний) —
+    // це вирішило Problem 1 (fp223), але створило нову: Kp−2 і Pᵢ, обидва
+    // негативні, стали однаковим червоним — легенда й кільце більше не
+    // показували, ЯКИЙ сегмент де. Компроміс за рекомендацією аудиту:
+    // повертаємо ВЛАСНИЙ колір типу (ідентичність), а знак передаємо
+    // насиченістю/яскравістю ТОГО САМОГО кольору (негатив = притлумлений
+    // відтінок, не інший колір) + товщиною (було раніше) + title-tooltip.
+    const _typeColors = { v86segKp:'#ffb84d', v86segLi:'#8da2ff', v86segMi:'#ff6b6b', v86segEi:'#d28cff', v86segPi:'#37d39a', v86segDi:'#58c7ff' };
+    const _typeColorsDim = { v86segKp:'#8a6329', v86segLi:'#4d5687', v86segMi:'#8a3a3a', v86segEi:'#6e4a87', v86segPi:'#1e6e52', v86segDi:'#2e6b80' };
     if (!neutral && isActive) {
       const isNeg = s.val < 0;
+      const _baseCol = _typeColors[s.id] || '#8b93a8';
+      const _dimCol = _typeColorsDim[s.id] || '#555b6b';
       el.setAttribute('stroke-width', isNeg ? '8' : '12');
-      el.style.filter = isNeg ? 'none' : el.style.filter || '';
-      el.setAttribute('stroke', isNeg ? '#ff6b6b' : '#37d39a');
-      el.style.filter = isNeg ? 'none' : 'drop-shadow(0 0 6px #37d39a)';
+      el.setAttribute('stroke', isNeg ? _dimCol : _baseCol);
+      el.style.filter = isNeg ? 'none' : `drop-shadow(0 0 6px ${_baseCol})`;
     } else {
       el.setAttribute('stroke-width', '12');
       el.setAttribute('stroke', '#8b93a8');
@@ -13661,13 +13725,20 @@ function renderGRadialV86(g, kp, ai){
     } catch(_eTip) {}
     if (isActive) cursor += segLen + (activeCount > 1 ? GAP_PX : 0);
   });
-  // v88.9.41-fp223 (Problem 1, легенда): дот легенди теж кодує ЗНАК поточного
-  // значення відповідного компонента (динамічно на кожному рендері), а не
-  // статичний колір за типом — узгоджено з кільцем.
+  // v88.9.42-fp224 (Problem 6, легенда): узгоджено з новою логікою сегментів —
+  // крапка знову власний колір типу (притлумлений при негативі, як і сегмент),
+  // а не суто знаковий зелений/червоний. Додано текстовий +/−N.NN поруч із
+  // назвою — легенда тепер показує тип (колір+назва), знак (+/−) і величину
+  // (число) одночасно, без потреби гадати за одним лише кольором.
   try {
+    const _typeColors2 = { v86segKp:'#ffb84d', v86segLi:'#8da2ff', v86segMi:'#ff6b6b', v86segEi:'#d28cff', v86segPi:'#37d39a', v86segDi:'#58c7ff' };
+    const _typeColorsDim2 = { v86segKp:'#8a6329', v86segLi:'#4d5687', v86segMi:'#8a3a3a', v86segEi:'#6e4a87', v86segPi:'#1e6e52', v86segDi:'#2e6b80' };
     segs.forEach(s => {
       const _dot = document.querySelector(`#v86Legend [data-seg="${s.id}"]`);
-      if (_dot) _dot.style.background = (Math.abs(s.val) < 0.05) ? '#8b93a8' : (s.val < 0 ? '#ff6b6b' : '#37d39a');
+      const _isNeutral = Math.abs(s.val) < 0.05;
+      if (_dot) _dot.style.background = _isNeutral ? '#8b93a8' : (s.val < 0 ? (_typeColorsDim2[s.id] || '#555b6b') : (_typeColors2[s.id] || '#8b93a8'));
+      const _valEl = document.querySelector(`#v86Legend [data-segval="${s.id}"]`);
+      if (_valEl) _valEl.textContent = _isNeutral ? '' : ' ' + (s.val >= 0 ? '+' : '') + s.val.toFixed(2);
     });
   } catch(_eLg) {}
   // Central G-value
@@ -14829,9 +14900,15 @@ function _renderHeroCause(g, kp) {
         // Для Kp−2 інверсна семантика: f.val > 0 (вище за 2) = негативний геомагнітний стан.
         // Хоч у формулі це додатний вклад у G (бо ваш G = Kp − 2 + ΣAᵢ — більше Kp ⇒ більше G).
         // Класс CSS залишаємо за знаком вкладу (для color), але текст — фізично коректний.
-        const txt  = isKp
+        const txt0  = isKp
                    ? (f.val > 0 ? eff.pos : eff.neg)  // словник Kp−2 уже інверсно сформульовано: pos = "активний/збурений"
                    : (f.val > 0 ? eff.pos : eff.neg);
+        // v88.9.42-fp224 FIX (аудит-раунд-11, Problem 8): словесна категорія
+        // (напр. "панчанга напружена") не враховувала МАГНІТУДУ значення —
+        // Pᵢ=−0.1 (майже нейтрально) і Pᵢ=−2.0 (реально сильний вплив)
+        // отримували ту саму формулу-опис. Тепер для слабких значень (|val|<0.3)
+        // додається пом'якшувальне "слабко" — не змінюючи саму категорію.
+        const txt = Math.abs(f.val) < 0.3 ? ('слабко ' + txt0) : txt0;
         const cls  = isKp
           ? (_kpPhysical >= 3 ? 'is-neg' : 'is-pos') // фізично: буря/підвищено = погано, спокійно = добре
           : (f.val > 0 ? 'is-pos' : 'is-neg');
@@ -15033,7 +15110,7 @@ function _renderWhyTrend(){
               _gForDay = _kpLiveToday - 2 + _aiLive.Ai;
             } catch(e) { _gForDay = d.G; /* keep forecast value if live calc fails */ }
           }
-          days.push({ ds: d.ds, G: _gForDay, isPast: false, isToday: i === 0 });
+          days.push({ ds: d.ds, G: _gForDay, isPast: false, isToday: i === 0, kpUsed: (i === 0 ? _kpLiveToday : d.kpUsed) });
           _todayPlusFutureAdded++;
         }
       }
@@ -15051,7 +15128,7 @@ function _renderWhyTrend(){
       try {
         const ai = computeAi(sunriseUTC(addDays(new Date(todayKyivStr()+'T12:00:00Z'), i)), i === 0 ? _kpNow : 2);
         const G = (i === 0 ? _kpNow : 2) - 2 + ai.Ai;
-        days.push({ ds, G, isPast: false, isToday: i === 0 });
+        days.push({ ds, G, isPast: false, isToday: i === 0, kpUsed: (i === 0 ? _kpNow : 2) });
       } catch(e){if(window._DEBUG)console.warn('[silent fallback]:',e.message)}
     }
     if(window._DEBUG) console.log('[v88.7.7 trend] race fallback computeAi для today+3');
@@ -15147,6 +15224,15 @@ function _renderWhyTrend(){
     // v88.8.18 ★ FIX + fp12 BB: tooltip явно розрізняє Raw G_day vs PDF/Engine, щоб користувач
     // не плутав точки raw-серії зі зірками PDF expert overlay.
     let _dotTip = `${d.ds}\nRaw G_day: ${d.G >= 0 ? '+' : ''}${d.G.toFixed(2)}`;
+    // v88.9.42-fp224 (аудит-раунд-11, Problem 10): показуємо розбивку
+    // Kp-baseline vs ΣAᵢ, коли kpUsed відомий — інакше назва "NOAA 27-day"
+    // візуально приписує весь результат NOAA, хоча при низькому Largest Kp
+    // (Kp−2≈0) майже все число формує ΣAᵢ (Панчанга), не NOAA.
+    if (isFinite(d.kpUsed)) {
+      const _kpBase = d.kpUsed - 2;
+      const _aiSum = d.G - _kpBase;
+      _dotTip += `\n  NOAA Kp baseline (Kp−2): ${_kpBase >= 0 ? '+' : ''}${_kpBase.toFixed(1)}\n  ΣAᵢ (Панчанга): ${_aiSum >= 0 ? '+' : ''}${_aiSum.toFixed(1)}`;
+    }
     if(Number.isFinite(d.overrideEng)){
       _dotTip += `\nPDF Engine: ${d.overrideEng >= 0 ? '+' : ''}${d.overrideEng} (експертна оцінка)`;
     } else if(Number.isFinite(d.engineEng)){
@@ -15402,7 +15488,7 @@ function _renderHeroTimeWindows() {
       }
     }
     const cls = isCurrent ? ' is-now' : isNext ? ' is-next' : '';
-    const mark = isCurrent ? '<span style="color:var(--ok);font-size:10px;font-weight:700"> ◀ зараз</span>' : '';
+    const mark = isCurrent ? '<span style="color:var(--ok);font-size:10px;font-weight:700"> ◀ поточний слот</span>' : '';
     const dot = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${col};flex-shrink:0"></span>`;
     // v87.90: показуємо ЛОКАЛЬНИЙ час замість UTC (Київ юзер бачить свій час)
     const _tzOffH2 = -new Date().getTimezoneOffset() / 60;
