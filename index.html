@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.27-fp208-OVERRIDE-GATE-FIX</title>
+  <title>G-Index — Космофізичний дашборд v88.9.41-fp223-RING-SIGN-COLOR</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -525,8 +525,16 @@
     .hero-left{display:flex!important;align-items:center!important;justify-content:center!important;gap:0!important;flex-wrap:nowrap!important}
     .hero-maintext{display:flex;flex-direction:column;gap:4px;min-width:0;justify-content:center}
     /* v83f: hero-right compact inline status */
+    /* v88.9.33-fp214 (аудит-раунд-4): НЕЙТРАЛІЗОВАНО — конфліктувало з
+       "═══ FINAL HERO FIX ═══" (v87.5/v87.21, нижче в каскаді, останнє
+       визначення .hero-right у файлі). Це один із 3 історичних шарів
+       (v85b/v86.2-3/v87.5-21), що одночасно задавали .hero-right — суміш
+       їхніх !important-правил давала непередбачуваний результат (бейджі
+       −3/—/★ ставали вузькою вертикальною колонкою замість рядка).
+       Тепер єдине джерело правди — блок "FINAL HERO FIX".
     .hero-right{justify-content:flex-end;gap:6px!important;font-size:12px}
     @media (max-width: 860px){.hero-right{justify-content:flex-start!important}}
+    */
     .hero-metric{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:6px 8px;min-height:44px}
     .hero-metric .label{font-size:9px!important;margin-bottom:2px!important;display:block}
     #heroDelta,#heroConfidence,#heroFreshness,#heroStamp{font-weight:700;font-variant-numeric:tabular-nums}
@@ -632,8 +640,14 @@
     /* 7. Hero action cmd великий */
     #heroActionCmd{font-size:24px!important;line-height:1.1!important;color:#ffd24f!important}
     /* 8. Hero-right — status cards style */
+    /* v88.9.33-fp214 (аудит-раунд-4): НЕЙТРАЛІЗОВАНО — display:block!important
+       тут був ГОЛОВНОЮ причиною вертикальної колонки бейджів (−3/—/★): span
+       ставав блочним елементом на всю ширину, тому кожен наступний бейдж
+       падав на новий рядок замість стояти в ряд. Див. коментар біля v83f вище —
+       той самий консолідаційний фікс, єдине джерело правди тепер "FINAL HERO FIX".
     .hero-right{gap:8px!important;min-width:160px!important}
     .hero-right span{display:block!important;padding:8px 10px!important;border-radius:10px!important;background:rgba(255,255,255,.04)!important;border:1px solid rgba(255,255,255,.06)!important;text-align:left!important}
+    */
     #heroFreshness{border-color:rgba(43,212,125,.3)!important;background:rgba(43,212,125,.08)!important}
     /* 9. Hero chips більші */
     .hero-chip{padding:8px 14px!important;border-radius:12px!important;font-size:12px!important}
@@ -652,8 +666,11 @@
     #heroDecisionDo,#heroDecisionAvoid{font-size:17px!important;padding:14px 16px!important;letter-spacing:.01em!important}
     #heroActionCmd{font-size:28px!important}
     /* P3: Hero-right = premium status panel */
+    /* v88.9.33-fp214 (аудит-раунд-4): НЕЙТРАЛІЗОВАНО — той самий консолідаційний
+       фікс, що і два коментарі вище. "FINAL HERO FIX" — єдине джерело правди.
     .hero-right span{padding:10px 12px!important;background:rgba(255,255,255,.06)!important;border:1px solid rgba(255,255,255,.09)!important}
     .hero-right span strong,.hero-right span#heroFreshness{font-size:15px!important;font-weight:800!important}
+    */
     #heroFreshness{font-size:15px!important}
     /* P3b: порожні hero-right cards — ховати (heroDelta, heroNextShiftChip без тексту) */
     #heroDelta:empty,#heroNextShiftChip:empty{display:none!important;padding:0!important;border:none!important;background:none!important}
@@ -1363,7 +1380,7 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
         <button id="btnRefresh" aria-label="Оновити дані з NOAA">↻ Оновити</button>
         <button id="btnHardReset" title="Скинути кеш SW і перезавантажити — якщо бачиш стару версію"
           aria-label="Очистити кеш Service Worker і перезавантажити"
-          onclick="(async function(){try{if('serviceWorker' in navigator){const regs=await navigator.serviceWorker.getRegistrations();await Promise.all(regs.map(r=>r.unregister()));}if('caches' in window){const keys=await caches.keys();await Promise.all(keys.map(k=>caches.delete(k)));}location.reload(true);}catch(e){alert('Reset error: '+e.message);}})()"
+          onclick="(async function(){try{if('serviceWorker' in navigator){const _s=new window.URL('.', location.href).href;const regs=await navigator.serviceWorker.getRegistrations();await Promise.all(regs.filter(r=>r.scope===_s).map(r=>r.unregister()));}if('caches' in window){const keys=await caches.keys();await Promise.all(keys.filter(k=>k.startsWith('gindex-')).map(k=>caches.delete(k)));}location.reload(true);}catch(e){alert('Reset error: '+e.message);}})()"
           style="background:#2a1a1a;color:#ff9f9f;border:1px solid #4a2a2a;font-size:11px;padding:3px 8px;border-radius:6px">🗑 Кеш</button>
         <button id="btnShare" title="Поділитись поточним G-станом" aria-label="Поділитись" onclick="shareGState()" style="background: var(--border);color: var(--muted);border:1px solid var(--border2)">📤</button>
         <button id="btnChronoExport" title="Експорт Chrono Journal" onclick="(function(){try{var d=localStorage.getItem('gindex_chrono_v2_abcd')||'[]';prompt('CHRONO JSON (A/B/C/D):',d);}catch(e){alert('Помилка: '+e.message);}})()" style="background:#0a2a1a;color:#44ffaa;border:1px solid #1a6644;font-size:11px;padding:3px 8px;border-radius:6px">📊</button>
@@ -1426,7 +1443,7 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
           <summary style="cursor:pointer;color:var(--faint);font-size:14px;list-style:none;padding:2px 6px;border-radius:4px" title="Dev tools (?dev=1)">⋯</summary>
           <div id="devMenuPanel" style="position:absolute;right:0;top:100%;margin-top:4px;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:6px;display:flex;flex-direction:column;gap:4px;z-index:50;min-width:140px">
             <button id="btnV86Radial" onclick="(function(){try{const cur=localStorage.getItem('v86_radial')==='1';const next=cur?'0':'1';localStorage.setItem('v86_radial', next);localStorage.setItem('v86_heat', next);location.reload();}catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}})()" style="background:#1a0f2a;color:#d28cff;border:1px solid #4a2a6e;font-size:11px;padding:4px 8px;border-radius:6px;cursor:pointer;text-align:left" title="Перемкнути v86 features: radial G + heat-strip">✦ v86</button>
-            <button id="btnCacheReset" onclick="(async function(){try{const regs=await navigator.serviceWorker.getRegistrations();await Promise.all(regs.map(r=>r.unregister()));const keys=await caches.keys();await Promise.all(keys.map(k=>caches.delete(k)));setTimeout(()=>location.href=location.pathname+'?nocache=fp70',300);}catch(e){location.reload(true);}})()" style="background:#2a1a00;color:#ffcc44;border:1px solid #554400;font-size:11px;padding:4px 8px;border-radius:6px;cursor:pointer;text-align:left" title="Скинути кеш і перезавантажити (fp58)">🗑 Кеш</button>
+            <button id="btnCacheReset" onclick="(async function(){try{const _s=new window.URL('.', location.href).href;const regs=await navigator.serviceWorker.getRegistrations();await Promise.all(regs.filter(r=>r.scope===_s).map(r=>r.unregister()));const keys=await caches.keys();await Promise.all(keys.filter(k=>k.startsWith('gindex-')).map(k=>caches.delete(k)));setTimeout(()=>location.href=location.pathname+'?nocache=fp70',300);}catch(e){location.reload(true);}})()" style="background:#2a1a00;color:#ffcc44;border:1px solid #554400;font-size:11px;padding:4px 8px;border-radius:6px;cursor:pointer;text-align:left" title="Скинути кеш і перезавантажити (fp58)">🗑 Кеш</button>
           </div>
         </details>
       </span>
@@ -1501,7 +1518,7 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
               </svg>
               <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none">
                 <div id="v86GVal" style="font-size:36px;font-weight:900;color:#ffd77a;line-height:1;text-shadow:0 0 12px rgba(255,210,110,.3)">—</div>
-                <!-- v87.90: Confidence interval (P50 band) — wow-фіча, нікого з конкурентів немає -->
+                <!-- v88.9.31-fp212: евристичний діапазон мінливості G_now (не статистичний CI, див. renderGRadialV86) -->
                 <div id="v86CI" class="hint" tabindex="0" style="font-size:10px;font-weight:600;color:var(--dim);margin-top:2px;line-height:1;letter-spacing:.02em;cursor:help;pointer-events:auto;display:none" title=""></div>
                 <!-- v87.21: inline ΔG trend directly beneath G-value for immediate signal -->
                 <div id="v86DeltaInline" style="font-size:13px;font-weight:800;line-height:1;margin-top:4px;color:var(--muted);letter-spacing:.02em;min-height:13px"></div>
@@ -1510,12 +1527,12 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
             </div>
             <!-- v86: inline legend -->
             <div id="v86Legend" style="display:grid;grid-template-columns:repeat(3,auto);gap:2px 10px;font-size:9px;color: var(--muted);line-height:1.3;margin-top:2px;width:100%">
-              <span><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#ffb84d;margin-right:3px"></span>Kp−2</span>
-              <span><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#8da2ff;margin-right:3px"></span>Lᵢ</span>
-              <span><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background: var(--bad);margin-right:3px"></span>Mᵢ</span>
-              <span><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#d28cff;margin-right:3px"></span>eᵢ</span>
-              <span><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#37d39a;margin-right:3px"></span>Pᵢ</span>
-              <span><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#58c7ff;margin-right:3px"></span>Dᵢ</span>
+              <span><span data-seg="v86segKp" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#8b93a8;margin-right:3px"></span>Kp−2</span>
+              <span><span data-seg="v86segLi" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#8b93a8;margin-right:3px"></span>Lᵢ</span>
+              <span><span data-seg="v86segMi" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#8b93a8;margin-right:3px"></span>Mᵢ</span>
+              <span><span data-seg="v86segEi" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#8b93a8;margin-right:3px"></span>eᵢ</span>
+              <span><span data-seg="v86segPi" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#8b93a8;margin-right:3px"></span>Pᵢ</span>
+              <span><span data-seg="v86segDi" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#8b93a8;margin-right:3px"></span>Dᵢ</span>
             </div>
           </div>
           <!-- Legacy ring (default) -->
@@ -1642,7 +1659,7 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
           <!-- v88.8.18: v18.8 patches defined but DISABLED in fp75 — V3 freeze compliance -->
           <span id="heroBulletin" data-label="Engine v18.5" class="hint" tabindex="0" style="font-size:12px;font-weight:700;color:var(--muted);cursor:help;border:1px solid var(--border2);padding:1px 8px;border-radius:8px;background:rgba(11,18,32,.4)" title="Engine v18.5 canonical (frozen). V3 freeze active 2026-05-03→~2026-08-01. V18.8 runtime patches DISABLED.&#10;&#10;v18.8 patches (4 active, P1a/P5 rejected by ablation):&#10;• P2 broad: ANY '✈' emoji → +1, з 'Подорожі' → max(eng, +2)&#10;• P3 broad: Dashami (Tithi 10 OR 25) → +1: 30+ days&#10;• P4 empty+saturn_retro+Kp≥4 → −3: Saturn malefic canon&#10;• P1d empty+eng=+2 → +1: точкова exact correction&#10;&#10;v18.7 → v18.8 fix: P2 раніше шукав 'Подорожі' word — missed 93 dates з emoji-only.&#10;P3 раніше тільки Shukla Dashami — пропускав Krishna Dashami (Tithi 25).&#10;&#10;Phase V3 freeze respected: engine_scores.json НЕ модифікується.&#10;Patches застосовуються JS read-time у _applyV186Patches().&#10;&#10;Validation (n=212 ablation-validated):&#10;• Strict 3-class: 75.0% → 79.2% (+4.2pp)&#10;• Binary neg/non-neg: 87.3% → 88.7% (+1.4pp)&#10;• Exact 7-class: 43.9% → 50.0% (+6.1pp) ⭐&#10;• 5-fold CV strict: 79.2% ± 4.2% (stable, кращий vs v18.7 ±4.8%)&#10;&#10;ALL 3 metrics improved.&#10;Engine v18.5 frozen залишається canonical scoring core.&#10;Dashboard G — continuous real-time signal (Kp − 2 + ΣAᵢ).&#10;Різні моделі за дизайном — розбіжність не баг.">—</span>
           <!-- v88.0: Astronomical layer pill (Tithi/Nakshatra/Yoga з cal_score field у engine_scores.json, Swiss Ephemeris Lahiri) -->
-          <span id="heroAstroLayer" data-label="Astro" class="hint" tabindex="0" style="display:none;font-size:12px;font-weight:700;color:var(--muted);cursor:help;border:1px solid var(--border2);padding:1px 8px;border-radius:8px;background:rgba(11,18,32,.4)" title="">—</span>
+          <span id="heroAstroLayer" data-label="Astro advisory" class="hint" tabindex="0" style="display:none;font-size:12px;font-weight:700;color:var(--muted);cursor:help;border:1px solid var(--border2);padding:1px 8px;border-radius:8px;background:rgba(11,18,32,.4)" title="">—</span>
           <!-- V25-fu29 v5.1 (2026-05-03): canonical metrics from VALIDATION_REPORT_v18_5_pdf47_v5.json — n=280 / strict 71.4% / κ=0.52 -->
           <!-- v88.8.18 patches: P2/P3/P4/P1d — DISABLED in fp75 (V3 freeze). V19 candidate. -->
           <a href="backtest.html" target="_blank" rel="noopener" data-label="Точність" style="font-size:12px;font-weight:700;color:var(--ok);text-decoration:none;border:1px solid var(--ok);padding:1px 8px;border-radius:8px;background:rgba(43,212,125,.08);transition:background .2s" title="Engine v18.5 canonical (N=280, GT v6.3): strict 70.6% / 43.0% exact / 83.6% binary. V18.8 patches DISABLED during V3 freeze (2026-05-03 → ~2026-08-01). Canonical source: CANONICAL_METRICS.md v2.1&#10;&#10;Validation (n=212 full PDF-valid, Jun 2025 → May 2026):&#10;• Strict 3-class: 79.2% (v18.5 was 75.0%, +4.2pp)&#10;• Binary neg/non-neg: 88.7% (v18.5 was 87.3%, +1.4pp)&#10;• Exact 7-class: 50.0% (v18.5 was 43.9%, +6.1pp) ⭐&#10;• 5-fold CV strict: 79.2% ± 4.2% (kraschuye stability vs v18.7 ±4.8%)&#10;&#10;v18.7 → v18.8 bug fix:&#10;• P2 раніше шукав 'Подорожі' word — missed 93 dates з '✈' emoji-only&#10;• P3 раніше тільки Shukla Dashami (10) — missed Krishna Dashami (25)&#10;&#10;v18.8 final patches (4 ablation-validated):&#10;• P2 broad: ANY '✈' → +1, з 'Подорожі' → max(+2)&#10;• P3 broad: Dashami (Tithi 10 OR 25) → +1&#10;• P4 empty+saturn_retro+Kp≥4 → −3 (Saturn malefic canon)&#10;• P1d empty+eng=2 → 1 (точкова exact)&#10;&#10;v18.5 frozen baseline (canonical, n=280 v5.1):&#10;• Strict 71.4% [CI 66.1–76.8%]&#10;• Binary 83.6% [CI 79.3–87.9%]&#10;• Cohen's κ = 0.52, Weighted κ = 0.73&#10;&#10;⚠ Caveat: ground truth = expert PDF bulletins using same Vedic Panchanga + Kp framework. Validates engine reproduces expert reasoning, NOT predictive validity vs real outcomes.&#10;&#10;Status: Phase V3 prospective freeze 2026-05-03 → ~2026-08-01&#10;Patches applied at read-time — frozen engine_scores.json unchanged.&#10;Sources: CANONICAL_METRICS.md v2.0, ablation audit 2026-05-11&#10;&#10;Натисни → повний backtest report.">📊 70.6% strict / 43.0% exact (v18.5 canonical)</a>
@@ -3067,6 +3084,34 @@ function updateDataFreshness(source, ts){
   window._dataFetchTimestamps[source] = ts || Date.now();
   _renderFreshnessState();
 }
+// v88.9.40-fp222 (аудит-раунд-9, Problem 4): єдиний об'єкт стану джерела даних.
+// Раніше 4 незалежні функції (_renderFreshnessState, Sanity Watchdog, SW_STALE_DATA
+// listener, hero mode-mapper нижче) писали статус ЛИШЕ як DOM-текст різних елементів
+// (freshnessBadge/heroFreshness), і інші функції (напр. Formula Audit) мусили
+// вгадувати реальний стан через .includes('degraded')/.includes('live') на тексті
+// ОСТАННЬОГО writer'а, що записав туди — це і є "гонка станів". Повністю переписувати
+// внутрішню логіку кожного writer'а (коли саме LIVE/DELAYED/STALE/DEGRADED) — ризиковано
+// без живих тестів (значна частина тонких edge-кейсів формувалась саме через ітеративні
+// фікси в цих 4 місцях). Натомість: кожен writer ДОДАТКОВО (не замість DOM-запису)
+// публікує свій шматок у window.__sourceState через цей helper — спільне, надійне
+// джерело поруч зі старим DOM-текстом, який лишається fallback-ом для сумісності.
+function _updateSourceState(partial){
+  try {
+    if (!window.__sourceState) {
+      window.__sourceState = {
+        mode: null,          // 'live' | 'estimated' | 'delayed' | 'stale' | 'old' | 'scenario' | 'offline' | 'degraded'
+        contentAgeHours: null,
+        fetchAgeMinutes: null,
+        cached: false,
+        degraded: false,
+        reason: null,
+        updatedAt: null
+      };
+    }
+    Object.assign(window.__sourceState, partial, { updatedAt: Date.now() });
+  } catch(_e) { /* silent — це допоміжний шар, не критичний шлях рендеру */ }
+}
+
 function _renderFreshnessState(){
   const ts = window._dataFetchTimestamps;
   const now = Date.now();
@@ -3127,6 +3172,14 @@ function _renderFreshnessState(){
     hf.style.color = ''; hf.style.background = '';
   }
   if(window.__uiState) window.__uiState.freshness = state;
+  _updateSourceState({
+    mode: state,
+    contentAgeHours: (window._kpSourceFreshness && isFinite(window._kpSourceFreshness.ageHours)) ? window._kpSourceFreshness.ageHours : null,
+    fetchAgeMinutes: _ageMin,
+    cached: false,
+    degraded: (state === 'old' || state === 'stale'),
+    reason: _contentOverride ? 'content_age_override' : null
+  });
 
   // v87.91 fix: scenario/offline override — без цього 60-сек таймер перетирав SCENARIO на LIVE
   // навіть коли syncHero виставив правильний стан. _renderFreshnessState бачить тільки age
@@ -3148,6 +3201,12 @@ function _renderFreshnessState(){
           : 'Дані offline: навіть Kp обсервації недоступні. Все, що показано — з кешу.';
       }
       if (window.__uiState) window.__uiState.freshness = _dm;
+      _updateSourceState({
+        mode: _dm,
+        cached: _dm === 'offline',
+        degraded: false,
+        reason: _dm === 'scenario' ? 'no_noaa_forecast' : 'offline_cache_only'
+      });
     }
     // v87.92 fix: маркер heroTomorrow через data-attribute + CSS ::after.
     // Раніше використовував innerHTML.replace, але render3Day переписував все через innerHTML.
@@ -3181,8 +3240,24 @@ function renderKpContribution(){
   if(!n) return;
   if(!isFinite(kp)){n.textContent='Kp\u22122 = \u2014';n.style.color='';return;}
   var v=Math.round((kp-2)*10)/10;
-  n.textContent='Kp\u22122 = '+(v>0?'+':'')+v.toFixed(1);
-  n.style.color=v>0?'#2bd47d':v<0?'#ff6b6b':'#9bb1dc';
+  // v88.9.31-fp212 FIX (аудит-проблема 2, доопрацювання): попередня версія мала
+  // словесний перетин меж (\u226 43 / 3\u20135 / \u226 55 — 3 і 5 в двох групах одночасно),
+  // хоча тернарний ланцюг у коді фактично однозначний (перша умова, що спрацювала,
+  // забирає значення). Тепер межі явним if/else if, без жодної двозначності:
+  //   Kp <  3  → спокійно
+  //   3 <= Kp < 5 → підвищено
+  //   Kp >= 5  → буря
+  var _kpState, _kpColor;
+  if (kp < 3) { _kpState = 'спокійно'; _kpColor = '#2bd47d'; }
+  else if (kp < 5) { _kpState = 'підвищено'; _kpColor = '#9bb1dc'; }
+  else { _kpState = 'буря'; _kpColor = '#ff6b6b'; }
+  // v88.9.31-fp212: явно розділяємо ЧИСЛО (legacy-компонент формули G_now,
+  // арифметика Kp-2 не змінена, канонічна) і КОЛІР/ЛЕЙБЛ (фізичний стан Kp).
+  // Раніше залишалась суперечність "зелений бейдж, а число -1.33" — тепер
+  // текст поруч із числом явно каже, що це два різних виміри.
+  n.textContent='Kp\u22122 = '+(v>0?'+':'')+v.toFixed(1)+' ('+_kpState+')';
+  n.style.color=_kpColor;
+  n.title='Число '+(v>0?'+':'')+v.toFixed(1)+' — legacy-компонент формули G_now (Kp\u22122, канонічна арифметика, не змінена).\nСлово і колір — фізичний стан Kp: <3 спокійно, 3\u20135 підвищено, \u22655 буря.\nЦе НЕ те саме вимірювання: число може бути від\'ємним при фізично спокійному Kp (Kp<2) — так влаштована формула G = Kp\u22122+\u03a3A\u1d62, її зміна не в межах цього патча.';
 }
 
 // ═══ v76b: Panchanga Pi line ═══
@@ -3202,8 +3277,12 @@ function renderPanchPiLine(){
 // ═══ v76d: wf3 Human-readable Signal Summary ═══
 var WF3_PHRASES={
   calm:'Фон стабільний, виражених факторів немає.',
-  kp_up:'Геомагнітний фон дає {s} ріст ({v}).',
-  kp_down:'Геомагнітний фон створює {s} тиск ({v}).',
+  // v88.9.29-fp210: узгодження з fp13-семантикою «ЩО ФОРМУЄ СТАН».
+  // kp_down = Kp<2 = фізично СПОКІЙНИЙ фон; «тиск» тут — це відʼємний внесок
+  // моделі (Kp−2), а не фізична буря. Старий текст «фон створює тиск» прямо
+  // суперечив сусідньому «геомагнітний фон спокійний» для того самого числа.
+  kp_up:'Геомагнітний фон активний (Kp>2); внесок моделі в G: {v} ({s}).',
+  kp_down:'Геомагнітний фон спокійний (Kp<2); внесок моделі в G: {v} ({s}).',
   moon_up:'Місячна фаза додає {s} вплив ({v}).',
   moon_down:'Місячна фаза створює {s} тиск ({v}).',
   eclipse:'Період затемнення створює нестабільність ({v}).',
@@ -3857,24 +3936,31 @@ document.addEventListener('DOMContentLoaded',()=>{
   } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
 });
 
-// fp138 emergency: unregister any old Service Worker immediately. Current issue is runtime hang / stale cache;
-// dashboard must run network-only until startup is stable.
+// v88.9.32-fp213 FIX-CRITICAL (аудит-раунд-3, Problem 1): попередня версія
+// видаляла БУДЬ-ЯКУ SW-реєстрацію, чий scriptURL не містить "sw.js", і БУДЬ-
+// ЯКИЙ cache-ключ без версійного суфікса — обидва origin-wide (CacheStorage і
+// список SW-реєстрацій спільні для ВСЬОГО nikolaevkirill-commits.github.io,
+// а не лише для /g-index/). Це могло видалити SW/кеші ІНШИХ GitHub Pages
+// проєктів на тому самому домені.
+// Тепер:
+//  (a) реєстрації фільтруються за ВЛАСНИМ SCOPE (директорія поточної сторінки)
+//      — чужі реєстрації мають інший scope і НІКОЛИ не розглядаються;
+//  (b) page-level видалення кешів прибрано повністю — це робить ЛИШЕ
+//      sw.js activate handler, який тепер сам фільтрує за префіксом 'gindex-'.
 try{
   if('serviceWorker' in navigator){
-    navigator.serviceWorker.getRegistrations().then(function(regs){ regs.forEach(function(r){ try{r.unregister();}catch(e){} }); });
-  }
-  if(window.caches){ caches.keys().then(function(keys){ keys.forEach(function(k){ try{caches.delete(k);}catch(e){} }); }); }
-}catch(e){}
-if (false && 'serviceWorker' in navigator) {
-  // fp138: SW disabled emergency; auto-unregister below is replaced by early cleanup.
-  // fp106: auto-unregister old SW versions on load
-  const _swKey = 'g-index-shell-v88-8-86-fp165';
-  navigator.serviceWorker.getRegistrations().then(regs => {
-    regs.forEach(r => {
-      if(!r.active || !r.active.scriptURL.includes(_swKey)) r.unregister();
+    const _ownScope = new URL('.', location.href).href;
+    navigator.serviceWorker.getRegistrations().then(function(regs){
+      regs.forEach(function(r){
+        try{
+          if (r.scope !== _ownScope) return; // чужий проєкт — НІКОЛИ не чіпаємо
+          if (!r.active || !r.active.scriptURL.endsWith('/sw.js')) r.unregister();
+        }catch(e){}
+      });
     });
-  });
-  if(window.caches) caches.keys().then(ks => ks.forEach(k => { if(!k.includes(_swKey)) caches.delete(k); }));
+  }
+}catch(e){}
+if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     // v87.1 NFR: refresh freshness badge every 60s (дані старіють без оновлення)
     SAFE_INTERVAL(function(){ try{_renderFreshnessState();}catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)} }, 60000).start();
@@ -3896,10 +3982,24 @@ if (false && 'serviceWorker' in navigator) {
           if (event.data && event.data.type === 'SW_STALE_DATA') {
             const el = document.getElementById('swStaleBar');
             if (el) {
-              const age = Math.round((Date.now() - event.data.fetchedAt) / 60000);
-              el.textContent = `⚠ Дані з кешу (${age} хв тому) — перевірте з'єднання`;
+              // v88.9.34-fp215: fetchedAt може бути null для кеш-записів без
+              // заголовка x-gindex-cached-at (створених до цього фіксу) —
+              // тоді чесно кажемо "вік невідомий", а не рахуємо NaN.
+              const _ageTxt = (event.data.fetchedAt != null)
+                ? `${Math.round((Date.now() - event.data.fetchedAt) / 60000)} хв тому`
+                : 'вік невідомий';
+              el.textContent = `⚠ Дані з кешу (${_ageTxt}) — перевірте з'єднання`;
               el.style.display = 'block';
               setTimeout(() => { el.style.display = 'none'; }, 10000);
+            }
+            // v88.9.40-fp222 (Problem 4, writer 3/4): SW_STALE_DATA публікує в __sourceState.
+            if (typeof _updateSourceState === 'function') {
+              _updateSourceState({
+                mode: 'offline',
+                cached: true,
+                fetchAgeMinutes: (event.data.fetchedAt != null) ? Math.round((Date.now() - event.data.fetchedAt) / 60000) : null,
+                reason: 'sw_offline_fallback'
+              });
             }
             // Update freshness badge
             const badge = document.getElementById('freshnessBadge');
@@ -3931,8 +4031,21 @@ if (false && 'serviceWorker' in navigator) {
           checkWaiting(reg.installing);
         });
 
-        // Після того як новий SW взяв контроль — перезавантажити сторінку
+        // Після того як новий SW взяв контроль — перезавантажити сторінку.
+        // v88.9.32-fp213 FIX-CRITICAL (аудит-раунд-3, Problem 3): sessionStorage
+        // переживає reload — після ПЕРШОГО controllerchange-reload прапор лишався
+        // '1' назавжди в цій вкладці, тому ВСІ наступні реальні SW-оновлення
+        // більше не перезавантажували сторінку: новий SW ставав активним, але
+        // 1.4MB inline JS/HTML лишались старими без перезавантаження. In-memory
+        // прапор природно скидається при кожному reload — саме та поведінка,
+        // яка потрібна (не більше 1 reload ЗА ОДИН controllerchange-цикл, але
+        // кожен новий цикл після наступного reload — знову дозволений).
         navigator.serviceWorker.addEventListener('controllerchange', () => {
+          if (window._swReloading) {
+            if(window._DEBUG) console.warn('[SW] controllerchange again in same cycle — skipping reload (guard)');
+            return;
+          }
+          window._swReloading = true;
           window.location.reload();
         });
 
@@ -4834,6 +4947,7 @@ function getEffectiveGForDate(dateObj, rawG, minDelta) {
     rawG: isFinite(rawG) ? rawG : null,
     override: null,
     hasOverride: false,
+    isSignificant: false, // v88.9.34-fp215: розбіжність варта окремого ⚠-попередження
     delta: 0,
     marker: '',
     tooltip: '',
@@ -4845,14 +4959,26 @@ function getEffectiveGForDate(dateObj, rawG, minDelta) {
     if (!score || !score._expertOverride || !isFinite(score.eng)) return out;
     out.override = score.eng;
     out.delta = Math.abs(score.eng - rawG);
-    if (out.delta >= _minDelta) {
-      out.hasOverride = true;
+    // v88.9.34-fp215 FIX-CRITICAL (аудит-раунд-5, "завтра" desync): hasOverride
+    // РАНІШЕ вмикався лише при delta>=1.5 — тому verified PDF override з малою
+    // розбіжністю від raw G (напр. override=0, raw=0.9, delta=0.9) вважався
+    // downstream-кодом (heroTomorrow) "відсутнім" і взагалі не показувався,
+    // хоча він реально є і має бути головним для рішень. Тепер hasOverride —
+    // факт існування, isSignificant — стара порогова семантика (лише для
+    // "конфлікт/⚠"-стилю, не для приховування самого override).
+    out.hasOverride = true;
+    out.isSignificant = out.delta >= _minDelta;
+    if (out.isSignificant) {
       out.marker = ' ★';
       const _sign = score.eng >= 0 ? '+' : '';
       out.tooltip = `\n\n★ PDF EXPERT: ${_sign}${score.eng} (delta ${out.delta.toFixed(1)} від raw G ${rawG >= 0 ? '+' : ''}${rawG.toFixed(1)}).\n`
         + 'Raw G — окремий live/astro індекс: NOAA Kp + ΣAᵢ.\n'
         + 'PDF/Engine — окремий денний score, НЕ G і не заміна G.\n'
         + 'Дії зараз рахуються за live-guard; прогноз дня — за PDF/Engine.';
+    } else {
+      out.marker = ' ★';
+      const _sign2 = score.eng >= 0 ? '+' : '';
+      out.tooltip = `\n\n★ PDF EXPERT: ${_sign2}${score.eng} (близько до raw G ${rawG >= 0 ? '+' : ''}${rawG.toFixed(1)}, delta ${out.delta.toFixed(1)}).`;
     }
   } catch(e) { /* silent */ }
   return out;
@@ -6084,8 +6210,45 @@ function _applyV186Patches(snapshot) {
 }
 
 function getEngineScore(dateObj){
-  if(!_engineScores) return null;
   const ds = fmtDate(dateObj);
+  // v88.9.34-fp215 FIX-CRITICAL (аудит-раунд-5, Problem 5/6): раніше PDF
+  // override застосовувався ЛИШЕ якщо (a) _engineScores взагалі завантажився
+  // і (b) для цієї дати вже існував snapshot у ньому. Тобто verified
+  // експертний вердикт — незалежна, людиною підтверджена сутність — міг
+  // мовчки зникнути через технічний збій завантаження engine_scores.json,
+  // відсутність дати в ±16-денному вікні loader'а тощо. Тепер override
+  // перевіряється НЕЗАЛЕЖНО від стану _engineScores; якщо snapshot відсутній,
+  // будується мінімальний synthetic snapshot лише з override-даних.
+  if(!_engineScores || !_engineScores[ds]){
+    if(_expertOverrides && _expertOverrides[ds]){
+      const ovr = _expertOverrides[ds];
+      const _hashOk = /^sha256:[0-9a-f]{16,64}$/i.test(String(ovr.snippet_hash || ''));
+      const _pdfReadingOk = ovr.verified_by_pdf_reading === true
+        && typeof ovr.snippet === 'string' && ovr.snippet.length > 0;
+      const _isVerified = ovr.verified === true
+        && typeof ovr.source_pdf === 'string' && ovr.source_pdf.length > 0
+        && (_hashOk || _pdfReadingOk);
+      if(_isVerified){
+        return {
+          eng: ovr.expert_eng,
+          pdf: ovr.expert_eng,
+          tag: '',
+          kp_synthetic: false,
+          _engineDataMissing: true, // v88.9.34-fp215: явний прапор — це НЕ engine snapshot
+          _expertOverride: true,
+          _expertOverrideVerified: true,
+          _expertEngCandidate: ovr.expert_eng,
+          _overrideCategory: ovr.category || 'manual_expert_override',
+          _overrideAppliedIn: ovr.applied_in || ovr.source_pdf || ovr.source || '',
+          _overrideSourceReason: 'verified_with_source_pdf_and_snippet_hash',
+          _overrideSnippetHash: ovr.snippet_hash || null,
+          _overrideSourcePdf: ovr.source_pdf || ovr.source || null,
+          _overrideSourcePage: ovr.source_page || null
+        };
+      }
+    }
+    if(!_engineScores) return null;
+  }
   let snapshot = _engineScores[ds] || null;
   // v88.8.35: single source of truth.
   // Якщо запис існує в expert_overrides_v3.json — він і є verified verdict дня.
@@ -6196,8 +6359,23 @@ function renderHeroBulletin(){
   }
   const s = entry.eng;
   const color = s >= 2 ? 'var(--ok)' : s === 1 ? '#9cd49c' : s === 0 ? 'var(--muted)' : s === -1 ? 'var(--warn)' : s <= -2 ? 'var(--bad)' : 'var(--muted)';
+  // v88.9.34-fp215 FIX-CRITICAL (аудит-раунд-5, Problem 4): статичний
+  // data-label="Engine v18.5" (з HTML) залишався незмінним навіть коли `s` —
+  // це PDF override, не розрахунок engine. Користувач читав "ENGINE V18.5: −3 ~★"
+  // і думав, що engine порахував −3 із synthetic Kp — насправді −3 це ручний
+  // вердикт з PDF, а ~ (synthetic Kp) стосується RAW engine snapshot ПІД override,
+  // який до цього значення не має відношення. Тепер лейбл перемикається явно.
+  elB.dataset.label = entry._expertOverride ? 'PDF override' : 'Engine v18.5';
+  // v88.9.37-fp219 FIX-CRITICAL (аудит-раунд-6, Problem 1): ~ (synthetic Kp)
+  // стосується RAW engine snapshot, а не PDF override — override узагалі не
+  // рахується з якогось Kp, це ручний вердикт людини з тексту PDF. Але synMark
+  // формувався БЕЗУМОВНО з entry.kp_synthetic, тому "PDF OVERRIDE: −3 ~★"
+  // все одно приписував synthetic Kp значенню −3, яке від нього не залежить.
+  // Тепер ~ (і ◌/✓, той самий клас маркерів) показуються ТІЛЬКИ коли число —
+  // реальний розрахунок engine, не override.
+  const _isPdfOverride = entry._expertOverride === true;
   // v87.90: synthetic marker у видимому тексті (не лише tooltip) — чесність для майбутніх дат
-  const _synMark = entry.annual_fallback ? '<span style="color:#9bb1dc;margin-left:2px" title="Річний астрономічний каркас (Swiss Ephemeris) — попередній бал, очікує бюлетеня">◌</span>' : (entry.kp_synthetic ? '<span style="color:#fca474;margin-left:2px" title="Synthetic Kp=2.0 (NOAA 27DO недоступний — очікує бюлетеня або оновлення даних)">~</span>' : (entry.kp_real_from_future ? '<span style="color:#63be7b;margin-left:2px" title="Реальний Kp з NOAA 27-day-outlook (не synthetic)">✓</span>' : ''));
+  const _synMark = _isPdfOverride ? '' : (entry.annual_fallback ? '<span style="color:#9bb1dc;margin-left:2px" title="Річний астрономічний каркас (Swiss Ephemeris) — попередній бал, очікує бюлетеня">◌</span>' : (entry.kp_synthetic ? '<span style="color:#fca474;margin-left:2px" title="Synthetic Kp=2.0 (NOAA 27DO недоступний — очікує бюлетеня або оновлення даних)">~</span>' : (entry.kp_real_from_future ? '<span style="color:#63be7b;margin-left:2px" title="Реальний Kp з NOAA 27-day-outlook (не synthetic)">✓</span>' : '')));
   // v88.7.15 Г: marker '★' коли застосовано expert override; '?' коли candidate є, але source не підтверджений.
   const _unv = entry._expertOverrideAvailable && entry._expertOverrideVerified === false && isFinite(entry._expertEngCandidate);
   const _ovMark = entry._expertOverride ? '<span style="color:#ffd166;margin-left:2px;font-size:9px" title="Expert override застосовано">★</span>' : (_unv ? '<span style="color: var(--warn);margin-left:2px;font-size:9px" title="PDF override candidate НЕ застосовано: source не підтверджений">?</span>' : '');
@@ -6220,7 +6398,9 @@ function renderHeroBulletin(){
   const _patchInfo = (entry._v186Patches && entry._v186Patches.length > 0)
     ? `\nψ v18.5 canonical (patches disabled in freeze) (raw v18.5: ${entry._engV185Raw>=0?'+':''}${entry._engV185Raw})`
     : '';
-  elB.title = `Engine v18.5 canonical score: ${s >= 0 ? '+' : ''}${s} (V3 freeze active, patches disabled).\nТег: ${entry.tag || '—'}\nKp=${entry.kp}${synth}${pdfStr}${_ovInfo}${_patchInfo}\nDashboard G (continuous) ≠ Engine score (threshold) — різні моделі за дизайном.`;
+  elB.title = _isPdfOverride
+    ? `PDF override: ${s >= 0 ? '+' : ''}${s} (verified expert verdict, джерело: ${entry._overrideSourcePdf || entry._overrideAppliedIn || 'PDF'}).\nRaw Engine v18.5 (для порівняння): ${isFinite(entry._engRaw) ? (entry._engRaw >= 0 ? '+' : '') + entry._engRaw : 'недоступний'}.\nТег: ${entry.tag || '—'}\nDashboard G (continuous) ≠ PDF/Engine score (threshold) — різні моделі за дизайном.`
+    : `Engine v18.5 canonical score: ${s >= 0 ? '+' : ''}${s} (V3 freeze active, patches disabled).\nТег: ${entry.tag || '—'}\nKp=${entry.kp}${synth}${pdfStr}${_ovInfo}${_patchInfo}\nDashboard G (continuous) ≠ Engine score (threshold) — різні моделі за дизайном.`;
 }
 
 // v88.1: BPHS canonical yoga penalties for ADVISORY display only.
@@ -12097,11 +12277,17 @@ function render3Day(parsed3){
         _scenBanner = `<div style="font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#fca474;background:rgba(252,164,116,.18);border:1px solid rgba(252,164,116,.5);border-radius:6px;padding:2px 6px;margin-bottom:5px;text-align:center" title="NOAA не дає реального forecast Kp на цю дату (за межами 3-денного вікна). Підставлено synthetic Kp=2.0. Це ймовірний сценарій «якщо нічого не зміниться», НЕ прогноз.">⚠ Сценарій, не прогноз</div>`;
         _scenLabel = `<div style="font-size:9px;color:#fca474;margin-top:2px;line-height:1.3" title="Engine використав synthetic Kp=2.0 (NOAA forecast недоступний). Це сценарій, не справжній прогноз.">ймовірний сценарій за поточним Kp · synthetic</div>`;
       } else if(_engineOutdatedNotSynth){
+        // v88.9.34-fp215 (аудит-раунд-5, Problem 13): якщо для цієї дати активний
+        // verified PDF override — банер мав казати конкретно "PDF override", а не
+        // generic "PDF/Engine", яке читається так, ніби engine v18.5 порахував.
+        const _dayHasOverride = (function(){ try { const _es = getEngineScore(d.date); return !!(_es && _es._expertOverride); } catch(_e){ return false; } })();
         // v88.8.35-fp56-P8: engine-outdated is DIFFERENT from synthetic-scenario — here live Kp is
         // REAL (=${d.kpMax}) but the engine score was computed on an older snapshot. Give it its own
         // explicit (blue, not orange) banner so the card no longer reads as a normal forecast, while
         // still distinguishing it from the synthetic-Kp scenario case above. Numbers unchanged.
-        _scenBanner = `<div style="font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color: var(--muted);background:rgba(155,177,220,.15);border:1px solid rgba(155,177,220,.45);border-radius:6px;padding:2px 6px;margin-bottom:5px;text-align:center" title="Live NOAA forecast Kp=${d.kpMax.toFixed(1)} свіжіший за engine-score (рахований на старому snapshot). Engine може недо-оцінювати буревий ризик — звіряйся з live.">ⓘ PDF/Engine — пріоритет · live Kp оновлює фон</div>`;
+        _scenBanner = _dayHasOverride
+          ? `<div style="font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#ffd166;background:rgba(255,209,102,.15);border:1px solid rgba(255,209,102,.45);border-radius:6px;padding:2px 6px;margin-bottom:5px;text-align:center" title="Це значення — ручний verified PDF-вердикт (expert override), НЕ розрахунок engine v18.5. Raw engine snapshot окремо, у tooltip бейджа Engine v18.5.">★ PDF override · не engine v18.5</div>`
+          : `<div style="font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color: var(--muted);background:rgba(155,177,220,.15);border:1px solid rgba(155,177,220,.45);border-radius:6px;padding:2px 6px;margin-bottom:5px;text-align:center" title="Live NOAA forecast Kp=${d.kpMax.toFixed(1)} свіжіший за engine-score (рахований на старому snapshot). Engine може недо-оцінювати буревий ризик — звіряйся з live.">ⓘ PDF/Engine — пріоритет · live Kp оновлює фон</div>`;
         _scenLabel = `<div style="font-size:9px;color: var(--muted);margin-top:2px;line-height:1.3" title="Engine v18.5 score обчислений на snapshot часу train. Live NOAA forecast Kp=${d.kpMax.toFixed(1)} оновленіший. Engine score може недо-оцінювати буревий ризик.">пріоритет — live Kp=${d.kpMax.toFixed(1)}, не engine</div>`;
       }
       qhtml+=`<span title="${escapeHtml(_daySigQ?.tooltip||'')}" style="flex:1;min-width:140px;padding:8px 14px;border-radius:10px;${_scenStyle};text-align:center">
@@ -12135,12 +12321,21 @@ function render3Day(parsed3){
       const _htEl = document.getElementById('heroTomorrow');
       if (_htEl) {
         if (isFinite(_tomorrowG)) {
-          // v87.6b: fallback — якщо __uiState ще не готовий, беремо G today з days[0]
+          // v88.9.33-fp214 FIX-CRITICAL (аудит-раунд-4, "завтра" desync):
+          // Раніше фолбек, коли __uiState.gNow ще NaN (race — рендер heroTomorrow
+          // може відпрацювати до loadAll()), ПЕРЕРАХОВУВАВ today G через
+          // days[0].kpMax (денний ПІК прогнозу Kp) — інша величина, ніж live
+          // поточний Kp. Це давало інший today-baseline, ніж той, що бачить
+          // користувач у кільці/Formula Audit (#nowG), і могло перевернути
+          // напрям стрілки "завтра" (напр. показати "↓ погіршення" там, де
+          // проти РЕАЛЬНОГО G_now це насправді покращення).
+          // Виправлено: той самий канонічний #nowG DOM-fallback, що вже
+          // застосований у _patchStaleLoadingDOM (fp172/fp209) — єдине надійне
+          // джерело G_now у файлі, а не окрема формула з іншою семантикою.
           let _todayG = isFinite(window.__uiState?.gNow) ? window.__uiState.gNow : NaN;
-          if (!isFinite(_todayG) && days[0]) {
-            const _kp0 = fmtDate(days[0].date) === _todayStr && lastWWV && isFinite(lastWWV.kNow) ? lastWWV.kNow : days[0].kpMax;
-            const _ai0 = computeAi(sunriseUTC(days[0].date), _kp0 ?? 0);
-            _todayG = (isFinite(_kp0) ? _kp0 : 0) - 2 + _ai0.Ai;
+          if (!isFinite(_todayG)) {
+            const _nowGEl2 = document.getElementById('nowG');
+            _todayG = _num(_firstText(_nowGEl2) || _nowGEl2?.textContent);
           }
           const _diff = isFinite(_todayG) ? (_tomorrowG - _todayG) : 0;
           const _arrow = _diff > 0.3 ? '↑' : _diff < -0.3 ? '↓' : '→';
@@ -12183,7 +12378,18 @@ function render3Day(parsed3){
             const _os = _tomEff.override >= 0 ? '+' : '';
             _pdfPart = ` · PDF: ${_os}${_tomEff.override}`;
           }
-          _htEl.textContent = `G=${_sign}${_tomorrowG.toFixed(1)} ${_displayArrow} ${_hint}${_pdfPart}${_tomEff.marker}`;
+          // v88.9.37-fp219 (аудит-раунд-6, Problem 3): раніше текст завжди
+          // починався з raw G ("G=+0.9 ↑ покращення · PDF: +0★") — користувач
+          // першим читав "покращення", хоча головне рішення для дня — PDF-
+          // вердикт (тут 0, нейтрально), а "покращення" стосується ЛИШЕ
+          // переходу live-фону G_now→G_raw, не вердикту. Коли override існує,
+          // PDF-вердикт тепер іде першим, фон — другим, явно підписаний "фон".
+          if (_tomEff.hasOverride && isFinite(_tomEff.override) && !_conflictOverride) {
+            const _os2 = _tomEff.override >= 0 ? '+' : '';
+            _htEl.textContent = `PDF: ${_os2}${_tomEff.override} · фон ${_sign}${_tomorrowG.toFixed(1)} ${_displayArrow}${_tomEff.marker}`;
+          } else {
+            _htEl.textContent = `G=${_sign}${_tomorrowG.toFixed(1)} ${_displayArrow} ${_hint}${_pdfPart}${_tomEff.marker}`;
+          }
           const _htSibling = document.getElementById('heroTomorrowScenario');
           if (_isScenario) {
             _htEl.dataset.scenario = '1';
@@ -12686,6 +12892,11 @@ function formatConfidence(v){
 // fp96: Sanity Watchdog — uses confirmed globals only
 function _runSanityWatchdog(g, kp){
   const warns = [];
+  // v88.9.34-fp215: скидаємо прапор на початку кожного проходу — інакше він
+  // залипне true назавжди після першого виявлення DEGRADED, навіть коли стан
+  // вже видужав.
+  window.__isDegraded = false;
+  _updateSourceState({ degraded: false, reason: null });
 
   // Rule 1: Physics inconsistency — Kp calm but Dst stormy
   try {
@@ -12856,10 +13067,23 @@ function renderAlertBanner(g, kp){
             fb.textContent = '⚠ DEGRADED';
             fb.style.color = '#ff9944';
             fb.style.background = '#2a1200';
+            // v88.9.34-fp215 (аудит-раунд-5, Problem 7): це ЄДИНЕ місце, де факт
+            // DEGRADED точно відомий у момент виявлення (той самий висновок, що
+            // вже зробив fp199-коментар нижче про heroConfidence). Публікуємо це
+            // напряму як прапор, а не лише як текст бейджа — Formula Audit тепер
+            // може читати РЕАЛЬНИЙ стан замість вгадування через .includes('degraded')
+            // на тексті іншого елемента.
+            // v88.9.40-fp222 (Problem 4): розширено до повного window.__sourceState
+            // через _updateSourceState — той самий helper, що вже використовують
+            // інші 3 writer'и.
+            window.__isDegraded = true;
+            _updateSourceState({ mode: 'degraded', degraded: true, reason: hasPhysics ? 'physics_conflict' : 'stale_feed' });
           }
           if(hf && !hf.textContent.includes('STALE') && !hf.textContent.includes('OLD')){
             hf.textContent = 'DEGRADED';
             hf.style.color = '#ff9944';
+            window.__isDegraded = true;
+            _updateSourceState({ mode: 'degraded', degraded: true, reason: hasPhysics ? 'physics_conflict' : 'stale_feed' });
           }
           // fp199 (2026-07-16, скрін Kyrylo): computeCScore() рахує heroConfidence
           // РАНІШЕ, ніж window._lastDst/_kpSourceFreshness взагалі приходять (async,
@@ -13109,6 +13333,16 @@ function _renderHeroHierarchy(){
         const _tcol = _tv ? _tv.color : 'var(--text2)';
         const _tlab = _tv ? _tv.label : '';
         tomoHtml = `<span style="font-weight:800;color:${_tcol}">${_tsc>=0?'+':''}${_tsc}</span> <span style="color:var(--text2)">${_tlab}</span> <span style="color:var(--faint);font-size:10px">· прогноз</span>`;
+        // v88.9.33-fp214 (аудит-раунд-4): за тим самим принципом, що й "сьогодні"
+        // нижче (fp56-P8) — коли дискретний вердикт ЗАВТРА (тут, округлено -3..+3)
+        // і неперервний live-тренд G_raw (бейдж heroTomorrow, статус-рядок) різняться
+        // напрямом/знаком, явно позначаємо це прямо в рядку, а не лише в hover-title.
+        try {
+          const _tgRaw = window.__tomorrowG;
+          if (isFinite(_tgRaw) && Math.abs(Math.round(_tgRaw) - _tsc) >= 1) {
+            tomoHtml += ` <span style="color:var(--faint);font-size:9px" title="Дискретний вердикт (округлено, ліворуч) і неперервний G_now-прогноз (статус-рядок нижче) — різні метрики й можуть розходитись напрямом.">· G_raw=${_tgRaw>=0?'+':''}${_tgRaw.toFixed(1)} ⚠ різні метрики</span>`;
+          }
+        } catch(_e) {}
       }
     }catch(e){ /* silent */ }
     box.innerHTML =
@@ -13154,26 +13388,46 @@ function _renderHeroHierarchy(){
 // fp36: separate stale-DOM patcher for non-storm placeholders (whyRows, timingRows).
 // Runs in same interval/triggers as storm-guard so loading text doesn't get stuck.
 function _patchStaleLoadingDOM() {
+  // a0) heroTomorrow стрілка "→" через race (render3Day виконується ДО
+  // renderCurrentPanel() у тому самому проході loadAll(), тому #nowG/uiState.gNow
+  // ще не заповнені на момент першого обчислення тренду "завтра" — diff завжди
+  // рахується як 0, стрілка завжди нейтральна "→", навіть коли реальна різниця
+  // велика). v88.9.38-fp220 FIX (аудит-раунд-7): той самий "re-trigger коли дані
+  // з'явились" патерн, що вже використаний нижче для whyRows/timingRows/
+  // decisionTimingList — застосований тепер і сюди.
+  try {
+    const _htChk = document.getElementById('heroTomorrow');
+    if (_htChk && _htChk.dataset._arrowNeutral !== '0'
+        && (_htChk.textContent || '').includes('→')
+        && isFinite(window.__uiState?.gNow)
+        && Array.isArray(window._gIndex_last3D?.days)
+        && typeof render3Day === 'function') {
+      render3Day(window._gIndex_last3D);
+      // Позначаємо, що ре-тригер уже відбувся для цього G_now — не заходити в
+      // цикл повторних викликів, якщо реальний стан ЛИШИВСЯ нейтральним.
+      if (document.getElementById('heroTomorrow')) {
+        document.getElementById('heroTomorrow').dataset._arrowNeutral = '0';
+      }
+    }
+  } catch(_e0) { /* silent */ }
+
   // a) whyRows "Дані завантажуються…" — re-trigger _renderHeroCause if data is available now
   try {
     const _wr = document.getElementById('whyRows');
     if (_wr && _wr.textContent && _wr.textContent.includes('Дані завантажуються')) {
       // v88.8.91-fp172: __uiState.gNow alone was unreliable (stays NaN if it
       // was set during an early render pass before Kp arrived, and never
-      // gets refreshed until the next full loadAll() cycle). Falling back to
-      // reading the already-rendered #nowG DOM text — same pattern used
-      // elsewhere in the file (gVal computation) — since that value is
-      // confirmed correct on screen even when __uiState.gNow is stale.
-      // v88.8.95-fp176: fp172 fix used the WRONG element id ('nowG', a separate/
-      // possibly legacy badge) — the ring's actual visible number lives in
-      // '#heroG' (confirmed: cache-paint comment at L1535 explicitly names
-      // "heroG/heroRingVal" as the real render targets). Fixed to read the
-      // right element. Also try both as a defensive fallback.
+      // gets refreshed until the next full loadAll() cycle).
+      // v88.8.95-fp176: fp172 fallback read '#heroG' — WRONG. Виправлено fp209:
+      // #heroG — це велике кільце, і після fp128/fp208 воно показує PDF/Engine
+      // ВЕРДИКТ (дискретне -3..+3), не G_now (безперервний фон). Змішування цих
+      // двох метрик у fallback означало: якщо __uiState.gNow ще NaN на момент
+      // рендеру, функція могла взяти -3 (вердикт) і трактувати його як "поточний
+      // G_now" у поясненні "Чому сьогодні такий день?" — показуючи неправильну
+      // причину користувачу. #nowG — окремий бейдж "G-індекс зараз", використовується
+      // як надійне джерело G_now у 5+ інших місцях файлу (рядки 3004, 13669, 13817,
+      // 15426, 19370) — тепер єдиний fallback тут теж.
       let _gNow = window.__uiState?.gNow;
-      if (!isFinite(_gNow)) {
-        const _heroGEl = document.getElementById('heroG');
-        _gNow = _num(_firstText(_heroGEl) || _heroGEl?.textContent);
-      }
       if (!isFinite(_gNow)) {
         const _nowGEl = document.getElementById('nowG');
         _gNow = _num(_firstText(_nowGEl) || _nowGEl?.textContent);
@@ -13327,6 +13581,18 @@ function renderGRadialV86(g, kp, ai){
   v86Wrap.classList.remove('v86-hidden');
   legacyWrap.style.display = 'none';
 
+  // v88.9.39-fp221 АРХІТЕКТУРНА ЗМІНА (аудит-раунд-8): fp212–fp219 ховали
+  // сегменти/легенду/дельту кільця, коли є PDF-вердикт — намір був не давати
+  // хибне враження, що дуги розкладають вердикт. Але наслідок: коли вердикт
+  // є (а він є майже завжди, бо expert_overrides покриває майже кожен день),
+  // кільце ставало порожнім сірим колом — сам індикатор переставав працювати.
+  // Нове рішення: кільце ЗАВЖДИ показує G_now (live, неперервний) з повною
+  // декомпозицією сегментів. PDF-вердикт НІКОЛИ не змішується з цим кільцем —
+  // він живе окремо в heroHierarchy ("СЬОГОДНІ" рядок), heroBulletin
+  // (статус-рядок "PDF OVERRIDE: −3★") і великому текстовому вердикті під
+  // індексами дня. Кільце більше НЕ читає window.__heroVerdictDisplay.
+  // Сегменти й легенда — завжди видимі.
+
   // Values (absolute for segment size, sign for visual direction later)
   // v86.0.1: NaN-safety — якщо ai undefined, robust fallback
   const safeAi = ai || {};
@@ -13350,6 +13616,7 @@ function renderGRadialV86(g, kp, ai){
   const activeCount = neutral ? 6 : segs.filter(s => Math.abs(s.val) >= 0.05).length;
   const totalGap = activeCount > 1 ? GAP_PX * activeCount : 0;
   const usableC = Math.max(C - totalGap, C * 0.5);
+  const _segLabels = { v86segKp:'Kp−2 (геомагнітний)', v86segLi:'Lᵢ (місяць)', v86segMi:'Mᵢ (затемнення)', v86segEi:'eᵢ (події)', v86segPi:'Pᵢ (панчанга)', v86segDi:'Dᵢ (Dst-буря)' };
   let cursor = 0;
   segs.forEach(s => {
     const absVal = neutral ? 1 : Math.abs(s.val);
@@ -13361,46 +13628,99 @@ function renderGRadialV86(g, kp, ai){
     if (!el) return;
     el.setAttribute('stroke-dasharray', `${segLen.toFixed(2)} ${gap.toFixed(2)}`);
     el.setAttribute('stroke-dashoffset', `${(-cursor).toFixed(2)}`);
+    // v88.9.39-fp221: сегменти більше НЕ ховаються за вердиктом — кільце
+    // завжди показує G_now-декомпозицію (див. коментар на початку функції).
+    el.style.display = '';
     // v87.3 B1/B5: повний hide нульових сегментів (усуває фантомні крапки)
     el.style.opacity = neutral ? '0.35' : (isActive ? '1' : '0');
-    // v87.3 B4: візуалізація знаку — негативні сегменти тонші + без glow
+    // v88.9.41-fp223 FIX-CRITICAL (аудит-раунд-10, Problem 1): раніше колір
+    // сегмента визначався ТИПОМ компонента (Pᵢ завжди #37d39a зелений, з HTML),
+    // незалежно від знаку значення — великий негативний Pᵢ=−0.8 фарбувався
+    // тим самим зеленим, що й позитивний внесок, тому кільце виглядало
+    // переважно "позитивним" при насправді від'ємній сумі. Тепер колір
+    // ЗАВЖДИ кодує знак: зелений=позитивний, червоний/помаранчевий=негативний,
+    // сірий=нейтральний(~0). Тип компонента лишається впізнаваним через
+    // легенду (підписи назв) і title-tooltip на самому сегменті.
     if (!neutral && isActive) {
       const isNeg = s.val < 0;
       el.setAttribute('stroke-width', isNeg ? '8' : '12');
       el.style.filter = isNeg ? 'none' : el.style.filter || '';
+      el.setAttribute('stroke', isNeg ? '#ff6b6b' : '#37d39a');
+      el.style.filter = isNeg ? 'none' : 'drop-shadow(0 0 6px #37d39a)';
     } else {
       el.setAttribute('stroke-width', '12');
+      el.setAttribute('stroke', '#8b93a8');
+      el.style.filter = 'none';
     }
+    try {
+      const _lbl = _segLabels[s.id] || s.id;
+      const _existingTitle = el.querySelector('title');
+      const _titleText = `${_lbl}: ${s.val >= 0 ? '+' : ''}${s.val.toFixed(2)}`;
+      if (_existingTitle) { _existingTitle.textContent = _titleText; }
+      else { const _t = document.createElementNS('http://www.w3.org/2000/svg', 'title'); _t.textContent = _titleText; el.appendChild(_t); }
+    } catch(_eTip) {}
     if (isActive) cursor += segLen + (activeCount > 1 ? GAP_PX : 0);
   });
+  // v88.9.41-fp223 (Problem 1, легенда): дот легенди теж кодує ЗНАК поточного
+  // значення відповідного компонента (динамічно на кожному рендері), а не
+  // статичний колір за типом — узгоджено з кільцем.
+  try {
+    segs.forEach(s => {
+      const _dot = document.querySelector(`#v86Legend [data-seg="${s.id}"]`);
+      if (_dot) _dot.style.background = (Math.abs(s.val) < 0.05) ? '#8b93a8' : (s.val < 0 ? '#ff6b6b' : '#37d39a');
+    });
+  } catch(_eLg) {}
   // Central G-value
   const vEl = document.getElementById('v86GVal');
   if (vEl) {
-    // v88.9.14-fp195: те саме число, що і в heroG — вердикт дня, якщо він є
-    // (ціле, -3..+3), інакше live G_now з десятковою. Колір — від показаного значення.
-    const _vd = window.__heroVerdictDisplay;
-    const _shown = (_vd && _vd.hasVerdict && isFinite(_vd.val)) ? Math.round(Number(_vd.val)) : g;
-    const _isVerdictShown = !!(_vd && _vd.hasVerdict && isFinite(_vd.val));
-    vEl.textContent = isFinite(_shown) ? (_shown >= 0 ? '+' : '') + (_isVerdictShown ? String(_shown) : _shown.toFixed(1)) : '—';
+    // v88.9.39-fp221 АРХІТЕКТУРНА ЗМІНА (аудит-раунд-8): раніше центр показував
+    // PDF-вердикт, якщо він є (window.__heroVerdictDisplay), інакше G_now —
+    // саме це змішування і призводило до того, що кільце або показувало
+    // невідповідне сегментам число, або (після fp212 hide-фіксу) лишалось
+    // порожнім. Тепер центр ЗАВЖДИ = g (live G_now, той самий, що й сегменти
+    // під ним) — кільце й число всередині завжди одна метрика. PDF-вердикт
+    // живе окремо (heroHierarchy/heroBulletin/статус-рядок), сюди більше не
+    // потрапляє. window.__heroVerdictDisplay тут більше не читається.
+    const _shown = g;
+    // v88.9.41-fp223 (аудит-раунд-10, Problem 4): кільце показувало -1.5
+    // (1 знак), а рядок "ЗАРАЗ" — -1.47 (2 знаки) — те саме число, різна
+    // точність відображення виглядало як два різних значення. Уніфіковано.
+    vEl.textContent = isFinite(_shown) ? (_shown >= 0 ? '+' : '') + _shown.toFixed(2) : '—';
     vEl.style.color = _shown >= 1 ? '#7fe3a6' : _shown >= -1 ? '#ffd77a' : '#ff9f9f';
     vEl.style.textShadow = _shown >= 1 ? '0 0 12px rgba(127,227,166,.3)'
                          : _shown >= -1 ? '0 0 12px rgba(255,210,110,.3)'
                          : '0 0 12px rgba(255,120,120,.3)';
     try {
       const _lbl = document.getElementById('v86GLabel');
-      if (_lbl) _lbl.textContent = _isVerdictShown ? 'ВЕРДИКТ ДНЯ' : 'G_NOW';
+      if (_lbl) _lbl.textContent = 'G_NOW';
     } catch(_e){}
   }
-  // v87.90: Confidence interval P50 band (wow-фіча — нікого з конкурентів немає)
+  // v88.9.31-fp212: евристичний діапазон мінливості G_now (НЕ калібрований статистичний CI —
+  // не плутати з реальним 95% CI engine v18.5 backtest у backtestBadgeTitle, той — справжній
+  // біноміальний ДІ на n=280, залишено без змін).
   // Розрахунок: σ = sqrt(kpDelta² + eventUncertainty²); kpDelta з last-8 NOAA Kp obs.
   const ciEl = document.getElementById('v86CI');
   if (ciEl) {
     if (isFinite(g) && typeof computeConfidenceBand === 'function') {
       try {
         const cb = computeConfidenceBand(kp, _lastKpObsJson);
+        // v88.9.39-fp221: кільце тепер ЗАВЖДИ показує G_now (не вердикт) —
+        // цей діапазон завжди про той самий G_now, що в центрі, тому гейтинг
+        // за вердиктом більше не потрібен (раніше ховали, коли центр
+        // показував вердикт; тепер центр ніколи не показує вердикт).
         if (cb && isFinite(cb.delta) && cb.delta > 0) {
-          ciEl.textContent = '± ' + cb.delta.toFixed(1);
-          ciEl.title = `Confidence band ≈ ±${cb.delta.toFixed(1)} (P50, σ-розкид).\nKp variability ${cb.kpDelta.toFixed(1)} + event uncertainty 0.5.\nЧим менше — тим стабільніший прогноз.\n\nP95 (~95% довіра): ±${(cb.delta*1.96).toFixed(1)}.`;
+          // v88.9.41-fp223 (аудит-раунд-10, Problem 2): "± 0.7" без слова в
+          // головному крузі виглядав як звичний символ довірчого інтервалу.
+          // Title вже пояснював, але видимий текст — ні. Додано слово прямо
+          // в текст (коротко, щоб влізло під кільце).
+          ciEl.textContent = 'мінливість ± ' + cb.delta.toFixed(1);
+          // Статистичні терміни з конкретним означенням (калібрований перцентиль
+          // розподілу похибки) сюди не підходять: це евристика
+          // σ=sqrt(kpDelta²+0.5²) з мінливості Kp, не відкалібрований розподіл
+          // залишків проти GT. Тому в назві/title лишається тільки нейтральне
+          // "евристичний діапазон мінливості", без множників нормального
+          // розподілу (раніше тут був і "×1.96" — теж прибрано, fp213).
+          ciEl.title = `Евристичний діапазон мінливості ≈ ±${cb.delta.toFixed(1)}.\nKp variability ${cb.kpDelta.toFixed(1)} + event uncertainty 0.5.\nЧим менше — тим стабільніший прогноз.\n\n⚠ Це НЕ статистичний довірчий інтервал — емпіричної калібровки проти GT ще не проведено.`;
           ciEl.style.display = '';
         } else {
           ciEl.style.display = 'none';
@@ -13833,6 +14153,14 @@ function syncHero(){
   } else if (isFinite(dn)) {
     _hasDeltaHistory = true;
   }
+  // v88.9.29-fp210: нормалізація «−0.00» — крихітні відʼємні Δ (напр. -0.001)
+  // після toFixed(2) давали "↓ -0.00" / "→ −0.00", що виглядало як помилка.
+  // Все з |Δ| < 0.005 показуємо як рівно 0 (стрілка "→ 0.00").
+  if (isFinite(dn) && Math.abs(dn) < 0.005) dn = 0;
+  // v88.9.39-fp221: heroDelta і v86DeltaInline — обидва завжди про G_now.
+  // Кільце тепер ЗАВЖДИ показує G_now (fp221, вище), ніколи не вердикт —
+  // тому гейтинг "ховати дельту, коли центр показує вердикт" (fp215/fp218)
+  // більше не потрібен: центр і дельта завжди одна метрика.
   const hd=el('heroDelta');
   if(hd){
     if(_hasDeltaHistory && isFinite(dn)){
@@ -13850,14 +14178,16 @@ function syncHero(){
     }
   }
 
-  // v87.21: mirror ΔG inline beneath v86GVal (centre of ring) — main visible signal
+  // v88.9.39-fp221: v86DeltaInline — той самий принцип, завжди про G_now.
   const _hdi = el('v86DeltaInline');
   if(_hdi){
     if(_hasDeltaHistory && isFinite(dn)){
       const _absd = Math.abs(dn);
       const _arr = dn > 0.05 ? '↑' : dn < -0.05 ? '↓' : '→';
       const _sgn = dn > 0 ? '+' : dn < 0 ? '−' : '';
-      _hdi.textContent = _arr + ' ' + _sgn + _absd.toFixed(2);
+      // v88.9.41-fp223 (аудит-раунд-10, Problem 3): "→ 0.00" без підпису "Δ"
+      // не було зрозуміло, що це зміна. Додано короткий префікс "Δ".
+      _hdi.textContent = 'Δ ' + _arr + ' ' + _sgn + _absd.toFixed(2);
       // Колір: сильний сигнал при |Δ|≥0.5, слабкий при 0.1–0.5, нейтральний інакше
       _hdi.style.color = _absd < 0.1 ? 'var(--muted)'
                        : dn > 0 ? (_absd >= 0.5 ? 'var(--ok)' : '#9fd7b4')
@@ -14019,6 +14349,17 @@ function syncHero(){
   // fp79 FIX: resolveDataModeExtended → 'estimated' для нормального NOAA 3h циклу (не DELAYED)
   const _dataMode = (typeof resolveDataModeExtended === 'function') ? resolveDataModeExtended() : 'live';
   window.__dataMode = _dataMode; // v87.91: глобально доступно для інших рендерів (heroTomorrow тощо)
+  // v88.9.40-fp222 (Problem 4, writer 4/4): публікуємо в __sourceState. Guard: не
+  // перезаписуємо mode='degraded' мовчки — resolveDataModeExtended() не знає про
+  // DEGRADED (окрема детекція watchdog'а), тому без guard'а цей writer міг би
+  // тихо "повернути" стан назад до estimated/live одразу після того, як watchdog
+  // щойно виявив DEGRADED — відтворивши ту саму гонку станів у новому об'єкті.
+  if (typeof _updateSourceState === 'function') {
+    const _curMode = window.__sourceState && window.__sourceState.mode;
+    if (_curMode !== 'degraded' || window.__isDegraded !== true) {
+      _updateSourceState({ mode: _dataMode });
+    }
+  }
   const hf=el('heroFreshness');
   if(hf){
     // Маппинг dataMode → display label
@@ -14252,7 +14593,10 @@ function syncHero(){
       const _drKey = _topDrv.main?.key || 'kp';
       // Cause by driver type
       const _causes = {
-        kp: { neg:'Геомагнітний тиск → підвищена нервовість → помилки дорожчі.', pos:'Спокійне поле → стабільна концентрація → рішення точніші.' },
+        // v88.9.29-fp210: kp-тексти описували інверсну семантику (neg='тиск' при
+        // фізично спокійному Kp<2; pos='спокійне поле' навіть при Kp 5+). Тепер
+        // описуємо ВНЕСОК моделі, не вигаданий фізичний стан:
+        kp: { neg:'Внесок Kp−2 у мінус (фон фізично спокійний) → загальний G нижчий → без форсування.', pos:'Внесок Kp−2 у плюс → G вищий; за високого Kp — звичайна пильність.' },
         ei: { neg:'Астроподія → порушення ритму → обережніше з новим.', pos:'Сприятлива подія → підтримка дій.' },
         pi: { neg:'Панчанга тисне → внутрішня нестабільність → не форсуй.', pos:'Панчанга підтримує → хронобіологічний ресурс є.' },
         li: { neg:'Місячна фаза → зниження адаптації → мінімізуй навантаження.', pos:'Місячна фаза сприятлива.' },
@@ -14467,16 +14811,30 @@ function _renderHeroCause(g, kp) {
     if (_top3.length > 0) {
       chainEl.innerHTML = _top3.map(f => {
         const sign = f.val > 0 ? '+' : '';
-        const dir  = f.val > 0 ? '↑' : '↓';
+        const isKp = f.name === 'Kp−2';
+        // v88.9.34-fp215 FIX-CRITICAL (аудит-раунд-5, Problem 3): для Kp−2 текст
+        // уже описував ФІЗИЧНИЙ стан (neg='спокійний'), але стрілка (dir) і
+        // колір-клас (cls) досі бралися за сирим арифметичним знаком val=Kp−2 —
+        // тим самим правилом, що й для Pᵢ/Lᵢ/etc, де val<0 дійсно означає
+        // "погано". Для Kp це давало пряму суперечність: "↓ −0.7 — фон
+        // спокійний" (слово=добре, стрілка+колір=погано). Тепер для Kp обидва
+        // похідні від ФІЗИЧНОГО стану (ті самі пороги, що вже в
+        // renderKpContribution, fp212: <3 спокійно, 3–5 підвищено, ≥5 буря),
+        // а не від сирого знаку компонента формули.
+        const _kpPhysical = isKp ? (f.val + 2) : null; // val = Kp-2 → Kp = val+2
+        const dir = isKp
+          ? (_kpPhysical >= 3 ? '↑' : '↓')
+          : (f.val > 0 ? '↑' : '↓');
         const eff  = _effects[f.name] || { neg:'додає ризик', pos:'сприяє' };
         // Для Kp−2 інверсна семантика: f.val > 0 (вище за 2) = негативний геомагнітний стан.
         // Хоч у формулі це додатний вклад у G (бо ваш G = Kp − 2 + ΣAᵢ — більше Kp ⇒ більше G).
         // Класс CSS залишаємо за знаком вкладу (для color), але текст — фізично коректний.
-        const isKp = f.name === 'Kp−2';
         const txt  = isKp
                    ? (f.val > 0 ? eff.pos : eff.neg)  // словник Kp−2 уже інверсно сформульовано: pos = "активний/збурений"
                    : (f.val > 0 ? eff.pos : eff.neg);
-        const cls  = f.val > 0 ? 'is-pos' : 'is-neg';
+        const cls  = isKp
+          ? (_kpPhysical >= 3 ? 'is-neg' : 'is-pos') // фізично: буря/підвищено = погано, спокійно = добре
+          : (f.val > 0 ? 'is-pos' : 'is-neg');
         return `<div class="why-cause-row ${cls}">`
              + `<span class="wcr-cause">${f.name} (зараз) ${dir} ${sign}${f.val.toFixed(1)}</span>`
              + `<span class="wcr-arrow">→</span>`
@@ -15708,18 +16066,44 @@ function renderProvenance(){
 
   // Engine v18.5 entry today
   const _eng = (typeof getEngineScore === 'function') ? getEngineScore(_now) : null;
-  const _engStr = _eng ? `${_eng.eng >= 0 ? '+' : ''}${_eng.eng}${_eng.kp_synthetic ? ' ⚠ synthetic' : ''}` : '—';
+  // v88.9.37-fp219 FIX-CRITICAL (аудит-раунд-6, Problem 2): той самий баг, що
+  // і Problem 1 (heroBulletin) — synthetic-мітка була безумовною, а заголовок
+  // блоку жорстко "Engine v18.5" навіть коли _eng.eng — PDF override, не
+  // розрахунок engine. Formula Audit — саме те місце, де користувач очікує
+  // найточнішу provenance-інформацію, тому цю плутанину тут особливо критично
+  // було залишити. Тепер явно розділено.
+  const _engIsOverride = !!(_eng && _eng._expertOverride);
+  const _engStr = _eng ? `${_eng.eng >= 0 ? '+' : ''}${_eng.eng}${(!_engIsOverride && _eng.kp_synthetic) ? ' ⚠ synthetic' : ''}` : '—';
   const _engTag = _eng?.tag || '—';
+  const _engRawStr = (_eng && isFinite(_eng._engRaw)) ? `${_eng._engRaw >= 0 ? '+' : ''}${_eng._engRaw}${_eng.kp_synthetic ? ' ⚠ synthetic' : ''}` : (_engIsOverride ? 'недоступний' : '—');
+  const _engSourcePdf = _eng?._overrideSourcePdf || _eng?._overrideAppliedIn || '—';
 
   // Components G
   const _ai = _ui.ai || _ds.ai || {};
   const _gNow = _ui.gNow ?? _ds.gNow ?? NaN;
 
   // Cache state
-  const _cacheState = _fresh.toLowerCase().includes('live') ? '✓ LIVE'
-                    : _fresh.toLowerCase().includes('cache') || _fresh.toLowerCase().includes('stale') ? '⊙ CACHE/STALE'
-                    : _fresh.toLowerCase().includes('offline') || _fresh.toLowerCase().includes('old') ? '✗ OFFLINE'
-                    : '? unknown';
+  // v88.9.33-fp214 FIX (аудит-раунд-4): freshnessBadge може показувати "DEGRADED"
+  // (задокументовано в його ж title/tooltip: "NOAA-фід не оновлювався понад 3г
+  // АБО фізична суперечність між джерелами"), але жодна з попередніх гілок
+  // (live/cache/stale/offline/old) не матчила цей рядок — падало в "? unknown",
+  // хоча стан насправді ВІДОМИЙ (просто відсутня гілка). Додано явну гілку.
+  const _freshLower = _fresh.toLowerCase();
+  // v88.9.40-fp222 (Problem 4, фінально): тепер window.__sourceState.mode —
+  // перше джерело (єдиний canonical об'єкт, у який пишуть усі 4 writer'и).
+  // window.__isDegraded — другий пріоритет (той самий прапор з fp215, лишається
+  // для сумісності). Текстовий парсинг freshnessBadge — останній fallback.
+  const _srcMode = window.__sourceState && window.__sourceState.mode;
+  const _modeToLabel = { live:'✓ LIVE', estimated:'✓ ESTIMATED', delayed:'⊙ DELAYED', stale:'⊙ CACHE/STALE', old:'✗ OFFLINE', scenario:'⚠ SCENARIO', offline:'✗ OFFLINE', degraded:'⚠ DEGRADED' };
+  const _cacheState = _modeToLabel[_srcMode] ? _modeToLabel[_srcMode]
+                    : window.__isDegraded === true ? '⚠ DEGRADED'
+                    : _freshLower.includes('degraded') ? '⚠ DEGRADED'
+                    : _freshLower.includes('live') ? '✓ LIVE'
+                    : _freshLower.includes('cache') || _freshLower.includes('stale') ? '⊙ CACHE/STALE'
+                    : _freshLower.includes('offline') || _freshLower.includes('old') ? '✗ OFFLINE'
+                    : _freshLower.includes('delay') ? '⊙ DELAYED'
+                    : _freshLower.includes('estimat') ? '✓ ESTIMATED'
+                    : `? unknown (raw: ${_fresh})`;
 
   const _row = (label, val, hint) => `<div style="display:grid;grid-template-columns:140px 1fr;gap:10px;padding:3px 0;border-bottom:1px solid rgba(30,42,68,.4)">
     <span style="color:var(--dim)">${label}</span>
@@ -15758,9 +16142,18 @@ function renderProvenance(){
       </div>
     </div>
     <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+      ${_engIsOverride ? `
+      <div style="font-size:10px;color:#ffd166;letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px">PDF override (verified expert verdict)</div>
+      ${_row('Score', _engStr)}
+      ${_row('Джерело', escapeHtml(String(_engSourcePdf)))}
+      <div style="font-size:10px;color:var(--warn);letter-spacing:.12em;text-transform:uppercase;margin:10px 0 6px">Raw Engine v18.5 (для порівняння, НЕ застосовано)</div>
+      ${_row('Score', _engRawStr)}
+      ${_row('Tag', _engTag)}
+      ` : `
       <div style="font-size:10px;color:var(--warn);letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px">Engine v18.5 (rule-based, для порівняння)</div>
       ${_row('Score', _engStr)}
       ${_row('Tag', _engTag)}
+      `}
     </div>
     <div style="margin-top:10px;padding:6px 8px;font-size:10px;color:var(--faint);background:rgba(11,18,32,.6);border-radius:6px;line-height:1.5">
       Усі дані фіксуються при кожному G-tick (~10 хв). Натисни Оновити (вверху) щоб примусово оновити.
@@ -16202,8 +16595,14 @@ function renderCounterfactual(){
   let _topHtml = '';
   if(_components.length > 0){
     const _top = _components[0];
-    const _topCol = _top.val > 0 ? 'var(--ok)' : 'var(--bad)';
-    const _topAction = _top.val > 0 ? 'найбільше додає' : 'найбільше тисне';
+    // v88.9.34-fp215 (аудит-раунд-5, той самий клас Problem 3): для Kp той самий
+    // сирий знак val>0 давав хибний колір/текст — спокійний Kp (val<0) писався
+    // як "найбільше тисне" червоним, хоча фізично це добре. Той самий фізичний
+    // поріг, що вже в renderKpContribution (fp212) і why-cause-chain (fp215 вище).
+    const _isTopKp = _top.name === 'Kp − 2';
+    const _topPhysicalBad = _isTopKp ? ((_top.val + 2) >= 3) : (_top.val < 0);
+    const _topCol = _topPhysicalBad ? 'var(--bad)' : 'var(--ok)';
+    const _topAction = _topPhysicalBad ? 'найбільше тисне' : 'найбільше додає';
     // v87.90: clean format — нуль як "0"
     const _topStr = Math.abs(_top.val) < 0.05 ? '0' : (_top.val > 0 ? '+' : '') + _top.val.toFixed(1);
     const _secStr = _components.length >= 2
