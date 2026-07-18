@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.46-fp228-SYNCHERO-WRITER-FIX</title>
+  <title>G-Index — Космофізичний дашборд v88.9.47-fp229-HEADER-OVERRIDE-LABEL</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -13493,9 +13493,19 @@ function _renderHeroHierarchy(){
     box.innerHTML =
         `<div style="display:flex;gap:8px;align-items:baseline;padding:7px 10px;background:rgba(43,212,125,.06)">`
       + `<span style="flex:0 0 62px;font-size:8px;font-weight:800;letter-spacing:.06em;color:#9cd49c;text-transform:uppercase">Сьогодні</span>`
-      + `<span class="hero-label" data-basic="Сьогодні" style="flex:0 0 150px;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--ok)">Рішення дня · PDF/Engine</span>`
+      + `<span class="hero-label" data-basic="Сьогодні" style="flex:0 0 150px;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--ok)">Рішення дня · ${(function(){
+          // v88.9.47-fp229 (аудит-раунд-16, Недолік 1): заголовок завжди казав
+          // узагальнено "PDF/Engine", навіть коли сьогодні реально застосовано
+          // verified PDF override (не розрахунок engine). Той самий принцип, що
+          // вже застосований до кільця (fp215) і 3-day карток (fp215/fp224).
+          try {
+            const _esToday = (typeof todayKyivStr === 'function' && typeof getEngineScore === 'function')
+              ? getEngineScore(new Date(todayKyivStr()+'T12:00:00Z')) : null;
+            return (_esToday && _esToday._expertOverride) ? 'PDF OVERRIDE' : 'PDF/Engine';
+          } catch(_e) { return 'PDF/Engine'; }
+        })()}</span>`
       + `<span style="flex:1;font-size:14px;font-weight:700;line-height:1.25">${decHtml}</span></div>`
-      + row('Фон зараз · G_now' + (function(){ try { const _r = resolveSourceLabel(); return _r.isLive ? ' (live)' : ' (' + _r.freshnessLabel.toLowerCase() + ')'; } catch(_e){ return ' (live)'; } })(), gHtml, null, 'Зараз')
+      + row((function(){ try { const _r = resolveSourceLabel(); return _r.isLive ? 'Фон зараз · G_now (live)' : 'Останній фон · G_now (' + _r.freshnessLabel.toLowerCase() + ')'; } catch(_e){ return 'Фон зараз · G_now (live)'; } })(), gHtml, null, 'Зараз')
       + row('Прогноз дня · PDF/Engine', tomoHtml, null, 'Завтра')
       + row('Якість даних', `<span style="font-weight:700;color:${qCol}">${qLab}</span>`, null, '')
       + (function(){
