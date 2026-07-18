@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.43-fp225-SOURCESTATE-RACE-RING-EDGE</title>
+  <title>G-Index — Космофізичний дашборд v88.9.44-fp226-OBSERVED-DELAYED-LABEL</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -3141,6 +3141,7 @@ function _renderFreshnessState(){
   // (NOAA SWPC issue 2026-03-28). Тоді ми вважалися LIVE, але resolveDataMode вже бачив partial.
   // Тепер обидва writer-и узгоджені: top status теж downgrade до DELAYED+content-stale.
   let _contentOverride = false;
+  let _isRealObserved = false;
   try {
     const _src = window._kpSourceFreshness;
     if (_src && isFinite(_src.ageHours)) {
@@ -3156,8 +3157,23 @@ function _renderFreshnessState(){
         // DELAYED, а resolveDataModeExtended повертає 'estimated' → два writer-и розсинхронізовані.
         const _last3Fake = !!(typeof last3D !== 'undefined' && last3D && last3D._synthetic);
         if (!_last3Fake && _src.ageHours <= 12) {
-          // ESTIMATED — спокійний синювато-сірий колір, без тривожного жовтого
-          state='estimated'; label='● ESTIMATED · контент '+_src.ageHours.toFixed(1)+'г'; col='#a8d5e0'; bgCol='#0e1f2a'; _contentOverride=true;
+          // v88.9.44-fp226 FIX-CRITICAL (аудит-раунд-13): "ESTIMATED" писалось
+          // ЛИШЕ за віком контенту (>1г, ≤12г), незалежно від ТИПУ джерела —
+          // затримане, але РЕАЛЬНЕ observed-вимірювання (Kp з NOAA спостережень,
+          // просто на кілька годин старіше) називалось так само, як справжній
+          // forecast/оцінка. "ESTIMATED" читається як "модель вгадала", хоча
+          // насправді це просто затримка доставки реального значення. Тепер
+          // видимий текст розрізняє джерело: якщо lastWWV.kNow (реальний
+          // observed Kp) доступний — "OBSERVED · DELAYED", інакше — "ESTIMATED"
+          // (справжній forecast/fallback). Внутрішній ключ стану (state=
+          // 'estimated') НЕ змінено — забагато коду читає саме цей рядок,
+          // перейменування самого ключа — окрема, ризикованіша задача.
+          _isRealObserved = !!(typeof lastWWV !== 'undefined' && lastWWV && isFinite(lastWWV.kNow) && !lastWWV._synthetic);
+          state='estimated';
+          label = _isRealObserved
+            ? '● OBSERVED · DELAYED '+_src.ageHours.toFixed(1)+'г'
+            : '● ESTIMATED · контент '+_src.ageHours.toFixed(1)+'г';
+          col='#a8d5e0'; bgCol='#0e1f2a'; _contentOverride=true;
         } else {
           state='delayed'; label='● DELAYED · контент '+_src.ageHours.toFixed(1)+'г'; col='#ffcc44'; bgCol='#2a1a00'; _contentOverride=true;
         }
@@ -3169,7 +3185,9 @@ function _renderFreshnessState(){
     // v88.8.35-fp9 O: для heroFreshness теж зберігаємо вирівняний стан + позначка контенту якщо overridden.
     // v88.8.35-fp17 fix: ЯВНИЙ reset inline-стилів — попередній scenario/offline рендер міг
     // залишити hf.style.color, який не перебивається класами при поверненні у live/estimated.
-    const _hfLabel = state.toUpperCase() + (_contentOverride ? ' · контент' : ' · ' + _ageStr);
+    const _hfLabel = (state === 'estimated' && _isRealObserved)
+      ? ('OBSERVED · DELAYED' + (_contentOverride ? ' · контент' : ' · ' + _ageStr))
+      : (state.toUpperCase() + (_contentOverride ? ' · контент' : ' · ' + _ageStr));
     hf.textContent = _hfLabel;
     hf.className=''; hf.classList.add(state);
     hf.style.color = ''; hf.style.background = '';
