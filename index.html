@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.42-fp224-OVERRIDE-INDEPENDENCE-2</title>
+  <title>G-Index — Космофізичний дашборд v88.9.43-fp225-SOURCESTATE-RACE-RING-EDGE</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1522,6 +1522,7 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
                 <div id="v86CI" class="hint" tabindex="0" style="font-size:10px;font-weight:600;color:var(--dim);margin-top:2px;line-height:1;letter-spacing:.02em;cursor:help;pointer-events:auto;display:none" title=""></div>
                 <!-- v87.21: inline ΔG trend directly beneath G-value for immediate signal -->
                 <div id="v86DeltaInline" style="font-size:13px;font-weight:800;line-height:1;margin-top:4px;color:var(--muted);letter-spacing:.02em;min-height:13px"></div>
+                <div id="v86CompensationNote" style="display:none;font-size:9px;color:#ffd166;line-height:1.3;margin-top:3px;max-width:150px;text-align:center;cursor:help"></div>
                 <div id="v86GLabel" style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);margin-top:2px">G_now</div>
               </div>
             </div>
@@ -2392,7 +2393,7 @@ Kp: 3-год індекс геомагнітної активності (0–9)
     <div class="swipe-hint" style="display:none" id="swipeHint27">Прокрутіть таблицю</div>
     <section class="card" id="twentysevenCard">
         <div class="flex" style="flex-wrap:wrap;gap:8px">
-          <h2 style="margin:0">27-денний G_day raw <span style="font-size:13px;font-weight:400;color:var(--dim)">(NOAA 27-day Largest Kp → G_day)</span></h2>
+          <h2 style="margin:0">27-денний G_day raw <span style="font-size:13px;font-weight:400;color:var(--dim)">(NOAA Largest Kp − 2 + ΣAᵢ)</span></h2>
           <!-- v88.8.35-fp56-P8: explicit rail badge — users look at the line, not the fine print. -->
           <span style="display:inline-block;font-size:10px;font-weight:700;letter-spacing:.04em;color:#8fb5ff;background:rgba(55,167,255,.10);border:1px solid rgba(55,167,255,.30);border-radius:6px;padding:2px 8px;margin-left:2px;vertical-align:middle">NOAA raw rail · не рішення дня</span>
           <span class="hint" tabindex="0" style="cursor:help;font-size:11px;color:var(--dim);border-bottom:1px dotted #2a3b61">? що це<span class="hint-pop" style="white-space:pre;font-size:12px;text-align:left;max-width:380px">Це НЕ G_now і НЕ PDF/Engine — це окремий індекс raw-фону доби.
@@ -6242,7 +6243,16 @@ function getEngineScore(dateObj){
           _expertEngCandidate: ovr.expert_eng,
           _overrideCategory: ovr.category || 'manual_expert_override',
           _overrideAppliedIn: ovr.applied_in || ovr.source_pdf || ovr.source || '',
-          _overrideSourceReason: 'verified_with_source_pdf_and_snippet_hash',
+          // v88.9.43-fp225 FIX (doc15, Problem 6): раніше причина верифікації
+          // завжди писалась як "verified_with_source_pdf_and_snippet_hash" —
+          // навіть коли _hashOk=false і override пройшов ЛИШЕ через
+          // verified_by_pdf_reading (без реального хешу). Це перебільшувало
+          // криптографічну доказовість джерела (аудит цілком слушно це зауважив:
+          // формат sha256:... перевіряється, але не реальний digest тексту PDF —
+          // цього ми тут і не стверджуємо, лише позначаємо, ЯКИЙ шлях спрацював).
+          _overrideSourceReason: (_hashOk && _pdfReadingOk) ? 'hash_format_gate_and_manual_pdf_reading'
+                               : _hashOk ? 'hash_format_gate'
+                               : 'manual_pdf_reading',
           _overrideSnippetHash: ovr.snippet_hash || null,
           _overrideSourcePdf: ovr.source_pdf || ovr.source || null,
           _overrideSourcePage: ovr.source_page || null
@@ -6281,9 +6291,13 @@ function getEngineScore(dateObj){
       _expertEngCandidate: ovr.expert_eng,
       _overrideCategory: ovr.category || 'manual_expert_override',
       _overrideAppliedIn: ovr.applied_in || ovr.source_pdf || ovr.source || '',
-      _overrideSourceReason: _isVerified
-        ? 'verified_with_source_pdf_and_snippet_hash'
-        : 'candidate_override_unverified',
+      // v88.9.43-fp225 FIX (doc15, Problem 6): та сама заміна, що і в
+      // fallback-гілці вище — реальний метод верифікації, не перебільшена
+      // "hash"-формула для записів, що пройшли лише через pdf_reading.
+      _overrideSourceReason: !_isVerified ? 'candidate_override_unverified'
+        : (_hashOk && _pdfReadingOk) ? 'hash_format_gate_and_manual_pdf_reading'
+        : _hashOk ? 'hash_format_gate'
+        : 'manual_pdf_reading',
       _overrideSnippetHash: ovr.snippet_hash || null,
       _overrideSourcePdf: ovr.source_pdf || ovr.source || null,
       _overrideSourcePage: ovr.source_page || null
@@ -7986,13 +8000,18 @@ function computeCScore(kpNow, kpObsJson, ai, G, kpSrc){
     const _dstObj = window._lastDst;
     const _dstV = _dstObj && isFinite(_dstObj.dst) ? _dstObj.dst : null;
     if (isFinite(kp) && kp < 2 && _dstV !== null && _dstV < -80) _degraded = true;
-    // Rule 3 mirror: NOAA feed stale > 3h
+    // v88.9.43-fp225 FIX-CRITICAL (doc15, Problem 2): цей "Rule 3 mirror" мав
+    // ВЛАСНИЙ, незалежний поріг >3г — коли в fp224 я підняв поріг watchdog'а
+    // до 12г (узгодивши з "ESTIMATED · Kp ≤12год = норма циклу"), забув про
+    // ЦЮ копію того самого правила. Тому C-score міг штрафувати −28% (DEGRADED)
+    // навіть коли сам бейдж уже коректно показував ESTIMATED, не DEGRADED —
+    // третє незалежне джерело істини для того самого факту. Синхронізовано.
     const _src = window._kpSourceFreshness;
-    if (_src && _src.ageHours != null && _src.ageHours > 3) _degraded = true;
+    if (_src && _src.ageHours != null && _src.ageHours > 12) _degraded = true;
   } catch(e){ /* silent */ }
   if(_degraded){
     penalty += 0.28;
-    reasons.push({ txt:'DEGRADED — фід >3г або фізична суперечність джерел', col:'#ff6b6b', d:0.28 });
+    reasons.push({ txt:'DEGRADED — фід >12г або фізична суперечність джерел', col:'#ff6b6b', d:0.28 });
   } else if (_fbTxt.includes('cache') || _fbTxt.includes('stale')){
     penalty += 0.12;
     reasons.push({ txt:'Дані з кешу (stale/cached)', col:'#ffcc00', d:0.12 });
@@ -9008,7 +9027,10 @@ function draw27dTable(){
       if(_bs27 && isFinite(_bs27.eng)){
         const _bSign = _bs27.eng >= 0 ? '+' : '';
         const _bCol = _bs27.eng >= 2 ? '#2bd47d' : _bs27.eng === 1 ? '#9cd49c' : _bs27.eng === 0 ? 'var(--muted)' : _bs27.eng === -1 ? '#ffaa33' : '#ff6b6b';
-        const _bSynth = _bs27.kp_synthetic ? '~' : '';
+        // v88.9.43-fp225 FIX-CRITICAL (doc15, Problem 4): той самий баг, що вже
+        // виправлено в heroBulletin (fp219) — ~ приписувався PDF override,
+        // ігноруючи _expertOverride. "PDF/Engine +3~" вводило в оману.
+        const _bSynth = _bs27._expertOverride ? '' : (_bs27.kp_synthetic ? '~' : '');
         // Sign divergence same rule as 3-day
         const _gPos27 = G >= 0.5, _gNeg27 = G <= -0.5;
         const _ePos27 = _bs27.eng > 0, _eNeg27 = _bs27.eng < 0;
@@ -12240,7 +12262,9 @@ function render3Day(parsed3){
         if(_bs && isFinite(_bs.eng)){
           const _bsSign = _bs.eng >= 0 ? '+' : '';
           const _bsCol = _bs.eng >= 2 ? '#2bd47d' : _bs.eng === 1 ? '#9cd49c' : _bs.eng === 0 ? 'var(--muted)' : _bs.eng === -1 ? '#ffaa33' : '#ff6b6b';
-          const _synth = _bs.kp_synthetic ? '~' : '';
+          // v88.9.43-fp225 FIX-CRITICAL (doc15, Problem 4): той самий баг, що
+          // вже виправлено в heroBulletin (fp219) — ~ приписувався PDF override.
+          const _synth = _bs._expertOverride ? '' : (_bs.kp_synthetic ? '~' : '');
           // v88.7 (deep audit): _recalculatedFromLive deprecated → _kpOutdated marker
           // Show marker коли snapshot Kp != live Kp (engine score залишається original snapshot)
           const _recalcMark = _bs._kpOutdated
@@ -13452,6 +13476,24 @@ function _patchStaleLoadingDOM() {
     }
   } catch(_e0) { /* silent */ }
 
+  // v88.9.43-fp225 (doc15, Problem 3): той самий клас race — computeCScore()
+  // (усередині renderCurrentPanel()) читає window._kpSourceFreshness, але це
+  // поле встановлюється ПІЗНІШЕ в loadAll() (після NOAA/GFZ fetch). На першому
+  // проході _src=undefined → DEGRADED-штраф C-score мовчки пропускається →
+  // "Якість даних: Висока" (92%) застрягає, навіть коли freshnessBadge вже
+  // показує ESTIMATED/DEGRADED. Один одноразовий ре-тригер, коли дані з'являться.
+  try {
+    const _qEl = document.getElementById('heroConfidence');
+    if (_qEl && _qEl.dataset._cscoreStale !== '0'
+        && isFinite(window._kpSourceFreshness?.ageHours)
+        && typeof renderCurrentPanel === 'function') {
+      renderCurrentPanel();
+      if (document.getElementById('heroConfidence')) {
+        document.getElementById('heroConfidence').dataset._cscoreStale = '0';
+      }
+    }
+  } catch(_e0b) { /* silent */ }
+
   // a) whyRows "Дані завантажуються…" — re-trigger _renderHeroCause if data is available now
   try {
     const _wr = document.getElementById('whyRows');
@@ -13656,19 +13698,43 @@ function renderGRadialV86(g, kp, ai){
   const GAP_PX = 2;
   const activeCount = neutral ? 6 : segs.filter(s => Math.abs(s.val) >= 0.05).length;
   const totalGap = activeCount > 1 ? GAP_PX * activeCount : 0;
-  // v88.9.42-fp224 FIX-CRITICAL (аудит-раунд-11, Problem 5): раніше довжина
-  // дуг залежала ЛИШЕ від пропорції компонента в сумі |значень| — тобто навіть
-  // при G=−0.43 (майже нейтрально) сегменти заповнювали ~95% кола (лишався
-  // тільки GAP_PX-розрив), бо пропорції рахувались НЕЗАЛЕЖНО від абсолютної
-  // сили G. Кільце виглядало як максимальна небезпека при слабкому стані.
-  // Тепер довжина ВСІЄЇ заповненої дуги масштабується за |G|/5 (5 — приблизна
-  // верхня межа "сильного" G_now в цій системі), з мінімальною видимою
-  // підлогою 8%, щоб навіть G≈0 не зникало візуально повністю. Пропорції
-  // МІЖ сегментами всередині заповненої частини лишаються тими самими —
-  // структура внесків не змінена, змінена лише загальна "сила" кільця.
+  // v88.9.43-fp225 FIX-CRITICAL (doc14/doc15, Problem 5, доопрацювання):
+  // fp224 масштабував довжину дуги за |G|/5, АЛЕ для "neutral" (всі компоненти
+  // справді нульові, rawTotal<0.01) примусово ставив масштаб=1 — тобто якраз
+  // ЦЕЙ край-кейс (G=0, все спокійно) все ще малював майже ПОВНЕ сіре коло,
+  // хоча мав би бути НАЙменшим. Прибрано цей примусовий override — масштаб
+  // тепер уніфіковано за |G|/5 для БУДЬ-якого стану, включно з neutral
+  // (природно дає малу/порожню дугу, бо G≈0, коли компоненти≈0).
+  //
+  // Другий край-кейс з аудиту (сильна компенсація: A1=+2, A2=−2 → G=0, але
+  // система насправді нестабільна) НЕ вирішується масштабуванням довжини дуги
+  // взагалі — |G| справді мале в цьому випадку, і дуга справді має бути
+  // короткою (net-результат дійсно слабкий). Замість спроби "показати
+  // нестабільність через довжину дуги" (що суперечило б самій ідеї "довжина
+  // = сила net G"), додано ОКРЕМИЙ індекс компенсації C = 1 − |G|/Σ|Aᵢ| —
+  // текстовий маркер поруч із кільцем, що явно попереджає про приховану
+  // внутрішню нестабільність, коли компоненти сильно гасять одне одного.
   const _gMagnitude = isFinite(g) ? Math.abs(g) : 0;
-  const _magnitudeScale = neutral ? 1 : Math.max(0.08, Math.min(1, _gMagnitude / 5));
+  const _magnitudeScale = Math.max(0.08, Math.min(1, _gMagnitude / 5));
   const usableC = Math.max(C - totalGap, C * 0.5) * _magnitudeScale;
+  // Індекс компенсації: наскільки сильно компоненти гасять одне одного.
+  // C→0: усі компоненти одного знаку (немає компенсації, |G|≈Σ|Aᵢ|).
+  // C→1: сильна компенсація (Σ|Aᵢ| набагато більше за |G| — активність є,
+  // а net-результат малий саме через взаємне скасування, не через спокій).
+  const _compensationIdx = (!neutral && rawTotal > 0.01) ? Math.max(0, 1 - (_gMagnitude / rawTotal)) : 0;
+  try {
+    const _compEl = document.getElementById('v86CompensationNote');
+    if (_compEl) {
+      if (_compensationIdx >= 0.4) {
+        _compEl.textContent = `⚠ висока компенсація C=${_compensationIdx.toFixed(2)} — сильні протилежні фактори гасять одне одного`;
+        _compEl.style.display = '';
+        _compEl.title = `Σ|Aᵢ|=${rawTotal.toFixed(2)}, але |G|=${_gMagnitude.toFixed(2)} — компоненти сильно скасовують одне одного. Кільце показує слабкий NET-результат, але окремі фактори всередині можуть бути сильними — дивись сегменти.`;
+      } else {
+        _compEl.textContent = '';
+        _compEl.style.display = 'none';
+      }
+    }
+  } catch(_eComp) {}
   const _segLabels = { v86segKp:'Kp−2 (геомагнітний)', v86segLi:'Lᵢ (місяць)', v86segMi:'Mᵢ (затемнення)', v86segEi:'eᵢ (події)', v86segPi:'Pᵢ (панчанга)', v86segDi:'Dᵢ (Dst-буря)' };
   let cursor = 0;
   segs.forEach(s => {
@@ -13738,7 +13804,11 @@ function renderGRadialV86(g, kp, ai){
       const _isNeutral = Math.abs(s.val) < 0.05;
       if (_dot) _dot.style.background = _isNeutral ? '#8b93a8' : (s.val < 0 ? (_typeColorsDim2[s.id] || '#555b6b') : (_typeColors2[s.id] || '#8b93a8'));
       const _valEl = document.querySelector(`#v86Legend [data-segval="${s.id}"]`);
-      if (_valEl) _valEl.textContent = _isNeutral ? '' : ' ' + (s.val >= 0 ? '+' : '') + s.val.toFixed(2);
+      // v88.9.43-fp225 (doc14, Problem 6): раніше число ховалось для майже-
+      // нульових значень — але явний приклад аудиту хоче бачити "Lᵢ +0.00"
+      // завжди, не лише для помітних значень. Товщина сама по собі недостатньо
+      // передає знак — число обов'язкове завжди.
+      if (_valEl) _valEl.textContent = ' ' + (s.val >= 0 ? '+' : '') + s.val.toFixed(2);
     });
   } catch(_eLg) {}
   // Central G-value
@@ -14258,7 +14328,11 @@ function syncHero(){
       const _sgn = dn > 0 ? '+' : dn < 0 ? '−' : '';
       // v88.9.41-fp223 (аудит-раунд-10, Problem 3): "→ 0.00" без підпису "Δ"
       // не було зрозуміло, що це зміна. Додано короткий префікс "Δ".
-      _hdi.textContent = 'Δ ' + _arr + ' ' + _sgn + _absd.toFixed(2);
+      // v88.9.43-fp225 (doc14, Problem 7): для нейтральної дельти (_arr='→')
+      // стрілка на дрібному шрифті могла сприйматись як мінус — прибрано лише
+      // для цього випадку. Для реальних ↑/↓ змін стрілка лишається — там вона
+      // несе змістовну інформацію про напрям.
+      _hdi.textContent = _arr === '→' ? ('Δ ' + _absd.toFixed(2)) : ('Δ ' + _arr + ' ' + _sgn + _absd.toFixed(2));
       // Колір: сильний сигнал при |Δ|≥0.5, слабкий при 0.1–0.5, нейтральний інакше
       _hdi.style.color = _absd < 0.1 ? 'var(--muted)'
                        : dn > 0 ? (_absd >= 0.5 ? 'var(--ok)' : '#9fd7b4')
@@ -14436,9 +14510,13 @@ function syncHero(){
     // Маппинг dataMode → display label
     // v88.8.35-fp9 O: 'partial' рендериться як DELAYED для словесної консистентності з top freshnessBadge
     // (раніше Hero казав PARTIAL, top — DELAYED, користувач плутався).
+    // v88.9.43-fp225 FIX-CRITICAL (doc15, Problem 1): estimated мапився на
+    // 'LIVE' — тому Hero завжди писав "LIVE", навіть коли верхній
+    // freshnessBadge (інше джерело правди) казав "ESTIMATED · контент 6.0г".
+    // Саме цей розсинхрон видно на скріні. Тепер узгоджено з верхнім бейджем.
     const _modeLabel = {
       live:      'LIVE',
-      estimated: 'LIVE',
+      estimated: 'ESTIMATED',
       partial:   'DELAYED',
       scenario:  'SCENARIO',
       offline:   'OFFLINE'
