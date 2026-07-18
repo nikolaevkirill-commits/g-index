@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.47-fp229-HEADER-OVERRIDE-LABEL</title>
+  <title>G-Index — Космофізичний дашборд v88.9.50-fp232-SELFAUDIT-DOUBLECOUNT-COMPGATE</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1575,8 +1575,8 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
           <!-- v88.8.56: завжди видимий пояснювальний рядок (не лише title-тултіп) —
                Kyrylo explicit ask після аудиту 2026-07-06: hero-число плутали з G_now. -->
           <div id="heroLegendCaption" style="margin-top:4px;text-align:center;font-size:9px;line-height:1.4;color:var(--faint)">
-            Головне число: <b style="color:var(--dim)">PDF/Engine verdict</b><br>
-            Live G_now — показано нижче як фон
+            Головне число: <b style="color:var(--dim)">G_now — останній observed фон</b><br>
+            PDF-вердикт показано окремо вище
           </div>
           <!-- v88.8.6 Д1: компактна lunar phase іконка під heroRing — постійно видима. -->
           <div id="heroMoonPhaseIcon" tabindex="0" style="display:none;margin-top:6px;text-align:center;font-size:10px;color:var(--dim);cursor:help" title="">
@@ -8077,10 +8077,15 @@ function computeCScore(kpNow, kpObsJson, ai, G, kpSrc){
     // якість максимум до "Середня" — точно як рекомендовано аудитом.
     try {
       const _rslPenalty = (typeof resolveSourceLabel === 'function') ? resolveSourceLabel() : null;
-      if (_rslPenalty && !_rslPenalty.isLive) {
-        // v88.9.46-fp228 FIX (справжня причина "Висока" не зникало): штраф 0.10
-        // (fp227) давав conf=0.90 — усе ще ≥85% поріг "Висока" у formatConfidence().
-        // Підняв до 0.18 (conf≈0.82), реально потрапляє в діапазон "Середня" (65-84%).
+      // v88.9.50-fp232 САМОАУДИТ-ФІКС: раніше цей штраф застосовувався до
+      // БУДЬ-якого не-live джерела — тобто накладався ПОВЕРХ штрафу за тип
+      // джерела вище (synthetic +0.30, 27d +0.22, 3d +0.10), хоча обидва
+      // штрафують ОДИН І ТОЙ САМИЙ факт (немає свіжих реальних даних).
+      // Для synthetic це давало 0.30+0.18=0.48 лише з джерела. Тепер штраф
+      // за застарілість застосовується ЛИШЕ коли Kp РЕАЛЬНО observed
+      // (kpSrc==='obs') — це саме той випадок, який тип-штраф не покриває
+      // взагалі (там penalty=0): дані справжні, але застарілі на N годин.
+      if (_rslPenalty && !_rslPenalty.isLive && kpSrc === 'obs') {
         penalty += 0.18;
         reasons.push({ txt:`${_rslPenalty.combined} — не live`, col:'#a8d5e0', d:0.18 });
       }
@@ -13506,7 +13511,15 @@ function _renderHeroHierarchy(){
         })()}</span>`
       + `<span style="flex:1;font-size:14px;font-weight:700;line-height:1.25">${decHtml}</span></div>`
       + row((function(){ try { const _r = resolveSourceLabel(); return _r.isLive ? 'Фон зараз · G_now (live)' : 'Останній фон · G_now (' + _r.freshnessLabel.toLowerCase() + ')'; } catch(_e){ return 'Фон зараз · G_now (live)'; } })(), gHtml, null, 'Зараз')
-      + row('Прогноз дня · PDF/Engine', tomoHtml, null, 'Завтра')
+      + row((function(){
+          // v88.9.48-fp230 (аудит-раунд-17, Problem 2): той самий принцип, що
+          // вже застосований до "сьогодні" (fp229) — тепер і для "завтра".
+          try {
+            const _tmrDate = new Date(new Date(todayKyivStr()+'T12:00:00Z').getTime() + 86400000);
+            const _esTmr = (typeof getEngineScore === 'function') ? getEngineScore(_tmrDate) : null;
+            return 'Прогноз дня · ' + ((_esTmr && _esTmr._expertOverride) ? 'PDF OVERRIDE' : 'PDF/Engine');
+          } catch(_e) { return 'Прогноз дня · PDF/Engine'; }
+        })(), tomoHtml, null, 'Завтра')
       + row('Якість даних', `<span style="font-weight:700;color:${qCol}">${qLab}</span>`, null, '')
       + (function(){
           // v88.8.35-fp56-P8: when day-verdict and live background diverge (|Δ|≥1), explain BOTH
@@ -13815,7 +13828,14 @@ function renderGRadialV86(g, kp, ai){
   try {
     const _compEl = document.getElementById('v86CompensationNote');
     if (_compEl) {
-      if (_compensationIdx >= 0.4) {
+      // v88.9.50-fp232 САМОАУДИТ-ФІКС: C — ВІДНОСНА величина, вона не знає
+      // про абсолютний масштаб. Тому компоненти ±0.1 (тривіальний шум) давали
+      // C=1.00 і попередження "сильні протилежні фактори гасять одне одного",
+      // хоча жодного сильного фактора там немає. Перевірено симуляцією:
+      // ±0.1 → Σ=0.2, C=1.00 → хибне попередження. Додано поріг за реальною
+      // силою Σ|Aᵢ| ≥ 1.5 — тепер попередження лише коли фактори справді
+      // сильні І при цьому взаємно гасяться.
+      if (_compensationIdx >= 0.4 && rawTotal >= 1.5) {
         _compEl.textContent = `⚠ висока компенсація C=${_compensationIdx.toFixed(2)} — сильні протилежні фактори гасять одне одного`;
         _compEl.style.display = '';
         _compEl.title = `Σ|Aᵢ|=${rawTotal.toFixed(2)}, але |G|=${_gMagnitude.toFixed(2)} — компоненти сильно скасовують одне одного. Кільце показує слабкий NET-результат, але окремі фактори всередині можуть бути сильними — дивись сегменти.`;
@@ -14246,9 +14266,14 @@ function syncHero(){
     try{
       const _capEl = document.getElementById('heroLegendCaption');
       if(_capEl){
-        _capEl.innerHTML = _hasVerdict
-          ? 'Головне число: <b style="color:var(--dim)">PDF/Engine verdict</b><br>Live G_now — показано нижче як фон'
-          : 'Engine недоступний — тимчасово показано <b style="color:var(--dim)">Live G_now</b>';
+        // v88.9.48-fp230 FIX-CRITICAL (аудит-раунд-17, Problem 1): текст тут
+        // писався для СТАРОЇ архітектури (до fp221), коли центр кільця
+        // показував PDF-вердикт. Після fp221 кільце ЗАВЖДИ показує G_now
+        // (архітектурна зміна: "кільце = G_now, вердикт — окремо") — але цей
+        // caption і далі стверджував "Головне число: PDF/Engine verdict",
+        // що прямо суперечило тому, що реально в центрі кільця (G_now,
+        // не вердикт). Тепер текст відповідає реальній поведінці кільця.
+        _capEl.innerHTML = 'Головне число: <b style="color:var(--dim)">G_now — останній observed фон</b><br>PDF-вердикт показано окремо вище';
       }
     }catch(_e){}
 
@@ -16423,6 +16448,17 @@ function renderProvenance(){
       ${_row('Score', _engStr)}
       ${_row('Tag', _engTag)}
       `}
+    </div>
+    <div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(155,177,220,.25)">
+      <div style="font-size:10px;color:#8fb5ff;letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px">Expert Excel replay (R&amp;D, довідково — НЕ production-джерело)</div>
+      ${_row('Strict-3 / Exact', '80.5% / 65.0% (n=394, перетин з GT)')}
+      ${_row('Файл покриває', '495 днів, 07.03.2025–14.07.2026')}
+      <div style="margin-top:6px;padding:6px 8px;font-size:9px;color:var(--faint);background:rgba(143,181,255,.06);border-radius:6px;line-height:1.5">
+        Ретроспективне відтворення PDF-вердикту за РУЧНИМИ експертними тегами (не автоматичний розрахунок).
+        Дані закінчуються 14.07.2026 — після цієї дати НЕ застосовується (немає підготовлених вхідних тегів).
+        Це не незалежний прогноз, а звірка з тим самим інструментом, яким міг користуватись експерт при написанні PDF.
+        Автоматизація вхідних тегів (V19-shadow) — окрема задача в розробці, паралельно з frozen v18.5, не в production.
+      </div>
     </div>
     <div style="margin-top:10px;padding:6px 8px;font-size:10px;color:var(--faint);background:rgba(11,18,32,.6);border-radius:6px;line-height:1.5">
       Усі дані фіксуються при кожному G-tick (~10 хв). Натисни Оновити (вверху) щоб примусово оновити.
