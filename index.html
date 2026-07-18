@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.45-fp227-UNIFIED-SOURCE-LABEL</title>
+  <title>G-Index — Космофізичний дашборд v88.9.46-fp228-SYNCHERO-WRITER-FIX</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -8078,8 +8078,11 @@ function computeCScore(kpNow, kpObsJson, ai, G, kpSrc){
     try {
       const _rslPenalty = (typeof resolveSourceLabel === 'function') ? resolveSourceLabel() : null;
       if (_rslPenalty && !_rslPenalty.isLive) {
-        penalty += 0.10;
-        reasons.push({ txt:`${_rslPenalty.combined} — не live`, col:'#a8d5e0', d:0.10 });
+        // v88.9.46-fp228 FIX (справжня причина "Висока" не зникало): штраф 0.10
+        // (fp227) давав conf=0.90 — усе ще ≥85% поріг "Висока" у formatConfidence().
+        // Підняв до 0.18 (conf≈0.82), реально потрапляє в діапазон "Середня" (65-84%).
+        penalty += 0.18;
+        reasons.push({ txt:`${_rslPenalty.combined} — не live`, col:'#a8d5e0', d:0.18 });
       }
     } catch(_ePen) { /* silent */ }
   }
@@ -8102,7 +8105,11 @@ function computeCScore(kpNow, kpObsJson, ai, G, kpSrc){
   const conf = Math.round((1 - penalty) * 100) / 100;
 
   // Grade
-  const grade = conf >= 0.75 ? 'high' : conf >= 0.50 ? 'med' : 'low';
+  // v88.9.46-fp228 FIX (той самий клас бага знову): grade тут мав ВЛАСНИЙ
+  // поріг (0.75/0.50), відмінний від formatConfidence() (0.85/0.65) —
+  // одна й та сама conf=0.82 могла одночасно називатись "Висока" тут і
+  // "Середня" через formatConfidence() деінде. Уніфіковано пороги.
+  const grade = conf >= 0.85 ? 'high' : conf >= 0.65 ? 'med' : 'low';
   const gradeCol = grade==='high' ? '#2bd47d' : grade==='med' ? '#ffcc00' : '#ff6b6b';
   const gradeLabel = grade==='high' ? 'Висока' : grade==='med' ? 'Середня' : 'Низька';
 
@@ -14591,9 +14598,16 @@ function syncHero(){
     // 'LIVE' — тому Hero завжди писав "LIVE", навіть коли верхній
     // freshnessBadge (інше джерело правди) казав "ESTIMATED · контент 6.0г".
     // Саме цей розсинхрон видно на скріні. Тепер узгоджено з верхнім бейджем.
+    // v88.9.46-fp228 FIX-CRITICAL (аудит-раунд-15): ЦЕЙ writer — справжня
+    // причина, чому "ESTIMATED" поверталось назад навіть після fp227.
+    // syncHero() виконується ПІСЛЯ _renderFreshnessState() (яка вже писала
+    // правильний "OBSERVED · DELAYED 5.0г" через resolveSourceLabel()) і
+    // ПЕРЕЗАПИСУВАВ heroFreshness.innerHTML назад на плоский "ESTIMATED" —
+    // старий паралельний renderer, точно як здогадався аудит. Тепер і цей
+    // writer читає ту саму resolveSourceLabel().
     const _modeLabel = {
       live:      'LIVE',
-      estimated: 'ESTIMATED',
+      estimated: (function(){ try { const _r = resolveSourceLabel(); return _r.isRealObserved ? _r.combined : 'ESTIMATED'; } catch(_e){ return 'ESTIMATED'; } })(),
       partial:   'DELAYED',
       scenario:  'SCENARIO',
       offline:   'OFFLINE'
@@ -16369,7 +16383,7 @@ function renderProvenance(){
         ${_row('Kp', isFinite(_kpVal) ? _kpVal.toFixed(2) : '—', _kpSrc)}
         ${_row('Sn (Wolf)', _snVal != null ? _snVal + _snProv : '—', _snDate + ' · SILSO')}
         ${_row('Dst', _dstVal != null ? _dstVal + ' нТл' : '—', _dstTime + ' · Kyoto' + _dstCached)}
-        ${_row('Cache state', _cacheState, _fresh)}
+        ${_row('Source state', _cacheState, (_fresh && _fresh.replace(/^●\s*/,'').trim() === _cacheState.replace(/^[✓⊙✗⚠]\s*/,'').trim()) ? '' : _fresh)}
       </div>
       <div>
         <div style="font-size:10px;color:var(--ok);letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px">${(typeof t === 'function' ? t('provenanceComposite') : 'Composite G')}</div>
