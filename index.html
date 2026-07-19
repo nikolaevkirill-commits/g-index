@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.57-fp239-SLOT-PARTIAL-OVERLAP-KPSRC</title>
+  <title>G-Index — Космофізичний дашборд v88.9.58-fp240-SW-CROSSORIGIN-HORA-SEQUENCE</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -15765,8 +15765,13 @@ function _renderHeroTimeWindows() {
       const now = new Date();
       visibleSlots.forEach(s => {
         const h = parseInt(s.label || '0');
-        const slotMid = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), h + 1, 30));
-        const hora = calcHora(slotMid);
+        // v88.9.58-fp240 (Problem 3): послідовність планет по ВСЬОМУ слоту,
+        // не лише в середині — див. calcHoraSequence.
+        const slotStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), h, 0));
+        const slotEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), h + 3, 0));
+        const sequence = calcHoraSequence(slotStart, slotEnd, 4);
+        const hora = sequence[0] || calcHora(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), h + 1, 30)));
+        hora.sequence = sequence;
         _horaForSlot[h] = hora;
       });
     } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
@@ -15859,7 +15864,13 @@ function _renderHeroTimeWindows() {
 
     if (_isFlat && _horaForSlot[h]) {
       const hora = _horaForSlot[h];
-      label = `${_actionLabel} · ${hora.planet}`;
+      // v88.9.58-fp240 (Problem 3): якщо всередині слоту хора змінюється —
+      // показуємо послідовність (Меркурій → Місяць), а не лише одну планету
+      // з середини слоту, яка могла вже не діяти на момент початку слоту.
+      const _horaLabel = (hora.sequence && hora.sequence.length > 1)
+        ? hora.sequence.map(x => x.planet).join(' → ')
+        : hora.planet;
+      label = `${_actionLabel} · ${_horaLabel}`;
     } else {
       label = _actionLabel;
     }
@@ -16460,9 +16471,16 @@ function syncDayPlanCard(){
     // Hora context
     let horaStr = '';
     try{
-      const slotMid = new Date(Date.UTC(_now.getUTCFullYear(), _now.getUTCMonth(), _now.getUTCDate(), h+1, 30));
-      const hora = calcHora(slotMid);
-      if(hora?.planet) horaStr = ` · ${hora.planet}`;
+      // v88.9.58-fp240 (Problem 3): послідовність замість одної точки в середині.
+      const _slotStart2 = new Date(Date.UTC(_now.getUTCFullYear(), _now.getUTCMonth(), _now.getUTCDate(), h, 0));
+      const _slotEnd2 = new Date(Date.UTC(_now.getUTCFullYear(), _now.getUTCMonth(), _now.getUTCDate(), h+3, 0));
+      const _seq2 = calcHoraSequence(_slotStart2, _slotEnd2, 4);
+      if (_seq2.length > 1) horaStr = ` · ${_seq2.map(x=>x.planet).join(' → ')}`;
+      else {
+        const slotMid = new Date(Date.UTC(_now.getUTCFullYear(), _now.getUTCMonth(), _now.getUTCDate(), h+1, 30));
+        const hora = calcHora(slotMid);
+        if(hora?.planet) horaStr = ` · ${hora.planet}`;
+      }
     }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
     // v87.90: конвертуємо UTC → локальний для відображення
     const _localStart = ((h + _tzOffH) % 24 + 24) % 24;
@@ -18218,6 +18236,41 @@ function calcHora(dateUTC) {
   const locEnd = endLocal.toLocaleTimeString('uk-UA',{hour:'2-digit',minute:'2-digit'});
   const minLeft = Math.round((horaEnd - nowH) * 60);
   return { planet: HORA_ORDER[horaIdx], end: locEnd, minLeft };
+}
+
+// v88.9.58-fp240 (аудит-раунд-26, Problem 3): раніше "План дня" рахував Хору
+// лише в ОДНІЙ точці — середині 3-годинного слоту (slotMid = h+1:30) — і
+// підписував весь слот ЦІЄЮ ОДНІЄЮ планетою. Хора триває ~1г (dayLen/12),
+// тому в 3-годинному слоті зазвичай 2-3 різні хори — підпис міг показувати
+// "Місяць" для всього 18:00-21:00, хоча о 18:09 реально активний Меркурій
+// (Меркурій-хора ще не закінчилась на момент початку слоту). Ця функція
+// проходить слот від початку до кінця, збираючи послідовність планет.
+function calcHoraSequence(startUTC, endUTC, maxEntries){
+  const seq = [];
+  let cursor = new Date(startUTC.getTime());
+  const endMs = endUTC.getTime();
+  const cap = maxEntries || 4;
+  let guard = 0;
+  while (cursor.getTime() < endMs && guard < cap) {
+    guard++;
+    const hora = calcHora(cursor);
+    if (!hora || !hora.planet) break;
+    // v88.9.58-fp240 САМОАУДИТ-ФІКС: на межовому моменті (cursor точно
+    // збігається з кінцем хори) calcHora повертає minLeft=0 для хори, що
+    // ЩОЙНО закінчилась — реальний тест показав дублікат "Місяць → Місяць"
+    // з однаковим часом. Якщо minLeft<=0, ця хора вже фактично не діє —
+    // зсуваємо курсор на 1 хв і перераховуємо, НЕ пушимо застарілий запис.
+    if (hora.minLeft <= 0) {
+      cursor = new Date(cursor.getTime() + 60000);
+      continue;
+    }
+    seq.push({ planet: hora.planet, fromLocal: cursor.toLocaleTimeString('uk-UA',{hour:'2-digit',minute:'2-digit'}), endLocal: hora.end });
+    const minLeftMs = hora.minLeft * 60000;
+    const nextCursorMs = cursor.getTime() + minLeftMs;
+    if (nextCursorMs <= cursor.getTime()) break; // захист від нескінченного циклу
+    cursor = new Date(nextCursorMs);
+  }
+  return seq;
 }
 
 // ===================== ТРАНЗИТ МІСЯЦЯ =====================
