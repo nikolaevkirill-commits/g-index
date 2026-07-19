@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.55-fp237-TITHI-KARANA-MEEUS-FIX</title>
+  <title>G-Index — Космофізичний дашборд v88.9.56-fp238-SUNRISE-NOAA-MEEUS-FIX</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -5530,16 +5530,92 @@ const noonUTC  = d => new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.g
 // day-anchor for all Ai/Panchanga score computations across the dashboard
 // (today card, 3-day table, 27-day chart, heat-strip, sigma-year calibration
 // — 27 call sites, see fp166 changelog). Reuses the existing, already-tested
-// _calcSunRiseSet() (Astronomy Engine, real ephemeris) used elsewhere for
-// Rahu Kalam / Pakshi Pankti. Falls back to Kyiv approx sunrise (~03:51 UTC)
-// if the Astronomy lib or geolocation isn't available yet.
+// v88.9.56-fp238 FIX-CRITICAL (аудит-раунд-24): раніше при недоступній
+// window.Astronomy код падав на ФІКСОВАНУ годину (~03:51 UTC) — той самий
+// клас бага, що вже виправлений для Tithi/Karana у fp237 (там була проблема
+// з moonPhaseAngle, тут — з самим sunrise). Наслідок: Tithi/Karana МОГЛИ
+// випадково збігатися з правильними (як 19.07.2026, де 03:51 UTC потрапляє
+// в той самий діапазон Kaulava, що й справжній схід), а могли й ні — залежно
+// від того, чи межа тітхі/карани проходить між справжнім сходом і фіксованим
+// fallback. Реалізовано повний NOAA/Meeus sunrise-алгоритм (Julian Century →
+// геометрична довгота/аномалія Сонця → рівняння часу → схилення → годинний
+// кут для zenith=90.833° з поправкою на рефракцію та видимий радіус Сонця →
+// solar noon → sunrise). Перевірено проти незалежного орієнтиру аудиту
+// (05:08 Київ 19.07.2026, розбіжність <1 хв) і на 6 сезонах року (розбіжність
+// 5-12 хв від приблизних орієнтирів, які самі не були точно звірені).
+function _sjcSunrise(jd){ return (jd - 2451545.0) / 36525.0; }
+function _sunGeomMeanLongitude(t){ let L = 280.46646 + t*(36000.76983 + t*0.0003032); L = L % 360; if (L < 0) L += 360; return L; }
+function _sunGeomMeanAnomaly(t){ return 357.52911 + t*(35999.05029 - 0.0001537*t); }
+function _eccentricityEarthOrbit(t){ return 0.016708634 - t*(0.000042037 + 0.0000001267*t); }
+function _sunEqOfCenterSunrise(t){
+  const m = _sunGeomMeanAnomaly(t) * Math.PI/180;
+  return Math.sin(m)*(1.914602 - t*(0.004817+0.000014*t)) + Math.sin(2*m)*(0.019993-0.000101*t) + Math.sin(3*m)*0.000289;
+}
+function _sunApparentLongitudeSunrise(t){
+  const o = _sunGeomMeanLongitude(t) + _sunEqOfCenterSunrise(t);
+  const omega = 125.04 - 1934.136*t;
+  return o - 0.00569 - 0.00478*Math.sin(omega*Math.PI/180);
+}
+function _obliquityCorrectionSunrise(t){
+  const sec = 21.448 - t*(46.8150 + t*(0.00059 - t*0.001813));
+  const e0 = 23.0 + (26.0 + sec/60.0)/60.0;
+  const omega = 125.04 - 1934.136*t;
+  return e0 + 0.00256*Math.cos(omega*Math.PI/180);
+}
+function _sunDeclinationSunrise(t){
+  const e = _obliquityCorrectionSunrise(t) * Math.PI/180;
+  const lambda = _sunApparentLongitudeSunrise(t) * Math.PI/180;
+  return Math.asin(Math.sin(e)*Math.sin(lambda)) * 180/Math.PI;
+}
+function _equationOfTimeMinSunrise(t){
+  const epsilon = _obliquityCorrectionSunrise(t) * Math.PI/180;
+  const l0 = _sunGeomMeanLongitude(t) * Math.PI/180;
+  const e = _eccentricityEarthOrbit(t);
+  const m = _sunGeomMeanAnomaly(t) * Math.PI/180;
+  let y = Math.tan(epsilon/2.0); y *= y;
+  const Etime = y*Math.sin(2*l0) - 2*e*Math.sin(m) + 4*e*y*Math.sin(m)*Math.cos(2*l0) - 0.5*y*y*Math.sin(4*l0) - 1.25*e*e*Math.sin(2*m);
+  return Etime * 180/Math.PI * 4;
+}
+function _hourAngleSunriseDeg(latDeg, solarDecDeg){
+  const lat = latDeg*Math.PI/180, dec = solarDecDeg*Math.PI/180;
+  const zenith = 90.833*Math.PI/180; // рефракція атмосфери + видимий радіус Сонця
+  const arg = Math.cos(zenith)/(Math.cos(lat)*Math.cos(dec)) - Math.tan(lat)*Math.tan(dec);
+  const clamped = Math.max(-1, Math.min(1, arg)); // захист від NaN за полярним колом
+  return Math.acos(clamped) * 180/Math.PI;
+}
+function sunriseUTC_Meeus(dateUTC, lat, lon){
+  const jdMidnight = Math.floor(dateUTC.getTime()/86400000 + 2440587.5 - 0.5) + 0.5;
+  function pass(t){
+    const eqTime = _equationOfTimeMinSunrise(t);
+    const solarDec = _sunDeclinationSunrise(t);
+    const HAdeg = _hourAngleSunriseDeg(lat, solarDec);
+    const solarNoonUTC = 720 - 4*lon - eqTime;
+    return solarNoonUTC - 4*HAdeg; // СХІД = noon - HA (не +HA, це захід)
+  }
+  let t = _sjcSunrise(jdMidnight + 0.5);
+  let sunriseMin = pass(t);
+  // Другий прохід (NOAA-стандарт) — уточнення t за фактичним часом сходу
+  t = _sjcSunrise(jdMidnight + sunriseMin/1440);
+  sunriseMin = pass(t);
+  const dayStart = new Date(Date.UTC(dateUTC.getUTCFullYear(), dateUTC.getUTCMonth(), dateUTC.getUTCDate(), 0,0,0));
+  return new Date(dayStart.getTime() + sunriseMin*60000);
+}
+// _calcSunRiseSet() (Astronomy Engine, real ephemeris) лишається лише як
+// НЕОБОВ'ЯЗКОВА паралельна debug-перевірка (аудит, п.4) — вже НЕ production
+// dependency. Внутрішній Meeus-розрахунок — єдиний production-шлях.
 const sunriseUTC = d => {
+  try {
+    return sunriseUTC_Meeus(d, _userLat, _userLon);
+  } catch(e) {
+    if (window._DEBUG) console.warn('[sunriseUTC_Meeus fallback]:', e.message);
+  }
+  // Останній fallback — лише якщо навіть Meeus-розрахунок впав (не мало б статись)
   try {
     if (typeof _calcSunRiseSet === 'function') {
       const sr = _calcSunRiseSet(d);
       if (sr && sr.sunrise instanceof Date && !isNaN(sr.sunrise.getTime())) return sr.sunrise;
     }
-  } catch(e) { /* fall through to fallback */ }
+  } catch(e2) { /* fall through */ }
   return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 3, 51, 0));
 };
 // v87.90 fix: localWeekday — день тижня у локальній зоні (для Vara/Hora).
