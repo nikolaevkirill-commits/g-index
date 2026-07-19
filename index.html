@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.56-fp238-SUNRISE-NOAA-MEEUS-FIX</title>
+  <title>G-Index — Космофізичний дашборд v88.9.57-fp239-SLOT-PARTIAL-OVERLAP-KPSRC</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -13572,7 +13572,13 @@ function _renderHeroHierarchy(){
         };
         const _m = (_cls && _map[_cls]) ? _map[_cls] : ['нейтральний','var(--muted)'];
         const word = _m[0], col = _m[1];
-        const kpTxt= isFinite(kpN) ? ` <span style="color:var(--faint);font-size:11px">· live Kp ${kpN.toFixed(2)}</span>` : '';
+        // v88.9.57-fp239 (аудит-раунд-25, Problem 3): "live Kp" завжди казав
+        // "live", незалежно від реального джерела — навіть коли Kp насправді
+        // OBSERVED · DELAYED на кілька годин. Той самий принцип, що вже
+        // застосований до heroFreshness/Formula Audit/заголовка через
+        // resolveSourceLabel().
+        const _kpSrcWord = (function(){ try { const _r = resolveSourceLabel(); return _r.isLive ? 'live' : (_r.isRealObserved ? 'observed' : 'forecast'); } catch(_e){ return 'live'; } })();
+        const kpTxt= isFinite(kpN) ? ` <span style="color:var(--faint);font-size:11px">· ${_kpSrcWord} Kp ${kpN.toFixed(2)}</span>` : '';
         // v88.8.51-fp128: видима арифметика — "звідки береться це число", без пояснень у тултіпах.
         // ΣAᵢ виводиться зворотно з формули G=Kp-2+ΣAᵢ (self-consistent, нічого не вигадується).
         let _breakdown = '';
@@ -15867,9 +15873,32 @@ function _renderHeroTimeWindows() {
     if (_inauspWins.length) {
       const _hits = _inauspWins.filter(w => Math.max(h, w.a) < Math.min(endH, w.b));
       if (_hits.length) {
+        // v88.9.57-fp239 FIX-CRITICAL (аудит-раунд-25, Problem 2): раніше ВЕСЬ
+        // 3-годинний слот позначався тегом ⚠, навіть коли інаусп. вікно
+        // перекриває лише ЧАСТИНУ слота і ще не почалось (напр. слот 15:00-18:00,
+        // Gulika 17:03-19:03 — до 17:03 слот насправді вільний, але виглядав як
+        // "уникати зараз"). Для ПОТОЧНОГО слота з частковим МАЙБУТНІМ перекриттям
+        // (нинішній момент ще ДО початку найранішого вікна) показуємо явний час,
+        // коли обмеження реально почнеться, замість блокового позначення.
+        const _nowPreciseH = new Date().getUTCHours() + new Date().getUTCMinutes()/60;
+        // v88.9.57-fp239 САМОАУДИТ-ФІКС: перша версія вимагала, щоб УСІ
+        // перетини були в майбутньому (_futureHits.length === _hits.length) —
+        // але коли Yama вже минула, а Gulika ще ні (точний сценарій зі скріна:
+        // 15:56 Київ, Yama скінчилась о 15:03), Yama лишалась у _hits (формально
+        // перетинає слот), тому умова "всі майбутні" провалювалась і тег ⚠
+        // Yama/Gulika лишався блоковим — той самий баг, який мав виправити.
+        // Правильна перевірка: чи АКТИВНЕ щось ПРЯМО ЗАРАЗ (a<=now<b), а не
+        // "чи всі перетини в майбутньому".
+        const _activeNow = isCurrent ? _hits.filter(w => w.a <= _nowPreciseH && _nowPreciseH < w.b) : _hits;
+        const _futureHits = isCurrent ? _hits.filter(w => w.a > _nowPreciseH) : [];
+        if (isCurrent && _activeNow.length === 0 && _futureHits.length > 0) {
+          const _earliestFuture = _futureHits.reduce((a,b) => a.a < b.a ? a : b);
+          label += ` · <span style="color:#7fe3a6;cursor:help" title="Наразі жодне інаусп. вікно не активне. ${_hits.map(w => `${w.nm} ${w.st}–${w.en} UTC`).join(', ')}.">вільно, ${_earliestFuture.nm} з ${_earliestFuture.st}</span>`;
+        } else {
         const _names = _hits.map(w => w.nm).join('/');
         const _tip = _hits.map(w => `${w.nm} ${w.st}–${w.en} UTC`).join(', ');
         label += ` · <span style="color:#ffcc44;cursor:help" title="Канонічне інаусп. вікно — ${_tip}. Перетин із цим Kp-слотом → частково обережно (Kp-клас не змінюється).">⚠ ${_names}</span>`;
+        }
       }
     }
     const cls = isCurrent ? ' is-now' : isNext ? ' is-next' : '';
