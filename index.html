@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.53-fp235-SELFAUDIT-LABEL-CONSISTENCY</title>
+  <title>G-Index — Космофізичний дашборд v88.9.55-fp237-TITHI-KARANA-MEEUS-FIX</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -2112,7 +2112,8 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
         <div class="flex" style="margin-bottom:8px;align-items:flex-start">
           <div>
             <h2 style="margin:0;font-size:16px">Панчанга дня</h2>
-            <div class="small muted" style="margin-top:2px">Референс на 12:00 UTC <span class="hint" tabindex="0" style="cursor:help;color:var(--dim);font-size:10px;margin-left:4px;border-bottom:1px dotted var(--faint)">ⓘ час відліку<span class="hint-pop" style="white-space:pre;font-size:11px;text-align:left">Тіхі/Вара/Накшатра/Йога/Карана розраховані на 12:00 UTC поточного дня (консистентність з G-формулою 3-day таблиці).
+            <div class="small muted" style="margin-top:2px" id="panchRefLabel">Референс на схід сонця <span class="hint" tabindex="0" style="cursor:help;color:var(--dim);font-size:10px;margin-left:4px;border-bottom:1px dotted var(--faint)">ⓘ час відліку<span class="hint-pop" style="white-space:pre;font-size:11px;text-align:left">Тіхі/Вара/Накшатра/Йога/Карана розраховані на реальний астрономічний схід сонця для поточного дня (ведична конвенція), НЕ на 12:00 UTC — попередній текст тут був неточним (fp236).
+Зовнішні календарі можуть показувати іншу тіхі, якщо рахують "на момент запиту" або "опівночі" (західна конвенція) — це методологічна різниця, не обов'язково помилка.
 Для поточної хори дивись блок «Планетарний ритм» у картці особистого прогнозу.</span></span></div>
           </div>
           <span class="pill right" id="panchDate" style="font-size:12px">—</span>
@@ -6836,11 +6837,30 @@ function moonAgeDays_simple(date){
   return (x + SYNODIC) % SYNODIC;
 }
 function moonPhaseAngle(date){
-  try{
-    if (window.Astronomy && typeof Astronomy.MoonPhase === 'function'){
-      return Astronomy.MoonPhase(date) % 360;
-    }
-  }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+  // v88.9.55-fp237 FIX-CRITICAL (аудит-раунд-23, підтверджено реальним тестом
+  // формул): раніше ця функція воліла window.Astronomy.MoonPhase() (зовнішня
+  // бібліотека), і ЛИШЕ якщо вона недоступна — падала на грубий
+  // moonAgeDays_simple() (середній синодичний рух 29.53 дн/цикл, БЕЗ корекцій
+  // еліптичності орбіти). У сесії Kyrylo бібліотека, вочевидь, не завантажилась
+  // (або дала іншу похибку) — фактично використовувався fallback.
+  // Перевірено числами (Node, вручну витягнуті функції з файлу): для 19.07.2026
+  // sunrise (02:08 UTC) fallback дає phaseDeg=52.37° → tithi#5=Panchami — точно
+  // те, що було на екрані. Точний шлях calcMoonLongitude(jde)−calcSunLongitude(jde)
+  // (той самий, що вже використовується для Nakshatra і зовнішньо звірений
+  // раніше) дає 61.99° → tithi#6=Shashthi — збігається з незалежним
+  // ефемеридним розрахунком аудиту (62.0027°) з точністю до 0.02°.
+  // Karana рахується з ТОГО САМОГО phaseDeg (karK=floor(phaseDeg/6)), тому цей
+  // єдиний фікс виправляє обидва поля одночасно.
+  // Прибрано залежність від window.Astronomy — тепер завжди self-contained
+  // Meeus-обчислення, ідентичне до вже перевіреного шляху Nakshatra/Yoga.
+  try {
+    const jde = date.getTime() / 86400000 + 2440587.5;
+    const moonLon = calcMoonLongitude(jde);
+    const sunLon = calcSunLongitude(jde);
+    const elong = ((moonLon - sunLon) % 360 + 360) % 360;
+    if (isFinite(elong)) return elong;
+  } catch(e){ if(window._DEBUG) console.warn('[moonPhaseAngle Meeus fallback]:', e.message); }
+  // Останній fallback — лише якщо навіть Meeus-обчислення впало (не мало б статись)
   const age = moonAgeDays_simple(date);
   return (age / SYNODIC) * 360.0;
 }
@@ -11052,7 +11072,13 @@ function computePanchangaState(dateUTC){
 function renderPanchangaCard(state){
   const { p, ctx, cells, _gEarly, aiNow, pclOnly, panchDiscrepancy, finalDo, finalAvoid, _gNow, dateStr, dateUTC } = state;
   const el_ = id => document.getElementById(id);
-  el_('panchDate').textContent = dateStr + ' ~12:00 UTC';
+  // v88.9.54-fp236: "~12:00 UTC" тут був хардкоджений і неточний — dateUTC це
+  // РЕАЛЬНИЙ sunrise-момент (переданий через computePanchangaState(sunriseUTC(...))),
+  // не буквально полудень. Показуємо фактичну годину:хвилину UTC.
+  const _refHM = (dateUTC instanceof Date && !isNaN(dateUTC.getTime()))
+    ? String(dateUTC.getUTCHours()).padStart(2,'0') + ':' + String(dateUTC.getUTCMinutes()).padStart(2,'0') + ' UTC'
+    : '~схід сонця';
+  el_('panchDate').textContent = dateStr + ' ' + _refHM;
 
   function scoreSpan(s){
     if(s > 0) return `<span class="panch-score-pos">+${s}</span>`;
@@ -13318,8 +13344,8 @@ function _applyStormGuardDOM(){
       if (!_isStormAware && (
           _t === 'Сьогодні сильний, сприятливий день' ||
           _t === 'День сприятливий — можна діяти планово' ||
-          _t === 'ОРІЄНТОВНО МОЖНА ДІЯТИ за PDF · live-фон — перевір перед критичною дією' ||
-          _t === 'МОЖНА ДІЯТИ за PDF · live-фон estimated — перевір перед критичною дією')) {
+          _t.startsWith('ОРІЄНТОВНО МОЖНА ДІЯТИ за PDF ·') ||
+          (_t.startsWith('МОЖНА ДІЯТИ за PDF ·') && _t.includes('перевір перед критичною дією')))) {
         const _etaStr43 = _sw.etaLabel || `~${_sw.hoursAhead}г`;
         _ac.textContent = _sw.active
           ? `PDF · буря Kp=${_sw.kp.toFixed(1)} АКТИВНА — тільки рутина`
@@ -14150,13 +14176,26 @@ function heroHeadlineFromHierarchy_v88824(sig){
   try {
     const _dm = (typeof resolveDataModeExtended === 'function') ? resolveDataModeExtended() : null;
     if(sig.dayScore >= 3 && (_dm === 'estimated' || _dm === 'partial' || _dm === 'offline' || _dm === 'scenario')) {
+      // v88.9.54-fp236 FIX-CRITICAL (аудит-раунд-22): раніше цей текст хардкодив
+      // слово "estimated" при _dm==='estimated' — але _dm тут читає ВНУТРІШНІЙ
+      // ключ стану (той самий, що навмисно НЕ перейменований у fp226, бо забагато
+      // коду на нього спирається), а не реальний тип джерела. Тому затримане, але
+      // РЕАЛЬНЕ observed-вимірювання (напр. Kp з NOAA спостережень, просто на
+      // 3 години старіше) все одно писало "estimated" в реченні — той самий клас
+      // розсинхрону, що вже виправляли для DOM-writer'ів (fp227/228), але в
+      // ІНШОМУ, досі не охопленому споживачі. Тепер текст бере реальний опис
+      // джерела через resolveSourceLabel() — той самий, що всюди інде.
+      const _srcDesc = (function(){
+        try { const _r = resolveSourceLabel(); return _r.isRealObserved ? _r.combined.toLowerCase() : 'live-фон estimated'; }
+        catch(_e){ return 'live-фон estimated'; }
+      })();
       // v88.8.37-fp70: навіть при estimated зберігаємо застереження про слабкий фон,
       // якщо G_now негативний. Раніше estimated-гілка обходила live-guard і губила
       // інформацію «фон слабкий» — юзер бачив «МОЖНА ДІЯТИ» при PDF+3 і фоні −1.
       if (isFinite(sig.liveG) && sig.liveG < -0.3) {
-        return `Сильний день за PDF (+${sig.dayScore}), але фон зараз слабкий (G${sig.liveG.toFixed(1)}) · live-фон estimated — перевір`;
+        return `Сильний день за PDF (+${sig.dayScore}), але фон зараз слабкий (G${sig.liveG.toFixed(1)}) · ${_srcDesc} — перевір`;
       }
-      return 'МОЖНА ДІЯТИ за PDF · live-фон estimated — перевір перед критичною дією';
+      return `МОЖНА ДІЯТИ за PDF · ${_srcDesc} — перевір перед критичною дією`;
     }
   } catch(e) { /* silent */ }
   if(sig.dayScore >= 3) {
@@ -14909,7 +14948,7 @@ function syncHero(){
   const _dm47 = (typeof resolveDataModeExtended === 'function') ? resolveDataModeExtended() : 'live';
   const _headlineStormAware47 = _headline.includes('буря') || _headline.includes('АКТИВНА');
   if ((_dm47 === 'partial' || _dm47 === 'offline' || _dm47 === 'scenario') && !_headlineStormAware47 && !_headline.startsWith('ОРІЄНТОВНО')) {
-    if (_headline === 'МОЖНА ДІЯТИ за PDF · live-фон estimated — перевір перед критичною дією') {
+    if (_headline.startsWith('МОЖНА ДІЯТИ за PDF ·') && _headline.includes('перевір перед критичною дією')) {
       // Already has estimated suffix but lacks ОРІЄНТОВНО prefix
       _headline = 'ОРІЄНТОВНО МОЖНА ДІЯТИ за PDF · live-фон — перевір перед критичною дією';
     } else if (_headline === 'Сьогодні сильний, сприятливий день') {
