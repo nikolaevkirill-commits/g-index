@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.58-fp240-SW-CROSSORIGIN-HORA-SEQUENCE</title>
+  <title>G-Index — Космофізичний дашборд v88.9.60-fp242-SELFAUDIT-SHORTHAND-RESET-BUG</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -8197,6 +8197,23 @@ function computeCScore(kpNow, kpObsJson, ai, G, kpSrc){
     if (isFinite(kpNow) && kpNow < 2 && _dstV !== null && _dstV < -80) _physicsConflict = true;
   } catch(e){ /* silent */ }
 
+  // v88.9.59-fp241 (аудит-раунд-27, Problem 3): раніше tooltip "Причини
+  // зниження" не показував відсутність Sn/Dst як окремі пункти, хоча Formula
+  // Audit вже візуально показує "Sn —" і "Dst —" — користувач бачив "Середня"
+  // без пояснення, ЩО саме неповне. Малий штраф (0.03 кожен) — Sn/Dst
+  // другорядні для G_now (не входять у формулу напряму), тому мінімальний
+  // вплив на конфіденс, лише інформаційна прозорість причини.
+  try {
+    if (!window._lastDst || !isFinite(window._lastDst.dst)) {
+      penalty += 0.03;
+      reasons.push({ txt: 'Dst недоступний (фізична звірка неповна)', col: 'var(--dim)', d: 0.03 });
+    }
+    if (!window._lastWolfSn || !isFinite(window._lastWolfSn.sn)) {
+      penalty += 0.03;
+      reasons.push({ txt: 'Sn (Wolf) недоступний', col: 'var(--dim)', d: 0.03 });
+    }
+  } catch(e){ /* silent */ }
+
   // Вимір 2: вік даних. v88.9.52-fp234: шкалу перекалібровано — fp233 давав
   // для 5г затримки лише 0.12 → 88% → знову "Висока", тобто регресію проти
   // вимоги аудиту-14 ("delayed observed не може називатись Висока"). Цикл
@@ -14952,6 +14969,37 @@ function syncHero(){
   _set('heroDecisionAvoid', _st.avoidText);
   const _doEl = el('heroDecisionDo');
   if(_doEl) _doEl.style.color = _st.color;
+  // v88.9.59-fp241 FIX-CRITICAL (аудит-раунд-27, Problem 2): CSS для
+  // #heroDecisionDo має ЖОРСТКИЙ зелений фон (rgba(43,212,125,...) з
+  // !important) незалежно від стану джерела — тому текстовий префікс
+  // "орієнтовно:" (fp45) НЕ міняв візуальну вагу блоку, він і далі виглядав
+  // як впевнена команда action-NOW, хоча дані delayed. Коли фон/дія
+  // сприятливі (favorable/good), АЛЕ джерело не live — притлумлюємо зелений
+  // на нейтрально-попереджувальний, той самий inline-override прийом, що вже
+  // застосований нижче для avoidEl.
+  try {
+    if (_doEl && (_stKey === 'favorable' || _stKey === 'good')) {
+      const _rslDo = (typeof resolveSourceLabel === 'function') ? resolveSourceLabel() : null;
+      if (_rslDo && !_rslDo.isLive) {
+        _doEl.style.setProperty('background','rgba(255,204,68,.08)','important');
+        _doEl.style.setProperty('border-color','rgba(255,204,68,.28)','important');
+        _doEl.style.setProperty('color','#ffe9b3','important');
+      } else {
+        // v88.9.60-fp242 САМОАУДИТ-ФІКС: реальний jsdom-тест виявив, що
+        // removeProperty('background') НІЧОГО не робить — background це
+        // shorthand-властивість, яку setProperty розгортає в background-color
+        // (та інші лонгхенди), а removeProperty шукає буквально "background"
+        // (якого вже немає як окремого запису) — фон лишався жовтим НАЗАВЖДИ
+        // навіть після повернення до live-стану. Пряме присвоєння порожнього
+        // рядка коректно очищає весь shorthand.
+        _doEl.style.background = '';
+        _doEl.style.borderColor = '';
+      }
+    } else if (_doEl) {
+      _doEl.style.background = '';
+      _doEl.style.borderColor = '';
+    }
+  } catch(_eDo) { /* noop */ }
   try {
     const _avoidEl = el('heroDecisionAvoid');
     const _note = heroLayerNoteFromHierarchy_v88824(_heroSig);
@@ -14969,10 +15017,14 @@ function syncHero(){
         _avoidEl.style.setProperty('border-color','rgba(155,177,220,.22)','important');
         _avoidEl.style.setProperty('color','#cfe0ff','important');
       } else {
-        // Скинути inline-стилі для не-позитивних станів (повертаємо CSS-defaults)
-        _avoidEl.style.removeProperty('background');
-        _avoidEl.style.removeProperty('border-color');
-        _avoidEl.style.removeProperty('color');
+        // v88.9.60-fp242 САМОАУДИТ-ФІКС (давній баг, знайдений тим самим
+        // методом реального DOM-тесту, що й для heroDecisionDo вище):
+        // removeProperty('background') не працює на shorthand — синій фон
+        // для favorable/good дня міг лишитись НАЗАВЖДИ навіть після переходу
+        // в неfavorable стан. Пряме присвоєння порожнього рядка.
+        _avoidEl.style.background = '';
+        _avoidEl.style.borderColor = '';
+        _avoidEl.style.color = '';
       }
     }
   } catch(e) { /* noop */ }
@@ -17352,7 +17404,20 @@ async function loadAll(){
       if (lastWWV && lastWWV.whenText) {
         const _tsStr = lastWWV.whenText.replace(' UTC', '').replace(' ', 'T') + 'Z';
         const _tsMs = new Date(_tsStr).getTime();
-        if (isFinite(_tsMs)) _noaaAgeH = Math.round((Date.now() - _tsMs) / 3600000);
+        // v88.9.59-fp241 FIX-CRITICAL (аудит-раунд-27, Problem 1): time_tag —
+        // це ПОЧАТОК 3-годинного observed-інтервалу NOAA (напр. 12:00 →
+        // інтервал 12:00-15:00 UTC), а не момент, коли значення стало
+        // актуальним. Раніше вік рахувався від time_tag напряму, тому
+        // затримка виглядала перебільшеною приблизно на 3 години (17:39 −
+        // 12:00 = 5.7г замість реальних 17:39 − 15:00 = 2.7г після завершення
+        // інтервалу). Тепер додаємо тривалість інтервалу (3г) — вік
+        // рахується від моменту, коли дані стали фінальними.
+        const KP_INTERVAL_HOURS = 3;
+        if (isFinite(_tsMs)) _noaaAgeH = Math.round((Date.now() - (_tsMs + KP_INTERVAL_HOURS*3600000)) / 3600000);
+        // Захист: якщо результат від'ємний (інтервал ще триває — NOAA іноді
+        // публікує проміжне значення до завершення вікна), не показуємо
+        // "від'ємну затримку" — округляємо до 0 (щойно з'явилось).
+        if (_noaaAgeH !== null && _noaaAgeH < 0) _noaaAgeH = 0;
       }
     } catch(eStale){ /* silent */ }
     window._kpSourceFreshness = { source: 'NOAA', ageHours: _noaaAgeH };
@@ -17367,7 +17432,10 @@ async function loadAll(){
         if (gfzParsed && gfzParsed.whenText) {
           const _gTsStr = gfzParsed.whenText.replace(' UTC','').replace(' ','T') + 'Z';
           const _gTsMs = new Date(_gTsStr).getTime();
-          if (isFinite(_gTsMs)) _gfzAgeH = Math.round((Date.now() - _gTsMs) / 3600000);
+          // v88.9.59-fp241 (той самий фікс, що й для NOAA вище): GFZ теж
+          // публікує 3-годинні Kp-інтервали з time_tag на початку вікна.
+          if (isFinite(_gTsMs)) _gfzAgeH = Math.round((Date.now() - (_gTsMs + 3*3600000)) / 3600000);
+          if (_gfzAgeH !== null && _gfzAgeH < 0) _gfzAgeH = 0;
         }
         if (gfzParsed && isFinite(gfzParsed.kNow) && _gfzAgeH !== null && _gfzAgeH < _noaaAgeH) {
           _lastKpObsJson = gfzVal;
