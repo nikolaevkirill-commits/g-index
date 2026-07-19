@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.52-fp234-PENALTY-RESTRUCTURE-HALO</title>
+  <title>G-Index — Космофізичний дашборд v88.9.53-fp235-SELFAUDIT-LABEL-CONSISTENCY</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -3112,9 +3112,17 @@ function resolveSourceLabel(){
     const _isRealObserved = !!(typeof lastWWV !== 'undefined' && lastWWV && isFinite(lastWWV.kNow) && !lastWWV._synthetic);
     const _ageH = (_src && isFinite(_src.ageHours)) ? _src.ageHours : null;
     let typeLabel, freshnessLabel, combined, shortCombined, color, isLive;
-    if (_isRealObserved && _ageH != null) {
+    // v88.9.53-fp235 САМОАУДИТ-ФІКС: раніше умова `_isRealObserved && _ageH != null`
+    // означала, що коли Kp РЕАЛЬНО observed, але вік (_ageH) ще не завантажений
+    // (null, типово до першого NOAA fetch), функція падала в "else" і писала
+    // "FORECAST · ESTIMATED" — хоча в тому самому обʼєкті isRealObserved:true.
+    // Споживачі, що читають лише .isRealObserved (не .combined), бачили
+    // суперечність. Тепер тип визначається ЛИШЕ isRealObserved; вік — окремо.
+    if (_isRealObserved) {
       typeLabel = 'OBSERVED';
-      if (_ageH < 1) {
+      if (_ageH == null) {
+        freshnessLabel = 'UNKNOWN'; combined = 'OBSERVED · вік невідомий'; shortCombined = 'OBSERVED'; color = '#a8d5e0'; isLive = false;
+      } else if (_ageH < 1) {
         freshnessLabel = 'LIVE'; combined = 'OBSERVED · LIVE'; shortCombined = 'LIVE'; color = '#63be7b'; isLive = true;
       } else if (_ageH <= 12) {
         freshnessLabel = 'DELAYED';
