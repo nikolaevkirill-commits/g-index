@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.61-fp243b-SLOT-DECISION-BLOCKEDNOW-FIX</title>
+  <title>G-Index — Космофізичний дашборд v88.9.64-fp246-DATA-MANIFEST-AUTOUPDATE</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -5405,6 +5405,43 @@ window.__testTimezone = function(){
   return info;
 };
 
+// v88.9.6x-fp245 (аудит fp242, п.4): раніше кожен блок сам рахував "локальний"
+// час через ТАЙМЗОНУ БРАУЗЕРА (getTimezoneOffset() або new Date(Date.UTC(...)).
+// getHours()) — Rahu Kalam / Yamagandam / Gulika / слоти "Плану дня" / "Критичних
+// вікон" МОГЛИ розійтися з датою дня (todayKyivStr() — завжди Europe/Kyiv), якщо
+// у Kyrylo інший системний TZ ноутбука/телефона (подорож, інша ОС). Одна
+// канонічна функція: офсет Europe/Kyiv У ЦЮ КОНКРЕТНУ МИТЬ (враховує літній/
+// зимовий час автоматично через IANA-базу, а НЕ browser TZ).
+function kyivOffsetHoursAt(date){
+  try {
+    const d = (date instanceof Date && !isNaN(date)) ? date : new Date();
+    const _parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Europe/Kyiv', hourCycle: 'h23',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit'
+    }).formatToParts(d).reduce((a, p) => { a[p.type] = p.value; return a; }, {});
+    const _asUTC = Date.UTC(+_parts.year, +_parts.month - 1, +_parts.day, +_parts.hour, +_parts.minute, +_parts.second);
+    return (_asUTC - d.getTime()) / 3600000;
+  } catch(e) { return 3; } // fallback — Київ влітку UTC+3, якщо Intl/IANA недоступні
+}
+window.kyivOffsetHoursAt = kyivOffsetHoursAt;
+// Цілий офсет для конверсій "година слоту" (3-годинні межі — patern `(h+off)%24`).
+function kyivOffsetHoursIntAt(date){ return Math.round(kyivOffsetHoursAt(date)); }
+window.kyivOffsetHoursIntAt = kyivOffsetHoursIntAt;
+// "HH:MM" (UTC, для опорної дати refDate) → "HH:MM" Europe/Kyiv.
+function utcHHMMToKyiv(utcStr, refDate){
+  const parts = String(utcStr || '').split(':').map(Number);
+  if (!isFinite(parts[0])) return utcStr;
+  const h = parts[0] + (parts[1] || 0) / 60;
+  const off = kyivOffsetHoursAt(refDate || new Date());
+  const local = ((h + off) % 24 + 24) % 24;
+  const hh = Math.floor(local);
+  let mm = Math.round((local - hh) * 60);
+  if (mm === 60) mm = 0;
+  return `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}`;
+}
+window.utcHHMMToKyiv = utcHHMMToKyiv;
+
 const pad = n => String(n).padStart(2,'0');
 function tzOffsetLabel(d){
   const m = -d.getTimezoneOffset();
@@ -5753,6 +5790,59 @@ async function loadDailyMaster(){
   }
   return _dailyMaster;
 }
+
+// v88.9.6x-fp246 (аудит fp242, п.5): loader-и вище мають guard "якщо вже
+// завантажено — не перезавантажувати" (_x !== null ? return). Це усувало зайві
+// фетчі, але й означало, що НОВИЙ файл на сервері (новий expert_overrides_v3.json
+// після оновлення бюлетеня, новий future_kp.json після friday_routine) НЕ
+// підхоплювався без ручного перезавантаження сторінки — Kyrylo мав сам F5,
+// інакше дашборд жив на даних із моменту першого відкриття вкладки.
+// data_manifest.json — легкий файл-маячок {version, expert_overrides, expert_calc,
+// future_kp}; кожен цикл auto-refresh (loadAll, вже раз на N хв) звіряє його з
+// попереднім знімком. Якщо конкретне поле змінилось — скидається ЛИШЕ відповідний
+// in-memory кеш, і loader перезавантажує саме той файл (не все підряд).
+// Окремо: перехід через північ Europe/Kyiv форсує повний reload незалежно від
+// manifest — новий день потребує нових даних, навіть якщо генератор манфесту
+// відстає чи впав.
+let _lastManifest = null;
+let _lastSeenKyivDateForManifest = null;
+async function checkDataManifest(){
+  let m = null;
+  try {
+    const resp = await fetch('data_manifest.json', { cache: 'default' });
+    if (resp.ok) m = await resp.json();
+  } catch(e){ /* маніфест відсутній/недоступний — не критично, просто без auto-refresh нових даних */ }
+
+  const todayK = todayKyivStr();
+  const _dayChanged = _lastSeenKyivDateForManifest !== null && _lastSeenKyivDateForManifest !== todayK;
+  _lastSeenKyivDateForManifest = todayK;
+
+  if (!m) return; // без manifest — просто немає на що реагувати (старий деплой без fp246)
+
+  const _changed = [];
+  if (_dayChanged) {
+    // Нова доба Europe/Kyiv — форсуємо повний reload незалежно від manifest.
+    _expertOverrides = null; _expertCalc = null; _futureKp = null; _dailyMaster = null;
+    _changed.push('day_rollover');
+  } else if (_lastManifest) {
+    if (m.expert_overrides !== _lastManifest.expert_overrides) { _expertOverrides = null; _changed.push('expert_overrides'); }
+    if (m.expert_calc !== _lastManifest.expert_calc) { _expertCalc = null; _changed.push('expert_calc'); }
+    if (m.future_kp !== _lastManifest.future_kp) { _futureKp = null; _changed.push('future_kp'); }
+  }
+  _lastManifest = m;
+  if (!_changed.length) return;
+
+  if (window._DEBUG) console.log('[fp246] manifest change:', _changed.join(', '), '— перезавантажую...');
+  try { await loadExpertOverrides(); } catch(e){ /* silent */ }
+  try { await loadExpertCalc(); } catch(e){ /* silent */ }
+  try { await loadFutureKp(); } catch(e){ /* silent */ }
+  // v88.9.13-fp194 патерн: той самий рендер-ланцюжок, що й одноразовий boot-
+  // завантажувач нижче — тепер повторюваний на кожну зміну manifest, не лише раз.
+  try { if (typeof syncV702UI === 'function') syncV702UI(); } catch(e){ /* silent */ }
+  try { if (typeof _renderHeroHierarchy === 'function') _renderHeroHierarchy(); } catch(e){ /* silent */ }
+  try { if (typeof renderHeroBulletin === 'function') renderHeroBulletin(); } catch(e){ /* silent */ }
+}
+window.checkDataManifest = checkDataManifest;
 
 const REGIME_LABEL = {
   extreme_negative: { t:'Екстремум −', d:'сильний негатив', c:'#ff6b6b', conf:'надійний (~88%)' },
@@ -8273,14 +8363,43 @@ function computeCScore(kpNow, kpObsJson, ai, G, kpSrc){
   // v87.14: also enforce floor penalty — R&D cannot claim 100% (0 penalty)
   // Мінімум 8% penalty = базова невизначеність моделі (R&D / Advisory)
   penalty = Math.max(0.08, penalty);
-  const conf = Math.round((1 - penalty) * 100) / 100;
+  let conf = Math.round((1 - penalty) * 100) / 100;
 
   // Grade
   // v88.9.46-fp228 FIX (той самий клас бага знову): grade тут мав ВЛАСНИЙ
   // поріг (0.75/0.50), відмінний від formatConfidence() (0.85/0.65) —
   // одна й та сама conf=0.82 могла одночасно називатись "Висока" тут і
   // "Середня" через formatConfidence() деінде. Уніфіковано пороги.
-  const grade = conf >= 0.85 ? 'high' : conf >= 0.65 ? 'med' : 'low';
+  let grade = conf >= 0.85 ? 'high' : conf >= 0.65 ? 'med' : 'low';
+
+  // v88.9.6x-fp244 FIX-CRITICAL (аудит fp242, п.2/3): "Якість даних: Висока"
+  // раніше НЕ реагувала на провенанс Dst — якщо Dst взагалі був відсутній, це
+  // давав лише малий адитивний штраф (0.03, крок 7 вище), а якщо Dst БУВ
+  // присутній, але з чужим/нерозпізнаним/майбутнім timestamp — не штрафувалось
+  // ВЗАЄМІ. Це РІЗНІ речі (відсутність даних vs недовіра до конкретного
+  // значення), тому окремий hard-gate, що ріже grade ЗВЕРХУ (а не адитивно) —
+  // на відміну від penalty-штрафів, hard-gate не можна "перебити" іншими
+  // хорошими факторами.
+  try {
+    const _dp = _dstProvenanceCheck();
+    if (!_dp.ok && window._lastDst && isFinite(window._lastDst.dst)) {
+      // Dst присутній, але непідтверджений — не плутати з "Dst відсутній
+      // взагалі" (те вже враховано штрафом 0.03 вище, крок 7).
+      if (grade === 'high') grade = 'med';
+      reasons.push({ txt: `Dst provenance: ${_dp.reason} → максимум «Середня»`, col:'#ffcc00', d:0 });
+    }
+  } catch(e){ /* silent */ }
+  // Другий hard-gate: Kp застарілий (>12г, той самий поріг, що age-шкала
+  // вище) не може називатись навіть "Середня" — лише "Низька".
+  if (_agePenalty >= 0.30 && grade !== 'low') {
+    grade = 'low';
+    reasons.push({ txt: `Kp застарілий (age-penalty ${_agePenalty}) → максимум «Низька»`, col:'#ff6b6b', d:0 });
+  }
+  // Grade cap застосований — узгоджуємо чисельний conf/pct з лейблом, щоб
+  // бар і відсоток не суперечили тексту (напр. "92%" поруч із "Середня").
+  if (grade === 'med' && conf >= 0.85) conf = 0.84;
+  if (grade === 'low' && conf >= 0.65) conf = 0.64;
+
   const gradeCol = grade==='high' ? '#2bd47d' : grade==='med' ? '#ffcc00' : '#ff6b6b';
   const gradeLabel = grade==='high' ? 'Висока' : grade==='med' ? 'Середня' : 'Низька';
 
@@ -9045,6 +9164,36 @@ function _lastValidDst(rows, getVal){
   for(let i = rows.length - 1; i >= 0; i--){ const v = getVal(rows[i]); if(_dstValid(v)) return { dst: parseFloat(v), row: rows[i] }; }
   return null;
 }
+// v88.9.6x-fp244 (аудит fp242, п.2): показаний Dst timestamp раніше НІЯК не
+// звірявся з реальним часом — можна було показати запис із майбутнім або
+// дуже старим часом як "Kyoto" без жодного попередження, а "Якість даних"
+// не реагувала. _parseDstTimeToDate() розбирає рядок часу з parseDst() (формат
+// "YYYY-MM-DD HH:MM:SSUTC" — parseDst() приліплює "UTC" без пробілу) у Date.
+function _parseDstTimeToDate(raw){
+  if (!raw || typeof raw !== 'string') return null;
+  let s = raw.replace(/\s*UTC\s*$/i, '').trim();
+  if (!s) return null;
+  s = s.replace(' ', 'T');
+  if (!/Z$/i.test(s)) s += 'Z';
+  const d = new Date(s);
+  return isNaN(d.getTime()) ? null : d;
+}
+// Повертає { ok, reason, ageHours }. ok=false у трьох випадках: значення
+// відсутнє, час запису не розпізнано, або час — у майбутньому/задавнений
+// (>6г — той самий поріг, що вже прийнятий для Kp age-penalty в computeCScore).
+function _dstProvenanceCheck(){
+  const d = window._lastDst;
+  if (!d || !isFinite(d.dst)) return { ok:false, reason:'Dst недоступний', ageHours:null };
+  if (d._cached) return { ok:false, reason:'Dst із локального кешу (час невідомий)', ageHours:null };
+  const t = _parseDstTimeToDate(d.time);
+  if (!t) return { ok:false, reason:'Dst: час запису не розпізнано', ageHours:null };
+  const ageH = (Date.now() - t.getTime()) / 3600000;
+  if (ageH < -0.5) return { ok:false, reason:`Dst: час запису в майбутньому (${d.time})`, ageHours:ageH };
+  if (ageH > 6) return { ok:false, reason:`Dst: запис застарілий (${ageH.toFixed(1)}г від Kyoto)`, ageHours:ageH };
+  return { ok:true, reason:'', ageHours:ageH };
+}
+window._dstProvenanceCheck = _dstProvenanceCheck;
+
 function parseDst(json){
   try{
     const rows = JSON.parse(json);
@@ -11377,14 +11526,10 @@ function renderPanchangaCard(state){
         const _re = p.rahu.end.split(':').map(Number);
         const _rsH = _rs[0] + (_rs[1]||0)/60;
         const _reH = _re[0] + (_re[1]||0)/60;
-        // Convert UTC HH:MM → local через Date.UTC + getHours()
+        // Convert UTC HH:MM → Europe/Kyiv (fp245: канонічно, НЕ browser TZ —
+        // раніше через Date.UTC+getHours(), що плаває з TZ ноутбука/телефона).
         const _today = new Date();
-        const _toLocal = (utcStr) => {
-          const [h, m] = utcStr.split(':').map(Number);
-          if (!isFinite(h) || !isFinite(m)) return utcStr;
-          const d = new Date(Date.UTC(_today.getUTCFullYear(), _today.getUTCMonth(), _today.getUTCDate(), h, m, 0));
-          return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-        };
+        const _toLocal = (utcStr) => utcHHMMToKyiv(utcStr, _today);
         const _rsLocal = _toLocal(p.rahu.start);
         const _reLocal = _toLocal(p.rahu.end);
         // v88.8.20 fix: active rerender від ПОТОЧНОГО _nh, не від p.rahu.active
@@ -11414,12 +11559,7 @@ function renderPanchangaCard(state){
       if (!p.rahu.yamagandam || !p.rahu.gulika) return '';
       const _today2 = new Date();
       const _nh2 = _today2.getUTCHours() + _today2.getUTCMinutes()/60;
-      const _toLocal2 = (utcStr) => {
-        const [h, m] = utcStr.split(':').map(Number);
-        if (!isFinite(h) || !isFinite(m)) return utcStr;
-        const d = new Date(Date.UTC(_today2.getUTCFullYear(), _today2.getUTCMonth(), _today2.getUTCDate(), h, m, 0));
-        return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-      };
+      const _toLocal2 = (utcStr) => utcHHMMToKyiv(utcStr, _today2);
       const _renderWindow = (label, w, _iconColor) => {
         const _ws = w.start.split(':').map(Number);
         const _we = w.end.split(':').map(Number);
@@ -11518,22 +11658,19 @@ function renderPanchangaCard(state){
         const dayAvg = slots.reduce((s,x) => s + x.G, 0) / slots.length;
         const stateClass = dayAvg >= 1 ? '' : dayAvg > -1 ? 'is-neutral' : 'is-tense';
         bt.className = 'panch-best-time ' + stateClass;
-        // v88.7.16 N2-fix: robust UTC→локальний через Date.getHours() (нативно local).
-        // Раніше (v88.7.13): _tzOffH = -getTimezoneOffset()/60. У браузері Kyrylo
-        // в production цей розрахунок чомусь повертав 0 → label лишався UTC ('06:00–09:00'
-        // замість '09:00–12:00' у Києві UTC+3). Можлива причина: privacy extension override
-        // на Date.prototype.getTimezoneOffset.
-        // Новий шлях: створюємо Date з UTC години → .getHours() повертає локальну.
-        // Це не залежить від getTimezoneOffset() — використовує внутрішній timezone DB browser.
+        // v88.9.6x-fp245: канонічний Europe/Kyiv-офсet (kyivOffsetHoursIntAt) —
+        // НЕ browser TZ. Закриває одразу дві проблеми: (1) v88.7.13 баг, де
+        // getTimezoneOffset() у Kyrylo іноді повертав 0 (privacy-розширення);
+        // (2) аудит fp242 п.4 — якщо Kyrylo подорожує, "Рекомендований час"
+        // раніше показав би ЙОГО поточний TZ замість Києва, розходячись із
+        // Панчангою/Rahu (які завжди Europe/Kyiv через todayKyivStr()).
         const _refDate = (dateUTC instanceof Date) ? dateUTC : new Date();
-        const _refMs = Date.UTC(_refDate.getUTCFullYear(), _refDate.getUTCMonth(), _refDate.getUTCDate());
+        const _kyivOffInt = kyivOffsetHoursIntAt(_refDate);
         const _toLocalRange = (utcLabel) => {
           const h = parseInt(utcLabel, 10);
           if (!isFinite(h)) return `${utcLabel}:00–??:00`;
-          const dStart = new Date(_refMs + h * 3600000);
-          const dEnd = new Date(_refMs + (h + 3) * 3600000);
-          const ls = dStart.getHours();
-          const le = dEnd.getHours();
+          const ls = ((h + _kyivOffInt) % 24 + 24) % 24;
+          const le = ((h + 3 + _kyivOffInt) % 24 + 24) % 24;
           return `${String(ls).padStart(2,'0')}:00–${String(le).padStart(2,'0')}:00`;
         };
         const _utcRange = (utcLabel) => {
@@ -13165,7 +13302,7 @@ function normalizeDaySlots(slots){
   if(!Array.isArray(slots)) return [];
   const now = new Date();
   const nowH = now.getUTCHours();
-  const tzOffH = -now.getTimezoneOffset() / 60;
+  const tzOffH = kyivOffsetHoursIntAt(now); // fp245: Europe/Kyiv канонічно, не browser TZ
   // fp40: storm hard cap — slots at or after storm-start hour → force bad/mid
   const _sw40 = window._stormWindow;
   const _stormStartH = (_sw40 && isFinite(_sw40.kp) && _sw40.kp >= 5)
@@ -14067,10 +14204,10 @@ function renderHeatStripV86(){
   const nowUTC = _now.getUTCHours();
   const currentSlotIdx = Math.floor(nowUTC / 3); // 0..7 — UTC, для лукапу даних слоту (window._daySlots)
   // v87.90 fix: лейбли показуємо в ЛОКАЛЬНОМУ часі, бо UTC дезорієнтує (юзер у Києві о 21:52 бачить "18" і не розуміє що це).
-  // Кожен слот починається у (slotUtcStart) UTC → локальний час = slotUtcStart - tzOffsetMinutes/60
-  // tzOffsetMinutes — Date.getTimezoneOffset() у хвилинах (positive якщо локальний час позаду UTC).
-  // Київ UTC+3 → getTimezoneOffset() = -180 → локальна година = utcStart - (-180/60) = utcStart + 3
-  const _tzOffH = -_now.getTimezoneOffset() / 60; // +3 для Києва влітку
+  // v88.9.6x-fp245 (аудит fp242, п.4): раніше через getTimezoneOffset() (browser TZ) —
+  // якщо Kyrylo подорожує, слоти показали б ЙОГО поточний TZ замість Києва,
+  // розходячись із Панчангою/Rahu (завжди Europe/Kyiv через todayKyivStr()).
+  const _tzOffH = kyivOffsetHoursIntAt(_now);
   // v87.15 S4: визначаємо "рівний день" — варіативність G між слотами <0.3
   const _gVals = slots.filter(s => isFinite(s.G)).map(s => s.G);
   const _isFlat = _gVals.length >= 4 && (Math.max(..._gVals) - Math.min(..._gVals)) < 0.3;
@@ -16087,7 +16224,8 @@ function _renderHeroTimeWindows() {
     const mark = isCurrent ? '<span style="color:var(--ok);font-size:10px;font-weight:700"> ◀ поточний слот</span>' : '';
     const dot = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${col};flex-shrink:0"></span>`;
     // v87.90: показуємо ЛОКАЛЬНИЙ час замість UTC (Київ юзер бачить свій час)
-    const _tzOffH2 = -new Date().getTimezoneOffset() / 60;
+    // v88.9.6x-fp245: канонічно Europe/Kyiv, не browser TZ (аудит fp242, п.4).
+    const _tzOffH2 = kyivOffsetHoursIntAt(new Date());
     const _hL = ((h + _tzOffH2) % 24 + 24) % 24;
     const _eL = ((endH + _tzOffH2) % 24 + 24) % 24;
     const _hLstr = String(Math.floor(_hL)).padStart(2,'0');
@@ -16638,7 +16776,8 @@ function syncDayPlanCard(){
   const _now = new Date();
   const nowH = _now.getUTCHours();
   // v87.90: показуємо часи у ЛОКАЛЬНОМУ часі (юзер очікує "21:00", не "18:00 UTC")
-  const _tzOffH = -_now.getTimezoneOffset() / 60; // Київ влітку = +3
+  // v88.9.6x-fp245: канонічно Europe/Kyiv, не browser TZ (аудит fp242, п.4).
+  const _tzOffH = kyivOffsetHoursIntAt(_now);
   const rows = [];
   // Future slots only (up to 3)
   for(const s of slots){
@@ -16802,6 +16941,14 @@ function renderProvenance(){
   const _dstVal = window._lastDst?.dst ?? null;
   const _dstTime = window._lastDst?.time ?? '—';
   const _dstCached = window._lastDst?._cached ? ' (кеш)' : '';
+  // v88.9.6x-fp244 (аудит fp242, п.2): раніше тут завжди писалось "· Kyoto",
+  // навіть якщо timestamp не підтверджений офіційним фідом (майбутній/
+  // застарілий/нерозпізнаний). Тепер hint явно каже "непідтверджено" + причину.
+  let _dstProvLabel = ' · Kyoto' + _dstCached;
+  try {
+    const _dpRow = _dstProvenanceCheck();
+    if (!_dpRow.ok && _dstVal != null) _dstProvLabel = ` · ⚠ непідтверджено (${_dpRow.reason})`;
+  } catch(_e){ /* silent */ }
 
   // Engine v18.5 entry today
   const _eng = (typeof getEngineScore === 'function') ? getEngineScore(_now) : null;
@@ -16866,7 +17013,7 @@ function renderProvenance(){
         ${_row('Дата (UTC)', _now.toISOString().slice(0,16) + 'Z')}
         ${_row('Kp', isFinite(_kpVal) ? _kpVal.toFixed(2) : '—', _kpSrc)}
         ${_row('Sn (Wolf)', _snVal != null ? _snVal + _snProv : '—', _snDate + ' · SILSO')}
-        ${_row('Dst', _dstVal != null ? _dstVal + ' нТл' : '—', _dstTime + ' · Kyoto' + _dstCached)}
+        ${_row('Dst', _dstVal != null ? _dstVal + ' нТл' : '—', _dstTime + _dstProvLabel)}
         ${_row('Source state', _cacheState, (_fresh && _fresh.replace(/^●\s*/,'').trim() === _cacheState.replace(/^[✓⊙✗⚠]\s*/,'').trim()) ? '' : _fresh)}
       </div>
       <div>
@@ -17539,8 +17686,13 @@ async function loadAll(){
   el('btnRefresh').disabled = true;
   el('nowError').textContent = '';
   el('threeError').textContent = '';
-  
+
   setStamp();
+
+  // v88.9.6x-fp246: легка перевірка manifest на КОЖЕН цикл loadAll (boot +
+  // кожні N хв auto-refresh) — не блокує решту завантаження (fire-and-forget),
+  // бо це незалежний рейл від live Kp/Dst/Sn нижче.
+  try { checkDataManifest().catch(()=>{}); } catch(e){ /* silent */ }
 
   try{
     await preloadEventsAroundNow();
@@ -17799,6 +17951,10 @@ async function loadAll(){
   // Dst index
   if(dstR.status === 'fulfilled'){
     window._lastDst = parseDst(dstR.value);
+    // v88.9.6x-fp244: зберігаємо провенанс — коли реально зафетчили і звідки,
+    // потрібно для _dstProvenanceCheck() (не можна перевірити "вік запису"
+    // без цього, коли time з фіда відсутній/нерозпізнаний).
+    if (window._lastDst) { window._lastDst.fetchedAt = Date.now(); window._lastDst.sourceUrl = URL_DST; }
     if (window._lastDst) { lsSet('last_dst_known', window._lastDst.dst); _setSrcStatus('srcDst','ok'); }
     const dstEl = document.getElementById('sciDst');
     if(window._lastDst){
