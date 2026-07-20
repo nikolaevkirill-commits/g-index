@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.69-fp251-PROVENANCE-GRID-MOBILE-FIX</title>
+  <title>G-Index — Космофізичний дашборд v88.9.75-fp257-3DAY-DIVERGENCE-MERGE</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -149,6 +149,16 @@
       content:""; position:absolute; top:100%; left:50%; transform:translateX(-50%);
       border-left:8px solid transparent; border-right:8px solid transparent; border-top:8px solid #0f1a2f;
       filter: drop-shadow(0 -1px 0 #2a3b61);
+    }
+    /* fp253: opacity:0 не виключає absolute tooltip з overflow-геометрії,
+       тому приховані підказки створювали горизонтальну смугу прокрутки. */
+    @media (min-width:501px){
+      .hint-pop{display:none}
+      .hint:hover .hint-pop,.hint:focus-visible .hint-pop{display:block}
+      #uipPanchangaRow .hint-pop,#threeCard .hint-pop{left:auto;right:0;transform:translateY(0)}
+      #uipPanchangaRow .hint:hover .hint-pop,#uipPanchangaRow .hint:focus-visible .hint-pop,
+      #threeCard .hint:hover .hint-pop,#threeCard .hint:focus-visible .hint-pop{transform:translateY(-4px)}
+      #uipPanchangaRow .hint-pop::after,#threeCard .hint-pop::after{left:auto;right:12px;transform:none}
     }
 
     /* Дата — без переносу і ширша колонка */
@@ -411,6 +421,15 @@
       .prov-grid{ grid-template-columns: 1fr !important; }
       .prov-row{ grid-template-columns: minmax(0,140px) minmax(0,1fr) !important; }
       .prov-row span{ overflow-wrap: anywhere !important; }
+      /* fp252: таблиця розкладу G має довгі динамічні пояснення. Навіть у
+         закритому details її intrinsic width збільшувала ширину сторінки.
+         Локальний scroll-контейнер не дає таблиці розтягувати весь viewport. */
+      #gDecompBlock{ max-width:100%; overflow-x:auto !important; overflow-y:hidden; }
+      #gDecompTable{ width:100% !important; max-width:100%; }
+    #gDecompTable th, #gDecompTable td{ min-width:0; overflow-wrap:anywhere !important; word-break:break-word; }
+      /* fp254: SVG <text> у hero має більшу intrinsic width, ніж видима
+         графіка. Не дозволяємо цій службовій ширині розтягувати документ. */
+      #heroCard{ overflow-x:clip; }
       /* v88.9.6x-fp250 FIX-CRITICAL (аудит: mobile overflow ~128px після
          повного завантаження даних — Formula Audit, 3-day forecast, панель
          індексів дня, самі hint-pop). Корінь: .hint-pop — position:absolute
@@ -719,6 +738,7 @@
     /* 1. G = джерело світла */
     #v86GVal{text-shadow:0 0 10px rgba(255,210,110,.45),0 0 30px rgba(255,210,110,.2),0 0 60px rgba(255,210,110,.08)!important}
     /* 2. Danger aura (state-driven — червона при risk, зелена при good) */
+    #heroCard{overflow-x:hidden}
     #heroCard.hero-state-tense::after,#heroCard.hero-state-unstable::after{content:'';position:absolute;inset:-10%;z-index:0;pointer-events:none;background:radial-gradient(circle at 25% 35%,rgba(255,70,70,.12),transparent 45%);opacity:.7;border-radius:20px}
     #heroCard.hero-state-favorable::after,#heroCard.hero-state-good::after{content:'';position:absolute;inset:-10%;z-index:0;pointer-events:none;background:radial-gradient(circle at 25% 35%,rgba(43,212,125,.10),transparent 45%);opacity:.6;border-radius:20px}
     /* 3. Hero breath — легкий масштаб */
@@ -1099,7 +1119,9 @@
     @keyframes heroCardPulse{0%,100%{box-shadow:0 0 0 0 rgba(255,70,70,.12)}50%{box-shadow:0 0 0 6px rgba(255,70,70,.04)}}
 
     /* ═══ FINAL HERO FIX ═══ */
-    #heroCard{overflow:visible!important}
+    /* fp256: SVG labels мають більшу intrinsic width інакше створюють
+       горизонтальний document scroll; усі видимі hero-елементи в межах card. */
+    #heroCard{overflow:hidden!important}
     /* v87.5 P2: Hero = 2 колонки (ring + maintext). Hero-right стає inline status-row внизу maintext */
     #heroCard .hero-wrap{display:grid!important;grid-template-columns:200px minmax(0,1fr)!important;gap:20px!important;align-items:center!important}
     .hero-left{width:200px!important;min-width:200px!important;max-width:200px!important;display:flex!important;align-items:center!important;justify-content:center!important;overflow:visible!important;position:relative;z-index:2}
@@ -12771,6 +12793,7 @@ function render3Day(parsed3){
       // v87.61: Bulletin (engine v18.5) score line if available
       // v87.62: + sign divergence alert when G and Bulletin have opposite signs
       let _bulletinLine = '';
+      let _isDivergent = false;
       try {
         const _bs = getEngineScore(d.date);
         if(_bs && isFinite(_bs.eng)){
@@ -12790,6 +12813,7 @@ function render3Day(parsed3){
           const _gPos = G >= 0.5, _gNeg = G <= -0.5;
           const _ePos = _bs.eng > 0, _eNeg = _bs.eng < 0;
           const _divergent = (_gPos && _eNeg) || (_gNeg && _ePos) || Math.abs(G - _bs.eng) >= 2.5;
+          _isDivergent = _divergent;
           if (_divergent) {
             // v88.8.5 Б2: розширений tooltip — пояснює ЧОМУ розбіжність і ЩО робити.
             // Раніше: загальне 'обережніше з рішеннями'. Тепер: причини + actionable hint.
@@ -12866,7 +12890,7 @@ function render3Day(parsed3){
         ${_scenBanner}
         <div style="font-weight:700;color:${col};font-size:14px">${dd} → ${cat}</div>
         <div style="font-size:11px;color:var(--muted);margin-top:2px">${act}</div>
-        ${_scenBanner ? '' : _bulletinLine}
+        ${(_scenBanner && !_isDivergent) ? '' : _bulletinLine}
         <div class="card3d-numeric" style="font-size:10px;color:var(--faint);margin-top:3px" title="Довідкові raw-числа (НЕ вердикт дня). G_day raw (3d) = Kp_max з NOAA 3-day forecast (${isFinite(kpMax)?kpMax.toFixed(1):'?'}) − 2 + ΣAᵢ. Вердикт дня вгорі = PDF/Engine (експерт), він головний. Raw показує лише сирий геомагнітний фон.">${isFinite(G)?'<span style="color:var(--faint);font-size:9px">довідково · raw </span>'+(G>=0?'+':'')+G.toFixed(1):'—'}${(() => {
           // fp51: show G_day 27D alongside 3D and delta
           try {
