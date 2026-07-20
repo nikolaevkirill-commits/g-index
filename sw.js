@@ -21,7 +21,7 @@
 // GitHub Pages проєктів на тому самому домені. Тепер видаляємо лише ключі з
 // власним префіксом 'gindex-', що не є поточною версією.
 
-const CACHE_VERSION = 'fp235-v1'; // bump this string on every deploy
+const CACHE_VERSION = 'fp242-v1'; // bump this string on every deploy
 const CACHE_PREFIX = 'gindex-'; // власний namespace — НІКОЛИ не чіпати ключі без цього префікса
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${CACHE_VERSION}`;
 const DATA_CACHE = `${CACHE_PREFIX}data-${CACHE_VERSION}`;
@@ -65,11 +65,33 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // v88.9.58-fp240 FIX-CRITICAL (аудит-раунд-26): раніше isHtmlOrData не
+  // перевіряв url.origin — тому запит до ЗОВНІШНЬОЇ CDN-бібліотеки (напр.
+  // astronomy-engine з jsdelivr/unpkg, якщо вона підключена через .js URL)
+  // теж потрапляв у наш network-first перехоплювач. Для cross-origin запиту
+  // без явних CORS-заголовків з боку CDN fetch() усередині SW повертає
+  // OPAQUE-відповідь (type='opaque', status=0, ok=false) — наш код тоді бачив
+  // fresh.ok=false, кидав виняток, і якщо в кеші ще нічого не було (типовий
+  // перший запуск), ВЕСЬ fetch провалювався замість повернути браузеру скрипт.
+  // Це ЙМОВІРНО справжня причина, чому window.Astronomy був недоступний увесь
+  // час — і саме тому знадобились fallback-фікси на Meeus для moonPhaseAngle
+  // і sunrise раніше в цій сесії. Тепер cross-origin запити ПОВНІСТЮ виключені
+  // з перехоплення — SW їх не чіпає, браузер обробляє нативно (свій кеш,
+  // стандартна CORS-обробка), не поламавши логіку.
+  const isCrossOrigin = url.origin !== self.location.origin;
   const isHtmlOrData =
-    req.mode === 'navigate' ||
-    url.pathname.endsWith('.html') ||
-    url.pathname.endsWith('.json') ||
-    url.pathname.endsWith('.js');
+    !isCrossOrigin && (
+      req.mode === 'navigate' ||
+      url.pathname.endsWith('.html') ||
+      url.pathname.endsWith('.json') ||
+      url.pathname.endsWith('.js')
+    );
+
+  if (isCrossOrigin) {
+    // Не перехоплюємо взагалі — event.respondWith() не викликається,
+    // браузер обробляє запит своїм звичайним шляхом.
+    return;
+  }
 
   if (isHtmlOrData) {
     event.respondWith((async () => {

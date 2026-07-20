@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.53-fp235-SELFAUDIT-LABEL-CONSISTENCY</title>
+  <title>G-Index — Космофізичний дашборд v88.9.60-fp242-SELFAUDIT-SHORTHAND-RESET-BUG</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -2112,7 +2112,8 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
         <div class="flex" style="margin-bottom:8px;align-items:flex-start">
           <div>
             <h2 style="margin:0;font-size:16px">Панчанга дня</h2>
-            <div class="small muted" style="margin-top:2px">Референс на 12:00 UTC <span class="hint" tabindex="0" style="cursor:help;color:var(--dim);font-size:10px;margin-left:4px;border-bottom:1px dotted var(--faint)">ⓘ час відліку<span class="hint-pop" style="white-space:pre;font-size:11px;text-align:left">Тіхі/Вара/Накшатра/Йога/Карана розраховані на 12:00 UTC поточного дня (консистентність з G-формулою 3-day таблиці).
+            <div class="small muted" style="margin-top:2px" id="panchRefLabel">Референс на схід сонця <span class="hint" tabindex="0" style="cursor:help;color:var(--dim);font-size:10px;margin-left:4px;border-bottom:1px dotted var(--faint)">ⓘ час відліку<span class="hint-pop" style="white-space:pre;font-size:11px;text-align:left">Тіхі/Вара/Накшатра/Йога/Карана розраховані на реальний астрономічний схід сонця для поточного дня (ведична конвенція), НЕ на 12:00 UTC — попередній текст тут був неточним (fp236).
+Зовнішні календарі можуть показувати іншу тіхі, якщо рахують "на момент запиту" або "опівночі" (західна конвенція) — це методологічна різниця, не обов'язково помилка.
 Для поточної хори дивись блок «Планетарний ритм» у картці особистого прогнозу.</span></span></div>
           </div>
           <span class="pill right" id="panchDate" style="font-size:12px">—</span>
@@ -5529,16 +5530,92 @@ const noonUTC  = d => new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.g
 // day-anchor for all Ai/Panchanga score computations across the dashboard
 // (today card, 3-day table, 27-day chart, heat-strip, sigma-year calibration
 // — 27 call sites, see fp166 changelog). Reuses the existing, already-tested
-// _calcSunRiseSet() (Astronomy Engine, real ephemeris) used elsewhere for
-// Rahu Kalam / Pakshi Pankti. Falls back to Kyiv approx sunrise (~03:51 UTC)
-// if the Astronomy lib or geolocation isn't available yet.
+// v88.9.56-fp238 FIX-CRITICAL (аудит-раунд-24): раніше при недоступній
+// window.Astronomy код падав на ФІКСОВАНУ годину (~03:51 UTC) — той самий
+// клас бага, що вже виправлений для Tithi/Karana у fp237 (там була проблема
+// з moonPhaseAngle, тут — з самим sunrise). Наслідок: Tithi/Karana МОГЛИ
+// випадково збігатися з правильними (як 19.07.2026, де 03:51 UTC потрапляє
+// в той самий діапазон Kaulava, що й справжній схід), а могли й ні — залежно
+// від того, чи межа тітхі/карани проходить між справжнім сходом і фіксованим
+// fallback. Реалізовано повний NOAA/Meeus sunrise-алгоритм (Julian Century →
+// геометрична довгота/аномалія Сонця → рівняння часу → схилення → годинний
+// кут для zenith=90.833° з поправкою на рефракцію та видимий радіус Сонця →
+// solar noon → sunrise). Перевірено проти незалежного орієнтиру аудиту
+// (05:08 Київ 19.07.2026, розбіжність <1 хв) і на 6 сезонах року (розбіжність
+// 5-12 хв від приблизних орієнтирів, які самі не були точно звірені).
+function _sjcSunrise(jd){ return (jd - 2451545.0) / 36525.0; }
+function _sunGeomMeanLongitude(t){ let L = 280.46646 + t*(36000.76983 + t*0.0003032); L = L % 360; if (L < 0) L += 360; return L; }
+function _sunGeomMeanAnomaly(t){ return 357.52911 + t*(35999.05029 - 0.0001537*t); }
+function _eccentricityEarthOrbit(t){ return 0.016708634 - t*(0.000042037 + 0.0000001267*t); }
+function _sunEqOfCenterSunrise(t){
+  const m = _sunGeomMeanAnomaly(t) * Math.PI/180;
+  return Math.sin(m)*(1.914602 - t*(0.004817+0.000014*t)) + Math.sin(2*m)*(0.019993-0.000101*t) + Math.sin(3*m)*0.000289;
+}
+function _sunApparentLongitudeSunrise(t){
+  const o = _sunGeomMeanLongitude(t) + _sunEqOfCenterSunrise(t);
+  const omega = 125.04 - 1934.136*t;
+  return o - 0.00569 - 0.00478*Math.sin(omega*Math.PI/180);
+}
+function _obliquityCorrectionSunrise(t){
+  const sec = 21.448 - t*(46.8150 + t*(0.00059 - t*0.001813));
+  const e0 = 23.0 + (26.0 + sec/60.0)/60.0;
+  const omega = 125.04 - 1934.136*t;
+  return e0 + 0.00256*Math.cos(omega*Math.PI/180);
+}
+function _sunDeclinationSunrise(t){
+  const e = _obliquityCorrectionSunrise(t) * Math.PI/180;
+  const lambda = _sunApparentLongitudeSunrise(t) * Math.PI/180;
+  return Math.asin(Math.sin(e)*Math.sin(lambda)) * 180/Math.PI;
+}
+function _equationOfTimeMinSunrise(t){
+  const epsilon = _obliquityCorrectionSunrise(t) * Math.PI/180;
+  const l0 = _sunGeomMeanLongitude(t) * Math.PI/180;
+  const e = _eccentricityEarthOrbit(t);
+  const m = _sunGeomMeanAnomaly(t) * Math.PI/180;
+  let y = Math.tan(epsilon/2.0); y *= y;
+  const Etime = y*Math.sin(2*l0) - 2*e*Math.sin(m) + 4*e*y*Math.sin(m)*Math.cos(2*l0) - 0.5*y*y*Math.sin(4*l0) - 1.25*e*e*Math.sin(2*m);
+  return Etime * 180/Math.PI * 4;
+}
+function _hourAngleSunriseDeg(latDeg, solarDecDeg){
+  const lat = latDeg*Math.PI/180, dec = solarDecDeg*Math.PI/180;
+  const zenith = 90.833*Math.PI/180; // рефракція атмосфери + видимий радіус Сонця
+  const arg = Math.cos(zenith)/(Math.cos(lat)*Math.cos(dec)) - Math.tan(lat)*Math.tan(dec);
+  const clamped = Math.max(-1, Math.min(1, arg)); // захист від NaN за полярним колом
+  return Math.acos(clamped) * 180/Math.PI;
+}
+function sunriseUTC_Meeus(dateUTC, lat, lon){
+  const jdMidnight = Math.floor(dateUTC.getTime()/86400000 + 2440587.5 - 0.5) + 0.5;
+  function pass(t){
+    const eqTime = _equationOfTimeMinSunrise(t);
+    const solarDec = _sunDeclinationSunrise(t);
+    const HAdeg = _hourAngleSunriseDeg(lat, solarDec);
+    const solarNoonUTC = 720 - 4*lon - eqTime;
+    return solarNoonUTC - 4*HAdeg; // СХІД = noon - HA (не +HA, це захід)
+  }
+  let t = _sjcSunrise(jdMidnight + 0.5);
+  let sunriseMin = pass(t);
+  // Другий прохід (NOAA-стандарт) — уточнення t за фактичним часом сходу
+  t = _sjcSunrise(jdMidnight + sunriseMin/1440);
+  sunriseMin = pass(t);
+  const dayStart = new Date(Date.UTC(dateUTC.getUTCFullYear(), dateUTC.getUTCMonth(), dateUTC.getUTCDate(), 0,0,0));
+  return new Date(dayStart.getTime() + sunriseMin*60000);
+}
+// _calcSunRiseSet() (Astronomy Engine, real ephemeris) лишається лише як
+// НЕОБОВ'ЯЗКОВА паралельна debug-перевірка (аудит, п.4) — вже НЕ production
+// dependency. Внутрішній Meeus-розрахунок — єдиний production-шлях.
 const sunriseUTC = d => {
+  try {
+    return sunriseUTC_Meeus(d, _userLat, _userLon);
+  } catch(e) {
+    if (window._DEBUG) console.warn('[sunriseUTC_Meeus fallback]:', e.message);
+  }
+  // Останній fallback — лише якщо навіть Meeus-розрахунок впав (не мало б статись)
   try {
     if (typeof _calcSunRiseSet === 'function') {
       const sr = _calcSunRiseSet(d);
       if (sr && sr.sunrise instanceof Date && !isNaN(sr.sunrise.getTime())) return sr.sunrise;
     }
-  } catch(e) { /* fall through to fallback */ }
+  } catch(e2) { /* fall through */ }
   return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 3, 51, 0));
 };
 // v87.90 fix: localWeekday — день тижня у локальній зоні (для Vara/Hora).
@@ -6836,11 +6913,30 @@ function moonAgeDays_simple(date){
   return (x + SYNODIC) % SYNODIC;
 }
 function moonPhaseAngle(date){
-  try{
-    if (window.Astronomy && typeof Astronomy.MoonPhase === 'function'){
-      return Astronomy.MoonPhase(date) % 360;
-    }
-  }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+  // v88.9.55-fp237 FIX-CRITICAL (аудит-раунд-23, підтверджено реальним тестом
+  // формул): раніше ця функція воліла window.Astronomy.MoonPhase() (зовнішня
+  // бібліотека), і ЛИШЕ якщо вона недоступна — падала на грубий
+  // moonAgeDays_simple() (середній синодичний рух 29.53 дн/цикл, БЕЗ корекцій
+  // еліптичності орбіти). У сесії Kyrylo бібліотека, вочевидь, не завантажилась
+  // (або дала іншу похибку) — фактично використовувався fallback.
+  // Перевірено числами (Node, вручну витягнуті функції з файлу): для 19.07.2026
+  // sunrise (02:08 UTC) fallback дає phaseDeg=52.37° → tithi#5=Panchami — точно
+  // те, що було на екрані. Точний шлях calcMoonLongitude(jde)−calcSunLongitude(jde)
+  // (той самий, що вже використовується для Nakshatra і зовнішньо звірений
+  // раніше) дає 61.99° → tithi#6=Shashthi — збігається з незалежним
+  // ефемеридним розрахунком аудиту (62.0027°) з точністю до 0.02°.
+  // Karana рахується з ТОГО САМОГО phaseDeg (karK=floor(phaseDeg/6)), тому цей
+  // єдиний фікс виправляє обидва поля одночасно.
+  // Прибрано залежність від window.Astronomy — тепер завжди self-contained
+  // Meeus-обчислення, ідентичне до вже перевіреного шляху Nakshatra/Yoga.
+  try {
+    const jde = date.getTime() / 86400000 + 2440587.5;
+    const moonLon = calcMoonLongitude(jde);
+    const sunLon = calcSunLongitude(jde);
+    const elong = ((moonLon - sunLon) % 360 + 360) % 360;
+    if (isFinite(elong)) return elong;
+  } catch(e){ if(window._DEBUG) console.warn('[moonPhaseAngle Meeus fallback]:', e.message); }
+  // Останній fallback — лише якщо навіть Meeus-обчислення впало (не мало б статись)
   const age = moonAgeDays_simple(date);
   return (age / SYNODIC) * 360.0;
 }
@@ -8099,6 +8195,23 @@ function computeCScore(kpNow, kpObsJson, ai, G, kpSrc){
     const _dstObj = window._lastDst;
     const _dstV = _dstObj && isFinite(_dstObj.dst) ? _dstObj.dst : null;
     if (isFinite(kpNow) && kpNow < 2 && _dstV !== null && _dstV < -80) _physicsConflict = true;
+  } catch(e){ /* silent */ }
+
+  // v88.9.59-fp241 (аудит-раунд-27, Problem 3): раніше tooltip "Причини
+  // зниження" не показував відсутність Sn/Dst як окремі пункти, хоча Formula
+  // Audit вже візуально показує "Sn —" і "Dst —" — користувач бачив "Середня"
+  // без пояснення, ЩО саме неповне. Малий штраф (0.03 кожен) — Sn/Dst
+  // другорядні для G_now (не входять у формулу напряму), тому мінімальний
+  // вплив на конфіденс, лише інформаційна прозорість причини.
+  try {
+    if (!window._lastDst || !isFinite(window._lastDst.dst)) {
+      penalty += 0.03;
+      reasons.push({ txt: 'Dst недоступний (фізична звірка неповна)', col: 'var(--dim)', d: 0.03 });
+    }
+    if (!window._lastWolfSn || !isFinite(window._lastWolfSn.sn)) {
+      penalty += 0.03;
+      reasons.push({ txt: 'Sn (Wolf) недоступний', col: 'var(--dim)', d: 0.03 });
+    }
   } catch(e){ /* silent */ }
 
   // Вимір 2: вік даних. v88.9.52-fp234: шкалу перекалібровано — fp233 давав
@@ -11052,7 +11165,13 @@ function computePanchangaState(dateUTC){
 function renderPanchangaCard(state){
   const { p, ctx, cells, _gEarly, aiNow, pclOnly, panchDiscrepancy, finalDo, finalAvoid, _gNow, dateStr, dateUTC } = state;
   const el_ = id => document.getElementById(id);
-  el_('panchDate').textContent = dateStr + ' ~12:00 UTC';
+  // v88.9.54-fp236: "~12:00 UTC" тут був хардкоджений і неточний — dateUTC це
+  // РЕАЛЬНИЙ sunrise-момент (переданий через computePanchangaState(sunriseUTC(...))),
+  // не буквально полудень. Показуємо фактичну годину:хвилину UTC.
+  const _refHM = (dateUTC instanceof Date && !isNaN(dateUTC.getTime()))
+    ? String(dateUTC.getUTCHours()).padStart(2,'0') + ':' + String(dateUTC.getUTCMinutes()).padStart(2,'0') + ' UTC'
+    : '~схід сонця';
+  el_('panchDate').textContent = dateStr + ' ' + _refHM;
 
   function scoreSpan(s){
     if(s > 0) return `<span class="panch-score-pos">+${s}</span>`;
@@ -13318,8 +13437,8 @@ function _applyStormGuardDOM(){
       if (!_isStormAware && (
           _t === 'Сьогодні сильний, сприятливий день' ||
           _t === 'День сприятливий — можна діяти планово' ||
-          _t === 'ОРІЄНТОВНО МОЖНА ДІЯТИ за PDF · live-фон — перевір перед критичною дією' ||
-          _t === 'МОЖНА ДІЯТИ за PDF · live-фон estimated — перевір перед критичною дією')) {
+          _t.startsWith('ОРІЄНТОВНО МОЖНА ДІЯТИ за PDF ·') ||
+          (_t.startsWith('МОЖНА ДІЯТИ за PDF ·') && _t.includes('перевір перед критичною дією')))) {
         const _etaStr43 = _sw.etaLabel || `~${_sw.hoursAhead}г`;
         _ac.textContent = _sw.active
           ? `PDF · буря Kp=${_sw.kp.toFixed(1)} АКТИВНА — тільки рутина`
@@ -13470,7 +13589,13 @@ function _renderHeroHierarchy(){
         };
         const _m = (_cls && _map[_cls]) ? _map[_cls] : ['нейтральний','var(--muted)'];
         const word = _m[0], col = _m[1];
-        const kpTxt= isFinite(kpN) ? ` <span style="color:var(--faint);font-size:11px">· live Kp ${kpN.toFixed(2)}</span>` : '';
+        // v88.9.57-fp239 (аудит-раунд-25, Problem 3): "live Kp" завжди казав
+        // "live", незалежно від реального джерела — навіть коли Kp насправді
+        // OBSERVED · DELAYED на кілька годин. Той самий принцип, що вже
+        // застосований до heroFreshness/Formula Audit/заголовка через
+        // resolveSourceLabel().
+        const _kpSrcWord = (function(){ try { const _r = resolveSourceLabel(); return _r.isLive ? 'live' : (_r.isRealObserved ? 'observed' : 'forecast'); } catch(_e){ return 'live'; } })();
+        const kpTxt= isFinite(kpN) ? ` <span style="color:var(--faint);font-size:11px">· ${_kpSrcWord} Kp ${kpN.toFixed(2)}</span>` : '';
         // v88.8.51-fp128: видима арифметика — "звідки береться це число", без пояснень у тултіпах.
         // ΣAᵢ виводиться зворотно з формули G=Kp-2+ΣAᵢ (self-consistent, нічого не вигадується).
         let _breakdown = '';
@@ -14150,13 +14275,26 @@ function heroHeadlineFromHierarchy_v88824(sig){
   try {
     const _dm = (typeof resolveDataModeExtended === 'function') ? resolveDataModeExtended() : null;
     if(sig.dayScore >= 3 && (_dm === 'estimated' || _dm === 'partial' || _dm === 'offline' || _dm === 'scenario')) {
+      // v88.9.54-fp236 FIX-CRITICAL (аудит-раунд-22): раніше цей текст хардкодив
+      // слово "estimated" при _dm==='estimated' — але _dm тут читає ВНУТРІШНІЙ
+      // ключ стану (той самий, що навмисно НЕ перейменований у fp226, бо забагато
+      // коду на нього спирається), а не реальний тип джерела. Тому затримане, але
+      // РЕАЛЬНЕ observed-вимірювання (напр. Kp з NOAA спостережень, просто на
+      // 3 години старіше) все одно писало "estimated" в реченні — той самий клас
+      // розсинхрону, що вже виправляли для DOM-writer'ів (fp227/228), але в
+      // ІНШОМУ, досі не охопленому споживачі. Тепер текст бере реальний опис
+      // джерела через resolveSourceLabel() — той самий, що всюди інде.
+      const _srcDesc = (function(){
+        try { const _r = resolveSourceLabel(); return _r.isRealObserved ? _r.combined.toLowerCase() : 'live-фон estimated'; }
+        catch(_e){ return 'live-фон estimated'; }
+      })();
       // v88.8.37-fp70: навіть при estimated зберігаємо застереження про слабкий фон,
       // якщо G_now негативний. Раніше estimated-гілка обходила live-guard і губила
       // інформацію «фон слабкий» — юзер бачив «МОЖНА ДІЯТИ» при PDF+3 і фоні −1.
       if (isFinite(sig.liveG) && sig.liveG < -0.3) {
-        return `Сильний день за PDF (+${sig.dayScore}), але фон зараз слабкий (G${sig.liveG.toFixed(1)}) · live-фон estimated — перевір`;
+        return `Сильний день за PDF (+${sig.dayScore}), але фон зараз слабкий (G${sig.liveG.toFixed(1)}) · ${_srcDesc} — перевір`;
       }
-      return 'МОЖНА ДІЯТИ за PDF · live-фон estimated — перевір перед критичною дією';
+      return `МОЖНА ДІЯТИ за PDF · ${_srcDesc} — перевір перед критичною дією`;
     }
   } catch(e) { /* silent */ }
   if(sig.dayScore >= 3) {
@@ -14831,6 +14969,37 @@ function syncHero(){
   _set('heroDecisionAvoid', _st.avoidText);
   const _doEl = el('heroDecisionDo');
   if(_doEl) _doEl.style.color = _st.color;
+  // v88.9.59-fp241 FIX-CRITICAL (аудит-раунд-27, Problem 2): CSS для
+  // #heroDecisionDo має ЖОРСТКИЙ зелений фон (rgba(43,212,125,...) з
+  // !important) незалежно від стану джерела — тому текстовий префікс
+  // "орієнтовно:" (fp45) НЕ міняв візуальну вагу блоку, він і далі виглядав
+  // як впевнена команда action-NOW, хоча дані delayed. Коли фон/дія
+  // сприятливі (favorable/good), АЛЕ джерело не live — притлумлюємо зелений
+  // на нейтрально-попереджувальний, той самий inline-override прийом, що вже
+  // застосований нижче для avoidEl.
+  try {
+    if (_doEl && (_stKey === 'favorable' || _stKey === 'good')) {
+      const _rslDo = (typeof resolveSourceLabel === 'function') ? resolveSourceLabel() : null;
+      if (_rslDo && !_rslDo.isLive) {
+        _doEl.style.setProperty('background','rgba(255,204,68,.08)','important');
+        _doEl.style.setProperty('border-color','rgba(255,204,68,.28)','important');
+        _doEl.style.setProperty('color','#ffe9b3','important');
+      } else {
+        // v88.9.60-fp242 САМОАУДИТ-ФІКС: реальний jsdom-тест виявив, що
+        // removeProperty('background') НІЧОГО не робить — background це
+        // shorthand-властивість, яку setProperty розгортає в background-color
+        // (та інші лонгхенди), а removeProperty шукає буквально "background"
+        // (якого вже немає як окремого запису) — фон лишався жовтим НАЗАВЖДИ
+        // навіть після повернення до live-стану. Пряме присвоєння порожнього
+        // рядка коректно очищає весь shorthand.
+        _doEl.style.background = '';
+        _doEl.style.borderColor = '';
+      }
+    } else if (_doEl) {
+      _doEl.style.background = '';
+      _doEl.style.borderColor = '';
+    }
+  } catch(_eDo) { /* noop */ }
   try {
     const _avoidEl = el('heroDecisionAvoid');
     const _note = heroLayerNoteFromHierarchy_v88824(_heroSig);
@@ -14848,10 +15017,14 @@ function syncHero(){
         _avoidEl.style.setProperty('border-color','rgba(155,177,220,.22)','important');
         _avoidEl.style.setProperty('color','#cfe0ff','important');
       } else {
-        // Скинути inline-стилі для не-позитивних станів (повертаємо CSS-defaults)
-        _avoidEl.style.removeProperty('background');
-        _avoidEl.style.removeProperty('border-color');
-        _avoidEl.style.removeProperty('color');
+        // v88.9.60-fp242 САМОАУДИТ-ФІКС (давній баг, знайдений тим самим
+        // методом реального DOM-тесту, що й для heroDecisionDo вище):
+        // removeProperty('background') не працює на shorthand — синій фон
+        // для favorable/good дня міг лишитись НАЗАВЖДИ навіть після переходу
+        // в неfavorable стан. Пряме присвоєння порожнього рядка.
+        _avoidEl.style.background = '';
+        _avoidEl.style.borderColor = '';
+        _avoidEl.style.color = '';
       }
     }
   } catch(e) { /* noop */ }
@@ -14909,7 +15082,7 @@ function syncHero(){
   const _dm47 = (typeof resolveDataModeExtended === 'function') ? resolveDataModeExtended() : 'live';
   const _headlineStormAware47 = _headline.includes('буря') || _headline.includes('АКТИВНА');
   if ((_dm47 === 'partial' || _dm47 === 'offline' || _dm47 === 'scenario') && !_headlineStormAware47 && !_headline.startsWith('ОРІЄНТОВНО')) {
-    if (_headline === 'МОЖНА ДІЯТИ за PDF · live-фон estimated — перевір перед критичною дією') {
+    if (_headline.startsWith('МОЖНА ДІЯТИ за PDF ·') && _headline.includes('перевір перед критичною дією')) {
       // Already has estimated suffix but lacks ОРІЄНТОВНО prefix
       _headline = 'ОРІЄНТОВНО МОЖНА ДІЯТИ за PDF · live-фон — перевір перед критичною дією';
     } else if (_headline === 'Сьогодні сильний, сприятливий день') {
@@ -15644,8 +15817,13 @@ function _renderHeroTimeWindows() {
       const now = new Date();
       visibleSlots.forEach(s => {
         const h = parseInt(s.label || '0');
-        const slotMid = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), h + 1, 30));
-        const hora = calcHora(slotMid);
+        // v88.9.58-fp240 (Problem 3): послідовність планет по ВСЬОМУ слоту,
+        // не лише в середині — див. calcHoraSequence.
+        const slotStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), h, 0));
+        const slotEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), h + 3, 0));
+        const sequence = calcHoraSequence(slotStart, slotEnd, 4);
+        const hora = sequence[0] || calcHora(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), h + 1, 30)));
+        hora.sequence = sequence;
         _horaForSlot[h] = hora;
       });
     } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
@@ -15738,7 +15916,13 @@ function _renderHeroTimeWindows() {
 
     if (_isFlat && _horaForSlot[h]) {
       const hora = _horaForSlot[h];
-      label = `${_actionLabel} · ${hora.planet}`;
+      // v88.9.58-fp240 (Problem 3): якщо всередині слоту хора змінюється —
+      // показуємо послідовність (Меркурій → Місяць), а не лише одну планету
+      // з середини слоту, яка могла вже не діяти на момент початку слоту.
+      const _horaLabel = (hora.sequence && hora.sequence.length > 1)
+        ? hora.sequence.map(x => x.planet).join(' → ')
+        : hora.planet;
+      label = `${_actionLabel} · ${_horaLabel}`;
     } else {
       label = _actionLabel;
     }
@@ -15752,9 +15936,32 @@ function _renderHeroTimeWindows() {
     if (_inauspWins.length) {
       const _hits = _inauspWins.filter(w => Math.max(h, w.a) < Math.min(endH, w.b));
       if (_hits.length) {
+        // v88.9.57-fp239 FIX-CRITICAL (аудит-раунд-25, Problem 2): раніше ВЕСЬ
+        // 3-годинний слот позначався тегом ⚠, навіть коли інаусп. вікно
+        // перекриває лише ЧАСТИНУ слота і ще не почалось (напр. слот 15:00-18:00,
+        // Gulika 17:03-19:03 — до 17:03 слот насправді вільний, але виглядав як
+        // "уникати зараз"). Для ПОТОЧНОГО слота з частковим МАЙБУТНІМ перекриттям
+        // (нинішній момент ще ДО початку найранішого вікна) показуємо явний час,
+        // коли обмеження реально почнеться, замість блокового позначення.
+        const _nowPreciseH = new Date().getUTCHours() + new Date().getUTCMinutes()/60;
+        // v88.9.57-fp239 САМОАУДИТ-ФІКС: перша версія вимагала, щоб УСІ
+        // перетини були в майбутньому (_futureHits.length === _hits.length) —
+        // але коли Yama вже минула, а Gulika ще ні (точний сценарій зі скріна:
+        // 15:56 Київ, Yama скінчилась о 15:03), Yama лишалась у _hits (формально
+        // перетинає слот), тому умова "всі майбутні" провалювалась і тег ⚠
+        // Yama/Gulika лишався блоковим — той самий баг, який мав виправити.
+        // Правильна перевірка: чи АКТИВНЕ щось ПРЯМО ЗАРАЗ (a<=now<b), а не
+        // "чи всі перетини в майбутньому".
+        const _activeNow = isCurrent ? _hits.filter(w => w.a <= _nowPreciseH && _nowPreciseH < w.b) : _hits;
+        const _futureHits = isCurrent ? _hits.filter(w => w.a > _nowPreciseH) : [];
+        if (isCurrent && _activeNow.length === 0 && _futureHits.length > 0) {
+          const _earliestFuture = _futureHits.reduce((a,b) => a.a < b.a ? a : b);
+          label += ` · <span style="color:#7fe3a6;cursor:help" title="Наразі жодне інаусп. вікно не активне. ${_hits.map(w => `${w.nm} ${w.st}–${w.en} UTC`).join(', ')}.">вільно, ${_earliestFuture.nm} з ${_earliestFuture.st}</span>`;
+        } else {
         const _names = _hits.map(w => w.nm).join('/');
         const _tip = _hits.map(w => `${w.nm} ${w.st}–${w.en} UTC`).join(', ');
         label += ` · <span style="color:#ffcc44;cursor:help" title="Канонічне інаусп. вікно — ${_tip}. Перетин із цим Kp-слотом → частково обережно (Kp-клас не змінюється).">⚠ ${_names}</span>`;
+        }
       }
     }
     const cls = isCurrent ? ' is-now' : isNext ? ' is-next' : '';
@@ -16316,9 +16523,16 @@ function syncDayPlanCard(){
     // Hora context
     let horaStr = '';
     try{
-      const slotMid = new Date(Date.UTC(_now.getUTCFullYear(), _now.getUTCMonth(), _now.getUTCDate(), h+1, 30));
-      const hora = calcHora(slotMid);
-      if(hora?.planet) horaStr = ` · ${hora.planet}`;
+      // v88.9.58-fp240 (Problem 3): послідовність замість одної точки в середині.
+      const _slotStart2 = new Date(Date.UTC(_now.getUTCFullYear(), _now.getUTCMonth(), _now.getUTCDate(), h, 0));
+      const _slotEnd2 = new Date(Date.UTC(_now.getUTCFullYear(), _now.getUTCMonth(), _now.getUTCDate(), h+3, 0));
+      const _seq2 = calcHoraSequence(_slotStart2, _slotEnd2, 4);
+      if (_seq2.length > 1) horaStr = ` · ${_seq2.map(x=>x.planet).join(' → ')}`;
+      else {
+        const slotMid = new Date(Date.UTC(_now.getUTCFullYear(), _now.getUTCMonth(), _now.getUTCDate(), h+1, 30));
+        const hora = calcHora(slotMid);
+        if(hora?.planet) horaStr = ` · ${hora.planet}`;
+      }
     }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
     // v87.90: конвертуємо UTC → локальний для відображення
     const _localStart = ((h + _tzOffH) % 24 + 24) % 24;
@@ -17190,7 +17404,20 @@ async function loadAll(){
       if (lastWWV && lastWWV.whenText) {
         const _tsStr = lastWWV.whenText.replace(' UTC', '').replace(' ', 'T') + 'Z';
         const _tsMs = new Date(_tsStr).getTime();
-        if (isFinite(_tsMs)) _noaaAgeH = Math.round((Date.now() - _tsMs) / 3600000);
+        // v88.9.59-fp241 FIX-CRITICAL (аудит-раунд-27, Problem 1): time_tag —
+        // це ПОЧАТОК 3-годинного observed-інтервалу NOAA (напр. 12:00 →
+        // інтервал 12:00-15:00 UTC), а не момент, коли значення стало
+        // актуальним. Раніше вік рахувався від time_tag напряму, тому
+        // затримка виглядала перебільшеною приблизно на 3 години (17:39 −
+        // 12:00 = 5.7г замість реальних 17:39 − 15:00 = 2.7г після завершення
+        // інтервалу). Тепер додаємо тривалість інтервалу (3г) — вік
+        // рахується від моменту, коли дані стали фінальними.
+        const KP_INTERVAL_HOURS = 3;
+        if (isFinite(_tsMs)) _noaaAgeH = Math.round((Date.now() - (_tsMs + KP_INTERVAL_HOURS*3600000)) / 3600000);
+        // Захист: якщо результат від'ємний (інтервал ще триває — NOAA іноді
+        // публікує проміжне значення до завершення вікна), не показуємо
+        // "від'ємну затримку" — округляємо до 0 (щойно з'явилось).
+        if (_noaaAgeH !== null && _noaaAgeH < 0) _noaaAgeH = 0;
       }
     } catch(eStale){ /* silent */ }
     window._kpSourceFreshness = { source: 'NOAA', ageHours: _noaaAgeH };
@@ -17205,7 +17432,10 @@ async function loadAll(){
         if (gfzParsed && gfzParsed.whenText) {
           const _gTsStr = gfzParsed.whenText.replace(' UTC','').replace(' ','T') + 'Z';
           const _gTsMs = new Date(_gTsStr).getTime();
-          if (isFinite(_gTsMs)) _gfzAgeH = Math.round((Date.now() - _gTsMs) / 3600000);
+          // v88.9.59-fp241 (той самий фікс, що й для NOAA вище): GFZ теж
+          // публікує 3-годинні Kp-інтервали з time_tag на початку вікна.
+          if (isFinite(_gTsMs)) _gfzAgeH = Math.round((Date.now() - (_gTsMs + 3*3600000)) / 3600000);
+          if (_gfzAgeH !== null && _gfzAgeH < 0) _gfzAgeH = 0;
         }
         if (gfzParsed && isFinite(gfzParsed.kNow) && _gfzAgeH !== null && _gfzAgeH < _noaaAgeH) {
           _lastKpObsJson = gfzVal;
@@ -18074,6 +18304,41 @@ function calcHora(dateUTC) {
   const locEnd = endLocal.toLocaleTimeString('uk-UA',{hour:'2-digit',minute:'2-digit'});
   const minLeft = Math.round((horaEnd - nowH) * 60);
   return { planet: HORA_ORDER[horaIdx], end: locEnd, minLeft };
+}
+
+// v88.9.58-fp240 (аудит-раунд-26, Problem 3): раніше "План дня" рахував Хору
+// лише в ОДНІЙ точці — середині 3-годинного слоту (slotMid = h+1:30) — і
+// підписував весь слот ЦІЄЮ ОДНІЄЮ планетою. Хора триває ~1г (dayLen/12),
+// тому в 3-годинному слоті зазвичай 2-3 різні хори — підпис міг показувати
+// "Місяць" для всього 18:00-21:00, хоча о 18:09 реально активний Меркурій
+// (Меркурій-хора ще не закінчилась на момент початку слоту). Ця функція
+// проходить слот від початку до кінця, збираючи послідовність планет.
+function calcHoraSequence(startUTC, endUTC, maxEntries){
+  const seq = [];
+  let cursor = new Date(startUTC.getTime());
+  const endMs = endUTC.getTime();
+  const cap = maxEntries || 4;
+  let guard = 0;
+  while (cursor.getTime() < endMs && guard < cap) {
+    guard++;
+    const hora = calcHora(cursor);
+    if (!hora || !hora.planet) break;
+    // v88.9.58-fp240 САМОАУДИТ-ФІКС: на межовому моменті (cursor точно
+    // збігається з кінцем хори) calcHora повертає minLeft=0 для хори, що
+    // ЩОЙНО закінчилась — реальний тест показав дублікат "Місяць → Місяць"
+    // з однаковим часом. Якщо minLeft<=0, ця хора вже фактично не діє —
+    // зсуваємо курсор на 1 хв і перераховуємо, НЕ пушимо застарілий запис.
+    if (hora.minLeft <= 0) {
+      cursor = new Date(cursor.getTime() + 60000);
+      continue;
+    }
+    seq.push({ planet: hora.planet, fromLocal: cursor.toLocaleTimeString('uk-UA',{hour:'2-digit',minute:'2-digit'}), endLocal: hora.end });
+    const minLeftMs = hora.minLeft * 60000;
+    const nextCursorMs = cursor.getTime() + minLeftMs;
+    if (nextCursorMs <= cursor.getTime()) break; // захист від нескінченного циклу
+    cursor = new Date(nextCursorMs);
+  }
+  return seq;
 }
 
 // ===================== ТРАНЗИТ МІСЯЦЯ =====================
