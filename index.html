@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.65-fp247-SEGMENT-TZ-AND-SUB-CONTRADICTION-FIX</title>
+  <title>G-Index — Космофізичний дашборд v88.9.66-fp248-GLOBAL-CURRENT-DECISION-SYNC</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -3648,6 +3648,27 @@ function renderDecisionLayer(gVal, ui) {
       avoidArr.push('Критично залежних від точного GPS систем');
     }
   }
+
+  // v88.9.6x-fp248 FIX-CRITICAL (аудит fp247, п.1): жоден з guard-ів вище не
+  // бачив Rahu/Yama/Gulika — «Запускати нові ініціативи/Укладати угоди» могло
+  // показуватись, поки Yama активна. Тепер — getCurrentSlotDecision() (той
+  // самий resolveSlotDecision(), що й в інших блоках). Буря вже оброблена
+  // гілкою _stormActive44 вище (той самий пріоритет буря>вікно, що в резолвері),
+  // тому тут реагуємо тільки на 'window:' причини, не дублюємо storm-текст.
+  try {
+    const _gcd = (typeof getCurrentSlotDecision === 'function') ? getCurrentSlotDecision() : null;
+    if (_gcd && _gcd.blockedNow && !_gcd.reasonsNow.includes('storm')) {
+      const _namesDL = _gcd.reasonsNow.filter(r => r.startsWith('window:')).map(r => r.slice(7)).join('+');
+      const _untilDL = (_gcd.blockedUntilH != null) ? ` до ${_fmtKyivFromUTCFloat(_gcd.blockedUntilH)}` : '';
+      doArr = ['Продовжувати розпочате', 'Виконувати рутинні завдання'];
+      avoidArr = [
+        `Нових ініціатив${_untilDL} (${_namesDL} активний)`,
+        'Підписання угод, контрактів',
+        'Ключових рішень і важливих переговорів'
+      ];
+      ctxTxt = `${_namesDL} активний${_untilDL} — тільки рутина, незалежно від фону дня. ` + ctxTxt;
+    }
+  } catch(_eGcdDL) { /* silent */ }
 
   // 5. Обмежити довжину (щоб не перенасичувати)
   doArr = doArr.slice(0, 5);
@@ -11678,7 +11699,40 @@ function renderPanchangaCard(state){
           if (!isFinite(h)) return `${utcLabel}:00–??:00`;
           return `${String(h).padStart(2,'0')}:00–${String((h + 3) % 24).padStart(2,'0')}:00`;
         };
-        const bestRange = _toLocalRange(best.label);
+        // v88.9.6x-fp248 (аудит fp247, п.4): best раніше показував ЦІЛИЙ
+        // 3-годинний слот з максимальним G, навіть якщо Rahu/Yama/Gulika
+        // перекривали його частину (напр. "09:00–12:00", хоча Yama почалась
+        // о 11:05) — "найкращий час" виглядав ширшим, ніж він реально чистий.
+        // Тепер: якщо best-слот частково заблокований — звужуємо діапазон до
+        // найдовшого НЕзаблокованого сегмента.
+        const _toLocalRangeH = (aH, bH) => {
+          const ls = ((aH + _kyivOffInt) % 24 + 24) % 24;
+          const le = ((bH + _kyivOffInt) % 24 + 24) % 24;
+          const _fmtH2 = x => { const hh = Math.floor(x); let mm = Math.round((x - hh) * 60); if (mm === 60) mm = 0; return String(hh).padStart(2,'0') + ':' + String(mm).padStart(2,'0'); };
+          return `${_fmtH2(ls)}–${_fmtH2(le)}`;
+        };
+        let _bestClipNote = '', _bestClipped = null;
+        try {
+          const _bh = parseInt(best.label, 10);
+          if (isFinite(_bh) && typeof resolveSlotDecision === 'function' && typeof getInauspiciousWindowsUTC === 'function') {
+            const _bDec = resolveSlotDecision({
+              slotStartH: _bh, slotEndH: _bh + 3, nowH: null,
+              slotG: best.G, dayScore: null,
+              windows: getInauspiciousWindowsUTC(), stormActive: false
+            });
+            if (_bDec.segments.length > 1) {
+              const _clean = _bDec.segments.filter(s => !s.blockedNewStarts);
+              if (_clean.length) {
+                const _longest = _clean.reduce((a,b) => (b.bH - b.aH) > (a.bH - a.aH) ? b : a);
+                const _blocked = _bDec.segments.find(s => s.blockedNewStarts);
+                const _blockedName = _blocked ? _blocked.reasons.filter(r => r.startsWith('window:')).map(r => r.slice(7)).join('+') : '';
+                _bestClipped = { a: _longest.aH, b: _longest.bH };
+                _bestClipNote = _blockedName ? ` (без ${_blockedName})` : '';
+              }
+            }
+          }
+        } catch(_eBestClip) { /* silent */ }
+        const bestRange = _bestClipped ? (_toLocalRangeH(_bestClipped.a, _bestClipped.b) + _bestClipNote) : _toLocalRange(best.label);
         const worstRange = _toLocalRange(worst.label);
         const bestRangeUTC = _utcRange(best.label);
         const worstRangeUTC = _utcRange(worst.label);
@@ -13300,6 +13354,58 @@ function resolveSlotDecision(params){
   return { segments, currentSegment, actionNow, slotAction, blockedNow, reasonsNow, hasBlockedSegment, reasons, nextChangeAt };
 }
 window.resolveSlotDecision = resolveSlotDecision;
+
+// v88.9.6x-fp248 (аудит fp247, п.1/2): "Що робити зараз" (renderDecisionLayer)
+// і Hero (heroDecisionDo/Avoid) кожен рахував власне рішення дня з G+PDF/Engine,
+// АЛЕ жоден не бачив Rahu/Yama/Gulika/бурю — тому «Публікувати, виступати,
+// презентувати» / «МОЖНА ДІЯТИ» показувались одночасно з «Yama активний — не
+// починати нових справ» в іншій картці. getCurrentSlotDecision() — одна точка
+// виклику resolveSlotDecision() для "поточного 3-годинного слоту" (той самий
+// підхід, що вже в syncPersonalContext з fp243b), яку тепер використовують І
+// Hero, І Decision Layer — а не кожен рахує власну копію тих самих вхідних даних.
+function getCurrentSlotDecision(){
+  const _now = new Date();
+  const _nowPreciseH = _now.getUTCHours() + _now.getUTCMinutes() / 60;
+  const _slotH = Math.floor(_now.getUTCHours() / 3) * 3;
+  const _sw = window._stormWindow;
+  const _stormActive = !!(_sw && isFinite(_sw.kp) && _sw.kp >= 5 && _slotH >= parseInt(_sw.label, 10));
+  let _dayEng = null;
+  try {
+    const _e = (typeof getEngineScore === 'function') ? getEngineScore(new Date(todayKyivStr() + 'T12:00:00Z')) : null;
+    if (_e && isFinite(_e.eng)) _dayEng = Number(_e.eng);
+  } catch(_e){ /* silent */ }
+  const g = (typeof _v73G === 'function') ? _v73G() : NaN;
+  const _wins = (typeof getInauspiciousWindowsUTC === 'function') ? getInauspiciousWindowsUTC() : [];
+  const _dec = resolveSlotDecision({
+    slotStartH: _slotH, slotEndH: _slotH + 3, nowH: _nowPreciseH,
+    slotG: g, dayScore: _dayEng,
+    windows: _wins, stormActive: _stormActive
+  });
+  // v88.9.6x-fp248 FIX (виявлено власним тестом): nextChangeAt обрізаний межею
+  // ПОТОЧНОГО слоту — якщо вікно (напр. Yama) закінчується ПІСЛЯ кінця слоту
+  // (реальний кейс зі скріну: слот 06:00-09:00 UTC, Yama 08:05-10:04 UTC),
+  // nextChangeAt=null, і "до котрої" губиться. blockedUntilH — справжній кінець
+  // активного вікна з повного _wins (не обрізаний слотом), для UI-тексту "до X".
+  let _blockedUntilH = null;
+  if (_dec.blockedNow && !_dec.reasonsNow.includes('storm')) {
+    const _activeNames = _dec.reasonsNow.filter(r => r.startsWith('window:')).map(r => r.slice(7));
+    const _ends = _wins.filter(w => _activeNames.includes(w.nm)).map(w => w.b);
+    if (_ends.length) _blockedUntilH = Math.max(..._ends);
+  }
+  _dec.blockedUntilH = _blockedUntilH;
+  return _dec;
+}
+window.getCurrentSlotDecision = getCurrentSlotDecision;
+// UTC-година (float) → "HH:MM" Europe/Kyiv — для показу "до КОЛИ" триває блок.
+function _fmtKyivFromUTCFloat(h){
+  const off = (typeof kyivOffsetHoursIntAt === 'function') ? kyivOffsetHoursIntAt(new Date()) : 3;
+  const local = ((h + off) % 24 + 24) % 24;
+  const hh = Math.floor(local);
+  let mm = Math.round((local - hh) * 60);
+  if (mm === 60) mm = 0;
+  return String(hh).padStart(2,'0') + ':' + String(mm).padStart(2,'0');
+}
+window._fmtKyivFromUTCFloat = _fmtKyivFromUTCFloat;
 
 function classifySlotScore(score){
   const s = Number(score ?? 0);
@@ -15299,8 +15405,23 @@ function syncHero(){
   } else {
     _stormDoText = _delayedPrefix + _st.doText;
   }
+  // v88.9.6x-fp248 FIX-CRITICAL (аудит fp247, п.2): Hero показував «МОЖНА
+  // ДІЯТИ» / «Можна діяти активно» одночасно з «Yama активний — не починати
+  // нових справ» в особистому блоці — Hero не бачив Rahu/Yama/Gulika взагалі.
+  // Буря вже оброблена гілкою вище (той самий пріоритет буря>вікно), тут
+  // реагуємо лише на 'window:' причини.
+  let _heroAvoidText = _st.avoidText;
+  try {
+    const _gcdHero = (typeof getCurrentSlotDecision === 'function') ? getCurrentSlotDecision() : null;
+    if (_gcdHero && _gcdHero.blockedNow && !_gcdHero.reasonsNow.includes('storm')) {
+      const _namesHero = _gcdHero.reasonsNow.filter(r => r.startsWith('window:')).map(r => r.slice(7)).join('+');
+      const _untilHero = (_gcdHero.blockedUntilH != null) ? ` до ${_fmtKyivFromUTCFloat(_gcdHero.blockedUntilH)}` : '';
+      _stormDoText = `${_delayedPrefix}Сприятливий день, але зараз ${_namesHero}: тільки рутина${_untilHero}`;
+      _heroAvoidText = `Не починати нових справ${_untilHero} (${_namesHero} активний)`;
+    }
+  } catch(_eGcdHero) { /* silent */ }
   _set('heroDecisionDo', _stormDoText);
-  _set('heroDecisionAvoid', _st.avoidText);
+  _set('heroDecisionAvoid', _heroAvoidText);
   const _doEl = el('heroDecisionDo');
   if(_doEl) _doEl.style.color = _st.color;
   // v88.9.59-fp241 FIX-CRITICAL (аудит-раунд-27, Problem 2): CSS для
@@ -15338,9 +15459,11 @@ function syncHero(){
     const _avoidEl = el('heroDecisionAvoid');
     const _note = heroLayerNoteFromHierarchy_v88824(_heroSig);
     if(_avoidEl){
+      // fp248: _heroAvoidText (не _st.avoidText напряму) — інакше цей блок
+      // перезаписував би override з Rahu/Yama/Gulika guard-у вище.
       _avoidEl.innerHTML = _note
-        ? `${_st.avoidText}<br><span style="font-size:10px;color:var(--faint);font-weight:600">${_note}</span>`
-        : _st.avoidText;
+        ? `${_heroAvoidText}<br><span style="font-size:10px;color:var(--faint);font-weight:600">${_note}</span>`
+        : _heroAvoidText;
     }
     // v88.8.35-fp20 fix: avoid block при позитивному дні (favorable/good) — нейтральний фон,
     // не червоний. Інакше "Підтримуйте темп без хаосу" виглядає алармовано на сприятливому дні.
@@ -16680,26 +16803,13 @@ function syncPersonalContext(){
   const st = GLOBAL_STATES[stKey];
   if(!st) return;
 
-  // v88.9.6x-fp243 (аудит fp242, п.1): раніше цей блок бачив ЛИШЕ Rahu (окремий
-  // булевий прапорець pc?.rahu?.active) — Yama/Gulika/буря взагалі не враховувались
-  // тут, тоді як «Критичні вікна» вже показували їх. Тепер — той самий
-  // resolveSlotDecision(), той самий пріоритет (буря > вікно > базове G), що й в
-  // інших двох блоках, для поточного 3-годинного слоту.
-  const _nowP243 = new Date();
-  const _nowPreciseHp3 = _nowP243.getUTCHours() + _nowP243.getUTCMinutes() / 60;
-  const _slotHp3 = Math.floor(_nowP243.getUTCHours() / 3) * 3;
-  const _swp3 = window._stormWindow;
-  const _stormActiveP3 = !!(_swp3 && isFinite(_swp3.kp) && _swp3.kp >= 5 && _slotHp3 >= parseInt(_swp3.label, 10));
-  let _dayEngP3 = null;
-  try {
-    const _eP3 = (typeof getEngineScore === 'function') ? getEngineScore(new Date(todayKyivStr()+'T12:00:00Z')) : null;
-    if (_eP3 && isFinite(_eP3.eng)) _dayEngP3 = Number(_eP3.eng);
-  } catch(_e){ /* silent */ }
-  const _personalDecision = resolveSlotDecision({
-    slotStartH: _slotHp3, slotEndH: _slotHp3 + 3, nowH: _nowPreciseHp3,
-    slotG: g, dayScore: _dayEngP3,
-    windows: getInauspiciousWindowsUTC(), stormActive: _stormActiveP3
-  });
+  // v88.9.6x-fp248 (аудит fp247, рекомендація "одна точка виклику"): раніше
+  // цей блок сам повторював обчислення поточного слоту (той самий код, що й у
+  // Hero/Decision Layer) — тепер спільна getCurrentSlotDecision(), яку
+  // використовують усі чотири споживачі (Personal/DayPlan/Critical
+  // Windows/Hero/Decision Layer), гарантуючи що це справді ОДИН і той самий
+  // виклик resolveSlotDecision(), а не N синхронізованих копій.
+  const _personalDecision = getCurrentSlotDecision();
   const _p243Names = () => _personalDecision.reasonsNow.filter(r => r.startsWith('window:')).map(r => r.slice(7)).join('+');
 
   // v85b-F6 (CRIT): Personal layer НЕ має права давати optimistic поради при risk-фоні.
@@ -16836,10 +16946,23 @@ function syncDayPlanCard(){
     let cls, text;
     if (_isBlockedForRow) {
       cls = 'warn';
-      // Компактний варіант для цієї картки (повний текст сегментів — у «Критичних вікнах»).
-      text = _reasonsForRow.includes('storm')
-        ? 'тільки рутина · Kp≥5'
-        : `тільки рутина · ${_reasonsForRow.filter(r => r.startsWith('window:')).map(r => r.slice(7)).join('+')} активний`;
+      if (_isCurrentSlotP) {
+        // Поточний слот — компактний статус ЦІЄЇ МИТІ (повний час сегмента — у «Критичних вікнах»).
+        text = _reasonsForRow.includes('storm')
+          ? 'тільки рутина · Kp≥5'
+          : `тільки рутина · ${_reasonsForRow.filter(r => r.startsWith('window:')).map(r => r.slice(7)).join('+')} активний`;
+      } else {
+        // v88.9.6x-fp248 FIX (аудит fp247, п.3): раніше майбутній слот з
+        // ЧАСТКОВИМ вікном (напр. Yama лише до 13:04 з 3-годинного 12:00-15:00)
+        // показував "тільки рутина; Yama активний" на ВЕСЬ слот — виглядало,
+        // ніби обмеження діє всі 3 години. Тепер — повні сегменти з часом
+        // (той самий slotAction, що вже коректно показує «Критичні вікна»,
+        // включно з fp247 Kyiv-конверсією).
+        text = (_decisionP.segments.length > 1) ? _decisionP.slotAction
+          : (_reasonsForRow.includes('storm')
+            ? 'тільки рутина · Kp≥5'
+            : `тільки рутина · ${_reasonsForRow.filter(r => r.startsWith('window:')).map(r => r.slice(7)).join('+')} активний`);
+      }
     } else {
       // v88.8.36-fp56-P12d: guard критичного дня (той самий принцип, що P12-C в особистому блоці).
       // Раніше: «можна діяти · Сатурн» ×3 на дні PDF/Engine=−2 прямо під hora-guard «лише рутина».
