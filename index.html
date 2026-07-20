@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.66-fp248-GLOBAL-CURRENT-DECISION-SYNC</title>
+  <title>G-Index — Космофізичний дашборд v88.9.67-fp249-DEPLOY-INTEGRITY-FIX</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -568,7 +568,8 @@
     @media (max-width: 860px){#astroGrid .panch-grid{gap:4px}}
     #heroCard{margin-bottom:10px;padding:12px 14px}
     /* v85b: hero sub-element classes */
-    #heroDecisionDo{font-size:13px;font-weight:700;line-height:1.3;color:var(--ok)}
+    #heroDecisionDo{font-size:13px;font-weight:700;line-height:1.3;color:var(--ok);overflow-wrap:break-word;word-break:break-word}
+    #heroDecisionAvoid{overflow-wrap:break-word;word-break:break-word}
     #heroDecisionAvoid{font-size:12px;line-height:1.3;color:var(--muted);margin-top:2px}
     #heroDecisionBlock{margin-top:4px}
     .hero-energy{margin-top:6px;position:relative}
@@ -797,6 +798,11 @@
     .decision-avoid .decision-col-title{color:#ff9f9f}
     .decision-col ul{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:3px}
     .decision-col li{font-size:12px;line-height:1.4;color:var(--text);padding:4px 8px;border-radius:6px;background:rgba(255,255,255,.02)}
+    /* v88.9.6x-fp249: min-width:0 safety — fp248 подовжив avoidArr-тексти
+       ("Нових ініціатив до 13:04 (Yama активний)"); стосується ширин >640px,
+       де .decision-grid ще 2-колонковий (на мобільному вже 1 колонка вище). */
+    .decision-col{min-width:0}
+    .decision-col li{overflow-wrap:break-word;word-break:break-word}
     .decision-do li{border-left:2px solid rgba(127,227,166,.4)}
     .decision-avoid li{border-left:2px solid rgba(255,159,159,.4)}
     /* v87.19 U4: Best/Worst days block (retention hook) */
@@ -1108,6 +1114,16 @@
 
     /* Timing block */
     .timing-row{display:grid;grid-template-columns:90px 1fr;gap:8px;align-items:center;padding:6px 10px;border-radius:10px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.05);margin-bottom:4px}
+    /* v88.9.6x-fp249 (аудит: mobile overflow ~280px @390px, саме в Critical
+       Windows): grid-колонка 1fr за замовчуванням не стискається нижче
+       max-content вмісту (CSS grid minmax(auto,1fr)) — fp243/247/248 подовжили
+       текст сегментів ("12:00–13:03 активні дії... · 13:03–14:02 тільки
+       рутина; Gulika активний — не починати нових справ · ..."), і без
+       min-width:0 весь рядок (і сторінка) розпирався горизонтально. */
+    .timing-row{min-width:0}
+    .timing-label{min-width:0;overflow-wrap:break-word;word-break:break-word}
+    .timing-label span{min-width:0;overflow-wrap:break-word;word-break:break-word}
+    .timing-time{min-width:0}
     .timing-row:last-child{margin-bottom:0}
     .timing-time{font-weight:700;font-size:12px;color:var(--text);font-variant-numeric:tabular-nums}
     .timing-val{font-weight:800;font-size:13px;text-align:right}
@@ -5828,32 +5844,51 @@ async function loadDailyMaster(){
 let _lastManifest = null;
 let _lastSeenKyivDateForManifest = null;
 async function checkDataManifest(){
-  let m = null;
-  try {
-    const resp = await fetch('data_manifest.json', { cache: 'default' });
-    if (resp.ok) m = await resp.json();
-  } catch(e){ /* маніфест відсутній/недоступний — не критично, просто без auto-refresh нових даних */ }
-
+  // v88.9.6x-fp249 FIX-CRITICAL (аудит fp248): раніше day-rollover перевірявся
+  // ДО `if (!m) return`, але саме скидання кешів було ПІСЛЯ нього — тому якщо
+  // manifest недоступний РІВНО в момент переходу доби (мережа, CDN затримка),
+  // повний reload не спрацьовував ВЗАГАЛІ, а не просто відкладався до
+  // наступного тіку. Тепер: day-rollover обробляється ПЕРШИМ і БЕЗУМОВНО,
+  // manifest — лише для гранулярної інвалідації окремих файлів (другорядно).
   const todayK = todayKyivStr();
   const _dayChanged = _lastSeenKyivDateForManifest !== null && _lastSeenKyivDateForManifest !== todayK;
   _lastSeenKyivDateForManifest = todayK;
 
-  if (!m) return; // без manifest — просто немає на що реагувати (старий деплой без fp246)
-
   const _changed = [];
   if (_dayChanged) {
-    // Нова доба Europe/Kyiv — форсуємо повний reload незалежно від manifest.
     _expertOverrides = null; _expertCalc = null; _futureKp = null; _dailyMaster = null;
     _changed.push('day_rollover');
-  } else if (_lastManifest) {
-    if (m.expert_overrides !== _lastManifest.expert_overrides) { _expertOverrides = null; _changed.push('expert_overrides'); }
-    if (m.expert_calc !== _lastManifest.expert_calc) { _expertCalc = null; _changed.push('expert_calc'); }
-    if (m.future_kp !== _lastManifest.future_kp) { _futureKp = null; _changed.push('future_kp'); }
   }
-  _lastManifest = m;
+
+  let m = null;
+  try {
+    // v88.9.6x-fp249: cache:'no-store' (не 'default') — манфест сам є "чи є
+    // зміни" сигналом, тому браузерний HTTP-кеш не повинен обслуговувати
+    // застарілу відповідь ДО того, як SW взагалі побачить запит.
+    const resp = await fetch('data_manifest.json', { cache: 'no-store' });
+    if (resp.ok) m = await resp.json();
+  } catch(e){ /* маніфест відсутній/недоступний — не критично, day-rollover вже оброблено вище */ }
+
+  if (m) {
+    if (!_dayChanged && _lastManifest) {
+      if (m.expert_overrides !== _lastManifest.expert_overrides) { _expertOverrides = null; _changed.push('expert_overrides'); }
+      if (m.expert_calc !== _lastManifest.expert_calc) { _expertCalc = null; _changed.push('expert_calc'); }
+      if (m.future_kp !== _lastManifest.future_kp) { _futureKp = null; _changed.push('future_kp'); }
+    }
+    // v88.9.6x-fp249: engine_scores.json ЗАФРОЗЖЕНИЙ на час V3 freeze — сюди
+    // НЕ додаємо auto-reload (freeze-інваріант: md5 не повинен змінюватись).
+    // Лише інформаційне попередження, якщо manifest раптом бачить іншу версію,
+    // ніж очікувана — сигнал про можливий незапланований дрейф frozen-файлу.
+    if (m.engine_scores && _lastManifest && _lastManifest.engine_scores &&
+        m.engine_scores !== _lastManifest.engine_scores) {
+      console.warn('[fp249] engine_scores.json version changed during V3 freeze — це НЕ мало статись:', _lastManifest.engine_scores, '→', m.engine_scores);
+    }
+    _lastManifest = m;
+  }
+
   if (!_changed.length) return;
 
-  if (window._DEBUG) console.log('[fp246] manifest change:', _changed.join(', '), '— перезавантажую...');
+  if (window._DEBUG) console.log('[fp246/249] manifest change:', _changed.join(', '), '— перезавантажую...');
   try { await loadExpertOverrides(); } catch(e){ /* silent */ }
   try { await loadExpertCalc(); } catch(e){ /* silent */ }
   try { await loadFutureKp(); } catch(e){ /* silent */ }
@@ -7906,7 +7941,9 @@ function renderGnssRisk(){
   const dst = (typeof _lastDst !== 'undefined' && isFinite(_lastDst)) ? _lastDst : 0;
   const lat = (typeof _userLat !== 'undefined') ? _userLat : 50.45; // default Kyiv
   const nowUTC = new Date();
-  const localHour = (nowUTC.getUTCHours() + 3) % 24; // UTC+3 Kyiv
+  // v88.9.6x-fp249 (аудит: hardcoded UTC+3 зсунеться на годину після переходу
+  // Києва на зимовий час) — той самий канонічний офсет, що вже в fp245.
+  const localHour = ((nowUTC.getUTCHours() + kyivOffsetHoursIntAt(nowUTC)) % 24 + 24) % 24;
 
   // === GNSS Risk v1 — NOAA G-Scale ===
   let base = 0;
@@ -13504,7 +13541,7 @@ function renderDecisionTiming(slots){
     const _sw32t = window._stormWindow;
     if (_sw32t && isFinite(_sw32t.kp) && _sw32t.kp >= 5) {
       const _utcL32t = String(_sw32t.label).padStart(2,'0');
-      const _kyivL32t = String((parseInt(_sw32t.label,10) + 3) % 24).padStart(2,'0');
+      const _kyivL32t = String(((parseInt(_sw32t.label,10) + kyivOffsetHoursIntAt(new Date())) % 24 + 24) % 24).padStart(2,'0');
       list.innerHTML = _delayWarn + `
         <div class="dt-row dt-good dt-now"><span class="dt-time">Зараз</span><span class="dt-label">орієнтовно можна — дійте до ${_utcL32t}:00 UTC ◀</span></div>
         <div class="dt-row dt-bad" style="opacity:.85"><span class="dt-time">До ${_utcL32t}:00 UTC / ${_kyivL32t}:00 Київ</span><span class="dt-label">закрити важливе</span></div>
@@ -13761,7 +13798,7 @@ function renderAlertBanner(g, kp){
   const _sw43 = window._stormWindow;
   if (_sw43 && !alerts.length) {
     const _utcH = parseInt(_sw43.label, 10);
-    const _kyivH = (_utcH + 3) % 24;
+    const _kyivH = ((_utcH + kyivOffsetHoursIntAt(new Date())) % 24 + 24) % 24;
     const _kyivStr = String(_kyivH).padStart(2,'0') + ':00';
     const _alertTitle = _sw43.active
       ? `⚡ БУРЯ АКТИВНА ЗАРАЗ — Kp=${_sw43.kp.toFixed(1)}`
@@ -13866,7 +13903,7 @@ function _applyStormGuardDOM(){
   const _sw = window._stormWindow;
   if (!_sw || !isFinite(_sw.kp) || _sw.kp < 5) return;
   const _utcL = String(_sw.label).padStart(2,'0');
-  const _kyivL = String((parseInt(_sw.label,10) + 3) % 24).padStart(2,'0');
+  const _kyivL = String(((parseInt(_sw.label,10) + kyivOffsetHoursIntAt(new Date())) % 24 + 24) % 24).padStart(2,'0');
 
   // 1. heroActionCmd
   try {
@@ -14691,7 +14728,7 @@ function heroHeadlineFromHierarchy_v88824(sig){
     const _sw = window._stormWindow;
     if (_sw && isFinite(_sw.kp) && _sw.kp >= 5 && sig.dayScore >= 2) {
       const _utcLabel = String(_sw.label).padStart(2,'0');
-      const _kyivLabel = String((parseInt(_sw.label,10) + 3) % 24).padStart(2,'0');
+      const _kyivLabel = String(((parseInt(_sw.label,10) + kyivOffsetHoursIntAt(new Date())) % 24 + 24) % 24).padStart(2,'0');
       // fp42: use etaLabel (ЗАРАЗ / ~Xг); active storm gets different wording
       const _etaStr = _sw.etaLabel || `~${_sw.hoursAhead}г`;
       if (_sw.active) {
@@ -16224,7 +16261,7 @@ function _renderHeroTimeWindows() {
     const _sw32c = window._stormWindow;
     if (_sw32c && isFinite(_sw32c.kp) && _sw32c.kp >= 5) {
       const _utcLc = String(_sw32c.label).padStart(2,'0');
-      const _kyivLc = String((parseInt(_sw32c.label,10) + 3) % 24).padStart(2,'0');
+      const _kyivLc = String(((parseInt(_sw32c.label,10) + kyivOffsetHoursIntAt(new Date())) % 24 + 24) % 24).padStart(2,'0');
       wrap.innerHTML = `<span style="color:#ffd2a0;font-size:11px">⚡ Kp-слоти недоступні, але відомо: буря Kp=${_sw32c.kp.toFixed(1)} о ${_utcLc}:00 UTC / ${_kyivLc}:00 Київ</span>`;
     } else {
       wrap.innerHTML = '<span style="color:var(--dim)">Прогноз Kp-слотів недоступний</span>';
