@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.67-fp249-DEPLOY-INTEGRITY-FIX</title>
+  <title>G-Index — Космофізичний дашборд v88.9.69-fp251-PROVENANCE-GRID-MOBILE-FIX</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -403,15 +403,42 @@
 
     /* ── Mobile: tooltip clamp (prevent off-screen) ── */
     @media (max-width: 500px) {
+      /* v88.9.6x-fp251 FIX-CRITICAL (аудит fp250: overflow 141px саме тут —
+         #provenanceCard → Formula Audit → Composite G). Точна специфікація
+         фіксу з аудиту: outer 1fr-1fr складається вертикально, внутрішні
+         рядки 140px 1fr → minmax(0,140px) minmax(0,1fr) (стискаються, а не
+         тримають жорстку ширину), overflow-wrap:anywhere для довгих hint. */
+      .prov-grid{ grid-template-columns: 1fr !important; }
+      .prov-row{ grid-template-columns: minmax(0,140px) minmax(0,1fr) !important; }
+      .prov-row span{ overflow-wrap: anywhere !important; }
+      /* v88.9.6x-fp250 FIX-CRITICAL (аудит: mobile overflow ~128px після
+         повного завантаження даних — Formula Audit, 3-day forecast, панель
+         індексів дня, самі hint-pop). Корінь: .hint-pop — position:absolute
+         відносно .hint (position:relative), яка може стояти БУДЬ-ДЕ на
+         екрані (таблиця Formula Audit, картка 3-day forecast, і т.д.).
+         Попередній фікс (left:0!important) досі позиціювався ВІДНОСНО .hint,
+         а не viewport — якщо .hint був ближче до правого краю, left:0 давав
+         значний зсув вправо, і max-width:calc(100vw-32px) все одно вилазив
+         за екран. Тепер: position:fixed, прибитий до низу екрана — гарантовано
+         в межах viewport НЕЗАЛЕЖНО від того, де саме на сторінці розташована
+         іконка-якір. */
       .hint-pop {
-        left: 0 !important;
-        right: auto !important;
+        position: fixed !important;
+        left: 16px !important;
+        right: 16px !important;
+        bottom: 16px !important;
+        top: auto !important;
+        width: auto !important;
+        max-width: none !important;
         transform: none !important;
-        max-width: calc(100vw - 32px);
+        max-height: 60vh;
+        overflow-y: auto;
       }
       .hint:hover .hint-pop,
-      .hint:focus-visible .hint-pop { transform: translateY(-4px) !important; }
-      .hint-pop::after { left: 20px; transform: none }
+      .hint:focus-visible .hint-pop { transform: none !important; }
+      /* Стрілка вказувала на іконку при відносному позиціюванні — з fixed
+         bottom-sheet вона більше нічого не вказує, ховаємо. */
+      .hint-pop::after { display: none !important; }
       /* personalForm — stack all fields */
       #personalForm > div { flex-direction: column }
       #personalForm > div > div { width: 100% !important; min-width: unset !important; flex: unset !important }
@@ -803,6 +830,17 @@
        де .decision-grid ще 2-колонковий (на мобільному вже 1 колонка вище). */
     .decision-col{min-width:0}
     .decision-col li{overflow-wrap:break-word;word-break:break-word}
+
+    /* v88.9.6x-fp251 (аудит fp250, точний структурний винуватець): Formula
+       Audit / Composite G рядки раніше мали grid-template-columns напряму в
+       inline style — CSS-класи не могли їх перебити без !important проти
+       inline. Тепер класи, база = ідентична попередній поведінці на desktop,
+       мобільний override — окремо нижче в @media (max-width:500px). */
+    .prov-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;min-width:0;max-width:100%}
+    .prov-col{min-width:0;max-width:100%}
+    .prov-row{display:grid;grid-template-columns:140px 1fr;gap:10px;padding:3px 0;border-bottom:1px solid rgba(30,42,68,.4);min-width:0;max-width:100%}
+    .prov-row-total{padding:6px 0;margin-top:4px;border-top:1px solid var(--border);border-bottom:none}
+    .prov-row span{min-width:0;overflow-wrap:anywhere}
     .decision-do li{border-left:2px solid rgba(127,227,166,.4)}
     .decision-avoid li{border-left:2px solid rgba(255,159,159,.4)}
     /* v87.19 U4: Best/Worst days block (retention hook) */
@@ -17175,7 +17213,7 @@ function renderProvenance(){
                     : _freshLower.includes('estimat') ? '✓ ESTIMATED'
                     : `? unknown (raw: ${_fresh})`;
 
-  const _row = (label, val, hint) => `<div style="display:grid;grid-template-columns:140px 1fr;gap:10px;padding:3px 0;border-bottom:1px solid rgba(30,42,68,.4)">
+  const _row = (label, val, hint) => `<div class="prov-row">
     <span style="color:var(--dim)">${label}</span>
     <span style="color:var(--text)">${val}${hint ? ` <span style="color:var(--faint);font-size:10px">${hint}</span>` : ''}</span>
   </div>`;
@@ -17187,8 +17225,8 @@ function renderProvenance(){
   };
 
   el.innerHTML = `
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-      <div>
+    <div class="prov-grid">
+      <div class="prov-col">
         <div style="font-size:10px;color:var(--alt);letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px">${(typeof t === 'function' ? t('provenanceInputs') : 'Inputs')}</div>
         ${_row('Дата (UTC)', _now.toISOString().slice(0,16) + 'Z')}
         ${_row('Kp', isFinite(_kpVal) ? _kpVal.toFixed(2) : '—', _kpSrc)}
@@ -17196,7 +17234,7 @@ function renderProvenance(){
         ${_row('Dst', _dstVal != null ? _dstVal + ' нТл' : '—', _dstTime + _dstProvLabel)}
         ${_row('Source state', _cacheState, (_fresh && _fresh.replace(/^●\s*/,'').trim() === _cacheState.replace(/^[✓⊙✗⚠]\s*/,'').trim()) ? '' : _fresh)}
       </div>
-      <div>
+      <div class="prov-col">
         <div style="font-size:10px;color:var(--ok);letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px">${(typeof t === 'function' ? t('provenanceComposite') : 'Composite G')}</div>
         ${_row('Kp − 2', _fmt(isFinite(_kpVal) ? (_kpVal - 2) : null, 2))}
         ${_row('Lᵢ (тітхі)', _fmt(_ai.Li, 1), _ai.lTip ? _ai.lTip.split('\\n')[0].slice(0,40) : '')}
@@ -17205,7 +17243,7 @@ function renderProvenance(){
         ${_row('Pᵢ (панчанга)', _fmt(_ai.Pi, 1), _ai.pTip ? _ai.pTip.slice(0,40) : '')}
         ${_row('Dᵢ (Dst-буря)', _fmt(_ai.Di, 1))}
         ${_row('ΣAᵢ', _fmt(_ai.Ai, 1))}
-        <div style="display:grid;grid-template-columns:140px 1fr;gap:10px;padding:6px 0;margin-top:4px;border-top:1px solid var(--border)">
+        <div class="prov-row prov-row-total">
           <span style="color:var(--ok);font-weight:700">G total</span>
           <span style="color:var(--text);font-weight:700;font-size:14px">${_fmt(_gNow, 2)}</span>
         </div>
