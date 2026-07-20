@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.64-fp246-DATA-MANIFEST-AUTOUPDATE</title>
+  <title>G-Index — Космофізичний дашборд v88.9.65-fp247-SEGMENT-TZ-AND-SUB-CONTRADICTION-FIX</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -13200,9 +13200,19 @@ function resolveSlotDecision(params){
   const sH = Number(p.slotStartH), eH = Number(p.slotEndH), nowH = p.nowH;
   const g = Number(p.slotG);
   const _wins = Array.isArray(p.windows) ? p.windows : [];
+  // v88.9.6x-fp247 FIX-CRITICAL (виявлено на реальному деплої fp246): раніше
+  // _fmtH() форматував СИРИЙ UTC — це не було видно, поки зовнішня мітка рядка
+  // (в _renderHeroTimeWindows/syncDayPlanCard) сама рахувалась через browser TZ
+  // (яка у Kyrylo зазвичай теж +3 = Kyiv). Але fp245 перевів зовнішню мітку на
+  // канонічний Europe/Kyiv-офсет — і два різні "локальні" часи в ОДНОМУ рядку
+  // (мітка слоту "09:00–12:00" Kyiv, а текст сегмента всередині "08:05–09:00"
+  // UTC) розійшлися візуально. Тепер _fmtH теж конвертує в Europe/Kyiv.
   const _fmtH = h => {
-    const hh = Math.floor(((h % 24) + 24) % 24);
-    const mm = Math.round((h - Math.floor(h)) * 60);
+    const _kOff = (typeof kyivOffsetHoursIntAt === 'function') ? kyivOffsetHoursIntAt(new Date()) : 3;
+    const local = ((h + _kOff) % 24 + 24) % 24;
+    const hh = Math.floor(local);
+    let mm = Math.round((local - Math.floor(local)) * 60);
+    if (mm === 60) mm = 0;
     return String(hh).padStart(2,'0') + ':' + String(mm).padStart(2,'0');
   };
 
@@ -16746,7 +16756,17 @@ function syncPersonalContext(){
 
   // Sub — what's different for today specifically
   const piVal = pc?.aiComponents?.Pi || 0;
-  if(piVal >= 1){
+  // v88.9.6x-fp247 FIX-CRITICAL (виявлено на реальному деплої fp246, скрін
+  // Kyrylo): personalSub рахувався НЕЗАЛЕЖНО від personalMain — коли вікно
+  // блокує (Yama/Rahu/Gulika/буря), main казав "не починати нових справ", а sub
+  // (через piVal>=1 АБО st.impact) міг сказати "можна приймати рішення і
+  // рухатись вперед" — пряме протиріччя в тій самій картці. Той самий клас
+  // бага, що аудит fp242 п.1 знайшов для "Критичних вікон"/"Плану дня", просто
+  // в іншому рядку, який fp243b не займав. Тепер blockedNow — перевірка НОМЕР 1,
+  // перед усіма piVal-гілками.
+  if (_personalDecision.blockedNow) {
+    personalSub = 'Вікно тимчасово обмежує нові справи, незалежно від загального фону.';
+  } else if(piVal >= 1){
     personalSub = 'Панчанга сьогодні підтримує — це компенсує частину тиску.';
   } else if(piVal <= -1){
     personalSub = 'Панчанга додає навантаження — варто бути ще обережнішим.';
