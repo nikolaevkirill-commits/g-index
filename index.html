@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.60-fp242-SELFAUDIT-SHORTHAND-RESET-BUG</title>
+  <title>G-Index — Космофізичний дашборд v88.9.61-fp243b-SLOT-DECISION-BLOCKEDNOW-FIX</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -12967,6 +12967,193 @@ function resolveStormWindow(now, slots, kpNow) {
 }
 window.resolveStormWindow = resolveStormWindow;
 
+// ═══ fp243: канонічний slot-decision resolver ═══
+// v88.9.6x-fp243 (аудит fp242, п.1): раніше «Критичні вікна», «План дня» й
+// «Особистий контекст» кожен окремо вирішували, чи можна діяти в слоті —
+// Rahu/Yama/Gulika одні блоки трактували як HARD BLOCK («не починати нових
+// справ»), інші лише як декоративний тег ⚠ поруч із «активні дії і ключові
+// рішення». Та сама хвилина видавала взаємовиключні команди в різних картках.
+// Тепер — одна функція, один пріоритет: буря > активне вікно (Rahu/Yama/Gulika)
+// > базове рішення за slot G > контекст дня (PDF/Engine softening).
+
+function getInauspiciousWindowsUTC(){
+  // Винесено з (колишнього) renderHeroTimeWindows — раніше рахувалось ЛИШЕ там,
+  // День-план і Особистий контекст Rahu/Yama/Gulika взагалі не бачили.
+  let _wins = [];
+  try {
+    const _pc = _lastPanchCtx;
+    let _R = null;
+    if (typeof computePanchanga === 'function' && typeof sunriseUTC === 'function') {
+      try {
+        const _dk = todayKyivStr();
+        if (window.__p3RahuCache && window.__p3RahuCache.dk === _dk) {
+          _R = window.__p3RahuCache.rahu;
+        } else {
+          _R = computePanchanga(sunriseUTC(new Date(todayKyivStr()+'T12:00:00Z'))).rahu;
+          window.__p3RahuCache = { dk: _dk, rahu: _R };
+        }
+      } catch(_e){ _R = null; }
+    }
+    if (!_R || !_R.gulika) _R = (_pc && _pc.rahu) ? _pc.rahu : _R;
+    if (_R) {
+      const _toH = t => { const _p2 = String(t||'').split(':').map(Number); return _p2.length===2 ? _p2[0]+_p2[1]/60 : NaN; };
+      [['Rahu', _R.start, _R.end],
+       ['Yama', _R.yamagandam && _R.yamagandam.start, _R.yamagandam && _R.yamagandam.end],
+       ['Gulika', _R.gulika && _R.gulika.start, _R.gulika && _R.gulika.end]
+      ].forEach(([_nm, _st, _en]) => {
+        const _a = _toH(_st), _b = _toH(_en);
+        if (isFinite(_a) && isFinite(_b) && _b > _a) _wins.push({ nm: _nm, start: _st, end: _en, a: _a, b: _b });
+      });
+    }
+  } catch(_e) { /* silent */ }
+  return _wins;
+}
+window.getInauspiciousWindowsUTC = getInauspiciousWindowsUTC;
+
+function _slotDecisionInvariant(text, blocked){
+  // fp243 runtime invariant (ТЗ п.4): якщо слот заблокований активним вікном/
+  // бурею — текст рішення НЕ МОЖЕ містити формулювання, що дозволяють нові
+  // старти. Порушення = логічна суперечність між блоками; лог для виявлення
+  // регресій під час розробки (не блокує рендер — тільки сигналізує).
+  if (blocked && /ключові рішення|активні дії|нов[іу] ініціатив|укладати угод/i.test(String(text||''))) {
+    console.error('SLOT_DECISION_CONFLICT', text);
+  }
+}
+
+function _baseSlotAction(g, dayScore){
+  // Базові 5 рівнів + softening за PDF/Engine дня — ідентично попередній логіці,
+  // що раніше жила лише в renderHeroTimeWindows; тепер спільна для всіх трьох
+  // блоків, замість «Плану дня» власної спрощеної 3-рівневої версії.
+  let action = g >= 1.5 ? 'активні дії і ключові рішення'
+    : g >= 0.5 ? 'безпечно працювати і планувати'
+    : g >= -0.5 ? 'стандартний темп без форсування'
+    : g >= -1.5 ? 'обережно: тільки перевірені дії'
+    : 'тільки рутина, не приймати рішень';
+  const _ds = isFinite(dayScore) ? Number(dayScore) : null;
+  const _pdfNeg  = (_ds !== null && _ds < 0);
+  const _pdfHard = (_ds !== null && _ds <= -2);
+  const _pdfCrit = (_ds !== null && _ds <= -3);
+  if (_pdfCrit) {
+    action = g >= 1.5 ? 'мінімум активності, без жодних рішень (день PDF/Engine особливо несприятливий)'
+      : g >= 0.5 ? 'тільки рутина, без нових ініціатив (день PDF/Engine особливо несприятливий)'
+      : g >= -0.5 ? 'категорично уникати рішень (день PDF/Engine особливо несприятливий)'
+      : g >= -1.5 ? 'категорично уникати, тільки невідкладне (день PDF/Engine особливо несприятливий)'
+      : 'припинити всі активні дії (день PDF/Engine особливо несприятливий)';
+  } else if (_pdfHard) {
+    action = g >= 1.5 ? 'тільки перевірені дії, без нових рішень (день PDF/Engine критичний)'
+      : g >= 0.5 ? 'рутина і відомі задачі (день PDF/Engine критичний)'
+      : g >= -0.5 ? 'мінімум активних дій (день PDF/Engine критичний)'
+      : g >= -1.5 ? 'обережно: тільки перевірені дії (день PDF/Engine критичний)'
+      : 'тільки рутина, не приймати рішень (день PDF/Engine критичний)';
+  } else if (_pdfNeg && g >= 0.5) {
+    action = g >= 1.5 ? 'звичайні задачі і планування (день PDF/Engine негативний)'
+      : 'перевірені дії, не ключові рішення (день PDF/Engine негативний)';
+  }
+  return action;
+}
+
+// resolveSlotDecision({slotStartH, slotEndH, nowH, slotG, dayScore, windows, stormActive})
+// → { segments[], currentSegment, actionNow, slotAction, blockedNow, reasonsNow[],
+//     hasBlockedSegment, reasons[], nextChangeAt }
+//   hasBlockedSegment — десь У СЛОТІ є заблокований сегмент (для майбутніх слотів)
+//   blockedNow        — заблоковано САМЕ ЗАРАЗ (currentSegment), для "поточного стану"
+// Усі години — UTC float (0..24), як в решті кодової бази (parseInt(slot.label)).
+function resolveSlotDecision(params){
+  const p = params || {};
+  const sH = Number(p.slotStartH), eH = Number(p.slotEndH), nowH = p.nowH;
+  const g = Number(p.slotG);
+  const _wins = Array.isArray(p.windows) ? p.windows : [];
+  const _fmtH = h => {
+    const hh = Math.floor(((h % 24) + 24) % 24);
+    const mm = Math.round((h - Math.floor(h)) * 60);
+    return String(hh).padStart(2,'0') + ':' + String(mm).padStart(2,'0');
+  };
+
+  // 1) буря — найвищий пріоритет, перекриває і активні вікна, і базове G.
+  if (p.stormActive) {
+    const action = 'тільки рутина · Kp≥5 (буря)';
+    _slotDecisionInvariant(action, true);
+    const _seg0 = { aH: sH, bH: eH, action, blockedNewStarts: true, reasons: ['storm'] };
+    const _isNow0 = isFinite(nowH) && nowH >= sH && nowH < eH;
+    return {
+      segments: [_seg0],
+      currentSegment: _isNow0 ? _seg0 : null,
+      actionNow: _isNow0 ? action : null,
+      slotAction: action,
+      blockedNow: _isNow0,
+      reasonsNow: _isNow0 ? ['storm'] : [],
+      hasBlockedSegment: true,
+      reasons: ['storm'],
+      nextChangeAt: null
+    };
+  }
+
+  // 2) сегменти — межі слоту + краї вікон, обрізані по межах слоту.
+  const _bounds = new Set([sH, eH]);
+  const _clipped = [];
+  _wins.forEach(w => {
+    const a = Math.max(sH, w.a), b = Math.min(eH, w.b);
+    if (b > a) { _clipped.push({ nm: w.nm, a, b }); _bounds.add(a); _bounds.add(b); }
+  });
+  const _sorted = Array.from(_bounds).sort((x, y) => x - y);
+  const baseAction = _baseSlotAction(g, isFinite(p.dayScore) ? p.dayScore : null);
+
+  const segments = [];
+  for (let i = 0; i < _sorted.length - 1; i++) {
+    const x = _sorted[i], y = _sorted[i + 1];
+    if (y <= x) continue;
+    const mid = (x + y) / 2;
+    const active = _clipped.filter(w => w.a <= mid && mid < w.b);
+    let action, blocked, reasons;
+    if (active.length) {
+      const names = active.map(w => w.nm).join('+');
+      action = `тільки рутина; ${names} активн${active.length > 1 ? 'і' : 'ий'} — не починати нових справ`;
+      blocked = true;
+      reasons = active.map(w => 'window:' + w.nm);
+    } else {
+      action = baseAction;
+      blocked = false;
+      reasons = ['baseG'];
+    }
+    _slotDecisionInvariant(action, blocked);
+    segments.push({ aH: x, bH: y, action, blockedNewStarts: blocked, reasons });
+  }
+  if (!segments.length) {
+    _slotDecisionInvariant(baseAction, false);
+    segments.push({ aH: sH, bH: eH, action: baseAction, blockedNewStarts: false, reasons: ['baseG'] });
+  }
+
+  // v88.9.6x-fp243b FIX-CRITICAL (самоаудит доп. пасу): раніше єдиний прапорець
+  // blockedNewStarts = segments.some(...) означав "БУДЬ-ДЕ в слоті є блок" — тому
+  // о 06:30, коли Rahu ще не почався (07:06), персональний блок і День-план ВСЕ
+  // ОДНО писали "Rahu активний — не починати нових справ", хоча actionNow чесно
+  // казав "активні дії". Тепер два окремі поняття:
+  //   hasBlockedSegment — десь У СЛОТІ є заблокований сегмент (для майбутніх
+  //                       слотів у списку — попередження про частину слоту);
+  //   blockedNow        — заблоковано САМЕ ЗАРАЗ (для "поточного стану", кольору
+  //                       поточного рядка, особистого блоку) — тільки з currentSegment.
+  let actionNow = null, nextChangeAt = null, currentSegment = null;
+  if (isFinite(nowH) && nowH >= sH && nowH < eH) {
+    const curIdx = segments.findIndex(s => nowH >= s.aH && nowH < s.bH);
+    if (curIdx >= 0) {
+      currentSegment = segments[curIdx];
+      actionNow = `${_fmtH(currentSegment.aH)}–${_fmtH(currentSegment.bH)} — ${currentSegment.action}`;
+      if (curIdx < segments.length - 1) nextChangeAt = segments[curIdx + 1].aH;
+    }
+  }
+
+  const hasBlockedSegment = segments.some(s => s.blockedNewStarts);
+  const blockedNow = !!(currentSegment && currentSegment.blockedNewStarts);
+  const reasonsNow = currentSegment ? currentSegment.reasons : [];
+  const reasons = Array.from(new Set(segments.flatMap(s => s.reasons)));
+  const slotAction = segments.length === 1
+    ? segments[0].action
+    : segments.map(s => `${_fmtH(s.aH)}–${_fmtH(s.bH)} ${s.action}`).join(' · ');
+
+  return { segments, currentSegment, actionNow, slotAction, blockedNow, reasonsNow, hasBlockedSegment, reasons, nextChangeAt };
+}
+window.resolveSlotDecision = resolveSlotDecision;
+
 function classifySlotScore(score){
   const s = Number(score ?? 0);
   if(s >= TIMING_THRESHOLDS.good) return 'good';
@@ -15829,92 +16016,61 @@ function _renderHeroTimeWindows() {
     } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
   }
 
-  // v88.8.35-fp55-P3 (fix): inauspicious windows (UTC) computed ONCE before the slot loop.
-  // _lastPanchCtx.rahu is a reduced object (active/start/end only) — gulika/yamagandam live only on
-  // the full computePanchanga() result, so recompute at noonUTC (stable; sunrise-based windows don't
-  // depend on time-of-day). Fallback to _pc.rahu (Rahu-only) if recompute is unavailable.
-  let _inauspWins = [];
-  try {
-    let _R = null;
-    if (typeof computePanchanga === 'function' && typeof sunriseUTC === 'function') {
-      // v88.8.35-fp56-P8: cache the recompute by UTC date — _renderHeroTimeWindows runs on the 30s
-      // guard timer, and these sunrise-based windows only change once per day, so recomputing the full
-      // panchanga every tick was wasted work.
-      try {
-        const _dk = todayKyivStr();
-        if (window.__p3RahuCache && window.__p3RahuCache.dk === _dk) {
-          _R = window.__p3RahuCache.rahu;
-        } else {
-          _R = computePanchanga(sunriseUTC(new Date(todayKyivStr()+'T12:00:00Z'))).rahu;
-          window.__p3RahuCache = { dk: _dk, rahu: _R };
-        }
-      } catch(_e){ _R = null; }
-    }
-    if (!_R || !_R.gulika) _R = (_pc && _pc.rahu) ? _pc.rahu : _R;
-    if (_R) {
-      const _toH = t => { const _p2 = String(t||'').split(':').map(Number); return _p2.length===2 ? _p2[0]+_p2[1]/60 : NaN; };
-      [['Rahu', _R.start, _R.end],
-       ['Yama', _R.yamagandam && _R.yamagandam.start, _R.yamagandam && _R.yamagandam.end],
-       ['Gulika', _R.gulika && _R.gulika.start, _R.gulika && _R.gulika.end]
-      ].forEach(([_nm, _st, _en]) => {
-        const _a = _toH(_st), _b = _toH(_en);
-        if (isFinite(_a) && isFinite(_b)) _inauspWins.push({ nm: _nm, st: _st, en: _en, a: _a, b: _b });
-      });
-    }
-  } catch(_e) { /* silent */ }
+  // v88.9.6x-fp243: раніше цей блок сам рахував Rahu/Yama/Gulika (_inauspWins) і
+  // сам вирішував текст дії (_actionLabel), а «План дня» і «Особистий контекст»
+  // рахували своє — незалежно, різними шляхами. Наслідок (аудит fp242): та сама
+  // хвилина видавала «активні дії і ключові рішення · ⚠ Rahu» тут і «не починати
+  // нових справ» в іншій картці. Тепер: вікна — через getInauspiciousWindowsUTC()
+  // (спільна для всіх трьох блоків), а дію для кожного слоту вирішує ЄДИНА функція
+  // resolveSlotDecision() (пріоритет: буря → активне вікно → базове G → контекст дня).
+  const _inauspWins = getInauspiciousWindowsUTC();
 
   const lines = visibleSlots.map(s => {
     const h = parseInt(s.label || '0'); // UTC година початку
     const endH = h + 3;
     const isCurrent = (nowH >= h && nowH < endH);
     const isNext = (nextIdx >= 0 && slots[nextIdx] === s);
-    const g = s.G;
+    // v88.9.6x-fp243b FIX-CRITICAL (аудит fp243, п.2): для ПОТОЧНОГО слоту всі три
+    // блоки мали передавати resolveSlotDecision РІЗНИЙ G — тут статичний s.G
+    // (прогноз слоту), а особистий блок — live _v73G() (G_now). Через це поза Rahu
+    // один блок міг сказати «активні дії», а інший — «обережно» на ту саму мить.
+    // Тепер: для поточного слоту effectiveG = G_now (якщо доступний), для
+    // майбутніх слотів — s.G (G_now для майбутнього не існує).
+    const _liveGNow = (isCurrent && typeof _v73G === 'function') ? _v73G() : NaN;
+    const g = (isCurrent && isFinite(_liveGNow)) ? _liveGNow : s.G;
     let _dayNegFlag = false;
-    try { const _de=getEngineScore(new Date(todayKyivStr()+'T12:00:00Z')); if(_de&&isFinite(_de.eng)) _dayNegFlag=Number(_de.eng)<=-2; } catch(e){}
-    const col = _dayNegFlag
+    let _dayEngForGate = null;
+    try {
+      const _de = getEngineScore(new Date(todayKyivStr()+'T12:00:00Z'));
+      if (_de && isFinite(_de.eng)) { _dayNegFlag = Number(_de.eng) <= -2; _dayEngForGate = Number(_de.eng); }
+    } catch(e){}
+    const _colBase = _dayNegFlag
       ? (g >= 0 ? '#ffaa33' : g >= -1 ? '#ff9944' : '#ff6b6b')
       : (g >= 1 ? '#2bd47d' : g >= 0 ? '#9bb1dc' : g >= -1 ? '#ffcc00' : '#ff6b6b');
 
-    let label;
-    // v79: human action label
-    // v88.8.35-fp9 Q + fp11 W: PDF/Engine для дня має пріоритет — якщо денний verdict ≤ -2 (особливо
-    // несприятливий), softening застосовується до ВСІХ live-слотів, не тільки g >= 0.5.
-    // Це усуває "стандартний темп без форсування" при PDF/Engine = -3 — теж занадто м'яко.
-    let _dayEngForGate = null;
-    try {
-      const _e = (typeof getEngineScore === 'function') ? getEngineScore(new Date(todayKyivStr()+'T12:00:00Z')) : null;
-      if (_e && isFinite(_e.eng)) _dayEngForGate = Number(_e.eng);
-    } catch(e){ _dayEngForGate = null; }
-    const _pdfNeg = (_dayEngForGate !== null && _dayEngForGate < 0);   // м'який gate (fp9 Q)
-    const _pdfHard = (_dayEngForGate !== null && _dayEngForGate <= -2); // жорсткий cap (fp11 W)
-    // v88.8.35-fp18: окремий tier для eng<=-3 → "категорично уникати" замість "обережно".
-    const _pdfCrit = (_dayEngForGate !== null && _dayEngForGate <= -3);
-    let _actionLabel = g >= 1.5 ? 'активні дії і ключові рішення'
-      : g >= 0.5 ? 'безпечно працювати і планувати'
-      : g >= -0.5 ? 'стандартний темп без форсування'
-      : g >= -1.5 ? 'обережно: тільки перевірені дії'
-      : 'тільки рутина, не приймати рішень';
-    if (_pdfCrit) {
-      // PDF/Engine = -3 — Особливо несприятливий день. Жорсткіше за -2.
-      _actionLabel = g >= 1.5 ? 'мінімум активності, без жодних рішень (день PDF/Engine особливо несприятливий)'
-        : g >= 0.5 ? 'тільки рутина, без нових ініціатив (день PDF/Engine особливо несприятливий)'
-        : g >= -0.5 ? 'категорично уникати рішень (день PDF/Engine особливо несприятливий)'
-        : g >= -1.5 ? 'категорично уникати, тільки невідкладне (день PDF/Engine особливо несприятливий)'
-        : 'припинити всі активні дії (день PDF/Engine особливо несприятливий)';
-    } else if (_pdfHard) {
-      // PDF/Engine = -2 — несприятливий день.
-      _actionLabel = g >= 1.5 ? 'тільки перевірені дії, без нових рішень (день PDF/Engine критичний)'
-        : g >= 0.5 ? 'рутина і відомі задачі (день PDF/Engine критичний)'
-        : g >= -0.5 ? 'мінімум активних дій (день PDF/Engine критичний)'
-        : g >= -1.5 ? 'обережно: тільки перевірені дії (день PDF/Engine критичний)'
-        : 'тільки рутина, не приймати рішень (день PDF/Engine критичний)';
-    } else if (_pdfNeg && g >= 0.5) {
-      // PDF/Engine = -1 → softened wording для зелених слотів (старий fp9 Q)
-      _actionLabel = g >= 1.5 ? 'звичайні задачі і планування (день PDF/Engine негативний)'
-        : 'перевірені дії, не ключові рішення (день PDF/Engine негативний)';
-    }
+    // fp243: той самий критерій storm hard-cap, що й раніше в normalizeDaySlots/dayPlan.
+    const _sw174slot = window._stormWindow;
+    const _stormActiveSlot = !!(_sw174slot && isFinite(_sw174slot.kp) && _sw174slot.kp >= 5 && h >= parseInt(_sw174slot.label, 10));
+    const _nowPreciseH2 = new Date().getUTCHours() + new Date().getUTCMinutes() / 60;
 
-    if (_isFlat && _horaForSlot[h]) {
+    const _decision = resolveSlotDecision({
+      slotStartH: h, slotEndH: endH, nowH: _nowPreciseH2,
+      slotG: g, dayScore: _dayEngForGate,
+      windows: _inauspWins, stormActive: _stormActiveSlot
+    });
+    // v88.9.6x-fp243b FIX-CRITICAL (аудит fp243, п.1): раніше колір читав
+    // blockedNewStarts = "десь у слоті є блок" — тому о 06:30 (до Rahu 07:06)
+    // рядок писав "активні дії" ЗЕЛЕНИМ текстом, але кольором точки — червоним.
+    // Для поточного слоту колір мусить відповідати ЦІЙ МИТІ (blockedNow), для
+    // майбутніх слотів — попередження про слот загалом (hasBlockedSegment).
+    const col = (isCurrent ? _decision.blockedNow : _decision.hasBlockedSegment) ? '#ff6b6b' : _colBase;
+
+    // Поточний слот показує точний сегмент "зараз" (з реальними межами вікна,
+    // обрізаними по слоту) — саме кейс зі скріну: 08:10 всередині Rahu 07:06–09:06,
+    // слот 06:00–09:00 → "07:06–09:00 — тільки рутина; Rahu активний".
+    let label = (isCurrent && _decision.actionNow) ? _decision.actionNow : _decision.slotAction;
+
+    if (_isFlat && _horaForSlot[h] && !_decision.hasBlockedSegment) {
       const hora = _horaForSlot[h];
       // v88.9.58-fp240 (Problem 3): якщо всередині слоту хора змінюється —
       // показуємо послідовність (Меркурій → Місяць), а не лише одну планету
@@ -15922,48 +16078,11 @@ function _renderHeroTimeWindows() {
       const _horaLabel = (hora.sequence && hora.sequence.length > 1)
         ? hora.sequence.map(x => x.planet).join(' → ')
         : hora.planet;
-      label = `${_actionLabel} · ${_horaLabel}`;
-    } else {
-      label = _actionLabel;
+      label += ` · ${_horaLabel}`;
     }
-    // Panchanga overlay
-    if (_panchTimingNote && g < 0.5) label += ` (${_panchTimingNote})`;
-    // v88.8.35-fp56-P8: reconcile Kp-slot vs Vedic inauspicious windows (Rahu/Yama/Gulika).
-    // Overlap in UTC against _inauspWins (computed once above). Compact inline tag (⚠ Name) — the
-    // previous inline "частково обережно (Name HH:MM–HH:MM UTC)" was long AND placed UTC times next to
-    // the row's LOCAL times, reading as inconsistent. Full UTC window now lives in the tooltip.
-    // Kp class itself is unchanged.
-    if (_inauspWins.length) {
-      const _hits = _inauspWins.filter(w => Math.max(h, w.a) < Math.min(endH, w.b));
-      if (_hits.length) {
-        // v88.9.57-fp239 FIX-CRITICAL (аудит-раунд-25, Problem 2): раніше ВЕСЬ
-        // 3-годинний слот позначався тегом ⚠, навіть коли інаусп. вікно
-        // перекриває лише ЧАСТИНУ слота і ще не почалось (напр. слот 15:00-18:00,
-        // Gulika 17:03-19:03 — до 17:03 слот насправді вільний, але виглядав як
-        // "уникати зараз"). Для ПОТОЧНОГО слота з частковим МАЙБУТНІМ перекриттям
-        // (нинішній момент ще ДО початку найранішого вікна) показуємо явний час,
-        // коли обмеження реально почнеться, замість блокового позначення.
-        const _nowPreciseH = new Date().getUTCHours() + new Date().getUTCMinutes()/60;
-        // v88.9.57-fp239 САМОАУДИТ-ФІКС: перша версія вимагала, щоб УСІ
-        // перетини були в майбутньому (_futureHits.length === _hits.length) —
-        // але коли Yama вже минула, а Gulika ще ні (точний сценарій зі скріна:
-        // 15:56 Київ, Yama скінчилась о 15:03), Yama лишалась у _hits (формально
-        // перетинає слот), тому умова "всі майбутні" провалювалась і тег ⚠
-        // Yama/Gulika лишався блоковим — той самий баг, який мав виправити.
-        // Правильна перевірка: чи АКТИВНЕ щось ПРЯМО ЗАРАЗ (a<=now<b), а не
-        // "чи всі перетини в майбутньому".
-        const _activeNow = isCurrent ? _hits.filter(w => w.a <= _nowPreciseH && _nowPreciseH < w.b) : _hits;
-        const _futureHits = isCurrent ? _hits.filter(w => w.a > _nowPreciseH) : [];
-        if (isCurrent && _activeNow.length === 0 && _futureHits.length > 0) {
-          const _earliestFuture = _futureHits.reduce((a,b) => a.a < b.a ? a : b);
-          label += ` · <span style="color:#7fe3a6;cursor:help" title="Наразі жодне інаусп. вікно не активне. ${_hits.map(w => `${w.nm} ${w.st}–${w.en} UTC`).join(', ')}.">вільно, ${_earliestFuture.nm} з ${_earliestFuture.st}</span>`;
-        } else {
-        const _names = _hits.map(w => w.nm).join('/');
-        const _tip = _hits.map(w => `${w.nm} ${w.st}–${w.en} UTC`).join(', ');
-        label += ` · <span style="color:#ffcc44;cursor:help" title="Канонічне інаусп. вікно — ${_tip}. Перетин із цим Kp-слотом → частково обережно (Kp-клас не змінюється).">⚠ ${_names}</span>`;
-        }
-      }
-    }
+    // Panchanga overlay — лише коли слот НЕ заблокований вікном (активне Rahu/
+    // Yama/Gulika вже explicit у тексті рішення, не дублюємо попередження).
+    if (_panchTimingNote && g < 0.5 && !_decision.hasBlockedSegment) label += ` (${_panchTimingNote})`;
     const cls = isCurrent ? ' is-now' : isNext ? ' is-next' : '';
     const mark = isCurrent ? '<span style="color:var(--ok);font-size:10px;font-weight:700"> ◀ поточний слот</span>' : '';
     const dot = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${col};flex-shrink:0"></span>`;
@@ -16413,15 +16532,38 @@ function syncPersonalContext(){
   const st = GLOBAL_STATES[stKey];
   if(!st) return;
 
+  // v88.9.6x-fp243 (аудит fp242, п.1): раніше цей блок бачив ЛИШЕ Rahu (окремий
+  // булевий прапорець pc?.rahu?.active) — Yama/Gulika/буря взагалі не враховувались
+  // тут, тоді як «Критичні вікна» вже показували їх. Тепер — той самий
+  // resolveSlotDecision(), той самий пріоритет (буря > вікно > базове G), що й в
+  // інших двох блоках, для поточного 3-годинного слоту.
+  const _nowP243 = new Date();
+  const _nowPreciseHp3 = _nowP243.getUTCHours() + _nowP243.getUTCMinutes() / 60;
+  const _slotHp3 = Math.floor(_nowP243.getUTCHours() / 3) * 3;
+  const _swp3 = window._stormWindow;
+  const _stormActiveP3 = !!(_swp3 && isFinite(_swp3.kp) && _swp3.kp >= 5 && _slotHp3 >= parseInt(_swp3.label, 10));
+  let _dayEngP3 = null;
+  try {
+    const _eP3 = (typeof getEngineScore === 'function') ? getEngineScore(new Date(todayKyivStr()+'T12:00:00Z')) : null;
+    if (_eP3 && isFinite(_eP3.eng)) _dayEngP3 = Number(_eP3.eng);
+  } catch(_e){ /* silent */ }
+  const _personalDecision = resolveSlotDecision({
+    slotStartH: _slotHp3, slotEndH: _slotHp3 + 3, nowH: _nowPreciseHp3,
+    slotG: g, dayScore: _dayEngP3,
+    windows: getInauspiciousWindowsUTC(), stormActive: _stormActiveP3
+  });
+  const _p243Names = () => _personalDecision.reasonsNow.filter(r => r.startsWith('window:')).map(r => r.slice(7)).join('+');
+
   // v85b-F6 (CRIT): Personal layer НЕ має права давати optimistic поради при risk-фоні.
   // Раніше: Юпітер hora при G=-1.33 → "сприяє стратегії і важливим рішенням" (суперечність з hero).
   // Тепер: при G ≤ -1 особистий шар — тільки про НЕ-дії.
   if (isFinite(g) && g <= -1) {
     const hora = (function(){try{return calcHora(new Date())}catch(e){return null}})();
     const pc = _lastPanchCtx;
-    const rahu = pc?.rahu?.active;
-    if (rahu) {
-      main.textContent = '⚠ Rahu Kalam + нестабільний фон — не починати нових справ.';
+    if (_personalDecision.blockedNow) {
+      main.textContent = _personalDecision.reasonsNow.includes('storm')
+        ? '⚠ Буря (Kp≥5) + нестабільний фон — не починати нових справ.'
+        : `⚠ ${_p243Names()} + нестабільний фон — не починати нових справ.`;
     } else if (hora?.planet) {
       main.textContent = `${hora.planet} hora, але загальний фон тисне — без форсування і нових рішень.`;
     } else {
@@ -16434,15 +16576,18 @@ function syncPersonalContext(){
   // v84b: Personal MODIFIER — not global copy
   const hora = (function(){try{return calcHora(new Date())}catch(e){return null}})();
   const pc = _lastPanchCtx;
-  const rahu = pc?.rahu?.active;
 
   // Build personal-specific text
   let personalMain = '';
   let personalSub = '';
 
   // Hora context — what's special NOW
-  if(rahu){
-    personalMain = '⚠ Rahu Kalam активний — не починати нових справ.';
+  // v88.9.6x-fp243: раніше тільки Rahu; тепер той самий _personalDecision, що й
+  // вище (буря/Yama/Gulika теж блокують нові справи, а не лише Rahu).
+  if(_personalDecision.blockedNow){
+    personalMain = _personalDecision.reasonsNow.includes('storm')
+      ? '⚠ Буря (Kp≥5) активна — не починати нових справ.'
+      : `⚠ ${_p243Names()} активний — не починати нових справ.`;
   } else if(hora?.planet){
     const HORA_CONTEXT = {
       'Юпітер': 'Зараз Юпітер hora — сприяє стратегії і важливим рішенням.',
@@ -16499,23 +16644,47 @@ function syncDayPlanCard(){
   for(const s of slots){
     const h = parseInt(s.label || '0'); // UTC година початку слоту
     if(h + 3 <= nowH) continue; // past
-    const g = Number(s.G ?? 0);
-    // fp44: storm hard cap for plan dня
+    const _isCurrentSlotP = (nowH >= h && nowH < h + 3);
+    // v88.9.6x-fp243b (аудит fp243, п.2): для поточного слоту — live G_now, для
+    // майбутніх — прогнозний s.G (як і в «Критичних вікнах», той самий effectiveG).
+    const _liveGNowP = (_isCurrentSlotP && typeof _v73G === 'function') ? _v73G() : NaN;
+    const g = (_isCurrentSlotP && isFinite(_liveGNowP)) ? _liveGNowP : Number(s.G ?? 0);
+    // v88.9.6x-fp243 (аудит fp242, п.1): раніше тут рахувався ТІЛЬКИ storm hard-cap —
+    // Rahu/Yama/Gulika взагалі не читались, тому «План дня» міг показати «можна
+    // діяти» одночасно з Rahu-забороною в іншій картці. Тепер — resolveSlotDecision(),
+    // та сама логіка й ті самі вікна, що й у «Критичних вікнах» / особистому блоці.
     const _sw44p = window._stormWindow;
-    const _stormStartHp = (_sw44p && isFinite(_sw44p.kp) && _sw44p.kp >= 5) ? parseInt(_sw44p.label, 10) : null;
-    const _isStormSlotP = _stormStartHp !== null && h >= _stormStartHp;
+    const _stormActiveP = !!(_sw44p && isFinite(_sw44p.kp) && _sw44p.kp >= 5 && h >= parseInt(_sw44p.label, 10));
+    let _dayEngForGateP = null;
+    try {
+      const _eD = (typeof getEngineScore === 'function') ? getEngineScore(new Date(todayKyivStr()+'T12:00:00Z')) : null;
+      if (_eD && isFinite(_eD.eng)) _dayEngForGateP = Number(_eD.eng);
+    } catch(_e){ /* silent */ }
+    const _nowPreciseHp = _now.getUTCHours() + _now.getUTCMinutes() / 60;
+    const _decisionP = resolveSlotDecision({
+      slotStartH: h, slotEndH: h + 3, nowH: _nowPreciseHp,
+      slotG: g, dayScore: _dayEngForGateP,
+      windows: getInauspiciousWindowsUTC(), stormActive: _stormActiveP
+    });
+    // v88.9.6x-fp243b FIX-CRITICAL (аудит fp243, п.1): раніше "blockedNewStarts"
+    // = будь-де в слоті — тому о 06:30 (до Rahu 07:06) картка вже писала
+    // "тільки рутина · Rahu активний" на весь слот. Для ПОТОЧНОГО слоту рішення
+    // мусить відповідати ЦІЙ МИТІ (blockedNow/reasonsNow); для майбутніх слотів —
+    // попередження про наявність блокованої частини (hasBlockedSegment) лишається,
+    // це не помилка, а завчасне попередження про частину слоту, що настане.
+    const _isBlockedForRow = _isCurrentSlotP ? _decisionP.blockedNow : _decisionP.hasBlockedSegment;
+    const _reasonsForRow = _isCurrentSlotP ? _decisionP.reasonsNow : _decisionP.reasons;
     let cls, text;
-    if (_isStormSlotP) {
+    if (_isBlockedForRow) {
       cls = 'warn';
-      text = `тільки рутина · Kp≥5`;
+      // Компактний варіант для цієї картки (повний текст сегментів — у «Критичних вікнах»).
+      text = _reasonsForRow.includes('storm')
+        ? 'тільки рутина · Kp≥5'
+        : `тільки рутина · ${_reasonsForRow.filter(r => r.startsWith('window:')).map(r => r.slice(7)).join('+')} активний`;
     } else {
       // v88.8.36-fp56-P12d: guard критичного дня (той самий принцип, що P12-C в особистому блоці).
       // Раніше: «можна діяти · Сатурн» ×3 на дні PDF/Engine=−2 прямо під hora-guard «лише рутина».
-      let _dayCrit = false;
-      try {
-        const _eD = (typeof getEngineScore === 'function') ? getEngineScore(new Date(todayKyivStr()+'T12:00:00Z')) : null;
-        _dayCrit = !!(_eD && isFinite(_eD.eng) && Number(_eD.eng) <= -2);
-      } catch(_e){ /* silent */ }
+      const _dayCrit = (_dayEngForGateP !== null && _dayEngForGateP <= -2);
       cls = g >= 0.5 ? 'ok' : g >= -0.5 ? 'info' : 'warn';
       text = g >= 0.5 ? 'можна діяти' : g >= -0.5 ? 'обережно: перевірені дії' : 'уникати: тільки рутина';
       if (_dayCrit && g >= 0.5) { cls = 'info'; text = 'рутина й перевірені дії (день критичний)'; }
