@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.77-fp259-MODEL-CONFLICT-CARD-NO-DOUBLECOUNT</title>
+  <title>G-Index — Космофізичний дашборд v88.9.78-fp260-PUSH-BACKEND-CLOUDFLARE-MIGRATION</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -4351,6 +4351,14 @@ const GAUTH_WORKER_URL = 'https://gindex-auth.nikolaev-kirill.workers.dev';
 const GAUTH_TOKEN_KEY = 'gindex_session_token';
 const GAUTH_USER_KEY = 'gindex_user';
 
+// v88.9.6x-fp260: VAPID public key для Web Push — раніше НІДЕ в коді не
+// встановлювався (window._vapid_public_key завжди був undefined), тому PUSH
+// був "inert" завжди, незалежно від Supabase/Cloudflare. Згенерувати:
+//   npx web-push generate-vapid-keys
+// Публічний ключ вставити сюди (рядок нижче), приватний — ТІЛЬКИ в env
+// Cloudflare Worker (push-worker-addon.js), НІКОЛИ не в цей файл.
+window._vapid_public_key = ''; // TODO(Kyrylo): встав публічний VAPID-ключ сюди
+
 // v88.6.9: safe localStorage helpers (handle quota / private mode / disabled storage)
 function _gauthLsSet(k, v){
   try { localStorage.setItem(k, v); return true; }
@@ -5147,13 +5155,23 @@ function getEffectiveGForDate(dateObj, rawG, minDelta) {
 window.getEffectiveGForDate = getEffectiveGForDate;
 
 // ═══════════════════════════════════════════════════════════════════════════
-// v87.37 PUSH NOTIFICATIONS — client side. Inert без VAPID-ключа (window._vapid_public_key).
+// v87.37 PUSH NOTIFICATIONS — client side.
+// v88.9.6x-fp260 FIX-CRITICAL (аудит: "чому у нас цього немає?" — виявилось,
+// що є, з v87.37, але НЕПРАЦЮЮЧЕ): цей модуль звертався до SUPA.getClient()/
+// SUPA.currentUser() — Supabase-бекенду, який v88.6.9 ЯВНО видалив на користь
+// Cloudflare-авторизації (SUPA.getClient() відтоді хардкоджено повертає null,
+// SUPA.isConfigured() — завжди false, з коментарем "поки push backend не
+// deployed"). Тобто навіть з VAPID-ключем підписка впала б на першому ж
+// зверненні до бази (client.from(...) на null). Тепер — той самий Worker і
+// той самий Bearer-паттерн, що вже реально працює для /auth/logout.
+// Inert без VAPID-ключа (window._vapid_public_key) — так само, як і раніше.
 // Workflow:
 //   1. User clicks 🔔 bell → PushModal.show()
 //   2. Notification.requestPermission() → 'granted' | 'denied' | 'default'
 //   3. If granted: serviceWorker.pushManager.subscribe({userVisibleOnly:true, applicationServerKey:VAPID})
-//   4. POST subscription to Supabase push_subscriptions (via SUPA.getClient())
-//   5. Server (Edge Function, окремо) може надсилати push через web-push npm lib.
+//   4. POST subscription до gindex-auth Worker /push/subscribe (Bearer GAuth token)
+//   5. Worker (Cloudflare, окремо — див. push-worker-addon.js) зберігає підписку
+//      в KV і на Cron Trigger шле push через web-push (nodejs_compat).
 // ═══════════════════════════════════════════════════════════════════════════
 const PUSH = (function(){
   function _log(...a){ try{ if(window._DEBUG) console.log('[PUSH]', ...a); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)} }
@@ -5166,8 +5184,11 @@ const PUSH = (function(){
       && 'Notification' in window;
   }
 
+  // fp260: більше не залежить від SUPA (видалений backend) — лише від
+  // наявності VAPID-ключа. Worker-доступність перевіряється фактичним
+  // запитом у subscribe(), не тут (немає сенсу тримати другий health-check).
   function isConfigured(){
-    return !!(window._vapid_public_key && SUPA && SUPA.isConfigured && SUPA.isConfigured());
+    return !!window._vapid_public_key;
   }
 
   function currentPermission(){
@@ -5214,26 +5235,34 @@ const PUSH = (function(){
       });
     }
 
-    // 4. Зберегти у Supabase (якщо залогінений — user_id з auth, інакше guest-fail)
-    const user = SUPA.currentUser();
-    if(!user) throw new Error('Увійдіть в акаунт, щоб увімкнути сповіщення');
-
-    const client = SUPA.getClient();
-    if(!client) throw new Error('Supabase client недоступний');
+    // 4. Зберегти на gindex-auth Worker (fp260: замість мертвого Supabase).
+    // Той самий Bearer-паттерн, що вже реально працює для /auth/logout.
+    const token = GAuth.getToken();
+    if(!token) throw new Error('Увійдіть в акаунт, щоб увімкнути сповіщення');
 
     const subJson = sub.toJSON();
     const row = {
-      user_id: user.id,
       endpoint: subJson.endpoint,
       p256dh: subJson.keys && subJson.keys.p256dh,
       auth_secret: subJson.keys && subJson.keys.auth,
-      user_agent: navigator.userAgent,
-      last_seen: new Date().toISOString()
+      user_agent: navigator.userAgent
     };
 
-    // upsert по endpoint (один endpoint унікальний)
-    const { error } = await client.from('push_subscriptions').upsert(row, { onConflict: 'endpoint' });
-    if(error) throw error;
+    let r;
+    try {
+      r = await fetch(GAUTH_WORKER_URL + '/push/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify(row)
+      });
+    } catch(netErr) {
+      throw new Error('Сервер сповіщень недоступний. Перевір інтернет і спробуй знову.');
+    }
+    if (!r.ok) {
+      let msg = 'Не вдалося зберегти підписку (HTTP ' + r.status + ')';
+      try { const data = await r.json(); if (data && data.error) msg = data.error; } catch(_e){}
+      throw new Error(msg);
+    }
     _log('subscribed and stored');
     return sub;
   }
@@ -5245,11 +5274,16 @@ const PUSH = (function(){
     if(!sub) return;
     const endpoint = sub.endpoint;
     await sub.unsubscribe();
-    // Видалити з DB якщо залогінений
-    if(SUPA.currentUser() && SUPA.getClient()){
+    // Видалити на Worker-стороні, якщо є токен (fp260: замість Supabase delete).
+    const token = GAuth.getToken();
+    if(token){
       try{
-        await SUPA.getClient().from('push_subscriptions').delete().eq('endpoint', endpoint);
-      }catch(e){ _warn('DB delete failed:', e); }
+        await fetch(GAUTH_WORKER_URL + '/push/unsubscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({ endpoint })
+        });
+      }catch(e){ _warn('server-side unsubscribe failed:', e); }
     }
     _log('unsubscribed');
   }
