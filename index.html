@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.75-fp257-3DAY-DIVERGENCE-MERGE</title>
+  <title>G-Index — Космофізичний дашборд v88.9.76-fp258-STRONG-RAW-CONFIDENCE-SHADOW</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1695,6 +1695,7 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
             <!-- v88.7.15 Б: low-confidence marker — engine F1=0.26 на neutral (CANONICAL_METRICS).
                  Видимий ТІЛЬКИ коли |G| ≤ 1 (зона де engine має слабку точність). -->
             <div id="heroLowConfBadge" tabindex="0" style="display:none;margin-top:6px;padding:4px 8px;border-radius:6px;font-size:11px;color: var(--muted);background:rgba(155,177,220,.06);border:1px dashed rgba(155,177,220,.25);cursor:help" title="Engine v18.5 на нейтральному класі (G ∈ [-1, +1]) має f1=0.26 — низька точність розрізнення нейтральних/слабких днів. Strong negative (F1=0.84) і Strong positive (F1=0.69) — надійні. Для критичних рішень у середній зоні рекомендована експертна перевірка.&#10;Source: CANONICAL_METRICS.md v2.0 (n=280, GT v5.1).">⚪ Низька довіра в нейтральній зоні</div>
+            <div id="heroStrongRawConfidence" tabindex="0" style="display:none;margin-top:6px;padding:4px 8px;border-radius:6px;font-size:11px;font-weight:700;color:#9ce6c0;background:rgba(43,212,125,.08);border:1px solid rgba(43,212,125,.45);cursor:help" title="Shadow confidence policy: HIGH лише коли |expert raw sum| ≥ 3. Не змінює G. Historical descriptive: ±1 95.7%, coverage 53.1%; prospective validation active from 2026-07-21.">● Висока довіра · ±1 shadow 95.7% · coverage 53%</div>
             <!-- v88.8.4: 7-class verdict badge — canonical lexicon (tag_to_text.json verdict_text). Показується завжди коли G визначений. -->
             <div id="heroVerdict7Badge" tabindex="0" style="display:none;margin-top:6px;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:600;cursor:help" title="Канонічна 7-класова градація (з tag_to_text.json verdict_text). Використовується в DOCX/PDF звітах, Excel, експертних бюлетенях. UI-стани (МОЖНА/НЕЙТРАЛЬНО/СТОП) — 5-classна спрощена модель. Це паралельні вимірювання того самого G, не суперечать."></div>
             <div id="heroDecisionBlock">
@@ -5813,7 +5814,18 @@ let _expertOverrides = null; // {date: {expert_eng, tanita_O, tanita_N, category
 // 65.0% exact / 80.5% strict3 на n=406 GT vs 51.1%/75.5% v18.5-only).
 // Пріоритет: verified expert_override > expert_calc > engine_v18.5 > cal_score.
 let _expertCalc = null; // {date: {score, raw_sum, kp_her}}
+let _strongRawPolicy = null;
 window._expertCalcLoadStatus = 'pending';
+async function loadStrongRawPolicy(){
+  if(_strongRawPolicy !== null) return _strongRawPolicy;
+  try {
+    const r = await fetch('SELECTIVE_POLICY_STRONG_RAW_v2.json', {cache:'no-store'});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const p = await r.json();
+    _strongRawPolicy = (p && p.condition === 'abs(expert_raw_sum) >= 3' && Number(p.score_effect) === 0) ? p : {};
+  } catch(e) { _strongRawPolicy = {}; }
+  return _strongRawPolicy;
+}
 async function loadExpertCalc(){
   if(_expertCalc !== null) return _expertCalc;
   try {
@@ -15062,6 +15074,15 @@ function syncHero(){
         _lcb.style.display = _isLowConf ? '' : 'none';
       }
     } catch(e) { /* noop */ }
+    // fp258: shadow HIGH-confidence badge. This never changes G; it only
+    // reports the frozen post-hoc policy when today's expert raw is available.
+    try {
+      const _hcb=document.getElementById('heroStrongRawConfidence');
+      const _ds=todayKyivStr();
+      const _raw=_expertCalc && _expertCalc[_ds] ? Number(_expertCalc[_ds].raw_sum) : NaN;
+      const _policyOK=_strongRawPolicy && _strongRawPolicy.condition==='abs(expert_raw_sum) >= 3' && Number(_strongRawPolicy.score_effect)===0;
+      if(_hcb) _hcb.style.display=(_policyOK && Number.isFinite(_raw) && Math.abs(_raw)>=3)?'':'none';
+    } catch(e) { /* shadow badge must never block hero */ }
 
     // v88.8.4: 7-class verdict badge — canonical label з tag_to_text.json.
     // Показується завжди коли G визначений. Текст = full canonical verdict (наприклад
@@ -23050,6 +23071,7 @@ setTimeout(async function _dayVerdictLoad(){
     if (/[?&](verdict=off|diag=1)/.test(location.search)) return; // diag має власний завантажувач
     await loadExpertOverrides();
     await loadExpertCalc();
+    await loadStrongRawPolicy();
     if (_engineScores === null) {
       const resp = await fetch('engine_scores.json', { cache: 'default' });
       if (resp.ok) {
