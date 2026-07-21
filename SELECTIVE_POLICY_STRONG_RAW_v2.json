@@ -1,0 +1,49 @@
+{
+  "schema": "selective_policy_strong_raw_v2",
+  "status": "posthoc_freeze_candidate_requires_prospective_confirmation",
+  "condition": "abs(expert_raw_sum) >= 3",
+  "prediction": "expert_score",
+  "score_effect": 0,
+  "confidence_label": "HIGH",
+  "fallback": "NORMAL_OR_LOW_CONFIDENCE; retain canonical score",
+  "metrics": {
+    "pre2026": {
+      "n": 106,
+      "coverage": 0.5326633165829145,
+      "exact": 0.8679245283018868,
+      "within1": 0.9528301886792453,
+      "within1_wilson95": [0.8942995856883567, 0.9796862266086237],
+      "strict": 0.9716981132075472
+    },
+    "year2026_exploratory": {
+      "n": 103,
+      "coverage": 0.5282051282051282,
+      "exact": 0.912621359223301,
+      "within1": 0.9611650485436893,
+      "within1_wilson95": [0.9043705100480193, 0.984796256454916],
+      "strict": 1.0
+    },
+    "combined_descriptive": {
+      "n": 209,
+      "coverage": 0.5304568527918782,
+      "exact": 0.8899521531100478,
+      "within1": 0.9569377990430622,
+      "within1_wilson95": [0.9201986767267833, 0.9771822863932083],
+      "strict": 0.9856459330143541
+    }
+  },
+  "why_v1_union_rejected": "Meeus stable6 alone admitted weak score classes: score0 within1 64.29%, score±1 76.92%, score±2 87.50%. It raised coverage but reduced robustness.",
+  "limitations": [
+    "threshold 3 was examined after subgroup error inspection and is post-hoc",
+    "expert_raw_sum must be available before forecast publication",
+    "do not change threshold until prospective sample is complete",
+    "report abstentions and coverage alongside accuracy"
+  ],
+  "prospective_gate": {
+    "minimum_new_selected_outcomes": 100,
+    "frozen_condition": "abs(expert_raw_sum) >= 3",
+    "primary_metric": "within1",
+    "target": 0.90,
+    "required": ["Wilson95", "coverage", "exact", "strict", "failure list"]
+  }
+}
