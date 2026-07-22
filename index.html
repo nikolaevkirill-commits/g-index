@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.75-fp257-3DAY-DIVERGENCE-MERGE</title>
+  <title>G-Index — Космофізичний дашборд v88.9.78-fp260-PUSH-BACKEND-CLOUDFLARE-MIGRATION</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1695,6 +1695,7 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
             <!-- v88.7.15 Б: low-confidence marker — engine F1=0.26 на neutral (CANONICAL_METRICS).
                  Видимий ТІЛЬКИ коли |G| ≤ 1 (зона де engine має слабку точність). -->
             <div id="heroLowConfBadge" tabindex="0" style="display:none;margin-top:6px;padding:4px 8px;border-radius:6px;font-size:11px;color: var(--muted);background:rgba(155,177,220,.06);border:1px dashed rgba(155,177,220,.25);cursor:help" title="Engine v18.5 на нейтральному класі (G ∈ [-1, +1]) має f1=0.26 — низька точність розрізнення нейтральних/слабких днів. Strong negative (F1=0.84) і Strong positive (F1=0.69) — надійні. Для критичних рішень у середній зоні рекомендована експертна перевірка.&#10;Source: CANONICAL_METRICS.md v2.0 (n=280, GT v5.1).">⚪ Низька довіра в нейтральній зоні</div>
+            <div id="heroStrongRawConfidence" tabindex="0" style="display:none;margin-top:6px;padding:4px 8px;border-radius:6px;font-size:11px;font-weight:700;color:#9ce6c0;background:rgba(43,212,125,.08);border:1px solid rgba(43,212,125,.45);cursor:help" title="Shadow confidence policy: HIGH лише коли |expert raw sum| ≥ 3. Не змінює G. Historical descriptive: ±1 95.7%, coverage 53.1%; prospective validation active from 2026-07-21.">● Висока довіра · ±1 shadow 95.7% · coverage 53%</div>
             <!-- v88.8.4: 7-class verdict badge — canonical lexicon (tag_to_text.json verdict_text). Показується завжди коли G визначений. -->
             <div id="heroVerdict7Badge" tabindex="0" style="display:none;margin-top:6px;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:600;cursor:help" title="Канонічна 7-класова градація (з tag_to_text.json verdict_text). Використовується в DOCX/PDF звітах, Excel, експертних бюлетенях. UI-стани (МОЖНА/НЕЙТРАЛЬНО/СТОП) — 5-classна спрощена модель. Це паралельні вимірювання того самого G, не суперечать."></div>
             <div id="heroDecisionBlock">
@@ -4350,6 +4351,14 @@ const GAUTH_WORKER_URL = 'https://gindex-auth.nikolaev-kirill.workers.dev';
 const GAUTH_TOKEN_KEY = 'gindex_session_token';
 const GAUTH_USER_KEY = 'gindex_user';
 
+// v88.9.6x-fp260: VAPID public key для Web Push — раніше НІДЕ в коді не
+// встановлювався (window._vapid_public_key завжди був undefined), тому PUSH
+// був "inert" завжди, незалежно від Supabase/Cloudflare. Згенерувати:
+//   npx web-push generate-vapid-keys
+// Публічний ключ вставити сюди (рядок нижче), приватний — ТІЛЬКИ в env
+// Cloudflare Worker (push-worker-addon.js), НІКОЛИ не в цей файл.
+window._vapid_public_key = ''; // TODO(Kyrylo): встав публічний VAPID-ключ сюди
+
 // v88.6.9: safe localStorage helpers (handle quota / private mode / disabled storage)
 function _gauthLsSet(k, v){
   try { localStorage.setItem(k, v); return true; }
@@ -5146,13 +5155,23 @@ function getEffectiveGForDate(dateObj, rawG, minDelta) {
 window.getEffectiveGForDate = getEffectiveGForDate;
 
 // ═══════════════════════════════════════════════════════════════════════════
-// v87.37 PUSH NOTIFICATIONS — client side. Inert без VAPID-ключа (window._vapid_public_key).
+// v87.37 PUSH NOTIFICATIONS — client side.
+// v88.9.6x-fp260 FIX-CRITICAL (аудит: "чому у нас цього немає?" — виявилось,
+// що є, з v87.37, але НЕПРАЦЮЮЧЕ): цей модуль звертався до SUPA.getClient()/
+// SUPA.currentUser() — Supabase-бекенду, який v88.6.9 ЯВНО видалив на користь
+// Cloudflare-авторизації (SUPA.getClient() відтоді хардкоджено повертає null,
+// SUPA.isConfigured() — завжди false, з коментарем "поки push backend не
+// deployed"). Тобто навіть з VAPID-ключем підписка впала б на першому ж
+// зверненні до бази (client.from(...) на null). Тепер — той самий Worker і
+// той самий Bearer-паттерн, що вже реально працює для /auth/logout.
+// Inert без VAPID-ключа (window._vapid_public_key) — так само, як і раніше.
 // Workflow:
 //   1. User clicks 🔔 bell → PushModal.show()
 //   2. Notification.requestPermission() → 'granted' | 'denied' | 'default'
 //   3. If granted: serviceWorker.pushManager.subscribe({userVisibleOnly:true, applicationServerKey:VAPID})
-//   4. POST subscription to Supabase push_subscriptions (via SUPA.getClient())
-//   5. Server (Edge Function, окремо) може надсилати push через web-push npm lib.
+//   4. POST subscription до gindex-auth Worker /push/subscribe (Bearer GAuth token)
+//   5. Worker (Cloudflare, окремо — див. push-worker-addon.js) зберігає підписку
+//      в KV і на Cron Trigger шле push через web-push (nodejs_compat).
 // ═══════════════════════════════════════════════════════════════════════════
 const PUSH = (function(){
   function _log(...a){ try{ if(window._DEBUG) console.log('[PUSH]', ...a); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)} }
@@ -5165,8 +5184,11 @@ const PUSH = (function(){
       && 'Notification' in window;
   }
 
+  // fp260: більше не залежить від SUPA (видалений backend) — лише від
+  // наявності VAPID-ключа. Worker-доступність перевіряється фактичним
+  // запитом у subscribe(), не тут (немає сенсу тримати другий health-check).
   function isConfigured(){
-    return !!(window._vapid_public_key && SUPA && SUPA.isConfigured && SUPA.isConfigured());
+    return !!window._vapid_public_key;
   }
 
   function currentPermission(){
@@ -5213,26 +5235,34 @@ const PUSH = (function(){
       });
     }
 
-    // 4. Зберегти у Supabase (якщо залогінений — user_id з auth, інакше guest-fail)
-    const user = SUPA.currentUser();
-    if(!user) throw new Error('Увійдіть в акаунт, щоб увімкнути сповіщення');
-
-    const client = SUPA.getClient();
-    if(!client) throw new Error('Supabase client недоступний');
+    // 4. Зберегти на gindex-auth Worker (fp260: замість мертвого Supabase).
+    // Той самий Bearer-паттерн, що вже реально працює для /auth/logout.
+    const token = GAuth.getToken();
+    if(!token) throw new Error('Увійдіть в акаунт, щоб увімкнути сповіщення');
 
     const subJson = sub.toJSON();
     const row = {
-      user_id: user.id,
       endpoint: subJson.endpoint,
       p256dh: subJson.keys && subJson.keys.p256dh,
       auth_secret: subJson.keys && subJson.keys.auth,
-      user_agent: navigator.userAgent,
-      last_seen: new Date().toISOString()
+      user_agent: navigator.userAgent
     };
 
-    // upsert по endpoint (один endpoint унікальний)
-    const { error } = await client.from('push_subscriptions').upsert(row, { onConflict: 'endpoint' });
-    if(error) throw error;
+    let r;
+    try {
+      r = await fetch(GAUTH_WORKER_URL + '/push/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify(row)
+      });
+    } catch(netErr) {
+      throw new Error('Сервер сповіщень недоступний. Перевір інтернет і спробуй знову.');
+    }
+    if (!r.ok) {
+      let msg = 'Не вдалося зберегти підписку (HTTP ' + r.status + ')';
+      try { const data = await r.json(); if (data && data.error) msg = data.error; } catch(_e){}
+      throw new Error(msg);
+    }
     _log('subscribed and stored');
     return sub;
   }
@@ -5244,11 +5274,16 @@ const PUSH = (function(){
     if(!sub) return;
     const endpoint = sub.endpoint;
     await sub.unsubscribe();
-    // Видалити з DB якщо залогінений
-    if(SUPA.currentUser() && SUPA.getClient()){
+    // Видалити на Worker-стороні, якщо є токен (fp260: замість Supabase delete).
+    const token = GAuth.getToken();
+    if(token){
       try{
-        await SUPA.getClient().from('push_subscriptions').delete().eq('endpoint', endpoint);
-      }catch(e){ _warn('DB delete failed:', e); }
+        await fetch(GAUTH_WORKER_URL + '/push/unsubscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({ endpoint })
+        });
+      }catch(e){ _warn('server-side unsubscribe failed:', e); }
     }
     _log('unsubscribed');
   }
@@ -5813,7 +5848,18 @@ let _expertOverrides = null; // {date: {expert_eng, tanita_O, tanita_N, category
 // 65.0% exact / 80.5% strict3 на n=406 GT vs 51.1%/75.5% v18.5-only).
 // Пріоритет: verified expert_override > expert_calc > engine_v18.5 > cal_score.
 let _expertCalc = null; // {date: {score, raw_sum, kp_her}}
+let _strongRawPolicy = null;
 window._expertCalcLoadStatus = 'pending';
+async function loadStrongRawPolicy(){
+  if(_strongRawPolicy !== null) return _strongRawPolicy;
+  try {
+    const r = await fetch('SELECTIVE_POLICY_STRONG_RAW_v2.json', {cache:'no-store'});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const p = await r.json();
+    _strongRawPolicy = (p && p.condition === 'abs(expert_raw_sum) >= 3' && Number(p.score_effect) === 0) ? p : {};
+  } catch(e) { _strongRawPolicy = {}; }
+  return _strongRawPolicy;
+}
 async function loadExpertCalc(){
   if(_expertCalc !== null) return _expertCalc;
   try {
@@ -12794,11 +12840,13 @@ function render3Day(parsed3){
       // v87.62: + sign divergence alert when G and Bulletin have opposite signs
       let _bulletinLine = '';
       let _isDivergent = false;
+      let _bsEng = NaN, _bsCol = 'var(--muted)';
       try {
         const _bs = getEngineScore(d.date);
         if(_bs && isFinite(_bs.eng)){
+          _bsEng = _bs.eng;
           const _bsSign = _bs.eng >= 0 ? '+' : '';
-          const _bsCol = _bs.eng >= 2 ? '#2bd47d' : _bs.eng === 1 ? '#9cd49c' : _bs.eng === 0 ? 'var(--muted)' : _bs.eng === -1 ? '#ffaa33' : '#ff6b6b';
+          _bsCol = _bs.eng >= 2 ? '#2bd47d' : _bs.eng === 1 ? '#9cd49c' : _bs.eng === 0 ? 'var(--muted)' : _bs.eng === -1 ? '#ffaa33' : '#ff6b6b';
           // v88.9.43-fp225 FIX-CRITICAL (doc15, Problem 4): той самий баг, що
           // вже виправлено в heroBulletin (fp219) — ~ приписувався PDF override.
           const _synth = _bs._expertOverride ? '' : (_bs.kp_synthetic ? '~' : '');
@@ -12907,6 +12955,38 @@ function render3Day(parsed3){
           return '';
         })()}</div>
         ${_scenLabel}
+        ${(function(){
+          // v88.9.6x-fp259 (кейс 22.07: PDF −3 vs G_day raw +3.8): раніше
+          // розбіжність показувала лише один рядок "⚠ PDF/Engine: −3 ·
+          // розбіжність" — недостатньо, щоб зрозуміти ЩО саме розходиться.
+          // Явна картка з розкладкою: PDF / геомагнітний фон / Панчанга Pᵢ /
+          // календарні фактори (cal_score, cal_symbols — mercury_retro, bolt
+          // тощо, вже завантажені в _engineScores, раніше ніде так не
+          // показувались). КРИТИЧНО (аудит, п.2): Pᵢ вже входить у G_day raw
+          // вище (computeAi: AiNoDstRaw = Li+Mi+ei+Pi+snPen) — це ОДИН сигнал,
+          // не два незалежних "голоси". Явно позначаємо це в картці, щоб не
+          // рахувати "2 зелених проти 1 червоного".
+          if (!_isDivergent) return '';
+          try {
+            const _dsCal = fmtDate(d.date);
+            const _calEntry = (typeof _engineScores !== 'undefined' && _engineScores && _engineScores[_dsCal]) ? _engineScores[_dsCal] : null;
+            const _calScore = _calEntry && isFinite(_calEntry.cal_score) ? Number(_calEntry.cal_score) : null;
+            const _calSymbols = _calEntry && Array.isArray(_calEntry.cal_symbols) ? _calEntry.cal_symbols : [];
+            const _calSymText = (_calSymbols.length && typeof formatCalSymbols === 'function') ? formatCalSymbols(_calSymbols) : '';
+            const _piVal = (ai && isFinite(ai.Pi)) ? ai.Pi : null;
+            const _piLabel = _piVal === null ? '' : (_piVal >= 0.3 ? 'підтримує' : _piVal <= -0.3 ? 'заважає' : 'нейтральна');
+            const _pdfLabel = _bsEng >= 2 ? 'сприятливо' : _bsEng >= 1 ? 'помірно сприятливо' : _bsEng === 0 ? 'нейтрально' : _bsEng >= -1 ? 'помірно уникати' : 'уникати';
+            const _rawLabel = G >= 2 ? 'сприятливий' : G >= 0.5 ? 'помірно сприятливий' : G >= -0.5 ? 'нейтральний' : 'несприятливий';
+            return `<div style="margin-top:6px;padding:8px 10px;border-radius:8px;background:rgba(255,107,107,.08);border:1px solid rgba(255,107,107,.35);font-size:11px;line-height:1.65;text-align:left">
+              <div style="font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#ff9f9f;font-size:10px;margin-bottom:4px;cursor:help" title="Значна розбіжність (Δ≥2.5 або протилежні знаки) між експертним вердиктом і сирим геомагнітним фоном. Розклад нижче — щоб зрозуміти ЩО саме розходиться, а не просто 'десь конфлікт'.">⚠ Конфлікт моделей</div>
+              <div><span style="color:var(--faint)">Експерт/PDF:</span> <strong style="color:${_bsCol}">${_bsEng>=0?'+':''}${_bsEng}</strong> — ${_pdfLabel}</div>
+              <div><span style="color:var(--faint)">Геомагнітний фон (G_day raw):</span> <strong style="color:${col}">${isFinite(G)?(G>=0?'+':'')+G.toFixed(1):'—'}</strong> — ${_rawLabel}</div>
+              ${_piVal !== null ? `<div><span style="color:var(--faint)">Панчанга Pᵢ:</span> <strong>${_piVal>=0?'+':''}${_piVal.toFixed(1)}</strong>${_piLabel?' — '+_piLabel:''} <span style="color:var(--faint);font-size:9px" title="AiNoDstRaw = Lᵢ+Mᵢ+eᵢ+Pᵢ+snPen — Pᵢ вже частина суми вище, не окремий сигнал">(вже в фоні вище, не окремий голос)</span></div>` : ''}
+              ${_calScore !== null ? `<div><span style="color:var(--faint)">Календарні фактори:</span> <strong>${_calScore>=0?'+':''}${_calScore.toFixed(1)}</strong>${_calSymText?' — '+_calSymText:''} <span style="color:var(--faint);font-size:9px">(frozen engine_scores, довідково)</span></div>` : ''}
+              <div style="margin-top:4px;padding-top:4px;border-top:1px solid rgba(255,255,255,.08)"><span style="color:var(--faint)">Рішення:</span> обережність; довіра знижена</div>
+            </div>`;
+          } catch(_eConf) { return ''; }
+        })()}
       </span>`;
     }
     qw.innerHTML=qhtml;
@@ -15062,6 +15142,15 @@ function syncHero(){
         _lcb.style.display = _isLowConf ? '' : 'none';
       }
     } catch(e) { /* noop */ }
+    // fp258: shadow HIGH-confidence badge. This never changes G; it only
+    // reports the frozen post-hoc policy when today's expert raw is available.
+    try {
+      const _hcb=document.getElementById('heroStrongRawConfidence');
+      const _ds=todayKyivStr();
+      const _raw=_expertCalc && _expertCalc[_ds] ? Number(_expertCalc[_ds].raw_sum) : NaN;
+      const _policyOK=_strongRawPolicy && _strongRawPolicy.condition==='abs(expert_raw_sum) >= 3' && Number(_strongRawPolicy.score_effect)===0;
+      if(_hcb) _hcb.style.display=(_policyOK && Number.isFinite(_raw) && Math.abs(_raw)>=3)?'':'none';
+    } catch(e) { /* shadow badge must never block hero */ }
 
     // v88.8.4: 7-class verdict badge — canonical label з tag_to_text.json.
     // Показується завжди коли G визначений. Текст = full canonical verdict (наприклад
@@ -23050,6 +23139,7 @@ setTimeout(async function _dayVerdictLoad(){
     if (/[?&](verdict=off|diag=1)/.test(location.search)) return; // diag має власний завантажувач
     await loadExpertOverrides();
     await loadExpertCalc();
+    await loadStrongRawPolicy();
     if (_engineScores === null) {
       const resp = await fetch('engine_scores.json', { cache: 'default' });
       if (resp.ok) {
