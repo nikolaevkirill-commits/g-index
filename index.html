@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.80-fp263-FORGOT-PASSWORD</title>
+  <title>G-Index — Космофізичний дашборд v88.9.81-fp264-AUTH-RECOVERY-HARDENED</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -4460,6 +4460,23 @@ const GAuth = {
     return data;
   },
 
+  async verifyEmail(token){
+    let r;
+    try {
+      r = await fetch(GAUTH_WORKER_URL + '/auth/verify-email', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ token }),
+      });
+    } catch(netErr){
+      throw new Error('Сервер недоступний. Перевір інтернет і спробуй знову.');
+    }
+    let data;
+    try { data = await r.json(); }
+    catch(parseErr){ throw new Error('Невірна відповідь сервера.'); }
+    if (!r.ok) throw new Error(data.error?.message || 'Email verification failed');
+    return data;
+  },
+
   async logout(){
     const token = this.getToken();
     if (token) {
@@ -4626,6 +4643,9 @@ const AuthModal = {
       btn.disabled = true; btn.textContent = '...';
       try {
         await GAuth.resetPassword(AuthModal._resetToken, password);
+        _gauthLsRemove(GAUTH_TOKEN_KEY);
+        _gauthLsRemove(GAUTH_USER_KEY);
+        GAuth.refreshUI();
         ok.textContent = '✓ Пароль змінено! Тепер увійди з новим паролем.';
         ok.style.display = 'block';
         AuthModal._resetToken = null;
@@ -4685,6 +4705,7 @@ if (typeof window !== 'undefined') {
     try {
       const params = new URLSearchParams(location.search);
       const resetToken = params.get('reset_token');
+      const verifyToken = params.get('verify_token');
       if (resetToken) {
         AuthModal._resetToken = resetToken;
         AuthModal.show('reset');
@@ -4692,6 +4713,25 @@ if (typeof window !== 'undefined') {
         const newSearch = params.toString();
         const newUrl = location.pathname + (newSearch ? '?' + newSearch : '') + location.hash;
         history.replaceState(null, '', newUrl);
+      } else if (verifyToken) {
+        params.delete('verify_token');
+        const newSearch = params.toString();
+        const newUrl = location.pathname + (newSearch ? '?' + newSearch : '') + location.hash;
+        history.replaceState(null, '', newUrl);
+        GAuth.verifyEmail(verifyToken)
+          .then(() => {
+            const user = GAuth.getUser();
+            if (user) {
+              user.email_verified = true;
+              _gauthLsSet(GAUTH_USER_KEY, JSON.stringify(user));
+              GAuth.refreshUI();
+            }
+            if (typeof showToast === 'function') showToast('✓ Email підтверджено');
+          })
+          .catch((e) => {
+            console.error('[GAuth] verify email:', e);
+            if (typeof showToast === 'function') showToast('Посилання підтвердження недійсне або протерміноване');
+          });
       }
     } catch(e){ /* silent — якщо URLSearchParams недоступний, просто не автовідкриваємо */ }
   });
