@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.92-fp276-TANITA-SHADOW-ENGINE</title>
+  <title>G-Index — Космофізичний дашборд v88.9.93-fp277-TANITA-FULL-UI</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1778,6 +1778,10 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
       <div style="margin-top:5px"><strong style="color:#ffd37a">Expert coverage:</strong> канонічний Excel закінчується 14.07.2026. Після цієї дати Engine показується окремо, але не називається Expert raw; нові Expert-прогнози мають бути заморожені до появи PDF.</div>
       <div id="autoProspectiveStatus" style="margin-top:5px;color:#9ce6c0">Автоматичний shadow: завантаження статусу…</div>
     </div>
+    <details id="tanitaShadowPanel" style="margin:0 0 10px;padding:9px 14px;border-radius:12px;border:1px solid rgba(178,126,255,.35);background:linear-gradient(180deg,rgba(178,126,255,.07),rgba(178,126,255,.02));font-size:11px;color:var(--muted)">
+      <summary id="tanitaShadowSummary" style="cursor:pointer;color:#d9c2ff;font-weight:800">🔐 Таніта — відтворений алгоритм і незалежний image-shadow</summary>
+      <div id="tanitaShadowBody" style="margin-top:8px;line-height:1.55">Завантаження…</div>
+    </details>
     <details id="bgsAdvisoryPanel" style="margin:0 0 10px;padding:9px 14px;border-radius:12px;border:1px solid rgba(255,176,32,.34);background:linear-gradient(180deg,rgba(255,176,32,.065),rgba(255,176,32,.02));font-size:11px;color:var(--muted)">
       <summary id="bgsAdvisorySummary" style="cursor:pointer;color:#ffd37a;font-weight:800">🌍 BGS незалежний 3-добовий прогноз — завантаження…</summary>
       <div id="bgsAdvisoryBody" style="margin-top:7px;line-height:1.55"></div>
@@ -6053,6 +6057,42 @@ let _strongRawPolicy = null;
 let _autoProspectiveStatus = null;
 let _bgsSpaceWeather = null;
 let _spaceWeatherAccumulated = null;
+function renderTanitaShadow(){
+  const sum=document.getElementById('tanitaShadowSummary');
+  const body=document.getElementById('tanitaShadowBody');
+  if(!sum||!body) return;
+  const today=new Date().toISOString().slice(0,10);
+  const feed=window._autoForecastFeed||{};
+  const day=feed.days&&feed.days[today]||{};
+  const tanita=day.tanita_shadow||{};
+  const status=_autoProspectiveStatus||{};
+  const ts=status.tanita_shadow||{};
+  const fr=ts.formula_reconstruction||{};
+  const hold=ts.holdout||{};
+  const strong=hold.strong_image_against_pdf||{};
+  const tScore=Number.isFinite(Number(tanita.score))?Number(tanita.score):null;
+  const base=Number.isFinite(Number(day.score))?Number(day.score):null;
+  const delta=tScore!==null&&base!==null?tScore-base:null;
+  const conflict=delta!==null&&((tScore*base<0)||Math.abs(delta)>=2);
+  const icons=Array.isArray(tanita.detected_icons)&&tanita.detected_icons.length?tanita.detected_icons.join(', '):'надійні іконки не виділені';
+  sum.textContent='🔐 Таніта: формула '+(fr.verified_exact||0)+'/'+(fr.dates||0)+' відтворена'+
+    (tScore!==null?' · сьогодні shadow '+(tScore>0?'+':'')+tScore:'')+
+    (conflict?' · ⚠ конфлікт з основною моделлю':'');
+  body.innerHTML=
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:6px">'+
+      '<div style="padding:7px 9px;border:1px solid var(--border);border-radius:8px"><b>Детермінована формула</b><br><code>(2−Kp)+Місяць+Затемнення+Σваг</code><br>Перевірка: '+(fr.verified_exact||0)+'/'+(fr.dates||0)+', помилок '+(fr.mismatches||0)+'</div>'+
+      '<div style="padding:7px 9px;border:1px solid var(--border);border-radius:8px"><b>Сьогодні</b><br>Таніта image-shadow: '+(tScore===null?'—':(tScore>0?'+':'')+tScore)+
+        '<br>Основний frozen/priority: '+(base===null?'—':(base>0?'+':'')+base)+(delta===null?'':' · Δ '+(delta>0?'+':'')+delta)+'</div>'+
+      '<div style="padding:7px 9px;border:1px solid var(--border);border-radius:8px"><b>Розпізнані символи</b><br>'+icons+'</div>'+
+      '<div style="padding:7px 9px;border:1px solid var(--border);border-radius:8px"><b>Чесний holdout strong-image</b><br>n='+(strong.n||0)+
+        ' · exact '+(strong.exact==null?'—':(strong.exact*100).toFixed(1)+'%')+
+        ' · ±1 '+(strong.within1==null?'—':(strong.within1*100).toFixed(1)+'%')+
+        ' · sign '+(strong.strict_sign==null?'—':(strong.strict_sign*100).toFixed(1)+'%')+'</div>'+
+    '</div>'+
+    '<div style="margin-top:7px;color:'+(conflict?'#ffd37a':'var(--dim)')+'">'+
+      (conflict?'⚠ Це окремий сигнал для перевірки, не автоматична заміна рішення. ':'')+
+      'Image-decoder має score effect 0; PDF/Expert і frozen Engine зберігають пріоритет до prospective gate.</div>';
+}
 function updateSpaceWeatherDecisionGuard(){
   const el=document.getElementById('spaceWeatherDecisionGuard');
   if(!el) return;
@@ -6129,6 +6169,7 @@ async function loadBgsSpaceWeather(){
     if(!r.ok) throw new Error('HTTP '+r.status);
     const b=await r.json(); _bgsSpaceWeather=b||{};
     if(pair[1] && pair[1].ok) window._autoForecastFeed=await pair[1].json();
+    renderTanitaShadow();
     if(!b.ok) throw new Error(b.error||'invalid BGS snapshot');
     const periods=Array.isArray(b.periods)?b.periods:[];
     const flags=b.flags||{};
@@ -6181,6 +6222,7 @@ async function loadAutoProspectiveStatus(){
       (contextTotal ? ' · context flags '+contextTotal+' (лише ручна перевірка, G не змінено)' : '')+
       (tanitaFormula.verified_exact ? ' · Таніта: формула '+tanitaFormula.verified_exact+'/'+tanitaFormula.dates+
         ' відтворена, image-shadow '+tanitaDays+' дн. (G не змінено)' : '');
+    renderTanitaShadow();
   } catch(e) {
     _autoProspectiveStatus = {};
     if(el) el.textContent = 'Автоматичний shadow: статус тимчасово недоступний; production G не змінено.';
