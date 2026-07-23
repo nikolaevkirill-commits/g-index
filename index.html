@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.84-fp267-AUTO-SHADOW-PIPELINE</title>
+  <title>G-Index — Космофізичний дашборд v88.9.85-fp268-BGS-INDEPENDENT-ADVISORY</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1778,6 +1778,10 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
       <div style="margin-top:5px"><strong style="color:#ffd37a">Expert coverage:</strong> канонічний Excel закінчується 14.07.2026. Після цієї дати Engine показується окремо, але не називається Expert raw; нові Expert-прогнози мають бути заморожені до появи PDF.</div>
       <div id="autoProspectiveStatus" style="margin-top:5px;color:#9ce6c0">Автоматичний shadow: завантаження статусу…</div>
     </div>
+    <details id="bgsAdvisoryPanel" style="margin:0 0 10px;padding:9px 14px;border-radius:12px;border:1px solid rgba(255,176,32,.34);background:linear-gradient(180deg,rgba(255,176,32,.065),rgba(255,176,32,.02));font-size:11px;color:var(--muted)">
+      <summary id="bgsAdvisorySummary" style="cursor:pointer;color:#ffd37a;font-weight:800">🌍 BGS незалежний 3-добовий прогноз — завантаження…</summary>
+      <div id="bgsAdvisoryBody" style="margin-top:7px;line-height:1.55"></div>
+    </details>
     <!-- v88.8.51-fp128: Regime cards (M2) — score+regime+confidence+space-weather. daily_master.json -->
     <div id="regimeCards" style="display:none;margin:0 0 10px;gap:8px;grid-template-columns:repeat(4,1fr)">
       <div id="rcScore" style="padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:rgba(11,18,32,.5);text-align:center">
@@ -6042,7 +6046,47 @@ let _expertOverrides = null; // {date: {expert_eng, tanita_O, tanita_N, category
 let _expertCalc = null; // {date: {score, raw_sum, kp_her}}
 let _strongRawPolicy = null;
 let _autoProspectiveStatus = null;
+let _bgsSpaceWeather = null;
 window._expertCalcLoadStatus = 'pending';
+async function loadBgsSpaceWeather(){
+  if(_bgsSpaceWeather !== null) return _bgsSpaceWeather;
+  const panel=document.getElementById('bgsAdvisoryPanel');
+  const sum=document.getElementById('bgsAdvisorySummary');
+  const body=document.getElementById('bgsAdvisoryBody');
+  try {
+    const pair=await Promise.all([
+      fetch('BGS_SPACE_WEATHER_v1.json',{cache:'no-store'}),
+      fetch('AUTO_FORECAST_FEED_v1.json',{cache:'no-store'}).catch(()=>null)
+    ]);
+    const r=pair[0];
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const b=await r.json(); _bgsSpaceWeather=b||{};
+    if(pair[1] && pair[1].ok) window._autoForecastFeed=await pair[1].json();
+    if(!b.ok) throw new Error(b.error||'invalid BGS snapshot');
+    const periods=Array.isArray(b.periods)?b.periods:[];
+    const flags=b.flags||{};
+    const conflict=periods.some((p,i)=>{
+      const ds=new Date(Date.now()+i*86400000).toISOString().slice(0,10);
+      const f=window._autoForecastFeed && window._autoForecastFeed.days && window._autoForecastFeed.days[ds];
+      return f && f.bgs_advisory && f.bgs_advisory.conflict_with_positive_model;
+    });
+    if(sum) sum.textContent='🌍 BGS 3-добовий прогноз'+(conflict?' · ⚠ конфлікт із позитивною моделлю':'')+
+      (flags.storm_g1_plus?' · можливий G1':'')+
+      (flags.cme?' · CME':'')+(flags.glancing_blow?' · ковзний удар':'');
+    if(body) body.innerHTML=
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:5px">'+
+      periods.map(p=>'<div style="padding:5px 7px;border:1px solid var(--border);border-radius:7px"><b>'+p.from+'–'+p.to+
+      '</b><br>середнє: '+p.average+' · максимум: <strong style="color:'+(p.max==='QUIET'?'#9ce6c0':'#ffd37a')+'">'+p.max+'</strong></div>').join('')+
+      '</div><div style="margin-top:7px">'+(b.comment||'Без додаткового коментаря.')+'</div>'+
+      '<div style="margin-top:6px;color:var(--dim)">Джерело: British Geological Survey · noon-to-noon GMT · незалежний advisory · score effect 0.</div>';
+    if(panel && flags.storm_g1_plus) panel.open=true;
+  } catch(e) {
+    _bgsSpaceWeather={};
+    if(sum) sum.textContent='🌍 BGS advisory тимчасово недоступний';
+    if(body) body.textContent='Production G не змінено. '+e.message;
+  }
+  return _bgsSpaceWeather;
+}
 async function loadAutoProspectiveStatus(){
   if(_autoProspectiveStatus !== null) return _autoProspectiveStatus;
   const el = document.getElementById('autoProspectiveStatus');
@@ -23370,6 +23414,7 @@ setTimeout(async function _dayVerdictLoad(){
     await loadExpertCalc();
     await loadStrongRawPolicy();
     await loadAutoProspectiveStatus();
+    await loadBgsSpaceWeather();
     if (_engineScores === null) {
       const resp = await fetch('engine_scores.json', { cache: 'default' });
       if (resp.ok) {
