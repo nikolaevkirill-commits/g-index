@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.83-fp266-EXPERT-CUTOFF-NO-DOUBLE-VOTE</title>
+  <title>G-Index — Космофізичний дашборд v88.9.84-fp267-AUTO-SHADOW-PIPELINE</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1776,6 +1776,7 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
       <div style="font-weight:800;color:#b9d8ff">① Один сигнал, не два зелені голоси</div>
       <div><strong style="color:var(--text2)">G_day raw уже містить Панчангу Pᵢ</strong> у сумі календарних компонентів. Окрема зелена Панчанга нижче — лише розклад того самого G_day, її не можна додавати або рахувати другим незалежним прогнозом.</div>
       <div style="margin-top:5px"><strong style="color:#ffd37a">Expert coverage:</strong> канонічний Excel закінчується 14.07.2026. Після цієї дати Engine показується окремо, але не називається Expert raw; нові Expert-прогнози мають бути заморожені до появи PDF.</div>
+      <div id="autoProspectiveStatus" style="margin-top:5px;color:#9ce6c0">Автоматичний shadow: завантаження статусу…</div>
     </div>
     <!-- v88.8.51-fp128: Regime cards (M2) — score+regime+confidence+space-weather. daily_master.json -->
     <div id="regimeCards" style="display:none;margin:0 0 10px;gap:8px;grid-template-columns:repeat(4,1fr)">
@@ -6040,7 +6041,28 @@ let _expertOverrides = null; // {date: {expert_eng, tanita_O, tanita_N, category
 // Пріоритет: verified expert_override > expert_calc > engine_v18.5 > cal_score.
 let _expertCalc = null; // {date: {score, raw_sum, kp_her}}
 let _strongRawPolicy = null;
+let _autoProspectiveStatus = null;
 window._expertCalcLoadStatus = 'pending';
+async function loadAutoProspectiveStatus(){
+  if(_autoProspectiveStatus !== null) return _autoProspectiveStatus;
+  const el = document.getElementById('autoProspectiveStatus');
+  try {
+    const r = await fetch('AUTO_PROSPECTIVE_STATUS_v1.json', {cache:'no-store'});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const s = await r.json();
+    _autoProspectiveStatus = s || {};
+    const n = Number(s.selected_high_scored || 0);
+    const need = Number(s.promotion_gate && s.promotion_gate.required_selected_outcomes || 100);
+    const created = Number(s.decisions_total || 0);
+    const passed = !!(s.promotion_gate && s.promotion_gate.passed);
+    if(el) el.textContent = 'Автоматичний shadow: '+created+' прогнозів заморожено · HIGH outcomes '+n+'/'+need+
+      (passed ? ' · promotion gate пройдено' : ' · без заяви 90% до проходження gate');
+  } catch(e) {
+    _autoProspectiveStatus = {};
+    if(el) el.textContent = 'Автоматичний shadow: статус тимчасово недоступний; production G не змінено.';
+  }
+  return _autoProspectiveStatus;
+}
 async function loadStrongRawPolicy(){
   if(_strongRawPolicy !== null) return _strongRawPolicy;
   try {
@@ -23347,6 +23369,7 @@ setTimeout(async function _dayVerdictLoad(){
     await loadExpertOverrides();
     await loadExpertCalc();
     await loadStrongRawPolicy();
+    await loadAutoProspectiveStatus();
     if (_engineScores === null) {
       const resp = await fetch('engine_scores.json', { cache: 'default' });
       if (resp.ok) {
