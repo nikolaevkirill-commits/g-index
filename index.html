@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.93-fp277-TANITA-FULL-UI</title>
+  <title>G-Index — Космофізичний дашборд v88.9.94-fp278-SINGLE-FINAL-DECISION</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1778,6 +1778,10 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
       <div style="margin-top:5px"><strong style="color:#ffd37a">Expert coverage:</strong> канонічний Excel закінчується 14.07.2026. Після цієї дати Engine показується окремо, але не називається Expert raw; нові Expert-прогнози мають бути заморожені до появи PDF.</div>
       <div id="autoProspectiveStatus" style="margin-top:5px;color:#9ce6c0">Автоматичний shadow: завантаження статусу…</div>
     </div>
+    <section id="singleFinalDecision" style="margin:0 0 10px;padding:14px 16px;border-radius:13px;border:1px solid rgba(67,230,167,.5);background:linear-gradient(135deg,rgba(15,96,78,.28),rgba(8,20,38,.96));box-shadow:0 0 24px rgba(34,210,150,.08)">
+      <div style="font-size:10px;letter-spacing:.12em;color:#91b8ad">ЄДИНИЙ ПІДСУМКОВИЙ РЕЗУЛЬТАТ</div>
+      <div id="singleFinalDecisionBody" style="margin-top:7px;font-size:14px;color:#dbe9ff">Завантаження узгодженого рішення…</div>
+    </section>
     <details id="tanitaShadowPanel" style="margin:0 0 10px;padding:9px 14px;border-radius:12px;border:1px solid rgba(178,126,255,.35);background:linear-gradient(180deg,rgba(178,126,255,.07),rgba(178,126,255,.02));font-size:11px;color:var(--muted)">
       <summary id="tanitaShadowSummary" style="cursor:pointer;color:#d9c2ff;font-weight:800">🔐 Таніта — відтворений алгоритм і незалежний image-shadow</summary>
       <div id="tanitaShadowBody" style="margin-top:8px;line-height:1.55">Завантаження…</div>
@@ -6093,6 +6097,43 @@ function renderTanitaShadow(){
       (conflict?'⚠ Це окремий сигнал для перевірки, не автоматична заміна рішення. ':'')+
       'Image-decoder має score effect 0; PDF/Expert і frozen Engine зберігають пріоритет до prospective gate.</div>';
 }
+function renderSingleFinalDecision(){
+  const el=document.getElementById('singleFinalDecisionBody');
+  if(!el) return;
+  const today=new Date().toISOString().slice(0,10);
+  const day=window._autoForecastFeed&&window._autoForecastFeed.days&&window._autoForecastFeed.days[today];
+  if(!day||!day.final_decision){
+    el.textContent='Підсумкове рішення ще не завантажене.';
+    return;
+  }
+  const f=day.final_decision;
+  const score=Number(f.score);
+  const labels={
+    ACT:'ДІЯТИ',
+    ACT_WITH_CAUTION:'ДІЯТИ ОБЕРЕЖНО',
+    NEUTRAL:'НЕЙТРАЛЬНО',
+    CAUTION:'ОБЕРЕЖНО',
+    AVOID:'УНИКАТИ ВАЖЛИВИХ РІШЕНЬ',
+    NO_DATA:'НЕМАЄ ДАНИХ'
+  };
+  const sources={
+    expert_formula_raw:'формула експерта (raw)',
+    verified_expert_pdf:'перевірений прогноз експерта',
+    engine_v18_5_frozen:'автономний Engine v18.5'
+  };
+  const color=score>=2?'#43e6a7':score>0?'#b9e986':score===0?'#cbd5e1':score<=-2?'#ff7070':'#ffd37a';
+  const restrictions=Array.isArray(f.restrictions)?f.restrictions:[];
+  el.innerHTML=
+    '<div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap">'+
+      '<strong style="font-size:24px;color:'+color+'">'+(score>0?'+':'')+score+' · '+(labels[f.action]||f.action)+'</strong>'+
+      '<span style="color:#9fb6c8">Основа: '+(sources[f.authority]||f.authority)+' · '+(f.confidence_tier||'без рівня')+'</span>'+
+    '</div>'+
+    '<div style="margin-top:7px;color:#c7d8e6">'+
+      (f.tanita_corroborates?'✓ Таніта підтверджує напрям. ':'Таніта не використовується як другий голос. ')+
+      (restrictions.length?'<span style="color:#ffd37a">Обмеження: '+restrictions.join(' · ')+'</span>':'Критичних додаткових обмежень у feed немає.')+
+    '</div>'+
+    '<div style="margin-top:5px;font-size:10px;color:#7792a5">Одне рішення за ієрархією джерел; деталі й конфлікти винесені нижче.</div>';
+}
 function updateSpaceWeatherDecisionGuard(){
   const el=document.getElementById('spaceWeatherDecisionGuard');
   if(!el) return;
@@ -6170,6 +6211,7 @@ async function loadBgsSpaceWeather(){
     const b=await r.json(); _bgsSpaceWeather=b||{};
     if(pair[1] && pair[1].ok) window._autoForecastFeed=await pair[1].json();
     renderTanitaShadow();
+    renderSingleFinalDecision();
     if(!b.ok) throw new Error(b.error||'invalid BGS snapshot');
     const periods=Array.isArray(b.periods)?b.periods:[];
     const flags=b.flags||{};
