@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.89-fp272-VERIFIED-PDF-THROUGH-AUG09</title>
+  <title>G-Index — Космофізичний дашборд v88.9.90-fp273-EDITORIAL-GAP-SHADOW</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -6168,8 +6168,11 @@ async function loadAutoProspectiveStatus(){
     const need = Number(s.promotion_gate && s.promotion_gate.required_selected_outcomes || 100);
     const created = Number(s.decisions_total || 0);
     const passed = !!(s.promotion_gate && s.promotion_gate.passed);
+    const editorialTotal = Number(s.editorial_comparisons && s.editorial_comparisons.total || 0);
+    const editorialConflicts = Number(s.editorial_comparisons && s.editorial_comparisons.material_disagreements || 0);
     if(el) el.textContent = 'Автоматичний shadow: '+created+' прогнозів заморожено · HIGH outcomes '+n+'/'+need+
-      (passed ? ' · promotion gate пройдено' : ' · без заяви 90% до проходження gate');
+      (passed ? ' · promotion gate пройдено' : ' · без заяви 90% до проходження gate')+
+      (editorialTotal ? ' · Expert↔Engine перевірено '+editorialTotal+', суттєвих розбіжностей '+editorialConflicts : '');
   } catch(e) {
     _autoProspectiveStatus = {};
     if(el) el.textContent = 'Автоматичний shadow: статус тимчасово недоступний; production G не змінено.';
