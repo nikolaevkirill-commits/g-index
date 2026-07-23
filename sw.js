@@ -21,7 +21,7 @@
 // GitHub Pages проєктів на тому самому домені. Тепер видаляємо лише ключі з
 // власним префіксом 'gindex-', що не є поточною версією.
 
-const CACHE_VERSION = 'fp264-v1'; // bump this string on every deploy
+const CACHE_VERSION = 'fp265-v1'; // bump this string on every deploy
 const CACHE_PREFIX = 'gindex-'; // власний namespace — НІКОЛИ не чіпати ключі без цього префікса
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${CACHE_VERSION}`;
 const DATA_CACHE = `${CACHE_PREFIX}data-${CACHE_VERSION}`;

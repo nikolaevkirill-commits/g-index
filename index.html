@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.81-fp264-AUTH-RECOVERY-HARDENED</title>
+  <title>G-Index — Космофізичний дашборд v88.9.82-fp265-DATE-INDEX-EVIDENCE</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1696,6 +1696,7 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
                  Видимий ТІЛЬКИ коли |G| ≤ 1 (зона де engine має слабку точність). -->
             <div id="heroLowConfBadge" tabindex="0" style="display:none;margin-top:6px;padding:4px 8px;border-radius:6px;font-size:11px;color: var(--muted);background:rgba(155,177,220,.06);border:1px dashed rgba(155,177,220,.25);cursor:help" title="Engine v18.5 на нейтральному класі (G ∈ [-1, +1]) має f1=0.26 — низька точність розрізнення нейтральних/слабких днів. Strong negative (F1=0.84) і Strong positive (F1=0.69) — надійні. Для критичних рішень у середній зоні рекомендована експертна перевірка.&#10;Source: CANONICAL_METRICS.md v2.0 (n=280, GT v5.1).">⚪ Низька довіра в нейтральній зоні</div>
             <div id="heroStrongRawConfidence" tabindex="0" style="display:none;margin-top:6px;padding:4px 8px;border-radius:6px;font-size:11px;font-weight:700;color:#9ce6c0;background:rgba(43,212,125,.08);border:1px solid rgba(43,212,125,.45);cursor:help" title="Shadow confidence policy: HIGH лише коли |expert raw sum| ≥ 3. Не змінює G. Historical descriptive: ±1 95.7%, coverage 53.1%; prospective validation active from 2026-07-21.">● Висока довіра · ±1 shadow 95.7% · coverage 53%</div>
+            <div id="heroIndexConflict" tabindex="0" style="display:none;margin-top:6px;padding:5px 8px;border-radius:6px;font-size:11px;font-weight:700;color:#ffd37a;background:rgba(255,176,32,.08);border:1px solid rgba(255,176,32,.42);cursor:help" title="Engine/PDF verdict і календарний context мають різні знаки. Calendar score уже походить із тих самих календарних факторів і НЕ є другим незалежним голосом. Це лише confidence/context warning; G не змінюється.">⚠ Конфлікт контексту · перевір перед важливим рішенням</div>
             <!-- v88.8.4: 7-class verdict badge — canonical lexicon (tag_to_text.json verdict_text). Показується завжди коли G визначений. -->
             <div id="heroVerdict7Badge" tabindex="0" style="display:none;margin-top:6px;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:600;cursor:help" title="Канонічна 7-класова градація (з tag_to_text.json verdict_text). Використовується в DOCX/PDF звітах, Excel, експертних бюлетенях. UI-стани (МОЖНА/НЕЙТРАЛЬНО/СТОП) — 5-classна спрощена модель. Це паралельні вимірювання того самого G, не суперечать."></div>
             <div id="heroDecisionBlock">
@@ -1754,10 +1755,23 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
       <span style="font-size:20px;line-height:1">📊</span>
       <div style="flex:1;min-width:0">
         <div style="font-size:12px;font-weight:700;color:#d8f7e3">Як ми міряємо точність</div>
-        <div style="font-size:11px;color:var(--dim);margin-top:1px">v18.5 canonical (N=280): <strong style="color:var(--ok)">70.6% strict</strong> · 83.6% binary · 43.0% exact (N=280 v5.1: 71.4% strict). V18.8 patches disabled — V3 freeze active.</div>
+        <div style="font-size:11px;color:var(--dim);margin-top:1px">v18.5 canonical (N=280): <strong style="color:var(--ok)">70.6% strict</strong> · 83.6% binary · 43.0% exact. Fresh PDF 27.07–09.08: 9/14 exact; strong |Engine|=3: <strong style="color:#ffd37a">8/9 (88.9%)</strong> — 90% ще не підтверджено.</div>
       </div>
       <span style="font-size:11px;color:var(--ok);font-weight:700;white-space:nowrap">Подивитись →</span>
     </a>
+    <details id="freshValidationPanel" style="margin:0 0 10px;padding:9px 14px;border-radius:12px;border:1px solid rgba(255,176,32,.28);background:linear-gradient(180deg,rgba(255,176,32,.055),rgba(255,176,32,.018));font-size:11px;color:var(--muted)">
+      <summary style="cursor:pointer;color:#ffd37a;font-weight:700">🧪 Свіжа перевірка 14 дат — де модель помилилася</summary>
+      <div style="margin-top:8px;line-height:1.55">
+        <div><strong style="color:var(--text2)">Чесний результат:</strong> all dates exact 64.3%, ±1 71.4%; strong |Engine|=3 — 8/9 exact і ±1. Прогнози були у файлі до створення PDF.</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:6px;margin-top:7px">
+          <div style="padding:6px 8px;border:1px solid var(--border);border-radius:7px"><b>29.07:</b> Engine −2, PDF 0 — bolt/purnima context надто негативний.</div>
+          <div style="padding:6px 8px;border:1px solid var(--border);border-radius:7px"><b>01.08:</b> Engine +2, PDF −1 — позитивний tag-layer пропустив негативний контекст.</div>
+          <div style="padding:6px 8px;border:1px solid var(--border);border-radius:7px"><b>02.08:</b> Engine −1, PDF −3 — знак правильний, величина заслабка.</div>
+          <div style="padding:6px 8px;border:1px solid var(--border);border-radius:7px"><b>09.08:</b> Engine −3, PDF 0 — сильний false negative; Ekadashi не можна глобально послаблювати за одним кейсом.</div>
+        </div>
+        <div style="margin-top:7px;color:var(--dim)">Calendar score та символи показуються як пояснення/confidence context і мають score effect 0 у цьому шарі. Frozen G не змінено.</div>
+      </div>
+    </details>
     <!-- v88.8.51-fp128: Regime cards (M2) — score+regime+confidence+space-weather. daily_master.json -->
     <div id="regimeCards" style="display:none;margin:0 0 10px;gap:8px;grid-template-columns:repeat(4,1fr)">
       <div id="rcScore" style="padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:rgba(11,18,32,.5);text-align:center">
@@ -15323,6 +15337,22 @@ function syncHero(){
       const _policyOK=_strongRawPolicy && _strongRawPolicy.condition==='abs(expert_raw_sum) >= 3' && Number(_strongRawPolicy.score_effect)===0;
       if(_hcb) _hcb.style.display=(_policyOK && Number.isFinite(_raw) && Math.abs(_raw)>=3)?'':'none';
     } catch(e) { /* shadow badge must never block hero */ }
+    // fp265: calendar context is explanatory, never a second vote. Show a
+    // warning only when its sign materially conflicts with the final day score.
+    try {
+      const _icb=document.getElementById('heroIndexConflict');
+      const _ds=todayKyivStr();
+      const _rec=_engineScores && _engineScores[_ds] ? _engineScores[_ds] : null;
+      const _day=(_heroSig && _heroSig.hasEngine) ? Number(_heroSig.dayScore) : NaN;
+      const _cal=_rec ? Number(_rec.cal_score) : NaN;
+      const _conflict=Number.isFinite(_day) && Number.isFinite(_cal)
+        && Math.abs(_cal)>=2 && Math.sign(_day)!==0 && Math.sign(_cal)!==0
+        && Math.sign(_day)!==Math.sign(_cal);
+      if(_icb){
+        _icb.style.display=_conflict?'':'none';
+        if(_conflict) _icb.title=`Engine/PDF ${_day>=0?'+':''}${_day}, calendar context ${_cal>=0?'+':''}${_cal}. Calendar context НЕ є другим голосом і не змінює G. Це лише попередження про розбіжність факторів.`;
+      }
+    } catch(e) { /* advisory warning must never block hero */ }
 
     // v88.8.4: 7-class verdict badge — canonical label з tag_to_text.json.
     // Показується завжди коли G визначений. Текст = full canonical verdict (наприклад
