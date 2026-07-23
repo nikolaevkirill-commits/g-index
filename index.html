@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.85-fp268-BGS-INDEPENDENT-ADVISORY</title>
+  <title>G-Index — Космофізичний дашборд v88.9.86-fp269-ACCUMULATED-SPACE-WEATHER</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1781,6 +1781,10 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
     <details id="bgsAdvisoryPanel" style="margin:0 0 10px;padding:9px 14px;border-radius:12px;border:1px solid rgba(255,176,32,.34);background:linear-gradient(180deg,rgba(255,176,32,.065),rgba(255,176,32,.02));font-size:11px;color:var(--muted)">
       <summary id="bgsAdvisorySummary" style="cursor:pointer;color:#ffd37a;font-weight:800">🌍 BGS незалежний 3-добовий прогноз — завантаження…</summary>
       <div id="bgsAdvisoryBody" style="margin-top:7px;line-height:1.55"></div>
+    </details>
+    <details id="spaceWeatherAccumulatedPanel" style="margin:0 0 10px;padding:9px 14px;border-radius:12px;border:1px solid rgba(155,177,220,.25);background:rgba(89,166,255,.025);font-size:11px;color:var(--muted)">
+      <summary id="spaceWeatherAccumulatedSummary" style="cursor:pointer;color:#b9d8ff;font-weight:800">🛰 Накопичена космічна погода за 6 год — завантаження…</summary>
+      <div id="spaceWeatherAccumulatedBody" style="margin-top:7px;line-height:1.55"></div>
     </details>
     <!-- v88.8.51-fp128: Regime cards (M2) — score+regime+confidence+space-weather. daily_master.json -->
     <div id="regimeCards" style="display:none;margin:0 0 10px;gap:8px;grid-template-columns:repeat(4,1fr)">
@@ -6047,7 +6051,38 @@ let _expertCalc = null; // {date: {score, raw_sum, kp_her}}
 let _strongRawPolicy = null;
 let _autoProspectiveStatus = null;
 let _bgsSpaceWeather = null;
+let _spaceWeatherAccumulated = null;
 window._expertCalcLoadStatus = 'pending';
+async function loadSpaceWeatherAccumulated(){
+  if(_spaceWeatherAccumulated!==null) return _spaceWeatherAccumulated;
+  const sum=document.getElementById('spaceWeatherAccumulatedSummary');
+  const body=document.getElementById('spaceWeatherAccumulatedBody');
+  try{
+    const r=await fetch('SPACE_WEATHER_CONTEXT_v1.json',{cache:'no-store'});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const p=await r.json(); _spaceWeatherAccumulated=p||{};
+    const m=p.magnetic||{}, w=p.solar_wind||{}, pr=p.protons||{}, a=p.alerts||{};
+    const stressed=(Number(m.longest_bz_le_minus5_minutes)>=30)||(Number(w.dynamic_pressure_max_6h_npa)>=5)||
+      !!pr.s1_threshold_exceeded||Number(a.recent_72h_count)>0;
+    if(sum) sum.textContent='🛰 Накопичена космічна погода 6 год'+
+      (stressed?' · ⚠ підвищене навантаження':' · спокійний накопичений фон');
+    if(body) body.innerHTML=
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:5px">'+
+      '<div style="padding:5px 7px;border:1px solid var(--border);border-radius:7px"><b>IMF Bz</b><br>мін '+Number(m.bz_min_6h_nt||0).toFixed(1)+' nT · південний '+Math.round(Number(m.southward_fraction_6h||0)*100)+'% часу · ≤−5 nT безперервно '+Number(m.longest_bz_le_minus5_minutes||0)+' хв</div>'+
+      '<div style="padding:5px 7px;border:1px solid var(--border);border-radius:7px"><b>Сонячний вітер</b><br>зараз '+Math.round(Number(w.speed_latest_km_s||0))+' км/с · max '+Math.round(Number(w.speed_max_6h_km_s||0))+' км/с · тиск max '+Number(w.dynamic_pressure_max_6h_npa||0).toFixed(1)+' nPa</div>'+
+      '<div style="padding:5px 7px;border:1px solid var(--border);border-radius:7px"><b>Протони ≥10 MeV</b><br>max 24 год '+Number(pr.max_24h_ge10mev_pfu||0).toFixed(2)+' pfu · S1 '+(pr.s1_threshold_exceeded?'перевищено':'ні')+'</div>'+
+      '<div style="padding:5px 7px;border:1px solid var(--border);border-radius:7px"><b>NOAA alerts</b><br>G/R/S/CME за 72 год: '+Number(a.recent_72h_count||0)+'</div>'+
+      '</div><div style="margin-top:6px;color:var(--dim)">RTSW/GOES/NOAA · snapshot SHA-256 · advisory only · score effect 0 до prospective validation.</div>';
+    if(stressed){
+      const panel=document.getElementById('spaceWeatherAccumulatedPanel'); if(panel) panel.open=true;
+    }
+  }catch(e){
+    _spaceWeatherAccumulated={};
+    if(sum) sum.textContent='🛰 Накопичений space-weather context недоступний';
+    if(body) body.textContent='Production G не змінено. '+e.message;
+  }
+  return _spaceWeatherAccumulated;
+}
 async function loadBgsSpaceWeather(){
   if(_bgsSpaceWeather !== null) return _bgsSpaceWeather;
   const panel=document.getElementById('bgsAdvisoryPanel');
@@ -8419,30 +8454,38 @@ let lastVsw   = null;
 let lastVswTime = null;
 
 async function fetchBzNow(){
-  const url = 'https://services.swpc.noaa.gov/products/solar-wind/mag-1-day.json';
+  const url = 'https://services.swpc.noaa.gov/json/rtsw/rtsw_mag_1m.json';
   let text;
   try { text = await fetchTextWithCORS(url); } catch(e){ console.warn('[v42] Bz fetch failed',e); return null; }
   try {
     const rows = JSON.parse(text);
-    if(!Array.isArray(rows)||rows.length<2){ console.warn('[v42] Bz: unexpected format'); return null; }
-    for(let i=rows.length-1;i>=1;i--){
-      const bz = parseFloat(rows[i][3]);
-      if(isFinite(bz)){ lastBz=bz; lastBzTime=rows[i][0]; if(window._DEBUG) console.log('[v42] Bz OK:',bz,'@',rows[i][0]); return {bz,time:rows[i][0]}; }
+    if(!Array.isArray(rows)||rows.length<1){ console.warn('[v42] Bz: unexpected format'); return null; }
+    const preferred=rows.find(r=>r&&r.active===true&&isFinite(parseFloat(r.bz_gsm)))||
+                    rows.find(r=>r&&isFinite(parseFloat(r.bz_gsm)));
+    if(preferred){
+      const bz=parseFloat(preferred.bz_gsm);
+      lastBz=bz; lastBzTime=preferred.time_tag;
+      if(window._DEBUG) console.log('[fp269] RTSW Bz OK:',bz,'@',preferred.time_tag);
+      return {bz,time:preferred.time_tag};
     }
   } catch(e){ console.warn('[v42] Bz parse failed',e); }
   return null;
 }
 
 async function fetchVswNow(){
-  const url = 'https://services.swpc.noaa.gov/products/solar-wind/plasma-1-day.json';
+  const url = 'https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json';
   let text;
   try { text = await fetchTextWithCORS(url); } catch(e){ console.warn('[v42] Vsw fetch failed',e); return null; }
   try {
     const rows = JSON.parse(text);
-    if(!Array.isArray(rows)||rows.length<2){ console.warn('[v42] Vsw: unexpected format'); return null; }
-    for(let i=rows.length-1;i>=1;i--){
-      const vsw = parseFloat(rows[i][1]);
-      if(isFinite(vsw)){ lastVsw=vsw; lastVswTime=rows[i][0]; if(window._DEBUG) console.log('[v42] Vsw OK:',vsw,'@',rows[i][0]); return {vsw,time:rows[i][0]}; }
+    if(!Array.isArray(rows)||rows.length<1){ console.warn('[v42] Vsw: unexpected format'); return null; }
+    const preferred=rows.find(r=>r&&r.active===true&&isFinite(parseFloat(r.proton_speed)))||
+                    rows.find(r=>r&&isFinite(parseFloat(r.proton_speed)));
+    if(preferred){
+      const vsw=parseFloat(preferred.proton_speed);
+      lastVsw=vsw; lastVswTime=preferred.time_tag;
+      if(window._DEBUG) console.log('[fp269] RTSW Vsw OK:',vsw,'@',preferred.time_tag);
+      return {vsw,time:preferred.time_tag};
     }
   } catch(e){ console.warn('[v42] Vsw parse failed',e); }
   return null;
@@ -23149,19 +23192,15 @@ const GChrono = (function(){
 // ретроспективний (готовий 3-годинний зріз), не попереджувальний. Суто інформаційний шар,
 // НЕ чіпає G-формулу/engine/freeze.
 const SolarWind = (function(){
-  const URL_MAG = 'https://services.swpc.noaa.gov/products/solar-wind/mag-1-day.json';
-  const URL_PLASMA = 'https://services.swpc.noaa.gov/products/solar-wind/plasma-1-day.json';
+  const URL_MAG = 'https://services.swpc.noaa.gov/json/rtsw/rtsw_mag_1m.json';
+  const URL_PLASMA = 'https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json';
   const LS_KEY = 'gindex_solarwind_v1';
   const TTL_MS = 5 * 60 * 1000; // 5хв — швидкозмінні дані, коротший TTL ніж alerts
 
-  function _lastValidRow(rows){
-    // rows[0] = заголовок, далі дані. Беремо останній рядок без null/порожніх значень.
-    if(!Array.isArray(rows) || rows.length < 2) return null;
-    for(let i = rows.length - 1; i >= 1; i--){
-      const r = rows[i];
-      if(r && r.every(v => v !== null && v !== '')) return r;
-    }
-    return null;
+  function _latestObject(rows, field){
+    if(!Array.isArray(rows) || !rows.length) return null;
+    return rows.find(r=>r&&r.active===true&&isFinite(parseFloat(r[field])))||
+           rows.find(r=>r&&isFinite(parseFloat(r[field])))||null;
   }
 
   async function fetchLatest(){
@@ -23177,17 +23216,15 @@ const SolarWind = (function(){
       ]);
       const magRows = JSON.parse(magTxt);
       const plasmaRows = JSON.parse(plasmaTxt);
-      const magRow = _lastValidRow(magRows);
-      const plasmaRow = _lastValidRow(plasmaRows);
+      const magRow = _latestObject(magRows,'bz_gsm');
+      const plasmaRow = _latestObject(plasmaRows,'proton_speed');
       if(!magRow || !plasmaRow) throw new Error('no valid rows');
-      // mag: [time_tag, bx_gsm, by_gsm, bz_gsm, lon_gsm, lat_gsm, bt]
-      // plasma: [time_tag, density, speed, temperature]
       const data = {
-        time: magRow[0],
-        bz: parseFloat(magRow[3]),
-        bt: parseFloat(magRow[6]),
-        speed: parseFloat(plasmaRow[2]),
-        density: parseFloat(plasmaRow[1])
+        time: magRow.time_tag,
+        bz: parseFloat(magRow.bz_gsm),
+        bt: parseFloat(magRow.bt),
+        speed: parseFloat(plasmaRow.proton_speed),
+        density: parseFloat(plasmaRow.proton_density)
       };
       try { localStorage.setItem(LS_KEY, JSON.stringify({ts: Date.now(), data})); } catch(e){}
       return data;
@@ -23415,6 +23452,7 @@ setTimeout(async function _dayVerdictLoad(){
     await loadStrongRawPolicy();
     await loadAutoProspectiveStatus();
     await loadBgsSpaceWeather();
+    await loadSpaceWeatherAccumulated();
     if (_engineScores === null) {
       const resp = await fetch('engine_scores.json', { cache: 'default' });
       if (resp.ok) {
