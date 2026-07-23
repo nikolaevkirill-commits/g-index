@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.86-fp269-ACCUMULATED-SPACE-WEATHER</title>
+  <title>G-Index — Космофізичний дашборд v88.9.87-fp270-ENLIL-CME-PROBABILITY</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -6061,9 +6061,10 @@ async function loadSpaceWeatherAccumulated(){
     const r=await fetch('SPACE_WEATHER_CONTEXT_v1.json',{cache:'no-store'});
     if(!r.ok) throw new Error('HTTP '+r.status);
     const p=await r.json(); _spaceWeatherAccumulated=p||{};
-    const m=p.magnetic||{}, w=p.solar_wind||{}, pr=p.protons||{}, a=p.alerts||{};
+    const m=p.magnetic||{}, w=p.solar_wind||{}, pr=p.protons||{}, a=p.alerts||{}, e=p.enlil||{}, sp=p.solar_probabilities||{};
     const stressed=(Number(m.longest_bz_le_minus5_minutes)>=30)||(Number(w.dynamic_pressure_max_6h_npa)>=5)||
-      !!pr.s1_threshold_exceeded||Number(a.recent_72h_count)>0;
+      !!pr.s1_threshold_exceeded||Number(a.recent_72h_count)>0||Number(e.peak_speed_km_s)>=550||
+      Number(sp.m_class_1_day_pct)>=50||Number(sp.x_class_1_day_pct)>=10;
     if(sum) sum.textContent='🛰 Накопичена космічна погода 6 год'+
       (stressed?' · ⚠ підвищене навантаження':' · спокійний накопичений фон');
     if(body) body.innerHTML=
@@ -6072,6 +6073,8 @@ async function loadSpaceWeatherAccumulated(){
       '<div style="padding:5px 7px;border:1px solid var(--border);border-radius:7px"><b>Сонячний вітер</b><br>зараз '+Math.round(Number(w.speed_latest_km_s||0))+' км/с · max '+Math.round(Number(w.speed_max_6h_km_s||0))+' км/с · тиск max '+Number(w.dynamic_pressure_max_6h_npa||0).toFixed(1)+' nPa</div>'+
       '<div style="padding:5px 7px;border:1px solid var(--border);border-radius:7px"><b>Протони ≥10 MeV</b><br>max 24 год '+Number(pr.max_24h_ge10mev_pfu||0).toFixed(2)+' pfu · S1 '+(pr.s1_threshold_exceeded?'перевищено':'ні')+'</div>'+
       '<div style="padding:5px 7px;border:1px solid var(--border);border-radius:7px"><b>NOAA alerts</b><br>G/R/S/CME за 72 год: '+Number(a.recent_72h_count||0)+'</div>'+
+      '<div style="padding:5px 7px;border:1px solid var(--border);border-radius:7px"><b>ENLIL 7 діб</b><br>пік '+Math.round(Number(e.peak_speed_km_s||0))+' км/с · '+(e.peak_speed_time?new Date(e.peak_speed_time).toLocaleString('uk-UA'):'час —')+' · CME cloud '+(e.cme_cloud_start?'так':'не виявлено')+'</div>'+
+      '<div style="padding:5px 7px;border:1px solid var(--border);border-radius:7px"><b>Імовірність 1 доба</b><br>M '+Number(sp.m_class_1_day_pct||0).toFixed(0)+'% · X '+Number(sp.x_class_1_day_pct||0).toFixed(0)+'% · proton '+Number(sp.proton_10mev_1_day_pct||0).toFixed(0)+'%</div>'+
       '</div><div style="margin-top:6px;color:var(--dim)">RTSW/GOES/NOAA · snapshot SHA-256 · advisory only · score effect 0 до prospective validation.</div>';
     if(stressed){
       const panel=document.getElementById('spaceWeatherAccumulatedPanel'); if(panel) panel.open=true;
