@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.78-fp260-PUSH-BACKEND-CLOUDFLARE-MIGRATION</title>
+  <title>G-Index — Космофізичний дашборд v88.9.80-fp263-FORGOT-PASSWORD</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -4357,7 +4357,7 @@ const GAUTH_USER_KEY = 'gindex_user';
 //   npx web-push generate-vapid-keys
 // Публічний ключ вставити сюди (рядок нижче), приватний — ТІЛЬКИ в env
 // Cloudflare Worker (push-worker-addon.js), НІКОЛИ не в цей файл.
-window._vapid_public_key = ''; // TODO(Kyrylo): встав публічний VAPID-ключ сюди
+window._vapid_public_key = 'BDGLLdncnSezr6esT8pHHOFdSn74BNnf5vHyTMX_qcYq9nFXdIPTYqMnhljd99pc0vbZfg3GMsGNAojZqZveUvw';
 
 // v88.6.9: safe localStorage helpers (handle quota / private mode / disabled storage)
 function _gauthLsSet(k, v){
@@ -4424,6 +4424,42 @@ const GAuth = {
     return data;
   },
 
+  // [fp263] Той самий паттерн, що login/signup — jsonResponse/errorResponse
+  // на сервері вже узгоджені, просто нові endpoints.
+  async forgotPassword(email){
+    let r;
+    try {
+      r = await fetch(GAUTH_WORKER_URL + '/auth/forgot-password', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ email }),
+      });
+    } catch(netErr){
+      throw new Error('Сервер недоступний. Перевір інтернет і спробуй знову.');
+    }
+    let data;
+    try { data = await r.json(); }
+    catch(parseErr){ throw new Error('Невірна відповідь сервера.'); }
+    if (!r.ok) throw new Error(data.error?.message || 'Forgot-password failed');
+    return data;
+  },
+
+  async resetPassword(token, newPassword){
+    let r;
+    try {
+      r = await fetch(GAUTH_WORKER_URL + '/auth/reset-password', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ token, new_password: newPassword }),
+      });
+    } catch(netErr){
+      throw new Error('Сервер недоступний. Перевір інтернет і спробуй знову.');
+    }
+    let data;
+    try { data = await r.json(); }
+    catch(parseErr){ throw new Error('Невірна відповідь сервера.'); }
+    if (!r.ok) throw new Error(data.error?.message || 'Reset-password failed');
+    return data;
+  },
+
   async logout(){
     const token = this.getToken();
     if (token) {
@@ -4457,10 +4493,11 @@ const GAuth = {
 
 // AuthModal: keep public interface, replace internals з Cloudflare flow
 const AuthModal = {
-  _mode: 'login', // 'login' | 'signup'
-  show(){
+  _mode: 'login', // 'login' | 'signup' | 'forgot' | 'reset'
+  _resetToken: null,
+  show(mode){
     const u = GAuth.getUser();
-    if (u) {
+    if (u && mode !== 'reset') {
       // v88.6.9: non-blocking confirm
       showToastConfirm(`Вийти з ${u.email}?`, () => GAuth.logout());
       return;
@@ -4472,16 +4509,22 @@ const AuthModal = {
       ov.style.cssText = 'position:fixed;inset:0;background:rgba(10,15,25,.85);display:flex;align-items:center;justify-content:center;z-index:1000;padding:20px';
       ov.innerHTML = `
         <div style="background:#0f1a2f;border:1px solid #2a3b61;border-radius:12px;padding:24px;max-width:380px;width:100%">
-          <div style="display:flex;gap:0;background:rgba(255,255,255,.04);padding:3px;border-radius:8px;margin-bottom:14px">
+          <div id="amTabs" style="display:flex;gap:0;background:rgba(255,255,255,.04);padding:3px;border-radius:8px;margin-bottom:14px">
             <button id="amTabLogin" onclick="AuthModal.switchTab('login')" style="flex:1;padding:8px;background:rgba(43,212,125,.15);border:0;color: var(--ok);font-weight:600;cursor:pointer;border-radius:6px;font-size:13px">Вхід</button>
             <button id="amTabSignup" onclick="AuthModal.switchTab('signup')" style="flex:1;padding:8px;background:transparent;border:0;color: var(--muted);font-weight:600;cursor:pointer;border-radius:6px;font-size:13px">Реєстрація</button>
+          </div>
+          <div id="amBackRow" style="display:none;margin-bottom:10px">
+            <a href="#" onclick="AuthModal.switchTab('login');return false;" style="color: var(--muted);font-size:12px;text-decoration:underline">← Назад до входу</a>
           </div>
           <div id="amError" style="display:none;padding:8px 10px;background:rgba(255,107,107,.1);border:1px solid rgba(255,107,107,.3);border-radius:6px;color: var(--bad);font-size:12px;margin-bottom:10px"></div>
           <div id="amSuccess" style="display:none;padding:8px 10px;background:rgba(43,212,125,.1);border:1px solid rgba(43,212,125,.3);border-radius:6px;color: var(--ok);font-size:12px;margin-bottom:10px"></div>
           <input id="amEmail" type="email" placeholder="your@email.com" autocomplete="email"
                  style="width:100%;padding:10px;font-size:14px;background:#0a1428;border:1px solid #2a3b61;color: var(--text2);border-radius:8px;margin-bottom:10px;box-sizing:border-box" aria-label="your@email.com">
           <input id="amPassword" type="password" placeholder="Пароль (мін. 8 символів)" autocomplete="current-password" minlength="8"
-                 style="width:100%;padding:10px;font-size:14px;background:#0a1428;border:1px solid #2a3b61;color: var(--text2);border-radius:8px;margin-bottom:14px;box-sizing:border-box" aria-label="Пароль (мін. 8 символів)">
+                 style="width:100%;padding:10px;font-size:14px;background:#0a1428;border:1px solid #2a3b61;color: var(--text2);border-radius:8px;margin-bottom:4px;box-sizing:border-box" aria-label="Пароль (мін. 8 символів)">
+          <div id="amForgotRow" style="text-align:right;margin-bottom:10px">
+            <a href="#" onclick="AuthModal.switchTab('forgot');return false;" style="color: var(--muted);font-size:11px;text-decoration:underline">Забули пароль?</a>
+          </div>
           <div style="display:flex;gap:8px;justify-content:flex-end">
             <button onclick="AuthModal.hide()" style="padding:8px 14px;background: var(--border);color: var(--muted);border:1px solid #2a3b61;border-radius:6px;cursor:pointer">Скасувати</button>
             <button id="amSubmit" onclick="AuthModal.submit()" style="padding:8px 14px;background: var(--ok);color:#0a1020;border:none;border-radius:6px;cursor:pointer;font-weight:700">Увійти</button>
@@ -4493,7 +4536,7 @@ const AuthModal = {
     }
     ov.style.display = 'flex';
     setTimeout(() => { document.getElementById('amEmail')?.focus(); }, 50);
-    AuthModal.switchTab('login');
+    AuthModal.switchTab(mode || 'login');
   },
   hide(){
     const ov = document.getElementById('authOverlay');
@@ -4505,20 +4548,45 @@ const AuthModal = {
   switchTab(mode){
     AuthModal._mode = mode;
     const isLogin = mode === 'login';
+    const isSignup = mode === 'signup';
+    const isForgot = mode === 'forgot';
+    const isReset = mode === 'reset';
     const tabL = document.getElementById('amTabLogin');
     const tabS = document.getElementById('amTabSignup');
+    const tabs = document.getElementById('amTabs');
+    const backRow = document.getElementById('amBackRow');
+    const forgotRow = document.getElementById('amForgotRow');
+    const emailEl = document.getElementById('amEmail');
+    const pwdEl = document.getElementById('amPassword');
+
+    // fp263: forgot/reset — окремі підрежими без верхніх вкладок Вхід/Реєстрація,
+    // натомість "← Назад до входу".
+    if (tabs) tabs.style.display = (isForgot || isReset) ? 'none' : 'flex';
+    if (backRow) backRow.style.display = (isForgot || isReset) ? 'block' : 'none';
+    if (forgotRow) forgotRow.style.display = isLogin ? 'block' : 'none';
+    if (emailEl) emailEl.style.display = isReset ? 'none' : 'block';
+    if (pwdEl) {
+      pwdEl.style.display = isForgot ? 'none' : 'block';
+      pwdEl.placeholder = isReset ? 'Новий пароль (мін. 8 символів)' : 'Пароль (мін. 8 символів)';
+    }
+
     if (tabL) {
       tabL.style.background = isLogin ? 'rgba(43,212,125,.15)' : 'transparent';
       tabL.style.color = isLogin ? '#2bd47d' : '#9bb1dc';
     }
     if (tabS) {
-      tabS.style.background = !isLogin ? 'rgba(43,212,125,.15)' : 'transparent';
-      tabS.style.color = !isLogin ? '#2bd47d' : '#9bb1dc';
+      tabS.style.background = isSignup ? 'rgba(43,212,125,.15)' : 'transparent';
+      tabS.style.color = isSignup ? '#2bd47d' : '#9bb1dc';
     }
     const btn = document.getElementById('amSubmit');
-    if (btn) btn.textContent = isLogin ? 'Увійти' : 'Створити акаунт';
+    if (btn) {
+      btn.textContent = isLogin ? 'Увійти' : isSignup ? 'Створити акаунт'
+        : isForgot ? 'Надіслати посилання' : 'Встановити пароль';
+    }
     const pwd = document.getElementById('amPassword');
     if (pwd) pwd.setAttribute('autocomplete', isLogin ? 'current-password' : 'new-password');
+    const err = document.getElementById('amError'); if (err) err.style.display = 'none';
+    const ok = document.getElementById('amSuccess'); if (ok) ok.style.display = 'none';
   },
   async submit(){
     const email = document.getElementById('amEmail')?.value.trim();
@@ -4527,6 +4595,53 @@ const AuthModal = {
     const ok = document.getElementById('amSuccess');
     const btn = document.getElementById('amSubmit');
     err.style.display = 'none'; ok.style.display = 'none';
+
+    // fp263: forgot — потрібен лише email.
+    if (AuthModal._mode === 'forgot') {
+      if (!email || !/.+@.+\..+/.test(email)) {
+        err.textContent = 'Невірний формат email'; err.style.display = 'block'; return;
+      }
+      btn.disabled = true; btn.textContent = '...';
+      try {
+        await GAuth.forgotPassword(email);
+        ok.textContent = '✓ Якщо цей email зареєстрований — на нього надіслано посилання для скидання пароля.';
+        ok.style.display = 'block';
+      } catch(e) {
+        err.textContent = e.message || String(e); err.style.display = 'block';
+      } finally {
+        btn.disabled = false; btn.textContent = 'Надіслати посилання';
+      }
+      return;
+    }
+
+    // fp263: reset — потрібен лише новий пароль + токен з URL (AuthModal._resetToken).
+    if (AuthModal._mode === 'reset') {
+      if (!AuthModal._resetToken) {
+        err.textContent = 'Токен скидання відсутній — перейди за посиланням з листа ще раз.';
+        err.style.display = 'block'; return;
+      }
+      if (!password || password.length < 8) {
+        err.textContent = 'Пароль має бути мін. 8 символів'; err.style.display = 'block'; return;
+      }
+      btn.disabled = true; btn.textContent = '...';
+      try {
+        await GAuth.resetPassword(AuthModal._resetToken, password);
+        ok.textContent = '✓ Пароль змінено! Тепер увійди з новим паролем.';
+        ok.style.display = 'block';
+        AuthModal._resetToken = null;
+        setTimeout(() => AuthModal.switchTab('login'), 2000);
+      } catch(e) {
+        const msg = e.message || String(e);
+        err.textContent = msg.toLowerCase().includes('invalid or expired')
+          ? 'Посилання недійсне або протерміноване — запроси нове через "Забули пароль?"'
+          : msg;
+        err.style.display = 'block';
+      } finally {
+        btn.disabled = false; btn.textContent = 'Встановити пароль';
+      }
+      return;
+    }
+
     if (!email || !/.+@.+\..+/.test(email)) {
       err.textContent = 'Невірний формат email'; err.style.display = 'block'; return;
     }
@@ -4562,7 +4677,24 @@ const AuthModal = {
 
 // Init UI on load
 if (typeof window !== 'undefined') {
-  document.addEventListener('DOMContentLoaded', () => GAuth.refreshUI());
+  document.addEventListener('DOMContentLoaded', () => {
+    GAuth.refreshUI();
+    // [fp263] Лист "Забули пароль?" веде на ...?reset_token=XXX — підхоплюємо
+    // й одразу відкриваємо форму скидання, прибираючи токен з видимого URL
+    // (щоб не лишався в історії браузера довше, ніж потрібно).
+    try {
+      const params = new URLSearchParams(location.search);
+      const resetToken = params.get('reset_token');
+      if (resetToken) {
+        AuthModal._resetToken = resetToken;
+        AuthModal.show('reset');
+        params.delete('reset_token');
+        const newSearch = params.toString();
+        const newUrl = location.pathname + (newSearch ? '?' + newSearch : '') + location.hash;
+        history.replaceState(null, '', newUrl);
+      }
+    } catch(e){ /* silent — якщо URLSearchParams недоступний, просто не автовідкриваємо */ }
+  });
   if (document.readyState !== 'loading') GAuth.refreshUI();
 }
 
