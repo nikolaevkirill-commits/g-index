@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.91-fp274-INDEX-CONTEXT-POLICY</title>
+  <title>G-Index — Космофізичний дашборд v88.9.92-fp276-TANITA-SHADOW-ENGINE</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -6172,10 +6172,15 @@ async function loadAutoProspectiveStatus(){
     const editorialConflicts = Number(s.editorial_comparisons && s.editorial_comparisons.material_disagreements || 0);
     const contextCounts = s.shadow_context_flags && s.shadow_context_flags.counts || {};
     const contextTotal = Object.values(contextCounts).reduce((a,b)=>a+Number(b||0),0);
+    const tanita = s.tanita_shadow || {};
+    const tanitaFormula = tanita.formula_reconstruction || {};
+    const tanitaDays = Number(tanita.horizon_days_available || 0);
     if(el) el.textContent = 'Автоматичний shadow: '+created+' прогнозів заморожено · HIGH outcomes '+n+'/'+need+
       (passed ? ' · promotion gate пройдено' : ' · без заяви 90% до проходження gate')+
       (editorialTotal ? ' · Expert↔Engine перевірено '+editorialTotal+', суттєвих розбіжностей '+editorialConflicts : '')+
-      (contextTotal ? ' · context flags '+contextTotal+' (лише ручна перевірка, G не змінено)' : '');
+      (contextTotal ? ' · context flags '+contextTotal+' (лише ручна перевірка, G не змінено)' : '')+
+      (tanitaFormula.verified_exact ? ' · Таніта: формула '+tanitaFormula.verified_exact+'/'+tanitaFormula.dates+
+        ' відтворена, image-shadow '+tanitaDays+' дн. (G не змінено)' : '');
   } catch(e) {
     _autoProspectiveStatus = {};
     if(el) el.textContent = 'Автоматичний shadow: статус тимчасово недоступний; production G не змінено.';
