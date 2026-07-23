@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.87-fp270-ENLIL-CME-PROBABILITY</title>
+  <title>G-Index — Космофізичний дашборд v88.9.88-fp271-SPACE-WEATHER-CONFLICT-CLARITY</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1783,9 +1783,10 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
       <div id="bgsAdvisoryBody" style="margin-top:7px;line-height:1.55"></div>
     </details>
     <details id="spaceWeatherAccumulatedPanel" style="margin:0 0 10px;padding:9px 14px;border-radius:12px;border:1px solid rgba(155,177,220,.25);background:rgba(89,166,255,.025);font-size:11px;color:var(--muted)">
-      <summary id="spaceWeatherAccumulatedSummary" style="cursor:pointer;color:#b9d8ff;font-weight:800">🛰 Накопичена космічна погода за 6 год — завантаження…</summary>
+      <summary id="spaceWeatherAccumulatedSummary" style="cursor:pointer;color:#b9d8ff;font-weight:800">🛰 Космічна погода: спостереження 6 год + прогноз 7 діб — завантаження…</summary>
       <div id="spaceWeatherAccumulatedBody" style="margin-top:7px;line-height:1.55"></div>
     </details>
+    <div id="spaceWeatherDecisionGuard" style="display:none;margin:0 0 10px;padding:9px 14px;border-radius:12px;border:1px solid rgba(255,176,32,.55);background:rgba(255,176,32,.08);font-size:11px;line-height:1.5;color:#ffd37a"></div>
     <!-- v88.8.51-fp128: Regime cards (M2) — score+regime+confidence+space-weather. daily_master.json -->
     <div id="regimeCards" style="display:none;margin:0 0 10px;gap:8px;grid-template-columns:repeat(4,1fr)">
       <div id="rcScore" style="padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:rgba(11,18,32,.5);text-align:center">
@@ -6052,6 +6053,32 @@ let _strongRawPolicy = null;
 let _autoProspectiveStatus = null;
 let _bgsSpaceWeather = null;
 let _spaceWeatherAccumulated = null;
+function updateSpaceWeatherDecisionGuard(){
+  const el=document.getElementById('spaceWeatherDecisionGuard');
+  if(!el) return;
+  const p=_spaceWeatherAccumulated||{}, b=_bgsSpaceWeather||{};
+  const m=p.magnetic||{}, w=p.solar_wind||{}, e=p.enlil||{}, sp=p.solar_probabilities||{}, flags=b.flags||{};
+  const reasons=[];
+  if(Number(w.speed_latest_km_s)>=550) reasons.push('швидкий сонячний вітер '+Math.round(Number(w.speed_latest_km_s))+' км/с');
+  if(Number(w.dynamic_pressure_max_6h_npa)>=5) reasons.push('динамічний тиск до '+Number(w.dynamic_pressure_max_6h_npa).toFixed(1)+' nPa');
+  if(flags.storm_g1_plus) reasons.push('BGS допускає G1');
+  if(e.cme_cloud_start) reasons.push('ENLIL бачить CME-cloud');
+  if(Number(sp.m_class_1_day_pct)>=50) reasons.push('M-спалах '+Math.round(Number(sp.m_class_1_day_pct))+'%');
+  const today=new Date().toISOString().slice(0,10);
+  const day=window._autoForecastFeed&&window._autoForecastFeed.days&&window._autoForecastFeed.days[today];
+  const positive=day&&Number(day.score)>0;
+  const fetched=Date.parse(p.fetched_at||'');
+  const ageH=Number.isFinite(fetched)?Math.max(0,(Date.now()-fetched)/3600000):null;
+  const stale=ageH!==null&&ageH>6;
+  if(!reasons.length&&!stale){ el.style.display='none'; return; }
+  el.style.display='block';
+  el.innerHTML='<strong>⚠ Операційна поправка до рішення:</strong> '+
+    (positive?'загальний PDF/Engine-вердикт сприятливий, але це не означає спокійну космічну погоду. ':'')+
+    (reasons.length?'Зараз: '+reasons.join(' · ')+'. ':'')+
+    '<strong>Для GPS, радіозв’язку, дронів і критичних запусків знизьте впевненість та перевірте умови безпосередньо перед дією.</strong>'+
+    (stale?' <span style="color:#ff9f9f">Дані старші 6 год — потрібне оновлення.</span>':'')+
+    '<div style="margin-top:3px;color:var(--dim)">Це незалежний safety/advisory-шар: він не додається вдруге до G і не переписує експертний PDF.</div>';
+}
 window._expertCalcLoadStatus = 'pending';
 async function loadSpaceWeatherAccumulated(){
   if(_spaceWeatherAccumulated!==null) return _spaceWeatherAccumulated;
@@ -6065,7 +6092,7 @@ async function loadSpaceWeatherAccumulated(){
     const stressed=(Number(m.longest_bz_le_minus5_minutes)>=30)||(Number(w.dynamic_pressure_max_6h_npa)>=5)||
       !!pr.s1_threshold_exceeded||Number(a.recent_72h_count)>0||Number(e.peak_speed_km_s)>=550||
       Number(sp.m_class_1_day_pct)>=50||Number(sp.x_class_1_day_pct)>=10;
-    if(sum) sum.textContent='🛰 Накопичена космічна погода 6 год'+
+    if(sum) sum.textContent='🛰 Космічна погода: спостереження 6 год + прогноз 7 діб'+
       (stressed?' · ⚠ підвищене навантаження':' · спокійний накопичений фон');
     if(body) body.innerHTML=
       '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:5px">'+
@@ -6079,10 +6106,12 @@ async function loadSpaceWeatherAccumulated(){
     if(stressed){
       const panel=document.getElementById('spaceWeatherAccumulatedPanel'); if(panel) panel.open=true;
     }
+    updateSpaceWeatherDecisionGuard();
   }catch(e){
     _spaceWeatherAccumulated={};
     if(sum) sum.textContent='🛰 Накопичений space-weather context недоступний';
     if(body) body.textContent='Production G не змінено. '+e.message;
+    updateSpaceWeatherDecisionGuard();
   }
   return _spaceWeatherAccumulated;
 }
@@ -6118,10 +6147,12 @@ async function loadBgsSpaceWeather(){
       '</div><div style="margin-top:7px">'+(b.comment||'Без додаткового коментаря.')+'</div>'+
       '<div style="margin-top:6px;color:var(--dim)">Джерело: British Geological Survey · noon-to-noon GMT · незалежний advisory · score effect 0.</div>';
     if(panel && flags.storm_g1_plus) panel.open=true;
+    updateSpaceWeatherDecisionGuard();
   } catch(e) {
     _bgsSpaceWeather={};
     if(sum) sum.textContent='🌍 BGS advisory тимчасово недоступний';
     if(body) body.textContent='Production G не змінено. '+e.message;
+    updateSpaceWeatherDecisionGuard();
   }
   return _bgsSpaceWeather;
 }
