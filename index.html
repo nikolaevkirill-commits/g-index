@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.94-fp278-SINGLE-FINAL-DECISION</title>
+  <title>G-Index — Космофізичний дашборд v88.9.95-fp279-HOURLY-KP-AUTOMATION</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1782,6 +1782,10 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
       <div style="font-size:10px;letter-spacing:.12em;color:#91b8ad">ЄДИНИЙ ПІДСУМКОВИЙ РЕЗУЛЬТАТ</div>
       <div id="singleFinalDecisionBody" style="margin-top:7px;font-size:14px;color:#dbe9ff">Завантаження узгодженого рішення…</div>
     </section>
+    <details id="kpHourlyPanel" style="margin:0 0 10px;padding:9px 14px;border-radius:12px;border:1px solid rgba(255,190,75,.38);background:rgba(255,174,45,.035);font-size:11px;color:var(--muted)">
+      <summary id="kpHourlySummary" style="cursor:pointer;font-weight:700;color:#ffd37a">🛰 Погодинний Kp: завантаження…</summary>
+      <div id="kpHourlyBody" style="margin-top:8px"></div>
+    </details>
     <details id="tanitaShadowPanel" style="margin:0 0 10px;padding:9px 14px;border-radius:12px;border:1px solid rgba(178,126,255,.35);background:linear-gradient(180deg,rgba(178,126,255,.07),rgba(178,126,255,.02));font-size:11px;color:var(--muted)">
       <summary id="tanitaShadowSummary" style="cursor:pointer;color:#d9c2ff;font-weight:800">🔐 Таніта — відтворений алгоритм і незалежний image-shadow</summary>
       <div id="tanitaShadowBody" style="margin-top:8px;line-height:1.55">Завантаження…</div>
@@ -6133,6 +6137,27 @@ function renderSingleFinalDecision(){
       (restrictions.length?'<span style="color:#ffd37a">Обмеження: '+restrictions.join(' · ')+'</span>':'Критичних додаткових обмежень у feed немає.')+
     '</div>'+
     '<div style="margin-top:5px;font-size:10px;color:#7792a5">Одне рішення за ієрархією джерел; деталі й конфлікти винесені нижче.</div>';
+}
+async function loadKpHourlyAlert(){
+  const sum=document.getElementById('kpHourlySummary');
+  const body=document.getElementById('kpHourlyBody');
+  if(!sum||!body) return;
+  try{
+    const r=await fetch('KP_HOURLY_ALERT_v2.json',{cache:'no-store'});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const p=await r.json(), peak=p.peak||{}, slots=Array.isArray(p.slots)?p.slots:[];
+    const level=Number(peak.level||0), kp=Number(peak.kp);
+    sum.textContent='🛰 Погодинний Kp · пік '+(Number.isFinite(kp)?kp.toFixed(1):'—')+
+      (level>=2?' · 🔴 буря':level===1?' · 🟡 підвищений':' · 🟢 спокійно');
+    body.innerHTML='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">'+
+      '<thead><tr><th style="text-align:left;padding:5px">Час</th><th style="text-align:left;padding:5px">Kp</th><th style="text-align:left;padding:5px">Джерело</th></tr></thead><tbody>'+
+      slots.slice(0,12).map(x=>{const v=Number(x.kp),c=v>=5?'#ff7070':v>=4?'#ffd37a':'#75e6a8';return '<tr style="border-top:1px solid var(--border)"><td style="padding:5px">'+new Date(x.time_utc).toLocaleString('uk-UA',{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit'})+'</td><td style="padding:5px;color:'+c+';font-weight:700">'+v.toFixed(1)+'</td><td style="padding:5px">'+(x.source==='observed'?'факт':'прогноз')+'</td></tr>'}).join('')+
+      '</tbody></table></div><div style="margin-top:6px;color:var(--dim)">Поріг попередження Kp≥4; буря Kp≥5. Telegram-антиспам прив’язаний до конкретного часового піку.</div>';
+    if(level>0){const panel=document.getElementById('kpHourlyPanel');if(panel)panel.open=true;}
+  }catch(e){
+    sum.textContent='🛰 Погодинний Kp тимчасово недоступний';
+    body.textContent=e.message;
+  }
 }
 function updateSpaceWeatherDecisionGuard(){
   const el=document.getElementById('spaceWeatherDecisionGuard');
@@ -23582,6 +23607,7 @@ setTimeout(async function _dayVerdictLoad(){
     await loadAutoProspectiveStatus();
     await loadBgsSpaceWeather();
     await loadSpaceWeatherAccumulated();
+    await loadKpHourlyAlert();
     if (_engineScores === null) {
       const resp = await fetch('engine_scores.json', { cache: 'default' });
       if (resp.ok) {
