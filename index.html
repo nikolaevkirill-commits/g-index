@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.100-fp284-FREE-SAFETY-PUSH</title>
+  <title>G-Index — Космофізичний дашборд v88.9.101-fp285-PUSH-STATE-INDICATOR</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -5584,6 +5584,43 @@ const PUSH = (function(){
   return { isSupported, isConfigured, currentPermission, isSubscribed, subscribe, unsubscribe };
 })();
 
+async function updatePushButtonState(){
+  const btn=document.getElementById('pushBtn');
+  if(!btn) return;
+  btn.style.transition='background .2s ease,border-color .2s ease,color .2s ease';
+  if(!PUSH.isSupported()){
+    btn.textContent='🔕';
+    btn.title='Web Push не підтримується цим браузером';
+    btn.style.background='var(--border)';
+    btn.style.color='var(--muted)';
+    return;
+  }
+  if(Notification.permission==='denied'){
+    btn.textContent='🔕';
+    btn.title='Сповіщення заблоковані у налаштуваннях браузера';
+    btn.style.background='rgba(255,107,107,.16)';
+    btn.style.borderColor='rgba(255,107,107,.55)';
+    btn.style.color='#ff9f9f';
+    return;
+  }
+  let subscribed=false;
+  try{subscribed=await PUSH.isSubscribed();}catch(_e){}
+  if(subscribed){
+    btn.textContent='🔔 ✓';
+    btn.title='Web Push увімкнено на цьому пристрої';
+    btn.style.background='rgba(43,212,125,.18)';
+    btn.style.borderColor='rgba(43,212,125,.55)';
+    btn.style.color='var(--ok)';
+  }else{
+    btn.textContent='🔔';
+    btn.title='Увімкнути Web Push';
+    btn.style.background='var(--border)';
+    btn.style.borderColor='var(--border2)';
+    btn.style.color='var(--muted)';
+  }
+}
+window.addEventListener('load',()=>setTimeout(updatePushButtonState,800));
+
 const PushModal = {
   async show(){
     if(!PUSH.isSupported()){
@@ -5657,6 +5694,7 @@ const PushModal = {
     if(msg){ msg.textContent = 'Підписка…'; msg.style.color = '#9bb1dc'; }
     try{
       await PUSH.subscribe();
+      await updatePushButtonState();
       if(msg){ msg.textContent = '✓ Готово!'; msg.style.color = '#2bd47d'; }
       setTimeout(() => PushModal.show(), 800); // перерендерити у subscribed-стан
     }catch(e){
@@ -5666,6 +5704,7 @@ const PushModal = {
   async doUnsubscribe(){
     try{
       await PUSH.unsubscribe();
+      await updatePushButtonState();
       setTimeout(() => PushModal.show(), 300);
     }catch(e){ showToast('Помилка відписки: ' + (e.message || e), 'error'); }
   }
