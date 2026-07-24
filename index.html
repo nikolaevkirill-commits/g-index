@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.101-fp285-PUSH-STATE-INDICATOR</title>
+  <title>G-Index — Космофізичний дашборд v88.9.102-fp286-PUSH-REGISTRATION-RECOVERY</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -5502,10 +5502,32 @@ const PUSH = (function(){
     // 3. Підписка (або реюз існуючу)
     let sub = await reg.pushManager.getSubscription();
     if(!sub){
-      sub = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: _urlBase64ToUint8Array(window._vapid_public_key)
-      });
+      const options={
+        userVisibleOnly:true,
+        applicationServerKey:_urlBase64ToUint8Array(window._vapid_public_key)
+      };
+      try{
+        sub=await reg.pushManager.subscribe(options);
+      }catch(firstError){
+        // Chrome occasionally keeps a stale push-service registration after a
+        // service-worker/VAPID update. Refresh the registration and retry once.
+        try{await reg.update();}catch(_updateError){}
+        await new Promise(resolve=>setTimeout(resolve,900));
+        try{
+          sub=await reg.pushManager.subscribe(options);
+        }catch(secondError){
+          const raw=String((secondError&&secondError.message)||secondError||firstError||'');
+          if(/could not retrieve the public key|registration failed|push service/i.test(raw)){
+            throw new Error(
+              'Chrome не зміг зареєструвати пристрій у своїй push-службі. '+
+              'Закрийте всі вікна Chrome, відкрийте браузер знову та повторіть. '+
+              'Якщо помилка лишиться — очистьте дані цього сайту й перевірте, '+
+              'що сповіщення дозволені. Telegram Kp-алерти працюють незалежно.'
+            );
+          }
+          throw secondError;
+        }
+      }
     }
 
     // 4. Зберегти на gindex-auth Worker (fp260: замість мертвого Supabase).
