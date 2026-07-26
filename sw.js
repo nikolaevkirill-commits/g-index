@@ -21,7 +21,7 @@
 // GitHub Pages проєктів на тому самому домені. Тепер видаляємо лише ключі з
 // власним префіксом 'gindex-', що не є поточною версією.
 
-const CACHE_VERSION = 'fp291-v1'; // bump this string on every deploy
+const CACHE_VERSION = 'fp292-v1'; // bump this string on every deploy
 const CACHE_PREFIX = 'gindex-'; // власний namespace — НІКОЛИ не чіпати ключі без цього префікса
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${CACHE_VERSION}`;
 const DATA_CACHE = `${CACHE_PREFIX}data-${CACHE_VERSION}`;
@@ -164,4 +164,50 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     caches.match(req).then((cached) => cached || fetch(req))
   );
+});
+
+// fp292: real Web Push display + deterministic deep-link routing.
+// Previously the Worker delivered a payload, but the Service Worker had no
+// `push`/`notificationclick` listeners, so a background delivery could be
+// silently discarded and a notification click could not open the relevant
+// dashboard block.
+self.addEventListener('push', (event) => {
+  let payload = {};
+  try { payload = event.data ? event.data.json() : {}; }
+  catch (_e) {
+    try { payload = { body: event.data ? event.data.text() : '' }; }
+    catch (_e2) { payload = {}; }
+  }
+
+  const category = String(payload.category || 'daily');
+  const target = payload.url ||
+    (category === 'storm' ? './?push=storm#kpHourlyPanel' : './?push=daily#heroCard');
+  const options = {
+    body: payload.body || 'Оновився прогноз G-Index',
+    icon: './icon192.png',
+    badge: './icon192.png',
+    tag: payload.tag || `gindex-${category}`,
+    renotify: category === 'storm',
+    data: { url: target, category },
+    actions: [{ action: 'open', title: 'Відкрити G-Index' }]
+  };
+  event.waitUntil(self.registration.showNotification(payload.title || 'G-Index', options));
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const rawTarget = event.notification?.data?.url || './?push=daily#heroCard';
+  const target = new URL(rawTarget, self.registration.scope).href;
+  event.waitUntil((async () => {
+    const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    for (const client of windows) {
+      try {
+        if (new URL(client.url).origin === self.location.origin) {
+          await client.navigate(target);
+          return client.focus();
+        }
+      } catch (_e) { /* try next client */ }
+    }
+    return self.clients.openWindow(target);
+  })());
 });
