@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.103-fp287-PWA-APP-ASSETS</title>
+  <title>G-Index — Космофізичний дашборд v88.9.104-fp288-HERO-WHY-SCOPE-FIX</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -14722,10 +14722,15 @@ function _renderHeroHierarchy(){
   try{
     const box = (typeof el==='function') ? el('heroHierarchy') : document.getElementById('heroHierarchy');
     if(!box) return;
+    // fp288: heroWhyText нижче також читає цей snapshot. Раніше `snap` був
+    // const усередині вкладеного try, тому поза ним виникав ReferenceError,
+    // який зовнішній catch мовчки ковтав, а текст назавжди лишався
+    // «Завантаження…».
+    let snap = null;
     // 1) Рішення дня — PDF/Engine (override-aware, canonical day verdict)
     let decHtml = '<span style="color:var(--dim)">завантаження…</span>';
     try{
-      const snap = (typeof getEngineScore==='function') ? getEngineScore(new Date(todayKyivStr()+'T12:00:00Z')) : null;
+      snap = (typeof getEngineScore==='function') ? getEngineScore(new Date(todayKyivStr()+'T12:00:00Z')) : null;
       if(snap && isFinite(snap.eng)){
         const sc  = Math.max(-3, Math.min(3, Math.round(Number(snap.eng))));
         const v   = (typeof VERDICT_7CLASS!=='undefined') ? VERDICT_7CLASS[String(sc)] : null;
