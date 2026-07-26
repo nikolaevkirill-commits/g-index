@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.105-fp289-HERO-WHY-KP-FIX</title>
+  <title>G-Index — Космофізичний дашборд v88.9.106-fp291-INSTALL-APP-UX</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1513,6 +1513,10 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
           title="Звукові сповіщення — м'які тони на канонічних transition-точках"
           aria-label="Toggle звукові сповіщення"
           style="background: var(--border);color: var(--muted);border:1px solid var(--border2);font-size:11px;padding:3px 9px;border-radius:6px;cursor:pointer">🔊</button>
+        <button id="btnInstallApp" onclick="pwaInstallOrHelp()"
+          title="Встановити G-Index як застосунок"
+          aria-label="Встановити G-Index як застосунок"
+          style="background:#0a2a1a;color:#7fffc0;border:1px solid #1a6644;font-size:11px;padding:3px 9px;border-radius:6px;cursor:pointer">📲 Застосунок</button>
         <button id="btnRefresh" aria-label="Оновити дані з NOAA">↻ Оновити</button>
         <button id="btnHardReset" title="Скинути кеш SW і перезавантажити — якщо бачиш стару версію"
           aria-label="Очистити кеш Service Worker і перезавантажити"
@@ -3165,6 +3169,24 @@ function pwaInstall() {
   if (!_deferredInstall) return;
   _deferredInstall.prompt();
   _deferredInstall.userChoice.then(() => { _deferredInstall = null; pwaDismiss(); });
+}
+function pwaInstallOrHelp() {
+  if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) {
+    alert('G-Index уже відкритий як встановлений застосунок.');
+    return;
+  }
+  if (_deferredInstall) {
+    pwaInstall();
+    return;
+  }
+  const ua = navigator.userAgent || '';
+  const isIOS = /iPad|iPhone|iPod/.test(ua)
+    || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  if (isIOS) {
+    alert('Щоб встановити G-Index на iPhone/iPad: натисни «Поділитися» в Safari → «На початковий екран» → «Додати».');
+  } else {
+    alert('Відкрий меню браузера (⋮ або …) і вибери «Встановити застосунок» / «Додати на головний екран». Якщо пункт відсутній — онови сторінку та спробуй ще раз.');
+  }
 }
 function pwaDismiss() {
   const bar = document.getElementById('pwaInstallBar');
