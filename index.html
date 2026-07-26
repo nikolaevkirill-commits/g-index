@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.107-fp292-PUSH-DEEPLINK</title>
+  <title>G-Index — Космофізичний дашборд v88.9.108-fp293-PUSH-ROUTING</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -24108,6 +24108,36 @@ window.addEventListener('resize', () => {
 
 document.addEventListener('DOMContentLoaded', () => {
   setTimeout(mnavInit, 100); // after dashboard renders
+  // fp293: notification deep links must reveal the actual target, not merely
+  // load the page with a hidden/closed section.
+  setTimeout(() => {
+    try {
+      const pushKind = new URLSearchParams(location.search).get('push');
+      if (!pushKind) return;
+      if (pushKind === 'storm') {
+        const kpPanel = document.getElementById('kpHourlyPanel');
+        if (kpPanel) {
+          kpPanel.open = true;
+          kpPanel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          const summary = document.getElementById('kpHourlySummary');
+          if (summary) {
+            summary.setAttribute('tabindex', '-1');
+            summary.focus({ preventScroll: true });
+          }
+        }
+      } else {
+        if (window.innerWidth <= 700) mnavGo('now');
+        const hero = document.getElementById('heroCard');
+        if (hero) {
+          hero.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          hero.setAttribute('tabindex', '-1');
+          hero.focus({ preventScroll: true });
+        }
+      }
+      const clean = location.pathname + location.hash;
+      history.replaceState(null, '', clean);
+    } catch (_e) { /* routing is enhancement only */ }
+  }, 900);
 });
 try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line20806';}catch(e){}
 </script>
