@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.104-fp288-HERO-WHY-SCOPE-FIX</title>
+  <title>G-Index — Космофізичний дашборд v88.9.105-fp289-HERO-WHY-KP-FIX</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -14727,6 +14727,12 @@ function _renderHeroHierarchy(){
     // який зовнішній catch мовчки ковтав, а текст назавжди лишався
     // «Завантаження…».
     let snap = null;
+    // fp289: heroWhyText використовує Kp після блоку рендера G_now.
+    // Раніше там читалась неоголошена змінна `kp`; реальний `kpN` був const
+    // усередині іншого try і був недоступний. Це гарантовано кидало
+    // ReferenceError та залишало «Завантаження…».
+    let kp = (window.__uiState && isFinite(window.__uiState.kpNow))
+      ? Number(window.__uiState.kpNow) : NaN;
     // 1) Рішення дня — PDF/Engine (override-aware, canonical day verdict)
     let decHtml = '<span style="color:var(--dim)">завантаження…</span>';
     try{
@@ -14917,11 +14923,17 @@ function _renderHeroHierarchy(){
       const _why = document.getElementById('heroWhyText');
       if (_why) {
         const _kpPart = isFinite(kp) ? (kp < 2 ? 'Геомагнітний фон спокійний' : kp < 4 ? 'Геомагнітний фон помірний' : 'Геомагнітний фон активний') : '';
-        const _pSnap = (typeof computePanchanga === 'function') ? computePanchanga(new Date(todayKyivStr()+'T12:00:00Z')) : null;
-        const _nak = _pSnap?.nakshatra?.name || '';
-        const _rahu = (_pSnap?.rahu?.active) ? ' + зараз несприятливий час доби (Раху Калам)' : '';
         const _dayLabel = snap?.eng <= -2 ? 'несприятливий вплив на самопочуття та рішення' : snap?.eng >= 2 ? 'сприятливий фон для важливих справ' : 'нейтральний або змішаний фон';
-        _why.textContent = [_kpPart, _nak ? `Накшатра — ${_nak}` : '', _dayLabel + _rahu].filter(Boolean).join('. ') + '.';
+        // Базове пояснення записується ДО необов'язкового Panchanga enrichment,
+        // тому додатковий розрахунок більше не може залишити loading-placeholder.
+        _why.textContent = [_kpPart, _dayLabel].filter(Boolean).join('. ') + '.';
+        try {
+          const _pSnap = (typeof computePanchanga === 'function') ? computePanchanga(new Date(todayKyivStr()+'T12:00:00Z')) : null;
+          const _nak = _pSnap?.nakshatra?.name || '';
+          const _rahu = (_pSnap?.rahu?.active) ? 'Зараз несприятливий час доби (Раху Калам)' : '';
+          const _parts = [_kpPart, _nak ? `Накшатра — ${_nak}` : '', _dayLabel, _rahu].filter(Boolean);
+          if (_parts.length) _why.textContent = _parts.join('. ') + '.';
+        } catch(_panchErr) { /* базове пояснення вже встановлено */ }
       }
     } catch(_e) { /* silent */ }
   }catch(e){ /* silent */ }
