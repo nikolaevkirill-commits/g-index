@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.119-fp304-VISIBLE-CALENDAR-RISK</title>
+  <title>G-Index — Космофізичний дашборд v88.9.120-fp305-HONEST-OUTCOME-AUTOMATION</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -6526,12 +6526,31 @@ async function loadAutoProspectiveStatus(){
       (tanitaFormula.verified_exact ? ' · Таніта: формула '+tanitaFormula.verified_exact+'/'+tanitaFormula.dates+
         ' відтворена, image-shadow '+tanitaDays+' дн. (G не змінено)' : '');
     renderTanitaShadow();
+    loadOutcomeLedgerStatus();
   } catch(e) {
     _autoProspectiveStatus = {};
     if(el) el.textContent = 'Автоматичний shadow: статус тимчасово недоступний; production G не змінено.';
   }
   return _autoProspectiveStatus;
 }
+
+async function loadOutcomeLedgerStatus(){
+  const el=document.getElementById('autoProspectiveStatus');
+  if(!el) return null;
+  try{
+    const r=await fetch('OUTCOME_LEDGER_STATUS_v1.json',{cache:'no-store'});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const s=await r.json(), real=s.real_outcomes||{}, expert=s.expert_reproduction||{};
+    const paired=Number(real.paired_with_frozen_prediction||0), need=Number(real.required_for_promotion_gate||100);
+    const rows=Number(real.chrono_rows_total||0), en=Number(expert.n||0);
+    el.textContent += ' \u00b7 Реальні outcomes '+paired+'/'+need+' (Chrono: '+rows+' рядків) \u00b7 PDF-мітки n='+en+' — лише відтворення експерта, не фактична точність';
+    return s;
+  }catch(e){
+    el.textContent += ' \u00b7 журнал реальних outcomes тимчасово недоступний';
+    return null;
+  }
+}
+
 async function loadStrongRawPolicy(){
   if(_strongRawPolicy !== null) return _strongRawPolicy;
   try {
