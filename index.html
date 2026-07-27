@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.117-fp302-RESIDUAL-ROUTER-VALIDATED</title>
+  <title>G-Index — Космофізичний дашборд v88.9.118-fp303-27D-CALENDAR-ADVISORY</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -5770,6 +5770,27 @@ const URL_KP_OBS_FB   = 'https://services.swpc.noaa.gov/json/planetary_k_index_1
 const URL_KP_FCST     = 'https://services.swpc.noaa.gov/products/noaa-planetary-k-index-forecast.json';
 const URL_27DAY       = 'https://services.swpc.noaa.gov/text/27-day-outlook.txt';
 const URL_45DAY_FB    = 'https://services.swpc.noaa.gov/json/45-day-forecast.json'; // fallback P0
+const URL_CALENDAR_ADVISORY = './FUTURE_CALENDAR_ADVISORY_v1.json';
+window._futureCalendarAdvisory = {};
+async function loadFutureCalendarAdvisory(){
+  try{
+    const response = await fetch(URL_CALENDAR_ADVISORY, {cache:'no-store'});
+    if(!response.ok) throw new Error('HTTP '+response.status);
+    const doc = await response.json();
+    window._futureCalendarAdvisory = (doc && doc.days) || {};
+  }catch(error){
+    console.warn('[calendar advisory]', error.message);
+    window._futureCalendarAdvisory = {};
+  }
+}
+function calendarAdvisoryText(day){
+  if(!day) return '';
+  const parts = [];
+  if(day.high_risk && day.high_risk.length) parts.push('high risk: '+day.high_risk.join(', '));
+  if(day.caution && day.caution.length) parts.push('caution: '+day.caution.join(', '));
+  if(day.support && day.support.length) parts.push('support: '+day.support.join(', '));
+  return parts.join('; ');
+}
 // v88.8.18 ★ NOAA SWPC STALENESS FIX: NOAA SWPC /products/ endpoints не оновлюються
 // з 28.03.2026 (verified 11.05.2026 — 6+ тижнів простою). GFZ Potsdam — canonical
 // Kp source за IAGA, оновлюється кожні 3 години. Це primary alternative tier.
@@ -10145,8 +10166,9 @@ function build27dComputed(rows, last3D){
       }
     } catch(e) { /* silent */ }
 
+    const calendarAdvisory = window._futureCalendarAdvisory[ds] || null;
     result.push({r, ds, kpUsed, isOverridden, ai, G, delta, f107mod,
-                 _effectiveG, _expertEng, _hasOverride});
+                 _effectiveG, _expertEng, _hasOverride, calendarAdvisory});
   }
   return result;
 }
@@ -10199,7 +10221,7 @@ function draw27dTable(){
 
   let html='';
   const _panchCache={};
-  for(const {r,ds,kpUsed,isOverridden,ai,G,delta,f107mod,_expertEng,_hasOverride} of data){
+  for(const {r,ds,kpUsed,isOverridden,ai,G,delta,f107mod,_expertEng,_hasOverride,calendarAdvisory} of data){
     const isToday = ds === todayStr;
     // v88.8.34: raw-G table value; expert score is overlay, not replacement.
     const G_display = G;
@@ -10210,6 +10232,10 @@ function draw27dTable(){
     let gTip = f107mod && f107mod.val !== 0 ? gTipBase + '\n⚠ F10.7: ' + f107mod.tip + ' (контекст, не в G)' : gTipBase;
     if (_hasOverride && Number.isFinite(_expertEng)) {
       gTip += `\n\n★ PDF/Engine Day_score: ${_expertEng>=0?'+':''}${_expertEng}\n(G_day raw = ${G>=0?'+':''}${G.toFixed(2)}, delta ${(_expertEng-G).toFixed(1)})`;
+    }
+    if(calendarAdvisory){
+      const _adText = calendarAdvisoryText(calendarAdvisory);
+      if(_adText) gTip += `\n\nCalendar advisory (${calendarAdvisory.level}): ${_adText}\nscore_effect=0; never add it to G_day again.`;
     }
     // Moon phase emoji for Li column
     const _moonEmoji = ai.phaseDeg < 22 ? '🌑' : ai.phaseDeg < 67 ? '🌒' : ai.phaseDeg < 112 ? '🌓' : ai.phaseDeg < 157 ? '🌔' : ai.phaseDeg < 202 ? '🌕' : ai.phaseDeg < 247 ? '🌖' : ai.phaseDeg < 292 ? '🌗' : ai.phaseDeg < 337 ? '🌘' : '🌑';
@@ -18678,6 +18704,7 @@ function syncV702UI(){
 // Safe boot renders from synthetic/cache/local engine immediately; full live refresh is manual via ?live=1 or button.
 async function loadAllLite(){
   try{
+    await loadFutureCalendarAdvisory();
     const btn = el('btnRefresh'); if(btn) btn.disabled = false;
     const kpCached = parseFloat(lsGet('last_kp_known'));
     const kp0 = Number.isFinite(kpCached) ? kpCached : 2.0;
@@ -18727,6 +18754,7 @@ async function loadAll(){
   el('threeError').textContent = '';
 
   setStamp();
+  await loadFutureCalendarAdvisory();
 
   // v88.9.6x-fp246: легка перевірка manifest на КОЖЕН цикл loadAll (boot +
   // кожні N хв auto-refresh) — не блокує решту завантаження (fire-and-forget),
