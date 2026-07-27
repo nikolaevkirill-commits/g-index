@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.113-fp298-RD-OVERLAP-CLEANUP</title>
+  <title>G-Index — Космофізичний дашборд v88.9.114-fp299-27D-DECISION-RAW-SEPARATION</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -2629,7 +2629,7 @@ Fallback (NOAA 45-day-forecast.json):
             <button id="btnIcs" style="font-size:12px;padding:6px 10px" title="Експорт прогнозу у календарний файл (.ics): імпортуйте у Google/Apple/Outlook для нагадувань">⬇ .ics</button>
           </div>
         </div>
-        <div class="rail-legend-27 small" style="margin:6px 0 2px;color:var(--dim);font-size:11px;line-height:1.45">● Лінія: <strong>G_day raw</strong> (Largest Kp, без експерта) · ★ Зірка: <strong>PDF/Engine score</strong> (експертна оцінка дня)</div>
+        <div class="rail-legend-27 small" style="margin:6px 0 2px;color:var(--dim);font-size:11px;line-height:1.45"><strong style="color:#8fb5ff">Синя лінія й сині стовпчики — лише raw-контекст, не сприятливий прогноз.</strong> · <span style="color:#ff8b8b">Червона</span>/<span style="color:#68df9b">зелена</span> ★: <strong>PDF/Engine-рішення дня</strong>. Якщо рішення немає — день не фарбується як сприятливий.</div>
         <div id="twentysevenError" class="err small"></div>
         <!-- v87.19 U4: Best/worst days of last 30 days — retention hook -->
         <div id="bestWorstDays" class="best-worst-block" style="display:none"></div>
@@ -10593,11 +10593,11 @@ let _ftPlaySpeed = 1;      // 0.5 | 1 | 2 — multiplier
 
 function _ftGColor(g){
   if(!isFinite(g)) return '#445';
-  if(g <= -2.5) return '#ff6b6b';   // dark red (severely unfavorable)
-  if(g <= -0.5) return '#ff9955';   // orange (moderately unfavorable)
-  if(g <  0.5)  return '#9bb1dc';   // neutral
-  if(g <  2.5)  return '#2bd47d';   // green (favorable)
-  return '#7fffc4';                  // bright teal (exceptional)
+  if(g <= -2.5) return '#597395';   // raw context: muted blue, not a verdict
+  if(g <= -0.5) return '#6483aa';   // raw context: muted blue, not a verdict
+  if(g <  0.5)  return '#7895ba';   // raw context: neutral blue
+  if(g <  2.5)  return '#4f8fca';   // raw context: blue, not favorable
+  return '#6aa8df';                  // raw context: bright blue, not a decision
 }
 
 function _ftCategory(g){
@@ -10656,7 +10656,9 @@ function renderForwardTimeline(){
     // v88.8.34: raw continuous G only; PDF/Engine score is only a marker/tooltip
     const _gEff = d.G;
     const g = isFinite(_gEff) ? _gEff : 0;
-    const col = _ftGColor(_gEff);
+    // fp299: decision owns red/green semantics; raw-only bars stay blue.
+    const _hasDecision = d._hasOverride && Number.isFinite(d._expertEng);
+    const col = _hasDecision ? (d._expertEng >= 1 ? '#2bd47d' : d._expertEng <= -1 ? '#ff6b6b' : '#9bb1dc') : _ftGColor(_gEff);
     const isToday = (globalIdx === todayIdx);
     const isSel = (globalIdx === selIdx);
     // v87.90 P5 fix: opacity gradient за horizon — uncertainty visualization
@@ -10669,8 +10671,8 @@ function renderForwardTimeline(){
     const border = isSel ? `2px solid #fff` : (isToday ? `1.5px solid #9fd1ff` : d._hasOverride ? '1px solid #ffd166' : '1px solid transparent');
     const hPct = Math.max(18, Math.min(100, Math.abs(g) * 18 + 18));
     const _confLbl = daysOut <= 3 ? '' : daysOut <= 7 ? ' · ~75% conf' : daysOut <= 14 ? ' · ~55% conf' : ' · ~35% conf';
-    const _ovLbl = d._hasOverride ? ` · ★ PDF day score (G raw=${d.G.toFixed(1)})` : '';
-    const label = `${d.ds} · G ${g>=0?'+':''}${g.toFixed(2)}${_confLbl}${_ovLbl}`;
+    const _ovLbl = _hasDecision ? ` · РІШЕННЯ ${d._expertEng>=0?'+':''}${d._expertEng} · raw G=${d.G.toFixed(1)}` : ' · лише raw-контекст';
+    const label = `${d.ds}${_ovLbl}${_confLbl}`;
     sticks += `<div class="ft-stick" data-idx="${globalIdx}" title="${label}" style="flex:1;min-width:0;height:${hPct}%;background:${col};opacity:${opacity};border-radius:2px;cursor:pointer;transition:opacity .15s, border .15s;box-sizing:border-box;border:${border}"></div>`;
   }
 
@@ -10699,7 +10701,7 @@ function renderForwardTimeline(){
       <span class="pill" style="font-size:9px">${visibleData.length} дн.</span>
       ${narrowHint}
       <span class="hint" tabindex="0" style="font-size:10px;color:var(--faint);cursor:help">ⓘ<span class="hint-pop" style="white-space:pre;font-size:11px">Інтерактивна смуга прогнозу. Клік по стовпчику — вибір дня.
-▶ Play автопрокручує по обраній швидкості. Висота ∝ |G_day raw|, колір ∝ G_day raw категорія. PDF/Engine позначається ★ окремо і не входить у G_day.
+▶ Play автопрокручує по обраній швидкості. Висота ∝ |G_day raw|. Колір червоний/зелений дозволений лише для PDF/Engine-рішення; дні без рішення сині. Raw не є вердиктом.
 ${isNarrow?'На вузькому екрані показано 14 днів (−3..+10 від сьогодні).':'Показано всі 27 днів прогнозу.'}</span></span>
       <span style="margin-left:auto;display:flex;gap:3px;align-items:center">
         ${speedBtn(0.5, '½×')}
@@ -10711,7 +10713,7 @@ ${isNarrow?'На вузькому екрані показано 14 днів (−
     </div>
     <div id="ftSticksRow" style="display:flex;align-items:flex-end;height:48px;gap:${gap}px;padding:0 2px">${sticks}</div>
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:4px;font-size:9px;color:var(--faint);letter-spacing:.04em" title="Прозорість показує впевненість прогнозу. Дальні дні менш надійні через ±1.5 розкид Kp у NOAA 27-day outlook.">
-      <span>Впевненість прогнозу:</span>
+      <span><strong style="color:#8fb5ff">Синій = лише raw-контекст</strong>; червоний/зелений = PDF/Engine-рішення.</span><span>Горизонт raw:</span>
       <span style="display:inline-flex;align-items:center;gap:3px"><span style="display:inline-block;width:10px;height:8px;background: var(--muted);opacity:1"></span>0–3д 100%</span>
       <span style="display:inline-flex;align-items:center;gap:3px"><span style="display:inline-block;width:10px;height:8px;background: var(--muted);opacity:.75"></span>4–7д 75%</span>
       <span style="display:inline-flex;align-items:center;gap:3px"><span style="display:inline-block;width:10px;height:8px;background: var(--muted);opacity:.55"></span>8–14д 55%</span>
@@ -20955,11 +20957,11 @@ function draw27Chart(){
 
   // ── Зони кольору ──
   const zones = [
-    {from:2.5, to:gMax, color:'rgba(43,212,125,0.10)'},
-    {from:0.5, to:2.5,  color:'rgba(99,190,123,0.08)'},
-    {from:-0.5,to:0.5,  color:'rgba(155,177,220,0.06)'},
-    {from:-2.5,to:-0.5, color:'rgba(255,170,51,0.09)'},
-    {from:gMin,to:-2.5, color:'rgba(255,68,68,0.12)'}
+    {from:2.5, to:gMax, color:'rgba(55,167,255,0.075)'},
+    {from:0.5, to:2.5,  color:'rgba(55,167,255,0.055)'},
+    {from:-0.5,to:0.5,  color:'rgba(155,177,220,0.045)'},
+    {from:-2.5,to:-0.5, color:'rgba(86,116,157,0.055)'},
+    {from:gMin,to:-2.5, color:'rgba(86,116,157,0.075)'}
   ];
   zones.forEach(z=>{
     const y1 = yOf(Math.min(z.to, gMax));
@@ -21008,11 +21010,8 @@ function draw27Chart(){
   ctx.lineWidth = 2;
   ctx.lineJoin = 'round';
   // Градієнт по кольору
-  const grad = ctx.createLinearGradient(PAD_L, 0, W-PAD_R, 0);
-  grad.addColorStop(0, '#37a7ff');
-  grad.addColorStop(0.5, '#63be7b');
-  grad.addColorStop(1, '#37a7ff');
-  ctx.strokeStyle = grad;
+  // fp299: raw rail is always blue; red/green is reserved for decisions.
+  ctx.strokeStyle = '#4f8fca';
   ctx.beginPath();
   let first = true;
   data.forEach((d,i)=>{
@@ -21036,7 +21035,7 @@ function draw27Chart(){
     const _gForChart = d.G; // v88.8.34: raw continuous G only
     if(!isFinite(_gForChart)) return;
     const x = xOf(i), y = yOf(_gForChart);
-    const col = _gForChart<=-2.5?'#ff4444':_gForChart<=-0.5?'#ffaa33':_gForChart>=0.5?'#2bd47d':'#9bb1dc';
+    const col = '#6aa8df'; // raw point: neutral context, never a verdict color
     const isBest=i===bestIdx, isWorst=i===worstIdx;
     ctx.fillStyle = col;
     ctx.beginPath();
@@ -21062,10 +21061,13 @@ function draw27Chart(){
         // Якщо raw і expert майже збігаються — зсунемо зірку на 10 пікс вгору, щоб не злилась з точкою
         if (Math.abs(_starY - y) < 6) _starY = y - 10;
       }
-      ctx.fillStyle = '#ffd166';
-      ctx.font = 'bold 11px system-ui';
+      const _decisionCol = d._expertEng >= 1 ? '#2bd47d' : d._expertEng <= -1 ? '#ff6b6b' : '#9bb1dc';
+      ctx.fillStyle = _decisionCol;
+      ctx.font = 'bold 12px system-ui';
       ctx.textAlign = 'center';
       ctx.fillText('★', x, _starY + 4);
+      ctx.font = 'bold 9px system-ui';
+      ctx.fillText((d._expertEng>=0?'+':'')+d._expertEng, x, _starY - 7);
       // Тонка пунктирна вертикальна лінія від raw до expert (тільки якщо різниця ≥1 пункт)
       if (Number.isFinite(d._expertEng) && Math.abs(d._expertEng - _gForChart) >= 1) {
         ctx.save();
@@ -21081,12 +21083,12 @@ function draw27Chart(){
     }
     // v75: best/worst labels
     if(isBest){
-      ctx.fillStyle='#2bd47d';ctx.font='bold 9px system-ui';ctx.textAlign='center';
-      ctx.fillText('▲ G_day '+_gForChart.toFixed(1), x, y-8);
+      ctx.fillStyle='#8fb5ff';ctx.font='bold 9px system-ui';ctx.textAlign='center';
+      ctx.fillText('▲ max raw '+_gForChart.toFixed(1), x, y-8);
     }
     if(isWorst){
-      ctx.fillStyle='#ff4444';ctx.font='bold 9px system-ui';ctx.textAlign='center';
-      ctx.fillText('▼ G_day '+_gForChart.toFixed(1), x, y+16);
+      ctx.fillStyle='#8fb5ff';ctx.font='bold 9px system-ui';ctx.textAlign='center';
+      ctx.fillText('▼ min raw '+_gForChart.toFixed(1), x, y+16);
     }
   });
 
