@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.120-fp305-HONEST-OUTCOME-AUTOMATION</title>
+  <title>G-Index — Космофізичний дашборд v88.9.121-fp306-DECISION-AUTHORITY-COLORS</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -10170,6 +10170,8 @@ function build27dComputed(rows, last3D){
     let _effectiveG = G;
     let _expertEng = null;
     let _hasOverride = false;
+    let _decisionEng = null;
+    let _decisionAuthority = 'none';
     try {
       // fp200 (2026-07-16): раніше читало _expertOverrides[ds].expert_eng НАПРЯМУ,
       // в обхід verified/source_pdf/snippet_hash gate у getEngineScore(). Це друга,
@@ -10178,9 +10180,13 @@ function build27dComputed(rows, last3D){
       // одну функцію.
       if (typeof getEngineScore === 'function') {
         const _snap = getEngineScore(new Date(ds + 'T12:00:00Z'));
-        if (_snap && Number.isFinite(_snap.eng) && _snap._expertOverride) {
-          _expertEng = _snap.eng;
-          _hasOverride = true;
+        if (_snap && Number.isFinite(_snap.eng)) {
+          _decisionEng = Number(_snap.eng);
+          _decisionAuthority = _snap._expertOverride ? 'verified_pdf' : 'engine_fallback';
+          if (_snap._expertOverride) {
+            _expertEng = Number(_snap.eng);
+            _hasOverride = true;
+          }
         }
       } else if (typeof _expertOverrides !== 'undefined' && _expertOverrides && _expertOverrides[ds]) {
         const _ovEng = _expertOverrides[ds].expert_eng;
@@ -10190,7 +10196,8 @@ function build27dComputed(rows, last3D){
 
     const calendarAdvisory = window._futureCalendarAdvisory[ds] || null;
     result.push({r, ds, kpUsed, isOverridden, ai, G, delta, f107mod,
-                 _effectiveG, _expertEng, _hasOverride, calendarAdvisory});
+                 _effectiveG, _expertEng, _hasOverride, _decisionEng,
+                 _decisionAuthority, calendarAdvisory});
   }
   return result;
 }
@@ -15250,6 +15257,13 @@ function renderHeatStripV86(){
   // v87.15 S4: визначаємо "рівний день" — варіативність G між слотами <0.3
   const _gVals = slots.filter(s => isFinite(s.G)).map(s => s.G);
   const _isFlat = _gVals.length >= 4 && (Math.max(..._gVals) - Math.min(..._gVals)) < 0.3;
+  let _heatDecision = null;
+  try {
+    const _hd = (typeof getEngineScore === 'function')
+      ? getEngineScore(new Date(todayKyivStr()+'T12:00:00Z')) : null;
+    if (_hd && isFinite(_hd.eng)) _heatDecision = Number(_hd.eng);
+  } catch(_eHeat) { /* advisory display fallback */ }
+  const _heatNegativeCap = _heatDecision !== null && _heatDecision <= -2;
   const segs = strip.querySelectorAll('.heat-seg');
   segs.forEach((seg, idx) => {
     // v87.90: лейбл — локальний час початку слоту
@@ -15274,7 +15288,11 @@ function renderHeatStripV86(){
     const _sw44h = window._stormWindow;
     const _stormStartHh = (_sw44h && isFinite(_sw44h.kp) && _sw44h.kp >= 5) ? parseInt(_sw44h.label, 10) : null;
     const _isStormSlotH = _stormStartHh !== null && (idx * 3 >= _stormStartHh || (isFinite(slot.kp) && slot.kp >= 5));
-    if (_isStormSlotH) {
+    if (_heatNegativeCap) {
+      seg.classList.add('heat-bad');
+      seg.setAttribute('data-gval', `raw ${g>=0?'+':''}${g.toFixed(1)}`);
+      seg.title += ` · головне рішення PDF/Engine ${_heatDecision} — лише рутина`;
+    } else if (_isStormSlotH) {
       seg.classList.add('heat-bad');
       seg.setAttribute('data-gval', `⚡Kp≥5`);
     } else if (g >= 0.5) seg.classList.add('heat-good');
@@ -15284,8 +15302,8 @@ function renderHeatStripV86(){
     if (idx === currentSlotIdx) seg.classList.add('heat-current');
     // Show G value in corner — ТІЛЬКИ якщо день не рівний (інакше +1.3/+1.5/+1.5/... шум)
     if (!_isFlat) {
-      seg.setAttribute('data-gval', g >= 0 ? '+' + g.toFixed(1) : g.toFixed(1));
-    } else {
+      if (!_heatNegativeCap) seg.setAttribute('data-gval', g >= 0 ? '+' + g.toFixed(1) : g.toFixed(1));
+    } else if (!_heatNegativeCap) {
       seg.classList.add('heat-flat');
     }
   });
@@ -21029,7 +21047,7 @@ function draw27Chart(){
   if(!n) return;
 
   // Масштаб
-  const PAD_L=42, PAD_R=16, PAD_T=18, PAD_B=36;
+  const PAD_L=42, PAD_R=16, PAD_T=36, PAD_B=36;
   // v88.8.34: масштаб обчислюється тільки з raw continuous G. PDF/Engine score — overlay, не вісь G.
   const gValues = data.map(d=>d.G).filter(v=>isFinite(v)); // v88.8.34 raw continuous G only
   const gMin = Math.min(-3, ...gValues) - 0.5;
@@ -21088,7 +21106,13 @@ function draw27Chart(){
     ctx.fillText(v>0?'+'+v:v, PAD_L-4, y+3);
   });
 
-  // ── Лінія G ──
+  ctx.font = '8px system-ui';
+  ctx.textAlign = 'right';
+  ctx.fillStyle = '#7f99c4';
+  ctx.fillText('КАЛ', PAD_L-4, 13);
+  ctx.fillText('РІШ', PAD_L-4, 25);
+
+  // ── Лінія G RAW (довідкова, не рішення) ──
   // v88.8.34: лінія малюється тільки по raw continuous G. PDF/Engine day-score — overlay marker only. v88.8.34 label fix: axis is G_day raw, not current Hero G.
   ctx.lineWidth = 2;
   ctx.lineJoin = 'round';
@@ -21133,8 +21157,18 @@ function draw27Chart(){
       const _calCol = d.calendarAdvisory.level==='high_risk'?'#ff4d5e':d.calendarAdvisory.level==='caution'?'#ffaa33':d.calendarAdvisory.level==='mixed'?'#b88cff':'#2bd47d';
       ctx.fillStyle = _calCol;
       ctx.beginPath();
-      ctx.arc(x, PAD_T+4, 3.2, 0, Math.PI*2);
+      ctx.arc(x, 10, 3.0, 0, Math.PI*2);
       ctx.fill();
+    }
+    if(Number.isFinite(d._decisionEng)){
+      const _decCol = d._decisionEng >= 1 ? '#2bd47d' : d._decisionEng <= -1 ? '#ff6b6b' : '#9bb1dc';
+      ctx.fillStyle = _decCol;
+      ctx.fillRect(x-3.2, 19, 6.4, 6.4);
+      if(d._decisionAuthority === 'verified_pdf'){
+        ctx.strokeStyle = '#ffd166';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x-4.2, 18, 8.4, 8.4);
+      }
     }
     if (d._hasOverride) {
       // Золоте кільце залишаємо на raw точці — це маркер "тут є override"
