@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.108-fp293-PUSH-ROUTING</title>
+  <title>G-Index — Космофізичний дашборд v88.9.110-fp295-INDEX-LINEAGE-INTEGRITY</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1842,7 +1842,16 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
       <div style="margin-top:5px"><strong style="color:#ffd37a">Expert coverage:</strong> канонічний Excel закінчується 14.07.2026. Після цієї дати Engine показується окремо, але не називається Expert raw; нові Expert-прогнози мають бути заморожені до появи PDF.</div>
       <div id="autoProspectiveStatus" style="margin-top:5px;color:#9ce6c0">Автоматичний shadow: завантаження статусу…</div>
     </div>
-    <section id="singleFinalDecision" style="margin:0 0 10px;padding:14px 16px;border-radius:13px;border:1px solid rgba(67,230,167,.5);background:linear-gradient(135deg,rgba(15,96,78,.28),rgba(8,20,38,.96));box-shadow:0 0 24px rgba(34,210,150,.08)">
+    <details id="indexLineagePanel" style="margin:0 0 10px;padding:10px 14px;border-radius:12px;border:1px solid rgba(89,166,255,.36);background:linear-gradient(180deg,rgba(89,166,255,.075),rgba(89,166,255,.018));font-size:11px;color:var(--muted)">
+      <summary style="cursor:pointer;color:#b9d8ff;font-weight:800">🧭 Як рахується система — 4 окремі шари</summary>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:7px;margin-top:9px;line-height:1.5">
+        <div style="padding:8px;border:1px solid rgba(67,230,167,.28);border-radius:8px"><b style="color:#72e6b5">1. Рішення дня (−3…+3)</b><br>Перевірений PDF має пріоритет. Якщо PDF відсутній — окремо позначений frozen Engine. Це єдиний шар, що формує підсумковий вердикт.</div>
+        <div style="padding:8px;border:1px solid rgba(89,166,255,.28);border-radius:8px"><b style="color:#8dc6ff">2. G raw (безперервний фон)</b><br><code>G = Kp−2 + Lᵢ + Mᵢ + eᵢ + Pᵢ + Dᵢ + Sn<sub>pen</sub></code>. Панчанга Pᵢ уже всередині цієї суми. G raw не перезаписує рішення дня.</div>
+        <div style="padding:8px;border:1px solid rgba(255,176,32,.32);border-radius:8px"><b style="color:#ffd37a">3. Safety-veto</b><br>Kp≥5, сильний Dst та оперативні попередження можуть обмежити рекомендацію незалежно від арифметичного кольору G raw.</div>
+        <div style="padding:8px;border:1px solid rgba(178,126,255,.28);border-radius:8px"><b style="color:#d9c2ff">4. Shadow/context</b><br>AIA, BGS, ENLIL, Meteoagent, непідтверджені календарні й image-фактори мають <code>score_effect=0</code> до time-split та prospective gate.</div>
+      </div>
+      <div style="margin-top:8px;color:#ffd37a">Важливо: експертний Excel використовує іншу орієнтацію геомагнітного доданка — <code>2−Kp</code>. Його raw_sum і dashboard G raw не можна змішувати або порівнювати як одне число.</div>
+    </details>    <section id="singleFinalDecision" style="margin:0 0 10px;padding:14px 16px;border-radius:13px;border:1px solid rgba(67,230,167,.5);background:linear-gradient(135deg,rgba(15,96,78,.28),rgba(8,20,38,.96));box-shadow:0 0 24px rgba(34,210,150,.08)">
       <div style="font-size:10px;letter-spacing:.12em;color:#91b8ad">ЄДИНИЙ ПІДСУМКОВИЙ РЕЗУЛЬТАТ</div>
       <div id="singleFinalDecisionBody" style="margin-top:7px;font-size:14px;color:#dbe9ff">Завантаження узгодженого рішення…</div>
     </section>
@@ -1861,6 +1870,10 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
     <details id="spaceWeatherAccumulatedPanel" style="margin:0 0 10px;padding:9px 14px;border-radius:12px;border:1px solid rgba(155,177,220,.25);background:rgba(89,166,255,.025);font-size:11px;color:var(--muted)">
       <summary id="spaceWeatherAccumulatedSummary" style="cursor:pointer;color:#b9d8ff;font-weight:800">🛰 Космічна погода: спостереження 6 год + прогноз 7 діб — завантаження…</summary>
       <div id="spaceWeatherAccumulatedBody" style="margin-top:7px;line-height:1.55"></div>
+    </details>
+    <details id="aiaVernadskyPanel" style="margin:0 0 10px;padding:9px 14px;border-radius:12px;border:1px solid rgba(74,222,128,.30);background:rgba(74,222,128,.025);font-size:11px;color:var(--muted)">
+      <summary id="aiaVernadskySummary" style="cursor:pointer;color:#9be7bd;font-weight:800">🧲 AIA «Академік Вернадський» — завантаження…</summary>
+      <div id="aiaVernadskyBody" style="margin-top:7px;line-height:1.55"></div>
     </details>
     <div id="spaceWeatherDecisionGuard" style="display:none;margin:0 0 10px;padding:9px 14px;border-radius:12px;border:1px solid rgba(255,176,32,.55);background:rgba(255,176,32,.08);font-size:11px;line-height:1.5;color:#ffd37a"></div>
     <!-- v88.8.51-fp128: Regime cards (M2) — score+regime+confidence+space-weather. daily_master.json -->
@@ -6205,6 +6218,7 @@ let _strongRawPolicy = null;
 let _autoProspectiveStatus = null;
 let _bgsSpaceWeather = null;
 let _spaceWeatherAccumulated = null;
+let _aiaVernadsky = null;
 function renderTanitaShadow(){
   const sum=document.getElementById('tanitaShadowSummary');
   const body=document.getElementById('tanitaShadowBody');
@@ -6361,6 +6375,40 @@ async function loadSpaceWeatherAccumulated(){
   }
   return _spaceWeatherAccumulated;
 }
+async function loadAiaVernadsky(){
+  if(_aiaVernadsky!==null) return _aiaVernadsky;
+  const sum=document.getElementById('aiaVernadskySummary');
+  const body=document.getElementById('aiaVernadskyBody');
+  try{
+    const pair=await Promise.all([
+      fetch('AIA_VERNADSKY_DAILY_v1.json',{cache:'no-store'}),
+      fetch('AIA_VERNADSKY_SHADOW_AUDIT_v1.json',{cache:'no-store'})
+    ]);
+    if(!pair[0].ok||!pair[1].ok) throw new Error('HTTP '+pair[0].status+'/'+pair[1].status);
+    const daily=await pair[0].json(), audit=await pair[1].json();
+    _aiaVernadsky={daily,audit};
+    const days=daily.data||{}, keys=Object.keys(days).sort(), latest=keys[keys.length-1], row=days[latest]||{};
+    const age=latest?Math.floor((Date.now()-Date.parse(latest+'T00:00:00Z'))/86400000):null;
+    const stale=age!==null&&age>4, base=audit.baseline_frozen_engine||{}, withAia=audit.engine_plus_aia_lagged||{}, gate=audit.incremental_gate||{};
+    if(sum) sum.textContent='🧲 AIA «Академік Вернадський» · '+(latest||'даних немає')+' · '+(stale?'⚠ затримка':'shadow спостереження');
+    if(body) body.innerHTML=
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:5px">'+
+      '<div style="padding:5px 7px;border:1px solid var(--border);border-radius:7px"><b>H, добовий Δ90</b><br>'+Number(row.h_robust_range||0).toFixed(1)+' nT</div>'+
+      '<div style="padding:5px 7px;border:1px solid var(--border);border-radius:7px"><b>F, добовий Δ90</b><br>'+Number(row.f_robust_range||0).toFixed(1)+' nT</div>'+
+      '<div style="padding:5px 7px;border:1px solid var(--border);border-radius:7px"><b>Швидкі зміни H</b><br>q99 '+Number(row.dh1m_q99_abs||0).toFixed(1)+' nT/хв</div>'+
+      '<div style="padding:5px 7px;border:1px solid var(--border);border-radius:7px"><b>Повнота доби</b><br>'+Math.round(Number(row.coverage||0)*100)+'%</div>'+
+      '</div><div style="margin-top:6px"><b>Time-split 2025→2026:</b> Engine exact '+(100*Number(base.exact||0)).toFixed(1)+'% → з AIA '+(100*Number(withAia.exact||0)).toFixed(1)+'%; знак '+(100*Number(base.strict_sign||0)).toFixed(1)+'% → '+(100*Number(withAia.strict_sign||0)).toFixed(1)+'%.</div>'+
+      '<div style="margin-top:4px;color:#ffd37a"><b>'+(gate.passed?'Gate пройдено':'Gate НЕ пройдено')+'.</b> AIA не змінює G, PDF або рішення дня; score_effect=0.</div>'+
+      (stale?'<div style="margin-top:3px;color:#ff9f9f">Дані старші 4 діб — використовувати лише як архівний контекст.</div>':'')+
+      '<div style="margin-top:4px;color:var(--dim)">INTERMAGNET AIA · лише завершені UTC-доби · прогноз використовує тільки лаги 1–2 дні.</div>';
+  }catch(e){
+    _aiaVernadsky={};
+    if(sum) sum.textContent='🧲 AIA «Академік Вернадський» — дані недоступні';
+    if(body) body.textContent='G не змінено. '+e.message;
+  }
+  return _aiaVernadsky;
+}
+
 async function loadBgsSpaceWeather(){
   if(_bgsSpaceWeather !== null) return _bgsSpaceWeather;
   const panel=document.getElementById('bgsAdvisoryPanel');
@@ -9181,7 +9229,13 @@ const _computeAiCache = new Map();
 function computeAi(dateTimeUTC, kp=0){
   try{
     if(dateTimeUTC && typeof dateTimeUTC.getTime === 'function' && !isNaN(dateTimeUTC.getTime())){
-      const _k = dateTimeUTC.getTime() + '|' + (isFinite(kp)?kp:0);
+      // fp295: Ai also depends on live Dst, Wolf Sn and profile/Hora.
+      // Date+Kp alone returned stale results after async refresh or profile switch.
+      const _dstKey = (window._lastDst && isFinite(window._lastDst.dst)) ? window._lastDst.dst : 'na';
+      const _snKey = (window._lastWolfSn && isFinite(window._lastWolfSn.sn)) ? window._lastWolfSn.sn : 'na';
+      const _profileKey = (typeof _activeProfile !== 'undefined') ? _activeProfile : 'off';
+      const _liveBucket = Math.abs(dateTimeUTC.getTime() - Date.now()) < 300000 ? Math.floor(Date.now() / 300000) : 'day';
+      const _k = [dateTimeUTC.getTime(), (isFinite(kp) ? kp : 0), _dstKey, _snKey, _profileKey, _liveBucket].join('|');
       const _hit = _computeAiCache.get(_k);
       if(_hit) return _hit;
       const _res = _computeAiRaw(dateTimeUTC, kp);
@@ -23764,6 +23818,7 @@ setTimeout(async function _dayVerdictLoad(){
     await loadAutoProspectiveStatus();
     await loadBgsSpaceWeather();
     await loadSpaceWeatherAccumulated();
+    await loadAiaVernadsky();
     await loadKpHourlyAlert();
     if (_engineScores === null) {
       const resp = await fetch('engine_scores.json', { cache: 'default' });
