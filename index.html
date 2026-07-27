@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.121-fp306-DECISION-AUTHORITY-COLORS</title>
+  <title>G-Index — Космофізичний дашборд v88.9.122-fp307-VERIFIED-PDF-SHA-GATE</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -7315,8 +7315,9 @@ function getEngineScore(dateObj){
     if(_expertOverrides && _expertOverrides[ds]){
       const ovr = _expertOverrides[ds];
       const _hashOk = /^sha256:[0-9a-f]{16,64}$/i.test(String(ovr.snippet_hash || ''));
+      const _sourceShaOk = /^[0-9a-f]{64}$/i.test(String(ovr.source_sha256 || ''));
       const _pdfReadingOk = ovr.verified_by_pdf_reading === true
-        && typeof ovr.snippet === 'string' && ovr.snippet.length > 0;
+        && ((typeof ovr.snippet === 'string' && ovr.snippet.length > 0) || _sourceShaOk);
       const _isVerified = ovr.verified === true
         && typeof ovr.source_pdf === 'string' && ovr.source_pdf.length > 0
         && (_hashOk || _pdfReadingOk);
@@ -7362,13 +7363,13 @@ function getEngineScore(dateObj){
     // сама. fp200: перейменовано з "verified" на чесніше "gate_passed" у внутрішніх
     // полях нижче, щоб не створювати оманливе відчуття автоматичної крипто-перевірки.
     const _hashOk = /^sha256:[0-9a-f]{16,64}$/i.test(String(ovr.snippet_hash || ''));
-    // fp208 (2026-07-16, реальний expert_overrides_v3.json від Kyrylo): 35/84 записів
-    // мають verified_by_pdf_reading:true (людина звірила з PDF текстом), БЕЗ snippet_hash —
-    // це інша, старіша, теж легітимна форма підтвердження, не помилка даних. Gate вимагав
-    // ЛИШЕ hash-шлях і мовчки відкидав усі 35 записів (напр. 2026-07-18: expert_eng=0,
-    // verified_by_pdf_reading=true — відкидалось, dashboard показував engine fallback +2).
+    // fp307: newer revision-aware imports store the full PDF SHA-256 rather
+    // than a text snippet hash. Manual PDF verification + a valid source
+    // digest is an equally strong provenance path and must not fall through
+    // to the frozen Engine score (29.07.2026 was PDF 0 but showed Engine -2).
+    const _sourceShaOk = /^[0-9a-f]{64}$/i.test(String(ovr.source_sha256 || ''));
     const _pdfReadingOk = ovr.verified_by_pdf_reading === true
-      && typeof ovr.snippet === 'string' && ovr.snippet.length > 0;
+      && ((typeof ovr.snippet === 'string' && ovr.snippet.length > 0) || _sourceShaOk);
     const _isVerified = ovr.verified === true
       && typeof ovr.source_pdf === 'string' && ovr.source_pdf.length > 0
       && (_hashOk || _pdfReadingOk);
