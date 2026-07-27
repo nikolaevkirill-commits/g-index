@@ -1,0 +1,64 @@
+{
+  "schema": "residual_router_policy_v1",
+  "created": "2026-07-27",
+  "authority_order": [
+    "verified_expert_pdf",
+    "expert_formula_raw",
+    "engine_tanita_selective_v1",
+    "engine_residual_rule_v1",
+    "engine_v18_5_frozen"
+  ],
+  "rule": {
+    "expression": "if Tanita selective route is unused and Engine=-1 and engine_cal_score=-1, apply correction -1",
+    "engine_score": -1,
+    "engine_calendar_score": -1,
+    "correction": -1,
+    "requires_selective_tanita_unused": true
+  },
+  "validation": {
+    "pre_2026_oof": {
+      "n": 129,
+      "selective_baseline": {
+        "exact": 0.441860,
+        "within1": 0.728682,
+        "strict_sign": 0.751938,
+        "mae": 1.054264
+      },
+      "combined": {
+        "exact": 0.465116,
+        "within1": 0.736434,
+        "strict_sign": 0.751938,
+        "mae": 1.031008
+      },
+      "changed_n": 7
+    },
+    "historical_2026": {
+      "n": 195,
+      "selective_baseline": {
+        "exact": 0.523077,
+        "within1": 0.748718,
+        "strict_sign": 0.758974,
+        "mae": 0.984615
+      },
+      "combined": {
+        "exact": 0.533333,
+        "within1": 0.748718,
+        "strict_sign": 0.758974,
+        "mae": 0.979487
+      },
+      "changed_n": 5
+    }
+  },
+  "promotion": {
+    "allowed": true,
+    "score_effect": 1,
+    "reason": "Improved exact and MAE without degrading within1 or strict sign on both chronological OOF and the later historical block."
+  },
+  "safeguards": [
+    "PDF and ExpertCalc remain higher priority",
+    "rule is not applied after a Tanita selective correction",
+    "Panchanga is not counted as an independent second vote",
+    "same-date PDF and outcomes are forbidden prediction inputs",
+    "future performance remains subject to prospective tracking"
+  ]
+}
