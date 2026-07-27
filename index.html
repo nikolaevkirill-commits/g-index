@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.114-fp299-27D-DECISION-RAW-SEPARATION</title>
+  <title>G-Index — Космофізичний дашборд v88.9.115-fp300-EXPERT-DECISION-REGISTRY</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1834,7 +1834,7 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
     <div id="signalIndependenceNotice" style="margin:0 0 10px;padding:10px 14px;border-radius:12px;border:1px solid rgba(89,166,255,.30);background:linear-gradient(180deg,rgba(89,166,255,.07),rgba(89,166,255,.02));font-size:11px;line-height:1.5;color:var(--muted)">
       <div style="font-weight:800;color:#b9d8ff">① Один сигнал, не два зелені голоси</div>
       <div><strong style="color:var(--text2)">G_day raw уже містить Панчангу Pᵢ</strong> у сумі календарних компонентів. Окрема зелена Панчанга нижче — лише розклад того самого G_day, її не можна додавати або рахувати другим незалежним прогнозом.</div>
-      <div style="margin-top:5px"><strong style="color:#ffd37a">Expert coverage:</strong> канонічний Excel закінчується 14.07.2026. Після цієї дати Engine показується окремо, але не називається Expert raw; нові Expert-прогнози мають бути заморожені до появи PDF.</div>
+      <div id="expertDecisionRegistryStatus" style="margin-top:5px"><strong style="color:#ffd37a">Експертні рішення:</strong> завантаження єдиного реєстру PDF/Excel/Engine…</div>
       <div id="autoProspectiveStatus" style="margin-top:5px;color:#9ce6c0">Автоматичний shadow: завантаження статусу…</div>
     </div>
     <details id="indexLineagePanel" style="margin:0 0 10px;padding:10px 14px;border-radius:12px;border:1px solid rgba(89,166,255,.36);background:linear-gradient(180deg,rgba(89,166,255,.075),rgba(89,166,255,.018));font-size:11px;color:var(--muted)">
@@ -6211,6 +6211,7 @@ let _expertOverrides = null; // {date: {expert_eng, tanita_O, tanita_N, category
 let _expertCalc = null; // {date: {score, raw_sum, kp_her}}
 let _strongRawPolicy = null;
 let _autoProspectiveStatus = null;
+let _expertDecisionRegistry = null;
 let _bgsSpaceWeather = null;
 let _spaceWeatherAccumulated = null;
 let _aiaVernadsky = null;
@@ -6447,6 +6448,32 @@ async function loadBgsSpaceWeather(){
   }
   return _bgsSpaceWeather;
 }
+
+async function loadExpertDecisionRegistry(){
+  if(_expertDecisionRegistry !== null) return _expertDecisionRegistry;
+  const el=document.getElementById('expertDecisionRegistryStatus');
+  try{
+    const r=await fetch('EXPERT_DECISION_REGISTRY_v1.json',{cache:'no-store'});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const doc=await r.json();
+    if(doc.schema!=='expert_decision_registry_v1') throw new Error('unexpected schema');
+    _expertDecisionRegistry=doc;
+    window._expertDecisionRegistry=doc;
+    const s=doc.summary||{};
+    const pct=x=>Number.isFinite(Number(x))?(Number(x)*100).toFixed(1)+'%':'—';
+    if(el) el.innerHTML='<strong style="color:#ffd37a">Експертні рішення автоматизовано:</strong> '+
+      Number(s.pdf_decision_dates||0)+' дат із '+Number(s.pdf_sources||0)+' PDF; SHA/parser cross-check '+
+      Number(s.source_crosscheck_pass||0)+'/'+Number(s.pdf_sources||0)+'. Формула Excel: '+
+      Number(s.formula_dates||0)+' дат; проти revision-aware PDF на '+Number(s.formula_pdf_overlap||0)+
+      ' датах — exact '+pct(s.formula_exact)+', ±1 '+pct(s.formula_within_1)+', знак '+pct(s.formula_strict_sign)+
+      '. Перевірений PDF має пріоритет; Engine — лише fallback; Pᵢ не рахується другим голосом.';
+  }catch(e){
+    _expertDecisionRegistry={};
+    if(el) el.textContent='Експертний реєстр тимчасово недоступний; поточний verified PDF/Engine priority-chain не змінено.';
+  }
+  return _expertDecisionRegistry;
+}
+
 async function loadAutoProspectiveStatus(){
   if(_autoProspectiveStatus !== null) return _autoProspectiveStatus;
   const el = document.getElementById('autoProspectiveStatus');
@@ -23813,6 +23840,7 @@ setTimeout(async function _dayVerdictLoad(){
     await loadExpertOverrides();
     await loadExpertCalc();
     await loadStrongRawPolicy();
+    await loadExpertDecisionRegistry();
     await loadAutoProspectiveStatus();
     await loadBgsSpaceWeather();
     await loadSpaceWeatherAccumulated();
