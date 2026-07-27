@@ -1,0 +1,77 @@
+{
+    "schema":  "selective_ensemble_policy_v1",
+    "created":  "2026-07-27",
+    "authority_order":  [
+                            "verified_expert_pdf",
+                            "expert_formula_raw",
+                            "engine_tanita_selective_v1",
+                            "engine_v18_5_frozen"
+                        ],
+    "rule":  {
+                 "threshold":  1.5,
+                 "agreement":  false,
+                 "weak_engine_only":  true,
+                 "engine_max":  2,
+                 "expression":  "use Tanita iff abs(tanita_raw)\u003e=1.5 and abs(engine_score)\u003c=2; otherwise Engine"
+             },
+    "selection":  {
+                      "method":  "pre-2026 expanding chronological OOF",
+                      "n":  129,
+                      "metrics":  {
+                                      "n":  129,
+                                      "exact":  0.44186,
+                                      "within1":  0.728682,
+                                      "strict_sign":  0.751938,
+                                      "mae":  1.054264,
+                                      "tanita_coverage_n":  35,
+                                      "tanita_coverage":  0.271318,
+                                      "tanita_selected":  {
+                                                              "n":  35,
+                                                              "exact":  0.4,
+                                                              "within1":  0.628571,
+                                                              "strict_sign":  0.742857,
+                                                              "mae":  1.285714
+                                                          }
+                                  }
+                  },
+    "holdout_2026":  {
+                         "n":  195,
+                         "baseline":  {
+                                          "n":  195,
+                                          "exact":  0.497436,
+                                          "within1":  0.702564,
+                                          "strict_sign":  0.717949,
+                                          "mae":  1.107692,
+                                          "tanita_coverage_n":  0,
+                                          "tanita_coverage":  0.0,
+                                          "tanita_selected":  null
+                                      },
+                         "routed":  {
+                                        "n":  195,
+                                        "exact":  0.523077,
+                                        "within1":  0.748718,
+                                        "strict_sign":  0.758974,
+                                        "mae":  0.984615,
+                                        "tanita_coverage_n":  51,
+                                        "tanita_coverage":  0.261538,
+                                        "tanita_selected":  {
+                                                                "n":  51,
+                                                                "exact":  0.27451,
+                                                                "within1":  0.647059,
+                                                                "strict_sign":  0.705882,
+                                                                "mae":  1.313725
+                                                            }
+                                    }
+                     },
+    "promotion":  {
+                      "allowed":  true,
+                      "score_effect":  1,
+                      "verified_on_untouched_2026_holdout":  true
+                  },
+    "safeguards":  [
+                       "PDF and ExpertCalc remain higher priority",
+                       "Panchanga is not counted twice",
+                       "same-date targets and outcomes are forbidden features",
+                       "policy applies only when no expert decision exists"
+                   ]
+}
