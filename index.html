@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.111-fp296-FINAL-DECISION-TANITA-RESTORE</title>
+  <title>G-Index — Космофізичний дашборд v88.9.112-fp297-SN-SHADOW-PROVENANCE</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1615,12 +1615,7 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
             <span style="flex:1;font-size:9px;color:var(--faint);text-align:center" id="grVswLbl">Vsw</span>
           </div>
         </div>
-        <span style="color:var(--faint);font-size:10px">Формула: G = Kp − 2 + Lᵢ + Mᵢ + eᵢ + Pᵢ + Dᵢ <span id="formulaSnAddon" style="display:none;color:#ffa64d">+ Sn<sub>pen</sub></span> <span class="hint" tabindex="0" style="cursor:help;color:var(--dim);border-bottom:1px dotted var(--faint);margin-left:4px">ⓘ<span class="hint-pop" style="white-space:pre;font-size:11px;text-align:left">Sn<sub>pen</sub> активується при Wolf Sn > 150:
-• Sn &gt; 200 → −0.4
-• Sn &gt; 150 → −0.2
-• інакше → 0 (не в сумі)
-
-Науковий бекграунд: солярний max → калібровка engine v18.5.</span></span></span>
+        <span style="color:var(--faint);font-size:10px">Формула: G = Kp − 2 + Lᵢ + Mᵢ + eᵢ + Pᵢ + Dᵢ · Sn/Wolf: контекст, score_effect=0</span>
         <!-- v87.11: Source Health Panel — grid 2×3 замість inline line -->
         <div class="source-health">
           <div class="source-health-title">Стан джерел даних</div>
@@ -1846,7 +1841,7 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
       <summary style="cursor:pointer;color:#b9d8ff;font-weight:800">🧭 Як рахується система — 4 окремі шари</summary>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:7px;margin-top:9px;line-height:1.5">
         <div style="padding:8px;border:1px solid rgba(67,230,167,.28);border-radius:8px"><b style="color:#72e6b5">1. Рішення дня (−3…+3)</b><br>Перевірений PDF має пріоритет. Якщо PDF відсутній — окремо позначений frozen Engine. Це єдиний шар, що формує підсумковий вердикт.</div>
-        <div style="padding:8px;border:1px solid rgba(89,166,255,.28);border-radius:8px"><b style="color:#8dc6ff">2. G raw (безперервний фон)</b><br><code>G = Kp−2 + Lᵢ + Mᵢ + eᵢ + Pᵢ + Dᵢ + Sn<sub>pen</sub></code>. Панчанга Pᵢ уже всередині цієї суми. G raw не перезаписує рішення дня.</div>
+        <div style="padding:8px;border:1px solid rgba(89,166,255,.28);border-radius:8px"><b style="color:#8dc6ff">2. G raw (безперервний фон)</b><br><code>G = Kp−2 + Lᵢ + Mᵢ + eᵢ + Pᵢ + Dᵢ</code>. Панчанга Pᵢ уже всередині цієї суми. G raw не перезаписує рішення дня.</div>
         <div style="padding:8px;border:1px solid rgba(255,176,32,.32);border-radius:8px"><b style="color:#ffd37a">3. Safety-veto</b><br>Kp≥5, сильний Dst та оперативні попередження можуть обмежити рекомендацію незалежно від арифметичного кольору G raw.</div>
         <div style="padding:8px;border:1px solid rgba(178,126,255,.28);border-radius:8px"><b style="color:#d9c2ff">4. Shadow/context</b><br>AIA, BGS, ENLIL, Meteoagent, непідтверджені календарні й image-фактори мають <code>score_effect=0</code> до time-split та prospective gate.</div>
       </div>
@@ -2574,7 +2569,7 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
 
 ⚠ При Kp ≥ 5 — попередження незалежно від G
 Kp: 3-год індекс геомагнітної активності (0–9)
-ΣAᵢ = Lᵢ (тітхі) + Mᵢ (затемнення) + eᵢ (події) + Pᵢ (Панчанга×0.4) + Dᵢ (Dst-буря) + Snᵢ (сонячні плями: 0/−0.2/−0.4)</span></span>
+ΣAᵢ = Lᵢ (тітхі) + Mᵢ (затемнення) + eᵢ (події) + Pᵢ (Панчанга×0.4) + Dᵢ (Dst-буря)</span></span>
       </div>
       <div id="threeQuick" style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;font-size:13px"></div>
       <!-- v87.90: NOAA fallback alert — показується над quick-cards коли engine на synthetic platau -->
@@ -2816,7 +2811,7 @@ Fallback (NOAA 45-day-forecast.json):
         <p>Для горизонту 27 днів модель бере <strong>Largest Kp напряму</strong> з NOAA 27-Day Outlook (6-те поле в `27-day-outlook.txt`) — без жодних перетворень. У fallback-режимі (NOAA 27-day недоступний → переходимо на 45-day-forecast.json) застосовується <em>внутрішня дискретна апроксимація</em> Ap→Kp за табличними порогами NOAA (VLOOKUP-стиль, найближчий нижчий поріг). Це <strong>не офіційний зворотний стандарт NOAA</strong>, а робоче припущення моделі; G-значення з fallback-режиму слід інтерпретувати як якісний індикатор тренду, а не точний 3-годинний прогноз.</p>
 
         <p style="font-weight:600;color: var(--text2);margin-bottom:4px">Склад ΣAᵢ</p>
-        <p><code style="color: var(--alt)">ΣAᵢ = Lᵢ + Mᵢ + eᵢ + Pᵢ + Dᵢ + Snᵢ</code></p>
+        <p><code style="color: var(--alt)">ΣAᵢ = Lᵢ + Mᵢ + eᵢ + Pᵢ + Dᵢ</code></p>
         <table style="font-size:12px;margin:6px 0 10px;border:1px solid #1e2f52;border-radius:6px;overflow:hidden">
           <thead><tr style="background:#0c1526">
             <th style="padding:4px 8px;text-align:left;color:#7a9acc">Компонент</th>
@@ -2864,7 +2859,7 @@ Fallback (NOAA 45-day-forecast.json):
 
         <!-- v40: SVG G-formula diagram -->
         <p style="font-weight:600;color: var(--text2);margin-bottom:4px;margin-top:18px">Схема формули G-індексу</p>
-        <p style="font-size:12px;color:var(--text3);margin-bottom:8px">G = (Kp − 2) + Lᵢ + Mᵢ + eᵢ + Pᵢ + Dᵢ + Snᵢ. Кожен компонент незалежний; ΣΔeᵢ — інформаційний (рішення командира).</p>
+        <p style="font-size:12px;color:var(--text3);margin-bottom:8px">G = (Kp − 2) + Lᵢ + Mᵢ + eᵢ + Pᵢ + Dᵢ. Sn/Wolf показується як контекст із score_effect=0. Кожен компонент незалежний; ΣΔeᵢ — інформаційний (рішення командира).</p>
         <svg viewBox="0 0 520 130" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:520px;display:block;margin:0 0 16px;font-family:system-ui,sans-serif">
           <rect x="0" y="0" width="520" height="130" fill="#090f1e" rx="8"/>
           <!-- Title -->
@@ -3121,7 +3116,7 @@ Fallback (NOAA 45-day-forecast.json):
       <div id="g2watchResult" style="background:#0a1428;border-radius:10px;padding:16px;min-height:60px"></div>
 
       <div class="small muted" style="margin-top:10px">
-        Формула: G = Kp − 2 + (Lᵢ + Mᵢ + eᵢ + Pᵢ + Dᵢ + Snᵢ) · Значення розраховуються автоматично при переміщенні слайдерів · <a href="#" style="color:var(--faint)" onclick="el('g2watchPanel').style.display='none';return false">Згорнути</a>
+        Формула: G = Kp − 2 + (Lᵢ + Mᵢ + eᵢ + Pᵢ + Dᵢ ) · Значення розраховуються автоматично при переміщенні слайдерів · <a href="#" style="color:var(--faint)" onclick="el('g2watchPanel').style.display='none';return false">Згорнути</a>
       </div>
     </div>
   </div>
@@ -9394,7 +9389,8 @@ function _computeAiRaw(dateTimeUTC, kp=0){
   // Раніше: Sn>150 → -0.4 (бінарно). Solar Max має Sn ~150-200 → постійний шум -0.4.
   // Тепер: пороги diff (було engine v18.5 WEIGHTS.sn_high_pen = -0.4 single-threshold)
   const _snVal = window._lastWolfSn ? (window._lastWolfSn.sn ?? 0) : 0;
-  const snPen  = _snVal > 200 ? -0.4 : _snVal > 150 ? -0.2 : 0;
+  const snPenShadow = _snVal > 200 ? -0.4 : _snVal > 150 ? -0.2 : 0;
+  const snPen = 0; // fp297: rejected by chronological ablation; context only
 
   // Dᵢ — Dst component (A3+A4: офіційна частина ΣAᵢ, синхронно з engine v18.5)
   // v88.7.8 FIX-I: викликаємо computeDstModifier() — спільне джерело істини з Science Bar.
@@ -9412,13 +9408,13 @@ function _computeAiRaw(dateTimeUTC, kp=0){
   // v51: Bz/Vsw — інформаційний контекст, НЕ в canonical G (§13.2 Посібника)
   // v88.7.8 FIX-J: один Math.round в кінці на повній сумі AiRaw — раніше було 3 послідовних
   // round (Pi → Ai → AiFull) що накопичувало похибку до ±0.05. Тепер ΣAᵢ точна, UI-округлення лише раз.
-  const AiNoDstRaw = Li + Mi + eiTotalRaw + PiRaw + snPen;
+  const AiNoDstRaw = Li + Mi + eiTotalRaw + PiRaw;
   const AiFullRaw  = AiNoDstRaw + Di;
   const Ai     = Math.round(AiNoDstRaw * 10) / 10; // legacy field name AiNoDst
   const AiFull = Math.round(AiFullRaw  * 10) / 10;
-  const explain = `\u03a3A\u1d62 = L\u1d62+M\u1d62+e\u1d62+P\u1d62+D\u1d62${snPen!==0?'+Sn\u1d62':''} = ${Li}+${Mi}+${eiTotal}+${Pi}+${Di}${snPen!==0?'+'+snPen:''} = ${AiFull}` + (snPen!==0?`\n(Sn=${_snVal}>150: kp_pen${snPen} — engine v18.5${_diDateStr !== _todayStr ? ' · поточне Sn як наближення для цієї дати' : ''})`:'') + (bzVal!==0||vswVal!==0?`\n(+Bz=${bzVal}, Vsw=${vswVal} — контекст, не в G)`:'');
+  const explain = `\u03a3A\u1d62 = L\u1d62+M\u1d62+e\u1d62+P\u1d62+D\u1d62 = ${Li}+${Mi}+${eiTotal}+${Pi}+${Di} = ${AiFull}` + (snPenShadow!==0?`\n(Sn=${_snVal}: shadow candidate ${snPenShadow}; score_effect=0 after fp297 ablation)`:``) + (bzVal!==0||vswVal!==0?`\n(+Bz=${bzVal}, Vsw=${vswVal} — контекст, не в G)`:``);
 
-  return { Ai: AiFull, AiNoDst: Ai, Li, Mi, ei: eiTotal, eiBase: ei, horaEi, Pi, Di, snPen, bzVal, vswVal, phaseName, phaseDeg, lTip, mTip, eTip: eTipLines.join('\n'), pTip, diTip, explain, eclipseUnverified };
+  return { Ai: AiFull, AiNoDst: Ai, Li, Mi, ei: eiTotal, eiBase: ei, horaEi, Pi, Di, snPen, snPenShadow, bzVal, vswVal, phaseName, phaseDeg, lTip, mTip, eTip: eTipLines.join('\n'), pTip, diTip, explain, eclipseUnverified };
 }
 
 // --------------------------- ШКАЛИ / Бейджі для Kp --------------------------
@@ -13611,7 +13607,7 @@ function render3Day(parsed3){
           // календарні фактори (cal_score, cal_symbols — mercury_retro, bolt
           // тощо, вже завантажені в _engineScores, раніше ніде так не
           // показувались). КРИТИЧНО (аудит, п.2): Pᵢ вже входить у G_day raw
-          // вище (computeAi: AiNoDstRaw = Li+Mi+ei+Pi+snPen) — це ОДИН сигнал,
+          // вище (computeAi: AiNoDstRaw = Li+Mi+ei+Pi) — це ОДИН сигнал,
           // не два незалежних "голоси". Явно позначаємо це в картці, щоб не
           // рахувати "2 зелених проти 1 червоного".
           if (!_isDivergent) return '';
@@ -13629,7 +13625,7 @@ function render3Day(parsed3){
               <div style="font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#ff9f9f;font-size:10px;margin-bottom:4px;cursor:help" title="Значна розбіжність (Δ≥2.5 або протилежні знаки) між експертним вердиктом і сирим геомагнітним фоном. Розклад нижче — щоб зрозуміти ЩО саме розходиться, а не просто 'десь конфлікт'.">⚠ Конфлікт моделей</div>
               <div><span style="color:var(--faint)">Експерт/PDF:</span> <strong style="color:${_bsCol}">${_bsEng>=0?'+':''}${_bsEng}</strong> — ${_pdfLabel}</div>
               <div><span style="color:var(--faint)">Геомагнітний фон (G_day raw):</span> <strong style="color:${col}">${isFinite(G)?(G>=0?'+':'')+G.toFixed(1):'—'}</strong> — ${_rawLabel}</div>
-              ${_piVal !== null ? `<div><span style="color:var(--faint)">Панчанга Pᵢ:</span> <strong>${_piVal>=0?'+':''}${_piVal.toFixed(1)}</strong>${_piLabel?' — '+_piLabel:''} <span style="color:var(--faint);font-size:9px" title="AiNoDstRaw = Lᵢ+Mᵢ+eᵢ+Pᵢ+snPen — Pᵢ вже частина суми вище, не окремий сигнал">(вже в фоні вище, не окремий голос)</span></div>` : ''}
+              ${_piVal !== null ? `<div><span style="color:var(--faint)">Панчанга Pᵢ:</span> <strong>${_piVal>=0?'+':''}${_piVal.toFixed(1)}</strong>${_piLabel?' — '+_piLabel:''} <span style="color:var(--faint);font-size:9px" title="AiNoDstRaw = Lᵢ+Mᵢ+eᵢ+Pᵢ — Pᵢ вже частина суми вище, не окремий сигнал">(вже в фоні вище, не окремий голос)</span></div>` : ''}
               ${_calScore !== null ? `<div><span style="color:var(--faint)">Календарні фактори:</span> <strong>${_calScore>=0?'+':''}${_calScore.toFixed(1)}</strong>${_calSymText?' — '+_calSymText:''} <span style="color:var(--faint);font-size:9px">(frozen engine_scores, довідково)</span></div>` : ''}
               <div style="margin-top:4px;padding-top:4px;border-top:1px solid rgba(255,255,255,.08)"><span style="color:var(--faint)">Рішення:</span> обережність; довіра знижена</div>
             </div>`;
@@ -16616,10 +16612,10 @@ function _renderHeroCause(g, kp) {
     if (_ai.Pi !== 0) factors.push({ name: 'Pᵢ', val: _ai.Pi, label: 'панчанга' });
     if ((_ai.Di || 0) !== 0) factors.push({ name: 'Dᵢ', val: _ai.Di, label: 'DST' });
     // v88.7.8 FIX-H: Snᵢ (sunspot penalty) — раніше схований у tooltip, тепер повноцінний chip.
-    if ((_ai.snPen || 0) !== 0) factors.push({ name: 'Snᵢ', val: _ai.snPen, label: 'плями' });
+    
     // Add zero factors for neutral display
-    const zeroNames = ['Lᵢ','Mᵢ','eᵢ','Pᵢ','Dᵢ','Snᵢ'];
-    const zeroLabels = { 'Lᵢ':'місяць', 'Mᵢ':'затемнення', 'eᵢ':'події', 'Pᵢ':'панчанга', 'Dᵢ':'DST', 'Snᵢ':'плями' };
+    const zeroNames = ['Lᵢ','Mᵢ','eᵢ','Pᵢ','Dᵢ'];
+    const zeroLabels = { 'Lᵢ':'місяць', 'Mᵢ':'затемнення', 'eᵢ':'події', 'Pᵢ':'панчанга', 'Dᵢ':'DST' };
     for (const nm of zeroNames) {
       if (!factors.find(f => f.name === nm)) factors.push({ name: nm, val: 0, label: zeroLabels[nm] });
     }
@@ -19038,7 +19034,7 @@ async function loadAll(){
   try {
     const _snEl = document.getElementById('formulaSnAddon');
     const _snVal = window._lastWolfSn ? (window._lastWolfSn.sn ?? 0) : 0;
-    if (_snEl) _snEl.style.display = _snVal > 150 ? '' : 'none';
+    if (_snEl) _snEl.style.display = 'none'; // fp297: Sn is context-only
   } catch(e) { /* noop */ }
 
   try{
@@ -22441,7 +22437,7 @@ try{ const _bi=el('btnIcs'); if(_bi) _bi.addEventListener('click', exportICS); }
 // (Disagreement, Counterfactual, Provenance, Anti-action, banner, scenarios)
 const I18N = {
   UA: {
-    headerTitle: 'Космофізичний дашборд — <span class="muted">G = Kp − 2 + ΣAᵢ де ΣAᵢ = Lᵢ + Mᵢ + eᵢ + Pᵢ + Dᵢ + Snᵢ</span>',
+    headerTitle: 'Космофізичний дашборд — <span class="muted">G = Kp − 2 + ΣAᵢ де ΣAᵢ = Lᵢ + Mᵢ + eᵢ + Pᵢ + Dᵢ</span>',
     headerSub: 'Kp/Ap із NOAA, ΣAᵢ з автоматичним підтягуванням подій (ICS/астроджерела).',
     btnRefresh: 'Оновити дані',
     autoLabel: 'Авто:',
@@ -22514,7 +22510,7 @@ const I18N = {
     simpleModeActiveTitle: 'Простий режим АКТИВНИЙ. Натисніть для повного експертного UI.'
   },
   EN: {
-    headerTitle: 'Space Weather Dashboard — <span class="muted">G = Kp − 2 + ΣAᵢ where ΣAᵢ = Lᵢ + Mᵢ + eᵢ + Pᵢ + Dᵢ + Snᵢ</span>',
+    headerTitle: 'Space Weather Dashboard — <span class="muted">G = Kp − 2 + ΣAᵢ where ΣAᵢ = Lᵢ + Mᵢ + eᵢ + Pᵢ + Dᵢ</span>',
     headerSub: 'Kp/Ap from NOAA, ΣAᵢ from ICS/astro sources (auto-loaded).',
     btnRefresh: 'Refresh Data',
     autoLabel: 'Auto:',
@@ -22851,8 +22847,8 @@ function syncG2(scenarioLabel) {
   // Hero G = Kp − 2 + Li + Mi + ei + Pi + Di + snPen; раніше G2 watch не включав snPen
   // → розбіжність 0.2-0.4 у Solar Max коли Sn>150
   const _snVal = (window._lastWolfSn && isFinite(window._lastWolfSn.sn)) ? window._lastWolfSn.sn : 0;
-  const snPen = _snVal > 200 ? -0.4 : _snVal > 150 ? -0.2 : 0;
-  const sumAi = li + mi + ei_val + pi_val + di_val + snPen;
+  const snPen = 0; // fp297: SILSO remains context-only
+  const sumAi = li + mi + ei_val + pi_val + di_val;
   const G     = kp - 2 + sumAi;
   const catUA = classifyG(G);
   const rec   = recommendG(G, kp);
