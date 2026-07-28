@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.123-fp315-MOBILE-3DAY-STACK</title>
+  <title>G-Index — Космофізичний дашборд v88.9.124-fp316-DECISION-FIRST-27D</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -2589,9 +2589,9 @@ Kp: 3-год індекс геомагнітної активності (0–9)
     <div class="swipe-hint" style="display:none" id="swipeHint27">Прокрутіть таблицю</div>
     <section class="card" id="twentysevenCard">
         <div class="flex" style="flex-wrap:wrap;gap:8px">
-          <h2 style="margin:0">27-денний G_day raw <span style="font-size:13px;font-weight:400;color:var(--dim)">(NOAA Largest Kp − 2 + ΣAᵢ)</span></h2>
+          <h2 style="margin:0">27-денний прогноз рішень <span style="font-size:13px;font-weight:400;color:var(--dim)">(PDF/Engine; raw — лише аудит)</span></h2>
           <!-- v88.8.35-fp56-P8: explicit rail badge — users look at the line, not the fine print. -->
-          <span style="display:inline-block;font-size:10px;font-weight:700;letter-spacing:.04em;color:#8fb5ff;background:rgba(55,167,255,.10);border:1px solid rgba(55,167,255,.30);border-radius:6px;padding:2px 8px;margin-left:2px;vertical-align:middle">NOAA raw rail · не рішення дня</span>
+          <span style="display:inline-block;font-size:10px;font-weight:700;letter-spacing:.04em;color:#8fb5ff;background:rgba(55,167,255,.10);border:1px solid rgba(55,167,255,.30);border-radius:6px;padding:2px 8px;margin-left:2px;vertical-align:middle">ФІНАЛЬНЕ РІШЕННЯ · PDF/ENGINE</span>
           <span class="hint" tabindex="0" style="cursor:help;font-size:11px;color:var(--dim);border-bottom:1px dotted #2a3b61">? що це<span class="hint-pop" style="white-space:pre;font-size:12px;text-align:left;max-width:380px">Це НЕ G_now і НЕ PDF/Engine — це окремий індекс raw-фону доби.
 
 Основний шлях (NOAA 27-day-outlook.txt):
@@ -2636,7 +2636,7 @@ Fallback (NOAA 45-day-forecast.json):
             <button id="btnIcs" style="font-size:12px;padding:6px 10px" title="Експорт прогнозу у календарний файл (.ics): імпортуйте у Google/Apple/Outlook для нагадувань">⬇ .ics</button>
           </div>
         </div>
-        <div class="rail-legend-27 small" style="margin:6px 0 2px;color:var(--dim);font-size:11px;line-height:1.45"><strong style="color:#8fb5ff">Синя лінія й сині стовпчики — лише raw-контекст, не сприятливий прогноз.</strong> · <span style="color:#ff8b8b">Червона</span>/<span style="color:#68df9b">зелена</span> ★: <strong>PDF/Engine-рішення дня</strong>. Якщо рішення немає — день не фарбується як сприятливий.</div>
+        <div class="rail-legend-27 small" style="margin:6px 0 2px;color:var(--dim);font-size:11px;line-height:1.45"><strong><span style="color:#ff8b8b">Червона</span>/<span style="color:#68df9b">зелена</span> товста лінія — фінальне PDF/Engine-рішення.</strong> · <span style="color:#8fb5ff">Тонкий синій пунктир — raw-аудит, не прогноз рішення.</span> Якщо фінального рішення немає, кольорова лінія має розрив.</div>
         <div id="twentysevenError" class="err small"></div>
         <!-- v87.19 U4: Best/worst days of last 30 days — retention hook -->
         <div id="bestWorstDays" class="best-worst-block" style="display:none"></div>
@@ -21169,20 +21169,53 @@ function draw27Chart(){
 
   // ── Лінія G RAW (довідкова, не рішення) ──
   // v88.8.34: лінія малюється тільки по raw continuous G. PDF/Engine day-score — overlay marker only. v88.8.34 label fix: axis is G_day raw, not current Hero G.
-  ctx.lineWidth = 2;
+  // fp316: raw is a deliberately faint audit rail. It is never the primary forecast.
+  ctx.save();
+  ctx.lineWidth = 1;
   ctx.lineJoin = 'round';
-  // Градієнт по кольору
-  // fp299: raw rail is always blue; red/green is reserved for decisions.
-  ctx.strokeStyle = '#4f8fca';
+  ctx.setLineDash([4,4]);
+  ctx.strokeStyle = 'rgba(79,143,202,0.55)';
   ctx.beginPath();
   let first = true;
   data.forEach((d,i)=>{
-    const _gForChart = d.G; // v88.8.34: raw continuous G only
+    const _gForChart = d.G;
     if(!isFinite(_gForChart)) return;
     const x = xOf(i), y = yOf(_gForChart);
     if(first){ ctx.moveTo(x,y); first=false; } else ctx.lineTo(x,y);
   });
   ctx.stroke();
+  ctx.restore();
+
+  // fp316: primary series = routed PDF/Engine day decision.
+  // Missing decisions create gaps; raw is never substituted into this line.
+  ctx.save();
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = 3.2;
+  for(let i=1;i<data.length;i++){
+    const a=data[i-1], b=data[i];
+    if(!Number.isFinite(a._decisionEng) || !Number.isFinite(b._decisionEng)) continue;
+    const av=(a._decisionEng+b._decisionEng)/2;
+    ctx.strokeStyle = av >= 0.5 ? '#2bd47d' : av <= -0.5 ? '#ff6b6b' : '#9bb1dc';
+    ctx.beginPath();
+    ctx.moveTo(xOf(i-1), yOf(a._decisionEng));
+    ctx.lineTo(xOf(i), yOf(b._decisionEng));
+    ctx.stroke();
+  }
+  data.forEach((d,i)=>{
+    if(!Number.isFinite(d._decisionEng)) return;
+    const col=d._decisionEng>=1?'#2bd47d':d._decisionEng<=-1?'#ff6b6b':'#9bb1dc';
+    ctx.fillStyle=col;
+    ctx.beginPath();
+    ctx.arc(xOf(i),yOf(d._decisionEng),d.ds===todayStr?5:3.5,0,Math.PI*2);
+    ctx.fill();
+    if(d._decisionAuthority==='verified_pdf'){
+      ctx.strokeStyle='#ffd166';
+      ctx.lineWidth=1.4;
+      ctx.stroke();
+    }
+  });
+  ctx.restore();
 
   // ── Точки з кольором ──
   // v88.8.34: find best/worst по raw G
