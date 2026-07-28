@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.125-fp310-ATOMIC-HORIZON-REFRESH</title>
+  <title>G-Index — Космофізичний дашборд v88.9.126-fp311-WEEK-SEVERITY-BANDS</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -8626,22 +8626,24 @@ function renderWeekSummary(){
   // Знаходимо кластери для наративу
   const fmt = d => `${d.dateNum}.${d.mon}`;
   const bestDays = days.filter(d=>d.eng!==null&&d.eng>=2);
-  const cautionDays = days.filter(d=>d.eng!==null&&d.eng<=-2);
+  const stopDays = days.filter(d=>d.eng!==null&&d.eng<=-2);
+  const mildCautionDays = days.filter(d=>d.eng===-1);
   const bestStr = bestDays.length ? bestDays.map(d=>`${d.dow} ${fmt(d)}`).join(', ') : null;
-  const cautStr = cautionDays.length ? cautionDays.map(d=>`${d.dow} ${fmt(d)}`).join(', ') : null;
+  const stopStr = stopDays.length ? stopDays.map(d=>`${d.dow} ${fmt(d)}`).join(', ') : null;
+  const mildCautStr = mildCautionDays.length ? mildCautionDays.map(d=>`${d.dow} ${fmt(d)}`).join(', ') : null;
 
   // fp309: тижневий тон рахується з УСІХ денних класів.
   // Раніше green порівнювався лише з hard-red, а -1 ігнорувався у балансі:
   // 3 сприятливі, 2 hard-red, 1 mild-red помилково ставали "сприятливим тижнем".
   const favorable = green + greenL;
   const cautious = red + redL;
-  const weekTone = red>=3?['🔴','Складний тиждень','Обережно з рішеннями']:
-                   red>=2&&cautious>=favorable?['🟡','Обережний тиждень','Більше завершень, менше запусків']:
+  const weekTone = red>=3?['🔴','Складний тиждень',`${red} стоп-дні · обережно з рішеннями`]:
+                   red>=2&&cautious>favorable?['🟡','Обережний тиждень',`${red} стоп-дні · більше завершень, менше запусків`]:
                    favorable>=4&&red===0&&cautious<=1?['🟢','Сприятливий тиждень','Гарне вікно для дій']:
                    favorable>cautious&&red<=1?['🟢','Більше сприятливих, ніж складних','Використай активні дні']:
                    cautious>favorable?['🟡','Обережний тиждень','Більше завершень, менше запусків']:
                    (favorable===0&&cautious===0)?['⚪','Нейтральний тиждень','Стабільний темп без різких кроків']:
-                   ['⚪','Змішаний тиждень','Є і вікна дій, і дні обережності'];
+                   ['⚪','Змішаний тиждень',`${red} стоп-дні · ${redL} помірно обережний`];
 
   // Рядок цифр (компактний, знизу)
   const rowHtml = days.map(d=>{
@@ -8667,7 +8669,8 @@ function renderWeekSummary(){
       ${neutral>0?`<span>⚪ ${neutral} нейтр.</span>`:''}
       ${cautious>0?`<span>🔴 ${cautious} обереж.</span>`:''}
       ${bestStr?`<span style="color:var(--faint)">·</span><span style="color:#9cd49c">Краще: ${bestStr}</span>`:''}
-      ${cautStr?`<span style="color:var(--faint)">·</span><span style="color:#ffa64d">Обережно: ${cautStr}</span>`:''}
+      ${stopStr?`<span style="color:var(--faint)">·</span><span style="color:#ff6b6b">Стоп: ${stopStr}</span>`:''}
+      ${mildCautStr?`<span style="color:var(--faint)">·</span><span style="color:#ffa64d">Обережно: ${mildCautStr}</span>`:''}
     </div>
     <div style="display:flex;gap:1px">${rowHtml}</div>`;
 }
