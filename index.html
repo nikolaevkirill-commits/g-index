@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.122-fp307-VERIFIED-PDF-SHA-GATE</title>
+  <title>G-Index — Космофізичний дашборд v88.9.123-fp308-HEAT-AUTHORITY-LABEL</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -2109,6 +2109,7 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
           <div class="heat-seg" data-slot="6" title="18-21 UTC"><span class="heat-label">18</span></div>
           <div class="heat-seg" data-slot="7" title="21-24 UTC"><span class="heat-label">21</span></div>
         </div>
+        <div id="timingAuthorityNote" style="display:none;font-size:9px;color:#ffb3b3;margin:-4px 0 7px;line-height:1.3"></div>
         <div id="timingRows">—</div>
         <div id="timingNextShift"></div>
       </section>
@@ -15265,6 +15266,13 @@ function renderHeatStripV86(){
     if (_hd && isFinite(_hd.eng)) _heatDecision = Number(_hd.eng);
   } catch(_eHeat) { /* advisory display fallback */ }
   const _heatNegativeCap = _heatDecision !== null && _heatDecision <= -2;
+  const _authorityNote = document.getElementById('timingAuthorityNote');
+  if (_authorityNote) {
+    _authorityNote.style.display = _heatNegativeCap ? 'block' : 'none';
+    _authorityNote.textContent = _heatNegativeCap
+      ? `Колір і число = головне рішення дня ${_heatDecision}. Погодинний G raw видно лише при наведенні.`
+      : '';
+  }
   const segs = strip.querySelectorAll('.heat-seg');
   segs.forEach((seg, idx) => {
     // v87.90: лейбл — локальний час початку слоту
@@ -15291,8 +15299,8 @@ function renderHeatStripV86(){
     const _isStormSlotH = _stormStartHh !== null && (idx * 3 >= _stormStartHh || (isFinite(slot.kp) && slot.kp >= 5));
     if (_heatNegativeCap) {
       seg.classList.add('heat-bad');
-      seg.setAttribute('data-gval', `raw ${g>=0?'+':''}${g.toFixed(1)}`);
-      seg.title += ` · головне рішення PDF/Engine ${_heatDecision} — лише рутина`;
+      seg.setAttribute('data-gval', `ріш ${_heatDecision}`);
+      seg.title += ` · головне рішення PDF/Engine ${_heatDecision}; погодинний raw ${g>=0?'+':''}${g.toFixed(1)} — лише контекст`;
     } else if (_isStormSlotH) {
       seg.classList.add('heat-bad');
       seg.setAttribute('data-gval', `⚡Kp≥5`);
