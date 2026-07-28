@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>v88.9.120-fp312-MANUAL-SW-ACTIVATION · G-Index — Космофізичний дашборд v88.9.126-fp311-WEEK-SEVERITY-BANDS</title>
+  <title>v88.9.121-fp313-SHADOW-GATE-UI · G-Index — Космофізичний дашборд v88.9.126-fp311-WEEK-SEVERITY-BANDS</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -6545,6 +6545,18 @@ async function loadOutcomeLedgerStatus(){
     const paired=Number(real.paired_with_frozen_prediction||0), need=Number(real.required_for_promotion_gate||100);
     const rows=Number(real.chrono_rows_total||0), en=Number(expert.n||0);
     el.textContent += ' \u00b7 Реальні outcomes '+paired+'/'+need+' (Chrono: '+rows+' рядків) \u00b7 PDF-мітки n='+en+' — лише відтворення експерта, не фактична точність';
+    try {
+      const gr=await fetch('SHADOW_MODEL_PROMOTION_STATUS_v1.json',{cache:'no-store'});
+      if(gr.ok){
+        const g=await gr.json(), t=g.tanita||{}, c=g.nonlinear_calendar_interaction||{};
+        const signPct=Number(t.strong_historical_subset&&t.strong_historical_subset.strict_sign);
+        el.textContent += ' \u00b7 Tanita strong: '+Number(t.strong_historical_subset&&t.strong_historical_subset.n||0)+
+          ' dates, sign '+(Number.isFinite(signPct)?(signPct*100).toFixed(1)+'%':'--')+
+          '; prospective '+Number(t.prospective_real_outcomes||0)+'/'+Number(t.required_prospective_real_outcomes||100)+
+          ' \u00b7 nonlinear calendar: '+(c.historical_gate_passed?'candidate passed':'not confirmed')+
+          ' (score effect 0)';
+      }
+    } catch(_e) {}
     return s;
   }catch(e){
     el.textContent += ' \u00b7 журнал реальних outcomes тимчасово недоступний';
