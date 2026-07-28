@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>v88.9.121-fp313-SHADOW-GATE-UI · G-Index — Космофізичний дашборд v88.9.126-fp311-WEEK-SEVERITY-BANDS</title>
+  <title>G-Index — Космофізичний дашборд v88.9.122-fp314-AUTOMATION-INTEGRITY</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -6543,8 +6543,8 @@ async function loadOutcomeLedgerStatus(){
     if(!r.ok) throw new Error('HTTP '+r.status);
     const s=await r.json(), real=s.real_outcomes||{}, expert=s.expert_reproduction||{};
     const paired=Number(real.paired_with_frozen_prediction||0), need=Number(real.required_for_promotion_gate||100);
-    const rows=Number(real.chrono_rows_total||0), en=Number(expert.n||0);
-    el.textContent += ' \u00b7 Реальні outcomes '+paired+'/'+need+' (Chrono: '+rows+' рядків) \u00b7 PDF-мітки n='+en+' — лише відтворення експерта, не фактична точність';
+    const rows=Number(real.unique_dates||real.chrono_rows_total||0), en=Number(expert.n||0);
+    el.textContent += ' \u00b7 Реальні outcomes '+paired+'/'+need+' (Chrono: '+rows+' унікальних дат) \u00b7 PDF-мітки n='+en+' — лише відтворення експерта, не фактична точність';
     try {
       const gr=await fetch('SHADOW_MODEL_PROMOTION_STATUS_v1.json',{cache:'no-store'});
       if(gr.ok){
