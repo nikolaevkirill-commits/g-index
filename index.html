@@ -3,11 +3,11 @@
 <head>
   <meta charset="utf-8" />
   <meta http-equiv="X-Frame-Options" content="DENY" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://*.supabase.co https://*.nikolaev-kirill.workers.dev https://services.swpc.noaa.gov https://kp.gfz.de https://corsproxy.io https://api.allorigins.win https://api.codetabs.com https://corsfix.com https://thingproxy.freeboard.io; manifest-src 'self'; worker-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://*.supabase.co https://*.nikolaev-kirill.workers.dev https://services.swpc.noaa.gov https://kp.gfz.de https://sidc.be https://corsproxy.io https://api.allorigins.win https://api.codetabs.com https://corsfix.com https://thingproxy.freeboard.io; manifest-src 'self'; worker-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'" />
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.126-fp318-SINGLE-VERDICT-UX</title>
+  <title>G-Index — Космофізичний дашборд v88.9.127-fp319-ADVISORY-PRIORITY-AUDIT</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1544,7 +1544,7 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
           <span id="dataTimestamp" style="font-size:10px;color:var(--faint);margin-left:4px"></span>
         </div>
         <span class="pill" id="stamp" style="font-size:11px">—</span>
-        <span id="freshnessBadge" tabindex="0" title="Свіжість даних NOAA Kp (за віком останнього fetch + content-age):&#10;• LIVE — менше 5 хв (зелений)&#10;• ESTIMATED — контент до 12г, це forecast-дані NOAA (норм. цикл оновлення ~3г) — очікувано, не проблема&#10;• DELAYED — 5–30 хв АБО контент >1г (жовтий, нормальна затримка)&#10;• STALE — 30–60 хв АБО контент >1 дн (помаранчевий)&#10;• OLD — понад 60 хв АБО контент >1 тиж (червоний, втрачено зв'язок)&#10;• CACHED — офлайн режим / SW проксі-кеш&#10;• DEGRADED — NOAA-фід не оновлювався понад 3г АБО знайдено фізичну суперечність між джерелами (напр. Kp і Dst не узгоджуються). Дашборд і далі показує останні відомі дані, позначені як такі, що вимагають перевірки.&#10;&#10;NOAA Kp endpoints оновлюються кожні ~5–10 хв.&#10;PDF/Engine і frozen engine_scores працюють штатно — це обмеження лише для live/raw rail-ів." style="font-size:10px;padding:2px 6px;border-radius:3px;margin-left:4px;font-weight:600;letter-spacing:0.3px;background:#0a2a15;color:#63be7b;cursor:help">● LIVE</span>
+        <span id="freshnessBadge" tabindex="0" title="Свіжість даних NOAA Kp (за віком останнього fetch + content-age):&#10;• LIVE — менше 5 хв (зелений)&#10;• ESTIMATED — контент до 12г, це forecast-дані NOAA (норм. цикл оновлення ~3г) — очікувано, не проблема&#10;• DELAYED — 5–30 хв АБО контент >1г (жовтий, нормальна затримка)&#10;• STALE — 30–60 хв АБО контент >1 дн (помаранчевий)&#10;• OLD — понад 60 хв АБО контент >1 тиж (червоний, втрачено зв'язок)&#10;• CACHED — офлайн режим / SW проксі-кеш&#10;• DEGRADED — NOAA-фід не оновлювався понад 3г АБО знайдено фізичну суперечність між джерелами (напр. Kp і Dst не узгоджуються). Дашборд і далі показує останні відомі дані, позначені як такі, що вимагають перевірки.&#10;&#10;NOAA Kp endpoints оновлюються кожні ~5–10 хв.&#10;PDF/Engine і frozen engine_scores працюють штатно — це обмеження лише для live/raw rail-ів." style="font-size:10px;padding:2px 6px;border-radius:3px;margin-left:4px;font-weight:600;letter-spacing:0.3px;background:#0a2a15;color:#63be7b;cursor:help">● Kp LIVE</span>
       </div>
     </div>
   </header>
@@ -3399,7 +3399,7 @@ function _renderFreshnessState(){
                 : (Math.round(maxAge / 360000) / 10).toFixed(1) + 'г';
   // v87.1 NFR: stricter thresholds (LIVE ≤5min, DELAYED ≤30min, STALE ≤60min, OLD >60min)
   let state, label, col, bgCol;
-  if(maxAge < 5*60*1000){ state='live'; label='● LIVE · '+_ageStr; col='#63be7b'; bgCol='#0a2a15'; }
+  if(maxAge < 5*60*1000){ state='live'; label='● Kp LIVE · '+_ageStr; col='#63be7b'; bgCol='#0a2a15'; }
   else if(maxAge < 30*60*1000){ state='delayed'; label='● DELAYED · '+_ageStr; col='#ffcc44'; bgCol='#2a1a00'; }
   else if(maxAge < 60*60*1000){ state='stale'; label='● STALE · '+_ageStr; col='#ff9944'; bgCol='#2a1200'; }
   else { state='old'; label='● OLD · '+_ageStr; col='#ff6b6b'; bgCol='#2a0808'; }
@@ -12287,6 +12287,21 @@ function computePanchangaState(dateUTC){
 function renderPanchangaCard(state){
   const { p, ctx, cells, _gEarly, aiNow, pclOnly, panchDiscrepancy, finalDo, finalAvoid, _gNow, dateStr, dateUTC } = state;
   const el_ = id => document.getElementById(id);
+  // fp319: local Panchanga properties never override the final PDF/Engine verdict.
+  let _finalDayDecision = null;
+  try {
+    const _decisionDate = new Date(todayKyivStr()+'T12:00:00Z');
+    const _engFinal = getEngineScore(_decisionDate);
+    if (_engFinal && Number.isFinite(Number(_engFinal.eng))) _finalDayDecision = Number(_engFinal.eng);
+  } catch(_eFinalDay) { /* no engine coverage */ }
+  const _criticalFinalDay = Number.isFinite(_finalDayDecision) && _finalDayDecision <= -2;
+  const _localAction = (txt) => {
+    if (!txt) return '';
+    const safe = escapeHtml(String(txt));
+    return _criticalFinalDay
+      ? `<span style="color:#9bb1dc">Локально: ${safe}</span><br><span style="color:#ff9f9f;font-size:9px">не дозвіл · фінальне рішення ${_finalDayDecision}</span>`
+      : `✓ ${safe}`;
+  };
   // v88.9.54-fp236: "~12:00 UTC" тут був хардкоджений і неточний — dateUTC це
   // РЕАЛЬНИЙ sunrise-момент (переданий через computePanchangaState(sunriseUTC(...))),
   // не буквально полудень. Показуємо фактичну годину:хвилину UTC.
@@ -12449,35 +12464,35 @@ function renderPanchangaCard(state){
         <span class="hint" tabindex="0" style="cursor:help;font-style:italic;border-bottom:1px dotted var(--faint)">Tithi<span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.tithi(p.tithi))}</span></span>
       </td>
       <td style="padding:5px 6px;font-weight:600"><span class="hint" tabindex="0" style="cursor:help">${scoreIcon(p.tithi.score, _gEarly)}${scoreBar(p.tithi.score, _gEarly)} ${p.tithi.name}<br><span style="font-size:10px;color:#7a95b8;font-weight:400">${p.tithi.type}</span><span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.tithi(p.tithi))}</span></span></td>
-      <td style="padding:5px 6px;font-size:11px;color:#b0c4de">${tAdv && tAdv.do ? '✓ '+tAdv.do : ''}</td>
+      <td data-local-action="1" style="padding:5px 6px;font-size:11px;color:#b0c4de">${tAdv && tAdv.do ? _localAction(tAdv.do) : ''}</td>
     </tr>
     <tr>
       <td style="padding:5px 6px;color: var(--muted);font-size:11px">
         <span class="hint" tabindex="0" style="cursor:help;font-style:italic;border-bottom:1px dotted var(--faint)">Vara<span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.vara(p.vara))}</span></span>
       </td>
       <td style="padding:5px 6px;font-weight:600"><span class="hint" tabindex="0" style="cursor:help">${scoreIcon(p.vara.score, _gEarly)}${scoreBar(p.vara.score, _gEarly)} ${p.vara.name}<br><span style="font-size:10px;color:#7a95b8;font-weight:400">${p.vara.planet}</span><span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.vara(p.vara))}</span></span></td>
-      <td style="padding:5px 6px;font-size:11px;color:#b0c4de">${vAdv && vAdv.do ? '✓ '+vAdv.do : ''}</td>
+      <td data-local-action="1" style="padding:5px 6px;font-size:11px;color:#b0c4de">${vAdv && vAdv.do ? _localAction(vAdv.do) : ''}</td>
     </tr>
     <tr>
       <td style="padding:5px 6px;color: var(--muted);font-size:11px">
         <span class="hint" tabindex="0" style="cursor:help;font-style:italic;border-bottom:1px dotted var(--faint)">Nakshatra<span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.nakshatra(p.nakshatra))}</span></span>
       </td>
       <td style="padding:5px 6px;font-weight:600"><span class="hint" tabindex="0" style="cursor:help">${scoreIcon(p.nakshatra.score, _gEarly)}${scoreBar(p.nakshatra.score, _gEarly)} ${p.nakshatra.name}${p.nakshatra.isGandaMool ? ' <span style="color:#ffaa33;font-size:10px;font-weight:700" title="Ganda Mool junction nakshatra">⚠ GM</span>' : ''}${p.nakshatra.isPanchak ? ` <span style="color:#ff8866;font-size:10px;font-weight:700" title="Panchak — інаусп. 5-day window">⚠ PK${p.nakshatra.panchakType ? ' '+p.nakshatra.panchakType.split(' ')[0] : ''}</span>` : ''}<br><span style="font-size:10px;color:#7a95b8;font-weight:400">${p.nakshatra.type} · ${p.nakshatra.regent}${p.nakshatra.panchaPakshi ? ` · 🐦 ${p.nakshatra.panchaPakshi.birdUa}` : ''}</span><span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.nakshatra(p.nakshatra))}</span></span></td>
-      <td style="padding:5px 6px;font-size:11px;color:#b0c4de">${nAdv && nAdv.do ? '✓ '+nAdv.do : ''}</td>
+      <td data-local-action="1" style="padding:5px 6px;font-size:11px;color:#b0c4de">${nAdv && nAdv.do ? _localAction(nAdv.do) : ''}</td>
     </tr>
     <tr>
       <td style="padding:5px 6px;color: var(--muted);font-size:11px">
         <span class="hint" tabindex="0" style="cursor:help;font-style:italic;border-bottom:1px dotted var(--faint)">Yoga<span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.yoga(p.yoga))}</span></span>
       </td>
       <td style="padding:5px 6px;font-weight:600"><span class="hint" tabindex="0" style="cursor:help">${scoreIcon(p.yoga.score, _gEarly)}${scoreBar(p.yoga.score, _gEarly)} ${p.yoga.name}${p.yoga.isCritical?' ⚠️':''}<br><span style="font-size:10px;color:#7a95b8;font-weight:400">резонанс Сонце–Місяць</span><span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.yoga(p.yoga))}</span></span></td>
-      <td style="padding:5px 6px;font-size:11px;color:#b0c4de">${yAdv && yAdv.do ? '✓ '+yAdv.do : ''}</td>
+      <td data-local-action="1" style="padding:5px 6px;font-size:11px;color:#b0c4de">${yAdv && yAdv.do ? _localAction(yAdv.do) : ''}</td>
     </tr>
     <tr>
       <td style="padding:5px 6px;color: var(--muted);font-size:11px">
         <span class="hint" tabindex="0" style="cursor:help;font-style:italic;border-bottom:1px dotted var(--faint)">Karana<span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.karana(p.karana))}</span></span>
       </td>
       <td style="padding:5px 6px;font-weight:600"><span class="hint" tabindex="0" style="cursor:help">${scoreIcon(p.karana.score, _gEarly)}${scoreBar(p.karana.score, _gEarly)} ${p.karana.name}${p.karana.isVishti?' ⛔':''}<br><span style="font-size:10px;color:#7a95b8;font-weight:400">${p.karana.type}</span><span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.karana(p.karana))}</span></span></td>
-      <td style="padding:5px 6px;font-size:11px;color:#b0c4de">${kAdv && kAdv.do ? '✓ '+kAdv.do : ''}</td>
+      <td data-local-action="1" style="padding:5px 6px;font-size:11px;color:#b0c4de">${kAdv && kAdv.do ? _localAction(kAdv.do) : ''}</td>
     </tr>
     ${_aiEarly.ei !== 0 ? `<tr style="background:rgba(255,100,100,0.05)">
       <td style="padding:5px 6px;color:#ff9f9f;font-size:11px;font-style:italic">eᵢ (події)</td>
@@ -12694,11 +12709,15 @@ function renderPanchangaCard(state){
         const worstCls = worst.G < 0 ? 'is-neg' : '';
         let html = '';
         if (sameSlot) {
+          const _sameLabel = _criticalFinalDay ? 'Найменше локальне навантаження' : 'Рівний день';
+          const _sameHint = _criticalFinalDay
+            ? `Фінальне рішення ${_finalDayDecision}: це не сприятливе вікно; лише необхідна рутина.`
+            : 'Без виражених піків — витримуй рутину. Уникай імпульсних рішень.';
           html = `<div class="pbt-row">`
-               + `<span class="pbt-label">Рівний день</span>`
+               + `<span class="pbt-label">${_sameLabel}</span>`
                + `<span class="pbt-value ${bestCls}">G≈${bestG}</span>`
                + `</div>`
-               + `<div class="pbt-hint">Без виражених піків — витримуй рутину. Уникай імпульсних рішень.</div>`;
+               + `<div class="pbt-hint">${_sameHint}</div>`;
         } else {
           // v88.7.13 N1: лейбл «Уникати» з об'єктом + ховання залежно від worst.G.
           // Канон Posibnyk Part II Tab.1: «Уникати важливих дій» (завжди з об'єктом).
@@ -12721,10 +12740,13 @@ function renderPanchangaCard(state){
           //   best.G ≥ +0.5 → «Найкращий час»
           //   best.G ∈ (-0.5, +0.5) → «Відносно кращий час»
           //   best.G ≤ -0.5 → «Найменш ризиковий час (весь день у мінусі)»
-          const _bestLabelPbt = best.G >= 0.5 ? 'Найкращий час'
+          const _bestLabelPbt = _criticalFinalDay ? 'Найменше локальне навантаження'
+                              : best.G >= 0.5 ? 'Найкращий час'
                               : best.G > -0.5 ? 'Відносно кращий час'
                               : 'Найменш ризиковий час';
-          const _bestSuffix = best.G <= -0.5 ? ' <span style="color:#ffaa33;font-size:9px">· весь день у мінусі</span>' : '';
+          const _bestSuffix = _criticalFinalDay
+            ? ` <span style="color:#ff9f9f;font-size:9px">· фінальне рішення ${_finalDayDecision}: лише рутина</span>`
+            : best.G <= -0.5 ? ' <span style="color:#ffaa33;font-size:9px">· весь день у мінусі</span>' : '';
           html = `<div class="pbt-row">`
                + `<span class="pbt-label">${_bestLabelPbt}</span>`
                + `<span class="pbt-value ${bestCls}" title="UTC: ${bestRangeUTC}. G_day raw — continuous фон доби (Kp_day − 2 + ΣAᵢ). НЕ PDF/Engine експертний verdict.">${bestRange} · G_day raw=${bestG}${_bestSuffix} <span style="color:var(--faint);font-size:9px">· не PDF/Engine</span></span>`
@@ -17773,6 +17795,30 @@ function renderMoonRetroTop(){
 
 // v87.56: removed mergeOpsCards noop (v80 legacy)
 
+// fp319: run after Engine/PDF has loaded too. Initial Panchanga render can precede
+// engine_scores, so render-time gating alone is not sufficient.
+function enforcePanchFinalPriority(){
+  let finalScore = null;
+  try {
+    const e = getEngineScore(new Date(todayKyivStr()+'T12:00:00Z'));
+    if (e && Number.isFinite(Number(e.eng))) finalScore = Number(e.eng);
+  } catch(_e) { return; }
+  if (!(Number.isFinite(finalScore) && finalScore <= -2)) return;
+  document.querySelectorAll('#panchGrid [data-local-action="1"]').forEach(td => {
+    if (td.dataset.finalPriorityApplied === String(finalScore)) return;
+    const raw = (td.textContent || '').replace(/^✓\s*/, '').replace(/не дозвіл[\s\S]*$/, '').replace(/^Локально:\s*/, '').trim();
+    td.innerHTML = `<span style="color:#9bb1dc">Локально: ${escapeHtml(raw)}</span><br><span style="color:#ff9f9f;font-size:9px">не дозвіл · фінальне рішення ${finalScore}</span>`;
+    td.dataset.finalPriorityApplied = String(finalScore);
+  });
+  const bt = document.getElementById('panchBestTime');
+  if (bt) {
+    const label = bt.querySelector('.pbt-label');
+    const hint = bt.querySelector('.pbt-hint');
+    if (label) label.textContent = 'Найменше локальне навантаження';
+    if (hint) hint.textContent = `Фінальне рішення ${finalScore}: це не сприятливе вікно; лише необхідна рутина.`;
+  }
+}
+
 // --- WHY BLOCK (decision-first) ---
 function syncPanchSummary(){
   const pc=_lastPanchCtx;
@@ -17809,6 +17855,7 @@ function syncPanchSummary(){
     else action='Краща дія: використовувати день для планових запусків і просування.';
     noteEl.textContent=action;
   }
+  try { enforcePanchFinalPriority(); } catch(_ePriority) { /* noop */ }
 }
 
 function syncWhy(){
@@ -19389,7 +19436,7 @@ function exportCsv(){
   // v88.8.34: two-rail export. Never mix discrete PDF/Engine day score into G.
   // G_raw = continuous physical/advisory index: Kp−2+ΣAᵢ.
   // Day_score = discrete PDF/Engine score: −3..+3.
-  const header = ['Дата','G_raw_slot','Day_score_PDF_Engine','Day_score_source','Kp','Li','Mi','ei','Pi','Di','SumAi','Ap','Flux','G_raw_category','Operational_recommendation'];
+  const header = ['Дата','G_raw_slot','Day_score_PDF_Engine','Day_score_source','Operational_score','Operational_guard','Kp','Li','Mi','ei','Pi','Di','SumAi','Ap','Flux','G_raw_category','Operational_recommendation'];
   const lines = [header.join(',')];
   for(const r of _last27Rows){
     const ds = fmtDate(r.date);
@@ -19408,12 +19455,16 @@ function exportCsv(){
     const sig = (typeof resolveDaySignal_v88825 === 'function')
       ? resolveDaySignal_v88825(r.date, G, kpUsed, {isToday: ds===todayKyivStr()})
       : null;
+    const operationalScore = sig && Number.isFinite(Number(sig.decisionScore)) ? Number(sig.decisionScore) : (dayScore === '' ? G : Number(dayScore));
+    const operationalGuard = sig?.dynamicGuard?.reason || sig?.dynamicGuard?.label || (sig?.dynamicGuard ? 'live_guard' : 'none');
     const rec = sig?.recommendation?.text || recommendG(G, kpUsed).text || '';
     lines.push([
       ds,
       isFinite(G)?G.toFixed(2):'',
       dayScore,
       daySource,
+      isFinite(operationalScore)?operationalScore:'',
+      String(operationalGuard).replace(/[\r\n,]+/g,' ').trim(),
       kpUsed.toFixed(2),
       ai.Li, ai.Mi, ai.ei, ai.Pi, ai.Di, ai.Ai,
       r.Ap ?? '', r.flux ?? '',
@@ -19476,9 +19527,11 @@ function exportICS(){
       ? resolveDaySignal_v88825(r.date, G, kpUsed, {isToday: ds===todayKyivStr()})
       : null;
     const dayTxt = Number.isFinite(dayScore) ? `${dayScore>=0?'+':''}${dayScore} ${daySource}` : '—';
+    const operationalScore = sig && Number.isFinite(Number(sig.decisionScore)) ? Number(sig.decisionScore) : (Number.isFinite(dayScore) ? dayScore : G);
+    const operationalTxt = `${operationalScore>=0?'+':''}${Number(operationalScore).toFixed(Number.isInteger(operationalScore)?0:1)}`;
     const gSign = G >= 0 ? '+' : '';
-    const summary = `Day ${dayTxt}; Live G ${gSign}${G.toFixed(2)} — ${sig?.title || classifyG(G)}`;
-    const desc = `Дата: ${ds}\nDay_score = ${dayTxt} (дискретний прогноз дня, НЕ G)\nG_raw_slot = ${gSign}${G.toFixed(2)}\nKp = ${kpUsed.toFixed(2)}\nΣAᵢ = ${ai.Ai} (Lᵢ=${ai.Li}, Mᵢ=${ai.Mi}, eᵢ=${ai.ei}, Pᵢ=${ai.Pi}, Dᵢ=${ai.Di})\nОпераційна рекомендація: ${sig?.recommendation?.text || recommendG(G,kpUsed).text || ''}\n\nДжерело: G-Index two-rail (NOAA SWPC + Panchanga + verified PDF forecast where available).`;
+    const summary = `Рішення ${operationalTxt}: ${sig?.title || classifyG(G)}; raw G ${gSign}${G.toFixed(2)}`;
+    const desc = `Дата: ${ds}\nOperational_score = ${operationalTxt} (єдине рішення; PDF/Engine + live safety guard)\nDay_score = ${dayTxt} (базове PDF/Engine-рішення)\nG_raw_slot = ${gSign}${G.toFixed(2)} (довідковий фон, не другий вердикт)\nKp = ${kpUsed.toFixed(2)}\nΣAᵢ = ${ai.Ai} (Lᵢ=${ai.Li}, Mᵢ=${ai.Mi}, eᵢ=${ai.ei}, Pᵢ=${ai.Pi}, Dᵢ=${ai.Di})\nОпераційна рекомендація: ${sig?.recommendation?.text || recommendG(G,kpUsed).text || ''}\n\nДжерело: G-Index single-verdict export (PDF/Engine + NOAA live safety guard; raw окремо для аудиту).`;
     const dtStart = r.date;
     const dtEnd = new Date(dtStart.getTime() + 86400000);
     const uid = `gindex-${ds}-${Math.round((kpUsed||0)*100)}@g-index`;
