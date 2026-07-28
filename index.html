@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.124-fp309-WEEK-AUTHORITY-AGGREGATION</title>
+  <title>G-Index — Космофізичний дашборд v88.9.125-fp310-ATOMIC-HORIZON-REFRESH</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -6705,6 +6705,27 @@ async function checkDataManifest(){
   try { if (typeof syncV702UI === 'function') syncV702UI(); } catch(e){ /* silent */ }
   try { if (typeof _renderHeroHierarchy === 'function') _renderHeroHierarchy(); } catch(e){ /* silent */ }
   try { if (typeof renderHeroBulletin === 'function') renderHeroBulletin(); } catch(e){ /* silent */ }
+
+  // fp310: atomic horizon refresh.
+  // New verified PDF decisions used to refresh Hero only. The already-rendered
+  // 3-day cards, week summary and 27-day decision rail kept their old Engine
+  // values until F5, producing visible cross-horizon contradictions.
+  // Re-render every decision consumer from the same freshly loaded resolver.
+  try {
+    if (typeof render3Day === 'function' && typeof last3D !== 'undefined' &&
+        last3D && Array.isArray(last3D.days) && last3D.days.length) {
+      render3Day(last3D);
+    }
+  } catch(e) { console.warn('[fp310 horizon refresh: 3-day]', e); }
+  try {
+    if (typeof renderWeekSummary === 'function') renderWeekSummary();
+  } catch(e) { console.warn('[fp310 horizon refresh: week]', e); }
+  try {
+    if (typeof render27Day === 'function' && typeof _last27Rows !== 'undefined' &&
+        Array.isArray(_last27Rows) && _last27Rows.length) {
+      render27Day(_last27Rows, (typeof last3D !== 'undefined' ? last3D : null));
+    }
+  } catch(e) { console.warn('[fp310 horizon refresh: 27-day]', e); }
 }
 window.checkDataManifest = checkDataManifest;
 
