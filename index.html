@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.123-fp308-HEAT-AUTHORITY-LABEL</title>
+  <title>G-Index — Космофізичний дашборд v88.9.124-fp309-WEEK-AUTHORITY-AGGREGATION</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -8591,7 +8591,8 @@ function renderWeekSummary(){
     const dowShort = ['НД','ПН','ВТ','СР','ЧТ','ПТ','СБ'][d.getDay()];
     const dateNum = d.getUTCDate();
     const mon = d.getUTCMonth()+1;
-    days.push({ds, eng, dow:dowShort, dateNum, mon, isToday:i===0});
+    const source = e && e._expertOverride ? 'PDF' : (e ? 'Engine' : '—');
+    days.push({ds, eng, source, dow:dowShort, dateNum, mon, isToday:i===0});
   }
 
   const col = s => s===null?'var(--faint)':s>=2?'#63be7b':s>=1?'#9cd49c':s===0?'#9bb1dc':s>=-1?'#ffd2a0':'#ff6b6b';
@@ -8608,22 +8609,28 @@ function renderWeekSummary(){
   const bestStr = bestDays.length ? bestDays.map(d=>`${d.dow} ${fmt(d)}`).join(', ') : null;
   const cautStr = cautionDays.length ? cautionDays.map(d=>`${d.dow} ${fmt(d)}`).join(', ') : null;
 
-  // Загальний тон тижня
+  // fp309: тижневий тон рахується з УСІХ денних класів.
+  // Раніше green порівнювався лише з hard-red, а -1 ігнорувався у балансі:
+  // 3 сприятливі, 2 hard-red, 1 mild-red помилково ставали "сприятливим тижнем".
+  const favorable = green + greenL;
+  const cautious = red + redL;
   const weekTone = red>=3?['🔴','Складний тиждень','Обережно з рішеннями']:
-                   green>=4?['🟢','Сприятливий тиждень','Гарне вікно для дій']:
-                   green>=2&&green>red?['🟢','Більше сприятливих, ніж складних','Використай активні дні']:
-                   red>=2&&red>green?['🟡','Обережний тиждень','Більше завершень, менше запусків']:
-                   redL>=3?['🟡','Обережний тиждень','Більше завершень, менше запусків']:
-                   (green===0&&red===0&&redL===0&&greenL===0)?['⚪','Нейтральний тиждень','Стабільний темп без різких кроків']:
-                   ['⚪','Змішаний тиждень','Тримай стабільний темп'];
+                   red>=2&&cautious>=favorable?['🟡','Обережний тиждень','Більше завершень, менше запусків']:
+                   favorable>=4&&red===0&&cautious<=1?['🟢','Сприятливий тиждень','Гарне вікно для дій']:
+                   favorable>cautious&&red<=1?['🟢','Більше сприятливих, ніж складних','Використай активні дні']:
+                   cautious>favorable?['🟡','Обережний тиждень','Більше завершень, менше запусків']:
+                   (favorable===0&&cautious===0)?['⚪','Нейтральний тиждень','Стабільний темп без різких кроків']:
+                   ['⚪','Змішаний тиждень','Є і вікна дій, і дні обережності'];
 
   // Рядок цифр (компактний, знизу)
   const rowHtml = days.map(d=>{
     const s = d.eng; const sStr = s===null?'—':(s>=0?'+':'')+s;
     const bold = d.isToday?'font-weight:800;text-decoration:underline':'';
-    return `<span style="display:inline-flex;flex-direction:column;align-items:center;min-width:28px;${bold}">
+    const sourceTitle = d.source==='PDF' ? 'Перевірене рішення експерта/PDF' : (d.source==='Engine' ? 'Автоматичний Engine fallback' : 'Дані відсутні');
+    return `<span title="${sourceTitle}" style="display:inline-flex;flex-direction:column;align-items:center;min-width:30px;${bold}">
       <span style="font-size:8px;color:var(--dim)">${d.dow}</span>
       <span style="font-size:11px;font-weight:700;color:${col(s)}">${sStr}</span>
+      <span style="font-size:7px;color:${d.source==='PDF'?'#d6b55c':'var(--faint)'}">${d.source}</span>
     </span>`;
   }).join('');
 
@@ -8635,9 +8642,9 @@ function renderWeekSummary(){
       <span style="font-size:11px;color:var(--text2)">${weekTone[2]}</span>
     </div>
     <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:11px;color:var(--text2);margin-bottom:6px">
-      ${green+greenL>0?`<span>🟢 ${green+greenL} сприятл.</span>`:''}
+      ${favorable>0?`<span>🟢 ${favorable} сприятл.</span>`:''}
       ${neutral>0?`<span>⚪ ${neutral} нейтр.</span>`:''}
-      ${red+redL>0?`<span>🔴 ${red+redL} обереж.</span>`:''}
+      ${cautious>0?`<span>🔴 ${cautious} обереж.</span>`:''}
       ${bestStr?`<span style="color:var(--faint)">·</span><span style="color:#9cd49c">Краще: ${bestStr}</span>`:''}
       ${cautStr?`<span style="color:var(--faint)">·</span><span style="color:#ffa64d">Обережно: ${cautStr}</span>`:''}
     </div>
