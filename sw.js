@@ -21,7 +21,7 @@
 // GitHub Pages проєктів на тому самому домені. Тепер видаляємо лише ключі з
 // власним префіксом 'gindex-', що не є поточною версією.
 
-const CACHE_VERSION = 'fp311-v1'; // bump this string on every deploy
+const CACHE_VERSION = 'fp312-v1'; // manual activation: no surprise reloads
 const CACHE_PREFIX = 'gindex-'; // власний namespace — НІКОЛИ не чіпати ключі без цього префікса
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${CACHE_VERSION}`;
 const DATA_CACHE = `${CACHE_PREFIX}data-${CACHE_VERSION}`;
@@ -32,7 +32,9 @@ const SHELL_ASSETS = [
 ];
 
 self.addEventListener('install', (event) => {
-  self.skipWaiting();
+  // fp312: remain waiting until the user presses the visible Update button.
+  // Automatic skipWaiting + the 5-minute update probe caused surprise full-page
+  // reloads (a black screen while the 1.4 MB dashboard initialized).
   event.waitUntil(
     caches.open(SHELL_CACHE)
       .then((cache) => cache.addAll(SHELL_ASSETS))
