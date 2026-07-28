@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.125-fp317-UNIFIED-DYNAMIC-DECISION</title>
+  <title>G-Index — Космофізичний дашборд v88.9.126-fp318-SINGLE-VERDICT-UX</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -13793,7 +13793,7 @@ function render3Day(parsed3){
               <div><span style="color:var(--faint)">Геомагнітний фон (G_day raw):</span> <strong style="color:${col}">${isFinite(G)?(G>=0?'+':'')+G.toFixed(1):'—'}</strong> — ${_rawLabel}</div>
               ${_piVal !== null ? `<div><span style="color:var(--faint)">Панчанга Pᵢ:</span> <strong>${_piVal>=0?'+':''}${_piVal.toFixed(1)}</strong>${_piLabel?' — '+_piLabel:''} <span style="color:var(--faint);font-size:9px" title="AiNoDstRaw = Lᵢ+Mᵢ+eᵢ+Pᵢ — Pᵢ вже частина суми вище, не окремий сигнал">(вже в фоні вище, не окремий голос)</span></div>` : ''}
               ${_calScore !== null ? `<div><span style="color:var(--faint)">Календарні фактори:</span> <strong>${_calScore>=0?'+':''}${_calScore.toFixed(1)}</strong>${_calSymText?' — '+_calSymText:''} <span style="color:var(--faint);font-size:9px">(frozen engine_scores, довідково)</span></div>` : ''}
-              <div style="margin-top:4px;padding-top:4px;border-top:1px solid rgba(255,255,255,.08)"><span style="color:var(--faint)">Рішення:</span> обережність; довіра знижена</div>
+              <div style="margin-top:4px;padding-top:4px;border-top:1px solid rgba(255,255,255,.08)"><span style="color:var(--faint)">Фінальне рішення:</span> <strong style="color:${_bsCol}">${_bsEng>=0?'+':''}${_bsEng} — ${_pdfLabel}</strong><br><span style="color:var(--faint);font-size:9px">Розбіжність з raw знижує впевненість, але не створює другого verdict.</span></div>
             </div>`;
           } catch(_eConf) { return ''; }
         })()}
@@ -15591,7 +15591,9 @@ function renderGRadialV86(g, kp, ai){
     // під ним) — кільце й число всередині завжди одна метрика. PDF-вердикт
     // живе окремо (heroHierarchy/heroBulletin/статус-рядок), сюди більше не
     // потрапляє. window.__heroVerdictDisplay тут більше не читається.
-    const _shown = g;
+    const _vDisplay = window.__heroVerdictDisplay || null;
+    const _hasFinalDecision = !!(_vDisplay && _vDisplay.hasVerdict && isFinite(_vDisplay.val));
+    const _shown = _hasFinalDecision ? Number(_vDisplay.val) : g;
     // v88.9.41-fp223 (аудит-раунд-10, Problem 4): кільце показувало -1.5
     // (1 знак), а рядок "ЗАРАЗ" — -1.47 (2 знаки) — те саме число, різна
     // точність відображення виглядало як два різних значення. Уніфіковано.
@@ -15602,7 +15604,7 @@ function renderGRadialV86(g, kp, ai){
                          : '0 0 12px rgba(255,120,120,.3)';
     try {
       const _lbl = document.getElementById('v86GLabel');
-      if (_lbl) _lbl.textContent = 'G_NOW';
+      if (_lbl) _lbl.textContent = _hasFinalDecision ? 'РІШЕННЯ ДНЯ' : 'G_NOW';
     } catch(_e){}
   }
   // v88.9.31-fp212: евристичний діапазон мінливості G_now (НЕ калібрований статистичний CI —
@@ -15611,7 +15613,12 @@ function renderGRadialV86(g, kp, ai){
   // Розрахунок: σ = sqrt(kpDelta² + eventUncertainty²); kpDelta з last-8 NOAA Kp obs.
   const ciEl = document.getElementById('v86CI');
   if (ciEl) {
-    if (isFinite(g) && typeof computeConfidenceBand === 'function') {
+    const _vdCI = window.__heroVerdictDisplay || null;
+    if (_vdCI && _vdCI.hasVerdict && isFinite(_vdCI.val)) {
+      ciEl.textContent = isFinite(g) ? `raw фон ${g>=0?'+':''}${g.toFixed(2)}` : 'raw фон —';
+      ciEl.title = 'Велике число — фінальне рішення PDF/Engine. Raw G_now показаний окремо і не є другим verdict.';
+      ciEl.style.display = '';
+    } else if (isFinite(g) && typeof computeConfidenceBand === 'function') {
       try {
         const cb = computeConfidenceBand(kp, _lastKpObsJson);
         // v88.9.39-fp221: кільце тепер ЗАВЖДИ показує G_now (не вердикт) —
@@ -16479,7 +16486,12 @@ function syncHero(){
     if (_gcdHero && _gcdHero.blockedNow && !_gcdHero.reasonsNow.includes('storm')) {
       const _namesHero = _gcdHero.reasonsNow.filter(r => r.startsWith('window:')).map(r => r.slice(7)).join('+');
       const _untilHero = (_gcdHero.blockedUntilH != null) ? ` до ${_fmtKyivFromUTCFloat(_gcdHero.blockedUntilH)}` : '';
-      _stormDoText = `${_delayedPrefix}Сприятливий день, але зараз ${_namesHero}: тільки рутина${_untilHero}`;
+      const _dayDecisionTxt = _heroSig && _heroSig.hasEngine && isFinite(_heroSig.dayScore)
+        ? `Рішення дня ${_heroSig.dayScore>=0?'+':''}${_heroSig.dayScore}`
+        : 'Поточний фон';
+      _stormDoText = (_stKey === 'favorable' || _stKey === 'good')
+        ? `${_delayedPrefix}Сприятливий день, але зараз ${_namesHero}: тільки рутина${_untilHero}`
+        : `${_delayedPrefix}${_dayDecisionTxt}: тільки необхідна рутина; зараз ${_namesHero}${_untilHero}`;
       _heroAvoidText = `Не починати нових справ${_untilHero} (${_namesHero} активний)`;
     }
   } catch(_eGcdHero) { /* silent */ }
@@ -16514,8 +16526,16 @@ function syncHero(){
         _doEl.style.borderColor = '';
       }
     } else if (_doEl) {
-      _doEl.style.background = '';
-      _doEl.style.borderColor = '';
+      const _isNegativeDecision = (_stKey === 'tense' || _stKey === 'unstable');
+      if (_isNegativeDecision) {
+        _doEl.style.setProperty('background','rgba(255,107,107,.10)','important');
+        _doEl.style.setProperty('border-color','rgba(255,107,107,.40)','important');
+        _doEl.style.setProperty('color','#ffd6d6','important');
+      } else {
+        _doEl.style.background = '';
+        _doEl.style.borderColor = '';
+        _doEl.style.color = '';
+      }
     }
   } catch(_eDo) { /* noop */ }
   try {
