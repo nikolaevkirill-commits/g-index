@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.124-fp316-DECISION-FIRST-27D</title>
+  <title>G-Index — Космофізичний дашборд v88.9.125-fp317-UNIFIED-DYNAMIC-DECISION</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -8613,6 +8613,27 @@ function renderDayTheme(){
 
 // ═══ v88.8.37-fp70: Week Narrative — сценарій тижня замість цифрового рядка ═══
 // Co-Star pattern: не числа, а сценарій. Що відбувається, коли діяти, коли обережніше.
+function getDynamicKpForDate_v889125(dateObj){
+  const ds = fmtDate(dateObj);
+  try {
+    if(ds === todayKyivStr() && typeof lastWWV !== 'undefined' && lastWWV && isFinite(lastWWV.kNow)) return Number(lastWWV.kNow);
+    const pools = [window._gIndex_last3D?.days, (typeof last3D !== 'undefined' && last3D) ? last3D.days : null];
+    for(const pool of pools){
+      if(!Array.isArray(pool)) continue;
+      const hit = pool.find(x => x && x.date && fmtDate(x.date) === ds && isFinite(x.kpMax));
+      if(hit) return Number(hit.kpMax);
+    }
+    if(Array.isArray(_27dComputed)){
+      const hit27 = _27dComputed.find(x => x && x.ds === ds && isFinite(x.kpUsed));
+      if(hit27) return Number(hit27.kpUsed);
+    }
+    const e = (typeof getEngineScore === 'function') ? getEngineScore(ds) : null;
+    if(e && isFinite(e.kp)) return Number(e.kp);
+  } catch(e) { /* safe fallback */ }
+  return NaN;
+}
+window.getDynamicKpForDate_v889125 = getDynamicKpForDate_v889125;
+
 function renderWeekSummary(){
   const bar = document.getElementById('weekSummaryBar');
   if(!bar) return;
@@ -8623,12 +8644,17 @@ function renderWeekSummary(){
     d.setUTCDate(d.getUTCDate()+i);
     const ds = fmtDate(d);
     const e = (typeof getEngineScore==='function') ? getEngineScore(ds) : null;
-    const eng = e && isFinite(e.eng) ? Math.max(-3,Math.min(3,Math.round(e.eng))) : null;
+    const kpDynamic = getDynamicKpForDate_v889125(d);
+    const aiDynamic = computeAi(sunriseUTC(d), isFinite(kpDynamic) ? kpDynamic : 0);
+    const rawDynamic = (isFinite(kpDynamic) ? kpDynamic : 0) - 2 + aiDynamic.Ai;
+    const sig = resolveDaySignal_v88825(d, rawDynamic, kpDynamic, {isToday:i===0, horizon:'week'});
+    const eng = sig && isFinite(sig.dayScore) ? Math.max(-3,Math.min(3,Math.round(sig.dayScore))) : null;
     const dowShort = ['НД','ПН','ВТ','СР','ЧТ','ПТ','СБ'][d.getDay()];
     const dateNum = d.getUTCDate();
     const mon = d.getUTCMonth()+1;
-    const source = e && e._expertOverride ? 'PDF' : (e ? 'Engine' : '—');
-    days.push({ds, eng, source, dow:dowShort, dateNum, mon, isToday:i===0});
+    const sourceBase = e && e._expertOverride ? 'PDF' : (e ? 'Engine' : '—');
+    const source = sig && sig.dynamicGuard ? sourceBase+'+LIVE' : sourceBase;
+    days.push({ds, eng, source, dow:dowShort, dateNum, mon, isToday:i===0, kpDynamic, rawDynamic, dynamicGuard:sig?.dynamicGuard||null});
   }
 
   const col = s => s===null?'var(--faint)':s>=2?'#63be7b':s>=1?'#9cd49c':s===0?'#9bb1dc':s>=-1?'#ffd2a0':'#ff6b6b';
@@ -8664,7 +8690,7 @@ function renderWeekSummary(){
   const rowHtml = days.map(d=>{
     const s = d.eng; const sStr = s===null?'—':(s>=0?'+':'')+s;
     const bold = d.isToday?'font-weight:800;text-decoration:underline':'';
-    const sourceTitle = d.source==='PDF' ? 'Перевірене рішення експерта/PDF' : (d.source==='Engine' ? 'Автоматичний Engine fallback' : 'Дані відсутні');
+    const sourceTitle = d.source.startsWith('PDF') ? 'Перевірене рішення експерта/PDF' : (d.source.startsWith('Engine') ? 'Автоматичний Engine fallback' : 'Дані відсутні');
     return `<span title="${sourceTitle}" style="display:inline-flex;flex-direction:column;align-items:center;min-width:30px;${bold}">
       <span style="font-size:8px;color:var(--dim)">${d.dow}</span>
       <span style="font-size:11px;font-weight:700;color:${col(s)}">${sStr}</span>
@@ -10256,12 +10282,13 @@ function draw27dTable(){
   const filterVal = document.getElementById('sel27Filter').value;
 
   let data = [..._27dComputed];
+  const _decisionOf = d => Number.isFinite(d?._decisionEng) ? Number(d._decisionEng) : Number(d?.G);
 
   // v88.8.34: фільтр тільки по raw continuous G. PDF/Engine — overlay, не заміна G.
-  if(filterVal === 'good')    data = data.filter(d => d.G >= 0.5);
-  if(filterVal === 'neutral') data = data.filter(d => d.G > -0.5 && d.G < 0.5);
-  if(filterVal === 'bad')     data = data.filter(d => d.G < -0.5);
-  if(filterVal === 'verybad') data = data.filter(d => d.G <= -2.5);
+  if(filterVal === 'good')    data = data.filter(d => _decisionOf(d) >= 0.5);
+  if(filterVal === 'neutral') data = data.filter(d => _decisionOf(d) > -0.5 && _decisionOf(d) < 0.5);
+  if(filterVal === 'bad')     data = data.filter(d => _decisionOf(d) < -0.5);
+  if(filterVal === 'verybad') data = data.filter(d => _decisionOf(d) <= -2.5);
   if(filterVal === 'calendar-risk') data = data.filter(d => d.calendarAdvisory?.level === 'high_risk');
   if(filterVal === 'calendar-caution') data = data.filter(d => ['caution','mixed'].includes(d.calendarAdvisory?.level));
   if(filterVal === 'calendar-support') data = data.filter(d => d.calendarAdvisory?.level === 'support');
@@ -10269,7 +10296,7 @@ function draw27dTable(){
   // v88.8.34: sort за raw continuous G. PDF/Engine score не змішується з G.
   data.sort((a,b)=>{
     let va, vb;
-    if(_27dSortCol==='g')    { va=a.G; vb=b.G; }
+    if(_27dSortCol==='g')    { va=_decisionOf(a); vb=_decisionOf(b); }
     else if(_27dSortCol==='ap') { va=a.r.Ap; vb=b.r.Ap; }
     else                     { va=a.ds;     vb=b.ds; }
     if(va < vb) return _27dSortDir==='asc' ? -1 : 1;
@@ -10301,10 +10328,10 @@ function draw27dTable(){
 
   let html='';
   const _panchCache={};
-  for(const {r,ds,kpUsed,isOverridden,ai,G,delta,f107mod,_expertEng,_hasOverride,calendarAdvisory} of data){
+  for(const {r,ds,kpUsed,isOverridden,ai,G,delta,f107mod,_expertEng,_hasOverride,_baseDecisionEng,_decisionEng,_decisionAuthority,_dynamicGuard,calendarAdvisory} of data){
     const isToday = ds === todayStr;
     // v88.8.34: raw-G table value; expert score is overlay, not replacement.
-    const G_display = G;
+    const G_display = Number.isFinite(_decisionEng) ? Number(_decisionEng) : G;
     const gcls = classForG(G_display);
     const cls  = kpUsed>=5 ? 'k-bad' : (kpUsed>=4 ? 'k-warn' : 'k-ok');
     const kpLabel = isOverridden ? 'Kp max (3d↑)' : 'Kp max (27d)';
@@ -10381,7 +10408,7 @@ function draw27dTable(){
       ${_nakDotCell}
       <td style="min-width:60px">
         ${calendarAdvisory ? `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;margin:0 4px 0 0;background:` + (calendarAdvisory.level==='high_risk'?'#ff4d5e':calendarAdvisory.level==='caution'?'#ffaa33':calendarAdvisory.level==='mixed'?'#b88cff':calendarAdvisory.level==='support'?'#2bd47d':'#6b82aa') + `" title="Calendar advisory: ` + escapeHtml(calendarAdvisoryText(calendarAdvisory)) + `; score_effect=0"></span>` : ''}
-        <span class="gbadge ${gcls} hint" tabindex="0" style="font-size:13px;padding:4px 8px;min-width:60px">G_day ${isFinite(G_display)?G_display.toFixed(2):'…'}${_hasOverride?'<span style="color:#ffd166;font-size:10px;margin-left:2px" title="PDF expert override">★</span>':''}<span class="hint-pop">${escapeHtml(gTip)}</span></span>
+        <span class="gbadge ${gcls} hint" tabindex="0" style="font-size:13px;padding:4px 8px;min-width:60px">Рішення ${isFinite(G_display)?(G_display>=0?'+':'')+G_display.toFixed(1):'…'}<div style="font-size:8px;color:var(--faint);font-weight:500">raw G_day ${(G>=0?'+':'')+G.toFixed(1)}${_dynamicGuard?' · LIVE Kp':''}</div>${_hasOverride?'<span style="color:#ffd166;font-size:10px;margin-left:2px" title="PDF expert override">★</span>':''}<span class="hint-pop">${escapeHtml(gTip)}</span></span>
         <div style="margin-top:2px;height:3px;border-radius:2px;background:#0a1020;overflow:hidden"><div style="height:100%;width:${Math.min(100,Math.max(4,isFinite(G_display)?(Math.abs(G_display)/4*100):4)).toFixed(0)}%;background:${G_display<=-2.5?'#ff4444':G_display<=-0.5?'#ffaa33':G_display>=0.5?'#2bd47d':'#9bb1dc'};transition:width .3s"></div></div>
       </td>
       <td><span class="kbadge ${cls}">Kp ${kpUsed.toFixed(2)}${kpSuffix}</span></td>
@@ -10402,7 +10429,7 @@ function draw27dTable(){
   const _s27el = document.getElementById('stat27');
   if (_s27el && data.length) {
     // v88.8.34: статистика тільки по raw continuous G. PDF/Engine score не входить у G statistics.
-    const _gOf = d => d.G;
+    const _gOf = d => _decisionOf(d);
     const _gVals = data.map(_gOf).filter(g => isFinite(g));
     const _nGood = _gVals.filter(g => g >= 0.5).length;
     const _nBad  = _gVals.filter(g => g < -0.5).length;
@@ -10427,7 +10454,7 @@ function draw27dTable(){
   // v88.8.34: trend summary тільки по raw continuous G.
   const ts=document.getElementById('trend27Summary');
   if(ts&&data.length){
-    const _gOf = d => d.G;
+    const _gOf = d => _decisionOf(d);
     const sorted=[...data].sort((a,b)=>a.ds.localeCompare(b.ds));
     const next7=sorted.slice(0,7);
     const badDays=next7.filter(d=>_gOf(d)<-0.5);
@@ -13545,10 +13572,11 @@ function render3Day(parsed3){
     const G = (isFinite(kpMax)? kpMax : 0) - 2 + ai.Ai;
     const isToday = fmtDate(d.date) === todayKyivStr();
     const _daySig3 = (typeof resolveDaySignal_v88825 === 'function') ? resolveDaySignal_v88825(d.date, G, kpMax, {isToday}) : null;
+    const G_decision = _daySig3 && isFinite(_daySig3.decisionScore) ? Number(_daySig3.decisionScore) : G;
     const cls = isFinite(kpMax)? (kpMax>=5? 'k-bad' : (kpMax>=4? 'k-warn':'k-ok')) : 'k-ok';
-    const gCls = classForG(G);
+    const gCls = classForG(G_decision);
     const kp = d.kp8.map(v=>isFinite(v)? v.toFixed(2) : '…').join(' | ');
-    const rowStyle = G <= -2 ? 'background:rgba(255,107,107,0.08);' : '';
+    const rowStyle = G_decision <= -2 ? 'background:rgba(255,107,107,0.08);' : '';
     const todayStyle = isToday ? 'outline:2px solid rgba(55,167,255,0.6);' : '';
 
     const _moonE3 = ai.phaseDeg < 22 ? '🌑' : ai.phaseDeg < 67 ? '🌒' : ai.phaseDeg < 112 ? '🌓' : ai.phaseDeg < 157 ? '🌔' : ai.phaseDeg < 202 ? '🌕' : ai.phaseDeg < 247 ? '🌖' : ai.phaseDeg < 292 ? '🌗' : ai.phaseDeg < 337 ? '🌘' : '🌑';
@@ -13569,13 +13597,13 @@ function render3Day(parsed3){
 
     const gTip = gTooltipText('Kp max', (isFinite(kpMax)? kpMax : NaN), ai);
 
-    const _prob3d = calcProbabilityLayer({G, csConf:1, horizon:'3day'});
+    const _prob3d = calcProbabilityLayer({G:G_decision, csConf:1, horizon:'3day'});
     const _riskCell = _prob3d
       ? `<span style="font-size:12px;font-weight:700;color:${_prob3d.band==='high'?'#ff6b6b':_prob3d.band==='elevated'?'#fca474':_prob3d.band==='moderate'?'#ffcc00':'#2bd47d'}">${_prob3d.pSoftPct}%</span>`
       : '—';
     html += `<tr style="${rowStyle}${todayStyle}">
       <td class="mono col-date"${isToday?' style="font-weight:700;color:var(--alt)"':''}>${fmtDate(d.date)}${isToday?' <br><span style="color:var(--alt);font-size:10px;white-space:nowrap">◀ сьогодні</span>':''}</td>
-      <td><span class="gbadge ${gCls} hint" tabindex="0">G ${isFinite(G)? G.toFixed(2) : '…'}<span class="hint-pop">${escapeHtml(gTip)}</span></span></td>
+      <td><span class="gbadge ${gCls} hint" tabindex="0">Рішення ${isFinite(G_decision)?(G_decision>=0?'+':'')+G_decision.toFixed(1):'…'}<small style="display:block;color:var(--faint);font-size:8px">raw G ${(G>=0?'+':'')+G.toFixed(1)}${_daySig3?.dynamicGuard?' · LIVE Kp':''}</small><span class="hint-pop">${escapeHtml(_daySig3?.tooltip||gTip)}</span></span></td>
       <td>${kpCell}</td>
       <td>${Lcell}</td>
       <td>${Mcell}</td>
@@ -13606,7 +13634,7 @@ function render3Day(parsed3){
       const isToday=fmtDate(d.date)===todayKyivStr();
       const _daySigQ = (typeof resolveDaySignal_v88825 === 'function') ? resolveDaySignal_v88825(d.date, G, kpMax, {isToday}) : null;
       // v87.6: перший НЕ-сьогоднішній день = "завтра"
-      if (!isToday && _tomorrowG === null && isFinite(G)) _tomorrowG = G;
+      if (!isToday && _tomorrowG === null && isFinite(G)) _tomorrowG = (_daySigQ && isFinite(_daySigQ.decisionScore)) ? Number(_daySigQ.decisionScore) : G;
       // v83f: aligned with classifyStateByG thresholds
       // v88.8.9 БАГ#5 fix: повне узгодження з classifyStateByG.
       // Раніше: G<0 → 'обережно' плутало бо classifyStateByG для G ∈ [-1, +0.5)
@@ -15794,11 +15822,25 @@ function resolveDaySignal_v88825(dateObj, rawG, kp, opts){
   try { if(typeof getEngineScore === 'function') entry = getEngineScore(dateObj); } catch(e) { entry = null; }
   const hasEngine = !!(entry && isFinite(entry.eng));
   let dayScore = hasEngine ? Number(entry.eng) : NaN;
+  const sourceDayScore = dayScore;
   const liveKey = isFinite(rawG) ? classifyStateByG(rawG, kp) : 'neutral';
   const hasUnverifiedOverride = !!(entry && entry._expertOverrideAvailable && entry._expertOverrideVerified === false && isFinite(entry._expertEngCandidate));
   const sourceDelta = hasUnverifiedOverride ? Math.abs(Number(entry._expertEngCandidate) - Number(entry._engRaw ?? entry.eng)) : 0;
   let guard = 'none';
   if(hasUnverifiedOverride && sourceDelta >= 3){ dayScore = 0; guard = 'unverified_override_large_delta'; }
+  const baseDayScore = dayScore;
+  let dynamicGuard = null;
+  // fp317: one operational verdict for today/week/3-day/27-day.
+  // Archive PDF/Engine remains unchanged; live/forecast Kp can only make the operational verdict safer.
+  if(isFinite(kp) && kp >= 5 && (!isFinite(dayScore) || dayScore > -2)){
+    dayScore = -2;
+    dynamicGuard = 'kp_storm';
+    guard = 'dynamic_kp_storm';
+  } else if(isFinite(kp) && kp >= 4 && (!isFinite(dayScore) || dayScore > -1)){
+    dayScore = -1;
+    dynamicGuard = 'kp_elevated';
+    guard = 'dynamic_kp_elevated';
+  }
   const dayKey = hasEngine ? _engineScoreToStateKey_v88824(dayScore, kp) : liveKey;
   let opKey = dayKey || liveKey;
   if(isToday && hasEngine && dayScore >= 2){
@@ -15866,7 +15908,7 @@ Live-контур зараз: ${liveTxt}.`
 Live-контур зараз: ${liveTxt}.
 ${guard !== 'none' ? 'Поточний live-фон обмежує дію зараз.' : 'Денний прогноз керує verdict дня.'}`)
     : `Денного Engine/PDF score немає. Показано Live G: ${liveTxt}.`;
-  return { entry, hasEngine, dayScore, dayKey, liveKey, opKey, guard, repG, title, action, recommendation, color, tooltip, src, hasUnverifiedOverride, sourceDelta };
+  return { entry, hasEngine, sourceDayScore, baseDayScore, dayScore, decisionScore:dayScore, dayKey, liveKey, opKey, guard, dynamicGuard, repG, title, action, recommendation, color, tooltip, src, hasUnverifiedOverride, sourceDelta };
 }
 window.resolveDaySignal_v88825 = resolveDaySignal_v88825;
 
