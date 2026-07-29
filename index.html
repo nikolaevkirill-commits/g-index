@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="uk">
 <head>
   <meta charset="utf-8" />
@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.132-fp325-ONE-DECISION-RAW-AUDIT</title>
+  <title>G-Index — Космофізичний дашборд v88.9.133-fp326-DECISION-MEDALLION-FIX</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1646,7 +1646,7 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
           <div id="heroRingV86Wrap" style="flex-direction:column;align-items:center;gap:4px;position:relative;z-index:2">
             <div id="heroRingV86" style="position:relative;width:160px;height:160px">
               <svg viewBox="0 0 220 220" style="width:100%;height:100%;transform:rotate(-90deg)">
-                <circle cx="110" cy="110" r="92" fill="none" stroke="rgba(70,96,140,.22)" stroke-width="14"/>
+                <circle id="v86DecisionTrack" cx="110" cy="110" r="92" fill="none" stroke="rgba(70,96,140,.35)" stroke-width="14" style="transition:stroke .35s ease,filter .35s ease"/>
                 <circle id="v86CompensationHalo" cx="110" cy="110" r="104" fill="none" stroke="#ffd166" stroke-width="3" stroke-dasharray="6 4" opacity="0" style="transition:opacity .4s"><title>Режим компенсації: сильні протилежні фактори гасять одне одного</title></circle>
                 <circle id="v86segKp" cx="110" cy="110" r="92" fill="none" stroke="#ffb84d" stroke-width="12" stroke-linecap="butt" stroke-dasharray="0 578" style="filter:drop-shadow(0 0 6px #ffb84d);transition:stroke-dasharray .8s ease,stroke-dashoffset .8s ease" stroke-dashoffset="0"/>
                 <circle id="v86segLi" cx="110" cy="110" r="92" fill="none" stroke="#8da2ff" stroke-width="12" stroke-linecap="butt" stroke-dasharray="0 578" style="filter:drop-shadow(0 0 6px #8da2ff);transition:stroke-dasharray .8s ease,stroke-dashoffset .8s ease" stroke-dashoffset="0"/>
@@ -15700,9 +15700,10 @@ function renderGRadialV86(g, kp, ai){
   if (ciEl) {
     const _vdCI = window.__heroVerdictDisplay || null;
     if (_vdCI && _vdCI.hasVerdict && isFinite(_vdCI.val)) {
-      ciEl.textContent = isFinite(g) ? `довідковий live-фон ${g>=0?'+':''}${g.toFixed(2)} · НЕ РІШЕННЯ` : 'довідковий live-фон —';
-      ciEl.title = 'Велике число — фінальне рішення PDF/Engine. Raw G_now показаний окремо і не є другим verdict.';
-      ciEl.style.display = '';
+      // fp326: live raw already has a dedicated hierarchy row; do not repeat it inside the medallion.
+      ciEl.textContent = '';
+      ciEl.title = '';
+      ciEl.style.display = 'none';
     } else if (isFinite(g) && typeof computeConfidenceBand === 'function') {
       try {
         const cb = computeConfidenceBand(kp, _lastKpObsJson);
@@ -15743,8 +15744,16 @@ function renderGRadialV86(g, kp, ai){
       });
       const _note = document.getElementById('v86CompensationNote');
       const _delta = document.getElementById('v86DeltaInline');
+      const _track = document.getElementById('v86DecisionTrack');
+      const _decision = Number(_fp325Verdict.val);
+      const _decisionColor = _decision >= 1 ? '#37d39a' : (_decision <= -1 ? '#ff6b78' : '#ffd166');
       if (_note) _note.style.display = 'none';
       if (_delta) _delta.style.display = 'none';
+      if (_track) {
+        _track.setAttribute('stroke', _decisionColor);
+        _track.style.opacity = '0.78';
+        _track.style.filter = `drop-shadow(0 0 7px ${_decisionColor})`;
+      }
     } catch(_e) {}
   }
 }
