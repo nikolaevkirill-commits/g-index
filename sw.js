@@ -21,7 +21,7 @@
 // GitHub Pages проєктів на тому самому домені. Тепер видаляємо лише ключі з
 // власним префіксом 'gindex-', що не є поточною версією.
 
-const CACHE_VERSION = 'fp324-v1'; // manual activation: no surprise reloads
+const CACHE_VERSION = 'fp325-v1'; // manual activation: no surprise reloads
 const CACHE_PREFIX = 'gindex-'; // власний namespace — НІКОЛИ не чіпати ключі без цього префікса
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${CACHE_VERSION}`;
 const DATA_CACHE = `${CACHE_PREFIX}data-${CACHE_VERSION}`;

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="uk">
 <head>
   <meta charset="utf-8" />
@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.131-fp324-SINGLE-VERDICT-SLOTS</title>
+  <title>G-Index — Космофізичний дашборд v88.9.132-fp325-ONE-DECISION-RAW-AUDIT</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -2590,7 +2590,7 @@ Kp: 3-год індекс геомагнітної активності (0–9)
     <div class="swipe-hint" style="display:none" id="swipeHint27">Прокрутіть таблицю</div>
     <section class="card" id="twentysevenCard">
         <div class="flex" style="flex-wrap:wrap;gap:8px">
-          <h2 style="margin:0">27-денний прогноз рішень <span style="font-size:13px;font-weight:400;color:var(--dim)">(PDF/Engine; raw — лише аудит)</span></h2>
+          <h2 style="margin:0">27-денний прогноз рішень <span style="font-size:13px;font-weight:700;color:#ffcc66">(кольорова лінія = рішення; синій пунктир = RAW-АУДИТ, НЕ прогноз)</span></h2>
           <!-- v88.8.35-fp56-P8: explicit rail badge — users look at the line, not the fine print. -->
           <span style="display:inline-block;font-size:10px;font-weight:700;letter-spacing:.04em;color:#8fb5ff;background:rgba(55,167,255,.10);border:1px solid rgba(55,167,255,.30);border-radius:6px;padding:2px 8px;margin-left:2px;vertical-align:middle">ФІНАЛЬНЕ РІШЕННЯ · PDF/ENGINE</span>
           <span class="hint" tabindex="0" style="cursor:help;font-size:11px;color:var(--dim);border-bottom:1px dotted #2a3b61">? що це<span class="hint-pop" style="white-space:pre;font-size:12px;text-align:left;max-width:380px">Це НЕ G_now і НЕ PDF/Engine — це окремий індекс raw-фону доби.
@@ -13811,7 +13811,7 @@ function render3Day(parsed3){
         <div style="font-weight:700;color:${col};font-size:14px">${dd} → ${cat}</div>
         <div style="font-size:11px;color:var(--muted);margin-top:2px">${act}</div>
         ${(_scenBanner && !_isDivergent) ? '' : _bulletinLine}
-        <div class="card3d-numeric" style="font-size:10px;color:var(--faint);margin-top:3px" title="Довідкові raw-числа (НЕ вердикт дня). G_day raw (3d) = Kp_max з NOAA 3-day forecast (${isFinite(kpMax)?kpMax.toFixed(1):'?'}) − 2 + ΣAᵢ. Вердикт дня вгорі = PDF/Engine (експерт), він головний. Raw показує лише сирий геомагнітний фон.">${isFinite(G)?'<span style="color:var(--faint);font-size:9px">довідково · raw </span>'+(G>=0?'+':'')+G.toFixed(1):'—'}${(() => {
+        <div class="card3d-numeric" style="font-size:10px;color:var(--faint);margin-top:3px" title="Довідкові raw-числа (НЕ вердикт дня). G_day raw (3d) = Kp_max з NOAA 3-day forecast (${isFinite(kpMax)?kpMax.toFixed(1):'?'}) − 2 + ΣAᵢ. Вердикт дня вгорі = PDF/Engine (експерт), він головний. Raw показує лише сирий геомагнітний фон.">${isFinite(G)?'<span style="color:var(--faint);font-size:9px">RAW-АУДИТ ФОНУ · НЕ РІШЕННЯ </span>'+(G>=0?'+':'')+G.toFixed(1):'—'}${(() => {
           // fp51: show G_day 27D alongside 3D and delta
           try {
             const _ds51 = typeof fmtDate === 'function' ? fmtDate(d.date) : d.date.toISOString().slice(0,10);
@@ -15088,11 +15088,11 @@ function _renderHeroHierarchy(){
         // v88.8.36-fp56-P10: лейбли = канонічна шкала classifyG (lowercase). Раніше good='сприятливий'
         // → конфліктувало з classifyG good='Помірно сприятливий' (G=+0.73 показувало «сприятливий»).
         const _map = {
-          favorable:['сприятливий','var(--ok)'],
-          good:     ['помірно сприятливий','var(--ok)'],
-          neutral:  ['нейтральний','var(--muted)'],
-          unstable: ['помірно несприятливий','#ffaa33'],
-          tense:    ['несприятливий','#ff6b6b']
+          favorable:['фон значно вище нейтралі','var(--ok)'],
+          good:     ['фон вище нейтралі','var(--ok)'],
+          neutral:  ['фон біля нейтралі','var(--muted)'],
+          unstable: ['фон нижче нейтралі','#ffaa33'],
+          tense:    ['напружений live-фон','#ff6b6b']
         };
         const _m = (_cls && _map[_cls]) ? _map[_cls] : ['нейтральний','var(--muted)'];
         const word = _m[0], col = _m[1];
@@ -15195,7 +15195,7 @@ function _renderHeroHierarchy(){
           } catch(_e) { return 'PDF/Engine'; }
         })()}</span>`
       + `<span style="flex:1;font-size:14px;font-weight:700;line-height:1.25">${decHtml}</span></div>`
-      + row((function(){ try { const _r = resolveSourceLabel(); return _r.isLive ? 'Фон зараз · G_now (live)' : 'Останній фон · G_now (' + _r.freshnessLabel.toLowerCase() + ')'; } catch(_e){ return 'Фон зараз · G_now (live)'; } })(), gHtml, null, 'Зараз')
+      + row((function(){ try { const _r = resolveSourceLabel(); return _r.isLive ? 'ДОВІДКОВИЙ LIVE-ФОН · НЕ РІШЕННЯ' : 'ДОВІДКОВИЙ ФОН · НЕ РІШЕННЯ (' + _r.freshnessLabel.toLowerCase() + ')'; } catch(_e){ return 'ДОВІДКОВИЙ LIVE-ФОН · НЕ РІШЕННЯ'; } })(), gHtml, null, 'Зараз')
       + row((function(){
           // v88.9.48-fp230 (аудит-раунд-17, Problem 2): той самий принцип, що
           // вже застосований до "сьогодні" (fp229) — тепер і для "завтра".
@@ -15491,6 +15491,21 @@ function renderGRadialV86(g, kp, ai){
   // індексами дня. Кільце більше НЕ читає window.__heroVerdictDisplay.
   // Сегменти й легенда — завжди видимі.
 
+  // fp325: ONE DECISION UX. A verified PDF/Engine verdict is the only
+  // primary number. Raw G_now arcs/legend would visually decompose a
+  // different metric, so hide them while a final verdict exists.
+  const _fp325Verdict = window.__heroVerdictDisplay || null;
+  const _fp325HasVerdict = !!(_fp325Verdict && _fp325Verdict.hasVerdict && isFinite(_fp325Verdict.val));
+  try {
+    const _segLayer = document.getElementById('v86Segments');
+    const _legend = document.getElementById('v86Legend');
+    ['v86segKp','v86segLi','v86segMi','v86segEi','v86segPi','v86segDi'].forEach(_id => {
+      const _seg = document.getElementById(_id);
+      if (_seg) _seg.style.opacity = _fp325HasVerdict ? '0.10' : '1';
+    });
+    if (_legend) _legend.style.display = _fp325HasVerdict ? 'none' : '';
+  } catch(_e) {}
+
   // Values (absolute for segment size, sign for visual direction later)
   // v86.0.1: NaN-safety — якщо ai undefined, robust fallback
   const safeAi = ai || {};
@@ -15685,7 +15700,7 @@ function renderGRadialV86(g, kp, ai){
   if (ciEl) {
     const _vdCI = window.__heroVerdictDisplay || null;
     if (_vdCI && _vdCI.hasVerdict && isFinite(_vdCI.val)) {
-      ciEl.textContent = isFinite(g) ? `raw фон ${g>=0?'+':''}${g.toFixed(2)}` : 'raw фон —';
+      ciEl.textContent = isFinite(g) ? `довідковий live-фон ${g>=0?'+':''}${g.toFixed(2)} · НЕ РІШЕННЯ` : 'довідковий live-фон —';
       ciEl.title = 'Велике число — фінальне рішення PDF/Engine. Raw G_now показаний окремо і не є другим verdict.';
       ciEl.style.display = '';
     } else if (isFinite(g) && typeof computeConfidenceBand === 'function') {
@@ -15716,6 +15731,21 @@ function renderGRadialV86(g, kp, ai){
     } else {
       ciEl.style.display = 'none';
     }
+  }
+  // fp325 final pass: segment render above writes opacity after the initial
+  // guard. Apply one-decision presentation last, after every raw element was
+  // updated. Raw remains available in the labelled hierarchy audit row.
+  if (_fp325HasVerdict) {
+    try {
+      ['v86segKp','v86segLi','v86segMi','v86segEi','v86segPi','v86segDi','v86CompensationHalo'].forEach(_id => {
+        const _el = document.getElementById(_id);
+        if (_el) _el.style.display = 'none';
+      });
+      const _note = document.getElementById('v86CompensationNote');
+      const _delta = document.getElementById('v86DeltaInline');
+      if (_note) _note.style.display = 'none';
+      if (_delta) _delta.style.display = 'none';
+    } catch(_e) {}
   }
 }
 
