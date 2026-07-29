@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.128-fp321-SYSTEM-HEALTH-UI</title>
+  <title>G-Index — Космофізичний дашборд v88.9.129-fp322-DYNAMIC-GUARD-LABEL-SYNC</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -13679,6 +13679,7 @@ function render3Day(parsed3){
     let qhtml='';
     // v87.6 Крок 3: зібрати "завтра" для Hero-link
     let _tomorrowG = null;
+    let _tomorrowSig = null;
     const _todayStr = todayKyivStr();
     for(const d of days){
       const kpMax=fmtDate(d.date)===todayKyivStr()&&lastWWV&&isFinite(lastWWV.kNow)?lastWWV.kNow:d.kpMax;
@@ -13687,7 +13688,10 @@ function render3Day(parsed3){
       const isToday=fmtDate(d.date)===todayKyivStr();
       const _daySigQ = (typeof resolveDaySignal_v88825 === 'function') ? resolveDaySignal_v88825(d.date, G, kpMax, {isToday}) : null;
       // v87.6: перший НЕ-сьогоднішній день = "завтра"
-      if (!isToday && _tomorrowG === null && isFinite(G)) _tomorrowG = (_daySigQ && isFinite(_daySigQ.decisionScore)) ? Number(_daySigQ.decisionScore) : G;
+      if (!isToday && _tomorrowG === null && isFinite(G)) {
+        _tomorrowSig = _daySigQ;
+        _tomorrowG = (_daySigQ && isFinite(_daySigQ.decisionScore)) ? Number(_daySigQ.decisionScore) : G;
+      }
       // v83f: aligned with classifyStateByG thresholds
       // v88.8.9 БАГ#5 fix: повне узгодження з classifyStateByG.
       // Раніше: G<0 → 'обережно' плутало бо classifyStateByG для G ∈ [-1, +0.5)
@@ -13774,7 +13778,12 @@ function render3Day(parsed3){
       // banner просто не рендерився. Тепер окрема, найвищий пріоритет гілка:
       // будь-який verified override завжди явно позначений, незалежно від
       // стану Kp у сирому snapshot під ним.
-      if (_hasVerifiedOverride) {
+      if (_hasVerifiedOverride && _daySigQ && _daySigQ.dynamicGuard) {
+        const _pdfBase = isFinite(_daySigQ.sourceDayScore) ? Number(_daySigQ.sourceDayScore) : _bsEng;
+        const _opNow = isFinite(_daySigQ.decisionScore) ? Number(_daySigQ.decisionScore) : G_decision;
+        const _guardWhy = _daySigQ.dynamicGuard === 'kp_storm' ? 'Kp ≥ 5' : 'Kp ≥ 4';
+        _scenBanner = '<div style="font-size:9px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#ffaa33;background:rgba(255,170,51,.14);border:1px solid rgba(255,170,51,.5);border-radius:6px;padding:3px 6px;margin-bottom:5px;text-align:center">ОПЕРАТИВНО ' + (_opNow>=0?'+':'') + _opNow + ' через ' + _guardWhy + ' · базовий PDF ' + (_pdfBase>=0?'+':'') + _pdfBase + '</div>';
+      } else if (_hasVerifiedOverride) {
         const _engRawForBanner = (function(){ try { const _es = getEngineScore(d.date); return isFinite(_es?._engRaw) ? _es._engRaw : null; } catch(_e){ return null; } })();
         _scenBanner = `<div style="font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#ffd166;background:rgba(255,209,102,.15);border:1px solid rgba(255,209,102,.45);border-radius:6px;padding:2px 6px;margin-bottom:5px;text-align:center" title="Це значення — ручний verified PDF-вердикт (expert override), НЕ розрахунок engine v18.5.${_engRawForBanner!=null ? ' Raw engine v18.5 snapshot: '+(_engRawForBanner>=0?'+':'')+_engRawForBanner+'.' : ''} Фон NOAA (raw, окремо, довідково) — рядок нижче.">★ PDF OVERRIDE · НЕ ENGINE V18.5</div>`;
       } else if(_engineFullySynth){
@@ -13923,7 +13932,12 @@ function render3Day(parsed3){
           // вердикт (тут 0, нейтрально), а "покращення" стосується ЛИШЕ
           // переходу live-фону G_now→G_raw, не вердикту. Коли override існує,
           // PDF-вердикт тепер іде першим, фон — другим, явно підписаний "фон".
-          if (_tomEff.hasOverride && isFinite(_tomEff.override) && !_conflictOverride) {
+          if (_tomorrowSig && _tomorrowSig.dynamicGuard && isFinite(_tomorrowSig.decisionScore)) {
+            const _op = Number(_tomorrowSig.decisionScore);
+            const _base = isFinite(_tomorrowSig.sourceDayScore) ? Number(_tomorrowSig.sourceDayScore) : _tomEff.override;
+            const _why = _tomorrowSig.dynamicGuard === 'kp_storm' ? 'Kp≥5' : 'Kp≥4';
+            _htEl.textContent = 'Оперативно ' + (_op>=0?'+':'') + _op + ' · PDF ' + (_base>=0?'+':'') + _base + ' · ' + _why;
+          } else if (_tomEff.hasOverride && isFinite(_tomEff.override) && !_conflictOverride) {
             const _os2 = _tomEff.override >= 0 ? '+' : '';
             _htEl.textContent = `PDF: ${_os2}${_tomEff.override} · фон ${_sign}${_tomorrowG.toFixed(1)} ${_displayArrow}${_tomEff.marker}`;
           } else {
