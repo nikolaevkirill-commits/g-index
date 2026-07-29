@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.135-fp328-ONE-DECISION-DATE-LOCK</title>
+  <title>G-Index — Космофізичний дашборд v88.9.136-fp329-AUTO-G-PRIMARY</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -10363,7 +10363,7 @@ function draw27dTable(){
   for(const {r,ds,kpUsed,isOverridden,ai,G,delta,f107mod,_expertEng,_hasOverride,_baseDecisionEng,_decisionEng,_decisionAuthority,_dynamicGuard,calendarAdvisory} of data){
     const isToday = ds === todayStr;
     // v88.8.34: raw-G table value; expert score is overlay, not replacement.
-    const G_display = Number.isFinite(_decisionEng) ? Number(_decisionEng) : G;
+    const G_display = G;
     const gcls = classForG(G_display);
     const cls  = kpUsed>=5 ? 'k-bad' : (kpUsed>=4 ? 'k-warn' : 'k-ok');
     const kpLabel = isOverridden ? 'Kp max (3d↑)' : 'Kp max (27d)';
@@ -15801,7 +15801,7 @@ function resolveHeroSignalHierarchy_v88824(liveG, kp){
   let entry = null;
   try { if(typeof getEngineScore === 'function') entry = getEngineScore(new Date(todayKyivStr()+'T12:00:00Z')); } catch(e) { entry = null; }
   const hasEngine = !!(entry && isFinite(entry.eng));
-  let dayScore = hasEngine ? Number(entry.eng) : NaN;
+  let dayScore = isFinite(liveG) ? Number(liveG) : (hasEngine ? Number(entry.eng) : NaN);
   const liveKey = classifyStateByG(liveG, kp);
   const hasUnverifiedOverride = !!(entry && entry._expertOverrideAvailable && entry._expertOverrideVerified === false && isFinite(entry._expertEngCandidate));
   const sourceDelta = hasUnverifiedOverride ? Math.abs(Number(entry._expertEngCandidate) - Number(entry._engRaw ?? entry.eng)) : 0;
@@ -15814,7 +15814,7 @@ function resolveHeroSignalHierarchy_v88824(liveG, kp){
     dayScore = 0;
   }
 
-  const dayKey = hasEngine ? _engineScoreToStateKey_v88824(dayScore, kp) : liveKey;
+  const dayKey = isFinite(dayScore) ? _engineScoreToStateKey_v88824(dayScore, kp) : liveKey;
   let opKey = dayKey || liveKey;
   let guard = sourceGuard || 'none';
 
@@ -15948,7 +15948,7 @@ function resolveDaySignal_v88825(dateObj, rawG, kp, opts){
   let entry = null;
   try { if(typeof getEngineScore === 'function') entry = getEngineScore(dateObj); } catch(e) { entry = null; }
   const hasEngine = !!(entry && isFinite(entry.eng));
-  let dayScore = hasEngine ? Number(entry.eng) : NaN;
+  let dayScore = isFinite(liveG) ? Number(liveG) : (hasEngine ? Number(entry.eng) : NaN);
   const sourceDayScore = dayScore;
   const liveKey = isFinite(rawG) ? classifyStateByG(rawG, kp) : 'neutral';
   const hasUnverifiedOverride = !!(entry && entry._expertOverrideAvailable && entry._expertOverrideVerified === false && isFinite(entry._expertEngCandidate));
@@ -15964,7 +15964,7 @@ function resolveDaySignal_v88825(dateObj, rawG, kp, opts){
   } else if(isFinite(kp) && kp >= 4){
     dynamicGuard = 'kp_elevated';
   }
-  const dayKey = hasEngine ? _engineScoreToStateKey_v88824(dayScore, kp) : liveKey;
+  const dayKey = isFinite(dayScore) ? _engineScoreToStateKey_v88824(dayScore, kp) : liveKey;
   let opKey = dayKey || liveKey;
   if(isToday && hasEngine && dayScore >= 2){
     if(liveKey === 'tense') { opKey = 'tense'; guard = 'live_tense'; }
@@ -16058,7 +16058,7 @@ function syncHero(){
     const _verdictVal = _hasVerdict
       ? Math.max(-3, Math.min(3, Math.round(Number(_heroSig.dayScore))))
       : newG;
-    const _heroDisplayVal = _verdictVal;
+    const _heroDisplayVal = isFinite(newG) ? Number(newG) : _verdictVal;
     // v88.9.14-fp195: v86-кільце (canvas/SVG центр) малюється ОКРЕМО від heroG
     // (legacy heroG прихований display:none) і завжди писало G_now — тому після
     // fp194 верхній блок казав "-2", а велике кільце далі показувало "+1.6".
@@ -21314,7 +21314,7 @@ function draw27Chart(){
   // Масштаб
   const PAD_L=42, PAD_R=16, PAD_T=36, PAD_B=36;
   // v88.8.34: масштаб обчислюється тільки з raw continuous G. PDF/Engine score — overlay, не вісь G.
-  const gValues = data.map(d=>showRawAudit ? d.G : d._decisionEng).filter(v=>isFinite(v)); // normal: one routed decision; audit: raw
+  const gValues = data.map(d=>d.G).filter(v=>isFinite(v)); // automatic G is the primary forecast
   const gMin = Math.min(-3, ...gValues) - 0.5;
   const gMax = Math.max(3,  ...gValues) + 0.5;
   const xOf = i => PAD_L + (i/(n-1)) * (W - PAD_L - PAD_R);
@@ -21405,20 +21405,20 @@ function draw27Chart(){
   ctx.lineWidth = 3.2;
   for(let i=1;i<data.length;i++){
     const a=data[i-1], b=data[i];
-    if(!Number.isFinite(a._decisionEng) || !Number.isFinite(b._decisionEng)) continue;
-    const av=(a._decisionEng+b._decisionEng)/2;
+    if(!Number.isFinite(a.G) || !Number.isFinite(b.G)) continue;
+    const av=(a.G+b.G)/2;
     ctx.strokeStyle = av >= 0.5 ? '#2bd47d' : av <= -0.5 ? '#ff6b6b' : '#9bb1dc';
     ctx.beginPath();
-    ctx.moveTo(xOf(i-1), yOf(a._decisionEng));
-    ctx.lineTo(xOf(i), yOf(b._decisionEng));
+    ctx.moveTo(xOf(i-1), yOf(a.G));
+    ctx.lineTo(xOf(i), yOf(b.G));
     ctx.stroke();
   }
   data.forEach((d,i)=>{
-    if(!Number.isFinite(d._decisionEng)) return;
-    const col=d._decisionEng>=1?'#2bd47d':d._decisionEng<=-1?'#ff6b6b':'#9bb1dc';
+    if(!Number.isFinite(d.G)) return;
+    const col=d.G>=1?'#2bd47d':d.G<=-1?'#ff6b6b':'#9bb1dc';
     ctx.fillStyle=col;
     ctx.beginPath();
-    ctx.arc(xOf(i),yOf(d._decisionEng),d.ds===todayStr?5:3.5,0,Math.PI*2);
+    ctx.arc(xOf(i),yOf(d.G),d.ds===todayStr?5:3.5,0,Math.PI*2);
     ctx.fill();
     if(d._decisionAuthority==='verified_pdf'){
       ctx.strokeStyle='#ffd166';
