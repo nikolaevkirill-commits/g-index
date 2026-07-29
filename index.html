@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.129-fp322-DYNAMIC-GUARD-LABEL-SYNC</title>
+  <title>G-Index — Космофізичний дашборд v88.9.130-fp323-SEPARATE-KP-SAFETY-ADVISORY</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -10439,7 +10439,7 @@ function draw27dTable(){
       ${_nakDotCell}
       <td style="min-width:60px">
         ${calendarAdvisory ? `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;margin:0 4px 0 0;background:` + (calendarAdvisory.level==='high_risk'?'#ff4d5e':calendarAdvisory.level==='caution'?'#ffaa33':calendarAdvisory.level==='mixed'?'#b88cff':calendarAdvisory.level==='support'?'#2bd47d':'#6b82aa') + `" title="Calendar advisory: ` + escapeHtml(calendarAdvisoryText(calendarAdvisory)) + `; score_effect=0"></span>` : ''}
-        <span class="gbadge ${gcls} hint" tabindex="0" style="font-size:13px;padding:4px 8px;min-width:60px">Рішення ${isFinite(G_display)?(G_display>=0?'+':'')+G_display.toFixed(1):'…'}<div style="font-size:8px;color:var(--faint);font-weight:500">raw G_day ${(G>=0?'+':'')+G.toFixed(1)}${_dynamicGuard?' · LIVE Kp':''}</div>${_hasOverride?'<span style="color:#ffd166;font-size:10px;margin-left:2px" title="PDF expert override">★</span>':''}<span class="hint-pop">${escapeHtml(gTip)}</span></span>
+        <span class="gbadge ${gcls} hint" tabindex="0" style="font-size:13px;padding:4px 8px;min-width:60px">Рішення ${isFinite(G_display)?(G_display>=0?'+':'')+G_display.toFixed(1):'…'}<div style="font-size:8px;color:var(--faint);font-weight:500">raw G_day ${(G>=0?'+':'')+G.toFixed(1)}${_dynamicGuard?' · ⚠ Kp advisory':''}</div>${_hasOverride?'<span style="color:#ffd166;font-size:10px;margin-left:2px" title="PDF expert override">★</span>':''}<span class="hint-pop">${escapeHtml(gTip)}</span></span>
         <div style="margin-top:2px;height:3px;border-radius:2px;background:#0a1020;overflow:hidden"><div style="height:100%;width:${Math.min(100,Math.max(4,isFinite(G_display)?(Math.abs(G_display)/4*100):4)).toFixed(0)}%;background:${G_display<=-2.5?'#ff4444':G_display<=-0.5?'#ffaa33':G_display>=0.5?'#2bd47d':'#9bb1dc'};transition:width .3s"></div></div>
       </td>
       <td><span class="kbadge ${cls}">Kp ${kpUsed.toFixed(2)}${kpSuffix}</span></td>
@@ -13656,7 +13656,7 @@ function render3Day(parsed3){
       : '—';
     html += `<tr style="${rowStyle}${todayStyle}">
       <td class="mono col-date"${isToday?' style="font-weight:700;color:var(--alt)"':''}>${fmtDate(d.date)}${isToday?' <br><span style="color:var(--alt);font-size:10px;white-space:nowrap">◀ сьогодні</span>':''}</td>
-      <td><span class="gbadge ${gCls} hint" tabindex="0">Рішення ${isFinite(G_decision)?(G_decision>=0?'+':'')+G_decision.toFixed(1):'…'}<small style="display:block;color:var(--faint);font-size:8px">raw G ${(G>=0?'+':'')+G.toFixed(1)}${_daySig3?.dynamicGuard?' · LIVE Kp':''}</small><span class="hint-pop">${escapeHtml(_daySig3?.tooltip||gTip)}</span></span></td>
+      <td><span class="gbadge ${gCls} hint" tabindex="0">Рішення ${isFinite(G_decision)?(G_decision>=0?'+':'')+G_decision.toFixed(1):'…'}<small style="display:block;color:var(--faint);font-size:8px">raw G ${(G>=0?'+':'')+G.toFixed(1)}${_daySig3?.dynamicGuard?' · ⚠ Kp advisory':''}</small><span class="hint-pop">${escapeHtml(_daySig3?.tooltip||gTip)}</span></span></td>
       <td>${kpCell}</td>
       <td>${Lcell}</td>
       <td>${Mcell}</td>
@@ -13782,7 +13782,7 @@ function render3Day(parsed3){
         const _pdfBase = isFinite(_daySigQ.sourceDayScore) ? Number(_daySigQ.sourceDayScore) : _bsEng;
         const _opNow = isFinite(_daySigQ.decisionScore) ? Number(_daySigQ.decisionScore) : G_decision;
         const _guardWhy = _daySigQ.dynamicGuard === 'kp_storm' ? 'Kp ≥ 5' : 'Kp ≥ 4';
-        _scenBanner = '<div style="font-size:9px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#ffaa33;background:rgba(255,170,51,.14);border:1px solid rgba(255,170,51,.5);border-radius:6px;padding:3px 6px;margin-bottom:5px;text-align:center">ОПЕРАТИВНО ' + (_opNow>=0?'+':'') + _opNow + ' через ' + _guardWhy + ' · базовий PDF ' + (_pdfBase>=0?'+':'') + _pdfBase + '</div>';
+        _scenBanner = '<div style="font-size:9px;font-weight:800;letter-spacing:.04em;color:#ffaa33;background:rgba(255,170,51,.14);border:1px solid rgba(255,170,51,.5);border-radius:6px;padding:3px 6px;margin-bottom:5px;text-align:center">⚠ БЕЗПЕКА: ' + _guardWhy + ' — перевірити GPS/зв’язок/дрони; рішення дня ' + (_pdfBase>=0?'+':'') + _pdfBase + ' не змінено</div>';
       } else if (_hasVerifiedOverride) {
         const _engRawForBanner = (function(){ try { const _es = getEngineScore(d.date); return isFinite(_es?._engRaw) ? _es._engRaw : null; } catch(_e){ return null; } })();
         _scenBanner = `<div style="font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#ffd166;background:rgba(255,209,102,.15);border:1px solid rgba(255,209,102,.45);border-radius:6px;padding:2px 6px;margin-bottom:5px;text-align:center" title="Це значення — ручний verified PDF-вердикт (expert override), НЕ розрахунок engine v18.5.${_engRawForBanner!=null ? ' Raw engine v18.5 snapshot: '+(_engRawForBanner>=0?'+':'')+_engRawForBanner+'.' : ''} Фон NOAA (raw, окремо, довідково) — рядок нижче.">★ PDF OVERRIDE · НЕ ENGINE V18.5</div>`;
@@ -13936,7 +13936,7 @@ function render3Day(parsed3){
             const _op = Number(_tomorrowSig.decisionScore);
             const _base = isFinite(_tomorrowSig.sourceDayScore) ? Number(_tomorrowSig.sourceDayScore) : _tomEff.override;
             const _why = _tomorrowSig.dynamicGuard === 'kp_storm' ? 'Kp≥5' : 'Kp≥4';
-            _htEl.textContent = 'Оперативно ' + (_op>=0?'+':'') + _op + ' · PDF ' + (_base>=0?'+':'') + _base + ' · ' + _why;
+            _htEl.textContent = 'PDF ' + (_base>=0?'+':'') + _base + ' · ⚠ ' + _why + ' лише безпека GPS/зв’язку/дронів';
           } else if (_tomEff.hasOverride && isFinite(_tomEff.override) && !_conflictOverride) {
             const _os2 = _tomEff.override >= 0 ? '+' : '';
             _htEl.textContent = `PDF: ${_os2}${_tomEff.override} · фон ${_sign}${_tomorrowG.toFixed(1)} ${_displayArrow}${_tomEff.marker}`;
@@ -15904,16 +15904,12 @@ function resolveDaySignal_v88825(dateObj, rawG, kp, opts){
   if(hasUnverifiedOverride && sourceDelta >= 3){ dayScore = 0; guard = 'unverified_override_large_delta'; }
   const baseDayScore = dayScore;
   let dynamicGuard = null;
-  // fp317: one operational verdict for today/week/3-day/27-day.
-  // Archive PDF/Engine remains unchanged; live/forecast Kp can only make the operational verdict safer.
-  if(isFinite(kp) && kp >= 5 && (!isFinite(dayScore) || dayScore > -2)){
-    dayScore = -2;
+  // fp323: Kp is an activity-specific safety advisory, not a second day model.
+  // Never rewrite the canonical PDF/Engine day verdict because of Kp.
+  if(isFinite(kp) && kp >= 5){
     dynamicGuard = 'kp_storm';
-    guard = 'dynamic_kp_storm';
-  } else if(isFinite(kp) && kp >= 4 && (!isFinite(dayScore) || dayScore > -1)){
-    dayScore = -1;
+  } else if(isFinite(kp) && kp >= 4){
     dynamicGuard = 'kp_elevated';
-    guard = 'dynamic_kp_elevated';
   }
   const dayKey = hasEngine ? _engineScoreToStateKey_v88824(dayScore, kp) : liveKey;
   let opKey = dayKey || liveKey;
@@ -19501,7 +19497,7 @@ function exportCsv(){
       ? resolveDaySignal_v88825(r.date, G, kpUsed, {isToday: ds===todayKyivStr()})
       : null;
     const operationalScore = sig && Number.isFinite(Number(sig.decisionScore)) ? Number(sig.decisionScore) : (dayScore === '' ? G : Number(dayScore));
-    const operationalGuard = sig?.dynamicGuard?.reason || sig?.dynamicGuard?.label || (sig?.dynamicGuard ? 'live_guard' : 'none');
+    const operationalGuard = sig?.dynamicGuard || 'none';
     const rec = sig?.recommendation?.text || recommendG(G, kpUsed).text || '';
     lines.push([
       ds,
