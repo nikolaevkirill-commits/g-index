@@ -1,0 +1,227 @@
+{
+  "schema": "source_routing_audit_v1",
+  "generated_at": "2026-07-30T13:52:54+00:00",
+  "overall_ok": true,
+  "hard_failures": [],
+  "warnings": [],
+  "rules": [
+    "Verified expert PDF has decision priority; Engine is an explicit fallback.",
+    "Observed, 3-day and 27-day Kp products are not interchangeable.",
+    "Panchanga P_i is already inside G_raw and is never counted as a second vote.",
+    "BGS/ENLIL/Bz/Vsw/protons/alerts are safety advisories with score_effect=0.",
+    "Missing numeric inputs remain unavailable/null and are never converted to zero."
+  ],
+  "routes": [
+    {
+      "id": "expert",
+      "role": "decision",
+      "primary": "EXPERT_DECISION_REGISTRY_v1.json",
+      "fallbacks": [
+        "expert_overrides_v3.json",
+        "engine_scores.json"
+      ],
+      "consumer": "Hero/week/3-day/27-day final decision",
+      "max_age_h": null,
+      "source": "revision-aware expert PDF; validated Engine only when no PDF",
+      "selected": "EXPERT_DECISION_REGISTRY_v1.json",
+      "status": "ok",
+      "candidates": [
+        {
+          "file": "EXPERT_DECISION_REGISTRY_v1.json",
+          "exists": true,
+          "size": 435559,
+          "age_hours": 0.008
+        },
+        {
+          "file": "expert_overrides_v3.json",
+          "exists": true,
+          "size": 251061,
+          "age_hours": 4.334
+        },
+        {
+          "file": "engine_scores.json",
+          "exists": true,
+          "size": 198061,
+          "age_hours": 510.415
+        }
+      ],
+      "missing_policy": "unavailable/null; never substitute numeric zero"
+    },
+    {
+      "id": "kp_observed_forecast",
+      "role": "decision_input",
+      "primary": "future_kp.json",
+      "fallbacks": [],
+      "consumer": "G_now, forecast raw rail, hourly Kp alert",
+      "max_age_h": 6,
+      "source": "NOAA SWPC observed + 3-day + 27-day; products remain distinct",
+      "selected": "future_kp.json",
+      "status": "ok",
+      "candidates": [
+        {
+          "file": "future_kp.json",
+          "exists": true,
+          "size": 1881,
+          "age_hours": 0.024
+        }
+      ],
+      "missing_policy": "unavailable/null; never substitute numeric zero"
+    },
+    {
+      "id": "engine",
+      "role": "decision_fallback",
+      "primary": "engine_scores.json",
+      "fallbacks": [],
+      "consumer": "automatic decision when verified PDF is absent",
+      "max_age_h": null,
+      "source": "frozen Engine v18.5; missing dates are unavailable, never zero",
+      "selected": "engine_scores.json",
+      "status": "ok",
+      "candidates": [
+        {
+          "file": "engine_scores.json",
+          "exists": true,
+          "size": 198061,
+          "age_hours": 510.415
+        }
+      ],
+      "missing_policy": "unavailable/null; never substitute numeric zero"
+    },
+    {
+      "id": "calendar",
+      "role": "decision_component",
+      "primary": "FUTURE_CALENDAR_ADVISORY_v1.json",
+      "fallbacks": [
+        "engine_scores.json"
+      ],
+      "consumer": "Panchanga/Jyotish context and P_i decomposition",
+      "max_age_h": null,
+      "source": "local astronomy + two-year Tanita/Jyotish calendar",
+      "selected": "FUTURE_CALENDAR_ADVISORY_v1.json",
+      "status": "ok",
+      "candidates": [
+        {
+          "file": "FUTURE_CALENDAR_ADVISORY_v1.json",
+          "exists": true,
+          "size": 63689,
+          "age_hours": 73.254
+        },
+        {
+          "file": "engine_scores.json",
+          "exists": true,
+          "size": 198061,
+          "age_hours": 510.415
+        }
+      ],
+      "missing_policy": "unavailable/null; never substitute numeric zero"
+    },
+    {
+      "id": "space_weather",
+      "role": "safety_advisory",
+      "primary": "SPACE_WEATHER_CONTEXT_v1.json",
+      "fallbacks": [
+        "BGS_SPACE_WEATHER_v1.json"
+      ],
+      "consumer": "operational warning only; score_effect=0",
+      "max_age_h": 8,
+      "source": "NOAA RTSW/GOES/alerts/ENLIL + BGS 3-day",
+      "selected": "SPACE_WEATHER_CONTEXT_v1.json",
+      "status": "ok",
+      "candidates": [
+        {
+          "file": "SPACE_WEATHER_CONTEXT_v1.json",
+          "exists": true,
+          "size": 3246,
+          "age_hours": 0.227
+        },
+        {
+          "file": "BGS_SPACE_WEATHER_v1.json",
+          "exists": true,
+          "size": 1202,
+          "age_hours": 0.227
+        }
+      ],
+      "missing_policy": "unavailable/null; never substitute numeric zero"
+    },
+    {
+      "id": "bgs",
+      "role": "independent_advisory",
+      "primary": "BGS_SPACE_WEATHER_v1.json",
+      "fallbacks": [],
+      "consumer": "geomagnetic risk cross-check; score_effect=0",
+      "max_age_h": 12,
+      "source": "British Geological Survey 3-day forecast",
+      "selected": "BGS_SPACE_WEATHER_v1.json",
+      "status": "ok",
+      "candidates": [
+        {
+          "file": "BGS_SPACE_WEATHER_v1.json",
+          "exists": true,
+          "size": 1202,
+          "age_hours": 0.227
+        }
+      ],
+      "missing_policy": "unavailable/null; never substitute numeric zero"
+    },
+    {
+      "id": "silso",
+      "role": "shadow_audit",
+      "primary": "outputs/data_control/phase2/SILSO_SN_d_tot_V2.0.csv",
+      "fallbacks": [],
+      "consumer": "historical Sn ablation only; score_effect=0",
+      "max_age_h": 48,
+      "source": "WDC-SILSO daily total sunspot number",
+      "selected": "outputs/data_control/phase2/SILSO_SN_d_tot_V2.0.csv",
+      "status": "ok",
+      "candidates": [
+        {
+          "file": "outputs/data_control/phase2/SILSO_SN_d_tot_V2.0.csv",
+          "exists": true,
+          "size": 2893776,
+          "age_hours": 0.009
+        }
+      ],
+      "missing_policy": "unavailable/null; never substitute numeric zero"
+    },
+    {
+      "id": "aia",
+      "role": "shadow_audit",
+      "primary": "AIA_VERNADSKY_DAILY_v1.json",
+      "fallbacks": [],
+      "consumer": "independent geomagnetic shadow; score_effect=0",
+      "max_age_h": 48,
+      "source": "BGS HAPI / Vernadsky observatory",
+      "selected": "AIA_VERNADSKY_DAILY_v1.json",
+      "status": "ok",
+      "candidates": [
+        {
+          "file": "AIA_VERNADSKY_DAILY_v1.json",
+          "exists": true,
+          "size": 335328,
+          "age_hours": 0.251
+        }
+      ],
+      "missing_policy": "unavailable/null; never substitute numeric zero"
+    },
+    {
+      "id": "auto_feed",
+      "role": "dashboard_feed",
+      "primary": "AUTO_FORECAST_FEED_v1.json",
+      "fallbacks": [],
+      "consumer": "dashboard automatic forecast/provenance",
+      "max_age_h": 8,
+      "source": "assembled from current routed inputs",
+      "selected": "AUTO_FORECAST_FEED_v1.json",
+      "status": "ok",
+      "candidates": [
+        {
+          "file": "AUTO_FORECAST_FEED_v1.json",
+          "exists": true,
+          "size": 53912,
+          "age_hours": 0.227
+        }
+      ],
+      "missing_policy": "unavailable/null; never substitute numeric zero"
+    }
+  ]
+}
