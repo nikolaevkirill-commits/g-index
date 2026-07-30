@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.137-fp330-MODEL-QUALITY-TRUTH</title>
+  <title>G-Index — Космофізичний дашборд v88.9.138-fp331-IMMEDIATE-UPDATE-DISCOVERY</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -4331,6 +4331,14 @@ if ('serviceWorker' in navigator) {
         reg.addEventListener('updatefound', () => {
           checkWaiting(reg.installing);
         });
+
+        // fp331: discover a new worker immediately, but keep activation manual.
+        // This shows the visible update bar without a surprise reload/black screen.
+        try {
+          const p = reg.update();
+          if (p && p.catch) p.catch(() => {});
+        } catch (e) {}
+
 
         // Після того як новий SW взяв контроль — перезавантажити сторінку.
         // v88.9.32-fp213 FIX-CRITICAL (аудит-раунд-3, Problem 3): sessionStorage
@@ -25131,4 +25139,6 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line213
 </script>
 </body>
 </html>
+
+
 
