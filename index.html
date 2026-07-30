@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.141-fp334-SOURCE-ALIGNED-INDEX-MATH</title>
+  <title>G-Index — Космофізичний дашборд v88.9.142-fp335-DATA-GATES-SOURCE-STATUS</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1866,6 +1866,10 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
     <details id="bgsAdvisoryPanel" style="margin:0 0 10px;padding:9px 14px;border-radius:12px;border:1px solid rgba(255,176,32,.34);background:linear-gradient(180deg,rgba(255,176,32,.065),rgba(255,176,32,.02));font-size:11px;color:var(--muted)">
       <summary id="bgsAdvisorySummary" style="cursor:pointer;color:#ffd37a;font-weight:800">🌍 BGS незалежний 3-добовий прогноз — завантаження…</summary>
       <div id="bgsAdvisoryBody" style="margin-top:7px;line-height:1.55"></div>
+    </details>
+    <details id="sourceHealthPanel" style="margin:0 0 10px;padding:9px 14px;border-radius:12px;border:1px solid rgba(89,166,255,.30);background:rgba(89,166,255,.035);font-size:11px;color:var(--muted)">
+      <summary id="sourceHealthSummary" style="cursor:pointer;color:#b9d8ff;font-weight:800">📡 Джерела даних — перевірка…</summary>
+      <div id="sourceHealthBody" style="margin-top:7px;line-height:1.55"></div>
     </details>
     <details id="spaceWeatherAccumulatedPanel" style="margin:0 0 10px;padding:9px 14px;border-radius:12px;border:1px solid rgba(155,177,220,.25);background:rgba(89,166,255,.025);font-size:11px;color:var(--muted)">
       <summary id="spaceWeatherAccumulatedSummary" style="cursor:pointer;color:#b9d8ff;font-weight:800">🛰 Космічна погода: спостереження 6 год + прогноз 7 діб — завантаження…</summary>
@@ -6223,6 +6227,7 @@ let _engineScores = null;
 // v88.8.35-fp56-P8: future_kp.json (поза V3 freeze) — реальний Kp на майбутні дати.
 // Замінює synthetic Kp=2.0 у frozen engine_scores. Генерується friday_routine (fetch_kp_v2 --export-future).
 let _futureKp = null;
+let _futureKpMeta = null;
 async function loadFutureKp(){
   if(_futureKp !== null) return _futureKp;
   try {
@@ -6230,10 +6235,12 @@ async function loadFutureKp(){
     if(!resp.ok) throw new Error('HTTP ' + resp.status);
     const data = await resp.json();
     _futureKp = data.kp || {};
+    _futureKpMeta = {generated:data.generated||null, source_log:data.source_log||[], points:Object.values(_futureKp)};
     if(window._DEBUG) console.log('[fp56-P8] future_kp loaded: ' + Object.keys(_futureKp).length + ' days, gen ' + (data.generated||'?'));
   } catch(e){
     if(window._DEBUG) console.warn('[fp56-P8] future_kp.json not available:', e.message, '(synthetic Kp лишається)');
     _futureKp = {};
+    _futureKpMeta = {error:e.message, source_log:[], points:[]};
   }
   return _futureKp;
 }
@@ -6376,6 +6383,20 @@ function updateSpaceWeatherDecisionGuard(){
     '<div style="margin-top:3px;color:var(--dim)">Це незалежний safety/advisory-шар: він не додається вдруге до G і не переписує експертний PDF.</div>';
 }
 window._expertCalcLoadStatus = 'pending';
+async function loadSourceHealth(){
+  const sum=document.getElementById('sourceHealthSummary'), body=document.getElementById('sourceHealthBody');
+  try{
+    const r=await fetch('SOURCE_ROUTING_AUDIT_v1.json',{cache:'no-store'}); if(!r.ok) throw new Error('HTTP '+r.status);
+    const p=await r.json(), warnings=p.warnings||[], hard=p.hard_failures||[], routes=p.routes||[];
+    const kp=routes.find(x=>x.id==='kp_observed_forecast')||{}, sw=routes.find(x=>x.id==='space_weather')||{};
+    const ks=kp.semantic||{}, ss=sw.semantic||{}, delivery=ss.delivery||{};
+    const kpLabel=(ks.noaa_transport_ok?'NOAA LIVE':'GFZ/резерв')+' · real '+Number(ks.real_points||0)+' · synthetic '+Number(ks.synthetic_points||0);
+    const swLabel=delivery.status==='last_good' ? 'LAST-GOOD '+Number(delivery.age_hours||0).toFixed(1)+' год' : 'LIVE';
+    if(sum){ sum.textContent='📡 Джерела: Kp '+kpLabel+' · space '+swLabel+(hard.length?' · BLOCKED':warnings.length?' · WARN':' · OK'); sum.style.color=hard.length?'#ff8d8d':warnings.length?'#ffd37a':'#9be7bd'; }
+    if(body) body.innerHTML='<b>Kp:</b> '+kpLabel+'<br><b>Космічна погода:</b> '+swLabel+'<br><b>Правило:</b> synthetic/last-good позначаються явно; відсутні дані не стають нулем; advisory не змінює G.';
+    const panel=document.getElementById('sourceHealthPanel'); if(panel&&(hard.length||warnings.length)) panel.open=true;
+  }catch(e){ if(sum) sum.textContent='📡 Статус джерел недоступний'; if(body) body.textContent=e.message; }
+}
 async function loadSpaceWeatherAccumulated(){
   if(_spaceWeatherAccumulated!==null) return _spaceWeatherAccumulated;
   const sum=document.getElementById('spaceWeatherAccumulatedSummary');
@@ -6385,11 +6406,13 @@ async function loadSpaceWeatherAccumulated(){
     if(!r.ok) throw new Error('HTTP '+r.status);
     const p=await r.json(); _spaceWeatherAccumulated=p||{};
     const m=p.magnetic||{}, w=p.solar_wind||{}, pr=p.protons||{}, a=p.alerts||{}, e=p.enlil||{}, sp=p.solar_probabilities||{};
+    const delivery=p.delivery||{}, deliveryStatus=delivery.status||'live', deliveryAge=Number(delivery.age_hours||0);
+    const sourceLabel=deliveryStatus==='last_good' ? ('LAST-GOOD · '+deliveryAge.toFixed(1)+' год') : 'LIVE';
     const stressed=(Number(m.longest_bz_le_minus5_minutes)>=30)||(Number(w.dynamic_pressure_max_6h_npa)>=5)||
       !!pr.s1_threshold_exceeded||Number(a.recent_72h_count)>0||Number(e.peak_speed_km_s)>=550||
       Number(sp.m_class_1_day_pct)>=50||Number(sp.x_class_1_day_pct)>=10;
     if(sum) sum.textContent='🛰 Космічна погода: спостереження 6 год + прогноз 7 діб'+
-      (stressed?' · ⚠ підвищене навантаження':' · спокійний накопичений фон');
+      (stressed?' · ⚠ підвищене навантаження':' · спокійний накопичений фон')+' · '+sourceLabel;
     if(body) body.innerHTML=
       '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:5px">'+
       '<div style="padding:5px 7px;border:1px solid var(--border);border-radius:7px"><b>IMF Bz</b><br>мін '+Number(m.bz_min_6h_nt||0).toFixed(1)+' nT · південний '+Math.round(Number(m.southward_fraction_6h||0)*100)+'% часу · ≤−5 nT безперервно '+Number(m.longest_bz_le_minus5_minutes||0)+' хв</div>'+
@@ -6398,7 +6421,7 @@ async function loadSpaceWeatherAccumulated(){
       '<div style="padding:5px 7px;border:1px solid var(--border);border-radius:7px"><b>NOAA alerts</b><br>G/R/S/CME за 72 год: '+Number(a.recent_72h_count||0)+'</div>'+
       '<div style="padding:5px 7px;border:1px solid var(--border);border-radius:7px"><b>ENLIL 7 діб</b><br>пік '+Math.round(Number(e.peak_speed_km_s||0))+' км/с · '+(e.peak_speed_time?new Date(e.peak_speed_time).toLocaleString('uk-UA'):'час —')+' · CME cloud '+(e.cme_cloud_start?'так':'не виявлено')+'</div>'+
       '<div style="padding:5px 7px;border:1px solid var(--border);border-radius:7px"><b>Імовірність 1 доба</b><br>M '+Number(sp.m_class_1_day_pct||0).toFixed(0)+'% · X '+Number(sp.x_class_1_day_pct||0).toFixed(0)+'% · proton '+Number(sp.proton_10mev_1_day_pct||0).toFixed(0)+'%</div>'+
-      '</div><div style="margin-top:6px;color:var(--dim)">RTSW/GOES/NOAA · snapshot SHA-256 · advisory only · score effect 0 до prospective validation.</div>';
+      '</div><div style="margin-top:6px;color:var(--dim)"><b>Доставка: '+sourceLabel+'</b> · RTSW/GOES/NOAA · snapshot SHA-256 · advisory only · score effect 0 до prospective validation.</div>';
     if(stressed){
       const panel=document.getElementById('spaceWeatherAccumulatedPanel'); if(panel) panel.open=true;
     }
@@ -24272,6 +24295,7 @@ setTimeout(async function _dayVerdictLoad(){
     await loadExpertDecisionRegistry();
     await loadAutoProspectiveStatus();
     await loadBgsSpaceWeather();
+    await loadSourceHealth();
     await loadSpaceWeatherAccumulated();
     await loadAiaVernadsky();
     await loadKpHourlyAlert();

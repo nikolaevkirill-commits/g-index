@@ -1,9 +1,13 @@
 {
   "schema": "source_routing_audit_v1",
-  "generated_at": "2026-07-30T14:38:23+00:00",
+  "generated_at": "2026-07-30T15:01:37+00:00",
   "overall_ok": true,
   "hard_failures": [],
-  "warnings": [],
+  "warnings": [
+    "kp_observed_forecast:synthetic_horizon:10/14",
+    "kp_observed_forecast:noaa_transport_failed",
+    "space_weather:last_good:0.758h"
+  ],
   "rules": [
     "Verified expert PDF has decision priority; Engine is an explicit fallback.",
     "Observed, 3-day and 27-day Kp products are not interchangeable.",
@@ -36,16 +40,17 @@
           "file": "expert_overrides_v3.json",
           "exists": true,
           "size": 251061,
-          "age_hours": 5.092
+          "age_hours": 5.479
         },
         {
           "file": "engine_scores.json",
           "exists": true,
           "size": 198061,
-          "age_hours": 511.173
+          "age_hours": 511.56
         }
       ],
-      "missing_policy": "unavailable/null; never substitute numeric zero"
+      "missing_policy": "unavailable/null; never substitute numeric zero",
+      "semantic": {}
     },
     {
       "id": "kp_observed_forecast",
@@ -62,10 +67,20 @@
           "file": "future_kp.json",
           "exists": true,
           "size": 2121,
-          "age_hours": 0.025
+          "age_hours": 0.026
         }
       ],
-      "missing_policy": "unavailable/null; never substitute numeric zero"
+      "missing_policy": "unavailable/null; never substitute numeric zero",
+      "semantic": {
+        "real_points": 4,
+        "synthetic_points": 10,
+        "sources": [
+          "GFZ_reserve",
+          "NOAA_forecast",
+          "synthetic_fallback"
+        ],
+        "noaa_transport_ok": false
+      }
     },
     {
       "id": "engine",
@@ -82,10 +97,11 @@
           "file": "engine_scores.json",
           "exists": true,
           "size": 198061,
-          "age_hours": 511.173
+          "age_hours": 511.56
         }
       ],
-      "missing_policy": "unavailable/null; never substitute numeric zero"
+      "missing_policy": "unavailable/null; never substitute numeric zero",
+      "semantic": {}
     },
     {
       "id": "calendar",
@@ -104,16 +120,17 @@
           "file": "FUTURE_CALENDAR_ADVISORY_v1.json",
           "exists": true,
           "size": 63689,
-          "age_hours": 74.012
+          "age_hours": 74.399
         },
         {
           "file": "engine_scores.json",
           "exists": true,
           "size": 198061,
-          "age_hours": 511.173
+          "age_hours": 511.56
         }
       ],
-      "missing_policy": "unavailable/null; never substitute numeric zero"
+      "missing_policy": "unavailable/null; never substitute numeric zero",
+      "semantic": {}
     },
     {
       "id": "space_weather",
@@ -132,16 +149,41 @@
           "file": "SPACE_WEATHER_CONTEXT_v1.json",
           "exists": true,
           "size": 3858,
-          "age_hours": 0.049
+          "age_hours": 0.387
         },
         {
           "file": "BGS_SPACE_WEATHER_v1.json",
           "exists": true,
           "size": 1202,
-          "age_hours": 0.049
+          "age_hours": 0.387
         }
       ],
-      "missing_policy": "unavailable/null; never substitute numeric zero"
+      "missing_policy": "unavailable/null; never substitute numeric zero",
+      "semantic": {
+        "delivery": {
+          "status": "last_good",
+          "attempted_at": "2026-07-30T14:38:24+00:00",
+          "source_fetched_at": "2026-07-30T13:52:55+00:00",
+          "age_hours": 0.758,
+          "max_age_hours": 8,
+          "attempt_errors": {
+            "mag": "Expecting value: line 1 column 1 (char 0)",
+            "wind": "Expecting value: line 1 column 1 (char 0)",
+            "protons": "Expecting value: line 1 column 1 (char 0)",
+            "alerts": "Expecting value: line 1 column 1 (char 0)",
+            "enlil": "Expecting value: line 1 column 1 (char 0)",
+            "probabilities": "Expecting value: line 1 column 1 (char 0)"
+          }
+        },
+        "source_health": {
+          "mag": true,
+          "wind": true,
+          "protons": true,
+          "alerts": true,
+          "enlil": true,
+          "probabilities": true
+        }
+      }
     },
     {
       "id": "bgs",
@@ -158,10 +200,11 @@
           "file": "BGS_SPACE_WEATHER_v1.json",
           "exists": true,
           "size": 1202,
-          "age_hours": 0.049
+          "age_hours": 0.387
         }
       ],
-      "missing_policy": "unavailable/null; never substitute numeric zero"
+      "missing_policy": "unavailable/null; never substitute numeric zero",
+      "semantic": {}
     },
     {
       "id": "silso",
@@ -181,7 +224,8 @@
           "age_hours": 0.009
         }
       ],
-      "missing_policy": "unavailable/null; never substitute numeric zero"
+      "missing_policy": "unavailable/null; never substitute numeric zero",
+      "semantic": {}
     },
     {
       "id": "aia",
@@ -198,10 +242,11 @@
           "file": "AIA_VERNADSKY_DAILY_v1.json",
           "exists": true,
           "size": 335328,
-          "age_hours": 0.184
+          "age_hours": 0.4
         }
       ],
-      "missing_policy": "unavailable/null; never substitute numeric zero"
+      "missing_policy": "unavailable/null; never substitute numeric zero",
+      "semantic": {}
     },
     {
       "id": "auto_feed",
@@ -218,10 +263,11 @@
           "file": "AUTO_FORECAST_FEED_v1.json",
           "exists": true,
           "size": 53913,
-          "age_hours": 0.049
+          "age_hours": 0.387
         }
       ],
-      "missing_policy": "unavailable/null; never substitute numeric zero"
+      "missing_policy": "unavailable/null; never substitute numeric zero",
+      "semantic": {}
     }
   ]
 }
