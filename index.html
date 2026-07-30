@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.146-fp339-TANITA-MANUAL-HOLDOUT</title>
+  <title>G-Index — Космофізичний дашборд v88.9.147-fp340-EXCEL-INTEGRITY-AUTOMATION</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -6613,6 +6613,21 @@ async function loadSystemHealthStatus(){
       ' · перевірено '+stamp+
       (hard.length?' <div style="margin-top:4px">⛔ '+hard.map(escapeHtml).join(' · ')+'</div>':'')+
       (warns.length?' <div style="margin-top:3px;color:var(--dim)">Попередження: '+warns.map(escapeHtml).join(' · ')+'</div>':'');
+    try{
+      const xr=await fetch('EXCEL_FORMULA_INTEGRITY_STATUS_v1.json',{cache:'no-store'});
+      if(xr.ok){
+        const x=await xr.json(), c=x.coverage||{}, i=x.integrity||{};
+        const t=x.chronological_validation&&x.chronological_validation.test_2026_onward&&x.chronological_validation.test_2026_onward.verbatim||{};
+        const pct=v=>Number.isFinite(Number(v))?(100*Number(v)).toFixed(1)+'%':'\u2014';
+        el.innerHTML+='<div style="margin-top:4px;color:var(--dim)">Excel audit: '+Number(c.raw_formula_dates||0)+
+          ' raw dates through '+escapeHtml(String(c.raw_formula_max||'\u2014'))+
+          ' \u00b7 PDF decisions through '+escapeHtml(String(c.pdf_decision_max||'\u2014'))+
+          ' \u00b7 '+Number(c.pdf_dates_after_excel_formula||0)+' PDF dates without internal Excel formula'+
+          ' \u00b7 test 2026: exact '+pct(t.exact)+', +/-1 '+pct(t.within_1)+', sign '+pct(t.strict_sign)+
+          ' \u00b7 rebuilt disagreements '+Number(i.published_vs_rebuilt_disagreements||0)+
+          ' \u00b7 score effect '+Number(x.production_score_effect||0)+'</div>';
+      }
+    }catch(_e){}
     return s;
   }catch(e){
     el.style.display='block'; el.style.color='#ff7b82'; el.style.borderColor='rgba(255,90,100,.48)';
