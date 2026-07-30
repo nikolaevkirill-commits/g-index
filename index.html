@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="uk">
 <head>
   <meta charset="utf-8" />
@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.138-fp331-IMMEDIATE-UPDATE-DISCOVERY</title>
+  <title>G-Index — Космофізичний дашборд v88.9.139-fp332-VERDICT-SCOPE-AND-3DAY-RECOVERY</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -15809,7 +15809,7 @@ function resolveHeroSignalHierarchy_v88824(liveG, kp){
   let entry = null;
   try { if(typeof getEngineScore === 'function') entry = getEngineScore(new Date(todayKyivStr()+'T12:00:00Z')); } catch(e) { entry = null; }
   const hasEngine = !!(entry && isFinite(entry.eng));
-  let dayScore = isFinite(liveG) ? Number(liveG) : (hasEngine ? Number(entry.eng) : NaN);
+  let dayScore = hasEngine ? Number(entry.eng) : (isFinite(liveG) ? Number(liveG) : NaN);
   const liveKey = classifyStateByG(liveG, kp);
   const hasUnverifiedOverride = !!(entry && entry._expertOverrideAvailable && entry._expertOverrideVerified === false && isFinite(entry._expertEngCandidate));
   const sourceDelta = hasUnverifiedOverride ? Math.abs(Number(entry._expertEngCandidate) - Number(entry._engRaw ?? entry.eng)) : 0;
@@ -15956,7 +15956,7 @@ function resolveDaySignal_v88825(dateObj, rawG, kp, opts){
   let entry = null;
   try { if(typeof getEngineScore === 'function') entry = getEngineScore(dateObj); } catch(e) { entry = null; }
   const hasEngine = !!(entry && isFinite(entry.eng));
-  let dayScore = isFinite(liveG) ? Number(liveG) : (hasEngine ? Number(entry.eng) : NaN);
+  let dayScore = hasEngine ? Number(entry.eng) : (isFinite(rawG) ? Number(rawG) : NaN);
   const sourceDayScore = dayScore;
   const liveKey = isFinite(rawG) ? classifyStateByG(rawG, kp) : 'neutral';
   const hasUnverifiedOverride = !!(entry && entry._expertOverrideAvailable && entry._expertOverrideVerified === false && isFinite(entry._expertEngCandidate));
