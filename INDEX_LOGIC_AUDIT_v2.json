@@ -1,0 +1,61 @@
+{
+  "schema_version": 2,
+  "generated_utc": "2026-07-30T14:37:38.296852+00:00",
+  "status": "PASS",
+  "primary_source_rules": {
+    "kp_ap": "NOAA SWPC: K/Kp is nonlinear; convert each 3-hour K to linear a before daily averaging.",
+    "dst": "WDC Kyoto: 9999 is missing; quicklook/provisional/final versions must remain distinguishable.",
+    "panchanga": "Project runtime uses sunrise reference; coefficient remains R&D until prospective validation."
+  },
+  "checks": [
+    {
+      "name": "panchanga_reference_matches_runtime",
+      "status": "PASS",
+      "severity": "hard",
+      "detail": "Panchanga calculation and UI provenance must both say sunrise reference."
+    },
+    {
+      "name": "pcl_scale_not_claimed_optimal",
+      "status": "PASS",
+      "severity": "hard",
+      "detail": "PCL_SCALE=0.4 is retained for compatibility but must not be presented as validated accuracy."
+    },
+    {
+      "name": "kp_not_averaged_before_ap_conversion",
+      "status": "PASS",
+      "severity": "hard",
+      "detail": "NOAA method: convert each quasi-logarithmic 3-hour Kp to linear a, then average a to daily Ap."
+    },
+    {
+      "name": "dst_missing_sentinel_filtered",
+      "status": "PASS",
+      "severity": "hard",
+      "detail": "Kyoto WDC missing Dst=9999 must never enter the score."
+    },
+    {
+      "name": "sunspot_penalty_shadow_only",
+      "status": "PASS",
+      "severity": "hard",
+      "detail": "SILSO Sn remains context-only after negative chronological ablation."
+    },
+    {
+      "name": "panchanga_counted_once",
+      "status": "PASS",
+      "severity": "hard",
+      "detail": "Panchanga P_i is already inside G raw and must not be an independent second vote."
+    },
+    {
+      "name": "deploy_root_allowlist_only",
+      "status": "PASS",
+      "severity": "hard",
+      "detail": "Only canonical root index.html may be copied to the deploy repository."
+    },
+    {
+      "name": "legacy_copies_are_noncanonical",
+      "status": "PASS",
+      "severity": "warning",
+      "detail": "Legacy copies containing rejected Sn arithmetic exist but are excluded from deploy: g_index_full_deploy/index.html, archive/index.html"
+    }
+  ],
+  "hard_failures": 0
+}

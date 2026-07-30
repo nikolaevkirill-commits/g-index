@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.140-fp333-ATOMIC-3DAY-LAST-GOOD</title>
+  <title>G-Index — Космофізичний дашборд v88.9.141-fp334-SOURCE-ALIGNED-INDEX-MATH</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -9532,7 +9532,7 @@ function _computeAiRaw(dateTimeUTC, kp=0){
     if(panch.nakshatra.score !== 0)  pParts.push(`Nak(${panch.nakshatra.name})=${panch.nakshatra.score}`);
     if(panch.yoga.score !== 0)       pParts.push(`Yoga(${panch.yoga.name})=${panch.yoga.score}`);
     if(panch.karana.score !== 0)     pParts.push(`Kar(${panch.karana.name})=${panch.karana.score}`);
-    pTip = pParts.length ? `PCL (noon UTC): Tithi=${tithiInPi}×lunar(${lunarMod.toFixed(2)})=${_tithiPi.toFixed(1)} + fixed=${_restPi} → ×${PCL_SCALE} → Pᵢ=${Pi} (v87.90: noon-stable)` : `0 — всі Panchanga нейтральні`;
+    pTip = pParts.length ? `PCL (sunrise reference): Tithi=${tithiInPi}×lunar(${lunarMod.toFixed(2)})=${_tithiPi.toFixed(1)} + fixed=${_restPi} → ×${PCL_SCALE} → Pᵢ=${Pi} (R&D/advisory; scale is not prospectively validated)` : `0 — всі Panchanga нейтральні`;
   } catch(e) {
     pTip = '0 — помилка PCL';
   }
@@ -9990,8 +9990,10 @@ function uafTo3DayFormat(uaf){
       kpMax: kps.length ? Math.max(...kps) : NaN
     }));
     const predictedAp = days.map(day=>{
-      const avgKp = day.kp8.length ? day.kp8.reduce((a,b)=>a+b,0)/day.kp8.length : NaN;
-      return { date: day.date, Ap: isFinite(avgKp) ? kpToApInterp(avgKp) : null };
+      // NOAA/GFZ: Kp is quasi-logarithmic. Convert each 3-hour Kp to linear a first.
+      const aValues = day.kp8.map(kpToApInterp).filter(Number.isFinite);
+      const dailyAp = aValues.length ? aValues.reduce((a,b)=>a+b,0)/aValues.length : NaN;
+      return { date: day.date, Ap: isFinite(dailyAp) ? dailyAp : null };
     });
     const out = {
       issued: future[0][0],
@@ -10131,8 +10133,10 @@ function parse3DaySafe(json){
     }));
     // predictedAp з середнього Kp за добу (через GFZ таблицю)
     out.predictedAp = out.days.map(day => {
-      const avgKp = day.kp8.length ? day.kp8.reduce((a,b)=>a+b,0)/day.kp8.length : NaN;
-      return {date: day.date, Ap: isFinite(avgKp) ? kpToApInterp(avgKp) : null};
+      // NOAA/GFZ: average linear a values, never quasi-logarithmic Kp codes.
+      const aValues = day.kp8.map(kpToApInterp).filter(Number.isFinite);
+      const dailyAp = aValues.length ? aValues.reduce((a,b)=>a+b,0)/aValues.length : NaN;
+      return {date: day.date, Ap: isFinite(dailyAp) ? dailyAp : null};
     });
     // issued = дата першого майбутнього слоту (не минулого)
     const todayIssuedStr = todayKyivStr();
@@ -12897,7 +12901,7 @@ function _renderPanchUpcoming(refDateUTC){
           note: `${sgn}${avg.toFixed(1)} (${avg >= 0.3 ? 'панчанга підтримує' : avg <= -0.3 ? 'панчанга заважає' : 'панчанга нейтральна'})`,
           cls,
           // v88.7.13 N4: tooltip — пояснення формули та порогів класифікації
-          tip: 'Середнє арифметичне Pᵢ за наступні 3 дні (включно з сьогодні).\nPᵢ = (Tithi×lunar_mod + Vara + Nakshatra + Yoga + Karana) × PCL_SCALE,\nде PCL_SCALE = 0.4 (calibrated V25-fu29 v5.1 на n=280, optimal).\nВиключення: tіхі 11 (Ekadashi), 15 (Purnima), 26 (Krishna Ekadashi), 30 (Amavasya)\n  → обробляються в eᵢ (events), не в Pᵢ.\nКласифікація 3-day середнього:\n  ≥ +0.3 — «панчанга підтримує»\n  ≤ -0.3 — «панчанга заважає»\n  інше    — «нейтральна»\nДжерело: live noon UTC (astronomy-engine), не frozen engine_scores.'
+          tip: 'Середнє арифметичне Pᵢ за наступні 3 дні (включно з сьогодні).\nPᵢ = (Tithi×lunar_mod + Vara + Nakshatra + Yoga + Karana) × PCL_SCALE,\nPCL_SCALE = 0.4 має статус R&D/advisory і ще не підтверджений prospective-вибіркою.\nВиключення: tіхі 11 (Ekadashi), 15 (Purnima), 26 (Krishna Ekadashi), 30 (Amavasya)\n  → обробляються в eᵢ (events), не в Pᵢ.\nКласифікація 3-day середнього:\n  ≥ +0.3 — «панчанга підтримує»\n  ≤ -0.3 — «панчанга заважає»\n  інше    — «нейтральна»\nДжерело: live sunrise reference (astronomy-engine), не frozen engine_scores.'
         });
       }
     }
