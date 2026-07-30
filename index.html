@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.143-fp336-TANITA-QA-GATE</title>
+  <title>G-Index — Космофізичний дашборд v88.9.144-fp337-TANITA-P0-GALLERY</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -6583,6 +6583,10 @@ async function loadTanitaReviewStatus(){
     const s=await r.json(), tiers=s.tiers||{}, c=s.calendar_coverage||{};
     el.textContent='Tanita QA: календарі '+Number(c.dates||0)+'/'+Number(c.expected||730)+' дат · ручна перевірка P0 '+Number(tiers.P0||0)+', P1 '+Number(tiers.P1||0)+', P2 '+Number(tiers.P2||0)+' · непідтверджені ознаки не впливають на G (score effect '+Number(s.production_score_effect||0)+')';
     el.style.color=(c.complete&&Number(s.production_score_effect||0)===0)?'#ffd37a':'#ff7b82';
+    try{
+      const pr=await fetch('TANITA_P0_REVIEW_STATUS_v1.json',{cache:'no-store'});
+      if(pr.ok){ const p=await pr.json(); el.textContent+=' · P0-галерея: '+Number(p.p0_items||0)+' записів / '+Number(p.source_pages||0)+' сторінок, джерела '+((p.missing_source_pages||[]).length?'НЕПОВНІ':'OK'); }
+    }catch(_e){}
     return s;
   }catch(e){ el.textContent='Tanita QA: статус недоступний; непідтверджені ознаки не застосовуються'; el.style.color='#ff7b82'; return null; }
 }
