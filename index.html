@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.145-fp338-TANITA-P0-REVIEW-LOOP</title>
+  <title>G-Index — Космофізичний дашборд v88.9.146-fp339-TANITA-MANUAL-HOLDOUT</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -6588,6 +6588,7 @@ async function loadTanitaReviewStatus(){
       if(pr.ok){ const p=await pr.json(); el.textContent+=' · P0-галерея: '+Number(p.p0_items||0)+' записів / '+Number(p.source_pages||0)+' сторінок, джерела '+((p.missing_source_pages||[]).length?'НЕПОВНІ':'OK'); }
     }catch(_e){}
     try{ const ir=await fetch('TANITA_P0_REVIEW_IMPORT_STATUS_v1.json',{cache:'no-store'}); if(ir.ok){ const i=await ir.json(); el.textContent+=' · import: '+String(i.state||'unknown')+', labels '+Number(i.imported_labels||0)+', unclear '+Number(i.unclear_items||0); } }catch(_e){}
+    try{ const hr=await fetch('TANITA_MANUAL_HOLDOUT_STATUS_v1.json',{cache:'no-store'}); if(hr.ok){ const h=await hr.json(); const c=h.counts||{}; el.textContent+=' · holdout: '+String(h.state||'unknown')+', '+Number(c.evaluated_test||0)+'/'+Number(c.test||0)+' test'; } }catch(_e){}
     return s;
   }catch(e){ el.textContent='Tanita QA: статус недоступний; непідтверджені ознаки не застосовуються'; el.style.color='#ff7b82'; return null; }
 }
