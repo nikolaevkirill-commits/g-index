@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index вЂ” РљРѕСЃРјРѕС„С–Р·РёС‡РЅРёР№ РґР°С€Р±РѕСЂРґ v88.9.152-fp345-TANITA-P3-CLASS-BALANCE</title>
+  <title>G-Index вЂ” РљРѕСЃРјРѕС„С–Р·РёС‡РЅРёР№ РґР°С€Р±РѕСЂРґ v88.9.153-fp346-TANITA-DEDUP-BALANCED-GATE</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -6592,7 +6592,7 @@ async function loadTanitaReviewStatus(){
 
     try{ const p2r=await fetch('TANITA_P2_REVIEW_IMPORT_STATUS_v1.json',{cache:'no-store'}); if(p2r.ok){ const p2=await p2r.json(); el.textContent+=' · P2 labels '+Number(p2.imported_labels||0)+' (present '+Number(p2.present_labels||0)+', absent '+Number(p2.absent_labels||0)+')'; } }catch(_e){}
     try{ const p3r=await fetch('TANITA_P3_REVIEW_IMPORT_STATUS_v1.json',{cache:'no-store'}); if(p3r.ok){ const p3=await p3r.json(); el.textContent+=' ? P3 labels '+Number(p3.imported_labels||0)+' (present '+Number(p3.present_labels||0)+', absent '+Number(p3.absent_labels||0)+')'; } }catch(_e){}
-    try{ const hr=await fetch('TANITA_MANUAL_HOLDOUT_STATUS_v1.json',{cache:'no-store'}); if(hr.ok){ const h=await hr.json(); const c=h.counts||{}; el.textContent+=' В· holdout: '+String(h.state||'unknown')+', '+Number(c.evaluated_test||0)+'/'+Number(c.test||0)+' test'; } }catch(_e){}
+    try{ const hr=await fetch('TANITA_MANUAL_HOLDOUT_STATUS_v1.json',{cache:'no-store'}); if(hr.ok){ const h=await hr.json(), c=h.counts||{}, q=h.data_quality||{}, eligible=h.eligible_icons_for_prospective_shadow||[]; el.textContent+=' · holdout: '+String(h.state||'unknown')+', '+Number(c.evaluated_test||0)+'/'+Number(c.test||0)+' test · unique '+Number(q.unique_date_icon_labels||0)+' · conflicts '+Number(q.conflicting_date_icon_groups_excluded||0)+' · balanced eligible '+eligible.length; } }catch(_e){}
     return s;
   }catch(e){ el.textContent='Tanita QA: СЃС‚Р°С‚СѓСЃ РЅРµРґРѕСЃС‚СѓРїРЅРёР№; РЅРµРїС–РґС‚РІРµСЂРґР¶РµРЅС– РѕР·РЅР°РєРё РЅРµ Р·Р°СЃС‚РѕСЃРѕРІСѓСЋС‚СЊСЃСЏ'; el.style.color='#ff7b82'; return null; }
 }
