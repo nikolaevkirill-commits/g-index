@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.142-fp335-DATA-GATES-SOURCE-STATUS</title>
+  <title>G-Index — Космофізичний дашборд v88.9.143-fp336-TANITA-QA-GATE</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1841,6 +1841,7 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
       <div><strong style="color:var(--text2)">G_day raw уже містить Панчангу Pᵢ</strong> у сумі календарних компонентів. Окрема зелена Панчанга нижче — лише розклад того самого G_day, її не можна додавати або рахувати другим незалежним прогнозом.</div>
       <div id="expertDecisionRegistryStatus" style="margin-top:5px"><strong style="color:#ffd37a">Експертні рішення:</strong> завантаження єдиного реєстру PDF/Excel/Engine…</div>
       <div id="autoProspectiveStatus" style="margin-top:5px;color:#9ce6c0">Автоматичний shadow: завантаження статусу…</div>
+      <div id="tanitaReviewStatus" style="margin-top:4px;color:#ffd37a">Tanita QA: завантаження…</div>
     </div>
     <details id="indexLineagePanel" style="margin:0 0 10px;padding:10px 14px;border-radius:12px;border:1px solid rgba(89,166,255,.36);background:linear-gradient(180deg,rgba(89,166,255,.075),rgba(89,166,255,.018));font-size:11px;color:var(--muted)">
       <summary style="cursor:pointer;color:#b9d8ff;font-weight:800">🧭 Як рахується система — 4 окремі шари</summary>
@@ -6573,6 +6574,18 @@ async function loadAutoProspectiveStatus(){
 }
 
 
+async function loadTanitaReviewStatus(){
+  const el=document.getElementById('tanitaReviewStatus');
+  if(!el) return null;
+  try{
+    const r=await fetch('TANITA_REVIEW_PRIORITY_STATUS_v1.json',{cache:'no-store'});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const s=await r.json(), tiers=s.tiers||{}, c=s.calendar_coverage||{};
+    el.textContent='Tanita QA: календарі '+Number(c.dates||0)+'/'+Number(c.expected||730)+' дат · ручна перевірка P0 '+Number(tiers.P0||0)+', P1 '+Number(tiers.P1||0)+', P2 '+Number(tiers.P2||0)+' · непідтверджені ознаки не впливають на G (score effect '+Number(s.production_score_effect||0)+')';
+    el.style.color=(c.complete&&Number(s.production_score_effect||0)===0)?'#ffd37a':'#ff7b82';
+    return s;
+  }catch(e){ el.textContent='Tanita QA: статус недоступний; непідтверджені ознаки не застосовуються'; el.style.color='#ff7b82'; return null; }
+}
 async function loadSystemHealthStatus(){
   const el=document.getElementById('systemHealthBanner');
   if(!el) return null;
@@ -24294,6 +24307,7 @@ setTimeout(async function _dayVerdictLoad(){
     await loadStrongRawPolicy();
     await loadExpertDecisionRegistry();
     await loadAutoProspectiveStatus();
+    await loadTanitaReviewStatus();
     await loadBgsSpaceWeather();
     await loadSourceHealth();
     await loadSpaceWeatherAccumulated();
