@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index вЂ” РљРѕСЃРјРѕС„С–Р·РёС‡РЅРёР№ РґР°С€Р±РѕСЂРґ v88.9.151-fp344-TANITA-P2-VISUAL-TRUTH</title>
+  <title>G-Index вЂ” РљРѕСЃРјРѕС„С–Р·РёС‡РЅРёР№ РґР°С€Р±РѕСЂРґ v88.9.152-fp345-TANITA-P3-CLASS-BALANCE</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -6581,15 +6581,17 @@ async function loadTanitaReviewStatus(){
     const r=await fetch('TANITA_REVIEW_PRIORITY_STATUS_v1.json',{cache:'no-store'});
     if(!r.ok) throw new Error('HTTP '+r.status);
     const s=await r.json(), tiers=s.tiers||{}, c=s.calendar_coverage||{};
-    el.textContent='Tanita QA: РєР°Р»РµРЅРґР°СЂС– '+Number(c.dates||0)+'/'+Number(c.expected||730)+' РґР°С‚ В· СЂСѓС‡РЅР° РїРµСЂРµРІС–СЂРєР° P0 '+Number(tiers.P0||0)+', P1 '+Number(tiers.P1||0)+', P2 '+Number(tiers.P2||0)+' В· РЅРµРїС–РґС‚РІРµСЂРґР¶РµРЅС– РѕР·РЅР°РєРё РЅРµ РІРїР»РёРІР°СЋС‚СЊ РЅР° G (score effect '+Number(s.production_score_effect||0)+')';
+    el.textContent='Tanita QA: РєР°Р»РµРЅРґР°СЂС– '+Number(c.dates||0)+'/'+Number(c.expected||730)+' РґР°С‚ В· СЂСѓС‡РЅР° РїРµСЂРµРІС–СЂРєР° P0 '+Number(tiers.P0||0)+', P1 '+Number(tiers.P1||0)+', P2 '+Number(tiers.P2||0)+', P3 '+Number(tiers.P3||0)+' В· РЅРµРїС–РґС‚РІРµСЂРґР¶РµРЅС– РѕР·РЅР°РєРё РЅРµ РІРїР»РёРІР°СЋС‚СЊ РЅР° G (score effect '+Number(s.production_score_effect||0)+')';
     el.style.color=(c.complete&&Number(s.production_score_effect||0)===0)?'#ffd37a':'#ff7b82';
     try{
       const pr=await fetch('TANITA_P0_REVIEW_STATUS_v1.json',{cache:'no-store'});
       if(pr.ok){ const p=await pr.json(); el.textContent+=' В· P0-РіР°Р»РµСЂРµСЏ: '+Number(p.p0_items||0)+' Р·Р°РїРёСЃС–РІ / '+Number(p.source_pages||0)+' СЃС‚РѕСЂС–РЅРѕРє, РґР¶РµСЂРµР»Р° '+((p.missing_source_pages||[]).length?'РќР•РџРћР’РќР†':'OK'); }
     }catch(_e){}
     try{ const ir=await fetch('TANITA_P0_REVIEW_IMPORT_STATUS_v1.json',{cache:'no-store'}); if(ir.ok){ const i=await ir.json(); el.textContent+=' В· import: '+String(i.state||'unknown')+', labels '+Number(i.imported_labels||0)+', unclear '+Number(i.unclear_items||0); } }catch(_e){}
-    try{ const p1r=await fetch('TANITA_P1_REVIEW_IMPORT_STATUS_v1.json',{cache:'no-store'}); if(p1r.ok){ const p1=await p1r.json(); el.textContent+=' ? P1 labels '+Number(p1.imported_labels||0)+' (present '+Number(p1.present_labels||0)+', absent '+Number(p1.absent_labels||0)+')'; } }catch(_e){}
+    try{ const p1r=await fetch('TANITA_P1_REVIEW_IMPORT_STATUS_v1.json',{cache:'no-store'}); if(p1r.ok){ const p1=await p1r.json(); el.textContent+=' ? P1 labels '+Number(p1.imported_labels||0)+' (present '+Number(p1.present_labels||0)+', absent '+Number(p1.absent_labels||0)+')'; } }catch(_e){}
+
     try{ const p2r=await fetch('TANITA_P2_REVIEW_IMPORT_STATUS_v1.json',{cache:'no-store'}); if(p2r.ok){ const p2=await p2r.json(); el.textContent+=' · P2 labels '+Number(p2.imported_labels||0)+' (present '+Number(p2.present_labels||0)+', absent '+Number(p2.absent_labels||0)+')'; } }catch(_e){}
+    try{ const p3r=await fetch('TANITA_P3_REVIEW_IMPORT_STATUS_v1.json',{cache:'no-store'}); if(p3r.ok){ const p3=await p3r.json(); el.textContent+=' ? P3 labels '+Number(p3.imported_labels||0)+' (present '+Number(p3.present_labels||0)+', absent '+Number(p3.absent_labels||0)+')'; } }catch(_e){}
     try{ const hr=await fetch('TANITA_MANUAL_HOLDOUT_STATUS_v1.json',{cache:'no-store'}); if(hr.ok){ const h=await hr.json(); const c=h.counts||{}; el.textContent+=' В· holdout: '+String(h.state||'unknown')+', '+Number(c.evaluated_test||0)+'/'+Number(c.test||0)+' test'; } }catch(_e){}
     return s;
   }catch(e){ el.textContent='Tanita QA: СЃС‚Р°С‚СѓСЃ РЅРµРґРѕСЃС‚СѓРїРЅРёР№; РЅРµРїС–РґС‚РІРµСЂРґР¶РµРЅС– РѕР·РЅР°РєРё РЅРµ Р·Р°СЃС‚РѕСЃРѕРІСѓСЋС‚СЊСЃСЏ'; el.style.color='#ff7b82'; return null; }
