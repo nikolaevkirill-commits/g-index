@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.139-fp332-VERDICT-SCOPE-AND-3DAY-RECOVERY</title>
+  <title>G-Index — Космофізичний дашборд v88.9.140-fp333-ATOMIC-3DAY-LAST-GOOD</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -13600,8 +13600,24 @@ function updateAutoRefStatus(){
 
 
 function render3Day(parsed3){
-  const days = parsed3.days || [];
-  if(!days.length){ el('threeContent').innerHTML = '<span class="muted">Немає даних у 3-добовому продукті.</span>'; return; }
+  parsed3 = (parsed3 && typeof parsed3 === 'object') ? parsed3 : {days:[]};
+  let days = Array.isArray(parsed3.days) ? parsed3.days : [];
+  // fp333: one atomic 3-day state. A late empty CORS/UAF result must not
+  // overwrite a valid table while leaving already-rendered quick cards on screen.
+  if(!days.length && window.__lastValid3DayRender &&
+      Array.isArray(window.__lastValid3DayRender.days) &&
+      window.__lastValid3DayRender.days.length){
+    parsed3 = window.__lastValid3DayRender;
+    days = parsed3.days;
+  }
+  if(!days.length){
+    const empty3d = '<span class="muted">Немає даних у 3-добовому продукті.</span>';
+    el('threeContent').innerHTML = empty3d;
+    const quick3d = document.getElementById('threeQuick');
+    if(quick3d) quick3d.innerHTML = '';
+    return;
+  }
+  window.__lastValid3DayRender = parsed3;
   const hdr = parsed3._partialReal
     ? `<div style="margin-bottom:4px;font-size:11px;color:#fca474">⚠ Живий NOAA частково недоступний — частина днів із future_kp.json (реальний прогноз), решта — плато поточного Kp</div>`
     : parsed3._synthetic
