@@ -1,7 +1,7 @@
 # Index Logic Audit v2
 
 - Status: **PASS**
-- Generated UTC: `2026-07-31T11:12:12.322905+00:00`
+- Generated UTC: `2026-07-31T11:40:58.974791+00:00`
 - Hard failures: **0**
 
 - PASS `panchanga_reference_matches_runtime` — Panchanga calculation and UI provenance must both say sunrise reference.
