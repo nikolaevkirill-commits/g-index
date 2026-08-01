@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.157-fp350-TARGET-CONTRACT-GUARD</title>
+  <title>G-Index — Космофізичний дашборд v88.9.158-fp351-PANCHANGA-REFERENCE-CONTRACT</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -9571,7 +9571,7 @@ function _computeAiRaw(dateTimeUTC, kp=0){
   const lunarMod = Math.pow(Math.sin(_phiRad / 2), 2); // sin²(φ/2)
   let Pi = 0, PiRaw = 0, pTip = '';
   try {
-    // v87.90 fix: panchanga для Pᵢ обчислюється на NOON UTC цього ж дня
+    // v87.90 fix: panchanga для Pᵢ обчислюється на канонічний сход Сонця цього ж дня
     // (узгоджено з Panchanga карткою, ant-action, decision timing).
     // Раніше: computePanchanga(dateTimeUTC) → tithi міг не збігатися з картою.
     // Це призводило до Pᵢ-стрибків коли Hero перетинала межу tithi всередині дня.
@@ -10457,7 +10457,7 @@ function draw27dTable(){
     // Moon phase emoji for Li column
     const _moonEmoji = ai.phaseDeg < 22 ? '🌑' : ai.phaseDeg < 67 ? '🌒' : ai.phaseDeg < 112 ? '🌓' : ai.phaseDeg < 157 ? '🌔' : ai.phaseDeg < 202 ? '🌕' : ai.phaseDeg < 247 ? '🌖' : ai.phaseDeg < 292 ? '🌗' : ai.phaseDeg < 337 ? '🌘' : '🌑';
     // Nakshatra quality dot
-    const _p27 = _panchCache[ds] || (_panchCache[ds]=computePanchanga(r.date));
+    const _p27 = _panchCache[ds] || (_panchCache[ds]=computePanchanga(typeof sunriseUTC==='function' ? sunriseUTC(r.date) : r.date));
     const _nakDot = _p27.nakshatra.score>=1?'🟢':_p27.nakshatra.score<=-1?'🔴':'🟡';
     const Lcell  = `<span class="hint mono" tabindex="0">${_moonEmoji}${ai.Li !== 0 ? ' <b>'+ai.Li+'</b>' : ''}<span class="hint-pop">${escapeHtml(ai.lTip)}\n${ai.phaseName} (${ai.phaseDeg.toFixed(0)}°)\nНакш.: ${_p27.nakshatra.name} ${_nakDot}</span></span>`;
     const _nakDotCell = `<td style="font-size:14px;text-align:center" title="${_p27.nakshatra.name} (${_p27.nakshatra.score>=1?'сприятл.':_p27.nakshatra.score<=-1?'несприятл.':'нейтр.'})">${_nakDot}</td>`;
@@ -12017,7 +12017,7 @@ function computePanchanga(dateUTC){
   // лише на ACTIVITY STATE птаха (Eating/Walking/Ruling/Sleeping/Dying), не на bird ID.
   // Тут (без birth-профілю) показуємо bird поточної nakshatra як calendar-context
   // tantamount до того, що відображає Posibnyk Tithi/Nakshatra (advisory, не personal).
-  const tithiForPaksha = Math.floor(((moonLonSid - sunLon + 360) % 360) / 12) + 1;
+  const tithiForPaksha = tithiIdx + 1; // same Sun-Moon elongation used by canonical tithi; never mix sidereal Moon with tropical Sun
   const isShuklaPaksha = tithiForPaksha <= 15;
   const birdId = getPanchaPakshiBird(nakIdx, isShuklaPaksha);
   const nakshatra = {
@@ -12342,12 +12342,12 @@ function computePanchangaState(dateUTC){
   // Discrepancy real-time vs noon
   let panchDiscrepancy = '';
   try {
-    const pNoon = computePanchanga(sunriseUTC(dateUTC));
+    const pSunrise = computePanchanga(sunriseUTC(dateUTC));
     const diffs = [];
-    if(p.yoga.name !== pNoon.yoga.name) diffs.push(`Yoga: зараз ${p.yoga.name}, на полудень ${pNoon.yoga.name}`);
-    if(p.nakshatra.name !== pNoon.nakshatra.name) diffs.push(`Nak: зараз ${p.nakshatra.name}, на полудень ${pNoon.nakshatra.name}`);
-    if(p.tithi.name !== pNoon.tithi.name) diffs.push(`Tithi: зараз ${p.tithi.name}, на полудень ${pNoon.tithi.name}`);
-    if(p.karana.name !== pNoon.karana.name) diffs.push(`Karana: зараз ${p.karana.name}, на полудень ${pNoon.karana.name}`);
+    if(p.yoga.name !== pSunrise.yoga.name) diffs.push(`Yoga: зараз ${p.yoga.name}, на сході Сонця ${pSunrise.yoga.name}`);
+    if(p.nakshatra.name !== pSunrise.nakshatra.name) diffs.push(`Nak: зараз ${p.nakshatra.name}, на сході Сонця ${pSunrise.nakshatra.name}`);
+    if(p.tithi.name !== pSunrise.tithi.name) diffs.push(`Tithi: зараз ${p.tithi.name}, на сході Сонця ${pSunrise.tithi.name}`);
+    if(p.karana.name !== pSunrise.karana.name) diffs.push(`Karana: зараз ${p.karana.name}, на сході Сонця ${pSunrise.karana.name}`);
     if(diffs.length) panchDiscrepancy = diffs.join('; ');
   } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
 
