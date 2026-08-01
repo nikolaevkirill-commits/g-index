@@ -21,7 +21,7 @@
 // GitHub Pages РїСЂРѕС”РєС‚С–РІ РЅР° С‚РѕРјСѓ СЃР°РјРѕРјСѓ РґРѕРјРµРЅС–. РўРµРїРµСЂ РІРёРґР°Р»СЏС”РјРѕ Р»РёС€Рµ РєР»СЋС‡С– Р·
 // РІР»Р°СЃРЅРёРј РїСЂРµС„С–РєСЃРѕРј 'gindex-', С‰Рѕ РЅРµ С” РїРѕС‚РѕС‡РЅРѕСЋ РІРµСЂСЃС–С”СЋ.
 
-const CACHE_VERSION = 'fp352-v1'; // Kp provenance guard: synthetic fallback can never be promoted to real
+const CACHE_VERSION = 'fp353-v1'; // Kp provenance guard: synthetic fallback can never be promoted to real
 const CACHE_PREFIX = 'gindex-'; // РІР»Р°СЃРЅРёР№ namespace вЂ” РќР†РљРћР›Р РЅРµ С‡С–РїР°С‚Рё РєР»СЋС‡С– Р±РµР· С†СЊРѕРіРѕ РїСЂРµС„С–РєСЃР°
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${CACHE_VERSION}`;
 const DATA_CACHE = `${CACHE_PREFIX}data-${CACHE_VERSION}`;
