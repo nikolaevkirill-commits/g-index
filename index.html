@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.156-fp349-METRIC-CLARITY</title>
+  <title>G-Index — Космофізичний дашборд v88.9.157-fp350-TARGET-CONTRACT-GUARD</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -6547,10 +6547,12 @@ async function loadAutoProspectiveStatus(){
     if(!r.ok) throw new Error('HTTP '+r.status);
     const s = await r.json();
     _autoProspectiveStatus = s || {};
-    const n = Number(s.selected_high_scored || 0);
-    const need = Number(s.promotion_gate && s.promotion_gate.required_selected_outcomes || 100);
+    const gate = s.promotion_gate || {};
+    const n = Number(gate.independent_real_outcomes ?? gate.current_selected_outcomes ?? 0);
+    const expertPdfN = Number(gate.expert_pdf_comparisons ?? s.selected_high_scored ?? 0);
+    const need = Number(gate.required_selected_outcomes || 100);
     const created = Number(s.decisions_total || 0);
-    const passed = !!(s.promotion_gate && s.promotion_gate.passed);
+    const passed = !!gate.passed;
     const editorialTotal = Number(s.editorial_comparisons && s.editorial_comparisons.total || 0);
     const editorialConflicts = Number(s.editorial_comparisons && s.editorial_comparisons.material_disagreements || 0);
     const contextCounts = s.shadow_context_flags && s.shadow_context_flags.counts || {};
@@ -6558,7 +6560,8 @@ async function loadAutoProspectiveStatus(){
     const tanita = s.tanita_shadow || {};
     const tanitaFormula = tanita.formula_reconstruction || {};
     const tanitaDays = Number(tanita.horizon_days_available || 0);
-    if(el) el.textContent = 'Автоматичний shadow: '+created+' прогнозів заморожено · HIGH outcomes '+n+'/'+need+
+    if(el) el.textContent = 'Автоматичний shadow: '+created+' прогнозів заморожено · незалежних real outcomes '+n+'/'+need+
+      ' · expert-PDF comparisons '+expertPdfN+' (лише відтворення, не фактична точність)'+
       (passed ? ' · promotion gate пройдено' : ' · без заяви 90% до проходження gate')+
       (editorialTotal ? ' · Expert↔Engine перевірено '+editorialTotal+', суттєвих розбіжностей '+editorialConflicts : '')+
       (contextTotal ? ' · context flags '+contextTotal+' (лише ручна перевірка, G не змінено)' : '')+
@@ -6573,7 +6576,6 @@ async function loadAutoProspectiveStatus(){
   }
   return _autoProspectiveStatus;
 }
-
 
 async function loadTanitaReviewStatus(){
   const el=document.getElementById('tanitaReviewStatus');
@@ -6737,18 +6739,24 @@ let _dailyMaster = null;
 async function loadDailyMaster(){
   if(_dailyMaster !== null) return _dailyMaster;
   try {
-    const resp = await fetch('daily_master.json', { cache: 'default' });
+    const resp = await fetch('daily_master.json', { cache: 'no-store' });
     if(!resp.ok) throw new Error('HTTP ' + resp.status);
     const data = await resp.json();
+    const meta = data && data.meta || {};
+    const contractOk = meta.target_contract === 'independent_real_outcome' &&
+      Number(meta.independent_real_outcome_pairs || 0) > 0;
+    if(!contractOk){
+      console.warn('[target-contract] daily_master disabled: pseudo-prospective reliability is not an independent outcome metric');
+      _dailyMaster = {};
+      return _dailyMaster;
+    }
     _dailyMaster = data.days || {};
-    if(window._DEBUG) console.log('[fp87] daily_master loaded: ' + Object.keys(_dailyMaster).length + ' days');
   } catch(e){
-    if(window._DEBUG) console.warn('[fp87] daily_master.json not available:', e.message);
+    if(window._DEBUG) console.warn('[target-contract] daily_master.json unavailable:', e.message);
     _dailyMaster = {};
   }
   return _dailyMaster;
 }
-
 // v88.9.6x-fp246 (аудит fp242, п.5): loader-и вище мають guard "якщо вже
 // завантажено — не перезавантажувати" (_x !== null ? return). Це усувало зайві
 // фетчі, але й означало, що НОВИЙ файл на сервері (новий expert_overrides_v3.json
