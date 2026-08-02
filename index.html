@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.160-fp353-KP-SIGN-INTEGRITY</title>
+  <title>G-Index — Космофізичний дашборд v88.9.161-fp354-INTRADAY-COUPLING-SHADOW</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -6362,10 +6362,14 @@ function updateSpaceWeatherDecisionGuard(){
   const el=document.getElementById('spaceWeatherDecisionGuard');
   if(!el) return;
   const p=_spaceWeatherAccumulated||{}, b=_bgsSpaceWeather||{};
-  const m=p.magnetic||{}, w=p.solar_wind||{}, e=p.enlil||{}, sp=p.solar_probabilities||{}, flags=b.flags||{};
+  const m=p.magnetic||{}, w=p.solar_wind||{}, e=p.enlil||{}, sp=p.solar_probabilities||{};
+  const c=p.coupling||{}, d=p.dst||{}, hp=p.hpo||{}, flags=b.flags||{};
   const reasons=[];
   if(Number(w.speed_latest_km_s)>=550) reasons.push('швидкий сонячний вітер '+Math.round(Number(w.speed_latest_km_s))+' км/с');
   if(Number(w.dynamic_pressure_max_6h_npa)>=5) reasons.push('динамічний тиск до '+Number(w.dynamic_pressure_max_6h_npa).toFixed(1)+' nPa');
+  if(c.shock_candidate) reasons.push('ймовірний раптовий імпульс: тиск +'+Number(c.pressure_jump_delta_npa||0).toFixed(1)+' nPa');
+  if(Number(d.latest_nt)<=-50) reasons.push('Dst '+Number(d.latest_nt).toFixed(0)+' nT');
+  if(Number(hp.hp30&&hp.hp30.max_24h)>=5) reasons.push('Hp30 до '+Number(hp.hp30.max_24h).toFixed(1));
   if(flags.storm_g1_plus) reasons.push('BGS допускає G1');
   if(e.cme_cloud_start) reasons.push('ENLIL бачить CME-cloud');
   if(Number(sp.m_class_1_day_pct)>=50) reasons.push('M-спалах '+Math.round(Number(sp.m_class_1_day_pct))+'%');
@@ -6403,27 +6407,32 @@ async function loadSpaceWeatherAccumulated(){
   if(_spaceWeatherAccumulated!==null) return _spaceWeatherAccumulated;
   const sum=document.getElementById('spaceWeatherAccumulatedSummary');
   const body=document.getElementById('spaceWeatherAccumulatedBody');
+  const shown=(v,d=1)=>Number.isFinite(Number(v))?Number(v).toFixed(d):'—';
   try{
     const r=await fetch('SPACE_WEATHER_CONTEXT_v1.json',{cache:'no-store'});
     if(!r.ok) throw new Error('HTTP '+r.status);
     const p=await r.json(); _spaceWeatherAccumulated=p||{};
     const m=p.magnetic||{}, w=p.solar_wind||{}, pr=p.protons||{}, a=p.alerts||{}, e=p.enlil||{}, sp=p.solar_probabilities||{};
+    const c=p.coupling||{}, d=p.dst||{}, hp=p.hpo||{}, hp30=hp.hp30||{}, hp60=hp.hp60||{};
     const delivery=p.delivery||{}, deliveryStatus=delivery.status||'live', deliveryAge=Number(delivery.age_hours||0);
     const sourceLabel=deliveryStatus==='last_good' ? ('LAST-GOOD · '+deliveryAge.toFixed(1)+' год') : 'LIVE';
     const stressed=(Number(m.longest_bz_le_minus5_minutes)>=30)||(Number(w.dynamic_pressure_max_6h_npa)>=5)||
+      !!c.shock_candidate||Number(d.latest_nt)<=-50||Number(hp30.max_24h)>=5||
       !!pr.s1_threshold_exceeded||Number(a.recent_72h_count)>0||Number(e.peak_speed_km_s)>=550||
       Number(sp.m_class_1_day_pct)>=50||Number(sp.x_class_1_day_pct)>=10;
-    if(sum) sum.textContent='🛰 Космічна погода: спостереження 6 год + прогноз 7 діб'+
+    if(sum) sum.textContent='🛰 Космічна погода: хвилинний coupling + Hp30/Hp60/Dst + прогноз 7 діб'+
       (stressed?' · ⚠ підвищене навантаження':' · спокійний накопичений фон')+' · '+sourceLabel;
     if(body) body.innerHTML=
       '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:5px">'+
-      '<div style="padding:5px 7px;border:1px solid var(--border);border-radius:7px"><b>IMF Bz</b><br>мін '+Number(m.bz_min_6h_nt||0).toFixed(1)+' nT · південний '+Math.round(Number(m.southward_fraction_6h||0)*100)+'% часу · ≤−5 nT безперервно '+Number(m.longest_bz_le_minus5_minutes||0)+' хв</div>'+
-      '<div style="padding:5px 7px;border:1px solid var(--border);border-radius:7px"><b>Сонячний вітер</b><br>зараз '+Math.round(Number(w.speed_latest_km_s||0))+' км/с · max '+Math.round(Number(w.speed_max_6h_km_s||0))+' км/с · тиск max '+Number(w.dynamic_pressure_max_6h_npa||0).toFixed(1)+' nPa</div>'+
-      '<div style="padding:5px 7px;border:1px solid var(--border);border-radius:7px"><b>Протони ≥10 MeV</b><br>max 24 год '+Number(pr.max_24h_ge10mev_pfu||0).toFixed(2)+' pfu · S1 '+(pr.s1_threshold_exceeded?'перевищено':'ні')+'</div>'+
-      '<div style="padding:5px 7px;border:1px solid var(--border);border-radius:7px"><b>NOAA alerts</b><br>G/R/S/CME за 72 год: '+Number(a.recent_72h_count||0)+'</div>'+
-      '<div style="padding:5px 7px;border:1px solid var(--border);border-radius:7px"><b>ENLIL 7 діб</b><br>пік '+Math.round(Number(e.peak_speed_km_s||0))+' км/с · '+(e.peak_speed_time?new Date(e.peak_speed_time).toLocaleString('uk-UA'):'час —')+' · CME cloud '+(e.cme_cloud_start?'так':'не виявлено')+'</div>'+
-      '<div style="padding:5px 7px;border:1px solid var(--border);border-radius:7px"><b>Імовірність 1 доба</b><br>M '+Number(sp.m_class_1_day_pct||0).toFixed(0)+'% · X '+Number(sp.x_class_1_day_pct||0).toFixed(0)+'% · proton '+Number(sp.proton_10mev_1_day_pct||0).toFixed(0)+'%</div>'+
-      '</div><div style="margin-top:6px;color:var(--dim)"><b>Доставка: '+sourceLabel+'</b> · RTSW/GOES/NOAA · snapshot SHA-256 · advisory only · score effect 0 до prospective validation.</div>';
+      '<div style="padding:5px 7px;border:1px solid var(--border);border-radius:7px"><b>IMF Bz</b><br>мін '+shown(m.bz_min_6h_nt)+' nT · південний '+(Number.isFinite(Number(m.southward_fraction_6h))?Math.round(Number(m.southward_fraction_6h)*100)+'%':'—')+' · ≤−5 nT '+shown(m.longest_bz_le_minus5_minutes,0)+' хв</div>'+
+      '<div style="padding:5px 7px;border:1px solid var(--border);border-radius:7px"><b>Coupling (shadow)</b><br>Newell 1г '+shown(c.newell_proxy_mean_1h,0)+' · Ey∫ 1г '+shown(c.ey_integral_1h_mv_min_m,1)+' · south Bz∫ '+shown(c.southward_bz_integral_1h_nt_min,0)+(c.shock_candidate?' · ⚠ імпульс':'')+'</div>'+
+      '<div style="padding:5px 7px;border:1px solid var(--border);border-radius:7px"><b>Швидка геомагнітика</b><br>Hp30 зараз/max '+shown(hp30.latest)+'/'+shown(hp30.max_24h)+' · Hp60 '+shown(hp60.latest)+' · Dst '+shown(d.latest_nt,0)+' nT (min24 '+shown(d.min_24h_nt,0)+')</div>'+
+      '<div style="padding:5px 7px;border:1px solid var(--border);border-radius:7px"><b>Сонячний вітер</b><br>зараз '+shown(w.speed_latest_km_s,0)+' км/с · max '+shown(w.speed_max_6h_km_s,0)+' км/с · тиск max '+shown(w.dynamic_pressure_max_6h_npa)+' nPa</div>'+
+      '<div style="padding:5px 7px;border:1px solid var(--border);border-radius:7px"><b>Протони ≥10 MeV</b><br>max 24 год '+shown(pr.max_24h_ge10mev_pfu,2)+' pfu · S1 '+(pr.s1_threshold_exceeded?'перевищено':'ні')+'</div>'+
+      '<div style="padding:5px 7px;border:1px solid var(--border);border-radius:7px"><b>NOAA alerts</b><br>G/R/S/CME за 72 год: '+shown(a.recent_72h_count,0)+'</div>'+
+      '<div style="padding:5px 7px;border:1px solid var(--border);border-radius:7px"><b>ENLIL 7 діб</b><br>пік '+shown(e.peak_speed_km_s,0)+' км/с · '+(e.peak_speed_time?new Date(e.peak_speed_time).toLocaleString('uk-UA'):'час —')+' · CME cloud '+(e.cme_cloud_start?'так':'не виявлено')+'</div>'+
+      '<div style="padding:5px 7px;border:1px solid var(--border);border-radius:7px"><b>Імовірність 1 доба</b><br>M '+shown(sp.m_class_1_day_pct,0)+'% · X '+shown(sp.x_class_1_day_pct,0)+'% · proton '+shown(sp.proton_10mev_1_day_pct,0)+'%</div>'+
+      '</div><div style="margin-top:6px;color:var(--dim)"><b>Доставка: '+sourceLabel+'</b> · NOAA RTSW/Kyoto + GFZ Hpo + GOES/ENLIL · snapshot SHA-256 · shadow/advisory only · score effect 0 до prospective validation.</div>';
     if(stressed){
       const panel=document.getElementById('spaceWeatherAccumulatedPanel'); if(panel) panel.open=true;
     }

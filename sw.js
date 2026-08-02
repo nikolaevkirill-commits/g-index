@@ -21,7 +21,7 @@
 // Service-worker cache safety note; original detail is preserved in the backup.
 // Service-worker cache safety note; original detail is preserved in the backup.
 
-const CACHE_VERSION = 'fp353-v1'; // Kp provenance guard: synthetic fallback can never be promoted to real
+const CACHE_VERSION = 'fp354-v1'; // Kp provenance guard: synthetic fallback can never be promoted to real
 const CACHE_PREFIX = 'gindex-'; // G-Index cache namespace; do not remove the prefix.
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${CACHE_VERSION}`;
 const DATA_CACHE = `${CACHE_PREFIX}data-${CACHE_VERSION}`;
