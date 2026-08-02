@@ -1,0 +1,94 @@
+{
+  "schema": "gindex_model_quality_audit_v1",
+  "generated_at_utc": "2026-07-30T10:09:25.634787+00:00",
+  "target": "revision-aware verified expert PDF decisions",
+  "leakage_policy": {
+    "holdout": "all dates >= 2026-01-01",
+    "forbidden_as_predictors": [
+      "same-date PDF score",
+      "same-date Excel/PDF expert tags",
+      "future outcomes"
+    ],
+    "live_g_limitation": "No date-matched historical live snapshots; live G cannot be assigned a retrospective accuracy percentage from the current files."
+  },
+  "metrics": {
+    "engine_all": {
+      "n": 378,
+      "exact": 0.433862,
+      "within1": 0.677249,
+      "strict_sign": 0.690476,
+      "mae": 1.203704
+    },
+    "engine_train_2025": {
+      "n": 150,
+      "exact": 0.353333,
+      "within1": 0.673333,
+      "strict_sign": 0.666667,
+      "mae": 1.226667
+    },
+    "engine_holdout_2026": {
+      "n": 228,
+      "exact": 0.486842,
+      "within1": 0.679825,
+      "strict_sign": 0.70614,
+      "mae": 1.188596
+    },
+    "excel_formula_all": {
+      "n": 394,
+      "exact": 0.664975,
+      "within1": 0.883249,
+      "strict_sign": 0.809645,
+      "mae": 0.494924
+    },
+    "excel_formula_train_2025": {
+      "n": 199,
+      "exact": 0.648241,
+      "within1": 0.874372,
+      "strict_sign": 0.809045,
+      "mae": 0.537688
+    },
+    "excel_formula_holdout_2026": {
+      "n": 195,
+      "exact": 0.682051,
+      "within1": 0.892308,
+      "strict_sign": 0.810256,
+      "mae": 0.451282
+    },
+    "tanita_selective_router_holdout_2026": {
+      "n": 195,
+      "exact": 0.523077,
+      "within1": 0.748718,
+      "strict_sign": 0.758974,
+      "mae": 0.984615
+    }
+  },
+  "shadow_decisions": {
+    "calendar": {
+      "candidate_count": 35,
+      "stable_shadow_count": 10,
+      "promotion_allowed": false,
+      "score_effect": 0
+    },
+    "sn_penalty": {
+      "promotion_allowed": false,
+      "score_effect": 0,
+      "reason": null
+    },
+    "residual_corrector": {
+      "allowed": false,
+      "production_score_effect": 0,
+      "reason": "Residual model did not improve every protected metric; rejected.",
+      "required_prospective_n": 100
+    },
+    "tanita_router": {
+      "promotion_allowed": false,
+      "score_effect": 0,
+      "reason": "Requires 100 frozen prospective real outcomes."
+    }
+  },
+  "production_conclusion": {
+    "safe_formula_change": false,
+    "reason": "No tested shadow candidate improves all protected chronological holdout metrics and passes the prospective gate.",
+    "ui_rule": "Never label a shadow metric as production accuracy. Distinguish daily automatic forecast, live operational background, and PDF reference."
+  }
+}

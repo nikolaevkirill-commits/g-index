@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.161-fp354-INTRADAY-COUPLING-SHADOW</title>
+  <title>G-Index — Космофізичний дашборд v88.9.162-fp355-MODEL-QUALITY-TRUTH</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1806,7 +1806,7 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
           <span id="heroAstroLayer" data-label="Astro advisory" class="hint" tabindex="0" style="display:none;font-size:12px;font-weight:700;color:var(--muted);cursor:help;border:1px solid var(--border2);padding:1px 8px;border-radius:8px;background:rgba(11,18,32,.4)" title="">—</span>
           <!-- V25-fu29 v5.1 (2026-05-03): canonical metrics from VALIDATION_REPORT_v18_5_pdf47_v5.json — n=280 / strict 71.4% / κ=0.52 -->
           <!-- v88.8.18 patches: P2/P3/P4/P1d — DISABLED in fp75 (V3 freeze). V19 candidate. -->
-          <a href="backtest.html" target="_blank" rel="noopener" data-label="Точність" style="font-size:12px;font-weight:700;color:var(--ok);text-decoration:none;border:1px solid var(--ok);padding:1px 8px;border-radius:8px;background:rgba(43,212,125,.08);transition:background .2s" title="Chronological holdout 2026 against verified expert PDF: Auto Engine sign 72.4%, exact 52.0% (n=221). Tanita selective router is SHADOW only: sign 75.9%, exact 52.3%; promotion is blocked until 100 frozen prospective real outcomes. This measures reproduction of expert decisions, not real-world predictive accuracy.">&#128202; Auto Engine holdout 2026: 72.4% sign / 52.0% exact (n=221) | Tanita router SHADOW: 75.9% / 52.3% — не активний</a>
+          <a id="modelQualityBadge" href="backtest.html" target="_blank" rel="noopener" data-label="Точність" style="font-size:12px;font-weight:700;color:var(--ok);text-decoration:none;border:1px solid var(--ok);padding:1px 8px;border-radius:8px;background:rgba(43,212,125,.08);transition:background .2s" title="Завантажуються актуальні хронологічні метрики без витоку даних.">&#128202; Метрики якості завантажуються…</a>
           <!-- v88.8.37-fp72: Audit toggle button -->
           <button id="auditToggleBtn" onclick="(function(){const c=document.getElementById('auditCard');const b=document.getElementById('auditToggleBtn');if(!c)return;if(c.style.display==='none'||!c.style.display){try{renderAuditCard({silent:false});}catch(e){} c.style.display='';document.body.classList.add('audit-mode');try{draw27Chart();}catch(e){}b.textContent='Аудит ▾';}else{c.style.display='none';document.body.classList.remove('audit-mode');try{draw27Chart();}catch(e){}b.textContent='Аудит ▸';}})()" style="font-size:11px;font-weight:600;color:var(--muted);background:none;border:1px solid var(--border2);border-radius:6px;padding:1px 8px;cursor:pointer;line-height:1.6" aria-label="Показати розкладку висновку">Аудит ▸</button>
         </div>
@@ -6579,6 +6579,7 @@ async function loadAutoProspectiveStatus(){
     renderTanitaShadow();
     loadOutcomeLedgerStatus();
     loadSystemHealthStatus();
+    loadModelQualityStatus();
   } catch(e) {
     _autoProspectiveStatus = {};
     if(el) el.textContent = 'Автоматичний shadow: статус тимчасово недоступний; production G не змінено.';
@@ -6603,6 +6604,27 @@ async function loadTanitaReviewStatus(){
     try{ const hr=await fetch('TANITA_MANUAL_HOLDOUT_STATUS_v1.json',{cache:'no-store'}); if(hr.ok){ const h=await hr.json(); const c=h.counts||{}; el.textContent+=' · holdout: '+String(h.state||'unknown')+', '+Number(c.evaluated_test||0)+'/'+Number(c.test||0)+' test'; } }catch(_e){}
     return s;
   }catch(e){ el.textContent='Tanita QA: статус недоступний; непідтверджені ознаки не застосовуються'; el.style.color='#ff7b82'; return null; }
+}
+async function loadModelQualityStatus(){
+  const el=document.getElementById('modelQualityBadge');
+  if(!el) return null;
+  const pct=v=>Number.isFinite(Number(v))?(Number(v)*100).toFixed(1)+'%':'—';
+  try{
+    const r=await fetch('MODEL_QUALITY_AUDIT_v1.json',{cache:'no-store'});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const q=await r.json(), m=q.metrics||{}, eng=m.engine_holdout_2026||{}, xls=m.excel_formula_holdout_2026||{}, tan=m.tanita_selective_router_holdout_2026||{};
+    const safe=!!(q.production_conclusion&&q.production_conclusion.safe_formula_change);
+    el.innerHTML='&#128202; Автономний Engine: '+pct(eng.strict_sign)+' знак / '+pct(eng.exact)+' exact (n='+Number(eng.n||0)+') · Excel-відтворення: '+pct(xls.strict_sign)+' / '+pct(xls.exact)+' (не реальна точність) · Tanita '+pct(tan.strict_sign)+' / '+pct(tan.exact)+' SHADOW';
+    el.title='Хронологічний holdout 2026 проти verified expert PDF. Engine — автономний прогноз. Excel — відтворення експертної формули, не незалежний прогноз. Tanita — shadow, score_effect=0. Production formula change: '+(safe?'дозволено':'НЕ дозволено аудитом')+'.';
+    el.style.color=safe?'#43e6a7':'#ffd37a';
+    el.style.borderColor=safe?'#43e6a7':'#ffd37a';
+    return q;
+  }catch(e){
+    el.textContent='📊 Актуальні метрики тимчасово недоступні — production G не змінено';
+    el.title='MODEL_QUALITY_AUDIT_v1.json: '+e.message;
+    el.style.color='#ff7b82'; el.style.borderColor='#ff7b82';
+    return null;
+  }
 }
 async function loadSystemHealthStatus(){
   const el=document.getElementById('systemHealthBanner');
