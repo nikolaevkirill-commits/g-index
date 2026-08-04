@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.163-fp356-CURRENT-METRICS-SCOPE</title>
+  <title>G-Index — Космофізичний дашборд v88.9.165-fp358-KYIV-DATE-CANON</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -6012,6 +6012,16 @@ function todayKyivStr(){
     return fmtDate(new Date()); // fallback якщо Intl/timeZone недоступний
   }
 }
+// Kyiv civil-day helpers. Noon UTC keeps the calendar key stable across DST
+// and prevents `Date.now() + 24h` / browser-local timezone date drift.
+function kyivDayDate(offsetDays=0){
+  const d = new Date(todayKyivStr()+'T12:00:00Z');
+  d.setUTCDate(d.getUTCDate()+Number(offsetDays||0));
+  return d;
+}
+function kyivDayKey(offsetDays=0){
+  return kyivDayDate(offsetDays).toISOString().slice(0,10);
+}
 const el = id => document.getElementById(id);
 
 // ═══ v88.6.9: DEBUG flag — silence console.log noise у production ═══
@@ -6266,7 +6276,7 @@ function renderTanitaShadow(){
   const sum=document.getElementById('tanitaShadowSummary');
   const body=document.getElementById('tanitaShadowBody');
   if(!sum||!body) return;
-  const today=new Date().toISOString().slice(0,10);
+  const today=todayKyivStr();
   const feed=window._autoForecastFeed||{};
   const day=feed.days&&feed.days[today]||{};
   const tanita=day.tanita_shadow||{};
@@ -6301,7 +6311,7 @@ function renderTanitaShadow(){
 function renderSingleFinalDecision(){
   const el=document.getElementById('singleFinalDecisionBody');
   if(!el) return;
-  const today=new Date().toISOString().slice(0,10);
+  const today=todayKyivStr();
   const day=window._autoForecastFeed&&window._autoForecastFeed.days&&window._autoForecastFeed.days[today];
   if(!day||!day.final_decision){
     el.textContent='Підсумкове рішення ще не завантажене.';
@@ -6344,13 +6354,28 @@ async function loadKpHourlyAlert(){
   try{
     const r=await fetch('KP_HOURLY_ALERT_v2.json',{cache:'no-store'});
     if(!r.ok) throw new Error('HTTP '+r.status);
-    const p=await r.json(), peak=p.peak||{}, slots=Array.isArray(p.slots)?p.slots:[];
-    const level=Number(peak.level||0), kp=Number(peak.kp);
+    const p=await r.json();
+    const generatedMs=Date.parse(p.generated_at||'');
+    const ageHours=Number.isFinite(generatedMs)?Math.max(0,(Date.now()-generatedMs)/3600000):Infinity;
+    const maxAgeHours=6;
+    const allSlots=Array.isArray(p.slots)?p.slots:[];
+    // Keep only current/future slots. A small tolerance retains the currently
+    // active 3-hour bin without allowing yesterday's forecast to masquerade as today.
+    const minSlotMs=Date.now()-20*60*1000;
+    const maxSlotMs=Date.now()+(Number(p.lookahead_hours||12)+1)*3600000;
+    const slots=allSlots.filter(x=>{
+      const t=Date.parse(x&&x.time_utc||'');
+      return Number.isFinite(t)&&t>=minSlotMs&&t<=maxSlotMs&&Number.isFinite(Number(x.kp));
+    }).sort((a,b)=>Date.parse(a.time_utc)-Date.parse(b.time_utc));
+    if(ageHours>maxAgeHours) throw new Error('Дані Kp застаріли: '+(Number.isFinite(ageHours)?ageHours.toFixed(1):'невідомо')+' год');
+    if(!slots.length) throw new Error('Немає актуальних погодинних слотів Kp');
+    const peak=slots.reduce((best,x)=>Number(x.kp)>Number(best.kp)?x:best,slots[0]);
+    const kp=Number(peak.kp), level=kp>=5?2:kp>=4?1:0;
     sum.textContent='🛰 Погодинний Kp · пік '+(Number.isFinite(kp)?kp.toFixed(1):'—')+
       (level>=2?' · 🔴 буря':level===1?' · 🟡 підвищений':' · 🟢 спокійно');
     body.innerHTML='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">'+
       '<thead><tr><th style="text-align:left;padding:5px">Час</th><th style="text-align:left;padding:5px">Kp</th><th style="text-align:left;padding:5px">Джерело</th></tr></thead><tbody>'+
-      slots.slice(0,12).map(x=>{const v=Number(x.kp),c=v>=5?'#ff7070':v>=4?'#ffd37a':'#75e6a8';return '<tr style="border-top:1px solid var(--border)"><td style="padding:5px">'+new Date(x.time_utc).toLocaleString('uk-UA',{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit'})+'</td><td style="padding:5px;color:'+c+';font-weight:700">'+v.toFixed(1)+'</td><td style="padding:5px">'+(x.source==='observed'?'факт':'прогноз')+'</td></tr>'}).join('')+
+      slots.slice(0,12).map(x=>{const v=Number(x.kp),c=v>=5?'#ff7070':v>=4?'#ffd37a':'#75e6a8';return '<tr style="border-top:1px solid var(--border)"><td style="padding:5px">'+new Date(x.time_utc).toLocaleString('uk-UA',{timeZone:'Europe/Kyiv',hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit',hour12:false})+'</td><td style="padding:5px;color:'+c+';font-weight:700">'+v.toFixed(1)+'</td><td style="padding:5px">'+(x.source==='observed'?'факт':'прогноз')+'</td></tr>'}).join('')+
       '</tbody></table></div><div style="margin-top:6px;color:var(--dim)">Поріг попередження Kp≥4; буря Kp≥5. Telegram-антиспам прив’язаний до конкретного часового піку.</div>';
     if(level>0){const panel=document.getElementById('kpHourlyPanel');if(panel)panel.open=true;}
   }catch(e){
@@ -6373,7 +6398,7 @@ function updateSpaceWeatherDecisionGuard(){
   if(flags.storm_g1_plus) reasons.push('BGS допускає G1');
   if(e.cme_cloud_start) reasons.push('ENLIL бачить CME-cloud');
   if(Number(sp.m_class_1_day_pct)>=50) reasons.push('M-спалах '+Math.round(Number(sp.m_class_1_day_pct))+'%');
-  const today=new Date().toISOString().slice(0,10);
+  const today=todayKyivStr();
   const day=window._autoForecastFeed&&window._autoForecastFeed.days&&window._autoForecastFeed.days[today];
   const positive=day&&Number(day.score)>0;
   const fetched=Date.parse(p.fetched_at||'');
@@ -6499,7 +6524,7 @@ async function loadBgsSpaceWeather(){
     const periods=Array.isArray(b.periods)?b.periods:[];
     const flags=b.flags||{};
     const conflict=periods.some((p,i)=>{
-      const ds=new Date(Date.now()+i*86400000).toISOString().slice(0,10);
+      const ds=kyivDayKey(i);
       const f=window._autoForecastFeed && window._autoForecastFeed.days && window._autoForecastFeed.days[ds];
       return f && f.bgs_advisory && f.bgs_advisory.conflict_with_positive_model;
     });
@@ -7310,13 +7335,14 @@ async function loadEngineScores(){
     } catch(_e){ if(window._DEBUG) console.warn('[fp56-P8] annual load failed:', _e.message); }
     // V25-fu30: check expiration — show banner if scores expire soon
     try {
-      const today = new Date(todayKyivStr()+'T00:00:00'); today.setHours(0,0,0,0);
+      const todayKey = todayKyivStr();
+      const today = kyivDayDate(0);
       const futureDates = Object.keys(_engineScores)
-        .filter(d => { const dt = new Date(d); return !isNaN(dt) && dt >= today; });
+        .filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d) && d >= todayKey);
       if(futureDates.length > 0){
         const maxDate = futureDates.sort().pop();
-        const maxDt = new Date(maxDate);
-        const daysRemaining = Math.floor((maxDt - today) / 86400000);
+        const maxDt = new Date(maxDate+'T12:00:00Z');
+        const daysRemaining = Math.round((maxDt - today) / 86400000);
         if(daysRemaining < 30 && !document.getElementById('engineExpirationBanner')){
           const banner = document.createElement('div');
           banner.id = 'engineExpirationBanner';
@@ -16471,7 +16497,7 @@ function syncHero(){
         let _tomorrowLine = '';
         let _tomEngScore = null;
         try {
-          const _tomDate = new Date(Date.now() + 86400000);
+          const _tomDate = kyivDayDate(1);
           const _tomEntry = (typeof getEngineScore === 'function') ? getEngineScore(_tomDate) : null;
           if (_tomEntry && isFinite(_tomEntry.eng)) _tomEngScore = Number(_tomEntry.eng);
         } catch(e){ _tomEngScore = null; }
@@ -21171,8 +21197,8 @@ function renderTaara7d(wrap, natalIdx, nowJDE) {
     const gmod = isDanger ? '−1' : (t.group===2||t.group===4||t.group===6||t.group===8||t.group===9) ? '+1' : '0';
     const gmodCol = isDanger ? '#ff6b6b' : gmod==='+1' ? '#2bd47d' : '#6b82aa';
     // Дата
-    const dt = new Date(Date.now() + d*86400000);
-    const ds = dt.toLocaleDateString('uk-UA',{weekday:'short',month:'numeric',day:'numeric'});
+    const dt = kyivDayDate(d);
+    const ds = dt.toLocaleDateString('uk-UA',{weekday:'short',month:'numeric',day:'numeric',timeZone:'Europe/Kyiv'});
     rows += `<tr>
       <td style="padding:2px 6px;font-size:12px;color: var(--muted);border-bottom:1px solid #1a2540">${d===0?'Сьогодні':ds}</td>
       <td style="padding:2px 6px;font-size:12px;border-bottom:1px solid #1a2540;color:${col}">${TAARA_SHORT[t.group]||''} (${t.group}/9)</td>
@@ -22310,7 +22336,7 @@ async function shareGState() {
   const gStr   = isFinite(G) ? (G >= 0 ? '+' : '') + G.toFixed(1) : '—';
   const rmEl   = document.querySelector('[title*="Russell-McPherron"]');
   const rmStr  = rmEl ? '🌀 R-M вікно активне' : '';
-  const dateStr= new Date().toLocaleDateString('uk-UA', {day:'numeric',month:'long',year:'numeric'});
+  const dateStr= new Date().toLocaleDateString('uk-UA', {day:'numeric',month:'long',year:'numeric',timeZone:'Europe/Kyiv'});
 
   function gColor(g) {
     if (!isFinite(g)) return '#9bb1dc';
@@ -25267,6 +25293,3 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line213
 </script>
 </body>
 </html>
-
-
-

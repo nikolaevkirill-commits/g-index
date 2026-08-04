@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """Generate a non-destructive queue for independent real-world outcome entry."""
 from __future__ import annotations
-from datetime import datetime, timezone
+from datetime import date, datetime, time, timezone
 from pathlib import Path
 import csv
 import json
 import math
+from zoneinfo import ZoneInfo
 
 ROOT = Path(__file__).resolve().parent
 OUT = ROOT / "outputs"
@@ -14,6 +15,11 @@ TRACKER = OUT / "AUTO_PROSPECTIVE_TRACKER_v1.json"
 REAL_LEDGER = OUT / "REAL_OUTCOME_LEDGER_v1.jsonl"
 QUEUE = CONTROL / "OUTCOME_INTAKE_QUEUE_v1.csv"
 STATUS = CONTROL / "OUTCOME_INTAKE_QUEUE_STATUS_v1.json"
+KYIV = ZoneInfo("Europe/Kyiv")
+
+
+def target_day_start_utc(day: str) -> datetime:
+    return datetime.combine(date.fromisoformat(day), time.min, tzinfo=KYIV).astimezone(timezone.utc)
 
 
 def load(path, default):
@@ -36,13 +42,13 @@ def was_prior(day, prediction):
         when = datetime.fromisoformat(str(raw).replace("Z", "+00:00"))
         if when.tzinfo is None:
             when = when.replace(tzinfo=timezone.utc)
-        return when.date().isoformat() < day
-    except ValueError:
+        return when.astimezone(timezone.utc) < target_day_start_utc(day)
+    except (TypeError, ValueError):
         return False
 
 
 now = datetime.now(timezone.utc).replace(microsecond=0)
-today = now.date().isoformat()
+today = now.astimezone(KYIV).date().isoformat()
 tracker = load(TRACKER, {})
 paired_dates = set()
 if REAL_LEDGER.exists():
@@ -109,6 +115,8 @@ status = {
     "pending_independent_outcomes": len(rows),
     "dates": [row["date"] for row in rows],
     "automatic_fill": False,
+    "calendar_timezone": "Europe/Kyiv",
+    "completion_policy": "target date must be earlier than the current Europe/Kyiv date",
     "score_effect": 0,
     "production_change": False,
     "rule": "Queue is an intake aid. Only independently observed after-day results may be copied into Chrono telemetry.",

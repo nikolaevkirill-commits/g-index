@@ -34,6 +34,7 @@ def main() -> None:
     auto = read_json("AUTO_PROSPECTIVE_STATUS_v1.json")
     outcomes = read_json("OUTCOME_LEDGER_STATUS_v1.json")
     tanita = read_json("TANITA_2Y_PROMOTION_GATE_v1.json")
+    tanita_outcomes = read_json("outputs/data_control/TANITA_REAL_OUTCOME_PAIR_STATUS_v1.json")
     now = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
     h = holdout.get("metrics", {}).get("holdout", {})
@@ -74,6 +75,17 @@ def main() -> None:
             "blockers": tanita.get("blocking_reasons", []),
             "chronological_holdout_gain": g.get("tanita_improves_chronological_holdout"),
         },
+        "tanita_real_world_outcomes": {
+            "target": "independent real outcome paired by date with an immutable Tanita snapshot",
+            "snapshot_records": tanita_outcomes.get("snapshot_records", 0),
+            "elapsed_snapshot_dates": tanita_outcomes.get("elapsed_snapshot_dates", 0),
+            "paired_independent_outcomes": tanita_outcomes.get("paired_independent_outcomes", 0),
+            "awaiting_independent_outcomes": tanita_outcomes.get("awaiting_independent_outcomes", 0),
+            "tanita_shadow": tanita_outcomes.get("tanita_shadow", {}),
+            "baseline_frozen": tanita_outcomes.get("baseline_frozen", {}),
+            "promotion_gate": tanita_outcomes.get("promotion_gate", {}),
+            "score_effect": 0,
+        },
         "next_action": "Freeze a daily snapshot before the day starts and pair it with one independently defined outcome; do not change weights before the pre-registered gate passes.",
     }
 
@@ -107,6 +119,17 @@ def main() -> None:
         "",
         "Жодна нова ознака не переходить у production, доки не має наперед зареєстрованого правила та незалежного позитивного результату.",
     ]
+    t = summary["tanita_real_world_outcomes"]
+    lines.extend([
+        "",
+        "## Tanita vs independent outcomes",
+        "",
+        f"- Frozen snapshots: {t['snapshot_records']}.",
+        f"- Fully elapsed dates: {t['elapsed_snapshot_dates']}.",
+        f"- Paired independent outcomes: {t['paired_independent_outcomes']}.",
+        f"- Awaiting independent outcomes: {t['awaiting_independent_outcomes']}.",
+        "- Production score effect: 0 until the pre-registered promotion gate passes.",
+    ])
     (OUT_DIR / "UNIFIED_SCORECARD_v1.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
     print("UNIFIED SCORECARD OK")
 

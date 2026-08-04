@@ -2,8 +2,9 @@
 """Fail-closed import of reviewed independent outcomes into Chrono telemetry."""
 from __future__ import annotations
 import csv, json, math
-from datetime import date, datetime, timezone
+from datetime import date, datetime, time, timezone
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 ROOT = Path(__file__).resolve().parent
 CONTROL = ROOT / "outputs" / "data_control"
@@ -15,6 +16,10 @@ CLASSES = {"AVOID", "CAUTION", "NORMAL", "FAVORABLE", "BEST_WINDOW"}
 DOMAINS = {"work", "health", "travel", "finance", "communication", "other"}
 CONFIDENCE = {"LOW", "MED", "HIGH"}
 EDITABLE = ("forecast_seen", "actual_score", "actual_class", "domain", "event_summary", "confidence_actual", "notes")
+KYIV = ZoneInfo("Europe/Kyiv")
+
+def target_day_start_utc(day: str) -> datetime:
+    return datetime.combine(date.fromisoformat(day), time.min, tzinfo=KYIV).astimezone(timezone.utc)
 
 def score_class(score):
     if score <= -2: return "AVOID"
@@ -39,7 +44,7 @@ def prior_prediction(day, created):
     try:
         stamp = datetime.fromisoformat(str(created).replace("Z", "+00:00"))
         if stamp.tzinfo is None: stamp = stamp.replace(tzinfo=timezone.utc)
-        return stamp < datetime.combine(date.fromisoformat(day), datetime.min.time(), tzinfo=timezone.utc)
+        return stamp.astimezone(timezone.utc) < target_day_start_utc(day)
     except (TypeError, ValueError): return False
 
 def validate(row, today):
@@ -88,7 +93,7 @@ def main():
     by_date = {str(row.get("date", "")).strip(): row for row in telemetry}
     imported, rejected, changed = [], [], False
     for row in submitted:
-        day = str(row.get("date", "")).strip(); errors = validate(row, now.date()); target = by_date.get(day)
+        day = str(row.get("date", "")).strip(); errors = validate(row, now.astimezone(KYIV).date()); target = by_date.get(day)
         if target is None: errors.append("no_frozen_telemetry_row_for_date")
         if target is not None and str(target.get("actual_score", "")).strip(): errors.append("outcome_already_present")
         if errors:
@@ -99,7 +104,7 @@ def main():
         target["match"] = "-1" if "MID" in {pred_bucket, actual_bucket} else ("1" if pred_bucket == actual_bucket else "0")
         imported.append(day); changed = True
     if changed: write_telemetry(TELEMETRY, comments, telemetry, fields)
-    status = {"schema":"outcome_intake_import_status_v1", "generated_at":now.replace(microsecond=0).isoformat(), "submitted_rows":len(submitted), "imported_rows":len(imported), "imported_dates":imported, "rejected_rows":len(rejected), "issues":rejected, "automatic_import":True, "score_effect":"real_outcome_metrics_only", "production_forecast_change":False, "rule":"Only reviewed independent outcomes update an already frozen row; expert/PDF/Excel labels are forbidden."}
+    status = {"schema":"outcome_intake_import_status_v1", "generated_at":now.replace(microsecond=0).isoformat(), "submitted_rows":len(submitted), "imported_rows":len(imported), "imported_dates":imported, "rejected_rows":len(rejected), "issues":rejected, "automatic_import":True, "calendar_timezone":"Europe/Kyiv", "temporal_policy":"prediction must precede target-day 00:00 Europe/Kyiv; outcome date must be completed in Europe/Kyiv", "score_effect":"real_outcome_metrics_only", "production_forecast_change":False, "rule":"Only reviewed independent outcomes update an already frozen row; expert/PDF/Excel labels are forbidden."}
     STATUS.write_text(json.dumps(status, ensure_ascii=False, indent=2)+"\n", encoding="utf-8")
     print(json.dumps(status, ensure_ascii=False)); return 0 if not rejected else 1
 
