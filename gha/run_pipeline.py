@@ -62,6 +62,47 @@ def sha256(path: Path) -> str:
     return h.hexdigest()
 
 
+def verify_packaged_integrity(path: Path) -> None:
+    """Verify every inventory/checksum path against the final ZIP bytes."""
+    with zipfile.ZipFile(path) as zf:
+        members = set(zf.namelist())
+        checksum_member = "metadata/checksums.sha256"
+        inventory_member = "metadata/file_inventory.json"
+        if checksum_member not in members or inventory_member not in members:
+            raise RuntimeError("Final integrity manifests are missing from package")
+
+        for line in zf.read(checksum_member).decode("utf-8").splitlines():
+            if not line.strip():
+                continue
+            expected, rel = line.split("  ", 1)
+            if rel not in members:
+                raise RuntimeError(f"Checksummed file absent from ZIP: {rel}")
+            actual = hashlib.sha256(zf.read(rel)).hexdigest()
+            if actual != expected:
+                raise RuntimeError(f"ZIP checksum mismatch: {rel}")
+
+        inventory = json.loads(zf.read(inventory_member).decode("utf-8"))
+        for item in inventory.get("files", []):
+            rel = str(item["path"])
+            if rel not in members:
+                raise RuntimeError(f"Inventoried file absent from ZIP: {rel}")
+            actual = hashlib.sha256(zf.read(rel)).hexdigest()
+            if actual != item["sha256"]:
+                raise RuntimeError(f"ZIP inventory mismatch: {rel}")
+
+        required = {
+            "data/derived/jyotish/jyotish_daily.parquet",
+            "data/derived/jyotish/jyotish_hourly.parquet",
+            "data/processed/daily_master_utc_2013_2026.parquet",
+            "outputs/track_c_utc_real/run_manifest.json",
+            "scripts/validate_archive.py",
+            "analysis/track_c_climatology.py",
+        }
+        missing = sorted(required - members)
+        if missing:
+            raise RuntimeError(f"Required reproducibility files absent: {missing}")
+
+
 def package(verdict: str, statuses: dict[str, object]) -> Path:
     summary = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -69,7 +110,7 @@ def package(verdict: str, statuses: dict[str, object]) -> Path:
         "statuses": statuses,
         "runner": "GitHub-hosted ubuntu-latest / Python 3.11",
         "track_c_started": bool(statuses.get("track_c")),
-        "archive_version": "1.5.3",
+        "archive_version": "1.5.4",
     }
     summary_path = DIST / "GITHUB_ACTIONS_RUN_SUMMARY.json"
     summary_path.write_text(
@@ -90,18 +131,23 @@ def package(verdict: str, statuses: dict[str, object]) -> Path:
         "requirements_analysis.txt",
         "requirements_jyotish.txt",
         "README_V1_4B_STATIC_PATCH.md",
+        "PREREGISTRATION_DRAFT_v1.0.md",
         "PREREGISTRATION_TRACK_C_v1.0.md",
+        "conftest.py",
         "STATISTICAL_PROTOCOL.md",
         "ANALYSIS_PLAN_13Y.md",
         "NEGATIVE_CONTROLS.md",
         "GO_NO_GO_CHECKLIST.md",
     ]
     out = DIST / (
-        "PROGNOZ_13Y_CLAUDE_OUTPUT_v1.5.3_RAW.zip"
+        "PROGNOZ_13Y_CLAUDE_OUTPUT_v1.5.4_RAW.zip"
         if verdict == "PASS"
-        else "PROGNOZ_13Y_GITHUB_ACTIONS_DIAGNOSTIC_v1.5.3.zip"
+        else "PROGNOZ_13Y_GITHUB_ACTIONS_DIAGNOSTIC_v1.5.4.zip"
     )
-    with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED, allowZip64=True) as zf:
+    temp_out = out.with_suffix(out.suffix + ".tmp")
+    if temp_out.exists():
+        temp_out.unlink()
+    with zipfile.ZipFile(temp_out, "w", zipfile.ZIP_DEFLATED, allowZip64=True) as zf:
         for rel in include:
             path = PROJECT / rel
             if not path.exists():
@@ -119,6 +165,10 @@ def package(verdict: str, statuses: dict[str, object]) -> Path:
                     continue
                 zf.write(file, arcname=file.relative_to(PROJECT))
         zf.write(summary_path, arcname=summary_path.name)
+
+    if verdict == "PASS":
+        verify_packaged_integrity(temp_out)
+    temp_out.replace(out)
 
     (DIST / f"{out.name}.sha256").write_text(
         f"{sha256(out)}  {out.name}\n", encoding="utf-8"
@@ -266,9 +316,6 @@ def main() -> None:
     else:
         statuses["track_c"] = False
 
-    # Track C invokes the validator internally and updates its report/log.
-    # Run a final explicit validation, then generate all integrity artifacts
-    # only after every data/output mutation is complete.
     statuses["validate_final"] = run(
         "validate_final",
         [
