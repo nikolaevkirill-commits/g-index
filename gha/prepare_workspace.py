@@ -64,6 +64,7 @@ def main() -> None:
         "export_schema_samples.py": "export_schema_samples.py",
         "download_omni_cdaweb.py": "download_omni_cdaweb.py",
         "make_checksums.py": "make_checksums.py",
+        "build_file_inventory.py": "build_file_inventory.py",
     }
     for source_name, target_name in overrides.items():
         source = ROOT / "gha" / source_name
@@ -80,6 +81,7 @@ def main() -> None:
         PROJECT / "scripts" / "build_jyotish_archive.py",
         PROJECT / "scripts" / "download_omni_cdaweb.py",
         PROJECT / "scripts" / "make_checksums.py",
+        PROJECT / "scripts" / "build_file_inventory.py",
         PROJECT / "requirements_download.txt",
         PROJECT / "requirements_analysis.txt",
         PROJECT / "requirements_jyotish.txt",
