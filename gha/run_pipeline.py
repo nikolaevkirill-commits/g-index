@@ -69,6 +69,7 @@ def package(verdict: str, statuses: dict[str, object]) -> Path:
         "statuses": statuses,
         "runner": "GitHub-hosted ubuntu-latest / Python 3.11",
         "track_c_started": bool(statuses.get("track_c")),
+        "archive_version": "1.5.3",
     }
     summary_path = DIST / "GITHUB_ACTIONS_RUN_SUMMARY.json"
     summary_path.write_text(
@@ -78,16 +79,27 @@ def package(verdict: str, statuses: dict[str, object]) -> Path:
     include = [
         "metadata",
         "data/raw",
+        "data/derived",
         "data/processed",
         "outputs",
+        "scripts",
+        "analysis",
+        "tests",
         "config.json",
+        "requirements_download.txt",
+        "requirements_analysis.txt",
+        "requirements_jyotish.txt",
         "README_V1_4B_STATIC_PATCH.md",
         "PREREGISTRATION_TRACK_C_v1.0.md",
+        "STATISTICAL_PROTOCOL.md",
+        "ANALYSIS_PLAN_13Y.md",
+        "NEGATIVE_CONTROLS.md",
+        "GO_NO_GO_CHECKLIST.md",
     ]
     out = DIST / (
-        "PROGNOZ_13Y_CLAUDE_OUTPUT_v1.5.2_RAW.zip"
+        "PROGNOZ_13Y_CLAUDE_OUTPUT_v1.5.3_RAW.zip"
         if verdict == "PASS"
-        else "PROGNOZ_13Y_GITHUB_ACTIONS_DIAGNOSTIC.zip"
+        else "PROGNOZ_13Y_GITHUB_ACTIONS_DIAGNOSTIC_v1.5.3.zip"
     )
     with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED, allowZip64=True) as zf:
         for rel in include:
@@ -185,7 +197,6 @@ def main() -> None:
         and gate_result.get("verdict") == "PASS"
     )
     statuses["download_gate"] = gate_pass
-
     if not gate_pass:
         fail_after_packaging(
             "FAIL_DOWNLOAD_GATE",
@@ -212,28 +223,16 @@ def main() -> None:
             "--strict",
         ],
     )
-    statuses["validate_require_raw"] = run(
-        "validate_require_raw",
+    statuses["validate_before_track_c"] = run(
+        "validate_before_track_c",
         [
             sys.executable,
             "scripts/validate_archive.py",
             "--require-raw",
         ],
     )
-    statuses["schema_samples"] = run(
-        "schema_samples",
-        [sys.executable, "scripts/export_schema_samples.py"],
-    )
-    statuses["inventory"] = run(
-        "inventory",
-        [sys.executable, "scripts/build_file_inventory.py"],
-    )
-    statuses["checksums"] = run(
-        "checksums",
-        [sys.executable, "scripts/make_checksums.py"],
-    )
-    statuses["pytest_after"] = run(
-        "pytest_after", [sys.executable, "-m", "pytest", "-q"]
+    statuses["pytest_after_raw"] = run(
+        "pytest_after_raw", [sys.executable, "-m", "pytest", "-q"]
     )
     statuses["compileall"] = run(
         "compileall",
@@ -241,9 +240,11 @@ def main() -> None:
     )
 
     ready = bool(
-        statuses["reconciliation"]
-        and statuses["validate_require_raw"]
-        and statuses["pytest_after"]
+        statuses["preflight_before"]
+        and statuses["pytest_before"]
+        and statuses["reconciliation"]
+        and statuses["validate_before_track_c"]
+        and statuses["pytest_after_raw"]
         and statuses["compileall"]
     )
     if ready:
@@ -257,7 +258,7 @@ def main() -> None:
                 "--output",
                 "outputs/track_c_utc_real",
                 "--permutations",
-                "199",
+                "1999",
                 "--max-lag",
                 "30",
             ],
@@ -265,7 +266,43 @@ def main() -> None:
     else:
         statuses["track_c"] = False
 
-    verdict = "PASS" if ready and statuses["track_c"] else "FAIL_VALIDATION"
+    # Track C invokes the validator internally and updates its report/log.
+    # Run a final explicit validation, then generate all integrity artifacts
+    # only after every data/output mutation is complete.
+    statuses["validate_final"] = run(
+        "validate_final",
+        [
+            sys.executable,
+            "scripts/validate_archive.py",
+            "--require-raw",
+        ],
+    )
+    statuses["schema_samples_final"] = run(
+        "schema_samples_final",
+        [sys.executable, "scripts/export_schema_samples.py"],
+    )
+
+    old_checksums = PROJECT / "metadata" / "checksums.sha256"
+    if old_checksums.exists():
+        old_checksums.unlink()
+    statuses["inventory_final"] = run(
+        "inventory_final",
+        [sys.executable, "scripts/build_file_inventory.py"],
+    )
+    statuses["checksums_final"] = run(
+        "checksums_final",
+        [sys.executable, "scripts/make_checksums.py"],
+    )
+
+    final_ready = bool(
+        ready
+        and statuses["track_c"]
+        and statuses["validate_final"]
+        and statuses["schema_samples_final"]
+        and statuses["inventory_final"]
+        and statuses["checksums_final"]
+    )
+    verdict = "PASS" if final_ready else "FAIL_VALIDATION"
     out = package(verdict, statuses)
     print(f"Result artifact prepared: {out}", flush=True)
     if verdict != "PASS":
