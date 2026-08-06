@@ -13,17 +13,31 @@ except ImportError:
     DataRepresentation = None
 
 from common import (
-    ROOT, load_config, resolve_end_year, save_json, setup_logging,
-    utc_now_iso, year_ranges,
+    ROOT,
+    load_config,
+    resolve_end_year,
+    save_json,
+    setup_logging,
+    utc_now_iso,
+    year_ranges,
 )
 
 DATASET = "OMNI2_H0_MRG1HR"
 ALIASES = {
-    "dst": ["DST1800", "DST", "DST_INDEX"],
+    "bx_gse": ["BX_GSE1800", "BX_GSE"],
+    "by_gsm": ["BY_GSM1800", "BY_GSM"],
     "bz_gsm": ["BZ_GSM1800", "BZ_GSM", "BZ_GSM_OMNI"],
     "flow_speed": ["V1800", "SW_V1800", "FLOW_SPEED", "V", "SW_SPEED"],
-    "pressure": ["Pressure1800", "SW_P_D1800", "P1800", "PRESSURE", "FLOW_PRESSURE"],
+    "pressure": [
+        "Pressure1800",
+        "SW_P_D1800",
+        "P1800",
+        "PRESSURE",
+        "FLOW_PRESSURE",
+    ],
     "kp_omni_x10": ["KP1800", "KP", "KP_INDEX"],
+    "dst": ["DST1800", "DST", "DST_INDEX"],
+    "ae_index": ["AE1800", "AE_INDEX", "AE"],
     "imf_source_id": ["IMF1800", "IMF", "IMF_ID"],
     "plasma_source_id": ["PLS1800", "PLS", "PLASMA_ID"],
 }
@@ -71,13 +85,15 @@ def _array_frame(dataset: Any, provider: str) -> pd.DataFrame:
     arr = dataset[provider]
     dims = list(getattr(arr, "dims", ()))
     time_dims = [
-        dim for dim in dims
+        dim
+        for dim in dims
         if "epoch" in str(dim).lower() or "time" in str(dim).lower()
     ]
     if not time_dims and len(dims) == 1:
         time_dims = dims
     if not time_dims:
         raise ValueError(f"No time dimension for {provider}: {dims}")
+
     dim = time_dims[0]
     coords = getattr(arr, "coords", {})
     coord = coords[dim] if dim in coords else dataset.coords[dim]
@@ -86,21 +102,45 @@ def _array_frame(dataset: Any, provider: str) -> pd.DataFrame:
         raise ValueError(
             f"{provider} shape is not 1-D: {getattr(values, 'shape', None)}"
         )
+
     times = pd.to_datetime(
         getattr(coord, "values", coord), utc=True, errors="coerce"
     )
     if len(times) != len(values):
         raise ValueError(f"{provider} time/value length mismatch")
-    return pd.DataFrame(
+
+    frame = pd.DataFrame(
         {"timestamp_source_utc": times, provider: values}
     ).dropna(subset=["timestamp_source_utc"])
 
+    fill_candidates = []
+    attrs = getattr(arr, "attrs", {}) or {}
+    encoding = getattr(arr, "encoding", {}) or {}
+    for key in ("FILLVAL", "_FillValue", "fillval"):
+        if key in attrs:
+            fill_candidates.append(attrs[key])
+        if key in encoding:
+            fill_candidates.append(encoding[key])
+    if fill_candidates:
+        numeric = pd.to_numeric(frame[provider], errors="coerce")
+        for fill in fill_candidates:
+            try:
+                numeric = numeric.mask(numeric == float(fill))
+            except (TypeError, ValueError):
+                pass
+        frame[provider] = numeric
+    return frame
 
-def to_dataframe(data: Any, providers: list[str]) -> pd.DataFrame:
+
+def to_dataframe(
+    data: Any,
+    providers: list[str] | None = None,
+) -> pd.DataFrame:
     if hasattr(data, "data_vars") and hasattr(data, "coords"):
+        selected = providers or list(data.data_vars)
         frames = [
             _array_frame(data, provider)
-            for provider in providers
+            for provider in selected
             if provider in data
         ]
         if not frames:
@@ -125,7 +165,8 @@ def to_dataframe(data: Any, providers: list[str]) -> pd.DataFrame:
     if "timestamp_source_utc" not in df.columns:
         epoch = next(
             (
-                c for c in df.columns
+                c
+                for c in df.columns
                 if "epoch" in c.lower() or c.lower() == "time"
             ),
             None,
@@ -137,6 +178,7 @@ def to_dataframe(data: Any, providers: list[str]) -> pd.DataFrame:
             "timestamp_source_utc",
             pd.to_datetime(df.pop(epoch), utc=True, errors="coerce"),
         )
+
     source = pd.to_datetime(
         df["timestamp_source_utc"], utc=True, errors="coerce"
     )
@@ -146,6 +188,32 @@ def to_dataframe(data: Any, providers: list[str]) -> pd.DataFrame:
         "source_midpoint_normalized_to_hour_start"
     )
     return df
+
+
+def sanitize_canonical(df: pd.DataFrame) -> pd.DataFrame:
+    """Convert documented/impossible OMNI fill values to missing values.
+
+    Do not treat -1 as missing for Dst or Bz: both are valid physical values.
+    """
+    out = df.copy()
+    rules = {
+        "kp_omni_x10": lambda s: s.mask((s < 0) | (s > 90)),
+        "dst": lambda s: s.mask(s.abs() >= 9999),
+        "bx_gse": lambda s: s.mask(s.abs() >= 999),
+        "by_gsm": lambda s: s.mask(s.abs() >= 999),
+        "bz_gsm": lambda s: s.mask(s.abs() >= 999),
+        "flow_speed": lambda s: s.mask((s <= 0) | (s >= 9999)),
+        "pressure": lambda s: s.mask((s < 0) | (s >= 99.9)),
+        "ae_index": lambda s: s.mask((s < 0) | (s >= 99999)),
+        "imf_source_id": lambda s: s.mask(s >= 99),
+        "plasma_source_id": lambda s: s.mask(s >= 99),
+    }
+    for column, clean in rules.items():
+        if column not in out.columns:
+            continue
+        numeric = pd.to_numeric(out[column], errors="coerce")
+        out[column] = clean(numeric)
+    return out
 
 
 def main() -> None:
@@ -163,6 +231,7 @@ def main() -> None:
 
     if CdasWs is None or DataRepresentation is None:
         raise ModuleNotFoundError("cdasws/xarray support is required")
+
     cdas = CdasWs(timeout=240)
     available = cdas.get_variable_names(DATASET)
     available_names = [_name(value) for value in available]
@@ -183,9 +252,14 @@ def main() -> None:
         "available_variables": available_names,
         "selected": chosen,
         "required_primary": sorted(REQUIRED),
+        "fill_policy": (
+            "Provider metadata fills plus canonical impossible-domain masks; "
+            "valid negative Dst/Bz values are retained"
+        ),
         "files": [],
         "failed": [],
     }
+
     frames: list[pd.DataFrame] = []
     for year, start, stop in year_ranges(start_year, end_year):
         try:
@@ -198,27 +272,29 @@ def main() -> None:
             )
             if _status_code(status) != 200:
                 raise RuntimeError(f"CDAWeb status={status!r}")
+
             df = to_dataframe(data, list(chosen.values())).rename(
                 columns=reverse
             )
+            df = sanitize_canonical(df)
             df = df.dropna(subset=["timestamp_utc"]).sort_values(
                 "timestamp_utc"
             )
             lo = pd.Timestamp(start).floor("h")
             hi = pd.Timestamp(stop).floor("h")
             df = df.loc[df["timestamp_utc"].between(lo, hi)].copy()
+
             duplicates = int(df["timestamp_utc"].duplicated().sum())
             if duplicates:
                 raise ValueError(
                     f"Duplicate normalized OMNI hours: {duplicates}"
                 )
+
             if "kp_omni_x10" in df:
-                df["kp_omni"] = (
-                    pd.to_numeric(df["kp_omni_x10"], errors="coerce")
-                    / 10.0
-                )
+                df["kp_omni"] = df["kp_omni_x10"] / 10.0
                 df["kp_omni_scale"] = "raw_x10_and_normalized"
             df["dst_provenance"] = "WDC_Kyoto_via_NASA_OMNI"
+
             path = out_dir / f"omni2_h0_mrg1hr_{year}.parquet"
             df.to_parquet(path, index=False)
             frames.append(df)
@@ -230,6 +306,10 @@ def main() -> None:
                     "columns": list(df.columns),
                     "request_start": start,
                     "request_end": stop,
+                    "null_counts": {
+                        column: int(df[column].isna().sum())
+                        for column in df.columns
+                    },
                 }
             )
             log.info(
@@ -263,8 +343,13 @@ def main() -> None:
                 "coverage_start": str(full["timestamp_utc"].min()),
                 "coverage_end": str(full["timestamp_utc"].max()),
                 "combined_columns": list(full.columns),
+                "combined_null_counts": {
+                    column: int(full[column].isna().sum())
+                    for column in full.columns
+                },
             }
         )
+
     save_json(ROOT / "metadata" / "omni_manifest.json", manifest)
     if manifest["failed"] or not frames:
         raise SystemExit(1)
