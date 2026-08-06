@@ -1,0 +1,99 @@
+name: PROGNOZ 13Y Raw Archive v1.5.2
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/prognoz_raw_v15_2.yml"
+      - "gha/**"
+      - "inputs/**"
+      - "BUNDLE_MANIFEST.json"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: prognoz-13y-raw-v15-2-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-raw-archive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+
+    steps:
+      - name: Checkout execution bundle
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Prepare canonical workspace
+        run: |
+          python gha/prepare_workspace.py
+
+      - name: Install dependencies
+        working-directory: runtime/project
+        run: |
+          python -m pip install --upgrade pip wheel setuptools
+          python -m pip install -r requirements_download.txt
+          python -m pip install -r requirements_analysis.txt
+          python -m pip install -r requirements_jyotish.txt
+          python -m pip install pytest
+
+      - name: Rebuild Jyotish archive on runner
+        id: jyotish
+        continue-on-error: true
+        working-directory: runtime/project
+        run: |
+          python scripts/build_jyotish_archive.py
+
+      - name: Execute raw-data pipeline
+        id: pipeline
+        continue-on-error: true
+        run: |
+          python gha/run_pipeline.py
+
+      - name: Ensure a diagnostic artifact exists
+        if: always()
+        run: |
+          python gha/ensure_workflow_artifact.py
+
+      - name: Upload complete result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: PROGNOZ_13Y_GITHUB_ACTIONS_RESULT_v1_5_2
+          path: |
+            runtime/dist/*.zip
+            runtime/dist/*.json
+            runtime/dist/*.md
+            runtime/dist/*.sha256
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 0
+
+      - name: Mark workflow failed unless verdict is PASS
+        if: always()
+        run: |
+          python - <<'PY'
+          import json
+          import pathlib
+
+          path = pathlib.Path("runtime/dist/GITHUB_ACTIONS_RUN_SUMMARY.json")
+          if not path.exists():
+              print("::error::GITHUB_ACTIONS_RUN_SUMMARY.json is missing")
+              raise SystemExit(1)
+
+          summary = json.loads(path.read_text(encoding="utf-8"))
+          verdict = summary.get("verdict")
+          print(f"verdict={verdict}")
+          if verdict != "PASS":
+              print(
+                  f"::error::Pipeline verdict is {verdict}. "
+                  "Diagnostic artifact has already been uploaded."
+              )
+              raise SystemExit(1)
+          PY
