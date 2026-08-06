@@ -12,6 +12,32 @@ PROJECT = RUNTIME / "project"
 PARTS = ROOT / "inputs" / "minstatic_b64"
 
 
+def patch_validator_sentinels(path: Path) -> None:
+    """Do not misclassify valid signed -1 values as fill sentinels."""
+    text = path.read_text(encoding="utf-8")
+    old = '''        for val in (-1, 999, 999.9, 9999, 99999):
+            frac = float((s == val).mean())
+            if frac > 0.01:
+                suspects[f"{col}=={val}"] = round(frac, 5)
+'''
+    new = '''        # -1 is physically valid for signed geomagnetic/IMF variables
+        # (Dst, Bx, By, Bz), including their master aggregation columns.
+        signed_minus_one_ok = any(
+            token in str(col).lower()
+            for token in ("dst", "bx_gse", "by_gsm", "bz_gsm")
+        )
+        for val in (-1, 999, 999.9, 9999, 99999):
+            if val == -1 and signed_minus_one_ok:
+                continue
+            frac = float((s == val).mean())
+            if frac > 0.01:
+                suspects[f"{col}=={val}"] = round(frac, 5)
+'''
+    if old not in text:
+        raise SystemExit("Validator sentinel patch target not found")
+    path.write_text(text.replace(old, new, 1), encoding="utf-8")
+
+
 def main() -> None:
     if PROJECT.exists():
         shutil.rmtree(PROJECT)
@@ -37,6 +63,7 @@ def main() -> None:
         "assert_download_success.py": "assert_download_success.py",
         "export_schema_samples.py": "export_schema_samples.py",
         "download_omni_cdaweb.py": "download_omni_cdaweb.py",
+        "make_checksums.py": "make_checksums.py",
     }
     for source_name, target_name in overrides.items():
         source = ROOT / "gha" / source_name
@@ -45,10 +72,14 @@ def main() -> None:
             raise SystemExit(f"Required GHA override missing: {source}")
         shutil.copy2(source, target)
 
+    validator = PROJECT / "scripts" / "validate_archive.py"
+    patch_validator_sentinels(validator)
+
     required = [
-        PROJECT / "scripts" / "validate_archive.py",
+        validator,
         PROJECT / "scripts" / "build_jyotish_archive.py",
         PROJECT / "scripts" / "download_omni_cdaweb.py",
+        PROJECT / "scripts" / "make_checksums.py",
         PROJECT / "requirements_download.txt",
         PROJECT / "requirements_analysis.txt",
         PROJECT / "requirements_jyotish.txt",
@@ -60,6 +91,7 @@ def main() -> None:
     print(f"Canonical v1.4b minimal workspace prepared: {PROJECT}")
     print(f"Archive parts: {len(part_files)}")
     print("GHA overrides: " + ", ".join(sorted(overrides)))
+    print("Validator signed-sentinel patch: applied")
     print("Jyotish data will be rebuilt on the GitHub-hosted runner.")
     print("Frozen Engine/GT/PDF/Excel are not included or modified.")
 
