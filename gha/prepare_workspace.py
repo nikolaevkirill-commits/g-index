@@ -33,18 +33,22 @@ def main() -> None:
     with tarfile.open(archive, mode="r:") as tf:
         tf.extractall(PROJECT, filter="data")
 
-    shutil.copy2(
-        ROOT / "gha" / "assert_download_success.py",
-        PROJECT / "scripts" / "assert_download_success.py",
-    )
-    shutil.copy2(
-        ROOT / "gha" / "export_schema_samples.py",
-        PROJECT / "scripts" / "export_schema_samples.py",
-    )
+    overrides = {
+        "assert_download_success.py": "assert_download_success.py",
+        "export_schema_samples.py": "export_schema_samples.py",
+        "download_omni_cdaweb.py": "download_omni_cdaweb.py",
+    }
+    for source_name, target_name in overrides.items():
+        source = ROOT / "gha" / source_name
+        target = PROJECT / "scripts" / target_name
+        if not source.is_file():
+            raise SystemExit(f"Required GHA override missing: {source}")
+        shutil.copy2(source, target)
 
     required = [
         PROJECT / "scripts" / "validate_archive.py",
         PROJECT / "scripts" / "build_jyotish_archive.py",
+        PROJECT / "scripts" / "download_omni_cdaweb.py",
         PROJECT / "requirements_download.txt",
         PROJECT / "requirements_analysis.txt",
         PROJECT / "requirements_jyotish.txt",
@@ -55,6 +59,7 @@ def main() -> None:
 
     print(f"Canonical v1.4b minimal workspace prepared: {PROJECT}")
     print(f"Archive parts: {len(part_files)}")
+    print("GHA overrides: " + ", ".join(sorted(overrides)))
     print("Jyotish data will be rebuilt on the GitHub-hosted runner.")
     print("Frozen Engine/GT/PDF/Excel are not included or modified.")
 
