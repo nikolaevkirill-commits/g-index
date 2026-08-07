@@ -29,7 +29,7 @@ Diagnostics:
 
 `alias_changed_rows=0` means the frozen replay inputs already use symbol/legacy forms recognized by v15.1. Therefore this sealed replay validates the **bolt-policy effect**, but does not estimate the benefit of verbal aliases. Verbal↔symbol equality is covered deterministically by unit/JS parity tests instead.
 
-## Dashboard score-path audit
+## Dashboard correctness audit
 
 Static audit of `deploy/index.html` found 43 `getEngineScore()` calls and 12 direct `_engineScores[...]` accesses. Eleven direct accesses are loader/enrichment/Kp plumbing or the implementation of `getEngineScore()` itself. One UI consumer was a real bypass:
 
@@ -37,7 +37,14 @@ Static audit of `deploy/index.html` found 43 `getEngineScore()` calls and 12 dir
 - consequence: it could show raw v18.5 while the rest of UI used expert override / expert_calc hierarchy;
 - branch-only fix: route it through `getEngineScore(new Date(...))` and label the tooltip `Engine (canonical)`.
 
-The production `deploy` branch was not changed.
+A second UI inconsistency was found after the score-path audit: the `Тема дня` card interpreted `eng.tag` through a local hard-coded emoji-only `TAG_THEMES` table. Therefore verbal aliases could be parsed correctly by Engine/validator but still disappear from UI copy. Branch-only fix:
+
+- `deploy/index.html` loads `../engine_tag_parser.js`;
+- `loadEngineScores()` loads the same `../engine_tag_aliases_v1.json` contract through `EngineTagParser.loadAliasSpec()`;
+- `Тема дня` uses `EngineTagParser.parseTagTokens()` and token themes instead of direct emoji substring checks;
+- a fail-soft legacy display fallback remains only if the alias spec cannot be loaded; it does not alter Engine scoring.
+
+Both dashboard patches were applied by exact-match/idempotent patch scripts and verified with `git diff --check` before commit. The production `deploy` branch was not changed.
 
 ## Forensics / blockers
 
@@ -47,4 +54,4 @@ The production `deploy` branch was not changed.
 
 ## Promotion decision
 
-**Do not merge to production yet.** The candidate passes deterministic tests and improves the sealed v15.1 replay slightly, but production still serves static v18.5 scores whose exact generator/source is not reproducible from the repository. The correctness branch is the auditable replacement baseline until that source is recovered or formally retired.
+**Do not merge to production yet.** The candidate passes deterministic tests, removes the audited UI divergence paths, and improves the sealed v15.1 replay slightly, but production still serves static v18.5 scores whose exact generator/source is not reproducible from the repository. The correctness branch is the auditable replacement baseline until that source is recovered or formally retired.
