@@ -1,0 +1,39 @@
+name: v19.2 exposed rule attribution
+
+on:
+  push:
+    branches: [fix/post-freeze-engine-correctness]
+    paths:
+      - 'audit_v19_2_rule_attribution.py'
+      - 'ENGINE_V19_2_PRODUCTION_HIERARCHY_IMPACT.json'
+      - 'engine_scores_v19_2_candidate.json'
+      - 'engine_scores.json'
+      - 'sealed_replay_v19_2_reconstructed.py'
+      - '.github/workflows/v19-2-rule-attribution.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/post-freeze-engine-correctness
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Attribute exposed changes
+        run: python audit_v19_2_rule_attribution.py
+      - name: Commit attribution report
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add ENGINE_V19_2_EXPOSED_RULE_ATTRIBUTION.json
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'audit(engine): add exposed v19.2 rule attribution'
+          git push origin HEAD:fix/post-freeze-engine-correctness
