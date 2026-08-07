@@ -2878,6 +2878,7 @@ Fallback (NOAA 45-day-forecast.json):
     <div class="small" style="margin-top:8px;color:var(--faint);border-left:2px solid var(--warn);padding-left:8px">⚠ Caveat: ground truth = експертні PDF-бюлетені з тим же Vedic Panchanga + Kp framework. Метрики 79.2% / 88.7% валідують <strong>відтворення експертної логіки</strong>, НЕ предиктивну валідність vs реальні outcomes (медичні/операційні події). Outcome-based validation — pilot план у V19-E.</div>
   </footer>
 
+<script src="../engine_tag_parser.js"></script>
 <script>
 // ═══ Probability Layer v1 (bootstrap logistic, G-Index) ════════════════════
 function sigmoid(x){ return 1/(1+Math.exp(-x)); }
@@ -5545,6 +5546,14 @@ const _origSave=window.GChrono&&GChrono.saveToday;
 if(_origSave) GChrono.saveToday=(function(fn){return function(){fn.call(GChrono);try{renderChronoPanel();}catch(e){}};}(_origSave));
 
 async function loadEngineScores(){
+  // fp-correctness: Engine, validator and UI share one alias contract.
+  if(window.EngineTagParser && !window._engineTagAliasSpec){
+    try {
+      window._engineTagAliasSpec = await window.EngineTagParser.loadAliasSpec('../engine_tag_aliases_v1.json');
+    } catch(aliasErr){
+      console.warn('[engine-tags] alias spec unavailable; legacy UI fallback active:', aliasErr.message);
+    }
+  }
   if(_engineScores !== null) return _engineScores;
   try {
     const resp = await fetch('engine_scores.json', { cache: 'default' });
@@ -6928,8 +6937,24 @@ function renderDayTheme(){
     '-3': ['Стоп-день.',                   'Уникай нових дій і ключових кроків. Відпочинок і очікування — правильна стратегія.'],
   };
   const [tone, action] = TONES[String(score)] || TONES['0'];
-  const TAG_THEMES = {'✈':'переміщення і логістики','⊕':'лікування і відновлення','💊':'лікування і відновлення','📚':'навчання і розвитку','❤':'стосунків і комунікацій','⚡':'уважності (підвищений ризик)','✂':'завершення і відсікання зайвого'};
-  const themes = Object.entries(TAG_THEMES).filter(([s])=>tag.includes(s)).map(([,p])=>p);
+  const TOKEN_THEMES = {
+    plane:'переміщення і логістики',
+    plus:'лікування і відновлення',
+    med:'лікування і відновлення',
+    study:'навчання і розвитку',
+    heart:'стосунків і комунікацій',
+    bolt:'уважності (підвищений ризик)',
+    scissors:'завершення і відсікання зайвого'
+  };
+  let themes = [];
+  if(window.EngineTagParser && window._engineTagAliasSpec){
+    const _tokens = window.EngineTagParser.parseTagTokens(tag, window._engineTagAliasSpec);
+    themes = [...new Set(_tokens.map(t=>TOKEN_THEMES[t]).filter(Boolean))];
+  } else {
+    // Fail-soft display fallback only; canonical Engine scoring does not use this branch.
+    const _legacyThemes = {'✈':'переміщення і логістики','⊕':'лікування і відновлення','💊':'лікування і відновлення','📚':'навчання і розвитку','❤':'стосунків і комунікацій','⚡':'уважності (підвищений ризик)','✂':'завершення і відсікання зайвого'};
+    themes = [...new Set(Object.entries(_legacyThemes).filter(([s])=>tag.includes(s)).map(([,p])=>p))];
+  }
   const themeStr = themes.length ? `Підходить для ${themes.slice(0,2).join(' і ')}.` : '';
   const kpNote = kp>=5?'⚠ Геомагнітна буря — тримайся планів.':kp>=3?'Геомагнітний фон помірний.':'';
   const borderCol = score>=2?'rgba(43,212,125,.3)':score>=1?'rgba(43,212,125,.18)':score===0?'var(--border)':score>=-1?'rgba(255,170,51,.25)':'rgba(255,107,107,.3)';
@@ -14190,9 +14215,10 @@ function _renderWhyTrend(){
         const _eff = getEffectiveGForDate(new Date(d.ds + 'T12:00:00Z'), d.G, 0); // delta=0 — anyone override
         if (_eff.override !== null) d.overrideEng = _eff.override;
       }
-      // Engine snapshot — навіть для days без expert override (для tooltip info)
-      if (typeof _engineScores !== 'undefined' && _engineScores && _engineScores[d.ds]){
-        const _eng = _engineScores[d.ds];
+      // fp-correctness: tooltip Engine score must use the canonical hierarchy.
+      // Direct _engineScores[d.ds].eng bypassed expert_calc / verified overrides.
+      if (typeof getEngineScore === 'function'){
+        const _eng = getEngineScore(new Date(d.ds + 'T12:00:00Z'));
         if (_eng && isFinite(_eng.eng)) d.engineEng = _eng.eng;
       }
     } catch(e){if(window._DEBUG)console.warn('[silent overrideAnnot]:',e.message)}
@@ -14246,7 +14272,7 @@ function _renderWhyTrend(){
     if(Number.isFinite(d.overrideEng)){
       _dotTip += `\nPDF Engine: ${d.overrideEng >= 0 ? '+' : ''}${d.overrideEng} (експертна оцінка)`;
     } else if(Number.isFinite(d.engineEng)){
-      _dotTip += `\nPDF Engine: ${d.engineEng >= 0 ? '+' : ''}${d.engineEng} (v18.5)`;
+      _dotTip += `\nEngine: ${d.engineEng >= 0 ? '+' : ''}${d.engineEng} (canonical)`;
     }
     const _titleAttr = `<title>${_dotTip}</title>`;
     if(d.isToday){
