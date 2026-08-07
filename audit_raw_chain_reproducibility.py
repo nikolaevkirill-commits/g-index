@@ -28,7 +28,6 @@ def first_existing(*names: str) -> Path:
 
 
 def numeric_kwargs(snap: dict) -> dict:
-    """Use only optional numeric inputs actually preserved by the snapshot."""
     out = {}
     aliases = {
         "sn": ("sn", "sunspot", "sunspot_number"),
@@ -83,6 +82,15 @@ def main() -> int:
             "n_tags": len(tokens),
             "tokens": tokens,
             "optional_inputs_used": sorted(kwargs),
+            "snapshot_flags": {
+                key: snap[key]
+                for key in (
+                    "kp_synthetic", "fixed_2026_04_29", "_regenerated_from",
+                    "excel_tag_artifact", "excel_tag_artifact_reason",
+                    "excel_tag_artifact_severity",
+                )
+                if key in snap
+            },
         })
 
     reproducible = [r for r in rows if r["legacy_reproduced"]]
@@ -110,7 +118,7 @@ def main() -> int:
         "optional_engine_input_presence": dict(optional_presence),
         "legacy_mismatch_delta_counts": {str(k): v for k, v in sorted(mismatch_delta.items())},
         "alias_changed_reproducible_rows": alias_changed_repro,
-        "sample_provenance_incomplete_rows": incomplete[:100],
+        "provenance_incomplete_rows": incomplete,
     }
 
     out = ROOT / "ENGINE_RAW_CHAIN_REPRODUCIBILITY.json"
@@ -122,10 +130,14 @@ def main() -> int:
     print("optional_engine_input_presence=" + json.dumps(dict(optional_presence), ensure_ascii=False, sort_keys=True))
     print("legacy_mismatch_delta_counts=" + json.dumps(report["legacy_mismatch_delta_counts"], sort_keys=True))
     print("snapshot_keys=" + ",".join(sorted(key_counts)))
+    if incomplete:
+        print("=== PROVENANCE-INCOMPLETE ROWS ===")
+        for r in incomplete:
+            print(json.dumps(r, ensure_ascii=False, sort_keys=True))
     if alias_changed_repro:
         print("=== ALIAS-CHANGED REPRODUCIBLE ROWS ===")
-        for r in alias_changed_repro[:100]:
-            print(f"{r['date']} frozen={r['frozen']} corrected={r['corrected_regenerated']} tag={r['tag']!r} tokens={r['tokens']}")
+        for r in alias_changed_repro:
+            print(json.dumps(r, ensure_ascii=False, sort_keys=True))
     return 0
 
 
