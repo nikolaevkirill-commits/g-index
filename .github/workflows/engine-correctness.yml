@@ -1,0 +1,44 @@
+name: Engine correctness tests
+
+on:
+  push:
+    branches:
+      - fix/post-freeze-engine-correctness
+    paths:
+      - 'engine_correctness.py'
+      - 'engine_tag_aliases_v1.json'
+      - 'engine_tag_parser.js'
+      - 'forecast_engine_v15_1*.py'
+      - 'tests/test_engine_correctness.py'
+      - 'tests/test_engine_tag_parser.js'
+      - '.github/workflows/engine-correctness.yml'
+  pull_request:
+    paths:
+      - 'engine_correctness.py'
+      - 'engine_tag_aliases_v1.json'
+      - 'engine_tag_parser.js'
+      - 'forecast_engine_v15_1*.py'
+      - 'tests/test_engine_correctness.py'
+      - 'tests/test_engine_tag_parser.js'
+      - '.github/workflows/engine-correctness.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  correctness:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Python unit and integration tests
+        run: python -m unittest discover -s tests -v
+      - name: JavaScript alias-parity tests
+        run: node tests/test_engine_tag_parser.js
