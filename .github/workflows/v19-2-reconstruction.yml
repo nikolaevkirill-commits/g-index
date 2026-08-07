@@ -1,0 +1,40 @@
+name: v19.2 reconstructed replay
+
+on:
+  push:
+    branches:
+      - fix/post-freeze-engine-correctness
+    paths:
+      - 'sealed_replay_v19_2_reconstructed.py'
+      - 'engine_correctness.py'
+      - 'engine_tag_aliases_v1.json'
+      - 'ENGINE_V19_2_RECONSTRUCTION.md'
+      - '.github/workflows/v19-2-reconstruction.yml'
+  pull_request:
+    paths:
+      - 'sealed_replay_v19_2_reconstructed.py'
+      - 'engine_correctness.py'
+      - 'engine_tag_aliases_v1.json'
+      - 'ENGINE_V19_2_RECONSTRUCTION.md'
+      - '.github/workflows/v19-2-reconstruction.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Reconstructed v19.2 sealed replay
+        run: python sealed_replay_v19_2_reconstructed.py
+      - name: Verify reconstruction labels
+        shell: bash
+        run: |
+          grep -q 'historical_source_recovered.*False' sealed_replay_v19_2_reconstructed.py
+          grep -q 'RECONSTRUCTED CANDIDATE' ENGINE_V19_2_RECONSTRUCTION.md
