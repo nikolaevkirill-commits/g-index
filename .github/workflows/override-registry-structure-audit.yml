@@ -1,0 +1,22 @@
+name: override registry structure audit
+
+on:
+  push:
+    branches: [fix/post-freeze-engine-correctness]
+    paths:
+      - 'audit_override_registry_structure.py'
+      - '.github/workflows/override-registry-structure-audit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: python audit_override_registry_structure.py
