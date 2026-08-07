@@ -1,0 +1,31 @@
+name: PDF generator v19 context parity
+
+on:
+  push:
+    branches: [fix/post-freeze-engine-correctness]
+    paths:
+      - 'audit_pdf_generator_v19_context_parity.py'
+      - 'deploy/generate_forecast_pdf.py'
+      - 'deploy/score_engine_v19_preview.py'
+      - 'deploy/panchanga_sign_priors.json'
+      - 'deploy/calendar_tags_2025_2026.json'
+      - 'V19_2_PROSPECTIVE_SHADOW_FREEZE_v1.json'
+      - '.github/workflows/pdf-generator-v19-context-audit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install PDF generator dependencies
+        run: pip install openpyxl reportlab pypdf
+      - name: Quantify context drift
+        run: python audit_pdf_generator_v19_context_parity.py
