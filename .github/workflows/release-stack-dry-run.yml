@@ -1,0 +1,94 @@
+name: release stack dry run
+
+on:
+  push:
+    branches: [audit/release-stack-2026-08-07]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  stack:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Cherry-pick final PR heads in release order
+        run: |
+          git config user.name release-audit
+          git config user.email release-audit@example.invalid
+          git fetch origin \
+            fix/manifest-engine-fingerprint \
+            fix/run-forecast-runtime-contract \
+            fix/pdf-generator-engine-guard \
+            fix/bulletin-source-routing \
+            fix/root-dashboard-tag-parser \
+            fix/canonical-dashboard-entrypoint
+          for c in \
+            d13f18dbed6b3e472c4414a0afadba2fc8ad4311 \
+            6d6104cef79771be816f281595a190fe0084db78 \
+            06aa4fe71335b79f1d84449f3211612e6d2e883b \
+            08916dbe1985aba6b69e10017b61d86b353b049e \
+            33df023cdabb41dadcf230b08e29b8cb7f73799b \
+            2b01a900d9b3a7fc11b14aad9dc818acfd957c77; do
+              echo "CHERRY_PICK $c"
+              git cherry-pick "$c"
+          done
+          echo "STACK_HEAD=$(git rev-parse HEAD)"
+          git log --oneline -8
+      - name: Python syntax
+        run: |
+          python -m py_compile deploy/run_forecast.py deploy/generate_forecast_pdf.py deploy/generate_bulletin.py
+      - name: Manifest fingerprint parity
+        run: |
+          python - <<'PY'
+          import hashlib,json
+          from pathlib import Path
+          m=json.loads(Path('data_manifest.json').read_text(encoding='utf-8'))
+          mapping={'expert_overrides':'expert_overrides_v3.json','expert_calc':'expert_calc_scores.json','future_kp':'future_kp.json','engine_scores':'engine_scores.json'}
+          for field,path in mapping.items():
+              actual=hashlib.md5(Path(path).read_bytes()).hexdigest().upper()[:12]
+              assert m[field]==actual,(field,m[field],actual)
+          print('manifest parity PASS')
+          PY
+      - name: Root dashboard parser smoke
+        run: |
+          node --check engine_tag_parser.js
+          node - <<'JS'
+          const fs=require('fs');
+          const p=require('./engine_tag_parser.js');
+          const spec=JSON.parse(fs.readFileSync('engine_tag_aliases_v1.json','utf8'));
+          const got=p.parseTagTokens('Серце Хрест Книги Сукня Вінаяка',spec);
+          for (const x of ['heart','plus','study','new_clothes','ganesh']) if(!got.includes(x)) throw new Error(x);
+          console.log('root parser PASS',got);
+          JS
+          grep -q './engine_tag_parser.js' index.html
+          grep -q './engine_tag_aliases_v1.json' index.html
+          grep -q 'TOKEN_THEMES' index.html
+          grep -q 'Engine: ${d.engineEng' index.html
+          grep -q 'getEngineScore(new Date(d.ds' index.html
+      - name: Deprecated nested dashboard redirect smoke
+        run: |
+          grep -q "new URL('../', window.location.href)" deploy/index.html
+          grep -q 'self.registration.unregister' deploy/sw.js
+          grep -q "Response.redirect(new URL('../', event.request.url).href, 302)" deploy/sw.js
+          ! grep -q 'CACHE_NAME' deploy/sw.js
+      - name: Source-routing contracts
+        run: |
+          grep -q "REPO_ROOT = Path(__file__).resolve().parent.parent" deploy/generate_bulletin.py
+          grep -q "REPO_ROOT / 'engine_scores.json'" deploy/generate_bulletin.py
+          grep -q "REPO_ROOT / 'expert_overrides_v3.json'" deploy/generate_bulletin.py
+          grep -q -- '--workdir' deploy/run_forecast.py
+          grep -q -- '--no-engine' deploy/generate_forecast_pdf.py
+      - name: Protected artifacts unchanged from deploy
+        run: |
+          git diff --exit-code origin/deploy -- engine_scores.json expert_overrides_v3.json expert_calc_scores.json future_kp.json
+      - name: Final stack summary
+        run: |
+          echo 'FULL RELEASE STACK DRY-RUN PASS'
