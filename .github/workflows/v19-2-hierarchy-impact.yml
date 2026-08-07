@@ -1,0 +1,45 @@
+name: v19.2 production hierarchy impact
+
+on:
+  push:
+    branches:
+      - fix/post-freeze-engine-correctness
+    paths:
+      - 'audit_v19_2_production_hierarchy.py'
+      - 'engine_scores_v19_2_candidate.json'
+      - 'deploy/expert_overrides_v3.json'
+      - '.github/workflows/v19-2-hierarchy-impact.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/post-freeze-engine-correctness
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Locate expert_calc implementation/data
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo '=== expert_calc repository grep ==='
+          grep -Rni --exclude-dir=.git -E 'expert[_-]?calc|expertCalc|EXPERT_CALC' . || true
+      - name: Classify candidate through hierarchy
+        run: python audit_v19_2_production_hierarchy.py
+      - name: Commit hierarchy impact report
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add ENGINE_V19_2_PRODUCTION_HIERARCHY_IMPACT.json
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'audit(engine): add v19.2 production hierarchy impact'
+          git push origin HEAD:fix/post-freeze-engine-correctness
