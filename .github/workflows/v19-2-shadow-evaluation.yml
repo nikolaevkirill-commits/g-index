@@ -1,0 +1,53 @@
+name: v19.2 shadow evaluation
+
+on:
+  push:
+    branches: [fix/post-freeze-engine-correctness]
+    paths:
+      - 'V19_2_PROSPECTIVE_SHADOW_OBSERVATIONS_v1.json'
+      - 'V19_2_PROSPECTIVE_SHADOW_FREEZE_v1.json'
+      - 'evaluate_v19_2_shadow.py'
+      - '.github/workflows/v19-2-shadow-evaluation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  evaluate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/post-freeze-engine-correctness
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Evaluate frozen observations
+        run: python evaluate_v19_2_shadow.py
+      - name: Enforce non-production status
+        run: |
+          python - <<'PY'
+          import json
+          d=json.load(open('V19_2_PROSPECTIVE_SHADOW_EVALUATION_v1.json',encoding='utf-8'))
+          assert d['production_formula_changed'] is False
+          assert d['promotion_allowed'] is False
+          assert d['policy']['descriptive_only'] is True
+          assert d['policy']['expert_pdf_is_not_real_outcome'] is True
+          assert d['policy']['streams_never_pooled'] is True
+          print('evaluation safety assertions PASS')
+          PY
+      - name: Commit derived evaluation if changed
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add V19_2_PROSPECTIVE_SHADOW_EVALUATION_v1.json
+          if git diff --cached --quiet; then
+            echo 'Derived evaluation unchanged.'
+            exit 0
+          fi
+          git commit -m 'data(engine): update v19.2 shadow evaluation'
+          git push origin HEAD:fix/post-freeze-engine-correctness
