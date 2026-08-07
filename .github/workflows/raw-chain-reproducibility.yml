@@ -1,0 +1,45 @@
+name: Raw chain reproducibility
+
+on:
+  push:
+    branches:
+      - fix/post-freeze-engine-correctness
+    paths:
+      - 'forecast_engine_v17_0.py'
+      - 'forecast_engine_v18_5.py'
+      - 'forecast_engine_v18_5_correctness.py'
+      - 'engine_correctness.py'
+      - 'engine_tag_aliases_v1.json'
+      - 'engine_scores.json'
+      - 'audit_raw_chain_reproducibility.py'
+      - '.github/workflows/raw-chain-reproducibility.yml'
+  pull_request:
+    paths:
+      - 'forecast_engine_v17_0.py'
+      - 'forecast_engine_v18_5.py'
+      - 'forecast_engine_v18_5_correctness.py'
+      - 'engine_correctness.py'
+      - 'engine_tag_aliases_v1.json'
+      - 'engine_scores.json'
+      - 'audit_raw_chain_reproducibility.py'
+      - '.github/workflows/raw-chain-reproducibility.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify recovered source hashes
+        run: |
+          echo '1b4c5fa7052590ed441923e9383f42654247711c5ece6f9cea765693a954eaae  forecast_engine_v17_0.py' | sha256sum -c -
+          echo '26334307c6d757a183553c4f188c4829db06564a0664dafb1f85f580b3c033c4  forecast_engine_v18_5.py' | sha256sum -c -
+      - name: Raw-chain reproducibility audit
+        run: python audit_raw_chain_reproducibility.py
