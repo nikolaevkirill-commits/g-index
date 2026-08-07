@@ -70,7 +70,7 @@ No exposed change is parser-only correctness. Exposed-rule risk taxonomy:
 - GT-derived Panchanga priors: 5/29;
 - specific v19.1 heuristics: 3/29.
 
-## New pre-observation Panchanga provenance hold
+## Pre-observation Panchanga provenance hold
 
 Canonical spec fixes Panchanga sampling at **12:00 UTC**. Dashboard code identifies `annual_2026_27.json` as the PRIMARY canonical noon-UTC Panchanga display layer.
 
@@ -94,7 +94,7 @@ This defect was discovered before any prospective expert/PDF or real-outcome obs
 - context-invalid quarantine: **3**;
 - confirmatory context-valid sign-flip endpoint: **9**.
 
-The quarantine is outcome-independent. These three rows remain reported descriptively but cannot count toward promotion evidence.
+A first manual transcription of the amendment mis-copied the final two original frozen sign-flip dates. Machine validation immediately rejected it before any prospective observation. The list was corrected to the immutable freeze (`2026-11-25`, `2026-12-13`); quarantine membership remained unchanged. This correction is documented in amendment provenance and was not outcome-informed.
 
 ## Structural semantic risks already known before outcomes
 
@@ -144,6 +144,7 @@ Confirmatory primary sign/class endpoint is now the **9 context-valid frozen sig
 - [x] GT-informed tuning provenance disclosed.
 - [x] Canonical-vs-frozen Panchanga provenance audited before observations.
 - [x] Pre-observation 12 -> 9 + 3 context-validity amendment created.
+- [x] Amendment machine-validation catches date-list drift; typo corrected before observations.
 - [ ] Context-amendment/evaluator-v2 CI fully green on latest head.
 - [ ] Collect prospective evidence through leakage-safe append-only intake.
 - [ ] Reach end-of-cohort review checkpoint.
