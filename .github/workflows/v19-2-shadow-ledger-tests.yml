@@ -5,7 +5,9 @@ on:
     branches: [fix/post-freeze-engine-correctness]
     paths:
       - 'append_v19_2_shadow_observation.py'
+      - 'evaluate_v19_2_shadow.py'
       - 'V19_2_PROSPECTIVE_SHADOW_FREEZE_v1.json'
+      - 'V19_2_PROSPECTIVE_SHADOW_OBSERVATIONS_v1.json'
       - '.github/workflows/v19-2-shadow-ledger-tests.yml'
   workflow_dispatch:
 
@@ -20,29 +22,47 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Test append-only ledger in isolated copy
+      - name: Test append-only ledger and evaluator in isolated copy
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p /tmp/v19shadow
-          cp append_v19_2_shadow_observation.py V19_2_PROSPECTIVE_SHADOW_FREEZE_v1.json V19_2_PROSPECTIVE_SHADOW_STATUS_v1.json /tmp/v19shadow/
+          cp append_v19_2_shadow_observation.py evaluate_v19_2_shadow.py V19_2_PROSPECTIVE_SHADOW_FREEZE_v1.json V19_2_PROSPECTIVE_SHADOW_STATUS_v1.json /tmp/v19shadow/
           cd /tmp/v19shadow
           BEFORE=$(sha256sum V19_2_PROSPECTIVE_SHADOW_FREEZE_v1.json | awk '{print $1}')
-          python append_v19_2_shadow_observation.py --date 2026-08-07 --kind expert_pdf --value 1 --observed-at 2026-08-08T09:00:00Z --source SELFTEST
+
+          # Expert/PDF observation: candidate +1 should be exact for 2026-08-07.
+          python append_v19_2_shadow_observation.py --date 2026-08-07 --kind expert_pdf --value 1 --observed-at 2026-08-08T09:00:00Z --source SELFTEST_PDF
+
+          # A deliberately different real outcome for the same frozen date.
+          # The evaluator must keep the two streams separate rather than pool them.
+          python append_v19_2_shadow_observation.py --date 2026-08-07 --kind real_outcome --value 0 --observed-at 2026-08-08T21:00:00Z --source SELFTEST_REAL
+
           AFTER=$(sha256sum V19_2_PROSPECTIVE_SHADOW_FREEZE_v1.json | awk '{print $1}')
           test "$BEFORE" = "$AFTER"
+
+          python evaluate_v19_2_shadow.py
           python - <<'PY'
           import json
           d=json.load(open('V19_2_PROSPECTIVE_SHADOW_OBSERVATIONS_v1.json',encoding='utf-8'))
           assert d['append_only'] is True
-          assert len(d['observations']) == 1
-          assert d['observations'][0]['date'] == '2026-08-07'
-          assert d['observations'][0]['candidate_exact'] is True
+          assert len(d['observations']) == 2
+          assert {x['kind'] for x in d['observations']} == {'expert_pdf','real_outcome'}
           s=json.load(open('V19_2_PROSPECTIVE_SHADOW_STATUS_v1.json',encoding='utf-8'))
           assert s['promotion_allowed'] is False
           assert s['expert_labels_observed'] == 1
-          print('isolated valid append PASS')
+          assert s['real_outcomes_observed'] == 1
+          e=json.load(open('V19_2_PROSPECTIVE_SHADOW_EVALUATION_v1.json',encoding='utf-8'))
+          assert e['promotion_allowed'] is False
+          assert e['policy']['streams_never_pooled'] is True
+          assert e['streams']['expert_pdf']['observed_rows'] == 1
+          assert e['streams']['real_outcome']['observed_rows'] == 1
+          assert e['streams']['expert_pdf']['candidate']['exact'] == 1.0
+          assert e['streams']['real_outcome']['candidate']['exact'] == 0.0
+          assert e['paired_expert_and_real_dates'] == ['2026-08-07']
+          print('isolated valid append + separated evaluator PASS')
           PY
+
           if python append_v19_2_shadow_observation.py --date 2026-08-07 --kind expert_pdf --value 0 --observed-at 2026-08-09T09:00:00Z --source DUPLICATE; then
             echo 'ERROR: duplicate was accepted'; exit 1
           fi
