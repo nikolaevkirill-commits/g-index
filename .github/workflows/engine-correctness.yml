@@ -29,7 +29,7 @@ permissions:
 jobs:
   correctness:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
         with:
@@ -51,83 +51,59 @@ jobs:
           git rev-list --objects --all | grep -Ei 'forecast_engine|engine[^ ]*v1[78]|v18[_\. -]?5|v17[_\. -]?0' || true
           echo '=== COMMIT NAME SEARCH ==='
           git log --all --name-only --pretty='format:%H %ad %s' --date=iso | grep -Ei 'forecast_engine|v18[_\. -]?5|v17[_\. -]?0' || true
-      - name: Recover expert master and audit verbal tags
+      - name: Scan all historical Excel blobs for expert verbal tags
         shell: bash
         run: |
           set -euo pipefail
-          SRC_COMMIT='420f02bee1019217c8b58c92bb09be3f3808a251'
-          git show "${SRC_COMMIT}:deploy/prognoz_2025_2026_4.xlsx" > /tmp/expert_master.xlsx
+          git rev-list --objects --all | grep -Ei '\.xlsx$' > /tmp/xlsx_objects.txt || true
+          echo '=== HISTORICAL XLSX PATHS ==='
+          cat /tmp/xlsx_objects.txt || true
           python - <<'PY'
-          from zipfile import ZipFile
+          from zipfile import ZipFile, BadZipFile
           from xml.etree import ElementTree as ET
-          import re
+          import subprocess, tempfile, os, re
 
-          fn='/tmp/expert_master.xlsx'
           targets=['серце','книги','сукня','таблетка','хрест','гучномовець','зелена печатка','мішень','вінаяка','шприц']
-          ns={'m':'http://schemas.openxmlformats.org/spreadsheetml/2006/main','r':'http://schemas.openxmlformats.org/officeDocument/2006/relationships'}
-          relns={'p':'http://schemas.openxmlformats.org/package/2006/relationships'}
-
-          with ZipFile(fn) as z:
-              shared=[]
-              if 'xl/sharedStrings.xml' in z.namelist():
-                  root=ET.fromstring(z.read('xl/sharedStrings.xml'))
-                  for si in root.findall('m:si',ns):
-                      shared.append(''.join(t.text or '' for t in si.iterfind('.//m:t',ns)))
-
-              wb=ET.fromstring(z.read('xl/workbook.xml'))
-              rel=ET.fromstring(z.read('xl/_rels/workbook.xml.rels'))
-              relmap={x.attrib['Id']:x.attrib['Target'] for x in rel.findall('p:Relationship',relns)}
-              sheets=[]
-              for s in wb.find('m:sheets',ns):
-                  rid=s.attrib['{http://schemas.openxmlformats.org/officeDocument/2006/relationships}id']
-                  target=relmap[rid]
-                  path='xl/'+target.lstrip('/') if not target.startswith('xl/') else target
-                  path=path.replace('xl/../','')
-                  sheets.append((s.attrib['name'],path))
-
-              def val(c):
-                  typ=c.attrib.get('t')
-                  if typ=='inlineStr':
-                      return ''.join(t.text or '' for t in c.iterfind('.//m:t',ns))
-                  v=c.find('m:v',ns)
-                  if v is None: return ''
-                  raw=v.text or ''
-                  if typ=='s':
-                      try:return shared[int(raw)]
-                      except:return raw
-                  return raw
-
-              hits=[]
-              print('=== EXPERT MASTER TARGET HITS ===')
-              for sheet_name,path in sheets:
-                  if path not in z.namelist():
-                      continue
-                  root=ET.fromstring(z.read(path))
-                  cells={c.attrib.get('r',''):val(c) for c in root.findall('.//m:c',ns)}
-                  for ref,text in cells.items():
-                      low=str(text).casefold()
-                      found=[t for t in targets if t in low]
-                      if found:
-                          m=re.match(r'([A-Z]+)(\d+)$',ref)
-                          row=int(m.group(2)) if m else None
-                          ctx=[]
-                          if row:
-                              for col in 'CDEFG':
-                                  x=cells.get(f'{col}{row}','')
-                                  if x!='': ctx.append(f'{col}{row}={x}')
-                          line=f'{sheet_name}!{ref}: {text} | targets={found} | C:G: ' + ' || '.join(ctx)
-                          print(line)
-                          hits.append((sheet_name,ref,text,found,ctx))
-
-              print('=== C61:G540 TARGET SUMMARY ===')
-              in_master=[]
-              for sh,ref,text,found,ctx in hits:
-                  m=re.match(r'([A-Z]+)(\d+)$',ref)
-                  if not m: continue
-                  col,row=m.group(1),int(m.group(2))
-                  if col in ['C','D','E','F','G'] and 61 <= row <= 540:
-                      in_master.append((sh,ref,text,found,ctx))
-                      print(f'{sh}!{ref}: {text} -> {found}')
-              print('TARGET_HITS_TOTAL=',len(hits))
-              print('MASTER_C61_G540_HITS=',len(in_master))
+          ns={'m':'http://schemas.openxmlformats.org/spreadsheetml/2006/main'}
+          lines=open('/tmp/xlsx_objects.txt',encoding='utf-8').read().splitlines() if os.path.exists('/tmp/xlsx_objects.txt') else []
+          seen=set(); total=0
+          print('=== XLSX TAG FORENSICS ===')
+          for line in lines:
+              parts=line.split(' ',1)
+              if len(parts)!=2: continue
+              sha,path=parts
+              if sha in seen: continue
+              seen.add(sha)
+              data=subprocess.check_output(['git','cat-file','blob',sha])
+              fd,tmp=tempfile.mkstemp(suffix='.xlsx'); os.close(fd)
+              open(tmp,'wb').write(data)
+              try:
+                  with ZipFile(tmp) as z:
+                      strings=[]
+                      if 'xl/sharedStrings.xml' in z.namelist():
+                          root=ET.fromstring(z.read('xl/sharedStrings.xml'))
+                          for si in root.findall('m:si',ns):
+                              strings.append(''.join(t.text or '' for t in si.iterfind('.//m:t',ns)))
+                      # Include inline strings from worksheets too.
+                      for name in z.namelist():
+                          if name.startswith('xl/worksheets/') and name.endswith('.xml'):
+                              root=ET.fromstring(z.read(name))
+                              for c in root.findall('.//m:c',ns):
+                                  if c.attrib.get('t')=='inlineStr':
+                                      strings.append(''.join(t.text or '' for t in c.iterfind('.//m:t',ns)))
+                      hits=[]
+                      for s in strings:
+                          low=s.casefold()
+                          found=[t for t in targets if t in low]
+                          if found: hits.append((s,found))
+                      if hits:
+                          total += len(hits)
+                          print(f'FILE sha={sha} path={path} hits={len(hits)}')
+                          for s,found in hits[:80]:
+                              print('  ',repr(s),'->',found)
+              except (BadZipFile,ET.ParseError) as e:
+                  print(f'WARN {path}: {e}')
+              finally:
+                  os.unlink(tmp)
+          print('ALL_XLSX_TARGET_HITS=',total)
           PY
