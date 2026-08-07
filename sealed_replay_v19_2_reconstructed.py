@@ -174,7 +174,7 @@ def pct(x):
 
 
 def main() -> int:
-    from engine_correctness import load_alias_spec, parse_tag_tokens
+    from engine_correctness import parse_tag_tokens
 
     scores_path = first_existing("engine_scores.json", "deploy/engine_scores.json")
     gt_path = first_existing("deploy/pdf48_ground_truth_v6.json", "pdf48_ground_truth_v6.json")
@@ -183,7 +183,6 @@ def main() -> int:
     scores = scores_doc.get("scores", {})
     gt = gt_doc.get("data", {})
     tithi_prior, nak_prior, calendar_tags = load_support()
-    alias_spec = load_alias_spec()
 
     rows = []
     for ds in sorted(set(scores) & set(gt)):
@@ -207,7 +206,7 @@ def main() -> int:
             snap.get("cal_tithi"), snap.get("cal_nakshatra"), snap.get("cal_symbols", []),
             tithi_prior, nak_prior,
         )
-        tokens = parse_tag_tokens(tag, alias_spec)
+        tokens = parse_tag_tokens(tag)
         rows.append({
             "date": ds,
             "tag": tag,
