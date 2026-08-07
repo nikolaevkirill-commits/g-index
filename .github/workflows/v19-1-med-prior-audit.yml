@@ -16,7 +16,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   audit:
@@ -24,33 +24,20 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: fix/post-freeze-engine-correctness
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       - name: Verify recovered v17 source
         run: echo '1b4c5fa7052590ed441923e9383f42654247711c5ece6f9cea765693a954eaae  forecast_engine_v17_0.py' | sha256sum -c -
-      - name: Run read-only semantic audit
+      - name: Run semantic audit
         run: python audit_v19_1_med_prior_precedence.py
-      - name: Enforce frozen/non-production status
+      - name: Verify reproducibility
         run: |
+          git diff --exit-code -- ENGINE_V19_1_MED_PRIOR_PRECEDENCE_AUDIT.json
           python - <<'PY'
           import json
           d=json.load(open('ENGINE_V19_1_MED_PRIOR_PRECEDENCE_AUDIT.json',encoding='utf-8'))
-          assert d['read_only'] is True
-          assert d['production_changed'] is False
-          assert d['frozen_candidate_changed'] is False
-          assert d['decision']=='AUDIT_ONLY_DO_NOT_RETUNE_FROZEN_V19_2'
-          print('semantic audit safety assertions PASS')
+          assert d['counts']['rows_where_source_order_differs_from_documented_med_first']==2
+          assert d['counts']['conflicts_in_frozen_29_cohort']==0
+          print('med-prior audit reproducibility PASS')
           PY
-      - name: Commit audit report
-        shell: bash
-        run: |
-          set -euo pipefail
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add ENGINE_V19_1_MED_PRIOR_PRECEDENCE_AUDIT.json
-          if git diff --cached --quiet; then exit 0; fi
-          git commit -m 'docs(engine): record v19.1 med-prior precedence audit'
-          git push origin HEAD:fix/post-freeze-engine-correctness
