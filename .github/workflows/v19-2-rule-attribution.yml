@@ -13,27 +13,28 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   audit:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: fix/post-freeze-engine-correctness
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       - name: Attribute exposed changes
         run: python audit_v19_2_rule_attribution.py
-      - name: Commit attribution report
+      - name: Verify committed frozen attribution is reproducible
         shell: bash
         run: |
           set -euo pipefail
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add ENGINE_V19_2_EXPOSED_RULE_ATTRIBUTION.json
-          if git diff --cached --quiet; then exit 0; fi
-          git commit -m 'audit(engine): add exposed v19.2 rule attribution'
-          git push origin HEAD:fix/post-freeze-engine-correctness
+          git diff --exit-code -- ENGINE_V19_2_EXPOSED_RULE_ATTRIBUTION.json
+          python - <<'PY'
+          import json
+          d=json.load(open('ENGINE_V19_2_EXPOSED_RULE_ATTRIBUTION.json',encoding='utf-8'))
+          assert d['counts']['rows']==29
+          assert d['counts']['sign_flips']==12
+          assert d['counts']['v19_1_prior_vs_med_conflict_rows']==0
+          print('rule-attribution reproducibility PASS')
+          PY
