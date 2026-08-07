@@ -100,7 +100,6 @@ def v19_1_specific(raw: int, tag: str, kp: float, tithi_n, nak_n, tithi_prior, n
 
     t = parse_v17(tag)
 
-    # P-v19-3 med solo. Preserved source executes this when base != -3.
     if raw != -3:
         blocking = [
             "heart", "plane", "plus", "diamond", "star", "navaratri", "dipavali",
@@ -111,7 +110,6 @@ def v19_1_specific(raw: int, tag: str, kp: float, tithi_n, nak_n, tithi_prior, n
             return 1
         return clip(raw)
 
-    # P-v19-1 explicit bolt/action rescue from raw == -3.
     if (t["bolt"] and kp <= 2.0
             and not t["amavasya"] and not t["purnima"]
             and not t["ekadashi"] and not t["ganesh"]
@@ -217,7 +215,7 @@ def main() -> int:
             "candidate": cand,
             "source": source,
             "n_tags": len(tokens),
-            "tokens": tokens,
+            "tokens": sorted(tokens),
         })
 
     if not rows:
