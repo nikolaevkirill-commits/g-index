@@ -9,6 +9,7 @@ on:
       - 'deploy/score_engine_v19_preview.py'
       - 'deploy/panchanga_sign_priors.json'
       - 'deploy/calendar_tags_2025_2026.json'
+      - 'tests/test_v19_1_deploy_support.py'
       - '.github/workflows/v19-1-support-path-audit.yml'
   workflow_dispatch:
 
@@ -26,3 +27,5 @@ jobs:
           python-version: '3.11'
       - name: Audit root vs deploy support resolution
         run: python audit_v19_1_support_path_parity.py
+      - name: Deploy-context support-aware tests
+        run: python -m unittest tests.test_v19_1_deploy_support -v
