@@ -2,8 +2,9 @@
 """Evaluate frozen v19.2 shadow observations without model tuning or promotion.
 
 Expert/PDF labels and real outcomes are evaluated as separate evidence streams.
-The evaluator is descriptive only: it never changes the freeze, candidate,
-production files, thresholds, rules, or promotion state.
+The original frozen cohort remains immutable. A pre-observation context-validity
+amendment quarantines three Panchanga-input-invalid sign-flip rows from the
+confirmatory promotion endpoint while retaining them descriptively.
 """
 from __future__ import annotations
 
@@ -13,6 +14,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 FREEZE = ROOT / "V19_2_PROSPECTIVE_SHADOW_FREEZE_v1.json"
+AMENDMENT = ROOT / "V19_2_CONTEXT_VALIDITY_AMENDMENT_2026-08-07.json"
 LEDGER = ROOT / "V19_2_PROSPECTIVE_SHADOW_OBSERVATIONS_v1.json"
 OUT = ROOT / "V19_2_PROSPECTIVE_SHADOW_EVALUATION_v1.json"
 
@@ -57,15 +59,17 @@ def validate_observation(obs: dict, cohort: dict[str, dict]) -> None:
         raise ValueError(f"rule mutation detected for {ds}")
 
 
-def enrich(obs: dict, cohort: dict[str, dict]) -> dict:
+def enrich(obs: dict, cohort: dict[str, dict], context_valid: set[str], quarantined: set[str]) -> dict:
     frozen = cohort[obs["date"]]
     return {
         **obs,
         "baseline": frozen["production_baseline"],
         "candidate": frozen["v19_2_candidate"],
         "rule": frozen["rule"],
-        "family": frozen.get("family"),
+        "family": frozen.get("rule_family"),
         "frozen_sign_flip": frozen.get("sign_flip", False),
+        "context_valid_confirmatory_sign_flip": obs["date"] in context_valid,
+        "context_invalid_quarantined": obs["date"] in quarantined,
     }
 
 
@@ -75,14 +79,27 @@ def summarize_stream(rows: list[dict]) -> dict:
     for r in rows:
         by_rule[r.get("rule") or "unknown"].append(r)
         by_family[r.get("family") or "unknown"].append(r)
-    sign_flip_rows = [r for r in rows if r.get("frozen_sign_flip")]
+    original_sign_flip_rows = [r for r in rows if r.get("frozen_sign_flip")]
+    context_valid_sign_rows = [r for r in rows if r.get("context_valid_confirmatory_sign_flip")]
+    quarantined_rows = [r for r in rows if r.get("context_invalid_quarantined")]
     return {
         "observed_rows": len(rows),
         "baseline": metrics(rows, "baseline"),
         "candidate": metrics(rows, "candidate"),
-        "frozen_sign_flip_subset": {
-            "baseline": metrics(sign_flip_rows, "baseline"),
-            "candidate": metrics(sign_flip_rows, "candidate"),
+        "frozen_sign_flip_subset_descriptive": {
+            "baseline": metrics(original_sign_flip_rows, "baseline"),
+            "candidate": metrics(original_sign_flip_rows, "candidate"),
+            "dates": [r["date"] for r in original_sign_flip_rows],
+        },
+        "context_valid_sign_flip_subset_confirmatory": {
+            "baseline": metrics(context_valid_sign_rows, "baseline"),
+            "candidate": metrics(context_valid_sign_rows, "candidate"),
+            "dates": [r["date"] for r in context_valid_sign_rows],
+        },
+        "context_invalid_quarantined_descriptive": {
+            "baseline": metrics(quarantined_rows, "baseline"),
+            "candidate": metrics(quarantined_rows, "candidate"),
+            "dates": [r["date"] for r in quarantined_rows],
         },
         "by_family": {
             k: {"baseline": metrics(v, "baseline"), "candidate": metrics(v, "candidate")}
@@ -100,7 +117,21 @@ def main() -> int:
     freeze = load_json(FREEZE, None)
     if not freeze:
         raise RuntimeError("freeze file missing")
+    amendment = load_json(AMENDMENT, None)
+    if not amendment:
+        raise RuntimeError("context-validity amendment missing")
     cohort = {r["date"]: r for r in freeze.get("rows", [])}
+
+    original_sign_dates = [r["date"] for r in freeze.get("rows", []) if r.get("sign_flip")]
+    if original_sign_dates != amendment.get("original_frozen_sign_flip_dates"):
+        raise RuntimeError("amendment/original frozen sign cohort mismatch")
+    context_valid = set(amendment.get("confirmatory_context_valid_sign_flip_dates", []))
+    quarantined = set(amendment.get("quarantined_context_invalid_dates", {}).keys())
+    if context_valid & quarantined:
+        raise RuntimeError("context-valid and quarantined sets overlap")
+    if context_valid | quarantined != set(original_sign_dates):
+        raise RuntimeError("amendment does not partition original sign-flip cohort")
+
     ledger = load_json(LEDGER, {"observations": []})
     observations = ledger.get("observations", [])
 
@@ -112,14 +143,14 @@ def main() -> int:
         if key in seen:
             raise ValueError(f"duplicate observation: {key}")
         seen.add(key)
-        streams[obs["kind"]].append(enrich(obs, cohort))
+        streams[obs["kind"]].append(enrich(obs, cohort, context_valid, quarantined))
 
     paired_dates = sorted(
         set(r["date"] for r in streams["expert_pdf"])
         & set(r["date"] for r in streams["real_outcome"])
     )
     report = {
-        "schema": "v19_2_prospective_shadow_evaluation_v1",
+        "schema": "v19_2_prospective_shadow_evaluation_v2_context_validity",
         "state": "FROZEN_PROSPECTIVE_SHADOW",
         "production_formula_changed": False,
         "promotion_allowed": False,
@@ -129,9 +160,16 @@ def main() -> int:
             "expert_pdf_is_not_real_outcome": True,
             "streams_never_pooled": True,
             "automatic_promotion": False,
+            "original_frozen_12_retained_descriptively": True,
+            "confirmatory_sign_endpoint_uses_context_valid_9": True,
+            "quarantined_rows_never_count_toward_confirmatory_promotion": True,
+            "amendment_created_before_first_observation": True,
         },
         "cohort_rows": len(cohort),
-        "frozen_sign_flip_rows": sum(bool(r.get("sign_flip")) for r in cohort.values()),
+        "frozen_sign_flip_rows": len(original_sign_dates),
+        "confirmatory_context_valid_sign_flip_rows": len(context_valid),
+        "quarantined_context_invalid_sign_flip_rows": len(quarantined),
+        "context_validity_amendment": AMENDMENT.name,
         "streams": {
             "expert_pdf": summarize_stream(streams["expert_pdf"]),
             "real_outcome": summarize_stream(streams["real_outcome"]),
@@ -144,11 +182,14 @@ def main() -> int:
     print("=== V19.2 PROSPECTIVE SHADOW EVALUATION ===")
     print(f"cohort_rows={report['cohort_rows']}")
     print(f"frozen_sign_flip_rows={report['frozen_sign_flip_rows']}")
+    print(f"confirmatory_context_valid_sign_flip_rows={report['confirmatory_context_valid_sign_flip_rows']}")
+    print(f"quarantined_context_invalid_sign_flip_rows={report['quarantined_context_invalid_sign_flip_rows']}")
     for kind in ("expert_pdf", "real_outcome"):
         s = report["streams"][kind]
         print(f"{kind}: observed_rows={s['observed_rows']}")
         print(f"  baseline={s['baseline']}")
         print(f"  candidate={s['candidate']}")
+        print(f"  confirmatory_sign={s['context_valid_sign_flip_subset_confirmatory']}")
     print("promotion_allowed=false")
     return 0
 
