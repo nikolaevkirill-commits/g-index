@@ -1,0 +1,47 @@
+name: canonical dashboard entrypoint
+
+on:
+  push:
+    branches: [fix/canonical-dashboard-entrypoint]
+    paths:
+      - 'deploy/index.html'
+      - 'deploy/sw.js'
+      - '.github/workflows/canonical-dashboard-entrypoint.yml'
+  pull_request:
+    paths:
+      - 'deploy/index.html'
+      - 'deploy/sw.js'
+      - '.github/workflows/canonical-dashboard-entrypoint.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Static compatibility assertions
+        run: |
+          grep -q "new URL('../', window.location.href)" deploy/index.html
+          grep -q "window.location.replace(target)" deploy/index.html
+          grep -q "self.registration.unregister" deploy/sw.js
+          grep -q "Response.redirect(new URL('../', event.request.url).href, 302)" deploy/sw.js
+          ! grep -q "CACHE_NAME" deploy/sw.js
+      - name: URL resolution assertions
+        run: |
+          python - <<'PY'
+          from urllib.parse import urljoin
+          assert urljoin('https://nikolaevkirill-commits.github.io/g-index/deploy/','../') == 'https://nikolaevkirill-commits.github.io/g-index/'
+          assert urljoin('https://nikolaevkirill-commits.github.io/g-index/deploy/index.html','../') == 'https://nikolaevkirill-commits.github.io/g-index/'
+          print('canonical redirect resolution PASS')
+          PY
+      - name: Canonical root is not changed by this PR
+        shell: bash
+        run: |
+          git fetch origin deploy --depth=1
+          git diff --exit-code origin/deploy -- index.html sw.js

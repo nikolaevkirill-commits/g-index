@@ -1,19 +1,28 @@
-// G-Index SW fp143 SELF-DESTRUCT: розреєстровує себе, чистить усі кеші, перезавантажує клієнтів.
-// Мета: прибрати старий кешуючий SW, що віддавав застарілі версії. Після виконання
-// сторінка обслуговується напряму з мережі без SW-посередника.
-self.addEventListener('install', event => { self.skipWaiting(); });
+// Compatibility service worker for deprecated /deploy/ scope.
+// Canonical dashboard is repository root (/g-index/). Do not cache nested app.
+self.addEventListener('install', event => {
+  self.skipWaiting();
+});
 self.addEventListener('activate', event => {
   event.waitUntil((async () => {
     try {
       const keys = await caches.keys();
       await Promise.all(keys.map(k => caches.delete(k)));
-    } catch (e) {}
-    try { await self.registration.unregister(); } catch (e) {}
-    try {
-      const clientList = await self.clients.matchAll({ type: 'window' });
-      clientList.forEach(c => { try { c.navigate(c.url); } catch (e) {} });
-    } catch (e) {}
+      const clients = await self.clients.matchAll({type:'window', includeUncontrolled:true});
+      for (const client of clients) {
+        try {
+          const target = new URL('../', client.url).href;
+          if (client.url !== target) client.navigate(target);
+        } catch (_) {}
+      }
+      await self.registration.unregister();
+    } catch (_) {}
   })());
 });
-// Поки живий — не перехоплюємо кеш, лише прямий network passthrough.
-self.addEventListener('fetch', event => { event.respondWith(fetch(event.request)); });
+self.addEventListener('fetch', event => {
+  if (event.request.mode === 'navigate') {
+    try {
+      event.respondWith(Response.redirect(new URL('../', event.request.url).href, 302));
+    } catch (_) {}
+  }
+});
