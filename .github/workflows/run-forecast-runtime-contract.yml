@@ -1,0 +1,77 @@
+name: run_forecast runtime contract
+
+on:
+  push:
+    branches: [fix/run-forecast-runtime-contract]
+    paths:
+      - 'deploy/run_forecast.py'
+      - '.github/workflows/run-forecast-runtime-contract.yml'
+  pull_request:
+    paths:
+      - 'deploy/run_forecast.py'
+      - '.github/workflows/run-forecast-runtime-contract.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install openpyxl
+      - name: Missing-input fail-fast
+        run: |
+          mkdir -p /tmp/gindex-empty
+          set +e
+          python deploy/run_forecast.py --workdir /tmp/gindex-empty --from 2026-08-07 --days 1 --no-fetch > /tmp/fail.txt 2>&1
+          rc=$?
+          set -e
+          cat /tmp/fail.txt
+          test $rc -ne 0
+          grep -q 'Required Excel source not found' /tmp/fail.txt
+          ! grep -q 'теги порожні' /tmp/fail.txt
+      - name: Build complete synthetic runtime bundle
+        run: |
+          python - <<'PY'
+          import json
+          from datetime import datetime
+          from pathlib import Path
+          from openpyxl import Workbook
+          d=Path('/tmp/gindex-valid'); d.mkdir(parents=True,exist_ok=True)
+          wb=Workbook(); ws=wb.active; ws.title='ДАНІ_ЩОДЕННІ'
+          ws.append(['date']+['']*13)
+          row=['']*14
+          row[0]=datetime(2026,8,7)
+          row[9]=2.0
+          row[11]=0
+          row[13]='📚'
+          ws.append(row)
+          wb.save(d/'prognoz_2025_2026_4_FIXED.xlsx')
+          (d/'annual_2026_27.json').write_text(json.dumps({'days':[{'date':'2026-08-07','tithi_n':25,'nakshatra':'Krittika'}]}),encoding='utf-8')
+          (d/'future_kp.json').write_text(json.dumps({'kp':{'2026-08-07':{'kp':2.0,'source':'fixture'}}}),encoding='utf-8')
+          (d/'expert_overrides_v3.json').write_text(json.dumps({'overrides':[]}),encoding='utf-8')
+          (d/'score_engine_v19_preview.py').write_text("def score_day_v19(tag,kp,sn=0,date_str='',tithi_n=None,nakshatra_n=None,**kw):\n    assert tag=='📚'\n    assert date_str=='2026-08-07'\n    assert tithi_n==25\n    assert nakshatra_n==3\n    return 1\n",encoding='utf-8')
+          PY
+      - name: Complete-bundle success path
+        run: |
+          python deploy/run_forecast.py --workdir /tmp/gindex-valid --from 2026-08-07 --days 1 --no-fetch
+          test -f /tmp/gindex-valid/forecast_2026-08-07_2026-08-07.json
+          python - <<'PY'
+          import json
+          p='/tmp/gindex-valid/forecast_2026-08-07_2026-08-07.json'
+          d=json.load(open(p,encoding='utf-8'))
+          assert d['engine']=='v19_preview', d
+          assert len(d['days'])==1
+          r=d['days'][0]
+          assert r['date']=='2026-08-07'
+          assert r['tag']=='📚'
+          assert r['engine']==1 and r['final']==1
+          assert r['kp_source']=='fixture'
+          print('valid runtime bundle PASS')
+          PY
