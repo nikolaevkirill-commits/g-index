@@ -101,7 +101,7 @@ def main() -> int:
             "tokens": tokens,
             "base_tokens": base_tokens,
             "alias_changed": sorted(x.lower() for x in base_tokens) != sorted(tokens),
-            "bolt_rescued": bool(debug["bolt"]["applied"]),
+            "bolt_rescued": bool(debug["bolt"]["rescued"]),
         })
 
     if not rows:
