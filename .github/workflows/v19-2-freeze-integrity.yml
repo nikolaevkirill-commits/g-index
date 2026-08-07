@@ -28,14 +28,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # Git blob SHA pinned at the moment the prospective cohort was frozen.
           test "$(git hash-object V19_2_PROSPECTIVE_SHADOW_FREEZE_v1.json)" = "460386800d2f1756b1b0a47b80f20c811016b927"
           python - <<'PY'
           import hashlib, json
           from pathlib import Path
-
-          freeze_path=Path('V19_2_PROSPECTIVE_SHADOW_FREEZE_v1.json')
-          freeze=json.loads(freeze_path.read_text(encoding='utf-8'))
+          freeze=json.loads(Path('V19_2_PROSPECTIVE_SHADOW_FREEZE_v1.json').read_text(encoding='utf-8'))
           assert freeze['frozen_at_utc']=='2026-08-07T12:19:13+00:00'
           assert freeze['effective_start_date']=='2026-08-07'
           assert freeze['production_changed'] is False
@@ -44,15 +41,11 @@ jobs:
           assert freeze['counts']=={'rows':29,'sign_flips':12}
           assert all(r['future_expert_label'] is None for r in freeze['rows'])
           assert all(r['future_real_outcome'] is None for r in freeze['rows'])
-
-          def sha256(path):
-              return hashlib.sha256(Path(path).read_bytes()).hexdigest()
-
+          def sha256(path): return hashlib.sha256(Path(path).read_bytes()).hexdigest()
           prov=freeze['provenance']
           assert sha256('engine_scores_v19_2_candidate.json') == prov['candidate_sha256'] == '95b754735298a0de9f32901a1df2da9052193c47ae629bea7dcf323803716532'
           assert sha256('ENGINE_V19_2_PRODUCTION_HIERARCHY_IMPACT.json') == prov['hierarchy_impact_sha256']
           assert sha256('ENGINE_V19_2_EXPOSED_RULE_ATTRIBUTION.json') == prov['rule_attribution_sha256']
-
           cand=json.loads(Path('engine_scores_v19_2_candidate.json').read_text(encoding='utf-8'))
           assert cand['_meta']['production'] is False
           assert cand['_meta']['historical_v19_2_source_recovered'] is False
@@ -67,16 +60,9 @@ jobs:
           python - <<'PY'
           from pathlib import Path
           import re
-
           wfdir=Path('.github/workflows')
-          allowed_write={
-              'v19-2-shadow-expert-intake.yml',
-              'v19-2-shadow-evaluation.yml',
-          }
-          forbidden_generators={
-              'generate_engine_scores_v19_2_' + 'candidate.py',
-              'freeze_v19_2_' + 'prospective_shadow.py',
-          }
+          allowed_write={'v19-2-shadow-expert-intake.yml','v19-2-shadow-evaluation.yml'}
+          forbidden_generators={'generate_engine_scores_v19_2_'+'candidate.py','freeze_v19_2_'+'prospective_shadow.py'}
           violations=[]
           for p in sorted(wfdir.glob('*.yml')):
               text=p.read_text(encoding='utf-8')
@@ -87,26 +73,41 @@ jobs:
                   for token in forbidden_generators:
                       if token in text:
                           violations.append(f'{p.name}: frozen generator remains callable: {token}')
-          if violations:
-              raise SystemExit('\n'.join(violations))
+          if violations: raise SystemExit('\n'.join(violations))
           print('workflow write-path governance PASS')
           PY
-      - name: Verify mutable workflows cannot stage frozen artifacts
+      - name: Verify mutable workflow staging is narrow
         shell: bash
         run: |
           set -euo pipefail
           python - <<'PY'
           from pathlib import Path
+          import re
+          allowed_targets={
+              'v19-2-shadow-expert-intake.yml': {
+                  'V19_2_PROSPECTIVE_SHADOW_OBSERVATIONS_v1.json',
+                  'V19_2_PROSPECTIVE_SHADOW_STATUS_v1.json',
+              },
+              'v19-2-shadow-evaluation.yml': {
+                  'V19_2_PROSPECTIVE_SHADOW_EVALUATION_v1.json',
+              },
+          }
           protected={
               'V19_2_PROSPECTIVE_SHADOW_FREEZE_v1.json',
               'engine_scores_v19_2_candidate.json',
               'ENGINE_V19_2_PRODUCTION_HIERARCHY_IMPACT.json',
               'ENGINE_V19_2_EXPOSED_RULE_ATTRIBUTION.json',
           }
-          for name in ('v19-2-shadow-expert-intake.yml','v19-2-shadow-evaluation.yml'):
+          broad_patterns=(r'git\s+add\s+\.', r'git\s+add\s+-A\b', r'git\s+add\s+--all\b', r'git\s+add\s+\*')
+          for name, allowed in allowed_targets.items():
               text=(Path('.github/workflows')/name).read_text(encoding='utf-8')
+              for pat in broad_patterns:
+                  if re.search(pat,text): raise SystemExit(f'{name}: broad staging forbidden: {pat}')
               for target in protected:
                   if f'git add {target}' in text or f'git add -- {target}' in text:
-                      raise SystemExit(f'{name} can stage protected artifact {target}')
-          print('mutable workflow protected-artifact staging PASS')
+                      raise SystemExit(f'{name}: protected artifact staging forbidden: {target}')
+              staged=set(re.findall(r'git\s+add(?:\s+--)?\s+([A-Za-z0-9_.\/-]+)', text))
+              unexpected={x for x in staged if x not in allowed}
+              if unexpected: raise SystemExit(f'{name}: unexpected staged targets: {sorted(unexpected)}')
+          print('mutable workflow narrow-staging PASS')
           PY
