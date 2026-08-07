@@ -1,14 +1,22 @@
-# Engine correctness — post-freeze candidate
+# Engine correctness — post-freeze history and current status
 
-## Scope
+## Status
 
-This branch changes only deterministic correctness behavior. It does **not** use PDF/GT labels, date-specific patches, fitted thresholds, ML, new indices or time-window tuning.
+This file began as the **initial v15.1 correctness detour** before the real v17/v18.5/v19.1 source chain was recovered. It is retained only to document that path. It is **not the current promotion specification**.
 
-## Patch A — canonical tag aliases
+Current authoritative release status:
 
-`engine_tag_aliases_v1.json` is the single alias-to-token contract. `engine_correctness.py` exposes Python token-set and boolean-map views; `engine_tag_parser.js` reads the same JSON for dashboard/validator code. No alias list is duplicated in JavaScript.
+- `ENGINE_V19_2_RECONSTRUCTION.md` — reconstruction/provenance audit;
+- `V19_2_RELEASE_GATE_2026-08-07.md` — current release decision;
+- `V19_2_PROSPECTIVE_SHADOW_FREEZE_v1.json` — immutable prospective cohort.
 
-Required parity tests cover:
+Current decision: **HOLD DIRECT PROMOTION / FROZEN PROSPECTIVE SHADOW**. Production `deploy` and canonical `engine_scores.json` remain unchanged.
+
+## Canonical tag aliases
+
+`engine_tag_aliases_v1.json` is the shared alias-to-token contract. `engine_correctness.py` exposes Python parsing views and `engine_tag_parser.js` reads the same JSON for UI/validator parity.
+
+Primary expert workbook evidence now confirms the verbal vocabulary. In particular:
 
 | Verbal expert label | Canonical token | Symbol/emoji equivalent |
 |---|---|---|
@@ -23,44 +31,45 @@ Required parity tests cover:
 | Вінаяка | `ganesh` | Ганеша |
 | Шприц | `med` | 💉 |
 
-`Хрест → plus` is the only mapping that still requires direct confirmation against the original expert master table before production merge.
+**`Хрест → plus/⊕` is confirmed** from the expert workbook semantic legend plus the canonical production symbol dictionary. It is no longer provisional.
 
-## Patch B — aggregate bolt rescue
+## Recovered source chain
 
-Frozen formula:
+The earlier blocker “v17/v18.5 source is absent/unrecoverable” is obsolete.
+
+Byte-identical recovered sources are now committed and SHA-pinned in CI:
+
+- `forecast_engine_v17_0.py`;
+- `forecast_engine_v18_5.py` — 73/73 native tests PASS;
+- `score_engine_v19_preview.py` v19.1 — 11/11 native tests PASS.
+
+Raw reproducibility audit shows **563/563 non-overridden frozen rows reproduce exactly**. The single non-reproduced frozen row (`2026-05-21`) is an explicit historical override and is independently backed by a verified expert/PDF override.
+
+## About the legacy v15.1 files
+
+`forecast_engine_v15_1.py`, `forecast_engine_v15_1_frozen.py`, `forecast_engine_v15_1_correctness.py` and the original v15.1 sealed replay remain in this branch as **legacy regression scaffolding only**.
+
+They must not be interpreted as the current Engine baseline and must not be used to regenerate production scores. The v19.2 correctness path uses recovered **v17 weights** where weight semantics are required.
+
+The original v15.1 aggregate-bolt experiment used:
 
 ```text
 P = Σ max(0, w_t), t ≠ bolt
-rescue = |w_bolt|, if bolt is present and P ≥ w_heart; otherwise 0
+rescue = |w_bolt| when bolt is present and P ≥ w_heart
 ```
 
-With the reproducible v15.1 weights:
+That historical experiment is preserved for regression provenance, not as the v19.2 production formula.
 
-```text
-w_heart = +2.5
-w_bolt  = −2.2
-```
+## Current v19.2 gate
 
-The rescue neutralizes only the generic bolt base penalty. It does not remove structural negative interactions such as `bolt+med` or `bolt+navaratri`.
+The reconstructed v19.2 candidate was replayed without tuning and then passed deterministic correctness tests, raw-chain provenance audit, actual runtime hierarchy audit and exact rule-attribution audit.
 
-Regression cases:
+However the runtime hierarchy shows that the only **29 exposed candidate changes are all prospective dates from 2026-08-07 onward**, including **12 sign flips**. Rule attribution shows that multiple sign flips come from broad v18.8 plane/Dashami rules and v19.1 Panchanga priors, not merely parser correctness.
 
-- `heart+bolt`: rescued through the same general formula;
-- `plane+plus+scissors+bolt`: rescued because 1.0 + 1.2 + 0.5 = 2.7 ≥ 2.5;
-- `plane+study+bolt`: not rescued because 1.3 < 2.5;
-- `retro+bolt`, `med+bolt`, `bolt` alone: not rescued.
+Therefore:
 
-## Production blocker found during audit
-
-The current dashboard does not calculate the frozen Engine in `index.html`; it reads static `engine_scores.json` values labeled v18.5. The repository contains `forecast_engine_v15_1.py`, but the v17/v18.5 source modules required to reproduce current production scores are absent. `deploy/score_engine_v19_preview.py` imports those missing modules and also contains date/GT-oriented patches, so it is not a valid base for this correctness change.
-
-The unchanged reproducible source is preserved as `forecast_engine_v15_1_frozen.py`; the canonical `forecast_engine_v15_1.py` entry point on this branch is wired through `forecast_engine_v15_1_correctness.py`. This makes the correctness patch executable for v15.1 consumers while still leaving production scores untouched. It must not replace production scores until the exact frozen v18.5 source is restored or the static score file is deliberately regenerated from an audited source.
-
-## Promotion gate
-
-1. Restore the exact source that generated frozen v18.5 scores.
-2. Port only the canonical parser and fixed bolt formula.
-3. Run unit tests.
-4. Run one sealed replay on the unchanged frozen dataset.
-5. Report Exact 7-class, ±1, 3-class/sign and PDF agreement for `n_tags=0`, `1`, `2+`.
-6. Verify that all UI views consume the same canonical score path before merging into deploy.
+1. PR #2 remains draft;
+2. production v18.5/Expert hierarchy remains unchanged;
+3. reconstructed v19.2 is frozen prospectively from 2026-08-07;
+4. future evidence must be appended without modifying the frozen candidate;
+5. direct promotion is reconsidered only after prospective evidence exists.
