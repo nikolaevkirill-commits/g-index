@@ -33,7 +33,7 @@ from pathlib import Path
 # Накшатра текст→номер (з panchanga_sign_priors.json)
 # Завантажується при старті; fallback = вбудований словник
 def _load_nak_map(workdir: Path) -> dict:
-    for d in (workdir, Path(__file__).resolve().parent):
+    for d in (workdir, Path(__file__).resolve().parent, Path(__file__).resolve().parent.parent, Path('/mnt/project')):
         fp = d / 'panchanga_sign_priors.json'
         if fp.exists():
             try:
@@ -50,8 +50,10 @@ def _load_nak_map(workdir: Path) -> dict:
     }
 
 HERE = Path(__file__).resolve().parent
-sys.path.insert(0, str(HERE))
-sys.path.insert(0, '/mnt/project')
+REPO_ROOT = HERE.parent
+for _p in (HERE, REPO_ROOT, Path('/mnt/project')):
+    if str(_p) not in sys.path:
+        sys.path.insert(0, str(_p))
 
 # ── Verdict mapping ──────────────────────────────────────────────────
 VERDICT = {
@@ -128,37 +130,52 @@ def step_load_inputs(workdir: Path):
     ov = {r['date']: r['expert_eng'] for r in ov_raw.get('overrides', [])}
     log(f"      overrides: {len(ov)} записів")
 
-    # Excel теги
+    # Excel теги — REQUIRED. Never silently score empty tags.
     xl = {}
     xlsx = None
-    for name in ('prognoz_2025_2026_4_FIXED.xlsx', 'prognoz_2025_2026_4.xlsx'):
-        if (workdir / name).exists():
-            xlsx = workdir / name
+    search_dirs = (workdir, REPO_ROOT, Path('/mnt/project'))
+    for d in search_dirs:
+        for name in ('prognoz_2025_2026_4_FIXED.xlsx', 'prognoz_2025_2026_4.xlsx'):
+            if (d / name).exists():
+                xlsx = d / name
+                break
+        if xlsx:
             break
-    if xlsx:
-        wb = openpyxl.load_workbook(xlsx, read_only=True, data_only=True)
-        ws = wb['ДАНІ_ЩОДЕННІ'] if 'ДАНІ_ЩОДЕННІ' in wb.sheetnames else wb.active
-        for row in ws.iter_rows(min_row=2, values_only=True):
-            c = row[0]
-            ds = None
-            if isinstance(c, datetime):
-                ds = c.date().isoformat()
-            elif isinstance(c, date):
-                ds = c.isoformat()
-            if ds:
-                xl[ds] = {
-                    'tag': str(row[13] or '').strip(),   # col N
-                    'kp':  row[9],                        # col J
-                    'sn':  row[11] or 0,                  # col L
-                }
-        log(f"      Excel: {len(xl)} днів ({xlsx.name})")
-    else:
-        log("      ⚠ Excel не знайдено — теги порожні")
+    if not xlsx:
+        raise RuntimeError(
+            'Required Excel source not found. Expected prognoz_2025_2026_4_FIXED.xlsx '
+            'or prognoz_2025_2026_4.xlsx in --workdir, repo root, or /mnt/project.'
+        )
+    wb = openpyxl.load_workbook(xlsx, read_only=True, data_only=True)
+    ws = wb['ДАНІ_ЩОДЕННІ'] if 'ДАНІ_ЩОДЕННІ' in wb.sheetnames else wb.active
+    for row in ws.iter_rows(min_row=2, values_only=True):
+        c = row[0]
+        ds = None
+        if isinstance(c, datetime):
+            ds = c.date().isoformat()
+        elif isinstance(c, date):
+            ds = c.isoformat()
+        if ds:
+            xl[ds] = {
+                'tag': str(row[13] or '').strip(),
+                'kp':  row[9],
+                'sn':  row[11] or 0,
+            }
+    if not xl:
+        raise RuntimeError(f'Excel source has zero dated rows: {xlsx}')
+    log(f"      Excel: {len(xl)} днів ({xlsx})")
 
-    # annual (tithi_n для P-v19-5 панчанга-пріору)
-    an_raw = load_json(workdir / 'annual_2026_27.json', {})
-    an = {d['date']: d for d in an_raw.get('days', [])}
-    log(f"      annual: {len(an)} днів (tithi для панчанга-пріору)")
+    # annual Panchanga context — REQUIRED for v19 semantics.
+    annual_path = next((d / 'annual_2026_27.json' for d in search_dirs if (d / 'annual_2026_27.json').exists()), None)
+    if annual_path is None:
+        raise RuntimeError(
+            'Required annual_2026_27.json not found in --workdir, repo root, or /mnt/project.'
+        )
+    an_raw = load_json(annual_path, {})
+    an = {d['date']: d for d in an_raw.get('days', []) if d.get('date')}
+    if not an:
+        raise RuntimeError(f'annual Panchanga source has zero days: {annual_path}')
+    log(f"      annual: {len(an)} днів ({annual_path})")
 
     return fkp, ov, xl, an
 
@@ -168,9 +185,16 @@ def step_compute(start: date, days: int, fkp, ov, xl, an):
     try:
         from score_engine_v19_preview import score_day_v19
         engine_name = 'v19_preview'
-    except ImportError:
-        from forecast_engine_v18_5 import score_day as score_day_v19
-        engine_name = 'v18.5 (fallback)'
+    except ImportError as e19:
+        try:
+            from forecast_engine_v18_5 import score_day as score_day_v19
+            engine_name = 'v18.5 (fallback)'
+        except ImportError as e18:
+            raise RuntimeError(
+                'No runnable Engine dependency chain found. Provide score_engine_v19_preview.py '
+                'with forecast_engine_v18_5/v17_0, or forecast_engine_v18_5.py, in --workdir, '
+                'repo root, deploy/, or /mnt/project.'
+            ) from e18
     log(f"[3/5] Engine: {engine_name}")
 
     rows = []
@@ -267,11 +291,14 @@ def main():
     ap = argparse.ArgumentParser(description='G-Index автоматичний прогноз')
     ap.add_argument('--from', dest='start', default=None, help='Старт YYYY-MM-DD (default: сьогодні)')
     ap.add_argument('--days', type=int, default=14)
-    ap.add_argument('--workdir', default=str(HERE), help='Папка проєкту')
+    ap.add_argument('--workdir', default=str(HERE), help='Папка runtime-входів; Excel/annual також шукаються у repo root та /mnt/project')
     ap.add_argument('--no-fetch', action='store_true', help='Не оновлювати Kp')
     args = ap.parse_args()
 
-    workdir = Path(args.workdir)
+    workdir = Path(args.workdir).resolve()
+    for _p in (workdir, HERE, REPO_ROOT, Path('/mnt/project')):
+        if str(_p) not in sys.path:
+            sys.path.insert(0, str(_p))
     start = (datetime.strptime(args.start, '%Y-%m-%d').date()
              if args.start else date.today())
     end = start + timedelta(args.days - 1)
