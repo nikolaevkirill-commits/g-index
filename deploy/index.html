@@ -14190,9 +14190,10 @@ function _renderWhyTrend(){
         const _eff = getEffectiveGForDate(new Date(d.ds + 'T12:00:00Z'), d.G, 0); // delta=0 — anyone override
         if (_eff.override !== null) d.overrideEng = _eff.override;
       }
-      // Engine snapshot — навіть для days без expert override (для tooltip info)
-      if (typeof _engineScores !== 'undefined' && _engineScores && _engineScores[d.ds]){
-        const _eng = _engineScores[d.ds];
+      // fp-correctness: tooltip Engine score must use the canonical hierarchy.
+      // Direct _engineScores[d.ds].eng bypassed expert_calc / verified overrides.
+      if (typeof getEngineScore === 'function'){
+        const _eng = getEngineScore(new Date(d.ds + 'T12:00:00Z'));
         if (_eng && isFinite(_eng.eng)) d.engineEng = _eng.eng;
       }
     } catch(e){if(window._DEBUG)console.warn('[silent overrideAnnot]:',e.message)}
@@ -14246,7 +14247,7 @@ function _renderWhyTrend(){
     if(Number.isFinite(d.overrideEng)){
       _dotTip += `\nPDF Engine: ${d.overrideEng >= 0 ? '+' : ''}${d.overrideEng} (експертна оцінка)`;
     } else if(Number.isFinite(d.engineEng)){
-      _dotTip += `\nPDF Engine: ${d.engineEng >= 0 ? '+' : ''}${d.engineEng} (v18.5)`;
+      _dotTip += `\nEngine: ${d.engineEng >= 0 ? '+' : ''}${d.engineEng} (canonical)`;
     }
     const _titleAttr = `<title>${_dotTip}</title>`;
     if(d.isToday){
