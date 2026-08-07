@@ -71,6 +71,25 @@ def valid_verified_pdf(r: dict) -> bool:
     )
 
 
+def first_post_freeze_materialization(target_row: dict, baseline_row: dict | None,
+                                      post_freeze_rows: list[tuple[str, datetime, dict | None]]):
+    """Return first (sha,time) where exact valid evidence appears after freeze.
+
+    Pure helper used by tests. If identical evidence already existed at freeze,
+    return None even if it appears again later: that label is pre-existing and
+    cannot become prospective merely because a later commit touched the file.
+    """
+    if not valid_verified_pdf(target_row):
+        return None
+    target = evidence_tuple(target_row)
+    if evidence_tuple(baseline_row) == target:
+        return None
+    for sha, dt, row in post_freeze_rows:
+        if row and valid_verified_pdf(row) and evidence_tuple(row) == target:
+            return sha, dt
+    return None
+
+
 def git_file_at(commit: str, path: str) -> dict:
     p = subprocess.run(
         ["git", "show", f"{commit}:{path}"], cwd=ROOT, text=True, capture_output=True
@@ -96,15 +115,12 @@ def main() -> int:
     rel = override_path.relative_to(ROOT).as_posix()
     current = override_map(json.loads(override_path.read_text(encoding="utf-8")))
 
-    # Last repository state at or before the freeze. If the file did not yet
-    # exist, baseline is empty.
     baseline_commit = sh(
         "git", "log", "-1", f"--until={freeze_time.isoformat()}", "--format=%H", "--", rel,
         check=False,
     ).strip()
     baseline = override_map(git_file_at(baseline_commit, rel)) if baseline_commit else {}
 
-    # Ordered post-freeze commits that touched this source file.
     log = sh(
         "git", "log", "--reverse", f"--after={freeze_time.isoformat()}",
         "--format=%H|%cI", "--", rel, check=False,
@@ -124,17 +140,13 @@ def main() -> int:
         row = current.get(ds)
         if not row or not valid_verified_pdf(row):
             continue
-        target = evidence_tuple(row)
-        if evidence_tuple(baseline.get(ds)) == target:
+        if evidence_tuple(baseline.get(ds)) == evidence_tuple(row):
             rejected_preexisting.append(ds)
             continue
-
-        first = None
+        history = []
         for sha, dt in commits:
-            r = override_map(git_file_at(sha, rel)).get(ds)
-            if evidence_tuple(r) == target and valid_verified_pdf(r):
-                first = (sha, dt)
-                break
+            history.append((sha, dt, override_map(git_file_at(sha, rel)).get(ds)))
+        first = first_post_freeze_materialization(row, baseline.get(ds), history)
         if first:
             eligible.append((ds, row, first[0], first[1]))
 
