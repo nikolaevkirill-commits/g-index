@@ -42,7 +42,6 @@ DEFAULT_POSITIVE_WEIGHTS: dict[str, float] = {
     "scissors": 0.5,
     "goal": 0.5,
     "navaratri": 1.5,
-    "dipavali": 2.0,
     "maha_shiv": 0.8,
     "new_clothes": 1.5,
     "luck": 0.3,
@@ -99,6 +98,34 @@ def load_alias_spec(path: str | Path = ALIAS_SPEC_PATH) -> Mapping[str, object]:
             raise ValueError(f"Token {token!r} contains an invalid alias")
 
     return spec
+
+
+def assert_token_contract(
+    supported_tokens: Iterable[str],
+    *,
+    spec: Mapping[str, object] | None = None,
+) -> None:
+    """Fail fast when Engine and alias-contract token sets diverge.
+
+    Silent token dropping is forbidden: every alias token must reach Engine,
+    and every Engine token must have aliases for validator/UI parity.
+    """
+
+    active_spec = load_alias_spec() if spec is None else spec
+    token_map = active_spec.get("tokens")
+    if not isinstance(token_map, Mapping):
+        raise ValueError("Alias spec 'tokens' must be a mapping")
+
+    alias_tokens = {str(token) for token in token_map}
+    engine_tokens = {str(token) for token in supported_tokens}
+    aliases_without_engine = sorted(alias_tokens - engine_tokens)
+    engine_without_aliases = sorted(engine_tokens - alias_tokens)
+    if aliases_without_engine or engine_without_aliases:
+        raise ValueError(
+            "Engine/alias token contract mismatch: "
+            f"aliases_without_engine={aliases_without_engine}; "
+            f"engine_without_aliases={engine_without_aliases}"
+        )
 
 
 def parse_tag_tokens(

@@ -11,6 +11,7 @@ sys.path.insert(0, str(ROOT))
 from engine_correctness import (  # noqa: E402
     BOLT_BASE_PENALTY,
     HEART_EQUIVALENT_STRENGTH,
+    assert_token_contract,
     bolt_rescue_decision,
     load_alias_spec,
     normalize_tag_text,
@@ -68,8 +69,12 @@ class AliasParityTests(unittest.TestCase):
         path = ROOT / "engine_tag_aliases_v1.json"
         with path.open("r", encoding="utf-8") as handle:
             raw = json.load(handle)
-        self.assertEqual(raw["_meta"]["version"], "1.0.0")
+        self.assertEqual(raw["_meta"]["version"], "1.0.1")
         self.assertIn("heart", load_alias_spec()["tokens"])
+
+    def test_contract_rejects_silent_token_drift(self) -> None:
+        with self.assertRaisesRegex(ValueError, "aliases_without_engine"):
+            assert_token_contract({"heart"})
 
 
 class BoltRescueTests(unittest.TestCase):
@@ -121,6 +126,14 @@ class V151AdapterIntegrationTests(unittest.TestCase):
                     self.engine.score_day(verbal, 2.0),
                     self.engine.score_day(symbolic, 2.0),
                 )
+
+    def test_every_alias_contract_token_reaches_engine(self) -> None:
+        spec = load_alias_spec()
+        for token, config in spec["tokens"].items():
+            first_alias = config["aliases"][0]
+            with self.subTest(token=token, alias=first_alias):
+                debug = self.engine.correctness_debug(first_alias, 2.0)
+                self.assertIn(token, debug["parsed_tokens"])
 
     def test_canonical_entry_point_uses_general_bolt_rescue(self) -> None:
         strong = self.engine.correctness_debug("✈ ⊕ ✂ ⚡", 2.0)

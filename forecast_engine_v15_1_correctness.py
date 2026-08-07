@@ -12,6 +12,7 @@ from typing import Iterable
 
 import forecast_engine_v15_1_frozen as _base
 from engine_correctness import (
+    assert_token_contract,
     bolt_rescue_decision,
     parse_tag_tokens,
     positive_tag_strength,
@@ -53,6 +54,9 @@ _ENUM_TO_TOKEN = {
     for token, enum_name in _TOKEN_TO_ENUM_NAME.items()
     if hasattr(_base.T, enum_name)
 }
+
+# Fail at import instead of letting Engine silently discard a UI/validator token.
+assert_token_contract(_TOKEN_TO_ENUM_NAME)
 
 
 def parse_tags(value: object) -> set[_base.T]:
