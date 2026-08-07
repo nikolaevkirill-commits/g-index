@@ -1,0 +1,56 @@
+name: v19.1 med-prior precedence audit
+
+on:
+  push:
+    branches: [fix/post-freeze-engine-correctness]
+    paths:
+      - 'audit_v19_1_med_prior_precedence.py'
+      - 'score_engine_v19_preview.py'
+      - 'forecast_engine_v17_0.py'
+      - 'engine_scores.json'
+      - 'deploy/engine_scores.json'
+      - 'deploy/panchanga_sign_priors.json'
+      - 'deploy/calendar_tags_2025_2026.json'
+      - 'V19_2_PROSPECTIVE_SHADOW_FREEZE_v1.json'
+      - '.github/workflows/v19-1-med-prior-audit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/post-freeze-engine-correctness
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify recovered v17 source
+        run: echo '1b4c5fa7052590ed441923e9383f42654247711c5ece6f9cea765693a954eaae  forecast_engine_v17_0.py' | sha256sum -c -
+      - name: Run read-only semantic audit
+        run: python audit_v19_1_med_prior_precedence.py
+      - name: Enforce frozen/non-production status
+        run: |
+          python - <<'PY'
+          import json
+          d=json.load(open('ENGINE_V19_1_MED_PRIOR_PRECEDENCE_AUDIT.json',encoding='utf-8'))
+          assert d['read_only'] is True
+          assert d['production_changed'] is False
+          assert d['frozen_candidate_changed'] is False
+          assert d['decision']=='AUDIT_ONLY_DO_NOT_RETUNE_FROZEN_V19_2'
+          print('semantic audit safety assertions PASS')
+          PY
+      - name: Commit audit report
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add ENGINE_V19_1_MED_PRIOR_PRECEDENCE_AUDIT.json
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'docs(engine): record v19.1 med-prior precedence audit'
+          git push origin HEAD:fix/post-freeze-engine-correctness
