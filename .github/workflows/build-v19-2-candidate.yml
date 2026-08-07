@@ -1,0 +1,56 @@
+name: Build v19.2 candidate artifact
+
+on:
+  push:
+    branches:
+      - fix/post-freeze-engine-correctness
+    paths:
+      - 'generate_engine_scores_v19_2_candidate.py'
+      - '.github/workflows/build-v19-2-candidate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/post-freeze-engine-correctness
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify recovered sources
+        run: |
+          echo '1b4c5fa7052590ed441923e9383f42654247711c5ece6f9cea765693a954eaae  forecast_engine_v17_0.py' | sha256sum -c -
+          echo '26334307c6d757a183553c4f188c4829db06564a0664dafb1f85f580b3c033c4  forecast_engine_v18_5.py' | sha256sum -c -
+      - name: Generate candidate
+        run: python generate_engine_scores_v19_2_candidate.py
+      - name: Safety assertions
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f engine_scores_v19_2_candidate.json
+          test -f ENGINE_V19_2_CANDIDATE_IMPACT.json
+          python - <<'PY'
+          import json
+          d=json.load(open('engine_scores_v19_2_candidate.json',encoding='utf-8'))
+          assert d['_meta']['production'] is False
+          assert d['_meta']['historical_v19_2_source_recovered'] is False
+          assert d['_meta']['expert_overrides_folded_into_eng'] is False
+          assert len(d['scores']) >= 500
+          print('candidate safety assertions PASS')
+          PY
+      - name: Commit branch-only artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add engine_scores_v19_2_candidate.json ENGINE_V19_2_CANDIDATE_IMPACT.json
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'data(engine): add branch-only v19.2 candidate artifact'
+          git push origin HEAD:fix/post-freeze-engine-correctness
