@@ -1,0 +1,26 @@
+name: Panchanga source parity
+
+on:
+  push:
+    branches: [fix/post-freeze-engine-correctness]
+    paths:
+      - 'audit_panchanga_context_source_parity.py'
+      - 'engine_scores.json'
+      - 'annual_2026_27.json'
+      - '.github/workflows/panchanga-source-parity.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compare annual vs frozen context
+        run: python audit_panchanga_context_source_parity.py
