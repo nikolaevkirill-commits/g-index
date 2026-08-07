@@ -74,7 +74,7 @@ Rationale: a later explicit contextual override must not be disabled or numerica
 
 This policy is an inference. It must never be described as recovered historical v19.2 code.
 
-## 6. Local reconstruction regression
+## 6. Reconstruction regression
 
 A local `forecast_engine_v19_2_reconstructed.py` was built with the policy above.
 SHA256 at audit time: `33e1f5bb86ada34d7a76828901241b1765949f3280b4255a3502ad157928ada8`.
@@ -90,21 +90,52 @@ Minimal cross-family regression: **6/6 PASS**:
 
 No PDF/GT metric was consulted to choose the precedence rule.
 
-## 7. Promotion status
+## 7. Sealed no-tuning replay
+
+The fixed precedence policy was replayed in GitHub Actions against the unchanged frozen `engine_scores.json` snapshots and `deploy/pdf48_ground_truth_v6.json`.
+Workflow: `v19.2 reconstructed replay`, run `31166419366`, **PASS**.
+Comparable rows: **n=322**.
+
+| Metric | Frozen v18.5 snapshot | v19.2 reconstructed | Delta |
+|---|---:|---:|---:|
+| Exact 7-class | 43.5% | 44.1% | +0.6 pp |
+| ±1 | 69.9% | 74.2% | +4.3 pp |
+| Strict 3-class/sign | 69.6% | 73.3% | +3.7 pp |
+
+By canonical tag count:
+
+| Bucket | n | Exact base→cand | ±1 base→cand | Strict-3 base→cand |
+|---|---:|---:|---:|---:|
+| n_tags=0 | 33 | 9.1% → 18.2% | 33.3% → 57.6% | 45.5% → 45.5% |
+| n_tags=1 | 112 | 48.2% → 45.5% | 79.5% → 78.6% | 67.9% → 72.3% |
+| n_tags=2+ | 177 | 46.9% → 48.0% | 70.6% → 74.6% | 75.1% → 79.1% |
+
+Diagnostics:
+
+- prediction changed rows: **83**;
+- v19.1-specific precedence rows: **16**;
+- calendar-enriched rows: **6**.
+
+Interpretation: the reconstruction improves the two primary robustness metrics (±1 and Strict-3) materially on this unchanged replay, while exact improves slightly. The `n_tags=1` exact decline is retained transparently and is not tuned away. This is still replay agreement with PDF GT, not independent real-world predictive accuracy.
+
+## 8. Promotion status
 
 **DO NOT PROMOTE. DO NOT MERGE TO `deploy`.**
 
 Required next gates:
 
 - [ ] Commit byte-identical recovered v17.0, v18.5 and v19.1 source files to the correctness branch.
-- [ ] Commit the reconstructed v19.2 candidate with the explicit `historical_source_recovered=false` provenance flag.
+- [x] Commit an auditable reconstructed v19.2 replay with explicit `historical_source_recovered=false` provenance.
 - [ ] Port the shared verbal/emoji alias contract to this v19.x chain.
 - [ ] Port the frozen aggregate-positive bolt correctness rule to this v19.x chain without breaking explicit structural contexts.
 - [ ] Run deterministic v17/v18.5/v19.1/v19.2 regression suites.
-- [ ] Run one sealed no-tuning replay on unchanged data: Exact 7-class, ±1, Strict-3/sign, buckets n_tags=0/1/2+.
+- [x] Run one sealed no-tuning replay on unchanged data: Exact 7-class, ±1, Strict-3/sign, buckets n_tags=0/1/2+.
+- [ ] Run a second sealed replay comparing reconstructed v19.2 against reconstructed v19.2 + correctness fixes.
 - [ ] Confirm `Хрест -> ⊕` from a primary expert source or keep it explicitly provisional.
 - [ ] Only then evaluate production promotion.
 
-## 8. Current conclusion
+## 9. Current conclusion
 
-The old PR blocker "v17/v18.5 source cannot be recovered" is obsolete. Exact source files now exist and pass their own tests. The unresolved issue is narrower: **the original historical v19.2 precedence/consolidation source has not been recovered**. We can produce an auditable reconstructed candidate, but it must remain separately labeled until sealed testing and provenance gates are complete.
+The old PR blocker "v17/v18.5 source cannot be recovered" is obsolete. Exact source files now exist and pass their own tests. The unresolved provenance issue is narrower: **the original historical v19.2 precedence/consolidation source has not been recovered**.
+
+The reconstructed candidate now has a fixed, auditable precedence rule and a successful sealed replay. It is suitable as the baseline for the next correctness experiment, but must remain separately labeled until aliases, bolt correctness, regression and provenance gates are complete.
