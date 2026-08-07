@@ -1,0 +1,28 @@
+name: v19.2 canonical Panchanga counterfactual
+
+on:
+  push:
+    branches: [fix/post-freeze-engine-correctness]
+    paths:
+      - 'audit_v19_2_canonical_panchanga_counterfactual.py'
+      - 'V19_2_PROSPECTIVE_SHADOW_FREEZE_v1.json'
+      - 'annual_2026_27.json'
+      - 'deploy/panchanga_sign_priors.json'
+      - 'engine_scores.json'
+      - '.github/workflows/v19-2-canonical-panchanga-counterfactual.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Counterfactual audit
+        run: python audit_v19_2_canonical_panchanga_counterfactual.py
