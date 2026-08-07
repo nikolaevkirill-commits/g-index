@@ -4,11 +4,14 @@ PROGNOZ / G-Index — Автоматичний генератор аналіти
 Формат відповідає system prompt: факт/інтерпретація/рекомендація
 """
 import json
+from pathlib import Path
 from datetime import date, timedelta
 
 # --- CONFIG ---
-SCORES_FILE = 'engine_scores.json'
-OVERRIDES_FILE = 'expert_overrides_v3.json'
+# Resolve canonical data independently of current working directory.
+REPO_ROOT = Path(__file__).resolve().parent.parent
+SCORES_FILE = REPO_ROOT / 'engine_scores.json'
+OVERRIDES_FILE = REPO_ROOT / 'expert_overrides_v3.json'
 HORIZON_DAYS = 14  # змінити за потребою
 
 SCORE_LABELS = {
@@ -24,9 +27,9 @@ SCORE_LABELS = {
 CONF_ORDER = {"HIGH": 0, "MED": 1, "WEAK": 2, "LOW": 3, None: 4}
 
 def load_data():
-    eng_raw = json.load(open(SCORES_FILE))
+    eng_raw = json.load(open(SCORES_FILE, encoding='utf-8'))
     scores = eng_raw['scores']  # dict keyed by date str
-    ov_raw = json.load(open(OVERRIDES_FILE))
+    ov_raw = json.load(open(OVERRIDES_FILE, encoding='utf-8'))
     overrides_list = ov_raw['overrides']
     overrides = {e['date']: e for e in overrides_list}
     return scores, overrides
@@ -220,7 +223,7 @@ if __name__ == '__main__':
 
 def check_label_conflicts(overrides_file=OVERRIDES_FILE):
     """Виявити записи де pdf_label суперечить expert_eng"""
-    ov_raw = json.load(open(overrides_file))
+    ov_raw = json.load(open(overrides_file, encoding='utf-8'))
     overrides = ov_raw['overrides']
     issues = []
     for e in overrides:
