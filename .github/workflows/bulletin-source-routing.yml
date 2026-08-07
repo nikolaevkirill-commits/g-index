@@ -1,0 +1,40 @@
+name: bulletin source routing
+
+on:
+  push:
+    branches: [fix/bulletin-source-routing]
+    paths: ['deploy/generate_bulletin.py','.github/workflows/bulletin-source-routing.yml']
+  pull_request:
+    paths: ['deploy/generate_bulletin.py','.github/workflows/bulletin-source-routing.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Root/deploy cwd parity
+        run: |
+          python deploy/generate_bulletin.py > /tmp/root.txt
+          (cd deploy && python generate_bulletin.py) > /tmp/deploy.txt
+          cmp /tmp/root.txt /tmp/deploy.txt
+          grep -q 'АНАЛІТИЧНИЙ БЮЛЕТЕНЬ G-Index' /tmp/root.txt
+      - name: Canonical source contract
+        run: |
+          python - <<'PY'
+          import importlib.util
+          from pathlib import Path
+          p=Path('deploy/generate_bulletin.py').resolve()
+          spec=importlib.util.spec_from_file_location('b',p); m=importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+          assert m.SCORES_FILE == p.parent.parent/'engine_scores.json'
+          assert m.OVERRIDES_FILE == p.parent.parent/'expert_overrides_v3.json'
+          scores,overrides=m.load_data()
+          assert len(scores)>500 and len(overrides)>0
+          print('bulletin source routing PASS',len(scores),len(overrides))
+          PY
