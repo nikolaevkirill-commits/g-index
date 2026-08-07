@@ -8,12 +8,26 @@ This document governs evaluation of `V19_2_PROSPECTIVE_SHADOW_FREEZE_v1.json` on
 
 - freeze timestamp: `2026-08-07T12:19:13+00:00`;
 - cohort: 29 exposed Engine-core rows;
-- class/sign-flip subset: 12 rows;
+- original frozen class/sign-flip subset: 12 rows;
 - candidate SHA256: `95b754735298a0de9f32901a1df2da9052193c47ae629bea7dcf323803716532`;
 - production baseline and candidate values are immutable;
 - no rule, threshold, tag mapping or model parameter may be changed in response to prospective observations.
 
 Any post-freeze engine change is a **new version/new experiment**, not a correction of this cohort.
+
+### Pre-observation context-validity amendment
+
+Before the first prospective observation (`expert_pdf n=0`, `real_outcome n=0`), a provenance audit found that frozen `engine_scores.cal_tithi/cal_nakshatra` is an informational astronomical layer and differs systematically from the canonical Panchanga contract fixed in `CANONICAL_SPEC_v1.4` at **12:00 UTC** and represented by `annual_2026_27.json`.
+
+`V19_2_CONTEXT_VALIDITY_AMENDMENT_2026-08-07.json` therefore preregisters, without changing any frozen prediction:
+
+- original frozen sign-flip subset: **12** rows — retained descriptively;
+- context-invalid / quarantined rows: **3** (`2026-08-27`, `2026-08-30`, `2026-10-23`);
+- confirmatory context-valid sign-flip subset: **9** rows;
+- quarantine is outcome-independent and was fixed before any prospective label/outcome;
+- counterfactual canonical-context scores are diagnostic only and never replace the frozen predictions in the historical experiment.
+
+The three quarantined rows are excluded only from the confirmatory promotion endpoint. They remain visible in descriptive reporting.
 
 ## 2. Evidence streams remain separate
 
@@ -41,19 +55,18 @@ The two streams are never pooled into one accuracy number.
 
 The primary comparison is always **candidate versus frozen production baseline on the same observed rows**.
 
-### 3.1 Sign/class-change subset — 12 frozen rows
+### 3.1 Confirmatory sign/class endpoint — 9 context-valid frozen sign-flips
 
-Primary endpoint: paired **sign/3-class correctness** on rows where baseline and candidate differ in sign/class.
-
-Reason: these are the rows where v19.2 makes the operationally material categorical decision that production does not.
+Primary endpoint: paired **sign/3-class correctness** on the 9 context-valid rows where baseline and candidate differ in sign/class.
 
 Report:
 - baseline correct count / n;
 - candidate correct count / n;
 - paired wins / losses / ties;
-- candidate-minus-baseline difference.
+- candidate-minus-baseline difference;
+- coverage observed/9.
 
-Do not replace this endpoint with a more favorable metric after observations arrive.
+The original 12-row frozen sign-flip set is still reported descriptively, but cannot override the confirmatory 9-row endpoint because 3 rows have pre-observation input-provenance defects.
 
 ### 3.2 Full exposed cohort — up to 29 rows
 
@@ -66,7 +79,9 @@ Report the same paired counts and difference for baseline and candidate.
 Secondary/descriptive only:
 - exact 7-class agreement;
 - sign/3-class agreement on all observed 29 rows;
-- within-1 on the 12 sign-flip rows;
+- original frozen-12 sign endpoint;
+- quarantined-3 descriptive endpoint;
+- within-1 on sign-flip rows;
 - absolute error;
 - direction of error.
 
@@ -85,9 +100,10 @@ Descriptive stratification only; no subgroup can independently authorize promoti
 Known pre-observation governance flags:
 - all 4 broad P2/P3 prospective sign flips occur under Saturn retro context;
 - Panchanga priors/calendar enrichment contain GT-informed development choices;
-- recovered v19.1 med-vs-Panchanga precedence comment conflicts with source execution order, but no frozen-29 row is affected.
+- recovered v19.1 med-vs-Panchanga precedence comment conflicts with source execution order, but no frozen-29 row is affected;
+- frozen Panchanga-dependent rules used informational `engine_scores.cal_*`; canonical noon-UTC counterfactual changes 3 frozen sign predictions, which are quarantined from the confirmatory endpoint.
 
-These flags must be reported, not used to rewrite the frozen predictions.
+These flags must be reported, not used to rewrite frozen predictions.
 
 ## 6. Missing data
 
@@ -114,11 +130,12 @@ There is **no automatic numeric promotion threshold** for this 29-row cohort.
 
 At minimum, a production promotion discussion requires:
 - the end-of-cohort checkpoint has been reached;
-- candidate does not show a paired disadvantage versus baseline on the primary sign/class endpoint in the 12-row subset;
+- candidate does not show a paired disadvantage versus baseline on the **9-row context-valid confirmatory sign/class endpoint**;
 - candidate does not show a paired disadvantage versus baseline on full-cohort within-1;
+- original frozen-12 and quarantined-3 results are disclosed descriptively;
 - expert/PDF and real-outcome evidence are discussed separately;
 - missing-data coverage is disclosed;
-- GT-informed development provenance is disclosed;
+- GT-informed development provenance and Panchanga-context defect are disclosed;
 - no frozen prediction was changed after freeze.
 
 Even if these conditions hold, promotion remains a manual release decision and should create a versioned production candidate rather than silently replacing v18.5.
@@ -128,6 +145,7 @@ Even if these conditions hold, promotion remains a manual release decision and s
 This experiment is invalidated for promotion purposes if any of the following occurs:
 - frozen candidate/hash changes;
 - frozen baseline or 29-row cohort changes;
+- the pre-observation quarantine list changes after prospective evidence appears;
 - a post-freeze observation is backdated or lacks provenance;
 - rules/thresholds are tuned using any prospective observation and then evaluated on the same frozen cohort;
 - expert/PDF and real outcomes are pooled or substituted for each other.
