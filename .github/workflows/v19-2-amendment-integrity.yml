@@ -1,0 +1,38 @@
+name: v19.2 amendment integrity
+
+on:
+  push:
+    branches: [fix/post-freeze-engine-correctness]
+    paths:
+      - 'V19_2_CONTEXT_VALIDITY_AMENDMENT_2026-08-07.json'
+      - 'V19_2_PROSPECTIVE_EVALUATION_PREREGISTRATION.md'
+      - 'validate_v19_2_context_amendment.py'
+      - '.github/workflows/v19-2-amendment-integrity.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  integrity:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Pin amendment blob
+        run: |
+          test "$(git hash-object V19_2_CONTEXT_VALIDITY_AMENDMENT_2026-08-07.json)" = "0e3bd0e101e9692194a490b9fcffefe5832b90d1"
+      - name: Validate partition and provenance
+        run: python validate_v19_2_context_amendment.py
+      - name: Guard preregistration contract
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          t=Path('V19_2_PROSPECTIVE_EVALUATION_PREREGISTRATION.md').read_text(encoding='utf-8')
+          for s in ['9 context-valid','2026-08-27','2026-08-30','2026-10-23','no frozen prediction was changed']:
+              assert s in t, s
+          print('preregistration amendment contract PASS')
+          PY
