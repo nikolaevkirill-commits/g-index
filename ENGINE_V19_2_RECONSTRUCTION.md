@@ -19,7 +19,7 @@ Permanent `engine-correctness.yml` verifies all three hashes and native tests. T
 
 ## 2. Reconstructed v19.2 precedence
 
-Preserved evidence contains two non-trivially interacting layers:
+Preserved evidence contains two non-trivially interacting layers.
 
 ### v18.8 generic layer
 - P2 travel: any `✈` +1; `Подорожі` + `✈` floors at +2.
@@ -114,11 +114,11 @@ The audit caught an initial four-row `retro_end` side effect; it was fixed befor
 Final result:
 - scorable rows: **564**;
 - exact legacy reproduction: **563**;
-- unexplained raw rows: **0**;
-- explicit historical override rows: **1**;
+- explicitly overridden historical rows: **1**;
+- unexplained mismatches: **0**;
 - alias-induced changes on already-canonical frozen rows: **0**.
 
-The sole apparent mismatch is fully explained:
+The sole non-raw-equivalent snapshot is fully explained:
 
 ### 2026-05-21
 - tag: `❤ нова одежда ✈ ⊕ 🌑(очей провидіння)`
@@ -132,7 +132,7 @@ The sole apparent mismatch is fully explained:
 
 Therefore this is **not missing input, parser drift or failed reproducibility**. It is an explicit historical post-engine override already recorded inside the frozen snapshot.
 
-Conclusion: **all 563 non-overridden frozen rows reproduce exactly**.
+Conclusion: **all 563 non-overridden frozen rows reproduce exactly; the remaining one is provenance-explained.**
 
 The frozen score file already uses legacy-recognized/canonical tag forms, so zero alias changes there are expected. The correct empirical evidence for the verbal alias bug is the primary workbook replay in §4.
 
@@ -181,7 +181,7 @@ Raw-chain reproducibility workflow: **PASS**.
 - [x] Confirm expert verbal aliases and `Хрест→⊕` from primary evidence.
 - [x] Apply canonical aliases at the correct pre-v18.5 scoring layer.
 - [x] Prove adapter idempotency against canonical frozen snapshots.
-- [x] Explain every raw-chain mismatch: 563 exact + 1 explicit historical override.
+- [x] Explain every raw-chain non-equivalence: 563 exact + 1 explicit historical override.
 - [x] Freeze and regression-test aggregate-positive bolt correctness.
 - [x] Full correctness CI green.
 - [ ] Build a **branch-only regenerated score artifact** from the corrected raw chain and reconstructed v19.2; do not overwrite production `engine_scores.json`.
