@@ -1,0 +1,46 @@
+name: Apply dashboard tag parser
+
+on:
+  push:
+    branches:
+      - fix/post-freeze-engine-correctness
+    paths:
+      - '.github/workflows/apply-dashboard-tag-parser.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/post-freeze-engine-correctness
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Apply exact audited tag-parser patch
+        run: python patch_dashboard_tag_parser.py deploy/index.html
+      - name: Verify both dashboard correctness patches
+        shell: bash
+        run: |
+          python patch_dashboard_tag_parser.py --check deploy/index.html
+          python patch_dashboard_score_path.py --check deploy/index.html
+          grep -F '../engine_tag_parser.js' deploy/index.html
+          grep -F "loadAliasSpec('../engine_tag_aliases_v1.json')" deploy/index.html
+          grep -F 'EngineTagParser.parseTagTokens' deploy/index.html
+          git diff --check
+          git diff -- deploy/index.html
+      - name: Commit branch-only dashboard patch
+        shell: bash
+        run: |
+          if git diff --quiet -- deploy/index.html; then
+            echo 'No dashboard change required.'
+            exit 0
+          fi
+          git config user.name 'nikolaevkirill-commits'
+          git config user.email 'nikolaev.kirill@gmail.com'
+          git add deploy/index.html
+          git commit -m 'fix(ui): use canonical Engine tag aliases in day theme'
+          git push origin HEAD:fix/post-freeze-engine-correctness
