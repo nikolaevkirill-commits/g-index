@@ -16,12 +16,15 @@ def main():
     assert confirm==[d for d in sign_dates if d not in q]
     assert amend['counts']=={'original_sign_flips':12,'quarantined_context_invalid':3,'confirmatory_context_valid':9}
     assert amend['created_before_first_prospective_observation'] is True
+    assert amend['observed_expert_pdf_rows_at_creation']==0
+    assert amend['observed_real_outcome_rows_at_creation']==0
+    assert amend['freeze_mutated'] is False and amend['candidate_mutated'] is False
     obs=ROOT/'V19_2_PROSPECTIVE_SHADOW_OBSERVATIONS_v1.json'
+    current_n=0
     if obs.exists():
         doc=json.loads(obs.read_text(encoding='utf-8'))
-        assert len(doc.get('observations',[]))==0, 'amendment validation assumes n=0 at creation'
+        current_n=len(doc.get('observations',[]))
     print('context validity amendment PASS')
-    print('sign_dates=',sign_dates)
-    print('confirmatory=',confirm)
+    print('frozen_sign_flips=12 confirmatory=9 quarantined=3 current_observations=',current_n)
     return 0
 if __name__=='__main__': raise SystemExit(main())
