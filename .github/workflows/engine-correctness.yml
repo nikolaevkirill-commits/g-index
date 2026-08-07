@@ -9,11 +9,16 @@ on:
       - 'engine_tag_aliases_v1.json'
       - 'engine_tag_parser.js'
       - 'forecast_engine_v15_1*.py'
+      - 'forecast_engine_v17_0.py'
+      - 'forecast_engine_v18_5.py'
+      - 'forecast_engine_v18_5_correctness.py'
+      - 'score_engine_v19_preview.py'
       - 'sealed_replay_correctness.py'
       - 'sealed_replay_v19_2_reconstructed.py'
       - 'sealed_replay_v19_2_correctness.py'
       - 'tests/test_engine_correctness.py'
       - 'tests/test_v19_2_correctness.py'
+      - 'tests/test_v18_5_correctness.py'
       - 'tests/test_engine_tag_parser.js'
       - '.github/workflows/engine-correctness.yml'
   pull_request:
@@ -22,11 +27,16 @@ on:
       - 'engine_tag_aliases_v1.json'
       - 'engine_tag_parser.js'
       - 'forecast_engine_v15_1*.py'
+      - 'forecast_engine_v17_0.py'
+      - 'forecast_engine_v18_5.py'
+      - 'forecast_engine_v18_5_correctness.py'
+      - 'score_engine_v19_preview.py'
       - 'sealed_replay_correctness.py'
       - 'sealed_replay_v19_2_reconstructed.py'
       - 'sealed_replay_v19_2_correctness.py'
       - 'tests/test_engine_correctness.py'
       - 'tests/test_v19_2_correctness.py'
+      - 'tests/test_v18_5_correctness.py'
       - 'tests/test_engine_tag_parser.js'
       - '.github/workflows/engine-correctness.yml'
   workflow_dispatch:
@@ -48,6 +58,19 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Verify recovered source provenance
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo '1b4c5fa7052590ed441923e9383f42654247711c5ece6f9cea765693a954eaae  forecast_engine_v17_0.py' | sha256sum -c -
+          echo '26334307c6d757a183553c4f188c4829db06564a0664dafb1f85f580b3c033c4  forecast_engine_v18_5.py' | sha256sum -c -
+          echo '2d3ce185bca12f863a068b95f2a0c84dc2453bbe65fe1dc26855c493a73fb45b  score_engine_v19_preview.py' | sha256sum -c -
+      - name: Recovered native engine tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python forecast_engine_v18_5.py --self-test
+          python score_engine_v19_preview.py
       - name: Python unit and integration tests
         run: python -m unittest discover -s tests -v
       - name: JavaScript alias-parity tests
@@ -86,14 +109,14 @@ jobs:
               print(f'--- L{i} ---')
               for j in range(lo,hi+1): print(f'{j}: {lines[j-1][:700]}')
           PY
-      - name: Forensic search for missing v17/v18.5 sources
+      - name: Historical source provenance audit
         shell: bash
         run: |
           echo '=== ENGINE OBJECT/PATH SEARCH ==='
           git rev-list --objects --all | grep -Ei 'forecast_engine|engine[^ ]*v1[78]|v18[_\. -]?5|v17[_\. -]?0' || true
           echo '=== COMMIT NAME SEARCH ==='
           git log --all --name-only --pretty='format:%H %ad %s' --date=iso | grep -Ei 'forecast_engine|v18[_\. -]?5|v17[_\. -]?0' || true
-      - name: Scan all historical Excel blobs for expert verbal tags
+      - name: Scan historical Excel blobs for expert verbal tags
         shell: bash
         run: |
           set -euo pipefail
@@ -102,11 +125,8 @@ jobs:
           cat /tmp/xlsx_objects.txt || true
           python - <<'PY'
           from zipfile import ZipFile, BadZipFile
-          from xml.etree import ElementTree as ET
           import subprocess, tempfile, os
-
           targets=['серце','книги','сукня','таблетка','хрест','гучномовець','зелена печатка','мішень','вінаяка','шприц']
-          ns={'m':'http://schemas.openxmlformats.org/spreadsheetml/2006/main'}
           lines=open('/tmp/xlsx_objects.txt',encoding='utf-8').read().splitlines() if os.path.exists('/tmp/xlsx_objects.txt') else []
           found=[]
           for line in lines:
@@ -120,8 +140,7 @@ jobs:
                 texts=[]
                 for name in z.namelist():
                   if not name.endswith('.xml'): continue
-                  try:
-                    data=z.read(name).decode('utf-8','ignore').lower()
+                  try: data=z.read(name).decode('utf-8','ignore').lower()
                   except Exception: continue
                   for t in targets:
                     if t in data: texts.append((t,name))
