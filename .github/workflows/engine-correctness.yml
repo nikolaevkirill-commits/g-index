@@ -29,9 +29,11 @@ permissions:
 jobs:
   correctness:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -42,3 +44,90 @@ jobs:
         run: python -m unittest discover -s tests -v
       - name: JavaScript alias-parity tests
         run: node tests/test_engine_tag_parser.js
+      - name: Forensic search for missing v17/v18.5 sources
+        shell: bash
+        run: |
+          echo '=== ENGINE OBJECT/PATH SEARCH ==='
+          git rev-list --objects --all | grep -Ei 'forecast_engine|engine[^ ]*v1[78]|v18[_\. -]?5|v17[_\. -]?0' || true
+          echo '=== COMMIT NAME SEARCH ==='
+          git log --all --name-only --pretty='format:%H %ad %s' --date=iso | grep -Ei 'forecast_engine|v18[_\. -]?5|v17[_\. -]?0' || true
+      - name: Recover expert master and audit verbal tags
+        shell: bash
+        run: |
+          set -euo pipefail
+          SRC_COMMIT='420f02bee1019217c8b58c92bb09be3f3808a251'
+          git show "${SRC_COMMIT}:deploy/prognoz_2025_2026_4.xlsx" > /tmp/expert_master.xlsx
+          python - <<'PY'
+          from zipfile import ZipFile
+          from xml.etree import ElementTree as ET
+          import re
+
+          fn='/tmp/expert_master.xlsx'
+          targets=['серце','книги','сукня','таблетка','хрест','гучномовець','зелена печатка','мішень','вінаяка','шприц']
+          ns={'m':'http://schemas.openxmlformats.org/spreadsheetml/2006/main','r':'http://schemas.openxmlformats.org/officeDocument/2006/relationships'}
+          relns={'p':'http://schemas.openxmlformats.org/package/2006/relationships'}
+
+          with ZipFile(fn) as z:
+              shared=[]
+              if 'xl/sharedStrings.xml' in z.namelist():
+                  root=ET.fromstring(z.read('xl/sharedStrings.xml'))
+                  for si in root.findall('m:si',ns):
+                      shared.append(''.join(t.text or '' for t in si.iterfind('.//m:t',ns)))
+
+              wb=ET.fromstring(z.read('xl/workbook.xml'))
+              rel=ET.fromstring(z.read('xl/_rels/workbook.xml.rels'))
+              relmap={x.attrib['Id']:x.attrib['Target'] for x in rel.findall('p:Relationship',relns)}
+              sheets=[]
+              for s in wb.find('m:sheets',ns):
+                  rid=s.attrib['{http://schemas.openxmlformats.org/officeDocument/2006/relationships}id']
+                  target=relmap[rid]
+                  path='xl/'+target.lstrip('/') if not target.startswith('xl/') else target
+                  path=path.replace('xl/../','')
+                  sheets.append((s.attrib['name'],path))
+
+              def val(c):
+                  typ=c.attrib.get('t')
+                  if typ=='inlineStr':
+                      return ''.join(t.text or '' for t in c.iterfind('.//m:t',ns))
+                  v=c.find('m:v',ns)
+                  if v is None: return ''
+                  raw=v.text or ''
+                  if typ=='s':
+                      try:return shared[int(raw)]
+                      except:return raw
+                  return raw
+
+              hits=[]
+              print('=== EXPERT MASTER TARGET HITS ===')
+              for sheet_name,path in sheets:
+                  if path not in z.namelist():
+                      continue
+                  root=ET.fromstring(z.read(path))
+                  cells={c.attrib.get('r',''):val(c) for c in root.findall('.//m:c',ns)}
+                  for ref,text in cells.items():
+                      low=str(text).casefold()
+                      found=[t for t in targets if t in low]
+                      if found:
+                          m=re.match(r'([A-Z]+)(\d+)$',ref)
+                          row=int(m.group(2)) if m else None
+                          ctx=[]
+                          if row:
+                              for col in 'CDEFG':
+                                  x=cells.get(f'{col}{row}','')
+                                  if x!='': ctx.append(f'{col}{row}={x}')
+                          line=f'{sheet_name}!{ref}: {text} | targets={found} | C:G: ' + ' || '.join(ctx)
+                          print(line)
+                          hits.append((sheet_name,ref,text,found,ctx))
+
+              print('=== C61:G540 TARGET SUMMARY ===')
+              in_master=[]
+              for sh,ref,text,found,ctx in hits:
+                  m=re.match(r'([A-Z]+)(\d+)$',ref)
+                  if not m: continue
+                  col,row=m.group(1),int(m.group(2))
+                  if col in ['C','D','E','F','G'] and 61 <= row <= 540:
+                      in_master.append((sh,ref,text,found,ctx))
+                      print(f'{sh}!{ref}: {text} -> {found}')
+              print('TARGET_HITS_TOTAL=',len(hits))
+              print('MASTER_C61_G540_HITS=',len(in_master))
+          PY
