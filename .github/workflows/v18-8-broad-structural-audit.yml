@@ -14,7 +14,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   audit:
@@ -22,31 +22,19 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: fix/post-freeze-engine-correctness
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Run read-only audit
+      - name: Run structural audit
         run: python audit_v18_8_broad_structural_conflicts.py
-      - name: Enforce freeze safety
+      - name: Verify reproducibility
         run: |
+          git diff --exit-code -- ENGINE_V18_8_BROAD_STRUCTURAL_RISK_AUDIT.json
           python - <<'PY'
           import json
           d=json.load(open('ENGINE_V18_8_BROAD_STRUCTURAL_RISK_AUDIT.json',encoding='utf-8'))
-          assert d['read_only'] is True
-          assert d['production_changed'] is False
-          assert d['frozen_candidate_changed'] is False
-          assert d['decision']=='AUDIT_ONLY_DO_NOT_RETUNE_FROZEN_V19_2'
-          print('broad-rule audit safety assertions PASS')
+          assert d['counts']['broad_p2_p3_sign_flip_rows']==4
+          assert d['counts']['rows_with_structural_context']==4
+          assert d['counts']['rows_without_structural_context']==0
+          print('broad structural audit reproducibility PASS')
           PY
-      - name: Commit audit report
-        shell: bash
-        run: |
-          set -euo pipefail
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add ENGINE_V18_8_BROAD_STRUCTURAL_RISK_AUDIT.json
-          if git diff --cached --quiet; then exit 0; fi
-          git commit -m 'docs(engine): record v18.8 broad structural risk audit'
-          git push origin HEAD:fix/post-freeze-engine-correctness
