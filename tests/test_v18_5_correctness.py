@@ -22,10 +22,7 @@ class V185CorrectnessAdapterTests(unittest.TestCase):
     def test_primary_verbal_aliases_match_canonical_scores(self):
         for verbal, canonical, kp in self.CASES:
             with self.subTest(verbal=verbal):
-                self.assertEqual(
-                    fixed.score_day(verbal, kp),
-                    frozen.score_day(canonical, kp),
-                )
+                self.assertEqual(fixed.score_day(verbal, kp), frozen.score_day(canonical, kp))
 
     def test_primary_aliases_reach_v17_parser(self):
         for verbal, canonical, _ in self.CASES:
@@ -54,8 +51,36 @@ class V185CorrectnessAdapterTests(unittest.TestCase):
             with self.subTest(tag=tag, kp=kp):
                 self.assertEqual(fixed.score_day(tag, kp), frozen.score_day(tag, kp))
 
-    def test_retro_end_exclusion_survives_adapter(self):
-        normalized = fixed.canonicalize_tag_text_for_v17("Ме_ретро_end Хрест")
+    def test_existing_recognized_tokens_are_text_idempotent(self):
+        cases = [
+            "❤ ✈ ⊕",
+            "Юп_ретро_end ⊕",
+            "Ме_ретро_end 🟢 ⊕ нова одежда",
+            "❤ нова одежда Ме_ретро_end",
+            "✈ Sa_ретро_end",
+        ]
+        for tag in cases:
+            with self.subTest(tag=tag):
+                self.assertEqual(fixed.canonicalize_tag_text_for_v17(tag), tag)
+
+    def test_four_frozen_retro_end_regressions_are_unchanged(self):
+        cases = [
+            ("Юп_ретро_end ⊕", 2.1, 2),
+            ("Ме_ретро_end 🟢 ⊕ нова одежда", 3.0, 1),
+            ("❤ нова одежда Ме_ретро_end", 2.0, 3),
+            ("✈ Sa_ретро_end", 2.0, 2),
+        ]
+        for tag, kp, expected in cases:
+            with self.subTest(tag=tag):
+                self.assertEqual(frozen.score_day(tag, kp), expected)
+                self.assertEqual(fixed.score_day(tag, kp), expected)
+
+    def test_retro_end_exclusion_survives_adapter_when_new_alias_is_added(self):
+        source = "Ме_ретро_end Хрест"
+        normalized = fixed.canonicalize_tag_text_for_v17(source)
+        self.assertIn("⊕", normalized)
+        # Existing planet-specific retro_end text must not be duplicated/genericized.
+        self.assertNotIn("Ретро_end", normalized.replace("Ме_ретро_end", ""))
         parsed = frozen.parse_tags(normalized)
         self.assertTrue(parsed["retro_end"])
         self.assertFalse(parsed["retro"])
