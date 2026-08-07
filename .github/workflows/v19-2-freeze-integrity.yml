@@ -1,0 +1,112 @@
+name: v19.2 freeze integrity
+
+on:
+  push:
+    branches: [fix/post-freeze-engine-correctness]
+  pull_request:
+    paths:
+      - 'V19_2_PROSPECTIVE_SHADOW_FREEZE_v1.json'
+      - 'engine_scores_v19_2_candidate.json'
+      - 'ENGINE_V19_2_PRODUCTION_HIERARCHY_IMPACT.json'
+      - 'ENGINE_V19_2_EXPOSED_RULE_ATTRIBUTION.json'
+      - '.github/workflows/**'
+      - '.github/workflows/v19-2-freeze-integrity.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  integrity:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify immutable freeze and provenance hashes
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Git blob SHA pinned at the moment the prospective cohort was frozen.
+          test "$(git hash-object V19_2_PROSPECTIVE_SHADOW_FREEZE_v1.json)" = "460386800d2f1756b1b0a47b80f20c811016b927"
+          python - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+
+          freeze_path=Path('V19_2_PROSPECTIVE_SHADOW_FREEZE_v1.json')
+          freeze=json.loads(freeze_path.read_text(encoding='utf-8'))
+          assert freeze['frozen_at_utc']=='2026-08-07T12:19:13+00:00'
+          assert freeze['effective_start_date']=='2026-08-07'
+          assert freeze['production_changed'] is False
+          assert freeze['promotion_allowed'] is False
+          assert freeze['direct_promotion_gate']=='HOLD'
+          assert freeze['counts']=={'rows':29,'sign_flips':12}
+          assert all(r['future_expert_label'] is None for r in freeze['rows'])
+          assert all(r['future_real_outcome'] is None for r in freeze['rows'])
+
+          def sha256(path):
+              return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+
+          prov=freeze['provenance']
+          assert sha256('engine_scores_v19_2_candidate.json') == prov['candidate_sha256'] == '95b754735298a0de9f32901a1df2da9052193c47ae629bea7dcf323803716532'
+          assert sha256('ENGINE_V19_2_PRODUCTION_HIERARCHY_IMPACT.json') == prov['hierarchy_impact_sha256']
+          assert sha256('ENGINE_V19_2_EXPOSED_RULE_ATTRIBUTION.json') == prov['rule_attribution_sha256']
+
+          cand=json.loads(Path('engine_scores_v19_2_candidate.json').read_text(encoding='utf-8'))
+          assert cand['_meta']['production'] is False
+          assert cand['_meta']['historical_v19_2_source_recovered'] is False
+          assert cand['_meta']['expert_overrides_folded_into_eng'] is False
+          assert len(cand['scores'])==564
+          print('frozen artifact/hash integrity PASS')
+          PY
+      - name: Verify workflow write-path governance
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          wfdir=Path('.github/workflows')
+          allowed_write={
+              'v19-2-shadow-expert-intake.yml',
+              'v19-2-shadow-evaluation.yml',
+          }
+          forbidden_generators={
+              'generate_engine_scores_v19_2_' + 'candidate.py',
+              'freeze_v19_2_' + 'prospective_shadow.py',
+          }
+          violations=[]
+          for p in sorted(wfdir.glob('*.yml')):
+              text=p.read_text(encoding='utf-8')
+              writes=bool(re.search(r'(?m)^\s*contents:\s*write\s*$', text))
+              if writes and p.name not in allowed_write:
+                  violations.append(f'{p.name}: unexpected contents: write')
+              if p.name != 'v19-2-freeze-integrity.yml':
+                  for token in forbidden_generators:
+                      if token in text:
+                          violations.append(f'{p.name}: frozen generator remains callable: {token}')
+          if violations:
+              raise SystemExit('\n'.join(violations))
+          print('workflow write-path governance PASS')
+          PY
+      - name: Verify mutable workflows cannot stage frozen artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          protected={
+              'V19_2_PROSPECTIVE_SHADOW_FREEZE_v1.json',
+              'engine_scores_v19_2_candidate.json',
+              'ENGINE_V19_2_PRODUCTION_HIERARCHY_IMPACT.json',
+              'ENGINE_V19_2_EXPOSED_RULE_ATTRIBUTION.json',
+          }
+          for name in ('v19-2-shadow-expert-intake.yml','v19-2-shadow-evaluation.yml'):
+              text=(Path('.github/workflows')/name).read_text(encoding='utf-8')
+              for target in protected:
+                  if f'git add {target}' in text or f'git add -- {target}' in text:
+                      raise SystemExit(f'{name} can stage protected artifact {target}')
+          print('mutable workflow protected-artifact staging PASS')
+          PY
