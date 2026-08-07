@@ -96,6 +96,14 @@ This defect was discovered before any prospective expert/PDF or real-outcome obs
 
 A first manual transcription of the amendment mis-copied the final two original frozen sign-flip dates. Machine validation immediately rejected it before any prospective observation. The list was corrected to the immutable freeze (`2026-11-25`, `2026-12-13`); quarantine membership remained unchanged. This correction is documented in amendment provenance and was not outcome-informed.
 
+Amendment evaluator v2 now reports separately:
+- original frozen-12 descriptive endpoint;
+- confirmatory context-valid-9 endpoint;
+- quarantined-3 descriptive endpoint;
+- expert/PDF and real-outcome streams separately.
+
+The amendment/evaluator-v2 gate is **green** and null-safe at `n=0`. Amendment content is SHA/blob-pinned in a dedicated read-only integrity workflow.
+
 ## Structural semantic risks already known before outcomes
 
 - all 4 broad P2/P3 prospective sign flips occur under Saturn-retro context;
@@ -145,7 +153,7 @@ Confirmatory primary sign/class endpoint is now the **9 context-valid frozen sig
 - [x] Canonical-vs-frozen Panchanga provenance audited before observations.
 - [x] Pre-observation 12 -> 9 + 3 context-validity amendment created.
 - [x] Amendment machine-validation catches date-list drift; typo corrected before observations.
-- [ ] Context-amendment/evaluator-v2 CI fully green on latest head.
+- [x] Context-amendment/evaluator-v2 CI green; amendment blob pinned.
 - [ ] Collect prospective evidence through leakage-safe append-only intake.
 - [ ] Reach end-of-cohort review checkpoint.
 - [ ] Show no paired disadvantage on confirmatory 9-row sign endpoint and full-cohort within-1.
