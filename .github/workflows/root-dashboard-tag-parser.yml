@@ -1,0 +1,48 @@
+name: root dashboard tag parser
+
+on:
+  push:
+    branches: [fix/root-dashboard-tag-parser]
+    paths:
+      - 'index.html'
+      - 'engine_tag_parser.js'
+      - 'engine_tag_aliases_v1.json'
+      - '.github/workflows/root-dashboard-tag-parser.yml'
+  pull_request:
+    paths:
+      - 'index.html'
+      - 'engine_tag_parser.js'
+      - 'engine_tag_aliases_v1.json'
+      - '.github/workflows/root-dashboard-tag-parser.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Static assertions
+        run: |
+          grep -q './engine_tag_parser.js' index.html
+          grep -q './engine_tag_aliases_v1.json' index.html
+          grep -q 'TOKEN_THEMES' index.html
+          grep -q 'Engine: ${d.engineEng' index.html
+          ! grep -q 'const TAG_THEMES' index.html
+          node --check engine_tag_parser.js
+      - name: Alias smoke
+        run: |
+          node - <<'JS'
+          const fs=require('fs');
+          const p=require('./engine_tag_parser.js');
+          const spec=JSON.parse(fs.readFileSync('engine_tag_aliases_v1.json','utf8'));
+          const got=p.parseTagTokens('Серце Хрест Книги Сукня Вінаяка', spec);
+          for (const x of ['heart','plus','study','new_clothes','ganesh']) if(!got.includes(x)) throw new Error(x);
+          console.log('alias smoke PASS', got);
+          JS
+      - name: Preserve existing canonical score path
+        run: |
+          grep -q 'getEngineScore(new Date(d.ds' index.html
