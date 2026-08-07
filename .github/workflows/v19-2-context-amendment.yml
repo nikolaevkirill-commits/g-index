@@ -1,0 +1,44 @@
+name: v19.2 context amendment
+
+on:
+  push:
+    branches: [fix/post-freeze-engine-correctness]
+    paths:
+      - 'V19_2_CONTEXT_VALIDITY_AMENDMENT_2026-08-07.json'
+      - 'V19_2_PROSPECTIVE_SHADOW_FREEZE_v1.json'
+      - 'V19_2_PROSPECTIVE_SHADOW_OBSERVATIONS_v1.json'
+      - 'validate_v19_2_context_amendment.py'
+      - 'evaluate_v19_2_shadow_v2.py'
+      - '.github/workflows/v19-2-context-amendment.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Validate immutable amendment
+        run: python validate_v19_2_context_amendment.py
+      - name: Evaluate context-valid endpoint
+        run: python evaluate_v19_2_shadow_v2.py
+      - name: Assert zero-observation output remains null-safe
+        run: |
+          python - <<'PY'
+          import json
+          d=json.load(open('V19_2_PROSPECTIVE_SHADOW_EVALUATION_v2.json',encoding='utf-8'))
+          assert d['original_frozen_sign_flip_rows']==12
+          assert d['confirmatory_context_valid_sign_flip_rows']==9
+          assert d['quarantined_context_invalid_sign_flip_rows']==3
+          for s in d['streams'].values():
+              if s['observed_rows']==0:
+                  assert s['confirmatory_context_valid_9']['candidate']['sign'] is None
+          assert d['promotion_allowed'] is False
+          print('evaluator v2 governance PASS')
+          PY
