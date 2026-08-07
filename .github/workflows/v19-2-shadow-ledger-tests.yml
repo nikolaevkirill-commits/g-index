@@ -1,0 +1,52 @@
+name: v19.2 shadow ledger tests
+
+on:
+  push:
+    branches: [fix/post-freeze-engine-correctness]
+    paths:
+      - 'append_v19_2_shadow_observation.py'
+      - 'V19_2_PROSPECTIVE_SHADOW_FREEZE_v1.json'
+      - '.github/workflows/v19-2-shadow-ledger-tests.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Test append-only ledger in isolated copy
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/v19shadow
+          cp append_v19_2_shadow_observation.py V19_2_PROSPECTIVE_SHADOW_FREEZE_v1.json V19_2_PROSPECTIVE_SHADOW_STATUS_v1.json /tmp/v19shadow/
+          cd /tmp/v19shadow
+          BEFORE=$(sha256sum V19_2_PROSPECTIVE_SHADOW_FREEZE_v1.json | awk '{print $1}')
+          python append_v19_2_shadow_observation.py --date 2026-08-07 --kind expert_pdf --value 1 --observed-at 2026-08-08T09:00:00Z --source SELFTEST
+          AFTER=$(sha256sum V19_2_PROSPECTIVE_SHADOW_FREEZE_v1.json | awk '{print $1}')
+          test "$BEFORE" = "$AFTER"
+          python - <<'PY'
+          import json
+          d=json.load(open('V19_2_PROSPECTIVE_SHADOW_OBSERVATIONS_v1.json',encoding='utf-8'))
+          assert d['append_only'] is True
+          assert len(d['observations']) == 1
+          assert d['observations'][0]['date'] == '2026-08-07'
+          assert d['observations'][0]['candidate_exact'] is True
+          s=json.load(open('V19_2_PROSPECTIVE_SHADOW_STATUS_v1.json',encoding='utf-8'))
+          assert s['promotion_allowed'] is False
+          assert s['expert_labels_observed'] == 1
+          print('isolated valid append PASS')
+          PY
+          if python append_v19_2_shadow_observation.py --date 2026-08-07 --kind expert_pdf --value 0 --observed-at 2026-08-09T09:00:00Z --source DUPLICATE; then
+            echo 'ERROR: duplicate was accepted'; exit 1
+          fi
+          if python append_v19_2_shadow_observation.py --date 2026-08-14 --kind real_outcome --value 0 --observed-at 2026-08-07T10:00:00Z --source PRE_FREEZE; then
+            echo 'ERROR: pre-freeze observation was accepted'; exit 1
+          fi
+          echo 'immutability/duplicate/time guards PASS'
