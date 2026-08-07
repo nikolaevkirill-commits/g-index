@@ -1,0 +1,23 @@
+name: duplicate runtime sources audit
+
+on:
+  push:
+    branches: [fix/post-freeze-engine-correctness]
+    paths:
+      - 'audit_duplicate_runtime_sources.py'
+      - '.github/workflows/duplicate-runtime-sources-audit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Audit duplicate runtime basenames
+        run: python audit_duplicate_runtime_sources.py
