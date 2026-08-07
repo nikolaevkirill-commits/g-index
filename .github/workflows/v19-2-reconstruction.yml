@@ -6,6 +6,7 @@ on:
       - fix/post-freeze-engine-correctness
     paths:
       - 'sealed_replay_v19_2_reconstructed.py'
+      - 'sealed_replay_v19_2_correctness.py'
       - 'engine_correctness.py'
       - 'engine_tag_aliases_v1.json'
       - 'ENGINE_V19_2_RECONSTRUCTION.md'
@@ -13,6 +14,7 @@ on:
   pull_request:
     paths:
       - 'sealed_replay_v19_2_reconstructed.py'
+      - 'sealed_replay_v19_2_correctness.py'
       - 'engine_correctness.py'
       - 'engine_tag_aliases_v1.json'
       - 'ENGINE_V19_2_RECONSTRUCTION.md'
@@ -33,8 +35,11 @@ jobs:
           python-version: '3.11'
       - name: Reconstructed v19.2 sealed replay
         run: python sealed_replay_v19_2_reconstructed.py
+      - name: v19.2 correctness sealed replay
+        run: python sealed_replay_v19_2_correctness.py
       - name: Verify reconstruction labels
         shell: bash
         run: |
           grep -q 'historical_source_recovered.*False' sealed_replay_v19_2_reconstructed.py
+          grep -q 'correctness_policy_fixed_before_metrics.*True' sealed_replay_v19_2_correctness.py
           grep -q 'RECONSTRUCTED CANDIDATE' ENGINE_V19_2_RECONSTRUCTION.md
