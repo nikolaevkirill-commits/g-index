@@ -69,7 +69,7 @@ class AliasParityTests(unittest.TestCase):
         path = ROOT / "engine_tag_aliases_v1.json"
         with path.open("r", encoding="utf-8") as handle:
             raw = json.load(handle)
-        self.assertEqual(raw["_meta"]["version"], "1.0.1")
+        self.assertEqual(raw["_meta"]["version"], "1.0.2")
         self.assertIn("heart", load_alias_spec()["tokens"])
 
     def test_contract_rejects_silent_token_drift(self) -> None:
@@ -85,13 +85,11 @@ class BoltRescueTests(unittest.TestCase):
         self.assertEqual(decision.rescue, abs(BOLT_BASE_PENALTY))
 
     def test_strong_multi_tag_positive_combination_rescues_without_heart(self) -> None:
-        # plane 1.0 + plus 1.2 + scissors 0.5 = 2.7 >= heart 2.5
         tokens = {"plane", "plus", "scissors", "bolt"}
         self.assertEqual(positive_tag_strength(tokens), 2.7)
         self.assertTrue(bolt_rescue_decision(tokens).rescued)
 
     def test_weak_positive_combination_does_not_rescue(self) -> None:
-        # plane 1.0 + study 0.3 = 1.3 < 2.5
         decision = bolt_rescue_decision({"plane", "study", "bolt"})
         self.assertFalse(decision.rescued)
         self.assertEqual(decision.rescue, 0.0)
@@ -118,14 +116,8 @@ class V151AdapterIntegrationTests(unittest.TestCase):
     def test_canonical_entry_point_uses_alias_parser(self) -> None:
         for verbal, symbolic, _token in AliasParityTests.CASES:
             with self.subTest(verbal=verbal, symbolic=symbolic):
-                self.assertEqual(
-                    self.engine.parse_tags(verbal),
-                    self.engine.parse_tags(symbolic),
-                )
-                self.assertEqual(
-                    self.engine.score_day(verbal, 2.0),
-                    self.engine.score_day(symbolic, 2.0),
-                )
+                self.assertEqual(self.engine.parse_tags(verbal), self.engine.parse_tags(symbolic))
+                self.assertEqual(self.engine.score_day(verbal, 2.0), self.engine.score_day(symbolic, 2.0))
 
     def test_every_alias_contract_token_reaches_engine(self) -> None:
         spec = load_alias_spec()
