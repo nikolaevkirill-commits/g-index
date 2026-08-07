@@ -164,24 +164,24 @@ def load_excel_forecast(xlsx_path: Path, start: date, end: date):
 # ──────────────────────────────────────────────────────────────────────
 
 def compute_eng_for_day(tag: str, kp, engine_module=None):
-    """Compute engine score using v18.5 if available, else v17."""
+    """Compute score only with an explicit supported legacy Engine. Fail closed."""
     try:
         kp_f = float(kp) if kp is not None else 2.0
     except (TypeError, ValueError):
         kp_f = 2.0
     if engine_module is None:
-        for modname in ('score_engine_v19_preview', 'forecast_engine_v18_5', 'forecast_engine_v17_0'):
+        for modname in ('forecast_engine_v18_5', 'forecast_engine_v17_0'):
             try:
                 engine_module = __import__(modname)
                 break
             except ImportError:
                 continue
     if engine_module is None:
-        return 0
+        raise RuntimeError('No supported PDF Engine available. v19_preview is intentionally not auto-selected because this generator does not yet supply canonical date/tithi/nakshatra context. Provide forecast_engine_v18_5.py or forecast_engine_v17_0.py, or use --no-engine explicitly.')
     try:
         return engine_module.score_day(tag, kp_f)
-    except Exception:
-        return 0
+    except Exception as exc:
+        raise RuntimeError(f'Engine scoring failed for tag={tag!r}, kp={kp_f}: {exc}') from exc
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -250,7 +250,7 @@ def build_week_table(week_data, mon: date, sun: date, styles):
     return tbl
 
 
-def build_pdf(forecast_data: dict, out_path: Path, title: str = "G-Index Forecast"):
+def build_pdf(forecast_data: dict, out_path: Path, title: str = "G-Index Forecast", engine_label: str = 'NO ENGINE / neutral placeholders'):
     """Render PDF from forecast_data (dict iso → row)."""
     _register_fonts()
 
@@ -259,7 +259,7 @@ def build_pdf(forecast_data: dict, out_path: Path, title: str = "G-Index Forecas
         pagesize=landscape(A4),
         rightMargin=1 * cm, leftMargin=1 * cm,
         topMargin=1 * cm, bottomMargin=1 * cm,
-        title=title, author="G-Index v18.5",
+        title=title, author=f"G-Index {engine_label}",
     )
 
     base = getSampleStyleSheet()
@@ -293,7 +293,7 @@ def build_pdf(forecast_data: dict, out_path: Path, title: str = "G-Index Forecas
     story.append(Paragraph(title, styles['h1']))
     story.append(Paragraph(
         f"Період: {start.isoformat()} → {end.isoformat()} "
-        f"(Engine v18.5, R&amp;D / Advisory)",
+        f"(Engine {engine_label}, R&amp;D / Advisory)",
         styles['h2']))
     story.append(Spacer(1, 4 * mm))
 
@@ -318,7 +318,7 @@ def build_pdf(forecast_data: dict, out_path: Path, title: str = "G-Index Forecas
         "Прогноз здійснено з урахуванням впливу космофізичних факторів: "
         "сонячні бурі (прогнозований К-індекс), вплив Місяця, астрологічний "
         "вплив. Інформація носить рекомендаційний характер. "
-        "Engine v18.5 — internal validation, prospective freeze active.",
+        f"Engine {engine_label} — provenance reflects the selected PDF scoring mode.",
         styles['foot']))
 
     doc.build(story)
@@ -382,28 +382,40 @@ def main():
         print("ERROR: no rows in date range", file=sys.stderr)
         return 1
 
-    # Compute eng scores
+    # Compute eng scores. v19_preview is deliberately excluded until this
+    # generator supplies canonical date/tithi/nakshatra context (issue #8).
+    engine_label = 'NO ENGINE / neutral placeholders'
     if not args.no_engine:
         eng_mod = None
-        for modname in ('score_engine_v19_preview', 'forecast_engine_v18_5', 'forecast_engine_v17_0'):
+        eng_name = None
+        for modname in ('forecast_engine_v18_5', 'forecast_engine_v17_0'):
             try:
                 eng_mod = __import__(modname)
+                eng_name = modname
                 print(f"  engine: {modname}")
                 break
             except ImportError:
                 continue
+        if eng_mod is None:
+            raise RuntimeError(
+                'No supported PDF Engine available. Provide forecast_engine_v18_5.py or '
+                'forecast_engine_v17_0.py. v19_preview is not used here until canonical '
+                'date/tithi/nakshatra context is wired. Use --no-engine only for explicit '
+                'neutral placeholder rendering.'
+            )
+        engine_label = 'v18.5' if eng_name == 'forecast_engine_v18_5' else 'v17.0'
         for iso, rec in rows.items():
             rec['eng'] = compute_eng_for_day(rec['tag'], rec['kp'], eng_mod)
 
     out_path = Path(args.out)
     if args.append_to:
         tmp = out_path.with_suffix('.tmp.pdf')
-        build_pdf(rows, tmp, title=args.title)
+        build_pdf(rows, tmp, title=args.title, engine_label=engine_label)
         append_pdfs(Path(args.append_to), tmp, out_path)
         tmp.unlink()
         print(f"Appended: {args.append_to} + new → {out_path}")
     else:
-        build_pdf(rows, out_path, title=args.title)
+        build_pdf(rows, out_path, title=args.title, engine_label=engine_label)
         print(f"Saved: {out_path}")
     return 0
 
