@@ -118,24 +118,69 @@ Diagnostics:
 
 Interpretation: the reconstruction improves the two primary robustness metrics (±1 and Strict-3) materially on this unchanged replay, while exact improves slightly. The `n_tags=1` exact decline is retained transparently and is not tuned away. This is still replay agreement with PDF GT, not independent real-world predictive accuracy.
 
-## 8. Promotion status
+## 8. v19.2 correctness layer
 
-**DO NOT PROMOTE. DO NOT MERGE TO `deploy`.**
+The correctness policy was fixed before the second replay:
+
+- v19 overlay decisions use the shared canonical verbal/emoji parser;
+- positive strength uses the **recovered v17 weights**, not v15.1 weights;
+- strong-positive threshold = `2.5` (heart-equivalent);
+- generic bolt rescue = `+2.0`, exactly neutralizing the v17 numeric bolt penalty;
+- explicit structural contexts remain authoritative and are not rescued: `trident`, `amavasya`, `purnima`, `ekadashi`, `eclipse`, `surya`, `retro_end`, `ganesh`, `navaratri`, `med`;
+- explicit v19.1 action rescue keeps precedence.
+
+Synthetic/regression coverage was added in `tests/test_v19_2_correctness.py`. Full Python suite: **23/23 PASS**; JavaScript alias parity: **PASS**. Covered cases include verbal travel into v19 rescue, verbal travel into v18.8 P2, aggregate non-heart rescue, weak-positive no-rescue, Ekadashi/Ganesh structural blocks, verbal heart recovery and preservation of the existing explicit v19.1 rescue.
+
+Second sealed replay on the same `n=322` frozen snapshots:
+
+| Metric | v19.2 reconstructed | + correctness | Delta |
+|---|---:|---:|---:|
+| Exact 7-class | 44.1% | 44.1% | 0.0 pp |
+| ±1 | 74.2% | 74.2% | 0.0 pp |
+| Strict 3-class/sign | 73.3% | 73.3% | 0.0 pp |
+
+By tag count all three metrics are unchanged in all buckets.
+
+Diagnostics:
+
+- comparable rows: **322**;
+- prediction changed rows: **1**;
+- bolt rescue rows: **0**;
+- calendar-enriched rows: **6**;
+- changed rows with bolt rescue: **0**.
+
+Interpretation: **no regression**, but the frozen sample has no qualifying aggregate-bolt row, so this replay does not empirically validate the rescue effect. The bolt fix is validated by deterministic regression tests; verbal/emoji parity is likewise deterministic. Full raw-Engine alias impact cannot be measured from frozen precomputed v18.5 snapshots and requires rerunning the recovered v17→v18.5→v19.x source chain.
+
+## 9. Primary expert alias evidence
+
+The newly supplied expert workbook closes the last major alias uncertainty. In sheet `ШКАЛА + (2)`, the expert legend at rows 61–95 contains the verbal tags directly. Row 95 is:
+
+`Хрест | День лікування, прийому ліків | +1`
+
+The canonical production `deploy/tag_to_text.json` maps symbol `⊕` to the same semantic phrase `лікування, прийому ліків`. Therefore **`Хрест -> plus/⊕` is confirmed** by the expert workbook plus the canonical symbol dictionary and is no longer provisional.
+
+The same expert legend directly confirms that labels such as `Серце`, `Мішень`, `Зелена печатка`, `Гучномовець`, `Книги`, `Таблетка`, `Шприц`, `Сукня`, `Вінаяка` are genuine expert vocabulary rather than inferred names.
+
+## 10. Promotion status
+
+**DO NOT PROMOTE. DO NOT MERGE TO `deploy` YET.**
 
 Required next gates:
 
 - [ ] Commit byte-identical recovered v17.0, v18.5 and v19.1 source files to the correctness branch.
 - [x] Commit an auditable reconstructed v19.2 replay with explicit `historical_source_recovered=false` provenance.
-- [ ] Port the shared verbal/emoji alias contract to this v19.x chain.
-- [ ] Port the frozen aggregate-positive bolt correctness rule to this v19.x chain without breaking explicit structural contexts.
-- [ ] Run deterministic v17/v18.5/v19.1/v19.2 regression suites.
-- [x] Run one sealed no-tuning replay on unchanged data: Exact 7-class, ±1, Strict-3/sign, buckets n_tags=0/1/2+.
-- [ ] Run a second sealed replay comparing reconstructed v19.2 against reconstructed v19.2 + correctness fixes.
-- [ ] Confirm `Хрест -> ⊕` from a primary expert source or keep it explicitly provisional.
-- [ ] Only then evaluate production promotion.
+- [x] Port the shared verbal/emoji alias contract to the v19 overlay/replay path.
+- [x] Port the frozen aggregate-positive bolt correctness rule using recovered v17 weights and structural guards.
+- [x] Run deterministic correctness regression: Python 23/23 + JS PASS.
+- [x] Run sealed reconstructed-v19.2 replay on unchanged data.
+- [x] Run second sealed replay: reconstructed v19.2 vs + correctness fixes; no regression.
+- [x] Confirm `Хрест -> ⊕` from primary expert source + canonical symbol dictionary.
+- [ ] Rerun the **full recovered raw Engine chain** with canonical aliases before v18.5 scoring, so verbal aliases are measured at the correct layer rather than only in the v19 overlay.
+- [ ] Compare full-chain output against the frozen snapshots and explain every changed row before any production regeneration.
+- [ ] Only then evaluate production promotion / new freeze.
 
-## 9. Current conclusion
+## 11. Current conclusion
 
-The old PR blocker "v17/v18.5 source cannot be recovered" is obsolete. Exact source files now exist and pass their own tests. The unresolved provenance issue is narrower: **the original historical v19.2 precedence/consolidation source has not been recovered**.
+The old blocker "v17/v18.5 source cannot be recovered" is obsolete, and the `Хрест -> ⊕` uncertainty is closed.
 
-The reconstructed candidate now has a fixed, auditable precedence rule and a successful sealed replay. It is suitable as the baseline for the next correctness experiment, but must remain separately labeled until aliases, bolt correctness, regression and provenance gates are complete.
+The reconstructed v19.2 candidate has a fixed precedence policy, a successful sealed replay and a no-regression correctness layer. The remaining technical blocker is now precise: **the exact recovered v17/v18.5/v19.1 files must be made self-contained in the branch and the full raw chain must be rerun with the canonical alias parser before scoring**. The original historical v19.2 consolidation source remains unrecovered, so the reconstruction label must remain.
