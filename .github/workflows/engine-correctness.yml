@@ -9,6 +9,7 @@ on:
       - 'engine_tag_aliases_v1.json'
       - 'engine_tag_parser.js'
       - 'forecast_engine_v15_1*.py'
+      - 'sealed_replay_correctness.py'
       - 'tests/test_engine_correctness.py'
       - 'tests/test_engine_tag_parser.js'
       - '.github/workflows/engine-correctness.yml'
@@ -18,6 +19,7 @@ on:
       - 'engine_tag_aliases_v1.json'
       - 'engine_tag_parser.js'
       - 'forecast_engine_v15_1*.py'
+      - 'sealed_replay_correctness.py'
       - 'tests/test_engine_correctness.py'
       - 'tests/test_engine_tag_parser.js'
       - '.github/workflows/engine-correctness.yml'
@@ -44,6 +46,8 @@ jobs:
         run: python -m unittest discover -s tests -v
       - name: JavaScript alias-parity tests
         run: node tests/test_engine_tag_parser.js
+      - name: Sealed correctness replay
+        run: python sealed_replay_correctness.py
       - name: Forensic search for missing v17/v18.5 sources
         shell: bash
         run: |
@@ -61,7 +65,7 @@ jobs:
           python - <<'PY'
           from zipfile import ZipFile, BadZipFile
           from xml.etree import ElementTree as ET
-          import subprocess, tempfile, os, re
+          import subprocess, tempfile, os
 
           targets=['серце','книги','сукня','таблетка','хрест','гучномовець','зелена печатка','мішень','вінаяка','шприц']
           ns={'m':'http://schemas.openxmlformats.org/spreadsheetml/2006/main'}
@@ -84,7 +88,6 @@ jobs:
                           root=ET.fromstring(z.read('xl/sharedStrings.xml'))
                           for si in root.findall('m:si',ns):
                               strings.append(''.join(t.text or '' for t in si.iterfind('.//m:t',ns)))
-                      # Include inline strings from worksheets too.
                       for name in z.namelist():
                           if name.startswith('xl/worksheets/') and name.endswith('.xml'):
                               root=ET.fromstring(z.read(name))
