@@ -1,0 +1,56 @@
+name: PDF generator engine guard
+
+on:
+  push:
+    branches: [fix/pdf-generator-engine-guard]
+    paths: ['deploy/generate_forecast_pdf.py','.github/workflows/pdf-generator-engine-guard.yml']
+  pull_request:
+    paths: ['deploy/generate_forecast_pdf.py','.github/workflows/pdf-generator-engine-guard.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: pip install openpyxl reportlab pypdf
+      - name: Build fixture
+        run: |
+          python - <<'PY'
+          from openpyxl import Workbook
+          from datetime import datetime
+          wb=Workbook(); ws=wb.active; ws.title='ДАНІ_ЩОДЕННІ'; ws.append(['date']+['']*15)
+          r=['']*16; r[0]=datetime(2026,8,7); r[9]=2.0; r[13]='📚'; r[15]='fixture'; ws.append(r)
+          wb.save('/tmp/pdf-fixture.xlsx')
+          PY
+      - name: Fail closed without Engine
+        run: |
+          set +e
+          (cd deploy && python generate_forecast_pdf.py --xlsx /tmp/pdf-fixture.xlsx --start 2026-08-07 --end 2026-08-07 --out /tmp/fail.pdf) >/tmp/fail.txt 2>&1
+          rc=$?; set -e; cat /tmp/fail.txt
+          test $rc -ne 0
+          grep -q 'No supported PDF Engine available' /tmp/fail.txt
+          test ! -f /tmp/fail.pdf
+      - name: Explicit no-engine is labeled
+        run: |
+          (cd deploy && python generate_forecast_pdf.py --xlsx /tmp/pdf-fixture.xlsx --start 2026-08-07 --end 2026-08-07 --out /tmp/no-engine.pdf --no-engine)
+          test -f /tmp/no-engine.pdf
+      - name: v18.5 supported path
+        run: |
+          printf "def score_day(tag,kp):\n    return 1\n" > deploy/forecast_engine_v18_5.py
+          (cd deploy && python generate_forecast_pdf.py --xlsx /tmp/pdf-fixture.xlsx --start 2026-08-07 --end 2026-08-07 --out /tmp/v185.pdf)
+          test -f /tmp/v185.pdf
+          python - <<'PY'
+          import os,sys
+          from pathlib import Path
+          d=Path('deploy').resolve(); os.chdir(d); sys.path.insert(0,str(d))
+          import generate_forecast_pdf as g, forecast_engine_v18_5 as e
+          assert g.compute_eng_for_day('📚',2.0,e)==1
+          print('PDF engine guard PASS')
+          PY
