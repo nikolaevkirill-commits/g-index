@@ -156,7 +156,7 @@ The frozen sample contains no qualifying aggregate-bolt rescue row (`bolt_rescue
 
 ## 8. Final CI state
 
-Latest full correctness job: **PASS**.
+Full correctness workflow run **31168851698: PASS**.
 
 Passed gates include:
 - recovered source SHA256 provenance;
@@ -170,7 +170,7 @@ Passed gates include:
 - dashboard score-path audit;
 - historical source/Excel forensic checks.
 
-Raw-chain reproducibility workflow: **PASS**.
+Raw-chain reproducibility run **31168846963: PASS**.
 
 ## 9. Promotion gates
 
