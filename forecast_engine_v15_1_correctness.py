@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from typing import Iterable
 
-import forecast_engine_v15_1 as _base
+import forecast_engine_v15_1_frozen as _base
 from engine_correctness import (
     bolt_rescue_decision,
     parse_tag_tokens,
@@ -112,3 +112,19 @@ score_day = _base.score_day
 format_day = _base.format_day
 T = _base.T
 TAG_WEIGHTS = _base.TAG_WEIGHTS
+
+# Preserve the complete public v15.1 API for existing consumers.
+for _public_name in dir(_base):
+    if not _public_name.startswith("_"):
+        globals().setdefault(_public_name, getattr(_base, _public_name))
+
+__all__ = sorted({
+    *(_public_name for _public_name in dir(_base) if not _public_name.startswith("_")),
+    "parse_tags",
+    "compute_interactions",
+    "correctness_debug",
+    "score_day",
+    "format_day",
+    "T",
+    "TAG_WEIGHTS",
+})

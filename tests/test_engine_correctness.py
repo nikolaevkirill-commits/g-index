@@ -104,5 +104,35 @@ class BoltRescueTests(unittest.TestCase):
         self.assertEqual(decision.rescue, 0.0)
 
 
+class V151AdapterIntegrationTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        import forecast_engine_v15_1 as engine
+        cls.engine = engine
+
+    def test_canonical_entry_point_uses_alias_parser(self) -> None:
+        for verbal, symbolic, _token in AliasParityTests.CASES:
+            with self.subTest(verbal=verbal, symbolic=symbolic):
+                self.assertEqual(
+                    self.engine.parse_tags(verbal),
+                    self.engine.parse_tags(symbolic),
+                )
+                self.assertEqual(
+                    self.engine.score_day(verbal, 2.0),
+                    self.engine.score_day(symbolic, 2.0),
+                )
+
+    def test_canonical_entry_point_uses_general_bolt_rescue(self) -> None:
+        strong = self.engine.correctness_debug("✈ ⊕ ✂ ⚡", 2.0)
+        heart = self.engine.correctness_debug("❤ ⚡", 2.0)
+        negative = self.engine.correctness_debug("⚡ лікування💊", 2.0)
+
+        self.assertTrue(strong["bolt"]["rescued"])
+        self.assertEqual(strong["positive_strength"], 2.7)
+        self.assertTrue(heart["bolt"]["rescued"])
+        self.assertFalse(negative["bolt"]["rescued"])
+        self.assertEqual(negative["interaction_delta"], -1.0)
+
+
 if __name__ == "__main__":
     unittest.main()

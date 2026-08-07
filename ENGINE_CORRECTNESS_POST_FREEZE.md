@@ -54,7 +54,7 @@ Regression cases:
 
 The current dashboard does not calculate the frozen Engine in `index.html`; it reads static `engine_scores.json` values labeled v18.5. The repository contains `forecast_engine_v15_1.py`, but the v17/v18.5 source modules required to reproduce current production scores are absent. `deploy/score_engine_v19_preview.py` imports those missing modules and also contains date/GT-oriented patches, so it is not a valid base for this correctness change.
 
-Therefore `forecast_engine_v15_1_correctness.py` is an explicit candidate adapter for the latest reproducible source. It must not replace production scores until the exact frozen v18.5 source is restored or the static score file is deliberately regenerated from an audited source.
+The unchanged reproducible source is preserved as `forecast_engine_v15_1_frozen.py`; the canonical `forecast_engine_v15_1.py` entry point on this branch is wired through `forecast_engine_v15_1_correctness.py`. This makes the correctness patch executable for v15.1 consumers while still leaving production scores untouched. It must not replace production scores until the exact frozen v18.5 source is restored or the static score file is deliberately regenerated from an audited source.
 
 ## Promotion gate
 
