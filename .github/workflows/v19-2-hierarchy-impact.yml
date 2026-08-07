@@ -8,11 +8,13 @@ on:
       - 'audit_v19_2_production_hierarchy.py'
       - 'engine_scores_v19_2_candidate.json'
       - 'deploy/expert_overrides_v3.json'
+      - 'expert_calc_scores.json'
+      - 'deploy/expert_calc_scores.json'
       - '.github/workflows/v19-2-hierarchy-impact.yml'
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   audit:
@@ -20,26 +22,21 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: fix/post-freeze-engine-correctness
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Locate expert_calc implementation/data
-        shell: bash
-        run: |
-          set -euo pipefail
-          echo '=== expert_calc repository grep ==='
-          grep -Rni --exclude-dir=.git -E 'expert[_-]?calc|expertCalc|EXPERT_CALC' . || true
       - name: Classify candidate through hierarchy
         run: python audit_v19_2_production_hierarchy.py
-      - name: Commit hierarchy impact report
+      - name: Verify committed frozen report is reproducible
         shell: bash
         run: |
           set -euo pipefail
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add ENGINE_V19_2_PRODUCTION_HIERARCHY_IMPACT.json
-          if git diff --cached --quiet; then exit 0; fi
-          git commit -m 'audit(engine): add v19.2 production hierarchy impact'
-          git push origin HEAD:fix/post-freeze-engine-correctness
+          git diff --exit-code -- ENGINE_V19_2_PRODUCTION_HIERARCHY_IMPACT.json
+          python - <<'PY'
+          import json
+          d=json.load(open('ENGINE_V19_2_PRODUCTION_HIERARCHY_IMPACT.json',encoding='utf-8'))
+          assert d['counts']['candidate_core_changed_rows']==130
+          assert d['counts']['classes']=={'masked_expert_calc':81,'masked_verified_override':20,'exposed_engine_core':29}
+          assert d['counts']['exposed_sign_flip_rows']==12
+          print('hierarchy reproducibility PASS')
+          PY
