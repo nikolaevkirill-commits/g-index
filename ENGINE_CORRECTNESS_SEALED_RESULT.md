@@ -1,19 +1,25 @@
-# Engine correctness — sealed result
+# Engine correctness — historical v15.1 sealed result
 
 Date: 2026-08-07
 Branch: `fix/post-freeze-engine-correctness`
-Policy: **no GT/PDF tuning**. Same frozen input rows and same verified PDF ground truth for baseline and candidate.
+Status: **HISTORICAL REGRESSION ARTIFACT — not current baseline**
 
-## Result
+This replay was produced during the initial v15.1 correctness detour, before the exact v17/v18.5/v19.1 chain was recovered. Its numbers are retained for provenance only. It must not be interpreted as the current production/release comparison.
 
-| Metric | Frozen v15.1 | Correctness candidate | Delta |
+Current authoritative release decision: `V19_2_RELEASE_GATE_2026-08-07.md`.
+
+## Historical v15.1 result
+
+Policy was no GT/PDF tuning: same frozen input rows and same verified PDF ground truth for baseline and candidate.
+
+| Metric | Frozen v15.1 | v15.1 correctness candidate | Delta |
 |---|---:|---:|---:|
 | Exact 7-class | 44.4% | 44.7% | +0.3 pp |
 | ±1 accuracy | 69.9% | 69.9% | 0.0 pp |
 | Strict 3-class/sign | 71.4% | 72.0% | +0.6 pp |
 | N | 322 | 322 | — |
 
-### By canonical parsed tag count
+By canonical parsed tag count:
 
 | Bucket | N | Exact baseline → candidate | ±1 baseline → candidate | Strict3 baseline → candidate |
 |---|---:|---:|---:|---:|
@@ -21,37 +27,36 @@ Policy: **no GT/PDF tuning**. Same frozen input rows and same verified PDF groun
 | `n_tags=1` | 110 | 47.3% → 47.3% | 78.2% → 78.2% | 67.3% → 67.3% |
 | `n_tags=2+` | 173 | 47.4% → 48.0% | 68.8% → 68.8% | 77.5% → 78.6% |
 
-Diagnostics:
-- comparable rows: 322
-- prediction-changed rows: 6
-- bolt-rescue rows: 10
-- alias-changed rows: 0
+Historical diagnostics:
 
-`alias_changed_rows=0` means the frozen replay inputs already use symbol/legacy forms recognized by v15.1. Therefore this sealed replay validates the **bolt-policy effect**, but does not estimate the benefit of verbal aliases. Verbal↔symbol equality is covered deterministically by unit/JS parity tests instead.
+- comparable rows: 322;
+- prediction-changed rows: 6;
+- bolt-rescue rows: 10;
+- alias-changed rows: 0.
 
-## Dashboard correctness audit
+The v15.1 replay does **not** estimate the current v19.2 production impact.
 
-Static audit of `deploy/index.html` found 43 `getEngineScore()` calls and 12 direct `_engineScores[...]` accesses. Eleven direct accesses are loader/enrichment/Kp plumbing or the implementation of `getEngineScore()` itself. One UI consumer was a real bypass:
+## Dashboard correctness findings retained from this stage
 
-- trend tooltip used `_engineScores[d.ds].eng` directly;
-- consequence: it could show raw v18.5 while the rest of UI used expert override / expert_calc hierarchy;
-- branch-only fix: route it through `getEngineScore(new Date(...))` and label the tooltip `Engine (canonical)`.
+Two findings remain valid and are still part of PR #2:
 
-A second UI inconsistency was found after the score-path audit: the `Тема дня` card interpreted `eng.tag` through a local hard-coded emoji-only `TAG_THEMES` table. Therefore verbal aliases could be parsed correctly by Engine/validator but still disappear from UI copy. Branch-only fix:
+1. A trend tooltip bypassed the canonical `getEngineScore()` hierarchy by reading `_engineScores[d].eng` directly. It was routed through `getEngineScore()`.
+2. `Тема дня` used a local emoji-only theme table. It was wired to the shared `engine_tag_aliases_v1.json` / `engine_tag_parser.js` contract.
 
-- `deploy/index.html` loads `../engine_tag_parser.js`;
-- `loadEngineScores()` loads the same `../engine_tag_aliases_v1.json` contract through `EngineTagParser.loadAliasSpec()`;
-- `Тема дня` uses `EngineTagParser.parseTagTokens()` and token themes instead of direct emoji substring checks;
-- a fail-soft legacy display fallback remains only if the alias spec cannot be loaded; it does not alter Engine scoring.
+These are UI correctness fixes, independent of whether v15.1 or reconstructed v19.2 is used as the Engine core.
 
-Both dashboard patches were applied by exact-match/idempotent patch scripts and verified with `git diff --check` before commit. The production `deploy` branch was not changed.
+## Blockers from the original document — resolved status
 
-## Forensics / blockers
+The following original statements are now obsolete:
 
-1. Exact `forecast_engine_v18_5.py` and `forecast_engine_v17_0.py` are absent from current branches and Git object/path history under the expected names. Existing `score_engine_v19_preview.py` imports modules that are not present in the repository.
-2. All historical `.xlsx` blobs in Git history were scanned. Only `prognoz_2025_2026_4.xlsx` and `prognoz_2025_2026_4_REBUILT.xlsx` were found; neither contains the requested verbal labels (`Серце`, `Книги`, `Сукня`, `Таблетка`, `Хрест`, `Гучномовець`, `Зелена печатка`, `Мішень`, `Вінаяка`, `Шприц`).
-3. Therefore `Хрест → plus/⊕` remains a documented assumption until the original expert master table is recovered.
+- “v17/v18.5 source absent/unrecoverable” — **resolved**. Byte-identical v17.0 and v18.5 sources are committed and SHA-pinned; v18.5 native tests are 73/73 PASS.
+- “v19.1 dependency source unavailable” — **resolved**. Byte-identical `score_engine_v19_preview.py` is committed and 11/11 PASS.
+- “Хрест → plus/⊕ is only an assumption” — **resolved**. Confirmed from primary expert workbook semantics plus canonical production symbol dictionary.
 
-## Promotion decision
+Raw-chain audit now reproduces **563/563 non-overridden frozen rows exactly**. The lone historical mismatch is an explicit documented override.
 
-**Do not merge to production yet.** The candidate passes deterministic tests, removes the audited UI divergence paths, and improves the sealed v15.1 replay slightly, but production still serves static v18.5 scores whose exact generator/source is not reproducible from the repository. The correctness branch is the auditable replacement baseline until that source is recovered or formally retired.
+## Current decision
+
+Do **not** promote the historical v15.1 correctness candidate.
+
+Production remains the existing v18.5/Expert hierarchy. Reconstructed v19.2 has been audited separately and is currently `FROZEN_PROSPECTIVE_SHADOW` from 2026-08-07, with direct promotion held because all 29 exposed runtime changes are future-only and 12 are sign flips.
