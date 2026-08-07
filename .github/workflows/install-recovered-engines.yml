@@ -23,11 +23,22 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - name: Verify staging chunks
+        shell: bash
+        run: |
+          set -euo pipefail
+          wc -c recovered_engine_payload.part0*
+          sha256sum recovered_engine_payload.part0*
+          echo '68d745ebf8a16818c1b5d7df80ebd12bcbcd002067a7a7e2f7fa0376d0d81c60  recovered_engine_payload.part00' | sha256sum -c -
+          echo '52f7f653c9d2c57d6049d01474f8192d35d714c54985a0ebd5b16f6d8f947251  recovered_engine_payload.part01' | sha256sum -c -
+          echo '09154ab67c20ae46e0ef80088514da6841880d9c3009802e3fec078362dd7956  recovered_engine_payload.part02' | sha256sum -c -
+          echo '3dc387b7a31be393e85c05ea25a3dcdf668df9347e029b7827ca4892ccf4f230  recovered_engine_payload.part03' | sha256sum -c -
       - name: Reconstruct byte-identical recovered sources
         shell: bash
         run: |
           set -euo pipefail
           cat recovered_engine_payload.part00 recovered_engine_payload.part01 recovered_engine_payload.part02 recovered_engine_payload.part03 > /tmp/recovered_engines.b64
+          echo 'a81a135b956816c514b06adbd35ee527464ba08333aab01169a061b86d7212ec  /tmp/recovered_engines.b64' | sha256sum -c -
           base64 -d /tmp/recovered_engines.b64 > /tmp/recovered_engines.tar.gz
           tar -xzf /tmp/recovered_engines.tar.gz
           echo '1b4c5fa7052590ed441923e9383f42654247711c5ece6f9cea765693a954eaae  forecast_engine_v17_0.py' | sha256sum -c -
