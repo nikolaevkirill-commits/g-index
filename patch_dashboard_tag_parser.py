@@ -23,10 +23,13 @@ THEMES_NEW = """  const TOKEN_THEMES = {\n    plane:'переміщення і �
 def replace_contract(text: str, old: str, new: str, name: str) -> tuple[str, bool]:
     old_n = text.count(old)
     new_n = text.count(new)
+    # Some OLD fragments are intentionally contained inside NEW. Therefore
+    # seeing exactly one complete NEW contract means the file is already
+    # patched even if OLD also appears as a substring of that NEW block.
+    if new_n == 1:
+        return text, False
     if old_n == 1 and new_n == 0:
         return text.replace(old, new, 1), True
-    if old_n == 0 and new_n == 1:
-        return text, False
     raise RuntimeError(f"{name} contract mismatch: old={old_n}, new={new_n}")
 
 
