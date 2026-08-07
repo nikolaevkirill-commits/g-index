@@ -2,10 +2,11 @@
 """Read-only audit of support-file resolution for recovered v19.1 copies."""
 from __future__ import annotations
 
+import difflib
+import hashlib
 import importlib.util
 import json
 import os
-import subprocess
 import sys
 from pathlib import Path
 
@@ -28,11 +29,26 @@ def load_module(name: str, path: Path, cwd: Path):
         sys.path[:] = old_path
 
 
+def sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
 def main() -> int:
     root_path = ROOT / 'score_engine_v19_preview.py'
     deploy_path = ROOT / 'deploy' / 'score_engine_v19_preview.py'
     if not root_path.exists() or not deploy_path.exists():
         raise SystemExit('both v19.1 copies are required')
+
+    root_text = root_path.read_text(encoding='utf-8')
+    deploy_text = deploy_path.read_text(encoding='utf-8')
+    root_norm = root_text.replace('\r\n', '\n')
+    deploy_norm = deploy_text.replace('\r\n', '\n')
+    diff = list(difflib.unified_diff(
+        root_norm.splitlines(), deploy_norm.splitlines(),
+        fromfile='root/score_engine_v19_preview.py',
+        tofile='deploy/score_engine_v19_preview.py',
+        lineterm='',
+    ))
 
     root_mod = load_module('v191_root_audit', root_path, ROOT)
     deploy_mod = load_module('v191_deploy_audit', deploy_path, deploy_path.parent)
@@ -54,9 +70,16 @@ def main() -> int:
     )
 
     report = {
-        'schema': 'v19_1_support_path_parity_audit_v1',
+        'schema': 'v19_1_support_path_parity_audit_v2',
         'read_only': True,
         'production_changed': False,
+        'source_comparison': {
+            'root_sha256': sha256(root_path),
+            'deploy_sha256': sha256(deploy_path),
+            'normalized_text_equal': root_norm == deploy_norm,
+            'unified_diff_lines': len(diff),
+            'diff_preview': diff[:80],
+        },
         'root': {
             'module': str(root_path.name),
             'support_calendar_exists_next_to_module': (ROOT / 'calendar_tags_2025_2026.json').exists(),
@@ -85,7 +108,6 @@ def main() -> int:
     out.write_text(json.dumps(report, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
     print(json.dumps(report, ensure_ascii=False, indent=2))
 
-    # Expected audit condition: deploy resolves priors, root recovered artifact does not.
     if report['deploy']['tithi_priors_loaded'] == 0:
         raise SystemExit('deploy v19.1 failed to load its support priors')
     if report['root']['tithi_priors_loaded'] != 0:
