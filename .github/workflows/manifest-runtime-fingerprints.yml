@@ -1,0 +1,52 @@
+name: manifest runtime fingerprints
+
+on:
+  push:
+    branches: [fix/manifest-engine-fingerprint]
+    paths:
+      - 'data_manifest.json'
+      - 'engine_scores.json'
+      - 'expert_overrides_v3.json'
+      - 'expert_calc_scores.json'
+      - 'future_kp.json'
+      - '.github/workflows/manifest-runtime-fingerprints.yml'
+  pull_request:
+    paths:
+      - 'data_manifest.json'
+      - 'engine_scores.json'
+      - 'expert_overrides_v3.json'
+      - 'expert_calc_scores.json'
+      - 'future_kp.json'
+      - '.github/workflows/manifest-runtime-fingerprints.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Verify manifest MD5/12 fingerprints
+        run: |
+          python - <<'PY'
+          import hashlib,json
+          from pathlib import Path
+          m=json.loads(Path('data_manifest.json').read_text(encoding='utf-8'))
+          mapping={
+            'expert_overrides':'expert_overrides_v3.json',
+            'expert_calc':'expert_calc_scores.json',
+            'future_kp':'future_kp.json',
+            'engine_scores':'engine_scores.json',
+          }
+          for field,path in mapping.items():
+            actual=hashlib.md5(Path(path).read_bytes()).hexdigest().upper()[:12]
+            expected=m[field]
+            print(field, expected, actual)
+            assert expected==actual, (field,expected,actual)
+          print('manifest runtime fingerprints PASS')
+          PY
