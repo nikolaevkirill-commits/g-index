@@ -48,6 +48,34 @@ jobs:
         run: node tests/test_engine_tag_parser.js
       - name: Sealed correctness replay
         run: python sealed_replay_correctness.py
+      - name: Dashboard score-path audit
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          p=Path('deploy/index.html')
+          text=p.read_text(encoding='utf-8')
+          lines=text.splitlines()
+          print('=== SCORE PATH AUDIT ===')
+          pats={
+            'getEngineScore_calls': re.compile(r'\bgetEngineScore\s*\('),
+            'direct_engineScores': re.compile(r'_engineScores\s*\['),
+            'direct_eng_field': re.compile(r'_engineScores[^\n]{0,160}\.eng\b|_engineScores[^\n]{0,160}\[\s*["\']eng["\']\s*\]'),
+          }
+          for name,pat in pats.items():
+            hits=[]
+            for i,line in enumerate(lines,1):
+              if pat.search(line): hits.append((i,line.strip()))
+            print(f'{name}={len(hits)}')
+            for i,line in hits[:120]: print(f'  L{i}: {line[:500]}')
+          print('=== DIRECT _engineScores CONTEXT ===')
+          for i,line in enumerate(lines,1):
+            if '_engineScores[' in line:
+              lo=max(1,i-2); hi=min(len(lines),i+2)
+              print(f'--- L{i} ---')
+              for j in range(lo,hi+1): print(f'{j}: {lines[j-1][:700]}')
+          PY
       - name: Forensic search for missing v17/v18.5 sources
         shell: bash
         run: |
