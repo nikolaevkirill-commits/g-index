@@ -10,7 +10,10 @@ on:
       - 'engine_tag_parser.js'
       - 'forecast_engine_v15_1*.py'
       - 'sealed_replay_correctness.py'
+      - 'sealed_replay_v19_2_reconstructed.py'
+      - 'sealed_replay_v19_2_correctness.py'
       - 'tests/test_engine_correctness.py'
+      - 'tests/test_v19_2_correctness.py'
       - 'tests/test_engine_tag_parser.js'
       - '.github/workflows/engine-correctness.yml'
   pull_request:
@@ -20,7 +23,10 @@ on:
       - 'engine_tag_parser.js'
       - 'forecast_engine_v15_1*.py'
       - 'sealed_replay_correctness.py'
+      - 'sealed_replay_v19_2_reconstructed.py'
+      - 'sealed_replay_v19_2_correctness.py'
       - 'tests/test_engine_correctness.py'
+      - 'tests/test_v19_2_correctness.py'
       - 'tests/test_engine_tag_parser.js'
       - '.github/workflows/engine-correctness.yml'
   workflow_dispatch:
@@ -48,6 +54,10 @@ jobs:
         run: node tests/test_engine_tag_parser.js
       - name: Sealed correctness replay
         run: python sealed_replay_correctness.py
+      - name: Reconstructed v19.2 sealed replay
+        run: python sealed_replay_v19_2_reconstructed.py
+      - name: v19.2 correctness sealed replay
+        run: python sealed_replay_v19_2_correctness.py
       - name: Dashboard score-path audit
         shell: bash
         run: |
@@ -98,43 +108,30 @@ jobs:
           targets=['серце','книги','сукня','таблетка','хрест','гучномовець','зелена печатка','мішень','вінаяка','шприц']
           ns={'m':'http://schemas.openxmlformats.org/spreadsheetml/2006/main'}
           lines=open('/tmp/xlsx_objects.txt',encoding='utf-8').read().splitlines() if os.path.exists('/tmp/xlsx_objects.txt') else []
-          seen=set(); total=0
-          print('=== XLSX TAG FORENSICS ===')
+          found=[]
           for line in lines:
-              parts=line.split(' ',1)
-              if len(parts)!=2: continue
-              sha,path=parts
-              if sha in seen: continue
-              seen.add(sha)
-              data=subprocess.check_output(['git','cat-file','blob',sha])
-              fd,tmp=tempfile.mkstemp(suffix='.xlsx'); os.close(fd)
-              open(tmp,'wb').write(data)
-              try:
-                  with ZipFile(tmp) as z:
-                      strings=[]
-                      if 'xl/sharedStrings.xml' in z.namelist():
-                          root=ET.fromstring(z.read('xl/sharedStrings.xml'))
-                          for si in root.findall('m:si',ns):
-                              strings.append(''.join(t.text or '' for t in si.iterfind('.//m:t',ns)))
-                      for name in z.namelist():
-                          if name.startswith('xl/worksheets/') and name.endswith('.xml'):
-                              root=ET.fromstring(z.read(name))
-                              for c in root.findall('.//m:c',ns):
-                                  if c.attrib.get('t')=='inlineStr':
-                                      strings.append(''.join(t.text or '' for t in c.iterfind('.//m:t',ns)))
-                      hits=[]
-                      for s in strings:
-                          low=s.casefold()
-                          found=[t for t in targets if t in low]
-                          if found: hits.append((s,found))
-                      if hits:
-                          total += len(hits)
-                          print(f'FILE sha={sha} path={path} hits={len(hits)}')
-                          for s,found in hits[:80]:
-                              print('  ',repr(s),'->',found)
-              except (BadZipFile,ET.ParseError) as e:
-                  print(f'WARN {path}: {e}')
-              finally:
-                  os.unlink(tmp)
-          print('ALL_XLSX_TARGET_HITS=',total)
+            if not line.strip(): continue
+            sha,path=line.split(' ',1)
+            raw=subprocess.check_output(['git','cat-file','-p',sha])
+            fd,tmp=tempfile.mkstemp(suffix='.xlsx'); os.close(fd)
+            try:
+              open(tmp,'wb').write(raw)
+              with ZipFile(tmp) as z:
+                texts=[]
+                for name in z.namelist():
+                  if not name.endswith('.xml'): continue
+                  try:
+                    data=z.read(name).decode('utf-8','ignore').lower()
+                  except Exception: continue
+                  for t in targets:
+                    if t in data: texts.append((t,name))
+                if texts:
+                  print('HIT',path,sorted(set(texts)))
+                  found.append(path)
+            except BadZipFile:
+              pass
+            finally:
+              try: os.unlink(tmp)
+              except OSError: pass
+          print(f'ALL_XLSX_TARGET_FILES={len(found)}')
           PY
