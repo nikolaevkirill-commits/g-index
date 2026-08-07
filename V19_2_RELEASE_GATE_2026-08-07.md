@@ -37,8 +37,6 @@ Core changes versus frozen v18.5: **130/564**.
 
 ## 3. Actual production hierarchy impact
 
-The first hierarchy audit was corrected after finding that ExpertCalc lives in the separate `expert_calc_scores.json` file rather than inside each frozen snapshot.
-
 The audited runtime hierarchy is:
 
 `verified expert override > expert_calc_scores.json > Engine core`
@@ -54,9 +52,9 @@ All **29 exposed changes are prospective dates on/after 2026-08-07**. None of th
 Among the 29 exposed rows:
 
 - **12** change sign/class relative to current production Engine core;
-- 17 change magnitude only.
+- **17** change magnitude only.
 
-This is the decisive release-risk: the historical sealed replay does not directly validate the effective production impact of these exact 29 future rows.
+This is the decisive release-risk: historical replay does not directly validate the effective production impact of these exact 29 future rows.
 
 ## 4. Exact rule attribution of the 29 exposed rows
 
@@ -74,29 +72,31 @@ Rule counts:
 
 The **12 sign flips** are caused by:
 
-- v18.8 broad plane rule: **3**;
-- v18.8 broad Dashami rule: **1**;
+- broad v18.8 plane/Dashami rules: **4**;
 - v19.1 Panchanga priors: **5**;
 - v19.1 bolt/action rescue: **2**;
 - v19.1 med solo: **1**.
 
-Thus **4/12 sign flips come from broad generic v18.8 rules** and **5/12 from sign priors**. Direct promotion is therefore not justified as a narrow correctness-only patch.
+Direct promotion is therefore not justified as a narrow correctness-only patch.
 
 ## 5. v19.1 implementation/spec check
 
 The preserved v19.1 source comment states that medical logic should have precedence over Panchanga, while execution evaluates and returns the Panchanga prior before the medical branch.
 
-A dedicated audit checked the 29 exposed future rows. Result:
+Read-only audit across all 564 snapshots found:
 
-- `prior-vs-med implementation/spec conflict rows = 0` within this specific exposed cohort.
+- base=0 med-solo rows: **7**;
+- rows where source execution differs from documented med-first semantics: **2** (`2025-07-18`, `2025-11-28`);
+- conflicts inside the frozen 29-row prospective cohort: **0**.
 
-So this inconsistency is real in source structure, but it does **not** explain any of the current 29 exposed production-impact rows. It remains a provenance/maintenance issue and must not be silently rewritten as historical v19.2 behavior.
+Therefore the inconsistency is real but does not alter the frozen prospective cohort. It is post-shadow governance backlog and must not be silently rewritten as historical v19.2 behavior.
 
 ## 6. Prospective shadow freeze
 
 The entire exposed cohort was frozen before attaching future labels/outcomes:
 
 - file: `V19_2_PROSPECTIVE_SHADOW_FREEZE_v1.json`;
+- frozen at: `2026-08-07T12:19:13+00:00`;
 - effective start: **2026-08-07**;
 - cohort: **29 rows**;
 - sign flips: **12**;
@@ -104,38 +104,109 @@ The entire exposed cohort was frozen before attaching future labels/outcomes:
 - promotion allowed: **false**;
 - state: `FROZEN_PROSPECTIVE_SHADOW`.
 
-Every row freezes:
+Every row freezes current production baseline, reconstructed candidate, delta/sign-flip flag, exact rule attribution, tags and corrected raw v18.5 score.
 
-- current production baseline;
-- reconstructed v19.2 candidate;
-- delta and sign-flip flag;
-- exact rule attribution;
-- tag / overlay tag;
-- corrected raw v18.5 score.
-
-Future fields start empty:
-
-- prospective expert/PDF label;
-- prospective real outcome.
+Future expert/PDF and real-outcome evidence is stored outside the freeze in an append-only ledger.
 
 Contract:
 
-1. no rule/threshold/model retuning after this freeze;
-2. future expert/PDF agreement is evaluated separately and must not be called real-outcome accuracy;
-3. real outcomes are evaluated separately and must not be substituted by PDF agreement;
-4. missing observations remain missing — no imputation;
+1. no rule/threshold/model retuning after freeze;
+2. expert/PDF agreement is not real-outcome accuracy;
+3. real outcomes are never substituted by PDF/ExpertCalc;
+4. missing observations remain missing;
 5. no automatic promotion.
 
-## 7. Decision
+## 7. Development-set provenance barrier
+
+Historical v19.1 improvement numbers are **not independent validation evidence**.
+
+Recovered `deploy/panchanga_sign_priors.json` explicitly states that its Tithi/Nakshatra priors were derived/selected using **GT n=350** and reports their gain on that same development context.
+
+The same 2026-06-15 lineage also records target-informed calendar enrichment choices: calendar tags were excluded when they contradicted GT labels, and the retained set was checked to be neutral or beneficial on GT.
+
+Consequences:
+
+- old `73.4% / 75.1%` stack figures must be treated as development/replay agreement;
+- they cannot be used as a production-promotion argument;
+- exact non-overlap between the n=350 development set and later replay samples was not recovered/proven;
+- the current prospective shadow is the first leakage-controlled validation gate for the **effective exposed rules**.
+
+## 8. Prespecified structural-risk diagnostics
+
+A read-only audit of the 4 sign flips caused by broad v18.8 P2/P3 found:
+
+- **4/4 occur under Saturn retro context**;
+- 2/4 additionally occur during Pitru Paksha.
+
+This is a review flag, not proof the candidate scores are wrong. The frozen predictions remain unchanged so prospective evidence can test whether the broad rules survive this structural regime.
+
+No Saturn-retro guard may be fitted retrospectively to these four rows after their outcomes are observed.
+
+## 9. Freeze integrity hard-lock
+
+The original write-capable candidate-builder and freeze-generator workflows were removed after the freeze.
+
+Current CI includes a dedicated read-only integrity gate which verifies:
+
+- frozen freeze-file Git blob SHA: `460386800d2f1756b1b0a47b80f20c811016b927`;
+- candidate SHA256: `95b754735298a0de9f32901a1df2da9052193c47ae629bea7dcf323803716532`;
+- hierarchy-impact and rule-attribution SHA256 values against freeze provenance;
+- 29-row / 12-sign-flip counts;
+- `production=false`, `promotion_allowed=false`;
+- no workflow can call the frozen candidate/freeze generators;
+- only the append-only expert-intake and derived-evaluation workflows retain write permission;
+- those mutable workflows cannot stage protected candidate/freeze/provenance artifacts.
+
+Hierarchy, rule-attribution and semantic-audit workflows were converted from write-capable report generators to **read-only reproducibility checks**.
+
+## 10. Preregistered prospective evaluation
+
+`V19_2_PROSPECTIVE_EVALUATION_PREREGISTRATION.md` was committed while prospective observation counts were still zero.
+
+Primary endpoints are frozen as:
+
+- **paired sign/3-class correctness** on the 12 frozen sign-flip rows;
+- **paired within-1 accuracy** on all observed exposed rows.
+
+Expert/PDF and real-outcome streams remain separate. Exact 7-class is secondary.
+
+Formal review checkpoints are fixed at:
+
+- **2026-09-30**;
+- **2026-11-30**;
+- **2026-12-31**, after the final frozen date `2026-12-28`.
+
+There is no automatic numeric promotion threshold for this small cohort.
+
+## 11. Current prospective evidence state
+
+At the time of this gate update:
+
+- eligible post-freeze verified expert/PDF observations: **0**;
+- valid real outcomes: **0**;
+- derived metrics therefore remain `null`, not zero or imputed values.
+
+The leakage-safe PDF intake has been tested against pre-freeze evidence, changed evidence tuples and pending/unverified records.
+
+## 12. Decision
 
 **Do not merge PR #2 into `deploy`. Do not replace production `engine_scores.json`.**
 
-The correctness/provenance work is technically reproducible and the candidate is now safely frozen for prospective observation, but the effective production delta is entirely future-only and includes 12 class/sign changes, many from broad/inferred model rules rather than parser-only correctness.
+The correctness/provenance work is reproducible and the reconstructed candidate is now mechanically hard-locked for prospective observation, but:
+
+- the effective production delta is entirely future-only;
+- 12/29 exposed rows change sign/class;
+- broad-rule sign flips are structurally concentrated under Saturn retro;
+- Panchanga/calendar development choices were GT-informed;
+- the historical original v19.2 consolidation source remains unrecovered;
+- no post-freeze evidence exists yet.
 
 Current release state:
 
-`v18.5/Expert hierarchy = production`
+`v18.5 / verified Expert hierarchy = production`
 
 `reconstructed v19.2 = frozen prospective shadow`
 
-Promotion can be reconsidered only using evidence collected after the 2026-08-07 freeze, without changing the frozen candidate in response to those observations.
+`PR #3 = separate correctness-only dashboard/read-path patch; no model change`
+
+Promotion can be reconsidered only under the preregistered prospective protocol without modifying the frozen candidate in response to observations.
