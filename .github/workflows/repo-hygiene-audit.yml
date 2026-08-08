@@ -1,0 +1,54 @@
+name: repository hygiene audit
+
+on:
+  push:
+    branches: [audit/repo-hygiene-2026-08-08]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  hygiene:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Production workflow inventory
+        run: |
+          set -euo pipefail
+          find .github/workflows -maxdepth 1 -type f -name '*.yml' -printf '%f\n' | sort
+          test "$(find .github/workflows -maxdepth 1 -type f -name '*.yml' | wc -l)" -eq 6
+      - name: Read-only permissions only
+        run: |
+          set -euo pipefail
+          ! grep -R -nE 'contents:[[:space:]]*write|actions:[[:space:]]*write|pull-requests:[[:space:]]*write' .github/workflows
+      - name: No broad staging or pushes
+        run: |
+          set -euo pipefail
+          ! grep -R -nE 'git add ([.]|-A|--all)|git push|git commit' .github/workflows
+      - name: Production push triggers are deploy
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          files=sorted(Path('.github/workflows').glob('*.yml'))
+          for p in files:
+              s=p.read_text(encoding='utf-8')
+              assert re.search(r'push:\s*\n(?:.*\n){0,2}\s*branches:\s*\[deploy\]', s), p
+              assert 'pull_request:' in s, p
+              assert 'workflow_dispatch:' in s, p
+              assert 'contents: read' in s, p
+              print('PASS',p.name)
+          PY
+      - name: No stale feature-branch triggers
+        run: |
+          set -euo pipefail
+          ! grep -R -nE 'branches:[[:space:]]*\[(fix/|audit/|tmp/)' .github/workflows
+      - name: Protected production files unchanged by this audit
+        run: |
+          git fetch origin deploy --depth=1
+          git diff --exit-code origin/deploy -- \
+            index.html sw.js data_manifest.json engine_scores.json \
+            expert_overrides_v3.json expert_calc_scores.json future_kp.json \
+            deploy/run_forecast.py deploy/generate_forecast_pdf.py deploy/generate_bulletin.py
