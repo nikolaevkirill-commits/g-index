@@ -44,6 +44,8 @@ Repository hygiene audit run `31240616945` PASS against the production workflow 
 - no stale `fix/`, `audit/`, or `tmp/` branch triggers remain;
 - protected production files unchanged by the audit.
 
+A permanent `production health` workflow was subsequently added and then widened to every PR. It remains read-only. PR candidate validation now checks the candidate tree/manifest/security, while live GitHub Pages checks run only after a `deploy` push, scheduled run or manual run; this avoids circular failures when a PR itself repairs live production.
+
 ## Protected production data/model state
 
 The cleanup intentionally did not replace production Engine/model scores.
@@ -134,6 +136,9 @@ These are completed/merged/audit/tmp branches and should not be used for new wor
 - `audit/post-release-health-2026-08-08`
 - `audit/release-stack-2026-08-07`
 - `audit/repo-hygiene-2026-08-08`
+- `audit-prod-health-1539`
+- `audit/pr22-static`
+- `audit/root-parser-drift`
 - `fix/bulletin-source-routing`
 - `fix/canonical-dashboard-entrypoint`
 - `fix/dashboard-canonical-read-path`
@@ -143,25 +148,67 @@ These are completed/merged/audit/tmp branches and should not be used for new wor
 - `fix/root-dashboard-tag-parser`
 - `fix/run-forecast-runtime-contract`
 - `fix/production-ci-triggers`
+- `fix/permanent-production-health`
+- `fix/production-health-pr-scope`
+- `fix/root-ui-regression-guard`
+- `fix/push-action-mojibake`
 - `tmp/bulletin-clean`
 - `tmp/bulletin-squash`
 
 Before deleting each, Codex should run a one-line ancestry/diff check against `deploy` (or the relevant archive branch) and preserve any genuinely unique historical artifact via tag if needed. Do not delete `fix/post-freeze-engine-correctness`.
+
+## Final production repair checkpoint — 2026-08-08
+
+A local direct-push commit `8790e1f26c1779e8c73cbd4f0da6dccc416edab2` (`auto deploy 2026-08-08_08:03:50`) occurred after the initial correctness release. It was authored locally, not by GitHub Actions, and regressed two released production invariants:
+- root `index.html` lost the shared verbal-tag parser/alias integration and `TOKEN_THEMES`;
+- `data_manifest.json.engine_scores` drifted to stale `B8CCEBDC4E67` while canonical `engine_scores.json` remained `76F3AB6FAD78`.
+
+Live GitHub Pages confirmed the root parser regression. The deprecated `/g-index/deploy/` redirect and nested service-worker compatibility remained healthy.
+
+PR #24 repaired this without changing any Engine/model/frozen-shadow data. Production repair commit:
+`38b3414fff30e6298dfebb3a2c322526ab7d50a1`.
+
+PR #24 restored:
+- root `engine_tag_parser.js` load;
+- alias loader and `TOKEN_THEMES`/`EngineTagParser.parseTagTokens` path;
+- truthful canonical Engine tooltip;
+- root canonical/OG/share metadata (no deprecated `/deploy/` URL);
+- manifest Engine fingerprint `76F3AB6FAD78`.
+
+PR #24 also added tracked `verify_production_release_guard.py` and wired it into `daily_chain.bat` as fail-closed STEP 11B immediately before local `git_deploy.bat`. The guard blocks a local deploy if root parser/metadata, nested redirect or manifest fingerprints drift.
+
+Post-merge production health run `31258081194` initially hit a Pages publication race only: candidate/static/manifest checks had already passed while the live page still served the previous build. After the Pages deployment completed, failed-job rerun attempt 2 completed **success**, including live canonical root, `/g-index/deploy/`, security and hashes. Pages run `31258080829` completed **success**.
+
+PR #22 then rebased onto that repaired production and changed exactly one line in root `sw.js`: Web Push action mojibake -> `Відкрити G-Index`. Production commit:
+`e60474c83405d3f0815a7065d7c6b246714a8155`.
+
+Post-PR #22 production health run `31258242751` completed **success**, including live root, nested compatibility, manifest, security and hashes. Pages deployment run `31258242555` completed **success**.
+
+Current production head at this checkpoint:
+`e60474c83405d3f0815a7065d7c6b246714a8155`.
+
+### Remaining operational risk — HIGH
+
+`deploy` is currently **not branch-protected** (`protected:false`, required checks enforcement off). Therefore a local direct push can still bypass PR checks. The tracked daily-chain fail-closed guard mitigates the known local deployment path, but it is effective only after the local machine has pulled the current tracked `daily_chain.bat` and `verify_production_release_guard.py`.
+
+GitHub connector used for this handoff does not expose a branch-protection write action. Next Codex/operator with `gh`/repo-admin access should enable protection/rules for `deploy` and require the production health/correctness checks before merge/direct update. Do not weaken the local fail-closed guard after branch protection is enabled; keep both layers.
 
 ## What Codex should do tomorrow
 
 Start from `deploy`, not from the closed PR #2 branch.
 
 Priority order:
-1. Read this file first; live health and repository hygiene are already PASS.
-2. Reconfirm current `deploy` head before making any changes.
-3. Perform branch cleanup from the inventory above after one final unique-commit/diff check; never delete the shadow branch.
-4. Do NOT tune v19.2 or reopen closed governance decisions using historical GT.
-5. If working on future Engine development, create a NEW version/candidate branch and use canonical noon-UTC Panchanga context from the start.
-6. Keep the v19.2 shadow branch immutable except append-only prospective observations/status generated by its existing intake workflow.
-7. Any production change must remain separated from model-promotion evidence.
-8. Re-run a focused health sweep only after a new production change; do not redo settled archaeology without a new signal.
+1. Read this file first; final production health and Pages are PASS at head `e60474c83405d3f0815a7065d7c6b246714a8155`.
+2. Reconfirm current `deploy` head before making any changes. If it differs due another local `auto deploy`, run `verify_production_release_guard.py` immediately and inspect the direct-push diff before doing anything else.
+3. Highest governance priority: enable branch protection/rules for `deploy` with required production health/correctness checks; connector used here could verify that protection is currently off but could not enable it.
+4. Ensure the local daily-chain checkout has pulled `daily_chain.bat` STEP 11B and `verify_production_release_guard.py` before its next scheduled push.
+5. Perform branch cleanup from the inventory above after one final unique-commit/diff check; never delete the shadow branch.
+6. Do NOT tune v19.2 or reopen closed governance decisions using historical GT.
+7. If working on future Engine development, create a NEW version/candidate branch and use canonical noon-UTC Panchanga context from the start.
+8. Keep the v19.2 shadow branch immutable except append-only prospective observations/status generated by its existing intake workflow.
+9. Any production change must remain separated from model-promotion evidence.
+10. Re-run a focused health sweep only after a new production change; do not redo settled archaeology without a new signal.
 
 ## One-line rule
 
-Production is live-verified, CI-guarded, cleaned and stabilized; v19.2 remains a closed, non-production prospective shadow. Future model work starts as a new version, never by mutating the frozen v19.2 artifact.
+Production is live-verified, CI-guarded and repaired against the observed local auto-deploy rollback; v19.2 remains a closed, non-production prospective shadow. The remaining governance gap is unprotected `deploy`; future model work starts as a new version, never by mutating frozen v19.2.
