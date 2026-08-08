@@ -1,0 +1,46 @@
+name: PR22 static probe
+
+on:
+  push:
+    branches: [audit/pr22-static]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Required files
+        run: |
+          test -f index.html
+          test -f sw.js
+          test -f data_manifest.json
+          test -f engine_scores.json
+          test -f expert_overrides_v3.json
+          test -f expert_calc_scores.json
+          test -f engine_tag_parser.js
+          test -f engine_tag_aliases_v1.json
+      - name: Root parser refs
+        run: |
+          grep -q './engine_tag_parser.js' index.html
+          grep -q './engine_tag_aliases_v1.json' index.html
+          grep -q 'TOKEN_THEMES' index.html
+          grep -q 'getEngineScore(new Date(d.ds' index.html
+      - name: Nested compatibility refs
+        run: |
+          grep -q "new URL('../', window.location.href)" deploy/index.html
+          grep -q 'unregister' deploy/sw.js
+      - name: JS syntax parser
+        run: node --check engine_tag_parser.js
+      - name: JS syntax service worker
+        run: node --check sw.js
+      - name: Python syntax
+        run: python -m py_compile deploy/run_forecast.py deploy/generate_forecast_pdf.py deploy/generate_bulletin.py
+      - name: Push label exact
+        run: |
+          grep -q "title: 'Відкрити G-Index'" sw.js
+          ! grep -q "Р’С–РґРєСЂРёС‚Рё G-Index" sw.js
