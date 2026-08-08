@@ -17,102 +17,26 @@ jobs:
         with:
           ref: fix/root-ui-regression-guard
           fetch-depth: 0
-      - name: Reapply canonical root parser and metadata
+      - name: Apply prepared repair
+        run: python tmp_apply_root_ui_fix.py
+      - name: Verify repaired package
         run: |
-          python - <<'PY'
-          from pathlib import Path
-          import re
-          p=Path('index.html')
-          s=p.read_text(encoding='utf-8')
-
-          # 1) Shared parser script.
-          if './engine_tag_parser.js' not in s:
-              s=s.replace('</head>', '  <script src="./engine_tag_parser.js"></script>\n</head>', 1)
-
-          # 2) Alias spec load, fail-soft, before engine score early-return.
-          if 'loadAliasSpec(\'./engine_tag_aliases_v1.json\')' not in s:
-              needle='async function loadEngineScores(){\n'
-              block=(
-                  "async function loadEngineScores(){\n"
-                  "  if(window.EngineTagParser && !window._engineTagAliasSpec){\n"
-                  "    try {\n"
-                  "      window._engineTagAliasSpec = await window.EngineTagParser.loadAliasSpec('./engine_tag_aliases_v1.json');\n"
-                  "    } catch(aliasErr){\n"
-                  "      console.warn('[engine-tags] alias spec unavailable; legacy UI fallback active:', aliasErr.message);\n"
-                  "    }\n"
-                  "  }\n"
-              )
-              if needle not in s:
-                  raise SystemExit('loadEngineScores marker not found')
-              s=s.replace(needle, block, 1)
-
-          # 3) Theme parser: replace legacy symbol-only block.
-          if 'const TOKEN_THEMES' not in s:
-              pat=re.compile(
-                  r"  const TAG_THEMES = \{[^\n]+\};\n"
-                  r"  const themes = Object\.entries\(TAG_THEMES\)\.filter\(\(\[s\]\)=>tag\.includes\(s\)\)\.map\(\(\[,p\]\)=>p\);"
-              )
-              repl="""  const TOKEN_THEMES = {
-    plane:'переміщення і логістики', plus:'лікування і відновлення', med:'лікування і відновлення',
-    study:'навчання і розвитку', heart:'стосунків і комунікацій', bolt:'уважності (підвищений ризик)',
-    scissors:'завершення і відсікання зайвого'
-  };
-  let themes = [];
-  if(window.EngineTagParser && window._engineTagAliasSpec){
-    const _tokens = window.EngineTagParser.parseTagTokens(tag, window._engineTagAliasSpec);
-    themes = [...new Set(_tokens.map(t=>TOKEN_THEMES[t]).filter(Boolean))];
-  } else {
-    const _legacyThemes = {'✈':'переміщення і логістики','⊕':'лікування і відновлення','💊':'лікування і відновлення','📚':'навчання і розвитку','❤':'стосунків і комунікацій','⚡':'уважності (підвищений ризик)','✂':'завершення і відсікання зайвого'};
-    themes = [...new Set(Object.entries(_legacyThemes).filter(([sym])=>tag.includes(sym)).map(([,p])=>p))];
-  }"""
-              s,n=pat.subn(repl,s,count=1)
-              if n != 1:
-                  raise SystemExit(f'legacy TAG_THEMES block replacement count={n}')
-
-          # 4) Truthful tooltip wording.
-          s=s.replace(
-              "_dotTip += `\\nPDF Engine: ${d.engineEng >= 0 ? '+' : ''}${d.engineEng} (v18.5)`;",
-              "_dotTip += `\\nEngine: ${d.engineEng >= 0 ? '+' : ''}${d.engineEng} (canonical)`;"
-          )
-
-          # 5) Root is canonical; nested /deploy/ is compatibility-only.
-          s=s.replace('https://nikolaevkirill-commits.github.io/g-index/deploy/icon512.png',
-                      'https://nikolaevkirill-commits.github.io/g-index/icon512.png')
-          s=s.replace('https://nikolaevkirill-commits.github.io/g-index/deploy/',
-                      'https://nikolaevkirill-commits.github.io/g-index/')
-
-          p.write_text(s,encoding='utf-8')
-
-          # Assertions.
-          checks=[
-              './engine_tag_parser.js',
-              "loadAliasSpec('./engine_tag_aliases_v1.json')",
-              'const TOKEN_THEMES',
-              'EngineTagParser.parseTagTokens',
-              'Engine: ${d.engineEng',
-              '<link rel="canonical" href="https://nikolaevkirill-commits.github.io/g-index/"',
-              '<meta property="og:url" content="https://nikolaevkirill-commits.github.io/g-index/"',
-              'https://nikolaevkirill-commits.github.io/g-index/icon512.png',
-          ]
-          for c in checks:
-              assert c in s,c
-          assert 'https://nikolaevkirill-commits.github.io/g-index/deploy/' not in s
-          print('root UI regression repair assertions PASS')
-          PY
-      - name: Diff guard
-        run: |
+          set -euo pipefail
+          python verify_production_release_guard.py
+          node --check engine_tag_parser.js
+          node --check sw.js
+          python -m py_compile deploy/run_forecast.py deploy/generate_forecast_pdf.py deploy/generate_bulletin.py verify_production_release_guard.py
           git diff --check
           git diff --stat
-          git diff -- index.html | grep -E 'engine_tag_parser|EngineTagParser|TOKEN_THEMES|canonical|og:url|icon512' | head -80
-      - name: Commit product patch
+      - name: Commit isolated product repair
         run: |
           set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add index.html
+          git add index.html daily_chain.bat
           if git diff --cached --quiet; then
-            echo 'No patch required.'
+            echo 'No product patch required.'
             exit 0
           fi
-          git commit -m 'fix(dashboard): restore canonical root parser and metadata'
+          git commit -m 'fix(runtime): restore root UI contract and block local rollback'
           git push origin HEAD:fix/root-ui-regression-guard
