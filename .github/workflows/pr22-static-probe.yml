@@ -24,12 +24,14 @@ jobs:
           test -f expert_calc_scores.json
           test -f engine_tag_parser.js
           test -f engine_tag_aliases_v1.json
-      - name: Root parser refs
-        run: |
-          grep -q './engine_tag_parser.js' index.html
-          grep -q './engine_tag_aliases_v1.json' index.html
-          grep -q 'TOKEN_THEMES' index.html
-          grep -q 'getEngineScore(new Date(d.ds' index.html
+      - name: Root parser script ref
+        run: grep -q './engine_tag_parser.js' index.html
+      - name: Root alias ref
+        run: grep -q './engine_tag_aliases_v1.json' index.html
+      - name: Root token themes
+        run: grep -q 'TOKEN_THEMES' index.html
+      - name: Root canonical score path
+        run: grep -q 'getEngineScore(new Date(d.ds' index.html
       - name: Nested compatibility refs
         run: |
           grep -q "new URL('../', window.location.href)" deploy/index.html
