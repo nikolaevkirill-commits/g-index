@@ -14,25 +14,33 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - name: Materialize production workflow tree
+        run: |
+          set -euo pipefail
+          git fetch origin deploy
+          rm -rf /tmp/prod-wf && mkdir -p /tmp/prod-wf
+          git archive origin/deploy .github/workflows | tar -x -C /tmp/prod-wf
+          find /tmp/prod-wf/.github/workflows -maxdepth 1 -type f -name '*.yml' -printf '%f\n' | sort
       - name: Production workflow inventory
         run: |
           set -euo pipefail
-          find .github/workflows -maxdepth 1 -type f -name '*.yml' -printf '%f\n' | sort
-          test "$(find .github/workflows -maxdepth 1 -type f -name '*.yml' | wc -l)" -eq 6
+          test "$(find /tmp/prod-wf/.github/workflows -maxdepth 1 -type f -name '*.yml' | wc -l)" -eq 6
       - name: Read-only permissions only
         run: |
           set -euo pipefail
-          ! grep -R -nE 'contents:[[:space:]]*write|actions:[[:space:]]*write|pull-requests:[[:space:]]*write' .github/workflows
+          ! grep -R -nE 'contents:[[:space:]]*write|actions:[[:space:]]*write|pull-requests:[[:space:]]*write' /tmp/prod-wf/.github/workflows
       - name: No broad staging or pushes
         run: |
           set -euo pipefail
-          ! grep -R -nE 'git add ([.]|-A|--all)|git push|git commit' .github/workflows
+          ! grep -R -nE 'git add ([.]|-A|--all)|git push|git commit' /tmp/prod-wf/.github/workflows
       - name: Production push triggers are deploy
         run: |
           python - <<'PY'
           from pathlib import Path
           import re
-          files=sorted(Path('.github/workflows').glob('*.yml'))
+          files=sorted(Path('/tmp/prod-wf/.github/workflows').glob('*.yml'))
+          assert len(files)==6, len(files)
           for p in files:
               s=p.read_text(encoding='utf-8')
               assert re.search(r'push:\s*\n(?:.*\n){0,2}\s*branches:\s*\[deploy\]', s), p
@@ -44,10 +52,9 @@ jobs:
       - name: No stale feature-branch triggers
         run: |
           set -euo pipefail
-          ! grep -R -nE 'branches:[[:space:]]*\[(fix/|audit/|tmp/)' .github/workflows
+          ! grep -R -nE 'branches:[[:space:]]*\[(fix/|audit/|tmp/)' /tmp/prod-wf/.github/workflows
       - name: Protected production files unchanged by this audit
         run: |
-          git fetch origin deploy --depth=1
           git diff --exit-code origin/deploy -- \
             index.html sw.js data_manifest.json engine_scores.json \
             expert_overrides_v3.json expert_calc_scores.json future_kp.json \
