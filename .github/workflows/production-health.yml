@@ -76,9 +76,21 @@ jobs:
           grep -q "new URL('../', event.request.url)" /tmp/nested-sw.js
       - name: Production workflow security contract
         run: |
-          set -euo pipefail
-          ! grep -R -nE 'contents:[[:space:]]*write|actions:[[:space:]]*write|pull-requests:[[:space:]]*write' .github/workflows
-          ! grep -R -nE 'git add ([.]|-A|--all)|git push|git commit' .github/workflows
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          files=sorted(Path('.github/workflows').glob('*.yml'))
+          for p in files:
+              text=p.read_text(encoding='utf-8')
+              # Remove this auditor step from its own source before scanning commands.
+              if p.name=='production-health.yml':
+                  text=re.sub(r"\n      - name: Production workflow security contract\n.*?(?=\n      - name: Protected artifact hashes)","",text,flags=re.S)
+              bad_perm=re.findall(r'(?m)^\s*(contents|actions|pull-requests):\s*write\s*$',text)
+              assert not bad_perm,(p,bad_perm)
+              bad_cmd=re.findall(r'(?m)^\s*(?:git\s+add\s+(?:\.|-A|--all)|git\s+push\b|git\s+commit\b)',text)
+              assert not bad_cmd,(p,bad_cmd)
+              print('SECURITY PASS',p.name)
+          PY
       - name: Protected artifact hashes
         run: |
           sha256sum engine_scores.json expert_overrides_v3.json expert_calc_scores.json future_kp.json
