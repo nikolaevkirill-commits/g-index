@@ -1,0 +1,106 @@
+name: post-release production health sweep
+
+on:
+  push:
+    branches: [audit/post-release-health-2026-08-08]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  health:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+
+      - name: Production static contract
+        run: |
+          set -euo pipefail
+          test -f index.html
+          test -f sw.js
+          test -f data_manifest.json
+          test -f engine_scores.json
+          test -f expert_overrides_v3.json
+          test -f expert_calc_scores.json
+          test -f engine_tag_parser.js
+          test -f engine_tag_aliases_v1.json
+          grep -q './engine_tag_parser.js' index.html
+          grep -q './engine_tag_aliases_v1.json' index.html
+          grep -q 'TOKEN_THEMES' index.html
+          grep -q 'Engine: ${d.engineEng' index.html
+          grep -q 'getEngineScore(new Date(d.ds' index.html
+          node --check engine_tag_parser.js
+
+      - name: Manifest fingerprint parity
+        run: |
+          python - <<'PY'
+          import json, hashlib
+          m=json.load(open('data_manifest.json',encoding='utf-8'))
+          files={
+            'expert_overrides':'expert_overrides_v3.json',
+            'expert_calc':'expert_calc_scores.json',
+            'future_kp':'future_kp.json',
+            'engine_scores':'engine_scores.json',
+          }
+          for key,path in files.items():
+            got=hashlib.md5(open(path,'rb').read()).hexdigest()[:12].upper()
+            exp=m[key]
+            print(key, exp, got)
+            assert exp==got, (key, exp, got)
+          PY
+
+      - name: Deprecated nested entrypoint contract
+        run: |
+          set -euo pipefail
+          grep -q "new URL('../', window.location.href)" deploy/index.html
+          grep -q 'unregister' deploy/sw.js
+          grep -q "new URL('../', self.registration.scope)" deploy/sw.js
+          ! grep -q 'g-index-shell-v' deploy/sw.js
+
+      - name: Runtime scripts syntax
+        run: |
+          python -m py_compile deploy/run_forecast.py deploy/generate_forecast_pdf.py deploy/generate_bulletin.py
+
+      - name: Live GitHub Pages root
+        run: |
+          set -euo pipefail
+          curl -fL --retry 3 --retry-delay 2 --connect-timeout 10 --max-time 40 \
+            -o /tmp/root.html -D /tmp/root.headers \
+            https://nikolaevkirill-commits.github.io/g-index/
+          grep -q 'engine_tag_parser.js' /tmp/root.html
+          grep -q 'TOKEN_THEMES' /tmp/root.html
+          echo 'ROOT HTTP PASS'
+
+      - name: Live deprecated nested entrypoint
+        run: |
+          set -euo pipefail
+          curl -fL --retry 3 --retry-delay 2 --connect-timeout 10 --max-time 40 \
+            -o /tmp/nested.html -D /tmp/nested.headers \
+            https://nikolaevkirill-commits.github.io/g-index/deploy/
+          grep -q "new URL('../', window.location.href)" /tmp/nested.html
+          echo 'NESTED COMPAT HTML PASS'
+
+      - name: Live nested service worker compatibility
+        run: |
+          set -euo pipefail
+          curl -fL --retry 3 --retry-delay 2 --connect-timeout 10 --max-time 40 \
+            https://nikolaevkirill-commits.github.io/g-index/deploy/sw.js -o /tmp/nested-sw.js
+          grep -q 'unregister' /tmp/nested-sw.js
+          grep -q "new URL('../', self.registration.scope)" /tmp/nested-sw.js
+          echo 'NESTED SW PASS'
+
+      - name: Protected model/data hashes
+        run: |
+          sha256sum engine_scores.json expert_overrides_v3.json expert_calc_scores.json future_kp.json
+
+      - name: Open backlog expectation
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          test "$(gh api repos/${GITHUB_REPOSITORY}/issues?state=open\&per_page=100 --jq '[.[] | select(.pull_request|not)] | length')" = "0"
+          test "$(gh api repos/${GITHUB_REPOSITORY}/pulls?state=open\&per_page=100 --jq 'length')" = "0"
+          echo 'OPEN ISSUES/PRS = 0'
