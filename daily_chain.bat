@@ -195,6 +195,17 @@ if !OVERALL_OK! EQU 1 (
     )
 )
 
+REM STEP 11B: FAIL-CLOSED PRODUCTION RELEASE GUARD
+if !OVERALL_OK! EQU 1 (
+    echo %date% %time% [STEP 11B/12] production release guard >> "%LOG%"
+    python "%~dp0verify_production_release_guard.py" >> "%LOG%" 2>&1
+    if errorlevel 1 (
+        echo %date% %time% [FAIL] production release guard exit code !errorlevel! >> "%LOG%"
+        set OVERALL_OK=0
+    ) else (
+        echo %date% %time% [OK] production release guard >> "%LOG%"
+    )
+)
 REM STEP 12: GIT DEPLOY - only if all prior steps passed
 if !OVERALL_OK! EQU 1 (
     echo %date% %time% [STEP 12/12] git_deploy.bat >> "%LOG%"
