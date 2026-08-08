@@ -4,7 +4,6 @@ on:
   push:
     branches: [deploy]
   pull_request:
-    paths: ['.github/workflows/production-health.yml']
   workflow_dispatch:
   schedule:
     - cron: '17 4 * * *'
@@ -82,7 +81,6 @@ jobs:
           files=sorted(Path('.github/workflows').glob('*.yml'))
           for p in files:
               text=p.read_text(encoding='utf-8')
-              # Remove this auditor step from its own source before scanning commands.
               if p.name=='production-health.yml':
                   text=re.sub(r"\n      - name: Production workflow security contract\n.*?(?=\n      - name: Protected artifact hashes)","",text,flags=re.S)
               bad_perm=re.findall(r'(?m)^\s*(contents|actions|pull-requests):\s*write\s*$',text)
