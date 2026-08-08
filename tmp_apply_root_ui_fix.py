@@ -91,7 +91,9 @@ if 'verify_production_release_guard.py' not in bat:
     marker = 'REM STEP 12: GIT DEPLOY - only if all prior steps passed'
     if marker not in bat:
         raise SystemExit('daily_chain STEP 12 marker missing')
-    nl = '\r\n' if '\r\n' in bat else '\n'
+    # The tracked BAT contains mixed historical line endings around this block.
+    # Use LF for the inserted block so git diff --check does not treat CR as trailing whitespace.
+    nl = '\n'
     guard = nl.join([
         'REM STEP 11B: FAIL-CLOSED PRODUCTION RELEASE GUARD',
         'if !OVERALL_OK! EQU 1 (',
