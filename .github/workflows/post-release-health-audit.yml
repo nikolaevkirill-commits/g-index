@@ -58,7 +58,8 @@ jobs:
           set -euo pipefail
           grep -q "new URL('../', window.location.href)" deploy/index.html
           grep -q 'unregister' deploy/sw.js
-          grep -q "new URL('../', self.registration.scope)" deploy/sw.js
+          grep -q "new URL('../', client.url)" deploy/sw.js
+          grep -q "new URL('../', event.request.url)" deploy/sw.js
           ! grep -q 'g-index-shell-v' deploy/sw.js
 
       - name: Runtime scripts syntax
@@ -90,7 +91,8 @@ jobs:
           curl -fL --retry 3 --retry-delay 2 --connect-timeout 10 --max-time 40 \
             https://nikolaevkirill-commits.github.io/g-index/deploy/sw.js -o /tmp/nested-sw.js
           grep -q 'unregister' /tmp/nested-sw.js
-          grep -q "new URL('../', self.registration.scope)" /tmp/nested-sw.js
+          grep -q "new URL('../', client.url)" /tmp/nested-sw.js
+          grep -q "new URL('../', event.request.url)" /tmp/nested-sw.js
           echo 'NESTED SW PASS'
 
       - name: Protected model/data hashes
