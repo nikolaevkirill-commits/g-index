@@ -1,0 +1,27 @@
+name: root parser drift
+
+on:
+  push:
+    branches: [audit/root-parser-drift]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Show parser-related root lines
+        run: |
+          set +e
+          echo '--- engine_tag / EngineTagParser / TOKEN_THEMES ---'
+          grep -nE 'engine_tag|EngineTagParser|TOKEN_THEMES|getEngineScore' index.html | head -80
+          echo '--- exact booleans ---'
+          grep -q './engine_tag_parser.js' index.html; echo parser_ref=$?
+          grep -q './engine_tag_aliases_v1.json' index.html; echo alias_ref=$?
+          grep -q 'TOKEN_THEMES' index.html; echo token_themes=$?
+          grep -q 'getEngineScore' index.html; echo getEngineScore_any=$?
+          grep -q 'getEngineScore(new Date(d.ds' index.html; echo getEngineScore_exact=$?
+          exit 0
