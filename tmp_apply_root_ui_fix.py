@@ -83,4 +83,30 @@ if 'https://nikolaevkirill-commits.github.io/g-index/deploy/' in s:
     raise SystemExit('deprecated nested URL still present in root index')
 
 p.write_text(s, encoding='utf-8')
-print('root UI regression repair PASS')
+
+# Local daily chain must fail closed before git_deploy.bat if production invariants drift.
+bat_path = Path('daily_chain.bat')
+bat = bat_path.read_bytes().decode('utf-8')
+if 'verify_production_release_guard.py' not in bat:
+    marker = 'REM STEP 12: GIT DEPLOY - only if all prior steps passed'
+    if marker not in bat:
+        raise SystemExit('daily_chain STEP 12 marker missing')
+    nl = '\r\n' if '\r\n' in bat else '\n'
+    guard = nl.join([
+        'REM STEP 11B: FAIL-CLOSED PRODUCTION RELEASE GUARD',
+        'if !OVERALL_OK! EQU 1 (',
+        '    echo %date% %time% [STEP 11B/12] production release guard >> "%LOG%"',
+        '    python "%~dp0verify_production_release_guard.py" >> "%LOG%" 2>&1',
+        '    if errorlevel 1 (',
+        '        echo %date% %time% [FAIL] production release guard exit code !errorlevel! >> "%LOG%"',
+        '        set OVERALL_OK=0',
+        '    ) else (',
+        '        echo %date% %time% [OK] production release guard >> "%LOG%"',
+        '    )',
+        ')',
+        '',
+    ])
+    bat = bat.replace(marker, guard + marker, 1)
+    bat_path.write_bytes(bat.encode('utf-8'))
+
+print('root UI + local deploy guard repair PASS')
