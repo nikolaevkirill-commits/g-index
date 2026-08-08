@@ -1,0 +1,89 @@
+name: audit production health 1539
+
+on:
+  push:
+    branches: [audit-prod-health-1539]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Production static contract
+        run: |
+          set -euo pipefail
+          echo "HEAD=$(git rev-parse HEAD)"
+          test -f index.html
+          test -f sw.js
+          test -f data_manifest.json
+          test -f engine_scores.json
+          test -f expert_overrides_v3.json
+          test -f expert_calc_scores.json
+          test -f engine_tag_parser.js
+          test -f engine_tag_aliases_v1.json
+          grep -q 'getEngineScore(new Date(d.ds' index.html
+          node --check engine_tag_parser.js
+          node --check sw.js
+          python -m py_compile deploy/run_forecast.py deploy/generate_forecast_pdf.py deploy/generate_bulletin.py
+      - name: Root parser contract diagnostics
+        run: |
+          set +e
+          for p in './engine_tag_parser.js' './engine_tag_aliases_v1.json' 'TOKEN_THEMES' 'EngineTagParser.parseTagTokens'; do
+            grep -q "$p" index.html
+            echo "$p=$?"
+          done
+          exit 0
+      - name: Manifest fingerprints
+        run: |
+          python - <<'PY'
+          import hashlib,json
+          from pathlib import Path
+          m=json.loads(Path('data_manifest.json').read_text(encoding='utf-8'))
+          for field,path in {'expert_overrides':'expert_overrides_v3.json','expert_calc':'expert_calc_scores.json','future_kp':'future_kp.json','engine_scores':'engine_scores.json'}.items():
+              actual=hashlib.md5(Path(path).read_bytes()).hexdigest().upper()[:12]
+              expected=m[field]
+              print(field,expected,actual)
+              assert expected==actual,(field,expected,actual)
+          PY
+      - name: Live canonical root
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 3 --retry-delay 2 --connect-timeout 10 --max-time 40 https://nikolaevkirill-commits.github.io/g-index/ -o /tmp/root.html
+          test -s /tmp/root.html
+          grep -q 'getEngineScore' /tmp/root.html
+          echo "root_bytes=$(wc -c </tmp/root.html)"
+          for p in 'engine_tag_parser.js' 'engine_tag_aliases_v1.json' 'TOKEN_THEMES'; do
+            if grep -q "$p" /tmp/root.html; then echo "live_$p=present"; else echo "live_$p=missing"; fi
+          done
+      - name: Live deprecated nested compatibility
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 3 --retry-delay 2 --connect-timeout 10 --max-time 40 https://nikolaevkirill-commits.github.io/g-index/deploy/ -o /tmp/nested.html
+          grep -q "new URL('../', window.location.href)" /tmp/nested.html
+          curl -fsSL --retry 3 --retry-delay 2 --connect-timeout 10 --max-time 40 https://nikolaevkirill-commits.github.io/g-index/deploy/sw.js -o /tmp/nested-sw.js
+          grep -q 'unregister' /tmp/nested-sw.js
+          grep -q "new URL('../', event.request.url)" /tmp/nested-sw.js
+          echo nested_redirect=PASS
+      - name: Production workflow read-only audit
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          files=sorted(Path('.github/workflows').glob('*.yml'))
+          prod=[p for p in files if p.name != 'audit-prod-health-1539.yml']
+          print('workflow_count',len(prod))
+          for p in prod:
+              t=p.read_text(encoding='utf-8')
+              bad_perm=re.findall(r'(?m)^\s*(contents|actions|pull-requests):\s*write\s*$',t)
+              bad_cmd=re.findall(r'(?m)^\s*(?:git\s+add\s+(?:\.|-A|--all)|git\s+push\b|git\s+commit\b)',t)
+              assert not bad_perm,(p.name,bad_perm)
+              assert not bad_cmd,(p.name,bad_cmd)
+              print('READONLY PASS',p.name)
+          PY
+      - name: Protected artifact hashes
+        run: sha256sum engine_scores.json expert_overrides_v3.json expert_calc_scores.json future_kp.json
