@@ -57,6 +57,7 @@ jobs:
             assert expected==actual,(field,expected,actual)
           PY
       - name: Live canonical root
+        if: github.event_name != 'pull_request'
         run: |
           set -euo pipefail
           curl -fL --retry 3 --retry-delay 2 --connect-timeout 10 --max-time 40 \
@@ -64,6 +65,7 @@ jobs:
           grep -q 'engine_tag_parser.js' /tmp/root.html
           grep -q 'TOKEN_THEMES' /tmp/root.html
       - name: Live deprecated nested compatibility
+        if: github.event_name != 'pull_request'
         run: |
           set -euo pipefail
           curl -fL --retry 3 --retry-delay 2 --connect-timeout 10 --max-time 40 \
