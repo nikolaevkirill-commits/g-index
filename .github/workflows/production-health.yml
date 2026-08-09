@@ -37,7 +37,9 @@ jobs:
           grep -q "new URL('../', window.location.href)" deploy/index.html
           grep -q 'unregister' deploy/sw.js
           node --check engine_tag_parser.js
+          node verify_dashboard_decision_consistency.js
           python -m py_compile deploy/run_forecast.py deploy/generate_forecast_pdf.py deploy/generate_bulletin.py
+          python verify_production_release_guard.py
       - name: Manifest runtime fingerprints
         run: |
           python - <<'PY'
