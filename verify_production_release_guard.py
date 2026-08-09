@@ -39,6 +39,7 @@ def main() -> None:
         'expert_overrides': 'expert_overrides_v3.json',
         'expert_calc': 'expert_calc_scores.json',
         'future_kp': 'future_kp.json',
+        'kp_hourly_alert': 'KP_HOURLY_ALERT_v2.json',
         'engine_scores': 'engine_scores.json',
     }
     for field, rel in mapping.items():

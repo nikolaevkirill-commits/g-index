@@ -212,3 +212,13 @@ Priority order:
 ## One-line rule
 
 Production is live-verified, CI-guarded and repaired against the observed local auto-deploy rollback; v19.2 remains a closed, non-production prospective shadow. The remaining governance gap is unprotected `deploy`; future model work starts as a new version, never by mutating frozen v19.2.
+
+## Cloud/PDF/Kp continuation checkpoint — 2026-08-09
+
+Google Drive was inventoried and separated into a canonical incoming/archive tree and a legacy archive-only tree. The exact folder and package ids are recorded in `outputs/data_control/CLOUD_PROGNOZ_INVENTORY_2026-08-09.md`; `outputs/data_control/CLOUD_INTAKE_POLICY.md` now forbids direct Drive-to-production overwrite and requires dated staging on `D:`, hashes, provenance and semantic comparison.
+
+`D:\КОМП\Звіздяр\+10.8-23.8_ПРОГНОЗ.pdf` was visually checked. All 14 decisions for 10–23 August already exist in the canonical expert registry with matching values and source SHA-256, so the file was not imported twice. See `outputs/data_control/EXPERT_PDF_2026-08-10_23_AUDIT.md`.
+
+A release-integrity gap was found in the hourly Kp path: runtime scripts update `future_kp.json` and `KP_HOURLY_ALERT_v2.json` after the normal manifest step, while the old guard checked only `future_kp`. This can leave a release with feed bytes that do not match `data_manifest.json`. The guard now verifies both feed fingerprints, and `prepare_kp_feed_release.ps1` prepares them only in a separate complete release tree, updates both manifest fields and runs the fail-closed guard. The helper intentionally performs no commit, push, deployment or production-tree mutation.
+
+Frozen v19.2, historical GT and Engine weights were not changed. Any operational integration of the new preparation helper into the local scheduler must preserve its isolated staging boundary and continue through reviewed CI rather than direct production push.
