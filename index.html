@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.168-fp361-SEMANTIC-CONSISTENCY</title>
+  <title>G-Index — Космофізичний дашборд v88.9.169-fp362-RAW-LABEL-CLOSURE</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -2609,7 +2609,7 @@ Kp: 3-год індекс геомагнітної активності (0–9)
 Основний шлях (NOAA 27-day-outlook.txt):
 • NOAA публікує таблицю на 27 днів: F10.7 flux, Ap, Largest Kp.
 • Беремо Largest Kp НАПРЯМУ як kpMax доби.
-• G_day = Largest 2 − Kp + ΣAᵢ(noon UTC).
+• G_day = 2 − Largest Kp + ΣAᵢ(noon UTC).
 • Жодного Ap→Kp перетворення тут не виконується.
 
 Fallback (NOAA 45-day-forecast.json):
@@ -22509,10 +22509,10 @@ function renderBestTime(dateUTC, kp, G, panchPCL) {
     if(future7.length && future7[0].G > 0) {
       const best = future7[0];
       html += `<div style="margin-top:8px;font-size:12px;color:#7a9acc" title="G_day raw — добовий continuous фон (2 − Kp_day + ΣAᵢ). Це НЕ PDF/Engine reference і не команда. Для оперативної дії дивись Hero/safety-контур.">
-        📅 Найкращий день (7 днів): <strong style="color: var(--ok)">${best.ds}</strong>
+        📅 Найвищий raw-фон (7 днів): <strong style="color: var(--ok)">${best.ds}</strong>
         G_day raw = <strong style="color: var(--ok)">${best.G.toFixed(1)}</strong>
         · ${classifyG(best.G)}
-        <span style="color:var(--faint);font-size:10px">· не PDF/Engine verdict</span>
+        <span style="color:var(--faint);font-size:10px">· контекст, не рішення</span>
       </div>`;
     }
   }

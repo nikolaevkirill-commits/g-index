@@ -192,5 +192,7 @@ forbidText(": (dayScore === '' ? G : Number(dayScore))", 'CSV cannot substitute 
 forbidText(': (Number.isFinite(dayScore) ? dayScore : G)', 'ICS cannot substitute PDF/raw for missing operational resolver');
 forbidText('(базове PDF/Engine-рішення)', 'ICS cannot label PDF reference as base decision');
 forbidText('· РІШЕННЯ ${d._expertEng', 'forward timeline tooltip cannot label PDF reference as decision');
+forbidText('G_day = Largest 2 − Kp', '27-day legend formula cannot be malformed');
+forbidText('Найкращий день (7 днів)', 'raw maximum cannot be labeled best decision day');
 forbidText('Головний показник.', 'old PDF-first 27-day tooltip removed');
 forbidText('червоний/зелений = PDF/Engine-рішення', 'old 27-day decision caption removed');
