@@ -60,10 +60,20 @@ jobs:
         if: github.event_name != 'pull_request'
         run: |
           set -euo pipefail
-          curl -fL --retry 3 --retry-delay 2 --connect-timeout 10 --max-time 40 \
-            https://nikolaevkirill-commits.github.io/g-index/ -o /tmp/root.html
-          grep -q 'engine_tag_parser.js' /tmp/root.html
-          grep -q 'TOKEN_THEMES' /tmp/root.html
+          for attempt in $(seq 1 24); do
+            curl -fL --retry 3 --retry-delay 2 --connect-timeout 10 --max-time 40 \
+              "https://nikolaevkirill-commits.github.io/g-index/?health_sha=${GITHUB_SHA}&attempt=${attempt}" \
+              -o /tmp/root.html
+            if grep -q 'engine_tag_parser.js' /tmp/root.html && \
+               grep -q 'TOKEN_THEMES' /tmp/root.html; then
+              echo "Live canonical root PASS on attempt ${attempt}."
+              exit 0
+            fi
+            echo "GitHub Pages has not published the canonical root yet (attempt ${attempt}/24)."
+            sleep 10
+          done
+          echo 'Live canonical root did not converge within four minutes.' >&2
+          exit 1
       - name: Live deprecated nested compatibility
         if: github.event_name != 'pull_request'
         run: |
