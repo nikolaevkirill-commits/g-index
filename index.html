@@ -34,19 +34,19 @@
 
   <!-- SEO / share -->
   <!-- v88.8.4: canonical URL для SEO (запобігає duplicate content якщо PWA доступна на різних шляхах) -->
-  <link rel="canonical" href="https://nikolaevkirill-commits.github.io/g-index/" />
+  <link rel="canonical" href="https://nikolaevkirill-commits.github.io/g-index/deploy/" />
   <meta name="description" content="Інтегральний G-індекс: геомагнітна активність + Jyotish Panchanga. Advisory / R&D." />
   <meta property="og:title" content="G-Index Dashboard" />
   <meta property="og:description" content="Геомагнітна активність + Panchanga у реальному часі" />
   <meta property="og:type" content="website" />
   <!-- v88.7.1 (deep audit): full OG card -->
-  <meta property="og:url" content="https://nikolaevkirill-commits.github.io/g-index/" />
-  <meta property="og:image" content="https://nikolaevkirill-commits.github.io/g-index/icon512.png" />
+  <meta property="og:url" content="https://nikolaevkirill-commits.github.io/g-index/deploy/" />
+  <meta property="og:image" content="https://nikolaevkirill-commits.github.io/g-index/deploy/icon512.png" />
   <meta property="og:locale" content="uk_UA" />
   <meta name="twitter:card" content="summary" />
   <meta name="twitter:title" content="G-Index Dashboard" />
   <meta name="twitter:description" content="Геомагнітна активність + Panchanga у реальному часі. Advisory / R&D." />
-  <meta name="twitter:image" content="https://nikolaevkirill-commits.github.io/g-index/icon512.png" />
+  <meta name="twitter:image" content="https://nikolaevkirill-commits.github.io/g-index/deploy/icon512.png" />
 
   <!-- v88.6.9: Supabase SDK loading видалено — auth мігрував на Cloudflare Worker (GAuth).
        Push backend (push_subscriptions) тимчасово inert через SUPA shim — буде відновлено
@@ -1486,7 +1486,6 @@ body.simple-mode .col-hide-mobile {
 try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line1329';}catch(e){}
 </script>
 <!-- Formula sign convention: Expert Excel 2−Kp; dashboard raw тепер узгоджений з Excel: 2−Kp. -->
-  <script src="./engine_tag_parser.js"></script>
 </head>
 <body>
 <!-- fp153: __cpPanel boot-трасувальник видалено — залишався видимим на екрані постійно (fp148-152 регресія). cp()-виклики лишились у коді, безпечно no-op через try/catch. -->
@@ -7262,13 +7261,6 @@ const _origSave=window.GChrono&&GChrono.saveToday;
 if(_origSave) GChrono.saveToday=(function(fn){return function(){fn.call(GChrono);try{renderChronoPanel();}catch(e){}};}(_origSave));
 
 async function loadEngineScores(){
-  if(window.EngineTagParser && !window._engineTagAliasSpec){
-    try {
-      window._engineTagAliasSpec = await window.EngineTagParser.loadAliasSpec('./engine_tag_aliases_v1.json');
-    } catch(aliasErr){
-      console.warn('[engine-tags] alias spec unavailable; legacy UI fallback active:', aliasErr.message);
-    }
-  }
   if(_engineScores !== null) return _engineScores;
   try {
     const resp = await fetch('engine_scores.json', { cache: 'default' });
@@ -8772,19 +8764,8 @@ function renderDayTheme(){
     '-3': ['Стоп-день.',                   'Уникай нових дій і ключових кроків. Відпочинок і очікування — правильна стратегія.'],
   };
   const [tone, action] = TONES[String(score)] || TONES['0'];
-  const TOKEN_THEMES = {
-    plane:'переміщення і логістики', plus:'лікування і відновлення', med:'лікування і відновлення',
-    study:'навчання і розвитку', heart:'стосунків і комунікацій', bolt:'уважності (підвищений ризик)',
-    scissors:'завершення і відсікання зайвого'
-  };
-  let themes = [];
-  if(window.EngineTagParser && window._engineTagAliasSpec){
-    const _tokens = window.EngineTagParser.parseTagTokens(tag, window._engineTagAliasSpec);
-    themes = [...new Set(_tokens.map(t=>TOKEN_THEMES[t]).filter(Boolean))];
-  } else {
-    const _legacyThemes = {'✈':'переміщення і логістики','⊕':'лікування і відновлення','💊':'лікування і відновлення','📚':'навчання і розвитку','❤':'стосунків і комунікацій','⚡':'уважності (підвищений ризик)','✂':'завершення і відсікання зайвого'};
-    themes = [...new Set(Object.entries(_legacyThemes).filter(([sym])=>tag.includes(sym)).map(([,p])=>p))];
-  }
+  const TAG_THEMES = {'✈':'переміщення і логістики','⊕':'лікування і відновлення','💊':'лікування і відновлення','📚':'навчання і розвитку','❤':'стосунків і комунікацій','⚡':'уважності (підвищений ризик)','✂':'завершення і відсікання зайвого'};
+  const themes = Object.entries(TAG_THEMES).filter(([s])=>tag.includes(s)).map(([,p])=>p);
   const themeStr = themes.length ? `Підходить для ${themes.slice(0,2).join(' і ')}.` : '';
   const kpNote = kp>=5?'⚠ Геомагнітна буря — тримайся планів.':kp>=3?'Геомагнітний фон помірний.':'';
   const borderCol = score>=2?'rgba(43,212,125,.3)':score>=1?'rgba(43,212,125,.18)':score===0?'var(--border)':score>=-1?'rgba(255,170,51,.25)':'rgba(255,107,107,.3)';
@@ -17515,7 +17496,7 @@ function _renderWhyTrend(){
     if(Number.isFinite(d.overrideEng)){
       _dotTip += `\nPDF Engine: ${d.overrideEng >= 0 ? '+' : ''}${d.overrideEng} (експертна оцінка)`;
     } else if(Number.isFinite(d.engineEng)){
-      _dotTip += `\nEngine: ${d.engineEng >= 0 ? '+' : ''}${d.engineEng} (canonical)`;
+      _dotTip += `\nPDF Engine: ${d.engineEng >= 0 ? '+' : ''}${d.engineEng} (v18.5)`;
     }
     const _titleAttr = `<title>${_dotTip}</title>`;
     if(d.isToday){
@@ -22445,7 +22426,7 @@ async function shareGState() {
   ctx.font = '30px system-ui,-apple-system,sans-serif';
   ctx.fillText('G-Index · Cosmophysical Dashboard', W/2, H*0.96);
 
-  const fallbackText = `G-Index · ${dateStr}\nG = ${gStr} (${cat})\nKp = ${kpStr} · ${phase}${rmStr ? '\n' + rmStr : ''}\n\uD83D\uDD17 https://nikolaevkirill-commits.github.io/g-index/`;
+  const fallbackText = `G-Index · ${dateStr}\nG = ${gStr} (${cat})\nKp = ${kpStr} · ${phase}${rmStr ? '\n' + rmStr : ''}\n\uD83D\uDD17 https://nikolaevkirill-commits.github.io/g-index/deploy/`;
 
   try {
     const blob = await new Promise(res => cv.toBlob(res, 'image/png'));

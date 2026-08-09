@@ -191,7 +191,7 @@ self.addEventListener('push', (event) => {
     tag: payload.tag || `gindex-${category}`,
     renotify: category === 'storm',
     data: { url: target, category },
-    actions: [{ action: 'open', title: 'Відкрити G-Index' }]
+    actions: [{ action: 'open', title: 'Р’С–РґРєСЂРёС‚Рё G-Index' }]
   };
   event.waitUntil(self.registration.showNotification(payload.title || 'G-Index', options));
 });
