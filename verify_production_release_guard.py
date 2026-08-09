@@ -131,6 +131,39 @@ def main() -> None:
             raise SystemExit(f'FAIL manifest {field}: expected={expected} actual={actual}')
         print(f'PASS manifest {field}: {actual}')
 
+    decision_audit_path = ROOT / 'DECISION_CONSISTENCY_AUDIT_v1.json'
+    decision_audit = json.loads(release_bytes(decision_audit_path).decode('utf-8'))
+    policy = decision_audit.get('policy') or {}
+    if decision_audit.get('schema') != 'decision_consistency_audit_v2':
+        raise SystemExit('FAIL decision audit schema is not v2 operational/reference contract')
+    if policy.get('operational_authority') != 'resolved live/stale/storm safety state in resolveDaySignal':
+        raise SystemExit('FAIL decision audit does not name the operational safety resolver')
+    reference_authority = str(policy.get('reference_authority') or '')
+    if 'verified expert PDF' not in reference_authority or 'Engine only when no verified PDF exists' not in reference_authority:
+        raise SystemExit('FAIL decision audit does not preserve the frozen PDF/Engine reference chain')
+    serialized_policy = json.dumps(policy, ensure_ascii=False)
+    for obsolete in ('"authoritative_decision": "verified expert PDF"', 'never replaces the authoritative decision'):
+        if obsolete in serialized_policy:
+            raise SystemExit(f'FAIL decision audit restores obsolete action authority: {obsolete}')
+    for surface in ('Hero', 'week', '3-day', '27-day'):
+        if surface not in (policy.get('ui_contract') or {}):
+            raise SystemExit(f'FAIL decision audit UI contract missing {surface}')
+    print('PASS decision audit separates operational authority from frozen reference')
+
+    index_audit_path = ROOT / 'INDEX_INTEGRITY_AUDIT_v1.json'
+    index_audit = json.loads(release_bytes(index_audit_path).decode('utf-8'))
+    formula_contract = index_audit.get('formula_contract') or {}
+    if index_audit.get('schema') != 'gindex_integrity_audit_v2':
+        raise SystemExit('FAIL index integrity schema is not v2 operational/reference contract')
+    if 'decision' in formula_contract:
+        raise SystemExit('FAIL index integrity contract still labels the frozen reference as decision')
+    if formula_contract.get('reference') != 'verified PDF reference; frozen Engine reference only when PDF is absent':
+        raise SystemExit('FAIL index integrity contract does not preserve the frozen reference chain')
+    operational_contract = str(formula_contract.get('operational') or '')
+    if 'resolveDaySignal' not in operational_contract or 'action-authoritative' not in operational_contract:
+        raise SystemExit('FAIL index integrity contract does not identify operational action authority')
+    print('PASS index integrity contract separates operational authority from frozen reference')
+
     print('PASS production release guard')
 
 

@@ -32,15 +32,16 @@ checks = {
 hard_fail = [name for name, ok in checks.items() if not ok]
 status = "PASS" if not hard_fail else "FAIL"
 report = {
-    "schema": "gindex_integrity_audit_v1",
+    "schema": "gindex_integrity_audit_v2",
     "status": status,
     "checks": checks,
     "hard_failures": hard_fail,
     "formula_contract": {
         "dashboard_raw": "G_raw = (2 - Kp) + Li + Mi + ei + Pi + Di",
         "expert_excel": "raw_sum = (2 - Kp) + Moon + Eclipse + sum(tag_weights)",
-        "decision": "verified PDF override; frozen Engine only when PDF is absent",
-        "safety": "Kp/Dst operational veto is separate from arithmetic G_raw",
+        "reference": "verified PDF reference; frozen Engine reference only when PDF is absent",
+        "operational": "resolveDaySignal live/stale/storm safety state is action-authoritative and separate from G_raw/reference",
+        "safety": "Kp/Dst operational veto is separate from arithmetic G_raw and cannot be overridden by the reference",
         "shadow": "AIA/BGS/ENLIL/Meteoagent/unverified calendar: score_effect=0",
     },
     "known_nonindependence": [
@@ -50,7 +51,8 @@ report = {
         "G_extended_v2 contains overlapping predictors and remains advisory",
     ],
 }
-OUT_JSON.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+with OUT_JSON.open("w", encoding="utf-8", newline="\n") as handle:
+    handle.write(json.dumps(report, ensure_ascii=False, indent=2) + "\n")
 
 print(json.dumps(report, ensure_ascii=False, indent=2))
 raise SystemExit(0 if status == "PASS" else 1)
