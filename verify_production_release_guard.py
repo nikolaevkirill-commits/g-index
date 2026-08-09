@@ -2,13 +2,28 @@ from __future__ import annotations
 
 import hashlib
 import json
+import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 
 
+def release_bytes(path: Path) -> bytes:
+    """Return the exact bytes Git will publish, including staged changes."""
+    rel = path.relative_to(ROOT).as_posix()
+    if (ROOT / ".git").exists():
+        try:
+            return subprocess.check_output(
+                ["git", "-C", str(ROOT), "show", f":{rel}"],
+                stderr=subprocess.DEVNULL,
+            )
+        except (OSError, subprocess.CalledProcessError):
+            pass
+    return path.read_bytes()
+
+
 def md5_12(path: Path) -> str:
-    return hashlib.md5(path.read_bytes()).hexdigest().upper()[:12]
+    return hashlib.md5(release_bytes(path)).hexdigest().upper()[:12]
 
 
 def require(text: str, needle: str, label: str) -> None:
@@ -34,7 +49,7 @@ def main() -> None:
     require(nested_sw, "new URL('../', event.request.url)", 'nested service-worker redirect')
 
     manifest_path = ROOT / 'data_manifest.json'
-    manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
+    manifest = json.loads(release_bytes(manifest_path).decode('utf-8'))
     mapping = {
         'expert_overrides': 'expert_overrides_v3.json',
         'expert_calc': 'expert_calc_scores.json',
