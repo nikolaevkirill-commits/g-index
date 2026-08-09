@@ -37,6 +37,20 @@ def main() -> None:
     require(index, "loadAliasSpec('./engine_tag_aliases_v1.json')", 'root alias loader')
     require(index, 'const TOKEN_THEMES', 'root token themes')
     require(index, 'EngineTagParser.parseTagTokens', 'root token parser')
+    require(index, 'decisionScore:operationalScore', 'operational score export')
+    require(index, 'resolveSlotDecision({', 'canonical per-slot resolver')
+    require(index, "seg.setAttribute('data-gval', 'БЛОК')", 'blocked heat-slot label')
+    require(index, 'REFERENCE · НЕ РІШЕННЯ ДЛЯ ДІЇ', '27-day reference disclosure')
+    require(index, 'Нейтральний Pᵢ не скасовує eᵢ, бурю або часову заборону', 'Panchanga net-context disclosure')
+    forbidden = {
+        'decisionScore:dayScore': 'PDF reference leaked into operational score',
+        'Для рішень головний PDF/Engine': 'misleading PDF-first instruction',
+        'ФІНАЛЬНЕ РІШЕННЯ · PDF/ENGINE': 'misleading 27-day final-decision badge',
+        "seg.setAttribute('data-gval', `${_heatDecision": 'one day score stamped on every heat slot',
+    }
+    for needle, label in forbidden.items():
+        if needle in index:
+            raise SystemExit(f'FAIL {label}: found {needle!r}')
     require(index, '<link rel="canonical" href="https://nikolaevkirill-commits.github.io/g-index/"', 'canonical root URL')
     require(index, '<meta property="og:url" content="https://nikolaevkirill-commits.github.io/g-index/"', 'OG root URL')
     if 'https://nikolaevkirill-commits.github.io/g-index/deploy/' in index:
