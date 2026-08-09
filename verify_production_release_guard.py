@@ -42,11 +42,20 @@ def main() -> None:
     require(index, "seg.setAttribute('data-gval', 'БЛОК')", 'blocked heat-slot label')
     require(index, 'REFERENCE · НЕ РІШЕННЯ ДЛЯ ДІЇ', '27-day reference disclosure')
     require(index, 'Нейтральний Pᵢ не скасовує eᵢ, бурю або часову заборону', 'Panchanga net-context disclosure')
+    require(index, 'Оперативно СТОП: PDF reference', 'operational-first Hero conflict wording')
+    require(index, 'Оперативний стан ${_op179} має пріоритет:', 'personal cycle safety gate')
+    require(index, 'окрема порада призупинена через глобальний ризик', 'personal cycle positive-advice suppression')
+    require(index, 'PDF/Engine reference, не оперативне рішення', '27-day reference-only caption')
+    require(index, "'Історична подія NOAA'", 'inactive NOAA historical label')
+    require(index, 'Бюлетень NOAA ${hoursAgo}г тому', 'aged NOAA time-first label')
     forbidden = {
         'decisionScore:dayScore': 'PDF reference leaked into operational score',
         'Для рішень головний PDF/Engine': 'misleading PDF-first instruction',
         'ФІНАЛЬНЕ РІШЕННЯ · PDF/ENGINE': 'misleading 27-day final-decision badge',
         "seg.setAttribute('data-gval', `${_heatDecision": 'one day score stamped on every heat slot',
+        'День сильний за PDF': 'misleading PDF-first Hero headline',
+        'Головний показник.': 'misleading PDF-first 27-day tooltip',
+        'червоний/зелений = PDF/Engine-рішення': 'misleading 27-day decision caption',
     }
     for needle, label in forbidden.items():
         if needle in index:
@@ -61,6 +70,10 @@ def main() -> None:
     require(nested, "new URL('../', window.location.href)", 'nested redirect')
     require(nested_sw, 'unregister', 'nested service-worker unregister')
     require(nested_sw, "new URL('../', event.request.url)", 'nested service-worker redirect')
+
+    sw = (ROOT / 'sw.js').read_text(encoding='utf-8')
+    require(sw, "event.data.type === 'SKIP_WAITING'", 'service-worker manual update handler')
+    require(sw, 'self.skipWaiting()', 'service-worker activation call')
 
     manifest_path = ROOT / 'data_manifest.json'
     manifest = json.loads(release_bytes(manifest_path).decode('utf-8'))

@@ -76,3 +76,25 @@ if (storm.operationalScore !== -3 || storm.dynamicGuard !== 'kp_storm' || storm.
   throw new Error(`storm guard failed: ${JSON.stringify(storm)}`);
 }
 console.log('PASS storm guard: positive reference cannot render as positive operation');
+
+function requireText(needle, label) {
+  if (!html.includes(needle)) throw new Error(`${label}: missing ${needle}`);
+  console.log(`PASS ${label}`);
+}
+
+function forbidText(needle, label) {
+  if (html.includes(needle)) throw new Error(`${label}: stale text still present: ${needle}`);
+  console.log(`PASS ${label}`);
+}
+
+requireText('Оперативно СТОП: PDF reference', 'Hero conflict wording is operational-first');
+requireText('Локальний цикл зараз:', 'personal activity cycle is labeled as local context');
+requireText('Оперативний стан ${_op179} має пріоритет:', 'personal activity cycle has operational safety gate');
+requireText('окрема порада призупинена через глобальний ризик', 'positive local activity advice is suppressed during operational risk');
+requireText('PDF/Engine reference, не оперативне рішення', '27-day timeline legend is reference-only');
+requireText('is-now.is-routine', 'current routine slot has non-positive semantic styling');
+requireText("'Історична подія NOAA'", 'inactive NOAA event is explicitly historical');
+requireText('Бюлетень NOAA ${hoursAgo}г тому', 'aged NOAA event is time-labeled before live Kp loads');
+forbidText('День сильний за PDF', 'old PDF-first Hero headline removed');
+forbidText('Головний показник.', 'old PDF-first 27-day tooltip removed');
+forbidText('червоний/зелений = PDF/Engine-рішення', 'old 27-day decision caption removed');
