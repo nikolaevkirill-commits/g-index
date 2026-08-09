@@ -77,6 +77,40 @@ if (storm.operationalScore !== -3 || storm.dynamicGuard !== 'kp_storm' || storm.
 }
 console.log('PASS storm guard: positive reference cannot render as positive operation');
 
+function heroSignal(pdf, live, kp = 2) {
+  activeEntry = { eng: pdf, _expertOverride: true };
+  context.window._stormWindow = null;
+  return context.resolveHeroSignalHierarchy_v88824(live, kp);
+}
+
+function assertHeadline(name, sig, expectedPrefix) {
+  const headline = context.heroHeadlineFromHierarchy_v88824(sig);
+  if (!headline.startsWith(expectedPrefix)) {
+    throw new Error(`${name}: expected prefix ${expectedPrefix}, got ${headline}`);
+  }
+  console.log(`PASS ${name}: ${headline}`);
+}
+
+assertHeadline(
+  'Hero maps positive PDF vs tense live through operational state',
+  heroSignal(1, -3),
+  'Оперативно СТОП:'
+);
+assertHeadline(
+  'Hero maps positive PDF vs neutral live through operational state',
+  heroSignal(3, 0),
+  'Оперативно нейтрально:'
+);
+assertHeadline(
+  'Hero keeps aligned positive signals operational-first',
+  heroSignal(3, 2),
+  'Оперативно сприятливо; PDF reference'
+);
+const stormHeroSignal = heroSignal(2, 2);
+context.window._stormWindow = { kp: 5.3, label: '18', hoursAhead: 0, etaLabel: 'ЗАРАЗ', active: true };
+assertHeadline('Hero storm guard stays operational-first', stormHeroSignal, 'Оперативно СТОП: буря');
+context.window._stormWindow = null;
+
 function requireText(needle, label) {
   if (!html.includes(needle)) throw new Error(`${label}: missing ${needle}`);
   console.log(`PASS ${label}`);
@@ -88,6 +122,11 @@ function forbidText(needle, label) {
 }
 
 requireText('Оперативно СТОП: PDF reference', 'Hero conflict wording is operational-first');
+requireText('Оперативно сприятливо; PDF reference', 'positive Hero wording is operational-first');
+requireText('Оперативно СТОП: буря Kp=', 'storm Hero wording is operational-first');
+requireText("sig.opKey === 'neutral'", 'Hero conflict wording follows resolved operational state');
+requireText('ДЕННИЙ PDF/ENGINE REFERENCE · НЕ РІШЕННЯ ДЛЯ ДІЇ', 'AUTO feed panel is reference-only');
+requireText('Оперативну дію визначає обережніший стан у Hero', 'AUTO feed panel defers to operational safety');
 requireText('Локальний цикл зараз:', 'personal activity cycle is labeled as local context');
 requireText('Оперативний стан ${_op179} має пріоритет:', 'personal activity cycle has operational safety gate');
 requireText('окрема порада призупинена через глобальний ризик', 'positive local activity advice is suppressed during operational risk');
@@ -96,5 +135,18 @@ requireText('is-now.is-routine', 'current routine slot has non-positive semantic
 requireText("'Історична подія NOAA'", 'inactive NOAA event is explicitly historical');
 requireText('Бюлетень NOAA ${hoursAgo}г тому', 'aged NOAA event is time-labeled before live Kp loads');
 forbidText('День сильний за PDF', 'old PDF-first Hero headline removed');
+forbidText('МОЖНА ДІЯТИ за PDF', 'PDF reference cannot grant action');
+forbidText('Сильний день за PDF', 'PDF-first positive Hero branch removed');
+forbidText('День сприятливий за PDF', 'PDF-first moderate Hero branch removed');
+forbidText('return `PDF +${sig.dayScore} · буря', 'PDF-first storm Hero branch removed');
+forbidText('`PDF · буря Kp=', 'PDF-first late storm patch removed');
+forbidText('const _kyivLabel =', 'unused timezone helper cannot disable storm guard');
+forbidText('Це єдиний шар, що формує підсумковий вердикт', 'method explainer cannot crown PDF as final decision');
+forbidText('рішення дня бери звідти', 'offline hint cannot direct decisions to PDF reference');
+forbidText('рішення дня має пріоритет над live-фоном', 'future hint cannot bypass operational safety wording');
+forbidText('ЄДИНИЙ ПІДСУМКОВИЙ РЕЗУЛЬТАТ', 'AUTO feed cannot publish a second final decision');
+forbidText('Одне рішення за ієрархією джерел', 'AUTO feed cannot masquerade as operational command');
+forbidText('Вердикт дня вгорі = PDF/Engine (експерт), він головний', '3-day tooltip cannot crown PDF over safety contour');
+forbidText('PDF/Engine — пріоритет · live Kp оновлює фон', '3-day banner cannot demote live safety data');
 forbidText('Головний показник.', 'old PDF-first 27-day tooltip removed');
 forbidText('червоний/зелений = PDF/Engine-рішення', 'old 27-day decision caption removed');

@@ -43,6 +43,11 @@ def main() -> None:
     require(index, 'REFERENCE · НЕ РІШЕННЯ ДЛЯ ДІЇ', '27-day reference disclosure')
     require(index, 'Нейтральний Pᵢ не скасовує eᵢ, бурю або часову заборону', 'Panchanga net-context disclosure')
     require(index, 'Оперативно СТОП: PDF reference', 'operational-first Hero conflict wording')
+    require(index, 'Оперативно сприятливо; PDF reference', 'operational-first positive Hero wording')
+    require(index, 'Оперативно СТОП: буря Kp=', 'operational-first storm Hero wording')
+    require(index, "sig.opKey === 'neutral'", 'Hero conflict wording follows resolved operational state')
+    require(index, 'ДЕННИЙ PDF/ENGINE REFERENCE · НЕ РІШЕННЯ ДЛЯ ДІЇ', 'AUTO feed panel is reference-only')
+    require(index, 'Оперативну дію визначає обережніший стан у Hero', 'AUTO feed panel defers to operational safety')
     require(index, 'Оперативний стан ${_op179} має пріоритет:', 'personal cycle safety gate')
     require(index, 'окрема порада призупинена через глобальний ризик', 'personal cycle positive-advice suppression')
     require(index, 'PDF/Engine reference, не оперативне рішення', '27-day reference-only caption')
@@ -54,6 +59,19 @@ def main() -> None:
         'ФІНАЛЬНЕ РІШЕННЯ · PDF/ENGINE': 'misleading 27-day final-decision badge',
         "seg.setAttribute('data-gval', `${_heatDecision": 'one day score stamped on every heat slot',
         'День сильний за PDF': 'misleading PDF-first Hero headline',
+        'МОЖНА ДІЯТИ за PDF': 'PDF reference grants action',
+        'Сильний день за PDF': 'PDF-first positive Hero branch',
+        'День сприятливий за PDF': 'PDF-first moderate Hero branch',
+        'return `PDF +${sig.dayScore} · буря': 'PDF-first storm Hero branch',
+        '`PDF · буря Kp=': 'PDF-first late storm patch',
+        'const _kyivLabel =': 'unused timezone helper can disable storm guard',
+        'Це єдиний шар, що формує підсумковий вердикт': 'PDF crowned as final decision in method explainer',
+        'рішення дня бери звідти': 'offline hint directs decisions to PDF reference',
+        'рішення дня має пріоритет над live-фоном': 'future hint bypasses operational safety wording',
+        'ЄДИНИЙ ПІДСУМКОВИЙ РЕЗУЛЬТАТ': 'AUTO feed publishes a second final decision',
+        'Одне рішення за ієрархією джерел': 'AUTO feed masquerades as operational command',
+        'Вердикт дня вгорі = PDF/Engine (експерт), він головний': '3-day tooltip crowns PDF over safety contour',
+        'PDF/Engine — пріоритет · live Kp оновлює фон': '3-day banner demotes live safety data',
         'Головний показник.': 'misleading PDF-first 27-day tooltip',
         'червоний/зелений = PDF/Engine-рішення': 'misleading 27-day decision caption',
     }

@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.166-fp359-DECISION-CONSISTENCY</title>
+  <title>G-Index — Космофізичний дашборд v88.9.167-fp360-OPERATIONAL-FIRST</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1851,15 +1851,15 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
     <details id="indexLineagePanel" style="margin:0 0 10px;padding:10px 14px;border-radius:12px;border:1px solid rgba(89,166,255,.36);background:linear-gradient(180deg,rgba(89,166,255,.075),rgba(89,166,255,.018));font-size:11px;color:var(--muted)">
       <summary style="cursor:pointer;color:#b9d8ff;font-weight:800">🧭 Як рахується система — 4 окремі шари</summary>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:7px;margin-top:9px;line-height:1.5">
-        <div style="padding:8px;border:1px solid rgba(67,230,167,.28);border-radius:8px"><b style="color:#72e6b5">1. Рішення дня (−3…+3)</b><br>Перевірений PDF має пріоритет. Якщо PDF відсутній — окремо позначений frozen Engine. Це єдиний шар, що формує підсумковий вердикт.</div>
+        <div style="padding:8px;border:1px solid rgba(67,230,167,.28);border-radius:8px"><b style="color:#72e6b5">1. Денний reference (−3…+3)</b><br>Перевірений PDF зберігає заморожений сигнал методики. Якщо PDF відсутній — окремо позначений frozen Engine. Це довідковий шар, не оперативна команда і не дозвіл на дію.</div>
         <div style="padding:8px;border:1px solid rgba(89,166,255,.28);border-radius:8px"><b style="color:#8dc6ff">2. G raw (безперервний фон)</b><br><code>G = 2−Kp + Lᵢ + Mᵢ + eᵢ + Pᵢ + Dᵢ</code>. Панчанга Pᵢ уже всередині цієї суми. G raw не перезаписує рішення дня.</div>
         <div style="padding:8px;border:1px solid rgba(255,176,32,.32);border-radius:8px"><b style="color:#ffd37a">3. Safety-veto</b><br>Kp≥5, сильний Dst та оперативні попередження можуть обмежити рекомендацію незалежно від арифметичного кольору G raw.</div>
         <div style="padding:8px;border:1px solid rgba(178,126,255,.28);border-radius:8px"><b style="color:#d9c2ff">4. Shadow/context</b><br>AIA, BGS, ENLIL, Meteoagent, непідтверджені календарні й image-фактори мають <code>score_effect=0</code> до time-split та prospective gate.</div>
       </div>
       <div style="margin-top:8px;color:#ffd37a">Важливо: експертний Excel використовує іншу орієнтацію геомагнітного доданка — <code>2−Kp</code>. Його raw_sum і dashboard G raw не можна змішувати або порівнювати як одне число.</div>
     </details>    <section id="singleFinalDecision" style="margin:0 0 10px;padding:14px 16px;border-radius:13px;border:1px solid rgba(67,230,167,.5);background:linear-gradient(135deg,rgba(15,96,78,.28),rgba(8,20,38,.96));box-shadow:0 0 24px rgba(34,210,150,.08)">
-      <div style="font-size:10px;letter-spacing:.12em;color:#91b8ad">ЄДИНИЙ ПІДСУМКОВИЙ РЕЗУЛЬТАТ</div>
-      <div id="singleFinalDecisionBody" style="margin-top:7px;font-size:14px;color:#dbe9ff">Завантаження узгодженого рішення…</div>
+      <div style="font-size:10px;letter-spacing:.12em;color:#91b8ad">ДЕННИЙ PDF/ENGINE REFERENCE · НЕ РІШЕННЯ ДЛЯ ДІЇ</div>
+      <div id="singleFinalDecisionBody" style="margin-top:7px;font-size:14px;color:#dbe9ff">Завантаження денного reference…</div>
     </section>
     <details id="kpHourlyPanel" style="margin:0 0 10px;padding:9px 14px;border-radius:12px;border:1px solid rgba(255,190,75,.38);background:rgba(255,174,45,.035);font-size:11px;color:var(--muted)">
       <summary id="kpHourlySummary" style="cursor:pointer;font-weight:700;color:#ffd37a">🛰 Погодинний Kp: завантаження…</summary>
@@ -1910,7 +1910,7 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
       </div>
     </div>
     <!-- v88.8.51-fp128: ЄДИНА ПАНЕЛЬ ІНДЕКСІВ — усі показники в одному місці, явно розділені
-         на "сирий сигнал" (Панчанга/Kp/G_now) і "фінальний вердикт" (PDF/Engine), щоб не повторювати
+         на "сирий сигнал" (Панчанга/Kp/G_now) і денний reference (PDF/Engine), щоб не повторювати
          плутанину "+показник, а день -". Дані ті самі globals, нова логіка не додається. -->
     <div id="unifiedIndicesPanel" style="display:none;margin:0 0 10px;padding:10px 14px;border-radius:12px;border:1px solid var(--border);background:rgba(11,18,32,.5)">
       <div style="font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">📐 Індекси дня</div>
@@ -6346,19 +6346,12 @@ function renderSingleFinalDecision(){
   const today=todayKyivStr();
   const day=window._autoForecastFeed&&window._autoForecastFeed.days&&window._autoForecastFeed.days[today];
   if(!day||!day.final_decision){
-    el.textContent='Підсумкове рішення ще не завантажене.';
+    el.textContent='Денний PDF/Engine reference ще не завантажений.';
     return;
   }
   const f=day.final_decision;
   const score=Number(f.score);
-  const labels={
-    ACT:'ДІЯТИ',
-    ACT_WITH_CAUTION:'ДІЯТИ ОБЕРЕЖНО',
-    NEUTRAL:'НЕЙТРАЛЬНО',
-    CAUTION:'ОБЕРЕЖНО',
-    AVOID:'УНИКАТИ ВАЖЛИВИХ РІШЕНЬ',
-    NO_DATA:'НЕМАЄ ДАНИХ'
-  };
+  const referenceLabel=score>=2?'СПРИЯТЛИВИЙ ДЕННИЙ СИГНАЛ':score>0?'ПОМІРНО СПРИЯТЛИВИЙ ДЕННИЙ СИГНАЛ':score===0?'НЕЙТРАЛЬНИЙ ДЕННИЙ СИГНАЛ':score<=-2?'НЕСПРИЯТЛИВИЙ ДЕННИЙ СИГНАЛ':'ОБЕРЕЖНИЙ ДЕННИЙ СИГНАЛ';
   const sources={
     expert_formula_raw:'формула експерта (raw)',
     verified_expert_pdf:'перевірений прогноз експерта',
@@ -6370,14 +6363,14 @@ function renderSingleFinalDecision(){
   const restrictions=Array.isArray(f.restrictions)?f.restrictions:[];
   el.innerHTML=
     '<div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap">'+
-      '<strong style="font-size:24px;color:'+color+'">'+(score>0?'+':'')+score+' · '+(labels[f.action]||f.action)+'</strong>'+
-      '<span style="color:#9fb6c8">Основа: '+(sources[f.authority]||f.authority)+' · '+(f.confidence_tier||'без рівня')+'</span>'+
+      '<strong style="font-size:24px;color:'+color+'">REFERENCE '+(score>0?'+':'')+score+' · '+referenceLabel+'</strong>'+
+      '<span style="color:#9fb6c8">Джерело reference: '+(sources[f.authority]||f.authority)+' · '+(f.confidence_tier||'без рівня')+'</span>'+
     '</div>'+
     '<div style="margin-top:7px;color:#c7d8e6">'+
       (f.tanita_corroborates?'✓ Таніта підтверджує напрям. ':'Таніта не використовується як другий голос. ')+
       (restrictions.length?'<span style="color:#ffd37a">Обмеження: '+restrictions.join(' · ')+'</span>':'Критичних додаткових обмежень у feed немає.')+
     '</div>'+
-    '<div style="margin-top:5px;font-size:10px;color:#7792a5">Одне рішення за ієрархією джерел; деталі й конфлікти винесені нижче.</div>';
+    '<div style="margin-top:5px;font-size:10px;color:#ffd37a">Це не команда. Оперативну дію визначає обережніший стан у Hero з live-фоном, Kp і часовими блокуваннями.</div>';
 }
 async function loadKpHourlyAlert(){
   const sum=document.getElementById('kpHourlySummary');
@@ -6597,10 +6590,10 @@ async function loadExpertDecisionRegistry(){
       Number(s.source_crosscheck_pass||0)+'/'+Number(s.pdf_sources||0)+'. Формула Excel: '+
       Number(s.formula_dates||0)+' дат; проти revision-aware PDF на '+Number(s.formula_pdf_overlap||0)+
       ' датах — exact '+pct(s.formula_exact)+', ±1 '+pct(s.formula_within_1)+', знак '+pct(s.formula_strict_sign)+
-      '. Перевірений PDF має пріоритет; Engine — лише fallback; Pᵢ не рахується другим голосом.';
+      '. У денному reference перевірений PDF має пріоритет над Engine fallback; Pᵢ не рахується другим голосом. Оперативну дію визначає обережніший safety-контур.';
   }catch(e){
     _expertDecisionRegistry={};
-    if(el) el.textContent='Експертний реєстр тимчасово недоступний; поточний verified PDF/Engine priority-chain не змінено.';
+    if(el) el.textContent='Експертний реєстр тимчасово недоступний; PDF/Engine reference не змінено, але він не є оперативним дозволом.';
   }
   return _expertDecisionRegistry;
 }
@@ -13543,7 +13536,7 @@ function _renderPanchaPakshi(refDateUTC){
     const _eToday = (typeof getEngineScore === 'function') ? getEngineScore(refDateUTC || new Date()) : null;
     const _eVal = (_eToday && isFinite(_eToday.eng)) ? Number(_eToday.eng) : null;
     if (_eVal !== null && _eVal <= -2) {
-      _ppDisclaimer = `<div style="margin-top:6px;padding:4px 6px;border-radius:4px;background:rgba(255,107,107,.08);border:1px solid rgba(255,107,107,.25);font-size:9px;color:#ffaa99;font-style:italic;text-align:center;line-height:1.35">⚠ R&D-наближення (не canonical Pulippani таблиця). Загальне рішення = PDF/Engine ${_eVal} — картка вище має пріоритет.</div>`;
+      _ppDisclaimer = `<div style="margin-top:6px;padding:4px 6px;border-radius:4px;background:rgba(255,107,107,.08);border:1px solid rgba(255,107,107,.25);font-size:9px;color:#ffaa99;font-style:italic;text-align:center;line-height:1.35">⚠ R&D-наближення (не canonical Pulippani таблиця). PDF/Engine reference ${_eVal} обмежує ризик; оперативний стан у Hero має пріоритет.</div>`;
     }
   } catch(e) { /* silent */ }
   elActive.innerHTML = `<span style="color:${activeBird.color};font-weight:700">${activeBird.emoji} ${activeBird.name}</span> · через <em style="color:var(--text2)">${nakName}</em><br><span style="color:var(--dim);font-size:10px;font-style:italic">${quality}</span>${_ppActivityLine}${_ppDisclaimer}`;
@@ -14026,7 +14019,7 @@ function render3Day(parsed3){
         // still distinguishing it from the synthetic-Kp scenario case above. Numbers unchanged.
         _scenBanner = _dayHasOverride
           ? `<div style="font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#ffd166;background:rgba(255,209,102,.15);border:1px solid rgba(255,209,102,.45);border-radius:6px;padding:2px 6px;margin-bottom:5px;text-align:center" title="Це значення — ручний verified PDF-вердикт (expert override), НЕ розрахунок engine v18.5. Raw engine snapshot окремо, у tooltip бейджа Engine v18.5.">★ PDF override · не engine v18.5</div>`
-          : `<div style="font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color: var(--muted);background:rgba(155,177,220,.15);border:1px solid rgba(155,177,220,.45);border-radius:6px;padding:2px 6px;margin-bottom:5px;text-align:center" title="Live NOAA forecast Kp=${d.kpMax.toFixed(1)} свіжіший за engine-score (рахований на старому snapshot). Engine може недо-оцінювати буревий ризик — звіряйся з live.">ⓘ PDF/Engine — пріоритет · live Kp оновлює фон</div>`;
+          : `<div style="font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color: var(--muted);background:rgba(155,177,220,.15);border:1px solid rgba(155,177,220,.45);border-radius:6px;padding:2px 6px;margin-bottom:5px;text-align:center" title="Live NOAA forecast Kp=${d.kpMax.toFixed(1)} свіжіший за engine-score (рахований на старому snapshot). Engine може недо-оцінювати буревий ризик — звіряйся з live.">ⓘ PDF/Engine reference · live Kp оновлює safety-контур</div>`;
         _scenLabel = `<div style="font-size:9px;color: var(--muted);margin-top:2px;line-height:1.3" title="Engine v18.5 score обчислений на snapshot часу train. Live NOAA forecast Kp=${d.kpMax.toFixed(1)} оновленіший. Engine score може недо-оцінювати буревий ризик.">пріоритет — live Kp=${d.kpMax.toFixed(1)}, не engine</div>`;
       }
       qhtml+=`<span title="${escapeHtml(_daySigQ?.tooltip||'')}" style="flex:1;min-width:140px;padding:8px 14px;border-radius:10px;${_scenStyle};text-align:center">
@@ -14034,7 +14027,7 @@ function render3Day(parsed3){
         <div style="font-weight:700;color:${col};font-size:14px">${dd} → ${cat}</div>
         <div style="font-size:11px;color:var(--muted);margin-top:2px">${act}</div>
         ${(_scenBanner && !_isDivergent) ? '' : _bulletinLine}
-        <div class="card3d-numeric" style="font-size:10px;color:var(--faint);margin-top:3px" title="Довідкові raw-числа (НЕ вердикт дня). G_day raw (3d) = Kp_max з NOAA 3-day forecast (${isFinite(kpMax)?kpMax.toFixed(1):'?'}) − 2 + ΣAᵢ. Вердикт дня вгорі = PDF/Engine (експерт), він головний. Raw показує лише сирий геомагнітний фон.">${isFinite(G)?'<span style="color:var(--faint);font-size:9px">RAW-АУДИТ ФОНУ · НЕ РІШЕННЯ </span>'+(G>=0?'+':'')+G.toFixed(1):'—'}${(() => {
+        <div class="card3d-numeric" style="font-size:10px;color:var(--faint);margin-top:3px" title="Довідкові raw-числа. G_day raw (3d) = Kp_max з NOAA 3-day forecast (${isFinite(kpMax)?kpMax.toFixed(1):'?'}) − 2 + ΣAᵢ. PDF/Engine зверху — денний reference. Оперативний стан обирає обережніший safety-контур.">${isFinite(G)?'<span style="color:var(--faint);font-size:9px">RAW-АУДИТ ФОНУ · НЕ РІШЕННЯ </span>'+(G>=0?'+':'')+G.toFixed(1):'—'}${(() => {
           // fp51: show G_day 27D alongside 3D and delta
           try {
             const _ds51 = typeof fmtDate === 'function' ? fmtDate(d.date) : d.date.toISOString().slice(0,10);
@@ -15154,14 +15147,12 @@ function _applyStormGuardDOM(){
       const _t = (_ac.textContent || '').trim();
       const _isStormAware = _t.includes('буря Kp=') || _t.includes('АКТИВНА') || _t.includes('до ${');
       if (!_isStormAware && (
-          _t === 'Сьогодні сильний, сприятливий день' ||
-          _t === 'День сприятливий — можна діяти планово' ||
-          _t.startsWith('ОРІЄНТОВНО МОЖНА ДІЯТИ за PDF ·') ||
-          (_t.startsWith('МОЖНА ДІЯТИ за PDF ·') && _t.includes('перевір перед критичною дією')))) {
+          _t.startsWith('Оперативно сприятливо; PDF reference') ||
+          _t.startsWith('Оперативно помірно сприятливо; PDF reference'))) {
         const _etaStr43 = _sw.etaLabel || `~${_sw.hoursAhead}г`;
         _ac.textContent = _sw.active
-          ? `PDF · буря Kp=${_sw.kp.toFixed(1)} АКТИВНА — тільки рутина`
-          : `PDF · буря Kp=${_sw.kp.toFixed(1)} ${_etaStr43} — до ${_utcL}:00 UTC`;
+          ? `Оперативно СТОП: буря Kp=${_sw.kp.toFixed(1)} активна — тільки рутина`
+          : `Оперативно обережно: буря Kp=${_sw.kp.toFixed(1)} очікується ${_etaStr43} — до ${_utcL}:00 UTC`;
       }
     }
   } catch(_e) { /* silent */ }
@@ -16118,26 +16109,30 @@ function heroHeadlineFromHierarchy_v88824(sig){
     const _sw = window._stormWindow;
     if (_sw && isFinite(_sw.kp) && _sw.kp >= 5 && sig.dayScore >= 2) {
       const _utcLabel = String(_sw.label).padStart(2,'0');
-      const _kyivLabel = String(((parseInt(_sw.label,10) + kyivOffsetHoursIntAt(new Date())) % 24 + 24) % 24).padStart(2,'0');
       // fp42: use etaLabel (ЗАРАЗ / ~Xг); active storm gets different wording
       const _etaStr = _sw.etaLabel || `~${_sw.hoursAhead}г`;
       if (_sw.active) {
-        return `PDF +${sig.dayScore} · буря Kp=${_sw.kp.toFixed(1)} АКТИВНА — тільки рутина`;
+        return `Оперативно СТОП: буря Kp=${_sw.kp.toFixed(1)} активна — тільки рутина · PDF reference +${sig.dayScore}`;
       }
-      return `PDF +${sig.dayScore} · буря Kp=${_sw.kp.toFixed(1)} ${_etaStr} — до ${_utcLabel}:00 UTC`;
+      return `Оперативно обережно: буря Kp=${_sw.kp.toFixed(1)} очікується ${_etaStr} — до ${_utcLabel}:00 UTC · PDF reference +${sig.dayScore}`;
     }
     // Current Kp ≥ 5 (already storming)
     const _kpNow = (typeof lastWWV !== 'undefined' && lastWWV && isFinite(lastWWV.kNow)) ? lastWWV.kNow : 0;
     if (_kpNow >= 5 && sig.dayScore >= 2)
-      return `День +${sig.dayScore} за PDF, але Kp=${_kpNow.toFixed(1)} — буря активна — уникайте критичного`;
+      return `Оперативно СТОП: буря Kp=${_kpNow.toFixed(1)} активна — уникайте критичного · PDF reference +${sig.dayScore}`;
   } catch(e) { /* silent */ }
 
   // v88.8.34: Hero headline is an OPERATIONAL command for the current moment.
   // Day PDF/Engine score is shown as context, not as a command.
   // This prevents the wrong reading: "day +3" while all live windows say avoid.
   const ds = isFinite(sig.dayScore) ? (sig.dayScore >= 0 ? '+' + sig.dayScore : String(sig.dayScore)) : '—';
-  if(sig.dayScore >= 2 && sig.guard === 'live_tense') return `Оперативно СТОП: PDF reference ${ds} конфліктує з фоном зараз`;
-  if(sig.dayScore >= 2 && sig.guard === 'live_unstable') return `Оперативно обережно: PDF reference ${ds}, але live-фон слабший`;
+  // fp360: map every positive PDF conflict through the resolved operational
+  // state. Guard-name checks alone missed model_conflict (for example PDF +3
+  // versus neutral live G) and could still emit a positive action headline.
+  if(sig.dayScore >= 1 && sig.opKey === 'tense') return `Оперативно СТОП: PDF reference ${ds} конфліктує з фоном зараз`;
+  if(sig.dayScore >= 1 && sig.opKey === 'unstable') return `Оперативно обережно: PDF reference ${ds}, але live-фон слабший`;
+  if(sig.dayScore >= 1 && sig.opKey === 'neutral') return `Оперативно нейтрально: PDF reference ${ds} не підтверджений поточним фоном`;
+  if(sig.dayScore >= 1 && sig.opKey === 'good') return `Оперативно помірно сприятливо; PDF reference ${ds} узгоджений лише частково`;
   // fp23: якщо live-дані не свіжі — headline явно вказує на це
   try {
     const _dm = (typeof resolveDataModeExtended === 'function') ? resolveDataModeExtended() : null;
@@ -16159,26 +16154,26 @@ function heroHeadlineFromHierarchy_v88824(sig){
       // якщо G_now негативний. Раніше estimated-гілка обходила live-guard і губила
       // інформацію «фон слабкий» — юзер бачив «МОЖНА ДІЯТИ» при PDF+3 і фоні −1.
       if (isFinite(sig.liveG) && sig.liveG < -0.3) {
-        return `Сильний день за PDF (+${sig.dayScore}), але фон зараз слабкий (G${sig.liveG.toFixed(1)}) · ${_srcDesc} — перевір`;
+        return `Оперативно обережно: фон G${sig.liveG.toFixed(1)} слабкий · PDF reference +${sig.dayScore} · ${_srcDesc}`;
       }
-      return `МОЖНА ДІЯТИ за PDF · ${_srcDesc} — перевір перед критичною дією`;
+      return `Оперативно сприятливо; PDF reference +${sig.dayScore} · ${_srcDesc} — критичні дії лише після перевірки live-даних`;
     }
   } catch(e) { /* silent */ }
   if(sig.dayScore >= 3) {
     // fp54-B: if live G is negative despite positive PDF — show divergence note
     if (isFinite(sig.liveG) && sig.liveG < -0.3 && sig.guard === 'none') {
-      return `Сильний день за PDF (+${sig.dayScore}), хоча фон зараз слабкий (G${sig.liveG.toFixed(1)})`;
+      return `Оперативно обережно: фон G${sig.liveG.toFixed(1)} слабкий · PDF reference +${sig.dayScore}`;
     }
-    return 'Сьогодні сильний, сприятливий день';
+    return `Оперативно сприятливо; PDF reference +${sig.dayScore} узгоджений із поточним фоном`;
   }
   if(sig.dayScore >= 1) {
     // v88.8.37-fp70: симетрія з гілкою +3 — якщо фон зараз сильно негативний,
     // банер не каже беззастережно «діяти планово». Раніше тільки +3 мав цей guard,
     // через що PDF=+1/+2 з G_now≤−1 давали оптимістичний банер без застереження.
     if (isFinite(sig.liveG) && sig.liveG <= -1 && sig.guard === 'none') {
-      return `День сприятливий за PDF (+${sig.dayScore}), але фон зараз тисне — почни з рутини`;
+      return `Оперативно обережно: фон зараз тисне — почніть із рутини · PDF reference +${sig.dayScore}`;
     }
-    return 'День сприятливий — можна діяти планово';
+    return `Оперативно помірно сприятливо; PDF reference +${sig.dayScore} узгоджений із поточним фоном`;
   }
   if(sig.dayScore === 0) return sig.liveKey === 'tense' ? 'Нейтральний день, але фон зараз тисне — без поспіху' : 'Стандартний день';
   if(sig.dayScore === -1) return 'Сьогодні варто діяти обережно';
@@ -16641,9 +16636,9 @@ function syncHero(){
                      : _state === 'worsening' ? 'Погіршення з вчорашнього дня'
                      : 'Стабільно з вчорашнього дня';
         const _body = _state === 'improving'
-          ? `Фон зараз піднявся <span class="dc-metric is-pos">+${_abs}</span> <span style="color:var(--faint);font-size:10px">(G_now: зараз vs вчора)</span>${_ageNote} — фон став легший; рішення дня дивись у PDF/Engine.`
+          ? `Фон зараз піднявся <span class="dc-metric is-pos">+${_abs}</span> <span style="color:var(--faint);font-size:10px">(G_now: зараз vs вчора)</span>${_ageNote} — фон став легший; денний reference дивись окремо у PDF/Engine.`
           : _state === 'worsening'
-          ? `Фон зараз просів <span class="dc-metric is-neg">−${_abs}</span> <span style="color:var(--faint);font-size:10px">(G_now: зараз vs вчора)</span>${_ageNote} — фон важчий; рішення дня дивись у PDF/Engine.`
+          ? `Фон зараз просів <span class="dc-metric is-neg">−${_abs}</span> <span style="color:var(--faint);font-size:10px">(G_now: зараз vs вчора)</span>${_ageNote} — фон важчий; денний reference дивись окремо у PDF/Engine.`
           : `Δ24ч = ${_sign}${_abs}${_ageNote} — суттєвих змін немає.`;
         // v87.13: додатковий рядок про завтра (якщо відомо)
         // v88.8.35-fp5: додати поряд PDF/Engine score для завтра + override semantics
@@ -16702,7 +16697,7 @@ function syncHero(){
         // v88.8.35-fp7 H: візуально маркуємо контейнер amber-станом is-conflict.
         const _hasPdfConflict = (_tomEngScore !== null && _tomEngScore <= -2);
         if (_hasPdfConflict) {
-          _tomorrowLine += `<div class="dc-subline" style="color:#ffaa33;font-size:11px">⚠ PDF/Engine для завтра ≤ −2 — рішення дня має пріоритет над live-фоном.</div>`;
+          _tomorrowLine += `<div class="dc-subline" style="color:#ffaa33;font-size:11px">⚠ PDF/Engine reference для завтра ≤ −2 — оперативний контур не може бути м'якшим за цей ризик.</div>`;
         }
         // v88.8.41-fp104: РЯДОК "Сьогодні G_day raw" — усуває конфлікт Hero(G_now) vs 27-day graph(G_day_raw).
         // Раніше показувався тільки G_now (live) у Hero, а G_day_raw сьогодні видно лише
@@ -16796,8 +16791,8 @@ function syncHero(){
       live:      'Дані live: Kp обсервації + NOAA 3-day forecast доступні.',
       estimated: 'Kp ≤12год (норма циклу NOAA 3год). Forecast реальний. PDF/Engine актуальний.',
       partial:   'Затримані live-дані; PDF/Engine день актуальний.\n\nДеталі: Kp обсервації live, але forecast cached/delayed. Тренди можуть бути затримані.\nPDF/Engine і frozen engine_scores працюють штатно — це обмеження стосується лише live/raw rail-ів.',
-      scenario:  '⚠ Без NOAA forecast; PDF/Engine день актуальний.\n\nДеталі: Завтра/3-day показано як плато на базі поточного Kp — це сценарій, не справжній прогноз.\nPDF/Engine і frozen engine_scores працюють штатно — рішення дня бери звідти.',
-      offline:   '⚠ Дані з кешу; PDF/Engine день актуальний.\n\nДеталі: навіть Kp обсервації недоступні. Все, що показано — з кешу.\nPDF/Engine і frozen engine_scores працюють штатно — рішення дня бери звідти.'
+      scenario:  '⚠ Без NOAA forecast; PDF/Engine reference актуальний.\n\nДеталі: Завтра/3-day показано як плато на базі поточного Kp — це сценарій, не справжній прогноз.\nPDF/Engine і frozen engine_scores лишаються довідковим денним сигналом, не дозволом на дію.',
+      offline:   '⚠ Дані з кешу; PDF/Engine reference актуальний.\n\nДеталі: навіть Kp обсервації недоступні. Все, що показано — з кешу.\nPDF/Engine і frozen engine_scores лишаються довідковим денним сигналом, не дозволом на дію.'
     })[_dataMode] || '';
     // Інжектимо label + hint-pop, не перетираємо весь innerHTML інших слотів
     hf.innerHTML = _modeLabel + (_modeTip ? `<span class="hint-pop" style="white-space:pre-line;font-size:12px;text-align:left;max-width:280px">${_modeTip}</span>` : '');
@@ -17046,21 +17041,11 @@ function syncHero(){
   // fixed to state the actual, accurate situation.
   let _headline = _dt.headline || 'PDF/Engine недоступний — показано лише живий фон нижче';
   // fp47/fp52-P3/fp53-A: DELAYED prefix on headline.
-  // Problem: heroHeadlineFromHierarchy already returns 'МОЖНА ДІЯТИ за PDF · live-фон estimated...'
-  // which contains 'estimated' → fp52 condition blocked the fix.
-  // fp53-A: handle both cases: with and without 'estimated' in headline.
   // fp79 FIX: use resolveDataModeExtended — 'estimated' (Kp ≤12h, норм. цикл NOAA) не показує ОРІЄНТОВНО.
   const _dm47 = (typeof resolveDataModeExtended === 'function') ? resolveDataModeExtended() : 'live';
   const _headlineStormAware47 = _headline.includes('буря') || _headline.includes('АКТИВНА');
   if ((_dm47 === 'partial' || _dm47 === 'offline' || _dm47 === 'scenario') && !_headlineStormAware47 && !_headline.startsWith('ОРІЄНТОВНО')) {
-    if (_headline.startsWith('МОЖНА ДІЯТИ за PDF ·') && _headline.includes('перевір перед критичною дією')) {
-      // Already has estimated suffix but lacks ОРІЄНТОВНО prefix
-      _headline = 'ОРІЄНТОВНО МОЖНА ДІЯТИ за PDF · live-фон — перевір перед критичною дією';
-    } else if (_headline === 'Сьогодні сильний, сприятливий день') {
-      _headline = 'ОРІЄНТОВНО сильний день за PDF · live-фон estimated';
-    } else if (_headline === 'День сприятливий — можна діяти планово') {
-      _headline = 'ОРІЄНТОВНО день сприятливий · live-фон estimated';
-    } else if (!_headline.includes('estimated')) {
+    if (!_headline.includes('estimated')) {
       _headline = _headline + ' · live-фон estimated';
     }
   }
