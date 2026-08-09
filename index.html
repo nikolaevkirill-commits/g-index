@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.167-fp360-OPERATIONAL-FIRST</title>
+  <title>G-Index — Космофізичний дашборд v88.9.168-fp361-SEMANTIC-CONSISTENCY</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -2666,7 +2666,7 @@ Fallback (NOAA 45-day-forecast.json):
           <thead><tr>
             <th class="col-date th-sort" data-col="date">Дата (UTC) <span class="sort-ico">↕</span></th>
             <th title="Якість накшатри дня" style="width:28px">☽</th>
-            <th class="th-sort" data-col="g" title="G_day raw = Kp_day(max/approx) − 2 + ΣAᵢ(noon UTC). Це не G зараз і не PDF/Engine score.">G_day <span class="sort-ico">↕</span></th>
+            <th class="th-sort" data-col="g" title="G_day raw = 2 − Kp_day(max/approx) + ΣAᵢ(noon UTC). Це не G зараз і не PDF/Engine score.">G_day <span class="sort-ico">↕</span></th>
             <th>Kp max</th>
             <th class="col-hide-mobile">Δ Kp</th>
             <th>Lᵢ</th>
@@ -2678,7 +2678,7 @@ Fallback (NOAA 45-day-forecast.json):
             <th class="col-hide-mobile">Flux 10.7</th>
             <th>Категорія</th>
             <th class="col-hide-mobile">Ризик%</th>
-            <th>Рекомендація</th>
+            <th>Роль</th>
             <th title="PDF/Engine score — дискретна експертна/engine оцінка дня (−3..+3). Інша модель — інша шкала. ⚠ означає розбіжність знака з G_day raw." style="color:#7ab8d4">PDF/Engine</th>
             <th id="th27Gos" style="display:none;color:#c8b4ff" title="G_ос = G + Taara-mod (R&D)">G_ос</th>
           </tr></thead>
@@ -3884,6 +3884,21 @@ function renderDecisionLayer(gVal, ui) {
       avoidArr.push('Критично залежних від точного GPS систем');
     }
   }
+
+  // fp361: Decision Layer is a command surface, so stale/synthetic data must
+  // fail closed even when the last computed operational value was positive.
+  // A harder current Rahu/Yama/Gulika window below can still replace this copy.
+  try {
+    const _dmDL = (typeof resolveDataModeExtended === 'function') ? resolveDataModeExtended() : 'live';
+    if ((_dmDL === 'partial' || _dmDL === 'offline' || _dmDL === 'scenario') && (state === 'favorable' || state === 'good')) {
+      doArr = ['Продовжувати розпочате', 'Виконувати лише перевірені рутинні завдання'];
+      avoidArr = [
+        'Нових критичних рішень до відновлення live-даних',
+        'Запусків, угод і незворотних змін'
+      ];
+      ctxTxt = `Якість даних ${_dmDL.toUpperCase()} — позитивний стан не є дозволом на нові дії. ` + ctxTxt;
+    }
+  } catch(_eDmDL) { /* silent */ }
 
   // v88.9.6x-fp248 FIX-CRITICAL (аудит fp247, п.1): жоден з guard-ів вище не
   // бачив Rahu/Yama/Gulika — «Запускати нові ініціативи/Укладати угоди» могло
@@ -8852,27 +8867,28 @@ function renderWeekSummary(){
     const aiDynamic = computeAi(sunriseUTC(d), isFinite(kpDynamic) ? kpDynamic : 0);
     const rawDynamic = kpDayTerm(isFinite(kpDynamic) ? kpDynamic : 0) + aiDynamic.Ai;
     const sig = resolveDaySignal_v88825(d, rawDynamic, kpDynamic, {isToday:i===0, horizon:'week'});
-    const eng = sig && isFinite(sig.dayScore) ? Math.max(-3,Math.min(3,Math.round(sig.dayScore))) : null;
+    const reference = sig && isFinite(sig.dayScore) ? Math.max(-3,Math.min(3,Math.round(sig.dayScore))) : null;
+    const operational = sig && isFinite(sig.decisionScore) ? Math.max(-3,Math.min(3,Math.round(sig.decisionScore))) : null;
     const dowShort = ['НД','ПН','ВТ','СР','ЧТ','ПТ','СБ'][d.getDay()];
     const dateNum = d.getUTCDate();
     const mon = d.getUTCMonth()+1;
     const sourceBase = e && e._expertOverride ? 'PDF' : (e ? 'Engine' : '—');
-    const source = sig && sig.dynamicGuard ? sourceBase+'+LIVE' : sourceBase;
-    days.push({ds, eng, source, dow:dowShort, dateNum, mon, isToday:i===0, kpDynamic, rawDynamic, dynamicGuard:sig?.dynamicGuard||null});
+    const guards = [sig?.guard, sig?.dynamicGuard].filter(x=>x && x!=='none');
+    days.push({ds, operational, reference, source:sourceBase, guards, dow:dowShort, dateNum, mon, isToday:i===0, kpDynamic, rawDynamic});
   }
 
   const col = s => s===null?'var(--faint)':s>=2?'#63be7b':s>=1?'#9cd49c':s===0?'#9bb1dc':s>=-1?'#ffd2a0':'#ff6b6b';
-  const green = days.filter(d=>d.eng!==null&&d.eng>=2).length;
-  const greenL = days.filter(d=>d.eng===1).length;
-  const red = days.filter(d=>d.eng!==null&&d.eng<=-2).length;
-  const redL = days.filter(d=>d.eng===-1).length;
-  const neutral = days.filter(d=>d.eng===0).length;
+  const green = days.filter(d=>d.operational!==null&&d.operational>=2).length;
+  const greenL = days.filter(d=>d.operational===1).length;
+  const red = days.filter(d=>d.operational!==null&&d.operational<=-2).length;
+  const redL = days.filter(d=>d.operational===-1).length;
+  const neutral = days.filter(d=>d.operational===0).length;
 
   // Знаходимо кластери для наративу
   const fmt = d => `${d.dateNum}.${d.mon}`;
-  const bestDays = days.filter(d=>d.eng!==null&&d.eng>=2);
-  const stopDays = days.filter(d=>d.eng!==null&&d.eng<=-2);
-  const mildCautionDays = days.filter(d=>d.eng===-1);
+  const bestDays = days.filter(d=>d.operational!==null&&d.operational>=2);
+  const stopDays = days.filter(d=>d.operational!==null&&d.operational<=-2);
+  const mildCautionDays = days.filter(d=>d.operational===-1);
   const bestStr = bestDays.length ? bestDays.map(d=>`${d.dow} ${fmt(d)}`).join(', ') : null;
   const stopStr = stopDays.length ? stopDays.map(d=>`${d.dow} ${fmt(d)}`).join(', ') : null;
   const mildCautStr = mildCautionDays.length ? mildCautionDays.map(d=>`${d.dow} ${fmt(d)}`).join(', ') : null;
@@ -8892,13 +8908,15 @@ function renderWeekSummary(){
 
   // Рядок цифр (компактний, знизу)
   const rowHtml = days.map(d=>{
-    const s = d.eng; const sStr = s===null?'—':(s>=0?'+':'')+s;
+    const s = d.operational; const sStr = s===null?'—':(s>=0?'+':'')+s;
+    const refStr = d.reference===null?'—':(d.reference>=0?'+':'')+d.reference;
     const bold = d.isToday?'font-weight:800;text-decoration:underline':'';
-    const sourceTitle = d.source.startsWith('PDF') ? 'Перевірене рішення експерта/PDF' : (d.source.startsWith('Engine') ? 'Автоматичний Engine fallback' : 'Дані відсутні');
-    return `<span title="${sourceTitle}" style="display:inline-flex;flex-direction:column;align-items:center;min-width:30px;${bold}">
+    const sourceTitle = `Оперативний стан ${sStr}. PDF/Engine reference ${refStr} (${d.source}).${d.guards.length?' Safety: '+d.guards.join('+')+'.':''}`;
+    return `<span title="${sourceTitle}" style="display:inline-flex;flex-direction:column;align-items:center;min-width:38px;${bold}">
       <span style="font-size:8px;color:var(--dim)">${d.dow}</span>
       <span style="font-size:11px;font-weight:700;color:${col(s)}">${sStr}</span>
-      <span style="font-size:7px;color:${d.source==='PDF'?'#d6b55c':'var(--faint)'}">${d.source}</span>
+      <span style="font-size:7px;color:var(--faint)">OP${d.guards.length?' ⚠':''}</span>
+      <span style="font-size:7px;color:${d.source==='PDF'?'#d6b55c':'var(--faint)'}">ref ${refStr} ${d.source}</span>
     </span>`;
   }).join('');
 
@@ -10498,13 +10516,13 @@ function draw27dTable(){
   const filterVal = document.getElementById('sel27Filter').value;
 
   let data = [..._27dComputed];
-  const _decisionOf = d => Number.isFinite(d?._decisionEng) ? Number(d._decisionEng) : Number(d?.G);
+  const _rawGOf = d => Number(d?.G);
 
   // v88.8.34: фільтр тільки по raw continuous G. PDF/Engine — overlay, не заміна G.
-  if(filterVal === 'good')    data = data.filter(d => _decisionOf(d) >= 0.5);
-  if(filterVal === 'neutral') data = data.filter(d => _decisionOf(d) > -0.5 && _decisionOf(d) < 0.5);
-  if(filterVal === 'bad')     data = data.filter(d => _decisionOf(d) < -0.5);
-  if(filterVal === 'verybad') data = data.filter(d => _decisionOf(d) <= -2.5);
+  if(filterVal === 'good')    data = data.filter(d => _rawGOf(d) >= 0.5);
+  if(filterVal === 'neutral') data = data.filter(d => _rawGOf(d) > -0.5 && _rawGOf(d) < 0.5);
+  if(filterVal === 'bad')     data = data.filter(d => _rawGOf(d) < -0.5);
+  if(filterVal === 'verybad') data = data.filter(d => _rawGOf(d) <= -2.5);
   if(filterVal === 'calendar-risk') data = data.filter(d => d.calendarAdvisory?.level === 'high_risk');
   if(filterVal === 'calendar-caution') data = data.filter(d => ['caution','mixed'].includes(d.calendarAdvisory?.level));
   if(filterVal === 'calendar-support') data = data.filter(d => d.calendarAdvisory?.level === 'support');
@@ -10512,7 +10530,7 @@ function draw27dTable(){
   // v88.8.34: sort за raw continuous G. PDF/Engine score не змішується з G.
   data.sort((a,b)=>{
     let va, vb;
-    if(_27dSortCol==='g')    { va=_decisionOf(a); vb=_decisionOf(b); }
+    if(_27dSortCol==='g')    { va=_rawGOf(a); vb=_rawGOf(b); }
     else if(_27dSortCol==='ap') { va=a.r.Ap; vb=b.r.Ap; }
     else                     { va=a.ds;     vb=b.ds; }
     if(va < vb) return _27dSortDir==='asc' ? -1 : 1;
@@ -10624,7 +10642,7 @@ function draw27dTable(){
       ${_nakDotCell}
       <td style="min-width:60px">
         ${calendarAdvisory ? `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;margin:0 4px 0 0;background:` + (calendarAdvisory.level==='high_risk'?'#ff4d5e':calendarAdvisory.level==='caution'?'#ffaa33':calendarAdvisory.level==='mixed'?'#b88cff':calendarAdvisory.level==='support'?'#2bd47d':'#6b82aa') + `" title="Calendar advisory: ` + escapeHtml(calendarAdvisoryText(calendarAdvisory)) + `; score_effect=0"></span>` : ''}
-        <span class="gbadge ${gcls} hint" tabindex="0" style="font-size:13px;padding:4px 8px;min-width:60px">Рішення ${isFinite(G_display)?(G_display>=0?'+':'')+G_display.toFixed(1):'…'}<div style="font-size:8px;color:var(--faint);font-weight:500">raw G_day ${(G>=0?'+':'')+G.toFixed(1)}${_dynamicGuard?' · ⚠ Kp advisory':''}</div>${_hasOverride?'<span style="color:#ffd166;font-size:10px;margin-left:2px" title="PDF expert override">★</span>':''}<span class="hint-pop">${escapeHtml(gTip)}</span></span>
+        <span class="gbadge ${gcls} hint" tabindex="0" style="font-size:13px;padding:4px 8px;min-width:60px">G raw ${isFinite(G_display)?(G_display>=0?'+':'')+G_display.toFixed(1):'…'}<div style="font-size:8px;color:var(--faint);font-weight:500">контекст доби · не рішення${_dynamicGuard?' · ⚠ Kp advisory':''}</div>${_hasOverride?'<span style="color:#ffd166;font-size:10px;margin-left:2px" title="Окремий PDF reference у відповідній колонці">★</span>':''}<span class="hint-pop">${escapeHtml(gTip)}</span></span>
         <div style="margin-top:2px;height:3px;border-radius:2px;background:#0a1020;overflow:hidden"><div style="height:100%;width:${Math.min(100,Math.max(4,isFinite(G_display)?(Math.abs(G_display)/4*100):4)).toFixed(0)}%;background:${G_display<=-2.5?'#ff4444':G_display<=-0.5?'#ffaa33':G_display>=0.5?'#2bd47d':'#9bb1dc'};transition:width .3s"></div></div>
       </td>
       <td><span class="kbadge ${cls}">Kp ${kpUsed.toFixed(2)}${kpSuffix}</span></td>
@@ -10634,7 +10652,7 @@ function draw27dTable(){
       <td class="mono col-hide-mobile">${r.flux}</td>
       <td style="font-size:12px">${classifyG(isFinite(G_display)?G_display:0)}</td>
       <td class="col-hide-mobile" style="font-size:12px">${(()=>{const _p=calcProbabilityLayer({G:G_display,csConf:1,horizon:'27day'});return _p?`<span style="font-weight:700;color:${_p.band==='high'?'#ff6b6b':_p.band==='elevated'?'#fca474':_p.band==='moderate'?'#ffcc00':'#2bd47d'}" title="Горизонт 27д — низька точність (×0.55)">~${_p.pSoftPct}%</span>`:'—';})()}</td>
-      <td style="font-size:12px;${recommendG(G_display, kpUsed).style}">${recommendG(G_display, kpUsed).text}</td>
+      <td style="font-size:12px;color:var(--faint)">raw-контекст · не команда</td>
       ${bulletinCell}
       ${gosCell}
     </tr>`;
@@ -11050,7 +11068,7 @@ function renderForwardTimeline(){
     const border = isSel ? `2px solid #fff` : (isToday ? `1.5px solid #9fd1ff` : d._hasOverride ? '1px solid #ffd166' : '1px solid transparent');
     const hPct = Math.max(18, Math.min(100, Math.abs(g) * 18 + 18));
     const _confLbl = daysOut <= 3 ? '' : daysOut <= 7 ? ' · ~75% conf' : daysOut <= 14 ? ' · ~55% conf' : ' · ~35% conf';
-    const _ovLbl = _hasDecision ? ` · РІШЕННЯ ${d._expertEng>=0?'+':''}${d._expertEng} · raw G=${d.G.toFixed(1)}` : ' · лише raw-контекст';
+    const _ovLbl = _hasDecision ? ` · PDF REFERENCE ${d._expertEng>=0?'+':''}${d._expertEng} · raw G=${d.G.toFixed(1)}` : ' · лише raw-контекст';
     const label = `${d.ds}${_ovLbl}${_confLbl}`;
     sticks += `<div class="ft-stick" data-idx="${globalIdx}" title="${label}" style="flex:1;min-width:0;height:${hPct}%;background:${col};opacity:${opacity};border-radius:2px;cursor:pointer;transition:opacity .15s, border .15s;box-sizing:border-box;border:${border}"></div>`;
   }
@@ -12980,7 +12998,7 @@ function renderPanchangaCard(state){
             : best.G <= -0.5 ? ' <span style="color:#ffaa33;font-size:9px">· весь день у мінусі</span>' : '';
           html = `<div class="pbt-row">`
                + `<span class="pbt-label">${_bestLabelPbt}</span>`
-               + `<span class="pbt-value ${bestCls}" title="UTC: ${bestRangeUTC}. G_day raw — continuous фон доби (Kp_day − 2 + ΣAᵢ). НЕ PDF/Engine експертний verdict.">${bestRange} · G_day raw=${bestG}${_bestSuffix} <span style="color:var(--faint);font-size:9px">· не PDF/Engine</span></span>`
+               + `<span class="pbt-value ${bestCls}" title="UTC: ${bestRangeUTC}. G_day raw — continuous фон доби (2 − Kp_day + ΣAᵢ). НЕ PDF/Engine reference.">${bestRange} · G_day raw=${bestG}${_bestSuffix} <span style="color:var(--faint);font-size:9px">· не PDF/Engine</span></span>`
                + `</div>`;
           if (_showWorst) {
             html += `<div class="pbt-row">`
@@ -14027,7 +14045,7 @@ function render3Day(parsed3){
         <div style="font-weight:700;color:${col};font-size:14px">${dd} → ${cat}</div>
         <div style="font-size:11px;color:var(--muted);margin-top:2px">${act}</div>
         ${(_scenBanner && !_isDivergent) ? '' : _bulletinLine}
-        <div class="card3d-numeric" style="font-size:10px;color:var(--faint);margin-top:3px" title="Довідкові raw-числа. G_day raw (3d) = Kp_max з NOAA 3-day forecast (${isFinite(kpMax)?kpMax.toFixed(1):'?'}) − 2 + ΣAᵢ. PDF/Engine зверху — денний reference. Оперативний стан обирає обережніший safety-контур.">${isFinite(G)?'<span style="color:var(--faint);font-size:9px">RAW-АУДИТ ФОНУ · НЕ РІШЕННЯ </span>'+(G>=0?'+':'')+G.toFixed(1):'—'}${(() => {
+        <div class="card3d-numeric" style="font-size:10px;color:var(--faint);margin-top:3px" title="Довідкові raw-числа. G_day raw (3d) = 2 − Kp_max з NOAA 3-day forecast (${isFinite(kpMax)?kpMax.toFixed(1):'?'}) + ΣAᵢ. PDF/Engine зверху — денний reference. Оперативний стан обирає обережніший safety-контур.">${isFinite(G)?'<span style="color:var(--faint);font-size:9px">RAW-АУДИТ ФОНУ · НЕ РІШЕННЯ </span>'+(G>=0?'+':'')+G.toFixed(1):'—'}${(() => {
           // fp51: show G_day 27D alongside 3D and delta
           try {
             const _ds51 = typeof fmtDate === 'function' ? fmtDate(d.date) : d.date.toISOString().slice(0,10);
@@ -14332,8 +14350,26 @@ function buildUnifiedAdvice(state){
     const _sw28b = window._stormWindow;
     if (_sw28b && isFinite(_sw28b.kp) && _sw28b.kp >= 5) {
       const _utcL = String(_sw28b.label).padStart(2,'0');
-      DO.unshift(`важливе — завершити до ${_utcL}:00 UTC`);
-      AVOID.push(`нові критичні дії після ${_utcL}:00 UTC (Kp-буря)`);
+      if (_sw28b.active) {
+        AVOID.unshift(`нові критичні дії зараз (Kp=${_sw28b.kp.toFixed(1)} активна)`);
+        NOTE.push('буревий safety-контур активний — тільки необхідна рутина');
+      } else if (_stKey === 'favorable' || _stKey === 'good') {
+        DO.unshift(`планове — завершити до ${_utcL}:00 UTC`);
+        AVOID.push(`нові критичні дії після ${_utcL}:00 UTC (Kp-буря)`);
+      } else {
+        AVOID.push(`нові критичні дії; буря очікується о ${_utcL}:00 UTC`);
+        NOTE.push('поточний оперативний стан уже обмежувальний; майбутня буря не створює дозволеного вікна');
+      }
+    }
+  } catch(e) { /* silent */ }
+  // fp361: a positive operational score must not become an unconditional action
+  // list when live data are partial/offline or the 3-day rail is synthetic.
+  try {
+    const _dmAdv = (typeof resolveDataModeExtended === 'function') ? resolveDataModeExtended() : 'live';
+    if ((_dmAdv === 'partial' || _dmAdv === 'offline' || _dmAdv === 'scenario') && (_stKey === 'favorable' || _stKey === 'good')) {
+      DO = ['продовжити розпочате', 'лише перевірена рутина'];
+      AVOID.unshift('нові критичні рішення до відновлення live-даних');
+      NOTE.unshift(`якість даних ${_dmAdv.toUpperCase()} — позитивний стан не є дозволом`);
     }
   } catch(e) { /* silent */ }
   return { DO:_uniq(DO), AVOID:_uniq(AVOID), NOTE:_uniq(NOTE) };
@@ -16114,6 +16150,15 @@ function heroHeadlineFromHierarchy_v88824(sig){
       if (_sw.active) {
         return `Оперативно СТОП: буря Kp=${_sw.kp.toFixed(1)} активна — тільки рутина · PDF reference +${sig.dayScore}`;
       }
+      if (sig.opKey === 'tense') {
+        return `Оперативно СТОП зараз; буря Kp=${_sw.kp.toFixed(1)} очікується ${_etaStr} · PDF reference +${sig.dayScore}`;
+      }
+      if (sig.opKey === 'unstable') {
+        return `Оперативно обережно зараз; буря Kp=${_sw.kp.toFixed(1)} очікується ${_etaStr} · PDF reference +${sig.dayScore}`;
+      }
+      if (sig.opKey === 'neutral') {
+        return `Оперативно нейтрально зараз; буря Kp=${_sw.kp.toFixed(1)} очікується ${_etaStr} · PDF reference +${sig.dayScore}`;
+      }
       return `Оперативно обережно: буря Kp=${_sw.kp.toFixed(1)} очікується ${_etaStr} — до ${_utcLabel}:00 UTC · PDF reference +${sig.dayScore}`;
     }
     // Current Kp ≥ 5 (already storming)
@@ -16897,7 +16942,9 @@ function syncHero(){
   if (_sw30 && isFinite(_sw30.kp) && _sw30.kp >= 5) {
     _stormDoText = _sw30.active
       ? `✖ Kp=${_sw30.kp.toFixed(1)} АКТИВНА — тільки рутина`
-      : `${_delayedPrefix}✔ Діяти до ${String(_sw30.label).padStart(2,'0')}:00 UTC (${String((parseInt(_sw30.label,10)+3)%24).padStart(2,'0')}:00 Київ)`;
+      : (_stKey === 'favorable' || _stKey === 'good')
+      ? `${_delayedPrefix}Планові перевірені дії лише до ${String(_sw30.label).padStart(2,'0')}:00 UTC; далі буревий ризик`
+      : `${_delayedPrefix}${_st.doText} · буря Kp=${_sw30.kp.toFixed(1)} очікується о ${String(_sw30.label).padStart(2,'0')}:00 UTC`;
   } else {
     _stormDoText = _delayedPrefix + _st.doText;
   }
@@ -17705,7 +17752,7 @@ function _renderWhyTrend(){
     if(_futWithOverride.length && _maxDelta >= 2){
       const _firstOv = _futWithOverride[0];
       const _diff = _firstOv.overrideEng - _firstOv.G;
-      _overrideWarn = ` · <span style="color:#ffd166" title="На графіку показано G_day raw = Kp_day − 2 + ΣAᵢ. PDF/Engine Day_score дає окрему денну оцінку (★ маркер). Делта до ${_maxDelta.toFixed(1)} балів — перевір 3-day forecast блок нижче для правильних значень.">★ є експертні корекції (Δ до ${_maxDelta.toFixed(1)})</span>`;
+      _overrideWarn = ` · <span style="color:#ffd166" title="На графіку показано G_day raw = 2 − Kp_day + ΣAᵢ. PDF/Engine Day_score дає окремий денний reference (★ маркер). Делта до ${_maxDelta.toFixed(1)} балів — перевір 3-day forecast блок нижче для правильних значень.">★ є експертні корекції (Δ до ${_maxDelta.toFixed(1)})</span>`;
     }
     note.innerHTML = `Тренд ${arrow} ${trendTxt}${peakStr ? ' · ' + peakStr : ''}${_overrideWarn}`;
   }
@@ -19861,9 +19908,9 @@ function exportCsv(){
     const sig = (typeof resolveDaySignal_v88825 === 'function')
       ? resolveDaySignal_v88825(r.date, G, kpUsed, {isToday: ds===todayKyivStr()})
       : null;
-    const operationalScore = sig && Number.isFinite(Number(sig.decisionScore)) ? Number(sig.decisionScore) : (dayScore === '' ? G : Number(dayScore));
+    const operationalScore = sig && Number.isFinite(Number(sig.decisionScore)) ? Number(sig.decisionScore) : '';
     const operationalGuard = [sig?.guard, sig?.dynamicGuard].filter(x=>x && x!=='none').join('+') || 'none';
-    const rec = sig?.recommendation?.text || recommendG(G, kpUsed).text || '';
+    const rec = sig?.recommendation?.text || 'Operational resolver недоступний — лише raw/reference аудит';
     lines.push([
       ds,
       isFinite(G)?G.toFixed(2):'',
@@ -19933,11 +19980,15 @@ function exportICS(){
       ? resolveDaySignal_v88825(r.date, G, kpUsed, {isToday: ds===todayKyivStr()})
       : null;
     const dayTxt = Number.isFinite(dayScore) ? `${dayScore>=0?'+':''}${dayScore} ${daySource}` : '—';
-    const operationalScore = sig && Number.isFinite(Number(sig.decisionScore)) ? Number(sig.decisionScore) : (Number.isFinite(dayScore) ? dayScore : G);
-    const operationalTxt = `${operationalScore>=0?'+':''}${Number(operationalScore).toFixed(Number.isInteger(operationalScore)?0:1)}`;
+    const operationalScore = sig && Number.isFinite(Number(sig.decisionScore)) ? Number(sig.decisionScore) : null;
+    const operationalTxt = Number.isFinite(operationalScore)
+      ? `${operationalScore>=0?'+':''}${Number(operationalScore).toFixed(Number.isInteger(operationalScore)?0:1)}`
+      : 'недоступний';
     const gSign = G >= 0 ? '+' : '';
-    const summary = `Рішення ${operationalTxt}: ${sig?.title || classifyG(G)}; raw G ${gSign}${G.toFixed(2)}`;
-    const desc = `Дата: ${ds}\nOperational_score = ${operationalTxt} (єдине рішення; PDF/Engine + live safety guard)\nDay_score = ${dayTxt} (базове PDF/Engine-рішення)\nG_raw_slot = ${gSign}${G.toFixed(2)} (довідковий фон, не другий вердикт)\nKp = ${kpUsed.toFixed(2)}\nΣAᵢ = ${ai.Ai} (Lᵢ=${ai.Li}, Mᵢ=${ai.Mi}, eᵢ=${ai.ei}, Pᵢ=${ai.Pi}, Dᵢ=${ai.Di})\nОпераційна рекомендація: ${sig?.recommendation?.text || recommendG(G,kpUsed).text || ''}\n\nДжерело: G-Index single-verdict export (PDF/Engine + NOAA live safety guard; raw окремо для аудиту).`;
+    const summary = Number.isFinite(operationalScore)
+      ? `Оперативний стан ${operationalTxt}: ${sig.title}; raw G ${gSign}${G.toFixed(2)}`
+      : `Оперативний стан недоступний; PDF/Engine reference ${dayTxt}; raw G ${gSign}${G.toFixed(2)}`;
+    const desc = `Дата: ${ds}\nOperational_score = ${operationalTxt} (обережніший стан PDF/Engine + live safety guard; не підміняється reference)\nDay_score_reference = ${dayTxt} (довідковий PDF/Engine reference, не дозвіл)\nG_raw_slot = ${gSign}${G.toFixed(2)} (довідковий фон, не другий вердикт)\nKp = ${kpUsed.toFixed(2)}\nΣAᵢ = ${ai.Ai} (Lᵢ=${ai.Li}, Mᵢ=${ai.Mi}, eᵢ=${ai.ei}, Pᵢ=${ai.Pi}, Dᵢ=${ai.Di})\nОпераційна рекомендація: ${sig?.recommendation?.text || 'недоступна — resolver не спрацював'}\n\nДжерело: G-Index operational export; PDF/Engine reference і raw збережені окремо для аудиту.`;
     const dtStart = r.date;
     const dtEnd = new Date(dtStart.getTime() + 86400000);
     const uid = `gindex-${ds}-${Math.round((kpUsed||0)*100)}@g-index`;
@@ -22457,7 +22508,7 @@ function renderBestTime(dateUTC, kp, G, panchPCL) {
       .sort((a,b) => b.G - a.G);
     if(future7.length && future7[0].G > 0) {
       const best = future7[0];
-      html += `<div style="margin-top:8px;font-size:12px;color:#7a9acc" title="G_day raw — добовий continuous фон (Kp_day − 2 + ΣAᵢ). Це НЕ PDF/Engine експертна оцінка дня. Для рішень дня перевір PDF/Engine card.">
+      html += `<div style="margin-top:8px;font-size:12px;color:#7a9acc" title="G_day raw — добовий continuous фон (2 − Kp_day + ΣAᵢ). Це НЕ PDF/Engine reference і не команда. Для оперативної дії дивись Hero/safety-контур.">
         📅 Найкращий день (7 днів): <strong style="color: var(--ok)">${best.ds}</strong>
         G_day raw = <strong style="color: var(--ok)">${best.G.toFixed(1)}</strong>
         · ${classifyG(best.G)}

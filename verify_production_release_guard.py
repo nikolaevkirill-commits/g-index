@@ -48,6 +48,14 @@ def main() -> None:
     require(index, "sig.opKey === 'neutral'", 'Hero conflict wording follows resolved operational state')
     require(index, 'ДЕННИЙ PDF/ENGINE REFERENCE · НЕ РІШЕННЯ ДЛЯ ДІЇ', 'AUTO feed panel is reference-only')
     require(index, 'Оперативну дію визначає обережніший стан у Hero', 'AUTO feed panel defers to operational safety')
+    require(index, 'const operational = sig && isFinite(sig.decisionScore)', 'week summary uses operational score')
+    require(index, 'PDF/Engine reference ${refStr}', 'week summary labels reference separately')
+    require(index, 'const _rawGOf = d => Number(d?.G)', '27-day filter uses raw G only')
+    require(index, 'raw-контекст · не команда', '27-day table has no raw-G action recommendation')
+    require(index, 'позитивний стан не є дозволом на нові дії', 'Decision Layer stale-data guard')
+    require(index, 'позитивний стан не є дозволом', 'decision strip stale-data guard')
+    require(index, 'Operational resolver недоступний — лише raw/reference аудит', 'CSV resolver failure is explicit')
+    require(index, 'Day_score_reference = ${dayTxt}', 'ICS labels PDF/Engine as reference')
     require(index, 'Оперативний стан ${_op179} має пріоритет:', 'personal cycle safety gate')
     require(index, 'окрема порада призупинена через глобальний ризик', 'personal cycle positive-advice suppression')
     require(index, 'PDF/Engine reference, не оперативне рішення', '27-day reference-only caption')
@@ -72,6 +80,19 @@ def main() -> None:
         'Одне рішення за ієрархією джерел': 'AUTO feed masquerades as operational command',
         'Вердикт дня вгорі = PDF/Engine (експерт), він головний': '3-day tooltip crowns PDF over safety contour',
         'PDF/Engine — пріоритет · live Kp оновлює фон': '3-day banner demotes live safety data',
+        'days.filter(d=>d.eng': 'week summary classifies PDF reference as operational days',
+        'const s = d.eng': 'week row displays PDF reference as main score',
+        'const _decisionOf =': '27-day raw filter substitutes PDF/Engine score',
+        'Рішення ${isFinite(G_display)': '27-day raw G badge is labeled as decision',
+        'recommendG(G_display, kpUsed).text': '27-day raw context emits action recommendation',
+        '✔ Діяти до ${String(_sw30.label)': 'incoming storm creates unconditional action permission',
+        'DO.unshift(`важливе — завершити до': 'storm advice adds important action under restrictive state',
+        'Kp_day − 2': 'visible formula inverts 2−Kp',
+        '}) − 2 + ΣAᵢ': '3-day tooltip inverts 2−Kp',
+        ": (dayScore === '' ? G : Number(dayScore))": 'CSV substitutes PDF/raw for missing operational resolver',
+        ': (Number.isFinite(dayScore) ? dayScore : G)': 'ICS substitutes PDF/raw for missing operational resolver',
+        '(базове PDF/Engine-рішення)': 'ICS labels PDF reference as base decision',
+        '· РІШЕННЯ ${d._expertEng': 'forward timeline tooltip labels PDF reference as decision',
         'Головний показник.': 'misleading PDF-first 27-day tooltip',
         'червоний/зелений = PDF/Engine-рішення': 'misleading 27-day decision caption',
     }
