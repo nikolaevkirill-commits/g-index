@@ -110,6 +110,29 @@ const stormHeroSignal = heroSignal(2, 2);
 context.window._stormWindow = { kp: 5.3, label: '18', hoursAhead: 0, etaLabel: 'ЗАРАЗ', active: true };
 assertHeadline('Hero storm guard stays operational-first', stormHeroSignal, 'Оперативно СТОП: буря');
 context.window._stormWindow = null;
+const incomingStormTenseSignal = heroSignal(2, -3);
+context.window._stormWindow = { kp: 5.3, label: '21', hoursAhead: 2, etaLabel: '~2г', active: false };
+assertHeadline('Incoming storm cannot soften an existing stop state', incomingStormTenseSignal, 'Оперативно СТОП зараз;');
+context.window._stormWindow = null;
+
+const weekStart = html.indexOf('function renderWeekSummary(){');
+const weekEnd = html.indexOf('// ═══ v88.8.39-fp76', weekStart);
+if (weekStart < 0 || weekEnd < 0) throw new Error('week summary function missing');
+const weekBar = { style: {}, innerHTML: '' };
+context.document = { getElementById: id => id === 'weekSummaryBar' ? weekBar : null };
+context.fmtDate = d => d.toISOString().slice(0, 10);
+context.getDynamicKpForDate_v889125 = () => 2;
+context.computeAi = () => ({ Ai: -3 });
+context.sunriseUTC = d => d;
+context.kpDayTerm = () => 0;
+context.window.__uiState = {};
+activeEntry = { eng: 2, _expertOverride: true };
+vm.runInContext(html.slice(weekStart, weekEnd), context);
+context.renderWeekSummary();
+if (!weekBar.innerHTML.includes('ref +2 PDF') || !weekBar.innerHTML.includes('Стоп:') || weekBar.innerHTML.includes('Краще:')) {
+  throw new Error(`week summary did not honor operational -3 over PDF +2: ${weekBar.innerHTML}`);
+}
+console.log('PASS week summary runtime: operational -3 is primary; PDF +2 remains reference');
 
 function requireText(needle, label) {
   if (!html.includes(needle)) throw new Error(`${label}: missing ${needle}`);
@@ -127,6 +150,14 @@ requireText('Оперативно СТОП: буря Kp=', 'storm Hero wording i
 requireText("sig.opKey === 'neutral'", 'Hero conflict wording follows resolved operational state');
 requireText('ДЕННИЙ PDF/ENGINE REFERENCE · НЕ РІШЕННЯ ДЛЯ ДІЇ', 'AUTO feed panel is reference-only');
 requireText('Оперативну дію визначає обережніший стан у Hero', 'AUTO feed panel defers to operational safety');
+requireText('const operational = sig && isFinite(sig.decisionScore)', 'week summary uses operational score');
+requireText('PDF/Engine reference ${refStr}', 'week summary keeps reference separately labeled');
+requireText('const _rawGOf = d => Number(d?.G)', '27-day G filter uses raw G only');
+requireText('raw-контекст · не команда', '27-day table has no raw-G action recommendation');
+requireText('позитивний стан не є дозволом на нові дії', 'Decision Layer fails closed on stale data');
+requireText('позитивний стан не є дозволом', 'decision strip fails closed on stale data');
+requireText("Operational resolver недоступний — лише raw/reference аудит", 'CSV fails closed when resolver is unavailable');
+requireText('Day_score_reference = ${dayTxt}', 'ICS labels PDF/Engine as reference');
 requireText('Локальний цикл зараз:', 'personal activity cycle is labeled as local context');
 requireText('Оперативний стан ${_op179} має пріоритет:', 'personal activity cycle has operational safety gate');
 requireText('окрема порада призупинена через глобальний ризик', 'positive local activity advice is suppressed during operational risk');
@@ -148,5 +179,18 @@ forbidText('ЄДИНИЙ ПІДСУМКОВИЙ РЕЗУЛЬТАТ', 'AUTO feed 
 forbidText('Одне рішення за ієрархією джерел', 'AUTO feed cannot masquerade as operational command');
 forbidText('Вердикт дня вгорі = PDF/Engine (експерт), він головний', '3-day tooltip cannot crown PDF over safety contour');
 forbidText('PDF/Engine — пріоритет · live Kp оновлює фон', '3-day banner cannot demote live safety data');
+forbidText('days.filter(d=>d.eng', 'week summary cannot classify PDF reference as operational days');
+forbidText('const s = d.eng', 'week row cannot display PDF reference as main score');
+forbidText('const _decisionOf =', '27-day raw filter cannot substitute PDF/Engine score');
+forbidText('Рішення ${isFinite(G_display)', '27-day raw G badge cannot be labeled as a decision');
+forbidText('recommendG(G_display, kpUsed).text', '27-day raw context cannot emit action recommendation');
+forbidText('✔ Діяти до ${String(_sw30.label)', 'incoming storm cannot create unconditional action permission');
+forbidText('DO.unshift(`важливе — завершити до', 'storm advice cannot add important action under a restrictive state');
+forbidText('Kp_day − 2', 'visible formula cannot invert 2−Kp');
+forbidText('}) − 2 + ΣAᵢ', '3-day tooltip cannot invert 2−Kp');
+forbidText(": (dayScore === '' ? G : Number(dayScore))", 'CSV cannot substitute PDF/raw for missing operational resolver');
+forbidText(': (Number.isFinite(dayScore) ? dayScore : G)', 'ICS cannot substitute PDF/raw for missing operational resolver');
+forbidText('(базове PDF/Engine-рішення)', 'ICS cannot label PDF reference as base decision');
+forbidText('· РІШЕННЯ ${d._expertEng', 'forward timeline tooltip cannot label PDF reference as decision');
 forbidText('Головний показник.', 'old PDF-first 27-day tooltip removed');
 forbidText('червоний/зелений = PDF/Engine-рішення', 'old 27-day decision caption removed');
