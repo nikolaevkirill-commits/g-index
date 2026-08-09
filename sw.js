@@ -21,7 +21,7 @@
 // Service-worker cache safety note; original detail is preserved in the backup.
 // Service-worker cache safety note; original detail is preserved in the backup.
 
-const CACHE_VERSION = 'fp359-v1'; // Decision consistency + working manual update activation
+const CACHE_VERSION = 'fp360-v1'; // Operational-first Hero language + working manual update activation
 const CACHE_PREFIX = 'gindex-'; // G-Index cache namespace; do not remove the prefix.
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${CACHE_VERSION}`;
 const DATA_CACHE = `${CACHE_PREFIX}data-${CACHE_VERSION}`;
@@ -99,8 +99,7 @@ self.addEventListener('fetch', (event) => {
     );
 
   if (isCrossOrigin) {
-    // Service-worker cache safety note; original detail is preserved in the backup.
-    // Service-worker cache safety note; original detail is preserved in the backup.
+    // Cross-origin responses are not cached: opaque bodies cannot be stamped safely.
     return;
   }
 
@@ -109,26 +108,10 @@ self.addEventListener('fetch', (event) => {
       const cache = await caches.open(DATA_CACHE);
       try {
         const fresh = await fetch(req);
-        // Service-worker cache safety note; original detail is preserved in the backup.
-        // Service-worker cache safety note; original detail is preserved in the backup.
-        // Service-worker cache safety note; original detail is preserved in the backup.
-        // Service-worker cache safety note; original detail is preserved in the backup.
         if (!fresh.ok) {
           throw new Error(`HTTP ${fresh.status} for ${req.url}`);
         }
-        // Service-worker cache safety note; original detail is preserved in the backup.
-        // Service-worker cache safety note; original detail is preserved in the backup.
-        // С‡РµСЂРµР· `new Response(body, {status, ...})` РґР»СЏ Р·Р°РїРёСЃСѓ timestamp-Р·Р°РіРѕР»РѕРІРєР°.
-        // Service-worker cache safety note; original detail is preserved in the backup.
-        // РјР°С‚Рё С‚С–Р»Рѕ Р·Р° specification) С– РґР»СЏ opaque cross-origin РІС–РґРїРѕРІС–РґРµР№
-        // Service-worker cache safety note; original detail is preserved in the backup.
-        // Service-worker cache safety note; original detail is preserved in the backup.
-        // Service-worker cache safety note; original detail is preserved in the backup.
-        // Service-worker cache safety note; original detail is preserved in the backup.
-        // Service-worker cache safety note; original detail is preserved in the backup.
-        // Service-worker cache safety note; original detail is preserved in the backup.
-        // Service-worker cache safety note; original detail is preserved in the backup.
-        // Service-worker cache safety note; original detail is preserved in the backup.
+        // Stamp same-origin cached data so the page can report its real fallback age.
         try {
           const _stampedHeaders = new Headers(fresh.headers);
           _stampedHeaders.set('x-gindex-cached-at', String(Date.now()));
@@ -140,21 +123,14 @@ self.addEventListener('fetch', (event) => {
           });
           await cache.put(req, _stamped);
         } catch (_stampErr) {
-          // Service-worker cache safety note; original detail is preserved in the backup.
-          // Service-worker cache safety note; original detail is preserved in the backup.
+          // If header stamping fails, preserve a usable unstamped response.
           try { await cache.put(req, fresh.clone()); } catch (_e2) { /* best-effort */ }
         }
         return fresh;
       } catch (e) {
-        // Service-worker cache safety note; original detail is preserved in the backup.
-        // Service-worker cache safety note; original detail is preserved in the backup.
-        // Service-worker cache safety note; original detail is preserved in the backup.
         const cached = await cache.match(req);
         if (cached) {
-          // Service-worker cache safety note; original detail is preserved in the backup.
-          // Service-worker cache safety note; original detail is preserved in the backup.
-          // Service-worker cache safety note; original detail is preserved in the backup.
-          // Service-worker cache safety note; original detail is preserved in the backup.
+          // Tell the page exactly when fallback data was cached, when known.
           try {
             const clients = await self.clients.matchAll({ type: 'window' });
             const _cachedAtHeader = cached.headers.get('x-gindex-cached-at');
