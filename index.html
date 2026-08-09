@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.165-fp358-KYIV-DATE-CANON</title>
+  <title>G-Index — Космофізичний дашборд v88.9.166-fp359-DECISION-CONSISTENCY</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -779,6 +779,10 @@
     #timingRows .timing-row{padding:4px 8px!important;margin-bottom:2px!important;border-radius:8px!important;grid-template-columns:82px 1fr!important;gap:6px!important;font-size:11px!important;background:rgba(255,255,255,.025)!important;border:1px solid rgba(255,255,255,.04)!important}
     #timingRows .timing-row.is-now{background:rgba(43,212,125,.10)!important;border-color:rgba(43,212,125,.22)!important}
     #timingRows .timing-row.is-next{background:rgba(55,167,255,.06)!important;border-color:rgba(55,167,255,.14)!important}
+    /* fp359: current is a time marker, not a positive verdict. The action owns the colour. */
+    #timingRows .timing-row.is-now.is-blocked{background:rgba(255,107,107,.11)!important;border-color:rgba(255,107,107,.28)!important;border-left-color:#ff6b6b!important}
+    #timingRows .timing-row.is-now.is-routine{background:rgba(255,170,51,.10)!important;border-color:rgba(255,170,51,.26)!important;border-left-color:#ffaa33!important}
+    #timingRows .timing-row.is-now.is-allowed{background:rgba(43,212,125,.10)!important;border-color:rgba(43,212,125,.25)!important;border-left-color:#2bd47d!important}
     #timingRows .timing-time{font-size:10px!important;color:var(--muted)!important;font-variant-numeric:tabular-nums}
     #timingRows .timing-label{font-size:11px!important}
     /* P2: whyRows → chips (v87.2: pill layout замість таблиці) */
@@ -3218,7 +3222,16 @@ function pwaDismiss() {
 
 function pwaReload() {
   if (_swReg && _swReg.waiting) {
+    const bar = document.getElementById('pwaUpdateBar');
+    if (bar) {
+      const label = bar.querySelector('span');
+      const button = bar.querySelector('button');
+      if (label) label.textContent = '🔄 Застосовую оновлення G-Index…';
+      if (button) button.disabled = true;
+    }
     _swReg.waiting.postMessage({ type: 'SKIP_WAITING' });
+    // Fallback for older workers that did not implement SKIP_WAITING.
+    setTimeout(() => window.location.reload(), 4000);
   } else {
     window.location.reload();
   }
@@ -5282,8 +5295,26 @@ const GIndexPPProfile = {
         _currentAct179 = getPakshiActivityForYama(birdId, _yamaInfo179.yamaIdx, _weekday179, _yamaInfo179.isDay, _isShukla179);
       }
       const _actColors179 = {0:'#ff6b6b', 1:'#9bb1dc', 2:'#ffd93d', 3:'#9bd49e', 4:'#5dd49e'};
-      const _cardColor = _currentAct179 ? _actColors179[_currentAct179.strength] : '#9bb1dc';
-      const _advice = _currentAct179 ? this.ACT_ADVICE[_currentAct179.strength] : '';
+      let _cardColor = _currentAct179 ? _actColors179[_currentAct179.strength] : '#9bb1dc';
+      let _advice = _currentAct179 ? this.ACT_ADVICE[_currentAct179.strength] : '';
+      let _operationalGuard179 = '';
+      // fp359: the bird/activity cycle is local context only. It must never grant
+      // permission against the canonical current operational state.
+      try {
+        const _g179 = isFinite(window.__uiState?.gNow) ? Number(window.__uiState.gNow) : NaN;
+        const _kp179 = isFinite(window.__uiState?.kpNow) ? Number(window.__uiState.kpNow) : NaN;
+        const _sig179 = (typeof resolveDaySignal_v88825 === 'function')
+          ? resolveDaySignal_v88825(new Date(todayKyivStr()+'T12:00:00Z'), _g179, _kp179, {isToday:true})
+          : null;
+        const _op179 = Number(_sig179?.decisionScore);
+        if (Number.isFinite(_op179) && _op179 <= -1) {
+          _cardColor = _op179 <= -2 ? '#ff6b6b' : '#ffaa33';
+          _advice = _currentAct179
+            ? 'Локальна фаза показана лише як контекст; її окрема порада призупинена через глобальний ризик.'
+            : '';
+          _operationalGuard179 = `<div style="margin-top:6px;padding:6px 8px;border-radius:6px;background:rgba(255,107,107,.10);border-left:3px solid ${_cardColor};font-size:10px;color:#ffd2d2"><strong>Оперативний стан ${_op179} має пріоритет:</strong> лише необхідна рутина; не починати нових справ і не вести важливих переговорів.</div>`;
+        }
+      } catch(_e) { /* local cycle remains advisory */ }
 
       elBird.style.display = 'block';
       elBird.style.background = _cardColor + '14';
@@ -5298,9 +5329,10 @@ const GIndexPPProfile = {
           </div>
         </div>
         ${_currentAct179 ? `<div style="margin-top:8px;padding:6px 8px;border-radius:6px;background:${_cardColor}22;border-left:3px solid ${_cardColor}">
-          <div style="font-size:11px;font-weight:700;color:${_cardColor}">Зараз: ${_currentAct179.activityUa}</div>
+          <div style="font-size:11px;font-weight:700;color:${_cardColor}">Локальний цикл зараз: ${_currentAct179.activityUa}</div>
           <div style="font-size:10px;color:var(--text2);margin-top:2px">${_advice}</div>
         </div>` : ''}
+        ${_operationalGuard179}
         <div style="margin-top:6px;font-size:10px;color:var(--faint)">
           ${p.name ? p.name + ' · ' : ''}${p.date}${p.time ? ' ' + p.time : ' (12:00)'}
           ${!p.time ? ' <span style="color:var(--warn)">⚠ ±1 nakshatra без часу</span>' : ''}
@@ -11055,7 +11087,7 @@ function renderForwardTimeline(){
       <span class="pill" style="font-size:9px">${visibleData.length} дн.</span>
       ${narrowHint}
       <span class="hint" tabindex="0" style="font-size:10px;color:var(--faint);cursor:help">ⓘ<span class="hint-pop" style="white-space:pre;font-size:11px">Інтерактивна смуга прогнозу. Клік по стовпчику — вибір дня.
-▶ Play автопрокручує по обраній швидкості. Висота ∝ |G_day raw|. Колір червоний/зелений дозволений лише для PDF/Engine-рішення; дні без рішення сині. Raw не є вердиктом.
+▶ Play автопрокручує по обраній швидкості. Висота ∝ |G_day raw|. Червоний/зелений — лише PDF/Engine reference; дні без reference сині. Reference і raw не є дозволом для дії.
 ${isNarrow?'На вузькому екрані показано 14 днів (−3..+10 від сьогодні).':'Показано всі 27 днів прогнозу.'}</span></span>
       <span style="margin-left:auto;display:flex;gap:3px;align-items:center">
         ${speedBtn(0.5, '½×')}
@@ -11067,7 +11099,7 @@ ${isNarrow?'На вузькому екрані показано 14 днів (−
     </div>
     <div id="ftSticksRow" style="display:flex;align-items:flex-end;height:48px;gap:${gap}px;padding:0 2px">${sticks}</div>
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:4px;font-size:9px;color:var(--faint);letter-spacing:.04em" title="Прозорість показує впевненість прогнозу. Дальні дні менш надійні через ±1.5 розкид Kp у NOAA 27-day outlook.">
-      <span><strong style="color:#8fb5ff">Синій = лише raw-контекст</strong>; червоний/зелений = PDF/Engine-рішення.</span><span>Горизонт raw:</span>
+      <span><strong style="color:#8fb5ff">Синій = лише raw-контекст</strong>; червоний/зелений = PDF/Engine reference, не оперативне рішення.</span><span>Горизонт raw:</span>
       <span style="display:inline-flex;align-items:center;gap:3px"><span style="display:inline-block;width:10px;height:8px;background: var(--muted);opacity:1"></span>0–3д 100%</span>
       <span style="display:inline-flex;align-items:center;gap:3px"><span style="display:inline-block;width:10px;height:8px;background: var(--muted);opacity:.75"></span>4–7д 75%</span>
       <span style="display:inline-flex;align-items:center;gap:3px"><span style="display:inline-block;width:10px;height:8px;background: var(--muted);opacity:.55"></span>8–14д 55%</span>
@@ -11077,15 +11109,26 @@ ${isNarrow?'На вузькому екрані показано 14 днів (−
       <div style="flex:0 0 auto">
         <div style="font-size:10px;color:var(--faint)">${sel.ds} · ${relTxt}</div>
         ${(() => {
-          // v88.8.37-fp70: PDF/Engine verdict = ГОЛОВНИЙ (великий), raw = довідковий (малий).
-          // Раніше було навпаки: G_day raw 18px bold, verdict 10px — порушувало правило fp61
-          // (expert головний, raw довідка). Тепер 27-day узгоджено з Hero.
+          // fp359: for today the canonical operational resolver is primary.
+          // PDF/Engine remains a frozen reference and raw remains source context.
           try {
             const _v = (typeof getEngineScore === 'function') ? getEngineScore(sel.ds) : null;
+            if (sel.ds === todayStr && typeof resolveDaySignal_v88825 === 'function') {
+              const _liveG = isFinite(window.__uiState?.gNow) ? Number(window.__uiState.gNow) : selG;
+              const _liveKp = isFinite(window.__uiState?.kpNow) ? Number(window.__uiState.kpNow) : Number(sel.kpUsed);
+              const _opSig = resolveDaySignal_v88825(new Date(sel.ds+'T12:00:00Z'), _liveG, _liveKp, {isToday:true});
+              const _op = Number(_opSig?.decisionScore);
+              if (Number.isFinite(_op)) {
+                const _opCol = _op >= 1 ? '#63be7b' : _op <= -1 ? '#ff6b6b' : '#9bb1dc';
+                const _ref = (_v && isFinite(_v.eng)) ? Math.max(-3, Math.min(3, Math.round(_v.eng))) : null;
+                return `<div class="mono" style="font-size:18px;font-weight:700;color:${_opCol}" title="Оперативний стан зараз: обережніший результат live/raw-фону та safety-обмежень.">${_op>=0?'+':''}${_op} <span style="font-size:11px;font-weight:600;color:var(--dim)">оперативний стан</span></div>`
+                  + `<div style="font-size:10px;color:var(--faint);margin-top:1px">${_ref === null ? '' : `PDF/Engine reference ${_ref>=0?'+':''}${_ref} · `}raw G_now ${_liveG>=0?'+':''}${Number(_liveG).toFixed(1)}</div>`;
+              }
+            }
             if (_v && isFinite(_v.eng)) {
               const _ec = Math.max(-3, Math.min(3, Math.round(_v.eng)));
               const _vcol = _ec >= 1 ? '#63be7b' : _ec <= -1 ? '#ff6b6b' : '#9bb1dc';
-              return `<div class="mono" style="font-size:18px;font-weight:700;color:${_vcol}" title="Рішення дня за PDF/Engine — підсумкова оцінка дня. Головний показник.">${_ec>=0?'+':''}${_ec} <span style="font-size:11px;font-weight:600;color:var(--dim)">PDF/Engine</span></div>`
+              return `<div class="mono" style="font-size:18px;font-weight:700;color:${_vcol}" title="Заморожений PDF/Engine reference для порівняння; не оперативний дозвіл.">${_ec>=0?'+':''}${_ec} <span style="font-size:11px;font-weight:600;color:var(--dim)">PDF/Engine reference</span></div>`
                 + `<div style="font-size:10px;color:var(--faint);margin-top:1px" title="Forward Timeline raw = day-peak G (max Kp прогнозу × ΣAᵢ). Довідковий геомагнітний тренд, НЕ вердикт.">довідково · raw G_day ${gSign}${selG.toFixed(1)}</div>`;
             }
           } catch(_e) { /* silent */ }
@@ -12491,7 +12534,7 @@ function renderPanchangaCard(state){
     if (!txt) return '';
     const safe = escapeHtml(String(txt));
     return _criticalFinalDay
-      ? `<span style="color:#9bb1dc">Локально: ${safe}</span><br><span style="color:#ff9f9f;font-size:9px">не дозвіл · оперативний стан ${_finalDayDecision}</span>`
+      ? `<span style="color:#9bb1dc">Локальна асоціація: ${safe}</span>`
       : `✓ ${safe}`;
   };
   // v88.9.54-fp236: "~12:00 UTC" тут був хардкоджений і неточний — dateUTC це
@@ -16093,8 +16136,8 @@ function heroHeadlineFromHierarchy_v88824(sig){
   // Day PDF/Engine score is shown as context, not as a command.
   // This prevents the wrong reading: "day +3" while all live windows say avoid.
   const ds = isFinite(sig.dayScore) ? (sig.dayScore >= 0 ? '+' + sig.dayScore : String(sig.dayScore)) : '—';
-  if(sig.dayScore >= 2 && sig.guard === 'live_tense') return `День сильний за PDF (${ds}), але фон зараз блокує — почекай`;
-  if(sig.dayScore >= 2 && sig.guard === 'live_unstable') return `День сприятливий за PDF (${ds}), але зараз варто обережніше`;
+  if(sig.dayScore >= 2 && sig.guard === 'live_tense') return `Оперативно СТОП: PDF reference ${ds} конфліктує з фоном зараз`;
+  if(sig.dayScore >= 2 && sig.guard === 'live_unstable') return `Оперативно обережно: PDF reference ${ds}, але live-фон слабший`;
   // fp23: якщо live-дані не свіжі — headline явно вказує на це
   try {
     const _dm = (typeof resolveDataModeExtended === 'function') ? resolveDataModeExtended() : null;
@@ -17824,8 +17867,12 @@ function _renderHeroTimeWindows() {
     // Panchanga overlay — лише коли слот НЕ заблокований вікном (активне Rahu/
     // Yama/Gulika вже explicit у тексті рішення, не дублюємо попередження).
     if (_panchTimingNote && g < 0.5 && !_decision.hasBlockedSegment) label += ` (${_panchTimingNote})`;
-    const cls = isCurrent ? ' is-now' : isNext ? ' is-next' : '';
-    const mark = isCurrent ? '<span style="color:var(--ok);font-size:10px;font-weight:700"> ◀ поточний слот</span>' : '';
+    const _isBlockedVisual = isCurrent ? _decision.blockedNow : _decision.hasBlockedSegment;
+    const _isRoutineVisual = !_isBlockedVisual && (label.includes('рутин') || label.includes('обереж') || label.includes('перевір'));
+    const _actionCls = _isBlockedVisual ? ' is-blocked' : _isRoutineVisual ? ' is-routine' : ' is-allowed';
+    const cls = (isCurrent ? ' is-now' : isNext ? ' is-next' : '') + _actionCls;
+    const _markColor = _isBlockedVisual ? '#ff6b6b' : _isRoutineVisual ? '#ffaa33' : 'var(--ok)';
+    const mark = isCurrent ? `<span style="color:${_markColor};font-size:10px;font-weight:700"> ◀ поточний слот</span>` : '';
     const dot = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${col};flex-shrink:0"></span>`;
     // v87.90: показуємо ЛОКАЛЬНИЙ час замість UTC (Київ юзер бачить свій час)
     // v88.9.6x-fp245: канонічно Europe/Kyiv, не browser TZ (аудит fp242, п.4).
@@ -18174,8 +18221,8 @@ function enforcePanchFinalPriority(){
   if (!(Number.isFinite(finalScore) && finalScore <= -1)) return;
   document.querySelectorAll('#panchGrid [data-local-action="1"]').forEach(td => {
     if (td.dataset.finalPriorityApplied === String(finalScore)) return;
-    const raw = (td.textContent || '').replace(/^✓\s*/, '').replace(/не дозвіл[\s\S]*$/, '').replace(/^Локально:\s*/, '').trim();
-    td.innerHTML = `<span style="color:#9bb1dc">Локально: ${escapeHtml(raw)}</span><br><span style="color:#ff9f9f;font-size:9px">не дозвіл · оперативний стан ${finalScore}</span>`;
+    const raw = (td.textContent || '').replace(/^✓\s*/, '').replace(/не дозвіл[\s\S]*$/, '').replace(/^Локальн(?:о|а асоціація):\s*/, '').trim();
+    td.innerHTML = `<span style="color:#9bb1dc">Локальна асоціація: ${escapeHtml(raw)}</span>`;
     td.dataset.finalPriorityApplied = String(finalScore);
   });
   const bt = document.getElementById('panchBestTime');
@@ -24634,15 +24681,21 @@ function _renderNoaaAlertBanner(events){
   if (!recent.length) { box.style.display = 'none'; box.innerHTML = ''; return; }
   const top = recent[0];
   const meta = _NOAA_LEVEL_STYLE[top.type] || _NOAA_LEVEL_STYLE.other;
-  const color = _noaaSeverityColor(top.level);
+  let color = _noaaSeverityColor(top.level);
   const hoursAgo = Math.round((Date.now() - new Date(top.issued).getTime()) / 3600000);
   // v88.9.07-fp188: подія 40+г тому виглядала як ПОТОЧНА буря (Kyrylo: "чому +,
   // коли сьогодні буря" — а бурі вже не було, Kp=2.0). Якщо сповіщення старе
   // (≥6г) і поточний Kp < 5 — явно кажемо, що буря не активна зараз.
   const _kpNowB = (window.__uiState && isFinite(window.__uiState.kpNow)) ? window.__uiState.kpNow : NaN;
-  const _notActiveNote = (hoursAgo >= 6 && isFinite(_kpNowB) && _kpNowB < 5)
-    ? `<div style="margin-top:3px;font-size:11px;color:#9bd49e">Зараз Kp=${_kpNowB.toFixed(1)} — буря не активна в цей момент. Це сповіщення про подію ${hoursAgo}г тому (вікно показу 48г).</div>`
-    : '';
+  const _isAged = hoursAgo >= 6;
+  const _isHistorical = _isAged && isFinite(_kpNowB) && _kpNowB < 5;
+  // An old bulletin must never look like a live status while Kp is still loading.
+  if (_isAged) color = '#9bb1dc';
+  const _notActiveNote = _isHistorical
+    ? `<div style="margin-top:3px;font-size:11px;color:#9bd49e"><strong>Не активна зараз:</strong> Kp=${_kpNowB.toFixed(1)}. Це історичний бюлетень про подію ${hoursAgo}г тому.</div>`
+    : _isAged
+      ? `<div style="margin-top:3px;font-size:11px;color:var(--dim)">Поточний статус визначається окремо за live Kp у рядку нижче.</div>`
+      : '';
   const moreCount = recent.length - 1;
   box.style.display = 'block';
   const plainExplain = _noaaPlainExplain(top.type, top.level);
@@ -24650,7 +24703,7 @@ function _renderNoaaAlertBanner(events){
     <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:1px solid ${color}55;border-radius:10px;background:${color}14">
       <span style="font-size:18px;line-height:1">${meta.icon}</span>
       <div style="flex:1">
-        <div style="font-weight:700;color:${color}">${meta.label}${top.level ? ' '+top.level : ''} — ${plainExplain}</div>
+        <div style="font-weight:700;color:${color}">${_isHistorical ? 'Історична подія NOAA' : _isAged ? `Бюлетень NOAA ${hoursAgo}г тому` : meta.label}${top.level ? ' '+top.level : ''} — ${_isHistorical ? 'не активна зараз' : _isAged ? 'опис події, не поточний статус' : plainExplain}</div>
         <div style="margin-top:2px;font-size:11px;color:var(--dim)">Офіційне сповіщення NOAA (не прогноз G-Index) · ${hoursAgo<1?'щойно':hoursAgo+'г тому'}${moreCount>0 ? ' · ще '+moreCount+' поді'+(moreCount===1?'я':'й')+' за 48г' : ''}</div>${_notActiveNote}
         <div style="margin-top:2px;font-size:9px;color:var(--faint)">Код бюлетеня NOAA: ${_escHtml(top.summary || '')}</div>
       </div>

@@ -21,7 +21,7 @@
 // Service-worker cache safety note; original detail is preserved in the backup.
 // Service-worker cache safety note; original detail is preserved in the backup.
 
-const CACHE_VERSION = 'fp358-v1'; // Kyiv civil-date canon + Kp freshness integrity
+const CACHE_VERSION = 'fp359-v1'; // Decision consistency + working manual update activation
 const CACHE_PREFIX = 'gindex-'; // G-Index cache namespace; do not remove the prefix.
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${CACHE_VERSION}`;
 const DATA_CACHE = `${CACHE_PREFIX}data-${CACHE_VERSION}`;
@@ -40,6 +40,15 @@ self.addEventListener('install', (event) => {
       .then((cache) => cache.addAll(SHELL_ASSETS))
       .catch(() => {})
   );
+});
+
+// fp359: the page's Update button posts SKIP_WAITING. Without this listener a
+// newly installed worker remained in waiting forever and the blue update bar
+// reappeared after every reload.
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
 
 self.addEventListener('activate', (event) => {
