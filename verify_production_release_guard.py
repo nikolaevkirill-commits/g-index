@@ -93,6 +93,8 @@ def main() -> None:
         ': (Number.isFinite(dayScore) ? dayScore : G)': 'ICS substitutes PDF/raw for missing operational resolver',
         '(базове PDF/Engine-рішення)': 'ICS labels PDF reference as base decision',
         '· РІШЕННЯ ${d._expertEng': 'forward timeline tooltip labels PDF reference as decision',
+        'G_day = Largest 2 − Kp': '27-day legend formula is malformed',
+        'Найкращий день (7 днів)': 'raw maximum is labeled best decision day',
         'Головний показник.': 'misleading PDF-first 27-day tooltip',
         'червоний/зелений = PDF/Engine-рішення': 'misleading 27-day decision caption',
     }
