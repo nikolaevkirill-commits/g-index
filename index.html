@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.175-fp368-PWA-CACHE-CLOSURE</title>
+  <title>G-Index — Космофізичний дашборд v88.9.176-fp369-UX-FOCUS</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1369,8 +1369,42 @@ body.simple-mode #cosmicMapWrap {
 /* v88.8.35-fp56-P8: in Basic Mode, replace expert labels (Рішення дня · PDF/Engine /
    Фон зараз · G_now) with plain words (Сьогодні / Зараз) via CSS content: substitution.
    data-basic attr is already set on .hero-label spans by _renderHeroHierarchy. */
-/* v88.8.35-fp56-P8: «Чому?» accordion visible only in Basic Mode */
-body.simple-mode #heroWhyBasic { display: block !important; }
+/* fp369: the score explanation is essential context, so it stays available in both views. */
+#heroWhyBasic { display: block !important; }
+#heroWhyBasic > summary {
+  cursor: pointer;
+  color: var(--muted);
+  list-style: none;
+  user-select: none;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(11,18,32,.34);
+}
+#heroWhyBasic > summary::-webkit-details-marker { display: none; }
+#heroWhyBasic[open] > summary { color: var(--text2); border-color: var(--border2); }
+
+/* fp369: keep the header focused on actions used every day. */
+.dashboard-toolbar:not(.tools-open) #tierBadge,
+.dashboard-toolbar:not(.tools-open) #authBtn,
+.dashboard-toolbar:not(.tools-open) #pushBtn,
+.dashboard-toolbar:not(.tools-open) #soundBtn,
+.dashboard-toolbar:not(.tools-open) #btnInstallApp,
+.dashboard-toolbar:not(.tools-open) #btnHardReset,
+.dashboard-toolbar:not(.tools-open) #btnShare,
+.dashboard-toolbar:not(.tools-open) #btnChronoExport,
+.dashboard-toolbar:not(.tools-open) #btnLang,
+.dashboard-toolbar:not(.tools-open) #btnG2Watch { display: none !important; }
+#btnHeaderTools[aria-expanded="true"] { border-color: var(--accent); color: var(--text2); }
+#heroActionCmd { font-size: clamp(18px, 1.45vw, 22px) !important; line-height: 1.25 !important; }
+#heroDecisionDo, #heroDecisionAvoid { font-size: clamp(14px, 1.15vw, 18px) !important; line-height: 1.35 !important; }
+@media (max-width: 760px) {
+  .dashboard-toolbar { justify-content: flex-start; }
+  .dashboard-toolbar .autoref-bar { width: auto; }
+  #stamp, #dataTimestamp { display: none !important; }
+}
 body.simple-mode .hero-label[data-basic] {
   visibility: hidden;   /* hide original text but keep layout width */
   position: relative;
@@ -1509,7 +1543,7 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
         <h1 id="headerTitle">Космофізичний дашборд</h1>
         <div class="sub" id="headerSub">Геомагнітний прогноз · Панчанга · Персональний цикл &nbsp;<span style="color:var(--faint);font-size:10px">R&D / Advisory</span></div>
       </div>
-      <div class="right flex" style="flex-wrap:wrap;gap:6px">
+      <div class="right flex dashboard-toolbar" id="dashboardToolbar" style="flex-wrap:wrap;gap:6px">
         <span id="tierBadge" onclick="PAYWALL.tier()==='free'?PaywallModal.show('G-Index Premium','basic'):null"
           style="display:inline-block;font-size:11px;font-weight:700;padding:3px 9px;border-radius:6px;
           vertical-align:middle;letter-spacing:.05em;cursor:pointer;background: var(--border);color: var(--dim)">Free</span>
@@ -1528,6 +1562,10 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
           aria-label="Встановити G-Index як застосунок"
           style="background:#0a2a1a;color:#7fffc0;border:1px solid #1a6644;font-size:11px;padding:3px 9px;border-radius:6px;cursor:pointer">📲 Застосунок</button>
         <button id="btnRefresh" aria-label="Оновити дані з NOAA">↻ Оновити дані</button>
+        <button id="btnHeaderTools" type="button" aria-expanded="false" aria-controls="dashboardToolbar"
+          title="Показати або сховати другорядні інструменти"
+          onclick="const bar=document.getElementById('dashboardToolbar');const open=bar.classList.toggle('tools-open');this.setAttribute('aria-expanded',String(open));this.textContent=open?'× Сховати':'⋯ Інструменти';"
+          style="background:var(--border);color:var(--muted);border:1px solid var(--border2);font-size:11px;padding:3px 9px;border-radius:6px">⋯ Інструменти</button>
         <button id="btnHardReset" title="Скинути кеш SW і перезавантажити — якщо бачиш стару версію"
           aria-label="Очистити кеш Service Worker і перезавантажити"
           onclick="(async function(){try{if('serviceWorker' in navigator){const _s=new window.URL('.', location.href).href;const regs=await navigator.serviceWorker.getRegistrations();await Promise.all(regs.filter(r=>r.scope===_s).map(r=>r.unregister()));}if('caches' in window){const keys=await caches.keys();await Promise.all(keys.filter(k=>k.startsWith('gindex-')).map(k=>caches.delete(k)));}location.reload(true);}catch(e){alert('Reset error: '+e.message);}})()"
@@ -1739,10 +1777,9 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
                  подія за останні 48г, незалежно від того чи вона зачепила storm-guard поріг. -->
             <div id="noaaAlertBanner" style="display:none;margin-bottom:8px"></div>
             <div id="solarWindBadge" style="display:none;margin-bottom:8px"></div>
-            <!-- v88.8.35-fp56-P8: «Чому?» accordion — only visible in Basic Mode.
-                 Shows a 1-click plain-language reason without formulas. -->
-            <details id="heroWhyBasic" style="display:none;margin-bottom:6px;font-size:11px">
-              <summary style="cursor:pointer;color:var(--faint);list-style:none;user-select:none">▸ Чому сьогодні такий день?</summary>
+            <!-- fp369: plain-language reason is available in both simple and full views. -->
+            <details id="heroWhyBasic" style="display:block;margin-bottom:8px;font-size:12px">
+              <summary>▸ Чому така оцінка?</summary>
               <div id="heroWhyText" style="margin-top:5px;padding:7px 10px;background:rgba(11,18,32,.4);border-radius:8px;border:1px solid var(--border);color:var(--muted);line-height:1.5">
                 Завантаження…
               </div>
