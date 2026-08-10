@@ -190,6 +190,11 @@ requireText("'PDF reference' : 'Engine reference'", '3-day reference source is e
 requireText('· не дозвіл</span></div>', '3-day reference line cannot be read as action permission');
 requireText('PDF REFERENCE · VERIFIED OVERRIDE · НЕ РІШЕННЯ ДЛЯ ДІЇ', 'verified PDF banner is reference-only');
 requireText('${_bulletinLine}', '3-day reference line is always rendered');
+requireText('onclick="toggleSimpleMode()"', 'simple/full mode button has a direct durable handler');
+requireText("localStorage.setItem('gindex_simple_mode', isOn ? '1' : '0')", 'full-mode preference persists across reloads');
+requireText('onclick="setSimpleMode(false);', 'mode picker full choice activates full mode immediately');
+requireText('onclick="setSimpleMode(true);', 'mode picker simple choice keeps simple mode active');
+forbidText("localStorage.removeItem('gindex_simple_mode')", 'full-mode preference cannot be erased back to simple default');
 forbidText('День сильний за PDF', 'old PDF-first Hero headline removed');
 forbidText('МОЖНА ДІЯТИ за PDF', 'PDF reference cannot grant action');
 forbidText('Сильний день за PDF', 'PDF-first positive Hero branch removed');
