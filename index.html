@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.173-fp366-ADVISORY-FRESHNESS</title>
+  <title>G-Index — Космофізичний дашборд v88.9.174-fp367-ADVISORY-AGE-LABELS</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -6465,7 +6465,7 @@ async function loadSourceHealth(){
     // A successfully delivered old snapshot must never be presented as LIVE.
     const swAge=Number(sw.candidates&&sw.candidates[0]&&sw.candidates[0].age_hours);
     const swIsStale=String(sw.status||'').toLowerCase()==='stale'||(Number.isFinite(swAge)&&swAge>6);
-    const swLabel=swIsStale ? 'STALE '+(Number.isFinite(swAge)?swAge.toFixed(1):'—')+' год' :
+    const swLabel=swIsStale ? 'STALE джерело '+(Number.isFinite(swAge)?swAge.toFixed(1):'—')+' год' :
       (delivery.status==='last_good' ? 'LAST-GOOD '+Number(delivery.age_hours||0).toFixed(1)+' год' : 'LIVE');
     if(sum){ sum.textContent='📡 Джерела: Kp '+kpLabel+' · space '+swLabel+(hard.length?' · BLOCKED':warnings.length?' · WARN':' · OK'); sum.style.color=hard.length?'#ff8d8d':warnings.length?'#ffd37a':'#9be7bd'; }
     if(body) body.innerHTML='<b>Kp:</b> '+kpLabel+' <span style="color:var(--faint)">(це кількість точок, не значення Kp)</span><br><b>Космічна погода:</b> '+swLabel+'<br><b>Правило:</b> synthetic/last-good позначаються явно; відсутні дані не стають нулем; advisory не змінює G.';
@@ -6486,7 +6486,7 @@ async function loadSpaceWeatherAccumulated(){
     const delivery=p.delivery||{}, deliveryStatus=delivery.status||'live', deliveryAge=Number(delivery.age_hours||0);
     const fetchedAt=Date.parse(p.fetched_at||''), currentAgeHours=Number.isFinite(fetchedAt)?(Date.now()-fetchedAt)/3600000:null;
     const advisoryStale=currentAgeHours!==null&&currentAgeHours>6;
-    const sourceLabel=advisoryStale ? ('STALE · '+currentAgeHours.toFixed(1)+' год') :
+    const sourceLabel=advisoryStale ? ('STALE знімок · '+currentAgeHours.toFixed(1)+' год') :
       (deliveryStatus==='last_good' ? ('LAST-GOOD · '+deliveryAge.toFixed(1)+' год') : 'LIVE');
     const stressed=(Number(m.longest_bz_le_minus5_minutes)>=30)||(Number(w.dynamic_pressure_max_6h_npa)>=5)||
       !!c.shock_candidate||Number(d.latest_nt)<=-50||Number(hp30.max_24h)>=5||
@@ -6578,7 +6578,7 @@ async function loadBgsSpaceWeather(){
     });
     const bgsFetchedAt=Date.parse(b.fetched_at||''), bgsAgeHours=Number.isFinite(bgsFetchedAt)?(Date.now()-bgsFetchedAt)/3600000:null;
     const bgsStale=bgsAgeHours!==null&&bgsAgeHours>12;
-    if(sum) sum.textContent='🌍 BGS 3-добовий прогноз'+(bgsStale?' · STALE '+bgsAgeHours.toFixed(1)+' год':'')+(conflict?' · ⚠ конфлікт із позитивною моделлю':'')+
+    if(sum) sum.textContent='🌍 BGS 3-добовий прогноз'+(bgsStale?' · STALE знімок '+bgsAgeHours.toFixed(1)+' год':'')+(conflict?' · ⚠ конфлікт із позитивною моделлю':'')+
       (flags.storm_g1_plus?' · можливий G1':'')+
       (flags.cme?' · CME':'')+(flags.glancing_blow?' · ковзний удар':'');
     if(body) body.innerHTML=
