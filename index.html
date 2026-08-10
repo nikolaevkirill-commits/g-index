@@ -1536,7 +1536,7 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
         <button id="btnChronoExport" title="Експорт Chrono Journal" onclick="(function(){try{var d=localStorage.getItem('gindex_chrono_v2_abcd')||'[]';prompt('CHRONO JSON (A/B/C/D):',d);}catch(e){alert('Помилка: '+e.message);}})()" style="background:#0a2a1a;color:#44ffaa;border:1px solid #1a6644;font-size:11px;padding:3px 8px;border-radius:6px">📊</button>
         <button class="lang-btn active" id="btnLang" title="Switch language / Змінити мову" aria-label="Змінити мову інтерфейсу">UA</button>
         <button class="lang-btn" id="btnSimpleMode" title="Простий режим (тільки головне) / Експертний режим"
-          aria-label="Перемкнути простий/експертний режим" aria-pressed="false"
+          aria-label="Перемкнути простий/експертний режим" aria-pressed="false" onclick="toggleSimpleMode()"
           style="border-color:var(--faint);color:var(--dim);font-size:12px"><span aria-hidden="true">👁</span> <span id="simpleModeLabel">Простий вигляд</span></button>
         <button class="lang-btn" id="btnG2Watch" style="border-color:var(--faint);color:var(--dim);font-size:12px" title="Симулятор G — внизу сторінки" aria-label="Відкрити симулятор G">🧮</button>
         <div class="autoref-bar" style="margin-top:0">
@@ -23538,15 +23538,34 @@ function initG2Watch() {
 }
 
 // v88.6.9 SIMPLE MODE: toggle для civilian users (Євгенія). Hide advanced sections, show only Hero + 3-day forecast.
-function initSimpleMode(){
+function setSimpleMode(on, options){
   const btn = el('btnSimpleMode');
   if(!btn) return;
-  // v88.8.35-fp56-P8: keep label + aria-pressed in sync with state.
-  const _syncSimpleBtn = (on) => {
-    const lab = el('simpleModeLabel');
-    if(lab) lab.textContent = on ? 'Повний вигляд' : 'Простий вигляд';
-    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
-  };
+  const opts = options || {};
+  const isOn = Boolean(on);
+  document.body.classList.toggle('simple-mode', isOn);
+  const lab = el('simpleModeLabel');
+  if(lab) lab.textContent = isOn ? 'Повний вигляд' : 'Простий вигляд';
+  btn.setAttribute('aria-pressed', isOn ? 'true' : 'false');
+  btn.classList.toggle('active', isOn);
+  btn.style.borderColor = isOn ? 'var(--ok)' : 'var(--faint)';
+  btn.style.color = isOn ? 'var(--ok)' : 'var(--dim)';
+  btn.title = isOn
+    ? 'Простий режим АКТИВНИЙ. Натисніть для повного експертного UI.'
+    : 'Повний режим АКТИВНИЙ. Натисніть для простого вигляду.';
+  if(opts.persist !== false){
+    try { localStorage.setItem('gindex_simple_mode', isOn ? '1' : '0'); } catch(e){}
+  }
+  if(opts.notify !== false && typeof showToast === 'function'){
+    showToast(isOn ? 'Простий режим увімкнено' : 'Повний режим увімкнено', 'info', 2000);
+  }
+}
+
+function toggleSimpleMode(){
+  setSimpleMode(!document.body.classList.contains('simple-mode'));
+}
+
+function initSimpleMode(){
   // Restore стан з localStorage
   // fp92: default = simple mode для нових (перший відкриття без збереженого налаштування)
   const _hasSimplePref = (function(){ try { return localStorage.getItem('gindex_simple_mode') !== null; } catch(e){ return true; } })();
@@ -23554,35 +23573,7 @@ function initSimpleMode(){
     if(!_hasSimplePref) return true; // new user → simple by default
     return localStorage.getItem('gindex_simple_mode') === '1';
   } catch(e){ return true; } })();
-  if(_savedSimple){
-    document.body.classList.add('simple-mode');
-    btn.classList.add('active');
-    btn.style.borderColor = 'var(--ok)';
-    btn.style.color = 'var(--ok)';
-    btn.title = 'Простий режим АКТИВНИЙ. Натисніть для повного експертного UI.';
-  }
-  _syncSimpleBtn(_savedSimple);
-  btn.addEventListener('click', () => {
-    const isOn = document.body.classList.toggle('simple-mode');
-    _syncSimpleBtn(isOn);
-    if(isOn){
-      btn.classList.add('active');
-      btn.style.borderColor = 'var(--ok)';
-      btn.style.color = 'var(--ok)';
-      btn.title = 'Простий режим АКТИВНИЙ. Натисніть для повного експертного UI.';
-      try { localStorage.setItem('gindex_simple_mode', '1'); } catch(e){}
-    } else {
-      btn.classList.remove('active');
-      btn.style.borderColor = 'var(--faint)';
-      btn.style.color = 'var(--dim)';
-      btn.title = 'Простий режим (тільки Hero) / Експертний режим';
-      try { localStorage.removeItem('gindex_simple_mode'); } catch(e){}
-    }
-    // Toast feedback
-    if(typeof showToast === 'function'){
-      showToast(isOn ? 'Простий режим увімкнено' : 'Експертний режим увімкнено', 'info', 2000);
-    }
-  });
+  setSimpleMode(_savedSimple, {persist:false, notify:false});
 }
 
 // Сценарії швидкого вибору
@@ -25205,8 +25196,8 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line208
         _pick.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:19000;background:var(--card);border:1px solid var(--border2);border-radius:14px;padding:14px 18px;max-width:360px;width:calc(100vw - 32px);box-shadow:0 8px 32px rgba(0,0,0,.6);text-align:center';
         _pick.innerHTML=`<div style="font-size:13px;font-weight:700;color:var(--text2);margin-bottom:10px">Який вигляд зручніший?</div>`
           +`<div style="display:flex;gap:8px;justify-content:center">`
-          +`<button onclick="(function(){try{localStorage.removeItem('gindex_simple_mode')}catch(e){}document.getElementById('basicModePicker')?.remove()})()" style="flex:1;padding:9px 12px;border-radius:10px;border:1px solid var(--border2);background:rgba(55,167,255,.08);color:#8fb5ff;font-size:12px;font-weight:700;cursor:pointer">📊 Повний<br><span style='font-size:10px;font-weight:400;color:var(--dim)'>Усі дані й аналітика</span></button>`
-          +`<button onclick="(function(){const b=document.getElementById('btnSimpleMode');if(b)b.click();document.getElementById('basicModePicker')?.remove()})()" style="flex:1;padding:9px 12px;border-radius:10px;border:1px solid var(--border2);background:rgba(43,212,125,.08);color:#9cd49c;font-size:12px;font-weight:700;cursor:pointer">👁 Простий<br><span style='font-size:10px;font-weight:400;color:var(--dim)'>Тільки головне</span></button>`
+          +`<button onclick="setSimpleMode(false);document.getElementById('basicModePicker')?.remove()" style="flex:1;padding:9px 12px;border-radius:10px;border:1px solid var(--border2);background:rgba(55,167,255,.08);color:#8fb5ff;font-size:12px;font-weight:700;cursor:pointer">📊 Повний<br><span style='font-size:10px;font-weight:400;color:var(--dim)'>Усі дані й аналітика</span></button>`
+          +`<button onclick="setSimpleMode(true);document.getElementById('basicModePicker')?.remove()" style="flex:1;padding:9px 12px;border-radius:10px;border:1px solid var(--border2);background:rgba(43,212,125,.08);color:#9cd49c;font-size:12px;font-weight:700;cursor:pointer">👁 Простий<br><span style='font-size:10px;font-weight:400;color:var(--dim)'>Тільки головне</span></button>`
           +`</div>`;
         document.body.appendChild(_pick);
       } catch(_e) { /* silent */ }
