@@ -9956,12 +9956,12 @@ function kpToApInterp(kp) {
 // --------- Нова функція: підказка для G (склад рівно в момент наведення) ----
 function gTooltipText(kLabel, kVal, aiObj){
   const kStr = isFinite(kVal) ? kVal.toFixed(2) : '—';
-  const gStr = isFinite(kVal) ? (kVal - 2 + aiObj.Ai).toFixed(2) : '—';
+  const gStr = isFinite(kVal) ? (kpDayTerm(kVal) + aiObj.Ai).toFixed(2) : '—';
   return [
-    `Формула: G = ${kLabel} − 2 + ΣAᵢ`,
+    `Формула: G = 2 − ${kLabel} + ΣAᵢ`,
     `${kLabel} = ${kStr}`,
     aiObj.explain,
-    `Підсумок: ${kStr} − 2 + ${aiObj.Ai} = ${gStr}`
+    `Підсумок: 2 − ${kStr} + ${aiObj.Ai} = ${gStr}`
   ].join('\n');
 }
 
@@ -11539,7 +11539,7 @@ function renderCurrentPanel(){
   // 5) G (інтегральний індикатор) + ПІДКАЗКА СКЛАДУ
   // v26: G = 2 − Kp + ΣAᵢ (єдина формула скрізь). M_DST та F10.7 — лише індикатори у Science Bar.
   const dstMod = computeDstModifier(); // залишається для Science Bar
-  const G = (kUse!=null ? kUse : NaN) - 2 + ai.Ai; // Ai вже включає Di (A3)
+  const G = (kUse!=null ? kpDayTerm(kUse) : NaN) + ai.Ai; // Ai вже включає Di (A3)
   const gCls = classForG(G);
   const gTipLines = [
     gTooltipText('Kp', (kUse!=null ? kUse : NaN), ai),
@@ -17549,7 +17549,7 @@ function _renderWhyTrend(){
           _kpPast = lastWWV.kNow;
         }
         const ai = computeAi(sunriseUTC(addDays(new Date(todayKyivStr()+'T12:00:00Z'), i)), _kpPast);
-        const _Gpast = _kpPast - 2 + ai.Ai;
+        const _Gpast = kpDayTerm(_kpPast) + ai.Ai;
         days.push({ ds, G: _Gpast, isPast: true });
       } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
     }
@@ -17579,7 +17579,7 @@ function _renderWhyTrend(){
           if (i === 0 && _kpLiveToday !== null) {
             try {
               const _aiLive = computeAi(sunriseUTC(new Date(todayKyivStr()+'T12:00:00Z')), _kpLiveToday);
-              _gForDay = _kpLiveToday - 2 + _aiLive.Ai;
+              _gForDay = kpDayTerm(_kpLiveToday) + _aiLive.Ai;
             } catch(e) { _gForDay = d.G; /* keep forecast value if live calc fails */ }
           }
           days.push({ ds: d.ds, G: _gForDay, isPast: false, isToday: i === 0, kpUsed: (i === 0 ? _kpLiveToday : d.kpUsed) });
@@ -17599,7 +17599,7 @@ function _renderWhyTrend(){
       if(days.find(x => x.ds === ds)) continue;
       try {
         const ai = computeAi(sunriseUTC(addDays(new Date(todayKyivStr()+'T12:00:00Z'), i)), i === 0 ? _kpNow : 2);
-        const G = (i === 0 ? _kpNow : 2) - 2 + ai.Ai;
+        const G = kpDayTerm(i === 0 ? _kpNow : 2) + ai.Ai;
         days.push({ ds, G, isPast: false, isToday: i === 0, kpUsed: (i === 0 ? _kpNow : 2) });
       } catch(e){if(window._DEBUG)console.warn('[silent fallback]:',e.message)}
     }
@@ -24106,11 +24106,14 @@ window.__regress = function(opts){
     const d = new Date('2026-06-15T12:00:00Z');
     window._lastDst = { dst: -150, ts: Date.now() }; // сильний Dst
     const ai = computeAi(d, 3);
-    const G = 3 - 2 + ai.Ai; // 1 + Ai з сильним Di=-2 → ймовірно 0 або мінус
+    const G = kpDayTerm(3) + ai.Ai; // −1 + Ai за канонічною орієнтацією 2−Kp
     // Перевіряю що Di справді -2 застосовано (Dst=-150 ≤ -100)
     // Для today дата. Тут d!=today, тому Di=0. Тест формально про arithmetic.
-    return { G_formula_matches: near(G, 1 - 2, 0.5) /* якщо Di спрацював */ || near(G, 1, 0.5) /* якщо не */ };
-  }, { G_formula_matches: true });
+    return {
+      kp_term_is_inverse: near(kpDayTerm(3), -1),
+      G_formula_matches: near(G, -1 + ai.Ai)
+    };
+  }, { kp_term_is_inverse: true, G_formula_matches: true });
 
   // ─── Test 15: dedupe today ────────────────────────────
   test('T15 · sparkline: сьогодні не дублюється', () => {
