@@ -1564,7 +1564,7 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
         <button id="btnRefresh" aria-label="Оновити дані з NOAA">↻ Оновити дані</button>
         <button id="btnHeaderTools" type="button" aria-expanded="false" aria-controls="dashboardToolbar"
           title="Показати або сховати другорядні інструменти"
-          onclick="const bar=document.getElementById('dashboardToolbar');const open=bar.classList.toggle('tools-open');this.setAttribute('aria-expanded',String(open));this.textContent=open?'× Сховати':'⋯ Інструменти';"
+          onclick="toggleHeaderTools(this)"
           style="background:var(--border);color:var(--muted);border:1px solid var(--border2);font-size:11px;padding:3px 9px;border-radius:6px">⋯ Інструменти</button>
         <button id="btnHardReset" title="Скинути кеш SW і перезавантажити — якщо бачиш стару версію"
           aria-label="Очистити кеш Service Worker і перезавантажити"
@@ -23609,6 +23609,17 @@ function setSimpleMode(on, options){
 
 function toggleSimpleMode(){
   setSimpleMode(!document.body.classList.contains('simple-mode'));
+}
+
+function toggleHeaderTools(button){
+  const bar = document.getElementById('dashboardToolbar');
+  if (!bar) return;
+  const isOpen = bar.classList.toggle('tools-open');
+  const control = button || document.getElementById('btnHeaderTools');
+  if (control) {
+    control.setAttribute('aria-expanded', String(isOpen));
+    control.textContent = isOpen ? '× Сховати' : '⋯ Інструменти';
+  }
 }
 
 function initSimpleMode(){
