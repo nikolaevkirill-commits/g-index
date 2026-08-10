@@ -63,6 +63,7 @@ def main() -> None:
     require(index, 'data-model="reconstructed-v19.2" data-score-effect="0"', 'v19.2 reconstructed score-neutral contract')
     require(index, 'v19.2 не змінює Hero, оцінку дня, PDF/Engine reference або оперативні рекомендації', 'v19.2 non-production disclosure')
     require(index, 'PROSPECTIVE SHADOW</code> · <code>PRODUCTION HOLD</code> · <code>score_effect=0', 'v19.2 hold disclosure')
+    require(index, 'Сигнали розходяться: PDF/Engine reference не є оперативним дозволом.', 'sign-neutral divergence disclosure')
     require(index, "'Історична подія NOAA'", 'inactive NOAA historical label')
     require(index, 'Бюлетень NOAA ${hoursAgo}г тому', 'aged NOAA time-first label')
     forbidden = {
@@ -101,6 +102,7 @@ def main() -> None:
         'Найкращий день (7 днів)': 'raw maximum is labeled best decision day',
         'Головний показник.': 'misleading PDF-first 27-day tooltip',
         'червоний/зелений = PDF/Engine-рішення': 'misleading 27-day decision caption',
+        'Сигнали розходяться: позитивний PDF не є дозволом.': 'negative PDF mislabeled as positive',
     }
     for needle, label in forbidden.items():
         if needle in index:
