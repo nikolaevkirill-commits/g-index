@@ -165,6 +165,16 @@ requireText('PDF/Engine reference, не оперативне рішення', '2
 requireText('is-now.is-routine', 'current routine slot has non-positive semantic styling');
 requireText("'Історична подія NOAA'", 'inactive NOAA event is explicitly historical');
 requireText('Бюлетень NOAA ${hoursAgo}г тому', 'aged NOAA event is time-labeled before live Kp loads');
+requireText('це кількість точок, не значення Kp', 'Kp source counts cannot masquerade as Kp values');
+requireText('3D NOAA G_day raw · ДОБА, НЕ G_now:', '3-day raw value names its source and horizon');
+requireText('27D NOAA raw:', '27-day raw comparison names its source and horizon');
+requireText('Δ3D−27D', '3-day versus 27-day delta names both horizons');
+requireText('Зміна live G_now від учора:', '24-hour delta is labeled as a change, not a current value');
+requireText('це Δ, не поточне значення; зараз', '24-hour delta discloses the current G_now separately');
+requireText('PDF/Engine reference завтра = ${_tomEngScore', 'tomorrow risk warning renders the actual reference value');
+requireText('Технічні входи', 'technical panel is labeled as source inputs');
+requireText('Kp snapshot:', 'technical timestamp names the Kp snapshot');
+requireText('Час перерахунку (UTC)', 'formula audit distinguishes evaluation time from source snapshot');
 forbidText('День сильний за PDF', 'old PDF-first Hero headline removed');
 forbidText('МОЖНА ДІЯТИ за PDF', 'PDF reference cannot grant action');
 forbidText('Сильний день за PDF', 'PDF-first positive Hero branch removed');
@@ -196,3 +206,8 @@ forbidText('G_day = Largest 2 − Kp', '27-day legend formula cannot be malforme
 forbidText('Найкращий день (7 днів)', 'raw maximum cannot be labeled best decision day');
 forbidText('Головний показник.', 'old PDF-first 27-day tooltip removed');
 forbidText('червоний/зелений = PDF/Engine-рішення', 'old 27-day decision caption removed');
+forbidText("+' · real '+Number(ks.real_points", 'Kp source counts cannot use value-like real/synthetic shorthand');
+forbidText('RAW-АУДИТ ФОНУ · НЕ РІШЕННЯ', '3-day raw value cannot omit source and horizon');
+forbidText('Фон зараз просів <span', '24-hour delta cannot read as the current value');
+forbidText('Фон зараз піднявся <span', 'positive 24-hour delta cannot read as the current value');
+forbidText('PDF/Engine reference для завтра ≤ −2', 'threshold cannot masquerade as tomorrow reference value');

@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.169-fp362-RAW-LABEL-CLOSURE</title>
+  <title>G-Index — Космофізичний дашборд v88.9.170-fp363-SOURCE-HORIZON-LABELS</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -2198,7 +2198,7 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
       <!-- ПОТОЧНИЙ СТАН — v78d: demoted to collapsed details -->
       <details class="card" id="nowCard">
         <summary class="now-top" style="cursor:pointer;list-style:none">
-          <h2 style="margin:0;display:inline">Технічні дані <span id="nowEffLabel" class="muted" style="font-weight:400">(—)</span></h2>
+          <h2 style="margin:0;display:inline">Технічні входи <span id="nowEffLabel" class="muted" style="font-weight:400">(—)</span></h2>
           <span style="margin-left:8px;font-size:11px;color:var(--dim)">▶</span>
           <div class="now-right" style="display:inline-flex;gap:6px;margin-left:auto">
             <span class="pill" style="font-size:10px">UTC: <span id="utcNow">—</span></span>
@@ -6461,10 +6461,10 @@ async function loadSourceHealth(){
     const p=await r.json(), warnings=p.warnings||[], hard=p.hard_failures||[], routes=p.routes||[];
     const kp=routes.find(x=>x.id==='kp_observed_forecast')||{}, sw=routes.find(x=>x.id==='space_weather')||{};
     const ks=kp.semantic||{}, ss=sw.semantic||{}, delivery=ss.delivery||{};
-    const kpLabel=(ks.noaa_transport_ok?'NOAA LIVE':'GFZ/резерв')+' · real '+Number(ks.real_points||0)+' · synthetic '+Number(ks.synthetic_points||0);
+    const kpLabel=(ks.noaa_transport_ok?'NOAA LIVE':'GFZ/резерв')+' · реальних точок: '+Number(ks.real_points||0)+' · synthetic fallback-точок: '+Number(ks.synthetic_points||0);
     const swLabel=delivery.status==='last_good' ? 'LAST-GOOD '+Number(delivery.age_hours||0).toFixed(1)+' год' : 'LIVE';
     if(sum){ sum.textContent='📡 Джерела: Kp '+kpLabel+' · space '+swLabel+(hard.length?' · BLOCKED':warnings.length?' · WARN':' · OK'); sum.style.color=hard.length?'#ff8d8d':warnings.length?'#ffd37a':'#9be7bd'; }
-    if(body) body.innerHTML='<b>Kp:</b> '+kpLabel+'<br><b>Космічна погода:</b> '+swLabel+'<br><b>Правило:</b> synthetic/last-good позначаються явно; відсутні дані не стають нулем; advisory не змінює G.';
+    if(body) body.innerHTML='<b>Kp:</b> '+kpLabel+' <span style="color:var(--faint)">(це кількість точок, не значення Kp)</span><br><b>Космічна погода:</b> '+swLabel+'<br><b>Правило:</b> synthetic/last-good позначаються явно; відсутні дані не стають нулем; advisory не змінює G.';
     const panel=document.getElementById('sourceHealthPanel'); if(panel&&(hard.length||warnings.length)) panel.open=true;
   }catch(e){ if(sum) sum.textContent='📡 Статус джерел недоступний'; if(body) body.textContent=e.message; }
 }
@@ -11696,11 +11696,11 @@ function renderCurrentPanel(){
   // 6) Ярлик часу
   let effLabel = '—';
   if(lastWWV && lastWWV.whenText){
-    effLabel = `на ${lastWWV.whenText}`;
+    effLabel = `Kp snapshot: ${lastWWV.whenText}`;
   }else if(last3D && last3D.days && last3D.days.length){
     const eff = startUTC(last3D.days[0].date);
     const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-    effLabel = `на ${eff.getUTCDate()} ${months[eff.getUTCMonth()]} 00:00 UTC`;
+    effLabel = `3-day доба: ${eff.getUTCDate()} ${months[eff.getUTCMonth()]} 00:00 UTC`;
   }
   el('nowEffLabel').textContent = `(${effLabel})`;
   updateDataTimestamp(lastWWV && lastWWV.whenText ? lastWWV.whenText : null);
@@ -14045,7 +14045,7 @@ function render3Day(parsed3){
         <div style="font-weight:700;color:${col};font-size:14px">${dd} → ${cat}</div>
         <div style="font-size:11px;color:var(--muted);margin-top:2px">${act}</div>
         ${(_scenBanner && !_isDivergent) ? '' : _bulletinLine}
-        <div class="card3d-numeric" style="font-size:10px;color:var(--faint);margin-top:3px" title="Довідкові raw-числа. G_day raw (3d) = 2 − Kp_max з NOAA 3-day forecast (${isFinite(kpMax)?kpMax.toFixed(1):'?'}) + ΣAᵢ. PDF/Engine зверху — денний reference. Оперативний стан обирає обережніший safety-контур.">${isFinite(G)?'<span style="color:var(--faint);font-size:9px">RAW-АУДИТ ФОНУ · НЕ РІШЕННЯ </span>'+(G>=0?'+':'')+G.toFixed(1):'—'}${(() => {
+        <div class="card3d-numeric" style="font-size:10px;color:var(--faint);margin-top:3px" title="Довідкові raw-числа. G_day raw (3d) = 2 − Kp_max з NOAA 3-day forecast (${isFinite(kpMax)?kpMax.toFixed(1):'?'}) + ΣAᵢ. Це добовий 3-day прогноз, не live G_now і не 27-day NOAA raw. PDF/Engine зверху — денний reference. Оперативний стан обирає обережніший safety-контур.">${isFinite(G)?'<span style="color:var(--faint);font-size:9px">3D NOAA G_day raw · ДОБА, НЕ G_now: </span>'+(G>=0?'+':'')+G.toFixed(1):'—'}${(() => {
           // fp51: show G_day 27D alongside 3D and delta
           try {
             const _ds51 = typeof fmtDate === 'function' ? fmtDate(d.date) : d.date.toISOString().slice(0,10);
@@ -14055,7 +14055,7 @@ function render3Day(parsed3){
               const _deltaStr = (_delta >= 0 ? '+' : '') + _delta.toFixed(1);
               const _27str = (_e27.G >= 0 ? '+' : '') + _e27.G.toFixed(1);
               const _deltaColor = Math.abs(_delta) >= 0.3 ? '#ffaa33' : 'var(--faint)';
-              return ` · <span style="color:var(--faint)">27d: ${_27str}</span><span style="color:${_deltaColor};font-size:9px"> Δ${_deltaStr}</span>`;
+              return ` · <span style="color:var(--faint)">27D NOAA raw: ${_27str}</span><span style="color:${_deltaColor};font-size:9px"> Δ3D−27D ${_deltaStr}</span>`;
             }
           } catch(_e) {}
           return '';
@@ -16681,9 +16681,9 @@ function syncHero(){
                      : _state === 'worsening' ? 'Погіршення з вчорашнього дня'
                      : 'Стабільно з вчорашнього дня';
         const _body = _state === 'improving'
-          ? `Фон зараз піднявся <span class="dc-metric is-pos">+${_abs}</span> <span style="color:var(--faint);font-size:10px">(G_now: зараз vs вчора)</span>${_ageNote} — фон став легший; денний reference дивись окремо у PDF/Engine.`
+          ? `Зміна live G_now від учора: <span class="dc-metric is-pos">+${_abs}</span> <span style="color:var(--faint);font-size:10px">(це Δ, не поточне значення; зараз ${gVal>=0?'+':''}${gVal.toFixed(1)})</span>${_ageNote} — фон став легший; денний reference дивись окремо у PDF/Engine.`
           : _state === 'worsening'
-          ? `Фон зараз просів <span class="dc-metric is-neg">−${_abs}</span> <span style="color:var(--faint);font-size:10px">(G_now: зараз vs вчора)</span>${_ageNote} — фон важчий; денний reference дивись окремо у PDF/Engine.`
+          ? `Зміна live G_now від учора: <span class="dc-metric is-neg">−${_abs}</span> <span style="color:var(--faint);font-size:10px">(це Δ, не поточне значення; зараз ${gVal>=0?'+':''}${gVal.toFixed(1)})</span>${_ageNote} — фон важчий; денний reference дивись окремо у PDF/Engine.`
           : `Δ24ч = ${_sign}${_abs}${_ageNote} — суттєвих змін немає.`;
         // v87.13: додатковий рядок про завтра (якщо відомо)
         // v88.8.35-fp5: додати поряд PDF/Engine score для завтра + override semantics
@@ -16742,7 +16742,7 @@ function syncHero(){
         // v88.8.35-fp7 H: візуально маркуємо контейнер amber-станом is-conflict.
         const _hasPdfConflict = (_tomEngScore !== null && _tomEngScore <= -2);
         if (_hasPdfConflict) {
-          _tomorrowLine += `<div class="dc-subline" style="color:#ffaa33;font-size:11px">⚠ PDF/Engine reference для завтра ≤ −2 — оперативний контур не може бути м'якшим за цей ризик.</div>`;
+          _tomorrowLine += `<div class="dc-subline" style="color:#ffaa33;font-size:11px">⚠ PDF/Engine reference завтра = ${_tomEngScore>=0?'+':''}${_tomEngScore}; це зона високого ризику (≤ −2), тому оперативний контур не може бути м'якшим.</div>`;
         }
         // v88.8.41-fp104: РЯДОК "Сьогодні G_day raw" — усуває конфлікт Hero(G_now) vs 27-day graph(G_day_raw).
         // Раніше показувався тільки G_now (live) у Hero, а G_day_raw сьогодні видно лише
@@ -18736,7 +18736,7 @@ function renderProvenance(){
     <div class="prov-grid">
       <div class="prov-col">
         <div style="font-size:10px;color:var(--alt);letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px">${(typeof t === 'function' ? t('provenanceInputs') : 'Inputs')}</div>
-        ${_row('Дата (UTC)', _now.toISOString().slice(0,16) + 'Z')}
+        ${_row('Час перерахунку (UTC)', _now.toISOString().slice(0,16) + 'Z')}
         ${_row('Kp', isFinite(_kpVal) ? _kpVal.toFixed(2) : '—', _kpSrc)}
         ${_row('Sn (Wolf)', _snVal != null ? _snVal + _snProv : '—', _snDate + ' · SILSO')}
         ${_row('Dst', _dstVal != null ? _dstVal + ' нТл' : '—', _dstTime + _dstProvLabel)}
