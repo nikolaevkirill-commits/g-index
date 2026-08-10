@@ -112,6 +112,11 @@ def main() -> None:
             raise SystemExit(f'FAIL {label}: found {needle!r}')
     require(index, '<link rel="canonical" href="https://nikolaevkirill-commits.github.io/g-index/"', 'canonical root URL')
     require(index, '<meta property="og:url" content="https://nikolaevkirill-commits.github.io/g-index/"', 'OG root URL')
+    require(index, 'id="dashboardToolbar"', 'focused dashboard toolbar')
+    require(index, 'id="btnHeaderTools"', 'secondary tools toggle')
+    require(index, '#heroWhyBasic { display: block !important; }', 'always-available score explanation')
+    if 'id="heroWhyBasic" style="display:none' in index:
+        raise SystemExit('FAIL score explanation is hidden by default')
     if 'https://nikolaevkirill-commits.github.io/g-index/deploy/' in index:
         raise SystemExit('FAIL root metadata still points at deprecated /deploy/')
 
