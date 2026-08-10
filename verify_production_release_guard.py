@@ -59,6 +59,10 @@ def main() -> None:
     require(index, 'Оперативний стан ${_op179} має пріоритет:', 'personal cycle safety gate')
     require(index, 'окрема порада призупинена через глобальний ризик', 'personal cycle positive-advice suppression')
     require(index, 'PDF/Engine reference, не оперативне рішення', '27-day reference-only caption')
+    require(index, 'id="v19ShadowStatusBanner"', 'v19.2 shadow status banner')
+    require(index, 'data-model="reconstructed-v19.2" data-score-effect="0"', 'v19.2 reconstructed score-neutral contract')
+    require(index, 'v19.2 не змінює Hero, оцінку дня, PDF/Engine reference або оперативні рекомендації', 'v19.2 non-production disclosure')
+    require(index, 'PROSPECTIVE SHADOW</code> · <code>PRODUCTION HOLD</code> · <code>score_effect=0', 'v19.2 hold disclosure')
     require(index, "'Історична подія NOAA'", 'inactive NOAA historical label')
     require(index, 'Бюлетень NOAA ${hoursAgo}г тому', 'aged NOAA time-first label')
     forbidden = {
