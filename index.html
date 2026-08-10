@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.172-fp365-SOURCE-LABELS</title>
+  <title>G-Index — Космофізичний дашборд v88.9.173-fp366-ADVISORY-FRESHNESS</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -6462,7 +6462,11 @@ async function loadSourceHealth(){
     const kp=routes.find(x=>x.id==='kp_observed_forecast')||{}, sw=routes.find(x=>x.id==='space_weather')||{};
     const ks=kp.semantic||{}, ss=sw.semantic||{}, delivery=ss.delivery||{};
     const kpLabel=(ks.noaa_transport_ok?'NOAA LIVE':'GFZ/резерв')+' · реальних точок: '+Number(ks.real_points||0)+' · synthetic fallback-точок: '+Number(ks.synthetic_points||0);
-    const swLabel=delivery.status==='last_good' ? 'LAST-GOOD '+Number(delivery.age_hours||0).toFixed(1)+' год' : 'LIVE';
+    // A successfully delivered old snapshot must never be presented as LIVE.
+    const swAge=Number(sw.candidates&&sw.candidates[0]&&sw.candidates[0].age_hours);
+    const swIsStale=String(sw.status||'').toLowerCase()==='stale'||(Number.isFinite(swAge)&&swAge>6);
+    const swLabel=swIsStale ? 'STALE '+(Number.isFinite(swAge)?swAge.toFixed(1):'—')+' год' :
+      (delivery.status==='last_good' ? 'LAST-GOOD '+Number(delivery.age_hours||0).toFixed(1)+' год' : 'LIVE');
     if(sum){ sum.textContent='📡 Джерела: Kp '+kpLabel+' · space '+swLabel+(hard.length?' · BLOCKED':warnings.length?' · WARN':' · OK'); sum.style.color=hard.length?'#ff8d8d':warnings.length?'#ffd37a':'#9be7bd'; }
     if(body) body.innerHTML='<b>Kp:</b> '+kpLabel+' <span style="color:var(--faint)">(це кількість точок, не значення Kp)</span><br><b>Космічна погода:</b> '+swLabel+'<br><b>Правило:</b> synthetic/last-good позначаються явно; відсутні дані не стають нулем; advisory не змінює G.';
     const panel=document.getElementById('sourceHealthPanel'); if(panel&&(hard.length||warnings.length)) panel.open=true;
@@ -6480,7 +6484,10 @@ async function loadSpaceWeatherAccumulated(){
     const m=p.magnetic||{}, w=p.solar_wind||{}, pr=p.protons||{}, a=p.alerts||{}, e=p.enlil||{}, sp=p.solar_probabilities||{};
     const c=p.coupling||{}, d=p.dst||{}, hp=p.hpo||{}, hp30=hp.hp30||{}, hp60=hp.hp60||{};
     const delivery=p.delivery||{}, deliveryStatus=delivery.status||'live', deliveryAge=Number(delivery.age_hours||0);
-    const sourceLabel=deliveryStatus==='last_good' ? ('LAST-GOOD · '+deliveryAge.toFixed(1)+' год') : 'LIVE';
+    const fetchedAt=Date.parse(p.fetched_at||''), currentAgeHours=Number.isFinite(fetchedAt)?(Date.now()-fetchedAt)/3600000:null;
+    const advisoryStale=currentAgeHours!==null&&currentAgeHours>6;
+    const sourceLabel=advisoryStale ? ('STALE · '+currentAgeHours.toFixed(1)+' год') :
+      (deliveryStatus==='last_good' ? ('LAST-GOOD · '+deliveryAge.toFixed(1)+' год') : 'LIVE');
     const stressed=(Number(m.longest_bz_le_minus5_minutes)>=30)||(Number(w.dynamic_pressure_max_6h_npa)>=5)||
       !!c.shock_candidate||Number(d.latest_nt)<=-50||Number(hp30.max_24h)>=5||
       !!pr.s1_threshold_exceeded||Number(a.recent_72h_count)>0||Number(e.peak_speed_km_s)>=550||
@@ -6497,7 +6504,8 @@ async function loadSpaceWeatherAccumulated(){
       '<div style="padding:5px 7px;border:1px solid var(--border);border-radius:7px"><b>NOAA alerts</b><br>G/R/S/CME за 72 год: '+shown(a.recent_72h_count,0)+'</div>'+
       '<div style="padding:5px 7px;border:1px solid var(--border);border-radius:7px"><b>ENLIL 7 діб</b><br>пік '+shown(e.peak_speed_km_s,0)+' км/с · '+(e.peak_speed_time?new Date(e.peak_speed_time).toLocaleString('uk-UA'):'час —')+' · CME cloud '+(e.cme_cloud_start?'так':'не виявлено')+'</div>'+
       '<div style="padding:5px 7px;border:1px solid var(--border);border-radius:7px"><b>Імовірність 1 доба</b><br>M '+shown(sp.m_class_1_day_pct,0)+'% · X '+shown(sp.x_class_1_day_pct,0)+'% · proton '+shown(sp.proton_10mev_1_day_pct,0)+'%</div>'+
-      '</div><div style="margin-top:6px;color:var(--dim)"><b>Доставка: '+sourceLabel+'</b> · NOAA RTSW/Kyoto + GFZ Hpo + GOES/ENLIL · snapshot SHA-256 · shadow/advisory only · score effect 0 до prospective validation.</div>';
+      '</div><div style="margin-top:6px;color:var(--dim)"><b>Доставка: '+sourceLabel+'</b> · NOAA RTSW/Kyoto + GFZ Hpo + GOES/ENLIL · snapshot SHA-256 · shadow/advisory only · score effect 0 до prospective validation.'+
+      (advisoryStale?'<div style="margin-top:3px;color:#ff9f9f">Дані старші 6 год: це архівний advisory, а не поточний live-стан.</div>':'')+'</div>';
     if(stressed){
       const panel=document.getElementById('spaceWeatherAccumulatedPanel'); if(panel) panel.open=true;
     }
@@ -6568,7 +6576,9 @@ async function loadBgsSpaceWeather(){
       const f=window._autoForecastFeed && window._autoForecastFeed.days && window._autoForecastFeed.days[ds];
       return f && f.bgs_advisory && f.bgs_advisory.conflict_with_positive_model;
     });
-    if(sum) sum.textContent='🌍 BGS 3-добовий прогноз'+(conflict?' · ⚠ конфлікт із позитивною моделлю':'')+
+    const bgsFetchedAt=Date.parse(b.fetched_at||''), bgsAgeHours=Number.isFinite(bgsFetchedAt)?(Date.now()-bgsFetchedAt)/3600000:null;
+    const bgsStale=bgsAgeHours!==null&&bgsAgeHours>12;
+    if(sum) sum.textContent='🌍 BGS 3-добовий прогноз'+(bgsStale?' · STALE '+bgsAgeHours.toFixed(1)+' год':'')+(conflict?' · ⚠ конфлікт із позитивною моделлю':'')+
       (flags.storm_g1_plus?' · можливий G1':'')+
       (flags.cme?' · CME':'')+(flags.glancing_blow?' · ковзний удар':'');
     if(body) body.innerHTML=
@@ -6576,7 +6586,8 @@ async function loadBgsSpaceWeather(){
       periods.map(p=>'<div style="padding:5px 7px;border:1px solid var(--border);border-radius:7px"><b>'+p.from+'–'+p.to+
       '</b><br>середнє: '+p.average+' · максимум: <strong style="color:'+(p.max==='QUIET'?'#9ce6c0':'#ffd37a')+'">'+p.max+'</strong></div>').join('')+
       '</div><div style="margin-top:7px">'+(b.comment||'Без додаткового коментаря.')+'</div>'+
-      '<div style="margin-top:6px;color:var(--dim)">Джерело: British Geological Survey · noon-to-noon GMT · незалежний advisory · score effect 0.</div>';
+      '<div style="margin-top:6px;color:var(--dim)">Джерело: British Geological Survey · noon-to-noon GMT · незалежний advisory · score effect 0.'+
+      (bgsStale?'<div style="margin-top:3px;color:#ff9f9f">Дані BGS старші 12 год: показано лише як архівний advisory.</div>':'')+'</div>';
     if(panel && flags.storm_g1_plus) panel.open=true;
     updateSpaceWeatherDecisionGuard();
   } catch(e) {

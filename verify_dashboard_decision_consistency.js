@@ -2,6 +2,12 @@ const fs = require('fs');
 const vm = require('vm');
 
 const html = fs.readFileSync('index.html', 'utf8');
+// Freshness labels are presentation safeguards: stale advisory snapshots cannot
+// be styled or worded as live inputs, and they never alter the frozen score.
+requireText("const swIsStale=String(sw.status||'').toLowerCase()==='stale'", 'source health treats stale routing as stale, not LIVE');
+requireText('const advisoryStale=currentAgeHours!==null&&currentAgeHours>6', 'space-weather freshness uses snapshot age');
+requireText('const bgsStale=bgsAgeHours!==null&&bgsAgeHours>12', 'BGS freshness uses snapshot age');
+forbidText("const swLabel=delivery.status==='last_good' ? 'LAST-GOOD '", 'old source-health LIVE-only label removed');
 const match = html.match(
   /function _stateKeyToRepresentativeG_v88824[\s\S]+?window\.resolveDaySignal_v88825 = resolveDaySignal_v88825;/
 );
