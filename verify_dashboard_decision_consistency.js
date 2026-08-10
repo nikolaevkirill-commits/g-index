@@ -246,3 +246,5 @@ requireText('data-model="reconstructed-v19.2" data-score-effect="0"', 'v19.2 is 
 requireText('v19.2 не змінює Hero, оцінку дня, PDF/Engine reference або оперативні рекомендації', 'v19.2 cannot masquerade as the active forecast');
 requireText('PROSPECTIVE SHADOW</code> · <code>PRODUCTION HOLD</code> · <code>score_effect=0', 'v19.2 hold state is explicit');
 forbidText('data-score-effect="1"', 'v19.2 shadow cannot acquire production score effect');
+requireText('Сигнали розходяться: PDF/Engine reference не є оперативним дозволом.', 'divergence notice is sign-neutral');
+forbidText('Сигнали розходяться: позитивний PDF не є дозволом.', 'negative PDF cannot be mislabeled as positive');
