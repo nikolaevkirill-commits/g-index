@@ -253,7 +253,8 @@ requireText('Оновити застосунок</button>', 'PWA update action i
 forbidText('aria-label="Оновити дані з NOAA">↻ Оновити</button>', 'data refresh button cannot masquerade as app update');
 requireText('id="dashboardToolbar"', 'focused dashboard toolbar exists');
 requireText('id="btnHeaderTools"', 'secondary tools have an explicit toggle');
-requireText("classList.toggle('tools-open')", 'secondary tools toggle is functional');
+requireText('function toggleHeaderTools(button)', 'secondary tools use a durable named handler');
+requireText("bar.classList.toggle('tools-open')", 'secondary tools toggle is functional');
 requireText('#heroWhyBasic { display: block !important; }', 'score explanation is available in every view');
 requireText('<summary>▸ Чому така оцінка?</summary>', 'score explanation has a plain-language label');
 forbidText('id="heroWhyBasic" style="display:none', 'score explanation cannot be hidden by default');
