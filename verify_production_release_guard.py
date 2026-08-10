@@ -156,6 +156,22 @@ def main() -> None:
             raise SystemExit(f'FAIL manifest {field}: expected={expected} actual={actual}')
         print(f'PASS manifest {field}: {actual}')
 
+    health_path = ROOT / 'SYSTEM_HEALTH_STATUS_v1.json'
+    health = json.loads(release_bytes(health_path).decode('utf-8'))
+    hard_failures = health.get('hard_failures') or []
+    if hard_failures:
+        raise SystemExit(f'FAIL system health has hard failures: {hard_failures}')
+    collector = (health.get('checks') or {}).get('outcome_collector') or {}
+    if (
+        collector.get('mode') != 'offline_independent_form'
+        or collector.get('ready') is not True
+        or collector.get('telegram_required') is not False
+        or collector.get('automatic_values') is not False
+        or collector.get('score_effect') != 0
+    ):
+        raise SystemExit(f'FAIL independent outcome collector contract: {collector}')
+    print('PASS independent outcomes use the fail-closed offline form; Telegram is not required')
+
     decision_audit_path = ROOT / 'DECISION_CONSISTENCY_AUDIT_v1.json'
     decision_audit = json.loads(release_bytes(decision_audit_path).decode('utf-8'))
     policy = decision_audit.get('policy') or {}
