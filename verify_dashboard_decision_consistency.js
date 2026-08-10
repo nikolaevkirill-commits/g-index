@@ -248,3 +248,6 @@ requireText('PROSPECTIVE SHADOW</code> · <code>PRODUCTION HOLD</code> · <code>
 forbidText('data-score-effect="1"', 'v19.2 shadow cannot acquire production score effect');
 requireText('Сигнали розходяться: PDF/Engine reference не є оперативним дозволом.', 'divergence notice is sign-neutral');
 forbidText('Сигнали розходяться: позитивний PDF не є дозволом.', 'negative PDF cannot be mislabeled as positive');
+requireText('↻ Оновити дані', 'data refresh button is explicit');
+requireText('Оновити застосунок</button>', 'PWA update action is distinct from data refresh');
+forbidText('aria-label="Оновити дані з NOAA">↻ Оновити</button>', 'data refresh button cannot masquerade as app update');
