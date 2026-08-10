@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.170-fp363-SOURCE-HORIZON-LABELS</title>
+  <title>G-Index — Космофізичний дашборд v88.9.171-fp364-HEALTH-EVIDENCE-SPLIT</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -6697,21 +6697,32 @@ async function loadSystemHealthStatus(){
   try{
     const r=await fetch('SYSTEM_HEALTH_STATUS_v1.json',{cache:'no-store'});
     if(!r.ok) throw new Error('HTTP '+r.status);
-    const s=await r.json(), status=String(s.status||'UNKNOWN').toUpperCase();
+    const s=await r.json(), sourceStatus=String(s.status||'UNKNOWN').toUpperCase();
     const hard=Array.isArray(s.hard_failures)?s.hard_failures:[];
     const warns=Array.isArray(s.warnings)?s.warnings:[];
     const pairs=Number(s.checks&&s.checks.real_outcome_pairs||0);
+    const awaiting=Number(s.checks&&s.checks.real_outcomes_awaiting||0);
+    const tanitaAwaiting=Number(s.checks&&s.checks.tanita_real_outcome_pairs&&s.checks.tanita_real_outcome_pairs.awaiting_independent_outcomes||0);
+    const manualPending=Number(s.checks&&s.checks.tanita_balanced_review&&s.checks.tanita_balanced_review.pending_visual_review||0);
     const age=Number(s.checks&&s.checks.manifest_age_hours);
-    const colors=status==='PASS'?['#43e6a7','rgba(67,230,167,.28)','rgba(67,230,167,.055)']:
-      status==='FAIL'?['#ff7b82','rgba(255,90,100,.48)','rgba(255,90,100,.08)']:
+    const evidencePrefixes=['tanita_outcomes_awaiting:','tanita_balanced_review_pending:','promotion_waiting_for_prospective_outcomes'];
+    const evidenceWarns=warns.filter(w=>evidencePrefixes.some(p=>String(w).startsWith(p)));
+    const operationalWarns=warns.filter(w=>!evidencePrefixes.some(p=>String(w).startsWith(p)));
+    const automationStatus=hard.length?'FAIL':operationalWarns.length?'WARN':'PASS';
+    const evidenceStatus=(pairs>=100)?'READY':'WAIT';
+    const colors=automationStatus==='PASS'?['#43e6a7','rgba(67,230,167,.28)','rgba(67,230,167,.055)']:
+      automationStatus==='FAIL'?['#ff7b82','rgba(255,90,100,.48)','rgba(255,90,100,.08)']:
       ['#ffd37a','rgba(255,176,32,.40)','rgba(255,176,32,.06)'];
     el.style.display='block'; el.style.color=colors[0]; el.style.borderColor=colors[1]; el.style.background=colors[2];
     const stamp=s.generated_at?new Date(s.generated_at).toLocaleString('uk-UA'):'—';
-    el.innerHTML='<strong>⚙ Стан автоматизації: '+status+'</strong> · hard failures '+hard.length+
-      ' · outcomes '+pairs+'/100'+(Number.isFinite(age)?' · manifest '+age.toFixed(1)+' год':'')+
+    el.innerHTML='<strong>⚙ Автоматизація: '+automationStatus+'</strong> · hard failures '+hard.length+' · operational warnings '+operationalWarns.length+
+      (Number.isFinite(age)?' · manifest '+age.toFixed(1)+' год':'')+
       ' · перевірено '+stamp+
       (hard.length?' <div style="margin-top:4px">⛔ '+hard.map(escapeHtml).join(' · ')+'</div>':'')+
-      (warns.length?' <div style="margin-top:3px;color:var(--dim)">Попередження: '+warns.map(escapeHtml).join(' · ')+'</div>':'');
+      (operationalWarns.length?' <div style="margin-top:3px;color:#ffd37a">Операційні попередження: '+operationalWarns.map(escapeHtml).join(' · ')+'</div>':'')+
+      '<div style="margin-top:4px;color:#ffd37a"><strong>🧪 Докази: '+evidenceStatus+'</strong> · validated outcome pairs '+pairs+'/100 · очікують незалежних outcomes '+awaiting+' · Tanita '+tanitaAwaiting+' · ручний перегляд '+manualPending+'</div>'+
+      (sourceStatus==='WARN'&&automationStatus==='PASS'?'<div style="margin-top:3px;color:var(--dim)">Health artifact має WARN лише через evidence gates; це не збій автоматизації.</div>':'')+
+      (evidenceWarns.length?' <div style="margin-top:3px;color:var(--dim)">Evidence gates: '+evidenceWarns.map(escapeHtml).join(' · ')+'</div>':'');
     try{
       const xr=await fetch('EXCEL_FORMULA_INTEGRITY_STATUS_v1.json',{cache:'no-store'});
       if(xr.ok){

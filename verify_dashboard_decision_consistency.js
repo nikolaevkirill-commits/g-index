@@ -175,6 +175,9 @@ requireText('PDF/Engine reference завтра = ${_tomEngScore', 'tomorrow risk
 requireText('Технічні входи', 'technical panel is labeled as source inputs');
 requireText('Kp snapshot:', 'technical timestamp names the Kp snapshot');
 requireText('Час перерахунку (UTC)', 'formula audit distinguishes evaluation time from source snapshot');
+requireText("const automationStatus=hard.length?'FAIL':operationalWarns.length?'WARN':'PASS'", 'automation status excludes evidence-only waits');
+requireText("<strong>🧪 Докази: '+evidenceStatus", 'evidence readiness is displayed separately from automation health');
+requireText('Health artifact має WARN лише через evidence gates; це не збій автоматизації.', 'evidence-only WARN is explained as non-operational');
 forbidText('День сильний за PDF', 'old PDF-first Hero headline removed');
 forbidText('МОЖНА ДІЯТИ за PDF', 'PDF reference cannot grant action');
 forbidText('Сильний день за PDF', 'PDF-first positive Hero branch removed');
@@ -211,3 +214,4 @@ forbidText('RAW-АУДИТ ФОНУ · НЕ РІШЕННЯ', '3-day raw value ca
 forbidText('Фон зараз просів <span', '24-hour delta cannot read as the current value');
 forbidText('Фон зараз піднявся <span', 'positive 24-hour delta cannot read as the current value');
 forbidText('PDF/Engine reference для завтра ≤ −2', 'threshold cannot masquerade as tomorrow reference value');
+forbidText("<strong>⚙ Стан автоматизації: '+status", 'source health WARN cannot masquerade as automation failure');
