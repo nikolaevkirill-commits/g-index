@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import subprocess
 from pathlib import Path
 
@@ -64,6 +65,8 @@ def main() -> None:
     require(index, 'v19.2 не змінює Hero, оцінку дня, PDF/Engine reference або оперативні рекомендації', 'v19.2 non-production disclosure')
     require(index, 'PROSPECTIVE SHADOW</code> · <code>PRODUCTION HOLD</code> · <code>score_effect=0', 'v19.2 hold disclosure')
     require(index, 'Сигнали розходяться: PDF/Engine reference не є оперативним дозволом.', 'sign-neutral divergence disclosure')
+    require(index, '↻ Оновити дані', 'explicit data refresh label')
+    require(index, 'Оновити застосунок</button>', 'distinct PWA update label')
     require(index, "'Історична подія NOAA'", 'inactive NOAA historical label')
     require(index, 'Бюлетень NOAA ${hoursAgo}г тому', 'aged NOAA time-first label')
     forbidden = {
@@ -121,6 +124,14 @@ def main() -> None:
     sw = (ROOT / 'sw.js').read_text(encoding='utf-8')
     require(sw, "event.data.type === 'SKIP_WAITING'", 'service-worker manual update handler')
     require(sw, 'self.skipWaiting()', 'service-worker activation call')
+    title_fp = re.search(r'v88\.9\.\d+-fp(\d+)-', index)
+    cache_fp = re.search(r"const CACHE_VERSION = 'fp(\d+)-", sw)
+    if not title_fp or not cache_fp or title_fp.group(1) != cache_fp.group(1):
+        raise SystemExit(
+            f'FAIL dashboard/SW version mismatch: title={title_fp.group(1) if title_fp else None} '
+            f'cache={cache_fp.group(1) if cache_fp else None}'
+        )
+    print(f'PASS dashboard/SW cache version: fp{title_fp.group(1)}')
 
     manifest_path = ROOT / 'data_manifest.json'
     manifest = json.loads(release_bytes(manifest_path).decode('utf-8'))

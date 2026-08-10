@@ -21,7 +21,7 @@
 // Service-worker cache safety note; original detail is preserved in the backup.
 // Service-worker cache safety note; original detail is preserved in the backup.
 
-const CACHE_VERSION = 'fp367-v1'; // Advisory age labels distinguish source age from snapshot age
+const CACHE_VERSION = 'fp368-v1'; // PWA cache closure: activate sign-neutral dashboard copy
 const CACHE_PREFIX = 'gindex-'; // G-Index cache namespace; do not remove the prefix.
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${CACHE_VERSION}`;
 const DATA_CACHE = `${CACHE_PREFIX}data-${CACHE_VERSION}`;
