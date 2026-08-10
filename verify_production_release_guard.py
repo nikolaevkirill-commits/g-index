@@ -123,6 +123,9 @@ def main() -> None:
         'expert_calc': 'expert_calc_scores.json',
         'future_kp': 'future_kp.json',
         'engine_scores': 'engine_scores.json',
+        'aia_vernadsky_refresh_status': 'AIA_VERNADSKY_REFRESH_STATUS_v1.json',
+        'aia_vernadsky_daily': 'AIA_VERNADSKY_DAILY_v1.json',
+        'aia_vernadsky_audit': 'AIA_VERNADSKY_SHADOW_AUDIT_v1.json',
     }
     for field, rel in mapping.items():
         actual = md5_12(ROOT / rel)
