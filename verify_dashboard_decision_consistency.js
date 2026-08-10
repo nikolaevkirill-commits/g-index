@@ -178,6 +178,12 @@ requireText('Час перерахунку (UTC)', 'formula audit distinguishes 
 requireText("const automationStatus=hard.length?'FAIL':operationalWarns.length?'WARN':'PASS'", 'automation status excludes evidence-only waits');
 requireText("<strong>🧪 Докази: '+evidenceStatus", 'evidence readiness is displayed separately from automation health');
 requireText('Health artifact має WARN лише через evidence gates; це не збій автоматизації.', 'evidence-only WARN is explained as non-operational');
+requireText("· наступна ручна вибірка '+manualPending", 'manual evidence count is labeled as the next rolling sample');
+requireText('${dd} → ОПЕРАТИВНО ${_opScoreTextQ} · ${cat}', '3-day headline is explicitly operational');
+requireText("'PDF reference' : 'Engine reference'", '3-day reference source is explicit');
+requireText('· не дозвіл</span></div>', '3-day reference line cannot be read as action permission');
+requireText('PDF REFERENCE · VERIFIED OVERRIDE · НЕ РІШЕННЯ ДЛЯ ДІЇ', 'verified PDF banner is reference-only');
+requireText('${_bulletinLine}', '3-day reference line is always rendered');
 forbidText('День сильний за PDF', 'old PDF-first Hero headline removed');
 forbidText('МОЖНА ДІЯТИ за PDF', 'PDF reference cannot grant action');
 forbidText('Сильний день за PDF', 'PDF-first positive Hero branch removed');
@@ -195,6 +201,7 @@ forbidText('PDF/Engine — пріоритет · live Kp оновлює фон',
 forbidText('days.filter(d=>d.eng', 'week summary cannot classify PDF reference as operational days');
 forbidText('const s = d.eng', 'week row cannot display PDF reference as main score');
 forbidText('const _decisionOf =', '27-day raw filter cannot substitute PDF/Engine score');
+forbidText('_decisionOf(d)', '27-day statistics cannot call a missing decision helper');
 forbidText('Рішення ${isFinite(G_display)', '27-day raw G badge cannot be labeled as a decision');
 forbidText('recommendG(G_display, kpUsed).text', '27-day raw context cannot emit action recommendation');
 forbidText('✔ Діяти до ${String(_sw30.label)', 'incoming storm cannot create unconditional action permission');
@@ -215,3 +222,5 @@ forbidText('Фон зараз просів <span', '24-hour delta cannot read as
 forbidText('Фон зараз піднявся <span', 'positive 24-hour delta cannot read as the current value');
 forbidText('PDF/Engine reference для завтра ≤ −2', 'threshold cannot masquerade as tomorrow reference value');
 forbidText("<strong>⚙ Стан автоматизації: '+status", 'source health WARN cannot masquerade as automation failure');
+forbidText("· ручний перегляд '+manualPending", 'rolling sample cannot masquerade as the full remaining review pool');
+forbidText("${(_scenBanner && !_isDivergent) ? '' : _bulletinLine}", '3-day PDF reference cannot disappear when signals agree');

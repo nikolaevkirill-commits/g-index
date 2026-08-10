@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.171-fp364-HEALTH-EVIDENCE-SPLIT</title>
+  <title>G-Index — Космофізичний дашборд v88.9.172-fp365-SOURCE-LABELS</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -6720,7 +6720,7 @@ async function loadSystemHealthStatus(){
       ' · перевірено '+stamp+
       (hard.length?' <div style="margin-top:4px">⛔ '+hard.map(escapeHtml).join(' · ')+'</div>':'')+
       (operationalWarns.length?' <div style="margin-top:3px;color:#ffd37a">Операційні попередження: '+operationalWarns.map(escapeHtml).join(' · ')+'</div>':'')+
-      '<div style="margin-top:4px;color:#ffd37a"><strong>🧪 Докази: '+evidenceStatus+'</strong> · validated outcome pairs '+pairs+'/100 · очікують незалежних outcomes '+awaiting+' · Tanita '+tanitaAwaiting+' · ручний перегляд '+manualPending+'</div>'+
+      '<div style="margin-top:4px;color:#ffd37a"><strong>🧪 Докази: '+evidenceStatus+'</strong> · validated outcome pairs '+pairs+'/100 · очікують незалежних outcomes '+awaiting+' · Tanita '+tanitaAwaiting+' · наступна ручна вибірка '+manualPending+'</div>'+
       (sourceStatus==='WARN'&&automationStatus==='PASS'?'<div style="margin-top:3px;color:var(--dim)">Health artifact має WARN лише через evidence gates; це не збій автоматизації.</div>':'')+
       (evidenceWarns.length?' <div style="margin-top:3px;color:var(--dim)">Evidence gates: '+evidenceWarns.map(escapeHtml).join(' · ')+'</div>':'');
     try{
@@ -10674,7 +10674,7 @@ function draw27dTable(){
   const _s27el = document.getElementById('stat27');
   if (_s27el && data.length) {
     // v88.8.34: статистика тільки по raw continuous G. PDF/Engine score не входить у G statistics.
-    const _gOf = d => _decisionOf(d);
+    const _gOf = d => Number(d?.G);
     const _gVals = data.map(_gOf).filter(g => isFinite(g));
     const _nGood = _gVals.filter(g => g >= 0.5).length;
     const _nBad  = _gVals.filter(g => g < -0.5).length;
@@ -10699,7 +10699,7 @@ function draw27dTable(){
   // v88.8.34: trend summary тільки по raw continuous G.
   const ts=document.getElementById('trend27Summary');
   if(ts&&data.length){
-    const _gOf = d => _decisionOf(d);
+    const _gOf = d => Number(d?.G);
     const sorted=[...data].sort((a,b)=>a.ds.localeCompare(b.ds));
     const next7=sorted.slice(0,7);
     const badDays=next7.filter(d=>_gOf(d)<-0.5);
@@ -13947,6 +13947,10 @@ function render3Day(parsed3){
       const cat = _daySigQ ? _daySigQ.title : 'нейтрально';
       const act = _daySigQ ? _daySigQ.action : 'стандартний режим';
       const col = _daySigQ ? _daySigQ.color : '#9bb1dc';
+      // fp365: the card headline is the operational result only. PDF/Engine and
+      // NOAA raw stay on their own explicitly labeled audit lines below.
+      const _opScoreQ = (_daySigQ && isFinite(_daySigQ.decisionScore)) ? Number(_daySigQ.decisionScore) : G;
+      const _opScoreTextQ = isFinite(_opScoreQ) ? ((_opScoreQ >= 0 ? '+' : '') + _opScoreQ) : '—';
       const dd=d.date.getUTCDate()+'.'+(d.date.getUTCMonth()+1);
       // v87.61: Bulletin (engine v18.5) score line if available
       // v87.62: + sign divergence alert when G and Bulletin have opposite signs
@@ -13977,9 +13981,9 @@ function render3Day(parsed3){
           if (_divergent) {
             // v88.8.5 Б2: розширений tooltip — пояснює ЧОМУ розбіжність і ЩО робити.
             // Раніше: загальне 'обережніше з рішеннями'. Тепер: причини + actionable hint.
-            _bulletinLine = `<div style="font-size:10px;margin-top:2px;padding:2px 6px;border-radius:4px;background:rgba(255,170,51,.15);border:1px solid rgba(255,170,51,.35);cursor:help" title="⚠ G_now/G_day raw і PDF/Engine Day_score: різні знаки АБО велика розбіжність (Δ≥2.5).&#10;&#10;Чому це буває:&#10;• Engine — frozen tag-based за snapshot Kp; G — live з реальним Kp.&#10;• На boundary days Vedic Panchanga зсувається, Engine snapshot ще не оновлено.&#10;• Engine clamps до ±3, G — continuous (-5..+7).&#10;• На експертних PDF днях override може давати +3, навіть якщо Kp низький.&#10;&#10;Що робити: знизь довіру до автоматичної оцінки на 15%. Перевір 1-2 додаткові сигнали (NOAA SWPC, Panchanga вкладка, локальне самопочуття) перед важливим рішенням.">⚠ PDF/Engine: <span style="color:${_bsCol};font-weight:700">${_bsSign}${_bs.eng}${_synth}</span>${_recalcMark} <span style="color:var(--faint);font-size:9px">· розбіжність</span></div>`;
+            _bulletinLine = `<div style="font-size:10px;margin-top:2px;padding:2px 6px;border-radius:4px;background:rgba(255,170,51,.15);border:1px solid rgba(255,170,51,.35);cursor:help" title="⚠ G_now/G_day raw і PDF/Engine Day_score: різні знаки АБО велика розбіжність (Δ≥2.5).&#10;&#10;Чому це буває:&#10;• Engine — frozen tag-based за snapshot Kp; G — live з реальним Kp.&#10;• На boundary days Vedic Panchanga зсувається, Engine snapshot ще не оновлено.&#10;• Engine clamps до ±3, G — continuous (-5..+7).&#10;• На експертних PDF днях override може давати +3, навіть якщо Kp низький.&#10;&#10;Що робити: знизь довіру до автоматичної оцінки на 15%. Перевір 1-2 додаткові сигнали (NOAA SWPC, Panchanga вкладка, локальне самопочуття) перед важливим рішенням.">⚠ ${_bs._expertOverride ? 'PDF reference' : 'Engine reference'}: <span style="color:${_bsCol};font-weight:700">${_bsSign}${_bs.eng}${_synth}</span>${_recalcMark} <span style="color:var(--faint);font-size:9px">· не дозвіл · розбіжність</span></div>`;
           } else {
-            _bulletinLine = `<div style="font-size:10px;color:var(--dim);margin-top:2px">PDF/Engine: <span style="color:${_bsCol};font-weight:700">${_bsSign}${_bs.eng}${_synth}</span>${_recalcMark}</div>`;
+            _bulletinLine = `<div style="font-size:10px;color:var(--dim);margin-top:2px">${_bs._expertOverride ? 'PDF reference' : 'Engine reference'}: <span style="color:${_bsCol};font-weight:700">${_bsSign}${_bs.eng}${_synth}</span>${_recalcMark} <span style="color:var(--faint);font-size:9px">· не дозвіл</span></div>`;
           }
         }
       } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
@@ -14030,7 +14034,7 @@ function render3Day(parsed3){
         _scenBanner = '<div style="font-size:9px;font-weight:800;letter-spacing:.04em;color:#ffaa33;background:rgba(255,170,51,.14);border:1px solid rgba(255,170,51,.5);border-radius:6px;padding:3px 6px;margin-bottom:5px;text-align:center">⚠ БЕЗПЕКА: ' + _guardWhy + ' — перевірити GPS/зв’язок/дрони; рішення дня ' + (_pdfBase>=0?'+':'') + _pdfBase + ' не змінено</div>';
       } else if (_hasVerifiedOverride) {
         const _engRawForBanner = (function(){ try { const _es = getEngineScore(d.date); return isFinite(_es?._engRaw) ? _es._engRaw : null; } catch(_e){ return null; } })();
-        _scenBanner = `<div style="font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#ffd166;background:rgba(255,209,102,.15);border:1px solid rgba(255,209,102,.45);border-radius:6px;padding:2px 6px;margin-bottom:5px;text-align:center" title="Це значення — ручний verified PDF-вердикт (expert override), НЕ розрахунок engine v18.5.${_engRawForBanner!=null ? ' Raw engine v18.5 snapshot: '+(_engRawForBanner>=0?'+':'')+_engRawForBanner+'.' : ''} Фон NOAA (raw, окремо, довідково) — рядок нижче.">★ PDF OVERRIDE · НЕ ENGINE V18.5</div>`;
+        _scenBanner = `<div style="font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#ffd166;background:rgba(255,209,102,.15);border:1px solid rgba(255,209,102,.45);border-radius:6px;padding:2px 6px;margin-bottom:5px;text-align:center" title="Це значення — ручний verified PDF-вердикт (expert override), НЕ розрахунок engine v18.5.${_engRawForBanner!=null ? ' Raw engine v18.5 snapshot: '+(_engRawForBanner>=0?'+':'')+_engRawForBanner+'.' : ''} Фон NOAA (raw, окремо, довідково) — рядок нижче.">★ PDF REFERENCE · VERIFIED OVERRIDE · НЕ РІШЕННЯ ДЛЯ ДІЇ</div>`;
       } else if(_engineFullySynth){
         // v88.8.35-fp56-P8: make a synthetic-Kp SCENARIO card unmistakably weaker than a real
         // forecast. The dashed/opacity styling alone read too similar to a real card (user confusion).
@@ -14053,9 +14057,9 @@ function render3Day(parsed3){
       }
       qhtml+=`<span title="${escapeHtml(_daySigQ?.tooltip||'')}" style="flex:1;min-width:140px;padding:8px 14px;border-radius:10px;${_scenStyle};text-align:center">
         ${_scenBanner}
-        <div style="font-weight:700;color:${col};font-size:14px">${dd} → ${cat}</div>
+        <div style="font-weight:700;color:${col};font-size:14px">${dd} → ОПЕРАТИВНО ${_opScoreTextQ} · ${cat}</div>
         <div style="font-size:11px;color:var(--muted);margin-top:2px">${act}</div>
-        ${(_scenBanner && !_isDivergent) ? '' : _bulletinLine}
+        ${_bulletinLine}
         <div class="card3d-numeric" style="font-size:10px;color:var(--faint);margin-top:3px" title="Довідкові raw-числа. G_day raw (3d) = 2 − Kp_max з NOAA 3-day forecast (${isFinite(kpMax)?kpMax.toFixed(1):'?'}) + ΣAᵢ. Це добовий 3-day прогноз, не live G_now і не 27-day NOAA raw. PDF/Engine зверху — денний reference. Оперативний стан обирає обережніший safety-контур.">${isFinite(G)?'<span style="color:var(--faint);font-size:9px">3D NOAA G_day raw · ДОБА, НЕ G_now: </span>'+(G>=0?'+':'')+G.toFixed(1):'—'}${(() => {
           // fp51: show G_day 27D alongside 3D and delta
           try {
