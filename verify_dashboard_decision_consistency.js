@@ -224,6 +224,12 @@ forbidText(': (Number.isFinite(dayScore) ? dayScore : G)', 'ICS cannot substitut
 forbidText('(базове PDF/Engine-рішення)', 'ICS cannot label PDF reference as base decision');
 forbidText('· РІШЕННЯ ${d._expertEng', 'forward timeline tooltip cannot label PDF reference as decision');
 forbidText('G_day = Largest 2 − Kp', '27-day legend formula cannot be malformed');
+forbidText('kVal - 2 + aiObj.Ai', 'G tooltip arithmetic must use canonical 2−Kp helper');
+forbidText('(kUse!=null ? kUse : NaN) - 2 + ai.Ai', 'live G must use canonical 2−Kp helper');
+forbidText('_kpPast - 2 + ai.Ai', 'historical trend must use canonical 2−Kp helper');
+forbidText('_kpLiveToday - 2 + _aiLive.Ai', 'today trend must use canonical 2−Kp helper');
+forbidText('(i === 0 ? _kpNow : 2) - 2 + ai.Ai', 'fallback trend must use canonical 2−Kp helper');
+requireText('const G = (kUse!=null ? kpDayTerm(kUse) : NaN) + ai.Ai', 'live G closes against the displayed 2−Kp decomposition');
 forbidText('Найкращий день (7 днів)', 'raw maximum cannot be labeled best decision day');
 forbidText('Головний показник.', 'old PDF-first 27-day tooltip removed');
 forbidText('червоний/зелений = PDF/Engine-рішення', 'old 27-day decision caption removed');
