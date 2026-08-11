@@ -6,7 +6,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.184-fp377-LIGHTHOUSE-TRUST-FIXES</title>
+  <title>G-Index — Космофізичний дашборд v88.9.185-fp378-XRAY-SAME-ORIGIN</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -9488,6 +9488,29 @@ async function fetchVswNow(){
 // Letter scale: A = 1e-8, B = 1e-7, C = 1e-6, M = 1e-5, X = 1e-4 W/m²
 async function fetchXrayNow(){
   const url = 'https://services.swpc.noaa.gov/json/goes/primary/xrays-6-hour.json';
+  // fp378: prefer the scheduler-validated same-origin snapshot. Browser CORS
+  // proxies are only a fallback and must not be the primary availability path.
+  try {
+    const localResp = await fetch('SPACE_WEATHER_CONTEXT_v1.json', {cache:'no-store'});
+    if(localResp.ok){
+      const localPayload = await localResp.json();
+      const localXray = localPayload && localPayload.xray || {};
+      const localFlux = parseFloat(localXray.flux_w_m2);
+      const localTime = Date.parse(localXray.latest_time || '');
+      const localAgeH = Number.isFinite(localTime) ? Math.max(0, (Date.now()-localTime)/3600000) : Infinity;
+      if(Number.isFinite(localFlux) && localFlux >= 0 && /^[ABCMX]\d+(?:\.\d+)?$/.test(String(localXray.class||'')) && localAgeH <= 8){
+        window._lastXray = {
+          flux: localFlux,
+          class: String(localXray.class),
+          time: localXray.latest_time,
+          _delivery: 'same_origin_snapshot'
+        };
+        return window._lastXray;
+      }
+    }
+  } catch(e) {
+    if(window._DEBUG) console.warn('[xray] same-origin snapshot unavailable:', e.message);
+  }
   let text;
   try { text = await fetchTextWithCORS(url, _looksLikeNoaaArray); } catch(e){ console.warn('[v87.15] Xray fetch failed',e); return null; }
   try {
@@ -20089,7 +20112,7 @@ async function loadAll(){
         sciXrayEl.style.color = letter === 'X' ? '#ff4444' : letter === 'M' ? '#ff9944' : letter === 'C' ? '#ffcc44' : '#63be7b';
         sciXrayEl.style.fontWeight = (letter === 'X' || letter === 'M') ? '800' : '600';
         lsSet('last_xray_class', xr.class);
-        _setSrcStatus('srcXray','ok');
+        _setSrcStatus('srcXray', xr._delivery==='same_origin_snapshot' ? 'snapshot' : 'ok');
       } else {
         const cached = lsGet('last_xray_class');
         if (cached) { sciXrayEl.textContent = cached + ' (кеш)'; sciXrayEl.style.color = 'var(--dim)'; _setSrcStatus('srcXray','cache'); }
