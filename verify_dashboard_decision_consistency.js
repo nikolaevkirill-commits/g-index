@@ -304,3 +304,6 @@ requireText('color:#a9bad8">Health artifact', 'health evidence explanation keeps
 forbidText('aria-label="v19.2 SHADOW:', 'v19 shadow summary uses its full visible text as the accessible name');
 forbidText('aria-label="Показано ${visibleSlots.length}', 'dynamic slot paywall uses its full visible text as the accessible name');
 forbidText('aria-label="Повний розклад ${slots.length}', 'dynamic window paywall uses its full visible text as the accessible name');
+requireText("fetch('SPACE_WEATHER_CONTEXT_v1.json', {cache:'no-store'})", 'GOES X-ray prefers the validated same-origin snapshot');
+requireText("_delivery: 'same_origin_snapshot'", 'same-origin X-ray provenance is explicit');
+requireText("xr._delivery==='same_origin_snapshot' ? 'snapshot' : 'ok'", 'X-ray source indicator distinguishes snapshot from direct live fetch');
