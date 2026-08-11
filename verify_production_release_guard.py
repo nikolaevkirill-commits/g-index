@@ -83,6 +83,7 @@ def main() -> None:
     require(index, "m.set('2026-08-12','total_solar')", '2026-08-12 total solar eclipse catalog entry')
     require(index, 'function parseNoaaJson(text)', 'NOAA bare-NaN fail-soft parser')
     require(index, 'const plasmaRows = parseNoaaJson(plasmaTxt)', 'solar-wind parser routing')
+    require(index, 'seq.length < cap && guard < cap * 4 + 4', 'Hora boundary retry preserves requested sequence length')
     require(index, "'Історична подія NOAA'", 'inactive NOAA historical label')
     require(index, 'Бюлетень NOAA ${hoursAgo}г тому', 'aged NOAA time-first label')
     forbidden = {

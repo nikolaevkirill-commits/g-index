@@ -210,6 +210,7 @@ requireText("Astronomy.AngleBetween(vectors[i].vec, vectors[j].vec)", 'planet pa
 requireText("m.set('2026-08-12','total_solar')", '2026-08-12 total solar eclipse remains in the verified catalog');
 requireText("function parseNoaaJson(text)", 'NOAA bare-NaN payloads have a fail-soft parser');
 requireText("const plasmaRows = parseNoaaJson(plasmaTxt)", 'solar-wind module uses the NOAA parser');
+requireText('seq.length < cap && guard < cap * 4 + 4', 'Hora boundary retry cannot consume a requested sequence entry');
 forbidText("localStorage.removeItem('gindex_simple_mode')", 'full-mode preference cannot be erased back to simple default');
 forbidText('День сильний за PDF', 'old PDF-first Hero headline removed');
 forbidText('МОЖНА ДІЯТИ за PDF', 'PDF reference cannot grant action');
