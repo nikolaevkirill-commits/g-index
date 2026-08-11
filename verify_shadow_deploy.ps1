@@ -111,6 +111,9 @@ foreach ($needle in @("expert_overrides_v3.json", "manifest.json", "icon192.png"
 }
 
 $indexHtml = Get-Content -Raw -LiteralPath "index.html"
+foreach ($needle in @("gindex_kp_hourly_snapshot_v1", "МАЙБУТНІЙ ПІК · ПРОГНОЗ", "ДОБОВИЙ АГРЕГАТ")) {
+    if (-not $indexHtml.Contains($needle)) { throw "Kp signal-separation regression: $needle" }
+}
 if (-not $indexHtml.Contains("let snap = null;")) {
     throw "fp288 hero snapshot scope guard is missing"
 }

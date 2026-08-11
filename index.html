@@ -6,7 +6,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.186-fp379-VISIBILITY-PERF</title>
+  <title>G-Index — Космофізичний дашборд v88.9.187-fp380-KP-SIGNAL-SEPARATION</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -6515,12 +6515,69 @@ async function loadKpHourlyAlert(){
     if(!slots.length) throw new Error('Немає актуальних погодинних слотів Kp');
     const peak=slots.reduce((best,x)=>Number(x.kp)>Number(best.kp)?x:best,slots[0]);
     const kp=Number(peak.kp), level=kp>=5?2:kp>=4?1:0;
-    sum.textContent='🛰 Погодинний Kp · пік '+(Number.isFinite(kp)?kp.toFixed(1):'—')+
-      (level>=2?' · 🔴 буря':level===1?' · 🟡 підвищений':' · 🟢 спокійно');
-    body.innerHTML='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">'+
-      '<thead><tr><th style="text-align:left;padding:5px">Час</th><th style="text-align:left;padding:5px">Kp</th><th style="text-align:left;padding:5px">Джерело</th></tr></thead><tbody>'+
-      slots.slice(0,12).map(x=>{const v=Number(x.kp),c=v>=5?'#ff7070':v>=4?'#ffd37a':'#75e6a8';return '<tr style="border-top:1px solid var(--border)"><td style="padding:5px">'+new Date(x.time_utc).toLocaleString('uk-UA',{timeZone:'Europe/Kyiv',hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit',hour12:false})+'</td><td style="padding:5px;color:'+c+';font-weight:700">'+v.toFixed(1)+'</td><td style="padding:5px">'+(x.source==='observed'?'факт':'прогноз')+'</td></tr>'}).join('')+
-      '</tbody></table></div><div style="margin-top:6px;color:var(--dim)">Поріг попередження Kp≥4; буря Kp≥5. Telegram-антиспам прив’язаний до конкретного часового піку.</div>';
+    const currentKp=(window.__uiState&&Number.isFinite(Number(window.__uiState.kpNow)))
+      ? Number(window.__uiState.kpNow)
+      : (typeof lastWWV!=='undefined'&&lastWWV&&Number.isFinite(Number(lastWWV.kNow))?Number(lastWWV.kNow):null);
+    const peakTime=new Date(peak.time_utc);
+    const peakTimeLabel=peakTime.toLocaleString('uk-UA',{timeZone:'Europe/Kyiv',hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit',hour12:false});
+    const peakDateKyiv=peakTime.toLocaleDateString('sv-SE',{timeZone:'Europe/Kyiv'});
+    let dailyKp=null;
+    try{
+      const future=await loadFutureKp();
+      const daily=future&&future[peakDateKyiv];
+      if(daily&&Number.isFinite(Number(daily.kp))) dailyKp=Number(daily.kp);
+    }catch(_e){}
+
+    // Persist the preceding published forecast in this browser. A material
+    // upstream revision must be shown, not silently presented as an observation.
+    let revision=null;
+    const revisionKey='gindex_kp_hourly_snapshot_v1';
+    try{
+      const previous=JSON.parse(localStorage.getItem(revisionKey)||'null');
+      if(previous&&previous.generated_at!==p.generated_at&&previous.slots){
+        for(const x of slots){
+          const old=Number(previous.slots[x.time_utc]);
+          const next=Number(x.kp);
+          if(Number.isFinite(old)&&Number.isFinite(next)){
+            const delta=next-old;
+            if(!revision||Math.abs(delta)>Math.abs(revision.delta)) revision={time_utc:x.time_utc,old,newValue:next,delta};
+          }
+        }
+      }
+      const snapshot={generated_at:p.generated_at,slots:{}};
+      for(const x of allSlots) snapshot.slots[x.time_utc]=Number(x.kp);
+      localStorage.setItem(revisionKey,JSON.stringify(snapshot));
+    }catch(_e){}
+
+    const currentText=currentKp===null?'—':currentKp.toFixed(1);
+    const peakText=Number.isFinite(kp)?kp.toFixed(1):'—';
+    const peakState=level>=2?'🔴 прогноз G1 або вище':level===1?'🟡 підвищення, але нижче G1':'🟢 нижче порога попередження';
+    const slotValues=slots.map(x=>Number(x.kp)).filter(Number.isFinite);
+    const slotSpread=slotValues.length?Math.max(...slotValues)-Math.min(...slotValues):0;
+    const volatileForecast=slotSpread>=1.5;
+    sum.textContent='🛰 Kp: зараз '+currentText+' (факт) · прогнозований пік '+peakText+' о '+peakTimeLabel+' · '+peakState+
+      (volatileForecast?' · ⚠ мінливий прогноз ΔKp '+slotSpread.toFixed(1):'');
+
+    const volatilityHtml=volatileForecast
+      ? '<div style="margin:7px 0;padding:8px 10px;border:1px solid rgba(255,190,75,.55);border-radius:8px;background:rgba(255,176,32,.07);color:#ffd37a"><b>⚠ Великий розкид між майбутніми слотами:</b> ΔKp '+slotSpread.toFixed(1)+'. Це ознака мінливого прогнозу, а не одночасні значення поточного стану.</div>'
+      : '';
+    const revisionHtml=revision&&Math.abs(revision.delta)>=1
+      ? '<div style="margin:7px 0;padding:8px 10px;border:1px solid rgba(255,112,112,.6);border-radius:8px;background:rgba(255,80,80,.08);color:#ffb0b0"><b>⚠ Прогноз різко переглянуто:</b> '+revision.old.toFixed(1)+' → '+revision.newValue.toFixed(1)+' (Δ '+(revision.delta>0?'+':'')+revision.delta.toFixed(1)+') для '+new Date(revision.time_utc).toLocaleString('uk-UA',{timeZone:'Europe/Kyiv',hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit',hour12:false})+'. Це зміна прогнозу, не зафіксований стрибок Kp.</div>'
+      : '';
+    const generatedLabel=Number.isFinite(generatedMs)?new Date(generatedMs).toLocaleString('uk-UA',{timeZone:'Europe/Kyiv',hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit',hour12:false}):'невідомо';
+    const dailyHtml=dailyKp===null?'—':dailyKp.toFixed(1);
+    body.innerHTML=
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:7px;margin-bottom:8px">'+
+        '<div style="padding:8px 10px;border:1px solid rgba(117,230,168,.32);border-radius:8px"><b style="color:#75e6a8">ЗАРАЗ · СПОСТЕРЕЖЕННЯ</b><br><span style="font-size:18px;font-weight:800">Kp '+currentText+'</span><br><span style="color:var(--dim)">Останній завершений або активний 3-годинний слот.</span></div>'+
+        '<div style="padding:8px 10px;border:1px solid rgba(255,190,75,.42);border-radius:8px"><b style="color:#ffd37a">МАЙБУТНІЙ ПІК · ПРОГНОЗ</b><br><span style="font-size:18px;font-weight:800">Kp '+peakText+'</span> · '+peakTimeLabel+'<br><span style="color:var(--dim)">'+peakState+'. Це не спостережений факт.</span></div>'+
+        '<div style="padding:8px 10px;border:1px solid rgba(89,166,255,.32);border-radius:8px"><b style="color:#9fd1ff">ДОБОВИЙ АГРЕГАТ</b><br><span style="font-size:18px;font-weight:800">Kp '+dailyHtml+'</span> · '+peakDateKyiv+'<br><span style="color:var(--dim)">Зведення доби; не дорівнює максимуму окремого слота.</span></div>'+
+        '<div style="padding:8px 10px;border:1px solid rgba(178,126,255,.32);border-radius:8px"><b style="color:#d9c2ff">PDF / ОПЕРАТИВНА ОЦІНКА</b><br><span style="font-weight:800">Окрема шкала −3…+3</span><br><span style="color:var(--dim)">Не є Kp і не повинна чисельно збігатися з Kp.</span></div>'+
+      '</div>'+volatilityHtml+revisionHtml+
+      '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">'+
+        '<thead><tr><th style="text-align:left;padding:5px">Час Київ</th><th style="text-align:left;padding:5px">Kp</th><th style="text-align:left;padding:5px">Тип даних</th></tr></thead><tbody>'+
+        slots.slice(0,12).map(x=>{const v=Number(x.kp),c=v>=5?'#ff7070':v>=4?'#ffd37a':'#75e6a8';return '<tr style="border-top:1px solid var(--border)"><td style="padding:5px">'+new Date(x.time_utc).toLocaleString('uk-UA',{timeZone:'Europe/Kyiv',hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit',hour12:false})+'</td><td style="padding:5px;color:'+c+';font-weight:700">'+v.toFixed(1)+'</td><td style="padding:5px">'+(x.source==='observed'?'СПОСТЕРЕЖЕННЯ':'ПРОГНОЗ 3-ГОДИННОГО СЛОТА')+'</td></tr>'}).join('')+
+        '</tbody></table></div>'+
+      '<div style="margin-top:7px;color:var(--dim)">Сформовано: '+generatedLabel+' · Kp≥4 — підвищена активність; Kp≥5 — поріг G1. Погодинний прогноз не переписує денний PDF-reference або оперативний стан; він може лише активувати окремий safety-veto після досягнення визначеного порога.</div>';
     if(level>0){const panel=document.getElementById('kpHourlyPanel');if(panel)panel.open=true;}
   }catch(e){
     sum.textContent='🛰 Погодинний Kp тимчасово недоступний';
