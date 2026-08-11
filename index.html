@@ -6,7 +6,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.185-fp378-XRAY-SAME-ORIGIN</title>
+  <title>G-Index — Космофізичний дашборд v88.9.186-fp379-VISIBILITY-PERF</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1166,6 +1166,9 @@
     @media (max-width: 860px){#heroCard .hero-wrap{grid-template-columns:1fr!important;gap:10px!important}.hero-left,.hero-maintext,.hero-right{width:100%!important;min-width:0!important;max-width:none!important}.hero-wrap > .hero-left{grid-column:1!important;grid-row:1!important}.hero-wrap > .hero-maintext{grid-column:1!important;grid-row:2!important}.hero-wrap > .hero-right{grid-column:1!important;grid-row:3!important}}
     @media (max-width: 560px){#heroCard #heroG{font-size:38px!important}#heroRing,#heroRing svg{width:144px!important;height:144px!important}}
     @media (max-width: 560px){
+      /* fp379: live rows expand asynchronously. Reserve the measured final
+         simple-mode height so the main card does not push the whole page down. */
+      body.simple-mode #heroCard{min-height:860px!important}
       #heroCard{padding:10px!important;max-width:100%!important}
       #heroCard .hero-wrap,
       #heroCard .hero-maintext,
@@ -4372,6 +4375,10 @@ try{
   }
 }catch(e){}
 if ('serviceWorker' in navigator) {
+  // fp379: on a first visit the network HTML is already current. Installing
+  // its first controller must not reload the page a second time. Existing
+  // controlled clients still reload after an explicitly activated update.
+  const _swControlledAtBoot = Boolean(navigator.serviceWorker.controller);
   window.addEventListener('load', () => {
     // v87.1 NFR: refresh freshness badge every 60s (дані старіють без оновлення)
     SAFE_INTERVAL(function(){ try{_renderFreshnessState();}catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)} }, 60000).start();
@@ -4460,6 +4467,10 @@ if ('serviceWorker' in navigator) {
         // яка потрібна (не більше 1 reload ЗА ОДИН controllerchange-цикл, але
         // кожен новий цикл після наступного reload — знову дозволений).
         navigator.serviceWorker.addEventListener('controllerchange', () => {
+          if (!_swControlledAtBoot) {
+            if(window._DEBUG) console.log('[SW] first controller installed — current network page stays open');
+            return;
+          }
           if (window._swReloading) {
             if(window._DEBUG) console.warn('[SW] controllerchange again in same cycle — skipping reload (guard)');
             return;
@@ -20893,6 +20904,8 @@ const PLANET_DEF = [
 const ORBIT_RADII = [28, 46, 65, 85, 110, 132]; // запасний fallback
 
 let _planetAnimFrame = null;
+let _planetAnimTimer = null;
+let _planetLastPaint = 0;
 let _planetPhase = {};  // початкові кути планет
 
 function renderPlanetAnimation(kp, moonPhaseDeg, G, panchCtx, astroCtx) {
@@ -21041,6 +21054,10 @@ function renderPlanetAnimation(kp, moonPhaseDeg, G, panchCtx, astroCtx) {
   };
 
   if (_planetAnimFrame) cancelAnimationFrame(_planetAnimFrame);
+  if (_planetAnimTimer) clearTimeout(_planetAnimTimer);
+  _planetAnimFrame = null;
+  _planetAnimTimer = null;
+  _planetLastPaint = 0;
 
   // ── Швидкість анімації: базовий ACCEL ──
   // Меркурій (87.97 дні) = еталон. Всі інші пропорційно.
@@ -21050,8 +21067,25 @@ function renderPlanetAnimation(kp, moonPhaseDeg, G, panchCtx, astroCtx) {
   let t0 = null;
 
   function draw(ts) {
-    // v88.7+ (perf audit): pause heavy planet animation when tab hidden (battery saving)
-    if (document.hidden) { _planetAnimFrame = requestAnimationFrame(draw); return; }
+    // fp379: the planet canvas sits far below the fold. Do not spend a full
+    // animation frame on it until it is actually near the visible viewport.
+    const _view = canv.getBoundingClientRect();
+    const _nearViewport = _view.bottom >= -120 && _view.top <= window.innerHeight + 120;
+    if (document.hidden || !_nearViewport) {
+      _planetAnimFrame = null;
+      _planetAnimTimer = setTimeout(() => {
+        _planetAnimTimer = null;
+        if (!_planetAnimFrame) _planetAnimFrame = requestAnimationFrame(draw);
+      }, 500);
+      return;
+    }
+    // 20 fps is sufficient for this explanatory visual and avoids monopolising
+    // the main thread on slower phones.
+    if (_planetLastPaint && ts - _planetLastPaint < 50) {
+      _planetAnimFrame = requestAnimationFrame(draw);
+      return;
+    }
+    _planetLastPaint = ts;
     if (!t0) t0 = ts;
     const dt = (ts - t0) / 1000; // секунди від старту
     // v57: recalc W кожен кадр для підтримки повороту екрану
@@ -21414,6 +21448,10 @@ function renderPlanetAnimation(kp, moonPhaseDeg, G, panchCtx, astroCtx) {
       ctx.restore();
     }
 
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+      _planetAnimFrame = null;
+      return;
+    }
     _planetAnimFrame = requestAnimationFrame(draw);
   }
   _planetAnimFrame = requestAnimationFrame(draw);
@@ -22611,6 +22649,8 @@ function renderGDecomp(G, kp, ai) {
 // ─── G Flow Canvas v2 ────────────────────────────────────────────
 // Частинки течуть від кожного компонента → G (canvas 80px висота)
 let _gFlowAnimId = null;
+let _gFlowTimer = null;
+let _gFlowLastPaint = 0;
 let _gFlowState = {G:0, kp:0, ai:null, particles:[]};
 
 function _gFlowColor(val) {
@@ -22780,14 +22820,37 @@ function renderGFlowCanvas(G, kp, ai) {
 
 function startGFlowAnimation(G, kp, ai) {
   if(_gFlowAnimId) cancelAnimationFrame(_gFlowAnimId);
+  if(_gFlowTimer) clearTimeout(_gFlowTimer);
+  _gFlowAnimId = null;
+  _gFlowTimer = null;
+  _gFlowLastPaint = 0;
   _gFlowState = {G, kp, ai, ...initGFlowParticles(kp, ai)};
-  function loop() {
-    // v88.7+ (perf audit): pause when tab hidden
-    if (document.hidden) { _gFlowAnimId = requestAnimationFrame(loop); return; }
+  function loop(ts) {
+    const cv = document.getElementById('gFlowCanvas');
+    if (!cv) { _gFlowAnimId = null; return; }
+    const view = cv.getBoundingClientRect();
+    const nearViewport = view.bottom >= -120 && view.top <= window.innerHeight + 120;
+    if (document.hidden || !nearViewport) {
+      _gFlowAnimId = null;
+      _gFlowTimer = setTimeout(() => {
+        _gFlowTimer = null;
+        if (!_gFlowAnimId) _gFlowAnimId = requestAnimationFrame(loop);
+      }, 500);
+      return;
+    }
+    if (_gFlowLastPaint && ts - _gFlowLastPaint < 50) {
+      _gFlowAnimId = requestAnimationFrame(loop);
+      return;
+    }
+    _gFlowLastPaint = ts;
     renderGFlowCanvas(_gFlowState.G, _gFlowState.kp, _gFlowState.ai);
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+      _gFlowAnimId = null;
+      return;
+    }
     _gFlowAnimId = requestAnimationFrame(loop);
   }
-  requestAnimationFrame(loop);
+  _gFlowAnimId = requestAnimationFrame(loop);
 }
 
 function renderBestTime(dateUTC, kp, G, panchPCL) {
