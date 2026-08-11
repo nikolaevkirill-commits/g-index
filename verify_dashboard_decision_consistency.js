@@ -210,6 +210,9 @@ requireText("Astronomy.AngleBetween(vectors[i].vec, vectors[j].vec)", 'planet pa
 requireText("m.set('2026-08-12','total_solar')", '2026-08-12 total solar eclipse remains in the verified catalog');
 requireText("function parseNoaaJson(text)", 'NOAA bare-NaN payloads have a fail-soft parser');
 requireText("const plasmaRows = parseNoaaJson(plasmaTxt)", 'solar-wind module uses the NOAA parser');
+requireText('function _looksLikeNoaaArray(text)', 'NOAA response bodies are validated before a CORS route is accepted');
+requireText('fetchTextWithCORS(url, _looksLikeNoaaArray)', 'Bz, Vsw and X-ray reject truncated proxy responses');
+requireText('const rows = parseNoaaJson(text)', 'GOES X-ray uses the fail-soft NOAA parser');
 requireText('seq.length < cap && guard < cap * 4 + 4', 'Hora boundary retry cannot consume a requested sequence entry');
 requireText("const URL_WOLF_SN_STATUS = 'SILSO_REFRESH_STATUS_v1.json'", 'Wolf Sn prefers the same-origin validated scheduler snapshot');
 requireText('withTimeout(fetchWolfSnResilient(), 5000', 'Wolf Sn primary route is resilient and bounded');

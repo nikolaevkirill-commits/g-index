@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.181-fp374-KP-CONTENT-AGE</title>
+  <title>G-Index — Космофізичний дашборд v88.9.182-fp375-NOAA-JSON-VALIDATION</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -9421,11 +9421,14 @@ function parseNoaaJson(text){
   const normalized = String(text||'').replace(/([:\[,]\s*)(?:NaN|-?Infinity)(?=\s*[,}\]])/g, '$1null');
   return JSON.parse(normalized);
 }
+function _looksLikeNoaaArray(text){
+  try { return Array.isArray(parseNoaaJson(text)); } catch(_e) { return false; }
+}
 
 async function fetchBzNow(){
   const url = 'https://services.swpc.noaa.gov/json/rtsw/rtsw_mag_1m.json';
   let text;
-  try { text = await fetchTextWithCORS(url); } catch(e){ console.warn('[v42] Bz fetch failed',e); return null; }
+  try { text = await fetchTextWithCORS(url, _looksLikeNoaaArray); } catch(e){ console.warn('[v42] Bz fetch failed',e); return null; }
   try {
     const rows = parseNoaaJson(text);
     if(!Array.isArray(rows)||rows.length<1){ console.warn('[v42] Bz: unexpected format'); return null; }
@@ -9444,7 +9447,7 @@ async function fetchBzNow(){
 async function fetchVswNow(){
   const url = 'https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json';
   let text;
-  try { text = await fetchTextWithCORS(url); } catch(e){ console.warn('[v42] Vsw fetch failed',e); return null; }
+  try { text = await fetchTextWithCORS(url, _looksLikeNoaaArray); } catch(e){ console.warn('[v42] Vsw fetch failed',e); return null; }
   try {
     const rows = parseNoaaJson(text);
     if(!Array.isArray(rows)||rows.length<1){ console.warn('[v42] Vsw: unexpected format'); return null; }
@@ -9466,9 +9469,9 @@ async function fetchVswNow(){
 async function fetchXrayNow(){
   const url = 'https://services.swpc.noaa.gov/json/goes/primary/xrays-6-hour.json';
   let text;
-  try { text = await fetchTextWithCORS(url); } catch(e){ console.warn('[v87.15] Xray fetch failed',e); return null; }
+  try { text = await fetchTextWithCORS(url, _looksLikeNoaaArray); } catch(e){ console.warn('[v87.15] Xray fetch failed',e); return null; }
   try {
-    const rows = JSON.parse(text);
+    const rows = parseNoaaJson(text);
     if(!Array.isArray(rows)||rows.length===0) return null;
     // Шукаємо останній long-wave (0.1-0.8nm) запис з валідним flux
     for(let i=rows.length-1;i>=0;i--){
