@@ -84,6 +84,10 @@ def main() -> None:
     require(index, 'function parseNoaaJson(text)', 'NOAA bare-NaN fail-soft parser')
     require(index, 'const plasmaRows = parseNoaaJson(plasmaTxt)', 'solar-wind parser routing')
     require(index, 'seq.length < cap && guard < cap * 4 + 4', 'Hora boundary retry preserves requested sequence length')
+    require(index, "const URL_WOLF_SN_STATUS = 'SILSO_REFRESH_STATUS_v1.json'", 'same-origin validated SILSO snapshot')
+    require(index, 'withTimeout(fetchWolfSnResilient(), 5000', 'bounded resilient SILSO route')
+    require(index, "snapshot:  {icon:'▣'", 'validated snapshot status is explicit')
+    require(index, "window._lastWolfSn._delivery==='local_snapshot' ? ' · snapshot'", 'Wolf Sn delivery disclosure survives rerender')
     require(index, "'Історична подія NOAA'", 'inactive NOAA historical label')
     require(index, 'Бюлетень NOAA ${hoursAgo}г тому', 'aged NOAA time-first label')
     forbidden = {
@@ -92,6 +96,7 @@ def main() -> None:
         'ФІНАЛЬНЕ РІШЕННЯ · PDF/ENGINE': 'misleading 27-day final-decision badge',
         "seg.setAttribute('data-gval', `${_heatDecision": 'one day score stamped on every heat slot',
         'День сильний за PDF': 'misleading PDF-first Hero headline',
+        'withTimeout(fetchTextWithCORS(URL_WOLF_SN, _looksLikeJson), 5000': 'startup depends directly on SILSO CORS',
         'МОЖНА ДІЯТИ за PDF': 'PDF reference grants action',
         'Сильний день за PDF': 'PDF-first positive Hero branch',
         'День сприятливий за PDF': 'PDF-first moderate Hero branch',
