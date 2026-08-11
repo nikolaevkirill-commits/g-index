@@ -171,7 +171,7 @@ requireText('PDF/Engine reference, не оперативне рішення', '2
 requireText('is-now.is-routine', 'current routine slot has non-positive semantic styling');
 requireText("'Історична подія NOAA'", 'inactive NOAA event is explicitly historical');
 requireText('Бюлетень NOAA ${hoursAgo}г тому', 'aged NOAA event is time-labeled before live Kp loads');
-requireText('це кількість точок, не значення Kp', 'Kp source counts cannot masquerade as Kp values');
+requireText('кількість дат, не значення Kp', 'Kp source counts cannot masquerade as Kp values');
 requireText('3D NOAA G_day raw · ДОБА, НЕ G_now:', '3-day raw value names its source and horizon');
 requireText('27D NOAA raw:', '27-day raw comparison names its source and horizon');
 requireText('Δ3D−27D', '3-day versus 27-day delta names both horizons');
@@ -215,6 +215,10 @@ requireText("const URL_WOLF_SN_STATUS = 'SILSO_REFRESH_STATUS_v1.json'", 'Wolf S
 requireText('withTimeout(fetchWolfSnResilient(), 5000', 'Wolf Sn primary route is resilient and bounded');
 requireText("snapshot:  {icon:'▣'", 'validated snapshot is not mislabeled as offline cache');
 requireText("window._lastWolfSn._delivery==='local_snapshot' ? ' · snapshot'", 'Wolf Sn chip discloses snapshot delivery after rerender');
+requireText("Kp зараз '+kpNowLabel+' · Kp горизонт '+kpHorizonLabel", 'source health separates observed Kp from forecast-horizon provenance');
+requireText('synthetic не є прогнозом NOAA', 'synthetic horizon points cannot masquerade as NOAA forecasts');
+requireText('let _preferVerifiedLocal3Day = false', 'verified same-origin NOAA horizon is checked before UAF proxy fallback');
+requireText("point.kp_synthetic === false", 'only non-synthetic local Kp points may suppress UAF fallback');
 forbidText('withTimeout(fetchTextWithCORS(URL_WOLF_SN, _looksLikeJson), 5000', 'startup cannot depend directly on SILSO CORS');
 forbidText("localStorage.removeItem('gindex_simple_mode')", 'full-mode preference cannot be erased back to simple default');
 forbidText('День сильний за PDF', 'old PDF-first Hero headline removed');

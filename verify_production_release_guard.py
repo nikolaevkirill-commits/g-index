@@ -88,6 +88,10 @@ def main() -> None:
     require(index, 'withTimeout(fetchWolfSnResilient(), 5000', 'bounded resilient SILSO route')
     require(index, "snapshot:  {icon:'▣'", 'validated snapshot status is explicit')
     require(index, "window._lastWolfSn._delivery==='local_snapshot' ? ' · snapshot'", 'Wolf Sn delivery disclosure survives rerender')
+    require(index, "Kp зараз '+kpNowLabel+' · Kp горизонт '+kpHorizonLabel", 'observed Kp and forecast horizon are labeled separately')
+    require(index, 'synthetic не є прогнозом NOAA', 'synthetic horizon points are explicitly non-NOAA')
+    require(index, 'let _preferVerifiedLocal3Day = false', 'same-origin NOAA horizon precedes UAF proxy fallback')
+    require(index, 'point.kp_synthetic === false', 'UAF is skipped only for verified local Kp points')
     require(index, "'Історична подія NOAA'", 'inactive NOAA historical label')
     require(index, 'Бюлетень NOAA ${hoursAgo}г тому', 'aged NOAA time-first label')
     forbidden = {

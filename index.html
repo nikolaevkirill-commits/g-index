@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.179-fp372-SILSO-SNAPSHOT</title>
+  <title>G-Index — Космофізичний дашборд v88.9.180-fp373-SOURCE-TRUTH</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -6537,14 +6537,15 @@ async function loadSourceHealth(){
     const p=await r.json(), warnings=p.warnings||[], hard=p.hard_failures||[], routes=p.routes||[];
     const kp=routes.find(x=>x.id==='kp_observed_forecast')||{}, sw=routes.find(x=>x.id==='space_weather')||{};
     const ks=kp.semantic||{}, ss=sw.semantic||{}, delivery=ss.delivery||{};
-    const kpLabel=(ks.noaa_transport_ok?'NOAA LIVE':'GFZ/резерв')+' · реальних точок: '+Number(ks.real_points||0)+' · synthetic fallback-точок: '+Number(ks.synthetic_points||0);
+    const kpNowLabel=ks.noaa_transport_ok?'NOAA LIVE':'GFZ/резерв';
+    const kpHorizonLabel=Number(ks.real_points||0)+' NOAA · '+Number(ks.synthetic_points||0)+' synthetic';
     // A successfully delivered old snapshot must never be presented as LIVE.
     const swAge=Number(sw.candidates&&sw.candidates[0]&&sw.candidates[0].age_hours);
     const swIsStale=String(sw.status||'').toLowerCase()==='stale'||(Number.isFinite(swAge)&&swAge>6);
     const swLabel=swIsStale ? 'STALE джерело '+(Number.isFinite(swAge)?swAge.toFixed(1):'—')+' год' :
       (delivery.status==='last_good' ? 'LAST-GOOD '+Number(delivery.age_hours||0).toFixed(1)+' год' : 'LIVE');
-    if(sum){ sum.textContent='📡 Джерела: Kp '+kpLabel+' · space '+swLabel+(hard.length?' · BLOCKED':warnings.length?' · WARN':' · OK'); sum.style.color=hard.length?'#ff8d8d':warnings.length?'#ffd37a':'#9be7bd'; }
-    if(body) body.innerHTML='<b>Kp:</b> '+kpLabel+' <span style="color:var(--faint)">(це кількість точок, не значення Kp)</span><br><b>Космічна погода:</b> '+swLabel+'<br><b>Правило:</b> synthetic/last-good позначаються явно; відсутні дані не стають нулем; advisory не змінює G.';
+    if(sum){ sum.textContent='📡 Джерела: Kp зараз '+kpNowLabel+' · Kp горизонт '+kpHorizonLabel+' · space '+swLabel+(hard.length?' · BLOCKED':warnings.length?' · WARN':' · OK'); sum.style.color=hard.length?'#ff8d8d':warnings.length?'#ffd37a':'#9be7bd'; }
+    if(body) body.innerHTML='<b>Kp зараз:</b> '+kpNowLabel+'<br><b>Kp горизонт:</b> '+kpHorizonLabel+' <span style="color:var(--faint)">(кількість дат, не значення Kp; synthetic не є прогнозом NOAA)</span><br><b>Космічна погода:</b> '+swLabel+'<br><b>Правило:</b> synthetic/last-good позначаються явно; відсутні дані не стають нулем; advisory не змінює G.';
     const panel=document.getElementById('sourceHealthPanel'); if(panel&&(hard.length||warnings.length)) panel.open=true;
   }catch(e){ if(sum) sum.textContent='📡 Статус джерел недоступний'; if(body) body.textContent=e.message; }
 }
@@ -19873,8 +19874,24 @@ async function loadAll(){
     _setSrcStatus('srcKpFcst','error');
     el('threeError').textContent = 'Помилка 3-day: ' + (kpFcstR.reason?.message || 'недоступний');
   }
-  // v88.6.9: Tier-2 UAF Geophysical Institute fallback — якщо NOAA 3-day fail
+  // fp373: same-origin future_kp.json is refreshed by the local NOAA updater.
+  // When it covers today + 2 days with verified NOAA values, let the normal
+  // local-snapshot branch below consume it and do not probe the slower UAF/CORS
+  // chain. UAF remains available only when the verified local horizon is incomplete.
+  let _preferVerifiedLocal3Day = false;
   if (!last3D || !last3D.days || !last3D.days.length || last3D._synthetic) {
+    try {
+      const _localKp = await loadFutureKp() || {};
+      _preferVerifiedLocal3Day = [0,1,2].every(offset => {
+        const d = new Date(todayKyivStr()+'T12:00:00Z');
+        d.setUTCHours(0,0,0,0); d.setUTCDate(d.getUTCDate()+offset);
+        const point = _localKp[fmtDate(d)];
+        return point && Number.isFinite(Number(point.kp)) && point.kp_synthetic === false;
+      });
+    } catch(_e) { _preferVerifiedLocal3Day = false; }
+  }
+  // v88.6.9: Tier-2 UAF Geophysical Institute fallback — якщо NOAA 3-day fail
+  if ((!last3D || !last3D.days || !last3D.days.length || last3D._synthetic) && !_preferVerifiedLocal3Day) {
     try{
       if(window._DEBUG) console.log('[v88.6.9] NOAA 3-day fail → trying UAF Alaska mirror');
       const _uafHtml = await withTimeout(fetchTextWithCORS(URL_UAF_AURORA), 5000, 'UAF-3day');
