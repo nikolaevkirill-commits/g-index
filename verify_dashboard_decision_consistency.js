@@ -307,3 +307,10 @@ forbidText('aria-label="Повний розклад ${slots.length}', 'dynamic w
 requireText("fetch('SPACE_WEATHER_CONTEXT_v1.json', {cache:'no-store'})", 'GOES X-ray prefers the validated same-origin snapshot');
 requireText("_delivery: 'same_origin_snapshot'", 'same-origin X-ray provenance is explicit');
 requireText("xr._delivery==='same_origin_snapshot' ? 'snapshot' : 'ok'", 'X-ray source indicator distinguishes snapshot from direct live fetch');
+requireText('body.simple-mode #heroCard{min-height:860px!important}', 'mobile Hero reserves its measured loaded height');
+requireText('const _nearViewport = _view.bottom >= -120 && _view.top <= window.innerHeight + 120', 'planet animation pauses outside the viewport');
+requireText('const nearViewport = view.bottom >= -120 && view.top <= window.innerHeight + 120', 'G-flow animation pauses outside the viewport');
+requireText("ts - _planetLastPaint < 50", 'planet animation is capped at 20 fps');
+requireText("ts - _gFlowLastPaint < 50", 'G-flow animation is capped at 20 fps');
+requireText('const _swControlledAtBoot = Boolean(navigator.serviceWorker.controller)', 'first PWA install records whether the page was already controlled');
+requireText("if (!_swControlledAtBoot)", 'first PWA controller install cannot reload an already current network page');

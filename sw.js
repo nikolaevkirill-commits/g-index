@@ -21,7 +21,7 @@
 // Service-worker cache safety note; original detail is preserved in the backup.
 // Service-worker cache safety note; original detail is preserved in the backup.
 
-const CACHE_VERSION = 'fp378-v1'; // GOES X-ray prefers validated same-origin scheduler snapshot
+const CACHE_VERSION = 'fp379-v1'; // visibility-aware canvas animations; bounded 20 fps
 const CACHE_PREFIX = 'gindex-'; // G-Index cache namespace; do not remove the prefix.
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${CACHE_VERSION}`;
 const DATA_CACHE = `${CACHE_PREFIX}data-${CACHE_VERSION}`;
