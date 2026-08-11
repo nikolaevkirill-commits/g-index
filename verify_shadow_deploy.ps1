@@ -111,7 +111,7 @@ foreach ($needle in @("expert_overrides_v3.json", "manifest.json", "icon192.png"
 }
 
 $indexHtml = Get-Content -Raw -LiteralPath "index.html"
-foreach ($needle in @("gindex_kp_hourly_snapshot_v1", "gindex_kp_hourly_last_revision_v1", "МАЙБУТНІЙ ПІК · ПРОГНОЗ", "ДОБОВЕ ЗВЕДЕННЯ", "SYNTHETIC FALLBACK · не прогноз NOAA")) {
+foreach ($needle in @("gindex_kp_hourly_snapshot_v1", "gindex_kp_hourly_last_revision_v1", "МАЙБУТНІЙ ПІК · ПРОГНОЗ", "ДОБОВЕ ЗВЕДЕННЯ", "SYNTHETIC FALLBACK · не прогноз NOAA", "ГЕОМАГНІТНИЙ ФОН ЗАРАЗ · ОКРЕМИЙ ПОКАЗНИК", "Колір Kp не означає сприятливий день")) {
     if (-not $indexHtml.Contains($needle)) { throw "Kp signal-separation regression: $needle" }
 }
 if (-not $indexHtml.Contains("let snap = null;")) {
