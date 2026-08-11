@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.177-fp370-ASTRO-EVENTS</title>
+  <title>G-Index — Космофізичний дашборд v88.9.178-fp371-HORA-BOUNDARY</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -20649,7 +20649,10 @@ function calcHoraSequence(startUTC, endUTC, maxEntries){
   const endMs = endUTC.getTime();
   const cap = maxEntries || 4;
   let guard = 0;
-  while (cursor.getTime() < endMs && guard < cap) {
+  // fp371: guard counts calculation attempts, not returned Hora entries.
+  // A cursor exactly on a rounded boundary can yield minLeft=0 and needs a
+  // one-minute retry; that retry must not consume one of the requested slots.
+  while (cursor.getTime() < endMs && seq.length < cap && guard < cap * 4 + 4) {
     guard++;
     const hora = calcHora(cursor);
     if (!hora || !hora.planet) break;
