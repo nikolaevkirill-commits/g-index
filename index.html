@@ -2,12 +2,11 @@
 <html lang="uk">
 <head>
   <meta charset="utf-8" />
-  <meta http-equiv="X-Frame-Options" content="DENY" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://*.supabase.co https://*.nikolaev-kirill.workers.dev https://services.swpc.noaa.gov https://kp.gfz.de https://sidc.be https://corsproxy.io https://api.allorigins.win https://api.codetabs.com https://corsfix.com https://thingproxy.freeboard.io; manifest-src 'self'; worker-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://*.supabase.co https://*.nikolaev-kirill.workers.dev https://services.swpc.noaa.gov https://kp.gfz.de https://sidc.be https://corsproxy.io https://api.allorigins.win https://api.codetabs.com https://corsfix.com https://thingproxy.freeboard.io; manifest-src 'self'; worker-src 'self'; base-uri 'self'; form-action 'self'" />
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.183-fp376-PANCHANGA-LABEL-SPACING</title>
+  <title>G-Index — Космофізичний дашборд v88.9.184-fp377-LIGHTHOUSE-TRUST-FIXES</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -238,7 +237,7 @@
     #scienceBar.sci-expanded .sci-secondary{ display:flex }
     .sci-secondary{ opacity:.75 }
     /* Profile Bar */
-    .profile-btn{ appearance:none; border:1px solid var(--border2); background:#0f1a2f; color:var(--muted); font-size:var(--fs-sm); font-weight:600; padding:5px 11px; border-radius:8px; cursor:pointer; transition:all .15s }
+    .profile-btn{ appearance:none; border:1px solid var(--border2); background:#0f1a2f; color:#a9bad8; font-size:var(--fs-sm); font-weight:600; padding:5px 11px; border-radius:8px; cursor:pointer; transition:all .15s }
     .profile-btn:hover{ border-color:var(--alt); color:var(--text2) }
     .profile-btn.active{ color:#001026; font-weight:700 }
     .profile-btn[data-p="med"].active{ background:var(--ok); border-color:var(--ok) }
@@ -1572,10 +1571,11 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
           onclick="(async function(){try{if('serviceWorker' in navigator){const _s=new window.URL('.', location.href).href;const regs=await navigator.serviceWorker.getRegistrations();await Promise.all(regs.filter(r=>r.scope===_s).map(r=>r.unregister()));}if('caches' in window){const keys=await caches.keys();await Promise.all(keys.filter(k=>k.startsWith('gindex-')).map(k=>caches.delete(k)));}location.reload(true);}catch(e){alert('Reset error: '+e.message);}})()"
           style="background:#2a1a1a;color:#ff9f9f;border:1px solid #4a2a2a;font-size:11px;padding:3px 8px;border-radius:6px">🗑 Кеш</button>
         <button id="btnShare" title="Поділитись поточним G-станом" aria-label="Поділитись" onclick="shareGState()" style="background: var(--border);color: var(--muted);border:1px solid var(--border2)">📤</button>
+        <button id="btnGeo" title="Уточнити Панчангу і години за моїм місцезнаходженням" aria-label="Використати моє місцезнаходження" onclick="initGeolocation()" style="background:var(--border);color:#a9bad8;border:1px solid var(--border2)">📍</button>
         <button id="btnChronoExport" title="Експорт Chrono Journal" onclick="(function(){try{var d=localStorage.getItem('gindex_chrono_v2_abcd')||'[]';prompt('CHRONO JSON (A/B/C/D):',d);}catch(e){alert('Помилка: '+e.message);}})()" style="background:#0a2a1a;color:#44ffaa;border:1px solid #1a6644;font-size:11px;padding:3px 8px;border-radius:6px">📊</button>
         <button class="lang-btn active" id="btnLang" title="Switch language / Змінити мову" aria-label="Змінити мову інтерфейсу">UA</button>
         <button class="lang-btn" id="btnSimpleMode" title="Простий режим (тільки головне) / Експертний режим"
-          aria-label="Перемкнути простий/експертний режим" aria-pressed="false" onclick="toggleSimpleMode()"
+          aria-label="Простий вигляд" aria-pressed="false" onclick="toggleSimpleMode()"
           style="border-color:var(--faint);color:var(--dim);font-size:12px"><span aria-hidden="true">👁</span> <span id="simpleModeLabel">Простий вигляд</span></button>
         <button class="lang-btn" id="btnG2Watch" style="border-color:var(--faint);color:var(--dim);font-size:12px" title="Симулятор G — внизу сторінки" aria-label="Відкрити симулятор G">🧮</button>
         <div class="autoref-bar" style="margin-top:0">
@@ -1850,7 +1850,7 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
           <!-- v88.8.18 patches: P2/P3/P4/P1d — DISABLED in fp75 (V3 freeze). V19 candidate. -->
           <a id="modelQualityBadge" href="backtest.html" target="_blank" rel="noopener" data-label="Точність" style="font-size:12px;font-weight:700;color:var(--ok);text-decoration:none;border:1px solid var(--ok);padding:1px 8px;border-radius:8px;background:rgba(43,212,125,.08);transition:background .2s" title="Завантажуються актуальні хронологічні метрики без витоку даних.">&#128202; Метрики якості завантажуються…</a>
           <!-- v88.8.37-fp72: Audit toggle button -->
-          <button id="auditToggleBtn" onclick="(function(){const c=document.getElementById('auditCard');const b=document.getElementById('auditToggleBtn');if(!c)return;if(c.style.display==='none'||!c.style.display){try{renderAuditCard({silent:false});}catch(e){} c.style.display='';document.body.classList.add('audit-mode');try{draw27Chart();}catch(e){}b.textContent='Аудит ▾';}else{c.style.display='none';document.body.classList.remove('audit-mode');try{draw27Chart();}catch(e){}b.textContent='Аудит ▸';}})()" style="font-size:11px;font-weight:600;color:var(--muted);background:none;border:1px solid var(--border2);border-radius:6px;padding:1px 8px;cursor:pointer;line-height:1.6" aria-label="Показати розкладку висновку">Аудит ▸</button>
+          <button id="auditToggleBtn" onclick="(function(){const c=document.getElementById('auditCard');const b=document.getElementById('auditToggleBtn');if(!c)return;if(c.style.display==='none'||!c.style.display){try{renderAuditCard({silent:false});}catch(e){} c.style.display='';document.body.classList.add('audit-mode');try{draw27Chart();}catch(e){}b.textContent='Аудит ▾';b.setAttribute('aria-label','Аудит: сховати розкладку висновку');}else{c.style.display='none';document.body.classList.remove('audit-mode');try{draw27Chart();}catch(e){}b.textContent='Аудит ▸';b.setAttribute('aria-label','Аудит: показати розкладку висновку');}})()" style="font-size:11px;font-weight:600;color:var(--muted);background:none;border:1px solid var(--border2);border-radius:6px;padding:1px 8px;cursor:pointer;line-height:1.6" aria-label="Аудит: показати розкладку висновку">Аудит ▸</button>
         </div>
       </div>
     </section>
@@ -1865,9 +1865,9 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
       </div>
       <span style="font-size:11px;color:var(--ok);font-weight:700;white-space:nowrap">Подивитись →</span>
     </a>
-    <div id="systemHealthBanner" style="display:none;margin:0 0 10px;padding:9px 14px;border-radius:12px;border:1px solid rgba(255,176,32,.34);background:rgba(255,176,32,.045);font-size:11px;line-height:1.5;color:var(--muted)" role="status"></div>
+    <div id="systemHealthBanner" style="display:none;margin:0 0 10px;padding:9px 14px;border-radius:12px;border:1px solid rgba(255,176,32,.34);background:rgba(255,176,32,.045);font-size:11px;line-height:1.5;color:#a9bad8" role="status"></div>
     <details id="v19ShadowStatusBanner" data-model="reconstructed-v19.2" data-score-effect="0" style="margin:0 0 10px;padding:10px 14px;border-radius:12px;border:1px solid rgba(178,126,255,.38);background:linear-gradient(180deg,rgba(178,126,255,.085),rgba(178,126,255,.022));font-size:11px;line-height:1.5;color:var(--muted)">
-      <summary style="cursor:pointer;color:#d9c2ff;font-weight:800" aria-label="Статус реконструйованої моделі v19.2">🧪 v19.2 SHADOW — окремий тестовий контур · вплив на прогноз 0</summary>
+      <summary style="cursor:pointer;color:#d9c2ff;font-weight:800">🧪 v19.2 SHADOW — окремий тестовий контур · вплив на прогноз 0</summary>
       <div style="margin-top:8px;display:grid;gap:5px">
         <div><strong style="color:#e9ddff">Технічно працює:</strong> зафіксована реконструкція автоматично проходить тести та перевірку відтворюваності.</div>
         <div><strong style="color:#ffd37a">Не є головним прогнозом:</strong> v19.2 не змінює Hero, оцінку дня, PDF/Engine reference або оперативні рекомендації.</div>
@@ -2227,7 +2227,7 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
       <button class="profile-btn" data-p="pilot" onclick="setProfile('pilot')" aria-pressed="false">✈ Пілот</button>
       <button class="profile-btn" data-p="trader" onclick="setProfile('trader')" aria-pressed="false">📈 Трейдер</button>
       <button class="profile-btn" data-p="mil"  onclick="setProfile('mil')" aria-pressed="false">🎖 Військовий</button>
-      <button class="profile-btn" data-p="off"  onclick="setProfile('off')" style="color:#3a5a7a">✕ Вимк.</button>
+      <button class="profile-btn" data-p="off"  onclick="setProfile('off')">✕ Вимк.</button>
     </div>
     <div id="profileRec"></div>
 
@@ -6036,6 +6036,22 @@ function initGeolocation(){
   }
 }
 
+// Load a previously approved location without opening a permission prompt at boot.
+// A fresh browser geolocation request is only made from the explicit toolbar button.
+function initCachedGeolocation(){
+  try{
+    const lat = parseFloat(lsGet('last_geo_lat',''));
+    const lon = parseFloat(lsGet('last_geo_lon',''));
+    if(isFinite(lat) && isFinite(lon) && Math.abs(lat) <= 90 && Math.abs(lon) <= 180){
+      _userLat = lat;
+      _userLon = lon;
+    }
+    _updateHoraCoordLabel();
+  }catch(e){
+    if(window._DEBUG) console.warn('[geo] cached location unavailable:', e.message);
+  }
+}
+
 // v87.26: динамічний Hora-лейбл = "(IANA, UTC±HH, lat°N/S)"
 function _updateHoraCoordLabel(){
   const el = document.getElementById('horaCoordLabel');
@@ -6528,7 +6544,7 @@ function updateSpaceWeatherDecisionGuard(){
     (reasons.length?'Зараз: '+reasons.join(' · ')+'. ':'')+
     '<strong>Для GPS, радіозв’язку, дронів і критичних запусків знизьте впевненість та перевірте умови безпосередньо перед дією.</strong>'+
     (stale?' <span style="color:#ff9f9f">Дані старші 6 год — потрібне оновлення.</span>':'')+
-    '<div style="margin-top:3px;color:var(--dim)">Це незалежний safety/advisory-шар: він не додається вдруге до G і не переписує експертний PDF.</div>';
+    '<div style="margin-top:3px;color:#a9bad8">Це незалежний safety/advisory-шар: він не додається вдруге до G і не переписує експертний PDF.</div>';
 }
 window._expertCalcLoadStatus = 'pending';
 async function loadSourceHealth(){
@@ -6810,15 +6826,15 @@ async function loadSystemHealthStatus(){
       (hard.length?' <div style="margin-top:4px">⛔ '+hard.map(escapeHtml).join(' · ')+'</div>':'')+
       (operationalWarns.length?' <div style="margin-top:3px;color:#ffd37a">Операційні попередження: '+operationalWarns.map(escapeHtml).join(' · ')+'</div>':'')+
       '<div style="margin-top:4px;color:#ffd37a"><strong>🧪 Докази: '+evidenceStatus+'</strong> · validated outcome pairs '+pairs+'/100 · очікують незалежних outcomes '+awaiting+' · Tanita '+tanitaAwaiting+' · наступна ручна вибірка '+manualPending+'</div>'+
-      (sourceStatus==='WARN'&&automationStatus==='PASS'?'<div style="margin-top:3px;color:var(--dim)">Health artifact має WARN лише через evidence gates; це не збій автоматизації.</div>':'')+
-      (evidenceWarns.length?' <div style="margin-top:3px;color:var(--dim)">Evidence gates: '+evidenceWarns.map(escapeHtml).join(' · ')+'</div>':'');
+      (sourceStatus==='WARN'&&automationStatus==='PASS'?'<div style="margin-top:3px;color:#a9bad8">Health artifact має WARN лише через evidence gates; це не збій автоматизації.</div>':'')+
+      (evidenceWarns.length?' <div style="margin-top:3px;color:#a9bad8">Evidence gates: '+evidenceWarns.map(escapeHtml).join(' · ')+'</div>':'');
     try{
       const xr=await fetch('EXCEL_FORMULA_INTEGRITY_STATUS_v1.json',{cache:'no-store'});
       if(xr.ok){
         const x=await xr.json(), c=x.coverage||{}, i=x.integrity||{};
         const t=x.chronological_validation&&x.chronological_validation.test_2026_onward&&x.chronological_validation.test_2026_onward.verbatim||{};
         const pct=v=>Number.isFinite(Number(v))?(100*Number(v)).toFixed(1)+'%':'\u2014';
-        el.innerHTML+='<div style="margin-top:4px;color:var(--dim)">Excel audit: '+Number(c.raw_formula_dates||0)+
+        el.innerHTML+='<div style="margin-top:4px;color:#a9bad8">Excel audit: '+Number(c.raw_formula_dates||0)+
           ' raw dates through '+escapeHtml(String(c.raw_formula_max||'\u2014'))+
           ' \u00b7 PDF decisions through '+escapeHtml(String(c.pdf_decision_max||'\u2014'))+
           ' \u00b7 '+Number(c.pdf_dates_after_excel_formula||0)+' PDF dates without internal Excel formula'+
@@ -9284,7 +9300,10 @@ G_now  ${isFinite(gNow) ? (gNow >= 0 ? '+' : '') + gNow.toFixed(2) : '?'} = (2�
   if(_cl) _cl.onclick = function(){
     card.style.display = 'none';
     const _btn = document.getElementById('auditToggleBtn');
-    if(_btn) _btn.textContent = 'Аудит ▸';
+    if(_btn){
+      _btn.textContent = 'Аудит ▸';
+      _btn.setAttribute('aria-label','Аудит: показати розкладку висновку');
+    }
   };
 }
 
@@ -18240,11 +18259,11 @@ function _renderHeroTimeWindows() {
   // v87.41: explicit free-tier hint — без цього "3 з 8 слотів" виглядає як баг.
   // Додаємо зверху списку pre-пояснення.
   const _headerHint = _stormNote174 || ((!isPaid && slots.length > visibleSlots.length)
-    ? `<div role="button" tabindex="0" aria-label="Відкрити повний розклад слотів у Plus" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();PaywallModal.show('G-Index Plus','basic');}" style="padding:4px 10px 6px;font-size:10px;color:var(--faint);border-bottom:1px dashed rgba(139,160,200,.18);margin-bottom:4px;cursor:pointer" onclick="PaywallModal.show('G-Index Plus','basic')">📍 Показано ${visibleSlots.length} з ${slots.length} слотів (поточне + майбутні) · повний день — у Plus</div>`
+    ? `<div role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();PaywallModal.show('G-Index Plus','basic');}" style="padding:4px 10px 6px;font-size:10px;color:var(--faint);border-bottom:1px dashed rgba(139,160,200,.18);margin-bottom:4px;cursor:pointer" onclick="PaywallModal.show('G-Index Plus','basic')">📍 Показано ${visibleSlots.length} з ${slots.length} слотів (поточне + майбутні) · повний день — у Plus</div>`
     : '');
 
   if (!isPaid && slots.length > 3) {
-    lines.push(`<div role="button" tabindex="0" aria-label="Відкрити повний розклад вікон у Plus" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();PaywallModal.show('G-Index Plus','basic');}" style="margin-top:4px;padding:5px 10px;border-radius:8px;border:1px dashed rgba(55,167,255,.22);background:rgba(55,167,255,.04);font-size:11px;color:#8fb5ff;cursor:pointer" onclick="PaywallModal.show('G-Index Plus','basic')">🔒 Повний розклад (${slots.length} вікон) — у Plus</div>`);
+    lines.push(`<div role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();PaywallModal.show('G-Index Plus','basic');}" style="margin-top:4px;padding:5px 10px;border-radius:8px;border:1px dashed rgba(55,167,255,.22);background:rgba(55,167,255,.04);font-size:11px;color:#8fb5ff;cursor:pointer" onclick="PaywallModal.show('G-Index Plus','basic')">🔒 Повний розклад (${slots.length} вікон) — у Plus</div>`);
   }
   wrap.innerHTML = _headerHint + lines.join('');
 
@@ -23514,7 +23533,7 @@ function bootGIndexOnce(_reason){
   window.__gIndexBooted = true;
   var cp = function(n){ try{ document.getElementById('__cpPanel').textContent += '\nCP-BOOT-'+n; }catch(e){} };
   cp(1);
-  try{ initGeolocation(); }catch(e){} cp(2);
+  try{ initCachedGeolocation(); }catch(e){} cp(2);
   try{ setStamp(); }catch(e){} cp(3);
   // fp148 MINIMAL DIAG: НЕ викликаємо loadAll/loadAllLite взагалі — жодного рендеру.
   // Якщо фриз стається навіть тут — причина ПОЗА boot-ланцюгом (десь у топ-рівневих IIFE).
@@ -23854,6 +23873,7 @@ function setSimpleMode(on, options){
   document.body.classList.toggle('simple-mode', isOn);
   const lab = el('simpleModeLabel');
   if(lab) lab.textContent = isOn ? 'Повний вигляд' : 'Простий вигляд';
+  btn.setAttribute('aria-label', isOn ? 'Повний вигляд' : 'Простий вигляд');
   btn.setAttribute('aria-pressed', isOn ? 'true' : 'false');
   btn.classList.toggle('active', isOn);
   btn.style.borderColor = isOn ? 'var(--ok)' : 'var(--faint)';
@@ -25215,7 +25235,7 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line205
     </svg>
     Прогноз
   </button>
-  <button class="mnav-btn" id="mnavPersonal" onclick="mnavGo('personal',true)" aria-label="Особистий">
+  <button class="mnav-btn" id="mnavPersonal" onclick="mnavGo('personal',true)" aria-label="Профіль">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
       <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
     </svg>

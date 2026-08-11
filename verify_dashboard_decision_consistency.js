@@ -290,3 +290,17 @@ requireText("bar.classList.toggle('tools-open')", 'secondary tools toggle is fun
 requireText('#heroWhyBasic { display: block !important; }', 'score explanation is available in every view');
 requireText('<summary>▸ Чому така оцінка?</summary>', 'score explanation has a plain-language label');
 forbidText('id="heroWhyBasic" style="display:none', 'score explanation cannot be hidden by default');
+forbidText('http-equiv="X-Frame-Options"', 'unsupported X-Frame-Options meta cannot claim protection the browser ignores');
+forbidText("frame-ancestors 'none'", 'frame-ancestors cannot be declared in an ignored meta CSP');
+requireText('id="btnGeo"', 'geolocation has an explicit user-action control');
+requireText('onclick="initGeolocation()"', 'fresh geolocation runs from a user gesture');
+requireText('function initCachedGeolocation()', 'startup may reuse a previously approved location without prompting');
+requireText('try{ initCachedGeolocation(); }catch(e){} cp(2);', 'boot uses cached coordinates only');
+forbidText('try{ initGeolocation(); }catch(e){} cp(2);', 'boot cannot open a geolocation permission prompt');
+requireText("btn.setAttribute('aria-label', isOn ? 'Повний вигляд' : 'Простий вигляд')", 'simple-mode accessible name follows visible text');
+requireText('aria-label="Профіль"', 'mobile profile navigation name matches visible text');
+requireText("_btn.setAttribute('aria-label','Аудит: показати розкладку висновку')", 'audit control restores a visible-name-compatible label when closed');
+requireText('color:#a9bad8">Health artifact', 'health evidence explanation keeps readable contrast');
+forbidText('aria-label="v19.2 SHADOW:', 'v19 shadow summary uses its full visible text as the accessible name');
+forbidText('aria-label="Показано ${visibleSlots.length}', 'dynamic slot paywall uses its full visible text as the accessible name');
+forbidText('aria-label="Повний розклад ${slots.length}', 'dynamic window paywall uses its full visible text as the accessible name');
