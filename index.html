@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.176-fp369-UX-FOCUS</title>
+  <title>G-Index — Космофізичний дашборд v88.9.177-fp370-ASTRO-EVENTS</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -2355,6 +2355,35 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
         </div>
       </div>
       </details>
+
+      <!-- fp370: visible astronomy facts. Informational layer; never changes the frozen score. -->
+      <section class="card" id="astronomyEventsCard" style="margin-top:12px;border-color:rgba(110,160,255,.24)">
+        <div class="flex" style="align-items:flex-start;gap:10px;margin-bottom:8px">
+          <div>
+            <h2 style="margin:0;font-size:16px">🌘 Астрономічні події</h2>
+            <div class="small muted" style="margin-top:2px">Затемнення, парад планет і найближча кутова пара · інформаційно, без нового впливу на оцінку</div>
+          </div>
+          <span class="pill right" id="astroEventsStamp" style="font-size:10px">—</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:8px">
+          <div id="eclipseEventTile" style="padding:10px 12px;border-radius:10px;border:1px solid rgba(255,140,100,.2);background:rgba(255,140,100,.04)">
+            <div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);margin-bottom:4px">Найближче затемнення</div>
+            <div id="eclipseEventMain" style="font-size:13px;font-weight:700;color:var(--text2)">Завантаження…</div>
+            <div id="eclipseEventSub" class="small muted" style="margin-top:4px;line-height:1.4">—</div>
+          </div>
+          <div id="planetParadeTile" style="padding:10px 12px;border-radius:10px;border:1px solid rgba(176,132,255,.22);background:rgba(176,132,255,.05)">
+            <div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);margin-bottom:4px">Парад планет перед світанком</div>
+            <div id="planetParadeMain" style="font-size:13px;font-weight:700;color:var(--text2)">Завантаження…</div>
+            <div id="planetParadeSub" class="small muted" style="margin-top:4px;line-height:1.4">—</div>
+          </div>
+          <div id="planetPairTile" style="padding:10px 12px;border-radius:10px;border:1px solid rgba(110,160,255,.2);background:rgba(110,160,255,.04)">
+            <div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);margin-bottom:4px">Найближча пара планет зараз</div>
+            <div id="planetPairMain" style="font-size:13px;font-weight:700;color:var(--text2)">Завантаження…</div>
+            <div id="planetPairSub" class="small muted" style="margin-top:4px;line-height:1.4">—</div>
+          </div>
+        </div>
+        <div id="horaPairDisclosure" class="small muted" style="margin-top:8px;padding-top:7px;border-top:1px dashed rgba(139,160,200,.18)">Hora‑перехід: —</div>
+      </section>
 
       <!-- v82b: DUO CARD — Пачанга (ліворуч) + Особистий (праворуч) -->
       <div id="duoCard">
@@ -8795,6 +8824,164 @@ function computeMiFromEclipses(dateUTC){
   return {Mi:0, mTip:`0 — поза періодом затемнень (каталог ${y}: ${set.size} ${set.size===1?'подія':'подій'})`};
 }
 
+// fp370: explicit astronomy visibility layer.
+// This layer explains already-existing M_i and reports physical angular separation.
+// It is deliberately display-only: no value here is fed into computeAi/G/reference/operation.
+const ECLIPSE_TYPE_UA = {
+  total_solar:'повне сонячне', total_lunar:'повне місячне',
+  hybrid_solar:'гібридне сонячне', annular:'кільцеподібне сонячне',
+  partial_solar:'часткове сонячне', partial_lunar:'часткове місячне',
+  penumbral:'пенумбральне місячне', unknown:'затемнення (тип не підтверджено)'
+};
+const ASTRO_PLANETS = [
+  ['Mercury','Меркурій'], ['Venus','Венера'], ['Mars','Марс'],
+  ['Jupiter','Юпітер'], ['Saturn','Сатурн'], ['Uranus','Уран'], ['Neptune','Нептун']
+];
+const PLANET_PARADE_WINDOWS = [{
+  start:'2026-08-10', peak:'2026-08-12', end:'2026-08-14',
+  bodies:['Mercury','Jupiter','Uranus','Mars','Neptune','Saturn']
+}];
+let _astroEventsRetryCount = 0;
+
+function nearestCatalogEclipse(dateUTC){
+  const base = new Date(Date.UTC(dateUTC.getUTCFullYear(), dateUTC.getUTCMonth(), dateUTC.getUTCDate()));
+  const events = [];
+  for(let y=base.getUTCFullYear()-1; y<=base.getUTCFullYear()+4; y++){
+    let cat = eclipsesByYear.get(y);
+    if(!cat){
+      cat = _nasaEclipseCatalog(y);
+      if(cat) eclipsesByYear.set(y, cat);
+    }
+    if(!cat) continue;
+    for(const [ds,type] of cat.entries()){
+      const d = new Date(`${ds}T00:00:00Z`);
+      if(isFinite(d.getTime())) events.push({date:d, ds, type});
+    }
+  }
+  events.sort((a,b)=>a.date-b.date);
+  return events.find(e=>e.date>=base) || null;
+}
+
+function nearestPhysicalPlanetPair(dateUTC){
+  if(!window.Astronomy || typeof Astronomy.GeoVector!=='function' || typeof Astronomy.AngleBetween!=='function') return null;
+  const vectors = ASTRO_PLANETS.map(([body,ua])=>({body,ua,vec:Astronomy.GeoVector(body,dateUTC,true)}));
+  let best = null;
+  for(let i=0;i<vectors.length;i++) for(let j=i+1;j<vectors.length;j++){
+    const angle = Astronomy.AngleBetween(vectors[i].vec, vectors[j].vec);
+    if(isFinite(angle) && (!best || angle<best.angle)) best={a:vectors[i],b:vectors[j],angle};
+  }
+  if(!best) return null;
+  try{
+    const later = new Date(dateUTC.getTime()+6*3600000);
+    const va = Astronomy.GeoVector(best.a.body,later,true);
+    const vb = Astronomy.GeoVector(best.b.body,later,true);
+    const laterAngle = Astronomy.AngleBetween(va,vb);
+    best.motion = isFinite(laterAngle) ? (laterAngle < best.angle-0.02 ? 'зближуються' : laterAngle > best.angle+0.02 ? 'розходяться' : 'майже без зміни') : 'рух не визначено';
+  }catch(_e){ best.motion='рух не визначено'; }
+  return best;
+}
+
+function nextMorningPlanetParade(dateUTC){
+  if(!window.Astronomy || typeof Astronomy.Observer!=='function' ||
+     typeof Astronomy.Equator!=='function' || typeof Astronomy.Horizon!=='function') return null;
+  const observer = new Astronomy.Observer(_userLat, _userLon, 0);
+  let day = new Date(Date.UTC(dateUTC.getUTCFullYear(),dateUTC.getUTCMonth(),dateUTC.getUTCDate(),0,0,0));
+  let sun = _calcSunRiseSet(day);
+  let observeAt = sun && sun.sunrise ? new Date(sun.sunrise.getTime()-60*60000) : null;
+  if(!observeAt || observeAt.getTime()<dateUTC.getTime()-15*60000){
+    day = addDays(day,1);
+    sun = _calcSunRiseSet(day);
+    observeAt = sun && sun.sunrise ? new Date(sun.sunrise.getTime()-60*60000) : null;
+  }
+  if(!observeAt || !sun || !sun.sunrise) return null;
+  const paradeDay = fmtDate(observeAt);
+  const event = PLANET_PARADE_WINDOWS.find(e=>paradeDay>=e.start&&paradeDay<=e.end) || null;
+  const selected = event ? ASTRO_PLANETS.filter(([body])=>event.bodies.includes(body)) : ASTRO_PLANETS;
+  const positions = selected.map(([body,ua])=>{
+    const eq = Astronomy.Equator(body,observeAt,observer,true,true);
+    const hor = Astronomy.Horizon(observeAt,observer,eq.ra,eq.dec,'normal');
+    return {body,ua,alt:hor.altitude,az:hor.azimuth,optics:body==='Uranus'||body==='Neptune'};
+  }).filter(p=>isFinite(p.alt)&&isFinite(p.az));
+  const above = positions.filter(p=>p.alt>0).sort((a,b)=>a.az-b.az);
+  return {observeAt,sunrise:sun.sunrise,positions,above,event};
+}
+
+function renderAstronomyEvents(dateUTC){
+  const eclipseMain = el('eclipseEventMain');
+  const eclipseSub = el('eclipseEventSub');
+  const paradeMain = el('planetParadeMain');
+  const paradeSub = el('planetParadeSub');
+  const pairMain = el('planetPairMain');
+  const pairSub = el('planetPairSub');
+  if(!eclipseMain || !eclipseSub || !paradeMain || !paradeSub || !pairMain || !pairSub) return;
+  const when = (dateUTC && isFinite(dateUTC.getTime())) ? dateUTC : new Date();
+  const stamp = el('astroEventsStamp');
+  if(stamp) stamp.textContent = when.toLocaleString('uk-UA',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+
+  const eclipse = nearestCatalogEclipse(when);
+  const mi = computeMiFromEclipses(when);
+  if(eclipse){
+    const today0 = Date.UTC(when.getUTCFullYear(),when.getUTCMonth(),when.getUTCDate());
+    const days = Math.round((eclipse.date.getTime()-today0)/86400000);
+    const countdown = days===0 ? 'сьогодні' : days===1 ? 'завтра' : `через ${days} дн.`;
+    const dateLabel = eclipse.date.toLocaleDateString('uk-UA',{day:'2-digit',month:'long',year:'numeric',timeZone:'UTC'});
+    eclipseMain.innerHTML = `🌘 ${ECLIPSE_TYPE_UA[eclipse.type]||'затемнення'} · ${dateLabel} · ${countdown}`;
+    eclipseSub.innerHTML = `<strong style="color:${mi.Mi<0?'#ff9f9f':'var(--muted)'}">Сьогодні Mᵢ = ${mi.Mi}</strong> — ${mi.Mi<0?'вже враховано у ΣAᵢ та G':'сьогодні не впливає на G'}. Тип і дата — глобальна подія; локальна видимість залежить від місця. <a href="https://science.nasa.gov/eclipses/future-eclipses/" target="_blank" rel="noopener" style="color:#8fc8ff">NASA ↗</a>`;
+  }else{
+    eclipseMain.textContent = 'Немає підтвердженої події в локальному каталозі';
+    eclipseSub.textContent = 'Mᵢ не змінюється. Каталог не підміняється припущенням.';
+  }
+
+  try{
+    const parade = nextMorningPlanetParade(when);
+    if(parade){
+      const count = parade.above.length;
+      const dateLabel = parade.observeAt.toLocaleDateString('uk-UA',{day:'2-digit',month:'long'});
+      const timeLabel = parade.observeAt.toLocaleTimeString('uk-UA',{hour:'2-digit',minute:'2-digit'});
+      const sunriseLabel = parade.sunrise.toLocaleTimeString('uk-UA',{hour:'2-digit',minute:'2-digit'});
+      const total = parade.positions.length;
+      const paradeState = parade.event
+        ? `${parade.event.bodies.length}-планетний парад · локально ${count}/${total} над горизонтом`
+        : count>=4 ? `${count} планет над горизонтом · без каталожної події` : 'локальний парад не підтверджено';
+      paradeMain.textContent = `🪐 ${paradeState} · ${dateLabel} о ${timeLabel}`;
+      const list = parade.positions.sort((a,b)=>a.az-b.az).map(p=>{
+        const altLabel = Math.abs(p.alt)<5 ? p.alt.toFixed(1) : p.alt.toFixed(0);
+        return `${p.ua} ${altLabel}°${p.alt<=0?' (за горизонтом)':''}${p.optics?' 🔭':''}`;
+      }).join(' · ');
+      const peak = parade.event ? ` Пік події: ${new Date(parade.event.peak+'T00:00:00Z').toLocaleDateString('uk-UA',{day:'2-digit',month:'long',timeZone:'UTC'})}.` : '';
+      paradeSub.innerHTML = `${list||'Немає валідних позицій'}. Розрахунок для координат дашборду за 1 год до сходу Сонця (${sunriseLabel}); 🔭 — потрібна оптика.${peak} «Парад» — популярна назва одночасної видимості, <strong>score_effect=0</strong>.`;
+    }else{
+      paradeMain.textContent = 'Локальна геометрія параду ще завантажується';
+      paradeSub.textContent = 'Склад не вгадується: потрібні Astronomy Engine, координати та час сходу Сонця.';
+    }
+
+    const pair = nearestPhysicalPlanetPair(when);
+    if(pair){
+      const level = pair.angle<=1 ? 'тісне зближення' : pair.angle<=5 ? 'помітне зближення' : 'найменша відстань серед 7 планет';
+      pairMain.textContent = `${pair.a.ua} — ${pair.b.ua}: ${pair.angle.toFixed(1)}° · ${level}`;
+      pairSub.innerHTML = `Геоцентричний кут на небі; ${pair.motion}. <strong>Інформаційно, score_effect=0</strong>. Це не Hora і не автоматичний прогноз подій. Джерело розрахунку: Astronomy Engine.`;
+      _astroEventsRetryCount = 0;
+    }else{
+      pairMain.textContent = 'Астрономічний модуль ще завантажується';
+      pairSub.textContent = 'Кут не вигадується: буде показаний лише після готовності Astronomy Engine.';
+      if(_astroEventsRetryCount<5){ _astroEventsRetryCount++; setTimeout(()=>renderAstronomyEvents(new Date()),1500); }
+    }
+  }catch(e){
+    pairMain.textContent = 'Кутова пара тимчасово недоступна';
+    pairSub.textContent = 'Помилка астрономічного модуля; score_effect=0. Інші показники не підміняють цей факт.';
+  }
+
+  const horaEl = el('horaPairDisclosure');
+  if(horaEl){
+    try{
+      const seq = calcHoraSequence(when,new Date(when.getTime()+3*3600000),2);
+      horaEl.innerHTML = seq.length>1
+        ? `Традиційний Hora‑перехід: <strong>${seq[0].planet} → ${seq[1].planet}</strong> о ${seq[0].endLocal}. Це часовий символічний цикл, <strong>не фізичне зближення планет</strong>.`
+        : 'Традиційний Hora‑перехід: дані тимчасово недоступні.';
+    }catch(_e){ horaEl.textContent='Традиційний Hora‑перехід: дані тимчасово недоступні.'; }
+  }
+}
+
 // ------------------- Додаткові обчислювані події (без Інтернету) ------------
 // approxTithiIndex: повертає 1-based індекс тітхі (1..30).
 // Використовується ТІЛЬКИ в autoComputedExtras для перевірки t===1 (Pratipada).
@@ -9226,12 +9413,19 @@ let lastBzTime  = null;
 let lastVsw   = null;
 let lastVswTime = null;
 
+// fp370: NOAA RTSW occasionally serializes missing numeric samples as bare NaN,
+// which is not valid JSON. Null only those invalid values so later valid rows survive.
+function parseNoaaJson(text){
+  const normalized = String(text||'').replace(/([:\[,]\s*)(?:NaN|-?Infinity)(?=\s*[,}\]])/g, '$1null');
+  return JSON.parse(normalized);
+}
+
 async function fetchBzNow(){
   const url = 'https://services.swpc.noaa.gov/json/rtsw/rtsw_mag_1m.json';
   let text;
   try { text = await fetchTextWithCORS(url); } catch(e){ console.warn('[v42] Bz fetch failed',e); return null; }
   try {
-    const rows = JSON.parse(text);
+    const rows = parseNoaaJson(text);
     if(!Array.isArray(rows)||rows.length<1){ console.warn('[v42] Bz: unexpected format'); return null; }
     const preferred=rows.find(r=>r&&r.active===true&&isFinite(parseFloat(r.bz_gsm)))||
                     rows.find(r=>r&&isFinite(parseFloat(r.bz_gsm)));
@@ -9250,7 +9444,7 @@ async function fetchVswNow(){
   let text;
   try { text = await fetchTextWithCORS(url); } catch(e){ console.warn('[v42] Vsw fetch failed',e); return null; }
   try {
-    const rows = JSON.parse(text);
+    const rows = parseNoaaJson(text);
     if(!Array.isArray(rows)||rows.length<1){ console.warn('[v42] Vsw: unexpected format'); return null; }
     const preferred=rows.find(r=>r&&r.active===true&&isFinite(parseFloat(r.proton_speed)))||
                     rows.find(r=>r&&isFinite(parseFloat(r.proton_speed)));
@@ -11810,6 +12004,7 @@ function renderCurrentPanel(){
   // Hora таймлайн + найкращий час + Co-Star + Science bar + Profile
   try{
     renderHoraTimeline(nowUTC, kUse != null ? kUse : 0, G);
+    renderAstronomyEvents(nowUTC);
     const hora = calcHora(nowUTC);
     renderBestTime(nowUTC, kUse != null ? kUse : 0, G, 0);
     // v78: renderCoStarBanner, updateSafeStateBanner removed (CSS-hidden targets)
@@ -24444,8 +24639,8 @@ const SolarWind = (function(){
         fetchTextWithCORS(URL_MAG),
         fetchTextWithCORS(URL_PLASMA)
       ]);
-      const magRows = JSON.parse(magTxt);
-      const plasmaRows = JSON.parse(plasmaTxt);
+      const magRows = parseNoaaJson(magTxt);
+      const plasmaRows = parseNoaaJson(plasmaTxt);
       const magRow = _latestObject(magRows,'bz_gsm');
       const plasmaRow = _latestObject(plasmaRows,'proton_speed');
       if(!magRow || !plasmaRow) throw new Error('no valid rows');
