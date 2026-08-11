@@ -6,7 +6,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.188-fp381-KP-PROVENANCE</title>
+  <title>G-Index — Космофізичний дашборд v88.9.189-fp382-COLOR-SEMANTICS</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -587,7 +587,8 @@
     .hero-metric{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:6px 8px;min-height:44px}
     .hero-metric .label{font-size:9px!important;margin-bottom:2px!important;display:block}
     #heroDelta,#heroConfidence,#heroFreshness,#heroStamp{font-weight:700;font-variant-numeric:tabular-nums}
-    #heroFreshness.live{color:var(--ok)}
+    /* fp382: freshness is metadata, not a favourable-day verdict. */
+    #heroFreshness.live{color:#9fd1ff}
     #heroFreshness.cached{color:var(--warn)}
     #heroFreshness.stale{color:var(--bad)}
     #gFlowCanvas{display:block}
@@ -1593,7 +1594,7 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
           <span id="dataTimestamp" style="font-size:10px;color:var(--faint);margin-left:4px"></span>
         </div>
         <span class="pill" id="stamp" style="font-size:11px">—</span>
-        <span id="freshnessBadge" tabindex="0" title="Свіжість даних NOAA Kp (за віком останнього fetch + content-age):&#10;• LIVE — менше 5 хв (зелений)&#10;• ESTIMATED — контент до 12г, це forecast-дані NOAA (норм. цикл оновлення ~3г) — очікувано, не проблема&#10;• DELAYED — 5–30 хв АБО контент >1г (жовтий, нормальна затримка)&#10;• STALE — 30–60 хв АБО контент >1 дн (помаранчевий)&#10;• OLD — понад 60 хв АБО контент >1 тиж (червоний, втрачено зв'язок)&#10;• CACHED — офлайн режим / SW проксі-кеш&#10;• DEGRADED — NOAA-фід не оновлювався понад 3г АБО знайдено фізичну суперечність між джерелами (напр. Kp і Dst не узгоджуються). Дашборд і далі показує останні відомі дані, позначені як такі, що вимагають перевірки.&#10;&#10;NOAA Kp endpoints оновлюються кожні ~5–10 хв.&#10;PDF/Engine і frozen engine_scores працюють штатно — це обмеження лише для live/raw rail-ів." style="font-size:10px;padding:2px 6px;border-radius:3px;margin-left:4px;font-weight:600;letter-spacing:0.3px;background:#0a2a15;color:#63be7b;cursor:help">● Kp LIVE</span>
+        <span id="freshnessBadge" tabindex="0" title="Свіжість даних NOAA Kp — це технічний стан джерела, НЕ оцінка сприятливості дня.&#10;&#10;• DATA LIVE — менше 5 хв&#10;• ESTIMATED — контент до 12г, це forecast-дані NOAA (норм. цикл оновлення ~3г)&#10;• DELAYED — 5–30 хв АБО контент >1г&#10;• STALE — 30–60 хв АБО контент >1 дн&#10;• OLD — понад 60 хв АБО контент >1 тиж&#10;• CACHED — офлайн режим / SW проксі-кеш&#10;• DEGRADED — NOAA-фід не оновлювався понад 3г АБО знайдено фізичну суперечність між джерелами.&#10;&#10;Оперативну оцінку дня показує великий індекс −3…+3." style="font-size:10px;padding:2px 6px;border-radius:3px;margin-left:4px;font-weight:600;letter-spacing:0.3px;background:#10243a;color:#9fd1ff;cursor:help">● Kp DATA LIVE</span>
       </div>
     </div>
   </header>
@@ -3499,7 +3500,7 @@ function _renderFreshnessState(){
                 : (Math.round(maxAge / 360000) / 10).toFixed(1) + 'г';
   // v87.1 NFR: stricter thresholds (LIVE ≤5min, DELAYED ≤30min, STALE ≤60min, OLD >60min)
   let state, label, col, bgCol;
-  if(maxAge < 5*60*1000){ state='live'; label='● Kp LIVE · '+_ageStr; col='#63be7b'; bgCol='#0a2a15'; }
+  if(maxAge < 5*60*1000){ state='live'; label='● Kp DATA LIVE · '+_ageStr; col='#9fd1ff'; bgCol='#10243a'; }
   else if(maxAge < 30*60*1000){ state='delayed'; label='● DELAYED · '+_ageStr; col='#ffcc44'; bgCol='#2a1a00'; }
   else if(maxAge < 60*60*1000){ state='stale'; label='● STALE · '+_ageStr; col='#ff9944'; bgCol='#2a1200'; }
   else { state='old'; label='● OLD · '+_ageStr; col='#ff6b6b'; bgCol='#2a0808'; }
@@ -6590,16 +6591,16 @@ async function loadKpHourlyAlert(){
           : 'джерело не визначено';
     body.innerHTML=
       '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:7px;margin-bottom:8px">'+
-        '<div style="padding:8px 10px;border:1px solid rgba(117,230,168,.32);border-radius:8px"><b style="color:#75e6a8">ЗАРАЗ · СПОСТЕРЕЖЕННЯ</b><br><span style="font-size:18px;font-weight:800">Kp '+currentText+'</span><br><span style="color:var(--dim)">Останній завершений або активний 3-годинний слот.</span></div>'+
+        '<div style="padding:8px 10px;border:1px solid rgba(89,166,255,.32);border-radius:8px"><b style="color:#9fd1ff">ГЕОМАГНІТНИЙ ФОН ЗАРАЗ · ОКРЕМИЙ ПОКАЗНИК</b><br><span style="font-size:18px;font-weight:800;color:#dbe9ff">Kp '+currentText+'</span><br><span style="color:var(--dim)">Останній завершений або активний 3-годинний слот. Не є оцінкою сприятливості дня.</span></div>'+
         '<div style="padding:8px 10px;border:1px solid rgba(255,190,75,.42);border-radius:8px"><b style="color:#ffd37a">МАЙБУТНІЙ ПІК · ПРОГНОЗ</b><br><span style="font-size:18px;font-weight:800">Kp '+peakText+'</span> · '+peakTimeLabel+'<br><span style="color:var(--dim)">'+peakState+'. Це не спостережений факт.</span></div>'+
         '<div style="padding:8px 10px;border:1px solid rgba(89,166,255,.32);border-radius:8px"><b style="color:#9fd1ff">ДОБОВЕ ЗВЕДЕННЯ</b><br><span style="font-size:18px;font-weight:800">Kp '+dailyHtml+'</span> · '+peakDateKyiv+'<br><span style="color:'+(dailySynthetic?'#ffd37a':'var(--dim)')+'">'+dailySourceLabel+'. Не дорівнює максимуму окремого слота.</span></div>'+
         '<div style="padding:8px 10px;border:1px solid rgba(178,126,255,.32);border-radius:8px"><b style="color:#d9c2ff">PDF / ОПЕРАТИВНА ОЦІНКА</b><br><span style="font-weight:800">Окрема шкала −3…+3</span><br><span style="color:var(--dim)">Не є Kp і не повинна чисельно збігатися з Kp.</span></div>'+
       '</div>'+volatilityHtml+revisionHtml+
       '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">'+
         '<thead><tr><th style="text-align:left;padding:5px">Час Київ</th><th style="text-align:left;padding:5px">Kp</th><th style="text-align:left;padding:5px">Тип даних</th></tr></thead><tbody>'+
-        slots.slice(0,12).map(x=>{const v=Number(x.kp),c=v>=5?'#ff7070':v>=4?'#ffd37a':'#75e6a8';return '<tr style="border-top:1px solid var(--border)"><td style="padding:5px">'+new Date(x.time_utc).toLocaleString('uk-UA',{timeZone:'Europe/Kyiv',hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit',hour12:false})+'</td><td style="padding:5px;color:'+c+';font-weight:700">'+v.toFixed(1)+'</td><td style="padding:5px">'+(x.source==='observed'?'СПОСТЕРЕЖЕННЯ':'ПРОГНОЗ 3-ГОДИННОГО СЛОТА')+'</td></tr>'}).join('')+
+        slots.slice(0,12).map(x=>{const v=Number(x.kp),c=v>=5?'#ff7070':v>=4?'#ffd37a':'#9fd1ff';return '<tr style="border-top:1px solid var(--border)"><td style="padding:5px">'+new Date(x.time_utc).toLocaleString('uk-UA',{timeZone:'Europe/Kyiv',hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit',hour12:false})+'</td><td style="padding:5px;color:'+c+';font-weight:700">'+v.toFixed(1)+'</td><td style="padding:5px">'+(x.source==='observed'?'СПОСТЕРЕЖЕННЯ':'ПРОГНОЗ 3-ГОДИННОГО СЛОТА')+'</td></tr>'}).join('')+
         '</tbody></table></div>'+
-      '<div style="margin-top:7px;color:var(--dim)">Сформовано: '+generatedLabel+' · Kp≥4 — підвищена активність; Kp≥5 — поріг G1. Погодинний прогноз не переписує денний PDF-reference або оперативний стан; він може лише активувати окремий safety-veto після досягнення визначеного порога.</div>';
+      '<div style="margin-top:7px;color:var(--dim)">Сформовано: '+generatedLabel+' · <span style="color:#9fd1ff">синій = Kp нижче 4, лише геомагнітний показник</span>; Kp≥4 — підвищена активність; Kp≥5 — поріг G1. Колір Kp не означає сприятливий день. Погодинний прогноз не переписує денний PDF-reference або оперативний стан; він може лише активувати окремий safety-veto після досягнення визначеного порога.</div>';
     if(level>0){const panel=document.getElementById('kpHourlyPanel');if(panel)panel.open=true;}
   }catch(e){
     sum.textContent='🛰 Погодинний Kp тимчасово недоступний';
@@ -15852,7 +15853,7 @@ function _renderHeroHierarchy(){
       // замінено на чесніше "допустиме fallback-вікно".
       const _rslQ = (dm === 'estimated') ? resolveSourceLabel() : null;
       const map = {
-        live:      ['LIVE · дані актуальні','var(--ok)'],
+        live:      ['ДАНІ LIVE · актуальні · не оцінка дня','#9fd1ff'],
         estimated: _rslQ ? [_rslQ.combined + ' · допустиме fallback-вікно до 12г', _rslQ.color] : ['ESTIMATED · допустиме fallback-вікно до 12г','#a8d5e0'],
         partial:   ['DELAYED · орієнтовно — перевір перед важливою дією','#ffcc44'],
         scenario:  ['SCENARIO · не реальний прогноз, лише плато за поточним Kp','#ff9944'],
