@@ -6,7 +6,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.187-fp380-KP-SIGNAL-SEPARATION</title>
+  <title>G-Index — Космофізичний дашборд v88.9.188-fp381-KP-PROVENANCE</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -6521,17 +6521,22 @@ async function loadKpHourlyAlert(){
     const peakTime=new Date(peak.time_utc);
     const peakTimeLabel=peakTime.toLocaleString('uk-UA',{timeZone:'Europe/Kyiv',hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit',hour12:false});
     const peakDateKyiv=peakTime.toLocaleDateString('sv-SE',{timeZone:'Europe/Kyiv'});
-    let dailyKp=null;
+    let dailyKp=null, dailySource='unknown', dailySynthetic=false;
     try{
       const future=await loadFutureKp();
       const daily=future&&future[peakDateKyiv];
-      if(daily&&Number.isFinite(Number(daily.kp))) dailyKp=Number(daily.kp);
+      if(daily&&Number.isFinite(Number(daily.kp))){
+        dailyKp=Number(daily.kp);
+        dailySource=String(daily.source||'unknown');
+        dailySynthetic=!!daily.kp_synthetic;
+      }
     }catch(_e){}
 
     // Persist the preceding published forecast in this browser. A material
     // upstream revision must be shown, not silently presented as an observation.
     let revision=null;
     const revisionKey='gindex_kp_hourly_snapshot_v1';
+    const revisionAlertKey='gindex_kp_hourly_last_revision_v1';
     try{
       const previous=JSON.parse(localStorage.getItem(revisionKey)||'null');
       if(previous&&previous.generated_at!==p.generated_at&&previous.slots){
@@ -6547,6 +6552,16 @@ async function loadKpHourlyAlert(){
       const snapshot={generated_at:p.generated_at,slots:{}};
       for(const x of allSlots) snapshot.slots[x.time_utc]=Number(x.kp);
       localStorage.setItem(revisionKey,JSON.stringify(snapshot));
+      if(revision&&Math.abs(revision.delta)>=1){
+        revision.detected_at=Date.now();
+        localStorage.setItem(revisionAlertKey,JSON.stringify(revision));
+      }else{
+        const storedRevision=JSON.parse(localStorage.getItem(revisionAlertKey)||'null');
+        const storedAge=storedRevision&&Number.isFinite(Number(storedRevision.detected_at))
+          ? Date.now()-Number(storedRevision.detected_at) : Infinity;
+        revision=storedAge<=6*3600000?storedRevision:null;
+        if(storedAge>6*3600000) localStorage.removeItem(revisionAlertKey);
+      }
     }catch(_e){}
 
     const currentText=currentKp===null?'—':currentKp.toFixed(1);
@@ -6566,11 +6581,18 @@ async function loadKpHourlyAlert(){
       : '';
     const generatedLabel=Number.isFinite(generatedMs)?new Date(generatedMs).toLocaleString('uk-UA',{timeZone:'Europe/Kyiv',hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit',hour12:false}):'невідомо';
     const dailyHtml=dailyKp===null?'—':dailyKp.toFixed(1);
+    const dailySourceLabel=dailySynthetic||dailySource==='synthetic_fallback'
+      ? 'SYNTHETIC FALLBACK · не прогноз NOAA'
+      : dailySource==='NOAA_forecast'
+        ? 'NOAA · добовий прогноз'
+        : dailySource==='NOAA_fact'
+          ? 'NOAA · часткове/добове спостереження'
+          : 'джерело не визначено';
     body.innerHTML=
       '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:7px;margin-bottom:8px">'+
         '<div style="padding:8px 10px;border:1px solid rgba(117,230,168,.32);border-radius:8px"><b style="color:#75e6a8">ЗАРАЗ · СПОСТЕРЕЖЕННЯ</b><br><span style="font-size:18px;font-weight:800">Kp '+currentText+'</span><br><span style="color:var(--dim)">Останній завершений або активний 3-годинний слот.</span></div>'+
         '<div style="padding:8px 10px;border:1px solid rgba(255,190,75,.42);border-radius:8px"><b style="color:#ffd37a">МАЙБУТНІЙ ПІК · ПРОГНОЗ</b><br><span style="font-size:18px;font-weight:800">Kp '+peakText+'</span> · '+peakTimeLabel+'<br><span style="color:var(--dim)">'+peakState+'. Це не спостережений факт.</span></div>'+
-        '<div style="padding:8px 10px;border:1px solid rgba(89,166,255,.32);border-radius:8px"><b style="color:#9fd1ff">ДОБОВИЙ АГРЕГАТ</b><br><span style="font-size:18px;font-weight:800">Kp '+dailyHtml+'</span> · '+peakDateKyiv+'<br><span style="color:var(--dim)">Зведення доби; не дорівнює максимуму окремого слота.</span></div>'+
+        '<div style="padding:8px 10px;border:1px solid rgba(89,166,255,.32);border-radius:8px"><b style="color:#9fd1ff">ДОБОВЕ ЗВЕДЕННЯ</b><br><span style="font-size:18px;font-weight:800">Kp '+dailyHtml+'</span> · '+peakDateKyiv+'<br><span style="color:'+(dailySynthetic?'#ffd37a':'var(--dim)')+'">'+dailySourceLabel+'. Не дорівнює максимуму окремого слота.</span></div>'+
         '<div style="padding:8px 10px;border:1px solid rgba(178,126,255,.32);border-radius:8px"><b style="color:#d9c2ff">PDF / ОПЕРАТИВНА ОЦІНКА</b><br><span style="font-weight:800">Окрема шкала −3…+3</span><br><span style="color:var(--dim)">Не є Kp і не повинна чисельно збігатися з Kp.</span></div>'+
       '</div>'+volatilityHtml+revisionHtml+
       '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">'+
