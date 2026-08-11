@@ -211,6 +211,11 @@ requireText("m.set('2026-08-12','total_solar')", '2026-08-12 total solar eclipse
 requireText("function parseNoaaJson(text)", 'NOAA bare-NaN payloads have a fail-soft parser');
 requireText("const plasmaRows = parseNoaaJson(plasmaTxt)", 'solar-wind module uses the NOAA parser');
 requireText('seq.length < cap && guard < cap * 4 + 4', 'Hora boundary retry cannot consume a requested sequence entry');
+requireText("const URL_WOLF_SN_STATUS = 'SILSO_REFRESH_STATUS_v1.json'", 'Wolf Sn prefers the same-origin validated scheduler snapshot');
+requireText('withTimeout(fetchWolfSnResilient(), 5000', 'Wolf Sn primary route is resilient and bounded');
+requireText("snapshot:  {icon:'▣'", 'validated snapshot is not mislabeled as offline cache');
+requireText("window._lastWolfSn._delivery==='local_snapshot' ? ' · snapshot'", 'Wolf Sn chip discloses snapshot delivery after rerender');
+forbidText('withTimeout(fetchTextWithCORS(URL_WOLF_SN, _looksLikeJson), 5000', 'startup cannot depend directly on SILSO CORS');
 forbidText("localStorage.removeItem('gindex_simple_mode')", 'full-mode preference cannot be erased back to simple default');
 forbidText('День сильний за PDF', 'old PDF-first Hero headline removed');
 forbidText('МОЖНА ДІЯТИ за PDF', 'PDF reference cannot grant action');

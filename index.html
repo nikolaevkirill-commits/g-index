@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.178-fp371-HORA-BOUNDARY</title>
+  <title>G-Index — Космофізичний дашборд v88.9.179-fp372-SILSO-SNAPSHOT</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1677,7 +1677,7 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
             <div class="source-item"><span id="srcVsw" class="source-icon">…</span><span class="source-label">Vsw (DSCOVR)</span></div>
             <div class="source-item"><span id="srcXray" class="source-icon">…</span><span class="source-label">X-ray (GOES)</span></div>
           </div>
-          <div class="source-health-legend">✓ live · ⊙ cache · ~ synthetic · ✗ error</div>
+          <div class="source-health-legend">✓ live · ▣ verified snapshot · ⊙ cache · ~ synthetic · ✗ error</div>
         </div>
       </div>
     </div>
@@ -2826,7 +2826,7 @@ Fallback (NOAA 45-day-forecast.json):
             <tr><td style="padding:3px 8px;border-top:1px solid #1a2540">Kp (прогноз 3 доби)</td><td style="padding:3px 8px;border-top:1px solid #1a2540">NOAA SWPC — 3-Day Forecast JSON</td><td style="padding:3px 8px;border-top:1px solid #1a2540">кожні 3 год</td></tr>
             <tr><td style="padding:3px 8px;border-top:1px solid #1a2540">Ap/Kp (прогноз 27 діб)</td><td style="padding:3px 8px;border-top:1px solid #1a2540">NOAA SWPC — 27-Day Outlook TXT<br><span style="color:var(--dim)">Kp → Ap конвертується за таблицею GFZ/NOAA (лінійна інтерполяція)</span></td><td style="padding:3px 8px;border-top:1px solid #1a2540">щотижня, пн ~15:00 UTC</td></tr>
             <tr><td style="padding:3px 8px;border-top:1px solid #1a2540">Dst‑індекс</td><td style="padding:3px 8px;border-top:1px solid #1a2540">NOAA SWPC — Kyoto Dst JSON</td><td style="padding:3px 8px;border-top:1px solid #1a2540">щогодини</td></tr>
-            <tr><td style="padding:3px 8px;border-top:1px solid #1a2540">Число Вольфа (Sn)</td><td style="padding:3px 8px;border-top:1px solid #1a2540">SILSO/ROB — EISN JSON</td><td style="padding:3px 8px;border-top:1px solid #1a2540">щодоби</td></tr>
+            <tr><td style="padding:3px 8px;border-top:1px solid #1a2540">Число Вольфа (Sn)</td><td style="padding:3px 8px;border-top:1px solid #1a2540">SILSO/ROB — daily CSV через перевірений локальний snapshot</td><td style="padding:3px 8px;border-top:1px solid #1a2540">щодоби</td></tr>
             <tr><td style="padding:3px 8px;border-top:1px solid #1a2540">Фаза Місяця / PCL</td><td style="padding:3px 8px;border-top:1px solid #1a2540">Astronomy Engine (Meeus Ch.47, локально)</td><td style="padding:3px 8px;border-top:1px solid #1a2540">real‑time</td></tr>
             <tr><td style="padding:3px 8px;border-top:1px solid #1a2540">Затемнення</td><td style="padding:3px 8px;border-top:1px solid #1a2540">Timeanddate / NASA + hardcoded fallback</td><td style="padding:3px 8px;border-top:1px solid #1a2540">річний парсинг</td></tr>
             <tr><td style="padding:3px 8px;border-top:1px solid #1a2540">ICS‑події (eᵢ)</td><td style="padding:3px 8px;border-top:1px solid #1a2540">Vaisnava Calendar (Київ) + Hindu Holidays</td><td style="padding:3px 8px;border-top:1px solid #1a2540">річний + builtin</td></tr>
@@ -5945,6 +5945,7 @@ const URL_GFZ_KP_NOW  = 'https://kp.gfz.de/app/json/?index=Kp&status=now'; // (�
 const URL_GFZ_KP_DEF  = 'https://kp.gfz.de/app/json/?index=Kp&status=def';
 const URL_WOLF_SN  = 'https://sidc.be/SILSO/DATA/EISN_current.json';
 const URL_WOLF_SN_FB = 'https://sidc.be/SILSO/DATA/SN_d_tot_V2.0.json'; // fallback: total SN
+const URL_WOLF_SN_STATUS = 'SILSO_REFRESH_STATUS_v1.json'; // same-origin daily validated snapshot
 const URL_DST_FB   = 'https://services.swpc.noaa.gov/products/geospace/propagated-solar-wind-1-hour.json'; // fallback Dst proxy
 const URL_KP_FCST_FB2 = 'https://services.swpc.noaa.gov/json/planetary_k_index_1m.json'; // fallback fcst via obs
 const URL_DST      = 'https://services.swpc.noaa.gov/products/kyoto-dst.json'; // Dst/SYM-H
@@ -10290,6 +10291,41 @@ function parseWolfSn(json){
     return isFinite(sn) ? {sn, dateStr, provisional: last[7]===1} : null;
   }catch(e){ return null; }
 }
+
+// fp372: the local scheduler already downloads and validates the SILSO daily
+// series. Prefer its tiny same-origin status artifact so the browser does not
+// depend on third-party CORS proxies. Sn remains context-only (score_effect=0).
+function parseWolfSnStatus(json){
+  try{
+    const status = JSON.parse(json);
+    const latest = status && status.latest_observation;
+    const sn = Number(latest && latest.sn);
+    const dateStr = String((latest && latest.date) || '');
+    if(!Number.isFinite(sn) || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return null;
+    return {
+      sn, dateStr, provisional: latest.provisional === true,
+      _delivery:'local_snapshot', _refreshStatus:String(status.status||'UNKNOWN'),
+      _generatedAt:String(status.generated_at_utc||'')
+    };
+  }catch(_e){ return null; }
+}
+
+async function fetchWolfSnResilient(){
+  try{
+    const local = await fetchWithTimeout(URL_WOLF_SN_STATUS+'?v='+Date.now(), 2500);
+    if(local.ok){
+      const parsed = parseWolfSnStatus(await local.text());
+      if(parsed) return parsed;
+    }
+  }catch(e){ if(window._DEBUG) console.warn('[SILSO] local snapshot unavailable:',e.message); }
+  for(const url of [URL_WOLF_SN, URL_WOLF_SN_FB]){
+    try{
+      const parsed = parseWolfSn(await fetchTextWithCORS(url,_looksLikeJson));
+      if(parsed) return {...parsed,_delivery:'direct_or_proxy'};
+    }catch(_e){ /* try next verified SILSO endpoint */ }
+  }
+  throw new Error('SILSO snapshot and live endpoints unavailable');
+}
 // Парсер JSON прогнозу Kp (noaa-planetary-k-index-forecast.json)
 // Формат: [["time_tag","kp","observed","noaa_scale"],...] з заголовком
 // ─── v88.6.9: UAF Geophysical Institute (Alaska) — Tier-2 fallback ───
@@ -11706,8 +11742,9 @@ function renderCurrentPanel(){
     const snEl = el('nowSn');
     const {sn, dateStr, provisional} = window._lastWolfSn;
     const snCls = sn>150 ? 'color:var(--bad)' : (sn>80 ? 'color:var(--warn)' : 'color:var(--ok)');
+    const delivery = window._lastWolfSn._delivery==='local_snapshot' ? ' · snapshot' : '';
     snEl.style.display='inline-flex';
-    snEl.innerHTML = `Sn <strong style="${snCls}">${sn}</strong>${provisional?' (попер.)':''} <span class="muted" style="font-size:11px">${dateStr}</span>`;
+    snEl.innerHTML = `Sn <strong style="${snCls}">${sn}</strong>${provisional?' (попер.)':''} <span class="muted" style="font-size:11px">${dateStr}${delivery}</span>`;
   }
 
   // 4) ΣAᵢ — v26.2: беремо з 3-day для консистентності (той самий результат що в таблиці)
@@ -19705,7 +19742,7 @@ async function loadAll(){
     withTimeout(fetchTextWithCORS(URL_KP_FCST, _looksLikeJson), 5000, 'primary KP_FCST'),
     withTimeout(fetchTextWithCORS(URL_27DAY), 5000, 'primary 27DAY'),
     withTimeout(fetchTextWithCORS(URL_DST, _looksLikeJson), 5000, 'primary DST'),
-    withTimeout(fetchTextWithCORS(URL_WOLF_SN, _looksLikeJson), 5000, 'primary WOLF_SN')
+    withTimeout(fetchWolfSnResilient(), 5000, 'resilient WOLF_SN')
   ]);
 
   // Kp спостереження (P0: fallback на planetary_k_index_1m.json)
@@ -19969,15 +20006,19 @@ async function loadAll(){
 
   // Wolf Sn
   if(snR.status === 'fulfilled'){
-    window._lastWolfSn = parseWolfSn(snR.value);
-    if (window._lastWolfSn) { _setSrcStatus('srcSn','ok'); } else { _setSrcStatus('srcSn','error'); }
+    window._lastWolfSn = snR.value;
+    if (window._lastWolfSn) { _setSrcStatus('srcSn',window._lastWolfSn._delivery==='local_snapshot'?'snapshot':'ok'); } else { _setSrcStatus('srcSn','error'); }
     if(window._lastWolfSn){
       const snEl = el('nowSn');
       const {sn, dateStr, provisional} = window._lastWolfSn;
       const snCls = sn>150 ? 'color:var(--bad)' : (sn>80 ? 'color:var(--warn)' : 'color:var(--ok)');
       snEl.style.display='inline-flex';
-      snEl.innerHTML = `Sn <strong style="${snCls}">${sn}</strong>${provisional?' (попер.)':''} <span class="muted" style="font-size:11px">${dateStr}</span>`;
+      const delivery = window._lastWolfSn._delivery==='local_snapshot' ? ' · snapshot' : '';
+      snEl.innerHTML = `Sn <strong style="${snCls}">${sn}</strong>${provisional?' (попер.)':''} <span class="muted" style="font-size:11px">${dateStr}${delivery}</span>`;
     }
+  } else {
+    window._lastWolfSn = null;
+    _setSrcStatus('srcSn','error');
   }
 
   // v42: Real-time solar wind (DSCOVR Bz + Vsw)
@@ -22986,11 +23027,12 @@ function updateDataTimestamp(whenText) {
 
 // ═══ v62: Source status indicators ═══
 function _setSrcStatus(id, status) {
-  // status: 'ok'|'cache'|'synthetic'|'error'|'loading'
+  // status: 'ok'|'snapshot'|'cache'|'synthetic'|'error'|'loading'
   const el = document.getElementById(id);
   if (!el) return;
   const map = {
     ok:        {icon:'✓', col:'#2bd47d'},
+    snapshot:  {icon:'▣', col:'#8fc8ff'},
     cache:     {icon:'⊙', col:'#ffcc44'},
     synthetic: {icon:'~', col:'#fca474'},
     error:     {icon:'✗', col:'#ff6b6b'},
@@ -23001,6 +23043,7 @@ function _setSrcStatus(id, status) {
   el.style.color = s.col;
   el.title = {
     ok:       {srcKpObs:'Kp спостереження NOAA', srcKpFcst:'Kp прогноз NOAA', src27Day:'NOAA 27-day outlook', srcDst:'Dst Kyoto WDC', srcSn:'Wolf Sn SILSO', srcBz:'Bz DSCOVR', srcVsw:'Vsw DSCOVR', srcXray:'GOES X-ray'}[id] || 'Дані',
+    snapshot: 'Перевірений локальний snapshot; дата спостереження показана окремо',
     cache:    'Кешовані дані (offline fallback)',
     synthetic:'Synthetic (реальне джерело недоступне)',
     error:    'Помилка завантаження',
