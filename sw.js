@@ -21,7 +21,7 @@
 // Service-worker cache safety note; original detail is preserved in the backup.
 // Service-worker cache safety note; original detail is preserved in the backup.
 
-const CACHE_VERSION = 'fp373-v1'; // source-truth labels + same-origin NOAA forecast preference
+const CACHE_VERSION = 'fp374-v1'; // precise Kp observation content age + prior source-truth fixes
 const CACHE_PREFIX = 'gindex-'; // G-Index cache namespace; do not remove the prefix.
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${CACHE_VERSION}`;
 const DATA_CACHE = `${CACHE_PREFIX}data-${CACHE_VERSION}`;

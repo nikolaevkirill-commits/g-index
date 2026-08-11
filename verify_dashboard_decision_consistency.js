@@ -219,6 +219,8 @@ requireText("Kp зараз '+kpNowLabel+' · Kp горизонт '+kpHorizonLabe
 requireText('synthetic не є прогнозом NOAA', 'synthetic horizon points cannot masquerade as NOAA forecasts');
 requireText('let _preferVerifiedLocal3Day = false', 'verified same-origin NOAA horizon is checked before UAF proxy fallback');
 requireText("point.kp_synthetic === false", 'only non-synthetic local Kp points may suppress UAF fallback');
+requireText('_noaaAgeH = (Date.now() - (_tsMs + KP_INTERVAL_HOURS*3600000)) / 3600000', 'NOAA content age preserves fractional hours at the one-hour boundary');
+requireText('_gfzAgeH = (Date.now() - (_gTsMs + 3*3600000)) / 3600000', 'GFZ content age preserves fractional hours at the one-hour boundary');
 forbidText('withTimeout(fetchTextWithCORS(URL_WOLF_SN, _looksLikeJson), 5000', 'startup cannot depend directly on SILSO CORS');
 forbidText("localStorage.removeItem('gindex_simple_mode')", 'full-mode preference cannot be erased back to simple default');
 forbidText('День сильний за PDF', 'old PDF-first Hero headline removed');

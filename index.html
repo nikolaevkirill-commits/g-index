@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.180-fp373-SOURCE-TRUTH</title>
+  <title>G-Index — Космофізичний дашборд v88.9.181-fp374-KP-CONTENT-AGE</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -19767,7 +19767,7 @@ async function loadAll(){
         // інтервалу). Тепер додаємо тривалість інтервалу (3г) — вік
         // рахується від моменту, коли дані стали фінальними.
         const KP_INTERVAL_HOURS = 3;
-        if (isFinite(_tsMs)) _noaaAgeH = Math.round((Date.now() - (_tsMs + KP_INTERVAL_HOURS*3600000)) / 3600000);
+        if (isFinite(_tsMs)) _noaaAgeH = (Date.now() - (_tsMs + KP_INTERVAL_HOURS*3600000)) / 3600000;
         // Захист: якщо результат від'ємний (інтервал ще триває — NOAA іноді
         // публікує проміжне значення до завершення вікна), не показуємо
         // "від'ємну затримку" — округляємо до 0 (щойно з'явилось).
@@ -19788,7 +19788,7 @@ async function loadAll(){
           const _gTsMs = new Date(_gTsStr).getTime();
           // v88.9.59-fp241 (той самий фікс, що й для NOAA вище): GFZ теж
           // публікує 3-годинні Kp-інтервали з time_tag на початку вікна.
-          if (isFinite(_gTsMs)) _gfzAgeH = Math.round((Date.now() - (_gTsMs + 3*3600000)) / 3600000);
+          if (isFinite(_gTsMs)) _gfzAgeH = (Date.now() - (_gTsMs + 3*3600000)) / 3600000;
           if (_gfzAgeH !== null && _gfzAgeH < 0) _gfzAgeH = 0;
         }
         if (gfzParsed && isFinite(gfzParsed.kNow) && _gfzAgeH !== null && _gfzAgeH < _noaaAgeH) {

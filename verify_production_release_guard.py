@@ -92,6 +92,8 @@ def main() -> None:
     require(index, 'synthetic не є прогнозом NOAA', 'synthetic horizon points are explicitly non-NOAA')
     require(index, 'let _preferVerifiedLocal3Day = false', 'same-origin NOAA horizon precedes UAF proxy fallback')
     require(index, 'point.kp_synthetic === false', 'UAF is skipped only for verified local Kp points')
+    require(index, '_noaaAgeH = (Date.now() - (_tsMs + KP_INTERVAL_HOURS*3600000)) / 3600000', 'NOAA Kp content age keeps fractional hours')
+    require(index, '_gfzAgeH = (Date.now() - (_gTsMs + 3*3600000)) / 3600000', 'GFZ Kp content age keeps fractional hours')
     require(index, "'Історична подія NOAA'", 'inactive NOAA historical label')
     require(index, 'Бюлетень NOAA ${hoursAgo}г тому', 'aged NOAA time-first label')
     forbidden = {
