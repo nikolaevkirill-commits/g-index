@@ -6,7 +6,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.195-fp388-PRODUCT-MVP</title>
+  <title>G-Index — Космофізичний дашборд v88.9.196-fp389-JYOTISH-LITE</title>
 
   <script>
     // fp388: the Android TWA opens an explicit free companion channel. It keeps
@@ -1564,7 +1564,7 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
     <div class="flex" style="gap:12px">
       <div>
         <h1 id="headerTitle">Космофізичний дашборд</h1>
-        <div class="sub" id="headerSub">Геомагнітний прогноз · Панчанга · Персональний цикл &nbsp;<span style="color:var(--faint);font-size:10px">R&D / Advisory</span></div>
+        <div class="sub" id="headerSub">Геомагнітний прогноз · Джйотіш · Персональний цикл &nbsp;<span style="color:var(--faint);font-size:10px">R&D / Advisory</span></div>
       </div>
       <div class="right flex dashboard-toolbar" id="dashboardToolbar" style="flex-wrap:wrap;gap:6px">
         <span id="tierBadge" onclick="PAYWALL.tier()==='free'?PaywallModal.show('G-Index Premium','basic'):null"
@@ -2416,13 +2416,32 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
       <section class="card" id="panchCard">
         <div class="flex" style="margin-bottom:8px;align-items:flex-start">
           <div>
-            <h2 style="margin:0;font-size:16px">Панчанга дня</h2>
+            <h2 style="margin:0;font-size:16px">Джйотіш · календар дня</h2>
             <div class="small muted" style="margin-top:2px" id="panchRefLabel">Референс на схід сонця <span class="hint" tabindex="0" style="cursor:help;color:var(--dim);font-size:10px;margin-left:4px;border-bottom:1px dotted var(--faint)">ⓘ час відліку<span class="hint-pop" style="white-space:pre;font-size:11px;text-align:left">Тіхі/Вара/Накшатра/Йога/Карана розраховані на реальний астрономічний схід сонця для поточного дня (ведична конвенція), НЕ на 12:00 UTC — попередній текст тут був неточним (fp236).
 Зовнішні календарі можуть показувати іншу тіхі, якщо рахують "на момент запиту" або "опівночі" (західна конвенція) — це методологічна різниця, не обов'язково помилка.
 Для поточної хори дивись блок «Планетарний ритм» у картці особистого прогнозу.</span></span></div>
           </div>
           <span class="pill right" id="panchDate" style="font-size:12px">—</span>
         </div>
+        <div id="jyotishPassport" style="margin:0 0 10px;padding:10px 12px;border:1px solid rgba(176,132,255,.22);border-radius:12px;background:rgba(176,132,255,.045)">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+            <div>
+              <strong style="font-size:12px;color:#d7c4ff">Jyotish Lite</strong>
+              <div class="small muted" id="jyotishPassportSub">Panchanga · Chandra Rashi · локальні часові вікна</div>
+            </div>
+            <button id="btnJyotishVisibility" type="button" aria-pressed="true" style="font-size:11px;padding:5px 9px">Традиційний шар: показано</button>
+          </div>
+          <div id="jyotishRoleGrid" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:9px;font-size:10px">
+            <div style="padding:7px;border:1px solid rgba(255,255,255,.07);border-radius:8px"><strong>ВРАХОВАНО ОДИН РАЗ</strong><br><span class="muted">Tithi · Vara · Nakshatra · Yoga · Karana → один Pᵢ</span></div>
+            <div style="padding:7px;border:1px solid rgba(255,255,255,.07);border-radius:8px"><strong>ЛОКАЛЬНІ ВІКНА</strong><br><span class="muted">Rahu · Yama · Gulika · Hora обмежують слот, не весь день</span></div>
+            <div style="padding:7px;border:1px solid rgba(255,255,255,.07);border-radius:8px"><strong>ЛИШЕ ІНФОРМАЦІЙНО</strong><br><span class="muted">Rashi · Pada · Muhurta · Choghadiya · score_effect=0</span></div>
+          </div>
+          <details style="margin-top:8px">
+            <summary id="jyotishPassportSummary" style="cursor:pointer;font-size:11px;color:var(--text2)">Що це означає і які межі?</summary>
+            <div id="jyotishPassportLimits" class="small muted" style="margin-top:7px;line-height:1.5">Традиційний календарний шар, розрахований для локального дня від астрономічного сходу сонця з урахуванням timezone/DST. Це не другий прогноз і не фізична причинність. Головний оперативний стан має пріоритет; персональні D1/D9 і Dasha не активовані до окремої перевірки ephemeris та privacy-gate.</div>
+          </details>
+        </div>
+        <div id="jyotishTraditionalContent">
         <div id="panchSummaryLine" style="font-size:13px;margin-bottom:8px;line-height:1.45;padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);font-weight:600;color:#e6ecff">—</div>
         <div id="panchPiLine" class="small muted" style="margin-bottom:6px;font-size:11px">Pᵢ = —</div>
         <div id="panchGrid" style="margin-top:8px">
@@ -2449,6 +2468,7 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
         </div>
         <!-- v87.9: Рекомендований час / Gc summary — залишається внизу як bottom-line висновок -->
         <div id="panchBestTime" class="panch-best-time"></div>
+        </div>
       </section>
 
       <!-- ПЕРСОНАЛЬНИЙ РОЗРАХУНОК — правий стовпець, рядок 2 -->
@@ -23837,8 +23857,8 @@ const I18N = {
     btnRefresh: 'Оновити дані',
     autoLabel: 'Авто:',
     nowCardTitle: 'Поточний стан',
-    panchCardTitle: 'Панчанга',
-    panchCardSub: '— що діє сьогодні',
+    panchCardTitle: 'Джйотіш · календар дня',
+    panchCardSub: 'Panchanga · Chandra Rashi · локальні часові вікна',
     personalCardTitle: '👤 Особистий прогноз',
     personalCardSub: 'Місячна стоянка · Сприятливість дня · Планетарний цикл',
     threeCardTitle: 'Прогноз на 3 дні',
@@ -23910,8 +23930,8 @@ const I18N = {
     btnRefresh: 'Refresh Data',
     autoLabel: 'Auto:',
     nowCardTitle: 'Current Status',
-    panchCardTitle: 'Panchanga',
-    panchCardSub: '— chronobiol. daily state',
+    panchCardTitle: 'Jyotish · Vedic daily timing',
+    panchCardSub: 'Panchanga · Chandra Rashi · local time windows',
     personalCardTitle: '👤 Personal Forecast',
     personalCardSub: 'Lunar Mansion · Day Quality · Planetary Cycle',
     threeCardTitle: '3-Day Forecast',
@@ -24004,8 +24024,8 @@ function applyLang(lang) {
   if(hTitle) hTitle.textContent = ua ? 'Космофізичний дашборд' : 'Space Weather Dashboard';
   const hSub = document.getElementById('headerSub');
   if(hSub) hSub.innerHTML = ua
-    ? 'Геомагнітний прогноз · Панчанга · Персональний цикл &nbsp;<span style="color:var(--faint);font-size:10px">R&D / Advisory</span>'
-    : 'Geomagnetic forecast · Panchanga · Personal cycle &nbsp;<span style="color:var(--faint);font-size:10px">R&D / Advisory</span>';
+    ? 'Геомагнітний прогноз · Джйотіш · Персональний цикл &nbsp;<span style="color:var(--faint);font-size:10px">R&D / Advisory</span>'
+    : 'Geomagnetic forecast · Jyotish · Personal cycle &nbsp;<span style="color:var(--faint);font-size:10px">R&D / Advisory</span>';
   el('btnRefresh').textContent = ua ? '↻ Оновити дані' : '↻ Refresh data';
   el('btnG2Watch').textContent = '🧮';
 
@@ -24018,6 +24038,22 @@ function applyLang(lang) {
     panchH2.childNodes[0].nodeValue = t.panchCardTitle + ' ';
     const sub = panchH2.querySelector('span.muted');
     if(sub) sub.textContent = t.panchCardSub;
+  }
+  const jySub=el('jyotishPassportSub');
+  if(jySub) jySub.textContent=t.panchCardSub;
+  const jySummary=el('jyotishPassportSummary');
+  if(jySummary) jySummary.textContent=ua?'Що це означає і які межі?':'What does it mean and what are the limits?';
+  const jyLimits=el('jyotishPassportLimits');
+  if(jyLimits) jyLimits.textContent=ua
+    ? 'Традиційний календарний шар для локального дня від астрономічного сходу сонця з урахуванням timezone/DST. Це не другий прогноз і не фізична причинність. Головний оперативний стан має пріоритет; D1/D9 і Dasha не активовані до окремої перевірки ephemeris та privacy-gate.'
+    : 'Traditional timing for the local day from astronomical sunrise with timezone/DST. It is not a second forecast or a claim of physical causation. The operational state has priority; D1/D9 and Dasha stay disabled pending ephemeris and privacy gates.';
+  window.GJyotishLayer?.refreshLabel?.();
+  const jyNav=el('mnavPanch');
+  if(jyNav){
+    const label=ua?'Джйотіш':'Jyotish';
+    jyNav.setAttribute('aria-label',label);
+    const textNode=[...jyNav.childNodes].find(node=>node.nodeType===Node.TEXT_NODE && node.textContent.trim());
+    if(textNode) textNode.nodeValue='\n    '+label+'\n  ';
   }
 
   const persH2 = el('personalCard').querySelector('h2');
@@ -25470,13 +25506,13 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line205
     </svg>
     Зараз
   </button>
-  <button class="mnav-btn" id="mnavPanch" onclick="mnavGo('panch',true)" aria-label="Панчанга">
+  <button class="mnav-btn" id="mnavPanch" onclick="mnavGo('panch',true)" aria-label="Джйотіш">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
       <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10"/>
       <path d="M12 6a6 6 0 0 1 6 6"/>
       <circle cx="19" cy="5" r="2" fill="currentColor" stroke="none"/>
     </svg>
-    Панчанга
+    Джйотіш
   </button>
   <button class="mnav-btn" id="mnavFcst" onclick="mnavGo('fcst',true)" aria-label="Прогноз">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
@@ -25499,7 +25535,7 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line205
 // ── Mobile Bottom Nav ─────────────────────────────────────
 const MNAV_SECTIONS = {
   now:      ['heroCard','daySentenceCard','decisionStrip','decisionTiming','impactBlock','astroGrid','wf3SignalSummary','profileBar','profileRec','mainGrid','swipeHint3','threeCard'],
-  panch:    ['heroCard','daySentenceCard','decisionStrip','wf3SignalSummary','panchCard','swipeHint3','threeCard'],
+  panch:    ['heroCard','daySentenceCard','decisionStrip','wf3SignalSummary','mainGrid','panchCard','swipeHint3','threeCard'],
   fcst:     ['heroCard','daySentenceCard','decisionStrip','swipeHint27','twentysevenCard','backtestCard'],
   personal: ['heroCard','daySentenceCard','decisionStrip','personalCard']
 };
@@ -26106,6 +26142,31 @@ window.GDecisionLog = (function(){
 
   return { open, close, save };
 })();
+window.GJyotishLayer = (function(){
+  const key='gindex_jyotish_visible_v1';
+  let current=true;
+  function apply(visible){
+    current=visible;
+    const content=document.getElementById('jyotishTraditionalContent');
+    const button=document.getElementById('btnJyotishVisibility');
+    if(content) content.hidden=!visible;
+    if(button){
+      button.setAttribute('aria-pressed',String(visible));
+      const en=typeof _currentLang!=='undefined'&&_currentLang==='EN';
+      button.textContent=en?(visible?'Traditional layer: shown':'Traditional layer: hidden'):(visible?'Традиційний шар: показано':'Традиційний шар: приховано');
+    }
+    try{localStorage.setItem(key,visible?'1':'0');}catch(_e){}
+  }
+  function init(){
+    let visible=true;
+    try{visible=localStorage.getItem(key)!=='0';}catch(_e){}
+    apply(visible);
+    document.getElementById('btnJyotishVisibility')?.addEventListener('click',function(){apply(this.getAttribute('aria-pressed')!=='true');});
+  }
+  function refreshLabel(){apply(current);}
+  return {init,apply,refreshLabel};
+})();
+document.addEventListener('DOMContentLoaded',window.GJyotishLayer.init,{once:true});
 try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line21303';}catch(e){}
 </script>
 </body>
