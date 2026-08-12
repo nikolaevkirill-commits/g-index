@@ -17,6 +17,9 @@ foreach ($marker in @('Proceed carefully','Avanza con cuidado','A green source-a
 }
 if ($js -notmatch 'document\.documentElement\.lang=locale\.value') { throw 'Document language is not synchronized with locale.' }
 if ($js -notmatch "setAttribute\('aria-current','page'\)" -or $js -notmatch "removeAttribute\('aria-current'\)") { throw 'Active navigation semantics are not updated correctly.' }
+foreach ($marker in @('neborythm.local.v1','localStorage.setItem','localStorage.removeItem','neborythm-local-data.json','data-outcome','Birth data is not collected')) {
+  if ($js -notmatch [regex]::Escape($marker)) { throw "Missing local-data safety behavior: $marker" }
+}
 $node = (Get-Command node -ErrorAction Stop).Source
 & $node --check (Join-Path $app 'app.js')
 if ($LASTEXITCODE -ne 0) { throw 'Mobile shell JavaScript syntax failed.' }
