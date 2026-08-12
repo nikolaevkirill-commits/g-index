@@ -2,21 +2,34 @@
 
 ## Web/PWA gate
 
-- [x] Production health не має hard failures; release guards PASS.
-- [x] Manifest version синхронізована, PWA shortcuts не ведуть на відсутні файли.
-- [ ] Android physical install, standalone, splash, offline PASS.
-- [ ] Push після закриття браузера та deep-link PASS.
-- [ ] 320/360/390/412 px і landscape PASS на фізичному Android.
+- [x] Production health без hard failures; release guards PASS.
+- [x] Manifest version синхронізована; shortcuts не ведуть на відсутні файли.
+- [ ] Android physical install, standalone, splash та offline PASS.
+- [ ] Push і deep-link PASS у окремому reviewed release.
+- [x] 320/360/390/412 px і landscape PASS у Chromium browser emulation.
+- [ ] Ті самі viewports PASS на фізичному Android (external device gate).
 - [ ] Lighthouse/PWA audit збережений.
+
+## Brand і store assets
+
+- [x] Назва-кандидат `Неборитм`, brand system і factor explainer підготовлені.
+- [x] Feature graphic 1024×500 та icon 512×512 з provenance/SHA-256 готові.
+- [x] Панчанга присутня в описі, графічній концепції та screenshot plan.
+- [ ] Формальний trademark і store-name clearance завершено.
+- [ ] Остаточні phone screenshots зроблені після mobile QA.
 
 ## Product/policy gate
 
+- [x] Hero, provenance, sky-event, alert і реальні UTC→Europe/Kyiv DST-вектори проходять preflight.
+- [x] UA/EN/ES listings проходять автоматичний length/claim lint.
 - [x] Privacy policy, terms і web account-deletion request опубліковані HTTPS.
-- [ ] In-app і web account deletion працюють.
-- [ ] Data Safety звірена з Worker, TWA та SDK.
+- [ ] In-app та web account deletion фізично перевірені.
+- [x] Data Safety fail-closed inventory та Play Console worksheet підготовлені.
+- [ ] Data Safety звірена з фактичною `.aab`, Worker і SDK перед submission.
 - [ ] Support email активний.
 - [ ] Content rating, target audience, ads і app access заповнені.
-- [x] Play companion channel приховує web-продажі, auth і push до окремого reviewed release.
+- [x] Play companion приховує web-продажі, auth і push до окремого reviewed release.
+- [x] TWA `enableNotifications=false`; preflight блокує передчасне повернення push.
 
 ## Android gate
 
@@ -33,4 +46,4 @@
 - [x] Панчанга не голосує вдруге.
 - [x] Tanita/v19.2 мають `score_effect=0` і HOLD.
 - [x] Historical replay не підписаний як real-world accuracy.
-- [x] Немає зелених raw/reference індикаторів, схожих на дозвіл діяти.
+- [x] Колір джерела не маскується під дозвіл діяти.

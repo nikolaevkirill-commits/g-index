@@ -22,7 +22,7 @@ try {
     schema = 'gindex_product_config_v1'
     applicationId = 'com.example.gindex.test'
     host = 'example.test'
-    appName = 'G-Index Test'
+    appName = 'Neborytm Test'
     startPath = '/g-index/?channel=play'
     basePath = '/g-index/'
     versionName = '1.2.3'
@@ -50,12 +50,13 @@ try {
   if ($twa.host -ne $config.host -or $twa.startUrl -ne $config.startPath) { throw 'TWA host/startUrl do not match config.' }
   if ($twa.name -ne $config.appName -or $twa.appVersionName -ne $config.versionName -or $twa.appVersionCode -ne $config.versionCode) { throw 'TWA product identity/version do not match config.' }
   if ($twa.iconUrl -ne "https://$($config.host)$($config.basePath)icon512.png") { throw 'TWA icon URL does not match config.' }
+  if ($twa.enableNotifications -ne $false) { throw 'TWA notifications must remain disabled until a separately reviewed push release.' }
   if ($result.start_url -ne "https://$($config.host)$($config.startPath)") { throw 'Generator result start URL does not match config.' }
 
   [pscustomobject]@{
     schema = 'gindex_twa_generator_test_v1'
     status = 'PASS'
-    assertions = 13
+    assertions = 14
     test_application_id = $config.applicationId
     warning = 'TEST DATA ONLY - DO NOT PUBLISH'
   } | ConvertTo-Json -Depth 3

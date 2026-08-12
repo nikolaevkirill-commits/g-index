@@ -22,6 +22,7 @@ function Require-File([string]$RelativePath) {
 $indexRaw = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $DashboardRoot 'index.html')
 $manifestRaw = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $DashboardRoot 'manifest.json')
 $swRaw = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $DashboardRoot 'sw.js')
+$twaTemplateRaw = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $productRoot 'android\twa-manifest.template.json')
 try { $webManifest = $manifestRaw | ConvertFrom-Json } catch { $failures.Add("invalid web manifest JSON: $($_.Exception.Message)"); $webManifest = $null }
 if ($webManifest) {
   if ($webManifest.start_url -ne '/g-index/' -or $webManifest.scope -ne '/g-index/') { $failures.Add('web manifest start_url/scope mismatch') }
@@ -41,9 +42,33 @@ if ($indexRaw -notmatch 'GINDEX_PLAY_CHANNEL' -or $indexRaw -notmatch 'channel.*
 else { $passes.Add('Play companion disables web purchases') }
 if ($indexRaw -match 'href="backtest\.html"') { $failures.Add('dashboard contains broken backtest.html link') }
 else { $passes.Add('dashboard backtest links resolve internally') }
+if ($twaTemplateRaw -notmatch '"enableNotifications"\s*:\s*false') { $failures.Add('TWA notifications enabled before reviewed push release') }
+else { $passes.Add('TWA notifications fail closed') }
+
+$storeAssetAudit = Join-Path $productRoot 'store-assets\verify_store_assets.py'
+if (-not (Test-Path -LiteralPath $storeAssetAudit -PathType Leaf)) {
+  $failures.Add('missing store asset verifier')
+} else {
+  $pythonCandidates = @(@(
+    (Get-Command python -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source -ErrorAction SilentlyContinue),
+    'C:\Users\Dell\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe'
+  ) | Where-Object { $_ -and (Test-Path -LiteralPath $_ -PathType Leaf) } | Select-Object -Unique)
+  if (-not $pythonCandidates) {
+    $waits.Add('Python runtime for store asset provenance audit')
+  } else {
+    $assetResult = & ($pythonCandidates[0]) $storeAssetAudit 2>&1
+    if ($LASTEXITCODE -ne 0) { $failures.Add("store asset audit failed: $assetResult") }
+    else { $passes.Add('store assets pass dimensions, metadata and SHA-256 audit') }
+  }
+}
 
 foreach ($rel in @(
   'PRODUCT_SPEC_UK.md',
+  'MVP_INFORMATION_ARCHITECTURE_UK.md',
+  'LOCAL_AND_EXTERNAL_GATE_CLOSURE_2026-08-12_UK.md',
+  'BRAND_SYSTEM_NEBORYTM_UK.md',
+  'FACTOR_EXPLAINER_UK.md',
+  'IP_AND_ANTI_COPY_PLAN_UK.md',
   'TANITA_INTEGRATION_UK.md',
   'android\twa-manifest.template.json',
   'android\assetlinks.template.json',
@@ -51,9 +76,52 @@ foreach ($rel in @(
   'play-market\DATA_SAFETY_UK.md',
   'play-market\PRIVACY_POLICY_UK.md',
   'play-market\ACCOUNT_DELETION_UK.md',
-  'play-market\RELEASE_CHECKLIST_UK.md'
+  'play-market\RELEASE_CHECKLIST_UK.md',
+  'play-market\PLAY_CONSOLE_SUBMISSION_DRAFT_UK.md',
+  'play-market\TRADEMARK_AND_NAME_CLEARANCE_CHECKLIST_UK.md',
+  'play-market\COST_AND_LAUNCH_SEQUENCE_2026-08-12_UK.md',
+  'qa\BROWSER_RESPONSIVE_QA_2026-08-12.json',
+  'store-assets\STORE_ASSET_PROVENANCE_v1.json',
+  'store-assets\final\neborytm-feature-graphic-1024x500-v1.png',
+  'store-assets\final\neborytm-icon-512-v1.png'
 )) {
   if (-not (Test-Path -LiteralPath (Join-Path $productRoot $rel) -PathType Leaf)) { $failures.Add("missing product file: $rel") }
+}
+
+foreach ($testRel in @('tests\Test-StoreListings.ps1','tests\Test-ProductContracts.ps1','tests\Test-ProductIdentity.ps1','tests\Test-MobileShell.ps1','tests\Test-MobileSnapshotAdapter.ps1')) {
+  $testPath = Join-Path $productRoot $testRel
+  if (-not (Test-Path -LiteralPath $testPath -PathType Leaf)) {
+    $failures.Add("missing product test: $testRel")
+    continue
+  }
+  $testResult = & powershell -NoProfile -ExecutionPolicy Bypass -File $testPath 2>&1
+  if ($LASTEXITCODE -ne 0) { $failures.Add("product test failed: $testRel :: $testResult") }
+  else { $passes.Add("product test passed: $testRel") }
+}
+
+$releaseManifestPath = Join-Path $productRoot 'PRODUCT_RELEASE_MANIFEST.json'
+try { $releaseManifest = Get-Content -Raw -Encoding UTF8 -LiteralPath $releaseManifestPath | ConvertFrom-Json }
+catch { $failures.Add("invalid product release manifest: $($_.Exception.Message)"); $releaseManifest = $null }
+if ($releaseManifest) {
+  if ([string]::IsNullOrWhiteSpace([string]$releaseManifest.product)) { $failures.Add('product brand is empty') }
+  elseif (([string]$releaseManifest.product).Length -le 30) { $passes.Add('store title is within 30 characters') }
+  else { $failures.Add('store title exceeds 30 characters') }
+  if ($releaseManifest.technical_engine_name -ne 'G-Index') { $failures.Add('technical engine identity changed unexpectedly') }
+  if ($releaseManifest.forecast_contract.tanita_score_effect -ne 0 -or $releaseManifest.forecast_contract.v19_2_score_effect -ne 0) {
+    $failures.Add('research candidates are not score-neutral')
+  } else { $passes.Add('Tanita and v19.2 remain score-neutral') }
+}
+
+$browserQaPath = Join-Path $productRoot 'qa\BROWSER_RESPONSIVE_QA_2026-08-12.json'
+if (Test-Path -LiteralPath $browserQaPath -PathType Leaf) {
+  try { $browserQa = Get-Content -Raw -Encoding UTF8 -LiteralPath $browserQaPath | ConvertFrom-Json }
+  catch { $failures.Add("invalid browser QA JSON: $($_.Exception.Message)"); $browserQa = $null }
+  if ($browserQa) {
+    if ($browserQa.status -ne 'PASS_BROWSER_EMULATION') { $failures.Add('browser responsive QA did not pass') }
+    if (-not $browserQa.play_channel.auth_hidden -or -not $browserQa.play_channel.paywall_hidden) { $failures.Add('browser QA found exposed Play account/paywall UI') }
+    if (@($browserQa.viewports | Where-Object { $_.document_overflow }).Count) { $failures.Add('browser QA found document overflow') }
+    else { $passes.Add('browser emulation passes Play visibility and responsive viewports') }
+  }
 }
 
 if (Test-Path -LiteralPath $ConfigPath -PathType Leaf) {
@@ -72,6 +140,10 @@ if (Test-Path -LiteralPath $ConfigPath -PathType Leaf) {
 } else {
   $waits.Add('product.config.json copied from product.config.example.json')
 }
+
+# User-owned Play Console gates are explicit and cannot be inferred from local files.
+$waits.Add('complete payment profile address matching identity documents')
+$waits.Add('one-time USD 25 Play developer registration')
 
 $tanitaPath = Join-Path $DashboardRoot 'TANITA_2Y_PROMOTION_GATE_v1.json'
 if (Test-Path -LiteralPath $tanitaPath) {

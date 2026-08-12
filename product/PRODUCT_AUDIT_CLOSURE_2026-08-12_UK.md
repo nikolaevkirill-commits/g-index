@@ -28,4 +28,4 @@
 4. Згенерувати TWA-артефакти та опублікувати `assetlinks.json` на web origin.
 5. Зібрати `.aab`, пройти internal testing на реальному Android-пристрої й заповнити Play Console декларації.
 
-До виконання цих п'яти зовнішніх кроків стан продукту: **code-ready Play companion, не production Play release**.
+Локальні product/spec/contract/browser-emulation блоки закриті й автоматизовані. До виконання цих п'яти зовнішніх кроків стан продукту: **LOCAL PRODUCT PACKAGE COMPLETE / EXTERNAL RELEASE GATES OPEN, не production Play release**.
