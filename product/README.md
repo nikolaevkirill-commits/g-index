@@ -18,6 +18,7 @@
 - `IP_AND_ANTI_COPY_PLAN_UK.md` — багатошаровий захист продукту.
 - `store-assets/` — вихідні й фінальні store-активи з provenance.
 - `play-market/` — listing, policy та release checklist.
+- `play-market/COST_AND_LAUNCH_SEQUENCE_2026-08-12_UK.md` — обов'язкові/відкладені витрати та go/no-go до оплати.
 - `scripts/Test-ProductReadiness.ps1` — fail-closed preflight.
 - `contracts/` — машинно перевірювані приклади hero, подій неба, alerts і timezone/DST.
 - `contracts/product-identity.json` — незмінний Android ID `com.neborythm.app` і web-origin contract.

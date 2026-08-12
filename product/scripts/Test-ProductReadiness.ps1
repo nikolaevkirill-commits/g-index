@@ -79,6 +79,7 @@ foreach ($rel in @(
   'play-market\RELEASE_CHECKLIST_UK.md',
   'play-market\PLAY_CONSOLE_SUBMISSION_DRAFT_UK.md',
   'play-market\TRADEMARK_AND_NAME_CLEARANCE_CHECKLIST_UK.md',
+  'play-market\COST_AND_LAUNCH_SEQUENCE_2026-08-12_UK.md',
   'qa\BROWSER_RESPONSIVE_QA_2026-08-12.json',
   'store-assets\STORE_ASSET_PROVENANCE_v1.json',
   'store-assets\final\neborytm-feature-graphic-1024x500-v1.png',
@@ -139,6 +140,10 @@ if (Test-Path -LiteralPath $ConfigPath -PathType Leaf) {
 } else {
   $waits.Add('product.config.json copied from product.config.example.json')
 }
+
+# User-owned Play Console gates are explicit and cannot be inferred from local files.
+$waits.Add('complete payment profile address matching identity documents')
+$waits.Add('one-time USD 25 Play developer registration')
 
 $tanitaPath = Join-Path $DashboardRoot 'TANITA_2Y_PROMOTION_GATE_v1.json'
 if (Test-Path -LiteralPath $tanitaPath) {
