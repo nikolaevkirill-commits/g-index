@@ -312,5 +312,15 @@ requireText('const _nearViewport = _view.bottom >= -120 && _view.top <= window.i
 requireText('const nearViewport = view.bottom >= -120 && view.top <= window.innerHeight + 120', 'G-flow animation pauses outside the viewport');
 requireText("ts - _planetLastPaint < 50", 'planet animation is capped at 20 fps');
 requireText("ts - _gFlowLastPaint < 50", 'G-flow animation is capped at 20 fps');
+requireText('function rawContextColor(g)', '27-day raw context has one canonical color scale');
+requireText('зони G_raw-контексту, не дозвіл', '27-day visible legend explains the restored colors truthfully');
+forbidText('Тонкий синій пунктир — raw-контекст.', '27-day legend cannot describe the obsolete single-blue rail');
+requireText('ctx.strokeStyle = rawContextColor((a.G + b.G) / 2)', '27-day line segments restore meaningful raw-context colors');
+requireText('const col=rawContextColor(d.G)', '27-day visible points follow the raw-context color scale');
+requireText('deliberately not green', 'positive raw context cannot masquerade as an action permission');
+forbidText("ctx.strokeStyle = '#6aa8df';", '27-day line cannot regress to a single blue color');
+requireText('G_raw total', 'formula audit labels continuous raw G explicitly');
+requireText('поза оперативною шкалою −3…+3', 'extreme raw totals disclose the operational scale boundary');
+requireText("Kp observed із затримкою понад 1 год → максимум «Середня»", 'delayed observed data cannot be labeled High quality');
 requireText('const _swControlledAtBoot = Boolean(navigator.serviceWorker.controller)', 'first PWA install records whether the page was already controlled');
 requireText("if (!_swControlledAtBoot)", 'first PWA controller install cannot reload an already current network page');
