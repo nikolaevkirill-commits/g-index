@@ -6,7 +6,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.193-fp386-RAW-COLOR-AUDIT</title>
+  <title>G-Index — Космофізичний дашборд v88.9.194-fp387-AUDIT-CLARITY</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -6926,7 +6926,16 @@ async function loadSystemHealthStatus(){
   const el=document.getElementById('systemHealthBanner');
   if(!el) return null;
   try{
-    const r=await fetch('SYSTEM_HEALTH_STATUS_v1.json',{cache:'no-store'});
+    // fp387: bypass both the browser HTTP cache and an older service-worker JSON
+    // entry. If the network is unavailable, retry the canonical URL so the SW can
+    // still return its explicitly labelled offline fallback.
+    let r;
+    try{
+      r=await fetch('SYSTEM_HEALTH_STATUS_v1.json?fresh='+Date.now(),{cache:'no-store'});
+      if(!r.ok) throw new Error('HTTP '+r.status);
+    }catch(_freshErr){
+      r=await fetch('SYSTEM_HEALTH_STATUS_v1.json',{cache:'force-cache'});
+    }
     if(!r.ok) throw new Error('HTTP '+r.status);
     const s=await r.json(), sourceStatus=String(s.status||'UNKNOWN').toUpperCase();
     const hard=Array.isArray(s.hard_failures)?s.hard_failures:[];
@@ -6948,7 +6957,7 @@ async function loadSystemHealthStatus(){
     const stamp=s.generated_at?new Date(s.generated_at).toLocaleString('uk-UA'):'—';
     el.innerHTML='<strong>⚙ Автоматизація: '+automationStatus+'</strong> · hard failures '+hard.length+' · operational warnings '+operationalWarns.length+
       (Number.isFinite(age)?' · manifest '+age.toFixed(1)+' год':'')+
-      ' · перевірено '+stamp+
+      ' · знімок стану '+stamp+
       (hard.length?' <div style="margin-top:4px">⛔ '+hard.map(escapeHtml).join(' · ')+'</div>':'')+
       (operationalWarns.length?' <div style="margin-top:3px;color:#ffd37a">Операційні попередження: '+operationalWarns.map(escapeHtml).join(' · ')+'</div>':'')+
       '<div style="margin-top:4px;color:#ffd37a"><strong>🧪 Докази: '+evidenceStatus+'</strong> · validated outcome pairs '+pairs+'/100 · очікують незалежних outcomes '+awaiting+' · Tanita '+tanitaAwaiting+' · наступна ручна вибірка '+manualPending+'</div>'+
@@ -9071,7 +9080,7 @@ function renderAstronomyEvents(dateUTC){
     const countdown = days===0 ? 'сьогодні' : days===1 ? 'завтра' : `через ${days} дн.`;
     const dateLabel = eclipse.date.toLocaleDateString('uk-UA',{day:'2-digit',month:'long',year:'numeric',timeZone:'UTC'});
     eclipseMain.innerHTML = `🌘 ${ECLIPSE_TYPE_UA[eclipse.type]||'затемнення'} · ${dateLabel} · ${countdown}`;
-    eclipseSub.innerHTML = `<strong style="color:${mi.Mi<0?'#ff9f9f':'var(--muted)'}">Сьогодні Mᵢ = ${mi.Mi}</strong> — ${mi.Mi<0?'вже враховано у ΣAᵢ та G':'сьогодні не впливає на G'}. Тип і дата — глобальна подія; локальна видимість залежить від місця. <a href="https://science.nasa.gov/eclipses/future-eclipses/" target="_blank" rel="noopener" style="color:#8fc8ff">NASA ↗</a>`;
+    eclipseSub.innerHTML = `<strong style="color:${mi.Mi<0?'#ff9f9f':'var(--muted)'}">Сьогодні Mᵢ = ${mi.Mi}</strong> — ${mi.Mi<0?'вже враховано у ΣAᵢ та G':'сьогодні не впливає на G'}. Тип і дата — глобальна подія. Цей модуль не розраховує локальну видимість і не стверджує, що затемнення видно з Києва. <a href="https://science.nasa.gov/eclipses/future-eclipses/" target="_blank" rel="noopener" style="color:#8fc8ff">NASA ↗</a>`;
   }else{
     eclipseMain.textContent = 'Немає підтвердженої події в локальному каталозі';
     eclipseSub.textContent = 'Mᵢ не змінюється. Каталог не підміняється припущенням.';
@@ -11537,9 +11546,11 @@ function renderForwardTimeline(){
     // v88.8.34: raw continuous G only; PDF/Engine score is only a marker/tooltip
     const _gEff = d.G;
     const g = isFinite(_gEff) ? _gEff : 0;
-    // fp299: decision owns red/green semantics; raw-only bars stay blue.
+    // fp387: every bar is the same raw-context series as the 27-day line.
+    // A verified PDF reference is provenance only: gold outline + tooltip, never
+    // a green/red fill that could be mistaken for an operational permission.
     const _hasDecision = d._hasOverride && Number.isFinite(d._expertEng);
-    const col = _hasDecision ? (d._expertEng >= 1 ? '#2bd47d' : d._expertEng <= -1 ? '#ff6b6b' : '#9bb1dc') : _ftGColor(_gEff);
+    const col = _ftGColor(_gEff);
     const isToday = (globalIdx === todayIdx);
     const isSel = (globalIdx === selIdx);
     // v87.90 P5 fix: opacity gradient за horizon — uncertainty visualization
@@ -11582,7 +11593,7 @@ function renderForwardTimeline(){
       <span class="pill" style="font-size:9px">${visibleData.length} дн.</span>
       ${narrowHint}
       <span class="hint" tabindex="0" style="font-size:10px;color:var(--faint);cursor:help">ⓘ<span class="hint-pop" style="white-space:pre;font-size:11px">Інтерактивна смуга прогнозу. Клік по стовпчику — вибір дня.
-▶ Play автопрокручує по обраній швидкості. Висота ∝ |G_day raw|. Червоний/зелений — лише PDF/Engine reference; дні без reference сині. Reference і raw не є дозволом для дії.
+▶ Play автопрокручує по обраній швидкості. Висота ∝ |G_day raw|. Колір кожного стовпчика = зона G_raw. Золота рамка = на цю дату є PDF reference; його знак написаний у деталях. Reference і raw не є дозволом для дії.
 ${isNarrow?'На вузькому екрані показано 14 днів (−3..+10 від сьогодні).':'Показано всі 27 днів прогнозу.'}</span></span>
       <span style="margin-left:auto;display:flex;gap:3px;align-items:center">
         ${speedBtn(0.5, '½×')}
@@ -11594,7 +11605,7 @@ ${isNarrow?'На вузькому екрані показано 14 днів (−
     </div>
     <div id="ftSticksRow" style="display:flex;align-items:flex-end;height:48px;gap:${gap}px;padding:0 2px">${sticks}</div>
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:4px;font-size:9px;color:var(--faint);letter-spacing:.04em" title="Прозорість показує впевненість прогнозу. Дальні дні менш надійні через ±1.5 розкид Kp у NOAA 27-day outlook.">
-      <span><strong style="color:#8fb5ff">Синій = лише raw-контекст</strong>; червоний/зелений = PDF/Engine reference, не оперативне рішення.</span><span>Горизонт raw:</span>
+      <span><strong style="color:#f0a33a">Колір = зона G_raw-контексту</strong>, не дозвіл; <strong style="color:#ffd166">золота рамка = PDF reference</strong>, не оперативне рішення.</span><span>Горизонт raw:</span>
       <span style="display:inline-flex;align-items:center;gap:3px"><span style="display:inline-block;width:10px;height:8px;background: var(--muted);opacity:1"></span>0–3д 100%</span>
       <span style="display:inline-flex;align-items:center;gap:3px"><span style="display:inline-block;width:10px;height:8px;background: var(--muted);opacity:.75"></span>4–7д 75%</span>
       <span style="display:inline-flex;align-items:center;gap:3px"><span style="display:inline-block;width:10px;height:8px;background: var(--muted);opacity:.55"></span>8–14д 55%</span>
@@ -11622,7 +11633,7 @@ ${isNarrow?'На вузькому екрані показано 14 днів (−
             }
             if (_v && isFinite(_v.eng)) {
               const _ec = Math.max(-3, Math.min(3, Math.round(_v.eng)));
-              const _vcol = _ec >= 1 ? '#63be7b' : _ec <= -1 ? '#ff6b6b' : '#9bb1dc';
+              const _vcol = _ec >= 1 ? '#cfb6ff' : _ec <= -1 ? '#ff8f9a' : '#9bb1dc';
               return `<div class="mono" style="font-size:18px;font-weight:700;color:${_vcol}" title="Заморожений PDF/Engine reference для порівняння; не оперативний дозвіл.">${_ec>=0?'+':''}${_ec} <span style="font-size:11px;font-weight:600;color:var(--dim)">PDF/Engine reference</span></div>`
                 + `<div style="font-size:10px;color:var(--faint);margin-top:1px" title="Forward Timeline raw = day-peak G (max Kp прогнозу × ΣAᵢ). Довідковий геомагнітний тренд, НЕ вердикт.">довідково · raw G_day ${gSign}${selG.toFixed(1)}</div>`;
             }

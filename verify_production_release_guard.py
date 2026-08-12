@@ -59,7 +59,8 @@ def main() -> None:
     require(index, 'Day_score_reference = ${dayTxt}', 'ICS labels PDF/Engine as reference')
     require(index, 'Оперативний стан ${_op179} має пріоритет:', 'personal cycle safety gate')
     require(index, 'окрема порада призупинена через глобальний ризик', 'personal cycle positive-advice suppression')
-    require(index, 'PDF/Engine reference, не оперативне рішення', '27-day reference-only caption')
+    require(index, 'золота рамка = PDF reference', '27-day reference-only provenance caption')
+    require(index, 'const col = _ftGColor(_gEff)', 'forward timeline uses raw-context colors')
     require(index, 'id="v19ShadowStatusBanner"', 'v19.2 shadow status banner')
     require(index, 'data-model="reconstructed-v19.2" data-score-effect="0"', 'v19.2 reconstructed score-neutral contract')
     require(index, 'v19.2 не змінює Hero, оцінку дня, PDF/Engine reference або оперативні рекомендації', 'v19.2 non-production disclosure')
@@ -143,6 +144,7 @@ def main() -> None:
         'Найкращий день (7 днів)': 'raw maximum is labeled best decision day',
         'Головний показник.': 'misleading PDF-first 27-day tooltip',
         'червоний/зелений = PDF/Engine-рішення': 'misleading 27-day decision caption',
+        "d._expertEng >= 1 ? '#2bd47d'": 'PDF reference paints forward bar action-green',
         'Сигнали розходяться: позитивний PDF не є дозволом.': 'negative PDF mislabeled as positive',
     }
     for needle, label in forbidden.items():

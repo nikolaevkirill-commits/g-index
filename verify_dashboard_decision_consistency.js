@@ -167,7 +167,7 @@ requireText('Day_score_reference = ${dayTxt}', 'ICS labels PDF/Engine as referen
 requireText('Локальний цикл зараз:', 'personal activity cycle is labeled as local context');
 requireText('Оперативний стан ${_op179} має пріоритет:', 'personal activity cycle has operational safety gate');
 requireText('окрема порада призупинена через глобальний ризик', 'positive local activity advice is suppressed during operational risk');
-requireText('PDF/Engine reference, не оперативне рішення', '27-day timeline legend is reference-only');
+requireText('золота рамка = PDF reference', '27-day timeline separates reference provenance from raw colors');
 requireText('is-now.is-routine', 'current routine slot has non-positive semantic styling');
 requireText("'Історична подія NOAA'", 'inactive NOAA event is explicitly historical');
 requireText('Бюлетень NOAA ${hoursAgo}г тому', 'aged NOAA event is time-labeled before live Kp loads');
@@ -318,6 +318,10 @@ forbidText('Тонкий синій пунктир — raw-контекст.', '
 requireText('ctx.strokeStyle = rawContextColor((a.G + b.G) / 2)', '27-day line segments restore meaningful raw-context colors');
 requireText('const col=rawContextColor(d.G)', '27-day visible points follow the raw-context color scale');
 requireText('deliberately not green', 'positive raw context cannot masquerade as an action permission');
+requireText('const col = _ftGColor(_gEff)', 'forward timeline colors stay on the raw-context scale');
+forbidText("d._expertEng >= 1 ? '#2bd47d'", 'PDF reference cannot paint a forward bar action-green');
+requireText("SYSTEM_HEALTH_STATUS_v1.json?fresh='+Date.now()", 'system health bypasses stale browser and service-worker entries');
+requireText('не стверджує, що затемнення видно з Києва', 'astronomy tile does not imply uncalculated local eclipse visibility');
 forbidText("ctx.strokeStyle = '#6aa8df';", '27-day line cannot regress to a single blue color');
 requireText('G_raw total', 'formula audit labels continuous raw G explicitly');
 requireText('поза оперативною шкалою −3…+3', 'extreme raw totals disclose the operational scale boundary');
