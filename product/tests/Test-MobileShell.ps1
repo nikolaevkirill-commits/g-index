@@ -20,6 +20,9 @@ if ($js -notmatch "setAttribute\('aria-current','page'\)" -or $js -notmatch "rem
 foreach ($marker in @('neborythm.local.v1','localStorage.setItem','localStorage.removeItem','neborythm-local-data.json','data-outcome','Birth data is not collected')) {
   if ($js -notmatch [regex]::Escape($marker)) { throw "Missing local-data safety behavior: $marker" }
 }
+foreach ($marker in @('LAST_GOOD','not live','data-alert','data-threshold','data-quiet','Push permission is not requested')) {
+  if ($js -notmatch [regex]::Escape($marker)) { throw "Missing offline/notification safety behavior: $marker" }
+}
 $node = (Get-Command node -ErrorAction Stop).Source
 & $node --check (Join-Path $app 'app.js')
 if ($LASTEXITCODE -ne 0) { throw 'Mobile shell JavaScript syntax failed.' }
