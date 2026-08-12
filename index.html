@@ -6,7 +6,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.192-fp385-PRODUCT-POLICY</title>
+  <title>G-Index — Космофізичний дашборд v88.9.193-fp386-RAW-COLOR-AUDIT</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -2681,7 +2681,7 @@ Kp: 3-год індекс геомагнітної активності (0–9)
     <div class="swipe-hint" style="display:none" id="swipeHint27">Прокрутіть таблицю</div>
     <section class="card" id="twentysevenCard">
         <div class="flex" style="flex-wrap:wrap;gap:8px">
-          <h2 style="margin:0">27-денне порівняння сигналів <span style="font-size:13px;font-weight:700;color:#9fd1ff">(синя лінія = raw-контекст; квадрати = PDF/Engine reference)</span></h2>
+          <h2 style="margin:0">27-денне порівняння сигналів <span style="font-size:13px;font-weight:700;color:#9fd1ff">(кольорова лінія = G_raw-контекст, не дозвіл; квадрати = PDF/Engine reference)</span></h2>
           <!-- v88.8.35-fp56-P8: explicit rail badge — users look at the line, not the fine print. -->
           <span style="display:inline-block;font-size:10px;font-weight:800;letter-spacing:.04em;color:#ffcc66;background:rgba(255,170,51,.10);border:1px solid rgba(255,170,51,.38);border-radius:6px;padding:2px 8px;margin-left:2px;vertical-align:middle">REFERENCE · НЕ РІШЕННЯ ДЛЯ ДІЇ</span>
           <span class="hint" tabindex="0" style="cursor:help;font-size:11px;color:var(--dim);border-bottom:1px dotted #2a3b61">? що це<span class="hint-pop" style="white-space:pre;font-size:12px;text-align:left;max-width:380px">Це НЕ G_now і НЕ PDF/Engine — це окремий індекс raw-фону доби.
@@ -2728,7 +2728,7 @@ Fallback (NOAA 45-day-forecast.json):
             <button id="btnIcs" style="font-size:12px;padding:6px 10px" title="Експорт прогнозу у календарний файл (.ics): імпортуйте у Google/Apple/Outlook для нагадувань">⬇ .ics</button>
           </div>
         </div>
-        <div class="rail-legend-27 small" style="margin:6px 0 2px;color:var(--dim);font-size:11px;line-height:1.45"><strong><span style="color:#ff8b8b">Червона</span>/<span style="color:#68df9b">зелена</span> товста лінія — PDF/Engine reference, не дозвіл.</strong> · <span style="color:#8fb5ff">Тонкий синій пунктир — raw-контекст.</span> За розбіжності головним є обережніший оперативний стан у Hero/3-day; зелений reference не означає «можна діяти».</div>
+        <div class="rail-legend-27 small" style="margin:6px 0 2px;color:var(--dim);font-size:11px;line-height:1.45"><strong><span style="color:#ff5b68">Червоний</span>/<span style="color:#f0a33a">помаранчевий</span>/<span style="color:#55b7c8">блакитний</span> — зони G_raw-контексту, не дозвіл.</strong> · <span style="color:#ffd166">Квадрати — окрема PDF/Engine reference.</span> За розбіжності головним є обережніший оперативний стан у Hero/3-day.</div>
         <div id="twentysevenError" class="err small"></div>
         <!-- v87.19 U4: Best/worst days of last 30 days — retention hook -->
         <div id="bestWorstDays" class="best-worst-block" style="display:none"></div>
@@ -9977,6 +9977,15 @@ function computeCScore(kpNow, kpObsJson, ai, G, kpSrc){
   // "Середня" через formatConfidence() деінде. Уніфіковано пороги.
   let grade = conf >= 0.85 ? 'high' : conf >= 0.65 ? 'med' : 'low';
 
+  // fp386: the page must not say both "OBSERVED · DELAYED" and "High quality".
+  // A 1–3 h observation can still be useful, but its presentation is capped at
+  // Medium until a fresh observation arrives. This changes confidence wording,
+  // never G, PDF/Engine reference, or the frozen forecast formula.
+  if (_agePenalty >= 0.05 && grade === 'high') {
+    grade = 'med';
+    reasons.push({ txt: 'Kp observed із затримкою понад 1 год → максимум «Середня»', col:'#ffcc00', d:0 });
+  }
+
   // v88.9.6x-fp244 FIX-CRITICAL (аудит fp242, п.2/3): "Якість даних: Висока"
   // раніше НЕ реагувала на провенанс Dst — якщо Dst взагалі був відсутній, це
   // давав лише малий адитивний штраф (0.03, крок 7 вище), а якщо Dst БУВ
@@ -11459,13 +11468,17 @@ let _ftPlayTimer = null;   // setInterval handle
 let _ftPlaying = false;
 let _ftPlaySpeed = 1;      // 0.5 | 1 | 2 — multiplier
 
-function _ftGColor(g){
+function rawContextColor(g){
   if(!isFinite(g)) return '#445';
-  if(g <= -2.5) return '#597395';   // raw context: muted blue, not a verdict
-  if(g <= -0.5) return '#6483aa';   // raw context: muted blue, not a verdict
-  if(g <  0.5)  return '#7895ba';   // raw context: neutral blue
-  if(g <  2.5)  return '#4f8fca';   // raw context: blue, not favorable
-  return '#6aa8df';                  // raw context: bright blue, not a decision
+  if(g <= -2.5) return '#ff5b68';   // severe raw context
+  if(g <= -0.5) return '#f0a33a';   // adverse raw context
+  if(g <  0.5)  return '#9bb1dc';   // neutral raw context
+  if(g <  2.5)  return '#55b7c8';   // elevated raw context, deliberately not green
+  return '#7f9cff';                  // strong raw context, deliberately not green
+}
+
+function _ftGColor(g){
+  return rawContextColor(g);
 }
 
 function _ftCategory(g){
@@ -15537,7 +15550,8 @@ function renderAlertBanner(g, kp){
 
   // G ≤ -3 → extreme risk
   if (isFinite(g) && g <= -3) {
-    alerts.push({ title: '🔴 ВИСОКИЙ РИЗИК', body: `G = ${g.toFixed(1)} — критичний рівень. Не приймайте жодних рішень 3-6 годин.` });
+    const _operationalG = Math.max(-3, Math.min(3, g));
+    alerts.push({ title: '🔴 ВИСОКИЙ РИЗИК', body: `G_raw = ${g.toFixed(1)} — сума одночасних факторів поза оперативною шкалою −3…+3. Оперативний стан: ${_operationalG.toFixed(0)}. Не приймайте важливих рішень 3-6 годин.` });
   }
 
   // Forecast: check _daySlots for future Kp ≥ 5
@@ -19171,6 +19185,8 @@ function renderProvenance(){
   // Components G
   const _ai = _ui.ai || _ds.ai || {};
   const _gNow = _ui.gNow ?? _ds.gNow ?? NaN;
+  const _gRawOutsideOperationalScale = isFinite(_gNow) && Math.abs(_gNow) > 3;
+  const _gOperational = isFinite(_gNow) ? Math.max(-3, Math.min(3, _gNow)) : NaN;
 
   // Cache state
   // v88.9.33-fp214 FIX (аудит-раунд-4): freshnessBadge може показувати "DEGRADED"
@@ -19230,8 +19246,8 @@ function renderProvenance(){
         ${_row('Dᵢ (Dst-буря)', _fmt(_ai.Di, 1))}
         ${_row('ΣAᵢ', _fmt(_ai.Ai, 1))}
         <div class="prov-row prov-row-total">
-          <span style="color:var(--ok);font-weight:700">G total</span>
-          <span style="color:var(--text);font-weight:700;font-size:14px">${_fmt(_gNow, 2)}</span>
+          <span style="color:${rawContextColor(_gNow)};font-weight:700">G_raw total</span>
+          <span style="color:var(--text);font-weight:700;font-size:14px">${_fmt(_gNow, 2)}${_gRawOutsideOperationalScale ? ` <span style="color:var(--warn);font-size:10px;font-weight:600">поза оперативною шкалою −3…+3; стан ${_fmt(_gOperational, 0)}</span>` : ''}</span>
         </div>
       </div>
     </div>
@@ -22214,11 +22230,11 @@ function draw27Chart(){
 
   // ── Зони кольору ──
   const zones = [
-    {from:2.5, to:gMax, color:'rgba(55,167,255,0.075)'},
-    {from:0.5, to:2.5,  color:'rgba(55,167,255,0.055)'},
+    {from:2.5, to:gMax, color:'rgba(127,156,255,0.075)'},
+    {from:0.5, to:2.5,  color:'rgba(85,183,200,0.055)'},
     {from:-0.5,to:0.5,  color:'rgba(155,177,220,0.045)'},
-    {from:-2.5,to:-0.5, color:'rgba(86,116,157,0.055)'},
-    {from:gMin,to:-2.5, color:'rgba(86,116,157,0.075)'}
+    {from:-2.5,to:-0.5, color:'rgba(240,163,58,0.055)'},
+    {from:gMin,to:-2.5, color:'rgba(255,91,104,0.075)'}
   ];
   zones.forEach(z=>{
     const y1 = yOf(Math.min(z.to, gMax));
@@ -22288,8 +22304,8 @@ function draw27Chart(){
   ctx.restore();
   }
 
-  // fp383: the continuous line is raw G context, not a decision. Keep it blue;
-  // PDF/Engine reference is rendered separately as square markers.
+  // fp386: color restores scanability without using verdict-green. The continuous
+  // line remains raw G context; PDF/Engine reference stays a separate square marker.
   ctx.save();
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
@@ -22297,7 +22313,7 @@ function draw27Chart(){
   for(let i=1;i<data.length;i++){
     const a=data[i-1], b=data[i];
     if(!Number.isFinite(a.G) || !Number.isFinite(b.G)) continue;
-    ctx.strokeStyle = '#6aa8df';
+    ctx.strokeStyle = rawContextColor((a.G + b.G) / 2);
     ctx.beginPath();
     ctx.moveTo(xOf(i-1), yOf(a.G));
     ctx.lineTo(xOf(i), yOf(b.G));
@@ -22305,7 +22321,7 @@ function draw27Chart(){
   }
   data.forEach((d,i)=>{
     if(!Number.isFinite(d.G)) return;
-    const col='#6aa8df';
+    const col=rawContextColor(d.G);
     ctx.fillStyle=col;
     ctx.beginPath();
     ctx.arc(xOf(i),yOf(d.G),d.ds===todayStr?5:3.5,0,Math.PI*2);
@@ -22331,7 +22347,7 @@ function draw27Chart(){
     const _gForChart = d.G; // v88.8.34: raw continuous G only
     if(!isFinite(_gForChart)) return;
     const x = xOf(i), y = yOf(_gForChart);
-    const col = '#6aa8df'; // raw point: neutral context, never a verdict color
+    const col = rawContextColor(_gForChart); // raw context, never a verdict-green
     const isBest=i===bestIdx, isWorst=i===worstIdx;
     if(showRawAudit && isFinite(y)){
       ctx.fillStyle = col;
