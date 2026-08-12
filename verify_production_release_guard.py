@@ -69,6 +69,9 @@ def main() -> None:
     require(index, 'Таніта SHADOW · вплив на G = 0', 'Tanita score-neutral disclosure')
     require(index, 'На chronological holdout приріст проти baseline відсутній.', 'Tanita no-gain disclosure')
     require(index, 'Активація можлива лише після ', 'Tanita prospective activation rule')
+    require(index, 'href="privacy.html"', 'public privacy link')
+    require(index, 'href="terms.html"', 'public terms link')
+    require(index, 'href="account-deletion.html"', 'public account deletion link')
     require(index, '↻ Оновити дані', 'explicit data refresh label')
     require(index, 'Оновити застосунок</button>', 'distinct PWA update label')
     require(index, 'id="astronomyEventsCard"', 'visible astronomy events card')
@@ -172,6 +175,15 @@ def main() -> None:
             f'cache={cache_fp.group(1) if cache_fp else None}'
         )
     print(f'PASS dashboard/SW cache version: fp{title_fp.group(1)}')
+
+    for public_page in ('privacy.html', 'terms.html', 'account-deletion.html'):
+        page = ROOT / public_page
+        if not page.is_file() or page.stat().st_size < 500:
+            raise SystemExit(f'FAIL public product policy page: {public_page}')
+    deletion = (ROOT / 'account-deletion.html').read_text(encoding='utf-8')
+    require(deletion, 'mailto:nikolaev.kirill@gmail.com', 'account deletion request channel')
+    require(deletion, 'Видалення акаунта', 'account deletion page heading')
+    print('PASS public privacy, terms and account-deletion pages')
 
     manifest_path = ROOT / 'data_manifest.json'
     manifest = json.loads(release_bytes(manifest_path).decode('utf-8'))

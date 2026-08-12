@@ -29,5 +29,4 @@ G-Index є advisory/reflective planning інструментом. Він не н
 
 ## Контакт
 
-До публікації замінити на перевірений support email: `REPLACE_WITH_SUPPORT_EMAIL`.
-
+Support email: `nikolaev.kirill@gmail.com`.

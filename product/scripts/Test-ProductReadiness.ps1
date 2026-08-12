@@ -16,7 +16,7 @@ function Require-File([string]$RelativePath) {
   if (-not (Test-Path -LiteralPath $full -PathType Leaf)) { $failures.Add("missing dashboard file: $RelativePath") }
 }
 
-@('index.html','manifest.json','sw.js','icon192.png','icon512.png','TANITA_2Y_PROMOTION_GATE_v1.json') | ForEach-Object { Require-File $_ }
+@('index.html','manifest.json','sw.js','icon192.png','icon512.png','TANITA_2Y_PROMOTION_GATE_v1.json','privacy.html','terms.html','account-deletion.html') | ForEach-Object { Require-File $_ }
 
 foreach ($rel in @(
   'PRODUCT_SPEC_UK.md',
