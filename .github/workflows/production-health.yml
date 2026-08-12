@@ -30,6 +30,9 @@ jobs:
           test -f expert_calc_scores.json
           test -f engine_tag_parser.js
           test -f engine_tag_aliases_v1.json
+          test -f privacy.html
+          test -f terms.html
+          test -f account-deletion.html
           grep -q './engine_tag_parser.js' index.html
           grep -q './engine_tag_aliases_v1.json' index.html
           grep -q 'TOKEN_THEMES' index.html
@@ -71,20 +74,40 @@ jobs:
         if: github.event_name != 'pull_request'
         run: |
           set -euo pipefail
+          expected_title="$(python - <<'PY'
+          from pathlib import Path
+          import re
+          text=Path('index.html').read_text(encoding='utf-8')
+          match=re.search(r'<title>(.*?)</title>',text,re.S)
+          assert match, 'dashboard title missing'
+          print(match.group(1).strip())
+          PY
+          )"
           for attempt in $(seq 1 24); do
-            curl -fL --retry 3 --retry-delay 2 --connect-timeout 10 --max-time 40 \
+            curl -fL -H 'Cache-Control: no-cache' --retry 3 --retry-delay 2 --connect-timeout 10 --max-time 40 \
               "https://nikolaevkirill-commits.github.io/g-index/?health_sha=${GITHUB_SHA}&attempt=${attempt}" \
               -o /tmp/root.html
             if grep -q 'engine_tag_parser.js' /tmp/root.html && \
-               grep -q 'TOKEN_THEMES' /tmp/root.html; then
+               grep -q 'TOKEN_THEMES' /tmp/root.html && \
+               grep -Fq "$expected_title" /tmp/root.html; then
               echo "Live canonical root PASS on attempt ${attempt}."
-              exit 0
+              break
             fi
             echo "GitHub Pages has not published the canonical root yet (attempt ${attempt}/24)."
+            if [ "$attempt" -eq 24 ]; then
+              echo 'Live canonical root did not converge within four minutes.' >&2
+              exit 1
+            fi
             sleep 10
           done
-          echo 'Live canonical root did not converge within four minutes.' >&2
-          exit 1
+          for page in privacy.html terms.html account-deletion.html; do
+            curl -fL -H 'Cache-Control: no-cache' --retry 3 --retry-delay 2 --connect-timeout 10 --max-time 40 \
+              "https://nikolaevkirill-commits.github.io/g-index/${page}?health_sha=${GITHUB_SHA}" \
+              -o "/tmp/${page}"
+          done
+          grep -q 'Політика конфіденційності G-Index' /tmp/privacy.html
+          grep -q 'Умови використання G-Index' /tmp/terms.html
+          grep -q 'Видалення акаунта G-Index' /tmp/account-deletion.html
       - name: Live deprecated nested compatibility
         if: github.event_name != 'pull_request'
         run: |
