@@ -6,7 +6,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.190-fp383-AUX-COLOR-SEMANTICS</title>
+  <title>G-Index — Космофізичний дашборд v88.9.192-fp385-PRODUCT-POLICY</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -3224,6 +3224,12 @@ Fallback (NOAA 45-day-forecast.json):
     <div class="small">Дані Kp/Ap — NOAA SWPC; Ap↔Kp — GFZ/NOAA table; Dst — Kyoto WDC; Sn — SILSO/ROB; події — ICS; затемнення — Timeanddate/NASA; фази — Astronomy Engine (Meeus). Модель G: R&amp;D / Advisory — V3 prospective freeze 2026-05-03 → ~2026-08-01. Engine v18.5 canonical: Strict 70.6% / 71.4% holdout · Binary 83.6% · κ=0.52 (N=280). V18.8 runtime patches disabled during V3 freeze; G включає Dᵢ (Dst-компонент).</div>
     <div class="small" style="margin-top:8px">📊 Повна валідація моделі: <a href="backtest.html" style="color:var(--alt);text-decoration:none;border-bottom:1px dotted var(--alt)">backtest report</a> — engine v18.5 canonical vs PDF: N=280 — Strict 70.6% · Binary 83.6% · Exact 43.0% (N=280 GT v5.1: Strict 71.4%, κ=0.52 / weighted κ=0.73). V18.8 patches disabled — V3 freeze active.</div>
     <div class="small" style="margin-top:8px;color:var(--faint);border-left:2px solid var(--warn);padding-left:8px">⚠ Caveat: ground truth = експертні PDF-бюлетені з тим же Vedic Panchanga + Kp framework. Метрики 79.2% / 88.7% валідують <strong>відтворення експертної логіки</strong>, НЕ предиктивну валідність vs реальні outcomes (медичні/операційні події). Outcome-based validation — pilot план у V19-E.</div>
+    <nav class="small" aria-label="Правові документи та підтримка" style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap">
+      <a href="privacy.html" style="color:var(--faint)">Конфіденційність</a>
+      <a href="terms.html" style="color:var(--faint)">Умови</a>
+      <a href="account-deletion.html" style="color:var(--faint)">Видалення акаунта</a>
+      <a href="mailto:nikolaev.kirill@gmail.com" style="color:var(--faint)">Підтримка</a>
+    </nav>
   </footer>
 
 <script>
@@ -6420,6 +6426,7 @@ let _expertOverrides = null; // {date: {expert_eng, tanita_O, tanita_N, category
 let _expertCalc = null; // {date: {score, raw_sum, kp_her}}
 let _strongRawPolicy = null;
 let _autoProspectiveStatus = null;
+let _tanitaPromotionGate = null;
 let _expertDecisionRegistry = null;
 let _bgsSpaceWeather = null;
 let _spaceWeatherAccumulated = null;
@@ -6437,28 +6444,56 @@ function renderTanitaShadow(){
   const fr=ts.formula_reconstruction||{};
   const hold=ts.holdout||{};
   const strong=hold.strong_image_against_pdf||{};
+  const gate=_tanitaPromotionGate||{};
+  const evidence=gate.evidence||{};
+  const prospective=evidence.prospective||{};
+  const residual=evidence.residual_holdout||{};
+  const promotion=gate.promotion||{};
+  const independent=Number(prospective.independent_real_outcomes||0);
+  const required=Number(prospective.required||promotion.required_frozen_independent_outcomes||100);
   const tScore=Number.isFinite(Number(tanita.score))?Number(tanita.score):null;
   const base=Number.isFinite(Number(day.score))?Number(day.score):null;
   const delta=tScore!==null&&base!==null?tScore-base:null;
   const conflict=delta!==null&&((tScore*base<0)||Math.abs(delta)>=2);
   const icons=Array.isArray(tanita.detected_icons)&&tanita.detected_icons.length?tanita.detected_icons.join(', '):'надійні іконки не виділені';
-  sum.textContent='🔐 Таніта: формула '+(fr.verified_exact||0)+'/'+(fr.dates||0)+' відтворена'+
+  const relation=tScore===null||base===null?'немає повної пари':conflict?'КОНФЛІКТ':Math.sign(tScore)===Math.sign(base)?'напрям збігається':'часткова розбіжність';
+  sum.textContent='🔐 Таніта SHADOW · вплив на G = 0 · '+relation+
+    ' · формула '+(fr.verified_exact||0)+'/'+(fr.dates||0)+' відтворена'+
     (tScore!==null?' · сьогодні shadow '+(tScore>0?'+':'')+tScore:'')+
-    (conflict?' · ⚠ конфлікт з основною моделлю':'');
+    (conflict?' · ⚠ перевірити':'');
   body.innerHTML=
     '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:6px">'+
       '<div style="padding:7px 9px;border:1px solid var(--border);border-radius:8px"><b>Детермінована формула</b><br><code>(2−Kp)+Місяць+Затемнення+Σваг</code><br>Перевірка: '+(fr.verified_exact||0)+'/'+(fr.dates||0)+', помилок '+(fr.mismatches||0)+'</div>'+
       '<div style="padding:7px 9px;border:1px solid var(--border);border-radius:8px"><b>Сьогодні</b><br>Таніта image-shadow: '+(tScore===null?'—':(tScore>0?'+':'')+tScore)+
-        '<br>Основний frozen/priority: '+(base===null?'—':(base>0?'+':'')+base)+(delta===null?'':' · Δ '+(delta>0?'+':'')+delta)+'</div>'+
+        '<br>Основний PDF/Engine reference: '+(base===null?'—':(base>0?'+':'')+base)+(delta===null?'':' · Δ '+(delta>0?'+':'')+delta)+
+        '<br><b style="color:'+(conflict?'#ffd37a':'#b9d8ff')+'">'+relation+'</b></div>'+
       '<div style="padding:7px 9px;border:1px solid var(--border);border-radius:8px"><b>Розпізнані символи</b><br>'+icons+'</div>'+
-      '<div style="padding:7px 9px;border:1px solid var(--border);border-radius:8px"><b>Чесний holdout strong-image</b><br>n='+(strong.n||0)+
+      '<div style="padding:7px 9px;border:1px solid var(--border);border-radius:8px"><b>Історична перевірка (не real outcomes)</b><br>strong-image n='+(strong.n||0)+
         ' · exact '+(strong.exact==null?'—':(strong.exact*100).toFixed(1)+'%')+
         ' · ±1 '+(strong.within1==null?'—':(strong.within1*100).toFixed(1)+'%')+
         ' · sign '+(strong.strict_sign==null?'—':(strong.strict_sign*100).toFixed(1)+'%')+'</div>'+
+      '<div style="padding:7px 9px;border:1px solid '+(promotion.allowed?'rgba(67,230,167,.4)':'rgba(255,190,75,.38)')+';border-radius:8px"><b>Незалежні результати</b><br>'+independent+'/'+required+
+        ' заморожених пар<br>Promotion: <b>'+(promotion.allowed?'ДОЗВОЛЕНО':'HOLD')+'</b></div>'+
     '</div>'+
     '<div style="margin-top:7px;color:'+(conflict?'#ffd37a':'var(--dim)')+'">'+
       (conflict?'⚠ Це окремий сигнал для перевірки, не автоматична заміна рішення. ':'')+
-      'Image-decoder має score effect 0; PDF/Expert і frozen Engine зберігають пріоритет до prospective gate.</div>';
+      'Image-decoder має score effect 0; він пояснює та пререєструє кандидата, але не змінює Hero, PDF/Engine reference чи оперативний стан. '+
+      (Number(residual.strict_sign_delta||0)<=0?'На chronological holdout приріст проти baseline відсутній. ':'')+
+      'Активація можлива лише після '+required+' незалежних outcome-пар і повторного аудиту.</div>';
+}
+
+async function loadTanitaPromotionGate(){
+  try{
+    const r=await fetch('TANITA_2Y_PROMOTION_GATE_v1.json',{cache:'no-store'});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const g=await r.json();
+    if(Number(g.score_effect)!==0 || g.production_change!==false) throw new Error('unsafe Tanita gate contract');
+    _tanitaPromotionGate=g;
+  }catch(_e){
+    _tanitaPromotionGate={promotion:{allowed:false,required_frozen_independent_outcomes:100},evidence:{prospective:{independent_real_outcomes:0,required:100}}};
+  }
+  renderTanitaShadow();
+  return _tanitaPromotionGate;
 }
 function renderSingleFinalDecision(){
   const el=document.getElementById('singleFinalDecisionBody');
@@ -25129,7 +25164,7 @@ setTimeout(async function _dayVerdictLoad(){
     await loadExpertCalc();
     await loadStrongRawPolicy();
     await loadExpertDecisionRegistry();
-    await loadAutoProspectiveStatus();
+    await Promise.all([loadAutoProspectiveStatus(),loadTanitaPromotionGate()]);
     await loadTanitaReviewStatus();
     await loadBgsSpaceWeather();
     await loadSourceHealth();
@@ -25602,7 +25637,8 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line208
           Оновлення кожні 3 години.<br><br>
           <span style="color:var(--faint);font-size:12px">
             <a href="privacy.html" target="_blank" style="color:var(--faint)">Privacy Policy</a> ·
-            <a href="terms.html" target="_blank" style="color:var(--faint)">Terms of Use</a>
+            <a href="terms.html" target="_blank" style="color:var(--faint)">Terms of Use</a> ·
+            <a href="account-deletion.html" target="_blank" style="color:var(--faint)">Delete account</a>
           </span>
         </div>
       </div>
