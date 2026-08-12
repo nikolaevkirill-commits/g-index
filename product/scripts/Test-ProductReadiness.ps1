@@ -88,7 +88,7 @@ foreach ($rel in @(
   if (-not (Test-Path -LiteralPath (Join-Path $productRoot $rel) -PathType Leaf)) { $failures.Add("missing product file: $rel") }
 }
 
-foreach ($testRel in @('tests\Test-StoreListings.ps1','tests\Test-ProductContracts.ps1','tests\Test-ProductIdentity.ps1','tests\Test-MobileShell.ps1')) {
+foreach ($testRel in @('tests\Test-StoreListings.ps1','tests\Test-ProductContracts.ps1','tests\Test-ProductIdentity.ps1','tests\Test-MobileShell.ps1','tests\Test-MobileSnapshotAdapter.ps1')) {
   $testPath = Join-Path $productRoot $testRel
   if (-not (Test-Path -LiteralPath $testPath -PathType Leaf)) {
     $failures.Add("missing product test: $testRel")
