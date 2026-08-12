@@ -10,6 +10,7 @@ const types = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
   '.json': 'application/json; charset=utf-8',
+  '.webmanifest': 'application/manifest+json; charset=utf-8',
   '.svg': 'image/svg+xml',
 };
 
@@ -25,9 +26,10 @@ createServer((request, response) => {
 
   try {
     if (!statSync(file).isFile()) throw new Error('Not a file');
+    const contentType = file.endsWith('.webmanifest') ? types['.webmanifest'] : (types[extname(file)] || 'application/octet-stream');
     response.writeHead(200, {
       'Cache-Control': 'no-store',
-      'Content-Type': types[extname(file)] || 'application/octet-stream',
+      'Content-Type': contentType,
     });
     createReadStream(file).pipe(response);
   } catch {
