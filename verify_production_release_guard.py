@@ -73,6 +73,11 @@ def main() -> None:
     require(index, 'href="privacy.html"', 'public privacy link')
     require(index, 'href="terms.html"', 'public terms link')
     require(index, 'href="account-deletion.html"', 'public account deletion link')
+    require(index, 'window.GINDEX_PLAY_CHANNEL', 'explicit Play companion channel')
+    require(index, 'play-channel #paywallOverlay', 'Play companion purchase fail-closed CSS')
+    require(index, "window.GINDEX_PLAY_CHANNEL ? 'basic'", 'Play companion local Basic tier')
+    if 'href="backtest.html"' in index:
+        raise SystemExit('FAIL dashboard contains a broken backtest.html link')
     require(index, '↻ Оновити дані', 'explicit data refresh label')
     require(index, 'Оновити застосунок</button>', 'distinct PWA update label')
     require(index, 'id="astronomyEventsCard"', 'visible astronomy events card')
@@ -186,6 +191,24 @@ def main() -> None:
     require(deletion, 'mailto:nikolaev.kirill@gmail.com', 'account deletion request channel')
     require(deletion, 'Видалення акаунта', 'account deletion page heading')
     print('PASS public privacy, terms and account-deletion pages')
+
+    web_manifest = json.loads((ROOT / 'manifest.json').read_text(encoding='utf-8'))
+    title_version = re.search(r'v(88\.9\.\d+-fp\d+)-', index)
+    if not title_version or web_manifest.get('version') != title_version.group(1):
+        raise SystemExit(
+            f"FAIL web manifest version mismatch: title={title_version.group(1) if title_version else None} "
+            f"manifest={web_manifest.get('version')}"
+        )
+    if web_manifest.get('start_url') != '/g-index/' or web_manifest.get('scope') != '/g-index/':
+        raise SystemExit('FAIL web manifest start_url/scope contract')
+    for shortcut in web_manifest.get('shortcuts') or []:
+        url = str(shortcut.get('url') or '')
+        if not url.startswith('/g-index/'):
+            raise SystemExit(f'FAIL external manifest shortcut: {url}')
+        local_target = url[len('/g-index/'):].split('#', 1)[0].split('?', 1)[0]
+        if local_target and not (ROOT / local_target).is_file():
+            raise SystemExit(f'FAIL missing manifest shortcut target: {local_target}')
+    print('PASS Play companion and web manifest contracts')
 
     manifest_path = ROOT / 'data_manifest.json'
     manifest = json.loads(release_bytes(manifest_path).decode('utf-8'))
