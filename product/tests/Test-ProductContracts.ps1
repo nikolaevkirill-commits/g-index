@@ -64,6 +64,29 @@ if ($vectors) {
   }
 }
 
+$history = Load-Json 'forecast-history.example.json'
+if ($history) {
+  foreach ($record in @($history.records)) {
+    foreach ($field in @('issued_at','valid_for','decision','source_id','source_state','model_version','content_hash')) {
+      if ([string]::IsNullOrWhiteSpace([string]$record.$field)) { $failures.Add("forecast history missing $field") }
+    }
+  }
+}
+
+$calendar = Load-Json 'calendar-export.example.json'
+if ($calendar) {
+  if ($calendar.disclaimer -notmatch '(?i)not a guaranteed') { $failures.Add('calendar export limitation missing') }
+  if ([string]::IsNullOrWhiteSpace($calendar.source_id) -or [string]::IsNullOrWhiteSpace($calendar.data_state)) { $failures.Add('calendar export provenance incomplete') }
+}
+
+$widget = Load-Json 'widget-state.example.json'
+if ($widget) {
+  foreach ($field in @('decision','freshness','age_minutes','source_id','updated_at')) {
+    if ($null -eq $widget.$field -or [string]::IsNullOrWhiteSpace([string]$widget.$field)) { $failures.Add("widget state missing $field") }
+  }
+  if ($widget.deep_link -notmatch 'channel=play') { $failures.Add('widget must deep-link into fail-closed Play channel') }
+}
+
 if ($failures.Count) {
   $failures | ForEach-Object { Write-Error $_ }
   exit 1

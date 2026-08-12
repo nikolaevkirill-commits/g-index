@@ -14,6 +14,8 @@
 - `play-market/` — listing, policy та release checklist.
 - `scripts/Test-ProductReadiness.ps1` — fail-closed preflight.
 - `contracts/` — машинно перевірювані приклади hero, подій неба, alerts і timezone/DST.
+- `LOCAL_AND_EXTERNAL_GATE_CLOSURE_2026-08-12_UK.md` — що повністю закрито локально, а що потребує зовнішнього доказу.
+- `qa/` — датовані browser/device QA-докази.
 
 ## Незмінні правила прогнозу
 

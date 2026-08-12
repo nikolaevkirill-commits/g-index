@@ -22,6 +22,7 @@ function Require-File([string]$RelativePath) {
 $indexRaw = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $DashboardRoot 'index.html')
 $manifestRaw = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $DashboardRoot 'manifest.json')
 $swRaw = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $DashboardRoot 'sw.js')
+$twaTemplateRaw = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $productRoot 'android\twa-manifest.template.json')
 try { $webManifest = $manifestRaw | ConvertFrom-Json } catch { $failures.Add("invalid web manifest JSON: $($_.Exception.Message)"); $webManifest = $null }
 if ($webManifest) {
   if ($webManifest.start_url -ne '/g-index/' -or $webManifest.scope -ne '/g-index/') { $failures.Add('web manifest start_url/scope mismatch') }
@@ -41,6 +42,8 @@ if ($indexRaw -notmatch 'GINDEX_PLAY_CHANNEL' -or $indexRaw -notmatch 'channel.*
 else { $passes.Add('Play companion disables web purchases') }
 if ($indexRaw -match 'href="backtest\.html"') { $failures.Add('dashboard contains broken backtest.html link') }
 else { $passes.Add('dashboard backtest links resolve internally') }
+if ($twaTemplateRaw -notmatch '"enableNotifications"\s*:\s*false') { $failures.Add('TWA notifications enabled before reviewed push release') }
+else { $passes.Add('TWA notifications fail closed') }
 
 $storeAssetAudit = Join-Path $productRoot 'store-assets\verify_store_assets.py'
 if (-not (Test-Path -LiteralPath $storeAssetAudit -PathType Leaf)) {
@@ -62,6 +65,7 @@ if (-not (Test-Path -LiteralPath $storeAssetAudit -PathType Leaf)) {
 foreach ($rel in @(
   'PRODUCT_SPEC_UK.md',
   'MVP_INFORMATION_ARCHITECTURE_UK.md',
+  'LOCAL_AND_EXTERNAL_GATE_CLOSURE_2026-08-12_UK.md',
   'BRAND_SYSTEM_NEBORYTM_UK.md',
   'FACTOR_EXPLAINER_UK.md',
   'IP_AND_ANTI_COPY_PLAN_UK.md',
@@ -73,6 +77,9 @@ foreach ($rel in @(
   'play-market\PRIVACY_POLICY_UK.md',
   'play-market\ACCOUNT_DELETION_UK.md',
   'play-market\RELEASE_CHECKLIST_UK.md',
+  'play-market\PLAY_CONSOLE_SUBMISSION_DRAFT_UK.md',
+  'play-market\TRADEMARK_AND_NAME_CLEARANCE_CHECKLIST_UK.md',
+  'qa\BROWSER_RESPONSIVE_QA_2026-08-12.json',
   'store-assets\STORE_ASSET_PROVENANCE_v1.json',
   'store-assets\final\neborytm-feature-graphic-1024x500-v1.png',
   'store-assets\final\neborytm-icon-512-v1.png'
@@ -102,6 +109,18 @@ if ($releaseManifest) {
   if ($releaseManifest.forecast_contract.tanita_score_effect -ne 0 -or $releaseManifest.forecast_contract.v19_2_score_effect -ne 0) {
     $failures.Add('research candidates are not score-neutral')
   } else { $passes.Add('Tanita and v19.2 remain score-neutral') }
+}
+
+$browserQaPath = Join-Path $productRoot 'qa\BROWSER_RESPONSIVE_QA_2026-08-12.json'
+if (Test-Path -LiteralPath $browserQaPath -PathType Leaf) {
+  try { $browserQa = Get-Content -Raw -Encoding UTF8 -LiteralPath $browserQaPath | ConvertFrom-Json }
+  catch { $failures.Add("invalid browser QA JSON: $($_.Exception.Message)"); $browserQa = $null }
+  if ($browserQa) {
+    if ($browserQa.status -ne 'PASS_BROWSER_EMULATION') { $failures.Add('browser responsive QA did not pass') }
+    if (-not $browserQa.play_channel.auth_hidden -or -not $browserQa.play_channel.paywall_hidden) { $failures.Add('browser QA found exposed Play account/paywall UI') }
+    if (@($browserQa.viewports | Where-Object { $_.document_overflow }).Count) { $failures.Add('browser QA found document overflow') }
+    else { $passes.Add('browser emulation passes Play visibility and responsive viewports') }
+  }
 }
 
 if (Test-Path -LiteralPath $ConfigPath -PathType Leaf) {

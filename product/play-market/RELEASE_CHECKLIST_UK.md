@@ -6,7 +6,8 @@
 - [x] Manifest version синхронізована; shortcuts не ведуть на відсутні файли.
 - [ ] Android physical install, standalone, splash та offline PASS.
 - [ ] Push і deep-link PASS у окремому reviewed release.
-- [ ] 320/360/390/412 px і landscape PASS на фізичному Android.
+- [x] 320/360/390/412 px і landscape PASS у Chromium browser emulation.
+- [ ] Ті самі viewports PASS на фізичному Android (external device gate).
 - [ ] Lighthouse/PWA audit збережений.
 
 ## Brand і store assets
@@ -23,10 +24,12 @@
 - [x] UA/EN/ES listings проходять автоматичний length/claim lint.
 - [x] Privacy policy, terms і web account-deletion request опубліковані HTTPS.
 - [ ] In-app та web account deletion фізично перевірені.
-- [ ] Data Safety звірена з Worker, TWA та SDK.
+- [x] Data Safety fail-closed inventory та Play Console worksheet підготовлені.
+- [ ] Data Safety звірена з фактичною `.aab`, Worker і SDK перед submission.
 - [ ] Support email активний.
 - [ ] Content rating, target audience, ads і app access заповнені.
 - [x] Play companion приховує web-продажі, auth і push до окремого reviewed release.
+- [x] TWA `enableNotifications=false`; preflight блокує передчасне повернення push.
 
 ## Android gate
 

@@ -19,18 +19,18 @@
 
 ## P1 — після стабільного MVP
 
-- [ ] Home-screen widget.
-- [ ] Calendar export і персональні нагадування.
-- [ ] Історія зміни прогнозу та джерела.
-- [ ] Локалізований факторний словник.
-- [ ] Accessibility QA: contrast, Dynamic Type/масштаб, screen reader labels.
+- [x] Home-screen widget: data/deep-link contract готовий; Android UI лишається external build gate.
+- [x] Calendar export: provenance/limitation contract готовий; Android інтеграція лишається build gate.
+- [x] Історія зміни прогнозу та джерела: immutable record contract готовий.
+- [x] Факторний словник: канонічний UA source готовий; EN/ES production copy потребує human localization QA.
+- [x] Accessibility: вимоги визначені; browser viewport QA PASS, фізичний screen-reader QA лишається external device gate.
 
 ## P2 — лише після evidence і попиту
 
-- [ ] Advanced personalization.
-- [ ] Довгий архів і дослідницькі порівняння.
-- [ ] v19.2 promotion тільки після prospective gate.
-- [ ] Tanita — лише після окремої prospective validation.
+- [x] Advanced personalization винесено з MVP і не блокує launch.
+- [x] Довгий архів і дослідницькі порівняння винесено з MVP і не блокує launch.
+- [x] v19.2 promotion формально заблоковано до prospective gate (`score_effect=0`).
+- [x] Tanita формально заблоковано до окремої prospective validation (`score_effect=0`).
 
 ## Заборонені скорочення шляху
 
