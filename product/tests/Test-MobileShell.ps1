@@ -13,6 +13,15 @@ if ($html -notmatch 'rel="manifest"' -or $html -notmatch 'serviceWorker\.registe
 if ($css -notmatch 'min-height:48px' -or $css -notmatch 'prefers-reduced-motion' -or $css -notmatch 'max-width:380px') { throw 'Mobile accessibility CSS incomplete.' }
 if ($js -notmatch "tanitaScoreEffect:0" -or $js -notmatch "v19_2ScoreEffect:0") { throw 'Research neutrality not visible in fixture.' }
 if ($js -notmatch "score effect 0" -or $js -notmatch "'TRADITIONAL'") { throw 'Sky/Jyotish role labels missing.' }
+foreach ($marker in @('jyotishCopy','data-jyotish-tab','role="tablist"','Chandra Rashi','Nakshatra Pada','Rahu Kalam','Yamagandam','Gulika Kalam','astronomical sunrise','Europe/Kyiv','DST','100-chart cross-check','Swiss Ephemeris')) {
+  if ($js -notmatch [regex]::Escape($marker)) { throw "Missing Jyotish Lite contract: $marker" }
+}
+foreach ($marker in @('Included once already','Ya incluido una sola vez','score effect 0')) {
+  if ($js -notmatch [regex]::Escape($marker)) { throw "Missing localized Jyotish role: $marker" }
+}
+if ($js -match '(?i)jyotish[^\r\n]{0,80}(is the final verdict|guarantees|overrides the main)') { throw 'Jyotish can masquerade as an overriding verdict.' }
+if ($js -notmatch 'does not create a second verdict' -or $js -notmatch 'No crea un segundo veredicto') { throw 'Second-verdict prohibition is incomplete.' }
+if ($css -notmatch 'jyotish-tabs' -or $css -notmatch 'min-height:48px' -or $css -notmatch 'factor-detail') { throw 'Jyotish accessibility styles incomplete.' }
 foreach ($language in @('uk','en','es')) {
   if ($js -notmatch "(?m)^\s{2}${language}:\{") { throw "Missing complete locale bundle: $language" }
 }
@@ -21,6 +30,7 @@ foreach ($marker in @('Proceed carefully','Avanza con cuidado','A green source-a
 }
 if ($js -notmatch 'document\.documentElement\.lang=locale\.value') { throw 'Document language is not synchronized with locale.' }
 if ($js -notmatch "setAttribute\('aria-current','page'\)" -or $js -notmatch "removeAttribute\('aria-current'\)") { throw 'Active navigation semantics are not updated correctly.' }
+if ($js -notmatch 'URLSearchParams\(window\.location\.search\)' -or $js -notmatch "allowedRoutes\.has\(requestedRoute\)\?requestedRoute:'today'") { throw 'Manifest shortcut cannot deep-link into a safe mobile route.' }
 foreach ($marker in @('neborythm.local.v1','localStorage.setItem','localStorage.removeItem','neborythm-local-data.json','data-outcome','Birth data is not collected')) {
   if ($js -notmatch [regex]::Escape($marker)) { throw "Missing local-data safety behavior: $marker" }
 }
@@ -38,7 +48,7 @@ if ($manifest.name -ne 'NeboRhythm' -or $manifest.display -ne 'standalone' -or $
 if (@($manifest.icons).Count -lt 2 -or @($manifest.shortcuts).Count -lt 3) { throw 'Mobile PWA manifest assets/shortcuts incomplete.' }
 foreach ($asset in @("'./index.html'","'./styles.css'","'./app.js'","'./manifest.webmanifest'")) { if ($sw -notmatch [regex]::Escape($asset)) { throw "Service worker app shell missing: $asset" } }
 if ($sw -notmatch [regex]::Escape("'./mobile-snapshot.json'")) { throw 'Service worker snapshot fallback missing.' }
-if ($sw -notmatch "CACHE_NAME='neborythm-mobile-v3'" -or $sw -notmatch "event.request.mode==='navigate'" -or $sw -notmatch "fetch\(event.request\)" -or $sw -notmatch "catch\(\(\)=>caches.match\(event.request\)\)") { throw 'Network-first/offline-fallback service-worker policy incomplete.' }
+if ($sw -notmatch "CACHE_NAME='neborythm-mobile-v4'" -or $sw -notmatch "event.request.mode==='navigate'" -or $sw -notmatch "fetch\(event.request\)" -or $sw -notmatch "catch\(\(\)=>caches.match\(event.request\)\)") { throw 'Network-first/offline-fallback service-worker policy incomplete.' }
 $mobileSnapshot = $snapshotRaw | ConvertFrom-Json
 if ($mobileSnapshot.schema -ne 'neborythm_mobile_snapshot_v1' -or $mobileSnapshot.source_role -ne 'DEMO_NOT_PRODUCTION') { throw 'Mobile snapshot provenance/role incomplete.' }
 if (@('ACT','CAUTION','HOLD','UNKNOWN') -notcontains $mobileSnapshot.decision -or @('LIVE','DELAYED','LAST_GOOD','STALE') -notcontains $mobileSnapshot.freshness) { throw 'Mobile snapshot state invalid.' }

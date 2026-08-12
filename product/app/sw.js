@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE_NAME='neborythm-mobile-v3';
+const CACHE_NAME='neborythm-mobile-v4';
 const APP_SHELL=['./','./index.html','./styles.css','./app.js','./manifest.webmanifest','./mobile-snapshot.json'];
 
 self.addEventListener('install',event=>{
