@@ -27,12 +27,18 @@ foreach ($marker in @('neborythm.local.v1','localStorage.setItem','localStorage.
 foreach ($marker in @('LAST_GOOD','not live','data-alert','data-threshold','data-quiet','Push permission is not requested')) {
   if ($js -notmatch [regex]::Escape($marker)) { throw "Missing offline/notification safety behavior: $marker" }
 }
+foreach ($marker in @('data-range','day-strip','timelineMeta','Contexto bruto','labels:{low','aria-label=')) {
+  if ($js -notmatch [regex]::Escape($marker) -and $css -notmatch [regex]::Escape($marker)) { throw "Missing accessible 27-day context behavior: $marker" }
+}
+foreach ($marker in @('sourceRole','DEMO DATA','not a live forecast','demo-notice')) {
+  if ($js -notmatch [regex]::Escape($marker) -and $css -notmatch [regex]::Escape($marker)) { throw "Missing visible demo-data disclosure: $marker" }
+}
 $manifest = $manifestRaw | ConvertFrom-Json
 if ($manifest.name -ne 'NeboRhythm' -or $manifest.display -ne 'standalone' -or $manifest.start_url -notmatch 'channel=play') { throw 'Mobile PWA manifest identity mismatch.' }
 if (@($manifest.icons).Count -lt 2 -or @($manifest.shortcuts).Count -lt 3) { throw 'Mobile PWA manifest assets/shortcuts incomplete.' }
 foreach ($asset in @("'./index.html'","'./styles.css'","'./app.js'","'./manifest.webmanifest'")) { if ($sw -notmatch [regex]::Escape($asset)) { throw "Service worker app shell missing: $asset" } }
 if ($sw -notmatch [regex]::Escape("'./mobile-snapshot.json'")) { throw 'Service worker snapshot fallback missing.' }
-if ($sw -notmatch "CACHE_NAME='neborythm-mobile-v2'" -or $sw -notmatch "event.request.mode==='navigate'") { throw 'Offline service-worker policy incomplete.' }
+if ($sw -notmatch "CACHE_NAME='neborythm-mobile-v3'" -or $sw -notmatch "event.request.mode==='navigate'" -or $sw -notmatch "fetch\(event.request\)" -or $sw -notmatch "catch\(\(\)=>caches.match\(event.request\)\)") { throw 'Network-first/offline-fallback service-worker policy incomplete.' }
 $mobileSnapshot = $snapshotRaw | ConvertFrom-Json
 if ($mobileSnapshot.schema -ne 'neborythm_mobile_snapshot_v1' -or $mobileSnapshot.source_role -ne 'DEMO_NOT_PRODUCTION') { throw 'Mobile snapshot provenance/role incomplete.' }
 if (@('ACT','CAUTION','HOLD','UNKNOWN') -notcontains $mobileSnapshot.decision -or @('LIVE','DELAYED','LAST_GOOD','STALE') -notcontains $mobileSnapshot.freshness) { throw 'Mobile snapshot state invalid.' }

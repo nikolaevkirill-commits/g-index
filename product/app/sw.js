@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE_NAME='neborythm-mobile-v2';
+const CACHE_NAME='neborythm-mobile-v3';
 const APP_SHELL=['./','./index.html','./styles.css','./app.js','./manifest.webmanifest','./mobile-snapshot.json'];
 
 self.addEventListener('install',event=>{
@@ -17,8 +17,8 @@ self.addEventListener('fetch',event=>{
     event.respondWith(fetch(event.request).catch(()=>caches.match('./index.html')));
     return;
   }
-  event.respondWith(caches.match(event.request).then(cached=>cached||fetch(event.request).then(response=>{
-    if(response.ok){const copy=response.clone();caches.open(CACHE_NAME).then(cache=>cache.put(event.request,copy));}
+  event.respondWith(fetch(event.request).then(response=>{
+    if(response.ok){const copy=response.clone();event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.put(event.request,copy)));}
     return response;
-  })));
+  }).catch(()=>caches.match(event.request)));
 });
