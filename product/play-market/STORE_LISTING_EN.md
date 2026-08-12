@@ -20,7 +20,7 @@ Features:
 
 - current and forecast Kp, Bz and solar-wind context;
 - lunar phases, eclipses, equinoxes, solstices and visible planetary events;
-- an optional traditional Panchanga calendar with local time windows and explanations;
+- an optional Jyotish timing layer with an explained Panchanga calendar and local windows;
 - separate observed, forecast, reference and research signals;
 - three-day and 27-day context with source labels;
 - Simple and Detailed views that never change the underlying state.

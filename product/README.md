@@ -20,15 +20,18 @@
 - `play-market/` — listing, policy та release checklist.
 - `scripts/Test-ProductReadiness.ps1` — fail-closed preflight.
 - `contracts/` — машинно перевірювані приклади hero, подій неба, alerts і timezone/DST.
+- `contracts/product-identity.json` — незмінний Android ID `com.neborythm.app` і web-origin contract.
 - `LOCAL_AND_EXTERNAL_GATE_CLOSURE_2026-08-12_UK.md` — що повністю закрито локально, а що потребує зовнішнього доказу.
 - `qa/` — датовані browser/device QA-докази.
 - `qa/CLOSED_TEST_SCENARIOS_2026-08-12_UK.md` — 12 сценаріїв розуміння, safety, Jyotish, privacy та accessibility.
 - `android/MOBILE_BUILD_EXECUTION_PLAN_2026-08-12_UK.md` — work packages identity, shell, local data, notifications і physical QA.
+- `app/` — окремий mobile shell Today / Timeline / Sky / Jyotish / You без зміни production dashboard.
+- `qa/MOBILE_SHELL_BROWSER_QA_2026-08-12.json` — фактична перевірка 320/360 px, UK/EN/ES, accessibility та browser console.
 
 ## Незмінні правила прогнозу
 
 1. Hero показує один оперативний стан.
 2. PDF/Engine — окремий reference, не дозвіл діяти.
-3. Панчанга вже входить до `G_raw` як один складений компонент.
+3. Jyotish — продуктовий розділ; Panchanga вже входить до `G_raw` як один складений компонент.
 4. Tanita і v19.2 — `SHADOW / score_effect=0` до незалежних prospective gates.
 5. Історичне відтворення не називається реальною майбутньою точністю.

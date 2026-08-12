@@ -39,6 +39,9 @@ foreach ($listing in $listings) {
     if ($text -notmatch '(?i)(guarantee|garantiza)' -and $listing.Locale -ne 'uk') {
         $failures.Add("$($listing.Locale): limitation statement missing")
     }
+    if ($text -notmatch '(?i)Jyotish' -or $text -notmatch '(?i)Panchanga') {
+        $failures.Add("$($listing.Locale): Jyotish/Panchanga relationship is not discoverable")
+    }
 }
 
 if ($failures.Count -gt 0) {

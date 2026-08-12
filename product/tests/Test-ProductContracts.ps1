@@ -123,6 +123,13 @@ if ($journalSummary) {
   if ($journalSummary.sample_size -lt 10 -and $journalSummary.display_mode -ne 'INSUFFICIENT_SAMPLE') { $failures.Add('small journal sample cannot claim a personal pattern') }
 }
 
+$identity = Load-Json 'product-identity.json'
+if ($identity) {
+  if ($identity.application_id -ne 'com.neborythm.app') { $failures.Add('permanent applicationId changed') }
+  if ($identity.application_id_status -ne 'PERMANENT_APPROVED') { $failures.Add('applicationId is not approved') }
+  if ($identity.host -ne 'nikolaevkirill-commits.github.io' -or $identity.start_path -ne '/g-index/?channel=play') { $failures.Add('product identity origin mismatch') }
+}
+
 if ($failures.Count) {
   $failures | ForEach-Object { Write-Error $_ }
   exit 1

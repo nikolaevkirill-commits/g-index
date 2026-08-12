@@ -20,7 +20,7 @@ Incluye:
 
 - Kp, Bz y viento solar actuales y previstos;
 - fases lunares, eclipses, equinoccios, solsticios y eventos planetarios visibles;
-- un calendario Panchanga tradicional y opcional, con ventanas locales y explicaciones;
+- una capa opcional de Jyotish con calendario Panchanga explicado y ventanas locales;
 - señales observadas, previstas, de referencia y de investigación claramente separadas;
 - contexto de 3 y 27 días con procedencia de los datos;
 - vistas Simple y Detallada que no cambian el estado calculado.
