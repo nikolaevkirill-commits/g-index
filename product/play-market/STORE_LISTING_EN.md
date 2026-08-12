@@ -8,11 +8,11 @@ Working international candidate. Trademark and store-search clearance is require
 
 ## Short description
 
-Space weather, planetary cycles and clear context for your day.
+Space weather, sky events and clear context for your day.
 
 ## Full description
 
-NeboRhythm brings space weather, planetary and lunar events, natural calendar cycles and personal context into one calm, explainable view.
+NeboRhythm brings space weather, planetary and lunar events, an optional traditional calendar and personal context into one calm, explainable view.
 
 See one current state first, then open the reasons: data source, observation time, forecast horizon, factor contribution and the next expected change.
 
@@ -20,10 +20,11 @@ Features:
 
 - current and forecast Kp, Bz and solar-wind context;
 - lunar phases, eclipses, equinoxes, solstices and visible planetary events;
-- a detailed Panchanga layer with local time windows;
+- an optional traditional Panchanga calendar with local time windows and explanations;
 - separate observed, forecast, reference and research signals;
 - three-day and 27-day context with source labels;
 - Simple and Detailed views that never change the underlying state.
+- alerts with a visible threshold, lead time and source.
 
 Planetary and calendar events are shown as context. They affect the main state only when an explicitly documented and validated rule permits it. Research candidates remain inactive.
 
