@@ -23,6 +23,7 @@
 - `LOCAL_AND_EXTERNAL_GATE_CLOSURE_2026-08-12_UK.md` — що повністю закрито локально, а що потребує зовнішнього доказу.
 - `qa/` — датовані browser/device QA-докази.
 - `qa/CLOSED_TEST_SCENARIOS_2026-08-12_UK.md` — 12 сценаріїв розуміння, safety, Jyotish, privacy та accessibility.
+- `android/MOBILE_BUILD_EXECUTION_PLAN_2026-08-12_UK.md` — work packages identity, shell, local data, notifications і physical QA.
 
 ## Незмінні правила прогнозу
 
