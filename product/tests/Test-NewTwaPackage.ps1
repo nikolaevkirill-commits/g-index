@@ -22,7 +22,7 @@ try {
     schema = 'gindex_product_config_v1'
     applicationId = 'com.example.gindex.test'
     host = 'example.test'
-    appName = 'G-Index Test'
+    appName = 'Neborytm Test'
     startPath = '/g-index/?channel=play'
     basePath = '/g-index/'
     versionName = '1.2.3'

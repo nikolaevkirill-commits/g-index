@@ -42,8 +42,28 @@ else { $passes.Add('Play companion disables web purchases') }
 if ($indexRaw -match 'href="backtest\.html"') { $failures.Add('dashboard contains broken backtest.html link') }
 else { $passes.Add('dashboard backtest links resolve internally') }
 
+$storeAssetAudit = Join-Path $productRoot 'store-assets\verify_store_assets.py'
+if (-not (Test-Path -LiteralPath $storeAssetAudit -PathType Leaf)) {
+  $failures.Add('missing store asset verifier')
+} else {
+  $pythonCandidates = @(@(
+    (Get-Command python -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source -ErrorAction SilentlyContinue),
+    'C:\Users\Dell\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe'
+  ) | Where-Object { $_ -and (Test-Path -LiteralPath $_ -PathType Leaf) } | Select-Object -Unique)
+  if (-not $pythonCandidates) {
+    $waits.Add('Python runtime for store asset provenance audit')
+  } else {
+    $assetResult = & ($pythonCandidates[0]) $storeAssetAudit 2>&1
+    if ($LASTEXITCODE -ne 0) { $failures.Add("store asset audit failed: $assetResult") }
+    else { $passes.Add('store assets pass dimensions, metadata and SHA-256 audit') }
+  }
+}
+
 foreach ($rel in @(
   'PRODUCT_SPEC_UK.md',
+  'BRAND_SYSTEM_NEBORYTM_UK.md',
+  'FACTOR_EXPLAINER_UK.md',
+  'IP_AND_ANTI_COPY_PLAN_UK.md',
   'TANITA_INTEGRATION_UK.md',
   'android\twa-manifest.template.json',
   'android\assetlinks.template.json',
@@ -51,9 +71,25 @@ foreach ($rel in @(
   'play-market\DATA_SAFETY_UK.md',
   'play-market\PRIVACY_POLICY_UK.md',
   'play-market\ACCOUNT_DELETION_UK.md',
-  'play-market\RELEASE_CHECKLIST_UK.md'
+  'play-market\RELEASE_CHECKLIST_UK.md',
+  'store-assets\STORE_ASSET_PROVENANCE_v1.json',
+  'store-assets\final\neborytm-feature-graphic-1024x500-v1.png',
+  'store-assets\final\neborytm-icon-512-v1.png'
 )) {
   if (-not (Test-Path -LiteralPath (Join-Path $productRoot $rel) -PathType Leaf)) { $failures.Add("missing product file: $rel") }
+}
+
+$releaseManifestPath = Join-Path $productRoot 'PRODUCT_RELEASE_MANIFEST.json'
+try { $releaseManifest = Get-Content -Raw -Encoding UTF8 -LiteralPath $releaseManifestPath | ConvertFrom-Json }
+catch { $failures.Add("invalid product release manifest: $($_.Exception.Message)"); $releaseManifest = $null }
+if ($releaseManifest) {
+  if ([string]::IsNullOrWhiteSpace([string]$releaseManifest.product)) { $failures.Add('product brand is empty') }
+  elseif (([string]$releaseManifest.product).Length -le 30) { $passes.Add('store title is within 30 characters') }
+  else { $failures.Add('store title exceeds 30 characters') }
+  if ($releaseManifest.technical_engine_name -ne 'G-Index') { $failures.Add('technical engine identity changed unexpectedly') }
+  if ($releaseManifest.forecast_contract.tanita_score_effect -ne 0 -or $releaseManifest.forecast_contract.v19_2_score_effect -ne 0) {
+    $failures.Add('research candidates are not score-neutral')
+  } else { $passes.Add('Tanita and v19.2 remain score-neutral') }
 }
 
 if (Test-Path -LiteralPath $ConfigPath -PathType Leaf) {
