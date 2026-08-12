@@ -87,6 +87,42 @@ if ($widget) {
   if ($widget.deep_link -notmatch 'channel=play') { $failures.Add('widget must deep-link into fail-closed Play channel') }
 }
 
+$activity = Load-Json 'saved-activity.example.json'
+if ($activity) {
+  if ($activity.score_effect -ne 0) { $failures.Add('saved activity must not alter score') }
+  foreach ($field in @('activity_id','label_key','planning_mode','source_snapshot_id','disclaimer')) {
+    if ([string]::IsNullOrWhiteSpace([string]$activity.$field)) { $failures.Add("saved activity missing $field") }
+  }
+}
+
+$checkin = Load-Json 'outcome-checkin.example.json'
+if ($checkin) {
+  if ($checkin.score_effect -ne 0 -or $checkin.model_training_allowed) { $failures.Add('consumer check-in must remain score-neutral and training-off by default') }
+  if ($checkin.consent -ne 'LOCAL_ONLY') { $failures.Add('example check-in must default to LOCAL_ONLY') }
+}
+
+$explanation = Load-Json 'explanation-card.example.json'
+if ($explanation) {
+  if ([string]::IsNullOrWhiteSpace($explanation.level_1) -or @($explanation.level_2).Count -eq 0) { $failures.Add('explanation disclosure ladder incomplete') }
+  if ($explanation.research.tanita_score_effect -ne 0 -or $explanation.research.v19_2_score_effect -ne 0) { $failures.Add('explanation cannot promote research signals') }
+}
+
+$activityWindow = Load-Json 'activity-window.example.json'
+if ($activityWindow) {
+  if ($activityWindow.score_effect -ne 0) { $failures.Add('activity window must not alter score') }
+  if (@($activityWindow.windows).Count -eq 0) { $failures.Add('activity window example requires at least one window') }
+  foreach ($window in @($activityWindow.windows)) {
+    if (@('ACT','CAUTION','HOLD','UNKNOWN') -notcontains $window.decision) { $failures.Add('activity window has invalid decision') }
+    if (@('LIVE','DELAYED','LAST_GOOD','STALE') -notcontains $window.freshness) { $failures.Add('activity window has invalid freshness') }
+  }
+}
+
+$journalSummary = Load-Json 'journal-summary.example.json'
+if ($journalSummary) {
+  if ($journalSummary.score_effect -ne 0 -or $journalSummary.model_training_allowed) { $failures.Add('journal summary must remain score-neutral and training-off') }
+  if ($journalSummary.sample_size -lt 10 -and $journalSummary.display_mode -ne 'INSUFFICIENT_SAMPLE') { $failures.Add('small journal sample cannot claim a personal pattern') }
+}
+
 if ($failures.Count) {
   $failures | ForEach-Object { Write-Error $_ }
   exit 1
