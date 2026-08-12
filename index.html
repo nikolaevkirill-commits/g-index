@@ -6,7 +6,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.189-fp382-COLOR-SEMANTICS</title>
+  <title>G-Index — Космофізичний дашборд v88.9.190-fp383-AUX-COLOR-SEMANTICS</title>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -1277,7 +1277,7 @@
     #nowCard h2{font-size:15px!important}
     /* Next shift badge */
     .next-shift-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:999px;font-size:11px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);color:var(--text2);margin-top:6px}
-    .next-shift-badge .live-dot{width:6px;height:6px;border-radius:50%;background:#63be7b;animation:liveDot 1.4s ease-in-out infinite}
+    .next-shift-badge .live-dot{width:6px;height:6px;border-radius:50%;background:#37a7ff;animation:liveDot 1.4s ease-in-out infinite}
     @keyframes liveDot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.8)}}
     /* v79: hero alert line */
     /* v85b: .hero-alert-line CSS removed (DOM+JS deleted v85b) */
@@ -2681,7 +2681,7 @@ Kp: 3-год індекс геомагнітної активності (0–9)
     <div class="swipe-hint" style="display:none" id="swipeHint27">Прокрутіть таблицю</div>
     <section class="card" id="twentysevenCard">
         <div class="flex" style="flex-wrap:wrap;gap:8px">
-          <h2 style="margin:0">27-денне порівняння сигналів <span style="font-size:13px;font-weight:700;color:#ffcc66">(кольорова лінія = PDF/Engine reference; синій пунктир = raw-контекст)</span></h2>
+          <h2 style="margin:0">27-денне порівняння сигналів <span style="font-size:13px;font-weight:700;color:#9fd1ff">(синя лінія = raw-контекст; квадрати = PDF/Engine reference)</span></h2>
           <!-- v88.8.35-fp56-P8: explicit rail badge — users look at the line, not the fine print. -->
           <span style="display:inline-block;font-size:10px;font-weight:800;letter-spacing:.04em;color:#ffcc66;background:rgba(255,170,51,.10);border:1px solid rgba(255,170,51,.38);border-radius:6px;padding:2px 8px;margin-left:2px;vertical-align:middle">REFERENCE · НЕ РІШЕННЯ ДЛЯ ДІЇ</span>
           <span class="hint" tabindex="0" style="cursor:help;font-size:11px;color:var(--dim);border-bottom:1px dotted #2a3b61">? що це<span class="hint-pop" style="white-space:pre;font-size:12px;text-align:left;max-width:380px">Це НЕ G_now і НЕ PDF/Engine — це окремий індекс raw-фону доби.
@@ -11326,7 +11326,7 @@ function _renderCmpBlock(wrap, days, opts){
   const avgNow  = days.length ? days.reduce((s,d)=>s+(isFinite(d.aiNow)?d.aiNow:0), 0) / days.length : 0;
   const avgPrev = days.length ? days.reduce((s,d)=>s+(isFinite(d.aiPrev)?d.aiPrev:0), 0) / days.length : 0;
   const delta = avgNow - avgPrev;
-  const deltaCol = delta >= 0.3 ? '#2bd47d' : delta <= -0.3 ? '#ff6b6b' : '#9bb1dc';
+  const deltaCol = delta >= 0.3 ? '#9fd1ff' : delta <= -0.3 ? '#ff6b6b' : '#9bb1dc';
   const deltaSign = delta >= 0 ? '+' : '';
   const deltaTxt = isFinite(delta) ? `${deltaSign}${delta.toFixed(2)}` : '—';
 
@@ -11350,7 +11350,7 @@ function _renderCmpBlock(wrap, days, opts){
   for(let i=0;i<days.length;i++){
     const x = i * (barW + barGap);
     bars += mkBar(days[i].aiPrev, x+1, '#4a5e8c');
-    const nowCol = days[i].aiNow > 0 ? '#2bd47d' : days[i].aiNow < 0 ? '#ff6b6b' : '#6b82aa';
+    const nowCol = days[i].aiNow > 0 ? '#6aa8df' : days[i].aiNow < 0 ? '#ff6b6b' : '#6b82aa';
     bars += mkBar(days[i].aiNow, x+3, nowCol);
     dayLbls.push(`<text x="${x + barW/2}" y="${svgH-2}" text-anchor="middle" fill="#7f99c4" font-size="8">${LOC_SHORT(days[i].dNow)}</text>`);
   }
@@ -11385,11 +11385,11 @@ function _renderCmpBlock(wrap, days, opts){
     <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
       <div style="flex:0 0 auto">
         <div style="font-size:11px;color:var(--dim)">${label1}</div>
-        <div class="mono" style="font-size:18px;font-weight:700;color:${avgNow>=0?'#2bd47d':avgNow<=-0.5?'#ff6b6b':'#9bb1dc'}">${avgNow>=0?'+':''}${avgNow.toFixed(2)}</div>
+        <div class="mono" style="font-size:18px;font-weight:700;color:${avgNow>=0?'#9fd1ff':avgNow<=-0.5?'#ff6b6b':'#9bb1dc'}">${avgNow>=0?'+':''}${avgNow.toFixed(2)}</div>
       </div>
       <div style="flex:0 0 auto">
         <div style="font-size:11px;color:var(--dim)">${label2}</div>
-        <div class="mono" style="font-size:18px;font-weight:700;color:${avgPrev>=0?'#7fcfa4':'#b07080'};opacity:0.85">${avgPrev>=0?'+':''}${avgPrev.toFixed(2)}</div>
+        <div class="mono" style="font-size:18px;font-weight:700;color:${avgPrev>=0?'#8fb5ff':'#b07080'};opacity:0.85">${avgPrev>=0?'+':''}${avgPrev.toFixed(2)}</div>
       </div>
       <div style="flex:0 0 auto;border-left:1px solid #2a3b61;padding-left:16px">
         <div style="font-size:11px;color:var(--dim)">Різниця</div>
@@ -18321,7 +18321,8 @@ function _renderHeroTimeWindows() {
     // рядок писав "активні дії" ЗЕЛЕНИМ текстом, але кольором точки — червоним.
     // Для поточного слоту колір мусить відповідати ЦІЙ МИТІ (blockedNow), для
     // майбутніх слотів — попередження про слот загалом (hasBlockedSegment).
-    const col = (isCurrent ? _decision.blockedNow : _decision.hasBlockedSegment) ? '#ff6b6b' : _colBase;
+    const _blockedByDay = _dayNegFlag;
+    const col = (_blockedByDay || (isCurrent ? _decision.blockedNow : _decision.hasBlockedSegment)) ? '#ff6b6b' : _colBase;
 
     // Поточний слот показує точний сегмент "зараз" (з реальними межами вікна,
     // обрізаними по слоту) — саме кейс зі скріну: 08:10 всередині Rahu 07:06–09:06,
@@ -18341,7 +18342,7 @@ function _renderHeroTimeWindows() {
     // Panchanga overlay — лише коли слот НЕ заблокований вікном (активне Rahu/
     // Yama/Gulika вже explicit у тексті рішення, не дублюємо попередження).
     if (_panchTimingNote && g < 0.5 && !_decision.hasBlockedSegment) label += ` (${_panchTimingNote})`;
-    const _isBlockedVisual = isCurrent ? _decision.blockedNow : _decision.hasBlockedSegment;
+    const _isBlockedVisual = _blockedByDay || (isCurrent ? _decision.blockedNow : _decision.hasBlockedSegment);
     const _isRoutineVisual = !_isBlockedVisual && (label.includes('рутин') || label.includes('обереж') || label.includes('перевір'));
     const _actionCls = _isBlockedVisual ? ' is-blocked' : _isRoutineVisual ? ' is-routine' : ' is-allowed';
     const cls = (isCurrent ? ' is-now' : isNext ? ' is-next' : '') + _actionCls;
@@ -20091,7 +20092,7 @@ async function loadAll(){
           <div style="display:flex;align-items:center;gap:10px">
             <span style="font-size:16px">ℹ</span>
             <div style="flex:1">
-              <div style="font-weight:700;color:#9bd49e">Живий браузерний NOAA-фетч недоступний — показано резервні дані з future_kp.json</div>
+              <div style="font-weight:700;color:#9fd1ff">Живий браузерний NOAA-фетч недоступний — показано резервні дані з future_kp.json</div>
               <div style="margin-top:2px;font-size:11px;color:var(--dim)">
                 Це реальний NOAA 3-day forecast, збережений локальним update_kp.bat (не плато на поточному Kp). Онови сторінку, щоб спробувати живий CORS ще раз.
               </div>
@@ -21715,7 +21716,7 @@ function renderPersonal() {
     const _taaraLabel = _ti ? _ti.short.split(' — ')[0] : taara.name;
     const _cycleIsPositive = taaraGmod > 0 && !danger;
     _riskBannerHtml = `<div style="padding:8px 12px;margin-bottom:6px;border-radius:10px;border:1px solid rgba(255,165,80,.28);background:rgba(255,165,80,.08);display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;line-height:1.35">
-      <div><div style="color:var(--faint);font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Ваш цикл</div><div style="color:${_cycleIsPositive?'#7fe3a6':danger?'#ff8e8e':'#cfe0ff'};font-weight:700">${_taaraLabel}${_cycleIsPositive?' · позитивний':danger?' · обережний':' · нейтральний'}</div></div>
+      <div><div style="color:var(--faint);font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Ваш цикл · локальний шар</div><div style="color:${_cycleIsPositive?'#cfb6ff':danger?'#ff8e8e':'#cfe0ff'};font-weight:700">${_taaraLabel}${_cycleIsPositive?' · підтримує, але не є дозволом':danger?' · обережний':' · нейтральний'}</div></div>
       <div><div style="color:var(--faint);font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Фон зараз</div><div style="color:#ffb36a;font-weight:700">G = ${_globalG.toFixed(1)} · ${_gWord}</div></div>
     </div>`;
     // Override optimistic state if cycle is positive but global is risk
@@ -22252,8 +22253,8 @@ function draw27Chart(){
   ctx.restore();
   }
 
-  // fp316: primary series = routed PDF/Engine day decision.
-  // Missing decisions create gaps; raw is never substituted into this line.
+  // fp383: the continuous line is raw G context, not a decision. Keep it blue;
+  // PDF/Engine reference is rendered separately as square markers.
   ctx.save();
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
@@ -22261,8 +22262,7 @@ function draw27Chart(){
   for(let i=1;i<data.length;i++){
     const a=data[i-1], b=data[i];
     if(!Number.isFinite(a.G) || !Number.isFinite(b.G)) continue;
-    const av=(a.G+b.G)/2;
-    ctx.strokeStyle = av >= 0.5 ? '#2bd47d' : av <= -0.5 ? '#ff6b6b' : '#9bb1dc';
+    ctx.strokeStyle = '#6aa8df';
     ctx.beginPath();
     ctx.moveTo(xOf(i-1), yOf(a.G));
     ctx.lineTo(xOf(i), yOf(b.G));
@@ -22270,7 +22270,7 @@ function draw27Chart(){
   }
   data.forEach((d,i)=>{
     if(!Number.isFinite(d.G)) return;
-    const col=d.G>=1?'#2bd47d':d.G<=-1?'#ff6b6b':'#9bb1dc';
+    const col='#6aa8df';
     ctx.fillStyle=col;
     ctx.beginPath();
     ctx.arc(xOf(i),yOf(d.G),d.ds===todayStr?5:3.5,0,Math.PI*2);
@@ -22310,14 +22310,14 @@ function draw27Chart(){
     // До fp14: малювалась `y-10` від raw точки → візуально expert=−3 збігався з raw=−1.4
     // і користувач не міг прочитати реальний експертний verdict з графіка.
     if(d.calendarAdvisory && d.calendarAdvisory.level !== 'unknown'){
-      const _calCol = d.calendarAdvisory.level==='high_risk'?'#ff4d5e':d.calendarAdvisory.level==='caution'?'#ffaa33':d.calendarAdvisory.level==='mixed'?'#b88cff':'#2bd47d';
+      const _calCol = d.calendarAdvisory.level==='high_risk'?'#ff4d5e':d.calendarAdvisory.level==='caution'?'#ffaa33':d.calendarAdvisory.level==='mixed'?'#b88cff':'#9fd1ff';
       ctx.fillStyle = _calCol;
       ctx.beginPath();
       ctx.arc(x, 10, 3.0, 0, Math.PI*2);
       ctx.fill();
     }
     if(Number.isFinite(d._decisionEng)){
-      const _decCol = d._decisionEng >= 1 ? '#2bd47d' : d._decisionEng <= -1 ? '#ff6b6b' : '#9bb1dc';
+      const _decCol = d._decisionEng >= 1 ? '#cfb6ff' : d._decisionEng <= -1 ? '#ff6b6b' : '#9bb1dc';
       ctx.fillStyle = _decCol;
       ctx.fillRect(x-3.2, 19, 6.4, 6.4);
       if(d._decisionAuthority === 'verified_pdf'){
@@ -22341,7 +22341,7 @@ function draw27Chart(){
         // Якщо raw і expert майже збігаються — зсунемо зірку на 10 пікс вгору, щоб не злилась з точкою
         if (Math.abs(_starY - y) < 6) _starY = y - 10;
       }
-      const _decisionCol = d._expertEng >= 1 ? '#2bd47d' : d._expertEng <= -1 ? '#ff6b6b' : '#9bb1dc';
+      const _decisionCol = d._expertEng >= 1 ? '#cfb6ff' : d._expertEng <= -1 ? '#ff6b6b' : '#9bb1dc';
       ctx.fillStyle = _decisionCol;
       ctx.font = 'bold 12px system-ui';
       ctx.textAlign = 'center';
@@ -22568,7 +22568,7 @@ function renderHoraTimeline(dateUTC, kp, G) {
       ? ` · <span style="color:#7ab8d4;font-size:10px">eᵢ ${score*0.2>=0?'+':''}${(score*0.2).toFixed(1)} (×0.2 ${_activeProfile})</span>`
       : '';
     const favStr = nextFav
-      ? `<span style="color: var(--ok);font-size:10px"> ⏩ Наступна сприятлива: <strong>${HORA_SYMBOLS[nextFav.planet]||''} ${nextFav.planet}</strong> о ${toHHMM_utc(nextFav.startH)} UTC</span>`
+      ? `<span style="color:#cfb6ff;font-size:10px"> ⏩ Наступна локально підтримувальна Hora: <strong>${HORA_SYMBOLS[nextFav.planet]||''} ${nextFav.planet}</strong> о ${toHHMM_utc(nextFav.startH)} UTC · не змінює загальний G</span>`
       : `<span style="color:var(--faint);font-size:10px"> — сприятливих більше немає сьогодні</span>`;
     legend.innerHTML = `Зараз: <strong style="color:${col}">${sym} ${cur.planet}</strong> <span style="color:${col};font-size:10px">PCL ${score>0?'+':''}${score}</span> · до ${toHHMM_utc(cur.endH)} UTC (ще <span id="horaCountdown" style="color:${col};font-weight:700">${minLeft}хв</span>)${nxtStr}${horaEiStr}<br>${favStr}`;
     // P2-ux: live Hora countdown
