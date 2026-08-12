@@ -2,7 +2,8 @@
 
 ## Web/PWA gate
 
-- [ ] Production health і release guards PASS.
+- [x] Production health не має hard failures; release guards PASS.
+- [x] Manifest version синхронізована, PWA shortcuts не ведуть на відсутні файли.
 - [ ] Android physical install, standalone, splash, offline PASS.
 - [ ] Push після закриття браузера та deep-link PASS.
 - [ ] 320/360/390/412 px і landscape PASS на фізичному Android.
@@ -10,12 +11,12 @@
 
 ## Product/policy gate
 
-- [ ] Privacy policy опублікована HTTPS.
+- [x] Privacy policy, terms і web account-deletion request опубліковані HTTPS.
 - [ ] In-app і web account deletion працюють.
 - [ ] Data Safety звірена з Worker, TWA та SDK.
 - [ ] Support email активний.
 - [ ] Content rating, target audience, ads і app access заповнені.
-- [ ] Play build не продає цифрові функції через LiqPay без дозволеної billing схеми.
+- [x] Play companion channel приховує web-продажі, auth і push до окремого reviewed release.
 
 ## Android gate
 
@@ -28,9 +29,8 @@
 
 ## Forecast integrity gate
 
-- [ ] Hero має єдиний operational verdict.
-- [ ] Панчанга не голосує вдруге.
-- [ ] Tanita/v19.2 мають `score_effect=0` і HOLD.
-- [ ] Historical replay не підписаний як real-world accuracy.
-- [ ] Немає зелених data-health/raw/shadow індикаторів, схожих на дозвіл діяти.
-
+- [x] Hero має єдиний operational verdict.
+- [x] Панчанга не голосує вдруге.
+- [x] Tanita/v19.2 мають `score_effect=0` і HOLD.
+- [x] Historical replay не підписаний як real-world accuracy.
+- [x] Немає зелених raw/reference індикаторів, схожих на дозвіл діяти.

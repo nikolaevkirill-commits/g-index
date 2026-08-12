@@ -6,7 +6,17 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.194-fp387-AUDIT-CLARITY</title>
+  <title>G-Index — Космофізичний дашборд v88.9.195-fp388-PRODUCT-MVP</title>
+
+  <script>
+    // fp388: the Android TWA opens an explicit free companion channel. It keeps
+    // the forecast contract intact while disabling account, push and web-sale
+    // surfaces until the corresponding Play policy gates are implemented.
+    try {
+      window.GINDEX_PLAY_CHANNEL = new URLSearchParams(location.search).get('channel') === 'play';
+      if (window.GINDEX_PLAY_CHANNEL) document.documentElement.classList.add('play-channel');
+    } catch (_e) { window.GINDEX_PLAY_CHANNEL = false; }
+  </script>
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
@@ -72,6 +82,14 @@
       --gap:16px; --gap-sm:8px; --r:12px;
     }
     *{box-sizing:border-box}
+    html.play-channel #tierBadge,
+    html.play-channel #authBtn,
+    html.play-channel #pushBtn,
+    html.play-channel #plusTeaserCard,
+    html.play-channel #paywallOverlay,
+    html.play-channel [onclick*="PaywallModal.show"]{display:none!important}
+    #playChannelNotice{display:none}
+    html.play-channel #playChannelNotice{display:block}
     html,body{width:100%;max-width:100%;overflow-x:clip}
     body{margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Helvetica,Arial,sans-serif; background:var(--bg); color:var(--text); font-size:var(--fs-lg); line-height:1.5}
     header{position:sticky; top:0; max-width:100%; backdrop-filter:blur(6px); background:linear-gradient(180deg, rgba(11,18,32,.95), rgba(11,18,32,.75)); padding:12px 20px; border-bottom:1px solid var(--border); z-index:100}
@@ -1541,6 +1559,7 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
     </div>
   </noscript>
   <a href="#mainContent" class="skip-link" style="position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden" onfocus="this.style.position='fixed';this.style.left='10px';this.style.top='10px';this.style.width='auto';this.style.height='auto';this.style.padding='8px 16px';this.style.background='var(--ok)';this.style.color='#000';this.style.zIndex='99999';this.style.borderRadius='6px'" onblur="this.style.position='absolute';this.style.left='-10000px';this.style.width='1px';this.style.height='1px'">Перейти до основного контенту</a>
+  <div id="playChannelNotice" role="status" style="margin:8px auto;max-width:1740px;padding:7px 14px;border:1px solid rgba(55,167,255,.28);border-radius:9px;background:rgba(55,167,255,.07);color:#a9cfff;font-size:11px">Play companion · без покупок і хмарного акаунта · профіль зберігається локально на пристрої</div>
   <header>
     <div class="flex" style="gap:12px">
       <div>
@@ -1852,7 +1871,7 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
           <span id="heroAstroLayer" data-label="Astro advisory" class="hint" tabindex="0" style="display:none;font-size:12px;font-weight:700;color:var(--muted);cursor:help;border:1px solid var(--border2);padding:1px 8px;border-radius:8px;background:rgba(11,18,32,.4)" title="">—</span>
           <!-- V25-fu29 v5.1 (2026-05-03): canonical metrics from VALIDATION_REPORT_v18_5_pdf47_v5.json — n=280 / strict 71.4% / κ=0.52 -->
           <!-- v88.8.18 patches: P2/P3/P4/P1d — DISABLED in fp75 (V3 freeze). V19 candidate. -->
-          <a id="modelQualityBadge" href="backtest.html" target="_blank" rel="noopener" data-label="Точність" style="font-size:12px;font-weight:700;color:var(--ok);text-decoration:none;border:1px solid var(--ok);padding:1px 8px;border-radius:8px;background:rgba(43,212,125,.08);transition:background .2s" title="Завантажуються актуальні хронологічні метрики без витоку даних.">&#128202; Метрики якості завантажуються…</a>
+          <a id="modelQualityBadge" href="#backtestCard" onclick="document.getElementById('backtestCard').open=true" data-label="Точність" style="font-size:12px;font-weight:700;color:var(--ok);text-decoration:none;border:1px solid var(--ok);padding:1px 8px;border-radius:8px;background:rgba(43,212,125,.08);transition:background .2s" title="Завантажуються актуальні хронологічні метрики без витоку даних.">&#128202; Метрики якості завантажуються…</a>
           <!-- v88.8.37-fp72: Audit toggle button -->
           <button id="auditToggleBtn" onclick="(function(){const c=document.getElementById('auditCard');const b=document.getElementById('auditToggleBtn');if(!c)return;if(c.style.display==='none'||!c.style.display){try{renderAuditCard({silent:false});}catch(e){} c.style.display='';document.body.classList.add('audit-mode');try{draw27Chart();}catch(e){}b.textContent='Аудит ▾';b.setAttribute('aria-label','Аудит: сховати розкладку висновку');}else{c.style.display='none';document.body.classList.remove('audit-mode');try{draw27Chart();}catch(e){}b.textContent='Аудит ▸';b.setAttribute('aria-label','Аудит: показати розкладку висновку');}})()" style="font-size:11px;font-weight:600;color:var(--muted);background:none;border:1px solid var(--border2);border-radius:6px;padding:1px 8px;cursor:pointer;line-height:1.6" aria-label="Аудит: показати розкладку висновку">Аудит ▸</button>
         </div>
@@ -1861,7 +1880,7 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
     <!-- v87.90: Intra-day Kp drop alert — попередження про падіння всередині сьогоднішнього дня -->
     <div id="intraDayAlert" style="display:none;margin:0 0 10px;padding:10px 14px;border-radius:12px;border:1px solid rgba(255,170,51,.45);background:linear-gradient(180deg,rgba(255,170,51,.10),rgba(255,170,51,.04))"></div>
     <!-- v87.90: Backtest banner — public trust signal (відразу під Hero, перед усім контентом) -->
-    <a id="backtestBanner" href="backtest.html" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:12px;margin:0 0 10px;padding:10px 14px;border-radius:12px;border:1px solid rgba(43,212,125,.22);background:linear-gradient(180deg,rgba(43,212,125,.06),rgba(43,212,125,.02));text-decoration:none;color:inherit;transition:border-color .2s,background .2s">
+    <a id="backtestBanner" href="#backtestCard" onclick="document.getElementById('backtestCard').open=true" style="display:flex;align-items:center;gap:12px;margin:0 0 10px;padding:10px 14px;border-radius:12px;border:1px solid rgba(43,212,125,.22);background:linear-gradient(180deg,rgba(43,212,125,.06),rgba(43,212,125,.02));text-decoration:none;color:inherit;transition:border-color .2s,background .2s">
       <span style="font-size:20px;line-height:1">📊</span>
       <div style="flex:1;min-width:0">
         <div style="font-size:12px;font-weight:700;color:#d8f7e3">Як ми міряємо точність</div>
@@ -3222,7 +3241,7 @@ Fallback (NOAA 45-day-forecast.json):
 
   <footer>
     <div class="small">Дані Kp/Ap — NOAA SWPC; Ap↔Kp — GFZ/NOAA table; Dst — Kyoto WDC; Sn — SILSO/ROB; події — ICS; затемнення — Timeanddate/NASA; фази — Astronomy Engine (Meeus). Модель G: R&amp;D / Advisory — V3 prospective freeze 2026-05-03 → ~2026-08-01. Engine v18.5 canonical: Strict 70.6% / 71.4% holdout · Binary 83.6% · κ=0.52 (N=280). V18.8 runtime patches disabled during V3 freeze; G включає Dᵢ (Dst-компонент).</div>
-    <div class="small" style="margin-top:8px">📊 Повна валідація моделі: <a href="backtest.html" style="color:var(--alt);text-decoration:none;border-bottom:1px dotted var(--alt)">backtest report</a> — engine v18.5 canonical vs PDF: N=280 — Strict 70.6% · Binary 83.6% · Exact 43.0% (N=280 GT v5.1: Strict 71.4%, κ=0.52 / weighted κ=0.73). V18.8 patches disabled — V3 freeze active.</div>
+    <div class="small" style="margin-top:8px">📊 Повна валідація моделі: <a href="#backtestCard" onclick="document.getElementById('backtestCard').open=true" style="color:var(--alt);text-decoration:none;border-bottom:1px dotted var(--alt)">backtest report</a> — engine v18.5 canonical vs PDF: N=280 — Strict 70.6% · Binary 83.6% · Exact 43.0% (N=280 GT v5.1: Strict 71.4%, κ=0.52 / weighted κ=0.73). V18.8 patches disabled — V3 freeze active.</div>
     <div class="small" style="margin-top:8px;color:var(--faint);border-left:2px solid var(--warn);padding-left:8px">⚠ Caveat: ground truth = експертні PDF-бюлетені з тим же Vedic Panchanga + Kp framework. Метрики 79.2% / 88.7% валідують <strong>відтворення експертної логіки</strong>, НЕ предиктивну валідність vs реальні outcomes (медичні/операційні події). Outcome-based validation — pilot план у V19-E.</div>
     <nav class="small" aria-label="Правові документи та підтримка" style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap">
       <a href="privacy.html" style="color:var(--faint)">Конфіденційність</a>
@@ -4533,7 +4552,9 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line377
 
 // ═══ v62: PAYWALL + PaywallModal stubs ═══
 const PAYWALL = {
-  _tier: lsGet('pw_tier') || 'free',
+  // The Play companion exposes the existing Basic feature set without selling
+  // a digital entitlement. Web tiers remain unchanged outside ?channel=play.
+  _tier: window.GINDEX_PLAY_CHANNEL ? 'basic' : (lsGet('pw_tier') || 'free'),
   tier()    { return this._tier; },
   isPaid()  { return this._tier !== 'free'; },
   require(level, feature) { PaywallModal.show(feature, level); }
