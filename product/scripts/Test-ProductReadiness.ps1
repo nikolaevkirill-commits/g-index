@@ -61,6 +61,7 @@ if (-not (Test-Path -LiteralPath $storeAssetAudit -PathType Leaf)) {
 
 foreach ($rel in @(
   'PRODUCT_SPEC_UK.md',
+  'MVP_INFORMATION_ARCHITECTURE_UK.md',
   'BRAND_SYSTEM_NEBORYTM_UK.md',
   'FACTOR_EXPLAINER_UK.md',
   'IP_AND_ANTI_COPY_PLAN_UK.md',
@@ -77,6 +78,17 @@ foreach ($rel in @(
   'store-assets\final\neborytm-icon-512-v1.png'
 )) {
   if (-not (Test-Path -LiteralPath (Join-Path $productRoot $rel) -PathType Leaf)) { $failures.Add("missing product file: $rel") }
+}
+
+foreach ($testRel in @('tests\Test-StoreListings.ps1','tests\Test-ProductContracts.ps1')) {
+  $testPath = Join-Path $productRoot $testRel
+  if (-not (Test-Path -LiteralPath $testPath -PathType Leaf)) {
+    $failures.Add("missing product test: $testRel")
+    continue
+  }
+  $testResult = & powershell -NoProfile -ExecutionPolicy Bypass -File $testPath 2>&1
+  if ($LASTEXITCODE -ne 0) { $failures.Add("product test failed: $testRel :: $testResult") }
+  else { $passes.Add("product test passed: $testRel") }
 }
 
 $releaseManifestPath = Join-Path $productRoot 'PRODUCT_RELEASE_MANIFEST.json'

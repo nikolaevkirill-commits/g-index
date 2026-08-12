@@ -19,6 +19,8 @@
 
 ## Product/policy gate
 
+- [x] Hero, provenance, sky-event, alert і реальні UTC→Europe/Kyiv DST-вектори проходять preflight.
+- [x] UA/EN/ES listings проходять автоматичний length/claim lint.
 - [x] Privacy policy, terms і web account-deletion request опубліковані HTTPS.
 - [ ] In-app та web account deletion фізично перевірені.
 - [ ] Data Safety звірена з Worker, TWA та SDK.

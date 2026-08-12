@@ -5,6 +5,7 @@
 ## Основні файли
 
 - `PRODUCT_SPEC_UK.md` — продуктова логіка й межі обіцянок.
+- `MVP_INFORMATION_ARCHITECTURE_UK.md` — канон екранів, навігації, кольорів і accessibility.
 - `BRAND_SYSTEM_NEBORYTM_UK.md` — назва, аудиторії та візуальна мова.
 - `FACTOR_EXPLAINER_UK.md` — зрозуміле пояснення Kp, Панчанги та інших шарів.
 - `COMPETITOR_POSITIONING_AUDIT_2026-08-12_UK.md` — ринкова відмінність.
@@ -12,6 +13,7 @@
 - `store-assets/` — вихідні й фінальні store-активи з provenance.
 - `play-market/` — listing, policy та release checklist.
 - `scripts/Test-ProductReadiness.ps1` — fail-closed preflight.
+- `contracts/` — машинно перевірювані приклади hero, подій неба, alerts і timezone/DST.
 
 ## Незмінні правила прогнозу
 
