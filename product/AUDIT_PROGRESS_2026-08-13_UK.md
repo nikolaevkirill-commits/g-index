@@ -27,3 +27,12 @@
 3. Сплатити одноразову реєстрацію розробника Google Play ($25), після чого зібрати підписаний `.aab` і пройти closed/internal test на фізичному Android.
 
 Поточний чесний статус: `LOCAL CHECKS PASS / EXTERNAL PLAY GATES WAIT`.
+
+## Додаткова перевірка fp390
+
+- Перевірені runtime-файли fp390 синхронізовано з `deploy_git` у канонічне локальне джерело `прогноз по ексель\deploy\13` після резервного копіювання.
+- SHA-256 збігаються для `index.html`, `sw.js`, `manifest.json`, parser/aliases та трьох release/integrity перевірок.
+- Локальний unattended publisher не містить runtime-файлів у allowlist і має окремий fail-closed список захищених production-файлів.
+- Dashboard decision consistency, production release guard та index integrity повторно пройдені: PASS.
+- Повний product QA повторно пройдено на диску D: Jyotish snapshot, mobile shell, mobile adapter, TWA generator, product contracts, product identity та store listings — PASS.
+- Резервна копія до синхронізації: `D:\ПРОГНОЗ\backups\deploy13_before_fp390_20260813_210724`.
