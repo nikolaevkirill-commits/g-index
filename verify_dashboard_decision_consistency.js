@@ -314,6 +314,9 @@ requireText("xr._delivery==='same_origin_snapshot' ? 'snapshot' : 'ok'", 'X-ray 
 requireText("fetch('expert_overrides_v3.json?fresh=' + Date.now(), { cache: 'no-store' })", 'expert PDF overrides bypass stale browser and service-worker caches');
 requireText("window._expertOverridesDelivery = 'network_fresh'", 'fresh expert override delivery is observable');
 requireText("window._expertOverridesDelivery = 'offline_fallback'", 'offline expert override fallback is explicitly labeled');
+requireText('[fp391 boot horizon refresh: 3-day]', 'initial PDF loader refreshes the already-rendered 3-day horizon');
+requireText('[fp391 boot horizon refresh: week]', 'initial PDF loader refreshes the week horizon');
+requireText('[fp391 boot horizon refresh: 27-day]', 'initial PDF loader refreshes the 27-day horizon');
 requireText('body.simple-mode #heroCard{min-height:860px!important}', 'mobile Hero reserves its measured loaded height');
 requireText('const _nearViewport = _view.bottom >= -120 && _view.top <= window.innerHeight + 120', 'planet animation pauses outside the viewport');
 requireText('const nearViewport = view.bottom >= -120 && view.top <= window.innerHeight + 120', 'G-flow animation pauses outside the viewport');

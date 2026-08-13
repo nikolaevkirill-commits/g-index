@@ -21,7 +21,7 @@
 // Service-worker cache safety note; original detail is preserved in the backup.
 // Service-worker cache safety note; original detail is preserved in the backup.
 
-const CACHE_VERSION = 'fp390-v1'; // fresh expert PDF override delivery with explicit offline fallback
+const CACHE_VERSION = 'fp391-v1'; // atomic post-loader refresh for Hero and 3/7/27-day horizons
 const CACHE_PREFIX = 'gindex-'; // G-Index cache namespace; do not remove the prefix.
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${CACHE_VERSION}`;
 const DATA_CACHE = `${CACHE_PREFIX}data-${CACHE_VERSION}`;

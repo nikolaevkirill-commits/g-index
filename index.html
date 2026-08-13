@@ -6,7 +6,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.197-fp390-PDF-CACHE-SYNC</title>
+  <title>G-Index — Космофізичний дашборд v88.9.198-fp391-HORIZON-ATOMIC-BOOT</title>
 
   <script>
     // fp388: the Android TWA opens an explicit free companion channel. It keeps
@@ -25285,6 +25285,25 @@ setTimeout(async function _dayVerdictLoad(){
     try { if (typeof syncV702UI === 'function') syncV702UI(); } catch(e){ /* silent */ }
     try { if (typeof _renderHeroHierarchy === 'function') _renderHeroHierarchy(); } catch(e){ /* silent */ }
     try { if (typeof renderHeroBulletin === 'function') renderHeroBulletin(); } catch(e){ /* silent */ }
+    // fp391: refresh every horizon after the delayed PDF/Engine loaders.
+    // render3Day normally runs before this block, so without this refresh a
+    // verified reference could update Hero while 3/7/27-day views retained
+    // their earlier live fallback until a manual reload.
+    try {
+      if (typeof render3Day === 'function' && typeof last3D !== 'undefined' &&
+          last3D && Array.isArray(last3D.days) && last3D.days.length) {
+        render3Day(last3D);
+      }
+    } catch(e) { console.warn('[fp391 boot horizon refresh: 3-day]', e); }
+    try {
+      if (typeof renderWeekSummary === 'function') renderWeekSummary();
+    } catch(e) { console.warn('[fp391 boot horizon refresh: week]', e); }
+    try {
+      if (typeof render27Day === 'function' && typeof _last27Rows !== 'undefined' &&
+          Array.isArray(_last27Rows) && _last27Rows.length) {
+        render27Day(_last27Rows, (typeof last3D !== 'undefined' ? last3D : null));
+      }
+    } catch(e) { console.warn('[fp391 boot horizon refresh: 27-day]', e); }
   } catch(e) { /* silent — сторінка живе на live-фоні як раніше */ }
 }, 6000);
 // ═══ /fp194 ═════════════════════════════════════════════════════════════════
