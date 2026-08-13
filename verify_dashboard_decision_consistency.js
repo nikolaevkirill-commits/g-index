@@ -311,6 +311,9 @@ forbidText('aria-label="Повний розклад ${slots.length}', 'dynamic w
 requireText("fetch('SPACE_WEATHER_CONTEXT_v1.json', {cache:'no-store'})", 'GOES X-ray prefers the validated same-origin snapshot');
 requireText("_delivery: 'same_origin_snapshot'", 'same-origin X-ray provenance is explicit');
 requireText("xr._delivery==='same_origin_snapshot' ? 'snapshot' : 'ok'", 'X-ray source indicator distinguishes snapshot from direct live fetch');
+requireText("fetch('expert_overrides_v3.json?fresh=' + Date.now(), { cache: 'no-store' })", 'expert PDF overrides bypass stale browser and service-worker caches');
+requireText("window._expertOverridesDelivery = 'network_fresh'", 'fresh expert override delivery is observable');
+requireText("window._expertOverridesDelivery = 'offline_fallback'", 'offline expert override fallback is explicitly labeled');
 requireText('body.simple-mode #heroCard{min-height:860px!important}', 'mobile Hero reserves its measured loaded height');
 requireText('const _nearViewport = _view.bottom >= -120 && _view.top <= window.innerHeight + 120', 'planet animation pauses outside the viewport');
 requireText('const nearViewport = view.bottom >= -120 && view.top <= window.innerHeight + 120', 'G-flow animation pauses outside the viewport');

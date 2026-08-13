@@ -6,7 +6,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.196-fp389-JYOTISH-LITE</title>
+  <title>G-Index — Космофізичний дашборд v88.9.197-fp390-PDF-CACHE-SYNC</title>
 
   <script>
     // fp388: the Android TWA opens an explicit free companion channel. It keeps
@@ -7092,7 +7092,21 @@ window._expertOverridesLoadStatus = 'pending'; // 'pending' | 'loaded' | 'missin
 async function loadExpertOverrides(){
   if(_expertOverrides !== null) return _expertOverrides;
   try {
-    const resp = await fetch('expert_overrides_v3.json', { cache: 'default' });
+    // fp390: the expert PDF file is a live decision-reference artifact.  A
+    // cache-first/service-worker response may omit a newly verified bulletin
+    // even while the revision-aware registry is already current.  Prefer a
+    // cache-busted network read; keep the canonical URL only as an explicit
+    // offline fallback so the dashboard fails visibly rather than silently
+    // showing "PDF/Engine unavailable" for an imported date.
+    let resp;
+    try {
+      resp = await fetch('expert_overrides_v3.json?fresh=' + Date.now(), { cache: 'no-store' });
+      if(!resp.ok) throw new Error('HTTP ' + resp.status);
+      window._expertOverridesDelivery = 'network_fresh';
+    } catch(_freshErr) {
+      resp = await fetch('expert_overrides_v3.json', { cache: 'force-cache' });
+      window._expertOverridesDelivery = 'offline_fallback';
+    }
     if(!resp.ok) {
       window._expertOverridesLoadStatus = 'http_error_' + resp.status;
       throw new Error('HTTP ' + resp.status);
