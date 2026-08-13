@@ -36,3 +36,11 @@
 - Dashboard decision consistency, production release guard та index integrity повторно пройдені: PASS.
 - Повний product QA повторно пройдено на диску D: Jyotish snapshot, mobile shell, mobile adapter, TWA generator, product contracts, product identity та store listings — PASS.
 - Резервна копія до синхронізації: `D:\ПРОГНОЗ\backups\deploy13_before_fp390_20260813_210724`.
+
+## Jyotish
+
+- `Jyotish Lite` перевірено як окремий календарний продукт: Tithi, Nakshatra, Yoga, Karana, Vara, пояснення, provenance та `score_effect=0`.
+- Канонічний календар містить 165 дат (20.07–31.12.2026) і покриває дату релізного аудиту.
+- Тест посилено: опублікований `product/app/jyotish-snapshot.json` тепер обов'язково звіряється з канонічним календарем за значенням і UTC-межами кожного сегмента.
+- Jyotish snapshot, mobile shell і product contracts після посилення тесту: PASS.
+- `Jyotish Personal` не позначається готовим: D1, D9, Lagna, bhava і Dasha залишаються fail-closed до зафіксованого ephemeris/license рішення, golden vectors, незалежної перевірки 100 карт і privacy flow.
