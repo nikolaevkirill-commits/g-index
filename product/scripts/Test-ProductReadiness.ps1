@@ -141,9 +141,23 @@ if (Test-Path -LiteralPath $ConfigPath -PathType Leaf) {
   $waits.Add('product.config.json copied from product.config.example.json')
 }
 
-# User-owned Play Console gates are explicit and cannot be inferred from local files.
-$waits.Add('complete payment profile address matching identity documents')
-$waits.Add('one-time USD 25 Play developer registration')
+# User-owned Play Console gates are recorded without storing private identity,
+# address, phone or payment details in the repository.
+$playGatePath = Join-Path $productRoot 'play-market\PLAY_CONSOLE_GATE_STATUS.json'
+if (-not (Test-Path -LiteralPath $playGatePath -PathType Leaf)) {
+  $waits.Add('Play Console account verification status')
+} else {
+  try { $playGate = Get-Content -Raw -Encoding UTF8 -LiteralPath $playGatePath | ConvertFrom-Json }
+  catch { $failures.Add("invalid Play Console gate status: $($_.Exception.Message)"); $playGate = $null }
+  if ($playGate) {
+    if ($playGate.developer_registration -ne 'PAID') { $waits.Add('one-time USD 25 Play developer registration') } else { $passes.Add('Play developer registration recorded as paid') }
+    if ($playGate.android_device_verification -ne 'VERIFIED') { $waits.Add('physical Android device verification') } else { $passes.Add('physical Android device verification recorded') }
+    if ($playGate.identity_verification -ne 'VERIFIED') { $waits.Add("identity verification: $($playGate.identity_verification)") }
+    if ($playGate.payment_profile_address -ne 'VERIFIED') { $waits.Add("payment profile address: $($playGate.payment_profile_address)") }
+    if ($playGate.contact_phone_verification -ne 'VERIFIED') { $waits.Add("contact phone verification: $($playGate.contact_phone_verification)") }
+    if ($playGate.app_creation -ne 'UNLOCKED') { $waits.Add("Play app creation: $($playGate.app_creation)") }
+  }
+}
 
 $tanitaPath = Join-Path $DashboardRoot 'TANITA_2Y_PROMOTION_GATE_v1.json'
 if (Test-Path -LiteralPath $tanitaPath) {
