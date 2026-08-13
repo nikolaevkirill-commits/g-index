@@ -13,6 +13,14 @@ function Load-Json([string]$Name) {
   catch { $failures.Add("invalid JSON contract: $Name"); return $null }
 }
 
+$editorial = Load-Json 'editorial-signal.example.json'
+if ($editorial) {
+  if ($editorial.schema -ne 'neborythm_editorial_signal_v1') { $failures.Add('editorial signal schema missing') }
+  if ($editorial.research.role -ne 'EDITORIAL_SHADOW' -or $editorial.research.score_effect -ne 0 -or $editorial.research.decision_authority -ne $false -or $editorial.research.promotion_status -ne 'HOLD') { $failures.Add('editorial signal can influence the operational forecast') }
+  if ($editorial.source.content_sha256 -notmatch '^[0-9A-F]{64}$' -or [string]::IsNullOrWhiteSpace($editorial.source.rights) -or [string]::IsNullOrWhiteSpace($editorial.source.captured_at)) { $failures.Add('editorial provenance/rights contract incomplete') }
+  if ([string]::IsNullOrWhiteSpace($editorial.interval.start) -or [string]::IsNullOrWhiteSpace($editorial.interval.end) -or @($editorial.claims).Count -lt 1) { $failures.Add('editorial signal timing/claims contract incomplete') }
+}
+
 $hero = Load-Json 'hero-state.example.json'
 if ($hero) {
   if (@('ACT','CAUTION','HOLD','UNKNOWN') -notcontains $hero.decision) { $failures.Add('invalid hero decision') }

@@ -42,7 +42,7 @@
 | G raw | безперервний фон | ні |
 | Jyotish / Panchanga | один складений компонент і пояснення слотів | не другим голосом |
 | Персональний цикл | локальний контекст профілю | не перекриває глобальний ризик |
-| Tanita | незалежний image-shadow | ні, `score_effect=0` |
+| Editorial Signals Lab | незалежні людські/editorial shadow-джерела; Tanita лише один історичний приватний корпус | ні, `score_effect=0` |
 | v19.2 | prospective shadow | ні, HOLD |
 
 ## MVP Google Play
