@@ -1,7 +1,7 @@
 'use strict';
 
-const CACHE_NAME='neborythm-mobile-v4';
-const APP_SHELL=['./','./index.html','./styles.css','./app.js','./manifest.webmanifest','./mobile-snapshot.json'];
+const CACHE_NAME='neborythm-mobile-v6';
+const APP_SHELL=['./','./index.html','./styles.css','./app.js','./manifest.webmanifest','./mobile-snapshot.json','./jyotish-snapshot.json','./jyotish-calendar.json'];
 
 self.addEventListener('install',event=>{
   event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(APP_SHELL)).then(()=>self.skipWaiting()));

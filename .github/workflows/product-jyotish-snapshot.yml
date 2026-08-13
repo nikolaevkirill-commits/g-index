@@ -1,0 +1,30 @@
+name: product jyotish snapshot
+
+on:
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: '12 1 * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: windows-2022
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Generate score-neutral Jyotish snapshot
+        shell: pwsh
+        run: |
+          $date = [System.TimeZoneInfo]::ConvertTimeBySystemTimeZoneId([datetime]::UtcNow, 'FLE Standard Time').ToString('yyyy-MM-dd')
+          node product/scripts/New-JyotishSnapshot.mjs --input=panchanga_shadow_feed_v1.json --output=$env:RUNNER_TEMP/jyotish-snapshot.json --date=$date
+          node product/scripts/New-JyotishCalendar.mjs --input=panchanga_shadow_feed_v1.json --output=$env:RUNNER_TEMP/jyotish-calendar.json
+      - name: Product contracts
+        shell: pwsh
+        run: |
+          powershell -NoProfile -ExecutionPolicy Bypass -File product/tests/Test-JyotishSnapshot.ps1
+          powershell -NoProfile -ExecutionPolicy Bypass -File product/tests/Test-MobileShell.ps1
