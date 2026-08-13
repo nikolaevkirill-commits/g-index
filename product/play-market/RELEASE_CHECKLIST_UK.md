@@ -33,7 +33,7 @@
 
 ## Android gate
 
-- [ ] Постійний application ID затверджено.
+- [x] Постійний application ID `com.neborythm.app` затверджено й автоматично звіряється.
 - [ ] Play App Signing увімкнено; fingerprint зафіксовано.
 - [ ] TWA зібрана актуальним Bubblewrap/Android toolchain.
 - [ ] `/.well-known/assetlinks.json` доступний без redirect/HTML.

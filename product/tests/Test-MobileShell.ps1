@@ -7,6 +7,7 @@ $js = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $app 'app.js')
 $manifestRaw = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $app 'manifest.webmanifest')
 $sw = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $app 'sw.js')
 $snapshotRaw = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $app 'mobile-snapshot.json')
+$jyotishSnapshotRaw = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $app 'jyotish-snapshot.json')
 foreach ($route in @('today','timeline','sky','jyotish','you')) { if ($html -notmatch "data-route=`"$route`"") { throw "Missing mobile route: $route" } }
 if ($html -notmatch '<nav class="bottom-nav"' -or $html -notmatch 'aria-current="page"') { throw 'Mobile navigation accessibility semantics missing.' }
 if ($html -notmatch 'rel="manifest"' -or $html -notmatch 'serviceWorker\.register') { throw 'Installable PWA wiring missing.' }
@@ -48,12 +49,17 @@ if ($manifest.name -ne 'NeboRhythm' -or $manifest.display -ne 'standalone' -or $
 if (@($manifest.icons).Count -lt 2 -or @($manifest.shortcuts).Count -lt 3) { throw 'Mobile PWA manifest assets/shortcuts incomplete.' }
 foreach ($asset in @("'./index.html'","'./styles.css'","'./app.js'","'./manifest.webmanifest'")) { if ($sw -notmatch [regex]::Escape($asset)) { throw "Service worker app shell missing: $asset" } }
 if ($sw -notmatch [regex]::Escape("'./mobile-snapshot.json'")) { throw 'Service worker snapshot fallback missing.' }
-if ($sw -notmatch "CACHE_NAME='neborythm-mobile-v4'" -or $sw -notmatch "event.request.mode==='navigate'" -or $sw -notmatch "fetch\(event.request\)" -or $sw -notmatch "catch\(\(\)=>caches.match\(event.request\)\)") { throw 'Network-first/offline-fallback service-worker policy incomplete.' }
+if ($sw -notmatch [regex]::Escape("'./jyotish-snapshot.json'")) { throw 'Service worker Jyotish fallback missing.' }
+if ($sw -notmatch [regex]::Escape("'./jyotish-calendar.json'")) { throw 'Service worker Jyotish calendar fallback missing.' }
+if ($sw -notmatch "CACHE_NAME='neborythm-mobile-v6'" -or $sw -notmatch "event.request.mode==='navigate'" -or $sw -notmatch "fetch\(event.request\)" -or $sw -notmatch "catch\(\(\)=>caches.match\(event.request\)\)") { throw 'Network-first/offline-fallback service-worker policy incomplete.' }
 $mobileSnapshot = $snapshotRaw | ConvertFrom-Json
 if ($mobileSnapshot.schema -ne 'neborythm_mobile_snapshot_v1' -or $mobileSnapshot.source_role -ne 'DEMO_NOT_PRODUCTION') { throw 'Mobile snapshot provenance/role incomplete.' }
 if (@('ACT','CAUTION','HOLD','UNKNOWN') -notcontains $mobileSnapshot.decision -or @('LIVE','DELAYED','LAST_GOOD','STALE') -notcontains $mobileSnapshot.freshness) { throw 'Mobile snapshot state invalid.' }
 if ($mobileSnapshot.research.tanita_score_effect -ne 0 -or $mobileSnapshot.research.v19_2_score_effect -ne 0) { throw 'Mobile snapshot promotes research candidates.' }
 if ($js -notmatch "decision:'UNKNOWN',freshness:'STALE'" -or $js -notmatch 'invalid mobile snapshot') { throw 'Mobile shell does not fail closed on invalid snapshot.' }
+$jyotishSnapshot = $jyotishSnapshotRaw | ConvertFrom-Json
+if ($jyotishSnapshot.schema -ne 'neborythm_jyotish_snapshot_v1' -or $jyotishSnapshot.source_role -ne 'TRADITIONAL_SHADOW' -or $jyotishSnapshot.score_effect -ne 0) { throw 'Jyotish snapshot provenance/neutrality invalid.' }
+if ($js -notmatch 'acceptJyotishSnapshot' -or $js -notmatch 'Awaiting verified adapter' -or $js -notmatch 'panchanga_second_vote') { throw 'Jyotish runtime does not fail closed.' }
 $node = (Get-Command node -ErrorAction Stop).Source
 & $node --check (Join-Path $app 'app.js')
 if ($LASTEXITCODE -ne 0) { throw 'Mobile shell JavaScript syntax failed.' }
