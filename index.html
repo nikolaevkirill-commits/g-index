@@ -6,7 +6,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.198-fp391-HORIZON-ATOMIC-BOOT</title>
+  <title>G-Index — Космофізичний дашборд v88.9.199-fp392-STALE-ADVISORY-GATE</title>
 
   <script>
     // fp388: the Android TWA opens an explicit free companion channel. It keeps
@@ -6556,7 +6556,14 @@ function renderSingleFinalDecision(){
     engine_residual_rule_v1:'валідована поправка помилки Engine'
   };
   const color=score>=2?'#43e6a7':score>0?'#b9e986':score===0?'#cbd5e1':score<=-2?'#ff7070':'#ffd37a';
-  const restrictions=Array.isArray(f.restrictions)?f.restrictions:[];
+  const _bgsFetchedMs=Date.parse((_bgsSpaceWeather&&_bgsSpaceWeather.fetched_at)||'');
+  const _bgsFresh=Number.isFinite(_bgsFetchedMs) && (Date.now()-_bgsFetchedMs)<=12*3600000;
+  // fp392: a BGS restriction copied into AUTO_FORECAST_FEED can outlive the
+  // snapshot that produced it. Archived BGS remains visible in its own panel
+  // but cannot masquerade as a current decision restriction.
+  const restrictions=(Array.isArray(f.restrictions)?f.restrictions:[]).filter(x=>
+    _bgsFresh || !/^BGS\b/i.test(String(x||''))
+  );
   el.innerHTML=
     '<div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap">'+
       '<strong style="font-size:24px;color:'+color+'">REFERENCE '+(score>0?'+':'')+score+' · '+referenceLabel+'</strong>'+
@@ -6689,22 +6696,31 @@ function updateSpaceWeatherDecisionGuard(){
   const p=_spaceWeatherAccumulated||{}, b=_bgsSpaceWeather||{};
   const m=p.magnetic||{}, w=p.solar_wind||{}, e=p.enlil||{}, sp=p.solar_probabilities||{};
   const c=p.coupling||{}, d=p.dst||{}, hp=p.hpo||{}, flags=b.flags||{};
+  const fetched=Date.parse(p.fetched_at||'');
+  const ageH=Number.isFinite(fetched)?Math.max(0,(Date.now()-fetched)/3600000):null;
+  const stale=ageH===null||ageH>6;
+  const bgsFetched=Date.parse(b.fetched_at||'');
+  const bgsAgeH=Number.isFinite(bgsFetched)?Math.max(0,(Date.now()-bgsFetched)/3600000):null;
+  const bgsStale=bgsAgeH===null||bgsAgeH>12;
   const reasons=[];
-  if(Number(w.speed_latest_km_s)>=550) reasons.push('швидкий сонячний вітер '+Math.round(Number(w.speed_latest_km_s))+' км/с');
-  if(Number(w.dynamic_pressure_max_6h_npa)>=5) reasons.push('динамічний тиск до '+Number(w.dynamic_pressure_max_6h_npa).toFixed(1)+' nPa');
-  if(c.shock_candidate) reasons.push('ймовірний раптовий імпульс: тиск +'+Number(c.pressure_jump_delta_npa||0).toFixed(1)+' nPa');
-  if(Number(d.latest_nt)<=-50) reasons.push('Dst '+Number(d.latest_nt).toFixed(0)+' nT');
-  if(Number(hp.hp30&&hp.hp30.max_24h)>=5) reasons.push('Hp30 до '+Number(hp.hp30.max_24h).toFixed(1));
-  if(flags.storm_g1_plus) reasons.push('BGS допускає G1');
-  if(e.cme_cloud_start) reasons.push('ENLIL бачить CME-cloud');
-  if(Number(sp.m_class_1_day_pct)>=50) reasons.push('M-спалах '+Math.round(Number(sp.m_class_1_day_pct))+'%');
+  if(!stale&&Number(w.speed_latest_km_s)>=550) reasons.push('швидкий сонячний вітер '+Math.round(Number(w.speed_latest_km_s))+' км/с');
+  if(!stale&&Number(w.dynamic_pressure_max_6h_npa)>=5) reasons.push('динамічний тиск до '+Number(w.dynamic_pressure_max_6h_npa).toFixed(1)+' nPa');
+  if(!stale&&c.shock_candidate) reasons.push('ймовірний раптовий імпульс: тиск +'+Number(c.pressure_jump_delta_npa||0).toFixed(1)+' nPa');
+  if(!stale&&Number(d.latest_nt)<=-50) reasons.push('Dst '+Number(d.latest_nt).toFixed(0)+' nT');
+  if(!stale&&Number(hp.hp30&&hp.hp30.max_24h)>=5) reasons.push('Hp30 до '+Number(hp.hp30.max_24h).toFixed(1));
+  if(!bgsStale&&flags.storm_g1_plus) reasons.push('BGS допускає G1');
+  if(!stale&&e.cme_cloud_start) reasons.push('ENLIL бачить CME-cloud');
+  if(!stale&&Number(sp.m_class_1_day_pct)>=50) reasons.push('M-спалах '+Math.round(Number(sp.m_class_1_day_pct))+'%');
   const today=todayKyivStr();
   const day=window._autoForecastFeed&&window._autoForecastFeed.days&&window._autoForecastFeed.days[today];
   const positive=day&&Number(day.score)>0;
-  const fetched=Date.parse(p.fetched_at||'');
-  const ageH=Number.isFinite(fetched)?Math.max(0,(Date.now()-fetched)/3600000):null;
-  const stale=ageH!==null&&ageH>6;
-  if(!reasons.length&&!stale){ el.style.display='none'; return; }
+  if(!reasons.length&&!stale&&!bgsStale){ el.style.display='none'; return; }
+  if(!reasons.length){
+    el.style.display='block';
+    el.innerHTML='<strong>ℹ Архівні advisory-дані — не оперативна поправка.</strong> '+
+      'BGS/космічна погода прострочені; їх показано лише для довідки й вони не змінюють рекомендацію.';
+    return;
+  }
   el.style.display='block';
   el.innerHTML='<strong>⚠ Операційна поправка до рішення:</strong> '+
     (positive?'загальний PDF/Engine-вердикт сприятливий, але це не означає спокійну космічну погоду. ':'')+

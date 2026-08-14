@@ -317,6 +317,9 @@ requireText("window._expertOverridesDelivery = 'offline_fallback'", 'offline exp
 requireText('[fp391 boot horizon refresh: 3-day]', 'initial PDF loader refreshes the already-rendered 3-day horizon');
 requireText('[fp391 boot horizon refresh: week]', 'initial PDF loader refreshes the week horizon');
 requireText('[fp391 boot horizon refresh: 27-day]', 'initial PDF loader refreshes the 27-day horizon');
+requireText("_bgsFresh || !/^BGS\\b/i.test", 'stale BGS restrictions are removed from the current decision feed');
+requireText('if(!bgsStale&&flags.storm_g1_plus)', 'stale BGS storm flags cannot activate an operational advisory');
+requireText('Архівні advisory-дані — не оперативна поправка', 'stale space-weather panels are explicitly non-operational');
 requireText('body.simple-mode #heroCard{min-height:860px!important}', 'mobile Hero reserves its measured loaded height');
 requireText('const _nearViewport = _view.bottom >= -120 && _view.top <= window.innerHeight + 120', 'planet animation pauses outside the viewport');
 requireText('const nearViewport = view.bottom >= -120 && view.top <= window.innerHeight + 120', 'G-flow animation pauses outside the viewport');
