@@ -6,7 +6,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.200-fp395-OUTCOME-FORM-CLOSURE</title>
+  <title>G-Index — Космофізичний дашборд v88.9.201-fp396-FUTURE-RAW-SEMANTICS</title>
 
   <script>
     // fp388: the Android TWA opens an explicit free companion channel. It keeps
@@ -9358,21 +9358,24 @@ function renderWeekSummary(){
     const mon = d.getUTCMonth()+1;
     const sourceBase = e && e._expertOverride ? 'PDF' : (e ? 'Engine' : '—');
     const guards = [sig?.guard, sig?.dynamicGuard].filter(x=>x && x!=='none');
-    days.push({ds, operational, reference, source:sourceBase, guards, dow:dowShort, dateNum, mon, isToday:i===0, kpDynamic, rawDynamic});
+    // Only today has an operational decision. Future dates retain their
+    // continuous forecast value instead of being collapsed into -3/-1/+1/+3.
+    const displayScore = i===0 ? operational : (isFinite(rawDynamic) ? Number(rawDynamic) : null);
+    days.push({ds, operational, displayScore, reference, source:sourceBase, guards, dow:dowShort, dateNum, mon, isToday:i===0, kpDynamic, rawDynamic});
   }
 
   const col = s => s===null?'var(--faint)':s>=2?'#63be7b':s>=1?'#9cd49c':s===0?'#9bb1dc':s>=-1?'#ffd2a0':'#ff6b6b';
-  const green = days.filter(d=>d.operational!==null&&d.operational>=2).length;
-  const greenL = days.filter(d=>d.operational===1).length;
-  const red = days.filter(d=>d.operational!==null&&d.operational<=-2).length;
-  const redL = days.filter(d=>d.operational===-1).length;
-  const neutral = days.filter(d=>d.operational===0).length;
+  const green = days.filter(d=>d.displayScore!==null&&d.displayScore>=2).length;
+  const greenL = days.filter(d=>d.displayScore!==null&&d.displayScore>=0.5&&d.displayScore<2).length;
+  const red = days.filter(d=>d.displayScore!==null&&d.displayScore<=-2).length;
+  const redL = days.filter(d=>d.displayScore!==null&&d.displayScore>-2&&d.displayScore<=-0.5).length;
+  const neutral = days.filter(d=>d.displayScore!==null&&d.displayScore>-0.5&&d.displayScore<0.5).length;
 
   // Знаходимо кластери для наративу
   const fmt = d => `${d.dateNum}.${d.mon}`;
-  const bestDays = days.filter(d=>d.operational!==null&&d.operational>=2);
-  const stopDays = days.filter(d=>d.operational!==null&&d.operational<=-2);
-  const mildCautionDays = days.filter(d=>d.operational===-1);
+  const bestDays = days.filter(d=>d.displayScore!==null&&d.displayScore>=2);
+  const stopDays = days.filter(d=>d.displayScore!==null&&d.displayScore<=-2);
+  const mildCautionDays = days.filter(d=>d.displayScore!==null&&d.displayScore>-2&&d.displayScore<=-0.5);
   const bestStr = bestDays.length ? bestDays.map(d=>`${d.dow} ${fmt(d)}`).join(', ') : null;
   const stopStr = stopDays.length ? stopDays.map(d=>`${d.dow} ${fmt(d)}`).join(', ') : null;
   const mildCautStr = mildCautionDays.length ? mildCautionDays.map(d=>`${d.dow} ${fmt(d)}`).join(', ') : null;
@@ -9382,24 +9385,24 @@ function renderWeekSummary(){
   // 3 сприятливі, 2 hard-red, 1 mild-red помилково ставали "сприятливим тижнем".
   const favorable = green + greenL;
   const cautious = red + redL;
-  const weekTone = red>=3?['🔴','Складний тиждень',`${red} стоп-дні · обережно з рішеннями`]:
-                   red>=2&&cautious>favorable?['🟡','Обережний тиждень',`${red} стоп-дні · більше завершень, менше запусків`]:
+  const weekTone = red>=3?['🔴','Складний прогнозний фон',`${red} дні з G_raw≤−2 · прогноз, не команда`]:
+                   red>=2&&cautious>favorable?['🟡','Обережний прогнозний фон',`${red} дні з G_raw≤−2 · більше перевірок`]:
                    favorable>=4&&red===0&&cautious<=1?['🟢','Сприятливий тиждень','Гарне вікно для дій']:
                    favorable>cautious&&red<=1?['🟢','Більше сприятливих, ніж складних','Використай активні дні']:
                    cautious>favorable?['🟡','Обережний тиждень','Більше завершень, менше запусків']:
                    (favorable===0&&cautious===0)?['⚪','Нейтральний тиждень','Стабільний темп без різких кроків']:
-                   ['⚪','Змішаний тиждень',`${red} стоп-дні · ${redL} помірно обережний`];
+                   ['⚪','Змішаний тиждень',`${red} низький raw · ${redL} помірно низький raw`];
 
   // Рядок цифр (компактний, знизу)
   const rowHtml = days.map(d=>{
-    const s = d.operational; const sStr = s===null?'—':(s>=0?'+':'')+s;
+    const s = d.displayScore; const sStr = s===null?'—':(s>=0?'+':'')+(d.isToday?s.toFixed(0):s.toFixed(1));
     const refStr = d.reference===null?'—':(d.reference>=0?'+':'')+d.reference;
     const bold = d.isToday?'font-weight:800;text-decoration:underline':'';
-    const sourceTitle = `Оперативний стан ${sStr}. PDF/Engine reference ${refStr} (${d.source}).${d.guards.length?' Safety: '+d.guards.join('+')+'.':''}`;
+    const sourceTitle = `${d.isToday?'Оперативний стан':'Forecast G_raw'} ${sStr}. PDF/Engine reference ${refStr} (${d.source}).${d.guards.length?' Safety: '+d.guards.join('+')+'.':''}`;
     return `<span title="${sourceTitle}" style="display:inline-flex;flex-direction:column;align-items:center;min-width:38px;${bold}">
       <span style="font-size:8px;color:var(--dim)">${d.dow}</span>
       <span style="font-size:11px;font-weight:700;color:${col(s)}">${sStr}</span>
-      <span style="font-size:7px;color:var(--faint)">OP${d.guards.length?' ⚠':''}</span>
+      <span style="font-size:7px;color:var(--faint)">${d.isToday?'OP NOW':'G_raw forecast'}${d.guards.length?' ⚠':''}</span>
       <span style="font-size:7px;color:${d.source==='PDF'?'#d6b55c':'var(--faint)'}">ref ${refStr} ${d.source}</span>
     </span>`;
   }).join('');
@@ -9416,7 +9419,7 @@ function renderWeekSummary(){
       ${neutral>0?`<span>⚪ ${neutral} нейтр.</span>`:''}
       ${cautious>0?`<span>🔴 ${cautious} обереж.</span>`:''}
       ${bestStr?`<span style="color:var(--faint)">·</span><span style="color:#9cd49c">Краще: ${bestStr}</span>`:''}
-      ${stopStr?`<span style="color:var(--faint)">·</span><span style="color:#ff6b6b">Стоп: ${stopStr}</span>`:''}
+      ${stopStr?`<span style="color:var(--faint)">·</span><span style="color:#ff6b6b">Низький raw: ${stopStr}</span>`:''}
       ${mildCautStr?`<span style="color:var(--faint)">·</span><span style="color:#ffa64d">Обережно: ${mildCautStr}</span>`:''}
     </div>
     <div style="display:flex;gap:1px">${rowHtml}</div>`;
@@ -14432,10 +14435,11 @@ function render3Day(parsed3){
     const isToday = fmtDate(d.date) === todayKyivStr();
     const _daySig3 = (typeof resolveDaySignal_v88825 === 'function') ? resolveDaySignal_v88825(d.date, G, kpMax, {isToday}) : null;
     const G_decision = _daySig3 && isFinite(_daySig3.decisionScore) ? Number(_daySig3.decisionScore) : G;
+    const displayG3 = isToday ? G_decision : G;
     const cls = isFinite(kpMax)? (kpMax>=5? 'k-bad' : (kpMax>=4? 'k-warn':'k-ok')) : 'k-ok';
-    const gCls = classForG(G_decision);
+    const gCls = classForG(displayG3);
     const kp = d.kp8.map(v=>isFinite(v)? v.toFixed(2) : '…').join(' | ');
-    const rowStyle = G_decision <= -2 ? 'background:rgba(255,107,107,0.08);' : '';
+    const rowStyle = displayG3 <= -2 ? 'background:rgba(255,107,107,0.08);' : '';
     const todayStyle = isToday ? 'outline:2px solid rgba(55,167,255,0.6);' : '';
 
     const _moonE3 = ai.phaseDeg < 22 ? '🌑' : ai.phaseDeg < 67 ? '🌒' : ai.phaseDeg < 112 ? '🌓' : ai.phaseDeg < 157 ? '🌔' : ai.phaseDeg < 202 ? '🌕' : ai.phaseDeg < 247 ? '🌖' : ai.phaseDeg < 292 ? '🌗' : ai.phaseDeg < 337 ? '🌘' : '🌑';
@@ -14456,13 +14460,13 @@ function render3Day(parsed3){
 
     const gTip = gTooltipText('Kp max', (isFinite(kpMax)? kpMax : NaN), ai);
 
-    const _prob3d = calcProbabilityLayer({G:G_decision, csConf:1, horizon:'3day'});
+    const _prob3d = calcProbabilityLayer({G:displayG3, csConf:1, horizon:'3day'});
     const _riskCell = _prob3d
       ? `<span style="font-size:12px;font-weight:700;color:${_prob3d.band==='high'?'#ff6b6b':_prob3d.band==='elevated'?'#fca474':_prob3d.band==='moderate'?'#ffcc00':'#2bd47d'}">${_prob3d.pSoftPct}%</span>`
       : '—';
     html += `<tr style="${rowStyle}${todayStyle}">
       <td class="mono col-date"${isToday?' style="font-weight:700;color:var(--alt)"':''}>${fmtDate(d.date)}${isToday?' <br><span style="color:var(--alt);font-size:10px;white-space:nowrap">◀ сьогодні</span>':''}</td>
-      <td><span class="gbadge ${gCls} hint" tabindex="0">Рішення ${isFinite(G_decision)?(G_decision>=0?'+':'')+G_decision.toFixed(1):'…'}<small class="audit-only" style="color:var(--faint);font-size:8px"> · raw-аудит ${(G>=0?'+':'')+G.toFixed(1)}${_daySig3?.dynamicGuard?' · ⚠ Kp advisory':''}</small><span class="hint-pop">${escapeHtml(_daySig3?.tooltip||gTip)}</span></span></td>
+      <td><span class="gbadge ${gCls} hint" tabindex="0">${isToday?'Рішення':'Forecast G_raw'} ${isFinite(displayG3)?(displayG3>=0?'+':'')+displayG3.toFixed(1):'…'}<small class="audit-only" style="color:var(--faint);font-size:8px">${isToday?' · raw-аудит '+(G>=0?'+':'')+G.toFixed(1):' · не оперативна команда'}${_daySig3?.dynamicGuard?' · ⚠ Kp advisory':''}</small><span class="hint-pop">${escapeHtml(_daySig3?.tooltip||gTip)}</span></span></td>
       <td>${kpCell}</td>
       <td>${Lcell}</td>
       <td>${Mcell}</td>
@@ -14471,9 +14475,9 @@ function render3Day(parsed3){
       <td class="col-3d-ai">${AiCell}</td>
       <td class="col-3d-ap mono">${apCell}</td>
       <td class="col-hide-mobile">${kpSparkline(d.kp8)}</td>
-      <td><span class="hint" tabindex="0" style="color:${_daySig3?.color||'var(--text2)'};font-weight:700">${_daySig3 ? _daySig3.title : classifyG(isFinite(G)? G:0)}<span class="hint-pop">${escapeHtml(_daySig3?.tooltip||'Raw G category')}</span></span></td>
+      <td><span class="hint" tabindex="0" style="color:${isToday?(_daySig3?.color||'var(--text2)'):(displayG3<=-2?'#ff6b6b':displayG3<=-0.5?'#ffaa33':displayG3>=2?'#2bd47d':'#9bb1dc')};font-weight:700">${isToday?(_daySig3?_daySig3.title:classifyG(G)):'Прогнозний raw-контекст'}<span class="hint-pop">${escapeHtml(isToday?(_daySig3?.tooltip||gTip):'Майбутній безперервний G_raw; не оперативна команда і не PDF-verdict.')}</span></span></td>
       <td class="mono col-hide-mobile">${_riskCell}</td>
-      <td style="${(_daySig3?.recommendation||recommendG(G,kpMax)).style}">${(_daySig3?.recommendation||recommendG(G,kpMax)).text}</td>
+      <td style="${isToday?(_daySig3?.recommendation||recommendG(G,kpMax)).style:'color:var(--muted)'}">${isToday?(_daySig3?.recommendation||recommendG(G,kpMax)).text:'Фоновий прогноз; рішення формується лише в сам день.'}</td>
     </tr>`;
   }
   html += '</tbody></table>';
@@ -14496,7 +14500,7 @@ function render3Day(parsed3){
       // v87.6: перший НЕ-сьогоднішній день = "завтра"
       if (!isToday && _tomorrowG === null && isFinite(G)) {
         _tomorrowSig = _daySigQ;
-        _tomorrowG = (_daySigQ && isFinite(_daySigQ.decisionScore)) ? Number(_daySigQ.decisionScore) : G;
+        _tomorrowG = G;
       }
       // v83f: aligned with classifyStateByG thresholds
       // v88.8.9 БАГ#5 fix: повне узгодження з classifyStateByG.
@@ -14508,10 +14512,12 @@ function render3Day(parsed3){
       const cat = _daySigQ ? _daySigQ.title : 'нейтрально';
       const act = _daySigQ ? _daySigQ.action : 'стандартний режим';
       const col = _daySigQ ? _daySigQ.color : '#9bb1dc';
+      const forecastColQ = G<=-2?'#ff6b6b':G<=-0.5?'#ffaa33':G>=2?'#2bd47d':'#9bb1dc';
       // fp365: the card headline is the operational result only. PDF/Engine and
       // NOAA raw stay on their own explicitly labeled audit lines below.
       const _opScoreQ = (_daySigQ && isFinite(_daySigQ.decisionScore)) ? Number(_daySigQ.decisionScore) : G;
       const _opScoreTextQ = isFinite(_opScoreQ) ? ((_opScoreQ >= 0 ? '+' : '') + _opScoreQ) : '—';
+      const _futureRawTextQ = isFinite(G) ? ((G >= 0 ? '+' : '') + G.toFixed(1)) : '—';
       const dd=d.date.getUTCDate()+'.'+(d.date.getUTCMonth()+1);
       // v87.61: Bulletin (engine v18.5) score line if available
       // v87.62: + sign divergence alert when G and Bulletin have opposite signs
@@ -14618,8 +14624,8 @@ function render3Day(parsed3){
       }
       qhtml+=`<span title="${escapeHtml(_daySigQ?.tooltip||'')}" style="flex:1;min-width:140px;padding:8px 14px;border-radius:10px;${_scenStyle};text-align:center">
         ${_scenBanner}
-        <div style="font-weight:700;color:${col};font-size:14px">${dd} → ОПЕРАТИВНО ${_opScoreTextQ} · ${cat}</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:2px">${act}</div>
+        <div style="font-weight:700;color:${isToday?col:forecastColQ};font-size:14px">${dd} → ${isToday?'ОПЕРАТИВНО '+_opScoreTextQ:'FORECAST G_raw '+_futureRawTextQ} · ${isToday?cat:'не команда для дії'}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">${isToday?act:'Прогнозний фон; PDF/Engine reference показано окремо.'}</div>
         ${_bulletinLine}
         <div class="card3d-numeric" style="font-size:10px;color:var(--faint);margin-top:3px" title="Довідкові raw-числа. G_day raw (3d) = 2 − Kp_max з NOAA 3-day forecast (${isFinite(kpMax)?kpMax.toFixed(1):'?'}) + ΣAᵢ. Це добовий 3-day прогноз, не live G_now і не 27-day NOAA raw. PDF/Engine зверху — денний reference. Оперативний стан обирає обережніший safety-контур.">${isFinite(G)?'<span style="color:var(--faint);font-size:9px">3D NOAA G_day raw · ДОБА, НЕ G_now: </span>'+(G>=0?'+':'')+G.toFixed(1):'—'}${(() => {
           // fp51: show G_day 27D alongside 3D and delta
@@ -14662,10 +14668,10 @@ function render3Day(parsed3){
             return `<div style="margin-top:6px;padding:8px 10px;border-radius:8px;background:rgba(255,107,107,.08);border:1px solid rgba(255,107,107,.35);font-size:11px;line-height:1.65;text-align:left">
               <div style="font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#ff9f9f;font-size:10px;margin-bottom:4px;cursor:help" title="Значна розбіжність (Δ≥2.5 або протилежні знаки) між експертним вердиктом і сирим геомагнітним фоном. Розклад нижче — щоб зрозуміти ЩО саме розходиться, а не просто 'десь конфлікт'.">⚠ Конфлікт моделей</div>
               <div><span style="color:var(--faint)">Експерт/PDF:</span> <strong style="color:${_bsCol}">${_bsEng>=0?'+':''}${_bsEng}</strong> — ${_pdfLabel}</div>
-              <div><span style="color:var(--faint)">Геомагнітний фон (G_day raw):</span> <strong style="color:${col}">${isFinite(G)?(G>=0?'+':'')+G.toFixed(1):'—'}</strong> — ${_rawLabel}</div>
+              <div><span style="color:var(--faint)">Геомагнітний фон (G_day raw):</span> <strong style="color:${forecastColQ}">${isFinite(G)?(G>=0?'+':'')+G.toFixed(1):'—'}</strong> — ${_rawLabel}</div>
               ${_piVal !== null ? `<div><span style="color:var(--faint)">Панчанга Pᵢ:</span> <strong>${_piVal>=0?'+':''}${_piVal.toFixed(1)}</strong>${_piLabel?' — '+_piLabel:''} <span style="color:var(--faint);font-size:9px" title="AiNoDstRaw = Lᵢ+Mᵢ+eᵢ+Pᵢ — Pᵢ вже частина суми вище, не окремий сигнал">(вже в фоні вище, не окремий голос)</span></div>` : ''}
               ${_calScore !== null ? `<div><span style="color:var(--faint)">Календарні фактори:</span> <strong>${_calScore>=0?'+':''}${_calScore.toFixed(1)}</strong>${_calSymText?' — '+_calSymText:''} <span style="color:var(--faint);font-size:9px">(frozen engine_scores, довідково)</span></div>` : ''}
-              <div style="margin-top:4px;padding-top:4px;border-top:1px solid rgba(255,255,255,.08)"><span style="color:var(--faint)">Оперативний стан:</span> <strong style="color:${_daySigQ?.color||'#ffaa33'}">${isFinite(_daySigQ?.decisionScore)?(_daySigQ.decisionScore>=0?'+':'')+_daySigQ.decisionScore:'—'} — ${escapeHtml(_daySigQ?.title||'потрібна перевірка')}</strong><br><span style="color:var(--faint);font-size:9px">PDF лишається reference; при розбіжності система застосовує обережніший сигнал.</span></div>
+              <div style="margin-top:4px;padding-top:4px;border-top:1px solid rgba(255,255,255,.08)"><span style="color:var(--faint)">${isToday?'Оперативний стан':'Прогнозний висновок'}:</span> <strong style="color:${isToday?(_daySigQ?.color||'#ffaa33'):forecastColQ}">${isToday?(isFinite(_daySigQ?.decisionScore)?(_daySigQ.decisionScore>=0?'+':'')+_daySigQ.decisionScore:'—'):(isFinite(G)?(G>=0?'+':'')+G.toFixed(1):'—')} — ${isToday?escapeHtml(_daySigQ?.title||'потрібна перевірка'):'не команда для дії'}</strong><br><span style="color:var(--faint);font-size:9px">PDF лишається reference; ${isToday?'оперативний контур обирає обережніший сигнал.':'остаточний стан формується лише в сам день за live-даними.'}</span></div>
             </div>`;
           } catch(_eConf) { return ''; }
         })()}

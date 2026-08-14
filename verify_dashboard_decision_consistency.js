@@ -135,10 +135,10 @@ context.window.__uiState = {};
 activeEntry = { eng: 2, _expertOverride: true };
 vm.runInContext(html.slice(weekStart, weekEnd), context);
 context.renderWeekSummary();
-if (!weekBar.innerHTML.includes('ref +2 PDF') || !weekBar.innerHTML.includes('Стоп:') || weekBar.innerHTML.includes('Краще:')) {
-  throw new Error(`week summary did not honor operational -3 over PDF +2: ${weekBar.innerHTML}`);
+if (!weekBar.innerHTML.includes('ref +2 PDF') || !weekBar.innerHTML.includes('OP NOW') || !weekBar.innerHTML.includes('G_raw forecast')) {
+  throw new Error(`week summary did not separate today's operation from future raw forecasts: ${weekBar.innerHTML}`);
 }
-console.log('PASS week summary runtime: operational -3 is primary; PDF +2 remains reference');
+console.log('PASS week summary runtime: today is operational; future values are raw forecasts; PDF stays reference');
 
 function requireText(needle, label) {
   if (!html.includes(needle)) throw new Error(`${label}: missing ${needle}`);
@@ -185,7 +185,11 @@ requireText("const automationStatus=hard.length?'FAIL':operationalWarns.length?'
 requireText("<strong>🧪 Докази: '+evidenceStatus", 'evidence readiness is displayed separately from automation health');
 requireText('Health artifact має WARN лише через evidence gates; це не збій автоматизації.', 'evidence-only WARN is explained as non-operational');
 requireText("· наступна ручна вибірка '+manualPending", 'manual evidence count is labeled as the next rolling sample');
-requireText('${dd} → ОПЕРАТИВНО ${_opScoreTextQ} · ${cat}', '3-day headline is explicitly operational');
+requireText("const displayScore = i===0 ? operational : (isFinite(rawDynamic) ? Number(rawDynamic) : null)", 'week future values retain continuous raw forecasts');
+requireText("d.isToday?'OP NOW':'G_raw forecast'", 'week labels today and future provenance separately');
+requireText('const displayG3 = isToday ? G_decision : G;', '3-day display uses operation only for today');
+requireText('_tomorrowG = G;', 'tomorrow hero comparison uses continuous forecast raw');
+requireText("isToday?'ОПЕРАТИВНО '+_opScoreTextQ:'FORECAST G_raw '+_futureRawTextQ", '3-day headline separates operation from forecast');
 requireText("'PDF reference' : 'Engine reference'", '3-day reference source is explicit');
 requireText('· не дозвіл</span></div>', '3-day reference line cannot be read as action permission');
 requireText('PDF REFERENCE · VERIFIED OVERRIDE · НЕ РІШЕННЯ ДЛЯ ДІЇ', 'verified PDF banner is reference-only');
