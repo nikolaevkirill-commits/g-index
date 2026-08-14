@@ -27,7 +27,12 @@ tanita = load(ROOT / "TANITA_REVIEW_PRIORITY_STATUS_v1.json", {}) or {}
 html = (ROOT / "index.html").read_text(encoding="utf-8-sig")
 daily_chain = (ROOT / "daily_chain.bat").read_text(encoding="utf-8-sig")
 importer = (ROOT / "import_validated_outcome_queue.py").read_text(encoding="utf-8-sig")
-legacy_backfill = (ROOT / "auto_backfill_outcomes.py").read_text(encoding="utf-8-sig")
+legacy_backfill_path = ROOT / "auto_backfill_outcomes.py"
+legacy_backfill = (
+    legacy_backfill_path.read_text(encoding="utf-8-sig")
+    if legacy_backfill_path.exists()
+    else ""
+)
 import_status = load(OUT / "OUTCOME_INTAKE_IMPORT_STATUS_v1.json", {}) or {}
 
 real = ledger.get("real_outcomes", {}) or {}
@@ -66,7 +71,12 @@ checks = {
     "outcome_import_requires_prior_frozen_prediction": "no_frozen_telemetry_row_for_date" in importer,
     "outcome_import_forbids_expert_training_sources": "expert_or_training_source_reference_forbidden" in importer,
     "outcome_import_cannot_overwrite_actuals": "outcome_already_present" in importer,
-    "legacy_expert_pdf_outcome_backfill_is_retired": "RETIRED_TARGET_LEAKAGE" in legacy_backfill,
+    # Absence is the preferred retired state.  If an archival copy is kept, it
+    # must fail closed with the explicit retirement marker.
+    "legacy_expert_pdf_outcome_backfill_is_retired": (
+        not legacy_backfill_path.exists()
+        or "RETIRED_TARGET_LEAKAGE" in legacy_backfill
+    ),
     "outcome_import_status_is_observational_only": (
         import_status.get("automatic_import") is True
         and import_status.get("production_forecast_change") is False

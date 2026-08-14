@@ -147,6 +147,20 @@ if !OVERALL_OK! EQU 1 (
     )
 )
 
+REM STEP 7D: IMPORT ONLY REVIEWED INDEPENDENT OUTCOMES AFTER FORECAST FREEZE
+REM The importer fails closed on expert/PDF labels, future dates, missing frozen
+REM predictions and attempts to overwrite an existing outcome.
+if !OVERALL_OK! EQU 1 if exist "%~dp0import_validated_outcome_queue.py" (
+    echo %date% %time% [STEP 7D/12] validated independent outcome import >> "%LOG%"
+    python "%~dp0import_validated_outcome_queue.py" >> "%LOG%" 2>&1
+    if errorlevel 1 (
+        echo %date% %time% [FAIL] validated outcome import exit code !errorlevel! >> "%LOG%"
+        set OVERALL_OK=0
+    ) else (
+        echo %date% %time% [OK] validated independent outcomes imported >> "%LOG%"
+    )
+)
+
 REM STEP 8: LEGACY STRONG-RAW TRACKER (KEPT FOR HISTORICAL CONTINUITY)
 if !OVERALL_OK! EQU 1 (
     echo %date% %time% [STEP 8/12] strong-raw prospective updater >> "%LOG%"
