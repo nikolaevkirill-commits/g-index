@@ -1,6 +1,14 @@
 # Jyotish у продукті: межі й план реалізації
 
-Дата: 2026-08-12. Статус: продуктова специфікація; не змінює production score.
+Дата: 2026-08-12; технічний статус оновлено 2026-08-14. Статус: research implementation; не змінює production score.
+
+## Технічний статус 2026-08-14
+
+- створено окремий research-engine на `Astronomy Engine 2.1.19` (MIT): D1, D9, 9 graha, 12 whole-sign bhava та Vimshottari;
+- додано автоматичні invariant/regression-тести, local-only контракт профілю народження, згоду, експорт і видалення;
+- Lahiri ayanamsha та lunar node поки апроксимаційні, тому це не незалежно підтверджена Kundli;
+- consumer activation заблоковано до 100 незалежних еталонних карт і редакторської перевірки термінології;
+- весь персональний Jyotish має `score_effect=0` і не змінює operational forecast.
 
 ## Рішення щодо назви
 
@@ -56,7 +64,7 @@ Shodashvarga, Ashtakavarga, Shadbala, численні Yoga/Dosha, Muhurta, comp
 
 ## Розрахунковий контур
 
-Для персональної карти потрібен перевірений ephemeris engine. Кандидат — Swiss Ephemeris із фіксованими:
+Для персональної карти потрібен перевірений ephemeris engine. Для research-контуру обрано permissive `Astronomy Engine 2.1.19`; Swiss Ephemeris лишається альтернативою після окремого ліцензійного рішення. Потрібно зафіксувати:
 
 - версією бібліотеки й data files;
 - Lahiri ayanamsha;

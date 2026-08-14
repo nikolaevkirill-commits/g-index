@@ -109,6 +109,13 @@ if ($checkin) {
   if ($checkin.consent -ne 'LOCAL_ONLY') { $failures.Add('example check-in must default to LOCAL_ONLY') }
 }
 
+$jyotishProfile = Load-Json 'jyotish-profile.example.json'
+if ($jyotishProfile) {
+  if ($jyotishProfile.storage_scope -ne 'LOCAL_ONLY' -or $jyotishProfile.sync_enabled) { $failures.Add('Jyotish birth profile must remain local-only') }
+  if (-not $jyotishProfile.consent_required -or -not $jyotishProfile.export_supported -or -not $jyotishProfile.delete_supported) { $failures.Add('Jyotish privacy controls incomplete') }
+  if ($jyotishProfile.calculation.score_effect -ne 0 -or $jyotishProfile.calculation.activation -notmatch '^BLOCKED_') { $failures.Add('unvalidated Jyotish engine is not fail-closed') }
+}
+
 $explanation = Load-Json 'explanation-card.example.json'
 if ($explanation) {
   if ([string]::IsNullOrWhiteSpace($explanation.level_1) -or @($explanation.level_2).Count -eq 0) { $failures.Add('explanation disclosure ladder incomplete') }
