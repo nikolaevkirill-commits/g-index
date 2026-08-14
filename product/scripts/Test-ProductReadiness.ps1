@@ -52,12 +52,25 @@ foreach ($twaRel in @('twa-manifest.json','settings.gradle','build.gradle','grad
   }
 }
 $releaseAab = Join-Path $twaProjectRoot 'app\build\outputs\bundle\release\app-release.aab'
+$signedReleaseAab = Join-Path $twaProjectRoot 'app\build\outputs\bundle\release\app-release-signed.aab'
+$playUploadEvidence = Join-Path $productRoot 'android\PLAY_UPLOAD_BUILD_EVIDENCE.json'
 if (Test-Path -LiteralPath $releaseAab -PathType Leaf) {
   $aabHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $releaseAab).Hash
   $passes.Add("unsigned release AAB builds successfully (SHA-256 $aabHash)")
-  $waits.Add('signed Play upload AAB')
 } else {
   $waits.Add('release AAB build')
+}
+if ((Test-Path -LiteralPath $signedReleaseAab -PathType Leaf) -and (Test-Path -LiteralPath $playUploadEvidence -PathType Leaf)) {
+  try { $uploadEvidence = Get-Content -Raw -Encoding UTF8 -LiteralPath $playUploadEvidence | ConvertFrom-Json }
+  catch { $failures.Add("invalid Play upload evidence: $($_.Exception.Message)"); $uploadEvidence = $null }
+  if ($uploadEvidence) {
+    $actualSignedHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $signedReleaseAab).Hash
+    if ($actualSignedHash -ne $uploadEvidence.signed_aab_sha256) { $failures.Add('signed AAB hash does not match Play upload evidence') }
+    elseif ($uploadEvidence.play_console_acceptance -ne 'ACCEPTED_INTERNAL_TRACK_2026-08-14') { $waits.Add('Play Console AAB acceptance evidence') }
+    else { $passes.Add("signed AAB accepted by Play internal track (SHA-256 $actualSignedHash)") }
+  }
+} else {
+  $waits.Add('signed Play upload AAB')
 }
 
 $storeAssetAudit = Join-Path $productRoot 'store-assets\verify_store_assets.py'
@@ -170,7 +183,10 @@ if (-not (Test-Path -LiteralPath $playGatePath -PathType Leaf)) {
     if ($playGate.identity_verification -ne 'VERIFIED') { $waits.Add("identity verification: $($playGate.identity_verification)") }
     if ($playGate.payment_profile_address -ne 'VERIFIED') { $waits.Add("payment profile address: $($playGate.payment_profile_address)") }
     if ($playGate.contact_phone_verification -ne 'VERIFIED') { $waits.Add("contact phone verification: $($playGate.contact_phone_verification)") }
-    if ($playGate.app_creation -ne 'UNLOCKED') { $waits.Add("Play app creation: $($playGate.app_creation)") }
+    if ($playGate.app_creation -ne 'CREATED') { $waits.Add("Play app creation: $($playGate.app_creation)") } else { $passes.Add('Play app creation recorded as complete') }
+    if ($playGate.digital_asset_links -ne 'VERIFIED_HTTP_200') { $waits.Add('Digital Asset Links publication and verification') } else { $passes.Add('Digital Asset Links publication recorded as HTTP 200') }
+    if ($playGate.internal_release -eq 'PUBLISHED_NO_TESTERS') { $waits.Add('select internal testers') }
+    elseif ($playGate.internal_release -notmatch '^PUBLISHED') { $waits.Add("Play internal release: $($playGate.internal_release)") }
   }
 }
 

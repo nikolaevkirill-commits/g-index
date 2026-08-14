@@ -16,7 +16,9 @@ foreach ($value in @($config.startPath,$contract.start_path,$generated.startUrl,
   if ([string]$value -match '(?i)product/app|localhost|127\.0\.0\.1|fixture|demo') { throw "Play identity points to a prototype or local source: $value" }
 }
 if ($generated.webManifestUrl -ne 'https://nikolaevkirill-commits.github.io/g-index/manifest.json') { throw 'TWA manifest URL is not the canonical production manifest.' }
-if ($config.signingSha256 -notmatch '^REPLACE_WITH_PLAY_SIGNING_SHA256$') { throw 'Signing placeholder changed outside the reviewed signing stage.' }
+$playGate = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $productRoot 'play-market\PLAY_CONSOLE_GATE_STATUS.json') | ConvertFrom-Json
+if ($config.signingSha256 -notmatch '^([0-9A-Fa-f]{2}:){31}[0-9A-Fa-f]{2}$') { throw 'Play signing fingerprint is missing or invalid.' }
+if ($config.signingSha256 -ne $playGate.play_app_signing_sha256) { throw 'Product config does not match the Play Console signing fingerprint evidence.' }
 if ($generated.enableNotifications -ne $false -or $config.playBillingReady -ne $false) { throw 'Notifications or billing were enabled before reviewed release.' }
 
-Write-Host 'PASS: permanent Android identity is consistent; signing remains fail-closed.'
+Write-Host 'PASS: permanent Android identity and Play signing fingerprint are consistent.'
