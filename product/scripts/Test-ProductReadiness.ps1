@@ -117,6 +117,17 @@ foreach ($rel in @(
   if (-not (Test-Path -LiteralPath (Join-Path $productRoot $rel) -PathType Leaf)) { $failures.Add("missing product file: $rel") }
 }
 
+$storeAssetFinal = Join-Path $productRoot 'store-assets\final'
+$phoneScreenshots = @(
+  Get-ChildItem -LiteralPath $storeAssetFinal -File -ErrorAction SilentlyContinue |
+    Where-Object { $_.Extension -eq '.png' -and $_.Name -match '(?i)(phone|screenshot)' }
+)
+if ($phoneScreenshots.Count -lt 5) {
+  $waits.Add("Google Play phone screenshots: $($phoneScreenshots.Count)/5 minimum prepared")
+} else {
+  $passes.Add("Google Play phone screenshots prepared: $($phoneScreenshots.Count)")
+}
+
 foreach ($testRel in @('tests\Test-StoreListings.ps1','tests\Test-ProductContracts.ps1','tests\Test-ProductIdentity.ps1','tests\Test-MobileShell.ps1','tests\Test-MobileSnapshotAdapter.ps1','tests\Test-JyotishSnapshot.ps1','tests\Test-JyotishPersonalResearch.ps1')) {
   $testPath = Join-Path $productRoot $testRel
   if (-not (Test-Path -LiteralPath $testPath -PathType Leaf)) {
@@ -188,6 +199,10 @@ if (-not (Test-Path -LiteralPath $playGatePath -PathType Leaf)) {
     if ($playGate.digital_asset_links -ne 'VERIFIED_HTTP_200') { $waits.Add('Digital Asset Links publication and verification') } else { $passes.Add('Digital Asset Links publication recorded as HTTP 200') }
     if ($playGate.internal_release -eq 'PUBLISHED_NO_TESTERS') { $waits.Add('select internal testers') }
     elseif ($playGate.internal_release -notmatch '^PUBLISHED') { $waits.Add("Play internal release: $($playGate.internal_release)") }
+    if ($playGate.support_email_verification -ne 'VERIFIED') { $waits.Add('verify support email delivery and public contact') }
+    foreach ($declaration in @('data_safety','content_rating','target_audience','ads_declaration','app_access')) {
+      if ($playGate.$declaration -ne 'SUBMITTED') { $waits.Add("Play Console declaration pending: $declaration") }
+    }
   }
 }
 

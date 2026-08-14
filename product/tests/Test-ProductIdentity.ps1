@@ -16,6 +16,12 @@ foreach ($value in @($config.startPath,$contract.start_path,$generated.startUrl,
   if ([string]$value -match '(?i)product/app|localhost|127\.0\.0\.1|fixture|demo') { throw "Play identity points to a prototype or local source: $value" }
 }
 if ($generated.webManifestUrl -ne 'https://nikolaevkirill-commits.github.io/g-index/manifest.json') { throw 'TWA manifest URL is not the canonical production manifest.' }
+$canonicalClosure = Join-Path $productRoot 'CANONICAL_PLAY_SURFACE_CLOSURE_2026-08-14_UK.md'
+if (-not (Test-Path -LiteralPath $canonicalClosure -PathType Leaf)) { throw 'Canonical Play surface closure is missing.' }
+$canonicalClosureRaw = Get-Content -Raw -Encoding UTF8 -LiteralPath $canonicalClosure
+if ($canonicalClosureRaw -notmatch [regex]::Escape('https://nikolaevkirill-commits.github.io/g-index/?channel=play')) { throw 'Canonical Play surface closure does not name the production Play route.' }
+$prototypeRole = [string]$release.canonical_play_surface.product_app_directory_role
+if ($release.canonical_play_surface.route -ne $config.startPath -or $prototypeRole -ne 'PROTOTYPE_AND_CONTRACT_REFERENCE_NOT_SHIPPED') { throw 'Release manifest does not preserve the production/prototype boundary.' }
 $expectedConsumerBrand = -join @(1053,1077,1073,1086,1088,1080,1090,1084 | ForEach-Object { [char]$_ })
 foreach ($value in @($config.appName,$contract.consumer_brand,$release.product,$generated.name,$generated.launcherName)) {
   if ($value -ne $expectedConsumerBrand) { throw "Consumer brand mismatch or mojibake: $value" }
