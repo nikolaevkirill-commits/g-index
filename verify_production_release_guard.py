@@ -159,6 +159,7 @@ def main() -> None:
     require(index, '<meta property="og:url" content="https://nikolaevkirill-commits.github.io/g-index/"', 'OG root URL')
     require(index, 'id="dashboardToolbar"', 'focused dashboard toolbar')
     require(index, 'id="btnHeaderTools"', 'secondary tools toggle')
+    require(index, 'href="OUTCOME_INTAKE_FORM_v1.html"', 'visible independent outcome form link')
     require(index, '#heroWhyBasic { display: block !important; }', 'always-available score explanation')
     if 'id="heroWhyBasic" style="display:none' in index:
         raise SystemExit('FAIL score explanation is hidden by default')
@@ -217,6 +218,7 @@ def main() -> None:
         'expert_calc': 'expert_calc_scores.json',
         'future_kp': 'future_kp.json',
         'engine_scores': 'engine_scores.json',
+        'outcome_intake_form': 'OUTCOME_INTAKE_FORM_v1.html',
         'aia_vernadsky_refresh_status': 'AIA_VERNADSKY_REFRESH_STATUS_v1.json',
         'aia_vernadsky_daily': 'AIA_VERNADSKY_DAILY_v1.json',
         'aia_vernadsky_audit': 'AIA_VERNADSKY_SHADOW_AUDIT_v1.json',
@@ -227,6 +229,14 @@ def main() -> None:
         if expected != actual:
             raise SystemExit(f'FAIL manifest {field}: expected={expected} actual={actual}')
         print(f'PASS manifest {field}: {actual}')
+
+    outcome_form = release_bytes(ROOT / 'OUTCOME_INTAKE_FORM_v1.html').decode('utf-8')
+    require(outcome_form, "join('\\r\\n')+'\\r\\n'", 'outcome form CSV newline escaping')
+    if "join('\r\n')+'\r\n'" in outcome_form:
+        raise SystemExit('FAIL outcome form contains literal CRLF inside a JavaScript string')
+    form_builder = release_bytes(ROOT / 'build_outcome_intake_form.py').decode('utf-8-sig')
+    require(form_builder, 'newline="\\n"', 'outcome form deterministic LF output')
+    print('PASS independent outcome form JavaScript newline contract')
 
     health_path = ROOT / 'SYSTEM_HEALTH_STATUS_v1.json'
     health = json.loads(release_bytes(health_path).decode('utf-8'))
@@ -243,6 +253,26 @@ def main() -> None:
     ):
         raise SystemExit(f'FAIL independent outcome collector contract: {collector}')
     print('PASS independent outcomes use the fail-closed offline form; Telegram is not required')
+
+    validator_text = release_bytes(ROOT / 'validate_outcome_intake_queue.py').decode('utf-8-sig')
+    importer_text = release_bytes(ROOT / 'import_validated_outcome_queue.py').decode('utf-8-sig')
+    outcome_contract_markers = (
+        'forecast_seen_must_be_0_or_1',
+        'actual_score_must_be_integer_-3_to_3',
+        'actual_class_score_mismatch',
+        'domain_invalid',
+        'confidence_actual_invalid',
+        'expert_or_training_source_reference_forbidden',
+    )
+    missing_contract = [
+        marker for marker in outcome_contract_markers
+        if marker not in validator_text or marker not in importer_text
+    ]
+    if missing_contract:
+        raise SystemExit(f'FAIL validator/importer outcome contract drift: {missing_contract}')
+    if 'raise SystemExit(0 if not issues else 1)' not in validator_text:
+        raise SystemExit('FAIL outcome validator does not fail closed on rejected rows')
+    print('PASS outcome validator and importer enforce the same fail-closed row contract')
 
     decision_audit_path = ROOT / 'DECISION_CONSISTENCY_AUDIT_v1.json'
     decision_audit = json.loads(release_bytes(decision_audit_path).decode('utf-8'))

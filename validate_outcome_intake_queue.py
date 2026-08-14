@@ -15,6 +15,9 @@ QUEUE = CONTROL / "OUTCOME_INTAKE_QUEUE_v1.csv"
 STATUS = CONTROL / "OUTCOME_INTAKE_VALIDATION_v1.json"
 EDITABLE = ("forecast_seen", "actual_score", "actual_class", "domain", "event_summary", "confidence_actual", "notes")
 FORBIDDEN = ("pdf", "excel", "expert", "override", "g-index", "gindex")
+CLASSES = {"AVOID", "CAUTION", "NORMAL", "FAVORABLE", "BEST_WINDOW"}
+DOMAINS = {"work", "health", "travel", "finance", "communication", "other"}
+CONFIDENCE = {"LOW", "MED", "HIGH"}
 KYIV = ZoneInfo("Europe/Kyiv")
 
 
@@ -40,6 +43,18 @@ def prior_prediction(day, created):
         return False
 
 
+def score_class(value: int) -> str:
+    if value <= -2:
+        return "AVOID"
+    if value == -1:
+        return "CAUTION"
+    if value == 0:
+        return "NORMAL"
+    if value == 1:
+        return "FAVORABLE"
+    return "BEST_WINDOW"
+
+
 now = datetime.now(timezone.utc)
 today_kyiv = now.astimezone(KYIV).date()
 records, issues = [], []
@@ -59,13 +74,20 @@ if QUEUE.exists():
                 errors.append("invalid_date")
             if not prior_prediction(day, row.get("prediction_created_at")):
                 errors.append("prediction_not_prior")
+            if str(row.get("forecast_seen", "")).strip() not in {"0", "1"}:
+                errors.append("forecast_seen_must_be_0_or_1")
             actual = numeric(row.get("actual_score"))
-            if actual is None or actual < -3 or actual > 3:
-                errors.append("actual_score_must_be_numeric_-3_to_3")
-            if not str(row.get("actual_class", "")).strip():
-                errors.append("actual_class_required")
-            if not str(row.get("domain", "")).strip():
-                errors.append("domain_required")
+            if actual is None or actual < -3 or actual > 3 or not float(actual).is_integer():
+                errors.append("actual_score_must_be_integer_-3_to_3")
+            label = str(row.get("actual_class", "")).strip().upper()
+            if label not in CLASSES:
+                errors.append("actual_class_invalid")
+            elif actual is not None and float(actual).is_integer() and label != score_class(int(actual)):
+                errors.append("actual_class_score_mismatch")
+            if str(row.get("domain", "")).strip().lower() not in DOMAINS:
+                errors.append("domain_invalid")
+            if str(row.get("confidence_actual", "")).strip().upper() not in CONFIDENCE:
+                errors.append("confidence_actual_invalid")
             summary = str(row.get("event_summary", "")).strip()
             if len(summary) < 8:
                 errors.append("independent_event_summary_required")
@@ -95,3 +117,4 @@ status = {
 CONTROL.mkdir(parents=True, exist_ok=True)
 STATUS.write_text(json.dumps(status, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 print(json.dumps(status, ensure_ascii=False))
+raise SystemExit(0 if not issues else 1)
