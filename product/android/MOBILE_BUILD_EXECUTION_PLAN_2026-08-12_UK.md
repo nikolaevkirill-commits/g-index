@@ -48,6 +48,13 @@
 
 Closed-test build готовий лише коли applicationId/signing/asset links підтверджені, усі hard failures дорівнюють нулю, physical QA evidence існує, privacy/data safety відповідають фактичній поведінці, а digital sales залишаються вимкненими до billing decision.
 
-## Поточний блокер
+## Поточний стан — 2026-08-14
 
-Локально можна продовжувати UI/contracts/tests. Фізичне складання й Play identity не можна чесно закрити без permanent applicationId, signing fingerprint і доступу до Play Console/Android device.
+- permanent applicationId: `com.neborythm.app`;
+- Play identity, address і Android device verification: підтверджені користувачем;
+- Android/Gradle TWA-проєкт: згенерований у `product/android/twa`;
+- target/compile SDK: 36;
+- unsigned release AAB: збирається успішно, версія `1.0.0` (`versionCode 2`);
+- research-шари Tanita, Jyotish і v19.2 залишаються `score_effect=0`.
+
+Незакриті зовнішні блокери: відкрити саме підтверджений Play developer account у поточній browser-сесії, створити app record без дублювання, отримати Play App Signing SHA-256, опублікувати Digital Asset Links, створити й захистити upload key, підписати AAB та виконати фізичний Android QA. Сирий unsigned AAB не завантажувати в Play Console.

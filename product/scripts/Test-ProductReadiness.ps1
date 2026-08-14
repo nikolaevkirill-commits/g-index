@@ -45,6 +45,21 @@ else { $passes.Add('dashboard backtest links resolve internally') }
 if ($twaTemplateRaw -notmatch '"enableNotifications"\s*:\s*false') { $failures.Add('TWA notifications enabled before reviewed push release') }
 else { $passes.Add('TWA notifications fail closed') }
 
+$twaProjectRoot = Join-Path $productRoot 'android\twa'
+foreach ($twaRel in @('twa-manifest.json','settings.gradle','build.gradle','gradlew.bat','app\build.gradle','app\src\main\AndroidManifest.xml')) {
+  if (-not (Test-Path -LiteralPath (Join-Path $twaProjectRoot $twaRel) -PathType Leaf)) {
+    $failures.Add("missing generated TWA project file: $twaRel")
+  }
+}
+$releaseAab = Join-Path $twaProjectRoot 'app\build\outputs\bundle\release\app-release.aab'
+if (Test-Path -LiteralPath $releaseAab -PathType Leaf) {
+  $aabHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $releaseAab).Hash
+  $passes.Add("unsigned release AAB builds successfully (SHA-256 $aabHash)")
+  $waits.Add('signed Play upload AAB')
+} else {
+  $waits.Add('release AAB build')
+}
+
 $storeAssetAudit = Join-Path $productRoot 'store-assets\verify_store_assets.py'
 if (-not (Test-Path -LiteralPath $storeAssetAudit -PathType Leaf)) {
   $failures.Add('missing store asset verifier')
