@@ -6,7 +6,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.201-fp396-FUTURE-RAW-SEMANTICS</title>
+  <title>G-Index — Космофізичний дашборд v88.9.202-fp397-CONTINUOUS-COLOR-SEMANTICS</title>
 
   <script>
     // fp388: the Android TWA opens an explicit free companion channel. It keeps
@@ -9364,7 +9364,7 @@ function renderWeekSummary(){
     days.push({ds, operational, displayScore, reference, source:sourceBase, guards, dow:dowShort, dateNum, mon, isToday:i===0, kpDynamic, rawDynamic});
   }
 
-  const col = s => s===null?'var(--faint)':s>=2?'#63be7b':s>=1?'#9cd49c':s===0?'#9bb1dc':s>=-1?'#ffd2a0':'#ff6b6b';
+  const col = s => s===null?'var(--faint)':s>=2?'#63be7b':s>=0.5?'#9cd49c':s>-0.5?'#9bb1dc':s>-2?'#ffd2a0':'#ff6b6b';
   const green = days.filter(d=>d.displayScore!==null&&d.displayScore>=2).length;
   const greenL = days.filter(d=>d.displayScore!==null&&d.displayScore>=0.5&&d.displayScore<2).length;
   const red = days.filter(d=>d.displayScore!==null&&d.displayScore<=-2).length;
@@ -9387,10 +9387,10 @@ function renderWeekSummary(){
   const cautious = red + redL;
   const weekTone = red>=3?['🔴','Складний прогнозний фон',`${red} дні з G_raw≤−2 · прогноз, не команда`]:
                    red>=2&&cautious>favorable?['🟡','Обережний прогнозний фон',`${red} дні з G_raw≤−2 · більше перевірок`]:
-                   favorable>=4&&red===0&&cautious<=1?['🟢','Сприятливий тиждень','Гарне вікно для дій']:
-                   favorable>cautious&&red<=1?['🟢','Більше сприятливих, ніж складних','Використай активні дні']:
-                   cautious>favorable?['🟡','Обережний тиждень','Більше завершень, менше запусків']:
-                   (favorable===0&&cautious===0)?['⚪','Нейтральний тиждень','Стабільний темп без різких кроків']:
+                   favorable>=4&&red===0&&cautious<=1?['🟢','Переважно вищий raw-контекст','Прогнозний фон, не дозвіл на дію']:
+                   favorable>cautious&&red<=1?['🟢','Більше високих raw-значень','Прогнозний фон, не дозвіл на дію']:
+                   cautious>favorable?['🟡','Переважно нижчий raw-контекст','Прогнозний фон, не оперативна команда']:
+                   (favorable===0&&cautious===0)?['⚪','Нейтральний raw-контекст','Прогнозний фон без готового рішення']:
                    ['⚪','Змішаний тиждень',`${red} низький raw · ${redL} помірно низький raw`];
 
   // Рядок цифр (компактний, знизу)
@@ -9415,12 +9415,12 @@ function renderWeekSummary(){
       <span style="font-size:11px;color:var(--text2)">${weekTone[2]}</span>
     </div>
     <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:11px;color:var(--text2);margin-bottom:6px">
-      ${favorable>0?`<span>🟢 ${favorable} сприятл.</span>`:''}
-      ${neutral>0?`<span>⚪ ${neutral} нейтр.</span>`:''}
-      ${cautious>0?`<span>🔴 ${cautious} обереж.</span>`:''}
-      ${bestStr?`<span style="color:var(--faint)">·</span><span style="color:#9cd49c">Краще: ${bestStr}</span>`:''}
+      ${favorable>0?`<span>🟢 ${favorable} високий raw</span>`:''}
+      ${neutral>0?`<span>⚪ ${neutral} нейтральний raw</span>`:''}
+      ${cautious>0?`<span>🔴 ${cautious} низький raw</span>`:''}
+      ${bestStr?`<span style="color:var(--faint)">·</span><span style="color:#9cd49c">Вищий raw: ${bestStr}</span>`:''}
       ${stopStr?`<span style="color:var(--faint)">·</span><span style="color:#ff6b6b">Низький raw: ${stopStr}</span>`:''}
-      ${mildCautStr?`<span style="color:var(--faint)">·</span><span style="color:#ffa64d">Обережно: ${mildCautStr}</span>`:''}
+      ${mildCautStr?`<span style="color:var(--faint)">·</span><span style="color:#ffa64d">Помірно низький raw: ${mildCautStr}</span>`:''}
     </div>
     <div style="display:flex;gap:1px">${rowHtml}</div>`;
 }

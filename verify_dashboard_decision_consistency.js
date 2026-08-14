@@ -187,6 +187,8 @@ requireText('Health artifact має WARN лише через evidence gates; ц�
 requireText("· наступна ручна вибірка '+manualPending", 'manual evidence count is labeled as the next rolling sample');
 requireText("const displayScore = i===0 ? operational : (isFinite(rawDynamic) ? Number(rawDynamic) : null)", 'week future values retain continuous raw forecasts');
 requireText("d.isToday?'OP NOW':'G_raw forecast'", 'week labels today and future provenance separately');
+requireText("s>=0.5?'#9cd49c':s>-0.5?'#9bb1dc':s>-2?'#ffd2a0'", 'week continuous values use continuous color thresholds');
+requireText('Прогнозний фон, не оперативна команда', 'week forecast tone cannot masquerade as an action command');
 requireText('const displayG3 = isToday ? G_decision : G;', '3-day display uses operation only for today');
 requireText('_tomorrowG = G;', 'tomorrow hero comparison uses continuous forecast raw');
 requireText("isToday?'ОПЕРАТИВНО '+_opScoreTextQ:'FORECAST G_raw '+_futureRawTextQ", '3-day headline separates operation from forecast');
