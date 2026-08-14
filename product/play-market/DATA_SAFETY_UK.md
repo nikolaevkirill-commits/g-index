@@ -11,14 +11,14 @@
 | Email | реєстрація, вхід, reset password | Cloudflare auth Worker/D1 | потрібен endpoint і публічна сторінка |
 | User ID/session | автентифікація | Worker/D1, local storage token | разом з акаунтом |
 | Push endpoint/keys | системні сповіщення | Web Push subscription | unsubscribe та видалення акаунта |
-| Дата/час/місто народження | персональний цикл | профіль користувача | визначити: local-only чи server sync |
+| Дата/час/місто народження | персональний Jyotish | лише локальний профіль; sync вимкнено | локальне видалення та експорт |
 | Налаштування профілю | UX/personalization | local storage або акаунт | очистити локально/з акаунтом |
 | App interactions/outcomes | prospective validation, якщо користувач явно надсилає | outcome form/ledger | окрема згода й видалення |
 | Payment/subscription status | доступ Plus/Pro | Play Billing або web provider | фінансові записи за законом можуть мати retention |
 
 ## Потрібно підтвердити
 
-- Чи передаються точні координати на сервер. За поточним дизайном бажано обчислювати/зберігати локально.
+- Точні координати не повинні передаватися на сервер у поточному MVP: контракт `jyotish-profile.example.json` вимагає `LOCAL_ONLY`, `sync_enabled=false`, явну згоду, експорт і видалення.
 - Чи є analytics/telemetry у Play build.
 - Чи містить TWA сторонні SDK або web trackers.
 - Чи всі мережеві дані шифруються HTTPS.

@@ -1,5 +1,7 @@
 # Закриття продуктового аудиту — 12.08.2026
 
+> Цей документ є історичним зрізом. Стан зовнішніх воріт оновлено 14.08.2026 у `play-market/PLAY_CONSOLE_GATE_STATUS.json`; package ID, signing fingerprint, asset links, app creation і internal AAB вже виконані. Відкриті ворота: прийняття privacy candidate v3, реальні internal testers, фізичний runtime/network QA та Play declarations.
+
 ## Що готово
 
 - Окремий безкоштовний Play companion відкривається через `/g-index/?channel=play`.

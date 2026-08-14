@@ -109,6 +109,7 @@ foreach ($rel in @(
   'play-market\TRADEMARK_AND_NAME_CLEARANCE_CHECKLIST_UK.md',
   'play-market\COST_AND_LAUNCH_SEQUENCE_2026-08-12_UK.md',
   'qa\BROWSER_RESPONSIVE_QA_2026-08-12.json',
+  'qa\LOCAL_CLOSURE_STATUS_2026-08-14.json',
   'store-assets\STORE_ASSET_PROVENANCE_v1.json',
   'store-assets\final\neborytm-feature-graphic-1024x500-v1.png',
   'store-assets\final\neborytm-icon-512-v1.png'

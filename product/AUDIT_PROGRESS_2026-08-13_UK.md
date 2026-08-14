@@ -1,5 +1,15 @@
 # Стан аудиту й продукту — 13.08.2026
 
+> Оновлення 14.08.2026: попередні Play-gates нижче є історичним зрізом. Актуальний машинний стан міститься у `play-market/PLAY_CONSOLE_GATE_STATUS.json` та `qa/LOCAL_CLOSURE_STATUS_2026-08-14.json`.
+
+## Актуальний стан 14.08.2026
+
+- Play registration, identity, address, phone/device verification, application ID, App Signing SHA-256, app creation і Digital Asset Links підтверджені.
+- AAB `1.0.0 (2)` прийнята й опублікована в internal track; privacy candidate versionCode 3 з `allowBackup=false` зібрана, але її прийняття Play Console ще не підтверджене.
+- Internal track не має вибраних тестувальників; фізичний smoke/network test не виконаний.
+- Jyotish Personal research-engine реалізує D1, D9, 9 graha, 12 bhava і Vimshottari; автоматичні тести PASS, але consumer activation заблоковано до 100 незалежних карт та editorial review.
+- Dashboard consistency, production release guard, TWA generator і product preflight повторно пройдені; локальних hard failures немає.
+
 ## Закрито локально
 
 - Новий експертний прогноз `+10.8-23.8_ПРОГНОЗ.pdf` візуально звірений; SHA-256 `6A8A465EC58F5412EE28CA0F964D44D05888BADA02B435CEFEE1CCDA12715048`.
@@ -43,4 +53,4 @@
 - Канонічний календар містить 165 дат (20.07–31.12.2026) і покриває дату релізного аудиту.
 - Тест посилено: опублікований `product/app/jyotish-snapshot.json` тепер обов'язково звіряється з канонічним календарем за значенням і UTC-межами кожного сегмента.
 - Jyotish snapshot, mobile shell і product contracts після посилення тесту: PASS.
-- `Jyotish Personal` не позначається готовим: D1, D9, Lagna, bhava і Dasha залишаються fail-closed до зафіксованого ephemeris/license рішення, golden vectors, незалежної перевірки 100 карт і privacy flow.
+- `Jyotish Personal` не позначається consumer-ready: D1, D9, graha, bhava і Vimshottari вже реалізовані у research-engine; privacy flow зафіксований local-only, але лишаються незалежна перевірка 100 карт та editorial review.
