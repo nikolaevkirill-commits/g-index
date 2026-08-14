@@ -13,6 +13,8 @@ $passwordPath = Join-Path $secretDir 'upload-password.dpapi.txt'
 $unsignedAab = Join-Path $ProjectRoot 'app\build\outputs\bundle\release\app-release.aab'
 $signedAab = Join-Path $ProjectRoot 'app\build\outputs\bundle\release\app-release-signed.aab'
 $evidencePath = Join-Path $ProjectRoot '..\PLAY_UPLOAD_BUILD_EVIDENCE.json'
+$productConfigPath = Join-Path $ProjectRoot '..\..\product.config.json'
+$productConfig = Get-Content -Raw -Encoding UTF8 -LiteralPath $productConfigPath | ConvertFrom-Json
 
 if (-not (Test-Path -LiteralPath $unsignedAab -PathType Leaf)) {
   throw "Unsigned release AAB not found: $unsignedAab"
@@ -54,13 +56,13 @@ $bundleHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $signedAab).Hash
   schema = 'neborythm_play_upload_build_evidence_v1'
   generated_at = (Get-Date).ToString('yyyy-MM-ddTHH:mm:ssK')
   application_id = 'com.neborythm.app'
-  version_name = '1.0.0'
-  version_code = 2
+  version_name = [string]$productConfig.versionName
+  version_code = [int]$productConfig.versionCode
   target_sdk = 36
   signed_aab = 'product/android/twa/app/build/outputs/bundle/release/app-release-signed.aab'
   signed_aab_sha256 = $bundleHash
   upload_certificate_sha256 = $uploadSha256
-  play_app_signing_sha256 = 'PENDING_FIRST_PLAY_RELEASE'
+  play_app_signing_sha256 = [string]$productConfig.signingSha256
   verification = 'JARSIGNER_PASS_SELF_SIGNED_UPLOAD_CERT_EXPECTED'
   secret_storage = 'LOCAL_DPAPI_ONLY_NOT_IN_GIT'
 } | ConvertTo-Json -Depth 4 | Set-Content -Encoding UTF8 -LiteralPath $evidencePath

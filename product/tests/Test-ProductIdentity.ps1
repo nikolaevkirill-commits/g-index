@@ -16,6 +16,10 @@ foreach ($value in @($config.startPath,$contract.start_path,$generated.startUrl,
   if ([string]$value -match '(?i)product/app|localhost|127\.0\.0\.1|fixture|demo') { throw "Play identity points to a prototype or local source: $value" }
 }
 if ($generated.webManifestUrl -ne 'https://nikolaevkirill-commits.github.io/g-index/manifest.json') { throw 'TWA manifest URL is not the canonical production manifest.' }
+$expectedConsumerBrand = -join @(1053,1077,1073,1086,1088,1080,1090,1084 | ForEach-Object { [char]$_ })
+foreach ($value in @($config.appName,$contract.consumer_brand,$release.product,$generated.name,$generated.launcherName)) {
+  if ($value -ne $expectedConsumerBrand) { throw "Consumer brand mismatch or mojibake: $value" }
+}
 $playGate = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $productRoot 'play-market\PLAY_CONSOLE_GATE_STATUS.json') | ConvertFrom-Json
 if ($config.signingSha256 -notmatch '^([0-9A-Fa-f]{2}:){31}[0-9A-Fa-f]{2}$') { throw 'Play signing fingerprint is missing or invalid.' }
 if ($config.signingSha256 -ne $playGate.play_app_signing_sha256) { throw 'Product config does not match the Play Console signing fingerprint evidence.' }

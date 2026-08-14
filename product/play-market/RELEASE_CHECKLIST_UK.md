@@ -34,11 +34,15 @@
 ## Android gate
 
 - [x] Постійний application ID `com.neborythm.app` затверджено й автоматично звіряється.
-- [ ] Play App Signing увімкнено; fingerprint зафіксовано.
-- [ ] TWA зібрана актуальним Bubblewrap/Android toolchain.
-- [ ] `/.well-known/assetlinks.json` доступний без redirect/HTML.
-- [ ] `.aab` відповідає актуальній Target API policy.
-- [ ] Internal testing PASS, потім closed testing PASS.
+- [x] Play App Signing увімкнено; SHA-256 fingerprint зафіксовано без приватного ключа.
+- [x] TWA зібрана Android toolchain; підписана `.aab` прийнята Play Console як `1.0.0 (2)`.
+- [x] `/.well-known/assetlinks.json` повертає HTTP 200 `application/json` для Play App Signing certificate.
+- [x] Play Console прийняла `.aab` з target SDK 36.
+- [x] Internal release опублікований у track.
+- [x] Privacy candidate `versionCode 3` з `allowBackup=false` зібраний, підписаний і локально перевірений.
+- [ ] Play Console прийняла `versionCode 3` та ним оновлено internal release.
+- [ ] До internal track додані тестувальники й виконаний фізичний smoke test.
+- [ ] Closed testing: щонайменше 12 тестувальників протягом 14 безперервних днів, потім production access.
 
 ## Forecast integrity gate
 
