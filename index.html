@@ -14,7 +14,18 @@
     // surfaces until the corresponding Play policy gates are implemented.
     try {
       window.GINDEX_PLAY_CHANNEL = new URLSearchParams(location.search).get('channel') === 'play';
-      if (window.GINDEX_PLAY_CHANNEL) document.documentElement.classList.add('play-channel');
+      if (window.GINDEX_PLAY_CHANNEL) {
+        document.documentElement.classList.add('play-channel');
+        document.title = 'Неборитм — ритм дня';
+        document.addEventListener('DOMContentLoaded', () => {
+          const title = document.getElementById('headerTitle');
+          const subtitle = document.getElementById('headerSub');
+          const notice = document.getElementById('playChannelNotice');
+          if (title) title.textContent = 'Неборитм';
+          if (subtitle) subtitle.textContent = 'Ритм дня · Джйотіш · Планети · Космічна погода';
+          if (notice) notice.textContent = 'Ваші дані залишаються на пристрої · без покупок і хмарного акаунта';
+        }, { once: true });
+      }
     } catch (_e) { window.GINDEX_PLAY_CHANNEL = false; }
   </script>
 
@@ -24246,6 +24257,7 @@ function initSimpleMode(){
   // fp92: default = simple mode для нових (перший відкриття без збереженого налаштування)
   const _hasSimplePref = (function(){ try { return localStorage.getItem('gindex_simple_mode') !== null; } catch(e){ return true; } })();
   const _savedSimple = (function(){ try {
+    if(window.GINDEX_PLAY_CHANNEL) return true;
     if(!_hasSimplePref) return true; // new user → simple by default
     return localStorage.getItem('gindex_simple_mode') === '1';
   } catch(e){ return true; } })();
