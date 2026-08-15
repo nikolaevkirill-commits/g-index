@@ -292,6 +292,9 @@ forbidText('Сигнали розходяться: позитивний PDF не
 requireText('↻ Оновити дані', 'data refresh button is explicit');
 requireText('Оновити застосунок</button>', 'PWA update action is distinct from data refresh');
 forbidText('aria-label="Оновити дані з NOAA">↻ Оновити</button>', 'data refresh button cannot masquerade as app update');
+requireText('Встановити NeboRhythm', 'PWA install surface uses the product brand');
+requireText('Доступне оновлення NeboRhythm', 'PWA update surface uses the product brand');
+forbidText('Встановити G-Index', 'PWA install surface cannot regress to the engine brand');
 requireText("br+span[style*=\"font-size:10px\"]::before{content:'· '", 'compact Panchanga labels keep a visible separator');
 requireText('id="dashboardToolbar"', 'focused dashboard toolbar exists');
 requireText('id="btnHeaderTools"', 'secondary tools have an explicit toggle');
