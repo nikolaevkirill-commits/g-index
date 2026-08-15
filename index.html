@@ -6,7 +6,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.203-fp398-MOBILE-FORECAST-NAV</title>
+  <title>G-Index — Космофізичний дашборд v88.9.204-fp399-PLAY-DATA-FAIL-CLOSED</title>
 
   <script>
     // fp388: the Android TWA opens an explicit free companion channel. It keeps
@@ -4682,6 +4682,11 @@ document.addEventListener('DOMContentLoaded', () => {
 const GAUTH_WORKER_URL = 'https://gindex-auth.nikolaev-kirill.workers.dev';
 const GAUTH_TOKEN_KEY = 'gindex_session_token';
 const GAUTH_USER_KEY = 'gindex_user';
+function _gauthRequireNetworkAllowed(){
+  if(window.GINDEX_PLAY_CHANNEL){
+    throw new Error('Акаунт і серверна синхронізація вимкнені у версії Google Play.');
+  }
+}
 
 // v88.9.6x-fp260: VAPID public key для Web Push — раніше НІДЕ в коді не
 // встановлювався (window._vapid_public_key завжди був undefined), тому PUSH
@@ -4715,6 +4720,7 @@ const GAuth = {
   getTier(){ return this.getUser()?.tier || 'free'; },
 
   async signup(email, password){
+    _gauthRequireNetworkAllowed();
     let r;
     try {
       r = await fetch(GAUTH_WORKER_URL + '/auth/signup', {
@@ -4736,6 +4742,7 @@ const GAuth = {
   },
 
   async login(email, password){
+    _gauthRequireNetworkAllowed();
     let r;
     try {
       r = await fetch(GAUTH_WORKER_URL + '/auth/login', {
@@ -4759,6 +4766,7 @@ const GAuth = {
   // [fp263] Той самий паттерн, що login/signup — jsonResponse/errorResponse
   // на сервері вже узгоджені, просто нові endpoints.
   async forgotPassword(email){
+    _gauthRequireNetworkAllowed();
     let r;
     try {
       r = await fetch(GAUTH_WORKER_URL + '/auth/forgot-password', {
@@ -4776,6 +4784,7 @@ const GAuth = {
   },
 
   async resetPassword(token, newPassword){
+    _gauthRequireNetworkAllowed();
     let r;
     try {
       r = await fetch(GAUTH_WORKER_URL + '/auth/reset-password', {
@@ -4793,6 +4802,7 @@ const GAuth = {
   },
 
   async verifyEmail(token){
+    _gauthRequireNetworkAllowed();
     let r;
     try {
       r = await fetch(GAUTH_WORKER_URL + '/auth/verify-email', {
@@ -4811,7 +4821,7 @@ const GAuth = {
 
   async logout(){
     const token = this.getToken();
-    if (token) {
+    if (token && !window.GINDEX_PLAY_CHANNEL) {
       try {
         await fetch(GAUTH_WORKER_URL + '/auth/logout', {
           method:'POST', headers:{'Authorization': 'Bearer ' + token},
@@ -5711,7 +5721,7 @@ const PUSH = (function(){
   // наявності VAPID-ключа. Worker-доступність перевіряється фактичним
   // запитом у subscribe(), не тут (немає сенсу тримати другий health-check).
   function isConfigured(){
-    return !!window._vapid_public_key;
+    return !window.GINDEX_PLAY_CHANNEL && !!window._vapid_public_key;
   }
 
   function currentPermission(){
@@ -5739,6 +5749,7 @@ const PUSH = (function(){
   }
 
   async function subscribe(){
+    if(window.GINDEX_PLAY_CHANNEL) throw new Error('Push вимкнено у версії Google Play.');
     if(!isSupported()) throw new Error('Push не підтримується цим браузером');
     if(!isConfigured()) throw new Error('Push ще не налаштовано на сервері');
 
@@ -5821,7 +5832,7 @@ const PUSH = (function(){
     await sub.unsubscribe();
     // Видалити на Worker-стороні, якщо є токен (fp260: замість Supabase delete).
     const token = GAuth.getToken();
-    if(token){
+    if(token && !window.GINDEX_PLAY_CHANNEL){
       try{
         await fetch(GAUTH_WORKER_URL + '/push/unsubscribe', {
           method: 'POST',

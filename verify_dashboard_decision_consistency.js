@@ -286,6 +286,9 @@ forbidText('data-score-effect="1"', 'v19.2 shadow cannot acquire production scor
 requireText('window.GINDEX_PLAY_CHANNEL', 'Play companion channel is explicit');
 requireText('play-channel #paywallOverlay', 'Play companion hides digital purchases');
 requireText("window.GINDEX_PLAY_CHANNEL ? 'basic'", 'Play companion uses the local Basic feature set');
+requireText('_gauthRequireNetworkAllowed()', 'Play companion blocks auth network calls at execution level');
+requireText("if(window.GINDEX_PLAY_CHANNEL) throw new Error('Push вимкнено у версії Google Play.')", 'Play companion blocks push subscription at execution level');
+requireText('return !window.GINDEX_PLAY_CHANNEL && !!window._vapid_public_key', 'Play companion reports push as unconfigured');
 forbidText('href="backtest.html"', 'dashboard cannot link to a missing backtest page');
 requireText('Сигнали розходяться: PDF/Engine reference не є оперативним дозволом.', 'divergence notice is sign-neutral');
 forbidText('Сигнали розходяться: позитивний PDF не є дозволом.', 'negative PDF cannot be mislabeled as positive');

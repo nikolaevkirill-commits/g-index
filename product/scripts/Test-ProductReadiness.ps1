@@ -44,6 +44,11 @@ if ($swRaw -match "showNotification\(payload\.title \|\| 'G-Index'" -or $swRaw -
 else { $passes.Add('push notification surface uses NeboRhythm product brand') }
 if ($indexRaw -notmatch 'GINDEX_PLAY_CHANNEL' -or $indexRaw -notmatch 'channel.*play' -or $indexRaw -notmatch 'play-channel #paywallOverlay') { $failures.Add('Play companion channel does not fail closed on web purchases') }
 else { $passes.Add('Play companion disables web purchases') }
+if ($indexRaw -notmatch '_gauthRequireNetworkAllowed\(\)' -or
+    $indexRaw -notmatch 'return !window\.GINDEX_PLAY_CHANNEL && !!window\._vapid_public_key' -or
+    $indexRaw -notmatch "if\(window\.GINDEX_PLAY_CHANNEL\) throw new Error\('Push") {
+  $failures.Add('Play companion does not block auth/push at execution level')
+} else { $passes.Add('Play companion blocks auth and push network actions') }
 if ($indexRaw -match 'href="backtest\.html"') { $failures.Add('dashboard contains broken backtest.html link') }
 else { $passes.Add('dashboard backtest links resolve internally') }
 if ($twaTemplateRaw -notmatch '"enableNotifications"\s*:\s*false') { $failures.Add('TWA notifications enabled before reviewed push release') }

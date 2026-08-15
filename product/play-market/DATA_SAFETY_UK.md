@@ -26,12 +26,12 @@
 
 ## Перевірка фактичної Android-збірки — 15.08.2026
 
-- Перевірено новий підписаний кандидат `1.0.0 (3)`; SHA-256 AAB: `B66FDB1E09DB9EA4F44FA17459B903E72C701C7FEBB984F0B9798A93EF74F789`, розмір `1 248 853` байти. Цей кандидат ще має бути прийнятий Play Console.
+- Перевірено новий підписаний кандидат `1.0.0 (3)`; SHA-256 AAB: `9BD94A1035C446B2FFCE71D5C55214F08E891311324E446573A2B61BA60F7127`, розмір `1 248 850` байтів. Цей кандидат ще має бути прийнятий Play Console.
 - Формат застосунку: Trusted Web Activity; `minSdk=21`, `targetSdk=36`; пряма Android-залежність — `com.google.androidbrowserhelper:androidbrowserhelper:2.6.2`.
 - Повний `releaseRuntimeClasspath` не містить Firebase, Google Analytics, рекламних, платіжних, crash-reporting або social SDK. Транзитивні залежності — AndroidX, Kotlin runtime/coroutines та Guava, які потрібні Android Browser Helper.
 - У release merged manifest немає дозволів на Advertising ID, точну/приблизну геолокацію, камеру, мікрофон, контакти, телефон, календар, SMS або спільні файли. Є лише внутрішній signature permission `com.neborythm.app.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`.
-- `android:allowBackup=false`; native notification integration вимкнена (`enableNotifications=false`). Вбудований web manifest у підписаному AAB має бренд `NeboRhythm` і версію `88.9.203-fp398`.
-- Play-канал `?channel=play` приховує auth, push, web-продажі та paywall. Профіль Jyotish і журнал зберігаються в `localStorage`; точна геолокація запитується браузером лише після явної дії користувача й використовується для локального розрахунку.
+- `android:allowBackup=false`; native notification integration вимкнена (`enableNotifications=false`). Вбудований web manifest у підписаному AAB має бренд `NeboRhythm` і версію `88.9.204-fp399`.
+- Play-канал `?channel=play` приховує auth, push, web-продажі та paywall; auth/push додатково блокуються на рівні виконання до будь-якого Worker або Push API запиту. Профіль Jyotish і журнал зберігаються в `localStorage`; точна геолокація запитується браузером лише після явної дії користувача й використовується для локального розрахунку.
 - Веб-рівень звертається по HTTPS до публічних джерел космічної погоди та до same-origin JSON. Код auth/push Worker залишається у спільному web bundle, хоча його інтерфейс у Play-каналі прихований. Тому native-аудит сам по собі не доводить відсутність web-збору даних.
 - Машинний знімок доказів: `AAB_DATA_SAFETY_INVENTORY_2026-08-15.json`.
 
