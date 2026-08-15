@@ -48,6 +48,16 @@
 
 Closed-test build готовий лише коли applicationId/signing/asset links підтверджені, усі hard failures дорівнюють нулю, physical QA evidence існує, privacy/data safety відповідають фактичній поведінці, а digital sales залишаються вимкненими до billing decision.
 
+## Автоматичний фізичний capture
+
+Після встановлення versionCode 3 або новішої саме з internal track і підключення одного авторизованого Android через USB запустити:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File product\scripts\Invoke-AndroidPhysicalQa.ps1
+```
+
+Скрипт fail-closed: не працює без одного пристрою, без встановленого `com.neborythm.app`, зі старим versionCode або без доказу інсталятора `com.android.vending`. Він автоматично збирає 5 скриншотів і machine-readable evidence, але не ставить PASS без подальшої візуальної перевірки.
+
 ## Поточний стан — 2026-08-14
 
 - permanent applicationId: `com.neborythm.app`;

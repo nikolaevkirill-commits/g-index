@@ -117,6 +117,7 @@ foreach ($rel in @(
   'play-market\RELEASE_CHECKLIST_UK.md',
   'play-market\PLAY_CONSOLE_SUBMISSION_DRAFT_UK.md',
   'play-market\TRADEMARK_AND_NAME_CLEARANCE_CHECKLIST_UK.md',
+  'scripts\Invoke-AndroidPhysicalQa.ps1',
   'play-market\COST_AND_LAUNCH_SEQUENCE_2026-08-12_UK.md',
   'qa\BROWSER_RESPONSIVE_QA_2026-08-12.json',
   'qa\LOCAL_CLOSURE_STATUS_2026-08-14.json',
