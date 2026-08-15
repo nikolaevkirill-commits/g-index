@@ -6,7 +6,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.202-fp397-CONTINUOUS-COLOR-SEMANTICS</title>
+  <title>G-Index — Космофізичний дашборд v88.9.203-fp398-MOBILE-FORECAST-NAV</title>
 
   <script>
     // fp388: the Android TWA opens an explicit free companion channel. It keeps
@@ -25595,7 +25595,7 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line205
 const MNAV_SECTIONS = {
   now:      ['heroCard','daySentenceCard','decisionStrip','decisionTiming','impactBlock','astroGrid','wf3SignalSummary','profileBar','profileRec','mainGrid','swipeHint3','threeCard'],
   panch:    ['heroCard','daySentenceCard','decisionStrip','wf3SignalSummary','mainGrid','panchCard','swipeHint3','threeCard'],
-  fcst:     ['heroCard','daySentenceCard','decisionStrip','swipeHint27','twentysevenCard','backtestCard'],
+  fcst:     ['threeCard','swipeHint27','twentysevenCard','backtestCard'],
   personal: ['heroCard','daySentenceCard','decisionStrip','personalCard']
 };
 
@@ -25630,8 +25630,16 @@ function mnavGo(tab, scroll) {
     if (h) h.style.display = 'flex';
   }
 
-  // Scroll to top ТІЛЬКИ при явному кліку (scroll=true), НЕ при resize/init
-  if (scroll) window.scrollTo({ top: 0, behavior: 'smooth' });
+  // Explicit mobile navigation must land on the selected content, not on Hero.
+  if (scroll) {
+    const targetId = tab === 'fcst' ? 'threeCard'
+      : tab === 'panch' ? 'panchCard'
+      : tab === 'personal' ? 'personalCard'
+      : 'heroCard';
+    requestAnimationFrame(() => {
+      document.getElementById(targetId)?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    });
+  }
 
   // Save state
   lsSet('mnavTab', tab);

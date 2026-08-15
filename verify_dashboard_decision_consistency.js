@@ -309,6 +309,9 @@ requireText('try{ initCachedGeolocation(); }catch(e){} cp(2);', 'boot uses cache
 forbidText('try{ initGeolocation(); }catch(e){} cp(2);', 'boot cannot open a geolocation permission prompt');
 requireText("btn.setAttribute('aria-label', isOn ? 'Повний вигляд' : 'Простий вигляд')", 'simple-mode accessible name follows visible text');
 requireText('aria-label="Профіль"', 'mobile profile navigation name matches visible text');
+requireText("fcst:     ['threeCard','swipeHint27','twentysevenCard','backtestCard']", 'mobile forecast route exposes both forecast horizons without repeating Hero');
+requireText("tab === 'fcst' ? 'threeCard'", 'mobile forecast route lands on the 3-day forecast');
+forbidText("fcst:     ['heroCard','daySentenceCard','decisionStrip','swipeHint27','twentysevenCard','backtestCard']", 'mobile forecast route cannot hide the 3-day forecast behind Hero');
 requireText("_btn.setAttribute('aria-label','Аудит: показати розкладку висновку')", 'audit control restores a visible-name-compatible label when closed');
 requireText('color:#a9bad8">Health artifact', 'health evidence explanation keeps readable contrast');
 forbidText('aria-label="v19.2 SHADOW:', 'v19 shadow summary uses its full visible text as the accessible name');
