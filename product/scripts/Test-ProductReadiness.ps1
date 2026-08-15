@@ -106,6 +106,7 @@ foreach ($rel in @(
   'android\assetlinks.template.json',
   'play-market\STORE_LISTING_UK.md',
   'play-market\DATA_SAFETY_UK.md',
+  'play-market\AAB_DATA_SAFETY_INVENTORY_2026-08-15.json',
   'play-market\PRIVACY_POLICY_UK.md',
   'play-market\ACCOUNT_DELETION_UK.md',
   'play-market\RELEASE_CHECKLIST_UK.md',
@@ -119,6 +120,21 @@ foreach ($rel in @(
   'store-assets\final\neborytm-icon-512-v1.png'
 )) {
   if (-not (Test-Path -LiteralPath (Join-Path $productRoot $rel) -PathType Leaf)) { $failures.Add("missing product file: $rel") }
+}
+
+$dataSafetyInventoryPath = Join-Path $productRoot 'play-market\AAB_DATA_SAFETY_INVENTORY_2026-08-15.json'
+if (Test-Path -LiteralPath $dataSafetyInventoryPath -PathType Leaf) {
+  try { $dataSafetyInventory = Get-Content -Raw -Encoding UTF8 -LiteralPath $dataSafetyInventoryPath | ConvertFrom-Json }
+  catch { $failures.Add("invalid AAB Data Safety inventory: $($_.Exception.Message)"); $dataSafetyInventory = $null }
+  if ($dataSafetyInventory) {
+    if ((Test-Path -LiteralPath $signedReleaseAab -PathType Leaf) -and
+        $dataSafetyInventory.candidate.signed_aab_sha256 -ne (Get-FileHash -Algorithm SHA256 -LiteralPath $signedReleaseAab).Hash) {
+      $failures.Add('AAB Data Safety inventory hash is stale')
+    } else { $passes.Add('AAB Data Safety inventory matches signed candidate') }
+    if ($dataSafetyInventory.native_manifest.allow_backup -ne $false) { $failures.Add('AAB Data Safety inventory does not record backup as disabled') }
+    if ($dataSafetyInventory.dependencies.analytics_ads_crash_payment_social_sdk_found -ne $false) { $failures.Add('unreviewed analytics/ads/crash/payment/social SDK recorded in candidate') }
+    if ($dataSafetyInventory.web_runtime.physical_android_network_capture_complete -ne $true) { $waits.Add('physical Android TWA runtime network capture for Data Safety') }
+  }
 }
 
 $storeAssetFinal = Join-Path $productRoot 'store-assets\final'

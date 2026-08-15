@@ -24,14 +24,22 @@
 - Чи всі мережеві дані шифруються HTTPS.
 - Які retention periods у D1, push і outcome ledger.
 
-## Перевірка фактичної Android-збірки — 14.08.2026
+## Перевірка фактичної Android-збірки — 15.08.2026
 
-- Перевірено підписану й прийняту Play Console збірку `1.0.0 (2)`; SHA-256 AAB: `85E32579020945B0274D4F1C2541D5CDB3CBD9E379410042C118ADD3F30DD2E0`.
-- Формат застосунку: Trusted Web Activity; пряма Android-залежність — `com.google.androidbrowserhelper:androidbrowserhelper:2.6.2`.
-- У merged manifest не знайдено дозволів на рекламу/Advertising ID, геолокацію, камеру, мікрофон, контакти, телефон або файли. Є лише внутрішній signature permission `com.neborythm.app.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`.
-- `enableNotifications=false`; Play-канал приховує auth, push і web-продажі.
-- У прийнятій збірці versionCode 2 було `allowBackup=true`. У виправленому кандидатові versionCode 3 встановлено `allowBackup=false`; AAB зібрана й підписана, але ще має бути прийнята Play Console.
-- Ця перевірка не доводить відсутність web-збору даних: TWA завантажує HTTPS web-контент і публічні джерела прогнозу. Перед фінальним заповненням форми потрібен runtime network capture на фізичному Android.
+- Перевірено новий підписаний кандидат `1.0.0 (3)`; SHA-256 AAB: `B66FDB1E09DB9EA4F44FA17459B903E72C701C7FEBB984F0B9798A93EF74F789`, розмір `1 248 853` байти. Цей кандидат ще має бути прийнятий Play Console.
+- Формат застосунку: Trusted Web Activity; `minSdk=21`, `targetSdk=36`; пряма Android-залежність — `com.google.androidbrowserhelper:androidbrowserhelper:2.6.2`.
+- Повний `releaseRuntimeClasspath` не містить Firebase, Google Analytics, рекламних, платіжних, crash-reporting або social SDK. Транзитивні залежності — AndroidX, Kotlin runtime/coroutines та Guava, які потрібні Android Browser Helper.
+- У release merged manifest немає дозволів на Advertising ID, точну/приблизну геолокацію, камеру, мікрофон, контакти, телефон, календар, SMS або спільні файли. Є лише внутрішній signature permission `com.neborythm.app.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`.
+- `android:allowBackup=false`; native notification integration вимкнена (`enableNotifications=false`). Вбудований web manifest у підписаному AAB має бренд `NeboRhythm` і версію `88.9.203-fp398`.
+- Play-канал `?channel=play` приховує auth, push, web-продажі та paywall. Профіль Jyotish і журнал зберігаються в `localStorage`; точна геолокація запитується браузером лише після явної дії користувача й використовується для локального розрахунку.
+- Веб-рівень звертається по HTTPS до публічних джерел космічної погоди та до same-origin JSON. Код auth/push Worker залишається у спільному web bundle, хоча його інтерфейс у Play-каналі прихований. Тому native-аудит сам по собі не доводить відсутність web-збору даних.
+- Машинний знімок доказів: `AAB_DATA_SAFETY_INVENTORY_2026-08-15.json`.
+
+## Що можна й не можна заявляти в Play Console
+
+- Підтверджено: AAB не запитує чутливих Android-дозволів, не містить рекламного ID чи сторонніх analytics/ads SDK, не дозволяє Android backup.
+- Ще не підтверджено: повний список фактичних HTTP-запитів TWA на фізичному Android та поведінка всіх web-модулів у Play-каналі.
+- До runtime network capture не ставити «дані не збираються». Заповнювати форму консервативно за реально доступними сценаріями або прибрати серверний код із Play bundle окремою збіркою.
 
 ## Fail-closed правило
 
