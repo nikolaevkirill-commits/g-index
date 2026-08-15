@@ -29,7 +29,11 @@
 - [ ] Web runtime traffic звірено фізичним Android network capture перед Data Safety submission.
 - [ ] Support email активний.
 - [x] Content rating, target audience, ads і app access підготовлені як однозначний worksheet.
-- [ ] Content rating, target audience, ads і app access фактично подані в Play Console.
+- [x] Target audience (18+), ads (немає) і app access (немає закритих розділів) збережені в Play Console.
+- [x] Privacy URL, категорія Lifestyle, government/financial/health declarations і контактні дані збережені; контактні дані опубліковані.
+- [ ] IARC content rating фактично заповнений і поданий власником у Play Console.
+- [ ] Data Safety фактично подано після фізичного Android network capture.
+- [ ] Store listing завершено з фактичними phone/tablet screenshots.
 - [x] Play companion приховує web-продажі, auth і push до окремого reviewed release.
 - [x] TWA `enableNotifications=false`; preflight блокує передчасне повернення push.
 

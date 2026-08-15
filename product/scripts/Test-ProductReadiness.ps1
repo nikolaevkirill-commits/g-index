@@ -240,7 +240,12 @@ if (-not (Test-Path -LiteralPath $playGatePath -PathType Leaf)) {
     elseif ($playGate.internal_release -notmatch '^PUBLISHED') { $waits.Add("Play internal release: $($playGate.internal_release)") }
     if ($playGate.support_email_verification -ne 'VERIFIED') { $waits.Add('verify support email delivery and public contact') }
     foreach ($declaration in @('data_safety','content_rating','target_audience','ads_declaration','app_access')) {
-      if ($playGate.$declaration -ne 'SUBMITTED') { $waits.Add("Play Console declaration pending: $declaration") }
+      $declarationStatus = [string]$playGate.$declaration
+      if ($declarationStatus -notmatch '^(SAVED|SUBMITTED)') {
+        $waits.Add("Play Console declaration pending: $declaration")
+      } else {
+        $passes.Add("Play Console declaration recorded: $declaration ($declarationStatus)")
+      }
     }
   }
 }
