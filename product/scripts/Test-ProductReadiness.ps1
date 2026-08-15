@@ -75,7 +75,7 @@ if ((Test-Path -LiteralPath $signedReleaseAab -PathType Leaf) -and (Test-Path -L
   if ($uploadEvidence) {
     $actualSignedHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $signedReleaseAab).Hash
     if ($actualSignedHash -ne $uploadEvidence.signed_aab_sha256) { $failures.Add('signed AAB hash does not match Play upload evidence') }
-    elseif ($uploadEvidence.play_console_acceptance -ne 'ACCEPTED_INTERNAL_TRACK_2026-08-14') { $waits.Add("Play Console acceptance of signed candidate versionCode $($uploadEvidence.version_code)") }
+    elseif ($uploadEvidence.play_console_acceptance -ne 'ACCEPTED_INTERNAL_TRACK_2026-08-15') { $waits.Add("Play Console acceptance of signed candidate versionCode $($uploadEvidence.version_code)") }
     else { $passes.Add("signed AAB accepted by Play internal track (SHA-256 $actualSignedHash)") }
   }
 } else {

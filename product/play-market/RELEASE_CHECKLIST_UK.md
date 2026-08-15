@@ -46,7 +46,7 @@
 - [x] Play Console прийняла `.aab` з target SDK 36.
 - [x] Internal release опублікований у track.
 - [x] Privacy candidate `versionCode 3` з `allowBackup=false` зібраний, підписаний і локально перевірений.
-- [ ] Play Console прийняла `versionCode 3` та ним оновлено internal release.
+- [x] Play Console прийняла `versionCode 3` та ним оновлено internal release (15.08.2026; доступний внутрішнім тестувальникам).
 - [ ] До internal track додані тестувальники й виконаний фізичний smoke test.
 - [ ] Closed testing: щонайменше 12 тестувальників протягом 14 безперервних днів, потім production access.
 
