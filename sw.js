@@ -171,15 +171,15 @@ self.addEventListener('push', (event) => {
   const target = payload.url ||
     (category === 'storm' ? './?push=storm#kpHourlyPanel' : './?push=daily#heroCard');
   const options = {
-    body: payload.body || 'Оновився прогноз G-Index',
+    body: payload.body || 'Оновився прогноз NeboRhythm',
     icon: './icon192.png',
     badge: './icon192.png',
     tag: payload.tag || `gindex-${category}`,
     renotify: category === 'storm',
     data: { url: target, category },
-    actions: [{ action: 'open', title: 'Відкрити G-Index' }]
+    actions: [{ action: 'open', title: 'Відкрити NeboRhythm' }]
   };
-  event.waitUntil(self.registration.showNotification(payload.title || 'G-Index', options));
+  event.waitUntil(self.registration.showNotification(payload.title || 'NeboRhythm', options));
 });
 
 self.addEventListener('notificationclick', (event) => {

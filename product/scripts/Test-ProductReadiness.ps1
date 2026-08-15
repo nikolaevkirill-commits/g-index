@@ -26,6 +26,8 @@ $twaTemplateRaw = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $produ
 try { $webManifest = $manifestRaw | ConvertFrom-Json } catch { $failures.Add("invalid web manifest JSON: $($_.Exception.Message)"); $webManifest = $null }
 if ($webManifest) {
   if ($webManifest.start_url -ne '/g-index/' -or $webManifest.scope -ne '/g-index/') { $failures.Add('web manifest start_url/scope mismatch') }
+  if ($webManifest.name -ne 'NeboRhythm: Cosmic Timing' -or $webManifest.short_name -ne 'NeboRhythm') { $failures.Add('web manifest product brand mismatch') }
+  else { $passes.Add('web manifest uses NeboRhythm product brand') }
   foreach ($shortcut in @($webManifest.shortcuts)) {
     $target = [string]$shortcut.url
     if ($target -match '^/g-index/([^#?]+\.html)') {
@@ -38,6 +40,8 @@ if ($webManifest) {
 }
 if ($swRaw -notmatch "CACHE_VERSION = 'fp\d+-v\d+'") { $failures.Add('service worker cache version missing') }
 else { $passes.Add('service worker cache version present') }
+if ($swRaw -match "showNotification\(payload\.title \|\| 'G-Index'" -or $swRaw -match "actions:\s*\[\{[^\r\n]+G-Index") { $failures.Add('push notification surface uses obsolete G-Index product brand') }
+else { $passes.Add('push notification surface uses NeboRhythm product brand') }
 if ($indexRaw -notmatch 'GINDEX_PLAY_CHANNEL' -or $indexRaw -notmatch 'channel.*play' -or $indexRaw -notmatch 'play-channel #paywallOverlay') { $failures.Add('Play companion channel does not fail closed on web purchases') }
 else { $passes.Add('Play companion disables web purchases') }
 if ($indexRaw -match 'href="backtest\.html"') { $failures.Add('dashboard contains broken backtest.html link') }
