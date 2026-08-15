@@ -25,9 +25,11 @@
 - [x] Privacy policy, terms і web account-deletion request опубліковані HTTPS.
 - [ ] In-app та web account deletion фізично перевірені.
 - [x] Data Safety fail-closed inventory та Play Console worksheet підготовлені.
-- [ ] Data Safety звірена з фактичною `.aab`, Worker і SDK перед submission.
+- [x] Native permissions і SDK звірені з фактичною versionCode 3 `.aab`; hash зафіксовано.
+- [ ] Web runtime traffic звірено фізичним Android network capture перед Data Safety submission.
 - [ ] Support email активний.
-- [ ] Content rating, target audience, ads і app access заповнені.
+- [x] Content rating, target audience, ads і app access підготовлені як однозначний worksheet.
+- [ ] Content rating, target audience, ads і app access фактично подані в Play Console.
 - [x] Play companion приховує web-продажі, auth і push до окремого reviewed release.
 - [x] TWA `enableNotifications=false`; preflight блокує передчасне повернення push.
 
