@@ -16980,6 +16980,18 @@ function syncHero(){
   const newG = isFinite(_ui.gNow) ? _ui.gNow : (function(){ const m=(nowG?.textContent||'').match(/G\s*(-?\d+\.?\d*)/); return m?parseFloat(m[1]):NaN; })();
   const kpH_pre = isFinite(_ui.kpNow) ? _ui.kpNow : _num(_firstText(el('nowKp')));
   const _heroSig = resolveHeroSignalHierarchy_v88824(newG, kpH_pre);
+  try {
+    const _bridgeDecision = ({favorable:'ACT',good:'ACT',neutral:'UNKNOWN',unstable:'CAUTION',tense:'HOLD'})[_heroSig?.opKey] || 'UNKNOWN';
+    localStorage.setItem('neborythm.canonical.runtime.v1', JSON.stringify({
+      schema:'neborythm_canonical_runtime_v1', decision:_bridgeDecision,
+      operational_score:isFinite(_heroSig?.operationalScore)?_heroSig.operationalScore:null,
+      guard:_heroSig?.guard||'none', dynamic_guard:_heroSig?.dynamicGuard||null,
+      reference_score:_heroSig?.hasEngine&&isFinite(_heroSig?.dayScore)?_heroSig.dayScore:null,
+      kp:isFinite(kpH_pre)?kpH_pre:null, generated_at:new Date().toISOString(),
+      source_id:'CANONICAL_DASHBOARD_RESOLVER', score_effect:1,
+      research:{tanita_score_effect:0,v19_2_score_effect:0}
+    }));
+  } catch(_bridgeError) { /* storage may be unavailable; Hero must still render */ }
   if(heroG){
     // Safety contract: the largest signal on screen is the operational state.
     // The frozen PDF/Engine score remains visible as a labelled reference, but

@@ -9,6 +9,7 @@ try {
   if ($snapshot.schema -ne 'neborythm_mobile_snapshot_v1' -or $snapshot.decision -ne 'CAUTION') { throw 'Adapter mapping failed.' }
   if ($snapshot.source_role -ne 'DEMO_NOT_PRODUCTION' -or $snapshot.research.tanita_score_effect -ne 0 -or $snapshot.research.v19_2_score_effect -ne 0) { throw 'Adapter provenance/research gate failed.' }
   if ($snapshot.next_change -ne '12:00') { throw 'Adapter next-change mapping failed.' }
+  if ($snapshot.detail_status -ne 'UNAVAILABLE' -or @($snapshot.timeline).Count -ne 0 -or @($snapshot.sky).Count -ne 0 -or @($snapshot.context_27d).Count -ne 0) { throw 'Absent detail data did not fail closed.' }
   & $node (Join-Path $root 'product\scripts\New-MobileSnapshot.mjs') "--input=$(Join-Path $root 'product\contracts\hero-state.example.json')" "--output=$temp" '--source-role=PRODUCTION_CANONICAL' '--at=2026-08-12T10:00:00Z'
   if ($LASTEXITCODE -ne 0) { throw 'Valid production snapshot was rejected.' }
   $previousErrorPreference = $ErrorActionPreference

@@ -4,6 +4,7 @@ $app = Join-Path $root 'app'
 $html = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $app 'index.html')
 $css = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $app 'styles.css')
 $js = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $app 'app.js')
+if ($js -notmatch "content\.focus\(\{preventScroll:true\}\);window\.scrollTo\(\{top:0,left:0,behavior:'auto'\}\)") { throw 'Mobile navigation does not reset scroll position without focus drift.' }
 $manifestRaw = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $app 'manifest.webmanifest')
 $sw = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $app 'sw.js')
 $snapshotRaw = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $app 'mobile-snapshot.json')
@@ -43,6 +44,20 @@ foreach ($marker in @('data-range','day-strip','timelineMeta','Contexto bruto','
 }
 foreach ($marker in @('sourceRole','DEMO DATA','not a live forecast','demo-notice')) {
   if ($js -notmatch [regex]::Escape($marker) -and $css -notmatch [regex]::Escape($marker)) { throw "Missing visible demo-data disclosure: $marker" }
+}
+foreach ($marker in @('trustStrip','trustCopy','confidence','observedAt','generatedAt','validUntil','Source & freshness','Interface example')) {
+  if ($js -notmatch [regex]::Escape($marker)) { throw "Missing competitor-derived provenance UX: $marker" }
+}
+foreach ($marker in @('timelineViewContract','skyViewContract','context27','detailStatus','No values are invented','No se inventan valores')) {
+  if ($js -notmatch [regex]::Escape($marker)) { throw "Missing fail-closed detail contract: $marker" }
+}
+if ($js -notmatch 'timelineView=timelineViewContract' -or $js -notmatch 'skyView=skyViewContract') { throw 'Hardcoded Timeline/Sky views remain active.' }
+if ($js -notmatch "timeline:\[\],sky:\[\],context27:\[\],detailStatus:'UNAVAILABLE'") { throw 'Snapshot fetch failure does not preserve fail-closed detail arrays.' }
+foreach ($marker in @('applyRuntimeBridge','neborythm.canonical.runtime.v1','CANONICAL_DASHBOARD_RESOLVER','age>600000','CANONICAL_RUNTIME')) {
+  if ($js -notmatch [regex]::Escape($marker)) { throw "Missing canonical runtime bridge gate: $marker" }
+}
+foreach ($marker in @('todayViewContract','operationalToday','todayView=todayViewContract','The current canonical state is unavailable')) {
+  if ($js -notmatch [regex]::Escape($marker)) { throw "Missing decision-driven Today copy: $marker" }
 }
 $manifest = $manifestRaw | ConvertFrom-Json
 if ($manifest.name -ne 'NeboRhythm' -or $manifest.display -ne 'standalone' -or $manifest.start_url -notmatch 'channel=play') { throw 'Mobile PWA manifest identity mismatch.' }
