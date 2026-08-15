@@ -1,5 +1,7 @@
 # Стан аудиту й продукту — 13.08.2026
 
+> Оновлення 15.08.2026 (brand/AAB closure): PWA install/update, web manifest, push fallback, Android embedded manifest і privacy draft синхронізовані з продуктним брендом `NeboRhythm`; `G-Index` лишається технічною назвою прогнозного рушія. AAB `1.0.0 (3)` перебудований і підписаний; усередині перевірено `NeboRhythm: Cosmic Timing`, version `88.9.203-fp398`, SHA-256 `B66FDB1E09DB9EA4F44FA17459B903E72C701C7FEBB984F0B9798A93EF74F789`. Dashboard/Jyotish consistency, 10 PowerShell product tests і 5 timezone vectors — PASS. Readiness: hard failures 0; Play acceptance versionCode 3, тестувальники, фізичний Android QA/скріншоти та Play declarations залишаються зовнішніми WAIT.
+
 > Оновлення 15.08.2026: production runtime bridge для мобільного shell підключений до канонічного resolver; AAB `1.0.0 (2)` прийнятий Play і опублікований в internal track без тестувальників; підписаний privacy-candidate `1.0.0 (3)` зібраний і перевірений за SHA-256, але його прийняття Play ще не підтверджене. Браузерні screenshot-кандидати створені з канонічного маршруту `?channel=play`; вони не замінюють фізичний Android QA. Джйотіш, Tanita та v19.2 залишаються `score_effect=0`.
 
 > Оновлення 14.08.2026: попередні Play-gates нижче є історичним зрізом. Актуальний машинний стан міститься у `play-market/PLAY_CONSOLE_GATE_STATUS.json` та `qa/LOCAL_CLOSURE_STATUS_2026-08-14.json`.

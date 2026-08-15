@@ -202,6 +202,11 @@ if (-not (Test-Path -LiteralPath $playGatePath -PathType Leaf)) {
   try { $playGate = Get-Content -Raw -Encoding UTF8 -LiteralPath $playGatePath | ConvertFrom-Json }
   catch { $failures.Add("invalid Play Console gate status: $($_.Exception.Message)"); $playGate = $null }
   if ($playGate) {
+    if ((Test-Path -LiteralPath $signedReleaseAab -PathType Leaf) -and -not [string]::IsNullOrWhiteSpace([string]$playGate.signed_candidate_aab_sha256)) {
+      $actualGateHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $signedReleaseAab).Hash
+      if ($actualGateHash -ne [string]$playGate.signed_candidate_aab_sha256) { $failures.Add('Play gate status signed-candidate hash is stale') }
+      else { $passes.Add('Play gate status matches the signed candidate SHA-256') }
+    }
     if ($playGate.developer_registration -ne 'PAID') { $waits.Add('one-time USD 25 Play developer registration') } else { $passes.Add('Play developer registration recorded as paid') }
     if ($playGate.android_device_verification -ne 'VERIFIED') { $waits.Add('physical Android device verification') } else { $passes.Add('physical Android device verification recorded') }
     if ($playGate.identity_verification -ne 'VERIFIED') { $waits.Add("identity verification: $($playGate.identity_verification)") }
