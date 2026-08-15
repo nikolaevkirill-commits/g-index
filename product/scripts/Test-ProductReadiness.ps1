@@ -66,7 +66,7 @@ if ((Test-Path -LiteralPath $signedReleaseAab -PathType Leaf) -and (Test-Path -L
   if ($uploadEvidence) {
     $actualSignedHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $signedReleaseAab).Hash
     if ($actualSignedHash -ne $uploadEvidence.signed_aab_sha256) { $failures.Add('signed AAB hash does not match Play upload evidence') }
-    elseif ($uploadEvidence.play_console_acceptance -ne 'ACCEPTED_INTERNAL_TRACK_2026-08-14') { $waits.Add('Play Console AAB acceptance evidence') }
+    elseif ($uploadEvidence.play_console_acceptance -ne 'ACCEPTED_INTERNAL_TRACK_2026-08-14') { $waits.Add("Play Console acceptance of signed candidate versionCode $($uploadEvidence.version_code)") }
     else { $passes.Add("signed AAB accepted by Play internal track (SHA-256 $actualSignedHash)") }
   }
 } else {
@@ -123,9 +123,17 @@ $phoneScreenshots = @(
     Where-Object { $_.Extension -eq '.png' -and $_.Name -match '(?i)(phone|screenshot)' }
 )
 if ($phoneScreenshots.Count -lt 5) {
-  $waits.Add("Google Play phone screenshots: $($phoneScreenshots.Count)/5 minimum prepared")
+  $waits.Add("physical Android Google Play screenshots: $($phoneScreenshots.Count)/5 minimum prepared")
 } else {
-  $passes.Add("Google Play phone screenshots prepared: $($phoneScreenshots.Count)")
+  $passes.Add("physical Android Google Play screenshots prepared: $($phoneScreenshots.Count)")
+}
+$browserScreenshotRoot = Join-Path $productRoot 'store-assets\screenshots'
+$browserScreenshotCandidates = @(
+  Get-ChildItem -LiteralPath $browserScreenshotRoot -File -Recurse -ErrorAction SilentlyContinue |
+    Where-Object { $_.Extension -match '^\.(png|jpe?g)$' }
+)
+if ($browserScreenshotCandidates.Count) {
+  $passes.Add("browser screenshot candidates prepared (not physical-device QA): $($browserScreenshotCandidates.Count)")
 }
 
 foreach ($testRel in @('tests\Test-StoreListings.ps1','tests\Test-ProductContracts.ps1','tests\Test-ProductIdentity.ps1','tests\Test-MobileShell.ps1','tests\Test-MobileSnapshotAdapter.ps1','tests\Test-JyotishSnapshot.ps1','tests\Test-JyotishPersonalResearch.ps1')) {
