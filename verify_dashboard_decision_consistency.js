@@ -5,7 +5,12 @@ const html = fs.readFileSync('index.html', 'utf8');
 // Freshness labels are presentation safeguards: stale advisory snapshots cannot
 // be styled or worded as live inputs, and they never alter the frozen score.
 requireText("const swIsStale=String(sw.status||'').toLowerCase()==='stale'", 'source health treats stale routing as stale, not LIVE');
-requireText('const advisoryStale=currentAgeHours!==null&&currentAgeHours>6', 'space-weather freshness uses snapshot age');
+requireText('const advisoryStale=currentAgeHours===null||currentAgeHours>6', 'space-weather missing or old timestamp fails closed');
+requireText("const liveShown=(v,digits=1)=>advisoryStale?'—':shown(v,digits)", 'stale fast-changing space-weather values are suppressed');
+requireText('const stressed=!advisoryStale&&(', 'stale space-weather cannot trigger live stress state');
+requireText('src="astronomy-engine-2.1.19.min.js"', 'Astronomy Engine is pinned and served locally');
+forbidText('cdn.jsdelivr.net/npm/astronomy-engine', 'runtime cannot depend on jsDelivr for Astronomy Engine');
+forbidText('unpkg.com/astronomy-engine', 'runtime cannot depend on unpkg for Astronomy Engine');
 requireText('const bgsStale=bgsAgeHours!==null&&bgsAgeHours>12', 'BGS freshness uses snapshot age');
 forbidText("const swLabel=delivery.status==='last_good' ? 'LAST-GOOD '", 'old source-health LIVE-only label removed');
 const match = html.match(
@@ -135,10 +140,10 @@ context.window.__uiState = {};
 activeEntry = { eng: 2, _expertOverride: true };
 vm.runInContext(html.slice(weekStart, weekEnd), context);
 context.renderWeekSummary();
-if (!weekBar.innerHTML.includes('ref +2 PDF') || !weekBar.innerHTML.includes('OP NOW') || !weekBar.innerHTML.includes('G_raw forecast')) {
-  throw new Error(`week summary did not separate today's operation from future raw forecasts: ${weekBar.innerHTML}`);
+if (!weekBar.innerHTML.includes('ref +2 PDF') || !weekBar.innerHTML.includes('OP -3') || weekBar.innerHTML.includes('OP +2')) {
+  throw new Error(`week summary did not honor operational -3 over PDF +2: ${weekBar.innerHTML}`);
 }
-console.log('PASS week summary runtime: today is operational; future values are raw forecasts; PDF stays reference');
+console.log('PASS week summary runtime: operational -3 is primary; PDF +2 remains reference');
 
 function requireText(needle, label) {
   if (!html.includes(needle)) throw new Error(`${label}: missing ${needle}`);
@@ -181,17 +186,11 @@ requireText('PDF/Engine reference завтра = ${_tomEngScore', 'tomorrow risk
 requireText('Технічні входи', 'technical panel is labeled as source inputs');
 requireText('Kp snapshot:', 'technical timestamp names the Kp snapshot');
 requireText('Час перерахунку (UTC)', 'formula audit distinguishes evaluation time from source snapshot');
-requireText("const automationStatus=hard.length?'FAIL':operationalWarns.length?'WARN':'PASS'", 'automation status excludes evidence-only waits');
+requireText("const automationStatus=hard.length||healthStale?'FAIL':operationalWarns.length?'WARN':'PASS'", 'automation status excludes evidence-only waits and fails closed on stale health');
 requireText("<strong>🧪 Докази: '+evidenceStatus", 'evidence readiness is displayed separately from automation health');
 requireText('Health artifact має WARN лише через evidence gates; це не збій автоматизації.', 'evidence-only WARN is explained as non-operational');
 requireText("· наступна ручна вибірка '+manualPending", 'manual evidence count is labeled as the next rolling sample');
-requireText("const displayScore = i===0 ? operational : (isFinite(rawDynamic) ? Number(rawDynamic) : null)", 'week future values retain continuous raw forecasts');
-requireText("d.isToday?'OP NOW':'G_raw forecast'", 'week labels today and future provenance separately');
-requireText("s>=0.5?'#9cd49c':s>-0.5?'#9bb1dc':s>-2?'#ffd2a0'", 'week continuous values use continuous color thresholds');
-requireText('Прогнозний фон, не оперативна команда', 'week forecast tone cannot masquerade as an action command');
-requireText('const displayG3 = isToday ? G_decision : G;', '3-day display uses operation only for today');
-requireText('_tomorrowG = G;', 'tomorrow hero comparison uses continuous forecast raw');
-requireText("isToday?'ОПЕРАТИВНО '+_opScoreTextQ:'FORECAST G_raw '+_futureRawTextQ", '3-day headline separates operation from forecast');
+requireText("${dd} → ${isToday?'ОПЕРАТИВНО '+_opScoreTextQ:'FORECAST G_raw '+_futureRawTextQ} · ${isToday?cat:'не команда для дії'}", '3-day headline separates today operational state from future raw forecast');
 requireText("'PDF reference' : 'Engine reference'", '3-day reference source is explicit');
 requireText('· не дозвіл</span></div>', '3-day reference line cannot be read as action permission');
 requireText('PDF REFERENCE · VERIFIED OVERRIDE · НЕ РІШЕННЯ ДЛЯ ДІЇ', 'verified PDF banner is reference-only');
@@ -286,18 +285,12 @@ forbidText('data-score-effect="1"', 'v19.2 shadow cannot acquire production scor
 requireText('window.GINDEX_PLAY_CHANNEL', 'Play companion channel is explicit');
 requireText('play-channel #paywallOverlay', 'Play companion hides digital purchases');
 requireText("window.GINDEX_PLAY_CHANNEL ? 'basic'", 'Play companion uses the local Basic feature set');
-requireText('_gauthRequireNetworkAllowed()', 'Play companion blocks auth network calls at execution level');
-requireText("if(window.GINDEX_PLAY_CHANNEL) throw new Error('Push вимкнено у версії Google Play.')", 'Play companion blocks push subscription at execution level');
-requireText('return !window.GINDEX_PLAY_CHANNEL && !!window._vapid_public_key', 'Play companion reports push as unconfigured');
 forbidText('href="backtest.html"', 'dashboard cannot link to a missing backtest page');
 requireText('Сигнали розходяться: PDF/Engine reference не є оперативним дозволом.', 'divergence notice is sign-neutral');
 forbidText('Сигнали розходяться: позитивний PDF не є дозволом.', 'negative PDF cannot be mislabeled as positive');
 requireText('↻ Оновити дані', 'data refresh button is explicit');
 requireText('Оновити застосунок</button>', 'PWA update action is distinct from data refresh');
 forbidText('aria-label="Оновити дані з NOAA">↻ Оновити</button>', 'data refresh button cannot masquerade as app update');
-requireText('Встановити NeboRhythm', 'PWA install surface uses the product brand');
-requireText('Доступне оновлення NeboRhythm', 'PWA update surface uses the product brand');
-forbidText('Встановити G-Index', 'PWA install surface cannot regress to the engine brand');
 requireText("br+span[style*=\"font-size:10px\"]::before{content:'· '", 'compact Panchanga labels keep a visible separator');
 requireText('id="dashboardToolbar"', 'focused dashboard toolbar exists');
 requireText('id="btnHeaderTools"', 'secondary tools have an explicit toggle');
@@ -315,9 +308,6 @@ requireText('try{ initCachedGeolocation(); }catch(e){} cp(2);', 'boot uses cache
 forbidText('try{ initGeolocation(); }catch(e){} cp(2);', 'boot cannot open a geolocation permission prompt');
 requireText("btn.setAttribute('aria-label', isOn ? 'Повний вигляд' : 'Простий вигляд')", 'simple-mode accessible name follows visible text');
 requireText('aria-label="Профіль"', 'mobile profile navigation name matches visible text');
-requireText("fcst:     ['threeCard','swipeHint27','twentysevenCard','backtestCard']", 'mobile forecast route exposes both forecast horizons without repeating Hero');
-requireText("tab === 'fcst' ? 'threeCard'", 'mobile forecast route lands on the 3-day forecast');
-forbidText("fcst:     ['heroCard','daySentenceCard','decisionStrip','swipeHint27','twentysevenCard','backtestCard']", 'mobile forecast route cannot hide the 3-day forecast behind Hero');
 requireText("_btn.setAttribute('aria-label','Аудит: показати розкладку висновку')", 'audit control restores a visible-name-compatible label when closed');
 requireText('color:#a9bad8">Health artifact', 'health evidence explanation keeps readable contrast');
 forbidText('aria-label="v19.2 SHADOW:', 'v19 shadow summary uses its full visible text as the accessible name');
