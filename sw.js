@@ -1,27 +1,6 @@
-// G-Index service worker — safe normal caching.
-//
-// IMPORTANT: bump CACHE_VERSION on EVERY deploy that changes index.html or
-// any cached asset. This is what prevents the old staleness bug that forced
-// Service-worker cache safety note; original detail is preserved in the backup.
-// possible if this version string is not bumped.
-//
-// Strategy:
-//  - HTML and JSON (index.html, engine_scores.json, future_kp.json, etc.):
-//    NETWORK-FIRST. Always try to fetch the freshest version; cache is only
-//    used as an offline fallback if the network fails. This means even if
-//    CACHE_VERSION is forgotten, users still get fresh data as long as they
-// Service-worker cache safety note; original detail is preserved in the backup.
-//    cache-first HTML serving to happen together.
-//  - Static shell assets (icons, manifest.json): CACHE-FIRST. These rarely
-//    change and cache-first here is safe and fast.
-//
-// Service-worker cache safety note; original detail is preserved in the backup.
-// Service-worker cache safety note; original detail is preserved in the backup.
-// Service-worker cache safety note; original detail is preserved in the backup.
-// Service-worker cache safety note; original detail is preserved in the backup.
-// Service-worker cache safety note; original detail is preserved in the backup.
-
-const CACHE_VERSION = 'fp399-v1'; // Play channel blocks auth and push at execution level
+// G-Index service worker. HTML/data are network-first; static shell is cache-first.
+// Bump CACHE_VERSION whenever index.html or a cached shell asset changes.
+const CACHE_VERSION = 'fp404-v1'; // pinned local Astronomy Engine
 const CACHE_PREFIX = 'gindex-'; // G-Index cache namespace; do not remove the prefix.
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${CACHE_VERSION}`;
 const DATA_CACHE = `${CACHE_PREFIX}data-${CACHE_VERSION}`;
@@ -29,6 +8,7 @@ const DATA_CACHE = `${CACHE_PREFIX}data-${CACHE_VERSION}`;
 const SHELL_ASSETS = [
   './manifest.json',
   './icon512.png',
+  './astronomy-engine-2.1.19.min.js',
   './OUTCOME_INTAKE_FORM_v1.html'
 ];
 

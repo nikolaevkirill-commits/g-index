@@ -6,7 +6,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.204-fp399-PLAY-DATA-FAIL-CLOSED</title>
+  <title>G-Index — Космофізичний дашборд v88.9.209-fp404-LOCAL-ASTRONOMY</title>
 
   <script>
     // fp388: the Android TWA opens an explicit free companion channel. It keeps
@@ -1501,12 +1501,10 @@ body.simple-mode .col-hide-mobile {
 .audit-only{display:none!important}body.audit-mode .audit-only{display:initial!important}
 </style>
 
-  <!-- Астро бібліотека: фаза Місяця -->
-  <!-- v88.6.9: astronomy-engine з multi-CDN fallback (jsdelivr → unpkg)
-       Якщо jsdelivr DOWN, Panchanga/Tithi обчислення зламаються — потрібен fallback. -->
-  <script src="https://cdn.jsdelivr.net/npm/astronomy-engine@2.1.19/astronomy.browser.min.js"
-          onerror="(function(){var s=document.createElement('script');s.src='https://unpkg.com/astronomy-engine@2.1.19/astronomy.browser.min.js';s.onerror=function(){console.error('[astronomy-engine] both CDNs failed — Panchanga unavailable');};document.head.appendChild(s);})()"
-          defer></script>
+  <!-- fp404: pinned local Astronomy Engine 2.1.19 (MIT).
+       SHA-256 F41139A87941EA017AB902B954C9389FA27EA72083D7FAB4971756D7769D14E6,
+       independently matched byte-for-byte on jsDelivr and unpkg before vendoring. -->
+  <script src="astronomy-engine-2.1.19.min.js" defer></script>
 
   <!-- v88.6.9: secondary Supabase load видалено разом з primary loader (див. v88.6.9 cleanup). -->
 <script>
@@ -1895,7 +1893,7 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
       <span style="font-size:20px;line-height:1">📊</span>
       <div style="flex:1;min-width:0">
         <div style="font-size:12px;font-weight:700;color:#d8f7e3">Як ми міряємо точність</div>
-        <div style="font-size:11px;color:var(--dim);margin-top:1px">v18.5 canonical (N=280): <strong style="color:var(--ok)">70.6% strict</strong> · 83.6% binary · 43.0% exact. Fresh PDF 27.07–09.08: 9/14 exact; strong |Engine|=3: <strong style="color:#ffd37a">8/9 (88.9%)</strong> — 90% ще не підтверджено.</div>
+        <div style="font-size:11px;color:var(--dim);margin-top:1px">v18.5 frozen validation (N=280, GT v5.1): <strong style="color:var(--ok)">71.4% strict</strong> · 83.6% binary · 43.6% exact. Fresh PDF 27.07–09.08: 9/14 exact; strong |Engine|=3: <strong style="color:#ffd37a">8/9</strong> — мала вибірка, не 90% claim.</div>
       </div>
       <span style="font-size:11px;color:var(--ok);font-weight:700;white-space:nowrap">Подивитись →</span>
     </a>
@@ -2802,7 +2800,7 @@ Fallback (NOAA 45-day-forecast.json):
             <th title="Якість накшатри дня" style="width:28px">☽</th>
             <th class="th-sort" data-col="g" title="G_day raw = 2 − Kp_day(max/approx) + ΣAᵢ(noon UTC). Це не G зараз і не PDF/Engine score.">G_day <span class="sort-ico">↕</span></th>
             <th>Kp max</th>
-            <th class="col-hide-mobile">Δ Kp</th>
+            <th class="col-hide-mobile">Δ Kp-внесок (2−Kp)</th>
             <th>Lᵢ</th>
             <th>Mᵢ</th>
             <th>eᵢ</th>
@@ -3275,8 +3273,8 @@ Fallback (NOAA 45-day-forecast.json):
   </div>
 
   <footer>
-    <div class="small">Дані Kp/Ap — NOAA SWPC; Ap↔Kp — GFZ/NOAA table; Dst — Kyoto WDC; Sn — SILSO/ROB; події — ICS; затемнення — Timeanddate/NASA; фази — Astronomy Engine (Meeus). Модель G: R&amp;D / Advisory — V3 prospective freeze 2026-05-03 → ~2026-08-01. Engine v18.5 canonical: Strict 70.6% / 71.4% holdout · Binary 83.6% · κ=0.52 (N=280). V18.8 runtime patches disabled during V3 freeze; G включає Dᵢ (Dst-компонент).</div>
-    <div class="small" style="margin-top:8px">📊 Повна валідація моделі: <a href="#backtestCard" onclick="document.getElementById('backtestCard').open=true" style="color:var(--alt);text-decoration:none;border-bottom:1px dotted var(--alt)">backtest report</a> — engine v18.5 canonical vs PDF: N=280 — Strict 70.6% · Binary 83.6% · Exact 43.0% (N=280 GT v5.1: Strict 71.4%, κ=0.52 / weighted κ=0.73). V18.8 patches disabled — V3 freeze active.</div>
+    <div class="small">Дані Kp/Ap — NOAA SWPC; Ap↔Kp — GFZ/NOAA table; Dst — Kyoto WDC; Sn — SILSO/ROB; події — ICS; затемнення — Timeanddate/NASA; фази — Astronomy Engine (Meeus). Модель G: R&amp;D / Advisory — V3 prospective freeze 2026-05-03 → ~2026-08-01. Engine v18.5 frozen validation: Strict 71.4% global / 75.0% holdout · Binary 83.6% · κ=0.52 (N=280). V18.8 runtime patches disabled during V3 freeze; G включає Dᵢ (Dst-компонент).</div>
+    <div class="small" style="margin-top:8px">📊 Повна валідація моделі: <a href="#backtestCard" onclick="document.getElementById('backtestCard').open=true" style="color:var(--alt);text-decoration:none;border-bottom:1px dotted var(--alt)">backtest report</a> — engine v18.5 canonical vs PDF, GT v5.1: N=280 — Strict 71.4% · Binary 83.6% · Exact 43.6% (κ=0.52 / weighted κ=0.73). Окремий legacy-зріз N=272: Strict 70.6% · Exact 43.0%; когорти не змішуються. V18.8 patches disabled — V3 freeze active.</div>
     <div class="small" style="margin-top:8px;color:var(--faint);border-left:2px solid var(--warn);padding-left:8px">⚠ Caveat: ground truth = експертні PDF-бюлетені з тим же Vedic Panchanga + Kp framework. Метрики 79.2% / 88.7% валідують <strong>відтворення експертної логіки</strong>, НЕ предиктивну валідність vs реальні outcomes (медичні/операційні події). Outcome-based validation — pilot план у V19-E.</div>
     <nav class="small" aria-label="Правові документи та підтримка" style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap">
       <a href="privacy.html" style="color:var(--faint)">Конфіденційність</a>
@@ -3825,7 +3823,8 @@ function renderWf3(){
   parts.push(relTpl.replace('{c}',confNum)+' '+relState);
 
   // Scenario (only near threshold)
-  if(Math.abs(g)<=1.0) parts.push(WF3_PHRASES.scen_up.replace('{v}',fs(g+1)));
+  // G = (2 - Kp) + ΣAᵢ: if Kp rises by 1, G falls by 1.
+  if(Math.abs(g)<=1.0) parts.push(WF3_PHRASES.scen_up.replace('{v}',fs(g-1)));
 
   bot.textContent=parts.join(' ');
   bot.style.display='flex';
@@ -4267,7 +4266,7 @@ function _getComponentDelta(){
     const _d = (a,b) => (isFinite(a) && isFinite(b)) ? (a-b) : null;
     return {
       ageH: Math.round((now-best.ts)/3600000),
-      kp:  _d(curKp, best.kp),
+      kp:  _d(2-curKp, 2-best.kp),
       Li:  _d(curAi.Li, best.ai.Li),
       Mi:  _d(curAi.Mi, best.ai.Mi),
       ei:  _d(curAi.ei, best.ai.ei),
@@ -4282,7 +4281,7 @@ function _renderComponentDeltaCard(){
   const d = _getComponentDelta();
   if(!d){ box.style.display='none'; return; }
   const rows = [
-    ['Δ Kp', d.kp], ['Δ Тітхі (Lᵢ)', d.Li], ['Δ Затемнення (Mᵢ)', d.Mi],
+    ['Δ Kp-внесок (2−Kp)', d.kp], ['Δ Тітхі (Lᵢ)', d.Li], ['Δ Затемнення (Mᵢ)', d.Mi],
     ['Δ Події (eᵢ)', d.ei], ['Δ Панчанга (Pᵢ)', d.Pi], ['Δ Dst-буря (Dᵢ)', d.Di]
   ].filter(([_,v]) => v!=null && Math.abs(v) >= 0.05);
   if(!rows.length){ box.style.display='none'; return; }
@@ -6409,6 +6408,21 @@ function sunriseUTC_Meeus(dateUTC, lat, lon){
   const dayStart = new Date(Date.UTC(dateUTC.getUTCFullYear(), dateUTC.getUTCMonth(), dateUTC.getUTCDate(), 0,0,0));
   return new Date(dayStart.getTime() + sunriseMin*60000);
 }
+function sunRiseSetUTC_Meeus(dateUTC, lat, lon){
+  const jdMidnight = Math.floor(dateUTC.getTime()/86400000 + 2440587.5 - 0.5) + 0.5;
+  function pass(t){
+    const eqTime = _equationOfTimeMinSunrise(t);
+    const solarDec = _sunDeclinationSunrise(t);
+    const HAdeg = _hourAngleSunriseDeg(lat, solarDec);
+    const solarNoonUTC = 720 - 4*lon - eqTime;
+    return {riseMin:solarNoonUTC - 4*HAdeg, setMin:solarNoonUTC + 4*HAdeg};
+  }
+  let pair=pass(_sjcSunrise(jdMidnight+0.5));
+  const refinedRise=pass(_sjcSunrise(jdMidnight+pair.riseMin/1440)).riseMin;
+  const refinedSet=pass(_sjcSunrise(jdMidnight+pair.setMin/1440)).setMin;
+  const dayStart=new Date(Date.UTC(dateUTC.getUTCFullYear(),dateUTC.getUTCMonth(),dateUTC.getUTCDate()));
+  return {sunrise:new Date(dayStart.getTime()+refinedRise*60000),sunset:new Date(dayStart.getTime()+refinedSet*60000),source:'meeus_canonical'};
+}
 // _calcSunRiseSet() (Astronomy Engine, real ephemeris) лишається лише як
 // НЕОБОВ'ЯЗКОВА паралельна debug-перевірка (аудит, п.4) — вже НЕ production
 // dependency. Внутрішній Meeus-розрахунок — єдиний production-шлях.
@@ -6487,8 +6501,8 @@ async function loadFutureKp(){
 // якщо дата в overrides → eng замінюється на expert_eng, оригінал зберігається у _engRaw.
 // Frozen partition: engine_scores.json НЕ змінюється (V3 prospective freeze для backtest).
 let _expertOverrides = null; // {date: {expert_eng, tanita_O, tanita_N, category, applied_in}}
-// fp196: expert_calc layer (ШКАЛА+(2) direct calc, 495 днів, audit 2026-07-15:
-// 65.0% exact / 80.5% strict3 на n=406 GT vs 51.1%/75.5% v18.5-only).
+// fp196 expert_calc layer. Displayed replay metrics use the current
+// revision-aware registry cohort (n=394), not the superseded n=406 audit.
 // Пріоритет: verified expert_override > expert_calc > engine_v18.5 > cal_score.
 let _expertCalc = null; // {date: {score, raw_sum, kp_her}}
 let _strongRawPolicy = null;
@@ -6763,7 +6777,9 @@ async function loadSourceHealth(){
     const p=await r.json(), warnings=p.warnings||[], hard=p.hard_failures||[], routes=p.routes||[];
     const kp=routes.find(x=>x.id==='kp_observed_forecast')||{}, sw=routes.find(x=>x.id==='space_weather')||{};
     const ks=kp.semantic||{}, ss=sw.semantic||{}, delivery=ss.delivery||{};
-    const kpNowLabel=ks.noaa_transport_ok?'NOAA LIVE':'GFZ/резерв';
+    const kpAge=Number(kp.candidates&&kp.candidates[0]&&kp.candidates[0].age_hours);
+    const kpFeedFresh=String(kp.status||'').toLowerCase()==='ok'&&Number.isFinite(kpAge)&&kpAge<=Number(kp.max_age_h||6);
+    const kpNowLabel=kpFeedFresh&&ks.noaa_transport_ok?'NOAA feed свіжий':'Kp feed STALE/резерв';
     const kpHorizonLabel=Number(ks.real_points||0)+' NOAA · '+Number(ks.synthetic_points||0)+' synthetic';
     // A successfully delivered old snapshot must never be presented as LIVE.
     const swAge=Number(sw.candidates&&sw.candidates[0]&&sw.candidates[0].age_hours);
@@ -6788,21 +6804,25 @@ async function loadSpaceWeatherAccumulated(){
     const c=p.coupling||{}, d=p.dst||{}, hp=p.hpo||{}, hp30=hp.hp30||{}, hp60=hp.hp60||{};
     const delivery=p.delivery||{}, deliveryStatus=delivery.status||'live', deliveryAge=Number(delivery.age_hours||0);
     const fetchedAt=Date.parse(p.fetched_at||''), currentAgeHours=Number.isFinite(fetchedAt)?(Date.now()-fetchedAt)/3600000:null;
-    const advisoryStale=currentAgeHours!==null&&currentAgeHours>6;
+    const advisoryStale=currentAgeHours===null||currentAgeHours>6;
+    // fp403: stale/undated space-weather is archival context, never a live value.
+    // Keep the provenance/age warning visible, but suppress all rapidly changing
+    // measurements and do not let them trigger the expanded warning panel.
+    const liveShown=(v,digits=1)=>advisoryStale?'—':shown(v,digits);
     const sourceLabel=advisoryStale ? ('STALE знімок · '+currentAgeHours.toFixed(1)+' год') :
       (deliveryStatus==='last_good' ? ('LAST-GOOD · '+deliveryAge.toFixed(1)+' год') : 'LIVE');
-    const stressed=(Number(m.longest_bz_le_minus5_minutes)>=30)||(Number(w.dynamic_pressure_max_6h_npa)>=5)||
+    const stressed=!advisoryStale&&((Number(m.longest_bz_le_minus5_minutes)>=30)||(Number(w.dynamic_pressure_max_6h_npa)>=5)||
       !!c.shock_candidate||Number(d.latest_nt)<=-50||Number(hp30.max_24h)>=5||
       !!pr.s1_threshold_exceeded||Number(a.recent_72h_count)>0||Number(e.peak_speed_km_s)>=550||
-      Number(sp.m_class_1_day_pct)>=50||Number(sp.x_class_1_day_pct)>=10;
+      Number(sp.m_class_1_day_pct)>=50||Number(sp.x_class_1_day_pct)>=10);
     if(sum) sum.textContent='🛰 Космічна погода: хвилинний coupling + Hp30/Hp60/Dst + прогноз 7 діб'+
       (stressed?' · ⚠ підвищене навантаження':' · спокійний накопичений фон')+' · '+sourceLabel;
     if(body) body.innerHTML=
       '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:5px">'+
-      '<div style="padding:5px 7px;border:1px solid var(--border);border-radius:7px"><b>IMF Bz</b><br>мін '+shown(m.bz_min_6h_nt)+' nT · південний '+(Number.isFinite(Number(m.southward_fraction_6h))?Math.round(Number(m.southward_fraction_6h)*100)+'%':'—')+' · ≤−5 nT '+shown(m.longest_bz_le_minus5_minutes,0)+' хв</div>'+
-      '<div style="padding:5px 7px;border:1px solid var(--border);border-radius:7px"><b>Coupling (shadow)</b><br>Newell 1г '+shown(c.newell_proxy_mean_1h,0)+' · Ey∫ 1г '+shown(c.ey_integral_1h_mv_min_m,1)+' · south Bz∫ '+shown(c.southward_bz_integral_1h_nt_min,0)+(c.shock_candidate?' · ⚠ імпульс':'')+'</div>'+
-      '<div style="padding:5px 7px;border:1px solid var(--border);border-radius:7px"><b>Швидка геомагнітика</b><br>Hp30 зараз/max '+shown(hp30.latest)+'/'+shown(hp30.max_24h)+' · Hp60 '+shown(hp60.latest)+' · Dst '+shown(d.latest_nt,0)+' nT (min24 '+shown(d.min_24h_nt,0)+')</div>'+
-      '<div style="padding:5px 7px;border:1px solid var(--border);border-radius:7px"><b>Сонячний вітер</b><br>зараз '+shown(w.speed_latest_km_s,0)+' км/с · max '+shown(w.speed_max_6h_km_s,0)+' км/с · тиск max '+shown(w.dynamic_pressure_max_6h_npa)+' nPa</div>'+
+      '<div style="padding:5px 7px;border:1px solid var(--border);border-radius:7px"><b>IMF Bz</b><br>мін '+liveShown(m.bz_min_6h_nt)+' nT · південний '+(!advisoryStale&&Number.isFinite(Number(m.southward_fraction_6h))?Math.round(Number(m.southward_fraction_6h)*100)+'%':'—')+' · ≤−5 nT '+liveShown(m.longest_bz_le_minus5_minutes,0)+' хв</div>'+
+      '<div style="padding:5px 7px;border:1px solid var(--border);border-radius:7px"><b>Coupling (shadow)</b><br>Newell 1г '+liveShown(c.newell_proxy_mean_1h,0)+' · Ey∫ 1г '+liveShown(c.ey_integral_1h_mv_min_m,1)+' · south Bz∫ '+liveShown(c.southward_bz_integral_1h_nt_min,0)+(!advisoryStale&&c.shock_candidate?' · ⚠ імпульс':'')+'</div>'+
+      '<div style="padding:5px 7px;border:1px solid var(--border);border-radius:7px"><b>Швидка геомагнітика</b><br>Hp30 зараз/max '+liveShown(hp30.latest)+'/'+liveShown(hp30.max_24h)+' · Hp60 '+liveShown(hp60.latest)+' · Dst '+liveShown(d.latest_nt,0)+' nT (min24 '+liveShown(d.min_24h_nt,0)+')</div>'+
+      '<div style="padding:5px 7px;border:1px solid var(--border);border-radius:7px"><b>Сонячний вітер</b><br>зараз '+liveShown(w.speed_latest_km_s,0)+' км/с · max '+liveShown(w.speed_max_6h_km_s,0)+' км/с · тиск max '+liveShown(w.dynamic_pressure_max_6h_npa)+' nPa</div>'+
       '<div style="padding:5px 7px;border:1px solid var(--border);border-radius:7px"><b>Протони ≥10 MeV</b><br>max 24 год '+shown(pr.max_24h_ge10mev_pfu,2)+' pfu · S1 '+(pr.s1_threshold_exceeded?'перевищено':'ні')+'</div>'+
       '<div style="padding:5px 7px;border:1px solid var(--border);border-radius:7px"><b>NOAA alerts</b><br>G/R/S/CME за 72 год: '+shown(a.recent_72h_count,0)+'</div>'+
       '<div style="padding:5px 7px;border:1px solid var(--border);border-radius:7px"><b>ENLIL 7 діб</b><br>пік '+shown(e.peak_speed_km_s,0)+' км/с · '+(e.peak_speed_time?new Date(e.peak_speed_time).toLocaleString('uk-UA'):'час —')+' · CME cloud '+(e.cme_cloud_start?'так':'не виявлено')+'</div>'+
@@ -6993,7 +7013,7 @@ async function loadModelQualityStatus(){
     if(!r.ok) throw new Error('HTTP '+r.status);
     const q=await r.json(), m=q.metrics||{}, eng=m.engine_holdout_2026||{}, xls=m.excel_formula_holdout_2026||{}, tan=m.tanita_selective_router_holdout_2026||{};
     const safe=!!(q.production_conclusion&&q.production_conclusion.safe_formula_change);
-    el.innerHTML='&#128202; Автономний Engine: '+pct(eng.strict_sign)+' знак / '+pct(eng.exact)+' exact (n='+Number(eng.n||0)+') · Excel-відтворення: '+pct(xls.strict_sign)+' / '+pct(xls.exact)+' (не реальна точність) · Tanita '+pct(tan.strict_sign)+' / '+pct(tan.exact)+' SHADOW';
+    el.innerHTML='&#128202; Holdout 2026 · Автономний Engine: '+pct(eng.strict_sign)+' знак / '+pct(eng.exact)+' exact (n='+Number(eng.n||0)+') · Excel-відтворення: '+pct(xls.strict_sign)+' знак / '+pct(xls.exact)+' exact (n='+Number(xls.n||0)+', не реальна точність) · Tanita '+pct(tan.strict_sign)+' / '+pct(tan.exact)+' (n='+Number(tan.n||0)+', SHADOW)';
     el.title='Хронологічний holdout 2026 проти verified expert PDF. Engine — автономний прогноз. Excel — відтворення експертної формули, не незалежний прогноз. Tanita — shadow, score_effect=0. Production formula change: '+(safe?'дозволено':'НЕ дозволено аудитом')+'.';
     el.style.color=safe?'#43e6a7':'#ffd37a';
     el.style.borderColor=safe?'#43e6a7':'#ffd37a';
@@ -7028,11 +7048,16 @@ async function loadSystemHealthStatus(){
     const tanitaAwaiting=Number(s.checks&&s.checks.tanita_real_outcome_pairs&&s.checks.tanita_real_outcome_pairs.awaiting_independent_outcomes||0);
     const manualPending=Number(s.checks&&s.checks.tanita_balanced_review&&s.checks.tanita_balanced_review.pending_visual_review||0);
     const age=Number(s.checks&&s.checks.manifest_age_hours);
+    const artifactAgeHours=s.generated_at ? Math.max(0,(Date.now()-new Date(s.generated_at).getTime())/3600000) : Infinity;
+    const healthStale=!Number.isFinite(artifactAgeHours)||artifactAgeHours>36||!Number.isFinite(age)||age>36;
+    const tracker=s.checks&&s.checks.prospective_tracker;
+    const trackerOk=!!(tracker&&tracker.status==='PASS'&&Number(tracker.latest_age_hours)<=36);
     const evidencePrefixes=['tanita_outcomes_awaiting:','tanita_balanced_review_pending:','promotion_waiting_for_prospective_outcomes'];
     const evidenceWarns=warns.filter(w=>evidencePrefixes.some(p=>String(w).startsWith(p)));
     const operationalWarns=warns.filter(w=>!evidencePrefixes.some(p=>String(w).startsWith(p)));
-    const automationStatus=hard.length?'FAIL':operationalWarns.length?'WARN':'PASS';
-    const evidenceStatus=(pairs>=100)?'READY':'WAIT';
+    if(healthStale) operationalWarns.push('health_snapshot_stale_or_missing');
+    const automationStatus=hard.length||healthStale?'FAIL':operationalWarns.length?'WARN':'PASS';
+    const evidenceStatus=!trackerOk?'BLOCKED':(pairs>=100?'READY':'WAIT');
     const colors=automationStatus==='PASS'?['#43e6a7','rgba(67,230,167,.28)','rgba(67,230,167,.055)']:
       automationStatus==='FAIL'?['#ff7b82','rgba(255,90,100,.48)','rgba(255,90,100,.08)']:
       ['#ffd37a','rgba(255,176,32,.40)','rgba(255,176,32,.06)'];
@@ -7040,10 +7065,12 @@ async function loadSystemHealthStatus(){
     const stamp=s.generated_at?new Date(s.generated_at).toLocaleString('uk-UA'):'—';
     el.innerHTML='<strong>⚙ Автоматизація: '+automationStatus+'</strong> · hard failures '+hard.length+' · operational warnings '+operationalWarns.length+
       (Number.isFinite(age)?' · manifest '+age.toFixed(1)+' год':'')+
+      (Number.isFinite(artifactAgeHours)?' · health age '+artifactAgeHours.toFixed(1)+' год':' · health age невідомий')+
       ' · знімок стану '+stamp+
       (hard.length?' <div style="margin-top:4px">⛔ '+hard.map(escapeHtml).join(' · ')+'</div>':'')+
       (operationalWarns.length?' <div style="margin-top:3px;color:#ffd37a">Операційні попередження: '+operationalWarns.map(escapeHtml).join(' · ')+'</div>':'')+
       '<div style="margin-top:4px;color:#ffd37a"><strong>🧪 Докази: '+evidenceStatus+'</strong> · validated outcome pairs '+pairs+'/100 · очікують незалежних outcomes '+awaiting+' · Tanita '+tanitaAwaiting+' · наступна ручна вибірка '+manualPending+'</div>'+
+      (!trackerOk?'<div style="margin-top:3px;color:#ff7b82">⛔ Prospective tracker не має свіжої PASS-телеметрії у health-артефакті; promotion gate заблоковано.</div>':'')+
       (sourceStatus==='WARN'&&automationStatus==='PASS'?'<div style="margin-top:3px;color:#a9bad8">Health artifact має WARN лише через evidence gates; це не збій автоматизації.</div>':'')+
       (evidenceWarns.length?' <div style="margin-top:3px;color:#a9bad8">Evidence gates: '+evidenceWarns.map(escapeHtml).join(' · ')+'</div>':'');
     try{
@@ -9380,9 +9407,9 @@ function renderWeekSummary(){
     const mon = d.getUTCMonth()+1;
     const sourceBase = e && e._expertOverride ? 'PDF' : (e ? 'Engine' : '—');
     const guards = [sig?.guard, sig?.dynamicGuard].filter(x=>x && x!=='none');
-    // Only today has an operational decision. Future dates retain their
-    // continuous forecast value instead of being collapsed into -3/-1/+1/+3.
-    const displayScore = i===0 ? operational : (isFinite(rawDynamic) ? Number(rawDynamic) : null);
+    // This block is explicitly a G_raw forecast summary. Never substitute
+    // today's operational/PDF decision for the raw series.
+    const displayScore = isFinite(rawDynamic) ? Number(rawDynamic) : null;
     days.push({ds, operational, displayScore, reference, source:sourceBase, guards, dow:dowShort, dateNum, mon, isToday:i===0, kpDynamic, rawDynamic});
   }
 
@@ -9420,11 +9447,13 @@ function renderWeekSummary(){
     const s = d.displayScore; const sStr = s===null?'—':(s>=0?'+':'')+(d.isToday?s.toFixed(0):s.toFixed(1));
     const refStr = d.reference===null?'—':(d.reference>=0?'+':'')+d.reference;
     const bold = d.isToday?'font-weight:800;text-decoration:underline':'';
-    const sourceTitle = `${d.isToday?'Оперативний стан':'Forecast G_raw'} ${sStr}. PDF/Engine reference ${refStr} (${d.source}).${d.guards.length?' Safety: '+d.guards.join('+')+'.':''}`;
+    const opTitle = d.isToday && d.operational!==null ? ` Operational ${d.operational>=0?'+':''}${d.operational}.` : '';
+    const sourceTitle = `Forecast G_raw ${sStr}.${opTitle} PDF/Engine reference ${refStr} (${d.source}).${d.guards.length?' Safety: '+d.guards.join('+')+'.':''}`;
     return `<span title="${sourceTitle}" style="display:inline-flex;flex-direction:column;align-items:center;min-width:38px;${bold}">
       <span style="font-size:8px;color:var(--dim)">${d.dow}</span>
       <span style="font-size:11px;font-weight:700;color:${col(s)}">${sStr}</span>
-      <span style="font-size:7px;color:var(--faint)">${d.isToday?'OP NOW':'G_raw forecast'}${d.guards.length?' ⚠':''}</span>
+      <span style="font-size:7px;color:var(--faint)">G_raw forecast${d.guards.length?' ⚠':''}</span>
+      ${d.isToday&&d.operational!==null?`<span style="font-size:7px;color:#d6b55c">OP ${d.operational>=0?'+':''}${d.operational}</span>`:''}
       <span style="font-size:7px;color:${d.source==='PDF'?'#d6b55c':'var(--faint)'}">ref ${refStr} ${d.source}</span>
     </span>`;
   }).join('');
@@ -12822,32 +12851,13 @@ function computePanchanga(dateUTC){
     karana = {name:'Нага',nameEn:'Naga',type:'Стала',score:0,note:'Небезпечні ситуації — обережно',isVishti:false};
   }
 
-  // Rahu Kalam: SR + segment * order[weekday], segment = dayLen/8
-  // v88.7+ (deep audit): Spencer 1971 + EoT + refraction (sync з calcSunTimes precision ±2-5 хв)
-  const doy = Math.floor((dateUTC - new Date(Date.UTC(dateUTC.getUTCFullYear(),0,1)))/86400000);
-  const _gamma = 2 * Math.PI * (doy - 1) / 365;
-  const decl = (180/Math.PI) * (
-      0.006918
-    - 0.399912 * Math.cos(_gamma)
-    + 0.070257 * Math.sin(_gamma)
-    - 0.006758 * Math.cos(2*_gamma)
-    + 0.000907 * Math.sin(2*_gamma)
-    - 0.002697 * Math.cos(3*_gamma)
-    + 0.001480 * Math.sin(3*_gamma)
-  );
-  const lat = _userLat;
-  // EoT correction (≈±16 min year-round) + zenith 90.833° (sun radius + refraction)
-  const _Brad = (360/365) * (doy - 81) * Math.PI / 180;
-  const _eqTimeMin = 9.87 * Math.sin(2*_Brad) - 7.53 * Math.cos(_Brad) - 1.5 * Math.sin(_Brad);
-  const _eqHours = _eqTimeMin / 60;
-  const _zenRad = 90.833 * Math.PI / 180;
-  const _sinLat = Math.sin(lat*Math.PI/180), _cosLat = Math.cos(lat*Math.PI/180);
-  const _sinDec = Math.sin(decl*Math.PI/180), _cosDec = Math.cos(decl*Math.PI/180);
-  const cosHA = (Math.cos(_zenRad) - _sinLat*_sinDec) / (_cosLat*_cosDec);
-  const HA = Math.acos(Math.max(-1,Math.min(1,cosHA))) * 180/Math.PI;
-  const lonOff = _userLon / 15;
-  const srH  = (12 - lonOff) - HA/15 - _eqHours; // схід, UTC
-  const ssH  = (12 - lonOff) + HA/15 - _eqHours; // захід, UTC
+  // Rahu/Yama/Gulika use the same canonical Meeus sunrise/sunset anchor as
+  // computeAi and the rest of Panchanga. This changes display windows only;
+  // frozen scores and Pi are untouched.
+  const _solarPair = sunRiseSetUTC_Meeus(dateUTC, _userLat, _userLon);
+  const _dayStartMs = Date.UTC(dateUTC.getUTCFullYear(),dateUTC.getUTCMonth(),dateUTC.getUTCDate());
+  const srH = (_solarPair.sunrise.getTime()-_dayStartMs)/3600000;
+  const ssH = (_solarPair.sunset.getTime()-_dayStartMs)/3600000;
   const dayLenH = ssH - srH;
   const segH = dayLenH / 8;
   // v88.8.11 КАНОН-БАГ#9 fix: Rahu Kalam позиції (1-based slot номери з 8).
@@ -12891,7 +12901,7 @@ function computePanchanga(dateUTC){
     end:   toHHMM(rahuEndH),
     active: rahuActive,
     score: rahuActive ? -1 : 0,
-    note: `UTC (шир. 50°N апрокс.)`,
+    note: `UTC · Meeus canonical sunrise`,
     // v88.8.12: додаткові канонічні windows для повної панчанги
     yamagandam: { start: toHHMM(yamaStartH), end: toHHMM(yamaEndH), active: yamaActive },
     gulika:     { start: toHHMM(gulikaStartH), end: toHHMM(gulikaEndH), active: gulikaActive }
@@ -13714,6 +13724,24 @@ function _renderPanchUpcoming(refDateUTC){
   try {
     if(typeof BUILTIN_VAISNAVA !== 'undefined' && Array.isArray(BUILTIN_VAISNAVA)){
       const found = { ekad: false, ama: false, purn: false };
+      // Purnima is a lunar tithi, not a Vaisnava festival-name match.
+      // Derive it from the same canonical Panchanga calculation used elsewhere.
+      for(let pd = 0; pd <= 35 && !found.purn; pd++){
+        const pDate = new Date(todayMs + pd * 86400000 + 12 * 3600000);
+        const pCalc = computePanchanga(pDate);
+        if(pCalc && pCalc.tithi && pCalc.tithi.num === 15){
+          const pKey = pDate.toISOString().slice(0,10);
+          items.push({
+            icon: '🌕',
+            label: 'Пурніма (Tithi 15 · розрахунок)',
+            when: pKey,
+            rel: relTxt(pd),
+            note: 'Lᵢ = 0, нейтрально · не дата свята',
+            cls: 'neu'
+          });
+          found.purn = true;
+        }
+      }
       const sorted = BUILTIN_VAISNAVA.slice().sort((a,b) => a.d.localeCompare(b.d));
       for(const ev of sorted){
         const dd = daysFrom(ev.d);
@@ -13741,17 +13769,6 @@ function _renderPanchUpcoming(refDateUTC){
             cls: 'bad'
           });
           found.ama = true;
-        }
-        if(!found.purn && /purnima|gaura purnima|guru .{1,10}purnima/i.test(ev.s)){
-          items.push({
-            icon: '🌕',
-            label: 'Пурніма (повний місяць)',
-            when: ev.d,
-            rel: relTxt(dd),
-            note: 'Lᵢ = 0, нейтрально',
-            cls: 'neu'
-          });
-          found.purn = true;
         }
         if(found.ekad && found.ama && found.purn) break;
       }
@@ -14905,11 +14922,6 @@ function driverIcon(v){
 
 // ═══ v83b: unified decision system ═══
 function _uniq(arr){ return [...new Set(arr)]; }
-
-function gZoneLabel(g){
-  if(!isFinite(g)) return '—';
-  return GLOBAL_STATES[classifyStateByG(g)].zone;
-}
 
 function buildUnifiedAdvice(state){
   const g = Number(state?.gNow ?? state?.g ?? 0);
@@ -18780,13 +18792,14 @@ function renderMoonRetroTop(){
   // v88.9.05-fp187: same live-vs-cached-noon bug as Li — tithiName came from
   // _lastPanchCtx (stale), while _tithiIdxForLi185 (live, from pd) was
   // already computed right here for the Li fix. Reuse it for the name too.
-  // nakName is NOT fixed here — would need moon sidereal longitude, which
-  // isn't exposed as a global in this scope; documented, deferred, not
-  // guessed at with a risky new global variable right now.
   const tithiName = _tithiIdxForLi185 !== null ? TITHI_NAMES[_tithiIdxForLi185] : (pc?.tithi?.name||'—');
   const tithiNum = _tithiIdxForLi185 !== null ? _tithiIdxForLi185 + 1 : (pc?.tithi?.num||'');
-  const nakName=pc?.nakshatra?.name||'—';
-  const nakScore=pc?.nakshatra?.score;
+  // Use the same live timestamp and canonical Panchanga function as Tithi.
+  // The cached sunrise/noon context remains a separate comparison layer.
+  let _livePanch185=null;
+  try{ _livePanch185=computePanchanga(now); }catch(_e){}
+  const nakName=_livePanch185?.nakshatra?.name||pc?.nakshatra?.name||'—';
+  const nakScore=_livePanch185?.nakshatra?.score??pc?.nakshatra?.score;
 
   if(el('moonPhaseNow')) el('moonPhaseNow').textContent=phaseName;
   if(el('moonTithiNow')) el('moonTithiNow').textContent=tithiNum?tithiName+' ('+tithiNum+')':tithiName;
@@ -19267,7 +19280,6 @@ function renderProvenance(){
   const _ds = window.__dashState || {};
   const _ui = window.__uiState || {};
   const _now = new Date();
-  const _fmtTs = (ms) => ms ? new Date(ms).toLocaleString('uk-UA',{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit'}) : '—';
   const _fresh = document.getElementById('freshnessBadge')?.textContent || '?';
 
   // Kp source
@@ -19393,7 +19405,8 @@ function renderProvenance(){
     </div>
     <div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(155,177,220,.25)">
       <div style="font-size:10px;color:#8fb5ff;letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px">Expert Excel replay (R&amp;D, довідково — НЕ production-джерело)</div>
-      ${_row('Strict-3 / Exact', '80.5% / 65.0% (n=394, перетин з GT)')}
+      ${_row('Знак / Exact', '81.0% / 66.5% (n=394, revision-aware PDF overlap)')}
+      ${_row('±1', '88.3% (той самий n=394)')}
       ${_row('Файл покриває', '495 днів, 07.03.2025–14.07.2026')}
       <div style="margin-top:6px;padding:6px 8px;font-size:9px;color:var(--faint);background:rgba(143,181,255,.06);border-radius:6px;line-height:1.5">
         Ретроспективне відтворення PDF-вердикту за РУЧНИМИ експертними тегами (не автоматичний розрахунок).
@@ -20015,7 +20028,7 @@ async function loadAllLite(){
       try{ updateFreshnessBadge(); }catch(e){}
       try{ syncV702UI(); }catch(e){ console.warn('[fp138 lite sync]', e.message); }
       await _yield();
-      try{ if(typeof renderRegimeCards==='function') renderRegimeCards(); }catch(e){}
+      // Regime cards remain retired until independent outcomes exist.
       try{ if(typeof renderUnifiedIndicesPanel==='function') renderUnifiedIndicesPanel(); }catch(e){}
       try{ if(typeof _patchStaleLoadingDOM==='function') _patchStaleLoadingDOM(); }catch(e){}
     })();
@@ -20500,7 +20513,7 @@ async function loadAll(){
   // fallback-значенні — жодне наступне авто-оновлення (кожні N хв) її не оновлювало,
   // на відміну від hero-кільця/GNSS, які проходять через syncV702UI() тут же.
   // Тепер renderRegimeCards() теж в циклі — самокорегується на наступному refresh.
-  try{ if(typeof renderRegimeCards === 'function') renderRegimeCards(); }catch(e){if(window._DEBUG)console.warn('[fp122 regimeCards]:',e.message)}
+  // Regime cards remain retired until independent outcomes exist.
   try{ if(typeof renderUnifiedIndicesPanel === 'function') renderUnifiedIndicesPanel(); }catch(e){if(window._DEBUG)console.warn('[fp126 unifiedIndices]:',e.message)}
   // fp54-A: _daySlots may now be populated (from renderDayForecast earlier in the cycle)
   // Final pass to patch any stale "Немає даних по слотах" placeholders.
