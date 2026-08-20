@@ -6,7 +6,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.210-fp405-SINGLE-VERDICT</title>
+  <title>G-Index — Космофізичний дашборд v88.9.211-fp406-COLOR-HEALTH-CLOSURE</title>
 
   <script>
     // fp388: the Android TWA opens an explicit free companion channel. It keeps
@@ -13582,7 +13582,8 @@ function renderPanchangaCard(state){
         const worstRangeUTC = _utcRange(worst.label);
         const bestG = (best.G >= 0 ? '+' : '') + best.G.toFixed(1);
         const worstG = (worst.G >= 0 ? '+' : '') + worst.G.toFixed(1);
-        const bestCls = best.G > 0 ? 'is-pos' : best.G < 0 ? 'is-neg' : '';
+        // fp406: positive local/raw values are factors, not a green action permission.
+        const bestCls = _criticalFinalDay ? '' : (best.G > 0 ? 'is-pos' : best.G < 0 ? 'is-neg' : '');
         const worstCls = worst.G < 0 ? 'is-neg' : '';
         let html = '';
         if (sameSlot) {
@@ -17936,6 +17937,14 @@ function _renderHeroCause(g, kp) {
     return;
   }
 
+  // fp406: positive factors remain visible but must not look like a second
+  // green verdict when the canonical operational decision is restrictive.
+  let _operationalCritical406 = false;
+  try {
+    const _sig406 = (typeof resolveDaySignal_v88825 === 'function') ? resolveDaySignal_v88825() : null;
+    _operationalCritical406 = Number.isFinite(Number(_sig406?.decisionScore)) && Number(_sig406.decisionScore) <= -1;
+  } catch (_e406) { /* presentation guard only */ }
+
   // v85b: read from __uiState.ai instead of DOM gDecompChips
   const _ai = window.__uiState?.ai;
   const factors = [];
@@ -18009,9 +18018,10 @@ function _renderHeroCause(g, kp) {
         // отримували ту саму формулу-опис. Тепер для слабких значень (|val|<0.3)
         // додається пом'якшувальне "слабко" — не змінюючи саму категорію.
         const txt = Math.abs(f.val) < 0.3 ? ('слабко ' + txt0) : txt0;
-        const cls  = isKp
+        const cls0 = isKp
           ? (_kpPhysical >= 3 ? 'is-neg' : 'is-pos') // фізично: буря/підвищено = погано, спокійно = добре
           : (f.val > 0 ? 'is-pos' : 'is-neg');
+        const cls = (_operationalCritical406 && cls0 === 'is-pos') ? '' : cls0;
         return `<div class="why-cause-row ${cls}">`
              + `<span class="wcr-cause">${f.name} (зараз) ${dir} ${sign}${f.val.toFixed(1)}</span>`
              + `<span class="wcr-arrow">→</span>`
@@ -18037,7 +18047,7 @@ function _renderHeroCause(g, kp) {
 
   // Active factors with full detail
   let html = activeFact.map(f => {
-    const col = f.val > 0 ? '#2bd47d' : '#ff6b6b';
+    const col = f.val > 0 ? (_operationalCritical406 ? '#9bb1dc' : '#2bd47d') : '#ff6b6b';
     const sign = f.val > 0 ? '+' : '';
     const dir = f.val > 0 ? '↑' : '↓';
     const isMain = f.name === mainName;

@@ -352,3 +352,5 @@ requireText('поза оперативною шкалою −3…+3', 'extreme r
 requireText("Kp observed із затримкою понад 1 год → максимум «Середня»", 'delayed observed data cannot be labeled High quality');
 requireText('const _swControlledAtBoot = Boolean(navigator.serviceWorker.controller)', 'first PWA install records whether the page was already controlled');
 requireText("if (!_swControlledAtBoot)", 'first PWA controller install cannot reload an already current network page');
+requireText("const bestCls = _criticalFinalDay ? ''", 'restrictive operational verdict suppresses green local-load styling');
+requireText("_operationalCritical406 ? '#9bb1dc' : '#2bd47d'", 'positive factor uses neutral styling under a restrictive operational verdict');
