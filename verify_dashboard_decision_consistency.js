@@ -174,6 +174,12 @@ requireText('Оперативний стан ${_op179} має пріоритет
 requireText('окрема порада призупинена через глобальний ризик', 'positive local activity advice is suppressed during operational risk');
 requireText('золота рамка = PDF reference', '27-day timeline separates reference provenance from raw colors');
 requireText('is-now.is-routine', 'current routine slot has non-positive semantic styling');
+requireText("const _dayRestrictedHeat = isFinite(_heatReference) && Number(_heatReference) < 0", 'negative daily contour cannot render a green allowed slot');
+requireText("personalMain = `${_horaTheme405} — лише тема години. Оперативний стан ${_opScore405}: тільки перевірена рутина.`", 'Hora cannot issue an optimistic action against the operational verdict');
+requireText('уже всередині G_raw · не окремий прогноз', 'positive Panchanga is labeled as an included factor, not a second forecast');
+requireText('фактор · не прогноз', 'traditional components are visibly non-verdict factors');
+requireText('scoreIcon(p.tithi.score, _panchVisualCtx)', 'Jyotish component colors follow the operational verdict, not positive raw G');
+requireText('це вже врахований фактор, не окремий прогноз', 'state explanation cannot present Panchanga as a second forecast');
 requireText("'Історична подія NOAA'", 'inactive NOAA event is explicitly historical');
 requireText('Бюлетень NOAA ${hoursAgo}г тому', 'aged NOAA event is time-labeled before live Kp loads');
 requireText('кількість дат, не значення Kp', 'Kp source counts cannot masquerade as Kp values');

@@ -6,7 +6,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.209-fp404-LOCAL-ASTRONOMY</title>
+  <title>G-Index — Космофізичний дашборд v88.9.210-fp405-SINGLE-VERDICT</title>
 
   <script>
     // fp388: the Android TWA opens an explicit free companion channel. It keeps
@@ -3706,8 +3706,8 @@ function renderPanchPiLine(){
   if(!src||src==='\u2014'||src==='\u2026'){dst.textContent='P\u1d62 = \u2014';dst.style.color='';return;}
   var v=parseFloat(src.replace(',','.'));
   if(!isFinite(v)){dst.textContent='P\u1d62 = '+src;dst.style.color='';return;}
-  dst.textContent='P\u1d62 = '+(v>0?'+':'')+v.toFixed(1);
-  dst.style.color=v>0?'#2bd47d':v<0?'#ff6b6b':'#9bb1dc';
+  dst.textContent='P\u1d62 = '+(v>0?'+':'')+v.toFixed(1)+' · фактор у G_raw, не окремий прогноз';
+  dst.style.color=v>0?'#7ab8d4':v<0?'#ff6b6b':'#9bb1dc';
 }
 
 // ═══ v76c: wf3 Signal Summary ═══
@@ -3724,7 +3724,7 @@ var WF3_PHRASES={
   moon_down:'Місячна фаза створює {s} тиск ({v}).',
   eclipse:'Період затемнення створює нестабільність ({v}).',
   events:'Live-шар подій дає {s} вплив ({v}).',
-  panchanga:'Панчанга формує {s} фон ({v}).',
+  panchanga:'P\u1d62 Панчанги дає {s} внесок у G_raw ({v}); це вже врахований фактор, не окремий прогноз.',
   mixed:'Фактори змішані, чіткого домінування немає.',
   others_neutral:'Інші фактори нейтральні.',
   rel_good:'Вхідні дані повні ({c}%).',
@@ -7400,6 +7400,14 @@ function renderUnifiedIndicesPanel(){
       yoga: p.yoga?.name || null, karana: p.karana?.name || null
     };
 
+    let _uipOperationalScore = null;
+    try {
+      const _uipG = isFinite(window.__uiState?.gNow) ? Number(window.__uiState.gNow) : NaN;
+      const _uipKp = isFinite(window.__uiState?.kpNow) ? Number(window.__uiState.kpNow) : NaN;
+      const _uipSig = resolveDaySignal_v88825(new Date(todayKyivStr()+'T12:00:00Z'), _uipG, _uipKp, {isToday:true});
+      if (_uipSig && isFinite(_uipSig.decisionScore)) _uipOperationalScore = Number(_uipSig.decisionScore);
+    } catch(_e) { /* fail-soft: factors remain neutral-colored */ }
+    const _uipRestricted = _uipOperationalScore !== null && _uipOperationalScore < 0;
     const rowEl = el('uipPanchangaRow');
     if(rowEl){
       // v88.8.82-fp161: ⓘ-підказка на кожен індекс — що це і який традиційний вплив
@@ -7421,13 +7429,17 @@ function renderUnifiedIndicesPanel(){
       ];
       rowEl.innerHTML = items.map(([label, name, score])=>{
         if(name==null) return '';
-        const col = score>0 ? 'var(--ok)' : score<0 ? '#ff8866' : 'var(--muted)';
+        // A Panchanga component is a traditional factor already included in G_raw,
+        // never an independent green permission. Under a restrictive operational
+        // state it stays neutral/purple even when its local score is positive.
+        const col = score>0 ? (_uipRestricted ? '#cfb6ff' : '#7ab8d4') : score<0 ? '#ff8866' : 'var(--muted)';
         const expl = EXPLAIN[label] || '';
         return `<div style="padding:5px 6px;border-radius:6px;background:rgba(255,255,255,.03);text-align:center">
           <div style="font-size:8px;color:var(--faint);text-transform:uppercase">${label}
             <span class="hint" tabindex="0" style="cursor:help;color:var(--faint);border:1px solid var(--faint);border-radius:50%;width:11px;height:11px;display:inline-flex;align-items:center;justify-content:center;font-size:7px;font-style:normal;margin-left:2px;vertical-align:middle">і<span class="hint-pop">${_escHtml(expl)}<br><span style="opacity:.6;font-size:10px">Традиційна ведична асоціація, не медичний діагноз.</span></span></span>
           </div>
           <div style="font-size:11px;font-weight:600;color:${col}">${name}</div>
+          <div style="font-size:8px;color:var(--faint)">фактор · не прогноз</div>
         </div>`;
       }).join('');
     }
@@ -13138,6 +13150,15 @@ function computePanchangaState(dateUTC){
 
 function renderPanchangaCard(state){
   const { p, ctx, cells, _gEarly, aiNow, pclOnly, panchDiscrepancy, finalDo, finalAvoid, _gNow, dateStr, dateUTC } = state;
+  // Use the canonical operational verdict for visual suppression. Raw G can be
+  // positive while the single operational decision is negative; in that case
+  // positive Jyotish components must not render as green permissions.
+  let _panchVisualCtx = _gEarly;
+  try {
+    const _pvKp = isFinite(window.__uiState?.kpNow) ? Number(window.__uiState.kpNow) : NaN;
+    const _pvSig = resolveDaySignal_v88825(new Date(todayKyivStr()+'T12:00:00Z'), Number(_gNow), _pvKp, {isToday:true});
+    if (_pvSig && isFinite(_pvSig.decisionScore)) _panchVisualCtx = Number(_pvSig.decisionScore);
+  } catch(_e) { /* fail-soft to raw context */ }
   const el_ = id => document.getElementById(id);
   // Local Panchanga properties never override the operational safety state.
   let _finalDayDecision = null;
@@ -13316,35 +13337,35 @@ function renderPanchangaCard(state){
       <td style="padding:5px 6px;color: var(--muted);font-size:11px">
         <span class="hint" tabindex="0" style="cursor:help;font-style:italic;border-bottom:1px dotted var(--faint)">Tithi<span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.tithi(p.tithi))}</span></span>
       </td>
-      <td style="padding:5px 6px;font-weight:600"><span class="hint" tabindex="0" style="cursor:help">${scoreIcon(p.tithi.score, _gEarly)}${scoreBar(p.tithi.score, _gEarly)} ${p.tithi.name}<br><span style="font-size:10px;color:#7a95b8;font-weight:400">${p.tithi.type}</span><span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.tithi(p.tithi))}</span></span></td>
+      <td style="padding:5px 6px;font-weight:600"><span class="hint" tabindex="0" style="cursor:help">${scoreIcon(p.tithi.score, _panchVisualCtx)}${scoreBar(p.tithi.score, _panchVisualCtx)} ${p.tithi.name}<br><span style="font-size:10px;color:#7a95b8;font-weight:400">${p.tithi.type}</span><span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.tithi(p.tithi))}</span></span></td>
       <td data-local-action="1" style="padding:5px 6px;font-size:11px;color:#b0c4de">${tAdv && tAdv.do ? _localAction(tAdv.do) : ''}</td>
     </tr>
     <tr>
       <td style="padding:5px 6px;color: var(--muted);font-size:11px">
         <span class="hint" tabindex="0" style="cursor:help;font-style:italic;border-bottom:1px dotted var(--faint)">Vara<span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.vara(p.vara))}</span></span>
       </td>
-      <td style="padding:5px 6px;font-weight:600"><span class="hint" tabindex="0" style="cursor:help">${scoreIcon(p.vara.score, _gEarly)}${scoreBar(p.vara.score, _gEarly)} ${p.vara.name}<br><span style="font-size:10px;color:#7a95b8;font-weight:400">${p.vara.planet}</span><span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.vara(p.vara))}</span></span></td>
+      <td style="padding:5px 6px;font-weight:600"><span class="hint" tabindex="0" style="cursor:help">${scoreIcon(p.vara.score, _panchVisualCtx)}${scoreBar(p.vara.score, _panchVisualCtx)} ${p.vara.name}<br><span style="font-size:10px;color:#7a95b8;font-weight:400">${p.vara.planet}</span><span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.vara(p.vara))}</span></span></td>
       <td data-local-action="1" style="padding:5px 6px;font-size:11px;color:#b0c4de">${vAdv && vAdv.do ? _localAction(vAdv.do) : ''}</td>
     </tr>
     <tr>
       <td style="padding:5px 6px;color: var(--muted);font-size:11px">
         <span class="hint" tabindex="0" style="cursor:help;font-style:italic;border-bottom:1px dotted var(--faint)">Nakshatra<span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.nakshatra(p.nakshatra))}</span></span>
       </td>
-      <td style="padding:5px 6px;font-weight:600"><span class="hint" tabindex="0" style="cursor:help">${scoreIcon(p.nakshatra.score, _gEarly)}${scoreBar(p.nakshatra.score, _gEarly)} ${p.nakshatra.name}${p.nakshatra.isGandaMool ? ' <span style="color:#ffaa33;font-size:10px;font-weight:700" title="Ganda Mool junction nakshatra">⚠ GM</span>' : ''}${p.nakshatra.isPanchak ? ` <span style="color:#ff8866;font-size:10px;font-weight:700" title="Panchak — інаусп. 5-day window">⚠ PK${p.nakshatra.panchakType ? ' '+p.nakshatra.panchakType.split(' ')[0] : ''}</span>` : ''}<br><span style="font-size:10px;color:#7a95b8;font-weight:400">${p.nakshatra.type} · ${p.nakshatra.regent}${p.nakshatra.panchaPakshi ? ` · 🐦 ${p.nakshatra.panchaPakshi.birdUa}` : ''}</span><span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.nakshatra(p.nakshatra))}</span></span></td>
+      <td style="padding:5px 6px;font-weight:600"><span class="hint" tabindex="0" style="cursor:help">${scoreIcon(p.nakshatra.score, _panchVisualCtx)}${scoreBar(p.nakshatra.score, _panchVisualCtx)} ${p.nakshatra.name}${p.nakshatra.isGandaMool ? ' <span style="color:#ffaa33;font-size:10px;font-weight:700" title="Ganda Mool junction nakshatra">⚠ GM</span>' : ''}${p.nakshatra.isPanchak ? ` <span style="color:#ff8866;font-size:10px;font-weight:700" title="Panchak — інаусп. 5-day window">⚠ PK${p.nakshatra.panchakType ? ' '+p.nakshatra.panchakType.split(' ')[0] : ''}</span>` : ''}<br><span style="font-size:10px;color:#7a95b8;font-weight:400">${p.nakshatra.type} · ${p.nakshatra.regent}${p.nakshatra.panchaPakshi ? ` · 🐦 ${p.nakshatra.panchaPakshi.birdUa}` : ''}</span><span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.nakshatra(p.nakshatra))}</span></span></td>
       <td data-local-action="1" style="padding:5px 6px;font-size:11px;color:#b0c4de">${nAdv && nAdv.do ? _localAction(nAdv.do) : ''}</td>
     </tr>
     <tr>
       <td style="padding:5px 6px;color: var(--muted);font-size:11px">
         <span class="hint" tabindex="0" style="cursor:help;font-style:italic;border-bottom:1px dotted var(--faint)">Yoga<span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.yoga(p.yoga))}</span></span>
       </td>
-      <td style="padding:5px 6px;font-weight:600"><span class="hint" tabindex="0" style="cursor:help">${scoreIcon(p.yoga.score, _gEarly)}${scoreBar(p.yoga.score, _gEarly)} ${p.yoga.name}${p.yoga.isCritical?' ⚠️':''}<br><span style="font-size:10px;color:#7a95b8;font-weight:400">резонанс Сонце–Місяць</span><span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.yoga(p.yoga))}</span></span></td>
+      <td style="padding:5px 6px;font-weight:600"><span class="hint" tabindex="0" style="cursor:help">${scoreIcon(p.yoga.score, _panchVisualCtx)}${scoreBar(p.yoga.score, _panchVisualCtx)} ${p.yoga.name}${p.yoga.isCritical?' ⚠️':''}<br><span style="font-size:10px;color:#7a95b8;font-weight:400">резонанс Сонце–Місяць</span><span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.yoga(p.yoga))}</span></span></td>
       <td data-local-action="1" style="padding:5px 6px;font-size:11px;color:#b0c4de">${yAdv && yAdv.do ? _localAction(yAdv.do) : ''}</td>
     </tr>
     <tr>
       <td style="padding:5px 6px;color: var(--muted);font-size:11px">
         <span class="hint" tabindex="0" style="cursor:help;font-style:italic;border-bottom:1px dotted var(--faint)">Karana<span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.karana(p.karana))}</span></span>
       </td>
-      <td style="padding:5px 6px;font-weight:600"><span class="hint" tabindex="0" style="cursor:help">${scoreIcon(p.karana.score, _gEarly)}${scoreBar(p.karana.score, _gEarly)} ${p.karana.name}${p.karana.isVishti?' ⛔':''}<br><span style="font-size:10px;color:#7a95b8;font-weight:400">${p.karana.type}</span><span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.karana(p.karana))}</span></span></td>
+      <td style="padding:5px 6px;font-weight:600"><span class="hint" tabindex="0" style="cursor:help">${scoreIcon(p.karana.score, _panchVisualCtx)}${scoreBar(p.karana.score, _panchVisualCtx)} ${p.karana.name}${p.karana.isVishti?' ⛔':''}<br><span style="font-size:10px;color:#7a95b8;font-weight:400">${p.karana.type}</span><span class="hint-pop" style="white-space:pre;font-size:12px">${escapeHtml(PANCH_TIPS.karana(p.karana))}</span></span></td>
       <td data-local-action="1" style="padding:5px 6px;font-size:11px;color:#b0c4de">${kAdv && kAdv.do ? _localAction(kAdv.do) : ''}</td>
     </tr>
     ${_aiEarly.ei !== 0 ? `<tr style="background:rgba(255,100,100,0.05)">
@@ -16350,8 +16371,12 @@ function renderHeatStripV86(){
     }) : null;
     const _slotBlocked = !!(_slotDecision && _slotDecision.hasBlockedSegment);
     const _slotAction = _slotDecision?.slotAction || '';
-    const _slotRoutine = !_slotBlocked && (_slotAction.includes('рутин') || _slotAction.includes('обереж') || _slotAction.includes('перевір'));
-    const _slotAllowed = !_slotBlocked && !_slotRoutine && g >= 0.5;
+    // A negative daily reference/operational contour cannot render a green
+    // "МОЖНА" slot. The slot can only identify the least restrictive routine
+    // window; it cannot overturn the single daily verdict.
+    const _dayRestrictedHeat = isFinite(_heatReference) && Number(_heatReference) < 0;
+    const _slotRoutine = !_slotBlocked && (_dayRestrictedHeat || _slotAction.includes('рутин') || _slotAction.includes('обереж') || _slotAction.includes('перевір') || _slotAction.includes('без нових') || _slotAction.includes('без жодних'));
+    const _slotAllowed = !_slotBlocked && !_slotRoutine && !_dayRestrictedHeat && g >= 0.5;
     if (_slotBlocked) {
       seg.classList.add('heat-bad');
       seg.setAttribute('data-gval', 'БЛОК');
@@ -18913,10 +18938,20 @@ function syncPanchSummary(){
   const ai=pc.aiComponents||{};
   const astroTotal=Number(ai.Li||0)+Number(ai.Mi||0)+Number(ai.ei||0)+Number(ai.Pi||0)+Number(ai.Di||0);
   const currentSlot=(typeof getCurrentSlotDecision==='function') ? getCurrentSlotDecision() : null;
-  // Pi line with G contribution context
-  const piCol = pi>=1?'#2bd47d':pi<=-1?'#ff6b6b':'#9bb1dc';
-  const piState=pi>=1?'підтримує день':pi<=-1?'погіршує день':'майже нейтральна';
-  if(piLine) piLine.innerHTML=`Pᵢ = <strong style="color:${piCol}">${pi>0?'+':''}${pi.toFixed(1)}</strong> · ${piState} <span style="color:var(--faint);font-size:10px">· внесок у G · noon UTC</span>`;
+  // Pi line with G contribution context. It is already inside G_raw and must
+  // never look like a separate green forecast or permission.
+  let _panchOpScore = null;
+  try {
+    const _pg = isFinite(window.__uiState?.gNow) ? Number(window.__uiState.gNow) : NaN;
+    const _pk = isFinite(window.__uiState?.kpNow) ? Number(window.__uiState.kpNow) : NaN;
+    const _ps = resolveDaySignal_v88825(new Date(todayKyivStr()+'T12:00:00Z'), _pg, _pk, {isToday:true});
+    if (_ps && isFinite(_ps.decisionScore)) _panchOpScore = Number(_ps.decisionScore);
+  } catch(_e) { /* fail-soft */ }
+  const _panchRestricted = _panchOpScore !== null && _panchOpScore < 0;
+  const piCol = pi>=1?(_panchRestricted?'#cfb6ff':'#7ab8d4'):pi<=-1?'#ff6b6b':'#9bb1dc';
+  const piState=pi>=1?'локально підтримує raw-компонент':pi<=-1?'погіршує raw-компонент':'майже нейтральна';
+  const _panchGate = _panchRestricted ? ` · оперативний стан ${_panchOpScore} не змінюється` : '';
+  if(piLine) piLine.innerHTML=`Pᵢ = <strong style="color:${piCol}">${pi>0?'+':''}${pi.toFixed(1)}</strong> · ${piState}<span style="color:var(--faint);font-size:10px"> · уже всередині G_raw · не окремий прогноз${_panchGate} · noon UTC</span>`;
   // Product summary
   const neg=[],pos=[];
   if(ts<0)neg.push('тітхі');if(ns<0)neg.push('накшатра');if(ys<0)neg.push('йога');if(ks<0)neg.push('карана');
@@ -19106,6 +19141,19 @@ function syncPersonalContext(){
       }
     } catch(_e){ /* silent */ }
   }
+  // fp405: Hora/Panchanga are local explanatory factors, not a second verdict.
+  // Gate optimistic wording through the same canonical operational decision as Hero.
+  try {
+    const _opG405 = isFinite(window.__uiState?.gNow) ? Number(window.__uiState.gNow) : NaN;
+    const _opKp405 = isFinite(window.__uiState?.kpNow) ? Number(window.__uiState.kpNow) : NaN;
+    const _opSig405 = resolveDaySignal_v88825(new Date(todayKyivStr()+'T12:00:00Z'), _opG405, _opKp405, {isToday:true});
+    const _opScore405 = (_opSig405 && isFinite(_opSig405.decisionScore)) ? Number(_opSig405.decisionScore) : null;
+    if (_opScore405 !== null && _opScore405 < 0) {
+      const _horaTheme405 = hora?.planet ? `${hora.planet} Hora` : 'Поточна Hora';
+      personalMain = `${_horaTheme405} — лише тема години. Оперативний стан ${_opScore405}: тільки перевірена рутина.`;
+      personalSub = `Panchanga Pᵢ ${piVal>=0?'+':''}${piVal.toFixed(1)} уже врахована в raw-фоні й не послаблює оперативне рішення ${_opScore405}.`;
+    }
+  } catch(_e) { /* fail-soft: existing restrictive guards remain */ }
   if(hora) personalSub += ` (${hora.planet} ще ${hora.minLeft} хв)`;
 
   main.textContent = personalMain;
