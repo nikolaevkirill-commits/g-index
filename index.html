@@ -6,7 +6,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G-Index — Космофізичний дашборд v88.9.211-fp406-COLOR-HEALTH-CLOSURE</title>
+  <title>NeboRhythm: Cosmic Timing — Космофізичний дашборд v88.9.212-fp407-JYOTISH-ANCHOR-CLOSURE</title>
 
   <script>
     // fp388: the Android TWA opens an explicit free companion channel. It keeps
@@ -7389,8 +7389,11 @@ function renderUnifiedIndicesPanel(){
   const box = el('unifiedIndicesPanel');
   if(!box) return;
   try{
-    const now = new Date(todayKyivStr()+'T12:00:00Z');
-    const p = (typeof computePanchanga==='function') ? computePanchanga(now) : null;
+    const dayRef = new Date(todayKyivStr()+'T12:00:00Z');
+    // Day indices use the same canonical sunrise anchor as G/Pi and the
+    // main Jyotish card.  Do not mix an arbitrary noon snapshot into a
+    // day-level panel (audit C4-C6).
+    const p = (typeof computePanchanga==='function') ? computePanchanga(sunriseUTC(dayRef)) : null;
     if(!p) { box.style.display='none'; return; }
     box.style.display='block';
     // v88.8.86-fp165: снепшот НАЗВ (не тільки чисел) для Change Log — запит Kyrylo/аудит:
@@ -14957,13 +14960,10 @@ function buildUnifiedAdvice(state){
   const pc = _lastPanchCtx;
   if(pc){
     if(pc.karana?.isVishti){ AVOID.push('нові початки (Vishti)'); NOTE.push('Vishti karana — підвищений ризик'); }
-    // v88.9.05-fp187: same stale-cache bug as Li/tithiName fixes — pc.tithi.index
-    // could reflect the tithi active AT NOON (day reference), not right now.
-    // Recompute live from window._lunarPhaseDeg when available, so an
-    // Ekadashi-based recommendation doesn't linger for hours after the
-    // tithi has actually already moved on (or start too early).
-    const _pdAdv = window._lunarPhaseDeg;
-    const tIdx = isFinite(_pdAdv) ? Math.min(29, Math.floor(((_pdAdv % 360) + 360) % 360 / 12)) : pc.tithi?.index;
+    // Advice is a DAY layer.  _lastPanchCtx is already calculated at the
+    // canonical local sunrise; using a second live floor(phase/12) here
+    // made Tithi disagree with Nakshatra/Yoga and the day verdict.
+    const tIdx = Number.isFinite(Number(pc.tithi?.num)) ? Number(pc.tithi.num) - 1 : null;
     if(tIdx===10||tIdx===25){ DO.push('дисципліна','самоконтроль'); NOTE.push('Екадаші — день стриманості'); }
     const nType = pc.nakshatra?.type;
     // Nakshatra AVOID always applies; DO only at neutral+
@@ -18811,12 +18811,17 @@ function renderMoonRetroTop(){
 
   // Moon block — from JS variables
   const pd=window._lunarPhaseDeg;
+  // One complete instant Panchanga snapshot supplies every live lunar field.
+  // This removes independent floor(phase/12) copies that drifted from
+  // Nakshatra near boundaries while preserving the separate day/sunrise layer.
+  let _livePanch185=null;
+  try{ _livePanch185=computePanchanga(now); }catch(_e){}
   const phaseName=isFinite(pd)?phaseNameByAngle(pd):'—';
   // v88.9.03-fp185: same stale-cache bug as fp184 — moonLiNow ("Now" in the
   // id!) was reading ai.Li from _lastPanchCtx (noon-UTC-referenced cache),
   // not live. Recompute Amavasya case live from pd, matching computeAi's
   // canonical formula, same as syncWhy()'s fix.
-  const _tithiIdxForLi185 = isFinite(pd) ? Math.min(29, Math.floor(((pd % 360) + 360) % 360 / 12)) : null;
+  const _tithiIdxForLi185 = Number.isFinite(Number(_livePanch185?.tithi?.num)) ? Number(_livePanch185.tithi.num) - 1 : null;
   // v88.9.07-fp188: той самий дзеркальний баг що в syncWhy — fallback (ai.Li)
   // читав кеш (sunrise-референс) коли live-тітхі вже НЕ Амавасья. Рахуємо live.
   const _kpLive185 = (window.__uiState && isFinite(window.__uiState.kpNow)) ? window.__uiState.kpNow : 0;
@@ -18831,8 +18836,6 @@ function renderMoonRetroTop(){
   const tithiNum = _tithiIdxForLi185 !== null ? _tithiIdxForLi185 + 1 : (pc?.tithi?.num||'');
   // Use the same live timestamp and canonical Panchanga function as Tithi.
   // The cached sunrise/noon context remains a separate comparison layer.
-  let _livePanch185=null;
-  try{ _livePanch185=computePanchanga(now); }catch(_e){}
   const nakName=_livePanch185?.nakshatra?.name||pc?.nakshatra?.name||'—';
   const nakScore=_livePanch185?.nakshatra?.score??pc?.nakshatra?.score;
 
@@ -18859,12 +18862,11 @@ function renderMoonRetroTop(){
     try{
       // v88.9.05-fp187: same stale-cache pattern — use live tithi number
       // (window._lunarPhaseDeg) instead of cached pc.tithi.num.
-      const _pdShift = window._lunarPhaseDeg;
-      const tNum = isFinite(_pdShift) ? (Math.min(29, Math.floor(((_pdShift % 360) + 360) % 360 / 12)) + 1) : (pc?.tithi?.num||0);
-      // Approximate: tithi changes every ~24h, next shift in remaining hours
-      const dayFrac=(now.getUTCHours()*60+now.getUTCMinutes())/1440;
-      const remH=Math.max(1,Math.round((1-dayFrac)*24));
-      el('moonNextShift').textContent='~'+remH+'г';
+      const tNum = Number(_livePanch185?.tithi?.num||pc?.tithi?.num||0);
+      // Canonical ephemeris-derived boundary estimate from computePanchanga.
+      const _nextH=Number(_livePanch185?.tithi?.hoursToNext);
+      const remH=Number.isFinite(_nextH)?Math.max(1,Math.round(_nextH)):null;
+      el('moonNextShift').textContent=remH===null?'—':'~'+remH+'г';
       if(el('moonShiftHint')) el('moonShiftHint').textContent='Тітхі '+(tNum<30?tNum+1:1);
     }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
   }
@@ -18995,6 +18997,8 @@ function syncWhy(){
   const pd=window._lunarPhaseDeg;
   const g=_num(_firstText(el('nowG'))||el('nowG')?.textContent);
   const now=new Date();
+  let _liveWhyPanch=null;
+  try{ _liveWhyPanch=computePanchanga(now); }catch(_e){}
   const lines=[];
 
   // Moon interpretation
@@ -19007,7 +19011,7 @@ function syncWhy(){
     // ФОРМУЄ СТАН" panel correctly showed Lᵢ=-3.0 for the same moment.
     // Fixed to recompute Li live from pd, matching computeAi's canonical
     // tithi-based formula (Amavasya = 0-based tithiIdx 29 -> Li=-3).
-    const _tithiIdxForLi = Math.min(29, Math.floor(((pd % 360) + 360) % 360 / 12));
+    const _tithiIdxForLi = Number.isFinite(Number(_liveWhyPanch?.tithi?.num)) ? Number(_liveWhyPanch.tithi.num) - 1 : null;
     // v88.9.07-fp188: дзеркальний баг fp184 — fallback (ai?.Li) читав КЕШ
     // (_lastPanchCtx, sunrise-референс). У день Амавасьї ПІСЛЯ моменту молодика
     // live-тітхі вже Pratipada (idx 0, Li=0), а кеш тримав Li=-3 → стрічка
