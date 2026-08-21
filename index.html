@@ -6,7 +6,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>NeboRhythm: Cosmic Timing — Космофізичний дашборд v88.9.212-fp407-JYOTISH-ANCHOR-CLOSURE</title>
+  <title>NeboRhythm: Cosmic Timing — Космофізичний дашборд v88.9.213-fp408-PERSONAL-VERDICT-CLOSURE</title>
 
   <script>
     // fp388: the Android TWA opens an explicit free companion channel. It keeps
@@ -21950,14 +21950,28 @@ function renderPersonal() {
   // Раніше при G=+0.7 і Taara=Vipat hero казало "Можна діяти", а personal block — "День напружений".
   // Без banner оператор бачив суперечність без пояснення, що це різні шари (фон vs особистий).
   const _globalG = (function(){try{return _v73G();}catch(e){return NaN;}})();
-  const _globalRisk = isFinite(_globalG) && _globalG <= -1;
-  const _globalSafe = isFinite(_globalG) && _globalG >= 0;
-  const _globalUnknown = !isFinite(_globalG);
+  // fp408: action authority is the resolved operational verdict, not raw G.
+  // A raw value such as -0.83 may resolve to operational -1 because the
+  // verified daily reference and safety rules are applied separately.  The
+  // personal layer must therefore follow decisionScore or it can render a
+  // green "very favorable" card beside an amber/red canonical verdict.
+  const _operationalPersonal408 = (function(){
+    try {
+      return (typeof resolveDaySignal_v88825 === 'function') ? resolveDaySignal_v88825() : null;
+    } catch (_e408) { return null; }
+  })();
+  const _operationalScore408 = Number(_operationalPersonal408?.decisionScore);
+  const _operationalKnown408 = Number.isFinite(_operationalScore408);
+  const _globalRisk = _operationalKnown408 ? _operationalScore408 < 0 : (isFinite(_globalG) && _globalG <= -1);
+  const _globalSafe = _operationalKnown408 ? _operationalScore408 >= 0 : (isFinite(_globalG) && _globalG >= 0);
+  const _globalUnknown = !_operationalKnown408 && !isFinite(_globalG);
   // v88.8.36-fp56-P10: слово фону — з канонічної шкали (раніше хардкоди «ризик»/«сприятливо»
   // розходились із classifyG: G=+0.2 = 'neutral', а напис казав «сприятливо»).
-  const _gWord = (typeof classifyStateByG==='function')
-    ? ({favorable:'сприятливий',good:'помірно сприятливий',neutral:'нейтральний',unstable:'помірно несприятливий',tense:'несприятливий'})[classifyStateByG(_globalG)] || 'нейтральний'
-    : (_globalSafe ? 'сприятливий' : 'несприятливий');
+  const _gWord = _operationalKnown408
+    ? (_operationalScore408 >= 1 ? 'сприятливий' : _operationalScore408 === 0 ? 'нейтральний' : _operationalScore408 === -1 ? 'обережний' : 'несприятливий')
+    : ((typeof classifyStateByG==='function')
+      ? ({favorable:'сприятливий',good:'помірно сприятливий',neutral:'нейтральний',unstable:'помірно несприятливий',tense:'несприятливий'})[classifyStateByG(_globalG)] || 'нейтральний'
+      : (_globalSafe ? 'сприятливий' : 'несприятливий'));
   const _personalRisk = danger || taaraGmod <= -1;
   let _riskBannerHtml = '';
   let _effectivePhCol = _phCol, _effectivePhBg = _phBg, _effectivePhBrd = _phBrd;
@@ -21969,7 +21983,7 @@ function renderPersonal() {
     const _cycleIsPositive = taaraGmod > 0 && !danger;
     _riskBannerHtml = `<div style="padding:8px 12px;margin-bottom:6px;border-radius:10px;border:1px solid rgba(255,165,80,.28);background:rgba(255,165,80,.08);display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;line-height:1.35">
       <div><div style="color:var(--faint);font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Ваш цикл · локальний шар</div><div style="color:${_cycleIsPositive?'#cfb6ff':danger?'#ff8e8e':'#cfe0ff'};font-weight:700">${_taaraLabel}${_cycleIsPositive?' · підтримує, але не є дозволом':danger?' · обережний':' · нейтральний'}</div></div>
-      <div><div style="color:var(--faint);font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Фон зараз</div><div style="color:#ffb36a;font-weight:700">G = ${_globalG.toFixed(1)} · ${_gWord}</div></div>
+      <div><div style="color:var(--faint);font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Оперативний стан</div><div style="color:#ffb36a;font-weight:700">${_operationalKnown408 ? (_operationalScore408 >= 0 ? '+' : '') + _operationalScore408 : '—'} · ${_gWord}</div></div>
     </div>`;
     // Override optimistic state if cycle is positive but global is risk
     if (_cycleIsPositive) {

@@ -352,10 +352,10 @@ requireText('поза оперативною шкалою −3…+3', 'extreme r
 requireText("Kp observed із затримкою понад 1 год → максимум «Середня»", 'delayed observed data cannot be labeled High quality');
 requireText('const _swControlledAtBoot = Boolean(navigator.serviceWorker.controller)', 'first PWA install records whether the page was already controlled');
 requireText("if (!_swControlledAtBoot)", 'first PWA controller install cannot reload an already current network page');
-requireText("const bestCls = _criticalFinalDay ? ''", 'restrictive operational verdict suppresses green local-load styling');
-requireText("_operationalCritical406 ? '#9bb1dc' : '#2bd47d'", 'positive factor uses neutral styling under a restrictive operational verdict');
 requireText('computePanchanga(sunriseUTC(dayRef))', 'day index panel uses the canonical sunrise anchor');
 requireText('Number(pc.tithi.num) - 1', 'day advice reuses the canonical Panchanga Tithi');
 requireText('_livePanch185=computePanchanga(now)', 'live Tithi and Nakshatra come from one instant Panchanga snapshot');
 requireText('_livePanch185?.tithi?.hoursToNext', 'next Tithi boundary uses the canonical ephemeris estimate');
 forbidText('const _pdAdv = window._lunarPhaseDeg', 'day advice cannot recalculate Tithi from a second live phase path');
+requireText("const _globalRisk = _operationalKnown408 ? _operationalScore408 < 0", 'personal optimism is gated by the canonical operational verdict');
+requireText("_operationalScore408 === -1 ? 'обережний'", 'personal banner labels operational minus one as cautious');
