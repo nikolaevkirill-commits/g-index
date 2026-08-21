@@ -1,9 +1,10 @@
 const fs = require('fs');
+const path = require('path');
 const vm = require('vm');
 
-const indexPath = process.argv[2] || 'index.html';
-const swPath = process.argv[3] || 'sw.js';
-const outputPath = process.argv[4] || 'OPERATIONAL_SURFACE_PARITY_v1.json';
+const indexPath = process.argv[2] || path.join(__dirname, 'index.html');
+const swPath = process.argv[3] || path.join(__dirname, 'sw.js');
+const outputPath = process.argv[4] || path.join(__dirname, 'OPERATIONAL_SURFACE_PARITY_v1.json');
 const html = fs.readFileSync(indexPath, 'utf8');
 const sw = fs.readFileSync(swPath, 'utf8');
 const checks = [];

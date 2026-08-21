@@ -70,6 +70,8 @@ def main() -> None:
     require(index, 'Сигнали розходяться: PDF/Engine reference не є оперативним дозволом.', 'sign-neutral divergence disclosure')
     require(index, 'TANITA_2Y_PROMOTION_GATE_v1.json', 'Tanita promotion gate is loaded')
     require(index, 'категорії backlog можуть перетинатися; не сумуються', 'evidence backlog categories are not double-counted')
+    require(index, 'Prospective tracker свіжий, але історичне покриття неповне', 'fresh tracker is distinct from incomplete historical coverage')
+    require(index, 'Prospective tracker не має свіжої телеметрії (поріг 36 год)', 'stale tracker telemetry disclosure')
     require(index, 'Таніта SHADOW · вплив на G = 0', 'Tanita score-neutral disclosure')
     require(index, 'На chronological holdout приріст проти baseline відсутній.', 'Tanita no-gain disclosure')
     require(index, 'Активація можлива лише після ', 'Tanita prospective activation rule')
