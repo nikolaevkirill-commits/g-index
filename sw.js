@@ -1,6 +1,6 @@
 // G-Index service worker. HTML/data are network-first; static shell is cache-first.
 // Bump CACHE_VERSION whenever index.html or a cached shell asset changes.
-const CACHE_VERSION = 'fp408-v1'; // personal layer follows canonical operational verdict
+const CACHE_VERSION = 'fp409-v1'; // contract closure: canonical verdict + cross-cache offline fallback
 const CACHE_PREFIX = 'gindex-'; // G-Index cache namespace; do not remove the prefix.
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${CACHE_VERSION}`;
 const DATA_CACHE = `${CACHE_PREFIX}data-${CACHE_VERSION}`;
@@ -37,8 +37,6 @@ self.addEventListener('activate', (event) => {
     const keys = await caches.keys();
     await Promise.all(
       keys
-        // Service-worker cache safety note; original detail is preserved in the backup.
-        // Service-worker cache safety note; original detail is preserved in the backup.
         .filter((k) => k.startsWith(CACHE_PREFIX) && k !== SHELL_CACHE && k !== DATA_CACHE)
         .map((k) => caches.delete(k))
     );
@@ -57,19 +55,6 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Service-worker cache safety note; original detail is preserved in the backup.
-  // Service-worker cache safety note; original detail is preserved in the backup.
-  // Service-worker cache safety note; original detail is preserved in the backup.
-  // Service-worker cache safety note; original detail is preserved in the backup.
-  // Service-worker cache safety note; original detail is preserved in the backup.
-  // Service-worker cache safety note; original detail is preserved in the backup.
-  // Service-worker cache safety note; original detail is preserved in the backup.
-  // Service-worker cache safety note; original detail is preserved in the backup.
-  // Service-worker cache safety note; original detail is preserved in the backup.
-  // Service-worker cache safety note; original detail is preserved in the backup.
-  // Service-worker cache safety note; original detail is preserved in the backup.
-  // Service-worker cache safety note; original detail is preserved in the backup.
-  // Service-worker cache safety note; original detail is preserved in the backup.
   const isCrossOrigin = url.origin !== self.location.origin;
   const isHtmlOrData =
     !isCrossOrigin && (
@@ -109,7 +94,11 @@ self.addEventListener('fetch', (event) => {
         }
         return fresh;
       } catch (e) {
-        const cached = await cache.match(req);
+        let cached = await cache.match(req);
+        if (!cached) {
+          const shellCache = await caches.open(SHELL_CACHE);
+          cached = await shellCache.match(req);
+        }
         if (cached) {
           // Tell the page exactly when fallback data was cached, when known.
           try {
