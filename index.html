@@ -6,7 +6,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>NeboRhythm: Cosmic Timing — Космофізичний дашборд v88.9.213-fp408-PERSONAL-VERDICT-CLOSURE</title>
+  <title>NeboRhythm: Cosmic Timing — Космофізичний дашборд v88.9.214-fp409-AUTHORITY-CONTRACT-CLOSURE</title>
 
   <script>
     // fp388: the Android TWA opens an explicit free companion channel. It keeps
@@ -1904,7 +1904,7 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
         <div><strong style="color:#e9ddff">Технічно працює:</strong> зафіксована реконструкція автоматично проходить тести та перевірку відтворюваності.</div>
         <div><strong style="color:#ffd37a">Не є головним прогнозом:</strong> v19.2 не змінює Hero, оцінку дня, PDF/Engine reference або оперативні рекомендації.</div>
         <div><strong style="color:#9ce6c0">Статус:</strong> <code>PROSPECTIVE SHADOW</code> · <code>PRODUCTION HOLD</code> · <code>score_effect=0</code>.</div>
-        <div style="color:var(--dim)">Оригінальний історичний source v19.2 не знайдений; перевіряється реконструйований candidate. Просування можливе лише після окремої незалежної перевірки, не автоматично.</div>
+        <div style="color:var(--dim)">Оригінальний історичний source v19.2 не знайдений; перевіряється реконструйований candidate. У замороженому протоколі v19.2 назавжди лишається SHADOW; будь-який майбутній кандидат потребує нового версійованого протоколу та незалежної перевірки.</div>
       </div>
     </details>
     <details id="freshValidationPanel" style="margin:0 0 10px;padding:9px 14px;border-radius:12px;border:1px solid rgba(255,176,32,.28);background:linear-gradient(180deg,rgba(255,176,32,.055),rgba(255,176,32,.018));font-size:11px;color:var(--muted)">
@@ -10333,8 +10333,7 @@ function _computeAiRaw(dateTimeUTC, kp=0){
   if(bzVal !== 0) { eTipLines.push(''); eTipLines.push(`${bzVal.toFixed(1)} \u2014 ${bzMod.tip}`); }
   if(vswVal !== 0) { eTipLines.push(`${vswVal.toFixed(1)} \u2014 ${vswMod.tip}`); }
 
-  // Hora contribution: mil і trader ×0.2 (R&D, профільна, §14 Посібника v3.5.1)
-  // v88.7.8 FIX-J: horaEiRaw — без round для AiRaw, horaEi для UI/tip округлений.
+  // Hora is an intraday context layer only. It must never change canonical Ai/G.
   const HORA_ENABLED_PROFILES = ['mil','trader'];
   let horaEiRaw = 0, horaEi = 0, horaTip = '';
   // v88.8.36-fp56-P9 FIX: hora — ІНТРАДЕННИЙ сигнал (планетна година поточного моменту).
@@ -10349,14 +10348,14 @@ function _computeAiRaw(dateTimeUTC, kp=0){
     if(curHora){
       horaEiRaw = curHora.pcl * 0.2;
       horaEi = Math.round(horaEiRaw * 10) / 10;
-      horaTip = `${horaEi >= 0 ? '+' : ''}${horaEi} — Hora ${curHora.sym} ${curHora.planet} ×0.2 (${_activeProfile})`;
+      horaTip = `${horaEi >= 0 ? '+' : ''}${horaEi} — Hora ${curHora.sym} ${curHora.planet} ×0.2 (${_activeProfile}), контекст · score_effect=0`;
       if(horaEi !== 0){
         eTipLines.push('');
         eTipLines.push(horaTip);
       }
     }
   }
-  const eiTotalRaw = ei + horaEiRaw;
+  const eiTotalRaw = ei;
   const eiTotal = Math.round(eiTotalRaw * 10) / 10;
 
   // v85b-F5 (СЕРЕД-3): Sn penalty gradation — fixes constant -0.4 drift during Solar Max 2025-2026
@@ -13171,12 +13170,13 @@ function renderPanchangaCard(state){
     const _sigFinal = resolveDaySignal_v88825(_decisionDate, _gNow, _kpFinal, {isToday:true});
     if (_sigFinal && Number.isFinite(Number(_sigFinal.decisionScore))) _finalDayDecision = Number(_sigFinal.decisionScore);
   } catch(_eFinalDay) { /* no engine coverage */ }
-  const _criticalFinalDay = Number.isFinite(_finalDayDecision) && _finalDayDecision <= -1;
+  const _decisionKnownFinalDay = Number.isFinite(_finalDayDecision);
+  const _criticalFinalDay = _decisionKnownFinalDay && _finalDayDecision <= -1;
   const _localAction = (txt) => {
     if (!txt) return '';
     const safe = escapeHtml(String(txt));
-    return _criticalFinalDay
-      ? `<span style="color:#9bb1dc">Локальна асоціація: ${safe}</span>`
+    return (!_decisionKnownFinalDay || _criticalFinalDay)
+      ? `<span style="color:#9bb1dc">Локальна асоціація${_decisionKnownFinalDay?'':' (оперативний стан невідомий)'}: ${safe}</span>`
       : `✓ ${safe}`;
   };
   // v88.9.54-fp236: "~12:00 UTC" тут був хардкоджений і неточний — dateUTC це
@@ -15309,7 +15309,7 @@ window.resolveSlotDecision = resolveSlotDecision;
 // виклику resolveSlotDecision() для "поточного 3-годинного слоту" (той самий
 // підхід, що вже в syncPersonalContext з fp243b), яку тепер використовують І
 // Hero, І Decision Layer — а не кожен рахує власну копію тих самих вхідних даних.
-function getCurrentSlotDecision(){
+function _computeCurrentSlotDecision(){
   const _now = new Date();
   const _nowPreciseH = _now.getUTCHours() + _now.getUTCMinutes() / 60;
   const _slotH = Math.floor(_now.getUTCHours() / 3) * 3;
@@ -15340,6 +15340,14 @@ function getCurrentSlotDecision(){
   }
   _dec.blockedUntilH = _blockedUntilH;
   return _dec;
+}
+function getCurrentSlotDecision(){
+  try {
+    const _raw = (typeof _v73G === 'function') ? _v73G() : NaN;
+    const _kp = Number(window.__uiState?.kpNow);
+    const _sig = resolveDaySignal_v88825(new Date(todayKyivStr()+'T12:00:00Z'), _raw, _kp, {isToday:true});
+    return _sig?.intradayGuard || {segments:[],currentSegment:null,actionNow:'стан не визначено',slotAction:'стан не визначено',blockedNow:true,reasonsNow:['reference_unavailable'],hasBlockedSegment:true,reasons:['reference_unavailable'],nextChangeAt:null,blockedUntilH:null};
+  } catch(_e) { return {segments:[],currentSegment:null,actionNow:'стан не визначено',slotAction:'стан не визначено',blockedNow:true,reasonsNow:['reference_unavailable'],hasBlockedSegment:true,reasons:['reference_unavailable'],nextChangeAt:null,blockedUntilH:null}; }
 }
 window.getCurrentSlotDecision = getCurrentSlotDecision;
 // UTC-година (float) → "HH:MM" Europe/Kyiv — для показу "до КОЛИ" триває блок.
@@ -17006,10 +17014,11 @@ function resolveDaySignal_v88825(dateObj, rawG, kp, opts){
       recommendation = { text:'Уникати важливих рішень і запусків', style:'color: var(--bad);font-weight:800' };
     }
   } else {
-    const st = GLOBAL_STATES[liveKey] || GLOBAL_STATES.neutral;
-    title = (st.headline || 'нейтрально').toLowerCase();
-    action = 'лише live-фон, денного engine немає';
-    recommendation = recommendG(rawG, kp);
+    title = 'денне рішення недоступне';
+    action = 'raw/live-контекст показано лише довідково';
+    recommendation = (dynamicGuard === 'kp_storm' || dynamicGuard === 'kp_elevated' || liveKey === 'tense' || liveKey === 'unstable')
+      ? { text:'Обережний режим за safety-контекстом; позитивні дії не дозволені без Engine/PDF', style:'color: var(--warn);font-weight:800' }
+      : { text:'Не використовувати raw/live-фон як дозвіл на дію', style:'color: var(--muted);font-weight:800' };
   }
   const color = ({favorable:'#2bd47d',good:'#2bd47d',neutral:'#9bb1dc',unstable:'#ffaa33',tense:'#ff6b6b'})[keyForColor] || '#9bb1dc';
   const tooltip = hasEngine
@@ -17022,7 +17031,13 @@ Live-контур зараз: ${liveTxt}.
 Оперативний стан: ${operationalScore>=0?'+':''}${operationalScore} (${keyForColor}).
 ${guard !== 'none' || dynamicGuard ? 'Застосовано обережніший safety-контур; PDF/Engine не є дозволом на дію.' : 'Сигнали узгоджені.'}`)
     : `Денного Engine/PDF score немає. Показано Live G: ${liveTxt}.`;
-  return { entry, hasEngine, sourceDayScore, baseDayScore, dayScore, referenceScore:dayScore, operationalRawG, rawG, operationalScore, decisionScore:operationalScore, dayKey, liveKey, opKey, guard, dynamicGuard, materialConflict, repG, title, action, recommendation, color, tooltip, src, hasUnverifiedOverride, sourceDelta };
+  let intradayGuard = null;
+  if(isToday){
+    try { intradayGuard = _computeCurrentSlotDecision(); } catch(_slotErr) { intradayGuard = null; }
+  }
+  const decisionAvailable = hasEngine;
+  const actionPolicy = !decisionAvailable ? 'reference_unavailable' : (intradayGuard?.blockedNow ? 'routine_only' : 'resolved_day_policy');
+  return { entry, hasEngine, decisionAvailable, sourceDayScore, baseDayScore, dayScore, referenceScore:hasEngine?dayScore:undefined, operationalRawG, rawG, operationalScore, decisionScore:hasEngine?operationalScore:undefined, intradayGuard, actionPolicy, dayKey, liveKey, opKey, guard, dynamicGuard, materialConflict, repG, title, action, recommendation, color, tooltip, src, hasUnverifiedOverride, sourceDelta };
 }
 window.resolveDaySignal_v88825 = resolveDaySignal_v88825;
 
@@ -21957,21 +21972,20 @@ function renderPersonal() {
   // green "very favorable" card beside an amber/red canonical verdict.
   const _operationalPersonal408 = (function(){
     try {
-      return (typeof resolveDaySignal_v88825 === 'function') ? resolveDaySignal_v88825() : null;
+      const _kp408 = Number(window.__uiState?.kpNow);
+      return (typeof resolveDaySignal_v88825 === 'function') ? resolveDaySignal_v88825(new Date(todayKyivStr()+'T12:00:00Z'), _globalG, _kp408, {isToday:true}) : null;
     } catch (_e408) { return null; }
   })();
   const _operationalScore408 = Number(_operationalPersonal408?.decisionScore);
   const _operationalKnown408 = Number.isFinite(_operationalScore408);
-  const _globalRisk = _operationalKnown408 ? _operationalScore408 < 0 : (isFinite(_globalG) && _globalG <= -1);
-  const _globalSafe = _operationalKnown408 ? _operationalScore408 >= 0 : (isFinite(_globalG) && _globalG >= 0);
-  const _globalUnknown = !_operationalKnown408 && !isFinite(_globalG);
+  const _globalRisk = _operationalKnown408 ? _operationalScore408 < 0 : false;
+  const _globalSafe = _operationalKnown408 ? _operationalScore408 >= 0 : false;
+  const _globalUnknown = !_operationalKnown408;
   // v88.8.36-fp56-P10: слово фону — з канонічної шкали (раніше хардкоди «ризик»/«сприятливо»
   // розходились із classifyG: G=+0.2 = 'neutral', а напис казав «сприятливо»).
   const _gWord = _operationalKnown408
     ? (_operationalScore408 >= 1 ? 'сприятливий' : _operationalScore408 === 0 ? 'нейтральний' : _operationalScore408 === -1 ? 'обережний' : 'несприятливий')
-    : ((typeof classifyStateByG==='function')
-      ? ({favorable:'сприятливий',good:'помірно сприятливий',neutral:'нейтральний',unstable:'помірно несприятливий',tense:'несприятливий'})[classifyStateByG(_globalG)] || 'нейтральний'
-      : (_globalSafe ? 'сприятливий' : 'несприятливий'));
+    : 'стан не визначено';
   const _personalRisk = danger || taaraGmod <= -1;
   let _riskBannerHtml = '';
   let _effectivePhCol = _phCol, _effectivePhBg = _phBg, _effectivePhBrd = _phBrd;
