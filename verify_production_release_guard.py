@@ -69,6 +69,7 @@ def main() -> None:
     require(index, 'PROSPECTIVE SHADOW</code> · <code>PRODUCTION HOLD</code> · <code>score_effect=0', 'v19.2 hold disclosure')
     require(index, 'Сигнали розходяться: PDF/Engine reference не є оперативним дозволом.', 'sign-neutral divergence disclosure')
     require(index, 'TANITA_2Y_PROMOTION_GATE_v1.json', 'Tanita promotion gate is loaded')
+    require(index, 'категорії backlog можуть перетинатися; не сумуються', 'evidence backlog categories are not double-counted')
     require(index, 'Таніта SHADOW · вплив на G = 0', 'Tanita score-neutral disclosure')
     require(index, 'На chronological holdout приріст проти baseline відсутній.', 'Tanita no-gain disclosure')
     require(index, 'Активація можлива лише після ', 'Tanita prospective activation rule')
@@ -308,6 +309,17 @@ def main() -> None:
     if 'resolveDaySignal' not in operational_contract or 'action-authoritative' not in operational_contract:
         raise SystemExit('FAIL index integrity contract does not identify operational action authority')
     print('PASS index integrity contract separates operational authority from frozen reference')
+
+    operational_surface_path = ROOT / 'OPERATIONAL_SURFACE_PARITY_v1.json'
+    operational_surface = json.loads(release_bytes(operational_surface_path).decode('utf-8'))
+    if operational_surface.get('schema') != 'operational_surface_parity_v1':
+        raise SystemExit('FAIL operational surface parity schema')
+    if operational_surface.get('passed') is not True:
+        raise SystemExit(f'FAIL operational surface parity: {operational_surface.get("checks")}')
+    checks = operational_surface.get('checks') or []
+    if len(checks) < 9 or not all(check.get('passed') is True for check in checks):
+        raise SystemExit(f'FAIL operational surface parity coverage: {checks}')
+    print(f'PASS operational surface parity artifact: {len(checks)} checks')
 
     print('PASS production release guard')
 
