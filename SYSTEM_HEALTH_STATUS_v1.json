@@ -1,16 +1,16 @@
 {
   "schema": "gindex_system_health_v1",
-  "generated_at": "2026-08-21T11:40:43.273860+00:00",
+  "generated_at": "2026-08-21T13:22:26.399880+00:00",
   "status": "WARN",
   "checks": {
-    "manifest_age_hours": 0.01,
+    "manifest_age_hours": 0.0,
     "prospective_tracker": {
       "status": "DEGRADED",
       "snapshots": 32,
       "unique_dates": 32,
       "first_date": "2026-05-04",
       "last_date": "2026-08-21",
-      "latest_age_hours": 5.68,
+      "latest_age_hours": 7.37,
       "expected_dates_since_start": 111,
       "missing_dates": 79,
       "outcomes_filled": 0,
@@ -39,12 +39,12 @@
     },
     "data_integrity": "PASS",
     "real_outcome_pairs": 0,
-    "real_outcomes_awaiting": 27,
+    "real_outcomes_awaiting": 28,
     "tanita_real_outcome_pairs": {
-      "snapshot_records": 47,
-      "elapsed_snapshot_dates": 19,
+      "snapshot_records": 48,
+      "elapsed_snapshot_dates": 20,
       "paired_independent_outcomes": 0,
-      "awaiting_independent_outcomes": 19,
+      "awaiting_independent_outcomes": 20,
       "eligible_for_review": false,
       "eligible_for_promotion": false,
       "score_effect": 0,
@@ -69,7 +69,7 @@
       "mode": "offline_independent_form",
       "form": "outputs\\data_control\\OUTCOME_INTAKE_FORM_v1.html",
       "queue": "outputs\\data_control\\OUTCOME_INTAKE_QUEUE_v1.csv",
-      "pending_rows": 27,
+      "pending_rows": 28,
       "automatic_values": false,
       "score_effect": 0,
       "ready": true,
@@ -99,7 +99,7 @@
     },
     "silso_refresh": {
       "schema": "silso_refresh_status_v1",
-      "generated_at_utc": "2026-08-20T18:50:36Z",
+      "generated_at_utc": "2026-08-21T13:18:53Z",
       "status": "LIVE",
       "source_url": "https://www.sidc.be/SILSO/DATA/SN_d_tot_V2.0.csv",
       "target": "outputs/data_control/phase2/SILSO_SN_d_tot_V2.0.csv",
@@ -119,7 +119,7 @@
     },
     "aia_vernadsky_refresh": {
       "schema": "aia_vernadsky_refresh_status_v1",
-      "generated_at_utc": "2026-08-20T18:49:27+00:00",
+      "generated_at_utc": "2026-08-21T13:18:18+00:00",
       "status": "LIVE",
       "source_url": "https://imag-data.bgs.ac.uk/GIN_V1/hapi/data",
       "dataset": "aia/best-avail/PT1M/xyzf",
@@ -127,8 +127,8 @@
       "cache_used": false,
       "cache_age_hours": 0.0,
       "max_cache_age_hours": 168,
-      "data_max_date": "2026-08-17",
-      "days": 424,
+      "data_max_date": "2026-08-18",
+      "days": 425,
       "score_effect": 0,
       "role": "shadow_audit",
       "message": "BGS HAPI refresh completed"
@@ -140,58 +140,70 @@
         "name": "G-Index Telegram Outcomes",
         "state": "Disabled",
         "last_result": 0,
-        "next_run": "08/21/2026 14:41:00"
+        "next_run": "08/21/2026 16:26:00",
+        "action": "C:\\Windows\\System32\\wscript.exe \"D:\\GIndexTasks\\poll_hidden.vbs\""
       },
       {
         "name": "PROGNOZ_daily_chain",
         "state": "Ready",
         "last_result": 73,
-        "next_run": "08/22/2026 07:55:00"
+        "next_run": "08/22/2026 07:55:00",
+        "action": "C:\\Windows\\System32\\wscript.exe \"D:\\GIndexTasks\\hidden_gindex_task.vbs\" \"D:\\GIndexTasks\\gindex_daily_chain_hidden.cmd\""
       },
       {
         "name": "PROGNOZ_kp_alert",
         "state": "Ready",
-        "last_result": 2147943467,
-        "next_run": "08/21/2026 15:00:27"
+        "last_result": 0,
+        "next_run": "08/21/2026 16:30:27",
+        "action": "C:\\Windows\\System32\\wscript.exe \"D:\\GIndexTasks\\kp_alert_hidden.vbs\""
       },
       {
         "name": "PROGNOZ_live_context_refresh",
-        "state": "Running",
+        "state": "Ready",
         "last_result": 0,
         "next_run": "08/21/2026 20:07:00",
-        "raw_scheduler_code": 267009,
-        "current_run_in_progress": true,
-        "result_semantics": "last completed pipeline PASS; current invocation was still running at snapshot time"
+        "action": "C:\\Windows\\System32\\wscript.exe \"D:\\GIndexTasks\\hidden_gindex_task.vbs\" \"D:\\GIndexTasks\\refresh_live_context_fp377.cmd\""
       },
       {
         "name": "G-Index Evening",
         "state": "Ready",
         "last_result": 0,
-        "next_run": "08/21/2026 21:00:00"
+        "next_run": "08/21/2026 21:00:00",
+        "action": "cmd.exe /c \"D:\\ПРОГНОЗ\\прогноз по ексель\\deploy\\13\\gindex_daily.bat\" evening"
       },
       {
         "name": "G-Index Morning",
         "state": "Ready",
-        "last_result": 0,
-        "next_run": "08/22/2026 06:00:00"
+        "last_result": 3221225786,
+        "next_run": "08/22/2026 06:00:00",
+        "action": "cmd.exe /c \"D:\\ПРОГНОЗ\\прогноз по ексель\\deploy\\13\\gindex_daily.bat\" morning"
       }
     ],
     "telegram_entrypoints_retired": true,
-    "retired_telegram_tasks": {
-      "G-Index Telegram Outcomes": "Disabled",
-      "G-Index Morning": "Ready",
-      "G-Index Evening": "Ready"
+    "legacy_named_tasks": {
+      "G-Index Morning": {
+        "state": "Ready",
+        "action": "cmd.exe /c \"D:\\ПРОГНОЗ\\прогноз по ексель\\deploy\\13\\gindex_daily.bat\" morning",
+        "role": "offline_outcome_form_refresh",
+        "verified": true
+      },
+      "G-Index Evening": {
+        "state": "Ready",
+        "action": "cmd.exe /c \"D:\\ПРОГНОЗ\\прогноз по ексель\\deploy\\13\\gindex_daily.bat\" evening",
+        "role": "offline_outcome_form_refresh",
+        "verified": true
+      }
     },
-    "kp_feed_age_hours": 2.67,
+    "telegram_outcomes_task_retired": true,
+    "kp_feed_age_hours": 0.1,
     "kp_feed_fresh": true
   },
   "hard_failures": [],
   "warnings": [
     "prospective_tracker_missing_dates:79",
     "prospective_tracker_outcomes_filled:0",
-    "tanita_outcomes_awaiting:19",
+    "tanita_outcomes_awaiting:20",
     "tanita_balanced_review_pending:33",
-    "promotion_waiting_for_prospective_outcomes",
-    "scheduled_task_previous_result:PROGNOZ_kp_alert:2147943467"
+    "promotion_waiting_for_prospective_outcomes"
   ]
 }
