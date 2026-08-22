@@ -6,7 +6,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>NeboRhythm: Cosmic Timing — Космофізичний дашборд v88.9.216-fp411-HEALTH-SEMANTICS-CLOSURE</title>
+  <title>NeboRhythm: Cosmic Timing — Космофізичний дашборд v88.9.217-fp412-CONTRACT-AUTHORITY-CLOSURE</title>
 
   <script>
     // fp388: the Android TWA opens an explicit free companion channel. It keeps
@@ -1857,8 +1857,8 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
             <div class="pill hero-chip" data-tt="Поточний стан за G-індексом. Визначає базовий режим дня — спокійний, нестабільний, напружений.">
               <span class="hc-label">Стан</span><span id="heroStateChip" class="hc-val">—</span>
             </div>
-            <div class="pill hero-chip" data-tt="Ймовірність помилки рішень через геофізичне/хронобіологічне навантаження. Від низького до критичного.">
-              <span class="hc-label">Ризик</span><span id="heroRiskChip" class="hc-val">—</span>
+            <div class="pill hero-chip" data-tt="Евристична зона навантаження за поточними факторами. Це не калібрована ймовірність події або помилки.">
+              <span class="hc-label">Навантаження</span><span id="heroRiskChip" class="hc-val">—</span>
             </div>
             <div class="pill hero-chip" data-tt="Сприятливість для активних дій, планування, стратегічних ініціатив. Протилежність ризику.">
               <span class="hc-label">Потенціал</span><span id="heroPotentialChip" class="hc-val">—</span>
@@ -2809,7 +2809,7 @@ Fallback (NOAA 45-day-forecast.json):
             <th class="th-sort col-hide-mobile" data-col="ap">Ap <span class="sort-ico">↕</span></th>
             <th class="col-hide-mobile">Flux 10.7</th>
             <th>Категорія</th>
-            <th class="col-hide-mobile">Ризик%</th>
+            <th class="col-hide-mobile">Зона G</th>
             <th>Роль</th>
             <th title="PDF/Engine score — дискретна експертна/engine оцінка дня (−3..+3). Інша модель — інша шкала. ⚠ означає розбіжність знака з G_day raw." style="color:#7ab8d4">PDF/Engine</th>
             <th id="th27Gos" style="display:none;color:#c8b4ff" title="G_ос = G + Taara-mod (R&D)">G_ос</th>
@@ -3275,7 +3275,7 @@ Fallback (NOAA 45-day-forecast.json):
   <footer>
     <div class="small">Дані Kp/Ap — NOAA SWPC; Ap↔Kp — GFZ/NOAA table; Dst — Kyoto WDC; Sn — SILSO/ROB; події — ICS; затемнення — Timeanddate/NASA; фази — Astronomy Engine (Meeus). Модель G: R&amp;D / Advisory — V3 prospective freeze 2026-05-03 → ~2026-08-01. Engine v18.5 frozen validation: Strict 71.4% global / 75.0% holdout · Binary 83.6% · κ=0.52 (N=280). V18.8 runtime patches disabled during V3 freeze; G включає Dᵢ (Dst-компонент).</div>
     <div class="small" style="margin-top:8px">📊 Повна валідація моделі: <a href="#backtestCard" onclick="document.getElementById('backtestCard').open=true" style="color:var(--alt);text-decoration:none;border-bottom:1px dotted var(--alt)">backtest report</a> — engine v18.5 canonical vs PDF, GT v5.1: N=280 — Strict 71.4% · Binary 83.6% · Exact 43.6% (κ=0.52 / weighted κ=0.73). Окремий legacy-зріз N=272: Strict 70.6% · Exact 43.0%; когорти не змішуються. V18.8 patches disabled — V3 freeze active.</div>
-    <div class="small" style="margin-top:8px;color:var(--faint);border-left:2px solid var(--warn);padding-left:8px">⚠ Caveat: ground truth = експертні PDF-бюлетені з тим же Vedic Panchanga + Kp framework. Метрики 79.2% / 88.7% валідують <strong>відтворення експертної логіки</strong>, НЕ предиктивну валідність vs реальні outcomes (медичні/операційні події). Outcome-based validation — pilot план у V19-E.</div>
+    <div class="small" style="margin-top:8px;color:var(--faint);border-left:2px solid var(--warn);padding-left:8px">⚠ Caveat: ground truth = експертні PDF-бюлетені з тим же Vedic Panchanga + Kp framework. Retired v18.8 ablation (n=212, disabled) 79.2% / 88.7% вимірювала лише <strong>відтворення експертної логіки</strong>; це не production-метрика і не точність щодо реальних outcomes. Outcome-based validation заблокована до появи незалежних outcome-пар.</div>
     <nav class="small" aria-label="Правові документи та підтримка" style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap">
       <a href="privacy.html" style="color:var(--faint)">Конфіденційність</a>
       <a href="terms.html" style="color:var(--faint)">Умови</a>
@@ -3285,7 +3285,7 @@ Fallback (NOAA 45-day-forecast.json):
   </footer>
 
 <script>
-// ═══ Probability Layer v1 (bootstrap logistic, G-Index) ════════════════════
+// ═══ Legacy G-zone mapping (audit only; NOT probability) ══════════════════
 function sigmoid(x){ return 1/(1+Math.exp(-x)); }
 
 // P_soft: P(несприятливий | G). Якорі: G=0→0.35, G=-3→0.80
@@ -3299,21 +3299,19 @@ function calcHardRiskFromG(G){
 function getRiskBand(p){ return p<0.25?'low':p<0.50?'moderate':p<0.75?'elevated':'high'; }
 function getRiskLabelUA(p){ return p<0.25?'Низький':p<0.50?'Помірний':p<0.75?'Підвищений':'Високий'; }
 
-// calcProbabilityLayer: приймає {G, csConf (0..1), horizon}
-// csConf береться з existingCScore.conf, horizon = 'now'|'3day'|'27day'
+// Compatibility helper. The old logistic percentages were not calibrated on
+// independent outcomes and must never be rendered as probability or risk %.
 function calcProbabilityLayer({G, csConf=1, horizon='now'}={}){
   if(!isFinite(G)) return null;
   const pSoft = calcSoftRiskFromG(G);
   const pHard = calcHardRiskFromG(G);
-  const hFactor = horizon==='27day'?0.55:horizon==='3day'?0.85:1.00;
-  const conf = Math.max(0.05, Math.min(1, (csConf||1)*hFactor));
   return {
     G: Math.round(G*100)/100,
-    pSoft, pSoftPct: Math.round(pSoft*100),
-    pHard, pHardPct: Math.round(pHard*100),
-    conf, confPct: Math.round(conf*100),
+    auditOnly: true,
+    scoreEffect: 0,
     band: getRiskBand(pSoft),
-    labelUA: getRiskLabelUA(pSoft)
+    labelUA: getRiskLabelUA(pSoft),
+    horizon
   };
 }
 
@@ -4470,8 +4468,11 @@ if ('serviceWorker' in navigator) {
               el.style.display = 'block';
               setTimeout(() => { el.style.display = 'none'; }, 10000);
             }
-            // v88.9.40-fp222 (Problem 4, writer 3/4): SW_STALE_DATA публікує в __sourceState.
-            if (typeof _updateSourceState === 'function') {
+            // fp412: stale fallback for an unrelated shell/data asset must not
+            // downgrade the Kp/operational source. Only Kp-domain resources may.
+            const _staleUrl = String(event.data.url || '');
+            const _isKpResource = /(?:^|[\/_-])kp(?:[\/_\.-]|$)|planetary[-_]?k|swpc.*(?:kp|json)|wwv/i.test(_staleUrl);
+            if (_isKpResource && typeof _updateSourceState === 'function') {
               _updateSourceState({
                 mode: 'offline',
                 cached: true,
@@ -4481,7 +4482,7 @@ if ('serviceWorker' in navigator) {
             }
             // Update freshness badge
             const badge = document.getElementById('freshnessBadge');
-            if (badge) {
+            if (_isKpResource && badge) {
               badge.textContent = '● CACHED'; badge.style.background = '#2a1a00'; badge.style.color = '#ffcc44';
             }
             // v70.2: sync hero freshness
@@ -7051,15 +7052,15 @@ async function loadSystemHealthStatus(){
     const artifactAgeHours=s.generated_at ? Math.max(0,(Date.now()-new Date(s.generated_at).getTime())/3600000) : Infinity;
     const healthStale=!Number.isFinite(artifactAgeHours)||artifactAgeHours>36||!Number.isFinite(age)||age>36;
     const tracker=s.checks&&s.checks.prospective_tracker;
-    const trackerFresh=!!(tracker&&Number.isFinite(Number(tracker.latest_age_hours))&&Number(tracker.latest_age_hours)<=36);
+    const trackerAgeRaw=tracker&&tracker.latest_age_hours;
+    const trackerFresh=!!(tracker&&trackerAgeRaw!==null&&trackerAgeRaw!==''&&Number.isFinite(Number(trackerAgeRaw))&&Number(trackerAgeRaw)<=36);
     const trackerCoverageOk=!!(tracker&&tracker.status==='PASS');
-    const trackerOk=trackerFresh&&trackerCoverageOk;
-    const evidencePrefixes=['tanita_outcomes_awaiting:','tanita_balanced_review_pending:','promotion_waiting_for_prospective_outcomes'];
+    const evidencePrefixes=['tanita_outcomes_awaiting:','tanita_balanced_review_pending:','promotion_waiting_for_prospective_outcomes','prospective_tracker_missing_dates:','prospective_tracker_outcomes_filled:'];
     const evidenceWarns=warns.filter(w=>evidencePrefixes.some(p=>String(w).startsWith(p)));
     const operationalWarns=warns.filter(w=>!evidencePrefixes.some(p=>String(w).startsWith(p)));
     if(healthStale) operationalWarns.push('health_snapshot_stale_or_missing');
     const automationStatus=hard.length||healthStale?'FAIL':operationalWarns.length?'WARN':'PASS';
-    const evidenceStatus=!trackerOk?'BLOCKED':(pairs>=100?'READY':'WAIT');
+    const evidenceStatus=(!trackerCoverageOk||pairs<100)?'BLOCKED':'READY';
     const colors=automationStatus==='PASS'?['#43e6a7','rgba(67,230,167,.28)','rgba(67,230,167,.055)']:
       automationStatus==='FAIL'?['#ff7b82','rgba(255,90,100,.48)','rgba(255,90,100,.08)']:
       ['#ffd37a','rgba(255,176,32,.40)','rgba(255,176,32,.06)'];
@@ -9415,8 +9416,8 @@ function renderWeekSummary(){
     const ds = fmtDate(d);
     const e = (typeof getEngineScore==='function') ? getEngineScore(ds) : null;
     const kpDynamic = getDynamicKpForDate_v889125(d);
-    const aiDynamic = computeAi(sunriseUTC(d), isFinite(kpDynamic) ? kpDynamic : 0);
-    const rawDynamic = kpDayTerm(isFinite(kpDynamic) ? kpDynamic : 0) + aiDynamic.Ai;
+    const aiDynamic = computeAi(sunriseUTC(d), isFinite(kpDynamic) ? kpDynamic : null);
+    const rawDynamic = isFinite(kpDynamic) ? kpDayTerm(kpDynamic) + aiDynamic.Ai : NaN;
     const sig = resolveDaySignal_v88825(d, rawDynamic, kpDynamic, {isToday:i===0, horizon:'week'});
     const reference = sig && isFinite(sig.dayScore) ? Math.max(-3,Math.min(3,Math.round(sig.dayScore))) : null;
     const operational = sig && isFinite(sig.decisionScore) ? Math.max(-3,Math.min(3,Math.round(sig.decisionScore))) : null;
@@ -10191,14 +10192,15 @@ function computeCScore(kpNow, kpObsJson, ai, G, kpSrc){
 // activity lowers the day background. Safety thresholds (Kp >= 4/5) stay separate.
 function kpDayTerm(kp){
   const k = Number(kp);
-  return isFinite(k) ? (2 - k) : 0;
+  // fp412: missing Kp is not a real quiet observation.
+  return (kp !== null && kp !== '' && isFinite(k)) ? (2 - k) : NaN;
 }
 
 // fp145 PERF FIX: computeAi викликається 40+ разів на boot (render27Day, renderComparePeriods,
 // renderWeekSummary...), багато — на однакові дати. Кожен виклик робить важкий астро-обрахунок
 // (Astronomy.MoonPhase). Кеш за ключем (дата+kp) усуває повтори — головна причина фризу ~1.7с.
 const _computeAiCache = new Map();
-function computeAi(dateTimeUTC, kp=0){
+function computeAi(dateTimeUTC, kp=null){
   try{
     if(dateTimeUTC && typeof dateTimeUTC.getTime === 'function' && !isNaN(dateTimeUTC.getTime())){
       // fp295: Ai also depends on live Dst, Wolf Sn and profile/Hora.
@@ -10207,7 +10209,7 @@ function computeAi(dateTimeUTC, kp=0){
       const _snKey = (window._lastWolfSn && isFinite(window._lastWolfSn.sn)) ? window._lastWolfSn.sn : 'na';
       const _profileKey = (typeof _activeProfile !== 'undefined') ? _activeProfile : 'off';
       const _liveBucket = Math.abs(dateTimeUTC.getTime() - Date.now()) < 300000 ? Math.floor(Date.now() / 300000) : 'day';
-      const _k = [dateTimeUTC.getTime(), (isFinite(kp) ? kp : 0), _dstKey, _snKey, _profileKey, _liveBucket].join('|');
+      const _k = [dateTimeUTC.getTime(), (kp !== null && kp !== '' && isFinite(kp) ? kp : 'missing'), _dstKey, _snKey, _profileKey, _liveBucket].join('|');
       const _hit = _computeAiCache.get(_k);
       if(_hit) return _hit;
       const _res = _computeAiRaw(dateTimeUTC, kp);
@@ -10218,7 +10220,7 @@ function computeAi(dateTimeUTC, kp=0){
   }catch(e){}
   return _computeAiRaw(dateTimeUTC, kp);
 }
-function _computeAiRaw(dateTimeUTC, kp=0){
+function _computeAiRaw(dateTimeUTC, kp=null){
   // v88.7+ (deep audit): defensive input validation
   // Раніше: computeAi(null) → TypeError, computeAi(d, 100) → G=+96 (поза spec).
   // Тепер: graceful NaN return для invalid date, clamp kp до [0..9].
@@ -10228,10 +10230,11 @@ function _computeAiRaw(dateTimeUTC, kp=0){
              phaseName: '?', phaseDeg: NaN, lTip: 'Invalid date', mTip: '', eTip: '', pTip: '', diTip: '',
              explain: 'Invalid date input', eclipseUnverified: false };
   }
-  if(kp == null || !isFinite(kp)) kp = 0;
+  const kpAvailable = kp !== null && kp !== '' && isFinite(kp);
+  if(!kpAvailable) kp = NaN;
   // Clamp kp to physical range [0..9] (Kp index spec defines 0-9 only)
-  if(kp < 0) kp = 0;
-  if(kp > 9) kp = 9;
+  if(kpAvailable && kp < 0) kp = 0;
+  if(kpAvailable && kp > 9) kp = 9;
   const dateStr = fmtDate(dateTimeUTC);
 
   const phaseDeg  = moonPhaseAngle(dateTimeUTC);
@@ -11285,8 +11288,8 @@ function draw27dTable(){
       <td>${Lcell}</td><td>${Mcell}</td><td>${Ecell}</td><td>${Pcell}</td><td>${AiCell}</td>
       <td class="mono col-hide-mobile">${r.Ap}</td>
       <td class="mono col-hide-mobile">${r.flux}</td>
-      <td style="font-size:12px">${classifyG(isFinite(G_display)?G_display:0)}</td>
-      <td class="col-hide-mobile" style="font-size:12px">${(()=>{const _p=calcProbabilityLayer({G:G_display,csConf:1,horizon:'27day'});return _p?`<span style="font-weight:700;color:${_p.band==='high'?'#ff6b6b':_p.band==='elevated'?'#fca474':_p.band==='moderate'?'#ffcc00':'#2bd47d'}" title="Горизонт 27д — низька точність (×0.55)">~${_p.pSoftPct}%</span>`:'—';})()}</td>
+      <td style="font-size:12px">${isFinite(G_display)?classifyG(G_display):'Дані відсутні'}</td>
+      <td class="col-hide-mobile" style="font-size:12px">${(()=>{const _p=calcProbabilityLayer({G:G_display,horizon:'27day'});return _p?`<span style="font-weight:700;color:var(--muted)" title="Евристична зона G; не ймовірність, score_effect=0">${escapeHtml(_p.labelUA)}</span>`:'—';})()}</td>
       <td style="font-size:12px;color:var(--faint)">raw-контекст · не команда</td>
       ${bulletinCell}
       ${gosCell}
@@ -11708,7 +11711,7 @@ function renderForwardTimeline(){
     // v88.8.18: для overrides — золоте обведення замість transparent
     const border = isSel ? `2px solid #fff` : (isToday ? `1.5px solid #9fd1ff` : d._hasOverride ? '1px solid #ffd166' : '1px solid transparent');
     const hPct = Math.max(18, Math.min(100, Math.abs(g) * 18 + 18));
-    const _confLbl = daysOut <= 3 ? '' : daysOut <= 7 ? ' · ~75% conf' : daysOut <= 14 ? ' · ~55% conf' : ' · ~35% conf';
+    const _confLbl = daysOut <= 3 ? ' · близький горизонт' : daysOut <= 7 ? ' · короткий горизонт' : daysOut <= 14 ? ' · середній горизонт' : ' · дальній горизонт';
     const _ovLbl = _hasDecision ? ` · PDF REFERENCE ${d._expertEng>=0?'+':''}${d._expertEng} · raw G=${d.G.toFixed(1)}` : ' · лише raw-контекст';
     const label = `${d.ds}${_ovLbl}${_confLbl}`;
     sticks += `<div class="ft-stick" data-idx="${globalIdx}" title="${label}" style="flex:1;min-width:0;height:${hPct}%;background:${col};opacity:${opacity};border-radius:2px;cursor:pointer;transition:opacity .15s, border .15s;box-sizing:border-box;border:${border}"></div>`;
@@ -11750,12 +11753,9 @@ ${isNarrow?'На вузькому екрані показано 14 днів (−
       <button onclick="_ftJumpTo(-1)" style="font-size:11px;padding:3px 8px;border:1px solid #2a3b61;background:#0f1a2f;color: var(--muted);border-radius:6px;cursor:pointer" title="Сьогодні">⌖</button>
     </div>
     <div id="ftSticksRow" style="display:flex;align-items:flex-end;height:48px;gap:${gap}px;padding:0 2px">${sticks}</div>
-    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:4px;font-size:9px;color:var(--faint);letter-spacing:.04em" title="Прозорість показує впевненість прогнозу. Дальні дні менш надійні через ±1.5 розкид Kp у NOAA 27-day outlook.">
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:4px;font-size:9px;color:var(--faint);letter-spacing:.04em" title="Прозорість лише візуально послаблює дальній горизонт. Це не калібрована ймовірність і не оцінка точності.">
       <span><strong style="color:#f0a33a">Колір = зона G_raw-контексту</strong>, не дозвіл; <strong style="color:#ffd166">золота рамка = PDF reference</strong>, не оперативне рішення.</span><span>Горизонт raw:</span>
-      <span style="display:inline-flex;align-items:center;gap:3px"><span style="display:inline-block;width:10px;height:8px;background: var(--muted);opacity:1"></span>0–3д 100%</span>
-      <span style="display:inline-flex;align-items:center;gap:3px"><span style="display:inline-block;width:10px;height:8px;background: var(--muted);opacity:.75"></span>4–7д 75%</span>
-      <span style="display:inline-flex;align-items:center;gap:3px"><span style="display:inline-block;width:10px;height:8px;background: var(--muted);opacity:.55"></span>8–14д 55%</span>
-      <span style="display:inline-flex;align-items:center;gap:3px"><span style="display:inline-block;width:10px;height:8px;background: var(--muted);opacity:.35"></span>15–27д 35%</span>
+      <span>0–3д близький</span><span>4–7д короткий</span><span>8–14д середній</span><span>15–27д дальній</span>
     </div>
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:8px;padding-top:8px;border-top:1px solid #1e2a44">
       <div style="flex:0 0 auto">
@@ -12101,7 +12101,7 @@ function renderCurrentPanel(){
       // noon-ai паралельно рахується для diff-disclosure ("Δ vs полудень") в tooltip.
       // 27-day таблиця, compare periods, персональні slots — залишаються на noon (stable contract).
       // v37.9: для поточного стану використовуємо kNow, не kpMax — щоб eᵢ відповідав реальному Kp зараз
-      const kNowForAi = (lastWWV && isFinite(lastWWV.kNow)) ? lastWWV.kNow : (kUse ?? 0);
+      const kNowForAi = (lastWWV && isFinite(lastWWV.kNow)) ? lastWWV.kNow : (isFinite(kUse) ? kUse : null);
       ai = computeAi(nowUTC, kNowForAi);
       // v87.33: aiNoon рахуємо для того самого дня, що `nowUTC`, а не `todayRow.date` —
       // на межі доби todayRow може бути ВЧОРА (3-day forecast ще не оновив), тоді diff misleading.
@@ -12119,9 +12119,9 @@ function renderCurrentPanel(){
   }
   if(!ai){
     // v87.30: fallback теж на nowUTC (не noonUTC) для консистентної семантики Hero
-    ai = computeAi(nowUTC, kUse ?? 0);
+    ai = computeAi(nowUTC, isFinite(kUse) ? kUse : null);
     try{
-      const aiNoon = computeAi(sunriseUTC(nowUTC), kUse ?? 0);
+      const aiNoon = computeAi(sunriseUTC(nowUTC), isFinite(kUse) ? kUse : null);
       ai._noonDelta = {
         Ai: Math.round((ai.Ai - aiNoon.Ai) * 10) / 10,
         ei: Math.round((ai.ei - aiNoon.ei) * 10) / 10,
@@ -14488,7 +14488,7 @@ function render3Day(parsed3){
     + '<th class="col-3d-ap">Ap (прогноз)</th>'
     + '<th class="col-hide-mobile">Kp слоти (8×3год)</th>'
     + '<th>Категорія</th>'
-    + '<th class="col-hide-mobile">Ризик%</th>'
+    + '<th class="col-hide-mobile">Зона G</th>'
     + '<th>Рекомендація</th>'
     + '</tr></thead><tbody>';
 
@@ -14497,8 +14497,8 @@ function render3Day(parsed3){
     // v52: визначаємо kpMax ПЕРЕД computeAi — щоб ai і G використовували однаковий kp
     const kpMax = fmtDate(d.date) === todayKyivStr() && lastWWV && isFinite(lastWWV.kNow)
       ? lastWWV.kNow : d.kpMax;
-    const ai = computeAi(sunriseUTC(d.date), kpMax ?? 0);
-    const G = kpDayTerm(isFinite(kpMax)? kpMax : 0) + ai.Ai;
+    const ai = computeAi(sunriseUTC(d.date), isFinite(kpMax) ? kpMax : null);
+    const G = isFinite(kpMax) ? kpDayTerm(kpMax) + ai.Ai : NaN;
     const isToday = fmtDate(d.date) === todayKyivStr();
     const _daySig3 = (typeof resolveDaySignal_v88825 === 'function') ? resolveDaySignal_v88825(d.date, G, kpMax, {isToday}) : null;
     const G_decision = _daySig3 && isFinite(_daySig3.decisionScore) ? Number(_daySig3.decisionScore) : G;
@@ -14529,7 +14529,7 @@ function render3Day(parsed3){
 
     const _prob3d = calcProbabilityLayer({G:displayG3, csConf:1, horizon:'3day'});
     const _riskCell = _prob3d
-      ? `<span style="font-size:12px;font-weight:700;color:${_prob3d.band==='high'?'#ff6b6b':_prob3d.band==='elevated'?'#fca474':_prob3d.band==='moderate'?'#ffcc00':'#2bd47d'}">${_prob3d.pSoftPct}%</span>`
+      ? `<span style="font-size:12px;font-weight:700;color:var(--muted)" title="Евристична зона G; не ймовірність, score_effect=0">${escapeHtml(_prob3d.labelUA)}</span>`
       : '—';
     html += `<tr style="${rowStyle}${todayStyle}">
       <td class="mono col-date"${isToday?' style="font-weight:700;color:var(--alt)"':''}>${fmtDate(d.date)}${isToday?' <br><span style="color:var(--alt);font-size:10px;white-space:nowrap">◀ сьогодні</span>':''}</td>
@@ -14560,8 +14560,8 @@ function render3Day(parsed3){
     const _todayStr = todayKyivStr();
     for(const d of days){
       const kpMax=fmtDate(d.date)===todayKyivStr()&&lastWWV&&isFinite(lastWWV.kNow)?lastWWV.kNow:d.kpMax;
-      const ai=computeAi(sunriseUTC(d.date),kpMax??0);
-      const G=kpDayTerm(isFinite(kpMax)?kpMax:0)+ai.Ai;
+      const ai=computeAi(sunriseUTC(d.date),isFinite(kpMax)?kpMax:null);
+      const G=isFinite(kpMax)?kpDayTerm(kpMax)+ai.Ai:NaN;
       const isToday=fmtDate(d.date)===todayKyivStr();
       const _daySigQ = (typeof resolveDaySignal_v88825 === 'function') ? resolveDaySignal_v88825(d.date, G, kpMax, {isToday}) : null;
       // v87.6: перший НЕ-сьогоднішній день = "завтра"
@@ -19507,6 +19507,11 @@ function renderProvenance(){
 function renderAntiAction(){
   const _el = document.getElementById('antiActionContent');
   if(!_el) return;
+  // fp412: Jyotish is descriptive context only; Hero owns the verdict.
+  _el.innerHTML = '<div style="color:var(--muted);font-size:12px;line-height:1.5"><strong>Календарний контекст Jyotish</strong> · традиційні назви та часові вікна показані в картці нижче. score_effect=0; цей шар не дозволяє і не забороняє дії. Оперативне рішення — лише у головному блоці.</div>';
+  const _aPrev412 = document.getElementById('antiActionPreview');
+  if(_aPrev412) _aPrev412.textContent = 'Jyotish: календарний контекст · score_effect=0 · не команда для дії';
+  return;
   const _ds = window.__dashState || {};
   const _ai = (window.__uiState && window.__uiState.ai) || _ds.ai || {};
 
@@ -19642,6 +19647,19 @@ function renderAntiAction(){
 function renderDisagreement(){
   const _alert = document.getElementById('disagreementAlert');
   if(!_alert) return;
+  // fp412: explain provenance divergence only; never synthesize advice.
+  const _ui412 = window.__uiState || {};
+  const _g412 = Number(_ui412.gNow);
+  const _e412 = (typeof getEngineScore === 'function') ? getEngineScore(new Date(todayKyivStr()+'T12:00:00Z')) : null;
+  const _ref412 = _e412 && Number.isFinite(Number(_e412.eng)) ? Number(_e412.eng) : null;
+  if(Number.isFinite(_g412) && _ref412 !== null && Math.sign(_g412) !== Math.sign(_ref412)){
+    _alert.style.display='block';
+    _alert.innerHTML='<strong>Джерела розходяться.</strong> G_now — поточний контекст; PDF/Engine — окремий денний reference. Це пояснення розбіжності, не команда. Оперативне рішення показане лише у головному блоці.';
+  } else {
+    _alert.style.display='none';
+    _alert.innerHTML='';
+  }
+  return;
   const _ui = window.__uiState || {};
   const _gNow = _ui.gNow ?? NaN;
   const _eng = (typeof getEngineScore === 'function') ? getEngineScore(new Date(todayKyivStr()+'T12:00:00Z')) : null;
@@ -23220,6 +23238,12 @@ function renderBestTime(dateUTC, kp, G, panchPCL) {
   const wrap = document.getElementById('bestTimeBlock');
   const content = document.getElementById('bestTimeContent');
   if(!wrap || !content) return;
+  // fp412: Hora is timing context only and never grants permission.
+  wrap.style.display='block';
+  const _bestLabel412=document.getElementById('bestTimeLabel');
+  if(_bestLabel412) _bestLabel412.textContent='⏱ Hora — інформаційні часові вікна';
+  content.innerHTML = '<div class="muted small">Традиційний часовий контекст. score_effect=0; не є дозволом, забороною або рекомендацією дії. Оперативне рішення — лише у головному блоці.</div>';
+  return;
 
   // v88.8.35-fp6 D: paralelno з G перевіряємо PDF/Engine для дня — якщо PDF/Engine ≤ −2,
   // навіть при G_now > −1.5 показуємо попередження і НЕ рекомендуємо позитивні слоти.
