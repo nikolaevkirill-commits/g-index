@@ -6,7 +6,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>NeboRhythm: Cosmic Timing — Космофізичний дашборд v88.9.217-fp412-CONTRACT-AUTHORITY-CLOSURE</title>
+  <title>NeboRhythm: Cosmic Timing — Космофізичний дашборд v88.9.218-fp413-CURRENT-SLOT-AUTHORITY</title>
 
   <script>
     // fp388: the Android TWA opens an explicit free companion channel. It keeps
@@ -16745,6 +16745,28 @@ function _moreRestrictiveState_v88825(a, b){
 function _operationalScoreFromState_v88825(key){
   return Math.max(-3, Math.min(3, Math.round(_stateKeyToRepresentativeG_v88824(key))));
 }
+// fp413: one current-moment authority. Rahu/Yama/Gulika are timing vetoes:
+// they may cap the operational command to routine-only, but never rewrite the
+// frozen PDF/Engine reference or the raw 3/27-day context.
+function _applyCurrentSlotAuthority_v889218(opKey, kp){
+  let intradayGuard = null;
+  let guardedKey = opKey;
+  let dynamicGuard = null;
+  if(isFinite(kp) && Number(kp) >= 5){
+    guardedKey = _moreRestrictiveState_v88825(guardedKey, 'tense');
+    dynamicGuard = 'kp_storm';
+  } else if(isFinite(kp) && Number(kp) >= 4){
+    guardedKey = _moreRestrictiveState_v88825(guardedKey, 'unstable');
+    dynamicGuard = 'kp_elevated';
+  }
+  try { intradayGuard = _computeCurrentSlotDecision(); } catch(_e) { intradayGuard = null; }
+  if(intradayGuard?.blockedNow){
+    const isStorm = intradayGuard.reasonsNow?.includes('storm');
+    guardedKey = _moreRestrictiveState_v88825(guardedKey, isStorm ? 'tense' : 'unstable');
+    if(dynamicGuard !== 'kp_storm') dynamicGuard = isStorm ? 'current_storm' : 'current_window';
+  }
+  return { opKey: guardedKey, intradayGuard, dynamicGuard };
+}
 function resolveHeroSignalHierarchy_v88824(liveG, kp){
   let entry = null;
   try { if(typeof getEngineScore === 'function') entry = getEngineScore(new Date(todayKyivStr()+'T12:00:00Z')); } catch(e) { entry = null; }
@@ -16785,8 +16807,13 @@ function resolveHeroSignalHierarchy_v88824(liveG, kp){
     opKey = _moreRestrictiveState_v88825(dayKey, liveKey);
     guard = 'model_conflict';
   }
+  const currentAuthority = _applyCurrentSlotAuthority_v889218(opKey, kp);
+  opKey = currentAuthority.opKey;
+  const dynamicGuard = currentAuthority.dynamicGuard;
+  const intradayGuard = currentAuthority.intradayGuard;
   const commandG = _stateKeyToRepresentativeG_v88824(opKey);
-  return { entry, hasEngine, dayScore, dayKey, liveG, liveKey, opKey, commandG, guard, materialConflict, hasUnverifiedOverride, sourceDelta };
+  const operationalScore = _operationalScoreFromState_v88825(opKey);
+  return { entry, hasEngine, dayScore, dayKey, liveG, liveKey, opKey, commandG, operationalScore, guard, dynamicGuard, intradayGuard, materialConflict, hasUnverifiedOverride, sourceDelta };
 }
 
 function heroHeadlineFromHierarchy_v88824(sig){
@@ -16820,6 +16847,13 @@ function heroHeadlineFromHierarchy_v88824(sig){
     if (_kpNow >= 5 && sig.dayScore >= 2)
       return `Оперативно СТОП: буря Kp=${_kpNow.toFixed(1)} активна — уникайте критичного · PDF reference +${sig.dayScore}`;
   } catch(e) { /* silent */ }
+
+  if(sig.dynamicGuard === 'current_window' && sig.intradayGuard?.blockedNow){
+    const names = sig.intradayGuard.reasonsNow.filter(r => r.startsWith('window:')).map(r => r.slice(7)).join('+') || 'часове вікно';
+    const until = sig.intradayGuard.blockedUntilH != null ? ` до ${_fmtKyivFromUTCFloat(sig.intradayGuard.blockedUntilH)}` : '';
+    const ds = isFinite(sig.dayScore) ? `${sig.dayScore >= 0 ? '+' : ''}${sig.dayScore}` : '—';
+    return `Оперативно лише рутина зараз: ${names}${until} · денний reference ${ds}`;
+  }
 
   // v88.8.34: Hero headline is an OPERATIONAL command for the current moment.
   // Day PDF/Engine score is shown as context, not as a command.
@@ -16962,6 +16996,13 @@ function resolveDaySignal_v88825(dateObj, rawG, kp, opts){
   // recommendation must fail closed when the safety layer is elevated.
   if(dynamicGuard === 'kp_storm') opKey = _moreRestrictiveState_v88825(opKey, 'tense');
   else if(dynamicGuard === 'kp_elevated') opKey = _moreRestrictiveState_v88825(opKey, 'unstable');
+  let intradayGuard = null;
+  if(isToday){
+    const currentAuthority = _applyCurrentSlotAuthority_v889218(opKey, kp);
+    opKey = currentAuthority.opKey;
+    intradayGuard = currentAuthority.intradayGuard;
+    if(currentAuthority.dynamicGuard && dynamicGuard !== 'kp_storm') dynamicGuard = currentAuthority.dynamicGuard;
+  }
   const keyForColor = opKey || liveKey;
   const repG = _stateKeyToRepresentativeG_v88824(keyForColor);
   const operationalScore = _operationalScoreFromState_v88825(keyForColor);
@@ -16975,10 +17016,16 @@ function resolveDaySignal_v88825(dateObj, rawG, kp, opts){
       title = 'джерело не підтверджене';
       action = 'працюємо обережно до перевірки PDF#48';
       recommendation = { text:'Не запускати нове: потрібна перевірка джерела PDF#48', style:'color: var(--warn);font-weight:800' };
-    } else if(dynamicGuard === 'kp_storm') {
+    } else if(dynamicGuard === 'kp_storm' || dynamicGuard === 'current_storm') {
       title = 'оперативно СТОП · Kp≥5';
       action = 'буревий safety-контур блокує нові ризикові дії';
       recommendation = { text:'Тільки необхідна рутина; перевірити зв’язок, GPS і актуальний Kp', style:'color: var(--bad);font-weight:800' };
+    } else if(dynamicGuard === 'current_window') {
+      const names = intradayGuard?.reasonsNow?.filter(r => r.startsWith('window:')).map(r => r.slice(7)).join('+') || 'часове вікно';
+      const until = intradayGuard?.blockedUntilH != null ? ` до ${_fmtKyivFromUTCFloat(intradayGuard.blockedUntilH)}` : '';
+      title = `оперативно ${operationalScore} · лише рутина зараз`;
+      action = `${names}${until} блокує нові починання; денний reference показано окремо`;
+      recommendation = { text:`Не починати нових справ${until}; виконуйте лише звичні задачі`, style:'color: var(--warn);font-weight:800' };
     } else if(dynamicGuard === 'kp_elevated') {
       title = 'оперативно обережно · Kp≥4';
       action = 'підвищена геомагнітна активність';
@@ -17032,12 +17079,8 @@ Live-контур зараз: ${liveTxt}.`
         : `Довідковий денний сигнал: ${daySign}${dayScore} (${src}${raw}).
 Live-контур зараз: ${liveTxt}.
 Оперативний стан: ${operationalScore>=0?'+':''}${operationalScore} (${keyForColor}).
-${guard !== 'none' || dynamicGuard ? 'Застосовано обережніший safety-контур; PDF/Engine не є дозволом на дію.' : 'Сигнали узгоджені.'}`)
+${guard !== 'none' || dynamicGuard ? 'Застосовано обережніший safety-контур; PDF/Engine не є дозволом на дію.' : 'Сигнали узгоджені.'}${dynamicGuard === 'current_window' ? '\nПоточне часове вето: нові починання заблоковано до завершення активного вікна.' : ''}`)
     : `Денного Engine/PDF score немає. Показано Live G: ${liveTxt}.`;
-  let intradayGuard = null;
-  if(isToday){
-    try { intradayGuard = _computeCurrentSlotDecision(); } catch(_slotErr) { intradayGuard = null; }
-  }
   const decisionAvailable = hasEngine;
   const actionPolicy = !decisionAvailable ? 'reference_unavailable' : (intradayGuard?.blockedNow ? 'routine_only' : 'resolved_day_policy');
   return { entry, hasEngine, decisionAvailable, sourceDayScore, baseDayScore, dayScore, referenceScore:hasEngine?dayScore:undefined, operationalRawG, rawG, operationalScore, decisionScore:hasEngine?operationalScore:undefined, intradayGuard, actionPolicy, dayKey, liveKey, opKey, guard, dynamicGuard, materialConflict, repG, title, action, recommendation, color, tooltip, src, hasUnverifiedOverride, sourceDelta };
