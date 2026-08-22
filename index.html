@@ -6,7 +6,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>NeboRhythm: Cosmic Timing — Космофізичний дашборд v88.9.218-fp413-CURRENT-SLOT-AUTHORITY</title>
+  <title>NeboRhythm: Cosmic Timing — Космофізичний дашборд v88.9.219-fp414-HERO-ACTION-AUTHORITY</title>
 
   <script>
     // fp388: the Android TWA opens an explicit free companion channel. It keeps
@@ -17675,8 +17675,11 @@ function syncHero(){
     if (_gcdHero && _gcdHero.blockedNow && !_gcdHero.reasonsNow.includes('storm')) {
       const _namesHero = _gcdHero.reasonsNow.filter(r => r.startsWith('window:')).map(r => r.slice(7)).join('+');
       const _untilHero = (_gcdHero.blockedUntilH != null) ? ` до ${_fmtKyivFromUTCFloat(_gcdHero.blockedUntilH)}` : '';
-      const _dayDecisionTxt = _heroSig && _heroSig.hasEngine && isFinite(_heroSig.dayScore)
-        ? `Рішення дня ${_heroSig.dayScore>=0?'+':''}${_heroSig.dayScore}`
+      // fp414: this is an operational action card, so its numeric label must use
+      // the same decisionScore as the Hero ring. dayScore is the separate PDF
+      // reference and previously produced "Рішення дня +1" beside Hero -1.
+      const _dayDecisionTxt = _heroSig && isFinite(_heroSig.decisionScore)
+        ? `Оперативний стан ${_heroSig.decisionScore>=0?'+':''}${_heroSig.decisionScore}`
         : 'Поточний фон';
       _stormDoText = (_stKey === 'favorable' || _stKey === 'good')
         ? `${_delayedPrefix}Сприятливий день, але зараз ${_namesHero}: тільки рутина${_untilHero}`
