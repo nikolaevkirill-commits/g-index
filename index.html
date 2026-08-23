@@ -6,7 +6,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>NeboRhythm: Cosmic Timing — Космофізичний дашборд v88.9.223-fp418-AUDIT-CLOSURE</title>
+  <title>NeboRhythm: Cosmic Timing — Космофізичний дашборд v88.9.224-fp419-TIMEZONE-CLOSURE</title>
 
   <script>
     // fp388: the Android TWA opens an explicit free companion channel. It keeps
@@ -6190,6 +6190,19 @@ window.__testTimezone = function(){
 // у Kyrylo інший системний TZ ноутбука/телефона (подорож, інша ОС). Одна
 // канонічна функція: офсет Europe/Kyiv У ЦЮ КОНКРЕТНУ МИТЬ (враховує літній/
 // зимовий час автоматично через IANA-базу, а НЕ browser TZ).
+function _kyivFallbackOffsetHours(date){
+  const d = (date instanceof Date && !isNaN(date)) ? date : new Date();
+  const year = d.getUTCFullYear();
+  const lastSundayUtc = (month) => {
+    const end = new Date(Date.UTC(year, month + 1, 0, 1, 0, 0));
+    end.setUTCDate(end.getUTCDate() - end.getUTCDay());
+    return end.getTime();
+  };
+  // Europe/Kyiv follows the European transition instants: 01:00 UTC on the
+  // last Sunday of March and October. This branch is used only without IANA.
+  return d.getTime() >= lastSundayUtc(2) && d.getTime() < lastSundayUtc(9) ? 3 : 2;
+}
+window._kyivFallbackOffsetHours = _kyivFallbackOffsetHours;
 function kyivOffsetHoursAt(date){
   try {
     const d = (date instanceof Date && !isNaN(date)) ? date : new Date();
@@ -6200,7 +6213,7 @@ function kyivOffsetHoursAt(date){
     }).formatToParts(d).reduce((a, p) => { a[p.type] = p.value; return a; }, {});
     const _asUTC = Date.UTC(+_parts.year, +_parts.month - 1, +_parts.day, +_parts.hour, +_parts.minute, +_parts.second);
     return (_asUTC - d.getTime()) / 3600000;
-  } catch(e) { return 3; } // fallback — Київ влітку UTC+3, якщо Intl/IANA недоступні
+  } catch(e) { return _kyivFallbackOffsetHours(date); }
 }
 window.kyivOffsetHoursAt = kyivOffsetHoursAt;
 // Цілий офсет для конверсій "година слоту" (3-годинні межі — patern `(h+off)%24`).
@@ -6250,7 +6263,8 @@ function todayKyivStr(){
     return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Kyiv',
       year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
   } catch(e) {
-    return fmtDate(new Date()); // fallback якщо Intl/timeZone недоступний
+    const now = new Date();
+    return fmtDate(new Date(now.getTime() + _kyivFallbackOffsetHours(now) * 3600000));
   }
 }
 // Kyiv civil-day helpers. Noon UTC keeps the calendar key stable across DST

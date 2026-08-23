@@ -70,7 +70,6 @@ for (const [label, pattern] of [
 }
 
 for (const required of [
-  'v88.9.218-fp413-CURRENT-SLOT-AUTHORITY',
   'Оперативно лише рутина зараз:',
   'Поточне часове вето: нові починання заблоковано',
   '_applyCurrentSlotAuthority_v889218'
@@ -78,6 +77,10 @@ for (const required of [
   if (!html.includes(required)) throw new Error(`missing contract marker: ${required}`);
 }
 console.log('PASS fp413 contract markers');
-if (!manifest.includes('"version": "88.9.218-fp413"')) throw new Error('fp413 manifest version missing');
-if (!serviceWorker.includes("const CACHE_VERSION = 'fp413-v1'")) throw new Error('fp413 service-worker cache version missing');
-console.log('PASS fp413 manifest and service-worker cache versions');
+const manifestVersion = JSON.parse(manifest).version;
+const htmlVersion = (html.match(/v(\d+\.\d+\.\d+-fp\d+)-[A-Z0-9-]+<\/title>/) || [])[1];
+const cacheFp = (serviceWorker.match(/const CACHE_VERSION = '(fp\d+)-v\d+'/) || [])[1];
+const manifestFp = (manifestVersion.match(/(fp\d+)$/) || [])[1];
+if (!htmlVersion || htmlVersion !== manifestVersion) throw new Error(`release version mismatch: html=${htmlVersion}, manifest=${manifestVersion}`);
+if (!cacheFp || cacheFp !== manifestFp) throw new Error(`cache generation mismatch: cache=${cacheFp}, manifest=${manifestFp}`);
+console.log(`PASS release coherence: ${manifestVersion}; cache ${cacheFp}`);
