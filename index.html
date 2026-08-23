@@ -6,7 +6,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>NeboRhythm: Cosmic Timing — Космофізичний дашборд v88.9.219-fp414-HERO-ACTION-AUTHORITY</title>
+  <title>NeboRhythm: Cosmic Timing — Космофізичний дашборд v88.9.222-fp417-LIVE-DATA-REFRESH</title>
 
   <script>
     // fp388: the Android TWA opens an explicit free companion channel. It keeps
@@ -3482,7 +3482,8 @@ function updateDataFreshness(source, ts){
 function resolveSourceLabel(){
   try {
     const _src = window._kpSourceFreshness;
-    const _isRealObserved = !!(typeof lastWWV !== 'undefined' && lastWWV && isFinite(lastWWV.kNow) && !lastWWV._synthetic);
+    const _isProvisional = !!(typeof lastWWV !== 'undefined' && lastWWV && lastWWV._provisional);
+    const _isRealObserved = !!(typeof lastWWV !== 'undefined' && lastWWV && isFinite(lastWWV.kNow) && !lastWWV._synthetic && !_isProvisional);
     const _ageH = (_src && isFinite(_src.ageHours)) ? _src.ageHours : null;
     let typeLabel, freshnessLabel, combined, shortCombined, color, isLive;
     // v88.9.53-fp235 САМОАУДИТ-ФІКС: раніше умова `_isRealObserved && _ageH != null`
@@ -3491,7 +3492,14 @@ function resolveSourceLabel(){
     // "FORECAST · ESTIMATED" — хоча в тому самому обʼєкті isRealObserved:true.
     // Споживачі, що читають лише .isRealObserved (не .combined), бачили
     // суперечність. Тепер тип визначається ЛИШЕ isRealObserved; вік — окремо.
-    if (_isRealObserved) {
+    if (_isProvisional) {
+      typeLabel = 'PROVISIONAL';
+      freshnessLabel = (_ageH != null && _ageH <= 0.5) ? 'LIVE' : 'STALE';
+      combined = `PROVISIONAL · ${freshnessLabel}${_ageH != null ? ` ${_ageH.toFixed(1)}г` : ''}`;
+      shortCombined = `PROVISIONAL ${freshnessLabel}`;
+      color = freshnessLabel === 'LIVE' ? '#63be7b' : '#ff9944';
+      isLive = freshnessLabel === 'LIVE';
+    } else if (_isRealObserved) {
       typeLabel = 'OBSERVED';
       if (_ageH == null) {
         freshnessLabel = 'UNKNOWN'; combined = 'OBSERVED · вік невідомий'; shortCombined = 'OBSERVED'; color = '#a8d5e0'; isLive = false;
@@ -14440,7 +14448,7 @@ function updateAutoRefStatus(){
   const mins = parseInt(sel.value,10);
   if(_autoRefTimer){ clearInterval(_autoRefTimer); _autoRefTimer=null; }
   if(mins > 0){
-    _autoRefTimer = setInterval(loadAll, mins * 60000);
+    _autoRefTimer = setInterval(() => runDataRefresh('auto'), mins * 60000);
     badge.textContent = `● ${mins} хв`;
     badge.className = 'autoref-badge';
   }else{
@@ -15344,13 +15352,17 @@ function _computeCurrentSlotDecision(){
   _dec.blockedUntilH = _blockedUntilH;
   return _dec;
 }
-function getCurrentSlotDecision(){
+function getCurrentOperationalSignal(){
   try {
     const _raw = (typeof _v73G === 'function') ? _v73G() : NaN;
     const _kp = Number(window.__uiState?.kpNow);
-    const _sig = resolveDaySignal_v88825(new Date(todayKyivStr()+'T12:00:00Z'), _raw, _kp, {isToday:true});
-    return _sig?.intradayGuard || {segments:[],currentSegment:null,actionNow:'стан не визначено',slotAction:'стан не визначено',blockedNow:true,reasonsNow:['reference_unavailable'],hasBlockedSegment:true,reasons:['reference_unavailable'],nextChangeAt:null,blockedUntilH:null};
-  } catch(_e) { return {segments:[],currentSegment:null,actionNow:'стан не визначено',slotAction:'стан не визначено',blockedNow:true,reasonsNow:['reference_unavailable'],hasBlockedSegment:true,reasons:['reference_unavailable'],nextChangeAt:null,blockedUntilH:null}; }
+    return resolveDaySignal_v88825(new Date(todayKyivStr()+'T12:00:00Z'), _raw, _kp, {isToday:true});
+  } catch(_e) { return null; }
+}
+window.getCurrentOperationalSignal = getCurrentOperationalSignal;
+function getCurrentSlotDecision(){
+  const _sig = getCurrentOperationalSignal();
+  return _sig?.intradayGuard || {segments:[],currentSegment:null,actionNow:'стан не визначено',slotAction:'стан не визначено',blockedNow:true,reasonsNow:['reference_unavailable'],hasBlockedSegment:true,reasons:['reference_unavailable'],nextChangeAt:null,blockedUntilH:null};
 }
 window.getCurrentSlotDecision = getCurrentSlotDecision;
 // UTC-година (float) → "HH:MM" Europe/Kyiv — для показу "до КОЛИ" триває блок.
@@ -17088,10 +17100,10 @@ ${guard !== 'none' || dynamicGuard ? 'Застосовано обережніш�
 window.resolveDaySignal_v88825 = resolveDaySignal_v88825;
 
 function resolveCurrentOperationalG_v88825(){
-  const _ui = window.__uiState || {};
-  const g = isFinite(_ui.gNow) ? _ui.gNow : NaN;
-  const kp = isFinite(_ui.kpNow) ? _ui.kpNow : NaN;
-  try { return resolveHeroSignalHierarchy_v88824(g, kp).commandG; } catch(e) { return g; }
+  try {
+    const _sig = getCurrentOperationalSignal();
+    return _sig?.decisionAvailable && isFinite(_sig?.decisionScore) ? _sig.repG : NaN;
+  } catch(e) { return NaN; }
 }
 
 
@@ -17100,7 +17112,11 @@ function syncHero(){
   const nowG=el('nowG'), heroG=el('heroG');
   const newG = isFinite(_ui.gNow) ? _ui.gNow : (function(){ const m=(nowG?.textContent||'').match(/G\s*(-?\d+\.?\d*)/); return m?parseFloat(m[1]):NaN; })();
   const kpH_pre = isFinite(_ui.kpNow) ? _ui.kpNow : _num(_firstText(el('nowKp')));
-  const _heroSig = resolveHeroSignalHierarchy_v88824(newG, kpH_pre);
+  const _heroCanonicalSig = getCurrentOperationalSignal();
+  const _heroSig = _heroCanonicalSig ? Object.assign({}, _heroCanonicalSig, {
+    commandG: _heroCanonicalSig.repG,
+    liveG: _heroCanonicalSig.operationalRawG
+  }) : null;
   try {
     const _bridgeDecision = ({favorable:'ACT',good:'ACT',neutral:'UNKNOWN',unstable:'CAUTION',tense:'HOLD'})[_heroSig?.opKey] || 'UNKNOWN';
     localStorage.setItem('neborythm.canonical.runtime.v1', JSON.stringify({
@@ -17117,7 +17133,7 @@ function syncHero(){
     // Safety contract: the largest signal on screen is the operational state.
     // The frozen PDF/Engine score remains visible as a labelled reference, but
     // cannot stay green when the live/raw safety layer says stop or routine.
-    const _hasVerdict = !!(_heroSig && isFinite(_heroSig.commandG));
+    const _hasVerdict = !!(_heroSig && _heroSig.decisionAvailable && isFinite(_heroSig.decisionScore));
     const _heroDisplayVal = _hasVerdict
       ? _operationalScoreFromState_v88825(_heroSig.opKey)
       : newG;
@@ -20210,8 +20226,9 @@ async function loadAll(){
   // fp134 only bounded fallback calls; primary Promise.allSettled still waited for the full
   // CORS chain of every source and could freeze perceived startup. Each rail now gets a
   // hard 5s wait budget; stale/dead sources fall through to existing cache/synthetic logic.
-  const [kpObsR, kpFcstR, t27R, dstR, snR] = await Promise.allSettled([
+  const [kpObsR, kpLiveR, kpFcstR, t27R, dstR, snR] = await Promise.allSettled([
     withTimeout(fetchTextWithCORS(URL_KP_OBS, _looksLikeJson), 5000, 'primary KP_OBS'),
+    withTimeout(fetchTextWithCORS(URL_KP_OBS_FB, _looksLikeJson), 5000, 'provisional KP_1M'),
     withTimeout(fetchTextWithCORS(URL_KP_FCST, _looksLikeJson), 5000, 'primary KP_FCST'),
     withTimeout(fetchTextWithCORS(URL_27DAY), 5000, 'primary 27DAY'),
     withTimeout(fetchTextWithCORS(URL_DST, _looksLikeJson), 5000, 'primary DST'),
@@ -20328,6 +20345,34 @@ async function loadAll(){
         }
       }
     }
+  }
+
+  // The finalized 3-hour feed may lag the current interval. Prefer a fresh,
+  // robust 5-point median from NOAA's 1-minute estimated Kp rail and label it
+  // PROVISIONAL; never present it as a finalized observation.
+  if (kpLiveR.status === 'fulfilled') {
+    try {
+      const _rows1m = JSON.parse(kpLiveR.value).filter(r => r && isFinite(Number(r.estimated_kp)) && Number(r.estimated_kp) >= 0 && Number(r.estimated_kp) <= 9 && isFinite(Date.parse(String(r.time_tag)+'Z')));
+      const _tail1m = _rows1m.slice(-5);
+      const _last1m = _tail1m[_tail1m.length - 1];
+      const _age1m = _last1m ? (Date.now() - Date.parse(String(_last1m.time_tag)+'Z')) / 3600000 : Infinity;
+      if (_tail1m.length >= 3 && _age1m >= -0.1 && _age1m <= 0.5) {
+        const _vals1m = _tail1m.map(r => Number(r.estimated_kp)).sort((a,b)=>a-b);
+        const _kp1m = _vals1m[Math.floor(_vals1m.length/2)];
+        const _prevFinal = lastWWV;
+        lastWWV = {
+          kNow: _kp1m, aNow: _prevFinal?.aNow ?? null,
+          whenText: String(_last1m.time_tag).replace('T',' ') + ' UTC',
+          ts: Date.parse(String(_last1m.time_tag)+'Z'),
+          kPrev3h: _prevFinal?.kNow ?? null, kp24hAgo: _prevFinal?.kp24hAgo ?? null,
+          _provisional: true,
+          _sourceLabel: 'NOAA 1-minute estimated Kp (5-point median)'
+        };
+        window._kpSourceFreshness = {source:'NOAA 1m estimated', ageHours:Math.max(0,_age1m), provisional:true};
+        _setSrcStatus('srcKpObs','ok');
+        lsSet('last_kp_known', _kp1m);
+      }
+    } catch(_e1m) { if(window._DEBUG) console.warn('[fp417 KP_1M]', _e1m.message); }
   }
 
   // Kp прогноз 3 дні
@@ -20675,6 +20720,25 @@ async function loadAll(){
 
   el('btnRefresh').disabled = false;
 }
+
+// One refresh cycle at a time. A rejected render/fetch must never leave the
+// button disabled or allow overlapping auto-refresh jobs to accumulate.
+let _dataRefreshPromise = null;
+function runDataRefresh(reason){
+  if (_dataRefreshPromise) return _dataRefreshPromise;
+  const started = Date.now();
+  _dataRefreshPromise = Promise.resolve().then(loadAll).catch(err => {
+    const msg = 'Оновлення даних не завершено: ' + ((err && err.message) || 'невідома помилка');
+    const target = el('nowError'); if(target) target.textContent = msg;
+    console.error('[data-refresh]', reason, err);
+  }).finally(() => {
+    const btn = el('btnRefresh'); if(btn) btn.disabled = false;
+    window.__lastRefreshCycle = {reason, startedAt:started, finishedAt:Date.now()};
+    _dataRefreshPromise = null;
+  });
+  return _dataRefreshPromise;
+}
+window.runDataRefresh = runDataRefresh;
 
 // ----------------------------- Експорт CSV ----------------------------------
 function exportCsv(){
@@ -24078,9 +24142,9 @@ function bootGIndexOnce(_reason){
   // the engine_scores.json fetch) or real CORS/network timing. NOT retrying
   // boot-time engine score loading blindly a third time. See memory for
   // diagnostic plan (test in Incognito = no SW, isolate before next attempt).
-  loadAll().catch(function(e){ if(window._DEBUG) console.warn('[fp169 boot loadAll]', e); });
+  runDataRefresh('boot');
   try{ updateAutoRefStatus(); }catch(e){}
-  try{ updateAutoRefStatus(); }catch(e){} cp(8);
+  cp(8);
   cp('DONE-minimal-boot');
 }
 // fp138: start immediately after parser reaches this script, not after external resources finish.
@@ -24091,7 +24155,7 @@ if(document.readyState === 'interactive' || document.readyState === 'complete') 
   document.addEventListener('DOMContentLoaded', function(){ bootGIndexOnce('DOMContentLoaded'); }, {once:true});
 }
 addEventListener('load', function(){ bootGIndexOnce('load'); }, {once:true});
-try{ const _br=el('btnRefresh'); if(_br) _br.addEventListener('click', loadAll); }catch(e){if(window._DEBUG)console.warn('[boot refresh]:',e.message)}
+try{ const _br=el('btnRefresh'); if(_br) _br.addEventListener('click', () => runDataRefresh('manual')); }catch(e){if(window._DEBUG)console.warn('[boot refresh]:',e.message)}
 // fp172: btnCsv/btnIcs existed in HTML with real, working export functions
 // ready to serve them, but neither was ever connected — clicking did nothing.
 try{ const _bc=el('btnCsv'); if(_bc) _bc.addEventListener('click', exportCsv); }catch(e){if(window._DEBUG)console.warn('[boot csv]:',e.message)}
