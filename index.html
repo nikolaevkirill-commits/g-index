@@ -6,7 +6,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>NeboRhythm: Cosmic Timing — Космофізичний дашборд v88.9.222-fp417-LIVE-DATA-REFRESH</title>
+  <title>NeboRhythm: Cosmic Timing — Космофізичний дашборд v88.9.223-fp418-AUDIT-CLOSURE</title>
 
   <script>
     // fp388: the Android TWA opens an explicit free companion channel. It keeps
@@ -4480,6 +4480,14 @@ if ('serviceWorker' in navigator) {
             // downgrade the Kp/operational source. Only Kp-domain resources may.
             const _staleUrl = String(event.data.url || '');
             const _isKpResource = /(?:^|[\/_-])kp(?:[\/_\.-]|$)|planetary[-_]?k|swpc.*(?:kp|json)|wwv/i.test(_staleUrl);
+            const _isReferenceResource = /(?:^|\/)engine_scores\.json(?:[?#]|$)/i.test(_staleUrl);
+            if (_isReferenceResource) {
+              window.__referenceSourceState = {
+                mode:'cached', stale:true, fetchedAt:event.data.fetchedAt ?? null,
+                reason:'sw_offline_fallback'
+              };
+              try { if (typeof syncHero === 'function') syncHero(); } catch(_eRef) {}
+            }
             if (_isKpResource && typeof _updateSourceState === 'function') {
               _updateSourceState({
                 mode: 'offline',
@@ -7716,6 +7724,8 @@ async function loadEngineScores(){
     if(!resp.ok) throw new Error('HTTP ' + resp.status);
     const data = await resp.json();
     _engineScores = data.scores || {};
+    window.__referenceSourceState = {mode:'live', stale:false, loadedAt:Date.now(), reason:'network'};
+    window.__engineRetryCount = 0;
     if(window._DEBUG) console.log('[v87.61] engine_scores loaded: ' + Object.keys(_engineScores).length + ' days, v' + (data.version || '?'));
     // v88.8.35-fp56-P8: override synthetic Kp with REAL Kp from future_kp.json (27DO).
     // Не міняє eng-score (frozen tag-based), лише замінює відображуваний Kp і знімає synthetic-мітку,
@@ -7831,7 +7841,13 @@ async function loadEngineScores(){
     return _engineScores;
   } catch(e){
     console.warn('[v87.61] engine_scores.json fetch failed:', e.message);
-    _engineScores = {};
+    window.__referenceSourceState = {mode:'unavailable', stale:true, loadedAt:null, reason:String(e.message||'fetch_failed')};
+    window.__engineRetryCount = Number(window.__engineRetryCount||0) + 1;
+    if (window.__engineRetryCount <= 3) {
+      setTimeout(() => { loadEngineScores().then(() => {
+        try { syncV702UI(); syncHero(); _renderHeroHierarchy(); } catch(_eRefresh) {}
+      }); }, Math.min(30000, 2000 * Math.pow(2, window.__engineRetryCount-1)));
+    }
     return _engineScores;
   }
 }
@@ -11210,6 +11226,8 @@ function draw27dTable(){
   const _panchCache={};
   for(const {r,ds,kpUsed,isOverridden,ai,G,delta,f107mod,_expertEng,_hasOverride,_baseDecisionEng,_decisionEng,_decisionAuthority,_dynamicGuard,calendarAdvisory} of data){
     const isToday = ds === todayStr;
+    const _opSig27 = isToday ? getCurrentOperationalSignal() : null;
+    const _opScore27 = _opSig27 && isFinite(_opSig27.decisionScore) ? Number(_opSig27.decisionScore) : NaN;
     // v88.8.34: raw-G table value; expert score is overlay, not replacement.
     const G_display = G;
     const gcls = classForG(G_display);
@@ -11298,7 +11316,9 @@ function draw27dTable(){
       <td class="mono col-hide-mobile">${r.flux}</td>
       <td style="font-size:12px">${isFinite(G_display)?classifyG(G_display):'Дані відсутні'}</td>
       <td class="col-hide-mobile" style="font-size:12px">${(()=>{const _p=calcProbabilityLayer({G:G_display,horizon:'27day'});return _p?`<span style="font-weight:700;color:var(--muted)" title="Евристична зона G; не ймовірність, score_effect=0">${escapeHtml(_p.labelUA)}</span>`:'—';})()}</td>
-      <td style="font-size:12px;color:var(--faint)">raw-контекст · не команда</td>
+      <td style="font-size:12px;color:${isToday?'var(--warn)':'var(--faint)'}">${isToday
+        ? (isFinite(_opScore27) ? `OP ${_opScore27>=0?'+':''}${_opScore27} · ${escapeHtml(_opSig27.title||'оперативний стан')}` : 'OP недоступний · fail-closed')
+        : 'raw-контекст · не команда'}</td>
       ${bulletinCell}
       ${gosCell}
     </tr>`;
@@ -25570,19 +25590,7 @@ setTimeout(async function _dayVerdictLoad(){
     await loadSpaceWeatherAccumulated();
     await loadAiaVernadsky();
     await loadKpHourlyAlert();
-    if (_engineScores === null) {
-      const resp = await fetch('engine_scores.json', { cache: 'default' });
-      if (resp.ok) {
-        const data = await resp.json();
-        const all = (data && data.scores) || {};
-        const nowMs = Date.now(), MS = 86400000, win = {};
-        for (const ds in all) {
-          const t = Date.parse(ds + 'T00:00:00Z');
-          if (isFinite(t) && Math.abs(t - nowMs) <= 16 * MS) win[ds] = all[ds];
-        }
-        _engineScores = win;
-      }
-    }
+    if (_engineScores === null) await loadEngineScores();
     try { if (typeof syncV702UI === 'function') syncV702UI(); } catch(e){ /* silent */ }
     try { if (typeof _renderHeroHierarchy === 'function') _renderHeroHierarchy(); } catch(e){ /* silent */ }
     try { if (typeof renderHeroBulletin === 'function') renderHeroBulletin(); } catch(e){ /* silent */ }
