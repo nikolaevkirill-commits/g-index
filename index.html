@@ -6,7 +6,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>NeboRhythm: Cosmic Timing — Космофізичний дашборд v88.9.225-fp420-FORMULA-AUTHORITY</title>
+  <title>NeboRhythm: Cosmic Timing — Космофізичний дашборд v88.9.226-fp421-NO-ZERO-CONFLICT</title>
 
   <script>
     // fp388: the Android TWA opens an explicit free companion channel. It keeps
@@ -16851,6 +16851,11 @@ function resolveHeroSignalHierarchy_v88824(liveG, kp){
   ));
   if(materialConflict && guard === 'none'){
     opKey = _moreRestrictiveState_v88825(dayKey, liveKey);
+    // fp421: a material disagreement is not a neutral operational verdict.
+    // The previous neutral -> numeric 0 mapping fabricated +0.00 between a
+    // positive PDF reference and a weak live background. Fail closed to the
+    // next actionable state; raw G and the frozen reference stay untouched.
+    if(opKey === 'neutral') opKey = 'unstable';
     guard = 'model_conflict';
   }
   const currentAuthority = _applyCurrentSlotAuthority_v889218(opKey, kp);
@@ -17036,6 +17041,7 @@ function resolveDaySignal_v88825(dateObj, rawG, kp, opts){
   } else if(hasEngine && dayScore <= -2) { opKey = 'tense'; guard = guard === 'none' ? 'day_negative' : guard; }
   if(materialConflict && guard === 'none'){
     opKey = _moreRestrictiveState_v88825(dayKey, liveKey);
+    if(opKey === 'neutral') opKey = 'unstable';
     guard = 'model_conflict';
   }
   // Kp is preserved as its own measured/forecast input, but an operational

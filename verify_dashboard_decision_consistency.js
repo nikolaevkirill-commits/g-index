@@ -74,6 +74,10 @@ assertCase('future positive PDF vs negative raw',
   { pdf: 2, raw: -1.2 },
   { decisionScore: -1, operationalScore: -1, guard: 'model_conflict', opKey: 'unstable' });
 
+assertCase('positive PDF vs weak neutral-band live cannot fabricate zero',
+  { pdf: 2, raw: -0.8, kp: 1.33, isToday: true },
+  { decisionScore: -1, operationalScore: -1, guard: 'model_conflict', opKey: 'unstable' });
+
 assertCase('aligned positive signals',
   { pdf: 2, raw: 1.2, isToday: true },
   { decisionScore: 2, operationalScore: 2, guard: 'none', opKey: 'favorable' });
@@ -110,7 +114,7 @@ assertHeadline(
 assertHeadline(
   'Hero maps positive PDF vs neutral live through operational state',
   heroSignal(3, 0),
-  'Оперативно нейтрально:'
+  'Оперативно обережно:'
 );
 assertHeadline(
   'Hero keeps aligned positive signals operational-first',
@@ -158,7 +162,7 @@ function forbidText(needle, label) {
 requireText('Оперативно СТОП: PDF reference', 'Hero conflict wording is operational-first');
 requireText('Оперативно сприятливо; PDF reference', 'positive Hero wording is operational-first');
 requireText('Оперативно СТОП: буря Kp=', 'storm Hero wording is operational-first');
-requireText("sig.opKey === 'neutral'", 'Hero conflict wording follows resolved operational state');
+requireText("if(opKey === 'neutral') opKey = 'unstable'", 'material conflict cannot fabricate operational zero');
 requireText('ДЕННИЙ PDF/ENGINE REFERENCE · НЕ РІШЕННЯ ДЛЯ ДІЇ', 'AUTO feed panel is reference-only');
 requireText('Оперативну дію визначає обережніший стан у Hero', 'AUTO feed panel defers to operational safety');
 requireText('const operational = sig && isFinite(sig.decisionScore)', 'week summary uses operational score');
