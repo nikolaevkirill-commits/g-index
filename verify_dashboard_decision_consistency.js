@@ -373,3 +373,4 @@ requireText('function getCurrentOperationalPresentation()', 'current action surf
 requireText('const _currentPresentation = isCurrent ? getCurrentOperationalPresentation() : null;', 'visible current timing row consumes canonical operational presentation');
 requireText('const _currentPresentationP = getCurrentOperationalPresentation();', 'current day-plan row consumes canonical operational presentation');
 requireText('const current = getCurrentOperationalPresentation();', 'slot fallback fails closed through canonical operational presentation');
+requireText("console.warn('[fp424 final current-surface resync]'", 'post-horizon render performs one final canonical current-surface pass');

@@ -76,6 +76,8 @@ check('current timing and day-plan share canonical presentation',
   html.includes('function getCurrentOperationalPresentation()') &&
   html.includes('const _currentPresentation = isCurrent ? getCurrentOperationalPresentation() : null;') &&
   html.includes('const _currentPresentationP = getCurrentOperationalPresentation();'));
+check('post-horizon current surfaces resync last',
+  html.includes("console.warn('[fp424 final current-surface resync]'"));
 check('personal layer fails closed', html.includes('const _globalRisk = _operationalKnown408 ? _operationalScore408 < 0') &&
   html.includes('const _globalSafe = _operationalKnown408 ? _operationalScore408 >= 0 : false') &&
   html.includes('const _globalUnknown = !_operationalKnown408'));
