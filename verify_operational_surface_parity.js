@@ -68,7 +68,14 @@ check('legacy Hero resolver delegates to canonical authority',
 check('Hero ring fill follows displayed operational score',
   html.includes('const _hV = _hasVerdict ? _heroDisplayVal : newG;'));
 check('Hero visual state follows resolver opKey',
-  html.includes('let _heroSharedCls = _heroSig?.opKey || (isFinite(newG) ? classifyStateByG(newG, kpH_pre) : null);'));
+  html.includes("let _heroSharedCls = _hasVerdict ? _heroSig.opKey : 'neutral';"));
+check('stale cached reference fails closed',
+  html.includes('const decisionAvailable = hasEngine && !referenceStale;') &&
+  html.includes("referenceStale ? 'reference_stale' : 'reference_unavailable'"));
+check('current timing and day-plan share canonical presentation',
+  html.includes('function getCurrentOperationalPresentation()') &&
+  html.includes('const _currentPresentation = isCurrent ? getCurrentOperationalPresentation() : null;') &&
+  html.includes('const _currentPresentationP = getCurrentOperationalPresentation();'));
 check('personal layer fails closed', html.includes('const _globalRisk = _operationalKnown408 ? _operationalScore408 < 0') &&
   html.includes('const _globalSafe = _operationalKnown408 ? _operationalScore408 >= 0 : false') &&
   html.includes('const _globalUnknown = !_operationalKnown408'));

@@ -364,6 +364,12 @@ forbidText('const _pdAdv = window._lunarPhaseDeg', 'day advice cannot recalculat
 requireText("const _globalRisk = _operationalKnown408 ? _operationalScore408 < 0", 'personal optimism is gated by the canonical operational verdict');
 requireText("_operationalScore408 === -1 ? 'обережний'", 'personal banner labels operational minus one as cautious');
 requireText('const _hV = _hasVerdict ? _heroDisplayVal : newG;', 'Hero ring fill follows the displayed operational score');
-requireText('let _heroSharedCls = _heroSig?.opKey || (isFinite(newG) ? classifyStateByG(newG, kpH_pre) : null);', 'Hero card and ring color follow the resolver opKey');
+requireText("let _heroSharedCls = _hasVerdict ? _heroSig.opKey : 'neutral';", 'Hero visual state follows the resolver only when a verdict is available');
 forbidText('const _hV = (_heroSig && _heroSig.hasEngine && isFinite(_heroSig.dayScore))', 'PDF reference cannot independently fill the operational Hero ring');
 requireText('const sig = resolveDaySignal_v88825(todayKyivStr(), liveG, kp, {isToday:true});', 'legacy Hero entrypoint delegates to the canonical authority resolver');
+requireText("const decisionAvailable = hasEngine && !referenceStale;", 'stale cached reference cannot remain an operational verdict');
+requireText("referenceStale ? 'reference_stale' : 'reference_unavailable'", 'stale and missing reference states stay explicit');
+requireText('function getCurrentOperationalPresentation()', 'current action surfaces share one canonical presentation adapter');
+requireText('const _currentPresentation = isCurrent ? getCurrentOperationalPresentation() : null;', 'visible current timing row consumes canonical operational presentation');
+requireText('const _currentPresentationP = getCurrentOperationalPresentation();', 'current day-plan row consumes canonical operational presentation');
+requireText('const current = getCurrentOperationalPresentation();', 'slot fallback fails closed through canonical operational presentation');

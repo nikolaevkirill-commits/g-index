@@ -51,6 +51,18 @@ run('storm plus timing veto', {blockedNow:true, reasonsNow:['storm','window:Rahu
   day:{opKey:'tense', decisionScore:-3, operationalScore:-3, actionPolicy:'routine_only', dynamicGuard:'kp_storm'}
 });
 
+context.window.__referenceSourceState = {mode:'cached', stale:true, reason:'sw_offline_fallback'};
+slot = {blockedNow:false};
+const stale = context.window.resolveDaySignal_v88825(new Date('2026-08-22T12:00:00Z'), 2.4, 1.33, {isToday:true});
+if (stale.decisionAvailable !== false || stale.decisionScore !== undefined || stale.actionPolicy !== 'reference_stale') {
+  throw new Error(`stale reference did not fail closed: ${JSON.stringify(stale)}`);
+}
+if (!/рішення недоступне/i.test(stale.title) || /Можна планові/i.test(stale.recommendation?.text || '')) {
+  throw new Error('stale reference leaked an action recommendation');
+}
+console.log('PASS stale cached reference fails closed without raw/PDF permission');
+delete context.window.__referenceSourceState;
+
 slot = {blockedNow:true, reasonsNow:['window:Gulika'], blockedUntilH:4.72};
 const future = context.window.resolveDaySignal_v88825(new Date('2026-08-23T12:00:00Z'), -1.8, 1.33, {isToday:false});
 if (future.dynamicGuard === 'current_window' || future.intradayGuard) {

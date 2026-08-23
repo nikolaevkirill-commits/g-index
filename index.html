@@ -6,7 +6,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>NeboRhythm: Cosmic Timing — Космофізичний дашборд v88.9.227-fp422-HERO-VISUAL-AUTHORITY</title>
+  <title>NeboRhythm: Cosmic Timing — Космофізичний дашборд v88.9.228-fp423-STALE-REFERENCE-FAIL-CLOSED</title>
 
   <script>
     // fp388: the Android TWA opens an explicit free companion channel. It keeps
@@ -15394,6 +15394,23 @@ function getCurrentOperationalSignal(){
   } catch(_e) { return null; }
 }
 window.getCurrentOperationalSignal = getCurrentOperationalSignal;
+function getCurrentOperationalPresentation(){
+  const sig = getCurrentOperationalSignal();
+  if(!sig?.decisionAvailable || !isFinite(sig.decisionScore)){
+    return {sig, score:null, cls:'bad', color:'#ff6b6b', text:'оперативне рішення недоступне — raw-фон не є дозволом'};
+  }
+  const score = Number(sig.decisionScore);
+  const cls = score >= 1 ? 'good' : score >= 0 ? 'mid' : 'bad';
+  const text = score >= 1
+    ? `оперативно +${score}: планові дії`
+    : score === 0
+      ? 'оперативно нейтрально: лише перевірені дії'
+      : score === -1
+        ? 'оперативно −1: тільки рутина, без нових стартів'
+        : `оперативно ${score}: СТОП, тільки необхідна рутина`;
+  return {sig, score, cls, color:sig.color || (cls==='good'?'#2bd47d':cls==='mid'?'#9bb1dc':'#ff6b6b'), text};
+}
+window.getCurrentOperationalPresentation = getCurrentOperationalPresentation;
 function getCurrentSlotDecision(){
   const _sig = getCurrentOperationalSignal();
   return _sig?.intradayGuard || {segments:[],currentSegment:null,actionNow:'стан не визначено',slotAction:'стан не визначено',blockedNow:true,reasonsNow:['reference_unavailable'],hasBlockedSegment:true,reasons:['reference_unavailable'],nextChangeAt:null,blockedUntilH:null};
@@ -15430,12 +15447,19 @@ function normalizeDaySlots(slots){
     const utcH = parseInt(s.label||'0');
     const localStart = ((utcH + tzOffH) % 24 + 24) % 24;
     const localEnd   = ((utcH + 3 + tzOffH) % 24 + 24) % 24;
-    const score = Number(s.G ?? 0);
+    let score = Number(s.G ?? 0);
     // fp40: if slot kp>=5 OR slot starts at/after storm hour → cap to bad
     const _slotKp = isFinite(s.kp) ? s.kp : 0;
     const _isStormSlot = (_stormStartH !== null) && (utcH >= _stormStartH || _slotKp >= 5);
+    const isNow = (nowH>=utcH && nowH<utcH+3);
     let cls = classifySlotScore(score);
     let text = cls==='good' ? 'можна' : cls==='mid' ? 'обережно' : 'уникати';
+    if(isNow){
+      const current = getCurrentOperationalPresentation();
+      score = current.score;
+      cls = current.cls;
+      text = current.text;
+    }
     if (_isStormSlot) {
       cls = 'bad';
       text = 'тільки рутина · Kp≥5';
@@ -15444,7 +15468,7 @@ function normalizeDaySlots(slots){
       h: utcH, score, cls,
       time: `${String(Math.floor(localStart)).padStart(2,'0')}:00–${String(Math.floor(localEnd)).padStart(2,'0')}:00`,
       text,
-      isNow: (nowH>=utcH && nowH<utcH+3),
+      isNow,
       isPast: (utcH+3 <= nowH)
     };
   });
@@ -15534,7 +15558,7 @@ function renderDecisionTiming(slots){
     } catch(e){ /* silent */ }
     // fp28: storm-guard для "До кінця дня" — якщо є storm window, фон не може бути "сприятливий" до кінця
     const _sw28 = window._stormWindow;
-    const _nowText = _ttHardCap !== null
+    const _nowText = _first?.isNow ? _first.text : _ttHardCap !== null
                    ? `тільки рутина · день PDF/Engine = ${_ttHardCap}`
                    : (_sw28 && isFinite(_sw28.kp) && _sw28.kp >= 5 && _cls !== 'bad')
                      ? `сприятливо — дій зараз, до ${String(_sw28.label).padStart(2,'0')}:00 UTC`
@@ -16961,6 +16985,8 @@ function resolveDaySignal_v88825(dateObj, rawG, kp, opts){
   let entry = null;
   try { if(typeof getEngineScore === 'function') entry = getEngineScore(dateObj); } catch(e) { entry = null; }
   const hasEngine = !!(entry && isFinite(entry.eng));
+  const referenceStale = !!(hasEngine && window.__referenceSourceState?.stale === true);
+  const decisionAvailable = hasEngine && !referenceStale;
   let dayScore = hasEngine ? Number(entry.eng) : (isFinite(rawG) ? Number(rawG) : NaN);
   const sourceDayScore = dayScore;
   // Every "today" consumer must use the same current live G as Hero. The
@@ -17021,7 +17047,7 @@ function resolveDaySignal_v88825(dateObj, rawG, kp, opts){
   const src = entry?._expertOverride ? 'PDF override' : (hasEngine ? 'Engine' : 'Live G');
   const raw = (entry?._expertOverride && isFinite(entry?._engRaw)) ? ` · raw ${entry._engRaw >= 0 ? '+' : ''}${entry._engRaw}` : '';
   let title, action, recommendation;
-  if(hasEngine){
+  if(decisionAvailable){
     if(guard === 'unverified_override_large_delta'){
       title = 'джерело не підтверджене';
       action = 'працюємо обережно до перевірки PDF#48';
@@ -17082,7 +17108,9 @@ function resolveDaySignal_v88825(dateObj, rawG, kp, opts){
   }
   const color = ({favorable:'#2bd47d',good:'#2bd47d',neutral:'#9bb1dc',unstable:'#ffaa33',tense:'#ff6b6b'})[keyForColor] || '#9bb1dc';
   const tooltip = hasEngine
-    ? (guard === 'unverified_override_large_delta'
+    ? (referenceStale
+        ? `Денний Engine/PDF reference прострочений (${window.__referenceSourceState?.reason || 'stale'}). Оперативне рішення недоступне; raw/live-контекст не є дозволом.`
+        : guard === 'unverified_override_large_delta'
         ? `Непідтверджене джерело: PDF48 candidate=${entry._expertEngCandidate >= 0 ? '+' : ''}${entry._expertEngCandidate}, raw engine=${(entry._engRaw ?? entry.eng) >= 0 ? '+' : ''}${entry._engRaw ?? entry.eng}.
 ${entry._overrideSourceReason || ''}
 Live-контур зараз: ${liveTxt}.`
@@ -17091,9 +17119,8 @@ Live-контур зараз: ${liveTxt}.
 Оперативний стан: ${operationalScore>=0?'+':''}${operationalScore} (${keyForColor}).
 ${guard !== 'none' || dynamicGuard ? 'Застосовано обережніший safety-контур; PDF/Engine не є дозволом на дію.' : 'Сигнали узгоджені.'}${dynamicGuard === 'current_window' ? '\nПоточне часове вето: нові починання заблоковано до завершення активного вікна.' : ''}`)
     : `Денного Engine/PDF score немає. Показано Live G: ${liveTxt}.`;
-  const decisionAvailable = hasEngine;
-  const actionPolicy = !decisionAvailable ? 'reference_unavailable' : (intradayGuard?.blockedNow ? 'routine_only' : 'resolved_day_policy');
-  return { entry, hasEngine, decisionAvailable, sourceDayScore, baseDayScore, dayScore, referenceScore:hasEngine?dayScore:undefined, operationalRawG, rawG, operationalScore, decisionScore:hasEngine?operationalScore:undefined, intradayGuard, actionPolicy, dayKey, liveKey, opKey, guard, dynamicGuard, materialConflict, repG, title, action, recommendation, color, tooltip, src, hasUnverifiedOverride, sourceDelta };
+  const actionPolicy = !decisionAvailable ? (referenceStale ? 'reference_stale' : 'reference_unavailable') : (intradayGuard?.blockedNow ? 'routine_only' : 'resolved_day_policy');
+  return { entry, hasEngine, referenceStale, decisionAvailable, sourceDayScore, baseDayScore, dayScore, referenceScore:hasEngine?dayScore:undefined, operationalRawG, rawG, operationalScore, decisionScore:decisionAvailable?operationalScore:undefined, intradayGuard, actionPolicy, dayKey, liveKey, opKey, guard, dynamicGuard, materialConflict, repG, title, action, recommendation, color, tooltip, src, hasUnverifiedOverride, sourceDelta };
 }
 window.resolveDaySignal_v88825 = resolveDaySignal_v88825;
 
@@ -17265,9 +17292,9 @@ function syncHero(){
       }
     } catch(e) { /* noop */ }
 
-    // fp422: the resolver's opKey is the single visual authority. Raw G is
-    // only a fallback when no operational verdict is available.
-    let _heroSharedCls = _heroSig?.opKey || (isFinite(newG) ? classifyStateByG(newG, kpH_pre) : null);
+    // fp423: only an available resolver verdict may paint a verdict color.
+    // Missing/stale reference keeps the ring neutral; raw G remains labeled context.
+    let _heroSharedCls = _hasVerdict ? _heroSig.opKey : 'neutral';
     // Ring gauge
     const ring=document.getElementById('heroRingVal');
     if(ring&&isFinite(newG)){
@@ -17345,7 +17372,7 @@ function syncHero(){
     }
   }
 
-  // v88.9.39-fp221: v86DeltaInline — той самий принцип, завжди про G_now.
+  // Delta remains explicitly about G_now, independently of the operational ring.
   const _hdi = el('v86DeltaInline');
   if(_hdi){
     if(_hasDeltaHistory && isFinite(dn)){
@@ -18614,12 +18641,17 @@ function _renderHeroTimeWindows() {
     // Для поточного слоту колір мусить відповідати ЦІЙ МИТІ (blockedNow), для
     // майбутніх слотів — попередження про слот загалом (hasBlockedSegment).
     const _blockedByDay = _dayNegFlag;
-    const col = (_blockedByDay || (isCurrent ? _decision.blockedNow : _decision.hasBlockedSegment)) ? '#ff6b6b' : _colBase;
+    let col = (_blockedByDay || (isCurrent ? _decision.blockedNow : _decision.hasBlockedSegment)) ? '#ff6b6b' : _colBase;
 
     // Поточний слот показує точний сегмент "зараз" (з реальними межами вікна,
     // обрізаними по слоту) — саме кейс зі скріну: 08:10 всередині Rahu 07:06–09:06,
     // слот 06:00–09:00 → "07:06–09:00 — тільки рутина; Rahu активний".
     let label = (isCurrent && _decision.actionNow) ? _decision.actionNow : _decision.slotAction;
+    const _currentPresentation = isCurrent ? getCurrentOperationalPresentation() : null;
+    if(_currentPresentation){
+      label = _currentPresentation.text;
+      col = _currentPresentation.color;
+    }
 
     if (_isFlat && _horaForSlot[h] && !_decision.hasBlockedSegment) {
       const hora = _horaForSlot[h];
@@ -18634,7 +18666,9 @@ function _renderHeroTimeWindows() {
     // Panchanga overlay — лише коли слот НЕ заблокований вікном (активне Rahu/
     // Yama/Gulika вже explicit у тексті рішення, не дублюємо попередження).
     if (_panchTimingNote && g < 0.5 && !_decision.hasBlockedSegment) label += ` (${_panchTimingNote})`;
-    const _isBlockedVisual = _blockedByDay || (isCurrent ? _decision.blockedNow : _decision.hasBlockedSegment);
+    const _isBlockedVisual = isCurrent
+      ? (_currentPresentation.cls !== 'good')
+      : (_blockedByDay || _decision.hasBlockedSegment);
     const _isRoutineVisual = !_isBlockedVisual && (label.includes('рутин') || label.includes('обереж') || label.includes('перевір'));
     const _actionCls = _isBlockedVisual ? ' is-blocked' : _isRoutineVisual ? ' is-routine' : ' is-allowed';
     const cls = (isCurrent ? ' is-now' : isNext ? ' is-next' : '') + _actionCls;
@@ -19317,6 +19351,11 @@ function syncDayPlanCard(){
       text = g >= 0.5 ? 'можна діяти' : g >= -0.5 ? 'обережно: перевірені дії' : 'уникати: тільки рутина';
       if (_dayCrit && g >= 0.5) { cls = 'info'; text = 'рутина й перевірені дії (день критичний)'; }
     }
+    if(_isCurrentSlotP){
+      const _currentPresentationP = getCurrentOperationalPresentation();
+      cls = _currentPresentationP.cls === 'good' ? 'ok' : _currentPresentationP.cls === 'mid' ? 'info' : 'warn';
+      text = _currentPresentationP.text;
+    }
     // Hora context
     let horaStr = '';
     try{
@@ -19345,12 +19384,8 @@ function syncDayPlanCard(){
   if(ns && ns.length > 3) rows.push({ time:'Далі', label: ns.replace(/^[•●▲⚠◔]\s*/,'').substring(0,60), cls:'ok' });
   // Fallback
   if(!rows.length){
-    const sk = classifyStateByG(_v73G());
-    if(sk === 'tense' || sk === 'unstable'){
-      rows.push({ time:'Зараз', label:'Тільки рутина, без різких кроків', cls:'warn' });
-    } else {
-      rows.push({ time:'Зараз', label:'Працюй у звичному темпі', cls:'info' });
-    }
+    const current = getCurrentOperationalPresentation();
+    rows.push({ time:'Зараз', label:current.text, cls:current.cls === 'good' ? 'ok' : current.cls === 'mid' ? 'info' : 'warn' });
   }
   box.innerHTML = rows.map(r => `<div style="display:grid;grid-template-columns:68px 1fr;gap:6px;padding:5px 8px;border-radius:8px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.04);border-left:3px solid ${r.cls==='warn'?'#ff6b6b':r.cls==='ok'?'#2bd47d':'#37a7ff'}"><div style="font-size:11px;font-weight:700;color: var(--text2)">${r.time}</div><div style="font-size:11px;line-height:1.35;color:#e6ecff">${r.label}</div></div>`).join('');
 }
