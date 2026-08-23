@@ -363,3 +363,7 @@ requireText('_livePanch185?.tithi?.hoursToNext', 'next Tithi boundary uses the c
 forbidText('const _pdAdv = window._lunarPhaseDeg', 'day advice cannot recalculate Tithi from a second live phase path');
 requireText("const _globalRisk = _operationalKnown408 ? _operationalScore408 < 0", 'personal optimism is gated by the canonical operational verdict');
 requireText("_operationalScore408 === -1 ? 'обережний'", 'personal banner labels operational minus one as cautious');
+requireText('const _hV = _hasVerdict ? _heroDisplayVal : newG;', 'Hero ring fill follows the displayed operational score');
+requireText('let _heroSharedCls = _heroSig?.opKey || (isFinite(newG) ? classifyStateByG(newG, kpH_pre) : null);', 'Hero card and ring color follow the resolver opKey');
+forbidText('const _hV = (_heroSig && _heroSig.hasEngine && isFinite(_heroSig.dayScore))', 'PDF reference cannot independently fill the operational Hero ring');
+requireText('const sig = resolveDaySignal_v88825(todayKyivStr(), liveG, kp, {isToday:true});', 'legacy Hero entrypoint delegates to the canonical authority resolver');

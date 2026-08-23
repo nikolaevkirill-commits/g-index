@@ -63,6 +63,12 @@ for (const [name, raw, kp] of [
 check('Hora is context-only', html.includes('const eiTotalRaw = ei;') && !/eiTotalRaw\s*=\s*ei\s*\+\s*horaEiRaw/.test(html));
 check('only canonical resolver computes slot guard', (html.match(/_computeCurrentSlotDecision\(\)/g) || []).length === 2,
   'one declaration plus one resolver call');
+check('legacy Hero resolver delegates to canonical authority',
+  html.includes('const sig = resolveDaySignal_v88825(todayKyivStr(), liveG, kp, {isToday:true});'));
+check('Hero ring fill follows displayed operational score',
+  html.includes('const _hV = _hasVerdict ? _heroDisplayVal : newG;'));
+check('Hero visual state follows resolver opKey',
+  html.includes('let _heroSharedCls = _heroSig?.opKey || (isFinite(newG) ? classifyStateByG(newG, kpH_pre) : null);'));
 check('personal layer fails closed', html.includes('const _globalRisk = _operationalKnown408 ? _operationalScore408 < 0') &&
   html.includes('const _globalSafe = _operationalKnown408 ? _operationalScore408 >= 0 : false') &&
   html.includes('const _globalUnknown = !_operationalKnown408'));

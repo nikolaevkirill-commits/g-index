@@ -6,7 +6,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>NeboRhythm: Cosmic Timing — Космофізичний дашборд v88.9.226-fp421-NO-ZERO-CONFLICT</title>
+  <title>NeboRhythm: Cosmic Timing — Космофізичний дашборд v88.9.227-fp422-HERO-VISUAL-AUTHORITY</title>
 
   <script>
     // fp388: the Android TWA opens an explicit free companion channel. It keeps
@@ -16814,57 +16814,15 @@ function _applyCurrentSlotAuthority_v889218(opKey, kp){
   return { opKey: guardedKey, intradayGuard, dynamicGuard };
 }
 function resolveHeroSignalHierarchy_v88824(liveG, kp){
-  let entry = null;
-  try { if(typeof getEngineScore === 'function') entry = getEngineScore(new Date(todayKyivStr()+'T12:00:00Z')); } catch(e) { entry = null; }
-  const hasEngine = !!(entry && isFinite(entry.eng));
-  let dayScore = hasEngine ? Number(entry.eng) : (isFinite(liveG) ? Number(liveG) : NaN);
-  const liveKey = classifyStateByG(liveG, kp);
-  const hasUnverifiedOverride = !!(entry && entry._expertOverrideAvailable && entry._expertOverrideVerified === false && isFinite(entry._expertEngCandidate));
-  const sourceDelta = hasUnverifiedOverride ? Math.abs(Number(entry._expertEngCandidate) - Number(entry._engRaw ?? entry.eng)) : 0;
-  let sourceGuard = null;
-
-  // Strong unverified override (for example raw -3 -> candidate +3) is not a valid day verdict.
-  // Use neutral evidence + tactical Live-G guard until the source PDF is supplied.
-  if(hasUnverifiedOverride && sourceDelta >= 3){
-    sourceGuard = 'unverified_override_large_delta';
-    dayScore = 0;
-  }
-
-  const dayKey = isFinite(dayScore) ? _engineScoreToStateKey_v88824(dayScore, kp) : liveKey;
-  let opKey = dayKey || liveKey;
-  let guard = sourceGuard || 'none';
-
-  if(hasEngine && dayScore >= 2){
-    if(liveKey === 'tense') { opKey = 'tense'; guard = 'live_tense'; }
-    else if(liveKey === 'unstable') { opKey = 'unstable'; guard = 'live_unstable'; }
-  }
-  if(sourceGuard){
-    if(liveKey === 'tense' || liveKey === 'unstable') opKey = 'unstable';
-    else opKey = 'neutral';
-  } else if(hasEngine && dayScore <= -2){
-    opKey = 'tense'; guard = guard === 'none' ? 'day_negative' : guard;
-  }
-  const materialConflict = !!(hasEngine && isFinite(liveG) && (
-    (dayScore >= 1 && liveG <= -0.5) ||
-    (dayScore <= -1 && liveG >= 0.5) ||
-    Math.abs(dayScore - liveG) >= 2.5
-  ));
-  if(materialConflict && guard === 'none'){
-    opKey = _moreRestrictiveState_v88825(dayKey, liveKey);
-    // fp421: a material disagreement is not a neutral operational verdict.
-    // The previous neutral -> numeric 0 mapping fabricated +0.00 between a
-    // positive PDF reference and a weak live background. Fail closed to the
-    // next actionable state; raw G and the frozen reference stay untouched.
-    if(opKey === 'neutral') opKey = 'unstable';
-    guard = 'model_conflict';
-  }
-  const currentAuthority = _applyCurrentSlotAuthority_v889218(opKey, kp);
-  opKey = currentAuthority.opKey;
-  const dynamicGuard = currentAuthority.dynamicGuard;
-  const intradayGuard = currentAuthority.intradayGuard;
-  const commandG = _stateKeyToRepresentativeG_v88824(opKey);
-  const operationalScore = _operationalScoreFromState_v88825(opKey);
-  return { entry, hasEngine, dayScore, dayKey, liveG, liveKey, opKey, commandG, operationalScore, guard, dynamicGuard, intradayGuard, materialConflict, hasUnverifiedOverride, sourceDelta };
+  // Compatibility facade only: one canonical authority computes the current
+  // operational state. Legacy consumers keep their field names without a
+  // second implementation of the resolver.
+  const sig = resolveDaySignal_v88825(todayKyivStr(), liveG, kp, {isToday:true});
+  if(!sig) return null;
+  return Object.assign({}, sig, {
+    liveG: sig.operationalRawG,
+    commandG: sig.repG
+  });
 }
 
 function heroHeadlineFromHierarchy_v88824(sig){
@@ -17307,24 +17265,16 @@ function syncHero(){
       }
     } catch(e) { /* noop */ }
 
-    // v88.8.51-fp128: спільна класифікація для кільця й фону картки (з kp + verdict cap)
-    let _heroSharedCls = null;
-    if (isFinite(newG)) {
-      _heroSharedCls = classifyStateByG(newG, kpH_pre);
-      if (_heroSig && _heroSig.hasEngine && isFinite(_heroSig.dayScore)) {
-        const _vCls = _heroSig.dayScore <= -2.5 ? 'tense' : _heroSig.dayScore <= -1 ? 'unstable' : null;
-        const _ord = {favorable:4, good:3, neutral:2, unstable:1, tense:0};
-        if (_vCls && _ord[_vCls] < _ord[_heroSharedCls]) _heroSharedCls = _vCls;
-      }
-    }
+    // fp422: the resolver's opKey is the single visual authority. Raw G is
+    // only a fallback when no operational verdict is available.
+    let _heroSharedCls = _heroSig?.opKey || (isFinite(newG) ? classifyStateByG(newG, kpH_pre) : null);
     // Ring gauge
     const ring=document.getElementById('heroRingVal');
     if(ring&&isFinite(newG)){
       // v88.8.51-fp128: pct тепер на тій самій шкалі, що й велике число (вердикт -3..+3),
       // а не окремо на newG(-4..+4) — раніше кільце могло бути 100% заповнене (newG=+5),
       // а число показувати -3, суперечність в самій картці.
-      const _hV = (_heroSig && _heroSig.hasEngine && isFinite(_heroSig.dayScore))
-        ? Math.max(-3, Math.min(3, Math.round(Number(_heroSig.dayScore)))) : newG;
+      const _hV = _hasVerdict ? _heroDisplayVal : newG;
       const pct=Math.max(0.05,Math.min(1,(_hV+4)/8));
       const offset=283*(1-pct);
       ring.style.strokeDashoffset=offset;
