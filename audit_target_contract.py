@@ -41,13 +41,15 @@ paired = int(real.get(
     "paired_with_prior_frozen_prediction",
     real.get("paired_with_frozen_prediction", 0),
 ) or 0)
-required = int(real.get("required_for_promotion_gate", 100) or 100)
+supplied_required = int(real.get("required_for_promotion_gate", 100) or 100)
+required = max(100, supplied_required)
 master_meta = master.get("meta", {}) or {}
 master_contract_ok = (
     master_meta.get("target_contract") == "independent_real_outcome"
     and int(master_meta.get("independent_real_outcome_pairs", 0) or 0) > 0
 )
 checks = {
+    "promotion_minimum_is_canonical_100": supplied_required >= 100,
     "promotion_count_uses_independent_real_outcomes": int(gate.get("current_selected_outcomes", -1)) == paired,
     "promotion_gate_reports_independent_real_outcomes": int(gate.get("independent_real_outcomes", -1)) == paired,
     "expert_pdf_comparisons_are_labeled_separately": (
