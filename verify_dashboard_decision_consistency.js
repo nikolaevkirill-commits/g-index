@@ -374,3 +374,6 @@ requireText('const _currentPresentation = isCurrent ? getCurrentOperationalPrese
 requireText('const _currentPresentationP = getCurrentOperationalPresentation();', 'current day-plan row consumes canonical operational presentation');
 requireText('const current = getCurrentOperationalPresentation();', 'slot fallback fails closed through canonical operational presentation');
 requireText("console.warn('[fp424 final current-surface resync]'", 'post-horizon render performs one final canonical current-surface pass');
+requireText('_hasFinalDecision ? String(Math.round(_shown)) : _shown.toFixed(2)', 'discrete operational state has no false decimal precision');
+requireText('G_now <b style="color:${col}">${g>=0?\'+\':\'\'}${g.toFixed(2)}</b> · довідковий фон, не рішення', 'normal view exposes raw G as labeled reference-only context');
+forbidText('Тепер центр ЗАВЖДИ = g', 'Hero center comment cannot contradict the active verdict display path');

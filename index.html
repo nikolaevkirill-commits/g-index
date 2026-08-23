@@ -6,7 +6,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>NeboRhythm: Cosmic Timing — Космофізичний дашборд v88.9.229-fp424-FINAL-SURFACE-RESYNC</title>
+  <title>NeboRhythm: Cosmic Timing — Космофізичний дашборд v88.9.230-fp425-VERDICT-PRECISION</title>
 
   <script>
     // fp388: the Android TWA opens an explicit free companion channel. It keeps
@@ -16085,7 +16085,7 @@ function _renderHeroHierarchy(){
         // v88.8.37-fp70: видимий підпис шкали — юзер бачить +1.93 і +3.6 у 27-day без пояснення.
         // «поточна хвиля» vs «денний пік» — два різних виміри, не конфлікт.
         const _scaleNote = `<span style="font-size:9px;color:var(--faint);margin-left:4px" title="G_now = поточний live-фон (оновлюється щогодини). G_day raw у 27-day = денний пік (max Kp прогнозу). Різниця нормальна — це різні часові горизонти.">· поточна хвиля</span>`;
-        gHtml = `<span style="color:var(--muted)">фон оновлено · не рішення</span><span class="audit-only"> · <b style="color:${col}">${g>=0?'+':''}${g.toFixed(2)}</b> ${word}${kpTxt}${_breakdown}${_scaleNote}</span>`;
+        gHtml = `<span style="color:var(--muted)">G_now <b style="color:${col}">${g>=0?'+':''}${g.toFixed(2)}</b> · довідковий фон, не рішення</span><span class="audit-only"> · ${word}${kpTxt}${_breakdown}${_scaleNote}</span>`;
       }
     }catch(e){ /* silent */ }
     let opHtml = '<span style="color:var(--dim)">даних недостатньо</span>';
@@ -16682,21 +16682,18 @@ function renderGRadialV86(g, kp, ai){
   // Central G-value
   const vEl = document.getElementById('v86GVal');
   if (vEl) {
-    // v88.9.39-fp221 АРХІТЕКТУРНА ЗМІНА (аудит-раунд-8): раніше центр показував
-    // PDF-вердикт, якщо він є (window.__heroVerdictDisplay), інакше G_now —
-    // саме це змішування і призводило до того, що кільце або показувало
-    // невідповідне сегментам число, або (після fp212 hide-фіксу) лишалось
-    // порожнім. Тепер центр ЗАВЖДИ = g (live G_now, той самий, що й сегменти
-    // під ним) — кільце й число всередині завжди одна метрика. PDF-вердикт
-    // живе окремо (heroHierarchy/heroBulletin/статус-рядок), сюди більше не
-    // потрапляє. window.__heroVerdictDisplay тут більше не читається.
+    // fp425: center follows the same explicit display contract as Hero.
+    // With an available operational verdict it shows the discrete state;
+    // otherwise it shows continuous G_now as reference-only context.
     const _vDisplay = window.__heroVerdictDisplay || null;
     const _hasFinalDecision = !!(_vDisplay && _vDisplay.hasVerdict && isFinite(_vDisplay.val));
     const _shown = _hasFinalDecision ? Number(_vDisplay.val) : g;
     // v88.9.41-fp223 (аудит-раунд-10, Problem 4): кільце показувало -1.5
     // (1 знак), а рядок "ЗАРАЗ" — -1.47 (2 знаки) — те саме число, різна
     // точність відображення виглядало як два різних значення. Уніфіковано.
-    vEl.textContent = isFinite(_shown) ? (_shown >= 0 ? '+' : '') + _shown.toFixed(2) : '—';
+    vEl.textContent = isFinite(_shown)
+      ? (_shown >= 0 ? '+' : '') + (_hasFinalDecision ? String(Math.round(_shown)) : _shown.toFixed(2))
+      : '—';
     vEl.style.color = _shown >= 1 ? '#7fe3a6' : _shown >= -1 ? '#ffd77a' : '#ff9f9f';
     vEl.style.textShadow = _shown >= 1 ? '0 0 12px rgba(127,227,166,.3)'
                          : _shown >= -1 ? '0 0 12px rgba(255,210,110,.3)'
