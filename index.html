@@ -6,7 +6,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>NeboRhythm: Cosmic Timing — Космофізичний дашборд v88.9.230-fp425-VERDICT-PRECISION</title>
+  <title>NeboRhythm: Cosmic Timing — Космофізичний дашборд v88.9.231-fp426-ADVERSARIAL-CLOSURE</title>
 
   <script>
     // fp388: the Android TWA opens an explicit free companion channel. It keeps
@@ -17672,7 +17672,13 @@ function syncHero(){
 
   // v83: heroActionCmd set by buildDecisionTexts below
   // v78b: DO/AVOID from operational hierarchy (Engine day verdict guarded by Live G)
-  const _stKey = _heroSig.opKey || classifyStateByG(gVal, kpH);
+  // fp426: action-copy is governed by the same authority gate as the Hero
+  // number/ring. Raw G/opKey remains informational when the reference is
+  // unavailable or stale and must never become an operational command.
+  const _actionVerdictAvailable = !!(_heroSig && _heroSig.decisionAvailable && isFinite(_heroSig.decisionScore));
+  const _stKey = _actionVerdictAvailable
+    ? (_heroSig.opKey || classifyStateByG(gVal, kpH))
+    : 'neutral';
   const _st = GLOBAL_STATES[_stKey];
   // fp43: use canonical resolveStormWindow() — replaces fp33/fp40/fp42 inline computes
   try {
@@ -17717,6 +17723,13 @@ function syncHero(){
       _heroAvoidText = `Не починати нових справ${_untilHero} (${_namesHero} активний)`;
     }
   } catch(_eGcdHero) { /* silent */ }
+  if (!_actionVerdictAvailable) {
+    const _whyUnavailable = _heroSig && _heroSig.referenceStale
+      ? 'денний reference застарів'
+      : 'денний reference недоступний';
+    _stormDoText = `Рішення недоступне: ${_whyUnavailable}; G_now — лише довідковий фон`;
+    _heroAvoidText = 'Не формувати команду до дії, доки authority-resolver не отримає чинний reference';
+  }
   _set('heroDecisionDo', _stormDoText);
   _set('heroDecisionAvoid', _heroAvoidText);
   const _doEl = el('heroDecisionDo');
@@ -17730,7 +17743,11 @@ function syncHero(){
   // на нейтрально-попереджувальний, той самий inline-override прийом, що вже
   // застосований нижче для avoidEl.
   try {
-    if (_doEl && (_stKey === 'favorable' || _stKey === 'good')) {
+    if (_doEl && !_actionVerdictAvailable) {
+      _doEl.style.setProperty('background','rgba(155,177,220,.08)','important');
+      _doEl.style.setProperty('border-color','rgba(155,177,220,.24)','important');
+      _doEl.style.setProperty('color','#cfe0ff','important');
+    } else if (_doEl && (_stKey === 'favorable' || _stKey === 'good')) {
       const _rslDo = (typeof resolveSourceLabel === 'function') ? resolveSourceLabel() : null;
       if (_rslDo && !_rslDo.isLive) {
         _doEl.style.setProperty('background','rgba(255,204,68,.08)','important');
@@ -20082,13 +20099,13 @@ function renderCounterfactual(){
     {
       icon: '⚡',
       label: (typeof t === 'function' ? t('counterfactualScenStorm') : 'Якби буря Kp=7 (G3+)'),
-      delta: (7 - _kpNow),
+      delta: kpDayTerm(7) - kpDayTerm(_kpNow),
       hint: 'Сильна геомагнітна буря — Kp різко вгору'
     },
     {
       icon: '☀',
       label: (typeof t === 'function' ? t('counterfactualScenCalm') : 'Якби Kp був 1 (дуже спокійно)'),
-      delta: (1 - _kpNow),
+      delta: kpDayTerm(1) - kpDayTerm(_kpNow),
       hint: 'Спокійне геомагнітне поле'
     }
   ];

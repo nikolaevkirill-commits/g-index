@@ -1,6 +1,6 @@
 // G-Index service worker. HTML/data are network-first; static shell is cache-first.
 // Bump CACHE_VERSION whenever index.html or a cached shell asset changes.
-const CACHE_VERSION = 'fp425-v1'; // Discrete verdicts render without false decimal precision
+const CACHE_VERSION = 'fp426-v1'; // Transactional shell install; preserve last-known-good cache
 const CACHE_PREFIX = 'gindex-'; // G-Index cache namespace; do not remove the prefix.
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${CACHE_VERSION}`;
 const DATA_CACHE = `${CACHE_PREFIX}data-${CACHE_VERSION}`;
@@ -19,7 +19,13 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(SHELL_CACHE)
       .then((cache) => cache.addAll(SHELL_ASSETS))
-      .catch(() => {})
+      .catch(async (error) => {
+        // A partial/empty new cache must never be allowed to activate and
+        // replace the last-known-good worker. addAll is atomic; remove the
+        // empty cache and propagate the failure so this install is rejected.
+        await caches.delete(SHELL_CACHE);
+        throw error;
+      })
   );
 });
 
@@ -34,6 +40,11 @@ self.addEventListener('message', (event) => {
 
 self.addEventListener('activate', (event) => {
   event.waitUntil((async () => {
+    const shell = await caches.open(SHELL_CACHE);
+    const manifest = await shell.match('./manifest.json');
+    if (!manifest) {
+      throw new Error(`Refusing activation: ${SHELL_CACHE} is not populated`);
+    }
     const keys = await caches.keys();
     await Promise.all(
       keys
