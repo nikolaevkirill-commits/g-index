@@ -48,7 +48,7 @@ code{background:rgba(42,59,97,.5);padding:1px 6px;border-radius:3px;font-size:13
 <div class="models-disclaimer">
 <strong>📌 Three models у dashboard — це не bug, це by design:</strong>
 <ul style="margin:8px 0;padding-left:20px">
-  <li><strong>Live G</strong> — continuous real-time signal (<code>Kp − 2 + ΣAᵢ</code>), float у [−5..+5]</li>
+  <li><strong>Live G</strong> — continuous real-time signal (<code>2 − Kp + ΣAᵢ</code>), float у [−5..+5]</li>
   <li><strong>Engine v18.8</strong> — discrete integer score [−3..+3], frozen core + 4 ablation-validated patches, далі може mergeitsya з expert overrides</li>
   <li><strong>G_ext v3.1</strong> — R&D regression model, advisory тільки, NOT primary classifier</li>
 </ul>
@@ -150,7 +150,7 @@ All 3 metrics improved through ablation chain — rare для post-processing ch
   <p><strong>Strict 3-class agreement:</strong> Engine sign (-1/0/+1) equals expert sign on the same date.</p>
   <p><strong>Binary neg/non-neg:</strong> Engine and expert both classify day as &lt;0 (negative) or ≥0 (non-negative).</p>
   <p><strong>ExactMatch:</strong> Engine integer score (-3..+3) equals expert integer score exactly.</p>
-  <p><strong>Engine output:</strong> Discrete integer score on 7-class scale [-3, +3] per day. <code>G = Kp − 2 + ΣAᵢ</code> where ΣAᵢ = Lᵢ + Mᵢ + eᵢ + Pᵢ + Dᵢ.</p>
+  <p><strong>Engine output:</strong> Discrete integer score on 7-class scale [-3, +3] per day. Dashboard raw context uses <code>G_raw = 2 − Kp + ΣAᵢ</code>, where ΣAᵢ = Lᵢ + Mᵢ + eᵢ + Pᵢ + Dᵢ; the frozen Engine itself remains a threshold classifier.</p>
   <p><strong>v18.8 patches:</strong> Applied at READ TIME у JS function <code>_applyV186Patches()</code>. Frozen <code>engine_scores.json</code> файл НЕ модифікується. Phase V3 freeze respected (md5 unchanged).</p>
   <p><strong>Ground truth (v5.1):</strong> 329 unique dates extracted from 47-page expert PDF bulletin (Jun 2025 → May 2026). 22 textual pages parsed directly + 25 image pages via vision OCR. 12 multi-source inconsistencies reconciled by median rule. Filter n=212 — dates with available PDF reference (excluding gaps, current weeks).</p>
   <p><strong>Cross-implementation consistency:</strong> JS (<code>_applyV186Patches</code>) + Python tracker + Python DOCX gen — все три implementations sync на 564/564 dates (0 desync).</p>

@@ -1,8 +1,8 @@
 # Formula authority conflict — 2026-08-23
 
-## Status: BLOCKED pending owner decision
+## Status: RESOLVED by owner decision on 2026-08-23
 
-No formula is selected by this audit. The frozen model, weights, thresholds, sealed holdout, PDF/Excel sources, and historical results remain unchanged.
+Owner-designated authority: `G_raw = (2 − Kp) + Li + Mi + ei + Pi + Di`. The frozen model, weights, thresholds, sealed holdout, PDF/Excel sources, runtime calculation, and historical results remain unchanged. `CANONICAL_SPEC_v1_4.md` is preserved as frozen; its `Kp − 2` wording is superseded only by `CANONICAL_SPEC_v1_4_1_ERRATUM.md`.
 
 ## Conflicting authorities
 
@@ -24,4 +24,4 @@ No formula is selected by this audit. The frozen model, weights, thresholds, sea
 - `Pi` is included once in `G_raw`.
 - Rahu/Yama/Gulika are time-window guards and must not be added into `Pi` or `G_raw` again.
 
-Required owner decision: explicitly designate the authoritative sign convention and issue a new specification version. Until then, production behavior is documented as deployed behavior, not declared canonical by this audit.
+Formula authority BLOCK is closed after the fp420 repository parity scan and regression suite. Prospective/evidence gates remain BLOCKED and must not be backfilled retrospectively.
