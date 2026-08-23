@@ -6,7 +6,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>NeboRhythm: Cosmic Timing — Космофізичний дашборд v88.9.231-fp426-ADVERSARIAL-CLOSURE</title>
+  <title>NeboRhythm: Cosmic Timing — Космофізичний дашборд v88.9.232-fp427-GUARD-TYPE-PARITY</title>
 
   <script>
     // fp388: the Android TWA opens an explicit free companion channel. It keeps
@@ -14706,8 +14706,14 @@ function render3Day(parsed3){
       if (_hasVerifiedOverride && _daySigQ && _daySigQ.dynamicGuard) {
         const _pdfBase = isFinite(_daySigQ.sourceDayScore) ? Number(_daySigQ.sourceDayScore) : _bsEng;
         const _opNow = isFinite(_daySigQ.decisionScore) ? Number(_daySigQ.decisionScore) : G_decision;
-        const _guardWhy = _daySigQ.dynamicGuard === 'kp_storm' ? 'Kp ≥ 5' : 'Kp ≥ 4';
-        _scenBanner = '<div style="font-size:9px;font-weight:800;letter-spacing:.04em;color:#ffaa33;background:rgba(255,170,51,.14);border:1px solid rgba(255,170,51,.5);border-radius:6px;padding:3px 6px;margin-bottom:5px;text-align:center">⚠ БЕЗПЕКА: ' + _guardWhy + ' — перевірити GPS/зв’язок/дрони; рішення дня ' + (_pdfBase>=0?'+':'') + _pdfBase + ' не змінено</div>';
+        if (_daySigQ.dynamicGuard === 'kp_storm' || _daySigQ.dynamicGuard === 'kp_elevated') {
+          const _guardWhy = _daySigQ.dynamicGuard === 'kp_storm' ? 'Kp ≥ 5' : 'Kp ≥ 4';
+          _scenBanner = '<div style="font-size:9px;font-weight:800;letter-spacing:.04em;color:#ffaa33;background:rgba(255,170,51,.14);border:1px solid rgba(255,170,51,.5);border-radius:6px;padding:3px 6px;margin-bottom:5px;text-align:center">⚠ БЕЗПЕКА: ' + _guardWhy + ' — перевірити GPS/зв’язок/дрони; рішення дня ' + (_pdfBase>=0?'+':'') + _pdfBase + ' не змінено</div>';
+        } else if (_daySigQ.dynamicGuard === 'current_window') {
+          const _windowNames = ((_daySigQ.intradayGuard && _daySigQ.intradayGuard.reasonsNow) || [])
+            .filter(r => String(r).startsWith('window:')).map(r => String(r).slice(7)).join('+') || 'Rahu/Yama/Gulika';
+          _scenBanner = '<div style="font-size:9px;font-weight:800;letter-spacing:.04em;color:#ffaa33;background:rgba(255,170,51,.14);border:1px solid rgba(255,170,51,.5);border-radius:6px;padding:3px 6px;margin-bottom:5px;text-align:center">⚠ ПОТОЧНЕ ВІКНО: ' + _windowNames + ' — лише рутина зараз; денний reference ' + (_pdfBase>=0?'+':'') + _pdfBase + ' показано окремо</div>';
+        }
       } else if (_hasVerifiedOverride) {
         const _engRawForBanner = (function(){ try { const _es = getEngineScore(d.date); return isFinite(_es?._engRaw) ? _es._engRaw : null; } catch(_e){ return null; } })();
         _scenBanner = `<div style="font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#ffd166;background:rgba(255,209,102,.15);border:1px solid rgba(255,209,102,.45);border-radius:6px;padding:2px 6px;margin-bottom:5px;text-align:center" title="Це значення — ручний verified PDF-вердикт (expert override), НЕ розрахунок engine v18.5.${_engRawForBanner!=null ? ' Raw engine v18.5 snapshot: '+(_engRawForBanner>=0?'+':'')+_engRawForBanner+'.' : ''} Фон NOAA (raw, окремо, довідково) — рядок нижче.">★ PDF REFERENCE · VERIFIED OVERRIDE · НЕ РІШЕННЯ ДЛЯ ДІЇ</div>`;
