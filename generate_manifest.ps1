@@ -48,7 +48,9 @@ $manifest = [ordered]@{
     outcome_intake_queue = Get-FileVersion "outputs/data_control/OUTCOME_INTAKE_QUEUE_v1.csv"
     outcome_objective_context = Get-FileVersion "outputs/data_control/OUTCOME_OBJECTIVE_CONTEXT_v1.json"
     outcome_objective_context_status = Get-FileVersion "outputs/data_control/OUTCOME_OBJECTIVE_CONTEXT_STATUS_v1.json"
-    outcome_intake_form = Get-FileVersion "outputs/data_control/OUTCOME_INTAKE_FORM_v1.html"
+    # Production guard and GitHub Pages consume the root release form.
+    # Hashing the internal outputs/data_control copy caused deterministic CI drift.
+    outcome_intake_form = Get-FileVersion "OUTCOME_INTAKE_FORM_v1.html"
     outcome_intake_form_status = Get-FileVersion "outputs/data_control/OUTCOME_INTAKE_FORM_STATUS_v1.json"
     outcome_intake_validation = Get-FileVersion "outputs/data_control/OUTCOME_INTAKE_VALIDATION_v1.json"
     outcome_intake_import = Get-FileVersion "outputs/data_control/OUTCOME_INTAKE_IMPORT_STATUS_v1.json"
