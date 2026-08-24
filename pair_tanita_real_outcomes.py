@@ -11,6 +11,7 @@ from datetime import date, datetime, time, timezone
 from pathlib import Path
 import json
 import math
+import re
 from zoneinfo import ZoneInfo
 
 ROOT = Path(__file__).resolve().parent
@@ -125,6 +126,15 @@ for row in outcomes:
     # Only the independent user-outcome channel is admissible. Expert labels
     # and PDF/Excel agreement can never become ground truth here.
     if row.get("outcome_type") != "real_user_outcome":
+        continue
+    # Placeholder/legacy rows without an admissible numeric outcome are not
+    # evidence and are simply awaiting intake; provenance is enforced only
+    # when a row attempts to contribute an actual score.
+    if numeric(row.get("actual_score")) is None:
+        continue
+    digest = str(row.get("outcome_intake_sha256") or "").strip().lower()
+    if row.get("provenance_verified") is not True or re.fullmatch(r"[0-9a-f]{64}", digest) is None:
+        hard_failures.append(f"unverified outcome provenance for {target}")
         continue
     source = str(row.get("actual_source") or "").lower()
     if any(token in source for token in ("pdf", "excel", "expert", "override")):

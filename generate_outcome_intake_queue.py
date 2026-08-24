@@ -6,6 +6,7 @@ from pathlib import Path
 import csv
 import json
 import math
+import os
 from zoneinfo import ZoneInfo
 
 ROOT = Path(__file__).resolve().parent
@@ -84,15 +85,17 @@ for day, item in sorted((tracker.get("decisions") or {}).items()):
 # The generator must never erase user evidence before it passes a separate review.
 existing_by_date = {}
 if QUEUE.exists():
-    try:
-        with QUEUE.open(newline="", encoding="utf-8-sig") as handle:
-            for prior in csv.DictReader(handle):
-                day = (prior.get("date") or "").strip()
-                if day:
-                    existing_by_date[day] = prior
-    except (OSError, csv.Error):
-        # A malformed editable queue must not block the safety pipeline; validator reports it.
-        existing_by_date = {}
+    with QUEUE.open(newline="", encoding="utf-8-sig") as handle:
+        reader = csv.DictReader(handle)
+        if not reader.fieldnames or "date" not in reader.fieldnames:
+            raise SystemExit("Malformed editable queue: required date header is missing")
+        for line_no, prior in enumerate(reader, 2):
+            day = (prior.get("date") or "").strip()
+            if not day:
+                raise SystemExit(f"Malformed editable queue: empty date at line {line_no}")
+            if day in existing_by_date:
+                raise SystemExit(f"Malformed editable queue: duplicate date {day}")
+            existing_by_date[day] = prior
 
 editable_fields = ("forecast_seen", "actual_score", "actual_class", "domain", "event_summary", "confidence_actual", "notes")
 for row in rows:
@@ -104,10 +107,18 @@ for row in rows:
 
 CONTROL.mkdir(parents=True, exist_ok=True)
 fields = list(rows[0]) if rows else ["date", "prediction_score", "prediction_created_at", "prediction_model", "forecast_seen", "actual_score", "actual_class", "domain", "event_summary", "confidence_actual", "notes", "instruction"]
-with QUEUE.open("w", newline="", encoding="utf-8") as handle:
-    writer = csv.DictWriter(handle, fieldnames=fields)
-    writer.writeheader()
-    writer.writerows(rows)
+queue_tmp = QUEUE.with_suffix(QUEUE.suffix + ".tmp")
+try:
+    with queue_tmp.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fields)
+        writer.writeheader()
+        writer.writerows(rows)
+        handle.flush()
+        os.fsync(handle.fileno())
+    queue_tmp.replace(QUEUE)
+finally:
+    if queue_tmp.exists():
+        queue_tmp.unlink()
 status = {
     "schema": "outcome_intake_queue_status_v1",
     "generated_at": now.isoformat(),

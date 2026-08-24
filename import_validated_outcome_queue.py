@@ -1,7 +1,7 @@
 ﻿#!/usr/bin/env python3
 """Fail-closed import of reviewed independent outcomes into Chrono telemetry."""
 from __future__ import annotations
-import csv, json, math
+import csv, hashlib, json, math, os
 from datetime import date, datetime, time, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -16,6 +16,7 @@ CLASSES = {"AVOID", "CAUTION", "NORMAL", "FAVORABLE", "BEST_WINDOW"}
 DOMAINS = {"work", "health", "travel", "finance", "communication", "other"}
 CONFIDENCE = {"LOW", "MED", "HIGH"}
 EDITABLE = ("forecast_seen", "actual_score", "actual_class", "domain", "event_summary", "confidence_actual", "notes")
+PROVENANCE_FIELDS = ("actual_source", "outcome_intake_sha256", "outcome_imported_at_utc", "provenance_verified")
 KYIV = ZoneInfo("Europe/Kyiv")
 
 def target_day_start_utc(day: str) -> datetime:
@@ -81,7 +82,13 @@ def write_telemetry(path, comments, rows, fields):
         for line in comments: handle.write(line + "\n")
         writer = csv.DictWriter(handle, fieldnames=fields, lineterminator="\n")
         writer.writeheader(); writer.writerows(rows)
+        handle.flush(); os.fsync(handle.fileno())
     tmp.replace(path)
+
+def intake_hash(row):
+    payload = {key: str(row.get(key, "")).strip() for key in ("date", "prediction_score", "prediction_created_at", *EDITABLE)}
+    canonical = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 def main():
     now = datetime.now(timezone.utc); CONTROL.mkdir(parents=True, exist_ok=True)
@@ -90,6 +97,8 @@ def main():
         with QUEUE.open(newline="", encoding="utf-8-sig") as handle:
             submitted = [row for row in csv.DictReader(handle) if any(str(row.get(f, "")).strip() for f in EDITABLE)]
     comments, telemetry, fields = read_telemetry(TELEMETRY)
+    for field in PROVENANCE_FIELDS:
+        if field not in fields: fields.append(field)
     by_date = {str(row.get("date", "")).strip(): row for row in telemetry}
     imported, rejected, changed = [], [], False
     for row in submitted:
@@ -99,7 +108,7 @@ def main():
         if errors:
             rejected.append({"date": day, "errors": sorted(set(errors))}); continue
         actual = int(float(str(row["actual_score"]).strip())); label = str(row["actual_class"]).strip().upper()
-        target.update({"forecast_seen": str(row["forecast_seen"]).strip(), "actual_score": str(actual), "actual_class": label, "domain": str(row["domain"]).strip().lower(), "event_summary": str(row["event_summary"]).strip(), "confidence_actual": str(row["confidence_actual"]).strip().upper(), "delayed_flag": target.get("delayed_flag", "") or "0", "notes": str(row.get("notes", "")).strip()})
+        target.update({"forecast_seen": str(row["forecast_seen"]).strip(), "actual_score": str(actual), "actual_class": label, "domain": str(row["domain"]).strip().lower(), "event_summary": str(row["event_summary"]).strip(), "confidence_actual": str(row["confidence_actual"]).strip().upper(), "delayed_flag": target.get("delayed_flag", "") or "0", "notes": str(row.get("notes", "")).strip(), "actual_source":"validated_outcome_intake_v1", "outcome_intake_sha256":intake_hash(row), "outcome_imported_at_utc":now.replace(microsecond=0).isoformat(), "provenance_verified":"1"})
         pred_bucket, actual_bucket = bucket(str(target.get("v20_class", ""))), bucket(label)
         target["match"] = "-1" if "MID" in {pred_bucket, actual_bucket} else ("1" if pred_bucket == actual_bucket else "0")
         imported.append(day); changed = True
