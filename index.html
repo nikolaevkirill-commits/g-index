@@ -6,7 +6,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>NeboRhythm: Cosmic Timing — v88.9.240-fp435-COMPETITOR-FORMS</title>
+  <title>NeboRhythm: Cosmic Timing — v88.9.241-fp436-PANCHANGA-CLARITY</title>
 
   <script>
     // fp388: the Android TWA opens an explicit free companion channel. It keeps
@@ -26235,7 +26235,7 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line208
     const top=el('nav','nr-topnav','nrTopNav');top.setAttribute('aria-label','Розділи застосунку');top.innerHTML=`<button data-route="today" onclick="fp434Go('today',true)">Сьогодні</button><button data-route="calendar" onclick="fp434Go('calendar',true)">7 днів</button><button data-route="panch" onclick="fp434Go('panch',true)">Панчанга</button><button data-route="categories" onclick="fp434Go('categories',true)">Категорії</button><button data-route="match" onclick="fp434Go('match',true)">Match</button><button data-route="reports" onclick="fp434Go('reports',true)">Звіти</button><button data-route="profile" onclick="fp434Go('profile',true)">Профіль</button><button data-route="expert" onclick="fp434Go('expert',true)">Старий dashboard</button>`;shell.appendChild(top);
     const today=route(shell,'today',head('TODAY','Твій день — одним поглядом','Канонічний verdict, найближча зміна та космічна погода. Формули й аудит залишені в окремому dashboard.')+'<div id="nrTodayLive"></div><button class="nr-btn" style="margin:0 0 14px" onclick="fp434Go(\'plan\',true)">Скласти план дня</button>');
     const calendar=route(shell,'calendar',head('7 DAYS','Сім днів попереду','Окремий видимий горизонт на 7 днів: денний reference та raw/safety-контекст не змішуються.')+'<div class="nr-seven-head"><strong>Прогноз на 7 днів</strong><span>натисни день для деталей</span></div><div id="nrCalendarLive"></div>');
-    const panch=route(shell,'panch',head('SIDEREAL · LAHIRI','Панчанга дня','Tithi, Vara, Nakshatra, Yoga й Karana як ведичний шар канонічного G — не другий незалежний голос.')+'<div id="nrPanchLive"></div>');
+    const panch=route(shell,'panch',head('SIDEREAL · LAHIRI','Панчанга дня','П’ять компонентів описують якість часу. Вони вже враховані в Pᵢ усередині G і не голосують вдруге.')+`<div class="nr-card" id="nrPanchGuide"><span class="nr-chip">ЯК ЧИТАТИ</span><h3>П’ять частин одного календарного шару</h3><div class="nr-list"><div class="nr-row"><span>Tithi</span><span>місячна доба: загальний ритм і фаза циклу</span></div><div class="nr-row"><span>Vara</span><span>день тижня та його традиційний управитель</span></div><div class="nr-row"><span>Nakshatra</span><span>ділянка сидеричного шляху Місяця: характер дії</span></div><div class="nr-row"><span>Yoga</span><span>комбінація довгот Сонця й Місяця: фон взаємодії</span></div><div class="nr-row"><span>Karana</span><span>половина Tithi: коротший практичний ритм</span></div></div><div id="nrPanchNow" style="margin-top:14px">Завантаження переходів…</div><p style="margin-top:12px">Час переходу важливіший за статичну назву: протягом дня компонент може змінитися. Це reflective planning guidance, не гарантія результату.</p></div><div id="nrPanchLive"></div>`);
     const profile=route(shell,'profile',head('PROFILE','Персоналізація без втрати приватності','Місце, час народження, режим пояснення, сповіщення та локальні дані.')+'<div id="nrProfileLive"></div>');
     route(shell,'more',head('MORE','Усі інструменти','Глибокі категорії, спільний timing, форми планування, звіти та окремий старий dashboard.')+`<div class="nr-grid" id="fp434MoreGrid">
       <button class="nr-card" onclick="fp434Go('categories',true)"><span class="nr-chip">DAILY KEY</span><h3>Категорії дня</h3><p>Одна сфера глибоко у Free; повний день — Premium.</p></button>
@@ -26256,6 +26256,7 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line208
     ['personalCard','profileBar','profileRec','ppProfileBlock'].forEach(id=>move(id,pr));
     [...main.children].filter(n=>n!==shell).forEach(n=>ex.appendChild(n));
     renderCategories();
+    renderPanchGuide();
   }
   function todayKey(){try{return typeof todayKyivStr==='function'?todayKyivStr():new Date().toISOString().slice(0,10)}catch(_e){return new Date().toISOString().slice(0,10)}}
   function renderCategories(){
@@ -26288,6 +26289,19 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line208
   };
   window.fp435SavePlan=function(event){event.preventDefault();const data=Object.fromEntries(new FormData(event.currentTarget));data.date=todayKey();try{localStorage.setItem('gindex_day_plan_v1',JSON.stringify(data));document.getElementById('nrPlanStatus').textContent='✓ План збережено на цьому пристрої'}catch(_e){document.getElementById('nrPlanStatus').textContent='Не вдалося зберегти локально'}return false};
   window.fp435SaveMatch=function(event){event.preventDefault();const data=Object.fromEntries(new FormData(event.currentTarget));try{localStorage.setItem('gindex_match_person_v1',JSON.stringify(data));document.getElementById('nrMatchStatus').textContent='✓ Профіль збережено локально. Timing з’явиться після заповнення обох профілів.'}catch(_e){document.getElementById('nrMatchStatus').textContent='Не вдалося зберегти локально'}return false};
+  async function renderPanchGuide(){
+    const box=document.getElementById('nrPanchNow');if(!box)return;
+    const NAK=['Ashwini','Bharani','Krittika','Rohini','Mrigashira','Ardra','Punarvasu','Pushya','Ashlesha','Magha','Purva Phalguni','Uttara Phalguni','Hasta','Chitra','Swati','Vishakha','Anuradha','Jyeshtha','Mula','Purva Ashadha','Uttara Ashadha','Shravana','Dhanishtha','Shatabhisha','Purva Bhadrapada','Uttara Bhadrapada','Revati'];
+    const YOGA=['Vishkambha','Priti','Ayushman','Saubhagya','Shobhana','Atiganda','Sukarma','Dhriti','Shula','Ganda','Vriddhi','Dhruva','Vyaghata','Harshana','Vajra','Siddhi','Vyatipata','Variyana','Parigha','Shiva','Siddha','Sadhya','Shubha','Shukla','Brahma','Indra','Vaidhriti'];
+    const VARA=['Неділя · Сонце','Понеділок · Місяць','Вівторок · Марс','Середа · Меркурій','Четвер · Юпітер','П’ятниця · Венера','Субота · Сатурн'];
+    try{
+      const res=await fetch('panchanga_shadow_feed_v1.json',{cache:'no-store'});if(!res.ok)throw new Error('HTTP '+res.status);const feed=await res.json();const ds=todayKyivStr();const day=feed.days&&feed.days[ds];if(!day)throw new Error('немає дня '+ds);
+      const now=Date.now();
+      function current(name){const c=day.components[name],seg=c.segments.find(s=>Date.parse(s.start_utc)<=now&&now<Date.parse(s.end_utc))||c.segments[0];const idx=c.segments.indexOf(seg),next=c.segments[idx+1];let value=seg.value;if(name==='nakshatra')value=NAK[Number(value)-1]||value;if(name==='yoga')value=YOGA[Number(value)-1]||value;if(name==='tithi'){const v=Number(value),pak=v<=15?'Shukla':'Krishna';value=`${v} · ${pak}`};return {value,next:next?next.value:null,end:seg.end_utc,hasNext:!!next};}
+      const rows=[['Tithi',current('tithi')],['Vara',{value:VARA[new Date(ds+'T12:00:00').getDay()],end:null}],['Nakshatra',current('nakshatra')],['Yoga',current('yoga')],['Karana',current('karana')]];
+      box.innerHTML='<div class="nr-list">'+rows.map(([name,x])=>{const when=x.hasNext?new Intl.DateTimeFormat('uk-UA',{timeZone:'Europe/Kyiv',hour:'2-digit',minute:'2-digit'}).format(new Date(x.end)):'';const timing=x.end?(when?`зміниться о ${when}`:'діє до кінця дня'):'';return `<div class="nr-row"><span>${name}</span><span><strong>${escapeHtml(String(x.value))}</strong>${timing?`<br><small>${timing}</small>`:''}</span></div>`}).join('')+'</div>';
+    }catch(error){box.innerHTML='<div class="nr-row"><span>UNVERIFIED</span><span>Переходи Панчанги недоступні: '+escapeHtml(error.message)+'</span></div>'}
+  }
   function init(){
     buildShell();let saved='today';try{saved=localStorage.getItem('fp434_route')||'today'}catch(_e){}
     const push=new URLSearchParams(location.search).get('push');if(push)saved=push==='storm'?'expert':'today';
