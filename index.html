@@ -6,7 +6,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>NeboRhythm: Cosmic Timing — Космофізичний дашборд v88.9.233-fp428-FULL-AUDIT-CLOSURE</title>
+  <title>NeboRhythm: Cosmic Timing — Космофізичний дашборд v88.9.234-fp429-AUTHORITY-OFFLINE-CLOSURE</title>
 
   <script>
     // fp388: the Android TWA opens an explicit free companion channel. It keeps
@@ -14496,6 +14496,10 @@ function _renderSolarRhythm(refDateUTC){
 function renderPanchanga(dateUTC){
   const state = computePanchangaState(dateUTC);
   _lastPanchCtx = state.ctx;
+  // fp429 D3: cached Panchanga may survive a Europe/Kyiv midnight boundary.
+  // Bind the cache to the day for which it was rendered before it can be used
+  // as a fallback by the operational timing-window resolver.
+  if (_lastPanchCtx) _lastPanchCtx._kyivDateKey = todayKyivStr();
   // v85b-F4: expose raw panchanga total (ns+ts+ys+ks+rahu) for verdict sync
   if (_lastPanchCtx) _lastPanchCtx.pclTotal = state.pclOnly;
   renderPanchangaCard(state);
@@ -15247,7 +15251,9 @@ function getInauspiciousWindowsUTC(){
         }
       } catch(_e){ _R = null; }
     }
-    if (!_R || !_R.gulika) _R = (_pc && _pc.rahu) ? _pc.rahu : _R;
+    if ((!_R || !_R.gulika) && _pc && _pc._kyivDateKey === todayKyivStr() && _pc.rahu) {
+      _R = _pc.rahu;
+    }
     if (_R) {
       const _toH = t => { const _p2 = String(t||'').split(':').map(Number); return _p2.length===2 ? _p2[0]+_p2[1]/60 : NaN; };
       [['Rahu', _R.start, _R.end],
@@ -15273,10 +15279,16 @@ function _slotDecisionInvariant(text, blocked){
   }
 }
 
-function _baseSlotAction(g, dayScore){
+function _baseSlotAction(g, dayScore, referenceAvailable){
   // Базові 5 рівнів + softening за PDF/Engine дня — ідентично попередній логіці,
   // що раніше жила лише в renderHeroTimeWindows; тепер спільна для всіх трьох
   // блоків, замість «Плану дня» власної спрощеної 3-рівневої версії.
+  // fp429 R-01: raw slot G is context, never an action authority.  A missing
+  // or stale daily reference must fail closed on every future/current-day
+  // slot surface, not only on Hero/current slot.
+  if (!referenceAvailable) {
+    return 'лише перевірені рутинні дії; денний reference недоступний, raw G — довідковий фон';
+  }
   let action = g >= 1.5 ? 'активні дії і ключові рішення'
     : g >= 0.5 ? 'безпечно працювати і планувати'
     : g >= -0.5 ? 'стандартний темп без форсування'
@@ -15359,7 +15371,10 @@ function resolveSlotDecision(params){
     if (b > a) { _clipped.push({ nm: w.nm, a, b }); _bounds.add(a); _bounds.add(b); }
   });
   const _sorted = Array.from(_bounds).sort((x, y) => x - y);
-  const baseAction = _baseSlotAction(g, isFinite(p.dayScore) ? p.dayScore : null);
+  const _referenceStale = !!(p.referenceStale || (window.__referenceSourceState && window.__referenceSourceState.stale));
+  const _hasReference = p.decisionAvailable === false ? false
+    : (p.dayScore !== null && p.dayScore !== undefined && Number.isFinite(Number(p.dayScore)) && !_referenceStale);
+  const baseAction = _baseSlotAction(g, _hasReference ? Number(p.dayScore) : null, _hasReference);
 
   const segments = [];
   for (let i = 0; i < _sorted.length - 1; i++) {
