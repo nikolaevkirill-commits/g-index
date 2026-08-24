@@ -1,6 +1,6 @@
 // G-Index service worker. HTML/data are network-first; static shell is cache-first.
 // Bump CACHE_VERSION whenever index.html or a cached shell asset changes.
-const CACHE_VERSION = 'fp436-v1'; // Panchanga clarity + corrected shadow timeline
+const CACHE_VERSION = 'fp437-v1'; // visible data truth gate + horizon provenance
 const CACHE_PREFIX = 'gindex-'; // G-Index cache namespace; do not remove the prefix.
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${CACHE_VERSION}`;
 const DATA_CACHE = `${CACHE_PREFIX}data-${CACHE_VERSION}`;
@@ -11,6 +11,9 @@ const SHELL_ASSETS = [
   './icon192.png',
   './icon512.png',
   './astronomy-engine-2.1.19.min.js',
+  './future_kp.json',
+  './SYSTEM_HEALTH_STATUS_v1.json',
+  './PANCHANGA_ASTRONOMY_ENGINE_CROSSCHECK_v1.json',
   './panchanga_shadow_feed_v1.json',
   './OUTCOME_INTAKE_FORM_v1.html'
 ];

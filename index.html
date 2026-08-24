@@ -6,7 +6,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>NeboRhythm: Cosmic Timing — v88.9.241-fp436-PANCHANGA-CLARITY</title>
+  <title>NeboRhythm: Cosmic Timing — v88.9.242-fp437-DATA-TRUTH-GATE</title>
 
   <script>
     // fp388: the Android TWA opens an explicit free companion channel. It keeps
@@ -26234,7 +26234,7 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line208
     const shell=el('div','', 'fp434Shell');main.insertBefore(shell,main.firstChild);
     const top=el('nav','nr-topnav','nrTopNav');top.setAttribute('aria-label','Розділи застосунку');top.innerHTML=`<button data-route="today" onclick="fp434Go('today',true)">Сьогодні</button><button data-route="calendar" onclick="fp434Go('calendar',true)">7 днів</button><button data-route="panch" onclick="fp434Go('panch',true)">Панчанга</button><button data-route="categories" onclick="fp434Go('categories',true)">Категорії</button><button data-route="match" onclick="fp434Go('match',true)">Match</button><button data-route="reports" onclick="fp434Go('reports',true)">Звіти</button><button data-route="profile" onclick="fp434Go('profile',true)">Профіль</button><button data-route="expert" onclick="fp434Go('expert',true)">Старий dashboard</button>`;shell.appendChild(top);
     const today=route(shell,'today',head('TODAY','Твій день — одним поглядом','Канонічний verdict, найближча зміна та космічна погода. Формули й аудит залишені в окремому dashboard.')+'<div id="nrTodayLive"></div><button class="nr-btn" style="margin:0 0 14px" onclick="fp434Go(\'plan\',true)">Скласти план дня</button>');
-    const calendar=route(shell,'calendar',head('7 DAYS','Сім днів попереду','Окремий видимий горизонт на 7 днів: денний reference та raw/safety-контекст не змішуються.')+'<div class="nr-seven-head"><strong>Прогноз на 7 днів</strong><span>натисни день для деталей</span></div><div id="nrCalendarLive"></div>');
+    const calendar=route(shell,'calendar',head('7 DAYS','Сім днів попереду','Офіційний Kp NOAA має горизонт 3 дні. Дні 4–7 — лише планувальний астрономічний сценарій; синтетичний Kp не подається як прогноз.')+'<div class="nr-card" id="nrDataTruthGate"><span class="nr-chip">DATA TRUTH GATE</span><h3>Перевірка горизонту й аномалій</h3><div id="nrDataTruthBody"><p>Перевіряю provenance, свіжість і статус системи…</p></div></div><div class="nr-seven-head"><strong>Сценарій на 7 днів</strong><span>натисни день для деталей</span></div><div id="nrCalendarLive"></div>');
     const panch=route(shell,'panch',head('SIDEREAL · LAHIRI','Панчанга дня','П’ять компонентів описують якість часу. Вони вже враховані в Pᵢ усередині G і не голосують вдруге.')+`<div class="nr-card" id="nrPanchGuide"><span class="nr-chip">ЯК ЧИТАТИ</span><h3>П’ять частин одного календарного шару</h3><div class="nr-list"><div class="nr-row"><span>Tithi</span><span>місячна доба: загальний ритм і фаза циклу</span></div><div class="nr-row"><span>Vara</span><span>день тижня та його традиційний управитель</span></div><div class="nr-row"><span>Nakshatra</span><span>ділянка сидеричного шляху Місяця: характер дії</span></div><div class="nr-row"><span>Yoga</span><span>комбінація довгот Сонця й Місяця: фон взаємодії</span></div><div class="nr-row"><span>Karana</span><span>половина Tithi: коротший практичний ритм</span></div></div><div id="nrPanchNow" style="margin-top:14px">Завантаження переходів…</div><p style="margin-top:12px">Час переходу важливіший за статичну назву: протягом дня компонент може змінитися. Це reflective planning guidance, не гарантія результату.</p></div><div id="nrPanchLive"></div>`);
     const profile=route(shell,'profile',head('PROFILE','Персоналізація без втрати приватності','Місце, час народження, режим пояснення, сповіщення та локальні дані.')+'<div id="nrProfileLive"></div>');
     route(shell,'more',head('MORE','Усі інструменти','Глибокі категорії, спільний timing, форми планування, звіти та окремий старий dashboard.')+`<div class="nr-grid" id="fp434MoreGrid">
@@ -26257,6 +26257,7 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line208
     [...main.children].filter(n=>n!==shell).forEach(n=>ex.appendChild(n));
     renderCategories();
     renderPanchGuide();
+    renderDataTruthGate();
   }
   function todayKey(){try{return typeof todayKyivStr==='function'?todayKyivStr():new Date().toISOString().slice(0,10)}catch(_e){return new Date().toISOString().slice(0,10)}}
   function renderCategories(){
@@ -26301,6 +26302,35 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line208
       const rows=[['Tithi',current('tithi')],['Vara',{value:VARA[new Date(ds+'T12:00:00').getDay()],end:null}],['Nakshatra',current('nakshatra')],['Yoga',current('yoga')],['Karana',current('karana')]];
       box.innerHTML='<div class="nr-list">'+rows.map(([name,x])=>{const when=x.hasNext?new Intl.DateTimeFormat('uk-UA',{timeZone:'Europe/Kyiv',hour:'2-digit',minute:'2-digit'}).format(new Date(x.end)):'';const timing=x.end?(when?`зміниться о ${when}`:'діє до кінця дня'):'';return `<div class="nr-row"><span>${name}</span><span><strong>${escapeHtml(String(x.value))}</strong>${timing?`<br><small>${timing}</small>`:''}</span></div>`}).join('')+'</div>';
     }catch(error){box.innerHTML='<div class="nr-row"><span>UNVERIFIED</span><span>Переходи Панчанги недоступні: '+escapeHtml(error.message)+'</span></div>'}
+  }
+  async function renderDataTruthGate(){
+    const box=document.getElementById('nrDataTruthBody');if(!box)return;
+    try{
+      const [kpRes,healthRes,panchRes]=await Promise.all([
+        fetch('future_kp.json',{cache:'no-store'}),
+        fetch('SYSTEM_HEALTH_STATUS_v1.json',{cache:'no-store'}),
+        fetch('PANCHANGA_ASTRONOMY_ENGINE_CROSSCHECK_v1.json',{cache:'no-store'})
+      ]);
+      if(!kpRes.ok)throw new Error('future_kp HTTP '+kpRes.status);
+      if(!healthRes.ok)throw new Error('system health HTTP '+healthRes.status);
+      if(!panchRes.ok)throw new Error('Panchanga cross-check HTTP '+panchRes.status);
+      const kp=await kpRes.json(),health=await healthRes.json(),panch=await panchRes.json();
+      const start=todayKey(),dates=[];for(let i=0;i<7;i++){const d=new Date(start+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+i);dates.push(d.toISOString().slice(0,10));}
+      const rows=dates.map(ds=>({date:ds,...((kp.kp||{})[ds]||{})}));
+      const official=rows.filter(x=>x.kp_synthetic===false&&/^NOAA_/.test(String(x.source||''))).length;
+      const synthetic=rows.filter(x=>x.kp_synthetic===true||x.source==='synthetic_fallback').length;
+      const missing=rows.filter(x=>!Number.isFinite(Number(x.kp))).length;
+      const gen=kp.generated?new Date(kp.generated):null,ageH=gen&&isFinite(gen)?Math.max(0,(Date.now()-gen.getTime())/36e5):null;
+      const fresh=ageH!==null&&ageH<=6;
+      const warnings=Array.isArray(health.warnings)?health.warnings:[];
+      const gate=(health.status==='PASS'&&synthetic===0&&missing===0&&fresh&&panch.status==='PASS')?'PASS':'WARN';
+      const dayRows=rows.map((x,i)=>{
+        const src=x.kp_synthetic===false&&/^NOAA_/.test(String(x.source||''))?'OFFICIAL NOAA':x.kp_synthetic?'UNVERIFIED Kp':'MISSING';
+        const color=src==='OFFICIAL NOAA'?'var(--ok)':src==='UNVERIFIED Kp'?'var(--warn)':'var(--bad)';
+        return `<div class="nr-row"><span>${i+1}. ${escapeHtml(x.date)}</span><span><strong style="color:${color}">${src}</strong>${Number.isFinite(Number(x.kp))?` · Kp ${Number(x.kp).toFixed(2)}`:''}<br><small>${escapeHtml(String(x.source||'немає джерела'))}</small></span></div>`;
+      }).join('');
+      box.innerHTML=`<div class="nr-list"><div class="nr-row"><span>Загальний gate</span><span><strong style="color:${gate==='PASS'?'var(--ok)':'var(--warn)'}">${gate}</strong> · System Health ${escapeHtml(String(health.status||'UNKNOWN'))}</span></div><div class="nr-row"><span>Горизонт Kp</span><span>${official}/7 official · ${synthetic}/7 synthetic · ${missing}/7 missing</span></div><div class="nr-row"><span>Свіжість Kp</span><span><strong style="color:${fresh?'var(--ok)':'var(--bad)'}">${fresh?'FRESH':'STALE / UNVERIFIED'}</strong>${ageH!==null?' · '+ageH.toFixed(1)+' год':''}</span></div><div class="nr-row"><span>Панчанга × Astronomy Engine</span><span><strong style="color:${panch.status==='PASS'?'var(--ok)':'var(--warn)'}">${escapeHtml(panch.status)}</strong> · ${Number(panch.tested||0)} сегментів · ${Number(panch.material_mismatches||0)} material mismatch · ${Number(panch.boundary_sensitive_mismatches||0)} boundary-sensitive</span></div></div><p style="margin:12px 0 8px"><strong>Правило:</strong> NOAA-ділянка — прогноз. <code>UNVERIFIED Kp</code> — технічне плато для обчислювальної сумісності, не прогноз і не підстава для дії. Межі Панчанги в межах кількох хвилин між різними ефемеридами позначаються як model-sensitive.</p><div class="nr-list">${dayRows}</div>${warnings.length?`<p style="margin-top:12px;color:var(--warn)"><strong>Відкриті аномалії:</strong> ${warnings.map(escapeHtml).join(' · ')}</p>`:''}`;
+    }catch(error){box.innerHTML=`<div class="nr-row"><span>BLOCKED</span><span>Не вдалося перевірити data gate: ${escapeHtml(error.message)}</span></div>`}
   }
   function init(){
     buildShell();let saved='today';try{saved=localStorage.getItem('fp434_route')||'today'}catch(_e){}
