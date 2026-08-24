@@ -6,7 +6,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>NeboRhythm: Cosmic Timing — Космофізичний дашборд v88.9.232-fp427-GUARD-TYPE-PARITY</title>
+  <title>NeboRhythm: Cosmic Timing — Космофізичний дашборд v88.9.233-fp428-FULL-AUDIT-CLOSURE</title>
 
   <script>
     // fp388: the Android TWA opens an explicit free companion channel. It keeps
@@ -3905,8 +3905,12 @@ function renderDecisionLayer(gVal, ui) {
   const ctxEl = document.getElementById('decisionContext');
   if (!dl || !doList || !avoidList || !isFinite(gVal)) { if (dl) dl.style.display='none'; return; }
 
-  // 1. Base за станом G
-  const state = (typeof classifyStateByG === 'function') ? classifyStateByG(gVal) : 'neutral';
+  // fp428: this is a command surface. Raw G is context only; the same canonical
+  // resolver that drives Hero must authorize both the state and action-copy.
+  const _opSigDL = (typeof getCurrentOperationalSignal === 'function') ? getCurrentOperationalSignal() : null;
+  const _opAvailableDL = !!(_opSigDL && _opSigDL.decisionAvailable && isFinite(_opSigDL.decisionScore));
+  // 1. Base за канонічним operational state, ніколи напряму за raw G.
+  const state = _opAvailableDL && _opSigDL.opKey ? _opSigDL.opKey : 'neutral';
   const base = DECISION_BASE[state] || DECISION_BASE.neutral;
   let doArr = [...base.do];
   let avoidArr = [...base.avoid];
@@ -4044,6 +4048,15 @@ function renderDecisionLayer(gVal, ui) {
       ctxTxt = `Якість даних ${_dmDL.toUpperCase()} — позитивний стан не є дозволом на нові дії. ` + ctxTxt;
     }
   } catch(_eDmDL) { /* silent */ }
+
+  // fp428 A-01: missing/unverified reference is stricter than every positive
+  // raw/background classification. Keep informational context, but issue no
+  // positive command until the canonical resolver exposes a finite decision.
+  if (!_opAvailableDL) {
+    doArr = ['Оперативне рішення недоступне — лише перевірена рутина'];
+    avoidArr = ['Нових рішень, запусків і незворотних дій до відновлення reference'];
+    ctxTxt = 'Reference недоступний або не підтверджений. G_raw — довідковий фон, не дозвіл до дії.';
+  }
 
   // v88.9.6x-fp248 FIX-CRITICAL (аудит fp247, п.1): жоден з guard-ів вище не
   // бачив Rahu/Yama/Gulika — «Запускати нові ініціативи/Укладати угоди» могло
@@ -6045,8 +6058,8 @@ function calendarAdvisoryText(day){
 //          або status=now (nowcast — швидше, але менш точно)
 const URL_GFZ_KP_NOW  = 'https://kp.gfz.de/app/json/?index=Kp&status=now'; // (з start/end)
 const URL_GFZ_KP_DEF  = 'https://kp.gfz.de/app/json/?index=Kp&status=def';
-const URL_WOLF_SN  = 'https://sidc.be/SILSO/DATA/EISN_current.json';
-const URL_WOLF_SN_FB = 'https://sidc.be/SILSO/DATA/SN_d_tot_V2.0.json'; // fallback: total SN
+const URL_WOLF_SN  = 'https://www.sidc.be/SILSO/DATA/SN_d_tot_V2.0.csv'; // documented daily total SN
+const URL_WOLF_SN_FB = 'https://www.sidc.be/SILSO/DATA/SN_m_tot_V2.0.csv'; // documented monthly fallback
 const URL_WOLF_SN_STATUS = 'SILSO_REFRESH_STATUS_v1.json'; // same-origin daily validated snapshot
 const URL_DST_FB   = 'https://services.swpc.noaa.gov/products/geospace/propagated-solar-wind-1-hour.json'; // fallback Dst proxy
 const URL_KP_FCST_FB2 = 'https://services.swpc.noaa.gov/json/planetary_k_index_1m.json'; // fallback fcst via obs
@@ -6963,6 +6976,25 @@ async function loadExpertDecisionRegistry(){
     if(doc.schema!=='expert_decision_registry_v1') throw new Error('unexpected schema');
     _expertDecisionRegistry=doc;
     window._expertDecisionRegistry=doc;
+    // fp428 A-02: normalize verified registry decisions into the same store
+    // consumed by getEngineScore(). The registry is no longer a display-only,
+    // parallel authority path. Existing explicit overrides retain precedence.
+    if(!_expertOverrides || typeof _expertOverrides !== 'object') _expertOverrides={};
+    for(const row of (Array.isArray(doc.rows)?doc.rows:[])){
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(String(row.date||''))) continue;
+      if(row.decision_source!=='verified_expert_pdf' || !Number.isFinite(Number(row.decision_score))) continue;
+      if(!/^[0-9a-f]{64}$/i.test(String(row.source_sha256||'')) || !String(row.source_pdf||'')) continue;
+      if(!_expertOverrides[row.date]){
+        _expertOverrides[row.date]={
+          expert_eng:Number(row.decision_score), verified:true,
+          verified_by_pdf_reading:true, source_pdf:String(row.source_pdf),
+          source_page:row.source_page??null, source_sha256:String(row.source_sha256),
+          category:row.decision_class||'verified_expert_pdf',
+          applied_in:'EXPERT_DECISION_REGISTRY_v1.json'
+        };
+      }
+    }
+    window._expertOverrides=_expertOverrides;
     const s=doc.summary||{};
     const pct=x=>Number.isFinite(Number(x))?(Number(x)*100).toFixed(1)+'%':'—';
     if(el) el.innerHTML='<strong style="color:#ffd37a">Експертні рішення автоматизовано:</strong> '+
@@ -7080,7 +7112,10 @@ async function loadSystemHealthStatus(){
     const manualPending=Number(s.checks&&s.checks.tanita_balanced_review&&s.checks.tanita_balanced_review.pending_visual_review||0);
     const age=Number(s.checks&&s.checks.manifest_age_hours);
     const artifactAgeHours=s.generated_at ? Math.max(0,(Date.now()-new Date(s.generated_at).getTime())/3600000) : Infinity;
-    const healthStale=!Number.isFinite(artifactAgeHours)||artifactAgeHours>36||!Number.isFinite(age)||age>36;
+    // fp428 O-01: health is operational telemetry (live-context cadence), not a
+    // daily forecast asset. Six hours without a new snapshot is a failure even
+    // if the manifest itself is still within its 36-hour publication SLA.
+    const healthStale=!Number.isFinite(artifactAgeHours)||artifactAgeHours>6||!Number.isFinite(age)||age>36;
     const tracker=s.checks&&s.checks.prospective_tracker;
     const trackerAgeRaw=tracker&&tracker.latest_age_hours;
     const trackerFresh=!!(tracker&&trackerAgeRaw!==null&&trackerAgeRaw!==''&&Number.isFinite(Number(trackerAgeRaw))&&Number(trackerAgeRaw)<=36);
@@ -10656,18 +10691,40 @@ function parseKpObsJSON(json){
   return {kNow:isFinite(kNow)?kNow:null, aNow, whenText, kPrev3h:isFinite(kPrev3h)?kPrev3h:null, kp24hAgo:isFinite(kp24hAgo)?kp24hAgo:null};
 }
 
-// Парсер числа Вольфа (SILSO EISN_current.json)
-// Формат: [[year, month, day, fracYear, Sn, stdDev, nbObs, provisional], ...]
+// Парсер числа Вольфа (офіційні SILSO CSV; legacy JSON також читається для cache compatibility)
 function parseWolfSn(json){
   try{
-    const rows = JSON.parse(json);
-    if(!Array.isArray(rows)||!rows.length) return null;
-    // беремо останній рядок
-    const last = rows[rows.length-1];
-    const sn = parseFloat(last[4]);
-    const dateStr = `${last[0]}-${String(last[1]).padStart(2,'0')}-${String(last[2]).padStart(2,'0')}`;
-    return isFinite(sn) ? {sn, dateStr, provisional: last[7]===1} : null;
+    const raw = String(json || '').trim();
+    if(!raw) return null;
+    if(raw[0] === '[' || raw[0] === '{'){
+      const rows = JSON.parse(raw);
+      if(!Array.isArray(rows)||!rows.length) return null;
+      const last = rows[rows.length-1];
+      const sn = parseFloat(last[4]);
+      const dateStr = `${last[0]}-${String(last[1]).padStart(2,'0')}-${String(last[2]).padStart(2,'0')}`;
+      return isFinite(sn) ? {sn, dateStr, provisional: last[7]===1} : null;
+    }
+    // Official SILSO semicolon-delimited daily/monthly files. Ignore the -1
+    // missing sentinel and walk back to the newest valid observation.
+    const lines = raw.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+    for(let i=lines.length-1;i>=0;i--){
+      const c = lines[i].split(';').map(s=>s.trim());
+      if(c.length < 5) continue;
+      const isDaily = c.length >= 8;
+      const sn = Number(isDaily ? c[4] : c[3]);
+      if(!Number.isFinite(sn) || sn < 0) continue;
+      const y=Number(c[0]), m=Number(c[1]), d=isDaily?Number(c[2]):1;
+      if(!Number.isInteger(y)||!Number.isInteger(m)||!Number.isInteger(d)) continue;
+      const dateStr = `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const provisional = isDaily ? Number(c[7]) === 1 : true;
+      return {sn,dateStr,provisional};
+    }
+    return null;
   }catch(e){ return null; }
+}
+function _looksLikeSilso(txt){
+  const t=String(txt||'').trim();
+  return _looksLikeJson(t) || /^\d{4}\s*;\s*\d{1,2}\s*;/m.test(t);
 }
 
 // fp372: the local scheduler already downloads and validates the SILSO daily
@@ -10698,7 +10755,7 @@ async function fetchWolfSnResilient(){
   }catch(e){ if(window._DEBUG) console.warn('[SILSO] local snapshot unavailable:',e.message); }
   for(const url of [URL_WOLF_SN, URL_WOLF_SN_FB]){
     try{
-      const parsed = parseWolfSn(await fetchTextWithCORS(url,_looksLikeJson));
+      const parsed = parseWolfSn(await fetchTextWithCORS(url,_looksLikeSilso));
       if(parsed) return {...parsed,_delivery:'direct_or_proxy'};
     }catch(_e){ /* try next verified SILSO endpoint */ }
   }
@@ -11111,7 +11168,13 @@ function parse27Day(text){
       continue;
     }
     const date = new Date(Date.UTC(parseInt(m[1],10), monIdx, parseInt(m[3],10)));
-    rows.push({date, flux: parseInt(m[4],10), Ap: parseInt(m[5],10), kpMax: parseInt(m[6],10)});
+    const fluxRaw = parseInt(m[4],10);
+    // fp428 X-01: quarantine impossible/corrupted F10.7 values. F10.7 remains
+    // advisory-only (score_effect=0), but it must not be presented as real.
+    const fluxValid = Number.isFinite(fluxRaw) && fluxRaw >= 50 && fluxRaw <= 400;
+    rows.push({date, flux: fluxValid ? fluxRaw : null, fluxRaw,
+      fluxStatus: fluxValid ? 'verified_range' : 'conflicting_outlier',
+      Ap: parseInt(m[5],10), kpMax: parseInt(m[6],10)});
   }
   return rows;
 }
@@ -11249,6 +11312,7 @@ function draw27dTable(){
     const kpLabel = isOverridden ? 'Kp max (3d↑)' : 'Kp max (27d)';
     const gTipBase = gTooltipText(kpLabel, kpUsed, ai);
     let gTip = f107mod && f107mod.val !== 0 ? gTipBase + '\n⚠ F10.7: ' + f107mod.tip + ' (контекст, не в G)' : gTipBase;
+    if(r.fluxStatus === 'conflicting_outlier') gTip += `\n⚠ F10.7 CONFLICTING/QUARANTINED: raw=${r.fluxRaw}; score_effect=0`;
     if (_hasOverride && Number.isFinite(_expertEng)) {
       gTip += `\n\n★ PDF/Engine Day_score: ${_expertEng>=0?'+':''}${_expertEng}\n(G_day raw = ${G>=0?'+':''}${G.toFixed(2)}, delta ${(_expertEng-G).toFixed(1)})`;
     }
@@ -11327,7 +11391,7 @@ function draw27dTable(){
       ${deltaCell}
       <td>${Lcell}</td><td>${Mcell}</td><td>${Ecell}</td><td>${Pcell}</td><td>${AiCell}</td>
       <td class="mono col-hide-mobile">${r.Ap}</td>
-      <td class="mono col-hide-mobile">${r.flux}</td>
+      <td class="mono col-hide-mobile">${r.fluxStatus==='conflicting_outlier'?`<span style="color:var(--bad)" title="F10.7 raw=${r.fluxRaw}; поза допустимим діапазоном 50–400; score_effect=0">CONFLICT</span>`:(r.flux ?? '—')}</td>
       <td style="font-size:12px">${isFinite(G_display)?classifyG(G_display):'Дані відсутні'}</td>
       <td class="col-hide-mobile" style="font-size:12px">${(()=>{const _p=calcProbabilityLayer({G:G_display,horizon:'27day'});return _p?`<span style="font-weight:700;color:var(--muted)" title="Евристична зона G; не ймовірність, score_effect=0">${escapeHtml(_p.labelUA)}</span>`:'—';})()}</td>
       <td style="font-size:12px;color:${isToday?'var(--warn)':'var(--faint)'}">${isToday
@@ -14537,8 +14601,9 @@ function render3Day(parsed3){
   for(const d of days){
     const apEntry = parsed3.predictedAp.find(x=> fmtDate(x.date)===fmtDate(d.date)) ?? null;
     // v52: визначаємо kpMax ПЕРЕД computeAi — щоб ai і G використовували однаковий kp
-    const kpMax = fmtDate(d.date) === todayKyivStr() && lastWWV && isFinite(lastWWV.kNow)
-      ? lastWWV.kNow : d.kpMax;
+    // fp428 D-01: the 3-day rail is daily Kp_max. Current 1-minute/3-hour
+    // Kp belongs only to G_now and must never replace this daily maximum.
+    const kpMax = d.kpMax;
     const ai = computeAi(sunriseUTC(d.date), isFinite(kpMax) ? kpMax : null);
     const G = isFinite(kpMax) ? kpDayTerm(kpMax) + ai.Ai : NaN;
     const isToday = fmtDate(d.date) === todayKyivStr();
@@ -14601,7 +14666,7 @@ function render3Day(parsed3){
     let _tomorrowSig = null;
     const _todayStr = todayKyivStr();
     for(const d of days){
-      const kpMax=fmtDate(d.date)===todayKyivStr()&&lastWWV&&isFinite(lastWWV.kNow)?lastWWV.kNow:d.kpMax;
+      const kpMax=d.kpMax;
       const ai=computeAi(sunriseUTC(d.date),isFinite(kpMax)?kpMax:null);
       const G=isFinite(kpMax)?kpDayTerm(kpMax)+ai.Ai:NaN;
       const isToday=fmtDate(d.date)===todayKyivStr();
@@ -16098,7 +16163,7 @@ function _renderHeroHierarchy(){
     let opColor = 'var(--muted)';
     let opBg = 'rgba(155,177,220,.06)';
     try {
-      const _opSig = resolveHeroSignalHierarchy_v88824(currentG, kp);
+      const _opSig = getCurrentOperationalSignal();
       const _opScore = _operationalScoreFromState_v88825(_opSig.opKey);
       const _opMap = {
         favorable:['МОЖНА ДІЯТИ','var(--ok)','rgba(43,212,125,.06)'],
@@ -16233,7 +16298,7 @@ function _renderHeroHierarchy(){
       const _why = document.getElementById('heroWhyText');
       if (_why) {
         const _kpPart = isFinite(kp) ? (kp < 2 ? 'Геомагнітний фон спокійний' : kp < 4 ? 'Геомагнітний фон помірний' : 'Геомагнітний фон активний') : '';
-        const _whySig = resolveHeroSignalHierarchy_v88824(currentG, kp);
+        const _whySig = getCurrentOperationalSignal();
         const _dayLabel = _whySig.opKey === 'tense' ? 'оперативно не починати нових справ'
           : _whySig.opKey === 'unstable' ? 'оперативно лише перевірена рутина'
           : _whySig.opKey === 'neutral' ? 'оперативно стандартний режим'
