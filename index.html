@@ -6,7 +6,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>NeboRhythm: Cosmic Timing — Космофізичний дашборд v88.9.234-fp429-AUTHORITY-OFFLINE-CLOSURE</title>
+  <title>NeboRhythm: Cosmic Timing — Космофізичний дашборд v88.9.235-fp430-NO-REFERENCE-NO-VERDICT</title>
 
   <script>
     // fp388: the Android TWA opens an explicit free companion channel. It keeps
@@ -16179,6 +16179,12 @@ function _renderHeroHierarchy(){
     let opBg = 'rgba(155,177,220,.06)';
     try {
       const _opSig = getCurrentOperationalSignal();
+      if (!_opSig || !_opSig.decisionAvailable) {
+        opHtml = '<span style="font-weight:900;color:var(--muted)">РІШЕННЯ НЕДОСТУПНЕ</span> <span style="font-size:10px;color:var(--faint)">· немає чинного денного reference</span>';
+        opColor = 'var(--muted)';
+        opBg = 'rgba(155,177,220,.06)';
+        throw new Error('fp430_no_operational_verdict');
+      }
       const _opScore = _operationalScoreFromState_v88825(_opSig.opKey);
       const _opMap = {
         favorable:['МОЖНА ДІЯТИ','var(--ok)','rgba(43,212,125,.06)'],
