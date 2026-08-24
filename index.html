@@ -6,7 +6,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>NeboRhythm: Cosmic Timing — Космофізичний дашборд v88.9.236-fp431-PWA-EXTERNAL-CLOSURE</title>
+  <title>NeboRhythm: Cosmic Timing — Космофізичний дашборд v88.9.237-fp432-OFFLINE-STATE-PARITY</title>
 
   <script>
     // fp388: the Android TWA opens an explicit free companion channel. It keeps
@@ -3564,7 +3564,10 @@ function _renderFreshnessState(){
                 : (Math.round(maxAge / 360000) / 10).toFixed(1) + 'г';
   // v87.1 NFR: stricter thresholds (LIVE ≤5min, DELAYED ≤30min, STALE ≤60min, OLD >60min)
   let state, label, col, bgCol;
-  if(maxAge < 5*60*1000){ state='live'; label='● Kp DATA LIVE · '+_ageStr; col='#9fd1ff'; bgCol='#10243a'; }
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+    state='offline'; label='● CACHED · OFFLINE'; col='#ffcc44'; bgCol='#2a1a00';
+  }
+  else if(maxAge < 5*60*1000){ state='live'; label='● Kp DATA LIVE · '+_ageStr; col='#9fd1ff'; bgCol='#10243a'; }
   else if(maxAge < 30*60*1000){ state='delayed'; label='● DELAYED · '+_ageStr; col='#ffcc44'; bgCol='#2a1a00'; }
   else if(maxAge < 60*60*1000){ state='stale'; label='● STALE · '+_ageStr; col='#ff9944'; bgCol='#2a1200'; }
   else { state='old'; label='● OLD · '+_ageStr; col='#ff6b6b'; bgCol='#2a0808'; }
@@ -9954,6 +9957,9 @@ function computeConfidenceBand(kpNow, kpObsJson){
 //   'scenario' — NOAA forecast недоступний → плато на базі поточного Kp (не справжній прогноз)
 //   'offline'  — навіть Kp обсервації недоступні
 function resolveDataMode(){
+  // Physical transport state outranks cached fetch timestamps. A recent cached
+  // response must never be presented as LIVE after the browser goes offline.
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) return 'offline';
   // Kp обсервації freshness — читаю той самий бейдж, що й heroFreshness
   const _fbTxt = (document.getElementById('freshnessBadge')?.textContent || 'LIVE').toLowerCase();
   let _kpFresh = 'live';
@@ -23756,6 +23762,10 @@ function _showToast(msg) {
     } else {
       ob.style.display = 'none';
     }
+    // Re-render every visible freshness consumer immediately on transport
+    // transitions; the periodic timer alone leaves a false LIVE window.
+    try { if (typeof _renderFreshnessState === 'function') _renderFreshnessState(); } catch (_e) {}
+    try { if (typeof syncHero === 'function') syncHero(); } catch (_e) {}
   }
   window.addEventListener('online',  _updateOnline);
   window.addEventListener('offline', _updateOnline);
