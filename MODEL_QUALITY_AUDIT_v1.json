@@ -1,9 +1,11 @@
 {
   "schema": "gindex_model_quality_audit_v1",
-  "generated_at_utc": "2026-08-24T11:31:08.082027+00:00",
+  "generated_at_utc": "2026-08-31T18:33:08.344769+00:00",
+  "as_of_date": "2026-08-31",
   "target": "revision-aware verified expert PDF decisions",
   "leakage_policy": {
-    "holdout": "all dates >= 2026-01-01",
+    "historical_holdout": "2026-01-01 through 2026-08-31 inclusive",
+    "future_reference_reproduction": "dates after 2026-08-31; never production accuracy",
     "forbidden_as_predictors": [
       "same-date PDF score",
       "same-date Excel/PDF expert tags",
@@ -13,11 +15,11 @@
   },
   "metrics": {
     "engine_all": {
-      "n": 399,
-      "exact": 0.421053,
-      "within1": 0.659148,
-      "strict_sign": 0.671679,
-      "mae": 1.265664
+      "n": 406,
+      "exact": 0.423645,
+      "within1": 0.660099,
+      "strict_sign": 0.672414,
+      "mae": 1.261084
     },
     "engine_train_2025": {
       "n": 150,
@@ -27,11 +29,25 @@
       "mae": 1.226667
     },
     "engine_holdout_2026": {
-      "n": 249,
-      "exact": 0.461847,
-      "within1": 0.650602,
-      "strict_sign": 0.674699,
-      "mae": 1.289157
+      "n": 243,
+      "exact": 0.465021,
+      "within1": 0.654321,
+      "strict_sign": 0.683128,
+      "mae": 1.279835
+    },
+    "engine_reference_2026_all": {
+      "n": 256,
+      "exact": 0.464844,
+      "within1": 0.652344,
+      "strict_sign": 0.675781,
+      "mae": 1.28125
+    },
+    "engine_future_reference_reproduction": {
+      "n": 13,
+      "exact": 0.461538,
+      "within1": 0.615385,
+      "strict_sign": 0.538462,
+      "mae": 1.307692
     },
     "excel_formula_all": {
       "n": 394,
@@ -54,7 +70,17 @@
       "strict_sign": 0.810256,
       "mae": 0.451282
     },
-    "tanita_selective_router_holdout_2026": {
+    "excel_formula_reference_2026_all": {
+      "n": 195,
+      "exact": 0.682051,
+      "within1": 0.892308,
+      "strict_sign": 0.810256,
+      "mae": 0.451282
+    },
+    "excel_formula_future_reference_reproduction": {
+      "n": 0
+    },
+    "tanita_selective_router_reference_2026_all": {
       "n": 195,
       "exact": 0.523077,
       "within1": 0.748718,
@@ -65,7 +91,7 @@
   "shadow_decisions": {
     "calendar": {
       "candidate_count": 36,
-      "stable_shadow_count": 9,
+      "stable_shadow_count": 8,
       "promotion_allowed": false,
       "score_effect": 0
     },
@@ -90,5 +116,12 @@
     "safe_formula_change": false,
     "reason": "No tested shadow candidate improves all protected chronological holdout metrics and passes the prospective gate.",
     "ui_rule": "Never label a shadow metric as production accuracy. Distinguish daily automatic forecast, live operational background, and PDF reference."
+  },
+  "reference_partition": {
+    "historical_as_of_n": 243,
+    "future_reference_n": 13,
+    "future_reference_min_date": "2026-09-01",
+    "future_reference_max_date": "2026-09-13",
+    "tanita_historical_split_status": "UNVERIFIED: aggregate-only source cannot be partitioned by date"
   }
 }

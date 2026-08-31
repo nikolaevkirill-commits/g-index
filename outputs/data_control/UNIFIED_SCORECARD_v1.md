@@ -1,12 +1,12 @@
 # Єдиний scorecard G-Index
 
-Згенеровано: `2026-08-24T11:31:00+00:00`.
+Згенеровано: `2026-08-31T06:20:27+00:00`.
 
 Це не один відсоток: нижче три різні цілі, які не можна змішувати.
 
 | Що перевіряємо | N | Exact | ±1 / directional | Знак | Статус |
 |---|---:|---:|---:|---:|---|
-| Відтворення frozen PDF | 32 | 43.75% | 56.25% | 62.50% | не є фактичним прогнозом |
+| Відтворення frozen PDF | 39 | 41.03% | 53.85% | 56.41% | не є фактичним прогнозом |
 | Chronological Engine holdout | 62 | 51.61% | 88.71% | 79.03% | історична перевірка проти expert/PDF |
 | Реальний outcome | 0 | — | — | — | ще немає зв'язаних frozen-прогнозів |
 
@@ -24,8 +24,8 @@
 
 ## Tanita vs independent outcomes
 
-- Frozen snapshots: 51.
-- Fully elapsed dates: 23.
+- Frozen snapshots: 58.
+- Fully elapsed dates: 30.
 - Paired independent outcomes: 0.
-- Awaiting independent outcomes: 23.
+- Awaiting independent outcomes: 30.
 - Production score effect: 0 until the pre-registered promotion gate passes.
