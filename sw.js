@@ -1,20 +1,55 @@
 // G-Index service worker. HTML/data are network-first; static shell is cache-first.
 // Bump CACHE_VERSION whenever index.html or a cached shell asset changes.
-const CACHE_VERSION = 'fp439-v1'; // competitive premium cover + unified 3/7/27 forecast
+const CACHE_VERSION = 'fp458-v1'; // consumer truth, cross-route authority parity and evidence closure
 const CACHE_PREFIX = 'gindex-'; // G-Index cache namespace; do not remove the prefix.
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${CACHE_VERSION}`;
 const DATA_CACHE = `${CACHE_PREFIX}data-${CACHE_VERSION}`;
+const NETWORK_FIRST_TIMEOUT_MS = 2500;
 
 const SHELL_ASSETS = [
   './',
+  './index.html',
   './manifest.json',
   './icon192.png',
   './icon512.png',
   './astronomy-engine-2.1.19.min.js',
+  './engine_tag_parser.js',
+  './engine_tag_aliases_v1.json',
+  './FUTURE_CALENDAR_ADVISORY_v1.json',
+  './SILSO_REFRESH_STATUS_v1.json',
   './future_kp.json',
   './SYSTEM_HEALTH_STATUS_v1.json',
   './PANCHANGA_ASTRONOMY_ENGINE_CROSSCHECK_v1.json',
   './panchanga_shadow_feed_v1.json',
+  './EXPERT_DECISION_REGISTRY_v1.json',
+  './EXPERT_PDF_IMPORT_STATUS_v1.json',
+  './engine_scores.json',
+  './expert_overrides_v3.json',
+  './expert_calc_scores.json',
+  './SELECTIVE_POLICY_STRONG_RAW_v2.json',
+  './annual_2026_27.json',
+  './daily_master.json',
+  './bulletin_v2.json',
+  './chrono_panel.json',
+  './chrono_v1.csv',
+  './data_manifest.json',
+  './SOURCE_ROUTING_AUDIT_v1.json',
+  './SPACE_WEATHER_CONTEXT_v1.json',
+  './KP_HOURLY_ALERT_v2.json',
+  './BGS_SPACE_WEATHER_v1.json',
+  './AIA_VERNADSKY_DAILY_v1.json',
+  './AIA_VERNADSKY_SHADOW_AUDIT_v1.json',
+  './AUTO_FORECAST_FEED_v1.json',
+  './AUTO_PROSPECTIVE_STATUS_v1.json',
+  './MODEL_QUALITY_AUDIT_v1.json',
+  './EXCEL_FORMULA_INTEGRITY_STATUS_v1.json',
+  './OUTCOME_LEDGER_STATUS_v1.json',
+  './SHADOW_MODEL_PROMOTION_STATUS_v1.json',
+  './TANITA_2Y_PROMOTION_GATE_v1.json',
+  './TANITA_MANUAL_HOLDOUT_STATUS_v1.json',
+  './TANITA_P0_REVIEW_IMPORT_STATUS_v1.json',
+  './TANITA_P0_REVIEW_STATUS_v1.json',
+  './TANITA_REVIEW_PRIORITY_STATUS_v1.json',
   './OUTCOME_INTAKE_FORM_v1.html'
 ];
 
@@ -90,7 +125,11 @@ self.addEventListener('fetch', (event) => {
     event.respondWith((async () => {
       const cache = await caches.open(DATA_CACHE);
       try {
-        const fresh = await fetch(req);
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), NETWORK_FIRST_TIMEOUT_MS);
+        let fresh;
+        try { fresh = await fetch(req, { signal: controller.signal }); }
+        finally { clearTimeout(timeout); }
         if (!fresh.ok) {
           throw new Error(`HTTP ${fresh.status} for ${req.url}`);
         }

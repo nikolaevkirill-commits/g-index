@@ -80,7 +80,7 @@ def main() -> None:
     require(index, 'href="account-deletion.html"', 'public account deletion link')
     require(index, 'window.GINDEX_PLAY_CHANNEL', 'explicit Play companion channel')
     require(index, 'play-channel #paywallOverlay', 'Play companion purchase fail-closed CSS')
-    require(index, "window.GINDEX_PLAY_CHANNEL ? 'basic'", 'Play companion local Basic tier')
+    require(index, 'if(window.GINDEX_PLAY_CHANNEL) return true;', 'Play companion consumer feature access')
     if 'href="backtest.html"' in index:
         raise SystemExit('FAIL dashboard contains a broken backtest.html link')
     require(index, '↻ Оновити дані', 'explicit data refresh label')
