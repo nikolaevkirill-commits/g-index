@@ -1,6 +1,6 @@
 // G-Index service worker. HTML/data are network-first; static shell is cache-first.
 // Bump CACHE_VERSION whenever index.html or a cached shell asset changes.
-const CACHE_VERSION = 'fp458-v1'; // consumer truth, cross-route authority parity and evidence closure
+const CACHE_VERSION = 'fp463-v1'; // consumer truth, cross-route authority parity and evidence closure
 const CACHE_PREFIX = 'gindex-'; // G-Index cache namespace; do not remove the prefix.
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${CACHE_VERSION}`;
 const DATA_CACHE = `${CACHE_PREFIX}data-${CACHE_VERSION}`;
@@ -40,6 +40,16 @@ const SHELL_ASSETS = [
   './AIA_VERNADSKY_DAILY_v1.json',
   './AIA_VERNADSKY_SHADOW_AUDIT_v1.json',
   './AUTO_FORECAST_FEED_v1.json',
+  './INDEPENDENT_FORECAST_CONTRACT_v1.json',
+  './INDEPENDENT_FORECAST_FEED_v1.json',
+  './TARGET_CONTRACT_FP463.json',
+  './PROSPECTIVE_PREREGISTRATION_FP463.json',
+  './FP463_PROSPECTIVE_STATUS.json',
+  './FP463_CHANNEL_SCORECARD.json',
+  './FP463_PREDICTIONS_EXPERT_PDF.jsonl',
+  './FP463_PREDICTIONS_FROZEN_ENGINE.jsonl',
+  './FP463_PREDICTIONS_TANITA_IMAGE.jsonl',
+  './FP463_REAL_OUTCOMES_APPEND_ONLY.jsonl',
   './AUTO_PROSPECTIVE_STATUS_v1.json',
   './MODEL_QUALITY_AUDIT_v1.json',
   './EXCEL_FORMULA_INTEGRITY_STATUS_v1.json',
