@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 from datetime import datetime, timezone
 from pathlib import Path
+from canonical_outcome_status import read_outcome_status
 
 
 ROOT = Path(__file__).resolve().parent
@@ -32,7 +33,7 @@ def rate(value) -> str:
 def main() -> None:
     holdout = read_json("holdout_v2_report.json")
     auto = read_json("AUTO_PROSPECTIVE_STATUS_v1.json")
-    outcomes = read_json("OUTCOME_LEDGER_STATUS_v1.json")
+    outcomes, outcome_source = read_outcome_status(ROOT)
     tanita = read_json("TANITA_2Y_PROMOTION_GATE_v1.json")
     tanita_outcomes = read_json("outputs/data_control/TANITA_REAL_OUTCOME_PAIR_STATUS_v1.json")
     now = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
@@ -45,6 +46,7 @@ def main() -> None:
     summary = {
         "schema": "gindex_unified_scorecard_v1",
         "generated_at_utc": now,
+        "outcome_status_source": outcome_source,
         "rule": "Do not pool these metrics: they have different targets and evidence.",
         "expert_pdf_agreement": {
             "target": "frozen expert PDF label; agreement/reproduction only",
@@ -105,7 +107,8 @@ def main() -> None:
         "|---|---:|---:|---:|---:|---|",
         f"| Відтворення frozen PDF | {summary['expert_pdf_agreement']['n'] or '—'} | {rate(summary['expert_pdf_agreement']['exact'])} | {rate(summary['expert_pdf_agreement']['within_1'])} | {rate(summary['expert_pdf_agreement']['strict_sign'])} | не є фактичним прогнозом |",
         f"| Chronological Engine holdout | {summary['historical_engine_holdout']['n'] or '—'} | {rate(summary['historical_engine_holdout']['exact'])} | {rate(summary['historical_engine_holdout']['within_1'])} | {rate(summary['historical_engine_holdout']['strict_sign'])} | історична перевірка проти expert/PDF |",
-        f"| Реальний outcome | {summary['real_world_outcomes']['paired_with_frozen_prediction'] or 0} | — | — | — | ще немає зв'язаних frozen-прогнозів |",
+        f"| Реальний outcome | {summary['real_world_outcomes']['paired_with_frozen_prediction']} | — | — | — | "
+        + ("є пари з попередньо зафіксованим прогнозом; готовність окремо визначає gate" if r['paired_with_frozen_prediction'] else "ще немає зв'язаних frozen-прогнозів") + " |",
         "",
         "## Висновок",
         "",

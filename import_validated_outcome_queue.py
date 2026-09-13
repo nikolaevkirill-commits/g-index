@@ -1,7 +1,7 @@
 ﻿#!/usr/bin/env python3
 """Fail-closed import of reviewed independent outcomes into Chrono telemetry."""
 from __future__ import annotations
-import csv, hashlib, json, math, os
+import csv, hashlib, io, json, math, os
 from datetime import date, datetime, time, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -70,11 +70,25 @@ def validate(row, today):
     return errors
 
 def read_telemetry(path):
-    lines = path.read_text(encoding="utf-8-sig").splitlines()
-    comments = [line for line in lines if line.startswith("#")]
-    data = [line for line in lines if line and not line.startswith("#")]
-    reader = csv.DictReader(data)
-    return comments, list(reader), list(reader.fieldnames or [])
+    lines = path.read_text(encoding="utf-8-sig").splitlines(keepends=True)
+    comments = []
+    while lines and (lines[0].startswith('#') or not lines[0].strip()):
+        comments.append(lines.pop(0).rstrip('\r\n'))
+    # Only the prefix is a comment block. Newlines and '#' within quoted
+    # fields are user data, not lines to discard or join without separators.
+    reader = csv.DictReader(io.StringIO(''.join(lines)), strict=True)
+    fields = list(reader.fieldnames or [])
+    if 'date' not in fields or len(fields) != len(set(fields)):
+        raise ValueError('invalid_or_duplicate_telemetry_header')
+    rows = list(reader); seen = set()
+    for row in rows:
+        if None in row or any(value is None for value in row.values()):
+            raise ValueError('ragged_telemetry_row')
+        day = row['date']
+        if not day or day.strip() != day or day in seen:
+            raise ValueError('empty_or_duplicate_telemetry_date')
+        seen.add(day)
+    return comments, rows, fields
 
 def write_telemetry(path, comments, rows, fields):
     tmp = path.with_suffix(path.suffix + ".tmp")
@@ -90,6 +104,24 @@ def intake_hash(row):
     canonical = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
+def identical_accepted_outcome(row, target):
+    """Retry only the identical intake; never overwrite an accepted result."""
+    if (target.get("actual_source") != "validated_outcome_intake_v1"
+        or target.get("provenance_verified") != "1"
+        or target.get("outcome_intake_sha256") != intake_hash(row)):
+        return False
+    try:
+        stamp = datetime.fromisoformat(str(target.get("outcome_imported_at_utc", "")).replace("Z", "+00:00"))
+        if stamp.tzinfo is None: return False
+    except ValueError:
+        return False
+    expected = {key: str(row.get(key, "")).strip() for key in EDITABLE}
+    expected["actual_score"] = str(int(float(expected["actual_score"])))
+    expected["actual_class"] = expected["actual_class"].upper()
+    expected["domain"] = expected["domain"].lower()
+    expected["confidence_actual"] = expected["confidence_actual"].upper()
+    return all(str(target.get(key, "")) == value for key, value in expected.items())
+
 def main():
     now = datetime.now(timezone.utc); CONTROL.mkdir(parents=True, exist_ok=True)
     submitted = []
@@ -100,11 +132,14 @@ def main():
     for field in PROVENANCE_FIELDS:
         if field not in fields: fields.append(field)
     by_date = {str(row.get("date", "")).strip(): row for row in telemetry}
-    imported, rejected, changed = [], [], False
+    imported, rejected, already_imported, changed = [], [], [], False
     for row in submitted:
         day = str(row.get("date", "")).strip(); errors = validate(row, now.astimezone(KYIV).date()); target = by_date.get(day)
         if target is None: errors.append("no_frozen_telemetry_row_for_date")
-        if target is not None and str(target.get("actual_score", "")).strip(): errors.append("outcome_already_present")
+        if target is not None and str(target.get("actual_score", "")).strip():
+            if not errors and identical_accepted_outcome(row, target):
+                already_imported.append(day); continue
+            errors.append("outcome_already_present")
         if errors:
             rejected.append({"date": day, "errors": sorted(set(errors))}); continue
         actual = int(float(str(row["actual_score"]).strip())); label = str(row["actual_class"]).strip().upper()
@@ -114,6 +149,8 @@ def main():
         imported.append(day); changed = True
     if changed: write_telemetry(TELEMETRY, comments, telemetry, fields)
     status = {"schema":"outcome_intake_import_status_v1", "generated_at":now.replace(microsecond=0).isoformat(), "submitted_rows":len(submitted), "imported_rows":len(imported), "imported_dates":imported, "rejected_rows":len(rejected), "issues":rejected, "automatic_import":True, "calendar_timezone":"Europe/Kyiv", "temporal_policy":"prediction must precede target-day 00:00 Europe/Kyiv; outcome date must be completed in Europe/Kyiv", "score_effect":"real_outcome_metrics_only", "production_forecast_change":False, "rule":"Only reviewed independent outcomes update an already frozen row; expert/PDF/Excel labels are forbidden."}
+    status["already_imported_rows"] = len(already_imported)
+    status["already_imported_dates"] = already_imported
     STATUS.write_text(json.dumps(status, ensure_ascii=False, indent=2)+"\n", encoding="utf-8")
     print(json.dumps(status, ensure_ascii=False)); return 0 if not rejected else 1
 

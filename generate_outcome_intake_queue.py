@@ -8,6 +8,7 @@ import json
 import math
 import os
 from zoneinfo import ZoneInfo
+from verify_recovery_sources import read_csv, matches_accepted, submitted
 
 ROOT = Path(__file__).resolve().parent
 OUT = ROOT / "outputs"
@@ -98,11 +99,22 @@ if QUEUE.exists():
             existing_by_date[day] = prior
 
 editable_fields = ("forecast_seen", "actual_score", "actual_class", "domain", "event_summary", "confidence_actual", "notes")
+generated_dates = {row['date'] for row in rows}
+excluded_submitted = {day: prior for day, prior in existing_by_date.items() if day not in generated_dates and submitted(prior)}
+if excluded_submitted:
+    # A generated list is not authority to discard independent manual input.
+    # Check actual accepted fields and provenance, not the derived pair flag.
+    _, accepted_rows, _ = read_csv(ROOT / 'chrono_v20_telemetry.csv', required=True)
+    unmatched = [day for day, prior in excluded_submitted.items() if not matches_accepted(prior, accepted_rows.get(day), now.astimezone(KYIV).date())]
+    if unmatched:
+        raise SystemExit('manual_input_not_represented; queue unchanged: ' + ', '.join(sorted(unmatched)))
 for row in rows:
     prior = existing_by_date.get(row["date"], {})
+    if submitted(prior) and any(str(prior.get(key, '')).strip() != str(row.get(key, '')).strip() for key in ('prediction_score', 'prediction_created_at', 'prediction_model')):
+        raise SystemExit('manual_intake_prediction_conflict; queue unchanged: ' + row['date'])
     for field in editable_fields:
-        value = str(prior.get(field, "")).strip()
-        if value:
+        value = str(prior.get(field, ""))
+        if value.strip():
             row[field] = value
 
 CONTROL.mkdir(parents=True, exist_ok=True)

@@ -18,8 +18,8 @@ def release_bytes(path: Path) -> bytes:
                 ["git", "-C", str(ROOT), "show", f":{rel}"],
                 stderr=subprocess.DEVNULL,
             )
-        except (OSError, subprocess.CalledProcessError):
-            pass
+        except (OSError, subprocess.CalledProcessError) as exc:
+            raise SystemExit(f'FAIL staged release bytes unavailable: {rel}') from exc
     return path.read_bytes()
 
 
@@ -32,8 +32,28 @@ def require(text: str, needle: str, label: str) -> None:
         raise SystemExit(f"FAIL {label}: missing {needle!r}")
 
 
+def check_free_companion_contract(index: str) -> None:
+    """Pinned free-research contract, complemented by real browser tests.
+
+    Basic was an obsolete entitlement, not a prerequisite for a free companion.
+    Do not accept a comment containing the old marker or storage-backed tiers.
+    """
+    contracts = re.findall(r'const\s+PAYWALL\s*=\s*\{(.*?)\n\};', index, re.S)
+    expected = """_tier: 'free',
+      tier() { return this._tier; },
+      isPaid() { return this._tier !== 'free'; },
+      require(level, feature) { PaywallModal.show(feature, level); }"""
+    compact = lambda value: re.sub(r'\s+', '', value)
+    if len(contracts) != 1 or compact(contracts[0]) != compact(expected):
+        raise SystemExit('FAIL free companion: unexpected entitlement implementation')
+    require(index, 'ДОСЛІДНИЦЬКА ГІПОТЕЗА · НЕ ПРОДАЄТЬСЯ', 'research-only disclosure')
+    require(index, 'function _gauthRequireNetworkAllowed()', 'account network guard')
+    require(index, "if (token && !window.GINDEX_PLAY_CHANNEL)", 'Play account refresh guard')
+    require(index, "return !window.GINDEX_PLAY_CHANNEL && !!window._vapid_public_key;", 'Play push guard')
+
+
 def main() -> None:
-    index = (ROOT / "index.html").read_text(encoding="utf-8")
+    index = release_bytes(ROOT / 'index.html').decode('utf-8-sig')
     require(index, './engine_tag_parser.js', 'root parser script')
     require(index, "loadAliasSpec('./engine_tag_aliases_v1.json')", 'root alias loader')
     require(index, 'const TOKEN_THEMES', 'root token themes')
@@ -80,7 +100,7 @@ def main() -> None:
     require(index, 'href="account-deletion.html"', 'public account deletion link')
     require(index, 'window.GINDEX_PLAY_CHANNEL', 'explicit Play companion channel')
     require(index, 'play-channel #paywallOverlay', 'Play companion purchase fail-closed CSS')
-    require(index, 'if(window.GINDEX_PLAY_CHANNEL) return true;', 'Play companion consumer feature access')
+    check_free_companion_contract(index)
     if 'href="backtest.html"' in index:
         raise SystemExit('FAIL dashboard contains a broken backtest.html link')
     require(index, '↻ Оновити дані', 'explicit data refresh label')
@@ -171,13 +191,13 @@ def main() -> None:
     if 'https://nikolaevkirill-commits.github.io/g-index/deploy/' in index:
         raise SystemExit('FAIL root metadata still points at deprecated /deploy/')
 
-    nested = (ROOT / 'deploy' / 'index.html').read_text(encoding='utf-8')
-    nested_sw = (ROOT / 'deploy' / 'sw.js').read_text(encoding='utf-8')
+    nested = release_bytes(ROOT / 'deploy' / 'index.html').decode('utf-8-sig')
+    nested_sw = release_bytes(ROOT / 'deploy' / 'sw.js').decode('utf-8-sig')
     require(nested, "new URL('../', window.location.href)", 'nested redirect')
     require(nested_sw, 'unregister', 'nested service-worker unregister')
     require(nested_sw, "new URL('../', event.request.url)", 'nested service-worker redirect')
 
-    sw = (ROOT / 'sw.js').read_text(encoding='utf-8')
+    sw = release_bytes(ROOT / 'sw.js').decode('utf-8-sig')
     require(sw, "event.data.type === 'SKIP_WAITING'", 'service-worker manual update handler')
     require(sw, 'self.skipWaiting()', 'service-worker activation call')
     title_fp = re.search(r'v88\.9\.\d+-fp(\d+)-', index)
@@ -191,14 +211,14 @@ def main() -> None:
 
     for public_page in ('privacy.html', 'terms.html', 'account-deletion.html'):
         page = ROOT / public_page
-        if not page.is_file() or page.stat().st_size < 500:
+        if len(release_bytes(page)) < 500:
             raise SystemExit(f'FAIL public product policy page: {public_page}')
-    deletion = (ROOT / 'account-deletion.html').read_text(encoding='utf-8')
+    deletion = release_bytes(ROOT / 'account-deletion.html').decode('utf-8-sig')
     require(deletion, 'mailto:nikolaev.kirill@gmail.com', 'account deletion request channel')
     require(deletion, 'Видалення акаунта', 'account deletion page heading')
     print('PASS public privacy, terms and account-deletion pages')
 
-    web_manifest = json.loads((ROOT / 'manifest.json').read_text(encoding='utf-8'))
+    web_manifest = json.loads(release_bytes(ROOT / 'manifest.json').decode('utf-8-sig'))
     title_version = re.search(r'v(88\.9\.\d+-fp\d+)-', index)
     if not title_version or web_manifest.get('version') != title_version.group(1):
         raise SystemExit(
@@ -217,7 +237,7 @@ def main() -> None:
     print('PASS Play companion and web manifest contracts')
 
     manifest_path = ROOT / 'data_manifest.json'
-    manifest = json.loads(release_bytes(manifest_path).decode('utf-8'))
+    manifest = json.loads(release_bytes(manifest_path).decode('utf-8-sig'))
     mapping = {
         'expert_overrides': 'expert_overrides_v3.json',
         'expert_calc': 'expert_calc_scores.json',
@@ -244,10 +264,28 @@ def main() -> None:
     print('PASS independent outcome form JavaScript newline contract')
 
     health_path = ROOT / 'SYSTEM_HEALTH_STATUS_v1.json'
-    health = json.loads(release_bytes(health_path).decode('utf-8'))
+    health = json.loads(release_bytes(health_path).decode('utf-8-sig'))
     hard_failures = health.get('hard_failures') or []
     if hard_failures:
-        raise SystemExit(f'FAIL system health has hard failures: {hard_failures}')
+        # Historical invocation failures are retained, not rewritten as PASS.
+        # A new attempt needs a fresh complete preparation proof bound to EVERY
+        # staged file; a current/unknown failure remains unconditionally fatal.
+        proof_path = ROOT / 'RELEASE_PREPARATION_v1.json'
+        try:
+            module_path = ROOT / 'release_preparation_guard.py'
+            if module_path.read_bytes() != release_bytes(module_path):
+                raise ValueError('unstaged preparation validator')
+            from release_preparation_guard import validate_preparation
+            proof = json.loads(release_bytes(proof_path).decode('utf-8'))
+            if (ROOT / '.git').exists():
+                paths = subprocess.check_output(['git','-C',str(ROOT),'ls-files','-z']).decode('utf-8').strip('\0').split('\0')
+            else:
+                raise ValueError('exact Git inventory required for recovery publication')
+            readiness = validate_preparation(proof, health, paths,
+                lambda name: release_bytes(ROOT / name))
+        except (OSError,ValueError,KeyError,ImportError,subprocess.CalledProcessError) as exc:
+            raise SystemExit(f'FAIL system health has hard failures: {hard_failures}; recovery proof rejected: {exc}') from exc
+        print('PREPARED only; historical health failures retained:', readiness)
     collector = (health.get('checks') or {}).get('outcome_collector') or {}
     if (
         collector.get('mode') != 'offline_independent_form'
@@ -280,7 +318,7 @@ def main() -> None:
     print('PASS outcome validator and importer enforce the same fail-closed row contract')
 
     decision_audit_path = ROOT / 'DECISION_CONSISTENCY_AUDIT_v1.json'
-    decision_audit = json.loads(release_bytes(decision_audit_path).decode('utf-8'))
+    decision_audit = json.loads(release_bytes(decision_audit_path).decode('utf-8-sig'))
     policy = decision_audit.get('policy') or {}
     if decision_audit.get('schema') != 'decision_consistency_audit_v2':
         raise SystemExit('FAIL decision audit schema is not v2 operational/reference contract')
@@ -299,7 +337,7 @@ def main() -> None:
     print('PASS decision audit separates operational authority from frozen reference')
 
     index_audit_path = ROOT / 'INDEX_INTEGRITY_AUDIT_v1.json'
-    index_audit = json.loads(release_bytes(index_audit_path).decode('utf-8'))
+    index_audit = json.loads(release_bytes(index_audit_path).decode('utf-8-sig'))
     formula_contract = index_audit.get('formula_contract') or {}
     if index_audit.get('schema') != 'gindex_integrity_audit_v2':
         raise SystemExit('FAIL index integrity schema is not v2 operational/reference contract')
@@ -313,7 +351,7 @@ def main() -> None:
     print('PASS index integrity contract separates operational authority from frozen reference')
 
     operational_surface_path = ROOT / 'OPERATIONAL_SURFACE_PARITY_v1.json'
-    operational_surface = json.loads(release_bytes(operational_surface_path).decode('utf-8'))
+    operational_surface = json.loads(release_bytes(operational_surface_path).decode('utf-8-sig'))
     if operational_surface.get('schema') != 'operational_surface_parity_v1':
         raise SystemExit('FAIL operational surface parity schema')
     if operational_surface.get('passed') is not True:

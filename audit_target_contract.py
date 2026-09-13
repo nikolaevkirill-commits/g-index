@@ -6,6 +6,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 import json
 import sys
+from canonical_pipeline_source import read_job_source
+from canonical_outcome_status import read_outcome_status
 
 ROOT = Path(__file__).resolve().parent
 OUT = ROOT / "outputs" / "data_control"
@@ -19,13 +21,13 @@ def load(path: Path, default=None):
         return default
 
 
-ledger = load(ROOT / "OUTCOME_LEDGER_STATUS_v1.json", {}) or {}
+ledger, outcome_source = read_outcome_status(ROOT)
 auto = load(ROOT / "outputs" / "AUTO_PROSPECTIVE_STATUS_v1.json", {}) or load(ROOT / "AUTO_PROSPECTIVE_STATUS_v1.json", {}) or {}
 master = load(ROOT / "daily_master.json", {}) or {}
 routing = load(ROOT / "SOURCE_ROUTING_AUDIT_v1.json", {}) or {}
 tanita = load(ROOT / "TANITA_REVIEW_PRIORITY_STATUS_v1.json", {}) or {}
 html = (ROOT / "index.html").read_text(encoding="utf-8-sig")
-daily_chain = (ROOT / "daily_chain.bat").read_text(encoding="utf-8-sig")
+daily_chain = read_job_source(ROOT, "daily_chain")
 importer = (ROOT / "import_validated_outcome_queue.py").read_text(encoding="utf-8-sig")
 legacy_backfill_path = ROOT / "auto_backfill_outcomes.py"
 legacy_backfill = (
@@ -98,6 +100,7 @@ for warning in routing.get("warnings", []) or []:
 
 report = {
     "schema": "target_semantics_audit_v2",
+    "outcome_status_source": outcome_source,
     "generated_at_utc": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
     "overall_ok": not hard_failures,
     "target_contract": {
