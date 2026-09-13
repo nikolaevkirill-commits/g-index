@@ -294,7 +294,15 @@ requireText('PROSPECTIVE SHADOW</code> · <code>PRODUCTION HOLD</code> · <code>
 forbidText('data-score-effect="1"', 'v19.2 shadow cannot acquire production score effect');
 requireText('window.GINDEX_PLAY_CHANNEL', 'Play companion channel is explicit');
 requireText('play-channel #paywallOverlay', 'Play companion hides digital purchases');
-requireText("window.GINDEX_PLAY_CHANNEL ? 'basic'", 'Play companion uses the local Basic feature set');
+// Match the same free companion contract enforced by the production release guard.
+const freeContracts = [...html.matchAll(/const\s+PAYWALL\s*=\s*\{(.*?)\n\};/gs)];
+const freeExpected = "_tier: 'free', tier() { return this._tier; }, isPaid() { return this._tier !== 'free'; }, require(level, feature) { PaywallModal.show(feature, level); }";
+if (freeContracts.length !== 1 || freeContracts[0][1].replace(/\s+/g, '') !== freeExpected.replace(/\s+/g, '')) {
+  throw new Error('Free companion entitlement implementation differs from the release contract');
+}
+requireText('ДОСЛІДНИЦЬКА ГІПОТЕЗА · НЕ ПРОДАЄТЬСЯ', 'free companion research disclosure');
+requireText("if (token && !window.GINDEX_PLAY_CHANNEL)", 'Play companion account refresh guard');
+requireText("return !window.GINDEX_PLAY_CHANNEL && !!window._vapid_public_key;", 'Play companion push guard');
 forbidText('href="backtest.html"', 'dashboard cannot link to a missing backtest page');
 requireText('Сигнали розходяться: PDF/Engine reference не є оперативним дозволом.', 'divergence notice is sign-neutral');
 forbidText('Сигнали розходяться: позитивний PDF не є дозволом.', 'negative PDF cannot be mislabeled as positive');
@@ -317,7 +325,9 @@ requireText('function initCachedGeolocation()', 'startup may reuse a previously 
 requireText('try{ initCachedGeolocation(); }catch(e){} cp(2);', 'boot uses cached coordinates only');
 forbidText('try{ initGeolocation(); }catch(e){} cp(2);', 'boot cannot open a geolocation permission prompt');
 requireText("btn.setAttribute('aria-label', isOn ? 'Повний вигляд' : 'Простий вигляд')", 'simple-mode accessible name follows visible text');
-requireText('aria-label="Профіль"', 'mobile profile navigation name matches visible text');
+requireText('id="mnavMore" onclick="fp434Go(\'more\',true)" aria-label="Ще"', 'mobile more navigation name matches its current route');
+const moreButton = html.match(/<button[^>]*id="mnavMore"[^>]*>([\s\S]*?)<\/button>/);
+if (!moreButton || moreButton[1].replace(/<[^>]*>/g, '').trim() !== 'Ще') throw new Error('Mobile more navigation must visibly say Ще');
 requireText("_btn.setAttribute('aria-label','Аудит: показати розкладку висновку')", 'audit control restores a visible-name-compatible label when closed');
 requireText('color:#a9bad8">Health artifact', 'health evidence explanation keeps readable contrast');
 forbidText('aria-label="v19.2 SHADOW:', 'v19 shadow summary uses its full visible text as the accessible name');

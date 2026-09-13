@@ -1,13 +1,13 @@
 # Research harness audit
 
-- Generated: 2026-09-04T11:33:11.937715+00:00
+- Generated: 2026-09-13T17:08:30.448045+00:00
 - Technical checks: PASS
 - Production formula changed: **NO**
 - Score effect: **0**
 - Legacy locked coverage: 2025-06-16..2026-07-12 (n=322)
-- Revision-aware coverage: 2025-06-16..2026-09-20 (n=413)
-- Revision-aware Engine vs expert: sign=0.6731234866828087, exact=0.4213075060532688, within +/-1=0.6585956416464891
-- Expert decisions available through: 2026-09-20
+- Revision-aware coverage: 2025-06-16..2026-09-27 (n=420)
+- Revision-aware Engine vs expert: sign=0.6738095238095239, exact=0.42142857142857143, within +/-1=0.6571428571428571
+- Expert decisions available through: 2026-09-27
 - Multiple testing: no pair survives
 - Split robustness: unstable
 - Promotion: **BLOCKED** until independent prospective outcomes and stable chronological validation.

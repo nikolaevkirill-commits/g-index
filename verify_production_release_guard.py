@@ -4,7 +4,10 @@ import hashlib
 import json
 import re
 import subprocess
+import struct
+import zlib
 from pathlib import Path
+from urllib.parse import unquote, urlsplit
 
 ROOT = Path(__file__).resolve().parent
 
@@ -18,8 +21,8 @@ def release_bytes(path: Path) -> bytes:
                 ["git", "-C", str(ROOT), "show", f":{rel}"],
                 stderr=subprocess.DEVNULL,
             )
-        except (OSError, subprocess.CalledProcessError):
-            pass
+        except (OSError, subprocess.CalledProcessError) as exc:
+            raise SystemExit(f'FAIL staged release bytes unavailable: {rel}') from exc
     return path.read_bytes()
 
 
@@ -32,8 +35,100 @@ def require(text: str, needle: str, label: str) -> None:
         raise SystemExit(f"FAIL {label}: missing {needle!r}")
 
 
+def check_free_companion_contract(index: str) -> None:
+    """Pinned free-research contract, complemented by real browser tests.
+
+    Basic was an obsolete entitlement, not a prerequisite for a free companion.
+    Do not accept a comment containing the old marker or storage-backed tiers.
+    """
+    contracts = re.findall(r'const\s+PAYWALL\s*=\s*\{(.*?)\n\};', index, re.S)
+    expected = """_tier: 'free',
+      tier() { return this._tier; },
+      isPaid() { return this._tier !== 'free'; },
+      require(level, feature) { PaywallModal.show(feature, level); }"""
+    compact = lambda value: re.sub(r'\s+', '', value)
+    if len(contracts) != 1 or compact(contracts[0]) != compact(expected):
+        raise SystemExit('FAIL free companion: unexpected entitlement implementation')
+    require(index, 'ДОСЛІДНИЦЬКА ГІПОТЕЗА · НЕ ПРОДАЄТЬСЯ', 'research-only disclosure')
+    require(index, 'function _gauthRequireNetworkAllowed()', 'account network guard')
+    require(index, "if (token && !window.GINDEX_PLAY_CHANNEL)", 'Play account refresh guard')
+    require(index, "return !window.GINDEX_PLAY_CHANNEL && !!window._vapid_public_key;", 'Play push guard')
+
+
+def check_manifest_icons(manifest: dict, read_bytes) -> None:
+    """Check the actual published PNG bytes, including shortcut icons.
+
+    Not a visual maskable-safe-area check: maskable artwork needs separate QA.
+    The release's icon contract deliberately requires local, exact-size PNGs.
+    """
+    icons = manifest.get('icons') or []
+    any_sizes = set()
+    entries = list(icons)
+    for shortcut in manifest.get('shortcuts') or []:
+        entries.extend(shortcut.get('icons') or [])
+    for entry in entries:
+        src = str(entry.get('src') or '')
+        url = urlsplit(src)
+        decoded = unquote(url.path)
+        if (url.scheme or url.netloc or url.query or url.fragment
+                or not decoded.startswith('/g-index/')
+                or '\\' in decoded or any(p in ('.', '..', '') for p in decoded[len('/g-index/'):].split('/'))):
+            raise SystemExit(f'FAIL manifest icon path: {src}')
+        rel = decoded[len('/g-index/'):]
+        if entry.get('type') != 'image/png' or not rel.endswith('.png'):
+            raise SystemExit(f'FAIL manifest icon MIME: {src}')
+        try:
+            data = read_bytes(rel)
+        except (OSError, KeyError) as exc:
+            raise SystemExit(f'FAIL missing manifest icon: {src}') from exc
+        if len(data) < 45 or data[:8] != b'\x89PNG\r\n\x1a\n':
+            raise SystemExit(f'FAIL manifest icon is not PNG: {src}')
+        offset, chunks, compressed = 8, [], bytearray()
+        while offset < len(data):
+            if offset + 12 > len(data):
+                raise SystemExit(f'FAIL truncated PNG: {src}')
+            size = int.from_bytes(data[offset:offset + 4], 'big')
+            kind = data[offset + 4:offset + 8]
+            end = offset + 12 + size
+            if end > len(data):
+                raise SystemExit(f'FAIL truncated PNG chunk: {src}')
+            body = data[offset + 8:end - 4]
+            crc = int.from_bytes(data[end - 4:end], 'big')
+            if zlib.crc32(kind + body) != crc:
+                raise SystemExit(f'FAIL PNG CRC: {src}')
+            chunks.append(kind)
+            if kind == b'IHDR':
+                if len(chunks) != 1 or size != 13:
+                    raise SystemExit(f'FAIL PNG header: {src}')
+                width, height, depth, colour, compression, filtering, interlace = struct.unpack('>IIBBBBB', body)
+            if kind == b'IDAT':
+                compressed.extend(body)
+            if kind == b'IEND' and (size or end != len(data)):
+                raise SystemExit(f'FAIL PNG end: {src}')
+            offset = end
+        if not chunks or chunks[0] != b'IHDR' or chunks[-1] != b'IEND' or not compressed:
+            raise SystemExit(f'FAIL incomplete PNG: {src}')
+        if width not in (192, 512) or height != width or entry.get('sizes') != f'{width}x{height}':
+            raise SystemExit(f'FAIL manifest icon dimensions: {src}')
+        if depth != 8 or colour not in (2, 6) or compression or filtering or interlace:
+            raise SystemExit(f'FAIL unsupported release PNG encoding: {src}')
+        row = width * (3 if colour == 2 else 4) + 1
+        try:
+            decoder = zlib.decompressobj()
+            pixels = decoder.decompress(compressed, row * height + 1)
+        except zlib.error as exc:
+            raise SystemExit(f'FAIL PNG data: {src}') from exc
+        if (not decoder.eof or decoder.unused_data or decoder.unconsumed_tail
+                or len(pixels) != row * height or any(pixels[i] > 4 for i in range(0, len(pixels), row))):
+            raise SystemExit(f'FAIL PNG scanlines: {src}')
+        if entry in icons and 'any' in str(entry.get('purpose', 'any')).split():
+            any_sizes.add(width)
+    if not {192, 512}.issubset(any_sizes):
+        raise SystemExit('FAIL manifest requires any-purpose PNG icons at 192 and 512')
+
+
 def main() -> None:
-    index = (ROOT / "index.html").read_text(encoding="utf-8")
+    index = release_bytes(ROOT / 'index.html').decode('utf-8-sig')
     require(index, './engine_tag_parser.js', 'root parser script')
     require(index, "loadAliasSpec('./engine_tag_aliases_v1.json')", 'root alias loader')
     require(index, 'const TOKEN_THEMES', 'root token themes')
@@ -80,7 +175,7 @@ def main() -> None:
     require(index, 'href="account-deletion.html"', 'public account deletion link')
     require(index, 'window.GINDEX_PLAY_CHANNEL', 'explicit Play companion channel')
     require(index, 'play-channel #paywallOverlay', 'Play companion purchase fail-closed CSS')
-    require(index, 'if(window.GINDEX_PLAY_CHANNEL) return true;', 'Play companion consumer feature access')
+    check_free_companion_contract(index)
     if 'href="backtest.html"' in index:
         raise SystemExit('FAIL dashboard contains a broken backtest.html link')
     require(index, '↻ Оновити дані', 'explicit data refresh label')
@@ -171,13 +266,13 @@ def main() -> None:
     if 'https://nikolaevkirill-commits.github.io/g-index/deploy/' in index:
         raise SystemExit('FAIL root metadata still points at deprecated /deploy/')
 
-    nested = (ROOT / 'deploy' / 'index.html').read_text(encoding='utf-8')
-    nested_sw = (ROOT / 'deploy' / 'sw.js').read_text(encoding='utf-8')
+    nested = release_bytes(ROOT / 'deploy' / 'index.html').decode('utf-8-sig')
+    nested_sw = release_bytes(ROOT / 'deploy' / 'sw.js').decode('utf-8-sig')
     require(nested, "new URL('../', window.location.href)", 'nested redirect')
     require(nested_sw, 'unregister', 'nested service-worker unregister')
     require(nested_sw, "new URL('../', event.request.url)", 'nested service-worker redirect')
 
-    sw = (ROOT / 'sw.js').read_text(encoding='utf-8')
+    sw = release_bytes(ROOT / 'sw.js').decode('utf-8-sig')
     require(sw, "event.data.type === 'SKIP_WAITING'", 'service-worker manual update handler')
     require(sw, 'self.skipWaiting()', 'service-worker activation call')
     title_fp = re.search(r'v88\.9\.\d+-fp(\d+)-', index)
@@ -191,14 +286,18 @@ def main() -> None:
 
     for public_page in ('privacy.html', 'terms.html', 'account-deletion.html'):
         page = ROOT / public_page
-        if not page.is_file() or page.stat().st_size < 500:
+        if len(release_bytes(page)) < 500:
             raise SystemExit(f'FAIL public product policy page: {public_page}')
-    deletion = (ROOT / 'account-deletion.html').read_text(encoding='utf-8')
+    deletion = release_bytes(ROOT / 'account-deletion.html').decode('utf-8-sig')
     require(deletion, 'mailto:nikolaev.kirill@gmail.com', 'account deletion request channel')
     require(deletion, 'Видалення акаунта', 'account deletion page heading')
     print('PASS public privacy, terms and account-deletion pages')
 
-    web_manifest = json.loads((ROOT / 'manifest.json').read_text(encoding='utf-8'))
+    web_manifest = json.loads(release_bytes(ROOT / 'manifest.json').decode('utf-8-sig'))
+    check_manifest_icons(web_manifest, lambda rel: release_bytes(ROOT / rel))
+    legacy_manifest = json.loads(release_bytes(ROOT / 'deploy/manifest.json').decode('utf-8-sig'))
+    check_manifest_icons(legacy_manifest, lambda rel: release_bytes(ROOT / rel))
+    print('PASS root and legacy manifest PNG bytes, sizes and shortcut icons')
     title_version = re.search(r'v(88\.9\.\d+-fp\d+)-', index)
     if not title_version or web_manifest.get('version') != title_version.group(1):
         raise SystemExit(
@@ -217,7 +316,7 @@ def main() -> None:
     print('PASS Play companion and web manifest contracts')
 
     manifest_path = ROOT / 'data_manifest.json'
-    manifest = json.loads(release_bytes(manifest_path).decode('utf-8'))
+    manifest = json.loads(release_bytes(manifest_path).decode('utf-8-sig'))
     mapping = {
         'expert_overrides': 'expert_overrides_v3.json',
         'expert_calc': 'expert_calc_scores.json',
@@ -244,10 +343,28 @@ def main() -> None:
     print('PASS independent outcome form JavaScript newline contract')
 
     health_path = ROOT / 'SYSTEM_HEALTH_STATUS_v1.json'
-    health = json.loads(release_bytes(health_path).decode('utf-8'))
+    health = json.loads(release_bytes(health_path).decode('utf-8-sig'))
     hard_failures = health.get('hard_failures') or []
     if hard_failures:
-        raise SystemExit(f'FAIL system health has hard failures: {hard_failures}')
+        # Historical invocation failures are retained, not rewritten as PASS.
+        # A new attempt needs a fresh complete preparation proof bound to EVERY
+        # staged file; a current/unknown failure remains unconditionally fatal.
+        proof_path = ROOT / 'RELEASE_PREPARATION_v1.json'
+        try:
+            module_path = ROOT / 'release_preparation_guard.py'
+            if module_path.read_bytes() != release_bytes(module_path):
+                raise ValueError('unstaged preparation validator')
+            from release_preparation_guard import validate_preparation
+            proof = json.loads(release_bytes(proof_path).decode('utf-8'))
+            if (ROOT / '.git').exists():
+                paths = subprocess.check_output(['git','-C',str(ROOT),'ls-files','-z']).decode('utf-8').strip('\0').split('\0')
+            else:
+                raise ValueError('exact Git inventory required for recovery publication')
+            readiness = validate_preparation(proof, health, paths,
+                lambda name: release_bytes(ROOT / name))
+        except (OSError,ValueError,KeyError,ImportError,subprocess.CalledProcessError) as exc:
+            raise SystemExit(f'FAIL system health has hard failures: {hard_failures}; recovery proof rejected: {exc}') from exc
+        print('PREPARED only; historical health failures retained:', readiness)
     collector = (health.get('checks') or {}).get('outcome_collector') or {}
     if (
         collector.get('mode') != 'offline_independent_form'
@@ -280,7 +397,7 @@ def main() -> None:
     print('PASS outcome validator and importer enforce the same fail-closed row contract')
 
     decision_audit_path = ROOT / 'DECISION_CONSISTENCY_AUDIT_v1.json'
-    decision_audit = json.loads(release_bytes(decision_audit_path).decode('utf-8'))
+    decision_audit = json.loads(release_bytes(decision_audit_path).decode('utf-8-sig'))
     policy = decision_audit.get('policy') or {}
     if decision_audit.get('schema') != 'decision_consistency_audit_v2':
         raise SystemExit('FAIL decision audit schema is not v2 operational/reference contract')
@@ -299,7 +416,7 @@ def main() -> None:
     print('PASS decision audit separates operational authority from frozen reference')
 
     index_audit_path = ROOT / 'INDEX_INTEGRITY_AUDIT_v1.json'
-    index_audit = json.loads(release_bytes(index_audit_path).decode('utf-8'))
+    index_audit = json.loads(release_bytes(index_audit_path).decode('utf-8-sig'))
     formula_contract = index_audit.get('formula_contract') or {}
     if index_audit.get('schema') != 'gindex_integrity_audit_v2':
         raise SystemExit('FAIL index integrity schema is not v2 operational/reference contract')
@@ -313,7 +430,7 @@ def main() -> None:
     print('PASS index integrity contract separates operational authority from frozen reference')
 
     operational_surface_path = ROOT / 'OPERATIONAL_SURFACE_PARITY_v1.json'
-    operational_surface = json.loads(release_bytes(operational_surface_path).decode('utf-8'))
+    operational_surface = json.loads(release_bytes(operational_surface_path).decode('utf-8-sig'))
     if operational_surface.get('schema') != 'operational_surface_parity_v1':
         raise SystemExit('FAIL operational surface parity schema')
     if operational_surface.get('passed') is not True:
