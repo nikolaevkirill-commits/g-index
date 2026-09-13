@@ -4,7 +4,10 @@ import hashlib
 import json
 import re
 import subprocess
+import struct
+import zlib
 from pathlib import Path
+from urllib.parse import unquote, urlsplit
 
 ROOT = Path(__file__).resolve().parent
 
@@ -50,6 +53,78 @@ def check_free_companion_contract(index: str) -> None:
     require(index, 'function _gauthRequireNetworkAllowed()', 'account network guard')
     require(index, "if (token && !window.GINDEX_PLAY_CHANNEL)", 'Play account refresh guard')
     require(index, "return !window.GINDEX_PLAY_CHANNEL && !!window._vapid_public_key;", 'Play push guard')
+
+
+def check_manifest_icons(manifest: dict, read_bytes) -> None:
+    """Check the actual published PNG bytes, including shortcut icons.
+
+    Not a visual maskable-safe-area check: maskable artwork needs separate QA.
+    The release's icon contract deliberately requires local, exact-size PNGs.
+    """
+    icons = manifest.get('icons') or []
+    any_sizes = set()
+    entries = list(icons)
+    for shortcut in manifest.get('shortcuts') or []:
+        entries.extend(shortcut.get('icons') or [])
+    for entry in entries:
+        src = str(entry.get('src') or '')
+        url = urlsplit(src)
+        decoded = unquote(url.path)
+        if (url.scheme or url.netloc or url.query or url.fragment
+                or not decoded.startswith('/g-index/')
+                or '\\' in decoded or any(p in ('.', '..', '') for p in decoded[len('/g-index/'):].split('/'))):
+            raise SystemExit(f'FAIL manifest icon path: {src}')
+        rel = decoded[len('/g-index/'):]
+        if entry.get('type') != 'image/png' or not rel.endswith('.png'):
+            raise SystemExit(f'FAIL manifest icon MIME: {src}')
+        try:
+            data = read_bytes(rel)
+        except (OSError, KeyError) as exc:
+            raise SystemExit(f'FAIL missing manifest icon: {src}') from exc
+        if len(data) < 45 or data[:8] != b'\x89PNG\r\n\x1a\n':
+            raise SystemExit(f'FAIL manifest icon is not PNG: {src}')
+        offset, chunks, compressed = 8, [], bytearray()
+        while offset < len(data):
+            if offset + 12 > len(data):
+                raise SystemExit(f'FAIL truncated PNG: {src}')
+            size = int.from_bytes(data[offset:offset + 4], 'big')
+            kind = data[offset + 4:offset + 8]
+            end = offset + 12 + size
+            if end > len(data):
+                raise SystemExit(f'FAIL truncated PNG chunk: {src}')
+            body = data[offset + 8:end - 4]
+            crc = int.from_bytes(data[end - 4:end], 'big')
+            if zlib.crc32(kind + body) != crc:
+                raise SystemExit(f'FAIL PNG CRC: {src}')
+            chunks.append(kind)
+            if kind == b'IHDR':
+                if len(chunks) != 1 or size != 13:
+                    raise SystemExit(f'FAIL PNG header: {src}')
+                width, height, depth, colour, compression, filtering, interlace = struct.unpack('>IIBBBBB', body)
+            if kind == b'IDAT':
+                compressed.extend(body)
+            if kind == b'IEND' and (size or end != len(data)):
+                raise SystemExit(f'FAIL PNG end: {src}')
+            offset = end
+        if not chunks or chunks[0] != b'IHDR' or chunks[-1] != b'IEND' or not compressed:
+            raise SystemExit(f'FAIL incomplete PNG: {src}')
+        if width not in (192, 512) or height != width or entry.get('sizes') != f'{width}x{height}':
+            raise SystemExit(f'FAIL manifest icon dimensions: {src}')
+        if depth != 8 or colour not in (2, 6) or compression or filtering or interlace:
+            raise SystemExit(f'FAIL unsupported release PNG encoding: {src}')
+        row = width * (3 if colour == 2 else 4) + 1
+        try:
+            decoder = zlib.decompressobj()
+            pixels = decoder.decompress(compressed, row * height + 1)
+        except zlib.error as exc:
+            raise SystemExit(f'FAIL PNG data: {src}') from exc
+        if (not decoder.eof or decoder.unused_data or decoder.unconsumed_tail
+                or len(pixels) != row * height or any(pixels[i] > 4 for i in range(0, len(pixels), row))):
+            raise SystemExit(f'FAIL PNG scanlines: {src}')
+        if entry in icons and 'any' in str(entry.get('purpose', 'any')).split():
+            any_sizes.add(width)
+    if not {192, 512}.issubset(any_sizes):
+        raise SystemExit('FAIL manifest requires any-purpose PNG icons at 192 and 512')
 
 
 def main() -> None:
@@ -219,6 +294,10 @@ def main() -> None:
     print('PASS public privacy, terms and account-deletion pages')
 
     web_manifest = json.loads(release_bytes(ROOT / 'manifest.json').decode('utf-8-sig'))
+    check_manifest_icons(web_manifest, lambda rel: release_bytes(ROOT / rel))
+    legacy_manifest = json.loads(release_bytes(ROOT / 'deploy/manifest.json').decode('utf-8-sig'))
+    check_manifest_icons(legacy_manifest, lambda rel: release_bytes(ROOT / rel))
+    print('PASS root and legacy manifest PNG bytes, sizes and shortcut icons')
     title_version = re.search(r'v(88\.9\.\d+-fp\d+)-', index)
     if not title_version or web_manifest.get('version') != title_version.group(1):
         raise SystemExit(
