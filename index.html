@@ -23,7 +23,7 @@
           const notice = document.getElementById('playChannelNotice');
           if (title) title.textContent = 'Неборитм';
           if (subtitle) subtitle.textContent = 'Ритм дня · Джйотіш · Планети · Космічна погода';
-          if (notice) notice.textContent = 'Ваші дані залишаються на пристрої · без покупок і хмарного акаунта';
+          if (notice) notice.textContent = 'Профіль і налаштування — на пристрої · мережеві сервіси обробляють технічні дані';
         }, { once: true });
       }
     } catch (_e) { window.GINDEX_PLAY_CHANNEL = false; }
@@ -48,7 +48,6 @@
   <!-- v88.7.1 (deep audit): preconnect для critical NOAA endpoints — зменшує cold-load latency ~200ms -->
   <link rel="preconnect" href="https://services.swpc.noaa.gov" crossorigin />
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
-  <link rel="dns-prefetch" href="https://api.allorigins.win" />
   <link rel="dns-prefetch" href="https://corsproxy.io" />
   <link rel="dns-prefetch" href="https://kp.gfz.de" />
 
@@ -8976,8 +8975,10 @@ async function fetchTextWithCORS(url, validate){
     const r = await fetchWithTimeout(url, 4000);
     if(r.ok){ const _t = await r.text(); if(_ok(_t)) return _t; }
   }catch(e){ console.warn('[CORS] direct fail:', _shortUrl, e.message); }
-  // 2. allorigins
-  try{
+  // These legacy web fallbacks have no verified service privacy policy.
+  // Do not contact them from the Google Play channel.
+  // 2. allorigins (web only)
+  if (!window.GINDEX_PLAY_CHANNEL) try{
     const r2 = await fetchWithTimeout('https://api.allorigins.win/raw?url='+encodeURIComponent(url), 2500);
     if(r2.ok){ const _t = await r2.text(); if(_ok(_t)) return _t; }
   }catch(e){ console.warn('[CORS] allorigins fail:', e.message); }
@@ -8991,8 +8992,8 @@ async function fetchTextWithCORS(url, validate){
     const r4 = await fetchWithTimeout('https://proxy.corsfix.com/?'+encodeURIComponent(url), 2500);
     if(r4.ok){ const _t = await r4.text(); if(_ok(_t)) return _t; }
   }catch(e){ console.warn('[CORS] corsfix fail:', e.message); }
-  // 5. codetabs
-  try{
+  // 5. codetabs (web only)
+  if (!window.GINDEX_PLAY_CHANNEL) try{
     const r5 = await fetchWithTimeout('https://api.codetabs.com/v1/proxy?quest='+encodeURIComponent(url), 2500);
     if(r5.ok){ const _t = await r5.text(); if(_ok(_t)) return _t; }
   }catch(e){ console.warn('[CORS] codetabs fail:', e.message); }
