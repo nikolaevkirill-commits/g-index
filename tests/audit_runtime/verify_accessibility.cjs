@@ -7,6 +7,8 @@ const server=http.createServer((req,res)=>{let file=path.resolve(root,'.'+new UR
  try{const page=await browser.newPage({serviceWorkers:'block'});await page.route('**/*',r=>r.request().url().startsWith(base)?r.continue():r.abort());
  await page.goto(base+'/index.html?channel=play');await page.waitForFunction(()=>typeof window.fp463CanonicalForDate==='function');
 
+ // Wait for rendered controls, not only exported functions defined before shell init.
+ await page.locator('#nrRoute-today').waitFor({state:'visible'});
  const results=[];
  await page.setViewportSize({width:320,height:740});
  for(const route of ['today','concept','plan','forecast','calendar','more','profile','match','panch','categories','reports','expert']){
