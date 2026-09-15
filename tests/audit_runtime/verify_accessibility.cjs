@@ -10,7 +10,7 @@ const server=http.createServer((req,res)=>{let file=path.resolve(root,'.'+new UR
  const results=[];
  await page.setViewportSize({width:320,height:740});
  for(const route of ['today','concept','plan','forecast','calendar','more','profile','match','panch','categories','reports','expert']){
- await page.evaluate(r=>fp434Go(r,true),route); await page.waitForFunction(()=>document.activeElement===document.querySelector('.nr-route.active h1'));
+ console.log('Checking route',route);await page.evaluate(r=>fp434Go(r,true),route); await page.waitForFunction(()=>document.activeElement===document.querySelector('.nr-route.active h1'));
  const snapshot=await page.locator('.nr-route.active').ariaSnapshot();
  const facts=await page.evaluate(()=>({overflow:document.documentElement.scrollWidth-innerWidth,focus:document.activeElement?.outerHTML.slice(0,200)}));
  const unnamed=snapshot.split('\n').filter(l=>/^\s*- (button|link|textbox|combobox|checkbox|slider|spinbutton)(:|\s*\[|\s*$)/.test(l));

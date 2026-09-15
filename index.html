@@ -27480,7 +27480,7 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line213
     document.querySelectorAll('.nr-route').forEach(route=>{
       const old=route.querySelector(':scope > .nr-route-head h2, :scope > .nr-cover h2.nr-cover-title');
       if(!old)return;
-      const h1=document.createElement('h1');[...old.attributes].forEach(a=>h1.setAttribute(a.name,a.value));h1.innerHTML=old.innerHTML;old.replaceWith(h1);
+      const hadFocus=document.activeElement===old;const h1=document.createElement('h1');[...old.attributes].forEach(a=>h1.setAttribute(a.name,a.value));h1.innerHTML=old.innerHTML;h1.setAttribute('tabindex','-1');old.replaceWith(h1);if(hadFocus)h1.focus({preventScroll:true});
       if(!h1.id)h1.id='nrRouteHeading-'+route.dataset.route;route.setAttribute('aria-labelledby',h1.id);
     });
   }
