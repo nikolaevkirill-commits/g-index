@@ -1,0 +1,36 @@
+name: audit runtime regressions
+on:
+  pull_request:
+    paths: ['index.html', 'sw.js', 'play_channel.js', '*xlsx*.js', 'privacy.html', 'terms.html', 'account-deletion.html', 'tools/kp_alert_bot.py', 'tests/audit_runtime/**', '.github/workflows/audit-runtime.yml']
+  push:
+    branches: [deploy]
+    paths: ['index.html', 'sw.js', 'play_channel.js', '*xlsx*.js', 'privacy.html', 'terms.html', 'account-deletion.html', 'tools/kp_alert_bot.py', 'tests/audit_runtime/**', '.github/workflows/audit-runtime.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  regressions:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v4
+        with: {node-version: '24'}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: npm install --no-save playwright@1.62.1
+      - run: npx playwright install --with-deps chromium
+      - run: node tests/audit_runtime/verify_channel.cjs
+      - run: node tests/audit_runtime/verify_runtime.cjs
+      - run: node tests/audit_runtime/verify_cache.cjs
+      - run: python tests/audit_runtime/test_bot.py
+      - run: node verify_dashboard_decision_consistency.js
+      - run: node verify_jyotish_product_layer.js
+      - run: node verify_fp420_formula_authority.js
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: audit-runtime-evidence
+          path: |
+            tests/audit_runtime/*RESULTS.json
+            tests/audit_runtime/outage_mobile.png
