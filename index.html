@@ -3665,8 +3665,26 @@ function initHeroField(){
 
 // ═══ v75: Data freshness + ΔG history ═══
 window._dataFetchTimestamps = {};
+// Order SW delivery per canonical resource; a late stale response cannot undo recovery.
+window.__nrSWResourceStates=new Map();
+function acceptSWDataMessage(data){
+  if(!data||typeof data.url!=='string'||!data.url||!['SW_FRESH_DATA','SW_STALE_DATA'].includes(data.type))return false;
+  let url;try{url=new URL(data.url,location.href);if(url.origin!==location.origin)return false;url.searchParams.delete('fresh');}catch(_e){return false;}
+  const order=typeof data.requestOrder==='number'&&Number.isFinite(data.requestOrder)&&data.requestOrder>0?data.requestOrder:0;
+  if(order>Date.now()+5*60000)return false;
+  const previous=window.__nrSWResourceStates.get(url.href);
+  if(previous&&(order<previous.order||(order===previous.order&&previous.type==='SW_FRESH_DATA'&&data.type==='SW_STALE_DATA')))return false;
+  const stamp=data.fetchedAt;
+  data.fetchedAt=typeof stamp==='number'&&Number.isFinite(stamp)&&stamp>0&&stamp<=Date.now()+5*60000?stamp:null;
+  if(data.type==='SW_FRESH_DATA'&&data.fetchedAt===null)return false;
+  window.__nrSWResourceStates.set(url.href,{order,type:data.type});
+  return true;
+}
 function updateDataFreshness(source, ts){
-  window._dataFetchTimestamps[source] = ts || Date.now();
+  const stamp=ts===undefined?Date.now():ts;
+  if(typeof stamp!=='number'||!Number.isFinite(stamp)||stamp<=0||stamp>Date.now()+5*60000)return false;
+  if(typeof window._dataFetchTimestamps[source]==='number'&&stamp<window._dataFetchTimestamps[source])return false;
+  window._dataFetchTimestamps[source] = stamp;
   _renderFreshnessState();
 }
 // v88.9.40-fp222 (аудит-раунд-9, Problem 4): єдиний об'єкт стану джерела даних.
@@ -4712,6 +4730,13 @@ if ('serviceWorker' in navigator) {
 
         // SW_STALE_DATA: показати маркер "дані з кешу" в UI (аудит sw.js п.4)
         navigator.serviceWorker.addEventListener('message', event => {
+          if(event.data&&/^SW_(FRESH|STALE)_DATA$/.test(event.data.type)&&!acceptSWDataMessage(event.data))return;
+          if(event.data?.type==='SW_FRESH_DATA'){
+            if(![...window.__nrSWResourceStates.values()].some(x=>x.type==='SW_STALE_DATA')){
+              const bar=document.getElementById('swStaleBar');if(bar)bar.style.display='none';
+            }
+            _renderFreshnessState();
+          }
           if (event.data && event.data.type === 'SW_STALE_DATA') {
             const el = document.getElementById('swStaleBar');
             if (el) {
@@ -4752,7 +4777,7 @@ if ('serviceWorker' in navigator) {
             }
             // v70.2: sync hero freshness
             const hf = document.getElementById('heroFreshness');
-            if (hf) { hf.textContent = 'CACHED'; hf.classList.remove('live','stale'); hf.classList.add('cached'); }
+            if (_isKpResource && hf) { hf.textContent = 'CACHED'; hf.classList.remove('live','stale'); hf.classList.add('cached'); }
           }
         });
 
@@ -6102,6 +6127,7 @@ const PUSH = (function(){
   // SW повідомляє про pushsubscriptionchange (browser auto-renewed) — re-subscribe
   if(typeof navigator !== 'undefined' && 'serviceWorker' in navigator){
     navigator.serviceWorker.addEventListener && navigator.serviceWorker.addEventListener('message', event => {
+      if(event.data&&/^SW_(FRESH|STALE)_DATA$/.test(event.data.type)&&!acceptSWDataMessage(event.data))return;
       if(event.data && event.data.type === 'SW_PUSH_SUB_CHANGED'){
         _log('SW notified subscription changed — re-subscribing');
         subscribe().catch(e => _warn('auto re-subscribe failed:', e));
@@ -6326,70 +6352,36 @@ let _userLat = 50.45, _userLon = 30.52;
   }catch(e){ window._iana = 'UTC'; }
 })();
 
-function initGeolocation(){
-  if(!navigator.geolocation) {
-    console.warn('[geo] navigator.geolocation undefined — using Kyiv default');
-    return;
-  }
-  // v88.6.9: smart default — якщо IANA timezone iндикує не Kyiv → попередити user
-  // що координати все ще Kyiv (бо Hora ι Panchanga залежать від lat/lon).
-  // Фактичний prompt geolocation буде запитано user-gesture (через тут).
-  try{
-    navigator.geolocation.getCurrentPosition(
-      pos => {
-        _userLat = pos.coords.latitude;
-        _userLon = pos.coords.longitude;
-        try { lsSet('last_geo_lat', String(_userLat)); lsSet('last_geo_lon', String(_userLon)); } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
-        console.log('[geo] OK:', _userLat.toFixed(2), _userLon.toFixed(2), 'IANA:', window._iana);
-        try{ _updateHoraCoordLabel(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
-      },
-      err => {
-        // v88.6.9: якщо user denied geolocation АЛЕ IANA не Europe/Kyiv — показати warning
-        const iana = window._iana || '';
-        if(iana && !iana.includes('Kyiv') && !iana.includes('Kiev') && iana !== 'UTC'){
-          // Перевіряю чи маю кеш
-          try {
-            const lat = parseFloat(lsGet('last_geo_lat',''));
-            const lon = parseFloat(lsGet('last_geo_lon',''));
-            if(isFinite(lat) && isFinite(lon)){
-              _userLat = lat; _userLon = lon;
-              if(window._DEBUG) console.log('[geo] using cached:', lat.toFixed(2), lon.toFixed(2));
-              try{ _updateHoraCoordLabel(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
-              return;
-            }
-          } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
-          // Ніякого кешу + не у Києвi → показати toast одного разу (sticky 8s)
-          if(typeof showToast === 'function'){
-            setTimeout(() => {
-              showToast(
-                `Використовую Київ як координати за замовчуванням. Hora i Panchanga можуть бути неточнi для ${iana}. Дозволь геолокацію у налаштуваннях браузера для точностi.`,
-                'info', 8000
-              );
-            }, 1500); // delay щоб toast container встиг створитись
-          }
-        }
-      },
-      { timeout: 5000, maximumAge: 3600000 }
-    );
-  }catch(e){
-    console.warn('[geo] navigator.geolocation throw:', e.message);
-  }
+let _geoSource='default';
+function readCachedGeo(){
+  const rawLat=lsGet('last_geo_lat',''),rawLon=lsGet('last_geo_lon','');
+  if(String(rawLat).trim()===''||String(rawLon).trim()==='')return null;
+  const lat=Number(rawLat),lon=Number(rawLon);
+  return Number.isFinite(lat)&&Number.isFinite(lon)&&Math.abs(lat)<=90&&Math.abs(lon)<=180?{lat,lon}:null;
 }
-
-// Load a previously approved location without opening a permission prompt at boot.
-// A fresh browser geolocation request is only made from the explicit toolbar button.
+function refreshGeoDependents(){
+  _lastPanchCtx=null;
+  try{_sunRiseSetCache.clear();renderPanchanga(new Date());}catch(e){if(window._DEBUG)console.warn('[geo] render:',e.message);}
+  try{syncHero();}catch(_e){}
+  window.dispatchEvent(new Event('gindex:location-changed'));
+}
+function initGeolocation(){
+  if(!navigator.geolocation){initCachedGeolocation();return;}
+  try{navigator.geolocation.getCurrentPosition(pos=>{
+    const lat=pos.coords.latitude,lon=pos.coords.longitude;
+    if(typeof lat!=='number'||typeof lon!=='number'||!Number.isFinite(lat)||!Number.isFinite(lon)||Math.abs(lat)>90||Math.abs(lon)>180)return;
+    _userLat=lat;_userLon=lon;_geoSource='device';
+    lsSet('last_geo_lat',String(lat));lsSet('last_geo_lon',String(lon));
+    _updateHoraCoordLabel();refreshGeoDependents();
+  },()=>{initCachedGeolocation();refreshGeoDependents();},{timeout:5000,maximumAge:0});
+  }catch(_e){initCachedGeolocation();}
+}
+// No permission prompt at boot. Saved coordinates are labelled as saved.
 function initCachedGeolocation(){
-  try{
-    const lat = parseFloat(lsGet('last_geo_lat',''));
-    const lon = parseFloat(lsGet('last_geo_lon',''));
-    if(isFinite(lat) && isFinite(lon) && Math.abs(lat) <= 90 && Math.abs(lon) <= 180){
-      _userLat = lat;
-      _userLon = lon;
-    }
-    _updateHoraCoordLabel();
-  }catch(e){
-    if(window._DEBUG) console.warn('[geo] cached location unavailable:', e.message);
-  }
+  const cached=readCachedGeo();
+  _userLat=cached?cached.lat:50.45;_userLon=cached?cached.lon:30.52;
+  _geoSource=cached?'saved':'default';
+  _updateHoraCoordLabel();
 }
 
 // v87.26: динамічний Hora-лейбл = "(IANA, UTC±HH, lat°N/S)"
@@ -6403,7 +6395,7 @@ function _updateHoraCoordLabel(){
   const offStr = mm===0 ? `UTC${sign}${hh}` : `UTC${sign}${hh}:${String(mm).padStart(2,'0')}`;
   const ns = _userLat>=0 ? 'N' : 'S';
   const iana = (window._iana && window._iana !== 'UTC') ? `${window._iana}, ` : '';
-  el.textContent = `(${iana}${offStr}, ${Math.abs(_userLat).toFixed(0)}°${ns})`;
+  el.textContent = `(${iana}${offStr}, ${Math.abs(_userLat).toFixed(2)}°${ns}, ${_userLon.toFixed(2)}° · ${_geoSource==='saved'?'збережені координати':_geoSource==='device'?'координати пристрою':'Київ за замовчуванням'})`;
 }
 
 // v87.26: console helper — `javascript:void(__testTimezone())`
@@ -7379,11 +7371,11 @@ async function loadSystemHealthStatus(){
     const tanitaAwaiting=Number(s.checks&&s.checks.tanita_real_outcome_pairs&&s.checks.tanita_real_outcome_pairs.awaiting_independent_outcomes||0);
     const manualPending=Number(s.checks&&s.checks.tanita_balanced_review&&s.checks.tanita_balanced_review.pending_visual_review||0);
     const age=Number(s.checks&&s.checks.manifest_age_hours);
-    const artifactAgeHours=s.generated_at ? Math.max(0,(Date.now()-new Date(s.generated_at).getTime())/3600000) : Infinity;
+    const artifactAgeHours=s.generated_at ? ((Date.now()-new Date(s.generated_at).getTime())/3600000) : Infinity;
     // fp428 O-01: health is operational telemetry (live-context cadence), not a
     // daily forecast asset. Six-hour schedule plus one hour processing grace;
     // the manifest independently retains its 36-hour publication SLA.
-    const healthStale=!Number.isFinite(artifactAgeHours)||artifactAgeHours>7||!Number.isFinite(age)||age>36;
+    const healthStale=!Number.isFinite(artifactAgeHours)||artifactAgeHours< -5/60||artifactAgeHours>7||!Number.isFinite(age)||age>36;
     const tracker=s.checks&&s.checks.prospective_tracker;
     const trackerAgeRaw=tracker&&tracker.latest_age_hours;
     const trackerFresh=!!(tracker&&trackerAgeRaw!==null&&trackerAgeRaw!==''&&Number.isFinite(Number(trackerAgeRaw))&&Number(trackerAgeRaw)<=36);
@@ -8044,7 +8036,8 @@ async function loadEngineScores(){
     if(!resp.ok) throw new Error('HTTP ' + resp.status);
     const data = await resp.json();
     _engineScores = data.scores || {};
-    window.__referenceSourceState = {mode:'live', stale:false, loadedAt:Date.now(), reason:'network'};
+    const referenceCached=resp.headers?.get('x-gindex-delivery')==='cached';
+    window.__referenceSourceState = {mode:referenceCached?'cached':'live', stale:referenceCached, loadedAt:Date.now(), reason:referenceCached?'sw_offline_fallback':'network'};
     window.__engineRetryCount = 0;
     if(window._DEBUG) console.log('[v87.61] engine_scores loaded: ' + Object.keys(_engineScores).length + ' days, v' + (data.version || '?'));
     // v88.8.35-fp56-P8: override synthetic Kp with REAL Kp from future_kp.json (27DO).
@@ -14761,7 +14754,7 @@ function renderPanchanga(dateUTC){
   // fp429 D3: cached Panchanga may survive a Europe/Kyiv midnight boundary.
   // Bind the cache to the day for which it was rendered before it can be used
   // as a fallback by the operational timing-window resolver.
-  if (_lastPanchCtx) _lastPanchCtx._kyivDateKey = todayKyivStr();
+  if (_lastPanchCtx) {_lastPanchCtx._kyivDateKey = todayKyivStr();_lastPanchCtx._geoKey=String(_userLat)+','+String(_userLon);}
   // v85b-F4: expose raw panchanga total (ns+ts+ys+ks+rahu) for verdict sync
   if (_lastPanchCtx) _lastPanchCtx.pclTotal = state.pclOnly;
   renderPanchangaCard(state);
@@ -15513,7 +15506,7 @@ function getInauspiciousWindowsUTC(){
         }
       } catch(_e){ _R = null; }
     }
-    if ((!_R || !_R.gulika) && _pc && _pc._kyivDateKey === todayKyivStr() && _pc.rahu) {
+    if ((!_R || !_R.gulika) && _pc && _pc._kyivDateKey === todayKyivStr() && _pc._geoKey===String(_userLat)+','+String(_userLon) && _pc.rahu) {
       _R = _pc.rahu;
     }
     if (_R) {
@@ -27570,6 +27563,7 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line213
   window.addEventListener('offline',()=>showState('nrRuntimeState','offline',false));
   window.addEventListener('online',()=>hideState('nrRuntimeState'));
   window.addEventListener('engine-data-stale',()=>showState('nrRuntimeState','stale',false));
+  window.addEventListener('engine-data-refreshed',()=>{if(![...window.__nrSWResourceStates.values()].some(x=>x.type==='SW_STALE_DATA'))hideState('nrRuntimeState')});
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(init,240),{once:true});else setTimeout(init,240);
 })();
 </script>
