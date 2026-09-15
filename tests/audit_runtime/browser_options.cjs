@@ -1,0 +1,1 @@
+const fs=require('fs'); exports.resolveBrowserOptions=()=>{const p=process.env.FP463_BROWSER||(process.platform==='win32'?'C:/Program Files/Google/Chrome/Application/chrome.exe':null);return p&&fs.existsSync(p)?{executablePath:p}:{};};

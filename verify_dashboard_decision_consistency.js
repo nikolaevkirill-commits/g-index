@@ -20,7 +20,7 @@ if (!match) throw new Error('decision resolver block missing');
 
 let activeEntry = null;
 const context = {
-  window: {},
+  window: {}, lastWWV: {kNow: 1, ts: Date.now()-3*3600000},
   isFinite,
   getEngineScore: () => activeEntry,
   todayKyivStr: () => '2026-08-09',
@@ -44,6 +44,7 @@ const context = {
   recommendG: () => ({ text: 'raw', style: '' }),
 };
 vm.createContext(context);
+vm.runInContext(html.slice(html.indexOf('function currentKpAuthority('),html.indexOf('function resolveSourceLabel()')), context);
 vm.runInContext(match[0], context);
 
 function resolve({ pdf, raw, kp = 2, isToday = false }) {
@@ -377,7 +378,7 @@ requireText('const _hV = _hasVerdict ? _heroDisplayVal : newG;', 'Hero ring fill
 requireText("let _heroSharedCls = _hasVerdict ? _heroSig.opKey : 'neutral';", 'Hero visual state follows the resolver only when a verdict is available');
 forbidText('const _hV = (_heroSig && _heroSig.hasEngine && isFinite(_heroSig.dayScore))', 'PDF reference cannot independently fill the operational Hero ring');
 requireText('const sig = resolveDaySignal_v88825(todayKyivStr(), liveG, kp, {isToday:true});', 'legacy Hero entrypoint delegates to the canonical authority resolver');
-requireText("const decisionAvailable = hasEngine && !referenceStale;", 'stale cached reference cannot remain an operational verdict');
+requireText("const decisionAvailable = hasEngine && !referenceStale && (!isToday || currentKpAuthority().usable);", 'stale cached reference cannot remain an operational verdict');
 requireText("referenceStale ? 'reference_stale' : 'reference_unavailable'", 'stale and missing reference states stay explicit');
 requireText('function getCurrentOperationalPresentation()', 'current action surfaces share one canonical presentation adapter');
 requireText('const _currentPresentation = isCurrent ? getCurrentOperationalPresentation() : null;', 'visible current timing row consumes canonical operational presentation');

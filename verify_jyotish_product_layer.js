@@ -12,7 +12,7 @@ const checks=[
   ['Personal D1 D9 Dasha remain gated',/D1\/D9 і Dasha не активовані/],
   ['English Jyotish label exists',/Jyotish · Vedic daily timing/],
   ['Mobile Jyotish route reveals its parent grid',/panch:\s*\[[^\]]*'mainGrid'[^\]]*'panchCard'/],
-  ['Mobile navigation uses the Jyotish product name',/id="mnavPanch"[^>]+aria-label="Джйотіш"/],
+  ['Mobile navigation has the visible Panchanga accessible name',/id="mnavPanch"[^>]+aria-label="Панчанга"/],
 ];
 let failed=0;
 for(const [label,pattern] of checks){const ok=pattern.test(source);console.log(`${ok?'PASS':'FAIL'} ${label}`);if(!ok)failed++;}

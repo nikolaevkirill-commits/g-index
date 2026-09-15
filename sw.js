@@ -1,6 +1,6 @@
 // G-Index service worker. HTML/data are network-first; static shell is cache-first.
 // Bump CACHE_VERSION whenever index.html or a cached shell asset changes.
-const CACHE_VERSION = 'fp467-v8'; // refresh shell after the Play proxy policy fix
+const CACHE_VERSION = 'fp467-v9'; // audit: channel persistence, qualified Kp authority and data freshness
 const CACHE_PREFIX = 'gindex-'; // G-Index cache namespace; do not remove the prefix.
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${CACHE_VERSION}`;
 const DATA_CACHE = `${CACHE_PREFIX}data-${CACHE_VERSION}`;
@@ -9,6 +9,11 @@ const NETWORK_FIRST_TIMEOUT_MS = 2500;
 const SHELL_ASSETS = [
   './',
   './index.html',
+  './play_channel.js',
+  './xlsx-0.20.3.full.min.js',
+  './privacy.html',
+  './terms.html',
+  './account-deletion.html',
   './manifest.json',
   './icon192.png',
   './icon512.png',
@@ -123,6 +128,8 @@ self.addEventListener('fetch', (event) => {
       req.mode === 'navigate' ||
       url.pathname.endsWith('.html') ||
       url.pathname.endsWith('.json') ||
+      url.pathname.endsWith('.csv') ||
+      url.pathname.endsWith('.jsonl') ||
       url.pathname.endsWith('.js')
     );
 
@@ -134,6 +141,9 @@ self.addEventListener('fetch', (event) => {
   if (isHtmlOrData) {
     event.respondWith((async () => {
       const cache = await caches.open(DATA_CACHE);
+      const canonicalUrl = new URL(req.url);
+      canonicalUrl.searchParams.delete('fresh');
+      const cacheKey = canonicalUrl.href;
       try {
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), NETWORK_FIRST_TIMEOUT_MS);
@@ -153,17 +163,17 @@ self.addEventListener('fetch', (event) => {
             statusText: fresh.statusText,
             headers: _stampedHeaders
           });
-          await cache.put(req, _stamped);
+          await cache.put(cacheKey, _stamped);
         } catch (_stampErr) {
           // If header stamping fails, preserve a usable unstamped response.
-          try { await cache.put(req, fresh.clone()); } catch (_e2) { /* best-effort */ }
+          try { await cache.put(cacheKey, fresh.clone()); } catch (_e2) { /* best-effort */ }
         }
         return fresh;
       } catch (e) {
-        let cached = await cache.match(req);
+        let cached = await cache.match(cacheKey);
         if (!cached) {
           const shellCache = await caches.open(SHELL_CACHE);
-          cached = await shellCache.match(req);
+          cached = await shellCache.match(cacheKey);
         }
         if (cached) {
           // Tell the page exactly when fallback data was cached, when known.

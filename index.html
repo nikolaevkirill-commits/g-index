@@ -2,18 +2,22 @@
 <html lang="uk">
 <head>
   <meta charset="utf-8" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://*.supabase.co https://*.nikolaev-kirill.workers.dev https://services.swpc.noaa.gov https://kp.gfz.de https://sidc.be https://www.sidc.be https://corsproxy.io https://api.allorigins.win https://api.codetabs.com https://corsfix.com https://proxy.corsfix.com https://thingproxy.freeboard.io https://www.gi.alaska.edu https://www.timeanddate.com https://www.vaisnavacalendar.info https://ics.calendarlabs.com; manifest-src 'self'; worker-src 'self'; base-uri 'self'; form-action 'self'" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://*.supabase.co https://*.nikolaev-kirill.workers.dev https://services.swpc.noaa.gov https://kp.gfz.de https://sidc.be https://www.sidc.be https://corsproxy.io https://api.allorigins.win https://api.codetabs.com https://proxy.corsfix.com https://www.gi.alaska.edu https://www.timeanddate.com https://www.vaisnavacalendar.info https://ics.calendarlabs.com; manifest-src 'self'; worker-src 'self'; base-uri 'self'; form-action 'self'" />
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>NeboRhythm: Cosmic Timing — v88.9.270-fp467-AUDIT-CLOSURE</title>
 
+  <script src="play_channel.js"></script>
   <script>
     // fp388: the Android TWA opens an explicit free companion channel. It keeps
     // the forecast contract intact while disabling account, push and web-sale
     // surfaces until the corresponding Play policy gates are implemented.
     try {
-      window.GINDEX_PLAY_CHANNEL = new URLSearchParams(location.search).get('channel') === 'play';
+      // Preserve the policy gate even if the channel asset fails to load.
+      let playRequested = new URLSearchParams(location.search).get('channel') === 'play';
+      try { playRequested = playRequested || sessionStorage.getItem('neborhythm.playChannel') === 'play'; if(playRequested)sessionStorage.setItem('neborhythm.playChannel','play'); } catch(_storage){}
+      window.GINDEX_PLAY_CHANNEL = !!(window.GINDEX_PLAY_CHANNEL || playRequested);
       if (window.GINDEX_PLAY_CHANNEL) {
         document.documentElement.classList.add('play-channel');
         document.title = 'Неборитм — ритм дня';
@@ -26,7 +30,7 @@
           if (notice) notice.textContent = 'Профіль і налаштування — на пристрої · мережеві сервіси обробляють технічні дані';
         }, { once: true });
       }
-    } catch (_e) { window.GINDEX_PLAY_CHANNEL = false; }
+    } catch (_e) { /* Never downgrade an established Play channel. */ }
   </script>
 
   <!-- PWA manifest -->
@@ -47,7 +51,7 @@
 
   <!-- v88.7.1 (deep audit): preconnect для critical NOAA endpoints — зменшує cold-load latency ~200ms -->
   <link rel="preconnect" href="https://services.swpc.noaa.gov" crossorigin />
-  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+
   <link rel="dns-prefetch" href="https://corsproxy.io" />
   <link rel="dns-prefetch" href="https://kp.gfz.de" />
 
@@ -1826,7 +1830,7 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
           <span id="dataTimestamp" style="font-size:10px;color:var(--faint);margin-left:4px"></span>
         </div>
         <span class="pill" id="stamp" style="font-size:11px">—</span>
-        <span id="freshnessBadge" tabindex="0" title="Свіжість даних NOAA Kp — це технічний стан джерела, НЕ оцінка сприятливості дня.&#10;&#10;• DATA LIVE — менше 5 хв&#10;• ESTIMATED — контент до 12г, це прогнозні дані NOAA (нормальний цикл оновлення близько 3 год)&#10;• DELAYED — 5–30 хв АБО контент >1 год&#10;• STALE — 30–60 хв АБО контент >1 доби&#10;• OLD — понад 60 хв АБО контент >1 тижня&#10;• CACHED — офлайн-режим / кеш застосунку&#10;• DEGRADED — NOAA-фід не оновлювався понад 3 год АБО знайдено фізичну суперечність між джерелами.&#10;&#10;Рішення дня показує центральна картка «Сьогодні». Оцінка −3…+3 є технічним балом рішення, а не ймовірністю події." style="font-size:10px;padding:2px 6px;border-radius:3px;margin-left:4px;font-weight:600;letter-spacing:0.3px;background:#10243a;color:#9fd1ff;cursor:help">● Kp DATA LIVE</span>
+        <span id="freshnessBadge" tabindex="0" title="Свіжість даних NOAA Kp — це технічний стан джерела, НЕ оцінка сприятливості дня.&#10;&#10;• DATA LIVE — менше 5 хв&#10;• ESTIMATED — контент до 12г, це прогнозні дані NOAA (нормальний цикл оновлення близько 3 год)&#10;• DELAYED — 5–30 хв АБО контент >1 год&#10;• STALE — 30–60 хв АБО контент >1 доби&#10;• OLD — понад 60 хв АБО контент >1 тижня&#10;• CACHED — офлайн-режим / кеш застосунку&#10;• DEGRADED — NOAA-фід не оновлювався понад 3 год АБО знайдено фізичну суперечність між джерелами.&#10;&#10;Рішення дня показує центральна картка «Сьогодні». Оцінка −3…+3 є технічним балом рішення, а не ймовірністю події." style="font-size:10px;padding:2px 6px;border-radius:3px;margin-left:4px;font-weight:600;letter-spacing:0.3px;background:#10243a;color:#9fd1ff;cursor:help">Kp НЕДОСТУПНИЙ</span>
       </div>
     </div>
   </header>
@@ -3683,11 +3687,30 @@ function updateDataFreshness(source, ts){
 // решта 4 місця лишились неузгодженими (підтверджено скріном: одночасно
 // "ESTIMATED" вгорі, "OBSERVED · DELAYED" в Formula Audit, "(live)" у
 // підписі). Тепер ОДНА функція — єдине джерело правди для ВСІХ 5 місць.
+// Current Kp authority: timestamps belong to the value, never to unrelated fetches.
+function currentKpAuthority(now=Date.now()){
+  const value=typeof lastWWV!=='undefined'?lastWWV:null;
+  if(!value||value._synthetic||value._cached||typeof value.kNow!=='number'||!Number.isFinite(value.kNow)||value.kNow<0||value.kNow>9)
+    return {usable:false,kp:NaN,label:'Kp НЕДОСТУПНИЙ',expiresAt:null};
+  let stamp=typeof value.ts==='number'?value.ts:NaN;
+  if(!Number.isFinite(stamp)){
+    let text=String(value.whenText||'').trim().replace(/ UTC$/, 'Z').replace(' ', 'T');
+    if(/^\d{4}-\d{2}-\d{2}T/.test(text)&&!/(?:Z|[+-]\d{2}:\d{2})$/.test(text))text+='Z';
+    stamp=Date.parse(text);
+  }
+  // Final Kp is a 3-hour bin; retain it only until the next bin can be final.
+  // NOAA 1-minute estimates already have a 30-minute validity contract.
+  const expiresAt=stamp+(value._provisional?0.5:6)*3600000;
+  const usable=Number.isFinite(stamp)&&stamp<=now+5*60000&&now<=expiresAt;
+  return {usable,kp:usable?value.kNow:NaN,expiresAt,provisional:!!value._provisional,
+    label:usable?(value._provisional?'Kp ОЦІНКА NOAA':'Kp СПОСТЕРЕЖЕННЯ'):'Kp НЕДОСТУПНИЙ'};
+}
+window.currentKpAuthority=currentKpAuthority;
 function resolveSourceLabel(){
   try {
     const _src = window._kpSourceFreshness;
     const _isProvisional = !!(typeof lastWWV !== 'undefined' && lastWWV && lastWWV._provisional);
-    const _isRealObserved = !!(typeof lastWWV !== 'undefined' && lastWWV && isFinite(lastWWV.kNow) && !lastWWV._synthetic && !_isProvisional);
+    const _isRealObserved = !!(typeof lastWWV !== 'undefined' && lastWWV && isFinite(lastWWV.kNow) && !lastWWV._synthetic && !lastWWV._cached && !_isProvisional);
     const _ageH = (_src && isFinite(_src.ageHours)) ? _src.ageHours : null;
     let typeLabel, freshnessLabel, combined, shortCombined, color, isLive;
     // v88.9.53-fp235 САМОАУДИТ-ФІКС: раніше умова `_isRealObserved && _ageH != null`
@@ -3751,6 +3774,12 @@ function _updateSourceState(partial){
 }
 
 function _renderFreshnessState(){
+  const authority=currentKpAuthority();
+  if(!authority.usable||authority.provisional){
+    for(const id of ['freshnessBadge','heroFreshness']){const n=document.getElementById(id);if(n)n.textContent=authority.label;}
+    if(window.__uiState)window.__uiState.freshness=authority.usable?'estimated':'unavailable';
+    return;
+  }
   const ts = window._dataFetchTimestamps;
   const now = Date.now();
   const ages = Object.values(ts).filter(t=>typeof t==='number').map(t => now - t);
@@ -6720,21 +6749,31 @@ let _engineScores = null;
 // Замінює synthetic Kp=2.0 у frozen engine_scores. Генерується friday_routine (fetch_kp_v2 --export-future).
 let _futureKp = null;
 let _futureKpMeta = null;
+Object.defineProperty(window,'__nrFutureKp',{configurable:true,get(){return {kp:_futureKp||{},generated:_futureKpMeta?.generated||null,source_log:_futureKpMeta?.source_log||[]}}});
+let _futureKpEpoch=0, _futureKpLoad=null;
+function invalidateFutureKp(){_futureKp=null;_futureKpMeta=null;_futureKpEpoch++;_futureKpLoad=null;}
 async function loadFutureKp(){
-  if(_futureKp !== null) return _futureKp;
-  try {
-    const resp = await fetch('future_kp.json', { cache: 'default' });
-    if(!resp.ok) throw new Error('HTTP ' + resp.status);
-    const data = await resp.json();
-    _futureKp = data.kp || {};
-    _futureKpMeta = {generated:data.generated||null, source_log:data.source_log||[], points:Object.values(_futureKp)};
-    if(window._DEBUG) console.log('[fp56-P8] future_kp loaded: ' + Object.keys(_futureKp).length + ' days, gen ' + (data.generated||'?'));
-  } catch(e){
-    if(window._DEBUG) console.warn('[fp56-P8] future_kp.json not available:', e.message, '(synthetic Kp лишається)');
-    _futureKp = {};
-    _futureKpMeta = {error:e.message, source_log:[], points:[]};
-  }
-  return _futureKp;
+  if(_futureKp!==null)return _futureKp;
+  if(_futureKpLoad)return _futureKpLoad;
+  const epoch=_futureKpEpoch;
+  const pending=(async()=>{
+    try{
+      const resp=await fetch('future_kp.json',{cache:'no-store'});
+      if(!resp.ok)throw new Error('HTTP '+resp.status);
+      const data=await resp.json();
+      if(!data.kp||typeof data.kp!=='object'||Array.isArray(data.kp))throw new Error('Invalid future Kp map');
+      if(epoch!==_futureKpEpoch)return loadFutureKp();
+      _futureKp=data.kp;
+      _futureKpMeta={generated:data.generated||null,source_log:data.source_log||[],points:Object.values(_futureKp)};
+      return _futureKp;
+    }catch(e){
+      if(epoch!==_futureKpEpoch)return loadFutureKp();
+      _futureKpMeta={error:e.message,source_log:[],points:[]};
+      return {}; // Leave the store null so the next request can recover.
+    }finally{if(epoch===_futureKpEpoch)_futureKpLoad=null;}
+  })();
+  _futureKpLoad=pending;
+  return pending;
 }
 
 // v88.7.15 Г: експертні overrides (PDF #48 calibration, 14 точкових записів 12.05–24.05).
@@ -6870,19 +6909,18 @@ async function loadKpHourlyAlert(){
     const allSlots=Array.isArray(p.slots)?p.slots:[];
     // Keep only current/future slots. A small tolerance retains the currently
     // active 3-hour bin without allowing yesterday's forecast to masquerade as today.
-    const minSlotMs=Date.now()-20*60*1000;
-    const maxSlotMs=Date.now()+(Number(p.lookahead_hours||12)+1)*3600000;
+    const minSlotMs=Date.now()-3*3600000;
+    const maxSlotMs=Date.now()+Number(p.lookahead_hours||12)*3600000;
     const slots=allSlots.filter(x=>{
       const t=Date.parse(x&&x.time_utc||'');
-      return Number.isFinite(t)&&t>=minSlotMs&&t<=maxSlotMs&&Number.isFinite(Number(x.kp));
+      return Number.isFinite(t)&&t>minSlotMs&&t<maxSlotMs&&Number.isFinite(Number(x.kp));
     }).sort((a,b)=>Date.parse(a.time_utc)-Date.parse(b.time_utc));
     if(ageHours>maxAgeHours) throw new Error('Дані Kp застаріли: '+(Number.isFinite(ageHours)?ageHours.toFixed(1):'невідомо')+' год');
     if(!slots.length) throw new Error('Немає актуальних погодинних слотів Kp');
     const peak=slots.reduce((best,x)=>Number(x.kp)>Number(best.kp)?x:best,slots[0]);
     const kp=Number(peak.kp), level=kp>=5?2:kp>=4?1:0;
-    const currentKp=(window.__uiState&&Number.isFinite(Number(window.__uiState.kpNow)))
-      ? Number(window.__uiState.kpNow)
-      : (typeof lastWWV!=='undefined'&&lastWWV&&Number.isFinite(Number(lastWWV.kNow))?Number(lastWWV.kNow):null);
+    const currentAuthority=currentKpAuthority();
+    const currentKp=currentAuthority.usable?currentAuthority.kp:null;
     const peakTime=new Date(peak.time_utc);
     const peakTimeLabel=peakTime.toLocaleString('uk-UA',{timeZone:'Europe/Kyiv',hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit',hour12:false});
     const peakDateKyiv=peakTime.toLocaleDateString('sv-SE',{timeZone:'Europe/Kyiv'});
@@ -6931,12 +6969,13 @@ async function loadKpHourlyAlert(){
 
     const currentText=currentKp===null?'—':currentKp.toFixed(1);
     const peakText=Number.isFinite(kp)?kp.toFixed(1):'—';
-    const peakState=level>=2?'🔴 прогноз G1 або вище':level===1?'🟡 підвищення, але нижче G1':'🟢 нижче порога попередження';
+    const coverage=p.forecast_coverage?.status||'unverified';
+    const peakState=(coverage==='missing'?'ПРОГНОЗ ВІДСУТНІЙ · ':coverage!=='complete'?'НЕПОВНЕ/НЕПЕРЕВІРЕНЕ ПОКРИТТЯ · ':'')+(level>=2?'🔴 прогноз G1 або вище':level===1?'🟡 підвищення, але нижче G1':'🟢 нижче порога попередження');
     const slotValues=slots.map(x=>Number(x.kp)).filter(Number.isFinite);
     const slotSpread=slotValues.length?Math.max(...slotValues)-Math.min(...slotValues):0;
     const volatileForecast=slotSpread>=1.5;
-    sum.textContent='🛰 Kp: зараз '+currentText+' (факт) · прогнозований пік '+peakText+' о '+peakTimeLabel+' · '+peakState+
-      (volatileForecast?' · ⚠ мінливий прогноз ΔKp '+slotSpread.toFixed(1):'');
+    sum.textContent='🛰 Kp: зараз '+currentText+' ('+currentAuthority.label+') · прогнозований пік '+peakText+' о '+peakTimeLabel+' · '+peakState+
+      (volatileForecast?' · ⚠ мінливий прогноз ΔKp '+slotSpread.toFixed(1):'')+(p.fallback?.issued_at?' · NOAA text: '+p.fallback.issued_at:'');
 
     const volatilityHtml=volatileForecast
       ? '<div style="margin:7px 0;padding:8px 10px;border:1px solid rgba(255,190,75,.55);border-radius:8px;background:rgba(255,176,32,.07);color:#ffd37a"><b>⚠ Великий розкид між майбутніми слотами:</b> ΔKp '+slotSpread.toFixed(1)+'. Це ознака мінливого прогнозу, а не одночасні значення поточного стану.</div>'
@@ -7306,8 +7345,11 @@ function nrDataStatusLabel(health, raw, offline, now=Date.now()){
   const stamp=health.generated_at,manifestAge=health.checks?.manifest_age_hours;
   const explicitZone=typeof stamp==='string'&&/^\d{4}-\d{2}-\d{2}T.*(?:Z|[+-]\d{2}:\d{2})$/.test(stamp);
   const age=explicitZone?(now-Date.parse(stamp))/36e5:NaN;
-  if(!Number.isFinite(age)||age< -5/60||age>6||typeof manifestAge!=='number'||!Number.isFinite(manifestAge)||manifestAge<0||manifestAge>36)
+  if(!Number.isFinite(age)||age< -5/60||age>7||typeof manifestAge!=='number'||!Number.isFinite(manifestAge)||manifestAge<0||manifestAge>36)
     return {label:'СТАН НЕ ПІДТВЕРДЖЕНО',state:'stale'};
+  if(!currentKpAuthority().usable)return {label:'Kp НЕДОСТУПНИЙ',state:'unavailable'};
+  if(currentKpAuthority().provisional)return {label:'Kp ОЦІНКА NOAA',state:'estimated'};
+  if(health.checks?.last_completed_live_context_ok===false)return {label:'ЗБІЙ ОНОВЛЕННЯ КОНТЕКСТУ',state:'warning'};
   if(health.status==='WARN')return {label:'Є ПОПЕРЕДЖЕННЯ',state:'warning'};
   if(health.status!=='PASS')return {label:'СТАН НЕ ПІДТВЕРДЖЕНО',state:'unknown'};
   return /\bLIVE\b/i.test(raw)?{label:'LIVE-ФОН ОНОВЛЕНО',state:'live'}:{label:raw,state:'unknown'};
@@ -7339,9 +7381,9 @@ async function loadSystemHealthStatus(){
     const age=Number(s.checks&&s.checks.manifest_age_hours);
     const artifactAgeHours=s.generated_at ? Math.max(0,(Date.now()-new Date(s.generated_at).getTime())/3600000) : Infinity;
     // fp428 O-01: health is operational telemetry (live-context cadence), not a
-    // daily forecast asset. Six hours without a new snapshot is a failure even
-    // if the manifest itself is still within its 36-hour publication SLA.
-    const healthStale=!Number.isFinite(artifactAgeHours)||artifactAgeHours>6||!Number.isFinite(age)||age>36;
+    // daily forecast asset. Six-hour schedule plus one hour processing grace;
+    // the manifest independently retains its 36-hour publication SLA.
+    const healthStale=!Number.isFinite(artifactAgeHours)||artifactAgeHours>7||!Number.isFinite(age)||age>36;
     const tracker=s.checks&&s.checks.prospective_tracker;
     const trackerAgeRaw=tracker&&tracker.latest_age_hours;
     const trackerFresh=!!(tracker&&trackerAgeRaw!==null&&trackerAgeRaw!==''&&Number.isFinite(Number(trackerAgeRaw))&&Number(trackerAgeRaw)<=36);
@@ -7350,6 +7392,7 @@ async function loadSystemHealthStatus(){
     const evidenceWarns=warns.filter(w=>evidencePrefixes.some(p=>String(w).startsWith(p)));
     const operationalWarns=warns.filter(w=>!evidencePrefixes.some(p=>String(w).startsWith(p)));
     if(healthStale) operationalWarns.push('health_snapshot_stale_or_missing');
+    if(s.checks?.last_completed_live_context_ok===false)operationalWarns.push('last_completed_live_context_failed');
     const automationStatus=hard.length||healthStale?'FAIL':operationalWarns.length?'WARN':'PASS';
     const evidenceStatus=(!trackerCoverageOk||pairs<100)?'BLOCKED':'READY';
     const colors=automationStatus==='PASS'?['#43e6a7','rgba(67,230,167,.28)','rgba(67,230,167,.055)']:
@@ -7553,7 +7596,7 @@ async function checkDataManifest(){
 
   const _changed = [];
   if (_dayChanged) {
-    _expertOverrides = null; _expertCalc = null; _futureKp = null; _dailyMaster = null;
+    _expertOverrides = null; _expertCalc = null; invalidateFutureKp(); _dailyMaster = null;
     _changed.push('day_rollover');
   }
 
@@ -7570,7 +7613,7 @@ async function checkDataManifest(){
     if (!_dayChanged && _lastManifest) {
       if (m.expert_overrides !== _lastManifest.expert_overrides) { _expertOverrides = null; _changed.push('expert_overrides'); }
       if (m.expert_calc !== _lastManifest.expert_calc) { _expertCalc = null; _changed.push('expert_calc'); }
-      if (m.future_kp !== _lastManifest.future_kp) { _futureKp = null; _changed.push('future_kp'); }
+      if (m.future_kp !== _lastManifest.future_kp) { invalidateFutureKp(); _changed.push('future_kp'); }
     }
     // v88.9.6x-fp249: engine_scores.json ЗАФРОЗЖЕНИЙ на час V3 freeze — сюди
     // НЕ додаємо auto-reload (freeze-інваріант: md5 не повинен змінюватись).
@@ -7588,7 +7631,7 @@ async function checkDataManifest(){
   if (window._DEBUG) console.log('[fp246/249] manifest change:', _changed.join(', '), '— перезавантажую...');
   try { await loadExpertOverrides(); } catch(e){ /* silent */ }
   try { await loadExpertCalc(); } catch(e){ /* silent */ }
-  try { await loadFutureKp(); } catch(e){ /* silent */ }
+  try { await loadFutureKp(); window.dispatchEvent(new Event('engine-data-ready')); } catch(e){ /* silent */ }
   // v88.9.13-fp194 патерн: той самий рендер-ланцюжок, що й одноразовий boot-
   // завантажувач нижче — тепер повторюваний на кожну зміну manifest, не лише раз.
   try { if (typeof syncV702UI === 'function') syncV702UI(); } catch(e){ /* silent */ }
@@ -10184,6 +10227,9 @@ function computeConfidenceBand(kpNow, kpObsJson){
 //   'scenario' — NOAA forecast недоступний → плато на базі поточного Kp (не справжній прогноз)
 //   'offline'  — навіть Kp обсервації недоступні
 function resolveDataMode(){
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) return 'offline';
+  if(!currentKpAuthority().usable)return 'offline';
+  if(currentKpAuthority().provisional)return 'estimated';
   // Physical transport state outranks cached fetch timestamps. A recent cached
   // response must never be presented as LIVE after the browser goes offline.
   if (typeof navigator !== 'undefined' && navigator.onLine === false) return 'offline';
@@ -15587,7 +15633,7 @@ function resolveSlotDecision(params){
     if (b > a) { _clipped.push({ nm: w.nm, a, b }); _bounds.add(a); _bounds.add(b); }
   });
   const _sorted = Array.from(_bounds).sort((x, y) => x - y);
-  const _referenceStale = !!(p.referenceStale || (window.__referenceSourceState && window.__referenceSourceState.stale));
+  const _referenceStale = typeof p.referenceStale==='boolean' ? p.referenceStale : !!window.__referenceSourceState?.stale;
   const _hasReference = p.decisionAvailable === false ? false
     : (p.dayScore !== null && p.dayScore !== undefined && Number.isFinite(Number(p.dayScore)) && !_referenceStale);
   const baseAction = _baseSlotAction(g, _hasReference ? Number(p.dayScore) : null, _hasReference);
@@ -17289,9 +17335,9 @@ function resolveDaySignal_v88825(dateObj, rawG, kp, opts){
   const isToday = !!(opts && opts.isToday);
   let entry = null;
   try { if(typeof getEngineScore === 'function') entry = getEngineScore(dateObj); } catch(e) { entry = null; }
-  const hasEngine = !!(entry && isFinite(entry.eng));
-  const referenceStale = !!(hasEngine && window.__referenceSourceState?.stale === true);
-  const decisionAvailable = hasEngine && !referenceStale;
+  const hasEngine = !!(entry && typeof entry.eng === 'number' && Number.isFinite(entry.eng));
+  const referenceStale = !!(hasEngine && entry._expertOverrideVerified !== true && window.__referenceSourceState?.stale === true);
+  const decisionAvailable = hasEngine && !referenceStale && (!isToday || currentKpAuthority().usable);
   let dayScore = hasEngine ? Number(entry.eng) : (isFinite(rawG) ? Number(rawG) : NaN);
   const sourceDayScore = dayScore;
   // Every "today" consumer must use the same current live G as Hero. The
@@ -25025,7 +25071,7 @@ async function handleBacktestFile(input) {
   if (!window.XLSX) {
     await new Promise((res, rej) => {
       const s = document.createElement('script');
-      s.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+      s.src = './xlsx-0.20.3.full.min.js';
       s.onload = res; s.onerror = rej;
       document.head.appendChild(s);
     });
@@ -26488,7 +26534,7 @@ body.fp434-app main#mainContent{padding-inline:24px!important}
   window.fp456BuildCalendarFrame=buildCalendarFrame;
   window.fp457BuildCalendarFrame=buildCalendarFrame;
   window.fp463BuildCalendarFrame=buildCalendarFrame;
-  function offlineAuthorityMode(){return !!(window.__nrOfflineFallback||typeof navigator!=='undefined'&&navigator.onLine===false)}
+  function offlineAuthorityMode(){return typeof navigator!=='undefined'&&navigator.onLine===false}
   function unavailableForDate(layers,feed,official,scenario,kp,offset,missing){return{...layers,feed,official,scenario,kp,signal:null,presentation:advisoryPresentation(null),decisionScore:NaN,actionEligible:true,calendarOffset:offset,missing:!!missing,snapshot:null}}
   function canonicalForDate(d){
     const layers=resolveDateLayers(d),offset=Number.isInteger(d?._calendarOffset)?d._calendarOffset:calendarOffsetForDs(layers.ds);
@@ -26498,14 +26544,14 @@ body.fp434-app main#mainContent{padding-inline:24px!important}
     const scenario=feed.kp_synthetic===true||feed.source==='synthetic_fallback';
     const isToday=layers.ds===todayKey(),ui=window.__uiState||{};
     const liveRaw=isToday&&Number.isFinite(Number(ui.gNow))?Number(ui.gNow):layers.rawValue;
-    const liveKp=isToday&&typeof lastWWV!=='undefined'&&lastWWV&&Number.isFinite(Number(lastWWV.kNow))?Number(lastWWV.kNow):(official?Number(feed.kp):NaN);
+    const liveKp=isToday?currentKpAuthority().kp:(official?Number(feed.kp):NaN);
     if(offlineAuthorityMode()){
       const snapshot=loadCanonicalSnapshot(layers.ds);
       if(!snapshot)return unavailableForDate(layers,feed,official,scenario,NaN,offset,!Number.isFinite(layers.rawValue));
       const signal={decisionAvailable:true,opKey:snapshot.opKey,decisionScore:Number(snapshot.decisionScore),guard:snapshot.guard,dynamicGuard:snapshot.dynamicGuard,actionPolicy:snapshot.actionPolicy};
       return{...layers,feed,official,scenario,kp:NaN,signal,presentation:{...snapshot.presentation},decisionScore:Number(snapshot.decisionScore),actionEligible:true,calendarOffset:offset,missing:!Number.isFinite(layers.rawValue),snapshot};
     }
-    if(!Number.isFinite(liveRaw))return unavailableForDate(layers,feed,official,scenario,liveKp,offset,true);
+    if((isToday&&!currentKpAuthority().usable)||!Number.isFinite(liveRaw))return unavailableForDate(layers,feed,official,scenario,liveKp,offset,true);
     let signal=null;try{signal=resolveDaySignal_v88825(new Date(layers.ds+'T12:00:00Z'),liveRaw,liveKp,{isToday})}catch(_e){signal=null}
     const presentation=advisoryPresentation(signal);
     const snapshot=isToday?saveCanonicalSnapshot(layers.ds,signal,presentation):null;
@@ -26677,7 +26723,7 @@ body.fp434-app main#mainContent{padding-inline:24px!important}
     const box=document.getElementById('nrDataTruthBody');if(!box)return;
     try{
       const [kpRes,healthRes,panchRes]=await Promise.all([
-        fetch('future_kp.json',{cache:'no-store'}),
+        loadFutureKp().then(kp=>({ok:true,json:async()=>window.__nrFutureKp})),
         fetch('SYSTEM_HEALTH_STATUS_v1.json',{cache:'no-store'}),
         fetch('PANCHANGA_ASTRONOMY_ENGINE_CROSSCHECK_v1.json',{cache:'no-store'})
       ]);
@@ -26685,7 +26731,7 @@ body.fp434-app main#mainContent{padding-inline:24px!important}
       if(!healthRes.ok)throw new Error('system health HTTP '+healthRes.status);
       if(!panchRes.ok)throw new Error('Panchanga cross-check HTTP '+panchRes.status);
       const kp=await kpRes.json(),health=await healthRes.json(),panch=await panchRes.json();
-      window.__nrFutureKp=kp;
+      // Read the shared loader state; diagnostics never own forecast authority.
       const start=todayKey(),dates=[];for(let i=0;i<7;i++){const d=new Date(start+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+i);dates.push(d.toISOString().slice(0,10));}
       const rows=dates.map(ds=>({date:ds,...((kp.kp||{})[ds]||{})}));
       const official=rows.filter(x=>x.kp_synthetic===false&&/^NOAA_/.test(String(x.source||''))).length;
@@ -26765,14 +26811,14 @@ body.fp434-app main#mainContent{padding-inline:24px!important}
   }
   const FP463_CANONICAL_SNAPSHOT_KEY='nr_canonical_snapshot_fp463_v1';
   function saveCanonicalSnapshot(date,signal,presentation){
-    if(!presentation?.available||!['favorable','good','neutral','unstable','tense'].includes(String(signal?.opKey||''))||!Number.isFinite(Number(signal?.decisionScore)))return null;
-    const snapshot={schema:'fp463-canonical-snapshot-v1',date,opKey:String(signal.opKey),decisionScore:Number(signal.decisionScore),guard:String(signal.guard||'none'),dynamicGuard:String(signal.dynamicGuard||''),actionPolicy:String(signal.actionPolicy||''),presentation:{available:true,opKey:presentation.opKey,bucket:presentation.bucket,className:presentation.className,coverState:presentation.coverState,symbol:presentation.symbol,label:presentation.label,title:presentation.title,summary:presentation.summary,do:presentation.do,avoid:presentation.avoid},resolved_at:new Date().toISOString()};
+    if(!currentKpAuthority().usable||!presentation?.available||!['favorable','good','neutral','unstable','tense'].includes(String(signal?.opKey||''))||!Number.isFinite(Number(signal?.decisionScore)))return null;
+    const snapshot={schema:'fp463-canonical-snapshot-v2',date,opKey:String(signal.opKey),decisionScore:Number(signal.decisionScore),guard:String(signal.guard||'none'),dynamicGuard:String(signal.dynamicGuard||''),actionPolicy:String(signal.actionPolicy||''),presentation:{available:true,opKey:presentation.opKey,bucket:presentation.bucket,className:presentation.className,coverState:presentation.coverState,symbol:presentation.symbol,label:presentation.label,title:presentation.title,summary:presentation.summary,do:presentation.do,avoid:presentation.avoid},resolved_at:new Date().toISOString(),expires_at:new Date(Math.min(Date.now()+3*3600000,currentKpAuthority().expiresAt)).toISOString()};
     try{localStorage.setItem(FP463_CANONICAL_SNAPSHOT_KEY,JSON.stringify(snapshot));return snapshot}catch(_e){return null}
   }
   function loadCanonicalSnapshot(date){
     try{
       const snapshot=JSON.parse(localStorage.getItem(FP463_CANONICAL_SNAPSHOT_KEY)||'null'),p=snapshot?.presentation;
-      const valid=snapshot?.schema==='fp463-canonical-snapshot-v1'&&snapshot.date===date&&['favorable','good','neutral','unstable','tense'].includes(snapshot.opKey)&&Number.isFinite(Number(snapshot.decisionScore))&&p?.available===true&&p.opKey===snapshot.opKey&&['act','check','hold'].includes(p.bucket)&&['state-act','state-check','state-caution','state-hold'].includes(p.className)&&['act','check','caution','hold'].includes(p.coverState)&&['✓','!','×'].includes(p.symbol)&&typeof snapshot.resolved_at==='string';
+      const valid=snapshot?.schema==='fp463-canonical-snapshot-v2'&&snapshot.date===date&&['favorable','good','neutral','unstable','tense'].includes(snapshot.opKey)&&Number.isFinite(Number(snapshot.decisionScore))&&p?.available===true&&p.opKey===snapshot.opKey&&['act','check','hold'].includes(p.bucket)&&['state-act','state-check','state-caution','state-hold'].includes(p.className)&&['act','check','caution','hold'].includes(p.coverState)&&['✓','!','×'].includes(p.symbol)&&typeof snapshot.resolved_at==='string'&&Number.isFinite(Date.parse(snapshot.resolved_at))&&Date.parse(snapshot.resolved_at)<=Date.now()&&Date.now()-Date.parse(snapshot.resolved_at)<=3*3600000&&Number.isFinite(Date.parse(snapshot.expires_at))&&Date.now()<=Date.parse(snapshot.expires_at);
       return valid?snapshot:null;
     }catch(_e){return null}
   }
@@ -26784,9 +26830,9 @@ body.fp434-app main#mainContent{padding-inline:24px!important}
     const cover=document.getElementById('nrCover');if(!cover)return;
     const text=id=>document.getElementById(id)?.textContent?.replace(/\s+/g,' ').trim()||'';
     const ui=window.__uiState||{};
-    const offline=window.__nrOfflineFallback||typeof navigator!=='undefined'&&navigator.onLine===false;
+    const offline=offlineAuthorityMode();
     const g=offline?NaN:(Number.isFinite(Number(ui.gNow))?Number(ui.gNow):NaN);
-    const kp=offline?NaN:(typeof lastWWV!=='undefined'&&lastWWV&&Number.isFinite(Number(lastWWV.kNow))?Number(lastWWV.kNow):Number(ui.kpNow));
+    const kp=offline?NaN:currentKpAuthority().kp;
     const date=todayKey(),registryRow=Array.isArray(window._expertDecisionRegistry?.rows)?window._expertDecisionRegistry.rows.find(r=>r.date===date):null;
     const canonical=canonicalForDate({ds:date,G:g,_calendarOffset:0});
     const daySignal=canonical.signal,presentation=canonical.presentation,snapshot=canonical.snapshot;
@@ -26828,7 +26874,7 @@ body.fp434-app main#mainContent{padding-inline:24px!important}
     fp434Go(saved,false);
   }
   window.renderCompetitiveCover=renderCompetitiveCover;
-  window.addEventListener('engine-data-stale',()=>{window.__nrOfflineFallback=true;const node=document.getElementById('nrCoverFresh');if(node)node.textContent='ДАНІ З КЕШУ'});
+  window.addEventListener('engine-data-stale',()=>{renderCompetitiveCover()});
   window.addEventListener('online',()=>{window.__nrOfflineFallback=false;renderCompetitiveCover()});
   document.addEventListener('DOMContentLoaded',()=>setTimeout(init,180),{once:true});
   window.addEventListener('hashchange',()=>{const r=location.hash.replace('#','');if(ROUTES.includes(r))fp434Go(r,true)});
@@ -27430,7 +27476,7 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line213
   }
   const STATE_COPY={
     loading:['⏳ ЗАВАНТАЖЕННЯ','Очікуємо дані. Рішення не показується як нейтральне до завершення перевірки.'],
-    stale:['◷ ЗАСТАРІЛІ ДАНІ','Останнє збережене рішення залишається видимим із часовою позначкою; live-контекст не вважається актуальним.'],
+    stale:['◷ ЗАСТАРІЛІ ДАНІ','Частина джерел повернула кешовані дані. Доступність поточного рішення визначається його джерелами та строком чинності.'],
     offline:['⇣ ОФЛАЙН · ДАНІ З КЕШУ','Канонічне рішення збережене на пристрої. Live G недоступний до відновлення мережі.'],
     missing:['— НЕМАЄ ДАНИХ','Відсутність даних не трактується як нейтральний стан або нульове рішення.'],
     error:['! ПОМИЛКА ОНОВЛЕННЯ','Оновлення не завершено. Застосунок не підмінює помилку синтетичним рішенням.'],
