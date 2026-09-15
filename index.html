@@ -1848,7 +1848,7 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
     </div>
   </div>
 
-  <main id="mainContent">
+  <main id="mainContent" tabindex="-1">
     <!-- ═══ SCIENCE BAR ═══ -->
     <div id="scienceBar">
       <!-- Первинні: завжди видно -->
@@ -26655,7 +26655,7 @@ body.fp434-app main#mainContent{padding-inline:24px!important}
     if(name==='forecast'){setTimeout(renderUnifiedForecast,80);setTimeout(renderIndependentForecasts,120)}
     if(name==='today'){setTimeout(renderCompetitiveCover,80);setTimeout(renderCosmicConcept,120)}
     if(['profile','match','reports','plan'].includes(name))setTimeout(enhanceFunctionalRoutes,80);
-    if(scroll){window.scrollTo({top:0,behavior:'smooth'});const activeRoute=document.getElementById('nrRoute-'+name);const heading=activeRoute?.querySelector('h1,h2');const announcer=document.getElementById('fp434RouteAnnouncer');if(announcer)announcer.textContent=heading?.textContent?.trim()||name;setTimeout(()=>heading?.focus({preventScroll:true}),120)}
+    if(scroll){window.scrollTo({top:0,behavior:'smooth'});const activeRoute=document.getElementById('nrRoute-'+name);const heading=activeRoute?.querySelector('h1,h2');const announcer=document.getElementById('fp434RouteAnnouncer');if(announcer)announcer.textContent=heading?.textContent?.trim()||name;setTimeout(()=>{if(!activeRoute?.classList.contains('active'))return;const currentHeading=activeRoute.querySelector('h1,h2');if(currentHeading){currentHeading.setAttribute('tabindex','-1');currentHeading.focus({preventScroll:true})}},120)}
   };
   window.fp435SavePlan=function(event){event.preventDefault();const data=Object.fromEntries(new FormData(event.currentTarget));data.date=todayKey();try{localStorage.setItem('gindex_day_plan_v1',JSON.stringify(data));window.fp466CancelReminder();document.getElementById('nrPlanStatus').textContent='✓ План збережено на цьому пристрої';renderPlanResult()}catch(_e){document.getElementById('nrPlanStatus').textContent='Не вдалося зберегти локально'}return false};
   window.fp466CancelReminder=function(){window.clearTimeout(window.__nrPlanReminderTimer);window.__nrPlanReminderTimer=null;try{localStorage.removeItem('gindex_plan_reminder_v1')}catch(_e){}const form=document.getElementById('nrPlanForm');if(form)delete form.dataset.reminder;const status=document.getElementById('nrReminderStatus');if(status)status.textContent='Нагадування скасовано.'};
