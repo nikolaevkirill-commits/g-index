@@ -1,10 +1,21 @@
 // G-Index service worker. HTML/data are network-first; static shell is cache-first.
 // Bump CACHE_VERSION whenever index.html or a cached shell asset changes.
-const CACHE_VERSION = 'fp467-v9'; // audit: channel persistence, qualified Kp authority and data freshness
+const CACHE_VERSION = 'fp467-v10'; // audit: channel persistence, qualified Kp authority and data freshness
 const CACHE_PREFIX = 'gindex-'; // G-Index cache namespace; do not remove the prefix.
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${CACHE_VERSION}`;
 const DATA_CACHE = `${CACHE_PREFIX}data-${CACHE_VERSION}`;
 const NETWORK_FIRST_TIMEOUT_MS = 2500;
+let lastRequestOrder=0;
+const newestRequest=new Map();
+async function reportDelivery(event, type, fetchedAt, requestOrder){
+  try{const client=event.clientId?await self.clients.get(event.clientId):null;
+    if(client)client.postMessage({type,fetchedAt,requestOrder,url:event.request.url,ageUnknown:fetchedAt===null});
+  }catch(_e){} // A delivery notification must never change the fetch result.
+}
+async function deliveryResponse(response,mode){
+  const headers=new Headers(response.headers);headers.set('x-gindex-delivery',mode);
+  return new Response(await response.clone().arrayBuffer(),{status:response.status,statusText:response.statusText,headers});
+}
 
 const SHELL_ASSETS = [
   './',
@@ -139,11 +150,13 @@ self.addEventListener('fetch', (event) => {
   }
 
   if (isHtmlOrData) {
+    const requestOrder=lastRequestOrder=Math.max(Date.now(),lastRequestOrder+0.001);
+    const canonicalUrl = new URL(req.url);
+    canonicalUrl.searchParams.delete('fresh');
+    const cacheKey = canonicalUrl.href;
+    newestRequest.set(cacheKey,requestOrder);
     event.respondWith((async () => {
       const cache = await caches.open(DATA_CACHE);
-      const canonicalUrl = new URL(req.url);
-      canonicalUrl.searchParams.delete('fresh');
-      const cacheKey = canonicalUrl.href;
       try {
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), NETWORK_FIRST_TIMEOUT_MS);
@@ -163,12 +176,13 @@ self.addEventListener('fetch', (event) => {
             statusText: fresh.statusText,
             headers: _stampedHeaders
           });
-          await cache.put(cacheKey, _stamped);
+          if(newestRequest.get(cacheKey)===requestOrder)await cache.put(cacheKey, _stamped);
         } catch (_stampErr) {
           // If header stamping fails, preserve a usable unstamped response.
-          try { await cache.put(cacheKey, fresh.clone()); } catch (_e2) { /* best-effort */ }
+          try { if(newestRequest.get(cacheKey)===requestOrder)await cache.put(cacheKey, fresh.clone()); } catch (_e2) { /* best-effort */ }
         }
-        return fresh;
+        await reportDelivery(event,'SW_FRESH_DATA',Date.now(),requestOrder);
+        return deliveryResponse(fresh,'network');
       } catch (e) {
         let cached = await cache.match(cacheKey);
         if (!cached) {
@@ -178,14 +192,11 @@ self.addEventListener('fetch', (event) => {
         if (cached) {
           // Tell the page exactly when fallback data was cached, when known.
           try {
-            const clients = await self.clients.matchAll({ type: 'window' });
-            const _cachedAtHeader = cached.headers.get('x-gindex-cached-at');
-            const fetchedAt = _cachedAtHeader ? parseInt(_cachedAtHeader, 10) : null;
-            clients.forEach((c) => {
-              c.postMessage({ type: 'SW_STALE_DATA', fetchedAt, url: req.url, ageUnknown: !_cachedAtHeader });
-            });
+            const raw=cached.headers.get('x-gindex-cached-at'),stamp=raw?Number(raw):NaN;
+            const fetchedAt=Number.isFinite(stamp)&&stamp>0&&stamp<=Date.now()+5*60000?stamp:null;
+            await reportDelivery(event,'SW_STALE_DATA',fetchedAt,requestOrder);
           } catch (_e) { /* best-effort notification; never block the response */ }
-          return cached;
+          return deliveryResponse(cached,'cached');
         }
         throw e;
       }
