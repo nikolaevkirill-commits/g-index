@@ -10033,8 +10033,8 @@ function renderGnssRisk(){
 // DST < -50 нТл = помірна буря (узгоджено з engine v18.5), < -100 = сильна буря
 function computeDstModifier(){
   if(!window._lastDst) return {val:0, tip:'0 — Dst недоступний'};
-  const dst = window._lastDst.dst;
-  if(!isFinite(dst)) return {val:0, tip:'0 — Dst недоступний'};
+  const dst = _finiteFormulaNumber(window._lastDst.dst);
+  if(!_dstValid(dst)) return {val:0, tip:'0 — Dst недоступний'};
   if(dst <= -100) return {val:-2, tip:`-2 — Dst=${dst} нТл (значна буря)`};
   if(dst <= -50)  return {val:-1, tip:`-1 — Dst=${dst} нТл (помірна буря, engine v18.5)`};
   return {val:0, tip:`0 — Dst=${dst} нТл (норма)`};
@@ -10535,8 +10535,14 @@ function computeCScore(kpNow, kpObsJson, ai, G, kpSrc){
 // ------------------------- Geomagnetic day component -------------------------
 // fp349: Expert Excel and physical semantics use (2 - Kp): stronger geomagnetic
 // activity lowers the day background. Safety thresholds (Kp >= 4/5) stay separate.
+function _finiteFormulaNumber(value){
+  if(typeof value !== 'number' && typeof value !== 'string') return NaN;
+  if(typeof value === 'string' && value.trim() === '') return NaN;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : NaN;
+}
 function kpDayTerm(kp){
-  const k = Number(kp);
+  const k = _finiteFormulaNumber(kp);
   // fp412: missing Kp is not a real quiet observation.
   return (kp !== null && kp !== '' && isFinite(k)) ? (2 - k) : NaN;
 }
@@ -10554,7 +10560,7 @@ function computeAi(dateTimeUTC, kp=null){
       const _snKey = (window._lastWolfSn && isFinite(window._lastWolfSn.sn)) ? window._lastWolfSn.sn : 'na';
       const _profileKey = (typeof _activeProfile !== 'undefined') ? _activeProfile : 'off';
       const _liveBucket = Math.abs(dateTimeUTC.getTime() - Date.now()) < 300000 ? Math.floor(Date.now() / 300000) : 'day';
-      const _k = [dateTimeUTC.getTime(), (kp !== null && kp !== '' && isFinite(kp) ? kp : 'missing'), _dstKey, _snKey, _profileKey, _liveBucket].join('|');
+      const _k = [dateTimeUTC.getTime(), (Number.isFinite(_finiteFormulaNumber(kp)) ? Number(kp) : 'missing'), _dstKey, _snKey, _profileKey, _liveBucket].join('|');
       const _hit = _computeAiCache.get(_k);
       if(_hit) return _hit;
       const _res = _computeAiRaw(dateTimeUTC, kp);
@@ -10575,7 +10581,8 @@ function _computeAiRaw(dateTimeUTC, kp=null){
              phaseName: '?', phaseDeg: NaN, lTip: 'Invalid date', mTip: '', eTip: '', pTip: '', diTip: '',
              explain: 'Invalid date input', eclipseUnverified: false };
   }
-  const kpAvailable = kp !== null && kp !== '' && isFinite(kp);
+  kp = _finiteFormulaNumber(kp);
+  const kpAvailable = Number.isFinite(kp);
   if(!kpAvailable) kp = NaN;
   // Clamp kp to physical range [0..9] (Kp index spec defines 0-9 only)
   if(kpAvailable && kp < 0) kp = 0;
@@ -10866,6 +10873,7 @@ const GFZ_AP_TABLE = [
 
 // Зворотна: Kp → Ap (для 3-day прогнозу)
 function kpToApInterp(kp) {
+  kp = _finiteFormulaNumber(kp);
   if (!isFinite(kp)) return NaN;
   kp = Math.max(0, Math.min(9, kp));
   for (let i = 0; i < GFZ_AP_TABLE.length - 1; i++) {
@@ -11352,7 +11360,7 @@ function parse3DaySafe(json){
 // WDC Kyoto marks missing hours as 9999; parseFloat("9999")=9999 passed isFinite() and showed as a
 // real "Dst 9999 нТл". Real Dst lives roughly within [-600, +100] nT; anything outside is rejected,
 // and we walk back to the last VALID row instead of trusting the latest (possibly-sentinel) one.
-function _dstValid(v){ const n = parseFloat(v); return isFinite(n) && Math.abs(n) < 1000 && n >= -600 && n <= 100; }
+function _dstValid(v){ const n = _finiteFormulaNumber(v); return Number.isFinite(n) && Math.abs(n) < 1000 && n >= -600 && n <= 100; }
 function _lastValidDst(rows, getVal){
   for(let i = rows.length - 1; i >= 0; i--){ const v = getVal(rows[i]); if(_dstValid(v)) return { dst: parseFloat(v), row: rows[i] }; }
   return null;
@@ -11376,7 +11384,7 @@ function _parseDstTimeToDate(raw){
 // (>6г — той самий поріг, що вже прийнятий для Kp age-penalty в computeCScore).
 function _dstProvenanceCheck(){
   const d = window._lastDst;
-  if (!d || !isFinite(d.dst)) return { ok:false, reason:'Dst недоступний', ageHours:null };
+  if (!d || !_dstValid(d.dst)) return { ok:false, reason:'Dst недоступний', ageHours:null };
   if (d._cached) return { ok:false, reason:'Dst із локального кешу (час невідомий)', ageHours:null };
   const t = _parseDstTimeToDate(d.time);
   if (!t) return { ok:false, reason:'Dst: час запису не розпізнано', ageHours:null };

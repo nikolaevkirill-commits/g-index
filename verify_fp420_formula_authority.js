@@ -8,6 +8,9 @@ const fn = html.match(/function kpDayTerm\(kp\)\s*\{[\s\S]*?\n\}/);
 if (!fn) throw new Error('canonical kpDayTerm function missing');
 const context = {};
 vm.createContext(context);
+const numeric = html.match(/function _finiteFormulaNumber\(value\)\s*\{[\s\S]*?\n\}/);
+if (!numeric) throw new Error('formula numeric validation helper missing');
+vm.runInContext(numeric[0], context);
 vm.runInContext(fn[0], context);
 
 for (const [kp, expected] of [[1, 1], [2, 0], [4, -2], [5, -3]]) {
