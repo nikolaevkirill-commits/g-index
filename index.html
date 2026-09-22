@@ -2040,7 +2040,7 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line132
             <div id="heroGreeting"></div>
             <!-- v88.7.15 Б: low-confidence marker — engine F1=0.26 на neutral (CANONICAL_METRICS).
                  Видимий ТІЛЬКИ коли |G| ≤ 1 (зона де engine має слабку точність). -->
-            <div id="heroLowConfBadge" tabindex="0" style="display:none;margin-top:6px;padding:4px 8px;border-radius:6px;font-size:11px;color: var(--muted);background:rgba(155,177,220,.06);border:1px dashed rgba(155,177,220,.25);cursor:help" title="Engine v18.5 на нейтральному класі (G ∈ [-1, +1]) має f1=0.26 — низька точність розрізнення нейтральних/слабких днів. Strong negative (F1=0.84) і Strong positive (F1=0.69) — надійні. Для критичних рішень у середній зоні рекомендована експертна перевірка.&#10;Source: CANONICAL_METRICS.md v2.0 (n=280, GT v5.1).">⚪ Низька довіра в нейтральній зоні</div>
+            <div id="heroLowConfBadge" tabindex="0" style="display:none;margin-top:6px;padding:4px 8px;border-radius:6px;font-size:11px;color: var(--muted);background:rgba(155,177,220,.06);border:1px dashed rgba(155,177,220,.25);cursor:help" title="Історичне порівняння Engine v18.5 з експертним PDF: F1 нейтрального класу 0.26, сильного негативного 0.84, сильного позитивного 0.69 (n=280, GT v5.1; CANONICAL_METRICS.md v2.0). Це узгодженість із PDF, а не точність прогнозування реальних подій. Метрики Engine не оцінюють поточний G або рішення live-guard.">⚪ Низька довіра в нейтральній зоні</div>
             <div id="heroStrongRawConfidence" tabindex="0" style="display:none;margin-top:6px;padding:4px 8px;border-radius:6px;font-size:11px;font-weight:700;color:#9ce6c0;background:rgba(43,212,125,.08);border:1px solid rgba(43,212,125,.45);cursor:help" title="Shadow confidence policy: HIGH лише коли |expert raw sum| ≥ 3. Не змінює G. Historical descriptive: ±1 95.7%, coverage 53.0%. Канонічний Expert Excel фізично закінчується 14.07.2026; після цієї дати badge не показується, доки новий Expert raw не буде зафіксований ДО PDF. Engine не замінює Expert raw.">● Історична згода ±1 · 95.7% · coverage 53%</div>
             <div id="heroIndexConflict" tabindex="0" style="display:none;margin-top:6px;padding:5px 8px;border-radius:6px;font-size:11px;font-weight:700;color:#ffd37a;background:rgba(255,176,32,.08);border:1px solid rgba(255,176,32,.42);cursor:help" title="Engine/PDF verdict і календарний context мають різні знаки. Calendar score уже походить із тих самих календарних факторів і НЕ є другим незалежним голосом. Це лише confidence/context warning; G не змінюється.">⚠ Конфлікт контексту · перевір перед важливим рішенням</div>
             <!-- v88.8.4: 7-class verdict badge — canonical lexicon (tag_to_text.json verdict_text). Показується завжди коли G визначений. -->
@@ -17572,7 +17572,7 @@ function syncHero(){
       else heroG.classList.add('g-bad');
     }
     // v88.7.15 Б: low-confidence badge — видимий тільки у зоні |G| ≤ 1 (engine F1=0.26 на neutral).
-    // Strong negative/positive класи валідовані (F1 0.84/0.69), середня зона — потребує експертного підтвердження.
+    // F1 0.84/0.69 описує історичне порівняння з PDF, не незалежні результати подій.
     try {
       const _lcb = document.getElementById('heroLowConfBadge');
       if (_lcb) {
@@ -18325,7 +18325,7 @@ function syncHero(){
     try {
       const _reasons = (window.__uiState && window.__uiState.confReasons) || [];
       if(_reasons.length){
-        const _txt = 'Довіра ' + _ui.confPct + '%\nПричини зниження:\n' +
+        const _txt = 'Оцінка якості вхідних даних: ' + _ui.confPct + '% (не ймовірність правильного прогнозу)\nПричини зниження:\n' +
           _reasons.filter(r => r.d > 0).map(r => `• -${(r.d*100).toFixed(0)}% — ${r.txt}`).join('\n');
         el('heroConfidence').title = _txt;
         el('heroConfidence').style.cursor = 'help';
