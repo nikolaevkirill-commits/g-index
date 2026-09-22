@@ -134,7 +134,7 @@ def main() -> None:
     require(index, 'const TOKEN_THEMES', 'root token themes')
     require(index, 'EngineTagParser.parseTagTokens', 'root token parser')
     require(index, 'decisionScore:decisionAvailable?operationalScore:undefined', 'fail-closed operational score export')
-    require(index, "actionPolicy = !decisionAvailable ? (referenceStale ? 'reference_stale' : 'reference_unavailable')", 'missing/stale reference action policy')
+    require(index, "actionPolicy = !decisionAvailable ? (!dstCurrent ? 'dst_unavailable' : (!rawAvailable || !Number.isFinite(kpDayTerm(kp))) ? 'input_unavailable' : referenceStale ? 'reference_stale' : 'reference_unavailable')", 'missing/stale reference, Dst and invalid-input action policy')
     require(index, 'intradayGuard = _computeCurrentSlotDecision()', 'canonical intraday guard ownership')
     require(index, 'resolveSlotDecision({', 'canonical per-slot resolver')
     require(index, "seg.setAttribute('data-gval', 'БЛОК')", 'blocked heat-slot label')

@@ -8038,6 +8038,9 @@ async function loadEngineScores(){
     if(!resp.ok) throw new Error('HTTP ' + resp.status);
     const data = await resp.json();
     _engineScores = data.scores || {};
+    for(const entry of Object.values(_engineScores)){
+      if(entry && typeof entry==='object') entry._frozenInputKp=entry.kp;
+    }
     const referenceCached=resp.headers?.get('x-gindex-delivery')==='cached';
     window.__referenceSourceState = {mode:referenceCached?'cached':'live', stale:referenceCached, loadedAt:Date.now(), reason:referenceCached?'sw_offline_fallback':'network'};
     window.__engineRetryCount = 0;
@@ -8051,7 +8054,7 @@ async function loadEngineScores(){
         let _patched = 0;
         for(const ds in _engineScores){
           const e = _engineScores[ds];
-          if(e && e.kp_synthetic === true && fkp[ds] && fkp[ds].kp_synthetic === false && isFinite(fkp[ds].kp)){
+          if(e && e.kp_synthetic === true && fkp[ds] && fkp[ds].kp_synthetic === false && Number.isFinite(kpDayTerm(fkp[ds].kp))){
             e.kp = fkp[ds].kp;
             e.kp_synthetic = false;
             e.kp_source = fkp[ds].source || '27do';
@@ -8417,6 +8420,9 @@ function getEngineScore(dateObj){
   // original snapshot gives 75.0% strict on holdout (n=56, v5.1). Recalc погіршує якість.
   // Натомість: показуємо snapshot eng + marker "Kp estimated" коли live Kp != snapshot Kp.
   // Це чесніше: snapshot — validated tag-based engine v18.5, recalc — ні.
+  // Guard the frozen model's legacy invalid-Kp -> quiet fallback at the read boundary.
+  // Independent verified PDF / Excel references do not depend on this Kp input.
+  if(snapshot && !snapshot._expertOverrideVerified && !snapshot._expertCalcApplied && !Number.isFinite(kpDayTerm(Object.prototype.hasOwnProperty.call(snapshot,'_frozenInputKp') ? snapshot._frozenInputKp : snapshot.kp))) return null;
   if(snapshot && snapshot.kp_synthetic === true && typeof last3D !== 'undefined' && last3D && Array.isArray(last3D.days)){
     try {
       const liveDay = last3D.days.find(d => fmtDate(d.date) === ds);
@@ -9387,7 +9393,13 @@ async function ensureEclipsesForYear(year){
 }
 function computeMiFromEclipses(dateUTC){
   const y = dateUTC.getUTCFullYear();
-  const set = eclipsesByYear.get(y);
+  // Include adjacent years so the +/-3-day window survives New Year.
+  const set = new Map();
+  for(const year of [y-1,y,y+1]){
+    const catalog = eclipsesByYear.get(year);
+    if(catalog instanceof Map) for(const [day,type] of catalog) set.set(day,type);
+    else if(catalog) for(const day of catalog) set.set(day,'unknown');
+  }
 
   // v85b-F5 (СЕРЕД-1): Explicit catalog-end warning
   if(!set || set.size===0){
@@ -10546,7 +10558,7 @@ function _finiteFormulaNumber(value){
 function kpDayTerm(kp){
   const k = _finiteFormulaNumber(kp);
   // fp412: missing Kp is not a real quiet observation.
-  return (kp !== null && kp !== '' && isFinite(k)) ? (2 - k) : NaN;
+  return (Number.isFinite(k) && k >= 0 && k <= 9) ? (2 - k) : NaN;
 }
 
 // fp145 PERF FIX: computeAi викликається 40+ разів на boot (render27Day, renderComparePeriods,
@@ -10562,7 +10574,14 @@ function computeAi(dateTimeUTC, kp=null){
       const _snKey = (window._lastWolfSn && isFinite(window._lastWolfSn.sn)) ? window._lastWolfSn.sn : 'na';
       const _profileKey = (typeof _activeProfile !== 'undefined') ? _activeProfile : 'off';
       const _liveBucket = Math.abs(dateTimeUTC.getTime() - Date.now()) < 300000 ? Math.floor(Date.now() / 300000) : 'day';
-      const _k = [dateTimeUTC.getTime(), (Number.isFinite(_finiteFormulaNumber(kp)) ? Number(kp) : 'missing'), _dstKey, _snKey, _profileKey, _liveBucket].join('|');
+      const _year = dateTimeUTC.getUTCFullYear();
+      const _dependencies = JSON.stringify([
+        _userLat, _userLon, todayKyivStr(), Math.floor(Date.now()/60000),
+        window._lastDst?.time, window._lastDst?._cached, _dstProvenanceCheck().ok, lastBz, lastVsw,
+        eventIndex.get(fmtDate(dateTimeUTC)) || [],
+        [_year-1,_year,_year+1].map(y=>Array.from(eclipsesByYear.get(y)||[]))
+      ]);
+      const _k = [dateTimeUTC.getTime(), (Number.isFinite(_finiteFormulaNumber(kp)) ? Number(kp) : 'missing'), _dstKey, _snKey, _profileKey, _liveBucket, _dependencies].join('|');
       const _hit = _computeAiCache.get(_k);
       if(_hit) return _hit;
       const _res = _computeAiRaw(dateTimeUTC, kp);
@@ -10584,11 +10603,9 @@ function _computeAiRaw(dateTimeUTC, kp=null){
              explain: 'Invalid date input', eclipseUnverified: false };
   }
   kp = _finiteFormulaNumber(kp);
-  const kpAvailable = Number.isFinite(kp);
+  const kpAvailable = Number.isFinite(kp) && kp >= 0 && kp <= 9;
   if(!kpAvailable) kp = NaN;
-  // Clamp kp to physical range [0..9] (Kp index spec defines 0-9 only)
-  if(kpAvailable && kp < 0) kp = 0;
-  if(kpAvailable && kp > 9) kp = 9;
+  // Reject invalid range consistently with kpDayTerm; never invent quiet Kp.
   const dateStr = fmtDate(dateTimeUTC);
 
   const phaseDeg  = moonPhaseAngle(dateTimeUTC);
@@ -10733,7 +10750,8 @@ function _computeAiRaw(dateTimeUTC, kp=null){
   const _diDateStr = fmtDate(dateTimeUTC);
   const _todayStr  = todayKyivStr();
   if(_diDateStr === _todayStr) {
-    const _dstMod = computeDstModifier();
+    const provenance = _dstProvenanceCheck();
+    const _dstMod = provenance.ok ? computeDstModifier() : {val:0, tip:'0 — Dst не використано: '+provenance.reason};
     Di = _dstMod.val;
     diTip = _dstMod.tip;
   }
@@ -13105,7 +13123,7 @@ function computePanchanga(dateUTC){
   // a minute, so cache by minute-rounded timestamp. Cache is tiny (1–2 keys/tick) and self-trims.
   let _pKey;
   try {
-    _pKey = Math.floor((dateUTC instanceof Date ? dateUTC.getTime() : new Date(dateUTC).getTime()) / 60000);
+    _pKey = [Math.floor((dateUTC instanceof Date ? dateUTC.getTime() : new Date(dateUTC).getTime()) / 60000), _userLat, _userLon].join('|');
     if (!window.__panchMemo) window.__panchMemo = {};
     if (window.__panchMemo[_pKey]) return window.__panchMemo[_pKey];
   } catch(_e) { _pKey = null; }
@@ -17340,13 +17358,15 @@ function resolveDaySignal_v88825(dateObj, rawG, kp, opts){
   try { if(typeof getEngineScore === 'function') entry = getEngineScore(dateObj); } catch(e) { entry = null; }
   const hasEngine = !!(entry && typeof entry.eng === 'number' && Number.isFinite(entry.eng));
   const referenceStale = !!(hasEngine && entry._expertOverrideVerified !== true && window.__referenceSourceState?.stale === true);
-  const decisionAvailable = hasEngine && !referenceStale && (!isToday || currentKpAuthority().usable);
+  const dstCurrent = !isToday || !window._lastDst || _dstProvenanceCheck().ok;
+  const rawAvailable = Number.isFinite(_finiteFormulaNumber(rawG)) || (isToday && Number.isFinite(_finiteFormulaNumber(window.__uiState?.gNow)));
+  const decisionAvailable = hasEngine && !referenceStale && dstCurrent && rawAvailable && Number.isFinite(kpDayTerm(kp)) && (!isToday || currentKpAuthority().usable);
   let dayScore = hasEngine ? Number(entry.eng) : (isFinite(rawG) ? Number(rawG) : NaN);
   const sourceDayScore = dayScore;
   // Every "today" consumer must use the same current live G as Hero. The
   // caller's G_day remains available for audit, but cannot create a milder
   // operational verdict in the 3-day/27-day cards for the same moment.
-  const operationalRawG = isToday && isFinite(window.__uiState?.gNow)
+  const operationalRawG = isToday && Number.isFinite(_finiteFormulaNumber(window.__uiState?.gNow))
     ? Number(window.__uiState.gNow) : Number(rawG);
   const liveKey = isFinite(operationalRawG) ? classifyStateByG(operationalRawG, kp) : 'neutral';
   const hasUnverifiedOverride = !!(entry && entry._expertOverrideAvailable && entry._expertOverrideVerified === false && isFinite(entry._expertEngCandidate));
@@ -17461,7 +17481,9 @@ function resolveDaySignal_v88825(dateObj, rawG, kp, opts){
       : { text:'Не використовувати raw/live-фон як дозвіл на дію', style:'color: var(--muted);font-weight:800' };
   }
   const color = ({favorable:'#2bd47d',good:'#2bd47d',neutral:'#9bb1dc',unstable:'#ffaa33',tense:'#ff6b6b'})[keyForColor] || '#9bb1dc';
-  const tooltip = hasEngine
+  const tooltip = !dstCurrent ? 'Dst не підтверджений за часом або якістю. Рішення сьогодні недоступне до оновлення даних.'
+    : (!rawAvailable || !Number.isFinite(kpDayTerm(kp))) ? 'Kp або G відсутній чи невалідний. Оперативне рішення недоступне.'
+    : hasEngine
     ? (referenceStale
         ? `Денний Engine/PDF reference прострочений (${window.__referenceSourceState?.reason || 'stale'}). Оперативне рішення недоступне; raw/live-контекст не є дозволом.`
         : guard === 'unverified_override_large_delta'
@@ -17473,7 +17495,7 @@ Live-контур зараз: ${liveTxt}.
 Оперативний стан: ${operationalScore>=0?'+':''}${operationalScore} (${keyForColor}).
 ${guard !== 'none' || dynamicGuard ? 'Застосовано обережніший safety-контур; PDF/Engine не є дозволом на дію.' : 'Сигнали узгоджені.'}${dynamicGuard === 'current_window' ? '\nПоточне часове вето: нові починання заблоковано до завершення активного вікна.' : ''}`)
     : `Денного Engine/PDF score немає. Показано Live G: ${liveTxt}.`;
-  const actionPolicy = !decisionAvailable ? (referenceStale ? 'reference_stale' : 'reference_unavailable') : (intradayGuard?.blockedNow ? 'routine_only' : 'resolved_day_policy');
+  const actionPolicy = !decisionAvailable ? (!dstCurrent ? 'dst_unavailable' : (!rawAvailable || !Number.isFinite(kpDayTerm(kp))) ? 'input_unavailable' : referenceStale ? 'reference_stale' : 'reference_unavailable') : (intradayGuard?.blockedNow ? 'routine_only' : 'resolved_day_policy');
   return { entry, hasEngine, referenceStale, decisionAvailable, sourceDayScore, baseDayScore, dayScore, referenceScore:hasEngine?dayScore:undefined, operationalRawG, rawG, operationalScore, decisionScore:decisionAvailable?operationalScore:undefined, intradayGuard, actionPolicy, dayKey, liveKey, opKey, guard, dynamicGuard, materialConflict, repG, title, action, recommendation, color, tooltip, src, hasUnverifiedOverride, sourceDelta };
 }
 window.resolveDaySignal_v88825 = resolveDaySignal_v88825;
@@ -21599,31 +21621,31 @@ function calcSunTimes(dateUTC) {
   return { srH, ssH, dayLen: ssH - srH, nightLen: 24 - (ssH - srH) };
 }
 
-function calcHora(dateUTC) {
-  const { srH, ssH, dayLen, nightLen } = calcSunTimes(dateUTC);
-  const segDay   = dayLen / 12;
-  const segNight = nightLen / 12;
-  const wday = localWeekday(dateUTC); // v87.90: локальний день (раніше getUTCDay → неправильна планета Hora вночі)
-  const firstIdx = HORA_DAY_LORD[wday];
-  const nowH = dateUTC.getUTCHours() + dateUTC.getUTCMinutes()/60 + dateUTC.getUTCSeconds()/3600;
-  let horaIdx, horaEnd;
-  if (nowH >= srH && nowH < ssH) {
-    const slot = Math.floor((nowH - srH) / segDay);
-    horaIdx = (firstIdx + slot) % 7;
-    horaEnd = srH + (slot + 1) * segDay;
-  } else {
-    const nightFirstIdx = (firstIdx + 12) % 7;
-    const slotNight = nowH >= ssH ? Math.floor((nowH - ssH) / segNight) : Math.floor((nowH + 24 - ssH) / segNight);
-    horaIdx = (nightFirstIdx + slotNight) % 7;
-    const base = nowH >= ssH ? ssH : ssH - 24;
-    horaEnd = base + (slotNight + 1) * segNight;
+function _horaSolarDay(dateUTC){
+  const now = dateUTC.getTime();
+  // Scan UTC anchors: solar sunrise can fall on an adjacent UTC date by longitude.
+  for(let offset=-2;offset<=1;offset++){
+    const anchor=addDays(dateUTC,offset), next=addDays(anchor,1);
+    const pair=sunRiseSetUTC_Meeus(anchor,_userLat,_userLon);
+    const nextPair=sunRiseSetUTC_Meeus(next,_userLat,_userLon);
+    const rise=pair.sunrise.getTime(), set=pair.sunset.getTime(), nextRise=nextPair.sunrise.getTime();
+    if(Number.isFinite(rise)&&rise<set&&set<nextRise&&now>=rise&&now<nextRise){
+      return {rise,set,nextRise,firstIdx:HORA_DAY_LORD[localWeekday(pair.sunrise)]};
+    }
   }
-  const nowMs = dateUTC.getTime();
-  const endMs = nowMs + (horaEnd - nowH) * 3600000;
-  const endLocal = new Date(endMs);
-  const locEnd = endLocal.toLocaleTimeString('uk-UA',{hour:'2-digit',minute:'2-digit'});
-  const minLeft = Math.round((horaEnd - nowH) * 60);
-  return { planet: HORA_ORDER[horaIdx], end: locEnd, minLeft };
+  return null;
+}
+function calcHora(dateUTC) {
+  const day=_horaSolarDay(dateUTC);
+  if(!day)return {planet:null,end:'—',minLeft:0,unavailable:true};
+  const now=dateUTC.getTime(), isDay=now<day.set;
+  const start=isDay?day.rise:day.set, finish=isDay?day.set:day.nextRise;
+  const duration=(finish-start)/12;
+  const slot=Math.min(11,Math.floor((now-start)/duration));
+  const endMs=start+(slot+1)*duration;
+  return {planet:HORA_ORDER[(day.firstIdx+(isDay?0:12)+slot)%7],
+    end:new Date(endMs).toLocaleTimeString('uk-UA',{hour:'2-digit',minute:'2-digit'}),
+    minLeft:Math.ceil((endMs-now)/60000),endMs};
 }
 
 // v88.9.58-fp240 (аудит-раунд-26, Problem 3): раніше "План дня" рахував Хору
@@ -21657,7 +21679,7 @@ function calcHoraSequence(startUTC, endUTC, maxEntries){
     }
     seq.push({ planet: hora.planet, fromLocal: cursor.toLocaleTimeString('uk-UA',{hour:'2-digit',minute:'2-digit'}), endLocal: hora.end });
     const minLeftMs = hora.minLeft * 60000;
-    const nextCursorMs = cursor.getTime() + minLeftMs;
+    const nextCursorMs = Number.isFinite(hora.endMs) ? hora.endMs : cursor.getTime() + minLeftMs;
     if (nextCursorMs <= cursor.getTime()) break; // захист від нескінченного циклу
     cursor = new Date(nextCursorMs);
   }
@@ -23231,76 +23253,23 @@ function draw27Chart(){
 
 // Хелпер для computeAi: повертає поточну Hora з PCL
 function _getCurrentHoraForAi(dateUTC) {
-  // v87.32: fix for night wrap-around. Hora-slots у цій добі UTC можуть починатись після sunrise
-  // (~3-5 UTC для Європи). Якщо nowH < sunrise → активний slot належить ПОПЕРЕДНІЙ добі UTC.
-  // Якщо nowH перевищує останній slot (sunset + 12*segNight) → слот у НАСТУПНІЙ добі UTC.
-  try {
-    const nowH = dateUTC.getUTCHours() + dateUTC.getUTCMinutes()/60;
-    const tryFind = (refDate, timeOffset) => {
-      const r = calcAllHoras(refDate);
-      const hh = nowH + timeOffset;
-      const cur = r.slots.find(s => hh >= s.startH && hh < s.endH);
-      return cur || null;
-    };
-    // 1. Поточна доба
-    let cur = tryFind(dateUTC, 0);
-    // 2. Якщо не знайдено — спробувати попередню добу (nowH у нічному шматку, що почався вчора)
-    if(!cur){
-      const prevDay = new Date(dateUTC.getTime() - 86400000);
-      cur = tryFind(prevDay, 24); // зсув +24 щоб співпасти з endH > 24
-    }
-    // 3. Якщо все ще нема — fallback на перший slot поточної доби (мінімально інвазивно, як раніше)
-    if(!cur){
-      const r = calcAllHoras(dateUTC);
-      cur = r.slots[0];
-    }
-    if(!cur) return null;
-    const HORA_SYM = {'Сонце':'☀','Місяць':'☽','Марс':'♂','Меркурій':'☿','Юпітер':'♃','Венера':'♀','Сатурн':'♄'};
-    return { planet: cur.planet, pcl: HORA_SCORE_MAP[cur.planet] ?? 0, sym: HORA_SYM[cur.planet] || '' };
-  } catch(e) { return null; }
+  const current=calcHora(dateUTC);
+  if(!current?.planet)return null;
+  const symbols={'Сонце':'☀','Місяць':'☽','Марс':'♂','Меркурій':'☿','Юпітер':'♃','Венера':'♀','Сатурн':'♄'};
+  return {planet:current.planet,pcl:HORA_SCORE_MAP[current.planet]??0,sym:symbols[current.planet]||''};
 }
-
-// ========================= HORA TIMELINE =========================
-// Кольори планет (традиційні)
-const HORA_COLORS = {
-  'Сонце':    '#e8a020',
-  'Місяць':   '#7ab8d4',
-  'Марс':     '#cc4444',
-  'Меркурій': '#44aa88',
-  'Юпітер':   '#8866dd',
-  'Венера':   '#dd66aa',
-  'Сатурн':   '#667788',
-};
-const HORA_SCORE_MAP = {
-  'Сонце': 1, 'Місяць': -1, 'Марс': 0, 'Меркурій': 1,
-  'Юпітер': 2, 'Венера': 1, 'Сатурн': -1
-};
-
 function calcAllHoras(dateUTC) {
-  // Розраховує всі 24 Hora на добу (12 денних + 12 нічних)
-  const { srH, ssH, dayLen, nightLen } = calcSunTimes(dateUTC);
-  const segDay   = dayLen / 12;
-  const segNight = nightLen / 12;
-  const wday = localWeekday(dateUTC); // v87.90: локальний день
-  const firstIdx = HORA_DAY_LORD[wday];
-
-  const slots = [];
-  // 12 денних
-  for(let i = 0; i < 12; i++){
-    const startH = srH + i * segDay;
-    const endH   = startH + segDay;
-    const planet = HORA_ORDER[(firstIdx + i) % 7];
-    slots.push({ startH, endH, planet, isDay: true });
+  const day=_horaSolarDay(dateUTC);
+  if(!day)return {slots:[],srH:NaN,ssH:NaN};
+  const midnight=Date.UTC(dateUTC.getUTCFullYear(),dateUTC.getUTCMonth(),dateUTC.getUTCDate());
+  const toH=ms=>(ms-midnight)/3600000;
+  const slots=[];
+  for(let i=0;i<24;i++){
+    const isDay=i<12,start=isDay?day.rise:day.set,end=isDay?day.set:day.nextRise;
+    const n=i%12,duration=(end-start)/12;
+    slots.push({startH:toH(start+n*duration),endH:toH(start+(n+1)*duration),planet:HORA_ORDER[(day.firstIdx+i)%7],isDay});
   }
-  // 12 нічних
-  const nightFirst = (firstIdx + 12) % 7;
-  for(let i = 0; i < 12; i++){
-    const startH = ssH + i * segNight;
-    const endH   = startH + segNight;
-    const planet = HORA_ORDER[(nightFirst + i) % 7];
-    slots.push({ startH, endH, planet, isDay: false });
-  }
-  return { slots, srH, ssH };
+  return {slots,srH:toH(day.rise),ssH:toH(day.set)};
 }
 
 function renderHoraTimeline(dateUTC, kp, G) {
@@ -23316,6 +23285,12 @@ function renderHoraTimeline(dateUTC, kp, G) {
   };
 
   const { slots, srH, ssH } = calcAllHoras(dateUTC);
+  if(!slots.length){
+    wrap.textContent='Хори недоступні: немає визначеного інтервалу сходу та заходу для цих координат.';
+    if(legend)legend.textContent='';
+    if(axis)axis.textContent='';
+    return;
+  }
   const nowH = dateUTC.getUTCHours() + dateUTC.getUTCMinutes()/60 + dateUTC.getUTCSeconds()/3600;
   const toPercent = h => ((h % 24 + 24) % 24) / 24 * 100;
 
@@ -26508,8 +26483,8 @@ body.fp434-app main#mainContent{padding-inline:24px!important}
   function renderOutcomeHistory(){const box=document.getElementById('nrOutcomeHistory');if(!box)return;let rows=[];try{rows=JSON.parse(localStorage.getItem('gindex_plan_outcomes_v1')||'[]')}catch(_e){}if(!Array.isArray(rows)||!rows.length){box.innerHTML='<span class="nr-chip">ІСТОРІЯ</span><h3>Останні результати</h3><p>Записів ще немає.</p>';return}const labels={done:'Виконано',partial:'Частково',not_done:'Не виконано'};box.innerHTML='<span class="nr-chip">ІСТОРІЯ · ЛИШЕ ЦЕЙ ПРИСТРІЙ</span><h3>Останні результати</h3><div class="nr-list">'+rows.slice(-7).reverse().map(x=>`<div class="nr-row"><span>${escapeHtml(x.date||'—')}</span><span><strong>${escapeHtml(labels[x.result]||x.result||'—')}</strong>${x.priority?' · '+escapeHtml(x.priority):''}${x.note?'<br><small>'+escapeHtml(x.note)+'</small>':''}</span></div>`).join('')+'</div><p class="nr-result-meta">Самозвіт користувача; не ground truth і не доказ точності прогнозу.</p>'}
   function enhanceFunctionalRoutes(){renderProfileResult();renderPlanResult();renderOutcomeHistory();renderMatchResult();renderDailyReport();const planMeta=document.querySelector('#nrPlanGuard .nr-result-meta');if(planMeta)planMeta.textContent='План допомагає діяти в межах канонічного висновку дня і не створює нового прогнозу.';const reportMeta=document.querySelector('#nrDailyReportPreview .nr-result-meta');if(reportMeta)reportMeta.textContent='Звіт повторює рішення «Сьогодні» і не створює іншого прогнозу.'}
   function calendarStateLabel(g){return g>=1?'сприятливий фон':g<=-1?'обережний режим':'нейтральний фон'}
-  function expertDecisionForDate(ds){const row=Array.isArray(window._expertDecisionRegistry?.rows)?window._expertDecisionRegistry.rows.find(x=>x.date===ds):null;const score=Number(row?.decision_score),displayText=window._expertDisplayText?.[ds],displayRow=displayText?{...row,headline_text:displayText}:row;return row?.decision_source==='verified_expert_pdf'&&Number.isFinite(score)?{row:displayRow,score:Math.max(-3,Math.min(3,score))}:null}
-  function resolveDateLayers(d){const expert=expertDecisionForDate(d?.ds),rawValue=Number(d?.G),raw=Number.isFinite(rawValue)?Math.max(-3,Math.min(3,rawValue)):NaN;return{ds:d?.ds||'',expert,raw,rawValue,primary:Number.isFinite(expert?.score)?expert.score:NaN}}
+  function expertDecisionForDate(ds){const row=Array.isArray(window._expertDecisionRegistry?.rows)?window._expertDecisionRegistry.rows.find(x=>x.date===ds):null;const score=_finiteFormulaNumber(row?.decision_score),displayText=window._expertDisplayText?.[ds],displayRow=displayText?{...row,headline_text:displayText}:row;return row?.decision_source==='verified_expert_pdf'&&Number.isFinite(score)?{row:displayRow,score:Math.max(-3,Math.min(3,score))}:null}
+  function resolveDateLayers(d){const expert=expertDecisionForDate(d?.ds),rawValue=_finiteFormulaNumber(d?.G),raw=Number.isFinite(rawValue)?Math.max(-3,Math.min(3,rawValue)):NaN;return{ds:d?.ds||'',expert,raw,rawValue,primary:Number.isFinite(expert?.score)?expert.score:NaN}}
   function advisoryPresentation(signal){
     const available=!!signal?.decisionAvailable&&Number.isFinite(Number(signal?.decisionScore));
     if(!available)return{available:false,opKey:null,bucket:'none',className:'state-none',coverState:'none',symbol:'—',label:'Без рішення',title:'Рішення дня недоступне',summary:'Надійного рішення зараз немає. Фонові дані не перетворюються на дозвіл для дії.',do:'Оновити дані й дочекатися підтвердженого рішення.',avoid:'Не трактувати окреме джерело як самостійну команду.'};
@@ -26531,7 +26506,7 @@ body.fp434-app main#mainContent{padding-inline:24px!important}
   }
   function buildCalendarFrame(source,start=todayKey(),count=27){
     const byDate=new Map((Array.isArray(source)?source:[]).filter(x=>x&&/^\d{4}-\d{2}-\d{2}$/.test(String(x.ds||''))).map(x=>[x.ds,x]));
-    return Array.from({length:count},(_,offset)=>{const dt=new Date(start+'T12:00:00Z');dt.setUTCDate(dt.getUTCDate()+offset);const ds=dt.toISOString().slice(0,10),row=byDate.get(ds);return{...(row||{}),ds,_calendarOffset:offset,_missing:!row||!Number.isFinite(Number(row.G)),_hasRaw:!!row&&Number.isFinite(Number(row.G))}});
+    return Array.from({length:count},(_,offset)=>{const dt=new Date(start+'T12:00:00Z');dt.setUTCDate(dt.getUTCDate()+offset);const ds=dt.toISOString().slice(0,10),row=byDate.get(ds);return{...(row||{}),ds,_calendarOffset:offset,_missing:!row||!Number.isFinite(_finiteFormulaNumber(row.G)),_hasRaw:!!row&&Number.isFinite(_finiteFormulaNumber(row.G))}});
   }
   window.fp455BuildCalendarFrame=buildCalendarFrame;
   window.fp456BuildCalendarFrame=buildCalendarFrame;
@@ -26543,10 +26518,10 @@ body.fp434-app main#mainContent{padding-inline:24px!important}
     const layers=resolveDateLayers(d),offset=Number.isInteger(d?._calendarOffset)?d._calendarOffset:calendarOffsetForDs(layers.ds);
     if(!Number.isFinite(offset)||offset<0||offset>=FP463_ACTION_HORIZON_DAYS)return contextForDate({...d,_calendarOffset:offset});
     const feed=window.__nrFutureKp?.kp?.[layers.ds]||{};
-    const official=feed.kp_synthetic===false&&/^NOAA_/.test(String(feed.source||''))&&Number.isFinite(Number(feed.kp));
+    const official=feed.kp_synthetic===false&&/^NOAA_/.test(String(feed.source||''))&&Number.isFinite(kpDayTerm(feed.kp));
     const scenario=feed.kp_synthetic===true||feed.source==='synthetic_fallback';
     const isToday=layers.ds===todayKey(),ui=window.__uiState||{};
-    const liveRaw=isToday&&Number.isFinite(Number(ui.gNow))?Number(ui.gNow):layers.rawValue;
+    const liveRaw=isToday&&Number.isFinite(_finiteFormulaNumber(ui.gNow))?_finiteFormulaNumber(ui.gNow):layers.rawValue;
     const liveKp=isToday?currentKpAuthority().kp:(official?Number(feed.kp):NaN);
     if(offlineAuthorityMode()){
       const snapshot=loadCanonicalSnapshot(layers.ds);
@@ -26554,7 +26529,7 @@ body.fp434-app main#mainContent{padding-inline:24px!important}
       const signal={decisionAvailable:true,opKey:snapshot.opKey,decisionScore:Number(snapshot.decisionScore),guard:snapshot.guard,dynamicGuard:snapshot.dynamicGuard,actionPolicy:snapshot.actionPolicy};
       return{...layers,feed,official,scenario,kp:NaN,signal,presentation:{...snapshot.presentation},decisionScore:Number(snapshot.decisionScore),actionEligible:true,calendarOffset:offset,missing:!Number.isFinite(layers.rawValue),snapshot};
     }
-    if((isToday&&!currentKpAuthority().usable)||!Number.isFinite(liveRaw))return unavailableForDate(layers,feed,official,scenario,liveKp,offset,true);
+    if((isToday&&!currentKpAuthority().usable)||(!isToday&&!official)||!Number.isFinite(liveRaw))return unavailableForDate(layers,feed,official,scenario,liveKp,offset,true);
     let signal=null;try{signal=resolveDaySignal_v88825(new Date(layers.ds+'T12:00:00Z'),liveRaw,liveKp,{isToday})}catch(_e){signal=null}
     const presentation=advisoryPresentation(signal);
     const snapshot=isToday?saveCanonicalSnapshot(layers.ds,signal,presentation):null;
@@ -26567,7 +26542,7 @@ body.fp434-app main#mainContent{padding-inline:24px!important}
   window.fp463CanonicalForDate=canonicalForDate;
   function contextForDate(d){
     const layers=resolveDateLayers(d),feed=window.__nrFutureKp?.kp?.[layers.ds]||{};
-    const official=feed.kp_synthetic===false&&/^NOAA_/.test(String(feed.source||''))&&Number.isFinite(Number(feed.kp));
+    const official=feed.kp_synthetic===false&&/^NOAA_/.test(String(feed.source||''))&&Number.isFinite(kpDayTerm(feed.kp));
     const scenario=feed.kp_synthetic===true||feed.source==='synthetic_fallback';
     const offset=Number.isInteger(d?._calendarOffset)?d._calendarOffset:calendarOffsetForDs(layers.ds);
     return{...layers,feed,official,scenario,kp:official?Number(feed.kp):NaN,signal:null,presentation:advisoryPresentation(null),decisionScore:NaN,actionEligible:false,calendarOffset:offset,missing:!Number.isFinite(layers.rawValue)};
@@ -26834,7 +26809,7 @@ body.fp434-app main#mainContent{padding-inline:24px!important}
     const text=id=>document.getElementById(id)?.textContent?.replace(/\s+/g,' ').trim()||'';
     const ui=window.__uiState||{};
     const offline=offlineAuthorityMode();
-    const g=offline?NaN:(Number.isFinite(Number(ui.gNow))?Number(ui.gNow):NaN);
+    const g=offline?NaN:(Number.isFinite(_finiteFormulaNumber(ui.gNow))?_finiteFormulaNumber(ui.gNow):NaN);
     const kp=offline?NaN:currentKpAuthority().kp;
     const date=todayKey(),registryRow=Array.isArray(window._expertDecisionRegistry?.rows)?window._expertDecisionRegistry.rows.find(r=>r.date===date):null;
     const canonical=canonicalForDate({ds:date,G:g,_calendarOffset:0});
