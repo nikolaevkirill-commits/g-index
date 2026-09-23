@@ -20,6 +20,7 @@ if (!match) throw new Error('decision resolver block missing');
 
 let activeEntry = null;
 const context = {
+  _userLat: 50.45, _userLon: 30.52,
   window: {}, lastWWV: {kNow: 1, ts: Date.now()-3*3600000},
   isFinite,
   getEngineScore: () => activeEntry,
@@ -44,6 +45,7 @@ const context = {
   recommendG: () => ({ text: 'raw', style: '' }),
 };
 vm.createContext(context);
+vm.runInContext(html.slice(html.indexOf('function _sjcSunrise('),html.indexOf('// _calcSunRiseSet()')),context);
 for(const name of ['_finiteFormulaNumber','kpDayTerm']){
   const fn=html.match(new RegExp('function '+name+'\\([^]*?\\n\\}'));
   if(!fn)throw new Error('Missing formula dependency '+name);

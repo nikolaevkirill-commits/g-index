@@ -3188,10 +3188,10 @@ Fallback (NOAA 45-day-forecast.json):
         <p>Kp ∈ [0; 9]. Раніше наведені межі ΣAᵢ [−10; +9] і робочі ΣAᵢ ≈ −4 … +4 не мають тут відтворюваного підтвердження. За першого припущення формула дає умовний інтервал G ∈ [−17; +11], а не старий [−12; +16]. Досяжність крайніх значень і старий робочий G ≈ −5 … +7 не встановлені; приблизні діапазони компонентів не є гарантією.</p>
         <p>Множник <strong>PCL_SCALE = 0.4</strong> для Pᵢ має статус <em>R&D / Advisory</em> і потребує емпіричного калібрування на операційних даних. Історичний PCL_CALIBRATION_REPORT використовував Kp − 2 та спрощений Pi без lunar_mod, тому не валідує чинну формулу. <a href="METHODOLOGY_STATUS.md">Специфікація, докази та обмеження методики</a>.</p>
         <p class="small" style="color:var(--muted)">ℹ Функції, реалізовані лише у <strong>forecast_engine v18.5</strong> (Python/Excel), але <em>відсутні</em> у браузерному дашборді: автрегресійний контекст (<code>prev_score</code>), довгострокові транзити Jupiter/Rahu, manual Excel-теги (ритуали/затемнення-маркери). Дашборд Hero G — <em>continuous unclamped</em> (2 − Kp + ΣAᵢ); engine pill — <em>discrete clamped</em> {−3…+3} з повним feature-set. Реальні розбіжності (n=30 cross-check 2025-12 — 2026-04): mean |Δ|≈2.2, max |Δ|≈6 (особливо при Kp≥5 коли Hero лінійний, а engine clamps).</p>
-        <p class="small" style="color:var(--muted)">ℹ <strong>Час розрахунку:</strong> Pᵢ використовує computePanchanga(sunriseUTC(date)) для координат користувача; аварійний fallback sunriseUTC — 03:51 UTC, не підтверджений місцевий схід. Lᵢ та lunar_mod використовують фазу на переданий момент dateTimeUTC. Це різні часові опори. Старий опис noon UTC та оцінка 46% розбіжностей не підтверджують чинну реалізацію; час Engine слід перевіряти за походженням його конкретного набору.</p>
+        <p class="small" style="color:var(--muted)">ℹ <strong>Час розрахунку:</strong> Pᵢ використовує computePanchanga(sunriseUTC(date)) для координат користувача; за відсутності полярного сходу Pᵢ та оперативне рішення недоступні; полуденна дата зберігається лише для календарного відображення. Аварійний fallback — 03:51 UTC, не підтверджений місцевий схід. Lᵢ та lunar_mod використовують фазу на переданий момент dateTimeUTC. Це різні часові опори. Старий опис noon UTC та оцінка 46% розбіжностей не підтверджують чинну реалізацію; час Engine слід перевіряти за походженням його конкретного набору.</p>
         <p>Tithi, що вже враховані в Lᵢ (Пурніма, Амавасья) або eᵢ (Екадаші), виключені з Pᵢ для уникнення подвійного рахування.</p>
         <p class="small" style="color:var(--muted);margin-top:6px;border-left:2px solid #4a5d8e;padding-left:8px">📐 <strong>Engine v14.2 calibration note:</strong> Деякі score-значення відрізняються від theoretical Posibnyk через калібрування на n=280 PDF v5.1 dataset:
-        <br>• <strong>Purnima (idx 14)</strong>: code score=0 (нейтральна), Posibnyk=−3 (Cajochen 2013) — engine v14.2 BUG-1 fix; у браузерному Lᵢ при Kp≥5 застосовується −1, при Kp≥7 — −2; ці ваги є гіпотезою, а не висновком Cajochen 2013
+        <br>• <strong>Purnima (idx 14)</strong>: code score=0 (нейтральна), Posibnyk=−3 (авторська вага, не висновок Cajochen 2013) — engine v14.2 BUG-1 fix; у браузерному Lᵢ при Kp≥5 застосовується −1, при Kp≥7 — −2; ці ваги є гіпотезою, а не висновком Cajochen 2013
         <br>• <strong>Chaturdashi (idx 13, 28)</strong>: code score=0, Posibnyk=−2 (Рікта) — calibrated for "обережно/бойовий" semantics
         <br>• <strong>Nakshatra Стала/М'яка/Рухома</strong>: code 1/0/0, Posibnyk ++/+/+ — calibration knock-down ~33% amplitude
         <br>Калібровочні рішення зафіксовані у V3 freeze (2026-05-03 → ~2026-08-01); revision у V19 backlog якщо outcome-based validation покаже потребу.</p>
@@ -6652,8 +6652,9 @@ function _hourAngleSunriseDeg(latDeg, solarDecDeg){
   const lat = latDeg*Math.PI/180, dec = solarDecDeg*Math.PI/180;
   const zenith = 90.833*Math.PI/180; // рефракція атмосфери + видимий радіус Сонця
   const arg = Math.cos(zenith)/(Math.cos(lat)*Math.cos(dec)) - Math.tan(lat)*Math.tan(dec);
-  const clamped = Math.max(-1, Math.min(1, arg)); // захист від NaN за полярним колом
-  return Math.acos(clamped) * 180/Math.PI;
+  // No horizon crossing during polar day/night. Clamping invents an event.
+  if(!Number.isFinite(arg) || arg < -1 || arg > 1) return NaN;
+  return Math.acos(arg) * 180/Math.PI;
 }
 function sunriseUTC_Meeus(dateUTC, lat, lon){
   const jdMidnight = Math.floor(dateUTC.getTime()/86400000 + 2440587.5 - 0.5) + 0.5;
@@ -6692,7 +6693,12 @@ function sunRiseSetUTC_Meeus(dateUTC, lat, lon){
 // dependency. Внутрішній Meeus-розрахунок — єдиний production-шлях.
 const sunriseUTC = d => {
   try {
-    return sunriseUTC_Meeus(d, _userLat, _userLon);
+    const rise = sunriseUTC_Meeus(d, _userLat, _userLon);
+    if(Number.isFinite(rise.getTime())) return rise;
+    // Keep a date for calendar rendering, explicitly not a sunrise observation.
+    const unavailable = noonUTC(d);
+    unavailable._solarUnavailable = true;
+    return unavailable;
   } catch(e) {
     if (window._DEBUG) console.warn('[sunriseUTC_Meeus fallback]:', e.message);
   }
@@ -10675,6 +10681,7 @@ function _computeAiRaw(dateTimeUTC, kp=null){
     // Раніше: computePanchanga(dateTimeUTC) → tithi міг не збігатися з картою.
     // Це призводило до Pᵢ-стрибків коли Hero перетинала межу tithi всередині дня.
     const _dayRef = (typeof sunriseUTC === 'function') ? sunriseUTC(dateTimeUTC) : dateTimeUTC;
+    if(_dayRef._solarUnavailable) throw new Error('solar_unavailable');
     const panch = computePanchanga(_dayRef);
     // v30.1: часткові Tithi scores додані в Pi
     // Amavasya(idx=29,score=-3) і Purnima(idx=14,score=0,нейтральна v14.2) виключені — вже в Li
@@ -10699,7 +10706,7 @@ function _computeAiRaw(dateTimeUTC, kp=null){
     if(panch.karana.score !== 0)     pParts.push(`Kar(${panch.karana.name})=${panch.karana.score}`);
     pTip = pParts.length ? `PCL (sunrise reference): Tithi=${tithiInPi}×lunar(${lunarMod.toFixed(2)})=${_tithiPi.toFixed(1)} + fixed=${_restPi} → ×${PCL_SCALE} → Pᵢ=${Pi} (R&D/advisory; scale is not prospectively validated)` : `0 — всі Panchanga нейтральні`;
   } catch(e) {
-    pTip = '0 — помилка PCL';
+    pTip = e.message==='solar_unavailable' ? 'PCL недоступний: немає місцевого сходу Сонця; 0 — технічний внесок, не нейтральний прогноз.' : '0 — помилка PCL';
   }
 
   // v42: real-time solar wind modifiers (Bz, Vsw) — advisory, DSCOVR
@@ -12861,7 +12868,7 @@ const TITHI_TYPE = [
 //   • Ashtami (idx 7, 22, тип Джая) = 0 а не +1 → BPHS змішана природа («уникати весіль»)
 //   • Chaturdashi (idx 13, 28, тип Рікта) = 0 а не -2 → «бойові справи — обережно», softer than full Rikta
 //   • Ekadashi (idx 10, 25, тип Нанда) = -2 а не +1 → день посту, виключено з Pᵢ і так
-//   • Purnima (idx 14) = 0 (v14.2) а не +1 (Пурна) → Cajochen 2013 calibration; підсилення в Lᵢ при Kp≥7
+//   • Purnima (idx 14) = 0 (v14.2) а не +1 (Пурна) → authored weight, not a Cajochen 2013 calibration; підсилення в Lᵢ при Kp≥7
 //   • Amavasya (idx 29) = -3 → у Pᵢ виключено через tIdx!==29; залишається тільки для UI scoreBar
 const TITHI_SCORE = [
   1, 1, 1,-2, 1, 1, 1, 0,-2, 1,
@@ -13296,7 +13303,7 @@ function computePanchanga(dateUTC){
   const gulikaStartH = srH + segH * (GULIKA_ORDER[wday] - 1);
   const gulikaEndH   = gulikaStartH + segH;
   // v88.8.35-fp17 fix: round via total-minutes щоб уникнути mm===60 edge-case (07.9999 → "07:60").
-  const toHHMM = h => { const tm=Math.round(h*60), hh=Math.floor(tm/60)%24, mm=tm%60; return `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}`; };
+  const toHHMM = h => { if(!Number.isFinite(h))return '—'; const tm=((Math.round(h*60)%1440)+1440)%1440, hh=Math.floor(tm/60), mm=tm%60; return `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}`; };
   // Поточна UTC година
   const nowH = dateUTC.getUTCHours() + dateUTC.getUTCMinutes()/60;
   const rahuActive = nowH >= rahuStartH && nowH < rahuEndH;
@@ -13307,7 +13314,7 @@ function computePanchanga(dateUTC){
     end:   toHHMM(rahuEndH),
     active: rahuActive,
     score: rahuActive ? -1 : 0,
-    note: `UTC · Meeus canonical sunrise`,
+    note: Number.isFinite(srH)&&Number.isFinite(ssH) ? 'UTC · Meeus canonical sunrise' : 'Недоступно: немає сходу/заходу Сонця для цього дня',
     // v88.8.12: додаткові канонічні windows для повної панчанги
     yamagandam: { start: toHHMM(yamaStartH), end: toHHMM(yamaEndH), active: yamaActive },
     gulika:     { start: toHHMM(gulikaStartH), end: toHHMM(gulikaEndH), active: gulikaActive }
@@ -17359,7 +17366,9 @@ function resolveDaySignal_v88825(dateObj, rawG, kp, opts){
   const hasEngine = !!(entry && typeof entry.eng === 'number' && Number.isFinite(entry.eng));
   const referenceStale = !!(hasEngine && entry._expertOverrideVerified !== true && window.__referenceSourceState?.stale === true);
   const dstCurrent = !isToday || !window._lastDst || _dstProvenanceCheck().ok;
-  const rawAvailable = Number.isFinite(_finiteFormulaNumber(rawG)) || (isToday && Number.isFinite(_finiteFormulaNumber(window.__uiState?.gNow)));
+  const solarPair = sunRiseSetUTC_Meeus(new Date(dateObj), _userLat, _userLon);
+  const solarAvailable = Number.isFinite(solarPair.sunrise.getTime()) && Number.isFinite(solarPair.sunset.getTime());
+  const rawAvailable = solarAvailable && (Number.isFinite(_finiteFormulaNumber(rawG)) || (isToday && Number.isFinite(_finiteFormulaNumber(window.__uiState?.gNow))));
   const decisionAvailable = hasEngine && !referenceStale && dstCurrent && rawAvailable && Number.isFinite(kpDayTerm(kp)) && (!isToday || currentKpAuthority().usable);
   let dayScore = hasEngine ? Number(entry.eng) : (isFinite(rawG) ? Number(rawG) : NaN);
   const sourceDayScore = dayScore;
@@ -17482,6 +17491,7 @@ function resolveDaySignal_v88825(dateObj, rawG, kp, opts){
   }
   const color = ({favorable:'#2bd47d',good:'#2bd47d',neutral:'#9bb1dc',unstable:'#ffaa33',tense:'#ff6b6b'})[keyForColor] || '#9bb1dc';
   const tooltip = !dstCurrent ? 'Dst не підтверджений за часом або якістю. Рішення сьогодні недоступне до оновлення даних.'
+    : !solarAvailable ? 'Місцевий схід/захід Сонця недоступний. Сонячні інтервали й оперативне рішення не визначаються.'
     : (!rawAvailable || !Number.isFinite(kpDayTerm(kp))) ? 'Kp або G відсутній чи невалідний. Оперативне рішення недоступне.'
     : hasEngine
     ? (referenceStale
@@ -21590,35 +21600,10 @@ const HORA_DAY_LORD = [0,3,6,2,5,1,4]; // Sun=Сонце,Mon=Місяць,Tue=М
 
 // Спільна функція: час сходу/заходу Сонця (UTC-годинник) для заданого дня і широти
 function calcSunTimes(dateUTC) {
-  const doy = Math.floor((dateUTC - new Date(Date.UTC(dateUTC.getUTCFullYear(),0,1)))/86400000);
-  // v88.7+ (deep audit): Spencer 1971 series — accuracy ±0.05° (vs Cooper 1969 ±0.6°)
-  const _gamma = 2 * Math.PI * (doy - 1) / 365;
-  const decl = (180/Math.PI) * (
-      0.006918
-    - 0.399912 * Math.cos(_gamma)
-    + 0.070257 * Math.sin(_gamma)
-    - 0.006758 * Math.cos(2*_gamma)
-    + 0.000907 * Math.sin(2*_gamma)
-    - 0.002697 * Math.cos(3*_gamma)
-    + 0.001480 * Math.sin(3*_gamma)
-  );
-  const lat = _userLat;
-  // v87.90 P4 fix: equation of time + atmospheric refraction.
-  // Раніше: cosHA для горизонту 90° + без EoT → похибка ±15-20 хв (критично для Hora boundary).
-  // Тепер: zenith 90.833° (sun radius 16' + refraction 34') + EoT correction → точність ±2-5 хв.
-  const Brad = (360/365) * (doy - 81) * Math.PI / 180;
-  const eqTimeMin = 9.87 * Math.sin(2*Brad) - 7.53 * Math.cos(Brad) - 1.5 * Math.sin(Brad);
-  const eqHours = eqTimeMin / 60;
-  const zenRad = 90.833 * Math.PI / 180;
-  const cosZen = Math.cos(zenRad);
-  const sinLat = Math.sin(lat*Math.PI/180), cosLat = Math.cos(lat*Math.PI/180);
-  const sinDec = Math.sin(decl*Math.PI/180), cosDec = Math.cos(decl*Math.PI/180);
-  const cosHA = (cosZen - sinLat*sinDec) / (cosLat*cosDec);
-  const HA = Math.acos(Math.max(-1,Math.min(1,cosHA))) * 180/Math.PI;
-  const lonOff = _userLon / 15; // корекція по довготі (год)
-  const srH = (12 - lonOff) - HA/15 - eqHours; // схід UTC, з EoT
-  const ssH = (12 - lonOff) + HA/15 - eqHours; // захід UTC, з EoT
-  return { srH, ssH, dayLen: ssH - srH, nightLen: 24 - (ssH - srH) };
+  const pair = sunRiseSetUTC_Meeus(dateUTC, _userLat, _userLon);
+  const midnight = Date.UTC(dateUTC.getUTCFullYear(),dateUTC.getUTCMonth(),dateUTC.getUTCDate());
+  const srH=(pair.sunrise.getTime()-midnight)/3600000, ssH=(pair.sunset.getTime()-midnight)/3600000;
+  return {srH,ssH,dayLen:ssH-srH,nightLen:24-(ssH-srH)};
 }
 
 function _horaSolarDay(dateUTC){
