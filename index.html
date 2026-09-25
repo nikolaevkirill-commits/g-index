@@ -11319,11 +11319,15 @@ function _fillPlaceholderDays(target3D, t27R){
   // Спроба 2: synthetic Kp-now fallback (якщо 27-day теж не дав)
   const _stillNeedFill = target3D.days.filter(d => d._needsFill);
   if(_stillNeedFill.length > 0){
-    const _kpFallback = (typeof lastWWV !== 'undefined' && lastWWV && isFinite(lastWWV.kNow)) ? lastWWV.kNow : 2.0;
+    const _authority = currentKpAuthority();
+    if (!_authority.usable) return; // Keep missing data missing; no invented Kp=2.
+    const _kpFallback = lastWWV.kNow;
+    target3D._partialReal = true;
     for(const d of _stillNeedFill){
       d.kp8 = Array(8).fill(_kpFallback);
       d.kpMax = _kpFallback;
       d._filledFrom = 'synthetic-kp-now';
+      d._synthetic = true;
       delete d._needsFill;
       const targetStr = fmtDate(d.date);
       const apEntry = target3D.predictedAp.find(p => fmtDate(p.date) === targetStr);
@@ -11334,52 +11338,57 @@ function _fillPlaceholderDays(target3D, t27R){
 }
 
 function parse3DaySafe(json){
-  const out = {issued:null, predictedAp:[], days:[]};
+  // NOAA supports both object rows and legacy header/table rows. Only rows
+  // explicitly marked predicted are forecast evidence; observation time is
+  // not issuance time. Keep UTC slots in their actual positions.
+  const out = {issued:null, predictedAp:[], days:[], _source:'noaa-3day',
+    _recordCounts:{predicted:0, excluded:0, conflictingSlots:0}};
   try{
     const rows = JSON.parse(json);
-    if(!Array.isArray(rows)||rows.length<2) return out;
-    const data = rows.slice(1).filter(r=>r[0]&&r[1]!=null&&r[1]!=='');
-    // Групуємо слоти по добах
-    const byDay = new Map();
-    for(const r of data){
-      const d = r[0].slice(0,10); // 'YYYY-MM-DD'
-      if(!byDay.has(d)) byDay.set(d,[]);
-      byDay.get(d).push(parseFloat(r[1]));
+    if(!Array.isArray(rows) || !rows.length) return out;
+    const table = Array.isArray(rows[0]);
+    const header = table ? rows[0].map(x=>String(x).toLowerCase()) : [];
+    const ti = header.indexOf('time_tag'), ki = header.indexOf('kp'), si = header.indexOf('observed');
+    if(table && (ti<0 || ki<0 || si<0)) return out;
+    const slots = new Map(), conflicts = new Set();
+    for(const row of table ? rows.slice(1) : rows){
+      const stamp = table ? row?.[ti] : row?.time_tag;
+      const raw = table ? row?.[ki] : row?.kp;
+      const kind = table ? row?.[si] : row?.observed;
+      const kp = _finiteFormulaNumber(raw);
+      const match = typeof stamp==='string' && stamp.match(/^(\d{4}-\d{2}-\d{2})[T ](\d{2}):00:00(?:Z)?$/);
+      const dt = match ? new Date(match[1]+'T'+match[2]+':00:00Z') : null;
+      if(kind!=='predicted' || !Number.isFinite(kp) || kp<0 || kp>9 ||
+          !dt || !Number.isFinite(dt.getTime()) || dt.toISOString().slice(0,10)!==match[1] ||
+          Number(match[2])>21 || Number(match[2])%3!==0){out._recordCounts.excluded++;continue;}
+      const key = dt.toISOString();
+      if(conflicts.has(key)) continue;
+      if(slots.has(key) && slots.get(key).kp!==kp){
+        slots.delete(key); conflicts.add(key); out._recordCounts.conflictingSlots++; continue;
+      }
+      slots.set(key,{date:match[1],slot:Number(match[2])/3,kp});
     }
-    const sorted = Array.from(byDay.entries()).sort((a,b)=>a[0]<b[0]?-1:1);
-    // Беремо 3 наступні доби
-    const todayStr = todayKyivStr();
-    // v62: включаємо сьогоднішній день завжди (навіть якщо частина слотів минула)
-    const future = sorted.filter(([d])=>d>=todayStr).slice(0,3);
-    // якщо сьогоднішнього немає — додаємо з усіх доступних
-    if (!future.find(([d])=>d===todayStr)) {
-      const todayEntry = sorted.find(([d])=>d===todayStr);
-      if (todayEntry) future.unshift(todayEntry);
+    out._recordCounts.predicted = slots.size;
+    const today = todayKyivStr(), byDay = new Map();
+    const end = new Date(today+'T00:00:00Z');end.setUTCDate(end.getUTCDate()+2);
+    const lastDay = end.toISOString().slice(0,10);
+    for(const [stamp,r] of [...slots].sort(([a],[b])=>a.localeCompare(b))){
+      if(r.date<today || r.date>lastDay) continue;
+      if(!byDay.has(r.date)) byDay.set(r.date,Array(8).fill(NaN));
+      byDay.get(r.date)[r.slot]=r.kp;
+      if(!out.firstForecastTime) out.firstForecastTime=stamp;
     }
-    out.days = future.map(([d,kps])=>({
-      date: new Date(d+'T00:00:00Z'),
-      kp8: kps,
-      kpMax: kps.length ? Math.max(...kps) : NaN
-    }));
-    // predictedAp з середнього Kp за добу (через GFZ таблицю)
-    out.predictedAp = out.days.map(day => {
-      // NOAA/GFZ: average linear a values, never quasi-logarithmic Kp codes.
-      const aValues = day.kp8.map(kpToApInterp).filter(Number.isFinite);
-      const dailyAp = aValues.length ? aValues.reduce((a,b)=>a+b,0)/aValues.length : NaN;
-      return {date: day.date, Ap: isFinite(dailyAp) ? dailyAp : null};
-    });
-    // issued = дата першого майбутнього слоту (не минулого)
-    const todayIssuedStr = todayKyivStr();
-    const firstFuture = data.find(r => r[0] && r[0].slice(0,10) >= todayIssuedStr);
-    if(firstFuture) out.issued = firstFuture[0];
-    else if(data.length) out.issued = data[0][0];
-    // v88.7.6: ГАРАНТУЄМО 3 days через спільну функцію _ensureThreeDays.
-    // Раніше була inline-копія цієї логіки тут; тепер єдина імплементація для NOAA + UAF шляхів.
+    for(const [date,kp8] of byDay){
+      const complete = kp8.every(Number.isFinite);
+      const day={date:new Date(date+'T00:00:00Z'),kp8,
+        kpMax:complete ? Math.max(...kp8) : NaN, forecastSlotCount:kp8.filter(Number.isFinite).length};
+      if(!complete) day._needsFill=true;
+      out.days.push(day);
+      const aValues=kp8.filter(Number.isFinite).map(kpToApInterp);
+      out.predictedAp.push({date:day.date,Ap:complete ? aValues.reduce((a,b)=>a+b,0)/8 : null});
+    }
     _ensureThreeDays(out);
-    if(window._DEBUG && out.days.filter(d => d._needsFill).length > 0){
-      console.log('[v88.7.6 parse3DaySafe] '+out.days.filter(d => d._needsFill).length+' placeholder day(s) awaiting 27-day fill');
-    }
-  }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+  }catch(e){if(window._DEBUG)console.warn('[parse3DaySafe]',e.message);}
   return out;
 }
 // Парсер Dst index (kyoto-dst.json) — Формат: [["time_tag","dst"],...] з заголовком
@@ -14808,15 +14817,16 @@ function renderDayForecast(last3D, kUse, ai) {
   const todayStr = todayKyivStr();
   const todayRow = last3D && Array.isArray(last3D.days)
     ? last3D.days.find(d => fmtDate(d.date) === todayStr) : null;
-  const useRow = todayRow || (last3D && Array.isArray(last3D.days) && last3D.days[0]) || null;
-  if (!useRow || !useRow.kp8 || !useRow.kp8.length) return;
+  const useRow = todayRow;
+  window._daySlots = [];
+  if (!useRow || !useRow.kp8 || !useRow.kp8.length || useRow._filledFrom || useRow._fromFutureKp || useRow._synthetic) return;
   const kp8 = useRow.kp8;
   const todayNoon = sunriseUTC(useRow.date);
   const slotLabels = ['00','03','06','09','12','15','18','21'];
   window._daySlots = [];
   for (let i = 0; i < kp8.length; i++) {
     const kp = kp8[i];
-    if (!isFinite(kp)) continue;
+    if (!Number.isFinite(kp)) continue;
     const aiSlot = computeAi(todayNoon, kp);
     const G = kpDayTerm(kp) + aiSlot.Ai;
     window._daySlots.push({ i, kp, G, label: slotLabels[i] || String(i*3) });
@@ -14870,7 +14880,7 @@ function render3Day(parsed3){
   }
   window.__lastValid3DayRender = parsed3;
   const hdr = parsed3._partialReal
-    ? `<div style="margin-bottom:4px;font-size:11px;color:#fca474">⚠ Живий NOAA частково недоступний — частина днів із future_kp.json (реальний прогноз), решта — плато поточного Kp</div>`
+    ? `<div style="margin-bottom:4px;font-size:11px;color:#fca474">⚠ Прогноз частково недоступний — позначені дні оцінено за поточним Kp; це не прогноз NOAA</div>`
     : parsed3._synthetic
     ? `<div style="margin-bottom:4px;font-size:11px;color:#fca474">⚠ NOAA недоступний — розрахунок на базі поточного Kp (synthetic)</div>`
     : (parsed3.days.some(d=>d._fromFutureKp)
@@ -14919,10 +14929,10 @@ function render3Day(parsed3){
     const AiCell = `<div class="mono" style="font-weight:700"><span class="hint" tabindex="0">${ai.Ai}<span class="hint-pop">${escapeHtml(ai.explain)}</span></span></div>`;
 
     const kpCell = isFinite(kpMax)
-      ? `<span class="kbadge ${cls} hint" tabindex="0">Kp ${kpMax.toFixed(2)}<span class="hint-pop">${escapeHtml(kpTooltip(kpMax))}</span></span>`
+      ? `<span class="kbadge ${cls} hint" tabindex="0">Kp ${kpMax.toFixed(2)}${d._synthetic ? ' (оцінка)' : ''}<span class="hint-pop">${escapeHtml(kpTooltip(kpMax))}</span></span>`
       : `<span class="kbadge k-warn">…</span>`;
 
-    const apCell = apEntry
+    const apCell = apEntry && Number.isFinite(apEntry.Ap)
       ? `<span class="hint" tabindex="0">${apEntry.Ap}<span class="hint-pop">${escapeHtml(apTooltip(apEntry.Ap,true))}</span></span>`
       : '—';
 
@@ -14934,7 +14944,7 @@ function render3Day(parsed3){
       : '—';
     html += `<tr style="${rowStyle}${todayStyle}">
       <td class="mono col-date"${isToday?' style="font-weight:700;color:var(--alt)"':''}>${fmtDate(d.date)}${isToday?' <br><span style="color:var(--alt);font-size:10px;white-space:nowrap">◀ сьогодні</span>':''}</td>
-      <td><span class="gbadge ${gCls} hint" tabindex="0">${isToday?'Рішення':'Forecast G_raw'} ${isFinite(displayG3)?(displayG3>=0?'+':'')+displayG3.toFixed(1):'…'}<small class="audit-only" style="color:var(--faint);font-size:8px">${isToday?' · raw-аудит '+(G>=0?'+':'')+G.toFixed(1):' · не оперативна команда'}${_daySig3?.dynamicGuard?' · ⚠ Kp advisory':''}</small><span class="hint-pop">${escapeHtml(_daySig3?.tooltip||gTip)}</span></span></td>
+      <td><span class="gbadge ${gCls} hint" tabindex="0">${isToday?'Рішення':'Forecast G_raw'} ${isFinite(displayG3)?(displayG3>=0?'+':'')+displayG3.toFixed(1):'…'}<small class="audit-only" style="color:var(--faint);font-size:8px">${isToday?' · raw-аудит '+(Number.isFinite(G)?(G>=0?'+':'')+G.toFixed(1):'…'):' · не оперативна команда'}${_daySig3?.dynamicGuard?' · ⚠ Kp advisory':''}</small><span class="hint-pop">${escapeHtml(_daySig3?.tooltip||gTip)}</span></span></td>
       <td>${kpCell}</td>
       <td>${Lcell}</td>
       <td>${Mcell}</td>
@@ -15064,7 +15074,7 @@ function render3Day(parsed3){
       // стану Kp у сирому snapshot під ним.
       if (_hasVerifiedOverride && _daySigQ && _daySigQ.dynamicGuard) {
         const _pdfBase = isFinite(_daySigQ.sourceDayScore) ? Number(_daySigQ.sourceDayScore) : _bsEng;
-        const _opNow = isFinite(_daySigQ.decisionScore) ? Number(_daySigQ.decisionScore) : G_decision;
+        const _opNow = Number.isFinite(_daySigQ.decisionScore) ? _daySigQ.decisionScore : G;
         if (_daySigQ.dynamicGuard === 'kp_storm' || _daySigQ.dynamicGuard === 'kp_elevated') {
           const _guardWhy = _daySigQ.dynamicGuard === 'kp_storm' ? 'Kp ≥ 5' : 'Kp ≥ 4';
           _scenBanner = '<div style="font-size:9px;font-weight:800;letter-spacing:.04em;color:#ffaa33;background:rgba(255,170,51,.14);border:1px solid rgba(255,170,51,.5);border-radius:6px;padding:3px 6px;margin-bottom:5px;text-align:center">⚠ БЕЗПЕКА: ' + _guardWhy + ' — перевірити GPS/зв’язок/дрони; рішення дня ' + (_pdfBase>=0?'+':'') + _pdfBase + ' не змінено</div>';
@@ -20814,7 +20824,7 @@ async function loadAll(){
     // syncHero called renderDecisionTiming when _daySlots was empty → "Немає даних по слотах".
     // Re-trigger patch now that _daySlots is populated.
     try { if(typeof _patchStaleLoadingDOM === 'function') _patchStaleLoadingDOM(); } catch(_e){ /* silent */ }
-    _setSrcStatus('srcKpFcst','ok');
+    _setSrcStatus('srcKpFcst', last3D.days.length ? (last3D._partialReal ? 'cache' : 'ok') : 'error');
   } else {
     _setSrcStatus('srcKpFcst','error');
     el('threeError').textContent = 'Помилка 3-day: ' + (kpFcstR.reason?.message || 'недоступний');

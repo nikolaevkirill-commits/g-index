@@ -1,0 +1,25 @@
+const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),assert=require('node:assert/strict'),crypto=require('node:crypto');
+const root=path.resolve(__dirname,'../..'),h=fs.readFileSync(path.join(root,'index.html'),'utf8');
+function fn(name){const s=h.indexOf('function '+name+'(');assert(s>=0,name);const e=h.indexOf('\n}',s);assert(e>s);return h.slice(s,e+2);}
+const ctx=vm.createContext({window:{},console,todayKyivStr:()=> '2026-09-25',fmtDate:d=>d.toISOString().slice(0,10),sunriseUTC:d=>d,computeAi:()=>({Ai:0}),kpDayTerm:k=>2-k});
+vm.runInContext(h.match(/const GFZ_AP_TABLE = \[[\s\S]*?\n\];/)[0]+['_finiteFormulaNumber','kpToApInterp','_ensureThreeDays','parse3DaySafe','renderDayForecast','_fillPlaceholderDays'].map(fn).join('\n'),ctx);
+const fixture=fs.readFileSync(path.join(__dirname,'fixtures/noaa_forecast_20260925.json'),'utf8');const rows=JSON.parse(fixture),parse=r=>ctx.parse3DaySafe(JSON.stringify(r));
+const real=parse(rows);assert.equal(real.days.length,3);assert.equal(real.days[0].date.toISOString().slice(0,10),'2026-09-25');assert.equal(real.days[0]._needsFill,true);assert.equal(real.days[1].kpMax,3.67);assert.equal(real.days[1].kp8.length,8);assert.equal(real.predictedAp[1].Ap,11.5);assert.equal(real.issued,null);assert.equal(real.firstForecastTime,'2026-09-26T00:00:00.000Z');assert.equal(real._recordCounts.predicted,17);assert.equal(real._recordCounts.excluded,57);
+const table=[['time_tag','kp','observed','noaa_scale'],...rows.map(r=>[r.time_tag,r.kp,r.observed,r.noaa_scale])];assert.equal(JSON.stringify(parse(table)),JSON.stringify(real));
+const row=(hour,kp=2,kind='predicted')=>({time_tag:`2026-09-25T${String(hour).padStart(2,'0')}:00:00`,kp,observed:kind});
+const complete=Array.from({length:8},(_,i)=>row(i*3,2));const c=parse(complete);assert.equal(c.days[0].kpMax,2);assert.equal(c.predictedAp[0].Ap,7);
+for(const v of [null,'',true,'2garbage',-1,10,Infinity]){const a=complete.map(x=>({...x}));a[0].kp=v;const out=parse(a);assert.equal(out.days[0]._needsFill,true);assert(Number.isNaN(out.days[0].kp8[0]));assert.equal(out.predictedAp[0].Ap,null);}
+assert.equal(parse(complete.map(r=>({...r,observed:'observed'}))).days.length,0);assert.equal(parse(complete.map(r=>({...r,observed:'estimated'}))).days.length,0);assert.equal(parse(complete.map(r=>({...r,observed:undefined}))).days.length,0);
+assert.equal(JSON.stringify(parse([...complete].reverse())),JSON.stringify(c));assert.equal(parse([...complete,complete[0]]).days[0].kpMax,2);
+const conflict=parse([...complete,row(0,9)]);assert.equal(conflict._recordCounts.conflictingSlots,1);assert(Number.isNaN(conflict.days[0].kp8[0]));assert(Number.isNaN(conflict.days[0].kpMax));
+for(const stamp of ['2026-02-30T00:00:00','2026-09-25T24:00:00','2026-09-25T01:00:00','invalid'])assert.equal(parse([{...row(0),time_tag:stamp}]).days.length,0);
+assert.equal(parse([{...row(0),time_tag:'2026-10-01T00:00:00'}]).days.length,0);
+assert.equal(parse([['time_tag','kp'],['2026-09-25T00:00:00',2]]).days.length,0,'unclassified values cannot be certified forecasts');
+ctx.renderDayForecast({days:[{date:new Date('2026-09-25T00:00:00Z'),kp8:[NaN,null,2]}]},0,0);assert.equal(ctx.window._daySlots.length,1);assert.equal(ctx.window._daySlots[0].i,2);assert.equal(ctx.window._daySlots[0].label,'06');
+ctx.renderDayForecast({days:[{date:new Date('2026-09-26T00:00:00Z'),kp8:[2]}]},0,0);assert.equal(ctx.window._daySlots.length,0,'tomorrow cannot become today');
+ctx.currentKpAuthority=()=>({usable:false});ctx.lastWWV=null;
+const missing=parse([row(6,2)]);ctx._fillPlaceholderDays(missing,null);assert.equal(missing.days[0]._needsFill,true);assert(Number.isNaN(missing.days[0].kpMax));
+ctx.currentKpAuthority=()=>({usable:true});ctx.lastWWV={kNow:3};ctx._fillPlaceholderDays(missing,null);assert.equal(missing._partialReal,true);assert.equal(missing.days[0]._synthetic,true);assert.equal(missing.days[0].kpMax,3);ctx.renderDayForecast(missing,0,0);assert.equal(ctx.window._daySlots.length,0,'synthetic repetitions are not timing slots');
+const daily={days:[{date:new Date('2026-09-25T00:00:00Z'),kp8:Array(8).fill(2),_filledFrom:'noaa-27d'}]};ctx.renderDayForecast(daily,0,0);assert.equal(ctx.window._daySlots.length,0,'daily maximum is not eight independent observations');
+const report={state:'PASS',source_sha256:crypto.createHash('sha256').update(h).digest('hex'),fixture_sha256:crypto.createHash('sha256').update(fixture).digest('hex'),object_and_table_equal:true,observations_excluded:57,predicted_records:17,exact_today_plus_two:true,real_daily_ap:11.5,issuance_not_fabricated:true,invalid_duplicate_conflict_time_and_slot_cases:true,training_or_threshold_change:false};
+fs.writeFileSync(path.join(__dirname,'NOAA_PARSER_RESULTS.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report));
