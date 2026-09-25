@@ -11482,7 +11482,12 @@ function build27dComputed(rows, last3D){
   const override3D = new Map();
   if(last3D && Array.isArray(last3D.days)){
     for(const d of last3D.days){
-      if(isFinite(d.kpMax)) override3D.set(fmtDate(d.date), d.kpMax);
+      // Only independent numeric short-range forecasts may replace daily outlooks.
+      // Copied daily maxima and synthetic current-Kp repetitions add no forecast evidence.
+      if(Number.isFinite(d.kpMax) && d.kpMax >= 0 && d.kpMax <= 9 &&
+         !last3D._synthetic && !d._synthetic && !d._filledFrom && !d._fromFutureKp && !d._needsFill){
+        override3D.set(fmtDate(d.date), d.kpMax);
+      }
     }
   }
   const result = [];

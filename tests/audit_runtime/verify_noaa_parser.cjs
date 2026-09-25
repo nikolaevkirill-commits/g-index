@@ -2,7 +2,7 @@ const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),asse
 const root=path.resolve(__dirname,'../..'),h=fs.readFileSync(path.join(root,'index.html'),'utf8');
 function fn(name){const s=h.indexOf('function '+name+'(');assert(s>=0,name);const e=h.indexOf('\n}',s);assert(e>s);return h.slice(s,e+2);}
 const ctx=vm.createContext({window:{},console,todayKyivStr:()=> '2026-09-25',fmtDate:d=>d.toISOString().slice(0,10),sunriseUTC:d=>d,computeAi:()=>({Ai:0}),kpDayTerm:k=>2-k});
-vm.runInContext(h.match(/const GFZ_AP_TABLE = \[[\s\S]*?\n\];/)[0]+['_finiteFormulaNumber','kpToApInterp','_ensureThreeDays','parse3DaySafe','renderDayForecast','_fillPlaceholderDays','uafTo3DayFormat','uafTo27DayFormat','parse45Day','apOnlyTo27Day'].map(fn).join('\n'),ctx);
+vm.runInContext(h.match(/const GFZ_AP_TABLE = \[[\s\S]*?\n\];/)[0]+['_finiteFormulaNumber','kpToApInterp','_ensureThreeDays','parse3DaySafe','renderDayForecast','_fillPlaceholderDays','uafTo3DayFormat','uafTo27DayFormat','parse45Day','apOnlyTo27Day','build27dComputed'].map(fn).join('\n'),ctx);
 const fixture=fs.readFileSync(path.join(__dirname,'fixtures/noaa_forecast_20260925.json'),'utf8');const rows=JSON.parse(fixture),parse=r=>ctx.parse3DaySafe(JSON.stringify(r));
 const real=parse(rows);assert.equal(real.days.length,3);assert.equal(real.days[0].date.toISOString().slice(0,10),'2026-09-25');assert.equal(real.days[0]._needsFill,true);assert.equal(real.days[1].kpMax,3.67);assert.equal(real.days[1].kp8.length,8);assert.equal(real.predictedAp[1].Ap,11.5);assert.equal(real.issued,null);assert.equal(real.firstForecastTime,'2026-09-26T00:00:00.000Z');assert.equal(real._recordCounts.predicted,17);assert.equal(real._recordCounts.excluded,57);
 const table=[['time_tag','kp','observed','noaa_scale'],...rows.map(r=>[r.time_tag,r.kp,r.observed,r.noaa_scale])];assert.equal(JSON.stringify(parse(table)),JSON.stringify(real));
@@ -32,5 +32,16 @@ for(const v of [null,'',-1,401,'5bad'])assert.equal(ctx.parse45Day(JSON.stringif
 assert.equal(ctx.parse45Day(JSON.stringify({data:[{time:'2026-09-25',metric:'ap',value:0},{time:'2026-09-25',metric:'f107',value:110}]}))[0].Ap,0);
 assert.equal(ctx.parse45Day(JSON.stringify({data:[{time:'2026-09-25',metric:'ap',value:1},{time:'2026-09-25',metric:'ap',value:2}]})).length,0);
 assert.equal(ctx.parse45Day(JSON.stringify({data:[{time:'2026-09-25',metric:'ap',value:3},{time:'2026-09-25',metric:'f107',value:999}]}))[0].flux,null);
+
+ctx.computeF107Modifier=()=>0;ctx.window._futureCalendarAdvisory={};
+const date=new Date('2026-09-25T00:00:00Z');
+const merge=(kp,extra={},base=5)=>ctx.build27dComputed([{date,kpMax:base,Ap:20,flux:110}],{days:[{date,kpMax:kp,...extra}]} )[0];
+for(const invalid of [null,'',true,'2',NaN,Infinity,-1,10])assert.equal(merge(invalid).kpUsed,5,'invalid short-range Kp must not override actual daily forecast');
+assert.equal(merge(2,{_synthetic:true}).kpUsed,5);
+assert.equal(merge(2,{_filledFrom:'synthetic-kp-now'}).kpUsed,5);
+assert.equal(merge(2,{_filledFrom:'noaa-27d'}).kpUsed,5,'copied daily fallback is not independent short-range forecast');
+assert.equal(merge(0).kpUsed,0);assert.equal(merge(3.67).kpUsed,3.67);assert.equal(merge(2,{_fromFutureKp:true}).kpUsed,5);
+assert(Number.isNaN(merge(2,{_synthetic:true},NaN).kpUsed),'Ap-only must remain missing Kp when only synthetic evidence exists');
+
 const report={state:'PASS',source_sha256:crypto.createHash('sha256').update(h).digest('hex'),fixture_sha256:crypto.createHash('sha256').update(fixture).digest('hex'),object_and_table_equal:true,observations_excluded:57,predicted_records:17,exact_today_plus_two:true,real_daily_ap:11.5,issuance_not_fabricated:true,invalid_duplicate_conflict_time_and_slot_cases:true,training_or_threshold_change:false};
 fs.writeFileSync(path.join(__dirname,'NOAA_PARSER_RESULTS.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report));
