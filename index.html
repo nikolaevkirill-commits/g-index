@@ -11177,82 +11177,36 @@ function parseUafAurora(html){
 // out: { issued, predictedAp, days: [{date, kp8, kpMax}] }
 function uafTo3DayFormat(uaf){
   if(!uaf) return null;
-  // v88.6.9.1: якщо kp3Day порожній, але kp27Day є → беремо з 27-day (less accurate но has data)
-  if(!uaf.kp3Day || !uaf.kp3Day.length){
-    if(!uaf.kp27Day || !uaf.kp27Day.length) return null;
-    try{
-      const todayStr = todayKyivStr();
-      const future = uaf.kp27Day
-        .filter(r => fmtDate(r.date) >= todayStr)
-        .slice(0,3);
-      if(!future.length) return null;
-      const days = future.map(r => ({
-        date: r.date,
-        kp8: Array(8).fill(r.kp),  // synthetic 8 slots з daily kp
-        kpMax: r.kp
-      }));
-      const predictedAp = days.map(day => ({
-        date: day.date,
-        Ap: isFinite(day.kpMax) ? kpToApInterp(day.kpMax) : null
-      }));
-      return {
-        issued: fmtDate(future[0].date),
-        predictedAp,
-        days,
-        _source: 'uaf-alaska-27d'
-      };
-    }catch(e){ return null; }
+  if(uaf.kp3Day && uaf.kp3Day.length){
+    // Reuse the same UTC slot, range, completeness and linear-a rules.
+    const out=parse3DaySafe(JSON.stringify(uaf.kp3Day.map(r=>({
+      time_tag:r.time,kp:r.kp,observed:'predicted'
+    }))));
+    out._source='uaf-alaska';
+    return out.days.length ? out : null;
   }
-  // Звичайний шлях: 3-day data (8 slots/day)
+  if(!uaf.kp27Day || !uaf.kp27Day.length) return null;
   try{
-    const byDay = new Map();
-    for(const r of uaf.kp3Day){
-      if(!byDay.has(r.date)) byDay.set(r.date, []);
-      byDay.get(r.date).push(r.kp);
-    }
-    const sorted = Array.from(byDay.entries()).sort((a,b)=>a[0]<b[0]?-1:1);
-    const todayStr = todayKyivStr();
-    const future = sorted.filter(([d])=>d>=todayStr).slice(0,3);
-    if(!future.length) return null;
-    const days = future.map(([d, kps])=>({
-      date: new Date(d+'T00:00:00Z'),
-      kp8: kps,
-      kpMax: kps.length ? Math.max(...kps) : NaN
-    }));
-    const predictedAp = days.map(day=>{
-      // NOAA/GFZ: Kp is quasi-logarithmic. Convert each 3-hour Kp to linear a first.
-      const aValues = day.kp8.map(kpToApInterp).filter(Number.isFinite);
-      const dailyAp = aValues.length ? aValues.reduce((a,b)=>a+b,0)/aValues.length : NaN;
-      return { date: day.date, Ap: isFinite(dailyAp) ? dailyAp : null };
-    });
-    const out = {
-      issued: future[0][0],
-      predictedAp,
-      days,
-      _source: 'uaf-alaska'
-    };
-    // v88.7.6 BUG-2 fix: UAF може повернути 1-2 днів — гарантуємо рівно 3 через спільну функцію.
-    _ensureThreeDays(out);
-    return out;
-  }catch(e){
-    console.warn('[v88.6.9 UAF] uafTo3DayFormat failed:', e.message);
-    return null;
-  }
+    const today=todayKyivStr(),end=new Date(today+'T00:00:00Z');end.setUTCDate(end.getUTCDate()+2);
+    const last=end.toISOString().slice(0,10);
+    const days=uafTo27DayFormat(uaf).filter(r=>fmtDate(r.date)>=today && fmtDate(r.date)<=last)
+      .sort((a,b)=>a.date-b.date).map(r=>({date:r.date,kp8:[],kpMax:r.kpMax,_filledFrom:'uaf-27d'}));
+    if(!days.length) return null;
+    // Daily maximum alone cannot determine the mean of eight linear a values.
+    const out={issued:null,predictedAp:days.map(d=>({date:d.date,Ap:null})),days,_source:'uaf-alaska-27d'};
+    _ensureThreeDays(out);return out;
+  }catch(e){return null;}
 }
 
 // Конвертує UAF 27-day у формат parse27Day output
 // out: [{date, flux, Ap, kpMax}]
 function uafTo27DayFormat(uaf){
-  if(!uaf || !uaf.kp27Day || !uaf.kp27Day.length) return [];
-  try{
-    function kp2ap(kp){ const t=[0,0,3,7,15,27,48,80,140,240,400]; const i=Math.min(Math.floor(kp),9); return t[i] || 400; }
-    return uaf.kp27Day.map(r=>({
-      date: r.date,
-      flux: null,            // UAF не дає F10.7
-      Ap: kp2ap(r.kp),
-      kpMax: r.kp
+  if(!uaf || !Array.isArray(uaf.kp27Day)) return [];
+  return uaf.kp27Day.filter(r=>r && Number.isFinite(_finiteFormulaNumber(r.kp)) &&
+    _finiteFormulaNumber(r.kp)>=0 && _finiteFormulaNumber(r.kp)<=9).map(r=>({
+      date:r.date,flux:null,Ap:null,kpMax:_finiteFormulaNumber(r.kp),
+      _apStatus:'unavailable_from_daily_kp_max'
     }));
-  }catch(e){ return []; }
 }
 
 // v88.7.6: спільний fill-up до 3 днів — використовується parse3DaySafe і uafTo3DayFormat.
@@ -11706,7 +11660,7 @@ function draw27dTable(){
       <td><span class="kbadge ${cls}">Kp ${kpUsed.toFixed(2)}${kpSuffix}</span></td>
       ${deltaCell}
       <td>${Lcell}</td><td>${Mcell}</td><td>${Ecell}</td><td>${Pcell}</td><td>${AiCell}</td>
-      <td class="mono col-hide-mobile">${r.Ap}</td>
+      <td class="mono col-hide-mobile">${Number.isFinite(r.Ap) ? r.Ap : '—'}</td>
       <td class="mono col-hide-mobile">${r.fluxStatus==='conflicting_outlier'?`<span style="color:var(--bad)" title="F10.7 raw=${r.fluxRaw}; поза допустимим діапазоном 50–400; score_effect=0">CONFLICT</span>`:(r.flux ?? '—')}</td>
       <td style="font-size:12px">${isFinite(G_display)?classifyG(G_display):'Дані відсутні'}</td>
       <td class="col-hide-mobile" style="font-size:12px">${(()=>{const _p=calcProbabilityLayer({G:G_display,horizon:'27day'});return _p?`<span style="font-weight:700;color:var(--muted)" title="Евристична зона G; не ймовірність, score_effect=0">${escapeHtml(_p.labelUA)}</span>`:'—';})()}</td>
