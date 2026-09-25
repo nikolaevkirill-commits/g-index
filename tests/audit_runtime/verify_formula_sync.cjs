@@ -12,15 +12,18 @@ const results=await page.evaluate(()=>{
  out.kp_out_of_range=[-1,0,9,10].map(k=>({kp:k,term:kpDayTerm(k),Li:_computeAiRaw(date,k).Li}));
  const oldDst=window._lastDst;const d=new Date(today+'T12:00:00Z');window._lastDst={dst:-110,time:'2000-01-01T00:00:00Z'};out.stale_dst={Di:_computeAiRaw(d,2).Di,tip:_computeAiRaw(d,2).diTip};window._lastDst=oldDst;
  out.sum_grid={cases:0,nonfinite:0,maxDisplayedComponentRoundingDelta:0};
- for(let day=0;day<365;day+=7)for(const k of [0,2,4,5,7,9]){const d=new Date(Date.UTC(2026,0,1+day,12));const a=_computeAiRaw(d,k);const componentSum=a.Li+a.Mi+a.ei+a.Pi+a.Di;out.sum_grid.cases++;if(!Number.isFinite(a.Ai))out.sum_grid.nonfinite++;else out.sum_grid.maxDisplayedComponentRoundingDelta=Math.max(out.sum_grid.maxDisplayedComponentRoundingDelta,Math.abs(a.Ai-componentSum));}
+ for(const year of [2025,2026])for(let day=0;day<365;day+=7)for(const k of [0,2,4,5,7,9]){const d=new Date(Date.UTC(year,0,1+day,12));const a=_computeAiRaw(d,k);const componentSum=a.Li+a.Mi+a.ei+a.Pi+a.Di;out.sum_grid.cases++;if(!Number.isFinite(a.Ai))out.sum_grid.nonfinite++;else out.sum_grid.maxDisplayedComponentRoundingDelta=Math.max(out.sum_grid.maxDisplayedComponentRoundingDelta,Math.abs(a.Ai-componentSum));}
  const y26=eclipsesByYear.get(2026),y27=eclipsesByYear.get(2027);eclipsesByYear.set(2026,new Map([['2026-06-01','total_solar']]));eclipsesByYear.set(2027,new Map([['2027-01-01','total_solar']]));out.eclipse_year_boundary={dec31:computeMiFromEclipses(new Date('2026-12-31T12:00:00Z')).Mi,jan1:computeMiFromEclipses(new Date('2027-01-01T12:00:00Z')).Mi,expectedDec31FromWindow:-3};eclipsesByYear.set(2026,y26);if(y27)eclipsesByYear.set(2027,y27);else eclipsesByYear.delete(2027);
  const oldLat=_userLat,oldLon=_userLon;_userLat=50.45;_userLon=30.52;window.__panchMemo={};const pa=computePanchanga(date);_userLat=40.71;_userLon=-74.01;const pc=computePanchanga(date);window.__panchMemo={};const pf=computePanchanga(date);out.location_panchanga_cache={before:pa.rahu,cached:pc.rahu,fresh:pf.rahu,pass:JSON.stringify(pc.rahu)===JSON.stringify(pf.rahu)};_userLat=oldLat;_userLon=oldLon;window.__panchMemo={};
  const nightDate=new Date('2026-09-22T00:00:00Z'),solar=calcSunTimes(nightDate),prev=new Date(nightDate.getTime()-86400000);const hour=0,slotNight=Math.floor((hour+24-solar.ssH)/(solar.nightLen/12));const expected=HORA_ORDER[(HORA_DAY_LORD[localWeekday(prev)]+12+slotNight)%7];out.hora_before_sunrise={actual:calcHora(nightDate).planet,expectedPreviousDayLord:expected,sunriseUTC:solar.srH,pass:calcHora(nightDate).planet===expected};
- out.hora_grid={slots:0,failures:[]};
+ out.hora_grid={slots:0,helper_cases:0,timeline_renders:0,failures:[]};
  for(const ds of ['2026-03-28','2026-03-29','2026-09-22','2026-10-25']){
    const d=new Date(ds+'T12:00:00Z'),all=calcAllHoras(d),midnight=Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate());
+   renderHoraTimeline(d,2,0);out.hora_grid.timeline_renders++;
    for(let i=0;i<all.slots.length;i++){
      const slot=all.slots[i],middle=new Date(midnight+(slot.startH+slot.endH)*1800000),h=calcHora(middle);out.hora_grid.slots++;
+     const helper=_getCurrentHoraForAi(middle);out.hora_grid.helper_cases++;
+     if(!helper||helper.planet!==slot.planet||helper.pcl!==HORA_SCORE_MAP[slot.planet]||!helper.sym||!HORA_COLORS[slot.planet])out.hora_grid.failures.push({ds,i,reason:"Hora helper/score/color mismatch"});
      if(h.planet!==slot.planet||h.endMs<=middle.getTime()||Math.abs(h.endMs-(midnight+slot.endH*3600000))>1)out.hora_grid.failures.push({ds,i,slot,h});
      if(i&&Math.abs(slot.startH-all.slots[i-1].endH)>1e-8)out.hora_grid.failures.push({ds,i,reason:'gap'});
    }
@@ -51,7 +54,7 @@ assert.equal(results.sum_grid.nonfinite,0);assert.ok(results.sum_grid.maxDisplay
 assert.equal(results.eclipse_year_boundary.dec31,-3);
 assert.equal(results.location_panchanga_cache.pass,true);
 assert.equal(results.hora_before_sunrise.pass,true);
-assert.equal(results.hora_grid.slots,96);assert.deepEqual(results.hora_grid.failures,[]);
+assert.equal(results.sum_grid.cases,636);assert.equal(results.hora_grid.helper_cases,96);assert.equal(results.hora_grid.timeline_renders,4);assert.equal(results.hora_grid.slots,96);assert.deepEqual(results.hora_grid.failures,[]);
 for(const r of results.kp_out_of_range)assert.equal(Number.isFinite(r.term),r.kp>=0&&r.kp<=9);
 for(const r of results.frozen_read_gate)assert.equal(r.available,r.kp===0||r.kp===2);
 assert.equal(results.verified_pdf_independent,true);
