@@ -11405,20 +11405,38 @@ function parseDst(json){
 // Парсер JSON 45-day (45-day-ap-forecast.json)
 // Формат: [["time_tag","ap"],...]  АБО  [[date, ap],...] з заголовком
 function parse45Day(json){
-  const rows = [];
   try{
-    const data = JSON.parse(json);
-    if(!Array.isArray(data)||data.length<2) return rows;
-    const body = Array.isArray(data[0]) && isNaN(parseFloat(data[0][1])) ? data.slice(1) : data;
-    for(const r of body){
-      if(!r[0]||r[1]==null||r[1]==='') continue;
-      const dateStr = String(r[0]).slice(0,10);
-      const date = new Date(dateStr+'T00:00:00Z');
-      const Ap = parseInt(r[1],10);
-      if(!isNaN(date.getTime())&&isFinite(Ap)) rows.push({date, Ap});
+    const payload=JSON.parse(json),data=Array.isArray(payload)?payload:payload?.data;
+    if(!Array.isArray(data)) return [];
+    let sourceRows=data;
+    if(data.some(r=>r && typeof r.metric==='string')){
+      const byTime=new Map();
+      for(const r of data){
+        if(!r || !['ap','f107'].includes(r.metric)) continue;
+        const key=r.time;if(!byTime.has(key)) byTime.set(key,{time:key});
+        const item=byTime.get(key),value=_finiteFormulaNumber(r.value);
+        if(Object.prototype.hasOwnProperty.call(item,r.metric) && item[r.metric]!==value) item[r.metric]=NaN;
+        else item[r.metric]=value;
+      }
+      sourceRows=[...byTime.values()];
     }
-  }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
-  return rows;
+    const rows=[];
+    for(const r of sourceRows){
+      const rawDate=Array.isArray(r)?r[0]:(r?.time??r?.time_tag??r?.date);
+      const rawAp=Array.isArray(r)?r[1]:r?.ap;
+      const Ap=_finiteFormulaNumber(rawAp);
+      if(typeof rawDate!=='string' || !/^\d{4}-\d{2}-\d{2}(?:$|[T ])/.test(rawDate) || !Number.isFinite(Ap) || Ap<0 || Ap>400) continue;
+      const ds=rawDate.slice(0,10),date=new Date(ds+'T00:00:00Z');
+      if(!Number.isFinite(date.getTime()) || date.toISOString().slice(0,10)!==ds) continue;
+      const flux=_finiteFormulaNumber(Array.isArray(r)?r[2]:r?.f107);
+      rows.push({date,Ap,flux:Number.isFinite(flux)&&flux>=50&&flux<=400?flux:null});
+    }
+    return rows.sort((a,b)=>a.date-b.date);
+  }catch(e){return [];}
+}
+function apOnlyTo27Day(rows){
+  // Daily mean Ap does not determine the maximum of eight Kp slots.
+  return rows.map(r=>({date:r.date,flux:r.flux??null,Ap:r.Ap,kpMax:NaN,_kpStatus:'unavailable_from_daily_ap'}));
 }
 
 // --------------------------- Парсер 27-day outlook txt ----------------------
@@ -11583,7 +11601,7 @@ function draw27dTable(){
     const gTipBase = gTooltipText(kpLabel, kpUsed, ai);
     let gTip = f107mod && f107mod.val !== 0 ? gTipBase + '\n⚠ F10.7: ' + f107mod.tip + ' (контекст, не в G)' : gTipBase;
     if(r.fluxStatus === 'conflicting_outlier') gTip += `\n⚠ F10.7 CONFLICTING/QUARANTINED: raw=${r.fluxRaw}; score_effect=0`;
-    if (_hasOverride && Number.isFinite(_expertEng)) {
+    if (_hasOverride && Number.isFinite(_expertEng) && Number.isFinite(G)) {
       gTip += `\n\n★ PDF/Engine Day_score: ${_expertEng>=0?'+':''}${_expertEng}\n(G_day raw = ${G>=0?'+':''}${G.toFixed(2)}, delta ${(_expertEng-G).toFixed(1)})`;
     }
     if(calendarAdvisory){
@@ -11615,7 +11633,7 @@ function draw27dTable(){
 
     // G_ос клітинка для цього рядка
     let gosCell = '';
-    if(gosColVisible) {
+    if(gosColVisible && Number.isFinite(G)) {
       const rowDate = r.date;
       const jde27 = rowDate.getTime() / 86400000 + 2440587.5;
       const nak27 = calcNakshatra(calcMoonLongitude(jde27), jde27);
@@ -11657,7 +11675,7 @@ function draw27dTable(){
         <span class="gbadge ${gcls} hint" tabindex="0" style="font-size:13px;padding:4px 8px;min-width:60px">G raw ${isFinite(G_display)?(G_display>=0?'+':'')+G_display.toFixed(1):'…'}<div style="font-size:8px;color:var(--faint);font-weight:500">контекст доби · не рішення${_dynamicGuard?' · ⚠ Kp advisory':''}</div>${_hasOverride?'<span style="color:#ffd166;font-size:10px;margin-left:2px" title="Окремий PDF reference у відповідній колонці">★</span>':''}<span class="hint-pop">${escapeHtml(gTip)}</span></span>
         <div style="margin-top:2px;height:3px;border-radius:2px;background:#0a1020;overflow:hidden"><div style="height:100%;width:${Math.min(100,Math.max(4,isFinite(G_display)?(Math.abs(G_display)/4*100):4)).toFixed(0)}%;background:${G_display<=-2.5?'#ff4444':G_display<=-0.5?'#ffaa33':G_display>=0.5?'#2bd47d':'#9bb1dc'};transition:width .3s"></div></div>
       </td>
-      <td><span class="kbadge ${cls}">Kp ${kpUsed.toFixed(2)}${kpSuffix}</span></td>
+      <td><span class="kbadge ${cls}">Kp ${Number.isFinite(kpUsed)?kpUsed.toFixed(2):'—'}${kpSuffix}</span></td>
       ${deltaCell}
       <td>${Lcell}</td><td>${Mcell}</td><td>${Ecell}</td><td>${Pcell}</td><td>${AiCell}</td>
       <td class="mono col-hide-mobile">${Number.isFinite(r.Ap) ? r.Ap : '—'}</td>
@@ -21051,15 +21069,13 @@ async function loadAll(){
       const fb45 = await withTimeout(fetchTextWithCORS(URL_45DAY_FB), 5000, '45-day-fallback');
       const rows45 = parse45Day(fb45);
       if(!rows45.length) throw new Error('45-day: порожній масив');
-      // Конвертуємо {date,Ap} → {date, flux:null, Ap, kpMax: Ap→Kp approx}
-      function ap2kp(ap){ const t=[0,2,3,4,5,6,7,9,12,15,18,22,27,32,39,48,56,67,80,94,111,132,154,179,207,236,300,400,Infinity]; for(let i=0;i<t.length-1;i++) if(ap<=t[i+1]) return i/3; return 9; }
-      const r27fb = rows45.map(r=>({date:r.date, flux:null, Ap:r.Ap, kpMax:ap2kp(r.Ap)}));
+      const r27fb = apOnlyTo27Day(rows45);
       const todayStr = todayKyivStr();
       const r27today = r27fb.find(r=>fmtDate(r.date)===todayStr) || r27fb[0];
-      window._lastF107 = null; // flux unavailable from 45-day
+      window._lastF107 = r27today && Number.isFinite(r27today.flux) ? r27today.flux : null;
       render27Day(r27fb, last3D);
       _setSrcStatus('src27Day','cache');
-      el('twentysevenError').textContent = '⚠ 27-day .txt недоступний — показано 45-day Ap/Kp прогноз (без F10.7)';
+      el('twentysevenError').textContent = '⚠ 27-day недоступний — показано 45-day Ap; максимум Kp із добового Ap не визначається';
       if(window._DEBUG) console.log('[v43] 45-day fallback OK,', r27fb.length, 'рядків');
     }catch(e2){
       console.warn('[v43] 45-day fallback failed:', e2.message);
