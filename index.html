@@ -6,6 +6,91 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<script>
+// Source https://maia.usno.navy.mil/ser7/tai-utc.dat; retrieved 2026-09-27
+// [effective JD, base seconds, reference MJD, seconds per day]
+const NR_TAI_TABLE=[[2437300.5, 1.422818, 37300.0, 0.001296], [2437512.5, 1.372818, 37300.0, 0.001296], [2437665.5, 1.845858, 37665.0, 0.0011232], [2438334.5, 1.945858, 37665.0, 0.0011232], [2438395.5, 3.24013, 38761.0, 0.001296], [2438486.5, 3.34013, 38761.0, 0.001296], [2438639.5, 3.44013, 38761.0, 0.001296], [2438761.5, 3.54013, 38761.0, 0.001296], [2438820.5, 3.64013, 38761.0, 0.001296], [2438942.5, 3.74013, 38761.0, 0.001296], [2439004.5, 3.84013, 38761.0, 0.001296], [2439126.5, 4.31317, 39126.0, 0.002592], [2439887.5, 4.21317, 39126.0, 0.002592], [2441317.5, 10.0, 41317.0, 0.0], [2441499.5, 11.0, 41317.0, 0.0], [2441683.5, 12.0, 41317.0, 0.0], [2442048.5, 13.0, 41317.0, 0.0], [2442413.5, 14.0, 41317.0, 0.0], [2442778.5, 15.0, 41317.0, 0.0], [2443144.5, 16.0, 41317.0, 0.0], [2443509.5, 17.0, 41317.0, 0.0], [2443874.5, 18.0, 41317.0, 0.0], [2444239.5, 19.0, 41317.0, 0.0], [2444786.5, 20.0, 41317.0, 0.0], [2445151.5, 21.0, 41317.0, 0.0], [2445516.5, 22.0, 41317.0, 0.0], [2446247.5, 23.0, 41317.0, 0.0], [2447161.5, 24.0, 41317.0, 0.0], [2447892.5, 25.0, 41317.0, 0.0], [2448257.5, 26.0, 41317.0, 0.0], [2448804.5, 27.0, 41317.0, 0.0], [2449169.5, 28.0, 41317.0, 0.0], [2449534.5, 29.0, 41317.0, 0.0], [2450083.5, 30.0, 41317.0, 0.0], [2450630.5, 31.0, 41317.0, 0.0], [2451179.5, 32.0, 41317.0, 0.0], [2453736.5, 33.0, 41317.0, 0.0], [2454832.5, 34.0, 41317.0, 0.0], [2456109.5, 35.0, 41317.0, 0.0], [2457204.5, 36.0, 41317.0, 0.0], [2457754.5, 37.0, 41317.0, 0.0]];
+if(typeof module!=="undefined"&&module.exports)module.exports=NR_TAI_TABLE;
+
+'use strict';
+// Candidate conversion only. JS Date cannot represent leap-second labels :60.
+// Pre-1961 input is interpreted as UT1-like civil time, not nonexistent UTC.
+// NASA https://eclipse.gsfc.nasa.gov/SEcat5/deltatpoly.html (1900–1961 only).
+(function(host){
+ const table=typeof module!=='undefined'&&module.exports?require('./usno_tai_utc_table.cjs'):NR_TAI_TABLE;
+ function timeAtUtc(ms){
+  if(typeof ms!=='number'||!Number.isFinite(ms))throw new TypeError('Finite timestamp required');
+  if(ms<Date.UTC(1900,0,1)||ms>=Date.UTC(2027,0,1))throw new RangeError('Time conversion scope 1900–2026');
+  const jd=ms/86400000+2440587.5;
+  let seconds,status,source;
+  if(jd>=table[0][0]){
+   const row=table.findLast(r=>jd>=r[0]);
+   seconds=32.184+row[1]+(jd-2400000.5-row[2])*row[3];
+   status='tabulated_UTC';source='USNO_TAI_UTC';
+  }else{
+   const d=new Date(ms),y=d.getUTCFullYear()+(d.getUTCMonth()+0.5)/12;
+   let t;
+   if(y<1920){t=y-1900;seconds=-2.79+1.494119*t-0.0598939*t*t+0.0061966*t**3-0.000197*t**4;}
+   else if(y<1941){t=y-1920;seconds=21.20+0.84493*t-0.076100*t*t+0.0020936*t**3;}
+   else{t=y-1950;seconds=29.07+0.407*t-t*t/233+t**3/2547;}
+   status='approximate_UT1_assumption';source='NASA_Espenak_Meeus_deltaT';
+  }
+  return {jdTT:(ms+seconds*1000)/86400000+2440587.5,offsetSeconds:seconds,status,source};
+ }
+ if(typeof module!=='undefined'&&module.exports)module.exports={timeAtUtc};else host.NRHistoricalTime={timeAtUtc};
+})(globalThis);
+
+</script>
+<script>
+'use strict';
+// Candidate only. Explicit UTC input; low-level core functions consume TT JD.
+// Validated interval, not a general historical delta-T/leap-second model.
+(function (host) {
+  const START = Date.UTC(2025, 0, 1), END = Date.UTC(2027, 0, 1);
+  function createMeeusTimeAdapter(core) {
+    for (const key of ['calcSunLongitude', 'calcMoonLongitude', 'lahiriAyanamsha', 'panchangaAt']) {
+      if (typeof core?.[key] !== 'function') throw new TypeError('Missing core function: ' + key);
+    }
+    function utcToTtJulianDay(utcMs) {
+      if (typeof utcMs !== 'number' || !Number.isFinite(utcMs)) throw new TypeError('Finite UTC milliseconds required');
+      if (utcMs < START || utcMs >= END) throw new RangeError('Unverified time conversion outside 2025–2026');
+      return (utcMs + 69184) / 86400000 + 2440587.5;
+    }
+    function longitudesAtUtc(utcMs) {
+      const jdTT = utcToTtJulianDay(utcMs);
+      return {jdTT, sun: core.calcSunLongitude(jdTT), moon: core.calcMoonLongitude(jdTT), ayanamsha: core.lahiriAyanamsha(jdTT)};
+    }
+    function panchangaAt(utcMs) {
+      utcToTtJulianDay(utcMs); // Validate before the legacy UTC-shaped interface.
+      return core.panchangaAt(utcMs + 69184);
+    }
+    return Object.freeze({version: 'meeus_tt_candidate_2025_2026', utcToTtJulianDay, longitudesAtUtc, panchangaAt});
+  }
+  if (typeof module !== 'undefined' && module.exports) module.exports = createMeeusTimeAdapter;
+  else host.createMeeusTimeAdapter = createMeeusTimeAdapter;
+})(globalThis);
+
+
+// RESEARCH CANDIDATE: input contract is UTC Julian day at all legacy call sites.
+// No fallback to uncorrected historical dates; scope errors prevent promotion.
+function __nrUtcJdToTt(jdUTC) {
+  if (!Number.isFinite(jdUTC)) throw new TypeError('Finite UTC JD required');
+  const adapter = createMeeusTimeAdapter({calcSunLongitude, calcMoonLongitude, lahiriAyanamsha, panchangaAt: function(){}});
+  const time = NRHistoricalTime.timeAtUtc((jdUTC - 2440587.5) * 86400000);
+  if (time.status === 'approximate_UT1_assumption') {
+    window.__nrHistoricalTimeApproximate = true;
+    if (document.body && !document.getElementById('nrHistoricalTimeNotice')) {
+      const notice = document.createElement('p');
+      notice.id = 'nrHistoricalTimeNotice'; notice.setAttribute('role','status');
+      notice.textContent = 'Розрахунок для дати до 1961 року приблизний: історичний час оцінено, точність часу народження окремо не перевірена.';
+      document.body.prepend(notice);
+    }
+  }
+  return time.jdTT;
+}
+
+</script>
+
   <title>NeboRhythm: Cosmic Timing — v88.9.270-fp467-AUDIT-CLOSURE</title>
 
   <script src="play_channel.js"></script>
@@ -6693,7 +6778,8 @@ function sunRiseSetUTC_Meeus(dateUTC, lat, lon){
 // dependency. Внутрішній Meeus-розрахунок — єдиний production-шлях.
 const sunriseUTC = d => {
   try {
-    const rise = sunriseUTC_Meeus(d, _userLat, _userLon);
+    const civilDay = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate(), 12));
+    const rise = sunriseUTC_Meeus(civilDay, _userLat, _userLon);
     if(Number.isFinite(rise.getTime())) return rise;
     // Keep a date for calendar rendering, explicitly not a sunrise observation.
     const unavailable = noonUTC(d);
@@ -8877,8 +8963,8 @@ function moonPhaseAngle(date){
   // Meeus-обчислення, ідентичне до вже перевіреного шляху Nakshatra/Yoga.
   try {
     const jde = date.getTime() / 86400000 + 2440587.5;
-    const moonLon = calcMoonLongitude(jde);
-    const sunLon = calcSunLongitude(jde);
+    const moonLon = calcMoonLongitude(__nrUtcJdToTt(jde));
+    const sunLon = calcSunLongitude(__nrUtcJdToTt(jde));
     const elong = ((moonLon - sunLon) % 360 + 360) % 360;
     if (isFinite(elong)) return elong;
   } catch(e){ if(window._DEBUG) console.warn('[moonPhaseAngle Meeus fallback]:', e.message); }
@@ -9657,8 +9743,8 @@ function isSuryaSankranti(dateUTC){
   const jde0 = d0.getTime() / 86400000 + 2440587.5; // 00:00 UTC
   const jde1 = jde0 + 0.9993; // ~23:59 UTC
   function sunSidRashi(jde){
-    const trop = calcSunLongitude(jde);
-    const ayan = lahiriAyanamsha(jde);
+    const trop = calcSunLongitude(__nrUtcJdToTt(jde));
+    const ayan = lahiriAyanamsha(__nrUtcJdToTt(jde));
     const sid = ((trop - ayan) % 360 + 360) % 360;
     return Math.floor(sid / 30);
   }
@@ -11584,7 +11670,7 @@ function draw27dTable(){
   if(slotD && slotD.date) {
     try {
       const birthJDE = dateToJDE(slotD.date, slotD.time||'12:00', slotD.utcOff??2);
-      const natalNak = calcNakshatra(calcMoonLongitude(birthJDE), birthJDE);
+      const natalNak = calcNakshatra(calcMoonLongitude(__nrUtcJdToTt(birthJDE)), birthJDE);
       natalIdxFor27 = natalNak.idx;
     } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
   }
@@ -11641,7 +11727,7 @@ function draw27dTable(){
     if(gosColVisible && Number.isFinite(G)) {
       const rowDate = r.date;
       const jde27 = rowDate.getTime() / 86400000 + 2440587.5;
-      const nak27 = calcNakshatra(calcMoonLongitude(jde27), jde27);
+      const nak27 = calcNakshatra(calcMoonLongitude(__nrUtcJdToTt(jde27)), jde27);
       const t27 = calcTaara(natalIdxFor27, nak27.idx);
       const gmod27 = TAARA_DANGER.includes(t27.group) ? -1 : (t27.group===2||t27.group===4||t27.group===6||t27.group===8||t27.group===9) ? 1 : 0;
       const Gos27 = (isFinite(G) ? G : 0) + gmod27;
@@ -13157,11 +13243,11 @@ function computePanchanga(dateUTC){
   // Nakshatra: Meeus Ch.47 точний місячний алгоритм
   // Ідентичний блоку personal-розрахунку — уникає ±3–5° похибки простого синусоїда
   const jde_meeus = dateUTC.getTime() / 86400000 + 2440587.5;
-  const moonLon_trop = calcMoonLongitude(jde_meeus); // tropical, Meeus Ch.47
-  const ayan = lahiriAyanamsha(jde_meeus);
+  const moonLon_trop = calcMoonLongitude(__nrUtcJdToTt(jde_meeus)); // tropical, Meeus Ch.47
+  const ayan = lahiriAyanamsha(__nrUtcJdToTt(jde_meeus));
   const moonLonSid = ((moonLon_trop - ayan) % 360 + 360) % 360; // sidereal Lahiri
   // Sun tropical: Meeus Ch.25, точність ~0.01° (BUG-4 fix)
-  const sunLon = calcSunLongitude(jde_meeus);
+  const sunLon = calcSunLongitude(__nrUtcJdToTt(jde_meeus));
   const nakIdx = Math.min(26, Math.floor(moonLonSid / (360/27)));
   const nakshatraType = NAKSHATRA_TYPE[nakIdx];
   // v88.8.15: Ganda Mool detection — junction nakshatra (BPHS Ch.4 v.13)
@@ -14361,9 +14447,9 @@ function _calcRashis(dateUTC){
      || typeof lahiriAyanamsha !== 'function') return null;
   try {
     const jde = dateUTC.getTime() / 86400000 + 2440587.5;
-    const ayan = lahiriAyanamsha(jde);
-    const sunSid = ((calcSunLongitude(jde) - ayan) % 360 + 360) % 360;
-    const moonSid = ((calcMoonLongitude(jde) - ayan) % 360 + 360) % 360;
+    const ayan = lahiriAyanamsha(__nrUtcJdToTt(jde));
+    const sunSid = ((calcSunLongitude(__nrUtcJdToTt(jde)) - ayan) % 360 + 360) % 360;
+    const moonSid = ((calcMoonLongitude(__nrUtcJdToTt(jde)) - ayan) % 360 + 360) % 360;
     const sunIdx = Math.floor(sunSid / 30);
     const moonIdx = Math.floor(moonSid / 30);
     return {
@@ -20030,8 +20116,8 @@ function renderAntiAction(){
       if(_data && _data.date){
         const _bjde = dateToJDE(_data.date, _data.time, _data.utcOff);
         const _njde = Date.now() / 86400000 + 2440587.5;
-        const _nat = calcNakshatra(calcMoonLongitude(_bjde), _bjde);
-        const _now2 = calcNakshatra(calcMoonLongitude(_njde), _njde);
+        const _nat = calcNakshatra(calcMoonLongitude(__nrUtcJdToTt(_bjde)), _bjde);
+        const _now2 = calcNakshatra(calcMoonLongitude(__nrUtcJdToTt(_njde)), _njde);
         const _t = calcTaara(_nat.idx, _now2.idx);
         // v87.90 fix: захист від NaN у _nat.idx (раніше показувало "#NaN")
         const _natName = (Number.isInteger(_nat.idx) && typeof NAKSHATRA_NAMES !== 'undefined' && NAKSHATRA_NAMES[_nat.idx])
@@ -21403,15 +21489,18 @@ function lahiriAyanamsha(jde) {
 }
 
 function dateToJDE(dateStr, timeStr, utcOff) {
-  // повертає JDE (Dynamical Time ≈ UTC + 69s, ігноруємо ΔT для побутових задач)
-  if (!dateStr || typeof dateStr !== 'string') return NaN;
-  const parts = dateStr.split('-').map(Number);
-  if (parts.length < 3 || parts.some(isNaN)) return NaN;
-  const [y, mo, d] = parts;
-  const [h, mi] = timeStr ? timeStr.split(':').map(Number) : [12, 0];
-  const utcH = (isNaN(h) ? 12 : h) - (utcOff || 0);
-  const dt = Date.UTC(y, mo-1, d, utcH, isNaN(mi) ? 0 : mi, 0);
-  return isNaN(dt) ? NaN : dt / 86400000 + 2440587.5;
+  // Returns UTC JD; conversion to TT occurs only at ephemeris call sites.
+  if (typeof dateStr !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return NaN;
+  const [y, mo, d] = dateStr.split('-').map(Number);
+  const value = timeStr || '12:00';
+  if (!/^\d{2}:\d{2}$/.test(value)) return NaN;
+  const [h, mi] = value.split(':').map(Number);
+  const offset = utcOff == null ? 0 : Number(utcOff);
+  if (!Number.isFinite(offset) || offset < -12 || offset > 14 || h > 23 || mi > 59) return NaN;
+  const day = new Date(Date.UTC(y, mo-1, d));
+  if (day.getUTCFullYear() !== y || day.getUTCMonth() !== mo-1 || day.getUTCDate() !== d) return NaN;
+  const ms = day.getTime() + (h*60 + mi - offset*60)*60000;
+  return ms / 86400000 + 2440587.5;
 }
 
 // NAKSHATRA_NAMES і NAKSHATRA_REGENT вже оголошені вище (рядки ~1219, ~1236)
@@ -21463,7 +21552,7 @@ const TAARA_UA = ['','Janma (небезп.)','Sampat (благо)','Vipat (не�
 const TAARA_DANGER = [1,3,5,7]; // позиції 1-based, небезпечні
 
 function calcNakshatra(lambdaTropical, jde) {
-  const ayan = lahiriAyanamsha(jde);
+  const ayan = lahiriAyanamsha(__nrUtcJdToTt(jde));
   const lambdaSid = _mod360(lambdaTropical - ayan);
   const idx = Math.floor(lambdaSid / (360/27));      // 0..26
   const pada = Math.floor((lambdaSid % (360/27)) / (360/108)) + 1; // 1..4
@@ -22427,8 +22516,8 @@ function renderPersonal() {
   const birthJDE = dateToJDE(data.date, data.time, data.utcOff);
   const nowJDE   = Date.now() / 86400000 + 2440587.5;
 
-  const natal   = calcNakshatra(calcMoonLongitude(birthJDE), birthJDE);
-  const nowNak  = calcNakshatra(calcMoonLongitude(nowJDE), nowJDE);
+  const natal   = calcNakshatra(calcMoonLongitude(__nrUtcJdToTt(birthJDE)), birthJDE);
+  const nowNak  = calcNakshatra(calcMoonLongitude(__nrUtcJdToTt(nowJDE)), nowJDE);
   const taara   = calcTaara(natal.idx, nowNak.idx);
   const dasa    = calcCurrentDasa(natal.idx, natal.fraction, birthJDE, nowJDE);
   const antar   = calcAntardasha(dasa, nowJDE);
@@ -22683,7 +22772,7 @@ function renderTaara7d(wrap, natalIdx, nowJDE) {
   let rows = '';
   for(let d=0;d<7;d++){
     const jde = nowJDE + d; // полудень +d днів
-    const moonLon = calcMoonLongitude(jde);
+    const moonLon = calcMoonLongitude(__nrUtcJdToTt(jde));
     const nak = calcNakshatra(moonLon, jde);
     const t = calcTaara(natalIdx, nak.idx);
     const isDanger = TAARA_DANGER_SET.has(t.group);
@@ -24342,8 +24431,8 @@ function getTaaraState() {
     if (!data || !data.date) return null;
     const birthJDE = dateToJDE(data.date, data.time, data.utcOff);
     const nowJDE   = Date.now() / 86400000 + 2440587.5;
-    const natal    = calcNakshatra(calcMoonLongitude(birthJDE), birthJDE);
-    const nowNak   = calcNakshatra(calcMoonLongitude(nowJDE), nowJDE);
+    const natal    = calcNakshatra(calcMoonLongitude(__nrUtcJdToTt(birthJDE)), birthJDE);
+    const nowNak   = calcNakshatra(calcMoonLongitude(__nrUtcJdToTt(nowJDE)), nowJDE);
     const taara    = calcTaara(natal.idx, nowNak.idx);
     const dasa     = calcCurrentDasa(natal.idx, natal.fraction, birthJDE, nowJDE);
     return { taara, dasa, natal, nowNak };
