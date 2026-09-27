@@ -19463,10 +19463,10 @@ function renderMoonRetroTop(){
   const uaNames={Mercury:'☿ Меркурій',Venus:'♀ Венера',Mars:'♂ Марс',Jupiter:'♃ Юпітер',Saturn:'♄ Сатурн'};
   const active=[];
   const html=planets.map(p=>{
-    let rx=false;
+    let rx=null;
     try{rx=isRetrograde(p,now)}catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
     if(rx) active.push(uaNames[p]||p);
-    return '<span class="retro-chip '+(rx?'rx':'direct')+'">'+(rx?'℞':'•')+' '+(uaNames[p]||p)+'</span>';
+    return '<span class="retro-chip '+(rx?'rx':'direct')+'">'+(rx===null?'?':rx?'℞':'•')+' '+(uaNames[p]||p)+'</span>';
   }).join('');
 
   if(el('retroNowWrap')) el('retroNowWrap').innerHTML=html;
@@ -19477,14 +19477,16 @@ function renderMoonRetroTop(){
     el('retroPressure').textContent=lbl;
     el('retroPressure').style.color=col;
   }
-  if(el('retroNowNote')) el('retroNowNote').textContent=n?'Активні: '+active.join(', '):'Усі планети — прямий рух';
+  const retroUnknown = planets.some(p => isRetrograde(p, now) === null);
+  if(el('retroNowNote')) el('retroNowNote').textContent=retroUnknown ? 'Ретроградність: немає перевірених даних для цієї дати' : (n?'Активні: '+active.join(', '):'Усі планети — прямий рух') + ' · Swiss Ephemeris, час приблизний до хвилини';
+  if(retroUnknown && el('retroPressure')) el('retroPressure').textContent='невідомо';
 
   // Summary line for collapsed astroGrid header
   if(el('retroSummaryLine')){
     const shortNames={Mercury:'☿',Venus:'♀',Mars:'♂',Jupiter:'♃',Saturn:'♄'};
     const rxShort=[];
     planets.forEach(p=>{try{if(isRetrograde(p,now))rxShort.push(shortNames[p]+'℞')}catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}});
-    el('retroSummaryLine').innerHTML=rxShort.length
+    el('retroSummaryLine').innerHTML=retroUnknown ? '🪐 Рух планет: немає перевірених даних' : rxShort.length
       ?'🪐 <span style="color:#ff9966">'+rxShort.join(' ')+'</span>'
       :'🪐 <span style="color: var(--ok)">прямий рух</span>';
   }
@@ -21830,26 +21832,91 @@ function renderGaugeMoon(G, phaseDeg, kp, phaseName) {
 //  ПЛАНЕТНА АНІМАЦІЯ v43
 //  Геліоцентрична модель: Сонце в центрі, 5 планет + Земля + Місяць
 //  Log-scale орбіти, пропорційні швидкості, чисті підписи
-//  Ретроградність — hardcoded таблиця 2025-2026 (ICS/NASA)
+//  Ретроградність — незалежні моменти Swiss Ephemeris; обмежене покриття
 // ════════════════════════════════════════════════════════════════
 
-// Таблиця ретроградних періодів [start, end] у форматі 'YYYY-MM-DD'
+// Independent Swiss Ephemeris geocentric tropical stations. Not calendar captions.
+// UT1 mapped to UTC with <1s time-scale uncertainty; station bracket is60s.
+// This contextual display does not change frozen scores or research coefficients.
+const RETRO_COVERAGE = ["2024-12-01T00:00:00Z", "2027-01-02T00:00:00Z"];
 const RETRO_PERIODS = {
-  'Mercury': [
-    ['2025-03-15','2025-04-07'],['2025-07-18','2025-08-11'],['2025-11-09','2025-11-29'],
-    ['2026-03-08','2026-03-30'],['2026-07-02','2026-07-25'],['2026-10-23','2026-11-13']
+  "Mercury": [
+    [
+      "2024-12-01T00:00:00Z",
+      "2024-12-15T20:56:18Z"
+    ],
+    [
+      "2025-03-15T06:46:06Z",
+      "2025-04-07T11:07:37Z"
+    ],
+    [
+      "2025-07-18T04:45:01Z",
+      "2025-08-11T07:29:52Z"
+    ],
+    [
+      "2025-11-09T19:01:42Z",
+      "2025-11-29T17:38:27Z"
+    ],
+    [
+      "2026-02-26T06:48:10Z",
+      "2026-03-20T19:32:50Z"
+    ],
+    [
+      "2026-06-29T17:35:55Z",
+      "2026-07-23T22:57:51Z"
+    ],
+    [
+      "2026-10-24T07:12:42Z",
+      "2026-11-13T15:53:52Z"
+    ]
   ],
-  'Venus':   [['2025-03-01','2025-04-12'],['2026-10-03','2026-11-13']],
-  'Mars':    [['2024-12-06','2025-02-24']],
-  'Jupiter': [['2024-10-09','2025-02-04'],['2025-11-11','2026-03-10']],
-  'Saturn':  [['2025-07-13','2025-11-28'],['2026-07-26','2026-12-01']]
+  "Venus": [
+    [
+      "2025-03-02T00:36:08Z",
+      "2025-04-13T01:02:17Z"
+    ],
+    [
+      "2026-10-03T07:15:53Z",
+      "2026-11-14T00:27:27Z"
+    ]
+  ],
+  "Mars": [
+    [
+      "2024-12-06T23:33:11Z",
+      "2025-02-24T01:59:48Z"
+    ]
+  ],
+  "Jupiter": [
+    [
+      "2024-12-01T00:00:00Z",
+      "2025-02-04T09:40:22Z"
+    ],
+    [
+      "2025-11-11T16:41:25Z",
+      "2026-03-11T03:29:51Z"
+    ],
+    [
+      "2026-12-13T00:56:39Z",
+      "2027-01-02T00:00:00Z"
+    ]
+  ],
+  "Saturn": [
+    [
+      "2025-07-13T04:07:20Z",
+      "2025-11-28T03:51:35Z"
+    ],
+    [
+      "2026-07-26T19:56:30Z",
+      "2026-12-10T23:31:05Z"
+    ]
+  ]
 };
-
 function isRetrograde(planetName, dateObj) {
+  if (planetName === 'Earth') return false;
   const periods = RETRO_PERIODS[planetName];
-  if (!periods) return false;
-  const d = dateObj.toISOString().slice(0,10);
-  return periods.some(([s,e]) => d >= s && d <= e);
+  const t = dateObj instanceof Date ? dateObj.getTime() : NaN;
+  if (!periods || !Number.isFinite(t) || t < Date.parse(RETRO_COVERAGE[0]) || t >= Date.parse(RETRO_COVERAGE[1])) return null;
+  return periods.some(([s,e]) => t >= Date.parse(s) && t < Date.parse(e));
 }
 
 // Планети: реальні орбітальні періоди (дні), log-scale радіуси розраховуються динамічно
@@ -21912,9 +21979,9 @@ function renderPlanetAnimation(kp, moonPhaseDeg, G, panchCtx, astroCtx) {
       if (found) {
         const _imp2 = PLANET_IMPACT[found.name];
         const _ret2 = isRetrograde(found.name, new Date());
-        const _de = _imp2 ? (_ret2 ? _imp2.eiRetro : _imp2.eiNorm) : 0;
-        const _ctx2 = _ret2 ? _imp2?.retro : _imp2?.norm;
-        const _deStr = _de > 0 ? `<span style="color: var(--ok)">+${_de}</span>` : _de < 0 ? `<span style="color: var(--bad)">${_de}</span>` : `<span style="color:var(--faint)">0</span>`;
+        const _de = _ret2 === null ? NaN : _imp2 ? (_ret2 ? _imp2.eiRetro : _imp2.eiNorm) : 0;
+        const _ctx2 = _ret2 === null ? 'Немає перевірених даних про рух' : _ret2 ? _imp2?.retro : _imp2?.norm;
+        const _deStr = !Number.isFinite(_de) ? '—' : _de > 0 ? `<span style="color: var(--ok)">+${_de}</span>` : _de < 0 ? `<span style="color: var(--bad)">${_de}</span>` : `<span style="color:var(--faint)">0</span>`;
         _tipDiv.innerHTML = `<b style="color:${found.color}">${found.symbol} ${found.ua}</b><br>ΔEᵢ = ${_deStr}<br><span style="color:#7a90b0">${_ctx2||'—'}</span>${_ret2?'<br><span style="color:'+found.retroColor+'">℞ ретроградна</span>':''}`;
         _tipDiv.style.display = 'block';
         _tipDiv.style.left = (ev.clientX + 14) + 'px';
@@ -22090,7 +22157,7 @@ function renderPlanetAnimation(kp, moonPhaseDeg, G, panchCtx, astroCtx) {
         orbitAiVal = (aiC != null) ? (aiC.Li ?? 0) : null;
       } else {
         const _imp = PLANET_IMPACT[p.name];
-        orbitAiVal = _imp ? (isRetrograde(p.name, now) ? _imp.eiRetro : _imp.eiNorm) : null;
+        orbitAiVal = _imp && retro !== null ? (retro ? _imp.eiRetro : _imp.eiNorm) : null;
       }
 
       if (isDasa) {
