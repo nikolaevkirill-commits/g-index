@@ -1,6 +1,6 @@
 # Єдиний scorecard G-Index
 
-Згенеровано: `2026-09-26T10:00:27+00:00`.
+Згенеровано: `2026-09-27T06:22:27+00:00`.
 
 Це не один відсоток: нижче три різні цілі, які не можна змішувати.
 
@@ -24,8 +24,8 @@
 
 ## Tanita vs independent outcomes
 
-- Frozen snapshots: 84.
-- Fully elapsed dates: 56.
+- Frozen snapshots: 85.
+- Fully elapsed dates: 57.
 - Paired independent outcomes: 0.
-- Awaiting independent outcomes: 56.
+- Awaiting independent outcomes: 57.
 - Production score effect: 0 until the pre-registered promotion gate passes.
