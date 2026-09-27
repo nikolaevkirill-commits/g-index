@@ -11166,6 +11166,13 @@ async function fetchWolfSnResilient(){
 // Returns: { kp3Day: [{time, kp}], kp27Day: [{date, kp}], historical: [{date, kp}] } | null
 function parseUafAurora(html){
   if(!html || typeof html !== 'string') return null;
+  // Reject malformed source values before conversion loses their original text.
+  const sourceKp = value => {
+    if (typeof value !== 'number' && typeof value !== 'string') return NaN;
+    if (typeof value === 'string' && !/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/.test(value.trim())) return NaN;
+    const n = Number(value);
+    return Number.isFinite(n) && n >= 0 && n <= 9 ? n : NaN;
+  };
   try{
     // v88.6.9.1: bracket-balanced JSON array extraction (regex з [^[\]] не справляється з nested)
     const matches = [];
@@ -11215,7 +11222,7 @@ function parseUafAurora(html){
         if(!result.kp27Day.length){
           result.kp27Day = arr.map(r => ({
             date: new Date(r.predicted_time + 'T00:00:00Z'),
-            kp: parseFloat(r.kp)
+            kp: sourceKp(r.kp)
           })).filter(r => isFinite(r.kp));
         }
       } else if(has3hr){
@@ -11231,7 +11238,7 @@ function parseUafAurora(html){
           if(!result.historical.length){
             result.historical = arr.map(r => ({
               date: r.predicted_time.slice(0,10),
-              kp: parseFloat(r.kp)
+              kp: sourceKp(r.kp)
             })).filter(r => isFinite(r.kp));
           }
         } else if(isFuture && !result.kp3Day.length){
@@ -11240,13 +11247,13 @@ function parseUafAurora(html){
             result.kp3Day = arr.map(r => ({
               time: r.predicted_time,
               date: r.predicted_time.slice(0,10),
-              kp: parseFloat(r.kp)
+              kp: sourceKp(r.kp)
             })).filter(r => isFinite(r.kp));
           } else {
             // Великий future array — кладемо у historical як scratch
             result.historical = arr.map(r => ({
               date: r.predicted_time.slice(0,10),
-              kp: parseFloat(r.kp)
+              kp: sourceKp(r.kp)
             })).filter(r => isFinite(r.kp));
           }
         }
