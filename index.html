@@ -20,13 +20,13 @@ if(typeof module!=="undefined"&&module.exports)module.exports=NR_TAI_TABLE;
  const table=typeof module!=='undefined'&&module.exports?require('./usno_tai_utc_table.cjs'):NR_TAI_TABLE;
  function timeAtUtc(ms){
   if(typeof ms!=='number'||!Number.isFinite(ms))throw new TypeError('Finite timestamp required');
-  if(ms<Date.UTC(1900,0,1)||ms>=Date.UTC(2027,0,1))throw new RangeError('Time conversion scope 1900–2026');
+  if(ms<Date.UTC(1900,0,1)||ms>=Date.UTC(2100,0,1))throw new RangeError('Time conversion scope 1900–2099');
   const jd=ms/86400000+2440587.5;
   let seconds,status,source;
   if(jd>=table[0][0]){
    const row=table.findLast(r=>jd>=r[0]);
    seconds=32.184+row[1]+(jd-2400000.5-row[2])*row[3];
-   status='tabulated_UTC';source='USNO_TAI_UTC';
+   status=ms>=Date.UTC(2027,0,1)?'provisional_future_UTC_offset':'tabulated_UTC';source='USNO_TAI_UTC';
   }else{
    const d=new Date(ms),y=d.getUTCFullYear()+(d.getUTCMonth()+0.5)/12;
    let t;
@@ -77,12 +77,12 @@ function __nrUtcJdToTt(jdUTC) {
   if (!Number.isFinite(jdUTC)) throw new TypeError('Finite UTC JD required');
   const adapter = createMeeusTimeAdapter({calcSunLongitude, calcMoonLongitude, lahiriAyanamsha, panchangaAt: function(){}});
   const time = NRHistoricalTime.timeAtUtc((jdUTC - 2440587.5) * 86400000);
-  if (time.status === 'approximate_UT1_assumption') {
+  if (time.status !== 'tabulated_UTC') {
     window.__nrHistoricalTimeApproximate = true;
     if (document.body && !document.getElementById('nrHistoricalTimeNotice')) {
       const notice = document.createElement('p');
       notice.id = 'nrHistoricalTimeNotice'; notice.setAttribute('role','status');
-      notice.textContent = 'Розрахунок для дати до 1961 року приблизний: історичний час оцінено, точність часу народження окремо не перевірена.';
+      notice.textContent = 'Час для дат до 1961 року або після 2026 року приблизний: історичний час оцінено, майбутні зміни UTC ще невідомі.';
       document.body.prepend(notice);
     }
   }

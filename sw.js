@@ -1,6 +1,6 @@
 // G-Index service worker. HTML/data are network-first; static shell is cache-first.
 // Bump CACHE_VERSION whenever index.html or a cached shell asset changes.
-const CACHE_VERSION = 'fp467-v23-tt-civil'; // audit: channel persistence, qualified Kp authority and data freshness
+const CACHE_VERSION = 'fp467-v24-tt-civil'; // audit: channel persistence, qualified Kp authority and data freshness
 const CACHE_PREFIX = 'gindex-'; // G-Index cache namespace; do not remove the prefix.
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${CACHE_VERSION}`;
 const DATA_CACHE = `${CACHE_PREFIX}data-${CACHE_VERSION}`;
@@ -227,13 +227,13 @@ self.addEventListener('push', (event) => {
   const target = payload.url ||
     (category === 'storm' ? './?push=storm#kpHourlyPanel' : './?push=daily#heroCard');
   const options = {
-    body: payload.body || 'РћРЅРѕРІРёРІСЃСЏ РїСЂРѕРіРЅРѕР· NeboRhythm',
+    body: payload.body || 'Р С›Р Р…Р С•Р Р†Р С‘Р Р†РЎРѓРЎРЏ Р С—РЎР‚Р С•Р С–Р Р…Р С•Р В· NeboRhythm',
     icon: './icon192.png',
     badge: './icon192.png',
     tag: payload.tag || `gindex-${category}`,
     renotify: category === 'storm',
     data: { url: target, category },
-    actions: [{ action: 'open', title: 'Р’С–РґРєСЂРёС‚Рё NeboRhythm' }]
+    actions: [{ action: 'open', title: 'Р вЂ™РЎвЂ“Р Т‘Р С”РЎР‚Р С‘РЎвЂљР С‘ NeboRhythm' }]
   };
   event.waitUntil(self.registration.showNotification(payload.title || 'NeboRhythm', options));
 });
