@@ -25158,6 +25158,15 @@ async function handleBacktestFile(input) {
     return;
   }
 
+  // Missing or malformed inputs must never become a numerical observation.
+  const numberCell = value => {
+    if (typeof value !== 'number' && typeof value !== 'string') return NaN;
+    if (typeof value === 'string' && !/^[+-]?(?:\d+(?:[.,]\d*)?|[.,]\d+)$/.test(value.trim())) return NaN;
+    const n = Number(typeof value === 'string' ? value.trim().replace(',', '.') : value);
+    return Number.isFinite(n) ? n : NaN;
+  };
+  document.getElementById('btStats').style.display = 'none';
+  document.getElementById('btTableWrap').style.display = 'none';
   // Збираємо Excel-дані в Map
   const excelMap = new Map();
   for (const row of rows) {
@@ -25165,20 +25174,25 @@ async function handleBacktestFile(input) {
     if (!d) continue;
     let ds;
     if (d instanceof Date) {
+      if (!Number.isFinite(d.getTime())) continue;
       ds = d.toISOString().slice(0,10);
     } else if (typeof d === 'string') {
       // DD.MM.YYYY або YYYY-MM-DD
-      const m = d.match(/(\d{2})\.(\d{2})\.(\d{4})/);
-      ds = m ? `${m[3]}-${m[2]}-${m[1]}` : d.slice(0,10);
+      const m = d.trim().match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
+      ds = m ? `${m[3]}-${m[2]}-${m[1]}` : d.trim();
     } else if (typeof d === 'number') {
       // Excel serial date
       const excelDate = new Date(Math.round((d - 25569) * 86400 * 1000));
+      if (!Number.isFinite(excelDate.getTime())) continue;
       ds = excelDate.toISOString().slice(0,10);
     } else continue;
-    const gVal  = scoreKey ? parseFloat(row[scoreKey]) : null;
-    const catVal = catKey   ? parseInt(row[catKey])     : null;
-    const kpVal  = kpKey    ? parseFloat(row[kpKey])    : NaN;
-    excelMap.set(ds, { g: gVal, cat: catVal, kp: isFinite(kpVal) ? kpVal : null });
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(ds) || !Number.isFinite(Date.parse(ds)) || new Date(ds).toISOString().slice(0,10) !== ds) continue;
+    if (excelMap.has(ds)) { document.getElementById('btFileLabel').textContent = '❌ Повтор дати: ' + ds + '. Усуньте дублікати перед звіркою.'; return; }
+    const gVal  = scoreKey ? numberCell(row[scoreKey]) : NaN;
+    const catRaw = catKey ? numberCell(row[catKey]) : NaN;
+    const catVal = Number.isInteger(catRaw) && catRaw >= 1 && catRaw <= 7 ? catRaw : null;
+    const kpVal  = kpKey ? numberCell(row[kpKey]) : NaN;
+    excelMap.set(ds, { g: gVal, cat: catVal, kp: Number.isFinite(kpVal) && kpVal >= 0 && kpVal <= 9 ? kpVal : null });
   }
 
   if (!excelMap.size) { document.getElementById('btFileLabel').textContent = '❌ Дати не розпізнано'; return; }
@@ -25188,20 +25202,14 @@ async function handleBacktestFile(input) {
   for (const [ds, ex] of excelMap) {
     const dateObj = new Date(ds + 'T12:00:00Z');
     if (isNaN(dateObj)) continue;
-    // v39: Kp: Excel-колонка → _kpData (NOAA 7d) → 2.0 fallback
-    let kpUsed = ex.kp !== null ? ex.kp : 2.0;
-    if (ex.kp === null && window._kpData) {
-      const kpRow = window._kpData.find ? window._kpData.find(r => {
-        const rd = new Date(r[0]);
-        return rd.toISOString().slice(0,10) === ds;
-      }) : null;
-      if (kpRow) kpUsed = parseFloat(kpRow[1]) || 2.0;
-    }
-    const ai   = computeAi(dateObj, kpUsed);
-    const G    = Math.round((kpDayTerm(kpUsed) + ai.Ai) * 100) / 100;
-    const catD = gToCategory(G);
-    const catE = ex.cat || (isFinite(ex.g) ? gToCategory(ex.g) : null);
-    const gE   = isFinite(ex.g) ? ex.g : null;
+    // Only the uploaded day's Kp is suitable here. A recent first 3-hour
+    // observation is not a daily historical value; never substitute Kp=2.
+    const kpUsed = ex.kp;
+    const ai = kpUsed !== null ? computeAi(dateObj, kpUsed) : null;
+    const G = ai && Number.isFinite(ai.Ai) ? Math.round((kpDayTerm(kpUsed) + ai.Ai) * 100) / 100 : NaN;
+    const catD = Number.isFinite(G) ? gToCategory(G) : null;
+    const catE = ex.cat !== null ? ex.cat : (Number.isFinite(ex.g) ? gToCategory(ex.g) : null);
+    const gE = Number.isFinite(ex.g) ? ex.g : null;
     const delta = (isFinite(G) && gE !== null) ? Math.round((G - gE) * 100) / 100 : null;
     const match = catD !== null && catE !== null ? catD === catE : null;
     results.push({ ds, G, gE, catD, catE, delta, match });
@@ -25218,9 +25226,9 @@ async function handleBacktestFile(input) {
   const mae  = maes.length ? (maes.reduce((s,v) => s+v, 0) / maes.length).toFixed(2) : '—';
 
   document.getElementById('btStats').style.display = '';
-  document.getElementById('btAccuracy').innerHTML = `✅ Точність (кат.): <strong style="color:${parseFloat(accuracy)>=80?'#2bd47d':'#ffcc00'}">${accuracy}%</strong> (${correct}/${compared.length})`;
+  document.getElementById('btAccuracy').innerHTML = `Збіг категорій з Excel: <strong style="color:${parseFloat(accuracy)>=80?'#2bd47d':'#ffcc00'}">${accuracy}%</strong> (${correct}/${compared.length})`;
   document.getElementById('btMae').textContent = `MAE G: ${mae}`;
-  document.getElementById('btN').textContent   = `n = ${results.length} днів`;
+  document.getElementById('btN').textContent   = `n = ${results.length} днів; без розрахунку G: ${results.filter(r => !Number.isFinite(r.G)).length}. Історична звірка, не точність прогнозу подій.`;
 
   // Таблиця
   const catColor = c => c >= 6 ? '#2bd47d' : c >= 5 ? '#92D050' : c >= 4 ? '#ffcc00' : c >= 3 ? '#FCA474' : '#ff6b6b';
