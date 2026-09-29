@@ -26947,22 +26947,36 @@ body.fp434-app main#mainContent{padding-inline:24px!important}
     }catch(error){const node=document.getElementById('nrSkyMeaning');if(node)node.textContent='Космічний шар тимчасово недоступний; значення не підміняються припущенням.'}
   }
   window.fp463RenderCosmicConcept=renderCosmicConcept;
+  let _independentPanelGeneration=0;
   async function renderIndependentForecasts(){
     const grid=document.getElementById('nrIndependentGrid');if(!grid)return;
-    const score=value=>Number.isFinite(Number(value))?`${Number(value)>0?'+':''}${Number(value)}`:'—';
+    const generation=++_independentPanelGeneration;
+    window.__independentPanelState={generation,status:'loading'};
+    const score=value=>{const n=_strictDayScore(value);return n===null?'—':`${n>0?'+':''}${n}`};
     try{
-      const response=await fetch('INDEPENDENT_FORECAST_FEED_v1.json',{cache:'no-store'});if(!response.ok)throw new Error('HTTP '+response.status);
-      const feed=await response.json(),all=Object.values(feed.days||{}).sort((a,b)=>String(a.date).localeCompare(String(b.date))),start=todayKey();
+      const [feed,scorecard]=await withTimeout(signal=>Promise.all(['INDEPENDENT_FORECAST_FEED_v1.json','FP463_CHANNEL_SCORECARD.json'].map(async url=>{
+        const response=await fetch(url,{cache:'no-store',signal});if(!response.ok)throw new Error('HTTP '+response.status);
+        return response.json();
+      })),7500,'independent panel');
+      if(generation!==_independentPanelGeneration)return;
+      const all=Object.values(feed.days||{}).sort((a,b)=>String(a.date).localeCompare(String(b.date))),start=todayKey();
       let rows=all.filter(row=>row.date>=start).slice(0,7);if(!rows.length)rows=all.slice(-7);
       if(!rows.length)throw new Error('empty feed');
       grid.innerHTML=`<div class="nr-independent-row" role="row"><span class="nr-ind-date">Дата</span><span>PDF</span><span>Engine</span><span class="nr-ind-tanita">Tanita</span><span class="nr-ind-status">Статус</span></div>`+rows.map(row=>{
         const channels=row.channels||{},pdf=channels.expert_pdf?.available?score(channels.expert_pdf.value):'—',engine=channels.frozen_engine?.available?score(channels.frozen_engine.value):'—',tanita=channels.tanita_image?.available?score(channels.tanita_image.value):'—';
-        const status=row.material_disagreement?'⚠ розбіжність':'✓ без істотної розбіжності';
+        const complete=['expert_pdf','frozen_engine','tanita_image'].every(key=>channels[key]?.available&&_strictDayScore(channels[key]?.value)!==null);
+        const status=!complete?'— неповні дані':row.material_disagreement?'⚠ розбіжність':'✓ без істотної розбіжності';
         return `<div class="nr-independent-row" role="row" data-date="${escapeHtml(row.date)}" data-disagreement="${row.material_disagreement?'true':'false'}"><span class="nr-ind-date">${escapeHtml(fmtDate(row.date))}</span><span aria-label="PDF ${pdf}">PDF ${pdf}</span><span aria-label="Engine ${engine}">Engine ${engine}</span><span class="nr-ind-tanita" aria-label="Tanita ${tanita}">Tanita ${tanita}</span><span class="nr-ind-status${row.material_disagreement?' nr-ind-warn':''}">${status} · не усереднюється</span></div>`;
       }).join('');
-      const scoreResponse=await fetch('FP463_CHANNEL_SCORECARD.json',{cache:'no-store'});if(!scoreResponse.ok)throw new Error('scorecard HTTP '+scoreResponse.status);const scorecard=await scoreResponse.json(),cards=scorecard.channels||{},boundary=document.getElementById('nrProspectiveBoundary');
+      const cards=scorecard.channels||{},boundary=document.getElementById('nrProspectiveBoundary');
       if(boundary)boundary.textContent=`Prospective зафіксовано: PDF ${cards.expert_pdf?.frozen_predictions??0}, Engine ${cards.frozen_engine?.frozen_predictions??0}, Tanita ${cards.tanita_image?.frozen_predictions??0}. Валідні незалежні outcomes: ${cards.expert_pdf?.valid_independent_pairs??0}/${cards.frozen_engine?.valid_independent_pairs??0}/${cards.tanita_image?.valid_independent_pairs??0}. Gate кожного каналу: 0/100 на старті; поточні значення показані вище. Порівняння, router та ансамбль заблоковані до 100 пар на канал.`;
-    }catch(error){grid.innerHTML='<div class="nr-chart-empty" role="status">[UNVERIFIED] Незалежні канали недоступні. Значення не підмінено припущенням.</div>'}
+      window.__independentPanelState={generation,status:'loaded'};
+    }catch(error){
+      if(generation!==_independentPanelGeneration)return;
+      window.__independentPanelState={generation,status:'error',message:String(error?.message||error)};
+      grid.innerHTML='<div class="nr-chart-empty" role="status">[UNVERIFIED] Незалежні канали недоступні. Значення не підмінено припущенням.</div>';
+      const boundary=document.getElementById('nrProspectiveBoundary');if(boundary)boundary.textContent='Статистика незалежних каналів недоступна до успішного оновлення.';
+    }
   }
   window.fp463RenderIndependentForecasts=renderIndependentForecasts;
   function renderCategories(){
