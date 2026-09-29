@@ -1,6 +1,6 @@
 // G-Index service worker. HTML/data are network-first; static shell is cache-first.
 // Bump CACHE_VERSION whenever index.html or a cached shell asset changes.
-const CACHE_VERSION = 'fp467-v28-resume-refresh'; // audit: channel persistence, qualified Kp authority and data freshness
+const CACHE_VERSION = 'fp467-v29-audit-inputs'; // audit: channel persistence, qualified Kp authority and data freshness
 const CACHE_PREFIX = 'gindex-'; // G-Index cache namespace; do not remove the prefix.
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${CACHE_VERSION}`;
 const DATA_CACHE = `${CACHE_PREFIX}data-${CACHE_VERSION}`;
@@ -153,6 +153,7 @@ self.addEventListener('fetch', (event) => {
     const requestOrder=lastRequestOrder=Math.max(Date.now(),lastRequestOrder+0.001);
     const canonicalUrl = new URL(req.url);
     canonicalUrl.searchParams.delete('fresh');
+    if(canonicalUrl.pathname.endsWith('/expert_overrides_v3.json')) canonicalUrl.searchParams.delete('display');
     const cacheKey = canonicalUrl.href;
     newestRequest.set(cacheKey,requestOrder);
     event.respondWith((async () => {
@@ -188,6 +189,15 @@ self.addEventListener('fetch', (event) => {
         if (!cached) {
           const shellCache = await caches.open(SHELL_CACHE);
           cached = await shellCache.match(cacheKey);
+          // Only the application's two entry paths may fall back to its shell.
+          // The navigation URL (including channel/push parameters) is retained.
+          const scope = new URL(self.registration.scope);
+          const index = new URL('index.html', scope);
+          if(!cached && req.mode === 'navigate' &&
+             (canonicalUrl.pathname === scope.pathname || canonicalUrl.pathname === index.pathname)) {
+            const entry = new URL(canonicalUrl.href); entry.search=''; entry.hash='';
+            cached = await cache.match(entry.href) || await shellCache.match(entry.href);
+          }
         }
         if (cached) {
           // Tell the page exactly when fallback data was cached, when known.

@@ -7,6 +7,7 @@ import json
 import math
 import re
 from datetime import date, datetime, time, timezone
+from outcome_score_contract import discrete_score
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -74,9 +75,12 @@ def read_csv(path: Path):
 
 def actual_from(row):
     for key in ("actual_score", "score_7", "mean"):
-        value = number(row.get(key))
-        if value is not None:
-            return value, key
+        raw = row.get(key)
+        if raw is None or (isinstance(raw, str) and not raw.strip()):
+            continue
+        value = discrete_score(raw)
+        # An explicitly invalid preferred field cannot fall through to a legacy score.
+        return (value, key) if value is not None else (None, None)
     return None, None
 
 

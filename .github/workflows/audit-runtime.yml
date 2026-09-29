@@ -1,10 +1,10 @@
 name: audit runtime regressions
 on:
   pull_request:
-    paths: ['index.html', 'sw.js', 'play_channel.js', '*xlsx*.js', 'privacy.html', 'terms.html', 'account-deletion.html', 'tools/kp_alert_bot.py', 'tests/audit_runtime/**', '.github/workflows/audit-runtime.yml']
+    paths: ['index.html', 'sw.js', 'play_channel.js', '*xlsx*.js', 'privacy.html', 'terms.html', 'account-deletion.html', 'tools/kp_alert_bot.py', 'outcome_score_contract.py', 'pair_tanita_real_outcomes.py', 'outcome_ledger_audit.py', 'import_validated_outcome_queue.py', 'validate_outcome_intake_queue.py', 'tests/audit_runtime/**', '.github/workflows/audit-runtime.yml']
   push:
     branches: [deploy]
-    paths: ['index.html', 'sw.js', 'play_channel.js', '*xlsx*.js', 'privacy.html', 'terms.html', 'account-deletion.html', 'tools/kp_alert_bot.py', 'tests/audit_runtime/**', '.github/workflows/audit-runtime.yml']
+    paths: ['index.html', 'sw.js', 'play_channel.js', '*xlsx*.js', 'privacy.html', 'terms.html', 'account-deletion.html', 'tools/kp_alert_bot.py', 'outcome_score_contract.py', 'pair_tanita_real_outcomes.py', 'outcome_ledger_audit.py', 'import_validated_outcome_queue.py', 'validate_outcome_intake_queue.py', 'tests/audit_runtime/**', '.github/workflows/audit-runtime.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -34,9 +34,11 @@ jobs:
       - run: node tests/audit_runtime/verify_accessibility.cjs
       - run: node tests/audit_runtime/verify_followup.cjs
       - run: node tests/audit_runtime/verify_sw_browser.cjs
+      - run: node tests/audit_runtime/verify_audit_inputs.cjs
       - run: node tests/audit_runtime/verify_resume.cjs
       - run: node tests/audit_runtime/verify_cache.cjs
       - run: python tests/audit_runtime/test_bot.py
+      - run: python tests/audit_runtime/test_pairing.py
       - run: node verify_dashboard_decision_consistency.js
       - run: node verify_jyotish_product_layer.js
       - run: node verify_fp420_formula_authority.js

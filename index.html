@@ -6448,6 +6448,7 @@ function readCachedGeo(){
 }
 function refreshGeoDependents(){
   _lastPanchCtx=null;
+  window.__p3RahuCache=null;
   try{_sunRiseSetCache.clear();renderPanchanga(new Date());}catch(e){if(window._DEBUG)console.warn('[geo] render:',e.message);}
   try{syncHero();}catch(_e){}
   window.dispatchEvent(new Event('gindex:location-changed'));
@@ -7288,38 +7289,91 @@ async function loadBgsSpaceWeather(){
   return _bgsSpaceWeather;
 }
 
+// BEGIN authority request ownership
+// Each source owns its deadline and commits only its latest complete response.
+const _authorityRequests = new Map();
+let _authoritySequence = 0;
+let _authorityBatch = null;
+function _commitAuthority(token,commit){
+  if(!token.current())return;
+  if(_authorityBatch)_authorityBatch.set(token.key,{token,commit});else commit();
+}
+function _beginAuthorityBatch(){_authorityBatch=new Map();}
+function _endAuthorityBatch(){
+  const batch=_authorityBatch;_authorityBatch=null;
+  if(batch)for(const {token,commit} of batch.values()){
+    if(_authorityRequests.get(token.key)===token && !token.reason)commit();
+  }
+}
+let _fileOverrides = {}, _registryOverrides = {};
+function _beginAuthority(key){
+  const previous=_authorityRequests.get(key);
+  if(previous) previous.cancel('superseded');
+  const controller=new AbortController();
+  const token={id:++_authoritySequence, key, active:true, controller};
+  token.current=()=>token.active && _authorityRequests.get(key)===token;
+  token.cancel=reason=>{token.active=false;token.reason=reason;controller.abort();clearTimeout(token.timer);if(reason==='timeout')_authorityFailure(token,new Error('authority deadline'));};
+  token.timer=setTimeout(()=>token.cancel('timeout'),7500);
+  token.finish=()=>{clearTimeout(token.timer);token.active=false;};
+  token.fetch=(url,options={})=>fetch(url,{...options,signal:controller.signal});
+  _authorityRequests.set(key,token);
+  return token;
+}
+function _authorityFailure(token,error){
+  if(_authorityRequests.get(token.key)!==token || token.reason==='superseded')return;
+  window.__authoritySourceState=window.__authoritySourceState||{};
+  window.__authoritySourceState[token.key]={generation:token.id,status:token.reason==='timeout'?'timeout':'error',stale:true,error:String(error?.message||error)};
+}
+function _authoritySuccess(token){
+  window.__authoritySourceState=window.__authoritySourceState||{};
+  window.__authoritySourceState[token.key]={generation:token.id,status:'loaded',stale:false,loadedAt:Date.now()};
+}
+function _strictDayScore(value){
+  if(typeof value!=='number' && typeof value!=='string')return null;
+  if(typeof value==='string' && !value.trim())return null;
+  const n=Number(value);
+  return Number.isInteger(n) && n>=-3 && n<=3 ? n : null;
+}
+function _publishExpertOverrides(){
+  // Explicit file decisions have deterministic precedence, independent of arrival order.
+  _expertOverrides=Object.assign({},_registryOverrides,_fileOverrides);
+  window._expertOverrides=_expertOverrides;
+}
+// END authority request ownership
+
 async function loadExpertDecisionRegistry(force = false){
   if(!force && _expertDecisionRegistry !== null) return _expertDecisionRegistry;
+  const token=_beginAuthority('registry');
   const el=document.getElementById('expertDecisionRegistryStatus');
   try{
-    const r=await fetch('EXPERT_DECISION_REGISTRY_v1.json',{cache:'no-store'});
+    const r=await token.fetch('EXPERT_DECISION_REGISTRY_v1.json',{cache:'no-store'});
     if(!r.ok) throw new Error('HTTP '+r.status);
     const doc=await r.json();
     if(doc.schema!=='expert_decision_registry_v1') throw new Error('unexpected schema');
-    _expertDecisionRegistry=doc;
-    window._expertDecisionRegistry=doc;
-    window._expertDisplayText={};
+    const displayText={}, registryOverrides={}, rejected=[];
     try{
-      const cleanResponse=await fetch('expert_overrides_v3.json?display='+Date.now(),{cache:'no-store'});
+      const cleanResponse=await token.fetch('expert_overrides_v3.json?display='+Date.now(),{cache:'no-store'});
       if(cleanResponse.ok){
         const cleanDoc=await cleanResponse.json(),rowsByDate=new Map((Array.isArray(doc.rows)?doc.rows:[]).map(row=>[row.date,row]));
         for(const override of (Array.isArray(cleanDoc.overrides)?cleanDoc.overrides:[])){
           const row=rowsByDate.get(override?.date),sameSource=String(override?.source_sha256||'').toLowerCase()===String(row?.source_sha256||'').toLowerCase();
-          if(row&&override?.verified&&sameSource&&override?.override_text)window._expertDisplayText[override.date]=String(override.override_text);
+          if(row&&override?.verified&&sameSource&&override?.override_text)displayText[override.date]=String(override.override_text);
         }
       }
     }catch(_displayTextError){}
     // fp428 A-02: normalize verified registry decisions into the same store
     // consumed by getEngineScore(). The registry is no longer a display-only,
     // parallel authority path. Existing explicit overrides retain precedence.
-    if(!_expertOverrides || typeof _expertOverrides !== 'object') _expertOverrides={};
+
     for(const row of (Array.isArray(doc.rows)?doc.rows:[])){
       if(!/^\d{4}-\d{2}-\d{2}$/.test(String(row.date||''))) continue;
-      if(row.decision_source!=='verified_expert_pdf' || !Number.isFinite(Number(row.decision_score))) continue;
+      if(row.decision_source!=='verified_expert_pdf') continue;
+      const score=_strictDayScore(row.decision_score);
+      if(score===null){rejected.push({date:row.date,reason:'invalid_discrete_score'});continue;}
       if(!/^[0-9a-f]{64}$/i.test(String(row.source_sha256||'')) || !String(row.source_pdf||'')) continue;
-      if(!_expertOverrides[row.date]){
-        _expertOverrides[row.date]={
-          expert_eng:Number(row.decision_score), verified:true,
+      if(!registryOverrides[row.date]){
+        registryOverrides[row.date]={
+          expert_eng:score, verified:true,
           verified_by_pdf_reading:true, source_pdf:String(row.source_pdf),
           source_page:row.source_page??null, source_sha256:String(row.source_sha256),
           category:row.decision_class||'verified_expert_pdf',
@@ -7327,7 +7381,12 @@ async function loadExpertDecisionRegistry(force = false){
         };
       }
     }
-    window._expertOverrides=_expertOverrides;
+    if(!token.current())return _expertDecisionRegistry;
+    _commitAuthority(token,()=>{
+    const admittedDoc={...doc,rows:(Array.isArray(doc.rows)?doc.rows:[]).filter(row=>row.decision_source!=='verified_expert_pdf' || !!registryOverrides[row.date])};
+    _expertDecisionRegistry=admittedDoc;window._expertDecisionRegistry=admittedDoc;
+    window._expertDisplayText=displayText;window.__registryRejected=rejected;
+    _registryOverrides=registryOverrides;_publishExpertOverrides();_authoritySuccess(token);
     if(window._expertOverridesLoadStatus==='pending')window._expertOverridesLoadStatus='loaded_registry';
     const s=doc.summary||{};
     const pct=x=>Number.isFinite(Number(x))?(Number(x)*100).toFixed(1)+'%':'—';
@@ -7337,10 +7396,14 @@ async function loadExpertDecisionRegistry(force = false){
       Number(s.formula_dates||0)+' дат; проти revision-aware PDF на '+Number(s.formula_pdf_overlap||0)+
       ' датах — exact '+pct(s.formula_exact)+', ±1 '+pct(s.formula_within_1)+', знак '+pct(s.formula_strict_sign)+
       '. У денному reference перевірений PDF має пріоритет над Engine fallback; Pᵢ не рахується другим голосом. Оперативну дію визначає обережніший safety-контур.';
+    });
   }catch(e){
-    _expertDecisionRegistry={};
+    _authorityFailure(token,e);
+    if(!token.current())return _expertDecisionRegistry;
+    if(_expertDecisionRegistry===null){_expertDecisionRegistry={};window._expertDecisionRegistry=_expertDecisionRegistry;}
     if(el) el.textContent='Експертний реєстр тимчасово недоступний; PDF/Engine reference не змінено, але він не є оперативним дозволом.';
   }
+  finally{token.finish();}
   return _expertDecisionRegistry;
 }
 
@@ -7552,30 +7615,34 @@ async function loadOutcomeLedgerStatus(){
 
 async function loadStrongRawPolicy(force = false){
   if(!force && _strongRawPolicy !== null) return _strongRawPolicy;
+  const token=_beginAuthority('policy');
   try {
-    const r = await fetch('SELECTIVE_POLICY_STRONG_RAW_v2.json', {cache:'no-store'});
-    if(!r.ok) throw new Error('HTTP '+r.status);
-    const p = await r.json();
-    _strongRawPolicy = (p && p.condition === 'abs(expert_raw_sum) >= 3' && Number(p.score_effect) === 0) ? p : {};
-  } catch(e) { _strongRawPolicy = {}; }
+    const r=await token.fetch('SELECTIVE_POLICY_STRONG_RAW_v2.json',{cache:'no-store'});
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const p=await r.json();
+    if(!p || p.condition!=='abs(expert_raw_sum) >= 3' || Number(p.score_effect)!==0)throw new Error('invalid policy');
+    _commitAuthority(token,()=>{_strongRawPolicy=p;_authoritySuccess(token);});
+  }catch(e){_authorityFailure(token,e);}finally{token.finish();}
   return _strongRawPolicy;
 }
 async function loadExpertCalc(force = false){
   if(!force && _expertCalc !== null) return _expertCalc;
+  const token=_beginAuthority('calc');
   try {
-    const resp = await fetch('expert_calc_scores.json', { cache: 'default' });
-    if(!resp.ok) { window._expertCalcLoadStatus = 'http_error_' + resp.status; throw new Error('HTTP ' + resp.status); }
-    const data = await resp.json();
-    _expertCalc = (data && data.scores && typeof data.scores === 'object') ? data.scores : {};
-    window._expertCalcLoadStatus = Object.keys(_expertCalc).length ? 'loaded' : 'invalid';
-    if(window._DEBUG) console.log('[fp196] expert_calc loaded: ' + Object.keys(_expertCalc).length + ' records');
-    return _expertCalc;
-  } catch(e){
-    if(window._expertCalcLoadStatus === 'pending') window._expertCalcLoadStatus = 'missing';
-    if(window._DEBUG) console.warn('[fp196] expert_calc_scores.json fetch failed:', e.message);
-    _expertCalc = {};
-    return _expertCalc;
-  }
+    const resp=await token.fetch('expert_calc_scores.json',{cache:'default'});
+    if(!resp.ok)throw new Error('HTTP '+resp.status);
+    const data=await resp.json();
+    if(!data || !data.scores || typeof data.scores!=='object' || Array.isArray(data.scores))throw new Error('invalid scores');
+    _commitAuthority(token,()=>{
+      _expertCalc=data.scores;
+      window._expertCalcLoadStatus=Object.keys(_expertCalc).length?'loaded':'invalid';
+      _authoritySuccess(token);
+    });
+  }catch(e){
+    _authorityFailure(token,e);
+    if(token.current())window._expertCalcLoadStatus=_expertCalc?'stale':'missing';
+  }finally{token.finish();}
+  return _expertCalc;
 }
 
 // v88.8.35: SINGLE SOURCE OF TRUTH policy.
@@ -7585,50 +7652,42 @@ async function loadExpertCalc(force = false){
 // v88.8.5 В2: diagnostic flag для трасування deploy issues
 window._expertOverridesLoadStatus = 'pending'; // 'pending' | 'loaded' | 'missing' | 'invalid' | 'http_error'
 async function loadExpertOverrides(force = false){
-  if(!force && _expertOverrides !== null) return _expertOverrides;
+  if(!force && _expertOverrides !== null && window._expertOverridesLoadStatus==='loaded') return _expertOverrides;
+  const token=_beginAuthority('overrides');
   try {
-    // fp390: the expert PDF file is a live decision-reference artifact.  A
-    // cache-first/service-worker response may omit a newly verified bulletin
-    // even while the revision-aware registry is already current.  Prefer a
-    // cache-busted network read; keep the canonical URL only as an explicit
-    // offline fallback so the dashboard fails visibly rather than silently
-    // showing "PDF/Engine unavailable" for an imported date.
-    let resp;
+    let resp,delivery='network_fresh';
     try {
-      resp = await fetch('expert_overrides_v3.json?fresh=' + Date.now(), { cache: 'no-store' });
-      if(!resp.ok) throw new Error('HTTP ' + resp.status);
-      window._expertOverridesDelivery = 'network_fresh';
-    } catch(_freshErr) {
-      resp = await fetch('expert_overrides_v3.json', { cache: 'force-cache' });
-      window._expertOverridesDelivery = 'offline_fallback';
+      resp=await token.fetch('expert_overrides_v3.json?fresh='+Date.now(),{cache:'no-store'});
+      if(!resp.ok)throw new Error('HTTP '+resp.status);
+      if(resp.headers?.get('x-gindex-delivery')==='cached')delivery='offline_fallback';
+    }catch(e){
+      if(!token.current())throw e;
+      resp=await token.fetch('expert_overrides_v3.json',{cache:'force-cache'});
+      delivery='offline_fallback';
     }
-    if(!resp.ok) {
-      window._expertOverridesLoadStatus = 'http_error_' + resp.status;
-      throw new Error('HTTP ' + resp.status);
+    if(!resp.ok)throw new Error('HTTP '+resp.status);
+    const data=await resp.json(),fileOverrides={},rejected=[];
+    if(!Array.isArray(data.overrides))throw new Error('invalid overrides');
+    for(const row of data.overrides){
+      const score=_strictDayScore(row?.expert_eng);
+      if(row?.date && score!==null)fileOverrides[row.date]={...row,expert_eng:score};
+      else rejected.push({date:row?.date||null,reason:'invalid_discrete_score'});
     }
-    const data = await resp.json();
-    _expertOverrides = {};
-    if(Array.isArray(data.overrides)){
-      for(const r of data.overrides){
-        if(r && r.date && Number.isFinite(r.expert_eng)){
-          _expertOverrides[r.date] = r;
-        }
-      }
-      window._expertOverridesLoadStatus = 'loaded';
-    } else {
-      _expertOverrides = {};
-      window._expertOverridesLoadStatus = 'invalid'; // файл є, але без overrides[]
+    _commitAuthority(token,()=>{
+      _fileOverrides=fileOverrides;_publishExpertOverrides();
+      window.__overridesRejected=rejected;
+      window._expertOverridesDelivery=delivery;
+      window._expertOverridesLoadStatus='loaded';_authoritySuccess(token);
+      if(delivery==='offline_fallback')window.__authoritySourceState.overrides.stale=true;
+    });
+  }catch(e){
+    _authorityFailure(token,e);
+    if(token.current()){
+      _publishExpertOverrides();
+      window._expertOverridesLoadStatus=Object.keys(_expertOverrides).length?'stale':'missing';
     }
-    if(window._DEBUG) console.log('[v88.8.35] expert_overrides_v3 loaded: ' + Object.keys(_expertOverrides).length + ' records');
-    return _expertOverrides;
-  } catch(e){
-    if(window._expertOverridesLoadStatus === 'pending') {
-      window._expertOverridesLoadStatus = 'missing'; // 404 або інша помилка
-    }
-    if(window._DEBUG) console.warn('[v88.8.35] expert_overrides_v3.json fetch failed:', e.message, '(status: ' + window._expertOverridesLoadStatus + ')');
-    _expertOverrides = {};
-    return _expertOverrides;
-  }
+  }finally{token.finish();}
+  return _expertOverrides;
 }
 
 // v88.8.51-fp128: daily_master.json loader + regime cards (M2). Freeze-safe, read-only.
@@ -8118,25 +8177,26 @@ if(_origSave) GChrono.saveToday=(function(fn){return function(){fn.call(GChrono)
 
 async function loadEngineScores(force = false){
   if(!force && _engineScores !== null) return _engineScores;
+  const token=_beginAuthority('engine');
   if(window.EngineTagParser && !window._engineTagAliasSpec){
     try {
-      window._engineTagAliasSpec = await window.EngineTagParser.loadAliasSpec('./engine_tag_aliases_v1.json');
+      const aliases=await window.EngineTagParser.loadAliasSpec('./engine_tag_aliases_v1.json');
+      if(token.current())window._engineTagAliasSpec=aliases;
     } catch(aliasErr) {
       console.warn('[engine-tags] alias spec unavailable; legacy UI fallback active:', aliasErr.message);
     }
   }
   try {
-    const resp = await fetch('engine_scores.json', { cache: 'default' });
+    const resp = await token.fetch('engine_scores.json', { cache: 'default' });
     if(!resp.ok) throw new Error('HTTP ' + resp.status);
     const data = await resp.json();
-    _engineScores = data.scores || {};
-    for(const entry of Object.values(_engineScores)){
+    const scores = data.scores || {};
+    for(const entry of Object.values(scores)){
       if(entry && typeof entry==='object') entry._frozenInputKp=entry.kp;
     }
     const referenceCached=resp.headers?.get('x-gindex-delivery')==='cached';
-    window.__referenceSourceState = {mode:referenceCached?'cached':'live', stale:referenceCached, loadedAt:Date.now(), reason:referenceCached?'sw_offline_fallback':'network'};
-    window.__engineRetryCount = 0;
-    if(window._DEBUG) console.log('[v87.61] engine_scores loaded: ' + Object.keys(_engineScores).length + ' days, v' + (data.version || '?'));
+
+    if(window._DEBUG) console.log('[v87.61] engine_scores loaded: ' + Object.keys(scores).length + ' days, v' + (data.version || '?'));
     // v88.8.35-fp56-P8: override synthetic Kp with REAL Kp from future_kp.json (27DO).
     // Не міняє eng-score (frozen tag-based), лише замінює відображуваний Kp і знімає synthetic-мітку,
     // де є реальні дані. Це усуває "Kp=2.0 synthetic" на майбутніх датах без бюлетеня.
@@ -8144,8 +8204,8 @@ async function loadEngineScores(force = false){
       const fkp = await loadFutureKp();
       if(fkp && Object.keys(fkp).length){
         let _patched = 0;
-        for(const ds in _engineScores){
-          const e = _engineScores[ds];
+        for(const ds in scores){
+          const e = scores[ds];
           if(e && e.kp_synthetic === true && fkp[ds] && fkp[ds].kp_synthetic === false && Number.isFinite(kpDayTerm(fkp[ds].kp))){
             e.kp = fkp[ds].kp;
             e.kp_synthetic = false;
@@ -8161,7 +8221,7 @@ async function loadEngineScores(force = false){
     // Для дат ПОЗА engine_scores (2027+) даємо cal_score як попередній бал з міткою annual_fallback.
     // Це НЕ рішення дня — лише каркас до появи бюлетеня/engine. Freeze не порушено (окремий файл).
     try {
-      const ar = await fetch('annual_2026_27.json', { cache: 'default' });
+      const ar = await token.fetch('annual_2026_27.json', { cache: 'default' });
       if(ar.ok){
         const aj = await ar.json();
         // fp77: nakshatra name→number (1-27). annual_2026_27 uses abbreviated forms.
@@ -8179,8 +8239,8 @@ async function loadEngineScores(force = false){
         let _added = 0, _enriched = 0;
         for(const day of (aj.days||[])){
           const _nakNum = _NAK_MAP[day.nakshatra] || null;
-          if(!_engineScores[day.date]){
-            _engineScores[day.date] = { eng: day.cal_score, pdf: null, tag: '',
+          if(!scores[day.date]){
+            scores[day.date] = { eng: day.cal_score, pdf: null, tag: '',
               kp: null, kp_synthetic: false, annual_fallback: true,
               cal_score: day.cal_score, cal_symbols: day.symbols||[],
               cal_tithi: day.tithi_n, cal_nakshatra: _nakNum,
@@ -8189,7 +8249,7 @@ async function loadEngineScores(force = false){
           } else {
             // fp77: enrich existing entries with Panchanga display fields.
             // Does NOT override eng/pdf/tag/kp/cal_score/cal_symbols (freeze-safe).
-            const e = _engineScores[day.date];
+            const e = scores[day.date];
             if(!e.annual_tithi)     e.annual_tithi    = day.tithi;
             if(!e.annual_nakshatra) e.annual_nakshatra = day.nakshatra;
             if(!e.cal_tithi)        e.cal_tithi       = day.tithi_n;
@@ -8202,6 +8262,11 @@ async function loadEngineScores(force = false){
         if(window._DEBUG) console.log('[fp77] annual: +' + _added + ' fallback, +' + _enriched + ' enriched (nak+tithi added)');
       }
     } catch(_e){ if(window._DEBUG) console.warn('[fp56-P8] annual load failed:', _e.message); }
+    if(!token.current())return _engineScores;
+    _commitAuthority(token,()=>{
+    _engineScores=scores;
+    window.__referenceSourceState={mode:referenceCached?'cached':'live',stale:referenceCached,loadedAt:Date.now(),reason:referenceCached?'sw_offline_fallback':'network'};
+    window.__engineRetryCount=0;_authoritySuccess(token);
     // V25-fu30: check expiration — show banner if scores expire soon
     try {
       const todayKey = todayKyivStr();
@@ -8248,18 +8313,21 @@ async function loadEngineScores(force = false){
     } catch(expErr){
       console.warn('[V25-fu30] expiration check failed:', expErr.message);
     }
+    });
     return _engineScores;
   } catch(e){
+    _authorityFailure(token,e);
+    if(!token.current())return _engineScores;
     console.warn('[v87.61] engine_scores.json fetch failed:', e.message);
-    window.__referenceSourceState = {mode:'unavailable', stale:true, loadedAt:null, reason:String(e.message||'fetch_failed')};
+    window.__referenceSourceState = {mode:_engineScores?'cached':'unavailable', stale:true, loadedAt:window.__referenceSourceState?.loadedAt||null, reason:String(e.message||'fetch_failed')};
     window.__engineRetryCount = Number(window.__engineRetryCount||0) + 1;
     if (window.__engineRetryCount <= 3) {
-      setTimeout(() => { loadEngineScores().then(() => {
+      setTimeout(() => { loadEngineScores(true).then(() => {
         try { syncV702UI(); syncHero(); _renderHeroHierarchy(); } catch(_eRefresh) {}
       }); }, Math.min(30000, 2000 * Math.pow(2, window.__engineRetryCount-1)));
     }
     return _engineScores;
-  }
+  } finally {token.finish();}
 }
 // ──────────────────────────────────────────────────────────────────────
 // v88.8.18 ENGINE v18.8 PATCH SET (additive over v18.5 frozen)
@@ -9980,9 +10048,9 @@ function renderAuditCard(opts){
   let rahuStr = '—';
   try {
     let _R = null;
-    if(typeof _lastPanchCtx !== 'undefined' && _lastPanchCtx && _lastPanchCtx.rahu && _lastPanchCtx.rahu.start)
+    if(typeof _lastPanchCtx !== 'undefined' && _lastPanchCtx && _lastPanchCtx._kyivDateKey===todayKyivStr() && _lastPanchCtx._geoKey===String(_userLat)+','+String(_userLon) && _lastPanchCtx.rahu && _lastPanchCtx.rahu.start)
       _R = _lastPanchCtx.rahu;
-    if(!_R && window.__p3RahuCache && window.__p3RahuCache.rahu && window.__p3RahuCache.rahu.start)
+    if(!_R && window.__p3RahuCache && window.__p3RahuCache.dk===todayKyivStr() && window.__p3RahuCache.geoKey===String(_userLat)+','+String(_userLon) && window.__p3RahuCache.rahu && window.__p3RahuCache.rahu.start)
       _R = window.__p3RahuCache.rahu;
     if(!_R && typeof computePanchanga === 'function'){
       const _pc = computePanchanga(sunriseUTC(new Date(todayKyivStr()+'T12:00:00Z')));
@@ -10641,6 +10709,26 @@ function computeCScore(kpNow, kpObsJson, ai, G, kpSrc){
 // ------------------------- Geomagnetic day component -------------------------
 // fp349: Expert Excel and physical semantics use (2 - Kp): stronger geomagnetic
 // activity lowers the day background. Safety thresholds (Kp >= 4/5) stay separate.
+function _provisionalKpMedian(rows,now){
+  if(!Array.isArray(rows))return null;
+  const unique=new Map(),conflicts=new Set();
+  for(const row of rows){
+    const value=_finiteFormulaNumber(row?.estimated_kp);
+    if(!Number.isFinite(value) || value<0 || value>9 || typeof row?.time_tag!=='string')continue;
+    let stamp=row.time_tag.trim();
+    if(!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(stamp))continue;
+    if(!/(Z|[+-]\d{2}:?\d{2})$/i.test(stamp))stamp+='Z';
+    const ts=Date.parse(stamp),age=now-ts;
+    if(!Number.isFinite(ts) || age < -5*60000 || age > 30*60000)continue;
+    if(unique.has(ts) && unique.get(ts)!==value)conflicts.add(ts);
+    else unique.set(ts,value);
+  }
+  const tail=[...unique].filter(([ts])=>!conflicts.has(ts)).sort((a,b)=>a[0]-b[0]).slice(-5);
+  if(tail.length<3)return null;
+  const values=tail.map(x=>x[1]).sort((a,b)=>a-b),ts=tail[tail.length-1][0];
+  return {kp:values[Math.floor(values.length/2)],ts,ageHours:Math.max(0,(now-ts)/3600000),n:tail.length};
+}
+
 function _finiteFormulaNumber(value){
   if(typeof value !== 'number' && typeof value !== 'string') return NaN;
   if(typeof value === 'string' && value.trim() === '') return NaN;
@@ -15613,11 +15701,11 @@ function getInauspiciousWindowsUTC(){
     if (typeof computePanchanga === 'function' && typeof sunriseUTC === 'function') {
       try {
         const _dk = todayKyivStr();
-        if (window.__p3RahuCache && window.__p3RahuCache.dk === _dk) {
+        if (window.__p3RahuCache && window.__p3RahuCache.dk === _dk && window.__p3RahuCache.geoKey === String(_userLat)+','+String(_userLon)) {
           _R = window.__p3RahuCache.rahu;
         } else {
           _R = computePanchanga(sunriseUTC(new Date(todayKyivStr()+'T12:00:00Z'))).rahu;
-          window.__p3RahuCache = { dk: _dk, rahu: _R };
+          window.__p3RahuCache = { dk: _dk, geoKey: String(_userLat)+','+String(_userLon), rahu: _R };
         }
       } catch(_e){ _R = null; }
     }
@@ -20862,18 +20950,14 @@ async function loadAll(){
   // PROVISIONAL; never present it as a finalized observation.
   if (kpLiveR.status === 'fulfilled') {
     try {
-      const _rows1m = JSON.parse(kpLiveR.value).filter(r => r && isFinite(Number(r.estimated_kp)) && Number(r.estimated_kp) >= 0 && Number(r.estimated_kp) <= 9 && isFinite(Date.parse(String(r.time_tag)+'Z')));
-      const _tail1m = _rows1m.slice(-5);
-      const _last1m = _tail1m[_tail1m.length - 1];
-      const _age1m = _last1m ? (Date.now() - Date.parse(String(_last1m.time_tag)+'Z')) / 3600000 : Infinity;
-      if (_tail1m.length >= 3 && _age1m >= -0.1 && _age1m <= 0.5) {
-        const _vals1m = _tail1m.map(r => Number(r.estimated_kp)).sort((a,b)=>a-b);
-        const _kp1m = _vals1m[Math.floor(_vals1m.length/2)];
+      const _sample1m = _provisionalKpMedian(JSON.parse(kpLiveR.value),Date.now());
+      if (_sample1m) {
+        const _kp1m = _sample1m.kp, _age1m = _sample1m.ageHours;
         const _prevFinal = lastWWV;
         lastWWV = {
           kNow: _kp1m, aNow: _prevFinal?.aNow ?? null,
-          whenText: String(_last1m.time_tag).replace('T',' ') + ' UTC',
-          ts: Date.parse(String(_last1m.time_tag)+'Z'),
+          whenText: new Date(_sample1m.ts).toISOString().replace('T',' ').replace('Z',' UTC'),
+          ts: _sample1m.ts,
           kPrev3h: _prevFinal?.kNow ?? null, kp24hAgo: _prevFinal?.kp24hAgo ?? null,
           _provisional: true,
           _sourceLabel: 'NOAA 1-minute estimated Kp (5-point median)'
@@ -21232,57 +21316,75 @@ async function loadAll(){
 // One refresh cycle at a time. A rejected render/fetch must never leave the
 // button disabled or allow overlapping auto-refresh jobs to accumulate.
 let _dataRefreshPromise = null;
+let _pendingRefreshReason = null;
+let _refreshGeneration = 0;
 function runDataRefresh(reason){
-  if (_dataRefreshPromise) return _dataRefreshPromise;
-  const started = Date.now();
-  _dataRefreshPromise = Promise.resolve().then(async () => {
-    if (['resume', 'online', 'bfcache'].includes(reason)) {
-      await Promise.allSettled([
-        loadExpertOverrides(true), loadExpertCalc(true),
-        loadStrongRawPolicy(true), loadExpertDecisionRegistry(true), loadEngineScores(true)
-      ].map(p => withTimeout(p, 8000, 'resume authority')));
-    }
-    await loadAll();
-  }).catch(err => {
-    const msg = 'Оновлення даних не завершено: ' + ((err && err.message) || 'невідома помилка');
-    const target = el('nowError'); if(target) target.textContent = msg;
-    console.error('[data-refresh]', reason, err);
-  }).finally(() => {
-    const btn = el('btnRefresh'); if(btn) btn.disabled = false;
-    window.__lastRefreshCycle = {reason, startedAt:started, finishedAt:Date.now()};
-    _dataRefreshPromise = null;
-  });
+  if (_dataRefreshPromise) {
+    // Retain one follow-up request; ordinary auto ticks need no extra cycle.
+    if(reason!=='auto')_pendingRefreshReason=reason;
+    return _dataRefreshPromise;
+  }
+  _dataRefreshPromise=Promise.resolve().then(async()=>{
+    let next=reason;
+    do {
+      const activeReason=next,started=Date.now(),generation=++_refreshGeneration;
+      let errorCount=0;
+      _pendingRefreshReason=null;
+      try {
+        if(['resume','online','bfcache'].includes(activeReason)){
+          _beginAuthorityBatch();
+          const settled=await Promise.allSettled([
+            loadExpertOverrides(true),loadExpertCalc(true),loadStrongRawPolicy(true),
+            loadExpertDecisionRegistry(true),loadEngineScores(true)
+          ].map(p=>withTimeout(p,8000,'resume authority')));
+          _endAuthorityBatch();
+          errorCount+=settled.filter(r=>r.status==='rejected').length;
+          errorCount+=Object.values(window.__authoritySourceState||{}).filter(r=>r.stale).length;
+        }
+        await loadAll();
+      }catch(err){
+        errorCount++;
+        const target=el('nowError');
+        if(target)target.textContent='Оновлення даних не завершено: '+(err?.message||'невідома помилка');
+        console.error('[data-refresh]',activeReason,err);
+      }finally{
+        const btn=el('btnRefresh');if(btn)btn.disabled=false;
+        window.__lastRefreshCycle={reason:activeReason,startedAt:started,finishedAt:Date.now(),
+          generation,status:errorCount?'partial':'completed',errorCount,pendingReason:_pendingRefreshReason};
+      }
+      next=_pendingRefreshReason;
+    }while(next);
+  }).finally(()=>{_dataRefreshPromise=null;});
   return _dataRefreshPromise;
 }
 window.runDataRefresh = runDataRefresh;
 
 // BEGIN lifecycle refresh: retain the page and unsaved form controls.
 (function installLifecycleRefresh(){
-  let hiddenAt = document.hidden ? Date.now() : null;
-  let visibleDay = todayKyivStr();
-  let pendingTimer = null;
-  let lastRequest = -Infinity;
-  function schedule(reason, force){
-    if (document.hidden || !navigator.onLine) return;
-    const now = Date.now(), day = todayKyivStr();
-    const last = window.__lastRefreshCycle;
-    const old = !last || now - last.finishedAt >= 60000;
-    const away = hiddenAt !== null && now - hiddenAt >= 60000;
-    if (!force && !old && !away && day === visibleDay) return;
-    if (pendingTimer !== null || now - lastRequest < 5000) return;
-    pendingTimer = setTimeout(() => {
-      pendingTimer = null;
-      if (document.hidden || !navigator.onLine) return;
-      lastRequest = Date.now(); hiddenAt = null; visibleDay = todayKyivStr();
-      runDataRefresh(reason);
-    }, 500);
+  let hiddenAt=document.hidden?Date.now():null;
+  let visibleDay=todayKyivStr(),pendingTimer=null,lastRequest=-Infinity,pendingReason=null;
+  function schedule(reason,force){
+    const now=Date.now(),day=todayKyivStr(),last=window.__lastRefreshCycle;
+    const old=!last || now-last.finishedAt>=60000 || last.status==='partial';
+    const away=hiddenAt!==null && now-hiddenAt>=60000;
+    if(force)pendingReason=reason;
+    if(!pendingReason && !old && !away && day===visibleDay)return;
+    if(!pendingReason)pendingReason=reason;
+    if(document.hidden || !navigator.onLine || pendingTimer!==null)return;
+    pendingTimer=setTimeout(()=>{
+      pendingTimer=null;
+      if(document.hidden || !navigator.onLine)return;
+      const requested=pendingReason;pendingReason=null;
+      lastRequest=Date.now();hiddenAt=null;visibleDay=todayKyivStr();
+      runDataRefresh(requested);
+    },Math.max(500,5000-(now-lastRequest)));
   }
-  document.addEventListener('visibilitychange', () => {
-    if (document.hidden) hiddenAt = Date.now(); else schedule('resume', false);
+  document.addEventListener('visibilitychange',()=>{
+    if(document.hidden)hiddenAt=Date.now();else schedule('resume',false);
   });
-  window.addEventListener('focus', () => schedule('resume', false));
-  window.addEventListener('online', () => schedule('online', true));
-  window.addEventListener('pageshow', event => { if(event.persisted) schedule('bfcache', true); });
+  window.addEventListener('focus',()=>schedule('resume',false));
+  window.addEventListener('online',()=>schedule('online',true));
+  window.addEventListener('pageshow',event=>{if(event.persisted)schedule('bfcache',true);});
 })();
 // END lifecycle refresh
 
@@ -26677,7 +26779,7 @@ body.fp434-app main#mainContent{padding-inline:24px!important}
   function renderOutcomeHistory(){const box=document.getElementById('nrOutcomeHistory');if(!box)return;let rows=[];try{rows=JSON.parse(localStorage.getItem('gindex_plan_outcomes_v1')||'[]')}catch(_e){}if(!Array.isArray(rows)||!rows.length){box.innerHTML='<span class="nr-chip">ІСТОРІЯ</span><h3>Останні результати</h3><p>Записів ще немає.</p>';return}const labels={done:'Виконано',partial:'Частково',not_done:'Не виконано'};box.innerHTML='<span class="nr-chip">ІСТОРІЯ · ЛИШЕ ЦЕЙ ПРИСТРІЙ</span><h3>Останні результати</h3><div class="nr-list">'+rows.slice(-7).reverse().map(x=>`<div class="nr-row"><span>${escapeHtml(x.date||'—')}</span><span><strong>${escapeHtml(labels[x.result]||x.result||'—')}</strong>${x.priority?' · '+escapeHtml(x.priority):''}${x.note?'<br><small>'+escapeHtml(x.note)+'</small>':''}</span></div>`).join('')+'</div><p class="nr-result-meta">Самозвіт користувача; не ground truth і не доказ точності прогнозу.</p>'}
   function enhanceFunctionalRoutes(){renderProfileResult();renderPlanResult();renderOutcomeHistory();renderMatchResult();renderDailyReport();const planMeta=document.querySelector('#nrPlanGuard .nr-result-meta');if(planMeta)planMeta.textContent='План допомагає діяти в межах канонічного висновку дня і не створює нового прогнозу.';const reportMeta=document.querySelector('#nrDailyReportPreview .nr-result-meta');if(reportMeta)reportMeta.textContent='Звіт повторює рішення «Сьогодні» і не створює іншого прогнозу.'}
   function calendarStateLabel(g){return g>=1?'сприятливий фон':g<=-1?'обережний режим':'нейтральний фон'}
-  function expertDecisionForDate(ds){const row=Array.isArray(window._expertDecisionRegistry?.rows)?window._expertDecisionRegistry.rows.find(x=>x.date===ds):null;const score=_finiteFormulaNumber(row?.decision_score),displayText=window._expertDisplayText?.[ds],displayRow=displayText?{...row,headline_text:displayText}:row;return row?.decision_source==='verified_expert_pdf'&&Number.isFinite(score)?{row:displayRow,score:Math.max(-3,Math.min(3,score))}:null}
+  function expertDecisionForDate(ds){const row=Array.isArray(window._expertDecisionRegistry?.rows)?window._expertDecisionRegistry.rows.find(x=>x.date===ds):null;const score=_strictDayScore(row?.decision_score),displayText=window._expertDisplayText?.[ds],displayRow=displayText?{...row,headline_text:displayText}:row;return row?.decision_source==='verified_expert_pdf'&&Number.isFinite(score)?{row:displayRow,score}:null}
   function resolveDateLayers(d){const expert=expertDecisionForDate(d?.ds),rawValue=_finiteFormulaNumber(d?.G),raw=Number.isFinite(rawValue)?Math.max(-3,Math.min(3,rawValue)):NaN;return{ds:d?.ds||'',expert,raw,rawValue,primary:Number.isFinite(expert?.score)?expert.score:NaN}}
   function advisoryPresentation(signal){
     const available=!!signal?.decisionAvailable&&Number.isFinite(Number(signal?.decisionScore));
@@ -27027,7 +27129,7 @@ body.fp434-app main#mainContent{padding-inline:24px!important}
     // Keep every current-day consumer on this same render, including when
     // asynchronous data arrives while another route is open. Do not reset forms.
     renderPlanResult();renderMatchResult();renderDailyReport();
-    const balance=document.querySelector('#nrAuthorityBalance span');if(balance){const pdf=Number(registryRow?.decision_score),eng=Number(registryRow?.engine_score),cal=Number(registryRow?.calendar_score_context),decision=Number(daySignal?.decisionScore);balance.textContent=`Канонічне рішення: ${presentation.available?`${presentation.opKey} · бал ${decision>=0?'+':''}${decision.toFixed(0)} · ${presentation.label}`:'недоступне'}${daySignal?.guard&&daySignal.guard!=='none'?` · обмеження ${daySignal.guard}`:''}${daySignal?.dynamicGuard?` · запобіжник ${daySignal.dynamicGuard}`:''}${offline&&snapshot?` · збережено ${snapshot.resolved_at}`:''}. Довідковий PDF ${Number.isFinite(pdf)?(pdf>=0?'+':'')+pdf:'—'}, Engine ${Number.isFinite(eng)?(eng>=0?'+':'')+eng:'—'}, календарний контекст ${Number.isFinite(cal)?(cal>=0?'+':'')+cal:'—'} і поточний G показані окремо та безпосередньо не визначають колір поради.`}
+    const balance=document.querySelector('#nrAuthorityBalance span');if(balance){const pdf=_strictDayScore(registryRow?.decision_score),eng=_strictDayScore(registryRow?.engine_score),cal=_finiteFormulaNumber(registryRow?.calendar_score_context),decision=_finiteFormulaNumber(daySignal?.decisionScore);balance.textContent=`Канонічне рішення: ${presentation.available?`${presentation.opKey} · бал ${decision>=0?'+':''}${decision.toFixed(0)} · ${presentation.label}`:'недоступне'}${daySignal?.guard&&daySignal.guard!=='none'?` · обмеження ${daySignal.guard}`:''}${daySignal?.dynamicGuard?` · запобіжник ${daySignal.dynamicGuard}`:''}${offline&&snapshot?` · збережено ${snapshot.resolved_at}`:''}. Довідковий PDF ${Number.isFinite(pdf)?(pdf>=0?'+':'')+pdf:'—'}, Engine ${Number.isFinite(eng)?(eng>=0?'+':'')+eng:'—'}, календарний контекст ${Number.isFinite(cal)?(cal>=0?'+':'')+cal:'—'} і поточний G показані окремо та безпосередньо не визначають колір поради.`}
     const eclipse=document.getElementById('nrEclipseContext');let mi=null;try{mi=typeof computeMiFromEclipses==='function'?computeMiFromEclipses(new Date(todayKey()+'T12:00:00Z')):null}catch(_e){}const eclipseActive=Number(mi?.Mi)<0||eclipseFromRegistry;if(eclipse){eclipse.classList.toggle('is-visible',eclipseActive);if(eclipseActive){set('nrEclipseTitle','ПЕРІОД ВПЛИВУ ЗАТЕМНЕННЯ');set('nrEclipseCopy',`${mi&&Number.isFinite(Number(mi.Mi))?'Mᵢ '+(Number(mi.Mi)>=0?'+':'')+Number(mi.Mi)+' · ':''}вже враховано у денному G. Спокійний темп, без форсування ключових рішень.`)}}
     set('nrCoverScore',presentation.symbol);set('nrCoverDecisionScore',Number.isFinite(scoreBase)?(scoreBase>=0?'+':'')+scoreBase.toFixed(0):'—');set('nrCoverKp',Number.isFinite(kp)?kp.toFixed(1):'—');set('nrCoverShift',shift);set('nrScoreHelper',presentation.available?`${presentation.label} · ${offline?'збережене рішення':'стан на зараз'}`:'Немає підтвердженого рішення');
     const scoreLabel=cover.querySelector('.nr-score-label');if(scoreLabel)scoreLabel.textContent='СТАН ДНЯ';

@@ -8,6 +8,8 @@ evaluation ledger after a calendar day has fully elapsed.
 from __future__ import annotations
 
 from datetime import date, datetime, time, timezone
+from collections import Counter
+from outcome_score_contract import discrete_score
 from pathlib import Path
 import json
 import math
@@ -96,50 +98,66 @@ except ValueError as exc:
     snapshots, outcomes = [], []
     hard_failures.append(str(exc))
 
+rejected: list[dict] = []
+def reject(channel, target, reason):
+    hard_failures.append(f"{channel}: {reason}: {target}")
+    rejected.append({"channel":channel,"date":target,"reason":reason})
+
+def valid_date(target):
+    try:
+        return bool(re.fullmatch(r"\d{4}-\d{2}-\d{2}", target)) and date.fromisoformat(target).isoformat() == target
+    except (ValueError, TypeError):
+        return False
+
+snapshot_counts = Counter(str(row.get("target_date") or "") for row in snapshots)
 snapshot_by_date: dict[str, dict] = {}
 for row in snapshots:
     target = str(row.get("target_date") or "")
-    if not target:
-        hard_failures.append("snapshot missing target_date")
-        continue
-    if target in snapshot_by_date:
-        hard_failures.append(f"duplicate Tanita snapshot date: {target}")
-        continue
+    if not valid_date(target):
+        reject("snapshot",target,"invalid target date"); continue
+    if snapshot_counts[target] != 1:
+        reject("snapshot",target,"duplicate date quarantined"); continue
     try:
         frozen = datetime.fromisoformat(str(row.get("frozen_at") or "").replace("Z", "+00:00"))
         if frozen.tzinfo is None:
             raise ValueError("explicit frozen_at timezone required")
         if frozen.astimezone(timezone.utc) >= target_day_start_utc(target):
-            hard_failures.append(f"snapshot was not frozen before target day: {target}")
-    except ValueError:
-        hard_failures.append(f"invalid frozen_at for {target}")
+            raise ValueError("snapshot was not frozen before target day")
+    except ValueError as exc:
+        reject("snapshot",target,str(exc)); continue
+    invalid = False
+    for channel in ("tanita_shadow", "final_prediction_reference"):
+        value = row.get(channel)
+        if value is not None and not isinstance(value, dict):
+            invalid = True
+        elif value and value.get("score") is not None and discrete_score(value.get("score")) is None:
+            invalid = True
+    if invalid:
+        reject("snapshot",target,"invalid discrete prediction"); continue
     snapshot_by_date[target] = row
 
+# Quarantine the entire date, not whichever duplicate happened to arrive last.
+outcome_counts = Counter(str(row.get("date") or "") for row in outcomes if row.get("outcome_type") == "real_user_outcome")
 outcome_by_date: dict[str, dict] = {}
 for row in outcomes:
-    target = str(row.get("date") or "")
-    if not target:
-        continue
-    if target in outcome_by_date:
-        hard_failures.append(f"duplicate real outcome date: {target}")
-        continue
-    # Only the independent user-outcome channel is admissible. Expert labels
-    # and PDF/Excel agreement can never become ground truth here.
     if row.get("outcome_type") != "real_user_outcome":
         continue
-    # Placeholder/legacy rows without an admissible numeric outcome are not
-    # evidence and are simply awaiting intake; provenance is enforced only
-    # when a row attempts to contribute an actual score.
-    if numeric(row.get("actual_score")) is None:
-        continue
+    target = str(row.get("date") or "")
+    if not valid_date(target):
+        reject("outcome",target,"invalid target date"); continue
+    if outcome_counts[target] != 1:
+        reject("outcome",target,"duplicate date quarantined"); continue
+    raw = row.get("actual_score")
+    if raw is None or (isinstance(raw,str) and not raw.strip()):
+        continue  # Explicit placeholders remain awaiting independent intake.
+    if discrete_score(raw) is None:
+        reject("outcome",target,"invalid discrete actual score"); continue
     digest = str(row.get("outcome_intake_sha256") or "").strip().lower()
     if row.get("provenance_verified") is not True or re.fullmatch(r"[0-9a-f]{64}", digest) is None:
-        hard_failures.append(f"unverified outcome provenance for {target}")
-        continue
+        reject("outcome",target,"unverified provenance"); continue
     source = str(row.get("actual_source") or "").lower()
-    if any(token in source for token in ("pdf", "excel", "expert", "override")):
-        hard_failures.append(f"forbidden outcome source for {target}: {source}")
-        continue
+    if not source or any(token in source for token in ("pdf", "excel", "expert", "override")):
+        reject("outcome",target,"forbidden or missing source"); continue
     outcome_by_date[target] = row
 
 pairs: list[dict] = []
@@ -148,12 +166,15 @@ for target, snapshot in sorted(snapshot_by_date.items()):
     if target >= today:
         continue
     outcome = outcome_by_date.get(target)
-    actual = numeric(outcome.get("actual_score")) if outcome else None
+    actual = discrete_score(outcome.get("actual_score")) if outcome else None
     if actual is None:
         awaiting.append(target)
         continue
-    tanita = numeric((snapshot.get("tanita_shadow") or {}).get("score"))
-    baseline = numeric((snapshot.get("final_prediction_reference") or {}).get("score"))
+    tanita = discrete_score((snapshot.get("tanita_shadow") or {}).get("score"))
+    baseline = discrete_score((snapshot.get("final_prediction_reference") or {}).get("score"))
+    if tanita is None and baseline is None:
+        awaiting.append(target)
+        continue
     pairs.append({
         "schema": "tanita_real_outcome_pair_v1",
         "date": target,
@@ -175,6 +196,11 @@ PAIRS.write_text("".join(json.dumps(row, ensure_ascii=False, separators=(",", ":
 
 tanita_summary = aggregate(pairs, "tanita_metrics")
 baseline_summary = aggregate(pairs, "baseline_metrics")
+diagnostic_metrics = {"tanita_shadow":tanita_summary,"baseline_frozen":baseline_summary}
+if hard_failures:
+    tanita_summary = aggregate([], "tanita_metrics")
+    baseline_summary = aggregate([], "baseline_metrics")
+review_pairs = sum(row["tanita_metrics"] is not None and row["baseline_metrics"] is not None for row in pairs)
 status = {
     "schema": "tanita_real_outcome_pair_status_v1",
     "generated_at": now.isoformat(),
@@ -190,10 +216,13 @@ status = {
     "promotion_gate": {
         "minimum_pairs_for_review": 30,
         "minimum_pairs_for_promotion": 100,
-        "eligible_for_review": len(pairs) >= 30,
-        "eligible_for_promotion": len(pairs) >= 100 and not hard_failures,
+        "eligible_for_review": review_pairs >= 30 and not hard_failures,
+        "eligible_for_promotion": review_pairs >= 100 and not hard_failures,
+        "matched_channel_pairs": review_pairs,
     },
     "hard_failures": hard_failures,
+    "rejected_records": rejected,
+    "diagnostic_metrics_only": diagnostic_metrics if hard_failures else None,
     "result": "PASS" if not hard_failures else "FAIL",
     "score_effect": 0,
     "production_change": False,

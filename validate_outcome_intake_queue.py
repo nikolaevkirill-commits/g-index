@@ -7,6 +7,7 @@ from import_validated_outcome_queue import frozen_prediction_errors
 import json
 import math
 from datetime import date, datetime, time, timezone
+from outcome_score_contract import discrete_score
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -77,7 +78,7 @@ if QUEUE.exists():
                 errors.append("prediction_not_prior")
             if str(row.get("forecast_seen", "")).strip() not in {"0", "1"}:
                 errors.append("forecast_seen_must_be_0_or_1")
-            actual = numeric(row.get("actual_score"))
+            actual = discrete_score(row.get("actual_score"))
             if actual is None or actual < -3 or actual > 3 or not float(actual).is_integer():
                 errors.append("actual_score_must_be_integer_-3_to_3")
             label = str(row.get("actual_class", "")).strip().upper()

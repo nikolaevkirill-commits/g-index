@@ -344,9 +344,9 @@ forbidText('aria-label="Повний розклад ${slots.length}', 'dynamic w
 requireText("fetch('SPACE_WEATHER_CONTEXT_v1.json', {cache:'no-store'})", 'GOES X-ray prefers the validated same-origin snapshot');
 requireText("_delivery: 'same_origin_snapshot'", 'same-origin X-ray provenance is explicit');
 requireText("xr._delivery==='same_origin_snapshot' ? 'snapshot' : 'ok'", 'X-ray source indicator distinguishes snapshot from direct live fetch');
-requireText("fetch('expert_overrides_v3.json?fresh=' + Date.now(), { cache: 'no-store' })", 'expert PDF overrides bypass stale browser and service-worker caches');
-requireText("window._expertOverridesDelivery = 'network_fresh'", 'fresh expert override delivery is observable');
-requireText("window._expertOverridesDelivery = 'offline_fallback'", 'offline expert override fallback is explicitly labeled');
+requireText("token.fetch('expert_overrides_v3.json?fresh='+Date.now(),{cache:'no-store'})", 'expert PDF overrides bypass stale browser and service-worker caches');
+requireText("let resp,delivery='network_fresh'", 'fresh expert override delivery is observable');
+requireText("delivery='offline_fallback'", 'offline expert override fallback is explicitly labeled');
 requireText('[fp391 boot horizon refresh: 3-day]', 'initial PDF loader refreshes the already-rendered 3-day horizon');
 requireText('[fp391 boot horizon refresh: week]', 'initial PDF loader refreshes the week horizon');
 requireText('[fp391 boot horizon refresh: 27-day]', 'initial PDF loader refreshes the 27-day horizon');

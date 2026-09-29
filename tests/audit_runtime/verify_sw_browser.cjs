@@ -4,6 +4,7 @@ const {resolveBrowserOptions}=require('./browser_options.cjs');
 const root=path.resolve(__dirname,'../..');let offline=false,revision=1;
 const server=http.createServer((req,res)=>{
  const name=new URL(req.url,'http://local').pathname;
+ if(name==='/install-fixture'){res.writeHead(200,{'Content-Type':'text/html'}).end('<!doctype html><title>Install fixture</title>');return;}
  if(name==='/audit-probe.json'){res.writeHead(offline?503:200,{'Content-Type':'application/json'}).end(JSON.stringify({revision}));return;}
  const file=path.resolve(root,'.'+(name==='/'?'/index.html':name));
  if(!file.startsWith(root+path.sep)){res.writeHead(403).end();return;}
@@ -30,7 +31,20 @@ const server=http.createServer((req,res)=>{
  // Replaying a delayed old message through the actual two listeners must not reopen the banner.
  await page.evaluate(()=>{const state=window.__nrSWResourceStates.get(location.origin+'/audit-probe.json');navigator.serviceWorker.dispatchEvent(new MessageEvent('message',{data:{type:'SW_STALE_DATA',url:location.origin+'/audit-probe.json',requestOrder:state.order-1,fetchedAt:Date.now()}}))});
  assert.equal(await page.locator('#nrRuntimeState').evaluate(el=>el.classList.contains('is-visible')),false);
- const result={checks:['actual SW network response','actual SW cached response','outage banner visible','network recovery updates body','recovery banner hidden','late message rejected by actual listeners']};
+ // Install from a minimal page: neither query navigation has ever been fetched.
+ const cold=await browser.newContext({serviceWorkers:'allow'}),coldPage=await cold.newPage();
+ await coldPage.goto(base+'/install-fixture');
+ await coldPage.evaluate(async()=>{await navigator.serviceWorker.register('/sw.js');await navigator.serviceWorker.ready});
+ await coldPage.waitForFunction(()=>!!navigator.serviceWorker.controller);
+ await cold.setOffline(true);
+ for(const entry of ['/index.html?channel=play','/?push=daily']){
+   const response=await coldPage.goto(base+entry,{waitUntil:'domcontentloaded'});
+   assert.equal(response.status(),200);assert.equal(response.fromServiceWorker(),true);
+   assert.equal(new URL(coldPage.url()).search,new URL(base+entry).search);
+   await coldPage.waitForFunction(()=>typeof runDataRefresh==='function');
+ }
+ await cold.close();
+ const result={checks:['cold first Play/push navigations offline with query preserved','actual SW network response','actual SW cached response','outage banner visible','network recovery updates body','recovery banner hidden','late message rejected by actual listeners']};
  fs.writeFileSync(path.join(__dirname,'SW_BROWSER_RESULTS.json'),JSON.stringify(result,null,2));console.log('PASS',result.checks.length,'actual service worker browser checks');
  }finally{await browser.close();server.close();}
 })().catch(e=>{console.error(e);server.close();process.exitCode=1});
