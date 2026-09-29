@@ -21350,6 +21350,7 @@ function runDataRefresh(reason){
           errorCount+=Object.values(window.__authoritySourceState||{}).filter(r=>r.stale).length;
         }
         await loadAll();
+        if(typeof window.requestProductRender==='function')window.requestProductRender('cover','forecast','calendar','independent');
       }catch(err){
         errorCount++;
         const target=el('nowError');
@@ -26756,17 +26757,17 @@ body.fp434-app main#mainContent{padding-inline:24px!important}
     loadFp440Profile();
     renderPanchGuide();
     renderCosmicConcept();
-    renderIndependentForecasts();
+    requestProductRender('independent');
     renderDataTruthGate();
-    if(typeof loadExpertDecisionRegistry==='function')Promise.resolve(loadExpertDecisionRegistry()).then(()=>{renderCompetitiveCover();renderUnifiedForecast();renderCalendar()}).catch(error=>console.warn('[fp449 early registry]',error));
-    setTimeout(renderCompetitiveCover,420);
+    if(typeof loadExpertDecisionRegistry==='function')Promise.resolve(loadExpertDecisionRegistry()).then(()=>requestProductRender('cover','forecast','calendar')).catch(error=>console.warn('[fp449 early registry]',error));
+    setTimeout(()=>requestProductRender('cover'),420);
     setTimeout(renderCosmicConcept,520);
-    setTimeout(renderIndependentForecasts,560);
-    setTimeout(renderCompetitiveCover,1800);
+    setTimeout(()=>requestProductRender('independent'),560);
+    setTimeout(()=>requestProductRender('cover'),1800);
     setTimeout(renderCosmicConcept,1900);
-    setTimeout(renderCompetitiveCover,5200);
-    setTimeout(renderUnifiedForecast,500);
-    setTimeout(renderCalendar,650);
+    setTimeout(()=>requestProductRender('cover'),5200);
+    setTimeout(()=>requestProductRender('forecast'),500);
+    setTimeout(()=>requestProductRender('calendar'),650);
     setTimeout(enhanceFunctionalRoutes,900);
   }
   function todayKey(){try{return typeof todayKyivStr==='function'?todayKyivStr():new Date().toISOString().slice(0,10)}catch(_e){return new Date().toISOString().slice(0,10)}}
@@ -26840,7 +26841,57 @@ body.fp434-app main#mainContent{padding-inline:24px!important}
     const snapshot=isToday?saveCanonicalSnapshot(layers.ds,signal,presentation):null;
     return{...layers,feed,official,scenario,kp:liveKp,signal,presentation,decisionScore:presentation.available?Number(signal.decisionScore):NaN,actionEligible:true,calendarOffset:offset,missing:!Number.isFinite(layers.rawValue),snapshot};
   }
-  function operationalForDate(d){return canonicalForDate(d)}
+  // BEGIN product render queue
+  const _productDirty=new Set(),_productAsync=new Map();let _productFrame=null,_productRendering=false,_productSnapshot=null;
+  let _productRenderGeneration=0;
+  function _freezeResolved(value){
+    if(value===null||typeof value!=='object')return value;
+    if(Array.isArray(value))return Object.freeze(value.map(_freezeResolved));
+    return Object.freeze(Object.fromEntries(Object.entries(value).map(([k,v])=>[k,_freezeResolved(v)])));
+  }
+  function operationalForDate(d){
+    if(!_productSnapshot)return canonicalForDate(d);
+    const key=JSON.stringify([d?.ds,d?.G,d?._calendarOffset,d?._missing,d?._hasRaw]);
+    if(!_productSnapshot.has(key))_productSnapshot.set(key,_freezeResolved(canonicalForDate(d)));
+    return _productSnapshot.get(key);
+  }
+  function requestProductRender(...parts){
+    parts.forEach(p=>_productDirty.add(p));
+    if(_productFrame!==null||_productRendering||document.hidden)return;
+    _productFrame=requestAnimationFrame(_flushProductRender);
+  }
+  function _flushProductRender(){
+    _productFrame=null;if(document.hidden)return;
+    const active=document.querySelector('.nr-route.active')?.dataset.route;
+    const jobs=[['forecast',renderUnifiedForecast],['calendar',renderCalendar],['independent',renderIndependentForecasts],['cover',renderCompetitiveCover]];
+    const result={generation:++_productRenderGeneration,parts:[],errors:[],resolvedDates:0};
+    _productRendering=true;_productSnapshot=new Map();
+    try{
+      for(const [part,render] of jobs){
+        if(!_productDirty.has(part)||_productAsync.has(part))continue;
+        if((part==='forecast'||part==='independent')&&active!=='forecast')continue;
+        if(part==='calendar'&&active!=='calendar')continue;
+        _productDirty.delete(part);
+        try{
+          const task=render();
+          if(task?.then){
+            const pending=Promise.resolve(task).catch(e=>console.warn('[product render]',part,e)).finally(()=>{
+              _productAsync.delete(part);if(_productDirty.has(part))requestProductRender();
+            });_productAsync.set(part,pending);
+          }
+          result.parts.push(part);
+        }
+        catch(e){result.errors.push({part,message:String(e?.message||e)});console.warn('[product render]',part,e)}
+      }
+      result.resolvedDates=_productSnapshot.size;
+    }finally{
+      _productSnapshot=null;_productRendering=false;
+      result.pending=[..._productDirty];window.__lastProductRender=Object.freeze(result);
+    }
+  }
+  window.requestProductRender=requestProductRender;
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)requestProductRender()});
+  // END product render queue
   window.fp455OperationalForDate=operationalForDate;
   window.fp456OperationalForDate=operationalForDate;
   window.fp457CanonicalForDate=canonicalForDate;
@@ -26857,7 +26908,7 @@ body.fp434-app main#mainContent{padding-inline:24px!important}
     const week=document.getElementById('nrCalendarWeek'),month=document.getElementById('nrCalendarMonth');if(!week||!month)return;
     const source=(typeof _27dComputed!=='undefined'&&Array.isArray(_27dComputed))?_27dComputed:[];
     const start=todayKey(),data=buildCalendarFrame(source,start,27);
-    if(!source.length){week.innerHTML='<div class="nr-chart-empty">Канонічний ряд ще завантажується…</div>';setTimeout(renderCalendar,900);return}
+    if(!source.length){week.innerHTML='<div class="nr-chart-empty">Канонічний ряд ще завантажується…</div>';setTimeout(()=>requestProductRender('calendar'),900);return}
     const fmtDay=ds=>new Intl.DateTimeFormat('uk-UA',{timeZone:'Europe/Kyiv',weekday:'short'}).format(new Date(ds+'T12:00:00Z'));
     const fmtDate=ds=>new Intl.DateTimeFormat('uk-UA',{timeZone:'Europe/Kyiv',day:'numeric',month:'short'}).format(new Date(ds+'T12:00:00Z'));
     week.innerHTML=data.slice(0,7).map((d,i)=>{const resolved=operationalForDate(d),p=resolved.presentation,today=d.ds===start;return `<button class="nr-calendar-day ${p.className}${i===0?' active':''}" data-ds="${d.ds}" aria-pressed="${i===0?'true':'false'}" onclick="fp443SelectCalendarDay('${d.ds}',this)"><small>${today?'сьогодні':escapeHtml(fmtDay(d.ds))}</small><b>${p.symbol} ${escapeHtml(p.label)}</b><span>${escapeHtml(fmtDate(d.ds))}<br>${escapeHtml(p.title)}</span></button>`}).join('');
@@ -26941,9 +26992,9 @@ body.fp434-app main#mainContent{padding-inline:24px!important}
     document.querySelectorAll('#nrTopNav button').forEach(n=>{const active=n.dataset.route===name||(!['today','concept','panch','forecast','calendar'].includes(name)&&n.dataset.route==='more');n.classList.toggle('active',active);if(active)n.setAttribute('aria-current','page');else n.removeAttribute('aria-current')});
     try{localStorage.setItem('fp434_route',name)}catch(_e){}
     if(name==='categories'){renderCategories();localizeNewShellCopy()}
-    if(name==='calendar')setTimeout(renderCalendar,80);
-    if(name==='forecast'){setTimeout(renderUnifiedForecast,80);setTimeout(renderIndependentForecasts,120)}
-    if(name==='today'){setTimeout(renderCompetitiveCover,80);setTimeout(renderCosmicConcept,120)}
+    if(name==='calendar')setTimeout(()=>requestProductRender('calendar'),80);
+    if(name==='forecast'){setTimeout(()=>requestProductRender('forecast'),80);setTimeout(()=>requestProductRender('independent'),120)}
+    if(name==='today'){setTimeout(()=>requestProductRender('cover'),80);setTimeout(renderCosmicConcept,120)}
     if(['profile','match','reports','plan'].includes(name))setTimeout(enhanceFunctionalRoutes,80);
     if(scroll){window.scrollTo({top:0,behavior:'smooth'});const activeRoute=document.getElementById('nrRoute-'+name);const heading=activeRoute?.querySelector('h1,h2');const announcer=document.getElementById('fp434RouteAnnouncer');if(announcer)announcer.textContent=heading?.textContent?.trim()||name;setTimeout(()=>{if(!activeRoute?.classList.contains('active'))return;const currentHeading=activeRoute.querySelector('h1,h2');if(currentHeading){currentHeading.setAttribute('tabindex','-1');currentHeading.focus({preventScroll:true})}},120)}
   };
@@ -27031,14 +27082,14 @@ body.fp434-app main#mainContent{padding-inline:24px!important}
         return `<div class="nr-row"><span>${i+1}. ${escapeHtml(x.date)}</span><span><strong style="color:${color}">${src}</strong>${Number.isFinite(Number(x.kp))?` · Kp ${Number(x.kp).toFixed(2)}`:''}<br><small>${escapeHtml(String(x.source||'немає джерела'))}</small></span></div>`;
       }).join('');
       box.innerHTML=`<div class="nr-list"><div class="nr-row"><span>Загальний gate</span><span><strong style="color:${gate==='PASS'?'var(--ok)':'var(--warn)'}">${gate}</strong> · System Health ${escapeHtml(String(health.status||'UNKNOWN'))}</span></div><div class="nr-row"><span>Горизонт Kp</span><span>${official}/7 official · ${synthetic}/7 synthetic · ${missing}/7 missing</span></div><div class="nr-row"><span>Свіжість Kp</span><span><strong style="color:${fresh?'var(--ok)':'var(--bad)'}">${fresh?'FRESH':'STALE / UNVERIFIED'}</strong>${ageH!==null?' · '+ageH.toFixed(1)+' год':''}</span></div><div class="nr-row"><span>Панчанга × Astronomy Engine</span><span><strong style="color:${panch.status==='PASS'?'var(--ok)':'var(--warn)'}">${escapeHtml(panch.status)}</strong> · ${Number(panch.tested||0)} сегментів · ${Number(panch.material_mismatches||0)} material mismatch · ${Number(panch.boundary_sensitive_mismatches||0)} boundary-sensitive</span></div></div><p style="margin:12px 0 8px"><strong>Правило:</strong> NOAA-ділянка — прогноз. <code>UNVERIFIED Kp</code> — технічне плато для обчислювальної сумісності, не прогноз і не підстава для дії. Межі Панчанги в межах кількох хвилин між різними ефемеридами позначаються як model-sensitive.</p><div class="nr-list">${dayRows}</div>${warnings.length?`<p style="margin-top:12px;color:var(--warn)"><strong>Відкриті аномалії:</strong> ${warnings.map(escapeHtml).join(' · ')}</p>`:''}`;
-      setTimeout(renderUnifiedForecast,0);
+      setTimeout(()=>requestProductRender('forecast'),0);
     }catch(error){box.innerHTML=`<div class="nr-row"><span>BLOCKED</span><span>Не вдалося перевірити data gate: ${escapeHtml(error.message)}</span></div>`}
   }
   function renderUnifiedForecast(){
     const source=(typeof _27dComputed!=='undefined'&&Array.isArray(_27dComputed))?_27dComputed:[];
     const start=todayKey();
     const data=buildCalendarFrame(source,start,27);
-    if(!source.length){setTimeout(renderUnifiedForecast,900);return}
+    if(!source.length){setTimeout(()=>requestProductRender('forecast'),900);return}
     const kpFeed=window.__nrFutureKp&&window.__nrFutureKp.kp?window.__nrFutureKp.kp:{};
     function chart(target,count){
       const box=document.getElementById(target);if(!box)return;
@@ -27090,7 +27141,7 @@ body.fp434-app main#mainContent{padding-inline:24px!important}
     set('nrPdfCoverage',`Довідкове джерело звірено: ${verified27}/27 календарних дат`);
     set('nrPredictiveBoundary','Прогнозну точність ще не підтверджено');
     set('nrContextBoundary','Фонові та сценарні дані: контекст, не команда');
-    renderCompetitiveCover();
+    if(_productRendering)_productDirty.add('cover');else renderCompetitiveCover();
   }
   const FP463_CANONICAL_SNAPSHOT_KEY='nr_canonical_snapshot_fp463_v1';
   function saveCanonicalSnapshot(date,signal,presentation){
@@ -27146,7 +27197,7 @@ body.fp434-app main#mainContent{padding-inline:24px!important}
     set('nrCoverLiveG',Number.isFinite(g)?(g>=0?'+':'')+g.toFixed(1):'—');
     const orbit=document.getElementById('nrScoreOrbit');if(orbit){orbit.style.setProperty('--nr-score-angle',(presentation.available?300:0)+'deg');orbit.classList.toggle('nr-score-pending',!presentation.available)}
     const source=(typeof _27dComputed!=='undefined'&&Array.isArray(_27dComputed))?_27dComputed:[],data=buildCalendarFrame(source,date,27);
-    if(!source.length){set('nrCover3','Дані ще завантажуються');set('nrCover7','Дані ще завантажуються');set('nrCover27','Дані ще завантажуються');setTimeout(renderCompetitiveCover,900);return}
+    if(!source.length){set('nrCover3','Дані ще завантажуються');set('nrCover7','Дані ще завантажуються');set('nrCover27','Дані ще завантажуються');setTimeout(()=>requestProductRender('cover'),900);return}
     const describe=n=>{const a=data.slice(0,n).map(operationalForDate);if(!a.length)return 'Дані ще завантажуються';const counts={act:0,check:0,hold:0,none:0};a.forEach(d=>counts[d.presentation.bucket]++);return `${counts.act} діяти · ${counts.check} перевірити · ${counts.hold} відкласти${counts.none?` · ${counts.none} без рішення`:''}`};
     set('nrCover3',describe(3));set('nrCover7',describe(7));set('nrCover27','Довгий огляд · без порад на дію');
   }
@@ -27161,9 +27212,7 @@ body.fp434-app main#mainContent{padding-inline:24px!important}
   window.addEventListener('online',()=>{window.__nrOfflineFallback=false;renderCompetitiveCover()});
   document.addEventListener('DOMContentLoaded',()=>setTimeout(init,180),{once:true});
   window.addEventListener('hashchange',()=>{const r=location.hash.replace('#','');if(ROUTES.includes(r))fp434Go(r,true)});
-  window.addEventListener('gindex:data-ready',renderUnifiedForecast);
-  window.addEventListener('gindex:data-ready',renderCompetitiveCover);
-  window.addEventListener('gindex:data-ready',renderCalendar);
+  window.addEventListener('gindex:data-ready',()=>requestProductRender('forecast','calendar','cover','independent'));
 })();
 </script>
 
