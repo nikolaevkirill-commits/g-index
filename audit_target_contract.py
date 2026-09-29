@@ -72,7 +72,15 @@ checks = {
     "source_routing_passes": bool(routing.get("overall_ok", False)),
     "tanita_unverified_score_effect_is_zero": int(tanita.get("production_score_effect", 0) or 0) == 0,
     "guarded_outcome_import_is_in_daily_chain": "import_validated_outcome_queue.py" in daily_chain,
-    "outcome_import_requires_prior_frozen_prediction": "no_frozen_telemetry_row_for_date" in importer,
+    # The canonical tracker owns prediction evidence; telemetry may contain
+    # outcome-only rows. Require the binding call and fail-closed guards.
+    "outcome_import_requires_prior_frozen_prediction": all(marker in importer for marker in (
+        "+ frozen_prediction_errors(row)",
+        "canonical_prediction_not_prior",
+        "canonical_prediction_evidence_missing_or_invalid",
+        "intake_prediction_mismatch",
+        "prediction_timezone_missing",
+    )),
     "outcome_import_forbids_expert_training_sources": "expert_or_training_source_reference_forbidden" in importer,
     "outcome_import_cannot_overwrite_actuals": "outcome_already_present" in importer,
     # Absence is the preferred retired state.  If an archival copy is kept, it

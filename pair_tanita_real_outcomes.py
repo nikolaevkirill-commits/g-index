@@ -108,7 +108,7 @@ for row in snapshots:
     try:
         frozen = datetime.fromisoformat(str(row.get("frozen_at") or "").replace("Z", "+00:00"))
         if frozen.tzinfo is None:
-            frozen = frozen.replace(tzinfo=timezone.utc)
+            raise ValueError("explicit frozen_at timezone required")
         if frozen.astimezone(timezone.utc) >= target_day_start_utc(target):
             hard_failures.append(f"snapshot was not frozen before target day: {target}")
     except ValueError:

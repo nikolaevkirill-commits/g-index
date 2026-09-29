@@ -1,8 +1,9 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 """Validate manually entered independent outcomes before fail-closed automatic import."""
 from __future__ import annotations
 
 import csv
+from import_validated_outcome_queue import frozen_prediction_errors
 import json
 import math
 from datetime import date, datetime, time, timezone
@@ -37,7 +38,7 @@ def prior_prediction(day, created):
     try:
         stamp = datetime.fromisoformat(str(created).replace("Z", "+00:00"))
         if stamp.tzinfo is None:
-            stamp = stamp.replace(tzinfo=timezone.utc)
+            return False
         return stamp.astimezone(timezone.utc) < target_day_start_utc(day)
     except (TypeError, ValueError):
         return False
@@ -64,7 +65,7 @@ if QUEUE.exists():
             submitted = any(str(row.get(field, "")).strip() for field in EDITABLE)
             if not submitted:
                 continue
-            errors = []
+            errors = frozen_prediction_errors(row)
             day = (row.get("date") or "").strip()
             try:
                 parsed_day = date.fromisoformat(day)

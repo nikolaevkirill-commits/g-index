@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 """Fail-closed import of reviewed independent outcomes into Chrono telemetry."""
 from __future__ import annotations
 import csv, hashlib, io, json, math, os
@@ -44,7 +44,7 @@ def numeric(value):
 def prior_prediction(day, created):
     try:
         stamp = datetime.fromisoformat(str(created).replace("Z", "+00:00"))
-        if stamp.tzinfo is None: stamp = stamp.replace(tzinfo=timezone.utc)
+        if stamp.tzinfo is None: return False
         return stamp.astimezone(timezone.utc) < target_day_start_utc(day)
     except (TypeError, ValueError): return False
 
@@ -68,6 +68,31 @@ def validate(row, today):
     evidence = " ".join(str(row.get(f, "")) for f in ("event_summary", "notes")).lower()
     if any(token in evidence for token in FORBIDDEN): errors.append("expert_or_training_source_reference_forbidden")
     return errors
+
+
+def frozen_prediction_errors(row, root=None):
+    """Bind editable intake to the recorded prediction, never to user-supplied time."""
+    try:
+        path = (ROOT if root is None else Path(root)) / "outputs/AUTO_PROSPECTIVE_TRACKER_v1.json"
+        tracker = json.loads(path.read_text(encoding="utf-8-sig"))
+        prediction = tracker["decisions"][row["date"]]["prediction"]
+        frozen_time = datetime.fromisoformat(str(prediction["created_at"]).replace("Z", "+00:00"))
+        supplied_time = datetime.fromisoformat(str(row["prediction_created_at"]).replace("Z", "+00:00"))
+        if frozen_time.tzinfo is None or supplied_time.tzinfo is None:
+            return ["prediction_timezone_missing"]
+        if not prior_prediction(row["date"], prediction["created_at"]):
+            return ["canonical_prediction_not_prior"]
+        score = prediction["score"]
+        if isinstance(score, bool) or not isinstance(score, (int, float)) or not math.isfinite(score) or score != int(score) or not -3 <= score <= 3:
+            return ["canonical_prediction_score_invalid"]
+        if (numeric(row.get("prediction_score")) != score
+            or supplied_time != frozen_time
+            or not prediction.get("model")
+            or str(row.get("prediction_model", "")) != str(prediction["model"])):
+            return ["intake_prediction_mismatch"]
+    except (OSError, KeyError, TypeError, ValueError):
+        return ["canonical_prediction_evidence_missing_or_invalid"]
+    return []
 
 def read_telemetry(path):
     lines = path.read_text(encoding="utf-8-sig").splitlines(keepends=True)
@@ -134,21 +159,26 @@ def main():
     by_date = {str(row.get("date", "")).strip(): row for row in telemetry}
     imported, rejected, already_imported, changed = [], [], [], False
     for row in submitted:
-        day = str(row.get("date", "")).strip(); errors = validate(row, now.astimezone(KYIV).date()); target = by_date.get(day)
-        if target is None: errors.append("no_frozen_telemetry_row_for_date")
+        day = str(row.get("date", "")).strip(); errors = validate(row, now.astimezone(KYIV).date()) + frozen_prediction_errors(row); target = by_date.get(day)
         if target is not None and str(target.get("actual_score", "")).strip():
             if not errors and identical_accepted_outcome(row, target):
                 already_imported.append(day); continue
             errors.append("outcome_already_present")
         if errors:
             rejected.append({"date": day, "errors": sorted(set(errors))}); continue
+        if target is None:
+            # Store only the observed result. The frozen prediction stays in its tracker.
+            target = {field: "" for field in fields}
+            target["date"] = day
+            telemetry.append(target)
+            by_date[day] = target
         actual = int(float(str(row["actual_score"]).strip())); label = str(row["actual_class"]).strip().upper()
         target.update({"forecast_seen": str(row["forecast_seen"]).strip(), "actual_score": str(actual), "actual_class": label, "domain": str(row["domain"]).strip().lower(), "event_summary": str(row["event_summary"]).strip(), "confidence_actual": str(row["confidence_actual"]).strip().upper(), "delayed_flag": target.get("delayed_flag", "") or "0", "notes": str(row.get("notes", "")).strip(), "actual_source":"validated_outcome_intake_v1", "outcome_intake_sha256":intake_hash(row), "outcome_imported_at_utc":now.replace(microsecond=0).isoformat(), "provenance_verified":"1"})
         pred_bucket, actual_bucket = bucket(str(target.get("v20_class", ""))), bucket(label)
         target["match"] = "-1" if "MID" in {pred_bucket, actual_bucket} else ("1" if pred_bucket == actual_bucket else "0")
         imported.append(day); changed = True
     if changed: write_telemetry(TELEMETRY, comments, telemetry, fields)
-    status = {"schema":"outcome_intake_import_status_v1", "generated_at":now.replace(microsecond=0).isoformat(), "submitted_rows":len(submitted), "imported_rows":len(imported), "imported_dates":imported, "rejected_rows":len(rejected), "issues":rejected, "automatic_import":True, "calendar_timezone":"Europe/Kyiv", "temporal_policy":"prediction must precede target-day 00:00 Europe/Kyiv; outcome date must be completed in Europe/Kyiv", "score_effect":"real_outcome_metrics_only", "production_forecast_change":False, "rule":"Only reviewed independent outcomes update an already frozen row; expert/PDF/Excel labels are forbidden."}
+    status = {"schema":"outcome_intake_import_status_v1", "generated_at":now.replace(microsecond=0).isoformat(), "submitted_rows":len(submitted), "imported_rows":len(imported), "imported_dates":imported, "rejected_rows":len(rejected), "issues":rejected, "automatic_import":True, "calendar_timezone":"Europe/Kyiv", "temporal_policy":"prediction must precede target-day 00:00 Europe/Kyiv; outcome date must be completed in Europe/Kyiv", "score_effect":"real_outcome_metrics_only", "production_forecast_change":False, "rule":"Only independently reported outcomes bound to a prior canonical tracker prediction are accepted; absent telemetry dates add outcome-only rows, never reconstructed v20 predictions."}
     status["already_imported_rows"] = len(already_imported)
     status["already_imported_dates"] = already_imported
     STATUS.write_text(json.dumps(status, ensure_ascii=False, indent=2)+"\n", encoding="utf-8")

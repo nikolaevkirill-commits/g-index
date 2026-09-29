@@ -43,7 +43,7 @@ def was_prior(day, prediction):
     try:
         when = datetime.fromisoformat(str(raw).replace("Z", "+00:00"))
         if when.tzinfo is None:
-            when = when.replace(tzinfo=timezone.utc)
+            return False
         return when.astimezone(timezone.utc) < target_day_start_utc(day)
     except (TypeError, ValueError):
         return False

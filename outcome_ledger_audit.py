@@ -97,7 +97,7 @@ def prediction_is_prior(day: str, prediction: dict):
     try:
         created = datetime.fromisoformat(str(raw).replace("Z", "+00:00"))
         if created.tzinfo is None:
-            created = created.replace(tzinfo=timezone.utc)
+            return False, "missing_prediction_timezone"
         boundary = target_day_start_utc(day)
         return created < boundary, None if created < boundary else "prediction_not_prior_to_day"
     except (TypeError, ValueError):
