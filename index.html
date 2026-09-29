@@ -7336,8 +7336,30 @@ function _strictDayScore(value){
 }
 function _publishExpertOverrides(){
   // Explicit file decisions have deterministic precedence, independent of arrival order.
-  _expertOverrides=Object.assign({},_registryOverrides,_fileOverrides);
+  _expertOverrides=Object.freeze(Object.fromEntries(Object.entries({..._registryOverrides,..._fileOverrides}).map(([date,row])=>[date,Object.freeze({...row})])));
   window._expertOverrides=_expertOverrides;
+}
+async function _readOverrideDocument(token){
+  const batch=_authorityBatch;
+  if(batch?.overrideDocument)return batch.overrideDocument;
+  const request=(async()=>{
+    let response,delivery='network_fresh';
+    try{
+      response=await token.fetch('expert_overrides_v3.json?fresh='+Date.now(),{cache:'no-store'});
+      if(!response.ok)throw new Error('HTTP '+response.status);
+      if(response.headers?.get('x-gindex-delivery')==='cached')delivery='offline_fallback';
+    }catch(e){
+      if(!token.current())throw e;
+      response=await token.fetch('expert_overrides_v3.json',{cache:'force-cache'});
+      delivery='offline_fallback';
+    }
+    if(!response.ok)throw new Error('HTTP '+response.status);
+    const data=await response.json();
+    if(!Array.isArray(data?.overrides))throw new Error('invalid overrides');
+    return {data,delivery};
+  })();
+  if(batch)batch.overrideDocument=request;
+  return request;
 }
 // END authority request ownership
 
@@ -7352,13 +7374,11 @@ async function loadExpertDecisionRegistry(force = false){
     if(doc.schema!=='expert_decision_registry_v1') throw new Error('unexpected schema');
     const displayText={}, registryOverrides={}, rejected=[];
     try{
-      const cleanResponse=await token.fetch('expert_overrides_v3.json?display='+Date.now(),{cache:'no-store'});
-      if(cleanResponse.ok){
-        const cleanDoc=await cleanResponse.json(),rowsByDate=new Map((Array.isArray(doc.rows)?doc.rows:[]).map(row=>[row.date,row]));
-        for(const override of (Array.isArray(cleanDoc.overrides)?cleanDoc.overrides:[])){
-          const row=rowsByDate.get(override?.date),sameSource=String(override?.source_sha256||'').toLowerCase()===String(row?.source_sha256||'').toLowerCase();
-          if(row&&override?.verified&&sameSource&&override?.override_text)displayText[override.date]=String(override.override_text);
-        }
+      const {data:cleanDoc}=await _readOverrideDocument(token);
+      const rowsByDate=new Map((Array.isArray(doc.rows)?doc.rows:[]).map(row=>[row.date,row]));
+      for(const override of cleanDoc.overrides){
+        const row=rowsByDate.get(override?.date),sameSource=String(override?.source_sha256||'').toLowerCase()===String(row?.source_sha256||'').toLowerCase();
+        if(row&&override?.verified&&sameSource&&override?.override_text)displayText[override.date]=String(override.override_text);
       }
     }catch(_displayTextError){}
     // fp428 A-02: normalize verified registry decisions into the same store
@@ -7655,19 +7675,8 @@ async function loadExpertOverrides(force = false){
   if(!force && _expertOverrides !== null && window._expertOverridesLoadStatus==='loaded') return _expertOverrides;
   const token=_beginAuthority('overrides');
   try {
-    let resp,delivery='network_fresh';
-    try {
-      resp=await token.fetch('expert_overrides_v3.json?fresh='+Date.now(),{cache:'no-store'});
-      if(!resp.ok)throw new Error('HTTP '+resp.status);
-      if(resp.headers?.get('x-gindex-delivery')==='cached')delivery='offline_fallback';
-    }catch(e){
-      if(!token.current())throw e;
-      resp=await token.fetch('expert_overrides_v3.json',{cache:'force-cache'});
-      delivery='offline_fallback';
-    }
-    if(!resp.ok)throw new Error('HTTP '+resp.status);
-    const data=await resp.json(),fileOverrides={},rejected=[];
-    if(!Array.isArray(data.overrides))throw new Error('invalid overrides');
+    const {data,delivery}=await _readOverrideDocument(token);
+    const fileOverrides={},rejected=[];
     for(const row of data.overrides){
       const score=_strictDayScore(row?.expert_eng);
       if(row?.date && score!==null)fileOverrides[row.date]={...row,expert_eng:score};
@@ -9146,62 +9155,50 @@ function fetchWithTimeout(url, ms=5000){
   const tid = setTimeout(()=>ctrl.abort(), ms);
   return fetch(url, {cache:'no-store', signal:ctrl.signal}).finally(()=>clearTimeout(tid));
 }
-// v88.8.62-fp138: bounded-wait wrapper для sequential fallback-ланцюжків.
-// Проблема: fetchTextWithCORS сам по собі — до 36с на виклик (worker+direct+4 проксі).
-// Коли кілька таких викликів йдуть послідовно (GFZ→KP_OBS_FB→UAF→45-day),
-// сумарний worst-case = кілька хвилин (fp131/fp132 hang, підтверджено 2026-07-07).
-// withTimeout НЕ скасовує сам fetch (немає AbortController на цьому рівні) —
-// він лише обмежує, скільки loadAll() ЧЕКАЄ відповідь, перш ніж піти далі по
-// ланцюжку fallback/synthetic. Занедбаний запит долетить у фоні без впливу на UI.
-function withTimeout(promise, ms, label){
-  return Promise.race([
-    promise,
-    new Promise((_, reject) => setTimeout(()=>reject(new Error('[fp136 timeout] '+(label||'')+' >'+ms+'ms')), ms))
-  ]);
+// A deadline cancels cancellable chains; factories propagate AbortSignal to nested loaders.
+function withTimeout(work,ms,label){
+  const controller=new AbortController();let timer;
+  const promise=typeof work==='function'?Promise.resolve().then(()=>work(controller.signal)):work;
+  const deadline=new Promise((_,reject)=>{timer=setTimeout(()=>{
+    controller.abort();if(typeof promise?.cancel==='function')promise.cancel();
+    reject(new Error('[deadline] '+(label||'')+' >'+ms+'ms'));
+  },ms);});
+  return Promise.race([promise,deadline]).finally(()=>clearTimeout(timer));
 }
-async function fetchTextWithCORS(url, validate){
-  // v88.8.35-fp56-P8: optional body validator. Some public proxies return 200 OK with an HTML
-  // error page or empty body instead of failing — that used to "succeed" and STOP the chain,
-  // masking working proxies downstream. When a validator is passed (e.g. _looksLikeJson for NOAA
-  // endpoints), a 200 with a bad body is treated as a miss and the chain continues. Default
-  // (no validator) keeps the old behavior — safe for HTML consumers like timeanddate eclipse.
-  const _ok = (txt) => { if (typeof txt !== 'string' || !txt.length) return false; if (typeof validate === 'function') { try { return validate(txt); } catch(_e) { return false; } } return true; };
-  const _shortUrl = url.length > 80 ? url.slice(0,77)+'...' : url;
-  // 0. Cloudflare Worker (власний proxy — найнадійніший, завжди перший)
-  if (NOAA_WORKER_URL && !NOAA_WORKER_URL.includes('YOUR_USERNAME')) {
-    try{
-      const r0 = await fetchWithTimeout(NOAA_WORKER_URL+encodeURIComponent(url), 3000);
-      if(r0.ok){ const _t = await r0.text(); if(_ok(_t)) return _t; }
-    }catch(e){ console.warn('[CORS] worker fail:', e.message); }
-  }
-  // 1. Прямий fetch (NOAA JSON підтримує CORS)
-  try{
-    const r = await fetchWithTimeout(url, 4000);
-    if(r.ok){ const _t = await r.text(); if(_ok(_t)) return _t; }
-  }catch(e){ console.warn('[CORS] direct fail:', _shortUrl, e.message); }
-  // These legacy web fallbacks have no verified service privacy policy.
-  // Do not contact them from the Google Play channel.
-  // 2. allorigins (web only)
-  if (!window.GINDEX_PLAY_CHANNEL) try{
-    const r2 = await fetchWithTimeout('https://api.allorigins.win/raw?url='+encodeURIComponent(url), 2500);
-    if(r2.ok){ const _t = await r2.text(); if(_ok(_t)) return _t; }
-  }catch(e){ console.warn('[CORS] allorigins fail:', e.message); }
-  // 3. corsproxy.io
-  try{
-    const r3 = await fetchWithTimeout('https://corsproxy.io/?url='+encodeURIComponent(url), 2500);
-    if(r3.ok){ const _t = await r3.text(); if(_ok(_t)) return _t; }
-  }catch(e){ console.warn('[CORS] corsproxy.io fail:', e.message); }
-  // 4. corsfix.com
-  try{
-    const r4 = await fetchWithTimeout('https://proxy.corsfix.com/?'+encodeURIComponent(url), 2500);
-    if(r4.ok){ const _t = await r4.text(); if(_ok(_t)) return _t; }
-  }catch(e){ console.warn('[CORS] corsfix fail:', e.message); }
-  // 5. codetabs (web only)
-  if (!window.GINDEX_PLAY_CHANNEL) try{
-    const r5 = await fetchWithTimeout('https://api.codetabs.com/v1/proxy?quest='+encodeURIComponent(url), 2500);
-    if(r5.ok){ const _t = await r5.text(); if(_ok(_t)) return _t; }
-  }catch(e){ console.warn('[CORS] codetabs fail:', e.message); }
-  throw new Error('Всі проксі недоступні: '+_shortUrl);
+function fetchTextWithCORS(url,validate,options={}){
+  const controller=new AbortController(),parent=options.signal;
+  const cancel=()=>controller.abort();
+  if(parent?.aborted)cancel();else parent?.addEventListener('abort',cancel,{once:true});
+  const timer=setTimeout(cancel,options.timeoutMs||17500);
+  const cancelled=()=>{if(controller.signal.aborted)throw new DOMException('Request cancelled','AbortError');};
+  const valid=text=>typeof text==='string'&&text.length>0&&(typeof validate!=='function'||validate(text));
+  const request=(async()=>{
+    const candidates=[];
+    if(options.directOnly)candidates.push([url,options.timeoutMs||4000]);
+    else {
+    if(NOAA_WORKER_URL&&!NOAA_WORKER_URL.includes('YOUR_USERNAME'))candidates.push([NOAA_WORKER_URL+encodeURIComponent(url),3000]);
+    candidates.push([url,4000]);
+    if(!window.GINDEX_PLAY_CHANNEL)candidates.push(['https://api.allorigins.win/raw?url='+encodeURIComponent(url),2500]);
+    candidates.push(['https://corsproxy.io/?url='+encodeURIComponent(url),2500],['https://proxy.corsfix.com/?'+encodeURIComponent(url),2500]);
+    if(!window.GINDEX_PLAY_CHANNEL)candidates.push(['https://api.codetabs.com/v1/proxy?quest='+encodeURIComponent(url),2500]);
+    }
+    for(const [endpoint,limit] of candidates){
+      cancelled();const attempt=new AbortController();let rejectAbort;
+      const stop=()=>{attempt.abort();rejectAbort?.(new DOMException('Request cancelled','AbortError'));};
+      controller.signal.addEventListener('abort',stop,{once:true});
+      const expired=new Promise((_,reject)=>{rejectAbort=reject;});
+      const attemptTimer=setTimeout(stop,limit);
+      window.__networkRequests=window.__networkRequests||{active:0,started:0,finished:0};
+      window.__networkRequests.active++;window.__networkRequests.started++;
+      try{
+        const text=await Promise.race([(async()=>{const r=await fetch(endpoint,{cache:'no-store',signal:attempt.signal});if(!r.ok)throw new Error('HTTP '+r.status);return r.text();})(),expired]);
+        cancelled();if(valid(text))return text;
+      }catch(e){cancelled();if(window._DEBUG)console.warn('[CORS]',e.message);}
+      finally{clearTimeout(attemptTimer);controller.signal.removeEventListener('abort',stop);window.__networkRequests.active--;window.__networkRequests.finished++;}
+    }
+    throw new Error('Всі проксі недоступні: '+url.slice(0,80));
+  })().finally(()=>{clearTimeout(timer);parent?.removeEventListener('abort',cancel);});
+  request.cancel=cancel;return request;
 }
 // v88.8.35-fp56-P8: lightweight JSON sniff — body starts with [ or { after trimming.
 function _looksLikeJson(txt){ const t = String(txt).trim(); return t.length>1 && (t[0]==='[' || t[0]==='{'); }
@@ -10241,10 +10238,10 @@ function _looksLikeNoaaArray(text){
   try { return Array.isArray(parseNoaaJson(text)); } catch(_e) { return false; }
 }
 
-async function fetchBzNow(){
+async function fetchBzNow(signal){
   const url = 'https://services.swpc.noaa.gov/json/rtsw/rtsw_mag_1m.json';
   let text;
-  try { text = await fetchTextWithCORS(url, _looksLikeNoaaArray); } catch(e){ console.warn('[v42] Bz fetch failed',e); return null; }
+  try { text = await fetchTextWithCORS(url, _looksLikeNoaaArray,{signal}); } catch(e){ console.warn('[v42] Bz fetch failed',e); return null; }
   try {
     const rows = parseNoaaJson(text);
     if(!Array.isArray(rows)||rows.length<1){ console.warn('[v42] Bz: unexpected format'); return null; }
@@ -10260,10 +10257,10 @@ async function fetchBzNow(){
   return null;
 }
 
-async function fetchVswNow(){
+async function fetchVswNow(signal){
   const url = 'https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json';
   let text;
-  try { text = await fetchTextWithCORS(url, _looksLikeNoaaArray); } catch(e){ console.warn('[v42] Vsw fetch failed',e); return null; }
+  try { text = await fetchTextWithCORS(url, _looksLikeNoaaArray,{signal}); } catch(e){ console.warn('[v42] Vsw fetch failed',e); return null; }
   try {
     const rows = parseNoaaJson(text);
     if(!Array.isArray(rows)||rows.length<1){ console.warn('[v42] Vsw: unexpected format'); return null; }
@@ -10282,14 +10279,15 @@ async function fetchVswNow(){
 // v87.15 U6: GOES X-ray flare (long wavelength 0.1–0.8 nm)
 // Повертає {flux, class, time} — class це 'A' | 'B' | 'C' | 'M' | 'X' з номером
 // Letter scale: A = 1e-8, B = 1e-7, C = 1e-6, M = 1e-5, X = 1e-4 W/m²
-async function fetchXrayNow(){
+async function fetchXrayNow(signal){
   const url = 'https://services.swpc.noaa.gov/json/goes/primary/xrays-6-hour.json';
   // fp378: prefer the scheduler-validated same-origin snapshot. Browser CORS
   // proxies are only a fallback and must not be the primary availability path.
   try {
-    const localResp = await fetch('SPACE_WEATHER_CONTEXT_v1.json', {cache:'no-store'});
+    const localResp = await fetch('SPACE_WEATHER_CONTEXT_v1.json', {cache:'no-store',signal});
     if(localResp.ok){
       const localPayload = await localResp.json();
+      if(signal?.aborted)return null;
       const localXray = localPayload && localPayload.xray || {};
       const localFlux = parseFloat(localXray.flux_w_m2);
       const localTime = Date.parse(localXray.latest_time || '');
@@ -10308,7 +10306,7 @@ async function fetchXrayNow(){
     if(window._DEBUG) console.warn('[xray] same-origin snapshot unavailable:', e.message);
   }
   let text;
-  try { text = await fetchTextWithCORS(url, _looksLikeNoaaArray); } catch(e){ console.warn('[v87.15] Xray fetch failed',e); return null; }
+  try { text = await fetchTextWithCORS(url, _looksLikeNoaaArray,{signal}); } catch(e){ console.warn('[v87.15] Xray fetch failed',e); return null; }
   try {
     const rows = parseNoaaJson(text);
     if(!Array.isArray(rows)||rows.length===0) return null;
@@ -10709,16 +10707,28 @@ function computeCScore(kpNow, kpObsJson, ai, G, kpSrc){
 // ------------------------- Geomagnetic day component -------------------------
 // fp349: Expert Excel and physical semantics use (2 - Kp): stronger geomagnetic
 // activity lowers the day background. Safety thresholds (Kp >= 4/5) stay separate.
+function _strictKpTimestamp(value){
+  if(typeof value!=='string')return NaN;
+  const m=value.trim().match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2})(\.\d{1,9})?)?(Z|[+-]\d{2}:?\d{2})?$/i);
+  if(!m)return NaN;
+  const y=+m[1],mo=+m[2],day=+m[3],hh=+m[4],mm=+m[5],ss=+(m[6]||0);
+  if(mo<1||mo>12||day<1||hh>23||mm>59||ss>59)return NaN;
+  const calendar=new Date(0);calendar.setUTCFullYear(y,mo-1,day);calendar.setUTCHours(0,0,0,0);
+  if(calendar.getUTCFullYear()!==y||calendar.getUTCMonth()!==mo-1||calendar.getUTCDate()!==day)return NaN;
+  const zone=m[8]||'Z';
+  if(zone!=='Z'&&zone!=='z'){
+    const offset=zone.slice(1).replace(':','');
+    if(+offset.slice(0,2)>23||+offset.slice(2)>59)return NaN;
+  }
+  return Date.parse(value.trim()+(m[8]?'':'Z'));
+}
 function _provisionalKpMedian(rows,now){
   if(!Array.isArray(rows))return null;
   const unique=new Map(),conflicts=new Set();
   for(const row of rows){
     const value=_finiteFormulaNumber(row?.estimated_kp);
     if(!Number.isFinite(value) || value<0 || value>9 || typeof row?.time_tag!=='string')continue;
-    let stamp=row.time_tag.trim();
-    if(!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(stamp))continue;
-    if(!/(Z|[+-]\d{2}:?\d{2})$/i.test(stamp))stamp+='Z';
-    const ts=Date.parse(stamp),age=now-ts;
+    const ts=_strictKpTimestamp(row.time_tag),age=now-ts;
     if(!Number.isFinite(ts) || age < -5*60000 || age > 30*60000)continue;
     if(unique.has(ts) && unique.get(ts)!==value)conflicts.add(ts);
     else unique.set(ts,value);
@@ -11107,14 +11117,14 @@ function gTooltipText(kLabel, kVal, aiObj){
 // API: https://kp.gfz.de/app/json/?start=ISO&end=ISO&index=Kp&status=now|def
 // Response format: { datetime: [...], Kp: [...], status: [...] }
 // Конвертуємо в NOAA-сумісний формат [["time_tag","Kp"],...] для parseKpObsJSON.
-async function fetchGfzKpAsNoaaFormat(daysBack){
+async function fetchGfzKpAsNoaaFormat(daysBack,signal){
   const _days = isFinite(daysBack) ? daysBack : 3;
   const end = new Date();
   const start = new Date(end.getTime() - _days * 86400000);
   // ISO without ms для GFZ API
   const _fmt = d => d.toISOString().slice(0,19) + 'Z';
   const url = `https://kp.gfz.de/app/json/?start=${_fmt(start)}&end=${_fmt(end)}&index=Kp&status=now`;
-  const text = await fetchTextWithCORS(url);
+  const text = await fetchTextWithCORS(url,undefined,{signal});
   let data;
   try { data = JSON.parse(text); } catch(e) { throw new Error('GFZ JSON parse: '+e.message); }
   if (!data || !Array.isArray(data.datetime) || !Array.isArray(data.Kp)) {
@@ -11226,17 +11236,15 @@ function parseWolfSnStatus(json){
   }catch(_e){ return null; }
 }
 
-async function fetchWolfSnResilient(){
+async function fetchWolfSnResilient(signal){
   try{
-    const local = await fetchWithTimeout(URL_WOLF_SN_STATUS+'?v='+Date.now(), 2500);
-    if(local.ok){
-      const parsed = parseWolfSnStatus(await local.text());
-      if(parsed) return parsed;
-    }
+    const text=await fetchTextWithCORS(URL_WOLF_SN_STATUS+'?v='+Date.now(),undefined,{signal,timeoutMs:2500,directOnly:true});
+    const parsed=parseWolfSnStatus(text);
+    if(parsed)return parsed;
   }catch(e){ if(window._DEBUG) console.warn('[SILSO] local snapshot unavailable:',e.message); }
   for(const url of [URL_WOLF_SN, URL_WOLF_SN_FB]){
     try{
-      const parsed = parseWolfSn(await fetchTextWithCORS(url,_looksLikeSilso));
+      const parsed = parseWolfSn(await fetchTextWithCORS(url,_looksLikeSilso,{signal}));
       if(parsed) return {...parsed,_delivery:'direct_or_proxy'};
     }catch(_e){ /* try next verified SILSO endpoint */ }
   }
@@ -15008,7 +15016,7 @@ function updateAutoRefStatus(){
   const mins = parseInt(sel.value,10);
   if(_autoRefTimer){ clearInterval(_autoRefTimer); _autoRefTimer=null; }
   if(mins > 0){
-    _autoRefTimer = setInterval(() => runDataRefresh('auto'), mins * 60000);
+    _autoRefTimer = setInterval(() => window.requestLifecycleRefresh('auto',true), mins * 60000);
     badge.textContent = `● ${mins} хв`;
     badge.className = 'autoref-badge';
   }else{
@@ -20830,7 +20838,7 @@ async function loadAll(){
     withTimeout(fetchTextWithCORS(URL_KP_FCST, _looksLikeJson), 5000, 'primary KP_FCST'),
     withTimeout(fetchTextWithCORS(URL_27DAY), 5000, 'primary 27DAY'),
     withTimeout(fetchTextWithCORS(URL_DST, _looksLikeJson), 5000, 'primary DST'),
-    withTimeout(fetchWolfSnResilient(), 5000, 'resilient WOLF_SN')
+    withTimeout(signal=>fetchWolfSnResilient(signal), 5000, 'resilient WOLF_SN')
   ]);
 
   // Kp спостереження (P0: fallback на planetary_k_index_1m.json)
@@ -20867,7 +20875,7 @@ async function loadAll(){
       // NOAA stale → пробуємо GFZ і порівнюємо ages
       console.warn('[v88.8.18] NOAA Kp data stale ('+_noaaAgeH+'h old) — comparing з GFZ');
       try {
-        const gfzVal = await withTimeout(fetchGfzKpAsNoaaFormat(3), 5000, 'GFZ-compare');
+        const gfzVal = await withTimeout(signal=>fetchGfzKpAsNoaaFormat(3,signal), 5000, 'GFZ-compare');
         const gfzParsed = parseKpObsJSON(gfzVal);
         let _gfzAgeH = null;
         if (gfzParsed && gfzParsed.whenText) {
@@ -20904,7 +20912,7 @@ async function loadAll(){
     // v88.8.18 ★ NEW: GFZ Potsdam Kp як tier-1 fallback (NOAA stale since 2026-03-28)
     let _gfzOK = false;
     try{
-      const gfzVal = await withTimeout(fetchGfzKpAsNoaaFormat(3), 5000, 'GFZ-fallback');
+      const gfzVal = await withTimeout(signal=>fetchGfzKpAsNoaaFormat(3,signal), 5000, 'GFZ-fallback');
       _lastKpObsJson = gfzVal;
       lastWWV = parseKpObsJSON(gfzVal);
       _setSrcStatus('srcKpObs','ok');
@@ -21151,10 +21159,10 @@ async function loadAll(){
 
   // v42: Real-time solar wind (DSCOVR Bz + Vsw)
   // v88.8.62-fp138: secondary live rails are non-critical; never let them block startup.
-  try { await withTimeout(fetchBzNow(), 3500, 'Bz live');  } catch(_){if(window._DEBUG)console.warn('[silent]')}
-  try { await withTimeout(fetchVswNow(), 3500, 'Vsw live'); } catch(_){if(window._DEBUG)console.warn('[silent]')}
+  try { await withTimeout(signal=>fetchBzNow(signal), 3500, 'Bz live');  } catch(_){if(window._DEBUG)console.warn('[silent]')}
+  try { await withTimeout(signal=>fetchVswNow(signal), 3500, 'Vsw live'); } catch(_){if(window._DEBUG)console.warn('[silent]')}
   // v87.15 U6: GOES X-ray flare — Solar flare monitoring
-  try { await withTimeout(fetchXrayNow(), 3500, 'Xray live'); } catch(_){if(window._DEBUG)console.warn('[silent]')}
+  try { await withTimeout(signal=>fetchXrayNow(signal), 3500, 'Xray live'); } catch(_){if(window._DEBUG)console.warn('[silent]')}
   // v62: Bz/Vsw localStorage cache + v87.16 A4: separate status indicators
   if (isFinite(lastBz))  { lsSet('last_bz_known', lastBz);  _setSrcStatus('srcBz','ok'); }
   else { const _lbz=parseFloat(lsGet('last_bz_known')); if(isFinite(_lbz)){ lastBz=_lbz; _setSrcStatus('srcBz','cache'); } else _setSrcStatus('srcBz','error'); }
@@ -21367,7 +21375,7 @@ window.runDataRefresh = runDataRefresh;
     const now=Date.now(),day=todayKyivStr(),last=window.__lastRefreshCycle;
     const old=!last || now-last.finishedAt>=60000 || last.status==='partial';
     const away=hiddenAt!==null && now-hiddenAt>=60000;
-    if(force)pendingReason=reason;
+    if(force && (reason!=='auto'||!pendingReason))pendingReason=reason;
     if(!pendingReason && !old && !away && day===visibleDay)return;
     if(!pendingReason)pendingReason=reason;
     if(document.hidden || !navigator.onLine || pendingTimer!==null)return;
@@ -21379,6 +21387,7 @@ window.runDataRefresh = runDataRefresh;
       runDataRefresh(requested);
     },Math.max(500,5000-(now-lastRequest)));
   }
+  window.requestLifecycleRefresh=schedule;
   document.addEventListener('visibilitychange',()=>{
     if(document.hidden)hiddenAt=Date.now();else schedule('resume',false);
   });

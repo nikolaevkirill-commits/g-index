@@ -234,11 +234,11 @@ requireText("m.set('2026-08-12','total_solar')", '2026-08-12 total solar eclipse
 requireText("function parseNoaaJson(text)", 'NOAA bare-NaN payloads have a fail-soft parser');
 requireText("const plasmaRows = parseNoaaJson(plasmaTxt)", 'solar-wind module uses the NOAA parser');
 requireText('function _looksLikeNoaaArray(text)', 'NOAA response bodies are validated before a CORS route is accepted');
-requireText('fetchTextWithCORS(url, _looksLikeNoaaArray)', 'Bz, Vsw and X-ray reject truncated proxy responses');
+requireText('fetchTextWithCORS(url, _looksLikeNoaaArray,{signal})', 'Bz, Vsw and X-ray reject truncated proxy responses');
 requireText('const rows = parseNoaaJson(text)', 'GOES X-ray uses the fail-soft NOAA parser');
 requireText('seq.length < cap && guard < cap * 4 + 4', 'Hora boundary retry cannot consume a requested sequence entry');
 requireText("const URL_WOLF_SN_STATUS = 'SILSO_REFRESH_STATUS_v1.json'", 'Wolf Sn prefers the same-origin validated scheduler snapshot');
-requireText('withTimeout(fetchWolfSnResilient(), 5000', 'Wolf Sn primary route is resilient and bounded');
+requireText('withTimeout(signal=>fetchWolfSnResilient(signal), 5000', 'Wolf Sn primary route is resilient and bounded');
 requireText("snapshot:  {icon:'▣'", 'validated snapshot is not mislabeled as offline cache');
 requireText("window._lastWolfSn._delivery==='local_snapshot' ? ' · snapshot'", 'Wolf Sn chip discloses snapshot delivery after rerender');
 requireText("Kp зараз '+kpNowLabel+' · Kp горизонт '+kpHorizonLabel", 'source health separates observed Kp from forecast-horizon provenance');
@@ -341,11 +341,11 @@ requireText('color:#a9bad8">Health artifact', 'health evidence explanation keeps
 forbidText('aria-label="v19.2 SHADOW:', 'v19 shadow summary uses its full visible text as the accessible name');
 forbidText('aria-label="Показано ${visibleSlots.length}', 'dynamic slot paywall uses its full visible text as the accessible name');
 forbidText('aria-label="Повний розклад ${slots.length}', 'dynamic window paywall uses its full visible text as the accessible name');
-requireText("fetch('SPACE_WEATHER_CONTEXT_v1.json', {cache:'no-store'})", 'GOES X-ray prefers the validated same-origin snapshot');
+requireText("fetch('SPACE_WEATHER_CONTEXT_v1.json', {cache:'no-store',signal})", 'GOES X-ray prefers the validated same-origin snapshot');
 requireText("_delivery: 'same_origin_snapshot'", 'same-origin X-ray provenance is explicit');
 requireText("xr._delivery==='same_origin_snapshot' ? 'snapshot' : 'ok'", 'X-ray source indicator distinguishes snapshot from direct live fetch');
 requireText("token.fetch('expert_overrides_v3.json?fresh='+Date.now(),{cache:'no-store'})", 'expert PDF overrides bypass stale browser and service-worker caches');
-requireText("let resp,delivery='network_fresh'", 'fresh expert override delivery is observable');
+requireText("let response,delivery='network_fresh'", 'fresh expert override delivery is observable');
 requireText("delivery='offline_fallback'", 'offline expert override fallback is explicitly labeled');
 requireText('[fp391 boot horizon refresh: 3-day]', 'initial PDF loader refreshes the already-rendered 3-day horizon');
 requireText('[fp391 boot horizon refresh: week]', 'initial PDF loader refreshes the week horizon');

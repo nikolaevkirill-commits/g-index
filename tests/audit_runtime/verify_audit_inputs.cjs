@@ -16,7 +16,7 @@ const turns=async()=>{for(let i=0;i<12;i++)await Promise.resolve()};
  for(const value of [-3,-2,-1,0,1,2,3,'2']){const {c}=env(async u=>response(u.startsWith('EXPERT_')?{...registry,rows:[{...registry.rows[0],decision_score:value}]}:{overrides:[]}));await c.loadExpertDecisionRegistry(true);assert.equal(c._expertOverrides[day].expert_eng,Number(value));assert.equal(c.window._expertOverrides,c._expertOverrides);}
  checks.push('F20 invalid scores rejected; all seven valid scores retained');
  for(const first of ['registry','file']){
-  let release;const {c}=env(async u=>{if(u.startsWith('EXPERT_'))return response(registry);if(u.includes('display='))return response({overrides:[]});if(first==='registry')return new Promise(r=>release=()=>r(response({overrides:[{date:day,expert_eng:-1,verified:true}]})));return response({overrides:[{date:day,expert_eng:-1,verified:true}]});});
+  let release,overrideCalls=0;const {c}=env(async u=>{if(u.startsWith('EXPERT_'))return response(registry);if(u.includes('display='))return response({overrides:[]});if(first==='registry'&&++overrideCalls===1)return new Promise(r=>release=()=>r(response({overrides:[{date:day,expert_eng:-1,verified:true}]})));return response({overrides:[{date:day,expert_eng:-1,verified:true}]});});
   if(first==='registry'){const f=c.loadExpertOverrides(true);await c.loadExpertDecisionRegistry(true);release();await f;}
   else{await c.loadExpertOverrides(true);await c.loadExpertDecisionRegistry(true);}
   assert.equal(c._expertOverrides[day].expert_eng,-1);assert.equal(c.window._expertOverrides,c._expertOverrides);
@@ -30,6 +30,12 @@ const turns=async()=>{for(let i=0;i<12;i++)await Promise.resolve()};
   c._endAuthorityBatch();assert.equal(c._expertOverrides[day].expert_eng,-1);assert.equal(c._expertOverrides,c.window._expertOverrides);
  }
  checks.push('F21 authority refresh publishes only after batch completion');
+ {let overrideFetches=0;const {c}=env(async u=>{if(u.startsWith('EXPERT_'))return response(registry);overrideFetches++;return response({overrides:[{date:day,expert_eng:-1,verified:true,source_sha256:digest,override_text:'fixture display'}]})});
+  c._beginAuthorityBatch();await Promise.all([c.loadExpertDecisionRegistry(true),c.loadExpertOverrides(true)]);c._endAuthorityBatch();
+  assert.equal(overrideFetches,1);assert.equal(c.window._expertDisplayText[day],'fixture display');assert.equal(c._expertOverrides[day].expert_eng,-1);assert(Object.isFrozen(c._expertOverrides));assert(Object.isFrozen(c._expertOverrides[day]));
+ }
+ checks.push('one override document per refresh batch; immutable resolved snapshot');
+
 
  for(const timeout of [false,true]){
   let oldResolve,calls=0;const {c,timers}=env(async()=>++calls===1?new Promise(r=>oldResolve=r):response({scores:{[day]:{score:1}}}));
@@ -39,7 +45,7 @@ const turns=async()=>{for(let i=0;i<12;i++)await Promise.resolve()};
  }
  {let release;const {c,timers}=env(async()=>new Promise(r=>release=r));const p=c.loadExpertCalc(true);[...timers.values()][0]();release(response({scores:{[day]:{score:-2}}}));await p;assert.equal(c._expertCalc,null);}
  checks.push('F21 superseded and timed-out requests cannot write even when transport ignores abort');
- const kpcode=take('function _provisionalKpMedian(','function _finiteFormulaNumber(')+take('function _finiteFormulaNumber(','\n}',h.indexOf('function _finiteFormulaNumber('))+'\n}';
+ const kpcode=take('function _strictKpTimestamp(','function _finiteFormulaNumber(')+take('function _finiteFormulaNumber(','\n}',h.indexOf('function _finiteFormulaNumber('))+'\n}';
  const k={Date};vm.createContext(k);vm.runInContext(kpcode,k);const now=Date.parse('2026-09-29T12:00:00Z');
  const row=(min,v,zone='Z')=>({time_tag:`2026-09-29T11:${min}:00${zone}`,estimated_kp:v});
  for(const v of [null,'',false,true,' ',{},[]])assert.equal(k._provisionalKpMedian([row('57',v),row('58',v),row('59',v)],now),null);
@@ -50,6 +56,10 @@ const turns=async()=>{for(let i=0;i<12;i++)await Promise.resolve()};
  assert.equal(k._provisionalKpMedian([row('00',1),row('01',2),row('59',3)],now),null);
  assert.equal(k._provisionalKpMedian(valid.map(x=>({...x,time_tag:'2026-09-29T12:10:00Z'})),now),null);
  checks.push('F19 numeric, age, timezone, order, duplicate and conflict boundaries');
+ for(const value of ['2026-02-29T12:00:00Z','2026-04-31T12:00:00Z','2026-09-29T24:00:00Z','2026-09-29T12:60:00Z','2026-09-29T12:00:60Z','2026-09-29T12:00:00+03:99','2026-09-29T12:00junk'])assert(Number.isNaN(k._strictKpTimestamp(value)),value);
+ assert.equal(k._strictKpTimestamp('2024-02-29T15:00:00+03:00'),Date.parse('2024-02-29T12:00:00Z'));
+ checks.push('strict calendar dates, leap day and offset validation');
+
  let calls=0;const geo={window:{dispatchEvent(){}},Event,Date,isFinite,_userLat:50.45,_userLon:30.52,_lastPanchCtx:null,_sunRiseSetCache:new Map(),renderPanchanga(){},syncHero(){},todayKyivStr:()=>day,sunriseUTC:d=>d,computePanchanga:()=>{calls++;return {rahu:{start:geo._userLat===50.45?'03:00':'05:00',end:geo._userLat===50.45?'04:00':'06:00',gulika:{start:'07:00',end:'08:00'}}}}};
  vm.createContext(geo);vm.runInContext(take('function refreshGeoDependents(){','function initGeolocation(){')+take('function getInauspiciousWindowsUTC(){','function _slotDecisionInvariant('),geo);
  assert.equal(geo.getInauspiciousWindowsUTC()[0].start,'03:00');geo._userLat=40;assert.equal(geo.getInauspiciousWindowsUTC()[0].start,'05:00');geo.getInauspiciousWindowsUTC();assert.equal(calls,2);geo.refreshGeoDependents();geo.getInauspiciousWindowsUTC();assert.equal(calls,3);
