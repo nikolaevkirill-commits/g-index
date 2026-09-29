@@ -7288,8 +7288,8 @@ async function loadBgsSpaceWeather(){
   return _bgsSpaceWeather;
 }
 
-async function loadExpertDecisionRegistry(){
-  if(_expertDecisionRegistry !== null) return _expertDecisionRegistry;
+async function loadExpertDecisionRegistry(force = false){
+  if(!force && _expertDecisionRegistry !== null) return _expertDecisionRegistry;
   const el=document.getElementById('expertDecisionRegistryStatus');
   try{
     const r=await fetch('EXPERT_DECISION_REGISTRY_v1.json',{cache:'no-store'});
@@ -7550,8 +7550,8 @@ async function loadOutcomeLedgerStatus(){
   }
 }
 
-async function loadStrongRawPolicy(){
-  if(_strongRawPolicy !== null) return _strongRawPolicy;
+async function loadStrongRawPolicy(force = false){
+  if(!force && _strongRawPolicy !== null) return _strongRawPolicy;
   try {
     const r = await fetch('SELECTIVE_POLICY_STRONG_RAW_v2.json', {cache:'no-store'});
     if(!r.ok) throw new Error('HTTP '+r.status);
@@ -7560,8 +7560,8 @@ async function loadStrongRawPolicy(){
   } catch(e) { _strongRawPolicy = {}; }
   return _strongRawPolicy;
 }
-async function loadExpertCalc(){
-  if(_expertCalc !== null) return _expertCalc;
+async function loadExpertCalc(force = false){
+  if(!force && _expertCalc !== null) return _expertCalc;
   try {
     const resp = await fetch('expert_calc_scores.json', { cache: 'default' });
     if(!resp.ok) { window._expertCalcLoadStatus = 'http_error_' + resp.status; throw new Error('HTTP ' + resp.status); }
@@ -7584,8 +7584,8 @@ async function loadExpertCalc(){
 // Hardcoded fallback з v88.8.34 видалено: оновлення JSON тепер одразу видно у дашборді.
 // v88.8.5 В2: diagnostic flag для трасування deploy issues
 window._expertOverridesLoadStatus = 'pending'; // 'pending' | 'loaded' | 'missing' | 'invalid' | 'http_error'
-async function loadExpertOverrides(){
-  if(_expertOverrides !== null) return _expertOverrides;
+async function loadExpertOverrides(force = false){
+  if(!force && _expertOverrides !== null) return _expertOverrides;
   try {
     // fp390: the expert PDF file is a live decision-reference artifact.  A
     // cache-first/service-worker response may omit a newly verified bulletin
@@ -8116,8 +8116,8 @@ window.renderChronoPanel=renderChronoPanel;
 const _origSave=window.GChrono&&GChrono.saveToday;
 if(_origSave) GChrono.saveToday=(function(fn){return function(){fn.call(GChrono);try{renderChronoPanel();}catch(e){}};}(_origSave));
 
-async function loadEngineScores(){
-  if(_engineScores !== null) return _engineScores;
+async function loadEngineScores(force = false){
+  if(!force && _engineScores !== null) return _engineScores;
   if(window.EngineTagParser && !window._engineTagAliasSpec){
     try {
       window._engineTagAliasSpec = await window.EngineTagParser.loadAliasSpec('./engine_tag_aliases_v1.json');
@@ -21235,7 +21235,15 @@ let _dataRefreshPromise = null;
 function runDataRefresh(reason){
   if (_dataRefreshPromise) return _dataRefreshPromise;
   const started = Date.now();
-  _dataRefreshPromise = Promise.resolve().then(loadAll).catch(err => {
+  _dataRefreshPromise = Promise.resolve().then(async () => {
+    if (['resume', 'online', 'bfcache'].includes(reason)) {
+      await Promise.allSettled([
+        loadExpertOverrides(true), loadExpertCalc(true),
+        loadStrongRawPolicy(true), loadExpertDecisionRegistry(true), loadEngineScores(true)
+      ].map(p => withTimeout(p, 8000, 'resume authority')));
+    }
+    await loadAll();
+  }).catch(err => {
     const msg = 'Оновлення даних не завершено: ' + ((err && err.message) || 'невідома помилка');
     const target = el('nowError'); if(target) target.textContent = msg;
     console.error('[data-refresh]', reason, err);
@@ -21247,6 +21255,37 @@ function runDataRefresh(reason){
   return _dataRefreshPromise;
 }
 window.runDataRefresh = runDataRefresh;
+
+// BEGIN lifecycle refresh: retain the page and unsaved form controls.
+(function installLifecycleRefresh(){
+  let hiddenAt = document.hidden ? Date.now() : null;
+  let visibleDay = todayKyivStr();
+  let pendingTimer = null;
+  let lastRequest = -Infinity;
+  function schedule(reason, force){
+    if (document.hidden || !navigator.onLine) return;
+    const now = Date.now(), day = todayKyivStr();
+    const last = window.__lastRefreshCycle;
+    const old = !last || now - last.finishedAt >= 60000;
+    const away = hiddenAt !== null && now - hiddenAt >= 60000;
+    if (!force && !old && !away && day === visibleDay) return;
+    if (pendingTimer !== null || now - lastRequest < 5000) return;
+    pendingTimer = setTimeout(() => {
+      pendingTimer = null;
+      if (document.hidden || !navigator.onLine) return;
+      lastRequest = Date.now(); hiddenAt = null; visibleDay = todayKyivStr();
+      runDataRefresh(reason);
+    }, 500);
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) hiddenAt = Date.now(); else schedule('resume', false);
+  });
+  window.addEventListener('focus', () => schedule('resume', false));
+  window.addEventListener('online', () => schedule('online', true));
+  window.addEventListener('pageshow', event => { if(event.persisted) schedule('bfcache', true); });
+})();
+// END lifecycle refresh
+
 
 // ----------------------------- Експорт CSV ----------------------------------
 function exportCsv(){

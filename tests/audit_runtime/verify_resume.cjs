@@ -1,0 +1,25 @@
+const fs=require('fs'),path=require('path'),vm=require('vm'),assert=require('assert/strict');
+const source=fs.readFileSync(path.resolve(__dirname,'../../index.html'),'utf8');
+const helper=source.split('// BEGIN lifecycle refresh:')[1].split('// END lifecycle refresh')[0];
+const code=helper.slice(helper.indexOf('(function'));
+const checks=[];
+function env(){let now=100000,day='2026-09-29';const w={},d={},timers=[];const calls=[];
+ const c={document:{hidden:false,addEventListener:(n,f)=>d[n]=f},navigator:{onLine:true},window:{__lastRefreshCycle:{finishedAt:now},addEventListener:(n,f)=>w[n]=f},Date:{now:()=>now},todayKyivStr:()=>day,setTimeout:f=>{timers.push(f);return timers.length},runDataRefresh:r=>calls.push(r)};
+ vm.runInNewContext(code,c);return {c,w,d,calls,tick:n=>now+=n,day:x=>day=x,flush:()=>{while(timers.length)timers.shift()()}};
+}
+let x=env();x.w.focus();x.flush();assert.equal(x.calls.length,0);checks.push('fresh short focus skips requests');
+x.c.document.hidden=true;x.d.visibilitychange();x.tick(61000);x.c.document.hidden=false;x.d.visibilitychange();x.w.focus();x.flush();assert.deepEqual(x.calls,['resume']);checks.push('long background triggers one refresh');
+x=env();x.day('2026-09-30');x.w.focus();x.flush();assert.deepEqual(x.calls,['resume']);checks.push('Kyiv date change refreshes even before one minute');
+x=env();x.c.navigator.onLine=false;x.tick(61000);x.w.focus();x.flush();assert.equal(x.calls.length,0);x.c.navigator.onLine=true;x.w.online();x.flush();assert.deepEqual(x.calls,['online']);checks.push('offline skips; online restores');
+x=env();x.w.pageshow({persisted:false});x.flush();assert.equal(x.calls.length,0);x.w.pageshow({persisted:true});x.flush();assert.deepEqual(x.calls,['bfcache']);checks.push('BFCache restoration refreshes');
+x=env();x.c.document.hidden=true;x.w.online();x.flush();assert.equal(x.calls.length,0);checks.push('hidden tab defers network refresh');
+x=env();x.w.online();x.c.document.hidden=true;x.flush();assert.equal(x.calls.length,0);checks.push('visibility rechecked when debounce fires');
+x=env();x.w.online();x.w.focus();x.flush();x.w.online();x.flush();assert.equal(x.calls.length,1);x.tick(5001);x.w.online();x.flush();assert.equal(x.calls.length,2);checks.push('debounce and rate limit recover');
+const refresh=source.slice(source.indexOf('let _dataRefreshPromise = null;'),source.indexOf('window.runDataRefresh = runDataRefresh;')+'window.runDataRefresh = runDataRefresh;'.length);
+(async()=>{const flags=[],buttons={btnRefresh:{disabled:true},nowError:{}};let loads=0,fail=false;
+const ctx={window:{},Date,Promise,console:{error(){}},el:n=>buttons[n],withTimeout:p=>p,loadAll:async()=>{loads++;if(fail)throw Error('fixture failure')}};
+for(const n of ['loadExpertOverrides','loadExpertCalc','loadStrongRawPolicy','loadExpertDecisionRegistry','loadEngineScores'])ctx[n]=async force=>flags.push([n,force]);
+vm.runInNewContext(refresh,ctx);const first=ctx.window.runDataRefresh('resume');assert.equal(first,ctx.window.runDataRefresh('resume'));await first;assert.equal(loads,1);assert.equal(flags.length,5);assert(flags.every(x=>x[1]===true));checks.push('one flight and forced current authority fetches');
+fail=true;await ctx.window.runDataRefresh('online');assert.equal(buttons.btnRefresh.disabled,false);assert(buttons.nowError.textContent.includes('fixture failure'));fail=false;await ctx.window.runDataRefresh('resume');assert.equal(loads,3);checks.push('failed refresh releases lock and next refresh succeeds');
+fs.writeFileSync(path.join(__dirname,'RESUME_RESULTS.json'),JSON.stringify({status:'PASS',checks},null,2));console.log('PASS',checks.length,'resume scenarios');
+})().catch(e=>{console.error(e);process.exitCode=1});
