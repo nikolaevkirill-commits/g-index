@@ -16,6 +16,7 @@ assert.equal(snap.counts['invariant:authority.resolve'],1);assert(!JSON.stringif
 const html=fs.readFileSync(path.join(root,'index.html'),'utf8'),sw=fs.readFileSync(path.join(root,'sw.js'),'utf8');
 assert(!html.includes('eval(name)'));assert(html.includes('const handlers=Object.freeze({'));assert(html.includes("name+'_error'"));
 for(const name of ['runtime_diagnostics_v1.js','lifecycle_refresh_v1.js']){assert(html.includes(`src="./${name}"`));assert(sw.includes(`'./${name}'`))}
-for(const site of ['authority.resolve','render.async','render.sync','refresh.cycle','probe.handler'])assert(html.includes(`'${site}'`));
+const criticalSource=html+fs.readFileSync(path.join(root,'product_render_queue_v1.js'),'utf8');
+for(const site of ['authority.resolve','render.async','render.sync','refresh.cycle','probe.handler'])assert(criticalSource.includes(`'${site}'`));
 const result={status:'PASS',checks:['allowlist rejects unknown and inherited names','missing optional and thrown handlers remain distinct','bounded immutable diagnostics without error payload','critical paths emit classified diagnostics','versioned modules included in HTML and offline shell']};
 fs.writeFileSync(path.join(__dirname,'RUNTIME_HYGIENE_RESULTS.json'),JSON.stringify(result,null,2));console.log('PASS',result.checks);

@@ -1,6 +1,6 @@
 // G-Index service worker. HTML/data are network-first; static shell is cache-first.
 // Bump CACHE_VERSION whenever index.html or a cached shell asset changes.
-const CACHE_VERSION = 'fp467-v34-presentation'; // audit: channel persistence, qualified Kp authority and data freshness
+const CACHE_VERSION = 'fp467-v35-render-storage'; // audit: channel persistence, qualified Kp authority and data freshness
 const CACHE_PREFIX = 'gindex-'; // G-Index cache namespace; do not remove the prefix.
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${CACHE_VERSION}`;
 const DATA_CACHE = `${CACHE_PREFIX}data-${CACHE_VERSION}`;
@@ -24,6 +24,8 @@ const SHELL_ASSETS = [
   './runtime_diagnostics_v1.js',
   './lifecycle_refresh_v1.js',
   './presentation_runtime_v1.js',
+  './product_render_queue_v1.js',
+  './local_storage_v1.js',
   './xlsx-0.20.3.full.min.js',
   './privacy.html',
   './terms.html',

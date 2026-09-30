@@ -9,6 +9,8 @@
 <script src="./runtime_diagnostics_v1.js"></script>
 <script src="./lifecycle_refresh_v1.js"></script>
 <script src="./presentation_runtime_v1.js"></script>
+<script src="./product_render_queue_v1.js"></script>
+<script src="./local_storage_v1.js"></script>
 <script>
 // Source https://maia.usno.navy.mil/ser7/tai-utc.dat; retrieved 2026-09-27
 // [effective JD, base seconds, reference MJD, seconds per day]
@@ -17718,7 +17720,7 @@ function syncHero(){
       source_id:'CANONICAL_DASHBOARD_RESOLVER', score_effect:1,
       research:{tanita_score_effect:0,v19_2_score_effect:0}
     }));
-  } catch(_bridgeError) { /* storage may be unavailable; Hero must still render */ }
+  } catch(_bridgeError) { window.NRDiagnostics.record('storage.runtime_bridge','recoverable',_bridgeError); }
   if(heroG){
     // Safety contract: the largest signal on screen is the operational state.
     // The frozen PDF/Engine score remains visible as a labelled reference, but
@@ -22650,9 +22652,9 @@ function renderPlanetAnimation(kp, moonPhaseDeg, G, panchCtx, astroCtx) {
 // v87.56: removed taaraDangerClass (dead, 0 callsites)
 
 // ═══ v83: Safe localStorage (single canonical block) ═══
-function lsGet(k, def=''){ try{ const v = localStorage.getItem(k); return v ?? def; }catch(e){ return def; } }
-function lsSet(k, v){ try{ localStorage.setItem(k, v); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)} }
-function lsRemove(k){ try{ localStorage.removeItem(k); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)} }
+function lsGet(k, def=''){ return window.NRStorage.get(k,def); }
+function lsSet(k, v){ window.NRStorage.set(k,v); }
+function lsRemove(k){ window.NRStorage.remove(k); }
 const lsRem = lsRemove; // shorthand alias
 
 // ═══ v76d: Personal human phrases ═══
@@ -26813,55 +26815,13 @@ body.fp434-app main#mainContent{padding-inline:24px!important}
     return{...layers,feed,official,scenario,kp:liveKp,signal,presentation,decisionScore:presentation.available?Number(signal.decisionScore):NaN,actionEligible:true,calendarOffset:offset,missing:!Number.isFinite(layers.rawValue),snapshot};
   }
   // BEGIN product render queue
-  const _productDirty=new Set(),_productAsync=new Map();let _productFrame=null,_productRendering=false,_productSnapshot=null;
-  let _productRenderGeneration=0;
-  function _freezeResolved(value){
-    if(value===null||typeof value!=='object')return value;
-    if(Array.isArray(value))return Object.freeze(value.map(_freezeResolved));
-    return Object.freeze(Object.fromEntries(Object.entries(value).map(([k,v])=>[k,_freezeResolved(v)])));
-  }
-  function operationalForDate(d){
-    if(!_productSnapshot)return canonicalForDate(d);
-    const key=JSON.stringify([d?.ds,d?.G,d?._calendarOffset,d?._missing,d?._hasRaw]);
-    if(!_productSnapshot.has(key))_productSnapshot.set(key,_freezeResolved(canonicalForDate(d)));
-    return _productSnapshot.get(key);
-  }
-  function requestProductRender(...parts){
-    parts.forEach(p=>_productDirty.add(p));
-    if(_productFrame!==null||_productRendering||document.hidden)return;
-    _productFrame=requestAnimationFrame(_flushProductRender);
-  }
-  function _flushProductRender(){
-    _productFrame=null;if(document.hidden)return;
-    const active=document.querySelector('.nr-route.active')?.dataset.route;
-    const jobs=[['forecast',renderUnifiedForecast],['calendar',renderCalendar],['independent',renderIndependentForecasts],['cover',renderCompetitiveCover]];
-    const result={generation:++_productRenderGeneration,parts:[],errors:[],resolvedDates:0};
-    _productRendering=true;_productSnapshot=new Map();
-    try{
-      for(const [part,render] of jobs){
-        if(!_productDirty.has(part)||_productAsync.has(part))continue;
-        if((part==='forecast'||part==='independent')&&active!=='forecast')continue;
-        if(part==='calendar'&&active!=='calendar')continue;
-        _productDirty.delete(part);
-        try{
-          const task=render();
-          if(task?.then){
-            const pending=Promise.resolve(task).catch(e=>{window.NRDiagnostics?.record('render.async','recoverable',e);console.warn('[product render]',part,e)}).finally(()=>{
-              _productAsync.delete(part);if(_productDirty.has(part))requestProductRender();
-            });_productAsync.set(part,pending);
-          }
-          result.parts.push(part);
-        }
-        catch(e){window.NRDiagnostics?.record('render.sync','recoverable',e);result.errors.push({part,message:String(e?.message||e)});console.warn('[product render]',part,e)}
-      }
-      result.resolvedDates=_productSnapshot.size;
-    }finally{
-      _productSnapshot=null;_productRendering=false;
-      result.pending=[..._productDirty];window.__lastProductRender=Object.freeze(result);
-    }
-  }
+  const _productQueue=window.NRRenderQueue.create({resolve:canonicalForDate,renderers:{
+    forecast:()=>renderUnifiedForecast(), calendar:()=>renderCalendar(),
+    independent:()=>renderIndependentForecasts(), cover:()=>renderCompetitiveCover()
+  }});
+  function operationalForDate(d){return _productQueue.resolve(d);}
+  function requestProductRender(...parts){return _productQueue.request(...parts);}
   window.requestProductRender=requestProductRender;
-  document.addEventListener('visibilitychange',()=>{if(!document.hidden)requestProductRender()});
   // END product render queue
   window.fp455OperationalForDate=operationalForDate;
   window.fp456OperationalForDate=operationalForDate;
@@ -27126,20 +27086,20 @@ body.fp434-app main#mainContent{padding-inline:24px!important}
     set('nrPdfCoverage',`Довідкове джерело звірено: ${verified27}/27 календарних дат`);
     set('nrPredictiveBoundary','Прогнозну точність ще не підтверджено');
     set('nrContextBoundary','Фонові та сценарні дані: контекст, не команда');
-    if(_productRendering)_productDirty.add('cover');else renderCompetitiveCover();
+    _productQueue.renderOrDefer('cover');
   }
   const FP463_CANONICAL_SNAPSHOT_KEY='nr_canonical_snapshot_fp463_v1';
   function saveCanonicalSnapshot(date,signal,presentation){
     if(!currentKpAuthority().usable||!presentation?.available||!['favorable','good','neutral','unstable','tense'].includes(String(signal?.opKey||''))||!Number.isFinite(Number(signal?.decisionScore)))return null;
     const snapshot={schema:'fp463-canonical-snapshot-v2',date,opKey:String(signal.opKey),decisionScore:Number(signal.decisionScore),guard:String(signal.guard||'none'),dynamicGuard:String(signal.dynamicGuard||''),actionPolicy:String(signal.actionPolicy||''),presentation:{available:true,opKey:presentation.opKey,bucket:presentation.bucket,className:presentation.className,coverState:presentation.coverState,symbol:presentation.symbol,label:presentation.label,title:presentation.title,summary:presentation.summary,do:presentation.do,avoid:presentation.avoid},resolved_at:new Date().toISOString(),expires_at:new Date(Math.min(Date.now()+3*3600000,currentKpAuthority().expiresAt)).toISOString()};
-    try{localStorage.setItem(FP463_CANONICAL_SNAPSHOT_KEY,JSON.stringify(snapshot));return snapshot}catch(_e){return null}
+    try{localStorage.setItem(FP463_CANONICAL_SNAPSHOT_KEY,JSON.stringify(snapshot));return snapshot}catch(_e){window.NRDiagnostics.record('storage.snapshot_write','recoverable',_e);return null}
   }
   function loadCanonicalSnapshot(date){
     try{
       const snapshot=JSON.parse(localStorage.getItem(FP463_CANONICAL_SNAPSHOT_KEY)||'null'),p=snapshot?.presentation;
       const valid=snapshot?.schema==='fp463-canonical-snapshot-v2'&&snapshot.date===date&&['favorable','good','neutral','unstable','tense'].includes(snapshot.opKey)&&Number.isFinite(Number(snapshot.decisionScore))&&p?.available===true&&p.opKey===snapshot.opKey&&['act','check','hold'].includes(p.bucket)&&['state-act','state-check','state-caution','state-hold'].includes(p.className)&&['act','check','caution','hold'].includes(p.coverState)&&['✓','!','×'].includes(p.symbol)&&typeof snapshot.resolved_at==='string'&&Number.isFinite(Date.parse(snapshot.resolved_at))&&Date.parse(snapshot.resolved_at)<=Date.now()&&Date.now()-Date.parse(snapshot.resolved_at)<=3*3600000&&Number.isFinite(Date.parse(snapshot.expires_at))&&Date.now()<=Date.parse(snapshot.expires_at);
       return valid?snapshot:null;
-    }catch(_e){return null}
+    }catch(_e){window.NRDiagnostics.record('storage.snapshot_read','recoverable',_e);return null}
   }
   window.fp455LoadCanonicalSnapshot=loadCanonicalSnapshot;
   window.fp456LoadCanonicalSnapshot=loadCanonicalSnapshot;
