@@ -1,0 +1,21 @@
+const fs=require('fs'),path=require('path'),vm=require('vm'),assert=require('assert/strict');
+const root=path.resolve(__dirname,'../..'),window={};
+vm.runInNewContext(fs.readFileSync(path.join(root,'runtime_diagnostics_v1.js'),'utf8'),{window,Date});
+const d=window.NRDiagnostics;let called=0;
+const handlers=Object.freeze({safe:()=>called++,missing:null,broken:()=>{throw Error('private content')}});
+assert.equal(d.invoke(handlers,'safe'),true);assert.equal(called,1);
+assert.equal(d.invoke(handlers,'missing'),false);
+for(const name of ['constructor','__proto__','safe();process.exit()'])assert.throws(()=>d.invoke(handlers,name));
+assert.throws(()=>d.invoke(handlers,'broken'));assert.equal(called,1);
+d.record('authority.resolve','invariant',new Error('private content'));
+for(let i=0;i<200;i++)d.record('render.async','recoverable');
+for(let i=0;i<100;i++)d.record('optional.'+i,'expected_optional');
+assert.equal(d.record('invalid site','invariant'),false);assert.equal(d.record('valid','wrong'),false);
+const snap=d.snapshot();assert(Object.isFrozen(snap)&&Object.isFrozen(snap.counts)&&Object.isFrozen(snap.recent));assert(snap.recent.length<=32&&Object.keys(snap.counts).length<=64&&snap.dropped>0);
+assert.equal(snap.counts['invariant:authority.resolve'],1);assert(!JSON.stringify(snap).includes('private content'));
+const html=fs.readFileSync(path.join(root,'index.html'),'utf8'),sw=fs.readFileSync(path.join(root,'sw.js'),'utf8');
+assert(!html.includes('eval(name)'));assert(html.includes('const handlers=Object.freeze({'));assert(html.includes("name+'_error'"));
+for(const name of ['runtime_diagnostics_v1.js','lifecycle_refresh_v1.js']){assert(html.includes(`src="./${name}"`));assert(sw.includes(`'./${name}'`))}
+for(const site of ['authority.resolve','render.async','render.sync','refresh.cycle','probe.handler'])assert(html.includes(`'${site}'`));
+const result={status:'PASS',checks:['allowlist rejects unknown and inherited names','missing optional and thrown handlers remain distinct','bounded immutable diagnostics without error payload','critical paths emit classified diagnostics','versioned modules included in HTML and offline shell']};
+fs.writeFileSync(path.join(__dirname,'RUNTIME_HYGIENE_RESULTS.json'),JSON.stringify(result,null,2));console.log('PASS',result.checks);

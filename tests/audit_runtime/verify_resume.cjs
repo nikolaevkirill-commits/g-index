@@ -1,6 +1,6 @@
 const fs=require('fs'),path=require('path'),vm=require('vm'),assert=require('assert/strict');
 const source=fs.readFileSync(path.resolve(__dirname,'../../index.html'),'utf8'),checks=[];
-const code=source.slice(source.indexOf('let _dataRefreshPromise = null;'),source.indexOf('// END lifecycle refresh'));
+const code=fs.readFileSync(path.resolve(__dirname,'../../lifecycle_refresh_v1.js'),'utf8')+'\n'+source.slice(source.indexOf('let _dataRefreshPromise = null;'),source.indexOf('// END lifecycle refresh'));
 const turns=async()=>{for(let i=0;i<30;i++)await Promise.resolve()};
 function env(){
  let now=100000,day='2026-09-29',loads=0,active=0,maxActive=0,hold=false,release=null,fail=false,authority=0;

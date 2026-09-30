@@ -6,6 +6,8 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<script src="./runtime_diagnostics_v1.js"></script>
+<script src="./lifecycle_refresh_v1.js"></script>
 <script>
 // Source https://maia.usno.navy.mil/ser7/tai-utc.dat; retrieved 2026-09-27
 // [effective JD, base seconds, reference MJD, seconds per day]
@@ -1845,7 +1847,7 @@ body.fp434-app #nrEclipseCopy{color:var(--nr-copy3)}
   };
   window._nativeIsFinite = _nativeIsFinite;
 })();
-try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line1329';}catch(e){}
+{const panel=document.getElementById('__cpPanel');if(panel)panel.textContent += '\nCP block-end @line1329';}
 </script>
 <!-- Formula sign convention: Expert Excel 2−Kp; dashboard raw тепер узгоджений з Excel: 2−Kp. -->
   <script src="./engine_tag_parser.js"></script>
@@ -4923,7 +4925,7 @@ if ('serviceWorker' in navigator) {
       .catch(err => console.warn('[SW] Registration failed:', err));
   });
 }
-try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line3773';}catch(e){}
+{const panel=document.getElementById('__cpPanel');if(panel)panel.textContent += '\nCP block-end @line3773';}
 </script>
 
 <script>
@@ -21353,6 +21355,7 @@ function runDataRefresh(reason){
         if(typeof window.requestProductRender==='function')window.requestProductRender('cover','forecast','calendar','independent');
       }catch(err){
         errorCount++;
+        window.NRDiagnostics?.record('refresh.cycle','recoverable',err);
         const target=el('nowError');
         if(target)target.textContent='Оновлення даних не завершено: '+(err?.message||'невідома помилка');
         console.error('[data-refresh]',activeReason,err);
@@ -21369,33 +21372,7 @@ function runDataRefresh(reason){
 window.runDataRefresh = runDataRefresh;
 
 // BEGIN lifecycle refresh: retain the page and unsaved form controls.
-(function installLifecycleRefresh(){
-  let hiddenAt=document.hidden?Date.now():null;
-  let visibleDay=todayKyivStr(),pendingTimer=null,lastRequest=-Infinity,pendingReason=null;
-  function schedule(reason,force){
-    const now=Date.now(),day=todayKyivStr(),last=window.__lastRefreshCycle;
-    const old=!last || now-last.finishedAt>=60000 || last.status==='partial';
-    const away=hiddenAt!==null && now-hiddenAt>=60000;
-    if(force && (reason!=='auto'||!pendingReason))pendingReason=reason;
-    if(!pendingReason && !old && !away && day===visibleDay)return;
-    if(!pendingReason)pendingReason=reason;
-    if(document.hidden || !navigator.onLine || pendingTimer!==null)return;
-    pendingTimer=setTimeout(()=>{
-      pendingTimer=null;
-      if(document.hidden || !navigator.onLine)return;
-      const requested=pendingReason;pendingReason=null;
-      lastRequest=Date.now();hiddenAt=null;visibleDay=todayKyivStr();
-      runDataRefresh(requested);
-    },Math.max(500,5000-(now-lastRequest)));
-  }
-  window.requestLifecycleRefresh=schedule;
-  document.addEventListener('visibilitychange',()=>{
-    if(document.hidden)hiddenAt=Date.now();else schedule('resume',false);
-  });
-  window.addEventListener('focus',()=>schedule('resume',false));
-  window.addEventListener('online',()=>schedule('online',true));
-  window.addEventListener('pageshow',event=>{if(event.persisted)schedule('bfcache',true);});
-})();
+window.NRLifecycle.install({todayKyivStr,runDataRefresh});
 // END lifecycle refresh
 
 
@@ -26157,7 +26134,7 @@ const NoaaEvents = (function(){
     if (last && !last.endsWith('_ok') && !/[?&]diag=1/.test(location.search)) {
       const d = document.createElement('div');
       d.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#7a1020;color:#fff;font:700 13px/1.4 monospace;padding:8px 12px;text-align:center;cursor:pointer';
-      d.textContent = '🔍 ДІАГНОСТИКА: ' + (last.endsWith('_invoking')
+      d.textContent = '🔍 ДІАГНОСТИКА: ' + (last.endsWith('_error') ? 'попередня перевірка завершилась із помилкою' : last.endsWith('_invoking')
         ? 'завис УСЕРЕДИНІ функції « ' + last.replace('_invoking','') + ' »'
         : last.endsWith('_queued')
           ? 'завис у ПАУЗІ перед « ' + last.replace('_queued','') + ' » (винен async-хвіст попередніх)'
@@ -26189,16 +26166,36 @@ const NoaaEvents = (function(){
         }
       }
       st.textContent = 'diag: дані є (' + Object.keys(_engineScores || {}).length + ' днів). Тестую функції по одній…';
-      const fns = ['buildDashboardState','syncHero','syncWhy','renderMoonRetroTop','syncPanchSummary',
-        'renderConfidenceBreakdown','renderKpContribution','renderPanchPiLine','renderWf3','syncTrustStrip',
-        'syncDayPlanCard','syncPersonalContext','renderPersonal','_v73G_saveHist','_renderComponentDeltaCard',
-        '_renderChangeLog','renderBestWorstDays','renderProvenance','renderDisagreement','renderCounterfactual',
-        'renderAntiAction','renderIntraDayAlert'];
+      const handlers=Object.freeze({
+        'buildDashboardState':()=>{window.__dashState=buildDashboardState()},
+        'syncHero':typeof syncHero==='function'?syncHero:null,
+        'syncWhy':typeof syncWhy==='function'?syncWhy:null,
+        'renderMoonRetroTop':typeof renderMoonRetroTop==='function'?renderMoonRetroTop:null,
+        'syncPanchSummary':typeof syncPanchSummary==='function'?syncPanchSummary:null,
+        'renderConfidenceBreakdown':typeof renderConfidenceBreakdown==='function'?renderConfidenceBreakdown:null,
+        'renderKpContribution':typeof renderKpContribution==='function'?renderKpContribution:null,
+        'renderPanchPiLine':typeof renderPanchPiLine==='function'?renderPanchPiLine:null,
+        'renderWf3':typeof renderWf3==='function'?renderWf3:null,
+        'syncTrustStrip':typeof syncTrustStrip==='function'?syncTrustStrip:null,
+        'syncDayPlanCard':typeof syncDayPlanCard==='function'?syncDayPlanCard:null,
+        'syncPersonalContext':typeof syncPersonalContext==='function'?syncPersonalContext:null,
+        'renderPersonal':typeof renderPersonal==='function'?renderPersonal:null,
+        '_v73G_saveHist':()=>{const g=_v73G();if(isFinite(g))_saveGHistory(g)},
+        '_renderComponentDeltaCard':typeof _renderComponentDeltaCard==='function'?_renderComponentDeltaCard:null,
+        '_renderChangeLog':typeof _renderChangeLog==='function'?_renderChangeLog:null,
+        'renderBestWorstDays':typeof renderBestWorstDays==='function'?renderBestWorstDays:null,
+        'renderProvenance':typeof renderProvenance==='function'?renderProvenance:null,
+        'renderDisagreement':typeof renderDisagreement==='function'?renderDisagreement:null,
+        'renderCounterfactual':typeof renderCounterfactual==='function'?renderCounterfactual:null,
+        'renderAntiAction':typeof renderAntiAction==='function'?renderAntiAction:null,
+        'renderIntraDayAlert':typeof renderIntraDayAlert==='function'?renderIntraDayAlert:null
+      });
+      const fns=Object.keys(handlers);let failures=0;
       let i = 0;
       (function step(){
         if (i >= fns.length) {
-          localStorage.setItem(KEY, 'ALL_PASSED_ok');
-          st.textContent = 'diag: ✅ УСІ ' + fns.length + ' пройшли БЕЗ зависання — скинь це Claude.';
+          localStorage.setItem(KEY, failures?'COMPLETED_WITH_ERRORS_error':'ALL_PASSED_ok');
+          st.textContent = 'diag: ✅ УСІ ' + fns.length + ' завершено; помилок: '+failures+'.';
           st.style.background = '#0a3a12';
           return;
         }
@@ -26213,16 +26210,11 @@ const NoaaEvents = (function(){
         setTimeout(function(){
           localStorage.setItem(KEY, name + '_invoking'); // синхронно, впритул перед викликом
           try {
-            if (name === 'buildDashboardState') { window.__dashState = buildDashboardState(); }
-            else if (name === '_v73G_saveHist') { const g = _v73G(); if (isFinite(g)) _saveGHistory(g); }
-            else {
-              let f = null;
-              try { f = eval(name); } catch(_e){}
-              if (typeof f === 'function') f();
-            }
+            window.NRDiagnostics.invoke(handlers,name);
             localStorage.setItem(KEY, name + '_ok');
           } catch(e) {
-            localStorage.setItem(KEY, name + '_ok'); // exception ≠ зависання, нас цікавить тільки freeze
+            failures++;window.NRDiagnostics.record('probe.handler','invariant',e);
+            try{localStorage.setItem(KEY,name+'_error')}catch(storageError){window.NRDiagnostics.record('probe.storage','expected_optional',storageError)}
           }
           setTimeout(step, 800);
         }, 50);
@@ -26406,7 +26398,7 @@ function _renderNoaaAlertBanner(events){
 }
 function _escHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
-try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line20593';}catch(e){}
+{const panel=document.getElementById('__cpPanel');if(panel)panel.textContent += '\nCP block-end @line20593';}
 </script>
 
 <!-- PWA disabled v59fix -->
@@ -26611,7 +26603,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (_e) { /* routing is enhancement only */ }
   }, 900);
 });
-try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line20806';}catch(e){}
+{const panel=document.getElementById('__cpPanel');if(panel)panel.textContent += '\nCP block-end @line20806';}
 </script>
 
 <style id="fp463CosmicConceptStyles">
@@ -26836,7 +26828,7 @@ body.fp434-app main#mainContent{padding-inline:24px!important}
       return{...layers,feed,official,scenario,kp:NaN,signal,presentation:{...snapshot.presentation},decisionScore:Number(snapshot.decisionScore),actionEligible:true,calendarOffset:offset,missing:!Number.isFinite(layers.rawValue),snapshot};
     }
     if((isToday&&!currentKpAuthority().usable)||(!isToday&&!official)||!Number.isFinite(liveRaw))return unavailableForDate(layers,feed,official,scenario,liveKp,offset,true);
-    let signal=null;try{signal=resolveDaySignal_v88825(new Date(layers.ds+'T12:00:00Z'),liveRaw,liveKp,{isToday})}catch(_e){signal=null}
+    let signal=null;try{signal=resolveDaySignal_v88825(new Date(layers.ds+'T12:00:00Z'),liveRaw,liveKp,{isToday})}catch(_e){window.NRDiagnostics.record('authority.resolve','invariant',_e);signal=null}
     const presentation=advisoryPresentation(signal);
     const snapshot=isToday?saveCanonicalSnapshot(layers.ds,signal,presentation):null;
     return{...layers,feed,official,scenario,kp:liveKp,signal,presentation,decisionScore:presentation.available?Number(signal.decisionScore):NaN,actionEligible:true,calendarOffset:offset,missing:!Number.isFinite(layers.rawValue),snapshot};
@@ -26875,13 +26867,13 @@ body.fp434-app main#mainContent{padding-inline:24px!important}
         try{
           const task=render();
           if(task?.then){
-            const pending=Promise.resolve(task).catch(e=>console.warn('[product render]',part,e)).finally(()=>{
+            const pending=Promise.resolve(task).catch(e=>{window.NRDiagnostics?.record('render.async','recoverable',e);console.warn('[product render]',part,e)}).finally(()=>{
               _productAsync.delete(part);if(_productDirty.has(part))requestProductRender();
             });_productAsync.set(part,pending);
           }
           result.parts.push(part);
         }
-        catch(e){result.errors.push({part,message:String(e?.message||e)});console.warn('[product render]',part,e)}
+        catch(e){window.NRDiagnostics?.record('render.sync','recoverable',e);result.errors.push({part,message:String(e?.message||e)});console.warn('[product render]',part,e)}
       }
       result.resolvedDates=_productSnapshot.size;
     }finally{
@@ -27436,7 +27428,7 @@ body.fp434-app main#mainContent{padding-inline:24px!important}
     }
   }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
 })();
-try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line21013';}catch(e){}
+{const panel=document.getElementById('__cpPanel');if(panel)panel.textContent += '\nCP block-end @line21013';}
 </script>
 <script>
 /* ── G-Index Telemetry stub v1.0 ──────────────────────────────────────────
@@ -27622,7 +27614,7 @@ try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line210
   });
 
 })();
-try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line21198';}catch(e){}
+{const panel=document.getElementById('__cpPanel');if(panel)panel.textContent += '\nCP block-end @line21198';}
 </script>
 <!-- fp95b: Decision Log Modal -->
 <div id="gdlModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.7);align-items:center;justify-content:center">
@@ -27760,7 +27752,7 @@ window.GJyotishLayer = (function(){
   return {init,apply,refreshLabel};
 })();
 document.addEventListener('DOMContentLoaded',window.GJyotishLayer.init,{once:true});
-try{document.getElementById('__cpPanel').textContent += '\nCP block-end @line21303';}catch(e){}
+{const panel=document.getElementById('__cpPanel');if(panel)panel.textContent += '\nCP block-end @line21303';}
 </script>
 <script id="fp449AuditClosureSemantics">
 (function(){
