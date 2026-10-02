@@ -26939,7 +26939,7 @@ body.fp434-app main#mainContent{padding-inline:24px!important}
       grid.innerHTML=`<div class="nr-independent-row" role="row"><span class="nr-ind-date">Дата</span><span>Наш розрахунок</span><span>PDF</span><span>Архів Engine</span><span class="nr-ind-tanita">Tanita</span><span class="nr-ind-status">Статус</span></div>`+rows.map(row=>{
         const channels=row.channels||{},pdf=channels.expert_pdf?.available?score(channels.expert_pdf.value):'—',engine=channels.frozen_engine?.available?score(channels.frozen_engine.value):'—',tanita=channels.tanita_image?.available?score(channels.tanita_image.value):'—';
         const own=channels.source_formula||{},generated=Date.parse(own.generated_at||''),issued=Date.parse(own.noaa_issued_at||''),now=Date.now();
-        const ownFresh=Number.isFinite(generated)&&Number.isFinite(issued)&&now>=generated&&now-generated<=8*3600000&&now>=issued&&now-issued<=8*86400000;
+        const ownFresh=window.NRConsumerAuthority.resolve(row,row.date,now).available;
         const ownScore=own.available&&ownFresh?score(own.value):'—';
         const ownNote=ownScore==='—'?'немає перевірених даних':`Kp max ${own.kp_daily_max} · NOAA`;
         const complete=ownScore!=='—'&&['expert_pdf','frozen_engine','tanita_image'].every(key=>channels[key]?.available&&_strictDayScore(channels[key]?.value)!==null);
