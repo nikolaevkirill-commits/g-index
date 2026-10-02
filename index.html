@@ -96,7 +96,7 @@ function __nrUtcJdToTt(jdUTC) {
 
 </script>
 
-  <title>NeboRhythm: Cosmic Timing — v88.9.271-fp468-SOURCE-FORECAST</title>
+  <title>NeboRhythm: Cosmic Timing — v88.9.272-fp469-CONSUMER-OVERVIEW</title>
 
   <script src="play_channel.js"></script>
   <script>
@@ -1854,6 +1854,9 @@ body.fp434-app #nrEclipseCopy{color:var(--nr-copy3)}
 </script>
 <!-- Formula sign convention: Expert Excel 2−Kp; dashboard raw тепер узгоджений з Excel: 2−Kp. -->
   <script src="./engine_tag_parser.js"></script>
+<script src="consumer_authority_v1.js"></script>
+<link rel="stylesheet" href="consumer_overview_v1.css">
+<script src="consumer_overview_v1.js" defer></script>
 </head>
 <body>
 <!-- fp153: __cpPanel boot-трасувальник видалено — залишався видимим на екрані постійно (fp148-152 регресія). cp()-виклики лишились у коді, безпечно no-op через try/catch. -->
@@ -26794,9 +26797,9 @@ body.fp434-app main#mainContent{padding-inline:24px!important}
   window.fp463BuildCalendarFrame=buildCalendarFrame;
   function offlineAuthorityMode(){return typeof navigator!=='undefined'&&navigator.onLine===false}
   function unavailableForDate(layers,feed,official,scenario,kp,offset,missing){return{...layers,feed,official,scenario,kp,signal:null,presentation:advisoryPresentation(null),decisionScore:NaN,actionEligible:true,calendarOffset:offset,missing:!!missing,snapshot:null}}
-  function canonicalForDate(d){
+  function legacyCanonicalForDate(d){
     const layers=resolveDateLayers(d),offset=Number.isInteger(d?._calendarOffset)?d._calendarOffset:calendarOffsetForDs(layers.ds);
-    if(!Number.isFinite(offset)||offset<0||offset>=FP463_ACTION_HORIZON_DAYS)return contextForDate({...d,_calendarOffset:offset});
+    if(!Number.isFinite(offset)||offset<0||offset>=FP463_ACTION_HORIZON_DAYS)return legacyContextForDate({...d,_calendarOffset:offset});
     const feed=window.__nrFutureKp?.kp?.[layers.ds]||{};
     const official=feed.kp_synthetic===false&&/^NOAA_/.test(String(feed.source||''))&&Number.isFinite(kpDayTerm(feed.kp));
     const scenario=feed.kp_synthetic===true||feed.source==='synthetic_fallback';
@@ -26815,6 +26818,21 @@ body.fp434-app main#mainContent{padding-inline:24px!important}
     const snapshot=isToday?saveCanonicalSnapshot(layers.ds,signal,presentation):null;
     return{...layers,feed,official,scenario,kp:liveKp,signal,presentation,decisionScore:presentation.available?Number(signal.decisionScore):NaN,actionEligible:true,calendarOffset:offset,missing:!Number.isFinite(layers.rawValue),snapshot};
   }
+  function legacyContextForDate(d){
+    const layers=resolveDateLayers(d),feed=window.__nrFutureKp?.kp?.[layers.ds]||{};
+    const official=feed.kp_synthetic===false&&/^NOAA_/.test(String(feed.source||''))&&Number.isFinite(kpDayTerm(feed.kp));
+    const scenario=feed.kp_synthetic===true||feed.source==='synthetic_fallback';
+    const offset=Number.isInteger(d?._calendarOffset)?d._calendarOffset:calendarOffsetForDs(layers.ds);
+    return{...layers,feed,official,scenario,kp:official?Number(feed.kp):NaN,signal:null,presentation:advisoryPresentation(null),decisionScore:NaN,actionEligible:false,calendarOffset:offset,missing:!Number.isFinite(layers.rawValue)};
+  }
+  function canonicalForDate(d){
+    const layers=resolveDateLayers(d),offset=calendarOffsetForDs(layers.ds);
+    const result=window.NRConsumerAuthority.resolve((_sourceForecastRows||{})[layers.ds],layers.ds,Date.now(),offlineAuthorityMode());
+    const presentation=window.NRConsumerAuthority.present(result);
+    const signal={decisionAvailable:result.available,decisionScore:result.score,opKey:presentation.opKey,guard:'none',dynamicGuard:null,authority:result.authority};
+    return {...layers,primary:result.score,consumer:result,feed:(_sourceForecastRows||{})[layers.ds]||{},official:result.available,scenario:false,kp:NaN,signal,presentation,
+      decisionScore:result.available?result.score:NaN,actionEligible:false,calendarOffset:offset,missing:!result.available,snapshot:null};
+  }
   // BEGIN product render queue
   const _productQueue=window.NRRenderQueue.create({resolve:canonicalForDate,renderers:{
     forecast:()=>renderUnifiedForecast(), calendar:()=>renderCalendar(),
@@ -26826,15 +26844,10 @@ body.fp434-app main#mainContent{padding-inline:24px!important}
   // END product render queue
   window.fp455OperationalForDate=operationalForDate;
   window.fp456OperationalForDate=operationalForDate;
-  window.fp457CanonicalForDate=canonicalForDate;
-  window.fp463CanonicalForDate=canonicalForDate;
-  function contextForDate(d){
-    const layers=resolveDateLayers(d),feed=window.__nrFutureKp?.kp?.[layers.ds]||{};
-    const official=feed.kp_synthetic===false&&/^NOAA_/.test(String(feed.source||''))&&Number.isFinite(kpDayTerm(feed.kp));
-    const scenario=feed.kp_synthetic===true||feed.source==='synthetic_fallback';
-    const offset=Number.isInteger(d?._calendarOffset)?d._calendarOffset:calendarOffsetForDs(layers.ds);
-    return{...layers,feed,official,scenario,kp:official?Number(feed.kp):NaN,signal:null,presentation:advisoryPresentation(null),decisionScore:NaN,actionEligible:false,calendarOffset:offset,missing:!Number.isFinite(layers.rawValue)};
-  }
+  window.fp457CanonicalForDate=legacyCanonicalForDate;
+  window.fp463CanonicalForDate=legacyCanonicalForDate;
+  window.fp469ConsumerForDate=canonicalForDate;
+  function contextForDate(d){return canonicalForDate(d);}
   function calendarPointG(d){const resolved=operationalForDate(d);return resolved.decisionScore}
   function renderCalendar(){
     const week=document.getElementById('nrCalendarWeek'),month=document.getElementById('nrCalendarMonth');if(!week||!month)return;
@@ -26879,17 +26892,33 @@ body.fp434-app main#mainContent{padding-inline:24px!important}
     }catch(error){const node=document.getElementById('nrSkyMeaning');if(node)node.textContent='Космічний шар тимчасово недоступний; значення не підміняються припущенням.'}
   }
   window.fp463RenderCosmicConcept=renderCosmicConcept;
-  let _independentPanelGeneration=0;
-  let _sourceForecastRows={};
-  function sourceSummary(ds){
-    const row=_sourceForecastRows[ds]||{},own=row.channels?.source_formula||{},pdf=row.channels?.expert_pdf||{};
-    const now=Date.now(),generated=Date.parse(own.generated_at||''),issued=Date.parse(own.noaa_issued_at||'');
-    const fresh=Number.isFinite(generated)&&Number.isFinite(issued)&&now>=generated&&now-generated<=8*3600000&&now>=issued&&now-issued<=8*86400000;
-    const value=own.available&&fresh?_strictDayScore(own.value):null,expert=pdf.available?_strictDayScore(pdf.value):null;
-    const fmt=x=>x===null?'—':`${x>0?'+':''}${x}`;
-    return `Наш розрахунок: ${fmt(value)}. Експертний PDF: ${fmt(expert)}. ${value===null?'Немає свіжих перевірених даних.':'Календар + NOAA Kp max. Точність щодо подій ще не підтверджена.'} Операційна порада нижче має окреме джерело.`;
+  let _consumerFeedPending=null;
+  function loadConsumerForecast(){
+    if(_consumerFeedPending)return _consumerFeedPending;
+    _consumerFeedPending=withTimeout(async signal=>{
+      const response=await fetch('INDEPENDENT_FORECAST_FEED_v1.json',{cache:'no-store',signal});
+      if(!response.ok)throw new Error('consumer feed HTTP '+response.status);
+      const feed=await response.json();
+      if(!feed.days||typeof feed.days!=='object')throw new Error('invalid consumer feed');
+      _sourceForecastRows=feed.days;window.NRConsumerOverview?.update(_sourceForecastRows);return feed;
+    },7500,'consumer feed').catch(error=>{window.NRDiagnostics.record('consumer.feed','recoverable',error);return null;}).finally(()=>{
+      _consumerFeedPending=null;renderSourceSummary();requestProductRender('cover','calendar','forecast');
+    });return _consumerFeedPending;
   }
-  function renderSourceSummary(){const node=document.getElementById('nrOwnForecastToday');if(node)node.textContent=sourceSummary(todayKey());}
+  window.fp469LoadConsumerForecast=loadConsumerForecast;
+  setTimeout(loadConsumerForecast,0);
+  window.addEventListener('gindex:data-ready',loadConsumerForecast);
+  window.addEventListener('online',loadConsumerForecast);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)loadConsumerForecast();});
+
+  let _independentPanelGeneration=0;
+  var _sourceForecastRows={};
+  function sourceSummary(ds){
+    const r=window.NRConsumerAuthority.resolve((_sourceForecastRows||{})[ds],ds,Date.now(),offlineAuthorityMode());
+    const fmt=n=>n===null?'—':n<0?'−'+Math.abs(n):n>0?'+'+n:'0';
+    return `Оцінка моделі: ${fmt(r.score)}. Експертне джерело: ${fmt(r.expertReference)}. Методики мають спільні вихідні складові; збіг не підтверджує точність. Стан: ${r.state}.`;
+  }
+  function renderSourceSummary(){window.NRConsumerOverview?.update(_sourceForecastRows);const node=document.getElementById('nrOwnForecastToday');if(node)node.textContent=sourceSummary(todayKey());}
   window.fp468SourceSummary=sourceSummary;
   async function renderIndependentForecasts(){
     const grid=document.getElementById('nrIndependentGrid');if(!grid)return;
@@ -26898,11 +26927,11 @@ body.fp434-app main#mainContent{padding-inline:24px!important}
     const score=value=>{const n=_strictDayScore(value);return n===null?'—':`${n>0?'+':''}${n}`};
     try{
       const [feed,scorecard]=await withTimeout(signal=>Promise.all(['INDEPENDENT_FORECAST_FEED_v1.json','FP463_CHANNEL_SCORECARD.json'].map(async url=>{
-        const response=await fetch(url,{cache:'no-store',signal});if(!response.ok)throw new Error('HTTP '+response.status);
+        const response=await fetch(url,{cache:'no-store',signal});if(!response.ok){if(url==='FP463_CHANNEL_SCORECARD.json')return {};throw new Error('HTTP '+response.status);}
         return response.json();
       })),7500,'independent panel');
       if(generation!==_independentPanelGeneration)return;
-      _sourceForecastRows=feed.days||{};renderSourceSummary();
+      _sourceForecastRows=feed.days||{};renderSourceSummary();requestProductRender("cover","calendar","forecast");
       const all=Object.values(feed.days||{}).sort((a,b)=>String(a.date).localeCompare(String(b.date))),start=todayKey();
       let rows=all.filter(row=>row.date>=start).slice(0,27);if(!rows.length)rows=all.slice(-7);
       if(!rows.length)throw new Error('empty feed');
@@ -26921,7 +26950,7 @@ body.fp434-app main#mainContent{padding-inline:24px!important}
       window.__independentPanelState={generation,status:'loaded'};
     }catch(error){
       if(generation!==_independentPanelGeneration)return;
-      _sourceForecastRows={};renderSourceSummary();
+      renderSourceSummary();requestProductRender("cover","calendar","forecast");
       window.__independentPanelState={generation,status:'error',message:String(error?.message||error)};
       grid.innerHTML='<div class="nr-chart-empty" role="status">[UNVERIFIED] Незалежні канали недоступні. Значення не підмінено припущенням.</div>';
       const boundary=document.getElementById('nrProspectiveBoundary');if(boundary)boundary.textContent='Статистика незалежних каналів недоступна до успішного оновлення.';
@@ -27156,7 +27185,7 @@ body.fp434-app main#mainContent{padding-inline:24px!important}
     const balance=document.querySelector('#nrAuthorityBalance span');if(balance){const pdf=_strictDayScore(registryRow?.decision_score),eng=_strictDayScore(registryRow?.engine_score),cal=_finiteFormulaNumber(registryRow?.calendar_score_context),decision=_finiteFormulaNumber(daySignal?.decisionScore);balance.textContent=`Канонічне рішення: ${presentation.available?`${presentation.opKey} · бал ${decision>=0?'+':''}${decision.toFixed(0)} · ${presentation.label}`:'недоступне'}${daySignal?.guard&&daySignal.guard!=='none'?` · обмеження ${daySignal.guard}`:''}${daySignal?.dynamicGuard?` · запобіжник ${daySignal.dynamicGuard}`:''}${offline&&snapshot?` · збережено ${snapshot.resolved_at}`:''}. Довідковий PDF ${Number.isFinite(pdf)?(pdf>=0?'+':'')+pdf:'—'}, Engine ${Number.isFinite(eng)?(eng>=0?'+':'')+eng:'—'}, календарний контекст ${Number.isFinite(cal)?(cal>=0?'+':'')+cal:'—'} і поточний G показані окремо та безпосередньо не визначають колір поради.`}
     const eclipse=document.getElementById('nrEclipseContext');let mi=null;try{mi=typeof computeMiFromEclipses==='function'?computeMiFromEclipses(new Date(todayKey()+'T12:00:00Z')):null}catch(_e){}const eclipseActive=Number(mi?.Mi)<0||eclipseFromRegistry;if(eclipse){eclipse.classList.toggle('is-visible',eclipseActive);if(eclipseActive){set('nrEclipseTitle','ПЕРІОД ВПЛИВУ ЗАТЕМНЕННЯ');set('nrEclipseCopy',`${mi&&Number.isFinite(Number(mi.Mi))?'Mᵢ '+(Number(mi.Mi)>=0?'+':'')+Number(mi.Mi)+' · ':''}вже враховано у денному G. Спокійний темп, без форсування ключових рішень.`)}}
     set('nrCoverScore',presentation.symbol);set('nrCoverDecisionScore',Number.isFinite(scoreBase)?(scoreBase>=0?'+':'')+scoreBase.toFixed(0):'—');set('nrCoverKp',Number.isFinite(kp)?kp.toFixed(1):'—');set('nrCoverShift',shift);set('nrScoreHelper',presentation.available?`${presentation.label} · ${offline?'збережене рішення':'стан на зараз'}`:'Немає підтвердженого рішення');
-    const scoreLabel=cover.querySelector('.nr-score-label');if(scoreLabel)scoreLabel.textContent='СТАН ДНЯ';
+    const scoreLabel=cover.querySelector('.nr-score-label');if(scoreLabel)scoreLabel.textContent='ОЦІНКА МОДЕЛІ';
     const scoreOrbit=document.getElementById('nrScoreOrbit');if(scoreOrbit)scoreOrbit.setAttribute('aria-label',`${presentation.label}. ${presentation.available?presentation.title:'Рішення недоступне'}`);
     set('nrCoverLiveG',Number.isFinite(g)?(g>=0?'+':'')+g.toFixed(1):'—');
     const orbit=document.getElementById('nrScoreOrbit');if(orbit){orbit.style.setProperty('--nr-score-angle',(presentation.available?300:0)+'deg');orbit.classList.toggle('nr-score-pending',!presentation.available)}

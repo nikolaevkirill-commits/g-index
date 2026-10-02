@@ -5,8 +5,8 @@ const code=cut('function withTimeout(','function fetchTextWithCORS(')+cut('funct
 const grid={innerHTML:''},boundary={textContent:'old statistics'},checks=[],signals=[];
 const doc=value=>({days:{'2026-09-29':{date:'2026-09-29',channels:{expert_pdf:{available:true,value},frozen_engine:{available:true,value:1},tanita_image:{available:true,value:-1}}}}});
 let impl=async url=>({ok:true,json:async()=>url.includes('SCORECARD')?{channels:{}}:doc(1)});
-const c={window:{},document:{getElementById:id=>id==='nrIndependentGrid'?grid:boundary},AbortController,console,setTimeout:(f,ms)=>setTimeout(f,Math.min(ms,30)),clearTimeout,fetch:(u,o)=>(signals.push(o.signal),impl(u,o)),todayKey:()=> '2026-09-29',escapeHtml:String,fmtDate:String};
-vm.createContext(c);vm.runInContext(code,c);
+const c={window:{},requestProductRender:()=>{},offlineAuthorityMode:()=>false,document:{getElementById:id=>id==='nrIndependentGrid'?grid:boundary},AbortController,console,setTimeout:(f,ms)=>setTimeout(f,Math.min(ms,30)),clearTimeout,fetch:(u,o)=>(signals.push(o.signal),impl(u,o)),todayKey:()=> '2026-09-29',escapeHtml:String,fmtDate:String};
+vm.createContext(c);vm.runInContext(fs.readFileSync(path.join(__dirname,'../../consumer_authority_v1.js'),'utf8'),c);vm.runInContext(code,c);
 (async()=>{
  for(const value of [null,'',true,false,'NaN',4,0.5]){impl=async url=>({ok:true,json:async()=>url.includes('SCORECARD')?{channels:{}}:doc(value)});await c.renderIndependentForecasts();assert(grid.innerHTML.includes('aria-label="PDF —"'),String(value));assert(grid.innerHTML.includes('неповні дані'));assert(!grid.innerHTML.includes('без істотної розбіжності'))}
  checks.push('invalid available-channel scores stay missing, never zero');
@@ -15,10 +15,10 @@ vm.createContext(c);vm.runInContext(code,c);
  let firstResolve;impl=async url=>({ok:true,json:()=>url.includes('SCORECARD')?Promise.resolve({channels:{}}):new Promise(r=>firstResolve=r)});const old=c.renderIndependentForecasts();await new Promise(r=>setImmediate(r));impl=async url=>({ok:true,json:async()=>url.includes('SCORECARD')?{channels:{}}:doc(-2)});await c.renderIndependentForecasts();firstResolve(doc(3));await old;assert(grid.innerHTML.includes('aria-label="PDF -2"'));assert.equal(c.window.__independentPanelState.status,'loaded');checks.push('new generation wins over late old response; recovery succeeds');
  const fresh=()=>{const d=doc(0);d.days['2026-09-29'].channels.source_formula={value:3,available:true,generated_at:new Date().toISOString(),noaa_issued_at:new Date().toISOString(),kp_daily_max:3};return d};
  impl=async url=>({ok:true,json:async()=>url.includes('SCORECARD')?{channels:{}}:fresh()});await c.renderIndependentForecasts();assert(grid.innerHTML.includes('Наш розрахунок +3'));checks.push('source formula independent of expert zero');
- assert(c.window.fp468SourceSummary('2026-09-29').includes('Наш розрахунок: +3. Експертний PDF: 0'));
- assert(c.window.fp468SourceSummary('2027-01-01').includes('Наш розрахунок: —'));
+ assert(c.window.fp468SourceSummary('2026-09-29').includes('Оцінка моделі: +3. Експертне джерело: 0'));
+ assert(c.window.fp468SourceSummary('2027-01-01').includes('Оцінка моделі: —'));
  checks.push('today and selected date use the same source/ expert values; absent date is missing');
- const stale=fresh();stale.days['2026-09-29'].channels.source_formula.generated_at='2020-01-01T00:00:00Z';impl=async url=>({ok:true,json:async()=>url.includes('SCORECARD')?{channels:{}}:stale});await c.renderIndependentForecasts();assert(grid.innerHTML.includes('Наш розрахунок —'));assert(c.window.fp468SourceSummary('2026-09-29').includes('Наш розрахунок: —'));checks.push('stale source calculation hidden in all views');
- impl=async()=>{throw new Error('offline')};await c.renderIndependentForecasts();assert(c.window.fp468SourceSummary('2026-09-29').includes('Експертний PDF: —'));checks.push('failed refresh clears summary rather than keeping stale labels');
+ const stale=fresh();stale.days['2026-09-29'].channels.source_formula.generated_at='2020-01-01T00:00:00Z';impl=async url=>({ok:true,json:async()=>url.includes('SCORECARD')?{channels:{}}:stale});await c.renderIndependentForecasts();assert(grid.innerHTML.includes('Наш розрахунок —'));assert(c.window.fp468SourceSummary('2026-09-29').includes('Оцінка моделі: —'));checks.push('stale source calculation hidden in all views');
+ impl=async()=>{throw new Error('offline')};await c.renderIndependentForecasts();assert(c.window.fp468SourceSummary('2026-09-29').includes('Оцінка моделі: —'));assert(c.window.fp468SourceSummary('2026-09-29').includes('stale'));checks.push('failed refresh preserves only explicitly stale snapshot, never a current score');
  fs.writeFileSync(path.join(__dirname,'INDEPENDENT_PANEL_RESULTS.json'),JSON.stringify({status:'PASS',checks},null,2));console.log('PASS',checks);
 })().catch(e=>{console.error(e);process.exitCode=1});

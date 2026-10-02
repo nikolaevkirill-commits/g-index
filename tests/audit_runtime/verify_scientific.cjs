@@ -1,7 +1,7 @@
 const fs=require('fs'),path=require('path'),http=require('http'),crypto=require('crypto');
 const {chromium}=require('playwright');
 const assert=require('assert/strict'); const {resolveBrowserOptions}=require('./browser_options.cjs'); const root=path.resolve(__dirname,'../..');
-const server=http.createServer((req,res)=>{let f=path.resolve(root,'.'+new URL(req.url,'http://local').pathname);if(f===root)f=path.join(root,'index.html');if(!f.startsWith(root+path.sep)){res.writeHead(403).end();return}try{res.setHeader('Content-Type',f.endsWith('.html')?'text/html; charset=utf-8':f.endsWith('.js')?'application/javascript':'application/json');res.end(fs.readFileSync(f))}catch(e){res.writeHead(404).end()}});
+const server=http.createServer((req,res)=>{let f=path.resolve(root,'.'+new URL(req.url,'http://local').pathname);if(f===root)f=path.join(root,'index.html');if(!f.startsWith(root+path.sep)){res.writeHead(403).end();return}try{res.setHeader('Content-Type',f.endsWith('.html')?'text/html; charset=utf-8':f.endsWith('.css')?'text/css':f.endsWith('.js')?'application/javascript':'application/json');res.end(fs.readFileSync(f))}catch(e){res.writeHead(404).end()}});
 (async()=>{await new Promise(r=>server.listen(0,'127.0.0.1',r));const browser=await chromium.launch({headless:true,...resolveBrowserOptions()});try{
  const page=await browser.newPage({serviceWorkers:'block',timezoneId:'Europe/Kyiv'}),base='http://127.0.0.1:'+server.address().port;
  await page.route('**/*',r=>r.request().url().startsWith(base)?r.continue():r.abort());await page.goto(base+'/?channel=play',{waitUntil:'domcontentloaded'});await page.waitForFunction(()=>typeof computeAi==='function'&&window.Astronomy);
