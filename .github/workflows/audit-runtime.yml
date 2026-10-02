@@ -1,10 +1,10 @@
 name: audit runtime regressions
 on:
   pull_request:
-    paths: ['index.html', 'sw.js', 'runtime_diagnostics_v1.js', 'lifecycle_refresh_v1.js', 'presentation_runtime_v1.js', 'product_render_queue_v1.js', 'local_storage_v1.js', 'consumer_authority_v1.js', 'consumer_overview_v1.js', 'consumer_overview_v1.css', 'play_channel.js', '*xlsx*.js', 'privacy.html', 'terms.html', 'account-deletion.html', 'tools/kp_alert_bot.py', 'outcome_score_contract.py', 'pair_tanita_real_outcomes.py', 'outcome_ledger_audit.py', 'import_validated_outcome_queue.py', 'validate_outcome_intake_queue.py', 'tests/audit_runtime/**', '.github/workflows/audit-runtime.yml']
+    paths: ['index.html', 'sw.js', 'runtime_diagnostics_v1.js', 'lifecycle_refresh_v1.js', 'presentation_runtime_v1.js', 'product_render_queue_v1.js', 'local_storage_v1.js', 'consumer_authority_v1.js', 'consumer_overview_v1.js', 'consumer_overview_v1.css', 'calendar_context_v1.js', 'play_channel.js', '*xlsx*.js', 'privacy.html', 'terms.html', 'account-deletion.html', 'tools/kp_alert_bot.py', 'outcome_score_contract.py', 'pair_tanita_real_outcomes.py', 'outcome_ledger_audit.py', 'import_validated_outcome_queue.py', 'validate_outcome_intake_queue.py', 'tests/audit_runtime/**', '.github/workflows/audit-runtime.yml']
   push:
     branches: [deploy]
-    paths: ['index.html', 'sw.js', 'runtime_diagnostics_v1.js', 'lifecycle_refresh_v1.js', 'presentation_runtime_v1.js', 'product_render_queue_v1.js', 'local_storage_v1.js', 'consumer_authority_v1.js', 'consumer_overview_v1.js', 'consumer_overview_v1.css', 'play_channel.js', '*xlsx*.js', 'privacy.html', 'terms.html', 'account-deletion.html', 'tools/kp_alert_bot.py', 'outcome_score_contract.py', 'pair_tanita_real_outcomes.py', 'outcome_ledger_audit.py', 'import_validated_outcome_queue.py', 'validate_outcome_intake_queue.py', 'tests/audit_runtime/**', '.github/workflows/audit-runtime.yml']
+    paths: ['index.html', 'sw.js', 'runtime_diagnostics_v1.js', 'lifecycle_refresh_v1.js', 'presentation_runtime_v1.js', 'product_render_queue_v1.js', 'local_storage_v1.js', 'consumer_authority_v1.js', 'consumer_overview_v1.js', 'consumer_overview_v1.css', 'calendar_context_v1.js', 'play_channel.js', '*xlsx*.js', 'privacy.html', 'terms.html', 'account-deletion.html', 'tools/kp_alert_bot.py', 'outcome_score_contract.py', 'pair_tanita_real_outcomes.py', 'outcome_ledger_audit.py', 'import_validated_outcome_queue.py', 'validate_outcome_intake_queue.py', 'tests/audit_runtime/**', '.github/workflows/audit-runtime.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -24,6 +24,7 @@ jobs:
       - run: node tests/audit_runtime/verify_formula_inputs.cjs
       - run: node tests/audit_runtime/verify_noaa_parser.cjs
       - run: node tests/audit_runtime/verify_retro.cjs
+      - run: node tests/audit_runtime/verify_calendar_context.cjs
       - run: node tests/audit_runtime/verify_excel_inputs.cjs
       - run: node tests/audit_runtime/verify_uaf_input.cjs
       - run: node tests/audit_runtime/verify_noaa_parser_browser.cjs

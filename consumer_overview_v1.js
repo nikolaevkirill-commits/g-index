@@ -19,7 +19,7 @@ function mount(){
   const summary=document.createElement('summary');summary.textContent='Дослідницькі та історичні дані · окремі методики';legacy.append(summary);
   for(const child of [...host.children])legacy.append(child);
   const root=document.createElement('section');root.className='nr-overview';root.dataset.overview=route;
-  root.innerHTML=`<div class="nr-o-heading"><span>НЕБОРИТМ · EUROPE/KYIV</span><h1>${route==='today'?'Огляд дня':'Календар оцінок'}</h1></div><label>Дата <select aria-label="Дата оцінки"></select></label><div class="nr-o-state" role="status" aria-live="polite"></div><div class="nr-o-score" aria-label="Оцінка моделі"></div><h3 class="nr-o-label"></h3><p class="nr-o-boundary">Оцінка за формулою джерела. Прогностичну точність щодо подій ще не підтверджено.</p><div class="nr-o-next" aria-label="Наступні дні"></div><details class="nr-o-factors"><summary>Чому така оцінка</summary><div></div></details><details class="nr-o-reference"><summary>Порівняння з експертним джерелом</summary><p></p></details><div class="nr-o-provenance"></div><details class="nr-o-calendar" ${route==='today'?'':'open'}><summary>Найближчі 14 днів</summary><div class="nr-o-days"></div></details>`;
+  root.innerHTML=`<div class="nr-o-heading"><span>НЕБОРИТМ · EUROPE/KYIV</span><h1>${route==='today'?'Огляд дня':'Календар оцінок'}</h1></div><label>Дата <select aria-label="Дата оцінки"></select></label><div class="nr-o-state" role="status" aria-live="polite"></div><div class="nr-o-score" aria-label="Оцінка моделі"></div><h3 class="nr-o-label"></h3><p class="nr-o-boundary">Оцінка за формулою джерела. Прогностичну точність щодо подій ще не підтверджено.</p><div class="nr-o-context"></div><div class="nr-o-next" aria-label="Наступні дні"></div><details class="nr-o-factors"><summary>Чому така оцінка</summary><div></div></details><details class="nr-o-reference"><summary>Порівняння з експертним джерелом</summary><p></p></details><div class="nr-o-provenance"></div><details class="nr-o-calendar" ${route==='today'?'':'open'}><summary>Найближчі 14 днів</summary><div class="nr-o-days"></div></details>`;
   host.append(root,legacy);selected[route]=today();
   root.querySelector('select').addEventListener('change',e=>{selected[route]=e.target.value;render(root);});
   root.addEventListener('click',e=>{const b=e.target.closest('button[data-day]');if(b){selected[route]=b.dataset.day;render(root);b.focus();}});
@@ -36,6 +36,7 @@ function buttons(host,dates,active){
 function render(root){
  const route=root.dataset.overview,dates=dayRange(),ds=dates.includes(selected[route])?selected[route]:today();selected[route]=ds;
  const select=root.querySelector('select');if([...select.options].map(x=>x.value).join()!==dates.join())select.replaceChildren(...dates.map(d=>new Option(dateLabel(d),d)));select.value=ds;
+ window.NRCalendarContext?.render(root.querySelector('.nr-o-context'),window.nrRetroEphemeris?.(),ds);
  const r=resolve(ds),own=rows[ds]?.channels?.source_formula||{};
  root.querySelector('.nr-o-state').textContent=states[r.state]+(ds===today()?' · сьогодні':' · '+dateLabel(ds));
  root.querySelector('.nr-o-score').textContent=fmt(r.score);
@@ -47,7 +48,7 @@ function render(root){
  const covered=Object.keys(rows).filter(d=>rows[d]?.channels?.source_formula?.available===true).sort();
  root.querySelector('.nr-o-provenance').textContent=`Розраховано: ${time(r.generated_at)}. ${r.kp_source==='NOAA_3day_slots'?'NOAA отримано: '+time(r.source_retrieved_at)+'. Час випуску у джерелі відсутній.':'NOAA випущено: '+time(r.source_issued_at)+'.'} Час показано для Europe/Kyiv. Покриття знімка: ${covered.length?dateLabel(covered.at(-1)):'немає'}.`+(r.state==='stale'&&r.lastScore!==null?' Остання збережена оцінка: '+fmt(r.lastScore)+'.':'');
 }
-function update(next){if(next)rows=next;if(!mount())return;document.querySelectorAll('[data-overview]').forEach(render);}
+function update(next){if(next)rows=next;if(!mount())return;document.querySelectorAll('[data-overview]').forEach(render);window.nrRefreshCategoryContext?.();}
 window.NRConsumerOverview={update};
 window.addEventListener('online',()=>update());window.addEventListener('offline',()=>update());
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)update();});

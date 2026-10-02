@@ -1856,6 +1856,7 @@ body.fp434-app #nrEclipseCopy{color:var(--nr-copy3)}
   <script src="./engine_tag_parser.js"></script>
 <script src="consumer_authority_v1.js"></script>
 <link rel="stylesheet" href="consumer_overview_v1.css">
+<script src="calendar_context_v1.js"></script>
 <script src="consumer_overview_v1.js" defer></script>
 </head>
 <body>
@@ -22031,6 +22032,8 @@ function isRetrograde(planetName, dateObj) {
   return periods.some(([s,e]) => t >= Date.parse(s) && t < Date.parse(e));
 }
 
+if(typeof window!=='undefined')window.nrRetroEphemeris=()=>({coverage:RETRO_COVERAGE,periods:RETRO_PERIODS});
+
 // Планети: реальні орбітальні періоди (дні), log-scale радіуси розраховуються динамічно
 // AU: Mercury=0.387, Venus=0.723, Earth=1.0, Mars=1.524, Jupiter=5.203, Saturn=9.537
 const PLANET_DEF = [
@@ -26969,8 +26972,11 @@ body.fp434-app main#mainContent{padding-inline:24px!important}
     const doTxt=document.getElementById('nrCoverDo')?.textContent?.trim()||'Дочекайтеся завантаження канонічної рекомендації.';
     const avoidTxt=document.getElementById('nrCoverAvoid')?.textContent?.trim()||'Дочекайтеся завантаження канонічного обмеження.';
     box.hidden=false;box.innerHTML=`<span class="nr-chip">ВІДКРИТО СЬОГОДНІ</span><h3>${item[1]}</h3><p>${item[2]}</p><div class="nr-list"><div class="nr-row"><span>Дія</span><span>${escapeHtml(doTxt)}</span></div><div class="nr-row"><span>Уникати</span><span>${escapeHtml(avoidTxt)}</span></div><div class="nr-row"><span>Статус</span><span>Категорійна валідація ще не завершена; використано канонічний verdict дня без окремого score.</span></div></div><button class="nr-btn secondary" style="margin-top:14px" onclick="fp456CategoryToPlan('${id}')">Додати цю сферу до плану</button>`;
+    const contextHost=document.createElement('div');contextHost.className='nr-category-context';box.append(contextHost);
+    window.NRCalendarContext?.render(contextHost,window.nrRetroEphemeris?.(),todayKey(),id);
     const status=box.querySelector('.nr-row:last-child span:last-child');if(status)status.textContent='Окрема перевірка категорій ще не завершена; використано спільне рішення дня без додаткового бала.';
   }
+  window.nrRefreshCategoryContext=function(){const box=document.getElementById('nrCategoryDetail');if(!box||box.hidden)return;let saved=null;try{saved=JSON.parse(localStorage.getItem('gindex_daily_key_v1')||'null')}catch(_e){}if(saved?.date!==todayKey()){box.hidden=true;return;}window.NRCalendarContext?.render(box.querySelector('.nr-category-context'),window.nrRetroEphemeris?.(),todayKey(),saved.category);};
   window.fp456CategoryToPlan=function(id){fp434Go('plan',false);const select=document.querySelector('#nrPlanForm select[name="category"]'),item=CATS.find(row=>row[0]===id);if(select){if(![...select.options].some(option=>option.value===id)&&item)select.add(new Option(item[1],id));select.value=id}document.querySelector('#nrPlanForm input[name="priority"]')?.focus()};
   window.fp434UnlockCategory=function(id){
     let current=null;try{current=JSON.parse(localStorage.getItem('gindex_daily_key_v1')||'null')}catch(_e){}
