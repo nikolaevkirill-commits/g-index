@@ -9174,6 +9174,14 @@ function withTimeout(work,ms,label){
   },ms);});
   return Promise.race([promise,deadline]).finally(()=>clearTimeout(timer));
 }
+// Play does not send SILSO/UAF requests, including through a proxy.
+// Keep this at the shared request boundary as well as at fallback call sites.
+function _playContextSourceBlocked(url){
+  if(!window.GINDEX_PLAY_CHANNEL)return false;
+  let decoded=String(url);
+  for(let i=0;i<3;i++){try{const next=decodeURIComponent(decoded);if(next===decoded)break;decoded=next;}catch(_e){break;}}
+  return /(?:https?:)?\/\/(?:www\.)?(?:sidc\.be|gi\.alaska\.edu)\.?(?=[:/?#]|$)/i.test(decoded);
+}
 function fetchTextWithCORS(url,validate,options={}){
   const controller=new AbortController(),parent=options.signal;
   const cancel=()=>controller.abort();
@@ -9182,6 +9190,7 @@ function fetchTextWithCORS(url,validate,options={}){
   const cancelled=()=>{if(controller.signal.aborted)throw new DOMException('Request cancelled','AbortError');};
   const valid=text=>typeof text==='string'&&text.length>0&&(typeof validate!=='function'||validate(text));
   const request=(async()=>{
+    if(_playContextSourceBlocked(url))throw new Error('PLAY_SOURCE_POLICY: external SILSO/UAF fallback disabled');
     const candidates=[];
     if(options.directOnly)candidates.push([url,options.timeoutMs||4000]);
     else {
@@ -11251,6 +11260,7 @@ async function fetchWolfSnResilient(signal){
     const parsed=parseWolfSnStatus(text);
     if(parsed)return parsed;
   }catch(e){ if(window._DEBUG) console.warn('[SILSO] local snapshot unavailable:',e.message); }
+  if(window.GINDEX_PLAY_CHANNEL)throw new Error('SILSO local snapshot unavailable; external fallback disabled in Play');
   for(const url of [URL_WOLF_SN, URL_WOLF_SN_FB]){
     try{
       const parsed = parseWolfSn(await fetchTextWithCORS(url,_looksLikeSilso,{signal}));
@@ -20997,7 +21007,7 @@ async function loadAll(){
     } catch(_e) { _preferVerifiedLocal3Day = false; }
   }
   // v88.6.9: Tier-2 UAF Geophysical Institute fallback — якщо NOAA 3-day fail
-  if ((!last3D || !last3D.days || !last3D.days.length || last3D._synthetic) && !_preferVerifiedLocal3Day) {
+  if (!window.GINDEX_PLAY_CHANNEL && (!last3D || !last3D.days || !last3D.days.length || last3D._synthetic) && !_preferVerifiedLocal3Day) {
     try{
       if(window._DEBUG) console.log('[v88.6.9] NOAA 3-day fail → trying UAF Alaska mirror');
       const _uafHtml = await withTimeout(fetchTextWithCORS(URL_UAF_AURORA), 5000, 'UAF-3day');
@@ -21142,6 +21152,8 @@ async function loadAll(){
   } else {
     window._lastWolfSn = null;
     _setSrcStatus('srcSn','error');
+    const snEl=el('nowSn');
+    if(snEl){snEl.textContent='Sn: дані недоступні';snEl.style.display='inline-flex';}
   }
 
   // v42: Real-time solar wind (DSCOVR Bz + Vsw)
@@ -21224,7 +21236,8 @@ async function loadAll(){
     } else {
       console.warn('[v43] 27-day fetch failed:', t27R.reason?.message, '— trying UAF fallback');
     }
-    // v88.6.9: Tier-2 UAF Alaska fallback (cached якщо 3-day гілка вже fetched UAF, інакше fetch)
+    // UAF fallback is web-only; Play continues to the NOAA/local fallback below.
+    if(!window.GINDEX_PLAY_CHANNEL){
     try{
       let r27uaf = window._uafCache27Day;
       if (!r27uaf || !r27uaf.length) {
@@ -21242,6 +21255,7 @@ async function loadAll(){
       }
     }catch(uafErr){
       console.warn('[v88.6.9] UAF 27-day fallback failed:', uafErr.message, '— trying 45-day fallback');
+    }
     }
     // Fallback: 45-day-forecast.json → parse45Day → конвертуємо у формат r27
     try{
