@@ -26827,7 +26827,7 @@ body.fp434-app main#mainContent{padding-inline:24px!important}
   }
   function canonicalForDate(d){
     const layers=resolveDateLayers(d),offset=calendarOffsetForDs(layers.ds);
-    const result=window.NRConsumerAuthority.resolve((_sourceForecastRows||{})[layers.ds],layers.ds,Date.now(),offlineAuthorityMode());
+    const result=window.NRConsumerAuthority.resolve((_sourceForecastRows||{})[layers.ds],layers.ds,Date.now(),offlineAuthorityMode()||window.__nrConsumerCached===true);
     const presentation=window.NRConsumerAuthority.present(result);
     const signal={decisionAvailable:result.available,decisionScore:result.score,opKey:presentation.opKey,guard:'none',dynamicGuard:null,authority:result.authority};
     return {...layers,primary:result.score,consumer:result,feed:(_sourceForecastRows||{})[layers.ds]||{},official:result.available,scenario:false,kp:NaN,signal,presentation,
@@ -26898,10 +26898,11 @@ body.fp434-app main#mainContent{padding-inline:24px!important}
     _consumerFeedPending=withTimeout(async signal=>{
       const response=await fetch('INDEPENDENT_FORECAST_FEED_v1.json',{cache:'no-store',signal});
       if(!response.ok)throw new Error('consumer feed HTTP '+response.status);
+      const cachedDelivery=response.headers.get('x-gindex-delivery')==='cached';
       const feed=await response.json();
       if(!feed.days||typeof feed.days!=='object')throw new Error('invalid consumer feed');
-      _sourceForecastRows=feed.days;window.NRConsumerOverview?.update(_sourceForecastRows);return feed;
-    },7500,'consumer feed').catch(error=>{window.NRDiagnostics.record('consumer.feed','recoverable',error);return null;}).finally(()=>{
+      window.__nrConsumerCached=cachedDelivery;_sourceForecastRows=feed.days;window.NRConsumerOverview?.update(_sourceForecastRows);return feed;
+    },7500,'consumer feed').catch(error=>{window.__nrConsumerCached=true;window.NRDiagnostics.record('consumer.feed','recoverable',error);return null;}).finally(()=>{
       _consumerFeedPending=null;renderSourceSummary();requestProductRender('cover','calendar','forecast');
     });return _consumerFeedPending;
   }
@@ -26914,7 +26915,7 @@ body.fp434-app main#mainContent{padding-inline:24px!important}
   let _independentPanelGeneration=0;
   var _sourceForecastRows={};
   function sourceSummary(ds){
-    const r=window.NRConsumerAuthority.resolve((_sourceForecastRows||{})[ds],ds,Date.now(),offlineAuthorityMode());
+    const r=window.NRConsumerAuthority.resolve((_sourceForecastRows||{})[ds],ds,Date.now(),offlineAuthorityMode()||window.__nrConsumerCached===true);
     const fmt=n=>n===null?'—':n<0?'−'+Math.abs(n):n>0?'+'+n:'0';
     return `Оцінка моделі: ${fmt(r.score)}. Експертне джерело: ${fmt(r.expertReference)}. Методики мають спільні вихідні складові; збіг не підтверджує точність. Стан: ${r.state}.`;
   }

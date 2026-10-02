@@ -50,7 +50,7 @@ const server=http.createServer((req,res)=>{let file=path.join(root,decodeURIComp
  await page.evaluate(()=>navigator.serviceWorker.register('./sw.js'));await page.evaluate(()=>navigator.serviceWorker.ready);
  await page.reload();await page.waitForFunction(()=>!!navigator.serviceWorker.controller);await page.evaluate(()=>fp469LoadConsumerForecast());
  await page.context().setOffline(true);await page.reload({waitUntil:'domcontentloaded'});
- await page.waitForFunction(()=>document.querySelector('[data-overview="today"] .nr-o-state')?.textContent.includes('Офлайн'),{},{timeout:15000});
+ try{await page.waitForFunction(()=>document.querySelector('[data-overview="today"] .nr-o-state')?.textContent.includes('Офлайн'),{},{timeout:15000});}catch(e){console.log('OFFLINE_DIAGNOSTIC',JSON.stringify(await page.evaluate(()=>({online:navigator.onLine,now:new Date().toISOString(),url:location.href,state:document.querySelector('[data-overview="today"] .nr-o-state')?.textContent,consumer:window.fp469ConsumerForDate?.({ds:'2026-10-02'})?.consumer,loader:typeof window.fp469LoadConsumerForecast,body:document.body.innerText.slice(0,350)}))),errors);throw e;}
  assert.equal(await page.locator('[data-overview="today"] .nr-o-score').textContent(),'+3');
  await page.context().setOffline(false);await page.evaluate(()=>fp469LoadConsumerForecast());
  await page.waitForFunction(()=>document.querySelector('[data-overview="today"] .nr-o-state')?.textContent.includes('Дані актуальні'));
