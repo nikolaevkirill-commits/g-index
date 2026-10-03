@@ -17,4 +17,4 @@
     fn();return true;
   }
   host.NRDiagnostics=Object.freeze({record,snapshot,invoke});
-})(window);
+})(typeof window!=='undefined'?window:globalThis);

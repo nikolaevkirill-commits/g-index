@@ -3765,7 +3765,7 @@ window._dataFetchTimestamps = {};
 window.__nrSWResourceStates=new Map();
 function acceptSWDataMessage(data){
   if(!data||typeof data.url!=='string'||!data.url||!['SW_FRESH_DATA','SW_STALE_DATA'].includes(data.type))return false;
-  let url;try{url=new URL(data.url,location.href);if(url.origin!==location.origin)return false;url.searchParams.delete('fresh');}catch(_e){return false;}
+  let url;try{url=new URL(data.url,location.href);if(url.origin!==location.origin)return false;url.searchParams.delete('fresh');}catch(_e){ globalThis.NRDiagnostics?.record('catch.0','recoverable'); return false;}
   const order=typeof data.requestOrder==='number'&&Number.isFinite(data.requestOrder)&&data.requestOrder>0?data.requestOrder:0;
   if(order>Date.now()+5*60000)return false;
   const previous=window.__nrSWResourceStates.get(url.href);
@@ -3865,7 +3865,7 @@ function resolveSourceLabel(){
       color = '#a8d5e0'; isLive = false;
     }
     return { typeLabel, freshnessLabel, combined, shortCombined, color, isRealObserved: _isRealObserved, ageHours: _ageH, isLive };
-  } catch(_e) {
+  } catch(_e) { globalThis.NRDiagnostics?.record('catch.1','recoverable');
     return { typeLabel:'—', freshnessLabel:'—', combined:'—', shortCombined:'—', color:'var(--dim)', isRealObserved:false, ageHours:null, isLive:false };
   }
 }
@@ -4484,7 +4484,7 @@ function _saveGHistory(g){
       for (const k of keys.slice(0, keys.length - 90)) delete daily[k];
     }
     localStorage.setItem(dayKey, JSON.stringify(daily));
-  }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+  }catch(e){ globalThis.NRDiagnostics?.record('catch.2','recoverable'); if(window._DEBUG)console.warn('[silent]:',e.message)}
 }
 
 // v87.19 U4: best/worst days of past 30 days
@@ -4557,7 +4557,7 @@ function _getBestWorstDays(){
     }
 
     return { best: {date:best[0], g:best[1]}, worst: {date:worst[0], g:worst[1]}, total: hist.length, source: hist.some(x=>x[2]==='27dComputed') ? '_27dComputed' : hist[0][2], fwdPeak };
-  }catch(e){ return null; }
+  }catch(e){ globalThis.NRDiagnostics?.record('catch.3','recoverable');  return null; }
 }
 
 function renderBestWorstDays(){
@@ -4609,7 +4609,7 @@ function _getGDelta(){
       g3h:  best3h  ? best3h.g   : null,
       g24h: best24h ? best24h.g  : null
     };
-  }catch(e){return {d3h:null, d24h:null, t3h:null, t24h:null};}
+  }catch(e){ globalThis.NRDiagnostics?.record('catch.4','recoverable'); return {d3h:null, d24h:null, t3h:null, t24h:null};}
 }
 
 // v88.8.83-fp162: per-component day-over-day diff — запит Kyrylo "Formula Audit":
@@ -4642,7 +4642,7 @@ function _getComponentDelta(){
       Pi:  _d(curAi.Pi, best.ai.Pi),
       Di:  _d(curAi.Di, best.ai.Di)
     };
-  }catch(e){ return null; }
+  }catch(e){ globalThis.NRDiagnostics?.record('catch.5','recoverable');  return null; }
 }
 function _renderComponentDeltaCard(){
   const box = document.getElementById('componentDeltaCard');
@@ -4712,7 +4712,7 @@ function _renderChangeLog(){
           <div style="margin-top:4px;font-size:10px;color:var(--faint)">Показано останні 5 з ${events.length} стрибків ≥0.8 за 48г. Це реальні зміни вхідних даних (NOAA), не збій програми.</div>
         </div>
       </details>`;
-  }catch(e){ box.style.display='none'; }
+  }catch(e){ globalThis.NRDiagnostics?.record('catch.6','recoverable');  box.style.display='none'; }
 }
 
 document.addEventListener('DOMContentLoaded',()=>{
@@ -4771,12 +4771,12 @@ document.addEventListener('DOMContentLoaded',()=>{
           pre.textContent = out;
           document.body.appendChild(pre);
           document.body.appendChild(close);
-        } catch(err) {
+        } catch(err) { globalThis.NRDiagnostics?.record('catch.7','recoverable');
           console.error('[?debug] dump failed:', err);
         }
       }, 2500).start();
     }
-  } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+  } catch(e){ globalThis.NRDiagnostics?.record('catch.8','recoverable'); if(window._DEBUG)console.warn('[silent]:',e.message)}
 });
 
 // v88.9.32-fp213 FIX-CRITICAL (аудит-раунд-3, Problem 1): попередня версія
@@ -4810,7 +4810,7 @@ if ('serviceWorker' in navigator) {
   const _swControlledAtBoot = Boolean(navigator.serviceWorker.controller);
   window.addEventListener('load', () => {
     // v87.1 NFR: refresh freshness badge every 60s (дані старіють без оновлення)
-    SAFE_INTERVAL(function(){ try{_renderFreshnessState();}catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)} }, 60000).start();
+    SAFE_INTERVAL(function(){ try{_renderFreshnessState();}catch(e){ globalThis.NRDiagnostics?.record('catch.9','recoverable'); if(window._DEBUG)console.warn('[silent]:',e.message)} }, 60000).start();
 
     // fp117: use explicit relative SW path and swallow async update rejections (404 should not surface as UI error)
     navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' })
@@ -5038,7 +5038,7 @@ document.addEventListener('DOMContentLoaded', () => {
         b.classList.toggle('active', b.dataset.p === _activeProfile);
       });
     }
-  } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+  } catch(e){ globalThis.NRDiagnostics?.record('catch.10','recoverable'); if(window._DEBUG)console.warn('[silent]:',e.message)}
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -5075,22 +5075,22 @@ window._vapid_public_key = 'BDGLLdncnSezr6esT8pHHOFdSn74BNnf5vHyTMX_qcYq9nFXdIPT
 // v88.6.9: safe localStorage helpers (handle quota / private mode / disabled storage)
 function _gauthLsSet(k, v){
   try { localStorage.setItem(k, v); return true; }
-  catch(e){ console.warn('[GAuth] localStorage.setItem failed:', k, e.message); return false; }
+  catch(e){ globalThis.NRDiagnostics?.record('catch.11','recoverable');  console.warn('[GAuth] localStorage.setItem failed:', k, e.message); return false; }
 }
 function _gauthLsGet(k){
   try { return localStorage.getItem(k); }
-  catch(e){ console.warn('[GAuth] localStorage.getItem failed:', k, e.message); return null; }
+  catch(e){ globalThis.NRDiagnostics?.record('catch.12','recoverable');  console.warn('[GAuth] localStorage.getItem failed:', k, e.message); return null; }
 }
 function _gauthLsRemove(k){
   try { localStorage.removeItem(k); }
-  catch(e){ console.warn('[GAuth] localStorage.removeItem failed:', k, e.message); }
+  catch(e){ globalThis.NRDiagnostics?.record('catch.13','recoverable');  console.warn('[GAuth] localStorage.removeItem failed:', k, e.message); }
 }
 
 const GAuth = {
   getToken(){ return _gauthLsGet(GAUTH_TOKEN_KEY); },
   getUser(){
     try { return JSON.parse(_gauthLsGet(GAUTH_USER_KEY) || 'null'); }
-    catch(e){ return null; }
+    catch(e){ globalThis.NRDiagnostics?.record('catch.14','recoverable');  return null; }
   },
   isAuthenticated(){ return !!this.getToken(); },
   getTier(){ return this.getUser()?.tier || 'free'; },
@@ -5103,12 +5103,12 @@ const GAuth = {
         method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ email, password, locale: (_gauthLsGet('gindex_lang')||'uk') }),
       });
-    } catch(netErr){
+    } catch(netErr){ globalThis.NRDiagnostics?.record('catch.15','recoverable');
       throw new Error('Сервер недоступний. Перевір інтернет і спробуй знову.');
     }
     let data;
     try { data = await r.json(); }
-    catch(parseErr){ throw new Error('Невірна відповідь сервера.'); }
+    catch(parseErr){ globalThis.NRDiagnostics?.record('catch.16','recoverable');  throw new Error('Невірна відповідь сервера.'); }
     if (!r.ok) throw new Error(data.error?.message || 'Signup failed');
     if (!_gauthLsSet(GAUTH_TOKEN_KEY, data.session_token)) {
       throw new Error('Не вдалося зберегти сесію (storage недоступний).');
@@ -5125,12 +5125,12 @@ const GAuth = {
         method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ email, password }),
       });
-    } catch(netErr){
+    } catch(netErr){ globalThis.NRDiagnostics?.record('catch.17','recoverable');
       throw new Error('Сервер недоступний. Перевір інтернет і спробуй знову.');
     }
     let data;
     try { data = await r.json(); }
-    catch(parseErr){ throw new Error('Невірна відповідь сервера.'); }
+    catch(parseErr){ globalThis.NRDiagnostics?.record('catch.18','recoverable');  throw new Error('Невірна відповідь сервера.'); }
     if (!r.ok) throw new Error(data.error?.message || 'Login failed');
     if (!_gauthLsSet(GAUTH_TOKEN_KEY, data.session_token)) {
       throw new Error('Не вдалося зберегти сесію (storage недоступний).');
@@ -5149,12 +5149,12 @@ const GAuth = {
         method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ email }),
       });
-    } catch(netErr){
+    } catch(netErr){ globalThis.NRDiagnostics?.record('catch.19','recoverable');
       throw new Error('Сервер недоступний. Перевір інтернет і спробуй знову.');
     }
     let data;
     try { data = await r.json(); }
-    catch(parseErr){ throw new Error('Невірна відповідь сервера.'); }
+    catch(parseErr){ globalThis.NRDiagnostics?.record('catch.20','recoverable');  throw new Error('Невірна відповідь сервера.'); }
     if (!r.ok) throw new Error(data.error?.message || 'Forgot-password failed');
     return data;
   },
@@ -5167,12 +5167,12 @@ const GAuth = {
         method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ token, new_password: newPassword }),
       });
-    } catch(netErr){
+    } catch(netErr){ globalThis.NRDiagnostics?.record('catch.21','recoverable');
       throw new Error('Сервер недоступний. Перевір інтернет і спробуй знову.');
     }
     let data;
     try { data = await r.json(); }
-    catch(parseErr){ throw new Error('Невірна відповідь сервера.'); }
+    catch(parseErr){ globalThis.NRDiagnostics?.record('catch.22','recoverable');  throw new Error('Невірна відповідь сервера.'); }
     if (!r.ok) throw new Error(data.error?.message || 'Reset-password failed');
     return data;
   },
@@ -5185,12 +5185,12 @@ const GAuth = {
         method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ token }),
       });
-    } catch(netErr){
+    } catch(netErr){ globalThis.NRDiagnostics?.record('catch.23','recoverable');
       throw new Error('Сервер недоступний. Перевір інтернет і спробуй знову.');
     }
     let data;
     try { data = await r.json(); }
-    catch(parseErr){ throw new Error('Невірна відповідь сервера.'); }
+    catch(parseErr){ globalThis.NRDiagnostics?.record('catch.24','recoverable');  throw new Error('Невірна відповідь сервера.'); }
     if (!r.ok) throw new Error(data.error?.message || 'Email verification failed');
     return data;
   },
@@ -5341,7 +5341,7 @@ const AuthModal = {
         await GAuth.forgotPassword(email);
         ok.textContent = '✓ Якщо цей email зареєстрований — на нього надіслано посилання для скидання пароля.';
         ok.style.display = 'block';
-      } catch(e) {
+      } catch(e) { globalThis.NRDiagnostics?.record('catch.25','recoverable');
         err.textContent = e.message || String(e); err.style.display = 'block';
       } finally {
         btn.disabled = false; btn.textContent = 'Надіслати посилання';
@@ -5368,7 +5368,7 @@ const AuthModal = {
         ok.style.display = 'block';
         AuthModal._resetToken = null;
         setTimeout(() => AuthModal.switchTab('login'), 2000);
-      } catch(e) {
+      } catch(e) { globalThis.NRDiagnostics?.record('catch.26','recoverable');
         const msg = e.message || String(e);
         err.textContent = msg.toLowerCase().includes('invalid or expired')
           ? 'Посилання недійсне або протерміноване — запроси нове через "Забули пароль?"'
@@ -5399,7 +5399,7 @@ const AuthModal = {
         GAuth.refreshUI();
         setTimeout(() => AuthModal.hide(), 2500);
       }
-    } catch(e) {
+    } catch(e) { globalThis.NRDiagnostics?.record('catch.27','recoverable');
       const msg = e.message || String(e);
       if (msg.toLowerCase().includes('email already')) err.textContent = 'Email вже зареєстровано. Спробуй увійти.';
       else if (msg.toLowerCase().includes('invalid credentials')) err.textContent = 'Невірний email або пароль';
@@ -5473,7 +5473,7 @@ window.GAuth = GAuth;
 window.AuthModal = AuthModal;
 
 // Auto-init SUPA when DOM ready (no-op у v88.6.9 — kept for backward compat)
-document.addEventListener('DOMContentLoaded', () => { try{ SUPA.init(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)} });
+document.addEventListener('DOMContentLoaded', () => { try{ SUPA.init(); }catch(e){ globalThis.NRDiagnostics?.record('catch.28','recoverable'); if(window._DEBUG)console.warn('[silent]:',e.message)} });
 
 // ═══════════════════════════════════════════════════════════════════════════
 // v88.8.18 SOUND NOTIFICATIONS — м'які тони через Web Audio API
@@ -5491,7 +5491,7 @@ const GIndexSound = {
     if (this.ctx) return this.ctx;
     try {
       this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-    } catch(e) { return null; }
+    } catch(e) { globalThis.NRDiagnostics?.record('catch.29','recoverable');  return null; }
     return this.ctx;
   },
 
@@ -5556,7 +5556,7 @@ const GIndexSound = {
   fire(eventKey) {
     if (!this.enabled) return;
     if (this.TONES[eventKey]) {
-      try { this.TONES[eventKey](); } catch(e) {
+      try { this.TONES[eventKey](); } catch(e) { globalThis.NRDiagnostics?.record('catch.30','recoverable');
         if (window._DEBUG) console.warn('[GIndexSound]:', e.message);
       }
     }
@@ -5614,7 +5614,7 @@ const GIndexSound = {
   init() {
     try {
       this.enabled = localStorage.getItem('gindex_sound_enabled') === '1';
-    } catch(e) { this.enabled = false; }
+    } catch(e) { globalThis.NRDiagnostics?.record('catch.31','recoverable');  this.enabled = false; }
     this._refreshButton();
   },
 };
@@ -6199,7 +6199,7 @@ const PushModal = {
       await updatePushButtonState();
       if(msg){ msg.textContent = '✓ Готово!'; msg.style.color = '#2bd47d'; }
       setTimeout(() => PushModal.show(), 800); // перерендерити у subscribed-стан
-    }catch(e){
+    }catch(e){ globalThis.NRDiagnostics?.record('catch.32','recoverable');
       if(msg){ msg.textContent = 'Помилка: ' + (e.message || e); msg.style.color = '#ff6b6b'; }
     }
   },
@@ -6208,7 +6208,7 @@ const PushModal = {
       await PUSH.unsubscribe();
       await updatePushButtonState();
       setTimeout(() => PushModal.show(), 300);
-    }catch(e){ showToast('Помилка відписки: ' + (e.message || e), 'error'); }
+    }catch(e){ globalThis.NRDiagnostics?.record('catch.33','recoverable');  showToast('Помилка відписки: ' + (e.message || e), 'error'); }
   }
 };
 
@@ -6228,7 +6228,7 @@ async function loadFutureCalendarAdvisory(){
     if(!response.ok) throw new Error('HTTP '+response.status);
     const doc = await response.json();
     window._futureCalendarAdvisory = (doc && doc.days) || {};
-  }catch(error){
+  }catch(error){ globalThis.NRDiagnostics?.record('catch.34','recoverable');
     console.warn('[calendar advisory]', error.message);
     window._futureCalendarAdvisory = {};
   }
@@ -6287,7 +6287,7 @@ let _userLat = 50.45, _userLon = 30.52;
   try{
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
     window._iana = tz || 'UTC';
-  }catch(e){ window._iana = 'UTC'; }
+  }catch(e){ globalThis.NRDiagnostics?.record('catch.35','recoverable');  window._iana = 'UTC'; }
 })();
 
 let _geoSource='default';
@@ -6300,7 +6300,7 @@ function readCachedGeo(){
 function refreshGeoDependents(){
   _lastPanchCtx=null;
   window.__p3RahuCache=null;
-  try{_sunRiseSetCache.clear();renderPanchanga(new Date());}catch(e){if(window._DEBUG)console.warn('[geo] render:',e.message);}
+  try{_sunRiseSetCache.clear();renderPanchanga(new Date());}catch(e){ globalThis.NRDiagnostics?.record('catch.36','recoverable'); if(window._DEBUG)console.warn('[geo] render:',e.message);}
   try{syncHero();}catch(_e){ window.NRDiagnostics?.record('legacy.catch.50','recoverable'); }
   window.dispatchEvent(new Event('gindex:location-changed'));
 }
@@ -6313,7 +6313,7 @@ function initGeolocation(){
     lsSet('last_geo_lat',String(lat));lsSet('last_geo_lon',String(lon));
     _updateHoraCoordLabel();refreshGeoDependents();
   },()=>{initCachedGeolocation();refreshGeoDependents();},{timeout:5000,maximumAge:0});
-  }catch(_e){initCachedGeolocation();}
+  }catch(_e){ globalThis.NRDiagnostics?.record('catch.37','recoverable'); initCachedGeolocation();}
 }
 // No permission prompt at boot. Saved coordinates are labelled as saved.
 function initCachedGeolocation(){
@@ -6343,8 +6343,8 @@ window.__testTimezone = function(){
   const info = {
     iana: window._iana || '(not set)',
     offset_minutes: -now.getTimezoneOffset(),
-    offset_label: (()=>{ try{ return tzOffsetLabel(now); }catch(e){ return '?'; } })(),
-    iana_label: (()=>{ try{ return ianaTzLabel(now); }catch(e){ return '?'; } })(),
+    offset_label: (()=>{ try{ return tzOffsetLabel(now); }catch(e){ globalThis.NRDiagnostics?.record('catch.38','recoverable');  return '?'; } })(),
+    iana_label: (()=>{ try{ return ianaTzLabel(now); }catch(e){ globalThis.NRDiagnostics?.record('catch.39','recoverable');  return '?'; } })(),
     user_lat: _userLat,
     user_lon: _userLon,
     hora_label_dom: (document.getElementById('horaCoordLabel')||{}).textContent || '(not rendered)'
@@ -6383,7 +6383,7 @@ function kyivOffsetHoursAt(date){
     }).formatToParts(d).reduce((a, p) => { a[p.type] = p.value; return a; }, {});
     const _asUTC = Date.UTC(+_parts.year, +_parts.month - 1, +_parts.day, +_parts.hour, +_parts.minute, +_parts.second);
     return (_asUTC - d.getTime()) / 3600000;
-  } catch(e) { return _kyivFallbackOffsetHours(date); }
+  } catch(e) { globalThis.NRDiagnostics?.record('catch.40','recoverable');  return _kyivFallbackOffsetHours(date); }
 }
 window.kyivOffsetHoursAt = kyivOffsetHoursAt;
 // Цілий офсет для конверсій "година слоту" (3-годинні межі — patern `(h+off)%24`).
@@ -6432,7 +6432,7 @@ function todayKyivStr(){
   try {
     return window.NRPresentation.dateFormatter('en-CA', { timeZone: 'Europe/Kyiv',
       year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
-  } catch(e) {
+  } catch(e) { globalThis.NRDiagnostics?.record('catch.41','recoverable');
     const now = new Date();
     return fmtDate(new Date(now.getTime() + _kyivFallbackOffsetHours(now) * 3600000));
   }
@@ -6468,7 +6468,7 @@ const el = id => document.getElementById(id);
     } else {
       if(window._DEBUG) console.log('[DEBUG] enabled — verbose logging on');
     }
-  } catch(e){ window._DEBUG = false; }
+  } catch(e){ globalThis.NRDiagnostics?.record('catch.42','recoverable');  window._DEBUG = false; }
 })();
 
 // ═══ v88.6.9: Non-blocking toast notification system (replaces alert/confirm) ═══
@@ -6637,7 +6637,7 @@ const sunriseUTC = d => {
     const unavailable = noonUTC(d);
     unavailable._solarUnavailable = true;
     return unavailable;
-  } catch(e) {
+  } catch(e) { globalThis.NRDiagnostics?.record('catch.43','recoverable');
     if (window._DEBUG) console.warn('[sunriseUTC_Meeus fallback]:', e.message);
   }
   // Останній fallback — лише якщо навіть Meeus-розрахунок впав (не мало б статись)
@@ -6704,7 +6704,7 @@ async function loadFutureKp(){
       _futureKp=data.kp;
       _futureKpMeta={generated:data.generated||null,source_log:data.source_log||[],points:Object.values(_futureKp)};
       return _futureKp;
-    }catch(e){
+    }catch(e){ globalThis.NRDiagnostics?.record('catch.44','recoverable');
       if(epoch!==_futureKpEpoch)return loadFutureKp();
       _futureKpMeta={error:e.message,source_log:[],points:[]};
       return {}; // Leave the store null so the next request can recover.
@@ -6788,7 +6788,7 @@ async function loadTanitaPromotionGate(){
     const g=await r.json();
     if(Number(g.score_effect)!==0 || g.production_change!==false) throw new Error('unsafe Tanita gate contract');
     _tanitaPromotionGate=g;
-  }catch(_e){
+  }catch(_e){ globalThis.NRDiagnostics?.record('catch.45','recoverable');
     _tanitaPromotionGate={promotion:{allowed:false,required_frozen_independent_outcomes:100},evidence:{prospective:{independent_real_outcomes:0,required:100}}};
   }
   renderTanitaShadow();
@@ -6943,7 +6943,7 @@ async function loadKpHourlyAlert(){
         '</tbody></table></div>'+
       '<div style="margin-top:7px;color:var(--dim)">Сформовано: '+generatedLabel+' · <span style="color:#9fd1ff">синій = Kp нижче 4, лише геомагнітний показник</span>; Kp≥4 — підвищена активність; Kp≥5 — поріг G1. Колір Kp не означає сприятливий день. Погодинний прогноз не переписує денний PDF-reference або оперативний стан; він може лише активувати окремий safety-veto після досягнення визначеного порога.</div>';
     if(level>0){const panel=document.getElementById('kpHourlyPanel');if(panel)panel.open=true;}
-  }catch(e){
+  }catch(e){ globalThis.NRDiagnostics?.record('catch.46','recoverable');
     sum.textContent='🛰 Погодинний Kp тимчасово недоступний';
     body.textContent=e.message;
   }
@@ -7007,7 +7007,7 @@ async function loadSourceHealth(){
     if(sum){ sum.textContent='📡 Джерела: Kp зараз '+kpNowLabel+' · Kp горизонт '+kpHorizonLabel+' · space '+swLabel+(hard.length?' · BLOCKED':warnings.length?' · WARN':' · OK'); sum.style.color=hard.length?'#ff8d8d':warnings.length?'#ffd37a':'#9be7bd'; }
     if(body) body.innerHTML='<b>Kp зараз:</b> '+kpNowLabel+'<br><b>Kp горизонт:</b> '+kpHorizonLabel+' <span style="color:var(--faint)">(кількість дат, не значення Kp; synthetic не є прогнозом NOAA)</span><br><b>Космічна погода:</b> '+swLabel+'<br><b>Правило:</b> synthetic/last-good позначаються явно; відсутні дані не стають нулем; advisory не змінює G.';
     const panel=document.getElementById('sourceHealthPanel'); if(panel&&(hard.length||warnings.length)) panel.open=true;
-  }catch(e){ if(sum) sum.textContent='📡 Статус джерел недоступний'; if(body) body.textContent=e.message; }
+  }catch(e){ globalThis.NRDiagnostics?.record('catch.47','recoverable');  if(sum) sum.textContent='📡 Статус джерел недоступний'; if(body) body.textContent=e.message; }
 }
 async function loadSpaceWeatherAccumulated(){
   if(_spaceWeatherAccumulated!==null) return _spaceWeatherAccumulated;
@@ -7051,7 +7051,7 @@ async function loadSpaceWeatherAccumulated(){
       const panel=document.getElementById('spaceWeatherAccumulatedPanel'); if(panel) panel.open=true;
     }
     updateSpaceWeatherDecisionGuard();
-  }catch(e){
+  }catch(e){ globalThis.NRDiagnostics?.record('catch.48','recoverable');
     _spaceWeatherAccumulated={};
     if(sum) sum.textContent='🛰 Накопичений space-weather context недоступний';
     if(body) body.textContent='Production G не змінено. '+e.message;
@@ -7085,7 +7085,7 @@ async function loadAiaVernadsky(){
       '<div style="margin-top:4px;color:#ffd37a"><b>'+(gate.passed?'Gate пройдено':'Gate НЕ пройдено')+'.</b> AIA не змінює G, PDF або рішення дня; score_effect=0.</div>'+
       (stale?'<div style="margin-top:3px;color:#ff9f9f">Дані старші 4 діб — використовувати лише як архівний контекст.</div>':'')+
       '<div style="margin-top:4px;color:var(--dim)">INTERMAGNET AIA · лише завершені UTC-доби · прогноз використовує тільки лаги 1–2 дні.</div>';
-  }catch(e){
+  }catch(e){ globalThis.NRDiagnostics?.record('catch.49','recoverable');
     _aiaVernadsky={};
     if(sum) sum.textContent='🧲 AIA «Академік Вернадський» — дані недоступні';
     if(body) body.textContent='G не змінено. '+e.message;
@@ -7131,7 +7131,7 @@ async function loadBgsSpaceWeather(){
       (bgsStale?'<div style="margin-top:3px;color:#ff9f9f">Дані BGS старші 12 год: показано лише як архівний advisory.</div>':'')+'</div>';
     if(panel && flags.storm_g1_plus) panel.open=true;
     updateSpaceWeatherDecisionGuard();
-  } catch(e) {
+  } catch(e) { globalThis.NRDiagnostics?.record('catch.50','recoverable');
     _bgsSpaceWeather={};
     if(sum) sum.textContent='🌍 BGS advisory тимчасово недоступний';
     if(body) body.textContent='Production G не змінено. '+e.message;
@@ -7199,7 +7199,7 @@ async function _readOverrideDocument(token){
       response=await token.fetch('expert_overrides_v3.json?fresh='+Date.now(),{cache:'no-store'});
       if(!response.ok)throw new Error('HTTP '+response.status);
       if(response.headers?.get('x-gindex-delivery')==='cached')delivery='offline_fallback';
-    }catch(e){
+    }catch(e){ globalThis.NRDiagnostics?.record('catch.51','recoverable');
       if(!token.current())throw e;
       response=await token.fetch('expert_overrides_v3.json',{cache:'force-cache'});
       delivery='offline_fallback';
@@ -7268,7 +7268,7 @@ async function loadExpertDecisionRegistry(force = false){
       ' датах — exact '+pct(s.formula_exact)+', ±1 '+pct(s.formula_within_1)+', знак '+pct(s.formula_strict_sign)+
       '. У денному reference перевірений PDF має пріоритет над Engine fallback; Pᵢ не рахується другим голосом. Оперативну дію визначає обережніший safety-контур.';
     });
-  }catch(e){
+  }catch(e){ globalThis.NRDiagnostics?.record('catch.52','recoverable');
     _authorityFailure(token,e);
     if(!token.current())return _expertDecisionRegistry;
     if(_expertDecisionRegistry===null){_expertDecisionRegistry={};window._expertDecisionRegistry=_expertDecisionRegistry;}
@@ -7310,7 +7310,7 @@ async function loadAutoProspectiveStatus(){
     loadOutcomeLedgerStatus();
     loadSystemHealthStatus();
     loadModelQualityStatus();
-  } catch(e) {
+  } catch(e) { globalThis.NRDiagnostics?.record('catch.53','recoverable');
     _autoProspectiveStatus = {};
     if(el) el.textContent = 'Автоматичний shadow: статус тимчасово недоступний; production G не змінено.';
   }
@@ -7333,7 +7333,7 @@ async function loadTanitaReviewStatus(){
     try{ const ir=await fetch('TANITA_P0_REVIEW_IMPORT_STATUS_v1.json',{cache:'no-store'}); if(ir.ok){ const i=await ir.json(); el.textContent+=' · import: '+String(i.state||'unknown')+', labels '+Number(i.imported_labels||0)+', unclear '+Number(i.unclear_items||0); } }catch(_e){ window.NRDiagnostics?.record('legacy.catch.56','recoverable'); }
     try{ const hr=await fetch('TANITA_MANUAL_HOLDOUT_STATUS_v1.json',{cache:'no-store'}); if(hr.ok){ const h=await hr.json(); const c=h.counts||{}; el.textContent+=' · holdout: '+String(h.state||'unknown')+', '+Number(c.evaluated_test||0)+'/'+Number(c.test||0)+' test'; } }catch(_e){ window.NRDiagnostics?.record('legacy.catch.57','recoverable'); }
     return s;
-  }catch(e){ el.textContent='Tanita QA: статус недоступний; непідтверджені ознаки не застосовуються'; el.style.color='#ff7b82'; return null; }
+  }catch(e){ globalThis.NRDiagnostics?.record('catch.54','recoverable');  el.textContent='Tanita QA: статус недоступний; непідтверджені ознаки не застосовуються'; el.style.color='#ff7b82'; return null; }
 }
 async function loadModelQualityStatus(){
   const el=document.getElementById('modelQualityBadge');
@@ -7349,7 +7349,7 @@ async function loadModelQualityStatus(){
     el.style.color=safe?'#43e6a7':'#ffd37a';
     el.style.borderColor=safe?'#43e6a7':'#ffd37a';
     return q;
-  }catch(e){
+  }catch(e){ globalThis.NRDiagnostics?.record('catch.55','recoverable');
     el.textContent='📊 Актуальні метрики тимчасово недоступні — production G не змінено';
     el.title='MODEL_QUALITY_AUDIT_v1.json: '+e.message;
     el.style.color='#ff7b82'; el.style.borderColor='#ff7b82';
@@ -7385,7 +7385,7 @@ async function loadSystemHealthStatus(){
     try{
       r=await fetch('SYSTEM_HEALTH_STATUS_v1.json?fresh='+Date.now(),{cache:'no-store'});
       if(!r.ok) throw new Error('HTTP '+r.status);
-    }catch(_freshErr){
+    }catch(_freshErr){ globalThis.NRDiagnostics?.record('catch.56','recoverable');
       r=await fetch('SYSTEM_HEALTH_STATUS_v1.json',{cache:'force-cache'});
     }
     if(!r.ok) throw new Error('HTTP '+r.status);
@@ -7447,7 +7447,7 @@ async function loadSystemHealthStatus(){
       }
     }catch(_e){ window.NRDiagnostics?.record('legacy.catch.58','recoverable'); }
     return s;
-  }catch(e){
+  }catch(e){ globalThis.NRDiagnostics?.record('catch.57','recoverable');
     el.style.display='block'; el.style.color='#ff7b82'; el.style.borderColor='rgba(255,90,100,.48)';
     window.__nrSystemHealth=null;
     if(typeof window.renderCompetitiveCover==='function')window.renderCompetitiveCover();
@@ -7478,7 +7478,7 @@ async function loadOutcomeLedgerStatus(){
       }
     } catch(_e){ window.NRDiagnostics?.record('legacy.catch.59','recoverable'); }
     return s;
-  }catch(e){
+  }catch(e){ globalThis.NRDiagnostics?.record('catch.58','recoverable');
     el.textContent += ' \u00b7 журнал реальних outcomes тимчасово недоступний';
     return null;
   }
@@ -7493,7 +7493,7 @@ async function loadStrongRawPolicy(force = false){
     const p=await r.json();
     if(!p || p.condition!=='abs(expert_raw_sum) >= 3' || Number(p.score_effect)!==0)throw new Error('invalid policy');
     _commitAuthority(token,()=>{_strongRawPolicy=p;_authoritySuccess(token);});
-  }catch(e){_authorityFailure(token,e);}finally{token.finish();}
+  }catch(e){ globalThis.NRDiagnostics?.record('catch.59','recoverable'); _authorityFailure(token,e);}finally{token.finish();}
   return _strongRawPolicy;
 }
 async function loadExpertCalc(force = false){
@@ -7509,7 +7509,7 @@ async function loadExpertCalc(force = false){
       window._expertCalcLoadStatus=Object.keys(_expertCalc).length?'loaded':'invalid';
       _authoritySuccess(token);
     });
-  }catch(e){
+  }catch(e){ globalThis.NRDiagnostics?.record('catch.60','recoverable');
     _authorityFailure(token,e);
     if(token.current())window._expertCalcLoadStatus=_expertCalc?'stale':'missing';
   }finally{token.finish();}
@@ -7540,7 +7540,7 @@ async function loadExpertOverrides(force = false){
       window._expertOverridesLoadStatus='loaded';_authoritySuccess(token);
       if(delivery==='offline_fallback')window.__authoritySourceState.overrides.stale=true;
     });
-  }catch(e){
+  }catch(e){ globalThis.NRDiagnostics?.record('catch.61','recoverable');
     _authorityFailure(token,e);
     if(token.current()){
       _publishExpertOverrides();
@@ -7567,7 +7567,7 @@ async function loadDailyMaster(){
       return _dailyMaster;
     }
     _dailyMaster = data.days || {};
-  } catch(e){
+  } catch(e){ globalThis.NRDiagnostics?.record('catch.62','recoverable');
     if(window._DEBUG) console.warn('[target-contract] daily_master.json unavailable:', e.message);
     _dailyMaster = {};
   }
@@ -7653,16 +7653,16 @@ async function checkDataManifest(){
         last3D && Array.isArray(last3D.days) && last3D.days.length) {
       render3Day(last3D);
     }
-  } catch(e) { console.warn('[fp310 horizon refresh: 3-day]', e); }
+  } catch(e) { globalThis.NRDiagnostics?.record('catch.63','recoverable');  console.warn('[fp310 horizon refresh: 3-day]', e); }
   try {
     if (typeof renderWeekSummary === 'function') renderWeekSummary();
-  } catch(e) { console.warn('[fp310 horizon refresh: week]', e); }
+  } catch(e) { globalThis.NRDiagnostics?.record('catch.64','recoverable');  console.warn('[fp310 horizon refresh: week]', e); }
   try {
     if (typeof render27Day === 'function' && typeof _last27Rows !== 'undefined' &&
         Array.isArray(_last27Rows) && _last27Rows.length) {
       render27Day(_last27Rows, (typeof last3D !== 'undefined' ? last3D : null));
     }
-  } catch(e) { console.warn('[fp310 horizon refresh: 27-day]', e); }
+  } catch(e) { globalThis.NRDiagnostics?.record('catch.65','recoverable');  console.warn('[fp310 horizon refresh: 27-day]', e); }
 }
 window.checkDataManifest = checkDataManifest;
 
@@ -7821,7 +7821,7 @@ function renderUnifiedIndicesPanel(){
         vEl.innerHTML = '<span style="color:var(--faint)">даних недостатньо</span>';
       }
     }
-  }catch(e){ if(window._DEBUG) console.warn('[unifiedIndicesPanel]', e.message); }
+  }catch(e){ globalThis.NRDiagnostics?.record('catch.66','recoverable');  if(window._DEBUG) console.warn('[unifiedIndicesPanel]', e.message); }
 }
 // v88.8.51-fp128: regime-first hero pill — режим показується під headline, домінує над score
 function renderHeroRegimePill(){
@@ -7849,7 +7849,7 @@ async function loadBulletinV2(){
     if(!resp.ok) throw new Error('HTTP ' + resp.status);
     const data = await resp.json();
     _bulletinV2 = data.days || [];
-  } catch(e){
+  } catch(e){ globalThis.NRDiagnostics?.record('catch.67','recoverable');
     if(window._DEBUG) console.warn('[fp87] bulletin_v2.json not available:', e.message);
     _bulletinV2 = [];
   }
@@ -7881,7 +7881,7 @@ async function loadChronoPanel(){
     const resp = await fetch('chrono_panel.json', { cache: 'default' });
     if(!resp.ok) throw new Error('HTTP ' + resp.status);
     _chronoPanel = await resp.json();
-  } catch(e){
+  } catch(e){ globalThis.NRDiagnostics?.record('catch.68','recoverable');
     if(window._DEBUG) console.warn('[fp87] chrono_panel.json not available:', e.message);
     _chronoPanel = null;
   }
@@ -8042,7 +8042,7 @@ async function loadEngineScores(force = false){
     try {
       const aliases=await window.EngineTagParser.loadAliasSpec('./engine_tag_aliases_v1.json');
       if(token.current())window._engineTagAliasSpec=aliases;
-    } catch(aliasErr) {
+    } catch(aliasErr) { globalThis.NRDiagnostics?.record('catch.69','recoverable');
       console.warn('[engine-tags] alias spec unavailable; legacy UI fallback active:', aliasErr.message);
     }
   }
@@ -8076,7 +8076,7 @@ async function loadEngineScores(force = false){
         }
         if(window._DEBUG && _patched) console.log('[fp56-P8] real Kp applied to ' + _patched + ' synthetic days');
       }
-    } catch(_e){ if(window._DEBUG) console.warn('[fp56-P8] future_kp apply failed:', _e.message); }
+    } catch(_e){ globalThis.NRDiagnostics?.record('catch.70','recoverable');  if(window._DEBUG) console.warn('[fp56-P8] future_kp apply failed:', _e.message); }
     // v88.8.35-fp56-P8: annual_2026_27.json — астрономічний каркас (Swiss Ephemeris, звірено drikpanchang 10.06.2026).
     // Для дат ПОЗА engine_scores (2027+) даємо cal_score як попередній бал з міткою annual_fallback.
     // Це НЕ рішення дня — лише каркас до появи бюлетеня/engine. Freeze не порушено (окремий файл).
@@ -8121,7 +8121,7 @@ async function loadEngineScores(force = false){
         }
         if(window._DEBUG) console.log('[fp77] annual: +' + _added + ' fallback, +' + _enriched + ' enriched (nak+tithi added)');
       }
-    } catch(_e){ if(window._DEBUG) console.warn('[fp56-P8] annual load failed:', _e.message); }
+    } catch(_e){ globalThis.NRDiagnostics?.record('catch.71','recoverable');  if(window._DEBUG) console.warn('[fp56-P8] annual load failed:', _e.message); }
     if(!token.current())return _engineScores;
     _commitAuthority(token,()=>{
     _engineScores=scores;
@@ -8170,12 +8170,12 @@ async function loadEngineScores(force = false){
           console.error('[V25-fu30] Engine scores fully expired');
         }
       }
-    } catch(expErr){
+    } catch(expErr){ globalThis.NRDiagnostics?.record('catch.72','recoverable');
       console.warn('[V25-fu30] expiration check failed:', expErr.message);
     }
     });
     return _engineScores;
-  } catch(e){
+  } catch(e){ globalThis.NRDiagnostics?.record('catch.73','recoverable');
     _authorityFailure(token,e);
     if(!token.current())return _engineScores;
     console.warn('[v87.61] engine_scores.json fetch failed:', e.message);
@@ -8456,7 +8456,7 @@ function getEngineScore(dateObj){
           // eng і kp_synthetic не міняємо — це validated tag-based score
         };
       }
-    } catch(e) { if(window._DEBUG) console.warn('[v88.7 outdated marker]', e.message); }
+    } catch(e) { globalThis.NRDiagnostics?.record('catch.74','recoverable');  if(window._DEBUG) console.warn('[v88.7 outdated marker]', e.message); }
   }
   return snapshot;
 }
@@ -8895,7 +8895,7 @@ function moonPhaseAngle(date){
     const sunLon = calcSunLongitude(__nrUtcJdToTt(jde));
     const elong = ((moonLon - sunLon) % 360 + 360) % 360;
     if (isFinite(elong)) return elong;
-  } catch(e){ if(window._DEBUG) console.warn('[moonPhaseAngle Meeus fallback]:', e.message); }
+  } catch(e){ globalThis.NRDiagnostics?.record('catch.75','recoverable');  if(window._DEBUG) console.warn('[moonPhaseAngle Meeus fallback]:', e.message); }
   // Останній fallback — лише якщо навіть Meeus-обчислення впало (не мало б статись)
   const age = moonAgeDays_simple(date);
   return (age / SYNODIC) * 360.0;
@@ -9021,7 +9021,7 @@ function withTimeout(work,ms,label){
 function _playContextSourceBlocked(url){
   if(!window.GINDEX_PLAY_CHANNEL)return false;
   let decoded=String(url);
-  for(let i=0;i<3;i++){try{const next=decodeURIComponent(decoded);if(next===decoded)break;decoded=next;}catch(_e){break;}}
+  for(let i=0;i<3;i++){try{const next=decodeURIComponent(decoded);if(next===decoded)break;decoded=next;}catch(_e){ globalThis.NRDiagnostics?.record('catch.76','recoverable'); break;}}
   return /(?:https?:)?\/\/(?:www\.)?(?:sidc\.be|gi\.alaska\.edu)\.?(?=[:/?#]|$)/i.test(decoded);
 }
 function fetchTextWithCORS(url,validate,options={}){
@@ -9053,7 +9053,7 @@ function fetchTextWithCORS(url,validate,options={}){
       try{
         const text=await Promise.race([(async()=>{const r=await fetch(endpoint,{cache:'no-store',signal:attempt.signal});if(!r.ok)throw new Error('HTTP '+r.status);return r.text();})(),expired]);
         cancelled();if(valid(text))return text;
-      }catch(e){cancelled();if(window._DEBUG)console.warn('[CORS]',e.message);}
+      }catch(e){ globalThis.NRDiagnostics?.record('catch.77','recoverable'); cancelled();if(window._DEBUG)console.warn('[CORS]',e.message);}
       finally{clearTimeout(attemptTimer);controller.signal.removeEventListener('abort',stop);window.__networkRequests.active--;window.__networkRequests.finished++;}
     }
     throw new Error('Всі проксі недоступні: '+url.slice(0,80));
@@ -9181,7 +9181,7 @@ async function indexIcsEventsForYears(years){
   try {
     const _qs = new URLSearchParams(location.search || '');
     if (_qs.get('onlineics') !== '1') return;
-  } catch(_e) { return; }
+  } catch(_e) { globalThis.NRDiagnostics?.record('catch.78','recoverable');  return; }
 
   const urls = [];
   for(const y of years){
@@ -9303,7 +9303,7 @@ window.__debugG = function(input, kpOverride){
       const nasa = _nasaEclipseCatalog(y);
       if(nasa) eclipsesByYear.set(y, nasa);
     }
-  } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+  } catch(e){ globalThis.NRDiagnostics?.record('catch.79','recoverable'); if(window._DEBUG)console.warn('[silent]:',e.message)}
   // Kp: priority (v87.58 fix — використовуємо реальні змінні з module scope):
   //   1. explicit kpOverride param
   //   2. _27dComputed entry по ds (охоплює 27 днів — від -3 до +~23 від today)
@@ -9340,7 +9340,7 @@ window.__debugG = function(input, kpOverride){
       try {
         const _lsKp = parseFloat(lsGet('last_kp_known'));
         if(isFinite(_lsKp)){ kp = _lsKp; kpSource = 'ls-cache'; }
-      } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+      } catch(e){ globalThis.NRDiagnostics?.record('catch.80','recoverable'); if(window._DEBUG)console.warn('[silent]:',e.message)}
     }
   }
   const r = computeAi(d, kp);
@@ -9382,7 +9382,7 @@ async function ensureEclipsesForYear(year){
   let text = '';
   try{
     text = await fetchTextWithCORS(`https://www.timeanddate.com/eclipse/${year}`);
-  }catch(e){ text=''; }
+  }catch(e){ globalThis.NRDiagnostics?.record('catch.81','recoverable');  text=''; }
 
   const months = {Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};
   // v85b-F5: Map<dateStr, type> instead of Set<dateStr>
@@ -9544,7 +9544,7 @@ function nearestPhysicalPlanetPair(dateUTC){
     const vb = Astronomy.GeoVector(best.b.body,later,true);
     const laterAngle = Astronomy.AngleBetween(va,vb);
     best.motion = isFinite(laterAngle) ? (laterAngle < best.angle-0.02 ? 'зближуються' : laterAngle > best.angle+0.02 ? 'розходяться' : 'майже без зміни') : 'рух не визначено';
-  }catch(_e){ best.motion='рух не визначено'; }
+  }catch(_e){ globalThis.NRDiagnostics?.record('catch.82','recoverable');  best.motion='рух не визначено'; }
   return best;
 }
 
@@ -9633,7 +9633,7 @@ function renderAstronomyEvents(dateUTC){
       pairSub.textContent = 'Кут не вигадується: буде показаний лише після готовності Astronomy Engine.';
       if(_astroEventsRetryCount<5){ _astroEventsRetryCount++; setTimeout(()=>renderAstronomyEvents(new Date()),1500); }
     }
-  }catch(e){
+  }catch(e){ globalThis.NRDiagnostics?.record('catch.83','recoverable');
     pairMain.textContent = 'Кутова пара тимчасово недоступна';
     pairSub.textContent = 'Помилка астрономічного модуля; score_effect=0. Інші показники не підміняють цей факт.';
   }
@@ -9645,7 +9645,7 @@ function renderAstronomyEvents(dateUTC){
       horaEl.innerHTML = seq.length>1
         ? `Традиційний Hora‑перехід: <strong>${seq[0].planet} → ${seq[1].planet}</strong> о ${seq[0].endLocal}. Це часовий символічний цикл, <strong>не фізичне зближення планет</strong>.`
         : 'Традиційний Hora‑перехід: дані тимчасово недоступні.';
-    }catch(_e){ horaEl.textContent='Традиційний Hora‑перехід: дані тимчасово недоступні.'; }
+    }catch(_e){ globalThis.NRDiagnostics?.record('catch.84','recoverable');  horaEl.textContent='Традиційний Hora‑перехід: дані тимчасово недоступні.'; }
   }
 }
 
@@ -10095,13 +10095,13 @@ function parseNoaaJson(text){
   return JSON.parse(normalized);
 }
 function _looksLikeNoaaArray(text){
-  try { return Array.isArray(parseNoaaJson(text)); } catch(_e) { return false; }
+  try { return Array.isArray(parseNoaaJson(text)); } catch(_e) { globalThis.NRDiagnostics?.record('catch.85','recoverable');  return false; }
 }
 
 async function fetchBzNow(signal){
   const url = 'https://services.swpc.noaa.gov/json/rtsw/rtsw_mag_1m.json';
   let text;
-  try { text = await fetchTextWithCORS(url, _looksLikeNoaaArray,{signal}); } catch(e){ console.warn('[v42] Bz fetch failed',e); return null; }
+  try { text = await fetchTextWithCORS(url, _looksLikeNoaaArray,{signal}); } catch(e){ globalThis.NRDiagnostics?.record('catch.86','recoverable');  console.warn('[v42] Bz fetch failed',e); return null; }
   try {
     const rows = parseNoaaJson(text);
     if(!Array.isArray(rows)||rows.length<1){ console.warn('[v42] Bz: unexpected format'); return null; }
@@ -10113,14 +10113,14 @@ async function fetchBzNow(signal){
       if(window._DEBUG) console.log('[fp269] RTSW Bz OK:',bz,'@',preferred.time_tag);
       return {bz,time:preferred.time_tag};
     }
-  } catch(e){ console.warn('[v42] Bz parse failed',e); }
+  } catch(e){ globalThis.NRDiagnostics?.record('catch.87','recoverable');  console.warn('[v42] Bz parse failed',e); }
   return null;
 }
 
 async function fetchVswNow(signal){
   const url = 'https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json';
   let text;
-  try { text = await fetchTextWithCORS(url, _looksLikeNoaaArray,{signal}); } catch(e){ console.warn('[v42] Vsw fetch failed',e); return null; }
+  try { text = await fetchTextWithCORS(url, _looksLikeNoaaArray,{signal}); } catch(e){ globalThis.NRDiagnostics?.record('catch.88','recoverable');  console.warn('[v42] Vsw fetch failed',e); return null; }
   try {
     const rows = parseNoaaJson(text);
     if(!Array.isArray(rows)||rows.length<1){ console.warn('[v42] Vsw: unexpected format'); return null; }
@@ -10132,7 +10132,7 @@ async function fetchVswNow(signal){
       if(window._DEBUG) console.log('[fp269] RTSW Vsw OK:',vsw,'@',preferred.time_tag);
       return {vsw,time:preferred.time_tag};
     }
-  } catch(e){ console.warn('[v42] Vsw parse failed',e); }
+  } catch(e){ globalThis.NRDiagnostics?.record('catch.89','recoverable');  console.warn('[v42] Vsw parse failed',e); }
   return null;
 }
 
@@ -10162,11 +10162,11 @@ async function fetchXrayNow(signal){
         return window._lastXray;
       }
     }
-  } catch(e) {
+  } catch(e) { globalThis.NRDiagnostics?.record('catch.90','recoverable');
     if(window._DEBUG) console.warn('[xray] same-origin snapshot unavailable:', e.message);
   }
   let text;
-  try { text = await fetchTextWithCORS(url, _looksLikeNoaaArray,{signal}); } catch(e){ console.warn('[v87.15] Xray fetch failed',e); return null; }
+  try { text = await fetchTextWithCORS(url, _looksLikeNoaaArray,{signal}); } catch(e){ globalThis.NRDiagnostics?.record('catch.91','recoverable');  console.warn('[v87.15] Xray fetch failed',e); return null; }
   try {
     const rows = parseNoaaJson(text);
     if(!Array.isArray(rows)||rows.length===0) return null;
@@ -10186,7 +10186,7 @@ async function fetchXrayNow(signal){
         return window._lastXray;
       }
     }
-  } catch(e){ console.warn('[v87.15] Xray parse failed',e); }
+  } catch(e){ globalThis.NRDiagnostics?.record('catch.92','recoverable');  console.warn('[v87.15] Xray parse failed',e); }
   return null;
 }
 
@@ -10236,7 +10236,7 @@ function computeConfidenceBand(kpNow, kpObsJson){
         }
       }
     }
-  }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+  }catch(e){ globalThis.NRDiagnostics?.record('catch.93','recoverable'); if(window._DEBUG)console.warn('[silent]:',e.message)}
   const eventUncertainty = 0.5;
   const totalDelta = Math.sqrt(kpDelta*kpDelta + eventUncertainty*eventUncertainty);
   return { delta: Math.round(totalDelta*10)/10, kpDelta: Math.round(kpDelta*10)/10 };
@@ -10278,7 +10278,7 @@ function resolveDataMode(){
 
   // Forecast synthetic flag — last3D._synthetic ставиться у renderQuick, коли NOAA 3-day упав
   let _fcastSynthetic = false;
-  try { _fcastSynthetic = !!(typeof last3D !== 'undefined' && last3D && last3D._synthetic); } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+  try { _fcastSynthetic = !!(typeof last3D !== 'undefined' && last3D && last3D._synthetic); } catch(e){ globalThis.NRDiagnostics?.record('catch.94','recoverable'); if(window._DEBUG)console.warn('[silent]:',e.message)}
 
   // Логіка пріоритету: offline Kp > scenario forecast > partial freshness > live
   if (_kpFresh === 'offline') return 'offline';
@@ -10491,7 +10491,7 @@ function computeCScore(kpNow, kpObsJson, ai, G, kpSrc){
   // Це різна семантика від stale Kp_obs: тут сьогодні може бути live, але "завтра" — synthetic.
   // Без цього штрафу Hero показував Довіру 92% тоді як прогноз — це fallback.
   let _fcastSynthetic = false;
-  try { _fcastSynthetic = !!(typeof last3D !== 'undefined' && last3D && last3D._synthetic); } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+  try { _fcastSynthetic = !!(typeof last3D !== 'undefined' && last3D && last3D._synthetic); } catch(e){ globalThis.NRDiagnostics?.record('catch.95','recoverable'); if(window._DEBUG)console.warn('[silent]:',e.message)}
   if (_fcastSynthetic) {
     penalty += 0.22;
     reasons.push({ txt:'NOAA forecast недоступний — scenario plateau', col:'#ff6b6b', d:0.22 });
@@ -10749,7 +10749,7 @@ function _computeAiRaw(dateTimeUTC, kp=null){
     if(panch.yoga.score !== 0)       pParts.push(`Yoga(${panch.yoga.name})=${panch.yoga.score}`);
     if(panch.karana.score !== 0)     pParts.push(`Kar(${panch.karana.name})=${panch.karana.score}`);
     pTip = pParts.length ? `PCL (sunrise reference): Tithi=${tithiInPi}×lunar(${lunarMod.toFixed(2)})=${_tithiPi.toFixed(1)} + fixed=${_restPi} → ×${PCL_SCALE} → Pᵢ=${Pi} (R&D/advisory; scale is not prospectively validated)` : `0 — всі Panchanga нейтральні`;
-  } catch(e) {
+  } catch(e) { globalThis.NRDiagnostics?.record('catch.96','recoverable');
     pTip = e.message==='solar_unavailable' ? 'PCL недоступний: немає місцевого сходу Сонця; 0 — технічний внесок, не нейтральний прогноз.' : '0 — помилка PCL';
   }
 
@@ -10986,7 +10986,7 @@ async function fetchGfzKpAsNoaaFormat(daysBack,signal){
   const url = `https://kp.gfz.de/app/json/?start=${_fmt(start)}&end=${_fmt(end)}&index=Kp&status=now`;
   const text = await fetchTextWithCORS(url,undefined,{signal});
   let data;
-  try { data = JSON.parse(text); } catch(e) { throw new Error('GFZ JSON parse: '+e.message); }
+  try { data = JSON.parse(text); } catch(e) { globalThis.NRDiagnostics?.record('catch.97','recoverable');  throw new Error('GFZ JSON parse: '+e.message); }
   if (!data || !Array.isArray(data.datetime) || !Array.isArray(data.Kp)) {
     throw new Error('GFZ format invalid (no datetime/Kp arrays)');
   }
@@ -11009,7 +11009,7 @@ async function fetchGfzKpAsNoaaFormat(daysBack,signal){
 
 function parseKpObsJSON(json){
   let rows;
-  try{ rows = JSON.parse(json); }catch(e){ return {kNow:null,aNow:null,whenText:null,kPrev3h:null,kp24hAgo:null}; }
+  try{ rows = JSON.parse(json); }catch(e){ globalThis.NRDiagnostics?.record('catch.98','recoverable');  return {kNow:null,aNow:null,whenText:null,kPrev3h:null,kp24hAgo:null}; }
   if(!Array.isArray(rows)||!rows.length) return {kNow:null,aNow:null,whenText:null,kPrev3h:null,kp24hAgo:null};
   // v59: підтримка обох форматів: масив масивів і масив об'єктів
   let data;
@@ -11071,7 +11071,7 @@ function parseWolfSn(json){
       return {sn,dateStr,provisional};
     }
     return null;
-  }catch(e){ return null; }
+  }catch(e){ globalThis.NRDiagnostics?.record('catch.99','recoverable');  return null; }
 }
 function _looksLikeSilso(txt){
   const t=String(txt||'').trim();
@@ -11093,7 +11093,7 @@ function parseWolfSnStatus(json){
       _delivery:'local_snapshot', _refreshStatus:String(status.status||'UNKNOWN'),
       _generatedAt:String(status.generated_at_utc||'')
     };
-  }catch(_e){ return null; }
+  }catch(_e){ globalThis.NRDiagnostics?.record('catch.100','recoverable');  return null; }
 }
 
 async function fetchWolfSnResilient(signal){
@@ -11101,7 +11101,7 @@ async function fetchWolfSnResilient(signal){
     const text=await fetchTextWithCORS(URL_WOLF_SN_STATUS+'?v='+Date.now(),undefined,{signal,timeoutMs:2500,directOnly:true});
     const parsed=parseWolfSnStatus(text);
     if(parsed)return parsed;
-  }catch(e){ if(window._DEBUG) console.warn('[SILSO] local snapshot unavailable:',e.message); }
+  }catch(e){ globalThis.NRDiagnostics?.record('catch.101','recoverable');  if(window._DEBUG) console.warn('[SILSO] local snapshot unavailable:',e.message); }
   if(window.GINDEX_PLAY_CHANNEL)throw new Error('SILSO local snapshot unavailable; external fallback disabled in Play');
   for(const url of [URL_WOLF_SN, URL_WOLF_SN_FB]){
     try{
@@ -11163,7 +11163,7 @@ function parseUafAurora(html){
 
     for(const raw of matches){
       let arr;
-      try{ arr = JSON.parse(raw); }catch(e){ continue; }
+      try{ arr = JSON.parse(raw); }catch(e){ globalThis.NRDiagnostics?.record('catch.102','recoverable');  continue; }
       if(!Array.isArray(arr) || !arr.length) continue;
       const first = arr[0];
       if(!first || !first.predicted_time) continue;
@@ -11217,7 +11217,7 @@ function parseUafAurora(html){
       }
     }
     return (result.kp3Day.length || result.kp27Day.length || result.historical.length) ? result : null;
-  }catch(e){
+  }catch(e){ globalThis.NRDiagnostics?.record('catch.103','recoverable');
     console.warn('[v88.6.9 UAF] parse failed:', e.message);
     return null;
   }
@@ -11245,7 +11245,7 @@ function uafTo3DayFormat(uaf){
     // Daily maximum alone cannot determine the mean of eight linear a values.
     const out={issued:null,predictedAp:days.map(d=>({date:d.date,Ap:null})),days,_source:'uaf-alaska-27d'};
     _ensureThreeDays(out);return out;
-  }catch(e){return null;}
+  }catch(e){ globalThis.NRDiagnostics?.record('catch.104','recoverable'); return null;}
 }
 
 // Конвертує UAF 27-day у формат parse27Day output
@@ -11283,7 +11283,7 @@ function _ensureThreeDays(out){
     }
     out.days.sort((a,b) => a.date - b.date);
     if(out.predictedAp) out.predictedAp.sort((a,b) => a.date - b.date);
-  }catch(e){if(window._DEBUG)console.warn('[_ensureThreeDays]:',e.message)}
+  }catch(e){ globalThis.NRDiagnostics?.record('catch.105','recoverable'); if(window._DEBUG)console.warn('[_ensureThreeDays]:',e.message)}
   return out;
 }
 
@@ -11315,7 +11315,7 @@ function _fillPlaceholderDays(target3D, t27R){
           }
         }
       }
-    }catch(fillErr){
+    }catch(fillErr){ globalThis.NRDiagnostics?.record('catch.106','recoverable');
       console.warn('[v88.7.6 fill] 27-day fill-up failed:', fillErr.message);
     }
   }
@@ -11392,7 +11392,7 @@ function parse3DaySafe(json){
       out.predictedAp.push({date:day.date,Ap:complete ? aValues.reduce((a,b)=>a+b,0)/8 : null});
     }
     _ensureThreeDays(out);
-  }catch(e){if(window._DEBUG)console.warn('[parse3DaySafe]',e.message);}
+  }catch(e){ globalThis.NRDiagnostics?.record('catch.107','recoverable'); if(window._DEBUG)console.warn('[parse3DaySafe]',e.message);}
   return out;
 }
 // Парсер Dst index (kyoto-dst.json) — Формат: [["time_tag","dst"],...] з заголовком
@@ -11450,7 +11450,7 @@ function parseDst(json){
     const data=rows.slice(1).filter(r=>r[1]!=null&&r[1]!=='');
     const hit=_lastValidDst(data, r=>r[1]);
     return hit ? { dst: hit.dst, time: hit.row[0]+'UTC' } : null;
-  }catch(e){ return null; }
+  }catch(e){ globalThis.NRDiagnostics?.record('catch.108','recoverable');  return null; }
 }
 // Парсер JSON 45-day (45-day-ap-forecast.json)
 // Формат: [["time_tag","ap"],...]  АБО  [[date, ap],...] з заголовком
@@ -11482,7 +11482,7 @@ function parse45Day(json){
       rows.push({date,Ap,flux:Number.isFinite(flux)&&flux>=50&&flux<=400?flux:null});
     }
     return rows.sort((a,b)=>a.date-b.date);
-  }catch(e){return [];}
+  }catch(e){ globalThis.NRDiagnostics?.record('catch.109','recoverable'); return [];}
 }
 function apOnlyTo27Day(rows){
   // Daily mean Ap does not determine the maximum of eight Kp slots.
@@ -11636,7 +11636,7 @@ function draw27dTable(){
       const birthJDE = dateToJDE(slotD.date, slotD.time||'12:00', slotD.utcOff??2);
       const natalNak = calcNakshatra(calcMoonLongitude(__nrUtcJdToTt(birthJDE)), birthJDE);
       natalIdxFor27 = natalNak.idx;
-    } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+    } catch(e){ globalThis.NRDiagnostics?.record('catch.110','recoverable'); if(window._DEBUG)console.warn('[silent]:',e.message)}
   }
   const gosColVisible = natalIdxFor27 !== null;
   const gosHeader = document.getElementById('th27Gos');
@@ -11720,7 +11720,7 @@ function draw27dTable(){
         const _tipB = `PDF/Engine Day_score: ${_bSign}${_bs27.eng}\nТег: ${_bs27.tag||'—'}\nKp=${_bs27.kp}${_bs27.kp_synthetic?' (synthetic 2.0)':''}${_pdfStr}${_div27?'\n\n⚠ Знак не співпадає з G — моделі не згодні':''}`;
         bulletinCell = `<td style="font-size:12px;text-align:center" title="${escapeHtml(_tipB)}">${_warn}<span style="color:${_bCol};font-weight:700">${_bSign}${_bs27.eng}${_bSynth}</span></td>`;
       }
-    } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+    } catch(e){ globalThis.NRDiagnostics?.record('catch.111','recoverable'); if(window._DEBUG)console.warn('[silent]:',e.message)}
 
     html += `<tr data-ds="${ds}" style="${(G_display <= -2.5 ? 'background:rgba(255,107,107,0.1);' : G_display <= -0.5 ? 'background:rgba(255,204,0,0.05);' : '')}${todayStyle}">
       <td class="mono col-date"${isToday?' style="font-weight:700;color:var(--alt)"':''}>${ds}${isToday?' <span style="white-space:nowrap;color:var(--alt)">◀</span>':''}</td>
@@ -11789,7 +11789,7 @@ function render27Day(rows, last3D){
   // v88.7.7 BUG-1 fix: повторно малюємо 7-day trend з whyCard, бо _27dComputed щойно готове.
   // Перший виклик _renderWhyTrend з _renderHeroCause міг спрацювати до build27dComputed →
   // тренд побудувався race-fallback (computeAi з kp=2). Зараз — точний з 27-day Kp.
-  try { if(typeof _renderWhyTrend === 'function') _renderWhyTrend(); } catch(e){if(window._DEBUG)console.warn('[silent _renderWhyTrend rerender]:',e.message)}
+  try { if(typeof _renderWhyTrend === 'function') _renderWhyTrend(); } catch(e){ globalThis.NRDiagnostics?.record('catch.112','recoverable'); if(window._DEBUG)console.warn('[silent _renderWhyTrend rerender]:',e.message)}
 
   // Сортування по кліку на заголовок
   document.querySelectorAll('.th-sort').forEach(th=>{
@@ -11808,17 +11808,17 @@ function render27Day(rows, last3D){
   document.getElementById('sel27Filter').onchange = draw27dTable;
 
   // v87.28: compare periods (non-blocking, errors isolated)
-  try{ renderComparePeriods(); }catch(e){ console.warn('[comparePeriods]', e); }
+  try{ renderComparePeriods(); }catch(e){ globalThis.NRDiagnostics?.record('catch.113','recoverable');  console.warn('[comparePeriods]', e); }
   // v87.34: forward timeline (non-blocking, errors isolated)
-  try{ renderForwardTimeline(); }catch(e){ console.warn('[forwardTimeline]', e); }
+  try{ renderForwardTimeline(); }catch(e){ globalThis.NRDiagnostics?.record('catch.114','recoverable');  console.warn('[forwardTimeline]', e); }
   // v88.8.37-fp70: Тема дня
-  try{ renderDayTheme(); }catch(e){ console.warn('[dayTheme]', e); }
+  try{ renderDayTheme(); }catch(e){ globalThis.NRDiagnostics?.record('catch.115','recoverable');  console.warn('[dayTheme]', e); }
   // v88.8.37-fp70: GNSS/UAV Risk Layer
-  try{ renderGnssRisk(); }catch(e){ console.warn('[gnssRisk]', e); }
+  try{ renderGnssRisk(); }catch(e){ globalThis.NRDiagnostics?.record('catch.116','recoverable');  console.warn('[gnssRisk]', e); }
   // v88.8.37-fp70: 7-day Summary
-  try{ renderWeekSummary(); }catch(e){ console.warn('[weekSummary]', e); }
+  try{ renderWeekSummary(); }catch(e){ globalThis.NRDiagnostics?.record('catch.117','recoverable');  console.warn('[weekSummary]', e); }
   // v88.8.37-fp72: Audit Card (оновлюємо дані при кожному refresh, показ — через toggle)
-  try{ renderAuditCard(); }catch(e){ console.warn('[auditCard]', e); }
+  try{ renderAuditCard(); }catch(e){ globalThis.NRDiagnostics?.record('catch.118','recoverable');  console.warn('[auditCard]', e); }
 }
 
 // v87.28 Compare periods — цей тиждень vs той самий тиждень рік тому (Σ-ритм only).
@@ -11847,11 +11847,11 @@ async function fetchDGDLast30(){
         if(o && o.ts && (Date.now() - o.ts < 6*3600*1000) && o.data){
           return new Map(Object.entries(o.data));
         }
-      }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+      }catch(e){ globalThis.NRDiagnostics?.record('catch.119','recoverable'); if(window._DEBUG)console.warn('[silent]:',e.message)}
     }
     let text = '';
     try{ text = await fetchTextWithCORS('https://services.swpc.noaa.gov/text/daily-geomagnetic-indices.txt'); }
-    catch(e){ console.warn('[DGD] fetch failed', e); return null; }
+    catch(e){ globalThis.NRDiagnostics?.record('catch.120','recoverable');  console.warn('[DGD] fetch failed', e); return null; }
     if(!text) return null;
     const map = new Map();
     const lines = text.split(/\r?\n/);
@@ -11872,7 +11872,7 @@ async function fetchDGDLast30(){
       try{
         const obj = {}; for(const [k,v] of map.entries()) obj[k]=v;
         lsSet(cacheKey, JSON.stringify({ts: Date.now(), data: obj}));
-      }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+      }catch(e){ globalThis.NRDiagnostics?.record('catch.121','recoverable'); if(window._DEBUG)console.warn('[silent]:',e.message)}
     }
     return map;
   })();
@@ -12044,7 +12044,7 @@ function _renderCmpBlock(wrap, days, opts){
 // Toggle handler
 function _cmpSetMode(m){
   lsSet('cmp_mode', m);
-  try{ renderComparePeriods(); }catch(e){ console.warn(e); }
+  try{ renderComparePeriods(); }catch(e){ globalThis.NRDiagnostics?.record('catch.122','recoverable');  console.warn(e); }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -12375,7 +12375,7 @@ function _ftTogglePlay(){
   window.addEventListener('resize', () => {
     if(_ftResizeTimer) clearTimeout(_ftResizeTimer);
     _ftResizeTimer = setTimeout(() => {
-      try{ renderForwardTimeline(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+      try{ renderForwardTimeline(); }catch(e){ globalThis.NRDiagnostics?.record('catch.123','recoverable'); if(window._DEBUG)console.warn('[silent]:',e.message)}
     }, 200);
   });
 })();
@@ -12545,7 +12545,7 @@ function renderCurrentPanel(){
           horaEi: Math.round(((ai.horaEi||0) - (aiNoon.horaEi||0)) * 10) / 10,
           noonAi: aiNoon.Ai
         };
-      }catch(e){ ai._noonDelta = null; }
+      }catch(e){ globalThis.NRDiagnostics?.record('catch.124','recoverable');  ai._noonDelta = null; }
       ai._isNowBased = true;
     }
   }
@@ -12560,7 +12560,7 @@ function renderCurrentPanel(){
         horaEi: Math.round(((ai.horaEi||0) - (aiNoon.horaEi||0)) * 10) / 10,
         noonAi: aiNoon.Ai
       };
-    }catch(e){ ai._noonDelta = null; }
+    }catch(e){ globalThis.NRDiagnostics?.record('catch.125','recoverable');  ai._noonDelta = null; }
     ai._isNowBased = true;
   }
   const aiWrap = el('nowAi');
@@ -12626,7 +12626,7 @@ function renderCurrentPanel(){
     : (last3D && (last3D.days||[]).length) ? '3d'
     : (_last27Rows && _last27Rows.length) ? '27d' : 'syn';
   // v87.17 A5 fix: guarantee freshnessBadge reflects actual state before computeCScore reads it
-  try { if (typeof _renderFreshnessState === 'function') _renderFreshnessState(); } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+  try { if (typeof _renderFreshnessState === 'function') _renderFreshnessState(); } catch(e){ globalThis.NRDiagnostics?.record('catch.126','recoverable'); if(window._DEBUG)console.warn('[silent]:',e.message)}
   const _csInline = computeCScore(kUse, _lastKpObsJson, ai, G, _kpSrcInline);
   const _cCol = _csInline.gradeCol;
   const _cHtml = isFinite(G)
@@ -12687,14 +12687,14 @@ function renderCurrentPanel(){
     const yRaw = localStorage.getItem(yKey);
     if(yRaw && isFinite(G) && ai){
       let ySnap = null;
-      try { ySnap = JSON.parse(yRaw); } catch(e){ ySnap = { G: parseFloat(yRaw) }; }
+      try { ySnap = JSON.parse(yRaw); } catch(e){ globalThis.NRDiagnostics?.record('catch.127','recoverable');  ySnap = { G: parseFloat(yRaw) }; }
       const yG = ySnap.G;
       if(isFinite(yG)){
         const dG = G - yG;
         if(window.__uiState) window.__uiState.delta = dG;
       }
     }
-  } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+  } catch(e){ globalThis.NRDiagnostics?.record('catch.128','recoverable'); if(window._DEBUG)console.warn('[silent]:',e.message)}
 
   // ── Probability Layer v68 ────────────────────────────────────────────────
   if(isFinite(G)){
@@ -12811,7 +12811,7 @@ function renderCurrentPanel(){
     renderGaugeMoon(G, lunarPhaseDeg, kUse!=null?kUse:0, ai.phaseName || phaseNameByAngle(lunarPhaseDeg));
     // v88.8.18: sound notification — G-score crossing 0 (favorable ↔ unfavorable).
     if (window.GIndexSound) window.GIndexSound.checkCritical(G);
-  }catch(e){ console.error('gauge:', e); }
+  }catch(e){ globalThis.NRDiagnostics?.record('catch.129','recoverable');  console.error('gauge:', e); }
 
   // Hora таймлайн + найкращий час + Co-Star + Science bar + Profile
   try{
@@ -12823,7 +12823,7 @@ function renderCurrentPanel(){
     renderDayForecast(last3D, kUse, ai); // v78: stripped to data-only (_daySlots)
     renderGDecomp(G, kUse, ai);
     renderProfileRec();
-  }catch(e){ console.error('extras:', e); }
+  }catch(e){ globalThis.NRDiagnostics?.record('catch.130','recoverable');  console.error('extras:', e); }
   // Science bar — окремий try щоб завжди оновлювався
   try{
     const apVal = (lastWWV && typeof lastWWV.aNow==='number') ? lastWWV.aNow
@@ -12831,7 +12831,7 @@ function renderCurrentPanel(){
     const snVal = window._lastWolfSn ? window._lastWolfSn.sn : null;
     const f107Val = window._lastF107 || null;
     updateScienceBar(kUse != null ? kUse : NaN, apVal, snVal, ai, ai.phaseName || phaseNameByAngle(lunarPhaseDeg), lunarPhaseDeg, f107Val);
-  }catch(e){ console.error('scibar:', e); }
+  }catch(e){ globalThis.NRDiagnostics?.record('catch.131','recoverable');  console.error('scibar:', e); }
 }
 
 // ----------------------------- Рекомендація за G ----------------------------
@@ -13169,7 +13169,7 @@ function computePanchanga(dateUTC){
     _pKey = [Math.floor((dateUTC instanceof Date ? dateUTC.getTime() : new Date(dateUTC).getTime()) / 60000), _userLat, _userLon].join('|');
     if (!window.__panchMemo) window.__panchMemo = {};
     if (window.__panchMemo[_pKey]) return window.__panchMemo[_pKey];
-  } catch(_e) { _pKey = null; }
+  } catch(_e) { globalThis.NRDiagnostics?.record('catch.132','recoverable');  _pKey = null; }
   const phaseDeg = (moonPhaseAngle(dateUTC) + 360) % 360;
 
   // tithiIdx: 0-based (0..29). tithi.num = tithiIdx+1 (1-based, для зовнішнього API).
@@ -13540,7 +13540,7 @@ function computePanchangaState(dateUTC){
     if(p.tithi.name !== pSunrise.tithi.name) diffs.push(`Tithi: зараз ${p.tithi.name}, на сході Сонця ${pSunrise.tithi.name}`);
     if(p.karana.name !== pSunrise.karana.name) diffs.push(`Karana: зараз ${p.karana.name}, на сході Сонця ${pSunrise.karana.name}`);
     if(diffs.length) panchDiscrepancy = diffs.join('; ');
-  } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+  } catch(e){ globalThis.NRDiagnostics?.record('catch.133','recoverable'); if(window._DEBUG)console.warn('[silent]:',e.message)}
 
   // Aggregated advice (DO/AVOID)
   const advSources = cells.filter(s => s.adv);
@@ -14159,7 +14159,7 @@ function _renderPanchUpcoming(refDateUTC){
         try {
           const ai = computeAi(sunriseUTC(d.date), 0);
           if(isFinite(ai.Pi)){ sum += ai.Pi; n++; }
-        } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+        } catch(e){ globalThis.NRDiagnostics?.record('catch.134','recoverable'); if(window._DEBUG)console.warn('[silent]:',e.message)}
       });
       if(n >= 2){
         const avg = sum / n;
@@ -14177,7 +14177,7 @@ function _renderPanchUpcoming(refDateUTC){
         });
       }
     }
-  } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+  } catch(e){ globalThis.NRDiagnostics?.record('catch.135','recoverable'); if(window._DEBUG)console.warn('[silent]:',e.message)}
 
   // 2. v87.44: Vaisnava-події з BUILTIN_VAISNAVA (Ekadasi/Amavasya/Purnima)
   //    Сканую 60 днів вперед — перша кожного типу
@@ -14233,7 +14233,7 @@ function _renderPanchUpcoming(refDateUTC){
         if(found.ekad && found.ama && found.purn) break;
       }
     }
-  } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+  } catch(e){ globalThis.NRDiagnostics?.record('catch.136','recoverable'); if(window._DEBUG)console.warn('[silent]:',e.message)}
 
   // 3. v87.44: Найближча Vishti Karana (7-а рухома) — скан 14 днів
   try {
@@ -14252,7 +14252,7 @@ function _renderPanchUpcoming(refDateUTC){
         break;
       }
     }
-  } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+  } catch(e){ globalThis.NRDiagnostics?.record('catch.137','recoverable'); if(window._DEBUG)console.warn('[silent]:',e.message)}
 
   // 4. v87.44+v87.45: Поточна Nakshatra + орієнтовна зміна
   //    v87.45 fix: computePanchanga повертає nakshatra.num (1-based), не .idx
@@ -14285,7 +14285,7 @@ function _renderPanchUpcoming(refDateUTC){
         }
       }
     }
-  } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+  } catch(e){ globalThis.NRDiagnostics?.record('catch.138','recoverable'); if(window._DEBUG)console.warn('[silent]:',e.message)}
 
   if(!items.length){ wrap.style.display = 'none'; return; }
 
@@ -14377,7 +14377,7 @@ function _calcSunRiseSet(dateUTC){
       _sunRiseSetCache.delete(firstKey);
     }
     return result;
-  } catch(e) {
+  } catch(e) { globalThis.NRDiagnostics?.record('catch.139','recoverable');
     if(window._DEBUG) console.warn('[v88.8.0 SunRiseSet]', e.message);
     return null;
   }
@@ -14420,7 +14420,7 @@ function _calcRashis(dateUTC){
       sun: { idx: sunIdx, deg: sunSid - sunIdx*30, ..._RASHI_NAMES[sunIdx] },
       moon: { idx: moonIdx, deg: moonSid - moonIdx*30, ..._RASHI_NAMES[moonIdx] }
     };
-  } catch(e) {
+  } catch(e) { globalThis.NRDiagnostics?.record('catch.140','recoverable');
     if(window._DEBUG) console.warn('[v88.8.1 Rashis]', e.message);
     return null;
   }
@@ -14537,7 +14537,7 @@ function _renderPanchaPakshi(refDateUTC){
 
   // Отримати поточну nakshatra
   let panch;
-  try { panch = computePanchanga(refDateUTC || new Date()); } catch(e) { wrap.style.display='none'; return; }
+  try { panch = computePanchanga(refDateUTC || new Date()); } catch(e) { globalThis.NRDiagnostics?.record('catch.141','recoverable');  wrap.style.display='none'; return; }
   if(!panch || !panch.nakshatra || !panch.nakshatra.panchaPakshi) {
     wrap.style.display = 'none';
     return;
@@ -15058,7 +15058,7 @@ function render3Day(parsed3){
             _bulletinLine = `<div style="font-size:10px;color:var(--dim);margin-top:2px">${_bs._expertOverride ? 'PDF reference' : 'Engine reference'}: <span style="color:${_bsCol};font-weight:700">${_bsSign}${_bs.eng}${_synth}</span>${_recalcMark} <span style="color:var(--faint);font-size:9px">· не дозвіл</span></div>`;
           }
         }
-      } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+      } catch(e){ globalThis.NRDiagnostics?.record('catch.142','recoverable'); if(window._DEBUG)console.warn('[silent]:',e.message)}
       // v87.90: synthetic Kp warning у quick-card — engine_scores дає kp=2.0 default для майбутнього
       // Якщо bulletin entry має kp_synthetic — це scenario, не реальний forecast
       // v87.90: посилене виділення — opacity 0.55, dashed 2px з кольором, striped pattern
@@ -15075,10 +15075,10 @@ function render3Day(parsed3){
       // з synthetic Kp) все одно рендерився як "⚠ Сценарій, не прогноз",
       // приховуючи реальний PDF override. Тепер перевіряємо override ПЕРШИМ.
       const _hasVerifiedOverride = (function(){
-        try { const _e = getEngineScore(d.date); return !!(_e && _e._expertOverride === true); } catch(e){ return false; }
+        try { const _e = getEngineScore(d.date); return !!(_e && _e._expertOverride === true); } catch(e){ globalThis.NRDiagnostics?.record('catch.143','recoverable');  return false; }
       })();
       const _isSynthScen = _hasVerifiedOverride ? false : (function(){
-        try { const _e = getEngineScore(d.date); return _e && _e.kp_synthetic === true; } catch(e){ return false; }
+        try { const _e = getEngineScore(d.date); return _e && _e.kp_synthetic === true; } catch(e){ globalThis.NRDiagnostics?.record('catch.144','recoverable');  return false; }
       })();
       const _hasRealLiveKp = isFinite(d.kpMax) && d.kpMax > 0 && !d._filledFrom;
       const _engineOutdatedNotSynth = _isSynthScen && _hasRealLiveKp;
@@ -15111,7 +15111,7 @@ function render3Day(parsed3){
           _scenBanner = '<div style="font-size:9px;font-weight:800;letter-spacing:.04em;color:#ffaa33;background:rgba(255,170,51,.14);border:1px solid rgba(255,170,51,.5);border-radius:6px;padding:3px 6px;margin-bottom:5px;text-align:center">⚠ ПОТОЧНЕ ВІКНО: ' + _windowNames + ' — лише рутина зараз; денний reference ' + (_pdfBase>=0?'+':'') + _pdfBase + ' показано окремо</div>';
         }
       } else if (_hasVerifiedOverride) {
-        const _engRawForBanner = (function(){ try { const _es = getEngineScore(d.date); return isFinite(_es?._engRaw) ? _es._engRaw : null; } catch(_e){ return null; } })();
+        const _engRawForBanner = (function(){ try { const _es = getEngineScore(d.date); return isFinite(_es?._engRaw) ? _es._engRaw : null; } catch(_e){ globalThis.NRDiagnostics?.record('catch.145','recoverable');  return null; } })();
         _scenBanner = `<div style="font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#ffd166;background:rgba(255,209,102,.15);border:1px solid rgba(255,209,102,.45);border-radius:6px;padding:2px 6px;margin-bottom:5px;text-align:center" title="Це значення — ручний verified PDF-вердикт (expert override), НЕ розрахунок engine v18.5.${_engRawForBanner!=null ? ' Raw engine v18.5 snapshot: '+(_engRawForBanner>=0?'+':'')+_engRawForBanner+'.' : ''} Фон NOAA (raw, окремо, довідково) — рядок нижче.">★ PDF REFERENCE · VERIFIED OVERRIDE · НЕ РІШЕННЯ ДЛЯ ДІЇ</div>`;
       } else if(_engineFullySynth){
         // v88.8.35-fp56-P8: make a synthetic-Kp SCENARIO card unmistakably weaker than a real
@@ -15123,7 +15123,7 @@ function render3Day(parsed3){
         // v88.9.34-fp215 (аудит-раунд-5, Problem 13): якщо для цієї дати активний
         // verified PDF override — банер мав казати конкретно "PDF override", а не
         // generic "PDF/Engine", яке читається так, ніби engine v18.5 порахував.
-        const _dayHasOverride = (function(){ try { const _es = getEngineScore(d.date); return !!(_es && _es._expertOverride); } catch(_e){ return false; } })();
+        const _dayHasOverride = (function(){ try { const _es = getEngineScore(d.date); return !!(_es && _es._expertOverride); } catch(_e){ globalThis.NRDiagnostics?.record('catch.146','recoverable');  return false; } })();
         // v88.8.35-fp56-P8: engine-outdated is DIFFERENT from synthetic-scenario — here live Kp is
         // REAL (=${d.kpMax}) but the engine score was computed on an older snapshot. Give it its own
         // explicit (blue, not orange) banner so the card no longer reads as a normal forecast, while
@@ -15184,7 +15184,7 @@ function render3Day(parsed3){
               ${_calScore !== null ? `<div><span style="color:var(--faint)">Календарні фактори:</span> <strong>${_calScore>=0?'+':''}${_calScore.toFixed(1)}</strong>${_calSymText?' — '+_calSymText:''} <span style="color:var(--faint);font-size:9px">(frozen engine_scores, довідково)</span></div>` : ''}
               <div style="margin-top:4px;padding-top:4px;border-top:1px solid rgba(255,255,255,.08)"><span style="color:var(--faint)">${isToday?'Оперативний стан':'Прогнозний висновок'}:</span> <strong style="color:${isToday?(_daySigQ?.color||'#ffaa33'):forecastColQ}">${isToday?(isFinite(_daySigQ?.decisionScore)?(_daySigQ.decisionScore>=0?'+':'')+_daySigQ.decisionScore:'—'):(isFinite(G)?(G>=0?'+':'')+G.toFixed(1):'—')} — ${isToday?escapeHtml(_daySigQ?.title||'потрібна перевірка'):'не команда для дії'}</strong><br><span style="color:var(--faint);font-size:9px">PDF лишається reference; ${isToday?'оперативний контур обирає обережніший сигнал.':'остаточний стан формується лише в сам день за live-даними.'}</span></div>
             </div>`;
-          } catch(_eConf) { return ''; }
+          } catch(_eConf) { globalThis.NRDiagnostics?.record('catch.147','recoverable');  return ''; }
         })()}
       </span>`;
     }
@@ -15304,7 +15304,7 @@ async function fetchText(u){
     const res = await fetch(u, {cache:'no-store'});
     if(!res.ok) throw new Error(`HTTP ${res.status}`);
     return await res.text();
-  } catch(e) {
+  } catch(e) { globalThis.NRDiagnostics?.record('catch.148','recoverable');
     console.error('fetchText failed:', u, e.message);
     throw e;
   }
@@ -15325,7 +15325,7 @@ async function preloadEventsAroundNow(){
         setTimeout(()=>indexIcsEventsForYears(yrs).catch(e=>{ if(window._DEBUG) console.warn('[ICS bg]', e.message); }), 0);
       }
     } catch(_e){ window.NRDiagnostics?.record('legacy.catch.116','recoverable'); }
-  } catch(e) {
+  } catch(e) { globalThis.NRDiagnostics?.record('catch.149','recoverable');
     if(window._DEBUG) console.warn('[ICS] builtin/eclipse preload failed:', e.message);
   }
 }
@@ -15428,7 +15428,7 @@ function buildUnifiedAdvice(state){
         const HORA_DO={'Юпітер':'стратегія, важливі рішення','Меркурій':'комунікація, аналіз','Венера':'креатив, партнерства','Сонце':'лідерські дії','Місяць':'інтуїтивні рішення'};
         if(HORA_DO[hora.planet]) DO.push(HORA_DO[hora.planet]);
       }
-    }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+    }catch(e){ globalThis.NRDiagnostics?.record('catch.150','recoverable'); if(window._DEBUG)console.warn('[silent]:',e.message)}
   }
   // fp28: storm-guard — if storm incoming today, add timing constraint regardless of PDF score
   try {
@@ -15576,7 +15576,7 @@ function getInauspiciousWindowsUTC(){
           _R = computePanchanga(sunriseUTC(new Date(todayKyivStr()+'T12:00:00Z'))).rahu;
           window.__p3RahuCache = { dk: _dk, geoKey: String(_userLat)+','+String(_userLon), rahu: _R };
         }
-      } catch(_e){ _R = null; }
+      } catch(_e){ globalThis.NRDiagnostics?.record('catch.151','recoverable');  _R = null; }
     }
     if ((!_R || !_R.gulika) && _pc && _pc._kyivDateKey === todayKyivStr() && _pc._geoKey===String(_userLat)+','+String(_userLon) && _pc.rahu) {
       _R = _pc.rahu;
@@ -15804,7 +15804,7 @@ function getCurrentOperationalSignal(){
     const _raw = (typeof _v73G === 'function') ? _v73G() : NaN;
     const _kp = Number(window.__uiState?.kpNow);
     return resolveDaySignal_v88825(new Date(todayKyivStr()+'T12:00:00Z'), _raw, _kp, {isToday:true});
-  } catch(_e) { return null; }
+  } catch(_e) { globalThis.NRDiagnostics?.record('catch.152','recoverable');  return null; }
 }
 window.getCurrentOperationalSignal = getCurrentOperationalSignal;
 function getCurrentOperationalPresentation(){
@@ -16152,7 +16152,7 @@ function _runSanityWatchdog(g, kp){
   try {
     var dl = JSON.parse(localStorage.getItem('gindex_decision_log_v1')||'[]');
     var cutoff = Date.now() - 14*86400000;
-    var recent = dl.filter(function(e){ try{ return new Date(e.ts).getTime() > cutoff; }catch(_ignore){ return false; }});
+    var recent = dl.filter(function(e){ try{ return new Date(e.ts).getTime() > cutoff; }catch(_ignore){ globalThis.NRDiagnostics?.record('catch.153','recoverable');  return false; }});
     var alertDays = recent.filter(function(e){ return e.g_at_save != null && e.g_at_save <= -2; }).length;
     if(recent.length >= 7 && alertDays/recent.length > 0.4){
       warns.push({ icon:'😴', title:'Alert fatigue', body:alertDays+' з '+recent.length+' останніх записів — high-risk. Поріг може бути занадто чутливим.' });
@@ -16486,7 +16486,7 @@ function _renderHeroHierarchy(){
         // OBSERVED · DELAYED на кілька годин. Той самий принцип, що вже
         // застосований до heroFreshness/Formula Audit/заголовка через
         // resolveSourceLabel().
-        const _kpSrcWord = (function(){ try { const _r = resolveSourceLabel(); return _r.isLive ? 'live' : (_r.isRealObserved ? 'observed' : 'forecast'); } catch(_e){ return 'live'; } })();
+        const _kpSrcWord = (function(){ try { const _r = resolveSourceLabel(); return _r.isLive ? 'live' : (_r.isRealObserved ? 'observed' : 'forecast'); } catch(_e){ globalThis.NRDiagnostics?.record('catch.154','recoverable');  return 'live'; } })();
         const kpTxt= isFinite(kpN) ? ` <span style="color:var(--faint);font-size:11px">· ${_kpSrcWord} Kp ${kpN.toFixed(2)}</span>` : '';
         // v88.8.51-fp128: видима арифметика — "звідки береться це число", без пояснень у тултіпах.
         // ΣAᵢ виводиться зворотно з формули G=2-Kp+ΣAᵢ (self-consistent, нічого не вигадується).
@@ -16610,10 +16610,10 @@ function _renderHeroHierarchy(){
             const _esToday = (typeof todayKyivStr === 'function' && typeof getEngineScore === 'function')
               ? getEngineScore(new Date(todayKyivStr()+'T12:00:00Z')) : null;
             return (_esToday && _esToday._expertOverride) ? 'PDF OVERRIDE' : 'PDF/Engine';
-          } catch(_e) { return 'PDF/Engine'; }
+          } catch(_e) { globalThis.NRDiagnostics?.record('catch.155','recoverable');  return 'PDF/Engine'; }
         })()}</span>`
       + `<span style="flex:1;font-size:14px;font-weight:700;line-height:1.25">${decHtml} <span style="font-size:10px;color:var(--faint)">· не дозвіл на дію</span></span></div>`
-      + row((function(){ try { const _r = resolveSourceLabel(); return _r.isLive ? 'ДОВІДКОВИЙ LIVE-ФОН · НЕ РІШЕННЯ' : 'ДОВІДКОВИЙ ФОН · НЕ РІШЕННЯ (' + _r.freshnessLabel.toLowerCase() + ')'; } catch(_e){ return 'ДОВІДКОВИЙ LIVE-ФОН · НЕ РІШЕННЯ'; } })(), gHtml, null, 'Зараз '+_todayTag)
+      + row((function(){ try { const _r = resolveSourceLabel(); return _r.isLive ? 'ДОВІДКОВИЙ LIVE-ФОН · НЕ РІШЕННЯ' : 'ДОВІДКОВИЙ ФОН · НЕ РІШЕННЯ (' + _r.freshnessLabel.toLowerCase() + ')'; } catch(_e){ globalThis.NRDiagnostics?.record('catch.156','recoverable');  return 'ДОВІДКОВИЙ LIVE-ФОН · НЕ РІШЕННЯ'; } })(), gHtml, null, 'Зараз '+_todayTag)
       + row((function(){
           // v88.9.48-fp230 (аудит-раунд-17, Problem 2): той самий принцип, що
           // вже застосований до "сьогодні" (fp229) — тепер і для "завтра".
@@ -16621,7 +16621,7 @@ function _renderHeroHierarchy(){
             const _tmrDate = new Date(new Date(todayKyivStr()+'T12:00:00Z').getTime() + 86400000);
             const _esTmr = (typeof getEngineScore === 'function') ? getEngineScore(_tmrDate) : null;
             return 'Прогноз дня · ' + ((_esTmr && _esTmr._expertOverride) ? 'PDF OVERRIDE' : 'PDF/Engine');
-          } catch(_e) { return 'Прогноз дня · PDF/Engine'; }
+          } catch(_e) { globalThis.NRDiagnostics?.record('catch.157','recoverable');  return 'Прогноз дня · PDF/Engine'; }
         })(), tomoHtml, null, 'Завтра '+_tomorrowTag)
       + row('Якість даних', `<span style="font-weight:700;color:${qCol}">${qLab}</span>`, null, '')
       + (function(){
@@ -16795,7 +16795,7 @@ try {
     if (params.get('v86radial') === '0') localStorage.setItem('v86_radial','0');
     if (params.get('v86heat') === '1') localStorage.setItem('v86_heat','1');
     if (params.get('v86heat') === '0') localStorage.setItem('v86_heat','0');
-  } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+  } catch(e){ globalThis.NRDiagnostics?.record('catch.158','recoverable'); if(window._DEBUG)console.warn('[silent]:',e.message)}
 })();
 
 // v86.1: Timing heat-strip — 24h day at a glance (8 segments × 3 hours each)
@@ -16803,7 +16803,7 @@ try {
 // Reads window._daySlots (8 slots built in fetchKpForecast pipeline)
 function renderHeatStripV86(){
   const enabled = (function(){
-    try { return localStorage.getItem('v86_heat') !== '0'; } catch(e){ return true; }
+    try { return localStorage.getItem('v86_heat') !== '0'; } catch(e){ globalThis.NRDiagnostics?.record('catch.159','recoverable');  return true; }
   })();
   const strip = document.getElementById('timingHeatStrip');
   if (!strip) return;
@@ -16897,7 +16897,7 @@ function renderHeatStripV86(){
 
 function renderGRadialV86(g, kp, ai){
   const enabled = (function(){
-    try { return localStorage.getItem('v86_radial') !== '0'; } catch(e){ return true; }
+    try { return localStorage.getItem('v86_radial') !== '0'; } catch(e){ globalThis.NRDiagnostics?.record('catch.160','recoverable');  return true; }
   })();
   const v86Wrap = document.getElementById('heroRingV86Wrap');
   const legacyWrap = document.getElementById('heroRing');
@@ -17158,7 +17158,7 @@ function renderGRadialV86(g, kp, ai){
         } else {
           ciEl.style.display = 'none';
         }
-      } catch(e) { ciEl.style.display = 'none'; }
+      } catch(e) { globalThis.NRDiagnostics?.record('catch.161','recoverable');  ciEl.style.display = 'none'; }
     } else {
       ciEl.style.display = 'none';
     }
@@ -17245,7 +17245,7 @@ function _applyCurrentSlotAuthority_v889218(opKey, kp){
     guardedKey = _moreRestrictiveState_v88825(guardedKey, 'unstable');
     dynamicGuard = 'kp_elevated';
   }
-  try { intradayGuard = _computeCurrentSlotDecision(); } catch(_e) { intradayGuard = null; }
+  try { intradayGuard = _computeCurrentSlotDecision(); } catch(_e) { globalThis.NRDiagnostics?.record('catch.162','recoverable');  intradayGuard = null; }
   if(intradayGuard?.blockedNow){
     const isStorm = intradayGuard.reasonsNow?.includes('storm');
     guardedKey = _moreRestrictiveState_v88825(guardedKey, isStorm ? 'tense' : 'unstable');
@@ -17330,7 +17330,7 @@ function heroHeadlineFromHierarchy_v88824(sig){
       // джерела через resolveSourceLabel() — той самий, що всюди інде.
       const _srcDesc = (function(){
         try { const _r = resolveSourceLabel(); return _r.isRealObserved ? _r.combined.toLowerCase() : 'live-фон estimated'; }
-        catch(_e){ return 'live-фон estimated'; }
+        catch(_e){ globalThis.NRDiagnostics?.record('catch.163','recoverable');  return 'live-фон estimated'; }
       })();
       // v88.8.37-fp70: навіть при estimated зберігаємо застереження про слабкий фон,
       // якщо G_now негативний. Раніше estimated-гілка обходила live-guard і губила
@@ -17399,7 +17399,7 @@ function heroLayerNoteFromHierarchy_v88824(sig){
 function resolveDaySignal_v88825(dateObj, rawG, kp, opts){
   const isToday = !!(opts && opts.isToday);
   let entry = null;
-  try { if(typeof getEngineScore === 'function') entry = getEngineScore(dateObj); } catch(e) { entry = null; }
+  try { if(typeof getEngineScore === 'function') entry = getEngineScore(dateObj); } catch(e) { globalThis.NRDiagnostics?.record('catch.164','recoverable');  entry = null; }
   const hasEngine = !!(entry && typeof entry.eng === 'number' && Number.isFinite(entry.eng));
   const referenceStale = !!(hasEngine && entry._expertOverrideVerified !== true && window.__referenceSourceState?.stale === true);
   const dstCurrent = !isToday || !window._lastDst || _dstProvenanceCheck().ok;
@@ -17551,7 +17551,7 @@ function resolveCurrentOperationalG_v88825(){
   try {
     const _sig = getCurrentOperationalSignal();
     return _sig?.decisionAvailable && isFinite(_sig?.decisionScore) ? _sig.repG : NaN;
-  } catch(e) { return NaN; }
+  } catch(e) { globalThis.NRDiagnostics?.record('catch.165','recoverable');  return NaN; }
 }
 
 
@@ -17844,7 +17844,7 @@ function syncHero(){
           const _tomDate = kyivDayDate(1);
           const _tomEntry = (typeof getEngineScore === 'function') ? getEngineScore(_tomDate) : null;
           if (_tomEntry && isFinite(_tomEntry.eng)) _tomEngScore = Number(_tomEntry.eng);
-        } catch(e){ _tomEngScore = null; }
+        } catch(e){ globalThis.NRDiagnostics?.record('catch.166','recoverable');  _tomEngScore = null; }
         const _tg = window.__tomorrowG;
         if (isFinite(_tg)) {
           // v88.8.35-fp14 AA: КРИТИЧНА правка шкал.
@@ -17977,7 +17977,7 @@ function syncHero(){
     // writer читає ту саму resolveSourceLabel().
     const _modeLabel = {
       live:      'LIVE',
-      estimated: (function(){ try { const _r = resolveSourceLabel(); return _r.isRealObserved ? _r.combined : 'ESTIMATED'; } catch(_e){ return 'ESTIMATED'; } })(),
+      estimated: (function(){ try { const _r = resolveSourceLabel(); return _r.isRealObserved ? _r.combined : 'ESTIMATED'; } catch(_e){ globalThis.NRDiagnostics?.record('catch.167','recoverable');  return 'ESTIMATED'; } })(),
       partial:   'DELAYED',
       scenario:  'SCENARIO',
       offline:   'OFFLINE'
@@ -18087,7 +18087,7 @@ function syncHero(){
   // fp43: use canonical resolveStormWindow() — replaces fp33/fp40/fp42 inline computes
   try {
     window._stormWindow = resolveStormWindow(new Date(), window._daySlots || [], kpH);
-  } catch(_eS) { window._stormWindow = window._stormWindow || null; }
+  } catch(_eS) { globalThis.NRDiagnostics?.record('catch.168','recoverable');  window._stormWindow = window._stormWindow || null; }
   // fp30-A: storm-guard on heroDecisionDo — override positive doText when storm incoming
   // fp43: active storm → full block regardless of _stKey
   // fp45: DELAYED mode → prefix "орієнтовно"
@@ -18308,7 +18308,7 @@ function syncHero(){
       _conseq.textContent = _text;
       _conseq.style.display = _text ? '' : 'none';
     }
-  }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+  }catch(e){ globalThis.NRDiagnostics?.record('catch.169','recoverable'); if(window._DEBUG)console.warn('[silent]:',e.message)}
 
   // 4c. v84: Energy bar
   try{
@@ -18322,7 +18322,7 @@ function syncHero(){
       _eFill.style.background = _stCol;
       _ePtr.style.left = _pct + '%';
     }
-  }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+  }catch(e){ globalThis.NRDiagnostics?.record('catch.170','recoverable'); if(window._DEBUG)console.warn('[silent]:',e.message)}
 
   // 4d. v84: Personal greeting
   try{
@@ -18342,7 +18342,7 @@ function syncHero(){
         _greet.style.display = _gTexts[_stKey] ? '' : 'none';
       } else { _greet.style.display = 'none'; }
     }
-  }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+  }catch(e){ globalThis.NRDiagnostics?.record('catch.171','recoverable'); if(window._DEBUG)console.warn('[silent]:',e.message)}
 
   // 5. Unified advice → decisionStrip 3-col
   const _dState = { gNow: _heroCmdG, mainDriver: _topDrv.mainStr, timingSummary: _timingSummary };
@@ -18371,7 +18371,7 @@ function syncHero(){
     const _tl = _trendLabels[_trend] || _trendLabels.flat;
     const _hmT = el('hmTrend');
     if(_hmT){ _hmT.textContent = _tl.text; _hmT.style.color = _tl.col; }
-  }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+  }catch(e){ globalThis.NRDiagnostics?.record('catch.172','recoverable'); if(window._DEBUG)console.warn('[silent]:',e.message)}
 
   // 8. Confidence — show only when <95%
   if(el('heroConfidence')){
@@ -18388,7 +18388,7 @@ function syncHero(){
         el('heroConfidence').style.cursor = 'help';
         el('heroConfidence').style.borderBottom = '1px dotted rgba(155,177,220,0.3)';
       }
-    } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+    } catch(e){ globalThis.NRDiagnostics?.record('catch.173','recoverable'); if(window._DEBUG)console.warn('[silent]:',e.message)}
   }
 
   // v85b-F3: 3-scenario mode (good/neutral/bad)
@@ -18425,13 +18425,13 @@ function syncHero(){
   _renderHeroTimeWindows();
 
   // v86-P1: radial G-decomposition (feature flag)
-  try { renderGRadialV86(gVal, kpH, _ui.ai || {}); } catch(e){ console.warn('v86radial:',e); }
+  try { renderGRadialV86(gVal, kpH, _ui.ai || {}); } catch(e){ globalThis.NRDiagnostics?.record('catch.174','recoverable');  console.warn('v86radial:',e); }
 
   // v86.1: timing heat-strip (feature flag)
-  try { renderHeatStripV86(); } catch(e){ console.warn('v86heat:',e); }
+  try { renderHeatStripV86(); } catch(e){ globalThis.NRDiagnostics?.record('catch.175','recoverable');  console.warn('v86heat:',e); }
 
   // v87: Alert banner — storm / high-risk detection
-  try { renderAlertBanner(gVal, kpH); } catch(e){ console.warn('alert:',e); }
+  try { renderAlertBanner(gVal, kpH); } catch(e){ globalThis.NRDiagnostics?.record('catch.176','recoverable');  console.warn('alert:',e); }
   // fp35: extra safety net — apply storm-guard patches at very end of render
   try { _applyStormGuardDOM(); _patchStaleLoadingDOM(); } catch(e){ window.NRDiagnostics?.record('legacy.catch.184','recoverable'); }
 }
@@ -18681,11 +18681,11 @@ function _renderWhyTrend(){
           const _kp = isFinite(d.kpMax) ? d.kpMax : 2;
           const _ai = computeAi(sunriseUTC(d.date), _kp);
           _Gpast = kpDayTerm(_kp) + _ai.Ai;
-        } catch(_e) { _Gpast = undefined; }
+        } catch(_e) { globalThis.NRDiagnostics?.record('catch.177','recoverable');  _Gpast = undefined; }
         if (isFinite(_Gpast)) days.push({ ds: fmtDate(d.date), G: _Gpast, isPast: true });
       });
     }
-  } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+  } catch(e){ globalThis.NRDiagnostics?.record('catch.178','recoverable'); if(window._DEBUG)console.warn('[silent]:',e.message)}
 
   // Якщо last3D не дав 3 минулих — заповнюю computeAi з реального Kp.
   // fp26: був hardcoded kp=2 → 7-day chart показував штучні G (нижчі за реальні).
@@ -18704,7 +18704,7 @@ function _renderWhyTrend(){
         const ai = computeAi(sunriseUTC(addDays(new Date(todayKyivStr()+'T12:00:00Z'), i)), _kpPast);
         const _Gpast = kpDayTerm(_kpPast) + ai.Ai;
         days.push({ ds, G: _Gpast, isPast: true });
-      } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+      } catch(e){ globalThis.NRDiagnostics?.record('catch.179','recoverable'); if(window._DEBUG)console.warn('[silent]:',e.message)}
     }
   }
 
@@ -18733,7 +18733,7 @@ function _renderWhyTrend(){
             try {
               const _aiLive = computeAi(sunriseUTC(new Date(todayKyivStr()+'T12:00:00Z')), _kpLiveToday);
               _gForDay = kpDayTerm(_kpLiveToday) + _aiLive.Ai;
-            } catch(e) { _gForDay = d.G; /* keep forecast value if live calc fails */ }
+            } catch(e) { globalThis.NRDiagnostics?.record('catch.180','recoverable');  _gForDay = d.G; /* keep forecast value if live calc fails */ }
           }
           days.push({ ds: d.ds, G: _gForDay, isPast: false, isToday: i === 0, kpUsed: (i === 0 ? _kpLiveToday : d.kpUsed) });
           _todayPlusFutureAdded++;
@@ -18754,7 +18754,7 @@ function _renderWhyTrend(){
         const ai = computeAi(sunriseUTC(addDays(new Date(todayKyivStr()+'T12:00:00Z'), i)), i === 0 ? _kpNow : 2);
         const G = kpDayTerm(i === 0 ? _kpNow : 2) + ai.Ai;
         days.push({ ds, G, isPast: false, isToday: i === 0, kpUsed: (i === 0 ? _kpNow : 2) });
-      } catch(e){if(window._DEBUG)console.warn('[silent fallback]:',e.message)}
+      } catch(e){ globalThis.NRDiagnostics?.record('catch.181','recoverable'); if(window._DEBUG)console.warn('[silent fallback]:',e.message)}
     }
     if(window._DEBUG) console.log('[v88.7.7 trend] race fallback computeAi для today+3');
   }
@@ -18801,7 +18801,7 @@ function _renderWhyTrend(){
         const _eng = _engineScores[d.ds];
         if (_eng && isFinite(_eng.eng)) d.engineEng = _eng.eng;
       }
-    } catch(e){if(window._DEBUG)console.warn('[silent overrideAnnot]:',e.message)}
+    } catch(e){ globalThis.NRDiagnostics?.record('catch.182','recoverable'); if(window._DEBUG)console.warn('[silent overrideAnnot]:',e.message)}
   });
 
   if(days.length < 2){ block.style.display = 'none'; return; }
@@ -19008,7 +19008,7 @@ function _renderHeroTimeWindows() {
         hora.sequence = sequence;
         _horaForSlot[h] = hora;
       });
-    } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+    } catch(e){ globalThis.NRDiagnostics?.record('catch.183','recoverable'); if(window._DEBUG)console.warn('[silent]:',e.message)}
   }
 
   // v88.9.6x-fp243: раніше цей блок сам рахував Rahu/Yama/Gulika (_inauspWins) і
@@ -19390,7 +19390,7 @@ function renderMoonRetroTop(){
       const remH=Number.isFinite(_nextH)?Math.max(1,Math.round(_nextH)):null;
       el('moonNextShift').textContent=remH===null?'—':'~'+remH+'г';
       if(el('moonShiftHint')) el('moonShiftHint').textContent='Тітхі '+(tNum<30?tNum+1:1);
-    }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+    }catch(e){ globalThis.NRDiagnostics?.record('catch.184','recoverable'); if(window._DEBUG)console.warn('[silent]:',e.message)}
   }
 
   // Retro block
@@ -19399,7 +19399,7 @@ function renderMoonRetroTop(){
   const active=[];
   const html=planets.map(p=>{
     let rx=null;
-    try{rx=isRetrograde(p,now)}catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+    try{rx=isRetrograde(p,now)}catch(e){ globalThis.NRDiagnostics?.record('catch.185','recoverable'); if(window._DEBUG)console.warn('[silent]:',e.message)}
     if(rx) active.push(uaNames[p]||p);
     return '<span class="retro-chip '+(rx?'rx':'direct')+'">'+(rx===null?'?':rx?'℞':'•')+' '+(uaNames[p]||p)+'</span>';
   }).join('');
@@ -19420,7 +19420,7 @@ function renderMoonRetroTop(){
   if(el('retroSummaryLine')){
     const shortNames={Mercury:'☿',Venus:'♀',Mars:'♂',Jupiter:'♃',Saturn:'♄'};
     const rxShort=[];
-    planets.forEach(p=>{try{if(isRetrograde(p,now))rxShort.push(shortNames[p]+'℞')}catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}});
+    planets.forEach(p=>{try{if(isRetrograde(p,now))rxShort.push(shortNames[p]+'℞')}catch(e){ globalThis.NRDiagnostics?.record('catch.186','recoverable'); if(window._DEBUG)console.warn('[silent]:',e.message)}});
     el('retroSummaryLine').innerHTML=retroUnknown ? '🪐 Рух планет: немає перевірених даних' : rxShort.length
       ?'🪐 <span style="color:#ff9966">'+rxShort.join(' ')+'</span>'
       :'🪐 <span style="color: var(--ok)">прямий рух</span>';
@@ -19441,7 +19441,7 @@ function enforcePanchFinalPriority(){
     const _kp = isFinite(window.__uiState?.kpNow) ? Number(window.__uiState.kpNow) : NaN;
     const sig = resolveDaySignal_v88825(new Date(todayKyivStr()+'T12:00:00Z'), _g, _kp, {isToday:true});
     if (sig && Number.isFinite(Number(sig.decisionScore))) finalScore = Number(sig.decisionScore);
-  } catch(_e) { return; }
+  } catch(_e) { globalThis.NRDiagnostics?.record('catch.187','recoverable');  return; }
   if (!(Number.isFinite(finalScore) && finalScore <= -1)) return;
   document.querySelectorAll('#panchGrid [data-local-action="1"]').forEach(td => {
     if (td.dataset.finalPriorityApplied === String(finalScore)) return;
@@ -19557,7 +19557,7 @@ function syncWhy(){
   const planets=['Mercury','Venus','Mars','Jupiter','Saturn'];
   const retroEffects={Mercury:'помилки, затримки',Venus:'перегляд стосунків',Mars:'імпульсивність',Jupiter:'переоцінка планів',Saturn:'тиск, обмеження'};
   const rxActive=[];
-  planets.forEach(p=>{try{if(isRetrograde(p,now))rxActive.push(p)}catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}});
+  planets.forEach(p=>{try{if(isRetrograde(p,now))rxActive.push(p)}catch(e){ globalThis.NRDiagnostics?.record('catch.188','recoverable'); if(window._DEBUG)console.warn('[silent]:',e.message)}});
   if(rxActive.length){
     const effects=rxActive.map(p=>retroEffects[p]||p).join(', ');
     lines.push(`<span style="color:#ff9966">🪐 Ретро: ${rxActive.length} планет → ${effects}</span>`);
@@ -19603,7 +19603,7 @@ function syncPersonalContext(){
   // Раніше: Юпітер hora при G=-1.33 → "сприяє стратегії і важливим рішенням" (суперечність з hero).
   // Тепер: при G ≤ -1 особистий шар — тільки про НЕ-дії.
   if (isFinite(g) && g <= -1) {
-    const hora = (function(){try{return calcHora(new Date())}catch(e){return null}})();
+    const hora = (function(){try{return calcHora(new Date())}catch(e){ globalThis.NRDiagnostics?.record('catch.189','recoverable'); return null}})();
     const pc = _lastPanchCtx;
     if (_personalDecision.blockedNow) {
       main.textContent = _personalDecision.reasonsNow.includes('storm')
@@ -19619,7 +19619,7 @@ function syncPersonalContext(){
   }
 
   // v84b: Personal MODIFIER — not global copy
-  const hora = (function(){try{return calcHora(new Date())}catch(e){return null}})();
+  const hora = (function(){try{return calcHora(new Date())}catch(e){ globalThis.NRDiagnostics?.record('catch.190','recoverable'); return null}})();
   const pc = _lastPanchCtx;
 
   // Build personal-specific text
@@ -19789,7 +19789,7 @@ function syncDayPlanCard(){
         const hora = calcHora(slotMid);
         if(hora?.planet) horaStr = ` · ${hora.planet}`;
       }
-    }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+    }catch(e){ globalThis.NRDiagnostics?.record('catch.191','recoverable'); if(window._DEBUG)console.warn('[silent]:',e.message)}
     // v87.90: конвертуємо UTC → локальний для відображення
     const _localStart = ((h + _tzOffH) % 24 + 24) % 24;
     const _localEnd = ((h + 3 + _tzOffH) % 24 + 24) % 24;
@@ -19928,7 +19928,7 @@ function renderProvenance(){
   // v88.9.45-fp227 (аудит-раунд-14): для 'estimated' основний лейбл тепер теж
   // явно каже OBSERVED/FORECAST через resolveSourceLabel() — раніше показував
   // generic "✓ ESTIMATED", і лише hint (_fresh) містив деталізацію.
-  const _estimatedLabel = (function(){ try { const _r = resolveSourceLabel(); return _r.isRealObserved ? ('✓ ' + _r.combined) : '✓ ESTIMATED'; } catch(_e){ return '✓ ESTIMATED'; } })();
+  const _estimatedLabel = (function(){ try { const _r = resolveSourceLabel(); return _r.isRealObserved ? ('✓ ' + _r.combined) : '✓ ESTIMATED'; } catch(_e){ globalThis.NRDiagnostics?.record('catch.192','recoverable');  return '✓ ESTIMATED'; } })();
   const _modeToLabel = { live:'✓ LIVE', estimated:_estimatedLabel, delayed:'⊙ DELAYED', stale:'⊙ CACHE/STALE', old:'✗ OFFLINE', scenario:'⚠ SCENARIO', offline:'✗ OFFLINE', degraded:'⚠ DEGRADED' };
   const _cacheState = _modeToLabel[_srcMode] ? _modeToLabel[_srcMode]
                     : window.__isDegraded === true ? '⚠ DEGRADED'
@@ -20026,7 +20026,7 @@ function renderAntiAction(){
   // v87.90 fix: використовую noonUTC щоб узгодити з Panchanga картою (раніше Anti-action міг показувати інший Tithi через time-of-day shift)
   const _refDate = (typeof sunriseUTC === 'function') ? sunriseUTC(_now) : _now;
   let _panch = null;
-  try { if(typeof computePanchanga === 'function') _panch = computePanchanga(_refDate); } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+  try { if(typeof computePanchanga === 'function') _panch = computePanchanga(_refDate); } catch(e){ globalThis.NRDiagnostics?.record('catch.193','recoverable'); if(window._DEBUG)console.warn('[silent]:',e.message)}
 
   if(!_panch){
     _el.innerHTML = '<span style="color:var(--dim)">Дані ще завантажуються…</span>';
@@ -20047,7 +20047,7 @@ function renderAntiAction(){
     if(_yAdv) _items.push({src:'Yoga', label:_panch.yoga.name, score:_panch.yoga.score, do:_yAdv.do, avoid:_yAdv.avoid});
     if(_kVishti) _items.push({src:'Karana', label:'Vishti (Bhadra)', score:-2, do:'Очікування, спостереження', avoid:'Будь-які активні дії (вето)'});
     if(_panch.rahu && _panch.rahu.active) _items.push({src:'Rahu Kalam', label:`${_panch.rahu.start}–${_panch.rahu.end}`, score:-1, do:'Оборона', avoid:'Нові старти'});
-  } catch(e){
+  } catch(e){ globalThis.NRDiagnostics?.record('catch.194','recoverable');
     _el.innerHTML = '<span style="color:var(--dim)">Помилка обчислення рекомендацій.</span>';
     return;
   }
@@ -20079,7 +20079,7 @@ function renderAntiAction(){
         }
       }
     }
-  } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+  } catch(e){ globalThis.NRDiagnostics?.record('catch.195','recoverable'); if(window._DEBUG)console.warn('[silent]:',e.message)}
 
   const _avoidItems = _items.filter(i => i.avoid && i.avoid.length > 0);
   const _doItems = _items.filter(i => i.do && i.do.length > 0);
@@ -20097,7 +20097,7 @@ function renderAntiAction(){
         _horaLine = `<div style="font-size:10px;color:var(--faint);margin-bottom:6px;letter-spacing:.04em">⏱ Зараз <strong style="color:var(--muted)">${_h.planet} hora</strong>${_h.minLeft ? ` (ще ${_h.minLeft}хв)` : ''} · враховуй це при timing</div>`;
       }
     }
-  } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+  } catch(e){ globalThis.NRDiagnostics?.record('catch.196','recoverable'); if(window._DEBUG)console.warn('[silent]:',e.message)}
 
   const _renderItem = (i, kind) => {
     const _col = i.score >= 1 ? 'var(--ok)' : i.score <= -1 ? 'var(--bad)' : 'var(--muted)';
@@ -20188,7 +20188,7 @@ function renderDisagreement(){
       }
       _sigmaYear = computeAi(sunriseUTC(_ya), 0).Ai;
     }
-  } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+  } catch(e){ globalThis.NRDiagnostics?.record('catch.197','recoverable'); if(window._DEBUG)console.warn('[silent]:',e.message)}
 
   const _models = [];
   if(isFinite(_gNow))    _models.push({
@@ -20567,34 +20567,34 @@ function syncV702UI(){
   const _ds = buildDashboardState();
   window.__dashState = _ds; // available for any function
 
-  try{syncHero();}catch(e){console.warn('syncHero:',e);}
-  try{syncWhy();}catch(e){console.warn('syncWhy:',e);}
-  try{renderMoonRetroTop();}catch(e){console.warn('renderMoonRetroTop:',e);}
-  try{syncPanchSummary();}catch(e){console.warn('syncPanchSummary:',e);}
-  try{renderConfidenceBreakdown();}catch(e){console.warn('confidence:',e);}
-  try{renderKpContribution();}catch(e){console.warn("kpContrib:",e);}
-  try{renderPanchPiLine();}catch(e){console.warn("panchPi:",e);}
-  try{renderWf3();}catch(e){console.warn("wf3:",e);}
-  try{syncTrustStrip();}catch(e){console.warn("trustStrip:",e);}
-  try{syncDayPlanCard();}catch(e){console.warn("dayPlan:",e);}
-  try{syncPersonalContext();}catch(e){console.warn("personalCtx:",e);}
+  try{syncHero();}catch(e){ globalThis.NRDiagnostics?.record('catch.198','recoverable'); console.warn('syncHero:',e);}
+  try{syncWhy();}catch(e){ globalThis.NRDiagnostics?.record('catch.199','recoverable'); console.warn('syncWhy:',e);}
+  try{renderMoonRetroTop();}catch(e){ globalThis.NRDiagnostics?.record('catch.200','recoverable'); console.warn('renderMoonRetroTop:',e);}
+  try{syncPanchSummary();}catch(e){ globalThis.NRDiagnostics?.record('catch.201','recoverable'); console.warn('syncPanchSummary:',e);}
+  try{renderConfidenceBreakdown();}catch(e){ globalThis.NRDiagnostics?.record('catch.202','recoverable'); console.warn('confidence:',e);}
+  try{renderKpContribution();}catch(e){ globalThis.NRDiagnostics?.record('catch.203','recoverable'); console.warn("kpContrib:",e);}
+  try{renderPanchPiLine();}catch(e){ globalThis.NRDiagnostics?.record('catch.204','recoverable'); console.warn("panchPi:",e);}
+  try{renderWf3();}catch(e){ globalThis.NRDiagnostics?.record('catch.205','recoverable'); console.warn("wf3:",e);}
+  try{syncTrustStrip();}catch(e){ globalThis.NRDiagnostics?.record('catch.206','recoverable'); console.warn("trustStrip:",e);}
+  try{syncDayPlanCard();}catch(e){ globalThis.NRDiagnostics?.record('catch.207','recoverable'); console.warn("dayPlan:",e);}
+  try{syncPersonalContext();}catch(e){ globalThis.NRDiagnostics?.record('catch.208','recoverable'); console.warn("personalCtx:",e);}
   // v85b-F9 (CRIT): re-render Personal block on every G tick, щоб F7-A risk-override спрацьовував
   // (раніше renderPersonal викликався тільки при input-change → при G-tick глобальний ризик не синхронізувався)
-  try{if(typeof renderPersonal==='function')renderPersonal();}catch(e){console.warn("renderPersonal:",e);}
-  try{const _gNow=_v73G();if(isFinite(_gNow))_saveGHistory(_gNow);}catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
-  try{ _renderComponentDeltaCard(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
-  try{ _renderChangeLog(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+  try{if(typeof renderPersonal==='function')renderPersonal();}catch(e){ globalThis.NRDiagnostics?.record('catch.209','recoverable'); console.warn("renderPersonal:",e);}
+  try{const _gNow=_v73G();if(isFinite(_gNow))_saveGHistory(_gNow);}catch(e){ globalThis.NRDiagnostics?.record('catch.210','recoverable'); if(window._DEBUG)console.warn('[silent]:',e.message)}
+  try{ _renderComponentDeltaCard(); }catch(e){ globalThis.NRDiagnostics?.record('catch.211','recoverable'); if(window._DEBUG)console.warn('[silent]:',e.message)}
+  try{ _renderChangeLog(); }catch(e){ globalThis.NRDiagnostics?.record('catch.212','recoverable'); if(window._DEBUG)console.warn('[silent]:',e.message)}
   // v87.19 U4: render best/worst days after history save
-  try{ renderBestWorstDays(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+  try{ renderBestWorstDays(); }catch(e){ globalThis.NRDiagnostics?.record('catch.213','recoverable'); if(window._DEBUG)console.warn('[silent]:',e.message)}
   // v87.90: provenance ledger render
-  try{ renderProvenance(); }catch(e){console.warn("provenance:",e);}
+  try{ renderProvenance(); }catch(e){ globalThis.NRDiagnostics?.record('catch.214','recoverable'); console.warn("provenance:",e);}
   // v87.90: model disagreement alert + counterfactual analysis
-  try{ renderDisagreement(); }catch(e){console.warn("disagreement:",e);}
-  try{ renderCounterfactual(); }catch(e){console.warn("counterfactual:",e);}
+  try{ renderDisagreement(); }catch(e){ globalThis.NRDiagnostics?.record('catch.215','recoverable'); console.warn("disagreement:",e);}
+  try{ renderCounterfactual(); }catch(e){ globalThis.NRDiagnostics?.record('catch.216','recoverable'); console.warn("counterfactual:",e);}
   // v87.90: anti-action recommender (Tithi/Vara/Nak/Yoga/Karana/Hora/Taara синтез)
-  try{ renderAntiAction(); }catch(e){console.warn("antiAction:",e);}
+  try{ renderAntiAction(); }catch(e){ globalThis.NRDiagnostics?.record('catch.217','recoverable'); console.warn("antiAction:",e);}
   // v87.90: intra-day Kp drop/rise alert (попередження ВСЕРЕДИНІ дня з 3-год NOAA forecast)
-  try{ renderIntraDayAlert(); }catch(e){console.warn("intraDayAlert:",e);}
+  try{ renderIntraDayAlert(); }catch(e){ globalThis.NRDiagnostics?.record('catch.218','recoverable'); console.warn("intraDayAlert:",e);}
 }
 
 
@@ -20614,8 +20614,8 @@ async function loadAllLite(){
     });
     last3D = { issued:null, predictedAp:[], days:_synDays, _synthetic:true };
     window._gIndex_last3D = last3D;
-    try{ render3Day(last3D); }catch(e){ console.warn('[fp138 lite render3Day]', e.message); }
-    try{ renderCurrentPanel(); }catch(e){ console.warn('[fp138 lite current]', e.message); }
+    try{ render3Day(last3D); }catch(e){ globalThis.NRDiagnostics?.record('catch.219','recoverable');  console.warn('[fp138 lite render3Day]', e.message); }
+    try{ renderCurrentPanel(); }catch(e){ globalThis.NRDiagnostics?.record('catch.220','recoverable');  console.warn('[fp138 lite current]', e.message); }
     // fp145 FIX: решта рендерів робить десятки синхронних computeAi (кожен смикає астро-
     // бібліотеку). Кумулятивно це блокувало головний потік на 1.5-2с → "Сторінка не
     // відповідає" + кнопки не встигали навіситись. Виносимо у чергу з yield між кроками:
@@ -20623,15 +20623,15 @@ async function loadAllLite(){
     const _yield = () => new Promise(r => (typeof requestIdleCallback==='function' ? requestIdleCallback(()=>r(), {timeout:500}) : setTimeout(r,0)));
     (async () => {
       await _yield();
-      try{ renderPanchanga(sunriseUTC(new Date(todayKyivStr()+'T12:00:00Z'))); }catch(e){ console.warn('[fp138 lite panch]', e.message); }
+      try{ renderPanchanga(sunriseUTC(new Date(todayKyivStr()+'T12:00:00Z'))); }catch(e){ globalThis.NRDiagnostics?.record('catch.221','recoverable');  console.warn('[fp138 lite panch]', e.message); }
       await _yield();
       try{
         const _syn27 = Array.from({length:27},(_,i)=>{ const d=new Date(todayKyivStr()+'T12:00:00Z'); d.setUTCHours(0,0,0,0); d.setUTCDate(d.getUTCDate()+i-7); return {date:d, flux:null, Ap:null, kpMax:kp0, _synthetic:true}; });
         render27Day(_syn27, last3D);
-      }catch(e){ console.warn('[fp138 lite 27d]', e.message); }
+      }catch(e){ globalThis.NRDiagnostics?.record('catch.222','recoverable');  console.warn('[fp138 lite 27d]', e.message); }
       await _yield();
       try{ updateFreshnessBadge(); }catch(e){ window.NRDiagnostics?.record('legacy.catch.199','recoverable'); }
-      try{ syncV702UI(); }catch(e){ console.warn('[fp138 lite sync]', e.message); }
+      try{ syncV702UI(); }catch(e){ globalThis.NRDiagnostics?.record('catch.223','recoverable');  console.warn('[fp138 lite sync]', e.message); }
       await _yield();
       // Regime cards remain retired until independent outcomes exist.
       try{ if(typeof renderUnifiedIndicesPanel==='function') renderUnifiedIndicesPanel(); }catch(e){ window.NRDiagnostics?.record('legacy.catch.200','recoverable'); }
@@ -20642,7 +20642,7 @@ async function loadAllLite(){
       if(st){ st.textContent='● SAFE'; st.style.background='#1a2540'; st.style.color='#9bb1dc'; st.title='Safe boot: live NOAA fetch вимкнено на старті, щоб сторінка не зависала. Натисни Оновити або відкрий ?live=1 для live fetch.'; }
       const ts=document.getElementById('dataTimestamp'); if(ts) ts.textContent='SAFE BOOT · live fetch manual';
     }catch(e){ window.NRDiagnostics?.record('legacy.catch.202','recoverable'); }
-  }catch(e){
+  }catch(e){ globalThis.NRDiagnostics?.record('catch.224','recoverable');
     console.error('[fp138 loadAllLite fatal]', e);
     try{ el('nowError').textContent='SAFE BOOT error: '+e.message; }catch(_e){ window.NRDiagnostics?.record('legacy.catch.203','recoverable'); }
   }
@@ -20662,7 +20662,7 @@ async function loadAll(){
 
   try{
     await preloadEventsAroundNow();
-  }catch(err){
+  }catch(err){ globalThis.NRDiagnostics?.record('catch.225','recoverable');
     el('nowError').textContent = 'Попередження: не вдалося підвантажити події: ' + err.message;
   }
 
@@ -20737,7 +20737,7 @@ async function loadAll(){
         } else {
           _setSrcStatus('srcKpObs','cache');
         }
-      } catch(eGfz){
+      } catch(eGfz){ globalThis.NRDiagnostics?.record('catch.226','recoverable');
         console.warn('[v88.8.18] GFZ comparison failed, keeping NOAA:', eGfz.message);
         _setSrcStatus('srcKpObs','cache'); // NOAA stale, GFZ fail → degraded
       }
@@ -20758,7 +20758,7 @@ async function loadAll(){
       if (lastWWV && isFinite(lastWWV.kNow)) lsSet('last_kp_known', lastWWV.kNow);
       _gfzOK = true;
       if(window._DEBUG) console.log('[v88.8.18] KP_OBS GFZ Potsdam fallback OK (Kp='+lastWWV.kNow+')');
-    }catch(eGfz){
+    }catch(eGfz){ globalThis.NRDiagnostics?.record('catch.227','recoverable');
       console.warn('[v88.8.18] GFZ fallback failed:', eGfz.message);
     }
     if (!_gfzOK) try{
@@ -20774,7 +20774,7 @@ async function loadAll(){
       _lastKpObsJson = converted;
       lastWWV = parseKpObsJSON(converted);
       if(window._DEBUG) console.log('[v43] KP_OBS fallback OK (1m)');
-    }catch(e2){
+    }catch(e2){ globalThis.NRDiagnostics?.record('catch.228','recoverable');
       if (!_gfzOK) {
         console.warn('[v43] KP_OBS fallback also failed:', e2.message);
         // v62: synthetic Kp з localStorage (останнє відоме значення)
@@ -20813,7 +20813,7 @@ async function loadAll(){
         _setSrcStatus('srcKpObs','ok');
         lsSet('last_kp_known', _kp1m);
       }
-    } catch(_e1m) { if(window._DEBUG) console.warn('[fp417 KP_1M]', _e1m.message); }
+    } catch(_e1m) { globalThis.NRDiagnostics?.record('catch.229','recoverable');  if(window._DEBUG) console.warn('[fp417 KP_1M]', _e1m.message); }
   }
 
   // Kp прогноз 3 дні
@@ -20846,7 +20846,7 @@ async function loadAll(){
         const point = _localKp[fmtDate(d)];
         return point && Number.isFinite(Number(point.kp)) && point.kp_synthetic === false;
       });
-    } catch(_e) { _preferVerifiedLocal3Day = false; }
+    } catch(_e) { globalThis.NRDiagnostics?.record('catch.230','recoverable');  _preferVerifiedLocal3Day = false; }
   }
   // v88.6.9: Tier-2 UAF Geophysical Institute fallback — якщо NOAA 3-day fail
   if (!window.GINDEX_PLAY_CHANNEL && (!last3D || !last3D.days || !last3D.days.length || last3D._synthetic) && !_preferVerifiedLocal3Day) {
@@ -20867,7 +20867,7 @@ async function loadAll(){
           window._uafCache27Day = uafTo27DayFormat(_uaf);
         }
       }
-    }catch(uafErr){
+    }catch(uafErr){ globalThis.NRDiagnostics?.record('catch.231','recoverable');
       console.warn('[v88.6.9] UAF fallback failed:', uafErr.message);
     }
   }
@@ -20881,7 +20881,7 @@ async function loadAll(){
     // навіть коли свіжіший реальний прогноз уже лежав у репо. Знайдено 2026-07-08 (аудит
     // невідповідності "3-day спадає" vs "future_kp.json зростає").
     let _fkp = {};
-    try { _fkp = await loadFutureKp() || {}; } catch(_e){ _fkp = {}; }
+    try { _fkp = await loadFutureKp() || {}; } catch(_e){ globalThis.NRDiagnostics?.record('catch.232','recoverable');  _fkp = {}; }
     let _usedReal = 0;
     const _synDays = [0,1,2].map(offset => {
       const d = new Date(todayKyivStr()+'T12:00:00Z'); d.setUTCHours(0,0,0,0); d.setUTCDate(d.getUTCDate()+offset);
@@ -21000,10 +21000,10 @@ async function loadAll(){
 
   // v42: Real-time solar wind (DSCOVR Bz + Vsw)
   // v88.8.62-fp138: secondary live rails are non-critical; never let them block startup.
-  try { await withTimeout(signal=>fetchBzNow(signal), 3500, 'Bz live');  } catch(_){if(window._DEBUG)console.warn('[silent]')}
-  try { await withTimeout(signal=>fetchVswNow(signal), 3500, 'Vsw live'); } catch(_){if(window._DEBUG)console.warn('[silent]')}
+  try { await withTimeout(signal=>fetchBzNow(signal), 3500, 'Bz live');  } catch(_){ globalThis.NRDiagnostics?.record('catch.233','recoverable'); if(window._DEBUG)console.warn('[silent]')}
+  try { await withTimeout(signal=>fetchVswNow(signal), 3500, 'Vsw live'); } catch(_){ globalThis.NRDiagnostics?.record('catch.234','recoverable'); if(window._DEBUG)console.warn('[silent]')}
   // v87.15 U6: GOES X-ray flare — Solar flare monitoring
-  try { await withTimeout(signal=>fetchXrayNow(signal), 3500, 'Xray live'); } catch(_){if(window._DEBUG)console.warn('[silent]')}
+  try { await withTimeout(signal=>fetchXrayNow(signal), 3500, 'Xray live'); } catch(_){ globalThis.NRDiagnostics?.record('catch.235','recoverable'); if(window._DEBUG)console.warn('[silent]')}
   // v62: Bz/Vsw localStorage cache + v87.16 A4: separate status indicators
   if (isFinite(lastBz))  { lsSet('last_bz_known', lastBz);  _setSrcStatus('srcBz','ok'); }
   else { const _lbz=parseFloat(lsGet('last_bz_known')); if(isFinite(_lbz)){ lastBz=_lbz; _setSrcStatus('srcBz','cache'); } else _setSrcStatus('srcBz','error'); }
@@ -21033,7 +21033,7 @@ async function loadAll(){
         else _setSrcStatus('srcXray','error');
       }
     }
-  } catch(e) { _setSrcStatus('srcXray','error'); }
+  } catch(e) { globalThis.NRDiagnostics?.record('catch.236','recoverable');  _setSrcStatus('srcXray','error'); }
 
   // v87.16 A1 fix: показати Sn_pen в формулі UI коли реально активний у розрахунку
   try {
@@ -21044,14 +21044,14 @@ async function loadAll(){
 
   try{
     renderCurrentPanel();
-  }catch(e){
+  }catch(e){ globalThis.NRDiagnostics?.record('catch.237','recoverable');
     console.error('renderCurrentPanel error:', e);
     el('nowError').textContent = 'Помилка панелі: ' + e.message;
   }
 
   try{
     renderPanchanga(sunriseUTC(new Date(todayKyivStr()+'T12:00:00Z'))); // v37.6: noon для консистентності з G
-  }catch(e){ console.error('renderPanchanga error:', e); }
+  }catch(e){ globalThis.NRDiagnostics?.record('catch.238','recoverable');  console.error('renderPanchanga error:', e); }
 
   // 27-day (P0: fallback на 45-day-forecast.json)
   async function try27Day(){
@@ -21072,7 +21072,7 @@ async function loadAll(){
         _setSrcStatus('src27Day','ok');
         if(window._DEBUG) console.log('[v43] 27-day OK (primary .txt)');
         return;
-      }catch(err){
+      }catch(err){ globalThis.NRDiagnostics?.record('catch.239','recoverable');
         console.warn('[v43] 27-day parse failed:', err.message, '— trying UAF fallback');
       }
     } else {
@@ -21095,7 +21095,7 @@ async function loadAll(){
         if(window._DEBUG) console.log('[v88.6.9] 27-day UAF Alaska OK ('+r27uaf.length+' days)');
         return;
       }
-    }catch(uafErr){
+    }catch(uafErr){ globalThis.NRDiagnostics?.record('catch.240','recoverable');
       console.warn('[v88.6.9] UAF 27-day fallback failed:', uafErr.message, '— trying 45-day fallback');
     }
     }
@@ -21112,7 +21112,7 @@ async function loadAll(){
       _setSrcStatus('src27Day','cache');
       el('twentysevenError').textContent = '⚠ 27-day недоступний — показано 45-day Ap; максимум Kp із добового Ap не визначається';
       if(window._DEBUG) console.log('[v43] 45-day fallback OK,', r27fb.length, 'рядків');
-    }catch(e2){
+    }catch(e2){ globalThis.NRDiagnostics?.record('catch.241','recoverable');
       console.warn('[v43] 45-day fallback failed:', e2.message);
       // v62: synthetic 27-day з поточного Kp + lsGet
       const _kp27 = (lastWWV && isFinite(lastWWV.kNow)) ? lastWWV.kNow
@@ -21129,7 +21129,7 @@ async function loadAll(){
   // v88.6.9: try27Day у outer try щоб помилка не зламала рендеринг
   try {
     await try27Day();
-  } catch(e) {
+  } catch(e) { globalThis.NRDiagnostics?.record('catch.242','recoverable');
     console.warn('[loadAll] try27Day failed:', e.message);
     _setSrcStatus('src27Day','error');
   }
@@ -21137,7 +21137,7 @@ async function loadAll(){
   // ── Freshness badge ──
   updateFreshnessBadge();
 
-  try{ syncV702UI(); }catch(e){ console.warn('syncV702UI:', e); }
+  try{ syncV702UI(); }catch(e){ globalThis.NRDiagnostics?.record('catch.243','recoverable');  console.warn('syncV702UI:', e); }
   // v88.8.51-fp128 BUGFIX: renderRegimeCards() раніше викликалась ЛИШЕ ОДИН РАЗ при
   // початковому завантаженні сторінки (addEventListener('load',...)), НЕ в кожному
   // циклі loadAll(). Якщо на той єдиний момент live Kp (lastWWV.kNow) ще не встиг
@@ -21146,7 +21146,7 @@ async function loadAll(){
   // на відміну від hero-кільця/GNSS, які проходять через syncV702UI() тут же.
   // Тепер renderRegimeCards() теж в циклі — самокорегується на наступному refresh.
   // Regime cards remain retired until independent outcomes exist.
-  try{ if(typeof renderUnifiedIndicesPanel === 'function') renderUnifiedIndicesPanel(); }catch(e){if(window._DEBUG)console.warn('[fp126 unifiedIndices]:',e.message)}
+  try{ if(typeof renderUnifiedIndicesPanel === 'function') renderUnifiedIndicesPanel(); }catch(e){ globalThis.NRDiagnostics?.record('catch.244','recoverable'); if(window._DEBUG)console.warn('[fp126 unifiedIndices]:',e.message)}
   // fp54-A: _daySlots may now be populated (from renderDayForecast earlier in the cycle)
   // Final pass to patch any stale "Немає даних по слотах" placeholders.
   setTimeout(() => {
@@ -21159,7 +21159,7 @@ async function loadAll(){
     // Гарантований відкладений повтор самокоригує це на кожному циклі.
     try { if(typeof syncHero === 'function') syncHero(); } catch(_e){ window.NRDiagnostics?.record('legacy.catch.211','recoverable'); }
   }, 400);
-  try{ applyWowFromG(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+  try{ applyWowFromG(); }catch(e){ globalThis.NRDiagnostics?.record('catch.245','recoverable'); if(window._DEBUG)console.warn('[silent]:',e.message)}
 
   el('btnRefresh').disabled = false;
 }
@@ -22617,7 +22617,7 @@ function renderPersonal() {
   // але особистий цикл несе ризик (danger=Vipat/Pratyak/Naidhana або taaraGmod ≤ -1).
   // Раніше при G=+0.7 і Taara=Vipat hero казало "Можна діяти", а personal block — "День напружений".
   // Без banner оператор бачив суперечність без пояснення, що це різні шари (фон vs особистий).
-  const _globalG = (function(){try{return _v73G();}catch(e){return NaN;}})();
+  const _globalG = (function(){try{return _v73G();}catch(e){ globalThis.NRDiagnostics?.record('catch.246','recoverable'); return NaN;}})();
   // fp408: action authority is the resolved operational verdict, not raw G.
   // A raw value such as -0.83 may resolve to operational -1 because the
   // verified daily reference and safety rules are applied separately.  The
@@ -22627,7 +22627,7 @@ function renderPersonal() {
     try {
       const _kp408 = Number(window.__uiState?.kpNow);
       return (typeof resolveDaySignal_v88825 === 'function') ? resolveDaySignal_v88825(new Date(todayKyivStr()+'T12:00:00Z'), _globalG, _kp408, {isToday:true}) : null;
-    } catch (_e408) { return null; }
+    } catch (_e408) { globalThis.NRDiagnostics?.record('catch.247','recoverable');  return null; }
   })();
   const _operationalScore408 = Number(_operationalPersonal408?.decisionScore);
   const _operationalKnown408 = Number.isFinite(_operationalScore408);
@@ -22935,7 +22935,7 @@ function getSlotData(idx){
   // v87.40: defensive — corrupt JSON in localStorage had ability to crash initPersonalCalc
   try{
     return JSON.parse(lsGet(getSlotKey(idx)) || 'null');
-  }catch(e){
+  }catch(e){ globalThis.NRDiagnostics?.record('catch.248','recoverable');
     console.warn('[getSlotData] corrupt JSON at slot', idx, '— clearing');
     lsRemove(getSlotKey(idx));
     return null;
@@ -23396,7 +23396,7 @@ function renderHoraTimeline(dateUTC, kp, G) {
   const axis = el('horaAxis');
   if(!wrap) return;
   // v87.26: оновити лейбл координат/TZ при кожному рендері (offset/DST може змінитися)
-  try{ _updateHoraCoordLabel(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+  try{ _updateHoraCoordLabel(); }catch(e){ globalThis.NRDiagnostics?.record('catch.249','recoverable'); if(window._DEBUG)console.warn('[silent]:',e.message)}
 
   const HORA_SYMBOLS = {
     'Сонце':'☀','Місяць':'☽','Марс':'♂','Меркурій':'☿','Юпітер':'♃','Венера':'♀','Сатурн':'♄'
@@ -23850,7 +23850,7 @@ function renderBestTime(dateUTC, kp, G, panchPCL) {
   try {
     const _e = (typeof getEngineScore === 'function') ? getEngineScore(dateUTC) : null;
     if (_e && isFinite(_e.eng)) _todayEng = Number(_e.eng);
-  } catch(e){ _todayEng = null; }
+  } catch(e){ globalThis.NRDiagnostics?.record('catch.250','recoverable');  _todayEng = null; }
 
   // Якщо G < -1 — взагалі несприятливо, показуємо попередження
   if(isFinite(G) && G <= -1.5) {
@@ -24068,7 +24068,7 @@ async function shareGState() {
     setTimeout(() => URL.revokeObjectURL(a.href), 5000);
     _copyFallback(fallbackText);
     _showToast('🖼 PNG збережено + 📋 текст скопійовано');
-  } catch(e) {
+  } catch(e) { globalThis.NRDiagnostics?.record('catch.251','recoverable');
     _copyFallback(fallbackText);
   }
 }
@@ -24136,7 +24136,7 @@ function updateDataTimestamp(whenText) {
     const offStr = (Number.isInteger(off) ? off : off.toFixed(1));
     el.textContent = 'оновлено ' + now.toLocaleTimeString('uk-UA', {hour:'2-digit',minute:'2-digit'}) + ' UTC' + (off>=0?'+':'') + offStr;
     // v87.26: IANA tooltip
-    try{ el.title = window._iana || ''; }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+    try{ el.title = window._iana || ''; }catch(e){ globalThis.NRDiagnostics?.record('catch.252','recoverable'); if(window._DEBUG)console.warn('[silent]:',e.message)}
   }
 }
 
@@ -24322,7 +24322,7 @@ function updateScienceBar(kp, ap, sn, ai, phaseName, phaseDeg, f107) {
         } else {
           _gExtEl.textContent = '—';
         }
-      } catch(e) {
+      } catch(e) { globalThis.NRDiagnostics?.record('catch.253','recoverable');
         if (window._DEBUG) console.warn('[G_ext]', e.message);
         _gExtEl.textContent = '—';
       }
@@ -24401,7 +24401,7 @@ const PROFILE_TEXT = {
 function setProfile(p) {
   _activeProfile = p;
   // v87.90 fix: persistence — без цього після reload юзер втрачає вибір
-  try { localStorage.setItem('gindex_profile', p); } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+  try { localStorage.setItem('gindex_profile', p); } catch(e){ globalThis.NRDiagnostics?.record('catch.254','recoverable'); if(window._DEBUG)console.warn('[silent]:',e.message)}
   document.querySelectorAll('.profile-btn').forEach(b => {
     const _on = b.dataset.p === p;
     b.classList.toggle('active', _on);
@@ -24412,7 +24412,7 @@ function setProfile(p) {
   try {
     const _ui = window.__uiState || {};
     { const _opG = (typeof resolveCurrentOperationalG_v88825 === 'function') ? resolveCurrentOperationalG_v88825() : _ui.gNow; if (isFinite(_opG)) renderDecisionLayer(_opG, _ui); }
-  } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+  } catch(e){ globalThis.NRDiagnostics?.record('catch.255','recoverable'); if(window._DEBUG)console.warn('[silent]:',e.message)}
 }
 
 // v87.90: відновити профіль з localStorage при load
@@ -24422,7 +24422,7 @@ function setProfile(p) {
     if (_saved && ['med','pilot','trader','mil','off'].includes(_saved)) {
       _activeProfile = _saved;
     }
-  } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+  } catch(e){ globalThis.NRDiagnostics?.record('catch.256','recoverable'); if(window._DEBUG)console.warn('[silent]:',e.message)}
 })();
 
 // ─── v32: Вікова поправка для mil-профілю ───────────────────────────────────
@@ -24462,7 +24462,7 @@ function getAgeAdj(profileKey) {
     const label  = gShift !== 0 ? `${age}р${suffix}` : '';
 
     return { age, ageKey, label, gShift };
-  } catch(e) {
+  } catch(e) { globalThis.NRDiagnostics?.record('catch.257','recoverable');
     return { age: null, ageKey: null, label: '', gShift: 0 };
   }
 }
@@ -24481,7 +24481,7 @@ function getTaaraState() {
     const taara    = calcTaara(natal.idx, nowNak.idx);
     const dasa     = calcCurrentDasa(natal.idx, natal.fraction, birthJDE, nowJDE);
     return { taara, dasa, natal, nowNak };
-  } catch(e) { return null; }
+  } catch(e) { globalThis.NRDiagnostics?.record('catch.258','recoverable');  return null; }
 }
 
 // ─── Генератор mil-контексту з ageAdj + Taara + Dasa ────────────────────────
@@ -24648,11 +24648,11 @@ if(document.readyState === 'interactive' || document.readyState === 'complete') 
   document.addEventListener('DOMContentLoaded', function(){ bootGIndexOnce('DOMContentLoaded'); }, {once:true});
 }
 addEventListener('load', function(){ bootGIndexOnce('load'); }, {once:true});
-try{ const _br=el('btnRefresh'); if(_br) _br.addEventListener('click', () => runDataRefresh('manual')); }catch(e){if(window._DEBUG)console.warn('[boot refresh]:',e.message)}
+try{ const _br=el('btnRefresh'); if(_br) _br.addEventListener('click', () => runDataRefresh('manual')); }catch(e){ globalThis.NRDiagnostics?.record('catch.259','recoverable'); if(window._DEBUG)console.warn('[boot refresh]:',e.message)}
 // fp172: btnCsv/btnIcs existed in HTML with real, working export functions
 // ready to serve them, but neither was ever connected — clicking did nothing.
-try{ const _bc=el('btnCsv'); if(_bc) _bc.addEventListener('click', exportCsv); }catch(e){if(window._DEBUG)console.warn('[boot csv]:',e.message)}
-try{ const _bi=el('btnIcs'); if(_bi) _bi.addEventListener('click', exportICS); }catch(e){if(window._DEBUG)console.warn('[boot ics]:',e.message)}
+try{ const _bc=el('btnCsv'); if(_bc) _bc.addEventListener('click', exportCsv); }catch(e){ globalThis.NRDiagnostics?.record('catch.260','recoverable'); if(window._DEBUG)console.warn('[boot csv]:',e.message)}
+try{ const _bi=el('btnIcs'); if(_bi) _bi.addEventListener('click', exportICS); }catch(e){ globalThis.NRDiagnostics?.record('catch.261','recoverable'); if(window._DEBUG)console.warn('[boot ics]:',e.message)}
 
 // ========================= i18n EN/UA =========================
 // v87.90: розширено для покриття всіх нових компонентів v87.66-77
@@ -24918,18 +24918,18 @@ function applyLang(lang) {
   const _astro = document.getElementById('heroAstroLayer');
   if(_astro && t.astroLayerLabel) _astro.setAttribute('data-label', t.astroLayerLabel);
   // Re-render scenario sub-label (контекст залежить від мови — критичних/critical)
-  try{ if(typeof renderScenarioCard === 'function') renderScenarioCard(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
-  try{ if(typeof renderHeroAstroLayer === 'function') renderHeroAstroLayer(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+  try{ if(typeof renderScenarioCard === 'function') renderScenarioCard(); }catch(e){ globalThis.NRDiagnostics?.record('catch.262','recoverable'); if(window._DEBUG)console.warn('[silent]:',e.message)}
+  try{ if(typeof renderHeroAstroLayer === 'function') renderHeroAstroLayer(); }catch(e){ globalThis.NRDiagnostics?.record('catch.263','recoverable'); if(window._DEBUG)console.warn('[silent]:',e.message)}
 
   // Disambig chip
   const _dis = document.getElementById('timingDisambig');
   if(_dis) _dis.textContent = t.timingDisambig;
 
   // Re-render dynamic content (Disagreement/Counterfactual/AntiAction/Provenance) для оновленої мови
-  try{ if(typeof renderProvenance === 'function') renderProvenance(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
-  try{ if(typeof renderDisagreement === 'function') renderDisagreement(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
-  try{ if(typeof renderCounterfactual === 'function') renderCounterfactual(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
-  try{ if(typeof renderAntiAction === 'function') renderAntiAction(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+  try{ if(typeof renderProvenance === 'function') renderProvenance(); }catch(e){ globalThis.NRDiagnostics?.record('catch.264','recoverable'); if(window._DEBUG)console.warn('[silent]:',e.message)}
+  try{ if(typeof renderDisagreement === 'function') renderDisagreement(); }catch(e){ globalThis.NRDiagnostics?.record('catch.265','recoverable'); if(window._DEBUG)console.warn('[silent]:',e.message)}
+  try{ if(typeof renderCounterfactual === 'function') renderCounterfactual(); }catch(e){ globalThis.NRDiagnostics?.record('catch.266','recoverable'); if(window._DEBUG)console.warn('[silent]:',e.message)}
+  try{ if(typeof renderAntiAction === 'function') renderAntiAction(); }catch(e){ globalThis.NRDiagnostics?.record('catch.267','recoverable'); if(window._DEBUG)console.warn('[silent]:',e.message)}
 
   // <html lang> attribute для accessibility
   document.documentElement.lang = ua ? 'uk' : 'en';
@@ -24999,12 +24999,12 @@ function toggleHeaderTools(button){
 function initSimpleMode(){
   // Restore стан з localStorage
   // fp92: default = simple mode для нових (перший відкриття без збереженого налаштування)
-  const _hasSimplePref = (function(){ try { return localStorage.getItem('gindex_simple_mode') !== null; } catch(e){ return true; } })();
+  const _hasSimplePref = (function(){ try { return localStorage.getItem('gindex_simple_mode') !== null; } catch(e){ globalThis.NRDiagnostics?.record('catch.268','recoverable');  return true; } })();
   const _savedSimple = (function(){ try {
     if(window.GINDEX_PLAY_CHANNEL) return true;
     if(!_hasSimplePref) return true; // new user → simple by default
     return localStorage.getItem('gindex_simple_mode') === '1';
-  } catch(e){ return true; } })();
+  } catch(e){ globalThis.NRDiagnostics?.record('catch.269','recoverable');  return true; } })();
   setSimpleMode(_savedSimple, {persist:false, notify:false});
 }
 
@@ -25332,7 +25332,7 @@ window.__regress = function(opts){
       }
       const ok = checks.every(c => c.endsWith('✓'));
       results.push({ name, ok, checks: checks.join(' · '), actual, expected });
-    } catch(e){
+    } catch(e){ globalThis.NRDiagnostics?.record('catch.270','recoverable');
       results.push({ name, ok: false, error: e.message, expected });
     } finally {
       window._lastDst = savedDst;
@@ -25634,8 +25634,8 @@ const GChrono = (function(){
     const d = new Date();
     return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
   }
-  function _lsLoad(){ try { return JSON.parse(localStorage.getItem(LS_KEY) || '[]'); } catch(e){ return []; } }
-  function _lsSave(arr){ try { localStorage.setItem(LS_KEY, JSON.stringify(arr)); return true; } catch(e){ return false; } }
+  function _lsLoad(){ try { return JSON.parse(localStorage.getItem(LS_KEY) || '[]'); } catch(e){ globalThis.NRDiagnostics?.record('catch.271','recoverable');  return []; } }
+  function _lsSave(arr){ try { localStorage.setItem(LS_KEY, JSON.stringify(arr)); return true; } catch(e){ globalThis.NRDiagnostics?.record('catch.272','recoverable');  return false; } }
 
   function saveToday(){
     const A=+(document.getElementById('chA')?.value||0);
@@ -25770,7 +25770,7 @@ const GChrono = (function(){
         completedN: completed.length,
         lastDate: rows.length ? rows[rows.length - 1][idxDate] : null
       };
-    } catch(e) {
+    } catch(e) { globalThis.NRDiagnostics?.record('catch.273','recoverable');
       if(window._DEBUG) console.warn('[chrono-csv] недоступний:', e.message);
       _chronoCsvCache = null;
     }
@@ -25841,7 +25841,7 @@ const SolarWind = (function(){
       };
       try { localStorage.setItem(LS_KEY, JSON.stringify({ts: Date.now(), data})); } catch(e){ window.NRDiagnostics?.record('legacy.catch.230','recoverable'); }
       return data;
-    } catch(e){
+    } catch(e){ globalThis.NRDiagnostics?.record('catch.274','recoverable');
       console.warn('[SolarWind] fetch failed:', e.message);
       try {
         const stale = JSON.parse(localStorage.getItem(LS_KEY) || 'null');
@@ -25932,7 +25932,7 @@ const NoaaEvents = (function(){
       });
       try { localStorage.setItem(LS_KEY, JSON.stringify({ts: Date.now(), data: events})); } catch(e){ window.NRDiagnostics?.record('legacy.catch.234','recoverable'); }
       return events;
-    } catch(e){
+    } catch(e){ globalThis.NRDiagnostics?.record('catch.275','recoverable');
       console.warn('[NoaaEvents] fetch failed:', e.message);
       // Return stale cache if available
       try {
@@ -26062,7 +26062,7 @@ const NoaaEvents = (function(){
           setTimeout(step, 800);
         }, 50);
       })();
-    } catch(e) {
+    } catch(e) { globalThis.NRDiagnostics?.record('catch.276','recoverable');
       st.textContent = 'diag: помилка завантаження даних: ' + ((e && e.message) || '?');
     }
   }, 6000);
@@ -26083,7 +26083,7 @@ setTimeout(async function _dayVerdictLoad(){
     // Repaint it immediately after the verified registry is normalized, otherwise
     // Today can keep the provisional live/Engine headline until another data event.
     try { if (typeof window.renderCompetitiveCover === 'function') window.renderCompetitiveCover(); }
-    catch(e) { console.warn('[fp441 authority cover refresh]', e); }
+    catch(e) { globalThis.NRDiagnostics?.record('catch.277','recoverable');  console.warn('[fp441 authority cover refresh]', e); }
     await Promise.all([loadAutoProspectiveStatus(),loadTanitaPromotionGate()]);
     await loadTanitaReviewStatus();
     await loadBgsSpaceWeather();
@@ -26104,23 +26104,23 @@ setTimeout(async function _dayVerdictLoad(){
           last3D && Array.isArray(last3D.days) && last3D.days.length) {
         render3Day(last3D);
       }
-    } catch(e) { console.warn('[fp391 boot horizon refresh: 3-day]', e); }
+    } catch(e) { globalThis.NRDiagnostics?.record('catch.278','recoverable');  console.warn('[fp391 boot horizon refresh: 3-day]', e); }
     try {
       if (typeof renderWeekSummary === 'function') renderWeekSummary();
-    } catch(e) { console.warn('[fp391 boot horizon refresh: week]', e); }
+    } catch(e) { globalThis.NRDiagnostics?.record('catch.279','recoverable');  console.warn('[fp391 boot horizon refresh: week]', e); }
     try {
       if (typeof render27Day === 'function' && typeof _last27Rows !== 'undefined' &&
           Array.isArray(_last27Rows) && _last27Rows.length) {
         render27Day(_last27Rows, (typeof last3D !== 'undefined' ? last3D : null));
       }
-    } catch(e) { console.warn('[fp391 boot horizon refresh: 27-day]', e); }
+    } catch(e) { globalThis.NRDiagnostics?.record('catch.280','recoverable');  console.warn('[fp391 boot horizon refresh: 27-day]', e); }
     // fp424: horizon rendering can finish after the first current-surface pass.
     // Repaint Hero/timing/day-plan last so every "now" surface observes the
     // same final Panchanga window, Kp guard and reference freshness state.
     try { if (typeof syncV702UI === 'function') syncV702UI(); }
-    catch(e) { console.warn('[fp424 final current-surface resync]', e); }
+    catch(e) { globalThis.NRDiagnostics?.record('catch.281','recoverable');  console.warn('[fp424 final current-surface resync]', e); }
     try { if (typeof renderCompetitiveCover === 'function') renderCompetitiveCover(); }
-    catch(e) { console.warn('[fp441 final cover refresh]', e); }
+    catch(e) { globalThis.NRDiagnostics?.record('catch.282','recoverable');  console.warn('[fp441 final cover refresh]', e); }
   } catch(e){ window.NRDiagnostics?.record('legacy.catch.241','recoverable'); }
 }, 6000);
 // ═══ /fp194 ═════════════════════════════════════════════════════════════════
@@ -26606,7 +26606,7 @@ body.fp434-app main#mainContent{padding-inline:24px!important}
     setTimeout(()=>requestProductRender('calendar'),650);
     setTimeout(enhanceFunctionalRoutes,900);
   }
-  function todayKey(){try{return typeof todayKyivStr==='function'?todayKyivStr():new Date().toISOString().slice(0,10)}catch(_e){return new Date().toISOString().slice(0,10)}}
+  function todayKey(){try{return typeof todayKyivStr==='function'?todayKyivStr():new Date().toISOString().slice(0,10)}catch(_e){ globalThis.NRDiagnostics?.record('catch.283','recoverable'); return new Date().toISOString().slice(0,10)}}
   function cleanRegistryHeadline(value){return String(value||'').replace(/Нейтральни\s+й/giu,'Нейтральний').replace(/несприятл\s+ивий/giu,'несприятливий').replace(/несприятливи\s+й/giu,'несприятливий').replace(/прибиран\s+ня/giu,'прибирання').replace(/\s+Дані можуть(?:\s+бути)?\s*$/iu,'').replace(/\s+/g,' ').trim()}
   function localizeNewShellCopy(){
     const f=document.querySelector('#nrRoute-forecast .nr-route-head');if(f){const e=f.querySelector('.nr-eyebrow'),p=f.querySelector('p');if(e)e.textContent='ПРОГНОЗ';if(p)p.textContent='Одна шкала для трьох горизонтів: спочатку порада, нижче — графік і пояснення джерел.'}
@@ -26748,7 +26748,7 @@ body.fp434-app main#mainContent{padding-inline:24px!important}
       set('nrSkyInfluenceNote','Космічна погода показана як фізичний фон; Панчанга — як традиційний календарний сенс. Вони не дублюють одне одного.');
       const parts=[p.tithi?.type&&`місячний ритм — ${p.tithi.type}`,p.nakshatra?.type&&`характер дії — ${p.nakshatra.type}`,p.karana?.note&&`короткий практичний ритм — ${p.karana.note}`,p.vara?.note&&`тема дня — ${p.vara.note}`].filter(Boolean);
       set('nrSkyMeaning',`${parts.join('; ')||'Традиційний сенс уточнюється за поточними компонентами Панчанги.'}. Це орієнтир для уважності, практики й планування, а не гарантія події.`);
-    }catch(error){const node=document.getElementById('nrSkyMeaning');if(node)node.textContent='Космічний шар тимчасово недоступний; значення не підміняються припущенням.'}
+    }catch(error){ globalThis.NRDiagnostics?.record('catch.284','recoverable'); const node=document.getElementById('nrSkyMeaning');if(node)node.textContent='Космічний шар тимчасово недоступний; значення не підміняються припущенням.'}
   }
   window.fp463RenderCosmicConcept=renderCosmicConcept;
   let _consumerFeedPending=null;
@@ -26808,7 +26808,7 @@ body.fp434-app main#mainContent{padding-inline:24px!important}
       const cards=scorecard.channels||{},boundary=document.getElementById('nrProspectiveBoundary');
       if(boundary)boundary.textContent=`Prospective зафіксовано: PDF ${cards.expert_pdf?.frozen_predictions??0}, Engine ${cards.frozen_engine?.frozen_predictions??0}, Tanita ${cards.tanita_image?.frozen_predictions??0}. Валідні незалежні outcomes: ${cards.expert_pdf?.valid_independent_pairs??0}/${cards.frozen_engine?.valid_independent_pairs??0}/${cards.tanita_image?.valid_independent_pairs??0}. Gate кожного каналу: 0/100 на старті; поточні значення показані вище. Порівняння, router та ансамбль заблоковані до 100 пар на канал.`;
       window.__independentPanelState={generation,status:'loaded'};
-    }catch(error){
+    }catch(error){ globalThis.NRDiagnostics?.record('catch.285','recoverable');
       if(generation!==_independentPanelGeneration)return;
       renderSourceSummary();requestProductRender("cover","calendar","forecast");
       window.__independentPanelState={generation,status:'error',message:String(error?.message||error)};
@@ -26854,7 +26854,7 @@ body.fp434-app main#mainContent{padding-inline:24px!important}
     if(['profile','match','reports','plan'].includes(name))setTimeout(enhanceFunctionalRoutes,80);
     if(scroll){window.scrollTo({top:0,behavior:'smooth'});const activeRoute=document.getElementById('nrRoute-'+name);const heading=activeRoute?.querySelector('h1,h2');const announcer=document.getElementById('fp434RouteAnnouncer');if(announcer)announcer.textContent=heading?.textContent?.trim()||name;setTimeout(()=>{if(!activeRoute?.classList.contains('active'))return;const currentHeading=activeRoute.querySelector('h1,h2');if(currentHeading){currentHeading.setAttribute('tabindex','-1');currentHeading.focus({preventScroll:true})}},120)}
   };
-  window.fp435SavePlan=function(event){event.preventDefault();const data=Object.fromEntries(new FormData(event.currentTarget));data.date=todayKey();try{localStorage.setItem('gindex_day_plan_v1',JSON.stringify(data));window.fp466CancelReminder();document.getElementById('nrPlanStatus').textContent='✓ План збережено на цьому пристрої';renderPlanResult()}catch(_e){document.getElementById('nrPlanStatus').textContent='Не вдалося зберегти локально'}return false};
+  window.fp435SavePlan=function(event){event.preventDefault();const data=Object.fromEntries(new FormData(event.currentTarget));data.date=todayKey();try{localStorage.setItem('gindex_day_plan_v1',JSON.stringify(data));window.fp466CancelReminder();document.getElementById('nrPlanStatus').textContent='✓ План збережено на цьому пристрої';renderPlanResult()}catch(_e){ globalThis.NRDiagnostics?.record('catch.286','recoverable'); document.getElementById('nrPlanStatus').textContent='Не вдалося зберегти локально'}return false};
   window.fp466CancelReminder=function(){window.clearTimeout(window.__nrPlanReminderTimer);window.__nrPlanReminderTimer=null;try{localStorage.removeItem('gindex_plan_reminder_v1')}catch(_e){ window.NRDiagnostics?.record('legacy.catch.255','recoverable'); }const form=document.getElementById('nrPlanForm');if(form)delete form.dataset.reminder;const status=document.getElementById('nrReminderStatus');if(status)status.textContent='Нагадування скасовано.'};
   window.fp466EnableReminder=async function(){
     const status=document.getElementById('nrReminderStatus'),form=document.getElementById('nrPlanForm'),say=text=>{if(status)status.textContent=text};
@@ -26878,17 +26878,17 @@ body.fp434-app main#mainContent{padding-inline:24px!important}
           if(registration)await registration.showNotification('NeboRhythm · план',{body:String(plan.priority||'Запланована дія'),tag:'neborhythm-day-plan'});
           else new Notification('NeboRhythm · план',{body:String(plan.priority||'Запланована дія')});
           say('Сповіщення передано системі.');
-        }catch(_e){say('Не вдалося показати сповіщення. Перевірте дозволи браузера.')}
+        }catch(_e){ globalThis.NRDiagnostics?.record('catch.287','recoverable'); say('Не вдалося показати сповіщення. Перевірте дозволи браузера.')}
         finally{window.__nrPlanReminderTimer=null;if(form)delete form.dataset.reminder;try{localStorage.removeItem('gindex_plan_reminder_v1')}catch(_e){ window.NRDiagnostics?.record('legacy.catch.256','recoverable'); }}
       },at.getTime()-Date.now());
       if(form)form.dataset.reminder='active';
       say('Нагадування на '+plan.time+'. Залиште сторінку відкритою; після закриття або перезавантаження таймер не працює.');
-    }catch(_e){say('Не вдалося встановити нагадування. Перевірте дозволи й доступ до локального сховища.')}
+    }catch(_e){ globalThis.NRDiagnostics?.record('catch.288','recoverable'); say('Не вдалося встановити нагадування. Перевірте дозволи й доступ до локального сховища.')}
   };
-  window.fp466SaveOutcome=function(event){event.preventDefault();const data=Object.fromEntries(new FormData(event.currentTarget));let plan=null,rows=[];try{plan=JSON.parse(localStorage.getItem('gindex_day_plan_v1')||'null');rows=JSON.parse(localStorage.getItem('gindex_plan_outcomes_v1')||'[]')}catch(_e){ window.NRDiagnostics?.record('legacy.catch.257','recoverable'); }if(!Array.isArray(rows))rows=[];const row={date:todayKey(),result:String(data.result||''),note:String(data.note||'').trim(),priority:plan?.date===todayKey()?String(plan.priority||''):''};rows=rows.filter(x=>x&&x.date!==row.date);rows.push(row);try{localStorage.setItem('gindex_plan_outcomes_v1',JSON.stringify(rows.slice(-90)));document.getElementById('nrOutcomeStatus').textContent='✓ Фактичний результат збережено локально';renderOutcomeHistory();event.currentTarget.reset()}catch(_e){document.getElementById('nrOutcomeStatus').textContent='Не вдалося зберегти результат'}return false};
-  window.fp435SaveMatch=function(event){event.preventDefault();const data=Object.fromEntries(new FormData(event.currentTarget));try{localStorage.setItem('gindex_match_person_v1',JSON.stringify({name:String(data.name||'').trim()}));document.getElementById('nrMatchStatus').textContent='✓ Ім’я збережено лише на цьому пристрої.';renderMatchResult()}catch(_e){document.getElementById('nrMatchStatus').textContent='Не вдалося зберегти ім’я на пристрої'}return false};
+  window.fp466SaveOutcome=function(event){event.preventDefault();const data=Object.fromEntries(new FormData(event.currentTarget));let plan=null,rows=[];try{plan=JSON.parse(localStorage.getItem('gindex_day_plan_v1')||'null');rows=JSON.parse(localStorage.getItem('gindex_plan_outcomes_v1')||'[]')}catch(_e){ window.NRDiagnostics?.record('legacy.catch.257','recoverable'); }if(!Array.isArray(rows))rows=[];const row={date:todayKey(),result:String(data.result||''),note:String(data.note||'').trim(),priority:plan?.date===todayKey()?String(plan.priority||''):''};rows=rows.filter(x=>x&&x.date!==row.date);rows.push(row);try{localStorage.setItem('gindex_plan_outcomes_v1',JSON.stringify(rows.slice(-90)));document.getElementById('nrOutcomeStatus').textContent='✓ Фактичний результат збережено локально';renderOutcomeHistory();event.currentTarget.reset()}catch(_e){ globalThis.NRDiagnostics?.record('catch.289','recoverable'); document.getElementById('nrOutcomeStatus').textContent='Не вдалося зберегти результат'}return false};
+  window.fp435SaveMatch=function(event){event.preventDefault();const data=Object.fromEntries(new FormData(event.currentTarget));try{localStorage.setItem('gindex_match_person_v1',JSON.stringify({name:String(data.name||'').trim()}));document.getElementById('nrMatchStatus').textContent='✓ Ім’я збережено лише на цьому пристрої.';renderMatchResult()}catch(_e){ globalThis.NRDiagnostics?.record('catch.290','recoverable'); document.getElementById('nrMatchStatus').textContent='Не вдалося зберегти ім’я на пристрої'}return false};
   function loadFp440Profile(){const form=document.getElementById('nrProfileForm');if(!form)return;try{const data=JSON.parse(localStorage.getItem('gindex_profile_v2')||'null');if(!data)return;['name','city','birth','time','mode'].forEach(k=>{if(form.elements[k]&&data[k]!=null)form.elements[k].value=data[k]})}catch(_e){ window.NRDiagnostics?.record('legacy.catch.258','recoverable'); }}
-  window.fp440SaveProfile=function(event){event.preventDefault();const data=Object.fromEntries(new FormData(event.currentTarget));try{localStorage.setItem('gindex_profile_v2',JSON.stringify(data));document.getElementById('nrProfileStatus').textContent='✓ Дані збережено лише на цьому пристрої';renderProfileResult();renderMatchResult()}catch(_e){document.getElementById('nrProfileStatus').textContent='Не вдалося зберегти дані на пристрої'}return false};
+  window.fp440SaveProfile=function(event){event.preventDefault();const data=Object.fromEntries(new FormData(event.currentTarget));try{localStorage.setItem('gindex_profile_v2',JSON.stringify(data));document.getElementById('nrProfileStatus').textContent='✓ Дані збережено лише на цьому пристрої';renderProfileResult();renderMatchResult()}catch(_e){ globalThis.NRDiagnostics?.record('catch.291','recoverable'); document.getElementById('nrProfileStatus').textContent='Не вдалося зберегти дані на пристрої'}return false};
   async function renderPanchGuide(){
     const box=document.getElementById('nrPanchNow');if(!box)return;
     const NAK=['Ashwini','Bharani','Krittika','Rohini','Mrigashira','Ardra','Punarvasu','Pushya','Ashlesha','Magha','Purva Phalguni','Uttara Phalguni','Hasta','Chitra','Swati','Vishakha','Anuradha','Jyeshtha','Mula','Purva Ashadha','Uttara Ashadha','Shravana','Dhanishtha','Shatabhisha','Purva Bhadrapada','Uttara Bhadrapada','Revati'];
@@ -26907,7 +26907,7 @@ body.fp434-app main#mainContent{padding-inline:24px!important}
       const timeline=events.length?events.map(e=>`<div class="nr-panch-event${Date.parse(e.at)<=now?' is-past':''}"><time datetime="${escapeHtml(e.at)}">${fmtTime(e.at)}</time><b>${e.label}</b><span>починається <strong>${escapeHtml(e.value)}</strong></span></div>`).join(''):'<div class="nr-panch-empty">Переходів до завершення календарної доби немає.</div>';
       const next=events.find(e=>Date.parse(e.at)>now);
       box.innerHTML=`<section class="nr-panch-summary"><div class="nr-panch-summary-head"><div><span class="nr-chip">ПАНЧАНГА ДНЯ</span><h3>Що діє зараз</h3><div class="nr-panch-date">${escapeHtml(dateText)} · ${escapeHtml(day.timezone||'Europe/Kyiv')}</div></div><span class="nr-panch-live">${next?`НАСТУПНА ЗМІНА О ${fmtTime(next.at)}`:'ПЕРЕХОДИ ДНЯ ЗАВЕРШЕНО'}</span></div><div class="nr-panch-components">${cards}</div></section><section class="nr-panch-section"><span class="nr-chip">ШКАЛА ДОБИ</span><h3>Усі переходи сьогодні</h3><div class="nr-panch-timeline">${timeline}</div></section>`;
-    }catch(error){box.innerHTML='<div class="nr-row"><span>UNVERIFIED</span><span>Переходи Панчанги недоступні: '+escapeHtml(error.message)+'</span></div>'}
+    }catch(error){ globalThis.NRDiagnostics?.record('catch.292','recoverable'); box.innerHTML='<div class="nr-row"><span>UNVERIFIED</span><span>Переходи Панчанги недоступні: '+escapeHtml(error.message)+'</span></div>'}
   }
   async function renderDataTruthGate(){
     const box=document.getElementById('nrDataTruthBody');if(!box)return;
@@ -26939,7 +26939,7 @@ body.fp434-app main#mainContent{padding-inline:24px!important}
       }).join('');
       box.innerHTML=`<div class="nr-list"><div class="nr-row"><span>Загальний gate</span><span><strong style="color:${gate==='PASS'?'var(--ok)':'var(--warn)'}">${gate}</strong> · System Health ${escapeHtml(String(health.status||'UNKNOWN'))}</span></div><div class="nr-row"><span>Горизонт Kp</span><span>${official}/7 official · ${synthetic}/7 synthetic · ${missing}/7 missing</span></div><div class="nr-row"><span>Свіжість Kp</span><span><strong style="color:${fresh?'var(--ok)':'var(--bad)'}">${fresh?'FRESH':'STALE / UNVERIFIED'}</strong>${ageH!==null?' · '+ageH.toFixed(1)+' год':''}</span></div><div class="nr-row"><span>Панчанга × Astronomy Engine</span><span><strong style="color:${panch.status==='PASS'?'var(--ok)':'var(--warn)'}">${escapeHtml(panch.status)}</strong> · ${Number(panch.tested||0)} сегментів · ${Number(panch.material_mismatches||0)} material mismatch · ${Number(panch.boundary_sensitive_mismatches||0)} boundary-sensitive</span></div></div><p style="margin:12px 0 8px"><strong>Правило:</strong> NOAA-ділянка — прогноз. <code>UNVERIFIED Kp</code> — технічне плато для обчислювальної сумісності, не прогноз і не підстава для дії. Межі Панчанги в межах кількох хвилин між різними ефемеридами позначаються як model-sensitive.</p><div class="nr-list">${dayRows}</div>${warnings.length?`<p style="margin-top:12px;color:var(--warn)"><strong>Відкриті аномалії:</strong> ${warnings.map(escapeHtml).join(' · ')}</p>`:''}`;
       setTimeout(()=>requestProductRender('forecast'),0);
-    }catch(error){box.innerHTML=`<div class="nr-row"><span>BLOCKED</span><span>Не вдалося перевірити data gate: ${escapeHtml(error.message)}</span></div>`}
+    }catch(error){ globalThis.NRDiagnostics?.record('catch.293','recoverable'); box.innerHTML=`<div class="nr-row"><span>BLOCKED</span><span>Не вдалося перевірити data gate: ${escapeHtml(error.message)}</span></div>`}
   }
   function renderUnifiedForecast(){
     const source=(typeof _27dComputed!=='undefined'&&Array.isArray(_27dComputed))?_27dComputed:[];
@@ -27241,7 +27241,7 @@ body.fp434-app main#mainContent{padding-inline:24px!important}
         // trigger profile change in main app if function exists
         if(typeof setProfile === 'function') setProfile(_obProfile);
         else if(typeof _activeProfile !== 'undefined') window._activeProfile = _obProfile;
-      }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+      }catch(e){ globalThis.NRDiagnostics?.record('catch.294','recoverable'); if(window._DEBUG)console.warn('[silent]:',e.message)}
     }
     try { localStorage.setItem(ONBOARD_KEY, '1'); } catch(_e){ window.NRDiagnostics?.record('legacy.catch.261','recoverable'); } // v88.8.35-fp56-P8
     const ov = document.getElementById('onboardOverlay');
@@ -27276,7 +27276,7 @@ body.fp434-app main#mainContent{padding-inline:24px!important}
       setTimeout(obShow, 600);
       obShowSlide(0);
     }
-  }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+  }catch(e){ globalThis.NRDiagnostics?.record('catch.295','recoverable'); if(window._DEBUG)console.warn('[silent]:',e.message)}
 })();
 {const panel=document.getElementById('__cpPanel');if(panel)panel.textContent += '\nCP block-end @line21013';}
 </script>
@@ -27301,7 +27301,7 @@ body.fp434-app main#mainContent{padding-inline:24px!important}
       arr.push({ ts: Date.now(), session: SESSION, name, ...props });
       if (arr.length > MAX_EVT) arr.splice(0, arr.length - MAX_EVT);
       localStorage.setItem(LS_KEY, JSON.stringify(arr));
-    } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+    } catch(e){ globalThis.NRDiagnostics?.record('catch.296','recoverable'); if(window._DEBUG)console.warn('[silent]:',e.message)}
   }
 
   // ── Відправка (заглушка) — замінити на реальний провайдер ───────────────
@@ -27318,15 +27318,15 @@ body.fp434-app main#mainContent{padding-inline:24px!important}
   window.GT = {
     // Трекнути довільну подію
     track(name, props) {
-      try { _tSend(name, props || {}); } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+      try { _tSend(name, props || {}); } catch(e){ globalThis.NRDiagnostics?.record('catch.297','recoverable'); if(window._DEBUG)console.warn('[silent]:',e.message)}
     },
     // Повернути всі збережені події (для debug/export)
     dump() {
-      try { return JSON.parse(localStorage.getItem(LS_KEY) || '[]'); } catch(e) { return []; }
+      try { return JSON.parse(localStorage.getItem(LS_KEY) || '[]'); } catch(e) { globalThis.NRDiagnostics?.record('catch.298','recoverable');  return []; }
     },
     // Очистити буфер
     clear() {
-      try { localStorage.removeItem(LS_KEY); } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+      try { localStorage.removeItem(LS_KEY); } catch(e){ globalThis.NRDiagnostics?.record('catch.299','recoverable'); if(window._DEBUG)console.warn('[silent]:',e.message)}
     },
     SESSION,
   };
@@ -27460,7 +27460,7 @@ body.fp434-app main#mainContent{padding-inline:24px!important}
     try {
       const sec = Math.round((Date.now() - _tStart) / 1000);
       if (sec > 3) window.GT.track('session_end', { duration_s: sec });
-    } catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
+    } catch(e){ globalThis.NRDiagnostics?.record('catch.300','recoverable'); if(window._DEBUG)console.warn('[silent]:',e.message)}
   });
 
 })();
@@ -27529,15 +27529,15 @@ window.addEventListener('pageshow', function(){
 });
 window.GDecisionLog = (function(){
   const LS_KEY = 'gindex_decision_log_v1';
-  function _load(){ try{ return JSON.parse(localStorage.getItem(LS_KEY)||'[]'); }catch(e){ return []; } }
-  function _save(arr){ try{ localStorage.setItem(LS_KEY,JSON.stringify(arr)); return true; }catch(e){ return false; } }
+  function _load(){ try{ return JSON.parse(localStorage.getItem(LS_KEY)||'[]'); }catch(e){ globalThis.NRDiagnostics?.record('catch.301','recoverable');  return []; } }
+  function _save(arr){ try{ localStorage.setItem(LS_KEY,JSON.stringify(arr)); return true; }catch(e){ globalThis.NRDiagnostics?.record('catch.302','recoverable');  return false; } }
   function _today(){ return todayKyivStr(); }
   function _getG(){
     try{
       const el=document.getElementById('heroGval')||document.getElementById('gNowVal');
       const value = el ? Number.parseFloat(el.textContent) : NaN;
       return Number.isFinite(value) ? value : null;
-    }catch(e){ return null; }
+    }catch(e){ globalThis.NRDiagnostics?.record('catch.303','recoverable');  return null; }
   }
 
   function open(){
@@ -27688,8 +27688,8 @@ document.addEventListener('DOMContentLoaded',window.GJyotishLayer.init,{once:tru
   }
   window.fp450ExportLocalData=function(){
     const data={exported_at:new Date().toISOString(),storage:'local_device_only',items:{}};
-    ownedKeys(localStorage).filter(k=>!STORAGE_POLICY.exportExcluded.includes(k)).forEach(k=>{try{const raw=localStorage.getItem(k);if(raw!==null)data.items[k]=JSON.parse(raw)}catch(_e){data.items[k]=localStorage.getItem(k)}});
-    data.session_items={};ownedKeys(sessionStorage).filter(k=>!STORAGE_POLICY.exportExcluded.includes(k)).forEach(k=>{const raw=sessionStorage.getItem(k);try{data.session_items[k]=JSON.parse(raw)}catch(_e){data.session_items[k]=raw}});
+    ownedKeys(localStorage).filter(k=>!STORAGE_POLICY.exportExcluded.includes(k)).forEach(k=>{try{const raw=localStorage.getItem(k);if(raw!==null)data.items[k]=JSON.parse(raw)}catch(_e){ globalThis.NRDiagnostics?.record('catch.304','recoverable'); data.items[k]=localStorage.getItem(k)}});
+    data.session_items={};ownedKeys(sessionStorage).filter(k=>!STORAGE_POLICY.exportExcluded.includes(k)).forEach(k=>{const raw=sessionStorage.getItem(k);try{data.session_items[k]=JSON.parse(raw)}catch(_e){ globalThis.NRDiagnostics?.record('catch.305','recoverable'); data.session_items[k]=raw}});
     data.exclusions=['authentication token','public offline site cache','other applications','server account'];
     const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='neborhythm-local-data.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),0);status('✓ Експорт підготовлено локально; дані нікуди не надсилалися.');
   };
@@ -27708,7 +27708,7 @@ document.addEventListener('DOMContentLoaded',window.GJyotishLayer.init,{once:tru
     ['nrReminderStatus','nrPlanStatus','nrOutcomeStatus'].forEach(id=>{const node=document.getElementById(id);if(node)node.textContent='Локальні дані очищено.'});
     // The initiating tab already cleared shared localStorage. Peers must not
     // erase a new profile that the user saves after that completed deletion.
-    try{(fromPeer?[sessionStorage]:[localStorage,sessionStorage]).forEach(storage=>ownedKeys(storage).forEach(k=>storage.removeItem(k)))}catch(_e){resetInProgress=false;status('Не вдалося повністю очистити локальне сховище. Повторіть очищення через налаштування браузера.');return}
+    try{(fromPeer?[sessionStorage]:[localStorage,sessionStorage]).forEach(storage=>ownedKeys(storage).forEach(k=>storage.removeItem(k)))}catch(_e){ globalThis.NRDiagnostics?.record('catch.306','recoverable'); resetInProgress=false;status('Не вдалося повністю очистити локальне сховище. Повторіть очищення через налаштування браузера.');return}
     const form=document.getElementById('nrProfileForm');form?.reset();if(form?.elements.city)form.elements.city.value='Київ';
     status('✓ Локальні дані очищено на цьому пристрої.');
     if(typeof renderProfileResult==='function')renderProfileResult();

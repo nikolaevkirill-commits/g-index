@@ -1,7 +1,7 @@
 // Extracted without changing subscription behaviour.
 const PUSH = (function(){
-  function _log(...a){ try{ if(window._DEBUG) console.log('[PUSH]', ...a); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)} }
-  function _warn(...a){ try{ console.warn('[PUSH]', ...a); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)} }
+  function _log(...a){ try{ if(window._DEBUG) console.log('[PUSH]', ...a); }catch(e){ globalThis.NRDiagnostics?.record('catch.307','recoverable'); if(window._DEBUG)console.warn('[silent]:',e.message)} }
+  function _warn(...a){ try{ console.warn('[PUSH]', ...a); }catch(e){ globalThis.NRDiagnostics?.record('catch.308','recoverable'); if(window._DEBUG)console.warn('[silent]:',e.message)} }
 
   function isSupported(){
     return typeof window !== 'undefined'
@@ -28,7 +28,7 @@ const PUSH = (function(){
       const reg = await navigator.serviceWorker.ready;
       const sub = await reg.pushManager.getSubscription();
       return !!sub;
-    }catch(e){ return false; }
+    }catch(e){ globalThis.NRDiagnostics?.record('catch.309','recoverable');  return false; }
   }
 
   // VAPID base64url → Uint8Array (per web-push spec)
@@ -62,14 +62,14 @@ const PUSH = (function(){
       };
       try{
         sub=await reg.pushManager.subscribe(options);
-      }catch(firstError){
+      }catch(firstError){ globalThis.NRDiagnostics?.record('catch.310','recoverable');
         // Chrome occasionally keeps a stale push-service registration after a
         // service-worker/VAPID update. Refresh the registration and retry once.
         try{await reg.update();}catch(_updateError){ window.NRDiagnostics?.record('legacy.catch.45','recoverable'); }
         await new Promise(resolve=>setTimeout(resolve,900));
         try{
           sub=await reg.pushManager.subscribe(options);
-        }catch(secondError){
+        }catch(secondError){ globalThis.NRDiagnostics?.record('catch.311','recoverable');
           const raw=String((secondError&&secondError.message)||secondError||firstError||'');
           if(/could not retrieve the public key|registration failed|push service/i.test(raw)){
             throw new Error(
@@ -104,7 +104,7 @@ const PUSH = (function(){
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
         body: JSON.stringify(row)
       });
-    } catch(netErr) {
+    } catch(netErr) { globalThis.NRDiagnostics?.record('catch.312','recoverable');
       throw new Error('Сервер сповіщень недоступний. Перевір інтернет і спробуй знову.');
     }
     if (!r.ok) {
@@ -132,7 +132,7 @@ const PUSH = (function(){
           headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
           body: JSON.stringify({ endpoint })
         });
-      }catch(e){ _warn('server-side unsubscribe failed:', e); }
+      }catch(e){ globalThis.NRDiagnostics?.record('catch.313','recoverable');  _warn('server-side unsubscribe failed:', e); }
     }
     _log('unsubscribed');
   }

@@ -1,6 +1,7 @@
+importScripts('./runtime_diagnostics_v1.js');
 // G-Index service worker. HTML/data are network-first; static shell is cache-first.
 // Bump CACHE_VERSION whenever index.html or a cached shell asset changes.
-const CACHE_VERSION = 'fp469-v41-audit-closure'; // audit: channel persistence, qualified Kp authority and data freshness
+const CACHE_VERSION = 'fp469-v42-audit-diagnostics'; // audit: channel persistence, qualified Kp authority and data freshness
 const CACHE_PREFIX = 'gindex-'; // G-Index cache namespace; do not remove the prefix.
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${CACHE_VERSION}`;
 const DATA_CACHE = `${CACHE_PREFIX}data-${CACHE_VERSION}`;
@@ -10,7 +11,7 @@ const newestRequest=new Map();
 async function reportDelivery(event, type, fetchedAt, requestOrder){
   try{const client=event.clientId?await self.clients.get(event.clientId):null;
     if(client)client.postMessage({type,fetchedAt,requestOrder,url:event.request.url,ageUnknown:fetchedAt===null});
-  }catch(_e){} // A delivery notification must never change the fetch result.
+  }catch(_e){ globalThis.NRDiagnostics?.record('catch.321','recoverable'); } // A delivery notification must never change the fetch result.
 }
 async function deliveryResponse(response,mode){
   const headers=new Headers(response.headers);headers.set('x-gindex-delivery',mode);
@@ -140,7 +141,7 @@ self.addEventListener('fetch', (event) => {
   let url;
   try {
     url = new URL(req.url);
-  } catch (e) {
+  } catch (e) { globalThis.NRDiagnostics?.record('catch.322','recoverable');
     return;
   }
 
@@ -189,13 +190,13 @@ self.addEventListener('fetch', (event) => {
             headers: _stampedHeaders
           });
           if(newestRequest.get(cacheKey)===requestOrder)await cache.put(cacheKey, _stamped);
-        } catch (_stampErr) {
+        } catch (_stampErr) { globalThis.NRDiagnostics?.record('catch.323','recoverable');
           // If header stamping fails, preserve a usable unstamped response.
-          try { if(newestRequest.get(cacheKey)===requestOrder)await cache.put(cacheKey, fresh.clone()); } catch (_e2) { /* best-effort */ }
+          try { if(newestRequest.get(cacheKey)===requestOrder)await cache.put(cacheKey, fresh.clone()); } catch (_e2) { globalThis.NRDiagnostics?.record('catch.324','recoverable');  /* best-effort */ }
         }
         await reportDelivery(event,'SW_FRESH_DATA',Date.now(),requestOrder);
         return deliveryResponse(fresh,'network');
-      } catch (e) {
+      } catch (e) { globalThis.NRDiagnostics?.record('catch.325','recoverable');
         let cached = await cache.match(cacheKey);
         if (!cached) {
           const shellCache = await caches.open(SHELL_CACHE);
@@ -216,7 +217,7 @@ self.addEventListener('fetch', (event) => {
             const raw=cached.headers.get('x-gindex-cached-at'),stamp=raw?Number(raw):NaN;
             const fetchedAt=Number.isFinite(stamp)&&stamp>0&&stamp<=Date.now()+5*60000?stamp:null;
             await reportDelivery(event,'SW_STALE_DATA',fetchedAt,requestOrder);
-          } catch (_e) { /* best-effort notification; never block the response */ }
+          } catch (_e) { globalThis.NRDiagnostics?.record('catch.326','recoverable');  /* best-effort notification; never block the response */ }
           return deliveryResponse(cached,'cached');
         }
         throw e;

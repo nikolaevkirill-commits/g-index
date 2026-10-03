@@ -3,7 +3,7 @@
 'use strict';
 const dailyURL='./?push=daily#heroCard',stormURL='./?push=storm#kpHourlyPanel';
 function safeURL(value,scope,fallback=dailyURL){
-  try {const u=new URL(value||fallback,scope),base=new URL(scope);if(u.origin===base.origin&&u.pathname.startsWith(base.pathname))return u.href;} catch (_) {}
+  try {const u=new URL(value||fallback,scope),base=new URL(scope);if(u.origin===base.origin&&u.pathname.startsWith(base.pathname))return u.href;} catch (_) { globalThis.NRDiagnostics?.record('catch.314','recoverable'); }
   return new URL(fallback,scope).href;
 }
 function daily(feed,now=Date.now()){
@@ -18,11 +18,11 @@ async function loadDaily(scope){
     const response=await fetch(new URL('INDEPENDENT_FORECAST_FEED_v1.json',scope),{cache:'no-store',signal:controller.signal});
     if(!response.ok)throw new Error('feed unavailable');
     return daily(await response.json());
-  } catch (_) {return daily(null);} finally {clearTimeout(timer);}
+  } catch (_) { globalThis.NRDiagnostics?.record('catch.315','recoverable'); return daily(null);} finally {clearTimeout(timer);}
 }
 function install(sw){
   sw.addEventListener('push',event=>event.waitUntil((async()=>{
-    let payload={};try{payload=event.data?.json()||{};}catch(_){}
+    let payload={};try{payload=event.data?.json()||{};}catch(_){ globalThis.NRDiagnostics?.record('catch.316','recoverable'); }
     const storm=payload.category==='storm',category=storm?'storm':'daily';
     // Never repeat a legacy server score or a cached payload as today's score.
     const content=storm?{title:payload.title||'NeboRhythm · Kp',body:payload.body||'Оновлення фізичного показника Kp'}:await loadDaily(sw.registration.scope);
@@ -37,7 +37,7 @@ function install(sw){
     const target=safeURL(event.notification.data?.url,sw.registration.scope);
     event.waitUntil((async()=>{
       for(const client of await sw.clients.matchAll({type:'window',includeUncontrolled:true})){
-        try{if(new URL(client.url).origin===new URL(sw.registration.scope).origin){await client.navigate(target);return client.focus();}}catch(_){}
+        try{if(new URL(client.url).origin===new URL(sw.registration.scope).origin){await client.navigate(target);return client.focus();}}catch(_){ globalThis.NRDiagnostics?.record('catch.317','recoverable'); }
       }
       return sw.clients.openWindow(target);
     })());
