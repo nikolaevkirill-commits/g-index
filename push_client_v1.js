@@ -143,7 +143,7 @@ const PUSH = (function(){
       if(event.data&&/^SW_(FRESH|STALE)_DATA$/.test(event.data.type)&&!acceptSWDataMessage(event.data))return;
       if(event.data && event.data.type === 'SW_PUSH_SUB_CHANGED'){
         _log('SW notified subscription changed — re-subscribing');
-        subscribe().catch(e => _warn('auto re-subscribe failed:', e));
+        subscribe().catch(e => {globalThis.NRDiagnostics?.record('promise.catch.12','recoverable');return (_warn('auto re-subscribe failed:', e));});
       }
       // V25-fu16: SW_FRESH_DATA / SW_STALE_DATA notifications
       if(event.data && event.data.type === 'SW_FRESH_DATA'){

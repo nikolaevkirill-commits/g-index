@@ -4818,10 +4818,10 @@ if ('serviceWorker' in navigator) {
         _swReg = reg;
         if(window._DEBUG) console.log('[SW] Registered, scope:', reg.scope);
         // fp116: auto-check for SW updates every 5 minutes — ensures new deploys activate without manual cache clear
-        setInterval(() => { try { const p = reg.update(); if(p && p.catch) p.catch(()=>{}); } catch(e){ window.NRDiagnostics?.record('legacy.catch.19','recoverable'); } }, 5 * 60 * 1000);
+        setInterval(() => { try { const p = reg.update(); if(p && p.catch) p.catch(()=>{globalThis.NRDiagnostics?.record('promise.catch.1','recoverable');}); } catch(e){ window.NRDiagnostics?.record('legacy.catch.19','recoverable'); } }, 5 * 60 * 1000);
         // fp116: force update check on visibility change (user returns to tab)
         document.addEventListener('visibilitychange', () => {
-          if (!document.hidden) { try { const p = reg.update(); if(p && p.catch) p.catch(()=>{}); } catch(e){ window.NRDiagnostics?.record('legacy.catch.20','recoverable'); } }
+          if (!document.hidden) { try { const p = reg.update(); if(p && p.catch) p.catch(()=>{globalThis.NRDiagnostics?.record('promise.catch.2','recoverable');}); } catch(e){ window.NRDiagnostics?.record('legacy.catch.20','recoverable'); } }
         }, { once: false });
 
         // SW_STALE_DATA: показати маркер "дані з кешу" в UI (аудит sw.js п.4)
@@ -4900,7 +4900,7 @@ if ('serviceWorker' in navigator) {
         // This shows the visible update bar without a surprise reload/black screen.
         try {
           const p = reg.update();
-          if (p && p.catch) p.catch(() => {});
+          if (p && p.catch) p.catch(() => {globalThis.NRDiagnostics?.record('promise.catch.3','recoverable');});
         } catch(e){ window.NRDiagnostics?.record('legacy.catch.22','recoverable'); }
 
 
@@ -4927,9 +4927,9 @@ if ('serviceWorker' in navigator) {
         });
 
         // Перевіряти оновлення кожні 30 хвилин
-        SAFE_INTERVAL(() => { try { const p = reg.update(); if(p && p.catch) p.catch(()=>{}); } catch(e){ window.NRDiagnostics?.record('legacy.catch.23','recoverable'); } }, 30 * 60 * 1000).start();
+        SAFE_INTERVAL(() => { try { const p = reg.update(); if(p && p.catch) p.catch(()=>{globalThis.NRDiagnostics?.record('promise.catch.4','recoverable');}); } catch(e){ window.NRDiagnostics?.record('legacy.catch.23','recoverable'); } }, 30 * 60 * 1000).start();
       })
-      .catch(err => console.warn('[SW] Registration failed:', err));
+      .catch(err => {globalThis.NRDiagnostics?.record('promise.catch.0','recoverable');return (console.warn('[SW] Registration failed:', err));});
   });
 }
 {const panel=document.getElementById('__cpPanel');if(panel)panel.textContent += '\nCP block-end @line3773';}
@@ -5446,7 +5446,7 @@ if (typeof window !== 'undefined') {
             }
             if (typeof showToast === 'function') showToast('✓ Email підтверджено');
           })
-          .catch((e) => {
+          .catch((e) => {globalThis.NRDiagnostics?.record('promise.catch.5','recoverable');
             console.error('[GAuth] verify email:', e);
             if (typeof showToast === 'function') showToast('Посилання підтвердження недійсне або протерміноване');
           });
@@ -7101,7 +7101,7 @@ async function loadBgsSpaceWeather(){
   try {
     const pair=await Promise.all([
       fetch('BGS_SPACE_WEATHER_v1.json',{cache:'no-store'}),
-      fetch('AUTO_FORECAST_FEED_v1.json',{cache:'no-store'}).catch(()=>null)
+      fetch('AUTO_FORECAST_FEED_v1.json',{cache:'no-store'}).catch(()=>{globalThis.NRDiagnostics?.record('promise.catch.6','recoverable');return (null);})
     ]);
     const r=pair[0];
     if(!r.ok) throw new Error('HTTP '+r.status);
@@ -11949,7 +11949,7 @@ function renderComparePeriods(){
       unit: 'G', pillText: 'Carrington rotation', yearNow,
       helpText: `Повний G = 2−Kp+ΣAᵢ. Historical Kp із NOAA DGD (last 30 days).\nВікно: тиждень −3..+3 від сьогодні vs той самий тиждень 27 днів тому.\nCarrington rotation ≈ 27.28 днів — той самий геліо-довготний сектор Сонця.${missing>0?'\n⚠ '+missing+' днів без Kp (використано лише Σ).':''}`
     });
-  }).catch(err => {
+  }).catch(err => {globalThis.NRDiagnostics?.record('promise.catch.7','recoverable');
     wrap.innerHTML = `<div style="font-size:12px;color:#ff9966">Не вдалося завантажити DGD-архів. <a href="#" onclick="_cmpSetMode('year');return false" style="color: var(--alt)">Переключитись на Σ-ритм (рік тому)</a></div>`;
   });
 }
@@ -15322,7 +15322,7 @@ async function preloadEventsAroundNow(){
     try {
       const _qs = new URLSearchParams(location.search || '');
       if (_qs.get('onlineics') === '1') {
-        setTimeout(()=>indexIcsEventsForYears(yrs).catch(e=>{ if(window._DEBUG) console.warn('[ICS bg]', e.message); }), 0);
+        setTimeout(()=>indexIcsEventsForYears(yrs).catch(e=>{globalThis.NRDiagnostics?.record('promise.catch.8','recoverable'); if(window._DEBUG) console.warn('[ICS bg]', e.message); }), 0);
       }
     } catch(_e){ window.NRDiagnostics?.record('legacy.catch.116','recoverable'); }
   } catch(e) { globalThis.NRDiagnostics?.record('catch.149','recoverable');
@@ -20658,7 +20658,7 @@ async function loadAll(){
   // v88.9.6x-fp246: легка перевірка manifest на КОЖЕН цикл loadAll (boot +
   // кожні N хв auto-refresh) — не блокує решту завантаження (fire-and-forget),
   // бо це незалежний рейл від live Kp/Dst/Sn нижче.
-  try { checkDataManifest().catch(()=>{}); } catch(e){ window.NRDiagnostics?.record('legacy.catch.204','recoverable'); }
+  try { checkDataManifest().catch(()=>{globalThis.NRDiagnostics?.record('promise.catch.9','recoverable');}); } catch(e){ window.NRDiagnostics?.record('legacy.catch.204','recoverable'); }
 
   try{
     await preloadEventsAroundNow();
@@ -24078,7 +24078,7 @@ function _copyFallback(text) {
     // v87.56: .catch — Safari/Firefox можуть відмовити у permission-контексті
     navigator.clipboard.writeText(text)
       .then(() => _showToast('📋 Скопійовано в буфер'))
-      .catch(() => _showToast('⚠ Не вдалось скопіювати'));
+      .catch(() => {globalThis.NRDiagnostics?.record('promise.catch.10','recoverable');return (_showToast('⚠ Не вдалось скопіювати'));});
   } else {
     const ta = document.createElement('textarea');
     ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
@@ -26595,7 +26595,7 @@ body.fp434-app main#mainContent{padding-inline:24px!important}
     renderCosmicConcept();
     requestProductRender('independent');
     renderDataTruthGate();
-    if(typeof loadExpertDecisionRegistry==='function')Promise.resolve(loadExpertDecisionRegistry()).then(()=>requestProductRender('cover','forecast','calendar')).catch(error=>console.warn('[fp449 early registry]',error));
+    if(typeof loadExpertDecisionRegistry==='function')Promise.resolve(loadExpertDecisionRegistry()).then(()=>requestProductRender('cover','forecast','calendar')).catch(error=>{globalThis.NRDiagnostics?.record('promise.catch.11','recoverable');return (console.warn('[fp449 early registry]',error));});
     setTimeout(()=>requestProductRender('cover'),420);
     setTimeout(renderCosmicConcept,520);
     setTimeout(()=>requestProductRender('independent'),560);
