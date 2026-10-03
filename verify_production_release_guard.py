@@ -52,7 +52,11 @@ def check_free_companion_contract(index: str) -> None:
     require(index, 'ДОСЛІДНИЦЬКА ГІПОТЕЗА · НЕ ПРОДАЄТЬСЯ', 'research-only disclosure')
     require(index, 'function _gauthRequireNetworkAllowed()', 'account network guard')
     require(index, "if (token && !window.GINDEX_PLAY_CHANNEL)", 'Play account refresh guard')
-    require(index, "return !window.GINDEX_PLAY_CHANNEL && !!window._vapid_public_key;", 'Play push guard')
+    push = index
+    if 'src="./push_client_v1.js"' in index:
+        push = release_bytes(ROOT / 'push_client_v1.js').decode('utf-8-sig')
+        require(release_bytes(ROOT / 'sw.js').decode('utf-8-sig'), "'./push_client_v1.js'", 'offline push module')
+    require(push, "return !window.GINDEX_PLAY_CHANNEL && !!window._vapid_public_key;", 'Play push guard')
 
 
 def check_manifest_icons(manifest: dict, read_bytes) -> None:

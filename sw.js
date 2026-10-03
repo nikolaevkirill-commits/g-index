@@ -1,6 +1,6 @@
 // G-Index service worker. HTML/data are network-first; static shell is cache-first.
 // Bump CACHE_VERSION whenever index.html or a cached shell asset changes.
-const CACHE_VERSION = 'fp469-v40-play-source-privacy'; // audit: channel persistence, qualified Kp authority and data freshness
+const CACHE_VERSION = 'fp469-v41-audit-closure'; // audit: channel persistence, qualified Kp authority and data freshness
 const CACHE_PREFIX = 'gindex-'; // G-Index cache namespace; do not remove the prefix.
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${CACHE_VERSION}`;
 const DATA_CACHE = `${CACHE_PREFIX}data-${CACHE_VERSION}`;
@@ -26,6 +26,8 @@ const SHELL_ASSETS = [
   './presentation_runtime_v1.js',
   './product_render_queue_v1.js',
   './consumer_authority_v1.js',
+  './push_client_v1.js',
+  './notification_runtime_v1.js',
   './consumer_overview_v1.js',
   './calendar_context_v1.js',
   './consumer_overview_v1.css',
@@ -234,43 +236,5 @@ self.addEventListener('fetch', (event) => {
 // `push`/`notificationclick` listeners, so a background delivery could be
 // silently discarded and a notification click could not open the relevant
 // dashboard block.
-self.addEventListener('push', (event) => {
-  let payload = {};
-  try { payload = event.data ? event.data.json() : {}; }
-  catch (_e) {
-    try { payload = { body: event.data ? event.data.text() : '' }; }
-    catch (_e2) { payload = {}; }
-  }
-
-  const category = String(payload.category || 'daily');
-  const target = payload.url ||
-    (category === 'storm' ? './?push=storm#kpHourlyPanel' : './?push=daily#heroCard');
-  const options = {
-    body: payload.body || 'Р С›Р Р…Р С•Р Р†Р С‘Р Р†РЎРѓРЎРЏ Р С—РЎР‚Р С•Р С–Р Р…Р С•Р В· NeboRhythm',
-    icon: './icon192.png',
-    badge: './icon192.png',
-    tag: payload.tag || `gindex-${category}`,
-    renotify: category === 'storm',
-    data: { url: target, category },
-    actions: [{ action: 'open', title: 'Р вЂ™РЎвЂ“Р Т‘Р С”РЎР‚Р С‘РЎвЂљР С‘ NeboRhythm' }]
-  };
-  event.waitUntil(self.registration.showNotification(payload.title || 'NeboRhythm', options));
-});
-
-self.addEventListener('notificationclick', (event) => {
-  event.notification.close();
-  const rawTarget = event.notification?.data?.url || './?push=daily#heroCard';
-  const target = new URL(rawTarget, self.registration.scope).href;
-  event.waitUntil((async () => {
-    const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-    for (const client of windows) {
-      try {
-        if (new URL(client.url).origin === self.location.origin) {
-          await client.navigate(target);
-          return client.focus();
-        }
-      } catch (_e) { /* try next client */ }
-    }
-    return self.clients.openWindow(target);
-  })());
-});
+importScripts('./consumer_authority_v1.js', './notification_runtime_v1.js');
+NRNotificationRuntime.install(self);

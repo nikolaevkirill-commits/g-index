@@ -1,0 +1,25 @@
+const fs=require('fs'),path=require('path'),vm=require('vm'),assert=require('assert/strict');
+const root=path.resolve(__dirname,'../..'),now=Date.parse('2026-10-03T12:00:00Z'),events={},sent=[];
+let feed,offline=false;
+const ctx=vm.createContext({URL,Intl,Date,AbortController,setTimeout,clearTimeout,fetch:async()=>{if(offline)throw Error('offline');return {ok:true,json:async()=>feed}}});
+for(const file of ['consumer_authority_v1.js','notification_runtime_v1.js'])vm.runInContext(fs.readFileSync(path.join(root,file),'utf8'),ctx);
+const api=ctx.NRNotificationRuntime;
+const row={date:'2026-10-03',channels:{source_formula:{available:true,value:-2,kp_source:'NOAA_3day_slots',generated_at:new Date(now).toISOString(),noaa_retrieved_at:new Date(now).toISOString()},expert_pdf:{available:true,value:3}}};
+feed={days:{'2026-10-03':row}};
+assert.equal(api.daily(feed,now).score,-2);
+assert.equal(api.daily(feed,now+8*3600000+1).score,null);
+assert.equal(api.daily(feed,now-1).score,null);
+assert.equal(api.daily({days:{'2026-10-03':{...row,channels:{expert_pdf:{available:true,value:3}}}}},now).score,null);
+assert.equal(api.daily(feed,Date.parse('2026-10-03T21:00:00Z')).date,'2026-10-04');
+assert.equal(api.safeURL('https://evil.test','https://app.test/g-index/'),'https://app.test/g-index/?push=daily#heroCard');
+assert.equal(api.safeURL('/other','https://app.test/g-index/'),'https://app.test/g-index/?push=daily#heroCard');
+api.install({addEventListener:(name,fn)=>events[name]=fn,registration:{scope:'https://app.test/g-index/',showNotification:async(title,options)=>sent.push({title,...options})}});
+(async()=>{
+ let promise;offline=true;
+ events.push({data:{json:()=>({body:'Legacy score +3',title:'old'})},waitUntil:p=>promise=p});await promise;
+ assert(!sent[0].body.includes('+3'));assert(sent[0].body.includes('Відкрийте'));assert.equal(sent[0].data.category,'daily');
+ events.push({data:{json:()=>({category:'storm',body:'NOAA Kp 5',url:'https://evil.test'})},waitUntil:p=>promise=p});await promise;
+ assert.equal(sent[1].body,'NOAA Kp 5');assert.equal(sent[1].data.url,'https://app.test/g-index/?push=storm#kpHourlyPanel');
+ fs.writeFileSync(path.join(__dirname,'NOTIFICATION_RESULTS.json'),JSON.stringify({status:'PASS',checks:['UI authority parity','8-hour boundary','future rejected','no expert fallback','Kyiv midnight','scope URL containment','offline daily ignores legacy payload','physical Kp storm preserved'],actual_push_sent:false},null,2));
+ console.log('PASS notification authority and offline scenarios; no messages sent');
+})().catch(e=>{console.error(e);process.exit(1)});

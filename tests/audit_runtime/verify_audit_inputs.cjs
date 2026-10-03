@@ -68,7 +68,8 @@ const turns=async()=>{for(let i=0;i<12;i++)await Promise.resolve()};
  const norm=k=>new URL(typeof k==='string'?k:k.url,base).href;
  const caches={open:async n=>{if(!stores.has(n))stores.set(n,new Map());const m=stores.get(n);return {addAll:async urls=>{for(const u of urls)m.set(norm(u),new Response('shell'))},match:async k=>m.get(norm(k))?.clone(),put:async(k,v)=>m.set(norm(k),v.clone())}},delete:async n=>stores.delete(n)};
  const sw={self:{registration:{scope:base},location:{origin:new URL(base).origin},addEventListener:(n,f)=>handlers[n]=f,clients:{get:async()=>null}},caches,URL,Response,Headers,AbortController,Date,setTimeout,clearTimeout,fetch:async()=>{if(!online)throw Error('offline');return new Response('network')}};
- vm.runInNewContext(fs.readFileSync(path.join(root,'sw.js'),'utf8'),sw);let install;handlers.install({waitUntil:p=>install=p});await install;online=false;
+ vm.createContext(sw);sw.importScripts=(...files)=>{for(const file of files)vm.runInContext(fs.readFileSync(path.join(root,file),'utf8'),sw);};
+ vm.runInContext(fs.readFileSync(path.join(root,'sw.js'),'utf8'),sw);let install;handlers.install({waitUntil:p=>install=p});await install;online=false;
  async function request(url,mode='navigate'){let p;handlers.fetch({request:{url:new URL(url,base).href,method:'GET',mode},respondWith:x=>p=x});return p;}
  for(const u of ['index.html?channel=play','?push=daily'])assert.equal(await(await request(u)).text(),'shell');
  for(const u of ['missing?push=daily','api?channel=play','../index.html?channel=play'])await assert.rejects(request(u));

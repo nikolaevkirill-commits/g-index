@@ -1,7 +1,9 @@
 const fs = require('fs');
 const vm = require('vm');
 
-const html = fs.readFileSync('index.html', 'utf8');
+const page = fs.readFileSync('index.html', 'utf8');
+if(!page.includes('src="./push_client_v1.js"'))throw Error('Push module not loaded');
+const html = page + '\n' + fs.readFileSync('push_client_v1.js','utf8');
 // Freshness labels are presentation safeguards: stale advisory snapshots cannot
 // be styled or worded as live inputs, and they never alter the frozen score.
 requireText("const swIsStale=String(sw.status||'').toLowerCase()==='stale'", 'source health treats stale routing as stale, not LIVE');
@@ -330,8 +332,8 @@ forbidText("frame-ancestors 'none'", 'frame-ancestors cannot be declared in an i
 requireText('id="btnGeo"', 'geolocation has an explicit user-action control');
 requireText('onclick="initGeolocation()"', 'fresh geolocation runs from a user gesture');
 requireText('function initCachedGeolocation()', 'startup may reuse a previously approved location without prompting');
-requireText('try{ initCachedGeolocation(); }catch(e){} cp(2);', 'boot uses cached coordinates only');
-forbidText('try{ initGeolocation(); }catch(e){} cp(2);', 'boot cannot open a geolocation permission prompt');
+if(!/try\{ initCachedGeolocation\(\); \}catch\(e\)\{[^}]*\} cp\(2\);/.test(html))throw Error('boot must use cached coordinates only');
+if(/try\{ initGeolocation\(\); \}catch\(e\)\{[^}]*\} cp\(2\);/.test(html))throw Error('boot cannot prompt for geolocation');
 requireText("btn.setAttribute('aria-label', isOn ? 'Повний вигляд' : 'Простий вигляд')", 'simple-mode accessible name follows visible text');
 requireText('id="mnavMore" onclick="fp434Go(\'more\',true)" aria-label="Ще"', 'mobile more navigation name matches its current route');
 const moreButton = html.match(/<button[^>]*id="mnavMore"[^>]*>([\s\S]*?)<\/button>/);

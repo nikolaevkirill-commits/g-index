@@ -106,7 +106,7 @@ function __nrUtcJdToTt(jdUTC) {
     try {
       // Preserve the policy gate even if the channel asset fails to load.
       let playRequested = new URLSearchParams(location.search).get('channel') === 'play';
-      try { playRequested = playRequested || sessionStorage.getItem('neborhythm.playChannel') === 'play'; if(playRequested)sessionStorage.setItem('neborhythm.playChannel','play'); } catch(_storage){}
+      try { playRequested = playRequested || sessionStorage.getItem('neborhythm.playChannel') === 'play'; if(playRequested)sessionStorage.setItem('neborhythm.playChannel','play'); } catch(_storage){ window.NRDiagnostics?.record('legacy.catch.1','recoverable'); }
       window.GINDEX_PLAY_CHANNEL = !!(window.GINDEX_PLAY_CHANNEL || playRequested);
       if (window.GINDEX_PLAY_CHANNEL) {
         document.documentElement.classList.add('play-channel');
@@ -120,7 +120,7 @@ function __nrUtcJdToTt(jdUTC) {
           if (notice) notice.textContent = 'Профіль і налаштування — на пристрої · мережеві сервіси обробляють технічні дані';
         }, { once: true });
       }
-    } catch (_e) { /* Never downgrade an established Play channel. */ }
+    } catch(_e){ window.NRDiagnostics?.record('legacy.catch.2','recoverable'); }
   </script>
 
   <!-- PWA manifest -->
@@ -1828,7 +1828,7 @@ body.fp434-app #nrEclipseCopy{color:var(--nr-copy3)}
       line.style.marginTop = '4px';
       _errBox.appendChild(line);
       _errBox.style.display = 'block';
-    }catch(e){}
+    }catch(e){ window.NRDiagnostics?.record('legacy.catch.3','recoverable'); }
   }
   window.addEventListener('error', function(ev){
     var m = (ev.message||'error') + ' @ ' + String(ev.filename||'').split('/').pop() + ':' + (ev.lineno||'?') + ':' + (ev.colno||'?');
@@ -1837,7 +1837,7 @@ body.fp434-app #nrEclipseCopy{color:var(--nr-copy3)}
   window.addEventListener('unhandledrejection', function(ev){
     var r = ev.reason;
     var m = 'Promise rejection: ' + (r && r.message ? r.message : String(r));
-    try { if (r && r.stack) m += '\n' + r.stack; } catch(e){}
+    try { if (r && r.stack) m += '\n' + r.stack; } catch(e){ window.NRDiagnostics?.record('legacy.catch.4','recoverable'); }
     _showErr(m);
   });
 })();
@@ -2087,7 +2087,7 @@ body.fp434-app #nrEclipseCopy{color:var(--nr-copy3)}
                   }
                 }
               }
-            } catch(e){}
+            } catch(e){ window.NRDiagnostics?.record('legacy.catch.5','recoverable'); }
           })();
           </script>
           <!-- v88.8.56: завжди видимий пояснювальний рядок (не лише title-тултіп) —
@@ -2184,7 +2184,7 @@ body.fp434-app #nrEclipseCopy{color:var(--nr-copy3)}
           <!-- v88.8.18 patches: P2/P3/P4/P1d — DISABLED in fp75 (V3 freeze). V19 candidate. -->
           <a id="modelQualityBadge" href="#backtestCard" onclick="document.getElementById('backtestCard').open=true" data-label="Точність" style="font-size:12px;font-weight:700;color:var(--ok);text-decoration:none;border:1px solid var(--ok);padding:1px 8px;border-radius:8px;background:rgba(43,212,125,.08);transition:background .2s" title="Завантажуються актуальні хронологічні метрики без витоку даних.">&#128202; Метрики якості завантажуються…</a>
           <!-- v88.8.37-fp72: Audit toggle button -->
-          <button id="auditToggleBtn" onclick="(function(){const c=document.getElementById('auditCard');const b=document.getElementById('auditToggleBtn');if(!c)return;if(c.style.display==='none'||!c.style.display){try{renderAuditCard({silent:false});}catch(e){} c.style.display='';document.body.classList.add('audit-mode');try{draw27Chart();}catch(e){}b.textContent='Аудит ▾';b.setAttribute('aria-label','Аудит: сховати розкладку висновку');}else{c.style.display='none';document.body.classList.remove('audit-mode');try{draw27Chart();}catch(e){}b.textContent='Аудит ▸';b.setAttribute('aria-label','Аудит: показати розкладку висновку');}})()" style="font-size:11px;font-weight:600;color:var(--muted);background:none;border:1px solid var(--border2);border-radius:6px;padding:1px 8px;cursor:pointer;line-height:1.6" aria-label="Аудит: показати розкладку висновку">Аудит ▸</button>
+          <button id="auditToggleBtn" onclick="(function(){const c=document.getElementById('auditCard');const b=document.getElementById('auditToggleBtn');if(!c)return;if(c.style.display==='none'||!c.style.display){try{renderAuditCard({silent:false});}catch(e){ window.NRDiagnostics?.record('legacy.catch.6','recoverable'); } c.style.display='';document.body.classList.add('audit-mode');try{draw27Chart();}catch(e){ window.NRDiagnostics?.record('legacy.catch.7','recoverable'); }b.textContent='Аудит ▾';b.setAttribute('aria-label','Аудит: сховати розкладку висновку');}else{c.style.display='none';document.body.classList.remove('audit-mode');try{draw27Chart();}catch(e){ window.NRDiagnostics?.record('legacy.catch.8','recoverable'); }b.textContent='Аудит ▸';b.setAttribute('aria-label','Аудит: показати розкладку висновку');}})()" style="font-size:11px;font-weight:600;color:var(--muted);background:none;border:1px solid var(--border2);border-radius:6px;padding:1px 8px;cursor:pointer;line-height:1.6" aria-label="Аудит: показати розкладку висновку">Аудит ▸</button>
         </div>
       </div>
     </section>
@@ -3884,7 +3884,7 @@ function _updateSourceState(partial){
       };
     }
     Object.assign(window.__sourceState, partial, { updatedAt: Date.now() });
-  } catch(_e) { /* silent — це допоміжний шар, не критичний шлях рендеру */ }
+  } catch(_e){ window.NRDiagnostics?.record('legacy.catch.9','recoverable'); }
 }
 
 function _renderFreshnessState(){
@@ -3951,7 +3951,7 @@ function _renderFreshnessState(){
         }
       }
     }
-  } catch(e) { /* silent */ }
+  } catch(e){ window.NRDiagnostics?.record('legacy.catch.10','recoverable'); }
   if(fb){ fb.textContent=label; fb.style.color=col; fb.style.background=bgCol; }
   if(hf){
     // v88.8.35-fp9 O: для heroFreshness теж зберігаємо вирівняний стан + позначка контенту якщо overridden.
@@ -4020,7 +4020,7 @@ function _renderFreshnessState(){
         if (_htSib) { _htSib.textContent = ''; _htSib.className = ''; }
       }
     }
-  } catch(e) { /* noop */ }
+  } catch(e){ window.NRDiagnostics?.record('legacy.catch.11','recoverable'); }
 }
 
 // ═══ v75: G history for ΔG ═══
@@ -4311,7 +4311,7 @@ function renderDecisionLayer(gVal, ui) {
       avoidArr.unshift(`Важливих рішень і запусків (день критичний, PDF/Engine ${_eDoG.eng})`);
       ctxTxt = `День критичний за PDF/Engine (${_eDoG.eng}) — навіть за спокійного фону тримати рутину. ` + ctxTxt;
     }
-  } catch(_eDay) { /* silent */ }
+  } catch(_eDay){ window.NRDiagnostics?.record('legacy.catch.12','recoverable'); }
 
   // v88.9.08-fp189: НЕЗАЛЕЖНИЙ від engine day-guard. Guard вище (fp56-P12f)
   // потребує getEngineScore — а він null поки loadEngineScores на паузі, тож
@@ -4328,7 +4328,7 @@ function renderDecisionLayer(gVal, ui) {
       avoidArr.unshift('Важливих запусків і угод (день Амавасьї — live-вікно тактичне)');
       ctxTxt = 'День Амавасьї (тітхі на схід сонця). Live-фон може давати короткий пік, але це тактичне вікно, не стратегічне. ' + ctxTxt;
     }
-  } catch(_eAmav) { /* silent */ }
+  } catch(_eAmav){ window.NRDiagnostics?.record('legacy.catch.13','recoverable'); }
 
   // fp54-C: Personal cycle conflict — if personal verdict is negative, modify DO list and add note
   try {
@@ -4352,7 +4352,7 @@ function renderDecisionLayer(gVal, ui) {
       // Глобальний день добрий, hora пасивна — ієрархічний bridge
       ctxTxt = 'День активний глобально. Поточна година краща для аналізу і спостережень — дочекайся активного слота. ' + ctxTxt;
     }
-  } catch(_eCyc) { /* silent */ }
+  } catch(_eCyc){ window.NRDiagnostics?.record('legacy.catch.14','recoverable'); }
 
   // Dst storm
   if ((ai.Di || 0) <= -1) {
@@ -4397,7 +4397,7 @@ function renderDecisionLayer(gVal, ui) {
       ];
       ctxTxt = `Якість даних ${_dmDL.toUpperCase()} — позитивний стан не є дозволом на нові дії. ` + ctxTxt;
     }
-  } catch(_eDmDL) { /* silent */ }
+  } catch(_eDmDL){ window.NRDiagnostics?.record('legacy.catch.15','recoverable'); }
 
   // fp428 A-01: missing/unverified reference is stricter than every positive
   // raw/background classification. Keep informational context, but issue no
@@ -4427,7 +4427,7 @@ function renderDecisionLayer(gVal, ui) {
       ];
       ctxTxt = `${_namesDL} активний${_untilDL} — тільки рутина, незалежно від фону дня. ` + ctxTxt;
     }
-  } catch(_eGcdDL) { /* silent */ }
+  } catch(_eGcdDL){ window.NRDiagnostics?.record('legacy.catch.16','recoverable'); }
 
   // 5. Обмежити довжину (щоб не перенасичувати)
   doArr = doArr.slice(0, 5);
@@ -4798,11 +4798,11 @@ try{
         try{
           if (r.scope !== _ownScope) return; // чужий проєкт — НІКОЛИ не чіпаємо
           if (!r.active || !r.active.scriptURL.endsWith('/sw.js')) r.unregister();
-        }catch(e){}
+        }catch(e){ window.NRDiagnostics?.record('legacy.catch.17','recoverable'); }
       });
     });
   }
-}catch(e){}
+}catch(e){ window.NRDiagnostics?.record('legacy.catch.18','recoverable'); }
 if ('serviceWorker' in navigator) {
   // fp379: on a first visit the network HTML is already current. Installing
   // its first controller must not reload the page a second time. Existing
@@ -4818,10 +4818,10 @@ if ('serviceWorker' in navigator) {
         _swReg = reg;
         if(window._DEBUG) console.log('[SW] Registered, scope:', reg.scope);
         // fp116: auto-check for SW updates every 5 minutes — ensures new deploys activate without manual cache clear
-        setInterval(() => { try { const p = reg.update(); if(p && p.catch) p.catch(()=>{}); } catch(e) {} }, 5 * 60 * 1000);
+        setInterval(() => { try { const p = reg.update(); if(p && p.catch) p.catch(()=>{}); } catch(e){ window.NRDiagnostics?.record('legacy.catch.19','recoverable'); } }, 5 * 60 * 1000);
         // fp116: force update check on visibility change (user returns to tab)
         document.addEventListener('visibilitychange', () => {
-          if (!document.hidden) { try { const p = reg.update(); if(p && p.catch) p.catch(()=>{}); } catch(e) {} }
+          if (!document.hidden) { try { const p = reg.update(); if(p && p.catch) p.catch(()=>{}); } catch(e){ window.NRDiagnostics?.record('legacy.catch.20','recoverable'); } }
         }, { once: false });
 
         // SW_STALE_DATA: показати маркер "дані з кешу" в UI (аудит sw.js п.4)
@@ -4856,7 +4856,7 @@ if ('serviceWorker' in navigator) {
                 mode:'cached', stale:true, fetchedAt:event.data.fetchedAt ?? null,
                 reason:'sw_offline_fallback'
               };
-              try { if (typeof syncHero === 'function') syncHero(); } catch(_eRef) {}
+              try { if (typeof syncHero === 'function') syncHero(); } catch(_eRef){ window.NRDiagnostics?.record('legacy.catch.21','recoverable'); }
             }
             if (_isKpResource && typeof _updateSourceState === 'function') {
               _updateSourceState({
@@ -4901,7 +4901,7 @@ if ('serviceWorker' in navigator) {
         try {
           const p = reg.update();
           if (p && p.catch) p.catch(() => {});
-        } catch (e) {}
+        } catch(e){ window.NRDiagnostics?.record('legacy.catch.22','recoverable'); }
 
 
         // Після того як новий SW взяв контроль — перезавантажити сторінку.
@@ -4927,7 +4927,7 @@ if ('serviceWorker' in navigator) {
         });
 
         // Перевіряти оновлення кожні 30 хвилин
-        SAFE_INTERVAL(() => { try { const p = reg.update(); if(p && p.catch) p.catch(()=>{}); } catch(e) {} }, 30 * 60 * 1000).start();
+        SAFE_INTERVAL(() => { try { const p = reg.update(); if(p && p.catch) p.catch(()=>{}); } catch(e){ window.NRDiagnostics?.record('legacy.catch.23','recoverable'); } }, 30 * 60 * 1000).start();
       })
       .catch(err => console.warn('[SW] Registration failed:', err));
   });
@@ -4945,7 +4945,7 @@ if ('serviceWorker' in navigator) {
   (function(){
     try {
       if(location.search.indexOf('debug=1') >= 0) window._DEBUG = true;
-    } catch(e) { /* noop */ }
+    } catch(e){ window.NRDiagnostics?.record('legacy.catch.24','recoverable'); }
     if (!window._DEBUG) {
       const _origLog = console.log, _origDebug = console.debug;
       console.log = function(){ if(window._DEBUG) _origLog.apply(console, arguments); };
@@ -4988,7 +4988,7 @@ const PaywallModal = {
       // v88.8.35-fp56-P8: if show() is called again without an intervening hide() (user clicks a
       // second paywall trigger), detach the previous keydown handler first — otherwise it leaks and
       // Esc/Tab-trap fire twice.
-      try { if (PaywallModal._keyHandler) ov.removeEventListener('keydown', PaywallModal._keyHandler); } catch(_e) {}
+      try { if (PaywallModal._keyHandler) ov.removeEventListener('keydown', PaywallModal._keyHandler); } catch(_e){ window.NRDiagnostics?.record('legacy.catch.25','recoverable'); }
       // v88.8.35-fp56-P8 a11y: remember opener, trap focus inside the dialog, allow Esc to close.
       try {
         PaywallModal._opener = document.activeElement;
@@ -5004,7 +5004,7 @@ const PaywallModal = {
           }
         };
         ov.addEventListener('keydown', PaywallModal._keyHandler);
-      } catch(_e) { /* silent */ }
+      } catch(_e){ window.NRDiagnostics?.record('legacy.catch.26','recoverable'); }
     }
   },
   hide() {
@@ -5016,7 +5016,7 @@ const PaywallModal = {
         if (PaywallModal._keyHandler) { ov.removeEventListener('keydown', PaywallModal._keyHandler); PaywallModal._keyHandler = null; }
         if (PaywallModal._opener && typeof PaywallModal._opener.focus === 'function') PaywallModal._opener.focus();
         PaywallModal._opener = null;
-      } catch(_e) { /* silent */ }
+      } catch(_e){ window.NRDiagnostics?.record('legacy.catch.27','recoverable'); }
     }
   },
   demoActivate() { PaywallModal.hide(); }
@@ -5202,7 +5202,7 @@ const GAuth = {
         await fetch(GAUTH_WORKER_URL + '/auth/logout', {
           method:'POST', headers:{'Authorization': 'Bearer ' + token},
         });
-      } catch(e) { /* ignore — server-side cleanup, кешеві дані видаляємо локально */ }
+      } catch(e){ window.NRDiagnostics?.record('legacy.catch.28','recoverable'); }
     }
     _gauthLsRemove(GAUTH_TOKEN_KEY);
     _gauthLsRemove(GAUTH_USER_KEY);
@@ -5451,7 +5451,7 @@ if (typeof window !== 'undefined') {
             if (typeof showToast === 'function') showToast('Посилання підтвердження недійсне або протерміноване');
           });
       }
-    } catch(e){ /* silent — якщо URLSearchParams недоступний, просто не автовідкриваємо */ }
+    } catch(e){ window.NRDiagnostics?.record('legacy.catch.29','recoverable'); }
   });
   if (document.readyState !== 'loading') GAuth.refreshUI();
 }
@@ -5565,7 +5565,7 @@ const GIndexSound = {
   // Toggle button handler
   toggle() {
     this.enabled = !this.enabled;
-    try { localStorage.setItem('gindex_sound_enabled', this.enabled ? '1' : '0'); } catch(e) {}
+    try { localStorage.setItem('gindex_sound_enabled', this.enabled ? '1' : '0'); } catch(e){ window.NRDiagnostics?.record('legacy.catch.30','recoverable'); }
     if (this.enabled) {
       const ctx = this._initCtx();
       if (ctx && ctx.state === 'suspended') ctx.resume();
@@ -5619,7 +5619,7 @@ const GIndexSound = {
   },
 };
 window.GIndexSound = GIndexSound;
-document.addEventListener('DOMContentLoaded', () => { try { GIndexSound.init(); } catch(e) {} });
+document.addEventListener('DOMContentLoaded', () => { try { GIndexSound.init(); } catch(e){ window.NRDiagnostics?.record('legacy.catch.31','recoverable'); } });
 
 // ═══════════════════════════════════════════════════════════════════════════
 // v88.8.18 PANCHA PAKSHI PROFILE — натальний птах + activity matrix
@@ -5683,7 +5683,7 @@ const GIndexPPProfile = {
           return Math.max(0, Math.min(26, p.nakshatra.num - 1));
         }
       }
-    } catch(e) { /* fall through */ }
+    } catch(e){ window.NRDiagnostics?.record('legacy.catch.32','recoverable'); }
     // Fallback: synodic-based (~±1 nakshatra accuracy)
     const fraction = this.lunarAge(date) / this.SYNODIC;
     return Math.max(0, Math.min(26, Math.floor(fraction * 27)));
@@ -5697,7 +5697,7 @@ const GIndexPPProfile = {
         const p = computePanchanga(date);
         if (p && p.tithi && isFinite(p.tithi.num)) return p.tithi.num <= 15;
       }
-    } catch(e) { /* fall through */ }
+    } catch(e){ window.NRDiagnostics?.record('legacy.catch.33','recoverable'); }
     return true; // fallback: невідомо → консервативно Shukla (задокументовано як припущення)
   },
 
@@ -5718,7 +5718,7 @@ const GIndexPPProfile = {
         localStorage.setItem('gindex_pp_profiles', JSON.stringify(arr));
         return arr;
       }
-    } catch(e) {}
+    } catch(e){ window.NRDiagnostics?.record('legacy.catch.34','recoverable'); }
     return [null, null, null];
   },
 
@@ -5738,7 +5738,7 @@ const GIndexPPProfile = {
       const slot = this.currentSlot || 0;
       all[slot] = profile;
       localStorage.setItem('gindex_pp_profiles', JSON.stringify(all));
-    } catch(e) {}
+    } catch(e){ window.NRDiagnostics?.record('legacy.catch.35','recoverable'); }
   },
 
   clear() {
@@ -5747,7 +5747,7 @@ const GIndexPPProfile = {
       const slot = this.currentSlot || 0;
       all[slot] = null;
       localStorage.setItem('gindex_pp_profiles', JSON.stringify(all));
-    } catch(e) {}
+    } catch(e){ window.NRDiagnostics?.record('legacy.catch.36','recoverable'); }
     document.getElementById('ppName').value = '';
     document.getElementById('ppDate').value = '';
     document.getElementById('ppTime').value = '';
@@ -5834,13 +5834,13 @@ const GIndexPPProfile = {
           const _sr179 = _calcSunRiseSet(_now179);
           if (_sr179 && _sr179.sunrise && _sr179.sunset) { _sunrise179 = _sr179.sunrise; _sunset179 = _sr179.sunset; }
         }
-      } catch(e) { /* fall through to fallback */ }
+      } catch(e){ window.NRDiagnostics?.record('legacy.catch.37','recoverable'); }
       if (!_sunrise179 || !_sunset179) {
         _sunrise179 = new Date(_now179); _sunrise179.setHours(6,0,0,0);
         _sunset179 = new Date(_now179); _sunset179.setHours(18,0,0,0);
       }
       let _yamaInfo179 = null;
-      try { if (typeof getCurrentYama === 'function') _yamaInfo179 = getCurrentYama(_now179, _sunrise179, _sunset179); } catch(e) {}
+      try { if (typeof getCurrentYama === 'function') _yamaInfo179 = getCurrentYama(_now179, _sunrise179, _sunset179); } catch(e){ window.NRDiagnostics?.record('legacy.catch.38','recoverable'); }
       let _currentAct179 = null;
       if (_yamaInfo179 && typeof getPakshiActivityForYama === 'function') {
         _currentAct179 = getPakshiActivityForYama(birdId, _yamaInfo179.yamaIdx, _weekday179, _yamaInfo179.isDay, _isShukla179);
@@ -5865,7 +5865,7 @@ const GIndexPPProfile = {
             : '';
           _operationalGuard179 = `<div style="margin-top:6px;padding:6px 8px;border-radius:6px;background:rgba(255,107,107,.10);border-left:3px solid ${_cardColor};font-size:10px;color:#ffd2d2"><strong>Оперативний стан ${_op179} має пріоритет:</strong> лише необхідна рутина; не починати нових справ і не вести важливих переговорів.</div>`;
         }
-      } catch(_e) { /* local cycle remains advisory */ }
+      } catch(_e){ window.NRDiagnostics?.record('legacy.catch.39','recoverable'); }
 
       elBird.style.display = 'block';
       elBird.style.background = _cardColor + '14';
@@ -5921,14 +5921,14 @@ const GIndexPPProfile = {
         const sr = _calcSunRiseSet(now);
         if (sr && sr.sunrise && sr.sunset) { sunrise = sr.sunrise; sunset = sr.sunset; isFallback = false; }
       }
-    } catch(e) { /* fall through to fallback */ }
+    } catch(e){ window.NRDiagnostics?.record('legacy.catch.40','recoverable'); }
     if (!sunrise || !sunset) {
       sunrise = new Date(now); sunrise.setHours(6,0,0,0);
       sunset = new Date(now); sunset.setHours(18,0,0,0);
     }
 
     let yamaInfo = null;
-    try { if (typeof getCurrentYama === 'function') yamaInfo = getCurrentYama(now, sunrise, sunset); } catch(e) {}
+    try { if (typeof getCurrentYama === 'function') yamaInfo = getCurrentYama(now, sunrise, sunset); } catch(e){ window.NRDiagnostics?.record('legacy.catch.41','recoverable'); }
 
     let currentAct = null, timeToNext = null;
     if (yamaInfo && typeof getPakshiActivityForYama === 'function') {
@@ -5988,12 +5988,12 @@ const GIndexPPProfile = {
       try {
         const cur = this.loadSlot(this.currentSlot || 0);
         if (cur && cur.date) this.render();
-      } catch(e) {}
+      } catch(e){ window.NRDiagnostics?.record('legacy.catch.42','recoverable'); }
     }, 60000);
   },
 };
 window.GIndexPPProfile = GIndexPPProfile;
-document.addEventListener('DOMContentLoaded', () => { try { GIndexPPProfile.init(); } catch(e) {} });
+document.addEventListener('DOMContentLoaded', () => { try { GIndexPPProfile.init(); } catch(e){ window.NRDiagnostics?.record('legacy.catch.43','recoverable'); } });
 
 // ═══════════════════════════════════════════════════════════════════════════
 // v88.8.34 ★ HELPER: getEffectiveGForDate — legacy marker helper only
@@ -6058,7 +6058,7 @@ function getEffectiveGForDate(dateObj, rawG, minDelta) {
       const _sign2 = score.eng >= 0 ? '+' : '';
       out.tooltip = `\n\n★ PDF EXPERT: ${_sign2}${score.eng} (близько до raw G ${rawG >= 0 ? '+' : ''}${rawG.toFixed(1)}, delta ${out.delta.toFixed(1)}).`;
     }
-  } catch(e) { /* silent */ }
+  } catch(e){ window.NRDiagnostics?.record('legacy.catch.44','recoverable'); }
   return out;
 }
 window.getEffectiveGForDate = getEffectiveGForDate;
@@ -6082,167 +6082,9 @@ window.getEffectiveGForDate = getEffectiveGForDate;
 //   5. Worker (Cloudflare, окремо — див. push-worker-addon.js) зберігає підписку
 //      в KV і на Cron Trigger шле push через web-push (nodejs_compat).
 // ═══════════════════════════════════════════════════════════════════════════
-const PUSH = (function(){
-  function _log(...a){ try{ if(window._DEBUG) console.log('[PUSH]', ...a); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)} }
-  function _warn(...a){ try{ console.warn('[PUSH]', ...a); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)} }
-
-  function isSupported(){
-    return typeof window !== 'undefined'
-      && 'serviceWorker' in navigator
-      && 'PushManager' in window
-      && 'Notification' in window;
-  }
-
-  // fp260: більше не залежить від SUPA (видалений backend) — лише від
-  // наявності VAPID-ключа. Worker-доступність перевіряється фактичним
-  // запитом у subscribe(), не тут (немає сенсу тримати другий health-check).
-  function isConfigured(){
-    return !window.GINDEX_PLAY_CHANNEL && !!window._vapid_public_key;
-  }
-
-  function currentPermission(){
-    if(!isSupported()) return 'unsupported';
-    return Notification.permission; // 'default' | 'granted' | 'denied'
-  }
-
-  async function isSubscribed(){
-    if(!isSupported()) return false;
-    try{
-      const reg = await navigator.serviceWorker.ready;
-      const sub = await reg.pushManager.getSubscription();
-      return !!sub;
-    }catch(e){ return false; }
-  }
-
-  // VAPID base64url → Uint8Array (per web-push spec)
-  function _urlBase64ToUint8Array(b64){
-    const padding = '='.repeat((4 - b64.length % 4) % 4);
-    const normalized = (b64 + padding).replace(/-/g,'+').replace(/_/g,'/');
-    const raw = atob(normalized);
-    const out = new Uint8Array(raw.length);
-    for(let i=0;i<raw.length;i++) out[i] = raw.charCodeAt(i);
-    return out;
-  }
-
-  async function subscribe(){
-    if(window.GINDEX_PLAY_CHANNEL) throw new Error('Push вимкнено у версії Google Play.');
-    if(!isSupported()) throw new Error('Push не підтримується цим браузером');
-    if(!isConfigured()) throw new Error('Push ще не налаштовано на сервері');
-
-    // 1. Запросити дозвіл
-    const perm = await Notification.requestPermission();
-    if(perm !== 'granted') throw new Error('Дозвіл не надано: ' + perm);
-
-    // 2. Отримати SW registration
-    const reg = await navigator.serviceWorker.ready;
-
-    // 3. Підписка (або реюз існуючу)
-    let sub = await reg.pushManager.getSubscription();
-    if(!sub){
-      const options={
-        userVisibleOnly:true,
-        applicationServerKey:_urlBase64ToUint8Array(window._vapid_public_key)
-      };
-      try{
-        sub=await reg.pushManager.subscribe(options);
-      }catch(firstError){
-        // Chrome occasionally keeps a stale push-service registration after a
-        // service-worker/VAPID update. Refresh the registration and retry once.
-        try{await reg.update();}catch(_updateError){}
-        await new Promise(resolve=>setTimeout(resolve,900));
-        try{
-          sub=await reg.pushManager.subscribe(options);
-        }catch(secondError){
-          const raw=String((secondError&&secondError.message)||secondError||firstError||'');
-          if(/could not retrieve the public key|registration failed|push service/i.test(raw)){
-            throw new Error(
-              'Chrome не зміг зареєструвати пристрій у своїй push-службі. '+
-              'Закрийте всі вікна Chrome, відкрийте браузер знову та повторіть. '+
-              'Якщо помилка лишиться — очистьте дані цього сайту й перевірте, '+
-              'що сповіщення дозволені. Telegram Kp-алерти працюють незалежно.'
-            );
-          }
-          throw secondError;
-        }
-      }
-    }
-
-    // 4. Зберегти на gindex-auth Worker (fp260: замість мертвого Supabase).
-    // Той самий Bearer-паттерн, що вже реально працює для /auth/logout.
-    const token = GAuth.getToken();
-    if(!token) throw new Error('Увійдіть в акаунт, щоб увімкнути сповіщення');
-
-    const subJson = sub.toJSON();
-    const row = {
-      endpoint: subJson.endpoint,
-      p256dh: subJson.keys && subJson.keys.p256dh,
-      auth_secret: subJson.keys && subJson.keys.auth,
-      user_agent: navigator.userAgent
-    };
-
-    let r;
-    try {
-      r = await fetch(GAUTH_WORKER_URL + '/push/subscribe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-        body: JSON.stringify(row)
-      });
-    } catch(netErr) {
-      throw new Error('Сервер сповіщень недоступний. Перевір інтернет і спробуй знову.');
-    }
-    if (!r.ok) {
-      let msg = 'Не вдалося зберегти підписку (HTTP ' + r.status + ')';
-      try { const data = await r.json(); if (data && data.error) msg = data.error; } catch(_e){}
-      throw new Error(msg);
-    }
-    _log('subscribed and stored');
-    return sub;
-  }
-
-  async function unsubscribe(){
-    if(!isSupported()) return;
-    const reg = await navigator.serviceWorker.ready;
-    const sub = await reg.pushManager.getSubscription();
-    if(!sub) return;
-    const endpoint = sub.endpoint;
-    await sub.unsubscribe();
-    // Видалити на Worker-стороні, якщо є токен (fp260: замість Supabase delete).
-    const token = GAuth.getToken();
-    if(token && !window.GINDEX_PLAY_CHANNEL){
-      try{
-        await fetch(GAUTH_WORKER_URL + '/push/unsubscribe', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-          body: JSON.stringify({ endpoint })
-        });
-      }catch(e){ _warn('server-side unsubscribe failed:', e); }
-    }
-    _log('unsubscribed');
-  }
-
-  // SW повідомляє про pushsubscriptionchange (browser auto-renewed) — re-subscribe
-  if(typeof navigator !== 'undefined' && 'serviceWorker' in navigator){
-    navigator.serviceWorker.addEventListener && navigator.serviceWorker.addEventListener('message', event => {
-      if(event.data&&/^SW_(FRESH|STALE)_DATA$/.test(event.data.type)&&!acceptSWDataMessage(event.data))return;
-      if(event.data && event.data.type === 'SW_PUSH_SUB_CHANGED'){
-        _log('SW notified subscription changed — re-subscribing');
-        subscribe().catch(e => _warn('auto re-subscribe failed:', e));
-      }
-      // V25-fu16: SW_FRESH_DATA / SW_STALE_DATA notifications
-      if(event.data && event.data.type === 'SW_FRESH_DATA'){
-        _log('SW: fresh data fetched at', new Date(event.data.fetchedAt).toISOString());
-        // Could trigger UI refresh here if data binding exists
-        try { window.dispatchEvent(new CustomEvent('engine-data-refreshed', { detail: event.data })); } catch(e){}
-      }
-      if(event.data && event.data.type === 'SW_STALE_DATA'){
-        _warn('SW: serving stale data (offline)');
-        try { window.dispatchEvent(new CustomEvent('engine-data-stale', { detail: event.data })); } catch(e){}
-      }
-    });
-  }
-
-  return { isSupported, isConfigured, currentPermission, isSubscribed, subscribe, unsubscribe };
-})();
+</script>
+<script src="./push_client_v1.js"></script>
+<script>
 
 async function updatePushButtonState(){
   const btn=document.getElementById('pushBtn');
@@ -6264,7 +6106,7 @@ async function updatePushButtonState(){
     return;
   }
   let subscribed=false;
-  try{subscribed=await PUSH.isSubscribed();}catch(_e){}
+  try{subscribed=await PUSH.isSubscribed();}catch(_e){ window.NRDiagnostics?.record('legacy.catch.49','recoverable'); }
   if(subscribed){
     btn.textContent='🔔 ✓';
     btn.title='Web Push увімкнено на цьому пристрої';
@@ -6459,7 +6301,7 @@ function refreshGeoDependents(){
   _lastPanchCtx=null;
   window.__p3RahuCache=null;
   try{_sunRiseSetCache.clear();renderPanchanga(new Date());}catch(e){if(window._DEBUG)console.warn('[geo] render:',e.message);}
-  try{syncHero();}catch(_e){}
+  try{syncHero();}catch(_e){ window.NRDiagnostics?.record('legacy.catch.50','recoverable'); }
   window.dispatchEvent(new Event('gindex:location-changed'));
 }
 function initGeolocation(){
@@ -6804,7 +6646,7 @@ const sunriseUTC = d => {
       const sr = _calcSunRiseSet(d);
       if (sr && sr.sunrise instanceof Date && !isNaN(sr.sunrise.getTime())) return sr.sunrise;
     }
-  } catch(e2) { /* fall through */ }
+  } catch(e2){ window.NRDiagnostics?.record('legacy.catch.51','recoverable'); }
   return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 3, 51, 0));
 };
 // v87.90 fix: localWeekday — день тижня у локальній зоні (для Vara/Hora).
@@ -7029,7 +6871,7 @@ async function loadKpHourlyAlert(){
         dailySource=String(daily.source||'unknown');
         dailySynthetic=!!daily.kp_synthetic;
       }
-    }catch(_e){}
+    }catch(_e){ window.NRDiagnostics?.record('legacy.catch.52','recoverable'); }
 
     // Persist the preceding published forecast in this browser. A material
     // upstream revision must be shown, not silently presented as an observation.
@@ -7061,7 +6903,7 @@ async function loadKpHourlyAlert(){
         revision=storedAge<=6*3600000?storedRevision:null;
         if(storedAge>6*3600000) localStorage.removeItem(revisionAlertKey);
       }
-    }catch(_e){}
+    }catch(_e){ window.NRDiagnostics?.record('legacy.catch.53','recoverable'); }
 
     const currentText=currentKp===null?'—':currentKp.toFixed(1);
     const peakText=Number.isFinite(kp)?kp.toFixed(1):'—';
@@ -7389,7 +7231,7 @@ async function loadExpertDecisionRegistry(force = false){
         const row=rowsByDate.get(override?.date),sameSource=String(override?.source_sha256||'').toLowerCase()===String(row?.source_sha256||'').toLowerCase();
         if(row&&override?.verified&&sameSource&&override?.override_text)displayText[override.date]=String(override.override_text);
       }
-    }catch(_displayTextError){}
+    }catch(_displayTextError){ window.NRDiagnostics?.record('legacy.catch.54','recoverable'); }
     // fp428 A-02: normalize verified registry decisions into the same store
     // consumed by getEngineScore(). The registry is no longer a display-only,
     // parallel authority path. Existing explicit overrides retain precedence.
@@ -7487,9 +7329,9 @@ async function loadTanitaReviewStatus(){
     try{
       const pr=await fetch('TANITA_P0_REVIEW_STATUS_v1.json',{cache:'no-store'});
       if(pr.ok){ const p=await pr.json(); el.textContent+=' · P0-галерея: '+Number(p.p0_items||0)+' записів / '+Number(p.source_pages||0)+' сторінок, джерела '+((p.missing_source_pages||[]).length?'НЕПОВНІ':'OK'); }
-    }catch(_e){}
-    try{ const ir=await fetch('TANITA_P0_REVIEW_IMPORT_STATUS_v1.json',{cache:'no-store'}); if(ir.ok){ const i=await ir.json(); el.textContent+=' · import: '+String(i.state||'unknown')+', labels '+Number(i.imported_labels||0)+', unclear '+Number(i.unclear_items||0); } }catch(_e){}
-    try{ const hr=await fetch('TANITA_MANUAL_HOLDOUT_STATUS_v1.json',{cache:'no-store'}); if(hr.ok){ const h=await hr.json(); const c=h.counts||{}; el.textContent+=' · holdout: '+String(h.state||'unknown')+', '+Number(c.evaluated_test||0)+'/'+Number(c.test||0)+' test'; } }catch(_e){}
+    }catch(_e){ window.NRDiagnostics?.record('legacy.catch.55','recoverable'); }
+    try{ const ir=await fetch('TANITA_P0_REVIEW_IMPORT_STATUS_v1.json',{cache:'no-store'}); if(ir.ok){ const i=await ir.json(); el.textContent+=' · import: '+String(i.state||'unknown')+', labels '+Number(i.imported_labels||0)+', unclear '+Number(i.unclear_items||0); } }catch(_e){ window.NRDiagnostics?.record('legacy.catch.56','recoverable'); }
+    try{ const hr=await fetch('TANITA_MANUAL_HOLDOUT_STATUS_v1.json',{cache:'no-store'}); if(hr.ok){ const h=await hr.json(); const c=h.counts||{}; el.textContent+=' · holdout: '+String(h.state||'unknown')+', '+Number(c.evaluated_test||0)+'/'+Number(c.test||0)+' test'; } }catch(_e){ window.NRDiagnostics?.record('legacy.catch.57','recoverable'); }
     return s;
   }catch(e){ el.textContent='Tanita QA: статус недоступний; непідтверджені ознаки не застосовуються'; el.style.color='#ff7b82'; return null; }
 }
@@ -7603,7 +7445,7 @@ async function loadSystemHealthStatus(){
           ' \u00b7 rebuilt disagreements '+Number(i.published_vs_rebuilt_disagreements||0)+
           ' \u00b7 score effect '+Number(x.production_score_effect||0)+'</div>';
       }
-    }catch(_e){}
+    }catch(_e){ window.NRDiagnostics?.record('legacy.catch.58','recoverable'); }
     return s;
   }catch(e){
     el.style.display='block'; el.style.color='#ff7b82'; el.style.borderColor='rgba(255,90,100,.48)';
@@ -7634,7 +7476,7 @@ async function loadOutcomeLedgerStatus(){
           ' \u00b7 nonlinear calendar: '+(c.historical_gate_passed?'candidate passed':'not confirmed')+
           ' (score effect 0)';
       }
-    } catch(_e) {}
+    } catch(_e){ window.NRDiagnostics?.record('legacy.catch.59','recoverable'); }
     return s;
   }catch(e){
     el.textContent += ' \u00b7 журнал реальних outcomes тимчасово недоступний';
@@ -7770,7 +7612,7 @@ async function checkDataManifest(){
     // застарілу відповідь ДО того, як SW взагалі побачить запит.
     const resp = await fetch('data_manifest.json', { cache: 'no-store' });
     if (resp.ok) m = await resp.json();
-  } catch(e){ /* маніфест відсутній/недоступний — не критично, day-rollover вже оброблено вище */ }
+  } catch(e){ window.NRDiagnostics?.record('legacy.catch.60','recoverable'); }
 
   if (m) {
     if (!_dayChanged && _lastManifest) {
@@ -7792,14 +7634,14 @@ async function checkDataManifest(){
   if (!_changed.length) return;
 
   if (window._DEBUG) console.log('[fp246/249] manifest change:', _changed.join(', '), '— перезавантажую...');
-  try { await loadExpertOverrides(); } catch(e){ /* silent */ }
-  try { await loadExpertCalc(); } catch(e){ /* silent */ }
-  try { await loadFutureKp(); window.dispatchEvent(new Event('engine-data-ready')); } catch(e){ /* silent */ }
+  try { await loadExpertOverrides(); } catch(e){ window.NRDiagnostics?.record('legacy.catch.61','recoverable'); }
+  try { await loadExpertCalc(); } catch(e){ window.NRDiagnostics?.record('legacy.catch.62','recoverable'); }
+  try { await loadFutureKp(); window.dispatchEvent(new Event('engine-data-ready')); } catch(e){ window.NRDiagnostics?.record('legacy.catch.63','recoverable'); }
   // v88.9.13-fp194 патерн: той самий рендер-ланцюжок, що й одноразовий boot-
   // завантажувач нижче — тепер повторюваний на кожну зміну manifest, не лише раз.
-  try { if (typeof syncV702UI === 'function') syncV702UI(); } catch(e){ /* silent */ }
-  try { if (typeof _renderHeroHierarchy === 'function') _renderHeroHierarchy(); } catch(e){ /* silent */ }
-  try { if (typeof renderHeroBulletin === 'function') renderHeroBulletin(); } catch(e){ /* silent */ }
+  try { if (typeof syncV702UI === 'function') syncV702UI(); } catch(e){ window.NRDiagnostics?.record('legacy.catch.64','recoverable'); }
+  try { if (typeof _renderHeroHierarchy === 'function') _renderHeroHierarchy(); } catch(e){ window.NRDiagnostics?.record('legacy.catch.65','recoverable'); }
+  try { if (typeof renderHeroBulletin === 'function') renderHeroBulletin(); } catch(e){ window.NRDiagnostics?.record('legacy.catch.66','recoverable'); }
 
   // fp310: atomic horizon refresh.
   // New verified PDF decisions used to refresh Hero only. The already-rendered
@@ -7912,7 +7754,7 @@ function renderUnifiedIndicesPanel(){
       const _uipKp = isFinite(window.__uiState?.kpNow) ? Number(window.__uiState.kpNow) : NaN;
       const _uipSig = resolveDaySignal_v88825(new Date(todayKyivStr()+'T12:00:00Z'), _uipG, _uipKp, {isToday:true});
       if (_uipSig && isFinite(_uipSig.decisionScore)) _uipOperationalScore = Number(_uipSig.decisionScore);
-    } catch(_e) { /* fail-soft: factors remain neutral-colored */ }
+    } catch(_e){ window.NRDiagnostics?.record('legacy.catch.67','recoverable'); }
     const _uipRestricted = _uipOperationalScore !== null && _uipOperationalScore < 0;
     const rowEl = el('uipPanchangaRow');
     if(rowEl){
@@ -8051,7 +7893,7 @@ function renderChronoPanel(){
   card.style.display='block';
 
   let entries=[];
-  try{ entries=JSON.parse(localStorage.getItem('gindex_chrono_v2_abcd')||'[]'); }catch(e){}
+  try{ entries=JSON.parse(localStorage.getItem('gindex_chrono_v2_abcd')||'[]'); }catch(e){ window.NRDiagnostics?.record('legacy.catch.68','recoverable'); }
 
   const valid=entries.filter(e=>e.exposure!=='invalid' && e.axis_a!=null && e.locked);
   const nv=valid.length;
@@ -8191,7 +8033,7 @@ function renderChronoPanel(){
 window.renderChronoPanel=renderChronoPanel;
 
 const _origSave=window.GChrono&&GChrono.saveToday;
-if(_origSave) GChrono.saveToday=(function(fn){return function(){fn.call(GChrono);try{renderChronoPanel();}catch(e){}};}(_origSave));
+if(_origSave) GChrono.saveToday=(function(fn){return function(){fn.call(GChrono);try{renderChronoPanel();}catch(e){ window.NRDiagnostics?.record('legacy.catch.69','recoverable'); }};}(_origSave));
 
 async function loadEngineScores(force = false){
   if(!force && _engineScores !== null) return _engineScores;
@@ -8341,7 +8183,7 @@ async function loadEngineScores(force = false){
     window.__engineRetryCount = Number(window.__engineRetryCount||0) + 1;
     if (window.__engineRetryCount <= 3) {
       setTimeout(() => { loadEngineScores(true).then(() => {
-        try { syncV702UI(); syncHero(); _renderHeroHierarchy(); } catch(_eRefresh) {}
+        try { syncV702UI(); syncHero(); _renderHeroHierarchy(); } catch(_eRefresh){ window.NRDiagnostics?.record('legacy.catch.70','recoverable'); }
       }); }, Math.min(30000, 2000 * Math.pow(2, window.__engineRetryCount-1)));
     }
     return _engineScores;
@@ -8983,7 +8825,7 @@ function renderScenarioCard(){
       card.open = true;
       sessionStorage.setItem('gix_scenario_auto_expanded', '1');
     }
-  } catch(e){ /* sessionStorage може кинути в private mode — ignore */ }
+  } catch(e){ window.NRDiagnostics?.record('legacy.catch.71','recoverable'); }
 }
 
 // v88.0 F3: scroll+highlight target row у 27d table.
@@ -9363,7 +9205,7 @@ async function indexIcsEventsForYears(years){
           if(!arr.some(x=>x.name===rec.name)) arr.push(rec);
         }
       }
-    }catch(e){ /* ignore parse errors */ }
+    }catch(e){ window.NRDiagnostics?.record('legacy.catch.72','recoverable'); }
   }
 }
 
@@ -9928,7 +9770,7 @@ function getDynamicKpForDate_v889125(dateObj){
     }
     const e = (typeof getEngineScore === 'function') ? getEngineScore(ds) : null;
     if(e && isFinite(e.kp)) return Number(e.kp);
-  } catch(e) { /* safe fallback */ }
+  } catch(e){ window.NRDiagnostics?.record('legacy.catch.73','recoverable'); }
   return NaN;
 }
 window.getDynamicKpForDate_v889125 = getDynamicKpForDate_v889125;
@@ -10049,7 +9891,7 @@ function renderAuditCard(opts){
       hasPdf   = true;
       pdfSrc   = (_e.src === 'override' || _e._expertOverrideVerified) ? 'PDF/Engine (override)' : 'PDF/Engine';
     }
-  } catch(_){}
+  } catch(_){ window.NRDiagnostics?.record('legacy.catch.74','recoverable'); }
 
   // Ai components
   const Li = isFinite(ai.Li) ? +ai.Li : '?';
@@ -10072,7 +9914,7 @@ function renderAuditCard(opts){
       if(_pc && _pc.rahu && _pc.rahu.start) _R = _pc.rahu;
     }
     if(_R && _R.start && _R.end) rahuStr = `${_R.start}–${_R.end}`;
-  } catch(_){}
+  } catch(_){ window.NRDiagnostics?.record('legacy.catch.75','recoverable'); }
 
   // Confidence + data-mode
   const confPct   = isFinite(ui.confPct) ? Math.round(ui.confPct) : '?';
@@ -10082,7 +9924,7 @@ function renderAuditCard(opts){
     const _dm = (typeof resolveDataModeExtended === 'function') ? resolveDataModeExtended() : 'live';
     const _dmMap = { live:'LIVE', estimated:'ESTIMATED', partial:'DELAYED', scenario:'SCENARIO', offline:'OFFLINE' };
     if(_dm && _dm !== 'live') dmLabel = ', ' + (_dmMap[_dm] || _dm.toUpperCase());
-  } catch(_){}
+  } catch(_){ window.NRDiagnostics?.record('legacy.catch.76','recoverable'); }
 
   const _fmt = v => (typeof v === 'number') ? (v >= 0 ? '+'+v.toFixed(2) : v.toFixed(2)) : String(v);
 
@@ -10432,7 +10274,7 @@ function resolveDataMode(){
       else if (_src.ageHours > 24)   _kpFresh = 'stale';    // > 1 доба
       else if (_src.ageHours > 1)    _kpFresh = 'cached';   // > 1 година
     }
-  } catch(e) { /* silent */ }
+  } catch(e){ window.NRDiagnostics?.record('legacy.catch.77','recoverable'); }
 
   // Forecast synthetic flag — last3D._synthetic ставиться у renderQuick, коли NOAA 3-day упав
   let _fcastSynthetic = false;
@@ -10476,7 +10318,7 @@ function resolveDataModeExtended(){
       const _m = _map[_ss.mode];
       if (_m) return _m;
     }
-  } catch(e) { /* silent — падаємо у fallback нижче */ }
+  } catch(e){ window.NRDiagnostics?.record('legacy.catch.78','recoverable'); }
   const _base = resolveDataMode();
   if (_base === 'live' || _base === 'offline' || _base === 'scenario') return _base;
   // _base === 'partial' — розщеплюємо на 'estimated' vs 'partial':
@@ -10487,7 +10329,7 @@ function resolveDataModeExtended(){
     const _src = window._kpSourceFreshness;
     const _ageH = (_src && isFinite(_src.ageHours)) ? _src.ageHours : null;
     if (!_fcastSynth && _ageH !== null && _ageH <= 12) return 'estimated';
-  } catch(e) { /* silent */ }
+  } catch(e){ window.NRDiagnostics?.record('legacy.catch.79','recoverable'); }
   return 'partial';
 }
 window.resolveDataModeExtended = resolveDataModeExtended;
@@ -10582,7 +10424,7 @@ function computeCScore(kpNow, kpObsJson, ai, G, kpSrc){
     const _dstObj = window._lastDst;
     const _dstV = _dstObj && isFinite(_dstObj.dst) ? _dstObj.dst : null;
     if (isFinite(kpNow) && kpNow < 2 && _dstV !== null && _dstV < -80) _physicsConflict = true;
-  } catch(e){ /* silent */ }
+  } catch(e){ window.NRDiagnostics?.record('legacy.catch.80','recoverable'); }
 
   // v88.9.59-fp241 (аудит-раунд-27, Problem 3): раніше tooltip "Причини
   // зниження" не показував відсутність Sn/Dst як окремі пункти, хоча Formula
@@ -10599,7 +10441,7 @@ function computeCScore(kpNow, kpObsJson, ai, G, kpSrc){
       penalty += 0.03;
       reasons.push({ txt: 'Sn (Wolf) недоступний', col: 'var(--dim)', d: 0.03 });
     }
-  } catch(e){ /* silent */ }
+  } catch(e){ window.NRDiagnostics?.record('legacy.catch.81','recoverable'); }
 
   // Вимір 2: вік даних. v88.9.52-fp234: шкалу перекалібровано — fp233 давав
   // для 5г затримки лише 0.12 → 88% → знову "Висока", тобто регресію проти
@@ -10617,7 +10459,7 @@ function computeCScore(kpNow, kpObsJson, ai, G, kpSrc){
       else if (_ageH > 3)  { _agePenalty = 0.18; _ageTxt = `Дані затримані (${_ageH.toFixed(1)}г, 3-6г)`; }
       else if (_ageH > 1)  { _agePenalty = 0.05; _ageTxt = `Дані злегка затримані (${_ageH.toFixed(1)}г)`; }
     }
-  } catch(e){ /* silent */ }
+  } catch(e){ window.NRDiagnostics?.record('legacy.catch.82','recoverable'); }
 
   // Вимір 3: транспорт (кеш / офлайн)
   let _transportPenalty = 0, _transportTxt = '';
@@ -10694,7 +10536,7 @@ function computeCScore(kpNow, kpObsJson, ai, G, kpSrc){
       if (grade === 'high') grade = 'med';
       reasons.push({ txt: `Dst provenance: ${_dp.reason} → максимум «Середня»`, col:'#ffcc00', d:0 });
     }
-  } catch(e){ /* silent */ }
+  } catch(e){ window.NRDiagnostics?.record('legacy.catch.83','recoverable'); }
   // Другий hard-gate: Kp застарілий (>12г, той самий поріг, що age-шкала
   // вище) не може називатись навіть "Середня" — лише "Низька".
   if (_agePenalty >= 0.30 && grade !== 'low') {
@@ -10797,7 +10639,7 @@ function computeAi(dateTimeUTC, kp=null){
       _computeAiCache.set(_k, _res);
       return _res;
     }
-  }catch(e){}
+  }catch(e){ window.NRDiagnostics?.record('legacy.catch.84','recoverable'); }
   return _computeAiRaw(dateTimeUTC, kp);
 }
 function _computeAiRaw(dateTimeUTC, kp=null){
@@ -11265,7 +11107,7 @@ async function fetchWolfSnResilient(signal){
     try{
       const parsed = parseWolfSn(await fetchTextWithCORS(url,_looksLikeSilso,{signal}));
       if(parsed) return {...parsed,_delivery:'direct_or_proxy'};
-    }catch(_e){ /* try next verified SILSO endpoint */ }
+    }catch(_e){ window.NRDiagnostics?.record('legacy.catch.85','recoverable'); }
   }
   throw new Error('SILSO snapshot and live endpoints unavailable');
 }
@@ -11740,7 +11582,7 @@ function build27dComputed(rows, last3D){
         const _ovEng = _expertOverrides[ds].expert_eng;
         if (Number.isFinite(_ovEng)) { _expertEng = _ovEng; _hasOverride = true; }
       }
-    } catch(e) { /* silent */ }
+    } catch(e){ window.NRDiagnostics?.record('legacy.catch.86','recoverable'); }
 
     const calendarAdvisory = window._futureCalendarAdvisory[ds] || null;
     result.push({r, ds, kpUsed, isOverridden, ai, G, delta, f107mod,
@@ -12373,7 +12215,7 @@ ${isNarrow?'На вузькому екрані показано 14 днів (−
               return `<div class="mono" style="font-size:18px;font-weight:700;color:${_vcol}" title="Заморожений PDF/Engine reference для порівняння; не оперативний дозвіл.">${_ec>=0?'+':''}${_ec} <span style="font-size:11px;font-weight:600;color:var(--dim)">PDF/Engine reference</span></div>`
                 + `<div style="font-size:10px;color:var(--faint);margin-top:1px" title="Forward Timeline raw = day-peak G (max Kp прогнозу × ΣAᵢ). Довідковий геомагнітний тренд, НЕ вердикт.">довідково · raw G_day ${gSign}${selG.toFixed(1)}</div>`;
             }
-          } catch(_e) { /* silent */ }
+          } catch(_e){ window.NRDiagnostics?.record('legacy.catch.87','recoverable'); }
           // fallback: немає verdict для дати — показуємо raw як було
           return `<div class="mono" style="cursor:help;font-size:18px;font-weight:700;color:${selCol}" title="G ${gSign}${selG.toFixed(2)} — денний пік. Hero G показує LIVE слот.">G_day ${gSign}${selG.toFixed(2)}</div>`
             + `<div style="font-size:10px;color:var(--dim);margin-top:1px">G_day raw · не G_now</div>`;
@@ -12806,7 +12648,7 @@ function renderCurrentPanel(){
         _peakHintLine = `\n─────\n📊 Зараз (Kp=${kUse.toFixed(1)}): G=${G.toFixed(2)}\n📈 Денний пік (Kp=${_peakKp.toFixed(1)}): G=${_peakG >= 0 ? '+' : ''}${_peakG.toFixed(1)}\n(Forward Timeline показує пік, Hero — поточний момент)`;
       }
     }
-  } catch(_pHE) { /* tooltip augment, не критично */ }
+  } catch(_pHE){ window.NRDiagnostics?.record('legacy.catch.88','recoverable'); }
   // v88.8.18 ★ EXPERT OVERRIDE marker для Hero G today (як уже зроблено для tomorrow).
   // Якщо expert PDF override для today різниться суттєво — показуємо ★ + інфо у tooltip.
   let _heroOverrideMark = '';
@@ -12829,7 +12671,7 @@ function renderCurrentPanel(){
         _heroOverrideTip = _heroEff.tooltip;
       }
     }
-  } catch(e) { /* silent */ }
+  } catch(e){ window.NRDiagnostics?.record('legacy.catch.89','recoverable'); }
   gEl.innerHTML = `G ${isFinite(G)? G.toFixed(2):'…'}${_heroOverrideMark}${_gTrendHtml}${_cHtml}${cbHtml}<span class="hint-pop">${escapeHtml(gTipLines + _peakHintLine + _heroOverrideTip)}\n\nC-score (впевненість): ${_csInline.pct}%\nConfidence Band: [${gLo} … ${gHi}]\nΔKp(8 obs): ±${cb.kpDelta} · ΔAᵢ: ±0.5</span>`;
   el('nowGcat').textContent = classifyG(isFinite(G)? G:0);
 
@@ -12840,7 +12682,7 @@ function renderCurrentPanel(){
     const todayKey = 'gPrev_' + todayKyivStr();
     if(isFinite(G) && ai){
       const snap = JSON.stringify({ G: +G.toFixed(2), kp: +(kUse||0).toFixed(2), Li: ai.Li, Mi: ai.Mi, ei: ai.ei, Pi: ai.Pi });
-      try { localStorage.setItem(todayKey, snap); } catch(_e) { /* private mode — silent */ } // v88.8.35-fp56-P8
+      try { localStorage.setItem(todayKey, snap); } catch(_e){ window.NRDiagnostics?.record('legacy.catch.90','recoverable'); } // v88.8.35-fp56-P8
     }
     const yRaw = localStorage.getItem(yKey);
     if(yRaw && isFinite(G) && ai){
@@ -13345,7 +13187,7 @@ function computePanchanga(dateUTC){
     const _degToNext = ((tithiIdx + 1) * 12) - phaseDeg;
     hoursToNextTithi = _degToNext / _rate;
     nextTithiIdx = (tithiIdx + 1) % 30;
-  } catch(_e) { /* leave null, non-critical enhancement */ }
+  } catch(_e){ window.NRDiagnostics?.record('legacy.catch.91','recoverable'); }
   const tithi = {
     num: tithiIdx + 1,  // 1-based: використовується в TITHI_ADVICE і Pi (tIdx = num-1)
     name: TITHI_NAMES[tithiIdx],
@@ -13522,7 +13364,7 @@ function computePanchanga(dateUTC){
       const _keys = Object.keys(window.__panchMemo);
       if (_keys.length > 20) delete window.__panchMemo[_keys[0]];
     }
-  } catch(_e) { /* silent */ }
+  } catch(_e){ window.NRDiagnostics?.record('legacy.catch.92','recoverable'); }
   return _pResult;
 }
 
@@ -13734,7 +13576,7 @@ function computePanchangaState(dateUTC){
 
   const _gNow = kpDayTerm(_kpForPanch) + aiNow.Ai;
   // v88.8.21: expose live G для GChrono journal capture
-  try { window.__lastG = _gNow; } catch(e){}
+  try { window.__lastG = _gNow; } catch(e){ window.NRDiagnostics?.record('legacy.catch.93','recoverable'); }
 
   return {
     p, ctx, cells, _gEarly, _kpEarly, _aiEarly, aiNow, pclOnly, panchDiscrepancy,
@@ -13753,7 +13595,7 @@ function renderPanchangaCard(state){
     const _pvKp = isFinite(window.__uiState?.kpNow) ? Number(window.__uiState.kpNow) : NaN;
     const _pvSig = resolveDaySignal_v88825(new Date(todayKyivStr()+'T12:00:00Z'), Number(_gNow), _pvKp, {isToday:true});
     if (_pvSig && isFinite(_pvSig.decisionScore)) _panchVisualCtx = Number(_pvSig.decisionScore);
-  } catch(_e) { /* fail-soft to raw context */ }
+  } catch(_e){ window.NRDiagnostics?.record('legacy.catch.94','recoverable'); }
   const el_ = id => document.getElementById(id);
   // Local Panchanga properties never override the operational safety state.
   let _finalDayDecision = null;
@@ -13762,7 +13604,7 @@ function renderPanchangaCard(state){
     const _kpFinal = isFinite(window.__uiState?.kpNow) ? Number(window.__uiState.kpNow) : NaN;
     const _sigFinal = resolveDaySignal_v88825(_decisionDate, _gNow, _kpFinal, {isToday:true});
     if (_sigFinal && Number.isFinite(Number(_sigFinal.decisionScore))) _finalDayDecision = Number(_sigFinal.decisionScore);
-  } catch(_eFinalDay) { /* no engine coverage */ }
+  } catch(_eFinalDay){ window.NRDiagnostics?.record('legacy.catch.95','recoverable'); }
   const _decisionKnownFinalDay = Number.isFinite(_finalDayDecision);
   const _criticalFinalDay = _decisionKnownFinalDay && _finalDayDecision <= -1;
   const _localAction = (txt) => {
@@ -14171,7 +14013,7 @@ function renderPanchangaCard(state){
               }
             }
           }
-        } catch(_eBestClip) { /* silent */ }
+        } catch(_eBestClip){ window.NRDiagnostics?.record('legacy.catch.96','recoverable'); }
         const bestRange = _bestClipped ? (_toLocalRangeH(_bestClipped.a, _bestClipped.b) + _bestClipNote) : _toLocalRange(best.label);
         const worstRange = _toLocalRange(worst.label);
         const bestRangeUTC = _utcRange(best.label);
@@ -14265,26 +14107,26 @@ function renderPanchangaCard(state){
               }
             }
           }
-        } catch(e) { /* noop */ }
+        } catch(e){ window.NRDiagnostics?.record('legacy.catch.97','recoverable'); }
         bt.innerHTML = html;
       } else {
         bt.innerHTML = '';
       }
     }
-  } catch(e) { /* noop */ }
+  } catch(e){ window.NRDiagnostics?.record('legacy.catch.98','recoverable'); }
 
   // v87.43: fill "Найближчі критичні вікна" — заповнюємо пустоту корисним контентом
-  try { _renderPanchUpcoming(dateUTC); } catch(e) { /* noop */ }
+  try { _renderPanchUpcoming(dateUTC); } catch(e){ window.NRDiagnostics?.record('legacy.catch.99','recoverable'); }
   // v88.8.0: Сонячний ритм — Sunrise/Sunset, Abhijit Muhurta, Choghadiya (16 muhurta).
-  try { _renderSolarRhythm(dateUTC); } catch(e) { /* noop */ }
+  try { _renderSolarRhythm(dateUTC); } catch(e){ window.NRDiagnostics?.record('legacy.catch.100','recoverable'); }
   // v88.8.17: Pancha Pakshi 5 птахів visualization — заповнює empty space у Personal column
-  try { _renderPanchaPakshi(dateUTC); } catch(e) { /* noop */ }
+  try { _renderPanchaPakshi(dateUTC); } catch(e){ window.NRDiagnostics?.record('legacy.catch.101','recoverable'); }
   // v88.8.17: tick — оновлюємо Sun Rhythm статуси (Brahma/Vijaya/Godhuli/Nishita/Abhijit)
   // кожну хвилину. Без цього: статус 'буде/минув' застарілий між data refreshes.
   // Скрін v88.8.16 17:10 показав Vijaya 🟡 хоча end 16:28 < now 17:10 → має бути ⚪.
   if (window._sunRhythmTickTimer) clearInterval(window._sunRhythmTickTimer);
   window._sunRhythmTickTimer = setInterval(function() {
-    try { _renderSolarRhythm(dateUTC); } catch(_e) {}
+    try { _renderSolarRhythm(dateUTC); } catch(_e){ window.NRDiagnostics?.record('legacy.catch.102','recoverable'); }
   }, 60000); // 1 раз/хвилину достатньо для muhurta granularity
 }
 
@@ -14752,7 +14594,7 @@ function _renderPanchaPakshi(refDateUTC){
     try {
       const _solar = (typeof _calcSunRiseSet === 'function') ? _calcSunRiseSet(_now) : null;
       if (_solar && _solar.sunrise && _solar.sunset) { _sr = _solar.sunrise; _ss = _solar.sunset; }
-    } catch(e){}
+    } catch(e){ window.NRDiagnostics?.record('legacy.catch.103','recoverable'); }
     if (_sr && _ss) {
       const _yama = getCurrentYama(_now, _sr, _ss);
       // v88.8.51-fp128 BUGFIX: раніше isShukla не передавався → завжди verified=true,
@@ -14779,8 +14621,8 @@ function _renderPanchaPakshi(refDateUTC){
           }
         }
       }
-    } catch(e){}
-  } catch(e) { /* silent — activity engine optional */ }
+    } catch(e){ window.NRDiagnostics?.record('legacy.catch.104','recoverable'); }
+  } catch(e){ window.NRDiagnostics?.record('legacy.catch.105','recoverable'); }
   let _ppDisclaimer = '';
   try {
     const _eToday = (typeof getEngineScore === 'function') ? getEngineScore(refDateUTC || new Date()) : null;
@@ -14788,7 +14630,7 @@ function _renderPanchaPakshi(refDateUTC){
     if (_eVal !== null && _eVal <= -2) {
       _ppDisclaimer = `<div style="margin-top:6px;padding:4px 6px;border-radius:4px;background:rgba(255,107,107,.08);border:1px solid rgba(255,107,107,.25);font-size:9px;color:#ffaa99;font-style:italic;text-align:center;line-height:1.35">⚠ R&D-наближення (не canonical Pulippani таблиця). PDF/Engine reference ${_eVal} обмежує ризик; оперативний стан у Hero має пріоритет.</div>`;
     }
-  } catch(e) { /* silent */ }
+  } catch(e){ window.NRDiagnostics?.record('legacy.catch.106','recoverable'); }
   elActive.innerHTML = `<span style="color:${activeBird.color};font-weight:700">${activeBird.emoji} ${activeBird.name}</span> · через <em style="color:var(--text2)">${nakName}</em><br><span style="color:var(--dim);font-size:10px;font-style:italic">${quality}</span>${_ppActivityLine}${_ppDisclaimer}`;
 }
 
@@ -14858,7 +14700,7 @@ function _renderSolarRhythm(refDateUTC){
         `;
       }
     }
-  } catch(e) { /* noop */ }
+  } catch(e){ window.NRDiagnostics?.record('legacy.catch.107','recoverable'); }
 
   // 2. Abhijit Muhurta
   const abh = _calcAbhijit(sunrise, sunset);
@@ -14891,7 +14733,7 @@ function _renderSolarRhythm(refDateUTC){
       // Наступний sunrise через _calcSunRiseSet(date+1d)
       const nextDay = new Date(date.getTime() + 24*3600*1000);
       let nextSunrise = null;
-      try { const nsr = _calcSunRiseSet(nextDay); if(nsr) nextSunrise = nsr.sunrise; } catch(_e) {}
+      try { const nsr = _calcSunRiseSet(nextDay); if(nsr) nextSunrise = nsr.sunrise; } catch(_e){ window.NRDiagnostics?.record('legacy.catch.108','recoverable'); }
       const ausp = _calcAuspiciousMuhurtas(sunrise, sunset, nextSunrise);
       if (ausp) {
         const now = new Date();
@@ -14921,7 +14763,7 @@ function _renderSolarRhythm(refDateUTC){
         ].join('');
       }
     }
-  } catch(_e) { /* noop */ }
+  } catch(_e){ window.NRDiagnostics?.record('legacy.catch.109','recoverable'); }
 
   // 3. Choghadiya
   const chog = _calcChoghadiya(date, sunrise, sunset);
@@ -14961,7 +14803,7 @@ function _renderSolarRhythm(refDateUTC){
         const _csign = _curSlot.score > 0 ? '+' : '';
         _chogNowLine = `<div style="margin-bottom:6px;padding:4px 6px;border-radius:4px;background:rgba(255,255,255,.03);font-size:11px">Зараз: <strong style="color:${_ccol}">${_curSlot.ua} (${_curSlot.name})</strong> <span style="color:${_ccol};font-weight:700">${_csign}${_curSlot.score} PCL-preview</span> <span style="font-size:9px;color:var(--faint)" title="Advisory display only — НЕ входить у canonical G/Pᵢ/final_score">(не в G)</span> · до ${_fmtLocalHM(_curSlot.end)} — ${_curSlot.hint}</div>`;
       }
-    } catch(e) { /* silent */ }
+    } catch(e){ window.NRDiagnostics?.record('legacy.catch.110','recoverable'); }
     elChog.innerHTML = `
       ${_chogNowLine}
       <div style="font-size:10px;color:var(--faint);margin-bottom:4px;letter-spacing:0.04em">☀ ДЕНЬ (${_fmtLocalHM(sunrise)} → ${_fmtLocalHM(sunset)})</div>
@@ -14993,7 +14835,7 @@ function renderPanchanga(dateUTC){
   // замість live (наприклад: chip "Saptami K" + картка "Ashtami K" одночасно).
   // Тепер: chip оновлюється на КОЖЕН renderPanchanga → синхронізація гарантована.
   try { if (typeof renderHeroAstroLayer === 'function') renderHeroAstroLayer(); }
-  catch(e) { /* noop */ }
+  catch(e){ window.NRDiagnostics?.record('legacy.catch.111','recoverable'); }
 }
 
 // ==================== КОМБО-ГРАФІК Kp (факт + прогноз) ====================
@@ -15021,9 +14863,9 @@ function renderDayForecast(last3D, kUse, ai) {
     if (document.getElementById('panchBestTime') && typeof _lastPanchCtx !== 'undefined' && _lastPanchCtx) {
       renderPanchanga(sunriseUTC(new Date(todayKyivStr()+'T12:00:00Z')));
     }
-  } catch(e) { /* noop */ }
+  } catch(e){ window.NRDiagnostics?.record('legacy.catch.112','recoverable'); }
   // fp24: heat strip must re-render from same _daySlots as panchBestTime — avoids stale data-gval mismatch
-  try { if (typeof renderHeatStripV86 === 'function') renderHeatStripV86(); } catch(e) { /* noop */ }
+  try { if (typeof renderHeatStripV86 === 'function') renderHeatStripV86(); } catch(e){ window.NRDiagnostics?.record('legacy.catch.113','recoverable'); }
 }
 
 
@@ -15308,7 +15150,7 @@ function render3Day(parsed3){
               const _deltaColor = Math.abs(_delta) >= 0.3 ? '#ffaa33' : 'var(--faint)';
               return ` · <span style="color:var(--faint)">27D NOAA raw: ${_27str}</span><span style="color:${_deltaColor};font-size:9px"> Δ3D−27D ${_deltaStr}</span>`;
             }
-          } catch(_e) {}
+          } catch(_e){ window.NRDiagnostics?.record('legacy.catch.114','recoverable'); }
           return '';
         })()}</div>
         ${_scenLabel}
@@ -15451,7 +15293,7 @@ function render3Day(parsed3){
           if (_htSibling) { _htSibling.textContent = ''; _htSibling.className = ''; }
         }
       }
-    } catch(e) { /* noop */ }
+    } catch(e){ window.NRDiagnostics?.record('legacy.catch.115','recoverable'); }
   }
 }
 
@@ -15482,7 +15324,7 @@ async function preloadEventsAroundNow(){
       if (_qs.get('onlineics') === '1') {
         setTimeout(()=>indexIcsEventsForYears(yrs).catch(e=>{ if(window._DEBUG) console.warn('[ICS bg]', e.message); }), 0);
       }
-    } catch(_e){}
+    } catch(_e){ window.NRDiagnostics?.record('legacy.catch.116','recoverable'); }
   } catch(e) {
     if(window._DEBUG) console.warn('[ICS] builtin/eclipse preload failed:', e.message);
   }
@@ -15604,7 +15446,7 @@ function buildUnifiedAdvice(state){
         NOTE.push('поточний оперативний стан уже обмежувальний; майбутня буря не створює дозволеного вікна');
       }
     }
-  } catch(e) { /* silent */ }
+  } catch(e){ window.NRDiagnostics?.record('legacy.catch.117','recoverable'); }
   // fp361: a positive operational score must not become an unconditional action
   // list when live data are partial/offline or the 3-day rail is synthetic.
   try {
@@ -15614,7 +15456,7 @@ function buildUnifiedAdvice(state){
       AVOID.unshift('нові критичні рішення до відновлення live-даних');
       NOTE.unshift(`якість даних ${_dmAdv.toUpperCase()} — позитивний стан не є дозволом`);
     }
-  } catch(e) { /* silent */ }
+  } catch(e){ window.NRDiagnostics?.record('legacy.catch.118','recoverable'); }
   return { DO:_uniq(DO), AVOID:_uniq(AVOID), NOTE:_uniq(NOTE) };
 }
 
@@ -15749,7 +15591,7 @@ function getInauspiciousWindowsUTC(){
         if (isFinite(_a) && isFinite(_b) && _b > _a) _wins.push({ nm: _nm, start: _st, end: _en, a: _a, b: _b });
       });
     }
-  } catch(_e) { /* silent */ }
+  } catch(_e){ window.NRDiagnostics?.record('legacy.catch.119','recoverable'); }
   return _wins;
 }
 window.getInauspiciousWindowsUTC = getInauspiciousWindowsUTC;
@@ -15935,7 +15777,7 @@ function _computeCurrentSlotDecision(){
   try {
     const _e = (typeof getEngineScore === 'function') ? getEngineScore(new Date(todayKyivStr() + 'T12:00:00Z')) : null;
     if (_e && isFinite(_e.eng)) _dayEng = Number(_e.eng);
-  } catch(_e){ /* silent */ }
+  } catch(_e){ window.NRDiagnostics?.record('legacy.catch.120','recoverable'); }
   const g = (typeof _v73G === 'function') ? _v73G() : NaN;
   const _wins = (typeof getInauspiciousWindowsUTC === 'function') ? getInauspiciousWindowsUTC() : [];
   const _dec = resolveSlotDecision({
@@ -16093,7 +15935,7 @@ function renderDecisionTiming(slots){
         _delayWarn = `<div style="color:#ffd2a0;font-size:11px;padding:4px 8px;margin-bottom:6px;background:rgba(255,170,51,.08);border-left:2px solid #ffaa33;border-radius:4px">${_wTxt}</div>`;
       }
     }
-  } catch(e) { /* silent */ }
+  } catch(e){ window.NRDiagnostics?.record('legacy.catch.121','recoverable'); }
   const futureSlots = summary.slots.filter(s => !s.isPast);
   const pastCount = summary.slots.length - futureSlots.length;
   const visible = futureSlots.length ? futureSlots : summary.slots;
@@ -16126,7 +15968,7 @@ function renderDecisionTiming(slots){
       const _eTd = (typeof getEngineScore === 'function') ? getEngineScore(new Date(todayKyivStr()+'T12:00:00Z')) : null;
       const _eTdScore = (_eTd && isFinite(_eTd.eng)) ? Number(_eTd.eng) : null;
       if (_eTdScore !== null && _eTdScore <= -2) _ttHardCap = _eTdScore;
-    } catch(e){ /* silent */ }
+    } catch(e){ window.NRDiagnostics?.record('legacy.catch.122','recoverable'); }
     // fp28: storm-guard для "До кінця дня" — якщо є storm window, фон не може бути "сприятливий" до кінця
     const _sw28 = window._stormWindow;
     const _nowText = _first?.isNow ? _first.text : _ttHardCap !== null
@@ -16154,7 +15996,7 @@ function renderDecisionTiming(slots){
                  || (typeof resolveDataMode === 'function' ? resolveDataMode() : 'live');
       if (_dm30 !== 'live' && _ttHardCap === null && !_stormRestText && _cls !== 'bad')
         _nowTextFinal = 'орієнтовно: ' + _nowText;
-    } catch(_e30) { /* silent */ }
+    } catch(_e30){ window.NRDiagnostics?.record('legacy.catch.123','recoverable'); }
     list.innerHTML = _delayWarn + `
       <div class="dt-row dt-${_clsForRender} dt-now"><span class="dt-time">Зараз</span><span class="dt-label">${_nowTextFinal} ◀</span></div>
       <div class="dt-row dt-${_clsForRender}" style="opacity:.72"><span class="dt-time">До кінця дня</span><span class="dt-label">${_restText}</span></div>
@@ -16175,7 +16017,7 @@ function renderDecisionTiming(slots){
     const _eTd = (typeof getEngineScore === 'function') ? getEngineScore(new Date(todayKyivStr()+'T12:00:00Z')) : null;
     const _eTdS = (_eTd && isFinite(_eTd.eng)) ? Number(_eTd.eng) : null;
     if (_eTdS !== null && _eTdS <= -2) _pdfHardForList = _eTdS;
-  } catch(e) { /* silent */ }
+  } catch(e){ window.NRDiagnostics?.record('legacy.catch.124','recoverable'); }
   // Normal mode (non-flat day) — render all slots as before
   list.innerHTML = _delayWarn + visible.map(s => {
     let _displayText = s.text;
@@ -16249,7 +16091,7 @@ function _runSanityWatchdog(g, kp){
     if(isFinite(kp) && kp < 2 && dstV !== null && dstV < -80){
       warns.push({ icon:'🔬', title:'Фізична суперечність', body:'Kp='+kp.toFixed(1)+' (спокій) але Dst='+dstV+' nT (буря). Дані з різних зрізів — перевір перед рішенням.' });
     }
-  } catch(e){}
+  } catch(e){ window.NRDiagnostics?.record('legacy.catch.125','recoverable'); }
 
   // Rule 2: Score jump ≥5 without storm/eclipse — uses real getEngineScore
   try {
@@ -16270,7 +16112,7 @@ function _runSanityWatchdog(g, kp){
         }
       }
     }
-  } catch(e){}
+  } catch(e){ window.NRDiagnostics?.record('legacy.catch.126','recoverable'); }
 
   // Rule 3: NOAA feed stale > 12h (узгоджено з "нормою циклу NOAA")
   // v88.9.42-fp224 FIX-CRITICAL (аудит-раунд-11, Problem 9): раніше поріг був
@@ -16285,7 +16127,7 @@ function _runSanityWatchdog(g, kp){
     if(src && src.ageHours != null && src.ageHours > 12){
       warns.push({ icon:'📡', title:'Дані застарілі ('+src.ageHours+'г)', body:'NOAA Kp не оновлювався '+src.ageHours+' год. Натисни «Оновити».' });
     }
-  } catch(e){}
+  } catch(e){ window.NRDiagnostics?.record('legacy.catch.127','recoverable'); }
 
   // Rule 4: Confidence paradox — high quality% but engine↔PDF sign conflict
   try {
@@ -16304,7 +16146,7 @@ function _runSanityWatchdog(g, kp){
         }
       }
     }
-  } catch(e){}
+  } catch(e){ window.NRDiagnostics?.record('legacy.catch.128','recoverable'); }
 
   // Rule 5: Alert fatigue — >40% of recent logged days were high-risk (min 7 entries)
   try {
@@ -16315,7 +16157,7 @@ function _runSanityWatchdog(g, kp){
     if(recent.length >= 7 && alertDays/recent.length > 0.4){
       warns.push({ icon:'😴', title:'Alert fatigue', body:alertDays+' з '+recent.length+' останніх записів — high-risk. Поріг може бути занадто чутливим.' });
     }
-  } catch(e){}
+  } catch(e){ window.NRDiagnostics?.record('legacy.catch.129','recoverable'); }
 
   return warns;
 }
@@ -16396,7 +16238,7 @@ function renderAlertBanner(g, kp){
     banner.style.display = 'none';
   }
   // fp35: always call standalone storm-guard, regardless of banner state
-  try { _applyStormGuardDOM(); _patchStaleLoadingDOM(); } catch(e) { /* silent */ }
+  try { _applyStormGuardDOM(); _patchStaleLoadingDOM(); } catch(e){ window.NRDiagnostics?.record('legacy.catch.130','recoverable'); }
 
   // fp96: Sanity Watchdog — yellow non-critical warnings
   try {
@@ -16454,7 +16296,7 @@ function renderAlertBanner(g, kp){
         sb.style.display = 'none';
       }
     }
-  } catch(e){ /* silent */ }
+  } catch(e){ window.NRDiagnostics?.record('legacy.catch.131','recoverable'); }
 }
 
 // fp35: STANDALONE storm-guard DOM patcher.
@@ -16482,7 +16324,7 @@ function _applyStormGuardDOM(){
           : `Оперативно обережно: буря Kp=${_sw.kp.toFixed(1)} очікується ${_etaStr43} — до ${_utcL}:00 UTC`;
       }
     }
-  } catch(_e) { /* silent */ }
+  } catch(_e){ window.NRDiagnostics?.record('legacy.catch.132','recoverable'); }
 
   // 2. heroDecisionDo
   try {
@@ -16499,7 +16341,7 @@ function _applyStormGuardDOM(){
           : `✔ Діяти до ${_utcL}:00 UTC (${_kyivL}:00 Київ)`;
       }
     }
-  } catch(_e) { /* silent */ }
+  } catch(_e){ window.NRDiagnostics?.record('legacy.catch.133','recoverable'); }
 
   // 3. heroMainDrag
   try {
@@ -16513,7 +16355,7 @@ function _applyStormGuardDOM(){
           : `До ${_utcL}:00 UTC — можна; після — рутина.`;
       }
     }
-  } catch(_e) { /* silent */ }
+  } catch(_e){ window.NRDiagnostics?.record('legacy.catch.134','recoverable'); }
 
   // 4. decisionTimingList — replace "Немає даних" with storm fallback
   //    fp38: ONLY if _daySlots is still empty. If populated → let normal render handle it.
@@ -16529,7 +16371,7 @@ function _applyStormGuardDOM(){
         <div style="color:var(--faint);font-size:10px;margin-top:4px">⚡ Storm — Kp=${_sw.kp.toFixed(1)} о ${_utcL}:00 UTC (${_kyivL}:00 Київ). Слоти підтягуються…</div>
       `;
     }
-  } catch(_e) { /* silent */ }
+  } catch(_e){ window.NRDiagnostics?.record('legacy.catch.135','recoverable'); }
 
   // 5. timingRows — replace "Прогноз Kp-слотів недоступний" with storm info
   //    fp38: ONLY if _daySlots is still empty. If populated → let _renderHeroTimeWindows render real slots.
@@ -16542,7 +16384,7 @@ function _applyStormGuardDOM(){
       // fp37: shorter
       _tr.innerHTML = `<span style="color:#ffd2a0;font-size:11px">⚡ Слоти підтягуються. Буря Kp=${_sw.kp.toFixed(1)} о ${_utcL}:00 UTC (${_kyivL}:00 Київ)</span>`;
     }
-  } catch(_e) { /* silent */ }
+  } catch(_e){ window.NRDiagnostics?.record('legacy.catch.136','recoverable'); }
 
   // 6. fp36: heroDecisionAvoid storm-aware
   try {
@@ -16556,7 +16398,7 @@ function _applyStormGuardDOM(){
           : `✖ Не починати нове після ${_utcL}:00 UTC`;
       }
     }
-  } catch(_e) { /* silent */ }
+  } catch(_e){ window.NRDiagnostics?.record('legacy.catch.137','recoverable'); }
 }
 
 // v88.8.35-fp56-P8: render the explicit 3-level decision hierarchy at the top of hero.
@@ -16613,9 +16455,9 @@ function _renderHeroHierarchy(){
             window.__heroResyncActive = true;
             try { syncHero(); } finally { window.__heroResyncActive = false; }
           }
-        }catch(_e){}
+        }catch(_e){ window.NRDiagnostics?.record('legacy.catch.138','recoverable'); }
       }
-    }catch(e){ /* silent */ }
+    }catch(e){ window.NRDiagnostics?.record('legacy.catch.139','recoverable'); }
     // 2) Фон зараз — G_now (live composite 2−Kp+ΣAᵢ)
     let gHtml = '<span style="color:var(--dim)">—</span>';
     try{
@@ -16658,7 +16500,7 @@ function _renderHeroHierarchy(){
         const _scaleNote = `<span style="font-size:9px;color:var(--faint);margin-left:4px" title="G_now = поточний live-фон (оновлюється щогодини). G_day raw у 27-day = денний пік (max Kp прогнозу). Різниця нормальна — це різні часові горизонти.">· поточна хвиля</span>`;
         gHtml = `<span style="color:var(--muted)">G_now <b style="color:${col}">${g>=0?'+':''}${g.toFixed(2)}</b> · довідковий фон, не рішення</span><span class="audit-only"> · ${word}${kpTxt}${_breakdown}${_scaleNote}</span>`;
       }
-    }catch(e){ /* silent */ }
+    }catch(e){ window.NRDiagnostics?.record('legacy.catch.140','recoverable'); }
     let opHtml = '<span style="color:var(--dim)">даних недостатньо</span>';
     let opColor = 'var(--muted)';
     let opBg = 'rgba(155,177,220,.06)';
@@ -16683,7 +16525,7 @@ function _renderHeroHierarchy(){
       const _guardNote = _opSig.guard !== 'none'
         ? ` <span style="font-size:10px;color:var(--faint)">· safety guard: ${escapeHtml(_opSig.guard)}</span>` : '';
       opHtml=`<span style="font-weight:900;color:${opColor}">${_op[0]}</span> <span style="font-weight:800;color:${opColor}">${_opScore>=0?'+':''}${_opScore}</span>${_guardNote}`;
-    } catch(_e) { /* keep no-data state */ }
+    } catch(_e){ window.NRDiagnostics?.record('legacy.catch.141','recoverable'); }
     // v88.8.80-fp159: якщо решта пайплайну ВЖЕ має дані (G_now визначений), а decHtml
     // усе ще на дефолтному "завантаження…" — це означає, що Engine/PDF ГЕНУЇННО відсутній
     // (V3 freeze / немає бюлетеня на сьогодні), а НЕ "ще не встиг завантажитись". Раніше
@@ -16715,7 +16557,7 @@ function _renderHeroHierarchy(){
         offline:   ['OFFLINE · з кешу, можливо застаріле','#ff6b6b']
       };
       const m = map[dm] || map.live; qLab=m[0]; qCol=m[1];
-    }catch(e){ /* silent */ }
+    }catch(e){ window.NRDiagnostics?.record('legacy.catch.142','recoverable'); }
     const _fmtDayTag = (ds) => { const p=String(ds||'').split('-'); return p.length===3 ? p[2]+'.'+p[1] : ''; };
     const _todayTag = _fmtDayTag(todayKyivStr());
     const _tmTagDate = new Date(todayKyivStr()+'T12:00:00Z'); _tmTagDate.setUTCDate(_tmTagDate.getUTCDate()+1);
@@ -16749,9 +16591,9 @@ function _renderHeroHierarchy(){
           if (isFinite(_tgRaw) && Math.abs(Math.round(_tgRaw) - _tsc) >= 1) {
             tomoHtml += ` <span class="audit-only" style="color:var(--faint);font-size:9px" title="Технічний raw-аудит, не друге рішення.">· raw-аудит=${_tgRaw>=0?'+':''}${_tgRaw.toFixed(1)}</span>`;
           }
-        } catch(_e) {}
+        } catch(_e){ window.NRDiagnostics?.record('legacy.catch.143','recoverable'); }
       }
-    }catch(e){ /* silent */ }
+    }catch(e){ window.NRDiagnostics?.record('legacy.catch.144','recoverable'); }
     box.innerHTML =
         `<div style="display:flex;gap:8px;align-items:baseline;padding:7px 10px;background:${opBg}">`
       + `<span style="flex:0 0 62px;font-size:8px;font-weight:800;letter-spacing:.06em;color:#9cd49c;text-transform:uppercase">Сьогодні ${_todayTag}</span>`
@@ -16794,7 +16636,7 @@ function _renderHeroHierarchy(){
                 + `<b style="color:#ffaa33">Сигнали розходяться: PDF/Engine reference не є оперативним дозволом.</b> `
                 + `Головний рядок застосовує обережніший оперативний стан; PDF/Engine і G_now лишаються видимими для перевірки.</div>`;
             }
-          } catch(_e){ /* silent */ }
+          } catch(_e){ window.NRDiagnostics?.record('legacy.catch.145','recoverable'); }
           return '';
         })();
     box.style.display='block';
@@ -16818,10 +16660,10 @@ function _renderHeroHierarchy(){
           const _rahu = (_pSnap?.rahu?.active) ? 'Зараз несприятливий час доби (Раху Калам)' : '';
           const _parts = [_kpPart, _nak ? `Накшатра — ${_nak}` : '', _dayLabel, _rahu].filter(Boolean);
           if (_parts.length) _why.textContent = _parts.join('. ') + '.';
-        } catch(_panchErr) { /* базове пояснення вже встановлено */ }
+        } catch(_panchErr){ window.NRDiagnostics?.record('legacy.catch.146','recoverable'); }
       }
-    } catch(_e) { /* silent */ }
-  }catch(e){ /* silent */ }
+    } catch(_e){ window.NRDiagnostics?.record('legacy.catch.147','recoverable'); }
+  }catch(e){ window.NRDiagnostics?.record('legacy.catch.148','recoverable'); }
 }
 
 // fp36: separate stale-DOM patcher for non-storm placeholders (whyRows, timingRows).
@@ -16848,7 +16690,7 @@ function _patchStaleLoadingDOM() {
         document.getElementById('heroTomorrow').dataset._arrowNeutral = '0';
       }
     }
-  } catch(_e0) { /* silent */ }
+  } catch(_e0){ window.NRDiagnostics?.record('legacy.catch.149','recoverable'); }
 
   // v88.9.43-fp225 (doc15, Problem 3): той самий клас race — computeCScore()
   // (усередині renderCurrentPanel()) читає window._kpSourceFreshness, але це
@@ -16866,7 +16708,7 @@ function _patchStaleLoadingDOM() {
         document.getElementById('heroConfidence').dataset._cscoreStale = '0';
       }
     }
-  } catch(_e0b) { /* silent */ }
+  } catch(_e0b){ window.NRDiagnostics?.record('legacy.catch.150','recoverable'); }
 
   // a) whyRows "Дані завантажуються…" — re-trigger _renderHeroCause if data is available now
   try {
@@ -16894,7 +16736,7 @@ function _patchStaleLoadingDOM() {
         _renderHeroCause(_gNow, _kp);
       }
     }
-  } catch(_e) { /* silent */ }
+  } catch(_e){ window.NRDiagnostics?.record('legacy.catch.151','recoverable'); }
 
   // b) timingRows "Прогноз Kp-слотів недоступний" OR stale storm fallback — re-trigger if _daySlots populated
   try {
@@ -16906,7 +16748,7 @@ function _patchStaleLoadingDOM() {
         _renderHeroTimeWindows();
       }
     }
-  } catch(_e) { /* silent */ }
+  } catch(_e){ window.NRDiagnostics?.record('legacy.catch.152','recoverable'); }
 
   // c) decisionTimingList "Немає даних по слотах" OR stale storm fallback — re-trigger if _daySlots populated
   try {
@@ -16918,29 +16760,29 @@ function _patchStaleLoadingDOM() {
         renderDecisionTiming(window._daySlots);
       }
     }
-  } catch(_e) { /* silent */ }
+  } catch(_e){ window.NRDiagnostics?.record('legacy.catch.153','recoverable'); }
 
   // v88.8.35-fp56-P8: keep the explicit decision hierarchy (РІШЕННЯ ДНЯ / ФОН ЗАРАЗ / ЯКІСТЬ) in sync.
-  try { if (typeof _renderHeroHierarchy === 'function') _renderHeroHierarchy(); } catch(_e) { /* silent */ }
+  try { if (typeof _renderHeroHierarchy === 'function') _renderHeroHierarchy(); } catch(_e){ window.NRDiagnostics?.record('legacy.catch.154','recoverable'); }
   // fp207 (2026-07-16): renderHeroBulletin() існувала, але НІКОЛИ не викликалась — той самий
   // клас багу, що loadEngineScores/loadExpertOverrides орфани з історії проєкту.
   // Тому 'ENGINE V18.5:' badge завжди показував '—' незалежно від наявності даних.
-  try { if (typeof renderHeroBulletin === 'function') renderHeroBulletin(); } catch(_e) { /* silent */ }
+  try { if (typeof renderHeroBulletin === 'function') renderHeroBulletin(); } catch(_e){ window.NRDiagnostics?.record('legacy.catch.155','recoverable'); }
 }
 
 // fp35: schedule storm-guard auto-patch every 30s as safety net for async race conditions
 try {
   if (!window.__stormGuardTimer) {
     window.__stormGuardTimer = setInterval(() => {
-      try { _applyStormGuardDOM(); _patchStaleLoadingDOM(); } catch(e) { /* silent */ }
+      try { _applyStormGuardDOM(); _patchStaleLoadingDOM(); } catch(e){ window.NRDiagnostics?.record('legacy.catch.156','recoverable'); }
       // v88.9.09-fp190: банер NOAA рендерився ОДИН раз через 3с після load,
       // коли window.__uiState.kpNow ще не готовий → примітка "буря не активна
       // зараз" (fp188) ніколи не з'являлась (підтверджено скріном 14.07).
       // Перерендер тут — коли Kp вже відомий, примітка додається.
-      try { if (window.__noaaEvents && typeof _renderNoaaAlertBanner === 'function') _renderNoaaAlertBanner(window.__noaaEvents); } catch(e) { /* silent */ }
+      try { if (window.__noaaEvents && typeof _renderNoaaAlertBanner === 'function') _renderNoaaAlertBanner(window.__noaaEvents); } catch(e){ window.NRDiagnostics?.record('legacy.catch.157','recoverable'); }
     }, 30000);
   }
-} catch(e) { /* silent */ }
+} catch(e){ window.NRDiagnostics?.record('legacy.catch.158','recoverable'); }
 
 // v86-P1: Radial G-decomposition — formula as visual
 // Feature flag: localStorage.v86_radial='1' OR URL ?v86radial=1
@@ -16985,7 +16827,7 @@ function renderHeatStripV86(){
     const _hd = (typeof getEngineScore === 'function')
       ? getEngineScore(new Date(todayKyivStr()+'T12:00:00Z')) : null;
     if (_hd && isFinite(_hd.eng)) _heatReference = Number(_hd.eng);
-  } catch(_eHeat) { /* advisory display fallback */ }
+  } catch(_eHeat){ window.NRDiagnostics?.record('legacy.catch.159','recoverable'); }
   const _hasHeatReference = _heatReference !== null;
   const _heatWindows = (typeof getInauspiciousWindowsUTC === 'function') ? getInauspiciousWindowsUTC() : [];
   const _nowPreciseH = _now.getUTCHours() + _now.getUTCMinutes() / 60;
@@ -17095,7 +16937,7 @@ function renderGRadialV86(g, kp, ai){
       if (_seg) _seg.style.opacity = _fp325HasVerdict ? '0.10' : '1';
     });
     if (_legend) _legend.style.display = _fp325HasVerdict ? 'none' : '';
-  } catch(_e) {}
+  } catch(_e){ window.NRDiagnostics?.record('legacy.catch.160','recoverable'); }
 
   // Values (absolute for segment size, sign for visual direction later)
   // v86.0.1: NaN-safety — якщо ai undefined, robust fallback
@@ -17156,7 +16998,7 @@ function renderGRadialV86(g, kp, ai){
     // з повторюваним патерном 6/4, а не псевдо-dasharray на сегментах.
     const _halo = document.getElementById('v86CompensationHalo');
     if (_halo) _halo.style.opacity = _compensationMode ? '0.85' : '0';
-  } catch(_eHalo) {}
+  } catch(_eHalo){ window.NRDiagnostics?.record('legacy.catch.161','recoverable'); }
   try {
     const _compEl = document.getElementById('v86CompensationNote');
     if (_compEl) {
@@ -17175,7 +17017,7 @@ function renderGRadialV86(g, kp, ai){
         _compEl.style.display = 'none';
       }
     }
-  } catch(_eComp) {}
+  } catch(_eComp){ window.NRDiagnostics?.record('legacy.catch.162','recoverable'); }
   const _segLabels = { v86segKp:'2−Kp (геомагнітний)', v86segLi:'Lᵢ (місяць)', v86segMi:'Mᵢ (затемнення)', v86segEi:'eᵢ (події)', v86segPi:'Pᵢ (панчанга)', v86segDi:'Dᵢ (Dst-буря)' };
   let cursor = 0;
   segs.forEach(s => {
@@ -17229,7 +17071,7 @@ function renderGRadialV86(g, kp, ai){
       const _titleText = `${_lbl}: ${s.val >= 0 ? '+' : ''}${s.val.toFixed(2)}`;
       if (_existingTitle) { _existingTitle.textContent = _titleText; }
       else { const _t = document.createElementNS('http://www.w3.org/2000/svg', 'title'); _t.textContent = _titleText; el.appendChild(_t); }
-    } catch(_eTip) {}
+    } catch(_eTip){ window.NRDiagnostics?.record('legacy.catch.163','recoverable'); }
     if (isActive) cursor += segLen + (activeCount > 1 ? GAP_PX : 0);
   });
   // v88.9.42-fp224 (Problem 6, легенда): узгоджено з новою логікою сегментів —
@@ -17255,7 +17097,7 @@ function renderGRadialV86(g, kp, ai){
       // ▼/▲ перед числом — однозначний незалежно від сприйняття кольору.
       if (_valEl) _valEl.textContent = ' ' + (s.val >= 0 ? '▲+' : '▼') + s.val.toFixed(2);
     });
-  } catch(_eLg) {}
+  } catch(_eLg){ window.NRDiagnostics?.record('legacy.catch.164','recoverable'); }
   // Central G-value
   const vEl = document.getElementById('v86GVal');
   if (vEl) {
@@ -17278,7 +17120,7 @@ function renderGRadialV86(g, kp, ai){
     try {
       const _lbl = document.getElementById('v86GLabel');
       if (_lbl) _lbl.textContent = _hasFinalDecision ? 'ОПЕРАТИВНИЙ СТАН' : 'G_NOW';
-    } catch(_e){}
+    } catch(_e){ window.NRDiagnostics?.record('legacy.catch.165','recoverable'); }
   }
   // v88.9.31-fp212: евристичний діапазон мінливості G_now (НЕ калібрований статистичний CI —
   // не плутати з реальним 95% CI engine v18.5 backtest у backtestBadgeTitle, той — справжній
@@ -17348,7 +17190,7 @@ function renderGRadialV86(g, kp, ai){
         _track.style.opacity = '0.78';
         _track.style.filter = `drop-shadow(0 0 7px ${_decisionColor})`;
       }
-    } catch(_e) {}
+    } catch(_e){ window.NRDiagnostics?.record('legacy.catch.166','recoverable'); }
   }
 }
 
@@ -17453,7 +17295,7 @@ function heroHeadlineFromHierarchy_v88824(sig){
     const _kpNow = (typeof lastWWV !== 'undefined' && lastWWV && isFinite(lastWWV.kNow)) ? lastWWV.kNow : 0;
     if (_kpNow >= 5 && sig.dayScore >= 2)
       return `Оперативно СТОП: буря Kp=${_kpNow.toFixed(1)} активна — уникайте критичного · PDF reference +${sig.dayScore}`;
-  } catch(e) { /* silent */ }
+  } catch(e){ window.NRDiagnostics?.record('legacy.catch.167','recoverable'); }
 
   if(sig.dynamicGuard === 'current_window' && sig.intradayGuard?.blockedNow){
     const names = sig.intradayGuard.reasonsNow.filter(r => r.startsWith('window:')).map(r => r.slice(7)).join('+') || 'часове вікно';
@@ -17498,7 +17340,7 @@ function heroHeadlineFromHierarchy_v88824(sig){
       }
       return `Оперативно сприятливо; PDF reference +${sig.dayScore} · ${_srcDesc} — критичні дії лише після перевірки live-даних`;
     }
-  } catch(e) { /* silent */ }
+  } catch(e){ window.NRDiagnostics?.record('legacy.catch.168','recoverable'); }
   if(sig.dayScore >= 3) {
     // fp54-B: if live G is negative despite positive PDF — show divergence note
     if (isFinite(sig.liveG) && sig.liveG < -0.3 && sig.guard === 'none') {
@@ -17547,7 +17389,7 @@ function heroLayerNoteFromHierarchy_v88824(sig){
     if (sig.dayScore >= 2 && (_mode === 'estimated' || _mode === 'partial' || _mode === 'offline' || _mode === 'scenario')) {
       _staleWarn = ` · ⚠ Live-дані ${_mode.toUpperCase()} — перед важливою дією оновити через 5–10 хв.`;
     }
-  } catch(e) { /* silent */ }
+  } catch(e){ window.NRDiagnostics?.record('legacy.catch.169','recoverable'); }
   // v88.8.35-fp56-P8: default verdict note removed — it is now fully duplicated by #heroHierarchy
   // (Рішення дня / Фон зараз / Якість + live/daily Kp note). The unique divergence & guard branches
   // above (unverified override, live_unstable/live_tense) are kept — they carry info not in the hierarchy.
@@ -17773,7 +17615,7 @@ function syncHero(){
           ? 'Головне число: <b style="color:var(--dim)">оперативний стан зараз</b><br>PDF/Engine і raw G показані окремо як джерела'
           : 'Головне число: <b style="color:var(--dim)">G_now — останній observed фон</b>';
       }
-    }catch(_e){}
+    }catch(_e){ window.NRDiagnostics?.record('legacy.catch.170','recoverable'); }
 
     // Repeated syncs keep the existing transition; unchanged values need no frames.
     if(Number.isFinite(_heroDisplayVal)) window._heroGprev=_heroDisplayVal;
@@ -17794,7 +17636,7 @@ function syncHero(){
         const _isLowConf = (_heroSig && _heroSig.hasEngine && isFinite(_heroSig.dayScore)) ? Math.abs(_heroSig.dayScore) <= 1 : (isFinite(newG) && Math.abs(newG) <= 1.0);
         _lcb.style.display = _isLowConf ? '' : 'none';
       }
-    } catch(e) { /* noop */ }
+    } catch(e){ window.NRDiagnostics?.record('legacy.catch.171','recoverable'); }
     // fp258: shadow HIGH-confidence badge. This never changes G; it only
     // reports the frozen post-hoc policy when today's expert raw is available.
     try {
@@ -17803,7 +17645,7 @@ function syncHero(){
       const _raw=_expertCalc && _expertCalc[_ds] ? Number(_expertCalc[_ds].raw_sum) : NaN;
       const _policyOK=_strongRawPolicy && _strongRawPolicy.condition==='abs(expert_raw_sum) >= 3' && Number(_strongRawPolicy.score_effect)===0;
       if(_hcb) _hcb.style.display=(_policyOK && Number.isFinite(_raw) && Math.abs(_raw)>=3)?'':'none';
-    } catch(e) { /* shadow badge must never block hero */ }
+    } catch(e){ window.NRDiagnostics?.record('legacy.catch.172','recoverable'); }
     // fp265: calendar context is explanatory, never a second vote. Show a
     // warning only when its sign materially conflicts with the final day score.
     try {
@@ -17819,7 +17661,7 @@ function syncHero(){
         _icb.style.display=_conflict?'':'none';
         if(_conflict) _icb.title=`Engine/PDF ${_day>=0?'+':''}${_day}, calendar context ${_cal>=0?'+':''}${_cal}. Calendar context НЕ є другим голосом і не змінює G. Це лише попередження про розбіжність факторів.`;
       }
-    } catch(e) { /* advisory warning must never block hero */ }
+    } catch(e){ window.NRDiagnostics?.record('legacy.catch.173','recoverable'); }
 
     // v88.8.4: 7-class verdict badge — canonical label з tag_to_text.json.
     // Показується завжди коли G визначений. Текст = full canonical verdict (наприклад
@@ -17849,7 +17691,7 @@ function syncHero(){
           _vb.style.display = 'none';
         }
       }
-    } catch(e) { /* noop */ }
+    } catch(e){ window.NRDiagnostics?.record('legacy.catch.174','recoverable'); }
 
     // fp423: only an available resolver verdict may paint a verdict color.
     // Missing/stale reference keeps the ring neutral; raw G remains labeled context.
@@ -18017,7 +17859,7 @@ function syncHero(){
               const _todayEntry = _27dComputed.find(d => d && d.ds === _todayStrDC);
               if (_todayEntry && isFinite(_todayEntry.G)) _todayGdayRaw = _todayEntry.G;
             }
-          } catch(e) { /* silent */ }
+          } catch(e){ window.NRDiagnostics?.record('legacy.catch.175','recoverable'); }
           const _hasGdayBaseline = isFinite(_todayGdayRaw);
           const _baseline = _hasGdayBaseline ? _todayGdayRaw : gVal;
           const _tDiff = _tg - _baseline;
@@ -18070,7 +17912,7 @@ function syncHero(){
               — це різні шкали: live vs daily aggregate, не помилка.
             </div>`;
           }
-        } catch(e) { /* silent */ }
+        } catch(e){ window.NRDiagnostics?.record('legacy.catch.176','recoverable'); }
         dc.className = (_hasPdfConflict ? 'is-conflict ' : '') + 'is-' + _state;
         dc.title = _ttip; // v87.90: tooltip з реальним age та timestamp
         dc.innerHTML = `<span class="dc-icon">${_icon}</span>`
@@ -18085,10 +17927,10 @@ function syncHero(){
         dc.style.display = 'none';
       }
     }
-  } catch(e) { /* noop */ }
+  } catch(e){ window.NRDiagnostics?.record('legacy.catch.177','recoverable'); }
 
   // v87.18: Decision Layer — "Що робити зараз" (конкретні actions)
-  try { renderDecisionLayer(_heroCmdG, _ui); } catch(e) { /* noop */ }
+  try { renderDecisionLayer(_heroCmdG, _ui); } catch(e){ window.NRDiagnostics?.record('legacy.catch.178','recoverable'); }
 
   // Confidence: set by v83 decision block below
 
@@ -18187,7 +18029,7 @@ function syncHero(){
                              : (_ringMode === 'delayed') ? 'rgba(255,170,51,.32)'
                              : 'rgba(255,136,136,.32)';
     }
-  } catch(e) { /* silent */ }
+  } catch(e){ window.NRDiagnostics?.record('legacy.catch.179','recoverable'); }
   // v87.92: dataset.scenario для heroTomorrow — третя точка синхронізації (після render3Day і _renderFreshnessState).
   // CSS ::after pseudo-element рендерить '⚠ scenario' автоматично.
   // v87.94: + sibling DOM heroTomorrowScenario для повної надійності
@@ -18284,7 +18126,7 @@ function syncHero(){
         : `${_delayedPrefix}${_dayDecisionTxt}: тільки необхідна рутина; зараз ${_namesHero}${_untilHero}`;
       _heroAvoidText = `Не починати нових справ${_untilHero} (${_namesHero} активний)`;
     }
-  } catch(_eGcdHero) { /* silent */ }
+  } catch(_eGcdHero){ window.NRDiagnostics?.record('legacy.catch.180','recoverable'); }
   if (!_actionVerdictAvailable) {
     const _whyUnavailable = _heroSig && _heroSig.referenceStale
       ? 'денний reference застарів'
@@ -18338,7 +18180,7 @@ function syncHero(){
         _doEl.style.color = '';
       }
     }
-  } catch(_eDo) { /* noop */ }
+  } catch(_eDo){ window.NRDiagnostics?.record('legacy.catch.181','recoverable'); }
   try {
     const _avoidEl = el('heroDecisionAvoid');
     const _note = heroLayerNoteFromHierarchy_v88824(_heroSig);
@@ -18368,7 +18210,7 @@ function syncHero(){
         _avoidEl.style.color = '';
       }
     }
-  } catch(e) { /* noop */ }
+  } catch(e){ window.NRDiagnostics?.record('legacy.catch.182','recoverable'); }
 
   // v78d: hero state class for CSS animations
   const _heroEl = el('heroCard');
@@ -18462,7 +18304,7 @@ function syncHero(){
             _text = `Оцінка дня сприятлива (+${_dayS}), але фон саме зараз слабший (${_liveG.toFixed(1)}) — звичні справи ок, важливе перевір.`;
           }
         }
-      } catch(e) { /* silent */ }
+      } catch(e){ window.NRDiagnostics?.record('legacy.catch.183','recoverable'); }
       _conseq.textContent = _text;
       _conseq.style.display = _text ? '' : 'none';
     }
@@ -18591,7 +18433,7 @@ function syncHero(){
   // v87: Alert banner — storm / high-risk detection
   try { renderAlertBanner(gVal, kpH); } catch(e){ console.warn('alert:',e); }
   // fp35: extra safety net — apply storm-guard patches at very end of render
-  try { _applyStormGuardDOM(); _patchStaleLoadingDOM(); } catch(e) { /* silent */ }
+  try { _applyStormGuardDOM(); _patchStaleLoadingDOM(); } catch(e){ window.NRDiagnostics?.record('legacy.catch.184','recoverable'); }
 }
 
 // ═══ v78d: Why Card (coreGrid) ═══
@@ -18616,7 +18458,7 @@ function _renderHeroCause(g, kp) {
   try {
     const _sig406 = (typeof resolveDaySignal_v88825 === 'function') ? resolveDaySignal_v88825() : null;
     _operationalCritical406 = Number.isFinite(Number(_sig406?.decisionScore)) && Number(_sig406.decisionScore) <= -1;
-  } catch (_e406) { /* presentation guard only */ }
+  } catch(_e406){ window.NRDiagnostics?.record('legacy.catch.185','recoverable'); }
 
   // v85b: read from __uiState.ai instead of DOM gDecompChips
   const _ai = window.__uiState?.ai;
@@ -18802,7 +18644,7 @@ function _renderHeroCause(g, kp) {
   }
 
   // v87.47: 7-day G sparkline — заповнення whyCard і тренд-контекст
-  try { _renderWhyTrend(); } catch(e){ /* noop */ }
+  try { _renderWhyTrend(); } catch(e){ window.NRDiagnostics?.record('legacy.catch.186','recoverable'); }
 }
 
 // v87.47: Render 7-day G sparkline inside whyCard
@@ -19196,7 +19038,7 @@ function _renderHeroTimeWindows() {
     try {
       const _de = getEngineScore(new Date(todayKyivStr()+'T12:00:00Z'));
       if (_de && isFinite(_de.eng)) { _dayNegFlag = Number(_de.eng) <= -2; _dayEngForGate = Number(_de.eng); }
-    } catch(e){}
+    } catch(e){ window.NRDiagnostics?.record('legacy.catch.187','recoverable'); }
     const _colBase = _dayNegFlag
       ? (g >= 0 ? '#ffaa33' : g >= -1 ? '#ff9944' : '#ff6b6b')
       : (g >= 1 ? '#2bd47d' : g >= 0 ? '#9bb1dc' : g >= -1 ? '#ffcc00' : '#ff6b6b');
@@ -19463,7 +19305,7 @@ function resolveDecisionByG(g, kp) {
       } else if (_eTdS !== null && _eTdS === -1 && (stKey === 'favorable' || stKey === 'good')) {
         _noteText = `Live-фон зараз позитивний, але PDF/Engine для дня = -1 (помірно несприятливий). Для важливих рішень — додаткова обережність.`;
       }
-    } catch(e) { /* silent */ }
+    } catch(e){ window.NRDiagnostics?.record('legacy.catch.188','recoverable'); }
   }
   return {
     mode: stKey === 'favorable' || stKey === 'good' ? 'action'
@@ -19495,7 +19337,7 @@ function renderMoonRetroTop(){
   // This removes independent floor(phase/12) copies that drifted from
   // Nakshatra near boundaries while preserving the separate day/sunrise layer.
   let _livePanch185=null;
-  try{ _livePanch185=computePanchanga(now); }catch(_e){}
+  try{ _livePanch185=computePanchanga(now); }catch(_e){ window.NRDiagnostics?.record('legacy.catch.189','recoverable'); }
   const phaseName=isFinite(pd)?phaseNameByAngle(pd):'—';
   // v88.9.03-fp185: same stale-cache bug as fp184 — moonLiNow ("Now" in the
   // id!) was reading ai.Li from _lastPanchCtx (noon-UTC-referenced cache),
@@ -19640,7 +19482,7 @@ function syncPanchSummary(){
     const _pk = isFinite(window.__uiState?.kpNow) ? Number(window.__uiState.kpNow) : NaN;
     const _ps = resolveDaySignal_v88825(new Date(todayKyivStr()+'T12:00:00Z'), _pg, _pk, {isToday:true});
     if (_ps && isFinite(_ps.decisionScore)) _panchOpScore = Number(_ps.decisionScore);
-  } catch(_e) { /* fail-soft */ }
+  } catch(_e){ window.NRDiagnostics?.record('legacy.catch.190','recoverable'); }
   const _panchRestricted = _panchOpScore !== null && _panchOpScore < 0;
   const piCol = pi>=1?(_panchRestricted?'#cfb6ff':'#7ab8d4'):pi<=-1?'#ff6b6b':'#9bb1dc';
   const piState=pi>=1?'локально підтримує raw-компонент':pi<=-1?'погіршує raw-компонент':'майже нейтральна';
@@ -19668,7 +19510,7 @@ function syncPanchSummary(){
     else action='Краща дія: лише планові дії після перевірки оперативного стану й часових вікон.';
     noteEl.textContent=action;
   }
-  try { enforcePanchFinalPriority(); } catch(_ePriority) { /* noop */ }
+  try { enforcePanchFinalPriority(); } catch(_ePriority){ window.NRDiagnostics?.record('legacy.catch.191','recoverable'); }
 }
 
 function syncWhy(){
@@ -19680,7 +19522,7 @@ function syncWhy(){
   const g=_num(_firstText(el('nowG'))||el('nowG')?.textContent);
   const now=new Date();
   let _liveWhyPanch=null;
-  try{ _liveWhyPanch=computePanchanga(now); }catch(_e){}
+  try{ _liveWhyPanch=computePanchanga(now); }catch(_e){ window.NRDiagnostics?.record('legacy.catch.192','recoverable'); }
   const lines=[];
 
   // Moon interpretation
@@ -19835,7 +19677,7 @@ function syncPersonalContext(){
       if (_eP && isFinite(_eP.eng) && Number(_eP.eng) <= -2) {
         personalSub = `Hora підтримує лише рутину й перевірені дії: день критичний (PDF/Engine ${_eP.eng}), важливі рішення відкласти.`;
       }
-    } catch(_e){ /* silent */ }
+    } catch(_e){ window.NRDiagnostics?.record('legacy.catch.193','recoverable'); }
   }
   // fp405: Hora/Panchanga are local explanatory factors, not a second verdict.
   // Gate optimistic wording through the same canonical operational decision as Hero.
@@ -19849,7 +19691,7 @@ function syncPersonalContext(){
       personalMain = `${_horaTheme405} — лише тема години. Оперативний стан ${_opScore405}: тільки перевірена рутина.`;
       personalSub = `Panchanga Pᵢ ${piVal>=0?'+':''}${piVal.toFixed(1)} уже врахована в raw-фоні й не послаблює оперативне рішення ${_opScore405}.`;
     }
-  } catch(_e) { /* fail-soft: existing restrictive guards remain */ }
+  } catch(_e){ window.NRDiagnostics?.record('legacy.catch.194','recoverable'); }
   if(hora) personalSub += ` (${hora.planet} ще ${hora.minLeft} хв)`;
 
   main.textContent = personalMain;
@@ -19886,7 +19728,7 @@ function syncDayPlanCard(){
     try {
       const _eD = (typeof getEngineScore === 'function') ? getEngineScore(new Date(todayKyivStr()+'T12:00:00Z')) : null;
       if (_eD && isFinite(_eD.eng)) _dayEngForGateP = Number(_eD.eng);
-    } catch(_e){ /* silent */ }
+    } catch(_e){ window.NRDiagnostics?.record('legacy.catch.195','recoverable'); }
     const _nowPreciseHp = _now.getUTCHours() + _now.getUTCMinutes() / 60;
     const _decisionP = resolveSlotDecision({
       slotStartH: h, slotEndH: h + 3, nowH: _nowPreciseHp,
@@ -20049,7 +19891,7 @@ function renderProvenance(){
   try {
     const _dpRow = _dstProvenanceCheck();
     if (!_dpRow.ok && _dstVal != null) _dstProvLabel = ` · ⚠ непідтверджено (${_dpRow.reason})`;
-  } catch(_e){ /* silent */ }
+  } catch(_e){ window.NRDiagnostics?.record('legacy.catch.196','recoverable'); }
 
   // Engine v18.5 entry today
   const _eng = (typeof getEngineScore === 'function') ? getEngineScore(_now) : null;
@@ -20538,7 +20380,7 @@ function renderIntraDayAlert(){
       if (_eTdS !== null && _eTdS <= -2 && _maxFuture < 5) {
         _msg.action = `Використовуй спокійні години тільки для рутини й підготовки (день PDF/Engine = ${_eTdS}).`;
       }
-    } catch(e) { /* silent */ }
+    } catch(e){ window.NRDiagnostics?.record('legacy.catch.197','recoverable'); }
     _col = _maxFuture >= 5 ? '#ff6b6b' : '#ffaa33';
   } else {
     _alert.style.display = 'none';
@@ -20565,7 +20407,7 @@ function renderIntraDayAlert(){
       else if (_dm === 'offline')  { _srcLabel = 'OFFLINE — старі кешовані'; _noteColor = '#ff8a7a'; }
       _staleNote = `<div style="margin-top:4px;font-size:10px;color:${_noteColor};font-style:italic">⚠ Прогноз будується із ${_srcLabel} NOAA 3-day feed — звірте з swpc.noaa.gov перед рішенням.</div>`;
     }
-  } catch(e) { /* silent */ }
+  } catch(e){ window.NRDiagnostics?.record('legacy.catch.198','recoverable'); }
   _alert.innerHTML = `
     <div style="display:flex;align-items:flex-start;gap:10px">
       <span style="font-size:20px;line-height:1.1;flex:0 0 auto">${_msg.icon}</span>
@@ -20788,21 +20630,21 @@ async function loadAllLite(){
         render27Day(_syn27, last3D);
       }catch(e){ console.warn('[fp138 lite 27d]', e.message); }
       await _yield();
-      try{ updateFreshnessBadge(); }catch(e){}
+      try{ updateFreshnessBadge(); }catch(e){ window.NRDiagnostics?.record('legacy.catch.199','recoverable'); }
       try{ syncV702UI(); }catch(e){ console.warn('[fp138 lite sync]', e.message); }
       await _yield();
       // Regime cards remain retired until independent outcomes exist.
-      try{ if(typeof renderUnifiedIndicesPanel==='function') renderUnifiedIndicesPanel(); }catch(e){}
-      try{ if(typeof _patchStaleLoadingDOM==='function') _patchStaleLoadingDOM(); }catch(e){}
+      try{ if(typeof renderUnifiedIndicesPanel==='function') renderUnifiedIndicesPanel(); }catch(e){ window.NRDiagnostics?.record('legacy.catch.200','recoverable'); }
+      try{ if(typeof _patchStaleLoadingDOM==='function') _patchStaleLoadingDOM(); }catch(e){ window.NRDiagnostics?.record('legacy.catch.201','recoverable'); }
     })();
     try{
       const st=document.getElementById('freshnessBadge');
       if(st){ st.textContent='● SAFE'; st.style.background='#1a2540'; st.style.color='#9bb1dc'; st.title='Safe boot: live NOAA fetch вимкнено на старті, щоб сторінка не зависала. Натисни Оновити або відкрий ?live=1 для live fetch.'; }
       const ts=document.getElementById('dataTimestamp'); if(ts) ts.textContent='SAFE BOOT · live fetch manual';
-    }catch(e){}
+    }catch(e){ window.NRDiagnostics?.record('legacy.catch.202','recoverable'); }
   }catch(e){
     console.error('[fp138 loadAllLite fatal]', e);
-    try{ el('nowError').textContent='SAFE BOOT error: '+e.message; }catch(_e){}
+    try{ el('nowError').textContent='SAFE BOOT error: '+e.message; }catch(_e){ window.NRDiagnostics?.record('legacy.catch.203','recoverable'); }
   }
 }
 async function loadAll(){
@@ -20816,7 +20658,7 @@ async function loadAll(){
   // v88.9.6x-fp246: легка перевірка manifest на КОЖЕН цикл loadAll (boot +
   // кожні N хв auto-refresh) — не блокує решту завантаження (fire-and-forget),
   // бо це незалежний рейл від live Kp/Dst/Sn нижче.
-  try { checkDataManifest().catch(()=>{}); } catch(e){ /* silent */ }
+  try { checkDataManifest().catch(()=>{}); } catch(e){ window.NRDiagnostics?.record('legacy.catch.204','recoverable'); }
 
   try{
     await preloadEventsAroundNow();
@@ -20865,7 +20707,7 @@ async function loadAll(){
         // "від'ємну затримку" — округляємо до 0 (щойно з'явилось).
         if (_noaaAgeH !== null && _noaaAgeH < 0) _noaaAgeH = 0;
       }
-    } catch(eStale){ /* silent */ }
+    } catch(eStale){ window.NRDiagnostics?.record('legacy.catch.205','recoverable'); }
     window._kpSourceFreshness = { source: 'NOAA', ageHours: _noaaAgeH };
 
     if (_noaaAgeH !== null && _noaaAgeH > 24) {
@@ -20984,7 +20826,7 @@ async function loadAll(){
     // fp50-C: render3Day → renderDayForecast → fills _daySlots AFTER syncHero already ran.
     // syncHero called renderDecisionTiming when _daySlots was empty → "Немає даних по слотах".
     // Re-trigger patch now that _daySlots is populated.
-    try { if(typeof _patchStaleLoadingDOM === 'function') _patchStaleLoadingDOM(); } catch(_e){ /* silent */ }
+    try { if(typeof _patchStaleLoadingDOM === 'function') _patchStaleLoadingDOM(); } catch(_e){ window.NRDiagnostics?.record('legacy.catch.206','recoverable'); }
     _setSrcStatus('srcKpFcst', last3D.days.length ? (last3D._partialReal ? 'cache' : 'ok') : 'error');
   } else {
     _setSrcStatus('srcKpFcst','error');
@@ -21198,7 +21040,7 @@ async function loadAll(){
     const _snEl = document.getElementById('formulaSnAddon');
     const _snVal = window._lastWolfSn ? (window._lastWolfSn.sn ?? 0) : 0;
     if (_snEl) _snEl.style.display = 'none'; // fp297: Sn is context-only
-  } catch(e) { /* noop */ }
+  } catch(e){ window.NRDiagnostics?.record('legacy.catch.207','recoverable'); }
 
   try{
     renderCurrentPanel();
@@ -21226,7 +21068,7 @@ async function loadAll(){
     try {
       const _l3d = window._gIndex_last3D || last3D;
       if (_l3d && typeof render3Day === 'function') render3Day(_l3d);
-    } catch(_e) { /* silent */ }
+    } catch(_e){ window.NRDiagnostics?.record('legacy.catch.208','recoverable'); }
         _setSrcStatus('src27Day','ok');
         if(window._DEBUG) console.log('[v43] 27-day OK (primary .txt)');
         return;
@@ -21308,14 +21150,14 @@ async function loadAll(){
   // fp54-A: _daySlots may now be populated (from renderDayForecast earlier in the cycle)
   // Final pass to patch any stale "Немає даних по слотах" placeholders.
   setTimeout(() => {
-    try { if(typeof _patchStaleLoadingDOM === 'function') _patchStaleLoadingDOM(); } catch(_e){}
-    try { if(typeof _applyStormGuardDOM === 'function') _applyStormGuardDOM(); } catch(_e){}
+    try { if(typeof _patchStaleLoadingDOM === 'function') _patchStaleLoadingDOM(); } catch(_e){ window.NRDiagnostics?.record('legacy.catch.209','recoverable'); }
+    try { if(typeof _applyStormGuardDOM === 'function') _applyStormGuardDOM(); } catch(_e){ window.NRDiagnostics?.record('legacy.catch.210','recoverable'); }
     // v88.8.51-fp128 BUGFIX: hero-число іноді застрягало на G_now (fallback) замість
     // вердикту дня — підтверджено вручну: syncHero() викликаний повторно одразу дає
     // правильний результат (entry.eng вже доступний), отже це race condition між
     // паралельними syncHero()-викликами при завантаженні сторінки, не баг логіки.
     // Гарантований відкладений повтор самокоригує це на кожному циклі.
-    try { if(typeof syncHero === 'function') syncHero(); } catch(_e){}
+    try { if(typeof syncHero === 'function') syncHero(); } catch(_e){ window.NRDiagnostics?.record('legacy.catch.211','recoverable'); }
   }, 400);
   try{ applyWowFromG(); }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
 
@@ -21400,7 +21242,7 @@ function exportCsv(){
         dayScore = e.eng;
         daySource = e._expertOverride ? 'verified_pdf_override' : 'engine_v18_5';
       }
-    } catch(e) {}
+    } catch(e){ window.NRDiagnostics?.record('legacy.catch.212','recoverable'); }
     const sig = (typeof resolveDaySignal_v88825 === 'function')
       ? resolveDaySignal_v88825(r.date, G, kpUsed, {isToday: ds===todayKyivStr()})
       : null;
@@ -21471,7 +21313,7 @@ function exportICS(){
         dayScore = e.eng;
         daySource = e._expertOverride ? 'PDF' : 'Engine';
       }
-    } catch(e) {}
+    } catch(e){ window.NRDiagnostics?.record('legacy.catch.213','recoverable'); }
     const sig = (typeof resolveDaySignal_v88825 === 'function')
       ? resolveDaySignal_v88825(r.date, G, kpUsed, {isToday: ds===todayKyivStr()})
       : null;
@@ -22865,7 +22707,7 @@ function renderPersonal() {
       _effectiveDec = 'важливі рішення відкласти';
       _effectiveComms = 'обмежено, без нових домовленостей';
     }
-  } catch(e) { /* silent */ }
+  } catch(e){ window.NRDiagnostics?.record('legacy.catch.214','recoverable'); }
 
   // v88.8.35-fp10 T: якщо PDF/Engine для дня негативний (≤-1), а персональний блок
   // зеленіть → додати явну note що персональна підтримка НЕ скасовує PDF/Engine денний verdict.
@@ -22883,7 +22725,7 @@ function renderPersonal() {
       if (_eTdScore !== null && _eTdScore === -1 && _personalLooksGreen) {
         _pdfOverrideNote = `<div style="margin-top:6px;padding:6px 8px;border-radius:6px;background:rgba(255,170,51,.08);border-left:3px solid #ffaa33;font-size:11px;color:#ffd2a0;line-height:1.4">⚠ Персональна підтримка не скасовує PDF/Engine дня (${_eTdScore >= 0 ? '+' : ''}${_eTdScore}). Особистий цикл — це додатковий шар, не заміна денного verdict-у.</div>`;
       }
-    } catch(e) { /* silent */ }
+    } catch(e){ window.NRDiagnostics?.record('legacy.catch.215','recoverable'); }
   }
 
   resEl.innerHTML = `${noTimeWarnHtml}${_riskBannerHtml}<div style="padding:8px 10px;border-radius:10px;border:1px solid ${_effectivePhBrd};background:${_effectivePhBg}"><div style="font-size:14px;font-weight:700;line-height:1.3;color:${_effectivePhCol}">${_effectivePhState}${_effectivePhMod}</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 12px;margin-top:6px;font-size:12px;line-height:1.5;color: var(--text3)"><span style="color:var(--dim)">Робота:</span><span>${_effectiveWork}</span><span style="color:var(--dim)">Рішення:</span><span>${_effectiveDec}</span><span style="color:var(--dim)">Комунікації:</span><span>${_effectiveComms}</span></div>${_pdfOverrideNote}</div><details style="margin-top:6px"><summary class="small muted" style="cursor:pointer;font-size:11px">▶ Показати персональний розклад</summary>${gmodHtml}<table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:6px">
@@ -24274,8 +24116,8 @@ function _showToast(msg) {
     }
     // Re-render every visible freshness consumer immediately on transport
     // transitions; the periodic timer alone leaves a false LIVE window.
-    try { if (typeof _renderFreshnessState === 'function') _renderFreshnessState(); } catch (_e) {}
-    try { if (typeof syncHero === 'function') syncHero(); } catch (_e) {}
+    try { if (typeof _renderFreshnessState === 'function') _renderFreshnessState(); } catch(_e){ window.NRDiagnostics?.record('legacy.catch.216','recoverable'); }
+    try { if (typeof syncHero === 'function') syncHero(); } catch(_e){ window.NRDiagnostics?.record('legacy.catch.217','recoverable'); }
   }
   window.addEventListener('online',  _updateOnline);
   window.addEventListener('offline', _updateOnline);
@@ -24463,7 +24305,7 @@ function updateScienceBar(kp, ap, sn, ai, phaseName, phaseDeg, f107) {
             const _es = getEngineScore(_nowD);
             if (_es && isFinite(_es.cal_score)) _calSc = _es.cal_score;
           }
-        } catch(e) { /* graceful */ }
+        } catch(e){ window.NRDiagnostics?.record('legacy.catch.218','recoverable'); }
         const _gExt = computeGExtended(_nowD, kp, _panch, ai, _calSc);
         if (_gExt.available && isFinite(_gExt.gExt)) {
           const _v = _gExt.gExt;
@@ -24765,16 +24607,16 @@ function renderProfileRec() {
 function bootGIndexOnce(_reason){
   if(window.__gIndexBooted) return;
   window.__gIndexBooted = true;
-  var cp = function(n){ try{ document.getElementById('__cpPanel').textContent += '\nCP-BOOT-'+n; }catch(e){} };
+  var cp = function(n){ try{ document.getElementById('__cpPanel').textContent += '\nCP-BOOT-'+n; }catch(e){ window.NRDiagnostics?.record('legacy.catch.219','recoverable'); } };
   cp(1);
-  try{ initCachedGeolocation(); }catch(e){} cp(2);
-  try{ setStamp(); }catch(e){} cp(3);
+  try{ initCachedGeolocation(); }catch(e){ window.NRDiagnostics?.record('legacy.catch.220','recoverable'); } cp(2);
+  try{ setStamp(); }catch(e){ window.NRDiagnostics?.record('legacy.catch.221','recoverable'); } cp(3);
   // fp148 MINIMAL DIAG: НЕ викликаємо loadAll/loadAllLite взагалі — жодного рендеру.
   // Якщо фриз стається навіть тут — причина ПОЗА boot-ланцюгом (десь у топ-рівневих IIFE).
-  try{ initPersonalCalc(); }catch(e){} cp(4);
-  try{ initLangToggle(); }catch(e){} cp(5);
-  try{ initG2Watch(); }catch(e){} cp(6);
-  try{ initSimpleMode(); }catch(e){} cp(7);
+  try{ initPersonalCalc(); }catch(e){ window.NRDiagnostics?.record('legacy.catch.222','recoverable'); } cp(4);
+  try{ initLangToggle(); }catch(e){ window.NRDiagnostics?.record('legacy.catch.223','recoverable'); } cp(5);
+  try{ initG2Watch(); }catch(e){ window.NRDiagnostics?.record('legacy.catch.224','recoverable'); } cp(6);
+  try{ initSimpleMode(); }catch(e){ window.NRDiagnostics?.record('legacy.catch.225','recoverable'); } cp(7);
   // fp166: fp148 diag confirmed loadAll() had ZERO automatic trigger anywhere
   // in the file (static analysis 2026-07-11) — dashboard only ever showed a
   // stale localStorage cache-paint (fp164) labeled "оновлюється..." that
@@ -24794,7 +24636,7 @@ function bootGIndexOnce(_reason){
   // boot-time engine score loading blindly a third time. See memory for
   // diagnostic plan (test in Incognito = no SW, isolate before next attempt).
   runDataRefresh('boot');
-  try{ updateAutoRefStatus(); }catch(e){}
+  try{ updateAutoRefStatus(); }catch(e){ window.NRDiagnostics?.record('legacy.catch.226','recoverable'); }
   cp(8);
   cp('DONE-minimal-boot');
 }
@@ -25132,7 +24974,7 @@ function setSimpleMode(on, options){
     ? 'Простий режим АКТИВНИЙ. Натисніть для повного експертного UI.'
     : 'Повний режим АКТИВНИЙ. Натисніть для простого вигляду.';
   if(opts.persist !== false){
-    try { localStorage.setItem('gindex_simple_mode', isOn ? '1' : '0'); } catch(e){}
+    try { localStorage.setItem('gindex_simple_mode', isOn ? '1' : '0'); } catch(e){ window.NRDiagnostics?.record('legacy.catch.227','recoverable'); }
   }
   if(opts.notify !== false && typeof showToast === 'function'){
     showToast(isOn ? 'Простий режим увімкнено' : 'Повний режим увімкнено', 'info', 2000);
@@ -25835,7 +25677,7 @@ const GChrono = (function(){
 
   function clearAll(){
     if(!confirm('Видалити ВСІ записи журналу? Незворотно.')) return;
-    try { localStorage.removeItem(LS_KEY); } catch(e){}
+    try { localStorage.removeItem(LS_KEY); } catch(e){ window.NRDiagnostics?.record('legacy.catch.228','recoverable'); }
     renderStats(); _prefillToday();
   }
 
@@ -25978,7 +25820,7 @@ const SolarWind = (function(){
     try {
       const cached = JSON.parse(localStorage.getItem(LS_KEY) || 'null');
       if(cached && (Date.now() - cached.ts) < TTL_MS) return cached.data;
-    } catch(e){}
+    } catch(e){ window.NRDiagnostics?.record('legacy.catch.229','recoverable'); }
 
     try {
       const [magTxt, plasmaTxt] = await Promise.all([
@@ -25997,14 +25839,14 @@ const SolarWind = (function(){
         speed: parseFloat(plasmaRow.proton_speed),
         density: parseFloat(plasmaRow.proton_density)
       };
-      try { localStorage.setItem(LS_KEY, JSON.stringify({ts: Date.now(), data})); } catch(e){}
+      try { localStorage.setItem(LS_KEY, JSON.stringify({ts: Date.now(), data})); } catch(e){ window.NRDiagnostics?.record('legacy.catch.230','recoverable'); }
       return data;
     } catch(e){
       console.warn('[SolarWind] fetch failed:', e.message);
       try {
         const stale = JSON.parse(localStorage.getItem(LS_KEY) || 'null');
         if(stale) return stale.data;
-      } catch(_){}
+      } catch(_){ window.NRDiagnostics?.record('legacy.catch.231','recoverable'); }
       return null;
     }
   }
@@ -26049,7 +25891,7 @@ function _renderSolarWindBadge(data){
 // після аудиту "занадто багато одночасних fetch" — 5хв TTL кешу вистачає, оновлення
 // відбудеться природньо при наступному ручному/авто-оновленні сторінки)
 setTimeout(() => {
-  try { SolarWind.fetchLatest().then(d => { window.__solarWind = d; _renderSolarWindBadge(d); }); } catch(e){}
+  try { SolarWind.fetchLatest().then(d => { window.__solarWind = d; _renderSolarWindBadge(d); }); } catch(e){ window.NRDiagnostics?.record('legacy.catch.232','recoverable'); }
 }, 3500);
 
 const NoaaEvents = (function(){
@@ -26064,7 +25906,7 @@ const NoaaEvents = (function(){
       if(cached && (Date.now() - cached.ts) < TTL_MS){
         return cached.data;
       }
-    } catch(e){}
+    } catch(e){ window.NRDiagnostics?.record('legacy.catch.233','recoverable'); }
 
     try {
       const r = await fetch(URL_ALERTS, {cache:'no-cache'});
@@ -26088,7 +25930,7 @@ const NoaaEvents = (function(){
           summary: msg.split('\n')[0].slice(0, 120)
         };
       });
-      try { localStorage.setItem(LS_KEY, JSON.stringify({ts: Date.now(), data: events})); } catch(e){}
+      try { localStorage.setItem(LS_KEY, JSON.stringify({ts: Date.now(), data: events})); } catch(e){ window.NRDiagnostics?.record('legacy.catch.234','recoverable'); }
       return events;
     } catch(e){
       console.warn('[NoaaEvents] fetch failed:', e.message);
@@ -26096,7 +25938,7 @@ const NoaaEvents = (function(){
       try {
         const stale = JSON.parse(localStorage.getItem(LS_KEY) || 'null');
         if(stale) return stale.data;
-      } catch(_){}
+      } catch(_){ window.NRDiagnostics?.record('legacy.catch.235','recoverable'); }
       return [];
     }
   }
@@ -26140,10 +25982,10 @@ const NoaaEvents = (function(){
         : last.endsWith('_queued')
           ? 'завис у ПАУЗІ перед « ' + last.replace('_queued','') + ' » (винен async-хвіст попередніх)'
           : 'checkpoint « ' + last + ' »') + ' — скинь це Claude. (клік = закрити)';
-      d.onclick = function(){ try{localStorage.removeItem(KEY);}catch(_e){} d.remove(); };
+      d.onclick = function(){ try{localStorage.removeItem(KEY);}catch(_e){ window.NRDiagnostics?.record('legacy.catch.236','recoverable'); } d.remove(); };
       (document.body || document.documentElement).appendChild(d);
     }
-  } catch(_e){}
+  } catch(_e){ window.NRDiagnostics?.record('legacy.catch.237','recoverable'); }
   if (!/[?&]diag=1/.test(location.search)) return;
   setTimeout(async function(){
     const st = document.createElement('div');
@@ -26250,9 +26092,9 @@ setTimeout(async function _dayVerdictLoad(){
     await loadAiaVernadsky();
     await loadKpHourlyAlert();
     if (_engineScores === null) await loadEngineScores();
-    try { if (typeof syncV702UI === 'function') syncV702UI(); } catch(e){ /* silent */ }
-    try { if (typeof _renderHeroHierarchy === 'function') _renderHeroHierarchy(); } catch(e){ /* silent */ }
-    try { if (typeof renderHeroBulletin === 'function') renderHeroBulletin(); } catch(e){ /* silent */ }
+    try { if (typeof syncV702UI === 'function') syncV702UI(); } catch(e){ window.NRDiagnostics?.record('legacy.catch.238','recoverable'); }
+    try { if (typeof _renderHeroHierarchy === 'function') _renderHeroHierarchy(); } catch(e){ window.NRDiagnostics?.record('legacy.catch.239','recoverable'); }
+    try { if (typeof renderHeroBulletin === 'function') renderHeroBulletin(); } catch(e){ window.NRDiagnostics?.record('legacy.catch.240','recoverable'); }
     // fp391: refresh every horizon after the delayed PDF/Engine loaders.
     // render3Day normally runs before this block, so without this refresh a
     // verified reference could update Hero while 3/7/27-day views retained
@@ -26279,7 +26121,7 @@ setTimeout(async function _dayVerdictLoad(){
     catch(e) { console.warn('[fp424 final current-surface resync]', e); }
     try { if (typeof renderCompetitiveCover === 'function') renderCompetitiveCover(); }
     catch(e) { console.warn('[fp441 final cover refresh]', e); }
-  } catch(e) { /* silent — сторінка живе на live-фоні як раніше */ }
+  } catch(e){ window.NRDiagnostics?.record('legacy.catch.241','recoverable'); }
 }, 6000);
 // ═══ /fp194 ═════════════════════════════════════════════════════════════════
 
@@ -26294,10 +26136,10 @@ setTimeout(() => {
       window._stormWindow = resolveStormWindow();
       if (typeof _applyStormGuardDOM === 'function') _applyStormGuardDOM();
       if (typeof _patchStaleLoadingDOM === 'function') _patchStaleLoadingDOM();
-    } catch(_e) { /* silent */ }
+    } catch(_e){ window.NRDiagnostics?.record('legacy.catch.242','recoverable'); }
     // v88.8.81-fp160: показати банер, якщо є реальна подія за останні 48г
-    try { _renderNoaaAlertBanner(ev); } catch(_e) { /* silent */ }
-  }); } catch(e){}
+    try { _renderNoaaAlertBanner(ev); } catch(_e){ window.NRDiagnostics?.record('legacy.catch.243','recoverable'); }
+  }); } catch(e){ window.NRDiagnostics?.record('legacy.catch.244','recoverable'); }
 }, 3000);
 
 // v88.8.81-fp160: видимий банер для NOAA real-time alerts (Варіант A з роадмапу
@@ -26601,7 +26443,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       const clean = location.pathname + location.hash;
       history.replaceState(null, '', clean);
-    } catch (_e) { /* routing is enhancement only */ }
+    } catch(_e){ window.NRDiagnostics?.record('legacy.catch.245','recoverable'); }
   }, 900);
 });
 {const panel=document.getElementById('__cpPanel');if(panel)panel.textContent += '\nCP block-end @line20806';}
@@ -26776,11 +26618,11 @@ body.fp434-app main#mainContent{padding-inline:24px!important}
     const footer=document.querySelector('footer');if(footer&&!document.getElementById('nrFooterDetails')){const details=document.createElement('details');details.id='nrFooterDetails';details.className='nr-authority-details';const summary=document.createElement('summary');summary.textContent='Джерела та методика';const body=document.createElement('div');body.className='nr-authority-balance';while(footer.firstChild)body.appendChild(footer.firstChild);details.append(summary,body);footer.appendChild(details)}
   }
   function ensureResult(formId,resultId){const form=document.getElementById(formId);if(!form)return null;let box=document.getElementById(resultId);if(!box){box=document.createElement('section');box.id=resultId;box.className='nr-functional-result';form.insertAdjacentElement('afterend',box)}return box}
-  function renderProfileResult(){const box=ensureResult('nrProfileForm','nrProfileResult');if(!box)return;let data=null;try{data=JSON.parse(localStorage.getItem('gindex_profile_v2')||'null')}catch(_e){}const saved=data?['name','city','birth','time','mode'].filter(k=>String(data[k]||'').trim()).length:0;box.innerHTML=`<span class="nr-chip">ЛОКАЛЬНИЙ СТАН</span><h3>${saved?`${saved} полів збережено`:'Профіль ще не збережено'}</h3><p class="nr-result-primary">Ім’я використовується для локального підпису. Місто, дата й час збережені як експериментальні поля та зараз не змінюють рішення у «Сьогодні», «Прогнозі» або «Календарі».</p><div class="nr-result-meta">Зберігання: лише цей пристрій · серверне надсилання: ні · валідована персональна модель: ні.</div>`}
-  function renderPlanResult(){const box=ensureResult('nrPlanForm','nrPlanResult');if(!box)return;const form=document.getElementById('nrPlanForm');let guard=document.getElementById('nrPlanGuard');if(form&&!guard){guard=document.createElement('section');guard.id='nrPlanGuard';guard.className='nr-functional-result';form.insertAdjacentElement('beforebegin',guard)}if(guard){const title=document.getElementById('nrCoverTitle')?.textContent?.trim()||'Рішення дня завантажується',avoid=document.getElementById('nrCoverAvoid')?.textContent?.trim()||'Не форсуйте неперевірені рішення.';guard.innerHTML=`<span class="nr-chip">ОБМЕЖЕННЯ ДНЯ</span><h3>${escapeHtml(title)}</h3><p class="nr-result-primary">${escapeHtml(avoid)}</p><div class="nr-result-meta">План допомагає діяти в межах канонічного висновку дня і не створює нового прогнозу.</div>`}let d=null;try{d=JSON.parse(localStorage.getItem('gindex_day_plan_v1')||'null')}catch(_e){}if(!d||d.date!==todayKey()){box.innerHTML='<span class="nr-chip">ПЛАН НА СЬОГОДНІ</span><h3>План ще не збережено</h3><p class="nr-result-primary">Один пріоритет і конкретний час достатні для робочого плану.</p>';return}box.innerHTML=`<span class="nr-chip">ЗБЕРЕЖЕНО ЛОКАЛЬНО</span><h3>${escapeHtml(d.priority||'Без назви')}</h3><p class="nr-result-primary">${d.time?'Час: <strong>'+escapeHtml(d.time)+'</strong>. ':''}${d.contact?'Контакт: '+escapeHtml(d.contact)+'. ':''}${d.note?escapeHtml(d.note):''}</p><div class="nr-result-meta">Дата плану: ${escapeHtml(d.date)} · це запис користувача, не прогноз.</div>`}
-  function renderMatchResult(){const box=ensureResult('nrMatchForm','nrMatchResult');if(!box)return;let a=null,b=null;try{a=JSON.parse(localStorage.getItem('gindex_profile_v2')||'null');b=JSON.parse(localStorage.getItem('gindex_match_person_v1')||'null')}catch(_e){}if(!b?.name){box.innerHTML='<span class="nr-chip">БАЗОВИЙ КОНТУР</span><h3>Вкажіть ім’я другої людини</h3><p class="nr-result-primary">Дата, час і місто не потрібні: персональний перетин ще не обчислюється.</p>';return}const title=document.getElementById('nrCoverTitle')?.textContent?.trim()||'Рішення дня завантажується',summary=document.getElementById('nrCoverSummary')?.textContent?.trim()||'Базовий контур дня ще завантажується.',doTxt=document.getElementById('nrCoverDo')?.textContent?.trim()||'',avoid=document.getElementById('nrCoverAvoid')?.textContent?.trim()||'';box.dataset.authoritySource='today-cover';box.innerHTML=`<span class="nr-chip">СПІЛЬНЕ ПЛАНУВАННЯ</span><h3>${escapeHtml(a?.name||'Ви')} + ${escapeHtml(b.name)}</h3><p class="nr-result-primary"><strong>${escapeHtml(title)}</strong><br>${escapeHtml(summary)}</p><div class="nr-list"><div class="nr-row"><span>Доречно</span><span>${escapeHtml(doTxt)}</span></div><div class="nr-row"><span>Відкласти</span><span>${escapeHtml(avoid)}</span></div></div><div class="nr-result-meta">Джерело: канонічне рішення «Сьогодні». Це не персональний перетин і не оцінка сумісності; дата, час та місто не використовуються.</div>`}
+  function renderProfileResult(){const box=ensureResult('nrProfileForm','nrProfileResult');if(!box)return;let data=null;try{data=JSON.parse(localStorage.getItem('gindex_profile_v2')||'null')}catch(_e){ window.NRDiagnostics?.record('legacy.catch.246','recoverable'); }const saved=data?['name','city','birth','time','mode'].filter(k=>String(data[k]||'').trim()).length:0;box.innerHTML=`<span class="nr-chip">ЛОКАЛЬНИЙ СТАН</span><h3>${saved?`${saved} полів збережено`:'Профіль ще не збережено'}</h3><p class="nr-result-primary">Ім’я використовується для локального підпису. Місто, дата й час збережені як експериментальні поля та зараз не змінюють рішення у «Сьогодні», «Прогнозі» або «Календарі».</p><div class="nr-result-meta">Зберігання: лише цей пристрій · серверне надсилання: ні · валідована персональна модель: ні.</div>`}
+  function renderPlanResult(){const box=ensureResult('nrPlanForm','nrPlanResult');if(!box)return;const form=document.getElementById('nrPlanForm');let guard=document.getElementById('nrPlanGuard');if(form&&!guard){guard=document.createElement('section');guard.id='nrPlanGuard';guard.className='nr-functional-result';form.insertAdjacentElement('beforebegin',guard)}if(guard){const title=document.getElementById('nrCoverTitle')?.textContent?.trim()||'Рішення дня завантажується',avoid=document.getElementById('nrCoverAvoid')?.textContent?.trim()||'Не форсуйте неперевірені рішення.';guard.innerHTML=`<span class="nr-chip">ОБМЕЖЕННЯ ДНЯ</span><h3>${escapeHtml(title)}</h3><p class="nr-result-primary">${escapeHtml(avoid)}</p><div class="nr-result-meta">План допомагає діяти в межах канонічного висновку дня і не створює нового прогнозу.</div>`}let d=null;try{d=JSON.parse(localStorage.getItem('gindex_day_plan_v1')||'null')}catch(_e){ window.NRDiagnostics?.record('legacy.catch.247','recoverable'); }if(!d||d.date!==todayKey()){box.innerHTML='<span class="nr-chip">ПЛАН НА СЬОГОДНІ</span><h3>План ще не збережено</h3><p class="nr-result-primary">Один пріоритет і конкретний час достатні для робочого плану.</p>';return}box.innerHTML=`<span class="nr-chip">ЗБЕРЕЖЕНО ЛОКАЛЬНО</span><h3>${escapeHtml(d.priority||'Без назви')}</h3><p class="nr-result-primary">${d.time?'Час: <strong>'+escapeHtml(d.time)+'</strong>. ':''}${d.contact?'Контакт: '+escapeHtml(d.contact)+'. ':''}${d.note?escapeHtml(d.note):''}</p><div class="nr-result-meta">Дата плану: ${escapeHtml(d.date)} · це запис користувача, не прогноз.</div>`}
+  function renderMatchResult(){const box=ensureResult('nrMatchForm','nrMatchResult');if(!box)return;let a=null,b=null;try{a=JSON.parse(localStorage.getItem('gindex_profile_v2')||'null');b=JSON.parse(localStorage.getItem('gindex_match_person_v1')||'null')}catch(_e){ window.NRDiagnostics?.record('legacy.catch.248','recoverable'); }if(!b?.name){box.innerHTML='<span class="nr-chip">БАЗОВИЙ КОНТУР</span><h3>Вкажіть ім’я другої людини</h3><p class="nr-result-primary">Дата, час і місто не потрібні: персональний перетин ще не обчислюється.</p>';return}const title=document.getElementById('nrCoverTitle')?.textContent?.trim()||'Рішення дня завантажується',summary=document.getElementById('nrCoverSummary')?.textContent?.trim()||'Базовий контур дня ще завантажується.',doTxt=document.getElementById('nrCoverDo')?.textContent?.trim()||'',avoid=document.getElementById('nrCoverAvoid')?.textContent?.trim()||'';box.dataset.authoritySource='today-cover';box.innerHTML=`<span class="nr-chip">СПІЛЬНЕ ПЛАНУВАННЯ</span><h3>${escapeHtml(a?.name||'Ви')} + ${escapeHtml(b.name)}</h3><p class="nr-result-primary"><strong>${escapeHtml(title)}</strong><br>${escapeHtml(summary)}</p><div class="nr-list"><div class="nr-row"><span>Доречно</span><span>${escapeHtml(doTxt)}</span></div><div class="nr-row"><span>Відкласти</span><span>${escapeHtml(avoid)}</span></div></div><div class="nr-result-meta">Джерело: канонічне рішення «Сьогодні». Це не персональний перетин і не оцінка сумісності; дата, час та місто не використовуються.</div>`}
   function renderDailyReport(){const route=document.getElementById('nrRoute-reports');if(!route)return;let box=document.getElementById('nrDailyReportPreview');if(!box){box=document.createElement('section');box.id='nrDailyReportPreview';box.className='nr-functional-result';route.appendChild(box)}const title=document.getElementById('nrCoverTitle')?.textContent?.trim()||'Висновок завантажується',summary=document.getElementById('nrCoverSummary')?.textContent?.trim()||'',doTxt=document.getElementById('nrCoverDo')?.textContent?.trim()||'',avoid=document.getElementById('nrCoverAvoid')?.textContent?.trim()||'';box.innerHTML=`<span class="nr-chip">ПОПЕРЕДНІЙ ПЕРЕГЛЯД</span><h3>${escapeHtml(title)}</h3><p class="nr-result-primary">${escapeHtml(summary)}</p><div class="nr-list"><div class="nr-row"><span>Доречно</span><span>${escapeHtml(doTxt)}</span></div><div class="nr-row"><span>Відкласти</span><span>${escapeHtml(avoid)}</span></div></div><div class="nr-result-meta">Звіт повторює канонічний Today і не створює іншого прогнозу.</div>`}
-  function renderOutcomeHistory(){const box=document.getElementById('nrOutcomeHistory');if(!box)return;let rows=[];try{rows=JSON.parse(localStorage.getItem('gindex_plan_outcomes_v1')||'[]')}catch(_e){}if(!Array.isArray(rows)||!rows.length){box.innerHTML='<span class="nr-chip">ІСТОРІЯ</span><h3>Останні результати</h3><p>Записів ще немає.</p>';return}const labels={done:'Виконано',partial:'Частково',not_done:'Не виконано'};box.innerHTML='<span class="nr-chip">ІСТОРІЯ · ЛИШЕ ЦЕЙ ПРИСТРІЙ</span><h3>Останні результати</h3><div class="nr-list">'+rows.slice(-7).reverse().map(x=>`<div class="nr-row"><span>${escapeHtml(x.date||'—')}</span><span><strong>${escapeHtml(labels[x.result]||x.result||'—')}</strong>${x.priority?' · '+escapeHtml(x.priority):''}${x.note?'<br><small>'+escapeHtml(x.note)+'</small>':''}</span></div>`).join('')+'</div><p class="nr-result-meta">Самозвіт користувача; не ground truth і не доказ точності прогнозу.</p>'}
+  function renderOutcomeHistory(){const box=document.getElementById('nrOutcomeHistory');if(!box)return;let rows=[];try{rows=JSON.parse(localStorage.getItem('gindex_plan_outcomes_v1')||'[]')}catch(_e){ window.NRDiagnostics?.record('legacy.catch.249','recoverable'); }if(!Array.isArray(rows)||!rows.length){box.innerHTML='<span class="nr-chip">ІСТОРІЯ</span><h3>Останні результати</h3><p>Записів ще немає.</p>';return}const labels={done:'Виконано',partial:'Частково',not_done:'Не виконано'};box.innerHTML='<span class="nr-chip">ІСТОРІЯ · ЛИШЕ ЦЕЙ ПРИСТРІЙ</span><h3>Останні результати</h3><div class="nr-list">'+rows.slice(-7).reverse().map(x=>`<div class="nr-row"><span>${escapeHtml(x.date||'—')}</span><span><strong>${escapeHtml(labels[x.result]||x.result||'—')}</strong>${x.priority?' · '+escapeHtml(x.priority):''}${x.note?'<br><small>'+escapeHtml(x.note)+'</small>':''}</span></div>`).join('')+'</div><p class="nr-result-meta">Самозвіт користувача; не ground truth і не доказ точності прогнозу.</p>'}
   function enhanceFunctionalRoutes(){renderProfileResult();renderPlanResult();renderOutcomeHistory();renderMatchResult();renderDailyReport();const planMeta=document.querySelector('#nrPlanGuard .nr-result-meta');if(planMeta)planMeta.textContent='План допомагає діяти в межах канонічного висновку дня і не створює нового прогнозу.';const reportMeta=document.querySelector('#nrDailyReportPreview .nr-result-meta');if(reportMeta)reportMeta.textContent='Звіт повторює рішення «Сьогодні» і не створює іншого прогнозу.'}
   function calendarStateLabel(g){return g>=1?'сприятливий фон':g<=-1?'обережний режим':'нейтральний фон'}
   function expertDecisionForDate(ds){const row=Array.isArray(window._expertDecisionRegistry?.rows)?window._expertDecisionRegistry.rows.find(x=>x.date===ds):null;const score=_strictDayScore(row?.decision_score),displayText=window._expertDisplayText?.[ds],displayRow=displayText?{...row,headline_text:displayText}:row;return row?.decision_source==='verified_expert_pdf'&&Number.isFinite(score)?{row:displayRow,score}:null}
@@ -26977,7 +26819,7 @@ body.fp434-app main#mainContent{padding-inline:24px!important}
   window.fp463RenderIndependentForecasts=renderIndependentForecasts;
   function renderCategories(){
     const grid=document.getElementById('nrCategoryGrid');if(!grid)return;
-    let unlocked='';try{const x=JSON.parse(localStorage.getItem('gindex_daily_key_v1')||'null');if(x&&x.date===todayKey())unlocked=x.category}catch(_e){}
+    let unlocked='';try{const x=JSON.parse(localStorage.getItem('gindex_daily_key_v1')||'null');if(x&&x.date===todayKey())unlocked=x.category}catch(_e){ window.NRDiagnostics?.record('legacy.catch.250','recoverable'); }
     grid.innerHTML=CATS.map(([id,name,copy])=>`<article class="nr-card ${unlocked&&unlocked!==id?'nr-locked':''}"><span class="nr-chip">${unlocked===id?'ФОКУС ДНЯ':unlocked?'МОЖНА ЗМІНИТИ':'КЛЮЧ ДНЯ'}</span><h3>${name}</h3><p>${copy}</p><button class="nr-btn ${unlocked&&unlocked!==id?'secondary':''}" style="margin-top:14px" aria-pressed="${unlocked===id?'true':'false'}" onclick="fp434UnlockCategory('${id}')">${unlocked===id?'Показати фокус':unlocked?'Змінити фокус':'Обрати сьогодні'}</button></article>`).join('');
     if(unlocked)showCategory(unlocked);
   }
@@ -26990,11 +26832,11 @@ body.fp434-app main#mainContent{padding-inline:24px!important}
     window.NRCalendarContext?.render(contextHost,window.nrRetroEphemeris?.(),todayKey(),id);
     const status=box.querySelector('.nr-row:last-child span:last-child');if(status)status.textContent='Окрема перевірка категорій ще не завершена; використано спільне рішення дня без додаткового бала.';
   }
-  window.nrRefreshCategoryContext=function(){const box=document.getElementById('nrCategoryDetail');if(!box||box.hidden)return;let saved=null;try{saved=JSON.parse(localStorage.getItem('gindex_daily_key_v1')||'null')}catch(_e){}if(saved?.date!==todayKey()){box.hidden=true;return;}window.NRCalendarContext?.render(box.querySelector('.nr-category-context'),window.nrRetroEphemeris?.(),todayKey(),saved.category);};
+  window.nrRefreshCategoryContext=function(){const box=document.getElementById('nrCategoryDetail');if(!box||box.hidden)return;let saved=null;try{saved=JSON.parse(localStorage.getItem('gindex_daily_key_v1')||'null')}catch(_e){ window.NRDiagnostics?.record('legacy.catch.251','recoverable'); }if(saved?.date!==todayKey()){box.hidden=true;return;}window.NRCalendarContext?.render(box.querySelector('.nr-category-context'),window.nrRetroEphemeris?.(),todayKey(),saved.category);};
   window.fp456CategoryToPlan=function(id){fp434Go('plan',false);const select=document.querySelector('#nrPlanForm select[name="category"]'),item=CATS.find(row=>row[0]===id);if(select){if(![...select.options].some(option=>option.value===id)&&item)select.add(new Option(item[1],id));select.value=id}document.querySelector('#nrPlanForm input[name="priority"]')?.focus()};
   window.fp434UnlockCategory=function(id){
-    let current=null;try{current=JSON.parse(localStorage.getItem('gindex_daily_key_v1')||'null')}catch(_e){}
-    try{localStorage.setItem('gindex_daily_key_v1',JSON.stringify({date:todayKey(),category:id}))}catch(_e){}
+    let current=null;try{current=JSON.parse(localStorage.getItem('gindex_daily_key_v1')||'null')}catch(_e){ window.NRDiagnostics?.record('legacy.catch.252','recoverable'); }
+    try{localStorage.setItem('gindex_daily_key_v1',JSON.stringify({date:todayKey(),category:id}))}catch(_e){ window.NRDiagnostics?.record('legacy.catch.253','recoverable'); }
     renderCategories();localizeNewShellCopy();showCategory(id);document.getElementById('nrCategoryDetail')?.scrollIntoView({behavior:'smooth',block:'start'});
   };
   window.fp434Go=function(name,scroll){
@@ -27004,7 +26846,7 @@ body.fp434-app main#mainContent{padding-inline:24px!important}
     document.querySelectorAll('.mnav-btn').forEach(n=>{n.classList.remove('active');n.removeAttribute('aria-current')});
     const mobileCurrent=document.getElementById('mnav'+ROUTE_NAV[name]);mobileCurrent?.classList.add('active');mobileCurrent?.setAttribute('aria-current','page');
     document.querySelectorAll('#nrTopNav button').forEach(n=>{const active=n.dataset.route===name||(!['today','concept','panch','forecast','calendar'].includes(name)&&n.dataset.route==='more');n.classList.toggle('active',active);if(active)n.setAttribute('aria-current','page');else n.removeAttribute('aria-current')});
-    try{localStorage.setItem('fp434_route',name)}catch(_e){}
+    try{localStorage.setItem('fp434_route',name)}catch(_e){ window.NRDiagnostics?.record('legacy.catch.254','recoverable'); }
     if(name==='categories'){renderCategories();localizeNewShellCopy()}
     if(name==='calendar')setTimeout(()=>requestProductRender('calendar'),80);
     if(name==='forecast'){setTimeout(()=>requestProductRender('forecast'),80);setTimeout(()=>requestProductRender('independent'),120)}
@@ -27013,7 +26855,7 @@ body.fp434-app main#mainContent{padding-inline:24px!important}
     if(scroll){window.scrollTo({top:0,behavior:'smooth'});const activeRoute=document.getElementById('nrRoute-'+name);const heading=activeRoute?.querySelector('h1,h2');const announcer=document.getElementById('fp434RouteAnnouncer');if(announcer)announcer.textContent=heading?.textContent?.trim()||name;setTimeout(()=>{if(!activeRoute?.classList.contains('active'))return;const currentHeading=activeRoute.querySelector('h1,h2');if(currentHeading){currentHeading.setAttribute('tabindex','-1');currentHeading.focus({preventScroll:true})}},120)}
   };
   window.fp435SavePlan=function(event){event.preventDefault();const data=Object.fromEntries(new FormData(event.currentTarget));data.date=todayKey();try{localStorage.setItem('gindex_day_plan_v1',JSON.stringify(data));window.fp466CancelReminder();document.getElementById('nrPlanStatus').textContent='✓ План збережено на цьому пристрої';renderPlanResult()}catch(_e){document.getElementById('nrPlanStatus').textContent='Не вдалося зберегти локально'}return false};
-  window.fp466CancelReminder=function(){window.clearTimeout(window.__nrPlanReminderTimer);window.__nrPlanReminderTimer=null;try{localStorage.removeItem('gindex_plan_reminder_v1')}catch(_e){}const form=document.getElementById('nrPlanForm');if(form)delete form.dataset.reminder;const status=document.getElementById('nrReminderStatus');if(status)status.textContent='Нагадування скасовано.'};
+  window.fp466CancelReminder=function(){window.clearTimeout(window.__nrPlanReminderTimer);window.__nrPlanReminderTimer=null;try{localStorage.removeItem('gindex_plan_reminder_v1')}catch(_e){ window.NRDiagnostics?.record('legacy.catch.255','recoverable'); }const form=document.getElementById('nrPlanForm');if(form)delete form.dataset.reminder;const status=document.getElementById('nrReminderStatus');if(status)status.textContent='Нагадування скасовано.'};
   window.fp466EnableReminder=async function(){
     const status=document.getElementById('nrReminderStatus'),form=document.getElementById('nrPlanForm'),say=text=>{if(status)status.textContent=text};
     try{
@@ -27037,15 +26879,15 @@ body.fp434-app main#mainContent{padding-inline:24px!important}
           else new Notification('NeboRhythm · план',{body:String(plan.priority||'Запланована дія')});
           say('Сповіщення передано системі.');
         }catch(_e){say('Не вдалося показати сповіщення. Перевірте дозволи браузера.')}
-        finally{window.__nrPlanReminderTimer=null;if(form)delete form.dataset.reminder;try{localStorage.removeItem('gindex_plan_reminder_v1')}catch(_e){}}
+        finally{window.__nrPlanReminderTimer=null;if(form)delete form.dataset.reminder;try{localStorage.removeItem('gindex_plan_reminder_v1')}catch(_e){ window.NRDiagnostics?.record('legacy.catch.256','recoverable'); }}
       },at.getTime()-Date.now());
       if(form)form.dataset.reminder='active';
       say('Нагадування на '+plan.time+'. Залиште сторінку відкритою; після закриття або перезавантаження таймер не працює.');
     }catch(_e){say('Не вдалося встановити нагадування. Перевірте дозволи й доступ до локального сховища.')}
   };
-  window.fp466SaveOutcome=function(event){event.preventDefault();const data=Object.fromEntries(new FormData(event.currentTarget));let plan=null,rows=[];try{plan=JSON.parse(localStorage.getItem('gindex_day_plan_v1')||'null');rows=JSON.parse(localStorage.getItem('gindex_plan_outcomes_v1')||'[]')}catch(_e){}if(!Array.isArray(rows))rows=[];const row={date:todayKey(),result:String(data.result||''),note:String(data.note||'').trim(),priority:plan?.date===todayKey()?String(plan.priority||''):''};rows=rows.filter(x=>x&&x.date!==row.date);rows.push(row);try{localStorage.setItem('gindex_plan_outcomes_v1',JSON.stringify(rows.slice(-90)));document.getElementById('nrOutcomeStatus').textContent='✓ Фактичний результат збережено локально';renderOutcomeHistory();event.currentTarget.reset()}catch(_e){document.getElementById('nrOutcomeStatus').textContent='Не вдалося зберегти результат'}return false};
+  window.fp466SaveOutcome=function(event){event.preventDefault();const data=Object.fromEntries(new FormData(event.currentTarget));let plan=null,rows=[];try{plan=JSON.parse(localStorage.getItem('gindex_day_plan_v1')||'null');rows=JSON.parse(localStorage.getItem('gindex_plan_outcomes_v1')||'[]')}catch(_e){ window.NRDiagnostics?.record('legacy.catch.257','recoverable'); }if(!Array.isArray(rows))rows=[];const row={date:todayKey(),result:String(data.result||''),note:String(data.note||'').trim(),priority:plan?.date===todayKey()?String(plan.priority||''):''};rows=rows.filter(x=>x&&x.date!==row.date);rows.push(row);try{localStorage.setItem('gindex_plan_outcomes_v1',JSON.stringify(rows.slice(-90)));document.getElementById('nrOutcomeStatus').textContent='✓ Фактичний результат збережено локально';renderOutcomeHistory();event.currentTarget.reset()}catch(_e){document.getElementById('nrOutcomeStatus').textContent='Не вдалося зберегти результат'}return false};
   window.fp435SaveMatch=function(event){event.preventDefault();const data=Object.fromEntries(new FormData(event.currentTarget));try{localStorage.setItem('gindex_match_person_v1',JSON.stringify({name:String(data.name||'').trim()}));document.getElementById('nrMatchStatus').textContent='✓ Ім’я збережено лише на цьому пристрої.';renderMatchResult()}catch(_e){document.getElementById('nrMatchStatus').textContent='Не вдалося зберегти ім’я на пристрої'}return false};
-  function loadFp440Profile(){const form=document.getElementById('nrProfileForm');if(!form)return;try{const data=JSON.parse(localStorage.getItem('gindex_profile_v2')||'null');if(!data)return;['name','city','birth','time','mode'].forEach(k=>{if(form.elements[k]&&data[k]!=null)form.elements[k].value=data[k]})}catch(_e){}}
+  function loadFp440Profile(){const form=document.getElementById('nrProfileForm');if(!form)return;try{const data=JSON.parse(localStorage.getItem('gindex_profile_v2')||'null');if(!data)return;['name','city','birth','time','mode'].forEach(k=>{if(form.elements[k]&&data[k]!=null)form.elements[k].value=data[k]})}catch(_e){ window.NRDiagnostics?.record('legacy.catch.258','recoverable'); }}
   window.fp440SaveProfile=function(event){event.preventDefault();const data=Object.fromEntries(new FormData(event.currentTarget));try{localStorage.setItem('gindex_profile_v2',JSON.stringify(data));document.getElementById('nrProfileStatus').textContent='✓ Дані збережено лише на цьому пристрої';renderProfileResult();renderMatchResult()}catch(_e){document.getElementById('nrProfileStatus').textContent='Не вдалося зберегти дані на пристрої'}return false};
   async function renderPanchGuide(){
     const box=document.getElementById('nrPanchNow');if(!box)return;
@@ -27204,7 +27046,7 @@ body.fp434-app main#mainContent{padding-inline:24px!important}
     // asynchronous data arrives while another route is open. Do not reset forms.
     renderPlanResult();renderMatchResult();renderDailyReport();
     const balance=document.querySelector('#nrAuthorityBalance span');if(balance){const pdf=_strictDayScore(registryRow?.decision_score),eng=_strictDayScore(registryRow?.engine_score),cal=_finiteFormulaNumber(registryRow?.calendar_score_context),decision=_finiteFormulaNumber(daySignal?.decisionScore);balance.textContent=`Канонічне рішення: ${presentation.available?`${presentation.opKey} · бал ${decision>=0?'+':''}${decision.toFixed(0)} · ${presentation.label}`:'недоступне'}${daySignal?.guard&&daySignal.guard!=='none'?` · обмеження ${daySignal.guard}`:''}${daySignal?.dynamicGuard?` · запобіжник ${daySignal.dynamicGuard}`:''}${offline&&snapshot?` · збережено ${snapshot.resolved_at}`:''}. Довідковий PDF ${Number.isFinite(pdf)?(pdf>=0?'+':'')+pdf:'—'}, Engine ${Number.isFinite(eng)?(eng>=0?'+':'')+eng:'—'}, календарний контекст ${Number.isFinite(cal)?(cal>=0?'+':'')+cal:'—'} і поточний G показані окремо та безпосередньо не визначають колір поради.`}
-    const eclipse=document.getElementById('nrEclipseContext');let mi=null;try{mi=typeof computeMiFromEclipses==='function'?computeMiFromEclipses(new Date(todayKey()+'T12:00:00Z')):null}catch(_e){}const eclipseActive=Number(mi?.Mi)<0||eclipseFromRegistry;if(eclipse){eclipse.classList.toggle('is-visible',eclipseActive);if(eclipseActive){set('nrEclipseTitle','ПЕРІОД ВПЛИВУ ЗАТЕМНЕННЯ');set('nrEclipseCopy',`${mi&&Number.isFinite(Number(mi.Mi))?'Mᵢ '+(Number(mi.Mi)>=0?'+':'')+Number(mi.Mi)+' · ':''}вже враховано у денному G. Спокійний темп, без форсування ключових рішень.`)}}
+    const eclipse=document.getElementById('nrEclipseContext');let mi=null;try{mi=typeof computeMiFromEclipses==='function'?computeMiFromEclipses(new Date(todayKey()+'T12:00:00Z')):null}catch(_e){ window.NRDiagnostics?.record('legacy.catch.259','recoverable'); }const eclipseActive=Number(mi?.Mi)<0||eclipseFromRegistry;if(eclipse){eclipse.classList.toggle('is-visible',eclipseActive);if(eclipseActive){set('nrEclipseTitle','ПЕРІОД ВПЛИВУ ЗАТЕМНЕННЯ');set('nrEclipseCopy',`${mi&&Number.isFinite(Number(mi.Mi))?'Mᵢ '+(Number(mi.Mi)>=0?'+':'')+Number(mi.Mi)+' · ':''}вже враховано у денному G. Спокійний темп, без форсування ключових рішень.`)}}
     set('nrCoverScore',presentation.symbol);set('nrCoverDecisionScore',Number.isFinite(scoreBase)?(scoreBase>=0?'+':'')+scoreBase.toFixed(0):'—');set('nrCoverKp',Number.isFinite(kp)?kp.toFixed(1):'—');set('nrCoverShift',shift);set('nrScoreHelper',presentation.available?`${presentation.label} · ${offline?'збережене рішення':'стан на зараз'}`:'Немає підтвердженого рішення');
     const scoreLabel=cover.querySelector('.nr-score-label');if(scoreLabel)scoreLabel.textContent='ОЦІНКА МОДЕЛІ';
     const scoreOrbit=document.getElementById('nrScoreOrbit');if(scoreOrbit)scoreOrbit.setAttribute('aria-label',`${presentation.label}. ${presentation.available?presentation.title:'Рішення недоступне'}`);
@@ -27216,7 +27058,7 @@ body.fp434-app main#mainContent{padding-inline:24px!important}
     set('nrCover3',describe(3));set('nrCover7',describe(7));set('nrCover27','Довгий огляд · без порад на дію');
   }
   function init(){
-    buildShell();let saved='today';try{saved=localStorage.getItem('fp434_route')||'today'}catch(_e){}
+    buildShell();let saved='today';try{saved=localStorage.getItem('fp434_route')||'today'}catch(_e){ window.NRDiagnostics?.record('legacy.catch.260','recoverable'); }
     document.querySelector('#nrRoute-forecast .nr-forecast-tabs')?.addEventListener('keydown',event=>{const tabs=[...event.currentTarget.querySelectorAll('[role="tab"]')],current=tabs.indexOf(document.activeElement);if(current<0)return;let next=current;if(event.key==='ArrowRight')next=(current+1)%tabs.length;else if(event.key==='ArrowLeft')next=(current-1+tabs.length)%tabs.length;else if(event.key==='Home')next=0;else if(event.key==='End')next=tabs.length-1;else return;event.preventDefault();tabs[next].focus();tabs[next].click()});
     const push=new URLSearchParams(location.search).get('push');if(push)saved=push==='storm'?'expert':'today';
     fp434Go(saved,false);
@@ -27401,7 +27243,7 @@ body.fp434-app main#mainContent{padding-inline:24px!important}
         else if(typeof _activeProfile !== 'undefined') window._activeProfile = _obProfile;
       }catch(e){if(window._DEBUG)console.warn('[silent]:',e.message)}
     }
-    try { localStorage.setItem(ONBOARD_KEY, '1'); } catch(_e) { /* private mode — silent */ } // v88.8.35-fp56-P8
+    try { localStorage.setItem(ONBOARD_KEY, '1'); } catch(_e){ window.NRDiagnostics?.record('legacy.catch.261','recoverable'); } // v88.8.35-fp56-P8
     const ov = document.getElementById('onboardOverlay');
     if(ov){ ov.style.opacity='0'; ov.style.transition='opacity .4s'; setTimeout(()=>ov.style.display='none',400); }
     // v88.8.35-fp56-P5: one-time mode picker after onboarding — ask once, persist choice.
@@ -27420,7 +27262,7 @@ body.fp434-app main#mainContent{padding-inline:24px!important}
           +`<button onclick="setSimpleMode(true);document.getElementById('basicModePicker')?.remove()" style="flex:1;padding:9px 12px;border-radius:10px;border:1px solid var(--border2);background:rgba(43,212,125,.08);color:#9cd49c;font-size:12px;font-weight:700;cursor:pointer">👁 Простий<br><span style='font-size:10px;font-weight:400;color:var(--dim)'>Тільки головне</span></button>`
           +`</div>`;
         document.body.appendChild(_pick);
-      } catch(_e) { /* silent */ }
+      } catch(_e){ window.NRDiagnostics?.record('legacy.catch.262','recoverable'); }
     }, 500);
   }; // end obNext click handler
 
@@ -27748,11 +27590,11 @@ window.GJyotishLayer = (function(){
       const en=typeof _currentLang!=='undefined'&&_currentLang==='EN';
       button.textContent=en?(visible?'Traditional layer: shown':'Traditional layer: hidden'):(visible?'Традиційний шар: показано':'Традиційний шар: приховано');
     }
-    try{localStorage.setItem(key,visible?'1':'0');}catch(_e){}
+    try{localStorage.setItem(key,visible?'1':'0');}catch(_e){ window.NRDiagnostics?.record('legacy.catch.263','recoverable'); }
   }
   function init(){
     let visible=true;
-    try{visible=localStorage.getItem(key)!=='0';}catch(_e){}
+    try{visible=localStorage.getItem(key)!=='0';}catch(_e){ window.NRDiagnostics?.record('legacy.catch.264','recoverable'); }
     apply(visible);
     document.getElementById('btnJyotishVisibility')?.addEventListener('click',function(){apply(this.getAttribute('aria-pressed')!=='true');});
   }
@@ -27812,14 +27654,14 @@ document.addEventListener('DOMContentLoaded',window.GJyotishLayer.init,{once:tru
   // No personal payload is sent; each open tab clears its own session and timer.
   const RESET_SIGNAL='gindex_privacy_reset_v1';
   let resetInProgress=false,resetChannel=null;
-  try{if(typeof window.BroadcastChannel==='function')resetChannel=new window.BroadcastChannel(RESET_SIGNAL)}catch(_e){}
+  try{if(typeof window.BroadcastChannel==='function')resetChannel=new window.BroadcastChannel(RESET_SIGNAL)}catch(_e){ window.NRDiagnostics?.record('legacy.catch.265','recoverable'); }
   if(resetChannel)resetChannel.onmessage=event=>{if(event.data==='clear-local-data')clearLocalState(true)};
   window.addEventListener('storage',event=>{
     if(event.key===RESET_SIGNAL&&event.newValue==='clear-local-data')clearLocalState(true);
   });
   function notifyOtherTabs(){
-    try{if(resetChannel){resetChannel.postMessage('clear-local-data');return}}catch(_e){}
-    try{localStorage.setItem(RESET_SIGNAL,'clear-local-data');localStorage.removeItem(RESET_SIGNAL)}catch(_e){}
+    try{if(resetChannel){resetChannel.postMessage('clear-local-data');return}}catch(_e){ window.NRDiagnostics?.record('legacy.catch.266','recoverable'); }
+    try{localStorage.setItem(RESET_SIGNAL,'clear-local-data');localStorage.removeItem(RESET_SIGNAL)}catch(_e){ window.NRDiagnostics?.record('legacy.catch.267','recoverable'); }
   }
   const STATE_COPY={
     loading:['⏳ ЗАВАНТАЖЕННЯ','Очікуємо дані. Рішення не показується як нейтральне до завершення перевірки.'],
