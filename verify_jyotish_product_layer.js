@@ -1,6 +1,6 @@
 'use strict';
 const fs=require('fs');
-const source=fs.readFileSync('index.html','utf8');
+const source=require('./tools/read_runtime_source.cjs')(__dirname);
 const checks=[
   ['Jyotish passport is visible',/id="jyotishPassport"/],
   ['Panchanga is one aggregated component',/Tithi · Vara · Nakshatra · Yoga · Karana → один Pᵢ/],

@@ -1,5 +1,5 @@
 const fs=require('fs'),vm=require('vm'),assert=require('assert/strict'),path=require('path');
-const root=path.resolve(__dirname,'../..'),html=fs.readFileSync(path.join(root,'index.html'),'utf8');
+const root=path.resolve(__dirname,'../..'),html=require('../../tools/read_runtime_source.cjs')(require('path').resolve(__dirname,'../..'));
 const ctx={window:{},console};vm.createContext(ctx);
 for(const name of ['_finiteFormulaNumber','kpDayTerm','_dstValid','computeDstModifier']){
  const m=html.match(new RegExp('function '+name+'\\([^]*?\\n\\}'));

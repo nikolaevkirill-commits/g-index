@@ -1,5 +1,5 @@
 const fs=require('fs'),path=require('path'),vm=require('vm'),assert=require('assert/strict');
-const html=fs.readFileSync(path.join(__dirname,'../../index.html'),'utf8');
+const html=require('../../tools/read_runtime_source.cjs')(require('path').resolve(__dirname,'../..'));
 const cut=(a,b)=>html.slice(html.indexOf(a),html.indexOf(b,html.indexOf(a)));
 const code=cut('function withTimeout(','function fetchTextWithCORS(')+cut('function _strictDayScore(','function _publishExpertOverrides(')+cut('  let _independentPanelGeneration=0;','  window.fp463RenderIndependentForecasts=');
 const grid={innerHTML:''},boundary={textContent:'old statistics'},checks=[],signals=[];

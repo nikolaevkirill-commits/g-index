@@ -1,5 +1,5 @@
 const fs=require('fs'),vm=require('vm'),path=require('path'),assert=require('assert/strict');
-const h=fs.readFileSync(path.resolve(__dirname,'../../index.html'),'utf8');
+const h=require('../../tools/read_runtime_source.cjs')(require('path').resolve(__dirname,'../..'));
 const code=h.slice(h.indexOf('function withTimeout('),h.indexOf('// v88.8.35-fp56-P8: lightweight JSON sniff'));
 const checks=[];
 function env(fetch,play=false){const timers=new Set();const c={window:{GINDEX_PLAY_CHANNEL:play},NOAA_WORKER_URL:'https://worker.test/?url=',fetch,AbortController,DOMException,Promise,console:{warn(){}},setTimeout:(f,ms)=>{const id=setTimeout(()=>{timers.delete(id);f()},ms);timers.add(id);return id},clearTimeout:id=>{clearTimeout(id);timers.delete(id)}};vm.createContext(c);vm.runInContext(code,c);return {c,timers};}

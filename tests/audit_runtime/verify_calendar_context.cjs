@@ -3,7 +3,7 @@ const fs=require('fs'),path=require('path'),assert=require('assert/strict'),vm=r
 const {chromium}=require('playwright');
 const {resolveBrowserOptions}=require('./browser_options.cjs');
 const api=require('../../calendar_context_v1.js'),root=path.resolve(__dirname,'../..');
-const source=fs.readFileSync(path.join(root,'index.html'),'utf8');
+const source=require('../../tools/read_runtime_source.cjs')(require('path').resolve(__dirname,'../..'));
 const block=source.slice(source.indexOf('const RETRO_COVERAGE'),source.indexOf('// Планети: реальні орбітальні періоди'));
 const box={window:{}};vm.runInNewContext(block+';window.ephemeris={coverage:RETRO_COVERAGE,periods:RETRO_PERIODS};',box);
 const ephemeris=JSON.parse(JSON.stringify(box.window.ephemeris));

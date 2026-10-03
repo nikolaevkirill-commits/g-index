@@ -1,7 +1,7 @@
 'use strict';
 const fs=require('fs'),vm=require('vm'),path=require('path'),assert=require('assert/strict'),http=require('http');
 const {chromium}=require('playwright'),{resolveBrowserOptions}=require('./browser_options.cjs');
-const root=path.resolve(__dirname,'../..'),html=fs.readFileSync(path.join(root,'index.html'),'utf8');
+const root=path.resolve(__dirname,'../..'),html=require('../../tools/read_runtime_source.cjs')(require('path').resolve(__dirname,'../..'));
 const code=html.slice(html.indexOf('function withTimeout('),html.indexOf('// v88.8.35-fp56-P8: lightweight JSON sniff'));
 const blocked=['https://www.sidc.be/SILSO/DATA/SN_d_tot_V2.0.csv','https://sidc.be/SILSO/DATA/SN_m_tot_V2.0.csv','https://www.gi.alaska.edu/monitors/aurora-forecast'];
 function decoded(s){for(let i=0;i<3;i++){try{const n=decodeURIComponent(s);if(n===s)break;s=n;}catch{break;}}return s;}

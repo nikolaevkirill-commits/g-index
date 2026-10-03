@@ -13,7 +13,7 @@ for(let i=0;i<100;i++)d.record('optional.'+i,'expected_optional');
 assert.equal(d.record('invalid site','invariant'),false);assert.equal(d.record('valid','wrong'),false);
 const snap=d.snapshot();assert(Object.isFrozen(snap)&&Object.isFrozen(snap.counts)&&Object.isFrozen(snap.recent));assert(snap.recent.length<=32&&Object.keys(snap.counts).length<=64&&snap.dropped>0);
 assert.equal(snap.counts['invariant:authority.resolve'],1);assert(!JSON.stringify(snap).includes('private content'));
-const html=fs.readFileSync(path.join(root,'index.html'),'utf8'),sw=fs.readFileSync(path.join(root,'sw.js'),'utf8');
+const html=require('../../tools/read_runtime_source.cjs')(require('path').resolve(__dirname,'../..')),sw=fs.readFileSync(path.join(root,'sw.js'),'utf8');
 assert(!html.includes('eval(name)'));assert(html.includes('const handlers=Object.freeze({'));assert(html.includes("name+'_error'"));
 for(const name of ['runtime_diagnostics_v1.js','lifecycle_refresh_v1.js']){assert(html.includes(`src="./${name}"`));assert(sw.includes(`'./${name}'`))}
 const criticalSource=html+fs.readFileSync(path.join(root,'product_render_queue_v1.js'),'utf8');

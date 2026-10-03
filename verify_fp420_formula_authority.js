@@ -1,7 +1,7 @@
 const fs = require('fs');
 const vm = require('vm');
 
-const html = fs.readFileSync(__dirname + '/index.html', 'utf8');
+const html = require('./tools/read_runtime_source.cjs')(__dirname);
 const erratum = fs.readFileSync(__dirname + '/CANONICAL_SPEC_v1_4_1_ERRATUM.md', 'utf8');
 const frozen = fs.readFileSync(__dirname + '/CANONICAL_SPEC_v1_4.md', 'utf8');
 const fn = html.match(/function kpDayTerm\(kp\)\s*\{[\s\S]*?\n\}/);

@@ -133,6 +133,9 @@ def check_manifest_icons(manifest: dict, read_bytes) -> None:
 
 def main() -> None:
     index = release_bytes(ROOT / 'index.html').decode('utf-8-sig')
+    for name in ('mobile_navigation_v1.js', 'product_shell_v1.js', 'onboarding_v1.js', 'local_telemetry_v1.js', 'decision_journal_v1.js', 'audit_copy_v1.js'):
+        require(index, './'+name, 'runtime module inclusion')
+        index += '\n'+release_bytes(ROOT / name).decode('utf-8-sig')
     require(index, './engine_tag_parser.js', 'root parser script')
     require(index, "loadAliasSpec('./engine_tag_aliases_v1.json')", 'root alias loader')
     require(index, 'const TOKEN_THEMES', 'root token themes')

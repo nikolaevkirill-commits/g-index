@@ -19,7 +19,7 @@ const server=http.createServer((req,res)=>{
    await context.route('**/*',route=>{
     if(!route.request().url().startsWith(base))return route.abort();
     if(new URL(route.request().url()).pathname==='/index.html'){
-     const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
+     const html=require('../../tools/read_runtime_source.cjs')(require('path').resolve(__dirname,'../..'));
      assert(html.indexOf('src="play_channel.js"')<html.indexOf('// fp388:'));
      return route.fulfill({contentType:'text/html',body:'<html><head><script src="play_channel.js"></script></head><body>'+['privacy','terms','account-deletion'].map(n=>`<a href="${n}.html">${n}</a>`).join('')+'</body></html>'});
     }

@@ -1,5 +1,5 @@
 const fs=require('fs'),path=require('path'),vm=require('vm'),assert=require('assert/strict');
-const html=fs.readFileSync(path.join(__dirname,'../../index.html'),'utf8');
+const html=require('../../tools/read_runtime_source.cjs')(require('path').resolve(__dirname,'../..'));
 const code=html.slice(html.indexOf('// BEGIN product render queue'),html.indexOf('// END product render queue'));
 const frames=[],listeners={},calls=[],checks=[],diagnostics=[];let route='today',resolves=0,score=1,snapshot;
 const c={window:{},document:{hidden:false,querySelector:()=>({dataset:{route}}),addEventListener:(n,f)=>listeners[n]=f},console,requestAnimationFrame:f=>(frames.push(f),frames.length),canonicalForDate:d=>(resolves++,{ds:d.ds,signal:{score}}),renderUnifiedForecast:()=>{calls.push('forecast');snapshot=c.operationalForDate({ds:'2026-09-29',G:1});assert.equal(c.operationalForDate({ds:'2026-09-29',G:1}),snapshot);vm.runInContext("_productQueue.renderOrDefer('cover')",c)},renderCalendar:()=>calls.push('calendar'),renderIndependentForecasts:()=>calls.push('independent'),renderCompetitiveCover:()=>{calls.push('cover');c.operationalForDate({ds:'2026-09-29',G:1})}};

@@ -14,7 +14,7 @@ assert.equal(api.resolve(row,row.date,stamp+8*3600000+1).state,'stale');
 assert.equal(api.resolve(row,row.date,stamp-1).state,'invalid');
 assert.equal(api.resolve(row,row.date,now,true).state,'offline');
 for(const bad of [null,'3',false,4,1.5]){const x=structuredClone(row);x.channels.source_formula.value=bad;assert.equal(api.resolve(x,row.date,now).score,null);}
-const text=fs.readFileSync(path.join(root,'index.html'),'utf8');for(const m of text.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)){if(m[1].trim())new vm.Script(m[1]);}
+const text=require('../../tools/read_runtime_source.cjs')(require('path').resolve(__dirname,'../..'));for(const m of text.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)){if(m[1].trim())new vm.Script(m[1]);}
 const server=http.createServer((req,res)=>{let file=path.join(root,decodeURIComponent(new URL(req.url,'http://localhost').pathname));if(file.endsWith(path.sep))file+='index.html';if(!file.startsWith(root+path.sep)){res.writeHead(403);return res.end();}if(file===path.join(root,'INDEPENDENT_FORECAST_FEED_v1.json'))file=path.join(__dirname,'fixtures/consumer_feed_20261002.json');fs.readFile(file,(err,b)=>{if(err){res.writeHead(404);return res.end();}res.setHeader('Content-Type',file.endsWith('.css')?'text/css':file.endsWith('.js')?'application/javascript':file.endsWith('.json')?'application/json':file.endsWith('.html')?'text/html':'application/octet-stream');res.end(b);});});
 (async()=>{await new Promise(r=>server.listen(0,'127.0.0.1',r));const browser=await chromium.launch({headless:true,...(process.env.FP463_BROWSER?{executablePath:process.env.FP463_BROWSER}:{})});try{
  const page=await browser.newPage({viewport:{width:390,height:844},timezoneId:'Europe/Kyiv',serviceWorkers:'allow'}),errors=[];

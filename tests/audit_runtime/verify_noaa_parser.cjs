@@ -1,5 +1,5 @@
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),assert=require('node:assert/strict'),crypto=require('node:crypto');
-const root=path.resolve(__dirname,'../..'),h=fs.readFileSync(path.join(root,'index.html'),'utf8');
+const root=path.resolve(__dirname,'../..'),h=require('../../tools/read_runtime_source.cjs')(require('path').resolve(__dirname,'../..'));
 function fn(name){const s=h.indexOf('function '+name+'(');assert(s>=0,name);const e=h.indexOf('\n}',s);assert(e>s);return h.slice(s,e+2);}
 const ctx=vm.createContext({window:{},console,todayKyivStr:()=> '2026-09-25',fmtDate:d=>d.toISOString().slice(0,10),sunriseUTC:d=>d,computeAi:()=>({Ai:0}),kpDayTerm:k=>2-k});
 vm.runInContext(h.match(/const GFZ_AP_TABLE = \[[\s\S]*?\n\];/)[0]+['_finiteFormulaNumber','kpToApInterp','_ensureThreeDays','parse3DaySafe','renderDayForecast','_fillPlaceholderDays','uafTo3DayFormat','uafTo27DayFormat','parse45Day','apOnlyTo27Day','build27dComputed'].map(fn).join('\n'),ctx);

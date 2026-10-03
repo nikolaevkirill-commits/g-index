@@ -1,7 +1,7 @@
 const fs = require('fs');
 const vm = require('vm');
 
-const page = fs.readFileSync('index.html', 'utf8');
+const page = require('./tools/read_runtime_source.cjs')(__dirname);
 if(!page.includes('src="./push_client_v1.js"'))throw Error('Push module not loaded');
 const html = page + '\n' + fs.readFileSync('push_client_v1.js','utf8');
 // Freshness labels are presentation safeguards: stale advisory snapshots cannot

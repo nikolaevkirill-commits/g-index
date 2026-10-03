@@ -1,5 +1,5 @@
 const fs=require('fs'),path=require('path'),vm=require('vm'),assert=require('assert/strict');
-const root=path.resolve(__dirname,'../..'),h=fs.readFileSync(path.join(root,'index.html'),'utf8'),checks=[];
+const root=path.resolve(__dirname,'../..'),h=require('../../tools/read_runtime_source.cjs')(require('path').resolve(__dirname,'../..')),checks=[];
 function take(a,b){const i=h.indexOf(a),j=h.indexOf(b,i+a.length);assert(i>=0&&j>i);return h.slice(i,j)}
 const helpers=take('// BEGIN authority request ownership','// END authority request ownership');
 const authority=helpers+take('async function loadExpertDecisionRegistry(','async function loadAutoProspectiveStatus(')+take('async function loadStrongRawPolicy(','// v88.8.35: SINGLE SOURCE OF TRUTH policy.')+take('async function loadExpertOverrides(','// v88.8.51-fp128: daily_master.json loader');
