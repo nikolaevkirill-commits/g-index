@@ -4,12 +4,18 @@ on:
   push:
     branches: [deploy]
     paths:
+      - 'core_runtime_v1.js'
+      - 'src/legacy_core/**'
+      - 'tools/read_runtime_source.cjs'
       - 'index.html'
       - 'engine_tag_parser.js'
       - 'engine_tag_aliases_v1.json'
       - '.github/workflows/root-dashboard-tag-parser.yml'
   pull_request:
     paths:
+      - 'core_runtime_v1.js'
+      - 'src/legacy_core/**'
+      - 'tools/read_runtime_source.cjs'
       - 'index.html'
       - 'engine_tag_parser.js'
       - 'engine_tag_aliases_v1.json'
@@ -27,11 +33,12 @@ jobs:
       - uses: actions/checkout@v5
       - name: Static assertions
         run: |
-          grep -q './engine_tag_parser.js' index.html
-          grep -q './engine_tag_aliases_v1.json' index.html
-          grep -q 'TOKEN_THEMES' index.html
-          grep -q 'Engine: ${d.engineEng' index.html
-          ! grep -q 'const TAG_THEMES' index.html
+          node -e "require('fs').writeFileSync(process.env.RUNNER_TEMP+'/neborhythm-runtime.html',require('./tools/read_runtime_source.cjs')(process.cwd()))"
+          grep -q './engine_tag_parser.js' "$RUNNER_TEMP/neborhythm-runtime.html"
+          grep -q './engine_tag_aliases_v1.json' "$RUNNER_TEMP/neborhythm-runtime.html"
+          grep -q 'TOKEN_THEMES' "$RUNNER_TEMP/neborhythm-runtime.html"
+          grep -q 'Engine: ${d.engineEng' "$RUNNER_TEMP/neborhythm-runtime.html"
+          ! grep -q 'const TAG_THEMES' "$RUNNER_TEMP/neborhythm-runtime.html"
           node --check engine_tag_parser.js
       - name: Alias smoke
         run: |
@@ -45,4 +52,4 @@ jobs:
           JS
       - name: Preserve existing canonical score path
         run: |
-          grep -q 'getEngineScore(new Date(d.ds' index.html
+          grep -q 'getEngineScore(new Date(d.ds' "$RUNNER_TEMP/neborhythm-runtime.html"

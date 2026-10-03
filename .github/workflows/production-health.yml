@@ -33,19 +33,20 @@ jobs:
           test -f privacy.html
           test -f terms.html
           test -f account-deletion.html
-          grep -q './engine_tag_parser.js' index.html
-          grep -q './engine_tag_aliases_v1.json' index.html
-          grep -q 'TOKEN_THEMES' index.html
-          grep -q 'getEngineScore(new Date(d.ds' index.html
-          grep -q 'gindex_kp_hourly_snapshot_v1' index.html
-          grep -q 'МАЙБУТНІЙ ПІК · ПРОГНОЗ' index.html
-          grep -q 'ДОБОВЕ ЗВЕДЕННЯ' index.html
-          grep -q 'SYNTHETIC FALLBACK · не прогноз NOAA' index.html
-          grep -q 'gindex_kp_hourly_last_revision_v1' index.html
-          grep -q 'ГЕОМАГНІТНИЙ ФОН ЗАРАЗ · ОКРЕМИЙ ПОКАЗНИК' index.html
-          grep -q 'Колір Kp не означає сприятливий день' index.html
-          grep -q 'підтримує, але не є дозволом' index.html
-          grep -q 'кольорова лінія = G_raw-контекст' index.html
+          node -e "require('fs').writeFileSync(process.env.RUNNER_TEMP+'/neborhythm-runtime.html',require('./tools/read_runtime_source.cjs')(process.cwd()))"
+          grep -q './engine_tag_parser.js' "$RUNNER_TEMP/neborhythm-runtime.html"
+          grep -q './engine_tag_aliases_v1.json' "$RUNNER_TEMP/neborhythm-runtime.html"
+          grep -q 'TOKEN_THEMES' "$RUNNER_TEMP/neborhythm-runtime.html"
+          grep -q 'getEngineScore(new Date(d.ds' "$RUNNER_TEMP/neborhythm-runtime.html"
+          grep -q 'gindex_kp_hourly_snapshot_v1' "$RUNNER_TEMP/neborhythm-runtime.html"
+          grep -q 'МАЙБУТНІЙ ПІК · ПРОГНОЗ' "$RUNNER_TEMP/neborhythm-runtime.html"
+          grep -q 'ДОБОВЕ ЗВЕДЕННЯ' "$RUNNER_TEMP/neborhythm-runtime.html"
+          grep -q 'SYNTHETIC FALLBACK · не прогноз NOAA' "$RUNNER_TEMP/neborhythm-runtime.html"
+          grep -q 'gindex_kp_hourly_last_revision_v1' "$RUNNER_TEMP/neborhythm-runtime.html"
+          grep -q 'ГЕОМАГНІТНИЙ ФОН ЗАРАЗ · ОКРЕМИЙ ПОКАЗНИК' "$RUNNER_TEMP/neborhythm-runtime.html"
+          grep -q 'Колір Kp не означає сприятливий день' "$RUNNER_TEMP/neborhythm-runtime.html"
+          grep -q 'підтримує, але не є дозволом' "$RUNNER_TEMP/neborhythm-runtime.html"
+          grep -q 'кольорова лінія = G_raw-контекст' "$RUNNER_TEMP/neborhythm-runtime.html"
           grep -q "new URL('../', window.location.href)" deploy/index.html
           grep -q 'unregister' deploy/sw.js
           node --check engine_tag_parser.js
@@ -87,8 +88,12 @@ jobs:
             curl -fL -H 'Cache-Control: no-cache' --retry 3 --retry-delay 2 --connect-timeout 10 --max-time 40 \
               "https://nikolaevkirill-commits.github.io/g-index/?health_sha=${GITHUB_SHA}&attempt=${attempt}" \
               -o /tmp/root.html
-            if grep -q 'engine_tag_parser.js' /tmp/root.html && \
-               grep -q 'TOKEN_THEMES' /tmp/root.html && \
+            curl -fL -H 'Cache-Control: no-cache' --retry 3 --retry-delay 2 --connect-timeout 10 --max-time 40 \
+              "https://nikolaevkirill-commits.github.io/g-index/core_runtime_v1.js?health_sha=${GITHUB_SHA}&attempt=${attempt}" -o /tmp/core-runtime.js
+            cat /tmp/root.html /tmp/core-runtime.js > /tmp/root-runtime.html
+            if cmp -s core_runtime_v1.js /tmp/core-runtime.js && \
+               grep -q 'engine_tag_parser.js' /tmp/root-runtime.html && \
+               grep -q 'TOKEN_THEMES' /tmp/root-runtime.html && \
                grep -Fq "$expected_title" /tmp/root.html; then
               echo "Live canonical root PASS on attempt ${attempt}."
               break
