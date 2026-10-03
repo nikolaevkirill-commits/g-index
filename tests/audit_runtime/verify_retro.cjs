@@ -1,6 +1,7 @@
 const fs=require('fs'),vm=require('vm'),assert=require('assert'),path=require('path'),crypto=require('crypto');
+const readSource=file=>path.resolve(file)===path.resolve(__dirname,'../../index.html')?require('../../tools/read_runtime_source.cjs')(path.resolve(__dirname,'../..')):fs.readFileSync(file,'utf8');
 const source=process.env.RETRO_TEST_HTML||path.join(__dirname,'../../index.html');
-const html=fs.readFileSync(source,'utf8');
+const html=readSource(source);
 const a=html.indexOf('const RETRO_COVERAGE ='),b=html.indexOf('// Планети: реальні орбітальні періоди',a);
 const ctx={Date,Number};vm.createContext(ctx);vm.runInContext(html.slice(a,b),ctx);
 const test=(p,d)=>ctx.isRetrograde(p,new Date(d));
@@ -30,4 +31,4 @@ if(process.env.RETRO_REFERENCE_DIR){
  }
  assert(independent>3700);
 }
-console.log(JSON.stringify({status:'PASS',boundaries,independent_daily_sign_checks:independent,source_sha256:crypto.createHash('sha256').update(fs.readFileSync(source)).digest('hex')}));
+console.log(JSON.stringify({status:'PASS',boundaries,independent_daily_sign_checks:independent,source_sha256:crypto.createHash('sha256').update(readSource(source)).digest('hex')}));

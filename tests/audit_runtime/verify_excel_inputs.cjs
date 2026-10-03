@@ -1,6 +1,7 @@
 const fs=require('fs'),vm=require('vm'),assert=require('assert'),path=require('path'),crypto=require('crypto');
+const readSource=file=>path.resolve(file)===path.resolve(__dirname,'../../index.html')?require('../../tools/read_runtime_source.cjs')(path.resolve(__dirname,'../..')):fs.readFileSync(file,'utf8');
 const source=process.env.EXCEL_TEST_HTML||path.join(__dirname,'../../index.html');
-const html=fs.readFileSync(source,'utf8');
+const html=readSource(source);
 const start=html.indexOf('async function handleBacktestFile(input) {');
 const code=html.slice(start,html.indexOf('\n// ═',start));
 async function run(rows){
@@ -18,5 +19,5 @@ async function run(rows){
  r=await run([{date:'2026-02-30',G:2,Kp:0}]);assert.equal(r.calls.length,0);
  r=await run([{date:'2026-09-01',G:2,Kp:0},{date:'2026-09-01',G:1,Kp:1}]);assert.equal(r.calls.length,0);assert(r.nodes.btFileLabel.textContent.includes('Повтор дати'));assert.equal(r.nodes.btStats.style.display,'none');
  r=await run([{date:'2026-09-01',G:'2bad',category:'4bad',Kp:0}]);assert(r.nodes.btAccuracy.innerHTML.includes('(0/0)'));
- console.log(JSON.stringify({status:'PASS',source_sha256:crypto.createHash('sha256').update(fs.readFileSync(source)).digest('hex'),groups:13}));
+ console.log(JSON.stringify({status:'PASS',source_sha256:crypto.createHash('sha256').update(readSource(source)).digest('hex'),groups:13}));
 })().catch(e=>{console.error(e);process.exit(1)});

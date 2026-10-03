@@ -131,9 +131,35 @@ def check_manifest_icons(manifest: dict, read_bytes) -> None:
         raise SystemExit('FAIL manifest requires any-purpose PNG icons at 192 and 512')
 
 
+def verify_core_modules():
+    functions = {}
+    for name in ('views', 'authority', 'data', 'calculations', 'interaction_helpers'):
+        source = release_bytes(ROOT / ('src/legacy_core/' + name + '.js')).decode('utf-8-sig')
+        cursor = 0
+        for match in re.finditer(r'/\* NR_FN_BEGIN (\d{3}) \*/([\s\S]*?)/\* NR_FN_END \1 \*/', source):
+            if source[cursor:match.start()].strip() or match[1] in functions:
+                raise SystemExit('FAIL unmapped or duplicate core function')
+            functions[match[1]] = match[2]
+            cursor = match.end()
+        if source[cursor:].strip(): raise SystemExit('FAIL unmapped core source')
+    used = set()
+    def replace(match):
+        key = match[1]
+        if key not in functions or key in used: raise SystemExit('FAIL invalid core slot')
+        used.add(key)
+        return functions[key]
+    bootstrap = release_bytes(ROOT / 'src/legacy_core/bootstrap.js').decode('utf-8-sig')
+    assembled = re.sub(r'/\* NR_FN_SLOT (\d{3}) \*/', replace, bootstrap)
+    expected = release_bytes(ROOT / 'core_runtime_v1.js').decode('utf-8-sig')
+    if not used or len(used) != len(functions) or assembled.replace('\r\n', '\n') != expected.replace('\r\n', '\n'):
+        raise SystemExit('FAIL core runtime differs from source modules')
+    print('PASS core runtime matches source modules')
+
+
 def main() -> None:
+    verify_core_modules()
     index = release_bytes(ROOT / 'index.html').decode('utf-8-sig')
-    for name in ('mobile_navigation_v1.js', 'product_shell_v1.js', 'onboarding_v1.js', 'local_telemetry_v1.js', 'decision_journal_v1.js', 'audit_copy_v1.js'):
+    for name in ('core_runtime_v1.js', 'mobile_navigation_v1.js', 'product_shell_v1.js', 'onboarding_v1.js', 'local_telemetry_v1.js', 'decision_journal_v1.js', 'audit_copy_v1.js'):
         require(index, './'+name, 'runtime module inclusion')
         index += '\n'+release_bytes(ROOT / name).decode('utf-8-sig')
     require(index, './engine_tag_parser.js', 'root parser script')
