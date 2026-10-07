@@ -1,0 +1,24 @@
+<!doctype html><html lang="uk"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NeboRhythm · незалежні результати A–D</title>
+<style>body{font:16px system-ui;background:#081326;color:#dce8ff;margin:0;padding:20px}main{max-width:760px;margin:auto}label{display:block;margin:16px 0}select,input,button{font:inherit;box-sizing:border-box;width:100%;padding:12px;border-radius:8px}button{background:#27b978;color:#04170f;border:0}p{line-height:1.5}#status{color:#ffc45c}code{overflow-wrap:anywhere}</style>
+<main><h1>Фактичний результат дня · A–D</h1><p>Заповнюйте після завершення доби Europe/Kyiv. Не переглядайте оцінки каналів. Тут немає прогнозних балів. Якщо ви бачили прогноз, цей запис не відповідає засліпленому протоколу; використайте особистий щоденник.</p>
+<p>Шкала кожної осі: −3 — різко несприятливо; −2 — несприятливо; −1 — помірно несприятливо; 0 — нейтрально або змішано; +1 — помірно сприятливо; +2 — сприятливо; +3 — різко сприятливо.</p>
+<form id="outcome"><label>Завершений день<select id="day" required><option value="">Оберіть дату</option><option>2026-10-03</option><option>2026-10-04</option><option>2026-10-05</option><option>2026-10-06</option></select></label>
+<label>A · Стан або настрій<select id="A" required><option value="">Оберіть</option><option value="-3">-3</option><option value="-2">-2</option><option value="-1">-1</option><option value="0">+0</option><option value="1">+1</option><option value="2">+2</option><option value="3">+3</option></select></label><label>B · Продуктивність<select id="B" required><option value="">Оберіть</option><option value="-3">-3</option><option value="-2">-2</option><option value="-1">-1</option><option value="0">+0</option><option value="1">+1</option><option value="2">+2</option><option value="3">+3</option></select></label><label>C · Фізичний стан<select id="C" required><option value="">Оберіть</option><option value="-3">-3</option><option value="-2">-2</option><option value="-1">-1</option><option value="0">+0</option><option value="1">+1</option><option value="2">+2</option><option value="3">+3</option></select></label><label>D · Зовнішні події<select id="D" required><option value="">Оберіть</option><option value="-3">-3</option><option value="-2">-2</option><option value="-1">-1</option><option value="0">+0</option><option value="1">+1</option><option value="2">+2</option><option value="3">+3</option></select></label>
+<label>Джерело спостереження<input id="source" required placeholder="Наприклад, особистий щоденник"></label>
+<label>Посилання або ідентифікатор запису для перевірки походження<input id="provenance" required></label>
+<label><input id="blind" type="checkbox" required style="width:auto"> Я оцінюю фактичний досвід без перегляду оцінок каналів.</label>
+<button id="save">Завантажити запис A–D</button><p id="status" role="status"></p></form>
+<p>Середнє чотирьох осей і клас обчислюються автоматично. Файл не змінює журнал самостійно.</p>
+<p>Перевірка в папці проєкту: <code>python outcome_intake_fp463.py OUTCOME_INTAKE_FP463.json</code>. Для внесення перевіреного запису додайте <code>--commit</code>. Повторні дати, незавершені дні та невідповідні записи відхиляються.</p></main>
+<script>
+const contractHash='d06f9a49586388e73f7123a96bd78ca9c7dd2661dbc1607e77b616511355329a';
+document.getElementById('outcome').onsubmit=e=>{e.preventDefault();const status=document.getElementById('status');
+const axes=Object.fromEntries(['A','B','C','D'].map(k=>[k,Number(document.getElementById(k).value)]));
+const source=document.getElementById('source').value.trim(),provenance=document.getElementById('provenance').value.trim();
+if(!source||!provenance||/pdf|expert|forecast|прогноз/i.test(source)){status.textContent='Вкажіть джерело фактичного спостереження, не прогноз.';return;}
+const composite=Object.values(axes).reduce((a,b)=>a+b,0)/4;
+const row={target_date:document.getElementById('day').value,captured_at_utc:new Date().toISOString(),axes,composite,observed_class:composite<=-.5?'negative':composite>=.5?'positive':'neutral',blinded_to_channel_scores:document.getElementById('blind').checked,source_id:source,provenance_token:provenance};
+const doc={schema:'fp463_outcome_intake_v2',target_contract_sha256:contractHash,records:[row]};
+const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(doc,null,2)],{type:'application/json'}));a.download='OUTCOME_INTAKE_FP463.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);status.textContent='Файл створено. Запис ще не імпортовано. Середнє A–D: '+composite;};
+</script></html>

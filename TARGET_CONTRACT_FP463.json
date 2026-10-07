@@ -1,0 +1,32 @@
+{
+  "schema": "fp463_daily_outcome_target_v1",
+  "frozen_at_utc": "2026-09-03T15:00:00Z",
+  "timezone": "Europe/Kyiv",
+  "target": "next_day_observed_outcome_composite",
+  "prediction_scale": {
+    "-3": "strongly adverse",
+    "-2": "adverse",
+    "-1": "mildly adverse",
+    "0": "neutral or mixed",
+    "1": "mildly favorable",
+    "2": "favorable",
+    "3": "strongly favorable"
+  },
+  "outcome_axes": {
+    "A": "state_or_mood",
+    "B": "productivity",
+    "C": "physical_state",
+    "D": "external_events"
+  },
+  "outcome_rule": "Each axis is an integer from -3 to +3. Composite is the arithmetic mean of all four axes, recorded after the target day without viewing channel scores.",
+  "class_rule": "negative if composite <= -0.5; neutral if -0.5 < composite < 0.5; positive if composite >= 0.5",
+  "success": "predicted class equals observed class",
+  "error": "predicted class differs from observed class; absolute error is abs(prediction_score - outcome_composite)",
+  "miss": "prediction absent before target-day start, outcome absent after close, invalid provenance, unblinded capture, or contract violation; misses are excluded from accuracy and included in coverage denominator",
+  "channel_scope": {
+    "expert_pdf": "independent author forecast; evaluated as a forecast, not as ground truth",
+    "frozen_engine": "expert-imitation model; evaluated separately and never described as independent of expert labels",
+    "tanita_image": "separate shadow decoder; score_effect remains 0 until promotion gate passes"
+  },
+  "forbidden": ["post-hoc target changes", "backdating", "pooling missing outcomes as failures", "using PDF as outcome", "ensemble tuning before the 100-pair gate"]
+}

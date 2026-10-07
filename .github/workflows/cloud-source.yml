@@ -1,0 +1,85 @@
+name: cloud source calculation
+on:
+  schedule:
+    - cron: '17 */2 * * *'
+  workflow_dispatch:
+    inputs:
+      mode:
+        type: choice
+        options: [verify, publish]
+        default: verify
+      watchdog_nonce:
+        description: Correlation only; requires independent Cloudflare cron evidence
+        type: string
+        required: false
+permissions:
+  contents: read
+concurrency:
+  group: cloud-source
+  cancel-in-progress: false
+jobs:
+  source:
+    if: github.ref == 'refs/heads/deploy'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '24'}
+      - run: python -m pip install cryptography==50.0.1
+      - name: Decrypt private sources in temporary directory
+        env:
+          NR_SOURCE_BUNDLE_KEY: ${{ secrets.NR_SOURCE_BUNDLE_KEY }}
+        run: python tools/cloud/unpack.py "$RUNNER_TEMP/nr-private"
+      - name: Calculate and independently replay current inputs
+        run: python tools/cloud/refresh.py --private "$RUNNER_TEMP/nr-private" --site .
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: cloud-consumer-data
+          path: consumer_cloud/
+          retention-days: 14
+
+  publish:
+    needs: source
+    if: github.ref == 'refs/heads/deploy' && (github.event_name == 'schedule' || inputs.mode == 'publish')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pages: write
+    steps:
+      - uses: actions/checkout@v5
+        with: {ref: deploy}
+      - uses: actions/download-artifact@v4
+        with:
+          name: cloud-consumer-data
+          path: consumer_cloud
+      - name: Validate isolated publication paths and replay proof
+        run: python tools/cloud/validate_publication.py
+      - name: Publish only the cloud consumer feed
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name 'NeboRhythm source runner'
+          git config user.email 'actions@users.noreply.github.com'
+          git add -- consumer_cloud/forecast.json consumer_cloud/noaa
+          git diff --cached --check -- consumer_cloud/forecast.json
+          git commit -m "Refresh verified cloud consumer calculation"
+          git pull --rebase origin deploy
+          git push origin HEAD:deploy
+          gh api --method POST repos/${{ github.repository }}/pages/builds
+      - name: Verify actual Pages publication
+        env:
+          PUBLIC_BASE_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
+          WATCHDOG_NONCE: ${{ inputs.watchdog_nonce }}
+        run: python tools/cloud/verify_publication.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cloud-publication-evidence
+          path: cloud-publication.json
+          retention-days: 14

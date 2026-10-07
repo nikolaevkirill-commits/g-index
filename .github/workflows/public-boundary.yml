@@ -1,0 +1,12 @@
+name: public boundary
+on: [push, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  boundary:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: python tools/public/verify_boundary.py

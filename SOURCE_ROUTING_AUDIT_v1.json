@@ -1,0 +1,319 @@
+{
+  "schema": "source_routing_audit_v1",
+  "generated_at": "2026-10-07T05:36:57+00:00",
+  "overall_ok": true,
+  "hard_failures": [],
+  "warnings": [
+    "kp_observed_forecast:synthetic_horizon:10/14"
+  ],
+  "rules": [
+    "Verified expert PDF has decision priority; Engine is an explicit fallback.",
+    "Observed, 3-day and 27-day Kp products are not interchangeable.",
+    "Panchanga P_i is already inside G_raw and is never counted as a second vote.",
+    "BGS/ENLIL/Bz/Vsw/protons/alerts are safety advisories with score_effect=0.",
+    "Frozen Engine artifacts are audited by declared version and date coverage, not file mtime.",
+    "Missing numeric inputs remain unavailable/null and are never converted to zero."
+  ],
+  "routes": [
+    {
+      "id": "expert",
+      "role": "decision",
+      "primary": "EXPERT_DECISION_REGISTRY_v1.json",
+      "fallbacks": [
+        "expert_overrides_v3.json",
+        "engine_scores.json"
+      ],
+      "consumer": "Hero/week/3-day/27-day final decision",
+      "max_age_h": null,
+      "source": "revision-aware expert PDF; validated Engine only when no PDF",
+      "lifecycle": "revision_aware_registry",
+      "selected": "EXPERT_DECISION_REGISTRY_v1.json",
+      "status": "ok",
+      "candidates": [
+        {
+          "file": "EXPERT_DECISION_REGISTRY_v1.json",
+          "exists": true,
+          "size": 499223,
+          "age_hours": 0.115
+        },
+        {
+          "file": "expert_overrides_v3.json",
+          "exists": true,
+          "size": 289612,
+          "age_hours": 132.557
+        },
+        {
+          "file": "engine_scores.json",
+          "exists": true,
+          "size": 198061,
+          "age_hours": 1818.696
+        }
+      ],
+      "missing_policy": "unavailable/null; never substitute numeric zero",
+      "semantic": {}
+    },
+    {
+      "id": "kp_observed_forecast",
+      "role": "decision_input",
+      "primary": "future_kp.json",
+      "fallbacks": [],
+      "consumer": "G_now, forecast raw rail, hourly Kp alert",
+      "max_age_h": 6,
+      "source": "NOAA SWPC observed + 3-day forecast; synthetic long-horizon placeholders are explicitly non-forecast",
+      "selected": "future_kp.json",
+      "status": "ok",
+      "candidates": [
+        {
+          "file": "future_kp.json",
+          "exists": true,
+          "size": 26046,
+          "age_hours": 0.007
+        }
+      ],
+      "missing_policy": "unavailable/null; never substitute numeric zero",
+      "semantic": {
+        "real_points": 4,
+        "synthetic_points": 10,
+        "sources": [
+          "NOAA_fact",
+          "NOAA_forecast",
+          "missing_daily_mean"
+        ],
+        "noaa_transport_ok": true,
+        "current_date": "2026-10-07",
+        "current_retrieval_age_hours": 0.007,
+        "current_decision_input_fresh": true
+      }
+    },
+    {
+      "id": "engine",
+      "role": "decision_fallback",
+      "primary": "engine_scores.json",
+      "fallbacks": [],
+      "consumer": "automatic decision when verified PDF is absent",
+      "max_age_h": null,
+      "source": "frozen Engine v18.5; missing dates are unavailable, never zero",
+      "lifecycle": "frozen_model_artifact",
+      "selected": "engine_scores.json",
+      "status": "ok",
+      "candidates": [
+        {
+          "file": "engine_scores.json",
+          "exists": true,
+          "size": 198061,
+          "age_hours": 1818.696
+        }
+      ],
+      "missing_policy": "unavailable/null; never substitute numeric zero",
+      "semantic": {
+        "lifecycle": "frozen_model_artifact",
+        "version": "engine_v18.5_frozen_V25-fu29_v5.1_canonical_2026-05-03",
+        "coverage_rows": 564,
+        "coverage_start": "2025-06-16",
+        "coverage_end": "2026-12-31",
+        "current_date_present": true,
+        "mtime_is_live_freshness": false,
+        "freshness_rule": "audit version and date coverage; file mtime is not live-feed age"
+      }
+    },
+    {
+      "id": "calendar",
+      "role": "decision_component",
+      "primary": "FUTURE_CALENDAR_ADVISORY_v1.json",
+      "fallbacks": [
+        "engine_scores.json"
+      ],
+      "consumer": "Panchanga/Jyotish context and P_i decomposition",
+      "max_age_h": null,
+      "source": "local astronomy + two-year Tanita/Jyotish calendar",
+      "lifecycle": "generated_reference",
+      "selected": "FUTURE_CALENDAR_ADVISORY_v1.json",
+      "status": "ok",
+      "candidates": [
+        {
+          "file": "FUTURE_CALENDAR_ADVISORY_v1.json",
+          "exists": true,
+          "size": 63689,
+          "age_hours": 1720.988
+        },
+        {
+          "file": "engine_scores.json",
+          "exists": true,
+          "size": 198061,
+          "age_hours": 1818.696
+        }
+      ],
+      "missing_policy": "unavailable/null; never substitute numeric zero",
+      "semantic": {}
+    },
+    {
+      "id": "space_weather",
+      "role": "safety_advisory",
+      "primary": "SPACE_WEATHER_CONTEXT_v1.json",
+      "fallbacks": [
+        "BGS_SPACE_WEATHER_v1.json"
+      ],
+      "consumer": "operational warning only; score_effect=0",
+      "max_age_h": 8,
+      "source": "NOAA RTSW/GOES/alerts/ENLIL + BGS 3-day",
+      "selected": "SPACE_WEATHER_CONTEXT_v1.json",
+      "status": "ok",
+      "candidates": [
+        {
+          "file": "SPACE_WEATHER_CONTEXT_v1.json",
+          "exists": true,
+          "size": 9936,
+          "age_hours": 0.0
+        },
+        {
+          "file": "BGS_SPACE_WEATHER_v1.json",
+          "exists": true,
+          "size": 1552,
+          "age_hours": 0.001
+        }
+      ],
+      "missing_policy": "unavailable/null; never substitute numeric zero",
+      "semantic": {
+        "delivery": {
+          "status": "live",
+          "attempted_at": "2026-10-07T05:36:50+00:00",
+          "age_hours": 0.0
+        },
+        "source_health": {
+          "mag": true,
+          "wind": true,
+          "dst": true,
+          "hp30": true,
+          "hp60": true,
+          "protons": true,
+          "xray": true,
+          "alerts": true,
+          "enlil": true,
+          "probabilities": true
+        }
+      }
+    },
+    {
+      "id": "bgs",
+      "role": "independent_advisory",
+      "primary": "BGS_SPACE_WEATHER_v1.json",
+      "fallbacks": [],
+      "consumer": "geomagnetic risk cross-check; score_effect=0",
+      "max_age_h": 12,
+      "source": "British Geological Survey 3-day forecast",
+      "selected": "BGS_SPACE_WEATHER_v1.json",
+      "status": "ok",
+      "candidates": [
+        {
+          "file": "BGS_SPACE_WEATHER_v1.json",
+          "exists": true,
+          "size": 1552,
+          "age_hours": 0.001
+        }
+      ],
+      "missing_policy": "unavailable/null; never substitute numeric zero",
+      "semantic": {}
+    },
+    {
+      "id": "silso",
+      "role": "shadow_audit",
+      "primary": "outputs/data_control/phase2/SILSO_SN_d_tot_V2.0.csv",
+      "fallbacks": [],
+      "consumer": "historical Sn ablation only; score_effect=0",
+      "max_age_h": 48,
+      "source": "WDC-SILSO daily total sunspot number",
+      "selected": "outputs/data_control/phase2/SILSO_SN_d_tot_V2.0.csv",
+      "status": "ok",
+      "candidates": [
+        {
+          "file": "outputs/data_control/phase2/SILSO_SN_d_tot_V2.0.csv",
+          "exists": true,
+          "size": 2897272,
+          "age_hours": 0.119
+        }
+      ],
+      "missing_policy": "unavailable/null; never substitute numeric zero",
+      "semantic": {
+        "refresh": {
+          "schema": "silso_refresh_status_v1",
+          "generated_at_utc": "2026-10-07T05:29:50Z",
+          "status": "LIVE",
+          "source_url": "https://www.sidc.be/SILSO/DATA/SN_d_tot_V2.0.csv",
+          "target": "outputs/data_control/phase2/SILSO_SN_d_tot_V2.0.csv",
+          "network_ok": true,
+          "cache_used": false,
+          "cache_age_hours": 0,
+          "bytes": 2897272,
+          "max_cache_age_hours": 168,
+          "latest_observation": {
+            "date": "2026-09-30",
+            "sn": 30,
+            "provisional": false
+          },
+          "score_effect": 0,
+          "role": "historical shadow audit + dashboard context only",
+          "message": "SILSO daily series downloaded and validated."
+        }
+      }
+    },
+    {
+      "id": "aia",
+      "role": "shadow_audit",
+      "primary": "AIA_VERNADSKY_DAILY_v1.json",
+      "fallbacks": [],
+      "consumer": "independent geomagnetic shadow; score_effect=0",
+      "max_age_h": 48,
+      "source": "BGS HAPI / Vernadsky observatory",
+      "selected": "AIA_VERNADSKY_DAILY_v1.json",
+      "status": "ok",
+      "candidates": [
+        {
+          "file": "AIA_VERNADSKY_DAILY_v1.json",
+          "exists": true,
+          "size": 392653,
+          "age_hours": 0.137
+        }
+      ],
+      "missing_policy": "unavailable/null; never substitute numeric zero",
+      "semantic": {
+        "refresh": {
+          "schema": "aia_vernadsky_refresh_status_v1",
+          "generated_at_utc": "2026-10-07T05:28:44+00:00",
+          "status": "LIVE",
+          "source_url": "https://imag-data.bgs.ac.uk/GIN_V1/hapi/data",
+          "dataset": "aia/best-avail/PT1M/xyzf",
+          "network_ok": true,
+          "cache_used": false,
+          "cache_age_hours": 0.0,
+          "max_cache_age_hours": 168,
+          "data_max_date": "2026-10-04",
+          "days": 472,
+          "score_effect": 0,
+          "role": "shadow_audit",
+          "message": "BGS HAPI refresh completed"
+        }
+      }
+    },
+    {
+      "id": "auto_feed",
+      "role": "dashboard_feed",
+      "primary": "AUTO_FORECAST_FEED_v1.json",
+      "fallbacks": [],
+      "consumer": "dashboard automatic forecast/provenance",
+      "max_age_h": 8,
+      "source": "assembled from current routed inputs",
+      "selected": "AUTO_FORECAST_FEED_v1.json",
+      "status": "ok",
+      "candidates": [
+        {
+          "file": "AUTO_FORECAST_FEED_v1.json",
+          "exists": true,
+          "size": 61019,
+          "age_hours": 0.0
+        }
+      ],
+      "missing_policy": "unavailable/null; never substitute numeric zero",
+      "semantic": {}
+    }
+  ]
+}
