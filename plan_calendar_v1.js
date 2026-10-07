@@ -11,12 +11,13 @@ function instant(date,time){
 const stamp=t=>new Date(t).toISOString().replace(/[-:]/g,'').replace(/\.\d{3}Z$/,'Z');
 const escape=s=>String(s||'').replace(/\\/g,'\\\\').replace(/\r\n|\r|\n/g,'\\n').replace(/;/g,'\\;').replace(/,/g,'\\,');
 function fold(line){let result='',bytes=0;for(const c of line){const n=new TextEncoder().encode(c).length;if(bytes+n>75){result+='\r\n ';bytes=1}result+=c;bytes+=n}return result}
+const tr=s=>host.NRLocale?.text(s)||s;
 function create(plan,now=Date.now()){
  const t=instant(plan?.date,plan?.time);if(t===null)throw new Error('Некоректний або неоднозначний київський час.');
  return ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//NeboRhythm//Local plan//UK','CALSCALE:GREGORIAN','BEGIN:VEVENT',
  'UID:'+host.crypto.randomUUID()+'@neborhythm.local','DTSTAMP:'+stamp(now),'DTSTART:'+stamp(t),
- 'SUMMARY:'+escape(plan.priority||'Мій план'), 'DESCRIPTION:'+escape([plan.note,plan.contact?'Контакт: '+plan.contact:'','Час плану: '+plan.time+' Europe/Kyiv'].filter(Boolean).join('\n')),
- 'BEGIN:VALARM','ACTION:DISPLAY','TRIGGER:PT0M','DESCRIPTION:'+escape(plan.priority||'Мій план'),'END:VALARM','END:VEVENT','END:VCALENDAR'].map(fold).join('\r\n')+'\r\n';
+ 'SUMMARY:'+escape(plan.priority||tr('Мій план')), 'DESCRIPTION:'+escape([plan.note,plan.contact?tr('Контакт: ')+plan.contact:'',tr('Час плану: ')+plan.time+' Europe/Kyiv'].filter(Boolean).join('\n')),
+ 'BEGIN:VALARM','ACTION:DISPLAY','TRIGGER:PT0M','DESCRIPTION:'+escape(plan.priority||tr('Мій план')),'END:VALARM','END:VEVENT','END:VCALENDAR'].map(fold).join('\r\n')+'\r\n';
 }
 function download(){
  const status=document.getElementById('nrReminderStatus');

@@ -1,7 +1,7 @@
 importScripts('./runtime_diagnostics_v1.js');
 // G-Index service worker. HTML/data are network-first; static shell is cache-first.
 // Bump CACHE_VERSION whenever index.html or a cached shell asset changes.
-const CACHE_VERSION = 'fp469-v59-daily-flow'; // planning copy matches the available functionality
+const CACHE_VERSION = 'fp469-v60-languages-panchanga'; // planning copy matches the available functionality
 const CACHE_PREFIX = 'gindex-'; // G-Index cache namespace; do not remove the prefix.
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${CACHE_VERSION}`;
 const DATA_CACHE = `${CACHE_PREFIX}data-${CACHE_VERSION}`;
@@ -21,6 +21,10 @@ async function deliveryResponse(response,mode){
 const SHELL_ASSETS = [
   './',
   './index.html',
+  './locale_core_v1.js',
+  './locale_overview_v1.js',
+  './locale_bridge_v1.js',
+  './panchanga_reference_check_v1.json',
   './play_channel.js',
   './runtime_diagnostics_v1.js',
   './lifecycle_refresh_v1.js',

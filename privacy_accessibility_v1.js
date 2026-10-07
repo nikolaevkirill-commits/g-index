@@ -1,6 +1,7 @@
 // Local privacy controls and accessible shell lifecycle.
 (function(){
   'use strict';
+  const tr=s=>window.NRLocale?.text(s)||s;
   // Includes legacy writers through lsSet and variable/template keys.
   const STORAGE_POLICY={prefixes:['gindex_','gidx_','gix_','g_history_','gPrev_','neborythm.','nr_canonical_snapshot_','personalData_'],keys:['personalData','last_geo_lat','last_geo_lon','last_kp_known','last_dst_known','last_bz_known','last_vsw_known','last_xray_class','g_telemetry','v86_heat','v86_radial','fp434_route','cmp_mode','mnavTab','dgd_cache_v1','__vlDiag_last'],exportExcluded:['gindex_session_token']};
   function ownedKeys(storage){return Array.from({length:storage.length},(_,i)=>storage.key(i)).filter(k=>k&&(STORAGE_POLICY.keys.includes(k)||STORAGE_POLICY.prefixes.some(p=>k.startsWith(p))))}
@@ -65,7 +66,7 @@
     }finally{if(url!==null){const created=url;setTimeout(()=>URL.revokeObjectURL(created),0)}}
   };
   window.fp450ClearLocalData=function(){
-    if(!confirm('Видалити локальні профілі, геолокацію, журнали, плани, налаштування та сесію входу Неборитму? Сторінка перезавантажиться. Публічний офлайн-кеш і серверний обліковий запис залишаться.'))return;
+    if(!confirm(tr('Видалити локальні профілі, геолокацію, журнали, плани, налаштування та сесію входу Неборитму? Сторінка перезавантажиться. Публічний офлайн-кеш і серверний обліковий запис залишаться.')))return;
     clearLocalState(false);
   };
   function clearLocalState(fromPeer){

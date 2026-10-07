@@ -1,6 +1,31 @@
 (function(){
 'use strict';
 let rows={},selected={},mounted=false,topicFilter='all';
+const NAK=['Ashwini','Bharani','Krittika','Rohini','Mrigashira','Ardra','Punarvasu','Pushya','Ashlesha','Magha','Purva Phalguni','Uttara Phalguni','Hasta','Chitra','Swati','Vishakha','Anuradha','Jyeshtha','Mula','Purva Ashadha','Uttara Ashadha','Shravana','Dhanishtha','Shatabhisha','Purva Bhadrapada','Uttara Bhadrapada','Revati'];
+const YOGA=['Vishkambha','Priti','Ayushman','Saubhagya','Shobhana','Atiganda','Sukarma','Dhriti','Shula','Ganda','Vriddhi','Dhruva','Vyaghata','Harshana','Vajra','Siddhi','Vyatipata','Variyana','Parigha','Shiva','Siddha','Sadhya','Shubha','Shukla','Brahma','Indra','Vaidhriti'];
+let panchFeedPromise,panchFeedSha='',panchProofPromise;
+function panchProof(){return panchProofPromise||(panchProofPromise=fetch('panchanga_reference_check_v1.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).catch(()=>null));}
+
+function panchFeed(){return panchFeedPromise||(panchFeedPromise=fetch('panchanga_shadow_feed_v1.json',{cache:'no-store'}).then(async r=>{if(!r.ok)throw Error('HTTP '+r.status);const bytes=await r.arrayBuffer();panchFeedSha=globalThis.crypto?.subtle?Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes)),v=>v.toString(16).padStart(2,'0')).join(''):'';return JSON.parse(new TextDecoder().decode(bytes).replace(/^\uFEFF/,''))}).catch(e=>{panchFeedPromise=null;throw e}));}
+async function renderPanchPreview(root,ds){
+ const box=root.querySelector('.nr-o-panch-values');if(!box)return;box.dataset.date=ds;box.textContent='Завантаження календарних складових…';
+ try{
+  const feed=await panchFeed();if(box.dataset.date!==ds)return;
+  const proof=await panchProof();if(box.dataset.date!==ds)return;const checked=proof&&panchFeedSha&&proof.feed_sha256===panchFeedSha?proof.days?.[ds]:null;
+  const provenance=checked?'<strong>'+ (checked.differences_over_one_minute.length?'Є розбіжність із державним календарем. ':'')+'</strong>Звірено переходів: '+checked.count+' · найбільша різниця: '+checked.max_abs_seconds.toFixed(1)+' с. <a href="https://packolkata.imd.gov.in/panchang/en/asvina" target="_blank" rel="noopener noreferrer">PAC/IMD · 2026–2027</a>. Дата звірки — за індійським календарем; моменти переведено в UTC. Це не перевірка прогнозу особистих подій.':'Локальний розрахунковий календар. Звірку цієї дати з державним джерелом ще не виконано.';
+  const day=feed.days?.[ds];if(!day||day.timezone!=='Europe/Kyiv')throw Error('date or timezone missing');
+  const keys=['tithi','nakshatra','yoga','karana'];
+  const starts=keys.map(k=>Date.parse(day.components?.[k]?.segments?.[0]?.start_utc));
+  if(starts.some(x=>!Number.isFinite(x)))throw Error('incomplete components');
+  const at=ds===today()?Date.now():Math.max(...starts);
+  const labels={tithi:'Tithi · місячний день',nakshatra:'Nakshatra · стоянка Місяця',yoga:'Yoga · сума довгот',karana:'Karana · півтітхі'};
+  const values=keys.map(k=>{const segs=day.components[k].segments;const seg=segs.find(s=>Date.parse(s.start_utc)<=at&&at<Date.parse(s.end_utc));if(!seg)throw Error('uncovered instant');return {key:k,value:seg.value,segs};});
+  const weekday=new Intl.DateTimeFormat('uk-UA',{timeZone:'Europe/Kyiv',weekday:'long'}).format(new Date(ds+'T12:00:00Z'));
+  const transitions=values.flatMap(x=>x.segs.slice(1).map(s=>({at:Date.parse(s.start_utc),key:x.key}))).filter(e=>e.at>at).sort((a,b)=>a.at-b.at);
+  const next=transitions[0],when=next?new Intl.DateTimeFormat('uk-UA',{timeZone:'Europe/Kyiv',hour:'2-digit',minute:'2-digit'}).format(new Date(next.at)):null;
+  box.innerHTML='<p class="nr-o-panch-date">'+esc(dateLabel(ds))+' · '+(ds===today()?'зараз':'на початок календарної доби')+' · Київ</p><dl>'+values.map(x=>'<div><dt>'+labels[x.key]+'</dt><dd>'+esc(x.key==='nakshatra'?NAK[Number(x.value)-1]||x.value:x.key==='yoga'?YOGA[Number(x.value)-1]||x.value:x.value)+'</dd></div>').join('')+'<div><dt>Vara · день тижня</dt><dd>'+esc(weekday)+'</dd></div></dl><p>'+(next?'Найближчий перехід: '+esc(labels[next.key].split(' · ')[0])+' о '+esc(when)+'.':'Подальших переходів у цій добі немає.')+'</p><small class="nr-panch-provenance">'+provenance+'</small>';
+ }catch(e){if(box.dataset.date===ds)box.textContent='Для обраної дати повні складові недоступні. Значення іншого дня не підставляються.';}
+}
 function fmt(value){if(!Number.isFinite(value))return '—';const n=Number(value.toFixed(2));return n<0?'−'+Math.abs(n):n>0?'+'+n:'0';}
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const today=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Kyiv',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
@@ -25,7 +50,7 @@ function settings(){
  host.prepend(box);box.querySelector('#nrDeviceZone').textContent=Intl.DateTimeFormat().resolvedOptions().timeZone;
  box.querySelector('[data-export]').onclick=()=>window.fp450ExportLocalData?.();
  box.querySelector('[data-clear]').onclick=()=>window.fp450ClearLocalData?.();
- let saved='auto';try{saved=localStorage.getItem('gindex_theme')||'auto'}catch(e){window.NRDiagnostics?.record('ui.theme_read','recoverable')}
+ let saved='dark';try{saved=localStorage.getItem('gindex_theme')||'dark'}catch(e){window.NRDiagnostics?.record('ui.theme_read','recoverable')}
  theme(saved);
  box.querySelector('select').onchange=e=>{theme(e.target.value);let saved=true;try{localStorage.setItem('gindex_theme',e.target.value)}catch(error){saved=false;window.NRDiagnostics?.record('ui.theme_write','recoverable')}document.getElementById('nrThemeStatus').textContent=saved?'Оформлення збережено.':'Оформлення змінено на цей сеанс; сховище недоступне.'};
 }
@@ -59,7 +84,7 @@ function routeTools(root,route){
  const panel=document.createElement('section');panel.className='nr-o-route-tools';
  if(route==='forecast')panel.innerHTML='<p>Порівняйте оцінки та джерело фізичного прогнозу. Далекий орієнтир має інший горизонт, ніж короткий прогноз.</p><div class="nr-o-horizon-list" aria-label="Оцінки та горизонт прогнозу"></div>';
  else panel.innerHTML='<p>Знайдіть дати з потрібними позначками традиційного календаря. Це пошук тем, а не рейтинг найкращих днів.</p><div class="nr-o-topic-filters" role="group" aria-label="Тема календаря">'+[['all','Усі теми'],...TOPICS].map(t=>'<button type="button" data-topic="'+t[0]+'" aria-pressed="'+(t[0]===topicFilter)+'">'+t[1]+'</button>').join('')+'</div><p class="nr-o-topic-status" role="status"></p><div class="nr-o-topic-days" aria-label="Дати за темою"></div>';
- root.querySelector('.nr-o-heading').after(panel);
+ root.querySelector('.nr-o-hero').after(panel);
  panel.addEventListener('click',e=>{const b=e.target.closest('[data-topic]');if(!b)return;topicFilter=b.dataset.topic;const first=dayRange().find(d=>topicMatches(d,topicFilter));if(first&&!topicMatches(selected[route],topicFilter))selected[route]=first;render(root);});
 }
 function renderRouteTools(root,route,dates,ds){
@@ -88,11 +113,21 @@ function mount(){
   const hero=document.createElement('div');hero.className='nr-o-hero';
   for(const selector of ['.nr-o-heading','label','.nr-o-state','.nr-o-verdict','.nr-o-scale'])hero.append(root.querySelector(selector));
   root.prepend(hero);
+  const sky=document.createElement('div');sky.className='nr-o-sky-art';sky.setAttribute('aria-hidden','true');
+  sky.innerHTML='<svg viewBox="0 0 220 220" fill="none"><defs><radialGradient id="nrSkyGlow"><stop stop-color="#f8dfa1" stop-opacity=".20"/><stop offset="1" stop-color="#d7ae61" stop-opacity="0"/></radialGradient></defs><circle cx="110" cy="110" r="108" fill="url(#nrSkyGlow)"/><g stroke="currentColor"><circle cx="110" cy="110" r="74"/><ellipse cx="110" cy="110" rx="35" ry="74" transform="rotate(-28 110 110)"/><ellipse cx="110" cy="110" rx="88" ry="25" transform="rotate(-28 110 110)"/><path d="M110 23v18m0 138v18M23 110h18m138 0h18"/><circle cx="110" cy="110" r="25"/><circle cx="173" cy="78" r="5" fill="currentColor"/></g></svg>';
+  hero.append(sky);
+  if(route==='today'){
+   const weather=root.querySelector('.nr-o-layers section:first-child');weather.classList.add('nr-o-weather-top');hero.after(weather);
+   const strip=root.querySelector('.nr-o-next');weather.after(strip);
+   const panch=document.createElement('section');panch.className='nr-o-panch-preview';panch.innerHTML='<span class="nr-o-eyebrow">ПАНЧАНГА · П’ЯТЬ СКЛАДОВИХ ДНЯ</span><h2>Ритми неба</h2><p>Сонце, Місяць і переходи традиційного календаря.</p><details><summary>Складові обраного дня</summary><div class="nr-o-panch-values" role="status"></div></details><button type="button" data-panch>Відкрити Панчангу сьогодні →</button>';
+   root.querySelector('.nr-o-reasons').after(panch);panch.querySelector('[data-panch]').onclick=()=>window.fp434Go('panch',true);
+  }
+
   const legends=document.createElement('details');legends.className='nr-o-legends';legends.innerHTML='<summary>Значення позначок і джерело</summary><div></div>';root.querySelector('.nr-o-reasons').append(legends);
   if(route==='today'){
    const journey=document.createElement('nav');journey.className='nr-o-journey';journey.setAttribute('aria-label','Ваш день');
    journey.innerHTML='<button type="button" data-step="plan"><span>01 · СПЛАНУВАТИ</span><b>Мій план <i aria-hidden="true">↗</i></b></button><button type="button" data-step="calendar"><span>02 · ПОРІВНЯТИ</span><b>Обрати дату <i aria-hidden="true">↗</i></b></button><button type="button" data-step="outcome"><span>03 · ПІДСУМУВАТИ</span><b>Записати результат <i aria-hidden="true">↗</i></b></button>';
-   hero.after(journey);journey.addEventListener('click',e=>{const step=e.target.closest('[data-step]')?.dataset.step;if(step==='outcome')openOutcome();else if(step)window.fp434Go(step,true)});
+   root.querySelector('.nr-o-next').after(journey);journey.addEventListener('click',e=>{const step=e.target.closest('[data-step]')?.dataset.step;if(step==='outcome')openOutcome();else if(step)window.fp434Go(step,true)});
   }
   const practicalBody=root.querySelector('.nr-o-practical>p');const more=document.createElement('details');more.className='nr-o-topic-detail';more.innerHTML='<summary>Пояснення тем дня</summary>';practicalBody.before(more);more.append(practicalBody);
   host.append(root,legacy);selected[route]=today();routeTools(root,route);
@@ -115,6 +150,7 @@ function buttons(host,dates,active){
 }
 function render(root){
  const route=root.dataset.overview,dates=dayRange(),ds=dates.includes(selected[route])?selected[route]:today();selected[route]=ds;
+ renderPanchPreview(root,ds);
  const select=root.querySelector('select');if([...select.options].map(x=>x.value).join()!==dates.join())select.replaceChildren(...dates.map(d=>new Option(dateLabel(d),d)));select.value=ds;
  window.NRCalendarContext?.render(root.querySelector('.nr-o-context'),window.nrRetroEphemeris?.(),ds);
  const r=resolve(ds),own=rows[ds]?.channels?.source_formula||{};
