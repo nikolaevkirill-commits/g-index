@@ -6,7 +6,7 @@ const YOGA=['Vishkambha','Priti','Ayushman','Saubhagya','Shobhana','Atiganda','S
 let panchFeedPromise,panchFeedSha='',panchProofPromise;
 function panchProof(){return panchProofPromise||(panchProofPromise=fetch('panchanga_reference_check_v1.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).catch(()=>null));}
 
-function panchFeed(){return panchFeedPromise||(panchFeedPromise=fetch('panchanga_shadow_feed_v1.json',{cache:'no-store'}).then(async r=>{if(!r.ok)throw Error('HTTP '+r.status);const bytes=await r.arrayBuffer();panchFeedSha=globalThis.crypto?.subtle?Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes)),v=>v.toString(16).padStart(2,'0')).join(''):'';return JSON.parse(new TextDecoder().decode(bytes).replace(/^\uFEFF/,''))}).catch(e=>{panchFeedPromise=null;throw e}));}
+function panchFeed(){return panchFeedPromise||(panchFeedPromise=fetch('panchanga_shadow_feed_v1.json',{cache:'no-store'}).then(async r=>{if(!r.ok)throw Error('HTTP '+r.status);const bytes=await r.arrayBuffer();panchFeedSha=globalThis.crypto?.subtle?Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(new TextDecoder().decode(bytes).replace(/\r\n/g,'\n')))),v=>v.toString(16).padStart(2,'0')).join(''):'';return JSON.parse(new TextDecoder().decode(bytes).replace(/^\uFEFF/,''))}).catch(e=>{panchFeedPromise=null;throw e}));}
 async function renderPanchPreview(root,ds){
  const box=root.querySelector('.nr-o-panch-values');if(!box)return;box.dataset.date=ds;box.textContent='Завантаження календарних складових…';
  try{
