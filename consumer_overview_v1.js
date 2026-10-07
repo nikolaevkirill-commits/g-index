@@ -12,7 +12,9 @@ async function renderPanchPreview(root,ds){
  try{
   const feed=await panchFeed();if(box.dataset.date!==ds)return;
   const proof=await panchProof();if(box.dataset.date!==ds)return;const checked=proof&&panchFeedSha&&proof.feed_sha256===panchFeedSha?proof.days?.[ds]:null;
-  const provenance=checked?'<strong>'+ (checked.differences_over_one_minute.length?'Є розбіжність із державним календарем. ':'')+'</strong>Звірено переходів: '+checked.count+' · найбільша різниця: '+checked.max_abs_seconds.toFixed(1)+' с. <a href="https://packolkata.imd.gov.in/panchang/en/asvina" target="_blank" rel="noopener noreferrer">PAC/IMD · 2026–2027</a>. Дата звірки — за індійським календарем; моменти переведено в UTC. Це не перевірка прогнозу особистих подій.':'Локальний розрахунковий календар. Звірку цієї дати з державним джерелом ще не виконано.';
+  const sourceMonth=checked?.source_url==='https://packolkata.imd.gov.in/panchang/en/kartika'?'kartika':'asvina';
+  const iaeProvenance=checked?.iae?'<br><a href="https://packolkata.imd.gov.in/download/IAE2026.zip" target="_blank" rel="noopener noreferrer">Indian Astronomical Ephemeris 2026</a>: Звірено переходів: '+checked.iae.count+' · найбільша різниця: '+checked.iae.max_abs_seconds.toFixed(1)+' с. Обидва видання — PAC/IMD; це не незалежні джерела.':'';
+  const provenance=checked?'<strong>'+ (checked.differences_over_one_minute.length?'Є розбіжність із державним календарем. ':'')+'</strong><a href="https://packolkata.imd.gov.in/panchang/en/'+sourceMonth+'" target="_blank" rel="noopener noreferrer">Rashtriya Panchang · 2026–2027</a>: Звірено переходів: '+checked.count+' · найбільша різниця: '+checked.max_abs_seconds.toFixed(1)+' с.'+iaeProvenance+' Дата звірки — за індійським календарем; моменти переведено в UTC. Це не перевірка прогнозу особистих подій.':'Локальний розрахунковий календар. Звірку цієї дати з державним джерелом ще не виконано.';
   const day=feed.days?.[ds];if(!day||day.timezone!=='Europe/Kyiv')throw Error('date or timezone missing');
   const keys=['tithi','nakshatra','yoga','karana'];
   const starts=keys.map(k=>Date.parse(day.components?.[k]?.segments?.[0]?.start_utc));

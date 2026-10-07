@@ -2479,3 +2479,5 @@ NRLocale.register([
     "Analyse, revue, observation"
   ]
 ]);
+
+NRLocale.register([["Обидва видання — PAC/IMD; це не незалежні джерела.", "Both publications are from PAC/IMD; these are not independent sources.", "Ambas publicaciones son de PAC/IMD; no son fuentes independientes.", "Les deux publications proviennent du PAC/IMD ; ces sources ne sont pas indépendantes."]]);
