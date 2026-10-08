@@ -25,6 +25,7 @@ function weatherPanel(root){
  const tr=s=>window.NRLocale?.text(s)||s;
  const status=weatherError?{state:'unavailable'}:weatherStatus(weatherData);
  const label=tr('Попередження NOAA · найближчі три доби');
+ renderWeatherBrief(root,status,box);
  box.style.borderInlineStart=status.state==='available'&&(Object.values(status.current).some(v=>v>0)||status.forecasts.some(f=>f.g>0))?'4px solid #d99e36':'';
  if(status.state!=='available')box.innerHTML='<h2>'+esc(label)+'</h2><p>'+esc(tr(weatherRequest?'Перевіряємо попередження…':'Попередження недоступні або застарілі. Це не означає відсутності бурі.'))+'</p>';
  else{
@@ -65,6 +66,31 @@ async function renderPanchPreview(root,ds){
   box.innerHTML='<p class="nr-o-panch-date">'+esc(dateLabel(ds))+' · '+(ds===today()?'зараз':'на початок календарної доби')+' · Київ</p><dl>'+values.map(x=>'<div><dt>'+labels[x.key]+'</dt><dd>'+esc(x.key==='nakshatra'?NAK[Number(x.value)-1]||x.value:x.key==='yoga'?YOGA[Number(x.value)-1]||x.value:x.value)+'</dd></div>').join('')+'<div><dt>Vara · день тижня</dt><dd>'+esc(weekday)+'</dd></div></dl><p>'+(next?'Найближчий перехід: '+esc(labels[next.key].split(' · ')[0])+' о '+esc(when)+'.':'Подальших переходів у цій добі немає.')+'</p><small class="nr-panch-provenance">'+provenance+'</small>';
  }catch(e){if(box.dataset.date===ds)box.textContent='Для обраної дати повні складові недоступні. Значення іншого дня не підставляються.';}
 }
+
+function renderWeatherBrief(root,status,full){
+ if(!['today','forecast'].includes(root.dataset.overview))return;
+ const hero=root.querySelector('.nr-o-hero'),tr=s=>window.NRLocale?.text(s)||s;
+ let brief=root.querySelector('[data-weather-brief]');
+ if(!brief){brief=document.createElement('button');brief.type='button';brief.dataset.weatherBrief='';brief.className='nr-o-brief nr-o-weather-brief';brief.setAttribute('translate','no');hero.insertBefore(brief,hero.querySelector('[data-panch-countdown]'));brief.onclick=()=>{full.setAttribute('tabindex','-1');full.focus({preventScroll:true});full.scrollIntoView({block:'start'});};}
+ let body;
+ if(status.state!=='available')body='<span>'+esc(tr(weatherRequest?'Перевіряємо попередження…':'Попередження недоступні або застарілі. Це не означає відсутності бурі.'))+'</span>';
+ else{
+  const strongest=status.forecasts.reduce((a,b)=>!a||b.g>a.g?b:a,null);
+  const issued=NRPresentation.dateFormatter(window.NRLocale?.locale||'uk-UA',{timeZone:'UTC',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date(status.stamp));
+  body='<span>'+esc(tr('Спостерігається: ')+['G','S','R'].map(k=>k+status.current[k]).join(' · '))+'</span><span>'+esc(strongest?tr('Прогноз G · максимум: ')+'G'+strongest.g+' · '+strongest.date+' UTC':tr('Прогноз попереджень недоступний.'))+'</span><small>'+esc(tr('Оновлено NOAA: ')+issued+' UTC')+'</small>';
+ }
+ brief.dataset.active=String(status.state==='available'&&(Object.values(status.current).some(v=>v>0)||status.forecasts.some(f=>f.g>0)));
+ brief.innerHTML='<strong>'+esc(tr('NOAA · попередження та ймовірності'))+' ↗</strong>'+body;
+}
+function renderReasonBrief(root,r,strongest){
+ if(!['today','forecast'].includes(root.dataset.overview))return;
+ const hero=root.querySelector('.nr-o-hero'),tr=s=>window.NRLocale?.text(s)||s;
+ let brief=root.querySelector('[data-reason-brief]');
+ if(!brief){brief=document.createElement('button');brief.type='button';brief.dataset.reasonBrief='';brief.className='nr-o-brief nr-o-reason-brief';brief.setAttribute('translate','no');hero.querySelector('.nr-o-scale').after(brief);brief.onclick=()=>{const full=root.querySelector('.nr-o-reasons');full.setAttribute('tabindex','-1');full.focus({preventScroll:true});full.scrollIntoView({block:'start'});};}
+ const names={Kp:'Геомагнітна складова',Moon:'Місячна складова',Eclipse:'Складова затемнення'};
+ brief.innerHTML='<strong>'+esc(tr('Чому така оцінка'))+' ↗</strong>'+(r.available&&strongest.length?strongest.map(f=>'<span class="nr-o-brief-factor"><span>'+esc(tr(names[f.factor]||f.factor))+'</span><b>'+esc(fmt(f.value))+'</b></span>').join(''):'<span>'+esc(tr(r.available?'Ненульових внесків немає.':'Актуальну оцінку не показуємо'))+'</span>');
+}
+
 function fmt(value){if(!Number.isFinite(value))return '—';const n=Number(value.toFixed(2));return n<0?'−'+Math.abs(n):n>0?'+'+n:'0';}
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const today=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Kyiv',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
@@ -254,6 +280,7 @@ function render(root){
  buttons(root.querySelector('.nr-o-next'),dates.slice(1,4),ds);buttons(root.querySelector('.nr-o-days'),dates.slice(0,14),ds);
  const factors=Array.isArray(own.factors)?own.factors:[],calendar=factors.filter(x=>x.factor!=='Kp'&&x.value!==0),kp=factors.find(x=>x.factor==='Kp');
  const strongest=factors.filter(x=>Number.isFinite(x.value)&&x.value!==0).sort((a,b)=>Math.abs(b.value)-Math.abs(a.value)).slice(0,3);
+ renderReasonBrief(root,r,strongest);
  root.querySelector('.nr-o-reasons div').innerHTML=strongest.length?strongest.map(x=>'<p>'+'<span>'+esc(x.factor==='Kp'?'Геомагнітна складова':x.factor==='Moon'?'Місячна складова':x.factor==='Eclipse'?'Складова затемнення':x.factor)+'</span> <strong>'+esc(fmt(x.value))+'</strong></p>').join('')+'<p class="nr-o-boundary">'+(r.available?'Найбільші внески; повна сума до округлення й обмеження: '+esc(fmt(own.raw))+'.':'Внески збереженого розрахунку; актуальний підсумок недоступний.')+'</p>':'Складові для цієї дати недоступні.';
  root.querySelector('.nr-o-legends div').innerHTML=strongest.map(x=>'<p>'+esc(factorName(x.factor))+'</p>').join('');
  const minus=factors.filter(x=>!['Kp','Moon','Eclipse'].includes(x.factor)&&Number.isFinite(x.value)&&x.value<0);
