@@ -175,11 +175,29 @@ function render(root){
  root.querySelector('.nr-o-weather').textContent=live?(live.usable?'Зараз Kp '+live.kp.toFixed(1)+' · '+live.label:'Поточний Kp недоступний — запасне число не показуємо.'):(r.available&&typeof own.kp_daily_max==='number'?'Прогноз добового максимуму Kp '+own.kp_daily_max+' · '+(own.kp_timezone||'часовий пояс не вказано'):'Немає актуального фізичного прогнозу для цієї дати.');
  root.querySelector('.nr-o-factors div').innerHTML=factors.length?`<h4>Календарні складові</h4>${calendar.map(x=>`<p>${esc(factorName(x.factor))} <strong>${esc(fmt(x.value))}</strong></p>`).join('')||'<p>Ненульових внесків немає.</p>'}<h4>Внесок прогнозного Kp</h4><p>Добовий максимум: ${esc(own.kp_daily_max??'—')} · доба ${esc(own.kp_timezone||'не уточнена')}. ${own.kp_input?.fallback?'Резерв: 27-денний прогноз за добу UTC; це не максимум локальної доби.':own.kp_source==='NOAA_3day_slots'?'Повне покриття трьохгодинними NOAA-слотами.':''}</p><p>Внесок у формулу: ${esc(fmt(kp?.value))}. Сума до перетворення: ${esc(fmt(own.raw))}.</p><p>Фізичний показник і календарні складові поєднані правилом моделі; причинний вплив на події не підтверджено.</p>`:'Розклад складових у цьому знімку недоступний.';
  root.querySelector('.nr-o-reference p').textContent='Експертне джерело: '+fmt(r.expertReference)+'. Формула та календарні дані мають спільне походження. Збіг не є незалежним підтвердженням точності.';
+ const ref=root.querySelector('.nr-o-reference');
+ let versionNote=ref.querySelector('[data-version-note]');if(!versionNote){versionNote=document.createElement('p');versionNote.dataset.versionNote='';ref.append(versionNote);}
+ versionNote.textContent='Однаковість версій вхідних даних не підтверджена. Різниця з PDF сама по собі не доводить помилку формули.';
+ let save=root.querySelector('[data-save-calculation]');if(!save){save=document.createElement('button');save.type='button';save.dataset.saveCalculation='';root.querySelector('.nr-o-provenance').after(save);}
+ save.textContent='Зберегти розрахунок';save.disabled=!rows[ds];
+ save.onclick=()=>{const data=snapshot(ds),url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download='NeboRhythm-'+ds+'-calculation.json';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);};
  const covered=Object.keys(rows).filter(d=>rows[d]?.channels?.source_formula?.available===true).sort();
  root.querySelector('.nr-o-provenance').textContent=`Розраховано: ${time(r.generated_at)}. ${r.kp_source==='NOAA_3day_slots'?'NOAA отримано: '+time(r.source_retrieved_at)+'. Час випуску у джерелі відсутній.':'NOAA випущено: '+time(r.source_issued_at)+'.'} Час показано для Europe/Kyiv. Покриття знімка: ${covered.length?dateLabel(covered.at(-1)):'немає'}.`+(r.state==='stale'&&r.lastScore!==null?' Остання збережена оцінка: '+fmt(r.lastScore)+'.':'');
 }
+function snapshot(ds){
+ const r=resolve(ds),own=rows[ds]?.channels?.source_formula||{},input=own.kp_input||{};
+ const pick=(obj,keys)=>Object.fromEntries(keys.map(k=>[k,obj[k]??null]));
+ return {schema:'neborhythm_calculation_snapshot_v1',date:ds,saved_at:new Date().toISOString(),display_timezone:'Europe/Kyiv',
+  display:{state:r.state,available:r.available===true,score:r.available===true?r.score:null},
+  calculation:pick(own,['generated_at','available','value','raw','threshold_policy','kp_source','kp_daily_max','kp_timezone']),
+  source:pick(input,['source','issued_at','retrieved_at','raw_sha256','kp','timezone','kp_statistic','fallback','slot_count','expected_slots']),
+  provenance:{generated_at:r.generated_at??null,issued_at:r.source_issued_at??null,retrieved_at:r.source_retrieved_at??null},
+  factors:(own.factors||[]).map(f=>pick(f,['factor','value'])),
+  expert_reference:{score:Number.isFinite(r.expertReference)?r.expertReference:null,input_version_match:'unverified'},
+  scope:'Saved calculation inputs; not verified predictive accuracy. No personal notes or plans.'};
+}
 function update(next){if(next)rows=next;if(!mount())return;document.querySelectorAll('[data-overview]').forEach(render);window.nrRefreshCategoryContext?.();}
-window.NRConsumerOverview={update,category,openOutcome};
+window.NRConsumerOverview={update,category,openOutcome,snapshot};
 window.addEventListener('online',()=>update());window.addEventListener('offline',()=>update());
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)update();});
 setInterval(()=>update(),60000);
