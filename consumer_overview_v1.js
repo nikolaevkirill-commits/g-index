@@ -236,9 +236,47 @@ function snapshot(ds){
   expert_reference:{score:Number.isFinite(r.expertReference)?r.expertReference:null,input_version_match:'unverified'},
   scope:'Saved calculation inputs; not verified predictive accuracy. No personal notes or plans.'};
 }
-function update(next){if(next)rows=next;if(!mount())return;document.querySelectorAll('[data-overview]').forEach(render);window.nrRefreshCategoryContext?.();}
+function update(next){if(next)rows=next;if(!mount())return;document.querySelectorAll('[data-overview]').forEach(render);window.NRLocalContext?.render();window.nrRefreshCategoryContext?.();}
 window.NRConsumerOverview={update,category,openOutcome,snapshot};
 window.addEventListener('online',()=>update());window.addEventListener('offline',()=>update());
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)update();});
 setInterval(()=>update(),60000);
+})();
+
+(function(){
+'use strict';
+const key='gindex_local_context_v1',tr=s=>window.NRLocale?.text(s)||s;
+let location=null,source='saved',message='',busy=false;
+function valid(x){if(!x||typeof x.lat!=='number'||typeof x.lon!=='number'||!Number.isFinite(x.lat)||!Number.isFinite(x.lon)||Math.abs(x.lat)>90||Math.abs(x.lon)>180)return false;try{new Intl.DateTimeFormat('en',{timeZone:x.zone});return typeof x.zone==='string'&&Number.isFinite(Date.parse(x.saved_at))}catch{return false}}
+try{const saved=JSON.parse(localStorage.getItem(key));if(valid(saved))location=saved}catch{}
+const dateIn=(t,zone)=>new Intl.DateTimeFormat('en-CA',{timeZone:zone,year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(t));
+function solar(x,now=Date.now()){
+ if(!valid(x)||typeof sunRiseSetUTC_Meeus!=='function')return {state:'unavailable'};
+ const date=dateIn(now,x.zone),mid=Date.parse(date+'T12:00:00Z'),result={state:'calculated',date,zone:x.zone,sunrise:null,sunset:null};
+ for(let i=-2;i<=2;i++){const pair=sunRiseSetUTC_Meeus(new Date(mid+i*86400000),x.lat,x.lon);for(const k of ['sunrise','sunset'])if(Number.isFinite(pair[k]?.getTime())&&dateIn(pair[k],x.zone)===date)result[k]=pair[k].toISOString();}
+ return result;
+}
+function persist(x,how){x.auto=how==='device';location=x;source=how;try{localStorage.setItem(key,JSON.stringify(x));message='Місце збережено лише на пристрої.'}catch{message='Місце діє лише в цьому сеансі.'}render();const f=document.querySelector('#nrLocalContext form');if(f){f.elements.lat.value=x.lat;f.elements.lon.value=x.lon;f.elements.zone.value=x.zone}}
+function locate(){if(busy)return;busy=true;message='Визначаємо місце…';render();if(!navigator.geolocation){busy=false;message='Місце недоступне. Введіть координати вручну.';render();return}navigator.geolocation.getCurrentPosition(p=>{busy=false;const x={lat:p.coords.latitude,lon:p.coords.longitude,zone:Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC',saved_at:new Date().toISOString()};if(valid(x))persist(x,'device');else{message='Некоректні координати або часовий пояс.';render()}},()=>{busy=false;message='Місце недоступне. Введіть координати вручну.';render()},{timeout:10000,maximumAge:0});}
+function render(){
+ const host=document.getElementById('nrRoute-panch');if(!host)return;
+ let box=document.getElementById('nrLocalContext');
+ if(!box){box=document.createElement('section');box.id='nrLocalContext';box.className='nr-panch-section';box.innerHTML='<h2 data-title></h2><p data-position></p><button type="button" data-locate></button><details><summary data-manual></summary><form><label><span data-lat></span><input name="lat" type="number" min="-90" max="90" step="any" required></label><label><span data-lon></span><input name="lon" type="number" min="-180" max="180" step="any" required></label><label><span data-zone></span><input name="zone" type="text" required></label><button type="submit" data-save></button><button type="button" data-clear></button></form></details><p role="status" data-status></p><p data-solar></p><p data-limit></p><details><summary data-scope-title></summary><p data-scope></p></details>';
+  (host.querySelector('#nrPanchGuide')||host).append(box);
+  const form=box.querySelector('form');form.style.cssText='display:grid;gap:12px;margin:14px 0';box.querySelectorAll('label').forEach(e=>e.style.cssText='display:grid;gap:6px');box.querySelectorAll('input').forEach(e=>e.style.cssText='box-sizing:border-box;width:100%;min-height:44px;padding:10px;font:inherit;color:var(--nr-copy);background:var(--nr-panel);border:1px solid var(--nr-line);border-radius:8px');box.querySelectorAll('button').forEach(e=>e.className='nr-btn secondary');form.elements.lat.value=location?.lat??'';form.elements.lon.value=location?.lon??'';form.elements.zone.value=location?.zone||Intl.DateTimeFormat().resolvedOptions().timeZone;
+  box.querySelector('[data-locate]').onclick=locate;
+  form.onsubmit=e=>{e.preventDefault();const x={lat:Number(form.elements.lat.value),lon:Number(form.elements.lon.value),zone:form.elements.zone.value.trim(),saved_at:new Date().toISOString()};if(!form.elements.lat.value.trim()||!form.elements.lon.value.trim()||!valid(x)){message='Некоректні координати або часовий пояс.';render();return}persist(x,'manual')};
+  box.querySelector('[data-clear]').onclick=()=>{try{localStorage.removeItem(key);location=null;message='Місце видалено.';form.reset();form.elements.zone.value=Intl.DateTimeFormat().resolvedOptions().timeZone}catch{message='Не вдалося видалити місце.'}render()};
+ }
+ const put=(selector,text)=>{const e=box.querySelector(selector);if(e.textContent!==text)e.textContent=text};
+ for(const [selector,text] of Object.entries({'[data-title]':'Сонце для вашого місця','[data-locate]':'Визначити моє місце','[data-manual]':'Ввести або змінити місце','[data-lat]':'Широта (−90…90)','[data-lon]':'Довгота (−180…180)','[data-zone]':'Часовий пояс IANA','[data-save]':'Зберегти місце','[data-clear]':'Видалити місце','[data-scope-title]':'Які показники залежать від місця'}))put(selector,tr(text));
+ box.querySelector('[data-locate]').disabled=busy;put('[data-status]',tr(message));
+ put('[data-position]',location?tr(source==='device'?'Координати пристрою: ':source==='manual'?'Введені координати: ':'Збережені координати: ')+location.lat.toFixed(3)+', '+location.lon.toFixed(3)+' · '+location.zone+' · '+new Date(location.saved_at).toLocaleString(window.NRLocale?.locale,{timeZone:location.zone}):tr('Місце ще не визначено. Координати іншого міста не підставляються.'));
+ const s=solar(location),fmt=t=>new Intl.DateTimeFormat(window.NRLocale?.locale,{timeZone:location.zone,hour:'2-digit',minute:'2-digit'}).format(new Date(t));
+ put('[data-solar]',s.state==='calculated'?s.date+' · '+tr('Схід Сонця: ')+(s.sunrise?fmt(s.sunrise):tr('немає переходу горизонту'))+' · '+tr('Захід Сонця: ')+(s.sunset?fmt(s.sunset):tr('немає переходу горизонту')):tr('Схід і захід недоступні без коректного місця.'));
+ put('[data-limit]',tr('Розрахунок для рівного горизонту; погода й рельєф можуть змінити спостережуваний час. Перевірте часовий пояс, особливо в подорожі. Цей блок не змінює бал дня.'));
+ put('[data-scope]',tr('Kp, Ap, Dst — спільні геомагнітні індекси. Bz і сонячний вітер вимірюються в космосі, Sn — показник сонячної активності; координати їх не перераховують. Локальний K потребує обсерваторії і тут не підключений. Переходи панчанги показано за часом пристрою; Сонце в цьому блоці — за вказаним місцем. Бал і плани залишаються за Києвом.'));
+}
+window.NRLocalContext={render,solar,valid};window.addEventListener('nr:locale',render);document.addEventListener('visibilitychange',()=>{if(!document.hidden)render()});
+if(location?.auto&&navigator.permissions)navigator.permissions.query({name:'geolocation'}).then(p=>{if(p.state==='granted')locate()}).catch(()=>{});
 })();
