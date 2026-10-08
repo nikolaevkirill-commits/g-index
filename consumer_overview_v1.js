@@ -1,6 +1,43 @@
 (function(){
 'use strict';
 let rows={},selected={},mounted=false,topicFilter='all';
+const WEATHER_URL='https://services.swpc.noaa.gov/products/noaa-scales.json';
+let weatherData=null,weatherRequest=null,weatherAttempt=0,weatherError=false;
+function weatherStatus(data,now=Date.now()){
+ const current=data?.['0'],stamp=current?Date.parse(current.DateStamp+'T'+current.TimeStamp+'Z'):NaN;
+ if(!Number.isFinite(stamp)||now<stamp||now-stamp>8*3600000)return {state:'unavailable'};
+ const level=v=>typeof v==='string'&&/^[0-5]$/.test(v)?Number(v):null;
+ const currentLevels=Object.fromEntries(['G','S','R'].map(k=>[k,level(current[k]?.Scale)]));
+ if(Object.values(currentLevels).some(v=>v===null))return {state:'unavailable'};
+ const day=new Date(now).toISOString().slice(0,10),forecasts=[];
+ for(const key of ['1','2','3']){
+  const item=data[key],date=item?.DateStamp,g=level(item?.G?.Scale);
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(date||'')||date<day||date>new Date(now+2*86400000).toISOString().slice(0,10)||g===null)continue;
+  const probability=v=>typeof v==='string'&&/^\d{1,3}$/.test(v)&&Number(v)<=100?Number(v):null;
+  forecasts.push({date,g,s:probability(item.S?.Prob),rMinor:probability(item.R?.MinorProb),rMajor:probability(item.R?.MajorProb)});
+ }
+ return {state:'available',stamp,current:currentLevels,forecasts};
+}
+window.NRSpaceWeather={status:weatherStatus};
+function weatherPanel(root){
+ let box=root.querySelector('.nr-o-spaceweather');if(!box){box=document.createElement('section');box.className='nr-o-spaceweather nr-o-practical';box.setAttribute('aria-live','polite');root.querySelector('.nr-o-layers').before(box);}
+ box.style.display='block';
+ const tr=s=>window.NRLocale?.text(s)||s;
+ const status=weatherError?{state:'unavailable'}:weatherStatus(weatherData);
+ const label=tr('Попередження NOAA · найближчі три доби');
+ box.style.borderInlineStart=status.state==='available'&&(Object.values(status.current).some(v=>v>0)||status.forecasts.some(f=>f.g>0))?'4px solid #d99e36':'';
+ if(status.state!=='available')box.innerHTML='<h2>'+esc(label)+'</h2><p>'+esc(tr(weatherRequest?'Перевіряємо попередження…':'Попередження недоступні або застарілі. Це не означає відсутності бурі.'))+'</p>';
+ else{
+  const current=['G','S','R'].map(k=>k+status.current[k]).join(' · ');
+  box.innerHTML='<h2>'+esc(label)+'</h2><p><strong>'+esc(tr('Спостерігається: '))+esc(current)+'</strong></p><p>'+esc(tr('G — геомагнітна буря; S — радіаційна буря; R — радіозатемнення. 0 — нижче порога шкали.'))+'</p>'+status.forecasts.map(f=>'<p><strong>'+esc(f.date+' · '+tr('доба UTC')+' · '+tr('Очікується: ')+'G'+f.g)+'</strong><br>'+esc(tr('Імовірність: ')+'S1+: '+(f.s===null?'—':f.s+'%')+' · R1–R2: '+(f.rMinor===null?'—':f.rMinor+'%')+' · R3+: '+(f.rMajor===null?'—':f.rMajor+'%'))+'</p>').join('')+(status.forecasts.length?'':'<p>'+esc(tr('Прогноз попереджень недоступний.'))+'</p>')+'<small>'+esc(tr('Оновлено NOAA: ')+time(new Date(status.stamp).toISOString())+' · Europe/Kyiv')+'</small>';
+ }
+ box.innerHTML+='<p>'+esc(tr('Очікувана буря не означає, що вона вже почалася. Ці показники не змінюють бал дня.'))+'</p><a href="https://www.swpc.noaa.gov/products/alerts-watches-and-warnings" target="_blank" rel="noopener noreferrer">'+esc(tr('Офіційні повідомлення NOAA'))+'</a>';
+ if(!weatherRequest&&Date.now()-weatherAttempt>5*60000){
+  weatherAttempt=Date.now();const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),8000);
+  weatherRequest=fetch(WEATHER_URL,{cache:'no-store',signal:controller.signal}).then(r=>{if(!r.ok)throw Error('NOAA '+r.status);return r.json()}).then(data=>{weatherData=data;weatherError=false;}).catch(()=>{weatherError=true;}).finally(()=>{clearTimeout(timer);weatherRequest=null;document.querySelectorAll('[data-overview]').forEach(weatherPanel);});
+ }
+}
+setInterval(()=>{if(document.visibilityState==='visible')document.querySelectorAll('[data-overview]').forEach(weatherPanel);},60000);
 const NAK=['Ashwini','Bharani','Krittika','Rohini','Mrigashira','Ardra','Punarvasu','Pushya','Ashlesha','Magha','Purva Phalguni','Uttara Phalguni','Hasta','Chitra','Swati','Vishakha','Anuradha','Jyeshtha','Mula','Purva Ashadha','Uttara Ashadha','Shravana','Dhanishtha','Shatabhisha','Purva Bhadrapada','Uttara Bhadrapada','Revati'];
 const YOGA=['Vishkambha','Priti','Ayushman','Saubhagya','Shobhana','Atiganda','Sukarma','Dhriti','Shula','Ganda','Vriddhi','Dhruva','Vyaghata','Harshana','Vajra','Siddhi','Vyatipata','Variyana','Parigha','Shiva','Siddha','Sadhya','Shubha','Shukla','Brahma','Indra','Vaidhriti'];
 let panchFeedPromise,panchFeedSha='',panchProofPromise;
@@ -151,6 +188,7 @@ function buttons(host,dates,active){
  for(const b of host.children){const ds=b.dataset.day,r=resolve(ds);b.setAttribute('aria-pressed',String(ds===active));b.textContent=dateLabel(ds)+' · '+fmt(r.score);b.setAttribute('aria-label',dateLabel(ds)+': '+fmt(r.score)+', '+states[r.state]);}
 }
 function render(root){
+ weatherPanel(root);
  const route=root.dataset.overview,dates=dayRange(),ds=dates.includes(selected[route])?selected[route]:today();selected[route]=ds;
  renderPanchPreview(root,ds);
  const select=root.querySelector('select');if([...select.options].map(x=>x.value).join()!==dates.join())select.replaceChildren(...dates.map(d=>new Option(dateLabel(d),d)));select.value=ds;
