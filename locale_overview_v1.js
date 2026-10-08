@@ -1,4 +1,5 @@
 NRLocale.register([
+['Додатна · є застереження','Positive · cautions apply','Positiva · hay advertencias','Positive · avec réserves'],
 ["Попередження NOAA · найближчі три доби", "NOAA alerts · next three days", "Avisos NOAA · próximos tres días", "Alertes NOAA · trois prochains jours"],
 ["Перевіряємо попередження…", "Checking alerts…", "Comprobando avisos…", "Vérification des alertes…"],
 ["Попередження недоступні або застарілі. Це не означає відсутності бурі.", "Alerts are unavailable or out of date. This does not mean there is no storm.", "Los avisos no están disponibles o están desactualizados. Esto no significa que no haya una tormenta.", "Les alertes sont indisponibles ou périmées. Cela ne signifie pas qu’il n’y a pas de tempête."],

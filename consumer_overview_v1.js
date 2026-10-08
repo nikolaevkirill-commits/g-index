@@ -206,6 +206,8 @@ function render(root){
  const minus=factors.filter(x=>!['Kp','Moon','Eclipse'].includes(x.factor)&&Number.isFinite(x.value)&&x.value<0);
  const caution=root.querySelector('.nr-o-caution');
  caution.hidden=!(r.available&&r.score>0&&minus.length);
+ root.querySelector('.nr-o-score').dataset.scoreTone=!r.available?'missing':r.score<0?'negative':r.score===0?'neutral':caution.hidden?'positive':'caution';
+ if(!caution.hidden)root.querySelector('.nr-o-label').textContent='Додатна · є застереження';
  caution.textContent=caution.hidden?'':'Оцінка додатна, але в календарі є позначки з мінусом: '+minus.map(x=>factorName(x.factor)+' '+fmt(x.value)).join('; ')+'.';
  const topics=practical(factors,own,ds),card=root.querySelector('.nr-o-practical');
  card.querySelector('h2').textContent=topics.title;card.querySelector('p').textContent=topics.body;card.querySelector('small').textContent=topics.limit;
