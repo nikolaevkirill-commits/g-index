@@ -1,4 +1,7 @@
 NRLocale.register([
+[' с.',' seconds.',' segundos.',' secondes.'],
+['🟢 Сприятлива','🟢 Favourable','🟢 Favorable','🟢 Favorable'],
+['Найближча зміна панчанги: ','Next Panchanga transition: ','Próxima transición de Panchanga: ','Prochaine transition du Panchanga : '],
 ["Сонце для вашого місця", "Sun at your location", "Sol en tu ubicación", "Soleil à votre emplacement"],
 ["Визначити моє місце", "Detect my location", "Detectar mi ubicación", "Détecter mon emplacement"],
 ["Ввести або змінити місце", "Enter or change location", "Introducir o cambiar ubicación", "Saisir ou modifier l’emplacement"],

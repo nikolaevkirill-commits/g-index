@@ -350,14 +350,20 @@
   window.fp435SaveMatch=function(event){event.preventDefault();const data=Object.fromEntries(new FormData(event.currentTarget));try{localStorage.setItem('gindex_match_person_v1',JSON.stringify({name:String(data.name||'').trim()}));document.getElementById('nrMatchStatus').textContent='✓ Ім’я збережено лише на цьому пристрої.';renderMatchResult()}catch(_e){ globalThis.NRDiagnostics?.record('catch.290','recoverable'); document.getElementById('nrMatchStatus').textContent='Не вдалося зберегти ім’я на пристрої'}return false};
   function loadFp440Profile(){const form=document.getElementById('nrProfileForm');if(!form)return;try{const data=JSON.parse(localStorage.getItem('gindex_profile_v2')||'null');if(!data)return;['name','city','mode'].forEach(k=>{if(form.elements[k]&&data[k]!=null)form.elements[k].value=data[k]})}catch(_e){ window.NRDiagnostics?.record('legacy.catch.258','recoverable'); }}
   window.fp440SaveProfile=function(event){event.preventDefault();const data=Object.fromEntries(new FormData(event.currentTarget));try{localStorage.setItem('gindex_profile_v2',JSON.stringify({...JSON.parse(localStorage.getItem('gindex_profile_v2')||'{}'),...data}));document.getElementById('nrProfileStatus').textContent='✓ Дані збережено лише на цьому пристрої';renderProfileResult();renderMatchResult()}catch(_e){ globalThis.NRDiagnostics?.record('catch.291','recoverable'); document.getElementById('nrProfileStatus').textContent='Не вдалося зберегти дані на пристрої'}return false};
+  let panchGuideFeed=null,panchGuideRequest=null;
+  async function loadPanchGuideFeed(){
+    if(panchGuideFeed)return panchGuideFeed;
+    if(!panchGuideRequest)panchGuideRequest=fetch('panchanga_shadow_feed_v1.json',{cache:'no-store'}).then(r=>{if(!r.ok)throw Error('HTTP '+r.status);return r.json()}).then(d=>panchGuideFeed=d).finally(()=>panchGuideRequest=null);
+    return panchGuideRequest;
+  }
   async function renderPanchGuide(){
     const box=document.getElementById('nrPanchNow');if(!box)return;
     const NAK=['Ashwini','Bharani','Krittika','Rohini','Mrigashira','Ardra','Punarvasu','Pushya','Ashlesha','Magha','Purva Phalguni','Uttara Phalguni','Hasta','Chitra','Swati','Vishakha','Anuradha','Jyeshtha','Mula','Purva Ashadha','Uttara Ashadha','Shravana','Dhanishtha','Shatabhisha','Purva Bhadrapada','Uttara Bhadrapada','Revati'];
     const YOGA=['Vishkambha','Priti','Ayushman','Saubhagya','Shobhana','Atiganda','Sukarma','Dhriti','Shula','Ganda','Vriddhi','Dhruva','Vyaghata','Harshana','Vajra','Siddhi','Vyatipata','Variyana','Parigha','Shiva','Siddha','Sadhya','Shubha','Shukla','Brahma','Indra','Vaidhriti'];
     const VARA=['Неділя · Сонце','Понеділок · Місяць','Вівторок · Марс','Середа · Меркурій','Четвер · Юпітер','П’ятниця · Венера','Субота · Сатурн'];
     try{
-      const res=await fetch('panchanga_shadow_feed_v1.json',{cache:'no-store'});if(!res.ok)throw new Error('HTTP '+res.status);const feed=await res.json();const ds=todayKyivStr();const day=feed.days&&feed.days[ds];if(!day)throw new Error('немає дня '+ds);
-      const now=Date.now(),zone=Intl.DateTimeFormat().resolvedOptions().timeZone||'Europe/Kyiv',localDate=d=>new Intl.DateTimeFormat('en-CA',{timeZone:zone,year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(d)),localDay=localDate(now);
+      const feed=await loadPanchGuideFeed();const ds=todayKyivStr();const day=feed.days&&feed.days[ds];if(!day)throw new Error('немає дня '+ds);
+      const now=Date.now(),zone=Intl.DateTimeFormat().resolvedOptions().timeZone||'Europe/Kyiv',localDate=d=>window.NRPresentation.dateFormatter('en-CA',{timeZone:zone,year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(d)),localDay=localDate(now);
       const localComponents={};
       for(const key of ['tithi','nakshatra','yoga','karana']){
         const source=Object.values(feed.days).flatMap(d=>d.components?.[key]?.segments||[]).filter(s=>Date.parse(s.end_utc)>now-3*86400000&&Date.parse(s.start_utc)<now+3*86400000).sort((a,b)=>Date.parse(a.start_utc)-Date.parse(b.start_utc)),merged=[];
@@ -375,10 +381,18 @@
       const cards=rows.map(([name,x])=>`<article class="nr-panch-component"><b>${name}</b><strong>${escapeHtml(String(x.value))}</strong><small>${escapeHtml(meanings[name])}</small><small class="nr-panch-until">${x.missing?'Немає даних для поточного моменту':x.hasNext?`до ${fmtTime(x.end)}, далі ${escapeHtml(String(x.next))}`:'без наступної зміни сьогодні'}</small></article>`).join('');
       const timeline=events.length?events.map(e=>`<div class="nr-panch-event${Date.parse(e.at)<=now?' is-past':''}"><time datetime="${escapeHtml(e.at)}">${fmtTime(e.at)}</time><b>${e.label}</b><span>починається <strong>${escapeHtml(e.value)}</strong></span></div>`).join(''):'<div class="nr-panch-empty">Переходів до завершення календарної доби немає.</div>';
       const next=events.find(e=>Date.parse(e.at)>now);
+      const minutes=next?Math.max(1,Math.ceil((Date.parse(next.at)-now)/60000)):null;
+      const remaining=next?new Intl.RelativeTimeFormat(window.NRLocale?.locale||'uk-UA',{numeric:'always'}).format(minutes>=90?Math.ceil(minutes/60):minutes,minutes>=90?'hour':'minute'):null;
       box.innerHTML=`<section class="nr-panch-summary"><div class="nr-panch-summary-head"><div><span class="nr-chip">ПАНЧАНГА ДНЯ</span><h3>Що діє зараз</h3><div class="nr-panch-date">${escapeHtml(dateText)} · ${escapeHtml(zone)}</div></div><span class="nr-panch-live">${next?`НАСТУПНА ЗМІНА О ${fmtTime(next.at)}`:'ПЕРЕХОДИ ДНЯ ЗАВЕРШЕНО'}</span></div><div class="nr-panch-components">${cards}</div></section><section class="nr-panch-section"><span class="nr-chip">ШКАЛА ДОБИ</span><h3>Усі переходи сьогодні</h3><div class="nr-panch-timeline">${timeline}</div></section>`;
       const note=document.createElement('p');note.className='nr-panch-boundary';note.textContent='Час переходів і календарна доба — за часовим поясом пристрою. Схід Сонця — в окремому блоці за координатами. Оцінка дня й час планів залишаються за Києвом.';box.append(note);
-    }catch(error){ globalThis.NRDiagnostics?.record('catch.292','recoverable'); box.innerHTML='<div class="nr-row"><span>UNVERIFIED</span><span>Переходи Панчанги недоступні: '+escapeHtml(error.message)+'</span></div>'}
+      const live=box.querySelector('.nr-panch-live');if(next){live.setAttribute('translate','no');live.textContent=next.label+' · '+remaining+' · '+fmtTime(next.at);live.dataset.nextUtc=next.at;}
+      const today=document.querySelector('[data-overview="today"] .nr-o-hero');if(today){let hint=today.querySelector('[data-panch-countdown]');if(!hint){hint=document.createElement('button');hint.type='button';hint.dataset.panchCountdown='';hint.setAttribute('translate','no');hint.className='nr-btn secondary';hint.style.cssText='grid-column:1 / -1;width:100%;margin-top:6px;padding:8px 10px;text-align:left;font:inherit;font-size:13px;line-height:1.4';hint.onclick=()=>window.fp434Go('panch',true);today.append(hint)}hint.hidden=!next;if(next){hint.textContent=(window.NRLocale?.text('Найближча зміна панчанги: ')||'Найближча зміна панчанги: ')+next.label+' · '+remaining;hint.dataset.nextUtc=next.at}}
+    }catch(error){ const hint=document.querySelector('[data-panch-countdown]');if(hint)hint.hidden=true;globalThis.NRDiagnostics?.record('catch.292','recoverable'); box.innerHTML='<div class="nr-row"><span>UNVERIFIED</span><span>Переходи Панчанги недоступні: '+escapeHtml(error.message)+'</span></div>'}
   }
+  window.nrRefreshPanchGuide=renderPanchGuide;
+  setInterval(()=>{if(!document.hidden)renderPanchGuide()},60000);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)renderPanchGuide()});
+  window.addEventListener('nr:locale',renderPanchGuide);
   async function renderDataTruthGate(){
     const box=document.getElementById('nrDataTruthBody');if(!box)return;
     try{
