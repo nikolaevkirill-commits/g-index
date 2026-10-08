@@ -1,4 +1,6 @@
 NRLocale.register([
+['Мова інтерфейсу','Interface language','Idioma de la interfaz','Langue de l’interface'],
+['Час переходів і календарна доба — за часовим поясом пристрою. Схід Сонця за вашим місцем не розраховано. Оцінка дня й час планів залишаються за Києвом.','Transition times and the calendar day use your device time zone. Sunrise at your location has not been calculated. The daily score and planned times still use Kyiv time.','Las horas de transición y el día natural usan la zona horaria del dispositivo. No se ha calculado el amanecer en tu ubicación. La puntuación diaria y los horarios del plan siguen usando la hora de Kyiv.','Les heures de transition et le jour civil suivent le fuseau horaire de l’appareil. Le lever du soleil à votre emplacement n’a pas été calculé. Le score du jour et les horaires du programme restent à l’heure de Kyiv.'],
 ['Додатна · є застереження','Positive · cautions apply','Positiva · hay advertencias','Positive · avec réserves'],
 ["Попередження NOAA · найближчі три доби", "NOAA alerts · next three days", "Avisos NOAA · próximos tres días", "Alertes NOAA · trois prochains jours"],
 ["Перевіряємо попередження…", "Checking alerts…", "Comprobando avisos…", "Vérification des alertes…"],
