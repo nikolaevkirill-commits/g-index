@@ -139,6 +139,58 @@ function renderRouteTools(root,route,dates,ds){
 }
 function openOutcome(){window.fp434Go('plan',false);const form=document.getElementById('nrOutcomeForm');if(!form)return;form.scrollIntoView({block:'start'});form.querySelector('[name=result]')?.focus({preventScroll:true});}
 
+
+// Compare only fresh calculations actually seen on this device, never inferred history.
+const changeKey='gindex_forecast_seen_v1';
+function rememberForecast(){
+ let previous={};try{previous=JSON.parse(localStorage.getItem(changeKey)||'{}')||{};}catch(_){}
+ const next={};
+ for(const ds of Object.keys(rows).sort().slice(-40)){
+  const r=resolve(ds),c=rows[ds]?.channels?.source_formula;
+  if(!r.available||!c||!Number.isFinite(c.value)||!Number.isFinite(c.raw)||!Number.isFinite(Date.parse(r.generated_at)))continue;
+  const now={stamp:r.generated_at,score:c.value,raw:c.raw,kp:Number.isFinite(c.kp_daily_max)?c.kp_daily_max:null};
+  const old=previous[ds];
+  if(old&&Date.parse(old.stamp)>=Date.parse(now.stamp)){next[ds]=old;continue;}
+  if(old&&Number.isFinite(old.score)&&Number.isFinite(old.raw)&&['score','raw','kp'].some(k=>old[k]!==now[k]))now.before={stamp:old.stamp,score:old.score,raw:old.raw,kp:old.kp};
+  next[ds]=now;
+ }
+ // An empty or stale response must not erase the last successfully seen baseline.
+ if(Object.keys(next).length)try{localStorage.setItem(changeKey,JSON.stringify(next));}catch(_){}
+}
+function renderFeedback(root,ds){
+ const tr=s=>window.NRLocale?.text(s)||s;
+ const stamp=t=>NRPresentation.dateFormatter(window.NRLocale?.locale||'uk-UA',{timeZone:'Europe/Kyiv',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}).format(new Date(t));
+ let box=root.querySelector('[data-forecast-change]');
+ if(!box){box=document.createElement('details');box.dataset.forecastChange='';box.className='nr-card';box.setAttribute('translate','no');root.querySelector('.nr-o-hero').after(box);}
+ let item;try{item=JSON.parse(localStorage.getItem(changeKey)||'{}')?.[ds];}catch(_){}
+ const r=resolve(ds),old=item?.before;
+ box.hidden=!(r.available&&old&&item.stamp===r.generated_at);
+ if(!box.hidden){
+  const lines=[['score','Оцінка моделі'],['raw','Сума до округлення'],['kp','Прогноз добового максимуму Kp']].filter(([k])=>old[k]!==item[k]).map(([k,label])=>'<p>'+esc(tr(label))+': <b>'+esc(fmt(old[k]))+' → '+esc(fmt(item[k]))+'</b></p>').join('');
+  box.innerHTML='<summary>'+esc(tr('Що змінилося?'))+'</summary>'+lines+'<small>'+esc(tr('Порівняно з попереднім розрахунком, відкритим на цьому пристрої.'))+' '+esc(stamp(old.stamp))+' → '+esc(stamp(item.stamp))+'. Europe/Kyiv.</small>';
+ }
+ if(root.dataset.overview!=='today')return;
+ let evening=root.querySelector('[data-evening-summary]');
+ if(!evening){evening=document.createElement('section');evening.dataset.eveningSummary='';evening.className='nr-card';evening.setAttribute('translate','no');root.querySelector('.nr-o-journey').after(evening);}
+ let plan=null,outcomes=[];try{plan=JSON.parse(localStorage.getItem('gindex_day_plan_v1')||'null');outcomes=JSON.parse(localStorage.getItem('gindex_plan_outcomes_v1')||'[]');}catch(_){}
+ const hour=Number(NRPresentation.dateFormatter('en-GB',{timeZone:'Europe/Kyiv',hour:'2-digit',hourCycle:'h23'}).format(new Date()));
+ evening.hidden=ds!==today()||hour<18||plan?.date!==today()||!plan?.priority||!Array.isArray(outcomes);
+ if(evening.hidden)return;
+ const saved=outcomes.find(x=>x?.date===today()),labels={done:'Виконано',partial:'Частково',not_done:'Не виконано'};
+ evening.innerHTML='<h3>'+esc(tr('Як пройшов ваш план?'))+'</h3><p>'+esc(plan.priority)+'</p>'+(saved?'<p role="status">'+esc(tr('Підсумок уже збережено'))+': '+esc(tr(labels[saved.result]||'Оберіть'))+'</p>':'<p>'+esc(tr('Один дотик — запис у ваш щоденник. Вечір за Києвом.'))+'</p><div style="display:flex;flex-wrap:wrap;gap:8px">'+Object.entries(labels).map(([v,label])=>'<button type="button" class="nr-btn secondary" data-quick-outcome="'+v+'">'+esc(tr(label))+'</button>').join('')+'</div>')+'<button type="button" class="nr-btn secondary" data-evening-open style="margin-top:10px">'+esc(tr('Відкрити щоденник'))+'</button><p role="status" data-evening-status></p>';
+ evening.querySelector('[data-evening-open]').onclick=openOutcome;
+ evening.querySelectorAll('[data-quick-outcome]').forEach(b=>b.onclick=()=>{
+  // Re-read at click time: another tab or a double click may already have saved it.
+  let latest;try{latest=JSON.parse(localStorage.getItem('gindex_plan_outcomes_v1')||'[]');}catch(_){latest=null;}
+  if(!Array.isArray(latest)){evening.querySelector('[data-evening-status]').textContent=tr('Не вдалося зберегти результат');return;}
+  if(latest.some(x=>x?.date===today())){renderFeedback(root,ds);return;}
+  const form=document.createElement('form');for(const [name,value] of [['result',b.dataset.quickOutcome],['note','']]){const input=document.createElement('input');input.name=name;input.value=value;form.append(input);}
+  window.fp466SaveOutcome({preventDefault(){},currentTarget:form});
+  let savedNow=false;try{savedNow=JSON.parse(localStorage.getItem('gindex_plan_outcomes_v1')||'[]').some(x=>x?.date===today());}catch(_){}
+  if(savedNow)renderFeedback(root,ds);else evening.querySelector('[data-evening-status]').textContent=tr('Не вдалося зберегти результат');
+ });
+}
+
 function mount(){
  if(mounted)return true;
  if(!document.getElementById('nrRoute-today'))return false;
@@ -191,6 +243,7 @@ function render(root){
  weatherPanel(root);
  const route=root.dataset.overview,dates=dayRange(),ds=dates.includes(selected[route])?selected[route]:today();selected[route]=ds;
  renderPanchPreview(root,ds);
+ renderFeedback(root,ds);
  const select=root.querySelector('select');if([...select.options].map(x=>x.value).join()!==dates.join())select.replaceChildren(...dates.map(d=>new Option(dateLabel(d),d)));select.value=ds;
  window.NRCalendarContext?.render(root.querySelector('.nr-o-context'),window.nrRetroEphemeris?.(),ds);
  const r=resolve(ds),own=rows[ds]?.channels?.source_formula||{};
@@ -236,8 +289,11 @@ function snapshot(ds){
   expert_reference:{score:Number.isFinite(r.expertReference)?r.expertReference:null,input_version_match:'unverified'},
   scope:'Saved calculation inputs; not verified predictive accuracy. No personal notes or plans.'};
 }
-function update(next){if(next)rows=next;if(!mount())return;document.querySelectorAll('[data-overview]').forEach(render);window.NRLocalContext?.render();window.nrRefreshCategoryContext?.();}
+function update(next){if(next){rows=next;rememberForecast();}if(!mount())return;document.querySelectorAll('[data-overview]').forEach(render);window.NRLocalContext?.render();window.nrRefreshCategoryContext?.();}
 window.NRConsumerOverview={update,category,openOutcome,snapshot};
+window.addEventListener('nr:locale',()=>update());
+window.addEventListener('nr:outcome',()=>update());
+window.addEventListener('storage',e=>{if([changeKey,'gindex_day_plan_v1','gindex_plan_outcomes_v1'].includes(e.key)||e.key===null)update();});
 window.addEventListener('online',()=>update());window.addEventListener('offline',()=>update());
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)update();});
 setInterval(()=>update(),60000);
