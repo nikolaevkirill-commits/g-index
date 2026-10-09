@@ -82,20 +82,22 @@ function renderWeatherBrief(root,status,full){
  brief.dataset.active=String(status.state==='available'&&(Object.values(status.current).some(v=>v>0)||status.forecasts.some(f=>f.g>0)));
  brief.innerHTML='<strong>'+esc(tr('NOAA · попередження та ймовірності'))+' ↗</strong>'+body;
 }
-function renderReasonBrief(root,r,strongest){
+function renderReasonBrief(root,r,strongest,own){
  if(!['today','forecast'].includes(root.dataset.overview))return;
  const hero=root.querySelector('.nr-o-hero'),tr=s=>window.NRLocale?.text(s)||s;
  let brief=root.querySelector('[data-reason-brief]');
  if(!brief){brief=document.createElement('button');brief.type='button';brief.dataset.reasonBrief='';brief.className='nr-o-brief nr-o-reason-brief';brief.setAttribute('translate','no');hero.querySelector('.nr-o-scale').after(brief);brief.onclick=()=>{const full=root.querySelector('.nr-o-reasons');full.setAttribute('tabindex','-1');full.focus({preventScroll:true});full.scrollIntoView({block:'start'});};}
  const names={Kp:'Геомагнітна складова',Moon:'Місячна складова',Eclipse:'Складова затемнення'};
- brief.innerHTML='<strong>'+esc(tr('Чому така оцінка'))+' ↗</strong>'+(r.available&&strongest.length?strongest.map(f=>'<span class="nr-o-brief-factor"><span>'+esc(tr(names[f.factor]||f.factor))+'</span><b>'+esc(fmt(f.value))+'</b></span>').join(''):'<span>'+esc(tr(r.available?'Ненульових внесків немає.':'Актуальну оцінку не показуємо'))+'</span>');
+ brief.innerHTML='<strong>'+esc(tr('Чому така оцінка'))+' ↗</strong>'+(r.available&&strongest.length?strongest.map(f=>'<span class="nr-o-brief-factor"><span>'+esc(tr(names[f.factor]||f.factor))+'</span><b>'+esc(fmt(f.value))+'</b></span>').join(''):'<span>'+esc(tr(r.available?'Ненульових внесків немає.':'Актуальну оцінку не показуємо'))+'</span>')+(r.available?kpLine(own,tr):'')+(r.available&&Number.isFinite(own?.raw)&&Math.trunc(own.raw)!==r.score?'<small>'+esc(tr('Сума внесків ')+fmt(own.raw)+tr(' · шкала обмежена до ')+fmt(r.score))+'</small>':'');
 }
 
+function kpLine(own,tr){const kp=own?.kp_input?.kp;if(!Number.isFinite(kp))return '';const g=kp>=9?5:kp>=8?4:kp>=7?3:kp>=6?2:kp>=5?1:0;const src=own.kp_source==='NOAA_27day_outlook'?tr(' · NOAA outlook від ')+String(own.kp_input.issued_at||'').slice(0,10):tr(' · NOAA 3-годинний прогноз');return '<small data-kp-line>'+esc(tr('Kp макс. ')+String(Number(kp.toFixed(2)))+' (G'+g+')'+src)+'</small>';}
 function fmt(value){if(!Number.isFinite(value))return '—';const n=Number(value.toFixed(2));return n<0?'−'+Math.abs(n):n>0?'+'+n:'0';}
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const today=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Kyiv',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
 const dateLabel=ds=>new Intl.DateTimeFormat('uk-UA',{timeZone:'Europe/Kyiv',day:'numeric',month:'long'}).format(new Date(ds+'T12:00:00Z'));
 const time=s=>Number.isFinite(Date.parse(s))?new Intl.DateTimeFormat('uk-UA',{timeZone:'Europe/Kyiv',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}).format(new Date(s)):'не вказано';
+const stateLabel=(r,ds)=>r.state==='fresh'&&rows[ds]?.channels?.source_formula?.kp_source==='NOAA_27day_outlook'?'Орієнтир · outlook NOAA від '+String(rows[ds].channels.source_formula.kp_input?.issued_at||'').slice(0,10):states[r.state];
 const states={fresh:'Дані актуальні',offline:'Офлайн · збережені дані',stale:'Дані застаріли',missing:'Недостатньо даних',invalid:'Час джерела не підтверджено'};
 const dayRange=()=>Array.from({length:27},(_,i)=>{const d=new Date(today()+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+i);return d.toISOString().slice(0,10)});
 function resolve(ds){return NRConsumerAuthority.resolve(rows[ds],ds,Date.now(),!navigator.onLine||window.__nrConsumerCached===true);}
@@ -155,7 +157,7 @@ function routeTools(root,route){
 function renderRouteTools(root,route,dates,ds){
  if(route==='forecast'){
   const host=root.querySelector('.nr-o-horizon-list');buttons(host,dates.slice(0,14),ds);
-  for(const b of host.children){const r=resolve(b.dataset.day);b.textContent=dateLabel(b.dataset.day)+' · '+fmt(r.score)+' — '+horizon(b.dataset.day)+' · '+states[r.state];}
+  for(const b of host.children){const r=resolve(b.dataset.day);b.textContent=dateLabel(b.dataset.day)+' · '+fmt(r.score)+' — '+horizon(b.dataset.day)+' · '+(r.state==='fresh'&&rows[b.dataset.day]?.channels?.source_formula?.kp_source==='NOAA_27day_outlook'?'випуск '+String(rows[b.dataset.day].channels.source_formula.kp_input?.issued_at||'').slice(0,10):states[r.state]);}
  }
  if(route==='calendar'){
   root.querySelectorAll('[data-topic]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.topic===topicFilter)));
@@ -273,14 +275,14 @@ function render(root){
  const select=root.querySelector('select');if([...select.options].map(x=>x.value).join()!==dates.join())select.replaceChildren(...dates.map(d=>new Option(dateLabel(d),d)));select.value=ds;
  window.NRCalendarContext?.render(root.querySelector('.nr-o-context'),window.nrRetroEphemeris?.(),ds);
  const r=resolve(ds),own=rows[ds]?.channels?.source_formula||{};
- root.querySelector('.nr-o-state').textContent=states[r.state]+(ds===today()?' · сьогодні за Києвом':' · '+dateLabel(ds));
+ root.querySelector('.nr-o-state').textContent=stateLabel(r,ds)+(ds===today()?' · сьогодні за Києвом':' · '+dateLabel(ds)+' · Київ');
  root.querySelector('.nr-o-score').textContent=fmt(r.score);
  root.querySelector('.nr-o-label').textContent=r.available?(r.score>0?'Позитивна оцінка':r.score<0?'Негативна оцінка':'Нейтральна оцінка'):'Актуальну оцінку не показуємо';
  renderRouteTools(root,route,dates,ds);
  buttons(root.querySelector('.nr-o-next'),dates.slice(1,4),ds);buttons(root.querySelector('.nr-o-days'),dates.slice(0,14),ds);
  const factors=Array.isArray(own.factors)?own.factors:[],calendar=factors.filter(x=>x.factor!=='Kp'&&x.value!==0),kp=factors.find(x=>x.factor==='Kp');
  const strongest=factors.filter(x=>Number.isFinite(x.value)&&x.value!==0).sort((a,b)=>Math.abs(b.value)-Math.abs(a.value)).slice(0,3);
- renderReasonBrief(root,r,strongest);
+ renderReasonBrief(root,r,strongest,own);
  root.querySelector('.nr-o-reasons div').innerHTML=strongest.length?strongest.map(x=>'<p>'+'<span>'+esc(x.factor==='Kp'?'Геомагнітна складова':x.factor==='Moon'?'Місячна складова':x.factor==='Eclipse'?'Складова затемнення':x.factor)+'</span> <strong>'+esc(fmt(x.value))+'</strong></p>').join('')+'<p class="nr-o-boundary">'+(r.available?'Найбільші внески; повна сума до округлення й обмеження: '+esc(fmt(own.raw))+'.':'Внески збереженого розрахунку; актуальний підсумок недоступний.')+'</p>':'Складові для цієї дати недоступні.';
  root.querySelector('.nr-o-legends div').innerHTML=strongest.map(x=>'<p>'+esc(factorName(x.factor))+'</p>').join('');
  const minus=factors.filter(x=>!['Kp','Moon','Eclipse'].includes(x.factor)&&Number.isFinite(x.value)&&x.value<0);

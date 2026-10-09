@@ -2532,3 +2532,6 @@ NRLocale.register([["Що змінилося?", "What changed?", "¿Qué cambió
 
 NRLocale.register([["Прогноз G · максимум: ", "G forecast · maximum: ", "Pronóstico G · máximo: ", "Prévision G · maximum : "], ["NOAA · попередження та ймовірності", "NOAA · alerts and probabilities", "NOAA · alertas y probabilidades", "NOAA · alertes et probabilités"]]);
 NRLocale.register([["Kp СПОСТЕРЕЖЕННЯ","Kp OBSERVATION","Kp OBSERVADO","Kp OBSERVÉ"],["Kp ОЦІНКА NOAA","Kp NOAA ESTIMATE","Kp ESTIMACIÓN NOAA","Kp ESTIMATION NOAA"]]);
+
+NRLocale.register([["Сума внесків ","Sum of contributions ","Suma de aportes ","Somme des contributions "],[" · шкала обмежена до "," · scale capped at "," · escala limitada a "," · échelle plafonnée à "],["Kp макс. ","Kp max ","Kp máx. ","Kp max "],[" · NOAA outlook від "," · NOAA outlook of "," · NOAA outlook del "," · NOAA outlook du "],[" · NOAA 3-годинний прогноз"," · NOAA 3-hour forecast"," · pronóstico NOAA de 3 horas"," · prévision NOAA sur 3 heures"],["Орієнтир · outlook NOAA від ","Outlook · NOAA issue of ","Orientación · NOAA del ","Repère · NOAA du "]]);
+NRLocale.register([["випуск ","issued ","emitido ","émis le "]]);

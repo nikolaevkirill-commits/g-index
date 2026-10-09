@@ -38,7 +38,9 @@ function selectFeeds(results,now=Date.now()){
    const own=row.channels?.source_formula,t=Date.parse(own?.generated_at||'');
    if(!Number.isFinite(t)||t>now){if(!result.cloud&&!days[ds])days[ds]={...row,_consumer_cached:result.cached===true,_consumer_executor:'local'};continue;}
    const previous=days[ds],pt=Date.parse(previous?.channels?.source_formula?.generated_at||'');
-   if(previous&&pt>=t)continue;
+   // A-1: a feed without verified integrity never replaces a verified cloud row; it only fills gaps.
+   if(previous&&previous._consumer_executor==='cloud'&&!result.cloud)continue;
+   if(previous&&!(previous._consumer_executor!=='cloud'&&result.cloud)&&pt>=t)continue;
    // Selection does not grant freshness or validate a score; resolve still does both.
    days[ds]={...row,_consumer_cached:result.cached===true,_consumer_executor:result.cloud?'cloud':'local'};
   }
