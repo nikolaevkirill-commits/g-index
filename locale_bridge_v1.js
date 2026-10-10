@@ -3,7 +3,7 @@
 const records=new WeakMap(),attributes=new WeakMap();
 // Only application-owned overview text is translated. Forms, user notes,
 // identifiers, values and the historical/research surface are excluded.
-const roots='.nr-route:not(#nrRoute-expert),#headerTitle,#headerSub,#mobileNav,#nrTopNav';
+const roots='.nr-route:not(#nrRoute-expert),#headerTitle,#headerSub,#mobileNav,#nrTopNav,footer';
 function translate(root){
  const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);let node;
  while((node=walker.nextNode())){

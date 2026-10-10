@@ -1,4 +1,11 @@
 NRLocale.register([
+["Джерела та методика", "Sources and method", "Fuentes y método", "Sources et méthode"],
+["Оцінка не гарантує результату подій. Для перевірки прогнозу потрібні незалежно зафіксовані спостереження.", "The score does not guarantee event outcomes. Independent observations are needed to validate the forecast.", "La puntuación no garantiza los resultados. Se necesitan observaciones independientes para validar el pronóstico.", "Le score ne garantit pas le résultat des événements. Des observations indépendantes sont nécessaires pour valider les prévisions."],
+["Конфіденційність", "Privacy", "Privacidad", "Confidentialité"],
+["Умови", "Terms", "Condiciones", "Conditions"],
+["Видалення акаунта", "Account deletion", "Eliminar la cuenta", "Suppression du compte"],
+["Підтримка", "Support", "Soporte", "Assistance"],
+["Правові документи та підтримка", "Legal documents and support", "Documentos legales y soporte", "Documents juridiques et assistance"],
 ["Дані Kp/Ap — NOAA SWPC; Dst — Kyoto WDC; Sn — SILSO/ROB. Споживча оцінка — автоматичний розрахунок source_formula. Прогностичну точність щодо подій ще не підтверджено.", "Kp/Ap data: NOAA SWPC; Dst: Kyoto WDC; Sn: SILSO/ROB. The consumer score is calculated automatically by source_formula. Predictive accuracy for events has not been established.", "Datos Kp/Ap: NOAA SWPC; Dst: Kyoto WDC; Sn: SILSO/ROB. La puntuación se calcula automáticamente mediante source_formula. La precisión predictiva de los acontecimientos aún no se ha confirmado.", "Données Kp/Ap : NOAA SWPC ; Dst : Kyoto WDC ; Sn : SILSO/ROB. Le score est calculé automatiquement par source_formula. La précision prédictive des événements reste à confirmer."],
 [' с.',' seconds.',' segundos.',' secondes.'],
 ['🟢 Сприятлива','🟢 Favourable','🟢 Favorable','🟢 Favorable'],

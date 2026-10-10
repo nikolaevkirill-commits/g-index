@@ -274,7 +274,7 @@ function render(root){
  renderFeedback(root,ds);
  const select=root.querySelector('select');if([...select.options].map(x=>x.value).join()!==dates.join())select.replaceChildren(...dates.map(d=>new Option(dateLabel(d),d)));select.value=ds;
  window.NRCalendarContext?.render(root.querySelector('.nr-o-context'),window.nrRetroEphemeris?.(),ds);
- const r=resolve(ds),source=rows[ds]?.channels?.source_formula,own=source?.expert_override_used===true?{}:source||{};
+ const r=resolve(ds),source=rows[ds]?.channels?.source_formula,own=r.lastScore===null?{}:source||{};
  root.querySelector('.nr-o-state').textContent=stateLabel(r,ds)+(ds===today()?' · сьогодні за Києвом':' · '+dateLabel(ds)+' · Київ');
  root.querySelector('.nr-o-score').textContent=fmt(r.score);
  root.querySelector('.nr-o-label').textContent=r.available?(r.score>0?'Позитивна оцінка':r.score<0?'Негативна оцінка':'Нейтральна оцінка'):'Актуальну оцінку не показуємо';
@@ -303,7 +303,7 @@ function render(root){
  root.querySelector('.nr-o-provenance').textContent=`Розраховано: ${time(r.generated_at)}. ${r.kp_source==='NOAA_3day_slots'?'NOAA отримано: '+time(r.source_retrieved_at)+'. Час випуску у джерелі відсутній.':'NOAA випущено: '+time(r.source_issued_at)+'.'} Час показано для Europe/Kyiv. Покриття знімка: ${covered.length?dateLabel(covered.at(-1)):'немає'}.`+(r.state==='stale'&&r.lastScore!==null?' Остання збережена оцінка: '+fmt(r.lastScore)+'.':'');
 }
 function snapshot(ds){
- const r=resolve(ds),source=rows[ds]?.channels?.source_formula,own=source?.expert_override_used===true?{}:source||{},input=own.kp_input||{};
+ const r=resolve(ds),source=rows[ds]?.channels?.source_formula,own=r.lastScore===null?{}:source||{},input=own.kp_input||{};
  const pick=(obj,keys)=>Object.fromEntries(keys.map(k=>[k,obj[k]??null]));
  return {schema:'neborhythm_calculation_snapshot_v1',date:ds,saved_at:new Date().toISOString(),display_timezone:'Europe/Kyiv',
   display:{state:r.state,available:r.available===true,score:r.available===true?r.score:null},
