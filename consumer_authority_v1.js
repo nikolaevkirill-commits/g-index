@@ -5,7 +5,8 @@ function resolve(row, date, now=Date.now(), offline=false){
   const valid=x=>typeof x==='number'&&Number.isInteger(x)&&x>=-3&&x<=3;
   const short=own?.kp_source==='NOAA_3day_slots';
   const generated=Date.parse(own?.generated_at||''),issued=Date.parse((short?own?.noaa_retrieved_at:own?.noaa_issued_at)||'');
-  const inputValid=row?.date===date&&own?.available===true&&valid(own.value);
+  // Governance 10.10.2026: a row that declares an expert override is never a consumer score.
+  const inputValid=row?.date===date&&own?.available===true&&valid(own.value)&&own.expert_override_used!==true;
   const future=generated>now||issued>now;
   const freshness=Number.isFinite(generated)&&Number.isFinite(issued)&&!future&&now-generated<=8*3600000&&now-issued<=(short?8*3600000:8*86400000);
   offline=offline||row?._consumer_cached===true;
@@ -13,8 +14,7 @@ function resolve(row, date, now=Date.now(), offline=false){
   const available=inputValid&&freshness;
   return {schema:'consumer-authority-v1',date,authority:'source_formula',score:available?own.value:null,
     lastScore:inputValid&&!future?own.value:null,available,state,generated_at:own?.generated_at||null,
-    source_issued_at:own?.noaa_issued_at||null,source_retrieved_at:own?.noaa_retrieved_at||null,kp_source:own?.kp_source||null,independence:'shared_source_formula_not_independent_validation',
-    expertReference:row?.channels?.expert_pdf?.available===true&&valid(row.channels.expert_pdf.value)?row.channels.expert_pdf.value:null};
+    source_issued_at:own?.noaa_issued_at||null,source_retrieved_at:own?.noaa_retrieved_at||null,kp_source:own?.kp_source||null,independence:'shared_source_formula_not_independent_validation'};
 }
 function present(r){
  const n=r.score,key=!r.available?null:n>=2?'favorable':n>=1?'good':n===0?'neutral':n===-1?'unstable':'tense';

@@ -1,4 +1,5 @@
 NRLocale.register([
+["Дані Kp/Ap — NOAA SWPC; Dst — Kyoto WDC; Sn — SILSO/ROB. Споживча оцінка — автоматичний розрахунок source_formula. Прогностичну точність щодо подій ще не підтверджено.", "Kp/Ap data: NOAA SWPC; Dst: Kyoto WDC; Sn: SILSO/ROB. The consumer score is calculated automatically by source_formula. Predictive accuracy for events has not been established.", "Datos Kp/Ap: NOAA SWPC; Dst: Kyoto WDC; Sn: SILSO/ROB. La puntuación se calcula automáticamente mediante source_formula. La precisión predictiva de los acontecimientos aún no se ha confirmado.", "Données Kp/Ap : NOAA SWPC ; Dst : Kyoto WDC ; Sn : SILSO/ROB. Le score est calculé automatiquement par source_formula. La précision prédictive des événements reste à confirmer."],
 [' с.',' seconds.',' segundos.',' secondes.'],
 ['🟢 Сприятлива','🟢 Favourable','🟢 Favorable','🟢 Favorable'],
 ['Найближча зміна панчанги: ','Next Panchanga transition: ','Próxima transición de Panchanga: ','Prochaine transition du Panchanga : '],

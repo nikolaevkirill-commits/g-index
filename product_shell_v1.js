@@ -217,28 +217,48 @@
   function fetchConsumerFeeds(){
     return window.NRConsumerAuthority.loadFeeds(document.baseURI);
   }
-  let _consumerFeedPending=null;
+  let _consumerFeedPending=null,_consumerFeedRetries=0,_consumerFeedTimer=null;
+  function cancelConsumerRetry(){clearTimeout(_consumerFeedTimer);_consumerFeedTimer=null;}
+  function retryConsumerForecast(){
+    if(_consumerFeedTimer!==null||_consumerFeedRetries>=3||navigator.onLine===false||document.hidden)return;
+    const delay=[1500,4000,10000][_consumerFeedRetries++];
+    _consumerFeedTimer=setTimeout(()=>{_consumerFeedTimer=null;loadConsumerForecast();},delay);
+  }
+  function consumerFeedUsable(feed){
+    const ds=todayKey(),row=feed?.days?.[ds];
+    return row?._consumer_executor==='cloud'&&window.NRConsumerAuthority.resolve(row,ds).state==='fresh';
+  }
   function loadConsumerForecast(){
+    cancelConsumerRetry();
     if(_consumerFeedPending)return _consumerFeedPending;
+    let retry=false;
     _consumerFeedPending=fetchConsumerFeeds().then(feed=>{
       window.__nrConsumerCached=false;_sourceForecastRows=feed.days;
-      window.NRConsumerOverview?.update(_sourceForecastRows);return feed;
-    }).catch(error=>{window.__nrConsumerCached=true;window.NRDiagnostics.record('consumer.feed','recoverable',error);return null;}).finally(()=>{
+      window.NRConsumerOverview?.update(_sourceForecastRows);
+      retry=!consumerFeedUsable(feed);
+      if(!retry)_consumerFeedRetries=0;
+      return feed;
+    }).catch(error=>{window.__nrConsumerCached=true;window.NRDiagnostics.record('consumer.feed','recoverable',error);retry=true;return null;}).finally(()=>{
       _consumerFeedPending=null;renderSourceSummary();requestProductRender('cover','calendar','forecast');
+      if(retry)retryConsumerForecast();
     });return _consumerFeedPending;
   }
+  function resumeConsumerForecast(){_consumerFeedRetries=0;return loadConsumerForecast();}
   window.fp469LoadConsumerForecast=loadConsumerForecast;
   setTimeout(loadConsumerForecast,0);
   window.addEventListener('gindex:data-ready',loadConsumerForecast);
-  window.addEventListener('online',loadConsumerForecast);
-  document.addEventListener('visibilitychange',()=>{if(!document.hidden)loadConsumerForecast();});
+  window.addEventListener('online',resumeConsumerForecast);
+  window.addEventListener('offline',cancelConsumerRetry);
+  window.addEventListener('pagehide',cancelConsumerRetry);
+  window.addEventListener('pageshow',event=>{if(event.persisted)resumeConsumerForecast();});
+  document.addEventListener('visibilitychange',()=>{if(document.hidden)cancelConsumerRetry();else resumeConsumerForecast();});
 
   let _independentPanelGeneration=0;
   var _sourceForecastRows={};
   function sourceSummary(ds){
     const r=window.NRConsumerAuthority.resolve((_sourceForecastRows||{})[ds],ds,Date.now(),offlineAuthorityMode()||window.__nrConsumerCached===true);
     const fmt=n=>n===null?'—':n<0?'−'+Math.abs(n):n>0?'+'+n:'0';
-    return `Оцінка моделі: ${fmt(r.score)}. Експертне джерело: ${fmt(r.expertReference)}. Методики мають спільні вихідні складові; збіг не підтверджує точність. Стан: ${r.state}.`;
+    return `Оцінка моделі: ${fmt(r.score)}. Розрахунок за формулою джерела; точність щодо подій не підтверджена. Стан: ${r.state}.`;
   }
   function renderSourceSummary(){window.NRConsumerOverview?.update(_sourceForecastRows);const node=document.getElementById('nrOwnForecastToday');if(node)node.textContent=sourceSummary(todayKey());}
   window.fp468SourceSummary=sourceSummary;
