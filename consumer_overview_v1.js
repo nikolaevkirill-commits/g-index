@@ -330,11 +330,36 @@ let location=null,source='saved',message='',busy=false;
 function valid(x){if(!x||typeof x.lat!=='number'||typeof x.lon!=='number'||!Number.isFinite(x.lat)||!Number.isFinite(x.lon)||Math.abs(x.lat)>90||Math.abs(x.lon)>180)return false;try{new Intl.DateTimeFormat('en',{timeZone:x.zone});return typeof x.zone==='string'&&Number.isFinite(Date.parse(x.saved_at))}catch{return false}}
 try{const saved=JSON.parse(localStorage.getItem(key));if(valid(saved))location=saved}catch{}
 const dateIn=(t,zone)=>new Intl.DateTimeFormat('en-CA',{timeZone:zone,year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(t));
+// Complete missing events when the noon hour-angle approximation is undefined.
+// Uses the same Meeus solar declination/equation-of-time and -0.833 degree horizon.
+function completeSolarEvents(result,x){
+ const rad=Math.PI/180,sinLat=Math.sin(x.lat*rad),cosLat=Math.cos(x.lat*rad);
+ const start=Date.parse(result.date+'T00:00:00Z')-86400000,end=start+3*86400000;
+ function height(ms){
+  const jd=ms/86400000+2440587.5,t=_sjcSunrise(jd),dec=_sunDeclinationSunrise(t)*rad;
+  const utcMinutes=((ms%86400000)+86400000)%86400000/60000;
+  const hourAngle=(utcMinutes+_equationOfTimeMinSunrise(t)+4*x.lon-720)/4*rad;
+  return sinLat*Math.sin(dec)+cosLat*Math.cos(dec)*Math.cos(hourAngle)-Math.sin(-0.833*rad);
+ }
+ let left=start,a=height(left);
+ // One-minute sampling covers short polar crossings; exact tangency is not a crossing.
+ for(let right=start+60000;right<=end;right+=60000){const b=height(right);
+  if((a<0&&b>=0)||(a>0&&b<=0)){
+   const key=a<0?'sunrise':'sunset';let lo=left,hi=right;
+   for(let n=0;n<17;n++){const m=(lo+hi)/2;if((height(m)>=0)===(b>=0))hi=m;else lo=m;}
+   const event=new Date((lo+hi)/2);
+   if(!result[key]&&dateIn(event,x.zone)===result.date)result[key]=event.toISOString();
+  }
+  left=right;a=b;
+ }
+ return result;
+}
+
 function solar(x,now=Date.now()){
  if(!valid(x)||typeof sunRiseSetUTC_Meeus!=='function')return {state:'unavailable'};
  const date=dateIn(now,x.zone),mid=Date.parse(date+'T12:00:00Z'),result={state:'calculated',date,zone:x.zone,sunrise:null,sunset:null};
  for(let i=-2;i<=2;i++){const pair=sunRiseSetUTC_Meeus(new Date(mid+i*86400000),x.lat,x.lon);for(const k of ['sunrise','sunset'])if(Number.isFinite(pair[k]?.getTime())&&dateIn(pair[k],x.zone)===date)result[k]=pair[k].toISOString();}
- return result;
+ return (!result.sunrise||!result.sunset)?completeSolarEvents(result,x):result;
 }
 function persist(x,how){x.auto=how==='device';location=x;source=how;try{localStorage.setItem(key,JSON.stringify(x));message='Місце збережено лише на пристрої.'}catch{message='Місце діє лише в цьому сеансі.'}render();const f=document.querySelector('#nrLocalContext form');if(f){f.elements.lat.value=x.lat;f.elements.lon.value=x.lon;f.elements.zone.value=x.zone}}
 function locate(){if(busy)return;busy=true;message='Визначаємо місце…';render();if(!navigator.geolocation){busy=false;message='Місце недоступне. Введіть координати вручну.';render();return}navigator.geolocation.getCurrentPosition(p=>{busy=false;const x={lat:p.coords.latitude,lon:p.coords.longitude,zone:Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC',saved_at:new Date().toISOString()};if(valid(x))persist(x,'device');else{message='Некоректні координати або часовий пояс.';render()}},()=>{busy=false;message='Місце недоступне. Введіть координати вручну.';render()},{timeout:10000,maximumAge:0});}
