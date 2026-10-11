@@ -376,7 +376,7 @@
   window.NRPanchProvenance={
     describe(feed,days){
       const methods=[...new Set(days.map(d=>d?.method_version||(feed.method_version!=='mixed_research_methods'?feed.method_version:null)||'unverified'))];
-      const names={meeus_tt_candidate_2025_2026:'Meeus · Lahiri',meeus_tt_research_2025_2026:'Meeus · Lahiri',ae_pac_true_utc69_research_2026_v1:'Astronomy Engine · PAC / IAE'};
+      const names={meeus_tt_candidate_2025_2026:'Meeus · Lahiri',meeus_tt_research_2025_2026:'Meeus · Lahiri',ae_pac_true_utc69_research_2026_v1:'Astronomy Engine · PAC / IAE',ae_pac_true_utc69_research_2027h1_v1:'Astronomy Engine · PAC / IAE'};
       const unknown=methods.some(m=>!names[m]);
       const provisional=days.some(d=>d?.time_policy?.clock_status==='unverified_UTC_offset'||(d?.time_quality&&d.time_quality!=='tabulated_UTC'));
       return {methods,methodLabel:unknown?'Метод розрахунку не підтверджено.':methods.map(m=>names[m]).join(' / '),unknown,provisional};
