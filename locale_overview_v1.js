@@ -1,4 +1,7 @@
 NRLocale.register([
+["Файл передано системі. Збереження файла не означає імпорт у календар; відкрийте його й перевірте подію та нагадування.", "File handed to the system. Saving a file does not import it into a calendar; open it and check the event and reminder.", "Archivo enviado al sistema. Guardarlo no lo importa al calendario; ábrelo y comprueba el evento y el recordatorio.", "Fichier transmis au système. Son enregistrement ne l’importe pas dans le calendrier ; ouvrez-le et vérifiez l’événement et le rappel."],
+["Завантаження файла запитано. Перевірте, що файл збережено, потім відкрийте його у календарі.", "File download requested. Check that it was saved, then open it in your calendar.", "Descarga solicitada. Comprueba que el archivo se guardó y ábrelo en tu calendario.", "Téléchargement demandé. Vérifiez que le fichier est enregistré, puis ouvrez-le dans votre calendrier."],
+["Передавання файла скасовано.", "File sharing cancelled.", "Se canceló el envío del archivo.", "Partage du fichier annulé."],
 ['Метод і межі перевірки','Method and verification limits','Método y límites de verificación','Méthode et limites de vérification'],
 ['Метод розрахунку: ','Calculation method: ','Método de cálculo: ','Méthode de calcul : '],
 ['Метод розрахунку не підтверджено.','The calculation method is unverified.','El método de cálculo no está verificado.','La méthode de calcul n’est pas vérifiée.'],
