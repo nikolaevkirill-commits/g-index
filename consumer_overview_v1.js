@@ -64,6 +64,7 @@ async function renderPanchPreview(root,ds){
   const transitions=values.flatMap(x=>x.segs.slice(1).map(s=>({at:Date.parse(s.start_utc),key:x.key}))).filter(e=>e.at>at).sort((a,b)=>a.at-b.at);
   const next=transitions[0],when=next?new Intl.DateTimeFormat('uk-UA',{timeZone:'Europe/Kyiv',hour:'2-digit',minute:'2-digit'}).format(new Date(next.at)):null;
   box.innerHTML='<p class="nr-o-panch-date">'+esc(dateLabel(ds))+' · '+(ds===today()?'зараз':'на початок календарної доби')+' · Київ</p><dl>'+values.map(x=>'<div><dt>'+labels[x.key]+'</dt><dd>'+esc(x.key==='nakshatra'?NAK[Number(x.value)-1]||x.value:x.key==='yoga'?YOGA[Number(x.value)-1]||x.value:x.value)+'</dd></div>').join('')+'<div><dt>Vara · день тижня</dt><dd>'+esc(weekday)+'</dd></div></dl><p>'+(next?'Найближчий перехід: '+esc(labels[next.key].split(' · ')[0])+' о '+esc(when)+'.':'Подальших переходів у цій добі немає.')+'</p><small class="nr-panch-provenance">'+provenance+'</small>';
+  if(window.NRPanchProvenance)box.append(window.NRPanchProvenance.element(feed,[day]));
  }catch(e){if(box.dataset.date===ds)box.textContent='Для обраної дати повні складові недоступні. Значення іншого дня не підставляються.';}
 }
 
@@ -238,6 +239,8 @@ function mount(){
   if(route==='today'){
    const weather=root.querySelector('.nr-o-layers section:first-child');weather.classList.add('nr-o-weather-top');hero.after(weather);
    const strip=root.querySelector('.nr-o-next');weather.after(strip);
+  }
+  if(route==='today'||route==='forecast'){
    const panch=document.createElement('section');panch.className='nr-o-panch-preview';panch.innerHTML='<span class="nr-o-eyebrow">ПАНЧАНГА · П’ЯТЬ СКЛАДОВИХ ДНЯ</span><h2>Ритми неба</h2><p>Сонце, Місяць і переходи традиційного календаря.</p><details><summary>Складові обраного дня</summary><div class="nr-o-panch-values" role="status"></div></details><button type="button" data-panch>Відкрити Панчангу сьогодні →</button>';
    root.querySelector('.nr-o-reasons').after(panch);panch.querySelector('[data-panch]').onclick=()=>window.fp434Go('panch',true);
   }

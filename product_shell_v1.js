@@ -371,6 +371,25 @@
   function loadFp440Profile(){const form=document.getElementById('nrProfileForm');if(!form)return;try{const data=JSON.parse(localStorage.getItem('gindex_profile_v2')||'null');if(!data)return;['name','city','mode'].forEach(k=>{if(form.elements[k]&&data[k]!=null)form.elements[k].value=data[k]})}catch(_e){ window.NRDiagnostics?.record('legacy.catch.258','recoverable'); }}
   window.fp440SaveProfile=function(event){event.preventDefault();const data=Object.fromEntries(new FormData(event.currentTarget));try{localStorage.setItem('gindex_profile_v2',JSON.stringify({...JSON.parse(localStorage.getItem('gindex_profile_v2')||'{}'),...data}));document.getElementById('nrProfileStatus').textContent='✓ Дані збережено лише на цьому пристрої';renderProfileResult();renderMatchResult()}catch(_e){ globalThis.NRDiagnostics?.record('catch.291','recoverable'); document.getElementById('nrProfileStatus').textContent='Не вдалося зберегти дані на пристрої'}return false};
   let panchGuideFeed=null,panchGuideRequest=null;
+  // One resolver for the overview and the local-day calendar. Mixed feeds must
+  // never lend a global method to a day whose own provenance is missing.
+  window.NRPanchProvenance={
+    describe(feed,days){
+      const methods=[...new Set(days.map(d=>d?.method_version||(feed.method_version!=='mixed_research_methods'?feed.method_version:null)||'unverified'))];
+      const names={meeus_tt_candidate_2025_2026:'Meeus · Lahiri',meeus_tt_research_2025_2026:'Meeus · Lahiri',ae_pac_true_utc69_research_2026_v1:'Astronomy Engine · PAC / IAE'};
+      const unknown=methods.some(m=>!names[m]);
+      const provisional=days.some(d=>d?.time_policy?.clock_status==='unverified_UTC_offset'||(d?.time_quality&&d.time_quality!=='tabulated_UTC'));
+      return {methods,methodLabel:unknown?'Метод розрахунку не підтверджено.':methods.map(m=>names[m]).join(' / '),unknown,provisional};
+    },
+    element(feed,days){
+      const meta=this.describe(feed,days),tr=s=>window.NRLocale?.text(s)||s,details=document.createElement('details');details.className='nr-panch-method';details.setAttribute('translate','no');details.style.cssText='font-size:13px;line-height:1.5;overflow-wrap:anywhere;margin-top:12px';
+      const summary=document.createElement('summary');summary.textContent=tr('Метод і межі перевірки');details.append(summary);
+      const line=document.createElement('p');line.textContent=meta.unknown?tr(meta.methodLabel):tr('Метод розрахунку: ')+meta.methodLabel;details.append(line);
+      if(meta.provisional){const note=document.createElement('p');note.textContent=tr('Часова шкала попередня; час переходів потребує перевірки.');details.append(note);}
+      const note=document.createElement('p');note.textContent=tr('Метод розрахунку не підтверджує точність прогнозу особистих подій.');details.append(note);
+      return details;
+    }
+  };
   async function loadPanchGuideFeed(){
     if(panchGuideFeed)return panchGuideFeed;
     if(!panchGuideRequest)panchGuideRequest=fetch('panchanga_shadow_feed_v1.json',{cache:'no-store'}).then(r=>{if(!r.ok)throw Error('HTTP '+r.status);return r.json()}).then(d=>panchGuideFeed=d).finally(()=>panchGuideRequest=null);
@@ -405,6 +424,8 @@
       const remaining=next?new Intl.RelativeTimeFormat(window.NRLocale?.locale||'uk-UA',{numeric:'always'}).format(minutes>=90?Math.ceil(minutes/60):minutes,minutes>=90?'hour':'minute'):null;
       box.innerHTML=`<section class="nr-panch-summary"><div class="nr-panch-summary-head"><div><span class="nr-chip">ПАНЧАНГА ДНЯ</span><h3>Що діє зараз</h3><div class="nr-panch-date">${escapeHtml(dateText)} · ${escapeHtml(zone)}</div></div><span class="nr-panch-live">${next?`НАСТУПНА ЗМІНА О ${fmtTime(next.at)}`:'ПЕРЕХОДИ ДНЯ ЗАВЕРШЕНО'}</span></div><div class="nr-panch-components">${cards}</div></section><section class="nr-panch-section"><span class="nr-chip">ШКАЛА ДОБИ</span><h3>Усі переходи сьогодні</h3><div class="nr-panch-timeline">${timeline}</div></section>`;
       const note=document.createElement('p');note.className='nr-panch-boundary';note.textContent='Час переходів і календарна доба — за часовим поясом пристрою. Схід Сонця — в окремому блоці за координатами. Оцінка дня й час планів залишаються за Києвом.';box.append(note);
+      const provenanceDays=Object.values(feed.days).filter(d=>Object.values(d.components||{}).some(c=>(c.segments||[]).some(s=>localDate(s.start_utc)<=localDay&&localDate(Date.parse(s.end_utc)-1)>=localDay)));
+      box.append(window.NRPanchProvenance.element(feed,provenanceDays.length?provenanceDays:[day]));
       const live=box.querySelector('.nr-panch-live');if(next){live.setAttribute('translate','no');live.textContent=next.label+' · '+remaining+' · '+fmtTime(next.at);live.dataset.nextUtc=next.at;}
       const today=document.querySelector('[data-overview="today"] .nr-o-hero');if(today){let hint=today.querySelector('[data-panch-countdown]');if(!hint){hint=document.createElement('button');hint.type='button';hint.dataset.panchCountdown='';hint.setAttribute('translate','no');hint.className='nr-btn secondary';hint.style.cssText='grid-column:1 / -1;width:100%;margin-top:6px;padding:8px 10px;text-align:left;font:inherit;font-size:13px;line-height:1.4';hint.onclick=()=>window.fp434Go('panch',true);today.append(hint)}hint.hidden=!next;if(next){hint.textContent=(window.NRLocale?.text('Найближча зміна панчанги: ')||'Найближча зміна панчанги: ')+next.label+' · '+remaining;hint.dataset.nextUtc=next.at}}
     }catch(error){ const hint=document.querySelector('[data-panch-countdown]');if(hint)hint.hidden=true;globalThis.NRDiagnostics?.record('catch.292','recoverable'); box.innerHTML='<div class="nr-row"><span>UNVERIFIED</span><span>Переходи Панчанги недоступні: '+escapeHtml(error.message)+'</span></div>'}

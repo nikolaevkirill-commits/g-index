@@ -1,4 +1,9 @@
 NRLocale.register([
+['Метод і межі перевірки','Method and verification limits','Método y límites de verificación','Méthode et limites de vérification'],
+['Метод розрахунку: ','Calculation method: ','Método de cálculo: ','Méthode de calcul : '],
+['Метод розрахунку не підтверджено.','The calculation method is unverified.','El método de cálculo no está verificado.','La méthode de calcul n’est pas vérifiée.'],
+['Часова шкала попередня; час переходів потребує перевірки.','The time scale is provisional; transition times need verification.','La escala temporal es provisional; las horas de transición necesitan verificación.','L’échelle de temps est provisoire ; les heures de transition doivent être vérifiées.'],
+['Метод розрахунку не підтверджує точність прогнозу особистих подій.','The calculation method does not establish the accuracy of personal event forecasts.','El método de cálculo no confirma la precisión de las predicciones de acontecimientos personales.','La méthode de calcul ne confirme pas la précision des prévisions d’événements personnels.'],
 ["Джерела та методика", "Sources and method", "Fuentes y método", "Sources et méthode"],
 ["Оцінка не гарантує результату подій. Для перевірки прогнозу потрібні незалежно зафіксовані спостереження.", "The score does not guarantee event outcomes. Independent observations are needed to validate the forecast.", "La puntuación no garantiza los resultados. Se necesitan observaciones independientes para validar el pronóstico.", "Le score ne garantit pas le résultat des événements. Des observations indépendantes sont nécessaires pour valider les prévisions."],
 ["Конфіденційність", "Privacy", "Privacidad", "Confidentialité"],
