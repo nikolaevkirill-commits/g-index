@@ -1,7 +1,7 @@
 importScripts('./runtime_diagnostics_v1.js');
 // G-Index service worker. HTML/data are network-first; static shell is cache-first.
 // Bump CACHE_VERSION whenever index.html or a cached shell asset changes.
-const CACHE_VERSION = 'fp469-v79-calendar-share'; // planning copy matches the available functionality
+const CACHE_VERSION = 'fp469-v80-native-reminder'; // planning copy matches the available functionality
 const CACHE_PREFIX = 'gindex-'; // G-Index cache namespace; do not remove the prefix.
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${CACHE_VERSION}`;
 const DATA_CACHE = `${CACHE_PREFIX}data-${CACHE_VERSION}`;
@@ -40,6 +40,8 @@ const SHELL_ASSETS = [
   './mobile_navigation_v1.js',
   './product_shell_v1.js',
   './plan_calendar_v1.js',
+  './native_reminder_v1.js',
+  './native_reminder_ui_v1.js',
   './onboarding_v1.js',
   './local_telemetry_v1.js',
   './decision_journal_v1.js',
