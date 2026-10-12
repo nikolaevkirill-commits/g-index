@@ -20,6 +20,7 @@ const rows={
 function tr(key){return rows[key][Math.max(0,['uk','en','es','fr'].indexOf(host.NRLocale?.language||'uk'))]}
 let busy=false;
 let revision=0;
+let formObserver=null;
 function show(out,result){
 if(!out)return;
 out.dataset.nativeState=result.status;
@@ -46,7 +47,14 @@ async function act(cancel){
  finally{busy=false}
 }
 function mount(){
- const form=document.getElementById('nrPlanForm');if(!form||form.querySelector('[data-native-reminder]'))return;
+ if(!host.NRNativeReminder?.available)return;
+ const form=document.getElementById('nrPlanForm');
+ if(!form){
+  if(!formObserver){formObserver=new MutationObserver(mount);formObserver.observe(document.documentElement,{childList:true,subtree:true})}
+  return;
+ }
+ if(formObserver){formObserver.disconnect();formObserver=null}
+ if(form.querySelector('[data-native-reminder]'))return;
  const oldTimer=form.querySelector('[onclick="fp466EnableReminder()"]');if(oldTimer)oldTimer.hidden=true;
  const calendar=form.querySelector('[onclick="NRPlanCalendar.download()"]');
  if(calendar&&!form.querySelector('[data-native-calendar]')){
@@ -76,6 +84,7 @@ function mount(){
  }
 }
 host.addEventListener('nr:native-reminder-ready',mount);
+host.addEventListener('pagehide',()=>{if(formObserver){formObserver.disconnect();formObserver=null}});
 host.addEventListener('nr:locale',()=>{document.querySelector('[data-native-reminder]')?.remove();if(host.NRNativeReminder?.available)mount()});
 if(host.NRNativeReminder?.available)mount();
 })(globalThis);
