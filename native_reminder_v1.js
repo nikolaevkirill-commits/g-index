@@ -3,11 +3,12 @@
 const origin='https://nikolaevkirill-commits.github.io';
 let port=null;const pending=new Map();
 function disconnect(){if(port)port.close();port=null;for(const v of pending.values()){clearTimeout(v.timer);v.reject(Error('connection_lost'))}pending.clear()}
-host.addEventListener('message',event=>{
-  if(host.location.origin!==origin || event.origin!==origin || (event.source&&event.source!==host) || event.ports?.length!==1)return;
-  let hello;try{hello=typeof event.data==='string'?JSON.parse(event.data):event.data}catch{return}
-  if(hello?.type!=='nr-reminder-ready'||hello.version!==1)return;
-  disconnect();port=event.ports[0];port.onmessage=event=>{
+const nativeOrigin='android-app://nikolaevkirill-commits.github.io';
+let bootstrap=null;
+function readyMessage(data){try{const m=typeof data==='string'?JSON.parse(data):data;return m?.type==='nr-reminder-ready'&&m.version===1}catch{return false}}
+function attach(readyPort){
+  if(bootstrap){clearTimeout(bootstrap.timer);if(bootstrap.port!==readyPort)bootstrap.port.close();bootstrap=null}
+  disconnect();port=readyPort;port.onmessage=event=>{
     let msg;try{msg=typeof event.data==='string'?JSON.parse(event.data):event.data}catch{return}
     if(msg?.type!=='nr-reminder-result'||msg.version!==1)return;
     const request=pending.get(msg.id);if(!request)return;
@@ -16,6 +17,22 @@ host.addEventListener('message',event=>{
     clearTimeout(request.timer);pending.delete(msg.id);request.resolve(msg);
   };port.onmessageerror=disconnect;port.start();
   host.dispatchEvent(new Event('nr:native-reminder-ready'));
+}
+host.addEventListener('message',event=>{
+  if(host.location.origin!==origin || event.ports?.length!==1)return;
+  const native=event.origin===nativeOrigin && event.source===null;
+  const legacy=event.origin===origin && (!event.source||event.source===host);
+  if(!native&&!legacy)return;
+  if(readyMessage(event.data)){attach(event.ports[0]);return}
+  // Chromium transfers an empty bootstrap message; native hello follows on its port.
+  if(event.data!=='')return;
+  if(bootstrap){clearTimeout(bootstrap.timer);bootstrap.port.close()}
+  const candidate=event.ports[0];
+  const state={port:candidate,timer:setTimeout(()=>{candidate.close();if(bootstrap===state)bootstrap=null},10000)};
+  bootstrap=state;
+  candidate.onmessage=e=>{if(bootstrap!==state||!readyMessage(e.data))return;clearTimeout(state.timer);bootstrap=null;attach(candidate)};
+  candidate.onmessageerror=()=>{clearTimeout(state.timer);candidate.close();if(bootstrap===state)bootstrap=null};
+  candidate.start();
 });
 function request(op,details={}){
   if(!port)return Promise.reject(Error('native_unavailable'));
@@ -34,5 +51,5 @@ function scheduleAt(title,at){
 }
 function schedule(plan){return scheduleAt(plan?.priority,host.NRPlanCalendar?.instant(plan?.date,plan?.time))}
 host.NRNativeReminder=Object.freeze({get available(){return !!port},schedule,scheduleAt,cancel:()=>request('cancel'),status:()=>request('status')});
-host.addEventListener('pagehide',disconnect);
+host.addEventListener('pagehide',()=>{if(bootstrap){clearTimeout(bootstrap.timer);bootstrap.port.close();bootstrap=null}disconnect()});
 })(globalThis);
