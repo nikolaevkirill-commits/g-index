@@ -1,0 +1,176 @@
+/* NeboRhythm · сцени й рух (шар оформлення поверх DesignB17).
+   Нічого не рахує і не змінює дані: лише малює вже наявні значення (opKey/бал зі стрічки, G зі шкали NOAA, тітхі з panchanga).
+   Рух вимикається: системне «Зменшити рух», html.nr-design-motion-off (перемикач у «Ще»); пауза: html.nr-design-background (прихована вкладка). */
+
+/* ---------- Токени ---------- */
+:root{--nrs-ink:#ede9df;--nrs-paper:#11151b;--nrs-rule:#68727b;--nrs-accent:#e9c77e;--nrs-soft:rgba(237,233,223,.55);
+  --nrs-ease:cubic-bezier(.2,.8,.2,1);--nrs-spring:cubic-bezier(.2,.9,.25,1.15);
+  --nrs-shadow-1:inset 0 1px 0 rgba(255,255,255,.05),0 1px 2px rgba(0,0,0,.35),0 6px 16px -10px rgba(0,0,0,.7);
+  --nrs-shadow-2:inset 0 1px 0 rgba(255,255,255,.06),0 2px 4px rgba(0,0,0,.35),0 14px 30px -14px rgba(0,0,0,.85);
+  }
+html[data-nr-theme=light]{--nrs-ink:#24221e;--nrs-paper:#f3f0e8;--nrs-rule:#b8b2a5;--nrs-accent:#785617;--nrs-soft:rgba(36,34,30,.5);
+  --nrs-shadow-1:0 1px 1px rgba(36,34,30,.06),0 4px 12px -6px rgba(36,34,30,.18);
+  --nrs-shadow-2:0 1px 2px rgba(36,34,30,.08),0 12px 26px -12px rgba(36,34,30,.34)}
+@media (prefers-color-scheme:light){html[data-nr-theme=auto]{--nrs-ink:#24221e;--nrs-paper:#f3f0e8;--nrs-rule:#b8b2a5;--nrs-accent:#785617;--nrs-soft:rgba(36,34,30,.5);
+  --nrs-shadow-1:0 1px 1px rgba(36,34,30,.06),0 4px 12px -6px rgba(36,34,30,.18);
+  --nrs-shadow-2:0 1px 2px rgba(36,34,30,.08),0 12px 26px -12px rgba(36,34,30,.34)}}
+
+/* ---------- Заставка ---------- */
+html.nr-shell-starting::after{content:none!important;display:none!important}
+#nrLaunch{position:fixed;inset:0;z-index:2147483000;display:grid;place-items:center;visibility:visible;background:var(--nrs-paper);color:var(--nrs-ink);
+  transition:opacity .42s var(--nrs-ease),transform .42s var(--nrs-ease);pointer-events:none}
+#nrLaunch .nrs-launch{display:grid;justify-items:center;gap:14px}
+#nrLaunch svg{width:min(56vw,220px);height:auto;overflow:visible}
+#nrLaunch .nrs-word{font:600 22px/1 'Literata',Georgia,serif;letter-spacing:.02em;opacity:0;transform:translateY(6px);animation:nrs-rise .6s var(--nrs-ease) .25s forwards}
+#nrLaunch.is-leaving{opacity:0;transform:scale(1.04)}
+#nrLaunch .nrs-orbit-draw{stroke-dasharray:1;stroke-dashoffset:1;animation:nrs-draw .9s var(--nrs-ease) forwards}
+#nrLaunch .nrs-orbit-draw.d2{animation-delay:.12s}#nrLaunch .nrs-orbit-draw.d3{animation-delay:.24s}
+#nrLaunch .nrs-planet{transform-origin:100px 100px;animation:nrs-spin 2.6s linear infinite}
+#nrLaunch .nrs-planet.slow{animation-duration:5.2s;animation-direction:reverse}
+#nrLaunch .nrs-ticks{transform-origin:100px 100px;animation:nrs-spin 60s linear infinite}
+
+/* ---------- Смуга сцени ---------- */
+.nr-scene{position:relative;display:block;height:88px;margin:0 0 6px;color:var(--nrs-ink);overflow:hidden;border-bottom:1px solid var(--nrs-rule);contain:layout paint}
+.nr-scene svg{display:block;width:100%;height:100%}
+@media (max-width:359px){.nr-scene{height:72px}}
+.nr-scene .nrs-drift{animation:nrs-drift var(--nrs-drift,16s) linear infinite}
+.nr-scene .nrs-twinkle{animation:nrs-twinkle var(--nrs-tw,4s) ease-in-out infinite;animation-delay:var(--nrs-d,0s)}
+.nr-scene .nrs-draw{stroke-dasharray:1;stroke-dashoffset:1;animation:nrs-draw .9s var(--nrs-ease) forwards;animation-delay:var(--nrs-d,0s)}
+.nr-scene .nrs-pop{opacity:0;transform-box:fill-box;transform-origin:center;animation:nrs-pop .42s var(--nrs-spring) forwards;animation-delay:var(--nrs-d,0s)}
+.nr-scene .nrs-fade{opacity:0;animation:nrs-fade .5s var(--nrs-ease) forwards;animation-delay:var(--nrs-d,0s)}
+.nr-scene .nrs-spin{transform-box:view-box;animation:nrs-spin 240s linear infinite}
+.nr-scene .nrs-scan{display:none}
+.nr-scene[data-state=loading] .nrs-scan{display:block;animation:nrs-scan 1.6s var(--nrs-ease) infinite}
+.nr-scene[data-state=loading] .nrs-drift{opacity:.35}
+/* Прокрутка: сцена плавно відходить (прогресивне покращення; без підтримки нічого не змінюється) */
+@supports (animation-timeline: scroll()){
+  .nr-scene svg{animation:nrs-parallax linear both;animation-timeline:scroll(root);animation-range:0 160px}
+}
+
+/* ---------- Глибина: тіні, папір ---------- */
+/* Зерно паперу: світла тема — темні цятки, темна — світлі; середня зміна яскравості фону ≈ 2–3 % */
+body.fp434-app{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 .07 0 0 0 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E")!important;background-size:160px 160px!important}
+html[data-nr-theme=light] body.fp434-app{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .09 0 0 0 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E")!important}
+@media (prefers-color-scheme:light){html[data-nr-theme=auto] body.fp434-app{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .09 0 0 0 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E")!important}}
+body.fp434-app .nr-b-primary{box-shadow:var(--nrs-shadow-2)!important;transition:box-shadow .18s var(--nrs-ease),transform .12s ease-out}
+body.fp434-app .nr-b-primary:active{box-shadow:var(--nrs-shadow-1)!important;transform:translateY(1px) scale(.995)}
+body.fp434-app .nr-o-weather-brief,body.fp434-app .nr-o-hero>.nr-card{box-shadow:var(--nrs-shadow-1)!important}
+body.fp434-app #mobileNav{box-shadow:0 -1px 0 var(--nrs-rule)!important}
+@supports (animation-timeline: scroll()){
+  body.fp434-app #mobileNav{animation:nrs-navshadow linear both;animation-timeline:scroll(root);animation-range:0 120px}
+}
+
+/* ---------- Ключові кадри ---------- */
+@keyframes nrs-draw{to{stroke-dashoffset:0}}
+@keyframes nrs-spin{to{transform:rotate(360deg)}}
+@keyframes nrs-drift{from{transform:translateX(0)}to{transform:translateX(-40px)}}
+@keyframes nrs-twinkle{0%,100%{opacity:.25}50%{opacity:.9}}
+@keyframes nrs-pop{from{opacity:0;transform:scale(.3)}to{opacity:1;transform:none}}
+@keyframes nrs-fade{to{opacity:1}}
+@keyframes nrs-rise{to{opacity:1;transform:none}}
+@keyframes nrs-scan{from{transform:translateX(-30px)}to{transform:translateX(420px)}}
+@keyframes nrs-parallax{to{transform:translateY(18px);opacity:.55}}
+@keyframes nrs-navshadow{from{box-shadow:0 -1px 0 var(--nrs-rule)}to{box-shadow:0 -1px 0 var(--nrs-rule),0 -10px 24px -14px rgba(0,0,0,.45)}}
+
+/* ---------- Рух вимкнено / пауза ---------- */
+html.nr-design-motion-off .nr-scene *,html.nr-design-motion-off .nr-scene svg,html.nr-design-motion-off #nrLaunch,html.nr-design-motion-off #nrLaunch *,
+html.nr-design-motion-off body.fp434-app #mobileNav{animation:none!important;transition:none!important}
+html.nr-design-motion-off .nr-scene .nrs-draw,html.nr-design-motion-off #nrLaunch .nrs-orbit-draw{stroke-dashoffset:0}
+html.nr-design-motion-off .nr-scene .nrs-pop,html.nr-design-motion-off .nr-scene .nrs-fade,html.nr-design-motion-off #nrLaunch .nrs-word{opacity:1;transform:none}
+@media (prefers-reduced-motion:reduce){
+  .nr-scene *,.nr-scene svg,#nrLaunch,#nrLaunch *,body.fp434-app #mobileNav{animation:none!important;transition:none!important}
+  .nr-scene .nrs-draw,#nrLaunch .nrs-orbit-draw{stroke-dashoffset:0}
+  .nr-scene .nrs-pop,.nr-scene .nrs-fade,#nrLaunch .nrs-word{opacity:1;transform:none}
+}
+html.nr-design-background .nr-scene *,.nr-scene.is-offscreen *{animation-play-state:paused!important}
+/* Тони точок у сцені прогнозу — ті самі кольори, що в integration.css для opKey */
+:root{--nrs-pos:#8ce4b0;--nrs-neg:#ffada2;--nrs-warn:#f3cb74}
+html[data-nr-theme=light]{--nrs-pos:#196840;--nrs-neg:#a92e21;--nrs-warn:#805b00}
+@media (prefers-color-scheme:light){html[data-nr-theme=auto]{--nrs-pos:#196840;--nrs-neg:#a92e21;--nrs-warn:#805b00}}
+
+/* ---------- Виправлення B17-N1: бал у вибраній даті календаря ----------
+   Зелений/червоний бал на золотому фоні вибраної кнопки давав контраст 1,02 (світла) / 1,07 (темна).
+   У вибраній кнопці бал бере колір тексту кнопки; тон лишається видимим у всіх невибраних датах. */
+body.fp434-app .nr-overview button[aria-pressed=true] .nr-b-score-value{color:inherit!important}
+
+/* ---------- scenes2: Місяць за темою ----------
+   Темна тема — об'ємна куля (радіальний градієнт) з м'якою тінню за фазою; світла — гравюра зі штрихуванням. */
+.nr-scene .nrs-ink{display:none}.nr-scene .nrs-orb{display:inline}.nr-scene .nrs-nightglow{display:inline}
+html[data-nr-theme=light] .nr-scene .nrs-ink{display:inline}html[data-nr-theme=light] .nr-scene .nrs-orb,html[data-nr-theme=light] .nr-scene .nrs-nightglow{display:none}
+@media (prefers-color-scheme:light){html[data-nr-theme=auto] .nr-scene .nrs-ink{display:inline}html[data-nr-theme=auto] .nr-scene .nrs-orb,html[data-nr-theme=auto] .nr-scene .nrs-nightglow{display:none}}
+
+/* ---------- Виправлення B17-N5: риска над заголовком «Панчанги» у палітрі B ---------- */
+body.fp434-app #nrRoute-panch .nr-route-head::before{background:var(--nrs-accent)!important}
+
+/* ---------- scenes3: смуга поступається місцем головній дії ---------- */
+.nr-scene.is-compact{display:none}
+/* B17-N7: дрібний підпис «Оновлено NOAA» у картці попередження (було < 11 px на 320 px) */
+body.fp434-app .nr-o-weather-brief small{font-size:max(12px,.75rem)!important}
+/* B17-N8: при 200 % тексту на 320 px заголовки (Literata 52 px) рвалися посеред слова («Панчан|га», «сьогодн|і»).
+   Обмежуємо лише верхню межу шириною екрана (11vw ≈ 35 px на 320 px); при 100 % розмір не змінюється (clamp B17 менший). */
+html body.fp434-app :is(.nr-o-heading h1,.nr-route-head h1){font-size:min(clamp(1.65rem,5vw,2.4rem),11vw)!important;hyphens:auto}
+html body.fp434-app :is([data-overview=today],[data-overview=forecast]) .nr-o-heading h1{font-size:min(clamp(1.75rem,5vw,2.6rem),11vw)!important}
+
+/* ================= scenes4 (14.10.2026) ================= */
+/* Токени нових шарів: сяйво, туман 27d, світанок, Сонце */
+:root{--nrs-aur-a:#5fe0a6;--nrs-aur-b:#8e7cff;--nrs-fog:rgba(170,186,206,.16);--nrs-dawn:#f0a36a;--nrs-sun:#f2c265;
+  --nrs-shadow-3:inset 0 1px 0 rgba(255,255,255,.07),0 3px 6px rgba(0,0,0,.35),0 22px 44px -18px rgba(0,0,0,.9);
+  --nrs-glow:0 12px 30px -16px rgba(233,199,126,.55)}
+html[data-nr-theme=light]{--nrs-aur-a:#1f8a5c;--nrs-aur-b:#5b4bc4;--nrs-fog:rgba(36,34,30,.075);--nrs-dawn:#c86a2a;--nrs-sun:#b5761a;
+  --nrs-shadow-3:0 2px 3px rgba(36,34,30,.08),0 18px 36px -16px rgba(36,34,30,.38);--nrs-glow:0 0 0 transparent}
+@media (prefers-color-scheme:light){html[data-nr-theme=auto]{--nrs-aur-a:#1f8a5c;--nrs-aur-b:#5b4bc4;--nrs-fog:rgba(36,34,30,.075);--nrs-dawn:#c86a2a;--nrs-sun:#b5761a;
+  --nrs-shadow-3:0 2px 3px rgba(36,34,30,.08),0 18px 36px -16px rgba(36,34,30,.38);--nrs-glow:0 0 0 transparent}}
+
+/* Сяйво (NOAA G ≥ 1): повільне коливання стрічок */
+.nr-scene .nrs-aurora{transform-box:fill-box;transform-origin:50% 0;animation:nrs-aurora var(--nrs-ad,10s) ease-in-out infinite alternate;animation-delay:var(--nrs-d,0s)}
+@keyframes nrs-aurora{0%{transform:translateX(0) scaleY(1)}50%{transform:translateX(-14px) scaleY(1.14)}100%{transform:translateX(-26px) scaleY(.92)}}
+/* Туман над 27d: дуже повільний дрейф штрихування */
+.nr-scene .nrs-fogdrift{animation:nrs-fogdrift 22s linear infinite}
+@keyframes nrs-fogdrift{to{transform:translateX(-40px)}}
+/* Накшатра поточна — легке дихання */
+.nr-scene .nrs-naksh{animation:nrs-breathe 3.2s ease-in-out infinite}
+@keyframes nrs-breathe{0%,100%{opacity:1}50%{opacity:.45}}
+/* Небо за висотою Сонця: сутінки теплішають, день — менше зір */
+.nr-scene .nrs-skyphase[data-phase=day] .nrs-nightglow{opacity:.35}
+.nr-scene .nrs-skyphase[data-phase=twilight] .nrs-nightglow{opacity:.7}
+/* Стани даних у сцені: помилка / офлайн — приглушено, лінії пунктиром (без «нуля») */
+.nr-scene[data-state=error] .nrs-drift,.nr-scene[data-state=offline] .nrs-drift{opacity:.3}
+.nr-scene[data-state=error] .nrs-drift path{stroke-dasharray:2 5}
+.nr-scene[data-state=offline] .nrs-twinkle{animation:none;opacity:.35}
+.nr-scene[data-state=offline]{border-bottom-style:dashed}
+
+/* Ковзна риска нижньої навігації */
+body.fp434-app #mobileNav>.nrs-navind{position:absolute;left:0;top:0;height:3px;width:0;background:var(--nr-b-ink,currentColor);border-radius:0 0 2px 2px;pointer-events:none;opacity:0;
+  transition:transform .34s var(--nrs-spring),width .34s var(--nrs-ease),opacity .2s}
+body.fp434-app #mobileNav.nrs-ind-on>.nrs-navind{opacity:1}
+body.fp434-app #mobileNav.nrs-ind-on button[aria-current="page"]{box-shadow:none!important}
+
+/* Шкала −3…+3: вибрана позиція «наливається» при зміні бала */
+@media (prefers-reduced-motion:no-preference){
+  html:not(.nr-design-motion-off) body.fp434-app .nr-design-scale span{transition:border-top-width .22s var(--nrs-ease)}
+  html:not(.nr-design-motion-off) body.fp434-app .nr-design-scale span.selected{animation:nrs-selpop .46s var(--nrs-spring)}
+}
+@keyframes nrs-selpop{from{transform:translateY(5px) scaleY(.7);opacity:.35}}
+
+/* Глибина v4: три рівні тіней; підйом карток лише для миші; тепле світло головної кнопки в темній темі */
+body.fp434-app .nr-b-primary{box-shadow:var(--nrs-shadow-2),var(--nrs-glow)!important}
+body.fp434-app .nr-b-primary:active{box-shadow:var(--nrs-shadow-1)!important}
+body.fp434-app .nr-o-hero>.nr-card.nr-o-weather-brief[data-active=true]{box-shadow:var(--nrs-shadow-3)!important}
+@media (hover:hover) and (prefers-reduced-motion:no-preference){
+  html:not(.nr-design-motion-off) body.fp434-app :is(.nr-o-journey button,.nr-o-panch-preview button){transition:transform .16s var(--nrs-ease),box-shadow .2s var(--nrs-ease)}
+  html:not(.nr-design-motion-off) body.fp434-app :is(.nr-o-journey button,.nr-o-panch-preview button):hover{transform:translateY(-1px);box-shadow:var(--nrs-shadow-1)}
+}
+
+/* Рух вимкнено / зменшено — нові шари статичні */
+html.nr-design-motion-off :is(.nrs-aurora,.nrs-fogdrift,.nrs-naksh),html.nr-design-motion-off body.fp434-app #mobileNav>.nrs-navind,html.nr-design-motion-off body.fp434-app .nr-design-scale span{animation:none!important;transition:none!important}
+@media (prefers-reduced-motion:reduce){:is(.nrs-aurora,.nrs-fogdrift,.nrs-naksh),body.fp434-app #mobileNav>.nrs-navind,body.fp434-app .nr-design-scale span{animation:none!important;transition:none!important}}
+
+/* ---------- Доступність (прогін 14.10) ---------- */
+/* B17-N6: контур на заголовку після переходу — лише для клавіатури, єдиний для всіх екранів (3 px як у B17; «Панчанга» мала 2 px синій) */
+body.fp434-app .nr-route :is(h1,h2)[tabindex="-1"]:focus:not(:focus-visible){outline:none!important}
+body.fp434-app .nr-route :is(h1,h2)[tabindex="-1"]:focus-visible{outline:3px solid var(--nr-compat-base0,currentColor)!important;outline-offset:4px!important}
+/* Текст < 11 px нижче першого екрана (B17, усі мови): кроки журналу 9 px, підписи 10 px */
+body.fp434-app .nr-o-journey span,body.fp434-app .nr-o-weather-top small{font-size:max(12px,.75rem)!important}
+body.fp434-app :is(#nrPanchLive,#astroGrid,.nr-route) :is([style*="font-size:10px"],[style*="font-size: 10px"],[style*="font-size:9px"],[style*="font-size: 9px"]){font-size:max(12px,.75rem)!important}
+/* Короткі екрани (≤ 568 px): B17 зменшував підпис причини до 10,5 px — тримаємо ≥ 12 px */
+body.fp434-app .nr-o-reason-brief small{font-size:max(12px,.75rem)!important}

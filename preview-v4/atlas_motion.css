@@ -1,0 +1,24 @@
+/* B17 Atlas Motion — адаптовано під v2 (сцени), 14.10.2026. Лише оформлення; source_formula, feed і NOAA-логіка не зачеплені.
+   Перенесено з оригіналу: тактильне натискання, переходи кнопок дат, запас під навігацію для фокусу й прокрутки.
+   Не перенесено (і чому):
+   - #nrRoute-panch .nr-route-head::before як розмите коло — у B17 це 3-px риска розділу; заміна ламає її і конфліктує з виправленням B17-N5.
+     Атмосферу «Панчанги» вже дає сцена з Місяцем за реальною фазою.
+   - .nr-o-sky-art (поява 440 мс) — у B17 цей елемент прихований у hero (display:none), правило не мало б видимого ефекту.
+   - button:focus-visible 2 px кольору чорнила для всіх кнопок — замінило б перевірений у B17 контур 3 px (113 цілей); залишено B17.
+   - atlas_motion.js — знімав .selected зі шкали при відсутньому балі, але design_scale.js уже робить це; ще один MutationObserver на всьому документі без користі. */
+:root{--nr-atlas-motion-fast:160ms;--nr-atlas-ease:cubic-bezier(.22,.68,.19,1)}
+
+/* Кнопки дат: м'яка зміна фону й риски вибору */
+body.fp434-app .nr-b-week button{transition:background-color var(--nr-atlas-motion-fast) ease,box-shadow var(--nr-atlas-motion-fast) ease}
+
+/* Фокус і прокрутка не ховаються під нижньою навігацією */
+body.fp434-app :is(.nr-o-hero,.nr-o-journey,.nr-o-panch-preview){scroll-margin-bottom:calc(var(--nr-nav-height,76px) + 18px)}
+body.fp434-app .nr-overview{padding-bottom:calc(var(--nr-nav-height,76px) + env(safe-area-inset-bottom,0px) + 32px)!important}
+
+/* Тактильне натискання (головна кнопка вже має тінь і зсув у scenes.css) */
+@media (prefers-reduced-motion:no-preference){
+ html:not(.nr-design-motion-off) body.fp434-app :is(.nr-o-journey button,.nr-o-panch-preview button):active{transform:scale(.985)}
+ html:not(.nr-design-motion-off) body.fp434-app :is(.nr-o-journey button,.nr-o-panch-preview button){transition:transform 120ms ease,background-color 160ms ease}
+}
+@media (prefers-reduced-motion:reduce){body.fp434-app .nr-b-week button{transition:none!important}}
+html.nr-design-motion-off body.fp434-app .nr-b-week button{transition:none!important}

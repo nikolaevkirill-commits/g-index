@@ -1,7 +1,7 @@
 importScripts('./runtime_diagnostics_v1.js');
 // G-Index service worker. HTML/data are network-first; static shell is cache-first.
 // Bump CACHE_VERSION whenever index.html or a cached shell asset changes.
-const CACHE_VERSION = 'fp469-v80-b17-preview-offline'; // planning copy matches the available functionality
+const CACHE_VERSION = 'fp469-v80-observatory-preview-v4'; // planning copy matches the available functionality
 const CACHE_PREFIX = 'gindex-'; // G-Index cache namespace; do not remove the prefix.
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${CACHE_VERSION}`;
 const DATA_CACHE = `${CACHE_PREFIX}data-${CACHE_VERSION}`;
@@ -19,6 +19,42 @@ async function deliveryResponse(response,mode){
 }
 
 const SHELL_ASSETS = [
+  './preview-v4/public_preview_policy.js',
+  './design-v4.html',
+  './preview-v4/atlas_motion.css',
+  './preview-v4/consumer_overview_v1.js',
+  './preview-v4/core_runtime_v1.js',
+  './preview-v4/design_candidate.css',
+  './preview-v4/design_candidate.js',
+  './preview-v4/design_scale.js',
+  './preview-v4/locale_bridge_v1.js',
+  './preview-v4/locale_overview_v1.js',
+  './preview-v4/product_shell_v1.js',
+  './preview-v4/design_b/integration.css',
+  './preview-v4/design_b/assets/field-lines.svg',
+  './preview-v4/design_b/assets/icon-forecast.svg',
+  './preview-v4/design_b/assets/icon-night.svg',
+  './preview-v4/design_b/assets/icon-panchanga.svg',
+  './preview-v4/design_b/assets/icon-today.svg',
+  './preview-v4/design_b/assets/moon-crescent.svg',
+  './preview-v4/design_b/assets/samrat-yantra.svg',
+  './preview-v4/design_b/css/fonts.css',
+  './preview-v4/design_b/fonts/fira-sans-cyrillic-400-normal.woff2',
+  './preview-v4/design_b/fonts/fira-sans-cyrillic-500-normal.woff2',
+  './preview-v4/design_b/fonts/fira-sans-cyrillic-600-normal.woff2',
+  './preview-v4/design_b/fonts/fira-sans-latin-400-normal.woff2',
+  './preview-v4/design_b/fonts/fira-sans-latin-500-normal.woff2',
+  './preview-v4/design_b/fonts/fira-sans-latin-600-normal.woff2',
+  './preview-v4/design_b/fonts/literata-cyrillic-400-normal.woff2',
+  './preview-v4/design_b/fonts/literata-cyrillic-600-normal.woff2',
+  './preview-v4/design_b/fonts/literata-latin-400-normal.woff2',
+  './preview-v4/design_b/fonts/literata-latin-600-normal.woff2',
+  './preview-v4/design_b/fonts/OFL-FiraSans.txt',
+  './preview-v4/design_b/fonts/OFL-Literata.txt',
+  './preview-v4/design_b/scenes/locale_extra_v1.js',
+  './preview-v4/design_b/scenes/scenes.css',
+  './preview-v4/design_b/scenes/scenes.js',
+
   './design-b17.html',
   './preview-b17/consumer_overview_v1.js',
   './preview-b17/design_candidate.css',
