@@ -28,6 +28,7 @@ const group=document.querySelector('[data-native-reminder]');
 if(group){const scheduled=result.status==='scheduled';group.children[0].hidden=scheduled;group.children[1].hidden=!scheduled;group.children[2].hidden=scheduled;}
 
  if(result.status==='scheduled')out.textContent=tr('saved')+' '+new Intl.DateTimeFormat(host.NRLocale?.locale||'uk-UA',{dateStyle:'short',timeStyle:'short',timeZone:'Europe/Kyiv'}).format(result.at)+' ('+tr('zone')+').';
+ else if(result.status==='ready')out.textContent='';
  else if(result.status!=='ready')out.textContent=tr(rows[result.status]?result.status:'error');
 }
 async function act(cancel){
@@ -46,6 +47,11 @@ async function act(cancel){
  }catch(e){out.textContent=tr(e.message==='invalid_plan'?'invalid_plan':['confirmation_missing','connection_lost'].includes(e.message)?'unknown':'error')}
  finally{busy=false}
 }
+function refreshStatus(){
+ if(busy||!host.NRNativeReminder?.available)return;
+ const snapshot=++revision;
+ host.NRNativeReminder.status().then(result=>{if(snapshot===revision&&!busy)show(document.getElementById('nrReminderStatus'),result)}).catch(()=>{if(snapshot===revision&&!busy){const out=document.getElementById('nrReminderStatus');if(out)out.textContent=tr('unknown')}});
+}
 function mount(){
  if(!host.NRNativeReminder?.available)return;
  const form=document.getElementById('nrPlanForm');
@@ -54,7 +60,7 @@ function mount(){
   return;
  }
  if(formObserver){formObserver.disconnect();formObserver=null}
- if(form.querySelector('[data-native-reminder]'))return;
+ if(form.querySelector('[data-native-reminder]')){refreshStatus();return;}
  const oldTimer=form.querySelector('[onclick="fp466EnableReminder()"]');if(oldTimer)oldTimer.hidden=true;
  const calendar=form.querySelector('[onclick="NRPlanCalendar.download()"]');
  if(calendar&&!form.querySelector('[data-native-calendar]')){
@@ -67,8 +73,7 @@ function mount(){
  const cancel=document.createElement('button');cancel.type='button';cancel.className='nr-btn secondary';cancel.textContent=tr('cancel');cancel.hidden=true;cancel.onclick=()=>act(true);
  const hint=document.createElement('p');hint.className='nr-result-meta';hint.textContent=tr('soon');group.append(button,cancel,hint);form.insertBefore(group,document.getElementById('nrReminderStatus'));
  const calendarDetails=form.querySelector('[data-native-calendar]');if(calendarDetails){calendarDetails.querySelector('summary').textContent=tr('other');form.append(calendarDetails)}
- const snapshot=revision;
- host.NRNativeReminder.status().then(result=>{if(snapshot===revision&&!busy)show(document.getElementById('nrReminderStatus'),result)}).catch(()=>{});
+ refreshStatus();
  if(!form.dataset.nativeCancelGuard){
   form.dataset.nativeCancelGuard='true';let approved=false;
   form.addEventListener('submit',async event=>{
@@ -84,6 +89,8 @@ function mount(){
  }
 }
 host.addEventListener('nr:native-reminder-ready',mount);
+host.addEventListener('pageshow',mount);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&document.querySelector('[data-native-reminder]'))refreshStatus()});
 host.addEventListener('pagehide',()=>{if(formObserver){formObserver.disconnect();formObserver=null}});
 host.addEventListener('nr:locale',()=>{document.querySelector('[data-native-reminder]')?.remove();if(host.NRNativeReminder?.available)mount()});
 if(host.NRNativeReminder?.available)mount();

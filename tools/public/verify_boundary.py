@@ -20,7 +20,7 @@ def verify(root=ROOT):
     if re.search(r'[CD]:[/\\]|Users[/\\]',health):raise ValueError('Local paths in public health')
     sw=(root/'sw.js').read_text('utf-8');assets=re.findall(r"'\./([^']+)'",re.search(r'const SHELL_ASSETS = \[(.*?)\];',sw,re.S).group(1))
     for n in assets:
-        if not (root/n).is_file():raise ValueError('Offline shell missing '+n)
+        if not (root/n.split('?',1)[0]).is_file():raise ValueError('Offline shell missing '+n)
     for n,digest in policy['frozen_sha256'].items():
         if hashlib.sha256((root/n).read_bytes()).hexdigest()!=digest:raise ValueError('Frozen public registration changed')
     print('PASS public allowlist, source-only feeds, encrypted originals, shell and frozen registration')
