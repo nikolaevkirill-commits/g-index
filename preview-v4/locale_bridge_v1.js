@@ -31,11 +31,21 @@ function mount(){
  label.querySelector('select').prepend(new Option('Auto · мова пристрою','auto'));
  document.addEventListener('click',e=>{if(e.target.closest('#btnLang')){e.preventDefault();e.stopImmediatePropagation();const all=NRLocale.supported;NRLocale.set(all[(all.indexOf(NRLocale.language)+1)%all.length])}},true);
 }
-let queued=false;
-function refresh(){queued=false;mount();document.documentElement.lang=NRLocale.language;document.querySelectorAll(roots).forEach(translate);for(const c of document.querySelectorAll('#nrLocaleControl select,#nrSettingsLanguage')){c.value=NRLocale.choice;const autoLabel={uk:'Авто · мова пристрою',en:'Auto · device language',es:'Auto · idioma del dispositivo',fr:'Auto · langue de l’appareil'}[NRLocale.language];const option=c.querySelector('[value="auto"]');if(option.textContent!==autoLabel)option.textContent=autoLabel;const label={uk:'Мова',en:'Language',es:'Idioma',fr:'Langue'}[NRLocale.language];if(c.closest('#nrLocaleControl')&&c.previousElementSibling.textContent!==label)c.previousElementSibling.textContent=label;c.setAttribute('aria-label',{uk:'Мова інтерфейсу',en:'Interface language',es:'Idioma de la interfaz',fr:'Langue de l’interface'}[NRLocale.language]);}}
-function queue(){if(!queued){queued=true;queueMicrotask(refresh)}}
+let queued=false;const pending=new Set();
+function refresh(targets){mount();document.documentElement.lang=NRLocale.language;(Array.isArray(targets)?targets:document.querySelectorAll(roots)).forEach(root=>{if(root.isConnected)translate(root)});for(const c of document.querySelectorAll('#nrLocaleControl select,#nrSettingsLanguage')){c.value=NRLocale.choice;const autoLabel={uk:'Авто · мова пристрою',en:'Auto · device language',es:'Auto · idioma del dispositivo',fr:'Auto · langue de l’appareil'}[NRLocale.language];const option=c.querySelector('[value="auto"]');if(option.textContent!==autoLabel)option.textContent=autoLabel;const label={uk:'Мова',en:'Language',es:'Idioma',fr:'Langue'}[NRLocale.language];if(c.closest('#nrLocaleControl')&&c.previousElementSibling.textContent!==label)c.previousElementSibling.textContent=label;c.setAttribute('aria-label',{uk:'Мова інтерфейсу',en:'Interface language',es:'Idioma de la interfaz',fr:'Langue de l’interface'}[NRLocale.language]);}}
+// Translate changed application roots only. CSS classes and our own translated
+// characterData do not require another walk over every (including hidden) screen.
+function queue(changes){
+ for(const r of changes){
+  if(r.type==='characterData'&&records.get(r.target)?.output===r.target.nodeValue)continue;
+  const el=r.target.nodeType===1?r.target:r.target.parentElement,owner=el?.closest?.(roots);
+  if(owner)pending.add(owner);
+  else for(const n of r.addedNodes||[]){if(n.nodeType!==1)continue;if(n.matches(roots))pending.add(n);n.querySelectorAll(roots).forEach(x=>pending.add(x))}
+ }
+ if(pending.size&&!queued){queued=true;queueMicrotask(()=>{queued=false;const targets=[...pending];pending.clear();refresh(targets)})}
+}
 window.addEventListener('nr:locale',refresh);
-function start(){refresh();new MutationObserver(queue).observe(document.body,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['class','aria-hidden']});}
+function start(){refresh();new MutationObserver(queue).observe(document.body,{subtree:true,childList:true,characterData:true});}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 window.NRLocaleOverviewRefresh=refresh;
 })();
