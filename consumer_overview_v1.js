@@ -288,6 +288,9 @@ function render(root){
  renderReasonBrief(root,r,strongest,own);
  root.querySelector('.nr-o-reasons div').innerHTML=strongest.length?strongest.map(x=>'<p>'+'<span>'+esc(x.factor==='Kp'?'Геомагнітна складова':x.factor==='Moon'?'Пурніма (за календарем)':x.factor==='Eclipse'?'Складова затемнення':x.factor)+'</span> <strong>'+esc(fmt(x.value))+'</strong></p>').join('')+'<p class="nr-o-boundary">'+(r.available?'Найбільші внески; повна сума до округлення й обмеження: '+esc(fmt(own.raw))+'.':'Внески збереженого розрахунку; актуальний підсумок недоступний.')+'</p>':'Складові для цієї дати недоступні.';
  root.querySelector('.nr-o-legends div').innerHTML=strongest.map(x=>'<p>'+esc(factorName(x.factor))+'</p>').join('');
+ root.querySelector('.nr-o-legends div').innerHTML += '<p>'+esc('Календарні позначки враховано за цілу добу. Часові межі окремих позначок не змінюють цей бал.')+'</p>';
+ if(factors.some(x=>x.factor==='Савана Сомвара'))root.querySelector('.nr-o-legends div').innerHTML += '<p>'+esc('Солах Сомвара: використано вагу Савана Сомвара +1; відповідність назв не підтверджена.')+'</p>';
+ if(factors.some(x=>x.factor==='Пітру Пакша'))root.querySelector('.nr-o-legends div').innerHTML += '<p>'+esc('Пітру Пакша: вага джерела +1; легенда водночас застерігає від нових матеріальних справ.')+'</p>';
  const minus=factors.filter(x=>!['Kp','Moon','Eclipse'].includes(x.factor)&&Number.isFinite(x.value)&&x.value<0);
  const caution=root.querySelector('.nr-o-caution');
  caution.hidden=!(r.available&&r.score>0&&minus.length);

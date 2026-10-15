@@ -2017,7 +2017,7 @@ async function loadEngineScores(force = false){
         for(const day of (aj.days||[])){
           const _nakNum = _NAK_MAP[day.nakshatra] || null;
           if(!scores[day.date]){
-            scores[day.date] = { eng: day.cal_score, pdf: null, tag: '',
+            scores[day.date] = { eng: null, pdf: null, tag: 'R&D calendar; not consumer score',
               kp: null, kp_synthetic: false, annual_fallback: true,
               cal_score: day.cal_score, cal_symbols: day.symbols||[],
               cal_tithi: day.tithi_n, cal_nakshatra: _nakNum,
@@ -2576,7 +2576,7 @@ function renderHeroAstroLayer(){
   // Compact label: cal_score · Tithi (live) · first 8 chars Nakshatra (live)
   // v88.7.12: маркер ⊙ якщо є розбіжність з engine — натяк, що варто глянути tooltip
   const _divMark = _hasDiv ? '<span style="color:var(--faint);font-size:9px;margin-left:2px" title="Розбіжність з engine_scores — деталі у tooltip">⊙</span>' : '';
-  elA.innerHTML = `${csStr}🌙 ${tName} · ✨ ${nName.slice(0, 8)}${_divMark}`;
+  elA.innerHTML = `R&D · ${csStr}🌙 ${tName} · ✨ ${nName.slice(0, 8)}${_divMark}`;
   // Rich tooltip with full astronomical context
   const symStr = formatCalSymbols(entry.cal_symbols);
   const artifactWarn = entry.excel_tag_artifact ? `\n⚠ Excel-tag artifact: ${entry.excel_tag_artifact_reason || ''}` : '';
@@ -2682,11 +2682,11 @@ function renderScenarioCard(){
     const engStr = (eng !== null && eng !== undefined) ? `${eng >= 0 ? '+' : ''}${eng}` : '—';
     const calStr = (cal !== null && cal !== undefined) ? `${cal >= 0 ? '+' : ''}${cal}` : '';
     const calDot = (cal !== null && cal !== undefined)
-      ? `<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${colorForScore(cal)};margin-right:3px;vertical-align:middle" title="cal_score ${calStr}"></span>`
+      ? `<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${colorForScore(cal)};margin-right:3px;vertical-align:middle" title="R&D calendar: different weights; not consumer score ${calStr}"></span>`
       : '';
     const flags = (synth ? '~' : '') + (artifact ? '⚠' : '');
     const tt = e
-      ? `${d.ds} (${dow})\nPDF/Engine Day_score: ${engStr}${synth ? ' (Kp synthetic)' : ''}\ncal_score: ${calStr || '—'}\nТег: ${tag || '—'}` + (artifact ? `\n⚠ ${e.excel_tag_artifact_reason || 'Excel-tag artifact'}` : '') + ((function(){
+      ? `${d.ds} (${dow})\nPDF/Engine Day_score: ${engStr}${synth ? ' (Kp synthetic)' : ''}\nR&D calendar (different weights; not consumer score): ${calStr || '—'}\nТег: ${tag || '—'}` + (artifact ? `\n⚠ ${e.excel_tag_artifact_reason || 'Excel-tag artifact'}` : '') + ((function(){
           const _ny2 = (typeof NEGATIVE_YOGAS_BPHS !== 'undefined' && e.cal_yoga) ? NEGATIVE_YOGAS_BPHS[e.cal_yoga] : null;
           return _ny2 ? `\n⚪ BPHS: ${_ny2.name} (${_ny2.pen}, advisory only)` : '';
         })()) + ((function(){
@@ -4783,7 +4783,7 @@ function computeGExtended(dateUTC, kp, panchanga, ai, calScore) {
        + `+ ${_coefs.nak_score.toFixed(2)}×NakScore(${nak_score}) `
        + `+ ${_coefs.cal_score.toFixed(2)}×cal(${cal_sc}) `
        + `= ${gExtRounded.toFixed(2)}\n\n`
-       + `R&D advisory v2 (weak; NOT a verdict).\n`
+       + `R&D v2: different weights; NOT the consumer score.\n`
        + `Validation: n=212, CV r=+0.42 ± 0.16, CV sign-match=63.7%, strict=48.6%.\n`
        + `Primary verdict must come from verified Engine/PDF path; Live G is current background.`,
   };
@@ -18255,38 +18255,7 @@ function updateScienceBar(kp, ap, sn, ai, phaseName, phaseDeg, f107) {
 // ========================= PROFILE MODE =========================
 let _activeProfile = 'off';
 
-const PROFILE_TEXT = {
-  trader: {
-    label: '📈 Трейдер',
-    color: '#ffcc00',
-    bg: 'rgba(255,204,0,0.07)',
-    border: '#ffcc00',
-    ageAdj: { '18': 0, '35': -0.1, '45': -0.2, '55': -0.3 },
-    recs: {
-      '≤-3': 'СТОП: при G ≤ −3 задокументовано збільшення помилок прийняття рішень та надмірного ризику (Krivelyova & Robotti 2003). Закрити позиції, вийти в кеш.',
-      '-2':  'ОБЕРЕЖНО: підвищений нейронний шум. Уникати нових входів. Якщо в позиції — tight стопи.',
-      '-1':  'ПОМІРНО: дещо підвищений когнітивний стрес. Торгувати з 50% звичайного розміру.',
-       '0':  'НОРМА: нейтральний фон. Стандартний ризик-менеджмент.',
-       '1':  'СПРИЯТЛИВО: спокійний геомагнітний фон. Хороший час для аналізу та нових стратегій.',
-      '≥2':  'ОПТИМАЛЬНО: мінімальний Kp + сприятлива накшатра. Найкращий час для входів і прийняття рішень.',
-    }
-  },
-  mil: {
-    label: '🎖 Військовий',
-    color: '#ff6b6b',
-    bg: 'rgba(255,107,107,0.08)',
-    border: '#ff6b6b',
-    ageAdj: { '18': 0, '35': -0.3, '45': -0.7, '55': -1.2 },
-    recs: {
-      '≤-3': 'СТОП: G ≤ −3. Максимальна обережність. Висока втома особового складу, знижена реакція. Уникати ініціативних операцій.',
-      '-2':  'ОБЕРЕЖНО: підвищений стрес-фактор. Ротація вахт, контроль стану операторів. Рішення погоджувати з командиром.',
-      '-1':  'ПОМІРНО несприятливо. Стандартний контроль + моніторинг когнітивного стану в критичних вузлах.',
-       '0':  'НЕЙТРАЛЬНО: стандартний оперативний режим. Обмежень немає.',
-       '1':  'СПРИЯТЛИВО: хороший фон для операцій, навчання, прийняття рішень.',
-      '≥2':  'ОПТИМАЛЬНО: час для активних операцій, штурму, переговорів. Максимальна ефективність ОС.',
-    }
-  }
-};
+const PROFILE_TEXT = Object.freeze({});
 
 function setProfile(p) {
   _activeProfile = p;
@@ -18375,81 +18344,8 @@ function getTaaraState() {
 }
 
 // ─── Генератор mil-контексту з ageAdj + Taara + Dasa ────────────────────────
-function renderMilRec(G, prof) {
-  const adj    = getAgeAdj('mil');
-  const Geff   = G + adj.gShift;          // ефективний G з поправкою на вік
-  // v83f: use canonical stateKey
-  const _milKeyMap = { tense:'≤-3', unstable:'-1', neutral:'0', good:'1', favorable:'≥2' };
-  const key    = _milKeyMap[classifyStateByG(Geff)] || '0';
-  const baseRec = prof.recs[key] || prof.recs['-2'] || prof.recs['0'];
-
-  // Taara + Dasa контекст
-  const ps = getTaaraState();
-  let taaraLine = '';
-  let dasaLine  = '';
-  if (ps) {
-    const tDanger = ps.taara.danger;
-    const tCol    = tDanger ? '#ff6b6b' : '#2bd47d';
-    const tIcon   = tDanger ? '⚠' : '✓';
-    const tName   = ps.taara.name || `поз.${ps.taara.group}/9`;
-    taaraLine = `<div style="margin-top:5px;font-size:12px">
-      <span style="color:${tCol}">${tIcon} Taara ${ps.taara.group}/9 — ${tName}:</span>
-      ${tDanger
-        ? 'особиста Таара в зоні ризику — підвищити ротацію, уникати одноосібних рішень'
-        : 'особиста Таара сприятлива — когнітивний стан особового складу стабільний'}
-    </div>`;
-
-    // Dasa-контекст для mil
-    const DASA_MIL = {
-      'Ketu':    '⚡ Кету-даша: непередбачувані рішення, перевіряти накази',
-      'Venus':   '♀ Венера-даша: схильність до дипломатії, менш агресивний режим',
-      'Sun':     '☀ Сонце-даша: лідерство, чітке командування — оптимально для офіцерів',
-      'Moon':    '☾ Місяць-даша: емоційна реактивність, увага до стресу підлеглих',
-      'Mars':    '♂ Марс-даша: висока бойова активність, ризик імпульсивних дій',
-      'Rahu':    '☊ Раху-даша: аномалії та сюрпризи, обережно з розвідданими',
-      'Jupiter': '♃ Юпітер-даша: стратегічне мислення, час для планування',
-      'Saturn':  '♄ Сатурн-даша: виснаження, необхідна ротація і відпочинок',
-      'Mercury': '☿ Меркурій-даша: точність і зв\'язок, добре для брифінгів',
-    };
-    const dLord = ps.dasa.lordName || '';
-    const dText = DASA_MIL[dLord] || '';
-    if (dText) dasaLine = `<div style="margin-top:4px;font-size:12px;color: var(--text3)">${dText} (залишок ${ps.dasa.remainStr})</div>`;
-  }
-
-  // Вікова поправка — лінія
-  let ageLine = '';
-  if (adj.label) {
-    const shiftSign = adj.gShift > 0 ? `+${adj.gShift}` : adj.gShift < 0 ? `${adj.gShift}` : '±0';
-    const effStr    = Geff !== G ? ` → G_personal=${Geff.toFixed(1)}` : ''; // personal/profile adjusted, not raw G
-    ageLine = `<div style="margin-top:4px;font-size:11px;color:var(--faint)">${adj.label} | поправка: G${shiftSign}${effStr}</div>`;
-  }
-
-  return `<span style="font-weight:700;color:${prof.color}">${prof.label}:</span> ${baseRec}${taaraLine}${dasaLine}${ageLine}`;
-}
-
-// v88.8.36-fp56-P11: ICAO Doc 10100 / БпЛА aviation status line (профілі pilot/mil).
-// Дві шкали, ЧІТКО розділені: (1) офіційні ICAO-пороги advisory по Kp для HF великої авіації —
-// Table 3-1 + App A 4.3 Doc 10100: MOD Kp=8, SEV Kp=9; (2) НАША рекомендація обережності для
-// БпЛА (нижча, бо вища залежність від GNSS/магнітометра, нема резервів великої авіації):
-// Kp≥4 — увага (GPS-точність, компас, телеметрія), Kp≥5 — ручний режим/перевірити RTH,
-// не калібрувати компас. НЕ приписувати 4/5 ICAO — це наш поріг.
-function renderAviationSwxLine(){
-  const kp = (window.__uiState && isFinite(window.__uiState.kpNow)) ? Number(window.__uiState.kpNow) : NaN;
-  if(!isFinite(kp)) return '';
-  let st, col;
-  if(kp >= 9)      { st = 'ICAO SEV (Kp≥9) — HF-advisory, найвищий рівень'; col = '#ff6b6b'; }
-  else if(kp >= 8) { st = 'ICAO MOD (Kp≥8) — HF-advisory'; col = '#ff6b6b'; }
-  else if(kp >= 5) { st = 'БпЛА: обережність — ручний режим де можливо, перевір RTH, не калібруй компас'; col = '#ffaa33'; }
-  else if(kp >= 4) { st = 'БпЛА: увага — можливі похибки GPS/компаса, перебої телеметрії'; col = '#ffd166'; }
-  else             { st = 'норма — нижче порогів БпЛА (4/5) та ICAO (8/9)'; col = 'var(--ok)'; }
-  // fp56-P11b: вплив на ОБЛАДНАННЯ (Doc 10100: 1.2.3e, 1.3.1c, 2.5.8, 2.3.11, 2.4.6) — показуємо з Kp≥4
-  const eq = (kp >= 4)
-    ? `<span style="display:block;margin-top:2px;color:#ffd166">Обладнання: можливі перезавантаження електроніки (SEU), збої SATCOM L-діапазону (&lt;2 ГГц), аномалії ADS-B, шум радарів, похибки GNSS-синхронізації часу</span>`
-    : '';
-  return `<div style="margin-top:5px;font-size:11px;color:var(--faint);border-top:1px solid rgba(255,255,255,.07);padding-top:4px">`
-       + `✈ Космопогода для авіації: <span style="color:${col};font-weight:700">Kp ${kp.toFixed(2)} · ${st}</span>${eq}`
-       + `<span style="display:block;margin-top:2px">Пороги: БпЛА 4/5 (наша рекомендація) · велика авіація 8/9 (ICAO Doc 10100, Annex 3 Amd 78)</span></div>`;
-}
+function renderMilRec(){ return ''; }
+function renderAviationSwxLine(){ return ''; }
 
 function renderProfileRec() {
   const el_ = document.getElementById('profileRec');

@@ -220,6 +220,10 @@ NRLocale.register([
 ['Геомагнітна складова (2 − Kp максимум)','Geomagnetic component (2 − maximum Kp)','Componente geomagnético (2 − Kp máximo)','Composante géomagnétique (2 − Kp maximal)'],
 ['Геомагнітна складова','Geomagnetic component','Componente geomagnético','Composante géomagnétique'],
 ['Місячна складова','Lunar component','Componente lunar','Composante lunaire'],
+["Календарні позначки враховано за цілу добу. Часові межі окремих позначок не змінюють цей бал.", "Calendar markers apply to the whole day. Individual time boundaries do not change this score.", "Las marcas del calendario se aplican al día completo. Sus límites horarios no cambian esta puntuación.", "Les indications du calendrier comptent pour la journée entière. Leurs limites horaires ne modifient pas ce score."],
+["Солах Сомвара: використано вагу Савана Сомвара +1; відповідність назв не підтверджена.", "Solah Somvara uses the Savana Somvara weight +1; the name mapping is unconfirmed.", "Solah Somvara usa el peso +1 de Savana Somvara; la equivalencia de nombres no está confirmada.", "Solah Somvara utilise le poids +1 de Savana Somvara ; la correspondance des noms reste non confirmée."],
+["Пітру Пакша: вага джерела +1; легенда водночас застерігає від нових матеріальних справ.", "Pitru Paksha has source weight +1; the legend also cautions against new material ventures.", "Pitru Paksha tiene peso +1 en la fuente; la leyenda también desaconseja nuevas iniciativas materiales.", "Pitru Paksha a un poids de +1 dans la source ; la légende déconseille aussi les nouvelles entreprises matérielles."],
+
 ['Пурніма (за календарем)','Purnima (calendar designation)','Purnima (según el calendario)','Purnima (selon le calendrier)'],
 ['Складова затемнення','Eclipse component','Componente del eclipse','Composante de l’éclipse'],
 ['Оцінка додатна, але в календарі є позначки з мінусом: ','The score is positive, but the calendar has negative contributions: ','La puntuación es positiva, pero el calendario contiene contribuciones negativas: ','Le score est positif, mais le calendrier contient des contributions négatives : '],
