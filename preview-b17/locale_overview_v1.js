@@ -220,6 +220,7 @@ NRLocale.register([
 ['Геомагнітна складова (2 − Kp максимум)','Geomagnetic component (2 − maximum Kp)','Componente geomagnético (2 − Kp máximo)','Composante géomagnétique (2 − Kp maximal)'],
 ['Геомагнітна складова','Geomagnetic component','Componente geomagnético','Composante géomagnétique'],
 ['Місячна складова','Lunar component','Componente lunar','Composante lunaire'],
+['Пурніма (за календарем)','Purnima (calendar designation)','Purnima (según el calendario)','Purnima (selon le calendrier)'],
 ['Складова затемнення','Eclipse component','Componente del eclipse','Composante de l’éclipse'],
 ['Оцінка додатна, але в календарі є позначки з мінусом: ','The score is positive, but the calendar has negative contributions: ','La puntuación es positiva, pero el calendario contiene contribuciones negativas: ','Le score est positif, mais le calendrier contient des contributions négatives : '],
 ['Як читати NeboRhythm','How to read NeboRhythm','Cómo interpretar NeboRhythm','Comment lire NeboRhythm'],

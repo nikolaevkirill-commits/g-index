@@ -2,6 +2,7 @@
 from pathlib import Path
 from datetime import datetime,timezone,timedelta
 import hashlib,json,re,subprocess
+from kp_source_guard import reject_downgrade
 
 def validate(root):
     root=Path(root)
@@ -10,6 +11,9 @@ def validate(root):
         if p.is_symlink():raise ValueError('Symlink in publication')
         if p.is_file() and not re.fullmatch(allowed,p.relative_to(root).as_posix()):raise ValueError('Unexpected publication path')
     feed=json.loads((root/'consumer_cloud/forecast.json').read_text('utf-8'))
+    # Compare against publisher checkout, not only the earlier calculation checkout.
+    previous=json.loads(subprocess.check_output(['git','show','HEAD:consumer_cloud/forecast.json'],cwd=root,text=True,encoding='utf-8'))
+    reject_downgrade(previous,feed,datetime.now(timezone.utc))
     proof=feed.get('source_integrity',{})
     if feed.get('executor')!='github-actions-source-only-v1' or proof.get('status')!='PASS' or proof.get('replayed_days')!=27:raise ValueError('Missing replay proof')
     stamp=datetime.fromisoformat(feed['generated_at'])
@@ -24,6 +28,10 @@ def validate(root):
         own=row['channels']['source_formula']
         if row['date']!=day or own.get('generated_at')!=feed['generated_at']:raise ValueError('Inconsistent calculation time/date')
         if own.get('available') and (type(own.get('value')) is not int or not -3<=own['value']<=3):raise ValueError('Invalid score')
+        if own.get('kp_source_requirement')=='NOAA_3day_slots':
+            if own.get('available') is not False or own.get('value') is not None or own.get('raw') is not None or own.get('factors')!=[] or row.get('forecast_result',{}).get('score') is not None:
+                raise ValueError('Withheld Kp date exposes a score')
+            if own.get('status')!='missing_kp' or own.get('availability_reason')!='short_range_coverage_lost':raise ValueError('Unmarked Kp suppression')
         if own.get('validation')!='unvalidated_source_formula' or own.get('expert_override_used') is not False:raise ValueError('Invalid promotion claim')
     return True
 

@@ -2596,7 +2596,7 @@ function renderHeroAstroLayer(){
   const _divNote = _hasDiv
     ? `\n\n⊙ Розбіжність pill ↔ engine: pill = noon UTC (annual_2026_27.json, drikpanchang-verified); engine_scores = 00:30 UTC Swiss Ephemeris. На boundary днях (~46%) tithi/nakshatra може зсунутись на 1. Bulletin score не залежить від цього.`
     : '';
-  elA.title = `Astronomical layer (live names, frozen score)\ncal_score: ${cs >= 0 ? '+' : ''}${cs} (engine_scores.json, не PDF/engine)\n${_tithiLine}\n${_nakLine}\n${_yogaLine}\nSymbols: ${symStr}${artifactWarn}${yogaAdvisory}${_divNote}\n\nv88.7.12: tithi/nakshatra/yoga назви — live (узгоджено з Панчанга-карткою). cal_score/cal_symbols — frozen engine_scores. Engine pill (+3) — frozen v18.5 bulletin.`;
+  elA.title = `Calendar R&D layer: different weights; not the consumer score\ncal_score: ${cs >= 0 ? '+' : ''}${cs} (engine_scores.json, не PDF/engine)\n${_tithiLine}\n${_nakLine}\n${_yogaLine}\nSymbols: ${symStr}${artifactWarn}${yogaAdvisory}${_divNote}\n\nv88.7.12: tithi/nakshatra/yoga назви — live (узгоджено з Панчанга-карткою). cal_score/cal_symbols — frozen engine_scores. Engine pill (+3) — frozen v18.5 bulletin.`;
   elA.style.display = '';
 }
 
@@ -18250,37 +18250,6 @@ function updateScienceBar(kp, ap, sn, ai, phaseName, phaseDeg, f107) {
 let _activeProfile = 'off';
 
 const PROFILE_TEXT = {
-  med: {
-    label: '🏥 Медик',
-    color: '#2bd47d',
-    bg: 'rgba(43,212,125,0.08)',
-    border: '#2bd47d',
-    // gShift за віком: старший вік → нижчий поріг входу в "обережну" зону
-    ageAdj: { '18': 0, '35': -0.3, '45': -0.6, '55': -1.0 },
-    recs: {
-      '≤-3': 'СТОП: при G ≤ −3 зафіксовано зростання серцево-судинних подій до +25% (Stoupel 2014). Відкласти планові операції, підсилити моніторинг пацієнтів з аритміями.',
-      '-2':  'ОБЕРЕЖНО: геомагнітна збурення G2. Збільшити інтервал контролю АТ. Уникати елективних втручань у пацієнтів із коронарною патологією.',
-      '-1':  'ПОМІРНО: незначне збурення. Стандартний протокол з підвищеною уважністю до нейрохірургічних пацієнтів.',
-       '0':  'НОРМА: геомагнітний фон спокійний. Всі планові операції та процедури — без обмежень.',
-       '1':  'СПРИЯТЛИВО: низький Kp, спокійна фаза Місяця. Оптимально для складних планових втручань.',
-      '≥2':  'ОПТИМАЛЬНО: найкращий геофізичний фон. Рекомендовано для важких операцій і реанімаційних заходів.',
-    }
-  },
-  pilot: {
-    label: '✈ Пілот',
-    color: '#37a7ff',
-    bg: 'rgba(55,167,255,0.08)',
-    border: '#37a7ff',
-    ageAdj: { '18': 0, '35': -0.2, '45': -0.4, '55': -0.7 },
-    recs: {
-      '≤-3': 'СТОП: екстремальна геомагнітна буря G4–G5. Можливі збої GPS/HF-зв\'язку на полярних маршрутах. NOTAMs обов\'язкові.',
-      '-2':  'ОБЕРЕЖНО: G2–G3 шторм. Деградація GPS можлива (помилка до 50м). Перевірити ILS/VOR резерви. Уникати MNPS без резервного Nav.',
-      '-1':  'ПОМІРНО: незначні збурення. HF на північних маршрутах може деградувати. Стандартний dispatch з увагою до Space WX NOTAM.',
-       '0':  'НОРМА: Kp < 3. Геомагнітний фон чистий. Всі маршрути без обмежень.',
-       '1':  'СПРИЯТЛИВО: мінімальний Kp. GPS максимально точний. Оптимально для навчальних польотів і тренувань.',
-      '≥2':  'ОПТИМАЛЬНО: виняткові умови радіонавігації. Ідеально для тренувань і складних маршрутів.',
-    }
-  },
   trader: {
     label: '📈 Трейдер',
     color: '#ffcc00',

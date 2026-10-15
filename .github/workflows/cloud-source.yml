@@ -30,6 +30,8 @@ jobs:
       - uses: actions/setup-node@v4
         with: {node-version: '24'}
       - run: python -m pip install cryptography==50.0.1
+      - name: Check Kp source regression guard
+        run: python tools/cloud/test_kp_source_guard.py
       - name: Decrypt private sources in temporary directory
         env:
           NR_SOURCE_BUNDLE_KEY: ${{ secrets.NR_SOURCE_BUNDLE_KEY }}

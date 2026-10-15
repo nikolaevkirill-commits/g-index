@@ -3,6 +3,7 @@ from pathlib import Path
 from datetime import datetime, timezone
 import argparse, copy, hashlib, json, sys
 from public_feed import public_feed
+from kp_source_guard import reject_downgrade, suppress_downgrades
 from urllib.request import Request, urlopen
 
 def encode(doc):return json.dumps(doc,ensure_ascii=False,indent=2,allow_nan=False).encode('utf-8')
@@ -67,6 +68,11 @@ def main():
     root=a.private.resolve();site=a.site.resolve();prepare(root);doc,proof=calculate(root)
     legacy=json.loads((site/'INDEPENDENT_FORECAST_FEED_v1.json').read_text('utf-8-sig'))
     feed=public_feed(build_feed(doc,legacy,proof))
+    previous_path=site/'consumer_cloud/forecast.json'
+    if previous_path.exists():
+        previous=json.loads(previous_path.read_text('utf-8-sig'))
+        feed=suppress_downgrades(previous,feed,datetime.now(timezone.utc))
+        reject_downgrade(previous,feed,datetime.now(timezone.utc))
     write(site/'consumer_cloud/forecast.json',feed)
     # Public receipts contain physical NOAA data only, never workbook/PDF contents.
     dest=site/'consumer_cloud/noaa';dest.mkdir(parents=True,exist_ok=True)
