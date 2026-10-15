@@ -83,7 +83,12 @@ function renderWeatherBrief(root,status,full){
  brief.dataset.g=status.state==='available'&&Number.isInteger(status.current?.G)?String(status.current.G):'';
  brief.dataset.active=String(status.state==='available'&&(Object.values(status.current).some(v=>v>0)||status.forecasts.some(f=>f.g>0)));
  if(brief.dataset.active==='true'){if(hero.firstElementChild!==brief)hero.prepend(brief)}else if(hero.nextElementSibling!==brief)hero.after(brief);
- brief.innerHTML='<strong>'+esc(tr('NOAA · попередження та ймовірності'))+' →</strong>'+body;
+ /* v5 NR-01: в активному стані заголовок називає сигнал і рівень за шкалою NOAA (G1…G5: слабка…екстремальна); без нових порогів */
+ const gNames=['','слабка','помірна','сильна','дуже сильна','екстремальна'],cur=status.current||{},fmax=(status.forecasts||[]).reduce((a,f)=>Math.max(a,Number(f.g)||0),0);
+ const title=brief.dataset.active!=='true'?tr('NOAA · попередження та ймовірності'):cur.G>0&&gNames[cur.G]?tr('Геомагнітна буря')+' G'+cur.G+' · '+tr(gNames[cur.G])+' '+tr('(шкала NOAA)'):(cur.S>0||cur.R>0)?tr('Активне попередження NOAA'):tr('Прогноз NOAA: можлива буря')+' G'+fmax;
+ brief.dataset.signal=brief.dataset.active!=='true'?'none':cur.G>0?'storm':(cur.S>0||cur.R>0)?'alert':'forecast';
+ brief.innerHTML='<strong>'+esc(title)+' →</strong>'+body;
+ kpNote(root);
 }
 function renderReasonBrief(root,r,strongest,own){
  if(!['today','forecast'].includes(root.dataset.overview))return;
@@ -94,6 +99,10 @@ function renderReasonBrief(root,r,strongest,own){
  brief.innerHTML='<strong>'+esc(tr('Чому така оцінка'))+' →</strong>'+(r.available&&strongest.length?strongest.map(f=>'<span class="nr-o-brief-factor"><span>'+esc(tr(names[f.factor]||f.factor))+'</span><b>'+esc(fmt(f.value))+'</b></span>').join(''):'<span>'+esc(tr(r.available?'Ненульових внесків немає.':'Актуальну оцінку не показуємо'))+'</span>')+(r.available?kpLine(own,tr):'')+(r.available&&Number.isFinite(own?.raw)&&Math.trunc(own.raw)!==r.score?'<small>'+esc(tr('Сума внесків ')+fmt(own.raw)+tr(' · шкала обмежена до ')+fmt(r.score))+'</small>':'');
 }
 
+/* v7.2 NRA-02: явна дія після вичерпання автоповторів (та сама функція завантаження, лічильник скинуто) */
+function retryButton(root,status,show){let b=root.querySelector(':scope .nr-o-retry');if(!show){b?.remove();return}const tr=s=>window.NRLocale?.text(s)||s;if(!b){b=document.createElement('button');b.type='button';b.className='nr-btn secondary nr-o-retry';b.onclick=()=>{b.disabled=true;window.fp469RetryConsumerForecast?.()};status.after(b)}b.disabled=false;const t=tr('Повторити');if(b.textContent!==t)b.textContent=t}
+/* v7.2 NRA-11: за активної бурі — чим бал відрізняється від поточного спостереження NOAA. Відповідність Kp→G — та сама, що в kpLine; нових порогів немає */
+function kpNote(root){const lb=root.querySelector('.nr-o-label');if(!lb)return;root.querySelectorAll('.nr-o-kpnote').forEach(n=>n.remove());const brief=root.querySelector('[data-weather-brief]'),cur=Number(brief?.dataset.g),ds=root.querySelector('select')?.value;if(brief?.dataset.active!=='true'||!(cur>0)||ds!==today())return;const own=rows[ds]?.channels?.source_formula,kp=own?.kp_input?.kp;if(!own?.available||!Number.isFinite(kp))return;const g=kp>=9?5:kp>=8?4:kp>=7?3:kp>=6?2:kp>=5?1:0,tr=s=>window.NRLocale?.text(s)||s;const n=document.createElement('small');n.className='nr-o-kpnote';n.setAttribute('translate','no');const when=Number.isFinite(Date.parse(own.generated_at))?NRPresentation.dateFormatter(window.NRLocale?.locale||'uk-UA',{timeZone:'Europe/Kyiv',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}).format(new Date(own.generated_at)):'—';n.textContent=tr('Бал розраховано ')+when+tr(' з Kp макс. ')+String(Number(kp.toFixed(2)))+' (G'+g+')'+tr('; поточне спостереження NOAA G')+cur+tr(' показано окремо; бал використовує прогнозний Kp.');lb.append(n)}
 function kpLine(own,tr){const kp=own?.kp_input?.kp;if(!Number.isFinite(kp))return '';const g=kp>=9?5:kp>=8?4:kp>=7?3:kp>=6?2:kp>=5?1:0;const src=own.kp_source==='NOAA_27day_outlook'?tr(' · NOAA outlook від ')+String(own.kp_input.issued_at||'').slice(0,10):tr(' · NOAA 3-годинний прогноз');return '<small data-kp-line>'+esc(tr('Kp макс. ')+String(Number(kp.toFixed(2)))+' (G'+g+')'+src)+'</small>';}
 function fmt(value){if(!Number.isFinite(value))return '—';const n=Number(value.toFixed(2));return n<0?'−'+Math.abs(n):n>0?'+'+n:'0';}
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -305,8 +314,11 @@ function render(root){
  window.NRCalendarContext?.render(root.querySelector('.nr-o-context'),window.nrRetroEphemeris?.(),ds);
  const r=resolve(ds),source=rows[ds]?.channels?.source_formula,own=r.lastScore===null?{}:source||{};
  const status=root.querySelector('.nr-o-state'),transport=window.__nrConsumerLoadState;
- const transportLabels={uk:{loading:'Завантажуємо прогноз…',error:'Не вдалося отримати прогноз. Спробуйте пізніше.'},en:{loading:'Loading forecast…',error:'Unable to load the forecast. Please try again later.'},es:{loading:'Cargando el pronóstico…',error:'No se pudo cargar el pronóstico. Inténtalo más tarde.'},fr:{loading:'Chargement des prévisions…',error:'Impossible de charger les prévisions. Réessayez plus tard.'}};
- const transportText=r.state==='missing'&&transportLabels.uk[transport]?(transportLabels[window.NRLocale?.language]||transportLabels.uk)[transport]:null;
+ const transportLabels={uk:{loading:'Завантажуємо прогноз…',error:'Не вдалося отримати прогноз. Спробуйте пізніше.',retrying:'Не вдалося з першої спроби — повторюємо автоматично…'},en:{loading:'Loading forecast…',error:'Unable to load the forecast. Please try again later.',retrying:'First attempt failed — retrying automatically…'},es:{loading:'Cargando el pronóstico…',error:'No se pudo cargar el pronóstico. Inténtalo más tarde.',retrying:'Falló el primer intento — reintentando automáticamente…'},fr:{loading:'Chargement des prévisions…',error:'Impossible de charger les prévisions. Réessayez plus tard.',retrying:'Échec du premier essai — nouvelle tentative automatique…'}};
+ /* v7.2 NRA-01: поки запланований автоповтор — не показувати остаточну помилку */
+ const transportKey=transport==='error'&&window.__nrConsumerRetry?.pending?'retrying':transport;
+ const transportText=r.state==='missing'&&transportLabels.uk[transportKey]?(transportLabels[window.NRLocale?.language]||transportLabels.uk)[transportKey]:null;
+ retryButton(root,status,r.state==='missing'&&transportKey==='error');
  if(transportText){status.setAttribute('translate','no');status.textContent=transportText;status.dataset.transportState=transport;}
  else{status.removeAttribute('translate');delete status.dataset.transportState;status.textContent=stateLabel(r,ds)+(ds===today()?' · сьогодні за Києвом':' · '+dateLabel(ds)+' · Київ');}
  root.querySelector('.nr-o-score').textContent=fmt(r.score);
@@ -343,6 +355,9 @@ function render(root){
  root.querySelector('.nr-o-score').dataset.opKey=NRConsumerAuthority.present(r).opKey||'none';
  root.querySelector('.nr-o-score').dataset.scoreTone=!r.available?'missing':r.score<0?'negative':r.score===0?'neutral':caution.hidden?'positive':'caution';
  if(!caution.hidden)root.querySelector('.nr-o-label').textContent='Додатна · є застереження';
+ /* v5 NR-01: тип сигналу біля бала — модель дня, не прогноз бурі (бал містить прогноз Kp як одну складову) */
+ if(r.available){const lb=root.querySelector('.nr-o-label'),k=document.createElement('small');k.className='nr-o-kind';k.textContent='Модель дня · не прогноз бурі';lb.append(document.createTextNode(' '),k)}
+ kpNote(root);
  caution.textContent=caution.hidden?'':'Оцінка додатна, але в календарі є позначки з мінусом: '+minus.map(x=>factorName(x.factor)+' '+fmt(x.value)).join('; ')+'.';
  const topics=practical(factors,own,ds),card=root.querySelector('.nr-o-practical');
  card.querySelector('h2').textContent=topics.title;card.querySelector('p').textContent=topics.body;card.querySelector('small').textContent=topics.limit;

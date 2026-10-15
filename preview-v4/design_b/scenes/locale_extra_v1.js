@@ -23,6 +23,10 @@ const rows=[
  ['Оперативно','Operational','Operativo','Opérationnel'],
  ['БЛОК','BLOCK','BLOQUEO','BLOCAGE']
 ];
+/* v5 NR-01 */
+rows.push(["Геомагнітна буря", "Geomagnetic storm", "Tormenta geomagnética", "Tempête géomagnétique"],["(шкала NOAA)", "(NOAA scale)", "(escala NOAA)", "(échelle NOAA)"],["Активне попередження NOAA", "Active NOAA alert", "Alerta activa de NOAA", "Alerte NOAA active"],["Прогноз NOAA: можлива буря", "NOAA forecast: possible storm", "Pronóstico NOAA: posible tormenta", "Prévision NOAA : tempête possible"],["дуже сильна", "severe", "severa", "sévère"],["екстремальна", "extreme", "extrema", "extrême"],["помірна", "moderate", "moderada", "modérée"],["сильна", "strong", "fuerte", "forte"],["слабка", "minor", "menor", "mineure"],["Модель дня · не прогноз бурі", "Daily model · not a storm forecast", "Modelo del día · no es un pronóstico de tormenta", "Modèle du jour · pas une prévision de tempête"]);
+/* v7.2 */
+rows.push(["Повторити", "Retry", "Reintentar", "Réessayer"],["Бал розраховано ", "Score calculated ", "Puntuación calculada ", "Score calculé "],[" з Kp макс. ", " from max Kp ", " con Kp máx. ", " avec Kp max "],["; поточне спостереження NOAA G", "; current NOAA observation G", "; observación actual de NOAA G", "; observation NOAA actuelle G"],[" показано окремо; бал використовує прогнозний Kp.", " is shown separately; the score uses forecast Kp.", " se muestra por separado; la puntuación usa el Kp previsto.", " est affichée séparément ; le score utilise le Kp prévu."]);
 let added=0;for(const r of rows){try{NRLocale.register([r]);added++}catch{}}
 window.__nrLocaleExtra={added,total:rows.length};
 })();

@@ -18024,7 +18024,11 @@ function _showToast(msg) {
     if (!ob) return;
     if (!navigator.onLine) {
       const ts = document.getElementById('dataTimestamp');
-      const age = (ts && ts.textContent || '').trim() || 'невідомого часу';
+      /* r4: dataTimestamp може містити «дані від (synthetic)» — не дублюємо префікс і не показуємо технічний стан Kp */
+      const _rawAge = (ts && ts.textContent || '').trim().replace(/^дані від\s*/i, '');
+      /* v7.2 NRA-05: перевага — час генерації consumer feed (Europe/Kyiv) */
+      const _gen = window.__nrConsumerGeneratedAt && Number.isFinite(Date.parse(window.__nrConsumerGeneratedAt)) ? new Intl.DateTimeFormat('uk-UA',{timeZone:'Europe/Kyiv',day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'}).format(new Date(window.__nrConsumerGeneratedAt)) : null;
+      const age = _gen || ((/\d/.test(_rawAge) && !/synthetic|estimated|degraded/i.test(_rawAge)) ? _rawAge : 'невідомого часу');
       const ageEl = document.getElementById('offlineDataAge');
       if (ageEl) ageEl.textContent = age;
       ob.style.display = '';

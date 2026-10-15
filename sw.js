@@ -1,7 +1,7 @@
 importScripts('./runtime_diagnostics_v1.js');
 // G-Index service worker. HTML/data are network-first; static shell is cache-first.
 // Bump CACHE_VERSION whenever index.html or a cached shell asset changes.
-const CACHE_VERSION = 'fp469-v80-observatory-preview-v4-fast'; // planning copy matches the available functionality
+const CACHE_VERSION = 'fp469-v80-observatory-preview-v4-v7-2-fixed'; // planning copy matches the available functionality
 const CACHE_PREFIX = 'gindex-'; // G-Index cache namespace; do not remove the prefix.
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${CACHE_VERSION}`;
 const DATA_CACHE = `${CACHE_PREFIX}data-${CACHE_VERSION}`;
@@ -21,16 +21,20 @@ async function deliveryResponse(response,mode){
 const SHELL_ASSETS = [
   './preview-v4/public_preview_policy.js',
   './design-v4.html',
-  './preview-v4/atlas_motion.css',
+  './preview-v4/atlas_motion.css?v=v7-2',
   './preview-v4/consumer_overview_v1.js',
   './preview-v4/core_runtime_v1.js',
-  './preview-v4/design_candidate.css',
+  './preview-v4/design_candidate.css?v=v7-2',
   './preview-v4/design_candidate.js',
   './preview-v4/design_scale.js',
   './preview-v4/locale_bridge_v1.js',
   './preview-v4/locale_overview_v1.js',
   './preview-v4/product_shell_v1.js',
-  './preview-v4/design_b/integration.css',
+  './preview-v4/design_b/integration.css?v=v7-2',
+  './preview-v4/design_b/palette/palette.css?v=v7-2',
+  './preview-v4/design_b/palette/palette.js',
+  './preview-v4/design_b/states/states.css?v=v7-2',
+  './preview-v4/design_b/states/states.js',
   './preview-v4/design_b/assets/field-lines.svg',
   './preview-v4/design_b/assets/icon-forecast.svg',
   './preview-v4/design_b/assets/icon-night.svg',
@@ -38,7 +42,7 @@ const SHELL_ASSETS = [
   './preview-v4/design_b/assets/icon-today.svg',
   './preview-v4/design_b/assets/moon-crescent.svg',
   './preview-v4/design_b/assets/samrat-yantra.svg',
-  './preview-v4/design_b/css/fonts.css',
+  './preview-v4/design_b/css/fonts.css?v=v7-2',
   './preview-v4/design_b/fonts/fira-sans-cyrillic-400-normal.woff2',
   './preview-v4/design_b/fonts/fira-sans-cyrillic-500-normal.woff2',
   './preview-v4/design_b/fonts/fira-sans-cyrillic-600-normal.woff2',
@@ -52,7 +56,7 @@ const SHELL_ASSETS = [
   './preview-v4/design_b/fonts/OFL-FiraSans.txt',
   './preview-v4/design_b/fonts/OFL-Literata.txt',
   './preview-v4/design_b/scenes/locale_extra_v1.js',
-  './preview-v4/design_b/scenes/scenes.css',
+  './preview-v4/design_b/scenes/scenes.css?v=v7-2',
   './preview-v4/design_b/scenes/scenes.js',
 
   './design-b17.html',
@@ -154,7 +158,14 @@ self.addEventListener('install', (event) => {
   // reloads (a black screen while the 1.4 MB dashboard initialized).
   event.waitUntil(
     caches.open(SHELL_CACHE)
-      .then((cache) => cache.addAll(SHELL_ASSETS))
+      // Required shell, preview HTML/JS/CSS/fonts install atomically. Only decorative SVGs are optional.
+      // If required content fails, reject installation and retain the previous active worker and caches.
+      .then(async (cache) => {
+        const optional = (u) => /^\.\/preview-(?:v4|b17)\/.*\.svg(?:\?|$)/.test(u);
+        await cache.addAll(SHELL_ASSETS.filter((u) => !optional(u)));
+        const results = await Promise.allSettled(SHELL_ASSETS.filter(optional).map((u) => cache.add(u)));
+        if (results.some((r) => r.status === 'rejected')) globalThis.NRDiagnostics?.record('sw.decoration_precache_partial', 'recoverable');
+      })
       .catch(async (error) => {globalThis.NRDiagnostics?.record('promise.catch.13','recoverable');
         // A partial/empty new cache must never be allowed to activate and
         // replace the last-known-good worker. addAll is atomic; remove the
@@ -266,8 +277,10 @@ self.addEventListener('fetch', (event) => {
           // The navigation URL (including channel/push parameters) is retained.
           const scope = new URL(self.registration.scope);
           const index = new URL('index.html', scope);
+          // v7.2 NRA-35: точка входу preview теж має офлайн-запуск із будь-якими параметрами (?channel=play)
+          const preview = new URL('design-v4.html', scope);
           if(!cached && req.mode === 'navigate' &&
-             (canonicalUrl.pathname === scope.pathname || canonicalUrl.pathname === index.pathname)) {
+             (canonicalUrl.pathname === scope.pathname || canonicalUrl.pathname === index.pathname || canonicalUrl.pathname === preview.pathname)) {
             const entry = new URL(canonicalUrl.href); entry.search=''; entry.hash='';
             cached = await cache.match(entry.href) || await shellCache.match(entry.href);
           }

@@ -1,3 +1,5 @@
+/* r4: Chromium ICU для uk з weekday+day дає знахідний відмінок («середу, 14 жовтня»); у заголовку потрібен називний */
+window.__nrWeekdayDate=function(loc,opts,d){const f=window.NRPresentation.dateFormatter;if(!String(loc||'').startsWith('uk')||!opts.weekday)return f(loc,opts).format(d);const {weekday,...rest}=opts;return f(loc,{timeZone:opts.timeZone,weekday}).format(d)+', '+f(loc,rest).format(d)};
 
 (function(){
   'use strict';
@@ -189,7 +191,7 @@
     month.innerHTML=cells.join('');
     window.fp443SelectCalendarDay(data[0].ds,week.querySelector('.nr-calendar-day'));
   }
-    window.fp443SelectCalendarDay=function(ds,button){const source=(typeof _27dComputed!=='undefined'&&Array.isArray(_27dComputed))?_27dComputed:[],d=buildCalendarFrame(source,todayKey(),27).find(x=>x.ds===ds),box=document.getElementById('nrCalendarDetail');if(!d||!box)return;document.querySelectorAll('.nr-calendar-day').forEach(n=>{const active=n===button;n.classList.toggle('active',active);n.setAttribute('aria-pressed',String(active))});const resolved=operationalForDate(d),p=resolved.presentation,expert=resolved.expert,raw=resolved.rawValue,fmt=v=>Number.isFinite(v)?`${v>=0?'+':''}${v.toFixed(1)}`:'—';box.innerHTML=`<span class="nr-chip">РІШЕННЯ ДНЯ · ${escapeHtml(p.label.toUpperCase())}</span><p class="nr-source-summary">${escapeHtml(sourceSummary(ds))}</p><h3>${window.NRPresentation.dateFormatter('uk-UA',{timeZone:'Europe/Kyiv',weekday:'long',day:'numeric',month:'long'}).format(new Date(ds+'T12:00:00Z'))}</h3><p><strong>${p.symbol} ${escapeHtml(p.title)}</strong></p><p>${escapeHtml(p.summary)}</p><details class="nr-authority-details"><summary>Джерела й технічні дані</summary><p class="nr-result-meta">Канонічний механізм: ${p.available?`${escapeHtml(String(resolved.signal.opKey))} · рішення ${fmt(resolved.decisionScore)}`:'рішення недоступне'}${resolved.signal?.guard&&resolved.signal.guard!=='none'?` · обмеження ${escapeHtml(resolved.signal.guard)}`:''}. Довідковий PDF: ${expert?fmt(expert.score)+' · джерело звірено':'немає'}. Поточний G: ${fmt(raw)} · контекст, не команда. ${resolved.scenario?'Резервний сценарій не визначає колір поради.':''}</p></details>`};
+    window.fp443SelectCalendarDay=function(ds,button){const source=(typeof _27dComputed!=='undefined'&&Array.isArray(_27dComputed))?_27dComputed:[],d=buildCalendarFrame(source,todayKey(),27).find(x=>x.ds===ds),box=document.getElementById('nrCalendarDetail');if(!d||!box)return;document.querySelectorAll('.nr-calendar-day').forEach(n=>{const active=n===button;n.classList.toggle('active',active);n.setAttribute('aria-pressed',String(active))});const resolved=operationalForDate(d),p=resolved.presentation,expert=resolved.expert,raw=resolved.rawValue,fmt=v=>Number.isFinite(v)?`${v>=0?'+':''}${v.toFixed(1)}`:'—';box.innerHTML=`<span class="nr-chip">РІШЕННЯ ДНЯ · ${escapeHtml(p.label.toUpperCase())}</span><p class="nr-source-summary">${escapeHtml(sourceSummary(ds))}</p><h3>${window.__nrWeekdayDate('uk-UA',{timeZone:'Europe/Kyiv',weekday:'long',day:'numeric',month:'long'},new Date(ds+'T12:00:00Z'))}</h3><p><strong>${p.symbol} ${escapeHtml(p.title)}</strong></p><p>${escapeHtml(p.summary)}</p><details class="nr-authority-details"><summary>Джерела й технічні дані</summary><p class="nr-result-meta">Канонічний механізм: ${p.available?`${escapeHtml(String(resolved.signal.opKey))} · рішення ${fmt(resolved.decisionScore)}`:'рішення недоступне'}${resolved.signal?.guard&&resolved.signal.guard!=='none'?` · обмеження ${escapeHtml(resolved.signal.guard)}`:''}. Довідковий PDF: ${expert?fmt(expert.score)+' · джерело звірено':'немає'}. Поточний G: ${fmt(raw)} · контекст, не команда. ${resolved.scenario?'Резервний сценарій не визначає колір поради.':''}</p></details>`};
   window.fp453SetHorizon=function(days,button){
     document.querySelectorAll('#nrRoute-forecast .nr-forecast-tabs [role="tab"]').forEach(tab=>{const selected=tab===button;tab.setAttribute('aria-selected',String(selected));tab.tabIndex=selected?0:-1});
     document.querySelectorAll('#nrRoute-forecast .nr-horizon[data-horizon]').forEach(panel=>panel.dataset.active=String(Number(panel.dataset.horizon)===Number(days)));
@@ -218,10 +220,12 @@
     return window.NRConsumerAuthority.loadFeeds(document.baseURI);
   }
   let _consumerFeedPending=null,_consumerFeedRetries=0,_consumerFeedTimer=null;
-  function cancelConsumerRetry(){clearTimeout(_consumerFeedTimer);_consumerFeedTimer=null;}
+  function cancelConsumerRetry(keep){clearTimeout(_consumerFeedTimer);_consumerFeedTimer=null;if(keep!==true&&window.__nrConsumerRetry?.pending){window.__nrConsumerRetry={pending:false,exhausted:false};window.NRConsumerOverview?.update();}}
   function retryConsumerForecast(){
-    if(_consumerFeedTimer!==null||_consumerFeedRetries>=3||navigator.onLine===false||document.hidden)return;
+    if(_consumerFeedTimer!==null||_consumerFeedRetries>=3||navigator.onLine===false||document.hidden){window.__nrConsumerRetry={pending:false,exhausted:_consumerFeedRetries>=3};window.NRConsumerOverview?.update();return;}
     const delay=[1500,4000,10000][_consumerFeedRetries++];
+    /* v7.2 NRA-01: стан повтору видно в UI */
+    window.__nrConsumerRetry={pending:true,attempt:_consumerFeedRetries+1,of:4,delay};window.NRConsumerOverview?.update();
     _consumerFeedTimer=setTimeout(()=>{_consumerFeedTimer=null;loadConsumerForecast();},delay);
   }
   function consumerFeedUsable(feed){
@@ -229,24 +233,24 @@
     return row?._consumer_executor==='cloud'&&window.NRConsumerAuthority.resolve(row,ds).state==='fresh';
   }
   function loadConsumerForecast(){
-    cancelConsumerRetry();
+    cancelConsumerRetry(true); /* v7.2: поки триває повторна спроба, стан «повторюємо» зберігається */
     if(_consumerFeedPending)return _consumerFeedPending;
     if(!window.__nrConsumerLoadState)window.__nrConsumerLoadState='loading';
     window.NRConsumerOverview?.update();
     let retry=false;
     _consumerFeedPending=fetchConsumerFeeds().then(feed=>{
-      window.__nrConsumerLoadState='loaded';window.__nrConsumerCached=false;_sourceForecastRows=feed.days;
+      window.__nrConsumerLoadState='loaded';window.__nrConsumerCached=false;_sourceForecastRows=feed.days;window.__nrConsumerRetry={pending:false,exhausted:false};window.__nrConsumerGeneratedAt=(()=>{const g=feed?.generated_at||feed?.days?.[todayKey()]?.channels?.source_formula?.generated_at;return typeof g==='string'?g:null})();try{window.dispatchEvent(new CustomEvent('nr:consumer-feed',{detail:{generated_at:window.__nrConsumerGeneratedAt}}))}catch{}
       window.NRConsumerOverview?.update(_sourceForecastRows);
       retry=!consumerFeedUsable(feed);
       if(!retry)_consumerFeedRetries=0;
       return feed;
-    }).catch(error=>{window.__nrConsumerLoadState='error';window.NRConsumerOverview?.update();window.__nrConsumerCached=true;window.NRDiagnostics.record('consumer.feed','recoverable',error);retry=true;return null;}).finally(()=>{
+    }).catch(error=>{window.__nrConsumerLoadState='error';window.__nrConsumerRetry={pending:_consumerFeedRetries<3&&navigator.onLine!==false&&!document.hidden,exhausted:_consumerFeedRetries>=3};window.NRConsumerOverview?.update();window.__nrConsumerCached=true;window.NRDiagnostics.record('consumer.feed','recoverable',error);retry=true;return null;}).finally(()=>{
       _consumerFeedPending=null;renderSourceSummary();requestProductRender('cover','calendar','forecast');
       if(retry)retryConsumerForecast();
     });return _consumerFeedPending;
   }
   function resumeConsumerForecast(){_consumerFeedRetries=0;return loadConsumerForecast();}
-  window.fp469LoadConsumerForecast=loadConsumerForecast;
+  window.fp469LoadConsumerForecast=loadConsumerForecast;window.fp469RetryConsumerForecast=resumeConsumerForecast;
   setTimeout(loadConsumerForecast,0);
   window.addEventListener('gindex:data-ready',loadConsumerForecast);
   window.addEventListener('online',resumeConsumerForecast);
@@ -418,7 +422,7 @@
       const meanings={Tithi:'місячний ритм',Vara:'управитель дня',Nakshatra:'характер дії',Yoga:'фон взаємодії',Karana:'короткий практичний ритм'};
       const rows=[['Tithi',current('tithi')],['Vara',{value:VARA[new Date(localDay+'T12:00:00Z').getUTCDay()],end:null,hasNext:false}],['Nakshatra',current('nakshatra')],['Yoga',current('yoga')],['Karana',current('karana')]];
       const events=[];for(const [key,label] of [['tithi','Tithi'],['nakshatra','Nakshatra'],['yoga','Yoga'],['karana','Karana']]){const segs=local.components[key].segments;for(let i=1;i<segs.length;i++)if(localDate(segs[i].start_utc)===localDay)events.push({at:segs[i].start_utc,label,value:fmtValue(key,segs[i].value)})}events.sort((a,b)=>Date.parse(a.at)-Date.parse(b.at));
-      const dateText=window.NRPresentation.dateFormatter(window.NRLocale?.locale||'uk-UA',{timeZone:zone,weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(new Date(now));
+      const dateText=window.__nrWeekdayDate(window.NRLocale?.locale||'uk-UA',{timeZone:zone,weekday:'long',day:'numeric',month:'long',year:'numeric'},new Date(now));
       const cards=rows.map(([name,x])=>`<article class="nr-panch-component"><b>${({Tithi:'Тітхі',Vara:'Вара',Nakshatra:'Накшатра',Yoga:'Йога',Karana:'Карана'})[name]||name}</b><strong>${escapeHtml(String(x.value))}</strong><small>${escapeHtml(meanings[name])}</small><small class="nr-panch-until">${x.missing?'Немає даних для поточного моменту':x.hasNext?`до ${fmtTime(x.end)}, далі ${escapeHtml(String(x.next))}`:'без наступної зміни сьогодні'}</small></article>`).join('');
       const timeline=events.length?events.map(e=>`<div class="nr-panch-event${Date.parse(e.at)<=now?' is-past':''}"><time datetime="${escapeHtml(e.at)}">${fmtTime(e.at)}</time><b>${({Tithi:'Тітхі',Vara:'Вара',Nakshatra:'Накшатра',Yoga:'Йога',Karana:'Карана'})[e.label]||e.label}</b><span>починається <strong>${escapeHtml(e.value)}</strong></span></div>`).join(''):'<div class="nr-panch-empty">Переходів до завершення календарної доби немає.</div>';
       const next=events.find(e=>Date.parse(e.at)>now);
@@ -566,7 +570,7 @@
     if(freshnessNode){freshnessNode.dataset.state=freshStatus.state;freshnessNode.title='Статус оновлення джерел; не підтвердження точності прогнозу. Подробиці — у розділі «Дані та походження».'}
     const set=(id,value)=>{const n=document.getElementById(id);if(n)n.textContent=value};
     const liveChip=document.getElementById('nrCoverLiveG')?.parentElement;if(liveChip?.firstChild)liveChip.firstChild.nodeValue='ПОТОЧНИЙ ФОН · G ';
-    set('nrCoverDate',window.NRPresentation.dateFormatter('uk-UA',{timeZone:'Europe/Kyiv',weekday:'long',day:'numeric',month:'long'}).format(new Date()));
+    set('nrCoverDate',window.__nrWeekdayDate('uk-UA',{timeZone:'Europe/Kyiv',weekday:'long',day:'numeric',month:'long'},new Date()));
     set('nrCoverFresh',fresh);set('nrCoverKicker',`СЬОГОДНІ · ${presentation.label.toUpperCase()}`);set('nrCoverTitle',title);set('nrCoverSummary',summary);set('nrCoverDo',doTxt);set('nrCoverAvoid',avoidTxt);
     cover.dataset.advisory=presentation.coverState;
     // Keep every current-day consumer on this same render, including when

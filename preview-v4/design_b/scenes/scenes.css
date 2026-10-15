@@ -105,7 +105,7 @@ body.fp434-app #nrRoute-panch .nr-route-head::before{background:var(--nrs-accent
 /* ---------- scenes3: смуга поступається місцем головній дії ---------- */
 .nr-scene.is-compact{display:none}
 /* B17-N7: дрібний підпис «Оновлено NOAA» у картці попередження (було < 11 px на 320 px) */
-body.fp434-app .nr-o-weather-brief small{font-size:max(12px,.75rem)!important}
+body.fp434-app .nr-o-weather-brief small{font-size:max(12px,.85em)!important}
 /* B17-N8: при 200 % тексту на 320 px заголовки (Literata 52 px) рвалися посеред слова («Панчан|га», «сьогодн|і»).
    Обмежуємо лише верхню межу шириною екрана (11vw ≈ 35 px на 320 px); при 100 % розмір не змінюється (clamp B17 менший). */
 html body.fp434-app :is(.nr-o-heading h1,.nr-route-head h1){font-size:min(clamp(1.65rem,5vw,2.4rem),11vw)!important;hyphens:auto}
@@ -170,7 +170,20 @@ html.nr-design-motion-off :is(.nrs-aurora,.nrs-fogdrift,.nrs-naksh),html.nr-desi
 body.fp434-app .nr-route :is(h1,h2)[tabindex="-1"]:focus:not(:focus-visible){outline:none!important}
 body.fp434-app .nr-route :is(h1,h2)[tabindex="-1"]:focus-visible{outline:3px solid var(--nr-compat-base0,currentColor)!important;outline-offset:4px!important}
 /* Текст < 11 px нижче першого екрана (B17, усі мови): кроки журналу 9 px, підписи 10 px */
-body.fp434-app .nr-o-journey span,body.fp434-app .nr-o-weather-top small{font-size:max(12px,.75rem)!important}
-body.fp434-app :is(#nrPanchLive,#astroGrid,.nr-route) :is([style*="font-size:10px"],[style*="font-size: 10px"],[style*="font-size:9px"],[style*="font-size: 9px"]){font-size:max(12px,.75rem)!important}
+body.fp434-app .nr-o-journey span,body.fp434-app .nr-o-weather-top small{font-size:max(12px,.85em)!important}
+body.fp434-app :is(#nrPanchLive,#astroGrid,.nr-route) :is([style*="font-size:10px"],[style*="font-size: 10px"],[style*="font-size:9px"],[style*="font-size: 9px"]){font-size:max(12px,.85em)!important}
 /* Короткі екрани (≤ 568 px): B17 зменшував підпис причини до 10,5 px — тримаємо ≥ 12 px */
-body.fp434-app .nr-o-reason-brief small{font-size:max(12px,.75rem)!important}
+body.fp434-app .nr-o-reason-brief small{font-size:max(12px,.85em)!important}
+
+/* ================= v5 (14.10.2026) ================= */
+/* NR-01: тип сигналу біля бала */
+body.fp434-app .nr-o-label .nr-o-kind{display:block;margin-top:4px;font:500 max(12px,.8em)/1.3 'Fira Sans',sans-serif;letter-spacing:.01em;color:inherit;opacity:.82}
+/* Вузький екран + великий текст: підпис компактніший, щоб «Мій план» лишався над навігацією */
+@media (max-width:360px){body.fp434-app .nr-o-label .nr-o-kind{font-size:max(12px,.6em);margin-top:2px}}
+/* NR-01: активна буря — заголовок картки помітніший */
+body.fp434-app .nr-o-weather-brief[data-active=true] strong{font-weight:700}
+body.fp434-app .nr-o-weather-brief[data-signal=storm]{border-left-width:6px!important}
+/* NR-07: межа між коротким прогнозом (до 3 днів) і 27-денним орієнтиром у стрічці дат */
+body.fp434-app .nr-b-week button{position:relative}
+body.fp434-app .nr-b-week button:not([data-horizon=outlook])+button[data-horizon=outlook]::before{content:"";position:absolute;left:-4px;top:6px;bottom:6px;border-left:2px dashed currentColor;opacity:.55;pointer-events:none}
+body.fp434-app .nr-o-hero.nr-kind-compact .nr-o-kind{display:none}
