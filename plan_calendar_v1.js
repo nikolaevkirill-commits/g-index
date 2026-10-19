@@ -14,7 +14,7 @@ function fold(line){let result='',bytes=0;for(const c of line){const n=new TextE
 const tr=s=>host.NRLocale?.text(s)||s;
 function create(plan,now=Date.now()){
  const t=instant(plan?.date,plan?.time);if(t===null)throw new Error('Некоректний або неоднозначний київський час.');
- return ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//NeboRhythm//Local plan//UK','CALSCALE:GREGORIAN','BEGIN:VEVENT',
+ return ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//SkyRhythm//Local plan//UK','CALSCALE:GREGORIAN','BEGIN:VEVENT',
  'UID:'+host.crypto.randomUUID()+'@neborhythm.local','DTSTAMP:'+stamp(now),'DTSTART:'+stamp(t),
  'SUMMARY:'+escape(plan.priority||tr('Мій план')), 'DESCRIPTION:'+escape([plan.note,plan.contact?tr('Контакт: ')+plan.contact:'',tr('Час плану: ')+plan.time+' Europe/Kyiv'].filter(Boolean).join('\n')),
  'BEGIN:VALARM','ACTION:DISPLAY','TRIGGER:PT0M','DESCRIPTION:'+escape(plan.priority||tr('Мій план')),'END:VALARM','END:VEVENT','END:VCALENDAR'].map(fold).join('\r\n')+'\r\n';
@@ -22,10 +22,10 @@ function create(plan,now=Date.now()){
 async function download(){
  const status=document.getElementById('nrReminderStatus'),say=s=>{if(status)status.textContent=tr(s)};
  try{const plan=JSON.parse(localStorage.getItem('gindex_day_plan_v1')||'null');if(!plan)throw new Error('Спочатку збережіть план із часом.');
- const text=create(plan),name='NeboRhythm-plan-'+plan.date+'.ics';
+ const text=create(plan),name='SkyRhythm-plan-'+plan.date+'.ics';
  const file=typeof File==='function'?new File([text],name,{type:'text/calendar'}):null;
  if(file&&navigator.share&&navigator.canShare?.({files:[file]})){
-   await navigator.share({files:[file],title:'NeboRhythm'});
+   await navigator.share({files:[file],title:'SkyRhythm'});
    say('Файл передано системі. Збереження файла не означає імпорт у календар; відкрийте його й перевірте подію та нагадування.');
  }else{
    const url=URL.createObjectURL(new Blob([text],{type:'text/calendar;charset=utf-8'})),a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);

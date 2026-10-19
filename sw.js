@@ -1,7 +1,7 @@
 importScripts('./runtime_diagnostics_v1.js');
 // G-Index service worker. HTML/data are network-first; static shell is cache-first.
 // Bump CACHE_VERSION whenever index.html or a cached shell asset changes.
-const CACHE_VERSION = 'fp469-v80-math-r5-audit-closure'; // planning copy matches the available functionality
+const CACHE_VERSION = 'fp481-v129-research-boundary'; // planning copy matches the available functionality
 const CACHE_PREFIX = 'gindex-'; // G-Index cache namespace; do not remove the prefix.
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${CACHE_VERSION}`;
 const DATA_CACHE = `${CACHE_PREFIX}data-${CACHE_VERSION}`;
@@ -19,6 +19,15 @@ async function deliveryResponse(response,mode){
 }
 
 const SHELL_ASSETS = [
+  './observance_source_registry_v1.js',
+  './observances_tanita_v1.js',
+  './panchanga_civil_adapter.js',
+  './own_calendar_v1.js','./research_observances_v1.js','./research_observances_view.js',
+  './panchanga_app_bridge.js',
+  './r9_shell.css',
+  './panchanga_civil_view.css',
+  './panchanga_civil_scene.js',
+  './panchanga_civil_view.js',
   './preview-v4/public_preview_policy.js',
   './design-v4.html',
   './preview-v4/atlas_motion.css?v=v7-2',
@@ -107,6 +116,7 @@ const SHELL_ASSETS = [
   './presentation_runtime_v1.js',
   './product_render_queue_v1.js',
   './consumer_authority_v1.js',
+  './forecast_journal_v1.js',
   './push_client_v1.js',
   './core_runtime_v1.js',
   './mobile_navigation_v1.js',

@@ -11,7 +11,7 @@ const rows={
  saved:['Нагадування заплановано на','Reminder scheduled for','Recordatorio programado para','Rappel programmé pour'],
  pending:['Очікую підтвердження Android…','Waiting for Android confirmation…','Esperando la confirmación de Android…','En attente de confirmation Android…'],
  cancelled:['Нагадування скасовано.','Reminder cancelled.','Recordatorio cancelado.','Rappel annulé.'],
- notification_permission_required:['Дозвольте сповіщення NeboRhythm у налаштуваннях телефона.','Allow NeboRhythm notifications in phone settings.','Permite las notificaciones de NeboRhythm en los ajustes del teléfono.','Autorisez les notifications NeboRhythm dans les réglages du téléphone.'],
+ notification_permission_required:['Дозвольте сповіщення SkyRhythm у налаштуваннях телефона.','Allow SkyRhythm notifications in phone settings.','Permite las notificaciones de SkyRhythm en los ajustes del teléfono.','Autorisez les notifications SkyRhythm dans les réglages du téléphone.'],
  alarm_permission_required:['Потрібен дозвіл Android на точний час нагадування.','Android permission is needed for a precisely timed reminder.','Se necesita permiso de Android para un recordatorio a la hora exacta.','Une autorisation Android est nécessaire pour un rappel à l’heure exacte.'],
  invalid_plan:['Збережіть план і перевірте його час.','Save your plan and check its time.','Guarda el plan y comprueba la hora.','Enregistrez le plan et vérifiez son heure.'],
  unavailable:['Фонове нагадування тут ще недоступне.','Background reminders are not available here yet.','Los recordatorios en segundo plano aún no están disponibles aquí.','Les rappels en arrière-plan ne sont pas encore disponibles ici.'],

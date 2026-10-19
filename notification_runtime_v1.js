@@ -8,9 +8,9 @@ function safeURL(value,scope,fallback=dailyURL){
 }
 function daily(feed,now=Date.now()){
   const date=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Kyiv',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(now));
-  const result=host.NRConsumerAuthority.resolve(feed?.days?.[date],date,now,false);
+  const result=host.NRConsumerAuthority.resolveFinal(feed?.days?.[date],date,now,false);
   const view=host.NRConsumerAuthority.present(result);
-  return {title:'NeboRhythm · '+date,body:result.available?view.title+'. '+view.summary:view.label+'. Відкрийте застосунок, щоб перевірити джерела.',date,state:result.state,score:result.score};
+  return {title:'SkyRhythm · '+date,body:result.available?view.title+'. '+view.summary:view.label+'. Відкрийте застосунок, щоб перевірити джерела.',date,state:result.state,score:result.score};
 }
 async function loadDaily(scope){
   try{return daily(await host.NRConsumerAuthority.loadFeeds(scope));}
@@ -21,11 +21,11 @@ function install(sw){
     let payload={};try{payload=event.data?.json()||{};}catch(_){ globalThis.NRDiagnostics?.record('catch.316','recoverable'); }
     const storm=payload.category==='storm',category=storm?'storm':'daily';
     // Never repeat a legacy server score or a cached payload as today's score.
-    const content=storm?{title:payload.title||'NeboRhythm · Kp',body:payload.body||'Оновлення фізичного показника Kp'}:await loadDaily(sw.registration.scope);
+    const content=storm?{title:payload.title||'SkyRhythm · Kp',body:payload.body||'Оновлення фізичного показника Kp'}:await loadDaily(sw.registration.scope);
     await sw.registration.showNotification(content.title,{
       body:content.body,icon:'./icon192.png',badge:'./icon192.png',tag:'gindex-'+category,renotify:storm,
       data:{url:safeURL(storm?payload.url:dailyURL,sw.registration.scope,storm?stormURL:dailyURL),category,date:content.date,state:content.state},
-      actions:[{action:'open',title:'Відкрити NeboRhythm'}]
+      actions:[{action:'open',title:'Відкрити SkyRhythm'}]
     });
   })()));
   sw.addEventListener('notificationclick',event=>{

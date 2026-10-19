@@ -47,6 +47,9 @@ NRLocale.register([
 ['Мова інтерфейсу','Interface language','Idioma de la interfaz','Langue de l’interface'],
 ['Час переходів і календарна доба — за часовим поясом пристрою. Схід Сонця — в окремому блоці за координатами. Оцінка дня й час планів залишаються за Києвом.','Transition times and the calendar day use your device time zone. Sunrise is in a separate panel using coordinates. The daily score and planned times still use Kyiv time.','Las horas de transición y el día natural usan la zona horaria del dispositivo. El amanecer está en un panel separado que usa coordenadas. La puntuación diaria y los horarios del plan siguen usando la hora de Kyiv.','Les heures de transition et le jour civil suivent le fuseau horaire de l’appareil. Le lever du soleil figure dans un panneau distinct utilisant les coordonnées. Le score du jour et les horaires du programme restent à l’heure de Kyiv.'],
 ['Додатна · є застереження','Positive · cautions apply','Positiva · hay advertencias','Positive · avec réserves'],
+['Експертна правка (PDF) · найвищий пріоритет','Expert correction (PDF) · highest priority','Corrección experta (PDF) · máxima prioridad','Correction experte (PDF) · priorité maximale'],
+['Експертна правка · формула джерела окремо:','Expert correction · source formula separately:','Corrección experta · fórmula de la fuente aparte:','Correction experte · formule source à part :'],
+['Експертна правка · не прогноз бурі','Expert correction · not a storm forecast','Corrección experta · no es pronóstico de tormenta','Correction experte · pas une prévision d’orage'],
 ["Попередження NOAA · найближчі три доби", "NOAA alerts · next three days", "Avisos NOAA · próximos tres días", "Alertes NOAA · trois prochains jours"],
 ["Перевіряємо попередження…", "Checking alerts…", "Comprobando avisos…", "Vérification des alertes…"],
 ["Попередження недоступні або застарілі. Це не означає відсутності бурі.", "Alerts are unavailable or out of date. This does not mean there is no storm.", "Los avisos no están disponibles o están desactualizados. Esto no significa que no haya una tormenta.", "Les alertes sont indisponibles ou périmées. Cela ne signifie pas qu’il n’y a pas de tempête."],
@@ -61,7 +64,7 @@ NRLocale.register([
 ["Офіційні повідомлення NOAA", "Official NOAA notices", "Avisos oficiales de NOAA", "Communiqués officiels NOAA"],
 ['Зберегти розрахунок','Save calculation','Guardar cálculo','Enregistrer le calcul'],
 ['Однаковість версій вхідних даних не підтверджена. Різниця з PDF сама по собі не доводить помилку формули.','Matching input versions have not been confirmed. A difference from the PDF alone does not prove a formula error.','No se ha confirmado que las versiones de los datos de entrada coincidan. Una diferencia con el PDF no demuestra por sí sola un error en la fórmula.','La correspondance des versions des données d’entrée n’est pas confirmée. Une différence avec le PDF ne prouve pas à elle seule une erreur de formule.'],
-['Видалити локальні профілі, геолокацію, журнали, плани, налаштування та сесію входу Неборитму? Сторінка перезавантажиться. Публічний офлайн-кеш і серверний обліковий запис залишаться.','Delete local profiles, location, journals, plans, settings and the NeboRhythm sign-in session? The page will reload. The public offline cache and server account will remain.','¿Borrar perfiles locales, ubicación, diarios, planes, ajustes y la sesión de NeboRhythm? La página se recargará. Se conservarán la caché pública sin conexión y la cuenta del servidor.','Supprimer les profils locaux, la localisation, les journaux, les programmes, les réglages et la session NeboRhythm ? La page sera rechargée. Le cache public hors ligne et le compte serveur seront conservés.'],
+['Видалити локальні профілі, геолокацію, журнали, плани, налаштування та сесію входу SkyRhythm? Сторінка перезавантажиться. Публічний офлайн-кеш і серверний обліковий запис залишаться.','Delete local profiles, location, journals, plans, settings and the SkyRhythm sign-in session? The page will reload. The public offline cache and server account will remain.','¿Borrar perfiles locales, ubicación, diarios, planes, ajustes y la sesión de SkyRhythm? La página se recargará. Se conservarán la caché pública sin conexión y la cuenta del servidor.','Supprimer les profils locaux, la localisation, les journaux, les programmes, les réglages et la session SkyRhythm ? La page sera rechargée. Le cache public hors ligne et le compte serveur seront conservés.'],
 ['Час плану: ','Planned time: ','Hora prevista: ','Heure prévue : '],['Некоректний або неоднозначний київський час.','Invalid or ambiguous Kyiv time.','Hora de Kyiv no válida o ambigua.','Heure de Kyiv invalide ou ambiguë.'],['Спочатку збережіть план із часом.','First save a plan with a time.','Primero guarda un plan con una hora.','Enregistrez d’abord un programme avec une heure.'],
 ['Файл календаря створено. Відкрийте його, підтвердьте імпорт і перевірте нагадування у своєму календарі.','Calendar file created. Open it, confirm the import and check the reminder in your calendar.','Archivo de calendario creado. Ábrelo, confirma la importación y comprueba el recordatorio en tu calendario.','Fichier de calendrier créé. Ouvrez-le, confirmez l’importation et vérifiez le rappel dans votre calendrier.'],
 ['Експорт підготовлено локально; дані нікуди не надсилалися.','Export prepared locally; no data was sent anywhere.','Exportación preparada localmente; no se enviaron datos a ningún sitio.','Export préparé localement ; aucune donnée n’a été envoyée.'],
@@ -107,7 +110,7 @@ NRLocale.register([
 ['Ім’я','Name','Nombre','Nom'],['Місто','City','Ciudad','Ville'],['Показується у локальному профілі та спільному плануванні.','Shown in the local profile and shared planning.','Se muestra en el perfil local y la planificación compartida.','Affiché dans le profil local et la planification commune.'],
 ['Збережене для майбутнього локального контексту; зараз не змінює рішення дня.','Saved for future local context; it does not currently change the day’s assessment.','Guardada para un futuro contexto local; actualmente no cambia la valoración del día.','Enregistrée pour un futur contexte local ; elle ne modifie actuellement pas l’évaluation du jour.'],
 ['Режим пояснення','Explanation mode','Modo de explicación','Mode d’explication'],['Локальна перевага відображення; не змінює рішення.','Local display preference; does not change the assessment.','Preferencia local de visualización; no cambia la valoración.','Préférence locale d’affichage ; ne modifie pas l’évaluation.'],['Простий','Simple','Sencillo','Simple'],['Докладний','Detailed','Detallado','Détaillé'],['Зберегти локально','Save locally','Guardar localmente','Enregistrer localement'],['Експортувати мої дані','Export my data','Exportar mis datos','Exporter mes données'],['Очистити локальні дані','Clear local data','Borrar datos locales','Effacer les données locales'],
-['Очищення видаляє локальні профілі, геолокацію, журнали, плани, налаштування та локальну сесію входу Неборитму й перезавантажує сторінку. Публічний офлайн-кеш сайту та дані інших застосунків залишаються. Серверний обліковий запис не видаляється. Експорт охоплює локальні записи, крім токена входу.','Clearing removes local profiles, location, journals, plans, settings and the local NeboRhythm sign-in session, then reloads the page. The public offline site cache and other apps’ data remain. The server account is not deleted. Export includes local records except the sign-in token.','El borrado elimina perfiles locales, ubicación, diarios, planes, ajustes y la sesión local de NeboRhythm, y recarga la página. Se conservan la caché pública sin conexión y los datos de otras aplicaciones. No se elimina la cuenta del servidor. La exportación incluye los registros locales, excepto el token de acceso.','L’effacement supprime les profils locaux, la localisation, les journaux, les programmes, les réglages et la session locale NeboRhythm, puis recharge la page. Le cache public hors ligne du site et les données des autres applications sont conservés. Le compte serveur n’est pas supprimé. L’export inclut les données locales, sauf le jeton de connexion.'],
+['Очищення видаляє локальні профілі, геолокацію, журнали, плани, налаштування та локальну сесію входу SkyRhythm й перезавантажує сторінку. Публічний офлайн-кеш сайту та дані інших застосунків залишаються. Серверний обліковий запис не видаляється. Експорт охоплює локальні записи, крім токена входу.','Clearing removes local profiles, location, journals, plans, settings and the local SkyRhythm sign-in session, then reloads the page. The public offline site cache and other apps’ data remain. The server account is not deleted. Export includes local records except the sign-in token.','El borrado elimina perfiles locales, ubicación, diarios, planes, ajustes y la sesión local de SkyRhythm, y recarga la página. Se conservan la caché pública sin conexión y los datos de otras aplicaciones. No se elimina la cuenta del servidor. La exportación incluye los registros locales, excepto el token de acceso.','L’effacement supprime les profils locaux, la localisation, les journaux, les programmes, les réglages et la session locale SkyRhythm, puis recharge la page. Le cache public hors ligne du site et les données des autres applications sont conservés. Le compte serveur n’est pas supprimé. L’export inclut les données locales, sauf le jeton de connexion.'],
 ['ЛОКАЛЬНИЙ СТАН','LOCAL STATUS','ESTADO LOCAL','ÉTAT LOCAL'],['полів збережено','fields saved','campos guardados','champs enregistrés'],['Профіль ще не збережено','Profile not saved yet','Perfil aún no guardado','Profil pas encore enregistré'],
 ['Ім’я використовується для локального підпису. Місто не змінює оцінку; старі дані народження збережені лише у локальній копії. Ці поля не змінюють рішення у «Сьогодні», «Прогнозі» або «Календарі».','Your name is used as a local label. The city does not change the score; old birth data remains only in your local copy. These fields do not change the assessment in Today, Forecast or Calendar.','Tu nombre se usa como etiqueta local. La ciudad no cambia la puntuación; los antiguos datos de nacimiento solo permanecen en tu copia local. Estos campos no cambian la valoración en Hoy, Previsión o Calendario.','Votre nom sert de libellé local. La ville ne modifie pas le score ; les anciennes données de naissance restent uniquement dans votre copie locale. Ces champs ne modifient pas l’évaluation dans Aujourd’hui, Prévisions ou Calendrier.'],
 ['Зберігання: лише цей пристрій · серверне надсилання: ні · валідована персональна модель: ні.','Storage: this device only · sent to server: no · validated personal model: no.','Almacenamiento: solo este dispositivo · envío al servidor: no · modelo personal validado: no.','Stockage : cet appareil uniquement · envoi au serveur : non · modèle personnel validé : non.'],
@@ -180,7 +183,7 @@ NRLocale.register([
 ['Поки немає календарних входів для цієї дати.','No calendar inputs available for this date yet.','Aún no hay datos del calendario para esta fecha.','Aucune donnée du calendrier n’est encore disponible pour cette date.'],
 ['сприятливий для подорожей','favourable for travel in the source','favorable para viajar según la fuente','favorable aux voyages selon la source'],
 ['сприятливий для стрижки','favourable for haircuts in the source','favorable para cortarse el pelo según la fuente','favorable à une coupe de cheveux selon la source'],
-['НЕБОРИТМ','NEBORHYTHM','NEBORHYTHM','NEBORHYTHM'],
+['SKYRHYTHM','SKYRHYTHM','SKYRHYTHM','SKYRHYTHM'],
 ['Огляд дня','Day overview','Resumen del día','Aperçu du jour'],
 ['Прогноз і горизонт','Forecast and range','Previsión y alcance','Prévisions et horizon'],
 ['Календар за темами','Calendar by topic','Calendario por temas','Calendrier par thème'],
@@ -227,7 +230,7 @@ NRLocale.register([
 ['Пурніма (за календарем)','Purnima (calendar designation)','Purnima (según el calendario)','Purnima (selon le calendrier)'],
 ['Складова затемнення','Eclipse component','Componente del eclipse','Composante de l’éclipse'],
 ['Оцінка додатна, але в календарі є позначки з мінусом: ','The score is positive, but the calendar has negative contributions: ','La puntuación es positiva, pero el calendario contiene contribuciones negativas: ','Le score est positif, mais le calendrier contient des contributions négatives : '],
-['Як читати NeboRhythm','How to read NeboRhythm','Cómo interpretar NeboRhythm','Comment lire NeboRhythm'],
+['Як читати SkyRhythm','How to read SkyRhythm','Cómo interpretar SkyRhythm','Comment lire SkyRhythm'],
 ['Оцінка −3…+3 поєднує Kp NOAA та складові традиційного календаря. Її точність щодо подій не підтверджена.','The −3 to +3 score combines NOAA Kp with traditional calendar factors. Its accuracy in predicting events has not been established.','La puntuación de −3 a +3 combina el Kp de NOAA con factores del calendario tradicional. Su precisión para predecir acontecimientos no está demostrada.','Le score de −3 à +3 associe le Kp de la NOAA aux facteurs du calendrier traditionnel. Sa précision pour prédire des événements n’est pas établie.'],
 ['Перевіряйте дату й стан джерел. Доба моделі та час плану — за Києвом. «Чому така оцінка» показує внески; «План і щоденник» зберігає ваш власний план і підсумок.','Check the date and source status. The model day and planned times use Kyiv time. “Why this score” shows contributions; the planner and journal store your own plans and outcomes.','Comprueba la fecha y el estado de las fuentes. El día del modelo y los horarios del plan usan la hora de Kyiv. «Por qué esta puntuación» muestra las contribuciones; el planificador y el diario guardan tus planes y resultados.','Vérifiez la date et l’état des sources. Le jour du modèle et les horaires du programme suivent l’heure de Kyiv. « Pourquoi ce score » présente les contributions ; l’agenda et le journal conservent vos projets et vos résultats.'],
 ['Зрозуміло','Got it','Entendido','Compris'],
@@ -319,7 +322,7 @@ NRLocale.register([
 ]);
 NRLocale.register([
 ['Небо. Час. Твій ритм.','Sky, time and your daily plans.','El cielo, el tiempo y tus planes diarios.','Le ciel, le temps et vos projets quotidiens.'],
-['Неборитм','NeboRhythm','NeboRhythm','NeboRhythm'],
+['SkyRhythm','SkyRhythm','SkyRhythm','SkyRhythm'],
 ['Ритм дня · Джйотіш · Планети · Космічна погода','Daily planning · Jyotish · Planets · Space weather','Planificación diaria · Jyotish · Planetas · Clima espacial','Organisation quotidienne · Jyotish · Planètes · Météo spatiale'],
 ['Небо сьогодні','Sky today','El cielo hoy','Le ciel aujourd’hui'],
 ['Сьогодні','Today','Hoy','Aujourd’hui'],['Панчанга','Panchanga','Panchanga','Panchanga'],['Прогноз','Forecast','Previsión','Prévisions'],['Календар','Calendar','Calendario','Calendrier'],['Ще','More','Más','Plus'],['Навігація','Navigation','Navegación','Navigation'],['Концепція','About','Acerca de','À propos'],['Основні розділи застосунку','Main app sections','Secciones principales','Rubriques principales'],
@@ -408,7 +411,7 @@ NRLocale.register([
     "Tithi/Vara/Nakshatra/Yoga/Karana sont calculés au lever astronomique réel du soleil du jour (convention védique), et NON à 12 h UTC. Le texte précédent était inexact (fp236)."
   ],
   [
-    "Зовнішні календарі можуть показувати іншу тіхі, якщо рахують \"на момент запиту\" або \"опівночі\" (західна конвенція) — це методологічна різниця, не обов’язково помилка.",
+    "Зовнішні календарі можуть показувати іншу тітхі, якщо рахують \"на момент запиту\" або \"опівночі\" (західна конвенція) — це методологічна різниця, не обов’язково помилка.",
     "External calendars may show a different Tithi when calculated at the time of the request or at midnight (Western convention). This is a difference in method, not necessarily an error.",
     "Otros calendarios pueden mostrar un Tithi distinto si calculan para el momento de la consulta o la medianoche (convención occidental). Es una diferencia de método, no necesariamente un error.",
     "D’autres calendriers peuvent afficher un Tithi différent s’ils calculent au moment de la consultation ou à minuit (convention occidentale). Il s’agit d’une différence de méthode, pas nécessairement d’une erreur."
@@ -564,7 +567,7 @@ NRLocale.register([
     "développer"
   ],
   [
-    "Зовнішні календарі можуть показувати іншу тіхі, якщо рахують \"на момент запиту\" або \"опівночі\" (західна конвенція) — це методологічна різниця, не обов'язково помилка.",
+    "Зовнішні календарі можуть показувати іншу тітхі, якщо рахують \"на момент запиту\" або \"опівночі\" (західна конвенція) — це методологічна різниця, не обов'язково помилка.",
     "External calendars may show a different Tithi when calculated at the time of the request or at midnight (Western convention). This is a difference in method, not necessarily an error.",
     "Otros calendarios pueden mostrar un Tithi distinto si calculan para el momento de la consulta o la medianoche (convención occidental). Es una diferencia de método, no necesariamente un error.",
     "D’autres calendriers peuvent afficher un Tithi différent s’ils calculent au moment de la consultation ou à minuit (convention occidentale). Il s’agit d’une différence de méthode, pas nécessairement d’une erreur."
@@ -1001,10 +1004,22 @@ NRLocale.register([
     "neutre · pas une date de fête"
   ],
   [
-    "Екадаші (11-й тіхі)",
+    "Екадаші (11-та тітхі)",
     "Ekadashi (11th Tithi)",
     "Ekadashi (11.º Tithi)",
     "Ekadashi (11e Tithi)"
+  ],
+  [
+    "Амавасья: модель G знижує оцінку цього дня (розрахунковий фактор, не висновок про стан людини).",
+    "Amavasya: the G model lowers this day's score (a computed factor, not a statement about a person's condition).",
+    "Amavasya: el modelo G reduce la puntuación de este día (factor calculado, no una afirmación sobre el estado de una persona).",
+    "Amavasya : le modèle G abaisse la note de ce jour (facteur calculé, pas un constat sur l'état d'une personne)."
+  ],
+  [
+    "Екадаші: календарний фактор моделі G знижує оцінку дня.",
+    "Ekadashi: a calendar factor of the G model lowers the day's score.",
+    "Ekadashi: un factor de calendario del modelo G reduce la puntuación del día.",
+    "Ekadashi : un facteur calendaire du modèle G abaisse la note du jour."
   ],
   [
     "день відречення",

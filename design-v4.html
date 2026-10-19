@@ -13,7 +13,7 @@ html.nr-shell-starting[data-nr-theme=light]{background:#f3f0e8}
 html.nr-shell-starting[data-nr-theme=light]::after{color:#24221e}
 @media(prefers-color-scheme:light){html.nr-shell-starting[data-nr-theme=auto]{background:#f3f0e8}html.nr-shell-starting[data-nr-theme=auto]::after{color:#24221e}}
 html.nr-shell-starting body { visibility:hidden; }
-html.nr-shell-starting::after { content:'NeboRhythm'; position:fixed; inset:0; display:grid; place-items:center; color:#ede6d5; font:28px Literata,Georgia,serif; }
+html.nr-shell-starting::after { content:'SkyRhythm'; position:fixed; inset:0; display:grid; place-items:center; color:#ede6d5; font:28px Literata,Georgia,serif; }
 </style>
 <script>
 // Hide the legacy layout only during shell assembly; fail open if scripts fail.
@@ -112,7 +112,7 @@ function __nrUtcJdToTt(jdUTC) {
 
 </script>
 
-  <title>Неборитм: Місяць і ритм дня</title>
+  <title>SkyRhythm: Місяць і ритм дня</title>
 
   <script src="play_channel.js"></script>
   <script>
@@ -126,12 +126,12 @@ function __nrUtcJdToTt(jdUTC) {
       window.GINDEX_PLAY_CHANNEL = !!(window.GINDEX_PLAY_CHANNEL || playRequested);
       if (window.GINDEX_PLAY_CHANNEL) {
         document.documentElement.classList.add('play-channel');
-        document.title = 'Неборитм — ритм дня';
+        document.title = 'SkyRhythm — ритм дня';
         document.addEventListener('DOMContentLoaded', () => {
           const title = document.getElementById('headerTitle');
           const subtitle = document.getElementById('headerSub');
           const notice = document.getElementById('playChannelNotice');
-          if (title) title.textContent = 'Неборитм';
+          if (title) title.textContent = 'SkyRhythm';
           if (subtitle) subtitle.textContent = 'Ритм дня · Джйотіш · Планети · Космічна погода';
           if (notice) notice.textContent = 'Профіль і налаштування — на пристрої · мережеві сервіси обробляють технічні дані';
         }, { once: true });
@@ -145,7 +145,7 @@ function __nrUtcJdToTt(jdUTC) {
   <!-- iOS PWA meta -->
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="G-Index" />
+  <meta name="apple-mobile-web-app-title" content="SkyRhythm" />
   <link rel="icon" type="image/png" sizes="192x192" href="icon192.png" />
 <link rel="icon" type="image/png" sizes="512x512" href="icon512.png" />
 <link rel="shortcut icon" href="icon192.png" />
@@ -964,7 +964,7 @@ function __nrUtcJdToTt(jdUTC) {
     #deltaCard.is-improving{border-color:rgba(43,212,125,.22);background:linear-gradient(180deg,rgba(43,212,125,.06),rgba(43,212,125,.02))}
     #deltaCard.is-worsening{border-color:rgba(255,107,107,.22);background:linear-gradient(180deg,rgba(255,107,107,.06),rgba(255,107,107,.02))}
     #deltaCard.is-stable{border-color:rgba(155,177,220,.15);background:linear-gradient(180deg,rgba(155,177,220,.04),rgba(155,177,220,.01))}
-    /* v88.8.35-fp7 H: conflict state — застосовується якщо завтра PDF/Engine ≤ −2 і блок зараз позитивний.
+    /* v88.8.35-fp7 H: conflict state — застосовується якщо завтра Підсумковий бал ≤ −2 і блок зараз позитивний.
        Візуально переважує improving/worsening (specificity вища через додатковий клас). */
     #deltaCard.is-conflict{border-color:rgba(255,170,51,.32)!important;background:linear-gradient(180deg,rgba(255,170,51,.09),rgba(255,170,51,.03))!important}
     .dc-icon{font-size:22px;line-height:1}
@@ -1508,7 +1508,7 @@ body.simple-mode #cosmicMapWrap {
 /* v88.8.35-fp56-P8: у Basic ховаємо числові деталі 3-day cards (G_day raw / 27d / Δ) —
    лишається тільки словесний вердикт (${cat}) + порада (${act}). Новачок бачить
    «Сьогодні — уникати», без «−0.7 · 27d: −0.1 Δ+0.6». */
-/* v88.8.35-fp56-P8: in Basic Mode, replace expert labels (Рішення дня · PDF/Engine /
+/* v88.8.35-fp56-P8: in Basic Mode, replace expert labels (Рішення дня · Підсумковий бал /
    Фон зараз · G_now) with plain words (Сьогодні / Зараз) via CSS content: substitution.
    data-basic attr is already set on .hero-label spans by _renderHeroHierarchy. */
 /* fp369: the score explanation is essential context, so it stays available in both views. */
@@ -1871,6 +1871,7 @@ body.fp434-app #nrEclipseCopy{color:var(--nr-copy3)}
 <!-- Formula sign convention: Expert Excel 2−Kp; dashboard raw тепер узгоджений з Excel: 2−Kp. -->
   <script src="./engine_tag_parser.js"></script>
 <script src="consumer_authority_v1.js"></script>
+<script src="forecast_journal_v1.js"></script>
 <link rel="stylesheet" href="consumer_overview_v1.css">
 <script src="calendar_context_v1.js"></script>
 <script src="locale_core_v1.js" defer></script>
@@ -1893,9 +1894,24 @@ body.fp434-app #nrEclipseCopy{color:var(--nr-copy3)}
 <link rel="stylesheet" href="preview-v4/design_b/palette/palette.css?v=v7-2">
 <link rel="stylesheet" href="preview-v4/design_b/states/states.css?v=v7-2">
 <script src="preview-v4/design_b/states/states.js"></script>
-<script src="preview-v4/design_b/palette/palette.js"></script></head>
+<script src="preview-v4/design_b/palette/palette.js"></script><style id="sr-r12-navigation">
+/* R12: visible active navigation state. Does not alter navigation logic. */
+body.fp434-app #mobileNav .mnav-btn.active {
+  color:var(--nr-gold2)!important;
+  background:rgba(225,184,95,.18)!important;
+  font-weight:800!important;
+  /* Inset outline removed: overridden in computed styles; active background, underline and weight remain. */
+  text-decoration:underline!important;
+  text-underline-offset:3px;
+}
+body.fp434-app #mobileNav .mnav-btn:focus-visible {
+  outline:3px solid var(--nr-gold2)!important;
+  outline-offset:2px;
+}
+</style>
+</head>
 <body>
-<div id="nrLaunch" aria-hidden="true"><div class="nrs-launch"><svg viewBox="0 0 200 200" focusable="false"><defs><pattern id="nrsLH" width="3.2" height="3.2" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="3.2" stroke="currentColor" stroke-width=".8"/></pattern></defs><g fill="none" stroke="currentColor"><circle class="nrs-orbit-draw" pathLength="1" cx="100" cy="100" r="40" stroke-width=".8" opacity=".7"/><circle class="nrs-orbit-draw d2" pathLength="1" cx="100" cy="100" r="62" stroke-width=".8" opacity=".5"/><circle class="nrs-orbit-draw d3" pathLength="1" cx="100" cy="100" r="84" stroke-width=".7" opacity=".35"/></g><g class="nrs-ticks" stroke="currentColor" stroke-width=".8" opacity=".45"><line x1="190.0" y1="100.0" x2="195.0" y2="100.0"/><line x1="187.6" y1="120.8" x2="192.4" y2="121.9"/><line x1="180.4" y1="140.4" x2="184.9" y2="142.6"/><line x1="168.9" y1="157.9" x2="172.8" y2="161.1"/><line x1="153.7" y1="172.2" x2="156.7" y2="176.2"/><line x1="135.6" y1="182.6" x2="137.6" y2="187.2"/><line x1="115.6" y1="188.6" x2="116.5" y2="193.6"/><line x1="94.8" y1="189.8" x2="94.5" y2="194.8"/><line x1="74.2" y1="186.2" x2="72.8" y2="191.0"/><line x1="55.0" y1="177.9" x2="52.5" y2="182.3"/><line x1="38.2" y1="165.5" x2="34.8" y2="169.1"/><line x1="24.8" y1="149.5" x2="20.6" y2="152.2"/><line x1="15.4" y1="130.8" x2="10.7" y2="132.5"/><line x1="10.6" y1="110.4" x2="5.6" y2="111.0"/><line x1="10.6" y1="89.6" x2="5.6" y2="89.0"/><line x1="15.4" y1="69.2" x2="10.7" y2="67.5"/><line x1="24.8" y1="50.5" x2="20.6" y2="47.8"/><line x1="38.2" y1="34.5" x2="34.8" y2="30.9"/><line x1="55.0" y1="22.1" x2="52.5" y2="17.7"/><line x1="74.2" y1="13.8" x2="72.8" y2="9.0"/><line x1="94.8" y1="10.2" x2="94.5" y2="5.2"/><line x1="115.6" y1="11.4" x2="116.5" y2="6.4"/><line x1="135.6" y1="17.4" x2="137.6" y2="12.8"/><line x1="153.7" y1="27.8" x2="156.7" y2="23.8"/><line x1="168.9" y1="42.1" x2="172.8" y2="38.9"/><line x1="180.4" y1="59.6" x2="184.9" y2="57.4"/><line x1="187.6" y1="79.2" x2="192.4" y2="78.1"/></g><circle cx="100" cy="100" r="18" fill="none" stroke="currentColor" stroke-width="1"/><path d="M100 82A18 18 0 0 0 100 118A6.16 18 0 0 0 100 82Z" fill="url(#nrsLH)"/><g class="nrs-planet"><circle cx="100" cy="38" r="3.6" fill="currentColor"/></g><g class="nrs-planet slow"><circle cx="100" cy="16" r="2.4" style="fill:var(--nrs-accent)"/></g></svg><div class="nrs-word">NeboRhythm</div></div></div>
+<div id="nrLaunch" aria-hidden="true"><div class="nrs-launch"><svg viewBox="0 0 200 200" focusable="false"><defs><pattern id="nrsLH" width="3.2" height="3.2" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="3.2" stroke="currentColor" stroke-width=".8"/></pattern></defs><g fill="none" stroke="currentColor"><circle class="nrs-orbit-draw" pathLength="1" cx="100" cy="100" r="40" stroke-width=".8" opacity=".7"/><circle class="nrs-orbit-draw d2" pathLength="1" cx="100" cy="100" r="62" stroke-width=".8" opacity=".5"/><circle class="nrs-orbit-draw d3" pathLength="1" cx="100" cy="100" r="84" stroke-width=".7" opacity=".35"/></g><g class="nrs-ticks" stroke="currentColor" stroke-width=".8" opacity=".45"><line x1="190.0" y1="100.0" x2="195.0" y2="100.0"/><line x1="187.6" y1="120.8" x2="192.4" y2="121.9"/><line x1="180.4" y1="140.4" x2="184.9" y2="142.6"/><line x1="168.9" y1="157.9" x2="172.8" y2="161.1"/><line x1="153.7" y1="172.2" x2="156.7" y2="176.2"/><line x1="135.6" y1="182.6" x2="137.6" y2="187.2"/><line x1="115.6" y1="188.6" x2="116.5" y2="193.6"/><line x1="94.8" y1="189.8" x2="94.5" y2="194.8"/><line x1="74.2" y1="186.2" x2="72.8" y2="191.0"/><line x1="55.0" y1="177.9" x2="52.5" y2="182.3"/><line x1="38.2" y1="165.5" x2="34.8" y2="169.1"/><line x1="24.8" y1="149.5" x2="20.6" y2="152.2"/><line x1="15.4" y1="130.8" x2="10.7" y2="132.5"/><line x1="10.6" y1="110.4" x2="5.6" y2="111.0"/><line x1="10.6" y1="89.6" x2="5.6" y2="89.0"/><line x1="15.4" y1="69.2" x2="10.7" y2="67.5"/><line x1="24.8" y1="50.5" x2="20.6" y2="47.8"/><line x1="38.2" y1="34.5" x2="34.8" y2="30.9"/><line x1="55.0" y1="22.1" x2="52.5" y2="17.7"/><line x1="74.2" y1="13.8" x2="72.8" y2="9.0"/><line x1="94.8" y1="10.2" x2="94.5" y2="5.2"/><line x1="115.6" y1="11.4" x2="116.5" y2="6.4"/><line x1="135.6" y1="17.4" x2="137.6" y2="12.8"/><line x1="153.7" y1="27.8" x2="156.7" y2="23.8"/><line x1="168.9" y1="42.1" x2="172.8" y2="38.9"/><line x1="180.4" y1="59.6" x2="184.9" y2="57.4"/><line x1="187.6" y1="79.2" x2="192.4" y2="78.1"/></g><circle cx="100" cy="100" r="18" fill="none" stroke="currentColor" stroke-width="1"/><path d="M100 82A18 18 0 0 0 100 118A6.16 18 0 0 0 100 82Z" fill="url(#nrsLH)"/><g class="nrs-planet"><circle cx="100" cy="38" r="3.6" fill="currentColor"/></g><g class="nrs-planet slow"><circle cx="100" cy="16" r="2.4" style="fill:var(--nrs-accent)"/></g></svg><div class="nrs-word">SkyRhythm</div></div></div>
 <!-- fp153: __cpPanel boot-трасувальник видалено — залишався видимим на екрані постійно (fp148-152 регресія). cp()-виклики лишились у коді, безпечно no-op через try/catch. -->
 <!-- v88.8.58: пароль-гейт видалено (Kyrylo — власник, гейт не потрібен; блокував доступ/зависав) -->
   <noscript>
@@ -1910,7 +1926,7 @@ body.fp434-app #nrEclipseCopy{color:var(--nr-copy3)}
   <header>
     <div class="flex" style="gap:12px">
       <div>
-        <h1 id="headerTitle">NeboRhythm</h1>
+        <h1 id="headerTitle">SkyRhythm</h1>
         <div class="sub" id="headerSub">Небо. Час. Твій ритм. &nbsp;<span style="color:var(--faint);font-size:10px">Advisory</span></div>
       </div>
       <div class="right flex dashboard-toolbar" id="dashboardToolbar" style="flex-wrap:wrap;gap:6px">
@@ -1928,8 +1944,8 @@ body.fp434-app #nrEclipseCopy{color:var(--nr-copy3)}
           aria-label="Toggle звукові сповіщення"
           style="background: var(--border);color: var(--muted);border:1px solid var(--border2);font-size:11px;padding:3px 9px;border-radius:6px;cursor:pointer">🔊</button>
         <button id="btnInstallApp" onclick="pwaInstallOrHelp()"
-          title="Встановити NeboRhythm як застосунок"
-          aria-label="Встановити NeboRhythm як застосунок"
+          title="Встановити SkyRhythm як застосунок"
+          aria-label="Встановити SkyRhythm як застосунок"
           style="background:#0a2a1a;color:#7fffc0;border:1px solid #1a6644;font-size:11px;padding:3px 9px;border-radius:6px;cursor:pointer">📲 Застосунок</button>
         <button id="btnRefresh" aria-label="Оновити дані з NOAA">↻ Оновити дані</button>
         <button id="btnHeaderTools" type="button" aria-expanded="false" aria-controls="dashboardToolbar"
@@ -1982,7 +1998,7 @@ body.fp434-app #nrEclipseCopy{color:var(--nr-copy3)}
     <!-- ═══ SCIENCE BAR ═══ -->
     <div id="scienceBar">
       <!-- Первинні: завжди видно -->
-      <span class="sci-item sci-primary">🛰 <strong>Kp:</strong> <span class="sci-val" id="sciKp">—</span> <span class="hint" tabindex="0" style="cursor:help;color:var(--faint);border:1px solid var(--faint);border-radius:50%;width:11px;height:11px;display:inline-flex;align-items:center;justify-content:center;font-size:7px;font-style:normal;margin:0 2px;vertical-align:middle">і<span class="hint-pop">Планетарний геомагнітний індекс (0-9), NOAA. Вимірює збурення магнітного поля Землі від сонячного вітру.<br><br>Сонячна активність може впливати на психофізичний стан: зміну артеріального тиску, загострення серцево-судинних захворювань, головний біль, запаморочення, безсоння, дратівливість і тривожність, погіршення настрою, зміну гормонального фону.<br><span style="opacity:.6;font-size:10px">Джерело формулювання: офіційний бюлетень Tarita. Рекомендаційний характер, не медичний діагноз.</span></span></span> <a class="sci-src" href="https://www.spaceweather.gov/products/planetary-k-index" target="_blank" rel="noopener" title="Звірити з офіційним графіком NOAA (не з новинними сайтами)" style="text-decoration:underline dotted;cursor:pointer">NOAA ↗</a></span>
+      <span class="sci-item sci-primary">🛰 <strong>Kp:</strong> <span class="sci-val" id="sciKp">—</span> <span class="hint" tabindex="0" style="cursor:help;color:var(--faint);border:1px solid var(--faint);border-radius:50%;width:11px;height:11px;display:inline-flex;align-items:center;justify-content:center;font-size:7px;font-style:normal;margin:0 2px;vertical-align:middle">і<span class="hint-pop">Планетарний геомагнітний індекс (0-9), NOAA. Вимірює збурення магнітного поля Землі від сонячного вітру.</span></span> <a class="sci-src" href="https://www.spaceweather.gov/products/planetary-k-index" target="_blank" rel="noopener" title="Звірити з офіційним графіком NOAA (не з новинними сайтами)" style="text-decoration:underline dotted;cursor:pointer">NOAA ↗</a></span>
       <span class="sci-item sci-primary">🌙 <strong>Фаза:</strong> <span class="sci-val" id="sciPhase">—</span></span>
       <span class="sci-item sci-primary sci-secondary">🧲 <strong>Dst:</strong> <span class="sci-val" id="sciDst">—</span> <span class="sci-src">Kyoto</span></span>
       <span class="sci-item sci-primary sci-secondary" title="Lᵢ — авторська вага тітхі; користь для прогнозування психофізичного стану не підтверджена.">🌑 <strong>Lᵢ:</strong> <span class="sci-val" id="sciLi">—</span></span>
@@ -2092,8 +2108,8 @@ body.fp434-app #nrEclipseCopy{color:var(--nr-copy3)}
             </div>
           </div>
           <!-- Legacy ring (default) -->
-          <div id="heroRing" title="Hero показує оперативний стан зараз: обережніший результат PDF/Engine, live/raw-фону й safety-обмежень.&#10;PDF/Engine та G_now показані окремо як джерела, а не як конкуруючі дозволи.">
-            <span id="heroRingLabel" style="position:absolute;top:-14px;left:50%;transform:translateX(-50%);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);background:rgba(10,20,40,.55);padding:2px 8px;border-radius:4px;border:1px solid rgba(155,177,220,.18);white-space:nowrap;z-index:4;pointer-events:none" title="Оперативний стан зараз; PDF/Engine і G_now — окремі джерела нижче.">оперативний стан</span>
+          <div id="heroRing" title="Hero показує оперативний стан зараз: обережніший результат Підсумковий бал, live/raw-фону й safety-обмежень.&#10;Підсумковий бал та G_now показані окремо як джерела, а не як конкуруючі дозволи.">
+            <span id="heroRingLabel" style="position:absolute;top:-14px;left:50%;transform:translateX(-50%);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);background:rgba(10,20,40,.55);padding:2px 8px;border-radius:4px;border:1px solid rgba(155,177,220,.18);white-space:nowrap;z-index:4;pointer-events:none" title="Оперативний стан зараз; Підсумковий бал і G_now — окремі джерела нижче.">оперативний стан</span>
             <svg viewBox="0 0 100 100">
               <circle class="ring-bg" cx="50" cy="50" r="45"/>
               <circle class="ring-val" id="heroRingVal" cx="50" cy="50" r="45"
@@ -2140,7 +2156,7 @@ body.fp434-app #nrEclipseCopy{color:var(--nr-copy3)}
         </div>
         <div class="hero-maintext">
           <div id="heroDecisionPanel">
-            <!-- v88.8.35-fp56-P8: explicit decision hierarchy. РІШЕННЯ ДНЯ (PDF/Engine) ≠ ФОН ЗАРАЗ (G_now) ≠ ЯКІСТЬ. Filled by _renderHeroHierarchy() from existing globals. -->
+            <!-- v88.8.35-fp56-P8: explicit decision hierarchy. РІШЕННЯ ДНЯ (Підсумковий бал) ≠ ФОН ЗАРАЗ (G_now) ≠ ЯКІСТЬ. Filled by _renderHeroHierarchy() from existing globals. -->
             <div id="heroHierarchy" role="status" aria-live="polite" aria-label="Зведення дня: рішення, фон зараз, якість даних" style="display:none;margin-bottom:8px;border:1px solid var(--border);border-radius:10px;overflow:hidden;background:rgba(11,18,32,.35)"></div>
             <!-- v88.8.81-fp160: НОАА real-time alerts (не прогноз — офіційне сповіщення в момент
                  фіксації). Дані вже фетчились NoaaEvents.fetchAlerts() і раніше йшли ТІЛЬКИ у
@@ -2240,7 +2256,7 @@ body.fp434-app #nrEclipseCopy{color:var(--nr-copy3)}
       <summary style="cursor:pointer;color:#d9c2ff;font-weight:800">🧪 v19.2 SHADOW — окремий тестовий контур · вплив на прогноз 0</summary>
       <div style="margin-top:8px;display:grid;gap:5px">
         <div><strong style="color:#e9ddff">Технічно працює:</strong> зафіксована реконструкція автоматично проходить тести та перевірку відтворюваності.</div>
-        <div><strong style="color:#ffd37a">Не є головним прогнозом:</strong> v19.2 не змінює Hero, оцінку дня, PDF/Engine reference або оперативні рекомендації.</div>
+        <div><strong style="color:#ffd37a">Не є головним прогнозом:</strong> v19.2 не змінює Hero, оцінку дня, Підсумковий бал reference або оперативні рекомендації.</div>
         <div><strong style="color:#9ce6c0">Статус:</strong> <code>PROSPECTIVE SHADOW</code> · <code>PRODUCTION HOLD</code> · <code>score_effect=0</code>.</div>
         <div style="color:var(--dim)">Оригінальний історичний source v19.2 не знайдений; перевіряється реконструйований candidate. У замороженому протоколі v19.2 назавжди лишається SHADOW; будь-який майбутній кандидат потребує нового версійованого протоколу та незалежної перевірки.</div>
       </div>
@@ -2260,7 +2276,7 @@ body.fp434-app #nrEclipseCopy{color:var(--nr-copy3)}
     </details>
     <div id="signalIndependenceNotice" style="margin:0 0 10px;padding:10px 14px;border-radius:12px;border:1px solid rgba(89,166,255,.30);background:linear-gradient(180deg,rgba(89,166,255,.07),rgba(89,166,255,.02));font-size:11px;line-height:1.5;color:var(--muted)">
       <div style="font-weight:800;color:#b9d8ff">① Один сигнал, не два зелені голоси</div>
-      <div><strong style="color:var(--text2)">G_day raw уже містить Панчангу Pᵢ</strong> у сумі календарних компонентів. Окрема зелена Панчанга нижче — лише розклад того самого G_day, її не можна додавати або рахувати другим незалежним прогнозом.</div>
+      <div><strong style="color:var(--text2)">Один підсумковий бал на всіх екранах.</strong> G рахується з компонентів основної формули: (2 − Kp) + Місяць + затемнення + календарні позначки. Панчанга нижче — довідка, не доданок і не другий прогноз.</div>
       <div id="expertDecisionRegistryStatus" style="margin-top:5px"><strong style="color:#ffd37a">Експертні рішення:</strong> завантаження єдиного реєстру PDF/Excel/Engine…</div>
       <div id="autoProspectiveStatus" style="margin-top:5px;color:#9ce6c0">Автоматичний shadow: завантаження статусу…</div>
       <div id="tanitaReviewStatus" style="margin-top:4px;color:#ffd37a">Tanita QA: завантаження…</div>
@@ -2268,8 +2284,8 @@ body.fp434-app #nrEclipseCopy{color:var(--nr-copy3)}
     <details id="indexLineagePanel" style="margin:0 0 10px;padding:10px 14px;border-radius:12px;border:1px solid rgba(89,166,255,.36);background:linear-gradient(180deg,rgba(89,166,255,.075),rgba(89,166,255,.018));font-size:11px;color:var(--muted)">
       <summary style="cursor:pointer;color:#b9d8ff;font-weight:800">🧭 Як рахується система — 4 окремі шари</summary>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:7px;margin-top:9px;line-height:1.5">
-        <div style="padding:8px;border:1px solid rgba(67,230,167,.28);border-radius:8px"><b style="color:#72e6b5">1. Денний reference (−3…+3)</b><br>Перевірений PDF зберігає заморожений сигнал методики. Якщо PDF відсутній — окремо позначений frozen Engine. Це довідковий шар, не оперативна команда і не дозвіл на дію.</div>
-        <div style="padding:8px;border:1px solid rgba(89,166,255,.28);border-radius:8px"><b style="color:#8dc6ff">2. G raw (безперервний фон)</b><br><code>G = 2−Kp + Lᵢ + Mᵢ + eᵢ + Pᵢ + Dᵢ</code>. Панчанга Pᵢ уже всередині цієї суми. G raw не перезаписує рішення дня.</div>
+        <div style="padding:8px;border:1px solid rgba(67,230,167,.28);border-radius:8px"><b style="color:#72e6b5">1. Бал дня (−3…+3)</b><br>Перевірена експертна правка (PDF) має найвищий пріоритет; якщо її немає — бал основної формули. Frozen Engine для балу не використовується. Це орієнтир, не оперативна команда і не дозвіл на дію.</div>
+        <div style="padding:8px;border:1px solid rgba(89,166,255,.28);border-radius:8px"><b style="color:#8dc6ff">2. G raw (безперервний фон)</b><br><code>G = (2−Kp) + Місяць + затемнення + календарні позначки</code> — компоненти основної формули. G зараз бере поточний Kp, бал дня — прогнозний добовий максимум Kp. G raw не перезаписує бал дня.</div>
         <div style="padding:8px;border:1px solid rgba(255,176,32,.32);border-radius:8px"><b style="color:#ffd37a">3. Safety-veto</b><br>Kp≥5, сильний Dst та оперативні попередження можуть обмежити рекомендацію незалежно від арифметичного кольору G raw.</div>
         <div style="padding:8px;border:1px solid rgba(178,126,255,.28);border-radius:8px"><b style="color:#d9c2ff">4. Shadow/context</b><br>AIA, BGS, ENLIL, Meteoagent, непідтверджені календарні й image-фактори мають <code>score_effect=0</code> до time-split та prospective gate.</div>
       </div>
@@ -2327,7 +2343,7 @@ body.fp434-app #nrEclipseCopy{color:var(--nr-copy3)}
       </div>
     </div>
     <!-- v88.8.51-fp128: ЄДИНА ПАНЕЛЬ ІНДЕКСІВ — усі показники в одному місці, явно розділені
-         на "сирий сигнал" (Панчанга/Kp/G_now) і денний reference (PDF/Engine), щоб не повторювати
+         на "сирий сигнал" (Панчанга/Kp/G_now) і денний reference (Підсумковий бал), щоб не повторювати
          плутанину "+показник, а день -". Дані ті самі globals, нова логіка не додається. -->
     <div id="unifiedIndicesPanel" style="display:none;margin:0 0 10px;padding:10px 14px;border-radius:12px;border:1px solid var(--border);background:rgba(11,18,32,.5)">
       <div style="font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">📐 Індекси дня</div>
@@ -2378,7 +2394,7 @@ body.fp434-app #nrEclipseCopy{color:var(--nr-copy3)}
         <span style="font-size:14px">📅</span>
         <span style="flex:1;min-width:200px">
           <span id="scenarioSummaryLabel" style="color:var(--text)">Сценарій на 7 днів</span>
-          <span id="scenarioSummarySub" style="color:var(--dim);font-weight:500"> — PDF/Engine Day_score + astro layer</span>
+          <span id="scenarioSummarySub" style="color:var(--dim);font-weight:500"> — Підсумковий бал Day_score + astro layer</span>
         </span>
         <span style="font-size:11px;color:var(--dim)">▾</span>
       </summary>
@@ -2395,7 +2411,7 @@ body.fp434-app #nrEclipseCopy{color:var(--nr-copy3)}
         <span style="font-size:14px">📋</span>
         <span style="flex:1;min-width:200px">
           <span style="color:var(--text)">🔍 З чого складається G сьогодні (Formula Audit)</span>
-          <span id="provenancePreview" style="font-size:10px;color:var(--faint);font-weight:400;margin-left:8px;display:block;margin-top:2px">Kp · Dst · Sn · Тітхі · Затемнення · Панчанга — повний розклад G, не тільки підсумок</span>
+          <span id="provenancePreview" style="font-size:10px;color:var(--faint);font-weight:400;margin-left:8px;display:block;margin-top:2px">Kp · Місяць · Затемнення · календарні позначки — розклад G за основною формулою</span>
         </span>
         <span style="font-size:10px;color:var(--dim);font-weight:400">розгорнути ▾</span>
       </summary>
@@ -2689,13 +2705,13 @@ body.fp434-app #nrEclipseCopy{color:var(--nr-copy3)}
           <div style="margin-top:6px;padding:8px 10px;background: var(--card2);border:1px solid #1a2a45;border-radius:8px;line-height:1.45;color: var(--muted)">
             <p style="margin:0 0 6px"><strong style="color: var(--text2)">G</strong> показує, наскільки «легкий» чи «важкий» сьогоднішній день з точки зору космічної погоди та хронобіології. Значення вище нуля — відносно легкий день; нижче нуля — підвищене невидиме навантаження.</p>
             <p style="margin:0 0 6px">Кольори шкали від 🟢 до 🔴 допомагають швидко оцінити стан: <span style="color: var(--ok)">зелений</span> — сприятливий фон, <span style="color: var(--warn)">жовтий</span>/<span style="color:#fca474">помаранчевий</span> — варто бути обережнішим, <span style="color: var(--bad)">червоний</span> — максимальне зовнішнє навантаження.</p>
-            <p style="margin:0"><strong style="color: var(--text2)">2−Kp</strong> — це геомагнітна частина (космічна погода). <strong style="color: var(--text2)">ΣAᵢ</strong> — хронобіологічна (Місяць, затемнення, свята, Панчанга). Разом вони дають G.</p>
+            <p style="margin:0"><strong style="color: var(--text2)">2−Kp</strong> — це геомагнітна частина (космічна погода). <strong style="color: var(--text2)">ΣAᵢ</strong> — календарна частина основної формули (Місяць, затемнення, календарні позначки). Разом вони дають G. Знак <code>2 − Kp</code> — модельне припущення (вища геомагнітна активність знижує оцінку), не доведена наукова залежність.</p>
             <!-- v88.8.35-fp56-P8: scale/horizon legend folded into the single existing «Як читати» block
                  (no separate widget) so all number-reading help lives in one place. -->
             <div style="margin-top:8px;padding-top:8px;border-top:1px dashed rgba(139,160,200,.22)">
               <p style="margin:0 0 5px;color: var(--text2);font-weight:600">Чому на екрані кілька різних чисел</p>
               <p style="margin:0 0 4px"><strong style="color:#ffcc66">Оперативний стан</strong> (шкала −3…+3) — головна команда зараз. Він обирає обережніший результат, якщо джерела конфліктують.</p>
-              <p style="margin:0 0 4px"><strong style="color:#9cd49c">PDF/Engine reference</strong> — заморожений денний сигнал для перевірки методики, <strong>не автоматичний дозвіл на дію</strong>.</p>
+              <p style="margin:0 0 4px"><strong style="color:#9cd49c">Підсумковий бал reference</strong> — заморожений денний сигнал для перевірки методики, <strong>не автоматичний дозвіл на дію</strong>.</p>
               <p style="margin:0 0 4px"><strong style="color:#9cd49c">G_now / G_day raw</strong> — поточний або прогнозний фон з Kp та ΣAᵢ. Він лишається видимим як вхід оперативного safety-контуру.</p>
               <p style="margin:0">Якщо числа різняться знаком або сильною дельтою, дашборд має показати «конфлікт/пауза», а не називати один із сигналів фінальним рішенням.</p>
             </div>
@@ -2765,7 +2781,7 @@ body.fp434-app #nrEclipseCopy{color:var(--nr-copy3)}
           <div>
             <h2 style="margin:0;font-size:16px">Джйотіш · календар дня</h2>
             <div class="small muted" style="margin-top:2px" id="panchRefLabel">Референс на схід сонця <span class="hint" tabindex="0" style="cursor:help;color:var(--dim);font-size:10px;margin-left:4px;border-bottom:1px dotted var(--faint)">ⓘ час відліку<span class="hint-pop" style="white-space:pre;font-size:11px;text-align:left">Тіхі/Вара/Накшатра/Йога/Карана розраховані на реальний астрономічний схід сонця для поточного дня (ведична конвенція), НЕ на 12:00 UTC — попередній текст тут був неточним (fp236).
-Зовнішні календарі можуть показувати іншу тіхі, якщо рахують "на момент запиту" або "опівночі" (західна конвенція) — це методологічна різниця, не обов'язково помилка.
+Зовнішні календарі можуть показувати іншу тітхі, якщо рахують "на момент запиту" або "опівночі" (західна конвенція) — це методологічна різниця, не обов'язково помилка.
 Для поточної хори дивись блок «Планетарний ритм» у картці особистого прогнозу.</span></span></div>
           </div>
           <span class="pill right" id="panchDate" style="font-size:12px">—</span>
@@ -2779,7 +2795,7 @@ body.fp434-app #nrEclipseCopy{color:var(--nr-copy3)}
             <button id="btnJyotishVisibility" type="button" aria-pressed="true" style="font-size:11px;padding:5px 9px">Традиційний шар: показано</button>
           </div>
           <div id="jyotishRoleGrid" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:9px;font-size:10px">
-            <div style="padding:7px;border:1px solid rgba(255,255,255,.07);border-radius:8px"><strong>ВРАХОВАНО ОДИН РАЗ</strong><br><span class="muted">Tithi · Vara · Nakshatra · Yoga · Karana → один Pᵢ</span></div>
+            <div style="padding:7px;border:1px solid rgba(255,255,255,.07);border-radius:8px"><strong>ДОВІДКА, НЕ ДОДАНОК</strong><br><span class="muted">Tithi · Vara · Nakshatra · Yoga · Karana не входять в основну формулу</span></div>
             <div style="padding:7px;border:1px solid rgba(255,255,255,.07);border-radius:8px"><strong>ЛОКАЛЬНІ ВІКНА</strong><br><span class="muted">Rahu · Yama · Gulika · Hora обмежують слот, не весь день</span></div>
             <div style="padding:7px;border:1px solid rgba(255,255,255,.07);border-radius:8px"><strong>ЛИШЕ ІНФОРМАЦІЙНО</strong><br><span class="muted">Rashi · Pada · Muhurta · Choghadiya · score_effect=0</span></div>
           </div>
@@ -2849,9 +2865,13 @@ body.fp434-app #nrEclipseCopy{color:var(--nr-copy3)}
             <div class="small muted" style="margin-bottom:4px">Час (необов'язково)</div>
             <input id="pTime" type="time" style="width:100%;background:#0f1a2f;color: var(--text3);border:1px solid #2a3b61;border-radius:6px;padding:6px 8px;font-size:13px;box-sizing:border-box" aria-label="Час особистого прогнозу">
           </div>
+          <div style="flex:1;min-width:130px">
+            <div class="small muted" style="margin-bottom:4px">Місце (часовий пояс)</div>
+            <select id="pTz" aria-label="Часовий пояс місця народження" aria-describedby="pTzNote" style="width:100%;background:#0f1a2f;color: var(--text3);border:1px solid #2a3b61;border-radius:6px;padding:6px 8px;font-size:13px;box-sizing:border-box"><option value="Europe/Kyiv" selected>Київ / Україна</option><option value="Europe/Warsaw">Варшава</option><option value="Europe/Berlin">Берлін</option><option value="Europe/London">Лондон</option><option value="Europe/Moscow">Москва</option><option value="Europe/Minsk">Мінськ</option><option value="Asia/Kolkata">Індія</option><option value="America/New_York">Нью-Йорк</option><option value="UTC">UTC</option><option value="manual">Вручну (UTC±)</option></select>
+          </div>
           <div style="min-width:70px;max-width:80px">
             <div class="small muted" style="margin-bottom:4px">UTC±</div>
-            <input id="pUtcOff" type="number" value="2" min="-12" max="14" style="width:100%;background:#0f1a2f;color: var(--text3);border:1px solid #2a3b61;border-radius:6px;padding:6px 8px;font-size:13px;box-sizing:border-box" aria-label="Часовий пояс UTC для особистого прогнозу">
+            <input id="pUtcOff" type="number" step="0.25" value="2" min="-12" max="14" style="width:100%;background:#0f1a2f;color: var(--text3);border:1px solid #2a3b61;border-radius:6px;padding:6px 8px;font-size:13px;box-sizing:border-box" aria-label="Часовий пояс UTC для особистого прогнозу">
           </div>
           <div style="min-width:100px">
             <div class="small muted" style="margin-bottom:4px">Профіль</div>
@@ -2868,6 +2888,7 @@ body.fp434-app #nrEclipseCopy{color:var(--nr-copy3)}
             <button id="btnPersonalClear" style="font-size:12px;padding:6px 10px;background:#2a1a1a;color: var(--bad)">✕ Слот</button>
           </div>
         </div>
+        <div id="pTzNote" class="small muted" style="margin-top:6px;font-size:11px" aria-live="polite">Зміщення UTC визначається автоматично за місцем і датою народження.</div>
         <div class="small muted" style="margin-top:6px">⚠ Без часу народження використовується орієнтовний час 12:00 · Експериментальний шар не змінює рішення дня · До 3 профілів</div>
       </div>
 
@@ -3043,7 +3064,7 @@ body.fp434-app #nrEclipseCopy{color:var(--nr-copy3)}
     <section class="card" id="threeCard">
       <div class="flex">
         <h2 style="margin:0">Прогноз на 3 дні</h2>
-        <div class="pill right" title="Оперативний стан застосовує обережніший сигнал при конфлікті. PDF/Engine зберігається окремо як reference; NOAA 3-day + ΣAᵢ формує raw/safety-контекст.">Оперативний стан + окремі PDF/raw джерела</div>
+        <div class="pill right" title="Оперативний стан застосовує обережніший сигнал при конфлікті. Підсумковий бал зберігається окремо як reference; NOAA 3-day + ΣAᵢ формує raw/safety-контекст.">Оперативний стан + окремі PDF/raw джерела</div>
         <span class="hint" tabindex="0" style="cursor:help;font-size:11px;color:var(--dim);border-bottom:1px dotted #2a3b61;margin-left:8px">? легенда G<span class="hint-pop" style="white-space:pre;font-size:12px;text-align:left">Категорії G = 2 − Kp + ΣAᵢ:
 Зсув «−2» → Kp=2 (спокійне поле) = G≈0
 
@@ -3071,10 +3092,10 @@ Kp: 3-год індекс геомагнітної активності (0–9)
     <div class="swipe-hint" style="display:none" id="swipeHint27">Прокрутіть таблицю</div>
     <section class="card" id="twentysevenCard">
         <div class="flex" style="flex-wrap:wrap;gap:8px">
-          <h2 style="margin:0">27-денне порівняння сигналів <span style="font-size:13px;font-weight:700;color:#9fd1ff">(кольорова лінія = G_raw-контекст, не дозвіл; квадрати = PDF/Engine reference)</span></h2>
+          <h2 style="margin:0">27-денне порівняння сигналів <span style="font-size:13px;font-weight:700;color:#9fd1ff">(кольорова лінія = G_raw-контекст, не дозвіл; квадрати = Підсумковий бал reference)</span></h2>
           <!-- v88.8.35-fp56-P8: explicit rail badge — users look at the line, not the fine print. -->
           <span style="display:inline-block;font-size:10px;font-weight:800;letter-spacing:.04em;color:#ffcc66;background:rgba(255,170,51,.10);border:1px solid rgba(255,170,51,.38);border-radius:6px;padding:2px 8px;margin-left:2px;vertical-align:middle">REFERENCE · НЕ РІШЕННЯ ДЛЯ ДІЇ</span>
-          <span class="hint" tabindex="0" style="cursor:help;font-size:11px;color:var(--dim);border-bottom:1px dotted #2a3b61">? що це<span class="hint-pop" style="white-space:pre;font-size:12px;text-align:left;max-width:380px">Це НЕ G_now і НЕ PDF/Engine — це окремий індекс raw-фону доби.
+          <span class="hint" tabindex="0" style="cursor:help;font-size:11px;color:var(--dim);border-bottom:1px dotted #2a3b61">? що це<span class="hint-pop" style="white-space:pre;font-size:12px;text-align:left;max-width:380px">Це НЕ G_now і НЕ Підсумковий бал — це окремий індекс raw-фону доби.
 
 Основний шлях (NOAA 27-day-outlook.txt):
 • NOAA публікує таблицю на 27 днів: F10.7 flux, Ap, Largest Kp.
@@ -3087,7 +3108,7 @@ Fallback (NOAA 45-day-forecast.json):
 • 45-day дає тільки Ap, без Kp → робимо Ap→Kp табличну апроксимацію.
 • Точність нижча — позначається у статусі джерела.
 
-Для поточного рішення дивись Hero/Коли діяти. Для точного 3-год Kp — «Прогноз на 3 дні». Цей блок — контекст raw-фону на майбутнє. PDF/Engine ★ показується окремо як overlay.
+Для поточного рішення дивись Hero/Коли діяти. Для точного 3-год Kp — «Прогноз на 3 дні». Цей блок — контекст raw-фону на майбутнє. Підсумковий бал ★ показується окремо як overlay.
 
 ⚠ Назва "NOAA 27-day" стосується ЛИШЕ джерела Largest Kp, не всього значення G_day. Коли Largest Kp низький (напр. Kp=2 → внесок 2−Kp=0), майже все число G_day формує ΣAᵢ (Панчанга), не NOAA. Наведіть курсор на точку графіка, щоб побачити розбивку Kp-внеску окремо від ΣAᵢ.</span></span>
           <span class="hint" tabindex="0" style="cursor:help;font-size:11px;color:var(--dim);border-bottom:1px dotted #2a3b61">? легенда G<span class="hint-pop" style="white-space:pre;font-size:12px;text-align:left">Категорії G = 2 − Kp + ΣAᵢ:
@@ -3118,7 +3139,7 @@ Fallback (NOAA 45-day-forecast.json):
             <button id="btnIcs" style="font-size:12px;padding:6px 10px" title="Експорт прогнозу у календарний файл (.ics): імпортуйте у Google/Apple/Outlook для нагадувань">⬇ .ics</button>
           </div>
         </div>
-        <div class="rail-legend-27 small" style="margin:6px 0 2px;color:var(--dim);font-size:11px;line-height:1.45"><strong><span style="color:#ff5b68">Червоний</span>/<span style="color:#f0a33a">помаранчевий</span>/<span style="color:#55b7c8">блакитний</span> — зони G_raw-контексту, не дозвіл.</strong> · <span style="color:#ffd166">Квадрати — окрема PDF/Engine reference.</span> За розбіжності головним є обережніший оперативний стан у Hero/3-day.</div>
+        <div class="rail-legend-27 small" style="margin:6px 0 2px;color:var(--dim);font-size:11px;line-height:1.45"><strong><span style="color:#ff5b68">Червоний</span>/<span style="color:#f0a33a">помаранчевий</span>/<span style="color:#55b7c8">блакитний</span> — зони G_raw-контексту, не дозвіл.</strong> · <span style="color:#ffd166">Квадрати — окрема Підсумковий бал reference.</span> За розбіжності головним є обережніший оперативний стан у Hero/3-day.</div>
         <div id="twentysevenError" class="err small"></div>
         <!-- v87.19 U4: Best/worst days of last 30 days — retention hook -->
         <div id="bestWorstDays" class="best-worst-block" style="display:none"></div>
@@ -3136,7 +3157,7 @@ Fallback (NOAA 45-day-forecast.json):
           <thead><tr>
             <th class="col-date th-sort" data-col="date">Дата (UTC) <span class="sort-ico">↕</span></th>
             <th title="Якість накшатри дня" style="width:28px">☽</th>
-            <th class="th-sort" data-col="g" title="G_day raw = 2 − Kp_day(max/approx) + ΣAᵢ(noon UTC). Це не G зараз і не PDF/Engine score.">G_day <span class="sort-ico">↕</span></th>
+            <th class="th-sort" data-col="g" title="G_day raw = 2 − Kp_day(max/approx) + ΣAᵢ(noon UTC). Це не G зараз і не Підсумковий бал score.">G_day <span class="sort-ico">↕</span></th>
             <th>Kp max</th>
             <th class="col-hide-mobile">Δ Kp-внесок (2−Kp)</th>
             <th>Lᵢ</th>
@@ -3149,7 +3170,7 @@ Fallback (NOAA 45-day-forecast.json):
             <th>Категорія</th>
             <th class="col-hide-mobile">Зона G</th>
             <th>Роль</th>
-            <th title="PDF/Engine score — дискретна експертна/engine оцінка дня (−3..+3). Інша модель — інша шкала. ⚠ означає розбіжність знака з G_day raw." style="color:#7ab8d4">PDF/Engine</th>
+            <th title="Підсумковий бал score — дискретна експертна/engine оцінка дня (−3..+3). Інша модель — інша шкала. ⚠ означає розбіжність знака з G_day raw." style="color:#7ab8d4">Підсумковий бал</th>
             <th id="th27Gos" style="display:none;color:#c8b4ff" title="G_ос = G + Taara-mod (R&D)">G_ос</th>
           </tr></thead>
           <tbody id="twentysevenContent"><tr><td colspan="6" class="muted">Завантаження…</td></tr></tbody>
@@ -3299,7 +3320,9 @@ Fallback (NOAA 45-day-forecast.json):
 
         <p>Для горизонту 27 днів модель бере <strong>Largest Kp напряму</strong> з NOAA 27-Day Outlook (6-те поле в `27-day-outlook.txt`) — без жодних перетворень. У fallback-режимі (NOAA 27-day недоступний → переходимо на 45-day-forecast.json) застосовується <em>внутрішня дискретна апроксимація</em> Ap→Kp за табличними порогами NOAA (VLOOKUP-стиль, найближчий нижчий поріг). Це <strong>не офіційний зворотний стандарт NOAA</strong>, а робоче припущення моделі; G-значення з fallback-режиму слід інтерпретувати як якісний індикатор тренду, а не точний 3-годинний прогноз.</p>
 
-        <p style="font-weight:600;color: var(--text2);margin-bottom:4px">Склад ΣAᵢ</p>
+        <p style="font-weight:600;color: var(--text2);margin-bottom:4px">Основна формула (чинна, v113)</p>
+        <p><code style="color: var(--alt)">G = (2 − Kp) + Місяць + затемнення + Σ календарних позначок</code>; бал дня −3…+3 з цієї суми. Перевірена експертна правка (PDF) має пріоритет над балом формули. Компоненти показуються окремо й не підміняють підсумковий бал.</p>
+        <p style="font-weight:600;color: var(--warn);margin-bottom:4px">Стара формула ΣAᵢ — лише історичне порівняння, не поточний прогноз</p>
         <p><code style="color: var(--alt)">ΣAᵢ = Lᵢ + Mᵢ + eᵢ + Pᵢ + Dᵢ</code></p>
         <table style="font-size:12px;margin:6px 0 10px;border:1px solid #1e2f52;border-radius:6px;overflow:hidden">
           <thead><tr style="background:#0c1526">
@@ -3349,7 +3372,7 @@ Fallback (NOAA 45-day-forecast.json):
         <p class="small" style="color:var(--faint)">Детальніше про джерела та статус моделі — у блоці «📡 Джерела даних» вище.</p>
 
         <!-- v40: SVG G-formula diagram -->
-        <p style="font-weight:600;color: var(--text2);margin-bottom:4px;margin-top:18px">Схема формули G-індексу</p>
+        <p style="font-weight:600;color: var(--warn);margin-bottom:4px;margin-top:18px">Схема старої формули G (лише історичне порівняння, не поточний прогноз)</p><p style="font-size:12px;color:var(--dim)">Чинна основна формула: G = (2 − Kp) + Місяць + затемнення + календарні позначки; підсумковий бал дня — перевірена експертна правка або, без неї, бал цієї формули.</p>
         <p style="font-size:12px;color:var(--text3);margin-bottom:8px">G = (2 − Kp) + Lᵢ + Mᵢ + eᵢ + Pᵢ + Dᵢ. Sn/Wolf показується як контекст із score_effect=0. Статистична незалежність компонентів не встановлена. Bz/Vsw, Hora та Sn — інформаційний контекст поза сумою.</p>
         <svg viewBox="0 0 520 130" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:520px;display:block;margin:0 0 16px;font-family:system-ui,sans-serif">
           <rect x="0" y="0" width="520" height="130" fill="#090f1e" rx="8"/>
@@ -3674,7 +3697,7 @@ function pwaInstall() {
 }
 function pwaInstallOrHelp() {
   if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) {
-    alert('NeboRhythm уже відкритий як встановлений застосунок.');
+    alert('SkyRhythm уже відкритий як встановлений застосунок.');
     return;
   }
   if (_deferredInstall) {
@@ -3685,7 +3708,7 @@ function pwaInstallOrHelp() {
   const isIOS = /iPad|iPhone|iPod/.test(ua)
     || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   if (isIOS) {
-    alert('Щоб встановити NeboRhythm на iPhone/iPad: натисни «Поділитися» в Safari → «На початковий екран» → «Додати».');
+    alert('Щоб встановити SkyRhythm на iPhone/iPad: натисни «Поділитися» в Safari → «На початковий екран» → «Додати».');
   } else {
     alert('Відкрий меню браузера (⋮ або …) і вибери «Встановити застосунок» / «Додати на головний екран». Якщо пункт відсутній — онови сторінку та спробуй ще раз.');
   }
@@ -3701,7 +3724,7 @@ function pwaReload() {
     if (bar) {
       const label = bar.querySelector('span');
       const button = bar.querySelector('button');
-      if (label) label.textContent = '🔄 Застосовую оновлення NeboRhythm…';
+      if (label) label.textContent = '🔄 Застосовую оновлення SkyRhythm…';
       if (button) button.disabled = true;
     }
     _swReg.waiting.postMessage({ type: 'SKIP_WAITING' });
@@ -4133,8 +4156,8 @@ var WF3_ALERT={
   eclipse_peak:'Пік впливу затемнення, день краще не перевантажувати.',
   eclipse_near:'Період затемнення посилює нестабільність фону.',
   eclipse_far:'Відчувається фоновий вплив періоду затемнення.',
-  amavasya:'Амавасья підсилює внутрішню нестабільність і знижує стійкість.',
-  ekadashi:'Екадаші змінює ритм дня, краще уникати перевантаження.',
+  amavasya:'Амавасья: модель G знижує оцінку цього дня (розрахунковий фактор, не висновок про стан людини).',
+  ekadashi:'Екадаші: календарний фактор моделі G знижує оцінку дня.',
   mixed_hard:'Накладаються кілька несприятливих факторів, день напружений.',
   mixed_mid:'Live-фон змішаний, з перевагою несприятливих факторів.',
   unstable:'Картина дня неповна, дані слід читати обережно.'
@@ -4335,7 +4358,7 @@ function renderDecisionLayer(gVal, ui) {
   }
   // v88.8.36-fp56-P12f: guard критичного дня для списку «Робіть/Уникайте» (4-й рендерер з обходом).
   // Раніше фільтрувався лише персональний цикл (fp54-C) і буря, але НЕ критичний day-score:
-  // якщо PDF/Engine=−2 а live-фон позитивний → «Робіть: Запускати нові ініціативи» проскакувало.
+  // якщо Підсумковий бал=−2 а live-фон позитивний → «Робіть: Запускати нові ініціативи» проскакувало.
   try {
     const _eDoG = (typeof getEngineScore === 'function') ? getEngineScore(new Date(todayKyivStr()+'T12:00:00Z')) : null;
     if (_eDoG && isFinite(_eDoG.eng) && Number(_eDoG.eng) <= -2 && !_stormActive44) {
@@ -4343,8 +4366,8 @@ function renderDecisionLayer(gVal, ui) {
                               && !d.includes('нові старти') && !d.includes('Укладати') && !d.includes('контракт'));
       if (!doArr.some(d => d.includes('критичне') || d.includes('рутин')))
         doArr.unshift('Тільки критичне й перевірені задачі');
-      avoidArr.unshift(`Важливих рішень і запусків (день критичний, PDF/Engine ${_eDoG.eng})`);
-      ctxTxt = `День критичний за PDF/Engine (${_eDoG.eng}) — навіть за спокійного фону тримати рутину. ` + ctxTxt;
+      avoidArr.unshift(`Важливих рішень і запусків (день критичний, Підсумковий бал ${_eDoG.eng})`);
+      ctxTxt = `День критичний за Підсумковий бал (${_eDoG.eng}) — навіть за спокійного фону тримати рутину. ` + ctxTxt;
     }
   } catch(_eDay){ window.NRDiagnostics?.record('legacy.catch.12','recoverable'); }
 
@@ -4396,7 +4419,7 @@ function renderDecisionLayer(gVal, ui) {
   // Amavasya
   if (ai.Li === -3) {
     doArr.push('Використовувати для очищення, підбиття підсумків');
-    ctxTxt = 'Амавасья (нова Місяць). ' + ctxTxt;
+    ctxTxt = 'Амавасья (новий Місяць). ' + ctxTxt;
   }
   // Purnima
   if (ai.Li === 0 && ai.lTip && String(ai.lTip).toLowerCase().includes('повн')) {
@@ -4607,10 +4630,10 @@ function renderBestWorstDays(){
   const wSign = bw.worst.g >= 0 ? '+' : '';
   block.innerHTML = `
     <div class="bw-title">Графік 27д: Історія + Прогноз 7д <span style="color:var(--faint);font-size:9px;font-weight:400;margin-left:4px">← прокрути щоб побачити всі дати</span></div>
-    <div style="color:var(--faint);font-size:9px;line-height:1.5;grid-column:1/-1;margin-bottom:4px;border:1px solid rgba(155,177,220,.12);border-radius:6px;padding:4px 8px" title="Три числа, три різних NOAA-джерела Kp:&#10;G_now = observed/delayed Kp (live 3-год слот NOAA JSON)&#10;G_day 3D = NOAA 3-day forecast daily Kp_max&#10;G_day 27D = NOAA 27-day outlook Largest Kp&#10;Всі три рахуються за однією формулою G = 2 − Kp + ΣAᵢ, але Kp з різних файлів → різні числа для однієї дати є нормальними.">ⓘ <strong>G_now</strong> (кільце) = Kp NOAA observed · <strong>G_day 3D</strong> (картки) = Kp NOAA 3-day forecast · <strong>G_day 27D</strong> (ця лінія) = Kp NOAA 27-day outlook · <strong>★</strong> = PDF/Engine ±3 — різні Kp-джерела → різні числа для однієї дати є нормальними</div>
+    <div style="color:var(--faint);font-size:9px;line-height:1.5;grid-column:1/-1;margin-bottom:4px;border:1px solid rgba(155,177,220,.12);border-radius:6px;padding:4px 8px" title="Три числа, три різних NOAA-джерела Kp:&#10;G_now = observed/delayed Kp (live 3-год слот NOAA JSON)&#10;G_day 3D = NOAA 3-day forecast daily Kp_max&#10;G_day 27D = NOAA 27-day outlook Largest Kp&#10;Всі три рахуються за однією формулою G = 2 − Kp + ΣAᵢ, але Kp з різних файлів → різні числа для однієї дати є нормальними.">ⓘ <strong>G_now</strong> (кільце) = Kp NOAA observed · <strong>G_day 3D</strong> (картки) = Kp NOAA 3-day forecast · <strong>G_day 27D</strong> (ця лінія) = Kp NOAA 27-day outlook · <strong>★</strong> = Підсумковий бал ±3 — різні Kp-джерела → різні числа для однієї дати є нормальними</div>
     <div class="bw-item bw-best" title="Максимум G_day raw за минулі 27 днів від сьогодні (тільки МИНУЛЕ). Може бути лівіше поточного viewport — прокрути графік."><span class="bw-label">Макс G_day raw <span style="color:var(--faint);font-size:9px">(27д NOAA 27-day · минуле)</span></span><span class="bw-value">${fmtDate(bw.best.date)} · G_day=${bSign}${bw.best.g.toFixed(1)}</span></div>
     <div class="bw-item bw-worst" title="Мінімум G_day raw за минулі 27 днів від сьогодні (тільки МИНУЛЕ). Може бути лівіше поточного viewport — прокрути графік."><span class="bw-label">Мін G_day raw <span style="color:var(--faint);font-size:9px">(27д NOAA 27-day · минуле)</span></span><span class="bw-value">${fmtDate(bw.worst.date)} · G_day=${wSign}${bw.worst.g.toFixed(1)}</span></div>
-    ${bw.fwdPeak ? `<div class="bw-item bw-fwd" style="color: var(--muted)" title="З тієї самої _27dComputed raw-серії, що й графік. Це G_day raw, не PDF/Engine Day_score. Окрема вибірка — наступні 7 днів."><span class="bw-label" style="color: var(--muted)">Пік G_day raw <span style="color:var(--faint);font-size:9px">(прогноз наступних 7д)</span></span><span class="bw-value">${fmtDate(bw.fwdPeak.date)} · G_day=${bw.fwdPeak.g >= 0 ? '+' : ''}${bw.fwdPeak.g.toFixed(1)}</span></div>` : ''}
+    ${bw.fwdPeak ? `<div class="bw-item bw-fwd" style="color: var(--muted)" title="З тієї самої _27dComputed raw-серії, що й графік. Це G_day raw, не Підсумковий бал Day_score. Окрема вибірка — наступні 7 днів."><span class="bw-label" style="color: var(--muted)">Пік G_day raw <span style="color:var(--faint);font-size:9px">(прогноз наступних 7д)</span></span><span class="bw-value">${fmtDate(bw.fwdPeak.date)} · G_day=${bw.fwdPeak.g >= 0 ? '+' : ''}${bw.fwdPeak.g.toFixed(1)}</span></div>` : ''}
     <div class="bw-count">${bw.total} точок · джерело: NOAA 27-day + розрахунок G</div>
   `;
   block.style.display = '';
@@ -6028,7 +6051,7 @@ document.addEventListener('DOMContentLoaded', () => { try { GIndexPPProfile.init
 
 // ═══════════════════════════════════════════════════════════════════════════
 // v88.8.34 ★ HELPER: getEffectiveGForDate — legacy marker helper only
-// Не підміняє raw G. Повертає PDF/Engine day score як окремий overlay для UI.
+// Не підміняє raw G. Повертає Підсумковий бал day score як окремий overlay для UI.
 //
 // Архітектура проблема: у dashboard є два треки оцінки:
 //   1) Astro track (computeAi → Kp + ΣAᵢ) — continuous G з live NOAA
@@ -6044,7 +6067,7 @@ document.addEventListener('DOMContentLoaded', () => { try { GIndexPPProfile.init
 //
 // Returns:
 //   rawG:        original computed G (Kp + ΣAᵢ)
-//   override:    PDF/Engine day score, або null
+//   override:    Підсумковий бал day score, або null
 //   hasOverride: true якщо є override з meaningful delta (|delta| >= 1.5)
 //   delta:       |override - rawG|, або 0
 //   marker:      ' ★' для inline append, або ''
@@ -6082,8 +6105,8 @@ function getEffectiveGForDate(dateObj, rawG, minDelta) {
       const _sign = score.eng >= 0 ? '+' : '';
       out.tooltip = `\n\n★ PDF EXPERT: ${_sign}${score.eng} (delta ${out.delta.toFixed(1)} від raw G ${rawG >= 0 ? '+' : ''}${rawG.toFixed(1)}).\n`
         + 'Raw G — окремий live/astro індекс: NOAA Kp + ΣAᵢ.\n'
-        + 'PDF/Engine — окремий денний score, НЕ G і не заміна G.\n'
-        + 'Дії зараз рахуються за live-guard; прогноз дня — за PDF/Engine.';
+        + 'Підсумковий бал — окремий денний score, НЕ G і не заміна G.\n'
+        + 'Дії зараз рахуються за live-guard; прогноз дня — за Підсумковий бал.';
     } else {
       out.marker = ' ★';
       const _sign2 = score.eng >= 0 ? '+' : '';
@@ -6120,14 +6143,14 @@ window.getEffectiveGForDate = getEffectiveGForDate;
 <!-- PWA disabled v59fix -->
 
 <div id="pwaInstallBar" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:var(--card);border-top:1px solid #2a3b61;padding:12px 16px;align-items:center;gap:12px;font-size:13px;color: var(--text);">
-  <span style="flex:1">📲 <strong>Встановити NeboRhythm</strong> як застосунок</span>
+  <span style="flex:1">📲 <strong>Встановити SkyRhythm</strong> як застосунок</span>
   <button onclick="pwaInstall()" style="background: var(--alt);color:#001026;padding:7px 14px;border-radius:8px;font-weight:700;border:none;cursor:pointer">Встановити</button>
   <button aria-label="Закрити пропозицію встановлення" onclick="pwaDismiss()" style="background:transparent;color: var(--muted);padding:7px 10px;border-radius:8px;border:1px solid #2a3b61;cursor:pointer">✕</button>
 </div>
 
 <div id="swStaleBar" style="display:none;position:fixed;top:0;left:0;right:0;z-index:10000;background:#2a1a00;border-bottom:1px solid #e8b84b;padding:6px 16px;font-size:12px;color:#e8b84b;text-align:center;"></div>
 <div id="pwaUpdateBar" style="display:none;position:fixed;top:60px;left:0;right:0;z-index:9999;background:#143367;border-bottom:1px solid #37a7ff;padding:10px 16px;align-items:center;gap:12px;font-size:13px;color: var(--text);">
-  <span style="flex:1">🔄 Доступне оновлення NeboRhythm</span>
+  <span style="flex:1">🔄 Доступне оновлення SkyRhythm</span>
   <button onclick="pwaReload()" style="background: var(--alt);color:#001026;padding:6px 12px;border-radius:8px;font-weight:700;border:none;cursor:pointer">Оновити застосунок</button>
 </div>
 
@@ -6316,7 +6339,7 @@ body.fp434-app main#mainContent{padding-inline:24px!important}
       <!-- Slide 0: What is G -->
       <div class="ob-slide" id="obSlide0" style="padding:28px 28px 8px;text-align:center">
         <div style="font-size:52px;margin-bottom:12px">🌐</div>
-        <div style="font-size:20px;font-weight:800;color: var(--text);margin-bottom:10px">NeboRhythm — advisory з прозорими джерелами</div>
+        <div style="font-size:20px;font-weight:800;color: var(--text);margin-bottom:10px">SkyRhythm — advisory з прозорими джерелами</div>
         <div style="font-size:14px;color: var(--muted);line-height:1.65;margin-bottom:16px">
           Canonical resolver формує окремий advisory-стан: <strong style="color: var(--alt)">діяти, перевірити або відкласти</strong>.<br><br>
           Raw G — неперервний числовий контекст, а не рішення.<br>
@@ -6466,7 +6489,7 @@ body.fp434-app main#mainContent{padding-inline:24px!important}
 #nrCoverFresh[data-state="live"]:before{background:#63be7b;box-shadow:0 0 0 5px rgba(99,190,123,.1)}
 #nrCoverFresh[data-state="error"]:before{background:#ff7b82;box-shadow:0 0 0 5px rgba(255,123,130,.1)}
 </style>
-</body>
+<script src="panchanga_civil_adapter.js"></script><script src="panchanga_app_bridge.js"></script><link rel="stylesheet" href="r9_shell.css"><link rel="stylesheet" href="panchanga_civil_view.css"><script src="panchanga_civil_scene.js"></script><script src="observance_source_registry_v1.js"></script><script src="observances_tanita_v1.js"></script><script src="own_calendar_v1.js"></script><script src="research_observances_v1.js"></script><script src="research_observances_view.js"></script><script src="panchanga_civil_view.js"></script></body>
 </html>
 <script src="preview-v4/design_candidate.js"></script>
 <script src="preview-v4/design_scale.js"></script>
