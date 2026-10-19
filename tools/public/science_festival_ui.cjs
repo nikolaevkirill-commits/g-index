@@ -30,6 +30,10 @@ const server=http.createServer((q,s)=>{const f=path.join(root,decodeURI(q.url.sp
   for(const theme of ['light','dark'])for(const route of ['today','panch']){
    await p.evaluate(({theme,route})=>{const choice=document.getElementById('nrThemeChoice');choice.value=theme;choice.dispatchEvent(new Event('change',{bubbles:true}));location.hash=route;},{theme,route});
    const panel=p.locator('[data-festival-route="'+route+'"]');await panel.evaluate(el=>el.open=true);await panel.locator('[data-cases]').selectOption('kyiv-2028-01');
+   await p.waitForFunction(route=>document.querySelector('[data-festival-route="'+route+'"]')?.closest('.nr-route')?.classList.contains('active'),route);
+   // Measure the displayed route after its finite entry animation, without disabling motion or contrast rules.
+   const opacity=await panel.evaluate(async el=>{const ancestors=[];for(let n=el;n;n=n.parentElement)ancestors.push(n);await Promise.all(ancestors.flatMap(n=>n.getAnimations()).filter(a=>Number.isFinite(a.effect.getComputedTiming().endTime)).map(a=>a.finished));return ancestors.map(n=>Number(getComputedStyle(n).opacity));});
+   assert.ok(opacity.every(x=>x===1),'Festival and ancestors must be fully visible before accessibility measurement');
    const violations=await panel.evaluate(async el=>(await axe.run(el,{runOnly:{type:'tag',values:['wcag2a','wcag2aa','wcag21aa']}})).violations.map(v=>({id:v.id,nodes:v.nodes.map(n=>n.failureSummary)})));
    assert.deepEqual(violations,[],entry+'/'+theme+'/'+route);
    if(theme==='light'&&route==='today')await panel.screenshot({path:path.join(out,entry+'-light.png')});
