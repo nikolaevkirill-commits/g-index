@@ -4,12 +4,22 @@ from datetime import datetime,timezone,timedelta
 import hashlib,json,re,subprocess
 from kp_source_guard import reject_downgrade
 
-def validate(root):
+def validate_paths(root):
     root=Path(root)
+    registry='consumer_cloud/final_score_decisions.json'
+    expected=subprocess.check_output(['git','show','HEAD:'+registry],cwd=root,text=True,encoding='utf-8')
+    actual=root/registry
+    if actual.is_symlink() or not actual.is_file() or actual.read_text('utf-8')!=expected:
+        raise ValueError('Cloud artifact must not change expert decisions')
     allowed=r'consumer_cloud/(forecast\.json|noaa/27-day-outlook\.txt|noaa/receipts/cloud\.json|noaa/bodies/[a-f0-9]{64}\.json)'
     for p in (root/'consumer_cloud').rglob('*'):
         if p.is_symlink():raise ValueError('Symlink in publication')
-        if p.is_file() and not re.fullmatch(allowed,p.relative_to(root).as_posix()):raise ValueError('Unexpected publication path')
+        rel=p.relative_to(root).as_posix()
+        if p.is_file() and rel!=registry and not re.fullmatch(allowed,rel):raise ValueError('Unexpected publication path')
+
+def validate(root):
+    root=Path(root)
+    validate_paths(root)
     feed=json.loads((root/'consumer_cloud/forecast.json').read_text('utf-8'))
     # Compare against publisher checkout, not only the earlier calculation checkout.
     previous=json.loads(subprocess.check_output(['git','show','HEAD:consumer_cloud/forecast.json'],cwd=root,text=True,encoding='utf-8'))
