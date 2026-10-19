@@ -1,0 +1,86 @@
+name: gated Pages
+on:
+  push:
+    branches: [deploy]
+  workflow_dispatch:
+    inputs:
+      failure_probe:
+        description: Deliberately fail a test to prove deployment is blocked
+        type: boolean
+        default: false
+  workflow_call:
+    inputs:
+      release_sha:
+        type: string
+        required: true
+      watchdog_nonce:
+        type: string
+        default: ''
+permissions:
+  contents: read
+concurrency:
+  group: pages-release
+  cancel-in-progress: false
+jobs:
+  checks:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    outputs:
+      sha: ${{ steps.revision.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.release_sha || github.sha }}
+      - id: revision
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: python tools/public/verify_boundary.py
+      - uses: actions/setup-node@v4
+        with: {node-version: '24'}
+      - run: npm install --no-save --package-lock=false playwright@1.62.1
+      - run: npx playwright install --with-deps chromium
+      - run: node tools/public/verify_day_cautions.cjs
+      - run: node tools/public/verify_final_score.cjs
+      - name: Negative gate probe
+        if: github.event_name == 'workflow_dispatch' && inputs.failure_probe
+        run: |
+          node -e "require('node:assert/strict').equal(0,-2,'Intentional gate probe: mismatched scores must block deployment')"
+      - run: python tools/public/build_pages.py
+      - uses: actions/upload-pages-artifact@v3
+        with: {path: _site}
+  deploy:
+    needs: checks
+    if: github.ref == 'refs/heads/deploy'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v5
+        with: {ref: '${{ needs.checks.outputs.sha }}'}
+      - uses: actions/configure-pages@v5
+      - id: deployment
+        uses: actions/deploy-pages@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - name: Verify published runtime and decisions
+        run: python tools/public/verify_release_publication.py
+      - name: Verify published feed
+        env:
+          PUBLIC_BASE_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
+          WATCHDOG_NONCE: ${{ inputs.watchdog_nonce }}
+        run: python tools/cloud/verify_publication.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cloud-publication-evidence
+          path: |
+            cloud-publication.json
+            release-publication.json
+          retention-days: 14

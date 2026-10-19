@@ -46,13 +46,14 @@ jobs:
           retention-days: 14
 
   publish:
+    outputs:
+      release_sha: ${{ steps.publish.outputs.release_sha }}
     needs: source
     if: github.ref == 'refs/heads/deploy' && (github.event_name == 'schedule' || inputs.mode == 'publish')
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       contents: write
-      pages: write
     steps:
       - uses: actions/checkout@v5
         with: {ref: deploy}
@@ -63,6 +64,7 @@ jobs:
       - name: Validate isolated publication paths and replay proof
         run: python tools/cloud/validate_publication.py
       - name: Publish only the cloud consumer feed
+        id: publish
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -73,15 +75,14 @@ jobs:
           git commit -m "Refresh verified cloud consumer calculation"
           git pull --rebase origin deploy
           git push origin HEAD:deploy
-          gh api --method POST repos/${{ github.repository }}/pages/builds
-      - name: Verify actual Pages publication
-        env:
-          PUBLIC_BASE_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
-          WATCHDOG_NONCE: ${{ inputs.watchdog_nonce }}
-        run: python tools/cloud/verify_publication.py
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: cloud-publication-evidence
-          path: cloud-publication.json
-          retention-days: 14
+          echo "release_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+  deploy_pages:
+    needs: publish
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/gated-pages.yml
+    with:
+      release_sha: ${{ needs.publish.outputs.release_sha }}
+      watchdog_nonce: ${{ inputs.watchdog_nonce || '' }}
