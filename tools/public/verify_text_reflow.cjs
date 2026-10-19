@@ -8,6 +8,8 @@ for(const entry of ['index.html','design-v4.html'])for(const width of [320,390,4
 const context=await browser.newContext({viewport:{width,height:844},isMobile:true,serviceWorkers:'block',timezoneId:'Europe/Kyiv'});const p=await context.newPage();
 await p.goto('http://127.0.0.1:'+server.address().port+'/'+entry+'?channel=play#today',{waitUntil:'domcontentloaded'});
 await p.waitForSelector('[data-overview="today"] .nr-o-score',{state:'visible'});
+await p.evaluate(()=>document.fonts.ready);
+console.log('Reflow',entry,width,scale);
 const original=await p.evaluate(()=>parseFloat(getComputedStyle(document.body).fontSize));
 await p.addStyleTag({content:`html{-webkit-text-size-adjust:${scale}%!important;text-size-adjust:${scale}%!important}`});
 const metrics=await p.evaluate(()=>{const nav=document.querySelector('#mobileNav'),buttons=[...nav.querySelectorAll('button')],locale=document.querySelector('#nrLocaleControl select'),date=document.querySelector('[data-overview="today"] select');const rect=e=>{const r=e.getBoundingClientRect();return {left:r.left,right:r.right,width:r.width}};return {font:parseFloat(getComputedStyle(document.body).fontSize),width:innerWidth,documentWidth:document.documentElement.scrollWidth,locale:rect(locale),date:rect(date),navWidth:nav.clientWidth,navScroll:nav.scrollWidth,buttons:buttons.map(rect)}});
