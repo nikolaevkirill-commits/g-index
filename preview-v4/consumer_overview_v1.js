@@ -475,3 +475,14 @@ if(location?.auto&&navigator.permissions)navigator.permissions.query({name:'geol
  function label(){const lang=(window.NRLocale?.locale||'uk').slice(0,2),t=texts[lang]||texts.uk;document.querySelectorAll('.nr-research-gate > summary,.nr-legacy-details > summary').forEach(n=>n.textContent=t[0]);document.querySelectorAll('.nr-research-warning').forEach(n=>n.textContent=t[1]);}
  window.addEventListener('nr:locale',label);window.addEventListener('load',label);setTimeout(label,1500);
 })();
+// Large-text navigation can scroll horizontally. Keep keyboard focus visible
+// after the browser's own focus scrolling and the animated tab indicator update.
+document.addEventListener('focusin',function(event){
+  const button=event.target.closest?.('#mobileNav button');
+  if(button)requestAnimationFrame(function(){
+    if(document.activeElement!==button)return;
+    const nav=button.closest('#mobileNav'),bounds=nav.getBoundingClientRect(),item=button.getBoundingClientRect();
+    if(item.right>bounds.right)nav.scrollLeft+=item.right-bounds.right+8;
+    else if(item.left<bounds.left)nav.scrollLeft-=bounds.left-item.left+8;
+  });
+});
