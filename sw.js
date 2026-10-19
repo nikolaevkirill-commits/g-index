@@ -1,7 +1,7 @@
 importScripts('./runtime_diagnostics_v1.js');
 // G-Index service worker. HTML/data are network-first; static shell is cache-first.
 // Bump CACHE_VERSION whenever index.html or a cached shell asset changes.
-const CACHE_VERSION = 'fp481-v136-audit-reflow'; // Large-text controls and navigation reflow.
+const CACHE_VERSION = 'fp481-v137-festival'; // Festival research decisions integrated with v136 reflow.
 const CACHE_PREFIX = 'gindex-'; // G-Index cache namespace; do not remove the prefix.
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${CACHE_VERSION}`;
 const DATA_CACHE = `${CACHE_PREFIX}data-${CACHE_VERSION}`;
@@ -19,6 +19,12 @@ async function deliveryResponse(response,mode){
 }
 
 const SHELL_ASSETS = [
+  './festival_astronomy_adapter_v1.js',
+  './festival_decision_engine_v1.js',
+  './festival_decision_v1.css',
+  './festival_decision_view_v1.js',
+  './festival_evidence_v1.js',
+
   './observance_source_registry_v1.js',
   './observances_tanita_v1.js',
   './panchanga_civil_adapter.js',
