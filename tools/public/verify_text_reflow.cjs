@@ -5,6 +5,7 @@ const types={'.html':'text/html','.js':'application/javascript','.css':'text/css
 const server=http.createServer((q,r)=>{const f=path.resolve(root,'.'+decodeURIComponent(new URL(q.url,'http://local').pathname));if(!f.startsWith(root+path.sep)){r.writeHead(403);return r.end()}fs.readFile(f,(e,data)=>{r.writeHead(e?404:200,{'content-type':types[path.extname(f)]||'application/octet-stream'});r.end(e?'':data)})});
 (async()=>{await new Promise(r=>server.listen(0,'127.0.0.1',r));const browser=await chromium.launch(process.env.FP463_BROWSER?{executablePath:process.env.FP463_BROWSER}:{});const results=[];try{
 for(const entry of ['index.html','design-v4.html'])for(const width of [320,390,430])for(const scale of [100,200]){
+if(process.env.NR_REFLOW_CASE&&process.env.NR_REFLOW_CASE!==`${entry}:${width}:${scale}`)continue;
 const context=await browser.newContext({viewport:{width,height:844},isMobile:true,serviceWorkers:'block',timezoneId:'Europe/Kyiv'});const p=await context.newPage();
 await p.goto('http://127.0.0.1:'+server.address().port+'/'+entry+'?channel=play#today',{waitUntil:'domcontentloaded'});
 await p.waitForSelector('[data-overview="today"] .nr-o-score',{state:'visible'});
@@ -20,7 +21,7 @@ assert(metrics.date.left>=-1&&metrics.date.right<=width+1,'Date control must fit
 const textFits=await p.locator('#mobileNav button').evaluateAll(buttons=>buttons.every(b=>{const bounds=b.getBoundingClientRect();return [...b.childNodes].filter(n=>n.nodeType===Node.TEXT_NODE&&n.textContent.trim()).every(n=>{const range=document.createRange();range.selectNodeContents(n);const text=range.getBoundingClientRect();return text.left>=bounds.left-1&&text.right<=bounds.right+1})}));assert(textFits,'Navigation text escapes its button');
 for(let i=1;i<metrics.buttons.length;i++)assert(metrics.buttons[i].left>=metrics.buttons[i-1].right-1,'Navigation buttons overlap');
 await p.locator('#mobileNav button').last().focus();
-await p.waitForFunction(()=>{const r=[...document.querySelectorAll('#mobileNav button')].at(-1).getBoundingClientRect();return r.left>=-1&&r.right<=innerWidth+1},{},{timeout:3000});
+try{await p.waitForFunction(()=>{const r=[...document.querySelectorAll('#mobileNav button')].at(-1).getBoundingClientRect();return r.left>=-1&&r.right<=innerWidth+1},{},{timeout:3000})}catch(e){console.log(await p.evaluate(()=>{const n=document.querySelector('#mobileNav'),b=[...n.querySelectorAll('button')].at(-1);return {nav:n.getBoundingClientRect().toJSON(),last:b.getBoundingClientRect().toJSON(),scroll:n.scrollLeft,scrollWidth:n.scrollWidth,focus:document.activeElement.id}}));throw e}
 const reachable=await p.locator('#mobileNav button').last().evaluate(e=>{const r=e.getBoundingClientRect();return r.left>=-1&&r.right<=innerWidth+1});assert(reachable,'Last navigation destination must remain reachable');
 await p.locator('#mobileNav button').first().focus();
 await p.locator('#mobileNav').evaluate(e=>e.scrollTo({left:0,behavior:'instant'}));
