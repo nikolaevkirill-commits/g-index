@@ -415,6 +415,9 @@ if(location?.auto&&navigator.permissions)navigator.permissions.query({name:'geol
 document.addEventListener('focusin',function(event){
   const button=event.target.closest?.('#mobileNav button');
   if(button)requestAnimationFrame(function(){
-    if(document.activeElement===button)button.scrollIntoView({block:'nearest',inline:'nearest',behavior:'instant'});
+    if(document.activeElement!==button)return;
+    const nav=button.closest('#mobileNav'),bounds=nav.getBoundingClientRect(),item=button.getBoundingClientRect();
+    if(item.right>bounds.right)nav.scrollLeft+=item.right-bounds.right+8;
+    else if(item.left<bounds.left)nav.scrollLeft-=bounds.left-item.left+8;
   });
 });
