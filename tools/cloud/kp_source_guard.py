@@ -27,7 +27,7 @@ def suppress_downgrades(previous, candidate, now):
                    noaa_issued_at=None, noaa_retrieved_at=None,
                    kp_source_requirement='NOAA_3day_slots',
                    availability_reason='short_range_coverage_lost')
-        row['forecast_result'] = {'score':None, 'authority':'source_formula_unvalidated', 'expert_override_used':False}
+        row['source_formula_result'] = {'score':None, 'authority':'source_formula_unvalidated', 'expert_override_used':False}
         withheld.append(day)
     result['availability_projection'] = {'policy':'no_short_range_downgrade_v1', 'withheld_dates':withheld,
         'scope':'Source replay precedes availability suppression; no replacement score is introduced'}

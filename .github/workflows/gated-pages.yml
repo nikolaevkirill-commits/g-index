@@ -37,12 +37,17 @@ jobs:
         with: {python-version: '3.12'}
       - run: python tools/public/verify_boundary.py
       - run: python tools/cloud/test_publication_paths.py
+      - run: python tools/cloud/test_public_feed.py
+      - run: python tools/public/test_release_publication.py
       - uses: actions/setup-node@v4
         with: {node-version: '24'}
       - run: npm install --no-save --package-lock=false playwright@1.62.1
       - run: npx playwright install --with-deps chromium
       - run: node tools/public/verify_day_cautions.cjs
       - run: node tools/public/verify_final_score.cjs
+      - run: node tools/public/check_final_score_v113.cjs . final-score-regression.json
+      - run: node tools/public/check_legacy_sync_v112.cjs . legacy-regression.json
+      - run: node tools/public/check_product_brand_v123.cjs
       - name: Negative gate probe
         if: github.event_name == 'workflow_dispatch' && inputs.failure_probe
         run: |

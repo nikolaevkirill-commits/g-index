@@ -36,10 +36,11 @@ def validate(root):
     if hashlib.sha256(raw).hexdigest()!=receipt['sha256']:raise ValueError('NOAA raw bytes changed')
     for day,row in feed['days'].items():
         own=row['channels']['source_formula']
+        if 'forecast_result' in row or row.get('source_formula_result',{}).get('score')!=(own.get('value') if own.get('available') else None):raise ValueError('Ambiguous or inconsistent formula result')
         if row['date']!=day or own.get('generated_at')!=feed['generated_at']:raise ValueError('Inconsistent calculation time/date')
         if own.get('available') and (type(own.get('value')) is not int or not -3<=own['value']<=3):raise ValueError('Invalid score')
         if own.get('kp_source_requirement')=='NOAA_3day_slots':
-            if own.get('available') is not False or own.get('value') is not None or own.get('raw') is not None or own.get('factors')!=[] or row.get('forecast_result',{}).get('score') is not None:
+            if own.get('available') is not False or own.get('value') is not None or own.get('raw') is not None or own.get('factors')!=[] or row.get('source_formula_result',{}).get('score') is not None:
                 raise ValueError('Withheld Kp date exposes a score')
             if own.get('status')!='missing_kp' or own.get('availability_reason')!='short_range_coverage_lost':raise ValueError('Unmarked Kp suppression')
         if own.get('validation')!='unvalidated_source_formula' or own.get('expert_override_used') is not False:raise ValueError('Invalid promotion claim')

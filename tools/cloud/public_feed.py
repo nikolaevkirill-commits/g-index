@@ -9,7 +9,7 @@ def public_feed(feed):
         own=row.get('channels',{}).get('source_formula')
         if own is None:continue
         result['days'][day]={'date':day,'channels':{'source_formula':copy.deepcopy(own)},
-            'forecast_result':copy.deepcopy(row.get('forecast_result',{})),
+            'source_formula_result':{'score':own.get('value') if own.get('available') else None,'authority':'source_formula_unvalidated','expert_override_used':False},
             'consumer_authority':{'channel':'source_formula','fallback':None,'version':'consumer-authority-v1'}}
     if not result['days']:raise ValueError('No source rows')
     return result

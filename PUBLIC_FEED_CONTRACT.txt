@@ -1,0 +1,22 @@
+SkyRhythm public feed contract — v131, 2026-10-19
+
+consumer_cloud/forecast.json and INDEPENDENT_FORECAST_FEED_v1.json contain
+source-formula calculations, not resolved consumer verdicts.
+
+Migration: days[date].forecast_result was removed. Its explicit replacement is
+days[date].source_formula_result. The score and the source_formula channel retain
+their mathematical meaning; no formula, weights, thresholds or expert decisions
+were changed. Missing values remain null, never an invented zero.
+
+The application and its notification runtime resolve the final consumer score
+using NRConsumerAuthority.resolveFinal: a verified registered expert decision for
+the date takes precedence, otherwise a fresh source_formula value is used.
+Do not label source_formula_result.score as the final consumer forecast.
+For example, on 2026-10-19 the registered expert result is 0 while the formula
+snapshot can be -2. Display the resolved 0, not both as competing final scores.
+
+External clients using the removed field must migrate explicitly; do not silently
+substitute source_formula_result as a final verdict. This change does not certify
+an unknown third-party or native client's behavior.
+
+Frozen research inputs and historical archives are not migrated by this contract.

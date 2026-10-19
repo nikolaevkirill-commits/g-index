@@ -14,7 +14,7 @@ def verify(root=ROOT):
         if doc['schema']!='independent_forecast_feed_v1':raise ValueError('Unknown schema')
         for date,row in doc['days'].items():
             if row['date']!=date or set(row['channels'])!={'source_formula'}:raise ValueError('Research channel in public feed')
-            if set(row)-{'date','channels','forecast_result','consumer_authority'}:raise ValueError('Unexpected public row metadata')
+            if set(row)-{'date','channels','source_formula_result','consumer_authority'}:raise ValueError('Unexpected public row metadata')
     if (root/'tools/cloud/sources.enc').read_bytes()[:4]!=b'NRB1':raise ValueError('Unencrypted source bundle')
     health=(root/'SYSTEM_HEALTH_STATUS_v1.json').read_text('utf-8')
     if re.search(r'[CD]:[/\\]|Users[/\\]',health):raise ValueError('Local paths in public health')
