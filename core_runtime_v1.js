@@ -7186,15 +7186,15 @@ const PANCHAK_TYPES_BY_WEEKDAY = {
 };
 
 function computePanchanga(dateUTC){
-  // v88.8.35-fp56-P8 perf: memoize by minute. computePanchanga is the heaviest function in the
-  // app (~13 trig/ephemeris ops incl. Meeus moon/sun series) and is called 6+ times per render
-  // tick on the SAME noon date by different sub-renderers. Panchanga is effectively constant within
-  // a minute, so cache by minute-rounded timestamp. Cache is tiny (1–2 keys/tick) and self-trims.
+  // v137.1 correctness: cache by exact requested timestamp, not by rounded minute.
+  // Tithi/nakshatra/yoga may cross a boundary anywhere within a minute.
+  // Identical timestamp requests still share the expensive calculation; the 20-entry bound remains.
   let _pKey;
   try {
-    _pKey = [Math.floor((dateUTC instanceof Date ? dateUTC.getTime() : new Date(dateUTC).getTime()) / 60000), _userLat, _userLon].join('|');
+    const _pMs = dateUTC instanceof Date ? dateUTC.getTime() : new Date(dateUTC).getTime();
+    _pKey = Number.isFinite(_pMs) ? [_pMs, _userLat, _userLon].join('|') : null;
     if (!window.__panchMemo) window.__panchMemo = {};
-    if (window.__panchMemo[_pKey]) return window.__panchMemo[_pKey];
+    if (_pKey !== null && window.__panchMemo[_pKey]) return window.__panchMemo[_pKey];
   } catch(_e) { globalThis.NRDiagnostics?.record('catch.132','recoverable');  _pKey = null; }
   const phaseDeg = (moonPhaseAngle(dateUTC) + 360) % 360;
 
