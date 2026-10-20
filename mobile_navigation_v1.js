@@ -88,10 +88,33 @@ document.addEventListener('DOMContentLoaded', () => {
   setTimeout(mnavInit, 100); // after dashboard renders
   // fp293: notification deep links must reveal the actual target, not merely
   // load the page with a hidden/closed section.
-  setTimeout(() => {
+  let attempts = 0;
+  function revealNotification() {
     try {
       const pushKind = new URLSearchParams(location.search).get('push');
       if (!pushKind) return;
+      // Consumer overview replaces the historical hero and Kp panel with a
+      // separate visible surface. Never focus a hidden legacy descendant.
+      if (typeof window.fp434Go === 'function') {
+        const overview = document.querySelector('[data-overview="today"]');
+        if (!overview) {
+          if (++attempts < 100) setTimeout(revealNotification, 100);
+          return;
+        }
+        window.fp434Go('today', false);
+        const target = pushKind === 'storm'
+          ? overview.querySelector('.nr-o-weather-top')
+          : overview.querySelector('.nr-o-heading h1');
+        if (!target) return;
+        target.scrollIntoView({ behavior: 'instant', block: 'center' });
+        target.setAttribute('tabindex', '-1');
+        target.focus({ preventScroll: true });
+        const clean = new URL(location.href);
+        clean.searchParams.delete('push');
+        clean.hash = 'today';
+        history.replaceState(null, '', clean.pathname + clean.search + clean.hash);
+        return;
+      }
       if (pushKind === 'storm') {
         const kpPanel = document.getElementById('kpHourlyPanel');
         if (kpPanel) {
@@ -112,9 +135,11 @@ document.addEventListener('DOMContentLoaded', () => {
           hero.focus({ preventScroll: true });
         }
       }
-      const clean = location.pathname + location.hash;
-      history.replaceState(null, '', clean);
+      const clean = new URL(location.href);
+      clean.searchParams.delete('push');
+      history.replaceState(null, '', clean.pathname + clean.search + clean.hash);
     } catch(_e){ window.NRDiagnostics?.record('legacy.catch.245','recoverable'); }
-  }, 900);
+  }
+  setTimeout(revealNotification, 900);
 });
 {const panel=document.getElementById('__cpPanel');if(panel)panel.textContent += '\nCP block-end @line20806';}
