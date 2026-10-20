@@ -20,7 +20,9 @@ root.SRCalendarAuthority={resolve(date,zone='Europe/Kyiv'){
  const corrections=data.corrections.filter(r=>r&&r.date===date);
  // v121: corrections outside the covered years (Dec 2024, rejected by Drik/IMD) stay visible; no events are invented.
  if(!data.years.includes(Number(date.slice(0,4))))return {status:'missing',events:[],corrections};
- return {status:'source_verified',scope:data.scope,events:data.records.filter(r=>r&&r.date===date),coveredCategories:[...data.categories],corrections,affectsScore:false};
+ const research=root.SRResearchObservancesData?.years?.[date.slice(0,4)];
+ const hasConflict=!!research?.conflicts?.some(c=>c.dates.includes(date));
+ return {source_status:'source_verified',method_status:hasConflict?'CONFLICTING':'UNVERIFIED',decision_status:'UNVERIFIED',status:'source_verified',scope:data.scope,events:data.records.filter(r=>r&&r.date===date),coveredCategories:[...data.categories],corrections,affectsScore:false};
 }};
 // v120: every research key whose category is in the verified Drik scope is covered (all 7 categories,
 // not only 3): otherwise e.g. 2027-02-01 showed a computed Smarta Ekadashi next to Drik's 2027-02-02.
@@ -51,7 +53,7 @@ root.SRResearchObservances={renderSources:renderSourceCalendar,render(host,date,
  add('summary',w[0]).style.minHeight='44px';add('p',w[1]);
  if(!data){panel.dataset.state='missing';add('p',w[4]);host.append(panel);return;}
  const selected=root.SRCalendarAuthority.resolve(date),covered=selected.status==='source_verified'?new Set(keys.filter(k=>(selected.coveredCategories||[]).includes(baseCategory(k)))):new Set();
- const conflicts=data.conflicts.filter(c=>c.dates.includes(date)&&!covered.has(c.event)&&!covered.has(baseCategory(c.event))),events=keys.filter(k=>!covered.has(k)&&(data.events[k]||[]).includes(date)&&!conflicts.some(c=>c.event===k));
+ const conflicts=data.conflicts.filter(c=>c.dates.includes(date)),events=keys.filter(k=>(data.events[k]||[]).includes(date)&&!covered.has(k)&&!conflicts.some(c=>c.event===k));
  if(covered.size)add('p',selectedWords[lang]);
  panel.dataset.state=conflicts.length?'conflicting':events.length?'research':'none';
  for(const k of events)add('p',names[lang][keys.indexOf(k)]);

@@ -1,12 +1,12 @@
 /* Pure research decisions. No score, calendar-authority, network or storage writes. */
 (function(root){'use strict';
-const VERSION='festival-decision-1.0.1';
+const VERSION='festival-decision-1.0.2';
 const rules=Object.freeze({
  'shastra-sankashti':Object.freeze({rule_id:'shastra-sankashti',source_id:'shastra-sankashti-20261019',rule_version:'1.0.0',event:'sankashti',anchor:'moonrise',double:'unresolved',missing:'unresolved',url:'https://shastrapanchangam.com/en/sankashti/'}),
  'panchangtime-sankashti':Object.freeze({rule_id:'panchangtime-sankashti',source_id:'panchangtime-sankashti-20261019',rule_version:'1.0.0',event:'sankashti',anchor:'moonrise',double:'first',missing:'sunrise',url:'https://panchangtime.com/methodology/sankashti-chaturthi'}),
  'nava-sankashti':Object.freeze({rule_id:'nava-sankashti',source_id:'nava-sankashti-20261019',rule_version:'1.0.0',event:'sankashti',anchor:'moonrise',double:'ghatika',missing:'prior_moonrise',ghatika_ms:1440000,url:'https://navapanchangam.com/learn/festivals_fasts/sankatahara-chaturthi'}),
  'panchangtime-monthly':Object.freeze({rule_id:'panchangtime-monthly',source_id:'panchangtime-shivaratri-20261019',rule_version:'1.0.0',event:'masik_shivaratri',anchor:'nishita',double:'greater',missing:'sunrise',majority:true,url:'https://panchangtime.com/methodology/shivaratri'}),
- 'panchangtime-maha':Object.freeze({rule_id:'panchangtime-maha',source_id:'panchangtime-shivaratri-20261019',rule_version:'1.0.0',event:'maha_shivaratri',anchor:'nishita',double:'last',missing:'sunrise',majority:true,url:'https://panchangtime.com/methodology/shivaratri'}),
+ 'panchangtime-maha':Object.freeze({rule_id:'panchangtime-maha',source_id:'panchangtime-shivaratri-20261019',rule_version:'1.0.0',event:'maha_shivaratri',research_only:true,anchor:'nishita',double:'last',missing:'sunrise',majority:true,url:'https://panchangtime.com/methodology/shivaratri'}),
  'shastra-monthly':Object.freeze({rule_id:'shastra-monthly',source_id:'shastra-monthly-20261019',rule_version:'1.0.0',event:'masik_shivaratri',anchor:'nishita',double:'last',missing:'unresolved',url:'https://shastrapanchangam.com/en/masik-shivaratri/'})
 });
 // No classical review or independent physical uncertainty budget has been approved.
@@ -15,6 +15,7 @@ const approvedDecisionReviews=Object.freeze({});
 const librarySource=Object.freeze({"source_id": "pillai-panchang-horoscope-1985", "title": "Panchang and Horoscope — L. D. Swamikannu Pillai", "file_sha256": "6a28ea7e8f3210a3066d1d934fc5a2c73ce907d97563f619e1bba1b10d1432b4", "review_status": "PASSAGE_CHECKED", "source_type": "historical_handbook", "does_not_verify": "modern tie-break, astronomical convention, physical uncertainty or final date"});
 function civil(ms,zone){return new Intl.DateTimeFormat('en-CA',{timeZone:zone,year:'numeric',month:'2-digit',day:'2-digit'}).format(ms);}
 function valid(x){
+ if(!['sankashti','masik_shivaratri','maha_shivaratri'].includes(x?.event))throw Error('UNKNOWN_EVENT');
  if(!x||!x.place||!Number.isFinite(x.place.lat)||Math.abs(x.place.lat)>90||!Number.isFinite(x.place.lon)||Math.abs(x.place.lon)>180)throw Error('INVALID_PLACE');
  if(typeof x.place.zone!=='string'||!x.place.zone.trim())throw Error('MISSING_TIME_ZONE');
  civil(0,x.place.zone);
@@ -56,8 +57,9 @@ function decide(input,rule_id,rule_version='1.0.0'){
   }
  }
  const identity=JSON.stringify([x.place,x.event,x.start,x.end,rule_id,rule_version,x.astronomy,trace]);
- const reviewed=!!approvedDecisionReviews[identity];
- return {engine_version:VERSION,rule_id,source_id:r.source_id,rule_version,source_url:r.url,event:x.event,place:x.place,tithi_interval:{start:x.start,end:x.end},astronomy:x.astronomy,days:trace,selected_date:selected,reason,fallback_used:fallback,status:reviewed&&selected?'VERIFIED':'INSUFFICIENT_EVIDENCE',verification_scope:reviewed?'reviewed_exact_decision':'modern_method_candidate_with_scoped_book_support',rule_evidence:[{...librarySource,pdf_page:x.event==='sankashti'?27:19,printed_page:x.event==='sankashti'?20:12,support_scope:x.event==='sankashti'?'waning_chaturthi_and_moonrise_anchor_only':'monthly_waning_chaturdashi_identity_only'}],classical_source_status:'NOT VERIFIED',physical_uncertainty_ms:null,publish_as_verified:reviewed&&!!selected,affects_score:false};
+ const reviewed=!r.research_only&&!!approvedDecisionReviews[identity];
+ // method_status is method approval only; compare().flags carries rule conflicts and boundary sensitivity.
+ return {source_status:'PASSAGE_CHECKED',method_status:'UNVERIFIED',decision_status:r.research_only?'RESEARCH_ONLY':reviewed&&selected?'VERIFIED':'INSUFFICIENT_EVIDENCE',research_only:!!r.research_only,regime_id:x.astronomy.regime_id||x.astronomy.engine,engine_version:VERSION,rule_id,source_id:r.source_id,rule_version,source_url:r.url,event:x.event,place:x.place,tithi_interval:{start:x.start,end:x.end},astronomy:x.astronomy,days:trace,selected_date:selected,reason,fallback_used:fallback,status:reviewed&&selected?'VERIFIED':'INSUFFICIENT_EVIDENCE',verification_scope:reviewed?'reviewed_exact_decision':'modern_method_candidate_with_scoped_book_support',rule_evidence:[{...librarySource,pdf_page:x.event==='sankashti'?27:19,printed_page:x.event==='sankashti'?20:12,support_scope:x.event==='sankashti'?'waning_chaturthi_and_moonrise_anchor_only':'monthly_waning_chaturdashi_identity_only'}],classical_source_status:'NOT VERIFIED',physical_uncertainty_ms:null,publish_as_verified:!r.research_only&&reviewed&&!!selected,affects_score:false};
 }
 function compare(input,rule_ids,scenarios=[]){
  if(!Array.isArray(rule_ids)||!rule_ids.length||new Set(rule_ids).size!==rule_ids.length)throw Error('INVALID_RULE_SET');

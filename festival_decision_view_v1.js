@@ -37,6 +37,7 @@ function render(box){
   box._decision={input:item.input,reference:item.reference||null,result};out.dataset.status=result.status;
   add(out,'p',(place.name?place.name+' · ':'')+place.zone+' · '+place.lat.toFixed(6)+', '+place.lon.toFixed(6));
   if(id!=='live')add(out,'small',w[18]);
+  add(out,'p',item.input.astronomy.engine+' · '+(item.input.astronomy.regime_id||'archived_evidence')+' · '+item.input.astronomy.convention);
   const statuses={CONFLICTING_RULES:w[6],BOUNDARY_SENSITIVE:w[7],INSUFFICIENT_EVIDENCE:w[8],VERIFIED:w[9]};
   add(out,'strong',(result.flags.length?result.flags:['VERIFIED']).map(k=>statuses[k]).join(' · '));
   if(item.reference){add(out,'p',w[10]+': '+item.reference.published_dates.join(', '));if(result.decisions.some(d=>d.selected_date&&!item.reference.published_dates.includes(d.selected_date)))add(out,'p',w[26]);}
