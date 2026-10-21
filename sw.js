@@ -1,7 +1,7 @@
 importScripts('./runtime_diagnostics_v1.js');
 // G-Index service worker. HTML/data are network-first; static shell is cache-first.
 // Bump CACHE_VERSION whenever index.html or a cached shell asset changes.
-const CACHE_VERSION = 'fp482-v137-4-overview-a11y'; // Refresh visible route labels after overview replacement.
+const CACHE_VERSION = 'fp482-v137-5-nocturne'; // Refresh the shared Nocturne presentation and action order.
 const CACHE_PREFIX = 'gindex-'; // G-Index cache namespace; do not remove the prefix.
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${CACHE_VERSION}`;
 const DATA_CACHE = `${CACHE_PREFIX}data-${CACHE_VERSION}`;
@@ -19,6 +19,8 @@ async function deliveryResponse(response,mode){
 }
 
 const SHELL_ASSETS = [
+  './nocturne_v1.css',
+  './nocturne_v1.js',
   './festival_astronomy_adapter_v1.js',
   './festival_decision_engine_v1.js',
   './festival_decision_v1.css',
