@@ -265,7 +265,7 @@ function mount(){
    root.querySelector('.nr-o-next').after(journey);journey.addEventListener('click',e=>{const step=e.target.closest('[data-step]')?.dataset.step;if(step==='outcome')openOutcome();else if(step)window.fp434Go(step,true)});
   }
   const practicalBody=root.querySelector('.nr-o-practical>p');const more=document.createElement('details');more.className='nr-o-topic-detail';more.innerHTML='<summary>Пояснення тем дня</summary>';practicalBody.before(more);more.append(practicalBody);
-  host.append(root,legacy);selected[route]=today();routeTools(root,route);
+  host.append(root,legacy);selected[route]=route==='today'?(transitionDate()||today()):today();routeTools(root,route);
   root.querySelector('[data-outcome]').onclick=openOutcome;
   root.querySelector('[data-why]').onclick=()=>{const d=root.querySelector('.nr-o-factors');d.open=true;d.querySelector('summary').focus();d.scrollIntoView({block:'start'})};
   root.querySelector('[data-calendar]').onclick=()=>window.fp434Go(route==='calendar'?'forecast':'calendar',true);
@@ -283,15 +283,21 @@ function buttons(host,dates,active){
  }
  for(const b of host.children){const ds=b.dataset.day,r=resolve(ds);b.setAttribute('aria-pressed',String(ds===active));b.textContent=dateLabel(ds)+' · '+fmt(r.score);b.setAttribute('aria-label',dateLabel(ds)+': '+fmt(r.score)+', '+states[r.state]);}
 }
+function transitionDate(){const d=new URL(location.href).searchParams.get('dlDate');return d&&/^\d{4}-\d{2}-\d{2}$/.test(d)&&d>='2017-01-01'&&d<='2028-12-31'&&Number.isFinite(Date.parse(d))&&new Date(d).toISOString().slice(0,10)===d?d:null;}
 function render(root){
  weatherPanel(root);
- const route=root.dataset.overview,dates=dayRange(),ds=dates.includes(selected[route])?selected[route]:today();selected[route]=ds;
+ const route=root.dataset.overview,dates=dayRange();if(route==='today'&&selected[route]&&!dates.includes(selected[route]))dates.push(selected[route]);const ds=dates.includes(selected[route])?selected[route]:today();selected[route]=ds;
  renderPanchPreview(root,ds);
  renderFeedback(root,ds);
  const select=root.querySelector('select');if([...select.options].map(x=>x.value).join()!==dates.join())select.replaceChildren(...dates.map(d=>new Option(dateLabel(d),d)));select.value=ds;
  window.NRCalendarContext?.render(root.querySelector('.nr-o-context'),window.nrRetroEphemeris?.(),ds);
  const r=resolve(ds),source=rows[ds]?.channels?.source_formula,own=r.lastScore===null?{}:source||{};
  root.querySelector('.nr-o-state').textContent=stateLabel(r,ds)+(ds===today()?' · сьогодні за Києвом':' · '+dateLabel(ds)+' · Київ');
+ let offline=root.querySelector('[data-offline-asof]');if(!offline){offline=document.createElement('p');offline.dataset.offlineAsof='';offline.setAttribute('translate','no');offline.style.cssText='grid-column:1/-1;font-size:12px;line-height:1.45;margin:6px 0';root.querySelector('.nr-o-hero').append(offline);}
+ offline.hidden=navigator.onLine;
+ const ol=window.NRLocale?.language||'uk',ow=({uk:['Офлайн. Формульний знімок станом на','Час формульного знімка невідомий.','Нові дані не отримано. Лінія дня обчислюється на пристрої.'],en:['Offline. Formula snapshot as of','The formula snapshot time is unknown.','No new data received. The day line is calculated on this device.'],es:['Sin conexión. Datos de la fórmula del','Se desconoce la fecha de los datos de la fórmula.','No se han recibido datos nuevos. La línea del día se calcula en este dispositivo.'],fr:['Hors ligne. Données de la formule du','La date des données de la formule est inconnue.','Aucune nouvelle donnée reçue. La ligne du jour est calculée sur cet appareil.']})[ol]||['Offline. Formula snapshot as of','Snapshot time unknown.','No new data received.'];
+ const ot=source?.generated_at||r.generated_at,od=Date.parse(ot);offline.textContent=(Number.isFinite(od)?ow[0]+' '+new Intl.DateTimeFormat(({uk:'uk-UA',en:'en-GB',es:'es-ES',fr:'fr-FR'})[ol]||'en-GB',{timeZone:'Europe/Kyiv',dateStyle:'medium',timeStyle:'short'}).format(new Date(od))+' (Europe/Kyiv).':ow[1])+' '+ow[2];
+
  root.querySelector('.nr-o-score').textContent=fmt(r.score);
  root.querySelector('.nr-o-label').textContent=r.available?(r.score>0?'Позитивна оцінка':r.score<0?'Негативна оцінка':'Нейтральна оцінка'):'Актуальну оцінку не показуємо';
  renderRouteTools(root,route,dates,ds);
@@ -314,6 +320,13 @@ function render(root){
  const topics=practical(factors,own,ds),card=root.querySelector('.nr-o-practical');
  card.querySelector('h2').textContent=topics.title;card.querySelector('p').textContent=topics.body;card.querySelector('small').textContent=topics.limit;
  const live=ds===today()&&typeof currentKpAuthority==='function'?currentKpAuthority():null;
+ let aurora=root.querySelector('[data-aurora]');if(!aurora){aurora=document.createElement('div');aurora.dataset.aurora='';aurora.setAttribute('translate','no');aurora.innerHTML='<div class="sr-aurora-light" aria-hidden="true"></div><details><summary></summary><p></p></details>';root.querySelector('.nr-o-hero').append(aurora);}
+ const al=window.NRLocale?.language||'uk',aw=({uk:['Геомагнітна активність','Оцінка NOAA','Спостереження','Актуальний Kp недоступний — сяйво вимкнено.','Художня візуалізація Kp, не прогноз видимості сяйва у вашому місці. Інтенсивність світла не є оцінкою сприятливості дня.'],en:['Geomagnetic activity','NOAA estimate','Observation','Current Kp unavailable — aurora off.','An artistic visualization of Kp, not a forecast of local aurora visibility. Light intensity does not rate the day’s favorability.'],es:['Actividad geomagnética','Estimación NOAA','Observación','Kp actual no disponible: aurora desactivada.','Visualización artística de Kp, no un pronóstico de visibilidad local de auroras. La intensidad de la luz no indica si el día es favorable.'],fr:['Activité géomagnétique','Estimation NOAA','Observation','Kp actuel indisponible : aurore désactivée.','Visualisation artistique de Kp, pas une prévision de visibilité locale des aurores. L’intensité lumineuse ne mesure pas le caractère favorable de la journée.']})[al]||[];
+ const good=navigator.onLine&&live?.usable===true&&Number.isFinite(live.kp)&&live.kp>=0&&live.kp<=9&&Number.isFinite(live.expiresAt)&&Date.now()<=live.expiresAt;
+ aurora.hidden=ds!==today();aurora.dataset.active=good&&live.kp>=3?'true':'false';aurora.style.setProperty('--aurora-strength',good?String(Math.max(0,(live.kp-2)/7)):'0');aurora.style.setProperty('--aurora-duration',good?(28-2*live.kp)+'s':'28s');
+ const observed=good?live.expiresAt-(live.provisional?0.5:6)*3600000:null;
+ aurora.querySelector('summary').textContent=good?aw[0]+' · Kp '+live.kp.toFixed(1)+' · '+aw[live.provisional?1:2]+' '+new Intl.DateTimeFormat('en-GB',{timeZone:'UTC',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}).format(observed)+' UTC':aw[3];aurora.querySelector('p').textContent=aw[4];
+
  root.querySelector('.nr-o-weather').textContent=live?(live.usable?'Зараз Kp '+live.kp.toFixed(1)+' · '+live.label:'Поточний Kp недоступний — запасне число не показуємо.'):(r.available&&typeof own.kp_daily_max==='number'?'Прогноз добового максимуму Kp '+own.kp_daily_max+' · '+(own.kp_timezone||'часовий пояс не вказано'):'Немає актуального фізичного прогнозу для цієї дати.');
  root.querySelector('.nr-o-factors div').innerHTML=factors.length?`<h4>Календарні складові</h4>${calendar.map(x=>`<p>${esc(factorName(x.factor))} <strong>${esc(fmt(x.value))}</strong></p>`).join('')||'<p>Ненульових внесків немає.</p>'}<h4>Внесок прогнозного Kp</h4><p>Добовий максимум: ${esc(own.kp_daily_max??'—')} · доба ${esc(own.kp_timezone||'не уточнена')}. ${own.kp_input?.fallback?'Резерв: 27-денний прогноз за добу UTC; це не максимум локальної доби.':own.kp_source==='NOAA_3day_slots'?'Повне покриття трьохгодинними NOAA-слотами.':''}</p><p>Внесок у формулу: ${esc(fmt(kp?.value))}. Сума до перетворення: ${esc(fmt(own.raw))}.</p><p>Фізичний показник і календарні складові поєднані правилом моделі; причинний вплив на події не підтверджено.</p>`:'Розклад складових у цьому знімку недоступний.';
  let save=root.querySelector('[data-save-calculation]');if(!save){save=document.createElement('button');save.type='button';save.dataset.saveCalculation='';root.querySelector('.nr-o-provenance').after(save);}
@@ -322,6 +335,7 @@ function render(root){
  const covered=Object.keys(rows).filter(d=>rows[d]?.channels?.source_formula?.available===true).sort();
  root.querySelector('.nr-o-provenance').textContent=`Розраховано: ${time(r.generated_at)}. ${r.kp_source==='NOAA_3day_slots'?'NOAA отримано: '+time(r.source_retrieved_at)+'. Час випуску у джерелі відсутній.':'NOAA випущено: '+time(r.source_issued_at)+'.'} Час показано для Europe/Kyiv. Покриття знімка: ${covered.length?dateLabel(covered.at(-1)):'немає'}.`+(r.state==='stale'&&r.lastScore!==null?' Остання збережена оцінка: '+fmt(r.lastScore)+'.':'');
  if(window.__nrPublicPreview)root.querySelector('.nr-o-provenance').append(' Експертні правки (PDF) у публічному перегляді не публікуються; бал — формула джерела.');
+ window.SRDayLineView?.render(root,ds);
 }
 function snapshot(ds){
  const r=resolve(ds),source=rows[ds]?.channels?.source_formula,own=r.lastScore===null?{}:source||{},input=own.kp_input||{};

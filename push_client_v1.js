@@ -123,6 +123,7 @@ const PUSH = (function(){
     if(!sub) return;
     const endpoint = sub.endpoint;
     await sub.unsubscribe();
+    if(window.SRTransitionRuntime)await window.SRTransitionRuntime.control(null);
     // Видалити на Worker-стороні, якщо є токен (fp260: замість Supabase delete).
     const token = GAuth.getToken();
     if(token && !window.GINDEX_PLAY_CHANNEL){

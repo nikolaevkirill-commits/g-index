@@ -19,6 +19,13 @@ async function loadDaily(scope){
 function install(sw){
   sw.addEventListener('push',event=>event.waitUntil((async()=>{
     let payload={};try{payload=event.data?.json()||{};}catch(_){ globalThis.NRDiagnostics?.record('catch.316','recoverable'); }
+    if(payload.category==='astronomical_transition'){
+      let shown=false;try{shown=!!(host.SRTransitionRuntime&&await host.SRTransitionRuntime.receive(sw,payload));}catch(_){host.NRDiagnostics?.record('transition.receive','recoverable');}
+      // userVisibleOnly requires a visible result even for stale/revoked/duplicate deliveries.
+      // Never re-display the rejected event or convert it into a daily score.
+      if(!shown)await sw.registration.showNotification('SkyRhythm',{body:'Повідомлення про перехід більше не актуальне або його неможливо перевірити. Перевірте налаштування сповіщень.',tag:'sr-transition-status',renotify:false,silent:true,icon:'./icon192.png',data:{category:'transition_status',url:new URL('./#profile',sw.registration.scope).href}});
+      return;
+    }
     const storm=payload.category==='storm',category=storm?'storm':'daily';
     // Never repeat a legacy server score or a cached payload as today's score.
     const content=storm?{title:payload.title||'SkyRhythm · Kp',body:payload.body||'Оновлення фізичного показника Kp'}:await loadDaily(sw.registration.scope);

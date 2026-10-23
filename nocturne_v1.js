@@ -5,10 +5,15 @@
   if(!root)return;
   const hero=root.querySelector('.nr-o-hero'),journey=root.querySelector('.nr-o-journey');
   if(!hero||!journey)return;
-  if(hero.nextElementSibling!==journey)hero.after(journey);
+
   let details=root.querySelector('.sr-day-context');
   if(!details){details=document.createElement('div');details.className='sr-day-context';}
-  if(journey.nextElementSibling!==details)journey.after(details);
+  const dayline=root.querySelector('.sr-dayline');
+  if(dayline&&hero.nextElementSibling!==dayline)hero.after(dayline);
+  const first=dayline||hero;
+  if(first.nextElementSibling!==journey)first.after(journey);
+  const anchor=journey;
+  if(anchor.nextElementSibling!==details)anchor.after(details);
   for(const selector of ['[data-reason-brief]','[data-weather-brief]']){
    const node=root.querySelector(selector);
    if(node&&node.parentElement!==details)details.append(node);

@@ -1,7 +1,7 @@
 importScripts('./runtime_diagnostics_v1.js');
 // G-Index service worker. HTML/data are network-first; static shell is cache-first.
 // Bump CACHE_VERSION whenever index.html or a cached shell asset changes.
-const CACHE_VERSION = 'fp482-v137-5-nocturne'; // Refresh the shared Nocturne presentation and action order.
+const CACHE_VERSION = 'fp493-expert-intake-20261023-r1'; // DayLine calculation worker and async presentation.
 const CACHE_PREFIX = 'gindex-'; // G-Index cache namespace; do not remove the prefix.
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${CACHE_VERSION}`;
 const DATA_CACHE = `${CACHE_PREFIX}data-${CACHE_VERSION}`;
@@ -19,6 +19,14 @@ async function deliveryResponse(response,mode){
 }
 
 const SHELL_ASSETS = [
+  './meeus_core_v1.js',
+  './dayline_view_v1.js',
+  './dayline_view_v1.css',
+  './dayline_i18n_v1.js',
+  './dayline_adapter_v1.js',
+  './dayline_async_v1.js',
+  './dayline_worker_v1.js',
+
   './nocturne_v1.css',
   './nocturne_v1.js',
   './festival_astronomy_adapter_v1.js',
@@ -138,6 +146,8 @@ const SHELL_ASSETS = [
   './audit_copy_v1.js',
   './privacy_accessibility_v1.js',
   './notification_runtime_v1.js',
+  './transition_runtime_v1.js',
+  './transition_client_v1.js',
   './consumer_overview_v1.js',
   './calendar_context_v1.js',
   './consumer_overview_v1.css',
@@ -318,6 +328,9 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  if (req.method === 'GET' && /\/dayline_art\/(ashwini|bharani|krittika|rohini|mrigashira|ardra|punarvasu|pushya|ashlesha|magha|purvaphalguni|uttaraphalguni|hasta|chitra|swati|vishakha|anuradha|jyeshtha|mula|purvaashadha|uttaraashadha|shravana|dhanishta|water|fire|depth|nourish)-(engraving|gouache)\.webp$/.test(new URL(req.url).pathname)) {
+    event.respondWith((async()=>{const cache=await caches.open(SHELL_CACHE);const saved=await cache.match(req);if(saved)return saved;const fresh=await fetch(req);if(fresh.ok)await cache.put(req,fresh.clone());return fresh;})());return;
+  }
   // Static shell assets: cache-first, fall back to network.
   event.respondWith(
     caches.open(SHELL_CACHE).then(cache => cache.match(req)).then((cached) => cached || fetch(req))
@@ -329,5 +342,7 @@ self.addEventListener('fetch', (event) => {
 // `push`/`notificationclick` listeners, so a background delivery could be
 // silently discarded and a notification click could not open the relevant
 // dashboard block.
-importScripts('./consumer_authority_v1.js', './notification_runtime_v1.js');
+importScripts('./consumer_authority_v1.js', './dayline_i18n_v1.js', './transition_runtime_v1.js', './notification_runtime_v1.js');
 NRNotificationRuntime.install(self);
+
+self.addEventListener("message",event=>{if(event.data?.type==="SR_TRANSITION_CAPABILITY")event.ports?.[0]?.postMessage({schema:SRTransitionRuntime.VERSION});});
