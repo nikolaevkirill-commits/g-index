@@ -3,7 +3,7 @@
 // score for the checked dates; every legacy score path must show the consumer score,
 // and nothing when the consumer score is stale or missing (missing is not zero).
 // v115: scenarios A-D run with an EMPTY expert registry (the v112 formula guarantees stay intact);
-// scenario E runs with the real v114 registry: expert dates show the PDF decision in every feed state
+// scenario E runs with the current release registry (historical fixture values preserved): expert dates show the PDF decision in every feed state
 // (18.10 governance: expert decision > formula), all other dates keep the v112 rules.
 // usage: CHROME_PATH=... node tests/check_legacy_sync_v112.cjs <app_dir> <out.json>
 const {chromium}=require('playwright'),http=require('http'),fs=require('fs'),path=require('path'),assert=require('assert/strict');
@@ -21,7 +21,7 @@ const engineFor=ds=>expected[ds]===-3?3:-3;
 const scores={};for(let t=Date.UTC(2026,8,1);t<=Date.UTC(2026,11,31);t+=864e5){const ds=new Date(t).toISOString().slice(0,10);const v=engineFor(ds);scores[ds]={eng:v,pdf:v,tag:'sentinel',kp:2,kp_synthetic:true,cal_score:0}}
 const DATES=Object.keys(FEED.days).sort();
 const sym=n=>n===null?'—':n<0?'−'+Math.abs(n):n>0?'+'+n:'0';
-const REAL=JSON.parse(fs.readFileSync(path.join(__dirname,'fixtures/decisions_regression.json'),'utf8'));const EXPERT=Object.fromEntries(REAL.decisions.map(d=>[d.date,d.score]));
+const HISTORICAL=JSON.parse(fs.readFileSync(path.join(__dirname,'fixtures/decisions_regression.json'),'utf8'));const REAL=JSON.parse(fs.readFileSync(path.join(ROOT,'consumer_cloud/final_score_decisions.json'),'utf8'));const EXPERT=Object.fromEntries(REAL.decisions.map(d=>[d.date,d.score]));for(const d of HISTORICAL.decisions)assert.equal(EXPERT[d.date],d.score,'Historical expert fixture changed: '+d.date);
 async function open(b,page,{feed,engine,clock,registry='empty'}){
  const c=await b.newContext({serviceWorkers:'block',viewport:{width:1280,height:900}});
  await c.addInitScript(()=>{localStorage.setItem('gindex_local_context_v1',JSON.stringify({lat:50.45,lon:30.52,zone:'Europe/Kyiv',saved_at:'2026-10-20T12:00:00Z'}));sessionStorage.setItem('nrs_launch','1')});
