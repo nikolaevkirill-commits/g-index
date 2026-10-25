@@ -106,6 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
           ? overview.querySelector('.nr-o-weather-top')
           : overview.querySelector('.nr-o-heading h1');
         if (!target) return;
+        for(let parent=target.parentElement;parent&&parent!==overview;parent=parent.parentElement){if(parent.tagName==='DETAILS')parent.open=true;}
         target.scrollIntoView({ behavior: 'instant', block: 'center' });
         target.setAttribute('tabindex', '-1');
         target.focus({ preventScroll: true });

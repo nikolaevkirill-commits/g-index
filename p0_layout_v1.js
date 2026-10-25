@@ -40,14 +40,14 @@ function apply(root,ds,resolved){
  chip.textContent=resolved.authority==='expert_pdf'?'Джерело: експертна оцінка':resolved.available?'Джерело: формула календаря':'Оцінка недоступна';
  const label=hero.querySelector(':scope > label');if(label){label.childNodes.forEach(n=>{if(n.nodeType===3)n.textContent='Дата · Київ';});label.dataset.p0Date='';}
  // Keep the original accessible route heading, while removing duplicate visual chrome.
- const heading=root.querySelector('.nr-o-heading');if(heading)root.prepend(heading);
+ const heading=root.querySelector('.nr-o-heading');if(heading&&heading.parentElement!==root)root.prepend(heading);
  for(const e of [...hero.children])if(!e.matches('[data-p0-date],[data-p0-moon],[data-p0-sentence],.nr-o-verdict,[data-p0-source],.sr-p0-accessible-heading'))details.append(e);
  const source=root.querySelector('[data-score-source]');if(source)details.prepend(source);
  for(const e of [...root.children])if(e!==hero&&e!==details&&e!==signals&&!e.matches('.sr-dayline,.nr-o-journey,.nr-o-heading'))details.append(e);
  // Hide duplicate weather summaries only by putting them in the existing details; no data are dropped.
  const line=root.querySelector('.sr-dayline');if(line){signals.after(line);let explore=line.querySelector('[data-p0-explore]');if(!explore){explore=make('details','sr-p0-explore');explore.dataset.p0Explore='';explore.append(make('summary','','Усі події, час і традиційні образи'));line.append(explore);}
  for(const selector of ['.sr-dl-actions','label','[data-moment]','figure','[data-events]','[data-method]','[data-scope]']){const item=line.querySelector(':scope > '+selector);if(item)explore.append(item);}}
- const journey=root.querySelector('.nr-o-journey');if(journey){(line||signals).after(journey);}root.append(details);
+ const journey=root.querySelector('.nr-o-journey');if(journey){(line||signals).after(journey);}if(root.lastElementChild!==details)root.append(details);
  for(const child of [...root.parentElement.children])if(child!==root&&child.matches('details'))details.append(child);
 }
 window.SRP0Layout=Object.freeze({apply,noonKyiv,moon});
