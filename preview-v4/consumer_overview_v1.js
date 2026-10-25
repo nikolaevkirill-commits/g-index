@@ -323,7 +323,7 @@ function render(root){
  renderPanchPreview(root,ds);
  renderFeedback(root,ds);
  const select=root.querySelector('select');if([...select.options].map(x=>x.value).join()!==dates.join())select.replaceChildren(...dates.map(d=>new Option(dateLabel(d),d)));select.value=ds;
- window.NRCalendarContext?.render(root.querySelector('.nr-o-context'),window.nrRetroEphemeris?.(),ds);
+ window.NRCalendarContext?.render(root.querySelector('.nr-o-context'),window.nrRetroEphemeris?.(),ds,'general',Date.now(),rows[ds]?.channels?.source_formula?.expert_model||window.__nrExpertModels?.[ds]);
  const r=resolve(ds),source=rows[ds]?.channels?.source_formula,own=r.lastScore===null?{}:source||{};
  const status=root.querySelector('.nr-o-state'),transport=window.__nrConsumerLoadState;
  const transportLabels={uk:{loading:'Завантажуємо прогноз…',error:'Не вдалося отримати прогноз. Спробуйте пізніше.',retrying:'Не вдалося з першої спроби — повторюємо автоматично…'},en:{loading:'Loading forecast…',error:'Unable to load the forecast. Please try again later.',retrying:'First attempt failed — retrying automatically…'},es:{loading:'Cargando el pronóstico…',error:'No se pudo cargar el pronóstico. Inténtalo más tarde.',retrying:'Falló el primer intento — reintentando automáticamente…'},fr:{loading:'Chargement des prévisions…',error:'Impossible de charger les prévisions. Réessayez plus tard.',retrying:'Échec du premier essai — nouvelle tentative automatique…'}};

@@ -60,7 +60,7 @@ function present(r){
  do:'Перегляньте складові оцінки та стан джерел.',avoid:'Оцінка не гарантує результату справ і не визначає найкращий час.'};
 }
 function selectFeeds(results,now=Date.now()){
- const days=Object.create(null);let accepted=0;const rank=Object.create(null);
+ const days=Object.create(null),expertModels=Object.create(null);let accepted=0;const rank=Object.create(null);
  for(const result of results){
   // A public API call or a JSON flag cannot manufacture a delivery receipt.
   if(!result||!deliveredResults.has(result)||result.cloud!==true)continue;
@@ -71,6 +71,8 @@ function selectFeeds(results,now=Date.now()){
   for(const [ds,row] of Object.entries(feed.days)){
    // Reject malformed calendar keys and invalid channel payloads before ranking.
    if(!/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.test(ds)||!Number.isFinite(Date.parse(ds+'T00:00:00Z'))||new Date(ds+'T00:00:00Z').toISOString().slice(0,10)!==ds||row?.date!==ds)continue;
+   const model=row?.channels?.source_formula?.expert_model;
+   if(model?.version==='expert-factor-model-v2'&&model.date===ds)expertModels[ds]=freeze({...model});
    const candidate=row?.channels?.source_formula;
    if(candidate?.available!==true||typeof candidate.value!=='number'||!Number.isInteger(candidate.value)||candidate.value< -3||candidate.value>3||candidate.expert_override_used===true)continue;
    // Multiple verified deliveries may contain the same day. Never allow an older
@@ -98,7 +100,7 @@ function selectFeeds(results,now=Date.now()){
   }
  }
  if(!accepted)throw new Error('No verified consumer delivery');
- return Object.freeze({schema:'independent_forecast_feed_v1',days:Object.freeze(days)});
+ return Object.freeze({schema:'independent_forecast_feed_v1',days:Object.freeze(days),expertModels:Object.freeze(expertModels)});
 }
 async function loadFeeds(scope){
  // No local fallback: a cloud gap remains missing. Only this fixed endpoint is

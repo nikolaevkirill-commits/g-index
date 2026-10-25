@@ -26,6 +26,7 @@ def validate(root):
     reject_downgrade(previous,feed,datetime.now(timezone.utc))
     proof=feed.get('source_integrity',{})
     if feed.get('executor')!='github-actions-source-only-v1' or proof.get('status')!='PASS' or proof.get('replayed_days')!=27:raise ValueError('Missing replay proof')
+    if proof.get('expert_model')!={'status':'PASS','version':'expert-factor-model-v2','replayed_days':27}:raise ValueError('Missing expert model replay')
     stamp=datetime.fromisoformat(feed['generated_at'])
     if stamp.tzinfo is None or not timedelta(0)<=datetime.now(timezone.utc)-stamp<=timedelta(hours=1):raise ValueError('Publication calculation is stale/future')
     if len(feed['days'])!=27:raise ValueError('Invalid horizon')
@@ -36,6 +37,9 @@ def validate(root):
     if hashlib.sha256(raw).hexdigest()!=receipt['sha256']:raise ValueError('NOAA raw bytes changed')
     for day,row in feed['days'].items():
         own=row['channels']['source_formula']
+        model=own.get('expert_model',{})
+        if own.get('model_version')!='expert-factor-model-v2' or model.get('date')!=day:raise ValueError('Missing active expert model')
+        if own.get('available') and not model.get('applied_to_score'):raise ValueError('Expert model not replayed for score')
         if 'forecast_result' in row or row.get('source_formula_result',{}).get('score')!=(own.get('value') if own.get('available') else None):raise ValueError('Ambiguous or inconsistent formula result')
         if row['date']!=day or own.get('generated_at')!=feed['generated_at']:raise ValueError('Inconsistent calculation time/date')
         if own.get('available') and (type(own.get('value')) is not int or not -3<=own['value']<=3):raise ValueError('Invalid score')

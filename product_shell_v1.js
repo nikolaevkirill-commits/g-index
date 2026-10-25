@@ -273,7 +273,7 @@
     if(_consumerFeedPending)return _consumerFeedPending;
     let retry=false;
     _consumerFeedPending=fetchConsumerFeeds().then(feed=>{
-      window.__nrConsumerCached=false;_sourceForecastRows=feed.days;window.__nrFormulaFeedStamp=(window.__nrFormulaFeedStamp||0)+1;
+      window.__nrConsumerCached=false;_sourceForecastRows=feed.days;window.__nrExpertModels=feed.expertModels||{};window.__nrFormulaFeedStamp=(window.__nrFormulaFeedStamp||0)+1;
       window.NRConsumerOverview?.update(_sourceForecastRows);
       window.NRForecastJournal?.record(_sourceForecastRows);
       retry=!consumerFeedUsable(feed);
@@ -316,7 +316,7 @@
       },7500,'independent panel')]);
       if(!feed)throw new Error('consumer feed unavailable');
       if(generation!==_independentPanelGeneration)return;
-      window.__nrConsumerCached=false;_sourceForecastRows=feed.days||{};renderSourceSummary();requestProductRender("cover","calendar","forecast");
+      window.__nrConsumerCached=false;_sourceForecastRows=feed.days||{};window.__nrExpertModels=feed.expertModels||{};renderSourceSummary();requestProductRender("cover","calendar","forecast");
       const all=Object.values(feed.days||{}).sort((a,b)=>String(a.date).localeCompare(String(b.date))),start=todayKey();
       let rows=all.filter(row=>row.date>=start).slice(0,27);if(!rows.length)rows=all.slice(-7);
       if(!rows.length)throw new Error('empty feed');

@@ -279,7 +279,7 @@ window.__nrWeekdayDate=function(loc,opts,d){const f=window.NRPresentation.dateFo
     window.NRConsumerOverview?.update();
     let retry=false;
     _consumerFeedPending=fetchConsumerFeeds().then(feed=>{
-      window.__nrConsumerLoadState='loaded';window.__nrConsumerCached=false;_sourceForecastRows=feed.days;window.__nrFormulaFeedStamp=(window.__nrFormulaFeedStamp||0)+1;window.__nrConsumerRetry={pending:false,exhausted:false};window.__nrConsumerGeneratedAt=(()=>{const g=feed?.generated_at||feed?.days?.[todayKey()]?.channels?.source_formula?.generated_at;return typeof g==='string'?g:null})();try{window.dispatchEvent(new CustomEvent('nr:consumer-feed',{detail:{generated_at:window.__nrConsumerGeneratedAt}}))}catch{}
+      window.__nrConsumerLoadState='loaded';window.__nrConsumerCached=false;_sourceForecastRows=feed.days;window.__nrExpertModels=feed.expertModels||{};window.__nrFormulaFeedStamp=(window.__nrFormulaFeedStamp||0)+1;window.__nrConsumerRetry={pending:false,exhausted:false};window.__nrConsumerGeneratedAt=(()=>{const g=feed?.generated_at||feed?.days?.[todayKey()]?.channels?.source_formula?.generated_at;return typeof g==='string'?g:null})();try{window.dispatchEvent(new CustomEvent('nr:consumer-feed',{detail:{generated_at:window.__nrConsumerGeneratedAt}}))}catch{}
       window.NRConsumerOverview?.update(_sourceForecastRows);
       window.NRForecastJournal?.record(_sourceForecastRows);
       retry=!consumerFeedUsable(feed);
@@ -322,7 +322,7 @@ window.__nrWeekdayDate=function(loc,opts,d){const f=window.NRPresentation.dateFo
       },7500,'independent panel')]);
       if(!feed)throw new Error('consumer feed unavailable');
       if(generation!==_independentPanelGeneration)return;
-      window.__nrConsumerCached=false;_sourceForecastRows=feed.days||{};renderSourceSummary();requestProductRender("cover","calendar","forecast");
+      window.__nrConsumerCached=false;_sourceForecastRows=feed.days||{};window.__nrExpertModels=feed.expertModels||{};renderSourceSummary();requestProductRender("cover","calendar","forecast");
       const all=Object.values(feed.days||{}).sort((a,b)=>String(a.date).localeCompare(String(b.date))),start=todayKey();
       let rows=all.filter(row=>row.date>=start).slice(0,27);if(!rows.length)rows=all.slice(-7);
       if(!rows.length)throw new Error('empty feed');

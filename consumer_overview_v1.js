@@ -290,7 +290,7 @@ function render(root){
  renderPanchPreview(root,ds);
  renderFeedback(root,ds);
  const select=root.querySelector('select');if([...select.options].map(x=>x.value).join()!==dates.join())select.replaceChildren(...dates.map(d=>new Option(dateLabel(d),d)));select.value=ds;
- window.NRCalendarContext?.render(root.querySelector('.nr-o-context'),window.nrRetroEphemeris?.(),ds);
+ window.NRCalendarContext?.render(root.querySelector('.nr-o-context'),window.nrRetroEphemeris?.(),ds,'general',Date.now(),rows[ds]?.channels?.source_formula?.expert_model||window.__nrExpertModels?.[ds]);
  const r=resolve(ds),source=rows[ds]?.channels?.source_formula,own=r.lastScore===null?{}:source||{};
  root.querySelector('.nr-o-state').textContent=stateLabel(r,ds)+(ds===today()?' · сьогодні за Києвом':' · '+dateLabel(ds)+' · Київ');
  let offline=root.querySelector('[data-offline-asof]');if(!offline){offline=document.createElement('p');offline.dataset.offlineAsof='';offline.setAttribute('translate','no');offline.style.cssText='grid-column:1/-1;font-size:12px;line-height:1.45;margin:6px 0';root.querySelector('.nr-o-hero').append(offline);}

@@ -36,7 +36,11 @@ def calculate(root):
     if context is None:raise ValueError('Rejected fresh NOAA slots: '+str(error))
     doc=refresh(root)
     proof=verify(root,doc)
-    if doc['source_error'] or not doc['calculated_days']:raise ValueError('No verified calculation')
+    if doc['source_error']:raise ValueError('No verified source calculation')
+    from expert_model import apply, verify as verify_expert
+    weights=json.loads((root/'source_formula_candidate_20261001/workbook_weights.json').read_text('utf-8-sig'))['tag_weights']
+    doc=apply(doc,weights)
+    proof['expert_model']=verify_expert(doc)
     return doc,proof
 
 def build_feed(doc,legacy,proof):
@@ -49,7 +53,8 @@ def build_feed(doc,legacy,proof):
           'kp_source':kp.get('source'),'kp_input':kp,'noaa_retrieved_at':kp.get('retrieved_at'),
           'kp_daily_max':kp.get('kp'),'score_effect':0,'validation':'unvalidated_source_formula','expert_override_used':False,
           'factors':own.get('contributions',[]),'raw':own.get('raw_sum'),'kp_timezone':kp.get('timezone'),
-          'threshold_policy':own.get('threshold_policy'),'independence':'shared_source_formula_not_independent_validation'}
+          'threshold_policy':own.get('threshold_policy'),'independence':'shared_source_formula_not_independent_validation',
+          'model_version':'expert-factor-model-v2','expert_model':own['expert_model']}
         row.setdefault('channels',{})['source_formula']=channel
         row['forecast_result']={'score':own.get('forecast_score'),'authority':'source_formula_unvalidated','expert_override_used':False}
         values=[v['value'] for k,v in row['channels'].items() if k in ('expert_pdf','frozen_engine','tanita_image','source_formula') and v.get('available') and v.get('value') is not None]

@@ -5,7 +5,7 @@
  else root.NRCalendarContext=api;
 })(typeof window==='undefined'?globalThis:window,function(){
  'use strict';
- const version='expert-calendar-v1';
+ const version='expert-factor-model-v2';
  const zone='Europe/Kyiv';
  const dayFmt=new Intl.DateTimeFormat('en-CA',{timeZone:zone,year:'numeric',month:'2-digit',day:'2-digit'});
  const timeFmt=new Intl.DateTimeFormat('uk-UA',{timeZone:zone,day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'});
@@ -55,11 +55,18 @@
   const conflict=['2026-08-16','2026-08-17'].includes(ds)?'<p>Дата в експертному календарі відрізняється від розрахункового правила Рікта. Тут показано саме авторську позначку.</p>':'';
   return `<section lang="uk" translate="no" data-expert-calendar-date="${esc(ds)}" data-expert-source-sha256="${e.source_sha256}"><h3>Експертний календар · обмеження нових починань</h3><p>Таніта Талі позначає цю дату блискавкою у календарі сприятливих днів.</p><p>${esc(bound)} Часовий пояс джерела не підтверджений; ці години не перераховано для вашого місця.</p>${conflict}<details><summary>Джерело та перевірка</summary><p>Календар ${ds.slice(0,4)}, PDF-сторінка ${e.pdf_page}. Позначку та надруковану межу звірено з оригіналом. Відсутність позначки в інші дні не означає рекомендації починати справи.</p><a href="https://astrologtanita.com/" target="_blank" rel="noopener noreferrer">Авторка календаря</a></details></section>`;
  }
- function render(host,ephemeris,ds,category='general',now=Date.now()){
+ function modelMarkup(model,ds){
+  if(!validDay(ds)||model?.version!=='expert-factor-model-v2'||model.date!==ds)return '';
+  const active=model.computed_bolt===true,conflict=model.source_model_conflict===true;
+  if(!active&&!conflict&&model.full_calendar_available)return '';
+  const times=(Array.isArray(model.intervals)?model.intervals:[]).map(i=>esc(i.start_local)+' — '+esc(i.end_local)).join('<br>');
+  return `<section class="nr-calendar-context" lang="uk" translate="no" data-expert-model-date="${esc(ds)}"><h3>Розрахунок позначки Рікта</h3><p>${active?'Алгоритм визначив позначку обмеження нових починань.':'За правилом Рікта позначка на цю дату не визначена; це не загальна рекомендація починати справи.'}</p>${conflict?'<p>Розрахунок відрізняється від авторського календаря. У формулі збережено авторську позначку.</p>':''}${!model.full_calendar_available?'<p>Інші календарні фактори відсутні: однієї Рікта недостатньо для загального бала.</p>':''}<details><summary>Межі та правило розрахунку</summary><p>${times||'Інтервалів Рікта в цій цивільній добі немає.'}</p><p>Сценарій для Києва. Рікта займає щонайменше 30% відліків світлої частини доби з кроком 15 хвилин. Межі вище розраховані, а не переписані з авторського календаря. Фізичну невизначеність не оцінено.</p><p>Вага позначки −3 враховується лише один раз у повному наборі факторів. Відтворення авторських позначок не доводить точності прогнозу подій.</p></details></section>`;
+ }
+ function render(host,ephemeris,ds,category='general',now=Date.now(),model=null){
   if(!host)return;
-  const html=markup(ephemeris,ds,category,now)+expertMarkup(ds),open=host.querySelector('details')?.open;
+  const html=markup(ephemeris,ds,category,now)+expertMarkup(ds)+modelMarkup(model,ds),open=host.querySelector('details')?.open;
   if(host.__contextMarkup!==html){host.innerHTML=html;host.__contextMarkup=html;if(open&&host.querySelector('details'))host.querySelector('details').open=true;}
   host.hidden=!html;
  }
- return {version,context,markup,render,expertMarkup};
+ return {version,context,markup,render,expertMarkup,modelMarkup};
 });
