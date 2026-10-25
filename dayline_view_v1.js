@@ -39,7 +39,7 @@ function markers(){const bar=q('[data-track]'),axis=q('[data-axis]'),focus=bar.c
  function tick(t,label,align){const s=create('span',align,`${label} ${fmt(t)}`);s.style.left=x((t-a)/(b-a))+'px';s.title=stamp(t);axis.append(s);}
  tick(a,'↑','start');tick(b,'↑','end');if(sunset&&width>270)tick(sunset,'↓','middle');
  bar.setAttribute('aria-label',w(31)+' '+stamp(a)+(sunset?' · '+w(32)+' '+stamp(sunset):'')+' · '+w(33)+' '+stamp(b));
- let legend=q('[data-marker-legend]');if(!legend){legend=create('p','sr-dl-muted');legend.dataset.markerLegend='';axis.after(legend);}legend.textContent='☾ Тітхі · ✦ Накшатра · ◇ Йога · ◐ Карана · ⋯ Кілька подій';
+ let legend=q('[data-marker-legend]');if(!legend){legend=create('p','sr-dl-muted');legend.dataset.markerLegend='';axis.after(legend);}legend.textContent=['tithi','nakshatra','yoga','karana'].map((k,i)=>['☾','✦','◇','◐'][i]+' '+tr('kind.'+k)).join(' · ');
  const now=Date.now();if(now>=a&&now<b){const n=create('i','sr-dl-now');n.style.left=x((now-a)/(b-a))+'px';n.setAttribute('aria-label',w(4)+' '+fmt(now));n.append(create('span','',w(4)));bar.append(n);}
  data.events.forEach((e,i)=>{const px=x(e.position),g=groups.at(-1);if(g&&px-g.x<48)g.items.push({e,i});else groups.push({x:px,items:[{e,i}]});});
  for(const g of groups){const b=button(g.items.length>1?'⋯':({tithi:'☾',nakshatra:'✦',yoga:'◇',karana:'◐',vara:'☀'}[g.items[0].e.kind]||'●'),()=>explain(g.items[0].i));b.dataset.index=g.items[0].i;b.style.left=g.x+'px';b.setAttribute('aria-label',g.items.map(({e})=>eventText(e)).join('; '));bar.append(b);if(focus!==null&&g.items.some(x=>String(x.i)===focus))b.focus({preventScroll:true});}
@@ -92,7 +92,7 @@ async function render(root,date){if(root.dataset.overview!=='today'||!window.Mee
  for(const o of node.querySelectorAll('[data-style]'))o.textContent=tr('st.'+o.dataset.style);q('input[value='+pref.style+']').checked=true;
  q('[data-artnote]').textContent=tr('pr.p1');q('[data-source]').textContent=tr('pr.p2');q('[data-convention]').textContent=tr('pa.conv');root.querySelector('.sr-dl-close-day p').textContent=w(39);root.querySelector('.sr-dl-close-day button').textContent=w(20);
  try{const key=[date,pref.lat,pref.lon,pref.zone].join('|');if(!cache.has(key)){
-  data=null;q('[data-status]').textContent=({uk:'Обчислюємо лінію дня…',en:'Calculating the day line…',es:'Calculando la línea del día…',fr:'Calcul de la ligne du jour…'})[lang]||'Calculating…';
+  data=null;lastDate=date;notify();q('[data-status]').textContent=({uk:'Обчислюємо лінію дня…',en:'Calculating the day line…',es:'Calculando la línea del día…',fr:'Calcul de la ligne du jour…'})[lang]||'Calculating…';
   q('input[type=range]').disabled=true;q('[data-share]').disabled=true;q('figure').hidden=true;q('ol').replaceChildren();q('[data-track]').replaceChildren();q('[data-axis]').replaceChildren();q('[data-moment]').textContent='';headline();q('[data-headline]').textContent=q('[data-status]').textContent;
   const computed=await SRDayLineAsync.build({date,lat:pref.lat,lon:pref.lon,zone:pref.zone});if(sequence!==renderSequence)return;
   cache.set(key,computed);if(cache.size>32)cache.delete(cache.keys().next().value);
@@ -100,11 +100,19 @@ async function render(root,date){if(root.dataset.overview!=='today'||!window.Mee
   if(data.status==='available'){try{const t=Astronomy.SearchRiseSet('Sun',new Astronomy.Observer(pref.lat,pref.lon,0),-1,new Date(data.start),1)?.date;sunset=t&&+t>Date.parse(data.start)&&+t<Date.parse(data.end)?+t:null;}catch(_){} }
   if(lastDate!==date){minute=data.status==='available'?nowMinute():0;lastDate=date;}
   q('input[type=range]').value=minute;q('input[type=range]').disabled=data.status!=='available';q('[data-status]').textContent=data.status==='available'?tr('tlInterval').replace('{a}',stamp(data.start)).replace('{b}',stamp(data.end)):tr('tlNoInterval');
-  q('ol').replaceChildren();for(const [i,e]of data.events.entries()){const li=create('li');li.dataset.event=i;li.append(button(eventText(e),()=>explain(i)));q('ol').append(li);}headline();moment();markers();
+  q('ol').replaceChildren();for(const [i,e]of data.events.entries()){const li=create('li');li.dataset.event=i;li.append(button(eventText(e),()=>explain(i)));q('ol').append(li);}headline();moment();markers();notify();
   const link=new URL(location.href);if(link.searchParams.get('dlDate')===date){const n=data.events.findIndex(e=>e.at===link.searchParams.get('dlAt')&&e.kind===link.searchParams.get('dlKind'));if(n>=0&&link.searchParams.get('dlEvent')){explain(n);for(const k of ['dlDate','dlAt','dlKind','dlEvent'])link.searchParams.delete(k);history.replaceState(null,'',link);}}
- }catch(e){if(sequence!==renderSequence)return;data=null;q('[data-status]').textContent=tr('tlCalcError')+e.message;q('figure').hidden=true;q('input[type=range]').disabled=true;q('ol').replaceChildren();q('[data-track]').replaceChildren();q('[data-axis]').replaceChildren();q('[data-moment]').textContent='';headline();}
+ }catch(e){if(sequence!==renderSequence)return;data=null;notify();q('[data-status]').textContent=tr('tlCalcError')+e.message;q('figure').hidden=true;q('input[type=range]').disabled=true;q('ol').replaceChildren();q('[data-track]').replaceChildren();q('[data-axis]').replaceChildren();q('[data-moment]').textContent='';headline();}
 }
-window.SRDayLineView=Object.freeze({render});
+// Detached presentation snapshot; no consumer score or normative rule is inferred here.
+function snapshot(){
+ const base={date:lastDate,status:data?.status||'unavailable',zone:pref.zone,physical_uncertainty_ms:null,events:[]};
+ if(data?.status!=='available')return base;
+ const events=[{at:data.start,label:w(31),kind:'sunrise'},...(sunset?[{at:new Date(sunset).toISOString(),label:w(32),kind:'sunset'}]:[]),{at:data.end,label:w(33),kind:'sunrise'},...data.events.map((e,index)=>({at:e.at,label:tr('kind.'+e.kind)+': '+name(e.kind,e.from)+' → '+name(e.kind,e.to),kind:e.kind,index}))].sort((a,b)=>Date.parse(a.at)-Date.parse(b.at));
+ return {...base,date:data.date,start:data.start,end:data.end,initial:{...data.initial},initialLabel:tr('kind.tithi')+': '+name('tithi',data.initial.tithi),events};
+}
+function notify(){window.dispatchEvent(new Event('sr:dayline-ready'));}
+window.SRDayLineView=Object.freeze({render,snapshot,openEvent(index){if(Number.isInteger(index)&&data?.events[index])explain(index);}});
 function initial(){const r=document.querySelector('[data-overview="today"]');const select=r?.querySelector('select');if(select)render(r,select.value);}
 window.addEventListener('load',initial);window.addEventListener('nr:locale',()=>{if(dialog?.open)dialog.close();initial();});
 setInterval(()=>{if(node&&!document.hidden){headline();markers();}},60000);document.addEventListener('visibilitychange',()=>{if(node&&!document.hidden){headline();markers();}});initial();
