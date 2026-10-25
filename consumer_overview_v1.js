@@ -101,6 +101,23 @@ function renderReasonBrief(root,r,strongest,own){
 }
 
 function kpLine(own,tr){const kp=own?.kp_input?.kp;if(!Number.isFinite(kp))return '';const g=kp>=9?5:kp>=8?4:kp>=7?3:kp>=6?2:kp>=5?1:0;const src=own.kp_source==='NOAA_27day_outlook'?tr(' · NOAA outlook від ')+String(own.kp_input.issued_at||'').slice(0,10):tr(' · NOAA 3-годинний прогноз');return '<small data-kp-line>'+esc(tr('Kp макс. ')+String(Number(kp.toFixed(2)))+' (G'+g+')'+src)+'</small>';}
+
+function renderScoreEvidence(root,r,own,factors){
+ const score=root.querySelector('.nr-o-score'),final=r.available?r.score:null,semantic=SkyScore.SEMANTIC[SkyScore.scoreClass(final)];
+ score.textContent=SkyScore.formatScore(final);score.dataset.scoreTone=SkyScore.scoreClass(final);
+ root.querySelector('.nr-o-label').textContent=semantic.icon+' '+semantic.label;
+ let source=root.querySelector('[data-score-source]');
+ if(!source){source=document.createElement('p');source.dataset.scoreSource='';score.parentElement.append(source);}
+ const formula=r.formula||r,hasFormula=formula.available&&SkyScore.isValidFinal(formula.score);
+ source.textContent=r.authority==='expert_pdf'?(hasFormula?(formula.score===r.score?`Розрахунок за формулою (${SkyScore.formatScore(formula.score)}) і експертна оцінка (${SkyScore.formatScore(r.score)}) збігаються`:`Розрахунок за формулою: ${SkyScore.formatScore(formula.score)} → Експертна правка: ${SkyScore.formatScore(r.score)}`):'Оцінку встановлено експертним джерелом · складові — у деталях'):(hasFormula?'Розрахунок за формулою джерела':'Актуальна оцінка недоступна');
+ const valid=factors.length>0&&factors.every(f=>Number.isFinite(f.value)),sum=valid?factors.reduce((n,f)=>n+f.value,0):null;
+ const match=valid&&Number.isFinite(own.raw)&&Math.abs(sum-own.raw)<=1e-8;
+ const items=factors.map(f=>`<p data-contribution><span>${esc(factorName(f.factor))}</span> <strong>${esc(fmt(f.value))}</strong></p>`).join('');
+ const audit=valid?`Сума внесків (до перетворення): ${fmt(sum)} → оцінка формули: ${hasFormula?SkyScore.formatScore(formula.score):'недоступна'}. `+(match?'Сума внесків = raw фіду (арифметична звірка). Повнота переліку цим не підтверджується.':'Суму не підтверджено як raw фіду; потрібна перевірка джерела.'):'Складові відсутні або містять нечислові значення.';
+ root.querySelector('.nr-o-reasons').setAttribute('aria-label','Усі надані внески');
+ root.querySelector('.nr-o-reasons div').innerHTML=items+'<p data-contribution-sum class="nr-o-boundary">'+esc(audit)+'</p>';
+ root.querySelector('.nr-o-factors div').innerHTML=items+'<p>'+esc(audit)+'</p>';
+}
 function fmt(value){if(!Number.isFinite(value))return '—';const n=Number(value.toFixed(2));return n<0?'−'+Math.abs(n):n>0?'+'+n:'0';}
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const today=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Kyiv',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
@@ -286,7 +303,7 @@ function buttons(host,dates,active){
 function transitionDate(){const d=new URL(location.href).searchParams.get('dlDate');return d&&/^\d{4}-\d{2}-\d{2}$/.test(d)&&d>='2017-01-01'&&d<='2028-12-31'&&Number.isFinite(Date.parse(d))&&new Date(d).toISOString().slice(0,10)===d?d:null;}
 function render(root){
  weatherPanel(root);
- const route=root.dataset.overview,dates=dayRange();if(route==='today'&&selected[route]&&!dates.includes(selected[route]))dates.push(selected[route]);const ds=dates.includes(selected[route])?selected[route]:today();selected[route]=ds;
+ const route=root.dataset.overview,dates=dayRange();if(selected[route]&&/^\d{4}-\d{2}-\d{2}$/.test(selected[route])&&!dates.includes(selected[route]))dates.push(selected[route]);const ds=dates.includes(selected[route])?selected[route]:today();selected[route]=ds;
  renderPanchPreview(root,ds);
  renderFeedback(root,ds);
  const select=root.querySelector('select');if([...select.options].map(x=>x.value).join()!==dates.join())select.replaceChildren(...dates.map(d=>new Option(dateLabel(d),d)));select.value=ds;
@@ -314,7 +331,7 @@ function render(root){
  const minus=factors.filter(x=>!['Kp','Moon','Eclipse'].includes(x.factor)&&Number.isFinite(x.value)&&x.value<0);
  const caution=root.querySelector('.nr-o-caution');
  caution.hidden=!(r.available&&r.score>0&&minus.length);
- root.querySelector('.nr-o-score').dataset.scoreTone=!r.available?'missing':r.score<0?'negative':r.score===0?'neutral':caution.hidden?'positive':'caution';
+ root.querySelector('.nr-o-score').dataset.scoreTone=SkyScore.scoreClass(r.available?r.score:null);
  if(!caution.hidden&&r.state!=='expert')root.querySelector('.nr-o-label').textContent='Додатна · є застереження';
  caution.textContent=caution.hidden?'':'Оцінка додатна, але в календарі є позначки з мінусом: '+minus.map(x=>factorName(x.factor)+' '+fmt(x.value)).join('; ')+'.';
  const topics=practical(factors,own,ds),card=root.querySelector('.nr-o-practical');
@@ -333,9 +350,11 @@ function render(root){
  save.textContent='Зберегти розрахунок';save.disabled=!rows[ds];
  save.onclick=()=>{const data=snapshot(ds),url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download='SkyRhythm-'+ds+'-calculation.json';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);};
  const covered=Object.keys(rows).filter(d=>rows[d]?.channels?.source_formula?.available===true).sort();
+ renderScoreEvidence(root,r,own,factors);
  root.querySelector('.nr-o-provenance').textContent=`Розраховано: ${time(r.generated_at)}. ${r.kp_source==='NOAA_3day_slots'?'NOAA отримано: '+time(r.source_retrieved_at)+'. Час випуску у джерелі відсутній.':'NOAA випущено: '+time(r.source_issued_at)+'.'} Час показано для Europe/Kyiv. Покриття знімка: ${covered.length?dateLabel(covered.at(-1)):'немає'}.`+(r.state==='stale'&&r.lastScore!==null?' Остання збережена оцінка: '+fmt(r.lastScore)+'.':'');
  if(window.__nrPublicPreview)root.querySelector('.nr-o-provenance').append(' Експертні правки (PDF) у публічному перегляді не публікуються; бал — формула джерела.');
  window.SRDayLineView?.render(root,ds);
+ window.SRP0Layout?.apply(root,ds,r);
 }
 function snapshot(ds){
  const r=resolve(ds),source=rows[ds]?.channels?.source_formula,own=r.lastScore===null?{}:source||{},input=own.kp_input||{};

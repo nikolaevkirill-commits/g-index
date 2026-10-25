@@ -137,6 +137,7 @@ const URL_45DAY_FB    = 'https://services.swpc.noaa.gov/json/45-day-forecast.jso
 const URL_CALENDAR_ADVISORY = './FUTURE_CALENDAR_ADVISORY_v1.json';
 window._futureCalendarAdvisory = {};
 async function loadFutureCalendarAdvisory(){
+  if(window.NR_PUBLIC_BUILD){window._futureCalendarAdvisory={};return;}
   try{
     if(window.__nrPublicPreview) throw new Error('Research source not published in consumer preview');
     const response = await fetch(URL_CALENDAR_ADVISORY, {cache:'no-store'});
@@ -697,6 +698,7 @@ function renderTanitaShadow(){
 }
 
 async function loadTanitaPromotionGate(){
+  if(window.NR_PUBLIC_BUILD) return null;
   try{
     const r=await fetch('TANITA_2Y_PROMOTION_GATE_v1.json',{cache:'no-store'});
     if(!r.ok) throw new Error('HTTP '+r.status);
@@ -1020,7 +1022,7 @@ async function loadBgsSpaceWeather(){
   try {
     const pair=await Promise.all([
       fetch('BGS_SPACE_WEATHER_v1.json',{cache:'no-store'}),
-      fetch('AUTO_FORECAST_FEED_v1.json',{cache:'no-store'}).catch(()=>{globalThis.NRDiagnostics?.record('promise.catch.6','recoverable');return (null);})
+      (window.NR_PUBLIC_BUILD ? Promise.resolve(null) : fetch('AUTO_FORECAST_FEED_v1.json',{cache:'no-store'})).catch(()=>{globalThis.NRDiagnostics?.record('promise.catch.6','recoverable');return (null);})
     ]);
     const r=pair[0];
     if(!r.ok) throw new Error('HTTP '+r.status);
@@ -1135,6 +1137,7 @@ async function _readOverrideDocument(token){
 // END authority request ownership
 
 async function loadExpertDecisionRegistry(force = false){
+  if(window.NR_PUBLIC_BUILD){const status=document.getElementById('expertDecisionRegistryStatus');if(status)status.textContent='Дослідницький реєстр не опубліковано. Споживча оцінка використовує окремий контрольований реєстр.';return null;}
   if(!force && _expertDecisionRegistry !== null) return _expertDecisionRegistry;
   const token=_beginAuthority('registry');
   const el=document.getElementById('expertDecisionRegistryStatus');
@@ -1200,6 +1203,7 @@ async function loadExpertDecisionRegistry(force = false){
 }
 
 async function loadAutoProspectiveStatus(){
+  if(window.NR_PUBLIC_BUILD) return null;
   if(_autoProspectiveStatus !== null) return _autoProspectiveStatus;
   const el = document.getElementById('autoProspectiveStatus');
   try {
@@ -1239,6 +1243,7 @@ async function loadAutoProspectiveStatus(){
 }
 
 async function loadTanitaReviewStatus(){
+  if(window.NR_PUBLIC_BUILD) return null;
   const el=document.getElementById('tanitaReviewStatus');
   if(!el) return null;
   try{
@@ -1406,6 +1411,7 @@ async function loadOutcomeLedgerStatus(){
 }
 
 async function loadStrongRawPolicy(force = false){
+  if(window.NR_PUBLIC_BUILD) return null;
   if(!force && _strongRawPolicy !== null) return _strongRawPolicy;
   const token=_beginAuthority('policy');
   try {
@@ -1418,6 +1424,7 @@ async function loadStrongRawPolicy(force = false){
   return _strongRawPolicy;
 }
 async function loadExpertCalc(force = false){
+  if(window.NR_PUBLIC_BUILD) return null;
   if(!force && _expertCalc !== null) return _expertCalc;
   const token=_beginAuthority('calc');
   try {
@@ -1444,6 +1451,7 @@ async function loadExpertCalc(force = false){
 // v88.8.5 В2: diagnostic flag для трасування deploy issues
 window._expertOverridesLoadStatus = 'pending'; // 'pending' | 'loaded' | 'missing' | 'invalid' | 'http_error'
 async function loadExpertOverrides(force = false){
+  if(window.NR_PUBLIC_BUILD){window._expertOverridesLoadStatus='not_published';return null;}
   if(!force && _expertOverrides !== null && window._expertOverridesLoadStatus==='loaded') return _expertOverrides;
   const token=_beginAuthority('overrides');
   try {
@@ -5994,11 +6002,12 @@ function _renderCmpBlock(wrap, days, opts){
 
   // Sparkline
   const barW = 28, barGap = 6, barMaxH = 34;
-  const maxAbs = Math.max(...days.flatMap(d => [Math.abs(d.aiNow), Math.abs(d.aiPrev)]), 1);
+  const maxAbs = Math.max(...days.flatMap(d => [d.aiNow, d.aiPrev]).filter(Number.isFinite).map(Math.abs), 1);
   const svgW = days.length * (barW + barGap) - barGap;
   const svgH = barMaxH * 2 + 14;
   const midY = svgH / 2;
   const mkBar = (val, x, col) => {
+    if (!Number.isFinite(val)) return ''; // Missing is not a zero-height observation.
     const h = Math.abs(val) / maxAbs * barMaxH;
     const y = val >= 0 ? midY - h : midY;
     return `<rect x="${x}" y="${y}" width="${barW-2}" height="${h}" fill="${col}" opacity="0.85" rx="2"/>`;
@@ -12864,17 +12873,18 @@ function _renderWhyTrend(){
   svgHtml += `<text x="${padL-4}" y="${(y0+3).toFixed(1)}" font-size="9" fill="#5f7293" text-anchor="end">0</text>`;
 
   // Past segment (solid) + forecast segment (dashed)
-  const pastPts = days.filter(d => d.isPast || d.isToday).map((d,i) => `${xFor(days.indexOf(d)).toFixed(1)},${yFor(d.G).toFixed(1)}`);
-  const futPts  = days.filter(d => !d.isPast).map((d,i) => `${xFor(days.indexOf(d)).toFixed(1)},${yFor(d.G).toFixed(1)}`);
-  if(pastPts.length >= 2){
-    svgHtml += `<polyline points="${pastPts.join(' ')}" fill="none" stroke="#5a7ab0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />`;
+  // Break the line at unavailable observations; never connect across a gap.
+  function drawSegments(include,stroke,dashed){
+    let segment=[];
+    const flush=()=>{if(segment.length>=2)svgHtml+=`<polyline points="${segment.join(' ')}" fill="none" stroke="${stroke}" stroke-width="2" ${dashed?'stroke-dasharray="3 3"':''}/>`;segment=[];};
+    days.forEach((d,i)=>{if(!include(d)||!Number.isFinite(d.G)){flush();return;}segment.push(`${xFor(i).toFixed(1)},${yFor(d.G).toFixed(1)}`);});flush();
   }
-  if(futPts.length >= 2){
-    svgHtml += `<polyline points="${futPts.join(' ')}" fill="none" stroke="#8ea4c8" stroke-width="1.5" stroke-dasharray="3 3" stroke-linecap="round" />`;
-  }
+  drawSegments(d=>d.isPast||d.isToday,'#5a7ab0',false);
+  drawSegments(d=>!d.isPast,'#8ea4c8',true);
 
   // Dots
   days.forEach((d, i) => {
+    if (!Number.isFinite(d.G)) return;
     const x = xFor(i), y = yFor(d.G);
     const col = colorFor(d.G);
     // v88.8.18 ★ FIX + fp12 BB: tooltip явно розрізняє Raw G_day vs Підсумковий бал, щоб користувач
@@ -19694,6 +19704,7 @@ const GChrono = (function(){
   // пристрої, НЕ джерелом істини для офіційного n.
   let _chronoCsvCache;
   async function _loadChronoCsv(){
+    if(window.NR_PUBLIC_BUILD)return null; // Unpublished research observations.
     if(_chronoCsvCache !== undefined) return _chronoCsvCache;
     try {
       if(window.__nrPublicPreview) throw new Error('Research source not published in consumer preview');
@@ -19727,7 +19738,7 @@ const GChrono = (function(){
     if(csv){
       note.innerHTML = '📄 Канонічно (chrono_v1.csv, спільний з Telegram-ботом): <strong style="color:var(--ok)">n=' + csv.completedN + '</strong> заповнених / ' + csv.totalRows + ' рядків · остан. ' + (csv.lastDate || '—') + '. Це офіційний n, а не лічильник вище (той — лише цей браузер).';
     } else {
-      note.innerHTML = '⚠ chrono_v1.csv не знайдено поруч з index.html у деплої — канонічний n недоступний, лічильник вище показує тільки цей браузер.';
+      note.innerHTML = 'Канонічний журнал спостережень не опубліковано — загальна кількість недоступна; лічильник вище показує тільки цей браузер.';
     }
     box.appendChild(note);
   }

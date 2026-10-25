@@ -94,6 +94,23 @@ function renderReasonBrief(root,r,strongest,own){
 }
 
 function kpLine(own,tr){const kp=own?.kp_input?.kp;if(!Number.isFinite(kp))return '';const g=kp>=9?5:kp>=8?4:kp>=7?3:kp>=6?2:kp>=5?1:0;const src=own.kp_source==='NOAA_27day_outlook'?tr(' · NOAA outlook від ')+String(own.kp_input.issued_at||'').slice(0,10):tr(' · NOAA 3-годинний прогноз');return '<small data-kp-line>'+esc(tr('Kp макс. ')+String(Number(kp.toFixed(2)))+' (G'+g+')'+src)+'</small>';}
+
+function renderScoreEvidence(root,r,own,factors){
+ const score=root.querySelector('.nr-o-score'),final=r.available?r.score:null,semantic=SkyScore.SEMANTIC[SkyScore.scoreClass(final)];
+ score.textContent=SkyScore.formatScore(final);score.dataset.scoreTone=SkyScore.scoreClass(final);
+ root.querySelector('.nr-o-label').textContent=semantic.icon+' '+semantic.label;
+ let source=root.querySelector('[data-score-source]');
+ if(!source){source=document.createElement('p');source.dataset.scoreSource='';score.parentElement.append(source);}
+ const formula=r.formula||r,hasFormula=formula.available&&SkyScore.isValidFinal(formula.score);
+ source.textContent=r.authority==='expert_pdf'?(hasFormula?(formula.score===r.score?`Розрахунок за формулою (${SkyScore.formatScore(formula.score)}) і експертна оцінка (${SkyScore.formatScore(r.score)}) збігаються`:`Розрахунок за формулою: ${SkyScore.formatScore(formula.score)} → Експертна правка: ${SkyScore.formatScore(r.score)}`):'Оцінку встановлено експертним джерелом · складові — у деталях'):(hasFormula?'Розрахунок за формулою джерела':'Актуальна оцінка недоступна');
+ const valid=factors.length>0&&factors.every(f=>Number.isFinite(f.value)),sum=valid?factors.reduce((n,f)=>n+f.value,0):null;
+ const match=valid&&Number.isFinite(own.raw)&&Math.abs(sum-own.raw)<=1e-8;
+ const items=factors.map(f=>`<p data-contribution><span>${esc(factorName(f.factor))}</span> <strong>${esc(fmt(f.value))}</strong></p>`).join('');
+ const audit=valid?`Сума внесків (до перетворення): ${fmt(sum)} → оцінка формули: ${hasFormula?SkyScore.formatScore(formula.score):'недоступна'}. `+(match?'Сума внесків = raw фіду (арифметична звірка). Повнота переліку цим не підтверджується.':'Суму не підтверджено як raw фіду; потрібна перевірка джерела.'):'Складові відсутні або містять нечислові значення.';
+ root.querySelector('.nr-o-reasons').setAttribute('aria-label','Усі надані внески');
+ root.querySelector('.nr-o-reasons div').innerHTML=items+'<p data-contribution-sum class="nr-o-boundary">'+esc(audit)+'</p>';
+ root.querySelector('.nr-o-factors div').innerHTML=items+'<p>'+esc(audit)+'</p>';
+}
 function fmt(value){if(!Number.isFinite(value))return '—';const n=Number(value.toFixed(2));return n<0?'−'+Math.abs(n):n>0?'+'+n:'0';}
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const today=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Kyiv',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
@@ -102,7 +119,7 @@ const time=s=>Number.isFinite(Date.parse(s))?new Intl.DateTimeFormat('uk-UA',{ti
 const stateLabel=(r,ds)=>r.state==='fresh'&&rows[ds]?.channels?.source_formula?.kp_source==='NOAA_27day_outlook'?'Орієнтир · outlook NOAA від '+String(rows[ds].channels.source_formula.kp_input?.issued_at||'').slice(0,10):states[r.state];
 const states={fresh:'Дані актуальні',offline:'Офлайн · збережені дані',stale:'Дані застаріли',missing:'Недостатньо даних',invalid:'Час джерела не підтверджено'};
 const dayRange=()=>Array.from({length:27},(_,i)=>{const d=new Date(today()+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+i);return d.toISOString().slice(0,10)});
-function resolve(ds){return NRConsumerAuthority.resolve(rows[ds],ds,Date.now(),!navigator.onLine||window.__nrConsumerCached===true);}
+function resolve(ds){return NRConsumerAuthority.resolveFinal(rows[ds],ds,Date.now(),!navigator.onLine||window.__nrConsumerCached===true);}
 function factorName(f){if(f==='Kp')return 'Геомагнітна складова (2 − Kp максимум)';if(f==='Moon')return 'Пурніма (за календарем)';if(f==='Eclipse')return 'Складова затемнення';const reviewedLegend={"Серце":["позначка підтримки нових починань у трактуванні джерела",15],"Екадаші":["традиційний день пожертви й посту; не рекомендація обмежувати харчування",14],"Пітру Пакша":["період вшанування предків; джерело застерігає від нових матеріальних справ",17],"Наваратрі":["свято вшанування Богині-Матері",17],"1 місячний день":["планування й постановка цілей",14],"Мішень":["планування й постановка цілей",14],"Амавасья, день мертвих":["30-й місячний день; вшанування померлих родичів",14],"День порожні руки, несприятливий":["застереження джерела щодо нових справ; тема прибирання й очищення",14],"Сурья Санкранті Перехід Сонця із знаку в інший":["перехід Сонця між знаками; застереження джерела щодо нових проєктів",14],"Тричі  трикутник":["застереження джерела про повторення роботи тричі",15],"Ромб":["застереження джерела про повторення роботи",15],"Зелена печатка":["позначка нових починань у трактуванні джерела",15],"День Божого провидіння":["позначка нових починань у трактуванні джерела; заявлену ним імовірність успіху не підтверджено",15],"Рука":["увага до подій дня",15],"Гучномовець":["реклама й маркетингові проєкти",15],"Віджая дашамі":["свято, пов’язане в джерелі з починаннями",14],"Акаша трітья":["позначка починань у трактуванні джерела",14],"Гуру Пурніма":["вшанування вчителів і вдячність",16],"Прадош врат":["традиційний піст і вшанування Шиви",16],"Санкашті":["традиційне вшанування Ганеші",16],"Ганеша чатуртхі":["свято народження Ганеші",16],"Вінаяка":["традиційне вшанування Ганеші",17],"Діпавалі":["свято світла й добра",17],"Махашиваратрі":["ніч вшанування Шиви",16],"Масік Шиваратрі":["традиційний піст на честь Шиви",16],"Савана Сомвара":["цикл шістнадцяти понеділків; назву зіставлено з Солах Сомвара Врат",16],"Шприц":["позначка хірургічних втручань у джерелі; не медична рекомендація",16]};if(Object.hasOwn(reviewedLegend,f)){const [text,page]=reviewedLegend[f];return f+' — '+text+' (легенда джерела, с. '+page+')';}const legend={'Хрест':'відвідування лікаря й початок лікування; позначка календаря, не медична рекомендація','Книги':'початок навчання','Сукня':'перше вдягання нового одягу','Таблетка':'лікування; позначка календаря, не обіцянка одужання'};if(Object.hasOwn(legend,f))return f+' — '+legend[f]+' (легенда джерела, с. '+(f==='Книги'?'15':'16')+')';return f;}
 
 function theme(value){
@@ -336,7 +353,7 @@ function render(root){
  const caution=root.querySelector('.nr-o-caution');
  caution.hidden=!(r.available&&r.score>0&&minus.length);
  root.querySelector('.nr-o-score').dataset.opKey=NRConsumerAuthority.present(r).opKey||'none';
- root.querySelector('.nr-o-score').dataset.scoreTone=!r.available?'missing':r.score<0?'negative':r.score===0?'neutral':caution.hidden?'positive':'caution';
+ root.querySelector('.nr-o-score').dataset.scoreTone=SkyScore.scoreClass(r.available?r.score:null);
  if(!caution.hidden)root.querySelector('.nr-o-label').textContent='Додатна · є застереження';
  caution.textContent=caution.hidden?'':'Оцінка додатна, але в календарі є позначки з мінусом: '+minus.map(x=>factorName(x.factor)+' '+fmt(x.value)).join('; ')+'.';
  const topics=practical(factors,own,ds),card=root.querySelector('.nr-o-practical');
@@ -348,7 +365,9 @@ function render(root){
  save.textContent='Зберегти розрахунок';save.disabled=!rows[ds];
  save.onclick=()=>{const data=snapshot(ds),url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download='NeboRhythm-'+ds+'-calculation.json';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);};
  const covered=Object.keys(rows).filter(d=>rows[d]?.channels?.source_formula?.available===true).sort();
+ renderScoreEvidence(root,r,own,factors);
  root.querySelector('.nr-o-provenance').textContent=`Розраховано: ${time(r.generated_at)}. ${r.kp_source==='NOAA_3day_slots'?'NOAA отримано: '+time(r.source_retrieved_at)+'. Час випуску у джерелі відсутній.':'NOAA випущено: '+time(r.source_issued_at)+'.'} Час показано для Europe/Kyiv. Покриття знімка: ${covered.length?dateLabel(covered.at(-1)):'немає'}.`+(r.state==='stale'&&r.lastScore!==null?' Остання збережена оцінка: '+fmt(r.lastScore)+'.':'');
+ window.SRP0Layout?.apply(root,ds,r);
 }
 function snapshot(ds){
  const r=resolve(ds),source=rows[ds]?.channels?.source_formula,own=r.lastScore===null?{}:source||{},input=own.kp_input||{};

@@ -112,6 +112,23 @@ function retryButton(root,status,show){let b=root.querySelector(':scope .nr-o-re
 /* v7.2 NRA-11: за активної бурі — чим бал відрізняється від поточного спостереження NOAA. Відповідність Kp→G — та сама, що в kpLine; нових порогів немає */
 function kpNote(root){const lb=root.querySelector('.nr-o-label');if(!lb)return;root.querySelectorAll('.nr-o-kpnote').forEach(n=>n.remove());const brief=root.querySelector('[data-weather-brief]'),cur=Number(brief?.dataset.g),ds=root.querySelector('select')?.value;if(brief?.dataset.active!=='true'||!(cur>0)||ds!==today())return;const own=rows[ds]?.channels?.source_formula,kp=own?.kp_input?.kp;if(!own?.available||!Number.isFinite(kp))return;const g=kp>=9?5:kp>=8?4:kp>=7?3:kp>=6?2:kp>=5?1:0,tr=s=>window.NRLocale?.text(s)||s;const n=document.createElement('small');n.className='nr-o-kpnote';n.setAttribute('translate','no');const when=Number.isFinite(Date.parse(own.generated_at))?NRPresentation.dateFormatter(window.NRLocale?.locale||'uk-UA',{timeZone:'Europe/Kyiv',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}).format(new Date(own.generated_at)):'—';n.textContent=tr('Бал розраховано ')+when+tr(' з Kp макс. ')+String(Number(kp.toFixed(2)))+' (G'+g+')'+tr('; поточне спостереження NOAA G')+cur+tr(' показано окремо; бал використовує прогнозний Kp.');lb.append(n)}
 function kpLine(own,tr){const kp=own?.kp_input?.kp;if(!Number.isFinite(kp))return '';const g=kp>=9?5:kp>=8?4:kp>=7?3:kp>=6?2:kp>=5?1:0;const src=own.kp_source==='NOAA_27day_outlook'?tr(' · NOAA outlook від ')+String(own.kp_input.issued_at||'').slice(0,10):tr(' · NOAA 3-годинний прогноз');return '<small data-kp-line>'+esc(tr('Kp макс. ')+String(Number(kp.toFixed(2)))+' (G'+g+')'+src)+'</small>';}
+
+function renderScoreEvidence(root,r,own,factors){
+ const score=root.querySelector('.nr-o-score'),final=r.available?r.score:null,semantic=SkyScore.SEMANTIC[SkyScore.scoreClass(final)];
+ score.textContent=SkyScore.formatScore(final);score.dataset.scoreTone=SkyScore.scoreClass(final);
+ root.querySelector('.nr-o-label').textContent=semantic.icon+' '+semantic.label;
+ let source=root.querySelector('[data-score-source]');
+ if(!source){source=document.createElement('p');source.dataset.scoreSource='';score.parentElement.append(source);}
+ const formula=r.formula||r,hasFormula=formula.available&&SkyScore.isValidFinal(formula.score);
+ source.textContent=r.authority==='expert_pdf'?(hasFormula?(formula.score===r.score?`Розрахунок за формулою (${SkyScore.formatScore(formula.score)}) і експертна оцінка (${SkyScore.formatScore(r.score)}) збігаються`:`Розрахунок за формулою: ${SkyScore.formatScore(formula.score)} → Експертна правка: ${SkyScore.formatScore(r.score)}`):'Оцінку встановлено експертним джерелом · складові — у деталях'):(hasFormula?'Розрахунок за формулою джерела':'Актуальна оцінка недоступна');
+ const valid=factors.length>0&&factors.every(f=>Number.isFinite(f.value)),sum=valid?factors.reduce((n,f)=>n+f.value,0):null;
+ const match=valid&&Number.isFinite(own.raw)&&Math.abs(sum-own.raw)<=1e-8;
+ const items=factors.map(f=>`<p data-contribution><span>${esc(factorName(f.factor))}</span> <strong>${esc(fmt(f.value))}</strong></p>`).join('');
+ const audit=valid?`Сума внесків (до перетворення): ${fmt(sum)} → оцінка формули: ${hasFormula?SkyScore.formatScore(formula.score):'недоступна'}. `+(match?'Сума внесків = raw фіду (арифметична звірка). Повнота переліку цим не підтверджується.':'Суму не підтверджено як raw фіду; потрібна перевірка джерела.'):'Складові відсутні або містять нечислові значення.';
+ root.querySelector('.nr-o-reasons').setAttribute('aria-label','Усі надані внески');
+ root.querySelector('.nr-o-reasons div').innerHTML=items+'<p data-contribution-sum class="nr-o-boundary">'+esc(audit)+'</p>';
+ root.querySelector('.nr-o-factors div').innerHTML=items+'<p>'+esc(audit)+'</p>';
+}
 function fmt(value){if(!Number.isFinite(value))return '—';const n=Number(value.toFixed(2));return n<0?'−'+Math.abs(n):n>0?'+'+n:'0';}
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const todayFormatter=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Kyiv',year:'numeric',month:'2-digit',day:'2-digit'});
@@ -369,7 +386,7 @@ function render(root){
  const caution=root.querySelector('.nr-o-caution');
  caution.hidden=!(r.available&&r.score>0&&minus.length);
  root.querySelector('.nr-o-score').dataset.opKey=NRConsumerAuthority.present(r).opKey||'none';
- root.querySelector('.nr-o-score').dataset.scoreTone=!r.available?'missing':r.score<0?'negative':r.score===0?'neutral':caution.hidden?'positive':'caution';
+ root.querySelector('.nr-o-score').dataset.scoreTone=SkyScore.scoreClass(r.available?r.score:null);
  if(!caution.hidden&&r.state!=='expert')root.querySelector('.nr-o-label').textContent='Додатна · є застереження';
  /* v5 NR-01: тип сигналу біля бала — модель дня, не прогноз бурі (бал містить прогноз Kp як одну складову) */
  if(r.available){const lb=root.querySelector('.nr-o-label'),k=document.createElement('small');k.className='nr-o-kind';k.textContent=r.state==='expert'?'Експертна правка · не прогноз бурі':'Модель дня · не прогноз бурі';lb.append(document.createTextNode(' '),k)}
@@ -384,8 +401,10 @@ function render(root){
  save.textContent='Зберегти розрахунок';save.disabled=!rows[ds];
  save.onclick=()=>{const data=snapshot(ds),url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download='SkyRhythm-'+ds+'-calculation.json';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);};
  const covered=Object.keys(rows).filter(d=>rows[d]?.channels?.source_formula?.available===true).sort();
+ renderScoreEvidence(root,r,own,factors);
  root.querySelector('.nr-o-provenance').textContent=`Розраховано: ${time(r.generated_at)}. ${r.kp_source==='NOAA_3day_slots'?'NOAA отримано: '+time(r.source_retrieved_at)+'. Час випуску у джерелі відсутній.':'NOAA випущено: '+time(r.source_issued_at)+'.'} Час показано для Europe/Kyiv. Покриття знімка: ${covered.length?dateLabel(covered.at(-1)):'немає'}.`+(r.state==='stale'&&r.lastScore!==null?' Остання збережена оцінка: '+fmt(r.lastScore)+'.':'');
 
+ window.SRP0Layout?.apply(root,ds,r);
 }
 function snapshot(ds){
  const r=resolve(ds),source=rows[ds]?.channels?.source_formula,own=r.lastScore===null?{}:source||{},input=own.kp_input||{};

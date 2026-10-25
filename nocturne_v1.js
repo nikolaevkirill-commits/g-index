@@ -2,7 +2,7 @@
 (function(){
  function arrange(){
   const root=document.querySelector('[data-overview=today]');
-  if(!root)return;
+  if(!root||root.classList.contains('sr-p0-today'))return;
   const hero=root.querySelector('.nr-o-hero'),journey=root.querySelector('.nr-o-journey');
   if(!hero||!journey)return;
 

@@ -312,6 +312,7 @@
     const score=value=>{const n=_strictDayScore(value);return n===null?'—':`${n>0?'+':''}${n}`};
     try{
       const [feed,scorecard]=await Promise.all([fetchConsumerFeeds(),withTimeout(async signal=>{
+        if(window.NR_PUBLIC_BUILD)return {}; // Research scorecard is not published.
         const response=await fetch('FP463_CHANNEL_SCORECARD.json',{cache:'no-store',signal});return response.ok?response.json():{};
       },7500,'independent panel')]);
       if(!feed)throw new Error('consumer feed unavailable');
@@ -483,10 +484,11 @@
       const [kpRes,healthRes,panchRes]=await Promise.all([
         loadFutureKp().then(kp=>({ok:true,json:async()=>window.__nrFutureKp})),
         fetch('SYSTEM_HEALTH_STATUS_v1.json',{cache:'no-store'}),
-        fetch('PANCHANGA_ASTRONOMY_ENGINE_CROSSCHECK_v1.json',{cache:'no-store'})
+        (window.NR_PUBLIC_BUILD?Promise.resolve(null):fetch('PANCHANGA_ASTRONOMY_ENGINE_CROSSCHECK_v1.json',{cache:'no-store'}))
       ]);
       if(!kpRes.ok)throw new Error('future_kp HTTP '+kpRes.status);
       if(!healthRes.ok)throw new Error('system health HTTP '+healthRes.status);
+      if(!panchRes)throw new Error('Дослідницьку звірку не опубліковано');
       if(!panchRes.ok)throw new Error('Panchanga cross-check HTTP '+panchRes.status);
       const kp=await kpRes.json(),health=await healthRes.json(),panch=await panchRes.json();
       // Read the shared loader state; diagnostics never own forecast authority.
