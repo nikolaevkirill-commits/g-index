@@ -4,6 +4,26 @@ const COPY=[["Прогноз Kp", "Kp forecast", "Pronóstico Kp", "Prévision K
 function tr(text){let value=String(text),idx={uk:0,en:1,es:2,fr:3}[window.NRLocale?.language]||0;if(!idx)return value;for(const row of [...COPY].sort((a,b)=>b[0].length-a[0].length))value=value.split(row[0]).join(row[idx]);return window.NRLocale?.text(value)||value;}
 const make=(tag,cls,text)=>{const e=document.createElement(tag);e.className=cls;if(text)e.textContent=tr(text);return e;};
 function noonKyiv(ds){let d=new Date(ds+'T12:00:00Z');const h=Number(new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Kyiv',hour:'2-digit',hourCycle:'h23'}).format(d));return new Date(d.getTime()+(12-h)*3600000);}
+COPY.push(['Оцінки за днями','Daily scores','Puntuaciones por día','Notes par jour'],['Окремі денні оцінки. Риска означає відсутні дані; 0 — нейтральну оцінку.','Separate daily scores. A dash means missing data; 0 means neutral.','Puntuaciones diarias independientes. Una raya indica datos ausentes; 0 significa neutral.','Notes quotidiennes distinctes. Un tiret indique une donnée absente ; 0 signifie neutre.']);
+// Only geometry: final-score authority and rounding remain in the resolver.
+function forecastPoints(entries){return entries.map((entry,i)=>{const c=entry.consumer,score=c?.available===true&&SkyScore.isValidFinal(c.score)?c.score:null;return {date:entry.date,score,authority:c?.authority||null,x:entries.length===1?190:46+i*288/(entries.length-1),y:score===null?null:100-score*23};});}
+function renderForecastGraph(root){
+ const host=root.querySelector('.nr-o-horizon-list');if(!host)return;
+ let figure=root.querySelector('[data-forecast-graph]');if(!figure){figure=make('figure','sr-forecast-graph');figure.dataset.forecastGraph='';host.before(figure);}
+ const points=forecastPoints([...host.querySelectorAll('[data-day]')].filter(b=>!b.hidden).map(b=>({date:b.dataset.day,consumer:resolvedFor(b.dataset.day).consumer})));
+ const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 360 225');svg.setAttribute('role','img');
+ const node=(tag,attrs,text)=>{const e=document.createElementNS(svg.namespaceURI,tag);for(const [k,v]of Object.entries(attrs))e.setAttribute(k,String(v));if(text!==undefined)e.textContent=text;svg.append(e);return e;};
+ const descriptions=points.map(p=>p.date+': '+SkyScore.describe(p.score)+' · '+tr(p.score===null?'Оцінка недоступна':p.authority==='expert_pdf'?'Експертна оцінка':'Формула джерела'));
+ svg.setAttribute('aria-label',tr('Оцінки за днями')+'. '+descriptions.join('; '));
+ for(const score of [3,0,-3]){const y=100-score*23;node('line',{x1:30,y1:y,x2:350,y2:y,stroke:score===0?'#8fa2c6':'#435575','stroke-dasharray':score===0?'none':'3 5'});node('text',{x:4,y:y+4,fill:'#c7d4ec','font-size':12},score>0?'+'+score:String(score));}
+ for(const p of points){const color=SkyScore.color(p.score),g=node('g',{'data-date':p.date,'data-score':p.score===null?'missing':p.score});
+  const add=(tag,attrs,text)=>{const e=node(tag,attrs,text);g.append(e);};
+  if(p.score===null)add('text',{x:p.x,y:105,'text-anchor':'middle',fill:color,'font-size':20},'—');
+  else{if(p.score!==0)add('line',{x1:p.x,y1:100,x2:p.x,y2:p.y,stroke:color,'stroke-width':5,'stroke-linecap':'round',opacity:.65});add('circle',{cx:p.x,cy:p.y,r:5,fill:color,stroke:'#101a30','stroke-width':2});add('text',{x:p.x,y:p.y+(p.score<0?19:-12),'text-anchor':'middle',fill:color,'font-size':13,'font-weight':700},SkyScore.formatScore(p.score));}
+  add('text',{x:p.x,y:218,'text-anchor':'middle',fill:'#dce6fa','font-size':12},p.date.slice(8)+'.'+p.date.slice(5,7));
+ }
+ figure.replaceChildren(make('figcaption','','Оцінки за днями'),svg,make('p','','Окремі денні оцінки. Риска означає відсутні дані; 0 — нейтральну оцінку.'));
+}
 function moon(at){
  const {k,waxing}=SkyMoon.moonIllumination(at),r=35,c=40,rx=r*Math.abs(2*k-1),limb=waxing?1:0,term=k>=.5?(waxing?1:0):(waxing?0:1),pct=Math.round(k*100),id='srMoon'+(++moonSerial);
  const d=`M${c},${c-r} A${r},${r} 0 0 ${limb} ${c},${c+r} A${rx.toFixed(3)},${r} 0 0 ${term} ${c},${c-r} Z`;
@@ -30,6 +50,8 @@ function extras(root,ds){
   let controls=root.querySelector('[data-p0-forecast-tabs]');if(!controls){controls=make('div','sr-p0-tabs');controls.dataset.p0ForecastTabs='';for(const [name,count]of [['День',1],['Тиждень',7]]){const b=make('button','',name);b.type='button';b.onclick=()=>{root.dataset.forecastCount=String(count);extras(root,ds);};controls.append(b);}const month=make('button','','Місяць — згодом');month.disabled=true;controls.append(month);root.querySelector('.nr-o-horizon-list')?.before(controls);}
   controls.querySelectorAll('button').forEach((b,i)=>b.textContent=tr(['День','Тиждень','Місяць — згодом'][i]));
   [...root.querySelectorAll('.nr-o-horizon-list [data-day]')].forEach((b,i)=>b.hidden=i>=Number(root.dataset.forecastCount||7));
+  controls.querySelectorAll('button').forEach((b,i)=>{if(i<2)b.setAttribute('aria-pressed',String(Number(root.dataset.forecastCount||7)===[1,7][i]));});
+  renderForecastGraph(root);
  }
  if(route!=='calendar')return;
  let box=root.querySelector('[data-p0-month]');if(!box){box=make('section','sr-p0-month');box.dataset.p0Month='';root.querySelector('.nr-o-hero').after(box);}
@@ -42,8 +64,16 @@ function extras(root,ds){
  for(const date of compared){const data=resolvedFor(date),card=make('article','sr-p0-compare-card');card.append(make('h3','',date));const score=make('strong','sr-p0-value');paintScore(score,data.consumer);card.append(score,make('p','',data.consumer?.authority==='expert_pdf'?'Експертна оцінка':data.consumer?.available?'Формула джерела':'Оцінка недоступна'));
  const parts=make('details','');parts.append(make('summary','','Надані складові'));for(const f of data.feed?.channels?.source_formula?.factors||[])parts.append(make('p','',(window.NRConsumerOverview?.factorName?.(f.factor)||String(f.factor))+': '+(Number.isFinite(f.value)?String(f.value).replace('.',','):'—')));card.append(parts);const remove=make('button','','Прибрати');remove.type='button';remove.onclick=()=>{compared.delete(date);extras(root,ds);};card.append(remove);compare.append(card);}
 }
+function compactForecast(root){
+ let details=root.querySelector('[data-forecast-details]');
+ if(!details){details=make('details','sr-p0-details');details.dataset.forecastDetails='';details.append(make('summary','','Детально: джерела, розрахунок і календар'));root.append(details);
+  root.addEventListener('click',e=>{if(e.target.closest('[data-why],.nr-o-reason-brief'))details.open=true;},true);
+ }
+ details.querySelector(':scope > summary').textContent=tr('Детально: джерела, розрахунок і календар');
+ for(const selector of ['.nr-o-reasons','.nr-o-factors','.nr-o-provenance','.nr-o-context','.nr-o-panch-preview','.nr-o-next','.nr-o-calendar','.nr-o-layers','[data-settings]']){const item=root.querySelector(selector);if(item&&!details.contains(item))details.append(item);}
+}
 function apply(root,ds,resolved){
- feedStatus(root,ds,resolved);extras(root,ds);paintRing(root,resolved);if(root.dataset.overview!=='today')return;
+ feedStatus(root,ds,resolved);extras(root,ds);paintRing(root,resolved);if(root.dataset.overview==='forecast')compactForecast(root);if(root.dataset.overview!=='today')return;
  root.classList.add('sr-p0-today');const hero=root.querySelector('.nr-o-hero');if(!hero)return;
  let details=root.querySelector(':scope > [data-p0-details]');
  if(!details){details=make('details','sr-p0-details');details.dataset.p0Details='';details.append(make('summary','','Детально: джерела, розрахунок і календар'));root.append(details);}
@@ -117,5 +147,5 @@ try{motionWanted=localStorage.getItem('srSkyBackgroundMotionV1')==='on';}catch(_
 function updateMotion(){document.documentElement.classList.toggle('sr-sky-motion',motionWanted&&!motionQuery.matches&&!document.hidden&&!navigator.connection?.saveData);for(const b of document.querySelectorAll('[data-sky-motion]')){b.textContent=tr('Рух тла');b.setAttribute('aria-pressed',String(motionWanted));b.disabled=motionQuery.matches||!!navigator.connection?.saveData;}}
 function motionControl(details){let b=details.querySelector('[data-sky-motion]');if(!b){b=make('button','');b.type='button';b.dataset.skyMotion='';b.onclick=()=>{motionWanted=!motionWanted;try{localStorage.setItem('srSkyBackgroundMotionV1',motionWanted?'on':'off');}catch(_){}updateMotion();};details.append(b);}updateMotion();}
 motionQuery.addEventListener('change',updateMotion);document.addEventListener('visibilitychange',updateMotion);
-window.SRP0Layout=Object.freeze({apply,noonKyiv,moon,dataState,signalData});
+window.SRP0Layout=Object.freeze({apply,noonKyiv,moon,dataState,signalData,forecastPoints});
 })();
