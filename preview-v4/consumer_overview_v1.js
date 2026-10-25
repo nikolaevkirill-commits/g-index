@@ -420,7 +420,7 @@ function snapshot(ds){
   scope:'Saved calculation inputs; not verified predictive accuracy. No personal notes or plans.'};
 }
 function update(next){if(next){rows=next;rememberForecast();}if(!mount())return;document.querySelectorAll('[data-overview]').forEach(render);window.NRLocalContext?.render();window.nrRefreshCategoryContext?.();}
-window.NRConsumerOverview={update,category,openOutcome,snapshot};
+window.NRConsumerOverview={update,category,openOutcome,snapshot,factorName};
 window.addEventListener('nr:locale',()=>update());
 window.addEventListener('nr:outcome',()=>update());
 window.addEventListener('storage',e=>{if([changeKey,'gindex_day_plan_v1','gindex_plan_outcomes_v1'].includes(e.key)||e.key===null)update();});

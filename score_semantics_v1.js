@@ -31,7 +31,8 @@
     const c = scoreClass(v); const s = SEMANTIC[c];
     return c === 'missing' ? 'Оцінки на цю дату немає' : `Оцінка ${formatScore(v)}, ${s.word}` + (sourceLabel ? `, джерело: ${sourceLabel}` : '');
   }
-  const api = { SEMANTIC, scoreClass, isValidFinal, isInvalidPresent, formatScore, describe };
+  function color(v){return {positive:"#63e6ad",neutral:"#ffdc75",negative:"#ff858d",missing:"#bac5d1"}[scoreClass(v)];}
+  const api = { color, SEMANTIC, scoreClass, isValidFinal, isInvalidPresent, formatScore, describe };
   root.SkyScore = api;
   if (typeof module !== 'undefined') module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);

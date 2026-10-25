@@ -272,15 +272,16 @@
     cancelConsumerRetry();
     if(_consumerFeedPending)return _consumerFeedPending;
     let retry=false;
+    window.__srConsumerLoadState='loading';window.dispatchEvent(new Event('sr:consumer-load'));
     _consumerFeedPending=fetchConsumerFeeds().then(feed=>{
-      window.__nrConsumerCached=false;_sourceForecastRows=feed.days;window.__nrExpertModels=feed.expertModels||{};window.__nrFormulaFeedStamp=(window.__nrFormulaFeedStamp||0)+1;
+      window.__srConsumerLoadState='ready';window.__nrConsumerCached=false;_sourceForecastRows=feed.days;window.__nrExpertModels=feed.expertModels||{};window.__nrFormulaFeedStamp=(window.__nrFormulaFeedStamp||0)+1;
       window.NRConsumerOverview?.update(_sourceForecastRows);
       window.NRForecastJournal?.record(_sourceForecastRows);
       retry=!consumerFeedUsable(feed);
       if(!retry)_consumerFeedRetries=0;
       return feed;
-    }).catch(error=>{window.__nrConsumerCached=true;window.NRDiagnostics.record('consumer.feed','recoverable',error);retry=true;return null;}).finally(()=>{
-      _consumerFeedPending=null;renderSourceSummary();requestProductRender('cover','calendar','forecast');try{window.dispatchEvent(new Event('gindex:consumer-ready'))}catch(_e){}
+    }).catch(error=>{window.__srConsumerLoadState='error';window.__nrConsumerCached=true;window.NRDiagnostics.record('consumer.feed','recoverable',error);retry=true;return null;}).finally(()=>{
+      _consumerFeedPending=null;window.dispatchEvent(new Event('sr:consumer-load'));renderSourceSummary();requestProductRender('cover','calendar','forecast');try{window.dispatchEvent(new Event('gindex:consumer-ready'))}catch(_e){}
       if(retry)retryConsumerForecast();
     });return _consumerFeedPending;
   }

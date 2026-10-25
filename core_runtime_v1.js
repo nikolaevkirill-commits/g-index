@@ -6094,7 +6094,7 @@ let _ftPlaying = false;
 let _ftPlaySpeed = 1;      // 0.5 | 1 | 2 — multiplier
 
 function rawContextColor(g){
-  if(!isFinite(g)) return '#445';
+  if(!Number.isFinite(g)) return '#445';
   if(g <= -2.5) return '#ff5b68';   // severe raw context
   if(g <= -0.5) return '#f0a33a';   // adverse raw context
   if(g <  0.5)  return '#9bb1dc';   // neutral raw context
@@ -11747,7 +11747,7 @@ function syncHero(){
       // ніколи не спрацьовував для кольору кільця. Наслідок: під час шторму (Kp=7.3)
       // кільце було ЗЕЛЕНИМ при G_now=+4.03, хоча вердикт дня — "особливо несприятливий".
       // Тепер колір і клас кільця рахуються з ОДНІЄЇ класифікації (з kp + verdict cap).
-      const _heroRingColor = {favorable:'#2bd47d', good:'#63be7b', neutral:'#9bb1dc', unstable:'#ffaa33', tense:'#ff4444'}[_heroSharedCls] || '#9bb1dc';
+      const _heroRingColor = window.SkyScore?.color(_hasVerdict ? _heroDisplayVal : null) || '#bac5d1';
       ring.style.stroke=_heroRingColor;
       // v78b: ring state animation class
       const ringWrap=document.getElementById('heroRing');
