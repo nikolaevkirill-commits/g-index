@@ -30,7 +30,7 @@ function weatherPanel(root){
  if(status.state!=='available')box.innerHTML='<h2>'+esc(label)+'</h2><p>'+esc(tr(weatherRequest?'Перевіряємо попередження…':'Попередження недоступні або застарілі. Це не означає відсутності бурі.'))+'</p>';
  else{
   const current=['G','S','R'].map(k=>k+status.current[k]).join(' · ');
-  box.innerHTML='<h2>'+esc(label)+'</h2><p><strong>'+esc(tr('Спостерігається: '))+esc(current)+'</strong></p><p>'+esc(tr('G — геомагнітна буря; S — радіаційна буря; R — радіозатемнення. 0 — нижче порога шкали.'))+'</p>'+status.forecasts.map(f=>'<p><strong>'+esc(f.date+' · '+tr('доба UTC')+' · '+tr('Очікується: ')+'G'+f.g)+'</strong><br>'+esc(tr('Імовірність: ')+'S1+: '+(f.s===null?'—':f.s+'%')+' · R1–R2: '+(f.rMinor===null?'—':f.rMinor+'%')+' · R3+: '+(f.rMajor===null?'—':f.rMajor+'%'))+'</p>').join('')+(status.forecasts.length?'':'<p>'+esc(tr('Прогноз попереджень недоступний.'))+'</p>')+'<small>'+esc(tr('Оновлено NOAA: ')+time(new Date(status.stamp).toISOString())+' · Europe/Kyiv')+'</small>';
+  box.innerHTML='<h2>'+esc(label)+'</h2><p><strong>'+esc(tr('Спостерігається: '))+esc(current)+'</strong></p><p>'+esc(tr('G — геомагнітна буря; S — радіаційна буря; R — радіозатемнення. 0 — нижче порога шкали.'))+'</p>'+status.forecasts.map(f=>'<p><strong>'+esc(f.date+' · '+tr('доба UTC')+' · '+tr('Очікується: ')+'G'+f.g)+'</strong><br>'+esc(tr('Імовірність: ')+'S1+: '+(f.s===null?'—':f.s+'%')+' · R1–R2: '+(f.rMinor===null?'—':f.rMinor+'%')+' · R3+: '+(f.rMajor===null?'—':f.rMajor+'%'))+'</p>').join('')+(status.forecasts.length?'':'<p>'+esc(tr('Прогноз попереджень недоступний.'))+'</p>')+'<small>'+esc(tr('Оновлено NOAA: ')+time(new Date(status.stamp).toISOString())+' · '+(window.NRLocale?.text('за київським часом')||'за київським часом'))+'</small>';
  }
  box.innerHTML+='<p>'+esc(tr('Очікувана буря не означає, що вона вже почалася. Ці показники не змінюють бал дня.'))+'</p><a href="https://www.swpc.noaa.gov/products/alerts-watches-and-warnings" target="_blank" rel="noopener noreferrer">'+esc(tr('Офіційні повідомлення NOAA'))+'</a>';
  if(!weatherRequest&&Date.now()-weatherAttempt>5*60000){
@@ -106,7 +106,7 @@ function renderScoreEvidence(root,r,own,factors){
  const valid=factors.length>0&&factors.every(f=>Number.isFinite(f.value)),sum=valid?factors.reduce((n,f)=>n+f.value,0):null;
  const match=valid&&Number.isFinite(own.raw)&&Math.abs(sum-own.raw)<=1e-8;
  const items=factors.map(f=>`<p data-contribution><span>${esc(factorName(f.factor))}</span> <strong>${esc(fmt(f.value))}</strong></p>`).join('');
- const audit=valid?`Сума внесків (до перетворення): ${fmt(sum)} → оцінка формули: ${hasFormula?SkyScore.formatScore(formula.score):'недоступна'}. `+(match?'Сума внесків = raw фіду (арифметична звірка). Повнота переліку цим не підтверджується.':'Суму не підтверджено як raw фіду; потрібна перевірка джерела.'):'Складові відсутні або містять нечислові значення.';
+ const audit=valid?`Сума внесків (до перетворення): ${fmt(sum)} → оцінка формули: ${hasFormula?SkyScore.formatScore(formula.score):'недоступна'}. `+(match?'Сума внесків збігається із сумою, збереженою в джерелі. Це перевірка арифметики; вона не підтверджує повноту переліку.':'Сума внесків не збігається із сумою джерела або сума джерела відсутня; потрібна перевірка.'):'Складові відсутні або містять нечислові значення.';
  root.querySelector('.nr-o-reasons').setAttribute('aria-label','Усі надані внески');
  root.querySelector('.nr-o-reasons div').innerHTML=items+'<p data-contribution-sum class="nr-o-boundary">'+esc(audit)+'</p>';
  root.querySelector('.nr-o-factors div').innerHTML=items+'<p>'+esc(audit)+'</p>';
@@ -322,7 +322,7 @@ function render(root){
  root.querySelector('.nr-o-label').textContent=r.available?(r.score>0?'Позитивна оцінка':r.score<0?'Негативна оцінка':'Нейтральна оцінка'):'Актуальну оцінку не показуємо';
  renderRouteTools(root,route,dates,ds);
  if(route==='today'||route==='forecast'){
- const heading=root.querySelector('.nr-o-heading');heading.setAttribute('translate','no');heading.querySelector('h1').textContent=route==='today'?dateLabel(ds):({uk:'Прогноз на тиждень',en:'Weekly forecast',es:'Pronóstico semanal',fr:'Prévisions de la semaine'})[window.NRLocale?.language||'uk'];heading.querySelector('span').textContent=({uk:'Київ',en:'Kyiv',es:'Kyiv',fr:'Kyiv'})[window.NRLocale?.language||'uk']+' · Europe/Kyiv';
+ const heading=root.querySelector('.nr-o-heading');heading.setAttribute('translate','no');heading.querySelector('h1').textContent=route==='today'?dateLabel(ds):({uk:'Прогноз на тиждень',en:'Weekly forecast',es:'Pronóstico semanal',fr:'Prévisions de la semaine'})[window.NRLocale?.language||'uk'];heading.querySelector('span').textContent=({uk:'Київ',en:'Kyiv',es:'Kyiv',fr:'Kyiv'})[window.NRLocale?.language||'uk']+' · '+(window.NRLocale?.text('за київським часом')||'за київським часом');
  }
  if(route==='forecast')renderForecastTable(root,dates,ds);
 

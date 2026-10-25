@@ -124,7 +124,7 @@ function feedStatus(root,ds,result){
  const texts={fresh:'Формульні дані актуальні',stale:'Формульні дані застаріли',offline:'Офлайн: перевірте час збережених даних',loading:'Оновлюємо дані…',missing:'Формульні дані відсутні',error:'Не вдалося оновити дані'};
  box.replaceChildren(make('span','',texts[state]));
  const own=resolvedFor(ds).feed?.channels?.source_formula,stamp=own?.generated_at;
- if(typeof stamp==='string'&&Number.isFinite(Date.parse(stamp)))box.append(make('small','', ' · '+new Intl.DateTimeFormat(window.NRLocale?.locale||'uk-UA',{dateStyle:'short',timeStyle:'short',timeZone:'Europe/Kyiv'}).format(new Date(stamp))+' · Europe/Kyiv'));
+ if(typeof stamp==='string'&&Number.isFinite(Date.parse(stamp)))box.append(make('small','', ' · '+new Intl.DateTimeFormat(window.NRLocale?.locale||'uk-UA',{dateStyle:'short',timeStyle:'short',timeZone:'Europe/Kyiv'}).format(new Date(stamp))+' · '+tr('за київським часом')));
  if(state==='error'){const retry=make('button','','Спробувати ще');retry.type='button';retry.onclick=()=>window.fp469LoadConsumerForecast?.();box.append(retry);}
 }
 window.addEventListener('sr:consumer-load',()=>{for(const root of document.querySelectorAll('[data-overview]')){const ds=root.querySelector('select')?.value;if(ds){const result=resolvedFor(ds).consumer;feedStatus(root,ds,result);renderSignals(root,ds,result);}}});
