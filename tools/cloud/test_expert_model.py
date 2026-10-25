@@ -18,7 +18,8 @@ class Model(unittest.TestCase):
     def test_missing_factors_not_promoted(self):
         a=apply({'rows':[row('2027-01-01',None,None)]},{TAG:-3})
         self.assertIsNone(a['rows'][0]['forecast_score']);self.assertEqual(verify(a)['status'],'PASS')
-        self.assertEqual(a['rows'][0]['expert_model']['missing'],['OTHER_CALENDAR_FACTORS'])
+        self.assertEqual(len(a['rows'][0]['expert_model']['missing']),27)
+        self.assertIn('ekadashi',a['rows'][0]['expert_model']['missing'])
     def test_tampering_rejected(self):
         a=apply({'rows':[row('2026-10-29',True,-3)]},{TAG:-3})
         a['rows'][0]['contributions'].append({'factor':TAG,'value':-3})

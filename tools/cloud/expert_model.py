@@ -6,6 +6,7 @@ Kp and bucketing stay unchanged. Missing calendar factors block a full score.
 import copy, hashlib, math
 from pathlib import Path
 from expert_astronomy import detect_bolt_rikta, rikta_intervals
+from calendar_components import calculate as calendar_components, SYMBOLS
 
 VERSION='expert-factor-model-v2'
 TAG='День порожні руки, несприятливий'
@@ -40,6 +41,10 @@ def apply(doc, weights):
             'scope':'new_starts','applied_to_score':complete,'full_calendar_available':observed is not None,
             'missing':[] if observed is not None else ['OTHER_CALENDAR_FACTORS'],
             'physical_uncertainty_ms':None,'validation':'LABEL_REPRODUCTION_NOT_OUTCOME_VALIDATION'}
+        model['calendar_components']=calendar_components(day,observed)
+        model['missing']=model['calendar_components']['missing_selection_rules']
+        model['calendar_components']['symbols']['bolt'].update(selected=selected,
+            status='SOURCE_OBSERVED' if observed is not None else 'COMPUTED_RIKTA_HYPOTHESIS')
         if complete:
             factors=row.get('contributions',[])
             if sum(f.get('factor')==TAG for f in factors)>1:raise ValueError('Duplicate bolt')
@@ -53,7 +58,7 @@ def apply(doc, weights):
             if score!=previous or raw!=row.get('raw_sum'):raise ValueError('Observed source replay changed')
             row.update(contributions=revised,raw_sum=raw,forecast_score=score)
         row['expert_model']=model
-    out.setdefault('code_hashes',{}).update({n:hashlib.sha256(Path(__file__).with_name(n).read_bytes()).hexdigest() for n in ('expert_model.py','expert_astronomy.py')})
+    out.setdefault('code_hashes',{}).update({n:hashlib.sha256(Path(__file__).with_name(n).read_bytes()).hexdigest() for n in ('expert_model.py','expert_astronomy.py','calendar_components.py','skyrhythm_rnd_extras.py','parana_scenario.py','pradosh_overlap.py')})
     return out
 
 def verify(doc):
@@ -62,6 +67,13 @@ def verify(doc):
         m=row['expert_model'];score=row.get('forecast_score')
         if m['date']!=row['date'] or m['version']!=VERSION:raise ValueError('Model identity mismatch')
         if m['physical_uncertainty_ms'] is not None:raise ValueError('Unsupported certainty')
+        components=m['calendar_components']
+        if components['date']!=row['date'] or set(components['symbols'])!=set(SYMBOLS):raise ValueError('Incomplete symbol contract')
+        if components['score_adjustment']!=0 or components['normative_selection_confirmed'] is not False:raise ValueError('Unverified rules promoted')
+        if m['observed_bolt'] is None:
+            if any(s['selected'] is not None for k,s in components['symbols'].items() if k!='bolt'):raise ValueError('Missing rule replaced by false/true')
+        else:
+            if {k for k,s in components['symbols'].items() if s['selected']}!=set(row['observed_icons']):raise ValueError('Observed symbol set changed')
         if m['observed_bolt'] is not None and m['selected_bolt']!=m['observed_bolt']:raise ValueError('Source priority lost')
         if m['applied_to_score']:
             fs=row['contributions'];bolt=[f['value'] for f in fs if f['factor']==TAG]
