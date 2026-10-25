@@ -48,7 +48,7 @@ function apply(root,ds,resolved){
  const line=root.querySelector('.sr-dayline');if(line){signals.after(line);let explore=line.querySelector('[data-p0-explore]');if(!explore){explore=make('details','sr-p0-explore');explore.dataset.p0Explore='';explore.append(make('summary','','Усі події, час і традиційні образи'));line.append(explore);}
  for(const selector of ['.sr-dl-actions','label','[data-moment]','figure','[data-events]','[data-method]','[data-scope]']){const item=line.querySelector(':scope > '+selector);if(item)explore.append(item);}}
  const journey=root.querySelector('.nr-o-journey');if(journey){(line||signals).after(journey);}if(root.lastElementChild!==details)root.append(details);
- for(const child of [...root.parentElement.children])if(child!==root&&child.matches('details'))details.append(child);
+ // Route-level disclosures retain their own keyboard and deep-link entry points.
 }
 window.SRP0Layout=Object.freeze({apply,noonKyiv,moon});
 })();
