@@ -1,7 +1,7 @@
 importScripts('./runtime_diagnostics_v1.js');
 // G-Index service worker. HTML/data are network-first; static shell is cache-first.
 // Bump CACHE_VERSION whenever index.html or a cached shell asset changes.
-const CACHE_VERSION = 'fp495-navigation-offline-20261025-r10'; // DayLine calculation worker and async presentation.
+const CACHE_VERSION = 'fp496-wow-visual-20261025-r11'; // DayLine calculation worker and async presentation.
 const CACHE_PREFIX = 'gindex-'; // G-Index cache namespace; do not remove the prefix.
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${CACHE_VERSION}`;
 const DATA_CACHE = `${CACHE_PREFIX}data-${CACHE_VERSION}`;
@@ -134,6 +134,7 @@ const SHELL_ASSETS = [
   './moon_phase_v1.js',
   './p0_layout_v1.js',
   './p0_layout_v1.css',
+  './wow_reviewed_v1.css',
   './fonts_wow/lora.woff',
   './fonts_wow/manrope.woff',
   './fonts_wow/OFL_Lora.txt',
