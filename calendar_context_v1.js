@@ -65,7 +65,14 @@
  function render(host,ephemeris,ds,category='general',now=Date.now(),model=null){
   if(!host)return;
   const html=markup(ephemeris,ds,category,now)+expertMarkup(ds)+modelMarkup(model,ds),open=host.querySelector('details')?.open;
-  if(host.__contextMarkup!==html){host.innerHTML=html;host.__contextMarkup=html;if(open&&host.querySelector('details'))host.querySelector('details').open=true;}
+  const locale=globalThis.NRLocale,language=locale?.language||'uk',key=language+'|'+html;
+  if(host.__contextMarkup!==key){
+   host.innerHTML=html;host.__contextMarkup=key;
+   // Translate only owned text nodes. Dates, source hashes, URLs and model data stay intact.
+   if(locale&&language!=='uk'){const walk=host.ownerDocument.createTreeWalker(host,4);let n;while((n=walk.nextNode()))n.nodeValue=locale.text(n.nodeValue);}
+   for(const section of host.querySelectorAll('section[lang]'))section.lang=language;
+   if(open&&host.querySelector('details'))host.querySelector('details').open=true;
+  }
   host.hidden=!html;
  }
  return {version,context,markup,render,expertMarkup,modelMarkup};
