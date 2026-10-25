@@ -84,14 +84,7 @@ function renderWeatherBrief(root,status,full){
  if(brief.dataset.active==='true'){if(hero.firstElementChild!==brief)hero.prepend(brief)}else if(hero.nextElementSibling!==brief)hero.after(brief);
  brief.innerHTML='<strong>'+esc(tr('NOAA · попередження та ймовірності'))+' →</strong>'+body;
 }
-function renderReasonBrief(root,r,strongest,own){
- if(!['today','forecast'].includes(root.dataset.overview))return;
- const hero=root.querySelector('.nr-o-hero'),tr=s=>window.NRLocale?.text(s)||s;
- let brief=root.querySelector('[data-reason-brief]');
- if(!brief){brief=document.createElement('button');brief.type='button';brief.dataset.reasonBrief='';brief.className='nr-o-brief nr-o-reason-brief';brief.setAttribute('translate','no');hero.append(brief);brief.onclick=()=>{const full=root.querySelector('.nr-o-reasons');full.setAttribute('tabindex','-1');full.focus({preventScroll:true});full.scrollIntoView({block:'start'});};}
- const names={Kp:'Геомагнітна складова',Moon:'Пурніма (за календарем)',Eclipse:'Складова затемнення'};
- brief.innerHTML='<strong>'+esc(tr('Чому така оцінка'))+' →</strong>'+(r.available&&strongest.length?strongest.map(f=>'<span class="nr-o-brief-factor"><span>'+esc(tr(names[f.factor]||f.factor))+'</span><b>'+esc(fmt(f.value))+'</b></span>').join(''):'<span>'+esc(tr(r.available?'Ненульових внесків немає.':'Актуальну оцінку не показуємо'))+'</span>')+(r.available?kpLine(own,tr):'')+(r.available&&Number.isFinite(own?.raw)&&Math.trunc(own.raw)!==r.score?'<small>'+esc(tr('Сума внесків ')+fmt(own.raw)+tr(' · шкала обмежена до ')+fmt(r.score))+'</small>':'');
-}
+
 
 function kpLine(own,tr){const kp=own?.kp_input?.kp;if(!Number.isFinite(kp))return '';const g=kp>=9?5:kp>=8?4:kp>=7?3:kp>=6?2:kp>=5?1:0;const src=own.kp_source==='NOAA_27day_outlook'?tr(' · NOAA outlook від ')+String(own.kp_input.issued_at||'').slice(0,10):tr(' · NOAA 3-годинний прогноз');return '<small data-kp-line>'+esc(tr('Kp макс. ')+String(Number(kp.toFixed(2)))+' (G'+g+')'+src)+'</small>';}
 
@@ -343,7 +336,7 @@ function render(root){
 
  const factors=Array.isArray(own.factors)?own.factors:[],calendar=factors.filter(x=>x.factor!=='Kp'&&x.value!==0),kp=factors.find(x=>x.factor==='Kp');
  const strongest=factors.filter(x=>Number.isFinite(x.value)&&x.value!==0).sort((a,b)=>Math.abs(b.value)-Math.abs(a.value)).slice(0,3);
- renderReasonBrief(root,r,strongest,own);
+
  root.querySelector('.nr-o-reasons div').innerHTML=strongest.length?strongest.map(x=>'<p>'+'<span>'+esc(x.factor==='Kp'?'Геомагнітна складова':x.factor==='Moon'?'Пурніма (за календарем)':x.factor==='Eclipse'?'Складова затемнення':x.factor)+'</span> <strong>'+esc(fmt(x.value))+'</strong></p>').join('')+'<p class="nr-o-boundary">'+(r.available?'Найбільші внески; повна сума до округлення й обмеження: '+esc(fmt(own.raw))+'.':'Внески збереженого розрахунку; актуальний підсумок недоступний.')+'</p>':'Складові для цієї дати недоступні.';
  root.querySelector('.nr-o-legends div').innerHTML=strongest.map(x=>'<p>'+esc(factorName(x.factor))+'</p>').join('');
  root.querySelector('.nr-o-legends div').innerHTML += '<p>'+esc('Календарні позначки враховано за цілу добу. Часові межі окремих позначок не змінюють цей бал.')+'</p>';

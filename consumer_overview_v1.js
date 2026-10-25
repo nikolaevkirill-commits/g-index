@@ -81,7 +81,7 @@ function renderWeatherBrief(root,status,full){
   body='<span>'+esc(tr('Спостерігається: ')+['G','S','R'].map(k=>k+status.current[k]).join(' · '))+'</span><span>'+esc(strongest?tr('Прогноз G · максимум: ')+'G'+strongest.g+' · '+strongest.date+' UTC':tr('Прогноз попереджень недоступний.'))+'</span><small>'+esc(tr('Оновлено NOAA: ')+issued+' UTC')+'</small>';
  }
  brief.dataset.active=String(status.state==='available'&&(Object.values(status.current).some(v=>v>0)||status.forecasts.some(f=>f.g>0)));
- brief.innerHTML='<strong>'+esc(tr('NOAA · попередження та ймовірності'))+' ↗</strong>'+body;
+ brief.innerHTML='<strong>'+esc(tr('NOAA · попередження та ймовірності'))+' →</strong>'+body;
 }
 // v126: component arithmetic explains the formula, never an expert override.
 function reasonCopy(){return ({
@@ -90,15 +90,7 @@ function reasonCopy(){return ({
  es:{title:'Componentes de la fórmula',expert:'Calendario y clima espacial',sum:'Suma de aportes: ',score:' · puntuación de la fórmula: ',missing:'El cálculo actual de la fórmula no está disponible.'},
  fr:{title:'Composantes de la formule',expert:'Calendrier et météo spatiale',sum:'Somme des contributions : ',score:' · score de la formule : ',missing:'Le calcul actuel de la formule est indisponible.'}
 })[window.NRLocale?.language||'uk']||{title:'Formula components',expert:'Calendar and space weather',sum:'Sum: ',score:' · formula score: ',missing:'Current formula unavailable.'}}
-function renderReasonBrief(root,r,strongest,own){
- if(!['today','forecast'].includes(root.dataset.overview))return;
- const hero=root.querySelector('.nr-o-hero'),tr=s=>window.NRLocale?.text(s)||s;
- let brief=root.querySelector('[data-reason-brief]');
- if(!brief){brief=document.createElement('button');brief.type='button';brief.dataset.reasonBrief='';brief.className='nr-o-brief nr-o-reason-brief';brief.setAttribute('translate','no');hero.querySelector('.nr-o-scale').after(brief);brief.onclick=()=>{const full=root.querySelector('.nr-o-reasons');full.setAttribute('tabindex','-1');full.focus({preventScroll:true});full.scrollIntoView({block:'start'});};}
- const names={Kp:'Геомагнітна складова',Moon:'Пурніма (за календарем)',Eclipse:'Складова затемнення'};
- const formula=r.formula||r,copy=reasonCopy(),usable=formula.available===true;
- brief.innerHTML='<strong>'+esc(r.authority==='expert_pdf'?copy.expert:copy.title)+' ↗</strong>'+(usable&&strongest.length?strongest.map(f=>'<span class="nr-o-brief-factor"><span>'+esc(tr(names[f.factor]||f.factor))+'</span><b>'+esc(fmt(f.value))+'</b></span>').join(''):'<span>'+esc(usable?tr('Ненульових внесків немає.'):copy.missing)+'</span>')+(usable?kpLine(own,tr):'');
-}
+
 
 function kpLine(own,tr){const kp=own?.kp_input?.kp;if(!Number.isFinite(kp))return '';const g=kp>=9?5:kp>=8?4:kp>=7?3:kp>=6?2:kp>=5?1:0;const src=own.kp_source==='NOAA_27day_outlook'?tr(' · NOAA outlook від ')+String(own.kp_input.issued_at||'').slice(0,10):tr(' · NOAA 3-годинний прогноз');return '<small data-kp-line>'+esc(tr('Kp макс. ')+String(Number(kp.toFixed(2)))+' (G'+g+')'+src)+'</small>';}
 
@@ -278,7 +270,7 @@ function mount(){
   const legends=document.createElement('details');legends.className='nr-o-legends';legends.innerHTML='<summary>Значення позначок і джерело</summary><div></div>';root.querySelector('.nr-o-reasons').append(legends);
   if(route==='today'){
    const journey=document.createElement('nav');journey.className='nr-o-journey';journey.setAttribute('aria-label','Ваш день');
-   journey.innerHTML='<button type="button" data-step="plan"><span>01 · СПЛАНУВАТИ</span><b>Мій план <i aria-hidden="true">↗</i></b></button><button type="button" data-step="calendar"><span>02 · ПОРІВНЯТИ</span><b>Обрати дату <i aria-hidden="true">↗</i></b></button><button type="button" data-step="outcome"><span>03 · ПІДСУМУВАТИ</span><b>Записати результат <i aria-hidden="true">↗</i></b></button>';
+   journey.innerHTML='<button type="button" data-step="plan"><span>01 · СПЛАНУВАТИ</span><b>Мій план <i aria-hidden="true">→</i></b></button><button type="button" data-step="calendar"><span>02 · ПОРІВНЯТИ</span><b>Обрати дату <i aria-hidden="true">→</i></b></button><button type="button" data-step="outcome"><span>03 · ПІДСУМУВАТИ</span><b>Записати результат <i aria-hidden="true">→</i></b></button>';
    root.querySelector('.nr-o-next').after(journey);journey.addEventListener('click',e=>{const step=e.target.closest('[data-step]')?.dataset.step;if(step==='outcome')openOutcome();else if(step)window.fp434Go(step,true)});
   }
   const practicalBody=root.querySelector('.nr-o-practical>p');const more=document.createElement('details');more.className='nr-o-topic-detail';more.innerHTML='<summary>Пояснення тем дня</summary>';practicalBody.before(more);more.append(practicalBody);
@@ -321,7 +313,7 @@ function render(root){
  buttons(root.querySelector('.nr-o-next'),dates.slice(1,4),ds);buttons(root.querySelector('.nr-o-days'),dates.slice(0,14),ds);
  const factors=Array.isArray(own.factors)?own.factors:[],calendar=factors.filter(x=>x.factor!=='Kp'&&x.value!==0),kp=factors.find(x=>x.factor==='Kp');
  const strongest=factors.filter(x=>Number.isFinite(x.value)&&x.value!==0).sort((a,b)=>Math.abs(b.value)-Math.abs(a.value)).slice(0,3);
- renderReasonBrief(root,r,strongest,own);
+
  const reasonTitle=reasonCopy()[r.authority==='expert_pdf'?'expert':'title'];for(const el of [root.querySelector('.nr-o-reasons h2'),root.querySelector('.nr-o-factors summary')]){el.setAttribute('translate','no');el.textContent=reasonTitle;}
  root.querySelector('.nr-o-reasons div').innerHTML=strongest.length?strongest.map(x=>'<p>'+'<span>'+esc(x.factor==='Kp'?'Геомагнітна складова':x.factor==='Moon'?'Пурніма (за календарем)':x.factor==='Eclipse'?'Складова затемнення':x.factor)+'</span> <strong>'+esc(fmt(x.value))+'</strong></p>').join('')+'<p class="nr-o-boundary">'+((r.formula||r).available?'Найбільші внески; повна сума до округлення й обмеження: '+esc(fmt(own.raw))+'.':'Внески збереженого розрахунку; актуальний підсумок недоступний.')+'</p>':'Складові для цієї дати недоступні.';
  root.querySelector('.nr-o-legends div').innerHTML=strongest.map(x=>'<p>'+esc(factorName(x.factor))+'</p>').join('');

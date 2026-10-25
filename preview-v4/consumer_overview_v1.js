@@ -97,15 +97,7 @@ function reasonCopy(){return ({
  es:{title:'Componentes de la fórmula',expert:'Calendario y clima espacial',sum:'Suma de aportes: ',score:' · puntuación de la fórmula: ',missing:'El cálculo actual de la fórmula no está disponible.'},
  fr:{title:'Composantes de la formule',expert:'Calendrier et météo spatiale',sum:'Somme des contributions : ',score:' · score de la formule : ',missing:'Le calcul actuel de la formule est indisponible.'}
 })[window.NRLocale?.language||'uk']||{title:'Formula components',expert:'Calendar and space weather',sum:'Sum: ',score:' · formula score: ',missing:'Current formula unavailable.'}}
-function renderReasonBrief(root,r,strongest,own){
- if(!['today','forecast'].includes(root.dataset.overview))return;
- const hero=root.querySelector('.nr-o-hero'),tr=s=>window.NRLocale?.text(s)||s;
- let brief=root.querySelector('[data-reason-brief]');
- if(!brief){brief=document.createElement('button');brief.type='button';brief.dataset.reasonBrief='';brief.className='nr-o-brief nr-o-reason-brief';brief.setAttribute('translate','no');hero.append(brief);brief.onclick=()=>{const full=root.querySelector('.nr-o-reasons');full.setAttribute('tabindex','-1');full.focus({preventScroll:true});full.scrollIntoView({block:'start'});};}
- const names={Kp:'Геомагнітна складова',Moon:'Пурніма (за календарем)',Eclipse:'Складова затемнення'};
- const formula=r.formula||r,copy=reasonCopy(),usable=formula.available===true;
- brief.innerHTML='<strong>'+esc(r.authority==='expert_pdf'?copy.expert:copy.title)+' ↗</strong>'+(usable&&strongest.length?strongest.map(f=>'<span class="nr-o-brief-factor"><span>'+esc(tr(names[f.factor]||f.factor))+'</span><b>'+esc(fmt(f.value))+'</b></span>').join(''):'<span>'+esc(usable?tr('Ненульових внесків немає.'):copy.missing)+'</span>')+(usable?kpLine(own,tr):'');
-}
+
 
 /* v7.2 NRA-02: явна дія після вичерпання автоповторів (та сама функція завантаження, лічильник скинуто) */
 function retryButton(root,status,show){let b=root.querySelector(':scope .nr-o-retry');if(!show){b?.remove();return}const tr=s=>window.NRLocale?.text(s)||s;if(!b){b=document.createElement('button');b.type='button';b.className='nr-btn secondary nr-o-retry';b.onclick=()=>{b.disabled=true;window.fp469RetryConsumerForecast?.()};status.after(b)}b.disabled=false;const t=tr('Повторити');if(b.textContent!==t)b.textContent=t}
@@ -375,7 +367,7 @@ function render(root){
 
  const factors=Array.isArray(own.factors)?own.factors:[],calendar=factors.filter(x=>x.factor!=='Kp'&&x.value!==0),kp=factors.find(x=>x.factor==='Kp');
  const strongest=factors.filter(x=>Number.isFinite(x.value)&&x.value!==0).sort((a,b)=>Math.abs(b.value)-Math.abs(a.value)).slice(0,3);
- renderReasonBrief(root,r,strongest,own);
+
  const reasonTitle=reasonCopy()[r.authority==='expert_pdf'?'expert':'title'];for(const el of [root.querySelector('.nr-o-reasons h2'),root.querySelector('.nr-o-factors summary')]){el.setAttribute('translate','no');el.textContent=reasonTitle;}
  root.querySelector('.nr-o-reasons div').innerHTML=strongest.length?strongest.map(x=>'<p>'+'<span>'+esc(x.factor==='Kp'?'Геомагнітна складова':x.factor==='Moon'?'Пурніма (за календарем)':x.factor==='Eclipse'?'Складова затемнення':x.factor)+'</span> <strong>'+esc(fmt(x.value))+'</strong></p>').join('')+'<p class="nr-o-boundary">'+((r.formula||r).available?'Найбільші внески; повна сума до округлення й обмеження: '+esc(fmt(own.raw))+'.':'Внески збереженого розрахунку; актуальний підсумок недоступний.')+'</p>':'Складові для цієї дати недоступні.';
  root.querySelector('.nr-o-legends div').innerHTML=strongest.map(x=>'<p>'+esc(factorName(x.factor))+'</p>').join('');
