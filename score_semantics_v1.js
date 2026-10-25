@@ -29,7 +29,9 @@
   }
   function describe(v, sourceLabel) {
     const c = scoreClass(v); const s = SEMANTIC[c];
-    return c === 'missing' ? 'Оцінки на цю дату немає' : `Оцінка ${formatScore(v)}, ${s.word}` + (sourceLabel ? `, джерело: ${sourceLabel}` : '');
+    const labels={uk:['Оцінка','позитивна','нейтральна','негативна','Оцінки на цю дату немає','джерело'],en:['Score','positive','neutral','negative','No score for this date','source'],es:['Puntuación','positiva','neutra','negativa','No hay puntuación para esta fecha','fuente'],fr:['Note','positive','neutre','négative','Aucune note pour cette date','source']}[root.NRLocale?.language||'uk'];
+    const l=labels||['Score','positive','neutral','negative','No score for this date','source'];
+    return c==='missing'?l[4]:`${l[0]} ${formatScore(v)}, ${l[{positive:1,neutral:2,negative:3}[c]]}`+(sourceLabel?`, ${l[5]}: ${sourceLabel}`:'');
   }
   function color(v){return {positive:"#63e6ad",neutral:"#ffdc75",negative:"#ff858d",missing:"#bac5d1"}[scoreClass(v)];}
   const api = { color, SEMANTIC, scoreClass, isValidFinal, isInvalidPresent, formatScore, describe };
