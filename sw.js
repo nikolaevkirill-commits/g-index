@@ -1,7 +1,7 @@
 importScripts('./runtime_diagnostics_v1.js');
 // G-Index service worker. HTML/data are network-first; static shell is cache-first.
 // Bump CACHE_VERSION whenever index.html or a cached shell asset changes.
-const CACHE_VERSION = 'fp503-audit-readability-20261025-r18'; // Discrete final scores; no interpolated forecast.
+const CACHE_VERSION = 'fp504-audit-remaining-20261025-r19'; // Discrete final scores; no interpolated forecast.
 const CACHE_PREFIX = 'gindex-'; // G-Index cache namespace; do not remove the prefix.
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${CACHE_VERSION}`;
 const DATA_CACHE = `${CACHE_PREFIX}data-${CACHE_VERSION}`;
