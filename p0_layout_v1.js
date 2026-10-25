@@ -83,7 +83,23 @@ function compactForecast(root){
  details.querySelector(':scope > summary').textContent=tr('Детально: джерела, розрахунок і календар');
  for(const selector of ['.nr-o-reasons','.nr-o-factors','.nr-o-provenance','.nr-o-context','.nr-o-panch-preview','.nr-o-next','.nr-o-calendar','.nr-o-layers','[data-settings]']){const item=root.querySelector(selector);if(item&&!details.contains(item))details.append(item);}
 }
+function expertCaution(root,ds){
+ const texts={
+ '2026-10-30':['Домовленості й завершення справ','Agreements and unfinished tasks','Acuerdos y tareas pendientes','Accords et tâches inachevées'],
+ '2026-11-01':['Важливі фінансові рішення','Major financial decisions','Decisiones financieras importantes','Décisions financières importantes']};
+ const body={
+ '2026-10-30':['У прогнозі експерта на цей день — переперевірка деталей перед оплатою, підтвердженням завдання чи поїздкою та повернення до незавершених справ.','The expert’s forecast for this date emphasizes checking details before payment, confirming a task or travelling, and returning to unfinished tasks.','La previsión experta para esta fecha destaca revisar los detalles antes de pagar, confirmar una tarea o viajar, y retomar tareas pendientes.','La prévision experte pour cette date met l’accent sur la vérification des détails avant un paiement, la confirmation d’une tâche ou un voyage, et sur les tâches inachevées.'],
+ '2026-11-01':['Експерт пропонує приділити день родині й плануванню бюджету, утримавшись від важливих фінансових рішень. Це тематичне застереження джерела, а не персональна фінансова порада.','The expert suggests family time and budget planning while avoiding major financial decisions. This is a source-specific caution, not personal financial advice.','La experta propone dedicar tiempo a la familia y planificar el presupuesto, evitando decisiones financieras importantes. Es una advertencia de la fuente, no asesoramiento financiero personal.','L’experte propose de privilégier la famille et la préparation du budget, en évitant les décisions financières importantes. Il s’agit d’une réserve de la source, pas d’un conseil financier personnel.']};
+ let box=root.querySelector('[data-expert-caution]');if(!texts[ds]){box?.remove();return;}
+ const i={uk:0,en:1,es:2,fr:3}[window.NRLocale?.language]||0;
+ if(!box){box=make('section','sr-expert-caution');box.dataset.expertCaution='';box.setAttribute('translate','no');}
+ box.dataset.date=ds;box.dataset.sourceId='3202';box.dataset.sourceTextSha256='356781324ff588721b4792ee874dc6850274165f1226639e49b59508554768c2';box.dataset.sourceEdited='2026-10-25T16:49:49+00:00';
+ const label=['Трактування експерта','Expert interpretation','Interpretación experta','Interprétation experte'][i],note=['Загальний бал не означає однакової оцінки для всіх справ. Це застереження не змінює бал; вплив на реальні події не підтверджений.','The overall score does not rate every activity equally. This caution does not change the score; an effect on real events has not been established.','La puntuación general no valora por igual todas las actividades. Esta advertencia no cambia la puntuación; no se ha demostrado un efecto en hechos reales.','La note globale ne vaut pas pour toutes les activités de la même façon. Cette réserve ne change pas la note ; un effet sur les événements réels n’est pas établi.'][i];
+ box.replaceChildren(make('small','',label+' · '+ds),make('h2','',texts[ds][i]),make('p','',body[ds][i]),make('p','sr-caution-note',note));
+ const link=make('a','',['Допис @devakan від 25.10.2026','@devakan post dated 25 Oct 2026','Publicación de @devakan del 25/10/2026','Publication @devakan du 25/10/2026'][i]);link.href='https://t.me/devakan/3202';link.target='_blank';link.rel='noopener noreferrer';box.append(link);root.querySelector('.nr-o-hero')?.after(box);
+}
 function apply(root,ds,resolved){
+ expertCaution(root,ds);
  feedStatus(root,ds,resolved);extras(root,ds);paintRing(root,resolved);if(root.dataset.overview==='forecast')compactForecast(root);if(root.dataset.overview!=='today')return;
  root.classList.add('sr-p0-today');const hero=root.querySelector('.nr-o-hero');if(!hero)return;
  let details=root.querySelector(':scope > [data-p0-details]');
@@ -104,7 +120,7 @@ function apply(root,ds,resolved){
  details.querySelector(':scope > summary').textContent=tr('Детально: джерела, розрахунок і календар');
  signals.querySelectorAll('button').forEach((b,i)=>b.textContent=tr(['Астрономія й NOAA','Панчанга','Оцінка дня'][i]));
  const source=root.querySelector('[data-score-source]');if(source)details.prepend(source);
- for(const e of [...root.children])if(e!==hero&&e!==details&&e!==signals&&!e.matches('.sr-dayline,.nr-o-journey,.nr-o-heading,[data-p0-feed-state]'))details.append(e);
+ for(const e of [...root.children])if(e!==hero&&e!==details&&e!==signals&&!e.matches('.sr-dayline,.nr-o-journey,.nr-o-heading,[data-p0-feed-state],[data-expert-caution]'))details.append(e);
  // Hide duplicate weather summaries only by putting them in the existing details; no data are dropped.
  const line=root.querySelector('.sr-dayline');if(line){signals.after(line);let explore=line.querySelector('[data-p0-explore]');if(!explore){explore=make('details','sr-p0-explore');explore.dataset.p0Explore='';explore.append(make('summary','','Усі події, час і традиційні образи'));line.append(explore);}
  for(const selector of ['.sr-dl-actions','label','[data-moment]','figure','[data-events]','[data-method]','[data-scope]']){const item=line.querySelector(':scope > '+selector);if(item)explore.append(item);}}
