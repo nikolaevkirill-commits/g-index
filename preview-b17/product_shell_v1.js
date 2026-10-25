@@ -324,8 +324,11 @@
     try{localStorage.setItem('gindex_daily_key_v1',JSON.stringify({date:todayKey(),category:id}))}catch(_e){ window.NRDiagnostics?.record('legacy.catch.253','recoverable'); }
     renderCategories();localizeNewShellCopy();showCategory(id);document.getElementById('nrCategoryDetail')?.scrollIntoView({behavior:'smooth',block:'start'});
   };
-  window.fp434Go=function(name,scroll){
-    if(!ROUTES.includes(name)||(window.GINDEX_PLAY_CHANNEL&&name==='expert'))name='today';
+  window.fp434Go=function(name,scroll,historyMode){
+    if(!ROUTES.includes(name)||(window.GINDEX_PLAY_CHANNEL&&name==='expert')){name='today';historyMode='replace';}
+    // URL is the visible route, including internal links; browser traversal never adds entries.
+    if(historyMode!=='none'&&location.hash!=='#'+name){const url=new URL(location.href);url.hash=name;history[historyMode==='replace'?'replaceState':'pushState'](null,'',url);}
+
     renderSourceSummary();
     document.querySelectorAll('.nr-route').forEach(n=>{const active=n.dataset.route===name;n.classList.toggle('active',active);n.setAttribute('aria-hidden',String(!active))});
     document.querySelectorAll('.mnav-btn').forEach(n=>{n.classList.remove('active');n.removeAttribute('aria-current')});
@@ -591,13 +594,14 @@
     buildShell();let saved='today';try{saved=localStorage.getItem('fp434_route')||'today'}catch(_e){ window.NRDiagnostics?.record('legacy.catch.260','recoverable'); }
     document.querySelector('#nrRoute-forecast .nr-forecast-tabs')?.addEventListener('keydown',event=>{const tabs=[...event.currentTarget.querySelectorAll('[role="tab"]')],current=tabs.indexOf(document.activeElement);if(current<0)return;let next=current;if(event.key==='ArrowRight')next=(current+1)%tabs.length;else if(event.key==='ArrowLeft')next=(current-1+tabs.length)%tabs.length;else if(event.key==='Home')next=0;else if(event.key==='End')next=tabs.length-1;else return;event.preventDefault();tabs[next].focus();tabs[next].click()});
     const initialRoute=location.hash.slice(1);if(ROUTES.includes(initialRoute))saved=initialRoute;
+    const linked=location.hash.slice(1);if(ROUTES.includes(linked))saved=linked;
     const push=new URLSearchParams(location.search).get('push');if(push)saved=push==='storm'?'expert':'today';
-    fp434Go(saved,false);
+    fp434Go(saved,false,'replace');
   }
   window.renderCompetitiveCover=renderCompetitiveCover;
   window.addEventListener('engine-data-stale',()=>{renderCompetitiveCover()});
   window.addEventListener('online',()=>{window.__nrOfflineFallback=false;renderCompetitiveCover()});
   document.addEventListener('DOMContentLoaded',()=>{try{init()}finally{window.nrFinishShellStartup?.()}},{once:true});
-  window.addEventListener('hashchange',()=>{const r=location.hash.replace('#','');if(ROUTES.includes(r))fp434Go(r,true)});
+  window.addEventListener('hashchange',()=>{const r=location.hash.slice(1);fp434Go(ROUTES.includes(r)?r:'today',true,ROUTES.includes(r)?'none':'replace')});
   window.addEventListener('gindex:data-ready',()=>requestProductRender('forecast','calendar','cover','independent'));
 })();

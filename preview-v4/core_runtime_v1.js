@@ -1965,6 +1965,7 @@ const _origSave=window.GChrono&&GChrono.saveToday;
 if(_origSave) GChrono.saveToday=(function(fn){return function(){fn.call(GChrono);try{renderChronoPanel();}catch(e){ window.NRDiagnostics?.record('legacy.catch.69','recoverable'); }};}(_origSave));
 
 async function loadEngineScores(force = false){
+  if(window.NR_PUBLIC_BUILD)return null; // Private frozen research file is not part of the public shell.
   if(!force && _engineScores !== null) return _engineScores;
   const token=_beginAuthority('engine');
   if(window.EngineTagParser && !window._engineTagAliasSpec){
@@ -19948,7 +19949,7 @@ const NoaaEvents = (function(){
     try {
       await loadExpertOverrides();
     await loadExpertCalc();
-      if (_engineScores === null) {
+      if (!window.NR_PUBLIC_BUILD && _engineScores === null) {
         const resp = await fetch('engine_scores.json', { cache: 'default' });
         if (resp.ok) {
           const data = await resp.json();
