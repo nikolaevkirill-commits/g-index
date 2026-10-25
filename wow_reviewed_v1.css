@@ -276,3 +276,20 @@ html.wow #nrTopNav button.active,html.wow #nrTopNav [aria-current=page]{backgrou
  html.wow body{background:#070d1f!important}
  html.wow #nrRoute-today .sr-dayline [data-place]::after{display:none}
 }
+
+/* UX-06: real event times on a proportional civil-time track, not a solar-altitude curve. */
+html.wow #nrRoute-today .sr-dayline [data-track]{height:100px!important;border-radius:16px!important;position:relative;isolation:isolate}
+html.wow #nrRoute-today .sr-dayline [data-track]::before{content:"";position:absolute;left:24px;right:24px;top:32px;height:1px;background:linear-gradient(90deg,#e9c67e,#98b8eb);opacity:.8;z-index:-1}
+html.wow #nrRoute-today .sr-dayline [data-track]>button{top:10px!important;transform:translateX(-50%)!important;width:44px!important;height:44px!important;min-height:44px!important;padding:0!important;overflow:visible!important;border-radius:50%!important;border:1px solid #c4d6ef!important;background:#0a1b34!important;color:#f4da9d!important;box-shadow:0 0 14px #9cbded20;font-size:19px!important}
+html.wow #nrRoute-today .sr-event-clock{position:absolute;top:51px;left:50%;transform:translateX(-50%);color:#f0f3fb;font:600 13px/1.3 var(--w-ui);font-variant-numeric:tabular-nums;white-space:nowrap;pointer-events:none}
+html.wow #nrRoute-today .sr-dayline [data-track]>button:hover,html.wow #nrRoute-today .sr-dayline [data-track]>button:focus-visible{border-color:#ffe1a0!important;background:#223858!important;box-shadow:0 0 18px #ebc88030}
+@media(min-width:1100px){html.wow body #nrRoute-today .nr-overview.sr-p0-today .nr-o-verdict .nr-o-score[data-score-tone]{width:132px!important;height:132px!important;font-size:64px!important}html.wow #nrRoute-today .sr-p0-today .nr-o-label{font-size:21px!important}}
+@media(forced-colors:active){html.wow #nrRoute-today .sr-dayline [data-track]>button{border-color:ButtonText!important;color:ButtonText!important}html.wow #nrRoute-today .sr-event-clock{color:CanvasText}}
+/* Motion storyboard: brief feedback, no intermediate or invented numeric scores. */
+@keyframes srRouteArrival{from{opacity:.75;transform:translateY(5px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:no-preference){
+ html.wow .nr-route.active{animation:srRouteArrival .2s ease-out}
+ html.wow .nr-topnav button,html.wow .nr-o-journey button,html.wow .sr-p0-signals button{transition:background-color .15s,border-color .15s,box-shadow .15s}
+ html.wow .nr-o-journey button:hover,html.wow .sr-p0-signals button:hover{box-shadow:0 4px 20px #9fbde52b!important;border-color:#e2ce9e!important}
+ html.wow .nr-o-score{transition:color .18s,text-shadow .18s,box-shadow .18s}
+}
