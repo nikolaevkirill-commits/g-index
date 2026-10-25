@@ -1,7 +1,7 @@
 importScripts('./runtime_diagnostics_v1.js');
 // G-Index service worker. HTML/data are network-first; static shell is cache-first.
 // Bump CACHE_VERSION whenever index.html or a cached shell asset changes.
-const CACHE_VERSION = 'fp505-calendar-copy-20261025-r20'; // Discrete final scores; no interpolated forecast.
+const CACHE_VERSION = 'fp506-cosmic-return-20261025-r21'; // Discrete final scores; no interpolated forecast.
 const CACHE_PREFIX = 'gindex-'; // G-Index cache namespace; do not remove the prefix.
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${CACHE_VERSION}`;
 const DATA_CACHE = `${CACHE_PREFIX}data-${CACHE_VERSION}`;
@@ -135,6 +135,7 @@ const SHELL_ASSETS = [
   './p0_layout_v1.js',
   './p0_layout_v1.css',
   './wow_reviewed_v1.css',
+  './sky_panorama_v1.webp',
   './fonts_wow/lora.woff',
   './fonts_wow/manrope.woff',
   './fonts_wow/OFL_Lora.txt',

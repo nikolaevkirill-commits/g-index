@@ -122,7 +122,7 @@ function apply(root,ds,resolved){
  const source=root.querySelector('[data-score-source]');if(source)details.prepend(source);
  for(const e of [...root.children])if(e!==hero&&e!==details&&e!==signals&&!e.matches('.sr-dayline,.nr-o-journey,.nr-o-heading,[data-p0-feed-state],[data-expert-caution]'))details.append(e);
  // Hide duplicate weather summaries only by putting them in the existing details; no data are dropped.
- const line=root.querySelector('.sr-dayline');if(line){signals.after(line);let explore=line.querySelector('[data-p0-explore]');if(!explore){explore=make('details','sr-p0-explore');explore.dataset.p0Explore='';explore.append(make('summary','','Усі події, час і традиційні образи'));line.append(explore);}
+ const line=root.querySelector('.sr-dayline');if(line){signals.before(line);let explore=line.querySelector('[data-p0-explore]');if(!explore){explore=make('details','sr-p0-explore');explore.dataset.p0Explore='';explore.append(make('summary','','Усі події, час і традиційні образи'));line.append(explore);}
  for(const selector of ['.sr-dl-actions','label','[data-moment]','figure','[data-events]','[data-method]','[data-scope]']){const item=line.querySelector(':scope > '+selector);if(item)explore.append(item);}}
  const exp=root.querySelector('[data-p0-explore]>summary');if(exp)exp.textContent=tr('Усі події, час і традиційні образи');
  const journey=root.querySelector('.nr-o-journey');if(journey){(line||signals).after(journey);}if(root.lastElementChild!==details)root.append(details);
@@ -160,7 +160,7 @@ function renderSignals(root,ds,result){
 }
 function renderTimeline(root,ds){
  const line=root.querySelector('.sr-dayline');if(!line)return;
- let box=line.querySelector('[data-sky-events]');if(!box){box=make('details','sr-sky-events');box.open=matchMedia('(min-width:1024px)').matches;box.dataset.skyEvents='';line.querySelector('.sr-dl-story').after(box);}
+ let box=line.querySelector('[data-sky-events]');if(!box){box=make('details','sr-sky-events');box.open=false;box.dataset.skyEvents='';line.querySelector('.sr-dl-story').after(box);}
  const snap=window.SRDayLineView?.snapshot();box.replaceChildren();
  if(snap?.date!==ds||snap.status!=='available'){box.hidden=true;return;}box.hidden=false;
  box.append(make('summary','','Хронологія неба'),make('p','sr-dl-muted',tr('Розраховані події')+' · '+snap.zone));const list=make('ol','');
