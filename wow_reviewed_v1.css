@@ -545,3 +545,15 @@ html.wow body #fp434Shell .sr-solar-caption [data-solar-choose]{min-height:44px;
 .sr-solar-profile svg{cursor:crosshair}
 @media(min-width:1100px){html.wow body #fp434Shell .sr-solar-profile svg{max-height:100px!important}html.wow body #fp434Shell .sr-solar-profile svg text{font-size:15px!important}}
 @media(max-width:420px){.sr-solar-caption>span{font-size:20px}.sr-solar-caption [data-solar-choose]{max-width:130px}}
+
+/* One astronomical Sun; event times are quiet ticks. No numeric interpolation. */
+.sr-sky-motion [data-solar-rays]{transition:transform .28s ease}
+[data-solar-cursor][data-horizon=below] [data-active-sun],
+[data-solar-cursor][data-horizon=below] [data-solar-rays]{opacity:.6}
+@keyframes srContentArrival{from{opacity:.55;transform:translateY(4px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:no-preference){
+ html.wow.sr-sky-motion .nr-route.active :is(.sr-forecast-graph svg,.sr-p0-compare-card,.sr-panch-feature){animation:srContentArrival .24s ease-out}
+ html.wow.sr-sky-motion :is([data-calendar-date],[data-topic],.sr-p0-tabs button){transition:background-color .16s ease,border-color .16s ease,box-shadow .16s ease}
+}
+/* The user's switch and page visibility apply to every effect, not only stars. */
+html.wow:not(.sr-sky-motion) *,html.wow:not(.sr-sky-motion) *::before,html.wow:not(.sr-sky-motion) *::after{animation:none!important;transition:none!important}
