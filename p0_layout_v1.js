@@ -114,6 +114,7 @@ function apply(root,ds,resolved){
  expertCaution(root,ds);
  feedStatus(root,ds,resolved);extras(root,ds);paintRing(root,resolved);if(root.dataset.overview!=='today'){compactForecast(root);compactRouteHero(root);return;}
  root.classList.add('sr-p0-today');const hero=root.querySelector('.nr-o-hero');if(!hero)return;
+ let title=hero.querySelector('[data-reference-title]');if(!title){title=make('h2','sr-reference-title');title.dataset.referenceTitle='';hero.prepend(title);}title.textContent=({uk:'Огляд дня',en:'Day overview',es:'Resumen del día',fr:'Aperçu du jour'}[window.NRLocale?.language||'uk']);
  let details=root.querySelector(':scope > [data-p0-details]');
  if(!details){details=make('details','sr-p0-details');details.dataset.p0Details='';details.append(make('summary','','Детально: джерела, розрахунок і календар'));root.append(details);}
  let signals=root.querySelector(':scope > [data-p0-signals]');
@@ -127,7 +128,7 @@ function apply(root,ds,resolved){
  const label=hero.querySelector(':scope > label');if(label){label.childNodes.forEach(n=>{if(n.nodeType===3)n.textContent=tr('Дата · Київ');});label.dataset.p0Date='';}
  // Keep the original accessible route heading, while removing duplicate visual chrome.
  const heading=root.querySelector('.nr-o-heading');if(heading&&heading.parentElement!==root)root.prepend(heading);
- for(const e of [...hero.children])if(!e.matches('[data-p0-date],[data-p0-moon],[data-p0-sentence],.nr-o-verdict,[data-p0-source],.sr-p0-accessible-heading'))details.append(e);
+ for(const e of [...hero.children])if(!e.matches('[data-reference-title],[data-p0-date],[data-p0-moon],[data-p0-sentence],.nr-o-verdict,[data-p0-source],.sr-p0-accessible-heading'))details.append(e);
  sentence.textContent=tr(sentence.textContent);chip.textContent=tr(chip.textContent);
  details.querySelector(':scope > summary').textContent=tr('Детально: джерела, розрахунок і календар');
  signals.querySelectorAll('button').forEach((b,i)=>b.textContent=tr(['Астрономія й NOAA','Панчанга','Оцінка дня'][i]));
