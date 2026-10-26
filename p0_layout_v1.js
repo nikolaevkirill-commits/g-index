@@ -34,13 +34,13 @@ function renderForecastGraph(root){
 function moon(at){
  const {k,waxing}=SkyMoon.moonIllumination(at),r=35,c=40,rx=r*Math.abs(2*k-1),limb=waxing?1:0,term=k>=.5?(waxing?1:0):(waxing?0:1),pct=Math.round(k*100),id='srMoon'+(++moonSerial);
  const d=`M${c},${c-r} A${r},${r} 0 0 ${limb} ${c},${c+r} A${rx.toFixed(3)},${r} 0 0 ${term} ${c},${c-r} Z`;
- return `<svg viewBox="0 0 80 80" role="img" aria-label="Місяць: освітлено ${pct}%, ${waxing?'зростає':'спадає'}" data-moon-k="${k}" data-moon-waxing="${waxing}"><defs><radialGradient id="${id}lit" cx="62%" cy="38%" r="75%"><stop stop-color="#fff8e6"/><stop offset=".55" stop-color="#f3e9cf"/><stop offset="1" stop-color="#b8ab8c"/></radialGradient><radialGradient id="${id}dark"><stop stop-color="#2c3a66"/><stop offset="1" stop-color="#161f3d"/></radialGradient><clipPath id="${id}clip"><path d="${d}"/></clipPath></defs><circle cx="40" cy="40" r="35" fill="url(#${id}dark)"/><path d="${d}" fill="url(#${id}lit)"/><g clip-path="url(#${id}clip)" fill="#827958" opacity=".19"><circle cx="29" cy="32" r="6"/><circle cx="47" cy="26" r="3.5"/><circle cx="52" cy="46" r="5"/><circle cx="38" cy="53" r="4"/><circle cx="25" cy="47" r="3"/><circle cx="43" cy="40" r="2"/></g></svg><span>${pct}% · ${waxing?'зростає':'спадає'}<small>Розрахована фаза Місяця</small></span>`;
+ return `<svg viewBox="0 0 80 80" role="img" aria-label="Місяць: освітлено ${pct}%, ${waxing?'зростає':'спадає'}" data-moon-k="${k}" data-moon-waxing="${waxing}"><defs><radialGradient id="${id}lit" cx="62%" cy="38%" r="75%"><stop stop-color="#fff8e6"/><stop offset=".55" stop-color="#f3e9cf"/><stop offset="1" stop-color="#b8ab8c"/></radialGradient><radialGradient id="${id}dark"><stop stop-color="#2c3a66"/><stop offset="1" stop-color="#161f3d"/></radialGradient><clipPath id="${id}clip"><path d="${d}"/></clipPath></defs><circle cx="40" cy="40" r="35" fill="url(#${id}dark)"/><path d="${d}" fill="url(#${id}lit)"/><g clip-path="url(#${id}clip)" fill="#827958" opacity=".19"><path d="M21 24 Q26 15 34 20 L37 27 Q46 23 48 31 L43 38 Q34 36 31 43 Q21 40 24 34Z M48 18 Q60 20 61 29 L55 34 48 29Z M45 46 Q55 39 61 47 L57 58 Q49 65 43 56Z M24 49 Q31 45 35 51 L33 58 25 56Z"/><circle cx="35" cy="65" r="2"/><circle cx="62" cy="37" r="1.5"/></g></svg><span>${pct}% · ${waxing?'зростає':'спадає'}<small>Розрахована фаза Місяця</small></span>`;
 }
 let moonSerial=0;
 function atmosphere(at,ds){
  document.documentElement.classList.add('wow');
  if(!document.querySelector('.wow-sky')){const sky=make('div','wow-sky');sky.setAttribute('aria-hidden','true');let seed=11;const rand=()=>((seed=(seed*9301+49297)%233280)/233280);let dots='';for(let i=0;i<200;i++){dots+=`<circle cx="${(rand()*100).toFixed(2)}%" cy="${(rand()*100).toFixed(2)}%" r="${i%13===0?1.5:.8}" fill="#eef3ff" opacity="${(.2+rand()*.55).toFixed(2)}" class="${i%7===0?'tw':''}" style="--d:7s;--dl:${i%5}s"/>`;}sky.innerHTML='<svg class="layer2" aria-hidden="true">'+dots+'</svg>';document.body.prepend(sky);}
- const header=document.querySelector('body>header')||document.getElementById('headerTitle')?.closest('header');if(!header)return;
+ const header=document.querySelector('body>header')||document.getElementById('headerTitle')?.closest('header');if(!header)return;const nav=document.getElementById('nrTopNav');if(nav&&nav.parentElement!==header)header.append(nav);const notice=document.getElementById('playChannelNotice');if(notice&&!notice.querySelector('button')){const close=make('button','','×');close.type='button';close.setAttribute('aria-label',tr('Закрити'));close.onclick=()=>{notice.hidden=true;try{localStorage.setItem('srPrivacyNoticeDismissed','1');}catch(_){}};notice.append(close);try{notice.hidden=localStorage.getItem('srPrivacyNoticeDismissed')==='1';}catch(_){}}
  let box=header.querySelector('.wow-header-moon');if(!box){box=make('div','wow-header-moon');box.setAttribute('translate','no');header.append(box);}box.innerHTML=tr(moon(at));box.dataset.date=ds;box.title=ds+' · '+at.toISOString();const caption=box.querySelector('span');caption?.append(make('small','',new Intl.DateTimeFormat(window.NRLocale?.locale||'uk-UA',{day:'numeric',month:'long',timeZone:'Europe/Kyiv'}).format(at)));
 }
 
@@ -81,7 +81,19 @@ function compactForecast(root){
   root.addEventListener('click',e=>{if(e.target.closest('[data-why],.nr-o-reason-brief'))details.open=true;},true);
  }
  details.querySelector(':scope > summary').textContent=tr('Детально: джерела, розрахунок і календар');
- for(const selector of ['.nr-o-reasons','.nr-o-factors','.nr-o-provenance','.nr-o-context','.nr-o-panch-preview','.nr-o-next','.nr-o-calendar','.nr-o-layers','[data-settings]']){const item=root.querySelector(selector);if(item&&!details.contains(item))details.append(item);}
+ for(const selector of ['.nr-o-spaceweather','.nr-o-reasons','.nr-o-factors','.nr-o-provenance','.nr-o-context','.nr-o-panch-preview','.nr-o-next','.nr-o-calendar','.nr-o-layers','[data-settings]']){const item=root.querySelector(selector);if(item&&!details.contains(item))details.append(item);}
+}
+function compactRouteHero(root){
+ const hero=root.querySelector('.nr-o-hero'),details=root.querySelector('[data-forecast-details]');if(!hero||!details)return;
+ hero.classList.add('sr-compact-header');const heading=hero.querySelector('.nr-o-heading');if(heading)root.prepend(heading);
+ for(const child of [...hero.children])if(!child.matches('label,.nr-o-verdict'))details.append(child);
+ const source=hero.querySelector('[data-score-source]');if(source)details.append(source);
+ let chip=hero.querySelector('[data-compact-source]');if(!chip){chip=make('span','sr-compact-source');chip.dataset.compactSource='';hero.append(chip);}
+ const result=resolvedFor(root.querySelector('select')?.value).consumer;
+ chip.textContent=tr(result?.authority==='expert_pdf'?'Експертна оцінка':result?.available?'Формула джерела':'Оцінка недоступна');
+ const state=root.querySelector('[data-p0-feed-state]');if(state)details.append(state);
+ if(root.dataset.overview==='calendar')for(const selector of ['.nr-o-route-tools','.nr-o-practical','.nr-o-actions','.nr-o-spaceweather','.nr-o-boundary']){const e=root.querySelector(selector);if(e)details.append(e);}
+ const tools=root.querySelector(root.dataset.overview==='calendar'?'[data-p0-month]':'.nr-o-route-tools');if(tools)hero.after(tools);
 }
 function expertCaution(root,ds){
  const texts={
@@ -100,7 +112,7 @@ function expertCaution(root,ds){
 }
 function apply(root,ds,resolved){
  expertCaution(root,ds);
- feedStatus(root,ds,resolved);extras(root,ds);paintRing(root,resolved);if(root.dataset.overview==='forecast')compactForecast(root);if(root.dataset.overview!=='today')return;
+ feedStatus(root,ds,resolved);extras(root,ds);paintRing(root,resolved);if(root.dataset.overview!=='today'){compactForecast(root);compactRouteHero(root);return;}
  root.classList.add('sr-p0-today');const hero=root.querySelector('.nr-o-hero');if(!hero)return;
  let details=root.querySelector(':scope > [data-p0-details]');
  if(!details){details=make('details','sr-p0-details');details.dataset.p0Details='';details.append(make('summary','','Детально: джерела, розрахунок і календар'));root.append(details);}
@@ -122,11 +134,11 @@ function apply(root,ds,resolved){
  const source=root.querySelector('[data-score-source]');if(source)details.prepend(source);
  for(const e of [...root.children])if(e!==hero&&e!==details&&e!==signals&&!e.matches('.sr-dayline,.nr-o-journey,.nr-o-heading,[data-p0-feed-state],[data-expert-caution]'))details.append(e);
  // Hide duplicate weather summaries only by putting them in the existing details; no data are dropped.
- const line=root.querySelector('.sr-dayline');if(line){signals.before(line);let explore=line.querySelector('[data-p0-explore]');if(!explore){explore=make('details','sr-p0-explore');explore.dataset.p0Explore='';explore.append(make('summary','','Усі події, час і традиційні образи'));line.append(explore);}
+ const line=root.querySelector('.sr-dayline');if(line){signals.after(line);let explore=line.querySelector('[data-p0-explore]');if(!explore){explore=make('details','sr-p0-explore');explore.dataset.p0Explore='';explore.append(make('summary','','Усі події, час і традиційні образи'));line.append(explore);}
  for(const selector of ['.sr-dl-actions','label','[data-moment]','figure','[data-events]','[data-method]','[data-scope]']){const item=line.querySelector(':scope > '+selector);if(item)explore.append(item);}}
  const exp=root.querySelector('[data-p0-explore]>summary');if(exp)exp.textContent=tr('Усі події, час і традиційні образи');
  const journey=root.querySelector('.nr-o-journey');if(journey){(line||signals).after(journey);}if(root.lastElementChild!==details)root.append(details);
- renderSignals(root,ds,resolved);renderTimeline(root,ds);motionControl(details);
+ renderSignals(root,ds,resolved);renderTimeline(root,ds);motionControl(document.querySelector('#nrRoute-more')||details);hero.append(root.querySelector('[data-p0-feed-state]'));
  // Route-level disclosures retain their own keyboard and deep-link entry points.
 }
 
@@ -150,13 +162,19 @@ function signalData(result,feed,load=window.__srConsumerLoadState,online=navigat
  const valid=state==='fresh'&&Number.isFinite(kp)&&kp>=0&&kp<=9&&own?.available===true;
  return {state,kp:valid?kp:null,source:valid?own.kp_source:null};
 }
+COPY.push(['Kp — немає актуальних даних','Kp — current data unavailable','Kp — datos actuales no disponibles','Kp — données actuelles indisponibles'],['Оцінка NOAA','NOAA estimate','Estimación NOAA','Estimation NOAA'],['Спостереження','Observation','Observación','Observation']);
+function currentSignal(live,now=Date.now(),online=navigator.onLine){
+ const valid=online&&live?.usable===true&&Number.isFinite(live.kp)&&live.kp>=0&&live.kp<=9&&Number.isFinite(live.expiresAt)&&now<=live.expiresAt;
+ return {kp:valid?live.kp:null,provisional:valid&&!!live.provisional,observedAt:valid?live.expiresAt-(live.provisional?.5:6)*3600000:null};
+}
 function renderSignals(root,ds,result){
  const buttons=root.querySelectorAll('[data-p0-signals]>button');if(buttons.length!==3)return;
- const info=signalData(result,resolvedFor(ds).feed),dl=window.SRDayLineView?.snapshot();
+ const info=currentSignal(typeof currentKpAuthority==='function'?currentKpAuthority():null),dl=window.SRDayLineView?.snapshot();
  const states={fresh:'Формульні дані актуальні',loading:'Оновлюємо дані…',error:'Не вдалося оновити дані',missing:'Формульні дані відсутні',stale:'Формульні дані застаріли',offline:'Офлайн: перевірте час збережених даних'};
- const kp=info.kp===null?tr(states[info.state]):tr('Прогноз Kp')+' '+new Intl.NumberFormat(window.NRLocale?.locale||'uk-UA',{maximumFractionDigits:2}).format(info.kp);
+ const kp=info.kp===null?tr('Kp — немає актуальних даних'):'Kp '+new Intl.NumberFormat(window.NRLocale?.locale||'uk-UA',{maximumFractionDigits:2}).format(info.kp)+' · '+tr(info.provisional?'Оцінка NOAA':'Спостереження');
  const labels=[kp,dl?.date===ds&&dl.status==='available'?dl.initialLabel+' · '+tr('На початок дня'):tr('Календарні дані відсутні'),SkyScore.formatScore(result?.available?result.score:null)+' · '+tr(result?.authority==='expert_pdf'?'Експертна оцінка':result?.available?'Формула джерела':'Оцінка недоступна')];
- buttons.forEach((b,i)=>{b.replaceChildren(make('span','',tr(['Астрономія й NOAA','Панчанга','Оцінка дня'][i])),make('strong','',labels[i]));});
+ buttons[0].dataset.observedAt=info.observedAt?new Date(info.observedAt).toISOString():'';buttons[0].title=info.observedAt?new Date(info.observedAt).toISOString().replace('T',' ').slice(0,16)+' UTC':tr('Kp — немає актуальних даних');
+ buttons.forEach((b,i)=>{b.setAttribute('aria-label',tr(['Астрономія й NOAA','Панчанга','Оцінка дня'][i])+': '+labels[i]+(i===0?' '+b.title:''));const compact=i===0?(info.kp===null?'—':'Kp '+new Intl.NumberFormat(window.NRLocale?.locale||'uk-UA',{maximumFractionDigits:2}).format(info.kp)):i===1?labels[i].split(' · ')[0].replace(/^[^:]+: /,''):labels[i];b.replaceChildren(make('span','',tr([info.provisional?'Оцінка NOAA':'NOAA','Панчанга','Оцінка дня'][i])),make('strong','',compact));if(i===0)b.append(make('small','',info.observedAt?new Date(info.observedAt).toISOString().slice(11,16)+' UTC':tr('Оцінка недоступна')));});
 }
 function renderTimeline(root,ds){
  const line=root.querySelector('.sr-dayline');if(!line)return;
@@ -169,10 +187,10 @@ function renderTimeline(root,ds){
 }
 function paintRing(root,result){const el=root.querySelector('.nr-o-score');if(!el)return;const value=result?.available&&SkyScore.isValidFinal(result.score)?result.score:null;el.dataset.ring=value===null?'missing':value===0?'zero':'value';el.style.setProperty('--score-arc',(value===null?0:Math.abs(value)*120)+'deg');el.style.setProperty('--score-color',SkyScore.color(value));}
 window.addEventListener('sr:dayline-ready',()=>{const root=document.querySelector('[data-overview=today]'),ds=root?.querySelector('select')?.value;if(ds){renderTimeline(root,ds);renderSignals(root,ds,resolvedFor(ds).consumer);}});
-const motionQuery=matchMedia('(prefers-reduced-motion: reduce)');let motionWanted=false;
-try{motionWanted=localStorage.getItem('srSkyBackgroundMotionV1')==='on';}catch(_){}
-function updateMotion(){document.documentElement.classList.toggle('sr-sky-motion',motionWanted&&!motionQuery.matches&&!document.hidden&&!navigator.connection?.saveData);for(const b of document.querySelectorAll('[data-sky-motion]')){b.textContent=tr('Рух тла');b.setAttribute('aria-pressed',String(motionWanted));b.disabled=motionQuery.matches||!!navigator.connection?.saveData;}}
+const dataQuery=matchMedia('(prefers-reduced-data: reduce)'),motionQuery=matchMedia('(prefers-reduced-motion: reduce)');let motionWanted=true;
+try{motionWanted=localStorage.getItem('srSkyBackgroundMotionV1')!=='off';}catch(_){}
+function updateMotion(){document.documentElement.classList.toggle('sr-sky-motion',motionWanted&&!motionQuery.matches&&!dataQuery.matches&&!document.hidden&&!navigator.connection?.saveData);for(const b of document.querySelectorAll('[data-sky-motion]')){b.textContent=tr('Рух тла');b.setAttribute('aria-pressed',String(motionWanted));b.disabled=motionQuery.matches||dataQuery.matches||!!navigator.connection?.saveData;}}
 function motionControl(details){let b=details.querySelector('[data-sky-motion]');if(!b){b=make('button','');b.type='button';b.dataset.skyMotion='';b.onclick=()=>{motionWanted=!motionWanted;try{localStorage.setItem('srSkyBackgroundMotionV1',motionWanted?'on':'off');}catch(_){}updateMotion();};details.append(b);}updateMotion();}
-motionQuery.addEventListener('change',updateMotion);document.addEventListener('visibilitychange',updateMotion);
-window.SRP0Layout=Object.freeze({apply,noonKyiv,moon,dataState,signalData,forecastPoints,horizonText});
+motionQuery.addEventListener('change',updateMotion);dataQuery.addEventListener('change',updateMotion);navigator.connection?.addEventListener('change',updateMotion);document.addEventListener('visibilitychange',updateMotion);
+window.SRP0Layout=Object.freeze({apply,noonKyiv,moon,dataState,signalData,currentSignal,forecastPoints,horizonText});
 })();
