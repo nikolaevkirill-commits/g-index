@@ -20,13 +20,15 @@ const w=i=>(words[lang]||words.uk)[i],tr=k=>SkyRhythmI18n.t(lang,k),name=(k,v)=>
 const fmt=t=>new Intl.DateTimeFormat(SkyRhythmI18n.LOCALE[lang],{timeZone:pref.zone,hour:'2-digit',minute:'2-digit'}).format(new Date(t));
 const stamp=t=>new Intl.DateTimeFormat(SkyRhythmI18n.LOCALE[lang],{timeZone:pref.zone,day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}).format(new Date(t));
 const place=()=>cities[pref.city]?tr('city.'+pref.city):`${pref.lat.toFixed(3)}, ${pref.lon.toFixed(3)}`;
-const at=()=>Date.parse(data.start)+(Date.parse(data.end)-Date.parse(data.start))*minute/1000;
+let followNow=true;
+const inLiveDay=()=>data?.status==='available'&&Date.now()>=Date.parse(data.start)&&Date.now()<Date.parse(data.end);
+const at=()=>followNow&&inLiveDay()?Date.now():Date.parse(data.start)+(Date.parse(data.end)-Date.parse(data.start))*minute/1000;
 function validPlace(p){try{return typeof p.lat==='number'&&typeof p.lon==='number'&&Number.isFinite(p.lat)&&Number.isFinite(p.lon)&&Math.abs(p.lat)<=90&&Math.abs(p.lon)<=180&&typeof p.zone==='string'&&!!new Intl.DateTimeFormat('en',{timeZone:p.zone});}catch(_){return false;}}
 function create(tag,cls,text){const el=document.createElement(tag);if(cls)el.className=cls;if(text!==undefined)el.textContent=text;return el;}
 function button(text,fn){const b=create('button','',text);b.type='button';b.onclick=fn;return b;}
 function eventText(e){return fmt(e.at)+' · '+tr('kind.'+e.kind)+': '+name(e.kind,e.from)+' → '+name(e.kind,e.to);}
 function nowMinute(){return Math.max(0,Math.min(999,Math.floor((Date.now()-Date.parse(data.start))/(Date.parse(data.end)-Date.parse(data.start))*1000)));}
-function moment(){if(data?.status!=='available'){q('[data-moment]').textContent='';q('figure:not([data-solar-profile])').hidden=true;return;}
+function moment(){updateSolarMoment();if(data?.status!=='available'){q('[data-moment]').textContent='';q('figure:not([data-solar-profile])').hidden=true;return;}
  const p=MeeusCore.panchangaAt(at()+69184),key=({"1": "ashwini", "2": "bharani", "3": "krittika", "4": "rohini", "5": "mrigashira", "6": "ardra", "7": "punarvasu", "8": "pushya", "9": "ashlesha", "10": "magha", "11": "purvaphalguni", "12": "uttaraphalguni", "13": "hasta", "14": "chitra", "15": "swati", "16": "vishakha", "17": "anuradha", "18": "jyeshtha", "19": "mula", "20": "purvaashadha", "21": "uttaraashadha", "22": "shravana", "23": "dhanishta", "24": "water", "25": "fire", "26": "depth", "27": "nourish"})[p.nakshatra],target=key&&pref.style!=='none'&&(pref.style==='engraving'||p.nakshatra>=24)?key+'-'+pref.style:'';
  q('[data-moment]').textContent=stamp(at())+' · '+['tithi','nakshatra','yoga','karana'].map(k=>name(k,p[k])).join(' · ');
  q('figure:not([data-solar-profile])').hidden=!target||failed.has(target);
@@ -83,8 +85,8 @@ function mount(root){if(node)return;rootNode=root;node=create('section','sr-dayl
  node.insertBefore(node.querySelector('[data-track]'),node.querySelector('.sr-dl-story'));node.insertBefore(node.querySelector('[data-axis]'),node.querySelector('.sr-dl-story')); root.querySelector('select').parentElement.id='srDayDate'; root.querySelector('.nr-o-hero').after(node);window.SRTransitionClient?.mount(node,()=>({...pref}));dialog=create('dialog','sr-dl-dialog');dialog.setAttribute('translate','no');dialog.setAttribute('aria-labelledby','sr-dl-dialog-title');document.body.append(dialog);dialog.addEventListener('close',()=>!dialog.open&&returnFocus?.isConnected&&returnFocus.focus({preventScroll:true}));
  document.addEventListener('keydown',e=>{if(dialog.open&&e.key==='Escape'){e.preventDefault();dialog.close();}},true);
  dialog.addEventListener('keydown',e=>{if(e.key!=='Tab')return;const items=[...dialog.querySelectorAll('button:not(:disabled),a[href],input:not(:disabled),select,textarea')].filter(x=>x.getClientRects().length);const first=items[0],last=items.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}});
- q('[data-settings]').onclick=settings;q('[data-explain]').onclick=()=>explain(currentEvent);q('[data-share]').onclick=share;q('[data-now]').onclick=()=>{minute=nowMinute();q('input[type=range]').value=minute;moment();};
- q('fieldset').onchange=e=>{const next={...pref,style:e.target.value};if(!['engraving','gouache','none'].includes(next.style))return;if(!savePreferences(next)){q('input[value='+pref.style+']').checked=true;q('[data-pref-status]').textContent=w(28);return;}pref=next;q('[data-pref-status]').textContent=w(27);moment();};q('input[type=range]').oninput=e=>{minute=Number(e.target.value);moment();};q('img').onerror=e=>{failed.add(e.target.dataset.art);q('figure:not([data-solar-profile])').hidden=true;};new ResizeObserver(markers).observe(q('[data-track]'));
+ q('[data-settings]').onclick=settings;q('[data-explain]').onclick=()=>explain(currentEvent);q('[data-share]').onclick=share;q('[data-now]').onclick=()=>{followNow=true;minute=nowMinute();q('input[type=range]').value=minute;moment();};
+ q('fieldset').onchange=e=>{const next={...pref,style:e.target.value};if(!['engraving','gouache','none'].includes(next.style))return;if(!savePreferences(next)){q('input[value='+pref.style+']').checked=true;q('[data-pref-status]').textContent=w(28);return;}pref=next;q('[data-pref-status]').textContent=w(27);moment();};q('input[type=range]').oninput=e=>{followNow=false;minute=Number(e.target.value);moment();};q('img').onerror=e=>{failed.add(e.target.dataset.art);q('figure:not([data-solar-profile])').hidden=true;};new ResizeObserver(markers).observe(q('[data-track]'));
  const closeDay=create('div','sr-dl-close-day');closeDay.setAttribute('translate','no');closeDay.append(create('p','',w(39)),button(w(20),()=>window.NRConsumerOverview.openOutcome()));root.append(closeDay);
 }
 async function render(root,date){if(root.dataset.overview!=='today'||!window.MeeusCore||!window.SkyRhythmDayLine||!window.Astronomy||!window.SRDayLineAsync)return;const sequence=++renderSequence;lang=window.NRLocale?.language||'uk';mount(root);
@@ -93,14 +95,14 @@ async function render(root,date){if(root.dataset.overview!=='today'||!window.Mee
  for(const o of node.querySelectorAll('[data-style]'))o.textContent=tr('st.'+o.dataset.style);q('input[value='+pref.style+']').checked=true;
  q('[data-artnote]').textContent=tr('pr.p1');q('[data-source]').textContent=tr('pr.p2');q('[data-convention]').textContent=tr('pa.conv');root.querySelector('.sr-dl-close-day p').textContent=w(39);root.querySelector('.sr-dl-close-day button').textContent=w(20);
  try{const key=[date,pref.lat,pref.lon,pref.zone].join('|');if(!cache.has(key)){
-  data=null;lastDate=date;q('[data-solar-profile]')?.setAttribute('hidden','');notify();q('[data-status]').textContent=({uk:'Обчислюємо лінію дня…',en:'Calculating the day line…',es:'Calculando la línea del día…',fr:'Calcul de la ligne du jour…'})[lang]||'Calculating…';
+  data=null;followNow=true;lastDate=date;q('[data-solar-profile]')?.setAttribute('hidden','');notify();q('[data-status]').textContent=({uk:'Обчислюємо лінію дня…',en:'Calculating the day line…',es:'Calculando la línea del día…',fr:'Calcul de la ligne du jour…'})[lang]||'Calculating…';
   q('input[type=range]').disabled=true;q('[data-share]').disabled=true;q('figure:not([data-solar-profile])').hidden=true;q('[data-events] ol').replaceChildren();q('[data-track]').replaceChildren();q('[data-axis]').replaceChildren();q('[data-moment]').textContent='';headline();q('[data-headline]').textContent=q('[data-status]').textContent;
   const computed=await SRDayLineAsync.build({date,lat:pref.lat,lon:pref.lon,zone:pref.zone});if(sequence!==renderSequence)return;
   cache.set(key,computed);if(cache.size>32)cache.delete(cache.keys().next().value);
  }if(sequence!==renderSequence)return;data=cache.get(key);sunset=null;q('[data-share]').disabled=false;
   if(data.status==='available'){try{const t=Astronomy.SearchRiseSet('Sun',new Astronomy.Observer(pref.lat,pref.lon,0),-1,new Date(data.start),1)?.date;sunset=t&&+t>Date.parse(data.start)&&+t<Date.parse(data.end)?+t:null;}catch(_){} }
-  if(lastDate!==date){minute=data.status==='available'?nowMinute():0;lastDate=date;}
-  q('input[type=range]').value=minute;q('input[type=range]').disabled=data.status!=='available';q('[data-status]').textContent=data.status==='available'?tr('tlInterval').replace('{a}',stamp(data.start)).replace('{b}',stamp(data.end)):tr('tlNoInterval');
+  if(lastDate!==date){followNow=true;minute=data.status==='available'?nowMinute():0;lastDate=date;}
+  if(followNow&&data.status==='available')minute=nowMinute();q('input[type=range]').value=minute;q('input[type=range]').disabled=data.status!=='available';q('[data-status]').textContent=data.status==='available'?tr('tlInterval').replace('{a}',stamp(data.start)).replace('{b}',stamp(data.end)):tr('tlNoInterval');
   q('[data-events] ol').replaceChildren();for(const [i,e]of data.events.entries()){const li=create('li');li.dataset.event=i;li.append(button(eventText(e),()=>explain(i)));q('[data-events] ol').append(li);}headline();moment();markers();renderSolar();notify();
   const link=new URL(location.href);if(link.searchParams.get('dlDate')===date){const n=data.events.findIndex(e=>e.at===link.searchParams.get('dlAt')&&e.kind===link.searchParams.get('dlKind'));if(n>=0&&link.searchParams.get('dlEvent')){explain(n);for(const k of ['dlDate','dlAt','dlKind','dlEvent'])link.searchParams.delete(k);history.replaceState(null,'',link);}}
  }catch(e){if(sequence!==renderSequence)return;data=null;q('[data-solar-profile]')?.setAttribute('hidden','');notify();q('[data-status]').textContent=tr('tlCalcError')+e.message;q('figure:not([data-solar-profile])').hidden=true;q('input[type=range]').disabled=true;q('[data-events] ol').replaceChildren();q('[data-track]').replaceChildren();q('[data-axis]').replaceChildren();q('[data-moment]').textContent='';headline();}
@@ -129,23 +131,40 @@ function renderSolar(){
  const x=i=>32+536*i/96,y=a=>52-a*.42;
  for(const a of [60,0,-60]){add('line',{x1:32,x2:568,y1:y(a),y2:y(a),stroke:'#a8bbd7',opacity:a===0?'.65':'.2','stroke-dasharray':'3 5'});add('text',{x:2,y:y(a)+4,fill:'#d6e2f5','font-size':12},a+'°');}
  add('path',{d:samples.map((v,i)=>(i?'L':'M')+x(i).toFixed(2)+','+y(v.altitude).toFixed(2)).join(' '),fill:'none',stroke:'#f3ce78','stroke-width':2.5});
- const peak=samples.reduce((best,v,i)=>v.altitude>samples[best].altitude?i:best,0);
- const sunIcon=(at,kind)=>{const f=(Date.parse(at)-Date.parse(data.start))/(Date.parse(data.end)-Date.parse(data.start))*96,i=Math.min(95,Math.max(0,Math.floor(f))),alt=samples[i].altitude+(samples[i+1].altitude-samples[i].altitude)*(f-i),cx=x(f),cy=y(alt);
+ const observer=new Astronomy.Observer(pref.lat,pref.lon,0),transit=Astronomy.SearchHourAngle('Sun',observer,0,new Date(data.start),1)?.time?.date;
+ const culmination=transit&&+transit>=Date.parse(data.start)&&+transit<Date.parse(data.end)?transit:null;
+ const sunIcon=(at,kind)=>{const f=(Date.parse(at)-Date.parse(data.start))/(Date.parse(data.end)-Date.parse(data.start))*96,eq=Astronomy.Equator('Sun',new Date(at),observer,true,true),alt=Astronomy.Horizon(new Date(at),observer,eq.ra,eq.dec,null).altitude,cx=x(f),cy=y(alt);
  const g=add('g',{'data-solar-event':kind,'data-at':at,'aria-hidden':'true'});
  const part=(tag,attrs)=>g.append(add(tag,attrs));part('circle',{cx,cy,r:19,fill:'#ffd16c',opacity:'.12'});
  for(let k=0;k<8;k++){const a=k*Math.PI/4;part('line',{x1:cx+Math.cos(a)*12,y1:cy+Math.sin(a)*12,x2:cx+Math.cos(a)*17,y2:cy+Math.sin(a)*17,stroke:'#ffdb83','stroke-width':2,'stroke-linecap':'round'});}
  part('circle',{cx,cy,r:8,fill:'#ffe5a2',stroke:'#fff2cd','stroke-width':1.5});
  };
- sunIcon(data.start,'sunrise');if(sunset)sunIcon(new Date(sunset).toISOString(),'sunset');sunIcon(data.end,'next-sunrise');sunIcon(samples[peak].at,'sample-maximum');
+ sunIcon(data.start,'sunrise');if(sunset)sunIcon(new Date(sunset).toISOString(),'sunset');sunIcon(data.end,'next-sunrise');if(culmination){sunIcon(culmination.toISOString(),'culmination');const f=(+culmination-Date.parse(data.start))/(Date.parse(data.end)-Date.parse(data.start))*96;add('text',{x:x(f),y:90,fill:'#ffe3a0','text-anchor':'middle','font-size':12},fmt(culmination));const tip=add('title',{},({uk:'Кульмінація Сонця',en:'Solar culmination',es:'Culminación solar',fr:'Culmination solaire'}[lang])+' · '+fmt(culmination));svg.querySelector('[data-solar-event=culmination]').append(tip);}
  for(const at of [Date.parse(data.start),...(sunset?[sunset]:[]),Date.parse(data.end)]){const f=(at-Date.parse(data.start))/(Date.parse(data.end)-Date.parse(data.start))*96;add('text',{x:x(f),y:110,fill:'#d6e2f5','text-anchor':f===0?'start':f===96?'end':'middle','font-size':12},new Intl.DateTimeFormat(window.NRLocale?.locale||'uk-UA',{hour:'2-digit',minute:'2-digit',timeZone:pref.zone}).format(new Date(at)));}
- fig.append(create('figcaption','',labels[0]),svg,create('small','',labels[1]));fig.hidden=false;
+ fig.append(create('figcaption','',labels[0]),svg,create('small','',labels[1]));fig.hidden=false;updateSolarMoment();
  }catch(_){fig.hidden=true;}
 }
+
+
+function updateSolarMoment(){
+ const fig=q('[data-solar-profile]'),svg=fig?.querySelector('svg');if(!svg||data?.status!=='available')return;
+ let marker=svg.querySelector('[data-solar-cursor]'),label=fig.querySelector('[data-solar-moment]');
+ if(!marker){marker=document.createElementNS(svg.namespaceURI,'g');marker.dataset.solarCursor='';marker.setAttribute('aria-hidden','true');marker.innerHTML='<line y1="8" y2="96" stroke="#fff2bf" stroke-dasharray="2 4" opacity=".6"/><circle r="17" fill="#ffd16c" opacity=".2"/><circle r="7" fill="#fff4ce" stroke="#eab84c" stroke-width="2"/>';svg.append(marker);label=fig.querySelector(':scope > small')||create('small');label.title=label.textContent;label.classList.add('sr-solar-moment');label.dataset.solarMoment='';fig.append(label);}
+ try{const t=at(),observer=new Astronomy.Observer(pref.lat,pref.lon,0),eq=Astronomy.Equator('Sun',new Date(t),observer,true,true),alt=Astronomy.Horizon(new Date(t),observer,eq.ra,eq.dec,null).altitude;
+ if(!Number.isFinite(alt)){marker.setAttribute('hidden','');return;}
+ const x=32+536*(t-Date.parse(data.start))/(Date.parse(data.end)-Date.parse(data.start)),y=52-alt*.42;
+ marker.removeAttribute('hidden');marker.dataset.at=new Date(t).toISOString();marker.dataset.altitude=String(alt);marker.dataset.mode=followNow&&inLiveDay()?'live':'selected';
+ for(const c of marker.querySelectorAll('circle')){c.setAttribute('cx',x);c.setAttribute('cy',y);}const line=marker.querySelector('line');line.setAttribute('x1',x);line.setAttribute('x2',x);
+ const titles={uk:['Зараз','Вибраний час'],en:['Now','Selected time'],es:['Ahora','Hora seleccionada'],fr:['Maintenant','Heure choisie']}[lang];
+ label.textContent=titles[marker.dataset.mode==='live'?0:1]+' · '+fmt(t)+' · '+new Intl.NumberFormat(window.NRLocale?.locale||'uk-UA',{maximumFractionDigits:1}).format(alt)+'°';
+ }catch(_){marker.setAttribute('hidden','');if(label)label.textContent='';}
+}
+function tick(){if(!node||document.hidden)return;headline();markers();if(data?.status==='available'&&followNow){if(inLiveDay()){minute=nowMinute();q('input[type=range]').value=minute;}moment();}}
 
 function notify(){window.dispatchEvent(new Event('sr:dayline-ready'));}
 window.SRDayLineView=Object.freeze({render,snapshot,solarProfile,openEvent(index){if(Number.isInteger(index)&&data?.events[index])explain(index);}});
 function initial(){const r=document.querySelector('[data-overview="today"]');const select=r?.querySelector('select');if(select)render(r,select.value);}
 window.addEventListener('load',initial);window.addEventListener('nr:locale',()=>{if(dialog?.open)dialog.close();initial();});
-setInterval(()=>{if(node&&!document.hidden){headline();markers();}},60000);document.addEventListener('visibilitychange',()=>{if(node&&!document.hidden){headline();markers();}});initial();
+setInterval(tick,60000);document.addEventListener('visibilitychange',tick);initial();
 })();
 
