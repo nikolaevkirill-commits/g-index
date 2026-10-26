@@ -44,6 +44,7 @@ function atmosphere(at,ds){
  let box=header.querySelector('.wow-header-moon');if(!box){box=make('div','wow-header-moon');box.setAttribute('translate','no');header.append(box);}box.innerHTML=tr(moon(at));box.dataset.date=ds;box.title=ds+' · '+at.toISOString();const caption=box.querySelector('span');caption?.append(make('small','',new Intl.DateTimeFormat(window.NRLocale?.locale||'uk-UA',{day:'numeric',month:'long',timeZone:'Europe/Kyiv'}).format(at)));
 }
 
+COPY.push(['Завантажити порівняння','Download comparison','Descargar comparación','Télécharger la comparaison'],['Це складові формули, а не розклад експертного бала.','These are formula components, not a breakdown of the expert score.','Son componentes de la fórmula, no un desglose de la puntuación experta.','Ce sont les composantes de la formule, pas une décomposition de la note experte.']);
 const compared=new Set();
 function resolvedFor(ds){return window.fp469ConsumerForDate?.({ds})||{consumer:{score:null,available:false}};}
 function paintScore(node,result){const v=result?.available?result.score:null,kind=SkyScore.scoreClass(v),sem=SkyScore.SEMANTIC[kind];node.dataset.scoreTone=kind;node.textContent=sem.icon+' '+SkyScore.formatScore(v);node.setAttribute('aria-label',SkyScore.describe(v));}
@@ -72,8 +73,9 @@ function extras(root,ds){
  for(let d=1;d<=count;d++){const date=key+'-'+String(d).padStart(2,'0'),result=resolvedFor(date).consumer,b=make('button','');b.type='button';b.dataset.calendarDate=date;b.append(make('span','',String(d)));const val=make('strong','sr-p0-value');paintScore(val,result);const words=val.textContent.split(' ');val.replaceChildren(...words.map(word=>make('span','',word)));b.append(val);b.setAttribute('aria-label',date+' · '+SkyScore.describe(result?.available?result.score:null));b.setAttribute('aria-pressed',String(date===ds));b.onclick=()=>pick(root,date);grid.append(b);}box.append(grid,make('p','sr-p0-legend','▲ Позитивна · ● Нейтральна · ▼ Негативна · ○ Немає оцінки'));
  let compare=root.querySelector('[data-p0-compare]');if(!compare){compare=make('section','sr-p0-compare');compare.dataset.p0Compare='';box.after(compare);}compare.replaceChildren(make('h2','','Порівняти до трьох дат'));
  const add=make('button','','Додати обрану дату');add.type='button';add.disabled=compared.size>=3||compared.has(ds);add.onclick=()=>{compared.add(ds);extras(root,ds);};compare.append(add);
- for(const date of compared){const data=resolvedFor(date),card=make('article','sr-p0-compare-card');card.append(make('h3','',date));const score=make('strong','sr-p0-value');paintScore(score,data.consumer);card.append(score,make('p','',data.consumer?.authority==='expert_pdf'?'Експертна оцінка':data.consumer?.available?'Формула джерела':'Оцінка недоступна'));
- const parts=make('details','');parts.append(make('summary','','Надані складові'));for(const f of data.feed?.channels?.source_formula?.factors||[])parts.append(make('p','',(window.NRConsumerOverview?.factorName?.(f.factor)||String(f.factor))+': '+(Number.isFinite(f.value)?String(f.value).replace('.',','):'—')));card.append(parts);const remove=make('button','','Прибрати');remove.type='button';remove.onclick=()=>{compared.delete(date);extras(root,ds);};card.append(remove);compare.append(card);}
+ for(const date of compared){const data=resolvedFor(date),card=make('article','sr-p0-compare-card');card.dataset.date=date;card.style.setProperty('--compare-color',SkyScore.color(data.consumer?.available?data.consumer.score:null));card.append(make('h3','',new Intl.DateTimeFormat(window.NRLocale?.locale||'uk-UA',{day:'numeric',month:'long',year:'numeric',timeZone:'UTC'}).format(new Date(date+'T12:00:00Z'))));const score=make('strong','sr-p0-value sr-compare-ring');paintScore(score,data.consumer);card.append(score,make('p','',data.consumer?.authority==='expert_pdf'?'Експертна оцінка':data.consumer?.available?'Формула джерела':'Оцінка недоступна'));
+ const parts=make('details','');parts.append(make('summary','','Надані складові'),make('p','','Це складові формули, а не розклад експертного бала.'));for(const f of data.feed?.channels?.source_formula?.factors||[])parts.append(make('p','',(window.NRConsumerOverview?.factorName?.(f.factor)||String(f.factor))+': '+(Number.isFinite(f.value)?String(f.value).replace('.',','):'—')));card.append(parts);const remove=make('button','','Прибрати');remove.type='button';remove.onclick=()=>{compared.delete(date);extras(root,ds);};card.append(remove);compare.append(card);}
+ if(compared.size){const save=make('button','sr-compare-save','Завантажити порівняння');save.type='button';save.onclick=()=>{const payload={schema:'skyrhythm-comparison-v1',exported_at:new Date().toISOString(),note:'Snapshot of resolved scores, not evidence of predictive accuracy',dates:[...compared].map(date=>({date,consumer:resolvedFor(date).consumer}))};const url=URL.createObjectURL(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'})),a=document.createElement('a');a.href=url;a.download='SkyRhythm_comparison.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};compare.append(save);}
 }
 function compactForecast(root){
  let details=root.querySelector('[data-forecast-details]');
@@ -92,8 +94,8 @@ function compactRouteHero(root){
  const result=resolvedFor(root.querySelector('select')?.value).consumer;
  chip.textContent=tr(result?.authority==='expert_pdf'?'Експертна оцінка':result?.available?'Формула джерела':'Оцінка недоступна');
  const state=root.querySelector('[data-p0-feed-state]');if(state)details.append(state);
- if(root.dataset.overview==='calendar')for(const selector of ['.nr-o-route-tools','.nr-o-practical','.nr-o-actions','.nr-o-spaceweather','.nr-o-boundary']){const e=root.querySelector(selector);if(e)details.append(e);}
- const tools=root.querySelector(root.dataset.overview==='calendar'?'[data-p0-month]':'.nr-o-route-tools');if(tools)hero.after(tools);
+ if(root.dataset.overview==='calendar')for(const selector of ['.nr-o-practical','.nr-o-actions','.nr-o-spaceweather','.nr-o-boundary']){const e=root.querySelector(selector);if(e)details.append(e);}
+ const tools=root.querySelector(root.dataset.overview==='calendar'?'[data-p0-month]':'.nr-o-route-tools');if(tools)hero.after(tools);if(root.dataset.overview==='calendar'){const topics=root.querySelector('.nr-o-route-tools');if(topics)tools.after(topics);}
 }
 function expertCaution(root,ds){
  const texts={
@@ -136,7 +138,7 @@ function apply(root,ds,resolved){
  for(const e of [...root.children])if(e!==hero&&e!==details&&e!==signals&&!e.matches('.sr-dayline,.nr-o-journey,.nr-o-heading,[data-p0-feed-state],[data-expert-caution]'))details.append(e);
  // Hide duplicate weather summaries only by putting them in the existing details; no data are dropped.
  const line=root.querySelector('.sr-dayline');if(line){signals.after(line);let explore=line.querySelector('[data-p0-explore]');if(!explore){explore=make('details','sr-p0-explore');explore.dataset.p0Explore='';explore.append(make('summary','','Усі події, час і традиційні образи'));line.append(explore);}
- for(const selector of ['.sr-dl-actions','label','[data-moment]','figure','[data-events]','[data-method]','[data-scope]']){const item=line.querySelector(':scope > '+selector);if(item)explore.append(item);}}
+ for(const selector of ['.sr-dl-actions','label','[data-moment]','figure:not([data-solar-profile])','[data-events]','[data-method]','[data-scope]']){const item=line.querySelector(':scope > '+selector);if(item)explore.append(item);}}
  const exp=root.querySelector('[data-p0-explore]>summary');if(exp)exp.textContent=tr('Усі події, час і традиційні образи');
  const journey=root.querySelector('.nr-o-journey');if(journey){(line||signals).after(journey);}if(root.lastElementChild!==details)root.append(details);
  renderSignals(root,ds,resolved);renderTimeline(root,ds);motionControl(document.querySelector('#nrRoute-more')||details);hero.append(root.querySelector('[data-p0-feed-state]'));
