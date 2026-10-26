@@ -124,13 +124,20 @@ function renderSolar(){
  if(data?.status!=='available')return;
  try{const samples=solarProfile();if(samples.some(x=>!Number.isFinite(x.altitude)))return;
  const labels={uk:['Сонце над горизонтом','Геометрична висота Сонця · не оцінка дня'],en:['Sun above the horizon','Geometric solar altitude · not a day score'],es:['Sol sobre el horizonte','Altitud solar geométrica · no es una puntuación'],fr:['Soleil au-dessus de l’horizon','Hauteur géométrique du Soleil · pas une note du jour']}[lang];
- const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 600 180');svg.setAttribute('role','img');svg.setAttribute('aria-label',labels[1]);
+ const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 600 120');svg.setAttribute('role','img');svg.setAttribute('aria-label',labels[1]);
  const add=(tag,attrs,text)=>{const e=document.createElementNS(svg.namespaceURI,tag);for(const[k,v]of Object.entries(attrs))e.setAttribute(k,v);if(text)e.textContent=text;svg.append(e);return e;};
- const x=i=>32+536*i/96,y=a=>90-a*.72;
+ const x=i=>32+536*i/96,y=a=>52-a*.42;
  for(const a of [60,0,-60]){add('line',{x1:32,x2:568,y1:y(a),y2:y(a),stroke:'#a8bbd7',opacity:a===0?'.65':'.2','stroke-dasharray':'3 5'});add('text',{x:2,y:y(a)+4,fill:'#d6e2f5','font-size':12},a+'°');}
  add('path',{d:samples.map((v,i)=>(i?'L':'M')+x(i).toFixed(2)+','+y(v.altitude).toFixed(2)).join(' '),fill:'none',stroke:'#f3ce78','stroke-width':2.5});
- const peak=samples.reduce((best,v,i)=>v.altitude>samples[best].altitude?i:best,0);add('circle',{cx:x(peak),cy:y(samples[peak].altitude),r:6,fill:'#ffe7a5'});
- for(const i of [0,48,96])add('text',{x:x(i),y:173,fill:'#d6e2f5','text-anchor':i===0?'start':i===96?'end':'middle','font-size':12},new Intl.DateTimeFormat(window.NRLocale?.locale||'uk-UA',{hour:'2-digit',minute:'2-digit',timeZone:pref.zone}).format(new Date(samples[i].at)));
+ const peak=samples.reduce((best,v,i)=>v.altitude>samples[best].altitude?i:best,0);
+ const sunIcon=(at,kind)=>{const f=(Date.parse(at)-Date.parse(data.start))/(Date.parse(data.end)-Date.parse(data.start))*96,i=Math.min(95,Math.max(0,Math.floor(f))),alt=samples[i].altitude+(samples[i+1].altitude-samples[i].altitude)*(f-i),cx=x(f),cy=y(alt);
+ const g=add('g',{'data-solar-event':kind,'data-at':at,'aria-hidden':'true'});
+ const part=(tag,attrs)=>g.append(add(tag,attrs));part('circle',{cx,cy,r:19,fill:'#ffd16c',opacity:'.12'});
+ for(let k=0;k<8;k++){const a=k*Math.PI/4;part('line',{x1:cx+Math.cos(a)*12,y1:cy+Math.sin(a)*12,x2:cx+Math.cos(a)*17,y2:cy+Math.sin(a)*17,stroke:'#ffdb83','stroke-width':2,'stroke-linecap':'round'});}
+ part('circle',{cx,cy,r:8,fill:'#ffe5a2',stroke:'#fff2cd','stroke-width':1.5});
+ };
+ sunIcon(data.start,'sunrise');if(sunset)sunIcon(new Date(sunset).toISOString(),'sunset');sunIcon(data.end,'next-sunrise');sunIcon(samples[peak].at,'sample-maximum');
+ for(const at of [Date.parse(data.start),...(sunset?[sunset]:[]),Date.parse(data.end)]){const f=(at-Date.parse(data.start))/(Date.parse(data.end)-Date.parse(data.start))*96;add('text',{x:x(f),y:110,fill:'#d6e2f5','text-anchor':f===0?'start':f===96?'end':'middle','font-size':12},new Intl.DateTimeFormat(window.NRLocale?.locale||'uk-UA',{hour:'2-digit',minute:'2-digit',timeZone:pref.zone}).format(new Date(at)));}
  fig.append(create('figcaption','',labels[0]),svg,create('small','',labels[1]));fig.hidden=false;
  }catch(_){fig.hidden=true;}
 }

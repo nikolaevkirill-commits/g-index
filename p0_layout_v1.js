@@ -30,6 +30,7 @@ function renderForecastGraph(root){
   add('text',{x:p.x,y:218,'text-anchor':'middle',fill:'#dce6fa','font-size':12},p.date.slice(8)+'.'+p.date.slice(5,7));
  }
  figure.replaceChildren(make('figcaption','','Оцінки за днями'),svg,make('p','','Окремі денні оцінки. Риска означає відсутні дані; 0 — нейтральну оцінку.'));
+ const resizeLabels=()=>{const graph=figure.querySelector('svg'),width=graph?.getBoundingClientRect().width;if(width>0)for(const label of graph.querySelectorAll('text'))label.style.setProperty('font-size',(12*360/width)+'px','important');};figure._labelObserver?.disconnect();figure._labelObserver=new ResizeObserver(resizeLabels);figure._labelObserver.observe(svg);requestAnimationFrame(resizeLabels);
 }
 function moon(at){
  const {k,waxing}=SkyMoon.moonIllumination(at),r=35,c=40,rx=r*Math.abs(2*k-1),limb=waxing?1:0,term=k>=.5?(waxing?1:0):(waxing?0:1),pct=Math.round(k*100),id='srMoon'+(++moonSerial);
@@ -122,7 +123,7 @@ function apply(root,ds,resolved){
  expertCaution(root,ds);
  feedStatus(root,ds,resolved);extras(root,ds);paintRing(root,resolved);if(root.dataset.overview!=='today'){compactForecast(root);compactRouteHero(root);return;}
  root.classList.add('sr-p0-today');const hero=root.querySelector('.nr-o-hero');if(!hero)return;
- let title=hero.querySelector('[data-reference-title]');if(!title){title=make('h2','sr-reference-title');title.dataset.referenceTitle='';hero.prepend(title);}title.textContent=({uk:'Огляд дня',en:'Day overview',es:'Resumen del día',fr:'Aperçu du jour'}[window.NRLocale?.language||'uk']);
+ const titleBox=root.querySelector('.nr-o-heading');if(titleBox){titleBox.dataset.referenceTitle='';titleBox.classList.add('sr-reference-title');hero.prepend(titleBox);titleBox.querySelector('h1').textContent=({uk:'Огляд дня',en:'Day overview',es:'Resumen del día',fr:'Aperçu du jour'}[window.NRLocale?.language||'uk']);}
  let details=root.querySelector(':scope > [data-p0-details]');
  if(!details){details=make('details','sr-p0-details');details.dataset.p0Details='';details.append(make('summary','','Детально: джерела, розрахунок і календар'));root.append(details);}
  let signals=root.querySelector(':scope > [data-p0-signals]');
@@ -135,7 +136,7 @@ function apply(root,ds,resolved){
  chip.textContent=resolved.authority==='expert_pdf'?'Джерело: експертна оцінка':resolved.available?'Джерело: формула календаря':'Оцінка недоступна';
  const label=hero.querySelector(':scope > label');if(label){label.childNodes.forEach(n=>{if(n.nodeType===3)n.textContent=tr('Дата · Київ');});label.dataset.p0Date='';}
  // Keep the original accessible route heading, while removing duplicate visual chrome.
- const heading=root.querySelector('.nr-o-heading');if(heading&&heading.parentElement!==root)root.prepend(heading);
+ const heading=root.querySelector('.nr-o-heading');if(heading&&heading.parentElement!==hero)hero.prepend(heading);
  for(const e of [...hero.children])if(!e.matches('[data-reference-title],[data-p0-date],[data-p0-moon],[data-p0-sentence],.nr-o-verdict,[data-p0-source],.sr-p0-accessible-heading'))details.append(e);
  sentence.textContent=tr(sentence.textContent);chip.textContent=tr(chip.textContent);
  details.querySelector(':scope > summary').textContent=tr('Детально: джерела, розрахунок і календар');
@@ -183,11 +184,12 @@ function renderSignals(root,ds,result){
  const kp=info.kp===null?tr('Kp — немає актуальних даних'):'Kp '+new Intl.NumberFormat(window.NRLocale?.locale||'uk-UA',{maximumFractionDigits:2}).format(info.kp)+' · '+tr(info.provisional?'Оцінка NOAA':'Спостереження');
  const labels=[kp,dl?.date===ds&&dl.status==='available'?dl.initialLabel+' · '+tr('На початок дня'):tr('Календарні дані відсутні'),SkyScore.formatScore(result?.available?result.score:null)+' · '+tr(result?.authority==='expert_pdf'?'Експертна оцінка':result?.available?'Формула джерела':'Оцінка недоступна')];
  buttons[0].dataset.observedAt=info.observedAt?new Date(info.observedAt).toISOString():'';buttons[0].title=info.observedAt?new Date(info.observedAt).toISOString().replace('T',' ').slice(0,16)+' UTC':tr('Kp — немає актуальних даних');
- buttons.forEach((b,i)=>{b.setAttribute('aria-label',tr(['Астрономія й NOAA','Панчанга','Оцінка дня'][i])+': '+labels[i]+(i===0?' '+b.title:''));const compact=i===0?(info.kp===null?'—':'Kp '+new Intl.NumberFormat(window.NRLocale?.locale||'uk-UA',{maximumFractionDigits:2}).format(info.kp)):i===1?labels[i].split(' · ')[0].replace(/^[^:]+: /,''):labels[i];b.replaceChildren(make('span','',tr([info.provisional?'Оцінка NOAA':'NOAA','Панчанга','Оцінка дня'][i])),make('strong','',compact));if(i===0)b.append(make('small','',info.observedAt?new Date(info.observedAt).toISOString().slice(11,16)+' UTC':tr('Оцінка недоступна')));});
+ buttons.forEach((b,i)=>{b.setAttribute('aria-label',tr(['Астрономія й NOAA','Панчанга','Оцінка дня'][i])+': '+labels[i]+(i===0?' '+b.title:''));const compact=i===0?(info.kp===null?'—':'Kp '+new Intl.NumberFormat(window.NRLocale?.locale||'uk-UA',{maximumFractionDigits:2}).format(info.kp)):i===1?labels[i].split(' · ')[0].replace(/^[^:]+: /,''):labels[i];b.replaceChildren(make('span','',tr([info.provisional?'Оцінка NOAA':'NOAA','Панчанга','Оцінка дня'][i])),make('strong','',compact));if(i===0)b.append(make('small','',info.observedAt?new Date(info.observedAt).toISOString().slice(11,16)+' UTC':tr('Kp — немає актуальних даних')));});
 }
 function renderTimeline(root,ds){
  const line=root.querySelector('.sr-dayline');if(!line)return;
  let box=line.querySelector('[data-sky-events]');if(!box){box=make('details','sr-sky-events');box.open=false;box.dataset.skyEvents='';line.querySelector('.sr-dl-story').after(box);}
+ const explore=line.querySelector('[data-p0-explore]');if(explore&&box.parentElement!==explore)explore.append(box);
  const snap=window.SRDayLineView?.snapshot();box.replaceChildren();
  if(snap?.date!==ds||snap.status!=='available'){box.hidden=true;return;}box.hidden=false;
  box.append(make('summary','','Хронологія неба'),make('p','sr-dl-muted',tr('Розраховані події')+' · '+({uk:'місцевий час',en:'local time',es:'hora local',fr:'heure locale'}[window.NRLocale?.language||'uk'])));const list=make('ol','');
