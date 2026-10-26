@@ -404,6 +404,10 @@
   }
   async function renderPanchGuide(){
     const box=document.getElementById('nrPanchNow');if(!box)return;
+    const guide=document.getElementById('nrPanchGuide'),practice=guide?.querySelector('.nr-panch-practice')?.closest('section');
+    let help=guide?.querySelector('[data-panch-help]');if(practice&&!help){help=document.createElement('details');help.className='nr-panch-section';help.dataset.panchHelp='';help.append(document.createElement('summary'));practice.before(help);help.append(practice);for(const e of guide.querySelectorAll(':scope > .nr-panch-boundary,:scope > .nr-panch-actions'))help.append(e);}
+    if(help)help.querySelector('summary').textContent=({uk:'Як читати панчангу та межі тлумачення',en:'Reading Panchanga and interpretation limits',es:'Cómo leer Panchanga y límites de interpretación',fr:'Lire le Panchanga et limites d’interprétation'}[window.NRLocale?.language||'uk']);
+
     const NAK=['Ashwini','Bharani','Krittika','Rohini','Mrigashira','Ardra','Punarvasu','Pushya','Ashlesha','Magha','Purva Phalguni','Uttara Phalguni','Hasta','Chitra','Swati','Vishakha','Anuradha','Jyeshtha','Mula','Purva Ashadha','Uttara Ashadha','Shravana','Dhanishtha','Shatabhisha','Purva Bhadrapada','Uttara Bhadrapada','Revati'];
     const YOGA=['Vishkambha','Priti','Ayushman','Saubhagya','Shobhana','Atiganda','Sukarma','Dhriti','Shula','Ganda','Vriddhi','Dhruva','Vyaghata','Harshana','Vajra','Siddhi','Vyatipata','Variyana','Parigha','Shiva','Siddha','Sadhya','Shubha','Shukla','Brahma','Indra','Vaidhriti'];
     const VARA=['Неділя · Сонце','Понеділок · Місяць','Вівторок · Марс','Середа · Меркурій','Четвер · Юпітер','П’ятниця · Венера','Субота · Сатурн'];
@@ -418,14 +422,15 @@
       }
       const local={...day,components:localComponents};
       const fmtTime=d=>window.NRPresentation.dateFormatter('uk-UA',{timeZone:zone,hour:'2-digit',minute:'2-digit'}).format(new Date(d));
-      const fmtValue=(name,value)=>{if(name==='nakshatra')return NAK[Number(value)-1]||String(value);if(name==='yoga')return YOGA[Number(value)-1]||String(value);if(name==='tithi'){const v=Number(value);return `${v} · ${v<=15?'Шукла':'Крішна'}`};return String(value)};
+      const lang=window.NRLocale?.language||'uk',kindLabel=k=>k==='Vara'?(lang==='uk'?'Вара':'Vara'):SkyRhythmI18n.t(lang,'kind.'+k.toLowerCase());
+      const fmtValue=(kind,value)=>SkyRhythmI18n.name(kind,kind==='karana'?value:Number(value),lang);
       function current(name){const segments=local.components[name].segments,seg=segments.find(s=>Date.parse(s.start_utc)<=now&&now<Date.parse(s.end_utc));if(!seg)return {value:'Не перевірено',end:null,hasNext:false,missing:true};const idx=segments.indexOf(seg),next=segments[idx+1],sameDay=next&&localDate(next.start_utc)===localDay;return {value:fmtValue(name,seg.value),end:seg.end_utc,hasNext:!!sameDay,next:sameDay?fmtValue(name,next.value):null};}
       const meanings={Tithi:'місячний ритм',Vara:'цивільний день тижня',Nakshatra:'характер дії',Yoga:'фон взаємодії',Karana:'короткий практичний ритм'};
       const rows=[['Tithi',current('tithi')],['Vara',{value:VARA[new Date(localDay+'T12:00:00Z').getUTCDay()],end:null,hasNext:false}],['Nakshatra',current('nakshatra')],['Yoga',current('yoga')],['Karana',current('karana')]];
       const events=[];for(const [key,label] of [['tithi','Tithi'],['nakshatra','Nakshatra'],['yoga','Yoga'],['karana','Karana']]){const segs=local.components[key].segments;for(let i=1;i<segs.length;i++)if(localDate(segs[i].start_utc)===localDay)events.push({at:segs[i].start_utc,label,value:fmtValue(key,segs[i].value)})}events.sort((a,b)=>Date.parse(a.at)-Date.parse(b.at));
       const dateText=window.NRPresentation.dateFormatter(window.NRLocale?.locale||'uk-UA',{timeZone:zone,weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(new Date(now));
       const incomplete=rows.some(([,x])=>x.missing||(x.end&&!x.hasNext&&localDate(x.end)===localDay));
-      const zoneLabel=['Europe/Kyiv','Europe/Kiev'].includes(zone)?'за київським часом':'місцевий час пристрою · '+zone;
+      const zoneLabel=['Europe/Kyiv','Europe/Kiev'].includes(zone)?'за київським часом':'місцевий час пристрою';
       const cards=rows.map(([name,x])=>`<article class="nr-panch-component"><b>${({Tithi:'Тітхі',Vara:'Вара',Nakshatra:'Накшатра',Yoga:'Йога',Karana:'Карана'})[name]||name}</b><strong>${escapeHtml(String(x.value))}</strong><small>${escapeHtml(meanings[name])}</small><small class="nr-panch-until">${x.missing?'Немає даних для поточного моменту':x.hasNext?`до ${fmtTime(x.end)}, далі ${escapeHtml(String(x.next))}`:x.end&&localDate(x.end)===localDay?'Наступний перехід не підтверджено':'без наступної зміни сьогодні'}</small></article>`).join('');
       const timeline=events.length?events.map(e=>`<div class="nr-panch-event${Date.parse(e.at)<=now?' is-past':''}"><time datetime="${escapeHtml(e.at)}">${fmtTime(e.at)}</time><b>${({Tithi:'Тітхі',Vara:'Вара',Nakshatra:'Накшатра',Yoga:'Йога',Karana:'Карана'})[e.label]||e.label}</b><span>починається <strong>${escapeHtml(e.value)}</strong></span></div>`).join(''):`<div class="nr-panch-empty">${incomplete?'Недостатньо даних, щоб перелічити переходи цієї доби.':'Переходів до завершення календарної доби немає.'}</div>`;
       const next=events.find(e=>Date.parse(e.at)>now);

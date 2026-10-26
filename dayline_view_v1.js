@@ -37,12 +37,12 @@ function markers(){const bar=q('[data-track]'),axis=q('[data-axis]'),focus=bar.c
  const width=bar.clientWidth;if(width<48)return;const a=Date.parse(data.start),b=Date.parse(data.end),x=p=>24+(width-48)*p,groups=[];
  if(sunset){const pct=x((sunset-a)/(b-a))/width*100;bar.style.background=`linear-gradient(90deg,var(--dl-day) ${pct}%,var(--dl-night) ${pct}%)`;}
  function tick(t,label,align){const s=create('span',align,`${label} ${fmt(t)}`);s.style.left=x((t-a)/(b-a))+'px';s.title=stamp(t);axis.append(s);}
- tick(a,'↑','start');tick(b,'↑','end');if(sunset&&width>270)tick(sunset,'↓','middle');
+ tick(a,'↑ '+w(31),'start');tick(b,'↑ '+w(33),'end');if(sunset&&width>270)tick(sunset,'↓ '+w(32),'middle');
  bar.setAttribute('aria-label',w(31)+' '+stamp(a)+(sunset?' · '+w(32)+' '+stamp(sunset):'')+' · '+w(33)+' '+stamp(b));
  let legend=q('[data-marker-legend]');if(!legend){legend=create('p','sr-dl-muted');legend.dataset.markerLegend='';axis.after(legend);}legend.textContent=['tithi','nakshatra','yoga','karana'].map((k,i)=>['☾','✦','◇','◐'][i]+' '+tr('kind.'+k)).join(' · ');
  const now=Date.now();if(now>=a&&now<b){const n=create('i','sr-dl-now');n.style.left=x((now-a)/(b-a))+'px';n.setAttribute('aria-label',w(4)+' '+fmt(now));n.append(create('span','',w(4)));bar.append(n);}
  data.events.forEach((e,i)=>{const px=x(e.position),g=groups.at(-1);if(g&&px-g.x<48)g.items.push({e,i});else groups.push({x:px,items:[{e,i}]});});
- for(const g of groups){const b=button(g.items.length>1?'⋯':({tithi:'☾',nakshatra:'✦',yoga:'◇',karana:'◐',vara:'☀'}[g.items[0].e.kind]||'●'),()=>explain(g.items[0].i));b.dataset.index=g.items[0].i;const clock=create('time','sr-event-clock',fmt(g.items[0].e.at));clock.dateTime=g.items[0].e.at;clock.setAttribute('aria-hidden','true');b.append(clock);b.dataset.eventCount=String(g.items.length);b.style.left=g.x+'px';b.setAttribute('aria-label',g.items.map(({e})=>eventText(e)).join('; '));bar.append(b);if(focus!==null&&g.items.some(x=>String(x.i)===focus))b.focus({preventScroll:true});}
+ for(const g of groups){const b=button(g.items.length>1?String(g.items.length):({tithi:'☾',nakshatra:'✦',yoga:'◇',karana:'◐',vara:'☀'}[g.items[0].e.kind]||'●'),()=>g.items.length>1?explainGroup(g.items):explain(g.items[0].i));b.dataset.index=g.items[0].i;const clock=create('time','sr-event-clock',fmt(g.items[0].e.at));clock.dateTime=g.items[0].e.at;clock.setAttribute('aria-hidden','true');b.append(clock);b.dataset.eventCount=String(g.items.length);if(g.items.length>1)b.title=({uk:'Подій: ',en:'Events: ',es:'Eventos: ',fr:'Événements : '}[lang])+g.items.length;b.style.left=g.x+'px';b.setAttribute('aria-label',g.items.map(({e})=>eventText(e)).join('; '));bar.append(b);if(focus!==null&&g.items.some(x=>String(x.i)===focus))b.focus({preventScroll:true});}
 }
 function headline(){if(data?.status!=='available'){q('[data-headline]').textContent=tr('tlNoInterval');q('[data-explain]').disabled=true;q('[data-now]').disabled=true;return;}
  const a=Date.parse(data.start),b=Date.parse(data.end),now=Date.now(),inDay=now>=a&&now<b;
@@ -52,6 +52,7 @@ function headline(){if(data?.status!=='available'){q('[data-headline]').textCont
  q('[data-now]').disabled=!inDay;q('[data-now]').title=inDay?w(5):w(30);
 }
 function openDialog(title){const wasOpen=dialog.open;if(!wasOpen)returnFocus=document.activeElement;dialog.replaceChildren();const h=create('h2','',title);h.id='sr-dl-dialog-title';dialog.append(button(w(14),()=>dialog.close()),h);if(!wasOpen)dialog.showModal();return dialog;}
+function explainGroup(items){const title=({uk:'Події поруч на шкалі',en:'Events close on the timeline',es:'Eventos próximos en la escala',fr:'Événements proches sur la frise'})[lang],d=openDialog(title);for(const {e,i}of items)d.append(button(eventText(e),()=>explain(i)));d.querySelector('button').focus();}
 function explain(i){const e=data?.events[i];if(!e)return;currentEvent=i;const d=openDialog(eventText(e));
  const facts=create('section','sr-dl-fact');facts.append(create('h3','',w(8)),create('p','',(defs[lang]||defs.uk)[e.kind]),create('h3','',w(9)),create('p','',tr('pa.conv')));
  const link=create('a','',w(11)+' · MeeusCore.panchangaAt');link.href='meeus_core_v1.js';link.target='_blank';link.rel='noopener';facts.append(link);d.append(facts);
@@ -87,7 +88,7 @@ function mount(root){if(node)return;rootNode=root;node=create('section','sr-dayl
  const closeDay=create('div','sr-dl-close-day');closeDay.setAttribute('translate','no');closeDay.append(create('p','',w(39)),button(w(20),()=>window.NRConsumerOverview.openOutcome()));root.append(closeDay);
 }
 async function render(root,date){if(root.dataset.overview!=='today'||!window.MeeusCore||!window.SkyRhythmDayLine||!window.Astronomy||!window.SRDayLineAsync)return;const sequence=++renderSequence;lang=window.NRLocale?.language||'uk';mount(root);
- q('h2').textContent=tr('tlTitle');q('[data-settings]').textContent=w(3);q('[data-kicker]').textContent=w(0);q('[data-explain]').textContent=w(1)+' →';q('[data-share]').textContent=w(2);q('[data-now]').textContent=w(5);q('[data-place]').textContent=place()+' · '+pref.zone;q('[data-scope]').textContent=w(40);
+ q('h2').textContent=tr('tlTitle');q('[data-settings]').textContent=w(3);q('[data-kicker]').textContent=w(0);q('[data-explain]').textContent=w(1)+' →';q('[data-share]').textContent=w(2);q('[data-now]').textContent=w(5);q('[data-place]').textContent=place()+' · '+({uk:'місцевий час',en:'local time',es:'hora local',fr:'heure locale'}[lang]);q('[data-scope]').textContent=w(40);
  q('figcaption small').textContent=tr('artAlt');q('[data-scrub-label]').textContent=tr('tlMoment');q('[data-events] summary').textContent=tr('tlEvents');q('[data-method] summary').textContent=tr('pr.h1');q('[data-style-label]').textContent=tr('pr.style');
  for(const o of node.querySelectorAll('[data-style]'))o.textContent=tr('st.'+o.dataset.style);q('input[value='+pref.style+']').checked=true;
  q('[data-artnote]').textContent=tr('pr.p1');q('[data-source]').textContent=tr('pr.p2');q('[data-convention]').textContent=tr('pa.conv');root.querySelector('.sr-dl-close-day p').textContent=w(39);root.querySelector('.sr-dl-close-day button').textContent=w(20);

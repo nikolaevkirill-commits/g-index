@@ -394,7 +394,7 @@ setInterval(()=>update(),60000);
 'use strict';
 const key='gindex_local_context_v1',tr=s=>window.NRLocale?.text(s)||s;
 let location=null,source='saved',message='',busy=false;
-function valid(x){if(!x||typeof x.lat!=='number'||typeof x.lon!=='number'||!Number.isFinite(x.lat)||!Number.isFinite(x.lon)||Math.abs(x.lat)>90||Math.abs(x.lon)>180)return false;try{new Intl.DateTimeFormat('en',{timeZone:x.zone});return typeof x.zone==='string'&&Number.isFinite(Date.parse(x.saved_at))}catch{return false}}
+function valid(x,requireSaved=true){if(!x||typeof x.lat!=='number'||typeof x.lon!=='number'||!Number.isFinite(x.lat)||!Number.isFinite(x.lon)||Math.abs(x.lat)>90||Math.abs(x.lon)>180)return false;try{new Intl.DateTimeFormat('en',{timeZone:x.zone});return typeof x.zone==='string'&&(!requireSaved||Number.isFinite(Date.parse(x.saved_at)))}catch{return false}}
 try{const saved=JSON.parse(localStorage.getItem(key));if(valid(saved))location=saved}catch{}
 const dateIn=(t,zone)=>new Intl.DateTimeFormat('en-CA',{timeZone:zone,year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(t));
 // Complete missing events when the noon hour-angle approximation is undefined.
@@ -423,7 +423,7 @@ function completeSolarEvents(result,x){
 }
 
 function solar(x,now=Date.now()){
- if(!valid(x)||typeof sunRiseSetUTC_Meeus!=='function')return {state:'unavailable'};
+ if(!valid(x,false)||typeof sunRiseSetUTC_Meeus!=='function')return {state:'unavailable'};
  const date=dateIn(now,x.zone),mid=Date.parse(date+'T12:00:00Z'),result={state:'calculated',date,zone:x.zone,sunrise:null,sunset:null};
  for(let i=-2;i<=2;i++){const pair=sunRiseSetUTC_Meeus(new Date(mid+i*86400000),x.lat,x.lon);for(const k of ['sunrise','sunset'])if(Number.isFinite(pair[k]?.getTime())&&dateIn(pair[k],x.zone)===date)result[k]=pair[k].toISOString();}
  return (!result.sunrise||!result.sunset)?completeSolarEvents(result,x):result;
@@ -440,11 +440,12 @@ function render(){
   form.onsubmit=e=>{e.preventDefault();const x={lat:Number(form.elements.lat.value),lon:Number(form.elements.lon.value),zone:form.elements.zone.value.trim(),saved_at:new Date().toISOString()};if(!form.elements.lat.value.trim()||!form.elements.lon.value.trim()||!valid(x)){message='Некоректні координати або часовий пояс.';render();return}persist(x,'manual')};
   box.querySelector('[data-clear]').onclick=()=>{try{localStorage.removeItem(key);location=null;message='Місце видалено.';form.reset();form.elements.zone.value=Intl.DateTimeFormat().resolvedOptions().timeZone}catch{message='Не вдалося видалити місце.'}render()};
  }
+ box.querySelector('[data-scope]').before(box.querySelector('[data-limit]'));
  const put=(selector,text)=>{const e=box.querySelector(selector);if(e.textContent!==text)e.textContent=text};
  for(const [selector,text] of Object.entries({'[data-title]':'Сонце для вашого місця','[data-locate]':'Визначити моє місце','[data-manual]':'Ввести або змінити місце','[data-lat]':'Широта (−90…90)','[data-lon]':'Довгота (−180…180)','[data-zone]':'Часовий пояс IANA','[data-save]':'Зберегти місце','[data-clear]':'Видалити місце','[data-scope-title]':'Які показники залежать від місця'}))put(selector,tr(text));
  box.querySelector('[data-locate]').disabled=busy;put('[data-status]',tr(message));
- put('[data-position]',location?tr(source==='device'?'Координати пристрою: ':source==='manual'?'Введені координати: ':'Збережені координати: ')+location.lat.toFixed(3)+', '+location.lon.toFixed(3)+' · '+location.zone+' · '+new Date(location.saved_at).toLocaleString(window.NRLocale?.locale,{timeZone:location.zone}):tr('Місце ще не визначено. Координати іншого міста не підставляються.'));
- const s=solar(location),fmt=t=>new Intl.DateTimeFormat(window.NRLocale?.locale,{timeZone:location.zone,hour:'2-digit',minute:'2-digit'}).format(new Date(t));
+ put('[data-position]',location?tr(source==='device'?'Координати пристрою: ':source==='manual'?'Введені координати: ':'Збережені координати: ')+location.lat.toFixed(3)+', '+location.lon.toFixed(3)+' · '+location.zone+' · '+new Date(location.saved_at).toLocaleString(window.NRLocale?.locale,{timeZone:location.zone}):({uk:'Київ · типове місце. Геолокацію не визначено.',en:'Kyiv · default location. Geolocation not determined.',es:'Kyiv · lugar predeterminado. Geolocalización sin determinar.',fr:'Kyiv · lieu par défaut. Géolocalisation non déterminée.'}[window.NRLocale?.language||'uk']));
+ const effective=location||{lat:50.454,lon:30.524,zone:'Europe/Kyiv'},s=solar(effective),fmt=t=>new Intl.DateTimeFormat(window.NRLocale?.locale,{timeZone:effective.zone,hour:'2-digit',minute:'2-digit'}).format(new Date(t));
  put('[data-solar]',s.state==='calculated'?s.date+' · '+tr('Схід Сонця: ')+(s.sunrise?fmt(s.sunrise):tr('немає переходу горизонту'))+' · '+tr('Захід Сонця: ')+(s.sunset?fmt(s.sunset):tr('немає переходу горизонту')):tr('Схід і захід недоступні без коректного місця.'));
  put('[data-limit]',tr('Розрахунок для рівного горизонту; погода й рельєф можуть змінити спостережуваний час. Перевірте часовий пояс, особливо в подорожі. Цей блок не змінює бал дня.'));
  put('[data-scope]',tr('Kp, Ap, Dst — спільні геомагнітні індекси. Bz і сонячний вітер вимірюються в космосі, Sn — показник сонячної активності; координати їх не перераховують. Локальний K потребує обсерваторії і тут не підключений. Переходи панчанги показано за часом пристрою; Сонце в цьому блоці — за вказаним місцем. Бал і плани залишаються за Києвом.'));
