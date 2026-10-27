@@ -8,7 +8,7 @@ const server=http.createServer((q,s)=>{
 });
 (async()=>{
  await new Promise(r=>server.listen(0,'127.0.0.1',r));
- const b=await chromium.launch(),results=[];
+ const b=await chromium.launch({...(process.env.FP463_BROWSER?{executablePath:process.env.FP463_BROWSER}:{})}),results=[];
  try{
  for(const entry of ['index.html','design-v4.html'])for(const kind of ['daily','storm'])for(const width of [390,1280]){
   const ctx=await b.newContext({viewport:{width,height:844},serviceWorkers:'block'}),p=await ctx.newPage();

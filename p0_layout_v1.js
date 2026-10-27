@@ -123,7 +123,7 @@ function apply(root,ds,resolved){
  expertCaution(root,ds);
  feedStatus(root,ds,resolved);extras(root,ds);paintRing(root,resolved);if(root.dataset.overview!=='today'){compactForecast(root);compactRouteHero(root);return;}
  root.classList.add('sr-p0-today');const hero=root.querySelector('.nr-o-hero');if(!hero)return;
- const titleBox=root.querySelector('.nr-o-heading');if(titleBox){titleBox.dataset.referenceTitle='';titleBox.classList.add('sr-reference-title');hero.prepend(titleBox);titleBox.querySelector('h1').textContent=({uk:'Огляд дня',en:'Day overview',es:'Resumen del día',fr:'Aperçu du jour'}[window.NRLocale?.language||'uk']);}
+ const titleBox=root.querySelector('.nr-o-heading');if(titleBox){titleBox.dataset.referenceTitle='';titleBox.classList.add('sr-reference-title');if(hero.firstElementChild!==titleBox)hero.prepend(titleBox);titleBox.querySelector('h1').textContent=({uk:'Огляд дня',en:'Day overview',es:'Resumen del día',fr:'Aperçu du jour'}[window.NRLocale?.language||'uk']);}
  let details=root.querySelector(':scope > [data-p0-details]');
  if(!details){details=make('details','sr-p0-details');details.dataset.p0Details='';details.append(make('summary','','Детально: джерела, розрахунок і календар'));root.append(details);}
  let signals=root.querySelector(':scope > [data-p0-signals]');
