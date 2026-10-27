@@ -1,221 +1,161 @@
-/* SkyRhythm · wow_layer_v1.css — ЛИШЕ оформлення поверх 973dd30.
-   Не змінює бал, resolveFinal, фід, формулу. Кольори бала — з наявного data-score-tone / currentColor.
-   Аудит: SkyRhythm_UI_FULL_AUDIT_20261025.md (W-xx). */
-@font-face{font-family:'SR Lora';src:url(fonts_wow/lora.woff) format('woff');font-weight:400 700;font-display:swap}
-@font-face{font-family:'SR Manrope';src:url(fonts_wow/manrope.woff) format('woff');font-weight:300 800;font-display:swap}
-
+/* Consolidated presentation layer. Scores and astronomy remain owned by their runtime modules. */
+:root{--sr-ui-small:13px;}
+@font-face{font-family:"SR Lora";src:url(fonts_wow/lora.woff) format("woff");font-weight:400 700;font-display:swap}
+@font-face{font-family:"SR Manrope";src:url(fonts_wow/manrope.woff) format("woff");font-weight:300 800;font-display:swap}
 :root{
   --w-bg:#070d1f; --w-bg2:#0d1730; --w-surface:rgba(20,32,62,.72); --w-surface-2:rgba(26,40,74,.78);
   --w-line:rgba(150,175,230,.18); --w-line-strong:#6f84ad; --w-text:#f6f1e7; --w-muted:#b4c3e0;
   --w-accent:#afc6ff; --w-on-accent:#0b1530; --w-star:#e9c67e; --w-moon:#f3e9cf;
-  --w-display:'SR Lora',Georgia,serif; --w-ui:'SR Manrope',system-ui,sans-serif;
+  --w-display:"SR Lora",Georgia,serif; --w-ui:"SR Manrope",system-ui,sans-serif;
   --w-ease:cubic-bezier(.2,.7,.2,1); --w-spring:cubic-bezier(.21,1.3,.4,1);
 }
-
-/* W-01 Небо: фон сторінки — глибокий індиго + туманність + зірки (статичні шари; рух — нижче, декоративний) */
-html.wow body{background:radial-gradient(120% 70% at 75% -10%,#26386f 0%,rgba(38,56,111,0) 55%),radial-gradient(80% 50% at 0% 10%,rgba(92,70,150,.28) 0%,rgba(92,70,150,0) 60%),linear-gradient(180deg,#0a1430 0%,var(--w-bg) 38%,#050a17 100%) fixed!important;color:var(--w-text)}
-html.wow .wow-sky{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden}
-html.wow .wow-sky svg{position:absolute;inset:-10% -10% auto -10%;width:120%;height:120%}
-html.wow .wow-sky .tw{transform-box:fill-box;transform-origin:center}
-
-/* W-02 Шапка: бренд + великий Місяць (переміщений із hero, дані ті самі) */
-html.wow header{background:transparent!important;border-bottom:0!important;min-height:112px}
-html.wow #headerTitle{font-family:var(--w-display)!important;font-weight:700!important;font-size:30px!important;letter-spacing:.01em}
-html.wow #headerTitle::after{content:" ✦";color:var(--w-star);font-size:.6em;vertical-align:.5em}
-html.wow #headerSub{font-family:var(--w-ui)!important;font-size:14px!important;color:var(--w-muted)!important;opacity:1!important}
-html.wow #headerSub span{display:none}
-html.wow .wow-header-moon{position:absolute;right:max(16px,calc((100vw - 1480px)/2));top:10px;display:flex;align-items:center;gap:14px;color:var(--w-muted);font:13px/1.35 var(--w-ui);text-align:right}
-html.wow .wow-header-moon svg{width:92px;height:92px;overflow:visible;filter:drop-shadow(0 0 18px rgba(243,233,207,.35)) drop-shadow(0 0 42px rgba(175,198,255,.18))}
-html.wow .wow-header-moon b{display:block;color:var(--w-text);font-size:15px;font-weight:700}
-
-/* W-03 Hero: кільце бала — головний елемент */
-html.wow #nrRoute-today .sr-p0-today .nr-o-hero{background:linear-gradient(160deg,rgba(38,56,111,.55),rgba(14,24,48,.85))!important;border:1px solid var(--w-line)!important;border-radius:24px!important;box-shadow:0 24px 60px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.06)!important;padding:22px!important;gap:14px!important}
-html.wow #nrRoute-today .sr-p0-today .nr-o-verdict{order:1!important;display:flex!important;flex-direction:row!important;align-items:center!important;gap:18px!important}
-html.wow #nrRoute-today{min-height:0!important;padding-bottom:24px!important}
-html.wow body #nrRoute-today .nr-overview.sr-p0-today{background:transparent!important;box-shadow:none!important;border:0!important}
-html.wow body #mainContent{padding-bottom:calc(88px + env(safe-area-inset-bottom))!important}
-@media (min-width:1024px){html.wow body #mainContent{padding-bottom:32px!important}}
-html.wow #nrTopNav button.active,html.wow #nrTopNav [aria-current=page]{color:var(--w-on-accent)!important;background:var(--w-accent)!important}
-html.wow body #nrRoute-today .nr-overview.sr-p0-today .nr-o-verdict .nr-o-score.nr-o-score,html.wow body #nrRoute-today .nr-overview.sr-p0-today .nr-o-verdict .nr-o-score[data-score-tone]{position:relative;width:112px;height:112px;flex:none;display:grid!important;place-items:center;border-radius:50%;background:radial-gradient(circle at 50% 45%,rgba(255,255,255,.06),rgba(0,0,0,0) 62%)!important;font:800 46px/1 var(--w-ui)!important;letter-spacing:-.03em!important;padding:0!important;border:0!important}
-html.wow .wow-ring{position:absolute;inset:0;width:112px;height:112px;overflow:visible;pointer-events:none}
-html.wow .wow-ring .trk{stroke:rgba(255,255,255,.08)}
-html.wow .wow-ring .arc{stroke:currentColor;filter:drop-shadow(0 0 8px currentColor)}
-html.wow #nrRoute-today .sr-p0-today .nr-o-label{font:800 19px/1.25 var(--w-ui)!important;color:inherit!important}
-html.wow #nrRoute-today .sr-p0-today .nr-o-verdict:has(.nr-o-score[data-score-tone=positive]) .nr-o-label{color:#63e6ad!important}
-html.wow #nrRoute-today .sr-p0-today .nr-o-verdict:has(.nr-o-score[data-score-tone=negative]) .nr-o-label{color:#ff858d!important}
-html.wow #nrRoute-today .sr-p0-today .nr-o-verdict:has(.nr-o-score[data-score-tone=neutral]) .nr-o-label{color:#ffdc75!important}
-html.wow #nrRoute-today .sr-p0-sentence{order:2!important;font:400 18px/1.45 var(--w-display)!important;color:var(--w-text)}
-html.wow #nrRoute-today .sr-p0-source{order:3!important;min-height:44px;border-radius:999px!important;background:rgba(175,198,255,.08)!important;border-color:rgba(175,198,255,.35)!important;color:var(--w-text)!important;font:700 13px var(--w-ui)!important;letter-spacing:.02em}
-html.wow #nrRoute-today [data-p0-date]{order:0!important;align-self:flex-start;font:13px var(--w-ui)!important;color:var(--w-muted)}
-html.wow #nrRoute-today [data-p0-date] *{font-size:inherit}
-html.wow #nrRoute-today [data-p0-date] select{background:rgba(10,18,40,.6)!important;border:1px solid var(--w-line-strong)!important;border-radius:12px!important;color:var(--w-text)!important;font:600 16px var(--w-ui)!important}
-html.wow #nrRoute-today .sr-p0-today .sr-p0-moon{display:none!important} /* перенесено в шапку (W-02) */
-html.wow #nrRoute-today .sr-p0-feed-state,html.wow #nrRoute-today .sr-p0-feed-state *{font:13px/1.4 var(--w-ui)!important}
-html.wow #nrRoute-today .sr-p0-feed-state{order:4;color:var(--w-muted)!important;margin:0!important}
-html.wow #nrRoute-today .sr-p0-feed-state span{color:var(--w-muted)!important;font-weight:600}
-html.wow #nrRoute-today .sr-p0-feed-state::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:#8fb8ff;margin-right:7px;vertical-align:1px}
-html.wow #nrRoute-today .sr-p0-feed-state[data-state=stale]::before,html.wow #nrRoute-today .sr-p0-feed-state[data-state=offline]::before{background:#ffb86b}
-html.wow #nrRoute-today .sr-p0-feed-state[data-state=error]::before{background:#ff7182}
-
-/* W-05 Сигнали зі значеннями */
-html.wow #nrRoute-today .sr-p0-signals button{background:var(--w-surface-2)!important;border:1px solid var(--w-line)!important;border-radius:16px!important;text-align:left!important;padding:12px 14px!important;min-height:72px!important;color:var(--w-muted)!important;font:600 12px/1.3 var(--w-ui)!important;letter-spacing:.02em;display:flex!important;flex-direction:column;justify-content:center;gap:4px}
-html.wow #nrRoute-today .sr-p0-signals button b{display:block;color:var(--w-text);font:700 15px/1.3 var(--w-ui);letter-spacing:0}
-html.wow #nrRoute-today .sr-p0-signals button:nth-child(1){border-top:3px solid #8fb8ff!important}
-html.wow #nrRoute-today .sr-p0-signals button:nth-child(2){border-top:3px solid #c7b4ff!important}
-html.wow #nrRoute-today .sr-p0-signals button:nth-child(3){border-top:3px solid var(--w-text)!important}
-
-/* W-06 Лінія дня: скло + читабельні підписи */
-html.wow #nrRoute-today .sr-dayline{background:var(--w-surface)!important;border:1px solid var(--w-line)!important;border-radius:24px!important;backdrop-filter:blur(6px)}
-html.wow #nrRoute-today .sr-dayline h2{font:700 26px var(--w-display)!important}
-html.wow #nrRoute-today .sr-dayline .sr-dl-muted,html.wow #nrRoute-today .sr-dayline>p{font-size:13px!important;color:var(--w-muted)!important}
-html.wow .wow-events{list-style:none;margin:12px 0 4px;padding:0;position:relative}
-html.wow .wow-events:before{content:"";position:absolute;left:54px;top:10px;bottom:10px;width:2px;background:var(--w-line)}
-html.wow .wow-events li{display:grid;grid-template-columns:46px 20px 1fr;align-items:center;min-height:36px;color:var(--w-text)}
-html.wow .wow-events li>*{font:500 14px/1.35 var(--w-ui)!important}
-html.wow .wow-events li span small{font-size:13px!important;color:var(--w-muted);margin-left:6px}
-html.wow .wow-events time{color:var(--w-muted);font-variant-numeric:tabular-nums}
-html.wow .wow-events i{width:9px;height:9px;border-radius:50%;background:#c7b4ff;justify-self:center;position:relative;z-index:1;box-shadow:0 0 0 3px rgba(199,180,255,.15)}
-html.wow .wow-events li.astro i{background:#8fb8ff;box-shadow:0 0 0 3px rgba(143,184,255,.15)}
-html.wow .wow-events li.now i{background:var(--w-star);box-shadow:0 0 0 4px rgba(233,198,126,.25)}
-
-/* W-07 Акцент: блакитний замість золотого; внутрішні переходи без ↗ */
-html.wow #nrRoute-today .nr-o-journey button{background:var(--w-surface-2)!important;border:1px solid var(--w-line)!important;border-radius:16px!important;color:var(--w-text)!important;min-height:72px!important}
-html.wow #nrRoute-today .nr-o-journey button:first-child{background:var(--w-accent)!important;color:var(--w-on-accent)!important;border-color:var(--w-accent)!important}
-html.wow #nrRoute-today .nr-o-journey button span{font:700 12px var(--w-ui)!important;letter-spacing:.05em;opacity:.85}
-html.wow #nrRoute-today .nr-o-journey button b{font:800 15px/1.25 var(--w-ui)!important}
-html.wow #mobileNav a[aria-current=page],html.wow #mobileNav .active,html.wow .nr-topnav [aria-current=page],html.wow .nr-topnav .active{color:var(--w-accent)!important}
-
-/* W-08 Типографіка: мін. 13 px для підписів, 12 px лише для мітки зони */
-html.wow #nrRoute-today,html.wow header,html.wow #mobileNav{font-family:var(--w-ui)}
-html.wow #mobileNav a,html.wow #mobileNav button{font-size:13px!important;min-height:56px}
-html.wow #nrRoute-today .sr-dayline span.start,html.wow #nrRoute-today .sr-dayline span.end,html.wow #nrRoute-today .sr-dayline span.middle{font-size:13px!important}
-html.wow #nrRoute-today .sr-dl-now,html.wow #nrRoute-today .sr-dayline [class*=now] span{font-size:12px!important}
-html.wow #nrRoute-today .sr-p0-signals button>span{font-size:13px!important}
-html.wow .wow-header-moon small{font-size:13px}
-@media (max-width:1023px){html.wow #headerSub{font-size:13px!important}}
-
-/* W-09 Деталі — як картка, без порожнин */
-html.wow #nrRoute-today .sr-p0-details{background:var(--w-surface)!important;border:1px solid var(--w-line)!important;border-radius:20px!important}
-
-/* W-10 Десктоп ≥ 1024: одна навігація, сітка 2 колонки, без порожнин */
-@media (min-width:1024px){
-  html.wow body nav#mobileNav#mobileNav{display:none!important}
-  html.wow body{padding-bottom:24px!important}
-  html.wow #nrRoute-today .sr-p0-today{display:grid!important;grid-template-columns:minmax(380px,440px) minmax(0,1fr);grid-template-rows:auto auto auto auto auto 1fr auto;grid-template-areas:"head head" "hero day" "state day" "journey day" "signals day" ". day" "details details";column-gap:28px;row-gap:16px;align-items:start;max-width:1180px;margin:0 auto}
-  html.wow #nrRoute-today .sr-p0-today>.nr-o-heading{grid-area:head;position:static!important;width:auto!important;height:auto!important;clip-path:none!important;overflow:visible!important}
-  html.wow #nrRoute-today .sr-p0-today>.nr-o-heading h1{font:700 30px var(--w-display)!important;margin:0!important}
-  html.wow #nrRoute-today .sr-p0-today>.nr-o-hero{grid-area:hero}
-  html.wow #nrRoute-today .sr-p0-today>.sr-p0-feed-state{grid-area:state;margin:0 4px!important}
-  html.wow #nrRoute-today .sr-p0-today>.nr-o-journey{grid-area:journey;margin:0!important}
-  html.wow #nrRoute-today .sr-p0-today>.sr-dayline{grid-area:day;margin:0!important}
-  html.wow #nrRoute-today .sr-p0-today>.sr-p0-signals{grid-area:signals;margin:0!important;grid-template-columns:1fr!important}
-  html.wow #nrRoute-today .sr-p0-today>.sr-p0-signals button{min-height:60px!important;flex-direction:row!important;justify-content:space-between!important;align-items:center!important;border-top-width:1px!important;border-left:3px solid currentColor!important}
-  html.wow #nrRoute-today .sr-p0-today>.sr-p0-signals button:nth-child(1){border-left-color:#8fb8ff!important}
-  html.wow #nrRoute-today .sr-p0-today>.sr-p0-signals button:nth-child(2){border-left-color:#c7b4ff!important}
-  html.wow #nrRoute-today .sr-p0-today>.sr-p0-signals button:nth-child(3){border-left-color:var(--w-text)!important}
-  html.wow #nrRoute-today .sr-p0-today>.sr-p0-details{grid-area:details;margin:0!important}
-  html.wow .nr-topnav{background:rgba(14,24,48,.6)!important;border:1px solid var(--w-line)!important;border-radius:18px!important;backdrop-filter:blur(8px)}
-  html.wow .nr-topnav a,html.wow .nr-topnav button{font:700 14px var(--w-ui)!important}
-}
-@media (max-width:1023px){
-  html.wow #nrRoute-today .sr-p0-today>.sr-p0-feed-state{order:2}
-  html.wow .wow-header-moon svg{width:64px;height:64px}
-  html.wow .wow-header-moon span{display:none}
-  html.wow .wow-header-moon{top:6px}
-}
-
-/* ===== W-11 Рух: одноразова поява + декоративне небо. Дані не анімуються як «живі». ===== */
-@keyframes wowRise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
-@keyframes wowDraw{from{stroke-dashoffset:var(--len)}to{stroke-dashoffset:var(--off)}}
-@keyframes wowPop{0%{transform:scale(.92);opacity:.2}60%{transform:scale(1.03);opacity:1}100%{transform:scale(1)}}
-@keyframes wowTwinkle{0%,100%{opacity:.25}50%{opacity:.95}}
-@keyframes wowDrift{from{transform:translate3d(0,0,0)}to{transform:translate3d(-3%,2%,0)}}
-@keyframes wowMeteor{0%{opacity:0;transform:translate(0,0) rotate(-24deg)}8%{opacity:1}100%{opacity:0;transform:translate(-520px,230px) rotate(-24deg)}}
-@keyframes wowMoonIn{from{opacity:0;transform:translateY(10px) scale(.94)}to{opacity:1;transform:none}}
-html.wow.sr-sky-motion .wow-header-moon svg{animation:wowMoonIn 1s var(--w-ease) both}
-html.wow.sr-sky-motion .wow-sky .tw{animation:wowTwinkle var(--d,5s) ease-in-out var(--dl,0s) infinite}
-html.wow.sr-sky-motion .wow-sky svg.layer2{animation:wowDrift 90s linear infinite alternate}
-html.wow.wow-paused *{animation-play-state:paused!important}
-@media (prefers-reduced-motion:reduce){html.wow *,html.wow *::before,html.wow *::after{animation:none!important;transition:none!important}}
-html.wow:not(.sr-sky-motion) .wow-sky *{animation:none!important}
-
-/* W-07б активна кнопка нижньої навігації — акцент, не золото; футер без власного чорного фону */
-html.wow body nav#mobileNav#mobileNav .mnav-btn.active,html.wow body nav#mobileNav#mobileNav [aria-current=page]{color:var(--w-accent)!important}
-html.wow body nav#mobileNav#mobileNav{background:rgba(7,13,31,.92)!important;backdrop-filter:blur(12px);border-top:1px solid var(--w-line)!important}
-html.wow body footer{background:transparent!important}
-
-/* W-16 Прогноз і Календар: та сама подача бала й ті самі виправлення, що на «Сьогодні» */
-html.wow body :is(#nrRoute-forecast,#nrRoute-calendar) .nr-overview .nr-o-verdict .nr-o-score[data-score-tone]{position:relative;width:112px;height:112px;flex:none;display:grid!important;place-items:center;border-radius:50%;background:radial-gradient(circle at 50% 45%,rgba(255,255,255,.06),rgba(0,0,0,0) 62%)!important;font:800 46px/1 var(--w-ui)!important;letter-spacing:-.03em!important;padding:0!important;border:0!important;margin:0!important}
-html.wow body :is(#nrRoute-forecast,#nrRoute-calendar) .nr-overview .nr-o-verdict{display:flex!important;flex-wrap:wrap!important;align-items:center!important;gap:14px 18px!important}
-html.wow body :is(#nrRoute-forecast,#nrRoute-calendar) .nr-overview .nr-o-verdict>:not(.nr-o-score):not(.nr-o-label){flex:1 1 240px!important;min-width:0!important} /* W-17: без розриву слова по літерах на 360/390 */
-html.wow body :is(#nrRoute-forecast,#nrRoute-calendar) .nr-overview .nr-o-label{font:800 19px/1.25 var(--w-ui)!important}
-html.wow body :is(#nrRoute-forecast,#nrRoute-calendar) .nr-overview .nr-o-verdict:has(.nr-o-score[data-score-tone=positive]) .nr-o-label{color:#63e6ad!important}
-html.wow body :is(#nrRoute-forecast,#nrRoute-calendar) .nr-overview .nr-o-verdict:has(.nr-o-score[data-score-tone=negative]) .nr-o-label{color:#ff858d!important}
-html.wow body :is(#nrRoute-forecast,#nrRoute-calendar) .nr-overview .nr-o-verdict:has(.nr-o-score[data-score-tone=neutral]) .nr-o-label{color:#ffdc75!important}
-html.wow body :is(#nrRoute-forecast,#nrRoute-calendar) .nr-o-heading>span{display:none!important} /* «SKYRHYTHM · EUROPE/KYIV» */
-html.wow body :is(#nrRoute-forecast,#nrRoute-calendar) .nr-o-heading h1{font:700 28px var(--w-display)!important}
-html.wow body :is(#nrRoute-forecast,#nrRoute-calendar) .nr-overview>.nr-o-hero,html.wow body :is(#nrRoute-forecast,#nrRoute-calendar) .nr-overview{background:linear-gradient(160deg,rgba(38,56,111,.45),rgba(14,24,48,.85))!important;border-color:var(--w-line)!important;border-radius:24px!important}
-html.wow body #nrRoute-calendar :is(h2,h3)[class*=month],html.wow body #nrRoute-calendar .sr-p0-month-head h2{font:700 22px var(--w-display)!important}
-
-/* W-18 вибраний день у Прогнозі — акцент, а не золото (золото = «нейтральний» бал) */
-html.wow body #nrRoute-forecast button[aria-pressed=true]{background:#AFC6FF!important;color:#0B1530!important;border-color:#AFC6FF!important}
-/* Integration corrections: retain all content and structured-data rendering. */
-html.wow body{isolation:isolate}html.wow .wow-sky{z-index:-1}
-html.wow body>header{position:relative!important;min-height:116px!important;padding-right:180px!important}
-html.wow .wow-header-moon{right:24px;top:8px;max-width:46%;gap:12px}
-html.wow .wow-header-moon span{display:block;font-size:12px;line-height:1.5}
-html.wow .wow-header-moon small{font-size:12px}
-html.wow #nrRoute-today .sr-p0-today .sr-p0-moon{display:none!important}
-html.wow body #nrRoute-today .nr-o-verdict .nr-o-score[data-ring]{background:transparent!important;border-radius:50%!important;color:var(--score-color)!important}
-html.wow .nr-o-score[data-ring=value]::before{filter:drop-shadow(0 0 7px var(--score-color))}
-html.wow #nrRoute-today .sr-p0-signals strong{font-size:14px;line-height:1.5;color:var(--w-text)}
-html.wow .sr-sky-events li{grid-template-columns:110px minmax(0,1fr)!important;gap:12px;border-bottom:1px solid var(--w-line);padding:0!important}
-html.wow .sr-sky-events button{background:transparent!important;border:0!important;border-radius:8px!important;color:var(--w-text);padding:8px!important;min-height:44px}
-html.wow .sr-sky-events time{font-size:13px!important;color:var(--w-muted)}
-html.wow .sr-sky-events li>span{padding:8px;min-height:44px;box-sizing:border-box}
-html.wow .sr-sky-events li>button::before,html.wow .sr-sky-events li>span::before{content:'●';font-size:10px;color:#c7b4ff;margin-right:8px}
-html.wow #nrRoute-today{min-height:0!important}
-html.wow .sr-p0-today{margin-bottom:16px!important}
-html.wow .nr-o-horizon-list button{display:grid!important;grid-template-columns:minmax(0,1fr) auto;gap:6px 14px;padding:14px!important;min-height:88px;white-space:normal!important}
-html.wow .nr-o-horizon-list .sr-forecast-date{font-size:16px;font-weight:700;grid-column:1}
-html.wow .nr-o-horizon-list strong{grid-column:2;grid-row:1 / span 2;align-self:center;display:grid;place-items:center;min-width:44px;min-height:44px;border:1px solid currentColor;border-radius:50%;background:#091521!important}
-html.wow .nr-o-horizon-list small{grid-column:1;font-size:13px;line-height:1.5;white-space:normal;overflow-wrap:anywhere}
-@media(max-width:1023px){html.wow body>header{padding-right:110px!important;min-height:104px!important}html.wow .wow-header-moon{right:12px;top:12px;max-width:100px}html.wow .wow-header-moon span{display:none}html.wow .wow-header-moon svg{width:76px;height:76px}}
-@media(max-width:420px){html.wow .sr-sky-events li{grid-template-columns:90px minmax(0,1fr)!important}html.wow #mobileNav button{font-size:11px!important}}
-html.wow{background:#070d1f}
-html.wow body{background-attachment:scroll!important;background-color:#070d1f!important}
-html.wow .wow-header-moon span{max-width:240px;white-space:normal;order:-1}
-html.wow .wow-header-moon span small{display:block;line-height:1.5}
-html.wow body.fp434-app #nrRoute-today .nr-overview.sr-p0-today{margin:24px auto 16px!important}
-html.wow body #fp434Shell{padding-bottom:12px!important}
-html.wow body #nrRoute-today>.sr-festival-decision{max-width:1180px;margin:16px auto!important;box-sizing:border-box}
-html.wow body #nrFooterDetails{max-width:1180px;margin:0 auto 12px}
-html.wow body #nrRoute-forecast .nr-o-horizon-list button[aria-pressed=true] small{color:#0b1530!important}
-/* C08: disclosure controls on Panchanga need the same minimum target as buttons. */
-html.wow body #nrRoute-panch summary{min-height:44px;box-sizing:border-box;padding-top:12px;padding-bottom:12px}
-/* Discrete final-score chart: shared semantic colors, no invented interpolation. */
-html.wow .sr-forecast-graph{margin:16px 0;padding:18px;border:1px solid #50658b;border-radius:22px;background:linear-gradient(145deg,#182948,#101a30);box-shadow:0 12px 32px #04091840}
-html.wow .sr-forecast-graph figcaption{font-family:Manrope,sans-serif;font-size:18px;font-weight:700;color:#edf3ff}
-html.wow .sr-forecast-graph svg{display:block;width:100%;max-width:700px;height:auto;margin:14px auto 0;overflow:visible}
-html.wow .sr-forecast-graph p{color:#c7d4ec;font-size:13px;line-height:1.5;margin:12px 0 0}
-html.wow .sr-p0-tabs button[aria-pressed=true]{background:#bad6ff!important;color:#102346!important;border-color:#bad6ff!important}
-
-/* Panchanga actions use navigation blue, never the neutral-score yellow. */
-html.wow body #nrRoute-panch button{background:#bad6ff!important;color:#102346!important;border-color:#bad6ff!important}
-html.wow body #nrRoute-panch button.secondary{background:transparent!important;color:#bad6ff!important}
-
-html.wow .sr-expert-caution{padding:20px;margin:16px 0;border:1px solid #6e88b8;border-left:3px solid #bad6ff;border-radius:18px;background:#152440;color:#edf3ff;grid-column:1/-1}
-html.wow .sr-expert-caution small,html.wow .sr-expert-caution .sr-caution-note{color:#c7d4ec;font-size:13px;line-height:1.5}
-html.wow .sr-expert-caution h2{font-size:20px;margin:10px 0}
-html.wow .sr-expert-caution a{color:#bad6ff;text-decoration:underline;display:inline-block;min-height:44px;line-height:1.5;padding:10px 0;box-sizing:border-box}
-
-/* W-18: reserve bottom navigation space once, on body; retain safe-area. */
-html.wow body.fp434-app main#mainContent{padding-bottom:16px!important}
-html.wow body #fp434Shell>.nr-route{padding-bottom:16px!important}
-html.wow body #fp434Shell .nr-overview{margin-bottom:16px!important}
-
-/* W-14: readable navigation and first-screen labels; no global text resizing. */
-html.wow body #mobileNav button.mnav-btn{font-size:13px!important;letter-spacing:0!important;padding-inline:2px!important}
+html.wow body{color:var(--w-text);}
+html.wow .wow-sky{position:fixed;inset:0;pointer-events:none;overflow:hidden;}
+html.wow .wow-sky svg{position:absolute;inset:-10% -10% auto -10%;width:120%;height:120%;}
+html.wow .wow-sky .tw{transform-box:fill-box;transform-origin:center;}
+html.wow header{background:transparent;border-bottom:0;min-height:112px;}
+html.wow #headerTitle{font-family:var(--w-display)!important;font-weight:700;font-size:30px;letter-spacing:.01em;}
+html.wow #headerTitle::after{content:" ✦";color:var(--w-star);font-size:.6em;vertical-align:.5em;}
+html.wow #headerSub{font-family:var(--w-ui);font-size:14px;color:var(--w-muted);opacity:1;}
+html.wow #headerSub span{display:none;}
+html.wow .wow-header-moon{position:absolute;display:flex;align-items:center;color:var(--w-muted);font:13px/1.35 var(--w-ui);text-align:right;}
+html.wow .wow-header-moon svg{width:92px;height:92px;overflow:visible;filter:drop-shadow(0 0 18px rgba(243,233,207,.35)) drop-shadow(0 0 42px rgba(175,198,255,.18));}
+html.wow .wow-header-moon b{display:block;color:var(--w-text);font-size:15px;font-weight:700;}
+html.wow #nrRoute-today .sr-p0-today .nr-o-hero{border:1px solid var(--w-line);border-radius:24px;padding:22px;gap:14px;}
+html.wow #nrRoute-today .sr-p0-today .nr-o-verdict{order:1;display:flex!important;flex-direction:row;align-items:center;gap:18px;}
+html.wow #nrRoute-today{padding-bottom:24px;}
+html.wow body #nrRoute-today .nr-overview.sr-p0-today{background:transparent;box-shadow:none;border:0!important;}
+html.wow body #mainContent{padding-bottom:calc(88px + env(safe-area-inset-bottom));}
+@media (min-width:1024px){html.wow body #mainContent{padding-bottom:32px;}}
+html.wow #nrTopNav button.active,html.wow #nrTopNav [aria-current=page]{}
+html.wow body #nrRoute-today .nr-overview.sr-p0-today .nr-o-verdict .nr-o-score.nr-o-score,html.wow body #nrRoute-today .nr-overview.sr-p0-today .nr-o-verdict .nr-o-score[data-score-tone]{position:relative;width:112px;height:112px;flex:none;display:grid;place-items:center;border-radius:50%;background:radial-gradient(circle at 50% 45%,rgba(255,255,255,.06),rgba(0,0,0,0) 62%)!important;font:800 46px/1 var(--w-ui);letter-spacing:-.03em;padding:0;border:0;}
+html.wow .wow-ring{position:absolute;inset:0;width:112px;height:112px;overflow:visible;pointer-events:none;}
+html.wow .wow-ring .trk{stroke:rgba(255,255,255,.08);}
+html.wow .wow-ring .arc{stroke:currentColor;filter:drop-shadow(0 0 8px currentColor);}
+html.wow #nrRoute-today .sr-p0-today .nr-o-label{font:800 19px/1.25 var(--w-ui);color:inherit;}
+html.wow #nrRoute-today .sr-p0-today .nr-o-verdict:has(.nr-o-score[data-score-tone=positive]) .nr-o-label{color:#63e6ad!important;}
+html.wow #nrRoute-today .sr-p0-today .nr-o-verdict:has(.nr-o-score[data-score-tone=negative]) .nr-o-label{color:#ff858d!important;}
+html.wow #nrRoute-today .sr-p0-today .nr-o-verdict:has(.nr-o-score[data-score-tone=neutral]) .nr-o-label{color:#ffdc75!important;}
+html.wow #nrRoute-today .sr-p0-sentence{order:2;font:400 18px/1.45 var(--w-display);color:var(--w-text);}
+html.wow #nrRoute-today .sr-p0-source{order:3;min-height:44px;border-radius:999px;color:var(--w-text)!important;font:700 13px var(--w-ui)!important;letter-spacing:.02em;}
+html.wow #nrRoute-today [data-p0-date]{order:0;align-self:flex-start;font:13px var(--w-ui);color:var(--w-muted);}
+html.wow #nrRoute-today [data-p0-date] *{font-size:inherit;}
+html.wow #nrRoute-today [data-p0-date] select{background:rgba(10,18,40,.6);border:1px solid var(--w-line-strong);border-radius:12px;color:var(--w-text)!important;font:600 16px var(--w-ui);}
+html.wow #nrRoute-today .sr-p0-today .sr-p0-moon{}
+html.wow #nrRoute-today .sr-p0-feed-state,html.wow #nrRoute-today .sr-p0-feed-state *{font:13px/1.4 var(--w-ui)!important;}
+html.wow #nrRoute-today .sr-p0-feed-state{order:4;color:var(--w-muted);margin:0;}
+html.wow #nrRoute-today .sr-p0-feed-state span{color:var(--w-muted);font-weight:600;}
+html.wow #nrRoute-today .sr-p0-feed-state::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:#8fb8ff;margin-right:7px;vertical-align:1px;}
+html.wow #nrRoute-today .sr-p0-feed-state[data-state=stale]::before,html.wow #nrRoute-today .sr-p0-feed-state[data-state=offline]::before{background:#ffb86b;}
+html.wow #nrRoute-today .sr-p0-feed-state[data-state=error]::before{background:#ff7182;}
+html.wow #nrRoute-today .sr-p0-signals button{border:1px solid var(--w-line)!important;border-radius:16px!important;text-align:left;padding:12px 14px;min-height:72px;color:var(--w-muted)!important;font:600 12px/1.3 var(--w-ui)!important;letter-spacing:.02em;display:flex;flex-direction:column;justify-content:center;gap:4px;}
+html.wow #nrRoute-today .sr-p0-signals button b{display:block;color:var(--w-text);font:700 15px/1.3 var(--w-ui);letter-spacing:0;}
+html.wow #nrRoute-today .sr-p0-signals button:nth-child(1){border-top:3px solid #8fb8ff!important;}
+html.wow #nrRoute-today .sr-p0-signals button:nth-child(2){border-top:3px solid #c7b4ff!important;}
+html.wow #nrRoute-today .sr-p0-signals button:nth-child(3){border-top:3px solid var(--w-text)!important;}
+html.wow #nrRoute-today .sr-dayline{border:1px solid var(--w-line);border-radius:24px;backdrop-filter:blur(6px);}
+html.wow #nrRoute-today .sr-dayline h2{font:700 26px var(--w-display)!important;}
+html.wow #nrRoute-today .sr-dayline .sr-dl-muted,html.wow #nrRoute-today .sr-dayline>p{font-size:var(--sr-ui-small)!important;color:var(--w-muted)!important;}
+html.wow .wow-events{list-style:none;margin:12px 0 4px;padding:0;position:relative;}
+html.wow .wow-events:before{content:"";position:absolute;left:54px;top:10px;bottom:10px;width:2px;background:var(--w-line);}
+html.wow .wow-events li{display:grid;grid-template-columns:46px 20px 1fr;align-items:center;min-height:36px;color:var(--w-text);}
+html.wow .wow-events li>*{font:500 14px/1.35 var(--w-ui)!important;}
+html.wow .wow-events li span small{font-size:var(--sr-ui-small)!important;color:var(--w-muted);margin-left:6px;}
+html.wow .wow-events time{color:var(--w-muted);font-variant-numeric:tabular-nums;}
+html.wow .wow-events i{width:9px;height:9px;border-radius:50%;background:#c7b4ff;justify-self:center;position:relative;z-index:1;box-shadow:0 0 0 3px rgba(199,180,255,.15);}
+html.wow .wow-events li.astro i{background:#8fb8ff;box-shadow:0 0 0 3px rgba(143,184,255,.15);}
+html.wow .wow-events li.now i{background:var(--w-star);box-shadow:0 0 0 4px rgba(233,198,126,.25);}
+html.wow #nrRoute-today .nr-o-journey button{background:var(--w-surface-2)!important;border:1px solid var(--w-line)!important;border-radius:16px!important;color:var(--w-text)!important;min-height:72px;}
+html.wow #nrRoute-today .nr-o-journey button:first-child{color:var(--w-on-accent)!important;}
+html.wow #nrRoute-today .nr-o-journey button span{font:700 12px var(--w-ui);letter-spacing:.05em;opacity:.85;}
+html.wow #nrRoute-today .nr-o-journey button b{font:800 15px/1.25 var(--w-ui)!important;}
+html.wow #mobileNav a[aria-current=page],html.wow #mobileNav .active,html.wow .nr-topnav [aria-current=page],html.wow .nr-topnav .active{color:var(--w-accent);}
+html.wow #nrRoute-today,html.wow header,html.wow #mobileNav{font-family:var(--w-ui);}
+html.wow #mobileNav a,html.wow #mobileNav button{font-size:var(--sr-ui-small);min-height:56px;}
+html.wow #nrRoute-today .sr-dayline span.start,html.wow #nrRoute-today .sr-dayline span.end,html.wow #nrRoute-today .sr-dayline span.middle{font-size:var(--sr-ui-small);}
+html.wow #nrRoute-today .sr-dl-now,html.wow #nrRoute-today .sr-dayline [class*=now] span{font-size:12px;}
+html.wow #nrRoute-today .sr-p0-signals button>span{font-size:var(--sr-ui-small);}
+html.wow .wow-header-moon small{}
+@media (max-width:1023px){html.wow #headerSub{font-size:var(--sr-ui-small);}}
+html.wow #nrRoute-today .sr-p0-details{background:var(--w-surface);border:1px solid var(--w-line)!important;border-radius:20px;}
+@media (min-width:1024px){html.wow body nav#mobileNav#mobileNav{display:none;}html.wow body{padding-bottom:24px;}html.wow #nrRoute-today .sr-p0-today{display:grid;grid-template-columns:minmax(380px,440px) minmax(0,1fr);grid-template-rows:auto auto auto auto auto 1fr auto;grid-template-areas:"head head" "hero day" "state day" "journey day" "signals day" ". day" "details details";column-gap:28px;row-gap:16px;align-items:start;max-width:1180px;margin:0 auto;}html.wow #nrRoute-today .sr-p0-today>.nr-o-heading{grid-area:head;position:static!important;width:auto!important;height:auto!important;clip-path:none!important;overflow:visible!important;}html.wow #nrRoute-today .sr-p0-today>.nr-o-heading h1{font:700 30px var(--w-display)!important;margin:0!important;}html.wow #nrRoute-today .sr-p0-today>.nr-o-hero{grid-area:hero;}html.wow #nrRoute-today .sr-p0-today>.sr-p0-feed-state{grid-area:state;margin:0 4px!important;}html.wow #nrRoute-today .sr-p0-today>.nr-o-journey{grid-area:journey;margin:0;}html.wow #nrRoute-today .sr-p0-today>.sr-dayline{grid-area:day;margin:0!important;}html.wow #nrRoute-today .sr-p0-today>.sr-p0-signals{grid-area:signals;margin:0;grid-template-columns:1fr;}html.wow #nrRoute-today .sr-p0-today>.sr-p0-signals button{min-height:60px;flex-direction:row;justify-content:space-between;align-items:center;border-top-width:1px!important;border-left:3px solid currentColor!important;}html.wow #nrRoute-today .sr-p0-today>.sr-p0-signals button:nth-child(1){border-left-color:#8fb8ff!important;}html.wow #nrRoute-today .sr-p0-today>.sr-p0-signals button:nth-child(2){border-left-color:#c7b4ff!important;}html.wow #nrRoute-today .sr-p0-today>.sr-p0-signals button:nth-child(3){border-left-color:var(--w-text)!important;}html.wow #nrRoute-today .sr-p0-today>.sr-p0-details{grid-area:details;margin:0;}html.wow .nr-topnav{background:rgba(14,24,48,.6);border:1px solid var(--w-line)!important;border-radius:18px!important;backdrop-filter:blur(8px);}html.wow .nr-topnav a,html.wow .nr-topnav button{font:700 14px var(--w-ui);}}
+@media (max-width:1023px){html.wow #nrRoute-today .sr-p0-today>.sr-p0-feed-state{order:2;}html.wow .wow-header-moon svg{}html.wow .wow-header-moon span{}html.wow .wow-header-moon{}}
+@keyframes wowRise{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:none;}}
+@keyframes wowDraw{from{stroke-dashoffset:var(--len);}to{stroke-dashoffset:var(--off);}}
+@keyframes wowPop{0%{transform:scale(.92);opacity:.2;}60%{transform:scale(1.03);opacity:1;}100%{transform:scale(1);}}
+@keyframes wowTwinkle{0%,100%{opacity:.25;}50%{opacity:.95;}}
+@keyframes wowDrift{from{transform:translate3d(0,0,0);}to{transform:translate3d(-3%,2%,0);}}
+@keyframes wowMeteor{0%{opacity:0;transform:translate(0,0) rotate(-24deg);}8%{opacity:1;}100%{opacity:0;transform:translate(-520px,230px) rotate(-24deg);}}
+@keyframes wowMoonIn{from{opacity:0;transform:translateY(10px) scale(.94);}to{opacity:1;transform:none;}}
+html.wow.sr-sky-motion .wow-header-moon svg{animation:wowMoonIn 1s var(--w-ease) both;}
+html.wow.sr-sky-motion .wow-sky .tw{animation:wowTwinkle var(--d,5s) ease-in-out var(--dl,0s) infinite;}
+html.wow.sr-sky-motion .wow-sky svg.layer2{animation:wowDrift 90s linear infinite alternate;}
+html.wow.wow-paused *{animation-play-state:paused!important;}
+@media (prefers-reduced-motion:reduce){html.wow *,html.wow *::before,html.wow *::after{animation:none!important;transition:none!important;}}
+html.wow:not(.sr-sky-motion) .wow-sky *{animation:none;}
+html.wow body nav#mobileNav#mobileNav .mnav-btn.active,html.wow body nav#mobileNav#mobileNav [aria-current=page]{color:var(--w-accent)!important;}
+html.wow body nav#mobileNav#mobileNav{background:rgba(7,13,31,.92)!important;backdrop-filter:blur(12px);border-top:1px solid var(--w-line)!important;}
+html.wow body footer{background:transparent;}
+html.wow body :is(#nrRoute-forecast,#nrRoute-calendar) .nr-overview .nr-o-verdict .nr-o-score[data-score-tone]{position:relative;width:112px;height:112px;flex:none;display:grid;place-items:center;border-radius:50%;background:radial-gradient(circle at 50% 45%,rgba(255,255,255,.06),rgba(0,0,0,0) 62%)!important;font:800 46px/1 var(--w-ui);letter-spacing:-.03em;padding:0;border:0;margin:0;}
+html.wow body :is(#nrRoute-forecast,#nrRoute-calendar) .nr-overview .nr-o-verdict{display:flex;flex-wrap:wrap!important;align-items:center;gap:14px 18px;}
+html.wow body :is(#nrRoute-forecast,#nrRoute-calendar) .nr-overview .nr-o-verdict>:not(.nr-o-score):not(.nr-o-label){flex:1 1 240px!important;min-width:0!important;}
+html.wow body :is(#nrRoute-forecast,#nrRoute-calendar) .nr-overview .nr-o-label{font:800 19px/1.25 var(--w-ui);}
+html.wow body :is(#nrRoute-forecast,#nrRoute-calendar) .nr-overview .nr-o-verdict:has(.nr-o-score[data-score-tone=positive]) .nr-o-label{color:#63e6ad!important;}
+html.wow body :is(#nrRoute-forecast,#nrRoute-calendar) .nr-overview .nr-o-verdict:has(.nr-o-score[data-score-tone=negative]) .nr-o-label{color:#ff858d!important;}
+html.wow body :is(#nrRoute-forecast,#nrRoute-calendar) .nr-overview .nr-o-verdict:has(.nr-o-score[data-score-tone=neutral]) .nr-o-label{color:#ffdc75!important;}
+html.wow body :is(#nrRoute-forecast,#nrRoute-calendar) .nr-o-heading>span{display:none;}
+html.wow body :is(#nrRoute-forecast,#nrRoute-calendar) .nr-o-heading h1{font:700 28px var(--w-display)!important;}
+html.wow body :is(#nrRoute-forecast,#nrRoute-calendar) .nr-overview>.nr-o-hero,html.wow body :is(#nrRoute-forecast,#nrRoute-calendar) .nr-overview{background:linear-gradient(160deg,rgba(38,56,111,.45),rgba(14,24,48,.85))!important;border-color:var(--w-line)!important;border-radius:24px!important;}
+html.wow body #nrRoute-calendar :is(h2,h3)[class*=month],html.wow body #nrRoute-calendar .sr-p0-month-head h2{font:700 22px var(--w-display);}
+html.wow body #nrRoute-forecast button[aria-pressed=true]{background:#AFC6FF!important;color:#0B1530!important;border-color:#AFC6FF!important;}
+html.wow body{isolation:isolate;}
+html.wow .wow-sky{z-index:-1;}
+html.wow body>header{min-height:116px;padding-right:180px;}
+html.wow .wow-header-moon{right:24px;top:8px;max-width:46%;gap:12px;}
+html.wow .wow-header-moon span{display:block;font-size:12px;line-height:1.5;}
+html.wow .wow-header-moon small{font-size:12px;}
+html.wow #nrRoute-today .sr-p0-today .sr-p0-moon{display:none;}
+html.wow body #nrRoute-today .nr-o-verdict .nr-o-score[data-ring]{border-radius:50%;color:var(--score-color);}
+html.wow .nr-o-score[data-ring=value]::before{filter:drop-shadow(0 0 7px var(--score-color));}
+html.wow #nrRoute-today .sr-p0-signals strong{font-size:14px;line-height:1.5;color:var(--w-text);}
+html.wow .sr-sky-events li{grid-template-columns:110px minmax(0,1fr);gap:12px;border-bottom:1px solid var(--w-line);padding:0;}
+html.wow .sr-sky-events button{background:transparent;border:0;border-radius:8px;color:var(--w-text);padding:8px;min-height:44px;}
+html.wow .sr-sky-events time{font-size:var(--sr-ui-small);color:var(--w-muted);}
+html.wow .sr-sky-events li>span{padding:8px;min-height:44px;box-sizing:border-box;}
+html.wow .sr-sky-events li>button::before,html.wow .sr-sky-events li>span::before{content:"●";font-size:10px;color:#c7b4ff;margin-right:8px;}
+html.wow #nrRoute-today{min-height:0;}
+html.wow .sr-p0-today{margin-bottom:16px;}
+html.wow .nr-o-horizon-list button{display:grid!important;grid-template-columns:minmax(0,1fr) auto;gap:6px 14px;padding:14px;min-height:88px;white-space:normal;}
+html.wow .nr-o-horizon-list .sr-forecast-date{font-size:16px;font-weight:700;grid-column:1;}
+html.wow .nr-o-horizon-list strong{grid-column:2;grid-row:1 / span 2;align-self:center;display:grid;place-items:center;min-width:44px;min-height:44px;border:1px solid currentColor;border-radius:50%;background:#091521;}
+html.wow .nr-o-horizon-list small{grid-column:1;font-size:var(--sr-ui-small);line-height:1.5;white-space:normal;overflow-wrap:anywhere;}
+@media(max-width:1023px){html.wow body>header{padding-right:110px;min-height:104px;}html.wow .wow-header-moon{right:12px;top:12px;max-width:100px;}html.wow .wow-header-moon span{display:none;}html.wow .wow-header-moon svg{width:76px;height:76px;}}
+@media(max-width:420px){html.wow .sr-sky-events li{grid-template-columns:90px minmax(0,1fr);}html.wow #mobileNav button{font-size:11px;}}
+html.wow{background:#070d1f;}
+html.wow body{background-attachment:scroll;background-color:#070d1f;}
+html.wow .wow-header-moon span{max-width:240px;white-space:normal;order:-1;}
+html.wow .wow-header-moon span small{display:block;line-height:1.5;}
+html.wow body.fp434-app #nrRoute-today .nr-overview.sr-p0-today{margin:24px auto 16px!important;}
+html.wow body #fp434Shell{padding-bottom:12px;}
+html.wow body #nrRoute-today>.sr-festival-decision{box-sizing:border-box;}
+html.wow body #nrFooterDetails{max-width:1180px;margin:0 auto 12px;}
+html.wow body #nrRoute-forecast .nr-o-horizon-list button[aria-pressed=true] small{color:#0b1530!important;}
+html.wow body #nrRoute-panch summary{min-height:44px;box-sizing:border-box;padding-top:12px;padding-bottom:12px;}
+html.wow .sr-forecast-graph{margin:16px 0;padding:18px;border:1px solid #50658b;border-radius:22px;box-shadow:0 12px 32px #04091840;}
+html.wow .sr-forecast-graph figcaption{font-family:Manrope,sans-serif;font-size:18px;font-weight:700;color:#edf3ff;}
+html.wow .sr-forecast-graph svg{display:block;width:100%;height:auto;margin:14px auto 0;overflow:visible;}
+html.wow .sr-forecast-graph p{color:#c7d4ec;font-size:var(--sr-ui-small);line-height:1.5;margin:12px 0 0;}
+html.wow .sr-p0-tabs button[aria-pressed=true]{background:#bad6ff;color:#102346;border-color:#bad6ff;}
+html.wow body #nrRoute-panch button{background:#bad6ff;color:#102346;border-color:#bad6ff!important;}
+html.wow body #nrRoute-panch button.secondary{background:transparent!important;color:#bad6ff!important;}
+html.wow .sr-expert-caution{padding:20px;margin:16px 0;border:1px solid #6e88b8;border-left:3px solid #bad6ff;border-radius:18px;background:#152440;color:#edf3ff;grid-column:1/-1;}
+html.wow .sr-expert-caution small,html.wow .sr-expert-caution .sr-caution-note{color:#c7d4ec;font-size:var(--sr-ui-small);line-height:1.5;}
+html.wow .sr-expert-caution h2{font-size:20px;margin:10px 0;}
+html.wow .sr-expert-caution a{color:#bad6ff;text-decoration:underline;display:inline-block;min-height:44px;line-height:1.5;padding:10px 0;box-sizing:border-box;}
+html.wow body.fp434-app main#mainContent{padding-bottom:16px!important;}
+html.wow body #fp434Shell>.nr-route{padding-bottom:16px;}
+html.wow body #fp434Shell .nr-overview{margin-bottom:16px!important;}
+html.wow body #mobileNav button.mnav-btn{font-size:var(--sr-ui-small)!important;letter-spacing:0;padding-inline:2px!important;}
 html.wow body.fp434-app #headerSub,
 html.wow body #fp434Shell .nr-overview .nr-o-scale,
 html.wow body #fp434Shell .nr-overview [data-aurora] summary,
@@ -223,9 +163,7 @@ html.wow body #fp434Shell .nr-overview label,
 html.wow body #fp434Shell .nr-route .nr-eyebrow,
 html.wow body #fp434Shell .nr-route .nr-chip,
 html.wow body #fp434Shell .nr-route .nr-panch-live,
-html.wow body #fp434Shell .nr-route .nr-panch-component>b{font-size:13px!important;line-height:1.5!important}
-
-/* W-14 remaining desktop annotations and legacy preview data labels. */
+html.wow body #fp434Shell .nr-route .nr-panch-component>b{font-size:var(--sr-ui-small)!important;line-height:1.5!important;}
 html.wow body.fp434-app #playChannelNotice,
 html.wow body .wow-header-moon :is(span,small),
 html.wow body #nrRoute-today .sr-dayline .sr-dl-now span,
@@ -236,359 +174,222 @@ html.wow body #fp434Shell .nr-b-week :is(span,small),
 html.wow body #fp434Shell .nr-b-horizon-note,
 html.wow body #fp434Shell .nr-overview :is(th,caption),
 html.wow body #fp434Shell .nr-o-heading>span,
-html.wow body #fp434Shell .nr-panch-component small{font-size:13px!important;line-height:1.5!important}
-
-/* Keyboard focus must remain visible on native date controls. */
-html.wow body #fp434Shell :is(input,select,button,a,summary):focus-visible{outline:3px solid #d8e9ff!important;outline-offset:3px!important}
-
+html.wow body #fp434Shell .nr-panch-component small{font-size:var(--sr-ui-small)!important;line-height:1.5!important;}
+html.wow body #fp434Shell :is(input,select,button,a,summary):focus-visible{outline:3px solid #d8e9ff!important;outline-offset:3px!important;}
 html.wow body #fp434Shell .sr-dayline :is([data-settings],[data-kicker]),
 html.wow body #fp434Shell .nr-b-scroll-hint,
-html.wow body #srCivilPanel [data-eyebrow]{font-size:13px!important;line-height:1.5!important}
-
-html.wow body #fp434Shell input:focus-within{outline:3px solid #d8e9ff!important;outline-offset:3px!important}
-
-/* Owner-selected cosmic direction: decorative landscape, never an astronomical diagram. */
-html.wow{--w-accent:#f1cf88;--w-on-accent:#172030;--w-line:rgba(150,185,235,.30)}
-html.wow body{background:linear-gradient(180deg,rgba(4,12,28,.16),rgba(4,12,28,.38) 75%,#060c1b),url(sky_panorama_v1.webp) center top / cover fixed!important}
-html.wow body>header{background:linear-gradient(180deg,rgba(5,13,29,.65),transparent)!important;border:0!important}
-html.wow .wow-sky{opacity:.42}
-html.wow #nrRoute-today .sr-p0-today .nr-o-hero{background:linear-gradient(145deg,rgba(14,34,60,.88),rgba(7,20,39,.92))!important;border-color:rgba(128,175,224,.42)!important;box-shadow:0 18px 48px #02081770,inset 0 1px 0 #c5ddff20!important}
-html.wow #nrRoute-today .nr-o-verdict .nr-o-score[data-ring]{box-shadow:0 0 22px color-mix(in srgb,currentColor 20%,transparent),inset 0 0 24px color-mix(in srgb,currentColor 12%,transparent)!important;text-shadow:0 0 18px color-mix(in srgb,currentColor 45%,transparent)}
-html.wow #nrRoute-today .sr-dayline{background:linear-gradient(145deg,rgba(10,27,51,.94),rgba(7,18,38,.95))!important;border-color:rgba(128,175,224,.42)!important;box-shadow:0 16px 44px #02081755}
-html.wow #nrRoute-today .sr-dayline [data-place]::after{content:"";display:block;height:138px;margin:16px -2px 0;border-radius:14px;background:linear-gradient(180deg,#0a173018,transparent 60%,#07142655),url(sky_panorama_v1.webp) center 74% / cover;border:1px solid #8aaed530}
-html.wow #nrRoute-today .sr-p0-source{border-color:#d2b77b70!important;background:#e2bd6d0b!important}
-html.wow #nrRoute-today .sr-p0-signals button{background:linear-gradient(140deg,#102645ee,#07172ced)!important;box-shadow:inset 0 1px 0 #d4e5ff12}
-html.wow #nrRoute-today .nr-o-journey button:first-child{background:linear-gradient(145deg,#ffe4a5,#e6bb65)!important;border-color:#ffe3a7!important;box-shadow:0 5px 22px #e5b65324}
-html.wow .nr-topnav{box-shadow:0 10px 32px #03091555}
-html.wow #nrTopNav button.active,html.wow #nrTopNav [aria-current=page]{background:linear-gradient(145deg,#ffe4a5,#e6bb65)!important;color:#172030!important}
-@media(min-width:1100px){
- html.wow body>header{max-width:1320px;margin:auto;padding-top:20px!important;padding-bottom:16px!important;min-height:108px!important}
- html.wow #nrRoute-today .sr-p0-today{grid-template-columns:minmax(370px,.9fr) minmax(0,1.5fr);grid-template-rows:auto min-content min-content 1fr auto auto;grid-template-areas:"head head" "hero day" "state day" "journey day" ". signals" "details details";gap:16px 24px;max-width:1240px}
- html.wow #nrRoute-today .sr-p0-today>.sr-p0-signals{grid-template-columns:repeat(3,minmax(0,1fr))!important}
- html.wow #nrRoute-today .sr-p0-today>.sr-p0-signals button{flex-direction:column!important;align-items:flex-start!important;justify-content:center!important;gap:8px!important;min-height:108px!important}
-}
-@media(max-width:600px){
- html.wow body{background-size:auto 1050px!important;background-repeat:no-repeat!important;background-color:#060c1b!important;background-attachment:scroll!important}
- html.wow #nrRoute-today .sr-dayline [data-place]::after{height:110px;background-position:center 80%}
- html.wow #nrRoute-today .sr-p0-today .nr-o-hero{padding:18px!important}
-}
-@media(prefers-reduced-data:reduce),(forced-colors:active){
- html.wow body{background:#070d1f!important}
- html.wow #nrRoute-today .sr-dayline [data-place]::after{display:none}
-}
-
-/* UX-06: real event times on a proportional civil-time track, not a solar-altitude curve. */
-html.wow #nrRoute-today .sr-dayline [data-track]{height:100px!important;border-radius:16px!important;position:relative;isolation:isolate}
-html.wow #nrRoute-today .sr-dayline [data-track]::before{content:"";position:absolute;left:24px;right:24px;top:32px;height:1px;background:linear-gradient(90deg,#e9c67e,#98b8eb);opacity:.8;z-index:-1}
-html.wow #nrRoute-today .sr-dayline [data-track]>button{top:10px!important;transform:translateX(-50%)!important;width:44px!important;height:44px!important;min-height:44px!important;padding:0!important;overflow:visible!important;border-radius:50%!important;border:1px solid #c4d6ef!important;background:#0a1b34!important;color:#f4da9d!important;box-shadow:0 0 14px #9cbded20;font-size:19px!important}
-html.wow #nrRoute-today .sr-event-clock{position:absolute;top:51px;left:50%;transform:translateX(-50%);color:#f0f3fb;font:600 13px/1.3 var(--w-ui);font-variant-numeric:tabular-nums;white-space:nowrap;pointer-events:none}
-html.wow #nrRoute-today .sr-dayline [data-track]>button:hover,html.wow #nrRoute-today .sr-dayline [data-track]>button:focus-visible{border-color:#ffe1a0!important;background:#223858!important;box-shadow:0 0 18px #ebc88030}
-@media(min-width:1100px){html.wow body #nrRoute-today .nr-overview.sr-p0-today .nr-o-verdict .nr-o-score[data-score-tone]{width:132px!important;height:132px!important;font-size:64px!important}html.wow #nrRoute-today .sr-p0-today .nr-o-label{font-size:21px!important}}
-@media(forced-colors:active){html.wow #nrRoute-today .sr-dayline [data-track]>button{border-color:ButtonText!important;color:ButtonText!important}html.wow #nrRoute-today .sr-event-clock{color:CanvasText}}
-/* Motion storyboard: brief feedback, no intermediate or invented numeric scores. */
-@keyframes srRouteArrival{from{opacity:.75;transform:translateY(5px)}to{opacity:1;transform:none}}
-@media(prefers-reduced-motion:no-preference){
- html.wow .nr-route.active{animation:srRouteArrival .2s ease-out}
- html.wow .nr-topnav button,html.wow .nr-o-journey button,html.wow .sr-p0-signals button{transition:background-color .15s,border-color .15s,box-shadow .15s}
- html.wow .nr-o-journey button:hover,html.wow .sr-p0-signals button:hover{box-shadow:0 4px 20px #9fbde52b!important;border-color:#e2ce9e!important}
- html.wow .nr-o-score{transition:color .18s,text-shadow .18s,box-shadow .18s}
-}
-
-/* Audit b92: compact source-aware first screens; all evidence remains in disclosures. */
-html.wow body #fp434Shell h1[tabindex="-1"]:focus{outline:none!important}
-html.wow body #fp434Shell .nr-o-heading{margin:0!important;padding:0!important}
-html.wow body #fp434Shell .nr-o-heading>span{display:none!important}
-html.wow body #fp434Shell .nr-o-heading h1{font-size:24px!important;margin:0 0 10px!important}
-html.wow body #nrRoute-today .nr-o-heading{position:absolute!important;width:1px!important;height:1px!important;overflow:hidden!important;clip-path:inset(50%);white-space:nowrap}
-html.wow body #nrRoute-today .sr-dayline [data-place]::after{display:none!important}
-html.wow body #nrRoute-today .sr-p0-feed-state{font-size:13px!important;margin:4px 0 0!important;line-height:1.4!important}
-html.wow body #fp434Shell :is(#nrRoute-forecast,#nrRoute-calendar) .nr-o-hero{display:grid!important;grid-template-columns:minmax(120px,1fr) minmax(0,1.2fr)!important;gap:6px 12px!important;padding:12px!important;min-height:0!important}
-html.wow body #fp434Shell :is(#nrRoute-forecast,#nrRoute-calendar) .nr-o-hero>label{margin:0!important;grid-column:1!important;align-self:center}
-html.wow body #fp434Shell :is(#nrRoute-forecast,#nrRoute-calendar) .nr-o-verdict{display:flex!important;flex-direction:row!important;align-items:center!important;gap:8px!important;margin:0!important;grid-column:2!important;grid-row:1!important}
-html.wow body #fp434Shell :is(#nrRoute-forecast,#nrRoute-calendar) .nr-o-score{width:56px!important;height:56px!important;min-width:56px!important;font-size:27px!important;margin:0!important;flex:none!important}
-html.wow body #fp434Shell :is(#nrRoute-forecast,#nrRoute-calendar) .nr-o-label{font-size:14px!important;margin:0!important;line-height:1.3!important}
-html.wow body #fp434Shell .sr-compact-source{grid-column:1/-1;font-size:13px;color:var(--w-muted,#c7d4ec)}
-html.wow body #fp434Shell .sr-p0-month-grid button[aria-pressed=true]{background:#10223b!important;outline:2px solid #d7eaff!important;outline-offset:-2px;box-shadow:none!important}
-@media(min-width:1100px){
- html.wow body>header{min-height:90px!important;padding:12px 24px!important}
- html.wow body #fp434Shell{padding-top:0!important}
- html.wow body #nrTopNav{position:absolute!important;top:14px;left:31%;right:170px;width:auto!important;margin:0!important;z-index:5;padding:4px!important}
- html.wow body #nrTopNav button{padding:10px 8px!important;font-size:13px!important}
- html.wow body #nrRoute-today .sr-p0-today{grid-template-columns:minmax(320px,.9fr) minmax(0,1.4fr)!important;grid-template-rows:auto auto auto auto!important;grid-template-areas:"hero day" "journey day" "signals signals" "details details"!important;gap:14px!important}
- html.wow body #nrRoute-today .sr-p0-today>.sr-p0-signals{grid-area:signals!important}
- html.wow body #nrRoute-today .sr-p0-today>.sr-p0-signals button{min-height:72px!important}
- html.wow body #nrRoute-today .sr-dayline{align-self:stretch!important}
-}
-@media(max-width:600px){
- html.wow body{background-attachment:fixed!important;background-size:auto 100vh!important;background-repeat:repeat-y!important}
- html.wow body>header{height:108px!important;min-height:108px!important;padding:14px 16px!important;margin:0!important}
- html.wow .wow-header-moon{top:8px!important;right:10px!important}
- html.wow .wow-header-moon svg{width:80px!important;height:80px!important}
- html.wow body #fp434Shell{padding-top:0!important}
- html.wow body #nrRoute-today .sr-p0-today .nr-o-hero{padding:14px!important;gap:10px!important}
- html.wow body #nrRoute-today .sr-p0-signals{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:6px!important;margin:10px 0!important}
- html.wow body #nrRoute-today .sr-p0-signals button{padding:8px 6px!important;display:flex!important;flex-direction:column!important;align-items:flex-start!important;gap:4px!important;min-height:72px!important;font-size:12px!important;line-height:1.25!important}
- html.wow body #nrRoute-today .sr-p0-signals button strong{font-size:13px!important;line-height:1.25!important}
- html.wow body #nrRoute-today .sr-p0-signals button span{font-size:12px!important}
- html.wow body #nrRoute-today .nr-o-score{width:88px!important;height:88px!important;font-size:42px!important;min-width:88px!important}
- html.wow body #nrRoute-today .nr-o-verdict{margin:4px 0!important;gap:12px!important}
- html.wow body #nrRoute-today .sr-p0-sentence{font-size:15px!important;margin:0!important;line-height:1.4!important}
-}
-
-html.wow body #playChannelNotice{position:fixed!important;bottom:92px;left:16px;right:16px;top:auto!important;z-index:40;max-width:610px;margin:0!important;padding:10px 52px 10px 12px!important;box-shadow:0 8px 30px #0008}
-html.wow body #playChannelNotice[hidden]{display:none!important}
-html.wow body #playChannelNotice button{position:absolute;right:4px;top:0;min-width:44px;min-height:44px;background:transparent;color:inherit;border:0;font-size:24px}
-html.wow body>header{position:relative!important}
-html.wow body #fp434Shell .nr-route.active .nr-overview .nr-o-hero.sr-compact-header{display:grid!important;grid-template-areas:none!important;grid-template-columns:minmax(120px,1fr) minmax(0,1.2fr)!important;grid-template-rows:auto auto!important;min-height:0!important}
-html.wow body #fp434Shell .nr-route.active .nr-overview .sr-compact-header>label{grid-area:1/1!important;order:0!important}
-html.wow body #fp434Shell .nr-route.active .nr-overview .sr-compact-header>.nr-o-verdict{grid-area:1/2!important;display:flex!important;flex-flow:row nowrap!important;justify-content:flex-start!important;padding:0!important;align-items:center!important}
-html.wow body #fp434Shell .nr-route.active .nr-overview .sr-compact-header>.sr-compact-source{grid-area:2/1/auto/3!important}
-html.wow body #fp434Shell .nr-route.active .nr-overview .sr-compact-header .nr-o-score{width:56px!important;height:56px!important;font-size:27px!important}
-html.wow body #fp434Shell .nr-route.active .nr-overview .sr-compact-header .nr-o-label{font-size:14px!important;line-height:1.3!important}
-@media(min-width:1100px){
- html.wow body #nrTopNav{top:12px!important;left:30%!important;right:120px!important}
- html.wow body #nrRoute-today .sr-p0-today{max-width:1240px!important;margin:0 auto!important}
- html.wow body #nrRoute-today .sr-dayline{padding:16px!important}
- html.wow body #nrRoute-today .sr-dl-story{padding:12px!important;margin:10px 0!important}
- html.wow body #nrRoute-today .sr-dayline :is([data-p0-explore],[data-sky-events]){margin-top:10px!important;padding-top:10px!important}
- html.wow body #nrRoute-today .nr-o-journey{margin:0!important}
-}
-@media(max-width:600px){
- html.wow body #headerSub{max-width:calc(100vw - 115px)!important;white-space:normal!important;font-size:12px!important}
- html.wow body #fp434Shell .nr-route{padding-top:0!important}
- html.wow body #nrRoute-today .sr-p0-signals button strong{font-size:12px!important}
- html.wow body #nrRoute-today .sr-p0-signals button small{font-size:11px!important}
-}
-@media(min-width:1100px){
- html.wow body #mainContent{margin-top:0!important;padding-top:0!important}
- html.wow body #fp434Shell .nr-route{padding-top:0!important}
- html.wow body #nrRoute-today .nr-overview.sr-p0-today{padding-top:12px!important}
- html.wow body #nrRoute-today .sr-dayline>p{margin:6px 0!important}
- html.wow body #nrRoute-today .sr-dayline .sr-dl-story{display:grid!important;grid-template-columns:minmax(0,1fr) auto;gap:8px!important;padding:10px!important}
- html.wow body #nrRoute-today .sr-dl-story small{grid-column:1/-1}
- html.wow body #nrRoute-today .sr-dl-story :is(h3,p){margin:0!important;font-size:19px!important}
- html.wow body #nrRoute-today .sr-dl-story button{margin:0!important;min-height:44px!important;align-self:center}
- html.wow body #nrRoute-today .sr-dayline>details{padding:0!important;margin:6px 0!important}
- html.wow body #nrRoute-today .sr-dayline>details>summary{padding:10px 0!important;min-height:44px!important;font-size:17px!important}
- html.wow body .wow-header-moon>span{display:none!important}
-}
-html.wow body #playChannelNotice{max-width:610px!important;right:auto!important;width:calc(100vw - 32px)!important}
-
-html.wow body #nrRoute-today .sr-p0-signals button{gap:3px!important;padding:8px!important}
-html.wow body #nrRoute-today .sr-p0-signals button strong{font-size:13px!important;line-height:1.25!important}
-@media(min-width:1100px){html.wow body #nrRoute-today .nr-overview.sr-p0-today{padding-top:4px!important}}
-@media(max-width:600px){html.wow body #mainContent{padding-top:0!important;margin-top:0!important}html.wow body #nrRoute-today .sr-p0-signals button{padding:6px!important;min-height:72px!important}}
-html.wow body #fp434Shell .sr-p0-month-grid button[aria-pressed=true]>span{color:#eff5ff!important}
-/* Visually clipped heading retains its intrinsic box for text scaling and accessibility. */
-html.wow body #nrRoute-today .nr-o-heading{width:max-content!important;max-width:100%!important;height:auto!important;overflow:visible!important;white-space:normal!important;clip-path:inset(50%)}
-
-/* Audit P1/P2: readable events and compact calendar components. */
-html.wow body .sr-dayline [data-axis]{height:46px!important;font-size:12px!important}
-html.wow body .sr-dayline [data-axis]>span{max-width:30%;white-space:normal!important;line-height:1.3}
-html.wow body .sr-dl-dialog label,html.wow body .sr-dayline fieldset label{display:flex;align-items:center;gap:10px;min-height:44px;padding:6px}
-html.wow body .sr-dl-dialog>button{min-height:44px;margin:6px 0;display:block}
-html.wow body #nrRoute-more a{display:inline-flex;min-height:44px;align-items:center}
-html.wow body #fp434Shell [data-topic][aria-pressed=true]{background:#17334e!important;color:#eff5ff!important;outline:2px solid #c9e3ff;outline-offset:-2px}
-@media(max-width:600px){
- html.wow body #nrRoute-panch>.nr-route-head{min-height:160px!important;height:auto!important;padding:18px!important}
- html.wow body #nrRoute-panch .nr-panch-components{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important}
- html.wow body #nrRoute-panch .nr-panch-component{padding:10px!important;min-width:0!important}
- html.wow body #nrRoute-panch .nr-panch-component strong{font-size:15px!important}
- html.wow body #nrRoute-panch .nr-panch-summary{padding:12px!important}
- html.wow body #nrRoute-panch .nr-panch-summary h3{font-size:24px!important}
-}
-
-html.wow body .sr-dayline [data-axis]>span{width:30%;max-width:none;box-sizing:border-box}
-html.wow body .sr-dayline [data-axis]>.end{text-align:right}
-html.wow body .sr-dayline [data-axis]>.middle{text-align:center}
-@media(max-width:600px){
- html.wow body #nrRoute-panch>.nr-route-head{padding:8px!important}
- html.wow body #nrRoute-panch>.nr-route-head h1{font-size:24px!important;line-height:1.2!important;margin:4px 0!important;max-width:none!important}
- html.wow body #nrRoute-panch>.nr-route-head p{font-size:13px!important;line-height:1.4!important;margin:4px 0!important;max-width:none!important}
-}
-
-/* Visible group meaning, including touch users without a hover tooltip. */
-html.wow #nrRoute-today .sr-dayline [data-track]>button[data-event-count]:not([data-event-count="1"]){width:104px!important;border-radius:22px!important;font-size:13px!important;white-space:nowrap!important}
-
-/* Long translated solar captions stay separate below the time-positioned track. */
-html.wow body .sr-dayline [data-axis]{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;height:auto!important;min-height:46px}
-html.wow body .sr-dayline [data-axis]>span{position:static!important;transform:none!important;width:auto!important;overflow-wrap:anywhere}
-html.wow body .sr-dayline [data-axis]>.start{grid-column:1;grid-row:1}
-html.wow body .sr-dayline [data-axis]>.middle{grid-column:2;grid-row:1}
-html.wow body .sr-dayline [data-axis]>.end{grid-column:3;grid-row:1}
-
-/* Owner reference 01: structured day card, luminous ring and a scenic masthead. */
-html.wow body>header{background:linear-gradient(90deg,#06112588,#07122522),url(sky_panorama_v1.webp) center 77% / cover!important;border-bottom:1px solid #6684ac55!important}
-html.wow body #nrRoute-today .sr-p0-today .nr-o-hero{background:radial-gradient(ellipse at 20% 46%,#153b342b,transparent 62%),linear-gradient(145deg,#0b1c34f5,#071225f5)!important;border-color:#8199c080!important;border-radius:18px!important;box-shadow:0 12px 32px #02071466,inset 0 1px #bdd7ff20!important;display:grid!important;grid-template-columns:minmax(0,1fr) minmax(120px,1fr)!important;gap:14px!important}
-html.wow body #nrRoute-today .sr-reference-title{font:600 25px/1.2 var(--w-display);margin:0;grid-column:1;grid-row:1;align-self:center;color:#f4f1e8}
-html.wow body #nrRoute-today [data-p0-date]{grid-column:2;grid-row:1;font-size:13px!important;min-width:0}
-html.wow body #nrRoute-today [data-p0-date] select{width:100%;min-width:0;background:#09152a!important;border-color:#577296!important;border-radius:9px!important}
-html.wow body #nrRoute-today .nr-o-hero>.nr-o-verdict{grid-column:1/-1;grid-row:2;gap:22px!important;padding:12px 4px!important}
-html.wow body #nrRoute-today .nr-o-hero>.sr-p0-sentence{grid-column:1/-1;grid-row:3;font:14px/1.5 var(--w-ui)!important;color:#bdcde5}
-html.wow body #nrRoute-today .nr-o-hero>.sr-p0-source{grid-column:1/-1;grid-row:4;justify-self:start;background:#15243a!important;border:1px solid #8aa2c352!important;border-radius:10px!important;font-size:13px!important}
-html.wow body #nrRoute-today .nr-o-hero>[data-p0-feed-state]{grid-column:1/-1;grid-row:5;margin:0!important;font-size:13px!important}
-html.wow body #nrRoute-today .sr-p0-today .nr-o-verdict .nr-o-label{font-family:var(--w-display)!important;font-weight:600!important;font-size:21px!important;line-height:1.25!important}
-html.wow body #nrRoute-today .nr-o-verdict .nr-o-score[data-ring]{background:radial-gradient(circle,color-mix(in srgb,var(--score-color) 12%,#071521),#071521 68%)!important;box-shadow:0 0 30px color-mix(in srgb,var(--score-color) 28%,transparent),inset 0 0 24px color-mix(in srgb,var(--score-color) 16%,transparent)!important}
-html.wow body #nrRoute-today .nr-o-verdict .nr-o-score[data-ring]::after{content:'';position:absolute;inset:-7px;border:1px solid color-mix(in srgb,var(--score-color) 45%,transparent);border-radius:50%;pointer-events:none}
-html.wow body #nrRoute-today .sr-p0-signals button{background:linear-gradient(140deg,#13223c,#09172b)!important;border:1px solid #6d87b166!important;border-radius:10px!important;box-shadow:inset 0 1px #c5daff13!important}
-html.wow body #nrRoute-today .sr-dayline{background:linear-gradient(145deg,#101f39f2,#071326f5)!important;border:1px solid #8199c080!important;border-radius:18px!important}
-@media(max-width:600px){
- html.wow body>header{height:108px!important;min-height:108px!important;padding:12px 16px!important}
- html.wow body #headerTitle{font-size:32px!important;letter-spacing:-.04em!important}
- html.wow body #headerSub{font-size:12px!important;line-height:1.5!important}
- html.wow body .wow-header-moon{top:12px!important;right:12px!important}
- html.wow body .wow-header-moon svg{width:88px!important;height:88px!important}
- html.wow body #nrRoute-today .nr-overview.sr-p0-today .nr-o-verdict .nr-o-score[data-score-tone]{width:104px!important;height:104px!important;min-width:104px!important;font-size:46px!important}
- html.wow body #nrRoute-today .sr-reference-title{font-size:23px!important}
-}
-@media(max-width:360px){html.wow body #nrRoute-today .sr-reference-title{font-size:20px!important}html.wow body #nrRoute-today .nr-o-hero>.nr-o-verdict{gap:16px!important}html.wow body #nrRoute-today .sr-p0-today .nr-o-verdict .nr-o-label{font-size:19px!important}}
-
-html.wow body #fp434Shell #nrRoute-today .sr-p0-today .nr-o-hero{grid-template-areas:none!important;grid-template-rows:auto auto auto auto auto!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important}
-html.wow body #fp434Shell #nrRoute-today .nr-o-hero>.sr-reference-title{grid-area:1/1!important;min-width:0;font-size:23px!important}
-html.wow body #fp434Shell #nrRoute-today .nr-o-hero>[data-p0-date]{grid-area:1/2!important;width:100%!important;max-width:100%!important;min-width:0!important}
-html.wow body #fp434Shell #nrRoute-today .nr-o-hero>.nr-o-verdict{grid-area:2/1/3/3!important;order:0!important}
-html.wow body #fp434Shell #nrRoute-today .nr-o-hero>.sr-p0-sentence{grid-area:3/1/4/3!important;order:0!important}
-html.wow body #fp434Shell #nrRoute-today .nr-o-hero>.sr-p0-source{grid-area:4/1/5/3!important;order:0!important}
-html.wow body #fp434Shell #nrRoute-today .nr-o-hero>[data-p0-feed-state]{grid-area:5/1/6/3!important;order:0!important}
-
-/* Reference 02: a real upcoming transition leads the Panchanga screen. */
-html.wow body #nrRoute-panch>.nr-route-head{min-height:0!important;background:transparent!important;border:0!important;padding:12px 4px!important}
-html.wow body #nrRoute-panch>.nr-route-head h1{font:600 30px/1.2 var(--w-display)!important}
-html.wow body #nrRoute-panch .sr-panch-feature{display:grid;grid-template-columns:72px minmax(0,1fr);gap:18px;align-items:center;padding:22px 18px;margin:0 0 14px;border:1px solid #7894bd88;border-radius:18px;background:linear-gradient(100deg,#081629f5 25%,#0a193bcc),url(sky_panorama_v1.webp) center 72%/cover;box-shadow:inset 3px 0 #dfc07955,0 14px 35px #02071844}
-html.wow body #nrRoute-panch .sr-panch-feature small{font:600 13px/1.4 var(--w-ui);color:#dfc88e}
-html.wow body #nrRoute-panch .sr-panch-feature h3{font:600 24px/1.3 var(--w-display);margin:6px 0;color:#f5f1e8}
-html.wow body #nrRoute-panch .sr-panch-feature p{font:400 18px/1.5 var(--w-display);margin:8px 0 12px;color:#d6dff2;overflow-wrap:anywhere}
-html.wow body #nrRoute-panch .sr-panch-feature button{min-height:44px;background:#10223a!important;color:#dfebff!important;border:1px solid #849fc3!important;border-radius:10px;padding:8px 12px;font:600 14px/1.4 var(--w-ui)}
-html.wow body #nrRoute-panch .sr-panch-orbit{display:grid;place-items:center;width:68px;height:68px;border:1px solid #dfc079;border-radius:50%;color:#ffe2a2;font-size:36px;background:radial-gradient(circle,#b38a2922,transparent 70%);box-shadow:0 0 22px #dfc07922,inset 0 0 16px #dfc07915}
-html.wow body #nrRoute-panch :is(.nr-panch-summary,.nr-panch-section){background:linear-gradient(140deg,#0e2039f5,#081426f5)!important;border:1px solid #6983aa66!important;border-radius:16px!important}
-html.wow body #nrRoute-panch .nr-panch-component{background:linear-gradient(140deg,#152741,#0b1930)!important;border:1px solid #6584af55!important;border-radius:12px!important}
-html.wow body #nrRoute-panch .nr-panch-component strong{font-family:var(--w-display)!important;color:#edf0fa!important}
-html.wow body #nrRoute-panch .sr-panch-transitions>summary{min-height:44px;padding:10px 0;font:600 20px/1.3 var(--w-display);cursor:pointer}
-@media(min-width:1100px){html.wow body #nrRoute-panch .sr-panch-feature{grid-template-columns:104px minmax(0,1fr);padding:24px}.sr-panch-feature .sr-panch-orbit{justify-self:center}}
-@media(max-width:360px){html.wow body #nrRoute-panch .sr-panch-feature{grid-template-columns:48px minmax(0,1fr);gap:12px;padding:16px 12px}html.wow body #nrRoute-panch .sr-panch-orbit{width:44px;height:44px;font-size:26px}html.wow body #nrRoute-panch .sr-panch-feature h3{font-size:21px}}
-
-/* Reference completion: real solar geometry; source-led calendar and comparison. */
-html.wow .sr-solar-profile{margin:10px 0 16px!important;padding:12px!important;border:1px solid #536887;border-radius:16px;background:linear-gradient(#06122b66,#06122be8),url('sky_panorama_v1.webp') center/cover!important}
-html.wow .sr-solar-profile[hidden]{display:none!important}
-html.wow .sr-solar-profile svg{display:block;width:100%;height:auto;max-height:180px}
-html.wow .sr-solar-profile figcaption{font:600 20px Georgia,serif;color:#f3e5c6}
-html.wow .sr-solar-profile small{color:#cbd8ed;font-size:12px}
-html.wow .sr-forecast-graph{background:linear-gradient(#08172bd9,#08172bf5),url('sky_panorama_v1.webp') center/cover}
-html.wow .nr-o-topic-days{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
-html.wow .nr-o-topic-days button{min-height:72px;text-align:left;border-radius:15px;background:linear-gradient(125deg,#152642,#0a1427);border:1px solid #526584;padding:12px}
-html.wow .sr-p0-compare{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;padding:16px;border:1px solid #526584;border-radius:20px;background:#071326e8}
-html.wow .sr-p0-compare>h2,html.wow .sr-p0-compare>button{grid-column:1/-1}
-html.wow .sr-p0-compare-card{min-width:0;padding:18px;border:1px solid var(--compare-color);border-radius:20px;background:linear-gradient(150deg,#142442,#081326);box-shadow:0 12px 30px #0004}
-html.wow .sr-p0-compare-card h3{font:600 20px/1.3 Georgia,serif;margin:0 0 18px}
-html.wow .sr-p0-compare-card .sr-compare-ring{display:flex!important;align-items:center;justify-content:center;width:100px;height:100px;margin:0 auto 20px;border:2px solid var(--compare-color);border-radius:50%;color:var(--compare-color);box-shadow:0 0 20px color-mix(in srgb,var(--compare-color) 25%,transparent),inset 0 0 16px color-mix(in srgb,var(--compare-color) 15%,transparent);font-size:30px}
-html.wow .sr-p0-compare-card p{line-height:1.5;overflow-wrap:anywhere}
-html.wow .sr-p0-compare-card button{min-height:44px;width:100%;margin-top:12px}
-html.wow .sr-compare-save{background:linear-gradient(135deg,#ffe39d,#dfb85e)!important;color:#121c2b!important;min-height:48px;font-weight:700}
-@media(max-width:600px){html.wow .sr-p0-compare{grid-template-columns:1fr}html.wow .sr-p0-compare-card{display:grid;grid-template-columns:100px minmax(0,1fr);gap:8px 16px}html.wow .sr-p0-compare-card h3,html.wow .sr-p0-compare-card details,html.wow .sr-p0-compare-card button{grid-column:1/-1}html.wow .sr-p0-compare-card .sr-compare-ring{margin:0}html.wow .sr-p0-compare-card p{margin:0;align-self:center}}
-@media(prefers-reduced-motion:no-preference){html.wow.sr-sky-motion details[open]>:not(summary){animation:sr-disclosure-in 180ms ease-out}@keyframes sr-disclosure-in{from{opacity:.4;transform:translateY(3px)}to{opacity:1;transform:none}}}
-
-html.wow body #nrRoute-today .sr-dayline figure.sr-solar-profile{display:block!important;width:100%;box-sizing:border-box}html.wow body #nrRoute-today .sr-solar-profile figcaption{display:block!important;padding:0!important;font:600 20px/1.3 Georgia,serif!important}html.wow body #nrRoute-today .sr-solar-profile svg{width:100%!important;max-width:none!important}
-html.wow body #nrRoute-calendar .nr-o-topic-days{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))!important;gap:10px!important;max-height:400px;overflow-y:auto;padding:4px}html.wow body #nrRoute-calendar .nr-o-topic-days button{min-height:72px!important;font-size:15px!important;overflow-wrap:normal!important}
-
-@media(max-width:600px){html.wow .sr-solar-profile svg text{font-size:24px}}
-
-html.wow .sr-compare-picker,html.wow .sr-compare-count{grid-column:1/-1}html.wow .sr-compare-picker{display:grid;gap:8px;color:#dce6fa}html.wow .sr-compare-picker select{min-height:48px;width:100%;max-width:100%;box-sizing:border-box}html.wow .sr-compare-count{margin:0;color:#cbd8ed;font-size:14px}
-
-/* fp516: audited desktop layout and visible calculated solar events. */
-html.wow body #playChannelNotice{position:relative!important;inset:auto!important;width:auto!important;max-width:none!important;margin:8px 16px!important;box-sizing:border-box}
-html.wow .sr-p0-signals button span{font-size:13px!important}
-@media(min-width:1100px){
-html.wow body #nrRoute-today .sr-p0-today{width:100%!important;max-width:none!important;box-sizing:border-box;grid-template-areas:"hero day" "signals day" "journey journey" "details details"!important;grid-template-rows:max-content max-content auto auto!important;align-items:start}
-html.wow body #nrRoute-today .sr-dayline{padding:14px!important}
-html.wow body #nrRoute-today .sr-solar-profile{padding:10px!important;margin:8px 0 16px!important}
-html.wow body #nrRoute-today .sr-solar-profile svg{max-height:120px!important}
-html.wow body #nrRoute-today .sr-dayline [data-axis]{margin:6px 0!important;min-height:20px!important}
-html.wow body #nrRoute-today .sr-dayline details{padding:8px 0!important;margin:4px 0!important}
-html.wow body #nrRoute-today .sr-dayline details>summary{min-height:44px!important;padding:8px 0!important;box-sizing:border-box}
-html.wow body #nrRoute-today .sr-dayline [data-status]{margin:6px 0!important}
-}
-
-@media(min-width:1100px){
-html.wow body #nrRoute-today .sr-solar-profile svg{max-height:88px!important}
-html.wow body #nrRoute-today .sr-dayline [data-track]{height:80px!important;min-height:80px!important}
-html.wow body #nrRoute-today .sr-dayline .sr-dl-story{padding:6px 10px!important;margin:6px 0!important;gap:4px!important}
-html.wow body #nrRoute-today .sr-dayline .sr-dl-story p{font-size:18px!important}
-html.wow body #nrRoute-today .sr-dayline details:not([open]){padding:0!important;margin:4px 0!important}
-}
-
-html.wow .sr-forecast-graph svg{max-width:448px!important} @media(min-width:1100px){html.wow .sr-solar-profile svg text{font-size:28px}}
-
-@media(min-width:1100px){html.wow body #nrRoute-today .sr-solar-profile svg{max-height:120px!important}html.wow body #nrRoute-today .sr-solar-profile{padding:6px!important;margin-top:4px!important;margin-bottom:8px!important}html.wow .sr-solar-profile svg text{font-size:14px}}
-
-html.wow body #fp434Shell #nrRoute-today .sr-p0-today .nr-o-hero>.nr-o-heading[data-reference-title]{position:static!important;clip-path:none!important;width:auto!important;height:auto!important;overflow:visible!important;white-space:normal!important;grid-area:1/1!important}
-@media(min-width:1100px){html.wow body #nrRoute-today .sr-dayline{padding:8px!important}}
-
-/* fp517: data-driven solar cursor; motion is optional, data updates are not. */
-.sr-solar-moment{display:block;font-variant-numeric:tabular-nums;min-height:1.3em;color:#ffe3a0!important}
-.sr-sky-motion [data-solar-cursor] circle{transition:cx .28s ease,cy .28s ease}
-.sr-sky-motion [data-solar-cursor] line{transition:x1 .28s ease,x2 .28s ease}
-@media(prefers-reduced-motion:reduce){[data-solar-cursor] *{transition:none!important}}
-
-/* Align the remaining audit cards with the actual route container. */
-html.wow body #nrRoute-today>.sr-festival-decision{width:100%;max-width:none;margin:16px 0!important}
-#headerSub{text-wrap:balance}
-@media(max-width:420px){#headerSub{max-width:245px;font-size:11px;line-height:1.5}.nr-eyebrow{letter-spacing:.04em!important;font-size:11px!important;text-wrap:balance}}
-@media(min-width:1100px){
-html.wow body #fp434Shell .nr-route.active .nr-overview .nr-o-hero.sr-compact-header{grid-template-columns:minmax(150px,1fr) minmax(200px,1.2fr) auto!important;grid-template-rows:auto!important;align-items:center!important}
-html.wow body #fp434Shell .nr-route.active .nr-overview .sr-compact-header>.sr-compact-source{grid-area:1/3!important;align-self:center!important}
-}
-
-/* Discoverable time selection without expanding the desktop day card. */
-html.wow body #fp434Shell .sr-dayline .sr-solar-caption{display:flex!important;flex-direction:row!important;align-items:center;justify-content:space-between;gap:8px}
-html.wow body #fp434Shell .sr-dayline .sr-solar-caption>span{font-size:20px!important;font-weight:700;line-height:1.3;color:inherit}
-html.wow body #fp434Shell .sr-solar-caption [data-solar-choose]{min-height:44px;min-width:44px;padding:4px 10px;font:600 12px/1.3 var(--font-ui,sans-serif);white-space:normal;flex-shrink:0}
-.sr-solar-profile svg{cursor:crosshair}
-@media(min-width:1100px){html.wow body #fp434Shell .sr-solar-profile svg{max-height:100px!important}html.wow body #fp434Shell .sr-solar-profile svg text{font-size:15px!important}}
-@media(max-width:420px){.sr-solar-caption>span{font-size:20px}.sr-solar-caption [data-solar-choose]{max-width:130px}}
-
-/* One astronomical Sun; event times are quiet ticks. No numeric interpolation. */
-.sr-sky-motion [data-solar-rays]{transition:transform .28s ease}
+html.wow body #srCivilPanel [data-eyebrow]{font-size:var(--sr-ui-small)!important;line-height:1.5!important;}
+html.wow body #fp434Shell input:focus-within{outline:3px solid #d8e9ff!important;outline-offset:3px!important;}
+html.wow{--w-accent:#f1cf88;--w-on-accent:#172030;--w-line:rgba(150,185,235,.30);}
+html.wow body{background:linear-gradient(180deg,rgba(4,12,28,.16),rgba(4,12,28,.38) 75%,#060c1b),url(sky_panorama_v1.webp) center top / cover fixed!important;}
+html.wow body>header{border:0;}
+html.wow .wow-sky{opacity:.42;}
+html.wow #nrRoute-today .sr-p0-today .nr-o-hero{background:linear-gradient(145deg,rgba(14,34,60,.88),rgba(7,20,39,.92));border-color:rgba(128,175,224,.42);box-shadow:0 18px 48px #02081770,inset 0 1px 0 #c5ddff20;}
+html.wow #nrRoute-today .nr-o-verdict .nr-o-score[data-ring]{box-shadow:0 0 22px color-mix(in srgb,currentColor 20%,transparent),inset 0 0 24px color-mix(in srgb,currentColor 12%,transparent);text-shadow:0 0 18px color-mix(in srgb,currentColor 45%,transparent);}
+html.wow #nrRoute-today .sr-dayline{background:linear-gradient(145deg,rgba(10,27,51,.94),rgba(7,18,38,.95));border-color:rgba(128,175,224,.42);box-shadow:0 16px 44px #02081755;}
+html.wow #nrRoute-today .sr-dayline [data-place]::after{content:"";display:block;height:138px;margin:16px -2px 0;border-radius:14px;background:linear-gradient(180deg,#0a173018,transparent 60%,#07142655),url(sky_panorama_v1.webp) center 74% / cover;border:1px solid #8aaed530;}
+html.wow #nrRoute-today .sr-p0-source{border-color:#d2b77b70;background:#e2bd6d0b;}
+html.wow #nrRoute-today .sr-p0-signals button{background:linear-gradient(140deg,#102645ee,#07172ced);box-shadow:inset 0 1px 0 #d4e5ff12;}
+html.wow #nrRoute-today .nr-o-journey button:first-child{background:linear-gradient(145deg,#ffe4a5,#e6bb65)!important;border-color:#ffe3a7!important;box-shadow:0 5px 22px #e5b65324;}
+html.wow .nr-topnav{box-shadow:0 10px 32px #03091555;}
+html.wow #nrTopNav button.active,html.wow #nrTopNav [aria-current=page]{background:linear-gradient(145deg,#ffe4a5,#e6bb65)!important;color:#172030!important;}
+@media(min-width:1100px){html.wow body>header{max-width:1320px;margin:auto;padding-top:20px;padding-bottom:16px;}html.wow #nrRoute-today .sr-p0-today{grid-template-columns:minmax(370px,.9fr) minmax(0,1.5fr);grid-template-rows:auto min-content min-content 1fr auto auto;grid-template-areas:"head head" "hero day" "state day" "journey day" ". signals" "details details";gap:16px 24px;max-width:1240px;}html.wow #nrRoute-today .sr-p0-today>.sr-p0-signals{grid-template-columns:repeat(3,minmax(0,1fr))!important;}html.wow #nrRoute-today .sr-p0-today>.sr-p0-signals button{flex-direction:column;align-items:flex-start;justify-content:center;gap:8px!important;min-height:108px;}}
+@media(max-width:600px){html.wow body{background-color:#060c1b!important;}html.wow #nrRoute-today .sr-dayline [data-place]::after{height:110px;background-position:center 80%;}html.wow #nrRoute-today .sr-p0-today .nr-o-hero{padding:18px;}}
+@media(prefers-reduced-data:reduce),(forced-colors:active){html.wow body{background:#070d1f!important;}html.wow #nrRoute-today .sr-dayline [data-place]::after{display:none;}}
+html.wow #nrRoute-today .sr-dayline [data-track]{height:100px;border-radius:16px;position:relative;isolation:isolate;}
+html.wow #nrRoute-today .sr-dayline [data-track]::before{content:"";position:absolute;left:24px;right:24px;top:32px;height:1px;background:linear-gradient(90deg,#e9c67e,#98b8eb);opacity:.8;z-index:-1;}
+html.wow #nrRoute-today .sr-dayline [data-track]>button{top:10px;transform:translateX(-50%);width:44px;height:44px;min-height:44px!important;padding:0;overflow:visible;border-radius:50%!important;border:1px solid #c4d6ef!important;background:#0a1b34!important;color:#f4da9d!important;box-shadow:0 0 14px #9cbded20;font-size:19px!important;}
+html.wow #nrRoute-today .sr-event-clock{position:absolute;top:51px;left:50%;transform:translateX(-50%);color:#f0f3fb;font:600 13px/1.3 var(--w-ui);font-variant-numeric:tabular-nums;white-space:nowrap;pointer-events:none;}
+html.wow #nrRoute-today .sr-dayline [data-track]>button:hover,html.wow #nrRoute-today .sr-dayline [data-track]>button:focus-visible{border-color:#ffe1a0!important;background:#223858!important;box-shadow:0 0 18px #ebc88030;}
+@media(min-width:1100px){html.wow body #nrRoute-today .nr-overview.sr-p0-today .nr-o-verdict .nr-o-score[data-score-tone]{width:132px;height:132px;font-size:64px;}html.wow #nrRoute-today .sr-p0-today .nr-o-label{font-size:21px;}}
+@media(forced-colors:active){html.wow #nrRoute-today .sr-dayline [data-track]>button{border-color:ButtonText!important;color:ButtonText!important;}html.wow #nrRoute-today .sr-event-clock{color:CanvasText;}}
+@keyframes srRouteArrival{from{opacity:.75;transform:translateY(5px);}to{opacity:1;transform:none;}}
+@media(prefers-reduced-motion:no-preference){html.wow .nr-route.active{animation:srRouteArrival .2s ease-out;}html.wow .nr-topnav button,html.wow .nr-o-journey button,html.wow .sr-p0-signals button{transition:background-color .15s,border-color .15s,box-shadow .15s;}html.wow .nr-o-journey button:hover,html.wow .sr-p0-signals button:hover{box-shadow:0 4px 20px #9fbde52b!important;border-color:#e2ce9e!important;}html.wow .nr-o-score{transition:color .18s,text-shadow .18s,box-shadow .18s;}}
+html.wow body #fp434Shell h1[tabindex="-1"]:focus{outline:none!important;}
+html.wow body #fp434Shell .nr-o-heading{margin:0;padding:0;}
+html.wow body #fp434Shell .nr-o-heading>span{display:none;}
+html.wow body #fp434Shell .nr-o-heading h1{font-size:24px!important;margin:0 0 10px!important;}
+html.wow body #nrRoute-today .nr-o-heading{position:absolute;}
+html.wow body #nrRoute-today .sr-dayline [data-place]::after{display:none!important;}
+html.wow body #nrRoute-today .sr-p0-feed-state{font-size:var(--sr-ui-small);margin:4px 0 0;line-height:1.4;}
+html.wow body #fp434Shell :is(#nrRoute-forecast,#nrRoute-calendar) .nr-o-hero{display:grid!important;grid-template-columns:minmax(120px,1fr) minmax(0,1.2fr)!important;gap:6px 12px!important;padding:12px!important;min-height:0;}
+html.wow body #fp434Shell :is(#nrRoute-forecast,#nrRoute-calendar) .nr-o-hero>label{margin:0;grid-column:1!important;align-self:center;}
+html.wow body #fp434Shell :is(#nrRoute-forecast,#nrRoute-calendar) .nr-o-verdict{display:flex!important;flex-direction:row;align-items:center;gap:8px!important;margin:0!important;grid-column:2!important;grid-row:1!important;}
+html.wow body #fp434Shell :is(#nrRoute-forecast,#nrRoute-calendar) .nr-o-score{width:56px;height:56px;min-width:56px!important;font-size:27px!important;margin:0;flex:none;}
+html.wow body #fp434Shell :is(#nrRoute-forecast,#nrRoute-calendar) .nr-o-label{font-size:14px!important;margin:0;line-height:1.3!important;}
+html.wow body #fp434Shell .sr-compact-source{grid-column:1/-1;font-size:var(--sr-ui-small);color:var(--w-muted,#c7d4ec);}
+html.wow body #fp434Shell .sr-p0-month-grid button[aria-pressed=true]{background:#10223b!important;outline:2px solid #d7eaff;outline-offset:-2px;box-shadow:none;}
+@media(min-width:1100px){html.wow body>header{min-height:90px;padding:12px 24px!important;}html.wow body #fp434Shell{padding-top:0;}html.wow body #nrTopNav{position:absolute;width:auto;margin:0!important;z-index:5;padding:4px!important;}html.wow body #nrTopNav button{padding:10px 8px;font-size:var(--sr-ui-small);}html.wow body #nrRoute-today .sr-p0-today{grid-template-columns:minmax(320px,.9fr) minmax(0,1.4fr);gap:14px;}html.wow body #nrRoute-today .sr-p0-today>.sr-p0-signals{grid-area:signals;}html.wow body #nrRoute-today .sr-p0-today>.sr-p0-signals button{min-height:72px;}html.wow body #nrRoute-today .sr-dayline{align-self:stretch;}}
+@media(max-width:600px){html.wow body{background-attachment:fixed!important;background-size:auto 100vh!important;background-repeat:repeat-y!important;}html.wow body>header{margin:0;}html.wow .wow-header-moon{top:8px;right:10px;}html.wow .wow-header-moon svg{width:80px;height:80px;}html.wow body #fp434Shell{padding-top:0;}html.wow body #nrRoute-today .sr-p0-today .nr-o-hero{padding:14px;gap:10px;}html.wow body #nrRoute-today .sr-p0-signals{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:6px;margin:10px 0;}html.wow body #nrRoute-today .sr-p0-signals button{display:flex;flex-direction:column;align-items:flex-start;gap:4px;font-size:12px!important;line-height:1.25!important;}html.wow body #nrRoute-today .sr-p0-signals button strong{line-height:1.25;}html.wow body #nrRoute-today .sr-p0-signals button span{font-size:12px;}html.wow body #nrRoute-today .nr-o-score{width:88px;height:88px;font-size:42px;min-width:88px;}html.wow body #nrRoute-today .nr-o-verdict{margin:4px 0!important;gap:12px;}html.wow body #nrRoute-today .sr-p0-sentence{font-size:15px;margin:0;line-height:1.4;}}
+html.wow body #playChannelNotice{bottom:92px;left:16px;top:auto;z-index:40;padding:10px 52px 10px 12px!important;box-shadow:0 8px 30px #0008;}
+html.wow body #playChannelNotice[hidden]{display:none!important;}
+html.wow body #playChannelNotice button{position:absolute;right:4px;top:0;min-width:44px;min-height:44px;background:transparent;color:inherit;border:0;font-size:24px;}
+html.wow body>header{position:relative;}
+html.wow body #fp434Shell .nr-route.active .nr-overview .nr-o-hero.sr-compact-header{display:grid;grid-template-areas:none!important;grid-template-columns:minmax(120px,1fr) minmax(0,1.2fr)!important;grid-template-rows:auto auto!important;min-height:0;}
+html.wow body #fp434Shell .nr-route.active .nr-overview .sr-compact-header>label{grid-area:1/1!important;order:0;}
+html.wow body #fp434Shell .nr-route.active .nr-overview .sr-compact-header>.nr-o-verdict{grid-area:1/2;display:flex;flex-flow:row nowrap!important;justify-content:flex-start;padding:0;align-items:center;}
+html.wow body #fp434Shell .nr-route.active .nr-overview .sr-compact-header>.sr-compact-source{grid-area:2/1/auto/3;}
+html.wow body #fp434Shell .nr-route.active .nr-overview .sr-compact-header .nr-o-score{width:56px;height:56px;font-size:27px;}
+html.wow body #fp434Shell .nr-route.active .nr-overview .sr-compact-header .nr-o-label{font-size:14px;line-height:1.3;}
+@media(min-width:1100px){html.wow body #nrTopNav{top:12px;left:30%;right:120px;}html.wow body #nrRoute-today .sr-p0-today{margin:0 auto;}html.wow body #nrRoute-today .sr-dayline{}html.wow body #nrRoute-today .sr-dl-story{padding:12px;margin:10px 0;}html.wow body #nrRoute-today .sr-dayline :is([data-p0-explore],[data-sky-events]){margin-top:10px;padding-top:10px;}html.wow body #nrRoute-today .nr-o-journey{margin:0;}}
+@media(max-width:600px){html.wow body #headerSub{max-width:calc(100vw - 115px);white-space:normal;}html.wow body #fp434Shell .nr-route{padding-top:0!important;}html.wow body #nrRoute-today .sr-p0-signals button strong{font-size:12px;}html.wow body #nrRoute-today .sr-p0-signals button small{font-size:11px;}}
+@media(min-width:1100px){html.wow body #mainContent{margin-top:0!important;padding-top:0!important;}html.wow body #fp434Shell .nr-route{padding-top:0;}html.wow body #nrRoute-today .nr-overview.sr-p0-today{}html.wow body #nrRoute-today .sr-dayline>p{margin:6px 0!important;}html.wow body #nrRoute-today .sr-dayline .sr-dl-story{display:grid;grid-template-columns:minmax(0,1fr) auto;}html.wow body #nrRoute-today .sr-dl-story small{grid-column:1/-1;}html.wow body #nrRoute-today .sr-dl-story :is(h3,p){margin:0!important;font-size:19px;}html.wow body #nrRoute-today .sr-dl-story button{margin:0;min-height:44px!important;align-self:center;}html.wow body #nrRoute-today .sr-dayline>details{padding:0;margin:6px 0;}html.wow body #nrRoute-today .sr-dayline>details>summary{padding:10px 0;min-height:44px;font-size:17px;}html.wow body .wow-header-moon>span{display:none;}}
+html.wow body #playChannelNotice{right:auto;}
+html.wow body #nrRoute-today .sr-p0-signals button{gap:3px;padding:8px;}
+html.wow body #nrRoute-today .sr-p0-signals button strong{font-size:var(--sr-ui-small);line-height:1.25;}
+@media(min-width:1100px){html.wow body #nrRoute-today .nr-overview.sr-p0-today{padding-top:4px!important;}}
+@media(max-width:600px){html.wow body #mainContent{padding-top:0;margin-top:0!important;}html.wow body #nrRoute-today .sr-p0-signals button{padding:6px!important;min-height:72px!important;}}
+html.wow body #fp434Shell .sr-p0-month-grid button[aria-pressed=true]>span{color:#eff5ff;}
+html.wow body #nrRoute-today .nr-o-heading{width:max-content;max-width:100%;height:auto;overflow:visible;white-space:normal;clip-path:inset(50%);}
+html.wow body .sr-dayline [data-axis]{font-size:12px;}
+html.wow body .sr-dayline [data-axis]>span{white-space:normal;line-height:1.3;}
+html.wow body .sr-dl-dialog label,html.wow body .sr-dayline fieldset label{display:flex;align-items:center;gap:10px;min-height:44px;padding:6px;}
+html.wow body .sr-dl-dialog>button{min-height:44px;margin:6px 0;display:block;}
+html.wow body #nrRoute-more a{display:inline-flex;min-height:44px;align-items:center;}
+html.wow body #fp434Shell [data-topic][aria-pressed=true]{background:#17334e!important;color:#eff5ff!important;outline:2px solid #c9e3ff;outline-offset:-2px;}
+@media(max-width:600px){html.wow body #nrRoute-panch>.nr-route-head{min-height:160px;height:auto;}html.wow body #nrRoute-panch .nr-panch-components{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}html.wow body #nrRoute-panch .nr-panch-component{padding:10px;min-width:0;}html.wow body #nrRoute-panch .nr-panch-component strong{font-size:15px;}html.wow body #nrRoute-panch .nr-panch-summary{padding:12px;}html.wow body #nrRoute-panch .nr-panch-summary h3{font-size:24px;}}
+html.wow body .sr-dayline [data-axis]>span{max-width:none;box-sizing:border-box;}
+html.wow body .sr-dayline [data-axis]>.end{text-align:right;}
+html.wow body .sr-dayline [data-axis]>.middle{text-align:center;}
+@media(max-width:600px){html.wow body #nrRoute-panch>.nr-route-head{padding:8px;}html.wow body #nrRoute-panch>.nr-route-head h1{font-size:24px;line-height:1.2;margin:4px 0!important;max-width:none;}html.wow body #nrRoute-panch>.nr-route-head p{font-size:var(--sr-ui-small);line-height:1.4;margin:4px 0!important;max-width:none;}}
+html.wow #nrRoute-today .sr-dayline [data-track]>button[data-event-count]:not([data-event-count="1"]){width:104px;border-radius:22px!important;font-size:var(--sr-ui-small)!important;white-space:nowrap!important;}
+html.wow body .sr-dayline [data-axis]{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;height:auto;min-height:46px;}
+html.wow body .sr-dayline [data-axis]>span{position:static;transform:none;width:auto;overflow-wrap:anywhere;}
+html.wow body .sr-dayline [data-axis]>.start{grid-column:1;grid-row:1;}
+html.wow body .sr-dayline [data-axis]>.middle{grid-column:2;grid-row:1;}
+html.wow body .sr-dayline [data-axis]>.end{grid-column:3;grid-row:1;}
+html.wow body>header{background:linear-gradient(90deg,#06112588,#07122522),url(sky_panorama_v1.webp) center 77% / cover!important;border-bottom:1px solid #6684ac55!important;}
+html.wow body #nrRoute-today .sr-p0-today .nr-o-hero{background:radial-gradient(ellipse at 20% 46%,#153b342b,transparent 62%),linear-gradient(145deg,#0b1c34f5,#071225f5);border-color:#8199c080;border-radius:18px!important;box-shadow:0 12px 32px #02071466,inset 0 1px #bdd7ff20;display:grid!important;grid-template-columns:minmax(0,1fr) minmax(120px,1fr);gap:14px!important;}
+html.wow body #nrRoute-today .sr-reference-title{font:600 25px/1.2 var(--w-display);margin:0;grid-column:1;grid-row:1;align-self:center;color:#f4f1e8;}
+html.wow body #nrRoute-today [data-p0-date]{grid-column:2;grid-row:1;font-size:var(--sr-ui-small);min-width:0;}
+html.wow body #nrRoute-today [data-p0-date] select{width:100%;min-width:0;background:#09152a!important;border-color:#577296!important;border-radius:9px!important;}
+html.wow body #nrRoute-today .nr-o-hero>.nr-o-verdict{grid-column:1/-1;grid-row:2;gap:22px!important;padding:12px 4px!important;}
+html.wow body #nrRoute-today .nr-o-hero>.sr-p0-sentence{grid-column:1/-1;grid-row:3;font:14px/1.5 var(--w-ui)!important;color:#bdcde5;}
+html.wow body #nrRoute-today .nr-o-hero>.sr-p0-source{grid-column:1/-1;grid-row:4;justify-self:start;background:#15243a!important;border:1px solid #8aa2c352!important;border-radius:10px!important;font-size:var(--sr-ui-small);}
+html.wow body #nrRoute-today .nr-o-hero>[data-p0-feed-state]{grid-column:1/-1;grid-row:5;margin:0;font-size:var(--sr-ui-small);}
+html.wow body #nrRoute-today .sr-p0-today .nr-o-verdict .nr-o-label{font-family:var(--w-display);font-weight:600;font-size:21px!important;line-height:1.25!important;}
+html.wow body #nrRoute-today .nr-o-verdict .nr-o-score[data-ring]{background:radial-gradient(circle,color-mix(in srgb,var(--score-color) 12%,#071521),#071521 68%);box-shadow:0 0 30px color-mix(in srgb,var(--score-color) 28%,transparent),inset 0 0 24px color-mix(in srgb,var(--score-color) 16%,transparent)!important;}
+html.wow body #nrRoute-today .nr-o-verdict .nr-o-score[data-ring]::after{content:"";position:absolute;inset:-7px;border:1px solid color-mix(in srgb,var(--score-color) 45%,transparent);border-radius:50%;pointer-events:none;}
+html.wow body #nrRoute-today .sr-p0-signals button{background:linear-gradient(140deg,#13223c,#09172b)!important;border:1px solid #6d87b166!important;border-radius:10px!important;box-shadow:inset 0 1px #c5daff13;}
+html.wow body #nrRoute-today .sr-dayline{background:linear-gradient(145deg,#101f39f2,#071326f5);border:1px solid #8199c080;border-radius:18px;}
+@media(max-width:600px){html.wow body>header{height:108px;min-height:108px!important;padding:12px 16px!important;}html.wow body #headerTitle{font-size:32px!important;letter-spacing:-.04em!important;}html.wow body #headerSub{font-size:12px;line-height:1.5!important;}html.wow body .wow-header-moon{top:12px;right:12px;}html.wow body .wow-header-moon svg{width:88px;height:88px;}html.wow body #nrRoute-today .nr-overview.sr-p0-today .nr-o-verdict .nr-o-score[data-score-tone]{width:104px;height:104px;min-width:104px;font-size:46px;}html.wow body #nrRoute-today .sr-reference-title{font-size:23px;}}
+@media(max-width:360px){html.wow body #nrRoute-today .sr-reference-title{font-size:20px;}html.wow body #nrRoute-today .nr-o-hero>.nr-o-verdict{gap:16px!important;}html.wow body #nrRoute-today .sr-p0-today .nr-o-verdict .nr-o-label{font-size:19px!important;}}
+html.wow body #fp434Shell #nrRoute-today .sr-p0-today .nr-o-hero{grid-template-areas:none!important;grid-template-rows:auto auto auto auto auto!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;}
+html.wow body #fp434Shell #nrRoute-today .nr-o-hero>.sr-reference-title{grid-area:1/1;min-width:0;font-size:23px;}
+html.wow body #fp434Shell #nrRoute-today .nr-o-hero>[data-p0-date]{grid-area:1/2!important;width:100%;max-width:100%!important;min-width:0;}
+html.wow body #fp434Shell #nrRoute-today .nr-o-hero>.nr-o-verdict{grid-area:2/1/3/3!important;order:0!important;}
+html.wow body #fp434Shell #nrRoute-today .nr-o-hero>.sr-p0-sentence{grid-area:3/1/4/3;order:0!important;}
+html.wow body #fp434Shell #nrRoute-today .nr-o-hero>.sr-p0-source{grid-area:4/1/5/3;order:0;}
+html.wow body #fp434Shell #nrRoute-today .nr-o-hero>[data-p0-feed-state]{grid-area:5/1/6/3;order:0;}
+html.wow body #nrRoute-panch>.nr-route-head{min-height:0;background:transparent!important;border:0;padding:12px 4px!important;}
+html.wow body #nrRoute-panch>.nr-route-head h1{font:600 30px/1.2 var(--w-display)!important;}
+html.wow body #nrRoute-panch .sr-panch-feature{display:grid;grid-template-columns:72px minmax(0,1fr);gap:18px;align-items:center;padding:22px 18px;margin:0 0 14px;border:1px solid #7894bd88;border-radius:18px;background:linear-gradient(100deg,#081629f5 25%,#0a193bcc),url(sky_panorama_v1.webp) center 72%/cover;box-shadow:inset 3px 0 #dfc07955,0 14px 35px #02071844;}
+html.wow body #nrRoute-panch .sr-panch-feature small{font:600 13px/1.4 var(--w-ui);color:#dfc88e;}
+html.wow body #nrRoute-panch .sr-panch-feature h3{font:600 24px/1.3 var(--w-display);margin:6px 0;color:#f5f1e8;}
+html.wow body #nrRoute-panch .sr-panch-feature p{font:400 18px/1.5 var(--w-display);margin:8px 0 12px;color:#d6dff2;overflow-wrap:anywhere;}
+html.wow body #nrRoute-panch .sr-panch-feature button{min-height:44px;background:#10223a;color:#dfebff;border:1px solid #849fc3!important;border-radius:10px;padding:8px 12px;font:600 14px/1.4 var(--w-ui);}
+html.wow body #nrRoute-panch .sr-panch-orbit{display:grid;place-items:center;width:68px;height:68px;border:1px solid #dfc079;border-radius:50%;color:#ffe2a2;font-size:36px;background:radial-gradient(circle,#b38a2922,transparent 70%);box-shadow:0 0 22px #dfc07922,inset 0 0 16px #dfc07915;}
+html.wow body #nrRoute-panch :is(.nr-panch-summary,.nr-panch-section){background:linear-gradient(140deg,#0e2039f5,#081426f5)!important;border:1px solid #6983aa66!important;border-radius:16px!important;}
+html.wow body #nrRoute-panch .nr-panch-component{background:linear-gradient(140deg,#152741,#0b1930)!important;border:1px solid #6584af55;border-radius:12px;}
+html.wow body #nrRoute-panch .nr-panch-component strong{font-family:var(--w-display);color:#edf0fa;}
+html.wow body #nrRoute-panch .sr-panch-transitions>summary{min-height:44px;padding:10px 0;font:600 20px/1.3 var(--w-display);cursor:pointer;}
+@media(min-width:1100px){html.wow body #nrRoute-panch .sr-panch-feature{grid-template-columns:104px minmax(0,1fr);padding:24px;}.sr-panch-feature .sr-panch-orbit{justify-self:center;}}
+@media(max-width:360px){html.wow body #nrRoute-panch .sr-panch-feature{grid-template-columns:48px minmax(0,1fr);gap:12px;padding:16px 12px;}html.wow body #nrRoute-panch .sr-panch-orbit{width:44px;height:44px;font-size:26px;}html.wow body #nrRoute-panch .sr-panch-feature h3{font-size:21px;}}
+html.wow .sr-solar-profile{margin:10px 0 16px;padding:12px;border:1px solid #536887;border-radius:16px;background:linear-gradient(#06122b66,#06122be8),url("sky_panorama_v1.webp") center/cover;}
+html.wow .sr-solar-profile[hidden]{display:none!important;}
+html.wow .sr-solar-profile svg{display:block;width:100%;height:auto;max-height:180px;}
+html.wow .sr-solar-profile figcaption{font:600 20px Georgia,serif;color:#f3e5c6;}
+html.wow .sr-solar-profile small{color:#cbd8ed;font-size:12px;}
+html.wow .sr-forecast-graph{background:linear-gradient(#08172bd9,#08172bf5),url("sky_panorama_v1.webp") center/cover;}
+html.wow .nr-o-topic-days{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;}
+html.wow .nr-o-topic-days button{min-height:72px;text-align:left;border-radius:15px;background:linear-gradient(125deg,#152642,#0a1427);border:1px solid #526584;padding:12px;}
+html.wow .sr-p0-compare{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;padding:16px;border:1px solid #526584;border-radius:20px;background:#071326e8;}
+html.wow .sr-p0-compare>h2,html.wow .sr-p0-compare>button{grid-column:1/-1;}
+html.wow .sr-p0-compare-card{min-width:0;padding:18px;border:1px solid var(--compare-color);border-radius:20px;background:linear-gradient(150deg,#142442,#081326);box-shadow:0 12px 30px #0004;}
+html.wow .sr-p0-compare-card h3{font:600 20px/1.3 Georgia,serif;margin:0 0 18px;}
+html.wow .sr-p0-compare-card .sr-compare-ring{display:flex!important;align-items:center;justify-content:center;width:100px;height:100px;margin:0 auto 20px;border:2px solid var(--compare-color);border-radius:50%;color:var(--compare-color);box-shadow:0 0 20px color-mix(in srgb,var(--compare-color) 25%,transparent),inset 0 0 16px color-mix(in srgb,var(--compare-color) 15%,transparent);font-size:30px;}
+html.wow .sr-p0-compare-card p{line-height:1.5;overflow-wrap:anywhere;}
+html.wow .sr-p0-compare-card button{min-height:44px;width:100%;margin-top:12px;}
+html.wow .sr-compare-save{background:linear-gradient(135deg,#ffe39d,#dfb85e)!important;color:#121c2b!important;min-height:48px;font-weight:700;}
+@media(max-width:600px){html.wow .sr-p0-compare{grid-template-columns:1fr;}html.wow .sr-p0-compare-card{display:grid;grid-template-columns:100px minmax(0,1fr);gap:8px 16px;}html.wow .sr-p0-compare-card h3,html.wow .sr-p0-compare-card details,html.wow .sr-p0-compare-card button{grid-column:1/-1;}html.wow .sr-p0-compare-card .sr-compare-ring{margin:0;}html.wow .sr-p0-compare-card p{margin:0;align-self:center;}}
+@media(prefers-reduced-motion:no-preference){html.wow.sr-sky-motion details[open]>:not(summary){animation:sr-disclosure-in 180ms ease-out;}@keyframes sr-disclosure-in{from{opacity:.4;transform:translateY(3px);}to{opacity:1;transform:none;}}}
+html.wow body #nrRoute-today .sr-dayline figure.sr-solar-profile{display:block;width:100%;box-sizing:border-box;}
+html.wow body #nrRoute-today .sr-solar-profile figcaption{display:block;padding:0;font:600 20px/1.3 Georgia,serif;}
+html.wow body #nrRoute-today .sr-solar-profile svg{width:100%;max-width:none;}
+html.wow body #nrRoute-calendar .nr-o-topic-days{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;max-height:400px;overflow-y:auto;padding:4px;}
+html.wow body #nrRoute-calendar .nr-o-topic-days button{min-height:72px!important;font-size:15px;overflow-wrap:normal;}
+@media(max-width:600px){html.wow .sr-solar-profile svg text{font-size:24px;}}
+html.wow .sr-compare-picker,html.wow .sr-compare-count{grid-column:1/-1;}
+html.wow .sr-compare-picker{display:grid;gap:8px;color:#dce6fa;}
+html.wow .sr-compare-picker select{min-height:48px;width:100%;max-width:100%;box-sizing:border-box;}
+html.wow .sr-compare-count{margin:0;color:#cbd8ed;font-size:14px;}
+html.wow body #playChannelNotice{position:relative;inset:auto;width:auto;max-width:none!important;margin:8px 16px!important;box-sizing:border-box;}
+html.wow .sr-p0-signals button span{font-size:var(--sr-ui-small);}
+@media(min-width:1100px){html.wow body #nrRoute-today .sr-p0-today{width:100%;max-width:none;box-sizing:border-box;grid-template-areas:"hero day" "signals day" "journey journey" "details details";grid-template-rows:max-content max-content auto auto;align-items:start;}html.wow body #nrRoute-today .sr-dayline{}html.wow body #nrRoute-today .sr-solar-profile{margin:8px 0 16px;}html.wow body #nrRoute-today .sr-solar-profile svg{}html.wow body #nrRoute-today .sr-dayline [data-axis]{margin:6px 0;min-height:20px;}html.wow body #nrRoute-today .sr-dayline details{padding:8px 0;margin:4px 0;}html.wow body #nrRoute-today .sr-dayline details>summary{min-height:44px;padding:8px 0;box-sizing:border-box;}html.wow body #nrRoute-today .sr-dayline [data-status]{margin:6px 0;}}
+@media(min-width:1100px){html.wow body #nrRoute-today .sr-solar-profile svg{}html.wow body #nrRoute-today .sr-dayline [data-track]{height:80px;min-height:80px;}html.wow body #nrRoute-today .sr-dayline .sr-dl-story{padding:6px 10px;margin:6px 0;gap:4px;}html.wow body #nrRoute-today .sr-dayline .sr-dl-story p{font-size:18px!important;}html.wow body #nrRoute-today .sr-dayline details:not([open]){padding:0;margin:4px 0;}}
+html.wow .sr-forecast-graph svg{max-width:448px;}
+@media(min-width:1100px){html.wow .sr-solar-profile svg text{}}
+@media(min-width:1100px){html.wow body #nrRoute-today .sr-solar-profile svg{max-height:120px;}html.wow body #nrRoute-today .sr-solar-profile{padding:6px;margin-top:4px;margin-bottom:8px;}html.wow .sr-solar-profile svg text{font-size:14px;}}
+html.wow body #fp434Shell #nrRoute-today .sr-p0-today .nr-o-hero>.nr-o-heading[data-reference-title]{position:static;clip-path:none;width:auto;height:auto;overflow:visible;white-space:normal;grid-area:1/1;}
+@media(min-width:1100px){html.wow body #nrRoute-today .sr-dayline{padding:8px;}}
+.sr-solar-moment{display:block;font-variant-numeric:tabular-nums;min-height:1.3em;color:#ffe3a0;}
+.sr-sky-motion [data-solar-cursor] circle{transition:cx .28s ease,cy .28s ease;}
+.sr-sky-motion [data-solar-cursor] line{transition:x1 .28s ease,x2 .28s ease;}
+@media(prefers-reduced-motion:reduce){[data-solar-cursor] *{transition:none;}}
+html.wow body #nrRoute-today>.sr-festival-decision{width:100%;max-width:none;margin:16px 0;}
+#headerSub{text-wrap:balance;}
+@media(max-width:420px){#headerSub{max-width:245px;font-size:11px;line-height:1.5;}.nr-eyebrow{letter-spacing:.04em;font-size:11px;text-wrap:balance;}}
+@media(min-width:1100px){html.wow body #fp434Shell .nr-route.active .nr-overview .nr-o-hero.sr-compact-header{grid-template-columns:minmax(150px,1fr) minmax(200px,1.2fr) auto;grid-template-rows:auto!important;align-items:center;}html.wow body #fp434Shell .nr-route.active .nr-overview .sr-compact-header>.sr-compact-source{grid-area:1/3;align-self:center;}}
+html.wow body #fp434Shell .sr-dayline .sr-solar-caption{display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:8px;}
+html.wow body #fp434Shell .sr-dayline .sr-solar-caption>span{font-size:20px!important;font-weight:700;line-height:1.3;color:inherit;}
+html.wow body #fp434Shell .sr-solar-caption [data-solar-choose]{min-height:44px;min-width:44px;padding:4px 10px;font:600 12px/1.3 var(--font-ui,sans-serif);white-space:normal;flex-shrink:0;}
+.sr-solar-profile svg{cursor:crosshair;}
+@media(min-width:1100px){html.wow body #fp434Shell .sr-solar-profile svg{max-height:100px;}html.wow body #fp434Shell .sr-solar-profile svg text{font-size:15px;}}
+@media(max-width:420px){.sr-solar-caption>span{font-size:20px;}.sr-solar-caption [data-solar-choose]{max-width:130px;}}
+.sr-sky-motion [data-solar-rays]{transition:transform .28s ease;}
 [data-solar-cursor][data-horizon=below] [data-active-sun],
-[data-solar-cursor][data-horizon=below] [data-solar-rays]{opacity:.6}
-@keyframes srContentArrival{from{opacity:.55;transform:translateY(4px)}to{opacity:1;transform:none}}
-@media(prefers-reduced-motion:no-preference){
- html.wow.sr-sky-motion .nr-route.active :is(.sr-forecast-graph svg,.sr-p0-compare-card,.sr-panch-feature){animation:srContentArrival .24s ease-out}
- html.wow.sr-sky-motion :is([data-calendar-date],[data-topic],.sr-p0-tabs button){transition:background-color .16s ease,border-color .16s ease,box-shadow .16s ease}
-}
-/* The user's switch and page visibility apply to every effect, not only stars. */
-html.wow:not(.sr-sky-motion) *,html.wow:not(.sr-sky-motion) *::before,html.wow:not(.sr-sky-motion) *::after{animation:none!important;transition:none!important}
-
-/* Two complete presentation directions share the same data and score palette. */
-.sr-appearance{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;border:0;padding:0;margin:14px 0}
-.sr-appearance legend{font-weight:700;margin-bottom:10px}
-html.wow body #fp434Shell .sr-appearance label{display:flex;align-items:flex-start;gap:12px;min-height:92px;margin:0;padding:16px;border:1px solid #617899;border-radius:14px;background:#0b192e;cursor:pointer}
-.sr-appearance label:has(input:checked){outline:2px solid #d7eaff;outline-offset:-2px}
-.sr-appearance input{width:20px;height:20px;flex-shrink:0;margin:3px 0;accent-color:#d7eaff}
-.sr-appearance span{display:grid;gap:6px}.sr-appearance strong{font-size:16px;color:#f0f4fc}.sr-appearance small{font-size:13px;line-height:1.5;color:#c4d2e6}
-.sr-appearance [data-appearance-status]{grid-column:1/-1;margin:0}.sr-appearance [data-appearance-status]:empty{display:none}
-@media(max-width:540px){.sr-appearance{grid-template-columns:1fr}}
-html.wow[data-sr-appearance=observatory]{--w-display:'SR Manrope',system-ui,sans-serif;--w-star:#b8d8ff;--w-accent:#b8d8ff}
-html.wow[data-sr-appearance=observatory] body{background:#07111f!important}
-html.wow[data-sr-appearance=observatory] .wow-sky{display:none}
-html.wow[data-sr-appearance=observatory] body>header{background:linear-gradient(100deg,#0c1d33,#0b1525)!important;border-color:#3a526e!important}
-html.wow[data-sr-appearance=observatory] .wow-header-moon svg{filter:drop-shadow(0 0 5px #d3dcf530)}
-html.wow[data-sr-appearance=observatory] body #fp434Shell :is(.nr-o-hero,.sr-dayline,.sr-solar-profile,.sr-forecast-graph,.sr-panch-feature,.nr-card,.sr-p0-compare-card,.sr-p0-details){background:#0d1b2e!important;border-color:#4f6684!important;box-shadow:none!important}
-html.wow[data-sr-appearance=observatory] body #fp434Shell .nr-overview{background:transparent!important}
-html.wow[data-sr-appearance=observatory] body #fp434Shell :is(h1,h2,h3,.sr-solar-caption>span){font-family:'SR Manrope',system-ui,sans-serif!important}
-html.wow[data-sr-appearance=observatory] body #fp434Shell .nr-o-score{box-shadow:none!important;text-shadow:none!important}
-html.wow[data-sr-appearance=observatory] .nr-o-score::before{filter:none!important}
-html.wow[data-sr-appearance=observatory] #nrTopNav button.active{background:#b8d8ff!important;color:#07111f!important}
-html.wow[data-sr-appearance=observatory] body #nrRoute-today .sr-dayline [data-place]::after{background:#0d1b2e!important}
-
-/* ===== fp520 Claude polish (27.10.2026): лише оформлення; дані, бал і розрахунки не змінюються ===== */
-/* C-01: стан перемикача «Анімації» видно не лише через aria-pressed */
-html body [data-sky-motion][aria-pressed=false]{background:transparent!important;color:#dce7fb!important;border:1px solid #6f86aa!important;box-shadow:none!important}
-html body [data-sky-motion][aria-pressed=true]::before{content:"\2713\00a0"}
-html body [data-sky-motion][aria-pressed=false]::before{content:"\25CB\00a0"}
-/* C-02 (N-06): підписи сигналів >= 13 px */
-html.wow body #nrRoute-today .sr-p0-signals button>span,html.wow body #nrRoute-today .sr-p0-signals button>small{font-size:13px!important;line-height:1.35!important}
-/* C-03 (N-10): компактний рядок Прогнозу/Календаря: дата, бал, джерело ліворуч (специфічність вища за :is(#nrRoute-…) .nr-o-hero) */
-@media(min-width:700px){html.wow body #fp434Shell :is(#nrRoute-forecast,#nrRoute-calendar).nr-route.active .nr-overview .nr-o-hero.sr-compact-header{grid-template-columns:auto auto 1fr!important;column-gap:28px!important;justify-items:start!important}
-html.wow body #fp434Shell :is(#nrRoute-forecast,#nrRoute-calendar).nr-route.active .nr-overview .sr-compact-header>:is(label,.sr-compact-source){justify-self:start!important}}
-/* C-05 (W-14): решта службових підписів у першому екрані >= 13 px */
-html.wow body #nrRoute-today .sr-dayline label>span,html.wow body #nrRoute-today .sr-dayline figcaption span,html.wow body #nrRoute-today .sr-p0-details .nr-o-state{font-size:13px!important}
+[data-solar-cursor][data-horizon=below] [data-solar-rays]{opacity:.6;}
+@keyframes srContentArrival{from{opacity:.55;transform:translateY(4px);}to{opacity:1;transform:none;}}
+@media(prefers-reduced-motion:no-preference){html.wow.sr-sky-motion .nr-route.active :is(.sr-forecast-graph svg,.sr-p0-compare-card,.sr-panch-feature){animation:srContentArrival .24s ease-out;}html.wow.sr-sky-motion :is([data-calendar-date],[data-topic],.sr-p0-tabs button){transition:background-color .16s ease,border-color .16s ease,box-shadow .16s ease;}}
+html.wow:not(.sr-sky-motion) *,html.wow:not(.sr-sky-motion) *::before,html.wow:not(.sr-sky-motion) *::after{animation:none!important;transition:none!important;}
+.sr-appearance{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;border:0;padding:0;margin:14px 0;}
+.sr-appearance legend{font-weight:700;margin-bottom:10px;}
+html.wow body #fp434Shell .sr-appearance label{display:flex;align-items:flex-start;gap:12px;min-height:92px;margin:0;padding:16px;border:1px solid #617899;border-radius:14px;background:#0b192e;cursor:pointer;}
+.sr-appearance label:has(input:checked){outline:2px solid #d7eaff;outline-offset:-2px;}
+.sr-appearance input{width:20px;height:20px;flex-shrink:0;margin:3px 0;accent-color:#d7eaff;}
+.sr-appearance span{display:grid;gap:6px;}
+.sr-appearance strong{font-size:16px;color:#f0f4fc;}
+.sr-appearance small{font-size:var(--sr-ui-small);line-height:1.5;color:#c4d2e6;}
+.sr-appearance [data-appearance-status]{grid-column:1/-1;margin:0;}
+.sr-appearance [data-appearance-status]:empty{display:none;}
+@media(max-width:540px){.sr-appearance{grid-template-columns:1fr;}}
+html.wow[data-sr-appearance=observatory]{--w-display:"SR Manrope",system-ui,sans-serif;--w-star:#b8d8ff;--w-accent:#b8d8ff;}
+html.wow[data-sr-appearance=observatory] body{background:#07111f!important;}
+html.wow[data-sr-appearance=observatory] .wow-sky{display:none;}
+html.wow[data-sr-appearance=observatory] body>header{background:linear-gradient(100deg,#0c1d33,#0b1525)!important;border-color:#3a526e!important;}
+html.wow[data-sr-appearance=observatory] .wow-header-moon svg{filter:drop-shadow(0 0 5px #d3dcf530);}
+html.wow[data-sr-appearance=observatory] body #fp434Shell :is(.nr-o-hero,.sr-dayline,.sr-solar-profile,.sr-forecast-graph,.sr-panch-feature,.nr-card,.sr-p0-compare-card,.sr-p0-details){background:#0d1b2e!important;border-color:#4f6684!important;box-shadow:none;}
+html.wow[data-sr-appearance=observatory] body #fp434Shell .nr-overview{background:transparent!important;}
+html.wow[data-sr-appearance=observatory] body #fp434Shell :is(h1,h2,h3,.sr-solar-caption>span){font-family:"SR Manrope",system-ui,sans-serif!important;}
+html.wow[data-sr-appearance=observatory] body #fp434Shell .nr-o-score{box-shadow:none;text-shadow:none!important;}
+html.wow[data-sr-appearance=observatory] .nr-o-score::before{filter:none!important;}
+html.wow[data-sr-appearance=observatory] #nrTopNav button.active{background:#b8d8ff!important;color:#07111f!important;}
+html.wow[data-sr-appearance=observatory] body #nrRoute-today .sr-dayline [data-place]::after{background:#0d1b2e!important;}
+html body [data-sky-motion][aria-pressed=false]{background:transparent!important;color:#dce7fb!important;border:1px solid #6f86aa!important;box-shadow:none!important;}
+html body [data-sky-motion][aria-pressed=true]::before{content:"✓ ";}
+html body [data-sky-motion][aria-pressed=false]::before{content:"○ ";}
+html.wow body #nrRoute-today .sr-p0-signals button>span,html.wow body #nrRoute-today .sr-p0-signals button>small{font-size:var(--sr-ui-small);line-height:1.35!important;}
+@media(min-width:700px){html.wow body #fp434Shell :is(#nrRoute-forecast,#nrRoute-calendar).nr-route.active .nr-overview .nr-o-hero.sr-compact-header{grid-template-columns:auto auto 1fr!important;column-gap:28px!important;justify-items:start;}html.wow body #fp434Shell :is(#nrRoute-forecast,#nrRoute-calendar).nr-route.active .nr-overview .sr-compact-header>:is(label,.sr-compact-source){justify-self:start;}}
+html.wow body #nrRoute-today .sr-dayline label>span,html.wow body #nrRoute-today .sr-dayline figcaption span,html.wow body #nrRoute-today .sr-p0-details .nr-o-state{font-size:var(--sr-ui-small)!important;}
+@media(min-width:900px){html.wow .sr-forecast-graph svg{max-width:none;width:100%;height:225px;}}
+html.wow[data-sr-appearance=observatory] #nrRoute-more .nr-route-head{background:#0d1b2e!important;border:1px solid #536982;}
+@media (min-width:1100px){html.wow body #nrRoute-today .nr-overview.sr-p0-today{max-width:1520px!important;width:min(100%,1520px);gap:clamp(16px,1.6vw,28px);grid-template-columns:minmax(400px,.95fr) minmax(0,1.45fr);grid-template-areas:"hero day" "signals day" "journey journey" "details details";}html.wow body #nrRoute-today .sr-p0-today .nr-o-hero{padding:clamp(22px,2vw,34px)!important;gap:clamp(14px,1.3vw,24px)!important;border-radius:26px!important;min-width:0;}html.wow body #nrRoute-today .sr-dayline{padding:clamp(20px,1.8vw,30px)!important;border-radius:26px;min-width:0;}html.wow body #nrRoute-today .nr-overview.sr-p0-today .nr-o-verdict .nr-o-score[data-score-tone]{width:clamp(116px,10.5vw,160px);height:clamp(116px,10.5vw,160px);min-width:116px!important;font-size:clamp(52px,5vw,76px)!important;line-height:1;}html.wow body #nrRoute-today .nr-overview.sr-p0-today .nr-o-label{font-size:clamp(22px,2vw,30px)!important;line-height:1.2!important;}html.wow body #nrRoute-today .sr-p0-today .nr-o-journey button{min-height:68px!important;border-radius:16px;}html.wow body #nrRoute-today .sr-p0-today>.sr-p0-signals{gap:12px;}html.wow body #nrRoute-today .sr-p0-today>.sr-p0-signals button{min-height:70px!important;border-radius:16px!important;}}
+html.wow body #nrRoute-today :is(.nr-o-hero,.sr-dayline,.nr-o-verdict,.sr-p0-signals,.nr-o-journey){min-width:0;overflow-wrap:anywhere;}
+html.wow[data-sr-appearance="cosmos"] body #nrRoute-today :is(.nr-o-hero,.sr-dayline){box-shadow:0 18px 54px rgba(0,5,18,.46),inset 0 1px rgba(218,232,255,.11);border-color:rgba(143,177,230,.52)!important;}
+html.wow[data-sr-appearance="cosmos"] body #nrRoute-today .nr-o-hero{background:radial-gradient(ellipse at 14% 48%,rgba(53,82,130,.21),transparent 65%),linear-gradient(145deg,rgba(15,32,61,.97),rgba(6,18,39,.97))!important;}
+html.wow[data-sr-appearance="cosmos"] body #nrRoute-today .sr-dayline{background:radial-gradient(ellipse at 72% 0%,rgba(66,79,150,.16),transparent 63%),linear-gradient(145deg,rgba(17,32,61,.97),rgba(7,17,37,.98));}
+html.wow body #nrRoute-today :is(button,a,[role=button]):focus-visible{outline:3px solid #f6da9d!important;outline-offset:3px!important;}
+html.wow body #nrRoute-today button:where(:hover){filter:brightness(1.08);}
+@media(max-width:1099px){html.wow body #nrRoute-today .nr-overview.sr-p0-today{max-width:100%!important;}html.wow body #nrRoute-today :is(.nr-o-hero,.sr-dayline){padding:clamp(14px,3vw,22px)!important;}}
+@media(max-width:520px){html.wow body #nrRoute-today .nr-overview.sr-p0-today .nr-o-verdict .nr-o-score[data-score-tone]{width:100px;height:100px;min-width:100px!important;font-size:46px!important;}html.wow body #nrRoute-today .nr-o-journey button{min-height:48px;}}
+@media(prefers-reduced-motion:reduce){html.wow body #nrRoute-today :is(.nr-o-hero,.sr-dayline,.nr-o-score,button){animation:none;transition:none;scroll-behavior:auto;}}

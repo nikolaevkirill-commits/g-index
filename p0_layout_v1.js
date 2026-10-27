@@ -30,7 +30,7 @@ function renderForecastGraph(root){
   add('text',{x:p.x,y:218,'text-anchor':'middle',fill:'#dce6fa','font-size':12},p.date.slice(8)+'.'+p.date.slice(5,7));
  }
  figure.replaceChildren(make('figcaption','','Оцінки за днями'),svg,make('p','','Окремі денні оцінки. Риска означає відсутні дані; 0 — нейтральну оцінку.'));
- const resizeLabels=()=>{const graph=figure.querySelector('svg'),width=graph?.getBoundingClientRect().width;if(width>0)for(const label of graph.querySelectorAll('text'))label.style.setProperty('font-size',(13*360/width)+'px','important');};figure._labelObserver?.disconnect();figure._labelObserver=new ResizeObserver(resizeLabels);figure._labelObserver.observe(svg);requestAnimationFrame(resizeLabels);
+ const geometry=[...svg.querySelectorAll('[x],[x1],[cx]')].map(el=>({el,values:['x','x1','x2','cx'].filter(a=>el.hasAttribute(a)).map(a=>[a,Number(el.getAttribute(a))])}));const resizeLabels=()=>{const graph=svg,width=graph.getBoundingClientRect().width;if(!graph.isConnected||!(width>0))return;const W=innerWidth>=900?width:360;graph.setAttribute('viewBox',`0 0 ${W} 225`);for(const {el,values} of geometry)for(const [a,v]of values)el.setAttribute(a,W===360?v:v<30?v:30+(v-30)*(W-40)/320);for(const label of graph.querySelectorAll('text'))label.style.setProperty('font-size',(13*W/width)+'px','important');};figure._labelObserver?.disconnect();figure._labelObserver=new ResizeObserver(()=>requestAnimationFrame(()=>{if(svg.isConnected)resizeLabels();}));figure._labelObserver.observe(svg);resizeLabels();
 }
 function moon(at){
  const {k,waxing}=SkyMoon.moonIllumination(at),r=35,c=40,rx=r*Math.abs(2*k-1),limb=waxing?1:0,term=k>=.5?(waxing?1:0):(waxing?0:1),pct=Math.round(k*100),id='srMoon'+(++moonSerial);
