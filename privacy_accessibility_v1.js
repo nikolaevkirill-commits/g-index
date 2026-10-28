@@ -40,7 +40,19 @@
     const statusNode=document.getElementById('nrProfileStatus');form.insertBefore(controls,statusNode||null);
     const scope=document.createElement('p');scope.className='nr-result-meta';scope.textContent='Очищення видаляє локальні профілі, геолокацію, журнали, плани, налаштування та локальну сесію входу SkyRhythm й перезавантажує сторінку. Публічний офлайн-кеш сайту та дані інших застосунків залишаються. Серверний обліковий запис не видаляється. Експорт охоплює локальні записи, крім токена входу.';controls.after(scope);
   }
-  window.fp450ExportLocalData=function(){
+  async function personalDayData(clear=false){
+    return new Promise((resolve,reject)=>{
+      const q=indexedDB.open('skyrhythm-personal-day-summary-v1',1);
+      q.onupgradeneeded=()=>q.result.createObjectStore('entries',{keyPath:'day'});
+      q.onerror=()=>reject(q.error);q.onblocked=()=>reject(new Error('Personal day storage blocked'));
+      q.onsuccess=()=>{const db=q.result;db.onversionchange=()=>db.close();
+        const tx=db.transaction('entries',clear?'readwrite':'readonly'),st=tx.objectStore('entries'),request=clear?st.clear():st.getAll();
+        tx.oncomplete=()=>{db.close();resolve(clear?[]:request.result)};
+        tx.onerror=tx.onabort=()=>{db.close();reject(tx.error||request.error)};
+      };
+    });
+  }
+  window.fp450ExportLocalData=async function(){
     let url=null;
     try{
       const data={exported_at:new Date().toISOString(),storage:'local_device_only',items:{},session_items:{}};
@@ -54,6 +66,7 @@
           Object.defineProperty(target,key,{value,enumerable:true,configurable:true,writable:true});
         }
       }
+      data.personal_day_summary=await personalDayData();
       data.exclusions=['authentication token','public offline site cache','other applications','server account'];
       const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});url=URL.createObjectURL(blob);
       const a=document.createElement('a');a.href=url;a.download='skyrhythm-local-data.json';a.click();
@@ -75,6 +88,7 @@
     if(resetInProgress)return;
     resetInProgress=true;
     if(!fromPeer){try{await window.NRForecastJournal?.clearAll?.()}catch(_e){globalThis.NRDiagnostics?.record('privacy.journal_clear','recoverable',_e);resetInProgress=false;status('Не вдалося узгоджено очистити журнал. Дані не позначено як видалені; повторіть спробу.');return}}
+    if(!fromPeer){try{await personalDayData(true)}catch(e){resetInProgress=false;status('Не вдалося очистити підсумки дня. Повторіть очищення; повне видалення не підтверджено.');return}}
     window.clearTimeout(window.__nrPlanReminderTimer);
     window.__nrPlanReminderTimer=null;
     document.getElementById('nrPlanForm')?.reset();
