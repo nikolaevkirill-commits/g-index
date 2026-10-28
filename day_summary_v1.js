@@ -2,6 +2,9 @@
 const $=id=>document.getElementById(id),labels={A:'Стан і настрій',B:'Продуктивність',C:'Фізичний стан',D:'Зовнішні події'},DB='skyrhythm-personal-day-summary-v1';
 const dayAt=t=>new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Kyiv',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(t));
 const today=()=>dayAt(Date.now());
+// Direct journal links need the same offline shell as the main application.
+// Do not force activation or reload: an update must not discard an unfinished entry.
+if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol))navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).catch(()=>message('Не вдалося підготувати офлайн-режим. Локальне збереження записів залишається доступним, якщо браузер дозволяє сховище.'));
 function validate(r){if(!/^\d{4}-\d{2}-\d{2}$/.test(r.day)||!Number.isFinite(Date.parse(r.day+'T00:00:00Z'))||new Date(r.day+'T00:00:00Z').toISOString().slice(0,10)!==r.day||r.day>=today())throw Error('Оберіть завершений день за київським часом.');if(!['yes','no','unknown'].includes(r.forecast_seen))throw Error('Вкажіть, чи бачили ви прогноз.');if(Object.keys(labels).some(k=>!Number.isInteger(r.axes[k])||r.axes[k]<-3||r.axes[k]>3))throw Error('Заповніть усі чотири оцінки.');if(typeof r.note!=='string'||r.note.length>500)throw Error('Нотатка має містити не більше 500 символів.');}
 function db(){return new Promise((resolve,reject)=>{const q=indexedDB.open(DB,1);q.onupgradeneeded=()=>q.result.createObjectStore('entries',{keyPath:'day'});q.onsuccess=()=>resolve(q.result);q.onerror=()=>reject(q.error);q.onblocked=()=>reject(Error('Закрийте іншу вкладку щоденника та спробуйте ще раз.'));});}
 async function access(mode,operation){const d=await db();try{return await new Promise((resolve,reject)=>{const t=d.transaction('entries',mode),q=operation(t.objectStore('entries'));t.oncomplete=()=>resolve(q.result);t.onerror=t.onabort=()=>reject(t.error||q.error);});}finally{d.close();}}

@@ -1,7 +1,7 @@
 importScripts('./runtime_diagnostics_v1.js');
 // G-Index service worker. HTML/data are network-first; static shell is cache-first.
 // Bump CACHE_VERSION whenever index.html or a cached shell asset changes.
-const CACHE_VERSION = 'fp531-personal-restore-20261028'; // Discrete final scores; no interpolated forecast.
+const CACHE_VERSION = 'fp532-personal-offline-20261028'; // Discrete final scores; no interpolated forecast.
 const CACHE_PREFIX = 'gindex-'; // G-Index cache namespace; do not remove the prefix.
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${CACHE_VERSION}`;
 const DATA_CACHE = `${CACHE_PREFIX}data-${CACHE_VERSION}`;
@@ -321,8 +321,9 @@ self.addEventListener('fetch', (event) => {
           const index = new URL('index.html', scope);
           // v7.2 NRA-35: точка входу preview теж має офлайн-запуск із будь-якими параметрами (?channel=play)
           const preview = new URL('design-v4.html', scope);
+          const journal = new URL('day_summary.html', scope);
           if(!cached && req.mode === 'navigate' &&
-             (canonicalUrl.pathname === scope.pathname || canonicalUrl.pathname === index.pathname || canonicalUrl.pathname === preview.pathname)) {
+             (canonicalUrl.pathname === scope.pathname || canonicalUrl.pathname === index.pathname || canonicalUrl.pathname === preview.pathname || canonicalUrl.pathname === journal.pathname)) {
             const entry = new URL(canonicalUrl.href); entry.search=''; entry.hash='';
             cached = await cache.match(entry.href) || await shellCache.match(entry.href);
           }
