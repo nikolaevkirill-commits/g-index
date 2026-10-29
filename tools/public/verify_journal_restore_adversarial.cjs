@@ -69,12 +69,16 @@ T('C-conflict', 'conflict', 'existing 2026-10-20 entry + copy with same day (dif
   try {
     for (const c of cases) {
       const ctx = await b.newContext({serviceWorkers: 'block', timezoneId: c.tz || 'Europe/Kyiv'}), p = await ctx.newPage(); const errors = [];
+      try {
       p.on('pageerror', e => errors.push(String(e)));
       await p.clock.setFixedTime(new Date(NOW));
-      if(c.mockDisplay)await p.addInitScript(()=>{Object.defineProperty(Intl.DateTimeFormat.prototype,'format',{configurable:true,get(){return ()=> '28/10/2026';}});});
+      // FP539: Playwright clock replaces Intl.DateTimeFormat with a wrapper, so patching Intl.DateTimeFormat.prototype
+      // does not reach page code. Wrap the (clock) constructor instead and assert below that the mock is effective.
+      if(c.mockDisplay)await p.addInitScript(()=>{const Orig=Intl.DateTimeFormat;const F=function(...a){const f=new Orig(...a);return new Proxy(f,{get(t,k){if(k==='format')return ()=>'28/10/2026';const v=t[k];return typeof v==='function'?v.bind(t):v;}});};F.supportedLocalesOf=Orig.supportedLocalesOf;F.prototype=Orig.prototype;Intl.DateTimeFormat=F;});
       await p.goto('http://127.0.0.1:' + server.address().port + '/day_summary.html');
       await p.waitForFunction(() => document.querySelector('#history').textContent.length > 0);
       if (c.preexisting) await p.evaluate(r => new Promise((res, rej) => { const q = indexedDB.open('skyrhythm-personal-day-summary-v1', 1); q.onsuccess = () => { const t = q.result.transaction('entries', 'readwrite'); t.objectStore('entries').put(r); t.oncomplete = () => { q.result.close(); res(); }; t.onerror = rej; }; }), c.preexisting);
+      if(c.mockDisplay&&await p.evaluate(()=>new Intl.DateTimeFormat('en-CA').format(new Date()))!=='28/10/2026')throw Error('I2 display-format mock is not effective; the case would be vacuous');
       const t0 = Date.now();
       await p.setInputFiles('#restoreFile', {name: c.id + '.json', mimeType: 'application/json', buffer: Buffer.from(c.raw)});
       await p.waitForFunction(() => document.querySelector('#restorePreview').textContent.length > 0, null, {timeout: 20000});
@@ -92,6 +96,7 @@ T('C-conflict', 'conflict', 'existing 2026-10-20 entry + copy with same day (dif
       if (c.preexisting) { const kept = after.find(x => x.day === c.preexisting.day); r.conflict_kept = !!kept && kept.note === 'original' && kept.axes.A === -3 && kept.captured_at_utc === c.preexisting.captured_at_utc; r.added_other = after.some(x => x.day === '2026-10-19'); if (!r.conflict_kept || !r.added_other) r.pass = false; }
       if (errors.length) r.pass = false;
       results.push(r); console.log((r.pass ? 'PASS ' : (c.informational ? 'INFO ' : 'FAIL ')) + c.id + ' accepted=' + accepted + ' (' + ms + ' ms) ' + (r.note || '') + ' | ' + preview.slice(0, 90));
+      } catch (err) { results.push({id: c.id, group: c.group, name: c.name, expected_accept: c.expect, accepted: null, pass: false, informational: !!c.informational, note: 'case aborted: ' + String(err).split('\n')[0].slice(0, 160), page_errors: errors}); console.log('FAIL ' + c.id + ' aborted: ' + String(err).split('\n')[0].slice(0, 120) + ' | page errors: ' + errors.join('; ').slice(0, 120)); }
       await ctx.close();
     }
   } finally { await b.close(); server.close(); }
