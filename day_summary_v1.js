@@ -1,6 +1,8 @@
 (()=>{'use strict';
 const $=id=>document.getElementById(id),labels={A:'Стан і настрій',B:'Продуктивність',C:'Фізичний стан',D:'Зовнішні події'},DB='skyrhythm-personal-day-summary-v1';
-const dayAt=t=>new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Kyiv',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(t));
+// FP538: build YYYY-MM-DD from parts, not from a locale's display pattern; one cached formatter.
+const KYIV_DAY=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Kyiv',calendar:'gregory',numberingSystem:'latn',year:'numeric',month:'2-digit',day:'2-digit'});
+const dayAt=t=>{const p={};for(const x of KYIV_DAY.formatToParts(new Date(t)))p[x.type]=x.value;return p.year.padStart(4,'0')+'-'+p.month.padStart(2,'0')+'-'+p.day.padStart(2,'0');};
 const today=()=>dayAt(Date.now());
 // Direct journal links need the same offline shell as the main application.
 // Do not force activation or reload: an update must not discard an unfinished entry.
@@ -36,7 +38,7 @@ function parseBackupJSON(text){
  const ws=()=>{while(/\s/.test(text[i]||'x'))i++;};
  function string(){const start=i++;while(i<text.length){const c=text[i++];if(c==='\\'){i++;continue;}if(c==='"')return JSON.parse(text.slice(start,i));}throw new SyntaxError('JSON');}
  function value(depth){
-  if(depth>128)throw Error('Надто глибока структура JSON. Нічого не додано.');ws();const c=text[i];
+  if(depth>=128)throw Error('Надто глибока структура JSON. Нічого не додано.');/* FP538: at most 128 nesting levels, as documented */ws();const c=text[i];
   if(c==='"'){string();return;}
   if(c==='{'){i++;ws();const keys=new Set();if(text[i]==='}'){i++;return;}while(true){ws();const key=string();if(keys.has(key))throw Error('У JSON повторюється ключ. Нічого не додано.');keys.add(key);ws();i++;value(depth+1);ws();if(text[i++]==='}')return;}}
   if(c==='['){i++;ws();if(text[i]===']'){i++;return;}while(true){value(depth+1);ws();if(text[i++ ]===']')return;}}
@@ -48,7 +50,7 @@ function cleanBackup(data){
  if(!data||data.schema!=='personal_day_summary_backup_v1'||!Array.isArray(data.records)||!data.records.length||data.records.length>5000)throw Error('Потрібна особиста копія щоденника з 1–5000 записами. Дослідницький експорт не є резервною копією.');
  const days=new Set();return data.records.map(r=>{
   if(!r||r.schema!=='personal_day_summary_v1'||r.timezone!=='Europe/Kyiv'||!r.axes||!validUtcTimestamp(r.captured_at_utc))throw Error('У копії є запис із неправильним форматом. Нічого не додано.');
-  validate(r);if(!plausibleCapture(r))throw Error('У копії є запис, збережений до завершення дня або в майбутньому. Нічого не додано.');if(days.has(r.day))throw Error('У копії повторюється дата. Нічого не додано.');days.add(r.day);
+  validate(r);if(!plausibleCapture(r))throw Error('У копії запис за '+r.day+' збережено до завершення дня або в майбутньому. Нічого не додано.');if(days.has(r.day))throw Error('У копії повторюється дата. Нічого не додано.');days.add(r.day);
   return {schema:'personal_day_summary_v1',day:r.day,timezone:'Europe/Kyiv',captured_at_utc:r.captured_at_utc,axes:Object.fromEntries(Object.keys(labels).map(k=>[k,r.axes[k]])),forecast_seen:r.forecast_seen,note:r.note,independently_verified:false};
  });
 }
