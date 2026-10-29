@@ -22,15 +22,37 @@ function validUtcTimestamp(value){
  const t=Date.parse(value);if(!Number.isFinite(t))return false;
  return new Date(t).toISOString()===value.replace(/(?<!\.\d{3})Z$/,'.000Z');
 }
+// FP537: a restored record must have been saved after its Kyiv day ended and not in the future.
+function kyivDayEnd(day){
+ // Find the first millisecond of the following local date using the browser's timezone rules.
+ const anchor=Date.parse(day+'T00:00:00Z');let lo=anchor-36*3600000,hi=anchor+48*3600000;
+ while(hi-lo>1){const mid=lo+Math.floor((hi-lo)/2);if(dayAt(mid)<=day)lo=mid;else hi=mid;}
+ return dayAt(lo)===day&&dayAt(hi)>day?hi:NaN;
+}
+function plausibleCapture(r){const t=Date.parse(r.captured_at_utc);return t>=kyivDayEnd(r.day)&&t<=Date.now()+5*60000;}
+function parseBackupJSON(text){
+ // JSON.parse validates syntax; scan the same text to reject duplicate decoded object keys.
+ const result=JSON.parse(text);let i=0;
+ const ws=()=>{while(/\s/.test(text[i]||'x'))i++;};
+ function string(){const start=i++;while(i<text.length){const c=text[i++];if(c==='\\'){i++;continue;}if(c==='"')return JSON.parse(text.slice(start,i));}throw new SyntaxError('JSON');}
+ function value(depth){
+  if(depth>128)throw Error('Надто глибока структура JSON. Нічого не додано.');ws();const c=text[i];
+  if(c==='"'){string();return;}
+  if(c==='{'){i++;ws();const keys=new Set();if(text[i]==='}'){i++;return;}while(true){ws();const key=string();if(keys.has(key))throw Error('У JSON повторюється ключ. Нічого не додано.');keys.add(key);ws();i++;value(depth+1);ws();if(text[i++]==='}')return;}}
+  if(c==='['){i++;ws();if(text[i]===']'){i++;return;}while(true){value(depth+1);ws();if(text[i++ ]===']')return;}}
+  while(i<text.length&&!/[\s,}\]]/.test(text[i]))i++;
+ }
+ value(0);return result;
+}
 function cleanBackup(data){
  if(!data||data.schema!=='personal_day_summary_backup_v1'||!Array.isArray(data.records)||!data.records.length||data.records.length>5000)throw Error('Потрібна особиста копія щоденника з 1–5000 записами. Дослідницький експорт не є резервною копією.');
  const days=new Set();return data.records.map(r=>{
   if(!r||r.schema!=='personal_day_summary_v1'||r.timezone!=='Europe/Kyiv'||!r.axes||!validUtcTimestamp(r.captured_at_utc))throw Error('У копії є запис із неправильним форматом. Нічого не додано.');
-  validate(r);if(days.has(r.day))throw Error('У копії повторюється дата. Нічого не додано.');days.add(r.day);
+  validate(r);if(!plausibleCapture(r))throw Error('У копії є запис, збережений до завершення дня або в майбутньому. Нічого не додано.');if(days.has(r.day))throw Error('У копії повторюється дата. Нічого не додано.');days.add(r.day);
   return {schema:'personal_day_summary_v1',day:r.day,timezone:'Europe/Kyiv',captured_at_utc:r.captured_at_utc,axes:Object.fromEntries(Object.keys(labels).map(k=>[k,r.axes[k]])),forecast_seen:r.forecast_seen,note:r.note,independently_verified:false};
  });
 }
-$('restoreFile').onchange=async()=>{const selection=++restoreSelection;pendingRestore=null;$('restore').disabled=true;$('restorePreview').textContent='';try{const file=$('restoreFile').files[0];if(!file)return;if(file.size>2*1024*1024)throw Error('Оберіть JSON-файл розміром до 2 МБ.');const rows=cleanBackup(JSON.parse(await file.text()));const existing=new Set(await access('readonly',s=>s.getAllKeys()));if(selection!==restoreSelection)return;pendingRestore=rows;const skipped=rows.filter(r=>existing.has(r.day)).length;$('restorePreview').textContent='У копії: '+rows.length+'. Можна додати: '+(rows.length-skipped)+'. Уже збережені дні: '+skipped+' — залишаться без змін.';$('restore').disabled=rows.length===skipped;}catch(e){if(selection===restoreSelection)$('restorePreview').textContent=e instanceof SyntaxError?'Файл не є коректним JSON. Нічого не додано.':e.message;}};
+$('restoreFile').onchange=async()=>{const selection=++restoreSelection;pendingRestore=null;$('restore').disabled=true;$('restorePreview').textContent='';try{const file=$('restoreFile').files[0];if(!file)return;if(file.size>2*1024*1024)throw Error('Оберіть JSON-файл розміром до 2 МБ.');const rows=cleanBackup(parseBackupJSON(await file.text()));const existing=new Set(await access('readonly',s=>s.getAllKeys()));if(selection!==restoreSelection)return;pendingRestore=rows;const skipped=rows.filter(r=>existing.has(r.day)).length;$('restorePreview').textContent='У копії: '+rows.length+'. Можна додати: '+(rows.length-skipped)+'. Уже збережені дні: '+skipped+' — залишаться без змін.';$('restore').disabled=rows.length===skipped;}catch(e){if(selection===restoreSelection)$('restorePreview').textContent=e instanceof SyntaxError?'Файл не є коректним JSON. Нічого не додано.':e.message;}};
 async function restoreRows(rows){const d=await db();try{return await new Promise((resolve,reject)=>{const t=d.transaction('entries','readwrite'),store=t.objectStore('entries');let added=0,skipped=0;for(const r of rows){const q=store.get(r.day);q.onsuccess=()=>{if(q.result){skipped++;return;}store.add(r);added++;};}t.oncomplete=()=>resolve({added,skipped});t.onerror=t.onabort=()=>reject(t.error||Error('Не вдалося відновити копію.'));});}finally{d.close();}}
 $('restore').onclick=async()=>{if(!pendingRestore)return;$('restore').disabled=true;$('restoreFile').disabled=true;try{const result=await restoreRows(cleanBackup({schema:'personal_day_summary_backup_v1',records:pendingRestore}));pendingRestore=null;$('restoreFile').value='';$('restorePreview').textContent='Додано: '+result.added+'. Наявні записи збережено без змін: '+result.skipped+'.';await history();message('Відновлення завершено. Записи залишаються лише в цьому браузері.');}catch(e){message(e.message||'Відновлення не виконано.');$('restore').disabled=false;}finally{$('restoreFile').disabled=false;}};
 $('backup').onclick=()=>exportRows(false);$('research').onclick=()=>exportRows(true);history().catch(()=>message('Сховище недоступне. Збереження та історію потрібно перевірити в налаштуваннях браузера.'));
