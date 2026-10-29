@@ -4,8 +4,8 @@ const zone='Europe/Kyiv';
 function instant(date,time){
  if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!/^([01]\d|2[0-3]):[0-5]\d$/.test(time))return null;
  const target=date+'T'+time,base=Date.parse(target+':00Z');if(!Number.isFinite(base))return null;
- const f=new Intl.DateTimeFormat('sv-SE',{timeZone:zone,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'});
- const matches=[];for(let offset=-14;offset<=14;offset++){const t=base+offset*3600000;if(f.format(new Date(t)).replace(' ','T')===target)matches.push(t)}
+ const f={format:t=>NRCivilTime.minuteKey(t,zone)};
+ const matches=[];for(let offset=-14;offset<=14;offset++){const t=base+offset*3600000;if(f.format(new Date(t))===target)matches.push(t)}
  return matches.length===1?matches[0]:null;
 }
 const stamp=t=>new Date(t).toISOString().replace(/[-:]/g,'').replace(/\.\d{3}Z$/,'Z');

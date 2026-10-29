@@ -1,7 +1,7 @@
-importScripts('./runtime_diagnostics_v1.js');
+importScripts('./runtime_diagnostics_v1.js','./civil_time_v1.js');
 // G-Index service worker. HTML/data are network-first; static shell is cache-first.
 // Bump CACHE_VERSION whenever index.html or a cached shell asset changes.
-const CACHE_VERSION = 'fp538-journal-restore-hardening-20261029'; // Discrete final scores; no interpolated forecast.
+const CACHE_VERSION = 'fp540-civil-date-keys-20261029'; // Discrete final scores; no interpolated forecast.
 const CACHE_PREFIX = 'gindex-'; // G-Index cache namespace; do not remove the prefix.
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${CACHE_VERSION}`;
 const DATA_CACHE = `${CACHE_PREFIX}data-${CACHE_VERSION}`;
@@ -19,6 +19,7 @@ async function deliveryResponse(response,mode){
 }
 
 const SHELL_ASSETS = [
+  './civil_time_v1.js',
   './day_summary.html',
   './day_summary_v1.js',
   './day_summary_v1.css',

@@ -460,7 +460,7 @@ window.__nrWeekdayDate=function(loc,opts,d){const f=window.NRPresentation.dateFo
     const VARA=['Неділя · Сонце','Понеділок · Місяць','Вівторок · Марс','Середа · Меркурій','Четвер · Юпітер','П’ятниця · Венера','Субота · Сатурн'];
     try{
       const feed=await loadPanchGuideFeed();const ds=todayKyivStr();const day=feed.days&&feed.days[ds];if(!day)throw new Error('немає дня '+ds);
-      const now=Date.now(),zone=Intl.DateTimeFormat().resolvedOptions().timeZone||'Europe/Kyiv',localDate=d=>window.NRPresentation.dateFormatter('en-CA',{timeZone:zone,year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(d)),localDay=localDate(now);
+      const now=Date.now(),zone=Intl.DateTimeFormat().resolvedOptions().timeZone||'Europe/Kyiv',localDate=d=>NRCivilTime.dayKey(new Date(d),zone),localDay=localDate(now);
       const localComponents={};
       for(const key of ['tithi','nakshatra','yoga','karana']){
         const source=Object.values(feed.days).flatMap(d=>d.components?.[key]?.segments||[]).filter(s=>Date.parse(s.end_utc)>now-3*86400000&&Date.parse(s.start_utc)<now+3*86400000).sort((a,b)=>Date.parse(a.start_utc)-Date.parse(b.start_utc)),merged=[];

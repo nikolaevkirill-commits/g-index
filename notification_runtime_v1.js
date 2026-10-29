@@ -7,7 +7,7 @@ function safeURL(value,scope,fallback=dailyURL){
   return new URL(fallback,scope).href;
 }
 function daily(feed,now=Date.now()){
-  const date=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Kyiv',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(now));
+  const date=NRCivilTime.dayKey(new Date(now),'Europe/Kyiv');
   const result=host.NRConsumerAuthority.resolveFinal(feed?.days?.[date],date,now,false);
   const view=host.NRConsumerAuthority.present(result);
   return {title:'SkyRhythm · '+date,body:result.available?view.title+'. '+view.summary:view.label+'. Відкрийте застосунок, щоб перевірити джерела.',date,state:result.state,score:result.score};

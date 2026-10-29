@@ -8,7 +8,7 @@
 // Entries are never edited; changed inputs create a new revision. A SHA-256 chain makes
 // later edits detectable. This is a record for independent checking, not evidence of accuracy.
 const KEY='nr_forecast_journal_v1',SCHEMA='nr-forecast-journal-v1',MODEL='source_formula/threshold:symmetric_intervals_candidate/kp:2-Kp/expert_priority:v113',MAX=3000;
-const kyivDay=t=>new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Kyiv',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(t));
+const kyivDay=t=>NRCivilTime.dayKey(new Date(t),'Europe/Kyiv');
 function read(key,fallback){const raw=host.localStorage.getItem(key);if(raw===null)return fallback;try{return JSON.parse(raw)}catch(e){throw new Error('Corrupt journal: '+key)}}
 function load(){const x=read(KEY,{schema:SCHEMA,entries:[]});if(!x||x.schema!==SCHEMA||!Array.isArray(x.entries))throw new Error('Invalid journal schema');return x}
 function store(doc){host.localStorage.setItem(KEY,JSON.stringify(doc));}

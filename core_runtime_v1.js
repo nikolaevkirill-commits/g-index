@@ -345,8 +345,7 @@ const fmtDate = d => new Date(d).toISOString().slice(0,10);
 // (без хардкоду +3, через Intl — коректно і взимку/влітку).
 function todayKyivStr(){
   try {
-    return window.NRPresentation.dateFormatter('en-CA', { timeZone: 'Europe/Kyiv',
-      year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+    return NRCivilTime.dayKey(new Date(),'Europe/Kyiv');
   } catch(e) { globalThis.NRDiagnostics?.record('catch.41','recoverable');
     const now = new Date();
     return fmtDate(new Date(now.getTime() + _kyivFallbackOffsetHours(now) * 3600000));
@@ -777,7 +776,7 @@ async function loadKpHourlyAlert(){
     const currentKp=currentAuthority.usable?currentAuthority.kp:null;
     const peakTime=new Date(peak.time_utc);
     const peakTimeLabel=peakTime.toLocaleString('uk-UA',{timeZone:'Europe/Kyiv',hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit',hour12:false});
-    const peakDateKyiv=peakTime.toLocaleDateString('sv-SE',{timeZone:'Europe/Kyiv'});
+    const peakDateKyiv=NRCivilTime.dayKey(peakTime,'Europe/Kyiv');
     let dailyKp=null, dailySource='unknown', dailySynthetic=false;
     try{
       const future=await loadFutureKp();
@@ -4631,7 +4630,7 @@ function computeAi(dateTimeUTC, kp=null){
 // No row for the day -> NaN components: missing is not zero.
 function _formulaRowForInstant(dateTimeUTC){
   try{
-    const ds = new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Kyiv',year:'numeric',month:'2-digit',day:'2-digit'}).format(dateTimeUTC);
+    const ds = NRCivilTime.dayKey(dateTimeUTC,'Europe/Kyiv');
     const f = (typeof window !== 'undefined') ? window.fp469ConsumerForDate : null;
     if(typeof f !== 'function') return {ds, own:null};
     const c = f({ds, G:NaN, _calendarOffset:0});

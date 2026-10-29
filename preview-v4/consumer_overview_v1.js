@@ -130,10 +130,10 @@ function renderScoreEvidence(root,r,own,factors){
 }
 function fmt(value){if(!Number.isFinite(value))return '—';const n=Number(value.toFixed(2));return n<0?'−'+Math.abs(n):n>0?'+'+n:'0';}
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const todayFormatter=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Kyiv',year:'numeric',month:'2-digit',day:'2-digit'});
+
 const dateFormatters=new Map();
 const timeFormatter=new Intl.DateTimeFormat('uk-UA',{timeZone:'Europe/Kyiv',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
-const today=()=>todayFormatter.format(new Date());
+const today=()=>NRCivilTime.dayKey(Date.now());
 const dateLabel=ds=>{const locale=window.NRLocale?.locale||'uk-UA';let formatter=dateFormatters.get(locale);if(!formatter){formatter=new Intl.DateTimeFormat(locale,{timeZone:'Europe/Kyiv',day:'numeric',month:'long'});dateFormatters.set(locale,formatter)}return formatter.format(new Date(ds+'T12:00:00Z'))};
 const time=s=>Number.isFinite(Date.parse(s))?timeFormatter.format(new Date(s)):'не вказано';
 const stateLabel=(r,ds)=>r.state==='fresh'&&rows[ds]?.channels?.source_formula?.kp_source==='NOAA_27day_outlook'?'Орієнтир · outlook NOAA від '+String(rows[ds].channels.source_formula.kp_input?.issued_at||'').slice(0,10):states[r.state];
@@ -434,7 +434,7 @@ const key='gindex_local_context_v1',tr=s=>window.NRLocale?.text(s)||s;
 let location=null,source='saved',message='',busy=false;
 function valid(x,requireSaved=true){if(!x||typeof x.lat!=='number'||typeof x.lon!=='number'||!Number.isFinite(x.lat)||!Number.isFinite(x.lon)||Math.abs(x.lat)>90||Math.abs(x.lon)>180)return false;try{new Intl.DateTimeFormat('en',{timeZone:x.zone});return typeof x.zone==='string'&&(!requireSaved||Number.isFinite(Date.parse(x.saved_at)))}catch{return false}}
 try{const saved=JSON.parse(localStorage.getItem(key));if(valid(saved))location=saved}catch{}
-const dateIn=(t,zone)=>new Intl.DateTimeFormat('en-CA',{timeZone:zone,year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(t));
+const dateIn=(t,zone)=>NRCivilTime.dayKey(new Date(t),zone);
 // Complete missing events when the noon hour-angle approximation is undefined.
 // Uses the same Meeus solar declination/equation-of-time and -0.833 degree horizon.
 function completeSolarEvents(result,x){

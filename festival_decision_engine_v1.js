@@ -1,5 +1,6 @@
 /* Pure research decisions. No score, calendar-authority, network or storage writes. */
 (function(root){'use strict';
+const NRCivilTime=root.NRCivilTime||(typeof require==='function'?require('./civil_time_v1.js'):null);
 const VERSION='festival-decision-1.0.2';
 const rules=Object.freeze({
  'shastra-sankashti':Object.freeze({rule_id:'shastra-sankashti',source_id:'shastra-sankashti-20261019',rule_version:'1.0.0',event:'sankashti',anchor:'moonrise',double:'unresolved',missing:'unresolved',url:'https://shastrapanchangam.com/en/sankashti/'}),
@@ -13,7 +14,7 @@ const rules=Object.freeze({
 // Input JSON flags, source agreement and successful software tests cannot add approvals.
 const approvedDecisionReviews=Object.freeze({});
 const librarySource=Object.freeze({"source_id": "pillai-panchang-horoscope-1985", "title": "Panchang and Horoscope — L. D. Swamikannu Pillai", "file_sha256": "6a28ea7e8f3210a3066d1d934fc5a2c73ce907d97563f619e1bba1b10d1432b4", "review_status": "PASSAGE_CHECKED", "source_type": "historical_handbook", "does_not_verify": "modern tie-break, astronomical convention, physical uncertainty or final date"});
-function civil(ms,zone){return new Intl.DateTimeFormat('en-CA',{timeZone:zone,year:'numeric',month:'2-digit',day:'2-digit'}).format(ms);}
+function civil(ms,zone){return NRCivilTime.dayKey(ms,zone);}
 function valid(x){
  if(!['sankashti','masik_shivaratri','maha_shivaratri'].includes(x?.event))throw Error('UNKNOWN_EVENT');
  if(!x||!x.place||!Number.isFinite(x.place.lat)||Math.abs(x.place.lat)>90||!Number.isFinite(x.place.lon)||Math.abs(x.place.lon)>180)throw Error('INVALID_PLACE');

@@ -7,7 +7,8 @@
  'use strict';
  const version='expert-factor-model-v2';
  const zone='Europe/Kyiv';
- const dayFmt=new Intl.DateTimeFormat('en-CA',{timeZone:zone,year:'numeric',month:'2-digit',day:'2-digit'});
+ const civil=globalThis.NRCivilTime||(typeof require==='function'?require('./civil_time_v1.js'):null);
+ const dayFmt={format:t=>civil.dayKey(t,zone)};
  const timeFmt=new Intl.DateTimeFormat('uk-UA',{timeZone:zone,day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'});
  const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const validDay=ds=>typeof ds==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(ds)&&Number.isFinite(Date.parse(ds))&&new Date(ds).toISOString().slice(0,10)===ds;
@@ -23,7 +24,7 @@
   const [lo,hi]=ephemeris.coverage.map(Date.parse);
   if(!Number.isFinite(lo)||!Number.isFinite(hi)||lo>=hi||ds<dayFmt.format(lo)||ds>=dayFmt.format(hi))return unknown;
   // A partially covered first Kyiv day is not evidence for the whole day.
-  if(ds===dayFmt.format(lo)&&new Intl.DateTimeFormat('en-GB',{timeZone:zone,hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).format(lo)!=='00:00:00')return unknown;
+  if(ds===dayFmt.format(lo)&&civil.clockKey(lo,zone)!=='00:00:00')return unknown;
   const periods=ephemeris.periods.Venus.map(p=>Array.isArray(p)?p.map(Date.parse):[]);
   if(periods.some(p=>p.length!==2||!p.every(Number.isFinite)||p[0]>=p[1]||p[0]<lo||p[1]>hi))return unknown;
   periods.sort((a,b)=>a[0]-b[0]);

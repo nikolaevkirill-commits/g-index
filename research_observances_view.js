@@ -65,7 +65,7 @@ root.SRMountSourceCalendar=function(){
  let box;
  function mount(){const route=document.getElementById('nrRoute-panch');if(!route||box)return !!box;
   box=document.createElement('section');box.className='nr-panch-section';box.id='srSourceCalendarLegacy';
-  const label=document.createElement('label'),input=document.createElement('input'),content=document.createElement('div');input.type='date';input.style.minHeight='44px';input.value=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Kyiv',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+  const label=document.createElement('label'),input=document.createElement('input'),content=document.createElement('div');input.type='date';input.style.minHeight='44px';input.value=NRCivilTime.dayKey(new Date(),'Europe/Kyiv');
   label.append(input);box.append(label,content);route.append(box);
   function render(){const lang=root.NRLocale?.language||'uk';input.setAttribute('aria-label',({uk:'Дата календаря · Київ',en:'Calendar date · Kyiv',es:'Fecha del calendario · Kyiv',fr:'Date du calendrier · Kyiv'})[lang]||'Calendar date · Kyiv');content.replaceChildren();renderSourceCalendar(content,input.value,lang);if(!content.children.length)content.textContent=(words[lang]||words.uk)[4];}
   input.addEventListener('input',render);root.addEventListener('nr:locale',render);render();return true;}
