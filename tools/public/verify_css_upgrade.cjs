@@ -4,6 +4,17 @@ const {chromium}=require('playwright');
 const root=path.resolve(__dirname,'../..');
 const out=fs.mkdtempSync(path.join(os.tmpdir(),'skyrhythm-css-upgrade-'));
 let phase='old';
+// Observe pending fetch lifetimes without changing the historical worker fixture on disk.
+const traceWorker = `self.__upgradePending=new Map();self.__upgradeSequence=0;
+const __upgradeAdd=self.addEventListener.bind(self);
+self.addEventListener=function(type,listener,...rest){
+ if(type!=='fetch')return __upgradeAdd(type,listener,...rest);
+ return __upgradeAdd(type,event=>{const respond=event.respondWith.bind(event);
+ event.respondWith=promise=>{const id=++self.__upgradeSequence;self.__upgradePending.set(id,{url:event.request.url,started:Date.now()});
+ return respond(Promise.resolve(promise).then(value=>{self.__upgradePending.delete(id);return value},error=>{self.__upgradePending.delete(id);throw error}));};
+ return listener(event);},...rest);
+};\n`;
+
 const types={'.js':'application/javascript','.css':'text/css','.html':'text/html','.json':'application/json','.svg':'image/svg+xml','.woff':'font/woff','.woff2':'font/woff2'};
 const server=http.createServer((req,res)=>{
   const url=new URL(req.url,'http://localhost'),name=decodeURIComponent(url.pathname).replace(/^\//,'')||'index.html';
@@ -12,6 +23,7 @@ const server=http.createServer((req,res)=>{
   try{
     let bytes=fs.readFileSync(file);
     if(phase==='old'&&name==='sw.js')bytes=fs.readFileSync(path.join(__dirname,'fixtures/sw_fp532.js'));
+    if(name==='sw.js')bytes=Buffer.concat([Buffer.from(traceWorker),bytes]);
     if(phase==='old'&&['index.html','day_summary.html'].includes(name))bytes=Buffer.from(bytes.toString().replace(/<style data-inline-source="([^"]+)"[^>]*>[\s\S]*?<\/style>/g,'<link rel="stylesheet" href="$1">'));
     if(phase==='old'&&name.endsWith('.css'))bytes=Buffer.concat([bytes,Buffer.from('\n:root{--css-upgrade-probe:old-cache}\n')]);
     res.writeHead(200,{'content-type':types[path.extname(name)]||'application/octet-stream','cache-control':'no-store'});res.end(bytes);
@@ -48,7 +60,13 @@ let base;
     assert.equal(await journal.locator('#note').inputValue(),'unsaved upgrade fixture');
     await journal.screenshot({path:path.join(out,'offline_waiting_journal.png'),fullPage:true});
     await ctx.setOffline(false);
-    await Promise.all([page.waitForNavigation({waitUntil:'load'}),page.evaluate(async()=>{const r=await navigator.serviceWorker.getRegistration();r.waiting.postMessage({type:'SKIP_WAITING'});})]);
+    try {
+      await Promise.all([page.waitForNavigation({waitUntil:'load'}),page.evaluate(async()=>{const r=await navigator.serviceWorker.getRegistration();r.waiting.postMessage({type:'SKIP_WAITING'});})]);
+    } catch(error) {
+      const diagnostics={registration:await page.evaluate(async()=>{const r=await navigator.serviceWorker.getRegistration();return {waiting:r.waiting?.state,active:r.active?.state,reloading:window._swReloading}}),workers:[]};
+      for(const worker of ctx.serviceWorkers())try{diagnostics.workers.push(await worker.evaluate(()=>({version:typeof CACHE_VERSION==='undefined'?null:CACHE_VERSION,pending:[...(self.__upgradePending||[])],now:Date.now()})))}catch(e){diagnostics.workers.push({error:String(e)})}
+      console.error('CSS_UPGRADE_DIAGNOSTICS',JSON.stringify(diagnostics));throw error;
+    }
     await page.waitForFunction(async()=>!(await navigator.serviceWorker.getRegistration()).waiting);
     await page.waitForFunction(()=>!!navigator.serviceWorker.controller);
     await ctx.setOffline(true);await checkPage(page,'index.html?channel=play#today',6);await checkPage(journal,'day_summary.html',1);
