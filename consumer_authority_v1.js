@@ -4,6 +4,9 @@
 // Trust boundary: this app's HTTPS publication and same-origin service worker.
 // This is not a signature or protection against compromise of that origin.
 const deliveredResults=new WeakSet(),deliveredRows=new WeakSet();
+// FP542 (B2): device clocks may lag the publishing runner; a bounded tolerance prevents a
+// few minutes of skew from hiding every score. Larger offsets still fail closed as 'invalid'.
+const CLOCK_SKEW_MS=5*60000;
 function freeze(value){if(value&&typeof value==='object'){for(const x of Object.values(value))freeze(x);Object.freeze(value);}return value;}
 
 function resolve(row, date, now=Date.now(), offline=false){
@@ -13,7 +16,7 @@ function resolve(row, date, now=Date.now(), offline=false){
   const generated=Date.parse(own?.generated_at||''),issued=Date.parse((short?own?.noaa_retrieved_at:own?.noaa_issued_at)||'');
   // Governance 10.10.2026: a row that declares an expert override is never a consumer score.
   const inputValid=!!row&&deliveredRows.has(row)&&row?.date===date&&own?.available===true&&valid(own.value)&&own.expert_override_used!==true;
-  const future=generated>now||issued>now;
+  const future=generated>now+CLOCK_SKEW_MS||issued>now+CLOCK_SKEW_MS;
   const freshness=Number.isFinite(generated)&&Number.isFinite(issued)&&!future&&now-generated<=8*3600000&&now-issued<=(short?8*3600000:8*86400000);
   offline=offline||row?._consumer_cached===true;
   const state=!inputValid?'missing':future?'invalid':!freshness?'stale':offline?'offline':'fresh';
@@ -28,22 +31,51 @@ function resolve(row, date, now=Date.now(), offline=false){
 // labelled component; it is never replaced or mixed into the expert value.
 // Gate = the same verification rule the runtime uses for overrides (verified flag,
 // source PDF, sha256 hash format or a recorded manual PDF reading).
-let expertDecisions=Object.freeze({});
+let expertDecisions=Object.freeze({}),expertConflicts=Object.freeze({});
+let registryState=Object.freeze({status:'not_loaded',rejected_rows:0,conflict_dates:[],accepted:0});
 function expertFor(date){return expertDecisions[date]||null;}
+function registryStatus(){return registryState;}
+// FP542 (B1/R1): rows are validated one by one. A malformed row is skipped and counted; it can
+// no longer discard every other verified decision. Two different decisions for one date are a
+// conflict: that date shows no score (never a silent formula fallback). Identical repeats are
+// accepted once. A rejected document or failed delivery keeps the last validated snapshot
+// (FP541) and is reported as 'stale' (or 'unavailable' before any snapshot exists).
+function validDecision(o){return !!o&&typeof o==='object'&&typeof o.date==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(o.date)&&Number.isFinite(Date.parse(o.date+'T00:00:00Z'))&&new Date(o.date+'T00:00:00Z').toISOString().slice(0,10)===o.date&&Number.isInteger(o.score)&&o.score>=-3&&o.score<=3&&typeof o.source_sha256==='string'&&/^[a-f0-9]{64}$/i.test(o.source_sha256)&&Number.isInteger(o.source_page)&&o.source_page>=1&&typeof o.decision_id==='string'&&o.decision_id.length>0;}
+function parseDecisions(doc){
+ if(!doc||doc.schema!=='consumer-final-decisions-v1'||!Array.isArray(doc.decisions))throw new Error('Invalid decisions');
+ const entries={},conflicts={};let rejected=0;
+ for(const o of doc.decisions){
+  let ok=false;try{ok=validDecision(o)}catch(_e){ok=false}
+  if(!ok){rejected++;continue;}
+  const entry=Object.freeze({score:o.score,source_pdf:o.decision_id,source_page:o.source_page,source_sha256:o.source_sha256,decision_id:o.decision_id});
+  if(conflicts[o.date])continue;
+  const prev=entries[o.date];
+  if(prev){if(prev.score===entry.score&&prev.source_sha256===entry.source_sha256&&prev.source_page===entry.source_page&&prev.decision_id===entry.decision_id){rejected++;continue;}
+   delete entries[o.date];conflicts[o.date]=true;continue;}
+  entries[o.date]=entry;
+ }
+ return {entries:Object.freeze(entries),conflicts:Object.freeze(conflicts),rejected};
+}
 async function loadExpertDecisions(base){
  // v126: keep the validated snapshot while a refresh is in flight; swap only after validation.
  const url=new URL('consumer_cloud/final_score_decisions.json',base),controller=new AbortController();const timer=setTimeout(()=>controller.abort(),3500);
  try{const response=await fetch(url,{cache:'no-store',redirect:'error',credentials:'same-origin',signal:controller.signal});
  if(!response.ok||response.redirected||response.type==='opaque'||(response.url&&response.url!==url.href))throw new Error('Decision delivery rejected');
- const doc=await response.json();if(doc.schema!=='consumer-final-decisions-v1'||!Array.isArray(doc.decisions))throw new Error('Invalid decisions');
- const entries={};for(const o of doc.decisions){
- if(!/^\d{4}-\d{2}-\d{2}$/.test(o.date)||!Number.isInteger(o.score)||o.score< -3||o.score>3||!/^[a-f0-9]{64}$/i.test(o.source_sha256)||!Number.isInteger(o.source_page)||o.source_page<1||!o.decision_id||entries[o.date])throw new Error('Invalid/duplicate decision');
- entries[o.date]=Object.freeze({score:o.score,source_pdf:o.decision_id,source_page:o.source_page,source_sha256:o.source_sha256,decision_id:o.decision_id});
- }expertDecisions=Object.freeze(entries);
- }catch(e){expertDecisions=Object.freeze({});host.NRDiagnostics?.record('consumer.decisions','recoverable');}finally{clearTimeout(timer)}
+ const parsed=parseDecisions(await response.json());
+ expertDecisions=parsed.entries;expertConflicts=parsed.conflicts;
+ const conflictDates=Object.keys(parsed.conflicts).sort();
+ registryState=Object.freeze({status:parsed.rejected||conflictDates.length?'partial':'ok',rejected_rows:parsed.rejected,conflict_dates:Object.freeze(conflictDates),accepted:Object.keys(parsed.entries).length});
+ if(registryState.status!=='ok')host.NRDiagnostics?.record('consumer.decisions.partial','recoverable');
+ }catch(e){/* Preserve the last fully validated snapshot on transient delivery failure. Never merge partial documents. */
+  const had=registryState.status==='ok'||registryState.status==='partial'||registryState.status==='stale';
+  registryState=Object.freeze({...registryState,status:had?'stale':'unavailable'});
+  host.NRDiagnostics?.record('consumer.decisions','recoverable');}finally{clearTimeout(timer)}
 }
 function resolveFinal(row,date,now=Date.now(),offline=false){
- const formula=resolve(row,date,now,offline),expert=expertFor(date);
+ const formula=resolve(row,date,now,offline);
+ if(expertConflicts[date])return Object.freeze({...formula,authority:'expert_pdf',score:null,lastScore:null,available:false,state:'expert_conflict',formula,expert:null,
+  independence:'expert_verdict_not_independent_validation'});
+ const expert=expertFor(date);
  if(!expert)return Object.freeze({...formula,formula,expert:null});
  return Object.freeze({...formula,authority:'expert_pdf',score:expert.score,lastScore:expert.score,available:true,state:'expert',formula,expert,
   independence:'expert_verdict_not_independent_validation'});
@@ -55,7 +87,7 @@ function present(r){
  return {available:r.available,opKey:key,bucket:!r.available?'none':n>0?'act':n<0?'hold':'check',
  className:!r.available?'state-none':n>0?'state-act':n<0?'state-hold':'state-check',
  coverState:!r.available?'none':n>0?'act':n<0?'hold':'check',symbol:fmt,label,title:'Оцінка моделі '+fmt,
- summary:r.state==='expert'?'Експертна правка (PDF '+r.expert.source_pdf+'): '+fmt+'. Точність щодо подій не підтверджена.':r.state==='stale'?(Number.isInteger(r.lastScore)&&r.lastScore>=-3&&r.lastScore<=3?'Дані застаріли. Остання збережена оцінка: '+(r.lastScore>0?'+'+r.lastScore:r.lastScore<0?'−'+Math.abs(r.lastScore):r.lastScore)+'.':'Дані застаріли.'):r.state==='missing'?'Недостатньо даних для розрахунку.':r.state==='invalid'?'Час джерела не пройшов перевірку.':
+ summary:r.state==='expert'?'Експертна правка (PDF '+r.expert.source_pdf+'): '+fmt+'. Точність щодо подій не підтверджена.':r.state==='stale'?(Number.isInteger(r.lastScore)&&r.lastScore>=-3&&r.lastScore<=3?'Дані застаріли. Остання збережена оцінка: '+(r.lastScore>0?'+'+r.lastScore:r.lastScore<0?'−'+Math.abs(r.lastScore):r.lastScore)+'.':'Дані застаріли.'):r.state==='missing'?'Недостатньо даних для розрахунку.':r.state==='invalid'?'Час пристрою не збігається з часом джерела більш ніж на 5 хв. Перевірте годинник пристрою.':r.state==='expert_conflict'?'Експертні рішення для цієї дати суперечать одне одному, тому оцінку не показано.':
  (r.state==='offline'?'Офлайн: збережений розрахунок. ':'')+'Розрахунок за формулою джерела. Точність щодо подій не підтверджена.',
  do:'Перегляньте складові оцінки та стан джерел.',avoid:'Оцінка не гарантує результату справ і не визначає найкращий час.'};
 }
@@ -125,6 +157,6 @@ async function loadFeeds(scope){
   await loadExpertDecisions(base);throw e}
  finally{clearTimeout(timer)}
 }
-const api=Object.freeze({resolve,resolveFinal,expertFor,present,selectFeeds,loadFeeds});host.NRConsumerAuthority=api;
+const api=Object.freeze({resolve,resolveFinal,expertFor,registryStatus,present,selectFeeds,loadFeeds,CLOCK_SKEW_MS});host.NRConsumerAuthority=api;
 if(typeof module!=='undefined')module.exports=api;
 })(typeof window!=='undefined'?window:globalThis);

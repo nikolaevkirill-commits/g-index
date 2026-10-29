@@ -2574,3 +2574,10 @@ NRLocale.register([["Оцінки немає", "No score available", "No hay pun
 
 // Shared Ukrainian terminology in the expanded Panchanga guide.
 NRLocale.register([["Сидеричний зодіак · Лахірі","Sidereal zodiac · Lahiri","Zodiaco sideral · Lahiri","Zodiaque sidéral · Lahiri"],["Тітхі · місячний ритм","Tithi · lunar rhythm","Tithi · ritmo lunar","Tithi · rythme lunaire"],["Вара · день тижня","Vara · weekday","Vara · día de la semana","Vara · jour de la semaine"],["Накшатра · характер дії","Nakshatra · character of activity","Nakshatra · carácter de la actividad","Nakshatra · caractère de l’activité"],["Йога · фон взаємодії","Yoga · interaction context","Yoga · contexto de interacción","Yoga · contexte d’interaction"],["Карана · короткий ритм","Karana · short rhythm","Karana · ritmo breve","Karana · rythme court"],["Половина тітхі, тому протягом дня змінюється частіше.","Half a tithi, so it changes more often during the day.","La mitad de un tithi; por eso cambia más a menudo durante el día.","La moitié d’un tithi ; elle change donc plus souvent dans la journée."]]);
+// FP542: authority states added for clock skew (B2/B3) and expert-registry conflicts (B1).
+NRLocale.register([
+['Час пристрою не збігається з часом джерела більш ніж на 5 хв. Перевірте годинник пристрою.','The device time differs from the source time by more than 5 min. Check the device clock.','La hora del dispositivo difiere de la de la fuente en más de 5 min. Revise el reloj del dispositivo.','L’heure de l’appareil diffère de celle de la source de plus de 5 min. Vérifiez l’horloge de l’appareil.'],
+['Експертні рішення для цієї дати суперечать одне одному, тому оцінку не показано.','Expert decisions for this date contradict each other, so no score is shown.','Las decisiones expertas para esta fecha se contradicen, por lo que no se muestra puntuación.','Les décisions d’expert pour cette date se contredisent ; aucune note n’est affichée.']
+]);
+// FP542 (B5): a zero Moon factor is not a Purnima day.
+NRLocale.register([['Пурніма: не цього дня','Purnima: not this day','Purnima: no es este día','Purnima : pas ce jour']]);

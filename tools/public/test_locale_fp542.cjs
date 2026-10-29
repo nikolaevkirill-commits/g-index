@@ -1,0 +1,10 @@
+'use strict';
+const vm=require('node:vm'),fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+const context={navigator:{languages:['uk']},localStorage:{getItem(){return null},setItem(){},removeItem(){}},document:{documentElement:{}},CustomEvent:function(){},addEventListener(){},dispatchEvent(){}};
+context.window=context;vm.createContext(context);vm.runInContext(fs.readFileSync(path.join(__dirname,'../../locale_core_v1.js'),'utf8'),context);
+const a=context.NRLocale;
+a.register([['Прогноз','Forecast','Pronóstico','Prévision'],['Прогноз ','Forecast with trailing space ','Pronóstico con espacio ','Prévision avec espace ']]);
+a.set('es');assert.equal(a.text('Прогноз '),'Pronóstico con espacio ');assert.equal(a.text(' Прогноз '),' Pronóstico con espacio ');assert.equal(a.text('Прогноз'),'Pronóstico');
+a.set('en');assert.equal(a.text('Прогноз'),'Forecast');a.register([['Новий','New','Nuevo','Nouveau']]);assert.equal(a.text('Новий'),'New');
+for(let i=0;i<10000;i++)assert.equal(a.text('ASCII '+i),'ASCII '+i);
+console.log('PASS locale: whitespace-specific keys, language and registration invalidation, unchanged strings');
