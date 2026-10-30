@@ -13,13 +13,20 @@ jobs:
       fail-fast: false
       matrix:
         trigger: [message, button]
-        trial: [1, 2, 3]
+        trial: [1]
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v4
         with: {node-version: '24'}
       - run: npm install --no-save --package-lock=false playwright@1.62.1
       - run: npx playwright install --with-deps chromium
+      - run: node tools/public/verify_day_cautions.cjs
+      - run: node tools/public/verify_noaa_missing.cjs
+      - run: node tools/public/verify_svg_missing.cjs
+      - run: node tools/public/verify_presentation.cjs
+      - run: node tools/public/verify_day_summary.cjs
+      - run: node tools/public/verify_journal_restore_time.cjs
+      - run: node tools/public/verify_journal_restore_adversarial.cjs
       - run: node tools/public/verify_css_upgrade.cjs --${{ matrix.trigger }} --minimal
       - uses: actions/upload-artifact@v4
         if: always()
