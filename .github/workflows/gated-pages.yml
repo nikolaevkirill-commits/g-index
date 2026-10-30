@@ -54,8 +54,9 @@ jobs:
       - run: node tools/public/verify_day_summary.cjs
       - run: node tools/public/verify_journal_restore_time.cjs
       - run: node tools/public/verify_journal_restore_adversarial.cjs
+      # FP545 (T1/T2): one blocking run against the unmodified production worker.
+      # Button/trace/restart variants are diagnostics in b7-diagnostic.yml, not release gates.
       - run: node tools/public/verify_css_upgrade.cjs
-      - run: node tools/public/verify_css_upgrade.cjs --button
       - uses: actions/upload-artifact@v4
         if: always()
         with:
