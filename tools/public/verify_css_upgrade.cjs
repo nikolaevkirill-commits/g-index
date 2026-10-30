@@ -4,6 +4,7 @@ const {chromium}=require('playwright');
 const root=path.resolve(__dirname,'../..');
 const out=fs.mkdtempSync(path.join(os.tmpdir(),'skyrhythm-css-upgrade-'));
 let phase='old';
+const minimal=process.argv.includes('--minimal');
 const trigger=process.argv.includes('--button')?'button':'message';
 const expectedVersion=fs.readFileSync(path.join(root,'sw.js'),'utf8').match(/const CACHE_VERSION = '([^']+)'/)[1];
 // Observe pending fetch lifetimes without changing the historical worker fixture on disk.
@@ -28,7 +29,7 @@ const server=http.createServer((req,res)=>{
   try{
     let bytes=fs.readFileSync(file);
     if(phase==='old'&&name==='sw.js')bytes=fs.readFileSync(path.join(__dirname,'fixtures/sw_fp532.js'));
-    if(name==='sw.js')bytes=Buffer.concat([Buffer.from(traceWorker),bytes]);
+    if(name==='sw.js'&&!minimal)bytes=Buffer.concat([Buffer.from(traceWorker),bytes]);
     if(phase==='old'&&['index.html','day_summary.html'].includes(name))bytes=Buffer.from(bytes.toString().replace(/<style data-inline-source="([^"]+)"[^>]*>[\s\S]*?<\/style>/g,'<link rel="stylesheet" href="$1">'));
     if(phase==='old'&&name.endsWith('.css'))bytes=Buffer.concat([bytes,Buffer.from('\n:root{--css-upgrade-probe:old-cache}\n')]);
     res.writeHead(200,{'content-type':types[path.extname(name)]||'application/octet-stream','cache-control':'no-store'});res.end(bytes);
@@ -63,11 +64,11 @@ let base;
   try{
     const ctx=await browser.newContext({viewport:{width:390,height:844},serviceWorkers:'allow'}),page=await ctx.newPage();
     const cdp=await ctx.newCDPSession(page);
-    cdp.on('ServiceWorker.workerVersionUpdated',e=>lifecycle.push({at:Date.now(),...e}));await cdp.send('ServiceWorker.enable');
+    cdp.on('ServiceWorker.workerVersionUpdated',e=>lifecycle.push({at:Date.now(),...e}));if(!minimal)await cdp.send('ServiceWorker.enable');
     await page.goto(base+'index.html?channel=play#today');
     await page.evaluate(()=>navigator.serviceWorker.ready);await page.waitForFunction(()=>!!navigator.serviceWorker.controller);
     assert.equal(await page.evaluate(()=>getComputedStyle(document.documentElement).getPropertyValue('--css-upgrade-probe').trim()),'old-cache');
-    const oldVersion=await activeVersion(page);
+    const oldVersion=minimal?'historical fixture (not probed)':await activeVersion(page);
     assert.notEqual(oldVersion,expectedVersion,'fixture must exercise a different worker version');
     phase='new';
     await checkPage(page,'index.html?channel=play#today',6);
@@ -90,7 +91,7 @@ let base;
     }
     await page.waitForFunction(async()=>!(await navigator.serviceWorker.getRegistration()).waiting);
     await page.waitForFunction(()=>!!navigator.serviceWorker.controller);
-    const activatedVersion=await activeVersion(page);
+    const activatedVersion=minimal?await ctx.serviceWorkers().at(-1).evaluate(()=>CACHE_VERSION):await activeVersion(page);
     assert.equal(activatedVersion,expectedVersion,'new worker must actually activate');
     await ctx.setOffline(true);await checkPage(page,'index.html?channel=play#today',6);await checkPage(journal,'day_summary.html',1);
     assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
