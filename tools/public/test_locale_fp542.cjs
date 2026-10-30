@@ -29,9 +29,17 @@ console.log('PASS locale: whitespace-specific keys, language and registration in
    let walks=0;const original=document.createTreeWalker.bind(document);document.createTreeWalker=(node,...args)=>{walks++;return original(node,...args)};
    for(let i=0;i<100;i++){root.classList.toggle('animation');root.setAttribute('aria-hidden',String(i%2===0));}await tick();
    const visualWalks=walks;document.createTreeWalker=original;
-   return {added,attribute,user,changed,changedAttribute,reverted,restored,visualWalks};
+   root.innerHTML='<div class="nr-legacy-details">'+('<span>Прогноз</span>'.repeat(5000))+'</div><span id="visibleTranslation">Календар</span><div translate="no"><span>Прогноз</span></div>';await tick();
+   let visited=0;document.createTreeWalker=(...args)=>{const w=original(...args),next=w.nextNode.bind(w);w.nextNode=()=>{const n=next();if(n)visited++;return n;};return w;};
+   NRLocaleOverviewRefresh();document.createTreeWalker=original;
+   const protectedText=root.querySelector('.nr-legacy-details').textContent,visible=root.querySelector('#visibleTranslation').textContent;
+   return {added,attribute,user,changed,changedAttribute,reverted,restored,visualWalks,visited,protectedText,visible};
   });
-  assert.deepEqual(result,{added:'Forecast',attribute:'Forecast',user:'Прогноз',changed:'Calendar',changedAttribute:'Calendar',reverted:'Календар',restored:'Calendar',visualWalks:0});
+  const {visited,protectedText,visible,...basic}=result;
+  assert.deepEqual(basic,{added:'Forecast',attribute:'Forecast',user:'Прогноз',changed:'Calendar',changedAttribute:'Calendar',reverted:'Календар',restored:'Calendar',visualWalks:0});
+  assert(visited<10,'Excluded legacy subtree must not yield 5000 text nodes: '+visited);
+  assert.equal(protectedText,'Прогноз'.repeat(5000));assert.equal(visible,'Calendar');
+  console.log('PASS excluded legacy subtree: '+visited+' yielded nodes, 5000 protected texts unchanged');
   console.log('PASS locale DOM: content + accessible labels, protected notes, language roundtrip, no walks for 100 visual mutations');
  }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1});

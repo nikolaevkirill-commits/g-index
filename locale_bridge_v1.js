@@ -5,9 +5,13 @@ const records=new WeakMap(),attributes=new WeakMap();
 // identifiers, values and the historical/research surface are excluded.
 const roots='.nr-route:not(#nrRoute-expert),#headerTitle,#headerSub,#mobileNav,#nrTopNav,footer';
 function translate(root){
- const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);let node;
- while((node=walker.nextNode())){
-  if(node.parentElement.closest('script,style,svg,textarea,input,.nr-legacy-details,#nrProfileLive,[translate="no"],#nrLocaleControl'))continue;
+ const excluded='script,style,svg,textarea,input,.nr-legacy-details,#nrProfileLive,[translate="no"],#nrLocaleControl';
+ // Reject an excluded subtree once instead of visiting every protected text
+ // node and repeatedly traversing its ancestors. Root ancestry is separate:
+ // TreeWalker filters descendants, not the root itself.
+ const textRootExcluded=!!root.closest(excluded);
+ const walker=document.createTreeWalker(root,NodeFilter.SHOW_ELEMENT|NodeFilter.SHOW_TEXT,{acceptNode(n){return n.nodeType===1?(n.matches(excluded)?NodeFilter.FILTER_REJECT:NodeFilter.FILTER_SKIP):NodeFilter.FILTER_ACCEPT;}});let node;
+ while(!textRootExcluded&&(node=walker.nextNode())){
   let old=records.get(node);if(!old||node.nodeValue!==old.output)old={source:node.nodeValue};
   const output=NRLocale.text(old.source);records.set(node,{source:old.source,output});if(node.nodeValue!==output)node.nodeValue=output;
  }
