@@ -1,0 +1,28 @@
+name: B7 diagnostic
+on:
+  push:
+    branches: [codex/expert-calendar]
+    paths: [tools/public/verify_css_upgrade.cjs, .github/workflows/b7-diagnostic.yml]
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        trigger: [message, button]
+        trial: [1, 2, 3]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v4
+        with: {node-version: '24'}
+      - run: npm install --no-save --package-lock=false playwright@1.62.1
+      - run: npx playwright install --with-deps chromium
+      - run: node tools/public/verify_css_upgrade.cjs --${{ matrix.trigger }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: b7-${{ matrix.trigger }}-${{ matrix.trial }}
+          path: /tmp/skyrhythm-css-upgrade-*/

@@ -8,11 +8,13 @@ const trigger=process.argv.includes('--button')?'button':'message';
 const expectedVersion=fs.readFileSync(path.join(root,'sw.js'),'utf8').match(/const CACHE_VERSION = '([^']+)'/)[1];
 // Observe pending fetch lifetimes without changing the historical worker fixture on disk.
 const traceWorker = `self.addEventListener('message',event=>{if(event.data?.type==='TEST_UPGRADE_VERSION')event.ports[0]?.postMessage({version:CACHE_VERSION});});
-self.__upgradePending=new Map();self.__upgradeSequence=0;
+self.__upgradePending=new Map();self.__upgradeSequence=0;self.__upgradeEvents=[];
+self.addEventListener('message',e=>self.__upgradeEvents.push({type:e.data?.type,at:Date.now()}));
 const __upgradeAdd=self.addEventListener.bind(self);
 self.addEventListener=function(type,listener,...rest){
  if(type!=='fetch')return __upgradeAdd(type,listener,...rest);
  return __upgradeAdd(type,event=>{const respond=event.respondWith.bind(event);
+ const wait=event.waitUntil.bind(event);event.waitUntil=promise=>{const id=++self.__upgradeSequence;self.__upgradePending.set(id,{kind:'waitUntil',url:event.request.url,started:Date.now()});return wait(Promise.resolve(promise).finally(()=>self.__upgradePending.delete(id)));};
  event.respondWith=promise=>{const id=++self.__upgradeSequence;self.__upgradePending.set(id,{url:event.request.url,started:Date.now()});
  return respond(Promise.resolve(promise).then(value=>{self.__upgradePending.delete(id);return value},error=>{self.__upgradePending.delete(id);throw error}));};
  return listener(event);},...rest);
@@ -57,8 +59,11 @@ let base;
 (async()=>{
   await new Promise(r=>server.listen(0,'127.0.0.1',r));base='http://127.0.0.1:'+server.address().port+'/';
   const browser=await chromium.launch({headless:true});
+  const lifecycle=[];
   try{
     const ctx=await browser.newContext({viewport:{width:390,height:844},serviceWorkers:'allow'}),page=await ctx.newPage();
+    const cdp=await ctx.newCDPSession(page);
+    cdp.on('ServiceWorker.workerVersionUpdated',e=>lifecycle.push({at:Date.now(),...e}));await cdp.send('ServiceWorker.enable');
     await page.goto(base+'index.html?channel=play#today');
     await page.evaluate(()=>navigator.serviceWorker.ready);await page.waitForFunction(()=>!!navigator.serviceWorker.controller);
     assert.equal(await page.evaluate(()=>getComputedStyle(document.documentElement).getPropertyValue('--css-upgrade-probe').trim()),'old-cache');
@@ -79,9 +84,9 @@ let base;
     try {
       await Promise.all([page.waitForNavigation({waitUntil:'load'}),trigger==='button'?page.locator('#pwaUpdateBar button').click():page.evaluate(async()=>{const r=await navigator.serviceWorker.getRegistration();r.waiting.postMessage({type:'SKIP_WAITING'});})]);
     } catch(error) {
-      const diagnostics={registration:await page.evaluate(async()=>{const r=await navigator.serviceWorker.getRegistration();return {waiting:r.waiting?.state,active:r.active?.state,reloading:window._swReloading}}),workers:[]};
-      for(const worker of ctx.serviceWorkers())try{diagnostics.workers.push(await worker.evaluate(()=>({version:typeof CACHE_VERSION==='undefined'?null:CACHE_VERSION,pending:[...(self.__upgradePending||[])],now:Date.now()})))}catch(e){diagnostics.workers.push({error:String(e)})}
-      console.error('CSS_UPGRADE_DIAGNOSTICS',JSON.stringify(diagnostics));throw error;
+      const diagnostics={lifecycle,registration:await page.evaluate(async()=>{const r=await navigator.serviceWorker.getRegistration();return {waiting:r.waiting?.state,active:r.active?.state,reloading:window._swReloading}}),workers:[]};
+      for(const worker of ctx.serviceWorkers())try{diagnostics.workers.push(await worker.evaluate(()=>({version:typeof CACHE_VERSION==='undefined'?null:CACHE_VERSION,pending:[...(self.__upgradePending||[])],events:self.__upgradeEvents,now:Date.now()})))}catch(e){diagnostics.workers.push({error:String(e)})}
+      fs.writeFileSync(path.join(out,'FAILURE.json'),JSON.stringify(diagnostics,null,2));console.error('CSS_UPGRADE_DIAGNOSTICS',JSON.stringify(diagnostics));throw error;
     }
     await page.waitForFunction(async()=>!(await navigator.serviceWorker.getRegistration()).waiting);
     await page.waitForFunction(()=>!!navigator.serviceWorker.controller);
@@ -92,5 +97,5 @@ let base;
     await page.screenshot({path:path.join(out,'offline_updated_today.png'),fullPage:true});
     fs.writeFileSync(path.join(out,'RESULT.json'),JSON.stringify({trigger,oldVersion,activatedVersion,old_css_probe_reproduced:true,new_html_ignores_old_css:true,waiting_worker_offline:true,updated_worker_offline:true,inline_blocks:7,source_css_exact:true},null,2));
     console.log('PASS CSS upgrade ('+trigger+'): old cached styles reproduced; exact new styles online, waiting/offline and activated/offline. Evidence: '+out);
-  }finally{await browser.close();server.close();}
+  }finally{fs.writeFileSync(path.join(out,'LIFECYCLE.json'),JSON.stringify(lifecycle,null,2));await browser.close();server.close();}
 })().catch(e=>{console.error(e);server.close();process.exitCode=1});
