@@ -12,8 +12,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        trigger: [original]
-        trial: [1, 2, 3]
+        trigger: [message, button]
+        trial: [old, waiting]
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v4
@@ -27,9 +27,7 @@ jobs:
       - run: node tools/public/verify_day_summary.cjs
       - run: node tools/public/verify_journal_restore_time.cjs
       - run: node tools/public/verify_journal_restore_adversarial.cjs
-      - run: git fetch origin 5609a6d5e011cf469268fcd50ca6f72bd195e575
-      - run: git show 5609a6d5e011cf469268fcd50ca6f72bd195e575:tools/public/verify_css_upgrade.cjs > tools/public/b7_original.cjs
-      - run: node tools/public/b7_original.cjs
+      - run: node tools/public/verify_css_upgrade.cjs --${{ matrix.trigger }} --restart=${{ matrix.trial }}
       - uses: actions/upload-artifact@v4
         if: always()
         with:

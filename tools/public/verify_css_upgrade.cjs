@@ -5,6 +5,7 @@ const root=path.resolve(__dirname,'../..');
 const out=fs.mkdtempSync(path.join(os.tmpdir(),'skyrhythm-css-upgrade-'));
 let phase='old';
 const minimal=process.argv.includes('--minimal');
+const restart=process.argv.find(a=>a.startsWith('--restart='))?.split('=')[1];
 const trigger=process.argv.includes('--button')?'button':'message';
 const expectedVersion=fs.readFileSync(path.join(root,'sw.js'),'utf8').match(/const CACHE_VERSION = '([^']+)'/)[1];
 // Observe pending fetch lifetimes without changing the historical worker fixture on disk.
@@ -82,6 +83,12 @@ let base;
     assert.equal(await journal.locator('#note').inputValue(),'unsaved upgrade fixture');
     await journal.screenshot({path:path.join(out,'offline_waiting_journal.png'),fullPage:true});
     await ctx.setOffline(false);
+    if(restart){
+      const versions=new Map();for(const event of lifecycle)for(const version of event.versions)versions.set(version.versionId,version);
+      const target=[...versions.values()].find(v=>v.status===(restart==='old'?'activated':'installed'));
+      assert(target,'worker selected for restart must exist');
+      await cdp.send('ServiceWorker.stopWorker',{versionId:target.versionId});
+    }
     try {
       await Promise.all([page.waitForNavigation({waitUntil:'load'}),trigger==='button'?page.locator('#pwaUpdateBar button').click():page.evaluate(async()=>{const r=await navigator.serviceWorker.getRegistration();r.waiting.postMessage({type:'SKIP_WAITING'});})]);
     } catch(error) {
