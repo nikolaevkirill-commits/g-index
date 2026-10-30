@@ -4,7 +4,6 @@ const {chromium}=require('playwright');
 const root=path.resolve(__dirname,'../..');
 const out=fs.mkdtempSync(path.join(os.tmpdir(),'skyrhythm-css-upgrade-'));
 let phase='old';
-const minimal=process.argv.includes('--minimal');
 const restart=process.argv.find(a=>a.startsWith('--restart='))?.split('=')[1];
 const trigger=process.argv.includes('--button')?'button':'message';
 const expectedVersion=fs.readFileSync(path.join(root,'sw.js'),'utf8').match(/const CACHE_VERSION = '([^']+)'/)[1];
@@ -30,7 +29,7 @@ const server=http.createServer((req,res)=>{
   try{
     let bytes=fs.readFileSync(file);
     if(phase==='old'&&name==='sw.js')bytes=fs.readFileSync(path.join(__dirname,'fixtures/sw_fp532.js'));
-    if(name==='sw.js'&&!minimal)bytes=Buffer.concat([Buffer.from(traceWorker),bytes]);
+    if(name==='sw.js')bytes=Buffer.concat([Buffer.from(traceWorker),bytes]);
     if(phase==='old'&&['index.html','day_summary.html'].includes(name))bytes=Buffer.from(bytes.toString().replace(/<style data-inline-source="([^"]+)"[^>]*>[\s\S]*?<\/style>/g,'<link rel="stylesheet" href="$1">'));
     if(phase==='old'&&name.endsWith('.css'))bytes=Buffer.concat([bytes,Buffer.from('\n:root{--css-upgrade-probe:old-cache}\n')]);
     res.writeHead(200,{'content-type':types[path.extname(name)]||'application/octet-stream','cache-control':'no-store'});res.end(bytes);
@@ -57,6 +56,11 @@ async function activeVersion(page){
     });
   });
 }
+async function bounded(promise,ms=5000){
+  let timer;
+  try{return await Promise.race([promise,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('Diagnostic probe timed out')),ms);})]);}
+  finally{clearTimeout(timer);}
+}
 let base;
 (async()=>{
   await new Promise(r=>server.listen(0,'127.0.0.1',r));base='http://127.0.0.1:'+server.address().port+'/';
@@ -65,11 +69,11 @@ let base;
   try{
     const ctx=await browser.newContext({viewport:{width:390,height:844},serviceWorkers:'allow'}),page=await ctx.newPage();
     const cdp=await ctx.newCDPSession(page);
-    cdp.on('ServiceWorker.workerVersionUpdated',e=>lifecycle.push({at:Date.now(),...e}));if(!minimal)await cdp.send('ServiceWorker.enable');
+    cdp.on('ServiceWorker.workerVersionUpdated',e=>lifecycle.push({at:Date.now(),...e}));await cdp.send('ServiceWorker.enable');
     await page.goto(base+'index.html?channel=play#today');
     await page.evaluate(()=>navigator.serviceWorker.ready);await page.waitForFunction(()=>!!navigator.serviceWorker.controller);
     assert.equal(await page.evaluate(()=>getComputedStyle(document.documentElement).getPropertyValue('--css-upgrade-probe').trim()),'old-cache');
-    const oldVersion=minimal?'historical fixture (not probed)':await activeVersion(page);
+    const oldVersion=await activeVersion(page);
     assert.notEqual(oldVersion,expectedVersion,'fixture must exercise a different worker version');
     phase='new';
     await checkPage(page,'index.html?channel=play#today',6);
@@ -92,18 +96,18 @@ let base;
     try {
       await Promise.all([page.waitForNavigation({waitUntil:'load'}),trigger==='button'?page.locator('#pwaUpdateBar button').click():page.evaluate(async()=>{const r=await navigator.serviceWorker.getRegistration();r.waiting.postMessage({type:'SKIP_WAITING'});})]);
     } catch(error) {
-      const diagnostics={lifecycle,registration:await page.evaluate(async()=>{const r=await navigator.serviceWorker.getRegistration();return {waiting:r.waiting?.state,active:r.active?.state,reloading:window._swReloading}}),workers:[]};
-      for(const worker of ctx.serviceWorkers())try{diagnostics.workers.push(await worker.evaluate(()=>({version:typeof CACHE_VERSION==='undefined'?null:CACHE_VERSION,pending:[...(self.__upgradePending||[])],events:self.__upgradeEvents,now:Date.now()})))}catch(e){diagnostics.workers.push({error:String(e)})}
+      const diagnostics={trigger,restart,lifecycle,registration:await bounded(page.evaluate(async()=>{const r=await navigator.serviceWorker.getRegistration();return {waiting:r.waiting?.state,active:r.active?.state,reloading:window._swReloading}})).catch(e=>({error:String(e)})),workers:[]};
+      for(const worker of ctx.serviceWorkers())try{diagnostics.workers.push(await bounded(worker.evaluate(()=>({version:typeof CACHE_VERSION==='undefined'?null:CACHE_VERSION,pending:[...(self.__upgradePending||[])],events:self.__upgradeEvents,now:Date.now()}))))}catch(e){diagnostics.workers.push({error:String(e)})}
       fs.writeFileSync(path.join(out,'FAILURE.json'),JSON.stringify(diagnostics,null,2));console.error('CSS_UPGRADE_DIAGNOSTICS',JSON.stringify(diagnostics));throw error;
     }
     await page.waitForFunction(async()=>!(await navigator.serviceWorker.getRegistration()).waiting);
     await page.waitForFunction(()=>!!navigator.serviceWorker.controller);
-    const activatedVersion=minimal?await ctx.serviceWorkers().at(-1).evaluate(()=>CACHE_VERSION):await activeVersion(page);
+    const activatedVersion=await activeVersion(page);
     assert.equal(activatedVersion,expectedVersion,'new worker must actually activate');
     await ctx.setOffline(true);await checkPage(page,'index.html?channel=play#today',6);await checkPage(journal,'day_summary.html',1);
     assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
     await page.screenshot({path:path.join(out,'offline_updated_today.png'),fullPage:true});
-    fs.writeFileSync(path.join(out,'RESULT.json'),JSON.stringify({trigger,oldVersion,activatedVersion,old_css_probe_reproduced:true,new_html_ignores_old_css:true,waiting_worker_offline:true,updated_worker_offline:true,inline_blocks:7,source_css_exact:true},null,2));
+    fs.writeFileSync(path.join(out,'RESULT.json'),JSON.stringify({trigger,restart:restart||null,oldVersion,activatedVersion,old_css_probe_reproduced:true,new_html_ignores_old_css:true,waiting_worker_offline:true,updated_worker_offline:true,inline_blocks:7,source_css_exact:true},null,2));
     console.log('PASS CSS upgrade ('+trigger+'): old cached styles reproduced; exact new styles online, waiting/offline and activated/offline. Evidence: '+out);
   }finally{fs.writeFileSync(path.join(out,'LIFECYCLE.json'),JSON.stringify(lifecycle,null,2));await browser.close();server.close();}
 })().catch(e=>{console.error(e);server.close();process.exitCode=1});
