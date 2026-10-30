@@ -26,7 +26,7 @@ jobs:
       - run: node tools/public/verify_journal_restore_time.cjs
       - run: node tools/public/verify_journal_restore_adversarial.cjs
       # FP545: raw production-worker run first (statistics only), then the traced/restart probe.
-      - run: node tools/public/verify_css_upgrade.cjs --${{ matrix.trigger }}
+      - run: node tools/public/verify_css_upgrade.cjs --${{ matrix.trigger }} --server-log
         continue-on-error: true
       - run: node tools/public/verify_css_upgrade.cjs --${{ matrix.trigger }} --restart=${{ matrix.trial }} --trace
       - uses: actions/upload-artifact@v4

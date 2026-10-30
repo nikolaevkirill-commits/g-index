@@ -10,6 +10,8 @@ const trigger=process.argv.includes('--button')?'button':'message';
 // instrumentation (--trace) and the CDP ServiceWorker domain (--cdp, implied by --restart)
 // are diagnostic-only: in FP543 they changed the outcome of the same runtime (3/8 → 12/12).
 const trace=process.argv.includes('--trace');
+// Server-side evidence does not modify either worker or enable CDP ServiceWorker.
+const serverLog=process.argv.includes('--server-log'),requests=[];
 const cdpEnabled=trace||process.argv.includes('--cdp')||!!restart;
 const expectedVersion=fs.readFileSync(path.join(root,'sw.js'),'utf8').match(/const CACHE_VERSION = '([^']+)'/)[1];
 // Observe pending fetch lifetimes without changing the historical worker fixture on disk.
@@ -28,6 +30,7 @@ self.addEventListener=function(type,listener,...rest){
 
 const types={'.js':'application/javascript','.css':'text/css','.html':'text/html','.json':'application/json','.svg':'image/svg+xml','.woff':'font/woff','.woff2':'font/woff2'};
 const server=http.createServer((req,res)=>{
+  if(serverLog){const record={url:req.url,phase,started:Date.now()};requests.push(record);res.on('finish',()=>{record.finished=Date.now();record.status=res.statusCode;});res.on('close',()=>{record.closed=Date.now();record.completed=res.writableFinished;});}
   const url=new URL(req.url,'http://localhost'),name=decodeURIComponent(url.pathname).replace(/^\//,'')||'index.html';
   const file=path.resolve(root,name);
   if(!file.startsWith(root+path.sep)){res.writeHead(403).end();return;}
@@ -121,5 +124,5 @@ let base;
     await page.screenshot({path:path.join(out,'offline_updated_today.png'),fullPage:true});
     fs.writeFileSync(path.join(out,'RESULT.json'),JSON.stringify({trigger,trace,cdp:cdpEnabled,restart:restart||null,oldVersion,activatedVersion,old_css_probe_reproduced:true,new_html_ignores_old_css:true,waiting_worker_offline:true,updated_worker_offline:true,inline_blocks:7,source_css_exact:true},null,2));
     console.log('PASS CSS upgrade ('+trigger+(trace?', trace':'')+(cdpEnabled?', cdp':'')+'): old cached styles reproduced; exact new styles online, waiting/offline and activated/offline. Evidence: '+out);
-  }finally{fs.writeFileSync(path.join(out,'LIFECYCLE.json'),JSON.stringify(lifecycle,null,2));await browser.close();server.close();}
+  }finally{fs.writeFileSync(path.join(out,'LIFECYCLE.json'),JSON.stringify(lifecycle,null,2));if(serverLog)fs.writeFileSync(path.join(out,'SERVER_REQUESTS.json'),JSON.stringify({worker_modified:trace,cdp:cdpEnabled,requests},null,2));await browser.close();server.close();}
 })().catch(e=>{console.error(e);server.close();process.exitCode=1});
