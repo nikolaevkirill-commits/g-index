@@ -118,10 +118,12 @@ function expertCaution(root,ds){
  '2026-11-01':['Експерт пропонує приділити день родині й плануванню бюджету, утримавшись від важливих фінансових рішень. Це тематичне застереження джерела, а не персональна фінансова порада.','The expert suggests family time and budget planning while avoiding major financial decisions. This is a source-specific caution, not personal financial advice.','La experta propone dedicar tiempo a la familia y planificar el presupuesto, evitando decisiones financieras importantes. Es una advertencia de la fuente, no asesoramiento financiero personal.','L’experte propose de privilégier la famille et la préparation du budget, en évitant les décisions financières importantes. Il s’agit d’une réserve de la source, pas d’un conseil financier personnel.']};
  let box=root.querySelector('[data-expert-caution]');if(!texts[ds]){box?.remove();return;}
  const i={uk:0,en:1,es:2,fr:3}[window.NRLocale?.language]||0;
- if(!box){box=make('section','sr-expert-caution');box.dataset.expertCaution='';box.setAttribute('translate','no');}
+ if(!box){box=make('details','sr-expert-caution');box.dataset.expertCaution='';box.setAttribute('translate','no');}
+ if(box.dataset.date!==ds)box.open=false;
  box.dataset.date=ds;box.dataset.sourceId='3202';box.dataset.sourceTextSha256='356781324ff588721b4792ee874dc6850274165f1226639e49b59508554768c2';box.dataset.sourceEdited='2026-10-25T16:49:49+00:00';
  const label=['Трактування експерта','Expert interpretation','Interpretación experta','Interprétation experte'][i],note=['Загальний бал не означає однакової оцінки для всіх справ. Це застереження не змінює бал; вплив на реальні події не підтверджений.','The overall score does not rate every activity equally. This caution does not change the score; an effect on real events has not been established.','La puntuación general no valora por igual todas las actividades. Esta advertencia no cambia la puntuación; no se ha demostrado un efecto en hechos reales.','La note globale ne vaut pas pour toutes les activités de la même façon. Cette réserve ne change pas la note ; un effet sur les événements réels n’est pas établi.'][i];
- box.replaceChildren(make('small','',label+' · '+ds),make('h2','',texts[ds][i]),make('p','',body[ds][i]),make('p','sr-caution-note',note));
+ const summary=make('summary','');summary.append(make('small','',label+' · '+ds),make('strong','',texts[ds][i]));
+ box.replaceChildren(summary,make('p','',body[ds][i]),make('p','sr-caution-note',note));
  const link=make('a','',['Допис @devakan від 25.10.2026','@devakan post dated 25 Oct 2026','Publicación de @devakan del 25/10/2026','Publication @devakan du 25/10/2026'][i]);link.href='https://t.me/devakan/3202';link.target='_blank';link.rel='noopener noreferrer';box.append(link);root.querySelector('.nr-o-hero')?.after(box);
 }
 function apply(root,ds,resolved){
