@@ -2,6 +2,17 @@
 const fs=require('fs'),path=require('path'),http=require('http'),os=require('os'),assert=require('assert/strict');
 const {chromium}=require('playwright');
 const root=path.resolve(__dirname,'../..');
+// The timeout must never masquerade as a successful activation. Test both entry files.
+for(const entry of ['index.html','design-v4.html'])for(const language of ['uk','en','es','fr']){
+  const html=fs.readFileSync(path.join(root,entry),'utf8').replace(/\r\n/g,'\n'),start=html.indexOf('function pwaReload() {');assert(start>=0);
+  const source=html.slice(start,html.indexOf('\n}',start)+2);let reloads=0,messages=0,timer;
+  const label={textContent:''},button={disabled:false};
+  const context={_swReg:{waiting:{postMessage(data){assert.equal(data.type,'SKIP_WAITING');messages++;}}},document:{getElementById(){return {querySelector(s){return s==='span'?label:button}}}},setTimeout(fn,ms){assert.equal(ms,4000);timer=fn;}};
+  context.window={NRLocale:{language},location:{reload(){reloads++;}}};require('vm').createContext(context);require('vm').runInContext(source,context);
+  context.pwaReload();assert.equal(messages,1);assert.equal(button.disabled,true);timer();assert.equal(reloads,0,'waiting activation must not force reload');assert.equal(button.disabled,false);assert(label.textContent.length>20);
+  context.pwaReload();context._swReg.waiting=null;timer();assert.equal(reloads,0,'controllerchange owns successful reload');context.pwaReload();assert.equal(reloads,1,'explicit manual reload with no waiting worker remains available');
+}
+console.log('PASS update timeout guard: both entries, four languages; no premature reload');
 const out=fs.mkdtempSync(path.join(os.tmpdir(),'skyrhythm-css-upgrade-'));
 let phase='old';
 const restart=process.argv.find(a=>a.startsWith('--restart='))?.split('=')[1];

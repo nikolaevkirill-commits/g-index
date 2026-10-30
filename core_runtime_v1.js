@@ -16134,7 +16134,10 @@ function renderPlanetAnimation(kp, moonPhaseDeg, G, panchCtx, astroCtx) {
     // fp379: the planet canvas sits far below the fold. Do not spend a full
     // animation frame on it until it is actually near the visible viewport.
     const _view = canv.getBoundingClientRect();
-    const _nearViewport = _view.bottom >= -120 && _view.top <= window.innerHeight + 120;
+    // A canvas in a closed/hidden legacy panel has a zero rect at the origin.
+    // Its coordinates alone look on-screen; require a rendered area as well.
+    const _nearViewport = _view.width > 0 && _view.height > 0 &&
+      _view.bottom >= -120 && _view.top <= window.innerHeight + 120;
     if (document.hidden || !_nearViewport) {
       _planetAnimFrame = null;
       _planetAnimTimer = setTimeout(() => {

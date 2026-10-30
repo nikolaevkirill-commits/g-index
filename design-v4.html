@@ -3735,8 +3735,15 @@ function pwaReload() {
       if (button) button.disabled = true;
     }
     _swReg.waiting.postMessage({ type: 'SKIP_WAITING' });
-    // Fallback for older workers that did not implement SKIP_WAITING.
-    setTimeout(() => window.location.reload(), 4000);
+    // Reload only on controllerchange. A timer cannot prove activation and may
+    // otherwise reopen the old release or discard an unsaved form.
+    setTimeout(() => {
+      if (!_swReg?.waiting) return;
+      const bar = document.getElementById('pwaUpdateBar');
+      const label = bar?.querySelector('span'), button = bar?.querySelector('button');
+      if (label) label.textContent = ({uk:'Оновлення ще не активовано. Можна спробувати ще раз.',en:'The update is not active yet. You can try again.',es:'La actualización aún no está activa. Puedes reintentarlo.',fr:'La mise à jour n’est pas encore active. Vous pouvez réessayer.'})[window.NRLocale?.language || 'uk'];
+      if (button) button.disabled = false;
+    }, 4000);
   } else {
     window.location.reload();
   }
