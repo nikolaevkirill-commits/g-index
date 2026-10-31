@@ -2581,3 +2581,5 @@ NRLocale.register([
 ]);
 // FP542 (B5): a zero Moon factor is not a Purnima day.
 NRLocale.register([['Пурніма: не цього дня','Purnima: not this day','Purnima: no es este día','Purnima : pas ce jour']]);
+// Audit FP549 (L10N): visible strings left in Ukrainian in other languages.
+NRLocale.register([['Перейти до основного контенту','Skip to main content','Ir al contenido principal','Aller au contenu principal'],['ДОБРОВІЛЬНО · ЛОКАЛЬНО','VOLUNTARY · LOCAL','VOLUNTARIO · LOCAL','VOLONTAIRE · LOCAL'],['Мій підсумок дня','My day summary','Mi resumen del día','Mon bilan du jour'],['Чотири оцінки вашого досвіду, особиста історія та окрема згода на експорт для дослідження.','Four ratings of your experience, a personal history and separate consent to export for research.','Cuatro valoraciones de tu experiencia, un historial personal y un consentimiento aparte para exportar con fines de investigación.','Quatre évaluations de votre expérience, un historique personnel et un consentement distinct à l’export pour la recherche.']]);
