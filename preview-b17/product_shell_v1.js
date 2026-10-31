@@ -149,7 +149,7 @@
   }
   function canonicalForDate(d){
     const layers=resolveDateLayers(d),offset=calendarOffsetForDs(layers.ds);
-    const result=window.NRConsumerAuthority.resolve((_sourceForecastRows||{})[layers.ds],layers.ds,Date.now(),offlineAuthorityMode()||window.__nrConsumerCached===true);
+    const result=window.NRConsumerAuthority.resolveFinal((_sourceForecastRows||{})[layers.ds],layers.ds,Date.now(),offlineAuthorityMode()||window.__nrConsumerCached===true);
     const presentation=window.NRConsumerAuthority.present(result);
     const signal={decisionAvailable:result.available,decisionScore:result.score,opKey:presentation.opKey,guard:'none',dynamicGuard:null,authority:result.authority};
     return {...layers,primary:result.score,consumer:result,feed:(_sourceForecastRows||{})[layers.ds]||{},official:result.available,scenario:false,kp:NaN,signal,presentation,
@@ -259,9 +259,9 @@
   let _independentPanelGeneration=0;
   var _sourceForecastRows={};
   function sourceSummary(ds){
-    const r=window.NRConsumerAuthority.resolve((_sourceForecastRows||{})[ds],ds,Date.now(),offlineAuthorityMode()||window.__nrConsumerCached===true);
+    const r=window.NRConsumerAuthority.resolveFinal((_sourceForecastRows||{})[ds],ds,Date.now(),offlineAuthorityMode()||window.__nrConsumerCached===true);
     const fmt=n=>n===null?'—':n<0?'−'+Math.abs(n):n>0?'+'+n:'0';
-    return `Оцінка моделі: ${fmt(r.score)}. Розрахунок за формулою джерела; точність щодо подій не підтверджена. Стан: ${r.state}.`;
+    return r.state==='expert'?`Оцінка дня: ${fmt(r.score)} — експертна правка (PDF). Точність щодо подій не підтверджена.`:r.state==='expert_conflict'?'Оцінка дня: — . Експертні рішення для цієї дати суперечать одне одному, тому оцінку не показано.':r.state==='invalid'?'Оцінка дня: — . Час пристрою не збігається з часом джерела більш ніж на 5 хв. Перевірте годинник пристрою.':`Оцінка моделі: ${fmt(r.score)}. Розрахунок за формулою джерела; точність щодо подій не підтверджена. Стан: ${r.state}.`;
   }
   function renderSourceSummary(){window.NRConsumerOverview?.update(_sourceForecastRows);const node=document.getElementById('nrOwnForecastToday');if(node)node.textContent=sourceSummary(todayKey());}
   window.fp468SourceSummary=sourceSummary;
