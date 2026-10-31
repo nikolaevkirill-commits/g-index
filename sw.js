@@ -86,7 +86,7 @@ const SHELL_ASSETS = [
   './preview-v4/design_b/fonts/OFL-FiraSans.txt',
   './preview-v4/design_b/fonts/OFL-Literata.txt',
   './preview-v4/design_b/scenes/locale_extra_v1.js',
-  './preview-v4/design_b/scenes/scenes.css?v=v7-2',
+  './preview-v4/design_b/scenes/scenes.css?v=v7-3',
   './preview-v4/design_b/scenes/scenes.js',
 
   './design-b17.html',

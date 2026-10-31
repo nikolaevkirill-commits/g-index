@@ -122,7 +122,7 @@ function expertCaution(root,ds){
  if(box.dataset.date!==ds)box.open=false;
  box.dataset.date=ds;box.dataset.sourceId='3202';box.dataset.sourceTextSha256='356781324ff588721b4792ee874dc6850274165f1226639e49b59508554768c2';box.dataset.sourceEdited='2026-10-25T16:49:49+00:00';
  const label=['Трактування експерта','Expert interpretation','Interpretación experta','Interprétation experte'][i],note=['Загальний бал не означає однакової оцінки для всіх справ. Це застереження не змінює бал; вплив на реальні події не підтверджений.','The overall score does not rate every activity equally. This caution does not change the score; an effect on real events has not been established.','La puntuación general no valora por igual todas las actividades. Esta advertencia no cambia la puntuación; no se ha demostrado un efecto en hechos reales.','La note globale ne vaut pas pour toutes les activités de la même façon. Cette réserve ne change pas la note ; un effet sur les événements réels n’est pas établi.'][i];
- const summary=make('summary','');summary.append(make('small','',label+' · '+ds),make('strong','',texts[ds][i]));
+ const summary=make('summary','');summary.append(make('small','',label+' · '+ds),document.createTextNode(' '),make('strong','',texts[ds][i]));
  box.replaceChildren(summary,make('p','',body[ds][i]),make('p','sr-caution-note',note));
  const link=make('a','',['Допис @devakan від 25.10.2026','@devakan post dated 25 Oct 2026','Publicación de @devakan del 25/10/2026','Publication @devakan du 25/10/2026'][i]);link.href='https://t.me/devakan/3202';link.target='_blank';link.rel='noopener noreferrer';box.append(link);root.querySelector('.nr-o-hero')?.after(box);
 }
