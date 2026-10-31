@@ -28,8 +28,10 @@ def civil_tithis(day,zone):
         t=_tithi((x+y)/2)
         pieces.append({'tithi':t,'start_local':_from_jd(x,tz).isoformat(),
             'end_local':_from_jd(y,tz).isoformat(),
-            'overlap_start_local':_from_jd(max(a,x),tz).isoformat(),
-            'overlap_end_local':_from_jd(min(b,y),tz).isoformat(),
+            # Civil-day edges come from the exact local datetimes, not from a JD round trip
+            # (swe.revjul loses ~1e-5 s and would date the 00:00 edge to the previous day).
+            'overlap_start_local':(start if x<=a else _from_jd(x,tz)).isoformat(),
+            'overlap_end_local':(end if y>=b else _from_jd(y,tz)).isoformat(),
             'duration_seconds':(min(b,y)-max(a,x))*86400})
     for x in roots:
         if a<=x<b:

@@ -9,15 +9,24 @@ const messages=new Map(),untranslated=new Set();let pattern,dirty=false;
 const memo=new Map(),MEMO_LIMIT=8000;let version=0;const CYR=/[А-Яа-яІіЇїЄєҐґ]/u;
 function register(rows){for(const [uk,en,es,fr] of rows){if(!uk||![en,es,fr].every(x=>typeof x==='string'&&x.length))throw Error('Incomplete locale entry');if(messages.has(uk))throw Error('Duplicate locale entry: '+uk);messages.set(uk,{uk,en,es,fr})}dirty=true;memo.clear();version++;}
 // The pattern is built once, on first use after registration, instead of after each of the 18 register() calls.
-function build(){dirty=false;pattern=new RegExp([...messages.keys()].sort((a,b)=>b.length-a.length).map(s=>(/^\p{L}/u.test(s)?'(?<![\\p{L}\\p{M}])':'')+s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+(/\p{L}$/u.test(s)?'(?![\\p{L}\\p{M}])':'')).join('|'),'gu');}
+// PERF (audit FP549): one alternation RegExp over ~1000 keys cost ~1.9 s to compile and ~2.9 s to run
+// on CPU x4. The index below gives the same result as that RegExp: at each position the longest key
+// wins (keys sorted by length, stable), letter-edged keys keep the same \p{L}\p{M} boundary checks.
+const LM=/[\p{L}\p{M}]/u;let index=null;
+function build(){dirty=false;index=new Map();const keys=[...messages.keys()].sort((a,b)=>b.length-a.length);for(const k of keys){const c=k.charCodeAt(0);let list=index.get(c);if(!list)index.set(c,list=[]);list.push({k,lb:/^\p{L}/u.test(k),la:/\p{L}$/u.test(k)});}pattern=keys.length?index:null;}
+function before(s,i){if(i<=0)return '';const lo=s.charCodeAt(i-1);if(lo>=0xDC00&&lo<=0xDFFF&&i>=2){const hi=s.charCodeAt(i-2);if(hi>=0xD800&&hi<=0xDBFF)return s.slice(i-2,i);}return s[i-1];}
+function after(s,i){return i>=s.length?'':String.fromCodePoint(s.codePointAt(i));}
+function scan(s){let out='',i=0,last=0;const n=s.length;while(i<n){const list=index.get(s.charCodeAt(i));let hit=null;if(list)for(const e of list){const k=e.k;if(k.length>n-i||!s.startsWith(k,i))continue;if(e.lb&&LM.test(before(s,i)))continue;if(e.la&&LM.test(after(s,i+k.length)))continue;hit=k;break;}if(hit!==null){out+=s.slice(last,i)+messages.get(hit)[language];i+=hit.length;last=i;}else{const c=s.codePointAt(i);i+=c>0xFFFF?2:1;}}return last?out+s.slice(last):s;}
 function text(source){const s=String(source??'').replace(/\\n/g,'\n');if(language==='uk')return s;if(dirty)build();if(!pattern)return s;const hit=memo.get(s);if(hit!==undefined)return hit;
  // FP542 (F1): every registered key contains Cyrillic text; strings without it cannot match and are
  // returned unchanged without running the large alternation. A whole-string key is a direct lookup.
  if(!CYR.test(s))return s; // Unchanged strings need no cache entry; keep memory bounded.
  const exact=messages.get(s);
  if(exact){const out=exact[language];if(memo.size>=MEMO_LIMIT)memo.clear();memo.set(s,out);return out;}
- const out=s.replace(pattern,k=>messages.get(k)[language]).replace(/(\d)(г|хв|д)(?!\p{L})/gu,(_m,n,unit)=>n+({г:' h',хв:' min',д:' d'}[unit]));if(/[А-Яа-яІіЇїЄєҐґ]/u.test(out))untranslated.add(s);if(memo.size>=MEMO_LIMIT)memo.clear();memo.set(s,out);return out;}
+ const out=scan(s).replace(/(\d)(г|хв|д)(?!\p{L})/gu,(_m,n,unit)=>n+({г:' h',хв:' min',д:' d'}[unit]));if(/[А-Яа-яІіЇїЄєҐґ]/u.test(out))untranslated.add(s);if(memo.size>=MEMO_LIMIT)memo.clear();memo.set(s,out);return out;}
 function set(next){if(next!=='auto'&&!supported.includes(next))return false;choice=next;language=next==='auto'?detect():next;memo.clear();version++;let persisted=true;try{localStorage.setItem(key,next)}catch{persisted=false}document.documentElement.lang=language;global.dispatchEvent(new CustomEvent('nr:locale',{detail:{language,persisted}}));return persisted;}
+function share(){try{if(!global.caches||!global.document)return;const url=new URL('__nr_locale',document.baseURI).href;global.caches.open('nr-prefs-v1').then(c=>c.put(url,new Response(language,{headers:{'content-type':'text/plain'}}))).catch(()=>{});}catch{}}
+global.addEventListener('nr:locale',share);share();
 global.addEventListener('languagechange',()=>{if(choice==='auto')set('auto')});
 global.NRLocale={register,text,set,detect,get choice(){return choice},get language(){return language},get version(){return version},get locale(){return {uk:'uk-UA',en:'en-GB',es:'es-ES',fr:'fr-FR'}[language]},supported,missing:()=>[...untranslated],clearMissing:()=>untranslated.clear()};
 })(window);

@@ -1893,7 +1893,7 @@ body.fp434-app #nrEclipseCopy{color:var(--nr-copy3)}
 <link rel="preload" as="script" href="./decision_journal_v1.js">
 <link rel="preload" as="script" href="./audit_copy_v1.js">
 <link rel="preload" as="script" href="preview-v4/core_runtime_v1.js">
-<link rel="stylesheet" href="preview-v4/design_candidate.css?v=v7-2">
+<link rel="stylesheet" href="preview-v4/design_candidate.css?v=v7-3">
 <link rel="stylesheet" href="preview-v4/design_b/css/fonts.css?v=v7-2">
 <link rel="stylesheet" href="preview-v4/design_b/integration.css?v=v7-2">
 <link rel="stylesheet" href="preview-v4/design_b/scenes/scenes.css?v=v7-2">
@@ -3734,6 +3734,15 @@ function pwaReload() {
       if (label) label.textContent = '🔄 Застосовую оновлення SkyRhythm…';
       if (button) button.disabled = true;
     }
+    // B7 (audit FP549): Chromium stops the idle old worker right after SKIP_WAITING; a subresource fetch
+    // arriving during that stop restarts it and the activation is lost until the worker idles again
+    // (~30 s; 5 min with DevTools attached). Hold this page's own fetches briefly to avoid the race.
+    if (typeof window.fetch === 'function' && !window.__nrFetchGate) {
+      const nativeFetch = window.fetch.bind(window);
+      window.fetch = (...args) => { const wait = (window.__nrHoldFetchUntil || 0) - Date.now(); return wait > 0 ? new Promise(resolve => setTimeout(resolve, wait)).then(() => nativeFetch(...args)) : nativeFetch(...args); };
+      window.__nrFetchGate = true;
+    }
+    window.__nrHoldFetchUntil = Date.now() + 1500;
     _swReg.waiting.postMessage({ type: 'SKIP_WAITING' });
     // Reload only on controllerchange. A timer cannot prove activation and may
     // otherwise reopen the old release or discard an unsaved form.

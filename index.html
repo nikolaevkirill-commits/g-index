@@ -4504,6 +4504,15 @@ function pwaReload() {
       if (label) label.textContent = '🔄 Застосовую оновлення SkyRhythm…';
       if (button) button.disabled = true;
     }
+    // B7 (audit FP549): Chromium stops the idle old worker right after SKIP_WAITING; a subresource fetch
+    // arriving during that stop restarts it and the activation is lost until the worker idles again
+    // (~30 s; 5 min with DevTools attached). Hold this page's own fetches briefly to avoid the race.
+    if (typeof window.fetch === 'function' && !window.__nrFetchGate) {
+      const nativeFetch = window.fetch.bind(window);
+      window.fetch = (...args) => { const wait = (window.__nrHoldFetchUntil || 0) - Date.now(); return wait > 0 ? new Promise(resolve => setTimeout(resolve, wait)).then(() => nativeFetch(...args)) : nativeFetch(...args); };
+      window.__nrFetchGate = true;
+    }
+    window.__nrHoldFetchUntil = Date.now() + 1500;
     _swReg.waiting.postMessage({ type: 'SKIP_WAITING' });
     // Reload only on controllerchange. A timer cannot prove activation and may
     // otherwise reopen the old release or discard an unsaved form.
@@ -7273,7 +7282,7 @@ body.fp434-app main#mainContent{padding-inline:24px!important}
 #nrCoverFresh[data-state="live"]:before{background:#63be7b;box-shadow:0 0 0 5px rgba(99,190,123,.1)}
 #nrCoverFresh[data-state="error"]:before{background:#ff7b82;box-shadow:0 0 0 5px rgba(255,123,130,.1)}
 </style>
-<script src="research_observances_v1.js" defer></script><script src="research_observances_view.js" defer></script><script>document.addEventListener("DOMContentLoaded",()=>window.SRMountSourceCalendar(),{once:true});</script>
+<script src="research_observances_v1.js" defer></script><script src="research_observances_view.js" defer></script><script>document.addEventListener("DOMContentLoaded",()=>{if(typeof window.SRMountSourceCalendar==="function")window.SRMountSourceCalendar();else window.NRDiagnostics?.record("calendar.source_view_missing","recoverable");},{once:true});</script>
 
 <style data-inline-source="festival_decision_v1.css" data-css-sha256="f0d93423f1ad05039c9e6d0a8ebf6eb9592e9f7b35a0a1963000fb7b34fdee30">
 .sr-festival-decision{margin:16px 0;padding:16px;border:1px solid var(--border,#607086);border-radius:14px;line-height:1.55;overflow-wrap:anywhere;color:var(--text,#e8eef7);background:var(--card,#152034)}

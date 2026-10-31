@@ -30,6 +30,15 @@ class Components(unittest.TestCase):
             p=c.calculate('2027-06-21',None,city='Polar')
             self.assertIsNone(p['sunrise_tithi']);self.assertFalse(p['parana']['available'])
             self.assertFalse(p['pradosh']['available'])
+    def test_civil_edges_are_exact(self):
+        from datetime import date,timedelta
+        for day in ('2026-10-30','2026-03-29','2026-10-25','2026-12-31','2027-01-01'):
+            x=c.civil_tithis(day,'Europe/Kyiv')
+            nxt=(date.fromisoformat(day)+timedelta(days=1)).isoformat()
+            self.assertEqual(x['tithis'][0]['overlap_start_local'][:19],day+'T00:00:00')
+            self.assertEqual(x['tithis'][-1]['overlap_end_local'][:19],nxt+'T00:00:00')
+            for p in x['tithis']:
+                self.assertEqual(p['overlap_start_local'][:10],day)
     def test_bad_source_rejected(self):
         for icons in (['fake'],['bolt','bolt']):
             with self.assertRaises(ValueError):c.calculate('2027-01-01',icons)

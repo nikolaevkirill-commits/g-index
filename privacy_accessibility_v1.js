@@ -3,7 +3,7 @@
   'use strict';
   const tr=s=>window.NRLocale?.text(s)||s;
   // Includes legacy writers through lsSet and variable/template keys.
-  const STORAGE_POLICY={prefixes:['gindex_','gidx_','gix_','g_history_','gPrev_','neborythm.','neborythm_','neborhythm.','neborhythm_','skyrhythm_','nr_forecast_','nr_palette_','nr_design_','nr_canonical_snapshot_','personalData_'],keys:['personalData','last_geo_lat','last_geo_lon','last_kp_known','last_dst_known','last_bz_known','last_vsw_known','last_xray_class','g_telemetry','v86_heat','v86_radial','fp434_route','cmp_mode','mnavTab','dgd_cache_v1','__vlDiag_last'],exportExcluded:['gindex_session_token']};
+  const STORAGE_POLICY={prefixes:['gindex_','gidx_','gix_','g_history_','gPrev_','neborythm.','neborythm_','neborhythm.','neborhythm_','skyrhythm_','nr_forecast_','nr_palette_','nr_design_','nr_canonical_snapshot_','personalData_'],keys:['personalData','last_geo_lat','last_geo_lon','last_kp_known','last_dst_known','last_bz_known','last_vsw_known','last_xray_class','g_telemetry','v86_heat','v86_radial','fp434_route','cmp_mode','mnavTab','dgd_cache_v1','__vlDiag_last','srAppearanceV1','srPrivacyNoticeDismissed','srSkyBackgroundMotionV1'],exportExcluded:['gindex_session_token']};
   function ownedKeys(storage){return Array.from({length:storage.length},(_,i)=>storage.key(i)).filter(k=>k&&(STORAGE_POLICY.keys.includes(k)||STORAGE_POLICY.prefixes.some(p=>k.startsWith(p))))}
   // No personal payload is sent; each open tab clears its own session and timer.
   const RESET_SIGNAL='gindex_privacy_reset_v1';
@@ -97,7 +97,7 @@
     ['nrReminderStatus','nrPlanStatus','nrOutcomeStatus'].forEach(id=>{const node=document.getElementById(id);if(node)node.textContent='Локальні дані очищено.'});
     // The initiating tab already cleared shared localStorage. Peers must not
     // erase a new profile that the user saves after that completed deletion.
-    try{(fromPeer?[sessionStorage]:[localStorage,sessionStorage]).forEach(storage=>ownedKeys(storage).filter(k=>k!==window.NRForecastJournal?.RESET_MARKER).forEach(k=>storage.removeItem(k)))}catch(_e){ globalThis.NRDiagnostics?.record('catch.306','recoverable'); resetInProgress=false;status('Не вдалося повністю очистити локальне сховище. Повторіть очищення через налаштування браузера.');return}
+    try{(fromPeer?[sessionStorage]:[localStorage,sessionStorage]).forEach(storage=>ownedKeys(storage).filter(k=>k!==window.NRForecastJournal?.RESET_MARKER).forEach(k=>storage.removeItem(k)));try{window.caches?.delete('nr-prefs-v1').catch(()=>{})}catch(_c){}}catch(_e){ globalThis.NRDiagnostics?.record('catch.306','recoverable'); resetInProgress=false;status('Не вдалося повністю очистити локальне сховище. Повторіть очищення через налаштування браузера.');return}
     const form=document.getElementById('nrProfileForm');form?.reset();if(form?.elements.city)form.elements.city.value='Київ';
     status('✓ Локальні дані очищено на цьому пристрої.');
     if(typeof renderProfileResult==='function')renderProfileResult();

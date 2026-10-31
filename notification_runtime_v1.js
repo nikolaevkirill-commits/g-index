@@ -6,15 +6,32 @@ function safeURL(value,scope,fallback=dailyURL){
   try {const u=new URL(value||fallback,scope),base=new URL(scope);if(u.origin===base.origin&&u.pathname.startsWith(base.pathname))return u.href;} catch (_) { globalThis.NRDiagnostics?.record('catch.314','recoverable'); }
   return new URL(fallback,scope).href;
 }
-function daily(feed,now=Date.now()){
+// NOTIF-1: the notification follows the interface language (shared through Cache Storage by
+// locale_core_v1.js) and states the civil-day anchor. Score and state come only from resolveFinal.
+const LANGS=['uk','en','es','fr'],PREFS='nr-prefs-v1',LOCALE_KEY='__nr_locale';
+const COPY={
+ uk:{expert:'експертна оцінка',formula:'формула джерела',offline:'офлайн, збережений розрахунок',day:'день за київським часом',none:'Немає актуальної оцінки. Відкрийте застосунок, щоб перевірити джерела.',score:'Оцінка дня',note:'Точність щодо подій не підтверджена.',conflict:'Експертні рішення суперечать одне одному — оцінку не показано.'},
+ en:{expert:'expert assessment',formula:'source formula',offline:'offline, saved calculation',day:'Kyiv calendar day',none:'No current score. Open the app to check the sources.',score:'Day score',note:'Accuracy for real events is not confirmed.',conflict:'Expert decisions conflict — no score shown.'},
+ es:{expert:'evaluación experta',formula:'fórmula de la fuente',offline:'sin conexión, cálculo guardado',day:'día civil de Kiev',none:'No hay puntuación actual. Abre la aplicación para revisar las fuentes.',score:'Puntuación del día',note:'La precisión respecto a eventos reales no está confirmada.',conflict:'Las decisiones expertas se contradicen: no se muestra puntuación.'},
+ fr:{expert:'évaluation experte',formula:'formule de la source',offline:'hors ligne, calcul enregistré',day:'jour civil de Kyiv',none:'Aucune note actuelle. Ouvrez l’application pour vérifier les sources.',score:'Note du jour',note:'La précision vis-à-vis des événements réels n’est pas confirmée.',conflict:'Les décisions d’expert se contredisent : aucune note affichée.'}};
+function lang(value){return LANGS.includes(value)?value:'uk';}
+function daily(feed,now=Date.now(),language='uk'){
+  const L=COPY[lang(language)];
   const date=NRCivilTime.dayKey(new Date(now),'Europe/Kyiv');
   const result=host.NRConsumerAuthority.resolveFinal(feed?.days?.[date],date,now,false);
   const view=host.NRConsumerAuthority.present(result);
-  return {title:'SkyRhythm · '+date,body:result.available?view.title+'. '+view.summary:view.label+'. Відкрийте застосунок, щоб перевірити джерела.',date,state:result.state,score:result.score};
+  const source=result.state==='expert'?L.expert:result.state==='offline'?L.offline:L.formula;
+  const body=result.available?L.score+' '+view.symbol+' ('+source+'). '+L.note:result.state==='expert_conflict'?L.conflict:L.none;
+  return {title:'SkyRhythm · '+date+' · '+L.day,body,date,state:result.state,score:result.score,language:lang(language)};
+}
+async function storedLanguage(scope){
+  try{const cache=await caches.open(PREFS);const hit=await cache.match(new URL(LOCALE_KEY,scope).href);return lang(hit?(await hit.text()).trim():'uk');}
+  catch(_){host.NRDiagnostics?.record('notification.locale','recoverable');return 'uk';}
 }
 async function loadDaily(scope){
-  try{return daily(await host.NRConsumerAuthority.loadFeeds(scope));}
-  catch(e){host.NRDiagnostics?.record('notification.source','recoverable');return daily(null)}
+  const language=await storedLanguage(scope);
+  try{return daily(await host.NRConsumerAuthority.loadFeeds(scope),Date.now(),language);}
+  catch(e){host.NRDiagnostics?.record('notification.source','recoverable');return daily(null,Date.now(),language)}
 }
 function install(sw){
   sw.addEventListener('push',event=>event.waitUntil((async()=>{
@@ -46,5 +63,5 @@ function install(sw){
     })());
   });
 }
-host.NRNotificationRuntime=Object.freeze({daily,loadDaily,safeURL,install});
+host.NRNotificationRuntime=Object.freeze({daily,loadDaily,storedLanguage,safeURL,install,PREFS,LOCALE_KEY});
 })(globalThis);

@@ -69,7 +69,7 @@
     setTimeout(()=>requestProductRender('calendar'),650);
     setTimeout(enhanceFunctionalRoutes,900);
   }
-  function todayKey(){try{return typeof todayKyivStr==='function'?todayKyivStr():new Date().toISOString().slice(0,10)}catch(_e){ globalThis.NRDiagnostics?.record('catch.283','recoverable'); return new Date().toISOString().slice(0,10)}}
+  function todayKey(){try{return typeof todayKyivStr==='function'?todayKyivStr():NRCivilTime.dayKey(Date.now(),'Europe/Kyiv')}catch(_e){ globalThis.NRDiagnostics?.record('catch.283','recoverable'); try{return NRCivilTime.dayKey(Date.now(),'Europe/Kyiv')}catch(_e2){return new Date().toISOString().slice(0,10)}}}
   function cleanRegistryHeadline(value){return String(value||'').replace(/Нейтральни\s+й/giu,'Нейтральний').replace(/несприятл\s+ивий/giu,'несприятливий').replace(/несприятливи\s+й/giu,'несприятливий').replace(/прибиран\s+ня/giu,'прибирання').replace(/\s+Дані можуть(?:\s+бути)?\s*$/iu,'').replace(/\s+/g,' ').trim()}
   function localizeNewShellCopy(){
     const f=document.querySelector('#nrRoute-forecast .nr-route-head');if(f){const e=f.querySelector('.nr-eyebrow'),p=f.querySelector('p');if(e)e.textContent='ПРОГНОЗ';if(p)p.textContent='Одна шкала для трьох горизонтів: спочатку порада, нижче — графік і пояснення джерел.'}

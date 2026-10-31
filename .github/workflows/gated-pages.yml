@@ -18,6 +18,7 @@ on:
         default: ''
 permissions:
   contents: read
+  actions: read
 concurrency:
   group: pages-release
   cancel-in-progress: false
@@ -31,8 +32,24 @@ jobs:
       - uses: actions/checkout@v5
         with:
           ref: ${{ inputs.release_sha || github.sha }}
+          fetch-depth: 0
       - id: revision
         run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      # REL-1: a feed-only refresh must not depend on browser UI gates (B7 flakiness), but it may
+      # skip them only when every file changed since the LAST SUCCESSFULLY GATED deploy is under
+      # consumer_cloud/. Any runtime change, an unknown baseline or an API error runs the full gate.
+      - id: scope
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          last=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow gated-pages.yml --branch deploy --status success --limit 20 --json headSha,conclusion --jq '[.[]|select(.conclusion=="success")][0].headSha' 2>/dev/null || true)
+          mode=full
+          if [ -n "$last" ] && git cat-file -e "$last^{commit}" 2>/dev/null && git merge-base --is-ancestor "$last" HEAD; then
+            changed=$(git diff --name-only "$last" HEAD)
+            if [ -n "$changed" ] && ! printf '%s\n' "$changed" | grep -qv '^consumer_cloud/'; then mode=data; fi
+          fi
+          echo "baseline=${last:-none} mode=$mode"
+          echo "mode=$mode" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-python@v5
         with: {python-version: '3.12'}
       - run: python tools/public/verify_boundary.py
@@ -47,40 +64,68 @@ jobs:
         with: {node-version: '24'}
       - run: npm install --no-save --package-lock=false playwright@1.62.1
       - run: npx playwright install --with-deps chromium
-      - run: node tools/public/verify_day_cautions.cjs
+      - if: steps.scope.outputs.mode != 'data'
+        run: node tools/public/verify_day_cautions.cjs
       - run: node tools/public/verify_noaa_missing.cjs
-      - run: node tools/public/verify_svg_missing.cjs
-      - run: node tools/public/verify_presentation.cjs
-      - run: node tools/public/verify_day_summary.cjs
-      - run: node tools/public/verify_journal_restore_time.cjs
-      - run: node tools/public/verify_journal_restore_adversarial.cjs
+      - if: steps.scope.outputs.mode != 'data'
+        run: node tools/public/verify_svg_missing.cjs
+      - if: steps.scope.outputs.mode != 'data'
+        run: node tools/public/verify_presentation.cjs
+      - if: steps.scope.outputs.mode != 'data'
+        run: node tools/public/verify_day_summary.cjs
+      - if: steps.scope.outputs.mode != 'data'
+        run: node tools/public/verify_journal_restore_time.cjs
+      - if: steps.scope.outputs.mode != 'data'
+        run: node tools/public/verify_journal_restore_adversarial.cjs
       # FP545 (T1/T2): one blocking run against the unmodified production worker.
       # Button/trace/restart variants are diagnostics in b7-diagnostic.yml, not release gates.
-      - run: node tools/public/verify_css_upgrade.cjs
+      # B7 (audit FP549): the release gate exercises the production update path (#pwaUpdateBar button ->
+      # pwaReload). The direct postMessage trigger bypasses pwaReload and stays a diagnostic in b7-diagnostic.yml.
+      - if: steps.scope.outputs.mode != 'data'
+        run: node tools/public/verify_css_upgrade.cjs --button
+      - if: steps.scope.outputs.mode != 'data'
+        run: node tools/public/verify_b7_activation_race.cjs 20 index.html
+      - if: steps.scope.outputs.mode != 'data'
+        run: node tools/public/verify_b7_activation_race.cjs 20 design-v4.html
       - uses: actions/upload-artifact@v4
-        if: always()
+        if: always() && steps.scope.outputs.mode != 'data'
         with:
           name: css-upgrade-evidence
           path: /tmp/skyrhythm-css-upgrade-*/
           if-no-files-found: ignore
           retention-days: 14
-      - run: node tools/public/verify_civil_time.cjs
-      - run: node tools/public/test_locale_fp542.cjs
+      - if: steps.scope.outputs.mode != 'data'
+        run: node tools/public/verify_civil_time.cjs
+      - if: steps.scope.outputs.mode != 'data'
+        run: node tools/public/test_locale_fp542.cjs
       - run: node tools/public/test_authority_fp542.cjs
       - run: node tools/public/test_expert_refresh_regression.cjs
       - run: node tools/public/verify_authority_fp542.cjs
       - run: node tools/public/verify_final_score.cjs
-      - run: node tools/public/verify_notification_navigation.cjs
-      - run: node tools/public/verify_panchanga_cache.cjs cache-regression
-      - run: node tools/public/verify_text_reflow.cjs
-      - run: node tools/public/verify_all_routes_reflow.cjs
+      - run: node tools/public/test_notification_locale.cjs
+      - if: steps.scope.outputs.mode != 'data'
+        run: node tools/public/verify_notification_navigation.cjs
+      - if: steps.scope.outputs.mode != 'data'
+        run: node tools/public/verify_panchanga_cache.cjs cache-regression
+      - if: steps.scope.outputs.mode != 'data'
+        run: node tools/public/verify_text_reflow.cjs
+      - if: steps.scope.outputs.mode != 'data'
+        run: node tools/public/verify_all_routes_reflow.cjs
+      - if: steps.scope.outputs.mode != 'data'
+        run: node tools/public/verify_no_overlap.cjs
       - run: node tools/public/check_final_score_v113.cjs . final-score-regression.json
-      - run: node tools/public/check_legacy_sync_v112.cjs . legacy-regression.json
-      - run: node tools/public/check_product_brand_v123.cjs
-      - run: node tools/public/science_festival_engine.cjs festival-unit
-      - run: node tools/public/science_festival_ui.cjs festival-ui
-      - run: node tools/public/science_festival_offline.cjs festival-offline
-      - run: node tools/public/science_festival_library.cjs 
+      - if: steps.scope.outputs.mode != 'data'
+        run: node tools/public/check_legacy_sync_v112.cjs . legacy-regression.json
+      - if: steps.scope.outputs.mode != 'data'
+        run: node tools/public/check_product_brand_v123.cjs
+      - if: steps.scope.outputs.mode != 'data'
+        run: node tools/public/science_festival_engine.cjs festival-unit
+      - if: steps.scope.outputs.mode != 'data'
+        run: node tools/public/science_festival_ui.cjs festival-ui
+      - if: steps.scope.outputs.mode != 'data'
+        run: node tools/public/science_festival_offline.cjs festival-offline
+      - if: steps.scope.outputs.mode != 'data'
+        run: node tools/public/science_festival_library.cjs
       - name: Negative gate probe
         if: github.event_name == 'workflow_dispatch' && inputs.failure_probe
         run: |
