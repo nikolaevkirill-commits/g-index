@@ -157,12 +157,13 @@ const driverLabel=x=>x.factor==='Kp'?'Геомагнітна складова':x
  const label=hero.querySelector(':scope > label');if(label){label.childNodes.forEach(n=>{if(n.nodeType===3)n.textContent=tr('Дата · Київ');});label.dataset.p0Date='';}
  // Keep the original accessible route heading, while removing duplicate visual chrome.
  const heading=root.querySelector('.nr-o-heading');if(heading&&heading.parentElement!==hero)hero.prepend(heading);
- for(const e of [...hero.children])if(!e.matches('[data-reference-title],[data-p0-date],[data-p0-moon],[data-p0-sentence],.nr-o-verdict,[data-p0-source],.sr-p0-accessible-heading'))details.append(e);
+ for(const e of [...hero.children])if(!e.matches('[data-reference-title],[data-p0-date],[data-p0-moon],[data-p0-sentence],.nr-o-verdict,[data-p0-source],.sr-p0-accessible-heading,[data-placement="after-hero"]'))details.append(e);
  sentence.textContent=tr(sentence.textContent);chip.textContent=tr(chip.textContent);
  details.querySelector(':scope > summary').textContent=tr('Детально: джерела, розрахунок і календар');
  signals.querySelectorAll('button').forEach((b,i)=>b.textContent=tr(['Астрономія й NOAA','Панчанга','Оцінка дня'][i]));
  const source=root.querySelector('[data-score-source]');if(source)details.prepend(source);
- for(const e of [...root.children])if(e!==hero&&e!==details&&e!==signals&&!e.matches('.sr-dayline,.nr-o-journey,.nr-o-heading,[data-p0-feed-state],[data-expert-caution]'))details.append(e);
+ for(const e of [...root.children])if(e!==hero&&e!==details&&e!==signals&&!e.matches('.sr-dayline,.nr-o-journey,.nr-o-heading,[data-p0-feed-state],[data-expert-caution],[data-placement="after-hero"]'))details.append(e);// DES-12: a block that declares its own placement (design-v4 NOAA brief) is not moved back and forth.
+
  // Hide duplicate weather summaries only by putting them in the existing details; no data are dropped.
  const line=root.querySelector('.sr-dayline');if(line){signals.after(line);let explore=line.querySelector('[data-p0-explore]');if(!explore){explore=make('details','sr-p0-explore');explore.dataset.p0Explore='';explore.append(make('summary','','Усі події, час і традиційні образи'));line.append(explore);}
  for(const selector of ['.sr-dl-actions','label','[data-moment]','figure:not([data-solar-profile])','[data-events]','[data-method]','[data-scope]']){const item=line.querySelector(':scope > '+selector);if(item)explore.append(item);}}
