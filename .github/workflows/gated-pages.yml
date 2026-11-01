@@ -37,19 +37,13 @@ jobs:
         run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
       # REL-1: a feed-only refresh must not depend on browser UI gates (B7 flakiness), but it may
       # skip them only when every file changed since the LAST SUCCESSFULLY GATED deploy is under
-      # consumer_cloud/. Any runtime change, an unknown baseline or an API error runs the full gate.
+      # forecast.json or NOAA receipts. Registry/runtime changes and unknown evidence run the full gate.
       - id: scope
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           last=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow gated-pages.yml --branch deploy --status success --limit 20 --json headSha,conclusion --jq '[.[]|select(.conclusion=="success")][0].headSha' 2>/dev/null || true)
-          mode=full
-          if [ -n "$last" ] && git cat-file -e "$last^{commit}" 2>/dev/null && git merge-base --is-ancestor "$last" HEAD; then
-            changed=$(git diff --name-only "$last" HEAD)
-            if [ -n "$changed" ] && ! printf '%s\n' "$changed" | grep -qv '^consumer_cloud/'; then mode=data; fi
-          fi
-          echo "baseline=${last:-none} mode=$mode"
-          echo "mode=$mode" >> "$GITHUB_OUTPUT"
+          python tools/public/release_scope.py --baseline "${last:-}" --github-output "$GITHUB_OUTPUT"
       - uses: actions/setup-python@v5
         with: {python-version: '3.12'}
       - run: python tools/public/verify_boundary.py
@@ -61,6 +55,7 @@ jobs:
       - run: python tools/cloud/test_calendar_components.py
       - run: python tools/cloud/test_sunrise_conventions.py
       - run: python tools/public/test_release_publication.py
+      - run: python tools/public/test_release_scope.py
       - uses: actions/setup-node@v4
         with: {node-version: '24'}
       - run: npm install --no-save --package-lock=false playwright@1.62.1
@@ -78,8 +73,7 @@ jobs:
         run: node tools/public/verify_journal_restore_time.cjs
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_journal_restore_adversarial.cjs
-      # FP545 (T1/T2): one blocking run against the unmodified production worker.
-      # Button/trace/restart variants are diagnostics in b7-diagnostic.yml, not release gates.
+      # The real update button is gated; trace/restart and direct-message probes remain diagnostics.
       # B7 (audit FP549): the release gate exercises the production update path (#pwaUpdateBar button ->
       # pwaReload). The direct postMessage trigger bypasses pwaReload and stays a diagnostic in b7-diagnostic.yml.
       - if: steps.scope.outputs.mode != 'data'
