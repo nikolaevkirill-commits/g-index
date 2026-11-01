@@ -1,5 +1,6 @@
 importScripts('./runtime_diagnostics_v1.js','./civil_time_v1.js');
-// G-Index service worker. HTML/data are network-first; static shell is cache-first.
+// G-Index service worker. Navigations, HTML, JS and data (.json/.jsonl/.csv) are network-first with a
+// cached fallback; other same-origin assets (CSS, images, fonts) are cache-first.
 // Bump CACHE_VERSION whenever index.html or a cached shell asset changes.
 const CACHE_VERSION = 'fp550-audit-fixes-20261031'; // Discrete final scores; no interpolated forecast.
 const CACHE_PREFIX = 'gindex-'; // G-Index cache namespace; do not remove the prefix.
@@ -352,7 +353,7 @@ self.addEventListener('fetch', (event) => {
   if (req.method === 'GET' && /\/dayline_art\/(ashwini|bharani|krittika|rohini|mrigashira|ardra|punarvasu|pushya|ashlesha|magha|purvaphalguni|uttaraphalguni|hasta|chitra|swati|vishakha|anuradha|jyeshtha|mula|purvaashadha|uttaraashadha|shravana|dhanishta|water|fire|depth|nourish)-(engraving|gouache)\.webp$/.test(new URL(req.url).pathname)) {
     event.respondWith((async()=>{const cache=await caches.open(SHELL_CACHE);const saved=await cache.match(req);if(saved)return saved;const fresh=await fetch(req);if(fresh.ok)await cache.put(req,fresh.clone());return fresh;})());return;
   }
-  // Static shell assets: cache-first, fall back to network.
+  // Remaining same-origin assets (CSS, images, fonts; not JS, see isHtmlOrData): cache-first, fall back to network.
   event.respondWith(
     caches.open(SHELL_CACHE).then(cache => cache.match(req)).then((cached) => cached || fetch(req))
   );
