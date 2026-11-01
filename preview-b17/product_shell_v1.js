@@ -68,7 +68,7 @@
     setTimeout(()=>requestProductRender('calendar'),650);
     setTimeout(enhanceFunctionalRoutes,900);
   }
-  function todayKey(){try{return typeof todayKyivStr==='function'?todayKyivStr():new Date().toISOString().slice(0,10)}catch(_e){ globalThis.NRDiagnostics?.record('catch.283','recoverable'); return new Date().toISOString().slice(0,10)}}
+  function todayKey(){try{return typeof todayKyivStr==='function'?todayKyivStr():NRCivilTime.dayKey(Date.now(),'Europe/Kyiv')}catch(_e){ globalThis.NRDiagnostics?.record('catch.283','recoverable'); try{return NRCivilTime.dayKey(Date.now(),'Europe/Kyiv')}catch(_e2){return new Date().toISOString().slice(0,10)}}}
   function cleanRegistryHeadline(value){return String(value||'').replace(/Нейтральни\s+й/giu,'Нейтральний').replace(/несприятл\s+ивий/giu,'несприятливий').replace(/несприятливи\s+й/giu,'несприятливий').replace(/прибиран\s+ня/giu,'прибирання').replace(/\s+Дані можуть(?:\s+бути)?\s*$/iu,'').replace(/\s+/g,' ').trim()}
   function localizeNewShellCopy(){
     const f=document.querySelector('#nrRoute-forecast .nr-route-head');if(f){const e=f.querySelector('.nr-eyebrow'),p=f.querySelector('p');if(e)e.textContent='ПРОГНОЗ';if(p)p.textContent='Одна шкала для трьох горизонтів: спочатку порада, нижче — графік і пояснення джерел.'}
@@ -236,13 +236,14 @@
     let retry=false;
     window.__srConsumerLoadState='loading';window.dispatchEvent(new Event('sr:consumer-load'));
     _consumerFeedPending=fetchConsumerFeeds().then(feed=>{
-      window.__nrConsumerLoadState='loaded';window.__srConsumerLoadState='ready';window.__nrConsumerCached=false;_sourceForecastRows=feed.days;
+      window.__nrConsumerLoadState='loaded';window.__srConsumerLoadState='ready';window.__nrConsumerCached=false;_sourceForecastRows=feed.days;window.__nrExpertModels=feed.expertModels||{};window.__nrFormulaFeedStamp=(window.__nrFormulaFeedStamp||0)+1;
       window.NRConsumerOverview?.update(_sourceForecastRows);
+      window.NRForecastJournal?.record(_sourceForecastRows);
       retry=!consumerFeedUsable(feed);
       if(!retry)_consumerFeedRetries=0;
       return feed;
     }).catch(error=>{window.__srConsumerLoadState='error';window.__nrConsumerLoadState='error';window.NRConsumerOverview?.update();window.__nrConsumerCached=true;window.NRDiagnostics.record('consumer.feed','recoverable',error);retry=true;return null;}).finally(()=>{
-      _consumerFeedPending=null;window.dispatchEvent(new Event('sr:consumer-load'));renderSourceSummary();requestProductRender('cover','calendar','forecast');
+      _consumerFeedPending=null;window.dispatchEvent(new Event('sr:consumer-load'));renderSourceSummary();requestProductRender('cover','calendar','forecast');try{window.dispatchEvent(new Event('gindex:consumer-ready'))}catch(_e){}
       if(retry)retryConsumerForecast();
     });return _consumerFeedPending;
   }
@@ -431,8 +432,8 @@
       const dateText=window.NRPresentation.dateFormatter(window.NRLocale?.locale||'uk-UA',{timeZone:zone,weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(new Date(now));
       const incomplete=rows.some(([,x])=>x.missing||(x.end&&!x.hasNext&&localDate(x.end)===localDay));
       const zoneLabel=['Europe/Kyiv','Europe/Kiev'].includes(zone)?'за київським часом':'місцевий час пристрою';
-      const cards=rows.map(([name,x])=>`<article class="nr-panch-component"><b>${({Tithi:'Тітхі',Vara:'Вара',Nakshatra:'Накшатра',Yoga:'Йога',Karana:'Карана'})[name]||name}</b><strong>${escapeHtml(String(x.value))}</strong><small>${escapeHtml(meanings[name])}</small><small class="nr-panch-until">${x.missing?'Немає даних для поточного моменту':x.hasNext?`до ${fmtTime(x.end)}, далі ${escapeHtml(String(x.next))}`:x.end&&localDate(x.end)===localDay?'Наступний перехід не підтверджено':'без наступної зміни сьогодні'}</small></article>`).join('');
-      const timeline=events.length?events.map(e=>`<div class="nr-panch-event${Date.parse(e.at)<=now?' is-past':''}"><time datetime="${escapeHtml(e.at)}">${fmtTime(e.at)}</time><b>${({Tithi:'Тітхі',Vara:'Вара',Nakshatra:'Накшатра',Yoga:'Йога',Karana:'Карана'})[e.label]||e.label}</b><span>починається <strong>${escapeHtml(e.value)}</strong></span></div>`).join(''):`<div class="nr-panch-empty">${incomplete?'Недостатньо даних, щоб перелічити переходи цієї доби.':'Переходів до завершення календарної доби немає.'}</div>`;
+      const cards=rows.map(([name,x])=>`<article class="nr-panch-component"><b>${kindLabel(name)}</b><strong>${escapeHtml(String(x.value))}</strong><small>${escapeHtml(meanings[name])}</small>${(u=>u?`<small class="nr-panch-until">${u}</small>`:'')(x.missing?'Немає даних для поточного моменту':x.hasNext?`до ${fmtTime(x.end)}, далі ${escapeHtml(String(x.next))}`:x.end&&localDate(x.end)===localDay?'Наступний перехід не підтверджено':'')}</article>`).join('');
+      const timeline=events.length?events.map(e=>`<div class="nr-panch-event${Date.parse(e.at)<=now?' is-past':''}"><time datetime="${escapeHtml(e.at)}">${fmtTime(e.at)}</time><b>${kindLabel(e.label)}</b><span>починається <strong>${escapeHtml(e.value)}</strong></span></div>`).join(''):`<div class="nr-panch-empty">${incomplete?'Недостатньо даних, щоб перелічити переходи цієї доби.':'Переходів до завершення календарної доби немає.'}</div>`;
       const next=events.find(e=>Date.parse(e.at)>now);
       const minutes=next?Math.max(1,Math.ceil((Date.parse(next.at)-now)/60000)):null;
       const remaining=next?new Intl.RelativeTimeFormat(window.NRLocale?.locale||'uk-UA',{numeric:'always'}).format(minutes>=90?Math.ceil(minutes/60):minutes,minutes>=90?'hour':'minute'):null;

@@ -122,7 +122,7 @@ function renderScoreEvidence(root,r,own,factors){
  source.setAttribute('translate','no');source.textContent=r.authority==='expert_pdf'?(hasFormula?(formula.score===r.score?`${ec[0]} (${fs}) · ${ec[1]} (${es}): ${ec[2]}`:`${ec[0]}: ${fs} → ${ec[1]}: ${es}`):ec[3]):(hasFormula?ec[4]:ec[5]);
  const valid=factors.length>0&&factors.every(f=>Number.isFinite(f.value)),sum=valid?factors.reduce((n,f)=>n+f.value,0):null;
  const match=valid&&Number.isFinite(own.raw)&&Math.abs(sum-own.raw)<=1e-8;
- const items=factors.map(f=>`<p data-contribution><span>${esc(factorName(f.factor))}</span> <strong>${esc(fmt(f.value))}</strong></p>`).join('');
+ const items=factors.map(f=>`<p data-contribution><span>${esc(f.factor==='Moon'&&f.value===0?'Пурніма: не цього дня':factorName(f.factor))}</span> <strong>${esc(fmt(f.value))}</strong></p>`).join('');
  const audit=valid?`${ec[6]}: ${fmt(sum)} → ${ec[7]}: ${hasFormula?SkyScore.formatScore(formula.score):ec[8]}. `+(match?ec[9]:ec[10]):ec[11];
  root.querySelector('.nr-o-reasons').setAttribute('aria-label',ec[12]);
  root.querySelector('.nr-o-reasons div').innerHTML=items+'<p data-contribution-sum class="nr-o-boundary">'+esc(audit)+'</p>';

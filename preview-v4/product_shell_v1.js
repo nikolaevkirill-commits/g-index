@@ -70,7 +70,7 @@ window.__nrWeekdayDate=function(loc,opts,d){const f=window.NRPresentation.dateFo
     setTimeout(()=>requestProductRender('calendar'),650);
     setTimeout(enhanceFunctionalRoutes,900);
   }
-  function todayKey(){try{return typeof todayKyivStr==='function'?todayKyivStr():new Date().toISOString().slice(0,10)}catch(_e){ globalThis.NRDiagnostics?.record('catch.283','recoverable'); return new Date().toISOString().slice(0,10)}}
+  function todayKey(){try{return typeof todayKyivStr==='function'?todayKyivStr():NRCivilTime.dayKey(Date.now(),'Europe/Kyiv')}catch(_e){ globalThis.NRDiagnostics?.record('catch.283','recoverable'); try{return NRCivilTime.dayKey(Date.now(),'Europe/Kyiv')}catch(_e2){return new Date().toISOString().slice(0,10)}}}
   function cleanRegistryHeadline(value){return String(value||'').replace(/Нейтральни\s+й/giu,'Нейтральний').replace(/несприятл\s+ивий/giu,'несприятливий').replace(/несприятливи\s+й/giu,'несприятливий').replace(/прибиран\s+ня/giu,'прибирання').replace(/\s+Дані можуть(?:\s+бути)?\s*$/iu,'').replace(/\s+/g,' ').trim()}
   function localizeNewShellCopy(){
     const f=document.querySelector('#nrRoute-forecast .nr-route-head');if(f){const e=f.querySelector('.nr-eyebrow'),p=f.querySelector('p');if(e)e.textContent='ПРОГНОЗ';if(p)p.textContent='Одна шкала для трьох горизонтів: спочатку порада, нижче — графік і пояснення джерел.'}
@@ -308,7 +308,7 @@ window.__nrWeekdayDate=function(loc,opts,d){const f=window.NRPresentation.dateFo
   function sourceSummary(ds){
     const r=window.NRConsumerAuthority.resolveFinal((_sourceForecastRows||{})[ds],ds,Date.now(),offlineAuthorityMode()||window.__nrConsumerCached===true);
     const fmt=n=>n===null?'—':n<0?'−'+Math.abs(n):n>0?'+'+n:'0';
-    return r.state==='expert'?`Оцінка дня: ${fmt(r.score)} — експертна правка (PDF). Точність щодо подій не підтверджена.`:`Оцінка моделі: ${fmt(r.score)}. Розрахунок за формулою джерела; точність щодо подій не підтверджена. Стан: ${r.state}.`;
+    return r.state==='expert'?`Оцінка дня: ${fmt(r.score)} — експертна правка (PDF). Точність щодо подій не підтверджена.`:r.state==='expert_conflict'?'Оцінка дня: — . Експертні рішення для цієї дати суперечать одне одному, тому оцінку не показано.':r.state==='invalid'?'Оцінка дня: — . Час пристрою не збігається з часом джерела більш ніж на 5 хв. Перевірте годинник пристрою.':`Оцінка моделі: ${fmt(r.score)}. Розрахунок за формулою джерела; точність щодо подій не підтверджена. Стан: ${r.state}.`;
   }
   function renderSourceSummary(){window.NRConsumerOverview?.update(_sourceForecastRows);const node=document.getElementById('nrOwnForecastToday');if(node)node.textContent=sourceSummary(todayKey());}
   window.fp468SourceSummary=sourceSummary;
@@ -456,7 +456,7 @@ window.__nrWeekdayDate=function(loc,opts,d){const f=window.NRPresentation.dateFo
     if(help)help.querySelector('summary').textContent=({uk:'Як читати панчангу та межі тлумачення',en:'Reading Panchanga and interpretation limits',es:'Cómo leer Panchanga y límites de interpretación',fr:'Lire le Panchanga et limites d’interprétation'}[window.NRLocale?.language||'uk']);
 
     const NAK=['Ashwini','Bharani','Krittika','Rohini','Mrigashira','Ardra','Punarvasu','Pushya','Ashlesha','Magha','Purva Phalguni','Uttara Phalguni','Hasta','Chitra','Swati','Vishakha','Anuradha','Jyeshtha','Mula','Purva Ashadha','Uttara Ashadha','Shravana','Dhanishtha','Shatabhisha','Purva Bhadrapada','Uttara Bhadrapada','Revati'];
-    const YOGA=['Vishkambha','Priti','Ayushman','Saubhagya','Shobhana','Atiganda','Sukarma','Dhriti','Shula','Ganda','Vriddhi','Dhruva','Vyaghata','Harshana','Vajra','Siddhi','Vyatipata','Variyan','Parigha','Shiva','Siddha','Sadhya','Shubha','Shukla','Brahma','Indra','Vaidhriti'];
+    const YOGA=['Vishkambha','Priti','Ayushman','Saubhagya','Shobhana','Atiganda','Sukarma','Dhriti','Shula','Ganda','Vriddhi','Dhruva','Vyaghata','Harshana','Vajra','Siddhi','Vyatipata','Variyana','Parigha','Shiva','Siddha','Sadhya','Shubha','Shukla','Brahma','Indra','Vaidhriti'];
     const VARA=['Неділя · Сонце','Понеділок · Місяць','Вівторок · Марс','Середа · Меркурій','Четвер · Юпітер','П’ятниця · Венера','Субота · Сатурн'];
     try{
       const feed=await loadPanchGuideFeed();const ds=todayKyivStr();const day=feed.days&&feed.days[ds];if(!day)throw new Error('немає дня '+ds);
@@ -478,8 +478,8 @@ window.__nrWeekdayDate=function(loc,opts,d){const f=window.NRPresentation.dateFo
       const dateText=window.__nrWeekdayDate(window.NRLocale?.locale||'uk-UA',{timeZone:zone,weekday:'long',day:'numeric',month:'long',year:'numeric'},new Date(now));
       const incomplete=rows.some(([,x])=>x.missing||(x.end&&!x.hasNext&&localDate(x.end)===localDay));
       const zoneLabel=['Europe/Kyiv','Europe/Kiev'].includes(zone)?'за київським часом':'місцевий час пристрою';
-      const cards=rows.map(([name,x])=>`<article class="nr-panch-component"><b>${({Tithi:'Тітхі',Vara:'Вара',Nakshatra:'Накшатра',Yoga:'Йога',Karana:'Карана'})[name]||name}</b><strong>${escapeHtml(String(x.value))}</strong><small>${escapeHtml(meanings[name])}</small>${(u=>u?`<small class="nr-panch-until">${u}</small>`:'')(x.missing?'Немає даних для поточного моменту':x.hasNext?`до ${fmtTime(x.end)}, далі ${escapeHtml(String(x.next))}`:x.end&&localDate(x.end)===localDay?'Наступний перехід не підтверджено':'')}</article>`).join('');
-      const timeline=events.length?events.map(e=>`<div class="nr-panch-event${Date.parse(e.at)<=now?' is-past':''}"><time datetime="${escapeHtml(e.at)}">${fmtTime(e.at)}</time><b>${({Tithi:'Тітхі',Vara:'Вара',Nakshatra:'Накшатра',Yoga:'Йога',Karana:'Карана'})[e.label]||e.label}</b><span>починається <strong>${escapeHtml(e.value)}</strong></span></div>`).join(''):`<div class="nr-panch-empty">${incomplete?'Недостатньо даних, щоб перелічити переходи цієї доби.':'Переходів до завершення календарної доби немає.'}</div>`;
+      const cards=rows.map(([name,x])=>`<article class="nr-panch-component"><b>${kindLabel(name)}</b><strong>${escapeHtml(String(x.value))}</strong><small>${escapeHtml(meanings[name])}</small>${(u=>u?`<small class="nr-panch-until">${u}</small>`:'')(x.missing?'Немає даних для поточного моменту':x.hasNext?`до ${fmtTime(x.end)}, далі ${escapeHtml(String(x.next))}`:x.end&&localDate(x.end)===localDay?'Наступний перехід не підтверджено':'')}</article>`).join('');
+      const timeline=events.length?events.map(e=>`<div class="nr-panch-event${Date.parse(e.at)<=now?' is-past':''}"><time datetime="${escapeHtml(e.at)}">${fmtTime(e.at)}</time><b>${kindLabel(e.label)}</b><span>починається <strong>${escapeHtml(e.value)}</strong></span></div>`).join(''):`<div class="nr-panch-empty">${incomplete?'Недостатньо даних, щоб перелічити переходи цієї доби.':'Переходів до завершення календарної доби немає.'}</div>`;
       const next=events.find(e=>Date.parse(e.at)>now);
       const minutes=next?Math.max(1,Math.ceil((Date.parse(next.at)-now)/60000)):null;
       const remaining=next?new Intl.RelativeTimeFormat(window.NRLocale?.locale||'uk-UA',{numeric:'always'}).format(minutes>=90?Math.ceil(minutes/60):minutes,minutes>=90?'hour':'minute'):null;

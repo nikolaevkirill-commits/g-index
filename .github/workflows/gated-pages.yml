@@ -59,6 +59,7 @@ jobs:
       - run: python -m pip install pyswisseph==2.10.3.2
       - run: python tools/cloud/test_expert_model.py
       - run: python tools/cloud/test_calendar_components.py
+      - run: python tools/cloud/test_sunrise_conventions.py
       - run: python tools/public/test_release_publication.py
       - uses: actions/setup-node@v4
         with: {node-version: '24'}
@@ -105,6 +106,9 @@ jobs:
       - run: node tools/public/test_notification_locale.cjs
       - run: node tools/public/verify_entry_score_equivalence.cjs
       - run: node tools/public/verify_authority_boundary.cjs
+      - run: node tools/public/verify_fork_drift.cjs
+      - if: steps.scope.outputs.mode != 'data'
+        run: node tools/public/verify_l10n_expanded.cjs
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_notification_navigation.cjs
       - if: steps.scope.outputs.mode != 'data'
