@@ -14,6 +14,8 @@ try{for(const entry of ['index.html','design-v4.html'])for(const width of [320,3
  const routes=await p.evaluate(()=>[...document.querySelectorAll('#mobileNav button')].map(x=>({label:x.textContent.trim(),route:x.dataset.route||x.getAttribute('data-nav')||x.getAttribute('aria-controls')||null})));
  for(let i=0;i<routes.length;i++){
   await p.evaluate(i=>{const btn=[...document.querySelectorAll('#mobileNav button')][i];btn.scrollIntoView({inline:'center'});btn.click()},i);await p.waitForTimeout(700);
+  // Exercise active decoration independently of live NOAA freshness; this changes only the browser fixture.
+  await p.evaluate(()=>document.querySelectorAll('[data-aurora]').forEach(e=>{e.hidden=false;e.dataset.active='true';e.style.setProperty('--aurora-strength','.2')}));
   const m=await p.evaluate(()=>{const W=innerWidth,route=document.querySelector('.nr-route.active')||document.body;
    const vis=e=>{const s=getComputedStyle(e);if(s.display==='none'||s.visibility==='hidden')return false;const r=e.getBoundingClientRect();return r.width>0&&r.height>0};
    const nav=document.querySelector('#mobileNav');
