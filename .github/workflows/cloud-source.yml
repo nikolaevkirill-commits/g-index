@@ -33,6 +33,9 @@ jobs:
       - run: python tools/cloud/test_expert_model.py
       - run: python tools/cloud/test_calendar_components.py
       - run: python tools/cloud/test_sunrise_conventions.py
+      - run: python tools/cloud/test_transit_events.py
+      - run: python tools/cloud/test_space_weather.py
+      - run: python tools/cloud/test_market_proxy.py
       - name: Check Kp source regression guard
         run: python tools/cloud/test_kp_source_guard.py
       - name: Decrypt private sources in temporary directory
@@ -41,6 +44,15 @@ jobs:
         run: python tools/cloud/unpack.py "$RUNNER_TEMP/nr-private"
       - name: Calculate and independently replay current inputs
         run: python tools/cloud/refresh.py --private "$RUNNER_TEMP/nr-private" --site .
+      - name: Transit layer (context, score weight 0)
+        continue-on-error: true
+        run: python tools/cloud/sky_refresh.py --site .
+      - name: Space weather context (flares, solar wind, CME; score weight 0)
+        continue-on-error: true
+        run: python tools/cloud/space_weather.py --site .
+      - name: Market volatility proxy (VIX, BTC; validation only, score weight 0)
+        continue-on-error: true
+        run: python tools/cloud/market_proxy.py --site .
       - uses: actions/upload-artifact@v4
         if: success()
         with:
@@ -74,6 +86,9 @@ jobs:
           git config user.name 'NeboRhythm source runner'
           git config user.email 'actions@users.noreply.github.com'
           git add -- consumer_cloud/forecast.json consumer_cloud/noaa
+          if [ -f consumer_cloud/sky.json ]; then git add -- consumer_cloud/sky.json; fi
+          if [ -f consumer_cloud/space_weather.json ]; then git add -- consumer_cloud/space_weather.json; fi
+          if [ -f consumer_cloud/market_proxy.json ]; then git add -- consumer_cloud/market_proxy.json; fi
           git diff --cached --check -- consumer_cloud/forecast.json
           git commit -m "Refresh verified cloud consumer calculation"
           git pull --rebase origin deploy

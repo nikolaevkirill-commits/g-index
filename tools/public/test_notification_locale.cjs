@@ -25,5 +25,14 @@ function sandbox(stored){
     const c=sandbox(stored);assert.equal(await c.NRNotificationRuntime.storedLanguage('https://x.test/app/'),expected);}
   const broken=sandbox();broken.caches={open:async()=>{throw Error('denied')}};
   assert.equal(await broken.NRNotificationRuntime.storedLanguage('https://x.test/app/'),'uk','storage failure falls back');
-  console.log('PASS notification locale: 4 languages, authority unchanged, stored/missing/invalid/denied language');
+  // Morning verdict: tone follows the sign of the final score; topics only from the source calendar marks.
+  const feed=JSON.parse(fs.readFileSync(path.join(root,'consumer_cloud/forecast.json'),'utf8'));
+  const TONE={uk:['Сприятливий день.','Рівний день.','Напружений день.'],en:['A favourable day.','A steady day.','A tense day.']};let verdicts=0;
+  for(const [ds,row] of Object.entries(feed.days))for(const score of [3,0,-2])for(const l of ['uk','en']){
+    const v=N.verdict(row,score,l);assert.ok(v.startsWith(TONE[l][score>0?0:score<0?2:1]),l+' tone: '+v);
+    const names=(row.channels.source_formula.factors||[]).map(x=>x.factor);
+    if(names.includes('Книги'))assert.match(v,l==='uk'?/навчання/:/learning/);else assert.doesNotMatch(v,/навчання|learning/);
+    if(l==='en')assert.doesNotMatch(v,/[А-Яа-яІіЇїЄє]/u,'no Cyrillic in en verdict');verdicts++;}
+  assert.ok(verdicts>=100,'verdict checked on every feed day');
+  console.log('PASS notification locale: morning verdict on the real feed, 4 languages, authority unchanged, stored/missing/invalid/denied language');
 })().catch(e=>{console.error(e);process.exit(1)});

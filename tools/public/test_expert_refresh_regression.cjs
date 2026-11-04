@@ -3,7 +3,7 @@
 // a schema-valid document with two different decisions for one date is a conflict (no score),
 // never the stale snapshot and never the formula; recovery must actually swap the value.
 const assert=require('node:assert/strict');
-global.location={href:'http://127.0.0.1:8886/index.html'};
+global.location={href:'http://127.0.0.1:8886/classic.html'};
 const base='http://127.0.0.1:8886/';
 const feed=require('../../consumer_cloud/forecast.json');
 let mode='valid';const date='2026-10-19';

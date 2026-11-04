@@ -9,7 +9,7 @@
 const {chromium}=require('playwright'),http=require('http'),fs=require('fs'),path=require('path'),assert=require('assert/strict');
 const ROOT=process.argv[2],OUT=process.argv[3];
 const mime=f=>f.endsWith('.html')?'text/html; charset=utf-8':f.endsWith('.js')?'application/javascript':f.endsWith('.json')?'application/json':f.endsWith('.css')?'text/css':f.endsWith('.png')?'image/png':'application/octet-stream';
-const srv=http.createServer((q,s)=>{const f=decodeURIComponent(q.url.split('?')[0]).slice(1)||'index.html';fs.readFile(path.join(ROOT,f),(e,b)=>{if(e){s.writeHead(404);return s.end()}s.writeHead(200,{'content-type':mime(f)});s.end(b)})});
+const srv=http.createServer((q,s)=>{const f=decodeURIComponent(q.url.split('?')[0]).slice(1)||'classic.html';fs.readFile(path.join(ROOT,f),(e,b)=>{if(e){s.writeHead(404);return s.end()}s.writeHead(200,{'content-type':mime(f)});s.end(b)})});
 const FEED=JSON.parse(fs.readFileSync(path.join(__dirname,'fixtures/score_regression.json'),'utf8'));
 const NOW='2026-10-24T10:00:00Z';                 // consumer score 2026-10-24 = -3
 // Re-time the real feed (values untouched) so it is fresh at NOW: generated 1h ago,
@@ -50,7 +50,7 @@ async function probe(p,dates){return p.evaluate(dates=>{
  return {today,api,week,weekText:t('weekSummaryBar'),timingNote:t('timingAuthorityNote'),bulletin:t('heroBulletin'),personal:t('personalResult')}},dates)}
 srv.listen(0,'127.0.0.1',async()=>{const b=await chromium.launch({executablePath:process.env.CHROME_PATH||undefined});const R={now:NOW,scenarios:{}};
 try{
- for(const page of ['index.html','design-v4.html']){
+ for(const page of ['classic.html','index.html']){
   // A. fresh consumer feed, engine sentinel present
   {const {c,p,errs}=await open(b,page,{feed:retimed(),engine:true,clock:NOW});const x=await probe(p,DATES);R.scenarios[page+':fresh']=x;
    assert.equal(x.today,'2026-10-24');
@@ -59,7 +59,7 @@ try{
     else assert.equal(a.legacy,null,page+' '+ds+' unavailable consumer must give no legacy score');}
    assert.ok(DATES.filter(ds=>x.api[ds].state==='fresh').length>=15,'fresh rows');
    for(const w of x.week)assert.equal(w.dayScore,x.api[w.ds]?.state==='fresh'?x.api[w.ds].consumer:null,page+' week '+w.ds);
-   if(page==='index.html'){
+   if(page==='classic.html'){
     // visible legacy text: week refs in order, timing note, personal hard cap (consumer -3 <= -2)
     // v128: since v127 the week strip shows one final score per day ('СБ −3 НД +3 …'), no 'ref' prefix
     const refs=[...x.weekText.matchAll(/(?:ПН|ВТ|СР|ЧТ|ПТ|СБ|НД) ([+−-]\d|0|—)(?![.\d])/g)].map(m=>m[1].replace('-','−'));
@@ -73,18 +73,18 @@ try{
   {const {c,p,errs}=await open(b,page,{feed:retimed(),engine:true,clock:'2026-10-24T20:00:00Z'});const x=await probe(p,DATES);R.scenarios[page+':stale']=x;
    for(const ds of DATES){assert.notEqual(x.api[ds].state,'fresh');assert.equal(x.api[ds].legacy,null,page+' stale '+ds)}
    for(const w of x.week)assert.equal(w.dayScore,null);
-   if(page==='index.html'){assert.doesNotMatch(x.timingNote||'',/Підсумковий бал [+−-]?\d/);assert.doesNotMatch(x.personal||'',/день критичний/);
+   if(page==='classic.html'){assert.doesNotMatch(x.timingNote||'',/Підсумковий бал [+−-]?\d/);assert.doesNotMatch(x.personal||'',/день критичний/);
     assert.ok(![...x.weekText.matchAll(/(?:ПН|ВТ|СР|ЧТ|ПТ|СБ|НД) ([+−-]\d|0)(?![.\d])/g)].length,'stale week shows no ref score');}
    assert.deepEqual(errs,[],page+' errors');await c.close();}
   // C. consumer feed missing, engine present -> nothing from engine
   {const {c,p,errs}=await open(b,page,{feed:null,engine:true,clock:NOW});const x=await probe(p,DATES);R.scenarios[page+':missing']=x;
    for(const ds of DATES){assert.equal(x.api[ds].state,'missing');assert.equal(x.api[ds].legacy,null)}
-   if(page==='index.html'){assert.doesNotMatch(x.personal||'',/день критичний/);assert.ok(![...x.weekText.matchAll(/(?:ПН|ВТ|СР|ЧТ|ПТ|СБ|НД) ([+−-]\d|0)(?![.\d])/g)].length)}
+   if(page==='classic.html'){assert.doesNotMatch(x.personal||'',/день критичний/);assert.ok(![...x.weekText.matchAll(/(?:ПН|ВТ|СР|ЧТ|ПТ|СБ|НД) ([+−-]\d|0)(?![.\d])/g)].length)}
    assert.deepEqual(errs,[],page+' errors');await c.close();}
   // D. fresh feed without engine_scores.json: identical legacy score text
   {const {c,p,errs}=await open(b,page,{feed:retimed(),engine:false,clock:NOW});const x=await probe(p,DATES);R.scenarios[page+':fresh_no_engine']=x;const A=R.scenarios[page+':fresh'];
    for(const ds of DATES)assert.equal(x.api[ds].legacy,A.api[ds].legacy,page+' engine presence changed '+ds);
-   assert.deepEqual(x.week,A.week);if(page==='index.html'){assert.equal(x.timingNote,A.timingNote);}
+   assert.deepEqual(x.week,A.week);if(page==='classic.html'){assert.equal(x.timingNote,A.timingNote);}
    assert.deepEqual(errs,[],page+' errors');await c.close();}
   // E. v115: real expert registry; fresh / stale / missing feed
   for(const [name,feed,clock] of [['fresh',retimed(),NOW],['stale',retimed(),'2026-10-24T20:00:00Z'],['missing',null,NOW]]){

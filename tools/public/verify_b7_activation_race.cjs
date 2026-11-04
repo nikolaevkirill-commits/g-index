@@ -3,9 +3,9 @@
 // same-origin subresource fetches. Chromium stops the idle old worker after skipWaiting(); a fetch arriving
 // during that stop restarts it and activation is lost until the worker idles (30 s; 5 min under DevTools).
 // Production sw.js bytes are used for both versions (only CACHE_VERSION differs); no CDP ServiceWorker domain.
-// Usage: node verify_b7_activation_race.cjs [runs=10] [entry=index.html]
+// Usage: node verify_b7_activation_race.cjs [runs=10] [entry=classic.html]
 const http=require('http'),fs=require('fs'),path=require('path'),assert=require('assert/strict');const {chromium}=require('playwright');
-const root=path.resolve(__dirname,'../..'),runs=+process.argv[2]||10,entry=process.argv[3]||'index.html';
+const root=path.resolve(__dirname,'../..'),runs=+process.argv[2]||10,entry=process.argv[3]||'classic.html';
 const html=fs.readFileSync(path.join(root,entry),'utf8').replace(/\r\n/g,'\n');const a=html.indexOf('function pwaReload() {');assert(a>=0,'pwaReload not found');
 const pwaReload=html.slice(a,html.indexOf('\n}',a)+2);const sw=fs.readFileSync(path.join(root,'sw.js'),'utf8');let phase='old';
 const page=`<!doctype html><meta charset=utf-8><div id="pwaUpdateBar"><span></span><button>u</button></div><script>
@@ -15,7 +15,7 @@ window.changed=null;navigator.serviceWorker.addEventListener('controllerchange',
 window.storm=()=>setInterval(()=>{fetch('consumer_cloud/final_score_decisions.json',{cache:'no-store'}).then(r=>r.text()).catch(()=>{})},4);
 </script>`;
 const types={'.js':'application/javascript','.css':'text/css','.json':'application/json','.html':'text/html','.png':'image/png','.webp':'image/webp','.woff':'font/woff','.woff2':'font/woff2','.svg':'image/svg+xml','.txt':'text/plain'};
-const srv=http.createServer((q,s)=>{const name=decodeURIComponent(new URL(q.url,'http://x').pathname).slice(1)||'index.html';
+const srv=http.createServer((q,s)=>{const name=decodeURIComponent(new URL(q.url,'http://x').pathname).slice(1)||'classic.html';
  if(name==='race.html'){s.writeHead(200,{'content-type':'text/html','cache-control':'no-store'});return s.end(page)}
  if(name==='sw.js'){s.writeHead(200,{'content-type':'application/javascript','cache-control':'no-store'});return s.end(phase==='old'?sw:sw.replace(/const CACHE_VERSION = '[^']+'/,"const CACHE_VERSION = 'b7-race-new'"))}
  const f=path.resolve(root,name);if(!f.startsWith(root+path.sep)){s.writeHead(403);return s.end()}

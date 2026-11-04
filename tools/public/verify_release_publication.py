@@ -3,7 +3,7 @@ from pathlib import Path
 from urllib.request import Request,urlopen
 import hashlib,json,os,time,concurrent.futures,subprocess
 ROOT=Path(__file__).resolve().parents[2]
-CORE=['index.html','design-v4.html','sw.js','consumer_authority_v1.js','consumer_cloud/final_score_decisions.json','notification_runtime_v1.js','consumer_overview_v1.js','preview-v4/consumer_overview_v1.js','product_shell_v1.js','preview-v4/product_shell_v1.js']
+CORE=['index.html','classic.html','design-v4.html','sw.js','consumer_authority_v1.js','consumer_cloud/final_score_decisions.json','notification_runtime_v1.js','consumer_overview_v1.js','preview-v4/consumer_overview_v1.js','product_shell_v1.js','preview-v4/product_shell_v1.js']
 # v130 audit: verify every offline shell asset of the released sw.js (140), not only the 10 core files above;
 # otherwise a stale/mixed journal, privacy or calendar module would pass the release check unnoticed.
 def shell_assets():

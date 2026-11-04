@@ -2,7 +2,7 @@ const {chromium}=require('playwright'),fs=require('fs'),path=require('path'),htt
 const root=path.resolve(__dirname,'../..'),out=path.resolve(process.argv[2]);fs.mkdirSync(out,{recursive:true});
 const server=http.createServer((q,s)=>{const f=path.join(root,decodeURI(q.url.split('?')[0]));fs.readFile(f,(e,b)=>{s.writeHead(e?404:200,{'content-type':f.endsWith('.js')?'application/javascript':f.endsWith('.css')?'text/css':f.endsWith('.json')?'application/json':'text/html; charset=utf-8'});s.end(e?'':b);});});
 (async()=>{await new Promise(r=>server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+server.address().port,b=await chromium.launch({headless:true});const rows=[];try{
- for(const entry of ['index.html','design-v4.html']){
+ for(const entry of ['classic.html','index.html']){
   const c=await b.newContext({viewport:{width:390,height:844},serviceWorkers:'block'});await c.route('**/*',r=>r.request().url().startsWith(base)?r.continue():r.abort());const p=await c.newPage(),errors=[];p.on('pageerror',e=>errors.push(e.message));
   await p.goto(base+'/'+entry+'?channel=play#today');await p.waitForSelector('[data-festival-route="today"]');
   for(const lang of ['uk','en','es','fr']){

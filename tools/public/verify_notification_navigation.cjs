@@ -1,7 +1,7 @@
 const fs=require('fs'),path=require('path'),http=require('http'),assert=require('assert/strict'),{chromium}=require('playwright');
 const root=path.resolve(__dirname,'../..'),mime={'.js':'application/javascript','.html':'text/html','.css':'text/css','.json':'application/json','.svg':'image/svg+xml'};
 const server=http.createServer((q,s)=>{
- const rel=new URL(q.url,'http://localhost').pathname.replace(/^\/+/,'')||'index.html',f=path.resolve(root,rel);
+ const rel=new URL(q.url,'http://localhost').pathname.replace(/^\/+/,'')||'classic.html',f=path.resolve(root,rel);
  if(!f.startsWith(root+path.sep)){s.writeHead(403);return s.end()}
  const source=process.env.QA_OLD_NAV&&rel==='mobile_navigation_v1.js'?process.env.QA_OLD_NAV:f;
  fs.readFile(source,(e,b)=>{s.writeHead(e?404:200,{'content-type':mime[path.extname(f)]||'application/octet-stream'});s.end(e?'':b)});
@@ -10,7 +10,7 @@ const server=http.createServer((q,s)=>{
  await new Promise(r=>server.listen(0,'127.0.0.1',r));
  const b=await chromium.launch({...(process.env.FP463_BROWSER?{executablePath:process.env.FP463_BROWSER}:{})}),results=[];
  try{
- for(const entry of ['index.html','design-v4.html'])for(const kind of ['daily','storm'])for(const width of [390,1280]){
+ for(const entry of ['classic.html','index.html'])for(const kind of ['daily','storm'])for(const width of [390,1280]){
   const ctx=await b.newContext({viewport:{width,height:844},serviceWorkers:'block'}),p=await ctx.newPage();
   await p.clock.install({time:new Date('2026-10-20T10:00:00Z')});
   await p.goto('http://127.0.0.1:'+server.address().port+'/'+entry+'?channel=play&push='+kind+'#heroCard');

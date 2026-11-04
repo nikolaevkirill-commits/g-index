@@ -11,7 +11,7 @@ def validate_paths(root):
     actual=root/registry
     if actual.is_symlink() or not actual.is_file() or actual.read_text('utf-8')!=expected:
         raise ValueError('Cloud artifact must not change expert decisions')
-    allowed=r'consumer_cloud/(forecast\.json|noaa/27-day-outlook\.txt|noaa/receipts/cloud\.json|noaa/bodies/[a-f0-9]{64}\.json)'
+    allowed=r'consumer_cloud/(forecast\.json|sky\.json|space_weather\.json|market_proxy\.json|noaa/27-day-outlook\.txt|noaa/receipts/cloud\.json|noaa/bodies/[a-f0-9]{64}\.json)'
     for p in (root/'consumer_cloud').rglob('*'):
         if p.is_symlink():raise ValueError('Symlink in publication')
         rel=p.relative_to(root).as_posix()
@@ -48,6 +48,18 @@ def validate(root):
                 raise ValueError('Withheld Kp date exposes a score')
             if own.get('status')!='missing_kp' or own.get('availability_reason')!='short_range_coverage_lost':raise ValueError('Unmarked Kp suppression')
         if own.get('validation')!='unvalidated_source_formula' or own.get('expert_override_used') is not False:raise ValueError('Invalid promotion claim')
+    sky=root/'consumer_cloud/sky.json'
+    if sky.exists():
+        from sky_refresh import check
+        check(json.loads(sky.read_text('utf-8')))
+    weather=root/'consumer_cloud/space_weather.json'
+    if weather.exists():
+        from space_weather import check as check_weather
+        check_weather(json.loads(weather.read_text('utf-8')))
+    market=root/'consumer_cloud/market_proxy.json'
+    if market.exists():
+        from market_proxy import check as check_market
+        check_market(json.loads(market.read_text('utf-8')))
     return True
 
 if __name__=='__main__':

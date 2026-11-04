@@ -3,7 +3,7 @@ const fs=require('fs'),path=require('path'),http=require('http'),os=require('os'
 const {chromium}=require('playwright');
 const root=path.resolve(__dirname,'../..');
 // The timeout must never masquerade as a successful activation. Test both entry files.
-for(const entry of ['index.html','design-v4.html'])for(const language of ['uk','en','es','fr']){
+for(const entry of ['classic.html','index.html'])for(const language of ['uk','en','es','fr']){
   const html=fs.readFileSync(path.join(root,entry),'utf8').replace(/\r\n/g,'\n'),start=html.indexOf('function pwaReload() {');assert(start>=0);
   const source=html.slice(start,html.indexOf('\n}',start)+2);let reloads=0,messages=0,timer;
   const label={textContent:''},button={disabled:false};
@@ -42,18 +42,20 @@ self.addEventListener=function(type,listener,...rest){
 const types={'.js':'application/javascript','.css':'text/css','.html':'text/html','.json':'application/json','.svg':'image/svg+xml','.woff':'font/woff','.woff2':'font/woff2'};
 const server=http.createServer((req,res)=>{
   if(serverLog){const record={url:req.url,phase,started:Date.now()};requests.push(record);res.on('finish',()=>{record.finished=Date.now();record.status=res.statusCode;});res.on('close',()=>{record.closed=Date.now();record.completed=res.writableFinished;});}
-  const url=new URL(req.url,'http://localhost'),name=decodeURIComponent(url.pathname).replace(/^\//,'')||'index.html';
+  const url=new URL(req.url,'http://localhost'),name=decodeURIComponent(url.pathname).replace(/^\//,'')||'classic.html';
   const file=path.resolve(root,name);
   if(!file.startsWith(root+path.sep)){res.writeHead(403).end();return;}
   try{
     let bytes=fs.readFileSync(file);
     if(phase==='old'&&name==='sw.js')bytes=fs.readFileSync(path.join(__dirname,'fixtures/sw_fp532.js'));
     if(trace&&name==='sw.js')bytes=Buffer.concat([Buffer.from(traceWorker),bytes]);
-    if(phase==='old'&&['index.html','day_summary.html'].includes(name))bytes=Buffer.from(bytes.toString().replace(/<style data-inline-source="([^"]+)"[^>]*>[\s\S]*?<\/style>/g,'<link rel="stylesheet" href="$1">'));
+    if(phase==='old'&&['classic.html','day_summary.html'].includes(name))bytes=Buffer.from(bytes.toString().replace(/<style data-inline-source="([^"]+)"[^>]*>[\s\S]*?<\/style>/g,'<link rel="stylesheet" href="$1">'));
     if(phase==='old'&&name.endsWith('.css'))bytes=Buffer.concat([bytes,Buffer.from('\n:root{--css-upgrade-probe:old-cache}\n')]);
     res.writeHead(200,{'content-type':types[path.extname(name)]||'application/octet-stream','cache-control':'no-store'});res.end(bytes);
   }catch(e){res.writeHead(404).end();}
 });
+// Number of inlined CSS blocks in the current classic.html (kept in step with sync_inline_styles.py).
+const INDEX_STYLES=(fs.readFileSync(path.join(root,'classic.html'),'utf8').match(/<style data-inline-source="/g)||[]).length;
 async function checkPage(page,name,count){
   if(page.url()===base+name)await page.reload();else await page.goto(base+name);
   await page.waitForFunction(()=>document.querySelectorAll('style[data-inline-source]').length>0).catch(async e=>{fs.writeFileSync(path.join(out,'failed.html'),await page.content());throw e;});
@@ -61,7 +63,9 @@ async function checkPage(page,name,count){
   assert.equal(await page.locator('style[data-inline-source]').count(),count);
   assert.equal(await page.evaluate(()=>getComputedStyle(document.documentElement).getPropertyValue('--css-upgrade-probe').trim()),'');
   for(const item of await page.locator('style[data-inline-source]').evaluateAll(nodes=>nodes.map(n=>({source:n.dataset.inlineSource,text:n.textContent})))){
-    assert.equal(item.text,'\n'+fs.readFileSync(path.join(root,item.source),'utf8').replace(/\r\n/g,'\n')+'\n');
+    let css=fs.readFileSync(path.join(root,item.source),'utf8').replace(/\r\n/g,'\n');
+    css=css.replace(/url\((["']?)([^()"']+)\1\)/g,(all,q,v)=>/^(data:|https?:|\/|#)/.test(v)?all:'url('+q+path.posix.normalize(path.posix.join(path.posix.dirname(item.source),v))+q+')');
+    assert.equal(item.text,'\n'+css+'\n');
   }
 }
 // Without instrumentation the active version is read from the worker's own cache names
@@ -95,18 +99,19 @@ let base;
     const ctx=await browser.newContext({viewport:{width:390,height:844},serviceWorkers:'allow'}),page=await ctx.newPage();
     let cdp=null;
     if(cdpEnabled){cdp=await ctx.newCDPSession(page);cdp.on('ServiceWorker.workerVersionUpdated',e=>lifecycle.push({at:Date.now(),...e}));await cdp.send('ServiceWorker.enable');}
-    await page.goto(base+'index.html?channel=play#today');
+    await page.goto(base+'classic.html?channel=play#today');
     await page.evaluate(()=>navigator.serviceWorker.ready);await page.waitForFunction(()=>!!navigator.serviceWorker.controller);
     assert.equal(await page.evaluate(()=>getComputedStyle(document.documentElement).getPropertyValue('--css-upgrade-probe').trim()),'old-cache');
     const oldVersion=await activeVersion(page);
     assert.notEqual(oldVersion,expectedVersion,'fixture must exercise a different worker version');
     phase='new';
-    await checkPage(page,'index.html?channel=play#today',6);
+    await checkPage(page,'classic.html?channel=play#today',INDEX_STYLES);
     await page.evaluate(async()=>{const r=await navigator.serviceWorker.getRegistration();await r.update();});
     await page.waitForFunction(async()=>!!(await navigator.serviceWorker.getRegistration()).waiting,null,{timeout:60000});
-    const journal=await ctx.newPage();await checkPage(journal,'day_summary.html',1);
+    const main=await ctx.newPage();await checkPage(main,'index.html?channel=play#today',18);
+    const journal=await ctx.newPage();await checkPage(journal,'day_summary.html',1);await checkPage(main,'index.html?channel=play#today',18);
     await ctx.setOffline(true);
-    await checkPage(page,'index.html?channel=play#today',6);await checkPage(journal,'day_summary.html',1);
+    await checkPage(page,'classic.html?channel=play#today',INDEX_STYLES);await checkPage(journal,'day_summary.html',1);await checkPage(main,'index.html?channel=play#today',18);
     // Waiting worker does not force a reload or discard a draft.
     await journal.locator('#note').fill('unsaved upgrade fixture');
     assert.equal(await journal.locator('#note').inputValue(),'unsaved upgrade fixture');
@@ -130,10 +135,10 @@ let base;
     await page.waitForFunction(async()=>(await caches.keys()).filter(k=>k.startsWith('gindex-shell-')).length===1,null,{timeout:15000});
     const activatedVersion=await activeVersion(page);
     assert.equal(activatedVersion,expectedVersion,'new worker must actually activate');
-    await ctx.setOffline(true);await checkPage(page,'index.html?channel=play#today',6);await checkPage(journal,'day_summary.html',1);
+    await ctx.setOffline(true);await checkPage(page,'classic.html?channel=play#today',INDEX_STYLES);await checkPage(journal,'day_summary.html',1);await checkPage(main,'index.html?channel=play#today',18);
     assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
     await page.screenshot({path:path.join(out,'offline_updated_today.png'),fullPage:true});
-    fs.writeFileSync(path.join(out,'RESULT.json'),JSON.stringify({trigger,trace,cdp:cdpEnabled,restart:restart||null,oldVersion,activatedVersion,old_css_probe_reproduced:true,new_html_ignores_old_css:true,waiting_worker_offline:true,updated_worker_offline:true,inline_blocks:7,source_css_exact:true},null,2));
+    fs.writeFileSync(path.join(out,'RESULT.json'),JSON.stringify({trigger,trace,cdp:cdpEnabled,restart:restart||null,oldVersion,activatedVersion,old_css_probe_reproduced:true,new_html_ignores_old_css:true,waiting_worker_offline:true,updated_worker_offline:true,inline_blocks:27,source_css_exact:true},null,2));
     console.log('PASS CSS upgrade ('+trigger+(trace?', trace':'')+(cdpEnabled?', cdp':'')+'): old cached styles reproduced; exact new styles online, waiting/offline and activated/offline. Evidence: '+out);
   }finally{fs.writeFileSync(path.join(out,'LIFECYCLE.json'),JSON.stringify(lifecycle,null,2));if(serverLog)fs.writeFileSync(path.join(out,'SERVER_REQUESTS.json'),JSON.stringify({worker_modified:trace,cdp:cdpEnabled,requests},null,2));await browser.close();server.close();}
 })().catch(e=>{console.error(e);server.close();process.exitCode=1});

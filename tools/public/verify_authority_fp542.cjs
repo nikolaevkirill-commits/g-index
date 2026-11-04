@@ -15,7 +15,7 @@ for(const ds of ['2026-10-29','2026-10-30']){
 }
 const real=JSON.parse(fs.readFileSync(path.join(root,'consumer_cloud/final_score_decisions.json')));
 const types={'.js':'application/javascript','.html':'text/html','.json':'application/json','.css':'text/css','.svg':'image/svg+xml','.woff2':'font/woff2','.webp':'image/webp','.png':'image/png'};
-const server=http.createServer((q,r)=>{const n=decodeURIComponent(q.url.split('?')[0]).replace(/^\//,'')||'index.html',f=path.resolve(root,n);if(!f.startsWith(root+path.sep)){r.writeHead(403);return r.end()}fs.readFile(f,(e,b)=>{r.writeHead(e?404:200,{'content-type':types[path.extname(f)]||'application/octet-stream'});r.end(e?'':b)})});
+const server=http.createServer((q,r)=>{const n=decodeURIComponent(q.url.split('?')[0]).replace(/^\//,'')||'classic.html',f=path.resolve(root,n);if(!f.startsWith(root+path.sep)){r.writeHead(403);return r.end()}fs.readFile(f,(e,b)=>{r.writeHead(e?404:200,{'content-type':types[path.extname(f)]||'application/octet-stream'});r.end(e?'':b)})});
 // Synthetic generation time defines the clock; the underlying fixed fixture is unchanged.
 const generated=Date.parse(Object.values(feed.days).find(d=>d.channels.source_formula.available).channels.source_formula.generated_at);
 const day=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Kyiv',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(generated));
@@ -27,7 +27,7 @@ async function open(b,port,{time,decisions,abortDecisions}){
  await c.route('**/consumer_cloud/final_score_decisions.json*',r=>abortDecisions?r.abort():r.fulfill({json:decisions}));
  const p=await c.newPage();const errors=[];p.on('pageerror',e=>errors.push(e.message));
  await p.clock.setFixedTime(new Date(time));
- await p.goto('http://127.0.0.1:'+port+'/index.html?channel=play#today');
+ await p.goto('http://127.0.0.1:'+port+'/classic.html?channel=play#today');
  await p.waitForFunction(()=>window.fp469LoadConsumerForecast&&window.fp434Go,null,{timeout:30000});
  await p.evaluate(()=>{window.__d=false;fp469LoadConsumerForecast().finally(()=>window.__d=true)});await p.waitForFunction(()=>window.__d===true);
  await p.evaluate(()=>fp434Go('today',false));await p.waitForTimeout(500);

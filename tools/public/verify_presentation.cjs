@@ -14,13 +14,13 @@ console.log('PASS presentation regression: four illumination fixtures (not indep
  const fs=require('fs'),path=require('path'),http=require('http'),{chromium}=require('playwright');
  const root=path.resolve(__dirname,'../..');
  const types={'.js':'application/javascript','.html':'text/html','.json':'application/json','.css':'text/css','.svg':'image/svg+xml'};
- const server=http.createServer((q,r)=>{const name=decodeURIComponent(q.url.split('?')[0]).replace(/^\//,'')||'index.html',file=path.resolve(root,name);if(!file.startsWith(root+path.sep)){r.writeHead(403).end();return;}fs.readFile(file,(e,b)=>{r.writeHead(e?404:200,{'content-type':types[path.extname(file)]||'application/octet-stream'});r.end(e?'':b);});});
+ const server=http.createServer((q,r)=>{const name=decodeURIComponent(q.url.split('?')[0]).replace(/^\//,'')||'classic.html',file=path.resolve(root,name);if(!file.startsWith(root+path.sep)){r.writeHead(403).end();return;}fs.readFile(file,(e,b)=>{r.writeHead(e?404:200,{'content-type':types[path.extname(file)]||'application/octet-stream'});r.end(e?'':b);});});
  await new Promise(r=>server.listen(0,'127.0.0.1',r));let browser;
  try{
   browser=await chromium.launch();const c=await browser.newContext({serviceWorkers:'block',locale:'uk-UA',viewport:{width:390,height:844},reducedMotion:'no-preference'});
   await c.route(/^https?:\/\/(?!127\.0\.0\.1)/,r=>r.abort());const p=await c.newPage();
   await p.addInitScript(()=>{window.__paints=0;const original=CanvasRenderingContext2D.prototype.clearRect;CanvasRenderingContext2D.prototype.clearRect=function(...args){if(this.canvas.id==='planetCanvas')window.__paints++;return original.apply(this,args)};});
-  await p.goto('http://127.0.0.1:'+server.address().port+'/index.html?channel=play#today');await p.waitForFunction(()=>typeof renderPlanetAnimation==='function');
+  await p.goto('http://127.0.0.1:'+server.address().port+'/classic.html?channel=play#today');await p.waitForFunction(()=>typeof renderPlanetAnimation==='function');
   await p.evaluate(()=>renderPlanetAnimation(2,30,0,null,null));await p.waitForTimeout(1000);
   const rect=await p.locator('#planetCanvas').evaluate(e=>({width:e.getBoundingClientRect().width,height:e.getBoundingClientRect().height}));assert.deepEqual(rect,{width:0,height:0});
   const count=async()=>{await p.evaluate(()=>window.__paints=0);await p.waitForTimeout(1200);return p.evaluate(()=>window.__paints)};

@@ -12,5 +12,5 @@ for name in files:
  if source.is_symlink():raise SystemExit('Symlink rejected: '+name)
  target=out/name;target.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(source,target)
 (out/'.nojekyll').write_text('')
-for n in ['index.html','design-v4.html','sw.js','consumer_cloud/final_score_decisions.json']:assert (out/n).is_file(),n
+for n in ['index.html','classic.html','design-v4.html','sw.js','consumer_cloud/final_score_decisions.json']:assert (out/n).is_file(),n
 print('Public artifact ready; deployment is a separate dependent job')

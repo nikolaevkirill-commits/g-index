@@ -1,0 +1,23 @@
+/* SkyRhythm design-v4 · «Сьогодні» як у референсі 01: бал → три складові → трактування → небо зараз →
+   лінія дня → космічна погода → дії → деталі. Лише порядок і оформлення; дані й бал не змінюються.
+   Інші модулі переставляють свої блоки під час рендеру, тому порядок відновлюється після кожної зміни
+   складу секції (до відмальовування, без мерехтіння). */
+(()=>{'use strict';
+const ORDER=[':scope > .nr-o-hero',':scope > [data-p0-signals]',':scope > .sr-expert-caution','[data-sky-now]',':scope > .sr-dayline',':scope > .nr-o-weather-brief',':scope > .nr-o-journey',':scope > [data-p0-details]'];
+function arrange(root){
+ const els=ORDER.map(s=>root.querySelector(s)).filter(Boolean);if(els.length<2)return false;
+ let moved=false,prev=els[0];
+ for(const el of els.slice(1)){if(prev.nextElementSibling!==el){const focused=el.contains(document.activeElement)?document.activeElement:null;prev.after(el);focused?.focus?.({preventScroll:true});moved=true}prev=el}
+ return moved;
+}
+let observed=null;
+function watch(){
+ const root=document.querySelector('#nrRoute-today [data-overview="today"]');if(!root){setTimeout(watch,250);return}
+ if(observed===root)return;observed=root;root.dataset.appToday='';
+ arrange(root);
+ new MutationObserver(()=>arrange(root)).observe(root,{childList:true});
+}
+window.NRAppToday={arrange:()=>{const r=document.querySelector('#nrRoute-today [data-overview="today"]');return r?arrange(r):false},order:ORDER};
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',watch);else watch();
+window.addEventListener('sr:consumer-load',()=>{observed=null;watch()});
+})();

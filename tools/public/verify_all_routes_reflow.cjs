@@ -5,7 +5,7 @@ const root=path.resolve(process.argv[2]||path.join(__dirname,'../..')),OUT=proce
 const types={'.html':'text/html','.js':'application/javascript','.css':'text/css','.json':'application/json','.svg':'image/svg+xml','.woff2':'font/woff2','.webp':'image/webp','.png':'image/png'};
 const server=http.createServer((q,r)=>{const f=path.resolve(root,'.'+decodeURIComponent(new URL(q.url,'http://l').pathname));if(!f.startsWith(root+path.sep)){r.writeHead(403);return r.end()}fs.readFile(f,(e,d)=>{r.writeHead(e?404:200,{'content-type':types[path.extname(f)]||'application/octet-stream'});r.end(e?'':d)})});
 (async()=>{await new Promise(r=>server.listen(0,'127.0.0.1',r));const b=await chromium.launch({executablePath:process.env.CHROME_PATH||undefined});const R=[];
-try{for(const entry of ['index.html','design-v4.html'])for(const width of [320,390])for(const scale of [100,200]){
+try{for(const entry of ['classic.html','index.html'])for(const width of [320,390])for(const scale of [100,200]){
  const c=await b.newContext({viewport:{width,height:844},isMobile:true,serviceWorkers:'block',timezoneId:'Europe/Kyiv'});await c.addInitScript(()=>{sessionStorage.setItem('nrs_launch','1')});
  const p=await c.newPage();const errs=[];p.on('pageerror',e=>errs.push(e.message));
  await p.goto('http://127.0.0.1:'+server.address().port+'/'+entry+'?channel=play#today',{waitUntil:'domcontentloaded'});

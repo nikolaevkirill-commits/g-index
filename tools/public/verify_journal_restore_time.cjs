@@ -4,7 +4,7 @@
 const fs = require('fs'), path = require('path'), os = require('os'), http = require('http'), assert = require('assert/strict'), {chromium} = require('playwright');
 const root = path.resolve(__dirname, '../..'), tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'skyrhythm-restore-time-'));
 const types = {'.js': 'application/javascript', '.html': 'text/html', '.json': 'application/json', '.css': 'text/css'};
-const server = http.createServer((q, r) => { const n = decodeURIComponent(q.url.split('?')[0]).replace(/^\//, '') || 'index.html', f = path.resolve(root, n);
+const server = http.createServer((q, r) => { const n = decodeURIComponent(q.url.split('?')[0]).replace(/^\//, '') || 'classic.html', f = path.resolve(root, n);
   if (!f.startsWith(root + path.sep)) { r.writeHead(403); return r.end(); }
   fs.readFile(f, (e, b) => { r.writeHead(e ? 404 : 200, {'content-type': types[path.extname(f)] || 'application/octet-stream'}); r.end(e ? '' : b); }); });
 const rec = o => ({schema: 'personal_day_summary_v1', day: '2026-10-20', timezone: 'Europe/Kyiv', captured_at_utc: '2026-10-21T08:00:00.000Z',

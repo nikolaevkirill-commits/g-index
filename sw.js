@@ -2,7 +2,7 @@ importScripts('./runtime_diagnostics_v1.js','./civil_time_v1.js');
 // G-Index service worker. Navigations, HTML, JS and data (.json/.jsonl/.csv) are network-first with a
 // cached fallback; other same-origin assets (CSS, images, fonts) are cache-first.
 // Bump CACHE_VERSION whenever index.html or a cached shell asset changes.
-const CACHE_VERSION = 'fp550-audit-fixes-20261031'; // Discrete final scores; no interpolated forecast.
+const CACHE_VERSION = 'fp557-sky-reconciled-20261104'; // Discrete final scores; no interpolated forecast.
 const CACHE_PREFIX = 'gindex-'; // G-Index cache namespace; do not remove the prefix.
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${CACHE_VERSION}`;
 const DATA_CACHE = `${CACHE_PREFIX}data-${CACHE_VERSION}`;
@@ -52,6 +52,8 @@ const SHELL_ASSETS = [
   './panchanga_civil_view.js',
   './preview-v4/public_preview_policy.js',
   './design-v4.html',
+  './classic.html',
+  './preview-v4/desktop_v1.css?v=d1',
   './preview-v4/atlas_motion.css?v=v7-2',
   './preview-v4/consumer_overview_v1.js',
   './preview-v4/core_runtime_v1.js',
@@ -89,6 +91,14 @@ const SHELL_ASSETS = [
   './preview-v4/design_b/scenes/locale_extra_v1.js',
   './preview-v4/design_b/scenes/scenes.css?v=v7-3',
   './preview-v4/design_b/scenes/scenes.js',
+  './preview-v4/sky_scene_v1.js?v=sky4',
+  './preview-v4/sky_scene_v1.css?v=sky4',
+  './preview-v4/app_today_v1.js?v=app1',
+  './preview-v4/app_today_v1.css?v=app1',
+  './natal_sky_v1.js?v=ns1',
+  './day_verdict_v1.js?v=dv4',
+  './day_verdict_v1.css?v=dv5',
+  './shared_day_v1.js?v=sd1',
 
   './design-b17.html',
   './preview-b17/consumer_overview_v1.js',
@@ -327,10 +337,11 @@ self.addEventListener('fetch', (event) => {
           const scope = new URL(self.registration.scope);
           const index = new URL('index.html', scope);
           // v7.2 NRA-35: точка входу preview теж має офлайн-запуск із будь-якими параметрами (?channel=play)
-          const preview = new URL('design-v4.html', scope);
+          const preview = new URL('classic.html', scope);
+          const moved = new URL('design-v4.html', scope);
           const journal = new URL('day_summary.html', scope);
           if(!cached && req.mode === 'navigate' &&
-             (canonicalUrl.pathname === scope.pathname || canonicalUrl.pathname === index.pathname || canonicalUrl.pathname === preview.pathname || canonicalUrl.pathname === journal.pathname)) {
+             (canonicalUrl.pathname === scope.pathname || canonicalUrl.pathname === index.pathname || canonicalUrl.pathname === preview.pathname || canonicalUrl.pathname === moved.pathname || canonicalUrl.pathname === journal.pathname)) {
             const entry = new URL(canonicalUrl.href); entry.search=''; entry.hash='';
             cached = await cache.match(entry.href) || await shellCache.match(entry.href);
           }

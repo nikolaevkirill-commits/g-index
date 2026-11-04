@@ -6,7 +6,7 @@
 const fs = require('fs'), path = require('path'), http = require('http'), {chromium} = require('playwright');
 const root = path.resolve(process.argv[2] || path.join(__dirname, '../..')), OUT = process.argv[3] || '', DEPTH_LIMIT = Number(process.env.DEPTH_LIMIT || 128);
 const types = {'.js': 'application/javascript', '.html': 'text/html', '.json': 'application/json', '.css': 'text/css'};
-const server = http.createServer((q, r) => { const n = decodeURIComponent(q.url.split('?')[0]).replace(/^\//, '') || 'index.html', f = path.resolve(root, n);
+const server = http.createServer((q, r) => { const n = decodeURIComponent(q.url.split('?')[0]).replace(/^\//, '') || 'classic.html', f = path.resolve(root, n);
   if (!f.startsWith(root + path.sep)) { r.writeHead(403); return r.end(); }
   fs.readFile(f, (e, b) => { r.writeHead(e ? 404 : 200, {'content-type': types[path.extname(f)] || 'application/octet-stream'}); r.end(e ? '' : b); }); });
 const NOW = '2026-10-28T10:00:00.000Z';

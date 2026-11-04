@@ -54,6 +54,9 @@ jobs:
       - run: python tools/cloud/test_expert_model.py
       - run: python tools/cloud/test_calendar_components.py
       - run: python tools/cloud/test_sunrise_conventions.py
+      - run: python tools/cloud/test_transit_events.py
+      - run: python tools/cloud/test_space_weather.py
+      - run: python tools/cloud/test_market_proxy.py
       - run: python tools/public/test_release_publication.py
       - run: python tools/public/test_release_scope.py
       - uses: actions/setup-node@v4
@@ -79,9 +82,9 @@ jobs:
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_css_upgrade.cjs --button
       - if: steps.scope.outputs.mode != 'data'
-        run: node tools/public/verify_b7_activation_race.cjs 20 index.html
+        run: node tools/public/verify_b7_activation_race.cjs 20 classic.html
       - if: steps.scope.outputs.mode != 'data'
-        run: node tools/public/verify_b7_activation_race.cjs 20 design-v4.html
+        run: node tools/public/verify_b7_activation_race.cjs 20 index.html
       - uses: actions/upload-artifact@v4
         if: always() && steps.scope.outputs.mode != 'data'
         with:
@@ -103,6 +106,14 @@ jobs:
       - run: node tools/public/verify_fork_drift.cjs
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_l10n_expanded.cjs
+      - if: steps.scope.outputs.mode != 'data'
+        run: node tools/public/verify_sky_scene.cjs
+      - if: steps.scope.outputs.mode != 'data'
+        run: node tools/public/verify_day_verdict.cjs
+      - if: steps.scope.outputs.mode != 'data'
+        run: node tools/public/verify_day_match.cjs
+      - if: steps.scope.outputs.mode != 'data'
+        run: node tools/public/verify_natal_sky.cjs
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_notification_navigation.cjs
       - if: steps.scope.outputs.mode != 'data'

@@ -15,13 +15,24 @@ const COPY={
  es:{expert:'evaluación experta',formula:'fórmula de la fuente',offline:'sin conexión, cálculo guardado',day:'día civil de Kiev',none:'No hay puntuación actual. Abre la aplicación para revisar las fuentes.',score:'Puntuación del día',note:'La precisión respecto a eventos reales no está confirmada.',conflict:'Las decisiones expertas se contradicen: no se muestra puntuación.'},
  fr:{expert:'évaluation experte',formula:'formule de la source',offline:'hors ligne, calcul enregistré',day:'jour civil de Kyiv',none:'Aucune note actuelle. Ouvrez l’application pour vérifier les sources.',score:'Note du jour',note:'La précision vis-à-vis des événements réels n’est pas confirmée.',conflict:'Les décisions d’expert se contredisent : aucune note affichée.'}};
 function lang(value){return LANGS.includes(value)?value:'uk';}
+// Morning verdict (owner review 01.11): the same tone and «good for» topics as the Today card (day_verdict_v1.js),
+// from the sign of the final score and the source calendar marks only.
+const TONE={uk:['Сприятливий день.','Рівний день.','Напружений день.'],en:['A favourable day.','A steady day.','A tense day.'],es:['Un día favorable.','Un día estable.','Un día tenso.'],fr:['Une journée favorable.','Une journée stable.','Une journée tendue.']};
+const GOOD={uk:'Підходить: ',en:'Good for: ',es:'Adecuado para: ',fr:'Propice à : '};
+const TOPICS=[['Книги',['навчання','learning','aprendizaje','apprentissage']],['сприятливий для подорожей',['подорожі','travel','viajes','voyages']],['1 місячний день',['планування','planning','planificación','planification']],['Мішень',['планування','planning','planificación','planification']],['сприятливий для стрижки',['догляд за собою','self-care','cuidado personal','soin de soi']],['Сукня',['новий одяг','new clothes','ropa nueva','nouveaux vêtements']],['Гучномовець',['комунікація','communication','comunicación','communication']]];
+function verdict(row,score,language){
+  const i=LANGS.indexOf(lang(language)),tone=TONE[lang(language)][score>0?0:score<0?2:1];
+  const names=new Set((row?.channels?.source_formula?.factors||[]).filter(x=>typeof x.value==='number').map(x=>x.factor));
+  const good=[...new Set(TOPICS.filter(([n])=>names.has(n)).map(([,l])=>l[i]))];
+  return tone+(good.length?' '+GOOD[lang(language)]+good.slice(0,3).join(', ')+'.':'');
+}
 function daily(feed,now=Date.now(),language='uk'){
   const L=COPY[lang(language)];
   const date=NRCivilTime.dayKey(new Date(now),'Europe/Kyiv');
   const result=host.NRConsumerAuthority.resolveFinal(feed?.days?.[date],date,now,false);
   const view=host.NRConsumerAuthority.present(result);
   const source=result.state==='expert'?L.expert:result.state==='offline'?L.offline:L.formula;
-  const body=result.available?L.score+' '+view.symbol+' ('+source+'). '+L.note:result.state==='expert_conflict'?L.conflict:L.none;
+  const body=result.available?verdict(feed?.days?.[date],result.score,language)+' '+L.score+' '+view.symbol+' ('+source+'). '+L.note:result.state==='expert_conflict'?L.conflict:L.none;
   return {title:'SkyRhythm · '+date+' · '+L.day,body,date,state:result.state,score:result.score,language:lang(language)};
 }
 async function storedLanguage(scope){
@@ -63,5 +74,5 @@ function install(sw){
     })());
   });
 }
-host.NRNotificationRuntime=Object.freeze({daily,loadDaily,storedLanguage,safeURL,install,PREFS,LOCALE_KEY});
+host.NRNotificationRuntime=Object.freeze({daily,verdict,loadDaily,storedLanguage,safeURL,install,PREFS,LOCALE_KEY});
 })(globalThis);

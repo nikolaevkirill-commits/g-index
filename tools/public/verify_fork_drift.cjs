@@ -1,9 +1,9 @@
 'use strict';
-// ARCH-1 drift guard (audit FP549). index.html, design-v4.html and design-b17.html load forked copies of
+// ARCH-1 drift guard (audit FP549). classic.html, index.html and design-b17.html load forked copies of
 // product_shell_v1.js and consumer_overview_v1.js. Every function that exists in both the root copy and a
 // fork must be identical (whitespace-normalised). Known, reviewed differences are pinned below by the hash
 // of BOTH bodies: a change on either side fails the guard until the pair is reviewed and re-pinned
-// (node tools/public/verify_fork_drift.cjs --print). This stops a fix from silently reaching only index.html.
+// (node tools/public/verify_fork_drift.cjs --print). This stops a fix from silently reaching only classic.html.
 const fs=require('fs'),path=require('path'),crypto=require('crypto');
 const root=path.resolve(__dirname,'../..');
 const FILES=['product_shell_v1.js','consumer_overview_v1.js'],FORKS=['preview-v4','preview-b17'];

@@ -4,7 +4,7 @@ const out=process.env.NR_REFLOW_EVIDENCE;
 const types={'.html':'text/html','.js':'application/javascript','.css':'text/css','.json':'application/json','.svg':'image/svg+xml','.woff2':'font/woff2'};
 const server=http.createServer((q,r)=>{const f=path.resolve(root,'.'+decodeURIComponent(new URL(q.url,'http://local').pathname));if(!f.startsWith(root+path.sep)){r.writeHead(403);return r.end()}fs.readFile(f,(e,data)=>{r.writeHead(e?404:200,{'content-type':types[path.extname(f)]||'application/octet-stream'});r.end(e?'':data)})});
 (async()=>{await new Promise(r=>server.listen(0,'127.0.0.1',r));const browser=await chromium.launch(process.env.FP463_BROWSER?{executablePath:process.env.FP463_BROWSER}:{});const results=[];try{
-for(const entry of ['index.html','design-v4.html'])for(const width of [320,390,430])for(const scale of [100,200]){
+for(const entry of ['classic.html','index.html'])for(const width of [320,390,430])for(const scale of [100,200]){
 if(process.env.NR_REFLOW_CASE&&process.env.NR_REFLOW_CASE!==`${entry}:${width}:${scale}`)continue;
 const context=await browser.newContext({viewport:{width,height:844},isMobile:true,serviceWorkers:'block',timezoneId:'Europe/Kyiv'});const p=await context.newPage();
 await p.goto('http://127.0.0.1:'+server.address().port+'/'+entry+'?channel=play#today',{waitUntil:'domcontentloaded'});

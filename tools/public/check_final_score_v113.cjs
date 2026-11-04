@@ -7,7 +7,7 @@
 const {chromium}=require('playwright'),http=require('http'),fs=require('fs'),path=require('path'),assert=require('assert/strict');
 const ROOT=process.argv[2],OUT=process.argv[3];
 const mime=f=>f.endsWith('.html')?'text/html; charset=utf-8':f.endsWith('.js')?'application/javascript':f.endsWith('.json')?'application/json':f.endsWith('.css')?'text/css':f.endsWith('.png')?'image/png':'application/octet-stream';
-const srv=http.createServer((q,s)=>{const f=decodeURIComponent(q.url.split('?')[0]).slice(1)||'index.html';fs.readFile(path.join(ROOT,f),(e,b)=>{if(e){s.writeHead(404);return s.end()}s.writeHead(200,{'content-type':mime(f)});s.end(b)})});
+const srv=http.createServer((q,s)=>{const f=decodeURIComponent(q.url.split('?')[0]).slice(1)||'classic.html';fs.readFile(path.join(ROOT,f),(e,b)=>{if(e){s.writeHead(404);return s.end()}s.writeHead(200,{'content-type':mime(f)});s.end(b)})});
 const FEED=JSON.parse(fs.readFileSync(path.join(__dirname,'fixtures/score_regression.json'),'utf8'));
 const NOW='2026-10-24T10:00:00Z';
 function retimed(){const f=JSON.parse(JSON.stringify(FEED));for(const r of Object.values(f.days)){const o=r.channels.source_formula;o.generated_at='2026-10-24T09:00:00+00:00';if(o.kp_source==='NOAA_3day_slots')o.noaa_retrieved_at='2026-10-24T09:00:00+00:00';else o.noaa_issued_at='2026-10-20T03:45:00+00:00';}return f}
@@ -32,7 +32,7 @@ async function open(b,page,{registry,clock=NOW}){
 const DATES=Object.keys(FEED.days).sort().filter(d=>d>='2026-10-24');
 srv.listen(0,'127.0.0.1',async()=>{const b=await chromium.launch({executablePath:process.env.CHROME_PATH||undefined});const R={now:NOW,pages:{}};
 try{
- for(const page of ['index.html','design-v4.html']){const P=R.pages[page]={};
+ for(const page of ['classic.html','index.html']){const P=R.pages[page]={};
   const {c,p,errs}=await open(b,page,{registry:REGISTRY});
   // 1. one final resolver; expert wins; formula kept separately; unverified expert ignored
   P.final=await p.evaluate(dates=>Object.fromEntries(dates.map(ds=>{const x=window.fp469ConsumerForDate({ds}).consumer,e=getEngineScore(new Date(ds+'T12:00:00Z'));
@@ -55,7 +55,7 @@ try{
   for(const d of P.g.days)if(d.raw!==null)assert.ok(Math.abs(d.g-d.raw)<1e-9,page+' G_raw '+d.ds+' '+d.g+' vs '+d.raw);
   assert.equal(P.g.nowAi,-3);assert.equal(P.g.nowSource,'source_formula');assert.equal(P.g.legacyAvailable,true);
   // 4. legacy dashboard (index only; design-v4 hides it)
-  if(page==='index.html'){
+  if(page==='classic.html'){
    await p.evaluate(()=>{try{fp434Go('expert',false);const gate=document.querySelector('.nr-research-gate');if(gate)gate.open=true}catch(_){}});await p.clock.runFor(2500);
    P.legacy=await p.evaluate(()=>{const t=id=>document.getElementById(id)?.innerText.replace(/\s+/g,' ').trim()||'';return {week:t('weekSummaryBar'),timing:t('timingAuthorityNote'),route:t('nrRoute-expert')}});
    const refs=await p.locator('#weekSummaryBar [data-final-score]').evaluateAll(nodes=>nodes.map(n=>n.dataset.finalScore));
@@ -83,7 +83,7 @@ try{
   P.errors=errs;assert.deepEqual(errs,[],page+' errors');await c.close();
  }
  // 6. without the registry the formula is the final score (no expert anywhere)
- {const {c,p,errs}=await open(b,'index.html',{registry:null});const x=await p.evaluate(()=>window.fp469ConsumerForDate({ds:'2026-10-24'}).consumer);R.no_registry={authority:x.authority,score:x.score};
+ {const {c,p,errs}=await open(b,'classic.html',{registry:null});const x=await p.evaluate(()=>window.fp469ConsumerForDate({ds:'2026-10-24'}).consumer);R.no_registry={authority:x.authority,score:x.score};
   assert.deepEqual([x.authority,x.score],['source_formula',-3]);assert.deepEqual(errs,[]);await c.close();}
  R.status='PASS';
 }catch(e){R.status='FAIL';R.error=String(e.message||e);process.exitCode=1}

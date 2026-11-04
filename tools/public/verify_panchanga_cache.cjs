@@ -2,7 +2,7 @@ const fs=require('fs'),path=require('path'),http=require('http'),assert=require(
 const root=path.resolve(__dirname,'../..'),out=path.resolve(process.argv[2]||'cache-evidence');fs.mkdirSync(out,{recursive:true});
 const server=http.createServer((q,r)=>{const f=path.resolve(root,'.'+new URL(q.url,'http://local').pathname);if(!f.startsWith(root+path.sep)){r.writeHead(403);return r.end()}fs.readFile(f,(e,b)=>{r.writeHead(e?404:200,{'Content-Type':f.endsWith('.js')?'application/javascript':f.endsWith('.css')?'text/css':f.endsWith('.json')?'application/json':'text/html; charset=utf-8'});r.end(e?'':b)})});
 (async()=>{await new Promise(r=>server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+server.address().port,b=await chromium.launch();const rows=[];try{
-for(const entry of ['index.html','design-v4.html'])for(const zone of ['UTC','Europe/Kyiv']){
+for(const entry of ['classic.html','index.html'])for(const zone of ['UTC','Europe/Kyiv']){
 const c=await b.newContext({timezoneId:zone,viewport:{width:390,height:844},isMobile:true,serviceWorkers:'block'});await c.route('**/*',r=>r.request().url().startsWith(base)?r.continue():r.abort());const p=await c.newPage();await p.goto(base+'/'+entry+'?channel=play#panch');await p.waitForFunction(()=>typeof computePanchanga==='function'&&typeof renderPanchanga==='function');
 const result=await p.evaluate(()=>{
  const fail=m=>{throw Error(m)},at=t=>computePanchanga(new Date(t)),fresh=t=>{window.__panchMemo={};return at(t)},fields=['tithi','nakshatra','yoga'],boundaries=[];

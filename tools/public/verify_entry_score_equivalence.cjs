@@ -1,16 +1,16 @@
 'use strict';
 // ARCH-1 guard (audit FP549): three entry pages carry forked display code. For every date of the real
 // feed + real expert registry, the score shown on Today (date select) and on the calendar day button must
-// equal NRConsumerAuthority.resolveFinal, identically on index.html, design-v4.html and design-b17.html.
+// equal NRConsumerAuthority.resolveFinal, identically on classic.html, index.html and design-b17.html.
 const http=require('http'),fs=require('fs'),path=require('path'),assert=require('assert/strict');const {chromium}=require('playwright');
 const root=path.resolve(__dirname,'../..');
 const feed=JSON.parse(fs.readFileSync(path.join(root,'consumer_cloud/forecast.json'),'utf8'));
 const now=new Date(Date.parse(feed.generated_at)+3600e3);
 const mime=f=>f.endsWith('.html')?'text/html; charset=utf-8':f.endsWith('.js')?'application/javascript':f.endsWith('.json')?'application/json':f.endsWith('.css')?'text/css':'application/octet-stream';
-const srv=http.createServer((q,s)=>{const f=decodeURIComponent(q.url.split('?')[0]).slice(1)||'index.html';const p=path.resolve(root,f);if(!p.startsWith(root+path.sep)){s.writeHead(403);return s.end()}fs.readFile(p,(e,b)=>{if(e){s.writeHead(404);return s.end()}s.writeHead(200,{'content-type':mime(f)});s.end(b)})});
+const srv=http.createServer((q,s)=>{const f=decodeURIComponent(q.url.split('?')[0]).slice(1)||'classic.html';const p=path.resolve(root,f);if(!p.startsWith(root+path.sep)){s.writeHead(403);return s.end()}fs.readFile(p,(e,b)=>{if(e){s.writeHead(404);return s.end()}s.writeHead(200,{'content-type':mime(f)});s.end(b)})});
 const norm=s=>{const m=String(s||'').replace(/−/g,'-').match(/(^|[^\d])([+-]?[0-3])(?!\d)|—/);return !m?'?':m[0]==='—'?'—':String(Number(m[2]))};
 (async()=>{await new Promise(r=>srv.listen(0,'127.0.0.1',r));const b=await chromium.launch();const table={};let checks=0;
-try{for(const entry of ['index.html','design-v4.html','design-b17.html']){
+try{for(const entry of ['classic.html','index.html','design-b17.html']){
  const c=await b.newContext({locale:'uk-UA',serviceWorkers:'block',viewport:{width:1280,height:900},timezoneId:'Europe/Kyiv',reducedMotion:'reduce'});await c.route(/^https?:\/\/(?!127\.0\.0\.1)/,r=>r.abort());
  const p=await c.newPage();await p.clock.setFixedTime(now);await p.goto('http://127.0.0.1:'+srv.address().port+'/'+entry+'?channel=play#today',{waitUntil:'load',timeout:120000});
  await p.waitForFunction(()=>document.querySelector('[data-overview="today"] select')?.options.length>5&&window.NRConsumerAuthority,null,{timeout:60000});await p.waitForTimeout(2500);
@@ -25,8 +25,8 @@ try{for(const entry of ['index.html','design-v4.html','design-b17.html']){
  for(const ds of dates){if(cal[ds]!==undefined){const m=cal[ds].replace(/−/g,'-').match(/·\s*([+-]?[0-3]|—)/);out[ds].calendar=m?(m[1]==='—'?'—':String(Number(m[1]))):'?';}}
  table[entry]=out;await c.close();}}
 finally{await b.close();srv.close();}
-const dates=Object.keys(table['index.html']);const bad=[];
-for(const ds of dates){const ref=table['index.html'][ds].ref;
+const dates=Object.keys(table['classic.html']);const bad=[];
+for(const ds of dates){const ref=table['classic.html'][ds].ref;
  for(const e of Object.keys(table)){const o=table[e][ds];if(!o){bad.push(e+' '+ds+' missing');continue}checks++;
   if(o.ref!==ref)bad.push(e+' '+ds+' resolveFinal '+o.ref+' vs index '+ref);
   if(o.today!==ref)bad.push(e+' '+ds+' Today shows '+o.today+' expected '+ref);

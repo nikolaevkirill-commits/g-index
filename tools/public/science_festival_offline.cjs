@@ -1,9 +1,9 @@
 const {chromium}=require('playwright'),fs=require('fs'),path=require('path'),http=require('http'),assert=require('assert/strict');
 const root=path.resolve(__dirname,'../..'),out=path.resolve(process.argv[2]);fs.mkdirSync(out,{recursive:true});
 const mime={'.js':'application/javascript','.css':'text/css','.json':'application/json','.html':'text/html; charset=utf-8','.webmanifest':'application/manifest+json'};
-const server=http.createServer((q,s)=>{const f=path.join(root,decodeURI(q.url.split('?')[0]==='/'?'/index.html':q.url.split('?')[0]));fs.readFile(f,(e,b)=>{s.writeHead(e?404:200,{'content-type':mime[path.extname(f)]||'application/octet-stream'});s.end(e?'':b);});});
+const server=http.createServer((q,s)=>{const f=path.join(root,decodeURI(q.url.split('?')[0]==='/'?'/classic.html':q.url.split('?')[0]));fs.readFile(f,(e,b)=>{s.writeHead(e?404:200,{'content-type':mime[path.extname(f)]||'application/octet-stream'});s.end(e?'':b);});});
 (async()=>{await new Promise(r=>server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+server.address().port,b=await chromium.launch({headless:true});let report=[];try{
- for(const entry of ['index.html','design-v4.html']){
+ for(const entry of ['classic.html','index.html']){
   const c=await b.newContext({viewport:{width:390,height:844}}),p=await c.newPage();await p.goto(base+'/'+entry+'?channel=play#today');
   await p.evaluate(async()=>{await navigator.serviceWorker.register('./sw.js');await Promise.race([navigator.serviceWorker.ready,new Promise((_,reject)=>setTimeout(()=>reject(Error('SW_READY_TIMEOUT')),20000))]);});await p.reload();await p.waitForFunction(()=>navigator.serviceWorker.controller&&SRFestivalEvidence&&document.querySelector('[data-festival-route="today"]'));
   const assets=['festival_decision_engine_v1.js','festival_evidence_v1.js','festival_astronomy_adapter_v1.js','festival_decision_view_v1.js','festival_decision_v1.css'];

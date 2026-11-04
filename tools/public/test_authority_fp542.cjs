@@ -2,7 +2,7 @@
 // FP542: per-row registry validation (B1/R1), conflict semantics, clock tolerance (B2),
 // first-load failure and notification parity. Unit level; browser parity is in verify_final_score.cjs.
 const assert=require('node:assert/strict');
-global.location={href:'http://127.0.0.1:8886/index.html'};
+global.location={href:'http://127.0.0.1:8886/classic.html'};
 const base='http://127.0.0.1:8886/';
 const source=require('../../consumer_cloud/forecast.json');
 const real=require('../../consumer_cloud/final_score_decisions.json');

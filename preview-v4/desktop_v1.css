@@ -1,0 +1,37 @@
+/* SkyRhythm · десктоп (Д1–Д2, огляд власника 01.11.2026), лише основна сторінка.
+   ≥1024 px: контент 1100–1200 px по центру; основний текст не менше 15 px; фото — лише в шапці;
+   «Сьогодні» у дві колонки: ліворуч вердикт, бал, «Чому так», «Для тебе» (картка закріплюється при прокрутці);
+   праворуч «Небо зараз», космопогода NOAA, лінія дня; сигнали, маршрут і деталі — на всю ширину нижче.
+   Рядок лінії дня гнучкий (1fr): висота лівої картки не розтягує рядки «Небо зараз» і NOAA. Мобільний вигляд не змінюється. */
+@media (min-width:1024px){
+ html body>header,
+ html body #fp434Shell{max-width:1200px!important;margin-inline:auto!important;box-sizing:border-box}
+ html body #fp434Shell .nr-route{max-width:none!important}
+
+ /* Текст: не дрібніше 15 px (заголовки й позначки-чіпи лишаються як є) */
+ html body #fp434Shell :is(p,li,dd,dt,label,summary,figcaption,td,th,small){font-size:max(15px,1em)!important;line-height:1.5}
+
+ /* Фото лише в шапці: у картках лишається тільки градієнт */
+ html body #fp434Shell :is(.sr-solar-profile,.sr-forecast-graph,.sr-panch-feature){background-image:linear-gradient(rgba(8,23,43,.9),rgba(8,23,43,.97))!important}
+
+ /* «Сьогодні» — дві колонки */
+ html body #fp434Shell #nrRoute-today .nr-overview.sr-p0-today{
+  width:100%!important;max-width:none!important;
+  grid-template-columns:minmax(0,5fr) minmax(0,7fr)!important;
+  grid-template-rows:auto auto 1fr auto auto auto auto!important;grid-auto-rows:auto!important;
+  grid-template-areas:"hero sky" "hero noaa" "hero day" "signals signals" "journey journey" "details details" "close close"!important;
+  align-items:start;column-gap:24px!important;row-gap:20px!important}
+ html body #fp434Shell #nrRoute-today .nr-overview.sr-p0-today>.nr-o-hero{grid-area:hero!important}
+ html body #fp434Shell #nrRoute-today .nr-overview.sr-p0-today>.sr-p0-signals{grid-area:signals!important}
+ html body #fp434Shell #nrRoute-today .nr-overview.sr-p0-today>[data-sky-now]{grid-area:sky!important;margin:0!important}
+ html body #fp434Shell #nrRoute-today .nr-overview.sr-p0-today>.nr-o-weather-brief{grid-area:noaa!important;margin:0!important;width:100%!important}
+ html body #fp434Shell #nrRoute-today .nr-overview.sr-p0-today>.sr-dayline{grid-area:day!important;margin:0!important}
+ html body #fp434Shell #nrRoute-today .nr-overview.sr-p0-today>.nr-o-journey{grid-area:journey!important}
+ html body #fp434Shell #nrRoute-today .nr-overview.sr-p0-today>.sr-p0-details{grid-area:details!important}
+ html body #fp434Shell #nrRoute-today .nr-overview.sr-p0-today>.sr-dl-close-day{grid-area:close!important}
+}
+@media (min-width:1024px) and (min-height:860px){
+ html body #fp434Shell #nrRoute-today .nr-overview.sr-p0-today>.nr-o-hero{position:sticky;top:16px;align-self:start}
+}
+/* Посилання-картка «Класичний вигляд» у «Ще» виглядає як інші картки */
+html body #fp434Shell a.nr-card[data-classic-link]{text-decoration:none;color:inherit;display:block}
