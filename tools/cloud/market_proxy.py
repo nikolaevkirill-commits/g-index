@@ -180,5 +180,9 @@ if __name__ == '__main__':
     except (OSError, ValueError):
         previous = None
     doc = build(fetch, previous); check(doc)
-    out.write_text(json.dumps(doc, ensure_ascii=False, separators=(',', ':'), allow_nan=False), 'utf-8')
+    try:
+        out.with_suffix('.json.pending').write_text(json.dumps(doc, ensure_ascii=False, separators=(',', ':'), allow_nan=False), 'utf-8')
+        out.with_suffix('.json.pending').replace(out)
+    finally:
+        out.with_suffix('.json.pending').unlink(missing_ok=True)
     print(json.dumps({'status': 'PASS', **{k: v['status'] for k, v in doc['sources'].items()}, **doc['coverage']}))

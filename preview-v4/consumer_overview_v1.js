@@ -353,7 +353,7 @@ function render(root){
  root.querySelector('.nr-o-label').textContent=r.available?(r.score>0?'Позитивна оцінка':r.score<0?'Негативна оцінка':'Нейтральна оцінка'):'Актуальну оцінку не показуємо';
  renderRouteTools(root,route,dates,ds);
  if(route==='today'||route==='forecast'){
- const heading=root.querySelector('.nr-o-heading');heading.setAttribute('translate','no');heading.querySelector('h1').textContent=route==='today'?dateLabel(ds):({uk:'Прогноз на тиждень',en:'Weekly forecast',es:'Pronóstico semanal',fr:'Prévisions de la semaine'})[window.NRLocale?.language||'uk'];heading.querySelector('span').textContent=({uk:'Київ',en:'Kyiv',es:'Kyiv',fr:'Kyiv'})[window.NRLocale?.language||'uk']+' · '+(window.NRLocale?.text('за київським часом')||'за київським часом');
+ const heading=root.querySelector('.nr-o-heading');heading.setAttribute('translate','no');heading.querySelector('h1').textContent=route==='today'?dateLabel(ds):({uk:'Прогноз на обраний період',en:'Forecast for the selected period',es:'Pronóstico del período elegido',fr:'Prévisions pour la période choisie'})[window.NRLocale?.language||'uk'];heading.querySelector('span').textContent=({uk:'Київ',en:'Kyiv',es:'Kyiv',fr:'Kyiv'})[window.NRLocale?.language||'uk']+' · '+(window.NRLocale?.text('за київським часом')||'за київським часом');
  }
  if(route==='forecast')renderForecastTable(root,dates,ds);
 

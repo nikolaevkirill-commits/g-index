@@ -6,6 +6,7 @@ const L=()=>{const l=window.NRLocale?.language||'uk';return ['uk','en','es','fr'
 const I=['uk','en','es','fr'];
 const T={
  title:['Небо · 27 днів','Sky · 27 days','Cielo · 27 días','Ciel · 27 jours'],
+ tradition:['Традиційні трактування: вплив на події не підтверджено.','Traditional interpretations: effects on events are unverified.','Interpretaciones tradicionales: efectos en los sucesos no verificados.','Interprétations traditionnelles : effets sur les événements non vérifiés.'],
  sub:['Розрахунок положень планет (сидерично, Лахірі) і Kp NOAA. Оновлюється автоматично. На бал дня не впливає.','Calculated planetary positions (sidereal, Lahiri) and NOAA Kp. Updates automatically. Does not change the day score.','Posiciones planetarias calculadas (sideral, Lahiri) y Kp de NOAA. Se actualiza automáticamente. No cambia la puntuación del día.','Positions planétaires calculées (sidéral, Lahiri) et Kp de la NOAA. Mise à jour automatique. Ne modifie pas le score du jour.'],
  play:['Програти 27 днів','Play 27 days','Reproducir 27 días','Lire 27 jours'],
  stop:['Зупинити','Stop','Detener','Arrêter'],
@@ -29,7 +30,7 @@ const T={
  sw_noflare:['спалахів класу C і вище немає','no flares of class C or above','sin llamaradas de clase C o superior','aucune éruption de classe C ou plus'],
  sw_wind:['Сонячний вітер','Solar wind','Viento solar','Vent solaire'],
  sw_cme:['Викид маси (CME) до Землі','CME arrival at Earth','Llegada de CME a la Tierra','Arrivée d’une CME sur Terre'],
- sw_nocme:['не очікується за моделлю NASA','none expected by the NASA model','no se espera según el modelo de la NASA','aucune attendue selon le modèle de la NASA'],
+ sw_nocme:['у завантажених розрахунках NASA прибуттів не знайдено','no arrivals found in the retrieved NASA simulations','sin llegadas en las simulaciones recuperadas de NASA','aucune arrivée dans les simulations NASA récupérées'],
  sw_glancing:['дотичний удар','glancing blow','impacto rasante','impact rasant'],
  sw_none:['немає даних','no data','sin datos','pas de données'],
  sw_stale:['дані застарілі','data out of date','datos desactualizados','données périmées'],
@@ -114,7 +115,7 @@ function renderToday(){
  const head=`<div class="nr-sky-now-head"><h2>${esc(t('now'))}</h2><span>${esc(fmtDay(ds))}</span></div>`;
  if(state!=='ready'||dayIndex(ds)<0){todayHost.innerHTML=head+`<p class="nr-sky-none">${esc(state==='loading'?'…':t('missing'))}</p>`;return}
  const top=dayItems(ds).filter(x=>x.reading.intensity>=2).slice(0,2);
- todayHost.innerHTML=head+`<div class="nr-sky-now-body">${wheel(ds,true)}<div><ul class="nr-sky-now-list">${top.length?top.map(x=>`<li><b aria-hidden="true">${x.bodies.map(g=>(G[g]?.[0]||'')+VS).join(' ')}</b> ${esc(x.reading.text[lang]||x.reading.text.en)}</li>`).join(''):`<li>${esc(t('quiet'))}</li>`}</ul><small>${esc(t('sub'))}</small></div></div><button type="button" class="nr-sky-now-open">${esc(t('open'))} →</button>`;
+ todayHost.innerHTML=head+`<div class="nr-sky-now-body">${wheel(ds,true)}<div><ul class="nr-sky-now-list">${top.length?top.map(x=>`<li><b aria-hidden="true">${x.bodies.map(g=>(G[g]?.[0]||'')+VS).join(' ')}</b> ${esc(x.reading.text[lang]||x.reading.text.en)}</li>`).join(''):`<li>${esc(t('quiet'))}</li>`}</ul><small>${esc(t('tradition'))} ${esc(t('sub'))}</small></div></div><button type="button" class="nr-sky-now-open">${esc(t('open'))} →</button>`;
 }
 function mountToday(){
  if(todayHost&&todayHost.isConnected)return true;const ov=document.querySelector('#nrRoute-today [data-overview="today"]');if(!ov)return false;
