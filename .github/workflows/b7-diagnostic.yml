@@ -1,4 +1,4 @@
-name: B7 diagnostic
+name: Source transport diagnostic
 on:
   workflow_dispatch:
 permissions:
@@ -6,31 +6,26 @@ permissions:
 jobs:
   probe:
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    strategy:
-      fail-fast: false
-      matrix:
-        trigger: [message, button]
-        trial: [old, waiting]
+    timeout-minutes: 4
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v4
-        with: {node-version: '24'}
-      - run: npm install --no-save --package-lock=false playwright@1.62.1
-      - run: npx playwright install --with-deps chromium
-      - run: node tools/public/verify_day_cautions.cjs
-      - run: node tools/public/verify_noaa_missing.cjs
-      - run: node tools/public/verify_svg_missing.cjs
-      - run: node tools/public/verify_presentation.cjs
-      - run: node tools/public/verify_day_summary.cjs
-      - run: node tools/public/verify_journal_restore_time.cjs
-      - run: node tools/public/verify_journal_restore_adversarial.cjs
-      # FP545: raw production-worker run first (statistics only), then the traced/restart probe.
-      - run: node tools/public/verify_css_upgrade.cjs --${{ matrix.trigger }} --server-log
-        continue-on-error: true
-      - run: node tools/public/verify_css_upgrade.cjs --${{ matrix.trigger }} --restart=${{ matrix.trial }} --trace
+      - name: Probe official sources with curl default and IPv4
+        shell: bash
+        run: |
+          mkdir -p evidence
+          probe() {
+            name="$1"; mode="$2"; url="$3"
+            set +e
+            curl $mode --location --connect-timeout 8 --max-time 20 --silent --show-error --output "evidence/$name.body" --write-out 'http=%{http_code} remote=%{remote_ip} size=%{size_download} dns=%{time_namelookup} connect=%{time_connect} tls=%{time_appconnect} total=%{time_total}\n' "$url" > "evidence/$name.status" 2> "evidence/$name.error"
+            echo "exit=$?" >> "evidence/$name.status"
+            cat "evidence/$name.status" "evidence/$name.error"
+          }
+          probe fred_default '' 'https://fred.stlouisfed.org/graph/fredgraph.csv?id=VIXCLS&cosd=2026-07-07&coed=2026-11-03'
+          probe fred_ipv4 '-4' 'https://fred.stlouisfed.org/graph/fredgraph.csv?id=VIXCLS&cosd=2026-07-07&coed=2026-11-03'
+          probe fred_table '-4' 'https://fred.stlouisfed.org/data/VIXCLS'
+          probe cboe '-4' 'https://cdn-api.cboe.com/api/global/us_indices/daily_prices/VIX_History.csv'
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: b7-${{ matrix.trigger }}-${{ matrix.trial }}
-          path: /tmp/skyrhythm-css-upgrade-*/
+          name: source-transport
+          path: evidence/
+          retention-days: 7
