@@ -9,9 +9,11 @@ never a guessed value. Nothing here enters the score; owner rule: a weight may b
 after a check on >=100 days.
 """
 from datetime import datetime, timedelta, timezone
-import csv, io, json, math
+import csv, io, json, math, re
+from html.parser import HTMLParser
 
 FRED = 'https://fred.stlouisfed.org/graph/fredgraph.csv?id=VIXCLS&cosd={start}&coed={end}'
+FRED_TABLE = 'https://fred.stlouisfed.org/data/VIXCLS'
 COINBASE = 'https://api.exchange.coinbase.com/products/BTC-USD/candles?granularity=86400&start={start}&end={end}'
 KRAKEN = 'https://api.kraken.com/0/public/OHLC?pair=XBTUSD&interval=1440&since={since}'
 KEEP_DAYS = 1200
@@ -47,6 +49,48 @@ def parse_vix(raw, now):
     if not out:
         raise ValueError('vix: no closed days')
     return out
+
+
+def parse_fred_table(raw, now):
+    # FRED's official table uses 1000 HTML rows plus #date|value in extra-rows.
+    # Validate the series and declared range; a partial HTML response must not pass.
+    class Table(HTMLParser):
+        def __init__(self):
+            super().__init__(); self.rows=[]; self.row=None; self.cell=None; self.extra=[]; self.in_extra=False
+        def handle_starttag(self, tag, attrs):
+            if tag == 'tr': self.row=[]
+            if tag in ('th','td') and self.row is not None: self.cell=[]
+            if tag == 'div' and dict(attrs).get('id') == 'extra-rows': self.in_extra=True
+        def handle_data(self, value):
+            if self.cell is not None: self.cell.append(value)
+            if self.in_extra: self.extra.append(value)
+        def handle_endtag(self, tag):
+            if tag in ('th','td') and self.cell is not None:
+                self.row.append(''.join(self.cell).strip()); self.cell=None
+            if tag == 'tr' and self.row is not None:
+                self.rows.append(self.row); self.row=None
+            if tag == 'div': self.in_extra=False
+    t=Table(); t.feed(raw); t.close()
+    if ['Series ID','VIXCLS'] not in t.rows or ['DATE','VALUE'] not in t.rows:
+        raise ValueError('fred table: VIXCLS metadata/header missing')
+    ranges=[x[1] for x in t.rows if len(x)==2 and x[0]=='Date Range']
+    if len(ranges)!=1 or not re.fullmatch(r'\d{4}-\d{2}-\d{2} to \d{4}-\d{2}-\d{2}',ranges[0]):
+        raise ValueError('fred table: declared range missing')
+    rows=[x for x in t.rows if x and re.fullmatch(r'\d{4}-\d{2}-\d{2}',x[0])]
+    for line in ''.join(t.extra).splitlines():
+        line=line.strip()
+        if not line: continue
+        match=re.fullmatch(r'#(\d{4}-\d{2}-\d{2})\|\s*([0-9.]+)',line)
+        if not match: raise ValueError('fred table: malformed extra row')
+        rows.append(list(match.groups()))
+    if not rows or rows[-1][0] != ranges[0].split(' to ')[1]:
+        raise ValueError('fred table: truncated observations')
+    buf=io.StringIO(); writer=csv.writer(buf); writer.writerow(['DATE','VIXCLS']); writer.writerows(rows)
+    parsed=parse_vix(buf.getvalue(),now)
+    start=(now-timedelta(days=LOOKBACK_DAYS)).date().isoformat()
+    result={d:v for d,v in parsed.items() if d>=start}
+    if not result: raise ValueError('fred table: no recent closed observations')
+    return result
 
 
 def _btc_row(o, h, l, c):
@@ -108,13 +152,18 @@ def build(fetch, previous=None, now=None):
             for k in v:
                 days[d]['src'][k.split('_')[0]] = src
 
-    try:
-        url = FRED.format(start=start.isoformat(), end=(now - timedelta(days=1)).date().isoformat())
-        rows = parse_vix(fetch(url), now)
-        merge(rows, 'fred')
-        doc['sources']['vix'] = {'status': 'ok', 'url': url, 'days': len(rows), 'latest_observation_date': max(rows)}
-    except Exception as e:
-        doc['sources']['vix'] = {'status': 'unavailable', 'error': type(e).__name__ + ': ' + str(e)[:160]}
+    vix_errors = []
+    for url, parser in ((FRED.format(start=start.isoformat(), end=(now-timedelta(days=1)).date().isoformat()), parse_vix), (FRED_TABLE, parse_fred_table)):
+        try:
+            rows = parser(fetch(url), now)
+            merge(rows, 'fred')
+            doc['sources']['vix'] = {'status': 'ok', 'url': url, 'days': len(rows), 'latest_observation_date': max(rows)}
+            if vix_errors: doc['sources']['vix']['fallback_errors'] = vix_errors
+            break
+        except Exception as e:
+            vix_errors.append(type(e).__name__ + ': ' + str(e)[:160])
+    else:
+        doc['sources']['vix'] = {'status': 'unavailable', 'error': ' | '.join(vix_errors)}
 
     errors = []
     for name, url, fn in (

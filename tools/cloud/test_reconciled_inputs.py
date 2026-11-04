@@ -35,4 +35,19 @@ class Guards(unittest.TestCase):
   self.assertEqual(d['score_adjustment'],0)
   w.build(fetch,now)
   self.assertTrue(any(u.startswith('https://ccmc.gsfc.nasa.gov/DONKI-API/get/') for u in seen))
+ def test_fred_official_table(self):
+  now=datetime(2026,11,4,tzinfo=timezone.utc)
+  html='<table><tr><th>Series ID</th><td>VIXCLS</td></tr><tr><th>Date Range</th><td>2026-10-30 to 2026-11-02</td></tr><tr><th>DATE</th><th>VALUE</th></tr><tr><th>2026-10-30</th><td>19.42</td></tr></table><div id="extra-rows">#2026-11-02|21.15</div>'
+  self.assertEqual(m.parse_fred_table(html,now)['2026-11-02']['vix_close'],21.15)
+  for bad in (html.replace('VIXCLS','OTHER'),html.split('<div')[0],html.replace('21.15','nan'),html.replace('#2026-11-02|21.15','#2026-10-30|20\n#2026-11-02|21.15')):
+   with self.assertRaises(ValueError):m.parse_fred_table(bad,now)
+  def fetch(url):
+   if url==m.FRED_TABLE:return html
+   raise TimeoutError('fixture CSV timeout')
+  d=m.build(fetch,None,now)
+  self.assertEqual(d['sources']['vix']['status'],'ok')
+  self.assertEqual(d['sources']['vix']['url'],m.FRED_TABLE)
+  self.assertTrue(d['sources']['vix']['fallback_errors'])
+  self.assertEqual(d['days']['2026-11-02']['src']['vix'],'fred')
+  self.assertEqual(d['score_adjustment'],0)
 if __name__=='__main__':unittest.main()
