@@ -9,7 +9,7 @@ never a guessed value. Nothing here enters the score; owner rule: a weight may b
 after a check on >=100 days.
 """
 from datetime import datetime, timedelta, timezone
-import csv, io, json, math, re
+import csv, io, json, math, re, subprocess
 from html.parser import HTMLParser
 
 FRED = 'https://fred.stlouisfed.org/graph/fredgraph.csv?id=VIXCLS&cosd={start}&coed={end}'
@@ -18,6 +18,19 @@ COINBASE = 'https://api.exchange.coinbase.com/products/BTC-USD/candles?granulari
 KRAKEN = 'https://api.kraken.com/0/public/OHLC?pair=XBTUSD&interval=1440&since={since}'
 KEEP_DAYS = 1200
 LOOKBACK_DAYS = 120
+
+
+def fetch_http(url):
+    # Curl was verified against the official FRED endpoints on the CI runner.
+    # Keep transport limits explicit; never use user curlrc/proxy override files.
+    result = subprocess.run(['curl', '--disable', '--fail', '--silent', '--show-error', '--location',
+                             '--connect-timeout', '10', '--max-time', '35', '--max-filesize', '5000000', url],
+                            stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=40)
+    if result.returncode:
+        raise OSError('curl exit ' + str(result.returncode) + ': ' + result.stderr.decode('utf-8', errors='replace')[:160])
+    if len(result.stdout) > 5_000_000:
+        raise ValueError('Oversized source')
+    return result.stdout.decode('utf-8-sig')
 
 
 def _iso(t):
@@ -214,21 +227,13 @@ def check(doc):
 
 if __name__ == '__main__':
     import argparse, pathlib
-    from urllib.request import Request, urlopen
-
-    def fetch(url):
-        with urlopen(Request(url, headers={'User-Agent': 'SkyRhythm-cloud-source/1'}), timeout=35) as r:
-            raw = r.read(5_000_001)
-        if len(raw) > 5_000_000:
-            raise ValueError('Oversized source')
-        return raw.decode('utf-8')
     ap = argparse.ArgumentParser(); ap.add_argument('--site', type=pathlib.Path, required=True); a = ap.parse_args()
     out = a.site.resolve() / 'consumer_cloud/market_proxy.json'
     try:
         previous = json.loads(out.read_text('utf-8')) if out.exists() else None
     except (OSError, ValueError):
         previous = None
-    doc = build(fetch, previous); check(doc)
+    doc = build(fetch_http, previous); check(doc)
     try:
         out.with_suffix('.json.pending').write_text(json.dumps(doc, ensure_ascii=False, separators=(',', ':'), allow_nan=False), 'utf-8')
         out.with_suffix('.json.pending').replace(out)

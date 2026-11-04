@@ -50,4 +50,18 @@ class Guards(unittest.TestCase):
   self.assertTrue(d['sources']['vix']['fallback_errors'])
   self.assertEqual(d['days']['2026-11-02']['src']['vix'],'fred')
   self.assertEqual(d['score_adjustment'],0)
+ def test_market_transport_limits(self):
+  from unittest.mock import patch
+  from types import SimpleNamespace
+  with patch('market_proxy.subprocess.run',return_value=SimpleNamespace(returncode=0,stdout=b'DATE,VIXCLS\n',stderr=b'')) as run:
+   self.assertEqual(m.fetch_http('https://fred.stlouisfed.org/example'),'DATE,VIXCLS\n')
+   args=run.call_args.args[0]
+   self.assertEqual(args[1],'--disable');self.assertIn('--fail',args);self.assertIn('--max-filesize',args)
+   self.assertEqual(run.call_args.kwargs['timeout'],40)
+ def test_market_transport_rejects_error_and_oversize(self):
+  from unittest.mock import patch
+  from types import SimpleNamespace
+  for result,error in [(SimpleNamespace(returncode=22,stdout=b'not csv',stderr=b'HTTP 403'),OSError),(SimpleNamespace(returncode=0,stdout=b'x'*5000001,stderr=b''),ValueError)]:
+   with patch('market_proxy.subprocess.run',return_value=result):
+    with self.assertRaises(error):m.fetch_http('https://fred.stlouisfed.org/example')
 if __name__=='__main__':unittest.main()
