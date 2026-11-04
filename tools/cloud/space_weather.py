@@ -11,7 +11,7 @@ import json, re
 FLARES = 'https://services.swpc.noaa.gov/json/goes/primary/xray-flares-7-day.json'
 PLASMA = 'https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json'
 MAG = 'https://services.swpc.noaa.gov/json/rtsw/rtsw_mag_1m.json'
-ENLIL = 'https://kauai.ccmc.gsfc.nasa.gov/DONKI/WS/get/WSAEnlilSimulations?startDate={start}&endDate={end}'
+ENLIL = 'https://ccmc.gsfc.nasa.gov/DONKI-API/get/WSAEnlilSimulations?startDate={start}&endDate={end}'
 CLASS = re.compile(r'^([ABCMX])(\d+(?:\.\d+)?)$')
 ORDER = {'A': 1e-8, 'B': 1e-7, 'C': 1e-6, 'M': 1e-5, 'X': 1e-4}
 
@@ -131,7 +131,7 @@ def parse_enlil(raw, now):
         if not isinstance(sim, dict):
             raise ValueError('enlil: object rows expected')
         t = sim.get('estimatedShockArrivalTime')
-        glancing = None
+        glancing = sim.get('isEarthGB') if isinstance(sim.get('isEarthGB'), bool) else None
         if not t:
             for hit in sim.get('impactList') or []:
                 if isinstance(hit, dict) and str(hit.get('location', '')).lower() == 'earth' and hit.get('arrivalTime'):

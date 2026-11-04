@@ -11,7 +11,7 @@ after a check on >=100 days.
 from datetime import datetime, timedelta, timezone
 import csv, io, json, math
 
-FRED = 'https://fred.stlouisfed.org/graph/fredgraph.csv?id=VIXCLS&cosd={start}'
+FRED = 'https://fred.stlouisfed.org/graph/fredgraph.csv?id=VIXCLS&cosd={start}&coed={end}'
 COINBASE = 'https://api.exchange.coinbase.com/products/BTC-USD/candles?granularity=86400&start={start}&end={end}'
 KRAKEN = 'https://api.kraken.com/0/public/OHLC?pair=XBTUSD&interval=1440&since={since}'
 KEEP_DAYS = 1200
@@ -109,10 +109,10 @@ def build(fetch, previous=None, now=None):
                 days[d]['src'][k.split('_')[0]] = src
 
     try:
-        url = FRED.format(start=start.isoformat())
+        url = FRED.format(start=start.isoformat(), end=(now - timedelta(days=1)).date().isoformat())
         rows = parse_vix(fetch(url), now)
         merge(rows, 'fred')
-        doc['sources']['vix'] = {'status': 'ok', 'url': url, 'days': len(rows)}
+        doc['sources']['vix'] = {'status': 'ok', 'url': url, 'days': len(rows), 'latest_observation_date': max(rows)}
     except Exception as e:
         doc['sources']['vix'] = {'status': 'unavailable', 'error': type(e).__name__ + ': ' + str(e)[:160]}
 

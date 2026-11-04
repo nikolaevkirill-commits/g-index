@@ -14,7 +14,7 @@ class SpaceWeather(unittest.TestCase):
     def fetcher(self,over=None):
         data={sw.FLARES:FLARES,sw.PLASMA:PLASMA,sw.MAG:MAG};over=over or {}
         def f(u):
-            if u.startswith('https://kauai'):return over.get('enlil',ENLIL)
+            if u.startswith('https://ccmc.gsfc.nasa.gov/DONKI-API/get/'):return over.get('enlil',ENLIL)
             return over.get(u,data[u])
         return f
     def test_valid(self):
