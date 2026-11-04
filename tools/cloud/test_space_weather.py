@@ -33,4 +33,15 @@ class SpaceWeather(unittest.TestCase):
     def test_future_and_old_flares_ignored(self):
         f=json.dumps([{'max_time':'2026-11-05T00:00:00Z','max_class':'X9.0'},{'max_time':'2026-10-01T00:00:00Z','max_class':'X2.0'}])
         d=sw.build(self.fetcher({sw.FLARES:f}),NOW);self.assertEqual(d['flares']['count_7d'],0);self.assertIsNone(d['flares']['strongest'])
+    def test_nearby_models_preserved_exact_duplicates_removed(self):
+        a={'simulationID':'one','estimatedShockArrivalTime':'2026-11-03T14:00Z','modelCompletionTime':'2026-11-02T10:00Z','isEarthGB':True}
+        b={**a,'simulationID':'two','estimatedShockArrivalTime':'2026-11-03T16:00Z'}
+        c={**a,'simulationID':'three'}
+        result=sw.parse_enlil(json.dumps([a,a,b,c]),NOW)['earth_arrivals']
+        self.assertEqual(len(result),3)
+        self.assertEqual({r['model_id'] for r in result},{'one','two','three'})
+        self.assertTrue(all(r['glancing'] is True for r in result))
+    def test_unknown_glancing_is_not_true(self):
+        result=sw.parse_enlil(json.dumps([{'impactList':[{'location':'Earth','arrivalTime':'2026-11-03T14:00Z','isGlancingBlow':'false'}]}]),NOW)
+        self.assertIsNone(result['earth_arrivals'][0]['glancing'])
 if __name__=='__main__':unittest.main(verbosity=1)

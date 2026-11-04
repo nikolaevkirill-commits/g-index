@@ -135,17 +135,19 @@ def parse_enlil(raw, now):
         if not t:
             for hit in sim.get('impactList') or []:
                 if isinstance(hit, dict) and str(hit.get('location', '')).lower() == 'earth' and hit.get('arrivalTime'):
-                    t, glancing = hit['arrivalTime'], bool(hit.get('isGlancingBlow'))
+                    t = hit['arrivalTime']
+                    glancing = hit.get('isGlancingBlow') if isinstance(hit.get('isGlancingBlow'), bool) else None
                     break
         if not t:
             continue
         at = _time(t)
         if now - timedelta(days=1) <= at <= now + timedelta(days=7):
-            arrivals.append({'arrival_utc': _iso(at), 'glancing': glancing, 'model_run_utc': sim.get('modelCompletionTime')})
+            arrivals.append({'arrival_utc': _iso(at), 'glancing': glancing, 'model_run_utc': sim.get('modelCompletionTime'), 'model_id': sim.get('simulationID')})
     arrivals.sort(key=lambda x: x['arrival_utc'])
     dedup = []
     for a in arrivals:
-        if not dedup or abs((_time(a['arrival_utc']) - _time(dedup[-1]['arrival_utc'])).total_seconds()) > 6 * 3600:
+        # Nearby estimates may describe different runs or CMEs; proximity is not identity.
+        if a not in dedup:
             dedup.append(a)
     return {'earth_arrivals': dedup}
 

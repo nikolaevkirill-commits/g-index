@@ -5,6 +5,14 @@
 const L=()=>{const l=window.NRLocale?.language||'uk';return ['uk','en','es','fr'].includes(l)?l:'en'};
 const I=['uk','en','es','fr'];
 const T={
+ sw_model:["Розрахунок моделі", "Model run", "Cálculo del modelo", "Calcul du modèle"],
+ sw_elapsed:["Оціночний час минув; фактичне прибуття не підтверджено цими даними.", "Estimated time has passed; actual arrival is not confirmed by these data.", "La hora estimada ya pasó; estos datos no confirman la llegada real.", "L’heure estimée est passée ; ces données ne confirment pas l’arrivée réelle."],
+ sw_kyiv:["Усі години — Київ.", "All times are Kyiv time.", "Todas las horas son de Kyiv.", "Toutes les heures sont celles de Kyiv."],
+ sw_why:["Що можна передбачити?", "What can be forecast?", "¿Qué se puede prever?", "Que peut-on prévoir ?"],
+ sw_limits:["≈ — модельна оцінка прибуття CME, а не спостережений удар. Рівень бурі залежить, зокрема, від швидкості вітру та тривалості південного напрямку магнітного поля Bz. Один вимір Bz не підтверджує бурю. Відсутність прибуттів у моделях не виключає інших причин бурі.", "≈ marks a modeled CME arrival, not an observed impact. Storm level depends in part on wind speed and how long the magnetic field Bz stays southward. One Bz sample does not confirm a storm. No modeled arrivals does not rule out other storm drivers.", "≈ indica una llegada CME modelada, no un impacto observado. El nivel de tormenta depende, entre otros factores, de la velocidad del viento y del tiempo que Bz permanece hacia el sur. Una muestra de Bz no confirma una tormenta. La ausencia de llegadas modeladas no excluye otras causas.", "≈ indique une arrivée CME modélisée, et non un impact observé. Le niveau de tempête dépend notamment de la vitesse du vent et de la durée de l’orientation sud de Bz. Une mesure de Bz ne confirme pas une tempête. L’absence d’arrivées modélisées n’exclut pas d’autres causes."],
+ sw_horizon:["27-денний орієнтир NOAA показує очікуваний фон. Це не точний розклад бур: ближчі прогнози й вимірювання уточнюють ситуацію.", "The NOAA 27-day outlook describes expected conditions, not an exact storm schedule. Near-term forecasts and observations refine the picture.", "La perspectiva NOAA de 27 días describe las condiciones esperadas, no un horario exacto de tormentas. Los pronósticos próximos y las observaciones precisan la situación.", "La tendance NOAA à 27 jours décrit les conditions attendues, pas un calendrier exact des tempêtes. Les prévisions à court terme et les observations précisent la situation."],
+ sw_alternatives:["Окремі оцінки моделей; не довірчий інтервал.", "Separate model estimates; not a confidence interval.", "Estimaciones de modelos separadas; no un intervalo de confianza.", "Estimations de modèles distinctes ; pas un intervalle de confiance."],
+ sw_forecast:["Прогноз Kp", "Forecast Kp", "Kp previsto", "Kp prévu"],
  title:['Небо · 27 днів','Sky · 27 days','Cielo · 27 días','Ciel · 27 jours'],
  tradition:['Традиційні трактування: вплив на події не підтверджено.','Traditional interpretations: effects on events are unverified.','Interpretaciones tradicionales: efectos en los sucesos no verificados.','Interprétations traditionnelles : effets sur les événements non vérifiés.'],
  sub:['Розрахунок положень планет (сидерично, Лахірі) і Kp NOAA. Оновлюється автоматично. На бал дня не впливає.','Calculated planetary positions (sidereal, Lahiri) and NOAA Kp. Updates automatically. Does not change the day score.','Posiciones planetarias calculadas (sideral, Lahiri) y Kp de NOAA. Se actualiza automáticamente. No cambia la puntuación del día.','Positions planétaires calculées (sidéral, Lahiri) et Kp de la NOAA. Mise à jour automatique. Ne modifie pas le score du jour.'],
@@ -21,20 +29,20 @@ const T={
  until:['до','until','hasta','jusqu’au'],
  from:['з','from','desde','depuis'],
  exact:['точно','exact','exacto','exact'],
- storm:['Геомагнітна буря за прогнозом','Forecast geomagnetic storm','Tormenta geomagnética prevista','Tempête géomagnétique prévue'],
+ storm:["Можливий рівень бурі за прогнозом", "Possible forecast storm level", "Nivel posible de tormenta previsto", "Niveau possible de tempête prévu"],
  wheel:['Коло знаків з положеннями планет на','Zodiac wheel with planetary positions on','Rueda zodiacal con posiciones planetarias el','Roue zodiacale avec les positions planétaires le'],
  retro:['ретро','retro','retro','rétro'],
  intensity:['сила','strength','intensidad','intensité'],
- sw:['Космопогода зараз','Space weather now','Clima espacial ahora','Météo spatiale maintenant'],
+ sw:["Космопогода: спостереження й прогнози", "Space weather: observations and forecasts", "Clima espacial: observaciones y pronósticos", "Météo spatiale : observations et prévisions"],
  sw_flare:['Найсильніший спалах за 7 днів','Strongest flare in 7 days','Llamarada más fuerte en 7 días','Éruption la plus forte en 7 jours'],
  sw_noflare:['спалахів класу C і вище немає','no flares of class C or above','sin llamaradas de clase C o superior','aucune éruption de classe C ou plus'],
- sw_wind:['Сонячний вітер','Solar wind','Viento solar','Vent solaire'],
- sw_cme:['Викид маси (CME) до Землі','CME arrival at Earth','Llegada de CME a la Tierra','Arrivée d’une CME sur Terre'],
+ sw_wind:["Сонячний вітер · вимірювання NOAA", "Solar wind · NOAA observations", "Viento solar · observaciones NOAA", "Vent solaire · observations NOAA"],
+ sw_cme:["CME · модель прибуття NASA", "CME · NASA arrival model", "CME · modelo de llegada NASA", "CME · modèle d’arrivée NASA"],
  sw_nocme:['у завантажених розрахунках NASA прибуттів не знайдено','no arrivals found in the retrieved NASA simulations','sin llegadas en las simulaciones recuperadas de NASA','aucune arrivée dans les simulations NASA récupérées'],
  sw_glancing:['дотичний удар','glancing blow','impacto rasante','impact rasant'],
  sw_none:['немає даних','no data','sin datos','pas de données'],
  sw_stale:['дані застарілі','data out of date','datos desactualizados','données périmées'],
- sw_note:['Причини й ранні ознаки змін Kp. На бал не впливає — Kp уже в ньому.','Causes and early signs of Kp changes. Does not change the score — Kp is already in it.','Causas y señales tempranas de cambios de Kp. No cambia la puntuación: el Kp ya está incluido.','Causes et signes précoces des variations du Kp. Ne modifie pas le score — le Kp y est déjà.'],
+ sw_note:["Час і сила бурі можуть змінитися. Цей контекст не додає балів: Kp уже враховано у формулі.", "Storm timing and strength may change. This context adds no score: Kp is already in the formula.", "El momento y la intensidad de la tormenta pueden cambiar. Este contexto no suma puntos: Kp ya está en la fórmula.", "L’heure et la force de la tempête peuvent changer. Ce contexte n’ajoute aucun point : Kp est déjà dans la formule."],
  now:['Небо дня · 12:00 Київ','Daily sky · 12:00 Kyiv','Cielo del día · 12:00 Kyiv','Ciel du jour · 12:00 Kyiv'],
  open:['Відкрити небо · 27 днів','Open sky · 27 days','Abrir cielo · 27 días','Ouvrir le ciel · 27 jours'],
  quiet:['Сильних подій сьогодні немає — фон рівний.','No strong events today — a steady background.','Hoy no hay eventos fuertes: fondo estable.','Aucun événement fort aujourd’hui : fond stable.'],
@@ -126,24 +134,35 @@ function mountToday(){
  renderToday();return true;
 }
 function spaceWeather(){
- const fmt=iso=>{try{return NRPresentation.dateFormatter(window.NRLocale?.locale||'uk-UA',{timeZone:'Europe/Kyiv',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}).format(new Date(iso))}catch{return iso}};
- const w=weather&&Date.now()-Date.parse(weather.generated_at)>=-300000&&Date.now()-Date.parse(weather.generated_at)<7200000?weather:null,f=w?.flares,wi=w?.wind,c=w?.cme;
- const flare=!f?t('sw_none'):f.strongest?`${f.strongest.class} · ${fmt(f.strongest.peak_utc)}`:t('sw_noflare');
- const wind=!wi?t('sw_none'):[wi.plasma?wi.plasma.speed_km_s+(L()==='uk'?' км/с':' km/s'):null,wi.mag?'Bz '+wi.mag.bz_nt+' nT':null].filter(Boolean).join(' · ')+(wi.stale?' · '+t('sw_stale'):'');
- const cme=!c?t('sw_none'):c.earth_arrivals.length?c.earth_arrivals.map(a=>fmt(a.arrival_utc)+(a.glancing?' ('+t('sw_glancing')+')':'')).join(' · '):t('sw_nocme');
- return `<div class="nr-sky-sw"><h4>${esc(t('sw'))}</h4><dl><div><dt>${esc(t('sw_flare'))}</dt><dd>${esc(flare)}</dd></div><div><dt>${esc(t('sw_wind'))}</dt><dd>${esc(wind)}</dd></div><div><dt>${esc(t('sw_cme'))}</dt><dd>${esc(cme)}</dd></div></dl><small>${esc(t('sw_note'))}</small></div>`;
+ const stamp=iso=>typeof iso==='string'&&iso.trim()&&Number.isFinite(Date.parse(iso))?Date.parse(iso):null;
+ const fmt=iso=>{const ms=stamp(iso);if(ms===null)return t('sw_none');try{return NRPresentation.dateFormatter(window.NRLocale?.locale||'uk-UA',{timeZone:'Europe/Kyiv',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}).format(new Date(ms))}catch{return t('sw_none')}};
+ const generated=stamp(weather?.generated_at),age=generated===null?null:Date.now()-generated;
+ const w=age!==null&&age>=-300000&&age<7200000?weather:null,f=w?.flares,wi=w?.wind,c=w?.cme;
+ const unavailable=weather&&!w?t('sw_stale'):t('sw_none');
+ const flare=!f?unavailable:f.strongest?`${f.strongest.class} · ${fmt(f.strongest.peak_utc)}`:t('sw_noflare');
+ const sample=(value,unit,iso)=>{const ms=stamp(iso);return Number.isFinite(value)&&ms!==null&&ms<=Date.now()+600000?esc(value+unit)+'<small>'+esc(fmt(iso))+(Date.now()-ms>10800000?' · '+esc(t('sw_stale')):'')+'</small>':esc(t('sw_none'))};
+ const wind=!wi?esc(unavailable):sample(wi.plasma?.speed_km_s,L()==='uk'?' км/с':' km/s',wi.plasma?.time_utc)+'<br>Bz '+sample(wi.mag?.bz_nt,' nT',wi.mag?.time_utc)+(wi.stale?'<small>'+esc(t('sw_stale'))+'</small>':'');
+ const arrivals=Array.isArray(c?.earth_arrivals)?c.earth_arrivals:null;
+ const cme=!arrivals?esc(unavailable):arrivals.length?arrivals.map(a=>{
+  const ms=stamp(a?.arrival_utc);
+  return '<div class="nr-sky-arrival">'+(ms===null?esc(t('sw_none')):'≈ '+esc(fmt(a.arrival_utc)))+(a?.glancing===true?' ('+esc(t('sw_glancing'))+')':'')+
+   '<small>'+esc(t('sw_model')+': '+fmt(a?.model_run_utc))+'</small>'+(ms!==null&&ms<Date.now()?'<small class="nr-sky-estimate-past">'+esc(t('sw_elapsed'))+'</small>':'')+'</div>';
+ }).join('')+(arrivals.length>1?'<small>'+esc(t('sw_alternatives'))+'</small>':''):esc(t('sw_nocme'));
+ return `<div class="nr-sky-sw"><h4>${esc(t('sw'))}</h4><dl><div><dt>${esc(t('sw_flare'))}</dt><dd>${esc(flare)}</dd></div><div><dt>${esc(t('sw_wind'))}</dt><dd>${wind}</dd></div><div><dt>${esc(t('sw_cme'))}</dt><dd>${cme}</dd></div></dl><small>${esc(t('sw_kyiv'))}</small><p class="nr-sky-uncertainty">${esc(t('sw_note'))}</p><details class="nr-sky-weather-help"><summary>${esc(t('sw_why'))}</summary><p>${esc(t('sw_limits'))}</p><p>${esc(t('sw_horizon'))}</p><a href="https://www.spaceweather.gov/phenomena/geomagnetic-storms" target="_blank" rel="noopener noreferrer">NOAA</a> · <a href="https://ccmc.gsfc.nasa.gov/tools/DONKI/" target="_blank" rel="noopener noreferrer">NASA DONKI</a></details></div>`;
 }
 function render(){
  renderToday();
  if(!host)return;
+ const weatherHelpOpen=host.querySelector('.nr-sky-weather-help')?.open===true;
  host.querySelector('.nr-sky-title').textContent=t('title');host.querySelector('.nr-sky-sub').textContent=t('sub');
  if(state!=='ready'){host.querySelector('.nr-sky-body').innerHTML=`<p class="nr-sky-none" role="status">${esc(state==='loading'?'…':t('missing'))}</p>`;return}
  const today=kyivToday();if(!sel||dayIndex(sel)<0)sel=dayIndex(today)>=0?today:sky.daily[0].date;
  const stale=skyStale();
  const before=new Map([...host.querySelectorAll('.nr-sky-planet[data-g]')].map(e=>[e.dataset.g,[Number(e.dataset.lon),Number(e.dataset.rad)]]));
  host.querySelector('.nr-sky-body').innerHTML=(stale?`<p class="nr-sky-stale" role="status">${esc(t('stale'))}</p>`:'')+
-  `<div class="nr-sky-stage">${wheel(sel)}<div class="nr-sky-side"><p class="nr-sky-date">${esc(fmtDay(sel))}${(()=>{const k=kpFor(sel);return k?` · Kp ${new Intl.NumberFormat(window.NRLocale?.locale||'uk-UA',{maximumFractionDigits:2}).format(k.kp)}${k.src==='NOAA_27day_outlook'?' · '+esc(t('kp27')):''}${k.kp>=5?' · '+esc(t('storm'))+' G'+Math.min(5,Math.floor(k.kp)-4):''}`:''})()}</p><div class="nr-sky-list">${list(sel)}</div>${spaceWeather()}</div></div>`+
+  `<div class="nr-sky-stage">${wheel(sel)}<div class="nr-sky-side"><p class="nr-sky-date">${esc(fmtDay(sel))}${(()=>{const k=kpFor(sel);return k?` · ${esc(t('sw_forecast'))} ${new Intl.NumberFormat(window.NRLocale?.locale||'uk-UA',{maximumFractionDigits:2}).format(k.kp)}${k.src==='NOAA_27day_outlook'?' · '+esc(t('kp27')):''}${k.kp>=5?' · '+esc(t('storm'))+' G'+Math.min(5,Math.floor(k.kp)-4):''}`:''})()}</p><div class="nr-sky-list">${list(sel)}</div>${spaceWeather()}</div></div>`+
   strip(sel)+`<div class="nr-sky-controls"><button type="button" class="nr-sky-play" ${motionOn()?'':'disabled'} aria-pressed="${!!timer}">${esc(timer?t('stop'):t('play'))}</button><label><input type="range" aria-label="${esc(t('day'))}" min="0" max="${sky.daily.length-1}" value="${dayIndex(sel)}" aria-valuetext="${esc(fmtDay(sel))}"></label></div>`;
+ if(weatherHelpOpen)host.querySelector('.nr-sky-weather-help')?.setAttribute('open','');
  if(before.size&&motionOn())arcMove(before);
  host.querySelector('.nr-sky-title').textContent=t('title');host.querySelector('.nr-sky-sub').textContent=t('sub');
 }
