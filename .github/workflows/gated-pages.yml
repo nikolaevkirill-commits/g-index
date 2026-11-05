@@ -65,6 +65,8 @@ jobs:
       - run: npm install --no-save --package-lock=false playwright@1.62.1
       - run: npx playwright install --with-deps chromium
       - if: steps.scope.outputs.mode != 'data'
+        run: node tools/public/test_browser_readiness.cjs
+      - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_day_cautions.cjs
       - run: node tools/public/verify_noaa_missing.cjs
       - if: steps.scope.outputs.mode != 'data'
@@ -114,7 +116,7 @@ jobs:
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_day_match.cjs
       - if: steps.scope.outputs.mode != 'data'
-        run: node tools/public/verify_natal_sky.cjs
+        run: node tools/public/verify_natal_sky.cjs --slow-render
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_notification_navigation.cjs
       - if: steps.scope.outputs.mode != 'data'

@@ -21,10 +21,21 @@ try{for(const entry of ['classic.html','index.html'])for(const lang of ['uk','en
  await p.goto('http://127.0.0.1:'+srv.address().port+'/'+entry+'?channel=play#today',{waitUntil:'load',timeout:120000});
  await p.waitForFunction(()=>document.querySelector('#nrRoute-today [data-day-you] .nr-dv-you li'),null,{timeout:60000});
  const dates=await p.evaluate(()=>[...document.querySelector('#nrRoute-today [data-overview="today"] select').options].map(o=>o.value));
+ if(process.argv.includes('--slow-render'))await p.evaluate(()=>{const raf=requestAnimationFrame,caf=cancelAnimationFrame,jobs=new Map();let seq=0;window.requestAnimationFrame=cb=>{const id=--seq,job={};jobs.set(id,job);job.timer=setTimeout(()=>{job.frame=raf(t=>{jobs.delete(id);cb(t)})},650);return id};window.cancelAnimationFrame=id=>{const job=jobs.get(id);if(!job)return caf(id);clearTimeout(job.timer);if(job.frame!==undefined)caf(job.frame);jobs.delete(id)}});
  for(const day of sky.daily.slice(0,10)){if(!dates.includes(day.date))continue;
-  const r=await p.evaluate(async ds=>{const sel=document.querySelector('#nrRoute-today [data-overview="today"] select');const score0=document.querySelector('#nrRoute-today .nr-o-score').textContent;sel.value=ds;sel.dispatchEvent(new Event('change',{bubbles:true}));await new Promise(r=>setTimeout(r,350));
-   const y=document.querySelector('#nrRoute-today [data-day-you] .nr-dv-you');return {text:y?.innerText||'',score:document.querySelector('#nrRoute-today .nr-o-score').textContent,ref:String(fp469ConsumerForDate({ds}).consumer.score)}},day.date);
   const g=day.grahas,grp=((g.Moon.nakshatra-NATAL_NAK)%27+27)%27%9+1;
+  await p.evaluate(ds=>{const sel=document.querySelector('#nrRoute-today [data-overview="today"] select');sel.value=ds;sel.dispatchEvent(new Event('change',{bubbles:true}));},day.date);
+  // Consumer refresh and rAF can rebuild this card after 350 ms. Read one atomic snapshot
+  // only when the selected day's expected Tara is present; incorrect/missing output still fails.
+  let handle;
+  try{handle=await p.waitForFunction(({ds,tara})=>{
+   const sel=document.querySelector('#nrRoute-today [data-overview="today"] select');
+   const y=document.querySelector('#nrRoute-today [data-day-you] .nr-dv-you'),text=y?.innerText||'';
+   if(sel?.value!==ds||!y?.querySelector('li')||!text.includes(tara))return false;
+   return {text,score:document.querySelector('#nrRoute-today .nr-o-score').textContent,ref:String(fp469ConsumerForDate({ds}).consumer.score)};
+  },{ds:day.date,tara:TARA[grp-1]},{timeout:10000,polling:50});}
+  catch(e){throw Error(entry+' '+lang+' '+day.date+' natal readiness: '+await p.locator('#nrRoute-today [data-day-you]').textContent().catch(()=>'(card missing)')+'; '+e.message);}
+  const r=await handle.jsonValue();await handle.dispose();
   assert.ok(r.text.includes(TARA[grp-1]),day.date+' Tara '+TARA[grp-1]+' in '+r.text);
   const chandra=((g.Moon.sign-NATAL_SIGN)%12+12)%12===7;assert.equal(/Чандраштама|Chandrashtama/.test(r.text),chandra,day.date+' Chandrashtama');
   if(g.Saturn.sign===11)assert.match(r.text,lang==='uk'?/Саде Саті, фаза 3 з 3/:/Sade Sati, phase 3 of 3/);
