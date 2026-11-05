@@ -8,6 +8,7 @@
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <script src="./civil_time_v1.js"></script>
+<script src="./sw_update_coordination_v1.js"></script>
 <script src="./runtime_diagnostics_v1.js"></script>
 <script src="./lifecycle_refresh_v1.js"></script>
 <script src="./presentation_runtime_v1.js"></script>
@@ -4498,6 +4499,7 @@ function pwaDismiss() {
 
 function pwaReload() {
   if (_swReg && _swReg.waiting) {
+    window.__nrUpdateRequested = true;
     const bar = document.getElementById('pwaUpdateBar');
     if (bar) {
       const label = bar.querySelector('span');
@@ -4505,20 +4507,22 @@ function pwaReload() {
       if (label) label.textContent = '🔄 Застосовую оновлення SkyRhythm…';
       if (button) button.disabled = true;
     }
-    // B7 (audit FP549): Chromium stops the idle old worker right after SKIP_WAITING; a subresource fetch
-    // arriving during that stop restarts it and the activation is lost until the worker idles again
-    // (~30 s; 5 min with DevTools attached). Hold this page's own fetches briefly to avoid the race.
-    if (typeof window.fetch === 'function' && !window.__nrFetchGate) {
+    // Reproduced activation stalls with background fetches in another tab. Drain participating
+    // tabs before requesting activation; retain the bounded local fallback for older entry pages.
+    if (!window.NRUpdateCoordinator && typeof window.fetch === 'function' && !window.__nrFetchGate) {
       const nativeFetch = window.fetch.bind(window);
       window.fetch = (...args) => { const wait = (window.__nrHoldFetchUntil || 0) - Date.now(); return wait > 0 ? new Promise(resolve => setTimeout(resolve, wait)).then(() => nativeFetch(...args)) : nativeFetch(...args); };
       window.__nrFetchGate = true;
     }
     window.__nrHoldFetchUntil = Date.now() + 1500;
-    _swReg.waiting.postMessage({ type: 'SKIP_WAITING' });
+    const requestActivation = ready => { if (ready !== false && _swReg?.waiting) _swReg.waiting.postMessage({ type: 'SKIP_WAITING' }); };
+    if (window.NRUpdateCoordinator) window.NRUpdateCoordinator.prepare().then(requestActivation, () => { window.__nrUpdateRequested = false; });
+    else requestActivation(true);
     // Reload only on controllerchange. A timer cannot prove activation and may
     // otherwise reopen the old release or discard an unsaved form.
     setTimeout(() => {
       if (!_swReg?.waiting) return;
+      window.__nrUpdateRequested = false;
       const bar = document.getElementById('pwaUpdateBar');
       const label = bar?.querySelector('span'), button = bar?.querySelector('button');
       if (label) label.textContent = ({uk:'Оновлення ще не активовано. Можна спробувати ще раз.',en:'The update is not active yet. You can try again.',es:'La actualización aún no está activa. Puedes reintentarlo.',fr:'La mise à jour n’est pas encore active. Vous pouvez réessayer.'})[window.NRLocale?.language || 'uk'];
@@ -5764,6 +5768,12 @@ if ('serviceWorker' in navigator) {
         navigator.serviceWorker.addEventListener('controllerchange', () => {
           if (!_swControlledAtBoot) {
             if(window._DEBUG) console.log('[SW] first controller installed — current network page stays open');
+            return;
+          }
+          // A different tab may activate the worker. Keep this tab and its unsaved inputs intact.
+          if (!window.__nrUpdateRequested) {
+            const bar = document.getElementById('pwaUpdateBar');
+            if (bar) { bar.style.display = 'flex'; const button = bar.querySelector('button'); if (button) button.disabled = false; }
             return;
           }
           if (window._swReloading) {

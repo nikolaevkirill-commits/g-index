@@ -2,8 +2,8 @@
 const fs=require('fs'),path=require('path'),http=require('http'),os=require('os'),assert=require('assert/strict');
 const {chromium}=require('playwright');
 const root=path.resolve(__dirname,'../..');
-// The timeout must never masquerade as a successful activation. Test both entry files.
-for(const entry of ['classic.html','index.html'])for(const language of ['uk','en','es','fr']){
+// The timeout must never masquerade as a successful activation. Test all three entry files.
+for(const entry of ['classic.html','index.html','design-b17.html'])for(const language of ['uk','en','es','fr']){
   const html=fs.readFileSync(path.join(root,entry),'utf8').replace(/\r\n/g,'\n'),start=html.indexOf('function pwaReload() {');assert(start>=0);
   const source=html.slice(start,html.indexOf('\n}',start)+2);let reloads=0,messages=0,timer;
   const label={textContent:''},button={disabled:false};
@@ -12,14 +12,14 @@ for(const entry of ['classic.html','index.html'])for(const language of ['uk','en
   context.pwaReload();assert.equal(messages,1);assert.equal(button.disabled,true);timer();assert.equal(reloads,0,'waiting activation must not force reload');assert.equal(button.disabled,false);assert(label.textContent.length>20);
   context.pwaReload();context._swReg.waiting=null;timer();assert.equal(reloads,0,'controllerchange owns successful reload');context.pwaReload();assert.equal(reloads,1,'explicit manual reload with no waiting worker remains available');
 }
-console.log('PASS update timeout guard: both entries, four languages; no premature reload');
+console.log('PASS update timeout guard: three entries, four languages; no premature reload');
 const out=fs.mkdtempSync(path.join(os.tmpdir(),'skyrhythm-css-upgrade-'));
 let phase='old';
 const restart=process.argv.find(a=>a.startsWith('--restart='))?.split('=')[1];
 const trigger=process.argv.includes('--button')?'button':'message';
 // FP545 (T1): the release gate must exercise the production worker byte-for-byte. Worker
 // instrumentation (--trace) and the CDP ServiceWorker domain (--cdp, implied by --restart)
-// are diagnostic-only: in FP543 they changed the outcome of the same runtime (3/8 → 12/12).
+// are diagnostic-only: in FP543 they changed the outcome of the same runtime (3/8 в†’ 12/12).
 const trace=process.argv.includes('--trace');
 // Server-side evidence does not modify either worker or enable CDP ServiceWorker.
 const serverLog=process.argv.includes('--server-log'),requests=[];
@@ -117,6 +117,10 @@ let base;
     assert.equal(await journal.locator('#note').inputValue(),'unsaved upgrade fixture');
     await journal.screenshot({path:path.join(out,'offline_waiting_journal.png'),fullPage:true});
     await ctx.setOffline(false);
+    await main.evaluate(()=>{window.__updateCanary='unsaved main tab'});
+    let otherNavigations=0,journalNavigations=0;
+    main.on('framenavigated',frame=>{if(frame===main.mainFrame())otherNavigations++});
+    journal.on('framenavigated',frame=>{if(frame===journal.mainFrame())journalNavigations++});
     if(restart){
       const versions=new Map();for(const event of lifecycle)for(const version of event.versions)versions.set(version.versionId,version);
       const target=[...versions.values()].find(v=>v.status===(restart==='old'?'activated':'installed'));
@@ -124,7 +128,15 @@ let base;
       await cdp.send('ServiceWorker.stopWorker',{versionId:target.versionId});
     }
     try {
-      await Promise.all([page.waitForNavigation({waitUntil:'load'}),trigger==='button'?page.locator('#pwaUpdateBar button').click():page.evaluate(async()=>{const r=await navigator.serviceWorker.getRegistration();r.waiting.postMessage({type:'SKIP_WAITING'});})]);
+      if(trigger==='button')await Promise.all([page.waitForNavigation({waitUntil:'load'}),page.locator('#pwaUpdateBar button').click()]);
+      else{
+        // A worker activation from elsewhere must not itself reload this page.
+        let navigations=0;const observe=frame=>{if(frame===page.mainFrame())navigations++};page.on('framenavigated',observe);
+        await page.evaluate(async()=>{if(!await NRUpdateCoordinator.prepare())throw Error('Update preparation busy');const r=await navigator.serviceWorker.getRegistration();r.waiting.postMessage({type:'SKIP_WAITING'});});
+        await page.waitForFunction(async()=>!(await navigator.serviceWorker.getRegistration()).waiting);
+        assert.equal(navigations,0,'worker activation without a local user request must not reload');page.off('framenavigated',observe);
+        await Promise.all([page.waitForNavigation({waitUntil:'load'}),page.locator('#pwaUpdateBar button').click()]);
+      }
     } catch(error) {
       const diagnostics={trigger,restart,lifecycle,registration:await bounded(page.evaluate(async()=>{const r=await navigator.serviceWorker.getRegistration();return {waiting:r.waiting?.state,active:r.active?.state,reloading:window._swReloading}})).catch(e=>({error:String(e)})),workers:[]};
       for(const worker of ctx.serviceWorkers())try{diagnostics.workers.push(await bounded(worker.evaluate(()=>({version:typeof CACHE_VERSION==='undefined'?null:CACHE_VERSION,pending:[...(self.__upgradePending||[])],events:self.__upgradeEvents,now:Date.now()}))))}catch(e){diagnostics.workers.push({error:String(e)})}
@@ -135,10 +147,15 @@ let base;
     await page.waitForFunction(async()=>(await caches.keys()).filter(k=>k.startsWith('gindex-shell-')).length===1,null,{timeout:15000});
     const activatedVersion=await activeVersion(page);
     assert.equal(activatedVersion,expectedVersion,'new worker must actually activate');
+    assert.equal(otherNavigations,0,'updating one tab must preserve the other app tab');
+    assert.equal(journalNavigations,0,'updating one tab must preserve the journal');
+    assert.equal(await main.evaluate(()=>window.__updateCanary),'unsaved main tab');
+    assert.equal(await journal.locator('#note').inputValue(),'unsaved upgrade fixture');
+    const preservedTabs={otherNavigations,journalNavigations,unsaved_state_preserved:true};
     await ctx.setOffline(true);await checkPage(page,'classic.html?channel=play#today',INDEX_STYLES);await checkPage(journal,'day_summary.html',1);await checkPage(main,'index.html?channel=play#today',18);
     assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
     await page.screenshot({path:path.join(out,'offline_updated_today.png'),fullPage:true});
-    fs.writeFileSync(path.join(out,'RESULT.json'),JSON.stringify({trigger,trace,cdp:cdpEnabled,restart:restart||null,oldVersion,activatedVersion,old_css_probe_reproduced:true,new_html_ignores_old_css:true,waiting_worker_offline:true,updated_worker_offline:true,inline_blocks:27,source_css_exact:true},null,2));
+    fs.writeFileSync(path.join(out,'RESULT.json'),JSON.stringify({...preservedTabs,trigger,trace,cdp:cdpEnabled,restart:restart||null,oldVersion,activatedVersion,old_css_probe_reproduced:true,new_html_ignores_old_css:true,waiting_worker_offline:true,updated_worker_offline:true,inline_blocks:27,source_css_exact:true},null,2));
     console.log('PASS CSS upgrade ('+trigger+(trace?', trace':'')+(cdpEnabled?', cdp':'')+'): old cached styles reproduced; exact new styles online, waiting/offline and activated/offline. Evidence: '+out);
   }finally{fs.writeFileSync(path.join(out,'LIFECYCLE.json'),JSON.stringify(lifecycle,null,2));if(serverLog)fs.writeFileSync(path.join(out,'SERVER_REQUESTS.json'),JSON.stringify({worker_modified:trace,cdp:cdpEnabled,requests},null,2));await browser.close();server.close();}
 })().catch(e=>{console.error(e);server.close();process.exitCode=1});

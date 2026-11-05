@@ -83,11 +83,17 @@ jobs:
       # B7 (audit FP549): the release gate exercises the production update path (#pwaUpdateBar button ->
       # pwaReload). The direct postMessage trigger bypasses pwaReload and stays a diagnostic in b7-diagnostic.yml.
       - if: steps.scope.outputs.mode != 'data'
+        run: node tools/public/test_sw_update_coordination.cjs
+      - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_css_upgrade.cjs --button
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_b7_activation_race.cjs 20 classic.html
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_b7_activation_race.cjs 20 index.html
+      - if: steps.scope.outputs.mode != 'data'
+        run: node tools/public/verify_b7_activation_race.cjs 5 classic.html --multi
+      - if: steps.scope.outputs.mode != 'data'
+        run: node tools/public/verify_b7_activation_race.cjs 5 index.html --multi
       - uses: actions/upload-artifact@v4
         if: always() && steps.scope.outputs.mode != 'data'
         with:
