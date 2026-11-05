@@ -2582,3 +2582,103 @@ NRLocale.register([["ЖУРНАЛ ПРОГНОЗІВ · ЛИШЕ ЦЕЙ ПРИС
 
 // Navigation (owner review 01.11.2026): the Panchanga tab becomes «Небо» (sky scene + panchanga).
 NRLocale.register([['Небо','Sky','Cielo','Ciel'],['Небо: панчанга й планети','Sky: panchanga and planets','Cielo: panchanga y planetas','Ciel : panchanga et planètes']]);
+
+// Offline and service-worker state banners belong to the selected interface language.
+NRLocale.register([
+  [
+    "⏳ ЗАВАНТАЖЕННЯ",
+    "⏳ LOADING",
+    "⏳ CARGANDO",
+    "⏳ CHARGEMENT"
+  ],
+  [
+    "Очікуємо дані. Рішення не показується як нейтральне до завершення перевірки.",
+    "Waiting for data. The result is not shown as neutral until validation finishes.",
+    "Esperando datos. El resultado no se muestra como neutro hasta finalizar la validación.",
+    "En attente des données. Le résultat ne sera pas affiché comme neutre avant la fin de la validation."
+  ],
+  [
+    "◷ ЗАСТАРІЛІ ДАНІ",
+    "◷ OUTDATED DATA",
+    "◷ DATOS DESACTUALIZADOS",
+    "◷ DONNÉES PÉRIMÉES"
+  ],
+  [
+    "Частина джерел повернула кешовані дані. Доступність поточного рішення визначається його джерелами та строком чинності.",
+    "Some sources returned cached data. Availability of the current result depends on its sources and validity period.",
+    "Algunas fuentes devolvieron datos en caché. La disponibilidad del resultado actual depende de sus fuentes y su período de validez.",
+    "Certaines sources ont renvoyé des données en cache. La disponibilité du résultat actuel dépend de ses sources et de sa période de validité."
+  ],
+  [
+    "⇣ ОФЛАЙН · ДАНІ З КЕШУ",
+    "⇣ OFFLINE · CACHED DATA",
+    "⇣ SIN CONEXIÓN · DATOS EN CACHÉ",
+    "⇣ HORS LIGNE · DONNÉES EN CACHE"
+  ],
+  [
+    "Канонічне рішення збережене на пристрої. Live G недоступний до відновлення мережі.",
+    "The canonical result is saved on this device. Live G is unavailable until the connection returns.",
+    "El resultado canónico está guardado en este dispositivo. Live G no está disponible hasta que vuelva la conexión.",
+    "Le résultat canonique est enregistré sur cet appareil. Live G reste indisponible jusqu’au rétablissement de la connexion."
+  ],
+  [
+    "— НЕМАЄ ДАНИХ",
+    "— NO DATA",
+    "— SIN DATOS",
+    "— AUCUNE DONNÉE"
+  ],
+  [
+    "Відсутність даних не трактується як нейтральний стан або нульове рішення.",
+    "Missing data does not mean a neutral state or a zero result.",
+    "La ausencia de datos no significa un estado neutro ni un resultado de cero.",
+    "L’absence de données ne signifie ni un état neutre ni un résultat nul."
+  ],
+  [
+    "! ПОМИЛКА ОНОВЛЕННЯ",
+    "! UPDATE ERROR",
+    "! ERROR DE ACTUALIZACIÓN",
+    "! ERREUR DE MISE À JOUR"
+  ],
+  [
+    "Оновлення не завершено. Застосунок не підмінює помилку синтетичним рішенням.",
+    "The update did not finish. The app does not replace the error with a synthetic result.",
+    "La actualización no terminó. La aplicación no sustituye el error por un resultado sintético.",
+    "La mise à jour n’est pas terminée. L’application ne remplace pas l’erreur par un résultat synthétique."
+  ],
+  [
+    "F РЕЗЕРВНИЙ КОНТЕКСТ",
+    "F FALLBACK CONTEXT",
+    "F CONTEXTO DE RESPALDO",
+    "F CONTEXTE DE SECOURS"
+  ],
+  [
+    "Резервний Kp позначено окремо; він не є перевіреним експертним рішенням.",
+    "Fallback Kp is labelled separately; it is not a verified expert decision.",
+    "El Kp de respaldo se indica por separado; no es una decisión experta verificada.",
+    "Le Kp de secours est signalé séparément ; ce n’est pas une décision experte vérifiée."
+  ],
+  [
+    "Дані з кешу",
+    "Cached data",
+    "Datos en caché",
+    "Données en cache"
+  ],
+  [
+    "хв тому",
+    "min ago",
+    "min atrás",
+    "min auparavant"
+  ],
+  [
+    "вік невідомий",
+    "age unknown",
+    "antigüedad desconocida",
+    "ancienneté inconnue"
+  ],
+  [
+    "перевірте з'єднання",
+    "check your connection",
+    "comprueba tu conexión",
+    "vérifiez votre connexion"
+  ]
+]);

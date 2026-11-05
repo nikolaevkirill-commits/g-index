@@ -96,7 +96,7 @@ let base;
   const browser=await chromium.launch({headless:true});
   const lifecycle=[];
   try{
-    const ctx=await browser.newContext({viewport:{width:390,height:844},serviceWorkers:'allow'}),page=await ctx.newPage();
+    const ctx=await browser.newContext({viewport:{width:390,height:844},serviceWorkers:'allow',locale:'en-GB'}),page=await ctx.newPage();
     let cdp=null;
     if(cdpEnabled){cdp=await ctx.newCDPSession(page);cdp.on('ServiceWorker.workerVersionUpdated',e=>lifecycle.push({at:Date.now(),...e}));await cdp.send('ServiceWorker.enable');}
     await page.goto(base+'classic.html?channel=play#today');
@@ -153,6 +153,7 @@ let base;
     assert.equal(await journal.locator('#note').inputValue(),'unsaved upgrade fixture');
     const preservedTabs={otherNavigations,journalNavigations,unsaved_state_preserved:true};
     await ctx.setOffline(true);await checkPage(page,'classic.html?channel=play#today',INDEX_STYLES);await checkPage(journal,'day_summary.html',1);await checkPage(main,'index.html?channel=play#today',18);
+    await page.waitForFunction(()=>[...document.querySelectorAll('#nrRuntimeState,#swStaleBar')].every(el=>!/[А-Яа-яІіЇїЄєҐґ]/u.test(el.textContent)));
     assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
     await page.screenshot({path:path.join(out,'offline_updated_today.png'),fullPage:true});
     fs.writeFileSync(path.join(out,'RESULT.json'),JSON.stringify({...preservedTabs,trigger,trace,cdp:cdpEnabled,restart:restart||null,oldVersion,activatedVersion,old_css_probe_reproduced:true,new_html_ignores_old_css:true,waiting_worker_offline:true,updated_worker_offline:true,inline_blocks:27,source_css_exact:true},null,2));

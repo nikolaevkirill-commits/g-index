@@ -41,5 +41,21 @@ console.log('PASS locale: whitespace-specific keys, language and registration in
   assert.equal(protectedText,'Прогноз'.repeat(5000));assert.equal(visible,'Calendar');
   console.log('PASS excluded legacy subtree: '+visited+' yielded nodes, 5000 protected texts unchanged');
   console.log('PASS locale DOM: content + accessible labels, protected notes, language roundtrip, no walks for 100 visual mutations');
+  for(const prefix of ['','preview-v4/','preview-b17/']){
+   const probe=await browser.newPage({locale:'en-GB'});
+   await probe.setContent('<!doctype html><main></main><textarea id="draft">Моя нотатка</textarea>');
+   for(const file of ['locale_core_v1.js',prefix+'locale_overview_v1.js',prefix+'locale_bridge_v1.js'])await probe.addScriptTag({path:path.join(__dirname,'../..',file)});
+   await probe.evaluate(()=>{const node=document.createElement('div');node.id='nrRuntimeState';node.innerHTML='<strong>◷ ЗАСТАРІЛІ ДАНІ</strong><span>Частина джерел повернула кешовані дані. Доступність поточного рішення визначається його джерелами та строком чинності.</span>';document.body.append(node);const bar=document.createElement('div');bar.id='swStaleBar';bar.textContent="⚠ Дані з кешу (2 хв тому) — перевірте з'єднання";document.body.append(bar)});
+   for(const [lang,header] of [['en','OUTDATED DATA'],['es','DATOS DESACTUALIZADOS'],['fr','DONNÉES PÉRIMÉES'],['uk','ЗАСТАРІЛІ ДАНІ'],['en','OUTDATED DATA']]){
+    await probe.evaluate(lang=>NRLocale.set(lang),lang);
+    await probe.waitForFunction(header=>document.querySelector('#nrRuntimeState strong').textContent.includes(header),header);
+    if(lang!=='uk')assert(!/[А-Яа-яІіЇїЄєҐґ]/u.test(await probe.locator('#nrRuntimeState').innerText()+await probe.locator('#swStaleBar').innerText()));
+    assert.equal(await probe.locator('#draft').inputValue(),'Моя нотатка');
+   }
+   await probe.evaluate(()=>document.querySelector('#swStaleBar').textContent="⚠ Дані з кешу (вік невідомий) — перевірте з'єднання");
+   await probe.waitForFunction(()=>document.querySelector('#swStaleBar').textContent.includes('age unknown'));
+   await probe.close();
+  }
+  console.log('PASS offline state localization: 3 entry dictionaries/bridges, 4 languages, dynamic age, language roundtrip, user draft untouched');
  }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1});
