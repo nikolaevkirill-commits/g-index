@@ -16,6 +16,8 @@ try{for(const entry of ['index.html','classic.html']){
  // otherwise garbage-collect the transient promise before evaluate receives its result.
  await p.evaluate(()=>{window.__expertTestLoadDone=false;window.__expertTestLoadError=null;window.__expertTestLoad=fp469LoadConsumerForecast().then(()=>{window.__expertTestLoadDone=true},e=>{window.__expertTestLoadError=String(e);window.__expertTestLoadDone=true});});
  await p.waitForFunction(()=>window.__expertTestLoadDone===true);assert.equal(await p.evaluate(()=>window.__expertTestLoadError),null);
+ // The shell mounts 180 ms after DOMContentLoaded; module/feed promises do not prove DOM readiness.
+ await p.waitForFunction(()=>['today','forecast','calendar'].every(r=>document.querySelector('[data-overview="'+r+'"] select')?.options.length));
  for(const route of ['today','forecast','calendar']){
   await p.evaluate(r=>fp434Go(r,false),route);
   for(const ds of Object.keys(feed.days)){
