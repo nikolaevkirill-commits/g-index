@@ -333,6 +333,18 @@ function renderForecastTable(root,dates,ds){
  const table=document.createElement('table');table.innerHTML='<caption>'+esc(t[3])+' · NOAA</caption><thead><tr>'+t.slice(0,4).map(x=>'<th scope="col">'+esc(x)+'</th>').join('')+'</tr></thead><tbody>'+week.map(d=>{const r=resolve(d),own=rows[d]?.channels?.source_formula,kp=r.available?own?.kp_input?.kp:null;return '<tr'+(d===ds?' aria-current="date"':'')+'><th scope="row">'+esc(dateLabel(d))+'</th><td class="nr-b-score-value" data-op-key="'+esc(NRConsumerAuthority.present(r).opKey||'none')+'">'+esc(fmt(r.score))+'</td><td>'+esc(Number.isFinite(kp)?String(Number(kp.toFixed(2))):'—')+'</td><td>'+esc(!r.available?t[6]:r.kp_source==='NOAA_27day_outlook'?t[5]:t[4])+'</td></tr>'}).join('')+'</tbody>';
  const prevDate=new Date(ds+'T12:00:00Z');prevDate.setUTCDate(prevDate.getUTCDate()-1);const prev=resolve(prevDate.toISOString().slice(0,10)),current=resolve(ds),h=document.createElement('h2'),change=document.createElement('p');h.textContent=t[7];change.textContent=current.available&&prev.available?t[9]+fmt(current.score-prev.score):t[8];box.replaceChildren(table,h,change);
 }
+function renderScopedOpinion(root,ds){
+ const opinion=window.NRConsumerAuthority?.scopedFor?.(ds,'new_starts');
+ let note=root.querySelector('[data-scoped-opinion]');
+ if(!note&&!opinion)return;
+ if(!note){note=document.createElement('p');note.dataset.scopedOpinion='';note.dataset.placement='after-hero';note.className='nr-o-scoped-opinion';note.setAttribute('role','note');note.setAttribute('translate','no');note.style.cssText='grid-column:1/-1;font-size:14px;line-height:1.5;margin:12px 0';root.querySelector('.nr-o-hero').append(note);}
+ note.hidden=!opinion;note.textContent='';delete note.dataset.sourceSha;delete note.dataset.sourcePage;
+ if(!opinion)return;
+ const words=({uk:['Експертна оцінка лише для нових справ: ','несприятливо','нейтрально','сприятливо','. Це не загальна оцінка дня.','Експертні оцінки нових справ суперечать одна одній. Загальний бал дня визначається окремо.','Остання збережена оцінка. '],en:['Expert opinion for new starts only: ','unfavourable','neutral','favourable','. This does not rate the whole day.','Expert opinions for new starts conflict. The overall day score is determined separately.','Last saved opinion. '],es:['Opinión experta solo para nuevos proyectos: ','desfavorable','neutral','favorable','. No es una valoración de todo el día.','Las opiniones expertas para nuevos proyectos son contradictorias. La puntuación general del día se determina por separado.','Última opinión guardada. '],fr:['Avis expert uniquement pour les nouveaux projets : ','défavorable','neutre','favorable','. Ce n’est pas une évaluation de toute la journée.','Les avis experts pour les nouveaux projets se contredisent. Le score global du jour est déterminé séparément.','Dernier avis enregistré. ']})[window.NRLocale?.language||'uk'];
+ const w=words||[];
+ note.textContent=(window.NRConsumerAuthority.registryStatus().status==='stale'?w[6]:'')+(opinion.state==='expert_conflict'?w[5]:w[0]+w[opinion.score<0?1:opinion.score===0?2:3]+w[4]);
+ if(opinion.source_sha256){note.dataset.sourceSha=opinion.source_sha256;note.dataset.sourcePage=opinion.source_page;}
+}
 function render(root){
  weatherPanel(root);
  const route=root.dataset.overview,dates=dayRange(),ds=dates.includes(selected[route])?selected[route]:today();selected[route]=ds;
@@ -340,6 +352,7 @@ function render(root){
  renderFeedback(root,ds);
  const select=root.querySelector('select');if([...select.options].map(x=>x.value).join()!==dates.join())select.replaceChildren(...dates.map(d=>new Option(dateLabel(d),d)));select.value=ds;
  window.NRCalendarContext?.render(root.querySelector('.nr-o-context'),window.nrRetroEphemeris?.(),ds,'general',Date.now(),rows[ds]?.channels?.source_formula?.expert_model||window.__nrExpertModels?.[ds]);
+ renderScopedOpinion(root,ds);
  const r=resolve(ds),source=rows[ds]?.channels?.source_formula,own=r.lastScore===null?{}:source||{};{/* Audit FP549: the boundary note names the authority actually shown (expert decision or source formula). */const note=root.querySelector('[data-authority-boundary]');if(note){const text=r.authority==='expert_pdf'?'Експертна оцінка має пріоритет над формулою джерела. Прогностичну точність щодо подій ще не підтверджено.':'Оцінка за формулою джерела. Прогностичну точність щодо подій ще не підтверджено.';if(note.dataset.authoritySource!==text){note.dataset.authoritySource=text;note.textContent=text;}}}
  const status=root.querySelector('.nr-o-state'),transport=window.__nrConsumerLoadState;
  const transportLabels={uk:{loading:'Завантажуємо прогноз…',error:'Не вдалося отримати прогноз. Спробуйте пізніше.',retrying:'Не вдалося з першої спроби — повторюємо автоматично…'},en:{loading:'Loading forecast…',error:'Unable to load the forecast. Please try again later.',retrying:'First attempt failed — retrying automatically…'},es:{loading:'Cargando el pronóstico…',error:'No se pudo cargar el pronóstico. Inténtalo más tarde.',retrying:'Falló el primer intento — reintentando automáticamente…'},fr:{loading:'Chargement des prévisions…',error:'Impossible de charger les prévisions. Réessayez plus tard.',retrying:'Échec du premier essai — nouvelle tentative automatique…'}};

@@ -102,7 +102,7 @@ function compactForecast(root){
 function compactRouteHero(root){
  const hero=root.querySelector('.nr-o-hero'),details=root.querySelector('[data-forecast-details]');if(!hero||!details)return;
  hero.classList.add('sr-compact-header');const heading=hero.querySelector('.nr-o-heading');if(heading)root.prepend(heading);
- for(const child of [...hero.children])if(!child.matches('label,.nr-o-verdict'))details.append(child);
+ for(const child of [...hero.children])if(!child.matches('label,.nr-o-verdict,[data-scoped-opinion]'))details.append(child);
  const source=hero.querySelector('[data-score-source]');if(source)details.append(source);
  let chip=hero.querySelector('[data-compact-source]');if(!chip){chip=make('span','sr-compact-source');chip.dataset.compactSource='';hero.append(chip);}
  const result=resolvedFor(root.querySelector('select')?.value).consumer;

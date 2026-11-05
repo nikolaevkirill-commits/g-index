@@ -32,8 +32,15 @@ function resolve(row, date, now=Date.now(), offline=false){
 // Gate = the same verification rule the runtime uses for overrides (verified flag,
 // source PDF, sha256 hash format or a recorded manual PDF reading).
 let expertDecisions=Object.freeze({}),expertConflicts=Object.freeze({});
+let scopedDecisions=Object.freeze({}),scopedConflicts=Object.freeze({});
 let registryState=Object.freeze({status:'not_loaded',rejected_rows:0,conflict_dates:[],accepted:0});
 function expertFor(date){return expertDecisions[date]||null;}
+// Scoped opinions never enter resolveFinal, notifications or the general-day score.
+function scopedFor(date,scope='new_starts'){
+ if(scope!=='new_starts')return null;
+ if(scopedConflicts[date])return Object.freeze({scope,state:'expert_conflict',score:null});
+ const entry=scopedDecisions[date];return entry?Object.freeze({...entry,scope,state:'expert'}):null;
+}
 function registryStatus(){return registryState;}
 // FP542 (B1/R1): rows are validated one by one. A malformed row is skipped and counted; it can
 // no longer discard every other verified decision. Two different decisions for one date are a
@@ -45,7 +52,7 @@ function parseDecisions(doc){
  if(!doc||doc.schema!=='consumer-final-decisions-v1'||!Array.isArray(doc.decisions))throw new Error('Invalid decisions');
  const entries={},conflicts={};let rejected=0;
  for(const o of doc.decisions){
-  let ok=false;try{ok=validDecision(o)}catch(_e){ok=false}
+  let ok=false;try{ok=validDecision(o)&&(o.scope===undefined||o.scope==='general_day')}catch(_e){ok=false}
   if(!ok){rejected++;continue;}
   const entry=Object.freeze({score:o.score,source_pdf:o.decision_id,source_page:o.source_page,source_sha256:o.source_sha256,decision_id:o.decision_id});
   if(conflicts[o.date])continue;
@@ -56,15 +63,28 @@ function parseDecisions(doc){
  }
  return {entries:Object.freeze(entries),conflicts:Object.freeze(conflicts),rejected};
 }
+function parseScopedDecisions(doc){
+ if(doc.scoped_decisions===undefined)return {entries:Object.freeze({}),conflicts:Object.freeze({}),rejected:0};
+ if(!Array.isArray(doc.scoped_decisions))return {entries:Object.freeze({}),conflicts:Object.freeze({}),rejected:1};
+ // Validate with the same date/provenance rules, then reuse duplicate/conflict handling.
+ let rejected=0;const decisions=[];
+ for(const o of doc.scoped_decisions){
+  if(!validDecision(o)||o.scope!=='new_starts'){rejected++;continue;}
+  decisions.push({...o,scope:'general_day'});
+ }
+ const parsed=parseDecisions({schema:doc.schema,decisions});
+ return {...parsed,rejected:parsed.rejected+rejected};
+}
 async function loadExpertDecisions(base){
  // v126: keep the validated snapshot while a refresh is in flight; swap only after validation.
  const url=new URL('consumer_cloud/final_score_decisions.json',base),controller=new AbortController();const timer=setTimeout(()=>controller.abort(),3500);
  try{const response=await fetch(url,{cache:'no-store',redirect:'error',credentials:'same-origin',signal:controller.signal});
  if(!response.ok||response.redirected||response.type==='opaque'||(response.url&&response.url!==url.href))throw new Error('Decision delivery rejected');
- const parsed=parseDecisions(await response.json());
- expertDecisions=parsed.entries;expertConflicts=parsed.conflicts;
+ const doc=await response.json(),parsed=parseDecisions(doc),scoped=parseScopedDecisions(doc);
+ expertDecisions=parsed.entries;expertConflicts=parsed.conflicts;scopedDecisions=scoped.entries;scopedConflicts=scoped.conflicts;
  const conflictDates=Object.keys(parsed.conflicts).sort();
- registryState=Object.freeze({status:parsed.rejected||conflictDates.length?'partial':'ok',rejected_rows:parsed.rejected,conflict_dates:Object.freeze(conflictDates),accepted:Object.keys(parsed.entries).length});
+ const scopedConflictDates=Object.keys(scoped.conflicts).sort(),rejected=parsed.rejected+scoped.rejected;
+ registryState=Object.freeze({status:rejected||conflictDates.length||scopedConflictDates.length?'partial':'ok',rejected_rows:rejected,conflict_dates:Object.freeze(conflictDates),accepted:Object.keys(parsed.entries).length,scoped_accepted:Object.keys(scoped.entries).length,scoped_conflict_dates:Object.freeze(scopedConflictDates)});
  if(registryState.status!=='ok')host.NRDiagnostics?.record('consumer.decisions.partial','recoverable');
  }catch(e){/* Preserve the last fully validated snapshot on transient delivery failure. Never merge partial documents. */
   const had=registryState.status==='ok'||registryState.status==='partial'||registryState.status==='stale';
@@ -157,6 +177,6 @@ async function loadFeeds(scope){
   await loadExpertDecisions(base);throw e}
  finally{clearTimeout(timer)}
 }
-const api=Object.freeze({resolve,resolveFinal,expertFor,registryStatus,present,selectFeeds,loadFeeds,CLOCK_SKEW_MS});host.NRConsumerAuthority=api;
+const api=Object.freeze({resolve,resolveFinal,expertFor,scopedFor,registryStatus,present,selectFeeds,loadFeeds,CLOCK_SKEW_MS});host.NRConsumerAuthority=api;
 if(typeof module!=='undefined')module.exports=api;
 })(typeof window!=='undefined'?window:globalThis);
