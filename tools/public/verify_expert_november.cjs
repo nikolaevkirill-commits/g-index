@@ -11,7 +11,11 @@ try{for(const entry of ['index.html','classic.html']){
  const c=await b.newContext({serviceWorkers:'block',locale:'uk-UA',timezoneId:'Europe/Kyiv',viewport:{width:390,height:844},reducedMotion:'reduce'});
  await c.route(/^https?:\/\/(?!127\.0\.0\.1)/,r=>r.abort());await c.route('**/consumer_cloud/forecast.json*',r=>r.fulfill({json:feed}));await c.route('**/consumer_cloud/final_score_decisions.json*',r=>r.fulfill({json:actual}));
  const p=await c.newPage(),errors=[];p.on('pageerror',e=>errors.push(e.message));await p.clock.setFixedTime(new Date('2026-11-09T10:00:00Z'));
- await p.goto('http://127.0.0.1:'+server.address().port+'/'+entry+'?channel=play#today');await p.waitForFunction(()=>window.fp469LoadConsumerForecast&&window.NRConsumerOverview);await p.evaluate(()=>fp469LoadConsumerForecast());
+ await p.goto('http://127.0.0.1:'+server.address().port+'/'+entry+'?channel=play#today');await p.waitForFunction(()=>window.fp469LoadConsumerForecast&&window.NRConsumerOverview);
+ // Retain the load promise in the page, as verify_final_score does. Chromium/CDP can
+ // otherwise garbage-collect the transient promise before evaluate receives its result.
+ await p.evaluate(()=>{window.__expertTestLoadDone=false;window.__expertTestLoadError=null;window.__expertTestLoad=fp469LoadConsumerForecast().then(()=>{window.__expertTestLoadDone=true},e=>{window.__expertTestLoadError=String(e);window.__expertTestLoadDone=true});});
+ await p.waitForFunction(()=>window.__expertTestLoadDone===true);assert.equal(await p.evaluate(()=>window.__expertTestLoadError),null);
  for(const route of ['today','forecast','calendar']){
   await p.evaluate(r=>fp434Go(r,false),route);
   for(const ds of Object.keys(feed.days)){
