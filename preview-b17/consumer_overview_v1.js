@@ -441,7 +441,7 @@ function solar(x,now=Date.now()){
  for(let i=-2;i<=2;i++){const pair=sunRiseSetUTC_Meeus(new Date(mid+i*86400000),x.lat,x.lon);for(const k of ['sunrise','sunset'])if(Number.isFinite(pair[k]?.getTime())&&dateIn(pair[k],x.zone)===date)result[k]=pair[k].toISOString();}
  return (!result.sunrise||!result.sunset)?completeSolarEvents(result,x):result;
 }
-function persist(x,how){x.auto=how==='device';location=x;source=how;try{localStorage.setItem(key,JSON.stringify(x));message='Місце збережено лише на пристрої.'}catch{message='Місце діє лише в цьому сеансі.'}render();const f=document.querySelector('#nrLocalContext form');if(f){f.elements.lat.value=x.lat;f.elements.lon.value=x.lon;f.elements.zone.value=x.zone}}
+function persist(x,how){x.auto=how==='device';location=x;source=how;try{localStorage.setItem(key,JSON.stringify(x));message='Місце збережено лише на пристрої.'}catch{message='Місце діє лише в цьому сеансі.'}render();document.dispatchEvent(new Event('nr:location'));const f=document.querySelector('#nrLocalContext form');if(f){f.elements.lat.value=x.lat;f.elements.lon.value=x.lon;f.elements.zone.value=x.zone}}
 function locate(){if(busy)return;busy=true;message='Визначаємо місце…';render();if(!navigator.geolocation){busy=false;message='Місце недоступне. Введіть координати вручну.';render();return}navigator.geolocation.getCurrentPosition(p=>{busy=false;const x={lat:p.coords.latitude,lon:p.coords.longitude,zone:Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC',saved_at:new Date().toISOString()};if(valid(x))persist(x,'device');else{message='Некоректні координати або часовий пояс.';render()}},()=>{busy=false;message='Місце недоступне. Введіть координати вручну.';render()},{timeout:10000,maximumAge:0});}
 function render(){
  const host=document.getElementById('nrRoute-panch');if(!host)return;
@@ -451,7 +451,7 @@ function render(){
   const form=box.querySelector('form');form.style.cssText='display:grid;gap:12px;margin:14px 0';box.querySelectorAll('label').forEach(e=>e.style.cssText='display:grid;gap:6px');box.querySelectorAll('input').forEach(e=>e.style.cssText='box-sizing:border-box;width:100%;min-height:44px;padding:10px;font:inherit;color:var(--nr-copy);background:var(--nr-panel);border:1px solid var(--nr-line);border-radius:8px');box.querySelectorAll('button').forEach(e=>e.className='nr-btn secondary');form.elements.lat.value=location?.lat??'';form.elements.lon.value=location?.lon??'';form.elements.zone.value=location?.zone||Intl.DateTimeFormat().resolvedOptions().timeZone;
   box.querySelector('[data-locate]').onclick=locate;
   form.onsubmit=e=>{e.preventDefault();const x={lat:Number(form.elements.lat.value),lon:Number(form.elements.lon.value),zone:form.elements.zone.value.trim(),saved_at:new Date().toISOString()};if(!form.elements.lat.value.trim()||!form.elements.lon.value.trim()||!valid(x)){message='Некоректні координати або часовий пояс.';render();return}persist(x,'manual')};
-  box.querySelector('[data-clear]').onclick=()=>{try{localStorage.removeItem(key);location=null;message='Місце видалено.';form.reset();form.elements.zone.value=Intl.DateTimeFormat().resolvedOptions().timeZone}catch{message='Не вдалося видалити місце.'}render()};
+  box.querySelector('[data-clear]').onclick=()=>{try{localStorage.removeItem(key);location=null;message='Місце видалено.';form.reset();form.elements.zone.value=Intl.DateTimeFormat().resolvedOptions().timeZone}catch{message='Не вдалося видалити місце.'}render();document.dispatchEvent(new Event('nr:location'))};
  }
  box.querySelector('[data-scope]').before(box.querySelector('[data-limit]'));
  const put=(selector,text)=>{const e=box.querySelector(selector);if(e.textContent!==text)e.textContent=text};
@@ -463,6 +463,6 @@ function render(){
  put('[data-limit]',tr('Розрахунок для рівного горизонту; погода й рельєф можуть змінити спостережуваний час. Перевірте часовий пояс, особливо в подорожі. Цей блок не змінює бал дня.'));
  put('[data-scope]',tr('Kp, Ap, Dst — спільні геомагнітні індекси. Bz і сонячний вітер вимірюються в космосі, Sn — показник сонячної активності; координати їх не перераховують. Локальний K потребує обсерваторії і тут не підключений. Переходи панчанги показано за часом пристрою; Сонце в цьому блоці — за вказаним місцем. Бал і плани залишаються за Києвом.'));
 }
-window.NRLocalContext={render,solar,valid};window.addEventListener('nr:locale',render);document.addEventListener('visibilitychange',()=>{if(!document.hidden)render()});
+window.NRLocalContext={render,solar,valid,current:()=>location?{...location}:null};window.addEventListener('nr:locale',render);document.addEventListener('visibilitychange',()=>{if(!document.hidden)render()});
 if(location?.auto&&navigator.permissions)navigator.permissions.query({name:'geolocation'}).then(p=>{if(p.state==='granted')locate()}).catch(()=>{});
 })();
