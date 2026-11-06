@@ -54,7 +54,7 @@ const server=http.createServer((req,res)=>{
   if(!file.startsWith(root+path.sep)){res.writeHead(403).end();return;}
   try{
     let bytes=fs.readFileSync(file);
-    if(phase==='old'&&name==='sw.js')bytes=fs.readFileSync(path.join(__dirname,'fixtures/sw_fp532.js'));
+    if(phase==='old'&&name==='sw.js')bytes=process.env.CSS_UPGRADE_OLD_SW==='current'?Buffer.from(fs.readFileSync(file,'utf8').replace(/const CACHE_VERSION = '[^']+'/,"const CACHE_VERSION = 'self-upgrade-old'")):fs.readFileSync(path.join(__dirname,'fixtures/sw_fp532.js'));
     if(trace&&name==='sw.js')bytes=Buffer.concat([Buffer.from(traceWorker),bytes]);
     if(phase==='old'&&['classic.html','day_summary.html'].includes(name))bytes=Buffer.from(bytes.toString().replace(/<style data-inline-source="([^"]+)"[^>]*>[\s\S]*?<\/style>/g,'<link rel="stylesheet" href="$1">'));
     if(phase==='old'&&name.endsWith('.css'))bytes=Buffer.concat([bytes,Buffer.from('\n:root{--css-upgrade-probe:old-cache}\n')]);

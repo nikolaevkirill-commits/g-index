@@ -2,26 +2,37 @@ importScripts('./runtime_diagnostics_v1.js','./civil_time_v1.js');
 // G-Index service worker. Navigations, HTML, JS and data (.json/.jsonl/.csv) are network-first with a
 // cached fallback; other same-origin assets (CSS, images, fonts) are cache-first.
 // Bump CACHE_VERSION whenever index.html or a cached shell asset changes.
-const CACHE_VERSION = 'fp567-bounded-asset-lifetime-20261106'; // Discrete final scores; no interpolated forecast.
+const CACHE_VERSION = 'fp568-update-scoped-asset-deadline-20261106'; // Discrete final scores; no interpolated forecast.
 const CACHE_PREFIX = 'gindex-'; // G-Index cache namespace; do not remove the prefix.
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${CACHE_VERSION}`;
 const DATA_CACHE = `${CACHE_PREFIX}data-${CACHE_VERSION}`;
 const NETWORK_FIRST_TIMEOUT_MS = 2500;
 const NETWORK_BODY_TIMEOUT_MS = 15000; // FP542: upper bound for reading a response body
 // Uncached images/fonts/CSS must not keep the old worker alive indefinitely
-// while a user-requested update waits for its fetch events to finish.
+// while an update waits for its fetch events to finish. The deadline applies only
+// while an update is pending (waiting/installing worker), so a slow but healthy
+// network without an update is not cut off. In-flight fetches are armed on updatefound.
+const inflightAssets = new Set();
+function updatePending() { const r = self.registration; return !!(r && (r.waiting || r.installing)); }
+function armAssetDeadline(entry) {
+  clearTimeout(entry.timer); entry.armed = true;
+  entry.timer = setTimeout(() => entry.controller.abort(), entry.headers ? NETWORK_BODY_TIMEOUT_MS : NETWORK_FIRST_TIMEOUT_MS);
+}
+try { self.registration.addEventListener('updatefound', () => { for (const e of inflightAssets) if (!e.armed) armAssetDeadline(e); }); }
+catch (_e) { globalThis.NRDiagnostics?.record('catch.asset_deadline','recoverable'); }
 async function fetchBoundedAsset(request) {
-  const controller = new AbortController();
-  let timer = setTimeout(() => controller.abort(), NETWORK_FIRST_TIMEOUT_MS);
+  const entry = { controller: new AbortController(), headers: false, armed: false, timer: 0 };
+  inflightAssets.add(entry);
   try {
-    const response = await fetch(request, { signal: controller.signal });
-    clearTimeout(timer);
+    if (updatePending()) armAssetDeadline(entry);
+    const response = await fetch(request, { signal: entry.controller.signal });
     if (response.type === 'opaque' || response.type === 'opaqueredirect') return response;
-    timer = setTimeout(() => controller.abort(), NETWORK_BODY_TIMEOUT_MS);
+    entry.headers = true;
+    if (entry.armed || updatePending()) armAssetDeadline(entry);
     const body = await response.arrayBuffer();
     return new Response([204,205,304].includes(response.status) ? null : body,
       {status:response.status,statusText:response.statusText,headers:response.headers});
-  } finally { clearTimeout(timer); }
+  } finally { clearTimeout(entry.timer); inflightAssets.delete(entry); }
 }
 let lastRequestOrder=0;
 const newestRequest=new Map();
