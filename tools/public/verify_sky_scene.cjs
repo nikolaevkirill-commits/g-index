@@ -18,6 +18,9 @@ try{for(const [locale,rm] of [['uk-UA','no-preference'],['en-GB','no-preference'
  const p=await c.newPage();const errs=[];p.on('pageerror',e=>errs.push(e.message));await p.clock.setFixedTime(new Date(day+'T10:00:00Z'));
  await p.goto('http://127.0.0.1:'+srv.address().port+'/index.html?channel=play#panch',{waitUntil:'load',timeout:120000});
  await p.waitForFunction(()=>['ready','missing'].includes(window.NRSkyScene?.state()),null,{timeout:60000});
+ // Data readiness precedes deferred DOM mounting. CI 42181172460 reached this state
+ // before [data-sky] existed; wait for the UI, then keep all content/animation assertions.
+ await p.locator('[data-sky]').waitFor({state:'visible',timeout:60000});
  const score0=await p.evaluate(()=>document.querySelector('[data-overview="today"] .nr-o-score')?.textContent||'');
  await p.evaluate(()=>{document.querySelector('[data-sky]').scrollIntoView();document.querySelectorAll('[data-sky] details').forEach(d=>d.open=true)});await p.waitForTimeout(900);
  const r=await p.evaluate(()=>{const s=document.querySelector('[data-sky]');return {state:NRSkyScene.state(),planets:s.querySelectorAll('.nr-sky-planet').length,events:s.querySelectorAll('.nr-sky-ev').length,days:s.querySelectorAll('[data-sky-day]').length,
@@ -52,6 +55,7 @@ try{for(const [locale,rm] of [['uk-UA','no-preference'],['en-GB','no-preference'
   if(mode==='future-feed')weatherOverride.generated_at=day+'T11:00:00Z';
   await p.goto('http://127.0.0.1:'+srv.address().port+'/index.html?channel=play&weather_case='+mode+'#panch',{waitUntil:'load',timeout:120000});
   await p.waitForFunction(()=>window.NRSkyScene?.state()==='ready',null,{timeout:60000});
+  await p.locator('[data-sky] .nr-sky-sw').waitFor({state:'visible',timeout:60000});
   const card=p.locator('.nr-sky-sw'),help=card.locator('.nr-sky-weather-help');
   // Chromium may restore the details state on a same-URL navigation. Exercise the
   // actual toggle, then leave the explanation open rather than assuming it is closed.

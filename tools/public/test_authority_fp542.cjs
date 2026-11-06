@@ -38,7 +38,7 @@ const ok=(name,fn)=>{fn();n++;console.log('PASS',name)};
  decisions={schema:real.schema,decisions:[d(date,2),d(date,-1),d('2026-10-20',3),d('2026-10-20',3)]};
  sel=await api.loadFeeds(base);
  ok('conflicting decisions withhold the score',()=>{const r=api.resolveFinal(sel.days[date],date,T);assert.equal(r.state,'expert_conflict');assert.equal(r.score,null);assert.equal(r.available,false);assert.equal(r.formula.score,-2,'formula kept as a labelled component');assert.deepEqual([...api.registryStatus().conflict_dates],[date]);});
- ok('identical repeat accepted once',()=>{assert.equal(api.expertFor('2026-10-20')?.score,3);assert.equal(api.registryStatus().rejected_rows,1);});
+ ok('identical repeat accepted once',()=>{assert.equal(api.expertFor('2026-10-20')?.score,3);assert.equal(api.registryStatus().rejected_rows,0);assert.equal(api.registryStatus().duplicate_rows,1);}); // AUDIT-A2: duplicate is not a rejection
  ok('conflict text is explicit',()=>{const v=api.present(api.resolveFinal(sel.days[date],date,T));assert.equal(v.symbol,'—');assert.match(v.summary,/суперечать/);});
  // 6. Clock tolerance: boundary +-1 ms around 5 min.
  decisions={schema:real.schema,decisions:[]};sel=await api.loadFeeds(base);

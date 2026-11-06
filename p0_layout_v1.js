@@ -237,10 +237,37 @@ function appearanceControl(section){
  field.querySelector('legend').textContent=copy[0];for(const [i,input]of [...field.querySelectorAll('input')].entries()){input.checked=input.value===appearance;input.nextElementSibling.querySelector('strong').textContent=copy[1+i*2];input.nextElementSibling.querySelector('small').textContent=copy[2+i*2];}field.querySelector('[data-appearance-status]').textContent=appearanceSaved?'':copy[5];
 }
 
-const dataQuery=matchMedia('(prefers-reduced-data: reduce)'),motionQuery=matchMedia('(prefers-reduced-motion: reduce)');let motionWanted=true;
-try{motionWanted=localStorage.getItem('srSkyBackgroundMotionV1')!=='off';}catch(_){}
-function updateMotion(){document.documentElement.classList.toggle('sr-sky-motion',motionWanted&&!motionQuery.matches&&!dataQuery.matches&&!document.hidden&&!navigator.connection?.saveData);for(const b of document.querySelectorAll('[data-sky-motion]')){b.textContent=({uk:'Анімації',en:'Animations',es:'Animaciones',fr:'Animations'})[window.NRLocale?.language||'uk'];b.setAttribute('aria-pressed',String(motionWanted));b.disabled=motionQuery.matches||dataQuery.matches||!!navigator.connection?.saveData;}}
-function motionControl(details){if(details.id==='nrRoute-more'){let section=details.querySelector('[data-motion-settings]');if(!section){section=make('section','nr-card');section.dataset.motionSettings='';section.append(make('h2','',({uk:'Вигляд і рух',en:'Appearance and motion',es:'Aspecto y movimiento',fr:'Apparence et mouvement'}[window.NRLocale?.language||'uk'])));details.querySelector('#fp434MoreGrid')?.before(section);}section.querySelector('h2').textContent=({uk:'Вигляд і рух',en:'Appearance and motion',es:'Aspecto y movimiento',fr:'Apparence et mouvement'}[window.NRLocale?.language||'uk']);details=section;appearanceControl(section);}let b=details.querySelector('[data-sky-motion]');if(!b){b=make('button','');b.type='button';b.dataset.skyMotion='';b.onclick=()=>{motionWanted=!motionWanted;try{localStorage.setItem('srSkyBackgroundMotionV1',motionWanted?'on':'off');}catch(_){}updateMotion();};details.append(b);}updateMotion();}
+const dataQuery=matchMedia('(prefers-reduced-data: reduce)'),motionQuery=matchMedia('(prefers-reduced-motion: reduce)');let motionWanted=true,decorWanted=false,motionSaved=true;
+function readMotion(){try{motionWanted=localStorage.getItem('srSkyBackgroundMotionV1')!=='off';decorWanted=localStorage.getItem('srSkyDecorMotionV1')==='on';}catch(_){}}
+readMotion();
+function updateMotion(){
+ const reduced=motionQuery.matches||dataQuery.matches||!!navigator.connection?.saveData,lang=window.NRLocale?.language||'uk';
+ const motionOn=motionWanted&&!reduced&&!document.hidden;
+ document.documentElement.classList.toggle('sr-sky-motion',motionOn);
+ // Background effects do not encode data. Planet/day transitions remain governed by the master control.
+ document.documentElement.classList.toggle('sr-decor-motion',motionOn&&decorWanted);
+ for(const b of document.querySelectorAll('[data-sky-motion]')){b.textContent=({uk:'Анімації',en:'Animations',es:'Animaciones',fr:'Animations'})[lang];b.setAttribute('aria-pressed',String(motionWanted));b.disabled=reduced;}
+ for(const b of document.querySelectorAll('[data-sky-decor-motion]')){b.textContent=({uk:'Фоновий рух',en:'Background motion',es:'Movimiento del fondo',fr:'Mouvement du fond'})[lang];b.setAttribute('aria-pressed',String(decorWanted));b.disabled=reduced||!motionWanted;}
+ for(const p of document.querySelectorAll('[data-motion-note]'))p.textContent=({uk:'Фоновий рух додає мерехтіння зірок і рух тла. Положення планет та фаза Місяця залишаються видимими без анімацій.',en:'Background motion adds star twinkle and scenery movement. Planetary positions and the Moon phase stay visible with animations off.',es:'El movimiento del fondo añade destellos de estrellas y movimiento del paisaje. Las posiciones planetarias y la fase lunar siguen visibles sin animaciones.',fr:'Le mouvement du fond ajoute le scintillement des étoiles et le mouvement du décor. Les positions planétaires et la phase lunaire restent visibles sans animations.'})[lang];
+ for(const p of document.querySelectorAll('[data-motion-status]'))p.textContent=motionSaved?'':({uk:'Вибір діє лише в цьому сеансі: не вдалося зберегти.',en:'This choice applies only to this session: saving failed.',es:'La elección solo se aplica a esta sesión: no se pudo guardar.',fr:'Choix valable pour cette session uniquement : enregistrement impossible.'})[lang];
+}
+function motionControl(details){
+ if(details.id==='nrRoute-more'){
+  let section=details.querySelector('[data-motion-settings]');
+  if(!section){section=make('section','nr-card');section.dataset.motionSettings='';section.append(make('h2'));const grid=details.querySelector('#fp434MoreGrid');if(grid)grid.before(section);else details.append(section);}
+  section.querySelector('h2').textContent=({uk:'Вигляд і рух',en:'Appearance and motion',es:'Aspecto y movimiento',fr:'Apparence et mouvement'}[window.NRLocale?.language||'uk']);details=section;appearanceControl(section);
+ }
+ for(const [attr,key]of [['skyMotion','srSkyBackgroundMotionV1'],['skyDecorMotion','srSkyDecorMotionV1']]){
+  const selector=attr==='skyMotion'?'[data-sky-motion]':'[data-sky-decor-motion]';
+  if(details.querySelector(selector))continue;
+  const b=make('button');b.type='button';b.dataset[attr]='';b.style.minHeight='44px';b.style.margin='12px 8px 0 0';
+  b.onclick=()=>{if(attr==='skyMotion')motionWanted=!motionWanted;else decorWanted=!decorWanted;
+   try{localStorage.setItem(key,(attr==='skyMotion'?motionWanted:decorWanted)?'on':'off');motionSaved=true;}catch(_){motionSaved=false;}updateMotion();};details.append(b);
+ }
+ for(const attr of ['motionNote','motionStatus']){const selector=attr==='motionNote'?'[data-motion-note]':'[data-motion-status]';if(!details.querySelector(selector)){const p=make('p');p.dataset[attr]='';if(attr==='motionStatus')p.setAttribute('role','status');details.append(p);}}
+ updateMotion();
+}
+window.addEventListener('storage',e=>{if(e.key===null||['srSkyBackgroundMotionV1','srSkyDecorMotionV1'].includes(e.key)){readMotion();updateMotion();}});
 motionQuery.addEventListener('change',updateMotion);dataQuery.addEventListener('change',updateMotion);navigator.connection?.addEventListener('change',updateMotion);document.addEventListener('visibilitychange',updateMotion);
 updateMotion();
 window.SRP0Layout=Object.freeze({apply,noonKyiv,moon,dataState,signalData,currentSignal,forecastPoints,horizonText});

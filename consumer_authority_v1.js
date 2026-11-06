@@ -29,8 +29,9 @@ function resolve(row, date, now=Date.now(), offline=false){
 // priority. The final consumer score is expert_pdf when such a decision exists for
 // the date, otherwise source_formula. The formula result is kept as a separate,
 // labelled component; it is never replaced or mixed into the expert value.
-// Gate = the same verification rule the runtime uses for overrides (verified flag,
-// source PDF, sha256 hash format or a recorded manual PDF reading).
+// Gate (AUDIT-C1: actual client check) = date, integer score -3..3, 64-hex source_sha256, page>=1, decision_id;
+// No 'verified' field exists in the registry; trust rests on the controlled same-origin
+// publication. These client checks are not independent source authentication.
 let expertDecisions=Object.freeze({}),expertConflicts=Object.freeze({});
 let scopedDecisions=Object.freeze({}),scopedConflicts=Object.freeze({});
 let registryState=Object.freeze({status:'not_loaded',rejected_rows:0,conflict_dates:[],accepted:0});
@@ -50,18 +51,18 @@ function registryStatus(){return registryState;}
 function validDecision(o){return !!o&&typeof o==='object'&&typeof o.date==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(o.date)&&Number.isFinite(Date.parse(o.date+'T00:00:00Z'))&&new Date(o.date+'T00:00:00Z').toISOString().slice(0,10)===o.date&&Number.isInteger(o.score)&&o.score>=-3&&o.score<=3&&typeof o.source_sha256==='string'&&/^[a-f0-9]{64}$/i.test(o.source_sha256)&&Number.isInteger(o.source_page)&&o.source_page>=1&&typeof o.decision_id==='string'&&o.decision_id.length>0;}
 function parseDecisions(doc){
  if(!doc||doc.schema!=='consumer-final-decisions-v1'||!Array.isArray(doc.decisions))throw new Error('Invalid decisions');
- const entries={},conflicts={};let rejected=0;
+ const entries={},conflicts={};let rejected=0,duplicates=0;
  for(const o of doc.decisions){
   let ok=false;try{ok=validDecision(o)&&(o.scope===undefined||o.scope==='general_day')}catch(_e){ok=false}
   if(!ok){rejected++;continue;}
   const entry=Object.freeze({score:o.score,source_pdf:o.decision_id,source_page:o.source_page,source_sha256:o.source_sha256,decision_id:o.decision_id});
   if(conflicts[o.date])continue;
   const prev=entries[o.date];
-  if(prev){if(prev.score===entry.score&&prev.source_sha256===entry.source_sha256&&prev.source_page===entry.source_page&&prev.decision_id===entry.decision_id){rejected++;continue;}
+  if(prev){if(prev.score===entry.score&&prev.source_sha256===entry.source_sha256&&prev.source_page===entry.source_page&&prev.decision_id===entry.decision_id){duplicates++;continue;} // AUDIT-A2: identical repeat accepted once, not a rejection
    delete entries[o.date];conflicts[o.date]=true;continue;}
   entries[o.date]=entry;
  }
- return {entries:Object.freeze(entries),conflicts:Object.freeze(conflicts),rejected};
+ return {entries:Object.freeze(entries),conflicts:Object.freeze(conflicts),rejected,duplicates};
 }
 function parseScopedDecisions(doc){
  if(doc.scoped_decisions===undefined)return {entries:Object.freeze({}),conflicts:Object.freeze({}),rejected:0};
@@ -84,7 +85,7 @@ async function loadExpertDecisions(base){
  expertDecisions=parsed.entries;expertConflicts=parsed.conflicts;scopedDecisions=scoped.entries;scopedConflicts=scoped.conflicts;
  const conflictDates=Object.keys(parsed.conflicts).sort();
  const scopedConflictDates=Object.keys(scoped.conflicts).sort(),rejected=parsed.rejected+scoped.rejected;
- registryState=Object.freeze({status:rejected||conflictDates.length||scopedConflictDates.length?'partial':'ok',rejected_rows:rejected,conflict_dates:Object.freeze(conflictDates),accepted:Object.keys(parsed.entries).length,scoped_accepted:Object.keys(scoped.entries).length,scoped_conflict_dates:Object.freeze(scopedConflictDates)});
+ registryState=Object.freeze({status:rejected||conflictDates.length||scopedConflictDates.length?'partial':'ok',rejected_rows:rejected,duplicate_rows:(parsed.duplicates||0)+(scoped.duplicates||0),conflict_dates:Object.freeze(conflictDates),accepted:Object.keys(parsed.entries).length,scoped_accepted:Object.keys(scoped.entries).length,scoped_conflict_dates:Object.freeze(scopedConflictDates)});
  if(registryState.status!=='ok')host.NRDiagnostics?.record('consumer.decisions.partial','recoverable');
  }catch(e){/* Preserve the last fully validated snapshot on transient delivery failure. Never merge partial documents. */
   const had=registryState.status==='ok'||registryState.status==='partial'||registryState.status==='stale';
