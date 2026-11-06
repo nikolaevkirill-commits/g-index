@@ -28,6 +28,13 @@ const expectedVersion=fs.readFileSync(path.join(root,'sw.js'),'utf8').match(/con
 // Observe pending fetch lifetimes without changing the historical worker fixture on disk.
 const traceWorker = `self.addEventListener('message',event=>{if(event.data?.type==='TEST_UPGRADE_VERSION')event.ports[0]?.postMessage({version:CACHE_VERSION});});
 self.__upgradePending=new Map();self.__upgradeSequence=0;self.__upgradeEvents=[];
+self.__upgradeSkipWaiting=[];
+const __skipWaiting=self.skipWaiting.bind(self);
+self.skipWaiting=function(){
+ const record={called:Date.now(),waiting:self.registration.waiting?.state,active:self.registration.active?.state,pending:[...self.__upgradePending.values()]};self.__upgradeSkipWaiting.push(record);
+ try{const promise=__skipWaiting();Promise.resolve(promise).then(()=>{record.resolved=Date.now();record.waitingAfter=self.registration.waiting?.state;record.activeAfter=self.registration.active?.state;},error=>{record.rejected=Date.now();record.error=String(error);});return promise;}
+ catch(error){record.threw=String(error);throw error;}
+};
 self.addEventListener('message',e=>self.__upgradeEvents.push({type:e.data?.type,at:Date.now()}));
 const __upgradeAdd=self.addEventListener.bind(self);
 self.addEventListener=function(type,listener,...rest){
@@ -139,13 +146,14 @@ let base;
       }
     } catch(error) {
       const diagnostics={trigger,restart,lifecycle,registration:await bounded(page.evaluate(async()=>{const r=await navigator.serviceWorker.getRegistration();return {waiting:r.waiting?.state,active:r.active?.state,reloading:window._swReloading}})).catch(e=>({error:String(e)})),workers:[]};
-      for(const worker of ctx.serviceWorkers())try{diagnostics.workers.push(await bounded(worker.evaluate(()=>({version:typeof CACHE_VERSION==='undefined'?null:CACHE_VERSION,pending:[...(self.__upgradePending||[])],events:self.__upgradeEvents,now:Date.now()}))))}catch(e){diagnostics.workers.push({error:String(e)})}
+      for(const worker of ctx.serviceWorkers())try{diagnostics.workers.push(await bounded(worker.evaluate(()=>({version:typeof CACHE_VERSION==='undefined'?null:CACHE_VERSION,pending:[...(self.__upgradePending||[])],events:self.__upgradeEvents,skipWaiting:self.__upgradeSkipWaiting,now:Date.now()}))))}catch(e){diagnostics.workers.push({error:String(e)})}
       fs.writeFileSync(path.join(out,'FAILURE.json'),JSON.stringify(diagnostics,null,2));console.error('CSS_UPGRADE_DIAGNOSTICS',JSON.stringify(diagnostics));throw error;
     }
     await page.waitForFunction(async()=>!(await navigator.serviceWorker.getRegistration()).waiting);
     await page.waitForFunction(()=>!!navigator.serviceWorker.controller);
     await page.waitForFunction(async()=>(await caches.keys()).filter(k=>k.startsWith('gindex-shell-')).length===1,null,{timeout:15000});
     const activatedVersion=await activeVersion(page);
+    if(trace){const workers=[];for(const worker of ctx.serviceWorkers())try{workers.push(await bounded(worker.evaluate(()=>({version:typeof CACHE_VERSION==='undefined'?null:CACHE_VERSION,pending:[...(self.__upgradePending||[])],skipWaiting:self.__upgradeSkipWaiting}))))}catch(e){workers.push({error:String(e)})}fs.writeFileSync(path.join(out,'SKIP_WAITING_TRACE.json'),JSON.stringify(workers,null,2));}
     assert.equal(activatedVersion,expectedVersion,'new worker must actually activate');
     assert.equal(otherNavigations,0,'updating one tab must preserve the other app tab');
     assert.equal(journalNavigations,0,'updating one tab must preserve the journal');

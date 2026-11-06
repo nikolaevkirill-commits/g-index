@@ -151,7 +151,17 @@ const STYLE=`.nr-sl{margin:14px 0;padding:18px;overflow:hidden}.nr-sl a{color:in
 @media (prefers-reduced-motion:reduce){.nr-sl-body{transition:none!important}}
 .nr-sl-aurora{margin:.6rem 0 0;font-size:.92rem}.nr-sl-aurora span,.nr-sl-aurora small{display:block;opacity:.85;font-size:.82rem}
 .nr-sl-foot{margin:.5rem 0 0;font-size:.78rem;opacity:.8}.nr-sl-noloc{margin:0;font-size:.92rem}`;
-let host=null,timer=null,retry=null,last=null;
+let host=null,timer=null,retry=null,last=null,moonCanvas=null;
+function drawMoon(c){
+ const box=host?.querySelector('.nr-sl-moonbox'),svg=box?.querySelector('.nr-sl-moon');if(!svg)return;
+ const showSvg=()=>{svg.style.display='';if(moonCanvas)moonCanvas.hidden=true;};
+ if(!window.NRMoonGL||navigator.connection?.saveData||dataReduced.matches){showSvg();return;}
+ if(!moonCanvas){moonCanvas=document.createElement('canvas');moonCanvas.className='nr-sl-moon-gl';moonCanvas.setAttribute('role','img');}
+ if(moonCanvas.parentElement!==box)svg.after(moonCanvas);
+ moonCanvas.setAttribute('aria-label',svg.getAttribute('aria-label'));
+ const ok=NRMoonGL.draw(moonCanvas,{phaseAngle:c.phaseAngle,limb:c.limb,size:132});
+ if(ok){svg.style.display='none';moonCanvas.hidden=false;}else showSvg();
+}
 const reduced=matchMedia('(prefers-reduced-motion:reduce)'),dataReduced=matchMedia('(prefers-reduced-data:reduce)');
 function active(){return !document.hidden&&location.hash.split('?')[0]==='#panch';}
 function motion(){
@@ -178,7 +188,7 @@ function render(){
  if(!content){content=document.createElement('div');content.dataset.liveContent='';host.append(content);const links=document.createElement('p');links.className='nr-sl-sources';links.innerHTML='<span></span>: <a href="https://www.spaceweather.gov/noaa-scales-explanation" target="_blank" rel="noopener noreferrer">NOAA G</a> · <a href="https://www.spaceweather.gov/products/aurora-30-minute-forecast" target="_blank" rel="noopener noreferrer">OVATION</a> · <a href="https://wdc.kugi.kyoto-u.ac.jp/poles/polesexp.html" target="_blank" rel="noopener noreferrer">IGRF-14</a>';host.append(links);}
  host.querySelector('.nr-sl-sources span').textContent=tr('Джерела');
  const sig=lang()+':'+Boolean(c.loc),tmp=document.createElement('div');tmp.innerHTML=html;
- if(content.dataset.sig!==sig){content.innerHTML=html;content.dataset.sig=sig;return;}
+ if(content.dataset.sig!==sig){content.innerHTML=html;content.dataset.sig=sig;drawMoon(c);return;}
  for(const g of tmp.querySelectorAll('.nr-sl-body')){
   const cur=content.querySelector(`.nr-sl-body[data-body="${g.dataset.body}"]`);if(!cur)continue;
   // A crossing of north is a discontinuity of this cylindrical chart, not a trip across the sky.
@@ -190,6 +200,7 @@ function render(){
   if(wrap){void cur.getBoundingClientRect();cur.style.removeProperty('transition');}
  }
  for(const selector of ['.nr-sl-moonbox','.nr-sl-list','.nr-sl-noloc','[data-aurora-content]','.nr-sl-foot']){const old=content.querySelector(selector),next=tmp.querySelector(selector);if(old&&next)old.replaceWith(next);}
+ drawMoon(c);
 }
 function sync(){
  clearInterval(timer);clearTimeout(retry);timer=null;motion();
@@ -198,9 +209,10 @@ function sync(){
 window.NRSkyLive={render,compute,geomagLat,auroraFor,brightLimb,selectKp,POLE,NOAA_G,snapshot:()=>last,active};
 window.addEventListener('nr:locale',sync);document.addEventListener('nr:location',sync);
 document.addEventListener('nr:overview-rendered',render);
+document.addEventListener('nr:moon-gl',e=>{if(e.target!==moonCanvas)return;if(e.detail?.state==='lost'){moonCanvas.hidden=true;const svg=host?.querySelector('.nr-sl-moon');if(svg)svg.style.display='';}else render();});
 document.addEventListener('visibilitychange',sync);window.addEventListener('hashchange',sync);
 window.addEventListener('online',render);window.addEventListener('offline',render);
-reduced.addEventListener('change',motion);dataReduced.addEventListener('change',motion);navigator.connection?.addEventListener('change',motion);
+reduced.addEventListener('change',motion);dataReduced.addEventListener('change',()=>{motion();render();});navigator.connection?.addEventListener('change',()=>{motion();render();});
 new MutationObserver(motion).observe(document.documentElement,{attributes:true,attributeFilter:['class']});
 sync();
 })();
