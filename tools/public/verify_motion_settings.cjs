@@ -18,6 +18,7 @@ try{for(const entry of ['index.html','classic.html'])for(const locale of ['uk-UA
  await master.click();await p.emulateMedia({reducedMotion:'reduce'});await p.waitForFunction(()=>document.querySelector('[data-sky-motion]')?.disabled===true);assert.equal(await bg.isDisabled(),true);assert.equal(await master.isDisabled(),true);
  assert.equal(await p.evaluate(()=>document.documentElement.classList.contains('sr-decor-motion')||document.documentElement.classList.contains('sr-sky-motion')),false);
  await p.evaluate(()=>location.hash='today');await p.waitForTimeout(500);
+ if(!locale.startsWith('uk')){const text=await p.locator('[data-day-context],[data-day-provenance],[data-day-records-tools],[data-motion-settings]').allTextContents();assert(!/[А-Яа-яІіЇїЄєҐґ]/.test(text.join('\n')),locale+' new UI contains untranslated text: '+text.join('\n'));}
  assert.equal(await p.evaluate(()=>document.getAnimations().filter(a=>a.playState==='running'&&['wowTwinkle','wowDrift','srSkyBreath'].includes(a.animationName)).length),0);
  assert.deepEqual(errors,[]);rows.push({entry,locale,label,persistence:true,masterOff:true,reduced:true});await c.close();
 }console.log(JSON.stringify({status:'PASS',scenarios:rows.length,rows}));

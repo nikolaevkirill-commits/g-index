@@ -5,7 +5,7 @@
 if(window.NRDayContext)return;
 const SHOWN='gindex_day_shown_v1',RATED='gindex_day_vs_forecast_v1',MAX_SHOWN=60,MAX_RATED=800;
 const BACKUP='gindex_day_context_backup_v1';
-const tr=s=>window.NRLocale?.text(s)||s;
+const tr=s=>{const row=DC_STRINGS.find(r=>r[0]===s);return row?row[({uk:0,en:1,es:2,fr:3})[window.NRLocale?.language]??0]:(window.NRLocale?.text(s)||s);};
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const isDay=s=>typeof s==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(s)&&Number.isFinite(Date.parse(s+'T12:00:00Z'))&&new Date(s+'T12:00:00Z').toISOString().slice(0,10)===s;
 const todayKey=()=>window.NRCivilTime?.dayKey?NRCivilTime.dayKey(Date.now()):new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Kyiv',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
@@ -55,6 +55,10 @@ function visibleScore(root,score){
 }
 
 const DC_STRINGS=([
+ ['PDF, с.','PDF, p.','PDF, p.','PDF, p.'],
+ ['немає','none','sin datos','aucune donnée'],
+ ['формула','formula','fórmula','formule'],
+ ['Оцінка','Score','Puntuación','Score'],
  ['не сьогодні','not today','no es hoy','pas aujourd’hui'],
  ['До сьогодні','Back to today','Volver a hoy',"Revenir à aujourd’hui"],
  ['Проти вчора','Versus yesterday','Frente a ayer','Par rapport à hier'],
@@ -82,7 +86,8 @@ const DC_STRINGS=([
  ['Є пошкоджені локальні дані. Експорт містить їхні збережені оригінали.','Some local data is damaged. Export includes preserved originals.','Hay datos locales dañados. La exportación incluye los originales conservados.','Certaines données locales sont endommagées. L’export contient les originaux conservés.'],
  ['Порівнюються різні джерела оцінки','Different score sources are being compared','Se comparan distintas fuentes de puntuación','Les sources des scores comparés diffèrent'],
 ]);
-try{const known=s=>{try{return window.NRLocale?.has?.(s)}catch(_){return false}};window.NRLocale?.register?.(DC_STRINGS.filter(r=>!known(r[0])));}catch(e){console.warn('day context locale',e);}
+// This module owns its translated nodes. Do not partially register duplicate keys in
+// the global dictionary (NRLocale has no has() API); language events re-render them.
 
 // What the user actually saw: first and last available display per date, on this device only.
 function rememberShown(root,ds){
@@ -136,7 +141,7 @@ function provenance(root,ds){
  // block of ours inside that list makes them move nodes (and drop focus) back and forth.
  if(!el){el=document.createElement('p');el.dataset.dayProvenance='';el.dataset.for=key;el.className='nr-dc-prov';el.setAttribute('translate','no');root.after(el);}
  const s=window.NRConsumerOverview?.snapshot?.(ds)||{};
- const who=!s.display?.available?tr('немає'):s.display.authority==='expert_pdf'?tr('експерт')+(s.expert?.source_page?', PDF, с. '+s.expert.source_page:''):tr('формула');
+ const who=!s.display?.available?tr('немає'):s.display.authority==='expert_pdf'?tr('експерт')+(s.expert?.source_page?', '+tr('PDF, с.')+' '+s.expert.source_page:''):tr('формула');
  const title=s.expert?.source_pdf?'source_pdf: '+s.expert.source_pdf:'',text=tr('Дані для дати')+': '+dayLabel(ds)+' · '+tr('Оцінка')+': '+who+' · '+tr('Розраховано')+': '+stamp(s.provenance?.generated_at)+' · Kp: '+kpText(s.calculation?.kp_source)+' · Europe/Kyiv';
  if(el.title!==title)el.title=title;if(el.textContent!==text)el.textContent=text;
 }

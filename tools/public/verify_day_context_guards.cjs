@@ -49,5 +49,10 @@ try{
  {const x=await setup({evening:true});await x.p.evaluate(()=>{Storage.prototype.setItem=function(){throw new DOMException('Full','QuotaExceededError');};});
   await x.p.locator('[data-rate=better]').click();await x.p.waitForFunction(()=>document.querySelector('[data-rate-status]')?.textContent==='Не вдалося зберегти');
   assert.equal(await x.p.evaluate(k=>localStorage.getItem(k),RATED),null);await finish(x,'Failed write is reported and never shown as saved');}
+ {const x=await setup();await x.p.evaluate(()=>{window.NRLocale={language:'en',locale:'en-GB',text:s=>s==='Сьогодні'?'Today':s,register:()=>{throw Error('Duplicate global dictionary entry');}};window.dispatchEvent(new Event('nr:locale'));});
+  assert.match(await x.p.locator('[data-day-provenance]').innerText(),/Data for date/);assert.match(await x.p.locator('[data-day-records-tools]').innerText(),/My score reflections/);
+  assert(!/[А-Яа-яІіЇїЄєҐґ]/.test((await x.p.locator('[data-day-context],[data-day-provenance],[data-day-records-tools]').allTextContents()).join(' ')));
+  await x.p.evaluate(()=>{NRLocale.language='fr';NRLocale.locale='fr-FR';window.dispatchEvent(new Event('nr:locale'));});
+  assert.match(await x.p.locator('[data-day-provenance]').innerText(),/Données pour la date/);await finish(x,'Local translations survive existing global keys and update on language change');}
  console.log(JSON.stringify({status:'PASS',checks:results.length,results}));
 }finally{await browser.close();}})().catch(e=>{console.error(e);process.exitCode=1});
