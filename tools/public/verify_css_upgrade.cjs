@@ -80,6 +80,17 @@ async function checkPage(page,name,count){
 async function cacheVersions(page){
   return page.evaluate(async()=>(await caches.keys()).filter(k=>k.startsWith('gindex-shell-')).map(k=>k.slice('gindex-shell-'.length)).sort());
 }
+// waitForFunction treats an async predicate's Promise as truthy in the pinned
+// Playwright runtime. Poll the live registration synchronously instead.
+async function waitForWaiting(page,expected,timeout=30000){
+  await page.evaluate(async()=>{window.__cssUpgradeRegistration=await navigator.serviceWorker.getRegistration();if(!window.__cssUpgradeRegistration)throw Error('Expected existing service worker registration')});
+  await page.waitForFunction(expected=>!!window.__cssUpgradeRegistration?.waiting===expected,expected,{timeout});
+}
+async function waitForSingleCache(page){
+  const deadline=Date.now()+15000;
+  while(Date.now()<deadline){if((await cacheVersions(page)).length===1)return;await new Promise(r=>setTimeout(r,100));}
+  throw new Error('Timed out waiting for one activated shell cache');
+}
 async function activeVersion(page){
   if(!trace){const versions=await cacheVersions(page);return versions.length===1?versions[0]:'ambiguous:'+versions.join(',');}
   return page.evaluate(async()=>{
@@ -114,7 +125,7 @@ let base;
     phase='new';
     await checkPage(page,'classic.html?channel=play#today',INDEX_STYLES);
     await page.evaluate(async()=>{const r=await navigator.serviceWorker.getRegistration();await r.update();});
-    await page.waitForFunction(async()=>!!(await navigator.serviceWorker.getRegistration()).waiting,null,{timeout:60000});
+    await waitForWaiting(page,true,60000);
     const main=await ctx.newPage();await checkPage(main,'index.html?channel=play#today',18);
     const journal=await ctx.newPage();await checkPage(journal,'day_summary.html',1);await checkPage(main,'index.html?channel=play#today',18);
     await ctx.setOffline(true);
@@ -140,7 +151,7 @@ let base;
         // A worker activation from elsewhere must not itself reload this page.
         let navigations=0;const observe=frame=>{if(frame===page.mainFrame())navigations++};page.on('framenavigated',observe);
         await page.evaluate(async()=>{if(!await NRUpdateCoordinator.prepare())throw Error('Update preparation busy');const r=await navigator.serviceWorker.getRegistration();r.waiting.postMessage({type:'SKIP_WAITING'});});
-        await page.waitForFunction(async()=>!(await navigator.serviceWorker.getRegistration()).waiting);
+        await waitForWaiting(page,false);
         assert.equal(navigations,0,'worker activation without a local user request must not reload');page.off('framenavigated',observe);
         await Promise.all([page.waitForNavigation({waitUntil:'load'}),page.locator('#pwaUpdateBar button').click()]);
       }
@@ -149,9 +160,9 @@ let base;
       for(const worker of ctx.serviceWorkers())try{diagnostics.workers.push(await bounded(worker.evaluate(()=>({version:typeof CACHE_VERSION==='undefined'?null:CACHE_VERSION,pending:[...(self.__upgradePending||[])],events:self.__upgradeEvents,skipWaiting:self.__upgradeSkipWaiting,now:Date.now()}))))}catch(e){diagnostics.workers.push({error:String(e)})}
       fs.writeFileSync(path.join(out,'FAILURE.json'),JSON.stringify(diagnostics,null,2));console.error('CSS_UPGRADE_DIAGNOSTICS',JSON.stringify(diagnostics));throw error;
     }
-    await page.waitForFunction(async()=>!(await navigator.serviceWorker.getRegistration()).waiting);
+    await waitForWaiting(page,false);
     await page.waitForFunction(()=>!!navigator.serviceWorker.controller);
-    await page.waitForFunction(async()=>(await caches.keys()).filter(k=>k.startsWith('gindex-shell-')).length===1,null,{timeout:15000});
+    await waitForSingleCache(page);
     const activatedVersion=await activeVersion(page);
     if(trace){const workers=[];for(const worker of ctx.serviceWorkers())try{workers.push(await bounded(worker.evaluate(()=>({version:typeof CACHE_VERSION==='undefined'?null:CACHE_VERSION,pending:[...(self.__upgradePending||[])],skipWaiting:self.__upgradeSkipWaiting}))))}catch(e){workers.push({error:String(e)})}fs.writeFileSync(path.join(out,'SKIP_WAITING_TRACE.json'),JSON.stringify(workers,null,2));}
     assert.equal(activatedVersion,expectedVersion,'new worker must actually activate');

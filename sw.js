@@ -2,12 +2,27 @@ importScripts('./runtime_diagnostics_v1.js','./civil_time_v1.js');
 // G-Index service worker. Navigations, HTML, JS and data (.json/.jsonl/.csv) are network-first with a
 // cached fallback; other same-origin assets (CSS, images, fonts) are cache-first.
 // Bump CACHE_VERSION whenever index.html or a cached shell asset changes.
-const CACHE_VERSION = 'fp566-webgl-moon-guarded-20261106'; // Discrete final scores; no interpolated forecast.
+const CACHE_VERSION = 'fp567-bounded-asset-lifetime-20261106'; // Discrete final scores; no interpolated forecast.
 const CACHE_PREFIX = 'gindex-'; // G-Index cache namespace; do not remove the prefix.
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${CACHE_VERSION}`;
 const DATA_CACHE = `${CACHE_PREFIX}data-${CACHE_VERSION}`;
 const NETWORK_FIRST_TIMEOUT_MS = 2500;
 const NETWORK_BODY_TIMEOUT_MS = 15000; // FP542: upper bound for reading a response body
+// Uncached images/fonts/CSS must not keep the old worker alive indefinitely
+// while a user-requested update waits for its fetch events to finish.
+async function fetchBoundedAsset(request) {
+  const controller = new AbortController();
+  let timer = setTimeout(() => controller.abort(), NETWORK_FIRST_TIMEOUT_MS);
+  try {
+    const response = await fetch(request, { signal: controller.signal });
+    clearTimeout(timer);
+    if (response.type === 'opaque' || response.type === 'opaqueredirect') return response;
+    timer = setTimeout(() => controller.abort(), NETWORK_BODY_TIMEOUT_MS);
+    const body = await response.arrayBuffer();
+    return new Response([204,205,304].includes(response.status) ? null : body,
+      {status:response.status,statusText:response.statusText,headers:response.headers});
+  } finally { clearTimeout(timer); }
+}
 let lastRequestOrder=0;
 const newestRequest=new Map();
 async function reportDelivery(event, type, fetchedAt, requestOrder){
@@ -367,11 +382,11 @@ self.addEventListener('fetch', (event) => {
   }
 
   if (req.method === 'GET' && /\/dayline_art\/(ashwini|bharani|krittika|rohini|mrigashira|ardra|punarvasu|pushya|ashlesha|magha|purvaphalguni|uttaraphalguni|hasta|chitra|swati|vishakha|anuradha|jyeshtha|mula|purvaashadha|uttaraashadha|shravana|dhanishta|water|fire|depth|nourish)-(engraving|gouache)\.webp$/.test(new URL(req.url).pathname)) {
-    event.respondWith((async()=>{const cache=await caches.open(SHELL_CACHE);const saved=await cache.match(req);if(saved)return saved;const fresh=await fetch(req);if(fresh.ok)await cache.put(req,fresh.clone());return fresh;})());return;
+    event.respondWith((async()=>{const cache=await caches.open(SHELL_CACHE);const saved=await cache.match(req);if(saved)return saved;const fresh=await fetchBoundedAsset(req);if(fresh.ok)await cache.put(req,fresh.clone());return fresh;})());return;
   }
   // Remaining same-origin assets (CSS, images, fonts; not JS, see isHtmlOrData): cache-first, fall back to network.
   event.respondWith(
-    caches.open(SHELL_CACHE).then(cache => cache.match(req)).then((cached) => cached || fetch(req))
+    caches.open(SHELL_CACHE).then(cache => cache.match(req)).then((cached) => cached || fetchBoundedAsset(req))
   );
 });
 

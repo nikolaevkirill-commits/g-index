@@ -86,6 +86,13 @@ jobs:
         run: node tools/public/test_sw_update_coordination.cjs
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_css_upgrade.cjs --button
+      # Isolated worker/network fault probes complement the real Update-button gate above.
+      - if: steps.scope.outputs.mode != 'data'
+        run: node tools/public/verify_sw_asset_lifetime.cjs svgheaders --bounded
+      - if: steps.scope.outputs.mode != 'data'
+        run: node tools/public/verify_sw_asset_lifetime.cjs artbody --bounded
+      - if: steps.scope.outputs.mode != 'data'
+        run: node tools/public/verify_sw_asset_lifetime.cjs jsonbody --bounded
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_b7_activation_race.cjs 20 classic.html
       - if: steps.scope.outputs.mode != 'data'
