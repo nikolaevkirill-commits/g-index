@@ -60,7 +60,7 @@ function build(r,ds){
 function render(){
  const r=root();if(!r)return;const hero=r.querySelector('.nr-o-hero'),verdict=hero?.querySelector('.nr-o-verdict');if(!hero||!verdict)return;
  // Other modules may move unknown blocks out of a rebuilt hero (p0_layout → details): drop stale copies.
- for(const x of r.querySelectorAll('[data-day-verdict],[data-day-why],[data-day-you]'))if(!hero.contains(x))x.remove();
+ for(const x of r.querySelectorAll('[data-day-verdict],[data-day-why]'))if(!hero.contains(x))x.remove();
  let box=hero.querySelector('[data-day-verdict]');
  if(!box){box=document.createElement('div');box.className='nr-day-verdict';box.dataset.dayVerdict='';box.setAttribute('translate','no');box.setAttribute('aria-live','polite')}
  if(box.nextElementSibling!==verdict)verdict.before(box);
@@ -73,10 +73,13 @@ function render(){
  let whyBox=hero.querySelector('[data-day-why]');
  if(!whyBox){whyBox=document.createElement('details');whyBox.className='nr-day-why';whyBox.dataset.dayWhy='';whyBox.setAttribute('translate','no')}
  if(verdict.nextElementSibling!==whyBox)verdict.after(whyBox);
- // «Для тебе» and the evening prompt follow the score and «Why», so the score stays on the first screen.
- let youBox=hero.querySelector('[data-day-you]');
- if(!youBox){youBox=document.createElement('div');youBox.className='nr-day-you';youBox.dataset.dayYou='';youBox.setAttribute('translate','no')}
- if(whyBox.nextElementSibling!==youBox)whyBox.after(youBox);
+ // Keep optional personal tools below the public DayLine and weather.
+ let youBox=r.querySelector(':scope > [data-day-you]');
+ if(!youBox){
+  youBox=document.createElement('div');youBox.className='nr-day-you';youBox.dataset.dayYou='';youBox.dataset.placement='after-hero';youBox.setAttribute('translate','no');
+  const details=r.querySelector(':scope > [data-p0-details]');
+  if(details)details.before(youBox);else r.append(youBox);
+ }
  const youHtml=(window.NRNatalSky?window.NRNatalSky.html(ds,sky):'')+(ds===today&&hour>=18?matchHtml(ds):'')+(evening?`<button type="button" class="nr-dv-evening">${esc(t('evening'))}</button>`:'');
  if(youBox.dataset.html!==youHtml){const formOpen=youBox.querySelector('.nr-dv-you-form')?.open;youBox.innerHTML=youHtml;youBox.dataset.html=youHtml;if(formOpen)youBox.querySelector('.nr-dv-you-form')&&(youBox.querySelector('.nr-dv-you-form').open=true)}
  youBox.hidden=!youHtml;
@@ -98,7 +101,7 @@ let scheduled=false;const soon=()=>{if(scheduled)return;scheduled=true;requestAn
 async function loadSky(){if(skyTried)return;skyTried=true;try{const r=await fetch('consumer_cloud/sky.json',{cache:'no-cache'});if(r.ok){const d=await r.json();if(d?.schema==='sky_transits_v1')sky=d}}catch{}soon()}
 let watched=null;
 function watch(){const r=root();if(!r){setTimeout(watch,250);return}if(watched===r)return;watched=r;
- new MutationObserver(()=>{const h=r.querySelector('.nr-o-hero');if(!h?.querySelector('[data-day-verdict]')||!h.querySelector('[data-day-why]')||!h.querySelector('[data-day-you]'))soon()}).observe(r,{childList:true,subtree:true});
+ new MutationObserver(()=>{const h=r.querySelector('.nr-o-hero');if(!h?.querySelector('[data-day-verdict]')||!h.querySelector('[data-day-why]')||!r.querySelector(':scope > [data-day-you]'))soon()}).observe(r,{childList:true,subtree:true});
  r.addEventListener('change',e=>{if(e.target.matches('select'))setTimeout(soon,0)});soon()}
 window.NRDayVerdict={build:ds=>{const r=root();return r?build(r,ds||selected(r)):null},render,matches:matchAll};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{watch();loadSky()});else{watch();loadSky()}

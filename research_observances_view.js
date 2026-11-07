@@ -29,12 +29,27 @@ root.SRCalendarAuthority={resolve(date,zone='Europe/Kyiv'){
 const baseCategory=k=>k.replace(/_(smarta|vaishnava|sunrise|aparahna)$/,'');
 const selectedWords={uk:'Для Києва в цьому році всі сім категорій (Екадаші, Прадош, Масік Шіваратрі, Санкаштхі, Вінаяка, Пурніма, Амавасья) показуємо лише за перевіреними датами Drik у панелі вище. Розрахункові варіанти не є другим календарем.',en:'For Kyiv in this year all seven categories (Ekadashi, Pradosh, Masik Shivaratri, Sankashti, Vinayaka, Purnima, Amavasya) are shown only from the verified Drik dates in the panel above. Computed candidates are not a second calendar.',es:'Para Kyiv en este año, las siete categorías (Ekadashi, Pradosh, Masik Shivaratri, Sankashti, Vinayaka, Purnima, Amavasya) se muestran solo con las fechas verificadas de Drik del panel de arriba. Las alternativas calculadas no son un segundo calendario.',fr:'Pour Kyiv cette année, les sept catégories (Ekadashi, Pradosh, Masik Shivaratri, Sankashti, Vinayaka, Purnima, Amavasya) ne sont affichées que d’après les dates Drik vérifiées du panneau ci-dessus. Les variantes calculées ne constituent pas un second calendrier.'};
 const unsafeWords={uk:'джерельне посилання недоступне',en:'source link unavailable',es:'enlace de la fuente no disponible',fr:'lien source indisponible'};
+// The PDF lamp (p. 12) marks 5–10 November. Drik publishes one Kyiv Lakshmi Puja date.
+const diwaliKyiv2026={
+ date:'2026-11-08',
+ lampStart:'2026-11-05',
+ lampEnd:'2026-11-10',
+ hours:'16:36–18:15',
+ url:'https://www.drikpanchang.com/festivals/lakshmipuja/festivals-lakshmipuja-timings.html?geoname-id=703448',
+ words:{
+  uk:['Дівалі · Лакшмі-пуджа · Київ','Світильник у PDF-календарі Таніти позначений 5–10 листопада. За Drik Panchang дата Лакшмі-пуджі для Києва — 8 листопада 2026 року.'],
+  en:['Diwali · Lakshmi Puja · Kyiv','Tanita’s PDF calendar marks 5–10 November with a lamp. Drik Panchang dates Lakshmi Puja in Kyiv to 8 November 2026.'],
+  es:['Diwali · Lakshmi Puja · Kyiv','El calendario PDF de Tanita marca del 5 al 10 de noviembre con una lámpara. Drik Panchang sitúa Lakshmi Puja en Kyiv el 8 de noviembre de 2026.'],
+  fr:['Diwali · Lakshmi Puja · Kyiv','Le calendrier PDF de Tanita indique une lampe du 5 au 10 novembre. Selon Drik Panchang, la Lakshmi Puja à Kyiv a lieu le 8 novembre 2026.']
+ }
+};
 function renderSourceCalendar(host,date,lang){
  const data=root.SRVerifiedCalendarSources;if(!data)return;
  const resolved=root.SRCalendarAuthority.resolve(date);if(resolved.status==='invalid_date'||resolved.status==='unsupported_location')return;
  const events=resolved.events,corrections=resolved.corrections||[];
  if(resolved.status!=='source_verified'&&!corrections.length)return;
- const w=sourceWords[lang]||sourceWords.uk,panel=document.createElement('details');panel.className='sr-source-calendar';panel.dataset.state=events.length?'source-verified':corrections.length?'corrected':'none';panel.open=!!(events.length||corrections.length);
+ const diwali=diwaliKyiv2026,lampPeriod=date>=diwali.lampStart&&date<=diwali.lampEnd;
+ const w=sourceWords[lang]||sourceWords.uk,panel=document.createElement('details');panel.className='sr-source-calendar';panel.dataset.state=events.length?'source-verified':corrections.length?'corrected':'none';panel.open=!!(events.length||corrections.length||lampPeriod);
  const add=(tag,text)=>{const e=document.createElement(tag);e.textContent=text;panel.append(e);return e;};
  add('summary',w[0]).style.minHeight='44px';add('p',w[1]);
  for(const r of events){const a=add('a',r.source_label+' ↗');const url=typeof r.source_url==='string'?r.source_url:'';
@@ -42,7 +57,16 @@ function renderSourceCalendar(host,date,lang){
   if(!/^https:\/\/[^\s\\/?#]+(?::[0-9]+)?(?:[/?#][^\s\\]*)?$/i.test(url)){a.removeAttribute('href');a.removeAttribute('target');a.textContent=r.source_label+' · '+(unsafeWords[lang]||unsafeWords.uk);}else{a.href=url;a.target='_blank';a.rel='noopener noreferrer';}
   a.lang='en';a.style.display='block';a.style.minHeight='44px';a.style.overflowWrap='anywhere';}
  for(const r of corrections){add('p',r.source==='tanita_primary_pdf'?(r.source_events.length?w[3]+r.source_events.map(k=>sourceTitles[k]||k).join(', '):w[4]):w[5]);}
- if(!events.length&&!corrections.length)add('p',w[2]);host.append(panel);
+ if(!events.length&&!corrections.length)add('p',w[2]);
+ if(lampPeriod){
+  const [title,note]=diwali.words[lang]||diwali.words.uk;
+  add('p',note).dataset.diwaliSourceNote='';
+  const link=add('a',date===diwali.date?title+' · '+diwali.hours+' (Europe/Kyiv) ↗':'Drik Panchang ↗');
+  if(date===diwali.date)link.dataset.diwaliObservance='';
+  link.href=diwali.url;link.target='_blank';link.rel='noopener noreferrer';
+  link.style.display='block';link.style.minHeight='44px';link.style.overflowWrap='anywhere';
+ }
+ host.append(panel);
 }
 
 root.SRResearchObservances={renderSources:renderSourceCalendar,render(host,date,lang){

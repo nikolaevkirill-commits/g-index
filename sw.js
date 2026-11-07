@@ -2,7 +2,7 @@ importScripts('./runtime_diagnostics_v1.js','./civil_time_v1.js');
 // G-Index service worker. Navigations, HTML, JS and data (.json/.jsonl/.csv) are network-first with a
 // cached fallback; other same-origin assets (CSS, images, fonts) are cache-first.
 // Bump CACHE_VERSION whenever index.html or a cached shell asset changes.
-const CACHE_VERSION = 'fp568-update-scoped-asset-deadline-20261106'; // Discrete final scores; no interpolated forecast.
+const CACHE_VERSION = 'fp568-keyboard-20261107'; // Discrete final scores; no interpolated forecast.
 const CACHE_PREFIX = 'gindex-'; // G-Index cache namespace; do not remove the prefix.
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${CACHE_VERSION}`;
 const DATA_CACHE = `${CACHE_PREFIX}data-${CACHE_VERSION}`;
@@ -75,7 +75,7 @@ const SHELL_ASSETS = [
   './observance_source_registry_v1.js',
   './observances_tanita_v1.js',
   './panchanga_civil_adapter.js',
-  './own_calendar_v1.js','./research_observances_v1.js','./research_observances_view.js',
+  './own_calendar_v1.js','./research_observances_v1.js','./research_observances_view.js?v=fp568-review-20261107',
   './panchanga_app_bridge.js',
   './r9_shell.css',
   './panchanga_civil_view.css',
@@ -92,7 +92,7 @@ const SHELL_ASSETS = [
   './preview-v4/design_candidate.js',
   './preview-v4/design_scale.js',
   './preview-v4/locale_bridge_v1.js',
-  './preview-v4/locale_overview_v1.js',
+  './preview-v4/locale_overview_v1.js?v=fp568-review-20261107',
   './preview-v4/product_shell_v1.js',
   './preview-v4/design_b/integration.css?v=v7-2',
   './preview-v4/design_b/palette/palette.css?v=v7-2',
@@ -124,10 +124,10 @@ const SHELL_ASSETS = [
   './preview-v4/design_b/scenes/scenes.js',
   './preview-v4/sky_scene_v1.js?v=sky5',
   './preview-v4/sky_scene_v1.css?v=sky5',
-  './preview-v4/app_today_v1.js?v=app1',
+  './preview-v4/app_today_v1.js?v=fp568-review-20261107',
   './preview-v4/app_today_v1.css?v=app1',
   './natal_sky_v1.js?v=ns1',
-  './day_verdict_v1.js?v=dv4',
+  './day_verdict_v1.js?v=fp568-review-20261107',
   './day_verdict_v1.css?v=dv5',
   './shared_day_v1.js?v=sd1',
 
@@ -137,7 +137,7 @@ const SHELL_ASSETS = [
   './preview-b17/design_candidate.js',
   './preview-b17/design_scale.js',
   './preview-b17/locale_bridge_v1.js',
-  './preview-b17/locale_overview_v1.js',
+  './preview-b17/locale_overview_v1.js?v=fp568-review-20261107',
   './preview-b17/product_shell_v1.js',
   './preview-b17/design_b/integration.css',
   './preview-b17/design_b/assets/field-lines.svg',
@@ -170,7 +170,7 @@ const SHELL_ASSETS = [
   './theme_forecast.webp',
   './theme_journal.webp',
   './locale_core_v1.js',
-  './locale_overview_v1.js',
+  './locale_overview_v1.js?v=fp568-review-20261107',
   './locale_bridge_v1.js',
   './panchanga_reference_check_v1.json',
   './play_channel.js',

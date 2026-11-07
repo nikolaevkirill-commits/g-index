@@ -1,9 +1,9 @@
-/* SkyRhythm design-v4 · «Сьогодні» як у референсі 01: бал → три складові → трактування → небо зараз →
-   лінія дня → космічна погода → дії → деталі. Лише порядок і оформлення; дані й бал не змінюються.
+/* SkyRhythm design-v4 · «Сьогодні»: бал → три складові → трактування → лінія дня →
+   космічна погода → небо зараз → дії → персональні інструменти → деталі. Лише порядок і оформлення; дані й бал не змінюються.
    Інші модулі переставляють свої блоки під час рендеру, тому порядок відновлюється після кожної зміни
    складу секції (до відмальовування, без мерехтіння). */
 (()=>{'use strict';
-const ORDER=[':scope > .nr-o-hero',':scope > [data-p0-signals]',':scope > .sr-expert-caution','[data-sky-now]',':scope > .sr-dayline',':scope > .nr-o-weather-brief',':scope > .nr-o-journey',':scope > [data-p0-details]'];
+const ORDER=[':scope > .nr-o-hero',':scope > [data-p0-signals]',':scope > .sr-expert-caution',':scope > .sr-dayline',':scope > .nr-o-weather-brief','[data-sky-now]',':scope > .nr-o-journey',':scope > [data-day-you]',':scope > [data-p0-details]'];
 function arrange(root){
  const els=ORDER.map(s=>root.querySelector(s)).filter(Boolean);if(els.length<2)return false;
  let moved=false,prev=els[0];
