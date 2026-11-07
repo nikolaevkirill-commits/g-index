@@ -72,7 +72,7 @@ function renderWeatherBrief(root,status,full){
  if(!['today','forecast'].includes(root.dataset.overview))return;
  const hero=root.querySelector('.nr-o-hero'),tr=s=>window.NRLocale?.text(s)||s;
  let brief=root.querySelector('[data-weather-brief]');
- if(!brief){brief=document.createElement('button');brief.type='button';brief.dataset.weatherBrief='';brief.className='nr-o-brief nr-o-weather-brief';brief.setAttribute('translate','no');hero.insertBefore(brief,hero.querySelector('[data-panch-countdown]'));brief.onclick=()=>{full.setAttribute('tabindex','-1');full.focus({preventScroll:true});full.scrollIntoView({block:'start'});};}
+ if(!brief){brief=document.createElement('button');brief.type='button';brief.dataset.weatherBrief='';brief.className='nr-o-brief nr-o-weather-brief';brief.setAttribute('translate','no');hero.insertBefore(brief,hero.querySelector('[data-panch-countdown]'));brief.onclick=()=>{const disclosure=full.closest('details');if(disclosure)disclosure.open=true;full.setAttribute('tabindex','-1');full.focus({preventScroll:true});full.scrollIntoView({block:'start'});};}
  let body;
  if(status.state!=='available')body='<span>'+esc(tr(weatherRequest?'Перевіряємо попередження…':'Попередження недоступні або застарілі. Це не означає відсутності бурі.'))+'</span>';
  else{

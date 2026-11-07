@@ -17,11 +17,18 @@ function horizonText(source){
  const stamp=source.kp_input?.issued_at,valid=typeof stamp==='string'&&Number.isFinite(Date.parse(stamp));
  return tr('NOAA: орієнтир на 27 днів')+' · '+(valid?new Intl.DateTimeFormat(window.NRLocale?.locale||'uk-UA',{dateStyle:'long',timeZone:'UTC'}).format(new Date(stamp)):tr('Дата випуску не вказана'));
 }
+COPY.push(['Прокрутіть графік горизонтально, щоб переглянути всі дати.','Scroll the chart horizontally to see all dates.','Desplace el gráfico horizontalmente para ver todas las fechas.','Faites défiler le graphique horizontalement pour voir toutes les dates.']);
 function renderForecastGraph(root){
  const host=root.querySelector('.nr-o-horizon-list');if(!host)return;
- let figure=root.querySelector('[data-forecast-graph]');if(!figure){figure=make('figure','sr-forecast-graph');figure.dataset.forecastGraph='';host.before(figure);}
+ let figure=root.querySelector('[data-forecast-graph]');
+ if(!figure){
+  figure=make('figure','sr-forecast-graph');figure.dataset.forecastGraph='';
+  const plot=make('div','');plot.dataset.forecastScroll='';
+  const hint=make('p','');hint.dataset.forecastScrollHint='';
+  figure.append(make('figcaption',''),hint,plot,make('p',''));host.before(figure);
+ }
  const points=forecastPoints([...host.querySelectorAll('[data-day]')].filter(b=>!b.hidden).map(b=>({date:b.dataset.day,consumer:resolvedFor(b.dataset.day).consumer})));
- const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');const dense=points.length>7;const baseWidth=dense?Math.max(360,points.length*48):360;if(dense){for(const p of points)p.x=30+(p.x-30)*(baseWidth-40)/320;svg.style.minWidth=baseWidth+'px';figure.style.overflowX='auto';figure.tabIndex=0;}else{figure.style.overflowX='';figure.removeAttribute('tabindex');}svg.setAttribute('viewBox',`0 0 ${baseWidth} 225`);svg.setAttribute('role','img');
+ const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');const dense=points.length>7;const baseWidth=dense?Math.max(360,points.length*48):360;if(dense){for(const p of points)p.x=30+(p.x-30)*(baseWidth-40)/320;svg.style.minWidth=baseWidth+'px';}svg.setAttribute('viewBox',`0 0 ${baseWidth} 225`);svg.setAttribute('role','img');
  const node=(tag,attrs,text)=>{const e=document.createElementNS(svg.namespaceURI,tag);for(const [k,v]of Object.entries(attrs))e.setAttribute(k,String(v));if(text!==undefined)e.textContent=text;svg.append(e);return e;};
  const descriptions=points.map(p=>p.date+': '+SkyScore.describe(p.score)+' · '+tr(p.score===null?'Оцінка недоступна':p.authority==='expert_pdf'?'Експертна оцінка':'Формула джерела'));
  svg.setAttribute('aria-label',tr('Оцінки за днями')+'. '+descriptions.join('; '));
@@ -32,7 +39,15 @@ function renderForecastGraph(root){
   else{if(p.score!==0)add('line',{x1:p.x,y1:100,x2:p.x,y2:p.y,stroke:color,'stroke-width':5,'stroke-linecap':'round',opacity:.65});add('circle',{cx:p.x,cy:p.y,r:5,fill:color,stroke:'#101a30','stroke-width':2});add('text',{x:p.x,y:p.y+(p.score<0?19:-12),'text-anchor':'middle',fill:color,'font-size':13,'font-weight':700},SkyScore.formatScore(p.score));}
   add('text',{x:p.x,y:218,'text-anchor':'middle',fill:'#dce6fa','font-size':12},p.date.slice(8)+'.'+p.date.slice(5,7));
  }
- figure.replaceChildren(make('figcaption','','Оцінки за днями'),svg,make('p','','Окремі денні оцінки. Риска означає відсутні дані; 0 — нейтральну оцінку.'));
+ const plot=figure.querySelector('[data-forecast-scroll]'),hint=figure.querySelector('[data-forecast-scroll-hint]');
+ figure.querySelector('figcaption').textContent=tr('Оцінки за днями');
+ figure.lastElementChild.textContent=tr('Окремі денні оцінки. Риска означає відсутні дані; 0 — нейтральну оцінку.');
+ hint.textContent=tr('Прокрутіть графік горизонтально, щоб переглянути всі дати.');hint.hidden=!dense;
+ plot.style.overflowX=dense?'auto':'';
+ if(dense){plot.tabIndex=0;plot.setAttribute('role','region');plot.setAttribute('aria-label',hint.textContent);}
+ else{plot.removeAttribute('tabindex');plot.removeAttribute('role');plot.removeAttribute('aria-label');}
+ const scrollLeft=plot.dataset.firstDate===points[0]?.date?plot.scrollLeft:0;
+ plot.replaceChildren(svg);plot.dataset.firstDate=points[0]?.date||'';plot.scrollLeft=scrollLeft;
  const geometry=[...svg.querySelectorAll('[x],[x1],[cx]')].map(el=>({el,values:['x','x1','x2','cx'].filter(a=>el.hasAttribute(a)).map(a=>[a,Number(el.getAttribute(a))])}));const resizeLabels=()=>{const graph=svg,width=graph.getBoundingClientRect().width;if(!graph.isConnected||!(width>0))return;const W=dense?baseWidth:innerWidth>=900?width:360;graph.setAttribute('viewBox',`0 0 ${W} 225`);for(const {el,values} of geometry)for(const [a,v]of values)el.setAttribute(a,dense||W===360?v:v<30?v:30+(v-30)*(W-40)/320);for(const label of graph.querySelectorAll('text'))label.style.setProperty('font-size',(13*W/width)+'px','important');};figure._labelObserver?.disconnect();figure._labelObserver=new ResizeObserver(()=>requestAnimationFrame(()=>{if(svg.isConnected)resizeLabels();}));figure._labelObserver.observe(svg);resizeLabels();
 }
 function moon(at){

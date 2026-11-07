@@ -26,6 +26,24 @@ try{for(const entry of ['classic.html','index.html'])for(const lang of ['uk','en
   if(lang==='uk'&&r.good){const items=r.good.replace(/^Підходить:\s*/,'').split(' · ');for(const i of items)assert.ok(GOOD_UK.includes(i.trim()),'unknown good-for item '+i)}
   if(lang==='en')assert.equal(/[А-Яа-яІіЇїЄєҐґ]/.test(r.text),false,entry+' '+ds+' Ukrainian text in English verdict: '+r.text.slice(0,120));
   checks++;}
+ const noaa=await p.evaluate(ds=>{
+  const read=window.fp469ConsumerForDate,result=read({ds});
+  const cases=[['stale','NOAA_3day_slots',5.33],['offline','NOAA_3day_slots',5.33],['fresh','NOAA_27day_outlook',5.33],['fresh','NOAA_3day_slots',5.33],['fresh','unknown',5.33],['fresh','NOAA_3day_slots',12]];
+  try{return cases.map(([state,kp_source,kp])=>{
+   window.fp469ConsumerForDate=()=>({...result,consumer:{...result.consumer,formula:{state}},feed:{channels:{source_formula:{available:true,kp_source,kp_input:{kp}}}}});
+   const verdict=NRDayVerdict.build(ds);
+   return {storm:verdict.care.some(x=>x.includes('NOAA')),kp:verdict.why.find(([k])=>k.includes('NOAA'))?.[1]};
+  });}finally{window.fp469ConsumerForDate=read;}
+ },dates[0]);
+ assert.deepEqual(noaa.map(r=>r.storm),[false,false,false,true,false,false]);
+ assert.match(noaa[2].kp,/27/);
+ assert.match(noaa[3].kp,/5[.,]33/);
+ const weather=await p.evaluate(()=>{
+  const route=document.querySelector('#nrRoute-today [data-overview=today]'),target=route.querySelector('.nr-o-spaceweather');
+  const details=target.closest('details');details.open=false;route.querySelector('[data-weather-brief]').click();
+  return {open:details.open,focused:document.activeElement===target};
+ });
+ assert.deepEqual(weather,{open:true,focused:true});
  assert.equal(errs.length,0,errs.join('|'));await c.close();}}
 finally{await b.close();srv.close()}
 console.log('PASS day verdict: '+checks+' date checks (2 entries × uk/en): verdict above score, tone = sign of final score, good-for only from calendar marks');})().catch(e=>{console.error(e.message);process.exit(1)});

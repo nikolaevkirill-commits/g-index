@@ -21,7 +21,9 @@ const T={
  calendar_none:['окремих позначок немає','no specific marks','sin marcas específicas','pas de marques particulières'],
  kp:['Космопогода NOAA','NOAA space weather','Clima espacial NOAA','Météo spatiale NOAA'],
  kp_quiet:['спокійно','quiet','tranquilo','calme'],kp_active:['збурено','unsettled','agitado','agité'],kp_storm:['буря','storm','tormenta','tempête'],
- kp_none:['даних немає','no data','sin datos','pas de données'],
+ kp_none:['актуальний прогноз недоступний','current forecast unavailable','pronóstico vigente no disponible','prévision actuelle indisponible'],
+ kp_short:['Прогноз Kp NOAA','NOAA Kp forecast','Pronóstico de Kp de NOAA','Prévision Kp de la NOAA'],
+ kp_outlook:['орієнтир на 27 днів','27-day outlook','perspectiva de 27 días','tendance à 27 jours'],
  sky:['Небо','Sky','Cielo','Ciel'],sky_note:['традиція, не перевірено','tradition, not validated','tradición, no validado','tradition, non validé'],
  match:['Сьогодні збіглось?','Did today match?','¿Coincidió hoy?','Ça a correspondu aujourd’hui ?'],
  m_yes:['Так','Yes','Sí','Oui'],m_partial:['Частково','Partly','En parte','En partie'],m_no:['Ні','No','No','Non'],
@@ -47,12 +49,16 @@ function build(r,ds){
  if(names.has('День порожні руки, несприятливий'))avoid.push(t('newStarts'));
  const caution=r.querySelector('.sr-expert-caution summary strong')?.textContent?.trim();if(caution)avoid.push(caution);
  if(names.has('Тричі  трикутник'))care.push(t('recheck'));
- const kp=Number.isFinite(ch.kp_daily_max)?ch.kp_daily_max:null;if(kp!=null&&kp>=5)care.push(t('storm_check')+' G'+Math.min(5,Math.floor(kp)-4));
+ const signal=window.SRP0Layout?.signalData(c,row);
+ const short=signal?.source==='NOAA_3day_slots',outlook=signal?.source==='NOAA_27day_outlook';
+ const kp=short||outlook?signal.kp:null;
+ if(short&&kp>=5)care.push(t('storm_check')+' G'+Math.min(5,Math.floor(kp)-4));
  // why
  const why=[];
  if(c.available){const ex=c.authority==='expert_pdf';why.push([ex?t('score_exp'):t('score_formula'),(c.score>0?'+':c.score<0?'−':'')+Math.abs(c.score)])}
  why.push([t('calendar'),good.length?good.join(', '):avoid.includes(t('newStarts'))?t('avoid').replace(/:$/,'').toLowerCase()+': '+t('newStarts'):t('calendar_none')]);
- why.push([t('kp'),kp==null?t('kp_none'):'Kp '+kp.toFixed(1).replace('.',L()==='en'?'.':',')+' · '+(kp>=5?t('kp_storm'):kp>=4?t('kp_active'):t('kp_quiet'))]);
+ const kpText=kp===null?t('kp_none'):'Kp '+new Intl.NumberFormat(L(),{maximumFractionDigits:2}).format(kp)+' · '+(outlook?t('kp_outlook'):kp>=5?t('kp_storm'):kp>=4?t('kp_active'):t('kp_quiet'));
+ why.push([short?t('kp_short'):t('kp'),kpText]);
  const ev=sky?[...sky.intervals,...sky.events].filter(x=>x.reading&&x.reading.intensity>=3&&(x.start||x.at).kyiv_date<=ds&&ds<=(x.end||x.at).kyiv_date)[0]:null;
  if(ev)why.push([t('sky'),(ev.reading.text[L()]||ev.reading.text.en).replace(/:.*$/,'')+' ('+t('sky_note')+')']);
  return {tone,good,avoid,care,why};
@@ -105,7 +111,7 @@ function watch(){const r=root();if(!r){setTimeout(watch,250);return}if(watched==
  r.addEventListener('change',e=>{if(e.target.matches('select'))setTimeout(soon,0)});soon()}
 window.NRDayVerdict={build:ds=>{const r=root();return r?build(r,ds||selected(r)):null},render,matches:matchAll};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{watch();loadSky()});else{watch();loadSky()}
-for(const e of ['sr:consumer-load','nr:locale','gindex:consumer-ready','nr:natal'])window.addEventListener(e,soon);
+for(const e of ['sr:consumer-load','nr:locale','gindex:consumer-ready','nr:natal','online','offline'])window.addEventListener(e,soon);
 document.addEventListener('click',e=>{const b=e.target.closest?.('[data-day-match] button[data-match]');if(!b)return;const r=root();if(!r)return;
  let today='';try{today=NRCivilTime.dayKey(Date.now(),'Europe/Kyiv')}catch{}if(selected(r)!==today)return;
  matchSave(today,b.dataset.match);soon()});
