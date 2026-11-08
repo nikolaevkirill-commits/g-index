@@ -215,7 +215,7 @@ async function cachedFingerprints(page, oldVersion) {
         const response = await offline.goto(target, { waitUntil: 'domcontentloaded' });
         assert.equal(response.status(), 200);
         assert.equal(response.fromServiceWorker(), true);
-        assert.equal(offline.url(), target);
+        assert.equal(offline.url().split('#')[0], target);
         assert.equal(await response.text(), fs.readFileSync(path.join(root, file), 'utf8'));
       } finally {
         await offline.close();
