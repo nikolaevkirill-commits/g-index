@@ -74,6 +74,26 @@ try{for(const [locale,rm] of [['uk-UA','no-preference'],['en-GB','no-preference'
   assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
   res.push({weather:mode,scoreUnchanged:true});
  }
+ // Give the view identical Kp values with different provenance. Only short-range NOAA can label a possible storm.
+ const weatherLabels=await p.evaluate(()=>{
+  const original=window.fp469ConsumerForDate,ds=NRSkyScene.selected();
+  const label=source=>{
+   window.fp469ConsumerForDate=()=>({consumer:{state:'fresh'},feed:{channels:{source_formula:{kp_daily_max:7,kp_source:source}}}});
+   NRSkyScene.select(ds);
+   return document.querySelector('[data-sky] .nr-sky-date').textContent;
+  };
+  try{
+   return {short:label('NOAA_3day_slots'),outlook:label('NOAA_27day_outlook'),unknown:label('unverified'),aurora:!!document.querySelector('.nr-sky-aurora,.nrs-aurora,.sr-aurora-light')};
+  }finally{window.fp469ConsumerForDate=original;}
+ });
+ assert.match(weatherLabels.short,/G3/);
+ const controlsBeforeWheel=await p.evaluate(()=>document.querySelector('.nr-sky-controls').nextElementSibling?.matches('.nr-sky-stage'));
+ assert(controlsBeforeWheel,'27-day playback must be reachable above the wheel');
+ assert.match(weatherLabels.outlook,/27-денний орієнтир/);
+ assert.doesNotMatch(weatherLabels.outlook,/G3/);
+ assert.doesNotMatch(weatherLabels.unknown,/Kp/);
+ assert.equal(weatherLabels.aurora,false);
+ res.push({weather:'provenance',...weatherLabels});
  assert.deepEqual(errors,[]);await c.close();}
 finally{await b.close();srv.close()}
 console.log(JSON.stringify(res));console.log('PASS sky scene: 4 languages, reduced motion, missing data, score unchanged; Today order and Sky now card');})().catch(e=>{console.error(e.message);process.exit(1)});

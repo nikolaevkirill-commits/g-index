@@ -2,7 +2,7 @@ importScripts('./runtime_diagnostics_v1.js','./civil_time_v1.js');
 // G-Index service worker. Navigations, HTML, JS and data (.json/.jsonl/.csv) are network-first with a
 // cached fallback; other same-origin assets (CSS, images, fonts) are cache-first.
 // Bump CACHE_VERSION whenever index.html or a cached shell asset changes.
-const CACHE_VERSION = 'fp569c-shared-sky-time-20261108'; // Discrete final scores; no interpolated forecast.
+const CACHE_VERSION = 'fp569c-provenance-20261108'; // Discrete final scores; no interpolated forecast.
 const CACHE_PREFIX = 'gindex-'; // G-Index cache namespace; do not remove the prefix.
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${CACHE_VERSION}`;
 const DATA_CACHE = `${CACHE_PREFIX}data-${CACHE_VERSION}`;
@@ -50,7 +50,7 @@ const SHELL_ASSETS = [
   './civil_time_v1.js',
   './sw_update_coordination_v1.js',
   './day_context_v1.js?v=dc3',
-  './sky_time_v1.js?v=fp569c-clock',
+  './sky_time_v1.js?v=fp569c-event',
   './sky_live_loader_v1.js?v=fp569c-clock',
   './sky_live_v1.js?v=fp569c-clock',
   './moon_gl_v1.js?v=mg2',
@@ -122,8 +122,8 @@ const SHELL_ASSETS = [
   './preview-v4/design_b/fonts/OFL-Literata.txt',
   './preview-v4/design_b/scenes/locale_extra_v1.js',
   './preview-v4/design_b/scenes/scenes.css?v=v7-3',
-  './preview-v4/design_b/scenes/scenes.js?v=fp569c-scenes-20261108',
-  './preview-v4/sky_scene_v1.js?v=fp569b-planets-20261108',
+  './preview-v4/design_b/scenes/scenes.js?v=fp569c-scenes-provenance',
+  './preview-v4/sky_scene_v1.js?v=fp569c-event',
   './preview-v4/sky_scene_v1.css?v=sky5',
   './preview-v4/app_today_v1.js?v=fp569b-today-20261108',
   './preview-v4/app_today_v1.css?v=app1',
@@ -208,7 +208,7 @@ const SHELL_ASSETS = [
   './notification_runtime_v1.js',
   './transition_runtime_v1.js',
   './transition_client_v1.js',
-  './consumer_overview_v1.js?v=fp568-noaa-20261107',
+  './consumer_overview_v1.js?v=fp569c-provenance',
   './calendar_context_v1.js',
   './consumer_overview_v1.css',
   './local_storage_v1.js',

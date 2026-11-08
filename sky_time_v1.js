@@ -24,7 +24,7 @@ const copy={
 };
 const t=k=>copy[k][Math.max(0,language())];
 let selected=null, playing=false, frame=0, rangeCache, exampleChosen=false;
-let today, chartKey, formatterKey, formatter, dateFormatter;
+let today, chartKey, formatterKey, formatter, dateFormatter, offsetFormatter;
 
 function place(example=false){
  const loc=window.NRLocalContext?.current?.();
@@ -59,7 +59,12 @@ function snapshot(){
 }
 function timeText(at,zone){
  const locale=window.NRLocale?.locale||'uk-UA',key=locale+'|'+zone;
- if(formatterKey!==key){formatter=new Intl.DateTimeFormat(locale,{timeZone:zone,hour:'2-digit',minute:'2-digit',hourCycle:'h23'});dateFormatter=new Intl.DateTimeFormat(locale,{timeZone:zone,day:'numeric',month:'short'});formatterKey=key;}
+ if(formatterKey!==key){
+  formatter=new Intl.DateTimeFormat(locale,{timeZone:zone,hour:'2-digit',minute:'2-digit',hourCycle:'h23'});
+  dateFormatter=new Intl.DateTimeFormat(locale,{timeZone:zone,day:'numeric',month:'short'});
+  offsetFormatter=new Intl.DateTimeFormat(locale,{timeZone:zone,timeZoneName:'shortOffset'});
+  formatterKey=key;
+ }
  return formatter.format(at);
 }
 function sun(at,loc){
@@ -84,6 +89,12 @@ function seek(value){
  notify();
 }
 function live(){stop();selected=null;notify();}
+function selectMoment(instant){
+ const at=typeof instant==='string'?Date.parse(instant):NaN;
+ if(!Number.isFinite(at))return false;
+ stop();selected=at;notify();
+ return true;
+}
 function toggle(){
  if(playing){stop();notify();return;}
  if(!allowed())return;
@@ -115,14 +126,16 @@ function controls(host){
   const time=timeText(s.at,s.zone);
   el.querySelector('[data-time-label]').textContent=t('day');
   range.value=Math.floor((s.at-s.start)/(s.end-s.start-1)*1000);
-  range.setAttribute('aria-valuetext',time+' · '+s.zone);
+  // The same local clock reading occurs twice when the UTC offset moves back.
+  const offset=s.end-s.start===DAY?'':offsetFormatter.formatToParts(s.at).find(p=>p.type==='timeZoneName')?.value;
+  range.setAttribute('aria-valuetext',[time,offset,s.zone].filter(Boolean).join(' · '));
   play.textContent=t(s.mode==='playing'?'pause':'play');
   play.disabled=!s.allowed;
   play.title=s.allowed?'':t('motion');
   play.setAttribute('aria-pressed',String(s.mode==='playing'));
   now.textContent=t('now');now.setAttribute('aria-pressed',String(s.mode==='now'));
   const stamp=el.querySelector('time');stamp.dateTime=new Date(s.at).toISOString();stamp.textContent=time;
-  el.querySelector('[data-time-mode]').textContent=t(s.mode==='playing'?'running':s.mode==='selected'?'selected':'now')+' · '+dateFormatter.format(s.at)+' · '+s.zone;
+  el.querySelector('[data-time-mode]').textContent=[t(s.mode==='playing'?'running':s.mode==='selected'?'selected':'now'),dateFormatter.format(s.at),s.zone,offset].filter(Boolean).join(' · ');
   el.dataset.mode=s.mode;
  };
 }
@@ -178,7 +191,7 @@ function sync(){
  mount();
  if(!document.hidden)notify();
 }
-window.SRSkyTime=Object.freeze({snapshot,place,controls,light,timeText});
+window.SRSkyTime=Object.freeze({snapshot,place,controls,light,timeText,selectMoment});
 window.addEventListener('hashchange',sync);
 function watchRoutes(){
  const observer=new MutationObserver(sync);

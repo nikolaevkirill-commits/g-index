@@ -24,9 +24,18 @@ const srv=http.createServer((q,s)=>{const name=decodeURIComponent(new URL(q.url,
  for(let i=0;i<runs;i++){phase='old';const b=await chromium.launch();try{const c=await b.newContext();const p=await c.newPage();
   await p.goto('http://127.0.0.1:'+srv.address().port+'/race.html');await p.evaluate(()=>Promise.race([window.ready,new Promise((_,j)=>setTimeout(()=>j(Error('ready timeout')),20000))]));
   if(multi){const other=await c.newPage();await other.goto('http://127.0.0.1:'+srv.address().port+'/race.html');await other.evaluate(()=>window.ready);await other.evaluate(()=>window.storm());}
-  phase='new';await p.evaluate(async()=>{await _swReg.update()});await p.waitForFunction(()=>!!_swReg.waiting,null,{timeout:60000});await p.waitForTimeout(1000);
+  phase='new';await p.evaluate(async()=>{await _swReg.update()});
+  // The first page may be hidden after opening the second tab. Its animation frames can stop
+  // while the service worker continues to install and send controllerchange events.
+  try{await p.waitForFunction(()=>!!_swReg.waiting,null,{polling:100,timeout:60000});}
+  catch(error){
+   const state=await p.evaluate(()=>({visibility:document.visibilityState,installing:_swReg.installing?.state,waiting:_swReg.waiting?.state,active:_swReg.active?.state}));
+   console.error('B7 did not observe the waiting worker before requesting activation',JSON.stringify(state));
+   throw error;
+  }
+  await p.waitForTimeout(1000);
   await p.evaluate(()=>{window.storm();window.t0=Date.now();pwaReload();});
-  const ok=await p.waitForFunction(()=>window.changed!==null,null,{timeout:8000}).then(()=>true,()=>false);
+  const ok=await p.waitForFunction(()=>window.changed!==null,null,{polling:100,timeout:8000}).then(()=>true,()=>false);
   results.push(ok?await p.evaluate(()=>window.changed):null);}finally{await b.close()}}
  srv.close();const stuck=results.filter(x=>x===null).length;
  console.log(JSON.stringify({entry,multi,runs,stuck,activation_ms:results}));

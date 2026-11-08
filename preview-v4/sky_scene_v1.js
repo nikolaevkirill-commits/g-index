@@ -27,6 +27,7 @@ const T={
  stale:['Розрахунок неба застарів; показано наявні дні.','The sky calculation is out of date; available days are shown.','El cálculo del cielo está desactualizado; se muestran los días disponibles.','Le calcul du ciel est périmé ; les jours disponibles sont affichés.'],
  kp:['Kp NOAA (макс. за добу)','NOAA Kp (daily max)','Kp de NOAA (máx. diario)','Kp NOAA (max. quotidien)'],
  kpNone:['немає','none','sin dato','aucun'],
+ event_sky:['Небо в цей момент','Sky at this instant','Cielo en ese momento','Ciel à cet instant'],
  kp27:['27-денний орієнтир','27-day outlook','perspectiva de 27 días','tendance à 27 jours'],
  active:['Діє цього дня','Active on this day','Activo este día','Actif ce jour-là'],
  until:['до','until','hasta','jusqu’au'],
@@ -67,7 +68,7 @@ let sky=null,feed=null,weather=null,state='loading',sel=null,timer=null,host=nul
 
 function dayIndex(ds){return sky?sky.daily.findIndex(d=>d.date===ds):-1}
 function skyStale(){return !sky||sky.window?.start!==kyivToday()||!Number.isFinite(Date.parse(sky.generated_at))||Date.now()-Date.parse(sky.generated_at)>86400000||Date.parse(sky.generated_at)>Date.now()+300000}
-function kpFor(ds){const resolved=window.fp469ConsumerForDate?.({ds});const value=resolved?.consumer;const status=value?.formula||value;if(status?.state!=='fresh')return null;const ch=resolved?.feed?.channels?.source_formula;const kp=ch?.kp_daily_max??ch?.kp_input?.kp;return Number.isFinite(kp)&&kp>=0&&kp<=9?{kp,src:ch.kp_source}:null}
+function kpFor(ds){const resolved=window.fp469ConsumerForDate?.({ds});const value=resolved?.consumer;const status=value?.formula||value;if(status?.state!=='fresh')return null;const ch=resolved?.feed?.channels?.source_formula;const kp=ch?.kp_daily_max??ch?.kp_input?.kp;return Number.isFinite(kp)&&kp>=0&&kp<=9&&['NOAA_3day_slots','NOAA_27day_outlook'].includes(ch?.kp_source)?{kp,src:ch.kp_source}:null}
 function kpClass(kp){return kp==null?'none':kp>=7?'g3':kp>=6?'g2':kp>=5?'g1':kp>=4?'active':'quiet'}
 function within(item,ds){const s=(item.start||item.at).kyiv_date,e=(item.end||item.at).kyiv_date;return s<=ds&&ds<=e}
 function dayItems(ds){if(!sky)return [];return [...sky.intervals,...sky.events].filter(x=>x.reading&&within(x,ds)).sort((a,b)=>(b.reading.intensity-a.reading.intensity)||((a.start||a.at).utc<(b.start||b.at).utc?-1:1))}
@@ -103,9 +104,9 @@ function wheel(ds,mini){
  for(const {g} of order){const p=d.grahas[g],[x,y]=ring(p.lon,R+22+lane[g]*15),a=active.get(g)||new Set();
   const cls=['nr-sky-planet',...[...a].map(k=>'is-'+k.replace('_','-'))];if(p.retrograde&&g!=='Rahu'&&g!=='Ketu')cls.push('is-retro');if(exact.has(g))cls.push('is-exact');
   s+=`<g class="${cls.join(' ')}" data-g="${g}" data-lon="${p.lon}" data-rad="${R+22+lane[g]*15}" style="--c:${G[g][5]};transform:translate(${x.toFixed(1)}px,${y.toFixed(1)}px)"><circle class="nr-sky-flare" r="11"/><circle class="nr-sky-halo" r="11"/><circle class="nr-sky-dot" r="8.5"/><text class="nr-sky-glyph" aria-hidden="true">${G[g][0]+VS}</text>${cls.includes('is-retro')?'<path class="nr-sky-loop" d="M-13 -8 a7 7 0 1 1 0 0.1"/>':''}</g>`}
- // centre: Earth, aurora when the forecast Kp for the day reaches storm level
- const k=kpFor(ds),kc=kpClass(k?.kp);
- s+=`<g class="nr-sky-earth is-${kc}"><circle class="nr-sky-aurora" r="34"/><circle r="15" class="nr-sky-globe"/><text class="nr-sky-kp" y="52">${k?'Kp '+new Intl.NumberFormat(window.NRLocale?.locale||'uk-UA',{maximumFractionDigits:2}).format(k.kp).replace(/\.0$/,''):''}</text></g>`;
+ // The central label reports Kp without implying local aurora visibility.
+ const k=kpFor(ds);
+ s+=`<g class="nr-sky-earth"><circle r="15" class="nr-sky-globe"/><text class="nr-sky-kp" y="52">${k?'Kp '+new Intl.NumberFormat(window.NRLocale?.locale||'uk-UA',{maximumFractionDigits:2}).format(k.kp).replace(/\.0$/,''):''}</text></g>`;
  // eclipse shadow
  if(items.some(x=>x.type.endsWith('eclipse')))s+=`<circle class="nr-sky-eclipse" r="${R-46}"/>`;
  return s+'</svg>';
@@ -120,7 +121,10 @@ function list(ds){
  const items=dayItems(ds).filter(x=>x.reading.intensity>=1),lang=L();
  if(!items.length)return `<p class="nr-sky-none">${esc(t('none'))}</p>`;
  const li=x=>{const r=x.reading,when=x.at?x.at.kyiv:(x.exact&&x.exact.kyiv_date===ds?t('exact')+' '+x.exact.kyiv:[x.start.kyiv_date<ds||x.started_before_window?'':t('from')+' '+x.start.kyiv,x.continues_after_window?t('ongoing'):t('until')+' '+x.end.kyiv].filter(Boolean).join(' · '));
-  return `<li class="nr-sky-ev is-${x.type.replace('_','-')}" data-intensity="${r.intensity}"><b aria-hidden="true">${x.bodies.map(g=>(G[g]?.[0]||'')+VS).join(' ')}</b><span><span class="nr-sky-text">${esc(r.text[lang]||r.text.en)}</span><small>${esc(when)} · ${esc(t('intensity'))} ${'●'.repeat(r.intensity)}${'○'.repeat(3-r.intensity)} · ${esc(r.label[lang]||r.label.en)}</small></span></li>`};
+  const eventTime=x.at||(x.exact?.kyiv_date===ds?x.exact:null);
+  const action=window.SRSkyTime&&Number.isFinite(Date.parse(eventTime?.utc))
+   ?`<button type="button" class="nr-sky-event-time" data-sky-event-at="${esc(eventTime.utc)}">${esc(t('event_sky'))}</button>`:'';
+  return `<li class="nr-sky-ev is-${x.type.replace('_','-')}" data-intensity="${r.intensity}"><b aria-hidden="true">${x.bodies.map(g=>(G[g]?.[0]||'')+VS).join(' ')}</b><span><span class="nr-sky-text">${esc(r.text[lang]||r.text.en)}</span><small>${esc(when)} · ${esc(t('intensity'))} ${'●'.repeat(r.intensity)}${'○'.repeat(3-r.intensity)} · ${esc(r.label[lang]||r.label.en)}</small>${action}</span></li>`};
  const top=items.slice(0,4),rest=items.slice(4);
  return `<h4>${esc(t('active'))}</h4><ul class="nr-sky-events">${top.map(li).join('')}</ul>`+(rest.length?`<details class="nr-sky-more"><summary>${esc(t('more'))} (${rest.length})</summary><ul class="nr-sky-events">${rest.map(li).join('')}</ul></details>`:'');
 }
@@ -161,6 +165,8 @@ function spaceWeather(){
 function render(){
  renderToday();
  if(!host)return;
+ const active=document.activeElement;
+ const refocus=host.contains(active)?['.nr-sky-play','.nr-sky-controls input'].find(selector=>active.matches(selector)):null;
  const weatherHelpOpen=host.querySelector('.nr-sky-weather-help')?.open===true;
  host.querySelector('.nr-sky-title').textContent=t('title');host.querySelector('.nr-sky-sub').textContent=t('sub');
  if(state!=='ready'){host.querySelector('.nr-sky-body').innerHTML=`<p class="nr-sky-none" role="status">${esc(state==='loading'?'…':t('missing'))}</p>`;return}
@@ -168,9 +174,10 @@ function render(){
  const stale=skyStale();
  const before=new Map([...host.querySelectorAll('.nr-sky-planet[data-g]')].map(e=>[e.dataset.g,[Number(e.dataset.lon),Number(e.dataset.rad)]]));
  host.querySelector('.nr-sky-body').innerHTML=(stale?`<p class="nr-sky-stale" role="status">${esc(t('stale'))}</p>`:'')+
-  `<div class="nr-sky-stage"><div class="nr-sky-wheel-wrap">${wheel(sel)}${planets(sel,false)}</div><div class="nr-sky-side"><p class="nr-sky-date">${esc(fmtDay(sel))}${(()=>{const k=kpFor(sel);return k?` · ${esc(t('sw_forecast'))} ${new Intl.NumberFormat(window.NRLocale?.locale||'uk-UA',{maximumFractionDigits:2}).format(k.kp)}${k.src==='NOAA_27day_outlook'?' · '+esc(t('kp27')):''}${k.kp>=5?' · '+esc(t('storm'))+' G'+Math.min(5,Math.floor(k.kp)-4):''}`:''})()}</p><div class="nr-sky-list">${list(sel)}</div>${spaceWeather()}</div></div>`+
-  strip(sel)+`<div class="nr-sky-controls"><button type="button" class="nr-sky-play" ${motionOn()?'':'disabled'} aria-pressed="${!!timer}">${esc(timer?t('stop'):t('play'))}</button><label><input type="range" aria-label="${esc(t('day'))}" min="0" max="${sky.daily.length-1}" value="${dayIndex(sel)}" aria-valuetext="${esc(fmtDay(sel))}"></label></div>`;
+  `<div class="nr-sky-controls"><button type="button" class="nr-sky-play" ${motionOn()?'':'disabled'} aria-pressed="${!!timer}">${esc(timer?t('stop'):t('play'))}</button><label><input type="range" aria-label="${esc(t('day'))}" min="0" max="${sky.daily.length-1}" value="${dayIndex(sel)}" aria-valuetext="${esc(fmtDay(sel))}"></label></div>`+
+  `<div class="nr-sky-stage"><div class="nr-sky-wheel-wrap">${wheel(sel)}${planets(sel,false)}</div><div class="nr-sky-side"><p class="nr-sky-date">${esc(fmtDay(sel))}${(()=>{const k=kpFor(sel);return k?` · ${k.src==='NOAA_27day_outlook'?'Kp':esc(t('sw_forecast'))} ${new Intl.NumberFormat(window.NRLocale?.locale||'uk-UA',{maximumFractionDigits:2}).format(k.kp)}${k.src==='NOAA_27day_outlook'?' · '+esc(t('kp27')):''}${k.src==='NOAA_3day_slots'&&k.kp>=5?' · '+esc(t('storm'))+' G'+Math.min(5,Math.floor(k.kp)-4):''}`:''})()}</p><div class="nr-sky-list">${list(sel)}</div>${spaceWeather()}</div></div>`+strip(sel);
  if(weatherHelpOpen)host.querySelector('.nr-sky-weather-help')?.setAttribute('open','');
+ if(refocus)host.querySelector(refocus)?.focus({preventScroll:true});
  if(before.size&&motionOn())arcMove(before);
  host.querySelector('.nr-sky-title').textContent=t('title');host.querySelector('.nr-sky-sub').textContent=t('sub');
 }
@@ -191,7 +198,25 @@ function mount(){
  host=document.createElement('section');host.className='nr-sky';host.setAttribute('translate','no');host.dataset.sky='';host.setAttribute('aria-labelledby','nrSkyTitle');
  host.innerHTML='<div class="nr-sky-head"><h2 class="nr-sky-title" id="nrSkyTitle"></h2><p class="nr-sky-sub"></p></div><div class="nr-sky-body"></div>';
  route.prepend(host); // «Небо» tab: the sky scene first, the panchanga below it
- host.addEventListener('click',e=>{const b=e.target.closest('[data-sky-day]');if(b){stop();select(b.dataset.skyDay,true);return}if(e.target.closest('.nr-sky-play'))play()});
+ host.addEventListener('click',e=>{
+  const event=e.target.closest('[data-sky-event-at]');
+  if(event&&window.SRSkyTime?.selectMoment(event.dataset.skyEventAt)){
+   if(timer){stop();render();}
+   const heading=document.getElementById('nrSkyLiveHeading');
+   if(heading){
+    heading.tabIndex=-1;
+    heading.focus({preventScroll:true});
+    heading.scrollIntoView({block:'start',behavior:'instant'});
+   }
+   return;
+  }
+  const b=e.target.closest('[data-sky-day]');
+  if(b){stop();select(b.dataset.skyDay,true);return}
+  if(e.target.closest('.nr-sky-play')){
+   play();
+   host.querySelector('.nr-sky-play')?.focus({preventScroll:true});
+  }
+ });
  host.addEventListener('input',e=>{if(e.target.type==='range'){stop();sel=sky.daily[Number(e.target.value)].date;render();host.querySelector('input[type=range]')?.focus()}});
  host.addEventListener('keydown',e=>{const b=e.target.closest('[data-sky-day]');if(!b||!['ArrowLeft','ArrowRight'].includes(e.key))return;e.preventDefault();const i=dayIndex(b.dataset.skyDay)+(e.key==='ArrowRight'?1:-1);if(sky.daily[i])select(sky.daily[i].date,true)});
  if('IntersectionObserver' in window)new IntersectionObserver(es=>{for(const x of es)host.classList.toggle('is-visible',x.isIntersecting);if(!es.some(x=>x.isIntersecting))stop()}).observe(host);else host.classList.add('is-visible');
