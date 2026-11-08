@@ -38,7 +38,7 @@ try{for(const [lang,width] of [['uk',390],['uk',320],['en',390],['uk',1280]]){
  assert(today.line<today.sky,'the solar timeline must precede the detailed sky card');checks++;
  assert.equal(today.overflow,false,'no horizontal overflow on Today '+width);checks++;
  if(width>=1024){assert(today.bar<today.hero,'desktop date bar is the first row');checks++;}
- assert.equal(today.title,lang==='en'?'Week':'Тиждень');checks++;
+ assert.equal(today.title,lang==='en'?'Week · scores by Kyiv date':'Тиждень · оцінки за Києвом');checks++;
  await p.evaluate(()=>fp434Go('forecast',false));
  await p.waitForFunction(()=>document.querySelector('#nrRoute-forecast [data-week-events]'),null,{timeout:30000});
  const fc=await p.evaluate(()=>{const tools=document.querySelector('#nrRoute-forecast .nr-o-route-tools');const ev=tools.querySelector(':scope > [data-week-events]');

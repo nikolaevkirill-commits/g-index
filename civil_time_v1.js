@@ -12,5 +12,23 @@
  }
  const day=p=>p.year.padStart(4,'0')+'-'+p.month.padStart(2,'0')+'-'+p.day.padStart(2,'0');
  const clock=p=>p.hour.padStart(2,'0')+':'+p.minute.padStart(2,'0')+':'+p.second.padStart(2,'0');
- return Object.freeze({dayKey:(t,zone)=>day(parts(t,zone)),minuteKey:(t,zone)=>{const p=parts(t,zone);return day(p)+'T'+clock(p).slice(0,5);},clockKey:(t,zone)=>clock(parts(t,zone))});
+ function localZone(){
+  const ctx=globalThis.NRLocalContext;
+  const place=ctx?.current?.();
+  const zone=ctx?.valid?.(place,false)?place.zone:(Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC');
+  return zone==='Europe/Kiev'?'Europe/Kyiv':zone;
+ }
+ function localNoon(date,zone){
+  const wall=Date.parse(date+'T12:00:00Z');
+  if(!Number.isFinite(wall)||new Date(wall).toISOString().slice(0,10)!==date)return null;
+  // Read offsets on both sides so a change at midnight, or a skipped date, is explicit.
+  for(const probe of [wall,wall-86400000,wall+86400000]){
+   const p=parts(probe,zone);
+   const candidate=wall+probe-Date.parse(day(p)+'T'+clock(p)+'Z');
+   const actual=parts(candidate,zone);
+   if(day(actual)===date&&clock(actual)==='12:00:00')return candidate;
+  }
+  return null;
+ }
+ return Object.freeze({localZone,localNoon,dayKey:(t,zone)=>day(parts(t,zone)),minuteKey:(t,zone)=>{const p=parts(t,zone);return day(p)+'T'+clock(p).slice(0,5);},clockKey:(t,zone)=>clock(parts(t,zone))});
 });

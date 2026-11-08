@@ -33,11 +33,14 @@ const server=http.createServer(async(req,res)=>{
    await p.goto(base+'/'+entry+'?channel=play#today',{waitUntil:'domcontentloaded'});
    const today=p.locator('[data-sky-clock]'), sun=today.locator('[data-time-sun]');
    await sun.waitFor();
+   await p.waitForFunction(()=>!!document.querySelector('#nrRoute-today .nr-o-hero .nr-dv-tone'),null,{timeout:30000});
    const visible=await sun.evaluate(el=>{
     const r=el.getBoundingClientRect(),nav=document.getElementById('mobileNav');
-    return {top:r.top,bottom:r.bottom,limit:nav?.checkVisibility()?nav.getBoundingClientRect().top:innerHeight,aboveFold:r.top>=0&&r.bottom<=(nav?.checkVisibility()?nav.getBoundingClientRect().top:innerHeight)};
+    const limit=nav?.checkVisibility()?nav.getBoundingClientRect().top:innerHeight,card=el.closest('[data-sky-clock]'),tone=document.querySelector('#nrRoute-today .nr-o-hero .nr-dv-tone');
+    // FP569d: the day verdict opens Today; the Sun clock is the next block after the overview card.
+    return {top:r.top,bottom:r.bottom,limit,verdictAboveFold:!!tone&&tone.getBoundingClientRect().bottom<=limit,afterHero:!!card.previousElementSibling?.matches('.nr-o-hero,.sr-expert-caution')};
    });
-   assert(visible.aboveFold,JSON.stringify(visible));
+   assert(visible.verdictAboveFold&&visible.afterHero,JSON.stringify(visible));
    assert.equal(await p.evaluate(()=>Boolean(window.NRMoonGL)),false);
    const input=(host,value)=>host.locator('.sr-time-controls input').evaluate((el,v)=>{el.value=String(v);el.dispatchEvent(new Event('input',{bubbles:true}));},value);
    await input(today,475);
@@ -128,8 +131,13 @@ const server=http.createServer(async(req,res)=>{
   await p.evaluate(()=>fp434Go('today',false));
   const compactSun=p.locator('[data-sky-clock] [data-time-sun]');
   await compactSun.waitFor();
-  const fits=await compactSun.evaluate(el=>el.getBoundingClientRect().bottom<document.getElementById('mobileNav').getBoundingClientRect().top);
-  assert(fits,'Sun must fit on a 320×694 first viewport');
+  await p.waitForFunction(()=>!!document.querySelector('#nrRoute-today .nr-o-hero .nr-dv-tone')&&!!document.querySelector('#nrRoute-today .nr-o-hero .nr-o-verdict'),null,{timeout:30000});
+  // FP569d (owner decision 01.11): verdict and score open Today; the Sun clock follows the overview card.
+  const first=await compactSun.evaluate(el=>{const nav=document.getElementById('mobileNav').getBoundingClientRect().top,card=el.closest('[data-sky-clock]');
+   return {verdict:document.querySelector('#nrRoute-today .nr-o-hero .nr-dv-tone')?.getBoundingClientRect().bottom<nav,score:document.querySelector('#nrRoute-today .nr-o-hero .nr-o-verdict')?.getBoundingClientRect().bottom<nav,
+    afterHero:card.previousElementSibling?.matches('.nr-o-hero,.sr-expert-caution'),sunStarts:card.getBoundingClientRect().top<nav}});
+  assert(first.verdict&&first.score,'verdict and score must fit on a 320×694 first viewport');
+  assert(first.afterHero&&first.sunStarts,'Sun clock follows the overview card and starts on the first viewport');
   await p.locator('[data-sky-clock] [data-time-open]').click();
   await p.locator('[data-sky-live] .nr-sl-body[data-body=Sun]').waitFor();
   assert.match(await p.locator('#nrSkyLiveHeading').textContent(),/Києвом/);

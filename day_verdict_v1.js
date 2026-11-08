@@ -29,7 +29,7 @@ const T={
  m_yes:['Так','Yes','Sí','Oui'],m_partial:['Частково','Partly','En parte','En partie'],m_no:['Ні','No','No','Non'],
  m_saved:['Записано','Saved','Guardado','Enregistré'],
  evening:['Як пройшов день? Записати результат →','How did the day go? Record it →','¿Cómo fue el día? Registrarlo →','Comment s’est passée la journée ? L’enregistrer →'],
- storm_check:['геомагнітна буря за прогнозом NOAA','geomagnetic storm in the NOAA forecast','tormenta geomagnética en el pronóstico de NOAA','tempête géomagnétique prévue par la NOAA']
+ storm_check:['буря за прогнозом NOAA','NOAA storm forecast','tormenta prevista por NOAA','tempête prévue par la NOAA']
 };
 const t=k=>T[k][ix()];
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -109,6 +109,7 @@ let watched=null;
 function watch(){const r=root();if(!r){setTimeout(watch,250);return}if(watched===r)return;watched=r;
  new MutationObserver(()=>{const h=r.querySelector('.nr-o-hero');if(!h?.querySelector('[data-day-verdict]')||!h.querySelector('[data-day-why]')||!r.querySelector(':scope > [data-day-you]'))soon()}).observe(r,{childList:true,subtree:true});
  r.addEventListener('change',e=>{if(e.target.matches('select'))setTimeout(soon,0)});soon()}
+document.addEventListener('nr:overview-rendered',render);
 window.NRDayVerdict={build:ds=>{const r=root();return r?build(r,ds||selected(r)):null},render,matches:matchAll};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{watch();loadSky()});else{watch();loadSky()}
 for(const e of ['sr:consumer-load','nr:locale','gindex:consumer-ready','nr:natal','online','offline'])window.addEventListener(e,soon);

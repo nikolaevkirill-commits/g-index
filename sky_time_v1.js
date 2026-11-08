@@ -2,6 +2,16 @@
 (() => {
 'use strict';
 const KYIV={lat:50.454,lon:30.524,zone:'Europe/Kyiv',example:true};
+// City centers from GeoNames. The selector runs entirely on the device.
+const cities=[
+ ['kyiv',['Київ','Kyiv','Kyiv','Kyiv'],50.454,30.524,'Europe/Kyiv'],
+ ['barcelona',['Барселона','Barcelona','Barcelona','Barcelone'],41.38879,2.15899,'Europe/Madrid'],
+ ['izium',['Ізюм','Izium','Izium','Izioum'],49.206971,37.276791,'Europe/Kyiv'],
+ ['perpignan',['Перпіньян','Perpignan','Perpiñán','Perpignan'],42.69764,2.89541,'Europe/Paris'],
+ ['ny',['Нью-Йорк','New York','Nueva York','New York'],40.7128,-74.006,'America/New_York'],
+ ['delhi',['Делі','Delhi','Delhi','Delhi'],28.6139,77.209,'Asia/Kolkata'],
+ ['tromso',['Тромсе','Tromsø','Tromsø','Tromsø'],69.6492,18.9553,'Europe/Oslo']
+];
 const DAY=86400000, PLAY_MS=16000, STEP_MS=72;
 const reduced=matchMedia('(prefers-reduced-motion: reduce)');
 const reducedData=matchMedia('(prefers-reduced-data: reduce)');
@@ -20,6 +30,11 @@ const copy={
  example:['Київ · типове місце','Kyiv · default location','Kyiv · lugar predeterminado','Kyiv · lieu par défaut'],
  open:['Небо →','Sky →','Cielo →','Ciel →'],
  motion:['Для програвання ввімкніть анімації. Час можна обрати вручну.','Turn on motion for playback. You can still choose a time.','Activa las animaciones para reproducir. Puedes elegir la hora.','Activez les animations pour lire la journée. Vous pouvez choisir l’heure.'],
+ chooseCity:['Обрати місто','Choose a city','Elegir una ciudad','Choisir une ville'],
+ yourPlace:['Ваше місце','Your place','Tu ubicación','Votre lieu'],
+ rise:['Схід','Sunrise','Amanecer','Lever'],
+ set:['Захід','Sunset','Ocaso','Coucher'],
+ noon:['Полудень','Noon','Mediodía','Midi'],
  unavailable:['Шлях Сонця недоступний','Sun path unavailable','Trayectoria solar no disponible','Trajectoire solaire indisponible']
 };
 const t=k=>copy[k][Math.max(0,language())];
@@ -142,7 +157,7 @@ function controls(host){
 let updateControls;
 const X=f=>18+354*f, Y=h=>51-.48*h;
 function renderToday(s){
- const loc=place(true), panel=today, svg=panel.querySelector('svg'), key=[s.start,s.end,loc.lat,loc.lon,loc.elevation].join('|');
+ const loc=place(true), panel=today, svg=panel.querySelector('svg'), key=[s.start,s.end,s.zone,loc.lat,loc.lon,loc.elevation,language()].join('|');
  try{
   if(chartKey!==key){
    const samples=Array.from({length:73},(_,i)=>{
@@ -150,6 +165,15 @@ function renderToday(s){
     return (i?'L':'M')+X(f).toFixed(2)+' '+Y(sun(s.start+(s.end-s.start)*f,loc)).toFixed(2);
    }).join(' ');
    for(const path of svg.querySelectorAll('path[data-time-orbit]'))path.setAttribute('d',samples);
+   // FP569d: sunrise, noon and sunset are written on the picture (owner: pictures must explain themselves).
+   let g=svg.querySelector('[data-time-labels]');if(!g){g=document.createElementNS('http://www.w3.org/2000/svg','g');g.dataset.timeLabels='';g.setAttribute('aria-hidden','true');svg.append(g);}
+   g.textContent='';
+   const obs=new Astronomy.Observer(loc.lat,loc.lon,loc.elevation||0),span=s.end-s.start,fx=at=>(at-s.start)/span;
+   const find=(kind)=>{try{if(kind==='noon'){const h=Astronomy.SearchHourAngle('Sun',obs,0,new Date(s.start));return h?.time?.date}const r=Astronomy.SearchRiseSet('Sun',obs,kind==='rise'?+1:-1,new Date(s.start),span/DAY);return r?.date}catch{return null}};
+   const mark=(at,word,y,anchor)=>{if(!at)return;const f=fx(+at);if(f<0||f>=1)return;const el=document.createElementNS('http://www.w3.org/2000/svg','text');el.setAttribute('x',X(f).toFixed(1));el.setAttribute('y',y);el.setAttribute('text-anchor',anchor||'middle');el.setAttribute('class','sr-time-label');el.textContent=word+' '+timeText(+at,s.zone);g.append(el);};
+   const rise=find('rise'),set=find('set'),noon=find('noon');
+   mark(rise,'↑ '+t('rise'),100);mark(set,'↓ '+t('set'),100);
+   if(noon){const na=sun(+noon,loc);mark(noon,t('noon'),Math.max(10,Y(na)-7).toFixed(1));}
    chartKey=key;
   }
   const alt=sun(s.at,loc), x=X((s.at-s.start)/(s.end-s.start)), y=Y(alt);
@@ -170,7 +194,8 @@ function renderToday(s){
  }
  svg.querySelector('[data-time-sun]').style.visibility='';
  panel.querySelector('h2').textContent=t('title');
- panel.querySelector('[data-time-place]').textContent=loc.example?t('example'):(loc.label||loc.zone);
+ // FP569f (R-08): a saved place without a name is «Ваше місце», not an IANA identifier; the zone stays in the controls line.
+ panel.querySelector('[data-time-place]').textContent=loc.example?t('example'):(cityLabel(loc)||t('yourPlace'));
  panel.querySelector('[data-time-open]').textContent=t('open');
  updateControls(s);
 }
@@ -178,12 +203,13 @@ function mount(){
  if(today?.isConnected||!window.Astronomy||!window.NRCivilTime)return;
  const overview=document.querySelector('#nrRoute-today [data-overview="today"]');
  if(!overview)return;
- today=document.createElement('section');today.className='sr-time-sun';today.dataset.skyClock='';
+ today=document.createElement('section');today.className='sr-time-sun';today.dataset.skyClock='';today.dataset.placement='after-hero';
  today.setAttribute('translate','no');today.setAttribute('aria-labelledby','srTimeSunTitle');
  today.innerHTML='<div class="sr-time-stage"><div class="sr-time-title"><div><h2 id="srTimeSunTitle"></h2><small data-time-place></small></div><button type="button" data-time-open></button></div><svg viewBox="0 0 390 106" role="img"><defs><clipPath id="srTimeAbove"><rect width="390" height="51"/></clipPath><radialGradient id="srTimeGlow"><stop stop-color="#ffd478" stop-opacity=".84"/><stop offset="1" stop-color="#ffac42" stop-opacity="0"/></radialGradient></defs><line x1="18" y1="51" x2="372" y2="51"/><path data-time-orbit class="sr-time-orbit-night"/><path data-time-orbit clip-path="url(#srTimeAbove)" class="sr-time-orbit-day"/><g data-time-sun><circle r="23" fill="url(#srTimeGlow)"/><circle r="7" class="sr-time-disc"/></g></svg><p data-time-alt></p></div>';
  today.querySelector('[data-time-open]').onclick=()=>{if(!place())exampleChosen=true;window.fp434Go('panch',true);};
  updateControls=controls(today);
- overview.before(today);
+ // FP569d: verdict and score come first (owner decision 01.11); the Sun clock follows the day overview card.
+ const hero=overview.querySelector(':scope > .nr-o-hero');if(hero)hero.after(today);else overview.prepend(today);
  renderToday(snapshot());
 }
 function sync(){
@@ -191,21 +217,57 @@ function sync(){
  mount();
  if(!document.hidden)notify();
 }
-window.SRSkyTime=Object.freeze({snapshot,place,controls,light,timeText,selectMoment});
+window.SRSkyTime=Object.freeze({snapshot,place,cityLabel,cityPresets:()=>cities.map(([cityId,names,lat,lon,zone])=>({cityId,label:names[Math.max(0,language())],lat,lon,zone})),controls,light,timeText,selectMoment});
 window.addEventListener('hashchange',sync);
+function cityLabel(loc){
+ const city=cities.find(([id])=>id===loc?.cityId);
+ return city?city[1][Math.max(0,language())]:loc?.label;
+}
+function mountCityPicker(){
+ const box=document.getElementById('nrLocalContext');
+ if(!box)return;
+ let label=box.querySelector('[data-sky-city-picker]');
+ if(!label){
+  label=document.createElement('label');
+  label.dataset.skyCityPicker='';
+  label.style.cssText='display:grid;gap:6px;margin:12px 0';
+  const select=document.createElement('select');
+  select.style.cssText='width:100%;min-height:44px;font:inherit';
+  label.append(document.createElement('span'),select);
+  box.querySelector('[data-locate]').before(label);
+  select.addEventListener('change',()=>{
+   const city=cities.find(([id])=>id===select.value);
+   if(!city)return;
+   const [cityId,,lat,lon,zone]=city;
+   window.NRLocalContext?.choose?.({cityId,lat,lon,zone});
+  });
+ }
+ const title=t('chooseCity'),select=label.querySelector('select');
+ if(label.firstChild.textContent!==title){
+  label.firstChild.textContent=title;
+  select.replaceChildren(new Option(title,''),...cities.map(([id,names])=>new Option(names[Math.max(0,language())],id)));
+  select.options[0].disabled=true;
+ }
+ select.value=place()?.cityId||'';
+}
 function watchRoutes(){
  const observer=new MutationObserver(sync);
  for(const id of ['nrRoute-today','nrRoute-panch']){
   const route=document.getElementById(id);
   if(route)observer.observe(route,{attributes:true,attributeFilter:['class']});
+  if(id==='nrRoute-panch'&&route){
+   const picker=new MutationObserver(mountCityPicker);
+   picker.observe(route,{childList:true,subtree:true});
+   mountCityPicker();
+  }
  }
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',watchRoutes);else watchRoutes();
 window.addEventListener('popstate',sync);
-window.addEventListener('nr:locale',sync);
-document.addEventListener('nr:overview-rendered',mount);
+window.addEventListener('nr:locale',()=>{sync();mountCityPicker();});
+document.addEventListener('nr:overview-rendered',()=>{mount();mountCityPicker();});
 document.addEventListener('visibilitychange',sync);
-document.addEventListener('nr:location',()=>{exampleChosen=false;live();});
+document.addEventListener('nr:location',()=>{exampleChosen=false;live();mountCityPicker();});
 reduced.addEventListener('change',sync);reducedData.addEventListener('change',sync);
 navigator.connection?.addEventListener('change',sync);
 new MutationObserver(sync).observe(html,{attributes:true,attributeFilter:['class']});

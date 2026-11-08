@@ -1,8 +1,8 @@
-importScripts('./runtime_diagnostics_v1.js','./civil_time_v1.js');
+importScripts('./runtime_diagnostics_v1.js','./civil_time_v1.js?v=fp569f-global');
 // G-Index service worker. Navigations, HTML, JS and data (.json/.jsonl/.csv) are network-first with a
 // cached fallback; other same-origin assets (CSS, images, fonts) are cache-first.
 // Bump CACHE_VERSION whenever index.html or a cached shell asset changes.
-const CACHE_VERSION = 'fp569c-kp-source-20261108'; // Discrete final scores; no interpolated forecast.
+const CACHE_VERSION = 'fp569f-global-20261108'; // Discrete final scores; no interpolated forecast.
 const CACHE_PREFIX = 'gindex-'; // G-Index cache namespace; do not remove the prefix.
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${CACHE_VERSION}`;
 const DATA_CACHE = `${CACHE_PREFIX}data-${CACHE_VERSION}`;
@@ -90,18 +90,18 @@ async function deliveryResponse(response,mode){
 }
 
 const SHELL_ASSETS = [
-  './civil_time_v1.js',
+  './civil_time_v1.js?v=fp569f-global',
   './sw_update_coordination_v1.js',
   './day_context_v1.js?v=dc3',
-  './sky_time_v1.js?v=fp569c-event',
-  './sky_live_loader_v1.js?v=fp569c-kp',
-  './sky_live_v1.js?v=fp569c-kp',
+  './sky_time_v1.js?v=fp569f-global',
+  './sky_live_loader_v1.js?v=fp569f-global',
+  './sky_live_v1.js?v=fp569f-global',
   './moon_gl_v1.js?v=mg2',
   './day_summary.html',
   './day_summary_v1.js',
   './day_summary_v1.css',
   './meeus_core_v1.js',
-  './dayline_view_v1.js?v=fp569c-traditional-sun',
+  './dayline_view_v1.js?v=fp569f-global',
   './dayline_view_v1.css',
   './dayline_i18n_v1.js',
   './dayline_adapter_v1.js',
@@ -124,13 +124,13 @@ const SHELL_ASSETS = [
   './r9_shell.css',
   './panchanga_civil_view.css',
   './panchanga_civil_scene.js',
-  './panchanga_civil_view.js',
+  './panchanga_civil_view.js?v=fp569f-global',
   './preview-v4/public_preview_policy.js',
   './design-v4.html',
   './classic.html',
   './preview-v4/desktop_v1.css?v=d1',
   './preview-v4/atlas_motion.css?v=v7-2',
-  './preview-v4/consumer_overview_v1.js?v=fp568-noaa-20261107',
+  './preview-v4/consumer_overview_v1.js?v=fp569f-global',
   './preview-v4/core_runtime_v1.js?v=fp569c-kp',
   './preview-v4/design_candidate.css?v=v7-3',
   './preview-v4/design_candidate.js',
@@ -166,18 +166,20 @@ const SHELL_ASSETS = [
   './preview-v4/design_b/scenes/locale_extra_v1.js',
   './preview-v4/design_b/scenes/scenes.css?v=v7-3',
   './preview-v4/design_b/scenes/scenes.js?v=fp569c-scenes-provenance',
-  './preview-v4/sky_scene_v1.js?v=fp569c-event',
+  './preview-v4/sky_scene_v1.js?v=fp569d-review',
   './preview-v4/sky_scene_v1.css?v=sky5',
-  './preview-v4/app_today_v1.js?v=fp569b-today-20261108',
+  './preview-v4/app_today_v1.js?v=fp569d-review',
   './preview-v4/app_today_v1.css?v=app1',
   './natal_sky_v1.js?v=ns1',
-  './day_verdict_v1.js?v=fp568-noaa-20261107',
-  './week_ahead_v1.js?v=fp569b-review-20261108',
+  './day_verdict_v1.js?v=fp569f-global',
+  './week_ahead_v1.js?v=fp569f-global',
+  './moon_month_v1.js?v=fp569f-global',
+  './kp_threshold_v1.js?v=fp569f-global',
   './day_verdict_v1.css?v=dv5',
   './shared_day_v1.js?v=sd1',
 
   './design-b17.html',
-  './preview-b17/consumer_overview_v1.js?v=fp568-noaa-20261107',
+  './preview-b17/consumer_overview_v1.js?v=fp569f-global',
   './preview-b17/design_candidate.css',
   './preview-b17/design_candidate.js',
   './preview-b17/design_scale.js',
@@ -251,7 +253,7 @@ const SHELL_ASSETS = [
   './notification_runtime_v1.js',
   './transition_runtime_v1.js',
   './transition_client_v1.js',
-  './consumer_overview_v1.js?v=fp569c-kp',
+  './consumer_overview_v1.js?v=fp569f-global',
   './calendar_context_v1.js',
   './consumer_overview_v1.css',
   './local_storage_v1.js',
@@ -289,17 +291,18 @@ self.addEventListener('install', (event) => {
   // reloads (a black screen while the 1.4 MB dashboard initialized).
   event.waitUntil(
     caches.open(SHELL_CACHE)
-      // Required shell, preview HTML/JS/CSS/fonts install atomically. Only decorative SVGs and the import-only xlsx reader are optional.
+      // Required shell, preview HTML/JS/CSS/fonts install atomically. Decorative SVGs and spreadsheet import are best-effort; the legacy preview is lazy.
       // If required content fails, reject installation and retain the previous active worker and caches.
       .then(async (cache) => {
         // FP542 (F3): the 0.95 MB spreadsheet reader is loaded only on import; a failed download of it
         // must not block a shell update. It is still precached best-effort for offline import.
         const optional = (u) => /^\.\/preview-(?:v4|b17)\/.*\.svg(?:\?|$)/.test(u) || u === './xlsx-0.20.3.full.min.js';
-        await cache.addAll(SHELL_ASSETS.filter((u) => !optional(u)));
+        const lazy = (u) => u === './design-b17.html' || u.startsWith('./preview-b17/');
+        await cache.addAll(SHELL_ASSETS.filter((u) => !optional(u) && !lazy(u)));
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), OPTIONAL_INSTALL_TIMEOUT_MS);
         try {
-          const results = await Promise.allSettled(SHELL_ASSETS.filter(optional).map(async (u) => {
+          const results = await Promise.allSettled(SHELL_ASSETS.filter((u) => optional(u) && !lazy(u)).map(async (u) => {
             const response = await fetch(u, { signal: controller.signal });
             if (!response.ok || response.status === 206) throw new Error(`HTTP ${response.status} for ${u}`);
             await cache.put(u, response);

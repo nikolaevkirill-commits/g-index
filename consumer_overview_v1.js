@@ -453,7 +453,16 @@ function render(){
  put('[data-limit]',tr('Розрахунок для рівного горизонту; погода й рельєф можуть змінити спостережуваний час. Перевірте часовий пояс, особливо в подорожі. Цей блок не змінює бал дня.'));
  put('[data-scope]',tr('Kp, Ap, Dst — спільні геомагнітні індекси. Bz і сонячний вітер вимірюються в космосі, Sn — показник сонячної активності; координати їх не перераховують. Локальний K потребує обсерваторії і тут не підключений. Переходи панчанги показано за часом пристрою; Сонце в цьому блоці — за вказаним місцем. Бал і плани залишаються за Києвом.'));
 }
-window.NRLocalContext={render,solar,valid,current:()=>location?{...location}:null};window.addEventListener('nr:locale',render);document.addEventListener('visibilitychange',()=>{if(!document.hidden)render()});
+function choose(place){const x={...place,saved_at:new Date().toISOString()};if(!valid(x))return false;persist(x,'manual');return true;}
+window.NRLocalContext={render,solar,valid,choose,current:()=>location?{...location}:null};
+window.addEventListener('storage',event=>{
+ if(event.key!==key&&event.key!==null)return;
+ let saved=null;
+ try{saved=JSON.parse(localStorage.getItem(key));}catch{}
+ location=valid(saved)?saved:null;source='saved';message='';
+ render();document.dispatchEvent(new Event('nr:location'));
+});
+window.addEventListener('nr:locale',render);document.addEventListener('visibilitychange',()=>{if(!document.hidden)render()});
 if(location?.auto&&navigator.permissions)navigator.permissions.query({name:'geolocation'}).then(p=>{if(p.state==='granted')locate()}).catch(()=>{});
 })();
 

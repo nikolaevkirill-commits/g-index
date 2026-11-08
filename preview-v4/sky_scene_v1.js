@@ -29,6 +29,8 @@ const T={
  kpNone:['немає','none','sin dato','aucun'],
  event_sky:['Небо в цей момент','Sky at this instant','Cielo en ese momento','Ciel à cet instant'],
  kp27:['27-денний орієнтир','27-day outlook','perspectiva de 27 días','tendance à 27 jours'],
+ kp27s:['орієнтир','outlook','perspectiva','tendance'],
+ kpfs:['прогноз','forecast','pronóstico','prévision'],
  active:['Діє цього дня','Active on this day','Activo este día','Actif ce jour-là'],
  until:['до','until','hasta','jusqu’au'],
  from:['з','from','desde','depuis'],
@@ -106,7 +108,7 @@ function wheel(ds,mini){
   s+=`<g class="${cls.join(' ')}" data-g="${g}" data-lon="${p.lon}" data-rad="${R+22+lane[g]*15}" style="--c:${G[g][5]};transform:translate(${x.toFixed(1)}px,${y.toFixed(1)}px)"><circle class="nr-sky-flare" r="11"/><circle class="nr-sky-halo" r="11"/><circle class="nr-sky-dot" r="8.5"/><text class="nr-sky-glyph" aria-hidden="true">${G[g][0]+VS}</text>${cls.includes('is-retro')?'<path class="nr-sky-loop" d="M-13 -8 a7 7 0 1 1 0 0.1"/>':''}</g>`}
  // The central label reports Kp without implying local aurora visibility.
  const k=kpFor(ds);
- s+=`<g class="nr-sky-earth"><circle r="15" class="nr-sky-globe"/><text class="nr-sky-kp" y="52">${k?'Kp '+new Intl.NumberFormat(window.NRLocale?.locale||'uk-UA',{maximumFractionDigits:2}).format(k.kp).replace(/\.0$/,''):''}</text></g>`;
+ s+=`<g class="nr-sky-earth"><circle r="15" class="nr-sky-globe"/><text class="nr-sky-kp" y="52">${k?'Kp '+new Intl.NumberFormat(window.NRLocale?.locale||'uk-UA',{maximumFractionDigits:2}).format(k.kp).replace(/\.0$/,''):''}</text>${k?`<text class="nr-sky-kp nr-sky-kp-src" y="66" data-kp-src="${k.src==='NOAA_27day_outlook'?'outlook':'forecast'}">${esc(k.src==='NOAA_27day_outlook'?t('kp27s'):t('kpfs'))}</text>`:''}</g>`;
  // eclipse shadow
  if(items.some(x=>x.type.endsWith('eclipse')))s+=`<circle class="nr-sky-eclipse" r="${R-46}"/>`;
  return s+'</svg>';
@@ -114,7 +116,7 @@ function wheel(ds,mini){
 
 function strip(ds){
  return `<div class="nr-sky-days" role="group" aria-label="${esc(t('kp'))}">`+sky.daily.map(d=>{const k=kpFor(d.date),n=sky?[...sky.intervals,...sky.events].filter(x=>x.reading&&x.reading.intensity>=2&&[x.at,x.exact,x.started_before_window?null:x.start].some(s=>s&&s.kyiv_date===d.date)).length:0;
-  return `<button type="button" class="nr-sky-day is-${kpClass(k?.kp)}" data-sky-day="${d.date}" aria-pressed="${d.date===ds}" aria-label="${esc(fmtDay(d.date)+' · Kp '+(k?new Intl.NumberFormat(window.NRLocale?.locale||'uk-UA',{maximumFractionDigits:2}).format(k.kp):t('kpNone'))+(k?.src==='NOAA_27day_outlook'?' ('+t('kp27')+')':''))}"><span>${Number(d.date.slice(8))}</span>${n?`<i>${'•'.repeat(Math.min(n,3))}</i>`:''}</button>`}).join('')+'</div>';
+  return `<button type="button" class="nr-sky-day is-${k?.src==='NOAA_27day_outlook'?'outlook-'+kpClass(k.kp):kpClass(k?.kp)}" data-sky-day="${d.date}" aria-pressed="${d.date===ds}" aria-label="${esc(fmtDay(d.date)+' · Kp '+(k?new Intl.NumberFormat(window.NRLocale?.locale||'uk-UA',{maximumFractionDigits:2}).format(k.kp):t('kpNone'))+(k?.src==='NOAA_27day_outlook'?' ('+t('kp27')+')':''))}"><span>${Number(d.date.slice(8))}</span>${n?`<i>${'•'.repeat(Math.min(n,3))}</i>`:''}</button>`}).join('')+'</div>';
 }
 
 function list(ds){

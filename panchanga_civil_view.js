@@ -7,7 +7,7 @@
  fr:['Panchanga de votre lieu','Au lever du soleil','Date','Changer de lieu','Définissez d’abord votre lieu dans les réglages ci-dessous.','Tithi','jusqu’à','Nakshatra','Yoga','Karana','Il n’y a pas de lever du soleil à cette date locale.','Calcul indisponible. Vérifiez la date et le lieu.','Les moteurs divergent près d’une limite de tithi. Le numéro vient d’astronomy-engine ; les noms ne sont pas combinés.','Le tithi au lever du soleil décrit le jour ; il ne détermine pas les fêtes. Cette section ne modifie pas le score prévisionnel.','Lever du soleil','Composantes sidérales · ayanamsha Lahiri','Lieu enregistré sur cet appareil','Tithi au lever du soleil','Le karana dépend du tithi ; il n’est pas affiché près de la limite.']};
  let selected=null,box,lastKey='',savedObserver;
  const key='gindex_local_context_v1';
- function location(){try{const x=JSON.parse(localStorage.getItem(key));return root.NRLocalContext?.valid(x)&&x.zone.trim()?x:null;}catch(_){return null;}}
+ function location(){const ctx=root.NRLocalContext,x=ctx?.current?.();return ctx?.valid(x)?x:null;}
  function render(force=false){
   if(!box)return;
   const lang=root.NRLocale?.language||'uk',w=words[lang]||words.uk,x=location();
@@ -19,7 +19,7 @@
   box.querySelector('[data-foot]').textContent=w[13];
   const current=document.getElementById('nrPanchNow');
   if(current){let note=document.getElementById('srCurrentTimeNote');if(!note){note=document.createElement('p');note.id='srCurrentTimeNote';note.setAttribute('translate','no');current.before(note);}note.textContent=({uk:'Нижче — календарні складові на поточний момент; час показано в часовому поясі пристрою. Це інший момент, ніж схід Сонця обраної дати вище.',en:'Below: calendar components at the current instant, with times in the device time zone. This is a different instant from sunrise on the date selected above.',es:'Abajo: componentes del calendario en el momento actual, con horas de la zona del dispositivo. Es un momento distinto del amanecer de la fecha seleccionada arriba.',fr:'Ci-dessous : composantes du calendrier à l’instant présent, avec les heures du fuseau de l’appareil. Cet instant diffère du lever du soleil à la date sélectionnée ci-dessus.'})[lang]||'';}
-  box.querySelector('[data-place]').textContent=x?w[16]+' · '+x.zone:w[4];
+  box.querySelector('[data-place]').textContent=x?[root.SRSkyTime?.cityLabel(x)||w[16],x.zone].join(' · '):w[4];
   const out=box.querySelector('[role=status]');out.replaceChildren();
   box.querySelector('.sr-civil-orbit').hidden=true;
   const intraday=box.querySelector('[data-intraday]');intraday.hidden=true;intraday.replaceChildren();
@@ -99,6 +99,7 @@
   const observer=new MutationObserver(()=>{if(!box)mount();const context=document.getElementById('nrLocalContext');if(context&&!savedObserver){savedObserver=new MutationObserver(()=>render());savedObserver.observe(context,{childList:true,subtree:true,characterData:true});}if(box&&savedObserver)observer.disconnect();});
   observer.observe(document.body,{childList:true,subtree:true});mount();
   root.addEventListener('focus',()=>render());root.addEventListener('nr:locale',()=>render(true));root.addEventListener('storage',e=>{if(e.key===key||e.key===null)render(true);});
+  document.addEventListener('nr:location',()=>{selected=null;render(true);});
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)render();});
  }
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();

@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
-<script src="./civil_time_v1.js"></script>
+<script src="./civil_time_v1.js?v=fp569f-global"></script>
 <script src="./sw_update_coordination_v1.js"></script>
 <script src="./runtime_diagnostics_v1.js"></script>
 <script src="./lifecycle_refresh_v1.js"></script>
@@ -2555,7 +2555,7 @@ html body :is(#nrRoute-today,#nrRoute-forecast,#nrRoute-calendar) .nr-o-verdict 
 <script src="calendar_context_v1.js"></script>
 <script src="locale_core_v1.js" defer></script>
 <script src="locale_overview_v1.js?v=fp568-review-20261107" defer></script>
-<script src="consumer_overview_v1.js?v=fp569c-kp" defer></script>
+<script src="consumer_overview_v1.js?v=fp569f-global" defer></script>
 <script src="locale_bridge_v1.js" defer></script>
 <link rel="preload" as="script" href="./mobile_navigation_v1.js">
 <link rel="preload" as="script" href="./product_shell_v1.js">
@@ -4517,7 +4517,10 @@ function pwaReload() {
     }
     window.__nrHoldFetchUntil = Date.now() + 1500;
     const requestActivation = ready => { if (ready !== false && _swReg?.waiting) _swReg.waiting.postMessage({ type: 'SKIP_WAITING' }); };
-    if (window.NRUpdateCoordinator) window.NRUpdateCoordinator.prepare().then(requestActivation, () => { window.__nrUpdateRequested = false; });
+    // FP569f (R-07): on a busy device the peer tabs may not drain within 2 s; retry twice (1.5 s apart) before
+    // showing "try again". Activation is still requested only after a successful prepare (fail-closed).
+    const attempt = n => window.NRUpdateCoordinator.prepare().then(ready => (ready === false && n < 2 && _swReg?.waiting) ? new Promise(r => setTimeout(r, 1500)).then(() => attempt(n + 1)) : requestActivation(ready), () => { window.__nrUpdateRequested = false; });
+    if (window.NRUpdateCoordinator) attempt(0);
     else requestActivation(true);
     // Reload only on controllerchange. A timer cannot prove activation and may
     // otherwise reopen the old release or discard an unsaved form.
@@ -4528,7 +4531,7 @@ function pwaReload() {
       const label = bar?.querySelector('span'), button = bar?.querySelector('button');
       if (label) label.textContent = ({uk:'Оновлення ще не активовано. Можна спробувати ще раз.',en:'The update is not active yet. You can try again.',es:'La actualización aún no está activa. Puedes reintentarlo.',fr:'La mise à jour n’est pas encore active. Vous pouvez réessayer.'})[window.NRLocale?.language || 'uk'];
       if (button) button.disabled = false;
-    }, 4000);
+    }, window.NRUpdateCoordinator ? 10000 : 4000);
   } else {
     window.location.reload();
   }
@@ -7310,7 +7313,7 @@ body.fp434-app main#mainContent{padding-inline:24px!important}
 <script src="festival_evidence_v1.js" defer></script>
 <script src="festival_astronomy_adapter_v1.js" defer></script>
 <script src="festival_decision_view_v1.js" defer></script>
-<style data-inline-source="dayline_view_v1.css" data-css-sha256="95398ddc8643c76b6b77158e4e4f85d5086262e80440a708ea9a0ac690ac0d57">
+<style data-inline-source="dayline_view_v1.css" data-css-sha256="1b5d597c08c6ede9067674d728567cd37b1c6c0b3c1e6679c4895ed1ec609666">
 /* DayLine uses the same Nocturne tokens as the native shell. */
 .sr-dayline,.sr-dl-dialog{--dl-bg:#131d30;--dl-surface:#19243a;--dl-text:#f3efe6;--dl-muted:#c4cede;--dl-line:#65728a;--dl-accent:#f0cc87;--dl-day:#536784;--dl-night:#0c1220;color:var(--dl-text);background:var(--dl-bg);border:1px solid var(--dl-line);border-radius:18px;padding:20px;font:15px/1.6 system-ui,sans-serif;overflow-wrap:anywhere;color-scheme:dark}
 .nr-overview .sr-dayline :is(h2,h3,p,li,label,summary,small){color:var(--dl-text)!important}.nr-overview .sr-dayline h2{font:28px/1.2 Georgia,serif!important;margin:0!important;display:block!important}.sr-dl-head{display:flex;align-items:center;justify-content:space-between;gap:12px}.sr-dayline [data-place]{margin:3px 0 16px!important}.sr-dayline .sr-dl-muted,.sr-dl-dialog .sr-dl-muted{color:var(--dl-muted)!important;font-size:12px!important}
@@ -7376,9 +7379,11 @@ html body #nrRoute-panch [data-sky-live] [data-time-now]{background:#15223b!impo
  .sr-time-sun svg :is(line,path){stroke:CanvasText}
  .sr-time-disc{fill:Highlight;stroke:CanvasText}
 }
+.sr-time-sun svg text.sr-time-label{fill:#eef3fb;font:600 12.5px/1 'Fira Sans',system-ui,sans-serif;paint-order:stroke;stroke:#0b1430;stroke-width:3px;stroke-linejoin:round}
+@media(forced-colors:active){.sr-time-sun svg text.sr-time-label{fill:CanvasText;stroke:none}}
 
 </style>
-<style data-inline-source="day_verdict_v1.css" data-css-sha256="b64bfa720919a8230660541e37f1d9173d309011e2ba8231a1f32d6172ab86c1">
+<style data-inline-source="day_verdict_v1.css" data-css-sha256="4798cbe811a86aedff7e1a9712abdedf147c749d81728960a5ebee7e8d8485c5">
 /* SkyRhythm · вердикт дня: речення першим рядком, бал під ним, «чому» на вимогу. */
 .nr-day-verdict{grid-column:1/-1;margin:4px 0 10px;color:var(--nrs-ink,#F3EFF8)}
 .nr-day-verdict p{margin:0 0 6px;line-height:1.45;font-size:1rem}
@@ -7430,8 +7435,14 @@ html body #fp434Shell #nrRoute-today .nr-o-hero:has(>[data-day-verdict])>[data-d
 .nr-dv-match button:focus-visible{outline:2px solid #D9B777;outline-offset:2px}
 .nr-dv-match.is-saved{display:block;font-size:.82rem;color:var(--nrs-soft,rgba(243,239,248,.62))}
 
+/* Keep the Sun card in reach when the verdict includes a warning on a narrow display. */
+@media (max-width:359px){
+ html body #fp434Shell #nrRoute-today .nr-overview[data-overview]>.nr-o-hero:has(>[data-day-verdict]){row-gap:4px!important;padding-block:8px!important}
+ html body #fp434Shell #nrRoute-today .nr-overview>.sr-time-sun[data-sky-clock]{margin-block-start:6px!important}
+}
+
 </style>
-<style data-inline-source="preview-v4/sky_scene_v1.css" data-css-sha256="9d2e1229d2e102698af3e5ce742f7b9f54c5db68447c7bb6cc33a95b70914024">
+<style data-inline-source="preview-v4/sky_scene_v1.css" data-css-sha256="5f1e2c650126088b8663cf058765877eae98bb8ad17d15d9fb04e287ca4f3839">
 /* SkyRhythm · «Небо · 27 днів». Palette from design_b; motion only when visible and allowed. */
 .nr-sky{margin:20px 0;padding:18px 16px 16px;border:1px solid var(--nrv-card-line,rgba(185,163,227,.28));border-radius:20px;background:radial-gradient(120% 90% at 50% 0%,rgba(74,60,128,.35),rgba(16,20,41,.92) 60%),var(--nrs-paper,#101429);color:var(--nrs-ink,#F3EFF8);overflow:hidden}
 .nr-sky-head h2{margin:0;font-size:1.15rem;letter-spacing:.02em}
@@ -7559,6 +7570,11 @@ html:not(.sr-sky-motion) .nr-sky *,html:not(.sr-sky-motion) .nr-sky-now *{animat
 .nr-sky-weather-help a{color:inherit;text-decoration:underline;text-underline-offset:3px}
 @media(max-width:420px){.nr-sky-sw dl>div{grid-template-columns:1fr}}
 
+/* FP569d: 27-денний орієнтир не виглядає як прогноз бурі — пунктирна, а не суцільна смуга внизу дня; підпис джерела під Kp. */
+.nr-sky .nr-sky-day.is-outlook-active{box-shadow:none!important;background-image:repeating-linear-gradient(90deg,#8FE0BE 0 5px,transparent 5px 9px)!important;background-size:100% 3px!important;background-position:0 100%!important;background-repeat:no-repeat!important}
+.nr-sky .nr-sky-day:is(.is-outlook-g1,.is-outlook-g2,.is-outlook-g3){box-shadow:none!important;background-image:repeating-linear-gradient(90deg,#C49BFF 0 5px,transparent 5px 9px)!important;background-size:100% 3px!important;background-position:0 100%!important;background-repeat:no-repeat!important}
+.nr-sky-kp-src{font-size:9px!important;opacity:.75;letter-spacing:.02em}
+
 </style>
 <script type="module" src="meeus_core_v1.js"></script>
 <script src="dayline_i18n_v1.js"></script>
@@ -7566,13 +7582,15 @@ html:not(.sr-sky-motion) .nr-sky *,html:not(.sr-sky-motion) .nr-sky-now *{animat
 <script src="dayline_async_v1.js"></script>
 <script src="transition_runtime_v1.js"></script>
 <script src="transition_client_v1.js"></script>
-<script src="dayline_view_v1.js?v=fp569c-traditional-sun"></script>
+<script src="dayline_view_v1.js?v=fp569f-global"></script>
 <script src="natal_sky_v1.js?v=ns1" defer></script>
-<script src="day_verdict_v1.js?v=fp568-noaa-20261107" defer></script>
+<script src="day_verdict_v1.js?v=fp569f-global" defer></script>
 <script src="shared_day_v1.js?v=sd1" defer></script>
-<script src="preview-v4/sky_scene_v1.js?v=fp569c-event" defer></script>
+<script src="preview-v4/sky_scene_v1.js?v=fp569d-review" defer></script>
 <script src="day_context_v1.js?v=dc3" defer></script>
-<script src="sky_time_v1.js?v=fp569c-event" defer></script>
-<script src="sky_live_loader_v1.js?v=fp569c-kp" defer></script>
+<script src="moon_month_v1.js?v=fp569f-global" defer></script>
+<script src="kp_threshold_v1.js?v=fp569f-global" defer></script>
+<script src="sky_time_v1.js?v=fp569f-global" defer></script>
+<script src="sky_live_loader_v1.js?v=fp569f-global" defer></script>
 </body>
 </html>

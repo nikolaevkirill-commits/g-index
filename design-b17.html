@@ -7,7 +7,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
-<script src="./civil_time_v1.js"></script>
+<script src="./civil_time_v1.js?v=fp569f-global"></script>
 <script src="./sw_update_coordination_v1.js"></script>
 <style id="nr-startup-style">
 html.nr-shell-starting { background:#11151b; }
@@ -1882,7 +1882,7 @@ body.fp434-app #nrEclipseCopy{color:var(--nr-copy3)}
 <script src="calendar_context_v1.js"></script>
 <script src="locale_core_v1.js" defer></script>
 <script src="preview-b17/locale_overview_v1.js?v=fp568-review-20261107" defer></script>
-<script src="preview-b17/consumer_overview_v1.js?v=fp568-noaa-20261107" defer></script>
+<script src="preview-b17/consumer_overview_v1.js?v=fp569f-global" defer></script>
 <script src="preview-b17/locale_bridge_v1.js" defer></script>
 <link rel="preload" as="script" href="./mobile_navigation_v1.js">
 <link rel="preload" as="script" href="preview-b17/product_shell_v1.js">
@@ -3713,7 +3713,10 @@ function pwaReload() {
     }
     window.__nrHoldFetchUntil = Date.now() + 1500;
     const requestActivation = ready => { if (ready !== false && _swReg?.waiting) _swReg.waiting.postMessage({ type: 'SKIP_WAITING' }); };
-    if (window.NRUpdateCoordinator) window.NRUpdateCoordinator.prepare().then(requestActivation, () => { window.__nrUpdateRequested = false; });
+    // FP569f (R-07): on a busy device the peer tabs may not drain within 2 s; retry twice (1.5 s apart) before
+    // showing "try again". Activation is still requested only after a successful prepare (fail-closed).
+    const attempt = n => window.NRUpdateCoordinator.prepare().then(ready => (ready === false && n < 2 && _swReg?.waiting) ? new Promise(r => setTimeout(r, 1500)).then(() => attempt(n + 1)) : requestActivation(ready), () => { window.__nrUpdateRequested = false; });
+    if (window.NRUpdateCoordinator) attempt(0);
     else requestActivation(true);
     // Reload only on controllerchange. A timer cannot prove activation and may
     // otherwise reopen the old release or discard an unsaved form.
@@ -3724,7 +3727,7 @@ function pwaReload() {
       const label = bar?.querySelector('span'), button = bar?.querySelector('button');
       if (label) label.textContent = ({uk:'Оновлення ще не активовано. Можна спробувати ще раз.',en:'The update is not active yet. You can try again.',es:'La actualización aún no está activa. Puedes reintentarlo.',fr:'La mise à jour n’est pas encore active. Vous pouvez réessayer.'})[window.NRLocale?.language || 'uk'];
       if (button) button.disabled = false;
-    }, 4000);
+    }, window.NRUpdateCoordinator ? 10000 : 4000);
   } else {
     window.location.reload();
   }

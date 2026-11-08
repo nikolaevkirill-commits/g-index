@@ -3,7 +3,7 @@
    Інші модулі переставляють свої блоки під час рендеру, тому порядок відновлюється після кожної зміни
    складу секції (до відмальовування, без мерехтіння). */
 (()=>{'use strict';
-const ORDER=[':scope > .nr-o-hero',':scope > .sr-expert-caution',':scope > .sr-dayline',':scope > [data-week-strip]',':scope > [data-p0-signals]',':scope > .nr-o-weather-brief','[data-sky-now]',':scope > .nr-o-journey',':scope > [data-day-you]',':scope > [data-p0-details]'];
+const ORDER=[':scope > .nr-o-hero',':scope > .sr-expert-caution',':scope > .sr-time-sun',':scope > .sr-dayline',':scope > [data-week-strip]',':scope > [data-p0-signals]',':scope > .nr-o-weather-brief','[data-sky-now]',':scope > .nr-o-journey',':scope > [data-day-you]',':scope > [data-p0-details]'];
 function arrange(root){
  const els=ORDER.map(s=>root.querySelector(s)).filter(Boolean);if(els.length<2)return false;
  let moved=false,prev=els[0];

@@ -34,6 +34,7 @@ const STR=[
  ['Ваша геомагнітна широта','Your geomagnetic latitude','Su latitud geomagnética','Votre latitude géomagnétique'],
  ['За шкалою NOAA при такому Kp сяйво бачили до','On the NOAA scale, at this Kp aurora has been seen as low as','Según la escala NOAA, con este Kp la aurora se ha visto hasta','Selon l’échelle NOAA, à ce Kp l’aurore a été vue jusqu’à'],
  ['Даних Kp немає — оцінки сяйва немає.','No Kp data — no aurora estimate.','Sin datos de Kp — sin estimación de aurora.','Pas de données Kp — pas d’estimation d’aurore.'],
+ ['27-денний орієнтир NOAA не прогнозує конкретну бурю, тому межу сяйва з нього не оцінюємо.','The NOAA 27-day outlook does not forecast a specific storm, so no aurora extent is derived from it.','La perspectiva de 27 días de NOAA no pronostica una tormenta concreta; no se estima de ella el límite de la aurora.','La tendance NOAA à 27 jours ne prévoit pas de tempête précise : aucune limite d’aurore n’en est déduite.'],
  ['Це межа «бачили до», а не ймовірність; хмари й засвітка не враховані.','This is a “seen as low as” limit, not a probability; clouds and light pollution are not included.','Es un límite «se ha visto hasta», no una probabilidad; no incluye nubes ni contaminación lumínica.','C’est une limite « vue jusqu’à », pas une probabilité ; nuages et pollution lumineuse non pris en compte.'],
  ['Розрахунок','Calculation','Cálculo','Calcul'],
  ['прогноз Kp на добу','daily Kp forecast','pronóstico diario de Kp','prévision Kp journalière'],
@@ -128,7 +129,8 @@ function auroraHtml(c){
  const mlat=geomagLat(c.loc.lat,c.loc.lon),k=kpToday(),a=auroraFor(mlat,k.kp);
  const nf=new Intl.NumberFormat(window.NRLocale?.locale||'uk-UA',{maximumFractionDigits:2});
  const labels={observed:'Спостереження Kp NOAA',provisional:'Попередня оцінка Kp NOAA',gfz:'Оцінка Kp GFZ',forecast3:'Максимум за добу Києва · прогноз NOAA, 3 дні',outlook27:'Орієнтир на добу UTC · NOAA, 27 днів'};
- const body=(a.state==='no_kp'?tr('Даних Kp немає — оцінки сяйва немає.'):a.limit?tr('За шкалою NOAA при такому Kp сяйво бачили до')+' ~'+a.limit+'°.':tr('Для цього Kp шкала не задає числової межі широти.'))+' '+tr('Ваша геомагнітна широта')+': ≈ '+nf.format(mlat)+'°.';
+ // FP569d: a 27-day outlook value is a background expectation, not a storm forecast — no aurora extent from it.
+ const body=(a.state==='no_kp'?tr('Даних Kp немає — оцінки сяйва немає.'):k.kind==='outlook27'?tr('27-денний орієнтир NOAA не прогнозує конкретну бурю, тому межу сяйва з нього не оцінюємо.'):a.limit?tr('За шкалою NOAA при такому Kp сяйво бачили до')+' ~'+a.limit+'°.':tr('Для цього Kp шкала не задає числової межі широти.'))+' '+tr('Ваша геомагнітна широта')+': ≈ '+nf.format(mlat)+'°.';
  const stamp=Number.isFinite(k.stamp)?(['forecast3','outlook27'].includes(k.kind)?tr('Розрахунок')+': ':'')+new Date(k.stamp).toISOString().replace('T',' ').slice(0,16)+' UTC':'';
  return `<div class="nr-sl-aurora" data-aurora="${a.state}" data-mlat="${mlat.toFixed(2)}" data-kp-kind="${k.kind}"><b>${esc(tr('Сяйво'))} · ${esc(tr('Орієнтир, не локальний прогноз'))}</b><p>${esc(body)}</p>${k.kp!==null?`<p>Kp ${esc(nf.format(k.kp))} · ${esc(tr(labels[k.kind]))} · ${esc(stamp)}</p>`:''}<p>${esc(tr('Ймовірність побачити сяйво тут не розрахована.'))} ${c.hz.Sun?.altitude>0?esc(tr('За денного світла сяйва не видно.')):''}</p><small>${esc(tr('Хмари, засвітка й локальна карта OVATION тут не враховані.'))} ${esc(tr('Широта — наближення диполя IGRF-14, епоха 2025.'))}</small></div>`;
 }
