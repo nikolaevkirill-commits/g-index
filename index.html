@@ -2387,7 +2387,7 @@ html.wow details.sr-expert-caution>summary:focus-visible{outline:3px solid #f6da
 
 </style>
 <script src="moon_phase_v1.js"></script>
-<script src="p0_layout_v1.js?v=fp568-noaa-20261107"></script>
+<script src="p0_layout_v1.js?v=fp569c-kp"></script>
 <script src="score_semantics_v1.js"></script>
 <script src="consumer_authority_v1.js"></script>
 <script src="forecast_journal_v1.js"></script>
@@ -2580,7 +2580,7 @@ html body :is(#nrRoute-today,#nrRoute-forecast,#nrRoute-calendar) .nr-o-verdict 
 <link rel="preload" as="script" href="./local_telemetry_v1.js">
 <link rel="preload" as="script" href="./decision_journal_v1.js">
 <link rel="preload" as="script" href="./audit_copy_v1.js">
-<link rel="preload" as="script" href="preview-v4/core_runtime_v1.js">
+<link rel="preload" as="script" href="preview-v4/core_runtime_v1.js?v=fp569c-kp">
 <style data-inline-source="preview-v4/design_candidate.css" data-css-sha256="bae656ae7f14a4aa5a3400ac7193880e7ba0aceba139d96aae9a5b9992532b8c">
 /* Candidate visual layer; no score/data/locale/storage code is replaced. */
 .nr-overview{font-family:system-ui,-apple-system,'Segoe UI',sans-serif!important}
@@ -5418,8 +5418,8 @@ function currentKpAuthority(now=Date.now()){
   // NOAA 1-minute estimates already have a 30-minute validity contract.
   const expiresAt=stamp+(value._provisional?0.5:6)*3600000;
   const usable=Number.isFinite(stamp)&&stamp<=now+5*60000&&now<=expiresAt;
-  return {usable,kp:usable?value.kNow:NaN,expiresAt,provisional:!!value._provisional,
-    label:usable?(value._provisional?'Kp ОЦІНКА NOAA':'Kp СПОСТЕРЕЖЕННЯ'):'Kp НЕДОСТУПНИЙ'};
+  return {usable,kp:usable?value.kNow:NaN,expiresAt,provisional:!!value._provisional,provider:value._kpProvider||null,
+    label:usable?(value._kpProvider==='gfz'?'Kp ОЦІНКА GFZ':value._provisional?'Kp ОЦІНКА NOAA':'Kp СПОСТЕРЕЖЕННЯ'):'Kp НЕДОСТУПНИЙ'};
 }
 window.currentKpAuthority=currentKpAuthority;
 function resolveSourceLabel(){
@@ -7688,7 +7688,7 @@ window.getEffectiveGForDate = getEffectiveGForDate;
 // ═══════════════════════════════════════════════════════════════════════════
 </script>
 <script src="./push_client_v1.js"></script>
-<script src="preview-v4/core_runtime_v1.js"></script>
+<script src="preview-v4/core_runtime_v1.js?v=fp569c-kp"></script>
 
 <!-- PWA disabled v59fix -->
 
@@ -8319,4 +8319,4 @@ html.wow body #fp434Shell #nrRoute-calendar .nr-o-hero.sr-compact-header>label s
 <script src="shared_day_v1.js?v=sd1" defer></script>
 <script src="day_context_v1.js?v=dc3" defer></script>
 <script src="sky_time_v1.js?v=fp569c-event" defer></script>
-<script src="sky_live_loader_v1.js?v=fp569c-clock" defer></script>
+<script src="sky_live_loader_v1.js?v=fp569c-kp" defer></script>

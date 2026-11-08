@@ -2371,7 +2371,7 @@ html.wow details.sr-expert-caution>summary:focus-visible{outline:3px solid #f6da
 
 </style>
 <script src="moon_phase_v1.js"></script>
-<script src="p0_layout_v1.js?v=fp568-noaa-20261107"></script>
+<script src="p0_layout_v1.js?v=fp569c-kp"></script>
 <script src="score_semantics_v1.js"></script>
 <script src="consumer_authority_v1.js"></script>
 <script src="forecast_journal_v1.js"></script>
@@ -2555,7 +2555,7 @@ html body :is(#nrRoute-today,#nrRoute-forecast,#nrRoute-calendar) .nr-o-verdict 
 <script src="calendar_context_v1.js"></script>
 <script src="locale_core_v1.js" defer></script>
 <script src="locale_overview_v1.js?v=fp568-review-20261107" defer></script>
-<script src="consumer_overview_v1.js?v=fp569c-provenance" defer></script>
+<script src="consumer_overview_v1.js?v=fp569c-kp" defer></script>
 <script src="locale_bridge_v1.js" defer></script>
 <link rel="preload" as="script" href="./mobile_navigation_v1.js">
 <link rel="preload" as="script" href="./product_shell_v1.js">
@@ -2563,7 +2563,7 @@ html body :is(#nrRoute-today,#nrRoute-forecast,#nrRoute-calendar) .nr-o-verdict 
 <link rel="preload" as="script" href="./local_telemetry_v1.js">
 <link rel="preload" as="script" href="./decision_journal_v1.js">
 <link rel="preload" as="script" href="./audit_copy_v1.js">
-<link rel="preload" as="script" href="./core_runtime_v1.js">
+<link rel="preload" as="script" href="./core_runtime_v1.js?v=fp569c-kp">
 <style data-inline-source="nocturne_v1.css" data-css-sha256="ba4c8b803bd55178913cd65c88d44b61c669bb72dfb51f988316b4a2a2e978ab">
 :root{--sr-page:#0c1220;--sr-panel:#131d30;--sr-raised:#19243a;--sr-nav:#111a2b;--sr-hero-start:#1c2b45;--sr-hero-end:#151e32;--sr-accent:#f0cc87;--sr-text:#f3efe6;--sr-muted:#c4cede;--sr-line:#465169;--sr-input:#101a2c;--sr-negative:#ff9fa6;}
 /* Nocturne presentation. Forecast and authority logic remain in their existing modules. */
@@ -4673,8 +4673,8 @@ function currentKpAuthority(now=Date.now()){
   // NOAA 1-minute estimates already have a 30-minute validity contract.
   const expiresAt=stamp+(value._provisional?0.5:6)*3600000;
   const usable=Number.isFinite(stamp)&&stamp<=now+5*60000&&now<=expiresAt;
-  return {usable,kp:usable?value.kNow:NaN,expiresAt,provisional:!!value._provisional,
-    label:usable?(value._provisional?'Kp ОЦІНКА NOAA':'Kp СПОСТЕРЕЖЕННЯ'):'Kp НЕДОСТУПНИЙ'};
+  return {usable,kp:usable?value.kNow:NaN,expiresAt,provisional:!!value._provisional,provider:value._kpProvider||null,
+    label:usable?(value._kpProvider==='gfz'?'Kp ОЦІНКА GFZ':value._provisional?'Kp ОЦІНКА NOAA':'Kp СПОСТЕРЕЖЕННЯ'):'Kp НЕДОСТУПНИЙ'};
 }
 window.currentKpAuthority=currentKpAuthority;
 function resolveSourceLabel(){
@@ -6943,7 +6943,7 @@ window.getEffectiveGForDate = getEffectiveGForDate;
 // ═══════════════════════════════════════════════════════════════════════════
 </script>
 <script src="./push_client_v1.js"></script>
-<script src="./core_runtime_v1.js"></script>
+<script src="./core_runtime_v1.js?v=fp569c-kp"></script>
 
 <!-- PWA disabled v59fix -->
 
@@ -7573,6 +7573,6 @@ html:not(.sr-sky-motion) .nr-sky *,html:not(.sr-sky-motion) .nr-sky-now *{animat
 <script src="preview-v4/sky_scene_v1.js?v=fp569c-event" defer></script>
 <script src="day_context_v1.js?v=dc3" defer></script>
 <script src="sky_time_v1.js?v=fp569c-event" defer></script>
-<script src="sky_live_loader_v1.js?v=fp569c-clock" defer></script>
+<script src="sky_live_loader_v1.js?v=fp569c-kp" defer></script>
 </body>
 </html>

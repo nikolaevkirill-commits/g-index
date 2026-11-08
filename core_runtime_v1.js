@@ -14718,11 +14718,13 @@ async function loadAll(){
     withTimeout(fetchTextWithCORS(URL_DST, _looksLikeJson), 5000, 'primary DST'),
     withTimeout(signal=>fetchWolfSnResilient(signal), 5000, 'resilient WOLF_SN')
   ]);
+  let minuteKpRaw = kpLiveR.status === 'fulfilled' ? kpLiveR.value : null;
+  let needsKpFallback = false;
 
   // Kp спостереження (P0: fallback на planetary_k_index_1m.json)
   if(kpObsR.status === 'fulfilled'){
     _lastKpObsJson = kpObsR.value;
-    lastWWV = parseKpObsJSON(kpObsR.value);
+    lastWWV = {...parseKpObsJSON(kpObsR.value), _kpProvider:'noaa'};
     // v88.8.18 ★ STALENESS DETECTION: NOAA SWPC + GFZ — обидва можуть бути stale.
     // Перевіряємо чи NOAA data > 24h тому. Якщо так — пробуємо GFZ і порівнюємо ages.
     // НЕ замінюємо stale на більш-stale; беремо джерело з найсвіжішим timestamp.
@@ -14766,7 +14768,7 @@ async function loadAll(){
         }
         if (gfzParsed && isFinite(gfzParsed.kNow) && _gfzAgeH !== null && _gfzAgeH < _noaaAgeH) {
           _lastKpObsJson = gfzVal;
-          lastWWV = gfzParsed;
+          lastWWV = {...gfzParsed, _kpProvider:'gfz'};
           window._kpSourceFreshness = { source: 'GFZ Potsdam', ageHours: _gfzAgeH };
           _setSrcStatus('srcKpObs','ok');
           if(window._DEBUG) console.log('[v88.8.18] GFZ свіжіше ('+_gfzAgeH+'h) ніж NOAA ('+_noaaAgeH+'h) — replaced');
@@ -14792,7 +14794,9 @@ async function loadAll(){
     try{
       const gfzVal = await withTimeout(signal=>fetchGfzKpAsNoaaFormat(3,signal), 5000, 'GFZ-fallback');
       _lastKpObsJson = gfzVal;
-      lastWWV = parseKpObsJSON(gfzVal);
+      lastWWV = {...parseKpObsJSON(gfzVal), _kpProvider:'gfz'};
+      const gfzStart = _strictKpTimestamp(String(lastWWV.whenText||'').replace(/ UTC$/,'Z').replace(' ','T'));
+      window._kpSourceFreshness = {source:'GFZ Potsdam', ageHours:Number.isFinite(gfzStart)?Math.max(0,(Date.now()-gfzStart)/3600000-3):null};
       _setSrcStatus('srcKpObs','ok');
       if (lastWWV && isFinite(lastWWV.kNow)) lsSet('last_kp_known', lastWWV.kNow);
       _gfzOK = true;
@@ -14800,43 +14804,21 @@ async function loadAll(){
     }catch(eGfz){ globalThis.NRDiagnostics?.record('catch.227','recoverable');
       console.warn('[v88.8.18] GFZ fallback failed:', eGfz.message);
     }
-    if (!_gfzOK) try{
-      const fbVal = await withTimeout(fetchTextWithCORS(URL_KP_OBS_FB), 5000, 'KP_OBS_FB');
-      // planetary_k_index_1m.json: [{time_tag,kp,kp_index,...}]
-      // Конвертуємо у формат noaa-planetary-k-index.json: [["time_tag","Kp"],...]
-      const fbData = JSON.parse(fbVal);
-      const converted = JSON.stringify(
-        [["time_tag","Kp"]].concat(
-          fbData.map(r=>[r.time_tag, parseFloat(r.kp)])
-        )
-      );
-      _lastKpObsJson = converted;
-      lastWWV = parseKpObsJSON(converted);
-      if(window._DEBUG) console.log('[v43] KP_OBS fallback OK (1m)');
-    }catch(e2){ globalThis.NRDiagnostics?.record('catch.228','recoverable');
-      if (!_gfzOK) {
-        console.warn('[v43] KP_OBS fallback also failed:', e2.message);
-        // v62: synthetic Kp з localStorage (останнє відоме значення)
-        const _lsKp = parseFloat(lsGet('last_kp_known'));
-        if (isFinite(_lsKp)) {
-          lastWWV = {kNow:_lsKp, aNow:null, whenText:'(кеш)', kPrev3h:null, kp24hAgo:null, _cached:true};
-          _setSrcStatus('srcKpObs','cache');
-          if(window._DEBUG) console.log('[v62] KP_OBS: using localStorage cache Kp='+_lsKp);
-        } else {
-          lastWWV = {kNow:2.0, aNow:null, whenText:'(synthetic)', kPrev3h:null, kp24hAgo:null, _synthetic:true};
-          _setSrcStatus('srcKpObs','synthetic');
-          if(window._DEBUG) console.log('[v62] KP_OBS: full fallback to synthetic Kp=2.0');
-        }
-      }
+    needsKpFallback = !_gfzOK;
+    if (needsKpFallback && minuteKpRaw === null) try {
+      minuteKpRaw = await withTimeout(signal=>fetchTextWithCORS(URL_KP_OBS_FB, _looksLikeJson, {signal}), 5000, 'KP_OBS_FB');
+    } catch (error) {
+      globalThis.NRDiagnostics?.record('catch.228','recoverable');
+      if (window._DEBUG) console.warn('[KP_OBS_FB]', error.message);
     }
   }
 
   // The finalized 3-hour feed may lag the current interval. Prefer a fresh,
   // robust 5-point median from NOAA's 1-minute estimated Kp rail and label it
   // PROVISIONAL; never present it as a finalized observation.
-  if (kpLiveR.status === 'fulfilled') {
+  if (minuteKpRaw !== null) {
     try {
-      const _sample1m = _provisionalKpMedian(JSON.parse(kpLiveR.value),Date.now());
+      const _sample1m = _provisionalKpMedian(JSON.parse(minuteKpRaw),Date.now());
       if (_sample1m) {
         const _kp1m = _sample1m.kp, _age1m = _sample1m.ageHours;
         const _prevFinal = lastWWV;
@@ -14846,13 +14828,23 @@ async function loadAll(){
           ts: _sample1m.ts,
           kPrev3h: _prevFinal?.kNow ?? null, kp24hAgo: _prevFinal?.kp24hAgo ?? null,
           _provisional: true,
+          _kpProvider: 'noaa',
           _sourceLabel: 'NOAA 1-minute estimated Kp (5-point median)'
         };
         window._kpSourceFreshness = {source:'NOAA 1m estimated', ageHours:Math.max(0,_age1m), provisional:true};
         _setSrcStatus('srcKpObs','ok');
         lsSet('last_kp_known', _kp1m);
+        needsKpFallback = false;
       }
     } catch(_e1m) { globalThis.NRDiagnostics?.record('catch.229','recoverable');  if(window._DEBUG) console.warn('[fp417 KP_1M]', _e1m.message); }
+  }
+  if (needsKpFallback) {
+    window._kpSourceFreshness = null;
+    const cachedKp = parseFloat(lsGet('last_kp_known'));
+    const cached = Number.isFinite(cachedKp);
+    lastWWV = {kNow:cached?cachedKp:2, aNow:null, whenText:cached?'(кеш)':'(synthetic)',
+      kPrev3h:null, kp24hAgo:null, _cached:cached, _synthetic:!cached};
+    _setSrcStatus('srcKpObs', cached?'cache':'synthetic');
   }
 
   // Kp прогноз 3 дні
@@ -18244,7 +18236,7 @@ function _setSrcStatus(id, status) {
   el.textContent = s.icon;
   el.style.color = s.col;
   el.title = {
-    ok:       {srcKpObs:'Kp спостереження NOAA', srcKpFcst:'Kp прогноз NOAA', src27Day:'NOAA 27-day outlook', srcDst:'Dst Kyoto WDC', srcSn:'Wolf Sn SILSO', srcBz:'Bz DSCOVR', srcVsw:'Vsw DSCOVR', srcXray:'GOES X-ray'}[id] || 'Дані',
+    ok:       {srcKpObs:lastWWV?._kpProvider==='gfz'?'Оцінка Kp GFZ':lastWWV?._provisional?'Попередній Kp NOAA':'Kp спостереження NOAA', srcKpFcst:'Kp прогноз NOAA', src27Day:'NOAA 27-day outlook', srcDst:'Dst Kyoto WDC', srcSn:'Wolf Sn SILSO', srcBz:'Bz DSCOVR', srcVsw:'Vsw DSCOVR', srcXray:'GOES X-ray'}[id] || 'Дані',
     snapshot: 'Перевірений локальний snapshot; дата спостереження показана окремо',
     cache:    'Кешовані дані (offline fallback)',
     synthetic:'Synthetic (реальне джерело недоступне)',

@@ -45,6 +45,7 @@ STR.push(
  ['За денного світла сяйва не видно.','Aurora is not visible in daylight.','La aurora no es visible a la luz del día.','L’aurore n’est pas visible à la lumière du jour.'],
  ['Широта — наближення диполя IGRF-14, епоха 2025.','Latitude uses the IGRF-14 dipole approximation, epoch 2025.','Latitud aproximada con el dipolo IGRF-14, época 2025.','Latitude approchée par le dipôle IGRF-14, époque 2025.'],
  ['Спостереження Kp NOAA','Observed NOAA Kp','Kp observado NOAA','Kp observé NOAA'],
+ ['Оцінка Kp GFZ','GFZ nowcast Kp','Kp estimado de GFZ','Kp estimé par GFZ'],
  ['Попередня оцінка Kp NOAA','Provisional NOAA Kp estimate','Estimación provisional de Kp NOAA','Estimation provisoire Kp NOAA'],
  ['Максимум за добу Києва · прогноз NOAA, 3 дні','Kyiv daily maximum · NOAA 3-day forecast','Máximo diario de Kyiv · pronóstico NOAA de 3 días','Maximum journalier de Kyiv · prévision NOAA à 3 jours'],
  ['Орієнтир на добу UTC · NOAA, 27 днів','UTC-day outlook · NOAA, 27 days','Perspectiva del día UTC · NOAA, 27 días','Tendance du jour UTC · NOAA, 27 jours'],
@@ -112,7 +113,7 @@ function selectKp(live,snapshot,now=Date.now(),online=navigator.onLine){
  const valid=k=>Number.isFinite(k)&&k>=0&&k<=9;
  const observed=window.SRP0Layout?.currentSignal(live,now,online);
  if(valid(observed?.kp)&&Number.isFinite(observed.observedAt)&&observed.observedAt<=now+300000)
-  return {kp:observed.kp,kind:observed.provisional?'provisional':'observed',stamp:observed.observedAt};
+  return {kp:observed.kp,kind:observed.provider==='gfz'?'gfz':observed.provisional?'provisional':'observed',stamp:observed.observedAt};
  const c=snapshot?.calculation,stamp=Date.parse(c?.generated_at),state=snapshot?.formula?.state||snapshot?.display?.state;
  if(state!=='fresh'||!valid(c?.kp_daily_max)||!Number.isFinite(stamp)||stamp>now+300000||now-stamp>7200000)return {kp:null,kind:'missing'};
  const kind=c.kp_source==='NOAA_3day_slots'?'forecast3':c.kp_source==='NOAA_27day_outlook'?'outlook27':null;
@@ -126,7 +127,7 @@ function auroraHtml(c){
  if(!c.loc)return '';
  const mlat=geomagLat(c.loc.lat,c.loc.lon),k=kpToday(),a=auroraFor(mlat,k.kp);
  const nf=new Intl.NumberFormat(window.NRLocale?.locale||'uk-UA',{maximumFractionDigits:2});
- const labels={observed:'Спостереження Kp NOAA',provisional:'Попередня оцінка Kp NOAA',forecast3:'Максимум за добу Києва · прогноз NOAA, 3 дні',outlook27:'Орієнтир на добу UTC · NOAA, 27 днів'};
+ const labels={observed:'Спостереження Kp NOAA',provisional:'Попередня оцінка Kp NOAA',gfz:'Оцінка Kp GFZ',forecast3:'Максимум за добу Києва · прогноз NOAA, 3 дні',outlook27:'Орієнтир на добу UTC · NOAA, 27 днів'};
  const body=(a.state==='no_kp'?tr('Даних Kp немає — оцінки сяйва немає.'):a.limit?tr('За шкалою NOAA при такому Kp сяйво бачили до')+' ~'+a.limit+'°.':tr('Для цього Kp шкала не задає числової межі широти.'))+' '+tr('Ваша геомагнітна широта')+': ≈ '+nf.format(mlat)+'°.';
  const stamp=Number.isFinite(k.stamp)?(['forecast3','outlook27'].includes(k.kind)?tr('Розрахунок')+': ':'')+new Date(k.stamp).toISOString().replace('T',' ').slice(0,16)+' UTC':'';
  return `<div class="nr-sl-aurora" data-aurora="${a.state}" data-mlat="${mlat.toFixed(2)}" data-kp-kind="${k.kind}"><b>${esc(tr('Сяйво'))} · ${esc(tr('Орієнтир, не локальний прогноз'))}</b><p>${esc(body)}</p>${k.kp!==null?`<p>Kp ${esc(nf.format(k.kp))} · ${esc(tr(labels[k.kind]))} · ${esc(stamp)}</p>`:''}<p>${esc(tr('Ймовірність побачити сяйво тут не розрахована.'))} ${c.hz.Sun?.altitude>0?esc(tr('За денного світла сяйва не видно.')):''}</p><small>${esc(tr('Хмари, засвітка й локальна карта OVATION тут не враховані.'))} ${esc(tr('Широта — наближення диполя IGRF-14, епоха 2025.'))}</small></div>`;

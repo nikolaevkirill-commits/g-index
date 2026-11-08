@@ -218,18 +218,28 @@ function signalData(result,feed,load=window.__srConsumerLoadState,online=navigat
 COPY.push(['У формульному розрахунку знижують оцінку:','In the formula calculation, the score is lowered by:','En el cálculo por fórmula, bajan la puntuación:','Dans le calcul par formule, la note est abaissée par :'],['Знижують оцінку:','Lowering the score:','Bajan la puntuación:','Abaissent la note :'],['Найбільші внески у формульний розрахунок:','Largest contributions to the formula calculation:','Mayores contribuciones al cálculo por fórmula:','Principales contributions au calcul par formule :'],['Складова затемнення','Eclipse component','Componente de eclipse','Composante d’éclipse']);
 COPY.push(['Годинник пристрою розходиться з часом джерела','Device clock differs from the source time','El reloj del dispositivo no coincide con la hora de la fuente','L’horloge de l’appareil diffère de l’heure de la source'],['Частину експертних рішень відхилено перевіркою','Some expert decisions failed validation','Algunas decisiones expertas no superaron la validación','Certaines décisions d’expert ont échoué à la validation'],['Експертний реєстр не оновився; показано останню перевірену версію','The expert register did not update; showing the last validated version','El registro experto no se actualizó; se muestra la última versión validada','Le registre d’expert n’a pas été mis à jour ; dernière version validée affichée'],['Експертний реєстр недоступний','Expert register unavailable','Registro experto no disponible','Registre d’expert indisponible']);
 COPY.push(['Kp — немає актуальних даних','Kp — current data unavailable','Kp — datos actuales no disponibles','Kp — données actuelles indisponibles'],['Попередній Kp NOAA','Provisional NOAA Kp','Kp provisional NOAA','Kp provisoire NOAA'],['Спостереження','Observation','Observación','Observation']);
+COPY.push(['Оцінка Kp GFZ','GFZ nowcast Kp','Kp estimado de GFZ','Kp estimé par GFZ']);
 function currentSignal(live,now=Date.now(),online=navigator.onLine){
  const valid=online&&live?.usable===true&&Number.isFinite(live.kp)&&live.kp>=0&&live.kp<=9&&Number.isFinite(live.expiresAt)&&now<=live.expiresAt;
- return {kp:valid?live.kp:null,provisional:valid&&!!live.provisional,observedAt:valid?live.expiresAt-(live.provisional?.5:6)*3600000:null};
+ return {kp:valid?live.kp:null,provider:valid?live.provider:null,provisional:valid&&!!live.provisional,observedAt:valid?live.expiresAt-(live.provisional?.5:6)*3600000:null};
 }
 function renderSignals(root,ds,result){
  const buttons=root.querySelectorAll('[data-p0-signals]>button');if(buttons.length!==3)return;
  const info=currentSignal(typeof currentKpAuthority==='function'?currentKpAuthority():null),dl=window.SRDayLineView?.snapshot();
  const states={fresh:'Формульні дані актуальні',loading:'Оновлюємо дані…',error:'Не вдалося оновити дані',missing:'Формульні дані відсутні',invalid:'Годинник пристрою розходиться з часом джерела',stale:'Формульні дані застаріли',offline:'Офлайн: перевірте час збережених даних'};
- const kp=info.kp===null?tr('Kp — немає актуальних даних'):'Kp '+new Intl.NumberFormat(window.NRLocale?.locale||'uk-UA',{maximumFractionDigits:2}).format(info.kp)+' · '+tr(info.provisional?'Попередній Kp NOAA':'Спостереження');
+ const kpSource=info.provider==='gfz'?'Оцінка Kp GFZ':info.provisional?'Попередній Kp NOAA':'Спостереження';
+ const kpHeading=info.provider==='gfz'||info.provisional?kpSource:'NOAA';
+ const kp=info.kp===null?tr('Kp — немає актуальних даних'):'Kp '+new Intl.NumberFormat(window.NRLocale?.locale||'uk-UA',{maximumFractionDigits:2}).format(info.kp)+' · '+tr(kpSource);
  const labels=[kp,dl?.date===ds&&dl.status==='available'?dl.initialLabel+' · '+tr('На початок дня'):tr('Календарні дані відсутні'),SkyScore.formatScore(result?.available?result.score:null)+' · '+tr(result?.authority==='expert_pdf'?'Експертна оцінка':result?.available?'Формула джерела':'Оцінка недоступна')];
  buttons[0].dataset.observedAt=info.observedAt?new Date(info.observedAt).toISOString():'';buttons[0].title=info.observedAt?new Date(info.observedAt).toISOString().replace('T',' ').slice(0,16)+' UTC':tr('Kp — немає актуальних даних');
- buttons.forEach((b,i)=>{b.setAttribute('aria-label',tr(['Астрономія й NOAA','Панчанга','Оцінка дня'][i])+': '+labels[i]+(i===0?' '+b.title:''));const compact=i===0?(info.kp===null?'—':'Kp '+new Intl.NumberFormat(window.NRLocale?.locale||'uk-UA',{maximumFractionDigits:2}).format(info.kp)):i===1?labels[i].split(' · ')[0].replace(/^[^:]+: /,''):labels[i];b.replaceChildren(make('span','',tr([info.provisional?'Попередній Kp NOAA':'NOAA','Панчанга','Оцінка дня'][i])),make('strong','',compact));if(i===0)b.append(make('small','',info.observedAt?new Date(info.observedAt).toISOString().slice(11,16)+' UTC':tr('Kp — немає актуальних даних')));if(i===1&&dl?.date===ds&&dl.status==='available')b.append(make('small','',tr('На початок дня')));});
+ buttons.forEach((b,i)=>{
+  const accessible=i===0&&info.provider==='gfz'?labels[0]:tr(['Астрономія й NOAA','Панчанга','Оцінка дня'][i])+': '+labels[i];
+  b.setAttribute('aria-label',accessible+(i===0?' '+b.title:''));
+  const compact=i===0?(info.kp===null?'—':'Kp '+new Intl.NumberFormat(window.NRLocale?.locale||'uk-UA',{maximumFractionDigits:2}).format(info.kp)):i===1?labels[i].split(' · ')[0].replace(/^[^:]+: /,''):labels[i];
+  b.replaceChildren(make('span','',tr([kpHeading,'Панчанга','Оцінка дня'][i])),make('strong','',compact));
+  if(i===0)b.append(make('small','',info.observedAt?new Date(info.observedAt).toISOString().slice(11,16)+' UTC':tr('Kp — немає актуальних даних')));
+  if(i===1&&dl?.date===ds&&dl.status==='available')b.append(make('small','',tr('На початок дня')));
+ });
 }
 function renderTimeline(root,ds){
  const line=root.querySelector('.sr-dayline');if(!line)return;
