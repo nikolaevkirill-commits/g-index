@@ -62,7 +62,8 @@ const server=http.createServer((req,res)=>{
   }catch(e){res.writeHead(404).end();}
 });
 // Number of inlined CSS blocks in the current classic.html (kept in step with sync_inline_styles.py).
-const INDEX_STYLES=(fs.readFileSync(path.join(root,'classic.html'),'utf8').match(/<style data-inline-source="/g)||[]).length;
+const CLASSIC_STYLES=(fs.readFileSync(path.join(root,'classic.html'),'utf8').match(/<style data-inline-source="/g)||[]).length;
+const MAIN_STYLES=19,JOURNAL_STYLES=1;
 async function checkPage(page,name,count){
   if(page.url()===base+name)await page.reload();else await page.goto(base+name);
   await page.waitForFunction(()=>document.querySelectorAll('style[data-inline-source]').length>0).catch(async e=>{fs.writeFileSync(path.join(out,'failed.html'),await page.content());throw e;});
@@ -123,13 +124,13 @@ let base;
     const oldVersion=await activeVersion(page);
     assert.notEqual(oldVersion,expectedVersion,'fixture must exercise a different worker version');
     phase='new';
-    await checkPage(page,'classic.html?channel=play#today',INDEX_STYLES);
+    await checkPage(page,'classic.html?channel=play#today',CLASSIC_STYLES);
     await page.evaluate(async()=>{const r=await navigator.serviceWorker.getRegistration();await r.update();});
     await waitForWaiting(page,true,60000);
-    const main=await ctx.newPage();await checkPage(main,'index.html?channel=play#today',18);
-    const journal=await ctx.newPage();await checkPage(journal,'day_summary.html',1);await checkPage(main,'index.html?channel=play#today',18);
+    const main=await ctx.newPage();await checkPage(main,'index.html?channel=play#today',MAIN_STYLES);
+    const journal=await ctx.newPage();await checkPage(journal,'day_summary.html',JOURNAL_STYLES);await checkPage(main,'index.html?channel=play#today',MAIN_STYLES);
     await ctx.setOffline(true);
-    await checkPage(page,'classic.html?channel=play#today',INDEX_STYLES);await checkPage(journal,'day_summary.html',1);await checkPage(main,'index.html?channel=play#today',18);
+    await checkPage(page,'classic.html?channel=play#today',CLASSIC_STYLES);await checkPage(journal,'day_summary.html',JOURNAL_STYLES);await checkPage(main,'index.html?channel=play#today',MAIN_STYLES);
     // Waiting worker does not force a reload or discard a draft.
     await journal.locator('#note').fill('unsaved upgrade fixture');
     assert.equal(await journal.locator('#note').inputValue(),'unsaved upgrade fixture');
@@ -171,11 +172,11 @@ let base;
     assert.equal(await main.evaluate(()=>window.__updateCanary),'unsaved main tab');
     assert.equal(await journal.locator('#note').inputValue(),'unsaved upgrade fixture');
     const preservedTabs={otherNavigations,journalNavigations,unsaved_state_preserved:true};
-    await ctx.setOffline(true);await checkPage(page,'classic.html?channel=play#today',INDEX_STYLES);await checkPage(journal,'day_summary.html',1);await checkPage(main,'index.html?channel=play#today',18);
+    await ctx.setOffline(true);await checkPage(page,'classic.html?channel=play#today',CLASSIC_STYLES);await checkPage(journal,'day_summary.html',JOURNAL_STYLES);await checkPage(main,'index.html?channel=play#today',MAIN_STYLES);
     await page.waitForFunction(()=>[...document.querySelectorAll('#nrRuntimeState,#swStaleBar')].every(el=>!/[А-Яа-яІіЇїЄєҐґ]/u.test(el.textContent)));
     assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
     await page.screenshot({path:path.join(out,'offline_updated_today.png'),fullPage:true});
-    fs.writeFileSync(path.join(out,'RESULT.json'),JSON.stringify({...preservedTabs,trigger,trace,cdp:cdpEnabled,restart:restart||null,oldVersion,activatedVersion,old_css_probe_reproduced:true,new_html_ignores_old_css:true,waiting_worker_offline:true,updated_worker_offline:true,inline_blocks:27,source_css_exact:true},null,2));
+    fs.writeFileSync(path.join(out,'RESULT.json'),JSON.stringify({...preservedTabs,trigger,trace,cdp:cdpEnabled,restart:restart||null,oldVersion,activatedVersion,old_css_probe_reproduced:true,new_html_ignores_old_css:true,waiting_worker_offline:true,updated_worker_offline:true,inline_blocks:CLASSIC_STYLES+MAIN_STYLES+JOURNAL_STYLES,source_css_exact:true},null,2));
     console.log('PASS CSS upgrade ('+trigger+(trace?', trace':'')+(cdpEnabled?', cdp':'')+'): old cached styles reproduced; exact new styles online, waiting/offline and activated/offline. Evidence: '+out);
   }finally{fs.writeFileSync(path.join(out,'LIFECYCLE.json'),JSON.stringify(lifecycle,null,2));if(serverLog)fs.writeFileSync(path.join(out,'SERVER_REQUESTS.json'),JSON.stringify({worker_modified:trace,cdp:cdpEnabled,requests},null,2));await browser.close();server.close();}
 })().catch(e=>{console.error(e);server.close();process.exitCode=1});

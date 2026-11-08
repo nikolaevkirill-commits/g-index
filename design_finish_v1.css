@@ -1,0 +1,125 @@
+/* SkyRhythm · доробка дизайну FP569. Лише оформлення й нові блоки week_ahead_v1.js; бал, дані й логіку не змінює. */
+:root{--srf-pos:#63e6ad;--srf-neu:#ffdc75;--srf-neg:#ff858d;--srf-miss:#bac5d1;--srf-ink:var(--nrs-ink,#F3EFF8);--srf-soft:var(--nrs-soft,rgba(243,239,248,.62));--srf-line:rgba(185,197,255,.22);--srf-card:rgba(13,22,48,.72);--srf-accent:var(--nrs-accent,#D9B777)}
+html[data-nr-theme=light]{--srf-pos:#196840;--srf-neu:#805B00;--srf-neg:#A92E21;--srf-miss:#5b6472;--srf-line:rgba(42,34,64,.18);--srf-card:rgba(255,252,255,.86)}
+@media (prefers-color-scheme:light){html[data-nr-theme=auto]{--srf-pos:#196840;--srf-neu:#805B00;--srf-neg:#A92E21;--srf-miss:#5b6472;--srf-line:rgba(42,34,64,.18);--srf-card:rgba(255,252,255,.86)}}
+
+/* 1. Одна смуга відступу під нижню навігацію (раніше body 108 + маршрут 108–132 + картка 116 → ~330 px порожнечі). */
+body.fp434-app .nr-route.active{padding-bottom:16px!important}
+body.fp434-app .nr-overview{padding-bottom:20px!important}
+
+/* 3. Шкала −3…+3: колір за знаком, обрана позиція заповнена. Колір не єдиний носій: число й підпис лишаються. */
+html body #fp434Shell .nr-design-scale span{border-color:var(--srf-line)!important;color:var(--srf-soft)!important;background:transparent!important;border-top-width:3px!important}
+html body #fp434Shell .nr-design-scale span:nth-child(-n+3){border-top-color:var(--srf-neg)!important}
+html body #fp434Shell .nr-design-scale span:nth-child(4){border-top-color:var(--srf-neu)!important}
+html body #fp434Shell .nr-design-scale span:nth-child(n+5){border-top-color:var(--srf-pos)!important}
+html body #fp434Shell .nr-design-scale span.selected{color:var(--srf-ink)!important;outline:none!important;font-weight:800!important;background:rgba(255,255,255,.08)!important;box-shadow:inset 0 0 0 1px currentColor}
+html body #fp434Shell .nr-design-scale span.selected:nth-child(-n+3){color:var(--srf-neg)!important}
+html body #fp434Shell .nr-design-scale span.selected:nth-child(4){color:var(--srf-neu)!important}
+html body #fp434Shell .nr-design-scale span.selected:nth-child(n+5){color:var(--srf-pos)!important}
+
+/* 4. «Прогноз»: обраний день у стилі теми замість світло-блакитної заливки; компактніші рядки. */
+html body #nrRoute-forecast .nr-o-horizon-list [data-day]{min-height:64px!important;padding:10px 14px!important}
+html body #fp434Shell #nrRoute-forecast .nr-o-horizon-list [data-day][aria-pressed="true"]{background:rgba(217,183,119,.12)!important;color:var(--srf-ink)!important;border-color:var(--srf-accent)!important;box-shadow:inset 3px 0 0 var(--srf-accent)!important}
+html body #fp434Shell #nrRoute-forecast .nr-o-horizon-list [data-day][aria-pressed="true"] :is(span,small){color:var(--srf-ink)!important}
+html body #fp434Shell #nrRoute-forecast .nr-o-horizon-list [data-day][aria-pressed="true"] small{color:var(--srf-soft)!important}
+html[data-nr-theme=light] body #nrRoute-forecast .nr-o-horizon-list [data-day][aria-pressed="true"]{background:rgba(107,79,160,.10)!important}
+
+/* 4b. Перемикач День/Тиждень/27 днів: обраний — акцент теми, не світло-блакитна заливка. Картка бала без порожньої лівої колонки. */
+html body #fp434Shell [data-p0-forecast-tabs] button[aria-pressed="true"]{background:rgba(217,183,119,.16)!important;color:var(--srf-ink)!important;border-color:var(--srf-accent)!important;box-shadow:inset 0 -3px 0 var(--srf-accent)!important}
+html[data-nr-theme=light] body #fp434Shell [data-p0-forecast-tabs] button[aria-pressed="true"]{background:rgba(107,79,160,.12)!important}
+html body #fp434Shell #nrRoute-forecast .nr-o-hero.sr-compact-header{grid-template-columns:minmax(0,1fr)!important}
+html body #fp434Shell #nrRoute-forecast .nr-o-hero.sr-compact-header>*{grid-column:1/-1!important}
+html body #fp434Shell #nrRoute-forecast .nr-o-hero.sr-compact-header .nr-o-verdict{width:auto!important;justify-content:flex-start!important;gap:14px}
+
+/* 5. Події Drik у Панчанзі: картка й посилання в кольорі теми. */
+html body .sr-source-calendar{border:1px solid var(--srf-line);border-radius:16px;padding:6px 16px 10px;background:var(--srf-card);margin:12px 0}
+html body .sr-source-calendar>summary{font:600 17px/1.3 'Literata',Georgia,serif;display:flex;align-items:center;cursor:pointer;color:var(--srf-ink)}
+html body .sr-source-calendar>p{color:var(--srf-soft);font-size:14px;line-height:1.5;margin:6px 0 10px}
+html body .sr-source-calendar>a{color:var(--srf-accent)!important;text-decoration:none;display:flex!important;align-items:center;border-top:1px solid var(--srf-line);font-weight:600}
+html body .sr-source-calendar>a:hover,html body .sr-source-calendar>a:focus-visible{text-decoration:underline}
+
+/* 6. Нові блоки week_ahead_v1.js */
+.sr-week,.sr-week-events{border:1px solid var(--srf-line);border-radius:20px;background:var(--srf-card);padding:16px;margin:16px 0;color:var(--srf-ink)}
+.sr-week-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.sr-week h2,.sr-week-events h2{font:600 22px/1.2 'Literata',Georgia,serif!important;margin:0!important;color:var(--srf-ink)!important}
+.sr-week-head button{min-height:44px;padding:0 14px;border-radius:12px;border:1px solid var(--srf-line);background:transparent;color:var(--srf-accent);font:600 14px/1 'Fira Sans',system-ui,sans-serif;cursor:pointer}
+.sr-week ol{list-style:none;margin:12px 0 0;padding:0;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+.sr-week li{display:block;margin:0;padding:0}
+.sr-week li>button{position:relative;display:grid;width:100%;box-sizing:border-box;background:transparent;color:inherit;font:inherit;justify-items:center;gap:2px;padding:8px 2px 6px;border-radius:12px;border:1px solid var(--srf-line);border-bottom:3px solid var(--srf-miss);cursor:pointer;min-height:44px}
+.sr-week li[data-score-tone=positive]>button{border-bottom-color:var(--srf-pos)}.sr-week li[data-score-tone=neutral]>button{border-bottom-color:var(--srf-neu)}.sr-week li[data-score-tone=negative]>button{border-bottom-color:var(--srf-neg)}
+.sr-week li>button[aria-current=date]{background:rgba(217,183,119,.12);border-color:var(--srf-accent)}
+.sr-wk-wd{font:500 11px/1.2 'Fira Sans',system-ui,sans-serif;color:var(--srf-soft);text-transform:lowercase;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sr-wk-d{font:600 17px/1.2 'Literata',Georgia,serif}
+.sr-wk-s{font:700 13px/1.2 'Fira Sans',system-ui,sans-serif;white-space:nowrap}
+.sr-week li[data-score-tone=positive] .sr-wk-s,.sr-we-score[data-score-tone=positive]{color:var(--srf-pos)}
+.sr-week li[data-score-tone=neutral] .sr-wk-s,.sr-we-score[data-score-tone=neutral]{color:var(--srf-neu)}
+.sr-week li[data-score-tone=negative] .sr-wk-s,.sr-we-score[data-score-tone=negative]{color:var(--srf-neg)}
+.sr-week li[data-score-tone=missing] .sr-wk-s,.sr-we-score[data-score-tone=missing]{color:var(--srf-miss)}
+.sr-wk-ev{font-size:9px;line-height:1;height:9px;color:var(--srf-accent)}
+.sr-week-note{margin:10px 0 0!important;font:13px/1.45 'Fira Sans',system-ui,sans-serif!important;color:var(--srf-soft)!important}
+.sr-we-list{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:0}
+.sr-we-list>li{display:grid;grid-template-columns:64px 1fr auto;gap:4px 12px;align-items:start;padding:12px 0;border-top:1px solid var(--srf-line)}
+.sr-we-list>li:first-child{border-top:0}
+.sr-we-date{display:grid;gap:2px}.sr-we-date strong{font:600 16px/1.2 'Literata',Georgia,serif}.sr-we-date span{font-size:12px;color:var(--srf-soft)}
+.sr-we-score{grid-column:3;grid-row:1;font:700 14px/1.6 'Fira Sans',system-ui,sans-serif;white-space:nowrap}
+.sr-we-list ul{grid-column:2;grid-row:1;list-style:none;margin:0;padding:0;display:grid;gap:4px}
+.sr-we-list ul li{font:15px/1.4 'Fira Sans',system-ui,sans-serif}.sr-we-list ul li small{color:var(--srf-soft);font-size:12px}
+.sr-today-end{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:8px 16px;margin:24px 0 8px!important;padding:16px 0 0;border-top:1px solid var(--srf-line);color:var(--srf-soft)!important;font:italic 15px/1.4 'Literata',Georgia,serif!important;text-align:center}
+.sr-today-end button{min-height:44px;padding:0 14px;border-radius:12px;border:1px solid var(--srf-line);background:transparent;color:var(--srf-accent);font:600 14px/1 'Fira Sans',system-ui,sans-serif;font-style:normal;cursor:pointer}
+:is(.sr-week-head button,.sr-week li>button,.sr-today-end button):focus-visible{outline:3px solid var(--srf-accent);outline-offset:2px}
+@media (min-width:900px){.sr-week li>button{padding:10px 4px 8px}.sr-wk-wd{font-size:12px}}
+
+/* 7. Десктоп «Сьогодні»: рядок дати — угорі (раніше автоматично падав у кінець сітки), Лінія дня і тиждень — поряд з оцінкою. */
+@media (min-width:1024px){
+ html body #fp434Shell #nrRoute-today .nr-overview.sr-p0-today{
+  grid-template-rows:repeat(9,auto)!important;
+  grid-template-areas:"bar bar" "hero day" "hero week" "signals signals" "noaa sky" "journey journey" "personal personal" "details details" "close close"!important}
+ html body #fp434Shell #nrRoute-today .nr-overview.sr-p0-today>.nr-dc-bar{grid-area:bar!important}
+ html body #fp434Shell #nrRoute-today .nr-overview.sr-p0-today>[data-week-strip]{grid-area:week!important;margin:0!important}
+}
+@media (min-width:1024px){html body #fp434Shell #nrRoute-today .nr-dv-tone{font:600 26px/1.25 'Literata',Georgia,serif!important}}
+@media (max-width:379px){.sr-week{padding:14px 10px}.sr-week ol{gap:3px}.sr-wk-s{font-size:12px;letter-spacing:-.03em}.sr-week li>button{padding-inline:0}}
+
+/* 8. Зрозумілі картинки (огляд власника 07.11). */
+/* 8a. Місяць у шапці: підпис «3% · спадає / Розрахована фаза Місяця» замість німого диска. */
+html.wow body .wow-header-moon{flex-direction:column!important;align-items:center!important;gap:2px;text-align:center!important}
+html.wow body .wow-header-moon>span{order:2;display:block!important;font:600 12px/1.25 'Fira Sans',system-ui,sans-serif!important;color:var(--srf-ink)!important;white-space:nowrap}
+html.wow body .wow-header-moon>span small{display:block;font:400 10px/1.2 'Fira Sans',system-ui,sans-serif!important;color:var(--srf-soft)!important}
+html.wow body .wow-header-moon>span small+small{display:none!important}
+@media (max-width:1023px){html.wow body .wow-header-moon svg{width:58px!important;height:58px!important}html.wow body .wow-header-moon{top:8px!important;max-width:120px!important}}
+
+/* 8b. NOAA: замість зеленої кулі — шкала бур G0–G5 з позначкою «зараз». */
+html body #nrRoute-today [data-app-today][data-overview]>.nr-o-weather-brief::before,html body .nr-o-weather-brief::before{display:none!important;content:none!important}
+html body #fp434Shell .nr-route [data-overview]>.nr-o-weather-brief,html body #fp434Shell .nr-route .nr-o-weather-brief{padding-left:18px!important}
+.sr-g-scale{display:grid;gap:6px;margin-top:12px}
+.sr-g-title{font:600 12px/1.3 'Fira Sans',system-ui,sans-serif;color:var(--srf-soft)}
+.sr-g-cells{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:4px}
+.sr-g-cells i{font:600 12px/1 'Fira Sans',system-ui,sans-serif;font-style:normal;text-align:center;padding:7px 0;border-radius:8px;color:var(--srf-soft);background:rgba(255,255,255,.05);border-top:3px solid var(--srf-line)}
+.sr-g-cells i[data-level="0"]{border-top-color:var(--srf-pos)}.sr-g-cells i[data-level="1"],.sr-g-cells i[data-level="2"]{border-top-color:var(--srf-neu)}.sr-g-cells i[data-level="3"],.sr-g-cells i[data-level="4"],.sr-g-cells i[data-level="5"]{border-top-color:var(--srf-neg)}
+.sr-g-cells i.is-now{color:var(--srf-ink);background:rgba(255,255,255,.14);box-shadow:inset 0 0 0 2px currentColor}
+.sr-g-scale[data-g-scale=""] .sr-g-cells i{opacity:.45;border-top-color:var(--srf-line)}
+.sr-g-ends{display:flex;justify-content:space-between;font:11px/1.2 'Fira Sans',system-ui,sans-serif;color:var(--srf-soft)}
+
+/* 8c. «Небо дня» на «Сьогодні»: список планет словами замість дрібного кола. */
+.nr-sky-planets h4{margin:12px 0 6px!important;font:600 13px/1.3 'Fira Sans',system-ui,sans-serif!important;color:var(--srf-soft)!important;text-transform:none!important;letter-spacing:0!important}
+.nr-sky-planets ul{list-style:none!important;margin:0!important;padding:0!important;display:grid!important;grid-template-columns:repeat(auto-fill,minmax(min(100%,170px),1fr));gap:4px 12px}
+.nr-sky-planets li{display:grid!important;grid-template-columns:auto max-content minmax(0,1fr);align-items:baseline;gap:6px;font:14px/1.5 'Fira Sans',system-ui,sans-serif!important;padding:2px 0!important;border:0!important;background:none!important}
+.nr-sky-planets li b{color:var(--c);font-size:16px;text-align:center}
+.nr-sky-planets li span{color:var(--srf-ink)}
+.nr-sky-planets li em{font-style:normal;color:var(--srf-soft);min-width:0;overflow-wrap:anywhere}
+.nr-sky-planets-note{margin:8px 0 0!important;font:13px/1.45 'Fira Sans',system-ui,sans-serif!important;color:var(--srf-soft)!important}
+.nr-sky-now-body.is-readable{display:block!important}
+/* 8d. Позначки «Лінії дня»: слово замість символу — овальна кнопка за шириною тексту. */
+html.wow body #nrRoute-today .sr-dayline [data-track]>button{width:auto!important;min-width:44px;max-width:none!important;padding:0 10px!important;border-radius:22px!important;white-space:nowrap!important;font-size:var(--sr-ui-small,13px)!important}
+@media (min-width:1024px){.nr-sky-planets ul{grid-template-columns:repeat(auto-fill,minmax(230px,1fr))!important}}
+
+/* Keep enlarged signal labels within their cards on narrow screens. */
+@media (max-width:359px){
+ html body #nrRoute-today [data-app-today][data-overview]>[data-p0-signals]{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+ html body #nrRoute-today [data-app-today][data-overview]>[data-p0-signals]>button:last-child{grid-column:1/-1}
+ html body #nrRoute-today [data-app-today][data-overview]>[data-p0-signals]>button>*{max-inline-size:100%;overflow-wrap:anywhere!important}
+}
+
+/* Keep the date label intact when its calendar picker needs a second line. */
+html.wow body #fp434Shell #nrRoute-calendar .nr-o-hero.sr-compact-header>label{flex-wrap:wrap;white-space:nowrap;gap:6px}
+html.wow body #fp434Shell #nrRoute-calendar .nr-o-hero.sr-compact-header>label select{max-inline-size:100%}

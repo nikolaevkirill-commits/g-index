@@ -5,6 +5,9 @@
 const L=()=>{const l=window.NRLocale?.language||'uk';return ['uk','en','es','fr'].includes(l)?l:'en'};
 const I=['uk','en','es','fr'];
 const T={
+ pl_title:['Положення у знаках','Positions in the signs','Posiciones en los signos','Positions dans les signes'],
+ pl_note:['Знак зодіаку (сидерично, Лахірі) і градус у ньому. Коло вище — та сама картина: 12 секторів = 12 знаків, крапки = планети.','Zodiac sign (sidereal, Lahiri) and degree within it. The wheel shows the same: 12 sectors = 12 signs, dots = planets.','Signo zodiacal (sideral, Lahiri) y grado dentro de él. La rueda muestra lo mismo: 12 sectores = 12 signos, puntos = planetas.','Signe du zodiaque (sidéral, Lahiri) et degré dans le signe. La roue montre la même chose : 12 secteurs = 12 signes, points = planètes.'],
+ pl_retro:['ретроградний','retrograde','retrógrado','rétrograde'],
  sw_model:["Розрахунок моделі", "Model run", "Cálculo del modelo", "Calcul du modèle"],
  sw_elapsed:["Оціночний час минув; фактичне прибуття не підтверджено цими даними.", "Estimated time has passed; actual arrival is not confirmed by these data.", "La hora estimada ya pasó; estos datos no confirman la llegada real.", "L’heure estimée est passée ; ces données ne confirment pas l’arrivée réelle."],
  sw_kyiv:["Усі години — Київ.", "All times are Kyiv time.", "Todas las horas son de Kyiv.", "Toutes les heures sont celles de Kyiv."],
@@ -72,6 +75,11 @@ function fmtDay(ds){try{return NRPresentation.dateFormatter(window.NRLocale?.loc
 
 // Stars in three groups: three animations instead of one per star (keeps idle CPU low).
 function stars(n,rmin,rmax,seed){const g=['','',''];let x=seed;const rnd=()=>(x=(x*16807)%2147483647)/2147483647;for(let i=0;i<n;i++){const a=rnd()*360,r=rmin+rnd()*(rmax-rmin),[px,py]=ring(a,r);g[i%3]+=`<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="${(0.5+rnd()*1.1).toFixed(2)}"/>`}return g.map((c,i)=>`<g class="nr-sky-star" style="--d:${(i*1.3).toFixed(1)}s;--t:${(3.2+i*0.9).toFixed(1)}s">${c}</g>`).join('')}
+function planets(ds,compact){
+ const d=sky?.daily?.[dayIndex(ds)];if(!d)return '';
+ const rows=Object.keys(G).filter(g=>d.grahas?.[g]&&Number.isFinite(d.grahas[g].lon)).map(g=>{const p=d.grahas[g],lon=((p.lon%360)+360)%360,s=Math.floor(lon/30),deg=Math.floor(lon-s*30);return `<li data-g="${g}" style="--c:${G[g][5]}"><b aria-hidden="true">${G[g][0]+VS}</b><span>${esc(gName(g))}</span><em>${esc(SIGN_NAMES[s][I.indexOf(L())])} ${deg}°${p.retrograde&&g!=='Rahu'&&g!=='Ketu'?' · '+esc(t('pl_retro')):''}</em></li>`}).join('');
+ return `<div class="nr-sky-planets${compact?' is-compact':''}"><h4>${esc(t('pl_title'))}</h4><ul>${rows}</ul>${compact?'':`<p class="nr-sky-planets-note">${esc(t('pl_note'))}</p>`}</div>`;
+}
 function wheel(ds,mini){
  const d=sky.daily[dayIndex(ds)];if(!d)return '';const gid=mini?'nrSkyCoreMini':'nrSkyCore';
  const items=dayItems(ds),active=new Map();
@@ -123,7 +131,7 @@ function renderToday(){
  const head=`<div class="nr-sky-now-head"><h2>${esc(t('now'))}</h2><span>${esc(fmtDay(ds))}</span></div>`;
  if(state!=='ready'||dayIndex(ds)<0){todayHost.innerHTML=head+`<p class="nr-sky-none">${esc(state==='loading'?'…':t('missing'))}</p>`;return}
  const top=dayItems(ds).filter(x=>x.reading.intensity>=2).slice(0,2);
- todayHost.innerHTML=head+`<div class="nr-sky-now-body">${wheel(ds,true)}<div><ul class="nr-sky-now-list">${top.length?top.map(x=>`<li><b aria-hidden="true">${x.bodies.map(g=>(G[g]?.[0]||'')+VS).join(' ')}</b> ${esc(x.reading.text[lang]||x.reading.text.en)}</li>`).join(''):`<li>${esc(t('quiet'))}</li>`}</ul><small>${esc(t('tradition'))} ${esc(t('sub'))}</small></div></div><button type="button" class="nr-sky-now-open">${esc(t('open'))} →</button>`;
+ todayHost.innerHTML=head+`<div class="nr-sky-now-body is-readable"><div><ul class="nr-sky-now-list">${top.length?top.map(x=>`<li><b aria-hidden="true">${x.bodies.map(g=>(G[g]?.[0]||'')+VS).join(' ')}</b> ${esc(x.reading.text[lang]||x.reading.text.en)}</li>`).join(''):`<li>${esc(t('quiet'))}</li>`}</ul><small>${esc(t('tradition'))} ${esc(t('sub'))}</small></div>${planets(ds,true)}</div><button type="button" class="nr-sky-now-open">${esc(t('open'))} →</button>`;
 }
 function mountToday(){
  if(todayHost&&todayHost.isConnected)return true;const ov=document.querySelector('#nrRoute-today [data-overview="today"]');if(!ov)return false;
@@ -160,7 +168,7 @@ function render(){
  const stale=skyStale();
  const before=new Map([...host.querySelectorAll('.nr-sky-planet[data-g]')].map(e=>[e.dataset.g,[Number(e.dataset.lon),Number(e.dataset.rad)]]));
  host.querySelector('.nr-sky-body').innerHTML=(stale?`<p class="nr-sky-stale" role="status">${esc(t('stale'))}</p>`:'')+
-  `<div class="nr-sky-stage">${wheel(sel)}<div class="nr-sky-side"><p class="nr-sky-date">${esc(fmtDay(sel))}${(()=>{const k=kpFor(sel);return k?` · ${esc(t('sw_forecast'))} ${new Intl.NumberFormat(window.NRLocale?.locale||'uk-UA',{maximumFractionDigits:2}).format(k.kp)}${k.src==='NOAA_27day_outlook'?' · '+esc(t('kp27')):''}${k.kp>=5?' · '+esc(t('storm'))+' G'+Math.min(5,Math.floor(k.kp)-4):''}`:''})()}</p><div class="nr-sky-list">${list(sel)}</div>${spaceWeather()}</div></div>`+
+  `<div class="nr-sky-stage"><div class="nr-sky-wheel-wrap">${wheel(sel)}${planets(sel,false)}</div><div class="nr-sky-side"><p class="nr-sky-date">${esc(fmtDay(sel))}${(()=>{const k=kpFor(sel);return k?` · ${esc(t('sw_forecast'))} ${new Intl.NumberFormat(window.NRLocale?.locale||'uk-UA',{maximumFractionDigits:2}).format(k.kp)}${k.src==='NOAA_27day_outlook'?' · '+esc(t('kp27')):''}${k.kp>=5?' · '+esc(t('storm'))+' G'+Math.min(5,Math.floor(k.kp)-4):''}`:''})()}</p><div class="nr-sky-list">${list(sel)}</div>${spaceWeather()}</div></div>`+
   strip(sel)+`<div class="nr-sky-controls"><button type="button" class="nr-sky-play" ${motionOn()?'':'disabled'} aria-pressed="${!!timer}">${esc(timer?t('stop'):t('play'))}</button><label><input type="range" aria-label="${esc(t('day'))}" min="0" max="${sky.daily.length-1}" value="${dayIndex(sel)}" aria-valuetext="${esc(fmtDay(sel))}"></label></div>`;
  if(weatherHelpOpen)host.querySelector('.nr-sky-weather-help')?.setAttribute('open','');
  if(before.size&&motionOn())arcMove(before);

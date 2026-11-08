@@ -6,7 +6,7 @@ import re
 import posixpath
 
 ROOT=Path(__file__).resolve().parents[2]
-PAGES={'index.html':['p0_layout_v1.css', 'wow_reviewed_v1.css', 'consumer_overview_v1.css', 'preview-v4/design_candidate.css', 'preview-v4/design_b/css/fonts.css', 'preview-v4/design_b/integration.css', 'preview-v4/design_b/scenes/scenes.css', 'preview-v4/sky_scene_v1.css', 'preview-v4/app_today_v1.css', 'day_verdict_v1.css', 'preview-v4/atlas_motion.css', 'preview-v4/design_b/palette/palette.css', 'preview-v4/design_b/states/states.css', 'preview-v4/desktop_v1.css', 'r9_shell.css', 'panchanga_civil_view.css', 'festival_decision_v1.css', 'dayline_view_v1.css'],'classic.html':['p0_layout_v1.css','wow_reviewed_v1.css','consumer_overview_v1.css',
+PAGES={'index.html':['p0_layout_v1.css', 'wow_reviewed_v1.css', 'consumer_overview_v1.css', 'preview-v4/design_candidate.css', 'preview-v4/design_b/css/fonts.css', 'preview-v4/design_b/integration.css', 'preview-v4/design_b/scenes/scenes.css', 'preview-v4/sky_scene_v1.css', 'preview-v4/app_today_v1.css', 'day_verdict_v1.css', 'preview-v4/atlas_motion.css', 'preview-v4/design_b/palette/palette.css', 'preview-v4/design_b/states/states.css', 'preview-v4/desktop_v1.css', 'r9_shell.css', 'panchanga_civil_view.css', 'festival_decision_v1.css', 'dayline_view_v1.css', 'design_finish_v1.css'],'classic.html':['p0_layout_v1.css','wow_reviewed_v1.css','consumer_overview_v1.css',
                      'nocturne_v1.css','festival_decision_v1.css','dayline_view_v1.css','day_verdict_v1.css','preview-v4/sky_scene_v1.css'],
        'day_summary.html':['day_summary_v1.css']}
 

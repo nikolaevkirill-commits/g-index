@@ -23,14 +23,6 @@ if(launch){
 }
 
 /* ---------- Дані для сцен (тільки читання) ---------- */
-function weekData(scope){
-  const wk=scope.querySelector('.nr-b-week');if(!wk)return null;
-  return [...wk.querySelectorAll('button')].map(b=>{
-    const raw=(b.querySelector('strong')?.textContent||'').trim().replace('−','-');
-    const v=/^[+-]?[0-3]$/.test(raw)?Number(raw):null;
-    return {day:b.dataset.day||'',score:v,tone:b.dataset.tone||'none',outlook:b.dataset.horizon==='outlook',sel:b.getAttribute('aria-pressed')==='true'};
-  });
-}
 function gLevel(){
   const b=document.querySelector('[data-weather-brief]');if(b&&/^[0-5]$/.test(b.dataset.g||''))return Number(b.dataset.g);
   const t=b?.textContent||'';
@@ -122,24 +114,6 @@ function scenePanch(){
    ${ticks}
    <circle cx="${(128+14*8.3).toFixed(1)}" cy="66" r="2.6" fill="none" stroke="currentColor" stroke-width=".9"/><circle cx="${(128+29*8.3).toFixed(1)}" cy="66" r="2.6" fill="currentColor"/></svg>`}};
 }
-function sceneForecast(scope){
-  const d=weekData(scope);if(!d||!d.length)return null;
-  const W=390,x=i=>36+i*((W-72)/Math.max(1,d.length-1)),y=v=>44-v*9.5;let seg='',pts='',k=0;
-  for(let i=1;i<d.length;i++){const a=d[i-1],b=d[i];if(a.score===null||b.score===null)continue;
-    const dash=a.outlook||b.outlook;seg+=`<line class="${dash?'nrs-fade':'nrs-draw'}" ${dash?'':'pathLength="1"'} style="--nrs-d:${(0.1+i*0.08).toFixed(2)}s" x1="${x(i-1).toFixed(1)}" y1="${y(a.score)}" x2="${x(i).toFixed(1)}" y2="${y(b.score)}" stroke="currentColor" stroke-width="1" ${dash?'stroke-dasharray="3 3"':''} opacity=".7"/>`}
-  d.forEach((p,i)=>{if(p.score===null){pts+=`<line x1="${x(i).toFixed(1)}" y1="40" x2="${x(i).toFixed(1)}" y2="48" stroke="currentColor" stroke-width=".8" opacity=".4"/>`;return}
-    const tone=p.tone==='favorable'||p.tone==='good'?'var(--nrs-pos,currentColor)':p.tone==='tense'?'var(--nrs-neg,currentColor)':p.tone==='unstable'?'var(--nrs-warn,currentColor)':'currentColor';
-    pts+=`<g class="nrs-pop" style="--nrs-d:${(0.15+(k++)*0.07).toFixed(2)}s">${p.sel?`<circle cx="${x(i).toFixed(1)}" cy="${y(p.score)}" r="7.5" fill="none" stroke="currentColor" stroke-width=".9"/>`:''}<circle cx="${x(i).toFixed(1)}" cy="${y(p.score)}" r="3.4" ${p.outlook?`fill="none" style="stroke:${tone}" stroke-width="1.3"`:`style="fill:${tone}"`}/></g>`});
-  const rnd=seeded('w'+(d[0]?.day||'')),fid='nrsF'+(++uid),o0=d.findIndex(p=>p.outlook);
-  /* «Туман невизначеності» над 27-денними днями: це орієнтир NOAA, не короткий прогноз */
-  const fog=o0<0?'':`<defs>${hatchDef(fid)}</defs><g class="nrs-fog nrs-fade" style="--nrs-d:.5s"><rect x="${(x(o0)-(o0?((W-72)/Math.max(1,d.length-1))/2:36)).toFixed(1)}" y="0" width="${W}" height="88" fill="url(#${fid}fog)"/><rect class="nrs-fogdrift" x="${(x(o0)-10).toFixed(1)}" y="0" width="${W+60}" height="88" fill="url(#${fid}x)" opacity=".18"/></g>`;
-  return {sig:'f|'+d.map(p=>[p.score,p.outlook?1:0,p.sel?1:0,p.tone].join(':')).join(','),get svg(){return `<svg viewBox="0 0 ${W} 88" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
-   <g opacity=".6">${stars(rnd,10,W,88,84)}</g>${fog}
-   <line x1="0" y1="44" x2="${W}" y2="44" stroke="currentColor" stroke-width=".7" stroke-dasharray="2 5" opacity=".45"/>
-   ${seg}${pts}</svg>`}};
-}
-
-
 /* ---------- Пріоритет місця на першому екрані «Сьогодні» ----------
    1) «Мій план» над нижньою навігацією; 2) стрічка дат над балом; 3) декоративна смуга сцени.
    Перебираємо варіанти (сцена+стрічка вгорі → без сцени+стрічка вгорі → сцена+стрічка під шкалою → без сцени+стрічка під шкалою). */
@@ -179,9 +153,8 @@ function place(host,before,kind,build){
   if(el.dataset.sig!==sc.sig){el.dataset.sig=sc.sig;el.innerHTML=sc.svg}
 }
 function mount(){
-  const t=document.querySelector('[data-overview="today"]'),f=document.querySelector('[data-overview="forecast"]'),pr=document.getElementById('nrRoute-panch');
+  const t=document.querySelector('[data-overview="today"]'),pr=document.getElementById('nrRoute-panch');
   if(t)place(t,t.firstElementChild,'today',()=>sceneToday(t));
-  if(f)place(f,f.firstElementChild,'forecast',()=>sceneForecast(f));
   if(pr){const head=pr.querySelector(':scope > .nr-route-head');if(head)place(pr,head,'panch',scenePanch)}
 }
 let queued=false;

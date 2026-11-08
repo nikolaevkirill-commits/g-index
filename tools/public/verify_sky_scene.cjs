@@ -36,8 +36,8 @@ try{for(const [locale,rm] of [['uk-UA','no-preference'],['en-GB','no-preference'
  assert.equal(r.overflow,false);assert.equal(errs.length,0,errs.join('|'));assert.equal(score0,score1);
  if(rm!=='missing'){await p.evaluate(()=>{location.hash='today'});await p.waitForTimeout(1500);
   const td=await p.evaluate(()=>{const ov=document.querySelector('#nrRoute-today [data-overview="today"]');const kids=[...ov.children].map(e=>e.matches('.nr-o-hero')?'hero':e.matches('[data-p0-signals]')?'signals':e.matches('[data-sky-now]')?'sky':e.matches('.sr-dayline')?'dayline':e.matches('.nr-o-weather-brief')?'noaa':e.matches('[data-day-you]')?'personal':e.matches('[data-p0-details]')?'details':null).filter(Boolean);
-   const c=document.querySelector('[data-sky-now]');return {order:kids.join('>'),cyr:/[А-Яа-яІіЇїЄєҐґ]/.test(c?.innerText||''),wheel:!!c?.querySelector('svg.is-mini'),items:c?.querySelectorAll('li').length||0}});
-  assert.equal(td.order,'hero>signals>dayline>noaa>sky>personal>details','Today order '+td.order);assert.ok(td.wheel&&td.items>0,'Sky now card');
+   const c=document.querySelector('[data-sky-now]');return {order:kids.join('>'),cyr:/[А-Яа-яІіЇїЄєҐґ]/.test(c?.innerText||''),wheel:!c?.querySelector('svg.is-mini')&&(c?.querySelectorAll('.nr-sky-planets li').length||0)>=7,items:c?.querySelectorAll('li').length||0}});
+  assert.equal(td.order,'hero>dayline>signals>noaa>sky>personal>details','Today order '+td.order);assert.ok(td.wheel&&td.items>0,'Sky now card: readable planet list instead of the mini wheel (owner, 07.11)');
   if(!locale.startsWith('uk'))assert.equal(td.cyr,false,locale+' Sky now shows Ukrainian');res.at(-1).today=td.order}
  await c.close();}
  hideSky=false;
