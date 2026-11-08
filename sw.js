@@ -2,7 +2,7 @@ importScripts('./runtime_diagnostics_v1.js','./civil_time_v1.js?v=fp569f-global'
 // G-Index service worker. Navigations, HTML, JS and data (.json/.jsonl/.csv) are network-first with a
 // cached fallback; other same-origin assets (CSS, images, fonts) are cache-first.
 // Bump CACHE_VERSION whenever index.html or a cached shell asset changes.
-const CACHE_VERSION = 'fp569f-global-20261108'; // Discrete final scores; no interpolated forecast.
+const CACHE_VERSION = 'fp569h-p8-20261108'; // Discrete final scores; no interpolated forecast.
 const CACHE_PREFIX = 'gindex-'; // G-Index cache namespace; do not remove the prefix.
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${CACHE_VERSION}`;
 const DATA_CACHE = `${CACHE_PREFIX}data-${CACHE_VERSION}`;
@@ -94,8 +94,8 @@ const SHELL_ASSETS = [
   './sw_update_coordination_v1.js',
   './day_context_v1.js?v=dc3',
   './sky_time_v1.js?v=fp569f-global',
-  './sky_live_loader_v1.js?v=fp569f-global',
-  './sky_live_v1.js?v=fp569f-global',
+  './sky_live_loader_v1.js?v=fp569h-p8',
+  './sky_live_v1.js?v=fp569h-p8',
   './moon_gl_v1.js?v=mg2',
   './day_summary.html',
   './day_summary_v1.js',
@@ -171,9 +171,9 @@ const SHELL_ASSETS = [
   './preview-v4/app_today_v1.js?v=fp569d-review',
   './preview-v4/app_today_v1.css?v=app1',
   './natal_sky_v1.js?v=ns1',
-  './day_verdict_v1.js?v=fp569f-global',
+  './day_verdict_v1.js?v=fp569h-p8',
   './week_ahead_v1.js?v=fp569f-global',
-  './moon_month_v1.js?v=fp569f-global',
+  './moon_month_v1.js?v=fp569h-p8',
   './kp_threshold_v1.js?v=fp569f-global',
   './day_verdict_v1.css?v=dv5',
   './shared_day_v1.js?v=sd1',
@@ -210,7 +210,6 @@ const SHELL_ASSETS = [
   './preview-b17/design_candidate.js?v=phone1',
   './preview-b17/design_b/integration.css?v=phone1',
 
-  './',
   './index.html',
   './theme_moon.webp',
   './theme_panchanga.webp',
@@ -226,7 +225,7 @@ const SHELL_ASSETS = [
   './presentation_runtime_v1.js',
   './product_render_queue_v1.js',
   './moon_phase_v1.js',
-  './p0_layout_v1.js?v=fp569c-kp',
+  './p0_layout_v1.js?v=fp569h-p8',
   './p0_layout_v1.css',
   './wow_reviewed_v1.css',
   './sky_panorama_v1.webp',
@@ -417,7 +416,8 @@ self.addEventListener('fetch', (event) => {
           const journal = new URL('day_summary.html', scope);
           if(!cached && req.mode === 'navigate' &&
              (canonicalUrl.pathname === scope.pathname || canonicalUrl.pathname === index.pathname || canonicalUrl.pathname === preview.pathname || canonicalUrl.pathname === moved.pathname || canonicalUrl.pathname === journal.pathname)) {
-            const entry = new URL(canonicalUrl.href); entry.search=''; entry.hash='';
+            const entry = canonicalUrl.pathname === scope.pathname ? index : new URL(canonicalUrl.href);
+            entry.search=''; entry.hash='';
             cached = await cache.match(entry.href) || await shellCache.match(entry.href);
           }
         }

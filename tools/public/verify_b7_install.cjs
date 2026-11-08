@@ -72,7 +72,7 @@ const server = http.createServer((request, response) => {
       return response.writeHead(404).end();
     }
     shellRequests.add(url.pathname);
-    const type = { '.js': 'application/javascript', '.json': 'application/json', '.css': 'text/css' }[path.extname(file)];
+    const type = { '.html': 'text/html; charset=utf-8', '.js': 'application/javascript', '.json': 'application/json', '.css': 'text/css' }[path.extname(file)];
     response.writeHead(200, { 'content-type': type || 'application/octet-stream', 'cache-control': 'no-store' }).end(body);
   });
 });
@@ -206,6 +206,21 @@ async function cachedFingerprints(page, oldVersion) {
     assert(keys.includes(nextCache));
     assert(!keys.includes('gindex-shell-' + oldVersion));
     assert(!keys.includes('gindex-data-' + oldVersion));
+    // The root and direct classic links are both entry points after a clean offline install.
+    await context.setOffline(true);
+    for (const [route, file] of [['/?channel=play', 'index.html'], ['/classic.html?channel=play', 'classic.html']]) {
+      const offline = await context.newPage();
+      try {
+        const target = new URL(route, url).href;
+        const response = await offline.goto(target, { waitUntil: 'domcontentloaded' });
+        assert.equal(response.status(), 200);
+        assert.equal(response.fromServiceWorker(), true);
+        assert.equal(offline.url(), target);
+        assert.equal(await response.text(), fs.readFileSync(path.join(root, file), 'utf8'));
+      } finally {
+        await offline.close();
+      }
+    }
     console.log(JSON.stringify({ oldVersion, nextVersion, logicalReads: results.length, coalescedRequests, optionalTiming }));
     console.log('PASS B7: two tabs, required failure rollback, offline fallback, optional abort and activation');
   } finally {

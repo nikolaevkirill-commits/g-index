@@ -230,15 +230,18 @@ function renderSignals(root,ds,result){
  const kpSource=info.provider==='gfz'?'Оцінка Kp GFZ':info.provisional?'Попередній Kp NOAA':'Спостереження';
  const kpHeading=info.provider==='gfz'||info.provisional?kpSource:'NOAA';
  const kp=info.kp===null?tr('Kp — немає актуальних даних'):'Kp '+new Intl.NumberFormat(window.NRLocale?.locale||'uk-UA',{maximumFractionDigits:2}).format(info.kp)+' · '+tr(kpSource);
- const labels=[kp,dl?.date===ds&&dl.status==='available'?dl.initialLabel+' · '+tr('На початок дня'):tr('Календарні дані відсутні'),SkyScore.formatScore(result?.available?result.score:null)+' · '+tr(result?.authority==='expert_pdf'?'Експертна оцінка':result?.available?'Формула джерела':'Оцінка недоступна')];
+ const score=SkyScore.formatScore(result?.available?result.score:null);
+ const scoreSource=tr(result?.authority==='expert_pdf'?'Експертна оцінка':result?.available?'Формула джерела':'Оцінка недоступна');
+ const labels=[kp,dl?.date===ds&&dl.status==='available'?dl.initialLabel+' · '+tr('На початок дня'):tr('Календарні дані відсутні'),score+' · '+scoreSource];
  buttons[0].dataset.observedAt=info.observedAt?new Date(info.observedAt).toISOString():'';buttons[0].title=info.observedAt?new Date(info.observedAt).toISOString().replace('T',' ').slice(0,16)+' UTC':tr('Kp — немає актуальних даних');
  buttons.forEach((b,i)=>{
   const accessible=i===0&&info.provider==='gfz'?labels[0]:tr(['Астрономія й NOAA','Панчанга','Оцінка дня'][i])+': '+labels[i];
   b.setAttribute('aria-label',accessible+(i===0?' '+b.title:''));
-  const compact=i===0?(info.kp===null?'—':'Kp '+new Intl.NumberFormat(window.NRLocale?.locale||'uk-UA',{maximumFractionDigits:2}).format(info.kp)):i===1?labels[i].split(' · ')[0].replace(/^[^:]+: /,''):labels[i];
+  const compact=i===0?(info.kp===null?'—':'Kp '+new Intl.NumberFormat(window.NRLocale?.locale||'uk-UA',{maximumFractionDigits:2}).format(info.kp)):i===1?labels[i].split(' · ')[0].replace(/^[^:]+: /,''):score;
   b.replaceChildren(make('span','',tr([kpHeading,'Панчанга','Оцінка дня'][i])),make('strong','',compact));
   if(i===0)b.append(make('small','',info.observedAt?new Date(info.observedAt).toISOString().slice(11,16)+' UTC':tr('Kp — немає актуальних даних')));
   if(i===1&&dl?.date===ds&&dl.status==='available')b.append(make('small','',tr('На початок дня')));
+  if(i===2)b.append(make('small','',scoreSource));
  });
 }
 function renderTimeline(root,ds){

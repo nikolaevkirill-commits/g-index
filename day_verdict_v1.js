@@ -5,6 +5,8 @@
 (()=>{'use strict';
 const I=['uk','en','es','fr'],L=()=>{const l=window.NRLocale?.language||'uk';return I.includes(l)?l:'en'},ix=()=>I.indexOf(L());
 const T={
+ conflict:['Розбіжність джерел','Sources disagree','Fuentes discrepantes','Sources divergentes'],
+ conflict_text:['Формула джерела дає {f}, експерт — {e}. Показано оцінку експерта.','The source formula gives {f} and the expert gives {e}. The expert score is shown.','La fórmula da {f} y el experto da {e}. Se muestra la puntuación del experto.','La formule donne {f} et l’expert {e}. Le score de l’expert est affiché.'],
  tone_pos:['Сприятливий день.','A favourable day.','Un día favorable.','Une journée favorable.'],
  tone_zero:['Рівний день.','A steady day.','Un día estable.','Une journée stable.'],
  tone_neg:['Напружений день.','A tense day.','Un día tenso.','Une journée tendue.'],
@@ -32,6 +34,7 @@ const T={
  storm_check:['буря за прогнозом NOAA','NOAA storm forecast','tormenta prevista por NOAA','tempête prévue par la NOAA']
 };
 const t=k=>T[k][ix()];
+const formatScore=v=>(v>0?'+':v<0?'−':'')+Math.abs(v);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const tr=s=>window.NRLocale?.text?window.NRLocale.text(s):s;
 // Calendar marks of the source → practical topics (same mapping as the Today topics line).
@@ -55,7 +58,14 @@ function build(r,ds){
  if(short&&kp>=5)care.push(t('storm_check')+' G'+Math.min(5,Math.floor(kp)-4));
  // why
  const why=[];
- if(c.available){const ex=c.authority==='expert_pdf';why.push([ex?t('score_exp'):t('score_formula'),(c.score>0?'+':c.score<0?'−':'')+Math.abs(c.score)])}
+ if(c.available){
+  const expert=c.authority==='expert_pdf';
+  why.push([t(expert?'score_exp':'score_formula'),formatScore(c.score)]);
+  const formula=c.formula;
+  if(expert&&formula?.available===true&&formula.state==='fresh'&&Number.isFinite(formula.score)&&Math.abs(formula.score-c.score)>=2){
+   why.push([t('conflict'),t('conflict_text').replace('{f}',formatScore(formula.score)).replace('{e}',formatScore(c.score))]);
+  }
+ }
  why.push([t('calendar'),good.length?good.join(', '):avoid.includes(t('newStarts'))?t('avoid').replace(/:$/,'').toLowerCase()+': '+t('newStarts'):t('calendar_none')]);
  const kpText=kp===null?t('kp_none'):'Kp '+new Intl.NumberFormat(L(),{maximumFractionDigits:2}).format(kp)+' · '+(outlook?t('kp_outlook'):kp>=5?t('kp_storm'):kp>=4?t('kp_active'):t('kp_quiet'));
  why.push([short?t('kp_short'):t('kp'),kpText]);

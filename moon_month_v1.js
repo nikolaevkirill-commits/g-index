@@ -56,7 +56,7 @@ html[data-nr-theme=light] .sr-mm{background:rgba(255,252,255,.86);color:#2a2240;
 html[data-nr-theme=light] .sr-mm-dark{fill:#d9d1dc}html[data-nr-theme=light] .sr-mm-lit{fill:#fffdf4}html[data-nr-theme=light] .sr-mm-rim{stroke:#8f7c8f}
 html[data-nr-theme=light] .sr-mm-p,html[data-nr-theme=light] .sr-mm-note,html[data-nr-theme=light] .sr-mm-wk li{color:#5b5470}
 @media(forced-colors:active){.sr-mm-lit{fill:CanvasText}.sr-mm-dark{fill:Canvas}.sr-mm-rim{stroke:CanvasText}}
-@media(min-width:900px){.sr-mm-grid svg{width:30px;height:30px}.sr-mm-d{font-size:14px}}`;
+@media(min-width:900px){.sr-mm-wk,.sr-mm-grid,.sr-mm-q{max-width:560px}.sr-mm-grid svg{width:30px;height:30px}.sr-mm-d{font-size:14px}}`;
 let lastKey='',lastHtml='';
 function render(focusStep){
  const route=document.getElementById('nrRoute-panch'),anchor=route?.querySelector(':scope > [data-sky]');if(!anchor)return;

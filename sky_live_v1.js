@@ -103,10 +103,15 @@ function skySvg(c){
  // Labels only: shift a label down/up when it would overlap another one; the dot stays at the computed point.
  const placed=[];
  for(const b of [...BODIES].sort((p,q)=>(c.hz[p]?.azimuth||0)-(c.hz[q]?.azimuth||0))){const h=c.hz[b];if(!h)continue;
-  const px=x(h.azimuth),py=y(h.altitude),right=px>W-60;let dy=3;
-  for(let k=0;k<6&&placed.some(o=>Math.abs(o.x-px)<70&&Math.abs(o.y-(py+dy))<14);k++)dy+=(k%2?-1:1)*(k+1)*14;
-  dy=Math.max(9-py,Math.min(H-3-py,dy));placed.push({x:px,y:py+dy});
-  s+=`<g class="nr-sl-body is-${b.toLowerCase()}${h.altitude>0?'':' is-below'}" data-body="${b}" data-alt="${h.altitude.toFixed(3)}" data-az="${h.azimuth.toFixed(3)}" style="transform:translate(${px.toFixed(1)}px,${py.toFixed(1)}px)"><line x1="0" y1="0" x2="${right?-7:7}" y2="${dy-3}" stroke="currentColor" stroke-opacity=".4"/><circle r="${b==='Sun'?6:b==='Moon'?5:3}"/><text x="${right?-7:7}" y="${dy}"${right?' text-anchor="end"':''}>${esc(name(b))}</text></g>`;}
+  const px=x(h.azimuth),py=y(h.altitude),label=name(b),width=label.length*6.5+8;
+  const right=px+7+width>W,left=right?px-7-width:px+7;
+  const preferredY=Math.max(9,Math.min(H-3,py+3));
+  const fits=y=>y>=9&&y<=H-3&&!placed.some(p=>left<p.right&&left+width>p.left&&Math.abs(p.y-y)<16);
+  const offsets=[0,-16,16,-32,32,-48,48,-64,64,-80,80,-96,96,-112,112];
+  const labelY=offsets.map(offset=>preferredY+offset).find(fits)??preferredY;
+  const dy=labelY-py;
+  placed.push({left,right:left+width,y:labelY});
+  s+=`<g class="nr-sl-body is-${b.toLowerCase()}${h.altitude>0?'':' is-below'}" data-body="${b}" data-alt="${h.altitude.toFixed(3)}" data-az="${h.azimuth.toFixed(3)}" style="transform:translate(${px.toFixed(1)}px,${py.toFixed(1)}px)"><line x1="0" y1="0" x2="${right?-7:7}" y2="${dy-3}" stroke="currentColor" stroke-opacity=".4"/><circle r="${b==='Sun'?6:b==='Moon'?5:3}"/><text x="${right?-7:7}" y="${dy}"${right?' text-anchor="end"':''}>${esc(label)}</text></g>`;}
  return s+'</svg>';
 }
 function selectKp(live,snapshot,now=Date.now(),online=navigator.onLine){

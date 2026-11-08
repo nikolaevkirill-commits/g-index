@@ -38,6 +38,42 @@ try{for(const entry of ['classic.html','index.html'])for(const lang of ['uk','en
  assert.deepEqual(noaa.map(r=>r.storm),[false,false,false,true,false,false]);
  assert.match(noaa[2].kp,/27/);
  assert.match(noaa[3].kp,/5[.,]33/);
+ // Contrast the resolver's formula with a raw row that still contains a numeric value.
+ // A real zero is meaningful; an absent, stale or cached formula is not shown as current.
+ const explanation=await p.evaluate(ds=>{
+  const read=window.fp469ConsumerForDate,result=read({ds});
+  const panel=document.querySelector('#nrRoute-today [data-day-why]');
+  const cases=[
+   {state:'fresh',available:true,score:-2},
+   {state:'fresh',available:true,score:0},
+   {state:'fresh',available:true,score:2},
+   {state:'fresh',available:true,score:null},
+   {state:'fresh',available:true,score:'0'},
+   {state:'fresh',available:false,score:-3},
+   {state:'missing',available:false,score:null},
+   {state:'stale',available:false,score:null,lastScore:-3},
+   {state:'offline',available:true,score:-3},
+   {state:'invalid',available:false,score:null}
+  ];
+  try{return cases.map(formula=>{
+   window.fp469ConsumerForDate=()=>({...result,consumer:{available:true,authority:'expert_pdf',score:3,formula},
+    feed:{channels:{source_formula:{available:true,value:-3}}}});
+   NRDayVerdict.render();
+   const rows=[...panel.querySelectorAll('li')];
+   return {score:rows[0].querySelector('strong').textContent,
+    conflict:rows.find(row=>/^(Розбіжність джерел|Sources disagree)$/.test(row.querySelector('span').textContent))?.querySelector('strong').textContent??null};
+  });}finally{window.fp469ConsumerForDate=read;NRDayVerdict.render();}
+ },dates[0]);
+ assert.deepEqual(explanation.map(r=>r.score),Array(10).fill('+3'));
+ assert.match(explanation[0].conflict,/−2.*\+3/);
+ assert.match(explanation[1].conflict,/0.*\+3/);
+ assert.deepEqual(explanation.slice(2).map(r=>r.conflict),Array(8).fill(null));
+ const scoreTile=await p.evaluate(()=>{
+  const tile=document.querySelector('[data-p0-signals]>button:last-child');
+  return {score:tile.querySelector('strong').textContent,source:tile.querySelector('small')?.textContent,accessible:tile.getAttribute('aria-label')};
+ });
+ assert.doesNotMatch(scoreTile.score,/ · /);
+ assert.ok(scoreTile.source&&scoreTile.accessible.includes(scoreTile.source));
  const weather=await p.evaluate(()=>{
   const route=document.querySelector('#nrRoute-today [data-overview=today]'),target=route.querySelector('.nr-o-spaceweather');
   const details=target.closest('details');details.open=false;route.querySelector('[data-weather-brief]').click();
