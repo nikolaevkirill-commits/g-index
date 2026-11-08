@@ -2,11 +2,12 @@ importScripts('./runtime_diagnostics_v1.js','./civil_time_v1.js');
 // G-Index service worker. Navigations, HTML, JS and data (.json/.jsonl/.csv) are network-first with a
 // cached fallback; other same-origin assets (CSS, images, fonts) are cache-first.
 // Bump CACHE_VERSION whenever index.html or a cached shell asset changes.
-const CACHE_VERSION = 'fp568-keyboard-20261107'; // Discrete final scores; no interpolated forecast.
+const CACHE_VERSION = 'fp568-b7-install-20261108'; // Discrete final scores; no interpolated forecast.
 const CACHE_PREFIX = 'gindex-'; // G-Index cache namespace; do not remove the prefix.
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${CACHE_VERSION}`;
 const DATA_CACHE = `${CACHE_PREFIX}data-${CACHE_VERSION}`;
 const NETWORK_FIRST_TIMEOUT_MS = 2500;
+const OPTIONAL_INSTALL_TIMEOUT_MS = 5000;
 const NETWORK_BODY_TIMEOUT_MS = 15000; // FP542: upper bound for reading a response body
 // Uncached images/fonts/CSS must not keep the old worker alive indefinitely
 // while an update waits for its fetch events to finish. The deadline applies only
@@ -36,6 +37,48 @@ async function fetchBoundedAsset(request) {
 }
 let lastRequestOrder=0;
 const newestRequest=new Map();
+const pendingPublicReads=new Map();
+const publicFeeds=new Set([
+  'consumer_cloud/final_score_decisions.json',
+  'consumer_cloud/forecast.json',
+  'consumer_cloud/sky.json',
+  'consumer_cloud/space_weather.json'
+].map(path=>new URL(path,self.registration.scope).href));
+
+function publicReadKey(req) {
+  if (req.destination || !publicFeeds.has(req.url) || req.headers.has('authorization') || req.headers.has('range')) return null;
+  // Only identical public reads share a network response. Explicit query variants and
+  // requests with different fetch semantics keep their independent freshness checks.
+  return JSON.stringify([req.url,req.cache,req.credentials,req.mode,req.redirect,req.integrity,
+    req.referrer,req.referrerPolicy,[...req.headers]]);
+}
+
+async function readData(req) {
+  const controller=new AbortController();
+  const headerTimer=setTimeout(()=>controller.abort(),NETWORK_FIRST_TIMEOUT_MS);
+  let fresh;
+  try { fresh=await fetch(req,{signal:controller.signal}); }
+  finally { clearTimeout(headerTimer); }
+  if(!fresh.ok)throw new Error(`HTTP ${fresh.status} for ${req.url}`);
+  const bodyTimer=setTimeout(()=>controller.abort(),NETWORK_BODY_TIMEOUT_MS);
+  try {
+    const body=await fresh.arrayBuffer();
+    return {body,headers:fresh.headers,meta:{status:fresh.status,statusText:fresh.statusText},fetchedAt:Date.now()};
+  } finally { clearTimeout(bodyTimer); }
+}
+
+function beginDataRead(req,cacheKey) {
+  const key=publicReadKey(req);
+  const pending=key&&pendingPublicReads.get(key);
+  if(pending)return pending;
+  const order=lastRequestOrder=Math.max(Date.now(),lastRequestOrder+0.001);
+  newestRequest.set(cacheKey,order);
+  const read={order,cacheWrite:null,result:readData(req).finally(()=>{
+    if(key)pendingPublicReads.delete(key);
+  })};
+  if(key)pendingPublicReads.set(key,read);
+  return read;
+}
 async function reportDelivery(event, type, fetchedAt, requestOrder){
   try{const client=event.clientId?await self.clients.get(event.clientId):null;
     if(client)client.postMessage({type,fetchedAt,requestOrder,url:event.request.url,ageUnknown:fetchedAt===null});
@@ -251,8 +294,18 @@ self.addEventListener('install', (event) => {
         // must not block a shell update. It is still precached best-effort for offline import.
         const optional = (u) => /^\.\/preview-(?:v4|b17)\/.*\.svg(?:\?|$)/.test(u) || u === './xlsx-0.20.3.full.min.js';
         await cache.addAll(SHELL_ASSETS.filter((u) => !optional(u)));
-        const results = await Promise.allSettled(SHELL_ASSETS.filter(optional).map((u) => cache.add(u)));
-        if (results.some((r) => r.status === 'rejected')) globalThis.NRDiagnostics?.record('sw.decoration_precache_partial', 'recoverable');
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), OPTIONAL_INSTALL_TIMEOUT_MS);
+        try {
+          const results = await Promise.allSettled(SHELL_ASSETS.filter(optional).map(async (u) => {
+            const response = await fetch(u, { signal: controller.signal });
+            if (!response.ok || response.status === 206) throw new Error(`HTTP ${response.status} for ${u}`);
+            await cache.put(u, response);
+          }));
+          if (results.some((r) => r.status === 'rejected')) globalThis.NRDiagnostics?.record('sw.decoration_precache_partial', 'recoverable');
+        } finally {
+          clearTimeout(timer);
+        }
       })
       .catch(async (error) => {globalThis.NRDiagnostics?.record('promise.catch.13','recoverable');
         // A partial/empty new cache must never be allowed to activate and
@@ -322,43 +375,29 @@ self.addEventListener('fetch', (event) => {
   }
 
   if (isHtmlOrData) {
-    const requestOrder=lastRequestOrder=Math.max(Date.now(),lastRequestOrder+0.001);
     const canonicalUrl = new URL(req.url);
     canonicalUrl.searchParams.delete('fresh');
     if(canonicalUrl.pathname.endsWith('/expert_overrides_v3.json')) canonicalUrl.searchParams.delete('display');
     const cacheKey = canonicalUrl.href;
-    newestRequest.set(cacheKey,requestOrder);
+    const read=beginDataRead(req,cacheKey),requestOrder=read.order;
     event.respondWith((async () => {
-      const cache = await caches.open(DATA_CACHE);
       try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), NETWORK_FIRST_TIMEOUT_MS);
-        let fresh;
-        try { fresh = await fetch(req, { signal: controller.signal }); }
-        finally { clearTimeout(timeout); }
-        if (!fresh.ok) {
-          throw new Error(`HTTP ${fresh.status} for ${req.url}`);
-        }
-        // FP542 (F4): read the body once, with a bound. A stalled body used to keep this fetch
-        // event alive indefinitely (and with it a pending worker activation). On timeout the
-        // request is aborted and the cached copy is served, exactly as for a header timeout.
-        const bodyTimer = setTimeout(() => controller.abort(), NETWORK_BODY_TIMEOUT_MS);
-        let body;
-        try { body = await fresh.arrayBuffer(); }
-        finally { clearTimeout(bodyTimer); }
-        const meta = { status: fresh.status, statusText: fresh.statusText };
-        // Stamp same-origin cached data so the page can report its real fallback age.
-        // The cache write no longer delays the response; it is kept alive by waitUntil.
-        const stampedHeaders = new Headers(fresh.headers);
-        stampedHeaders.set('x-gindex-cached-at', String(Date.now()));
-        event.waitUntil((async () => {
-          try { if(newestRequest.get(cacheKey)===requestOrder) await cache.put(cacheKey, new Response(body, { ...meta, headers: stampedHeaders })); }
-          catch (_stampErr) { globalThis.NRDiagnostics?.record('catch.323','recoverable'); }
-        })());
-        await reportDelivery(event,'SW_FRESH_DATA',Date.now(),requestOrder);
-        const deliveredHeaders = new Headers(fresh.headers); deliveredHeaders.set('x-gindex-delivery','network');
-        return new Response(body, { ...meta, headers: deliveredHeaders });
+        const {body,headers,meta,fetchedAt}=await read.result;
+        // Each client receives its own body and delivery message. Stamp the physical
+        // read once, preserving the order of competing fetch variants.
+        if(!read.cacheWrite)read.cacheWrite=(async()=>{
+          try {
+            const cache=await caches.open(DATA_CACHE);
+            const stampedHeaders=new Headers(headers);stampedHeaders.set('x-gindex-cached-at',String(fetchedAt));
+            if(newestRequest.get(cacheKey)===requestOrder)await cache.put(cacheKey,new Response(body,{...meta,headers:stampedHeaders}));
+          } catch (_stampErr) { globalThis.NRDiagnostics?.record('catch.323','recoverable'); }
+        })();
+        event.waitUntil(read.cacheWrite);
+        await reportDelivery(event,'SW_FRESH_DATA',fetchedAt,requestOrder);
+        const deliveredHeaders=new Headers(headers);deliveredHeaders.set('x-gindex-delivery','network');
+        return new Response(body,{...meta,headers:deliveredHeaders});
       } catch (e) { globalThis.NRDiagnostics?.record('catch.325','recoverable');
+        const cache = await caches.open(DATA_CACHE);
         let cached = await cache.match(cacheKey);
         if (!cached) {
           const shellCache = await caches.open(SHELL_CACHE);
