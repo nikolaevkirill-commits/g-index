@@ -122,7 +122,7 @@ function solarProfile(){
  return Array.from({length:97},(_,i)=>{const at=start+(end-start)*i/96,t=new Date(at),eq=Astronomy.Equator('Sun',t,observer,true,true),alt=Astronomy.Horizon(t,observer,eq.ra,eq.dec,null).altitude;return {at:new Date(at).toISOString(),altitude:alt};});
 }
 function renderSolar(){
- let fig=q('[data-solar-profile]');if(!fig){fig=create('figure','sr-solar-profile');fig.dataset.solarProfile='';q('[data-track]').before(fig);}
+ let fig=q('[data-solar-profile]');if(!fig){fig=create('figure','sr-solar-profile');fig.dataset.solarProfile='';q('[data-events] ol').before(fig);}
  fig.replaceChildren();fig.hidden=true;
  if(data?.status!=='available')return;
  try{const samples=solarProfile();if(samples.some(x=>!Number.isFinite(x.altitude)))return;

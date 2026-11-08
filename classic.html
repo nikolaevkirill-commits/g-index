@@ -7310,7 +7310,7 @@ body.fp434-app main#mainContent{padding-inline:24px!important}
 <script src="festival_evidence_v1.js" defer></script>
 <script src="festival_astronomy_adapter_v1.js" defer></script>
 <script src="festival_decision_view_v1.js" defer></script>
-<style data-inline-source="dayline_view_v1.css" data-css-sha256="897e8441f65b9f060ce4b339eea3d9645a801795f32569dd917e2dbe344adf88">
+<style data-inline-source="dayline_view_v1.css" data-css-sha256="2bc0e2f135c96d6e5f0559af10074ed5156ecd7ac6445f8258cbf7b35b140034">
 /* DayLine uses the same Nocturne tokens as the native shell. */
 .sr-dayline,.sr-dl-dialog{--dl-bg:#131d30;--dl-surface:#19243a;--dl-text:#f3efe6;--dl-muted:#c4cede;--dl-line:#65728a;--dl-accent:#f0cc87;--dl-day:#536784;--dl-night:#0c1220;color:var(--dl-text);background:var(--dl-bg);border:1px solid var(--dl-line);border-radius:18px;padding:20px;font:15px/1.6 system-ui,sans-serif;overflow-wrap:anywhere;color-scheme:dark}
 .nr-overview .sr-dayline :is(h2,h3,p,li,label,summary,small){color:var(--dl-text)!important}.nr-overview .sr-dayline h2{font:28px/1.2 Georgia,serif!important;margin:0!important;display:block!important}.sr-dl-head{display:flex;align-items:center;justify-content:space-between;gap:12px}.sr-dayline [data-place]{margin:3px 0 16px!important}.sr-dayline .sr-dl-muted,.sr-dl-dialog .sr-dl-muted{color:var(--dl-muted)!important;font-size:12px!important}
@@ -7346,6 +7346,41 @@ body:has(.nr-route.active [data-offline-asof]:not([hidden])) #offlineBanner,body
 @media(prefers-reduced-motion:no-preference){[data-aurora][data-active=true] .sr-aurora-light::before{animation:sr-aurora-drift var(--aurora-duration) ease-in-out infinite alternate}@keyframes sr-aurora-drift{to{transform:translateX(12%) rotate(9deg)}}}
 @media(prefers-reduced-data:reduce),(forced-colors:active){.sr-aurora-light{display:none!important}}
 html.wow body #nrRoute-today .sr-dayline [data-track]>button,.sr-dayline [data-track]>button{width:auto!important;min-width:44px;max-width:none!important;padding:0 10px!important;border-radius:22px!important;white-space:nowrap!important}
+
+/* Physical Sun view and its shared local clock. */
+.sr-time-sun{--sky-light:0;margin:0 0 16px;border:1px solid #526585;border-radius:20px;color:#f4f0ff;background:#111a30;overflow:hidden;min-width:0}
+.sr-time-stage{padding:12px 14px 6px;background:linear-gradient(180deg,rgb(21 79 134 / calc(.26 + .68 * var(--sky-light))),rgb(210 117 39 / calc(.42 * var(--sky-light))) 68%,#0c1832 100%),url('sky_panorama_v1.webp') center 46%/cover}
+.sr-time-title{display:flex;align-items:center;justify-content:space-between;gap:6px}
+.sr-time-title h2{font:600 20px/1.2 'Literata',Georgia,serif;margin:0;color:inherit}
+.sr-time-title small{font-size:12px}
+.sr-time-title button,.sr-time-controls button{min-height:44px;min-width:44px;border:1px solid #8293b0;border-radius:10px;background:#15223b;color:#f4f0ff;font:inherit;cursor:pointer;padding:5px 10px}
+.sr-time-controls button[data-time-play]{background:#f3c879;color:#251a12;border-color:#f3c879;font-weight:700}
+.sr-time-controls button:disabled{opacity:.57;cursor:default}
+.sr-time-sun svg{display:block;width:100%;height:clamp(86px,25vw,118px);overflow:visible}
+.sr-time-sun svg line{stroke:#d6e2f7;stroke-dasharray:2 3;opacity:.64}
+.sr-time-sun svg path{fill:none;stroke-width:2}
+.sr-time-orbit-night{stroke:#a4b9e2;stroke-dasharray:3 4;opacity:.76}
+.sr-time-orbit-day{stroke:#ffe2a0}
+.sr-time-disc{fill:#fff4d7;stroke:#ffba53;stroke-width:1.5}
+.sr-time-sun[data-sun=below] [data-time-sun]>circle:first-child{opacity:.38}
+.sr-time-stage [data-time-alt]{margin:0;font-size:13px;color:inherit;font-weight:600}
+.sr-time-controls{padding:10px 14px;color:#f4f0ff;background:#111a30}
+.sr-time-controls label{display:block;margin:0}
+.sr-time-controls label span,.sr-time-controls small{display:block;font-size:12px}
+.sr-time-controls input{display:block;width:100%;min-width:0;height:26px;margin:0;accent-color:#f3c879}
+.sr-time-controls>div{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.sr-time-controls time{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;margin-inline-start:auto}
+.nr-sl>.sr-time-controls{border:1px solid #526585;border-radius:14px;margin:0 0 14px}
+html body #nrRoute-panch [data-sky-live] [data-time-play]{background:#f3c879!important;color:#251a12!important;border-color:#f3c879!important}
+html body #nrRoute-panch [data-sky-live] [data-time-now]{background:#15223b!important;color:#f4f0ff!important;border-color:#8293b0!important}
+@media(min-width:820px){
+ .sr-time-sun{display:grid;grid-template-columns:minmax(0,3fr) minmax(16rem,2fr);align-items:center;margin-block-start:40px}
+ .sr-time-sun .sr-time-controls{padding-inline:18px}
+}
+@media(forced-colors:active){
+ .sr-time-sun svg :is(line,path){stroke:CanvasText}
+ .sr-time-disc{fill:Highlight;stroke:CanvasText}
+}
 
 </style>
 <style data-inline-source="day_verdict_v1.css" data-css-sha256="b64bfa720919a8230660541e37f1d9173d309011e2ba8231a1f32d6172ab86c1">
@@ -7541,12 +7576,13 @@ html:not(.sr-sky-motion) .nr-sky *,html:not(.sr-sky-motion) .nr-sky-now *{animat
 <script src="dayline_async_v1.js"></script>
 <script src="transition_runtime_v1.js"></script>
 <script src="transition_client_v1.js"></script>
-<script src="dayline_view_v1.js?v=fp569b-sun-20261108"></script>
+<script src="dayline_view_v1.js?v=fp569c-traditional-sun"></script>
 <script src="natal_sky_v1.js?v=ns1" defer></script>
 <script src="day_verdict_v1.js?v=fp568-noaa-20261107" defer></script>
 <script src="shared_day_v1.js?v=sd1" defer></script>
 <script src="preview-v4/sky_scene_v1.js?v=sky5" defer></script>
 <script src="day_context_v1.js?v=dc3" defer></script>
-<script src="sky_live_loader_v1.js?v=sl3" defer></script>
+<script src="sky_time_v1.js?v=fp569c-clock" defer></script>
+<script src="sky_live_loader_v1.js?v=fp569c-clock" defer></script>
 </body>
 </html>

@@ -1,10 +1,9 @@
 // FP565 «Небо зараз над вами»: Moon with computed phase and bright-limb orientation, Sun/Moon/planets
 // altitude-azimuth for the saved place, aurora possibility from NOAA G-scale and the day's Kp.
-// Pure presentation: every drawn position comes from astronomy-engine for "now"; nothing changes the score.
+// All visual positions share one astronomy-engine instant. The clock does not feed the score.
 (function(){
 'use strict';
 if(window.NRSkyLive)return;
-const KEY='gindex_local_context_v1';
 const BODIES=['Sun','Moon','Mercury','Venus','Mars','Jupiter','Saturn'];
 // Geomagnetic north (dipole) pole, IGRF-14 epoch 2025: 80.8°N, 72.8°W (WDC Kyoto, poles table).
 const POLE={lat:80.8,lon:-72.8};
@@ -55,10 +54,6 @@ STR.push(
  ['Розрахунок неба недоступний.','Sky calculation unavailable.','Cálculo del cielo no disponible.','Calcul du ciel indisponible.'],
  ['Звичайна атмосферна рефракція; погода й рельєф не враховані.','Standard atmospheric refraction; weather and terrain are not included.','Refracción atmosférica estándar; no incluye tiempo ni relieve.','Réfraction atmosphérique standard ; météo et relief non inclus.']
 );
-function place(){
- // Same state as the location form, including an unsaved session after a storage failure.
- try{const x=window.NRLocalContext?.current?.();return window.NRLocalContext?.valid(x,false)?x:null;}catch(_){return null;}
-}
 function geomagLat(lat,lon){
  const s=Math.sin(rad(lat))*Math.sin(rad(POLE.lat))+Math.cos(rad(lat))*Math.cos(rad(POLE.lat))*Math.cos(rad(lon-POLE.lon));
  return deg(Math.asin(Math.max(-1,Math.min(1,s))));
@@ -142,16 +137,22 @@ function listHtml(c){
  return '<ul class="nr-sl-list">'+BODIES.map(b=>{const h=c.hz[b];return `<li data-body="${b}" class="${h.altitude>0?'is-up':'is-down'}"><b>${esc(name(b))}</b> ${esc(nf.format(h.altitude))}° · ${esc(compass(h.azimuth))} ${esc(nf.format(h.azimuth))}° — ${esc(tr(h.altitude>0?'над горизонтом':'під горизонтом'))}</li>`}).join('')+'</ul>';
 }
 const STYLE=`.nr-sl{margin:14px 0;padding:18px;overflow:hidden}.nr-sl a{color:inherit}.nr-sl-aurora p{margin:.35rem 0}.nr-sl-chart-note{font-size:.8rem;opacity:.8}.nr-sl h2{margin:0 0 8px}
-.nr-sl-top{display:flex;gap:14px;align-items:center;flex-wrap:wrap}.nr-sl-moonbox{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:140px}
-.nr-sl-list{list-style:none;margin:0;padding:0;font-size:.92rem;line-height:1.55}.nr-sl-list .is-down{opacity:.6}
+.nr-sl-top{display:grid;gap:10px;align-items:center}.nr-sl-map{min-width:0}.nr-sl-map .nr-sl-chart-note{margin:4px 0 0}.nr-sl-moonbox{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:140px}
+.nr-sl-list{list-style:none;margin:12px 0 0;padding:0;font-size:.92rem;line-height:1.55}
+@media(min-width:670px){.nr-sl-top{grid-template-columns:minmax(10rem,1fr) minmax(0,3fr)}.nr-sl-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:10px}}.nr-sl-list .is-down{opacity:.6}
 .nr-sl-sky{width:100%;max-width:640px;height:auto;margin:10px auto 0;display:block}.nr-sl-air{fill:rgba(60,90,150,.18)}.nr-sl-ground{fill:rgba(0,0,0,.35)}.nr-sl-horizon{stroke:rgba(255,255,255,.4)}
 .nr-sl-tick{fill:currentColor;font-size:11px;opacity:.85}.nr-sl-body circle{fill:#cfd8ff}.nr-sl-body.is-sun circle{fill:#ffd36b}.nr-sl-body.is-moon circle{fill:#f3efe0}
 .nr-sl-body text{fill:currentColor;font-size:12px}.nr-sl-body.is-below{opacity:.65}
-.nr-sl.nr-sl-motion .nr-sl-body{transition:transform .9s ease}
+.nr-sl.nr-sl-motion .nr-sl-body{transition:transform .32s ease}
+.nr-sl.nr-sl-motion:not([data-clock-mode=now]) .nr-sl-body{transition:none}
+.nr-sl .nr-sl-air{fill:rgb(29 91 154 / calc(.16 + .58 * var(--sky-light,0)))}
+.nr-sl .nr-sl-moonbox{border:1px solid #526c95;border-radius:22px;background:radial-gradient(ellipse at 50% 28%,#344267,#111a32 72%);padding:10px 8px;text-align:center}
+.nr-sl .nr-sl-moonbox small{max-width:16rem}
+.nr-sl-body.is-mercury circle{fill:#bfc6d3}.nr-sl-body.is-venus circle{fill:#ffd1a5}.nr-sl-body.is-mars circle{fill:#ff8d70}.nr-sl-body.is-jupiter circle{fill:#ffbf86}.nr-sl-body.is-saturn circle{fill:#ead98d}
 @media (prefers-reduced-motion:reduce){.nr-sl-body{transition:none!important}}
 .nr-sl-aurora{margin:.6rem 0 0;font-size:.92rem}.nr-sl-aurora span,.nr-sl-aurora small{display:block;opacity:.85;font-size:.82rem}
 .nr-sl-foot{margin:.5rem 0 0;font-size:.78rem;opacity:.8}.nr-sl-noloc{margin:0;font-size:.92rem}`;
-let host=null,timer=null,retry=null,last=null,moonCanvas=null;
+let host=null,retry=null,last=null,moonCanvas=null,updateControls;
 function drawMoon(c){
  const box=host?.querySelector('.nr-sl-moonbox'),svg=box?.querySelector('.nr-sl-moon');if(!svg)return;
  const showSvg=()=>{svg.style.display='';if(moonCanvas)moonCanvas.hidden=true;};
@@ -174,15 +175,23 @@ function mount(){
  const route=document.getElementById('nrRoute-panch'),scene=route?.querySelector(':scope > [data-sky]');
  if(!route||!scene||typeof window.Astronomy==='undefined')return false;
  if(!document.getElementById('nrSkyLiveStyle')){const s=document.createElement('style');s.id='nrSkyLiveStyle';s.textContent=STYLE;document.head.append(s);}
- host=document.createElement('section');host.className='nr-card nr-sl';host.dataset.skyLive='';host.setAttribute('translate','no');scene.after(host);return true;
+ host=document.createElement('section');host.className='nr-card nr-sl';host.dataset.skyLive='';host.setAttribute('translate','no');scene.before(host);
+ const heading=document.createElement('h2');heading.id='nrSkyLiveHeading';host.setAttribute('aria-labelledby',heading.id);host.append(heading);
+ updateControls=SRSkyTime.controls(host);
+ return true;
 }
-function render(){
- if(!active())return;
+function render(state){
+ if(!active()||!window.SRSkyTime)return;
  if(!mount()){clearTimeout(retry);retry=setTimeout(render,250);return;}
- let c;try{c=compute(new Date(),place());}catch(e){host.dataset.state='error';host.textContent=tr('Розрахунок неба недоступний.');return;}
- last=c;host.dataset.state='ready';host.dataset.time=c.time.toISOString();motion();
- const zone=c.loc?.zone||'UTC',pct=Math.round(c.fraction*100),t=new Intl.DateTimeFormat(window.NRLocale?.locale||'uk-UA',{timeZone:zone,hour:'2-digit',minute:'2-digit'}).format(c.time);
- const html=`<h2>${esc(tr('Небо зараз над вами'))}</h2><div class="nr-sl-top"><div class="nr-sl-moonbox">${moonSvg(c,132)}<span>${esc(name('Moon'))}: ${esc(tr('Освітлено'))} ${pct}% · ${esc(tr(c.waxing?'росте':'спадає'))}</span><small>${esc(tr(c.loc?'Орієнтація: зеніт угорі, як на вашому небі.':'Орієнтація: північ угорі (місце не задано).'))}</small></div>${listHtml(c)}</div>${c.loc?skySvg(c)+`<p class="nr-sl-chart-note">${esc(tr('Північ на обох краях; лінія — горизонт.'))}</p>`:''}<div data-aurora-content>${auroraHtml(c)}</div><p class="nr-sl-foot">${esc(tr('Розрахунок'))}: astronomy-engine 2.1.19 · ${esc(t)} ${esc(zone)}${c.loc?' · '+c.loc.lat.toFixed(2)+', '+c.loc.lon.toFixed(2):''}. ${esc(tr('Звичайна атмосферна рефракція; погода й рельєф не враховані.'))}</p>`;
+ const s=state?.detail?.at!==undefined?state.detail:SRSkyTime.snapshot();
+ let c;try{c=compute(new Date(s.at),s.loc);}catch(e){host.dataset.state='error';return;}
+ last=c;host.dataset.state='ready';host.dataset.time=c.time.toISOString();host.dataset.clockMode=s.mode;motion();
+ host.querySelector('h2').textContent=s.mode==='now'?tr('Небо зараз над вами'):['Небо у вибраний час','Sky at the selected time','Cielo a la hora elegida','Ciel à l’heure choisie'][li()];
+ if(c.loc?.example)host.querySelector('h2').textContent=['Небо над Києвом','Sky above Kyiv','Cielo sobre Kyiv','Ciel au-dessus de Kyiv'][li()];
+ host.style.setProperty('--sky-light',SRSkyTime.light(c.hz.Sun?.altitude??-18).toFixed(3));
+ updateControls(s);
+ const zone=s.zone,pct=Math.round(c.fraction*100),t=SRSkyTime.timeText(s.at,zone);
+ const html=`<div class="nr-sl-top"><div class="nr-sl-moonbox">${moonSvg(c,132)}<span>${esc(name('Moon'))}: ${esc(tr('Освітлено'))} ${pct}% · ${esc(tr(c.waxing?'росте':'спадає'))}</span><small>${esc(tr(c.loc?'Орієнтація: зеніт угорі, як на вашому небі.':'Орієнтація: північ угорі (місце не задано).'))}</small></div>${c.loc?`<div class="nr-sl-map">${skySvg(c)}<p class="nr-sl-chart-note">${esc(tr('Північ на обох краях; лінія — горизонт.'))}</p></div>`:''}</div>${listHtml(c)}<div data-aurora-content>${s.mode==='now'?auroraHtml(c):''}</div><p class="nr-sl-foot">${esc(tr('Розрахунок'))}: astronomy-engine 2.1.19 · ${esc(t)} ${esc(zone)}${c.loc?' · '+c.loc.lat.toFixed(2)+', '+c.loc.lon.toFixed(2):''}. ${esc(tr('Звичайна атмосферна рефракція; погода й рельєф не враховані.'))}</p>`;
  // Stable interactive links live outside the refreshed numeric content. Dot identity survives every tick.
  let content=host.querySelector('[data-live-content]');
  if(!content){content=document.createElement('div');content.dataset.liveContent='';host.append(content);const links=document.createElement('p');links.className='nr-sl-sources';links.innerHTML='<span></span>: <a href="https://www.spaceweather.gov/noaa-scales-explanation" target="_blank" rel="noopener noreferrer">NOAA G</a> · <a href="https://www.spaceweather.gov/products/aurora-30-minute-forecast" target="_blank" rel="noopener noreferrer">OVATION</a> · <a href="https://wdc.kugi.kyoto-u.ac.jp/poles/polesexp.html" target="_blank" rel="noopener noreferrer">IGRF-14</a>';host.append(links);}
@@ -199,15 +208,22 @@ function render(){
   for(const attr of ['x2','y2'])cur.querySelector('line').setAttribute(attr,g.querySelector('line').getAttribute(attr));
   if(wrap){void cur.getBoundingClientRect();cur.style.removeProperty('transition');}
  }
- for(const selector of ['.nr-sl-moonbox','.nr-sl-list','.nr-sl-noloc','[data-aurora-content]','.nr-sl-foot']){const old=content.querySelector(selector),next=tmp.querySelector(selector);if(old&&next)old.replaceWith(next);}
+ const oldMoon=content.querySelector('.nr-sl-moon'),newMoon=tmp.querySelector('.nr-sl-moon');
+ for(const key of ['aria-label','data-fraction','data-limb','data-rx'])oldMoon.setAttribute(key,newMoon.getAttribute(key));
+ oldMoon.querySelector('g').setAttribute('transform',newMoon.querySelector('g').getAttribute('transform'));
+ oldMoon.querySelector('path').setAttribute('d',newMoon.querySelector('path').getAttribute('d'));
+ for(const selector of ['.nr-sl-moonbox>span','.nr-sl-list','.nr-sl-noloc','[data-aurora-content]','.nr-sl-foot']){
+  const old=content.querySelector(selector),next=tmp.querySelector(selector);
+  if(old&&next&&!old.isEqualNode(next))old.replaceWith(next);
+ }
  drawMoon(c);
 }
 function sync(){
- clearInterval(timer);clearTimeout(retry);timer=null;motion();
- if(active()){render();timer=setInterval(render,60000);}
+ clearTimeout(retry);motion();
+ if(active())render();
 }
 window.NRSkyLive={render,compute,geomagLat,auroraFor,brightLimb,selectKp,POLE,NOAA_G,snapshot:()=>last,active};
-window.addEventListener('nr:locale',sync);document.addEventListener('nr:location',sync);
+window.addEventListener('sr:sky-time',render);window.addEventListener('nr:locale',sync);document.addEventListener('nr:location',sync);
 document.addEventListener('nr:overview-rendered',render);
 document.addEventListener('nr:moon-gl',e=>{if(e.target!==moonCanvas)return;if(e.detail?.state==='lost'){moonCanvas.hidden=true;const svg=host?.querySelector('.nr-sl-moon');if(svg)svg.style.display='';}else render();});
 document.addEventListener('visibilitychange',sync);window.addEventListener('hashchange',sync);

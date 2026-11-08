@@ -85,11 +85,9 @@ function sceneToday(scope){
   let lines='';for(let i=0;i<n;i++){const y=22+i*(40/Math.max(1,n-1||1));lines+=`<path d="${wave(y.toFixed(1),amp.toFixed(1),W)}" fill="none" stroke="currentColor" stroke-width="${g>=1?1.1:.9}" ${g===null?'stroke-dasharray="2 4"':''} opacity="${(g===null?.35:.45+i*.05).toFixed(2)}"/>`}
   const hour=Number(new Intl.DateTimeFormat('en-GB',{hour:'numeric',hour12:false,timeZone:'Europe/Kyiv'}).format(new Date()));
   const sk=sky(),phase=sk?sk.phase:(hour<7||hour>=19?'night':'day'),night=phase==='night';
-  /* Сонце на денній дузі: частка світлового дня від сходу до заходу */
-  const sun=sk&&sk.frac!==null?(()=>{const a=Math.PI*(1-sk.frac),cx=96+Math.cos(a)*78,cy=70-Math.sin(a)*46;return `<path class="nrs-draw" pathLength="1" style="--nrs-d:.2s" d="M18 70 A78 46 0 0 1 174 70" fill="none" stroke="currentColor" stroke-width=".7" stroke-dasharray="1.5 3" opacity=".4"/><g class="nrs-pop nrs-sun" style="--nrs-d:.45s"><circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="9" style="fill:var(--nrs-sun)" opacity=".18"/><circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="4.2" style="fill:var(--nrs-sun)"/></g>`})():'';
   return {sig:`t|${g}|${p?Math.round(p.phase):'x'}|${phase}|${sk&&sk.frac!==null?Math.round(sk.frac*40):'-'}`,get svg(){return `<svg viewBox="0 0 ${W} 88" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false"><defs>${hatchDef(hid)}<clipPath id="${hid}g"><rect x="0" y="72" width="${W}" height="16"/></clipPath></defs>
    <g class="nrs-skyphase" data-phase="${phase}"><rect class="nrs-nightglow" x="0" y="0" width="${W}" height="88" fill="url(#${hid}night)"/>${phase==='twilight'?`<rect class="nrs-fade" x="0" y="0" width="${W}" height="88" fill="url(#${hid}dawn)"/>`:''}<rect x="0" y="30" width="${W}" height="42" fill="url(#${hid}sky)" class="nrs-fade"/><g class="nrs-fade">${stars(rnd,night?26:phase==='twilight'?14:6,W,88,62)}</g></g>
-   ${aurora(g,hid,W,rnd)}${sun}
+   ${aurora(g,hid,W,rnd)}
    <g class="nrs-drift" style="--nrs-drift:${drift}s;color:var(--nrs-accent)">${lines}</g>
    <line class="nrs-draw" pathLength="1" x1="0" y1="72" x2="${W}" y2="72" stroke="currentColor" stroke-width=".9"/>
    <rect x="0" y="72" width="${W}" height="16" fill="url(#${hid})" opacity=".55" clip-path="url(#${hid}g)"/>
