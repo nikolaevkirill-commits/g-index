@@ -21,6 +21,25 @@ const T={
  save:['Зберегти на пристрої','Save on this device','Guardar en el dispositivo','Enregistrer sur l’appareil'],
  none:['Особливих транзитів від твого Місяця сьогодні немає.','No notable transits from your Moon today.','Hoy no hay tránsitos destacados desde tu Luna.','Pas de transit notable depuis votre Lune aujourd’hui.']
 };
+const P={
+ basis:['Відлік від Місяця на момент народження. Це трактування Джйотіш без впливу на бал дня.','Counted from the Moon at birth. This Jyotish interpretation does not change the day score.','Se cuenta desde la Luna al nacer. Esta interpretación jyotish no cambia la puntuación del día.','Le point de départ est la Lune à la naissance. Cette lecture du jyotish ne change pas la note du jour.'],
+ moon:['Твій знак Місяця','Your Moon sign','Tu signo lunar','Ton signe lunaire'],
+ lunar:['Поточний Місяць','Current Moon','Luna actual','Lune actuelle'],
+ saturn:['Цикл Сатурна','Saturn cycle','Ciclo de Saturno','Cycle de Saturne'],
+ jupiter:['Положення Юпітера','Jupiter placement','Posición de Júpiter','Position de Jupiter'],
+ tara:['Тара Бала зіставляє сьогоднішню ділянку Місяця з тією, де він був під час народження.','Tara Bala compares the Moon’s sector for this day with its sector at birth.','Tara Bala compara el sector lunar del día con el del nacimiento.','Tara Bala compare le secteur lunaire du jour à celui de la naissance.'],
+ caution:['Обережність за традицією','Caution by tradition','Cautela según la tradición','Prudence selon la tradition'],
+ good:['Сприятливо за традицією','Favourable by tradition','Favorable según la tradición','Favorable selon la tradition'],
+ info:['Для довідки','For reference','Como referencia','À titre indicatif']
+};
+const Z=[
+ ['Овен','Телець','Близнюки','Рак','Лев','Діва','Терези','Скорпіон','Стрілець','Козоріг','Водолій','Риби'],
+ ['Aries','Taurus','Gemini','Cancer','Leo','Virgo','Libra','Scorpio','Sagittarius','Capricorn','Aquarius','Pisces'],
+ ['Aries','Tauro','Géminis','Cáncer','Leo','Virgo','Libra','Escorpio','Sagitario','Capricornio','Acuario','Piscis'],
+ ['Bélier','Taureau','Gémeaux','Cancer','Lion','Vierge','Balance','Scorpion','Sagittaire','Capricorne','Verseau','Poissons']
+];
+const signGlyph=['♈','♉','♊','♋','♌','♍','♎','♏','♐','♑','♒','♓'];
+const p=k=>P[k][ix()];
 const t=k=>T[k][ix()];
 const ord=n=>L()==='en'?n+(n%10===1&&n!==11?'st':n%10===2&&n!==12?'nd':n%10===3&&n!==13?'rd':'th'):L()==='fr'?n+(n===1?'er':'e'):L()==='es'?n+'.º':String(n);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -47,20 +66,23 @@ function lines(ds,sky){
  const n=natal(d);if(!n)return {missing:true};
  const day=sky?.daily?.find(x=>x.date===ds);if(!day)return {missing:false,items:[],certain:n.certain,unavailable:true};
  const g=day.grahas,items=[];
- if(house(n.sign,g.Moon.sign)===8)items.push({k:'caution',text:t('chandra')});
+ if(house(n.sign,g.Moon.sign)===8)items.push({k:'caution',body:'lunar',symbol:'☾',text:t('chandra')});
  const pos=((g.Moon.nakshatra-n.nak)%27+27)%27,grp=pos%9+1;
- items.push({k:TARA_BAD.includes(grp)?'caution':'good',text:t('tara')+': '+TARA[grp-1]+' — '+(TARA_BAD.includes(grp)?t('tara_bad'):t('tara_good'))});
+ items.push({k:TARA_BAD.includes(grp)?'caution':'good',body:'lunar',symbol:'☾',help:p('tara'),text:t('tara')+': '+TARA[grp-1]+' — '+(TARA_BAD.includes(grp)?t('tara_bad'):t('tara_good'))});
  const hs=house(n.sign,g.Saturn.sign);
- if([12,1,2].includes(hs))items.push({k:'caution',text:t('sade').replace('{p}',hs===12?1:hs===1?2:3).replace('{h}',ord(hs))});
- else if([4,8].includes(hs))items.push({k:'caution',text:t('dhaiya').replace('{h}',ord(hs))});
- const hj=house(n.sign,g.Jupiter.sign);items.push({k:[2,5,7,9,11].includes(hj)?'good':'info',text:t('jup').replace('{h}',ord(hj))+([2,5,7,9,11].includes(hj)?t('jup_good'):'')});
- return {missing:false,items,certain:n.certain};
+ if([12,1,2].includes(hs))items.push({k:'caution',body:'saturn',symbol:'♄',text:t('sade').replace('{p}',hs===12?1:hs===1?2:3).replace('{h}',ord(hs))});
+ else if([4,8].includes(hs))items.push({k:'caution',body:'saturn',symbol:'♄',text:t('dhaiya').replace('{h}',ord(hs))});
+ const hj=house(n.sign,g.Jupiter.sign);items.push({k:[2,5,7,9,11].includes(hj)?'good':'info',body:'jupiter',symbol:'♃',text:t('jup').replace('{h}',ord(hj))+([2,5,7,9,11].includes(hj)?t('jup_good'):'')});
+ return {missing:false,items,certain:n.certain,sign:n.sign};
 }
 function html(ds,sky){
  const r=lines(ds,sky);
  if(r.missing){return `<div class="nr-dv-you is-empty"><p>${esc(t('add'))}</p><details class="nr-dv-you-form"><summary>${esc(t('addBtn'))}</summary><form data-natal-form><label>${esc(t('date'))}<input type="date" name="date" required></label><label>${esc(t('time'))}<input type="time" name="time"></label><label>${esc(t('zone'))}<input type="text" name="tz" value="${esc(Intl.DateTimeFormat().resolvedOptions().timeZone||'Europe/Kyiv')}" autocomplete="off"></label><button type="submit">${esc(t('save'))}</button></form></details></div>`}
  if(r.unavailable)return '';
- return `<div class="nr-dv-you"><p><b>${esc(t('you'))}</b> <small>(${esc(t('note'))})</small></p><ul>${r.items.length?r.items.map(x=>`<li class="is-${x.k}">${esc(x.text)}</li>`).join(''):`<li>${esc(t('none'))}</li>`}</ul>${r.certain?'':`<p class="nr-dv-you-warn">${esc(t('uncertain'))}</p>`}</div>`;
+ const sign=Z[ix()][r.sign];
+ const badge=r.certain&&sign?`<p class="nr-you-sign"><span aria-hidden="true">${signGlyph[r.sign]}</span> ${esc(p('moon'))} · <strong>${esc(sign)}</strong></p>`:'';
+ const rows=r.items.map(item=>`<li class="is-${item.k}"><span class="nr-you-glyph" aria-hidden="true">${item.symbol}</span><div><strong>${esc(p(item.body))}</strong><small class="nr-you-tone">${esc(p(item.k))}</small><p>${esc(item.text)}</p>${item.help?' <small>'+esc(item.help)+'</small>':''}</div></li>`).join('');
+ return `<div class="nr-dv-you"><p><b>${esc(t('you'))}</b> <small>(${esc(t('note'))})</small></p>${badge}<p class="nr-you-basis">${esc(p('basis'))}</p><ul class="nr-you-items">${rows}</ul>${r.certain?'':`<p class="nr-dv-you-warn">${esc(t('uncertain'))}</p>`}</div>`;
 }
 document.addEventListener('submit',e=>{
  const f=e.target.closest?.('[data-natal-form]');if(!f)return;e.preventDefault();

@@ -63,7 +63,10 @@ try{for(const [lang,width] of [['uk',390],['uk',320],['en',390],['uk',1280]]){
   assert.equal(await dateControl.inputValue(),date);
   await p.waitForFunction(()=>document.activeElement?.id==='nrOverviewHeading-forecast');
   assert.equal(await forecast.locator('.nr-o-horizon-list [data-day]:visible').count(),count);
-  checks+=4;
+  const fitsPageScroll=await forecast.locator('.nr-o-horizon-list').evaluate(el=>el.scrollHeight<=el.clientHeight+2 && el.scrollWidth<=el.clientWidth+2);
+  assert(fitsPageScroll,'all '+count+' forecast dates fit the page scroll');
+  assert.equal(await forecast.locator('.sr-forecast-graph svg').count(),count===7?1:0);
+  checks+=6;
  }
  assert.deepEqual(errs,[],'no page errors');checks++;
  await c.close();}

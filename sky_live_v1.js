@@ -139,6 +139,28 @@ function auroraHtml(c){
  const stamp=Number.isFinite(k.stamp)?(['forecast3','outlook27'].includes(k.kind)?tr('Розрахунок')+': ':'')+new Date(k.stamp).toISOString().replace('T',' ').slice(0,16)+' UTC':'';
  return `<div class="nr-sl-aurora" data-aurora="${a.state}" data-mlat="${mlat.toFixed(2)}" data-kp-kind="${k.kind}"><b>${esc(tr('Сяйво'))} · ${esc(tr('Орієнтир, не локальний прогноз'))}</b><p>${esc(body)}</p>${k.kp!==null?`<p>Kp ${esc(nf.format(k.kp))} · ${esc(tr(labels[k.kind]))} · ${esc(stamp)}</p>`:''}<p>${esc(tr('Ймовірність побачити сяйво тут не розрахована.'))} ${c.hz.Sun?.altitude>0?esc(tr('За денного світла сяйва не видно.')):''}</p><small>${esc(tr('Хмари, засвітка й локальна карта OVATION тут не враховані.'))} ${esc(tr('Широта — наближення диполя IGRF-14, епоха 2025.'))}</small></div>`;
 }
+const plainSky=[
+ {up:'Над горизонтом',none:'Серед обраних світил зараз жодного над горизонтом.',details:'Висота й напрямок у градусах',note:'Положення над горизонтом саме по собі не гарантує видимості.',darkMoon:'Майже новий Місяць'},
+ {up:'Above the horizon',none:'None of these bodies are above the horizon at this time.',details:'Altitude and direction in degrees',note:'A position above the horizon does not guarantee visibility.',darkMoon:'Nearly new Moon'},
+ {up:'Sobre el horizonte',none:'Ninguno de estos astros está sobre el horizonte a esta hora.',details:'Altitud y dirección en grados',note:'Una posición sobre el horizonte no garantiza la visibilidad.',darkMoon:'Luna casi nueva'},
+ {up:'Au-dessus de l’horizon',none:'Aucun de ces astres n’est au-dessus de l’horizon à cette heure.',details:'Hauteur et direction en degrés',note:'Une position au-dessus de l’horizon ne garantit pas la visibilité.',darkMoon:'Lune presque nouvelle'}
+];
+const DIRECTIONS=[
+ ['північ','північний схід','схід','південний схід','південь','південний захід','захід','північний захід'],
+ ['north','north-east','east','south-east','south','south-west','west','north-west'],
+ ['norte','noreste','este','sureste','sur','suroeste','oeste','noroeste'],
+ ['nord','nord-est','est','sud-est','sud','sud-ouest','ouest','nord-ouest']
+];
+function horizonSummary(c){
+ const words=plainSky[li()];
+ const bodies=BODIES.filter(b=>c.hz[b].altitude>0).sort((a,b)=>c.hz[b].altitude-c.hz[a].altitude);
+ const rows=bodies.map(b=>{
+  const dir=DIRECTIONS[li()][Math.round(c.hz[b].azimuth/45+8)%8];
+  return '<li><strong>'+esc(name(b))+'</strong><span>'+esc(dir)+'</span></li>';
+ }).join('');
+ const above=rows?'<p class="nr-sl-horizon-summary"><strong>'+esc(words.up)+'</strong></p><ul class="nr-sl-above">'+rows+'</ul>':'<p>'+esc(words.none)+'</p>';
+ return above+'<p class="nr-sl-chart-note">'+esc(words.note)+'</p>';
+}
 function listHtml(c){
  if(!c.loc)return `<p class="nr-sl-noloc">${esc(tr('Вкажіть місце в «Місце й вигляд», щоб побачити, що над горизонтом. Координати іншого міста не підставляються.'))}</p>`;
  const nf=new Intl.NumberFormat(window.NRLocale?.locale||'uk-UA',{maximumFractionDigits:2});
@@ -150,7 +172,7 @@ const STYLE=`.nr-sl{margin:14px 0;padding:18px;overflow:hidden}.nr-sl a{color:in
 @media(min-width:670px){.nr-sl-top{grid-template-columns:minmax(10rem,1fr) minmax(0,3fr)}.nr-sl-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:10px}}.nr-sl-list .is-down{opacity:.6}
 .nr-sl-sky{width:100%;max-width:640px;height:auto;margin:10px auto 0;display:block}.nr-sl-air{fill:rgba(60,90,150,.18)}.nr-sl-ground{fill:rgba(0,0,0,.35)}.nr-sl-horizon{stroke:rgba(255,255,255,.4)}
 .nr-sl-tick{fill:currentColor;font-size:11px;opacity:.85}.nr-sl-body circle{fill:#cfd8ff}.nr-sl-body.is-sun circle{fill:#ffd36b}.nr-sl-body.is-moon circle{fill:#f3efe0}
-.nr-sl-body text{fill:currentColor;font-size:12px}.nr-sl-body.is-below{opacity:.65}
+.nr-sl-body text{fill:currentColor;font-size:12px}.nr-sl-body.is-below{opacity:.45}.nr-sl-body.is-below :is(text,line){display:none}
 .nr-sl.nr-sl-motion .nr-sl-body{transition:transform .32s ease}
 .nr-sl.nr-sl-motion:not([data-clock-mode=now]) .nr-sl-body{transition:none}
 .nr-sl .nr-sl-air{fill:rgb(29 91 154 / calc(.16 + .58 * var(--sky-light,0)))}
@@ -159,7 +181,7 @@ const STYLE=`.nr-sl{margin:14px 0;padding:18px;overflow:hidden}.nr-sl a{color:in
 .nr-sl-body.is-mercury circle{fill:#bfc6d3}.nr-sl-body.is-venus circle{fill:#ffd1a5}.nr-sl-body.is-mars circle{fill:#ff8d70}.nr-sl-body.is-jupiter circle{fill:#ffbf86}.nr-sl-body.is-saturn circle{fill:#ead98d}
 @media (prefers-reduced-motion:reduce){.nr-sl-body{transition:none!important}}
 .nr-sl-aurora{margin:.6rem 0 0;font-size:.92rem}.nr-sl-aurora span,.nr-sl-aurora small{display:block;opacity:.85;font-size:.82rem}
-.nr-sl-foot{margin:.5rem 0 0;font-size:.78rem;opacity:.8}.nr-sl-noloc{margin:0;font-size:.92rem}`;
+.nr-sl-positions{margin-top:12px}.nr-sl-positions summary{min-height:44px;padding-block:10px;cursor:pointer}.nr-sl-horizon-summary{margin:12px 0 0}.nr-sl-above{list-style:none;display:grid;grid-template-columns:repeat(auto-fit,minmax(108px,1fr));gap:6px;margin:6px 0;padding:0}.nr-sl-above li{border:1px solid #526c95;border-radius:8px;padding:4px 8px}.nr-sl-above span{display:block;font-size:.83em}.nr-sl-foot{margin:.5rem 0 0;font-size:.78rem;opacity:.8}.nr-sl-noloc{margin:0;font-size:.92rem}`;
 let host=null,retry=null,last=null,moonCanvas=null,updateControls;
 function drawMoon(c){
  const box=host?.querySelector('.nr-sl-moonbox'),svg=box?.querySelector('.nr-sl-moon');if(!svg)return;
@@ -199,7 +221,8 @@ function render(state){
  host.style.setProperty('--sky-light',SRSkyTime.light(c.hz.Sun?.altitude??-18).toFixed(3));
  updateControls(s);
  const zone=s.zone,pct=Math.round(c.fraction*100),t=SRSkyTime.timeText(s.at,zone);
- const html=`<div class="nr-sl-top"><div class="nr-sl-moonbox">${moonSvg(c,132)}<span>${esc(name('Moon'))}: ${esc(tr('Освітлено'))} ${pct}% · ${esc(tr(c.waxing?'росте':'спадає'))}</span><small>${esc(tr(c.loc?'Орієнтація: зеніт угорі, як на вашому небі.':'Орієнтація: північ угорі (місце не задано).'))}</small></div>${c.loc?`<div class="nr-sl-map">${skySvg(c)}<p class="nr-sl-chart-note">${esc(tr('Північ на обох краях; лінія — горизонт.'))}</p></div>`:''}</div>${listHtml(c)}<div data-aurora-content>${s.mode==='now'?auroraHtml(c):''}</div><p class="nr-sl-foot">${esc(tr('Розрахунок'))}: astronomy-engine 2.1.19 · ${esc(t)} ${esc(zone)}${c.loc?' · '+c.loc.lat.toFixed(2)+', '+c.loc.lon.toFixed(2):''}. ${esc(tr('Звичайна атмосферна рефракція; погода й рельєф не враховані.'))}</p>`;
+ const moonLabel=c.fraction>0&&pct===0?plainSky[li()].darkMoon+' · <1%':name('Moon')+': '+tr('Освітлено')+' '+pct+'%';
+ const html=`<div class="nr-sl-top"><div class="nr-sl-moonbox">${moonSvg(c,132)}<span>${esc(moonLabel)} · ${esc(tr(c.waxing?'росте':'спадає'))}</span><small>${esc(tr(c.loc?'Орієнтація: зеніт угорі, як на вашому небі.':'Орієнтація: північ угорі (місце не задано).'))}</small></div>${c.loc?`<div class="nr-sl-map">${skySvg(c)}<p class="nr-sl-chart-note">${esc(tr('Північ на обох краях; лінія — горизонт.'))}</p></div>`:''}</div>${c.loc?'<div class="nr-sl-summary">'+horizonSummary(c)+'</div><details class="nr-sl-positions"><summary>'+esc(plainSky[li()].details)+'</summary>'+listHtml(c)+'</details>':listHtml(c)}<div data-aurora-content>${s.mode==='now'?auroraHtml(c):''}</div><p class="nr-sl-foot">${esc(tr('Розрахунок'))}: astronomy-engine 2.1.19 · ${esc(t)} ${esc(zone)}${c.loc?' · '+c.loc.lat.toFixed(2)+', '+c.loc.lon.toFixed(2):''}. ${esc(tr('Звичайна атмосферна рефракція; погода й рельєф не враховані.'))}</p>`;
  // Stable interactive links live outside the refreshed numeric content. Dot identity survives every tick.
  let content=host.querySelector('[data-live-content]');
  if(!content){content=document.createElement('div');content.dataset.liveContent='';host.append(content);const links=document.createElement('p');links.className='nr-sl-sources';links.innerHTML='<span></span>: <a href="https://www.spaceweather.gov/noaa-scales-explanation" target="_blank" rel="noopener noreferrer">NOAA G</a> · <a href="https://www.spaceweather.gov/products/aurora-30-minute-forecast" target="_blank" rel="noopener noreferrer">OVATION</a> · <a href="https://wdc.kugi.kyoto-u.ac.jp/poles/polesexp.html" target="_blank" rel="noopener noreferrer">IGRF-14</a>';host.append(links);}
@@ -220,7 +243,7 @@ function render(state){
  for(const key of ['aria-label','data-fraction','data-limb','data-rx'])oldMoon.setAttribute(key,newMoon.getAttribute(key));
  oldMoon.querySelector('g').setAttribute('transform',newMoon.querySelector('g').getAttribute('transform'));
  oldMoon.querySelector('path').setAttribute('d',newMoon.querySelector('path').getAttribute('d'));
- for(const selector of ['.nr-sl-moonbox>span','.nr-sl-list','.nr-sl-noloc','[data-aurora-content]','.nr-sl-foot']){
+ for(const selector of ['.nr-sl-moonbox>span','.nr-sl-summary','.nr-sl-list','.nr-sl-noloc','[data-aurora-content]','.nr-sl-foot']){
   const old=content.querySelector(selector),next=tmp.querySelector(selector);
   if(old&&next&&!old.isEqualNode(next))old.replaceWith(next);
  }

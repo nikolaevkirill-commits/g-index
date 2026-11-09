@@ -78,10 +78,27 @@ function fmtDay(ds){try{return NRPresentation.dateFormatter(window.NRLocale?.loc
 
 // Stars in three groups: three animations instead of one per star (keeps idle CPU low).
 function stars(n,rmin,rmax,seed){const g=['','',''];let x=seed;const rnd=()=>(x=(x*16807)%2147483647)/2147483647;for(let i=0;i<n;i++){const a=rnd()*360,r=rmin+rnd()*(rmax-rmin),[px,py]=ring(a,r);g[i%3]+=`<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="${(0.5+rnd()*1.1).toFixed(2)}"/>`}return g.map((c,i)=>`<g class="nr-sky-star" style="--d:${(i*1.3).toFixed(1)}s;--t:${(3.2+i*0.9).toFixed(1)}s">${c}</g>`).join('')}
+const plainScene={
+ uk:{near:'Зближення',exact:'Точне з’єднання',city:'за Києвом',details:'Знаки та градуси',guide:'Оберіть дату, щоб побачити зближення й переходи. Це календар подій неба.',disabled:'Автовідтворення вимкнене. Дату можна змінити повзунком.'},
+ en:{near:'Approach',exact:'Exact conjunction',city:'Kyiv time',details:'Signs and degrees',guide:'Choose a date to see approaches and transitions on the sky calendar.',disabled:'Autoplay is off. Use the slider to change the date.'},
+ es:{near:'Acercamiento',exact:'Conjunción exacta',city:'hora de Kyiv',details:'Signos y grados',guide:'Elija una fecha para ver acercamientos y cambios en el calendario del cielo.',disabled:'La reproducción está desactivada. Cambie la fecha con el control deslizante.'},
+ fr:{near:'Rapprochement',exact:'Conjonction exacte',city:'heure de Kyiv',details:'Signes et degrés',guide:'Choisissez une date pour voir les rapprochements et les transitions dans le calendrier du ciel.',disabled:'La lecture automatique est désactivée. Changez de date avec le curseur.'}
+};
+function conjunctionCopy(event,ds){
+ const words=plainScene[L()],reading=event.reading.text[L()]||event.reading.text.en;
+ if(event.type!=='conjunction')return esc(reading);
+ const at=Date.parse(event.exact?.utc);
+ const time=Number.isFinite(at)?new Intl.DateTimeFormat(window.NRLocale?.locale||'uk-UA',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',timeZone:'Europe/Kyiv'}).format(at):'';
+ const isExact=event.exact?.kyiv_date===ds;
+ const title=(isExact?words.exact:words.near)+' · '+event.bodies.map(gName).join(' / ');
+ const stamp=time?' · '+(isExact?'':words.exact+' ')+time+' ('+words.city+')':'';
+ const colon=reading.indexOf(': ');
+ return '<strong>'+esc(title+stamp)+'</strong>'+(colon>=0?'<br><span>'+esc(reading.slice(colon+2))+'</span>':'');
+}
 function planets(ds,compact){
  const d=sky?.daily?.[dayIndex(ds)];if(!d)return '';
  const rows=Object.keys(G).filter(g=>d.grahas?.[g]&&Number.isFinite(d.grahas[g].lon)).map(g=>{const p=d.grahas[g],lon=((p.lon%360)+360)%360,s=Math.floor(lon/30),deg=Math.floor(lon-s*30);return `<li data-g="${g}" style="--c:${G[g][5]}"><b aria-hidden="true">${G[g][0]+VS}</b><span>${esc(gName(g))}</span><em>${esc(SIGN_NAMES[s][I.indexOf(L())])} ${deg}°${p.retrograde&&g!=='Rahu'&&g!=='Ketu'?' · '+esc(t('pl_retro')):''}</em></li>`}).join('');
- return `<div class="nr-sky-planets${compact?' is-compact':''}"><h4>${esc(t('pl_title'))}</h4><ul>${rows}</ul>${compact?'':`<p class="nr-sky-planets-note">${esc(t('pl_note'))}</p>`}</div>`;
+ return `<details class="nr-sky-planet-details"><summary>${esc(plainScene[L()].details)}</summary><div class="nr-sky-planets${compact?' is-compact':''}"><h4>${esc(t('pl_title'))}</h4><ul>${rows}</ul>${compact?'':`<p class="nr-sky-planets-note">${esc(t('pl_note'))}</p>`}</div></details>`;
 }
 function wheel(ds,mini){
  const d=sky.daily[dayIndex(ds)];if(!d)return '';const gid=mini?'nrSkyCoreMini':'nrSkyCore';
@@ -126,7 +143,7 @@ function list(ds){
   const eventTime=x.at||(x.exact?.kyiv_date===ds?x.exact:null);
   const action=window.SRSkyTime&&Number.isFinite(Date.parse(eventTime?.utc))
    ?`<button type="button" class="nr-sky-event-time" data-sky-event-at="${esc(eventTime.utc)}">${esc(t('event_sky'))}</button>`:'';
-  return `<li class="nr-sky-ev is-${x.type.replace('_','-')}" data-intensity="${r.intensity}"><b aria-hidden="true">${x.bodies.map(g=>(G[g]?.[0]||'')+VS).join(' ')}</b><span><span class="nr-sky-text">${esc(r.text[lang]||r.text.en)}</span><small>${esc(when)} · ${esc(t('intensity'))} ${'●'.repeat(r.intensity)}${'○'.repeat(3-r.intensity)} · ${esc(r.label[lang]||r.label.en)}</small>${action}</span></li>`};
+  return `<li class="nr-sky-ev is-${x.type.replace('_','-')}" data-intensity="${r.intensity}"><b aria-hidden="true">${x.bodies.map(g=>(G[g]?.[0]||'')+VS).join(' ')}</b><span><span class="nr-sky-text">${conjunctionCopy(x,ds)}</span><small>${esc(when)} · ${esc(t('intensity'))} ${'●'.repeat(r.intensity)}${'○'.repeat(3-r.intensity)} · ${esc(r.label[lang]||r.label.en)}</small>${action}</span></li>`};
  const top=items.slice(0,4),rest=items.slice(4);
  return `<h4>${esc(t('active'))}</h4><ul class="nr-sky-events">${top.map(li).join('')}</ul>`+(rest.length?`<details class="nr-sky-more"><summary>${esc(t('more'))} (${rest.length})</summary><ul class="nr-sky-events">${rest.map(li).join('')}</ul></details>`:'');
 }
@@ -137,7 +154,7 @@ function renderToday(){
  const head=`<div class="nr-sky-now-head"><h2>${esc(t('now'))}</h2><span>${esc(fmtDay(ds))}</span></div>`;
  if(state!=='ready'||dayIndex(ds)<0){todayHost.innerHTML=head+`<p class="nr-sky-none">${esc(state==='loading'?'…':t('missing'))}</p>`;return}
  const top=dayItems(ds).filter(x=>x.reading.intensity>=2).slice(0,2);
- todayHost.innerHTML=head+`<div class="nr-sky-now-body is-readable"><div><ul class="nr-sky-now-list">${top.length?top.map(x=>`<li><b aria-hidden="true">${x.bodies.map(g=>(G[g]?.[0]||'')+VS).join(' ')}</b> ${esc(x.reading.text[lang]||x.reading.text.en)}</li>`).join(''):`<li>${esc(t('quiet'))}</li>`}</ul><small>${esc(t('tradition'))} ${esc(t('sub'))}</small></div>${planets(ds,true)}</div><button type="button" class="nr-sky-now-open">${esc(t('open'))} →</button>`;
+ todayHost.innerHTML=head+`<div class="nr-sky-now-body is-readable"><div><ul class="nr-sky-now-list">${top.length?top.map(x=>`<li><b aria-hidden="true">${x.bodies.map(g=>(G[g]?.[0]||'')+VS).join(' ')}</b> ${conjunctionCopy(x,ds)}</li>`).join(''):`<li>${esc(t('quiet'))}</li>`}</ul><small>${esc(t('tradition'))} ${esc(t('sub'))}</small></div>${planets(ds,true)}</div><button type="button" class="nr-sky-now-open">${esc(t('open'))} →</button>`;
 }
 function mountToday(){
  if(todayHost&&todayHost.isConnected)return true;const ov=document.querySelector('#nrRoute-today [data-overview="today"]');if(!ov)return false;
@@ -170,18 +187,20 @@ function render(){
  const active=document.activeElement;
  const refocus=host.contains(active)?['.nr-sky-play','.nr-sky-controls input'].find(selector=>active.matches(selector)):null;
  const weatherHelpOpen=host.querySelector('.nr-sky-weather-help')?.open===true;
- host.querySelector('.nr-sky-title').textContent=t('title');host.querySelector('.nr-sky-sub').textContent=t('sub');
+ const planetDetailsOpen=host.querySelector('.nr-sky-planet-details')?.open===true;
+ host.querySelector('.nr-sky-title').textContent=t('title');host.querySelector('.nr-sky-sub').textContent=plainScene[L()].guide+' '+t('sub');
  if(state!=='ready'){host.querySelector('.nr-sky-body').innerHTML=`<p class="nr-sky-none" role="status">${esc(state==='loading'?'…':t('missing'))}</p>`;return}
  const today=kyivToday();if(!sel||dayIndex(sel)<0)sel=dayIndex(today)>=0?today:sky.daily[0].date;
  const stale=skyStale();
  const before=new Map([...host.querySelectorAll('.nr-sky-planet[data-g]')].map(e=>[e.dataset.g,[Number(e.dataset.lon),Number(e.dataset.rad)]]));
  host.querySelector('.nr-sky-body').innerHTML=(stale?`<p class="nr-sky-stale" role="status">${esc(t('stale'))}</p>`:'')+
-  `<div class="nr-sky-controls"><button type="button" class="nr-sky-play" ${motionOn()?'':'disabled'} aria-pressed="${!!timer}">${esc(timer?t('stop'):t('play'))}</button><label><input type="range" aria-label="${esc(t('day'))}" min="0" max="${sky.daily.length-1}" value="${dayIndex(sel)}" aria-valuetext="${esc(fmtDay(sel))}"></label></div>`+
+  `<div class="nr-sky-controls"><button type="button" class="nr-sky-play" ${motionOn()?'':'disabled'} aria-pressed="${!!timer}">${esc(timer?t('stop'):t('play'))}</button><label><input type="range" aria-label="${esc(t('day'))}" min="0" max="${sky.daily.length-1}" value="${dayIndex(sel)}" aria-valuetext="${esc(fmtDay(sel))}"></label></div>${motionOn()?'':'<p class="nr-sky-motion-note">'+esc(plainScene[L()].disabled)+'</p>'}`+
   `<div class="nr-sky-stage"><div class="nr-sky-wheel-wrap">${wheel(sel)}${planets(sel,false)}</div><div class="nr-sky-side"><p class="nr-sky-date">${esc(fmtDay(sel))}${(()=>{const k=kpFor(sel);return k?` · ${k.src==='NOAA_27day_outlook'?'Kp':esc(t('sw_forecast'))} ${new Intl.NumberFormat(window.NRLocale?.locale||'uk-UA',{maximumFractionDigits:2}).format(k.kp)}${k.src==='NOAA_27day_outlook'?' · '+esc(t('kp27')):''}${k.src==='NOAA_3day_slots'&&k.kp>=5?' · '+esc(t('storm'))+' G'+Math.min(5,Math.floor(k.kp)-4):''}`:''})()}</p><div class="nr-sky-list">${list(sel)}</div>${spaceWeather()}</div></div>`+strip(sel);
+ if(planetDetailsOpen)host.querySelector('.nr-sky-planet-details')?.setAttribute('open','');
  if(weatherHelpOpen)host.querySelector('.nr-sky-weather-help')?.setAttribute('open','');
  if(refocus)host.querySelector(refocus)?.focus({preventScroll:true});
  if(before.size&&motionOn())arcMove(before);
- host.querySelector('.nr-sky-title').textContent=t('title');host.querySelector('.nr-sky-sub').textContent=t('sub');
+ host.querySelector('.nr-sky-title').textContent=t('title');host.querySelector('.nr-sky-sub').textContent=plainScene[L()].guide+' '+t('sub');
 }
 function arcMove(before){
  // Planets travel along the zodiac circle (shortest arc), not across it.

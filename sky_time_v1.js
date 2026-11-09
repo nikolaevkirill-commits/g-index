@@ -22,7 +22,7 @@ const copy={
  below:['Сонце під горизонтом','Sun below the horizon','Sol bajo el horizonte','Soleil sous l’horizon'],
  title:['Шлях Сонця','Sun path','Trayectoria solar','Trajectoire solaire'],
  day:['Час доби','Time of day','Hora del día','Heure de la journée'],
- play:['▶ Доба','▶ Play day','▶ Reproducir día','▶ Lire la journée'],
+ play:['▶ Програти добу','▶ Play day','▶ Reproducir día','▶ Lire la journée'],
  pause:['Ⅱ Пауза','Ⅱ Pause','Ⅱ Pausa','Ⅱ Pause'],
  now:['Зараз','Now','Ahora','Maintenant'],
  selected:['Вибраний час','Selected time','Hora elegida','Heure choisie'],
@@ -133,7 +133,7 @@ function toggle(){
 function controls(host){
  const el=document.createElement('div');
  el.className='sr-time-controls';
- el.innerHTML='<label><span data-time-label></span><input type="range" min="0" max="1000" step="1" value="0"></label><div><button type="button" data-time-play></button><button type="button" data-time-now></button><time></time></div><small data-time-mode></small>';
+ el.innerHTML='<label><span data-time-label></span><input type="range" min="0" max="1000" step="1" value="0"></label><div><button type="button" data-time-play></button><button type="button" data-time-now></button><time></time></div><small data-time-mode></small><small data-time-help hidden></small>';
  const range=el.querySelector('input'),play=el.querySelector('[data-time-play]'),now=el.querySelector('[data-time-now]');
  range.addEventListener('input',()=>seek(range.value));play.onclick=toggle;now.onclick=live;
  host.append(el);
@@ -151,6 +151,7 @@ function controls(host){
   now.textContent=t('now');now.setAttribute('aria-pressed',String(s.mode==='now'));
   const stamp=el.querySelector('time');stamp.dateTime=new Date(s.at).toISOString();stamp.textContent=time;
   el.querySelector('[data-time-mode]').textContent=[t(s.mode==='playing'?'running':s.mode==='selected'?'selected':'now'),dateFormatter.format(s.at),s.zone,offset].filter(Boolean).join(' · ');
+  const hint=el.querySelector('[data-time-help]');hint.hidden=s.allowed;hint.textContent=s.allowed?'':t('motion');
   el.dataset.mode=s.mode;
  };
 }

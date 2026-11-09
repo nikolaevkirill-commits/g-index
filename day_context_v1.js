@@ -195,7 +195,7 @@ function renderTools(){
  if(el.dataset.html!==html){el.innerHTML=html;el.dataset.html=html;bindExport(el);}
 }
 
-const STYLE=`.nr-dc-bar{position:sticky;top:0;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin:0 0 10px;padding:8px 12px;border-radius:12px;background:var(--nr-surface,rgba(18,28,44,.92));color:var(--nr-text,#eef3fb);backdrop-filter:blur(8px);font-size:.95rem;min-height:44px;box-sizing:border-box}
+const STYLE=`.nr-dc-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin:0 0 10px;padding:8px 12px;border-radius:12px;background:var(--nr-surface,rgba(18,28,44,.92));color:var(--nr-text,#eef3fb);backdrop-filter:blur(8px);font-size:.95rem;min-height:44px;box-sizing:border-box}
 .nr-dc-bar[data-state=other]{outline:2px solid var(--nr-warn,#f2b84b);outline-offset:-2px}
 .nr-dc-today,.nr-dc-skip{min-height:44px;padding:0 12px;border-radius:10px;border:1px solid currentColor;background:transparent;color:inherit;font:inherit;cursor:pointer}
 .nr-dc-head{display:flex;flex-direction:column;gap:2px}

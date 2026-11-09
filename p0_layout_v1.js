@@ -17,18 +17,24 @@ function horizonText(source){
  const stamp=source.kp_input?.issued_at,valid=typeof stamp==='string'&&Number.isFinite(Date.parse(stamp));
  return tr('NOAA: орієнтир на 27 днів')+' · '+(valid?new Intl.DateTimeFormat(window.NRLocale?.locale||'uk-UA',{dateStyle:'long',timeZone:'UTC'}).format(new Date(stamp)):tr('Дата випуску не вказана'));
 }
-COPY.push(['Прокрутіть графік горизонтально, щоб переглянути всі дати.','Scroll the chart horizontally to see all dates.','Desplace el gráfico horizontalmente para ver todas las fechas.','Faites défiler le graphique horizontalement pour voir toutes les dates.']);
+COPY.push(
+ ['Дати з оцінкою','Dates with a score','Fechas con puntuación','Dates avec une note'],
+ ['Риска означає, що оцінки немає. Нуль означає нейтральну оцінку.','A dash means no score. Zero means neutral.','Un guion indica que no hay puntuación. Cero significa neutral.','Un tiret indique une note indisponible. Zéro signifie neutre.'],
+ ['Експерт','Expert','Experto','Expert'],['Формула','Formula','Fórmula','Formule'],['Без оцінки','No score','Sin puntuación','Sans note'],
+ ['Оберіть період, а потім дату, щоб переглянути її оцінку й джерело.','Choose a period, then a date to see its score and source.','Elija un periodo y una fecha para ver la puntuación y su fuente.','Choisissez une période, puis une date pour afficher la note et sa source.']
+);
 function renderForecastGraph(root){
  const host=root.querySelector('.nr-o-horizon-list');if(!host)return;
+ const points=forecastPoints([...host.querySelectorAll('[data-day]')].filter(b=>!b.hidden).map(b=>({date:b.dataset.day,consumer:resolvedFor(b.dataset.day).consumer})));
  let figure=root.querySelector('[data-forecast-graph]');
+ if(points.length<2||points.length>7){figure?._labelObserver?.disconnect();figure?.remove();return;}
  if(!figure){
   figure=make('figure','sr-forecast-graph');figure.dataset.forecastGraph='';
   const plot=make('div','');plot.dataset.forecastScroll='';
-  const hint=make('p','');hint.dataset.forecastScrollHint='';
-  figure.append(make('figcaption',''),hint,plot,make('p',''));host.before(figure);
+  figure.append(make('figcaption',''),plot,make('p',''));host.before(figure);
  }
- const points=forecastPoints([...host.querySelectorAll('[data-day]')].filter(b=>!b.hidden).map(b=>({date:b.dataset.day,consumer:resolvedFor(b.dataset.day).consumer})));
- const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');const dense=points.length>7;const baseWidth=dense?Math.max(360,points.length*48):360;if(dense){for(const p of points)p.x=30+(p.x-30)*(baseWidth-40)/320;svg.style.minWidth=baseWidth+'px';}svg.setAttribute('viewBox',`0 0 ${baseWidth} 225`);svg.setAttribute('role','img');
+ const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');const baseWidth=360;
+ svg.setAttribute('viewBox','0 0 360 225');svg.setAttribute('role','img');
  const node=(tag,attrs,text)=>{const e=document.createElementNS(svg.namespaceURI,tag);for(const [k,v]of Object.entries(attrs))e.setAttribute(k,String(v));if(text!==undefined)e.textContent=text;svg.append(e);return e;};
  const descriptions=points.map(p=>p.date+': '+SkyScore.describe(p.score)+' · '+tr(p.score===null?'Оцінка недоступна':p.authority==='expert_pdf'?'Експертна оцінка':'Формула джерела'));
  svg.setAttribute('aria-label',tr('Оцінки за днями')+'. '+descriptions.join('; '));
@@ -39,16 +45,14 @@ function renderForecastGraph(root){
   else{if(p.score!==0)add('line',{x1:p.x,y1:100,x2:p.x,y2:p.y,stroke:color,'stroke-width':5,'stroke-linecap':'round',opacity:.65});add('circle',{cx:p.x,cy:p.y,r:5,fill:color,stroke:'#101a30','stroke-width':2});add('text',{x:p.x,y:p.y+(p.score<0?19:-12),'text-anchor':'middle',fill:color,'font-size':13,'font-weight':700},SkyScore.formatScore(p.score));}
   add('text',{x:p.x,y:218,'text-anchor':'middle',fill:'#dce6fa','font-size':12},p.date.slice(8)+'.'+p.date.slice(5,7));
  }
- const plot=figure.querySelector('[data-forecast-scroll]'),hint=figure.querySelector('[data-forecast-scroll-hint]');
+ const plot=figure.querySelector('[data-forecast-scroll]');
  figure.querySelector('figcaption').textContent=tr('Оцінки за днями');
  figure.lastElementChild.textContent=tr('Окремі денні оцінки. Риска означає відсутні дані; 0 — нейтральну оцінку.');
- hint.textContent=tr('Прокрутіть графік горизонтально, щоб переглянути всі дати.');hint.hidden=!dense;
- plot.style.overflowX=dense?'auto':'';
- if(dense){plot.tabIndex=0;plot.setAttribute('role','region');plot.setAttribute('aria-label',hint.textContent);}
- else{plot.removeAttribute('tabindex');plot.removeAttribute('role');plot.removeAttribute('aria-label');}
- const scrollLeft=plot.dataset.firstDate===points[0]?.date?plot.scrollLeft:0;
- plot.replaceChildren(svg);plot.dataset.firstDate=points[0]?.date||'';plot.scrollLeft=scrollLeft;
- const geometry=[...svg.querySelectorAll('[x],[x1],[cx]')].map(el=>({el,values:['x','x1','x2','cx'].filter(a=>el.hasAttribute(a)).map(a=>[a,Number(el.getAttribute(a))])}));const resizeLabels=()=>{const graph=svg,width=graph.getBoundingClientRect().width;if(!graph.isConnected||!(width>0))return;const W=dense?baseWidth:innerWidth>=900?width:360;graph.setAttribute('viewBox',`0 0 ${W} 225`);for(const {el,values} of geometry)for(const [a,v]of values)el.setAttribute(a,dense||W===360?v:v<30?v:30+(v-30)*(W-40)/320);for(const label of graph.querySelectorAll('text'))label.style.setProperty('font-size',(13*W/width)+'px','important');};figure._labelObserver?.disconnect();figure._labelObserver=new ResizeObserver(()=>requestAnimationFrame(()=>{if(svg.isConnected)resizeLabels();}));figure._labelObserver.observe(svg);resizeLabels();
+ plot.replaceChildren(svg);
+ const geometry=[...svg.querySelectorAll('[x],[x1],[cx]')].map(el=>({el,values:['x','x1','x2','cx'].filter(a=>el.hasAttribute(a)).map(a=>[a,Number(el.getAttribute(a))])}));
+ const resizeLabels=()=>{const width=svg.getBoundingClientRect().width;if(!svg.isConnected||!(width>0))return;const W=innerWidth>=900?width:360;svg.setAttribute('viewBox','0 0 '+W+' 225');for(const {el,values} of geometry)for(const [a,v]of values)el.setAttribute(a,W===360||v<30?v:30+(v-30)*(W-40)/320);for(const label of svg.querySelectorAll('text'))label.style.setProperty('font-size',(13*W/width)+'px','important');};
+ figure._labelObserver?.disconnect();figure._labelObserver=new ResizeObserver(()=>requestAnimationFrame(resizeLabels));figure._labelObserver.observe(svg);resizeLabels();
+
 }
 function moon(at){
  const {k,waxing}=SkyMoon.moonIllumination(at),r=35,c=40,rx=r*Math.abs(2*k-1),limb=waxing?1:0,term=k>=.5?(waxing?1:0):(waxing?0:1),pct=Math.round(k*100),id='srMoon'+(++moonSerial);
@@ -74,19 +78,38 @@ function extras(root,ds){
  for(const btn of root.querySelectorAll('[data-day]')){const value=resolvedFor(btn.dataset.day).consumer;btn.dataset.scoreTone=SkyScore.scoreClass(value?.available?value.score:null);for(const number of btn.querySelectorAll('strong')){number.dataset.scoreTone=btn.dataset.scoreTone;number.style.setProperty('color',SkyScore.color(value?.available?value.score:null),'important');number.setAttribute('aria-label',SkyScore.describe(value?.available?value.score:null));}}
  if(route==='forecast'){
   const list=root.querySelector('.nr-o-horizon-list');
-  const week=Array.from({length:Number(root.dataset.forecastCount||7)},(_,i)=>new Date(Date.parse(ds+'T12:00:00Z')+i*86400000).toISOString().slice(0,10));
+  const count=Number(root.dataset.forecastCount||7);
+  const datesFrom=start=>Array.from({length:count},(_,i)=>new Date(Date.parse(start+'T12:00:00Z')+i*86400000).toISOString().slice(0,10));
+  let week=datesFrom(root.dataset.forecastStart||ds);
+  if(!week.includes(ds))week=datesFrom(ds);
+  root.dataset.forecastStart=week[0];
+  if(list)list.dataset.forecastGrid=count===27?'month':'';
+  const intro=list?.parentElement?.querySelector(':scope > p');
+  if(intro)intro.textContent=tr('Оберіть період, а потім дату, щоб переглянути її оцінку й джерело.');
+
   for(const date of week)if(list&&![...list.querySelectorAll('[data-day]')].some(b=>b.dataset.day===date)){const b=make('button','');b.type='button';b.dataset.day=date;b.setAttribute('aria-pressed',String(date===ds));b.onclick=()=>pick(root,date);list.append(b);}
   if(list)list.append(...[...list.querySelectorAll('[data-day]')].sort((a,b)=>a.dataset.day.localeCompare(b.dataset.day)));
   for(const b of root.querySelectorAll('.nr-o-horizon-list [data-day]')){const own=resolvedFor(b.dataset.day),value=own.consumer,date=make('span','sr-forecast-date',new Intl.DateTimeFormat(window.NRLocale?.locale||'uk-UA',{day:'numeric',month:'long',timeZone:'UTC'}).format(new Date(b.dataset.day+'T12:00:00Z'))),score=make('strong','');paintScore(score,value);score.style.color=SkyScore.color(value?.available?value.score:null);const source=tr(value?.authority==='expert_pdf'?'Експертна оцінка':value?.available?'Формула джерела':'Оцінка недоступна');const state=dataState(value),copy={fresh:'Формульні дані актуальні',stale:'Формульні дані застаріли',offline:'Офлайн: перевірте час збережених даних',missing:'Формульні дані відсутні',loading:'Оновлюємо дані…',error:'Не вдалося оновити дані'};// Owner review 01.11 (D4): the card shows date, score, source and horizon only; the data state is shown once in
   // the hero and the full horizon text stays available as the card's title and accessible description.
   const full=source+' · '+tr(copy[state])+(horizonText(own.feed?.channels?.source_formula)?' · '+horizonText(own.feed.channels.source_formula):'');
-  const outlook=own.feed?.channels?.source_formula?.kp_source==='NOAA_27day_outlook';
-  b.replaceChildren(date,score,make('small','',source+(outlook?' · '+tr('орієнтир 27 дн.'):'')));b.title=full;b.dataset.fullState=full;}
+  const outlook=value?.available&&value.authority!=='expert_pdf'&&state==='fresh'&&own.feed?.channels?.source_formula?.kp_source==='NOAA_27day_outlook';
+  if(count===27)date.textContent=new Intl.DateTimeFormat(window.NRLocale?.locale||'uk-UA',{day:'numeric',month:'short',timeZone:'UTC'}).format(new Date(b.dataset.day+'T12:00:00Z'));
+  const compactSource=tr(value?.authority==='expert_pdf'?'Експерт':value?.available?'Формула':'Без оцінки');
+  b.setAttribute('aria-label',date.textContent+' · '+SkyScore.describe(value?.available?value.score:null)+' · '+source);
+  b.replaceChildren(date,score,make('small','',(count===27?compactSource:source)+(outlook?' · '+tr('орієнтир 27 дн.'):'')));b.title=full;b.dataset.fullState=full;}
 
-  let controls=root.querySelector('[data-p0-forecast-tabs]');if(!controls){controls=make('div','sr-p0-tabs');controls.dataset.p0ForecastTabs='';for(const [name,count]of [['День',1],['Тиждень',7],['27 днів',27]]){const b=make('button','',name);b.type='button';b.onclick=()=>{root.dataset.forecastCount=String(count);extras(root,root.querySelector('select')?.value||ds);};controls.append(b);}root.querySelector('.nr-o-horizon-list')?.before(controls);}
+  let controls=root.querySelector('[data-p0-forecast-tabs]');if(!controls){controls=make('div','sr-p0-tabs');controls.dataset.p0ForecastTabs='';for(const [name,count]of [['День',1],['Тиждень',7],['27 днів',27]]){const b=make('button','',name);b.type='button';b.onclick=()=>{root.dataset.forecastCount=String(count);root.dataset.forecastStart=root.querySelector('select')?.value||ds;extras(root,root.querySelector('select')?.value||ds);};controls.append(b);}root.querySelector('.nr-o-horizon-list')?.before(controls);}
   controls.querySelectorAll('button').forEach((b,i)=>b.textContent=tr(['День','Тиждень','27 днів'][i]));
   [...root.querySelectorAll('.nr-o-horizon-list [data-day]')].forEach(b=>b.hidden=Number(root.dataset.forecastCount||7)===1?b.dataset.day!==ds:!week.includes(b.dataset.day));
   controls.querySelectorAll('button').forEach((b,i)=>{b.setAttribute('aria-pressed',String(Number(root.dataset.forecastCount||7)===[1,7,27][i]));});
+  let overview=root.querySelector('[data-forecast-summary]');
+  if(!overview){overview=make('div','sr-forecast-summary');overview.dataset.forecastSummary='';controls.after(overview);}
+  const fmt=new Intl.DateTimeFormat(window.NRLocale?.locale||'uk-UA',{day:'numeric',month:'short',timeZone:'UTC'});
+  const first=new Date(week[0]+'T12:00:00Z'),last=new Date(week.at(-1)+'T12:00:00Z');
+  const scored=week.filter(day=>resolvedFor(day).consumer?.available===true).length;
+  overview.replaceChildren(make('strong','',count===1?fmt.format(first):fmt.formatRange(first,last)),
+   make('span','',tr('Дати з оцінкою')+' · '+scored+' / '+count));
+  if(scored<count)overview.append(make('small','','Риска означає, що оцінки немає. Нуль означає нейтральну оцінку.'));
   renderForecastGraph(root);
  }
  if(route!=='calendar')return;
