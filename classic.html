@@ -4539,22 +4539,42 @@ function pwaReload() {
       window.__nrFetchGate = true;
     }
     window.__nrHoldFetchUntil = Date.now() + 1500;
-    const requestActivation = ready => { if (ready !== false && _swReg?.waiting) _swReg.waiting.postMessage({ type: 'SKIP_WAITING' }); };
-    // FP569f (R-07): on a busy device the peer tabs may not drain within 2 s; retry twice (1.5 s apart) before
-    // showing "try again". Activation is still requested only after a successful prepare (fail-closed).
-    const attempt = n => window.NRUpdateCoordinator.prepare().then(ready => (ready === false && n < 2 && _swReg?.waiting) ? new Promise(r => setTimeout(r, 1500)).then(() => attempt(n + 1)) : requestActivation(ready), () => { window.__nrUpdateRequested = false; });
-    if (window.NRUpdateCoordinator) attempt(0);
-    else requestActivation(true);
-    // Reload only on controllerchange. A timer cannot prove activation and may
-    // otherwise reopen the old release or discard an unsaved form.
+    const waiting = _swReg.waiting;
+    const controller = window.navigator?.serviceWorker?.controller;
+    const coordinator = window.NRUpdateCoordinator;
+    const canSend = () => window.__nrUpdateRequested && _swReg?.waiting === waiting;
+
+    function requestActivation() {
+      if (!canSend()) return;
+      try { waiting.postMessage({ type: 'SKIP_WAITING' }); }
+      catch (error) { window.NRDiagnostics?.record('sw.activation_message', 'recoverable'); }
+    }
+
+    async function prepareAndActivate() {
+      // A waiting worker can remain installed after the network comes back.
+      // Retry the same worker with a fresh cross-tab drain on each attempt.
+      for (let attempt = 0; attempt < 3 && canSend(); attempt++) {
+        try {
+          if (await coordinator.prepare()) requestActivation();
+        } catch (error) {
+          window.NRDiagnostics?.record('sw.activation_prepare', 'recoverable');
+        }
+        if (attempt < 2 && canSend()) await new Promise(resolve => setTimeout(resolve, 1500));
+      }
+    }
+
+    if (coordinator) prepareAndActivate();
+    else requestActivation();
+
+    // Only controllerchange reloads the requesting tab. Leave the current
+    // page and its cache available if the browser does not complete activation.
     setTimeout(() => {
-      if (!_swReg?.waiting) return;
+      if (!window.__nrUpdateRequested || window.navigator?.serviceWorker?.controller !== controller) return;
       window.__nrUpdateRequested = false;
-      const bar = document.getElementById('pwaUpdateBar');
       const label = bar?.querySelector('span'), button = bar?.querySelector('button');
       if (label) label.textContent = ({uk:'Оновлення ще не активовано. Можна спробувати ще раз.',en:'The update is not active yet. You can try again.',es:'La actualización aún no está activa. Puedes reintentarlo.',fr:'La mise à jour n’est pas encore active. Vous pouvez réessayer.'})[window.NRLocale?.language || 'uk'];
       if (button) button.disabled = false;
-    }, window.NRUpdateCoordinator ? 10000 : 4000);
+    }, coordinator ? 10000 : 4000);
   } else {
     window.location.reload();
   }
@@ -5695,6 +5715,12 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' })
       .then(reg => {
         _swReg = reg;
+        // Recheck an installation interrupted by a network outage. Preserve
+        // manual activation and leave an already installed worker in waiting.
+        window.addEventListener('online', () => {
+          if (reg.waiting || reg.installing) return;
+          reg.update().catch(() => window.NRDiagnostics?.record('sw.online_recheck', 'recoverable'));
+        });
         if(window._DEBUG) console.log('[SW] Registered, scope:', reg.scope);
         // fp116: auto-check for SW updates every 5 minutes — ensures new deploys activate without manual cache clear
         setInterval(() => { try { const p = reg.update(); if(p && p.catch) p.catch(()=>{globalThis.NRDiagnostics?.record('promise.catch.1','recoverable');}); } catch(e){ window.NRDiagnostics?.record('legacy.catch.19','recoverable'); } }, 5 * 60 * 1000);

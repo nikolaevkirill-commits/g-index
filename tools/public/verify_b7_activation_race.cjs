@@ -6,6 +6,8 @@
 const http=require('http'),fs=require('fs'),path=require('path'),assert=require('assert/strict');const {chromium}=require('playwright');
 const root=path.resolve(__dirname,'../..'),runs=+process.argv[2]||10,entry=process.argv[3]||'classic.html';
 const multi=process.argv.includes('--multi');
+const reconnect=process.argv.includes('--offline-reconnect');
+if(reconnect)assert(multi,'The reconnect regression requires a second tab');
 const html=fs.readFileSync(path.join(root,entry),'utf8').replace(/\r\n/g,'\n');const a=html.indexOf('function pwaReload() {');assert(a>=0,'pwaReload not found');
 const pwaReload=html.slice(a,html.indexOf('\n}',a)+2);const sw=fs.readFileSync(path.join(root,'sw.js'),'utf8');let phase='old';
 const page=`<!doctype html><meta charset=utf-8><script src="sw_update_coordination_v1.js"></script><div id="pwaUpdateBar"><span></span><button>u</button></div><script>
@@ -24,9 +26,9 @@ const srv=http.createServer((q,s)=>{if(phase==='new'){if(q.url.includes('final_s
  const f=path.resolve(root,name);if(!f.startsWith(root+path.sep)){s.writeHead(403);return s.end()}
  fs.readFile(f,(e,b)=>{if(e){s.writeHead(404);return s.end()}s.writeHead(200,{'content-type':types[path.extname(name)]||'application/octet-stream','cache-control':'no-store'});s.end(b)})});
 (async()=>{await new Promise(r=>srv.listen(0,'127.0.0.1',r));const results=[],installMs=[],deferred=[];
- for(let i=0;i<runs;i++){phase='old';const b=await chromium.launch();try{const c=await b.newContext();const p=await c.newPage();
+ for(let i=0;i<runs;i++){phase='old';const b=await chromium.launch();try{const c=await b.newContext();const p=await c.newPage();let other=null;
   await p.goto('http://127.0.0.1:'+srv.address().port+'/race.html');await p.evaluate(()=>Promise.race([window.ready,new Promise((_,j)=>setTimeout(()=>j(Error('ready timeout')),20000))]));
-  if(multi){const other=await c.newPage();await other.goto('http://127.0.0.1:'+srv.address().port+'/race.html');await other.evaluate(()=>window.ready);await other.evaluate(()=>window.storm());}
+  if(multi){other=await c.newPage();await other.goto('http://127.0.0.1:'+srv.address().port+'/race.html');await other.evaluate(()=>window.ready);await other.evaluate(()=>window.storm());}
   phase='new';Object.assign(progress,{shell:0,storm:0,t0:Date.now()});await p.evaluate(async()=>{await _swReg.update()});
   // The first page may be hidden after opening the second tab. Its animation frames can stop
   // while the service worker continues to install and send controllerchange events.
@@ -36,11 +38,42 @@ const srv=http.createServer((q,s)=>{if(phase==='new'){if(q.url.includes('final_s
    console.error('B7 INSTALL_NOT_FINISHED (not an activation failure) — waiting worker not observed',JSON.stringify({...state,precache_requests:progress.shell,storm_requests:progress.storm,elapsed_ms:Date.now()-progress.t0}));
    throw error;
   }
-  await p.waitForTimeout(1000);
+  if(reconnect){
+   await p.bringToFront();
+   await other.evaluate(()=>{ window.unsavedDraft='pending journal input'; });
+   const cachedManifest=page=>page.evaluate(async()=>{
+    const response=await fetch('./manifest.json');
+    return {status:response.status,content:await response.text()};
+   });
+   const original=await cachedManifest(p);
+   assert.equal(original.status,200);
+   await c.setOffline(true);
+   assert.deepEqual(await cachedManifest(p),original,'old cache available offline in first tab');
+   assert.deepEqual(await cachedManifest(other),original,'old cache available offline in second tab');
+   await c.setOffline(false);
+   await p.waitForFunction(()=>navigator.onLine,null,{polling:100,timeout:10000});
+  }else await p.waitForTimeout(1000);
   // FP569d: record whether pwaReload actually sent SKIP_WAITING. Under CPU load NRUpdateCoordinator.prepare()
   // can return false (peer reads not drained in 2 s); then no activation is requested and the bar offers a retry.
-  await p.evaluate(()=>{window.sent=[];const pm=ServiceWorker.prototype.postMessage;ServiceWorker.prototype.postMessage=function(m,...r){if(m&&m.type==='SKIP_WAITING')window.sent.push(Date.now()-window.t0);return pm.call(this,m,...r)};window.storm();window.t0=Date.now();pwaReload();});
-  const ok=await p.waitForFunction(()=>window.changed!==null,null,{polling:100,timeout:+(process.env.B7_ACTIVATE_TIMEOUT_MS||8000)}).then(()=>true,()=>false);
+  await p.evaluate(dropFirst=>{
+   window.sent=[];
+   const postMessage=ServiceWorker.prototype.postMessage;
+   ServiceWorker.prototype.postMessage=function(message,...args){
+    if(message?.type==='SKIP_WAITING'){
+     window.sent.push(Date.now()-window.t0);
+     if(dropFirst && window.sent.length===1)return;
+    }
+    return postMessage.call(this,message,...args);
+   };
+   window.storm();
+   window.t0=Date.now();
+   pwaReload();
+  },reconnect);
+  const ok=await p.waitForFunction(()=>window.changed!==null,null,{polling:100,timeout:+(process.env.B7_ACTIVATE_TIMEOUT_MS||(reconnect?15000:8000))}).then(()=>true,()=>false);
+  if(reconnect&&ok){
+   assert((await p.evaluate(()=>window.sent.length))>=2,'activation must recover after the first message is lost');
+   assert.equal(await other.evaluate(()=>window.unsavedDraft),'pending journal input','the second tab never reloads');
+  }
   if(!ok)console.error('B7 ACTIVATION_NOT_CONFIRMED',JSON.stringify(await p.evaluate(()=>({visibility:document.visibilityState,installing:_swReg.installing?.state||null,waiting:_swReg.waiting?.state||null,active:_swReg.active?.state||null,controller:!!navigator.serviceWorker.controller}))));
   const sent=(await p.evaluate(()=>window.sent)).length>0;
   if(!ok&&!sent){await p.waitForTimeout(Math.max(0,10500-(+(process.env.B7_ACTIVATE_TIMEOUT_MS||8000))));
