@@ -87,7 +87,14 @@ try{for(const [locale,rm] of [['uk-UA','no-preference'],['en-GB','no-preference'
   }finally{window.fp469ConsumerForDate=original;}
  });
  assert.match(weatherLabels.short,/G3/);
- const controlsBeforeWheel=await p.evaluate(()=>document.querySelector('.nr-sky-controls').nextElementSibling?.matches('.nr-sky-stage'));
+ const controlsBeforeWheel=await p.evaluate(()=>{
+  const scene=document.querySelector('[data-sky]');
+  const control=scene?.querySelector('.nr-sky-controls input');
+  const wheel=scene?.querySelector('.nr-sky-stage .nr-sky-wheel');
+  if(!control||!wheel) return false;
+  const c=control.getBoundingClientRect(),w=wheel.getBoundingClientRect();
+  return c.width>0&&c.height>0&&c.bottom<=w.top+1;
+ });
  assert(controlsBeforeWheel,'27-day playback must be reachable above the wheel');
  assert.match(weatherLabels.outlook,/27-денний орієнтир/);
  assert.doesNotMatch(weatherLabels.outlook,/G3/);

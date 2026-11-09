@@ -268,6 +268,8 @@ NRLocale.register([
 ['Оцінка за формулою джерела. Прогностичну точність щодо подій ще не підтверджено.','Score calculated using the source formula. Predictive accuracy for events has not been established.','Puntuación calculada con la fórmula de la fuente. La precisión predictiva de acontecimientos no está demostrada.','Score calculé avec la formule de la source. La précision prédictive concernant les événements n’est pas établie.'],
 ['Налаштування','Settings','Ajustes','Réglages'],
 ['Оформлення','Appearance','Apariencia','Apparence'],
+['Нічне небо (темне)','Night sky (dark)','Cielo nocturno (oscuro)','Ciel nocturne (sombre)'],
+['Світла тема для цього оформлення ще в роботі; класичний вигляд («Ще» → «Класичний вигляд») має світлу.','A light theme for this design is still in progress; the classic layout (More → Classic layout) has one.','El tema claro de este diseño aún está en desarrollo; el diseño clásico (Más → Diseño clásico) lo tiene.','Le thème clair de ce design est en cours ; la mise en page classique (Plus → Mise en page classique) en a un.'],
 ['Як у системі','System setting','Según el sistema','Selon le système'],
 ['Світле','Light','Claro','Clair'],
 ['Темне','Dark','Oscuro','Sombre'],

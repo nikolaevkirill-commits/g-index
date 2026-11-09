@@ -126,8 +126,9 @@ const server=http.createServer(async(req,res)=>{
   const c=await browser.newContext({viewport:{width:320,height:694},locale:'uk-UA',timezoneId:'Europe/Kyiv',serviceWorkers:'block'});
   await c.route(/^https?:\/\/(?!127\.0\.0\.1)/,r=>r.abort());
   const p=await c.newPage();await p.goto(base+'/index.html?channel=play#panch',{waitUntil:'domcontentloaded'});
-  await p.locator('[data-sky-live] .nr-sl-noloc').waitFor();
-  assert.equal(await p.locator('[data-sky-live] .nr-sl-body').count(),0);
+  // FP569k policy: with no saved place Sky shows Kyiv, labelled as the default place (not an empty card).
+  await p.locator('[data-sky-live] [data-sky-example]').waitFor();
+  assert.ok(await p.locator('[data-sky-live] .nr-sl-body').count()>=7);
   await p.evaluate(()=>fp434Go('today',false));
   const compactSun=p.locator('[data-sky-clock] [data-time-sun]');
   await compactSun.waitFor();

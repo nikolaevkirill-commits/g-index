@@ -137,3 +137,66 @@ html body #fp434Shell #nrRoute-today .nr-overview>.sr-time-sun{margin:16px 0!imp
 .sr-we-ics button{min-height:44px;padding:0 14px;border-radius:12px;border:1px solid var(--srf-line);background:transparent;color:var(--srf-accent);font:600 13px/1 'Fira Sans',system-ui,sans-serif;cursor:pointer}
 .sr-we-ics button:focus-visible{outline:3px solid var(--srf-accent);outline-offset:2px}
 .sr-we-ics small{color:var(--srf-soft);font-size:12px}
+
+/* FP569k (Claude, 09.11): WCAG AA contrast fixes found by the route audit (390, dark). */
+html body #fp434Shell details.nr-o-calendar .nr-o-days button[aria-pressed=true] *{color:#101429!important}
+html.wow body #fp434Shell #nrRoute-forecast nav.nr-b-week button[aria-pressed=true] *{color:#0B1530!important}
+html body .sr-g-cells i{color:rgba(243,239,248,.86)!important;opacity:1!important}
+html body #fp434Shell #nrRoute-forecast .nr-o-horizon-list [data-day] small,html body #fp434Shell #nrRoute-forecast .nr-o-horizon-list [data-day][aria-pressed="true"] small{color:rgba(243,239,248,.8)!important}
+
+/* FP569k (K1 «Доба над містом»): «зараз» — пунктир; вибраний/відтворюваний час — сам диск Сонця. Вночі диска немає, лише контур під горизонтом. */
+.sr-time-sun svg .sr-time-now-line{stroke:#fff!important;stroke-dasharray:3 3;opacity:.85;stroke-width:1.5}
+.sr-time-sun svg text.sr-time-now-label{fill:#fff;font:600 11px/1 'Fira Sans',system-ui,sans-serif;paint-order:stroke;stroke:#0b1430;stroke-width:3px;stroke-linejoin:round}
+.sr-time-sun svg .sr-time-disc{fill:#FFD978;filter:drop-shadow(0 0 6px rgba(255,214,120,.9))}
+.sr-time-sun svg .sr-time-ghost{fill:none;stroke:#FFD978!important;stroke-width:1.5;opacity:0}
+.sr-time-sun svg .sr-time-halo{transform-box:fill-box;transform-origin:center}
+html body .sr-time-sun[data-sun=below] [data-time-sun] :is(.sr-time-disc,.sr-time-halo){opacity:0!important}
+html body .sr-time-sun[data-sun=below] [data-time-sun] .sr-time-ghost{opacity:.55}
+html.sr-sky-motion .sr-time-sun[data-sun=above] .sr-time-halo{animation:srSunHalo 4.5s ease-in-out infinite}
+@keyframes srSunHalo{50%{transform:scale(1.14);opacity:.85}}
+@media (prefers-reduced-motion:reduce){.sr-time-sun .sr-time-halo{animation:none!important}}
+.sr-dayline [data-track] button.is-passing{box-shadow:0 0 0 3px #F2C46B,0 0 18px rgba(242,196,107,.75)!important}
+html.sr-sky-motion .sr-dayline [data-track] button.is-passing{animation:srPass 1.2s ease-out}
+@keyframes srPass{from{box-shadow:0 0 0 10px rgba(242,196,107,.0),0 0 30px rgba(242,196,107,.9)}}
+@media (prefers-reduced-motion:reduce){.sr-dayline [data-track] button.is-passing{animation:none!important}}
+/* FP569k Прогноз: «Тиждень» — графік + компактний список (кожна дата ≈ 52 px, а не 88); «27 днів» — без «Подій тижня», з кінцем періоду; «День» — речення-вердикт. */
+html[data-forecast-count="7"] body #nrRoute-forecast .nr-o-horizon-list{gap:6px!important}
+html[data-forecast-count="7"] body #nrRoute-forecast .nr-o-horizon-list [data-day]{min-height:50px!important;padding:6px 12px!important;gap:0 10px!important}
+html[data-forecast-count="7"] body #nrRoute-forecast .nr-o-horizon-list [data-day] strong{min-width:38px;min-height:38px;font-size:.95rem}
+html[data-forecast-count="7"] body #nrRoute-forecast .nr-o-horizon-list .sr-forecast-date{font-size:15px}
+html[data-forecast-count="27"] body #nrRoute-forecast [data-week-events]{display:none!important}
+#nrRoute-forecast .sr-forecast-end{margin:4px 0 14px;font:600 13px/1.4 'Fira Sans',system-ui,sans-serif;color:#cfd5f2;text-align:center}
+#nrRoute-forecast .sr-forecast-verdict{margin:8px 0 12px;padding:12px 14px;border-radius:14px;border:1px solid rgba(217,183,119,.45);background:rgba(217,183,119,.08)}
+#nrRoute-forecast .sr-forecast-verdict p{margin:2px 0;line-height:1.45}
+#nrRoute-forecast .sr-forecast-verdict .sr-fv-tone{font:600 1.15rem/1.3 Georgia,serif}
+#nrRoute-forecast .sr-forecast-verdict b{color:#8FE0BE}
+#nrRoute-forecast .sr-forecast-verdict .sr-fv-avoid b{color:#FF9AA2}
+#nrRoute-forecast .sr-forecast-verdict .sr-fv-check b{color:#F2C46B}
+/* FP569l Лінія дня: позначка = людська назва головної зміни + «+ ще N»; легенда «Що означають позначки». */
+.sr-dayline [data-track] button .sr-dl-mk-title{display:block;font-weight:700;line-height:1.15;white-space:normal;max-width:9.5em}
+.sr-dayline [data-track] button .sr-dl-mk-more{display:block;font-size:.72em;opacity:.85;line-height:1.1}
+.sr-dayline .sr-dl-legend{margin:6px 0 4px}
+.sr-dayline .sr-dl-legend summary{cursor:pointer;font-weight:600;color:#F2C46B;min-height:32px;display:flex;align-items:center}
+.sr-dayline .sr-dl-legend ul{margin:4px 0 6px;padding-left:18px;line-height:1.45}
+.sr-dayline .sr-dl-legend li{margin:3px 0}
+.nr-sky-planets li{align-items:baseline}
+.nr-sky-planets li .nr-sky-means{display:block;grid-column:1/-1;opacity:.78;font-size:.82em;line-height:1.35;margin:1px 0 4px}
+.nr-sky-planets li em i{font-style:normal;color:#F2C46B}
+.nr-you-sign{display:flex;gap:12px;align-items:center;margin:8px 0 10px}
+.nr-you-sign p{margin:0}
+.nr-you-sign small{display:block;opacity:.8;line-height:1.4;margin-top:2px}
+.nr-you-medal{flex:0 0 52px;width:52px;height:52px;border-radius:50%;display:grid;place-items:center;font-size:28px;color:#F2C46B;background:radial-gradient(circle at 35% 30%,rgba(242,196,107,.28),rgba(20,24,58,.9));border:1px solid rgba(242,196,107,.6);box-shadow:0 0 18px rgba(242,196,107,.25)}
+.nr-you-items .nr-you-more{margin-top:4px}
+.nr-you-items .nr-you-more summary{cursor:pointer;color:#F2C46B;font-weight:600;min-height:32px;display:flex;align-items:center}
+.nr-you-items .nr-you-more p{margin:4px 0 2px;line-height:1.45;opacity:.9}
+.nr-you-items .is-good .nr-you-tone{color:#8FE0BE}.nr-you-items .is-caution .nr-you-tone{color:#FF9AA2}
+.sr-dl-place-changes{margin:8px 0 12px;padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.05);border:1px solid rgba(185,163,227,.25)}
+.sr-dl-place-changes ul{list-style:none;margin:6px 0 0;padding:0;line-height:1.5}
+.sr-dl-place-changes li.is-yes::before{content:'✓ ';color:#8FE0BE;font-weight:700}
+.sr-dl-place-changes li.is-no::before{content:'— ';color:#F2C46B;font-weight:700}
+.sr-dl-geo{margin:8px 0 2px;min-height:44px}
+#nrRoute-forecast .sr-forecast-selected{margin:0 0 6px;font:600 14px/1.3 'Fira Sans',system-ui,sans-serif;color:#F2C46B}
+.sr-dl-look-title{margin:16px 0 2px;font:600 1.05rem/1.3 Georgia,serif;border-top:1px solid rgba(185,163,227,.25);padding-top:12px}
+.nr-you-nak{margin:2px 0 0!important;font-size:.92em}
+.nr-you-today{margin:6px 0 8px;padding:8px 10px;border-radius:10px;font-weight:600;background:rgba(255,255,255,.05)}
+.nr-you-today.is-good{color:#8FE0BE;border:1px solid rgba(99,230,173,.4)}.nr-you-today.is-caution{color:#FF9AA2;border:1px solid rgba(255,133,141,.4)}.nr-you-today.is-info{color:#E6E2F0;border:1px solid rgba(185,163,227,.3)}

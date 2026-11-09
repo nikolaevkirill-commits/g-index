@@ -10,14 +10,14 @@ function arrange(root){
  for(const el of els.slice(1)){if(prev.nextElementSibling!==el){const focused=el.contains(document.activeElement)?document.activeElement:null;prev.after(el);focused?.focus?.({preventScroll:true});moved=true}prev=el}
  return moved;
 }
-let observed=null;
+let observed=null,observer;
 function watch(){
  const root=document.querySelector('#nrRoute-today [data-overview="today"]');if(!root){setTimeout(watch,250);return}
- if(observed===root)return;observed=root;root.dataset.appToday='';
+ if(observed===root){arrange(root);return}observer?.disconnect();observed=root;root.dataset.appToday='';
  arrange(root);
- new MutationObserver(()=>arrange(root)).observe(root,{childList:true});
+ observer=new MutationObserver(()=>arrange(root));observer.observe(root,{childList:true});
 }
 window.NRAppToday={arrange:()=>{const r=document.querySelector('#nrRoute-today [data-overview="today"]');return r?arrange(r):false},order:ORDER};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',watch);else watch();
-window.addEventListener('sr:consumer-load',()=>{observed=null;watch()});
+window.addEventListener('sr:consumer-load',watch);
 })();

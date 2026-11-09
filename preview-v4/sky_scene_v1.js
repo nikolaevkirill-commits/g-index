@@ -6,7 +6,7 @@ const L=()=>{const l=window.NRLocale?.language||'uk';return ['uk','en','es','fr'
 const I=['uk','en','es','fr'];
 const T={
  pl_title:['Положення у знаках','Positions in the signs','Posiciones en los signos','Positions dans les signes'],
- pl_note:['Знак зодіаку (сидерично, Лахірі) і градус у ньому. Коло вище — та сама картина: 12 секторів = 12 знаків, крапки = планети.','Zodiac sign (sidereal, Lahiri) and degree within it. The wheel shows the same: 12 sectors = 12 signs, dots = planets.','Signo zodiacal (sideral, Lahiri) y grado dentro de él. La rueda muestra lo mismo: 12 sectores = 12 signos, puntos = planetas.','Signe du zodiaque (sidéral, Lahiri) et degré dans le signe. La roue montre la même chose : 12 secteurs = 12 signes, points = planètes.'],
+ pl_note:['Знаки — сидеричні (Лахірі), як у Джйотіш. Значення планет — традиційні, не виміряний вплив. Коло вище — та сама картина: 12 секторів = 12 знаків.','Signs are sidereal (Lahiri), as in Jyotish. Planet meanings are traditional, not a measured effect. The wheel above shows the same picture: 12 sectors = 12 signs.','Los signos son siderales (Lahiri), como en Jyotish. Los significados son tradicionales, no un efecto medido. La rueda muestra lo mismo: 12 sectores = 12 signos.','Signes sidéraux (Lahiri), comme en Jyotish. Les significations sont traditionnelles, pas un effet mesuré. La roue montre la même chose : 12 secteurs = 12 signes.'],
  pl_retro:['ретроградний','retrograde','retrógrado','rétrograde'],
  sw_model:["Розрахунок моделі", "Model run", "Cálculo del modelo", "Calcul du modèle"],
  sw_elapsed:["Оціночний час минув; фактичне прибуття не підтверджено цими даними.", "Estimated time has passed; actual arrival is not confirmed by these data.", "La hora estimada ya pasó; estos datos no confirman la llegada real.", "L’heure estimée est passée ; ces données ne confirment pas l’arrivée réelle."],
@@ -60,6 +60,10 @@ const VS='\uFE0E';
 const G={Sun:['☉','Сонце','Sun','Sol','Soleil','#F6D27A'],Moon:['☽','Місяць','Moon','Luna','Lune','#E9E6F5'],Mars:['♂','Марс','Mars','Marte','Mars','#FF8F7A'],Mercury:['☿','Меркурій','Mercury','Mercurio','Mercure','#9FE3C9'],Jupiter:['♃','Юпітер','Jupiter','Júpiter','Jupiter','#F0C46A'],Venus:['♀','Венера','Venus','Venus','Vénus','#F3B7D3'],Saturn:['♄','Сатурн','Saturn','Saturno','Saturne','#A9A3D9'],Rahu:['☊','Раху','Rahu','Rahu','Rahu','#8FB6FF'],Ketu:['☋','Кету','Ketu','Ketu','Ketu','#C49BFF']};
 const gName=g=>G[g][1+I.indexOf(L())];
 const SIGNS=['♈','♉','♊','♋','♌','♍','♎','♏','♐','♑','♒','♓'].map(s=>s+'\uFE0E');
+const SIGN_GLYPH=['♈','♉','♊','♋','♌','♍','♎','♏','♐','♑','♒','♓'];
+const RETRO_HINT=['з Землі здається, що рухається назад','seems to move backwards as seen from Earth','parece moverse hacia atrás vista desde la Tierra','semble reculer vu de la Terre'];
+// Traditional significations (Jyotish), shown as tradition, not as a measured effect.
+const MEANS={Sun:['за традицією: сила волі, влада, здоров’я','tradition: will, authority, vitality','tradición: voluntad, autoridad, vitalidad','tradition : volonté, autorité, vitalité'],Moon:['за традицією: настрій, емоції, тіло','tradition: mood, emotions, body','tradición: ánimo, emociones, cuerpo','tradition : humeur, émotions, corps'],Mars:['за традицією: дія, суперечки, ризик','tradition: action, disputes, risk','tradición: acción, disputas, riesgo','tradition : action, conflits, risque'],Mercury:['за традицією: розум, мова, торгівля','tradition: mind, speech, trade','tradición: mente, habla, comercio','tradition : esprit, parole, commerce'],Jupiter:['за традицією: знання, гроші, вчителі','tradition: knowledge, wealth, teachers','tradición: saber, riqueza, maestros','tradition : savoir, richesse, maîtres'],Venus:['за традицією: стосунки, краса, комфорт','tradition: relationships, beauty, comfort','tradición: relaciones, belleza, confort','tradition : relations, beauté, confort'],Saturn:['за традицією: праця, терпіння, обмеження','tradition: work, patience, limits','tradición: trabajo, paciencia, límites','tradition : travail, patience, limites'],Rahu:['за традицією: бажання, нове, плутанина','tradition: desire, novelty, confusion','tradición: deseo, novedad, confusión','tradition : désir, nouveauté, confusion'],Ketu:['за традицією: відпускання, завершення','tradition: letting go, endings','tradición: soltar, finales','tradition : lâcher prise, fins']};
 const SIGN_NAMES=[['Овен','Aries','Aries','Bélier'],['Телець','Taurus','Tauro','Taureau'],['Близнюки','Gemini','Géminis','Gémeaux'],['Рак','Cancer','Cáncer','Cancer'],['Лев','Leo','Leo','Lion'],['Діва','Virgo','Virgo','Vierge'],['Терези','Libra','Libra','Balance'],['Скорпіон','Scorpio','Escorpio','Scorpion'],['Стрілець','Sagittarius','Sagitario','Sagittaire'],['Козеріг','Capricorn','Capricornio','Capricorne'],['Водолій','Aquarius','Acuario','Verseau'],['Риби','Pisces','Piscis','Poissons']];
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const reduce=matchMedia('(prefers-reduced-motion: reduce)');
@@ -80,10 +84,10 @@ function fmtDay(ds){try{return NRPresentation.dateFormatter(window.NRLocale?.loc
 // Stars in three groups: three animations instead of one per star (keeps idle CPU low).
 function stars(n,rmin,rmax,seed){const g=['','',''];let x=seed;const rnd=()=>(x=(x*16807)%2147483647)/2147483647;for(let i=0;i<n;i++){const a=rnd()*360,r=rmin+rnd()*(rmax-rmin),[px,py]=ring(a,r);g[i%3]+=`<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="${(0.5+rnd()*1.1).toFixed(2)}"/>`}return g.map((c,i)=>`<g class="nr-sky-star" style="--d:${(i*1.3).toFixed(1)}s;--t:${(3.2+i*0.9).toFixed(1)}s">${c}</g>`).join('')}
 const plainScene={
- uk:{near:'Зближення',exact:'Точне з’єднання',city:'за Києвом',details:'Знаки та градуси',guide:'Оберіть дату, щоб побачити зближення й переходи. Це календар подій неба.',disabled:'Автовідтворення вимкнене. Дату можна змінити повзунком.'},
- en:{near:'Approach',exact:'Exact conjunction',city:'Kyiv time',details:'Signs and degrees',guide:'Choose a date to see approaches and transitions on the sky calendar.',disabled:'Autoplay is off. Use the slider to change the date.'},
- es:{near:'Acercamiento',exact:'Conjunción exacta',city:'hora de Kyiv',details:'Signos y grados',guide:'Elija una fecha para ver acercamientos y cambios en el calendario del cielo.',disabled:'La reproducción está desactivada. Cambie la fecha con el control deslizante.'},
- fr:{near:'Rapprochement',exact:'Conjonction exacte',city:'heure de Kyiv',details:'Signes et degrés',guide:'Choisissez une date pour voir les rapprochements et les transitions dans le calendrier du ciel.',disabled:'La lecture automatique est désactivée. Changez de date avec le curseur.'}
+ uk:{near:'Зближення',exact:'Точне з’єднання',city:'за Києвом',details:'Де зараз планети',guide:'Оберіть дату, щоб побачити зближення й переходи. Це календар подій неба.',disabled:'Автовідтворення вимкнене. Дату можна змінити повзунком.'},
+ en:{near:'Approach',exact:'Exact conjunction',city:'Kyiv time',details:'Where the planets are',guide:'Choose a date to see approaches and transitions on the sky calendar.',disabled:'Autoplay is off. Use the slider to change the date.'},
+ es:{near:'Acercamiento',exact:'Conjunción exacta',city:'hora de Kyiv',details:'Dónde están los planetas',guide:'Elija una fecha para ver acercamientos y cambios en el calendario del cielo.',disabled:'La reproducción está desactivada. Cambie la fecha con el control deslizante.'},
+ fr:{near:'Rapprochement',exact:'Conjonction exacte',city:'heure de Kyiv',details:'Où sont les planètes',guide:'Choisissez une date pour voir les rapprochements et les transitions dans le calendrier du ciel.',disabled:'La lecture automatique est désactivée. Changez de date avec le curseur.'}
 };
 function conjunctionCopy(event,ds){
  const words=plainScene[L()],reading=event.reading.text[L()]||event.reading.text.en;
@@ -98,14 +102,18 @@ function conjunctionCopy(event,ds){
 }
 function planets(ds,compact){
  const d=sky?.daily?.[dayIndex(ds)];if(!d)return '';
- const rows=Object.keys(G).filter(g=>d.grahas?.[g]&&Number.isFinite(d.grahas[g].lon)).map(g=>{const p=d.grahas[g],lon=((p.lon%360)+360)%360,s=Math.floor(lon/30),deg=Math.floor(lon-s*30);return `<li data-g="${g}" style="--c:${G[g][5]}"><b aria-hidden="true">${G[g][0]+VS}</b><span>${esc(gName(g))}</span><em>${esc(SIGN_NAMES[s][I.indexOf(L())])} ${deg}°${p.retrograde&&g!=='Rahu'&&g!=='Ketu'?' · '+esc(t('pl_retro')):''}</em></li>`}).join('');
+ // FP569l (owner: «кому цікаві ці градуси»): sign symbol + name, «початок/середина/кінець знака» and what the planet stands for
+ // in the tradition; the exact degree stays in the tooltip and the accessible name.
+ const part=deg=>[['на початку знака','early in the sign','al inicio del signo','au début du signe'],['у середині знака','mid-sign','a mitad del signo','au milieu du signe'],['наприкінці знака','late in the sign','al final del signo','en fin de signe']][deg<10?0:deg<20?1:2][I.indexOf(L())];
+ const rows=Object.keys(G).filter(g=>d.grahas?.[g]&&Number.isFinite(d.grahas[g].lon)).map(g=>{const p=d.grahas[g],lon=((p.lon%360)+360)%360,s=Math.floor(lon/30),deg=Math.floor(lon-s*30),sign=SIGN_NAMES[s][I.indexOf(L())],retro=p.retrograde&&g!=='Rahu'&&g!=='Ketu',means=MEANS[g]?.[I.indexOf(L())]||'';
+  return `<li data-g="${g}" style="--c:${G[g][5]}" title="${esc(sign)} ${deg}°"><b aria-hidden="true">${G[g][0]+VS}</b><span>${esc(gName(g))}</span><em><i aria-hidden="true">${SIGN_GLYPH[s]+VS}</i> ${esc(sign)} · ${esc(part(deg))}${retro?' · '+esc(t('pl_retro'))+' <small>('+esc(RETRO_HINT[I.indexOf(L())])+')</small>':''}</em>${means?`<small class="nr-sky-means">${esc(means)}</small>`:''}</li>`}).join('');
  return `<details class="nr-sky-planet-details"><summary>${esc(plainScene[L()].details)}</summary><div class="nr-sky-planets${compact?' is-compact':''}"><h4>${esc(t('pl_title'))}</h4><ul>${rows}</ul>${compact?'':`<p class="nr-sky-planets-note">${esc(t('pl_note'))}</p>`}</div></details>`;
 }
 function wheel(ds,mini){
  const d=sky.daily[dayIndex(ds)];if(!d)return '';const gid=mini?'nrSkyCoreMini':'nrSkyCore';
  const items=dayItems(ds),active=new Map();
  for(const x of items)for(const b of x.bodies)if(G[b])(active.get(b)||active.set(b,new Set()).get(b)).add(x.type);
- let s=`<svg class="nr-sky-wheel${mini?' is-mini':''}" viewBox="-200 -200 400 400" role="img" aria-label="${esc(t('wheel')+' '+fmtDay(ds))}">`;
+ let s=`<svg class="nr-sky-wheel${mini?' is-mini':''}" viewBox="-214 -214 428 428" role="img" aria-label="${esc(t('wheel')+' '+fmtDay(ds))}">`;
  s+=`<defs><radialGradient id="${gid}"><stop offset="0" stop-color="#4A3C80" stop-opacity=".55"/><stop offset="1" stop-color="#101429" stop-opacity="0"/></radialGradient></defs>`;
  s+=`<circle r="${R+34}" class="nr-sky-rim"/><circle r="${R}" class="nr-sky-band"/><circle r="${R-44}" class="nr-sky-inner"/><circle r="${R-46}" fill="url(#${gid})"/>`+stars(mini?18:46,22,R-50,mini?7:11)+stars(mini?6:18,R+12,R+33,mini?3:5);
  // gandanta junctions (water→fire): 0°, 120°, 240°
@@ -119,11 +127,12 @@ function wheel(ds,mini){
  for(const x of items.filter(x=>x.type==='conjunction'||x.type==='graha_yuddha')){const [a,b]=x.bodies.map(g=>ring(d.grahas[g].lon,R+22));s+=`<line class="nr-sky-link nr-sky-${x.type}" x1="${a[0].toFixed(1)}" y1="${a[1].toFixed(1)}" x2="${b[0].toFixed(1)}" y2="${b[1].toFixed(1)}"/>`}
  // planets: stacked radially when close
  const order=Object.keys(G).map(g=>({g,lon:d.grahas[g].lon})).sort((a,b)=>a.lon-b.lon);const lane={};
- order.forEach((p,i)=>{let l=0;for(let j=0;j<i;j++){const q=order[j];if(Math.abs(((p.lon-q.lon+540)%360)-180)<9&&lane[q.g]===l)l++}lane[p.g]=l});
+ // FP569l: greedy lanes that re-check every nearer body (the old one-pass loop let 3+ bodies collide: Mars/Jupiter/Ketu/Moon).
+ order.forEach((p,i)=>{const near=order.slice(0,i).filter(q=>Math.abs(((p.lon-q.lon+540)%360)-180)<10).map(q=>lane[q.g]);let l=0;while(near.includes(l))l++;lane[p.g]=l});
  const exact=new Set(items.filter(x=>x.type==='conjunction'&&x.exact?.kyiv_date===ds).flatMap(x=>x.bodies));
- for(const {g} of order){const p=d.grahas[g],[x,y]=ring(p.lon,R+22+lane[g]*15),a=active.get(g)||new Set();
+ for(const {g} of order){const p=d.grahas[g],[x,y]=ring(p.lon,R+22+lane[g]*16),a=active.get(g)||new Set();
   const cls=['nr-sky-planet',...[...a].map(k=>'is-'+k.replace('_','-'))];if(p.retrograde&&g!=='Rahu'&&g!=='Ketu')cls.push('is-retro');if(exact.has(g))cls.push('is-exact');
-  s+=`<g class="${cls.join(' ')}" data-g="${g}" data-lon="${p.lon}" data-rad="${R+22+lane[g]*15}" style="--c:${G[g][5]};transform:translate(${x.toFixed(1)}px,${y.toFixed(1)}px)"><circle class="nr-sky-flare" r="11"/><circle class="nr-sky-halo" r="11"/><circle class="nr-sky-dot" r="8.5"/><text class="nr-sky-glyph" aria-hidden="true">${G[g][0]+VS}</text>${cls.includes('is-retro')?'<path class="nr-sky-loop" d="M-13 -8 a7 7 0 1 1 0 0.1"/>':''}</g>`}
+  s+=`<g class="${cls.join(' ')}" data-g="${g}" data-lon="${p.lon}" data-rad="${R+22+lane[g]*16}" style="--c:${G[g][5]};transform:translate(${x.toFixed(1)}px,${y.toFixed(1)}px)"><circle class="nr-sky-flare" r="11"/><circle class="nr-sky-halo" r="11"/><circle class="nr-sky-dot" r="8.5"/><text class="nr-sky-glyph" aria-hidden="true">${G[g][0]+VS}</text>${cls.includes('is-retro')?'<path class="nr-sky-loop" d="M-13 -8 a7 7 0 1 1 0 0.1"/>':''}</g>`}
  // The central label reports Kp without implying local aurora visibility.
  const k=kpFor(ds);
  s+=`<g class="nr-sky-earth"><circle r="15" class="nr-sky-globe"/><text class="nr-sky-kp" y="52">${k?'Kp '+new Intl.NumberFormat(window.NRLocale?.locale||'uk-UA',{maximumFractionDigits:2}).format(k.kp).replace(/\.0$/,''):''}</text>${k?`<text class="nr-sky-kp nr-sky-kp-src" y="66" data-kp-src="${k.src==='NOAA_27day_outlook'?'outlook':'forecast'}">${esc(k.src==='NOAA_27day_outlook'?t('kp27s'):t('kpfs'))}</text>`:''}</g>`;
@@ -140,7 +149,9 @@ function strip(ds){
 function list(ds){
  const items=dayItems(ds).filter(x=>x.reading.intensity>=1),lang=L();
  if(!items.length)return `<p class="nr-sky-none">${esc(t('none'))}</p>`;
- const li=x=>{const r=x.reading,when=x.at?x.at.kyiv:(x.exact&&x.exact.kyiv_date===ds?t('exact')+' '+x.exact.kyiv:[x.start.kyiv_date<ds||x.started_before_window?'':t('from')+' '+x.start.kyiv,x.continues_after_window?t('ongoing'):t('until')+' '+x.end.kyiv].filter(Boolean).join(' · '));
+ // FP569k: «24 лист., 18:46» instead of the raw «2026-11-24 18:46» from the feed.
+ const kt=s=>{const m=/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/.exec(String(s||''));if(!m)return s;return new Intl.DateTimeFormat(window.NRLocale?.locale||'uk-UA',{day:'numeric',month:'short',timeZone:'UTC'}).format(new Date(Date.UTC(+m[1],m[2]-1,+m[3],12)))+', '+m[4]+':'+m[5]};
+ const li=x=>{const r=x.reading,when=x.at?kt(x.at.kyiv):(x.exact&&x.exact.kyiv_date===ds?t('exact')+' '+kt(x.exact.kyiv):[x.start.kyiv_date<ds||x.started_before_window?'':t('from')+' '+kt(x.start.kyiv),x.continues_after_window?t('ongoing'):t('until')+' '+kt(x.end.kyiv)].filter(Boolean).join(' · '));
   const eventTime=x.at||(x.exact?.kyiv_date===ds?x.exact:null);
   const action=window.SRSkyTime&&Number.isFinite(Date.parse(eventTime?.utc))
    ?`<button type="button" class="nr-sky-event-time" data-sky-event-at="${esc(eventTime.utc)}">${esc(t('event_sky'))}</button>`:'';

@@ -61,28 +61,49 @@ function natal(d){
 }
 const house=(from,to)=>((to-from)%12+12)%12+1;
 const TARA=['Janma','Sampat','Vipat','Kshema','Pratyak','Sadhana','Naidhana','Mitra','Atimitra'],TARA_BAD=[1,3,5,7];
+// FP569k: names in the reader's script; the Sanskrit term stays in brackets (uk) or as is (en/es/fr).
+const TARA_UK=['Джанма','Сампат','Віпат','Кшема','Пратьяк','Садхана','Найдхана','Мітра','Атімітра'];
+const taraName=i=>(window.NRLocale?.language||'uk')==='uk'?TARA_UK[i]+' ('+TARA[i]+')':TARA[i];
 function lines(ds,sky){
  const d=slot();if(!d)return {missing:true};
  const n=natal(d);if(!n)return {missing:true};
  const day=sky?.daily?.find(x=>x.date===ds);if(!day)return {missing:false,items:[],certain:n.certain,unavailable:true};
  const g=day.grahas,items=[];
- if(house(n.sign,g.Moon.sign)===8)items.push({k:'caution',body:'lunar',symbol:'☾',text:t('chandra')});
+ if(house(n.sign,g.Moon.sign)===8)items.push({k:'caution',body:'lunar',symbol:'☾',more:'chandra',text:t('chandra')});
  const pos=((g.Moon.nakshatra-n.nak)%27+27)%27,grp=pos%9+1;
- items.push({k:TARA_BAD.includes(grp)?'caution':'good',body:'lunar',symbol:'☾',help:p('tara'),text:t('tara')+': '+TARA[grp-1]+' — '+(TARA_BAD.includes(grp)?t('tara_bad'):t('tara_good'))});
+ items.push({k:TARA_BAD.includes(grp)?'caution':'good',body:'lunar',symbol:'☾',more:'tara',help:p('tara'),text:t('tara')+': '+taraName(grp-1)+' — '+(TARA_BAD.includes(grp)?t('tara_bad'):t('tara_good'))});
  const hs=house(n.sign,g.Saturn.sign);
- if([12,1,2].includes(hs))items.push({k:'caution',body:'saturn',symbol:'♄',text:t('sade').replace('{p}',hs===12?1:hs===1?2:3).replace('{h}',ord(hs))});
- else if([4,8].includes(hs))items.push({k:'caution',body:'saturn',symbol:'♄',text:t('dhaiya').replace('{h}',ord(hs))});
- const hj=house(n.sign,g.Jupiter.sign);items.push({k:[2,5,7,9,11].includes(hj)?'good':'info',body:'jupiter',symbol:'♃',text:t('jup').replace('{h}',ord(hj))+([2,5,7,9,11].includes(hj)?t('jup_good'):'')});
- return {missing:false,items,certain:n.certain,sign:n.sign};
+ if([12,1,2].includes(hs))items.push({k:'caution',body:'saturn',symbol:'♄',more:'sade',text:t('sade').replace('{p}',hs===12?1:hs===1?2:3).replace('{h}',ord(hs))});
+ else if([4,8].includes(hs))items.push({k:'caution',body:'saturn',symbol:'♄',more:'dhaiya',text:t('dhaiya').replace('{h}',ord(hs))});
+ const hj=house(n.sign,g.Jupiter.sign);items.push({k:[2,5,7,9,11].includes(hj)?'good':'info',body:'jupiter',symbol:'♃',more:'jup',text:t('jup').replace('{h}',ord(hj))+([2,5,7,9,11].includes(hj)?t('jup_good'):'')});
+ return {missing:false,items,certain:n.certain,sign:n.sign,nak:n.nak};
 }
+// FP569l (owner: «розписати, і не тільки червоне чи зелене, а й знак»): plain «що це означає» for each line,
+// a shape next to the colour (▲ сприятливо · ▼ обережно · ● довідка) and a Moon-sign medallion.
+const MORE={
+ chandra:['Чандраштама: приблизно раз на 27 днів Місяць 2–3 дні проходить 8-й знак від вашого натального Місяця. Традиція радить у ці дні не починати важливого й не сперечатися.','Chandrashtama: about once every 27 days the Moon spends 2–3 days in the 8th sign from your natal Moon. Tradition advises not to start important things.','Chandrashtama: cada ~27 días la Luna pasa 2–3 días en el 8.º signo desde tu Luna natal. La tradición aconseja no empezar cosas importantes.','Chandrashtama : environ tous les 27 jours, la Lune passe 2–3 jours dans le 8e signe depuis votre Lune natale. La tradition déconseille de commencer l’important.'],
+ tara:['Тара Бала: «зірку дня» (накшатру, де зараз Місяць) рахують від вашої зірки народження. 9 видів ідуть по колу: Віпат, Пратьяк, Найдхана і сама Джанма — обережні, решта — сприятливі. Змінюється приблизно щодня.','Tara Bala: the day’s star (the Moon’s nakshatra) is counted from your birth star. Nine kinds repeat: Vipat, Pratyak, Naidhana and Janma itself are cautious, the rest favourable. Changes about daily.','Tara Bala: la estrella del día se cuenta desde tu estrella natal. Nueve tipos se repiten; Vipat, Pratyak, Naidhana y Janma son de cautela.','Tara Bala : l’étoile du jour est comptée depuis votre étoile natale. Neuf types se répètent ; Vipat, Pratyak, Naidhana et Janma appellent à la prudence.'],
+ sade:['Саде Саті — близько 7,5 року, поки Сатурн проходить знак перед вашим натальним Місяцем, сам знак і знак після нього (3 фази по ~2,5 року). У традиції — час навантаження й перевірки на міцність, а не прогноз конкретних подій.','Sade Sati: about 7.5 years while Saturn passes the sign before your natal Moon, that sign and the next (three ~2.5-year phases). In the tradition a time of load and testing, not a forecast of events.','Sade Sati: unos 7,5 años mientras Saturno pasa por el signo anterior a tu Luna natal, ese signo y el siguiente. Época de carga, no una predicción de hechos.','Sade Sati : environ 7,5 ans pendant que Saturne traverse le signe précédant votre Lune natale, ce signe et le suivant. Période d’effort, pas une prédiction.'],
+ dhaiya:['Дхайя — близько 2,5 року, коли Сатурн у 4-му або 8-му знаку від вашого натального Місяця. У традиції — період зайвих турбот удома чи у справах.','Dhaiya: about 2.5 years with Saturn in the 4th or 8th sign from your natal Moon; traditionally extra worries at home or work.','Dhaiya: unos 2,5 años con Saturno en el 4.º u 8.º signo desde tu Luna natal.','Dhaiya : environ 2,5 ans avec Saturne dans le 4e ou 8e signe depuis votre Lune natale.'],
+ jup:['Юпітер проходить один знак приблизно за рік. Положення у 2-му, 5-му, 7-му, 9-му чи 11-му знаку від вашого Місяця традиція вважає сприятливим (гроші, діти й творчість, партнерство, навчання, здобутки).','Jupiter spends about a year in each sign. The 2nd, 5th, 7th, 9th or 11th sign from your Moon is traditionally favourable (money, creativity, partnership, learning, gains).','Júpiter pasa un año por signo. Los signos 2, 5, 7, 9 y 11 desde tu Luna se consideran favorables.','Jupiter passe environ un an par signe. Les signes 2, 5, 7, 9 et 11 depuis votre Lune sont jugés favorables.']};
+const MORE_LABEL=['Що це означає','What this means','Qué significa','Ce que cela signifie'];
+const SHAPE={good:'▲',caution:'▼',info:'●'};
+const NAK_UK=['Ашвіні','Бгарані','Кріттіка','Рогіні','Мрігашіра','Ардра','Пунарвасу','Пуш’я','Ашлеша','Магха','Пурва Пхалгуні','Уттара Пхалгуні','Хаста','Чітра','Сваті','Вішакха','Анурадха','Джйештха','Мула','Пурва Ашадха','Уттара Ашадха','Шравана','Дганіштха','Шатабгіша','Пурва Бгадрапада','Уттара Бгадрапада','Реваті'];
+const NAK_EN=['Ashwini','Bharani','Krittika','Rohini','Mrigashira','Ardra','Punarvasu','Pushya','Ashlesha','Magha','Purva Phalguni','Uttara Phalguni','Hasta','Chitra','Swati','Vishakha','Anuradha','Jyeshtha','Mula','Purva Ashadha','Uttara Ashadha','Shravana','Dhanishta','Shatabhisha','Purva Bhadrapada','Uttara Bhadrapada','Revati'];
+const NAK_LABEL=['Зірка народження (накшатра)','Birth star (nakshatra)','Estrella natal (nakshatra)','Étoile de naissance (nakshatra)'];
+const TODAY_SUM=[[ 'Сьогодні за традицією: більше приводів для обережності','Сьогодні за традицією: більше сприятливого','Сьогодні за традицією: рівно'],['Today, by tradition: more reasons for caution','Today, by tradition: more favourable','Today, by tradition: balanced'],['Hoy, según la tradición: más motivos de cautela','Hoy, según la tradición: más favorable','Hoy, según la tradición: equilibrado'],['Aujourd’hui, selon la tradition : plus de prudence','Aujourd’hui, selon la tradition : plus favorable','Aujourd’hui, selon la tradition : équilibré']];
+const MOON_SIGN_NOTE=['Знак, де був Місяць у мить народження. У Джйотіш від нього рахують особисті переходи — як від «точки відліку».','The sign the Moon was in at birth. In Jyotish personal transits are counted from it.','El signo de la Luna al nacer; en Jyotish los tránsitos personales se cuentan desde él.','Le signe de la Lune à la naissance ; en Jyotish, les transits personnels sont comptés depuis lui.'];
 function html(ds,sky){
  const r=lines(ds,sky);
  if(r.missing){return `<div class="nr-dv-you is-empty"><p>${esc(t('add'))}</p><details class="nr-dv-you-form"><summary>${esc(t('addBtn'))}</summary><form data-natal-form><label>${esc(t('date'))}<input type="date" name="date" required></label><label>${esc(t('time'))}<input type="time" name="time"></label><label>${esc(t('zone'))}<input type="text" name="tz" value="${esc(Intl.DateTimeFormat().resolvedOptions().timeZone||'Europe/Kyiv')}" autocomplete="off"></label><button type="submit">${esc(t('save'))}</button></form></details></div>`}
  if(r.unavailable)return '';
  const sign=Z[ix()][r.sign];
- const badge=r.certain&&sign?`<p class="nr-you-sign"><span aria-hidden="true">${signGlyph[r.sign]}</span> ${esc(p('moon'))} · <strong>${esc(sign)}</strong></p>`:'';
- const rows=r.items.map(item=>`<li class="is-${item.k}"><span class="nr-you-glyph" aria-hidden="true">${item.symbol}</span><div><strong>${esc(p(item.body))}</strong><small class="nr-you-tone">${esc(p(item.k))}</small><p>${esc(item.text)}</p>${item.help?' <small>'+esc(item.help)+'</small>':''}</div></li>`).join('');
- return `<div class="nr-dv-you"><p><b>${esc(t('you'))}</b> <small>(${esc(t('note'))})</small></p>${badge}<p class="nr-you-basis">${esc(p('basis'))}</p><ul class="nr-you-items">${rows}</ul>${r.certain?'':`<p class="nr-dv-you-warn">${esc(t('uncertain'))}</p>`}</div>`;
+ const nakName=Number.isInteger(r.nak)?(ix()===0?NAK_UK:NAK_EN)[r.nak]:'';
+ const badge=r.certain&&sign?`<div class="nr-you-sign"><span class="nr-you-medal" aria-hidden="true">${signGlyph[r.sign]}&#xFE0E;</span><div><p>${esc(p('moon'))} · <strong>${esc(sign)}</strong></p>${nakName?`<p class="nr-you-nak">${esc(NAK_LABEL[ix()])}: <strong>${esc(nakName)}</strong></p>`:''}<small>${esc(MOON_SIGN_NOTE[ix()])}</small></div></div>`:'';
+ const good=r.items.filter(x=>x.k==='good').length,bad=r.items.filter(x=>x.k==='caution').length;
+ const sum=r.items.length?`<p class="nr-you-today is-${bad>good?'caution':good>bad?'good':'info'}"><span aria-hidden="true">${bad>good?'▼':good>bad?'▲':'●'}</span> ${esc(TODAY_SUM[ix()][bad>good?0:good>bad?1:2])} (▲ ${good} · ▼ ${bad})</p>`:'';
+ const rows=r.items.map(item=>`<li class="is-${item.k}"><span class="nr-you-glyph" aria-hidden="true">${item.symbol}</span><div><strong>${esc(p(item.body))}</strong><small class="nr-you-tone"><span aria-hidden="true">${SHAPE[item.k]||'●'}</span> ${esc(p(item.k))}</small><p>${esc(item.text)}</p>${item.more&&MORE[item.more]?`<details class="nr-you-more"><summary>${esc(MORE_LABEL[ix()])}</summary><p>${esc(MORE[item.more][ix()])}</p></details>`:item.help?' <small>'+esc(item.help)+'</small>':''}</div></li>`).join('');
+ return `<div class="nr-dv-you"><p><b>${esc(t('you'))}</b> <small>(${esc(t('note'))})</small></p>${badge}${sum}<p class="nr-you-basis">${esc(p('basis'))}</p><ul class="nr-you-items">${rows}</ul>${r.certain?'':`<p class="nr-dv-you-warn">${esc(t('uncertain'))}</p>`}</div>`;
 }
 document.addEventListener('submit',e=>{
  const f=e.target.closest?.('[data-natal-form]');if(!f)return;e.preventDefault();

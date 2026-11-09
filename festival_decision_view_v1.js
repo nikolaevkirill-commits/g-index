@@ -63,6 +63,8 @@ function mount(){
   const host=document.getElementById('nrRoute-'+route);if(!host||boxes.has(route))continue;
   // Wait for the Today overview to finish wrapping legacy content.
   if(route==='today'&&!host.querySelector('.nr-overview'))continue;
+  // FP569n (P12): in the main design the research tool lives only in «Небо/Панчанга», not on the Today screen.
+  if(route==='today'&&window.SR_MAIN_DESIGN===true){host.querySelector('[data-festival-route="today"]')?.remove();continue;}
   const box=document.createElement('details');box.className='sr-festival-decision';box.dataset.festivalRoute=route;box.setAttribute('translate','no');
   box.innerHTML='<summary></summary><p data-note></p><label><span data-label></span><input type="date"></label><select data-cases aria-label="Research case"><option value="live"></option></select><select data-event aria-label="Festival"><option value="sankashti">Sankashti Chaturthi</option><option value="masik_shivaratri">Masik Shivaratri</option></select><button type="button" data-run></button><div data-result role="status"></div>';
   for(const c of root.SRFestivalEvidence.cases){const o=add(box.querySelector('[data-cases]'),'option',c.input.place.name+' · '+c.id);o.value=c.id;}

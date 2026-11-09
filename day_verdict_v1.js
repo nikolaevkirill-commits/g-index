@@ -124,6 +124,8 @@ window.NRDayVerdict={
  build:ds=>{const r=root();return r?build(r,ds||selected(r)):null},
  render,
  matches:matchAll,
+ // FP569k: the same plain-language verdict for any date, reused by «Прогноз · День» (one sentence + good/avoid/check lines).
+ summary:ds=>{const r=root();if(!r)return null;const v=build(r,ds);return {tone:t(v.tone),lines:[['good',v.good],['avoid',v.avoid],['check',v.care]].filter(([,xs])=>xs.length).map(([k,xs])=>({kind:k,label:t(k),text:xs.join(' · ')}))}},
  hasMatch:ds=>MATCH_VALUES.includes(matchAll()[ds]?.v)
 };
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{watch();loadSky()});else{watch();loadSky()}

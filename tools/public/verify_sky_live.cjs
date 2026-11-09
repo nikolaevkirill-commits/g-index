@@ -19,7 +19,7 @@ try{
   await p.clock.runFor(4000);
   await p.waitForFunction(()=>document.querySelector('[data-sky-live] .nr-sl-moon'),null,{timeout:20000});
   const got=await p.evaluate(()=>{const h=document.querySelector('[data-sky-live]'),m=h.querySelector('.nr-sl-moon');
-   return {time:h.dataset.time,inScene:!!h.closest('[data-sky]'),fraction:+m.dataset.fraction,limb:+m.dataset.limb,rx:+m.dataset.rx,
+   return {time:h.dataset.time,inScene:!!h.closest('[data-sky]'),fraction:+m.dataset.fraction,limb:+m.dataset.limb,rx:+m.dataset.rx, radius:+m.querySelector("circle")?.getAttribute("r"),
     bodies:[...h.querySelectorAll('.nr-sl-body')].map(g=>({b:g.dataset.body,alt:+g.dataset.alt,az:+g.dataset.az,transform:g.style.transform,below:g.classList.contains('is-below')})),
     list:[...h.querySelectorAll('.nr-sl-list li')].map(li=>({b:li.dataset.body,up:li.classList.contains('is-up')})),
     aurora:h.querySelector('[data-aurora]')?.dataset.aurora,mlat:+h.querySelector('[data-aurora]')?.dataset.mlat,
@@ -31,7 +31,7 @@ try{
   // Independent recomputation in Node with the same library and time.
   const t=A.MakeTime(new Date(got.time)),obs=new A.Observer(KYIV.lat,KYIV.lon,0),ill=A.Illumination('Moon',t);
   assert(Math.abs(got.fraction-ill.phase_fraction)<1e-5,entry+' moon fraction '+got.fraction+' vs '+ill.phase_fraction);
-  const r=132/2-4;assert(Math.abs(got.rx-Math.abs(1-2*ill.phase_fraction)*r)<1e-2,'terminator ellipse');
+  const r=got.radius;assert(r>0,"Moon has a nonzero disc radius");assert(Math.abs(got.rx-Math.abs(1-2*ill.phase_fraction)*r)<1e-2,'terminator ellipse');
   assert.equal(got.bodies.length,7,'7 bodies on the sky strip');assert.equal(got.list.length,7,'7 rows');
   for(const g of got.bodies){const e=A.Equator(g.b,t,obs,true,true),h=A.Horizon(t,obs,e.ra,e.dec,'normal');
    assert(Math.abs(g.alt-h.altitude)<1e-2&&Math.abs(((g.az-h.azimuth+540)%360)-180)<1e-2,entry+' '+g.b+' alt/az');
@@ -46,10 +46,11 @@ try{
   assert(got.mlat>46&&got.mlat<49,'Kyiv geomagnetic latitude ~47.6°: '+got.mlat);
   assert.deepEqual(got.ag,['no_numeric_limit','historical_extent','historical_extent','historical_extent','historical_extent','no_kp']);
   assert(got.transitions.every(d=>d==='0s'),'reduced motion: no transitions');assert.equal(got.anims,0);
-  // No location: positions hidden, explicit message, no substituted coordinates.
+  // FP569k policy (Claude, mobile brief 09.11): no saved place → the sky of Kyiv, named as the default place
+  // («Небо над Києвом» + «Типове місце — Київ…»), exactly like «Шлях Сонця» on Today. Never the user's own coordinates.
   await p.evaluate(()=>{document.querySelector('#nrLocalContext [data-clear]').click();window.NRSkyLive.render()});
-  const none=await p.evaluate(()=>{const h=document.querySelector('[data-sky-live]');return {sky:!!h.querySelector('.nr-sl-sky'),list:h.querySelectorAll('.nr-sl-list li').length,msg:h.querySelector('.nr-sl-noloc')?.textContent||'',aurora:!!h.querySelector('[data-aurora]'),foot:h.querySelector('.nr-sl-foot').textContent}});
-  assert(!none.sky&&none.list===0&&!none.aurora&&/не підставляються/.test(none.msg)&&!/\d+\.\d+, \d+\.\d+/.test(none.foot),'no-location policy '+JSON.stringify(none));
+  const none=await p.evaluate(()=>{const h=document.querySelector('[data-sky-live]');return {title:h.querySelector('h2')?.textContent,sky:!!h.querySelector('.nr-sl-sky'),example:!!h.querySelector('[data-sky-example]'),foot:h.querySelector('.nr-sl-foot').textContent}});
+  assert(none.sky&&none.example&&/Києв/.test(none.title)&&/50\.45, 30\.52/.test(none.foot),'no-location policy (Kyiv default, labelled) '+JSON.stringify(none));
   assert.deepEqual(errors,[],entry+' '+width+' page errors');
   results.push({entry,width,fraction:got.fraction,limb:got.limb,mlat:got.mlat,up:got.list.filter(x=>x.up).map(x=>x.b)});await c.close();}
  // «Фоновий рух»: separate from «Анімації», off by default, toggles the decorative class only.

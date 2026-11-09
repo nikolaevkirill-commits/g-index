@@ -4,10 +4,12 @@ const server=http.createServer((q,s)=>{const f=path.join(root,decodeURI(q.url.sp
 (async()=>{await new Promise(r=>server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+server.address().port,b=await chromium.launch({headless:true});const rows=[];try{
  for(const entry of ['classic.html','index.html']){
   const c=await b.newContext({viewport:{width:390,height:844},serviceWorkers:'block'});await c.route('**/*',r=>r.request().url().startsWith(base)?r.continue():r.abort());const p=await c.newPage(),errors=[];p.on('pageerror',e=>errors.push(e.message));
-  await p.goto(base+'/'+entry+'?channel=play#today');await p.waitForSelector('[data-festival-route="today"]');
+  const FR=entry==='index.html'?'panch':'today'; // FP569n (P12): main design shows the tool only on Sky/Panchanga
+  await p.goto(base+'/'+entry+'?channel=play#'+FR);await p.waitForSelector('[data-festival-route="'+FR+'"]');
+  if(entry==='index.html'){await p.evaluate(()=>location.hash='today');await p.waitForTimeout(600);assert.equal(await p.locator('#nrRoute-today [data-festival-route]').count(),0,'no festival tool on Today in the main design');await p.evaluate(()=>location.hash='panch');}
   for(const lang of ['uk','en','es','fr']){
    await p.evaluate(lang=>NRLocale.set(lang),lang);
-   for(const route of ['today','panch']){
+   for(const route of (entry==='index.html'?['panch']:['today','panch'])){
     await p.evaluate(route=>{location.hash=route;},route);const box=p.locator('[data-festival-route="'+route+'"]');await box.evaluate(el=>el.open=true);
     for(const id of ['kyiv-2028-01','delhi-2028-05','new-york-2028-12']){
      await box.locator('[data-cases]').selectOption(id);
@@ -25,12 +27,12 @@ const server=http.createServer((q,s)=>{const f=path.join(root,decodeURI(q.url.sp
   const live=await p.evaluate(()=>{const input=SRFestivalAstronomy.build({date:'2028-03-12',lat:40.7141666667,lon:-74.0058333333,zone:'America/New_York'});return {input,result:SRFestivalDecision.compare(input,['panchangtime-sankashti','nava-sankashti'])};});
   assert.ok(live.input.end>live.input.start);assert.equal(live.input.astronomy.engine,'Astronomy Engine 2.1.19');assert.equal(live.result.status,'INSUFFICIENT_EVIDENCE');
   const dst=await p.evaluate(()=>['2028-03-12','2028-11-05'].map(date=>{const d=SkyRhythmCivil.dayIntervals(date,'America/New_York');return (+d.end- +d.start)/36e5;}));assert.deepEqual(dst,[23,25]);
-  await p.evaluate(()=>{NRLocale.set('uk');location.hash='today';});const box=p.locator('[data-festival-route="today"]');await box.locator('[data-cases]').selectOption('kyiv-2028-01');await box.locator('[data-result] > p').filter({hasText:'archived_evidence'}).evaluate(el=>el.scrollIntoView({block:'center'}));await p.screenshot({path:path.join(out,entry+'.png')});const detail=box.locator('.sr-festival-rule details').first();await detail.evaluate(el=>el.open=true);assert.ok(await detail.evaluate(el=>el.scrollWidth<=el.getBoundingClientRect().width+2));await detail.locator('p').first().evaluate(el=>el.scrollIntoView({block:'center'}));await p.screenshot({path:path.join(out,entry+'-trace.png')});
+  await p.evaluate(fr=>{NRLocale.set('uk');location.hash=fr;},FR);const box=p.locator('[data-festival-route="'+FR+'"]');await box.locator('[data-cases]').selectOption('kyiv-2028-01');await box.locator('[data-result] > p').filter({hasText:'archived_evidence'}).evaluate(el=>el.scrollIntoView({block:'center'}));await p.screenshot({path:path.join(out,entry+'.png')});const detail=box.locator('.sr-festival-rule details').first();await detail.evaluate(el=>el.open=true);assert.ok(await detail.evaluate(el=>el.scrollWidth<=el.getBoundingClientRect().width+2));await detail.locator('p').first().evaluate(el=>el.scrollIntoView({block:'center'}));await p.screenshot({path:path.join(out,entry+'-trace.png')});
   await p.evaluate(()=>localStorage.setItem('gindex_local_context_v1',JSON.stringify({lat:50.45,lon:30.52,zone:'Europe/Kyiv',saved_at:'2026-10-19T00:00:00Z'})));
   await box.locator('[data-cases]').selectOption('live');await box.locator('input').fill('2028-03-12');await box.locator('[data-run]').click();assert.ok(await box.evaluate(el=>el._decision?.input.astronomy.engine==='Astronomy Engine 2.1.19'));assert.equal(await box.locator('[data-result]').getAttribute('data-status'),'INSUFFICIENT_EVIDENCE');
 
   await p.addScriptTag({path:path.join(__dirname,'vendor/axe.min.js')});
-  for(const theme of ['light','dark'])for(const route of ['today','panch']){
+  for(const theme of ['light','dark'])for(const route of (entry==='index.html'?['panch']:['today','panch'])){
    await p.evaluate(({theme,route})=>{const choice=document.getElementById('nrThemeChoice');choice.value=theme;choice.dispatchEvent(new Event('change',{bubbles:true}));location.hash=route;},{theme,route});
    const panel=p.locator('[data-festival-route="'+route+'"]');await panel.evaluate(el=>el.open=true);await panel.locator('[data-cases]').selectOption('kyiv-2028-01');
    await p.waitForFunction(route=>document.querySelector('[data-festival-route="'+route+'"]')?.closest('.nr-route')?.classList.contains('active'),route);
@@ -39,7 +41,7 @@ const server=http.createServer((q,s)=>{const f=path.join(root,decodeURI(q.url.sp
    assert.ok(opacity.every(x=>x===1),'Festival and ancestors must be fully visible before accessibility measurement');
    const violations=await panel.evaluate(async el=>(await axe.run(el,{runOnly:{type:'tag',values:['wcag2a','wcag2aa','wcag21aa']}})).violations.map(v=>({id:v.id,nodes:v.nodes.map(n=>n.failureSummary)})));
    assert.deepEqual(violations,[],entry+'/'+theme+'/'+route);
-   if(theme==='light'&&route==='today'){await panel.locator('[data-result] > p').filter({hasText:'archived_evidence'}).evaluate(el=>el.scrollIntoView({block:'center'}));await p.screenshot({path:path.join(out,entry+'-light.png')});}
+   if(theme==='light'&&route===FR){await panel.locator('[data-result] > p').filter({hasText:'archived_evidence'}).evaluate(el=>el.scrollIntoView({block:'center'}));await p.screenshot({path:path.join(out,entry+'-light.png')});}
   }
 
   assert.deepEqual(errors,[]);await c.close();

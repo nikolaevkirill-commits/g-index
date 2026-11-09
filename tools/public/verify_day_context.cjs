@@ -20,7 +20,11 @@ try{for(const entry of ['index.html','classic.html'])for(const width of [390,128
  const bar=p.locator('[data-overview=today] [data-day-context]');
  assert.equal(await bar.getAttribute('data-state'),'today',entry+' '+width+' bar must mark today');
  assert.equal(await bar.getAttribute('data-selected-date'),today);
- assert.equal(await p.evaluate(()=>getComputedStyle(document.querySelector('[data-overview=today] [data-day-context]')).position),'sticky');
+ assert.equal(await bar.evaluate(e=>getComputedStyle(e).position),'static','date context must not obscure mobile content when scrolling');
+ const oldY=await bar.evaluate(e=>e.getBoundingClientRect().top);
+ await p.evaluate(()=>window.scrollBy(0,400));
+ assert.ok(await bar.evaluate((e,y)=>e.getBoundingClientRect().top<y,oldY),'date context moves with the page');
+ await p.evaluate(()=>window.scrollTo(0,0));
  const score=await p.evaluate(()=>NRConsumerOverview.snapshot(NRCivilTime.dayKey(Date.now())).display);
  const barText=await bar.innerText();
  if(score.available){const prevScore=await p.evaluate(y=>{const s=NRConsumerOverview.snapshot(y).display;return s.available?s.score:-1},yesterday);

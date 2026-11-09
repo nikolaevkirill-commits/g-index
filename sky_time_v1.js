@@ -27,6 +27,7 @@ const copy={
  now:['Зараз','Now','Ahora','Maintenant'],
  selected:['Вибраний час','Selected time','Hora elegida','Heure choisie'],
  running:['Відтворення доби','Day playback','Reproducción del día','Lecture de la journée'],
+ nowTick:['зараз','now','ahora','maintenant'],
  example:['Київ · типове місце','Kyiv · default location','Kyiv · lugar predeterminado','Kyiv · lieu par défaut'],
  open:['Небо →','Sky →','Cielo →','Ciel →'],
  motion:['Для програвання ввімкніть анімації. Час можна обрати вручну.','Turn on motion for playback. You can still choose a time.','Activa las animaciones para reproducir. Puedes elegir la hora.','Activez les animations pour lire la journée. Vous pouvez choisir l’heure.'],
@@ -69,7 +70,8 @@ function allowed(){
   !reduced.matches&&!reducedData.matches&&!navigator.connection?.saveData;
 }
 function snapshot(){
- const loc=place(), zone=(loc||KYIV).zone, at=selected??Date.now();
+ // FP569k: with no saved place every screen uses Kyiv, labelled «Київ · типове місце» (Today already did; Sky showed an empty sky).
+ const loc=place(true), zone=loc.zone, at=selected??Date.now();
  return {...localDay(at,zone),at,loc,mode:playing?'playing':selected===null?'now':'selected',allowed:allowed()};
 }
 function timeText(at,zone){
@@ -185,6 +187,10 @@ function renderToday(s){
   panel.style.setProperty('--sky-light',daylight.toFixed(3));
   panel.style.setProperty('--sky-twilight',twilight.toFixed(3));
   panel.style.setProperty('--sun-x',(100*x/390).toFixed(2)+'%');
+
+  // FP569k (K1): «зараз» is a dashed tick; the played/selected time is the Sun itself. They coincide in «now» mode.
+  const nowG=svg.querySelector('[data-time-nowtick]');if(nowG){const n=Date.now(),inDay=n>=s.start&&n<s.end;nowG.style.display=s.mode==='now'||!inDay?'none':'';
+   if(inDay){const nx=X((n-s.start)/(s.end-s.start));nowG.setAttribute('transform','translate('+nx.toFixed(2)+' 0)');nowG.querySelector('text').textContent=t('nowTick')+' '+timeText(n,s.zone);}}
   panel.dataset.sun=alt>=0?'above':'below';
   panel.dataset.clockMode=s.mode;
   svg.querySelector('[data-time-progress]').setAttribute('stroke-dasharray',Math.max(0,fraction).toFixed(4)+' 1');
@@ -211,7 +217,7 @@ function mount(){
  if(!overview)return;
  today=document.createElement('section');today.className='sr-time-sun';today.dataset.skyClock='';today.dataset.placement='after-hero';
  today.setAttribute('translate','no');today.setAttribute('aria-labelledby','srTimeSunTitle');
- today.innerHTML='<div class="sr-time-stage"><div class="sr-time-title"><div><h2 id="srTimeSunTitle"></h2><small data-time-place></small></div><button type="button" data-time-open></button></div><svg viewBox="0 0 390 106" role="img"><defs><clipPath id="srTimeAbove"><rect width="390" height="51"/></clipPath><radialGradient id="srTimeGlow"><stop stop-color="#fff3bd" stop-opacity=".95"/><stop offset=".38" stop-color="#ffbd56" stop-opacity=".65"/><stop offset="1" stop-color="#ff8d36" stop-opacity="0"/></radialGradient><radialGradient id="srTimeDisc" cx="34%" cy="32%"><stop stop-color="#fffdf0"/><stop offset=".64" stop-color="#ffe691"/><stop offset="1" stop-color="#ffa840"/></radialGradient></defs><line x1="18" y1="51" x2="372" y2="51"/><path data-time-orbit class="sr-time-orbit-night"/><path data-time-orbit clip-path="url(#srTimeAbove)" class="sr-time-orbit-day"/><path data-time-orbit data-time-progress pathLength="1" clip-path="url(#srTimeAbove)" class="sr-time-orbit-progress"/><g data-time-sun><circle r="28" class="sr-time-halo" fill="url(#srTimeGlow)"/><circle r="9" class="sr-time-disc"/><circle r="4" class="sr-time-night-cursor"/></g></svg><p data-time-alt></p></div>';
+ today.innerHTML='<div class="sr-time-stage"><div class="sr-time-title"><div><h2 id="srTimeSunTitle"></h2><small data-time-place></small></div><button type="button" data-time-open></button></div><svg viewBox="0 0 390 106" role="img"><defs><clipPath id="srTimeAbove"><rect width="390" height="51"/></clipPath><radialGradient id="srTimeGlow"><stop stop-color="#fff3bd" stop-opacity=".95"/><stop offset=".38" stop-color="#ffbd56" stop-opacity=".65"/><stop offset="1" stop-color="#ff8d36" stop-opacity="0"/></radialGradient><radialGradient id="srTimeDisc" cx="34%" cy="32%"><stop stop-color="#fffdf0"/><stop offset=".64" stop-color="#ffe691"/><stop offset="1" stop-color="#ffa840"/></radialGradient></defs><line x1="18" y1="51" x2="372" y2="51"/><path data-time-orbit class="sr-time-orbit-night"/><path data-time-orbit clip-path="url(#srTimeAbove)" class="sr-time-orbit-day"/><path data-time-orbit data-time-progress pathLength="1" clip-path="url(#srTimeAbove)" class="sr-time-orbit-progress"/><g data-time-nowtick style="display:none"><line y1="-4" y2="58" class="sr-time-now-line"/><text y="-8" text-anchor="middle" class="sr-time-now-label"></text></g><g data-time-sun><circle r="28" class="sr-time-halo" fill="url(#srTimeGlow)"/><circle r="9" class="sr-time-disc"/><circle r="4" class="sr-time-night-cursor"/></g></svg><p data-time-alt></p></div>';
  today.querySelector('[data-time-open]').onclick=()=>{if(!place())exampleChosen=true;window.fp434Go('panch',true);};
  updateControls=controls(today);
  // FP569d: verdict and score come first (owner decision 01.11); the Sun clock follows the day overview card.
@@ -223,7 +229,8 @@ function sync(){
  mount();
  if(!document.hidden)notify();
 }
-window.SRSkyTime=Object.freeze({snapshot,place,cityLabel,cityPresets:()=>cities.map(([cityId,names,lat,lon,zone])=>({cityId,label:names[Math.max(0,language())],lat,lon,zone})),controls,light,timeText,selectMoment});
+// FP569k: live() exported so other views (Лінія дня) can return the one shared clock to «now».
+window.SRSkyTime=Object.freeze({live,snapshot,place,cityLabel,cityPresets:()=>cities.map(([cityId,names,lat,lon,zone])=>({cityId,label:names[Math.max(0,language())],lat,lon,zone})),controls,light,timeText,selectMoment});
 window.addEventListener('hashchange',sync);
 function cityLabel(loc){
  const city=cities.find(([id])=>id===loc?.cityId);

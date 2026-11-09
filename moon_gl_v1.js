@@ -1,3 +1,4 @@
+// FP569k: faint limb glow on the night side so a new Moon reads as a body, not an empty hole (not a brightness claim).
 // FP566: one static WebGL sphere, lit by the same phaseAngle/limb as the SVG fallback.
 // No independent ephemeris, texture, animation loop or claim of measured surface brightness.
 (function(){
