@@ -148,8 +148,10 @@ function provenance(root,ds){
 function ratingTarget(){
  const t=todayKey(),rated=store(RATED,'rated').value,done=ds=>rated.some(x=>x.date===ds);
  const y=shift(t,-1);
- if(observedFor(y)&&!done(y))return y;
- if(kyivHour()>=18&&observedFor(t)&&!done(t))return t;
+ // FP569j: one question per day. In the evening the day card asks «Сьогодні збіглось?» (day_verdict); this journal
+ // then asks only about a past day that got no answer there, so the user never sees two ratings of the same day.
+ if(observedFor(y)&&!done(y)&&!window.NRDayVerdict?.hasMatch?.(y))return y;
+ if(!window.NRDayVerdict&&kyivHour()>=18&&observedFor(t)&&!done(t))return t;
  return null;
 }
 function rating(root,ds){
@@ -211,7 +213,12 @@ function renderAll(){
  });
  renderTools();
 }
-window.NRDayContext={render:renderAll,ratings:()=>read(RATED,[])};
+window.NRDayContext={
+ render:renderAll,
+ ratings:()=>read(RATED,[]),
+ hasRating:ds=>store(RATED,'rated').value.some(x=>x.date===ds),
+ target:()=>{try{return ratingTarget();}catch(_){return null;}}
+};
 let pending=0;
 function schedule(){renderAll();clearTimeout(pending);pending=setTimeout(renderAll,80);} // second pass runs after other layout layers
 document.addEventListener('nr:overview-rendered',schedule);

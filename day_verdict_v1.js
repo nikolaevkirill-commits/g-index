@@ -83,7 +83,6 @@ function render(){
  const ds=selected(r),v=build(r,ds);
  let today='';try{today=NRCivilTime.dayKey(Date.now(),'Europe/Kyiv')}catch{}
  const hour=Number(new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Kyiv',hour:'2-digit',hourCycle:'h23'}).format(new Date()));
- const evening=ds===today&&hour>=18&&r.querySelector('.nr-o-journey button:last-of-type');
  const line=(k,xs)=>xs.length?`<p class="nr-dv-${k}"><b>${esc(t(k))}</b> ${esc(xs.join(' · '))}</p>`:'';
  box.innerHTML=`<p class="nr-dv-tone">${esc(t(v.tone))}</p>${line('good',v.good)}${line('avoid',v.avoid)}${line('check',v.care)}`;
  let whyBox=hero.querySelector('[data-day-why]');
@@ -96,7 +95,7 @@ function render(){
   const details=r.querySelector(':scope > [data-p0-details]');
   if(details)details.before(youBox);else r.append(youBox);
  }
- const youHtml=(window.NRNatalSky?window.NRNatalSky.html(ds,sky):'')+(ds===today&&hour>=18?matchHtml(ds):'')+(evening?`<button type="button" class="nr-dv-evening">${esc(t('evening'))}</button>`:'');
+ const youHtml=(window.NRNatalSky?window.NRNatalSky.html(ds,sky):'')+(ds===today&&hour>=18?matchHtml(ds):'');
  if(youBox.dataset.html!==youHtml){const formOpen=youBox.querySelector('.nr-dv-you-form')?.open;youBox.innerHTML=youHtml;youBox.dataset.html=youHtml;if(formOpen)youBox.querySelector('.nr-dv-you-form')&&(youBox.querySelector('.nr-dv-you-form').open=true)}
  youBox.hidden=!youHtml;
  const open=whyBox.open;whyBox.innerHTML=`<summary>${esc(t('why'))}</summary><ul>${v.why.map(([k,val])=>`<li><span>${esc(k)}</span><strong>${esc(val)}</strong></li>`).join('')}</ul>`;whyBox.open=open;
@@ -112,6 +111,7 @@ function matchSave(ds,v){if(!MATCH_VALUES.includes(v)||!/^\d{4}-\d{2}-\d{2}$/.te
  window.dispatchEvent(new CustomEvent('nr:day-match',{detail:{ds,...all[ds]}}))}
 function matchHtml(ds){const got=matchAll()[ds];
  if(got&&MATCH_VALUES.includes(got.v))return `<p class="nr-dv-match is-saved" data-day-match>✓ ${esc(t('m_saved'))}: ${esc(t('m_'+got.v))}</p>`;
+ if(window.NRDayContext?.hasRating?.(ds))return '';
  return `<div class="nr-dv-match" data-day-match role="group" aria-label="${esc(t('match'))}"><span>${esc(t('match'))}</span>${MATCH_VALUES.map(v=>`<button type="button" data-match="${v}">${esc(t('m_'+v))}</button>`).join('')}</div>`}
 let scheduled=false;const soon=()=>{if(scheduled)return;scheduled=true;requestAnimationFrame(()=>{scheduled=false;render()})};
 async function loadSky(){if(skyTried)return;skyTried=true;try{const r=await fetch('consumer_cloud/sky.json',{cache:'no-cache'});if(r.ok){const d=await r.json();if(d?.schema==='sky_transits_v1')sky=d}}catch{}soon()}
@@ -120,11 +120,15 @@ function watch(){const r=root();if(!r){setTimeout(watch,250);return}if(watched==
  new MutationObserver(()=>{const h=r.querySelector('.nr-o-hero');if(!h?.querySelector('[data-day-verdict]')||!h.querySelector('[data-day-why]')||!r.querySelector(':scope > [data-day-you]'))soon()}).observe(r,{childList:true,subtree:true});
  r.addEventListener('change',e=>{if(e.target.matches('select'))setTimeout(soon,0)});soon()}
 document.addEventListener('nr:overview-rendered',render);
-window.NRDayVerdict={build:ds=>{const r=root();return r?build(r,ds||selected(r)):null},render,matches:matchAll};
+window.NRDayVerdict={
+ build:ds=>{const r=root();return r?build(r,ds||selected(r)):null},
+ render,
+ matches:matchAll,
+ hasMatch:ds=>MATCH_VALUES.includes(matchAll()[ds]?.v)
+};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{watch();loadSky()});else{watch();loadSky()}
 for(const e of ['sr:consumer-load','nr:locale','gindex:consumer-ready','nr:natal','online','offline'])window.addEventListener(e,soon);
 document.addEventListener('click',e=>{const b=e.target.closest?.('[data-day-match] button[data-match]');if(!b)return;const r=root();if(!r)return;
  let today='';try{today=NRCivilTime.dayKey(Date.now(),'Europe/Kyiv')}catch{}if(selected(r)!==today)return;
  matchSave(today,b.dataset.match);soon()});
-document.addEventListener('click',e=>{if(!e.target.closest?.('.nr-dv-evening'))return;document.querySelector('#nrRoute-today .nr-o-journey button:last-of-type')?.click()});
 })();
