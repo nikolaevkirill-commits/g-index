@@ -8,7 +8,7 @@ const srv=http.createServer((q,s)=>{const f=decodeURIComponent(q.url.split('?')[
 (async()=>{await new Promise(r=>srv.listen(0,'127.0.0.1',r));const b=await chromium.launch();const report={};
 try{for(const entry of ['classic.html','index.html']){const seen=new Set();
  for(let i=0;i<loads;i++){const c=await b.newContext({locale:'uk-UA',serviceWorkers:'block',viewport:{width:390,height:844},reducedMotion:'reduce'});await c.route(/^https?:\/\/(?!127\.0\.0\.1)/,r=>r.abort());const p=await c.newPage();await p.clock.setFixedTime(new Date('2026-10-30T17:00:00Z'));
-  await p.goto('http://127.0.0.1:'+srv.address().port+'/'+entry+'?channel=play#today',{waitUntil:'load',timeout:120000});if(entry==="index.html")await p.waitForSelector("#nrRoute-today [data-week-strip]",{state:"visible",timeout:20000});
+  await p.goto('http://127.0.0.1:'+srv.address().port+'/'+entry+'?channel=play#today',{waitUntil:'load',timeout:120000});await p.waitForSelector("#nrRoute-today .nr-o-hero",{state:"visible",timeout:20000});await p.waitForSelector("#nrRoute-today .sr-dayline",{state:"visible",timeout:20000});if(entry==="index.html")await p.waitForSelector("#nrRoute-today [data-week-strip]",{state:"visible",timeout:20000});
   seen.add(await p.evaluate(()=>{const hero=document.querySelector('#nrRoute-today .nr-o-hero');const out=[];let n=hero;while((n=n.nextElementSibling)&&out.length<4){if(n.checkVisibility())out.push(n.tagName.toLowerCase()+'.'+String(n.className).split(' ')[0])}return out.join(' > ')}));await c.close();}
  report[entry]=[...seen];assert.equal(seen.size,1,entry+': first-screen order varies between loads: '+JSON.stringify([...seen]));}}
 finally{await b.close();srv.close();}
