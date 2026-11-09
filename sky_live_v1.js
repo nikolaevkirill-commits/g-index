@@ -96,6 +96,13 @@ function moonSvg(c,size){
 <circle r="${r}" fill="none" stroke="rgba(255,255,255,.18)"/></svg>`;
 }
 // Sky strip: azimuth 0–360 (N→E→S→W→N) left→right, altitude −90…90 bottom→top. Dots placed from computed values.
+const BODY_RADIUS={Sun:8,Moon:6,Mercury:3.5,Venus:4.5,Mars:4.5,Jupiter:6,Saturn:5};
+function bodySymbol(body){
+ const radius=BODY_RADIUS[body];
+ const rings=body==='Saturn'?'<ellipse rx="9" ry="3" transform="rotate(-22)" class="nr-sl-ring"/>':'';
+ const bands=body==='Jupiter'?'<path d="M-4 -2h8 M-5 1h10" class="nr-sl-bands"/>':'';
+ return '<circle r="'+(radius+5)+'" class="nr-sl-halo"/><circle r="'+radius+'" class="nr-sl-disc"/>'+rings+bands;
+}
 function skySvg(c){
  const W=360,H=180,y=a=>(90-a),x=az=>az/360*W;
  let s=`<svg class="nr-sl-sky" viewBox="0 0 ${W} ${H+16}" role="img" aria-label="${esc(tr('Небо зараз над вами'))}"><rect width="${W}" height="${y(0)}" class="nr-sl-air"/><rect y="${y(0)}" width="${W}" height="${H-y(0)}" class="nr-sl-ground"/><line x1="0" x2="${W}" y1="${y(0)}" y2="${y(0)}" class="nr-sl-horizon"/>`;
@@ -104,14 +111,14 @@ function skySvg(c){
  const placed=[];
  for(const b of [...BODIES].sort((p,q)=>(c.hz[p]?.azimuth||0)-(c.hz[q]?.azimuth||0))){const h=c.hz[b];if(!h)continue;
   const px=x(h.azimuth),py=y(h.altitude),label=name(b),width=label.length*6.5+8;
-  const right=px+7+width>W,left=right?px-7-width:px+7;
+  const gap=BODY_RADIUS[b]+6,right=px+gap+width>W,left=right?px-gap-width:px+gap;
   const preferredY=Math.max(9,Math.min(H-3,py+3));
   const fits=y=>y>=9&&y<=H-3&&!placed.some(p=>left<p.right&&left+width>p.left&&Math.abs(p.y-y)<16);
   const offsets=[0,-16,16,-32,32,-48,48,-64,64,-80,80,-96,96,-112,112];
   const labelY=offsets.map(offset=>preferredY+offset).find(fits)??preferredY;
   const dy=labelY-py;
   placed.push({left,right:left+width,y:labelY});
-  s+=`<g class="nr-sl-body is-${b.toLowerCase()}${h.altitude>0?'':' is-below'}" data-body="${b}" data-alt="${h.altitude.toFixed(3)}" data-az="${h.azimuth.toFixed(3)}" style="transform:translate(${px.toFixed(1)}px,${py.toFixed(1)}px)"><line x1="0" y1="0" x2="${right?-7:7}" y2="${dy-3}" stroke="currentColor" stroke-opacity=".4"/><circle r="${b==='Sun'?6:b==='Moon'?5:3}"/><text x="${right?-7:7}" y="${dy}"${right?' text-anchor="end"':''}>${esc(label)}</text></g>`;}
+  s+=`<g class="nr-sl-body is-${b.toLowerCase()}${h.altitude>0?'':' is-below'}" data-body="${b}" data-alt="${h.altitude.toFixed(3)}" data-az="${h.azimuth.toFixed(3)}" style="transform:translate(${px.toFixed(1)}px,${py.toFixed(1)}px)"><line x1="0" y1="0" x2="${right?-gap:gap}" y2="${dy-3}" stroke="currentColor" stroke-opacity=".4"/>${bodySymbol(b)}<text x="${right?-gap:gap}" y="${dy}"${right?' text-anchor="end"':''}>${esc(label)}</text></g>`;}
  return s+'</svg>';
 }
 function selectKp(live,snapshot,now=Date.now(),online=navigator.onLine){
@@ -171,14 +178,18 @@ const STYLE=`.nr-sl{margin:14px 0;padding:18px;overflow:hidden}.nr-sl a{color:in
 .nr-sl-list{list-style:none;margin:12px 0 0;padding:0;font-size:.92rem;line-height:1.55}
 @media(min-width:670px){.nr-sl-top{grid-template-columns:minmax(10rem,1fr) minmax(0,3fr)}.nr-sl-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:10px}}.nr-sl-list .is-down{opacity:.6}
 .nr-sl-sky{width:100%;max-width:640px;height:auto;margin:10px auto 0;display:block}.nr-sl-air{fill:rgba(60,90,150,.18)}.nr-sl-ground{fill:rgba(0,0,0,.35)}.nr-sl-horizon{stroke:rgba(255,255,255,.4)}
-.nr-sl-tick{fill:currentColor;font-size:11px;opacity:.85}.nr-sl-body circle{fill:#cfd8ff}.nr-sl-body.is-sun circle{fill:#ffd36b}.nr-sl-body.is-moon circle{fill:#f3efe0}
-.nr-sl-body text{fill:currentColor;font-size:12px}.nr-sl-body.is-below{opacity:.45}.nr-sl-body.is-below :is(text,line){display:none}
+.nr-sl-tick{fill:currentColor;font-size:11px;opacity:.85}.nr-sl-body{--planet:#cfd8ff}.nr-sl-body .nr-sl-disc{fill:var(--planet);stroke:#edf3ff;stroke-width:.75}
+.nr-sl-body .nr-sl-halo{fill:var(--planet);opacity:.21}
+.nr-sl-body.is-sun{--planet:#ffd36b}.nr-sl-body.is-moon{--planet:#f3efe0}
+.nr-sl-body.is-below .nr-sl-halo{opacity:0}.nr-sl-body.is-below .nr-sl-disc{fill:#172541;stroke:var(--planet)}
+.nr-sl-ring{fill:none;stroke:#f4dfa0;stroke-width:1.2}.nr-sl-bands{fill:none;stroke:#9d5536;stroke-width:1.1}
+.nr-sl-body text{fill:currentColor;font-size:12px}.nr-sl-body.is-below{opacity:.45}.nr-sl-body.is-below :is(text,line,.nr-sl-ring,.nr-sl-bands){display:none}
 .nr-sl.nr-sl-motion .nr-sl-body{transition:transform .32s ease}
 .nr-sl.nr-sl-motion:not([data-clock-mode=now]) .nr-sl-body{transition:none}
 .nr-sl .nr-sl-air{fill:rgb(29 91 154 / calc(.16 + .58 * var(--sky-light,0)))}
 .nr-sl .nr-sl-moonbox{border:1px solid #526c95;border-radius:22px;background:radial-gradient(ellipse at 50% 28%,#344267,#111a32 72%);padding:10px 8px;text-align:center}
 .nr-sl .nr-sl-moonbox small{max-width:16rem}
-.nr-sl-body.is-mercury circle{fill:#bfc6d3}.nr-sl-body.is-venus circle{fill:#ffd1a5}.nr-sl-body.is-mars circle{fill:#ff8d70}.nr-sl-body.is-jupiter circle{fill:#ffbf86}.nr-sl-body.is-saturn circle{fill:#ead98d}
+.nr-sl-body.is-mercury{--planet:#bfc6d3}.nr-sl-body.is-venus{--planet:#ffd1a5}.nr-sl-body.is-mars{--planet:#ff8d70}.nr-sl-body.is-jupiter{--planet:#ffbf86}.nr-sl-body.is-saturn{--planet:#ead98d}
 @media (prefers-reduced-motion:reduce){.nr-sl-body{transition:none!important}}
 .nr-sl-aurora{margin:.6rem 0 0;font-size:.92rem}.nr-sl-aurora span,.nr-sl-aurora small{display:block;opacity:.85;font-size:.82rem}
 .nr-sl-positions{margin-top:12px}.nr-sl-positions summary{min-height:44px;padding-block:10px;cursor:pointer}.nr-sl-horizon-summary{margin:12px 0 0}.nr-sl-above{list-style:none;display:grid;grid-template-columns:repeat(auto-fit,minmax(108px,1fr));gap:6px;margin:6px 0;padding:0}.nr-sl-above li{border:1px solid #526c95;border-radius:8px;padding:4px 8px}.nr-sl-above span{display:block;font-size:.83em}.nr-sl-foot{margin:.5rem 0 0;font-size:.78rem;opacity:.8}.nr-sl-noloc{margin:0;font-size:.92rem}`;
@@ -190,13 +201,13 @@ function drawMoon(c){
  if(!moonCanvas){moonCanvas=document.createElement('canvas');moonCanvas.className='nr-sl-moon-gl';moonCanvas.setAttribute('role','img');}
  if(moonCanvas.parentElement!==box)svg.after(moonCanvas);
  moonCanvas.setAttribute('aria-label',svg.getAttribute('aria-label'));
- const ok=NRMoonGL.draw(moonCanvas,{phaseAngle:c.phaseAngle,limb:c.limb,size:132});
+ const ok=NRMoonGL.draw(moonCanvas,{phaseAngle:c.phaseAngle,limb:c.limb,size:152});
  if(ok){svg.style.display='none';moonCanvas.hidden=false;}else showSvg();
 }
 const reduced=matchMedia('(prefers-reduced-motion:reduce)'),dataReduced=matchMedia('(prefers-reduced-data:reduce)');
 function active(){return !document.hidden&&location.hash.split('?')[0]==='#panch';}
 function motion(){
- const on=active()&&document.documentElement.classList.contains('sr-sky-motion')&&!reduced.matches&&!dataReduced.matches&&!navigator.connection?.saveData;
+ const on=active()&&document.documentElement.classList.contains('sr-sky-motion')&&!document.documentElement.classList.contains('nr-design-motion-off')&&!reduced.matches&&!dataReduced.matches&&!navigator.connection?.saveData;
  if(host){host.classList.toggle('nr-sl-motion',on);if(!on)for(const a of host.getAnimations({subtree:true}))a.cancel();}
  return on;
 }
@@ -222,7 +233,7 @@ function render(state){
  updateControls(s);
  const zone=s.zone,pct=Math.round(c.fraction*100),t=SRSkyTime.timeText(s.at,zone);
  const moonLabel=c.fraction>0&&pct===0?plainSky[li()].darkMoon+' · <1%':name('Moon')+': '+tr('Освітлено')+' '+pct+'%';
- const html=`<div class="nr-sl-top"><div class="nr-sl-moonbox">${moonSvg(c,132)}<span>${esc(moonLabel)} · ${esc(tr(c.waxing?'росте':'спадає'))}</span><small>${esc(tr(c.loc?'Орієнтація: зеніт угорі, як на вашому небі.':'Орієнтація: північ угорі (місце не задано).'))}</small></div>${c.loc?`<div class="nr-sl-map">${skySvg(c)}<p class="nr-sl-chart-note">${esc(tr('Північ на обох краях; лінія — горизонт.'))}</p></div>`:''}</div>${c.loc?'<div class="nr-sl-summary">'+horizonSummary(c)+'</div><details class="nr-sl-positions"><summary>'+esc(plainSky[li()].details)+'</summary>'+listHtml(c)+'</details>':listHtml(c)}<div data-aurora-content>${s.mode==='now'?auroraHtml(c):''}</div><p class="nr-sl-foot">${esc(tr('Розрахунок'))}: astronomy-engine 2.1.19 · ${esc(t)} ${esc(zone)}${c.loc?' · '+c.loc.lat.toFixed(2)+', '+c.loc.lon.toFixed(2):''}. ${esc(tr('Звичайна атмосферна рефракція; погода й рельєф не враховані.'))}</p>`;
+ const html=`<div class="nr-sl-top"><div class="nr-sl-moonbox">${moonSvg(c,152)}<span>${esc(moonLabel)} · ${esc(tr(c.waxing?'росте':'спадає'))}</span><small>${esc(tr(c.loc?'Орієнтація: зеніт угорі, як на вашому небі.':'Орієнтація: північ угорі (місце не задано).'))}</small></div>${c.loc?`<div class="nr-sl-map">${skySvg(c)}<p class="nr-sl-chart-note">${esc(tr('Північ на обох краях; лінія — горизонт.'))}</p></div>`:''}</div>${c.loc?'<div class="nr-sl-summary">'+horizonSummary(c)+'</div><details class="nr-sl-positions"><summary>'+esc(plainSky[li()].details)+'</summary>'+listHtml(c)+'</details>':listHtml(c)}<div data-aurora-content>${s.mode==='now'?auroraHtml(c):''}</div><p class="nr-sl-foot">${esc(tr('Розрахунок'))}: astronomy-engine 2.1.19 · ${esc(t)} ${esc(zone)}${c.loc?' · '+c.loc.lat.toFixed(2)+', '+c.loc.lon.toFixed(2):''}. ${esc(tr('Звичайна атмосферна рефракція; погода й рельєф не враховані.'))}</p>`;
  // Stable interactive links live outside the refreshed numeric content. Dot identity survives every tick.
  let content=host.querySelector('[data-live-content]');
  if(!content){content=document.createElement('div');content.dataset.liveContent='';host.append(content);const links=document.createElement('p');links.className='nr-sl-sources';links.innerHTML='<span></span>: <a href="https://www.spaceweather.gov/noaa-scales-explanation" target="_blank" rel="noopener noreferrer">NOAA G</a> · <a href="https://www.spaceweather.gov/products/aurora-30-minute-forecast" target="_blank" rel="noopener noreferrer">OVATION</a> · <a href="https://wdc.kugi.kyoto-u.ac.jp/poles/polesexp.html" target="_blank" rel="noopener noreferrer">IGRF-14</a>';host.append(links);}

@@ -63,7 +63,8 @@ const SIGNS=['♈','♉','♊','♋','♌','♍','♎','♏','♐','♑','♒','
 const SIGN_NAMES=[['Овен','Aries','Aries','Bélier'],['Телець','Taurus','Tauro','Taureau'],['Близнюки','Gemini','Géminis','Gémeaux'],['Рак','Cancer','Cáncer','Cancer'],['Лев','Leo','Leo','Lion'],['Діва','Virgo','Virgo','Vierge'],['Терези','Libra','Libra','Balance'],['Скорпіон','Scorpio','Escorpio','Scorpion'],['Стрілець','Sagittarius','Sagitario','Sagittaire'],['Козеріг','Capricorn','Capricornio','Capricorne'],['Водолій','Aquarius','Acuario','Verseau'],['Риби','Pisces','Piscis','Poissons']];
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const reduce=matchMedia('(prefers-reduced-motion: reduce)');
-const motionOn=()=>document.documentElement.classList.contains('sr-sky-motion')&&!reduce.matches&&!document.documentElement.classList.contains('nr-design-motion-off');
+const reduceData=matchMedia('(prefers-reduced-data: reduce)');
+const motionOn=()=>!document.hidden&&document.documentElement.classList.contains('sr-sky-motion')&&!reduce.matches&&!reduceData.matches&&!navigator.connection?.saveData&&!document.documentElement.classList.contains('nr-design-motion-off');
 const kyivToday=()=>{try{return NRCivilTime.dayKey(Date.now(),'Europe/Kyiv')}catch{return new Date().toISOString().slice(0,10)}};
 const R=150,ring=(a,r)=>{const x=(-a+90)*Math.PI/180;return [Math.cos(x)*r,-Math.sin(x)*r]}; // 0° Aries at top, counter-clockwise
 let sky=null,feed=null,weather=null,state='loading',sel=null,timer=null,host=null;
@@ -150,7 +151,7 @@ function list(ds){
 
 let todayHost=null;
 function renderToday(){
- if(!todayHost)return;const lang=L(),ds=kyivToday();
+ if(!todayHost)return;todayHost.classList.toggle('is-motion',motionOn());const lang=L(),ds=kyivToday();
  const head=`<div class="nr-sky-now-head"><h2>${esc(t('now'))}</h2><span>${esc(fmtDay(ds))}</span></div>`;
  if(state!=='ready'||dayIndex(ds)<0){todayHost.innerHTML=head+`<p class="nr-sky-none">${esc(state==='loading'?'…':t('missing'))}</p>`;return}
  const top=dayItems(ds).filter(x=>x.reading.intensity>=2).slice(0,2);
@@ -184,6 +185,7 @@ function spaceWeather(){
 function render(){
  renderToday();
  if(!host)return;
+ host.classList.toggle('is-motion',motionOn());
  const active=document.activeElement;
  const refocus=host.contains(active)?['.nr-sky-play','.nr-sky-controls input'].find(selector=>active.matches(selector)):null;
  const weatherHelpOpen=host.querySelector('.nr-sky-weather-help')?.open===true;
@@ -192,10 +194,10 @@ function render(){
  if(state!=='ready'){host.querySelector('.nr-sky-body').innerHTML=`<p class="nr-sky-none" role="status">${esc(state==='loading'?'…':t('missing'))}</p>`;return}
  const today=kyivToday();if(!sel||dayIndex(sel)<0)sel=dayIndex(today)>=0?today:sky.daily[0].date;
  const stale=skyStale();
- const before=new Map([...host.querySelectorAll('.nr-sky-planet[data-g]')].map(e=>[e.dataset.g,[Number(e.dataset.lon),Number(e.dataset.rad)]]));
+ const before=new Map([...host.querySelectorAll('.nr-sky-planet[data-g]')].map(e=>[e.dataset.g,[Number(e.dataset.visualLon??e.dataset.lon),Number(e.dataset.visualRad??e.dataset.rad)]]));
  host.querySelector('.nr-sky-body').innerHTML=(stale?`<p class="nr-sky-stale" role="status">${esc(t('stale'))}</p>`:'')+
   `<div class="nr-sky-controls"><button type="button" class="nr-sky-play" ${motionOn()?'':'disabled'} aria-pressed="${!!timer}">${esc(timer?t('stop'):t('play'))}</button><label><input type="range" aria-label="${esc(t('day'))}" min="0" max="${sky.daily.length-1}" value="${dayIndex(sel)}" aria-valuetext="${esc(fmtDay(sel))}"></label></div>${motionOn()?'':'<p class="nr-sky-motion-note">'+esc(plainScene[L()].disabled)+'</p>'}`+
-  `<div class="nr-sky-stage"><div class="nr-sky-wheel-wrap">${wheel(sel)}${planets(sel,false)}</div><div class="nr-sky-side"><p class="nr-sky-date">${esc(fmtDay(sel))}${(()=>{const k=kpFor(sel);return k?` · ${k.src==='NOAA_27day_outlook'?'Kp':esc(t('sw_forecast'))} ${new Intl.NumberFormat(window.NRLocale?.locale||'uk-UA',{maximumFractionDigits:2}).format(k.kp)}${k.src==='NOAA_27day_outlook'?' · '+esc(t('kp27')):''}${k.src==='NOAA_3day_slots'&&k.kp>=5?' · '+esc(t('storm'))+' G'+Math.min(5,Math.floor(k.kp)-4):''}`:''})()}</p><div class="nr-sky-list">${list(sel)}</div>${spaceWeather()}</div></div>`+strip(sel);
+  `<div class="nr-sky-stage"><p class="nr-sky-date">${esc(fmtDay(sel))}${(()=>{const k=kpFor(sel);return k?` · ${k.src==='NOAA_27day_outlook'?'Kp':esc(t('sw_forecast'))} ${new Intl.NumberFormat(window.NRLocale?.locale||'uk-UA',{maximumFractionDigits:2}).format(k.kp)}${k.src==='NOAA_27day_outlook'?' · '+esc(t('kp27')):''}${k.src==='NOAA_3day_slots'&&k.kp>=5?' · '+esc(t('storm'))+' G'+Math.min(5,Math.floor(k.kp)-4):''}`:''})()}</p><div class="nr-sky-wheel-wrap">${wheel(sel)}${planets(sel,false)}</div><div class="nr-sky-side"><div class="nr-sky-list">${list(sel)}</div>${spaceWeather()}</div></div>`+strip(sel);
  if(planetDetailsOpen)host.querySelector('.nr-sky-planet-details')?.setAttribute('open','');
  if(weatherHelpOpen)host.querySelector('.nr-sky-weather-help')?.setAttribute('open','');
  if(refocus)host.querySelector(refocus)?.focus({preventScroll:true});
@@ -204,14 +206,43 @@ function render(){
 }
 function arcMove(before){
  // Planets travel along the zodiac circle (shortest arc), not across it.
- const els=[...host.querySelectorAll('.nr-sky-wheel:not(.is-mini) .nr-sky-planet[data-g]')].map(e=>{const [a0,r0]=before.get(e.dataset.g)||[];const a1=Number(e.dataset.lon),r1=Number(e.dataset.rad);return Number.isFinite(a0)?{e,a0,r0,da:((a1-a0+540)%360)-180,dr:r1-r0}:null}).filter(Boolean);
+ const els=[...host.querySelectorAll('.nr-sky-wheel:not(.is-mini) .nr-sky-planet[data-g]')].map(e=>{const [a0,r0]=before.get(e.dataset.g)||[];const a1=Number(e.dataset.lon),r1=Number(e.dataset.rad);const da=((a1-a0+540)%360)-180,dr=r1-r0;return Number.isFinite(a0)&&(Math.abs(da)>.0001||Math.abs(dr)>.0001)?{e,a0,r0,da,dr}:null}).filter(Boolean);
  if(!els.length)return;const t0=performance.now(),dur=820;cancelAnimationFrame(arcMove.id);
- const step=now=>{if(!motionOn()||document.hidden)return;const k=Math.min(1,(now-t0)/dur),q=1-Math.pow(1-k,3);for(const o of els){const [x,y]=ring(o.a0+o.da*q,o.r0+o.dr*q);o.e.style.transform=`translate(${x.toFixed(1)}px,${y.toFixed(1)}px)`}if(k<1)arcMove.id=requestAnimationFrame(step)};
- for(const o of els){const [x,y]=ring(o.a0,o.r0);o.e.style.transform=`translate(${x.toFixed(1)}px,${y.toFixed(1)}px)`}arcMove.id=requestAnimationFrame(step);
+ const place=(o,q)=>{
+  const lon=o.a0+o.da*q,r=o.r0+o.dr*q,[x,y]=ring(lon,r);
+  o.e.style.transform='translate('+x.toFixed(1)+'px,'+y.toFixed(1)+'px)';
+  o.e.dataset.visualLon=String((lon+360)%360);o.e.dataset.visualRad=String(r);
+ };
+ const step=now=>{
+  if(!motionOn())return;
+  const k=Math.min(1,(now-t0)/dur);
+  for(const o of els)place(o,1-Math.pow(1-k,3));
+  if(k<1)arcMove.id=requestAnimationFrame(step);
+ };
+ for(const o of els)place(o,0);
+ arcMove.id=requestAnimationFrame(step);
 }
 function select(ds,focus,silent){sel=ds;render();if(!silent)try{window.dispatchEvent(new CustomEvent('nr:day',{detail:ds}))}catch{}if(focus)host.querySelector(`[data-sky-day="${ds}"]`)?.focus()}
-function stop(){cancelAnimationFrame(arcMove.id);if(timer){clearInterval(timer);timer=null}}
-function play(){if(timer){stop();render();return}if(!motionOn())return;let i=Math.max(0,dayIndex(sel));timer=setInterval(()=>{i=(i+1)%sky.daily.length;sel=sky.daily[i].date;render();if(i===sky.daily.length-1)stop()},900);render()}
+function stop(){
+ cancelAnimationFrame(arcMove.id);
+ if(timer){clearInterval(timer);timer=null;}
+ for(const planet of host?.querySelectorAll('[data-visual-lon]')||[]){
+  const [x,y]=ring(Number(planet.dataset.lon),Number(planet.dataset.rad));
+  planet.style.transform='translate('+x.toFixed(1)+'px,'+y.toFixed(1)+'px)';
+  delete planet.dataset.visualLon;delete planet.dataset.visualRad;
+ }
+}
+function play(){
+ if(timer){stop();render();return}
+ if(!motionOn())return;
+ let i=Math.max(0,dayIndex(sel));
+ timer=setInterval(()=>{
+  i=(i+1)%sky.daily.length;sel=sky.daily[i].date;
+  if(i===sky.daily.length-1){clearInterval(timer);timer=null;}
+  render();
+ },900);
+ render();
+}
 
 let tries=0;
 function mount(){
@@ -260,8 +291,11 @@ window.addEventListener('nr:locale',render);
 let loadedAt=Date.now();
 function refreshVisible(){if(!document.hidden&&(Date.now()-loadedAt>300000||sky?.window?.start!==kyivToday())){loadedAt=Date.now();load()}}
 window.addEventListener('online',refreshVisible);
-document.addEventListener('visibilitychange',()=>{if(document.hidden){stop();cancelAnimationFrame(arcMove.id)}else refreshVisible()});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){stop();host?.classList.remove('is-motion');todayHost?.classList.remove('is-motion');}else{render();refreshVisible();}});
 setInterval(refreshVisible,300000);
 let lastMotion=motionOn();new MutationObserver(()=>{const on=motionOn();if(on!==lastMotion){lastMotion=on;if(!on){stop();cancelAnimationFrame(arcMove.id)}render()}}).observe(document.documentElement,{attributes:true,attributeFilter:['class']});
-reduce.addEventListener?.('change',()=>{stop();cancelAnimationFrame(arcMove.id);render()});
+const motionPreferenceChanged=()=>{stop();render();};
+reduce.addEventListener?.('change',motionPreferenceChanged);
+reduceData.addEventListener?.('change',motionPreferenceChanged);
+navigator.connection?.addEventListener('change',motionPreferenceChanged);
 })();

@@ -30,8 +30,11 @@ body:has(.nr-route.active [data-offline-asof]:not([hidden])) #offlineBanner,body
 html.wow body #nrRoute-today .sr-dayline [data-track]>button,.sr-dayline [data-track]>button{width:auto!important;min-width:44px;max-width:none!important;padding:0 10px!important;border-radius:22px!important;white-space:nowrap!important}
 
 /* Physical Sun view and its shared local clock. */
-.sr-time-sun{--sky-light:0;margin:0 0 16px;border:1px solid #526585;border-radius:20px;color:#f4f0ff;background:#111a30;overflow:hidden;min-width:0}
-.sr-time-stage{padding:12px 14px 6px;background:linear-gradient(180deg,rgb(21 79 134 / calc(.26 + .68 * var(--sky-light))),rgb(210 117 39 / calc(.42 * var(--sky-light))) 68%,#0c1832 100%),url('sky_panorama_v1.webp') center 46%/cover}
+.sr-time-sun{--sky-light:0;--sky-twilight:0;--sun-x:50%;margin:0 0 16px;border:1px solid #526585;border-radius:20px;color:#f4f0ff;background:#111a30;overflow:hidden;min-width:0}
+.sr-time-stage{padding:12px 14px 6px;background:
+ radial-gradient(ellipse at var(--sun-x) 54%,rgb(255 170 69 / calc(.63 * var(--sky-twilight))) 0%,transparent 57%),
+ linear-gradient(180deg,rgb(19 69 135 / calc(.2 + .62 * var(--sky-light))),rgb(214 130 51 / calc(.46 * var(--sky-light))) 66%,#0b132a 100%),
+ url('sky_panorama_v1.webp') center 46%/cover}
 .sr-time-title{display:flex;align-items:center;justify-content:space-between;gap:6px}
 .sr-time-title h2{font:600 20px/1.2 'Literata',Georgia,serif;margin:0;color:inherit}
 .sr-time-title small{font-size:12px}
@@ -42,9 +45,13 @@ html.wow body #nrRoute-today .sr-dayline [data-track]>button,.sr-dayline [data-t
 .sr-time-sun svg line{stroke:#d6e2f7;stroke-dasharray:2 3;opacity:.64}
 .sr-time-sun svg path{fill:none;stroke-width:2}
 .sr-time-orbit-night{stroke:#a4b9e2;stroke-dasharray:3 4;opacity:.76}
-.sr-time-orbit-day{stroke:#ffe2a0}
-.sr-time-disc{fill:#fff4d7;stroke:#ffba53;stroke-width:1.5}
-.sr-time-sun[data-sun=below] [data-time-sun]>circle:first-child{opacity:.38}
+.sr-time-orbit-day{stroke:#ffd48b;opacity:.66}
+.sr-time-sun svg .sr-time-orbit-progress{stroke:#fff5c9;stroke-width:3.3;stroke-linecap:round}
+.sr-time-disc{fill:url(#srTimeDisc);stroke:#ffbe62;stroke-width:1.5}
+.sr-time-night-cursor{display:none;fill:#142442;stroke:#b2c7ed;stroke-width:1.5}
+.sr-time-sun[data-sun=below] :is(.sr-time-disc,.sr-time-halo){display:none}
+.sr-time-sun[data-sun=below] .sr-time-night-cursor{display:block}
+.sr-time-sun[data-clock-mode=selected] .sr-time-disc{stroke:#fff4cf;stroke-dasharray:2 2}
 .sr-time-stage [data-time-alt]{margin:0;font-size:13px;color:inherit;font-weight:600}
 .sr-time-controls{padding:10px 14px;color:#f4f0ff;background:#111a30}
 .sr-time-controls label{display:block;margin:0}

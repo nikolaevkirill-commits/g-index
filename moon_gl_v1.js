@@ -7,8 +7,13 @@ const FS=`precision mediump float;varying vec2 v;uniform vec3 s;uniform float e;
 void main(){float r2=dot(v,v);if(r2>1.)discard;vec3 n=vec3(v,sqrt(max(0.,1.-r2)));
 float mu0=dot(n,s),mu=n.z,lit=mu0>0.?mu0/(mu0+mu):0.;
 float edge=1.-smoothstep(.985,1.,sqrt(r2));
-vec3 day=vec3(.93,.91,.85)*(.55+.9*lit),night=vec3(.10,.12,.18)+vec3(.05,.06,.09)*e;
-gl_FragColor=vec4(mix(night,day,smoothstep(0.,.02,mu0)),edge);}`;
+// Stylized terrain, projected onto the sphere. It changes albedo only.
+float grain=sin(74.*n.x+6.*n.z)*cos(83.*n.y-9.*n.z);
+float maria=.13*smoothstep(.12,.82,sin(5.2*n.x+1.7*n.z)*cos(4.4*n.y-2.*n.z));
+float albedo=1.-maria+.026*grain;
+vec3 day=vec3(.99,.955,.87)*albedo*(.60+.82*lit);
+vec3 night=vec3(.065,.081,.135)+vec3(.05,.062,.09)*e*albedo;
+gl_FragColor=vec4(mix(night,day,smoothstep(0.,.011,mu0)),edge);}`;
 const states=new WeakMap();let supported=null;
 function available(){
  if(supported!==null)return supported;

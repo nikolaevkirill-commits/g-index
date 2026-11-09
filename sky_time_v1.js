@@ -177,12 +177,17 @@ function renderToday(s){
    if(noon){const na=sun(+noon,loc);mark(noon,t('noon'),Math.max(10,Y(na)-7).toFixed(1));}
    chartKey=key;
   }
-  const alt=sun(s.at,loc), x=X((s.at-s.start)/(s.end-s.start)), y=Y(alt);
+  const alt=sun(s.at,loc), fraction=(s.at-s.start)/(s.end-s.start), x=X(fraction), y=Y(alt);
+  const daylight=light(alt), twilight=Math.max(0,1-Math.abs(alt)/12);
   const marker=svg.querySelector('[data-time-sun]');
   marker.style.transform='translate('+x.toFixed(2)+'px,'+y.toFixed(2)+'px)';
   marker.dataset.alt=alt.toFixed(3);marker.dataset.at=new Date(s.at).toISOString();
-  panel.style.setProperty('--sky-light',light(alt).toFixed(3));
+  panel.style.setProperty('--sky-light',daylight.toFixed(3));
+  panel.style.setProperty('--sky-twilight',twilight.toFixed(3));
+  panel.style.setProperty('--sun-x',(100*x/390).toFixed(2)+'%');
   panel.dataset.sun=alt>=0?'above':'below';
+  panel.dataset.clockMode=s.mode;
+  svg.querySelector('[data-time-progress]').setAttribute('stroke-dasharray',Math.max(0,fraction).toFixed(4)+' 1');
   svg.setAttribute('aria-label',t(alt>=0?'sun':'below'));
   const nf=new Intl.NumberFormat(window.NRLocale?.locale||'uk-UA',{maximumFractionDigits:1,signDisplay:'exceptZero'});
   panel.querySelector('[data-time-alt]').textContent=t(alt>=0?'sun':'below')+' · '+nf.format(alt)+'°';
@@ -206,7 +211,7 @@ function mount(){
  if(!overview)return;
  today=document.createElement('section');today.className='sr-time-sun';today.dataset.skyClock='';today.dataset.placement='after-hero';
  today.setAttribute('translate','no');today.setAttribute('aria-labelledby','srTimeSunTitle');
- today.innerHTML='<div class="sr-time-stage"><div class="sr-time-title"><div><h2 id="srTimeSunTitle"></h2><small data-time-place></small></div><button type="button" data-time-open></button></div><svg viewBox="0 0 390 106" role="img"><defs><clipPath id="srTimeAbove"><rect width="390" height="51"/></clipPath><radialGradient id="srTimeGlow"><stop stop-color="#ffd478" stop-opacity=".84"/><stop offset="1" stop-color="#ffac42" stop-opacity="0"/></radialGradient></defs><line x1="18" y1="51" x2="372" y2="51"/><path data-time-orbit class="sr-time-orbit-night"/><path data-time-orbit clip-path="url(#srTimeAbove)" class="sr-time-orbit-day"/><g data-time-sun><circle r="23" fill="url(#srTimeGlow)"/><circle r="7" class="sr-time-disc"/></g></svg><p data-time-alt></p></div>';
+ today.innerHTML='<div class="sr-time-stage"><div class="sr-time-title"><div><h2 id="srTimeSunTitle"></h2><small data-time-place></small></div><button type="button" data-time-open></button></div><svg viewBox="0 0 390 106" role="img"><defs><clipPath id="srTimeAbove"><rect width="390" height="51"/></clipPath><radialGradient id="srTimeGlow"><stop stop-color="#fff3bd" stop-opacity=".95"/><stop offset=".38" stop-color="#ffbd56" stop-opacity=".65"/><stop offset="1" stop-color="#ff8d36" stop-opacity="0"/></radialGradient><radialGradient id="srTimeDisc" cx="34%" cy="32%"><stop stop-color="#fffdf0"/><stop offset=".64" stop-color="#ffe691"/><stop offset="1" stop-color="#ffa840"/></radialGradient></defs><line x1="18" y1="51" x2="372" y2="51"/><path data-time-orbit class="sr-time-orbit-night"/><path data-time-orbit clip-path="url(#srTimeAbove)" class="sr-time-orbit-day"/><path data-time-orbit data-time-progress pathLength="1" clip-path="url(#srTimeAbove)" class="sr-time-orbit-progress"/><g data-time-sun><circle r="28" class="sr-time-halo" fill="url(#srTimeGlow)"/><circle r="9" class="sr-time-disc"/><circle r="4" class="sr-time-night-cursor"/></g></svg><p data-time-alt></p></div>';
  today.querySelector('[data-time-open]').onclick=()=>{if(!place())exampleChosen=true;window.fp434Go('panch',true);};
  updateControls=controls(today);
  // FP569d: verdict and score come first (owner decision 01.11); the Sun clock follows the day overview card.

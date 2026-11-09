@@ -27,7 +27,7 @@
 .nr-sky-event-time{display:block;min-height:44px;margin-block-start:5px;font-size:.85rem}
 .nr-sky-kp{fill:var(--nrs-soft,rgba(243,239,248,.7));font-size:12px;text-anchor:middle}
 .nr-sky-eclipse{fill:rgba(0,0,0,.35)}
-.nr-sky-date{margin:0 0 8px;font-weight:600}
+.nr-sky-date{grid-column:1/-1;margin:4px 0 0;font-weight:600}
 .nr-sky-list h4{margin:0 0 6px;font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--nrs-soft,rgba(243,239,248,.7))}
 .nr-sky-events{list-style:none;margin:0;padding:0;display:grid;gap:8px}
 .nr-sky-ev{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;padding:10px 12px;border-radius:14px;background:rgba(30,24,60,.6);border:1px solid rgba(185,163,227,.18)}
@@ -53,14 +53,13 @@
 @keyframes nrSkyKnot{0%,100%{stroke:#8FB6FF}50%{stroke:#FF8F7A}}
 @keyframes nrSkyFlash{0%{stroke-opacity:1}100%{stroke-opacity:.35}}
 @keyframes nrSkyDim{0%,100%{opacity:.55}50%{opacity:.25}}
-.nr-sky.is-visible .nr-sky-planet.is-conjunction .nr-sky-halo{animation:nrSkyPulse 2.4s ease-in-out infinite}
-.nr-sky.is-visible .nr-sky-planet.is-graha-yuddha .nr-sky-dot{animation:nrSkyClash .6s steps(2) infinite}
-.nr-sky.is-visible .nr-sky-planet.is-retro .nr-sky-loop{animation:nrSkyDash 2.4s linear infinite}
-.nr-sky.is-visible .nr-sky-gandanta.is-on{animation:nrSkyKnot 3s ease-in-out infinite}
-.nr-sky.is-visible .nr-sky-cusp.is-ingress{animation:nrSkyFlash 1.6s ease-out infinite alternate}
-.nr-sky.is-visible .nr-sky-planet.is-combustion{animation:nrSkyDim 3s ease-in-out infinite}
-.nr-sky.is-visible .nr-sky-eclipse{animation:nrSkyDim 5s ease-in-out infinite}
-.nr-sky.is-visible .nr-sky-planet{transition:transform .8s cubic-bezier(.3,.7,.2,1)}
+.nr-sky.is-visible.is-motion .nr-sky-planet.is-conjunction .nr-sky-halo{animation:nrSkyPulse 2.8s ease-in-out infinite}
+.nr-sky.is-visible.is-motion .nr-sky-planet.is-graha-yuddha .nr-sky-dot{animation:nrSkyClash 2s ease-in-out infinite}
+.nr-sky.is-visible.is-motion .nr-sky-planet.is-retro .nr-sky-loop{animation:nrSkyDash 2.4s linear infinite}
+.nr-sky.is-visible.is-motion .nr-sky-gandanta.is-on{animation:nrSkyKnot 3s ease-in-out infinite}
+.nr-sky.is-visible.is-motion .nr-sky-cusp.is-ingress{animation:nrSkyFlash 1.6s ease-out infinite alternate}
+.nr-sky.is-visible.is-motion .nr-sky-planet.is-combustion{animation:nrSkyDim 3s ease-in-out infinite}
+.nr-sky.is-visible.is-motion .nr-sky-eclipse{animation:nrSkyDim 5s ease-in-out infinite}
 .nr-sky-planet{transform-box:view-box}
 @media (prefers-reduced-motion:reduce){.nr-sky *{animation:none!important;transition:none!important}}
 html.nr-design-motion-off .nr-sky *{animation:none!important;transition:none!important}
@@ -69,15 +68,17 @@ html.nr-design-motion-off .nr-sky *{animation:none!important;transition:none!imp
 .nr-sky-star{fill:#F3EFF8;opacity:.55}
 .nr-sky-flare{fill:none;stroke:var(--c);stroke-width:2;opacity:0}
 .nr-sky-planet.is-exact .nr-sky-halo{opacity:.45}
+.nr-sky-planet.is-exact .nr-sky-dot{stroke-width:2.8}
+.nr-sky-planet.is-conjunction .nr-sky-glyph{font-size:15px}
 .nr-sky-vortex path{fill:none;stroke:#FF8F7A;stroke-width:1.4;stroke-linecap:round;opacity:.9}
 @media (min-width:760px){.nr-sky-stage>.nr-sky-wheel{position:sticky;top:84px}}
 @keyframes nrSkyTwinkle{0%,100%{opacity:.15}50%{opacity:.85}}
 @keyframes nrSkyFlare{0%{opacity:.9;stroke-width:2}100%{opacity:0;stroke-width:16}}
 @keyframes nrSkyDash{to{stroke-dashoffset:-20}}
 @keyframes nrSkyClash{0%{stroke-width:1.6}100%{stroke-width:3.4}}
-.nr-sky.is-visible .nr-sky-star,.nr-sky-now.is-visible .nr-sky-star{animation:nrSkyTwinkle var(--t,3.5s) ease-in-out var(--d,0s) infinite}
-.nr-sky.is-visible .nr-sky-planet.is-exact .nr-sky-flare{animation:nrSkyFlare 2.2s ease-out infinite}
-.nr-sky.is-visible .nr-sky-vortex path,.nr-sky-now.is-visible .nr-sky-vortex path{stroke-dasharray:3 2;animation:nrSkyDash 1.6s linear infinite}
+.nr-sky.is-visible.is-motion .nr-sky-star,.nr-sky-now.is-visible.is-motion .nr-sky-star{animation:nrSkyTwinkle var(--t,3.5s) ease-in-out var(--d,0s) infinite}
+.nr-sky.is-visible.is-motion .nr-sky-planet.is-exact .nr-sky-flare{animation:nrSkyFlare 2.2s ease-out infinite}
+.nr-sky.is-visible.is-motion .nr-sky-vortex path,.nr-sky-now.is-visible.is-motion .nr-sky-vortex path{stroke-dasharray:3 2;animation:nrSkyDash 1.6s linear infinite}
 .nr-sky-now{margin:12px 0;padding:16px;border:1px solid var(--nrv-card-line,rgba(185,163,227,.28));border-radius:20px;background:radial-gradient(110% 90% at 0% 0%,rgba(74,60,128,.45),rgba(22,27,56,.92) 65%);color:var(--nrs-ink,#F3EFF8)}
 .nr-sky-now-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
 .nr-sky-now-head h2{margin:0;font-size:1.25rem}
