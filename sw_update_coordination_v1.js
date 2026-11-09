@@ -7,11 +7,30 @@ const sender=Math.random().toString(36).slice(2);let channel=null,until=0,curren
 const pause=()=>{until=Math.max(until,Date.now()+HOLD_MS)};
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const post=data=>{try{channel?.postMessage({...data,sender})}catch(_){}};
-function localRead(input,init){
- try{return String(init?.method||input?.method||'GET').toUpperCase()==='GET'&&new URL(typeof input==='string'||input instanceof URL?String(input):input.url,host.location.href).origin===host.location.origin}catch(_){return false}
+const NOAA_ORIGINS=new Set([
+ 'https://services.swpc.noaa.gov',
+ 'https://gindex-noaa-proxy.nikolaev-kirill.workers.dev'
+]);
+const NOAA_FALLBACKS=new Map([
+ ['https://corsproxy.io','url'],
+ ['https://api.allorigins.win','url'],
+ ['https://api.codetabs.com','quest'],
+ ['https://proxy.corsfix.com',null]
+]);
+function updateRead(input,init){
+ try{
+  if(String(init?.method||input?.method||'GET').toUpperCase()!=='GET')return false;
+  const url=new URL(typeof input==='string'||input instanceof URL?String(input):input.url,host.location.href);
+  if(url.origin===host.location.origin||NOAA_ORIGINS.has(url.origin))return true;
+  if(!NOAA_FALLBACKS.has(url.origin))return false;
+  const param=NOAA_FALLBACKS.get(url.origin);
+  const target=param?url.searchParams.get(param):decodeURIComponent(url.search.slice(1));
+  return !!target&&new URL(target).origin==='https://services.swpc.noaa.gov';
+ }catch(_){return false}
 }
 if(nativeFetch)host.fetch=function(input,init){
- if(!localRead(input,init))return nativeFetch(input,init);
+ // Even a cross-origin GET can wake the controller before Chrome falls back to the network.
+ if(!updateRead(input,init))return nativeFetch(input,init);
  const run=()=>{const p=nativeFetch(input,init);active.add(p);p.then(()=>active.delete(p),()=>active.delete(p));return p};
  if(Date.now()>=until)return run();
  return (async()=>{const signal=init?.signal||input?.signal;while(Date.now()<until){if(signal?.aborted)throw signal.reason||new DOMException('Aborted','AbortError');await sleep(Math.min(50,until-Date.now()));}if(signal?.aborted)throw signal.reason||new DOMException('Aborted','AbortError');return run()})();
