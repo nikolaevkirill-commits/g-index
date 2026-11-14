@@ -152,7 +152,9 @@ function controls(host){
   play.setAttribute('aria-pressed',String(s.mode==='playing'));
   now.textContent=t('now');now.setAttribute('aria-pressed',String(s.mode==='now'));
   const stamp=el.querySelector('time');stamp.dateTime=new Date(s.at).toISOString();stamp.textContent=time;
-  el.querySelector('[data-time-mode]').textContent=[t(s.mode==='playing'?'running':s.mode==='selected'?'selected':'now'),dateFormatter.format(s.at),s.zone,offset].filter(Boolean).join(' · ');
+  // Human offset (UTC+2) instead of the raw IANA id; it also disambiguates repeated DST hours.
+  const human=(offsetFormatter.formatToParts(s.at).find(p=>p.type==='timeZoneName')?.value||'').replace(/^GMT/,'UTC')||s.zone;
+  el.querySelector('[data-time-mode]').textContent=[t(s.mode==='playing'?'running':s.mode==='selected'?'selected':'now'),dateFormatter.format(s.at),human].filter(Boolean).join(' · ');
   const hint=el.querySelector('[data-time-help]');hint.hidden=s.allowed;hint.textContent=s.allowed?'':t('motion');
   el.dataset.mode=s.mode;
  };
@@ -195,8 +197,7 @@ function renderToday(s){
   panel.dataset.clockMode=s.mode;
   svg.querySelector('[data-time-progress]').setAttribute('stroke-dasharray',Math.max(0,fraction).toFixed(4)+' 1');
   svg.setAttribute('aria-label',t(alt>=0?'sun':'below'));
-  const nf=new Intl.NumberFormat(window.NRLocale?.locale||'uk-UA',{maximumFractionDigits:1,signDisplay:'exceptZero'});
-  panel.querySelector('[data-time-alt]').textContent=t(alt>=0?'sun':'below')+' · '+nf.format(alt)+'°';
+  panel.querySelector('[data-time-alt]').textContent=(s.mode==='selected'?t('selected')+' · ':'')+timeText(s.at,s.zone)+' · '+t(alt>=0?'sun':'below');
  }catch{
   chartKey=null;
   for(const path of svg.querySelectorAll('path[data-time-orbit]'))path.removeAttribute('d');
@@ -217,11 +218,13 @@ function mount(){
  if(!overview)return;
  today=document.createElement('section');today.className='sr-time-sun';today.dataset.skyClock='';today.dataset.placement='after-hero';
  today.setAttribute('translate','no');today.setAttribute('aria-labelledby','srTimeSunTitle');
- today.innerHTML='<div class="sr-time-stage"><div class="sr-time-title"><div><h2 id="srTimeSunTitle"></h2><small data-time-place></small></div><button type="button" data-time-open></button></div><svg viewBox="0 0 390 106" role="img"><defs><clipPath id="srTimeAbove"><rect width="390" height="51"/></clipPath><radialGradient id="srTimeGlow"><stop stop-color="#fff3bd" stop-opacity=".95"/><stop offset=".38" stop-color="#ffbd56" stop-opacity=".65"/><stop offset="1" stop-color="#ff8d36" stop-opacity="0"/></radialGradient><radialGradient id="srTimeDisc" cx="34%" cy="32%"><stop stop-color="#fffdf0"/><stop offset=".64" stop-color="#ffe691"/><stop offset="1" stop-color="#ffa840"/></radialGradient></defs><line x1="18" y1="51" x2="372" y2="51"/><path data-time-orbit class="sr-time-orbit-night"/><path data-time-orbit clip-path="url(#srTimeAbove)" class="sr-time-orbit-day"/><path data-time-orbit data-time-progress pathLength="1" clip-path="url(#srTimeAbove)" class="sr-time-orbit-progress"/><g data-time-nowtick style="display:none"><line y1="-4" y2="58" class="sr-time-now-line"/><text y="-8" text-anchor="middle" class="sr-time-now-label"></text></g><g data-time-sun><circle r="28" class="sr-time-halo" fill="url(#srTimeGlow)"/><circle r="9" class="sr-time-disc"/><circle r="4" class="sr-time-night-cursor"/></g></svg><p data-time-alt></p></div>';
+ today.innerHTML='<div class="sr-time-stage"><div class="sr-time-title"><div><h2 id="srTimeSunTitle"></h2><small data-time-place></small></div><button type="button" data-time-open></button></div><svg viewBox="0 0 390 106" role="img"><defs><clipPath id="srTimeAbove"><rect width="390" height="51"/></clipPath><radialGradient id="srTimeGlow"><stop stop-color="#fff3bd" stop-opacity=".95"/><stop offset=".38" stop-color="#ffbd56" stop-opacity=".65"/><stop offset="1" stop-color="#ff8d36" stop-opacity="0"/></radialGradient><radialGradient id="srTimeDisc" cx="34%" cy="32%"><stop stop-color="#fffdf0"/><stop offset=".64" stop-color="#ffe691"/><stop offset="1" stop-color="#ffa840"/></radialGradient></defs><line x1="18" y1="51" x2="372" y2="51"/><path data-time-orbit class="sr-time-orbit-night"/><path data-time-orbit clip-path="url(#srTimeAbove)" class="sr-time-orbit-day"/><path data-time-orbit data-time-progress pathLength="1" clip-path="url(#srTimeAbove)" class="sr-time-orbit-progress"/><g data-time-nowtick style="display:none"><line y1="-4" y2="58" class="sr-time-now-line"/><text y="-8" text-anchor="middle" class="sr-time-now-label"></text></g><g data-time-sun><circle r="28" class="sr-time-halo" fill="url(#srTimeGlow)"/><circle r="11" class="sr-time-disc"/><circle r="4" class="sr-time-night-cursor"/></g></svg><p data-time-alt></p></div>';
  today.querySelector('[data-time-open]').onclick=()=>{if(!place())exampleChosen=true;window.fp434Go('panch',true);};
  updateControls=controls(today);
  // FP569d: verdict and score come first (owner decision 01.11); the Sun clock follows the day overview card.
- const hero=overview.querySelector(':scope > .nr-o-hero');if(hero)hero.after(today);else overview.prepend(today);
+ const hero=overview.querySelector(':scope > .nr-o-hero');
+ const caution=overview.querySelector(':scope > .sr-expert-caution');
+ if(caution||hero)(caution||hero).after(today);else overview.prepend(today);
  renderToday(snapshot());
 }
 function sync(){
@@ -230,11 +233,11 @@ function sync(){
  if(!document.hidden)notify();
 }
 // FP569k: live() exported so other views (Лінія дня) can return the one shared clock to «now».
-window.SRSkyTime=Object.freeze({live,snapshot,place,cityLabel,cityPresets:()=>cities.map(([cityId,names,lat,lon,zone])=>({cityId,label:names[Math.max(0,language())],lat,lon,zone})),controls,light,timeText,selectMoment});
+window.SRSkyTime=Object.freeze({live,snapshot,place,cityLabel,cityPresets:()=>cities.map(([cityId,names,lat,lon,zone])=>({cityId,label:names[Math.max(0,language())],aliases:[...names,...({kyiv:['Kiev'],izium:['Izyum'],tromso:['Тромсьо']}[cityId]||[])],lat,lon,zone})),controls,light,timeText,selectMoment});
 window.addEventListener('hashchange',sync);
 function cityLabel(loc){
  const city=cities.find(([id])=>id===loc?.cityId);
- return city?city[1][Math.max(0,language())]:loc?.label;
+ return city?city[1][Math.max(0,language())]:loc?.cityId==='device'?['Моє місце','My location','Mi ubicación','Ma position'][Math.max(0,language())]:loc?.label;
 }
 function mountCityPicker(){
  const box=document.getElementById('nrLocalContext');
@@ -286,4 +289,47 @@ navigator.connection?.addEventListener('change',sync);
 new MutationObserver(sync).observe(html,{attributes:true,attributeFilter:['class']});
 setInterval(()=>{if(!document.hidden&&selected===null&&['#today','#panch',''].includes(location.hash))notify();},60000);
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',sync);else sync();
+// Claude 13.11: «На цій сторінці» — chips to the Sky route sections (the route is ~8800 px on a phone).
+// Built from the visible h2 headings, so labels follow the current language and new sections appear by themselves.
+(function skyToc(){
+ const TITLE=['На цій сторінці','On this page','En esta página','Sur cette page'];
+ const REFERENCE=['Докладніше про Панчангу','Panchanga reference','Más sobre el Panchanga','En savoir plus sur le Panchanga'];
+ const short=s=>{const head=s.split('·')[0].trim();s=head.length<8?s.trim():head;return s.length>22?s.slice(0,21)+'…':s;};
+ let timer=0,last='';
+ function build(){
+  const route=document.getElementById('nrRoute-panch');if(!route)return;
+  const live=route.querySelector(':scope > [data-sky-live]'),evening=route.querySelector(':scope > [data-sky-evening]');
+  const local=route.querySelector(':scope > #srCivilPanel'),anchor=evening||live;
+  if(anchor&&local&&anchor.nextElementSibling!==local&&!local.contains(document.activeElement))anchor.after(local);
+  const guide=route.querySelector(':scope > #nrPanchGuide'),legacy=route.querySelector(':scope > #nrPanchLive');
+  if(local&&guide&&!guide.contains(document.activeElement)&&!legacy?.contains(document.activeElement)){
+   const extra=document.createElement('details');extra.className='sr-sky-reference';
+   extra.append(document.createElement('summary'));guide.before(extra);extra.append(guide);
+   if(legacy)extra.append(legacy);
+  }
+  const reference=route.querySelector('.sr-sky-reference > summary'),referenceLabel=REFERENCE[language()]||REFERENCE[0];
+  if(reference&&reference.textContent!==referenceLabel)reference.textContent=referenceLabel;
+  const heads=[...route.querySelectorAll('h2')].filter(h=>h.offsetParent&&!h.closest('.sr-sky-toc,.sr-sky-reference')&&h.textContent.trim());
+  const sig=heads.map(h=>h.textContent.trim()).join('|')+language();
+  let nav=route.querySelector(':scope > .sr-sky-toc');
+  if(heads.length<3){nav?.remove();last='';return;}
+  if(nav&&sig===last)return;last=sig;
+  if(!nav){nav=document.createElement('nav');nav.className='sr-sky-toc';nav.setAttribute('translate','no');route.prepend(nav);}
+  nav.setAttribute('aria-label',TITLE[language()]||TITLE[0]);nav.replaceChildren();
+  const label=document.createElement('span');label.textContent=TITLE[language()]||TITLE[0];nav.append(label);
+  heads.forEach((h,i)=>{if(!h.id)h.id='srSkySec'+i;const b=document.createElement('button');b.type='button';b.textContent=short(h.textContent.trim());
+   b.onclick=()=>{const target=h.closest('summary')||h;target.style.scrollMarginTop='72px';target.scrollIntoView({block:'start'});if(target===h)target.tabIndex=-1;target.focus({preventScroll:true});};nav.append(b);});
+ }
+ // Throttle, not debounce: the live sky keeps mutating the route, a debounce would never fire.
+ const soon=()=>{if(timer)return;timer=setTimeout(()=>{timer=0;build();},600);};
+ const style=document.createElement('style');style.id='srSkyTocStyle';
+ style.textContent='html body .sr-sky-toc{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 12px;padding:0}html body .sr-sky-toc span{width:100%;font:600 11px/1.3 system-ui,sans-serif;letter-spacing:.06em;text-transform:uppercase;color:#aebbd6}html body .sr-sky-toc button{min-height:32px!important;min-width:0!important;width:auto!important;padding:4px 11px!important;border-radius:999px!important;border:1px solid rgba(242,196,107,.5)!important;background:rgba(12,20,40,.82)!important;color:#f4ead2!important;font:600 12.5px/1.2 system-ui,sans-serif!important;box-shadow:none!important;cursor:pointer;max-width:100%;overflow-wrap:anywhere}html body .sr-sky-toc button:hover{border-color:#f2c46b!important}html body .sr-sky-toc button:focus-visible{outline:3px solid #f2c46b;outline-offset:2px}';
+ style.textContent+=' .nr-sky-expand>summary,.sr-sky-reference>summary{display:flex;align-items:center;gap:.65rem;min-height:44px;cursor:pointer}.nr-sky-expand>summary::before,.sr-sky-reference>summary::before{content:"+";color:#f2c46b;font-weight:700}.nr-sky-expand[open]>summary::before,.sr-sky-reference[open]>summary::before{content:"−"}.nr-sky-expand>summary:focus-visible,.sr-sky-reference>summary:focus-visible{outline:2px solid #f2c46b;outline-offset:3px}.sr-sky-reference{padding:0 14px;margin:12px 0;border:1px solid var(--nr-line);border-radius:14px}';
+ if(!document.getElementById('srSkyTocStyle'))document.head.append(style);
+ // The route node is created later by the shell; watch the body (throttled) instead of a missing node.
+ const start=()=>{new MutationObserver(soon).observe(document.body,{childList:true,subtree:true});soon();};
+ addEventListener('hashchange',soon);document.addEventListener('nr:language',soon);
+ document.addEventListener('focusout',e=>{if(e.target.closest?.('#nrRoute-panch'))soon();});
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
+})();
 })();

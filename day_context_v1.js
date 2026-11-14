@@ -67,6 +67,7 @@ const DC_STRINGS=([
  ['вчора — експерт, сьогодні — формула','yesterday expert, today formula','ayer experto, hoy fórmula','hier expert, aujourd’hui formule'],
  ['вчора — формула, сьогодні — експерт','yesterday formula, today expert','ayer fórmula, hoy experto','hier formule, aujourd’hui expert'],
  ['Дані для дати','Data for date','Datos para la fecha','Données pour la date'],
+ ['Київ','Kyiv','Kiev','Kyiv'],
  ['експерт','expert','experto','expert'],
  ['Розраховано','Calculated','Calculado','Calculé'],
  ['NOAA, 3 дні','NOAA, 3 days','NOAA, 3 días','NOAA, 3 jours'],
@@ -142,7 +143,7 @@ function provenance(root,ds){
  if(!el){el=document.createElement('p');el.dataset.dayProvenance='';el.dataset.for=key;el.className='nr-dc-prov';el.setAttribute('translate','no');root.after(el);}
  const s=window.NRConsumerOverview?.snapshot?.(ds)||{};
  const who=!s.display?.available?tr('немає'):s.display.authority==='expert_pdf'?tr('експерт')+(s.expert?.source_page?', '+tr('PDF, с.')+' '+s.expert.source_page:''):tr('формула');
- const title=s.expert?.source_pdf?'source_pdf: '+s.expert.source_pdf:'',text=tr('Дані для дати')+': '+dayLabel(ds)+' · '+tr('Оцінка')+': '+who+' · '+tr('Розраховано')+': '+stamp(s.provenance?.generated_at)+' · Kp: '+kpText(s.calculation?.kp_source)+' · Europe/Kyiv';
+ const title=s.expert?.source_pdf?'source_pdf: '+s.expert.source_pdf:'',text=tr('Дані для дати')+': '+dayLabel(ds)+' · '+tr('Оцінка')+': '+who+' · '+tr('Розраховано')+': '+stamp(s.provenance?.generated_at)+' · Kp: '+kpText(s.calculation?.kp_source)+' · '+tr('Київ')+', '+(new Intl.DateTimeFormat('en',{timeZone:'Europe/Kyiv',timeZoneName:'shortOffset'}).formatToParts(Date.parse(ds+'T12:00:00Z')).find(p=>p.type==='timeZoneName')?.value||'').replace(/^GMT/,'UTC')+' (Europe/Kyiv)';
  if(el.title!==title)el.title=title;if(el.textContent!==text)el.textContent=text;
 }
 function ratingTarget(){

@@ -29,7 +29,7 @@ const STR=[
  ['спадає','waning','menguante','décroissante'],
  ['Орієнтація: зеніт угорі, як на вашому небі.','Orientation: zenith up, as in your sky.','Orientación: cénit arriba, como en su cielo.','Orientation : zénith en haut, comme dans votre ciel.'],
  ['Орієнтація: північ угорі (місце не задано).','Orientation: north up (no location set).','Orientación: norte arriba (sin ubicación).','Orientation : nord en haut (lieu non défini).'],
- ['Вкажіть місце в «Місце й вигляд», щоб побачити, що над горизонтом. Координати іншого міста не підставляються.','Set your location in “Location and appearance” to see what is above the horizon. Another city’s coordinates are not substituted.','Indique su ubicación en «Ubicación y aspecto» para ver qué hay sobre el horizonte. No se sustituyen coordenadas de otra ciudad.','Indiquez votre lieu dans « Lieu et apparence » pour voir ce qui est au-dessus de l’horizon. Les coordonnées d’une autre ville ne sont pas substituées.'],
+ ['Вкажіть місце в «Місце», щоб побачити, що над горизонтом. Координати іншого міста не підставляються.','Set your location in “Place” to see what is above the horizon. Another city’s coordinates are not substituted.','Indique su ubicación en «Lugar» para ver qué hay sobre el horizonte. No se sustituyen coordenadas de otra ciudad.','Indiquez votre lieu dans « Lieu » pour voir ce qui est au-dessus de l’horizon. Les coordonnées d’une autre ville ne sont pas substituées.'],
  ['Сяйво','Aurora','Aurora','Aurore'],
  ['Ваша геомагнітна широта','Your geomagnetic latitude','Su latitud geomagnética','Votre latitude géomagnétique'],
  ['За шкалою NOAA при такому Kp сяйво бачили до','On the NOAA scale, at this Kp aurora has been seen as low as','Según la escala NOAA, con este Kp la aurora se ha visto hasta','Selon l’échelle NOAA, à ce Kp l’aurore a été vue jusqu’à'],
@@ -50,7 +50,7 @@ STR.push(
  ['Попередня оцінка Kp NOAA','Provisional NOAA Kp estimate','Estimación provisional de Kp NOAA','Estimation provisoire Kp NOAA'],
  ['Максимум за київську добу · прогноз NOAA, 3 дні','Maximum over the Kyiv day · NOAA 3-day forecast','Máximo del día de Kyiv · pronóstico NOAA de 3 días','Maximum sur la journée de Kyiv · prévision NOAA à 3 jours'],
  ['Орієнтир на добу UTC · NOAA, 27 днів','UTC-day outlook · NOAA, 27 days','Perspectiva del día UTC · NOAA, 27 días','Tendance du jour UTC · NOAA, 27 jours'],
- ['Хмари, засвітка й локальна карта OVATION тут не враховані.','Clouds, light pollution and a local OVATION map are not included here.','No se incluyen nubes, contaminación lumínica ni un mapa OVATION local.','Nuages, pollution lumineuse et carte OVATION locale ne sont pas inclus.'],
+ ['Хмари й засвітка тут не враховані.','Clouds and light pollution are not included here.','No se incluyen nubes ni contaminación lumínica.','Nuages et pollution lumineuse non inclus.'],
  ['Джерела','Sources','Fuentes','Sources'],
  ['Північ на обох краях; лінія — горизонт.','North at both edges; the line is the horizon.','Norte en ambos extremos; la línea es el horizonte.','Nord aux deux extrémités ; la ligne est l’horizon.'],
  ['Розрахунок неба недоступний.','Sky calculation unavailable.','Cálculo del cielo no disponible.','Calcul du ciel indisponible.'],
@@ -105,12 +105,13 @@ function bodySymbol(body){
 }
 function skySvg(c){
  const W=360,H=180,y=a=>(90-a),x=az=>az/360*W;
- let s=`<svg class="nr-sl-sky" viewBox="0 0 ${W} ${H+16}" role="img" aria-label="${esc(tr('Небо зараз над вами'))}"><rect width="${W}" height="${y(0)}" class="nr-sl-air"/><rect y="${y(0)}" width="${W}" height="${H-y(0)}" class="nr-sl-ground"/><line x1="0" x2="${W}" y1="${y(0)}" y2="${y(0)}" class="nr-sl-horizon"/>`;
+ let s=`<svg class="nr-sl-sky" viewBox="0 0 ${W} ${H+16}" role="img" aria-label="${esc(observingCopy[li()].map)}" data-at="${c.time.toISOString()}"><rect width="${W}" height="${y(0)}" class="nr-sl-air"/><rect y="${y(0)}" width="${W}" height="${H-y(0)}" class="nr-sl-ground"/><line x1="0" x2="${W}" y1="${y(0)}" y2="${y(0)}" class="nr-sl-horizon"/>`;
  for(let i=0;i<8;i++)s+=`<text x="${x(i*45)+(i?0:6)}" y="${H+12}" class="nr-sl-tick">${esc(COMPASS[lang()][i])}</text>`;
+ s+=`<text x="${W-6}" y="${H+12}" text-anchor="end" class="nr-sl-tick">${esc(COMPASS[lang()][0])}</text>`;
  // Labels only: shift a label down/up when it would overlap another one; the dot stays at the computed point.
  const placed=[];
  for(const b of [...BODIES].sort((p,q)=>(c.hz[p]?.azimuth||0)-(c.hz[q]?.azimuth||0))){const h=c.hz[b];if(!h)continue;
-  const px=x(h.azimuth),py=y(h.altitude),label=name(b),width=label.length*6.5+8;
+  const px=x(h.azimuth),py=y(h.altitude),label=name(b),width=label.length*7.6+10;/* Claude 13.11: 6.5px/char underestimated Cyrillic labels → right-edge clipping (verify_all_routes_reflow) */
   const gap=BODY_RADIUS[b]+6,right=px+gap+width>W,left=right?px-gap-width:px+gap;
   const preferredY=Math.max(9,Math.min(H-3,py+3));
   const fits=y=>y>=9&&y<=H-3&&!placed.some(p=>left<p.right&&left+width>p.left&&Math.abs(p.y-y)<16);
@@ -148,10 +149,10 @@ function auroraHtml(c){
  const li=Math.max(0,['uk','en','es','fr'].indexOf(window.NRLocale?.language||'uk'));
  const lead=a.state==='no_kp'?['Сяйво: даних про бурю зараз немає.','Aurora: no storm data right now.','Aurora: sin datos de tormenta ahora.','Aurore : pas de données d’orage pour l’instant.'][li]
   :k.kind==='outlook27'?['Сяйво: є лише далекий орієнтир — оцінки немає.','Aurora: only a long-range outlook — no estimate.','Aurora: solo hay una perspectiva lejana; sin estimación.','Aurore : seulement une tendance lointaine ; pas d’estimation.'][li]
-  :a.limit&&Math.abs(mlat)>=a.limit?['Сяйво: за такої бурі його бачили й на вашій широті — можливе низько на півночі вночі.','Aurora: storms like this were seen at your latitude — possible low in the north at night.','Aurora: con tormentas así se ha visto en su latitud; posible bajo en el norte de noche.','Aurore : vue à votre latitude lors de tels orages ; possible bas au nord la nuit.'][li]
-  :a.limit?['Сяйво: за такої бурі його бачили лише північніше — тут малоймовірне.','Aurora: storms like this were seen only further north — unlikely here.','Aurora: solo se ha visto más al norte; poco probable aquí.','Aurore : vue seulement plus au nord ; peu probable ici.'][li]
-  :['Сяйво: буря слабка — на вашій широті зазвичай не видно.','Aurora: the storm is weak — usually not visible at your latitude.','Aurora: tormenta débil; normalmente no visible en su latitud.','Aurore : orage faible ; d’habitude invisible à votre latitude.'][li];
- return `<div class="nr-sl-aurora" data-aurora="${a.state}" data-mlat="${mlat.toFixed(2)}" data-kp-kind="${k.kind}"><p class="nr-sl-aurora-lead"><b>${esc(lead)}</b></p><b>${esc(tr('Сяйво'))} · ${esc(tr('Орієнтир, не локальний прогноз'))}</b><p>${esc(body)}</p>${k.kp!==null?`<p>Kp ${esc(nf.format(k.kp))} · ${esc(tr(labels[k.kind]))} · ${esc(stamp)}</p>`:''}<p>${esc(tr('Ймовірність побачити сяйво тут не розрахована.'))} ${c.hz.Sun?.altitude>0?esc(tr('За денного світла сяйва не видно.')):''}</p><small>${esc(tr('Хмари, засвітка й локальна карта OVATION тут не враховані.'))} ${esc(tr('Широта — наближення диполя IGRF-14, епоха 2025.'))}</small></div>`;
+  :a.limit&&Math.abs(mlat)>=a.limit?['Сяйво: за такої бурі його бачили й на вашій широті — навіть за ясного неба видимість залежить від місцевих умов.','Aurora: storms like this were seen at your latitude — visibility depends on local conditions even under clear skies.','Aurora: con tormentas así se ha visto en su latitud; la visibilidad depende de las condiciones locales.','Aurore : vue à votre latitude lors de tels orages ; la visibilité dépend des conditions locales.'][li]
+  :a.limit?['Сяйво: історична межа для цього Kp лежить ближче до геомагнітних полюсів.','Aurora: the historical boundary for this Kp is closer to the geomagnetic poles.','Aurora: el límite histórico para este Kp está más cerca de los polos geomagnéticos.','Aurore : la limite historique pour ce Kp est plus proche des pôles géomagnétiques.'][li]
+  :['Сяйво: для цього Kp історична шкала NOAA не вказує межу широти.','Aurora: the NOAA historical scale gives no latitude boundary for this Kp.','Aurora: la escala histórica de NOAA no da un límite de latitud para este Kp.','Aurore : l’échelle historique de la NOAA ne donne aucune limite de latitude pour ce Kp.'][li];
+ return `<div class="nr-sl-aurora" data-aurora="${a.state}" data-mlat="${mlat.toFixed(2)}" data-kp-kind="${k.kind}"><p class="nr-sl-aurora-lead"><b>${esc(lead)}</b></p><b>${esc(tr('Сяйво'))} · ${esc(tr('Орієнтир, не локальний прогноз'))}</b><p>${esc(body)}</p>${k.kp!==null?`<p>Kp ${esc(nf.format(k.kp))} · ${esc(tr(labels[k.kind]))} · ${esc(stamp)}</p>`:''}<p>${esc(tr('Ймовірність побачити сяйво тут не розрахована.'))} ${c.hz.Sun?.altitude>0?esc(tr('За денного світла сяйва не видно.')):''}</p><small>${esc(tr('Хмари й засвітка тут не враховані.'))} ${esc(tr('Широта — наближення диполя IGRF-14, епоха 2025.'))}</small></div>`;
 }
 const plainSky=[
  {up:'Над горизонтом',none:'Серед обраних світил зараз жодного над горизонтом.',details:'Висота й напрямок у градусах',note:'Положення над горизонтом саме по собі не гарантує видимості.',darkMoon:'Майже новий Місяць'},
@@ -165,25 +166,59 @@ const DIRECTIONS=[
  ['norte','noreste','este','sureste','sur','suroeste','oeste','noroeste'],
  ['nord','nord-est','est','sud-est','sud','sud-ouest','ouest','nord-ouest']
 ];
+const observingCopy=[
+ {look:'Куди дивитися',sunCare:'Не дивіться прямо на Сонце.',low:'низько',high:'високо',map:'Карта горизонту',shadow:'Місяць під горизонтом'},
+ {look:'Where to look',sunCare:'Do not look directly at the Sun.',low:'low',high:'high',map:'Horizon map',shadow:'Moon below the horizon'},
+ {look:'Dónde mirar',sunCare:'No mires directamente al Sol.',low:'bajo',high:'alto',map:'Mapa del horizonte',shadow:'Luna bajo el horizonte'},
+ {look:'Où regarder',sunCare:'Ne regardez pas directement le Soleil.',low:'bas',high:'haut',map:'Carte de l’horizon',shadow:'Lune sous l’horizon'}
+];
+const direction=az=>DIRECTIONS[li()][Math.round(az/45+8)%8];
 function horizonSummary(c){
- const words=plainSky[li()];
- const bodies=BODIES.filter(b=>c.hz[b].altitude>0).sort((a,b)=>c.hz[b].altitude-c.hz[a].altitude);
- const rows=bodies.map(b=>{
-  const dir=DIRECTIONS[li()][Math.round(c.hz[b].azimuth/45+8)%8];
-  return '<li><strong>'+esc(name(b))+'</strong><span>'+esc(dir)+'</span></li>';
+ const words=plainSky[li()],guide=observingCopy[li()];
+ const up=BODIES.filter(body=>c.hz[body].altitude>0).sort((a,b)=>c.hz[b].altitude-c.hz[a].altitude);
+ const rows=up.map(body=>{
+  const {azimuth,altitude}=c.hz[body];
+  const height=altitude<15?guide.low:altitude>=45?guide.high:'';
+  return '<li data-look-body="'+body+'"><strong>'+esc(name(body))+'</strong><span>'+esc([direction(azimuth),height].filter(Boolean).join(' · '))+'</span></li>';
  }).join('');
- const above=rows?'<p class="nr-sl-horizon-summary"><strong>'+esc(words.up)+'</strong></p><ul class="nr-sl-above">'+rows+'</ul>':'<p>'+esc(words.none)+'</p>';
- return above+'<p class="nr-sl-chart-note">'+esc(words.note)+'</p>';
+ const above=rows?'<ul class="nr-sl-above">'+rows+'</ul>':'<p class="nr-sl-none">'+esc(words.none)+'</p>';
+ const safety=up.includes('Sun')?' '+guide.sunCare:'';
+ return '<h3 class="nr-sl-horizon-summary">'+esc(words.up+' · '+guide.look)+'</h3>'+above+'<p class="nr-sl-chart-note">'+esc(words.note+safety)+'</p>';
+}
+function sunCard(c){
+ const {altitude,azimuth}=c.hz.Sun;
+ const up=altitude>0;
+ // Use the same horizon altitude as the map and place zero on the dashed line.
+ const y=(48-altitude*.39).toFixed(3);
+ const text=tr(up?'над горизонтом':'під горизонтом')+(up?' · '+direction(azimuth):'');
+ return '<div class="nr-sl-suncard" data-sun-alt="'+altitude.toFixed(3)+'" data-sun-up="'+up+'" data-at="'+c.time.toISOString()+'">'+
+  '<b>'+esc(name('Sun'))+'</b><svg class="nr-sl-sun-height" viewBox="0 0 90 96" role="img" aria-label="'+esc(text)+'">'+
+  '<path d="M7 48h76"/><circle class="nr-sl-sun-halo" cx="45" cy="'+y+'" r="16"/>'+
+  '<circle class="nr-sl-sun-dot" cx="45" cy="'+y+'" r="7"/></svg><small>'+esc(text)+'</small></div>';
 }
 function listHtml(c){
- if(!c.loc)return `<p class="nr-sl-noloc">${esc(tr('Вкажіть місце в «Місце й вигляд», щоб побачити, що над горизонтом. Координати іншого міста не підставляються.'))}</p>`;
+ if(!c.loc)return `<p class="nr-sl-noloc">${esc(tr('Вкажіть місце в «Місце», щоб побачити, що над горизонтом. Координати іншого міста не підставляються.'))}</p>`;
  const nf=new Intl.NumberFormat(window.NRLocale?.locale||'uk-UA',{maximumFractionDigits:2});
  return '<ul class="nr-sl-list">'+BODIES.map(b=>{const h=c.hz[b];return `<li data-body="${b}" class="${h.altitude>0?'is-up':'is-down'}"><b>${esc(name(b))}</b> ${esc(nf.format(h.altitude))}° · ${esc(compass(h.azimuth))} ${esc(nf.format(h.azimuth))}° — ${esc(tr(h.altitude>0?'над горизонтом':'під горизонтом'))}</li>`}).join('')+'</ul>';
 }
 const STYLE=`.nr-sl{margin:14px 0;padding:18px;overflow:hidden}.nr-sl a{color:inherit}.nr-sl-aurora p{margin:.35rem 0}.nr-sl-chart-note{font-size:.8rem;opacity:.8}.nr-sl h2{margin:0 0 8px}
-.nr-sl-top{display:grid;gap:10px;align-items:center}.nr-sl-map{min-width:0}.nr-sl-map .nr-sl-chart-note{margin:4px 0 0}.nr-sl-moonbox{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:140px}
+.nr-sl-top{display:grid;gap:10px;align-items:start}.nr-sl-map{min-width:0}.nr-sl-map .nr-sl-chart-note{margin:4px 0 0}
+body:has(#nrRoute-panch.active .nr-sl[data-state=ready]) .wow-header-moon{display:none!important}
+.nr-sl-lights{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:8px}
+.nr-sl-lights:has(.nr-sl-moonbox:only-child){grid-template-columns:1fr}
+.nr-sl-suncard,.nr-sl .nr-sl-moonbox{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-width:0;border:1px solid #526c95;border-radius:14px;background:#101e36;padding:6px;text-align:center;font-size:.85rem}
+.nr-sl-suncard b,.nr-sl-moonbox>span{font-weight:650}
+.nr-sl-suncard small,.nr-sl-moonbox small{font-size:.73rem;line-height:1.25;color:#c9d5ed}
+.nr-sl-sun-height{display:block;width:62px;height:65px;overflow:visible}
+.nr-sl-sun-height path{stroke:#99b0d2;stroke-dasharray:3 2}
+.nr-sl-sun-halo{fill:#ffb640;opacity:.3}.nr-sl-sun-dot{fill:#ffda7c;stroke:#fff1bd}
+.nr-sl-suncard[data-sun-up=false] .nr-sl-sun-halo{display:none}
+.nr-sl-suncard[data-sun-up=false] .nr-sl-sun-dot{fill:#1d2d49;stroke:#ffda7c}
+.nr-sl .nr-sl-moonbox :is(canvas,svg){width:76px!important;height:76px!important;max-width:100%}
+.nr-sl .nr-sl-moonbox canvas[hidden]{display:none!important}
+.nr-sl .nr-sl-map h3,.nr-sl .nr-sl-summary h3{margin:0;font-size:1rem;line-height:1.3}
 .nr-sl-list{list-style:none;margin:12px 0 0;padding:0;font-size:.92rem;line-height:1.55}
-@media(min-width:670px){.nr-sl-top{grid-template-columns:minmax(10rem,1fr) minmax(0,3fr)}.nr-sl-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:10px}}.nr-sl-list .is-down{opacity:.6}
+@media(min-width:670px){.nr-sl-top{grid-template-columns:minmax(15rem,2fr) minmax(0,3fr)}.nr-sl-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:10px}}.nr-sl-list .is-down{opacity:.6}
 .nr-sl-sky{width:100%;max-width:640px;height:auto;margin:10px auto 0;display:block}.nr-sl-air{fill:rgba(60,90,150,.18)}.nr-sl-ground{fill:rgba(0,0,0,.35)}.nr-sl-horizon{stroke:rgba(255,255,255,.4)}
 .nr-sl-tick{fill:currentColor;font-size:11px;opacity:.85}.nr-sl-body{--planet:#cfd8ff}.nr-sl-body .nr-sl-disc{fill:var(--planet);stroke:#edf3ff;stroke-width:.75}
 .nr-sl-body .nr-sl-halo{fill:var(--planet);opacity:.21}
@@ -194,22 +229,29 @@ const STYLE=`.nr-sl{margin:14px 0;padding:18px;overflow:hidden}.nr-sl a{color:in
 .nr-sl.nr-sl-motion .nr-sl-body{transition:transform .32s ease}
 .nr-sl.nr-sl-motion:not([data-clock-mode=now]) .nr-sl-body{transition:none}
 .nr-sl .nr-sl-air{fill:rgb(29 91 154 / calc(.16 + .58 * var(--sky-light,0)))}
-.nr-sl .nr-sl-moonbox{border:1px solid #526c95;border-radius:22px;background:radial-gradient(ellipse at 50% 28%,#344267,#111a32 72%);padding:10px 8px;text-align:center}
+.nr-sl .nr-sl-moonbox{background:radial-gradient(ellipse at 50% 28%,#344267,#111a32 72%)}
 .nr-sl .nr-sl-moonbox small{max-width:16rem}
 .nr-sl-body.is-mercury{--planet:#bfc6d3}.nr-sl-body.is-venus{--planet:#ffd1a5}.nr-sl-body.is-mars{--planet:#ff8d70}.nr-sl-body.is-jupiter{--planet:#ffbf86}.nr-sl-body.is-saturn{--planet:#ead98d}
 @media (prefers-reduced-motion:reduce){.nr-sl-body{transition:none!important}}
 .nr-sl-aurora{margin:.6rem 0 0;font-size:.92rem}.nr-sl-aurora span,.nr-sl-aurora small{display:block;opacity:.85;font-size:.82rem}
-.nr-sl-positions{margin-top:12px}.nr-sl-positions summary{min-height:44px;padding-block:10px;cursor:pointer}.nr-sl-horizon-summary{margin:12px 0 0}.nr-sl-above{list-style:none;display:grid;grid-template-columns:repeat(auto-fit,minmax(108px,1fr));gap:6px;margin:6px 0;padding:0}.nr-sl-above li{border:1px solid #526c95;border-radius:8px;padding:4px 8px}.nr-sl-above span{display:block;font-size:.83em}.nr-sl-foot{margin:.5rem 0 0;font-size:.78rem;opacity:.8}.nr-sl-noloc{margin:0;font-size:.92rem}`;
+.nr-sl-positions{margin-top:12px}.nr-sl-positions summary{min-height:44px;padding-block:10px;cursor:pointer}.nr-sl-summary{margin:0 0 10px;padding:9px 10px;border:1px solid #526c95;border-radius:14px;background:#172540}
+.nr-sl-summary .nr-sl-chart-note,.nr-sl-summary .nr-sl-none{margin:5px 0 0;color:#e1e9fa;opacity:1;line-height:1.35}
+.nr-sl-above{list-style:none;display:grid;grid-template-columns:repeat(auto-fit,minmax(85px,1fr));gap:4px;margin:5px 0 0;padding:0}
+.nr-sl-above li{min-width:0;padding:3px 5px;background:#101d35;border-radius:6px;line-height:1.25}
+.nr-sl-above strong{display:block;font-size:.86rem}.nr-sl-above span{display:block;color:#cfddf3;font-size:.76rem}
+@media(max-width:400px){.nr-sl{padding:12px}.nr-sl .sr-time-controls{padding:6px 10px}.nr-sl .sr-time-controls button{padding-inline:7px}.nr-sl .nr-sl-sky{margin-top:4px}}
+.nr-sl-foot{margin:.5rem 0 0;font-size:.78rem;opacity:.8}.nr-sl-noloc{margin:0;font-size:.92rem}`;
 let host=null,retry=null,last=null,moonCanvas=null,updateControls;
 function drawMoon(c){
  const box=host?.querySelector('.nr-sl-moonbox'),svg=box?.querySelector('.nr-sl-moon');if(!svg)return;
+ svg.dataset.at=c.time.toISOString();
  const showSvg=()=>{svg.style.display='';if(moonCanvas)moonCanvas.hidden=true;};
  if(!window.NRMoonGL||navigator.connection?.saveData||dataReduced.matches){showSvg();return;}
  if(!moonCanvas){moonCanvas=document.createElement('canvas');moonCanvas.className='nr-sl-moon-gl';moonCanvas.setAttribute('role','img');}
  if(moonCanvas.parentElement!==box)svg.after(moonCanvas);
  moonCanvas.setAttribute('aria-label',svg.getAttribute('aria-label'));
  const ok=NRMoonGL.draw(moonCanvas,{phaseAngle:c.phaseAngle,limb:c.limb,size:152});
- if(ok){svg.style.display='none';moonCanvas.hidden=false;}else showSvg();
+ if(ok){moonCanvas.dataset.at=c.time.toISOString();svg.style.display='none';moonCanvas.hidden=false;}else showSvg();
 }
 const reduced=matchMedia('(prefers-reduced-motion:reduce)'),dataReduced=matchMedia('(prefers-reduced-data:reduce)');
 function active(){return !document.hidden&&location.hash.split('?')[0]==='#panch';}
@@ -224,9 +266,33 @@ function mount(){
  if(!route||!scene||typeof window.Astronomy==='undefined')return false;
  if(!document.getElementById('nrSkyLiveStyle')){const s=document.createElement('style');s.id='nrSkyLiveStyle';s.textContent=STYLE;document.head.append(s);}
  host=document.createElement('section');host.className='nr-card nr-sl';host.dataset.skyLive='';host.setAttribute('translate','no');scene.before(host);
- const heading=document.createElement('h2');heading.id='nrSkyLiveHeading';host.setAttribute('aria-labelledby',heading.id);host.append(heading);
+ const heading=document.createElement('h2');heading.id='nrSkyLiveHeading';host.setAttribute('aria-labelledby',heading.id);
+ const header=document.createElement('div');header.className='sr-dl-head nr-sl-header';
+ const placeButton=document.createElement('button');placeButton.type='button';placeButton.dataset.livePlace='';
+ placeButton.onclick=()=>window.SRDayLineView?.openPlace(placeButton);
+ const title=document.createElement('div'),placeLabel=document.createElement('small');
+ placeLabel.dataset.skyPlaceLabel='';
+ title.append(heading,placeLabel);header.append(title,placeButton);host.append(header);
+ const guide=document.createElement('div');guide.className='nr-sl-summary';host.append(guide);
  updateControls=SRSkyTime.controls(host);
  return true;
+}
+let ovationModule, ovationLoad;
+function showOvation(s,c){
+ const panel=host.querySelector('[data-local-ovation]');
+ panel.hidden=s.mode!=='now'||!c.loc;
+ if(panel.hidden)return;
+ if(ovationModule){
+  ovationModule.updatePanel(panel,c.loc,s.zone,lang(),dataReduced.matches||navigator.connection?.saveData,sync);
+ }else if(!ovationLoad){
+  ovationLoad=import('./sky_ovation_v1.js?v=1').then(module=>{
+   ovationModule=module;
+   sync();
+  }).catch(()=>{
+   panel.textContent=['Дані OVATION недоступні.','OVATION data unavailable.','Datos de OVATION no disponibles.','Données OVATION indisponibles.'][li()];
+   ovationLoad=null;
+  });
+ }
 }
 function render(state){
  if(!active()||!window.SRSkyTime)return;
@@ -236,20 +302,53 @@ function render(state){
  last=c;host.dataset.state='ready';host.dataset.time=c.time.toISOString();host.dataset.clockMode=s.mode;motion();
  host.querySelector('h2').textContent=s.mode==='now'?tr('Небо зараз над вами'):['Небо у вибраний час','Sky at the selected time','Cielo a la hora elegida','Ciel à l’heure choisie'][li()];
  if(c.loc?.example)host.querySelector('h2').textContent=['Небо над Києвом','Sky above Kyiv','Cielo sobre Kyiv','Ciel au-dessus de Kyiv'][li()];
+ const placeLabel=host.querySelector('[data-sky-place-label]');
+ const city=c.loc?.example?['Київ · типове місце','Kyiv · default location','Kyiv · lugar predeterminado','Kyiv · lieu par défaut'][li()]
+  :SRSkyTime.cityLabel(c.loc)||['Ваше місце','Your place','Tu ubicación','Votre lieu'][li()];
+ if(placeLabel.textContent!==city)placeLabel.textContent=city;
  host.style.setProperty('--sky-light',SRSkyTime.light(c.hz.Sun?.altitude??-18).toFixed(3));
  updateControls(s);
+ host.querySelector('[data-live-place]').textContent=['Місце','Place','Lugar','Lieu'][li()];
  const zone=s.zone,pct=Math.round(c.fraction*100),t=SRSkyTime.timeText(s.at,zone);
  // FP569k: near a new Moon say when it is (computed), instead of only «<1 %».
  let nm=null;try{if(c.fraction<.02){const f=Astronomy.SearchMoonPhase(0,new Date(c.time.getTime()-2*864e5),4);if(f&&Math.abs(f.date-c.time)<1.5*864e5)nm=f.date;}}catch(_){}
  const nmText=nm?['Молодик','New Moon','Luna nueva','Nouvelle Lune'][li()]+' · '+new Intl.DateTimeFormat(window.NRLocale?.locale||'uk-UA',{timeZone:zone,day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(nm):'';
  const moonLabel=nm?nmText+' · '+(pct===0?'<1%':pct+'%'):c.fraction>0&&pct===0?plainSky[li()].darkMoon+' · <1%':name('Moon')+': '+tr('Освітлено')+' '+pct+'%';
- const html=`<div class="nr-sl-top"><div class="nr-sl-moonbox">${moonSvg(c,152)}<span>${esc(moonLabel)} · ${esc(tr(c.waxing?'росте':'спадає'))}</span><small>${esc(tr(c.loc?'Орієнтація: зеніт угорі, як на вашому небі.':'Орієнтація: північ угорі (місце не задано).'))}</small></div>${c.loc?`<div class="nr-sl-map">${skySvg(c)}<p class="nr-sl-chart-note">${esc(tr('Північ на обох краях; лінія — горизонт.'))}</p>${c.loc.example?`<p class="nr-sl-chart-note" data-sky-example>${esc(['Типове місце — Київ. Своє місто можна обрати в «Місце й вигляд».','Default place: Kyiv. Choose your city in “Place and appearance”.','Lugar predeterminado: Kyiv. Elige tu ciudad en «Lugar y aspecto».','Lieu par défaut : Kyiv. Choisissez votre ville dans « Lieu et apparence ».'][li()])}</p>`:''}</div>`:''}</div>${c.loc?'<div class="nr-sl-summary">'+horizonSummary(c)+'</div><details class="nr-sl-positions"><summary>'+esc(plainSky[li()].details)+'</summary>'+listHtml(c)+'</details>':listHtml(c)}<div data-aurora-content>${s.mode==='now'?auroraHtml(c):''}</div><p class="nr-sl-foot">${esc(tr('Розрахунок'))}: astronomy-engine 2.1.19 · ${esc(t)} ${esc(zone)}${c.loc?' · '+c.loc.lat.toFixed(2)+', '+c.loc.lon.toFixed(2):''}. ${esc(tr('Звичайна атмосферна рефракція; погода й рельєф не враховані.'))}</p>`;
+ const html=`
+ <div class="nr-sl-top">
+  <div class="nr-sl-lights">${c.loc?sunCard(c):''}
+   <div class="nr-sl-moonbox">
+    ${moonSvg(c,152)}<span>${esc(moonLabel)} · ${esc(tr(c.waxing?'росте':'спадає'))}</span>
+    <small>${esc(c.hz.Moon?.altitude<=0?observingCopy[li()].shadow:tr('Орієнтація: зеніт угорі, як на вашому небі.'))}</small>
+   </div>
+  </div>${c.loc?`
+  <div class="nr-sl-map">
+   <h3>${esc(observingCopy[li()].map)}</h3>
+   <div class="nr-sl-chart">${skySvg(c)}</div><p class="nr-sl-chart-note">${esc(tr('Північ на обох краях; лінія — горизонт.'))}</p>${c.loc.example?`<p class="nr-sl-chart-note" data-sky-example>${esc(['Типове місце — Київ. Своє місто можна обрати в «Місце».','Default place: Kyiv. Choose your city in “Place”.','Lugar predeterminado: Kyiv. Elige tu ciudad en «Lugar».','Lieu par défaut : Kyiv. Choisissez votre ville dans « Lieu ».'][li()])}</p>`:''}</div>`:''}
+ </div>${c.loc?'<details class="nr-sl-positions"><summary>'+esc(plainSky[li()].details)+'</summary>'+listHtml(c)+'</details>':listHtml(c)}
+ <div data-aurora-content>${s.mode==='now'?auroraHtml(c):''}</div>
+ <p class="nr-sl-foot">${esc(tr('Розрахунок'))}: astronomy-engine 2.1.19 · ${esc(t)} ${esc(zone)}${c.loc?' · '+c.loc.lat.toFixed(2)+', '+c.loc.lon.toFixed(2):''}. ${esc(tr('Звичайна атмосферна рефракція; погода й рельєф не враховані.'))}</p>`;
+ const summary=host.querySelector('.nr-sl-summary');
+ const nextSummary=c.loc?horizonSummary(c):'';
+ if(summary.dataset.content!==nextSummary){summary.innerHTML=nextSummary;summary.dataset.content=nextSummary;}
  // Stable interactive links live outside the refreshed numeric content. Dot identity survives every tick.
  let content=host.querySelector('[data-live-content]');
  if(!content){content=document.createElement('div');content.dataset.liveContent='';host.append(content);const links=document.createElement('p');links.className='nr-sl-sources';links.innerHTML='<span></span>: <a href="https://www.spaceweather.gov/noaa-scales-explanation" target="_blank" rel="noopener noreferrer">NOAA G</a> · <a href="https://www.spaceweather.gov/products/aurora-30-minute-forecast" target="_blank" rel="noopener noreferrer">OVATION</a> · <a href="https://wdc.kugi.kyoto-u.ac.jp/poles/polesexp.html" target="_blank" rel="noopener noreferrer">IGRF-14</a>';host.append(links);}
+ let ovation=host.querySelector('[data-local-ovation]');
+ if(!ovation){
+  ovation=document.createElement('section');ovation.dataset.localOvation='';ovation.className='nr-sl-aurora';
+  ovation.setAttribute('aria-live','polite');content.after(ovation);
+ }
+ showOvation(s,c);
  host.querySelector('.nr-sl-sources span').textContent=tr('Джерела');
  const sig=lang()+':'+Boolean(c.loc)+':'+Boolean(c.loc?.example),tmp=document.createElement('div');tmp.innerHTML=html;
- if(content.dataset.sig!==sig){content.innerHTML=html;content.dataset.sig=sig;drawMoon(c);return;}
+ if(content.dataset.sig!==sig){
+  content.innerHTML=html;content.dataset.sig=sig;
+  const credit=window.SRP0Layout?.cosmosCredit?.();
+  if(credit)content.querySelector('.nr-sl-chart')?.after(credit);
+  drawMoon(c);return;
+ }
+ if(c.loc)content.querySelector('.nr-sl-sky').dataset.at=c.time.toISOString();
  for(const g of tmp.querySelectorAll('.nr-sl-body')){
   const cur=content.querySelector(`.nr-sl-body[data-body="${g.dataset.body}"]`);if(!cur)continue;
   // A crossing of north is a discontinuity of this cylindrical chart, not a trip across the sky.
@@ -264,7 +363,7 @@ function render(state){
  for(const key of ['aria-label','data-fraction','data-limb','data-rx'])oldMoon.setAttribute(key,newMoon.getAttribute(key));
  oldMoon.querySelector('g').setAttribute('transform',newMoon.querySelector('g').getAttribute('transform'));
  oldMoon.querySelector('path').setAttribute('d',newMoon.querySelector('path').getAttribute('d'));
- for(const selector of ['.nr-sl-moonbox>span','.nr-sl-summary','.nr-sl-list','.nr-sl-noloc','[data-aurora-content]','.nr-sl-foot']){
+ for(const selector of ['.nr-sl-moonbox>span','.nr-sl-moonbox>small','.nr-sl-suncard','.nr-sl-list','.nr-sl-noloc','[data-aurora-content]','.nr-sl-foot']){
   const old=content.querySelector(selector),next=tmp.querySelector(selector);
   if(old&&next&&!old.isEqualNode(next))old.replaceWith(next);
  }

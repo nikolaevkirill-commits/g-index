@@ -12,6 +12,7 @@ const sky=JSON.parse(fs.readFileSync(path.join(root,'consumer_cloud/sky.json'),'
 const feedAt=Date.parse(JSON.parse(fs.readFileSync(path.join(root,'consumer_cloud/forecast.json'),'utf8')).generated_at||0)||0;
 const NOW=new Date(Math.max(Date.parse(sky.daily[0].date+'T07:00:00Z'),feedAt+3600e3));
 const NATAL_SIGN=10,NATAL_NAK=24,TARA=['Janma','Sampat','Vipat','Kshema','Pratyak','Sadhana','Naidhana','Mitra','Atimitra'];
+const TARA_UK=['Джанма','Сампат','Віпат','Кшема','Пратьяк','Садхана','Найдхана','Мітра','Атімітра'];
 const fixture={name:'',date:'1990-06-15',time:'14:20',utcOff:4,tz:'Europe/Kyiv',profile:'general'};
 (async()=>{await new Promise(r=>srv.listen(0,'127.0.0.1',r));const b=await chromium.launch();let checks=0;
 try{for(const entry of ['classic.html','index.html'])for(const lang of ['uk','en']){
@@ -24,6 +25,7 @@ try{for(const entry of ['classic.html','index.html'])for(const lang of ['uk','en
  if(process.argv.includes('--slow-render'))await p.evaluate(()=>{const raf=requestAnimationFrame,caf=cancelAnimationFrame,jobs=new Map();let seq=0;window.requestAnimationFrame=cb=>{const id=--seq,job={};jobs.set(id,job);job.timer=setTimeout(()=>{job.frame=raf(t=>{jobs.delete(id);cb(t)})},650);return id};window.cancelAnimationFrame=id=>{const job=jobs.get(id);if(!job)return caf(id);clearTimeout(job.timer);if(job.frame!==undefined)caf(job.frame);jobs.delete(id)}});
  for(const day of sky.daily.slice(0,10)){if(!dates.includes(day.date))continue;
   const g=day.grahas,grp=((g.Moon.nakshatra-NATAL_NAK)%27+27)%27%9+1;
+  const expectedTara=(lang==='uk'?TARA_UK:TARA)[grp-1];
   await p.evaluate(ds=>{const sel=document.querySelector('#nrRoute-today [data-overview="today"] select');sel.value=ds;sel.dispatchEvent(new Event('change',{bubbles:true}));},day.date);
   // Consumer refresh and rAF can rebuild this card after 350 ms. Read one atomic snapshot
   // only when the selected day's expected Tara is present; incorrect/missing output still fails.
@@ -32,13 +34,15 @@ try{for(const entry of ['classic.html','index.html'])for(const lang of ['uk','en
    const sel=document.querySelector('#nrRoute-today [data-overview="today"] select');
    const y=document.querySelector('#nrRoute-today [data-day-you] .nr-dv-you'),text=y?.innerText||'';
    if(sel?.value!==ds||!y?.querySelector('li')||!text.includes(tara))return false;
-   return {text,score:document.querySelector('#nrRoute-today .nr-o-score').textContent,ref:String(fp469ConsumerForDate({ds}).consumer.score)};
-  },{ds:day.date,tara:TARA[grp-1]},{timeout:10000,polling:50});}
+   return {text,signals:[...y.querySelectorAll('[data-signal]')].map(el=>({name:el.querySelector('.nr-you-signal-head strong').innerText,glyph:el.querySelector('.nr-you-glyph').innerText,tone:el.querySelector('.nr-you-tone').innerText,explanation:el.querySelector('.nr-you-signal-content > p').innerText})),score:document.querySelector('#nrRoute-today .nr-o-score').textContent,ref:String(fp469ConsumerForDate({ds}).consumer.score)};
+  },{ds:day.date,tara:expectedTara},{timeout:10000,polling:50});}
   catch(e){throw Error(entry+' '+lang+' '+day.date+' natal readiness: '+await p.locator('#nrRoute-today [data-day-you]').textContent().catch(()=>'(card missing)')+'; '+e.message);}
   const r=await handle.jsonValue();await handle.dispose();
-  assert.ok(r.text.includes(TARA[grp-1]),day.date+' Tara '+TARA[grp-1]+' in '+r.text);
+  assert.ok(r.signals.every(x=>x.name&&x.glyph&&/^[▲▼●]/.test(x.tone)&&x.explanation.length>15),'each signal must visibly carry a glyph, name, status and explanation');
+  assert.ok(r.text.includes(expectedTara),day.date+' Tara '+expectedTara+' in '+r.text);
+  if(lang==='uk')assert.ok(!r.text.includes('('+TARA[grp-1]+')'),'duplicated Latin spelling in Ukrainian');
   const chandra=((g.Moon.sign-NATAL_SIGN)%12+12)%12===7;assert.equal(/Чандраштама|Chandrashtama/.test(r.text),chandra,day.date+' Chandrashtama');
-  if(g.Saturn.sign===11)assert.match(r.text,lang==='uk'?/Саде Саті, фаза 3 з 3/:/Sade Sati, phase 3 of 3/);
+  if(g.Saturn.sign===11)assert.match(r.text,lang==='uk'?/Саде Саті[\s\S]*Фаза 3 з 3/:/Sade Sati[\s\S]*Phase 3 of 3/);
   if(g.Jupiter.sign===4)assert.match(r.text,lang==='uk'?/Юпітер у 7-му.*сприятливо/:/Jupiter in the 7th sign.*favourable/);
   if(lang==='en')assert.equal(/[А-Яа-яІіЇїЄєҐґ]/.test(r.text),false,'Ukrainian in English: '+r.text);
   if(r.ref==='null')assert.equal(r.score.trim(),'—',day.date+': no score must show the explicit empty state');else assert.equal(r.score.replace(/[^\d+\-−]/g,'').replace('−','-').replace('+',''),r.ref.replace('+',''),'score changed');checks++;}
@@ -49,6 +53,33 @@ try{for(const entry of ['classic.html','index.html'])for(const lang of ['uk','en
  await p.fill('#nrRoute-today [data-natal-form] input[name=date]','1990-06-15');await p.fill('#nrRoute-today [data-natal-form] input[name=time]','14:20');await p.fill('#nrRoute-today [data-natal-form] input[name=tz]','Europe/Kyiv');
  await p.click('#nrRoute-today [data-natal-form] button[type=submit]');
  await p.waitForFunction(()=>document.querySelector('#nrRoute-today [data-day-you] .nr-dv-you li'),null,{timeout:10000});
+ // The same shared birth evidence drives all surfaces. A saved IANA zone is authoritative
+ // over legacy offset metadata; a manual profile retains its explicitly entered offset.
+ const birthCases=await p.evaluate(day=>{
+  const original=localStorage.getItem('personalData_0');
+  const base={date:'1982-11-28',time:'06:40',tz:'Europe/Kyiv',utcOff:0};
+  const doc={daily:[day]};
+  const check=profile=>{
+   localStorage.setItem('personalData_0',JSON.stringify(profile));
+   const info=NRNatalSky.lines(day.date,doc),div=document.createElement('div');div.innerHTML=NRNatalSky.html(day.date,doc);
+   return {info,tara:NRNatalSky.timelineTara([1,27]).status,warnings:div.querySelectorAll('.nr-dv-you-warn').length};
+  };
+  try{return [
+   check(base),check({...base,time:''}),check({...base,tz:'manual',utcOff:3}),
+   check({...base,tz:'manual',utcOff:null}),check({...base,date:'2026-03-29',time:'03:30'})
+  ];}finally{localStorage.setItem('personalData_0',original);}
+ },sky.daily[0]);
+ const [known,unknown,manual,noOffset,gap]=birthCases;
+ assert.deepEqual([known.info.sign,known.info.nak,known.tara,known.warnings],[0,0,'available',0]);
+ assert.deepEqual(manual,known);
+ assert.deepEqual([unknown.info.sign,unknown.info.nak,unknown.info.items.length,unknown.tara,unknown.warnings],[null,null,0,'ambiguous',2]);
+ for(const v of [noOffset,gap])assert.deepEqual([v.info.invalid,v.tara,v.warnings],[true,'unavailable',1]);
+ // The real Today renderer must keep the weather scene out of the closed details after profile changes.
+ const scene=p.locator('#nrRoute-today [data-space-scene=today]');
+ await scene.waitFor({state:'attached',timeout:10000});
+ await p.evaluate(()=>window.NRConsumerOverview.update());
+ assert.ok(await scene.evaluate(el=>el.parentElement.matches('[data-overview=today]')&&!el.closest('details')),
+  entry+' '+lang+': overview redraw moved the space weather scene into closed details');
  const saved=await p.evaluate(()=>JSON.parse(localStorage.getItem('personalData_0')||'null'));assert.equal(saved?.date,'1990-06-15');assert.equal(saved?.utcOff,4); // Kyiv 15.06.1990 = UTC+4 (Moscow summer time until 01.07.1990)
  assert.equal(errs.length,0,errs.join('|'));await c.close();}}
 finally{await b.close();srv.close()}

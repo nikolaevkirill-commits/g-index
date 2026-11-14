@@ -1,10 +1,10 @@
 (function(root){'use strict';
-const workerURL=new URL('dayline_worker_v1.js',document.currentScript.src);
+const workerURL=new URL('dayline_worker_v1.js?v=fp572-lunar',document.currentScript.src);
 let worker=null,pending=null,sequence=0;
 function finish(error,result){if(!pending)return;const job=pending;pending=null;clearTimeout(job.timer);error?job.reject(error):job.resolve(result);}
 function reset(error){if(worker){worker.terminate();worker=null;}finish(error);}
 function build(input){
- const key=JSON.stringify([input.date,input.lat,input.lon,input.zone]);
+ const key=JSON.stringify([input.date,input.lat,input.lon,input.zone,!!input.includeCivil]);
  if(pending?.key===key)return pending.promise;
  if(pending)reset(Error('SUPERSEDED_DAYLINE_REQUEST'));
  if(typeof Worker==='undefined')return Promise.reject(Error('DAYLINE_WORKER_UNAVAILABLE'));

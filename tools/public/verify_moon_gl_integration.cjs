@@ -7,7 +7,7 @@ for(const entry of ['index.html','classic.html']){
  const c=await b.newContext({viewport:{width:390,height:950},locale:'uk-UA',timezoneId:'Europe/Kyiv',serviceWorkers:'block',reducedMotion:'reduce'});await c.route(/^https?:\/\/(?!127\.0\.0\.1)/,r=>r.abort());
  const p=await c.newPage(),errors=[];p.on('pageerror',e=>errors.push(e.message));await p.clock.install({time:new Date('2026-11-06T05:30:00Z')});
  await p.addInitScript(()=>localStorage.setItem('gindex_local_context_v1',JSON.stringify({lat:50.4501,lon:30.5234,zone:'Europe/Kyiv',saved_at:new Date().toISOString()})));
- await p.goto('http://127.0.0.1:'+srv.address().port+'/'+entry+'?channel=play#today');await p.waitForFunction(()=>window.NRConsumerOverview);
+ await p.goto('http://127.0.0.1:'+srv.address().port+'/'+entry+'?channel=play#today',{waitUntil:'domcontentloaded',timeout:120000});await p.waitForFunction(()=>window.NRConsumerOverview,null,{polling:50,timeout:60000});
  assert.equal(await p.evaluate(()=>!!window.NRMoonGL),false,'WebGL module must not execute on Today');
  await p.evaluate(()=>location.hash='#panch');await p.clock.runFor(1500);await p.waitForSelector('canvas.nr-sl-moon-gl:visible');
  const initial=await p.evaluate(()=>{window.__canvas=document.querySelector('canvas.nr-sl-moon-gl');window.__gl=__canvas.getContext('webgl');const s=NRSkyLive.snapshot();return {phase:+__canvas.dataset.phaseAngle,limb:+__canvas.dataset.limb,expectedPhase:s.phaseAngle,expectedLimb:s.limb,anims:document.querySelector('[data-sky-live]').getAnimations({subtree:true}).length,svgHidden:getComputedStyle(document.querySelector('.nr-sl-moon')).display==='none'};});

@@ -14,6 +14,15 @@ try{for(const entry of ['classic.html','index.html','design-b17.html'])for(const
  for(const r of routes){await p.evaluate(r=>{location.hash=r},r);await p.waitForTimeout(1200);await p.evaluate(()=>document.querySelectorAll('details').forEach(d=>d.open=true));await p.waitForTimeout(600);pages++;
   const vis=await p.evaluate(()=>{const out=[];const w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);let x;while(x=w.nextNode()){const e=x.parentElement;const v=x.nodeValue.trim();if(!e||!/[А-Яа-яІіЇїЄєҐґ]/.test(v)||e.closest('script,style,[translate=no],[lang=uk]'))continue;if(!e.checkVisibility({opacityProperty:true,visibilityProperty:true}))continue;out.push(v.slice(0,120))}return out});
   for(const v of vis)if(!found.has(v))found.set(v,entry+'#'+r+' @'+when);}
+ await p.evaluate(()=>{
+  window.__nrConsumerGeneratedAt=null;
+  document.getElementById('dataTimestamp').textContent='дані від (synthetic)';
+ });
+ await c.setOffline(true);
+ await p.waitForFunction(()=>document.getElementById('offlineBanner').style.display!=='none');
+ const offline=await p.locator('#offlineBanner').textContent();
+ assert.match(offline,/Offline · data from\s+an unknown time\s+· Showing cached data/);
+ assert.doesNotMatch(offline,/synthetic|[А-Яа-яІіЇїЄєҐґ]/);
  await c.close();}}
 finally{await b.close();srv.close();}
 for(const [k,v] of found)console.error('  '+v+' :: '+k);

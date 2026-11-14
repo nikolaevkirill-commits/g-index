@@ -5,7 +5,7 @@
 let loading=false;
 function load(){
  if(document.hidden||location.hash.split('?')[0]!=='#panch'||loading||window.NRSkyLive)return;
- loading=true;const s=document.createElement('script');s.src='sky_live_v1.js?v=fp569n-integrated';s.defer=true;
+ loading=true;const s=document.createElement('script');s.src='sky_live_v1.js?v=fp569r-cosmos';s.defer=true;
  s.onerror=()=>{loading=false;s.remove();};document.head.append(s);
  const gl=document.createElement('script');gl.src='moon_gl_v1.js?v=fp569n-integrated';gl.defer=true;gl.onload=()=>window.NRSkyLive?.render();document.head.append(gl);
 }

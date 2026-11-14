@@ -50,7 +50,7 @@ function build(r,ds){
  const good=[...new Set(GOOD.filter(([n])=>names.has(n)).map(([,label])=>tr(label)))];
  const avoid=[],care=[];
  if(names.has('День порожні руки, несприятливий'))avoid.push(t('newStarts'));
- const caution=r.querySelector('.sr-expert-caution summary strong')?.textContent?.trim();if(caution)avoid.push(caution);
+ const caution=r.querySelector('.sr-expert-caution:not([data-scope="new_starts"]) summary strong')?.textContent?.trim();if(caution)avoid.push(caution);
  if(names.has('Тричі  трикутник'))care.push(t('recheck'));
  const signal=window.SRP0Layout?.signalData(c,row);
  const short=signal?.source==='NOAA_3day_slots',outlook=signal?.source==='NOAA_27day_outlook';
@@ -71,7 +71,9 @@ function build(r,ds){
  why.push([short?t('kp_short'):t('kp'),kpText]);
  const ev=sky?[...sky.intervals,...sky.events].filter(x=>x.reading&&x.reading.intensity>=3&&(x.start||x.at).kyiv_date<=ds&&ds<=(x.end||x.at).kyiv_date)[0]:null;
  if(ev)why.push([t('sky'),(ev.reading.text[L()]||ev.reading.text.en).replace(/:.*$/,'')+' ('+t('sky_note')+')']);
- return {tone,good,avoid,care,why};
+ // Tanita's new-starts card already states this advice with its source; keep it in «Чому так», drop the duplicate line.
+ const shownAvoid=window.SRP0Layout?.hasNewStartAdvice?.(ds)?avoid.filter(x=>x!==t('newStarts')):avoid;
+ return {tone,good,avoid:shownAvoid,care,why};
 }
 function render(){
  const r=root();if(!r)return;const hero=r.querySelector('.nr-o-hero'),verdict=hero?.querySelector('.nr-o-verdict');if(!hero||!verdict)return;

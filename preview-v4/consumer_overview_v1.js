@@ -3,6 +3,7 @@
 let rows={},selected={},mounted=false,topicFilter='all';
 const WEATHER_URL='https://services.swpc.noaa.gov/products/noaa-scales.json';
 let weatherData=null,weatherRequest=null,weatherAttempt=0,weatherError=false;
+const weatherBriefContent=new WeakMap();
 function weatherStatus(data,now=Date.now()){
  const current=data?.['0'],stamp=current?Date.parse(current.DateStamp+'T'+current.TimeStamp+'Z'):NaN;
  if(!Number.isFinite(stamp)||now<stamp||now-stamp>8*3600000)return {state:'unavailable'};
@@ -73,21 +74,47 @@ function renderWeatherBrief(root,status,full){
  const hero=root.querySelector('.nr-o-hero'),tr=s=>window.NRLocale?.text(s)||s;
  let brief=root.querySelector('[data-weather-brief]');
  if(!brief){brief=document.createElement('button');brief.type='button';brief.dataset.weatherBrief='';brief.className='nr-o-brief nr-o-weather-brief';brief.setAttribute('translate','no');brief.dataset.placement='after-hero';hero.insertBefore(brief,hero.querySelector('[data-panch-countdown]'));brief.onclick=()=>{const disclosure=full.closest('details');if(disclosure)disclosure.open=true;full.setAttribute('tabindex','-1');full.focus({preventScroll:true});full.scrollIntoView({block:'start'});};}
- let body;
+ let body,forecastSummary='';
  if(status.state!=='available')body='<span>'+esc(tr(weatherRequest?'Перевіряємо попередження…':'Свіжих попереджень NOAA зараз немає, тож про бурю не можемо сказати ні «так», ні «ні». Оновимо автоматично.'))+'</span>';
  else{
+  const L=Math.max(0,['uk','en','es','fr'].indexOf(window.NRLocale?.language||'uk'));
   const strongest=status.forecasts.reduce((a,b)=>!a||b.g>a.g?b:a,null);
-  const issued=NRPresentation.dateFormatter(window.NRLocale?.locale||'uk-UA',{timeZone:'UTC',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date(status.stamp));
-  body='<span>'+esc(tr('Спостерігається: ')+['G','S','R'].map(k=>k+status.current[k]).join(' · '))+'</span><span>'+esc(strongest?tr('Прогноз G · максимум: ')+'G'+strongest.g+' · '+strongest.date+' UTC':tr('Прогноз попереджень недоступний.'))+'</span><small>'+esc(tr('Оновлено NOAA: ')+issued+' UTC')+'</small>';
+  const observed=status.current;
+  const local=NRPresentation.dateFormatter(window.NRLocale?.locale||'uk-UA',
+   {timeZone:'Europe/Kyiv',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date(status.stamp));
+  const now=observed.G>0
+   ?['Спостерігається геомагнітна буря','Geomagnetic storm observed','Tormenta geomagnética observada','Orage géomagnétique observé'][L]+' G'+observed.G+'.'
+   :['Геомагнітної бурі не спостерігається.','No geomagnetic storm observed.','No se observa una tormenta geomagnética.','Aucun orage géomagnétique observé.'][L];
+  forecastSummary=strongest?.g>0
+   ?['Можлива магнітна буря','Possible magnetic storm','Posible tormenta geomagnética','Orage géomagnétique possible'][L]+' · G'+strongest.g+' · '+
+     NRPresentation.dateFormatter(window.NRLocale?.locale||'uk-UA',{timeZone:'UTC',day:'numeric',month:'short'}).format(new Date(strongest.date+'T12:00:00Z'))+' UTC'
+   :'';
+  const extra=[
+   observed.S>0?['Сонячна радіаційна буря','Solar radiation storm','Tormenta de radiación solar','Tempête de radiation solaire'][L]+' S'+observed.S:'',
+   observed.R>0?['Порушення короткохвильового зв’язку','HF radio blackout','Interrupción de radio HF','Perturbation des communications HF'][L]+' R'+observed.R:''
+  ].filter(Boolean);
+  const forecastInBody=forecastSummary&&(observed.G>0||extra.length>0);
+  body='<span>'+esc(now)+'</span>'+(forecastInBody?'<span>'+esc(forecastSummary)+'</span>':'')+
+   extra.map(x=>'<span>'+esc(x)+'</span>').join('')+'<small>'+
+   esc(['NOAA · оновлено','NOAA · updated','NOAA · actualizado','NOAA · mis à jour'][L]+' '+local+' · '+['Київ','Kyiv','Kyiv','Kyiv'][L])+'</small>';
  }
  brief.dataset.g=status.state==='available'&&Number.isInteger(status.current?.G)?String(status.current.G):'';
  brief.dataset.active=String(status.state==='available'&&(Object.values(status.current).some(v=>v>0)||status.forecasts.some(f=>f.g>0)));
  if(brief.dataset.active==='true'){if(hero.firstElementChild!==brief)hero.prepend(brief)}else if(hero.nextElementSibling!==brief)hero.after(brief);
  /* v5 NR-01: в активному стані заголовок називає сигнал і рівень за шкалою NOAA (G1…G5: слабка…екстремальна); без нових порогів */
  const gNames=['','слабка','помірна','сильна','дуже сильна','екстремальна'],cur=status.current||{},fmax=(status.forecasts||[]).reduce((a,f)=>Math.max(a,Number(f.g)||0),0);
- const title=brief.dataset.active!=='true'?tr('NOAA · попередження та ймовірності'):cur.G>0&&gNames[cur.G]?tr('Геомагнітна буря')+' G'+cur.G+' · '+tr(gNames[cur.G])+' '+tr('(шкала NOAA)'):(cur.S>0||cur.R>0)?tr('Активне попередження NOAA'):tr('Прогноз NOAA: можлива буря')+' G'+fmax;
+ const title=brief.dataset.active!=='true'?tr('NOAA · попередження та ймовірності'):
+  cur.G>0&&gNames[cur.G]?tr('Геомагнітна буря')+' G'+cur.G+' · '+tr(gNames[cur.G])+' '+tr('(шкала NOAA)'):
+  (cur.S>0||cur.R>0)?tr('Активне попередження NOAA'):forecastSummary;
+ brief.dataset.gForecast=status.state==='available'&&fmax>0&&fmax!==cur.G?String(fmax):'';
  brief.dataset.signal=brief.dataset.active!=='true'?'none':cur.G>0?'storm':(cur.S>0||cur.R>0)?'alert':'forecast';
- brief.innerHTML='<strong>'+esc(title)+' →</strong>'+body;
+ const html='<strong>'+esc(title)+' →</strong>'+body;
+ if(weatherBriefContent.get(brief)!==html){
+  const scale=brief.querySelector('.sr-g-scale');
+  brief.innerHTML=html;
+  if(scale)brief.append(scale);
+  weatherBriefContent.set(brief,html);
+ }
  kpNote(root);
 }
 // v126: component arithmetic explains the formula, never an expert override.
@@ -197,7 +224,7 @@ function routeTools(root,route){
  panel.addEventListener('click',e=>{const b=e.target.closest('[data-topic]');if(!b)return;topicFilter=b.dataset.topic;const first=dayRange().find(d=>topicMatches(d,topicFilter));if(first&&!topicMatches(selected[route],topicFilter))selected[route]=first;render(root);});
 }
 function renderRouteTools(root,route,dates,ds){
- if(route==='forecast'){
+ if(route==='forecast'&&!window.SRP0Layout){
   const host=root.querySelector('.nr-o-horizon-list');buttons(host,dates.slice(0,14),ds);
   for(const b of host.children){const r=resolve(b.dataset.day);b.textContent=dateLabel(b.dataset.day)+' · '+fmt(r.score)+' — '+horizon(b.dataset.day)+' · '+(r.state==='fresh'&&rows[b.dataset.day]?.channels?.source_formula?.kp_source==='NOAA_27day_outlook'?'випуск '+String(rows[b.dataset.day].channels.source_formula.kp_input?.issued_at||'').slice(0,10):states[r.state]);}
  }
@@ -308,7 +335,7 @@ function mount(){
   if(route==='today'){
    const journey=document.createElement('nav');journey.className='nr-o-journey';journey.setAttribute('aria-label','Ваш день');
    journey.innerHTML='<button type="button" data-step="plan"><span>01 · СПЛАНУВАТИ</span><b>Мій план <i aria-hidden="true">→</i></b></button><button type="button" data-step="calendar"><span>02 · ПОРІВНЯТИ</span><b>Обрати дату <i aria-hidden="true">→</i></b></button><button type="button" data-step="outcome"><span>03 · ПІДСУМУВАТИ</span><b>Записати результат <i aria-hidden="true">→</i></b></button>';
-   hero.after(journey);const primary=journey.querySelector('[data-step=plan]');primary.classList.add('nr-b-primary');hero.querySelector('.nr-o-verdict').after(primary);primary.onclick=()=>window.fp434Go('plan',true);journey.addEventListener('click',e=>{const step=e.target.closest('[data-step]')?.dataset.step;if(step==='outcome')openOutcome();else if(step)window.fp434Go(step,true)});
+   hero.after(journey);const primary=journey.querySelector('[data-step=plan]');primary.classList.add('nr-b-primary');hero.querySelector('.nr-o-verdict').after(primary);for(const step of journey.querySelectorAll('[data-step]>span'))step.textContent=step.textContent.replace(/^\d+\s*·\s*/,'');primary.onclick=()=>window.fp434Go('plan',true);journey.addEventListener('click',e=>{const step=e.target.closest('[data-step]')?.dataset.step;if(step==='outcome')openOutcome();else if(step)window.fp434Go(step,true)});
   }
   const practicalBody=root.querySelector('.nr-o-practical>p');const more=document.createElement('details');more.className='nr-o-topic-detail';more.innerHTML='<summary>Пояснення тем дня</summary>';practicalBody.before(more);more.append(practicalBody);
   host.append(root,legacy);selected[route]=today();routeTools(root,route);
@@ -318,7 +345,7 @@ function mount(){
   root.querySelector('[data-journal]').onclick=()=>window.fp434Go('plan',true);
   root.querySelector('[data-settings]').onclick=()=>window.fp434Go('profile',true);
   root.querySelector('select').addEventListener('change',e=>{selected[route]=e.target.value;render(root);});
-  root.addEventListener('click',e=>{const b=e.target.closest('button[data-day]');if(b){selected[route]=b.dataset.day;render(root);b.focus();}});
+  root.addEventListener('click',e=>{const b=e.target.closest('button[data-day]');if(b&&!b.closest('.nr-o-horizon-list[data-forecast-period]')){selected[route]=b.dataset.day;render(root);b.focus();}});
  }
  settings();mounted=true;return true;
 }

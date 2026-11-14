@@ -62,15 +62,27 @@ async function share(ds,btn){
  }catch(e){if(e?.name==='AbortError')return 'cancelled';btn.nextElementSibling&&(btn.nextElementSibling.textContent=t('fail'));return 'failed'}
 }
 function selected(){const r=document.querySelector('[data-overview="today"]');return r?.querySelector('select')?.value||(window.NRCivilTime?NRCivilTime.dayKey(Date.now(),ZONE):new Date().toISOString().slice(0,10))}
+const phone=matchMedia('(max-width:600px)');
 function mount(){
  const root=document.querySelector('#nrRoute-today [data-overview="today"]'),hero=root?.querySelector(':scope > .nr-o-hero');if(!hero)return;
+ const solar=phone.matches&&root.hasAttribute('data-app-today')&&root.querySelector(':scope > [data-sky-clock]');
+ const target=solar||hero;
  let box=root.querySelector('[data-share-card]');
- if(box&&box.parentElement!==hero)hero.append(box);
- if(!box){box=document.createElement('div');box.className='sr-share-card';box.dataset.shareCard='';box.innerHTML='<button type="button"></button><small role="status"></small>';box.querySelector('button').onclick=e=>share(selected(),e.currentTarget);hero.append(box);}
+ if(!box){
+  box=document.createElement('div');box.className='sr-share-card';box.dataset.shareCard='';
+  box.innerHTML='<button type="button"></button><small role="status"></small>';
+  box.querySelector('button').onclick=e=>share(selected(),e.currentTarget);
+ }
+ if(box.parentElement!==target){
+  const focused=box.contains(document.activeElement)?document.activeElement:null;
+  target.append(box);
+  focused?.focus({preventScroll:true});
+ }
  const b=box.querySelector('button');if(b.textContent!=='↗ '+t('btn'))b.textContent='↗ '+t('btn');
 }
-const STYLE='.sr-share-card{margin:10px 0 0;display:flex;align-items:center;gap:10px;flex-wrap:wrap}.sr-share-card button{min-height:44px;padding:0 16px;border-radius:14px;border:1px solid rgba(242,196,107,.6);background:rgba(242,196,107,.12);color:#F2C46B;font:600 15px/1 system-ui,sans-serif;cursor:pointer}.sr-share-card button:focus-visible{outline:3px solid #F2C46B;outline-offset:2px}.sr-share-card small{opacity:.8}';
+const STYLE='.sr-share-card{margin:10px 0 0;display:flex;align-items:center;gap:10px;flex-wrap:wrap}[data-sky-clock]>.sr-share-card{margin:4px 15px 16px}.sr-share-card button{min-height:44px;padding:0 16px;border-radius:14px;border:1px solid rgba(242,196,107,.6);background:rgba(242,196,107,.12);color:#F2C46B;font:600 15px/1 system-ui,sans-serif;cursor:pointer}.sr-share-card button:focus-visible{outline:3px solid #F2C46B;outline-offset:2px}.sr-share-card small{opacity:.8}';
 let pending=0;const soon=()=>{clearTimeout(pending);pending=setTimeout(()=>{if(!document.getElementById('srShareStyle')){const s=document.createElement('style');s.id='srShareStyle';s.textContent=STYLE;document.head.append(s)}try{mount()}catch(e){console.warn('share_card',e)}},250)};
+phone.addEventListener('change',soon);
 for(const ev of ['sr:consumer-load','gindex:consumer-ready','nr:locale','hashchange'])window.addEventListener(ev,soon);
 function watch(){const r=document.getElementById('nrRoute-today');if(!r){setTimeout(watch,400);return}new MutationObserver(soon).observe(r,{childList:true,subtree:true});soon()}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',watch);else watch();

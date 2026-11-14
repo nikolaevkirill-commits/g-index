@@ -5,15 +5,33 @@ const root=path.resolve(process.argv[2]||path.join(__dirname,'../..')),OUT=proce
 const types={'.html':'text/html','.js':'application/javascript','.css':'text/css','.json':'application/json','.svg':'image/svg+xml','.woff2':'font/woff2','.webp':'image/webp','.png':'image/png'};
 const server=http.createServer((q,r)=>{const f=path.resolve(root,'.'+decodeURIComponent(new URL(q.url,'http://l').pathname));if(!f.startsWith(root+path.sep)){r.writeHead(403);return r.end()}fs.readFile(f,(e,d)=>{r.writeHead(e?404:200,{'content-type':types[path.extname(f)]||'application/octet-stream'});r.end(e?'':d)})});
 (async()=>{await new Promise(r=>server.listen(0,'127.0.0.1',r));const b=await chromium.launch({executablePath:process.env.CHROME_PATH||undefined});const R=[];
-try{for(const entry of ['classic.html','index.html'])for(const width of [320,390])for(const scale of [100,200]){
- const c=await b.newContext({viewport:{width,height:844},isMobile:true,serviceWorkers:'block',timezoneId:'Europe/Kyiv'});await c.addInitScript(()=>{sessionStorage.setItem('nrs_launch','1')});
+// Both timestamps are covered by the bundled sky.json. The second exercises day 2 of the rolling window.
+const sky=JSON.parse(fs.readFileSync(path.join(root,'consumer_cloud/sky.json'),'utf8'));
+const clocks=[sky.daily[0].date+'T18:00:00Z',sky.daily[1].date+'T10:00:00Z'];
+try{for(const at of clocks)for(const entry of ['classic.html','index.html'])for(const width of [320,390])for(const scale of [100,200]){
+ const c=await b.newContext({viewport:{width,height:844},isMobile:true,hasTouch:true,locale:'uk-UA',serviceWorkers:'block',timezoneId:'Europe/Kyiv'});await c.addInitScript(()=>{sessionStorage.setItem('nrs_launch','1')});
  const p=await c.newPage();const errs=[];p.on('pageerror',e=>errs.push(e.message));
- await p.goto('http://127.0.0.1:'+server.address().port+'/'+entry+'?channel=play#today',{waitUntil:'domcontentloaded'});
+ await c.route(/^https?:\/\/(?!127\.0\.0\.1)/,r=>r.abort());
+ await p.clock.setFixedTime(new Date(at));
+ await p.goto('http://127.0.0.1:'+server.address().port+'/'+entry+'?channel=play#today',{waitUntil:'domcontentloaded',timeout:120000});
  await p.waitForSelector('[data-overview="today"] .nr-o-score',{state:'visible',timeout:30000});await p.evaluate(()=>document.fonts.ready);
  await p.addStyleTag({content:`html{-webkit-text-size-adjust:${scale}%!important;text-size-adjust:${scale}%!important}`});await p.waitForTimeout(300);
  const routes=await p.evaluate(()=>[...document.querySelectorAll('#mobileNav button')].map(x=>({label:x.textContent.trim(),route:x.dataset.route||x.getAttribute('data-nav')||x.getAttribute('aria-controls')||null})));
  for(let i=0;i<routes.length;i++){
   await p.evaluate(i=>{const btn=[...document.querySelectorAll('#mobileNav button')][i];btn.scrollIntoView({inline:'center'});btn.click()},i);await p.waitForTimeout(700);
+  if(await p.locator('#nrRoute-panch.active').count()){
+   const disclosure=p.locator('.nr-sky-expand'),summary=disclosure.locator(':scope > summary');
+   await summary.waitFor({state:'visible',timeout:60000});
+   const closedFits=await summary.evaluate(e=>{const r=e.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth+1&&r.height>=44;});
+   require('assert/strict').ok(closedFits,'collapsed 27-day control fits the mobile viewport');
+   if(!await disclosure.evaluate(e=>e.open))await summary.click();
+   const slider=p.locator('.nr-sky-controls input');
+   await slider.waitFor({state:'visible',timeout:30000});
+   const range=await slider.evaluate(e=>({width:e.getBoundingClientRect().width,day:Number(e.value)}));
+   const assert=require('assert/strict');
+   assert.ok(range.width>=44,'27-day scrubber must have a usable width, got '+range.width+' at '+entry+' '+at+' '+scale+'%');
+   assert.equal(range.day,clocks.indexOf(at),'exercise the selected day of the rolling window');
+  }
   // Exercise active decoration independently of live NOAA freshness; this changes only the browser fixture.
   await p.evaluate(()=>document.querySelectorAll('[data-aurora]').forEach(e=>{e.hidden=false;e.dataset.active='true';e.style.setProperty('--aurora-strength','.2')}));
   const m=await p.evaluate(()=>{const W=innerWidth,route=document.querySelector('.nr-route.active')||document.body;
@@ -25,15 +43,29 @@ try{for(const entry of ['classic.html','index.html'])for(const width of [320,390
     const s=getComputedStyle(e);if(s.overflowX==='hidden'&&e.scrollWidth>e.clientWidth+2&&e.textContent.trim()&&s.textOverflow!=='ellipsis')clipped.push((e.className||e.tagName)+':'+e.textContent.trim().slice(0,30)+' '+e.scrollWidth+'>'+e.clientWidth)}
    const overlaps=[];for(const g of route.querySelectorAll('*')){const ds=getComputedStyle(g).display;if(!/grid|flex/.test(ds)||!vis(g)||nav?.contains(g))continue;const kids=[...g.children].filter(vis).map(k=>[k,k.getBoundingClientRect()]);for(let i=0;i<kids.length;i++)for(let j=i+1;j<kids.length;j++){const a=kids[i][1],b=kids[j][1];const w=Math.min(a.right,b.right)-Math.max(a.left,b.left),h=Math.min(a.bottom,b.bottom)-Math.max(a.top,b.top);if(w>2&&h>2&&getComputedStyle(kids[i][0]).position!=='absolute'&&getComputedStyle(kids[j][0]).position!=='absolute')overlaps.push((String(g.className).split(' ')[0]||g.tagName)+': '+kids[i][0].textContent.trim().slice(0,12)+' / '+kids[j][0].textContent.trim().slice(0,12))}}
    const spill=[];for(const e of route.querySelectorAll('*')){if(!vis(e)||nav?.contains(e))continue;const box=e.getBoundingClientRect();for(const n of e.childNodes){if(n.nodeType!==3||!n.textContent.trim())continue;const rg=document.createRange();rg.selectNodeContents(n);const r=rg.getBoundingClientRect();if(r.right>box.right+2||r.left<box.left-2)spill.push((e.tagName)+':'+n.textContent.trim().slice(0,14)+' text['+Math.round(r.left)+','+Math.round(r.right)+'] box['+Math.round(box.left)+','+Math.round(box.right)+']')}}
+   const navClipped=[];
+   const navBox=nav?.getBoundingClientRect();
+   for(const button of nav?.querySelectorAll('button')||[]){
+    if(!vis(button))continue;
+    const box=button.getBoundingClientRect();
+    if(box.left<navBox.left-1||box.right>navBox.right+1)navClipped.push(button.id+': outside navigation');
+    const walker=document.createTreeWalker(button,NodeFilter.SHOW_TEXT);
+    for(let node=walker.nextNode();node;node=walker.nextNode()){
+     if(!node.textContent.trim())continue;
+     const range=document.createRange();range.selectNodeContents(node);
+     for(const text of range.getClientRects())if(text.width&&(text.left<box.left-1||text.right>box.right+1||text.top<box.top-1||text.bottom>box.bottom+1))
+      navClipped.push(button.id+':'+node.textContent.trim());
+    }
+   }
    const weather=document.querySelector('.nr-active-route .nr-o-weather, .nr-route.active .nr-o-weather, .nr-route.active [data-weather-brief]');
-   return {spill:[...new Set(spill)].slice(0,6),overlaps:[...new Set(overlaps)].slice(0,6),route:route.dataset?.route||route.id,docOverflow:document.documentElement.scrollWidth-W,crossing:[...new Set(crossing)].slice(0,8),clipped:[...new Set(clipped)].slice(0,8),weather:weather?{visible:vis(weather),text:weather.textContent.trim().slice(0,60)}:null}});
-  R.push({entry,width,scale,tab:routes[i].label,...m});
+   return {navClipped:[...new Set(navClipped)],spill:[...new Set(spill)].slice(0,6),overlaps:[...new Set(overlaps)].slice(0,6),route:route.dataset?.route||route.id,docOverflow:document.documentElement.scrollWidth-W,crossing:[...new Set(crossing)].slice(0,8),clipped:[...new Set(clipped)].slice(0,8),weather:weather?{visible:vis(weather),text:weather.textContent.trim().slice(0,60)}:null}});
+  R.push({at,entry,width,scale,tab:routes[i].label,...m});
  }
- R.push({entry,width,scale,errors:errs});await c.close();}
+ R.push({at,entry,width,scale,errors:errs});await c.close();}
 }finally{await b.close();server.close()}
 if(OUT)fs.writeFileSync(OUT,JSON.stringify(R,null,1));
-const bad=R.filter(x=>x.tab&&(x.docOverflow>1||x.crossing.length||x.clipped.length||x.overlaps.length||x.spill.length));
-console.log('cases',R.filter(x=>x.tab).length,'with issues',bad.length);for(const x of bad)console.log(x.entry,x.width,x.scale,'['+x.tab+']','docOverflow',x.docOverflow,'crossing',JSON.stringify(x.crossing),'clipped',JSON.stringify(x.clipped),'overlaps',JSON.stringify(x.overlaps),'spill',JSON.stringify(x.spill));
+const bad=R.filter(x=>x.tab&&(x.navClipped.length||x.docOverflow>1||x.crossing.length||x.clipped.length||x.overlaps.length||x.spill.length));
+console.log('cases',R.filter(x=>x.tab).length,'with issues',bad.length);for(const x of bad)console.log(x.at,x.entry,x.width,x.scale,'['+x.tab+']','navClipped',JSON.stringify(x.navClipped),'docOverflow',x.docOverflow,'crossing',JSON.stringify(x.crossing),'clipped',JSON.stringify(x.clipped),'overlaps',JSON.stringify(x.overlaps),'spill',JSON.stringify(x.spill));
 const errs=R.filter(x=>x.errors&&x.errors.length);for(const x of errs)console.log('JS ERRORS',x.entry,x.width,x.scale,x.errors.slice(0,3));
 require('assert/strict').equal(bad.length,0,'All routes must fit without clipped or overlapping text');
 require('assert/strict').equal(errs.length,0,'No page errors');

@@ -31,6 +31,8 @@ async function open(b,page,{feed,engine,clock,registry='empty'}){
  const p=await c.newPage();const errs=[];p.on('pageerror',e=>errs.push(e.message));
  await p.clock.install({time:new Date(clock)});
  await p.goto('http://127.0.0.1:'+srv.address().port+'/'+page+'#expert');await p.waitForTimeout(400);
+ // Do not advance the mocked timer past a pending feed or registry request.
+ await p.waitForFunction(target=>window.__srConsumerLoadState===target,feed?'ready':'error',{timeout:30000});
  // v125: with an installed fake clock, runFor(12000) would fire the app's 3.5 s registry abort timer before the real
  // network response arrives (flaky E/missing). Wait in real time for the registry first; fake time is not advanced meanwhile.
  if(registry==='real'){for(let i=0;i<100&&!(await p.evaluate(()=>!!window.NRConsumerAuthority?.expertFor?.('2026-10-24')).catch(()=>false));i++)await new Promise(r=>setTimeout(r,100))}

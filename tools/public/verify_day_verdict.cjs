@@ -15,6 +15,7 @@ try{for(const entry of ['classic.html','index.html'])for(const lang of ['uk','en
  const p=await c.newPage();const errs=[];p.on('pageerror',e=>errs.push(e.message));await p.clock.setFixedTime(now);
  await p.goto('http://127.0.0.1:'+srv.address().port+'/'+entry+'?channel=play#today',{waitUntil:'load',timeout:120000});
  await p.waitForFunction(()=>document.querySelector('#nrRoute-today [data-day-verdict] .nr-dv-tone'),null,{timeout:60000});
+ await p.waitForFunction(()=>navigator.onLine&&window.__srConsumerLoadState==='ready',null,{timeout:60000});
  const dates=await p.evaluate(()=>[...document.querySelector('#nrRoute-today [data-overview="today"] select').options].map(o=>o.value).slice(0,10));
  for(const ds of dates){
   const r=await p.evaluate(async ds=>{const sel=document.querySelector('#nrRoute-today [data-overview="today"] select');sel.value=ds;sel.dispatchEvent(new Event('change',{bubbles:true}));await new Promise(r=>setTimeout(r,350));

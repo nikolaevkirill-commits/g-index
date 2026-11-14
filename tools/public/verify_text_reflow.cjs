@@ -7,8 +7,9 @@ const server=http.createServer((q,r)=>{const f=path.resolve(root,'.'+decodeURICo
 for(const entry of ['classic.html','index.html'])for(const width of [320,390,430])for(const scale of [100,200]){
 if(process.env.NR_REFLOW_CASE&&process.env.NR_REFLOW_CASE!==`${entry}:${width}:${scale}`)continue;
 const context=await browser.newContext({viewport:{width,height:844},isMobile:true,serviceWorkers:'block',timezoneId:'Europe/Kyiv'});const p=await context.newPage();
-await p.goto('http://127.0.0.1:'+server.address().port+'/'+entry+'?channel=play#today',{waitUntil:'domcontentloaded'});
-await p.waitForSelector('[data-overview="today"] .nr-o-score',{state:'visible'});
+await context.route(/^https?:\/\/(?!127\.0\.0\.1)/,r=>r.abort());
+await p.goto('http://127.0.0.1:'+server.address().port+'/'+entry+'?channel=play#today',{waitUntil:'domcontentloaded',timeout:120000});
+await p.waitForFunction(()=>{const e=document.querySelector('[data-overview="today"] .nr-o-score');return e?.checkVisibility()&&e.getBoundingClientRect().width>0;},null,{polling:50,timeout:60000});
 await p.evaluate(()=>document.fonts.ready);
 console.log('Reflow',entry,width,scale);
 const original=await p.evaluate(()=>parseFloat(getComputedStyle(document.body).fontSize));

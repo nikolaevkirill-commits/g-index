@@ -28,8 +28,21 @@ const server=http.createServer((q,r)=>{const n=decodeURIComponent(q.url.split('?
   if(mocked)assert.equal(await p.evaluate(()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Kyiv',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())),'30/10/2026','mock must actually reach page');
   const expected=registry.find(x=>x.date==='2026-10-30');assert(expected);
   for(const route of ['today','forecast','calendar']){
-   await p.evaluate(r=>fp434Go(r,false),route);const select=p.locator('[data-overview="'+route+'"] select').first();await select.waitFor();assert.equal(await select.inputValue(),'2026-10-30');
-   const score=await p.locator('[data-overview="'+route+'"] .nr-o-score').first().innerText();assert.equal(Number(score.replace('−','-')),expected.score);
+   await p.evaluate(r=>fp434Go(r,false),route);
+   const view=p.locator('[data-overview="'+route+'"]'),select=view.locator('select').first();
+   await select.waitFor({state:'attached'});
+   assert.equal(await select.inputValue(),'2026-10-30');
+   if(route==='forecast'){
+    // The retained select is inside Details. The forecast card is the visible date.
+    const title=view.locator('[data-forecast-verdict] h2');
+    await title.waitFor({state:'visible'});
+    const visibleDate=await p.evaluate(()=>new Intl.DateTimeFormat(window.NRLocale?.locale||'uk-UA',{
+     weekday:'long',day:'numeric',month:'long',timeZone:'UTC'
+    }).format(new Date('2026-10-30T12:00:00Z')));
+    assert.equal(await title.innerText(),visibleDate);
+   }else assert.ok(await select.isVisible());
+   const score=view.locator('.nr-o-score').first();assert.ok(await score.isVisible());
+   assert.equal(Number((await score.innerText()).replace('−','-')),expected.score);
   }
   await p.addScriptTag({url:base+'/notification_runtime_v1.js'});
   assert.equal(await p.evaluate(()=>NRNotificationRuntime.daily(null,Date.now()).date),'2026-10-30');

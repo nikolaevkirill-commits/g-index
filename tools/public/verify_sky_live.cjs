@@ -12,10 +12,11 @@ try{
  // Pure-function checks (no browser): geomagnetic latitude of Kyiv and NOAA mapping.
  for(const entry of ['index.html','classic.html'])for(const width of [390,1280]){
   const c=await browser.newContext({viewport:{width,height:900},serviceWorkers:'block',locale:'uk-UA',timezoneId:'Europe/Kyiv',reducedMotion:'reduce'}),p=await c.newPage(),errors=[];
+  await c.route(/^https?:\/\/(?!127\.0\.0\.1)/,r=>r.abort());
   p.on('pageerror',e=>errors.push(String(e)));
   await p.clock.install({time:NOW});
   await p.addInitScript(k=>{try{localStorage.setItem('gindex_local_context_v1',JSON.stringify({lat:k.lat,lon:k.lon,auto:false,zone:'Europe/Kyiv',saved_at:new Date().toISOString()}))}catch(_){}},KYIV);
-  await p.goto('http://127.0.0.1:'+server.address().port+'/'+entry+'?channel=play#panch');
+  await p.goto('http://127.0.0.1:'+server.address().port+'/'+entry+'?channel=play#panch',{waitUntil:'domcontentloaded',timeout:120000});
   await p.clock.runFor(4000);
   await p.waitForFunction(()=>document.querySelector('[data-sky-live] .nr-sl-moon'),null,{timeout:20000});
   const got=await p.evaluate(()=>{const h=document.querySelector('[data-sky-live]'),m=h.querySelector('.nr-sl-moon');
@@ -53,6 +54,67 @@ try{
   assert(none.sky&&none.example&&/Києв/.test(none.title)&&/50\.45, 30\.52/.test(none.foot),'no-location policy (Kyiv default, labelled) '+JSON.stringify(none));
   assert.deepEqual(errors,[],entry+' '+width+' page errors');
   results.push({entry,width,fraction:got.fraction,limb:got.limb,mlat:got.mlat,up:got.list.filter(x=>x.up).map(x=>x.b)});await c.close();}
+ // Exercise local NOAA rendering through the real entry point and its lazy loader.
+ {
+  const context=await browser.newContext({serviceWorkers:'block',locale:'en-GB',timezoneId:'UTC'});
+  const page=await context.newPage();
+  await page.clock.setFixedTime(NOW);
+  await context.addInitScript(()=>localStorage.setItem('gidx_onboard_done_v2','1'));
+  await context.route(/^https?:\/\/(?!127\.0\.0\.1)/,route=>route.abort());
+  const url='https://services.swpc.noaa.gov/json/ovation_aurora_latest.json';
+  const grid=[];
+  for(let y=-90;y<=90;y++)for(let x=0;x<360;x++)grid.push([x,y,x===31&&y===50?10:x===286&&y===41?32:0]);
+  const forecast={'Observation Time':'2026-11-06T18:15:00Z','Forecast Time':'2026-11-06T19:00:00Z',
+   type:'MultiPoint','Data Format':'[Longitude, Latitude, Aurora]',coordinates:grid};
+  let requests=0, frameDoc=forecast;
+  await context.route(url,route=>{
+   requests++;
+   assert.equal(route.request().url(),url);
+   assert.equal(route.request().headers().referer,undefined);
+   return route.fulfill({json:frameDoc,headers:{'access-control-allow-origin':'*'}});
+  });
+  await page.goto('http://127.0.0.1:'+server.address().port+'/index.html?channel=play#today');
+  assert.equal(requests,0,'OVATION fetch stays on the live sky route');
+  await page.evaluate(()=>fp434Go('panch',true));
+  const panel=page.locator('[data-local-ovation]');
+  await page.locator('[data-local-ovation][data-status=forecast]').waitFor();
+  assert.match(await panel.innerText(),/10 \/ 100/);
+  assert.match(await panel.locator('h3').innerText(),/Kyiv|Київ/,'label the default city');
+  await page.evaluate(()=>NRLocalContext.choose({lat:40.71,lon:-74,zone:'America/New_York'}));
+  await page.waitForFunction(()=>document.querySelector('[data-local-ovation]').innerText.includes('32 / 100'));
+  assert.equal(requests,1,'changing location reuses the global grid');
+  assert.match(await panel.innerText(),/14:00/,'model timestamp uses selected time zone');
+  await page.evaluate(()=>SRSkyTime.selectMoment(new Date(Date.now()-3600000).toISOString()));
+  await panel.waitFor({state:'hidden'});
+  await page.evaluate(()=>SRSkyTime.live());
+  await panel.waitFor({state:'visible'});
+  await context.setOffline(true);
+  await page.locator('[data-local-ovation][data-status=offline]').waitFor();
+  assert.doesNotMatch(await panel.innerText(),/\/ 100/);
+  await context.setOffline(false);
+  await page.clock.setFixedTime(new Date('2026-11-06T18:51:00Z'));
+  await page.evaluate(()=>NRSkyLive.render());
+  await page.locator('[data-local-ovation][data-status=stale]').waitFor();
+  assert.doesNotMatch(await panel.innerText(),/\/ 100/);
+  frameDoc={...forecast,'Observation Time':'2026-11-06T18:55:00Z','Forecast Time':'2026-11-06T18:55:00Z'};
+  await page.clock.setFixedTime(new Date('2026-11-06T19:00:00Z'));
+  await page.evaluate(()=>NRSkyLive.render());
+  await page.locator('[data-local-ovation][data-status=no_lead]').waitFor();
+  assert.match(await panel.innerText(),/32 \/ 100/);
+  frameDoc={...forecast,'Observation Time':'2026-11-06T19:10:00Z','Forecast Time':'2026-11-06T19:30:00Z',
+   coordinates:[grid[1],...grid.slice(1)]};
+  const beforeMalformed=requests;
+  await page.clock.setFixedTime(new Date('2026-11-06T19:11:00Z'));
+  await page.evaluate(()=>NRSkyLive.render());
+  await page.locator('[data-local-ovation][data-status=stale]').waitFor();
+  assert.doesNotMatch(await panel.innerText(),/\/ 100/);
+  await page.waitForFunction(async()=>{
+   const {parseFrame}=await import('/sky_ovation_v1.js?v=1');
+   return parseFrame({'Observation Time':'2026-11-06T19:10:00Z','Forecast Time':'2026-11-06T19:30:00Z',type:'MultiPoint','Data Format':'[Longitude, Latitude, Aurora]',coordinates:Array(65160).fill([0,0,0])})===null;
+  });
+  assert.equal(requests,beforeMalformed+1);
+  await context.close();
+ }
  // «Фоновий рух»: separate from «Анімації», off by default, toggles the decorative class only.
  const c=await browser.newContext({viewport:{width:390,height:900},serviceWorkers:'block',locale:'uk-UA',reducedMotion:'no-preference'}),p=await c.newPage();
  await p.goto('http://127.0.0.1:'+server.address().port+'/index.html?channel=play#more');
@@ -62,5 +124,5 @@ try{
  await p.evaluate(()=>document.querySelector('[data-sky-decor-motion]').click());
  const after=await p.evaluate(()=>({pressed:document.querySelector('[data-sky-decor-motion]').getAttribute('aria-pressed'),key:localStorage.getItem('srSkyDecorMotionV1'),decor:document.documentElement.classList.contains('sr-decor-motion')}));
  assert.deepEqual(after,{pressed:'true',key:'on',decor:true});await c.close();
- console.log(JSON.stringify(results));console.log('PASS sky live: 2 entries × mobile/desktop; values = astronomy-engine; NOAA G-scale aurora; no-location policy; reduced motion; «Фоновий рух»');
+ console.log(JSON.stringify(results));console.log('PASS sky live: 2 entries × mobile/desktop; values = astronomy-engine; NOAA G-scale aurora; no-location policy; local OVATION / place / stale / offline; reduced motion; «Фоновий рух»');
 }finally{await browser.close();server.close()}})().catch(e=>{console.error(e);server.close();process.exitCode=1});

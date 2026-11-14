@@ -107,7 +107,11 @@ function lahiriAyanamsha(jde) {
   // v85b-F5 (КРИТ-1): Swiss Ephemeris official Lahiri at J2000.0 = 23°51'23.4" = 23.85650°
   // Rate 50.27889624"/yr per IAU 2006 precession. Was 23.853 + 50.2388475 — error ~12.6".
   // Previous note (kept for trace): BUG-2 fix v36 — corrected 23.25/2433282.5 → +5.7 arcmin vs IAU.
-  return 23.85650 + (50.27889624 / 3600) * (jde - 2451545.0) / 365.25;
+  // FP571 (Claude 13.11, approved by owner): Swiss Ephemeris SIDM_LAHIRI mean ayanamsa, quadratic fit
+  // to swe.get_ayanamsa over 1900–2100 (max residual <0.001"). The old 23.85650 base was ~2.1" low
+  // (Swiss J2000 = 23.8570923° = 23°51'25.5"), shifting nakshatra/yoga boundaries by ~4 s.
+  const T = (jde - 2451545.0) / 365.25;
+  return 23.8570923254552 + 0.0139688794 * T + 3.07096226e-8 * T * T;
 }
 
 

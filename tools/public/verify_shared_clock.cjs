@@ -46,9 +46,14 @@ const server=http.createServer(async(req,res)=>{
    await input(today,475);
    const reference=await sun.evaluate(el=>({at:el.dataset.at,alt:+el.dataset.alt,transform:el.style.transform}));
    assert(reference.alt>0);
-   await today.locator('[data-time-open]').click();
+   await today.locator('[data-time-open]').click({noWaitAfter:true});
    const sky=p.locator('[data-sky-live]');
    await sky.waitFor();
+   if(entry==='index.html'){
+    const evening=p.locator('#nrRoute-panch [data-sky-evening]');
+    await evening.waitFor();
+    assert.equal(await evening.evaluate(el=>el.previousElementSibling?.hasAttribute('data-sky-live')),true,'the selected-time sky opens before the evening card');
+   }
    const savedAt=await sky.getAttribute('data-time');
    assert.equal(savedAt,reference.at);
    assert.equal(+(await sky.locator('.nr-sl-body[data-body=Sun]').getAttribute('data-alt')),reference.alt);
@@ -57,7 +62,13 @@ const server=http.createServer(async(req,res)=>{
    await canvas.evaluate(el=>window.__clockCanvas=el);
    const stamp=()=>sky.evaluate(el=>{
     const s=NRSkyLive.snapshot(), c=el.querySelector('canvas'), g=[...el.querySelectorAll('.nr-sl-body')];
+    const sun=el.querySelector('.nr-sl-suncard'),map=el.querySelector('.nr-sl-sky'),guide=el.querySelector('.nr-sl-summary');
     return {at:s.time.toISOString(),phase:s.phaseAngle,limb:s.limb,canvasPhase:+c.dataset.phaseAngle,canvasLimb:+c.dataset.limb,
+     frameTimes:[el.dataset.time,sun.dataset.at,c.dataset.at,map.dataset.at,el.querySelector('.sr-time-controls time').dateTime],
+     sunAlt:+sun.dataset.sunAlt,sunMapAlt:+map.querySelector('[data-body=Sun]').dataset.alt,
+     guideFirst:guide.nextElementSibling?.classList.contains('sr-time-controls'),
+     listed:[...guide.querySelectorAll('[data-look-body]')].map(x=>x.dataset.lookBody).sort(),
+     expected:Object.keys(s.hz).filter(body=>s.hz[body].altitude>0).sort(),
      sameCanvas:c===window.__clockCanvas,values:g.map(x=>[x.dataset.body,+x.dataset.alt,+x.dataset.az,x.style.transform])};
    });
    const a=await stamp();
@@ -66,6 +77,10 @@ const server=http.createServer(async(req,res)=>{
    for(const r of [a,b]){
     assert(r.sameCanvas);assert(Math.abs(r.phase-r.canvasPhase)<.0001);assert(Math.abs(r.limb-r.canvasLimb)<.0001);
     assert.equal(r.values.length,7);
+    assert.ok(r.frameTimes.every(t=>t===r.at),'Sun, Moon, map and visible clock use the same instant');
+    assert.equal(r.sunAlt,r.sunMapAlt);
+    assert.ok(r.guideFirst);
+    assert.deepEqual(r.listed,r.expected);
    }
    assert.notEqual(a.at,b.at);assert.notEqual(a.limb,b.limb);
    for(const [i,g] of a.values.entries())assert.notDeepEqual(g.slice(1),b.values[i].slice(1));
@@ -74,6 +89,7 @@ const server=http.createServer(async(req,res)=>{
     fixture.events.find(x=>x.at&&x.reading?.intensity>=1)?.at;
    assert(timed,'fixture has a timed event');
    await p.waitForFunction(()=>window.NRSkyScene?.state()==='ready');
+   await p.locator('.nr-sky-expand > summary').click();
    await p.evaluate(day=>{
     NRSkyScene.select(day);
     const more=document.querySelector('.nr-sky-more');
@@ -125,7 +141,13 @@ const server=http.createServer(async(req,res)=>{
   }
   const c=await browser.newContext({viewport:{width:320,height:694},locale:'uk-UA',timezoneId:'Europe/Kyiv',serviceWorkers:'block'});
   await c.route(/^https?:\/\/(?!127\.0\.0\.1)/,r=>r.abort());
-  const p=await c.newPage();await p.goto(base+'/index.html?channel=play#panch',{waitUntil:'domcontentloaded'});
+  await c.addInitScript(()=>{
+   localStorage.setItem('gidx_onboard_done_v2','1');
+   localStorage.setItem('srPrivacyNoticeDismissed','1');
+  });
+  const p=await c.newPage();
+  await p.clock.setFixedTime(start);
+  await p.goto(base+'/index.html?channel=play#panch',{waitUntil:'domcontentloaded'});
   // FP569k policy: with no saved place Sky shows Kyiv, labelled as the default place (not an empty card).
   await p.locator('[data-sky-live] [data-sky-example]').waitFor();
   assert.ok(await p.locator('[data-sky-live] .nr-sl-body').count()>=7);
@@ -134,12 +156,17 @@ const server=http.createServer(async(req,res)=>{
   await compactSun.waitFor();
   await p.waitForFunction(()=>!!document.querySelector('#nrRoute-today .nr-o-hero .nr-dv-tone')&&!!document.querySelector('#nrRoute-today .nr-o-hero .nr-o-verdict'),null,{timeout:30000});
   // FP569d (owner decision 01.11): verdict and score open Today; the Sun clock follows the overview card.
+  await p.evaluate(()=>document.fonts.ready);
+  await p.waitForFunction(()=>['ready','error'].includes(window.__srConsumerLoadState),null,{timeout:30000});
+  // Wait for the asynchronously mounted share action before measuring the fold.
+  await p.locator('[data-sky-clock] [data-share-card] button').waitFor();
   const first=await compactSun.evaluate(el=>{const nav=document.getElementById('mobileNav').getBoundingClientRect().top,card=el.closest('[data-sky-clock]');
    return {verdict:document.querySelector('#nrRoute-today .nr-o-hero .nr-dv-tone')?.getBoundingClientRect().bottom<nav,score:document.querySelector('#nrRoute-today .nr-o-hero .nr-o-verdict')?.getBoundingClientRect().bottom<nav,
-    afterHero:card.previousElementSibling?.matches('.nr-o-hero,.sr-expert-caution'),sunStarts:card.getBoundingClientRect().top<nav}});
+    afterHero:card.previousElementSibling?.matches('.nr-o-hero,.sr-expert-caution'),sunStarts:card.getBoundingClientRect().top<nav,plotBottom:el.closest('svg').getBoundingClientRect().bottom,sunTop:card.getBoundingClientRect().top,nav,previous:card.previousElementSibling?.className}});
   assert(first.verdict&&first.score,'verdict and score must fit on a 320×694 first viewport');
-  assert(first.afterHero&&first.sunStarts,'Sun clock follows the overview card and starts on the first viewport');
-  await p.locator('[data-sky-clock] [data-time-open]').click();
+  assert(first.afterHero&&first.sunStarts,'Sun clock follows the overview card and starts on the first viewport: '+JSON.stringify(first));
+  assert(first.plotBottom<=first.nav,'solar plot must fit above the bottom navigation: '+JSON.stringify(first));
+  await p.locator('[data-sky-clock] [data-time-open]').click({noWaitAfter:true});
   await p.locator('[data-sky-live] .nr-sl-body[data-body=Sun]').waitFor();
   assert.match(await p.locator('#nrSkyLiveHeading').textContent(),/Києвом/);
   await c.close();
