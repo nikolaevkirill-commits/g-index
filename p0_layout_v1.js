@@ -4,7 +4,7 @@ const COPY=[["Прогноз Kp", "Kp forecast", "Pronóstico Kp", "Prévision K
 // FP542 (F1): COPY is sorted once per size and results are memoised per language and locale registry version.
 let trSorted=null,trSize=-1;const trMemo=new Map();
 function tr(text){let value=String(text),lang=window.NRLocale?.language,idx={uk:0,en:1,es:2,fr:3}[lang]||0;if(!idx)return value;if(trSize!==COPY.length){trSorted=[...COPY].sort((a,b)=>b[0].length-a[0].length);trSize=COPY.length;trMemo.clear();}const key=lang+'\u0000'+(window.NRLocale?.version??0)+'\u0000'+value,hit=trMemo.get(key);if(hit!==undefined)return hit;for(const row of trSorted)value=value.split(row[0]).join(row[idx]);const out=window.NRLocale?.text(value)||value;if(trMemo.size>=4000)trMemo.clear();trMemo.set(key,out);return out;}
-const make=(tag,cls,text)=>{const e=document.createElement(tag);e.className=cls;if(text)e.textContent=tr(text);return e;};
+const make=(tag,cls,text)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(text)e.textContent=tr(text);return e;};
 function noonKyiv(ds){let d=new Date(ds+'T12:00:00Z');const h=Number(new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Kyiv',hour:'2-digit',hourCycle:'h23'}).format(d));return new Date(d.getTime()+(12-h)*3600000);}
 COPY.push(['Оцінки за днями','Daily scores','Puntuaciones por día','Notes par jour'],['Окремі денні оцінки. Риска означає відсутні дані; 0 — нейтральну оцінку.','Separate daily scores. A dash means missing data; 0 means neutral.','Puntuaciones diarias independientes. Una raya indica datos ausentes; 0 significa neutral.','Notes quotidiennes distinctes. Un tiret indique une donnée absente ; 0 signifie neutre.']);
 // Only geometry: final-score authority and rounding remain in the resolver.

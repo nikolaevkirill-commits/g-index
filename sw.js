@@ -245,7 +245,7 @@ const SHELL_ASSETS = [
   './product_render_queue_v1.js',
   './moon_phase_v1.js',
   './expert_start_advice_v1.js?v=1',
-  './p0_layout_v1.js?v=fp569r-backdrops',
+  './p0_layout_v1.js?v=fp572-layout',
   './p0_layout_v1.css',
   './wow_reviewed_v1.css',
   './sky_panorama_v1.webp',

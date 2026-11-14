@@ -79,6 +79,9 @@ const server=http.createServer((request,response)=>{
   assert.equal(bridge.nakshatra,bridge.lunar.nakshatra);assert.equal(bridge.yoga,bridge.lunar.yoga);
   assert.equal(bridge.karana,bridge.lunar.karana);assert.equal(bridge.legacyCacheStable,true);
   assert.notEqual(bridge.legacyBefore,bridge.tithi);checks+=8;
+  await page.evaluate(()=>{location.hash='#more';});
+  await page.waitForSelector('[data-backdrop-option]',{state:'attached',timeout:30000});
+  assert.equal(await page.locator('[class="undefined"]').count(),0);checks++;
   assert.deepEqual(errors,[],'index errors');
   console.log(JSON.stringify({status:'PASS',checks,nakshatra:new Date(main.nakshatra[0]).toISOString(),tithi:new Date(main.tithi[0]).toISOString(),next:main.next+' '+main.label,
    scope:'Chromium emulation, service worker blocked; one event has one instant on three screens'}));
