@@ -2,10 +2,14 @@ importScripts('./runtime_diagnostics_v1.js','./civil_time_v1.js?v=fp569f-global'
 // G-Index service worker. Navigations, HTML, JS and data (.json/.jsonl/.csv) are network-first with a
 // cached fallback; other same-origin assets (CSS, images, fonts) are cache-first.
 // Bump CACHE_VERSION whenever index.html or a cached shell asset changes.
-const CACHE_VERSION = 'fp569n-handoff-20261109'; // Discrete final scores; no interpolated forecast.
+const CACHE_VERSION = 'fp572-natal-sky-cache-20261113';
 const CACHE_PREFIX = 'gindex-'; // G-Index cache namespace; do not remove the prefix.
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${CACHE_VERSION}`;
 const DATA_CACHE = `${CACHE_PREFIX}data-${CACHE_VERSION}`;
+const ON_DEMAND_ASSETS = new Set(['city_directory_v1.json.gz?v=fp569q-audit','cosmos_ngc4449_v1.webp',
+  'backdrop_ngc1672_v1.webp','backdrop_carina_v1.webp','backdrop_saturn_v1.webp','backdrop_paranal_v1.webp',
+  'theme_panchanga.webp','theme_forecast.webp','theme_journal.webp']
+  .map(asset=>new URL(asset,self.registration.scope).href));
 const NETWORK_FIRST_TIMEOUT_MS = 2500;
 const OPTIONAL_INSTALL_TIMEOUT_MS = 5000;
 const NETWORK_BODY_TIMEOUT_MS = 15000; // FP542: upper bound for reading a response body
@@ -93,24 +97,35 @@ const SHELL_ASSETS = [
   './civil_time_v1.js?v=fp569f-global',
   './sw_update_coordination_v1.js?v=fp569n-handoff',
   './day_context_v1.js?v=mobile-clarity1',
-  './sky_time_v1.js?v=fp569n-integrated',
-  './sky_live_loader_v1.js?v=fp569n-integrated',
-  './sky_live_v1.js?v=fp569n-integrated',
+  './sky_time_v1.js?v=fp572-sky',
+  './sky_live_loader_v1.js?v=fp569r-cosmos',
+  './sky_live_v1.js?v=fp569r-cosmos',
+  './sky_ovation_v1.js?v=1',
   './moon_gl_v1.js?v=fp569n-integrated',
-  './sky_evening_v1.js?v=fp569n',
-  './share_card_v1.js?v=fp569n',
-  './glossary_v1.js?v=fp569n',
+  './sky_evening_v1.js?v=fp569o-horizon',
+  './share_card_v1.js?v=fp569r-design',
+  './glossary_v1.js?v=fp569r-l10n',
   './journal_stats_v1.js?v=fp569n',
   './day_summary.html',
   './day_summary_v1.js',
   './day_summary_v1.css',
+  './personal_dayline.html',
+  './personal_dayline.css',
+  './personal_dayline_model.js?v=fp572-natal',
+  './personal_dayline_activity.js',
+  './personal_dayline_factors.js',
+  './personal_dayline_scene.js',
+  './personal_dayline_election.js',
+  './personal_dayline_snapshot.js',
+  './personal_dayline_ui.js',
   './meeus_core_v1.js',
-  './dayline_view_v1.js?v=fp569m',
+  './lunar_core_v1.js?v=fp572',
+  './dayline_view_v1.js?v=fp572-lunar',
   './dayline_view_v1.css',
   './dayline_i18n_v1.js',
-  './dayline_adapter_v1.js',
-  './dayline_async_v1.js',
-  './dayline_worker_v1.js',
+  './dayline_adapter_v1.js?v=fp572-lunar',
+  './dayline_async_v1.js?v=fp572-lunar',
+  './dayline_worker_v1.js?v=fp572-lunar',
 
   './nocturne_v1.css',
   './nocturne_v1.js',
@@ -134,12 +149,12 @@ const SHELL_ASSETS = [
   './classic.html',
   './preview-v4/desktop_v1.css?v=d1',
   './preview-v4/atlas_motion.css?v=v7-2',
-  './preview-v4/consumer_overview_v1.js?v=fp569m',
-  './preview-v4/core_runtime_v1.js?v=fp569c-kp',
+  './preview-v4/consumer_overview_v1.js?v=fp569o-daily',
+  './preview-v4/core_runtime_v1.js?v=fp572-cache',
   './preview-v4/design_candidate.css?v=v7-3',
   './preview-v4/design_candidate.js',
   './preview-v4/design_scale.js',
-  './preview-v4/locale_bridge_v1.js',
+  './preview-v4/locale_bridge_v1.js?v=fp569r-release',
   './preview-v4/locale_overview_v1.js?v=fp569m',
   './preview-v4/product_shell_v1.js',
   './preview-v4/design_b/integration.css?v=v7-2',
@@ -170,24 +185,27 @@ const SHELL_ASSETS = [
   './preview-v4/design_b/scenes/locale_extra_v1.js',
   './preview-v4/design_b/scenes/scenes.css?v=v7-3',
   './preview-v4/design_b/scenes/scenes.js?v=fp569c-scenes-provenance',
-  './preview-v4/sky_scene_v1.js?v=fp569n-integrated',
-  './preview-v4/sky_scene_v1.css?v=fp569n-integrated',
-  './preview-v4/app_today_v1.js?v=fp569n-integrated',
+  './preview-v4/sky_scene_v1.js?v=fp572-sky',
+  './preview-v4/sky_scene_v1.css?v=fp569r-reaudit',
+  './preview-v4/app_today_v1.js?v=fp569q-audit',
   './preview-v4/app_today_v1.css?v=app1',
-  './natal_sky_v1.js?v=fp569m',
-  './day_verdict_v1.js?v=fp569k',
-  './week_ahead_v1.js?v=fp569f-global',
+  './natal_sky_v1.js?v=fp572-natal',
+  './day_verdict_v1.js?v=fp569r-fix',
+  './space_scene_gl_v1.js?v=fp569r-noaa-locales',
+  './space_scene_v1.js?v=fp569r-noaa-locales',
+  './earth_bluemarble_v1.webp?v=fp569q',
+  './week_ahead_v1.js?v=fp569r-preaudit',
   './moon_month_v1.js?v=fp569h-p8',
   './kp_threshold_v1.js?v=fp569f-global',
   './day_verdict_v1.css?v=dv5',
   './shared_day_v1.js?v=sd1',
 
   './design-b17.html',
-  './preview-b17/consumer_overview_v1.js?v=fp569f-global',
+  './preview-b17/consumer_overview_v1.js?v=fp569o-daily',
   './preview-b17/design_candidate.css',
   './preview-b17/design_candidate.js',
   './preview-b17/design_scale.js',
-  './preview-b17/locale_bridge_v1.js',
+  './preview-b17/locale_bridge_v1.js?v=fp569r-release',
   './preview-b17/locale_overview_v1.js?v=fp569j',
   './preview-b17/product_shell_v1.js',
   './preview-b17/design_b/integration.css',
@@ -216,12 +234,9 @@ const SHELL_ASSETS = [
 
   './index.html',
   './theme_moon.webp',
-  './theme_panchanga.webp',
-  './theme_forecast.webp',
-  './theme_journal.webp',
-  './locale_core_v1.js',
+  './locale_core_v1.js?v=fp569r-release',
   './locale_overview_v1.js?v=fp569k',
-  './locale_bridge_v1.js',
+  './locale_bridge_v1.js?v=fp569r-release',
   './panchanga_reference_check_v1.json',
   './play_channel.js',
   './runtime_diagnostics_v1.js',
@@ -229,7 +244,8 @@ const SHELL_ASSETS = [
   './presentation_runtime_v1.js',
   './product_render_queue_v1.js',
   './moon_phase_v1.js',
-  './p0_layout_v1.js?v=fp569m',
+  './expert_start_advice_v1.js?v=1',
+  './p0_layout_v1.js?v=fp569r-backdrops',
   './p0_layout_v1.css',
   './wow_reviewed_v1.css',
   './sky_panorama_v1.webp',
@@ -242,7 +258,7 @@ const SHELL_ASSETS = [
   './consumer_authority_v1.js',
   './forecast_journal_v1.js',
   './push_client_v1.js',
-  './core_runtime_v1.js?v=fp569c-kp',
+  './core_runtime_v1.js?v=fp572-cache',
   './mobile_navigation_v1.js',
   './product_shell_v1.js',
   './plan_calendar_v1.js',
@@ -256,11 +272,10 @@ const SHELL_ASSETS = [
   './notification_runtime_v1.js',
   './transition_runtime_v1.js',
   './transition_client_v1.js',
-  './consumer_overview_v1.js?v=fp569f-global',
+  './consumer_overview_v1.js?v=fp569o-daily',
   './calendar_context_v1.js',
   './consumer_overview_v1.css',
   './local_storage_v1.js',
-  './xlsx-0.20.3.full.min.js',
   './privacy.html',
   './terms.html',
   './account-deletion.html',
@@ -279,8 +294,6 @@ const SHELL_ASSETS = [
   './SPACE_WEATHER_CONTEXT_v1.json',
   './KP_HOURLY_ALERT_v2.json',
   './BGS_SPACE_WEATHER_v1.json',
-  './AIA_VERNADSKY_DAILY_v1.json',
-  './AIA_VERNADSKY_SHADOW_AUDIT_v1.json',
   './INDEPENDENT_FORECAST_CONTRACT_v1.json',
   './INDEPENDENT_FORECAST_FEED_v1.json',
   './TARGET_CONTRACT_FP463.json',
@@ -294,19 +307,19 @@ self.addEventListener('install', (event) => {
   // reloads (a black screen while the 1.4 MB dashboard initialized).
   event.waitUntil(
     caches.open(SHELL_CACHE)
-      // Required shell, preview HTML/JS/CSS/fonts install atomically. Decorative SVGs and spreadsheet import are best-effort; the legacy preview is lazy.
-      // If required content fails, reject installation and retain the previous active worker and caches.
+      // Install the required app shell atomically. Decorative previews are best-effort;
+      // route backdrops, research data and the spreadsheet reader are cached on first use.
+      // A required failure rejects the install and leaves the previous active worker intact.
       .then(async (cache) => {
-        // FP542 (F3): the 0.95 MB spreadsheet reader is loaded only on import; a failed download of it
-        // must not block a shell update. It is still precached best-effort for offline import.
-        const optional = (u) => /^\.\/preview-(?:v4|b17)\/.*\.svg(?:\?|$)/.test(u) || u === './xlsx-0.20.3.full.min.js';
+        const optional = (u) => /^\.\/preview-(?:v4|b17)\/.*\.svg(?:\?|$)/.test(u);
         const lazy = (u) => u === './design-b17.html' || u.startsWith('./preview-b17/');
-        await cache.addAll(SHELL_ASSETS.filter((u) => !optional(u) && !lazy(u)));
+        const fresh = (u) => new Request(new URL(u,self.registration.scope),{cache:'reload'});
+        await cache.addAll(SHELL_ASSETS.filter((u) => !optional(u) && !lazy(u)).map(fresh));
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), OPTIONAL_INSTALL_TIMEOUT_MS);
         try {
           const results = await Promise.allSettled(SHELL_ASSETS.filter((u) => optional(u) && !lazy(u)).map(async (u) => {
-            const response = await fetch(u, { signal: controller.signal });
+            const response = await fetch(fresh(u), { signal: controller.signal });
             if (!response.ok || response.status === 206) throw new Error(`HTTP ${response.status} for ${u}`);
             await cache.put(u, response);
           }));
@@ -440,6 +453,21 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Cache optional assets on demand. Observatory and Save-Data need no galaxy download.
+  if(req.method==='GET'&&ON_DEMAND_ASSETS.has(url.href)){
+    event.respondWith((async()=>{
+      const cache=await caches.open(SHELL_CACHE);
+      const cached=await cache.match(req);
+      if(cached)return cached;
+      const response=await fetchBoundedAsset(req);
+      if(response.ok){
+        try{await cache.put(req,response.clone());}
+        catch(_e){globalThis.NRDiagnostics?.record('catch.optional_asset_cache','recoverable');}
+      }
+      return response;
+    })());
+    return;
+  }
   if (req.method === 'GET' && /\/dayline_art\/(ashwini|bharani|krittika|rohini|mrigashira|ardra|punarvasu|pushya|ashlesha|magha|purvaphalguni|uttaraphalguni|hasta|chitra|swati|vishakha|anuradha|jyeshtha|mula|purvaashadha|uttaraashadha|shravana|dhanishta|water|fire|depth|nourish)-(engraving|gouache)\.webp$/.test(new URL(req.url).pathname)) {
     event.respondWith((async()=>{const cache=await caches.open(SHELL_CACHE);const saved=await cache.match(req);if(saved)return saved;const fresh=await fetchBoundedAsset(req);if(fresh.ok)await cache.put(req,fresh.clone());return fresh;})());return;
   }

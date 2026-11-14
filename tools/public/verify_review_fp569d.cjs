@@ -22,10 +22,13 @@ try{for(const [w,h] of [[320,694],[390,844]]){
   const loc={lat:50.454,lon:30.524},obs=new Astronomy.Observer(loc.lat,loc.lon,0),s=SRSkyTime.snapshot(),fmt=d=>SRSkyTime.timeText(+d,s.zone);
   const rise=Astronomy.SearchRiseSet('Sun',obs,+1,new Date(s.start),1).date,set=Astronomy.SearchRiseSet('Sun',obs,-1,new Date(s.start),1).date,noon=Astronomy.SearchHourAngle('Sun',obs,0,new Date(s.start)).time.date;
   return {verdict:document.querySelector('#nrRoute-today .nr-o-hero .nr-dv-tone').getBoundingClientRect().bottom<=nav,score:document.querySelector('#nrRoute-today .nr-o-hero .nr-o-verdict').getBoundingClientRect().bottom<=nav,
-   afterHero:card.previousElementSibling?.matches('.nr-o-hero,.sr-expert-caution'),labels:[...card.querySelectorAll('.sr-time-label')].map(e=>e.textContent),expect:[fmt(rise),fmt(set),fmt(noon)]}});
- assert(r.verdict&&r.score,'verdict and score on the first viewport '+w);assert(r.afterHero,'Sun clock follows the overview card');n+=2;
+   afterHero:card.previousElementSibling?.matches('.nr-o-hero,.sr-expert-caution'),
+   afterActiveWeather:card.previousElementSibling?.matches('[data-space-scene=today]:is([data-tone=watch],[data-tone=storm])')&&
+    card.previousElementSibling.previousElementSibling?.matches('.nr-o-hero,.sr-expert-caution'),labels:[...card.querySelectorAll('.sr-time-label')].map(e=>e.textContent),expect:[fmt(rise),fmt(set),fmt(noon)]}});
+ assert(r.verdict&&r.score,'verdict and score on the first viewport '+w);assert(r.afterHero||r.afterActiveWeather,'Sun clock follows the overview or the prioritized active space-weather card');n+=2;
  assert.equal(r.labels.length,3);r.expect.forEach((t,i)=>assert(r.labels[i].endsWith(t),r.labels[i]+' vs '+t));n+=4;
  // (3) Next verified Drik event with a day countdown; per-day .ics export of verified events (RFC 5545 line ≤ 75 octets).
+ await p.locator('[data-week-strip] [data-week-next]').waitFor({state:'attached'});
  const nx=await p.evaluate(()=>{const today=NRCivilTime.dayKey(Date.now(),'Europe/Kyiv');let exp=null;
   for(let i=1;i<=45&&!exp;i++){const d=new Date(today+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+i);const ds=d.toISOString().slice(0,10);if(SRCalendarAuthority.resolve(ds,'Europe/Kyiv').events?.length)exp=ds}
   return {shown:document.querySelector('[data-week-next]')?.dataset.weekNext||'',exp:exp||''}});
@@ -48,7 +51,10 @@ try{for(const [w,h] of [[320,694],[390,844]]){
   await p.waitForFunction(()=>!document.querySelector('[data-week-ics]').disabled);
   assert.equal(downloads,0,'cancelling share must not download');
   n+=3;}
- if(w===390){await p.evaluate(()=>fp434Go('panch',false));await p.locator('.nr-sky-day').first().waitFor();
+ if(w===390){await p.evaluate(()=>fp434Go('panch',false));
+  const disclosure=p.locator('.nr-sky-expand');
+  if(!await disclosure.evaluate(e=>e.open))await disclosure.locator(':scope > summary').click();
+  await p.locator('.nr-sky-day').first().waitFor();
   const d=await p.evaluate(()=>[...document.querySelectorAll('.nr-sky-day')].map(x=>{const r=fp469ConsumerForDate({ds:x.dataset.skyDay}),ch=r?.feed?.channels?.source_formula;return {ds:x.dataset.skyDay,cls:x.className,src:ch?.kp_source,kp:ch?.kp_daily_max??ch?.kp_input?.kp,state:(r?.consumer?.formula||r?.consumer)?.state}}));
   const outlookHigh=d.filter(x=>x.state==='fresh'&&x.src==='NOAA_27day_outlook'&&x.kp>=5),fcHigh=d.filter(x=>x.state==='fresh'&&x.src==='NOAA_3day_slots'&&x.kp>=5);
   for(const x of d.filter(x=>x.src==='NOAA_27day_outlook')){assert(!/\bis-g\d\b|\bis-active\b/.test(x.cls),'outlook day with storm/active class '+x.ds+' '+x.cls);n++;}

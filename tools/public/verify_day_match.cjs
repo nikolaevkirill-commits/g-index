@@ -14,6 +14,7 @@ const at=(hh)=>{for(let h=-4;h<=4;h++){const d=new Date(day+'T'+String(hh).padSt
 (async()=>{await new Promise(r=>srv.listen(0,'127.0.0.1',r));const b=await chromium.launch();let checks=0;
 try{for(const entry of ['index.html','classic.html'])for(const lang of ['uk','en']){
  const c=await b.newContext({locale:lang==='uk'?'uk-UA':'en-GB',serviceWorkers:'block',viewport:{width:390,height:844},timezoneId:'Europe/Kyiv'});await c.route(/^https?:\/\/(?!127\.0\.0\.1)/,r=>r.abort());
+ await c.addInitScript(()=>{navigator.serviceWorker.register=async()=>undefined;});
  const p=await c.newPage();const errs=[];p.on('pageerror',e=>errs.push(e.message));const base='http://127.0.0.1:'+srv.address().port+'/'+entry+'?channel=play#today';
  // daytime: no row
  await p.clock.setFixedTime(at(12));await p.goto(base,{waitUntil:'load',timeout:120000});

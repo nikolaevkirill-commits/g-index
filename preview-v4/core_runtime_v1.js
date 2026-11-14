@@ -979,6 +979,15 @@ async function loadSpaceWeatherAccumulated(){
   }
   return _spaceWeatherAccumulated;
 }
+const aiaPanel=document.getElementById('aiaVernadskyPanel');
+let aiaPending=null;
+function requestAiaVernadsky(){
+ if(!aiaPanel?.open||aiaPending)return;
+ aiaPending=loadAiaVernadsky().finally(()=>{aiaPending=null;});
+}
+aiaPanel?.addEventListener('toggle',requestAiaVernadsky);
+requestAiaVernadsky();
+window.addEventListener('online',requestAiaVernadsky);
 async function loadAiaVernadsky(){
   if(_aiaVernadsky!==null) return _aiaVernadsky;
   const sum=document.getElementById('aiaVernadskySummary');
@@ -1006,7 +1015,7 @@ async function loadAiaVernadsky(){
       (stale?'<div style="margin-top:3px;color:#ff9f9f">Дані старші 4 діб — використовувати лише як архівний контекст.</div>':'')+
       '<div style="margin-top:4px;color:var(--dim)">INTERMAGNET AIA · лише завершені UTC-доби · прогноз використовує тільки лаги 1–2 дні.</div>';
   }catch(e){ globalThis.NRDiagnostics?.record('catch.49','recoverable');
-    _aiaVernadsky={};
+    // Allow a new attempt after reconnecting or reopening the panel.
     if(sum) sum.textContent='🧲 AIA «Академік Вернадський» — дані недоступні';
     if(body) body.textContent='G не змінено. '+e.message;
   }
@@ -7196,18 +7205,18 @@ const PANCHAK_TYPES_BY_WEEKDAY = {
   6: 'Mrityu Panchak' // Saturday — death risk (most severe)
 };
 
-function computePanchanga(dateUTC){
+function computePanchanga(dateUTC, displayLunar = null){
   // v137.1 correctness: cache by exact requested timestamp, not by rounded minute.
   // Tithi/nakshatra/yoga may cross a boundary anywhere within a minute.
   // Identical timestamp requests still share the expensive calculation; the 20-entry bound remains.
   let _pKey;
   try {
     const _pMs = dateUTC instanceof Date ? dateUTC.getTime() : new Date(dateUTC).getTime();
-    _pKey = Number.isFinite(_pMs) ? [_pMs, _userLat, _userLon].join('|') : null;
+    _pKey = Number.isFinite(_pMs) ? [_pMs, _userLat, _userLon, displayLunar ? "shared-lunar-display" : "legacy"].join('|') : null;
     if (!window.__panchMemo) window.__panchMemo = {};
     if (_pKey !== null && window.__panchMemo[_pKey]) return window.__panchMemo[_pKey];
   } catch(_e) { globalThis.NRDiagnostics?.record('catch.132','recoverable');  _pKey = null; }
-  const phaseDeg = (moonPhaseAngle(dateUTC) + 360) % 360;
+  const phaseDeg = displayLunar?.phase_deg ?? (moonPhaseAngle(dateUTC) + 360) % 360;
 
   // tithiIdx: 0-based (0..29). tithi.num = tithiIdx+1 (1-based, для зовнішнього API).
   // Усі масиви TITHI_NAMES/SCORE/TYPE індексуються 0-based через tithiIdx.
@@ -7246,7 +7255,7 @@ function computePanchanga(dateUTC){
   const jde_meeus = dateUTC.getTime() / 86400000 + 2440587.5;
   const moonLon_trop = calcMoonLongitude(__nrUtcJdToTt(jde_meeus)); // tropical, Meeus Ch.47
   const ayan = lahiriAyanamsha(__nrUtcJdToTt(jde_meeus));
-  const moonLonSid = ((moonLon_trop - ayan) % 360 + 360) % 360; // sidereal Lahiri
+  const moonLonSid = displayLunar?.moon_longitude_sidereal ?? ((moonLon_trop - ayan) % 360 + 360) % 360; // sidereal Lahiri
   // Sun tropical: Meeus Ch.25, точність ~0.01° (BUG-4 fix)
   const sunLon = calcSunLongitude(__nrUtcJdToTt(jde_meeus));
   const nakIdx = Math.min(26, Math.floor(moonLonSid / (360/27)));
@@ -7298,7 +7307,7 @@ function computePanchanga(dateUTC){
   // Yoga sidereal: (Sun_sid + Moon_sid) / 13.333 (BPHS — обидві в sidereal Lahiri)
   const sunLonSid = ((sunLon - ayan) % 360 + 360) % 360;
   const yogaSidSum = (sunLonSid + moonLonSid) % 360;
-  const yogaIdx = Math.min(26, Math.floor(yogaSidSum / (360/27)));
+  const yogaIdx = displayLunar ? displayLunar.yoga - 1 : Math.min(26, Math.floor(yogaSidSum / (360/27)));
   const yoga = {
     num: yogaIdx + 1,
     name: YOGA_NAMES[yogaIdx],
@@ -15500,7 +15509,11 @@ function lahiriAyanamsha(jde) {
   // v85b-F5 (КРИТ-1): Swiss Ephemeris official Lahiri at J2000.0 = 23°51'23.4" = 23.85650°
   // Rate 50.27889624"/yr per IAU 2006 precession. Was 23.853 + 50.2388475 — error ~12.6".
   // Previous note (kept for trace): BUG-2 fix v36 — corrected 23.25/2433282.5 → +5.7 arcmin vs IAU.
-  return 23.85650 + (50.27889624 / 3600) * (jde - 2451545.0) / 365.25;
+  // FP571 (Claude 13.11, approved by owner): Swiss Ephemeris SIDM_LAHIRI mean ayanamsa, quadratic fit
+  // to swe.get_ayanamsa over 1900–2100 (max residual <0.001"). The old 23.85650 base was ~2.1" low
+  // (Swiss J2000 = 23.8570923° = 23°51'25.5"), shifting nakshatra/yoga boundaries by ~4 s.
+  const T = (jde - 2451545.0) / 365.25;
+  return 23.8570923254552 + 0.0139688794 * T + 3.07096226e-8 * T * T;
 }
 
 function dateToJDE(dateStr, timeStr, utcOff) {
@@ -18184,11 +18197,12 @@ function _showToast(msg) {
     if (!ob) return;
     if (!navigator.onLine) {
       const ts = document.getElementById('dataTimestamp');
-      /* r4: dataTimestamp може містити «дані від (synthetic)» — не дублюємо префікс і не показуємо технічний стан Kp */
-      const _rawAge = (ts && ts.textContent || '').trim().replace(/^дані від\s*/i, '');
-      /* v7.2 NRA-05: перевага — час генерації consumer feed (Europe/Kyiv) */
-      const _gen = window.__nrConsumerGeneratedAt && Number.isFinite(Date.parse(window.__nrConsumerGeneratedAt)) ? new Intl.DateTimeFormat('uk-UA',{timeZone:'Europe/Kyiv',day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'}).format(new Date(window.__nrConsumerGeneratedAt)) : null;
-      const age = _gen || ((/\d/.test(_rawAge) && !/synthetic|estimated|degraded/i.test(_rawAge)) ? _rawAge : 'невідомого часу');
+      const label = (ts?.textContent || '').trim().replace(/^дані від\s*/i, '');
+      const generated = Date.parse(window.__nrConsumerGeneratedAt);
+      const locale = window.NRLocale?.locale || 'uk-UA';
+      const options = {timeZone:'Europe/Kyiv',day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'};
+      const age = Number.isFinite(generated) ? new Intl.DateTimeFormat(locale,options).format(generated)
+        : /\d/.test(label) && !/synthetic|estimated|degraded/i.test(label) ? label : 'невідомого часу';
       const ageEl = document.getElementById('offlineDataAge');
       if (ageEl) ageEl.textContent = age;
       ob.style.display = '';
@@ -19109,14 +19123,22 @@ async function handleBacktestFile(input) {
   if (!file) return;
   document.getElementById('btFileLabel').textContent = file.name;
 
-  // Lazy-load SheetJS
+  // Load only on import. A fresh offline shell may not yet have this optional reader.
   if (!window.XLSX) {
-    await new Promise((res, rej) => {
-      const s = document.createElement('script');
-      s.src = './xlsx-0.20.3.full.min.js';
-      s.onload = res; s.onerror = rej;
-      document.head.appendChild(s);
-    });
+    try {
+      await new Promise((res, rej) => {
+        const s = document.createElement('script');
+        s.src = './xlsx-0.20.3.full.min.js';
+        s.onload = res; s.onerror = () => { s.remove(); rej(Error('Spreadsheet reader unavailable')); };
+        document.head.appendChild(s);
+      });
+    } catch (e) {
+      document.getElementById('btFileLabel').textContent = navigator.onLine
+        ? 'Не вдалося завантажити засіб читання Excel. Спробуйте ще раз.'
+        : 'Для першого імпорту Excel потрібен інтернет. Під’єднайтеся та оберіть файл повторно.';
+      input.value = '';
+      return;
+    }
   }
 
   const buf = await file.arrayBuffer();
@@ -20037,7 +20059,7 @@ setTimeout(async function _dayVerdictLoad(){
     await loadBgsSpaceWeather();
     await loadSourceHealth();
     await loadSpaceWeatherAccumulated();
-    await loadAiaVernadsky();
+    // The separate AIA research panel loads only when opened.
     await loadKpHourlyAlert();
     if (_engineScores === null) await loadEngineScores();
     try { if (typeof syncV702UI === 'function') syncV702UI(); } catch(e){ window.NRDiagnostics?.record('legacy.catch.238','recoverable'); }

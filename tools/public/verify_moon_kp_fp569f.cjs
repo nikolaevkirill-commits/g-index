@@ -55,6 +55,7 @@ async function main(){
       await page.clock.setFixedTime(now);
       await page.goto(base+'/index.html?channel=play#panch',{waitUntil:'load',timeout:120000});
       await page.evaluate(async()=>{await fp469LoadConsumerForecast();fp434Go('panch',false);});
+      await page.locator('.sr-sky-reference > summary').click();
       const picker=page.locator('[data-sky-city-picker] select');
       await picker.waitFor({timeout:30000}).catch(async error=>{console.error(await page.evaluate(()=>({hash:location.hash,context:!!document.querySelector('#nrLocalContext'),picker:!!document.querySelector('[data-sky-city-picker]'),ready:!!window.SRSkyTime,overview:!!window.NRConsumerOverview})),errors);throw error;});
       const moon=page.locator('[data-moon-month]');

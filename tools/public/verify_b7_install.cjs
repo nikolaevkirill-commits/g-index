@@ -19,7 +19,8 @@ assert.notEqual(oldVersion, nextVersion);
 const feed = '/consumer_cloud/final_score_decisions.json';
 const variantFeed = '/consumer_cloud/sky.json';
 const manifest = '/manifest.json';
-const withoutHeaders = '/xlsx-0.20.3.full.min.js';
+const withoutHeaders = '/preview-v4/design_b/assets/icon-forecast.svg';
+const deferred = ['/xlsx-0.20.3.full.min.js','/theme_panchanga.webp','/theme_forecast.webp','/theme_journal.webp','/AIA_VERNADSKY_DAILY_v1.json','/AIA_VERNADSKY_SHADOW_AUDIT_v1.json'];
 const withoutBody = '/preview-v4/design_b/assets/field-lines.svg';
 const sockets = new Map();
 const reads = new Map();
@@ -175,6 +176,7 @@ async function cachedFingerprints(page, oldVersion) {
     await context.setOffline(false);
 
     phase = 'stall';
+    shellRequests.clear();
     // Exercise the retry while the second tab still uses the old worker.
     const retryTraffic = fetchCopies(second, variantFeed, 4);
     await first.evaluate(() => registration.update());
@@ -189,6 +191,7 @@ async function cachedFingerprints(page, oldVersion) {
     assert.equal(Object.keys(optionalTiming).length, 2);
     assert.deepEqual(await cachedFingerprints(first, oldVersion), old);
     const nextCache = 'gindex-shell-' + nextVersion;
+    assert.deepEqual(deferred.filter(p=>shellRequests.has(p)),[],'deferred assets must not be requested on install');
     assert.deepEqual(await first.evaluate(async ({ nextCache, manifest, paths }) => {
       const cache = await caches.open(nextCache);
       const response = await cache.match(manifest);
@@ -206,6 +209,16 @@ async function cachedFingerprints(page, oldVersion) {
     assert(keys.includes(nextCache));
     assert(!keys.includes('gindex-shell-' + oldVersion));
     assert(!keys.includes('gindex-data-' + oldVersion));
+    // A route background and import dependency become available offline after first use.
+    const sample = [deferred[0],deferred[1],deferred[4]];
+    for(const file of sample)assert.equal((await fetchCopies(first,file,1))[0].status,200);
+    await first.waitForFunction(async ({name,paths})=>{
+      const shell=await caches.open('gindex-shell-'+name),data=await caches.open('gindex-data-'+name);
+      for(const p of paths)if(!(await shell.match(p))&&!(await data.match(p)))return false;
+      return true;
+    },{name:nextVersion,paths:sample});
+    await context.setOffline(true);
+    for(const file of sample)assert.equal((await fetchCopies(second,file,1))[0].status,200);
     // The root and direct classic links are both entry points after a clean offline install.
     await context.setOffline(true);
     for (const [route, file] of [['/?channel=play', 'index.html'], ['/classic.html?channel=play', 'classic.html']]) {

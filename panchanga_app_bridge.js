@@ -6,7 +6,9 @@
    if(!civil||typeof root.computePanchanga!=='function')throw new Error('NO_ENGINE');
    const result=civil.atSunrise(input.date,input.lat,input.lon,input.zone);
    if(!result.sunrise)return result;
-   const p=root.computePanchanga(result.sunrise);
+   const lunar=root.SkyRhythmLunar;
+   const shared=lunar?.available?.()&&result.source===lunar.version?lunar.at(+result.sunrise):null;
+   const p=root.computePanchanga(result.sunrise,shared);
    // Engines can disagree near a boundary: expose it, never silently combine labels.
    const conflict=p.tithi.num!==result.tithi;
    return {...result,status:conflict?'conflicting':result.status,
@@ -15,7 +17,7 @@
        nakshatra:{num:p.nakshatra.num,name:p.nakshatra.name},
        yoga:{num:p.yoga.num,name:p.yoga.name},
        karana:conflict?null:{name:p.karana.name,nameEn:p.karana.nameEn}},
-     ayanamsha:'Lahiri (existing app engine)',
+     ayanamsha:shared?lunar.convention.ayanamsha:'Lahiri (existing app engine)',
      scope:'astronomical presentation; not consumer score or festival rules'};
  }
  root.SkyRhythmPanchanga=Object.freeze({resolve});

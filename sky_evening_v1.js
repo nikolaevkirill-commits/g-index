@@ -78,13 +78,14 @@ function render(){
  const anchor=route.querySelector('[data-sky-live]');if(!anchor)return;
  const s=SRSkyTime.snapshot(),day=new Intl.DateTimeFormat('en-CA',{timeZone:s.zone}).format(new Date(s.at)),key=[day,s.zone,s.loc?.lat,s.loc?.lon,s.loc?.elevation,li()].join('|');
  let el=route.querySelector('[data-sky-evening]');
- if(el&&key===last&&el.nextElementSibling===anchor)return;
+ if(el&&key===last&&el.previousElementSibling===anchor)return;
  if(document.hidden||location.hash.split('?')[0]!=='#panch')return;
  let c=null;try{c=compute(s.at,s.loc)}catch(_){c=null}
  const h=html(c,s.zone);last=key;
  if(!h){el?.remove();return;}
  const tmp=document.createElement('div');tmp.innerHTML=h;const next=tmp.firstElementChild;
- if(el)el.replaceWith(next);else anchor.before(next);
+ el?.remove();
+ anchor.after(next);
 }
 let pending=0;const soon=()=>{clearTimeout(pending);pending=setTimeout(()=>{try{render()}catch(e){console.warn('sky_evening',e)}},200)};
 for(const ev of ['hashchange','nr:locale','sr:sky-time'])window.addEventListener(ev,soon);document.addEventListener('nr:location',soon);

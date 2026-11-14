@@ -18,6 +18,25 @@ try{for(const entry of ['index.html','classic.html']){
  await p.waitForFunction(()=>window.__expertTestLoadDone===true);assert.equal(await p.evaluate(()=>window.__expertTestLoadError),null);
  // The shell mounts 180 ms after DOMContentLoaded; module/feed promises do not prove DOM readiness.
  await p.waitForFunction(()=>['today','forecast','calendar'].every(r=>document.querySelector('[data-overview="'+r+'"] select')?.options.length));
+ // Two synchronous date changes leave the optional “Why” block temporarily in closed details.
+ for(const day of ['2026-11-13','2026-11-14']){
+  const burst=await p.evaluate(day=>{
+   window.NRDayVerdict.render();
+   const root=document.querySelector('[data-overview=today]');
+   const select=root.querySelector('select');
+   for(const value of ['2026-11-12',day]){
+    select.value=value;
+    select.dispatchEvent(new Event('change',{bubbles:true}));
+   }
+   const box=root.querySelector('[data-expert-caution]');
+   return {
+    day:box?.dataset.date,insideOverview:!!box?.closest('.nr-o-hero'),
+    closedAncestor:box?.parentElement.closest('details:not([open])')?.className||null
+   };
+  },day);
+  assert.deepEqual(burst,{day,insideOverview:true,closedAncestor:null},entry+' Today: rapid date changes must leave the caution visible');
+  await p.locator('[data-overview=today] [data-expert-caution] summary').waitFor({state:'visible'});
+ }
  for(const route of ['today','forecast','calendar']){
   await p.evaluate(r=>fp434Go(r,false),route);
   for(const ds of Object.keys(feed.days)){
@@ -27,9 +46,24 @@ try{for(const entry of ['index.html','classic.html']){
    const a=await p.evaluate(ds=>{const r=fp469ConsumerForDate({ds}).consumer;return {authority:r.authority,score:r.score,expert:r.expert}},ds);
    assert.equal(a.authority,expected?'expert_pdf':'source_formula');assert.equal(a.score,score);
    const note=p.locator('[data-overview="'+route+'"] [data-scoped-opinion]');
-   if(!expected&&!await note.isVisible())console.error('SCOPE_VISIBILITY',entry,route,ds,await note.evaluate(el=>{const a=[];for(let n=el;n;n=n.parentElement)a.push([n.tagName,n.className,n.hidden,getComputedStyle(n).display]);return {html:el.outerHTML,ancestors:a}}));
    if(expected){assert(!await note.count()||await note.isHidden());assert.equal(a.expert.source_sha256,expected.source_sha256);}else{assert(await note.isVisible());assert.match(await note.innerText(),/лише для нових справ/);assert.match(await note.innerText(),/не загальна оцінка дня/);assert.equal(await note.getAttribute('data-source-sha'),actual.scoped_decisions[0].source_sha256);}
-   if(!expected)assert(await note.evaluate(el=>!!el.closest('.nr-o-hero')),'Scoped advice must stay beside the general score, outside collapsed details');
+   if(!expected)assert(await note.evaluate((el,r)=>r==='forecast'?el.previousElementSibling?.matches('[data-forecast-verdict]'):!!el.closest('.nr-o-hero'),route),'Scoped advice must stay beside the visible general score');
+   const caution=p.locator('[data-overview="'+route+'"] [data-expert-caution][data-scope="new_starts"]');
+   if(ds==='2026-11-13'||ds==='2026-11-14'){
+    assert.equal(a.score,0);
+    assert.equal(await p.evaluate(ds=>NRConsumerAuthority.scopedFor(ds),ds),null,'textual advice must not add a numeric scoped decision');
+    await caution.locator('summary').waitFor({state:'visible'});
+    assert.match(await caution.locator('summary').innerText(),/лише для нових справ/);
+    assert.match(await caution.locator('.sr-caution-context').innerText(),/Загальний бал — 0\. Застереження стосується нових справ\./);
+    assert.equal(await caution.getAttribute('data-date'),ds);
+    assert.equal(await caution.getAttribute('data-source-id'),'3210');
+    assert.equal(await caution.evaluate(el=>el.parentElement.closest('details:not([open])')===null),true);
+    const summary=caution.locator('summary');
+    await summary.press('Enter');
+    await caution.locator('a[href="https://t.me/devakan/3210"]').waitFor({state:'visible'});
+    assert.match(await caution.locator(':scope > p').first().innerText(),ds.endsWith('13')?/Порожні руки/:/сповільнитися й відкласти серйозні рішення/);
+    if(route==='today')assert.doesNotMatch(await p.locator('[data-overview=today] [data-day-verdict]').innerText(),/(?:Нові справи|Важливі починання) краще відкласти/);
+   }else assert.equal(await caution.count(),0,'new Telegram advice must be limited to 13–14 November');
    checks++;
   }
  }
@@ -38,8 +72,12 @@ try{for(const entry of ['index.html','classic.html']){
   await p.evaluate(()=>{const sel=document.querySelector('[data-overview="today"] select');sel.value='2026-11-15';sel.dispatchEvent(new Event('change',{bubbles:true}));});
   const note=p.locator('[data-overview="today"] [data-scoped-opinion]');await note.waitFor({state:'visible'});
   const text=await note.innerText();assert.match(text,({uk:/лише для нових справ/,en:/new starts only/,es:/solo para nuevos proyectos/,fr:/uniquement pour les nouveaux projets/})[lang]);if(lang!=='uk')assert(!/[А-Яа-яІіЇїЄєҐґ]/.test(text));
+  await p.evaluate(()=>{const sel=document.querySelector('[data-overview="today"] select');sel.value='2026-11-13';sel.dispatchEvent(new Event('change',{bubbles:true}));});
+  const caution=p.locator('[data-overview=today] [data-expert-caution][data-scope="new_starts"] summary');
+  await caution.waitFor();
+  assert.match(await caution.innerText(),({uk:/лише для нових справ/,en:/new starts only/,es:/solo para proyectos nuevos/,fr:/uniquement pour les nouveaux projets/})[lang]);
  }
  assert.deepEqual(errors,[]);await c.close();
 }}finally{await b.close();server.close()}
-console.log('PASS '+checks+' selected-date/route checks, 2 entries, 4 scoped-note languages; scoped negative opinion leaves synthetic +1 general score unchanged');
+console.log('PASS '+checks+' selected-date/route checks, 2 entries, 4 scoped-note languages, 4 rapid-date regressions; 13–14 Nov textual cautions and unchanged 15–16 Nov scoped decisions');
 })().catch(e=>{console.error(e);process.exitCode=1});

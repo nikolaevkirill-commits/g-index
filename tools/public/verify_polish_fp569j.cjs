@@ -69,7 +69,7 @@ try{
  for(const lang of ['uk','en']){const {c,p,errs}=await open(b,{lang,hour:12});
   await p.evaluate(()=>fp434Go('more',false));await p.waitForTimeout(1200);
   const m=await p.evaluate(()=>{const a=document.querySelector('#nrRoute-more [data-motion-settings] [data-appearance]'),f=document.querySelector('#nrRoute-more [data-nr-palette-settings]');return {placed:!!a&&a.nextElementSibling===f,legend:a?.querySelector('legend')?.textContent,title:f?.querySelector('legend')?.textContent,old:/Палітра оформлення|Appearance palette/.test(document.body.textContent)}});
-  assert.equal(m.placed,true,'colours right after background');assert.equal(m.old,false);assert.equal(m.legend,lang==='uk'?'Тло':'Background');assert.equal(m.title,lang==='uk'?'Кольори':'Colours');n+=4;
+  assert.equal(m.placed,true,'colours right after background');assert.equal(m.old,false);assert.equal(m.legend,lang==='uk'?'Тло застосунку':'App background');/* Claude 13.11: label was lengthened in p0_layout appearanceControl after FP569j; test was stale */assert.equal(m.title,lang==='uk'?'Кольори':'Colours');n+=4;
   await p.evaluate(()=>fp434Go('profile',false));await p.waitForTimeout(900);
   const prof=await p.evaluate(()=>document.querySelector('#nrRoute-profile')?.textContent||'');
   assert.equal(/більше не збираються|no longer collected/.test(prof),false,'stale birth-data text');n++;

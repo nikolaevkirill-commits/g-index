@@ -116,10 +116,20 @@ function weekEvents(){
   if(!items.length)continue;
   rows.push(`<li data-week-event="${ds}"><div class="sr-we-date"><strong>${esc(dm(ds))}</strong><span>${esc(i===0?t('today'):wd(ds))}</span></div>${reference?`<span class="sr-we-score" data-score-tone="${tone(s)}" aria-label="${esc(describe(s))}">${icon(s)} ${esc(fmt(s))}</span>`:''}<ul>${items.join('')}</ul>${d.events.length?`<div class="sr-we-ics"><button type="button" data-week-ics="${ds}">${esc(t('ics'))}</button><small role="status" data-week-ics-status></small></div>`:''}</li>`)}
  const body=rows.length?`<ol class="sr-we-list">${rows.join('')}</ol>`:`<p class="sr-week-note">${esc(reference?(verified?t('none'):t('noData')):(moons?t('noMoon'):t('noData')))}</p>`;
- return `<section class="sr-week-events" data-week-events data-week-zone="${esc(zone)}" aria-labelledby="srWeekEventsTitle"><h2 id="srWeekEventsTitle">${esc(t('events'))}</h2>${body}<p class="sr-week-note">${esc(reference?t('eventsNote'):t('localEventsNote'))} · ${esc(zone)}</p></section>`}
+ return `<section class="sr-week-events" data-week-events data-week-zone="${esc(zone)}" aria-labelledby="srWeekEventsTitle"><h2 id="srWeekEventsTitle">${esc(t('events'))}</h2>${body}<p class="sr-week-note">${esc(reference?t('eventsNote'):t('localEventsNote'))} · <span title="${esc(zone)}">${esc((new Intl.DateTimeFormat('en',{timeZone:zone,timeZoneName:'shortOffset'}).formatToParts(Date.now()).find(p=>p.type==='timeZoneName')?.value||zone).replace(/^GMT/,'UTC'))}</span></p></section>`}
 
-function gScale(g){const n=/^[0-5]$/.test(g)?+g:null,w=T.gWords[ix()];
- return `<span class="sr-g-scale" data-g-scale="${n??''}" aria-hidden="true"><span class="sr-g-title">${esc(t('gTitle'))}${n===null?' · '+esc(t('gNone')):''}</span><span class="sr-g-cells">${[0,1,2,3,4,5].map(i=>`<i data-level="${i}"${i===n?' class="is-now"':''}>G${i}</i>`).join('')}</span><span class="sr-g-ends"><span>${esc(w[0])}</span><span>${esc(w[1])} →</span></span></span>`}
+// FP569o: the forecast level is marked on the same scale («прогноз»), so «зараз» and «можливо» are told apart.
+function gScale(g,fc){
+ const n=/^[0-5]$/.test(g)?+g:null,f=/^[1-5]$/.test(fc||'')?+fc:null,w=T.gWords[ix()];
+ const fw=['прогноз','forecast','previsión','prévision'][ix()],nw=['зараз','now','ahora','maintenant'][ix()];
+ const markers=(n===null?'':'<b data-g-kind="now">G'+n+' · '+esc(nw)+'</b>')+
+  (f===null||f===n?'':'<b data-g-kind="forecast">G'+f+' · '+esc(fw)+'</b>');
+ const cells=[0,1,2,3,4,5].map(i=>'<i data-level="'+i+'"'+(i===n?' class="is-now"':i===f?' class="is-forecast"':'')+'>G'+i+'</i>').join('');
+ return '<span class="sr-g-scale" data-g-scale="'+(n??'')+'" aria-hidden="true"><span class="sr-g-title">'+esc(t('gTitle'))+
+  (n===null?' · '+esc(t('gNone')):'')+'</span><span class="sr-g-cells">'+cells+'</span>'+
+  (markers?'<span class="sr-g-markers">'+markers+'</span>':'')+
+  '<span class="sr-g-ends"><span>'+esc(w[0])+'</span><span>'+esc(w[1])+' →</span></span></span>';
+}
 function endHtml(){return `<p class="sr-today-end" data-today-end><span>${esc(t('end'))}</span><button type="button" data-today-top>${esc(t('top'))}</button></p>`}
 
 const sig=new WeakMap();
@@ -136,7 +146,7 @@ function render(){
  const tr=document.querySelector('#nrRoute-today'),ov=tr?.querySelector('.nr-overview');
  if(ov){const ref=ov.querySelector(':scope > .sr-dayline')||ov.querySelector(':scope > [data-p0-signals]');if(ref)put(ov,ref,'[data-week-strip]',weekStrip(),'free');}
  if(tr)put(tr,null,'[data-today-end]',endHtml(),'end');
- for(const b of document.querySelectorAll('[data-weather-brief]'))put(b,null,'.sr-g-scale',gScale(b.dataset.g),'end');
+ for(const b of document.querySelectorAll('[data-weather-brief]'))put(b,null,'.sr-g-scale',gScale(b.dataset.g,b.dataset.gForecast),'end');
  const tools=document.querySelector('#nrRoute-forecast .nr-o-route-tools'),list=tools?.querySelector(':scope > .nr-o-horizon-list');
  if(list)put(tools,list,'[data-week-events]',weekEvents());
 }

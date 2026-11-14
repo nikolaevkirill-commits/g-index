@@ -29,4 +29,9 @@ function share(){try{if(!global.caches||!global.document)return;const url=new UR
 global.addEventListener('nr:locale',share);share();
 global.addEventListener('languagechange',()=>{if(choice==='auto')set('auto')});
 global.NRLocale={register,text,set,detect,get choice(){return choice},get language(){return language},get version(){return version},get locale(){return {uk:'uk-UA',en:'en-GB',es:'es-ES',fr:'fr-FR'}[language]},supported,missing:()=>[...untranslated],clearMissing:()=>untranslated.clear()};
+register([
+ ['📵 Офлайн — дані від','📵 Offline · data from','📵 Sin conexión · datos del','📵 Hors ligne · données du'],
+ ['· Показуються кешовані значення','· Showing cached data','· Se muestran datos guardados','· Données en cache'],
+ ['невідомого часу','an unknown time','una hora desconocida','une heure inconnue'],
+]);
 })(window);

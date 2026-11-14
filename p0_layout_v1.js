@@ -63,10 +63,63 @@ function moon(at){
  const d=`M${c},${c-r} A${r},${r} 0 0 ${limb} ${c},${c+r} A${rx.toFixed(3)},${r} 0 0 ${term} ${c},${c-r} Z`;
  return `<svg viewBox="0 0 80 80" role="img" aria-label="Місяць: освітлено ${pct===0?'менше 1':pct}%, ${waxing?'росте':'спадає'}" data-moon-k="${k}" data-moon-waxing="${waxing}"><defs><radialGradient id="${id}lit" cx="62%" cy="38%" r="75%"><stop stop-color="#fff8e6"/><stop offset=".55" stop-color="#f3e9cf"/><stop offset="1" stop-color="#b8ab8c"/></radialGradient><radialGradient id="${id}dark"><stop stop-color="#2c3a66"/><stop offset="1" stop-color="#161f3d"/></radialGradient><radialGradient id="${id}halo"><stop offset=".7" stop-color="#e9e5c8" stop-opacity=".16"/><stop offset="1" stop-color="#cddafa" stop-opacity="0"/></radialGradient><radialGradient id="${id}edge" cx="42%" cy="38%" r="67%"><stop offset=".55" stop-color="#151e32" stop-opacity="0"/><stop offset="1" stop-color="#151e32" stop-opacity=".65"/></radialGradient><radialGradient id="${id}sea"><stop stop-color="#736d60" stop-opacity=".22"/><stop offset=".65" stop-color="#736d60" stop-opacity=".12"/><stop offset="1" stop-color="#736d60" stop-opacity="0"/></radialGradient><clipPath id="${id}clip"><path d="${d}"/></clipPath></defs><circle cx="40" cy="40" r="40" fill="url(#${id}halo)"/><circle cx="40" cy="40" r="35" fill="url(#${id}dark)"/><path d="${d}" fill="url(#${id}lit)"/><g clip-path="url(#${id}clip)" fill="url(#${id}sea)"><ellipse cx="31" cy="29" rx="14" ry="17"/><ellipse cx="54" cy="25" rx="10" ry="12"/><ellipse cx="51" cy="51" rx="13" ry="14"/><ellipse cx="28" cy="53" rx="9" ry="8"/></g><circle cx="40" cy="40" r="35" fill="url(#${id}edge)"/></svg><span>${pct===0?'<1':pct}% · ${waxing?'росте':'спадає'}<small>Розрахована фаза Місяця</small></span>`;
 }
+const BACKDROPS = {
+ cosmos: {
+  names: ['Космос · NGC 4449','Cosmos · NGC 4449','Cosmos · NGC 4449','Cosmos · NGC 4449'],
+  credit: 'NASA, ESA, A. Aloisi (STScI/ESA), and The Hubble Heritage (STScI/AURA)-ESA/Hubble Collaboration',
+  url: 'https://esahubble.org/images/heic0711a/'
+ },
+ spiral: {
+  names: ['Спіраль · NGC 1672','Spiral · NGC 1672','Espiral · NGC 1672','Spirale · NGC 1672'],
+  credit: 'NASA, ESA',
+  url: 'https://esahubble.org/images/heic0706a/'
+ },
+ carina: {
+  names: ['Космічні скелі','Cosmic Cliffs','Acantilados cósmicos','Falaises cosmiques'],
+  credit: 'NASA, ESA, CSA, and STScI',
+  url: 'https://esawebb.org/images/weic2205a/'
+ },
+ saturn: {
+  names: ['Сатурн','Saturn','Saturno','Saturne'],
+  credit: 'NASA, ESA, A. Simon (Goddard Space Flight Center), and M.H. Wong (University of California, Berkeley)',
+  url: 'https://esahubble.org/images/heic1917a/'
+ },
+ paranal: {
+  names: ['Захід у Параналі','Paranal sunset','Atardecer en Paranal','Coucher de soleil à Paranal'],
+  credit: 'F. Char/ESO',
+  url: 'https://www.eso.org/public/images/paranal-armazones/'
+ },
+ observatory: {names: ['Обсерваторія','Observatory','Observatorio','Observatoire']}
+};
+function backdropLanguage(){
+ return Math.max(0,['uk','en','es','fr'].indexOf(window.NRLocale?.language));
+}
+function updateBackdropCredit(link){
+ const theme=BACKDROPS[appearance];
+ link.hidden=!theme.url;
+ if(!theme.url){
+  link.removeAttribute('href');
+  link.textContent='';
+  return;
+ }
+ link.href=theme.url;
+ link.textContent=theme.names[backdropLanguage()]+' · '+theme.credit;
+}
+function cosmosCredit(){
+ const credit=make('a','sr-cosmos-credit');
+ credit.target='_blank';
+ credit.rel='noopener noreferrer';
+ credit.setAttribute('translate','no');
+ updateBackdropCredit(credit);
+ return credit;
+}
 let moonSerial=0;
 function atmosphere(at,ds){
  document.documentElement.classList.add('wow');
  if(!document.querySelector('.wow-sky')){const sky=make('div','wow-sky');sky.setAttribute('aria-hidden','true');let seed=11;const rand=()=>((seed=(seed*9301+49297)%233280)/233280);let dots='';for(let i=0;i<200;i++){dots+=`<circle cx="${(rand()*100).toFixed(2)}%" cy="${(rand()*100).toFixed(2)}%" r="${i%13===0?1.5:.8}" fill="#eef3ff" opacity="${(.2+rand()*.55).toFixed(2)}" class="${i%7===0?'tw':''}" style="--d:7s;--dl:${i%5}s"/>`;}sky.innerHTML='<svg class="layer2" aria-hidden="true">'+dots+'</svg>';document.body.prepend(sky);}
+ const footer=document.querySelector('body>footer');
+ if(footer&&!footer.querySelector('.sr-cosmos-credit'))footer.append(cosmosCredit());
+ document.querySelectorAll('.sr-cosmos-credit').forEach(updateBackdropCredit);
  const header=document.querySelector('body>header')||document.getElementById('headerTitle')?.closest('header');if(!header)return;const nav=document.getElementById('nrTopNav');if(nav&&nav.parentElement!==header)header.append(nav);const notice=document.getElementById('playChannelNotice');if(notice&&!notice.querySelector('button')){const close=make('button','','×');close.type='button';close.setAttribute('aria-label',tr('Закрити'));close.onclick=()=>{notice.hidden=true;try{localStorage.setItem('srPrivacyNoticeDismissed','1');}catch(_){}};notice.append(close);try{notice.hidden=localStorage.getItem('srPrivacyNoticeDismissed')==='1';}catch(_){}}
  let box=header.querySelector('.wow-header-moon');if(!box){box=make('div','wow-header-moon');box.setAttribute('translate','no');header.append(box);}const next=document.createElement('template');next.innerHTML=tr(moon(at));const oldSvg=box.querySelector('svg'),newSvg=next.content.querySelector('svg');if(oldSvg&&newSvg){for(const key of ['aria-label','data-moon-k','data-moon-waxing'])oldSvg.setAttribute(key,newSvg.getAttribute(key));const paths=newSvg.querySelectorAll('path');oldSvg.querySelectorAll('path').forEach((p,i)=>p.setAttribute('d',paths[i].getAttribute('d')));box.querySelector('span')?.replaceWith(next.content.querySelector('span'));}else{box.replaceChildren(next.content);}box.dataset.date=ds;box.title=ds+' · '+at.toISOString();const caption=box.querySelector('span');caption?.append(make('small','',new Intl.DateTimeFormat(window.NRLocale?.locale||'uk-UA',{day:'numeric',month:'long',timeZone:'Europe/Kyiv'}).format(at)));
 }
@@ -77,57 +130,204 @@ const compared=new Set();let comparisonChoice='';
 function resolvedFor(ds){return window.fp469ConsumerForDate?.({ds})||{consumer:{score:null,available:false}};}
 function paintScore(node,result){const v=result?.available?result.score:null,kind=SkyScore.scoreClass(v),sem=SkyScore.SEMANTIC[kind];node.dataset.scoreTone=kind;node.textContent=sem.icon+' '+SkyScore.formatScore(v);node.setAttribute('aria-label',SkyScore.describe(v));}
 function pick(root,ds){const select=root.querySelector('select');if(!select)return;if(![...select.options].some(x=>x.value===ds))select.add(new Option(ds,ds));select.value=ds;select.dispatchEvent(new Event('change',{bubbles:true}));}
+const forecastCopy={
+ uk:['День','Тиждень','27 днів','Дати з оцінкою','Оцінка відсутня','Експертна оцінка','Формула календаря','Причина','Прогноз магнітної активності','Короткий прогноз NOAA','27-денний орієнтир NOAA','Немає актуальних даних NOAA','До дат','Кінець періоду · ','Окремої календарної поради для цієї дати немає','Прогноз →','Графік оцінок за тиждень','Оцінка за Києвом'],
+ en:['Day','Week','27 days','Dates with a score','Score unavailable','Expert assessment','Calendar formula','Why','Geomagnetic activity forecast','Short-range NOAA forecast','NOAA 27-day outlook','No current NOAA data','Back to dates','End of period · ','No separate calendar advice for this date','Forecast →','Weekly score chart','Score in Kyiv time'],
+ es:['Día','Semana','27 días','Fechas con puntuación','Sin puntuación','Valoración experta','Fórmula del calendario','Motivo','Pronóstico de actividad geomagnética','Pronóstico NOAA a corto plazo','Perspectiva NOAA de 27 días','Sin datos actuales de NOAA','Volver a las fechas','Fin del periodo · ','No hay un consejo específico del calendario para esta fecha','Pronóstico →','Gráfico de la semana','Puntuación en hora de Kyiv'],
+ fr:['Jour','Semaine','27 jours','Dates avec une note','Note indisponible','Évaluation experte','Formule du calendrier','Pourquoi','Prévision d’activité géomagnétique','Prévision NOAA à court terme','Tendance NOAA à 27 jours','Données NOAA actuelles indisponibles','Retour aux dates','Fin de la période · ','Pas de conseil particulier du calendrier pour cette date','Prévisions →','Graphique de la semaine','Note en heure de Kyiv']
+};
+const forecastWords=()=>forecastCopy[window.NRLocale?.language]||forecastCopy.uk;
+const forecastDate=day=>new Date(day+'T12:00:00Z');
+function forecastOverview(root,ds){
+ const list=root.querySelector('.nr-o-horizon-list');
+ if(!list)return;
+ const panel=list.parentElement,words=forecastWords(),locale=window.NRLocale?.locale||'uk-UA';
+ const count=Number(root.dataset.forecastCount||7);
+ const today=NRCivilTime.dayKey(Date.now(),'Europe/Kyiv');
+ const horizon=Array.from({length:27},(_,i)=>new Date(+forecastDate(today)+i*86400000).toISOString().slice(0,10));
+ const selected=Math.max(0,horizon.indexOf(ds));
+ let first=0;
+ if(count===7){
+  first=Math.max(0,horizon.indexOf(root.dataset.forecastWeek));
+  if(selected<first||selected>=first+7)first=Math.min(selected,20);
+  root.dataset.forecastWeek=horizon[first];
+ }
+ const dates=count===1?[ds]:horizon.slice(first,first+count);
+ root.dataset.forecastStart=dates[0];
+ list.dataset.forecastGrid=count===27?'month':'';
+ list.dataset.forecastPeriod=String(count);
+ const intro=panel.querySelector(':scope > p');
+ if(intro)intro.hidden=true;
+
+ let controls=root.querySelector('[data-p0-forecast-tabs]');
+ if(!controls){
+  controls=make('div','sr-p0-tabs');
+  controls.dataset.p0ForecastTabs='';
+  for(const n of [1,7,27]){
+   const button=make('button','');
+   button.type='button';
+   button.onclick=()=>{
+    root.dataset.forecastCount=String(n);
+    forecastOverview(root,root.querySelector('select')?.value||ds);
+   };
+   controls.append(button);
+  }
+  list.before(controls);
+ }
+ for(const [i,button] of [...controls.children].entries()){
+  button.textContent=words[i];
+  button.setAttribute('aria-pressed',String(count===[1,7,27][i]));
+ }
+ let overview=root.querySelector('[data-forecast-summary]');
+ if(!overview){
+  overview=make('div','sr-forecast-summary');
+  overview.dataset.forecastSummary='';
+  controls.after(overview);
+ }
+ const range=new Intl.DateTimeFormat(locale,{day:'numeric',month:'short',timeZone:'UTC'});
+ const long=new Intl.DateTimeFormat(locale,{weekday:'long',day:'numeric',month:'long',timeZone:'UTC'});
+ const weekday=new Intl.DateTimeFormat(locale,{weekday:'short',timeZone:'UTC'});
+ const models=new Map(dates.map(day=>[day,resolvedFor(day)]));
+ const scored=[...models.values()].filter(model=>model.consumer?.available===true).length;
+ overview.hidden=count===1;
+ if(count!==1)overview.replaceChildren(make('strong','',range.formatRange(forecastDate(dates[0]),forecastDate(dates.at(-1)))),make('span','',words[3]+' · '+scored+' / '+count));
+
+ let card=root.querySelector('[data-forecast-verdict]');
+ if(!card){
+  card=make('section','sr-forecast-verdict');
+  card.dataset.forecastVerdict='';
+  card.tabIndex=-1;
+  card.setAttribute('translate','no');
+  card.setAttribute('aria-labelledby','srForecastDay');
+  overview.after(card);
+ }
+ const model=models.get(ds)||resolvedFor(ds),value=model.consumer;
+ const summary=window.NRDayVerdict?.summary?.(ds);
+ const unavailable={
+  uk:['Оцінка застаріла','Оцінка недоступна офлайн'],en:['Score is out of date','Score unavailable offline'],
+  es:['Puntuación desactualizada','Puntuación no disponible sin conexión'],
+  fr:['Note périmée','Note indisponible hors ligne']
+ }[window.NRLocale?.language||'uk'];
+ const source=value?.available?words[value.authority==='expert_pdf'?5:6]
+  :value?.state==='stale'?unavailable[0]:!navigator.onLine?unavailable[1]:words[4];
+ const head=make('div','sr-fv-header');
+ const date=make('h2','',long.format(forecastDate(ds)));date.id='srForecastDay';
+ // Move the score rendered by the existing resolver into the primary card.
+ const score=root.querySelector('.nr-o-score');
+ if(score){
+  score.classList.add('sr-fv-score');
+  score.setAttribute('aria-label',SkyScore.describe(value?.available?value.score:null));
+  head.append(date,score);
+ }else head.append(date);
+ const information=[head,make('small','sr-fv-source',value?.available?source+' · '+words[17]:source)];
+ if(summary&&value?.available){
+  information.push(make('p','sr-fv-tone',summary.tone));
+  // NOAA gets its own labelled row. Calendar reasons come from the same verdict as Today.
+  const reasons=summary.lines.map(line=>line.kind==='check'
+   ?{...line,text:line.text.split(' · ').filter(item=>!/\bG[1-5]\b/.test(item)).join(' · ')}
+   :line).filter(line=>line.text);
+  for(const line of reasons){
+   const paragraph=make('p','sr-fv-'+line.kind);
+   paragraph.append(make('b','',line.label+' '),document.createTextNode(line.text));
+   information.push(paragraph);
+  }
+  if(!reasons.length&&!adviceFor(ds)){
+   const calendarReady=value.formula?.available===true&&model.feed?.channels?.source_formula?.expert_model?.full_calendar_available===true;
+   const unavailableCalendar={
+    uk:'Календарні теми поки недоступні',
+    en:'Calendar themes are currently unavailable',
+    es:'Temas del calendario no disponibles',
+    fr:'Thèmes du calendrier indisponibles'
+   }[window.NRLocale?.language||'uk'];
+   information.push(make('p','sr-fv-unavailable',calendarReady?words[14]:unavailableCalendar));
+  }
+ }
+ const signal=signalData(value,model.feed);
+ const noaa=make('p','sr-fv-noaa');
+ const hasNoaa=Number.isFinite(signal.kp)&&['NOAA_3day_slots','NOAA_27day_outlook'].includes(signal.source);
+ const kp=hasNoaa?'Kp '+new Intl.NumberFormat(locale,{maximumFractionDigits:2}).format(signal.kp)+' · '+words[signal.source==='NOAA_3day_slots'?9:10]:words[11];
+ noaa.append(make('b','',words[8]),make('span','',kp));
+ if(value?.available&&value.authority==='source_formula'&&hasNoaa){
+  const factors=model.feed?.channels?.source_formula?.factors;
+  const contribution=Array.isArray(factors)?factors.find(item=>item.factor==='Kp')?.value:null;
+  if(Number.isFinite(contribution)){
+   const label=({uk:'Внесок Kp у формулу',en:'Kp contribution to the formula',es:'Contribución del Kp a la fórmula',fr:'Contribution du Kp à la formule'})[window.NRLocale?.language||'uk'];
+   noaa.append(make('small','',label+' · '+new Intl.NumberFormat(locale,{signDisplay:'exceptZero',maximumFractionDigits:2}).format(contribution)));
+  }
+ }
+ information.push(noaa);
+ let back=card.querySelector('[data-forecast-back]');
+ if(!back){back=make('button','sr-fv-back');back.type='button';back.dataset.forecastBack='';}
+ back.textContent=words[12];
+ back.onclick=()=>list.querySelector('[aria-pressed=true]')?.focus();
+ back.hidden=count===1||ds===dates[0];
+ const hadBackFocus=document.activeElement===back;
+ card.replaceChildren(...information,back);
+ // Keep the existing scoped opinion beside the visible forecast score.
+ const scoped=root.querySelector('[data-scoped-opinion]:not([hidden])');
+ if(scoped&&card.nextElementSibling!==scoped){
+  scoped.classList.add('sr-expert-caution');
+  card.after(scoped);
+ }
+ if(hadBackFocus)back.focus({preventScroll:true});
+
+ const currentNodes=[...list.children];
+ const known=new Map(currentNodes.map(button=>[button.dataset.day,button]));
+ const next=dates.map(day=>{
+  const button=known.get(day)||make('button','');
+  button.type='button';
+  button.dataset.day=day;
+  const result=models.get(day).consumer;
+  const formatted=long.format(forecastDate(day));
+  button.setAttribute('aria-pressed',String(day===ds));
+  button.setAttribute('aria-label',formatted+' · '+SkyScore.describe(result?.available?result.score:null));
+  button.dataset.scoreTone=SkyScore.scoreClass(result?.available?result.score:null);
+  const number=make('strong','');paintScore(number,result);
+  number.style.color=SkyScore.color(result?.available?result.score:null);
+  const tileDate=count===7?new Intl.NumberFormat(locale).format(forecastDate(day).getUTCDate()):range.format(forecastDate(day));
+  button.replaceChildren(make('span','sr-forecast-weekday',weekday.format(forecastDate(day))),make('span','sr-forecast-date',tileDate),number);
+  button.onclick=()=>{
+   pick(root,day);
+   const selectedCard=root.querySelector('[data-forecast-verdict]');
+   selectedCard?.focus({preventScroll:true});
+   const box=selectedCard?.getBoundingClientRect();
+   const mobileNav=document.querySelector('#mobileNav');
+   const bottom=mobileNav?.checkVisibility()?mobileNav.getBoundingClientRect().top:innerHeight;
+   if(box&&(box.top<16||box.bottom>bottom))selectedCard.scrollIntoView({block:'center'});
+  };
+  return button;
+ });
+ if(next.some((button,i)=>button!==currentNodes[i])||next.length!==currentNodes.length){
+  const focused=document.activeElement;
+  list.replaceChildren(...next);
+  if(list.contains(focused))focused.focus({preventScroll:true});
+ }
+ list.hidden=count===1;
+ let endNote=root.querySelector('[data-forecast-end]');
+ if(!endNote){endNote=make('p','sr-forecast-end');endNote.dataset.forecastEnd='';list.after(endNote);}
+ endNote.textContent=words[13]+range.format(forecastDate(dates.at(-1)));
+ endNote.hidden=count!==27;
+ document.documentElement.dataset.forecastCount=String(count);
+ renderForecastGraph(root);
+ const graph=root.querySelector('[data-forecast-graph]');
+ if(graph){
+  let details=root.querySelector('[data-forecast-chart]');
+  if(!details){
+   details=make('details','sr-p0-details sr-forecast-chart');
+   details.dataset.forecastChart='';
+   details.append(make('summary',''));
+   panel.append(details);
+  }
+  details.querySelector('summary').textContent=words[16];
+  if(graph.parentElement!==details)details.append(graph);
+ }
+ const chart=root.querySelector('[data-forecast-chart]');
+ if(chart)chart.hidden=!graph;
+}
 function extras(root,ds){
  const route=root.dataset.overview;
  for(const btn of root.querySelectorAll('[data-day]')){const value=resolvedFor(btn.dataset.day).consumer;btn.dataset.scoreTone=SkyScore.scoreClass(value?.available?value.score:null);for(const number of btn.querySelectorAll('strong')){number.dataset.scoreTone=btn.dataset.scoreTone;/* FP569k: on a light «pressed» chip (week strip, calendar) the sign colour had 1.1:1 contrast; use dark ink there. */number.style.setProperty('color',btn.matches('[aria-pressed="true"]')&&btn.closest('#nrRoute-forecast nav.nr-b-week,.nr-o-days')?'#101429':SkyScore.color(value?.available?value.score:null),'important');number.setAttribute('aria-label',SkyScore.describe(value?.available?value.score:null));}}
- if(route==='forecast'){
-  const list=root.querySelector('.nr-o-horizon-list');
-  const count=Number(root.dataset.forecastCount||7);
-  const datesFrom=start=>Array.from({length:count},(_,i)=>new Date(Date.parse(start+'T12:00:00Z')+i*86400000).toISOString().slice(0,10));
-  let week=datesFrom(root.dataset.forecastStart||ds);
-  if(!week.includes(ds))week=datesFrom(ds);
-  root.dataset.forecastStart=week[0];
-  if(list)list.dataset.forecastGrid=count===27?'month':'';
-  const intro=list?.parentElement?.querySelector(':scope > p');
-  if(intro)intro.textContent=tr('Оберіть період, а потім дату, щоб переглянути її оцінку й джерело.');
-
-  for(const date of week)if(list&&![...list.querySelectorAll('[data-day]')].some(b=>b.dataset.day===date)){const b=make('button','');b.type='button';b.dataset.day=date;b.setAttribute('aria-pressed',String(date===ds));b.onclick=()=>pick(root,date);list.append(b);}
-  if(list)list.append(...[...list.querySelectorAll('[data-day]')].sort((a,b)=>a.dataset.day.localeCompare(b.dataset.day)));
-  for(const b of root.querySelectorAll('.nr-o-horizon-list [data-day]')){const own=resolvedFor(b.dataset.day),value=own.consumer,date=make('span','sr-forecast-date',new Intl.DateTimeFormat(window.NRLocale?.locale||'uk-UA',{day:'numeric',month:'long',timeZone:'UTC'}).format(new Date(b.dataset.day+'T12:00:00Z'))),score=make('strong','');paintScore(score,value);score.style.color=SkyScore.color(value?.available?value.score:null);const source=tr(value?.authority==='expert_pdf'?'Експертна оцінка':value?.available?'Формула джерела':'Оцінка недоступна');const state=dataState(value),copy={fresh:'Формульні дані актуальні',stale:'Формульні дані застаріли',offline:'Офлайн: перевірте час збережених даних',missing:'Формульні дані відсутні',loading:'Оновлюємо дані…',error:'Не вдалося оновити дані'};// Owner review 01.11 (D4): the card shows date, score, source and horizon only; the data state is shown once in
-  // the hero and the full horizon text stays available as the card's title and accessible description.
-  const full=source+' · '+tr(copy[state])+(horizonText(own.feed?.channels?.source_formula)?' · '+horizonText(own.feed.channels.source_formula):'');
-  const outlook=value?.available&&value.authority!=='expert_pdf'&&state==='fresh'&&own.feed?.channels?.source_formula?.kp_source==='NOAA_27day_outlook';
-  if(count===27)date.textContent=new Intl.DateTimeFormat(window.NRLocale?.locale||'uk-UA',{day:'numeric',month:'short',timeZone:'UTC'}).format(new Date(b.dataset.day+'T12:00:00Z'));
-  const compactSource=tr(value?.authority==='expert_pdf'?'Експерт':value?.available?'Формула':'Без оцінки');
-  b.setAttribute('aria-label',date.textContent+' · '+SkyScore.describe(value?.available?value.score:null)+' · '+source);
-  b.replaceChildren(date,score,make('small','',(count===27?compactSource:source)+(outlook?' · '+tr('орієнтир 27 дн.'):'')));b.title=full;b.dataset.fullState=full;}
-
-  let controls=root.querySelector('[data-p0-forecast-tabs]');if(!controls){controls=make('div','sr-p0-tabs');controls.dataset.p0ForecastTabs='';for(const [name,count]of [['День',1],['Тиждень',7],['27 днів',27]]){const b=make('button','',name);b.type='button';b.onclick=()=>{root.dataset.forecastCount=String(count);root.dataset.forecastStart=root.querySelector('select')?.value||ds;extras(root,root.querySelector('select')?.value||ds);};controls.append(b);}root.querySelector('.nr-o-horizon-list')?.before(controls);}
-  controls.querySelectorAll('button').forEach((b,i)=>b.textContent=tr(['День','Тиждень','27 днів'][i]));
-  [...root.querySelectorAll('.nr-o-horizon-list [data-day]')].forEach(b=>b.hidden=Number(root.dataset.forecastCount||7)===1?b.dataset.day!==ds:!week.includes(b.dataset.day));
-  controls.querySelectorAll('button').forEach((b,i)=>{b.setAttribute('aria-pressed',String(Number(root.dataset.forecastCount||7)===[1,7,27][i]));});
-  let overview=root.querySelector('[data-forecast-summary]');
-  if(!overview){overview=make('div','sr-forecast-summary');overview.dataset.forecastSummary='';controls.after(overview);}
-  const fmt=new Intl.DateTimeFormat(window.NRLocale?.locale||'uk-UA',{day:'numeric',month:'short',timeZone:'UTC'});
-  const first=new Date(week[0]+'T12:00:00Z'),last=new Date(week.at(-1)+'T12:00:00Z');
-  const scored=week.filter(day=>resolvedFor(day).consumer?.available===true).length;
-  overview.replaceChildren(make('strong','',count===1?fmt.format(first):fmt.formatRange(first,last)),
-   make('span','',tr('Дати з оцінкою')+' · '+scored+' / '+count));
-  if(scored<count)overview.append(make('small','','Риска означає, що оцінки немає. Нуль означає нейтральну оцінку.'));
-  // FP569l: the big score at the top belongs to one date — say which (owner: «незрозуміло, що обрано»).
-  {const hero=root.querySelector('.nr-o-hero');if(hero){let sel=hero.querySelector('[data-forecast-selected]');if(!sel){sel=make('p','sr-forecast-selected');sel.dataset.forecastSelected='';hero.prepend(sel);}
-   sel.textContent=({uk:'Обрана дата: ',en:'Selected date: ',es:'Fecha elegida: ',fr:'Date choisie : '}[window.NRLocale?.language]||'Обрана дата: ')+new Intl.DateTimeFormat(window.NRLocale?.locale||'uk-UA',{weekday:'short',day:'numeric',month:'long',timeZone:'UTC'}).format(new Date(ds+'T12:00:00Z'));}}
-  // FP569k: «День» says what the day is in one sentence (same text as Today), not only a number.
-  let verdictBox=root.querySelector('[data-forecast-verdict]');
-  if(count===1){const v=window.NRDayVerdict?.summary?.(ds);if(v){if(!verdictBox){verdictBox=make('div','sr-forecast-verdict');verdictBox.dataset.forecastVerdict='';verdictBox.setAttribute('translate','no');}
-    if(verdictBox.previousElementSibling!==overview)overview.after(verdictBox);
-    verdictBox.replaceChildren(make('p','sr-fv-tone',v.tone),...v.lines.map(l=>{const p=make('p','sr-fv-'+l.kind);p.append(make('b','',l.label+' '),document.createTextNode(l.text));return p}));verdictBox.hidden=false;}}
-  else if(verdictBox)verdictBox.hidden=true;
-  // FP569k: the 27-day grid states where the period ends; «Події тижня» belong to Day/Week, not to the 27-day view.
-  let endNote=root.querySelector('[data-forecast-end]');if(count===27&&list){if(!endNote){endNote=make('p','sr-forecast-end');endNote.dataset.forecastEnd='';}if(endNote.previousElementSibling!==list)list.after(endNote);endNote.textContent=({uk:'Кінець періоду · ',en:'End of period · ',es:'Fin del periodo · ',fr:'Fin de la période · '}[window.NRLocale?.language]||'Кінець періоду · ')+fmt.format(last);endNote.hidden=false;}else if(endNote)endNote.hidden=true;
-  document.documentElement.dataset.forecastCount=String(count);
-  renderForecastGraph(root);
- }
+ if(route==='forecast')forecastOverview(root,ds);
  if(route!=='calendar')return;
  let box=root.querySelector('[data-p0-month]');if(!box){box=make('section','sr-p0-month');box.dataset.p0Month='';root.querySelector('.nr-o-hero').after(box);}
  const key=box.dataset.month||ds.slice(0,7);box.dataset.month=key;const [y,m]=key.split('-').map(Number),count=new Date(Date.UTC(y,m,0)).getUTCDate(),offset=(new Date(key+'-01T12:00:00Z').getUTCDay()+6)%7;
@@ -162,38 +362,79 @@ function compactRouteHero(root){
  const result=resolvedFor(root.querySelector('select')?.value).consumer;
  chip.textContent=tr(result?.authority==='expert_pdf'?'Експертна оцінка':result?.available?'Формула джерела':'Оцінка недоступна');
  const state=root.querySelector('[data-p0-feed-state]');if(state)details.append(state);
+ if(root.dataset.overview==='forecast'){
+  const tools=root.querySelector('.nr-o-route-tools');
+  const title=root.querySelector('.nr-o-heading h1');
+  if(title)title.textContent=({uk:'Прогноз',en:'Forecast',es:'Pronóstico',fr:'Prévisions'})[window.NRLocale?.language||'uk'];
+  for(const selector of ['.nr-o-actions','[data-authority-boundary]','[data-save-calculation]','[data-day-context]']){
+   const item=root.querySelector(selector);
+   if(item&&!details.contains(item))details.append(item);
+  }
+  if(tools&&tools.nextElementSibling!==details)details.before(tools);
+  if(hero.parentElement!==details)details.insertBefore(hero,details.children[1]||null);
+  return;
+ }
  if(root.dataset.overview==='calendar')for(const selector of ['.nr-o-practical','.nr-o-actions','.nr-o-spaceweather','.nr-o-boundary']){const e=root.querySelector(selector);if(e)details.append(e);}
  const tools=root.querySelector(root.dataset.overview==='calendar'?'[data-p0-month]':'.nr-o-route-tools');if(tools)hero.after(tools);
  // FP542 (D4): on the calendar, theme chips and the match count come before the month grid; the long
  // date list stays below it. Without the theme panel the previous order is kept.
  if(root.dataset.overview==='calendar'){const topics=root.querySelector('.nr-o-route-tools'),status=topics?.querySelector('.nr-o-topic-status');if(topics&&status&&tools){hero.after(topics);status.after(tools);const compare=root.querySelector('[data-p0-compare]');if(compare)tools.after(compare);}else if(topics&&tools)tools.after(topics);}
 }
-function expertCaution(root,ds){
+function adviceFor(ds){return window.NRExpertStartAdvice?.[ds];}
+function expertCaution(root,ds,resolved){
  const texts={
  '2026-10-30':['Домовленості й завершення справ','Agreements and unfinished tasks','Acuerdos y tareas pendientes','Accords et tâches inachevées'],
  '2026-11-01':['Важливі фінансові рішення','Major financial decisions','Decisiones financieras importantes','Décisions financières importantes']};
  const body={
  '2026-10-30':['У прогнозі експерта на цей день — переперевірка деталей перед оплатою, підтвердженням завдання чи поїздкою та повернення до незавершених справ.','The expert’s forecast for this date emphasizes checking details before payment, confirming a task or travelling, and returning to unfinished tasks.','La previsión experta para esta fecha destaca revisar los detalles antes de pagar, confirmar una tarea o viajar, y retomar tareas pendientes.','La prévision experte pour cette date met l’accent sur la vérification des détails avant un paiement, la confirmation d’une tâche ou un voyage, et sur les tâches inachevées.'],
  '2026-11-01':['Експерт пропонує приділити день родині й плануванню бюджету, утримавшись від важливих фінансових рішень. Це тематичне застереження джерела, а не персональна фінансова порада.','The expert suggests family time and budget planning while avoiding major financial decisions. This is a source-specific caution, not personal financial advice.','La experta propone dedicar tiempo a la familia y planificar el presupuesto, evitando decisiones financieras importantes. Es una advertencia de la fuente, no asesoramiento financiero personal.','L’experte propose de privilégier la famille et la préparation du budget, en évitant les décisions financières importantes. Il s’agit d’une réserve de la source, pas d’un conseil financier personnel.']};
- let box=root.querySelector('[data-expert-caution]');if(!texts[ds]){box?.remove();return;}
+ const newStarts=adviceFor(ds),sourceId=newStarts?.sourceId||'3202';
+ let box=root.querySelector('[data-expert-caution]');if(!texts[ds]&&!newStarts){box?.remove();return;}
  const i={uk:0,en:1,es:2,fr:3}[window.NRLocale?.language]||0;
  if(!box){box=make('details','sr-expert-caution');box.dataset.expertCaution='';box.setAttribute('translate','no');}
  if(box.dataset.date!==ds)box.open=false;
- box.dataset.date=ds;box.dataset.sourceId='3202';box.dataset.sourceTextSha256='356781324ff588721b4792ee874dc6850274165f1226639e49b59508554768c2';box.dataset.sourceEdited='2026-10-25T16:49:49+00:00';
+ box.dataset.date=ds;box.dataset.sourceId=sourceId;
+ if(newStarts){
+  box.dataset.scope='new_starts';box.dataset.placement='after-hero';box.dataset.sourcePublished=newStarts.sourcePublished;
+  delete box.dataset.sourceTextSha256;delete box.dataset.sourceEdited;
+ }else{
+  delete box.dataset.scope;delete box.dataset.placement;delete box.dataset.sourcePublished;
+  box.dataset.sourceTextSha256='356781324ff588721b4792ee874dc6850274165f1226639e49b59508554768c2';box.dataset.sourceEdited='2026-10-25T16:49:49+00:00';
+ }
  const label=['Трактування експерта','Expert interpretation','Interpretación experta','Interprétation experte'][i],note=['Загальний бал не означає однакової оцінки для всіх справ. Це застереження не змінює бал; вплив на реальні події не підтверджений.','The overall score does not rate every activity equally. This caution does not change the score; an effect on real events has not been established.','La puntuación general no valora por igual todas las actividades. Esta advertencia no cambia la puntuación; no se ha demostrado un efecto en hechos reales.','La note globale ne vaut pas pour toutes les activités de la même façon. Cette réserve ne change pas la note ; un effet sur les événements réels n’est pas établi.'][i];
- const summary=make('summary','');summary.append(make('small','',label+' · '+ds),document.createTextNode(' '),make('strong','',texts[ds][i]));
- box.replaceChildren(summary,make('p','',body[ds][i]),make('p','sr-caution-note',note));
- const link=make('a','',['Допис @devakan від 25.10.2026','@devakan post dated 25 Oct 2026','Publicación de @devakan del 25/10/2026','Publication @devakan du 25/10/2026'][i]);link.href='https://t.me/devakan/3202';link.target='_blank';link.rel='noopener noreferrer';box.append(link);root.querySelector('.nr-o-hero')?.after(box);
+ const summary=make('summary','');
+ const category=newStarts?['За дописом Таніти · лише для нових справ','From Tanita’s post · new starts only','Según Tanita · solo para proyectos nuevos','Selon Tanita · uniquement pour les nouveaux projets'][i]:label;
+ const title=(newStarts?.title||texts[ds])[i];
+ const dateText=new Intl.DateTimeFormat(window.NRLocale?.locale||['uk-UA','en-GB','es-ES','fr-FR'][i],{day:'numeric',month:'long',timeZone:'UTC'}).format(new Date(ds+'T12:00:00Z'));
+ summary.append(make('small','',category+' · '+dateText),document.createTextNode(' '),make('strong','',title));
+ if(newStarts&&resolved.available&&resolved.score===0){
+  const neutral=['Загальний бал — 0. Застереження стосується нових справ.','The overall score is 0. This caution applies to new projects.','La puntuación general es 0. La advertencia se aplica a los proyectos nuevos.','La note globale est de 0. Cette réserve concerne les nouveaux projets.'][i];
+  summary.append(make('small','sr-caution-context',neutral));
+ }
+ box.replaceChildren(summary,make('p','',(newStarts?.text||body[ds])[i]),make('p','sr-caution-note',note));
+ const linkLabel=newStarts?['Допис Таніти','Tanita’s post','Publicación de Tanita','Publication de Tanita'][i]:['Допис @devakan від 25.10.2026','@devakan post dated 25 Oct 2026','Publicación de @devakan del 25/10/2026','Publication @devakan du 25/10/2026'][i];
+ const link=make('a','',linkLabel);link.href='https://t.me/devakan/'+sourceId;link.target='_blank';link.rel='noopener noreferrer';box.append(link);
+ const route=root.dataset.overview;
+ const hero=root.querySelector(':scope > .nr-o-hero');
+ // The previous render may have moved “Why” into the closed technical details.
+ const anchor=newStarts&&route==='today'?(hero?.querySelector(':scope > [data-day-why]')||hero?.querySelector(':scope > .nr-o-verdict'))
+  :root.querySelector(newStarts&&route==='forecast'?'[data-forecast-verdict]':'.nr-o-hero');
+ if(anchor&&anchor.nextElementSibling!==box)anchor.after(box);
 }
 function apply(root,ds,resolved){
- expertCaution(root,ds);
- feedStatus(root,ds,resolved);extras(root,ds);paintRing(root,resolved);if(root.dataset.overview!=='today'){compactForecast(root);compactRouteHero(root);return;}
+ const newStarts=!!adviceFor(ds);
+ if(!newStarts)expertCaution(root,ds,resolved);
+ feedStatus(root,ds,resolved);extras(root,ds);paintRing(root,resolved);
+ if(root.dataset.overview!=='today'){compactForecast(root);compactRouteHero(root);if(newStarts)expertCaution(root,ds,resolved);return;}
+ if(newStarts)expertCaution(root,ds,resolved);
  root.classList.add('sr-p0-today');const hero=root.querySelector('.nr-o-hero');if(!hero)return;
  const titleBox=root.querySelector('.nr-o-heading');if(titleBox){titleBox.dataset.referenceTitle='';titleBox.classList.add('sr-reference-title');if(hero.firstElementChild!==titleBox)hero.prepend(titleBox);titleBox.querySelector('h1').textContent=({uk:'Огляд дня',en:'Day overview',es:'Resumen del día',fr:'Aperçu du jour'}[window.NRLocale?.language||'uk']);}
  let details=root.querySelector(':scope > [data-p0-details]');
  if(!details){details=make('details','sr-p0-details');details.dataset.p0Details='';details.append(make('summary','','Детально: джерела, розрахунок і календар'));root.append(details);}
  let signals=root.querySelector(':scope > [data-p0-signals]');
- if(!signals){signals=make('nav','sr-p0-signals');signals.dataset.p0Signals='';signals.setAttribute('aria-label','Три складові дня');for(const [name,selector]of [['Астрономія й NOAA','.nr-o-spaceweather'],['Панчанга','.nr-o-panch-preview'],['Оцінка дня','.nr-o-reasons']]){const btn=make('button','',name);btn.type='button';btn.onclick=()=>{details.open=true;const target=root.querySelector(selector);target?.scrollIntoView({block:'start'});if(target){target.tabIndex=-1;target.focus({preventScroll:true});}};signals.append(btn);}hero.after(signals);}
+ if(!signals){signals=make('nav','sr-p0-signals');signals.dataset.p0Signals='';signals.setAttribute('aria-label','Три складові дня');for(const [name,selector]of [['Астрономія й NOAA','.nr-o-spaceweather'],['Панчанга','.nr-o-panch-preview'],['Оцінка дня','.nr-o-reasons']]){const btn=make('button','',name);btn.type='button';btn.onclick=()=>{details.open=true;const target=root.querySelector(selector);target?.scrollIntoView({block:'start'});if(target){target.tabIndex=-1;target.focus({preventScroll:true});}};signals.append(btn);}
+ const lead=root.querySelector(':scope > [data-space-scene=today]')||root.querySelector(':scope > [data-sky-clock]')||root.querySelector(':scope > .sr-expert-caution')||hero;
+ lead.after(signals);}
  let visual=hero.querySelector('[data-p0-moon]');if(!visual){visual=make('div','sr-p0-moon');visual.dataset.p0Moon='';hero.append(visual);}
  const now=new Date(),today=NRCivilTime.dayKey(now),at=ds===today?now:noonKyiv(ds);visual.innerHTML=tr(moon(at));atmosphere(at,ds);visual.dataset.source='astronomy';visual.title='Геоцентричний розрахунок освітленої частки · '+at.toISOString();
  let sentence=hero.querySelector('[data-p0-sentence]');if(!sentence){sentence=make('p','sr-p0-sentence');sentence.dataset.p0Sentence='';hero.append(sentence);}
@@ -212,11 +453,25 @@ const driverLabel=x=>x.factor==='Kp'?'Геомагнітна складова':x
  if(resolved.available&&!text)text='Перегляньте календарні теми й підстави оцінки дня.';
  sentence.textContent=text;
  let chip=hero.querySelector('[data-p0-source]');if(!chip){chip=make('button','sr-p0-source');chip.dataset.p0Source='';chip.type='button';chip.onclick=()=>{details.open=true;root.querySelector('[data-score-source]')?.scrollIntoView({block:'center'});};hero.append(chip);}
+ let forecast=hero.querySelector('[data-today-forecast]');
+ if(!forecast){
+  forecast=make('button','sr-today-forecast');
+  forecast.dataset.todayForecast='';
+  forecast.type='button';
+  forecast.onclick=()=>{
+   window.fp434Go('forecast',true);
+   const target=document.querySelector('#nrRoute-forecast [data-overview="forecast"]');
+   const chosen=hero.querySelector(':scope > label select')?.value;
+   if(target&&chosen)pick(target,chosen);
+  };
+  chip.after(forecast);
+ }
+ forecast.textContent=forecastWords()[15];
  chip.textContent=resolved.authority==='expert_pdf'?'Джерело: експертна оцінка':resolved.available?'Джерело: формула календаря':'Оцінка недоступна';
  const label=hero.querySelector(':scope > label');if(label){label.childNodes.forEach(n=>{if(n.nodeType===3)n.textContent=tr('Дата · Київ');});label.dataset.p0Date='';}
  // Keep the original accessible route heading, while removing duplicate visual chrome.
  const heading=root.querySelector('.nr-o-heading');if(heading&&heading.parentElement!==hero)hero.prepend(heading);
- for(const e of [...hero.children])if(!e.matches('[data-reference-title],[data-p0-date],[data-p0-moon],[data-p0-sentence],.nr-o-verdict,[data-p0-source],[data-share-card],.sr-p0-accessible-heading,[data-placement="after-hero"]'))details.append(e);
+ for(const e of [...hero.children])if(!e.matches('[data-reference-title],[data-p0-date],[data-p0-moon],[data-p0-sentence],.nr-o-verdict,[data-p0-source],[data-today-forecast],[data-share-card],.sr-p0-accessible-heading,[data-placement="after-hero"]'))details.append(e);
  sentence.textContent=tr(sentence.textContent);chip.textContent=tr(chip.textContent);
  details.querySelector(':scope > summary').textContent=tr('Детально: джерела, розрахунок і календар');
  signals.querySelectorAll('button').forEach((b,i)=>b.textContent=tr(['Астрономія й NOAA','Панчанга','Оцінка дня'][i]));
@@ -299,27 +554,82 @@ function renderTimeline(root,ds){
 }
 function paintRing(root,result){const el=root.querySelector('.nr-o-score');if(!el)return;const value=result?.available&&SkyScore.isValidFinal(result.score)?result.score:null;el.dataset.ring=value===null?'missing':value===0?'zero':'value';el.style.setProperty('--score-arc',(value===null?0:Math.abs(value)*120)+'deg');el.style.setProperty('--score-color',SkyScore.color(value));}
 window.addEventListener('sr:dayline-ready',()=>{const root=document.querySelector('[data-overview=today]'),ds=root?.querySelector('select')?.value;if(ds){renderTimeline(root,ds);renderSignals(root,ds,resolvedFor(ds).consumer);}});
-const APPEARANCE_KEY='srAppearanceV1';let appearance='cosmos',appearanceSaved=true;
-try{const value=localStorage.getItem(APPEARANCE_KEY);if(['cosmos','observatory'].includes(value))appearance=value;}catch(_){}
-document.documentElement.dataset.srAppearance=appearance;
-function appearanceControl(section){
- const lang=window.NRLocale?.language||'uk',copy={uk:['Тло','Космос','Зоряне тло, тепле світло й виразні образи.','Обсерваторія','Спокійне тло, чіткі картки й акцент на даних.','Вибір діє лише в цьому сеансі: не вдалося зберегти.'],en:['Background','Cosmos','Starry scenery, warm light and expressive imagery.','Observatory','Quiet background, clear cards and a focus on data.','This choice applies only to this session: saving failed.'],es:['Fondo','Cosmos','Fondo estrellado, luz cálida e imágenes expresivas.','Observatorio','Fondo tranquilo, tarjetas claras y atención a los datos.','La elección solo se aplica a esta sesión: no se pudo guardar.'],fr:['Fond','Cosmos','Ciel étoilé, lumière chaude et images expressives.','Observatoire','Fond sobre, cartes lisibles et priorité aux données.','Choix valable pour cette session uniquement : enregistrement impossible.']}[lang];
- let field=section.querySelector('[data-appearance]');if(!field){field=make('fieldset','sr-appearance');field.dataset.appearance='';field.append(make('legend'));for(const value of ['cosmos','observatory']){const label=make('label'),input=make('input'),text=make('span');input.type='radio';input.name='sr-appearance';input.value=value;text.append(make('strong'),make('small'));label.append(input,text);field.append(label);input.onchange=()=>{if(!input.checked)return;appearance=value;document.documentElement.dataset.srAppearance=value;try{localStorage.setItem(APPEARANCE_KEY,value);appearanceSaved=true;}catch(_){appearanceSaved=false;}appearanceControl(section);};}const status=make('p');status.dataset.appearanceStatus='';status.setAttribute('role','status');field.append(status);section.append(field);}
- field.querySelector('legend').textContent=copy[0];for(const [i,input]of [...field.querySelectorAll('input')].entries()){input.checked=input.value===appearance;input.nextElementSibling.querySelector('strong').textContent=copy[1+i*2];input.nextElementSibling.querySelector('small').textContent=copy[2+i*2];}field.querySelector('[data-appearance-status]').textContent=appearanceSaved?'':copy[5];
+const APPEARANCE_KEY='srAppearanceV1';
+let appearance='cosmos',appearanceSaved=true;
+function readAppearance(){
+ try{
+  const value=localStorage.getItem(APPEARANCE_KEY);
+  appearance=Object.hasOwn(BACKDROPS,value)?value:'cosmos';
+ }catch(_){}
 }
+function applyAppearance(){
+ const root=document.documentElement;
+ root.dataset.srAppearance=appearance;
+ if(BACKDROPS[appearance].url)root.dataset.srPhoto='';
+ else delete root.dataset.srPhoto;
+ document.querySelectorAll('.sr-cosmos-credit').forEach(updateBackdropCredit);
+}
+function appearanceControl(section){
+ const language=backdropLanguage();
+ const copy=[
+  ['Тло застосунку','Вибір діє лише в цьому сеансі: не вдалося зберегти.'],
+  ['App background','This choice applies only to this session: saving failed.'],
+  ['Fondo de la aplicación','La elección solo se aplica a esta sesión: no se pudo guardar.'],
+  ['Fond de l’application','Choix valable pour cette session uniquement : enregistrement impossible.']
+ ][language];
+ let field=section.querySelector('[data-appearance]');
+ if(!field){
+  field=make('fieldset','sr-appearance');
+  field.dataset.appearance='';
+  field.append(make('legend'));
+  for(const value of Object.keys(BACKDROPS)){
+   const label=make('label'),input=make('input');
+   input.type='radio';
+   input.name='sr-appearance';
+   input.value=value;
+   label.dataset.backdropOption=value;
+   label.append(input,make('strong'));
+   input.onchange=()=>{
+    if(!input.checked)return;
+    appearance=value;
+    try{localStorage.setItem(APPEARANCE_KEY,value);appearanceSaved=true;}
+    catch(_){appearanceSaved=false;}
+    applyAppearance();
+    appearanceControl(section);
+   };
+   field.append(label);
+  }
+  const status=make('p');
+  status.dataset.appearanceStatus='';
+  status.setAttribute('role','status');
+  field.append(status,cosmosCredit());
+  section.append(field);
+ }
+ field.querySelector('legend').textContent=copy[0];
+ for(const input of field.querySelectorAll('input')){
+  input.checked=input.value===appearance;
+  input.nextElementSibling.textContent=BACKDROPS[input.value].names[language];
+ }
+ updateBackdropCredit(field.querySelector('.sr-cosmos-credit'));
+ field.querySelector('[data-appearance-status]').textContent=appearanceSaved?'':copy[1];
+}
+readAppearance();
+applyAppearance();
 
 const dataQuery=matchMedia('(prefers-reduced-data: reduce)'),motionQuery=matchMedia('(prefers-reduced-motion: reduce)');let motionWanted=true,decorWanted=false,motionSaved=true;
 function readMotion(){try{motionWanted=localStorage.getItem('srSkyBackgroundMotionV1')!=='off';decorWanted=localStorage.getItem('srSkyDecorMotionV1')==='on';}catch(_){}}
 readMotion();
 function updateMotion(){
- const reduced=motionQuery.matches||dataQuery.matches||!!navigator.connection?.saveData,lang=window.NRLocale?.language||'uk';
+ const saveData=dataQuery.matches||!!navigator.connection?.saveData;
+ const reduced=motionQuery.matches||saveData,lang=window.NRLocale?.language||'uk';
+ document.documentElement.classList.toggle('sr-save-data',saveData);
  const motionOn=motionWanted&&!reduced&&!document.hidden;
  document.documentElement.classList.toggle('sr-sky-motion',motionOn);
  // Background effects do not encode data. Planet/day transitions remain governed by the master control.
  document.documentElement.classList.toggle('sr-decor-motion',motionOn&&decorWanted);
  for(const b of document.querySelectorAll('[data-sky-motion]')){b.textContent=({uk:'Анімації',en:'Animations',es:'Animaciones',fr:'Animations'})[lang];b.setAttribute('aria-pressed',String(motionWanted));b.disabled=reduced;}
  for(const b of document.querySelectorAll('[data-sky-decor-motion]')){b.textContent=({uk:'Фоновий рух',en:'Background motion',es:'Movimiento del fondo',fr:'Mouvement du fond'})[lang];b.setAttribute('aria-pressed',String(decorWanted));b.disabled=reduced||!motionWanted;}
- for(const p of document.querySelectorAll('[data-motion-note]'))p.textContent=({uk:'Фоновий рух додає мерехтіння зірок і рух тла. Положення планет та фаза Місяця залишаються видимими без анімацій.',en:'Background motion adds star twinkle and scenery movement. Planetary positions and the Moon phase stay visible with animations off.',es:'El movimiento del fondo añade destellos de estrellas y movimiento del paisaje. Las posiciones planetarias y la fase lunar siguen visibles sin animaciones.',fr:'Le mouvement du fond ajoute le scintillement des étoiles et le mouvement du décor. Les positions planétaires et la phase lunaire restent visibles sans animations.'})[lang];
+ for(const p of document.querySelectorAll('[data-motion-note]'))p.textContent=({uk:'Фоновий рух плавно зміщує фото. Час доби можна обирати й без анімацій.',en:'Background motion slowly pans the photo. You can still select a time with animations off.',es:'El movimiento del fondo desplaza la foto lentamente. Puedes elegir una hora con las animaciones desactivadas.',fr:'Le mouvement du fond déplace lentement la photo. Vous pouvez choisir une heure avec les animations désactivées.'})[lang];
  for(const p of document.querySelectorAll('[data-motion-status]'))p.textContent=motionSaved?'':({uk:'Вибір діє лише в цьому сеансі: не вдалося зберегти.',en:'This choice applies only to this session: saving failed.',es:'La elección solo se aplica a esta sesión: no se pudo guardar.',fr:'Choix valable pour cette session uniquement : enregistrement impossible.'})[lang];
 }
 function motionControl(details){
@@ -338,8 +648,19 @@ function motionControl(details){
  for(const attr of ['motionNote','motionStatus']){const selector=attr==='motionNote'?'[data-motion-note]':'[data-motion-status]';if(!details.querySelector(selector)){const p=make('p');p.dataset[attr]='';if(attr==='motionStatus')p.setAttribute('role','status');details.append(p);}}
  updateMotion();
 }
-window.addEventListener('storage',e=>{if(e.key===null||['srSkyBackgroundMotionV1','srSkyDecorMotionV1'].includes(e.key)){readMotion();updateMotion();}});
+window.addEventListener('storage',e=>{
+ if(e.key===null||e.key===APPEARANCE_KEY){
+  readAppearance();
+  appearanceSaved=true;
+  applyAppearance();
+  document.querySelectorAll('[data-motion-settings]').forEach(appearanceControl);
+ }
+ if(e.key===null||['srSkyBackgroundMotionV1','srSkyDecorMotionV1'].includes(e.key)){
+  readMotion();
+  updateMotion();
+ }
+});
 motionQuery.addEventListener('change',updateMotion);dataQuery.addEventListener('change',updateMotion);navigator.connection?.addEventListener('change',updateMotion);document.addEventListener('visibilitychange',updateMotion);
 updateMotion();
-window.SRP0Layout=Object.freeze({apply,noonKyiv,moon,dataState,signalData,currentSignal,forecastPoints,horizonText});
+window.SRP0Layout=Object.freeze({hasNewStartAdvice:ds=>!!adviceFor(ds),apply,noonKyiv,moon,cosmosCredit,dataState,signalData,currentSignal,forecastPoints,horizonText});
 })();

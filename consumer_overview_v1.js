@@ -180,7 +180,7 @@ function routeTools(root,route){
  panel.addEventListener('click',e=>{const b=e.target.closest('[data-topic]');if(!b)return;topicFilter=b.dataset.topic;const first=dayRange().find(d=>topicMatches(d,topicFilter));if(first&&!topicMatches(selected[route],topicFilter))selected[route]=first;render(root);});
 }
 function renderRouteTools(root,route,dates,ds){
- if(route==='forecast'){
+ if(route==='forecast'&&!window.SRP0Layout){
   const host=root.querySelector('.nr-o-horizon-list');buttons(host,dates.slice(0,14),ds);
   for(const b of host.children){const r=resolve(b.dataset.day);b.textContent=dateLabel(b.dataset.day)+' · '+fmt(r.score)+' — '+horizon(b.dataset.day)+' · '+(r.state==='fresh'&&rows[b.dataset.day]?.channels?.source_formula?.kp_source==='NOAA_27day_outlook'?'випуск '+String(rows[b.dataset.day].channels.source_formula.kp_input?.issued_at||'').slice(0,10):states[r.state]);}
  }
@@ -288,7 +288,7 @@ function mount(){
   root.querySelector('[data-journal]').onclick=()=>window.fp434Go('plan',true);
   root.querySelector('[data-settings]').onclick=()=>window.fp434Go('profile',true);
   root.querySelector('select').addEventListener('change',e=>{selected[route]=e.target.value;render(root);});
-  root.addEventListener('click',e=>{const b=e.target.closest('button[data-day]');if(b){selected[route]=b.dataset.day;render(root);b.focus();}});
+  root.addEventListener('click',e=>{const b=e.target.closest('button[data-day]');if(b&&!b.closest('.nr-o-horizon-list[data-forecast-period]')){selected[route]=b.dataset.day;render(root);b.focus();}});
  }
  settings();mounted=true;return true;
 }

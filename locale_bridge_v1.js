@@ -3,7 +3,7 @@
 const records=new WeakMap(),attributes=new WeakMap();
 // Only application-owned overview text is translated. Forms, user notes,
 // identifiers, values and the historical/research surface are excluded.
-const roots='.nr-route:not(#nrRoute-expert),#headerTitle,#headerSub,#mobileNav,#nrTopNav,footer,a.skip-link,#nrRuntimeState,#nrQaStateFixture,#swStaleBar';
+const roots='.nr-route:not(#nrRoute-expert),#headerTitle,#headerSub,#mobileNav,#nrTopNav,footer,a.skip-link,#nrRuntimeState,#nrQaStateFixture,#swStaleBar,#offlineBanner';
 function translate(root){
  const excluded='script,style,svg,textarea,input,.nr-legacy-details,#nrProfileLive,[translate="no"],#nrLocaleControl';
  // Reject an excluded subtree once instead of visiting every protected text

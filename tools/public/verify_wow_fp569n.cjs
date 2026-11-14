@@ -32,8 +32,8 @@ try{for(const lang of ['uk','en']){
  const ev=await p.evaluate(()=>{const el=document.querySelector('#nrRoute-panch [data-sky-evening]'),A=Astronomy,obs=new A.Observer(50.454,30.524,0);
   const d=A.SearchAltitude('Sun',obs,-1,new Date('2026-11-09T10:00:00Z'),1.2,-12).date;
   const tf=new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Kyiv',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(d);
-  return {verdict:el.dataset.verdict,text:el.innerText,dusk:tf,next:el.nextElementSibling?.matches('[data-sky-live]')}});
- assert.equal(ev.verdict,'good','new Moon: Moon does not wash out the stars');assert.ok(ev.text.includes(ev.dusk),'dusk time '+ev.dusk+' shown');assert.match(ev.text,lang==='uk'?/Сатурн/:/Saturn/);assert.match(ev.text,lang==='uk'?/Хмарність/:/clouds/);assert.equal(ev.next,true,'card sits right above the live sky');n+=5;
+  return {verdict:el.dataset.verdict,text:el.innerText,dusk:tf,afterLive:el.previousElementSibling?.matches('[data-sky-live]')}});
+ assert.equal(ev.verdict,'good','new Moon: Moon does not wash out the stars');assert.ok(ev.text.includes(ev.dusk),'dusk time '+ev.dusk+' shown');assert.match(ev.text,lang==='uk'?/Сатурн/:/Saturn/);assert.match(ev.text,lang==='uk'?/Хмарність/:/clouds/);assert.equal(ev.afterLive,true,'live observing directions precede the evening card');n+=5;
  if(evidence&&lang==='uk')await p.locator('[data-sky-evening]').screenshot({path:path.join(evidence,'evening-390.png')});
  // Global date boundaries: different UTC days may represent the same local evening.
  if(lang==='uk'){
@@ -64,7 +64,26 @@ try{for(const lang of ['uk','en']){
  await p.evaluate(()=>{const a={};['2026-11-01','2026-11-02','2026-11-03','2026-11-04','2026-11-05','2026-11-06'].forEach((d,i)=>a[d]={v:['yes','yes','partial','no','yes','partial'][i],score:1,at:new Date().toISOString()});localStorage.setItem('nrDayMatch_v1',JSON.stringify(a));window.SRJournalStats.render()});
  const js=await p.evaluate(()=>document.querySelector('#nrRoute-more [data-journal-stats]')?.innerText||'');
  assert.match(js,/67%/,'rate (3 + 2×½)/6 = 67%');n++;
- if(lang==='en'){const cyr=await p.evaluate(()=>/[А-Яа-яІіЇїЄєҐґ]/.test(document.querySelector('#nrRoute-more [data-glossary]').innerText));assert.equal(cyr,false,'English glossary has no Cyrillic');n++;}
+ if(lang==='en'){
+  const glossary=p.locator('[data-glossary]');
+  assert.doesNotMatch(await glossary.innerText(),/[А-Яа-яІіЇїЄєҐґ]/,'English glossary has no Cyrillic');n++;
+  for(const [language,title,placeholder,query,kpTitle] of [
+   ['es','Glosario','Buscar un término','geomagnetica','Índice Kp'],
+   ['fr','Glossaire','Rechercher un terme','geomagnetique','Indice Kp']
+  ]){
+   await p.evaluate(language=>NRLocale.set(language),language);
+   await p.locator(`[data-glossary][data-lang="${language}"]`).waitFor();
+   assert.ok((await glossary.locator('h2').innerText()).startsWith(title));
+   const search=glossary.getByRole('searchbox',{name:placeholder});
+   await search.fill(query);
+   assert.ok(await glossary.getByText(kpTitle,{exact:true}).isVisible(),'accent-free search finds '+kpTitle);
+   const displayed=await glossary.locator('details:not([hidden])').count();
+   assert.ok(displayed>0&&displayed<g0,'localized search filters the list');
+   await search.clear();
+   assert.equal(await glossary.locator('details:not([hidden])').count(),g0);
+   n+=4;
+  }
+ }
  if(lang==='uk'){
   const native=await p.evaluate(async()=>{
    let captured=null;

@@ -72,10 +72,10 @@ html body .sr-source-calendar>a:hover,html body .sr-source-calendar>a:focus-visi
 /* 7. Десктоп «Сьогодні»: рядок дати — угорі (раніше автоматично падав у кінець сітки), Лінія дня і тиждень — поряд з оцінкою. */
 @media (min-width:1024px){
  html body #fp434Shell #nrRoute-today .nr-overview.sr-p0-today{
-  grid-template-rows:repeat(10,auto)!important;
-  grid-template-areas:"bar bar" "hero sun" "hero day" "noaa day" "noaa week" "signals signals" "sky sky" "journey journey" "personal personal" "details details" "close close"!important}
- /* FP569j: NOAA під оцінкою, «Небо дня» на всю ширину — без порожньої лівої колонки (огляд 1280, 09.11). */
- html body #fp434Shell #nrRoute-today .nr-overview.sr-p0-today{grid-template-rows:repeat(11,auto)!important}
+  grid-template-rows:repeat(11,auto)!important;
+  grid-template-areas:"bar bar" "hero sun" "space day" "noaa day" "noaa week" "signals signals" "sky sky" "journey journey" "personal personal" "details details" "close close"!important}
+
+ html body #fp434Shell #nrRoute-today .nr-overview.sr-p0-today>[data-space-scene=today]{grid-area:space!important;margin:0!important}
  html body #fp434Shell #nrRoute-today .nr-overview.sr-p0-today>.nr-dc-bar{grid-area:bar!important}
  html body #fp434Shell #nrRoute-today .nr-overview.sr-p0-today>[data-week-strip]{grid-area:week!important;margin:0!important}
 }
@@ -175,10 +175,6 @@ html[data-forecast-count="27"] body #nrRoute-forecast [data-week-events]{display
 /* FP569l Лінія дня: позначка = людська назва головної зміни + «+ ще N»; легенда «Що означають позначки». */
 .sr-dayline [data-track] button .sr-dl-mk-title{display:block;font-weight:700;line-height:1.15;white-space:normal;max-width:9.5em}
 .sr-dayline [data-track] button .sr-dl-mk-more{display:block;font-size:.72em;opacity:.85;line-height:1.1}
-.sr-dayline .sr-dl-legend{margin:6px 0 4px}
-.sr-dayline .sr-dl-legend summary{cursor:pointer;font-weight:600;color:#F2C46B;min-height:32px;display:flex;align-items:center}
-.sr-dayline .sr-dl-legend ul{margin:4px 0 6px;padding-left:18px;line-height:1.45}
-.sr-dayline .sr-dl-legend li{margin:3px 0}
 .nr-sky-planets li{align-items:baseline}
 .nr-sky-planets li .nr-sky-means{display:block;grid-column:1/-1;opacity:.78;font-size:.82em;line-height:1.35;margin:1px 0 4px}
 .nr-sky-planets li em i{font-style:normal;color:#F2C46B}
@@ -200,3 +196,8 @@ html[data-forecast-count="27"] body #nrRoute-forecast [data-week-events]{display
 .nr-you-nak{margin:2px 0 0!important;font-size:.92em}
 .nr-you-today{margin:6px 0 8px;padding:8px 10px;border-radius:10px;font-weight:600;background:rgba(255,255,255,.05)}
 .nr-you-today.is-good{color:#8FE0BE;border:1px solid rgba(99,230,173,.4)}.nr-you-today.is-caution{color:#FF9AA2;border:1px solid rgba(255,133,141,.4)}.nr-you-today.is-info{color:#E6E2F0;border:1px solid rgba(185,163,227,.3)}
+.sr-g-markers{display:flex;flex-wrap:wrap;gap:4px 12px;color:#F2C46B;font-size:.75rem;line-height:1.4;overflow-wrap:anywhere}
+html body .sr-g-cells i.is-forecast{outline:2px dashed #F2C46B;outline-offset:1px}
+
+/* Claude 13.11: desktop header moon must not spill into the date strip. */
+@media (min-width:1024px){html.wow body .wow-header-moon svg{width:52px!important;height:52px!important}html.wow body .wow-header-moon{top:2px!important}}
