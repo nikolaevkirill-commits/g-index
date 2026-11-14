@@ -110,7 +110,7 @@ const SHELL_ASSETS = [
   './day_summary_v1.js',
   './day_summary_v1.css',
   './personal_dayline.html',
-  './personal_dayline.css',
+  './personal_dayline.css?v=fp572-reflow',
   './personal_dayline_model.js?v=fp572-natal',
   './personal_dayline_activity.js',
   './personal_dayline_factors.js',

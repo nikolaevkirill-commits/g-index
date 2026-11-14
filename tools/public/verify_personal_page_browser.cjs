@@ -36,7 +36,13 @@ const type=f=>f.endsWith('.js')?'application/javascript':f.endsWith('.css')?'tex
    // 6. Reflow, also at 200 % text
    ok(assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true));
    await p.addStyleTag({content:'html,body{font-size:200%!important}'});await p.waitForTimeout(300);
-   ok(assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,'200% text overflow at '+width));
+   const layout=await p.evaluate(()=>{
+    const vw=document.documentElement.clientWidth;
+    return {vw,doc:document.documentElement.scrollWidth,offenders:[...document.querySelectorAll('main *')].filter(e=>{
+     if(!e.checkVisibility())return false;const r=e.getBoundingClientRect();return r.right>vw+1||r.left<-1||e.scrollWidth>e.clientWidth+2&&e.clientWidth>0;
+    }).slice(0,15).map(e=>[e.tagName,e.id,e.className?.baseVal||e.className,e.clientWidth,e.scrollWidth,Math.ceil(e.getBoundingClientRect().right)])};
+   });
+   ok(assert.ok(layout.doc<=layout.vw,'200% text overflow at '+width+': '+JSON.stringify(layout)));
    ok(assert.deepEqual(errs,[]));await c.close();}
  }finally{await b.close();server.close();}
  console.log(JSON.stringify({status:'PASS',checks,scope:'Chromium emulation 320/390; not a device test.'}));
