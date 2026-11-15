@@ -21,10 +21,15 @@ const at=hour=>new Date(day+'T'+String(hour).padStart(2,'0')+':30:00+03:00');
 assert.equal(feed.days[day]?.channels.source_formula.kp_source,'NOAA_3day_slots');
 assert.ok(Date.parse(feed.generated_at)<at(eveningHour).getTime());
 const shift=(ds,n)=>{const d=new Date(ds+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)};
+// FP572 audit: a feed where only today's NOAA channel is missing or synthetic, other days stay fresh.
+const mixed=kind=>{const f=JSON.parse(JSON.stringify(feed)),ch=f.days[day].channels;
+ if(kind==='missing')delete ch.source_formula;else ch.source_formula={...ch.source_formula,kp_source:'synthetic_kp'};
+ assert.ok(Object.keys(f.days).filter(d=>d!==day&&f.days[d].channels?.source_formula?.kp_source==='NOAA_3day_slots').length>0,'mixed feed keeps fresh neighbours');
+ return f;};
 async function open(b,{lang='uk',width=390,hour=eveningHour,init=null,forecast=true}={}){
  const c=await b.newContext({locale:lang==='uk'?'uk-UA':'en-GB',serviceWorkers:'block',viewport:{width,height:900},timezoneId:'Europe/Kyiv',reducedMotion:'reduce'});
  await c.route(/^https?:\/\/(?!127\.0\.0\.1)/,r=>r.abort());
- await c.route('**/consumer_cloud/forecast.json*',r=>r.fulfill({json:forecast?feed:{...feed,days:{}}}));
+ await c.route('**/consumer_cloud/forecast.json*',r=>r.fulfill({json:forecast===true?feed:forecast===false?{...feed,days:{}}:forecast}));
  await c.addInitScript(([l,extra])=>{localStorage.setItem('gidx_onboard_done_v2','1');if(l==='en')localStorage.setItem('nr_locale_v1','en');if(extra)for(const [k,v] of Object.entries(extra))localStorage.setItem(k,v);},[lang,init]);
  const p=await c.newPage();const errs=[];p.on('pageerror',e=>errs.push(e.message));await p.clock.setFixedTime(at(hour==='evening'?eveningHour:hour));
  await p.goto('http://127.0.0.1:'+srv.address().port+'/index.html?channel=play#today',{waitUntil:'load',timeout:120000});
@@ -54,6 +59,25 @@ try{
   assert.equal(await tile.getAttribute('data-kp-forecast'),'','missing feed exposes no numeric Kp');
   assert.match(await tile.textContent(),/немає актуальних даних/);
   assert.deepEqual(errs,[]);n+=3;await c.close();}
+ // FP572 audit: mixed feed — today missing or synthetic, neighbours fresh: the tile must not borrow a neighbour's Kp.
+ for(const kind of ['missing','synthetic']){const {c,p,errs}=await open(b,{hour:'evening',forecast:mixed(kind)});
+  const tile=p.locator('[data-p0-signals]>button').first();
+  assert.equal(await tile.getAttribute('data-kp-forecast'),'',kind+' today: no numeric Kp from another day or a synthetic source');
+  assert.match(await tile.textContent(),/немає актуальних даних/);assert.deepEqual(errs,[]);n+=3;await c.close();}
+ // FP572 audit: one evening tap is stored and the next morning neither asks again nor loses it (same device storage).
+ {const {c,p,errs}=await open(b,{hour:'evening'});
+  await p.waitForSelector('#nrRoute-today [data-day-match] button[data-match]',{timeout:60000});
+  await p.click('#nrRoute-today [data-day-match] button[data-match="yes"]');
+  await p.waitForSelector('#nrRoute-today [data-day-match].is-saved',{timeout:10000}).catch(()=>assert.fail('evening answer was not saved'));
+  const stored=await p.evaluate(ds=>JSON.parse(localStorage.getItem('nrDayMatch_v1')||'{}')[ds]?.v,day);
+  assert.equal(stored,'yes','evening answer stored');
+  await p.clock.setFixedTime(new Date(shift(day,1)+'T09:00:00+03:00'));await p.reload({waitUntil:'load'});
+  await p.waitForFunction(()=>typeof window.NRDayContext?.target==='function' &&
+    !!document.querySelector('#nrRoute-today [data-day-provenance]'),null,{timeout:60000});
+  const morning=await p.evaluate(ds=>({target:NRDayContext.target(),kept:JSON.parse(localStorage.getItem('nrDayMatch_v1')||'{}')[ds]?.v,
+   ask:document.querySelectorAll('#nrRoute-today [data-day-rating][data-target="'+ds+'"]').length}),day);
+  assert.equal(morning.kept,'yes','answer kept next morning');assert.notEqual(morning.target,day,'answered evening is not asked again next morning');assert.equal(morning.ask,0);
+  assert.deepEqual(errs,[]);n+=5;await c.close();}
  // 2: yesterday answered in the day card → the journal does not ask about it in the morning
  {const y=shift(day,-1);const shown={};shown[y]={date:y,score:0,shown_at:at(20).toISOString()};
   const {c,p,errs}=await open(b,{hour:9,init:{nrDayMatch_v1:JSON.stringify({[y]:{v:'yes',score:0,at:y+'T18:00:00Z'}})}});

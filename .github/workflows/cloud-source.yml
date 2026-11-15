@@ -44,7 +44,18 @@ jobs:
           NR_SOURCE_BUNDLE_KEY: ${{ secrets.NR_SOURCE_BUNDLE_KEY }}
         run: python tools/cloud/unpack.py "$RUNNER_TEMP/nr-private"
       - name: Calculate and independently replay current inputs
+        env:
+          NR_NOAA_REJECTED_DIR: ${{ runner.temp }}/noaa-rejected
         run: python tools/cloud/refresh.py --private "$RUNNER_TEMP/nr-private" --site .
+      - name: Keep rejected NOAA bodies for the next reproduction
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: noaa-rejected-bodies
+          path: ${{ runner.temp }}/noaa-rejected/
+          if-no-files-found: ignore
+          retention-days: 30
       - name: Transit layer (context, score weight 0)
         continue-on-error: true
         run: python tools/cloud/sky_refresh.py --site .

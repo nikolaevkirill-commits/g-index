@@ -14,6 +14,7 @@ const version = worker.match(/const CACHE_VERSION = '([^']+)'/)?.[1];
 assert.ok(version, 'missing SW cache version');
 const cssMime = { '.js':'application/javascript', '.css':'text/css', '.html':'text/html', '.json':'application/json', '.svg':'image/svg+xml' };
 const negative = process.argv.includes('--negative-control');
+const failedInstall = process.argv.includes('--install-failure-control');
 const requests = [];
 let release = 1;
 
@@ -27,9 +28,9 @@ const server = http.createServer((request, response) => {
   const file = path.resolve(root, '.' + decodeURIComponent(name));
   if (!file.startsWith(root + path.sep)) return response.writeHead(403).end();
   fs.readFile(file, (error, data) => {
-    const status = error ? 404 : 200;
+    const status = error ? 404 : failedInstall && servedRelease === 2 && name === asset ? 503 : 200;
     requests.push({ name, release: servedRelease, status, cache: request.headers['cache-control'] ?? null });
-    if (error) return response.writeHead(status).end();
+    if (status !== 200) return response.writeHead(status).end();
     let body = data;
     if (name === '/sw.js') {
       let source = worker.replace("const CACHE_VERSION = '" + version + "'",
@@ -75,14 +76,24 @@ async function verify() {
     await first.evaluate(async () => {
       window.trace = [];
       window.registration = await navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' });
-      window.watch = worker => {
-        if (!worker) return;
-        const record = () => trace.push(worker.state);
+      const watched = new WeakSet();
+      const watch = (worker, name) => {
+        if (!worker || watched.has(worker)) return;
+        watched.add(worker);
+        const record = () => trace.push({ event:'statechange', worker:name, state:worker.state });
         record();
         worker.addEventListener('statechange', record);
       };
-      watch(registration.installing || registration.active);
-      registration.addEventListener('updatefound', () => watch(registration.installing));
+      watch(registration.installing || registration.active, 'initial');
+      registration.addEventListener('updatefound', () => {
+        trace.push({event:'updatefound'});
+        const worker = registration.installing;
+        if (!worker || watched.has(worker)) return;
+        window.incoming = worker;
+        watch(worker, 'incoming');
+      });
+      // FP572 audit: keep the controller handover in the same trace for a failure report.
+      navigator.serviceWorker.addEventListener('controllerchange', () => trace.push({event:'controllerchange'}));
     });
     // Playwright's waitForFunction sees the Promise itself as truthy for an
     // async predicate. These checks read live properties synchronously.
@@ -99,9 +110,10 @@ async function verify() {
       sessionStorage.setItem('test_draft', 'unfinished');
     });
     release = 2;
+    await first.evaluate(() => { window.incoming = null; });
     await first.evaluate(() => registration.update().then(() => undefined));
     await first.waitForFunction(() => registration.waiting?.state === 'installed' ||
-      trace.includes('redundant'), null, { timeout: 60000 });
+      window.incoming?.state === 'redundant', null, { timeout: 60000 });
     const waiting = await first.evaluate(() => ({
       waiting: registration.waiting?.state, stillOld: registration.active === initial,
     }));
@@ -129,10 +141,13 @@ async function verify() {
     const diagnostics = first?.isClosed() === false ? await first.evaluate(async () => ({
       trace: window.trace, installing: window.registration?.installing?.state,
       waiting: window.registration?.waiting?.state, active: window.registration?.active?.state,
+      incoming: window.incoming?.state,
       caches: await caches.keys(),
     })).catch(() => null) : null;
-    console.error(JSON.stringify({ negative, diagnostics,
-      requests: requests.filter(r => r.status !== 200 || [asset, optional, '/sw.js'].includes(r.name)) }));
+    const shell = new Set([...worker.matchAll(/^\s*'\.(\/[^'?]+)/gm)].map(m => m[1]));
+    console.error(JSON.stringify({ negative, failedInstall, diagnostics,
+      requests: requests.filter(r => r.status !== 200 || [asset, optional, '/sw.js'].includes(r.name)),
+      shell_status: Object.fromEntries([...shell].map(name => [name, requests.filter(r => r.name === name).map(r => r.release + ':' + r.status)])) }));
     throw error;
   } finally {
     if (browser) await browser.close();
