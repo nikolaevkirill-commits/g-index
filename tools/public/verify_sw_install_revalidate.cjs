@@ -1,49 +1,142 @@
 'use strict';
-// FP572 (P2-7): a new service worker must not precache a stale HTTP-cached copy of an unversioned shell file.
-// The server sends Cache-Control: max-age=3600. Release 1 is installed; then the content of an unversioned
-// file and the cache version change (a deploy); release 2's install must store the new content.
-const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),http=require('node:http'),{chromium}=require('playwright');
-const root=path.resolve(__dirname,'..','..'),FILE='festival_astronomy_adapter_v1.js';
-const types={'.html':'text/html','.js':'application/javascript','.css':'text/css','.json':'application/json','.svg':'image/svg+xml','.woff2':'font/woff2','.webp':'image/webp','.png':'image/png','.webmanifest':'application/manifest+json'};
-let release=1;
-const sw=fs.readFileSync(path.join(root,'sw.js'),'utf8'),version=(sw.match(/const CACHE_VERSION = '([^']+)'/)||[])[1];
-assert.ok(version,'CACHE_VERSION not found');
-const server=http.createServer((request,response)=>{
- const url=new URL(request.url,'http://local'),file=path.resolve(root,'.'+decodeURIComponent(url.pathname));
- if(!file.startsWith(root+path.sep)){response.writeHead(403);return response.end();}
- fs.readFile(file,(error,data)=>{
-  if(error){response.writeHead(404);return response.end();}
-  let body=data;
-  if(url.pathname==='/sw.js')body=Buffer.from(sw.replace(`const CACHE_VERSION = '${version}'`,`const CACHE_VERSION = '${version}-r${release}'`));
-  if(url.pathname==='/'+FILE)body=Buffer.concat([data,Buffer.from(`\n/* release ${release} */\n`)]);
-  // sw.js itself is revalidated by the browser (updateViaCache 'imports'); every other file is long-lived.
-  response.writeHead(200,{'content-type':types[path.extname(file)]||'application/octet-stream','cache-control':url.pathname==='/sw.js'?'no-cache':'max-age=3600'});
-  response.end(body);
- });
+// Use Chromium's real HTTP cache. Playwright route interception would disable it.
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const http = require('node:http');
+const path = require('node:path');
+const { chromium } = require('playwright');
+
+const root = path.resolve(__dirname, '../..');
+const asset = '/festival_astronomy_adapter_v1.js';
+const optional = '/preview-v4/design_b/assets/icon-forecast.svg';
+const worker = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
+const version = worker.match(/const CACHE_VERSION = '([^']+)'/)?.[1];
+assert.ok(version, 'missing SW cache version');
+const cssMime = { '.js':'application/javascript', '.css':'text/css', '.html':'text/html', '.json':'application/json', '.svg':'image/svg+xml' };
+const negative = process.argv.includes('--negative-control');
+const requests = [];
+let release = 1;
+
+const server = http.createServer((request, response) => {
+  const name = new URL(request.url, 'http://localhost').pathname;
+  const servedRelease = release;
+  if (name === '/revalidate.html') {
+    return response.writeHead(200, { 'content-type':'text/html', 'cache-control':'no-store' })
+      .end('<!doctype html><title>Service worker revalidation</title>');
+  }
+  const file = path.resolve(root, '.' + decodeURIComponent(name));
+  if (!file.startsWith(root + path.sep)) return response.writeHead(403).end();
+  fs.readFile(file, (error, data) => {
+    const status = error ? 404 : 200;
+    requests.push({ name, release: servedRelease, status, cache: request.headers['cache-control'] ?? null });
+    if (error) return response.writeHead(status).end();
+    let body = data;
+    if (name === '/sw.js') {
+      let source = worker.replace("const CACHE_VERSION = '" + version + "'",
+        "const CACHE_VERSION = '" + version + '-r' + servedRelease + "'");
+      if (negative && servedRelease === 2) {
+        const bypass = source.replace("{cache:'reload'}", "{cache:'default'}");
+        assert.notEqual(bypass, source, 'negative control did not disable HTTP cache bypass');
+        source = bypass;
+      }
+      body = Buffer.from(source);
+    }
+    if (name === asset) body = Buffer.concat([data, Buffer.from('\n/* release ' + servedRelease + ' */\n')]);
+    const send = () => response.writeHead(status, {
+      'content-type': cssMime[path.extname(file)] || 'application/octet-stream',
+      'cache-control': name === '/sw.js' ? 'no-store' : 'max-age=3600',
+    }).end(body);
+    // The old worker must finish optional work before the test asks for release 2.
+    if (servedRelease === 1 && name === optional) setTimeout(send, 1000);
+    else send();
+  });
 });
-(async()=>{
- await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
- const browser=await chromium.launch();
- try{
-  const context=await browser.newContext({locale:'uk-UA',timezoneId:'Europe/Kyiv'});
-  await context.addInitScript(()=>{sessionStorage.setItem('nrs_launch','1');});
-  // No request interception here: in Chromium routing disables the HTTP cache this test is about.
-  const page=await context.newPage(),base='http://127.0.0.1:'+server.address().port+'/';
-  await page.goto(base+'index.html?channel=play#today',{waitUntil:'load'});
-  const cached=async name=>page.evaluate(async([name,file])=>{const c=await caches.open((await caches.keys()).find(k=>k.includes(name)&&/shell/i.test(k))||name);const r=await c.match('./'+file)||await c.match(file);return r?await r.text():null;},[name,FILE]);
-  await page.waitForFunction(async()=>(await navigator.serviceWorker.getRegistration())?.active?.state==='activated',null,{timeout:120000,polling:500});
-  await page.waitForFunction(async v=>(await caches.keys()).some(k=>k.includes(v)),version+'-r1',{timeout:60000,polling:500});
-  // The page itself fetched the file through the HTTP cache: release 1 is now stored there for an hour.
-  let first=null;for(let i=0;i<240&&!first;i++){first=await cached(version+'-r1');if(!first)await page.waitForTimeout(500);}
-  release=2;
-  await page.evaluate(async()=>{const r=await navigator.serviceWorker.getRegistration();await r.update();});
-  await page.waitForFunction(async()=>{const r=await navigator.serviceWorker.getRegistration();return !!(r.waiting||r.installing===null&&r.active&&r.active.scriptURL);},null,{timeout:120000,polling:500});
-  await page.waitForFunction(async v=>(await caches.keys()).some(k=>k.includes(v)),version+'-r2',{timeout:120000,polling:500});
-  // Wait until release 2 is installed (waiting) or its install gave up; then read what it stored.
-  let second=null;for(let i=0;i<240&&!second;i++){second=await cached(version+'-r2');if(!second)await page.waitForTimeout(500);}
-  const state=await page.evaluate(async()=>{const r=await navigator.serviceWorker.getRegistration();return {waiting:!!r.waiting,installing:!!r.installing};});
-  assert.ok(state.waiting||second,'release 2 did not install: '+JSON.stringify(state));
-  assert.match(second||'',/release 2 \*\//,'new release cached a stale copy of '+FILE+' from the HTTP cache');
-  console.log(JSON.stringify({status:'PASS',file:FILE,release1:'release 1',release2:'release 2',scope:'Chromium localhost; Cache-Control max-age=3600 on every shell file'}));
- }finally{await browser.close();server.close();}
-})().catch(error=>{console.error(error);process.exitCode=1;});
+
+const cacheName = n => 'gindex-shell-' + version + '-r' + n;
+async function cached(page, releaseNumber) {
+  return page.evaluate(async ({ cache, url }) => {
+    // CacheStorage.match with cacheName is read-only when a cache is absent.
+    const response = await caches.match(url, { cacheName: cache });
+    return response ? response.text() : null;
+  }, { cache: cacheName(releaseNumber), url: asset });
+}
+
+async function verify() {
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  let browser;
+  let first;
+  const base = 'http://127.0.0.1:' + server.address().port;
+  try {
+    browser = await chromium.launch();
+    const context = await browser.newContext();
+    first = await context.newPage();
+    await first.goto(base + '/revalidate.html');
+    assert.match(await first.evaluate(url => fetch(url).then(r => r.text()), asset), /release 1 \*\//);
+    await first.evaluate(async () => {
+      window.trace = [];
+      window.registration = await navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' });
+      window.watch = worker => {
+        if (!worker) return;
+        const record = () => trace.push(worker.state);
+        record();
+        worker.addEventListener('statechange', record);
+      };
+      watch(registration.installing || registration.active);
+      registration.addEventListener('updatefound', () => watch(registration.installing));
+    });
+    // Playwright's waitForFunction sees the Promise itself as truthy for an
+    // async predicate. These checks read live properties synchronously.
+    await first.waitForFunction(() => registration.active?.state === 'activated' &&
+      navigator.serviceWorker.controller === registration.active, null, { timeout: 60000 });
+    assert.match(await cached(first, 1), /release 1 \*\//);
+    assert.ok(requests.some(r => r.name === optional && r.release === 1 && r.status === 200));
+
+    const second = await context.newPage();
+    await second.goto(base + '/revalidate.html');
+    for (const tab of [first, second]) await tab.evaluate(() => {
+      window.initial = navigator.serviceWorker.controller;
+      if (!initial) throw new Error('expected old controller');
+      sessionStorage.setItem('test_draft', 'unfinished');
+    });
+    release = 2;
+    await first.evaluate(() => registration.update().then(() => undefined));
+    await first.waitForFunction(() => registration.waiting?.state === 'installed' ||
+      trace.includes('redundant'), null, { timeout: 60000 });
+    const waiting = await first.evaluate(() => ({
+      waiting: registration.waiting?.state, stillOld: registration.active === initial,
+    }));
+    assert.deepEqual(waiting, { waiting: 'installed', stillOld: true });
+    assert.equal((await cached(first, 2))?.match(/release ([0-9]+) \*\//)?.[1], '2', 'new worker must cache release 2 bytes');
+    assert.match(await cached(first, 1), /release 1 \*\//, 'old cache must remain while the new worker waits');
+    assert.ok(requests.some(r => r.name === '/sw.js' && r.release === 2));
+    assert.ok(requests.some(r => r.name === asset && r.release === 2 && r.status === 200));
+
+    await first.evaluate(() => registration.waiting.postMessage({type:'SKIP_WAITING'}));
+    for (const tab of [first, second]) {
+      await tab.waitForFunction(() => navigator.serviceWorker.controller?.state === 'activated' &&
+        navigator.serviceWorker.controller !== window.initial, null, {timeout:60000});
+      assert.equal(await tab.evaluate(() => sessionStorage.getItem('test_draft')), 'unfinished');
+    }
+    assert.equal(await cached(first, 1), null);
+    await context.setOffline(true);
+    for (const tab of [first, second]) {
+      assert.match(await tab.evaluate(url => fetch(url).then(r => r.text()), asset), /release 2 \*\//);
+    }
+    console.log(JSON.stringify({ status:'PASS', chromium:browser.version(),
+      scenario:'HTTP cache max-age=3600, delayed initial install, two tabs, old cache intact while waiting, both new offline',
+      workerStates:await first.evaluate(() => trace), requests:requests.filter(r => [asset, '/sw.js'].includes(r.name)) }));
+  } catch (error) {
+    const diagnostics = first?.isClosed() === false ? await first.evaluate(async () => ({
+      trace: window.trace, installing: window.registration?.installing?.state,
+      waiting: window.registration?.waiting?.state, active: window.registration?.active?.state,
+      caches: await caches.keys(),
+    })).catch(() => null) : null;
+    console.error(JSON.stringify({ negative, diagnostics,
+      requests: requests.filter(r => r.status !== 200 || [asset, optional, '/sw.js'].includes(r.name)) }));
+    throw error;
+  } finally {
+    if (browser) await browser.close();
+    server.close();
+  }
+}
+verify().catch(error => { console.error(error); process.exitCode = 1; });
