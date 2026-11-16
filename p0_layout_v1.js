@@ -160,12 +160,14 @@ function forecastOverview(root,ds){
  if(intro)intro.hidden=true;
 
  let controls=root.querySelector('[data-p0-forecast-tabs]');
+ const periods=window.NRThreeDayForecast?[1,3,7,27]:[1,7,27];
  if(!controls){
   controls=make('div','sr-p0-tabs');
   controls.dataset.p0ForecastTabs='';
-  for(const n of [1,7,27]){
+  for(const n of periods){
    const button=make('button','');
    button.type='button';
+   button.dataset.horizon=String(n);
    button.onclick=()=>{
     root.dataset.forecastCount=String(n);
     forecastOverview(root,root.querySelector('select')?.value||ds);
@@ -174,10 +176,20 @@ function forecastOverview(root,ds){
   }
   list.before(controls);
  }
- for(const [i,button] of [...controls.children].entries()){
-  button.textContent=words[i];
-  button.setAttribute('aria-pressed',String(count===[1,7,27][i]));
+ for(const button of controls.children){
+  const n=Number(button.dataset.horizon);
+  button.textContent=n===3?window.NRThreeDayForecast.tab():words[[1,7,27].indexOf(n)];
+  button.setAttribute('aria-pressed',String(count===n));
  }
+ let three=root.querySelector('[data-forecast-three-days]');
+ if(count===3&&window.NRThreeDayForecast){
+  if(!three){three=make('section','sr-3d');three.dataset.forecastThreeDays='';controls.after(three);}
+  three.hidden=false;
+  document.documentElement.dataset.forecastCount='3';
+  window.NRThreeDayForecast.mount(three);
+  return;
+ }
+ if(three)three.hidden=true;
  let overview=root.querySelector('[data-forecast-summary]');
  if(!overview){
   overview=make('div','sr-forecast-summary');

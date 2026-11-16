@@ -54,7 +54,7 @@ try{for(const [lang,width] of [['uk',390],['uk',320],['en',390],['uk',1280]]){
  const forecast=p.locator('#nrRoute-forecast [data-overview="forecast"]');
  const dateControl=forecast.locator('select').first();
  for(const [i,count] of [1,7,27].entries()){
-  await forecast.locator('[data-p0-forecast-tabs] button').nth(i).click();
+  await forecast.locator('[data-p0-forecast-tabs] [data-horizon="'+count+'"]').click();
   await p.evaluate(()=>fp434Go('today',false));
   const target=p.locator('[data-week-day]').nth(i+2);
   const date=await target.getAttribute('data-week-day');
