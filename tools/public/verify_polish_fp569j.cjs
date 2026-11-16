@@ -12,19 +12,26 @@ const http=require('http'),fs=require('fs'),path=require('path'),assert=require(
 const root=path.resolve(__dirname,'../..');
 const mime=f=>f.endsWith('.html')?'text/html; charset=utf-8':f.endsWith('.js')?'application/javascript':f.endsWith('.json')?'application/json':f.endsWith('.css')?'text/css':f.endsWith('.svg')?'image/svg+xml':f.endsWith('.webp')?'image/webp':f.endsWith('.woff2')?'font/woff2':'application/octet-stream';
 const srv=http.createServer((q,s)=>{const f=decodeURIComponent(q.url.split('?')[0]).slice(1)||'index.html';const p=path.resolve(root,f);if(!p.startsWith(root+path.sep)){s.writeHead(403);return s.end()}fs.readFile(p,(e,b)=>{if(e){s.writeHead(404);return s.end()}s.writeHead(200,{'content-type':mime(f),'cache-control':'no-store'});s.end(b)})});
-const feed=JSON.parse(fs.readFileSync(path.join(root,'consumer_cloud/forecast.json'),'utf8'));
-const day=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Kyiv'}).format(new Date(feed.generated_at));
-const at=hh=>{for(let h=-4;h<=4;h++){const d=new Date(day+'T'+String(hh).padStart(2,'0')+':30:00Z');d.setUTCHours(d.getUTCHours()-h);
- const k=new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Kyiv',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',hourCycle:'h23'}).formatToParts(d);const g=t=>k.find(x=>x.type===t).value;
- if(g('year')+'-'+g('month')+'-'+g('day')===day&&+g('hour')===hh)return d}throw new Error('no instant')};
-// After 18:00 Kyiv and after the feed was generated (an earlier clock makes the feed «from the future»), same Kyiv day.
-const evening=()=>{const g=Date.parse(feed.generated_at)+30*60000,e=Math.max(at(19).getTime(),g),d=new Date(e);const k=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Kyiv'}).format(d);if(k!==day)throw new Error('feed generated too late for an evening check');return d};
+// Use a pinned published-format fixture. A cloud refresh at 23:30–23:59
+// Kyiv cannot move this test's evening clock into the next day.
+const day='2026-10-15';
+const feed=JSON.parse(fs.readFileSync(path.join(__dirname,'fixtures','score_regression.json'),'utf8'));
+const eveningHour=21;
+const at=hour=>new Date(day+'T'+String(hour).padStart(2,'0')+':30:00+03:00');
+assert.equal(feed.days[day]?.channels.source_formula.kp_source,'NOAA_3day_slots');
+assert.ok(Date.parse(feed.generated_at)<at(eveningHour).getTime());
 const shift=(ds,n)=>{const d=new Date(ds+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)};
-async function open(b,{lang='uk',width=390,hour=19,init=null}={}){
+// FP572 audit: a feed where only today's NOAA channel is missing or synthetic, other days stay fresh.
+const mixed=kind=>{const f=JSON.parse(JSON.stringify(feed)),ch=f.days[day].channels;
+ if(kind==='missing')delete ch.source_formula;else ch.source_formula={...ch.source_formula,kp_source:'synthetic_kp'};
+ assert.ok(Object.keys(f.days).filter(d=>d!==day&&f.days[d].channels?.source_formula?.kp_source==='NOAA_3day_slots').length>0,'mixed feed keeps fresh neighbours');
+ return f;};
+async function open(b,{lang='uk',width=390,hour=eveningHour,init=null,forecast=true}={}){
  const c=await b.newContext({locale:lang==='uk'?'uk-UA':'en-GB',serviceWorkers:'block',viewport:{width,height:900},timezoneId:'Europe/Kyiv',reducedMotion:'reduce'});
  await c.route(/^https?:\/\/(?!127\.0\.0\.1)/,r=>r.abort());
+ await c.route('**/consumer_cloud/forecast.json*',r=>r.fulfill({json:forecast===true?feed:forecast===false?{...feed,days:{}}:forecast}));
  await c.addInitScript(([l,extra])=>{localStorage.setItem('gidx_onboard_done_v2','1');if(l==='en')localStorage.setItem('nr_locale_v1','en');if(extra)for(const [k,v] of Object.entries(extra))localStorage.setItem(k,v);},[lang,init]);
- const p=await c.newPage();const errs=[];p.on('pageerror',e=>errs.push(e.message));await p.clock.setFixedTime(hour==='evening'?evening():at(hour));
+ const p=await c.newPage();const errs=[];p.on('pageerror',e=>errs.push(e.message));await p.clock.setFixedTime(at(hour==='evening'?eveningHour:hour));
  await p.goto('http://127.0.0.1:'+srv.address().port+'/index.html?channel=play#today',{waitUntil:'load',timeout:120000});
  await p.waitForFunction(()=>document.querySelector('#nrRoute-today [data-day-verdict] .nr-dv-tone')&&document.querySelector('[data-p0-signals]>button strong'),null,{timeout:60000});await p.waitForTimeout(1500);
  return {c,p,errs};
@@ -39,15 +46,41 @@ try{
   const t=await p.evaluate(ds=>{const r=fp469ConsumerForDate({ds}),ch=r?.feed?.channels?.source_formula,st=(r?.consumer?.formula||r?.consumer)?.state,b=document.querySelector('[data-p0-signals]>button');
    return {obs:window.currentKpAuthority?.()?.kp??null,fresh:st==='fresh'&&ch?.kp_source==='NOAA_3day_slots',kp:ch?.kp_daily_max??ch?.kp_input?.kp,attr:b.dataset.kpForecast,text:b.textContent,aria:b.getAttribute('aria-label'),score:document.querySelector('#nrRoute-today .nr-o-hero .nr-o-score')?.textContent.trim(),final:r?.consumer?.score}},day);
   assert.equal(Number.isFinite(t.obs),false,'offline test: no live observation');
-  if(t.fresh&&Number.isFinite(t.kp)){assert.equal(Number(t.attr),t.kp,'tile shows the 3-day forecast Kp');assert.match(t.text,/прогноз NOAA, 3 дні/);assert.match(t.aria,/спостереження немає/);n+=3;}
-  else{assert.equal(t.attr,'','no forecast → no forecast value');assert.match(t.text,/немає актуальних даних/);n+=2;console.log('note: feed has no fresh 3-day slots for',day);}
+  assert.equal(t.fresh,true,'pinned evening fixture must exercise the fresh NOAA branch');
+  assert.ok(Number.isFinite(t.kp),'the NOAA fixture must provide a numeric Kp');
+  assert.equal(Number(t.attr),t.kp,'tile shows the 3-day forecast Kp');
+  assert.match(t.text,/прогноз NOAA, 3 дні/);assert.match(t.aria,/спостереження немає/);n+=5;
   const labels=await p.evaluate(()=>[...document.querySelectorAll('.sr-dayline button')].map(x=>x.textContent.trim()));
   assert.equal(labels.some(l=>/⋯/.test(l)),false,'no «⋯ N» labels: '+labels.join('|'));
   if(labels.some(l=>/^\d+ змін/.test(l)))n++;
   assert.deepEqual(errs,[]);n+=2;await c.close();}
+ {const {c,p,errs}=await open(b,{hour:'evening',forecast:false});
+  const tile=p.locator('[data-p0-signals]>button').first();
+  assert.equal(await tile.getAttribute('data-kp-forecast'),'','missing feed exposes no numeric Kp');
+  assert.match(await tile.textContent(),/немає актуальних даних/);
+  assert.deepEqual(errs,[]);n+=3;await c.close();}
+ // FP572 audit: mixed feed — today missing or synthetic, neighbours fresh: the tile must not borrow a neighbour's Kp.
+ for(const kind of ['missing','synthetic']){const {c,p,errs}=await open(b,{hour:'evening',forecast:mixed(kind)});
+  const tile=p.locator('[data-p0-signals]>button').first();
+  assert.equal(await tile.getAttribute('data-kp-forecast'),'',kind+' today: no numeric Kp from another day or a synthetic source');
+  assert.match(await tile.textContent(),/немає актуальних даних/);assert.deepEqual(errs,[]);n+=3;await c.close();}
+ // FP572 audit: one evening tap is stored and the next morning neither asks again nor loses it (same device storage).
+ {const {c,p,errs}=await open(b,{hour:'evening'});
+  await p.waitForSelector('#nrRoute-today [data-day-match] button[data-match]',{timeout:60000});
+  await p.click('#nrRoute-today [data-day-match] button[data-match="yes"]');
+  await p.waitForSelector('#nrRoute-today [data-day-match].is-saved',{timeout:10000}).catch(()=>assert.fail('evening answer was not saved'));
+  const stored=await p.evaluate(ds=>JSON.parse(localStorage.getItem('nrDayMatch_v1')||'{}')[ds]?.v,day);
+  assert.equal(stored,'yes','evening answer stored');
+  await p.clock.setFixedTime(new Date(shift(day,1)+'T09:00:00+03:00'));await p.reload({waitUntil:'load'});
+  await p.waitForFunction(()=>typeof window.NRDayContext?.target==='function' &&
+    !!document.querySelector('#nrRoute-today [data-day-provenance]'),null,{timeout:60000});
+  const morning=await p.evaluate(ds=>({target:NRDayContext.target(),kept:JSON.parse(localStorage.getItem('nrDayMatch_v1')||'{}')[ds]?.v,
+   ask:document.querySelectorAll('#nrRoute-today [data-day-rating][data-target="'+ds+'"]').length}),day);
+  assert.equal(morning.kept,'yes','answer kept next morning');assert.notEqual(morning.target,day,'answered evening is not asked again next morning');assert.equal(morning.ask,0);
+  assert.deepEqual(errs,[]);n+=5;await c.close();}
  // 2: yesterday answered in the day card → the journal does not ask about it in the morning
  {const y=shift(day,-1);const shown={};shown[y]={date:y,score:0,shown_at:at(20).toISOString()};
-  const {c,p,errs}=await open(b,{hour:9,init:{nrDayMatch_v1:JSON.stringify({[y]:{v:'yes',score:0,at:new Date().toISOString()}})}});
+  const {c,p,errs}=await open(b,{hour:9,init:{nrDayMatch_v1:JSON.stringify({[y]:{v:'yes',score:0,at:y+'T18:00:00Z'}})}});
   const r=await p.evaluate(y=>({target:window.NRDayContext?.target?.(),cards:document.querySelectorAll('#nrRoute-today [data-day-rating][data-target="'+y+'"]').length}),y);
   assert.notEqual(r.target,y,'answered day is not a journal target');assert.equal(r.cards,0);assert.deepEqual(errs,[]);n+=3;await c.close();}
 
