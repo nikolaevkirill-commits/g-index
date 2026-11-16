@@ -1,5 +1,6 @@
 from pathlib import Path
 import json,re,subprocess,hashlib
+from sync_packed_shell import verify as verify_packed_shell
 ROOT=Path(__file__).resolve().parents[2]
 def verify(root=ROOT):
     policy=json.loads((root/'PUBLIC_ASSET_ALLOWLIST.json').read_text('utf-8'))
@@ -21,6 +22,7 @@ def verify(root=ROOT):
     sw=(root/'sw.js').read_text('utf-8');assets=re.findall(r"'\./([^']+)'",re.search(r'const SHELL_ASSETS = \[(.*?)\];',sw,re.S).group(1))
     for n in assets:
         if not (root/n.split('?',1)[0]).is_file():raise ValueError('Offline shell missing '+n)
+    verify_packed_shell(root)
     for n,digest in policy['frozen_sha256'].items():
         if hashlib.sha256((root/n).read_bytes()).hexdigest()!=digest:raise ValueError('Frozen public registration changed')
     print('PASS public allowlist, source-only feeds, encrypted originals, shell and frozen registration')
