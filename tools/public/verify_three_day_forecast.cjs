@@ -143,6 +143,23 @@ async function setup(browser,base,{width=390,lang='uk',mode='fixture'}={}){
    assert.deepEqual(t.errors,[]);
    await t.context.close();
   }
+  const saved=await setup(browser,base);
+  const selector=active+panelSelector;
+  await saved.p.waitForFunction(s=>document.querySelector(s)?.textContent.includes('Отримано з NOAA'),selector);
+  await saved.context.route(url=>url.href===NOAA||url.pathname.endsWith('/noaa/receipts/cloud.json'),route=>route.abort());
+  await saved.p.reload({waitUntil:'load'});
+  await saved.p.locator(active+tabSelector+'"3"]').click();
+  await saved.p.waitForFunction(s=>document.querySelector(s)?.textContent.includes('Збережена копія NOAA'),selector);
+  assert.equal(await saved.panel.getAttribute('data-valid-slots'),'8');
+  assert.equal(await saved.panel.locator('.sr-3d-score strong').innerText(),'−1');
+  await saved.p.clock.setFixedTime(new Date(at+13*3600e3));
+  await saved.p.reload({waitUntil:'load'});
+  await saved.p.locator(active+tabSelector+'"3"]').click();
+  await saved.p.waitForFunction(s=>document.querySelector(s)?.textContent.includes('застаріли'),selector);
+  assert.equal(await saved.panel.getAttribute('data-valid-slots'),'0');
+  assert.equal(await saved.panel.locator('.sr-3d-score strong').innerText(),'—');
+  assert.deepEqual(saved.errors,[]);
+  await saved.context.close();
   if(process.env.NR3D_LIVE==='1'){
    const t=await setup(browser,base,{mode:'live'});
    await t.p.waitForFunction(selector=>document.querySelector(selector)?.textContent.includes('Отримано з NOAA'),active+panelSelector);
@@ -150,6 +167,6 @@ async function setup(browser,base,{width=390,lang='uk',mode='fixture'}={}){
    console.log('PASS direct NOAA in Chromium');
    await t.context.close();
   }
-  console.log('PASS 3 days Kyiv 16–18, mobile/desktop, keyboard, New York, DST, direct/fallback/missing NOAA');
+  console.log('PASS 3 days Kyiv 16–18, mobile/desktop, keyboard, New York, DST, direct/fallback/missing NOAA, saved copy expires');
  }finally{await browser?.close();server.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

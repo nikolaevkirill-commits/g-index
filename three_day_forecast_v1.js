@@ -2,6 +2,8 @@
 (function(root){
  'use strict';
  const NOAA='https://services.swpc.noaa.gov/products/noaa-planetary-k-index-forecast.json';
+ const SAVED_NOAA='skyrhythm_three_day_noaa_v1';
+ const MAX_SAVED_LENGTH=64000;
  const SLOT=3*3600000, DAY=24*3600000, MAX_AGE=12*3600000, MARGIN=384*60000;
  const STATES=['observed','estimated','predicted'];
  const RIKTA=new Set([4,9,14,19,24,29]);
@@ -49,7 +51,7 @@
   return Math.max(-3,Math.min(3,Math.trunc(2-Math.max(...rows.map(r=>r.kp)))))||0;
  }
 
- let pending=null, reading=null, lastAttempt=-Infinity, problem=false;
+ let pending=null, reading=null, lastAttempt=-Infinity, problem=false, restored=false;
  async function request(url,signal){
   const response=await fetch(url,{cache:'no-store',credentials:'omit',signal});
   if(!response.ok)throw Error('NOAA HTTP '+response.status);
@@ -61,6 +63,25 @@
   // A current HTTP header cannot make an old observation series fresh.
   const seen=[...slots.values()].filter(r=>r.state==='observed'&&r.start<=now).map(r=>r.start+SLOT);
   return {slots,at,source,validThrough:Math.min(at,Math.max(-Infinity,...seen))+MAX_AGE};
+ }
+ function storedSnapshot(){
+  try{
+   const json=localStorage.getItem(SAVED_NOAA);
+   if(!json||json.length>MAX_SAVED_LENGTH)return null;
+   const {rows,at}=JSON.parse(json);
+   return snapshot(parse(rows),at,'cached');
+  }catch{return null;}
+ }
+ function storeSnapshot(snapshot){
+  if(snapshot.validThrough<Date.now())return;
+  try{
+   if((storedSnapshot()?.validThrough??-Infinity)>snapshot.validThrough)return;
+   const rows=[...snapshot.slots.values()].map(({start,kp,state,scale})=>({
+    time_tag:new Date(start).toISOString().replace('.000Z','Z'),kp,observed:state,noaa_scale:scale,
+   }));
+   const json=JSON.stringify({at:snapshot.at,rows});
+   if(json.length<=MAX_SAVED_LENGTH)localStorage.setItem(SAVED_NOAA,json);
+  }catch{/* A storage restriction must not prevent showing a network response. */}
  }
  async function direct(){
   const result=await request(NOAA,AbortSignal.timeout(5000));
@@ -78,6 +99,7 @@
   return snapshot(parse(JSON.parse(new TextDecoder().decode(bytes))),Date.parse(receipt.retrieved_at),'cached');
  }
  async function refresh(force=false){
+  if(!restored){restored=true;reading=storedSnapshot();}
   if(pending||!navigator.onLine||Date.now()-lastAttempt<(force?5000:10*60000))return pending;
   lastAttempt=Date.now();
   problem=false;
@@ -87,7 +109,10 @@
    if(!next||next.validThrough<Date.now()){
     try{const cached=await archived();if(!next||cached.validThrough>next.validThrough)next=cached;}catch{}
    }
-   if(next&&(!reading||next.validThrough>=reading.validThrough))reading=next;
+   if(next&&(!reading||next.validThrough>=reading.validThrough)){
+    reading=next;
+    storeSnapshot(next);
+   }
    problem=!next||next.validThrough<Date.now();
   })().finally(()=>{pending=null;redraw();});
   return pending;
@@ -185,9 +210,9 @@
   refreshButton.onclick=()=>{if(navigator.onLine&&!pending){refresh(true);render(panel);}};
   header.append(node('h3','',w.kp),refreshButton);
   const status=node('p','sr-3d-status',
-   (pending?w.loading:ready?w[reading.source]:reading?w.stale:w.missing)
+   (pending&&!ready?w.loading:ready?w[problem||!navigator.onLine?'cached':reading.source]:reading?w.stale:w.missing)
    +(reading?' · '+w.status+' '+stamp.format(reading.at):'')
-   +(!navigator.onLine?' · '+w.offline:problem&&ready?' · '+w.cached:''));
+   +(!navigator.onLine?' · '+w.offline:''));
   status.setAttribute('role','status');
   const list=node('ul','sr-3d-slots');
   // Intervals are displayed once under their local start date; the end
