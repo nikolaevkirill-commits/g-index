@@ -8,10 +8,10 @@
  const STATES=['observed','estimated','predicted'];
  const RIKTA=new Set([4,9,14,19,24,29]);
  const copy={
-  uk:{tab:'3 дні',choose:'Оберіть день',score:'Власний бал',method:'2 − максимум Kp за місцевою добою, шкала від −3 до +3',kp:'NOAA · кожні 3 години',status:'Час оновлення NOAA',live:'Отримано з NOAA',cached:'Збережена копія NOAA',offline:'Офлайн',stale:'Дані NOAA застаріли',missing:'Актуальні дані NOAA недоступні',loading:'Оновлюємо NOAA…',refresh:'Оновити NOAA',noValue:'Немає даних',observed:'Спостереження',estimated:'Попередня оцінка',predicted:'Прогноз',clock:'Місцевий час',partial:'Для бала потрібні всі інтервали, що починаються цієї доби.',advice:'Календарні застереження',adviceScope:'Для відповідних нових справ за традицією. Окремо від бала.',clear:'Рікти та Санкранті на цю дату немає.',calendarMissing:'Календарні інтервали недоступні.',rikta:'Рікта',sankranti:'Санкранті'},
-  en:{tab:'3 days',choose:'Choose a day',score:'Our score',method:'2 − maximum Kp for the local day, scale −3 to +3',kp:'NOAA · every 3 hours',status:'NOAA update time',live:'Retrieved from NOAA',cached:'Saved NOAA copy',offline:'Offline',stale:'NOAA data are out of date',missing:'Current NOAA data are unavailable',loading:'Updating NOAA…',refresh:'Refresh NOAA',noValue:'No data',observed:'Observed',estimated:'Preliminary estimate',predicted:'Forecast',clock:'Local time',partial:'The score requires all intervals starting on this local date.',advice:'Calendar cautions',adviceScope:'For relevant new undertakings in the tradition. Separate from the score.',clear:'No Rikta or Sankranti on this date.',calendarMissing:'Calendar intervals are unavailable.',rikta:'Rikta',sankranti:'Sankranti'},
-  es:{tab:'3 días',choose:'Elige un día',score:'Nuestra puntuación',method:'2 − Kp máximo del día local, escala de −3 a +3',kp:'NOAA · cada 3 horas',status:'Actualización de NOAA',live:'Datos de NOAA',cached:'Copia guardada de NOAA',offline:'Sin conexión',stale:'Datos NOAA desactualizados',missing:'Sin datos recientes de NOAA',loading:'Actualizando NOAA…',refresh:'Actualizar NOAA',noValue:'Sin datos',observed:'Observación',estimated:'Estimación preliminar',predicted:'Pronóstico',clock:'Hora local',partial:'La puntuación requiere todos los intervalos que empiezan en esta fecha local.',advice:'Avisos del calendario',adviceScope:'Para nuevos comienzos según la tradición. Fuera de la puntuación.',clear:'Sin Rikta ni Sankranti en esta fecha.',calendarMissing:'Intervalos del calendario no disponibles.',rikta:'Rikta',sankranti:'Sankranti'},
-  fr:{tab:'3 jours',choose:'Choisir un jour',score:'Notre note',method:'2 − Kp maximal du jour local, échelle de −3 à +3',kp:'NOAA · toutes les 3 heures',status:'Mise à jour NOAA',live:'Données de NOAA',cached:'Copie NOAA enregistrée',offline:'Hors ligne',stale:'Données NOAA périmées',missing:'Données NOAA à jour indisponibles',loading:'Mise à jour NOAA…',refresh:'Actualiser NOAA',noValue:'Pas de données',observed:'Observation',estimated:'Estimation préliminaire',predicted:'Prévision',clock:'Heure locale',partial:'La note exige tous les intervalles qui commencent à cette date locale.',advice:'Avis du calendrier',adviceScope:'Pour les nouveaux projets selon la tradition. En dehors de la note.',clear:'Aucun Rikta ni Sankranti à cette date.',calendarMissing:'Intervalles du calendrier indisponibles.',rikta:'Rikta',sankranti:'Sankranti'}
+  uk:{tab:'3 дні',choose:'Оберіть день',score:'Власний бал',method:'2 − максимум Kp серед інтервалів, що починаються цієї доби; шкала від −3 до +2',peak:'Найвищий Kp',calm:'Найнижчий Kp',deviceClock:'Перевірте дату й час на пристрої',kp:'NOAA · кожні 3 години',status:'Час оновлення NOAA',live:'Отримано з NOAA',cached:'Збережена копія NOAA',offline:'Офлайн',stale:'Дані NOAA застаріли',missing:'Актуальні дані NOAA недоступні',loading:'Оновлюємо NOAA…',refresh:'Оновити NOAA',noValue:'Немає даних',observed:'Спостереження',estimated:'Попередня оцінка',predicted:'Прогноз',clock:'Місцевий час',partial:'Для бала потрібні всі інтервали, що починаються цієї доби.',horizon:'NOAA ще не опублікував прогноз до кінця цієї доби. Бал з’явиться, коли NOAA продовжить прогноз.',beyond:'Поза поточним прогнозом NOAA',advice:'Календарні застереження',adviceScope:'Для відповідних нових справ за традицією. Окремо від бала.',clear:'Рікти та Санкранті на цю дату немає.',calendarMissing:'Календарні інтервали недоступні.',rikta:'Рікта',sankranti:'Санкранті'},
+  en:{tab:'3 days',choose:'Choose a day',score:'Our score',method:'2 − maximum Kp among intervals starting on this local date; scale −3 to +2',peak:'Highest Kp',calm:'Lowest Kp',deviceClock:'Check the date and time on this device',kp:'NOAA · every 3 hours',status:'NOAA update time',live:'Retrieved from NOAA',cached:'Saved NOAA copy',offline:'Offline',stale:'NOAA data are out of date',missing:'Current NOAA data are unavailable',loading:'Updating NOAA…',refresh:'Refresh NOAA',noValue:'No data',observed:'Observed',estimated:'Preliminary estimate',predicted:'Forecast',clock:'Local time',partial:'The score requires all intervals starting on this local date.',horizon:'NOAA has not yet published a forecast through the end of this day. The score will appear once NOAA extends the forecast.',beyond:'Beyond the current NOAA forecast',advice:'Calendar cautions',adviceScope:'For relevant new undertakings in the tradition. Separate from the score.',clear:'No Rikta or Sankranti on this date.',calendarMissing:'Calendar intervals are unavailable.',rikta:'Rikta',sankranti:'Sankranti'},
+  es:{tab:'3 días',choose:'Elige un día',score:'Nuestra puntuación',method:'2 − Kp máximo entre los intervalos que empiezan en esta fecha local; escala de −3 a +2',peak:'Kp más alto',calm:'Kp más bajo',deviceClock:'Comprueba la fecha y la hora del dispositivo',kp:'NOAA · cada 3 horas',status:'Actualización de NOAA',live:'Datos de NOAA',cached:'Copia guardada de NOAA',offline:'Sin conexión',stale:'Datos NOAA desactualizados',missing:'Sin datos recientes de NOAA',loading:'Actualizando NOAA…',refresh:'Actualizar NOAA',noValue:'Sin datos',observed:'Observación',estimated:'Estimación preliminar',predicted:'Pronóstico',clock:'Hora local',partial:'La puntuación requiere todos los intervalos que empiezan en esta fecha local.',horizon:'NOAA aún no ha publicado el pronóstico hasta el final de este día. La puntuación aparecerá cuando NOAA amplíe el pronóstico.',beyond:'Fuera del pronóstico actual de NOAA',advice:'Avisos del calendario',adviceScope:'Para nuevos comienzos según la tradición. Fuera de la puntuación.',clear:'Sin Rikta ni Sankranti en esta fecha.',calendarMissing:'Intervalos del calendario no disponibles.',rikta:'Rikta',sankranti:'Sankranti'},
+  fr:{tab:'3 jours',choose:'Choisir un jour',score:'Notre note',method:'2 − Kp maximal parmi les intervalles qui commencent à cette date locale ; échelle de −3 à +2',peak:'Kp le plus élevé',calm:'Kp le plus bas',deviceClock:'Vérifiez l’heure et la date de l’appareil',kp:'NOAA · toutes les 3 heures',status:'Mise à jour NOAA',live:'Données de NOAA',cached:'Copie NOAA enregistrée',offline:'Hors ligne',stale:'Données NOAA périmées',missing:'Données NOAA à jour indisponibles',loading:'Mise à jour NOAA…',refresh:'Actualiser NOAA',noValue:'Pas de données',observed:'Observation',estimated:'Estimation préliminaire',predicted:'Prévision',clock:'Heure locale',partial:'La note exige tous les intervalles qui commencent à cette date locale.',horizon:'NOAA n’a pas encore publié de prévision jusqu’à la fin de cette journée. La note apparaîtra quand NOAA prolongera la prévision.',beyond:'Au-delà de la prévision NOAA actuelle',advice:'Avis du calendrier',adviceScope:'Pour les nouveaux projets selon la tradition. En dehors de la note.',clear:'Aucun Rikta ni Sankranti à cette date.',calendarMissing:'Intervalles du calendrier indisponibles.',rikta:'Rikta',sankranti:'Sankranti'}
  };
  const words=()=>copy[root.NRLocale?.language]||copy.uk;
  const dayKey=(ms,zone)=>root.NRCivilTime.dayKey(ms,zone);
@@ -51,7 +51,7 @@
   return Math.max(-3,Math.min(3,Math.trunc(2-Math.max(...rows.map(r=>r.kp)))))||0;
  }
 
- let pending=null, reading=null, lastAttempt=-Infinity, problem=false, restored=false;
+ let pending=null, reading=null, lastAttempt=-Infinity, problem=false, restored=false, skewed=false;
  async function request(url,signal){
   const response=await fetch(url,{cache:'no-store',credentials:'omit',signal});
   if(!response.ok)throw Error('NOAA HTTP '+response.status);
@@ -60,8 +60,9 @@
  function snapshot(slots,at,source){
   const now=Date.now();
   if(!Number.isFinite(at)||at>now+5*60000)throw Error('Invalid NOAA timestamp');
-  // A current HTTP header cannot make an old observation series fresh.
-  const seen=[...slots.values()].filter(r=>r.state==='observed'&&r.start<=now).map(r=>r.start+SLOT);
+  // A current HTTP header cannot make an old observation series fresh, and
+  // an interval cannot be observed before it has ended.
+  const seen=[...slots.values()].filter(r=>r.state==='observed'&&r.start+SLOT<=at).map(r=>r.start+SLOT);
   return {slots,at,source,validThrough:Math.min(at,Math.max(-Infinity,...seen))+MAX_AGE};
  }
  function storedSnapshot(){
@@ -69,12 +70,22 @@
    const json=localStorage.getItem(SAVED_NOAA);
    if(!json||json.length>MAX_SAVED_LENGTH)return null;
    const {rows,at}=JSON.parse(json);
-   return snapshot(parse(rows),at,'cached');
+   return Object.assign(snapshot(parse(rows),at,'cached'),{restored:true});
   }catch{return null;}
  }
  function atLeastAsFresh(next,current){
-  return !current||next.validThrough>current.validThrough||
-   (next.validThrough===current.validThrough&&next.at>=current.at);
+  if(!current||next.validThrough!==current.validThrough)return !current||next.validThrough>current.validThrough;
+  // At the same observation hour a direct NOAA response outranks a copy
+  // restored from this device; otherwise the newer issue time wins.
+  return (next.source==='live'&&!!current.restored)||next.at>=current.at;
+ }
+ // Another tab may have saved a fresher copy after this tab last read storage.
+ function adoptSaved(){
+  const saved=storedSnapshot();
+  if(!saved||(reading&&(saved.validThrough<reading.validThrough||
+   (saved.validThrough===reading.validThrough&&saved.at<=reading.at))))return false;
+  reading=saved;
+  return true;
  }
  function storeSnapshot(snapshot){
   if(snapshot.validThrough<Date.now())return;
@@ -91,6 +102,8 @@
   const result=await request(NOAA,AbortSignal.timeout(5000));
   const slots=parse(await result.json());
   const modified=Date.parse(result.headers.get('Last-Modified')||'');
+  // NOAA cannot have issued data in the device's future: the device clock is behind.
+  skewed=Number.isFinite(modified)&&modified>Date.now()+5*60000;
   return snapshot(slots,Number.isFinite(modified)?modified:Date.now(),'live');
  }
  async function archived(){
@@ -118,6 +131,7 @@
     storeSnapshot(next);
    }
    problem=!next||next.validThrough<Date.now();
+   if(problem)adoptSaved();
   })().finally(()=>{pending=null;redraw();});
   return pending;
  }
@@ -150,10 +164,9 @@
    }
    const result=new Map(spans.map(span=>{
     const rows=rikta.filter(r=>r.start<+span.end&&r.end>+span.start);
-    if(ingress!==null){
-     const start=Math.max(+span.start,ingress-MARGIN),end=Math.min(+span.end,ingress+MARGIN);
-     if(start<end)rows.push({key:'sankranti',start,end});
-    }
+    // Like Rikta, the window keeps its real bounds when it crosses midnight.
+    if(ingress!==null&&ingress-MARGIN<+span.end&&ingress+MARGIN>+span.start)
+     rows.push({key:'sankranti',start:ingress-MARGIN,end:ingress+MARGIN});
     return [span.date,rows];
    }));
    if(calendarCache.size>=8)calendarCache.delete(calendarCache.keys().next().value);
@@ -185,6 +198,9 @@
   const rowsByDay=new Map(days.map(day=>[day,daySlots(day,zone,slots)]));
   const dayRows=rowsByDay.get(selected), value=score(dayRows);
   const rowCount=dayRows.filter(r=>r.kp!==null).length;
+  // Distinguish «NOAA has not issued these hours yet» from a gap in the data.
+  const horizon=slots?Math.max(...slots.keys()):Infinity, empty=dayRows.filter(r=>r.kp===null);
+  const beyond=empty.length>0&&empty.every(r=>r.start>horizon);
   const intro=node('div','sr-3d-head');
   intro.append(node('small','',w.clock+' · '+zone));
   const choices=node('div','sr-3d-choices');choices.setAttribute('role','group');choices.setAttribute('aria-label',w.choose);
@@ -197,7 +213,15 @@
    choices.append(choice);
   }
   const summary=node('section','sr-3d-score');
-  summary.append(node('h3','',w.score),node('strong','',formatScore(value)),node('small','',value===null?w.partial:w.method));
+  summary.append(node('h3','',w.score),node('strong','',formatScore(value)),node('small','',value!==null?w.method:beyond?w.horizon:w.partial));
+  if(value!==null){
+   // Name the interval that sets the score and the quietest one of the day.
+   const peak=dayRows.reduce((a,b)=>b.kp>a.kp?b:a), calm=dayRows.reduce((a,b)=>b.kp<a.kp?b:a);
+   const span=(label,row)=>label+' '+number.format(row.kp)+' · '+localRange(row.start,row.start+SLOT);
+   const extremes=node('small','',span(w.peak,peak)+(calm.kp<peak.kp?'. '+span(w.calm,calm):''));
+   extremes.dataset.extremes='';
+   summary.append(extremes);
+  }
   const warning=node('section','sr-3d-advice');
   warning.append(node('h3','',w.advice),node('small','',w.adviceScope));
   const advisories=calendar(days,zone)?.get(selected);
@@ -216,7 +240,7 @@
   const status=node('p','sr-3d-status',
    (pending&&!ready?w.loading:ready?w[problem||!navigator.onLine?'cached':reading.source]:reading?w.stale:w.missing)
    +(reading?' · '+w.status+' '+stamp.format(reading.at):'')
-   +(!navigator.onLine?' · '+w.offline:''));
+   +(!navigator.onLine?' · '+w.offline:!ready&&skewed?' · '+w.deviceClock:''));
   status.setAttribute('role','status');
   const list=node('ul','sr-3d-slots');
   // Intervals are displayed once under their local start date; the end
@@ -225,7 +249,7 @@
    const item=node('li','');
    item.dataset.utc=new Date(row.start).toISOString();
    if(row.scale)item.dataset.storm=row.scale;
-   const detail=row.kp===null?w.noValue:w[row.state];
+   const detail=row.kp!==null?w[row.state]:row.start>horizon?w.beyond:w.noValue;
    item.append(node('time','',localRange(row.start,row.start+SLOT)),
     node('b','',row.kp===null?'—':'Kp '+number.format(row.kp)+(row.scale?' · '+row.scale:'')),
     node('small','',detail));
@@ -242,6 +266,7 @@
  function mount(panel){activePanel=panel;if(visible())refresh();render(panel);}
  if(typeof document!=='undefined'){
   for(const event of ['focus','sr:place-changed','load'])root.addEventListener(event,update);
+  root.addEventListener('storage',event=>{if(event.key===SAVED_NOAA&&adoptSaved())redraw();});
   root.addEventListener('online',()=>{if(visible()){refresh(true);redraw();}});
   for(const event of ['offline','nr:locale'])root.addEventListener(event,redraw);
   document.addEventListener('nr:location',redraw);
