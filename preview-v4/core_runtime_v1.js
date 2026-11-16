@@ -8300,36 +8300,20 @@ function _renderPanchUpcoming(refDateUTC){
     }
   } catch(e){ globalThis.NRDiagnostics?.record('catch.137','recoverable'); if(window._DEBUG)console.warn('[silent]:',e.message)}
 
-  // 4. v87.44+v87.45: Поточна Nakshatra + орієнтовна зміна
-  //    v87.45 fix: computePanchanga повертає nakshatra.num (1-based), не .idx
+  // Live nakshatra and its next transition share the day line ephemeris.
   try {
-    const pNow = computePanchanga(today);
-    if(pNow && pNow.nakshatra){
-      // Зміна Nakshatra відбувається коли Місяць проходить 13°20' sidereal.
-      // Середня швидкість ~13.18°/доба → ~1 Nakshatra / доба.
-      // Шукаю наступні 48 год, коли num зміниться.
-      const curNum = pNow.nakshatra.num;
-      let shiftHrs = null;
-      for(let h = 1; h <= 48; h++){
-        const t = new Date(today.getTime() + h * 3600000);
-        const p2 = computePanchanga(t);
-        if(p2 && p2.nakshatra && p2.nakshatra.num !== curNum){
-          shiftHrs = h;
-          // Взяти наступну Nakshatra
-          const nextNakName = p2.nakshatra.name;
-          const hrs = Math.floor(shiftHrs);
-          const hrsTxt = hrs < 1 ? '<1г' : hrs < 24 ? `${hrs}г` : `${Math.round(hrs/24)}д`;
-          items.push({
-            icon: '✨',
-            label: `Накшатра: ${pNow.nakshatra.name}`,
-            when: '',
-            rel: '',
-            note: `→ ${nextNakName} через ${hrsTxt}`,
-            cls: 'neu'
-          });
-          break;
-        }
-      }
+    const lunar=window.SkyRhythmLunar;
+    if(lunar?.available()){
+      const instant=today.getTime(), current=lunar.at(instant).nakshatra;
+      const next=lunar.nextTransition(instant,'nakshatra',current);
+      if(next) items.push({
+        icon: '✨',
+        label: 'Накшатра: '+NAKSHATRA_NAMES[current-1],
+        when: '',
+        rel: '',
+        note: '→ '+NAKSHATRA_NAMES[next.to-1]+' через '+lunarTransitionDuration(next.utcMs-instant),
+        cls: 'neu'
+      });
     }
   } catch(e){ globalThis.NRDiagnostics?.record('catch.138','recoverable'); if(window._DEBUG)console.warn('[silent]:',e.message)}
 
@@ -13378,73 +13362,53 @@ function resolveDecisionByG(g, kp) {
 
 // v87.56: removed _HORA_WIN_BONUS + _calcWindowScore + _getBestWindow (dead chain)
 
+function lunarTransitionDuration(ms){
+  const minutes=Math.ceil(ms/60000);
+  const hours=Math.floor(minutes/60);
+  return hours?hours+' год'+(minutes%60?' '+minutes%60+' хв':''):minutes+' хв';
+}
+
 // --- v70.3 ASTRO TOP LAYER ---
 function renderMoonRetroTop(){
   const now=new Date();
   const pc=_lastPanchCtx;
   const ai=pc?.aiComponents;
 
-  // Moon block — from JS variables
-  const pd=window._lunarPhaseDeg;
-  // One complete instant Panchanga snapshot supplies every live lunar field.
-  // This removes independent floor(phase/12) copies that drifted from
-  // Nakshatra near boundaries while preserving the separate day/sunrise layer.
-  let _livePanch185=null;
-  try{ _livePanch185=computePanchanga(now); }catch(_e){ window.NRDiagnostics?.record('legacy.catch.189','recoverable'); }
-  const phaseName=isFinite(pd)?phaseNameByAngle(pd):'—';
-  // v88.9.03-fp185: same stale-cache bug as fp184 — moonLiNow ("Now" in the
-  // id!) was reading ai.Li from _lastPanchCtx (noon-UTC-referenced cache),
-  // not live. Recompute Amavasya case live from pd, matching computeAi's
-  // canonical formula, same as syncWhy()'s fix.
-  const _tithiIdxForLi185 = Number.isFinite(Number(_livePanch185?.tithi?.num)) ? Number(_livePanch185.tithi.num) - 1 : null;
-  // v88.9.07-fp188: той самий дзеркальний баг що в syncWhy — fallback (ai.Li)
-  // читав кеш (sunrise-референс) коли live-тітхі вже НЕ Амавасья. Рахуємо live.
-  const _kpLive185 = (window.__uiState && isFinite(window.__uiState.kpNow)) ? window.__uiState.kpNow : 0;
-  const liVal = _tithiIdxForLi185 === null ? (ai?String(ai.Li):'—')
-              : String(_tithiIdxForLi185 === 29 ? -3
-                : _tithiIdxForLi185 === 14 ? (_kpLive185 >= 7 ? -2 : _kpLive185 >= 5 ? -1 : 0)
-                : 0);
-  // v88.9.05-fp187: same live-vs-cached-noon bug as Li — tithiName came from
-  // _lastPanchCtx (stale), while _tithiIdxForLi185 (live, from pd) was
-  // already computed right here for the Li fix. Reuse it for the name too.
-  const tithiName = _tithiIdxForLi185 !== null ? TITHI_NAMES[_tithiIdxForLi185] : (pc?.tithi?.name||'—');
-  const tithiNum = _tithiIdxForLi185 !== null ? _tithiIdxForLi185 + 1 : (pc?.tithi?.num||'');
-  // Use the same live timestamp and canonical Panchanga function as Tithi.
-  // The cached sunrise/noon context remains a separate comparison layer.
-  const nakName=_livePanch185?.nakshatra?.name||pc?.nakshatra?.name||'—';
-  const nakScore=_livePanch185?.nakshatra?.score??pc?.nakshatra?.score;
+  // Live astronomy uses the same instant and labels as the day line. The
+  // legacy Li component below keeps its own formula inputs and memo key.
+  const lunar=window.SkyRhythmLunar;
+  let live=null,next=null;
+  try{
+    if(lunar?.available()){
+      live=lunar.at(now.getTime());
+      next=lunar.nextTransition(now.getTime(),'tithi',live.tithi);
+    }
+  }catch(_e){ window.NRDiagnostics?.record('legacy.catch.189','recoverable'); }
 
-  if(el('moonPhaseNow')) el('moonPhaseNow').textContent=phaseName;
-  if(el('moonTithiNow')) el('moonTithiNow').textContent=tithiNum?tithiName+' ('+tithiNum+')':tithiName;
-  if(el('moonLiNow')) el('moonLiNow').textContent=liVal;
-  if(el('moonNakNow')) el('moonNakNow').textContent=nakName;
+  if(el('moonLiNow')){
+    let tithi=null;
+    try{ tithi=computePanchanga(now)?.tithi?.num; }
+    catch(_e){ window.NRDiagnostics?.record('legacy.catch.189','recoverable'); }
+    const kp=(window.__uiState&&isFinite(window.__uiState.kpNow))?window.__uiState.kpNow:0;
+    const li=tithi==null ? (ai?String(ai.Li):'—')
+      : String(tithi===30 ? -3 : tithi===15 ? (kp>=7?-2:kp>=5?-1:0) : 0);
+    el('moonLiNow').textContent=li;
+  }
 
-  // Nakshatra quality dot
+  if(el('moonPhaseNow')) el('moonPhaseNow').textContent=live?phaseNameByAngle(live.phase_deg):'—';
+  if(el('moonTithiNow')) el('moonTithiNow').textContent=live?TITHI_NAMES[live.tithi-1]+' ('+live.tithi+')':'—';
+  if(el('moonNakNow')) el('moonNakNow').textContent=live?NAKSHATRA_NAMES[live.nakshatra-1]:'—';
   if(el('moonNakQualNow')){
-    const dot=nakScore>=1?'🟢':nakScore<=-1?'🔴':'🟡';
-    const label=nakScore>=1?'Сприятлива':nakScore<=-1?'Несприятлива':'Нейтральна';
-    el('moonNakQualNow').textContent=dot+' '+label;
+    const score=live?NAKSHATRA_SCORE_MAP[NAKSHATRA_TYPE[live.nakshatra-1]]:null;
+    el('moonNakQualNow').textContent=score==null?'—'
+      :score>=1?'🟢 Сприятлива':score<=-1?'🔴 Несприятлива':'🟡 Нейтральна';
   }
-
-  // Illumination
-  if(isFinite(pd)){
-    const illum=((1-Math.cos(pd*Math.PI/180))/2*100).toFixed(0);
-    if(el('moonIllumNow')) el('moonIllumNow').textContent=illum+'% освітл.';
+  if(el('moonIllumNow')){
+    const percent=live?((1-Math.cos(live.phase_deg*Math.PI/180))/2*100).toFixed(0):null;
+    el('moonIllumNow').textContent=percent==null?'—':percent+'% освітл.';
   }
-
-  // Next tithi shift (approx: each tithi ~24h, compute remainder)
-  if(el('moonNextShift')){
-    try{
-      // v88.9.05-fp187: same stale-cache pattern — use live tithi number
-      // (window._lunarPhaseDeg) instead of cached pc.tithi.num.
-      const tNum = Number(_livePanch185?.tithi?.num||pc?.tithi?.num||0);
-      // Canonical ephemeris-derived boundary estimate from computePanchanga.
-      const _nextH=Number(_livePanch185?.tithi?.hoursToNext);
-      const remH=Number.isFinite(_nextH)?Math.max(1,Math.round(_nextH)):null;
-      el('moonNextShift').textContent=remH===null?'—':'~'+remH+'г';
-      if(el('moonShiftHint')) el('moonShiftHint').textContent='Тітхі '+(tNum<30?tNum+1:1);
-    }catch(e){ globalThis.NRDiagnostics?.record('catch.184','recoverable'); if(window._DEBUG)console.warn('[silent]:',e.message)}
-  }
+  if(el('moonNextShift')) el('moonNextShift').textContent=next?lunarTransitionDuration(next.utcMs-now.getTime()):'—';
+  if(el('moonShiftHint')) el('moonShiftHint').textContent=next?'Тітхі '+next.to:'—';
 
   // Retro block
   const planets=['Mercury','Venus','Mars','Jupiter','Saturn'];
@@ -16141,7 +16105,9 @@ function renderPlanetAnimation(kp, moonPhaseDeg, G, panchCtx, astroCtx) {
     // fp379: the planet canvas sits far below the fold. Do not spend a full
     // animation frame on it until it is actually near the visible viewport.
     const _view = canv.getBoundingClientRect();
-    const _nearViewport = _view.bottom >= -120 && _view.top <= window.innerHeight + 120;
+    // A closed legacy panel reports a zero-sized canvas at the origin.
+    const _nearViewport = _view.width > 0 && _view.height > 0 &&
+      _view.bottom >= -120 && _view.top <= window.innerHeight + 120;
     if (document.hidden || !_nearViewport) {
       _planetAnimFrame = null;
       _planetAnimTimer = setTimeout(() => {

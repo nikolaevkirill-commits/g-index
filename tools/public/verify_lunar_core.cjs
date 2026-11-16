@@ -79,6 +79,17 @@ for(const place of places)for(const date of place.dates){
  assert.deepEqual(mainAt('nakshatra'),personalNak,`${place.name} ${date}: nakshatra instants differ between the day line and the personal line`);
  assert.deepEqual(mainAt('tithi'),personalTithi,`${place.name} ${date}: tithi instants differ between the day line and the personal line`);
  assert.deepEqual(civilTithi,personalTithi,`${place.name} ${date}: tithi instants differ between Panchanga and the personal line`);
+ for(const kind of ['tithi','nakshatra']){
+  for(const instant of mainAt(kind)){
+   const from=L.at(instant-1)[kind],to=L.at(instant)[kind];
+   assert.deepEqual(L.nextTransition(instant-1,kind,from),{utcMs:instant,to});
+   const following=L.nextTransition(instant,kind,to);
+   assert(following.utcMs>instant);
+   assert.equal(L.at(following.utcMs-1)[kind],to);
+   assert.equal(L.at(following.utcMs)[kind],following.to);
+   checks+=4;
+  }
+ }
  compared+=personalNak.length+personalTithi.length;checks+=3;
  // Labels agree at both sides of every boundary and at each hour of the civil day.
  for(const t of [...personalNak.flatMap(x=>[x-1,x]),...Array.from({length:Math.ceil((personal.day.end-personal.day.start)/3600000)},(_,i)=>personal.day.start+i*3600000)]){

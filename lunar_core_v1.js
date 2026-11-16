@@ -64,6 +64,27 @@
    yoga:Math.min(27,Math.floor(mod(sun+moon)/N)+1),karana:karanaName(k),karana_index:k,phase_deg:phase,
    moon_longitude_sidereal:moon,sun_longitude_sidereal:sun,ayanamsha_with_nutation:ayanamsha};
  }
+ // Tithi and nakshatra advance in order. An hour is too short for either
+ // angle to traverse a whole label, even at the Moon's greatest speed.
+ function nextTransition(utcMs,kind,from){
+  if(kind!=='tithi'&&kind!=='nakshatra')throw RangeError('Unsupported lunar transition');
+  const hour=3600000;
+  let left=utcMs;
+  for(let step=1;step<=48;step++){
+   const right=utcMs+step*hour,after=at(right)[kind];
+   if(after!==from){
+    let lo=left,hi=right;
+    while(hi-lo>1){
+     const mid=Math.floor((lo+hi)/2);
+     if(at(mid)[kind]===from)lo=mid;
+     else hi=mid;
+    }
+    return {utcMs:hi,to:after};
+   }
+   left=right;
+  }
+  return null;
+ }
  const convention=Object.freeze({
   id:'lunar_core_v1',ephemeris:'astronomy-engine 2.1.19',frame:'geocentric true ecliptic of date; Sun apparent (aberration on)',
   tt_minus_utc_seconds:TT_MS/1000,tt_status:'32.184 s + leap seconds: 69.184 s from 2017-01-01 (assumption after the next leap second); table 1972–2016; library ΔT before 1972',
@@ -71,5 +92,5 @@
   reference:'Swiss Ephemeris 2.10.03, DE431 (sepl_18/semo_18), 2017–2028',
   model_tolerance_ms:Object.freeze({nakshatra:7000,tithi:9000,karana:9000,yoga:8000}),
   physical_uncertainty_ms:null});
- return Object.freeze({version:'lunar_core_v1',TT_MS,available,ttMinusUtcMs,time,ayanamshaAt,moonLongitude,bodyLongitude,elongation,karanaName,at,convention});
+ return Object.freeze({version:'lunar_core_v1',TT_MS,available,ttMinusUtcMs,time,ayanamshaAt,moonLongitude,bodyLongitude,elongation,karanaName,at,nextTransition,convention});
 });
