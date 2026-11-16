@@ -95,6 +95,29 @@ async function setup(browser,base,{width=390,lang='uk',mode='fixture'}={}){
    const captions=await p.locator(active+'[data-p0-forecast-tabs] button').allTextContents();
    assert.deepEqual(captions,lang==='uk'?['День','3 дні','Тиждень','27 днів']:['Day','3 days','Week','27 days']);
    assert.equal(await panel.locator('.sr-3d-slots li').count(),8);
+   if(width===320){
+    await p.evaluate(()=>{
+     window.dispatchEvent(new Event('engine-data-stale'));
+     document.getElementById('swStaleBar').style.display='block';
+     document.getElementById('offlineBanner').style.display='block';
+     window.scrollTo(0,0);
+    });
+    const status=panel.locator('.sr-3d-head [role="status"]');
+    assert.match(await status.innerText(),/Отримано з NOAA.*Час оновлення NOAA/s);
+    const placement=await status.evaluate(el=>{
+     const r=el.getBoundingClientRect();
+     const hit=document.elementFromPoint(r.left+3,r.top+r.height/2);
+     return {top:r.top,bottom:r.bottom,height:innerHeight,exposed:el.contains(hit),hit:hit?.outerHTML.slice(0,150)};
+    });
+    assert(placement.top>=0&&placement.bottom<=placement.height&&placement.exposed,
+     'NOAA source and timestamp visible and unobstructed at 320 px: '+JSON.stringify(placement));
+    for(const banner of ['#swStaleBar','#offlineBanner','#nrRuntimeState'])
+     assert.equal(await p.locator(banner).isVisible(),false,banner);
+    await p.locator(active+tabSelector+'"7"]').click();
+    assert.equal(await p.locator('#swStaleBar').isVisible(),true);
+    assert.equal(await p.locator('#nrRuntimeState').isVisible(),true);
+    await p.locator(active+tabSelector+'"3"]').click();
+   }
    if(lang==='uk')assert.match(await panel.locator('[data-extremes]').innerText(),/Найвищий Kp 3[,.]67 · .*23:00 → .*02:00\. Найнижчий Kp 2 · 02:00–05:00/s);
    assert.match(await panel.locator('.sr-3d-advice').innerText(),/09:49.*22:37/s);
    if(process.env.NR3D_EVIDENCE&&width===390&&lang==='uk')

@@ -242,6 +242,7 @@
    +(reading?' · '+w.status+' '+stamp.format(reading.at):'')
    +(!navigator.onLine?' · '+w.offline:!ready&&skewed?' · '+w.deviceClock:''));
   status.setAttribute('role','status');
+  intro.append(status);
   const list=node('ul','sr-3d-slots');
   // Intervals are displayed once under their local start date; the end
   // date remains visible on slots that cross midnight.
@@ -255,7 +256,7 @@
     node('small','',detail));
    list.append(item);
   }
-  forecast.append(header,status,list);
+  forecast.append(header,list);
   panel.dataset.validSlots=String(rowCount);
   panel.replaceChildren(intro,choices,summary,warning,forecast);
   if(focusKey)[...panel.querySelectorAll('[data-control]')].find(x=>x.dataset.control===focusKey)?.focus({preventScroll:true});
