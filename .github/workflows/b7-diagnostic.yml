@@ -4,33 +4,75 @@ on:
 permissions:
   contents: read
 jobs:
-  probe:
+  historical-revalidation:
+    if: github.ref == 'refs/heads/codex/fp572-cloud-verify-20261116'
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 9
     strategy:
       fail-fast: false
       matrix:
-        trigger: [message, button]
-        trial: [old, waiting]
+        revision: [03c7988c7f94ad7a25a77faab65316b84a15463c, 3f91a4192bbe73daacad19d441b213d73f88a22d]
+        delay: [0, 6000]
     steps:
       - uses: actions/checkout@v5
+        with: {fetch-depth: 0, persist-credentials: false}
       - uses: actions/setup-node@v4
         with: {node-version: '24'}
       - run: npm install --no-save --package-lock=false playwright@1.62.1
       - run: npx playwright install --with-deps chromium
-      - run: node tools/public/verify_day_cautions.cjs
-      - run: node tools/public/verify_noaa_missing.cjs
-      - run: node tools/public/verify_svg_missing.cjs
-      - run: node tools/public/verify_presentation.cjs
-      - run: node tools/public/verify_day_summary.cjs
-      - run: node tools/public/verify_journal_restore_time.cjs
-      - run: node tools/public/verify_journal_restore_adversarial.cjs
-      # FP545: raw production-worker run first (statistics only), then the traced/restart probe.
-      - run: node tools/public/verify_css_upgrade.cjs --${{ matrix.trigger }} --server-log
-        continue-on-error: true
-      - run: node tools/public/verify_css_upgrade.cjs --${{ matrix.trigger }} --restart=${{ matrix.trial }} --trace
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: b7-${{ matrix.trigger }}-${{ matrix.trial }}
-          path: /tmp/skyrhythm-css-upgrade-*/
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - name: Replay the historical test with worker lifecycle and HTTP tracing
+        env:
+          OLD_REVISION: ${{ matrix.revision }}
+          OPTIONAL_DELAY: ${{ matrix.delay }}
+        run: |
+          export NODE_PATH="$GITHUB_WORKSPACE/node_modules"
+          git worktree add --detach "$RUNNER_TEMP/legacy-tree" "$OLD_REVISION"
+          cd "$RUNNER_TEMP/legacy-tree"
+          python - <<'PY'
+          from pathlib import Path
+          original = Path("tools/public/verify_sw_install_revalidate.cjs").read_text(encoding="utf-8")
+          script = original
+          def inject(before, after):
+              global script
+              if script.count(before) != 1:
+                  raise ValueError(f"Historical marker differs: {before[:90]}")
+              script = script.replace(before, after)
+          inject("const server=http.createServer", "const traffic=[];\nconst server=http.createServer")
+          inject("if(error){response.writeHead(404);return response.end();}", """if(error){traffic.push({path:url.pathname,release,status:404});response.writeHead(404);return response.end();}
+            const tracePath=['/sw.js','/'+FILE,'/preview-v4/design_b/assets/icon-forecast.svg'].includes(url.pathname);
+            if(tracePath)traffic.push({path:url.pathname,release,status:200,cache:request.headers['cache-control']||null});""")
+          inject("response.end(body);", """if(release===1 && url.pathname==='/preview-v4/design_b/assets/icon-forecast.svg' && Number(process.env.OPTIONAL_DELAY)>0)
+              return setTimeout(()=>response.end(body),Number(process.env.OPTIONAL_DELAY));
+            response.end(body);""")
+          inject("  const cached=async name", """  await page.evaluate(async()=>{
+            const reg=await navigator.serviceWorker.getRegistration();
+            const trace=window.__legacyTrace=[],workers=new WeakMap();
+            let id=0;
+            const describe=worker=>worker&&{id:workers.get(worker)??null,state:worker.state};
+            const watch=worker=>{
+              if(!worker||workers.has(worker))return;
+              workers.set(worker,++id);
+              const log=()=>trace.push({event:'state',...describe(worker)});
+              log();worker.addEventListener('statechange',log);
+            };
+            watch(reg?.installing);watch(reg?.waiting);watch(reg?.active);
+            reg?.addEventListener('updatefound',()=>{trace.push({event:'updatefound'});watch(reg.installing);});
+            navigator.serviceWorker.addEventListener('controllerchange',()=>trace.push({event:'controllerchange',controller:describe(navigator.serviceWorker.controller)}));
+            window.__legacySnapshot=async label=>trace.push({event:label,active:describe(reg?.active),waiting:describe(reg?.waiting),
+              installing:describe(reg?.installing),controller:describe(navigator.serviceWorker.controller),keys:await caches.keys()});
+          });
+          globalThis.legacyPage=page;
+          const cached=async name""")
+          inject("  release=2;","  await page.evaluate(()=>window.__legacySnapshot('before-update'));\n  release=2;")
+          inject("  const state=await page.evaluate", "  await page.evaluate(()=>window.__legacySnapshot('after-cache-poll'));\n  const state=await page.evaluate")
+          inject(" }finally{await browser.close();server.close();}", """ }finally{
+            const trace=await globalThis.legacyPage?.evaluate(()=>window.__legacyTrace).catch(()=>null);
+            console.log('HISTORICAL_SW_TRACE '+JSON.stringify({revision:process.env.OLD_REVISION,delay:Number(process.env.OPTIONAL_DELAY),
+              chromium:browser.version(),trace,traffic}));
+            await browser.close();server.close();
+          }""")
+          Path("tools/public/fp572_legacy_probe.generated.cjs").write_text(script,encoding="utf-8")
+          PY
+          node tools/public/fp572_legacy_probe.generated.cjs
