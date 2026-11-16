@@ -40,7 +40,7 @@ const copy={
 };
 const t=k=>copy[k][Math.max(0,language())];
 let selected=null, playing=false, frame=0, rangeCache, exampleChosen=false;
-let today, chartKey, formatterKey, formatter, dateFormatter, offsetFormatter;
+let today, firstSun, chartKey, formatterKey, formatter, dateFormatter, offsetFormatter;
 
 function place(example=false){
  const loc=window.NRLocalContext?.current?.();
@@ -161,6 +161,31 @@ function controls(host){
 }
 let updateControls;
 const X=f=>18+354*f, Y=h=>51-.48*h;
+function renderFirstSun(s,above){
+ const subtitle=document.getElementById('headerSub');
+ if(!subtitle)return;
+ if(!firstSun?.isConnected){
+  firstSun=document.createElement('div');
+  firstSun.className='sub';
+  firstSun.dataset.sunFirstScreen='';
+  firstSun.setAttribute('translate','no');
+  firstSun.style.cssText='max-width:min(22rem,calc(100vw - 115px));margin-top:3px;font-size:.75rem;line-height:1.35;color:var(--nr-text,#eef3fb);overflow-wrap:anywhere';
+  subtitle.after(firstSun);
+ }
+ const loc=s.loc, label=loc.example?t('example'):(cityLabel(loc)||t('yourPlace'));
+ const status=above===null?t('unavailable'):t(above?'sun':'below');
+ const text=status+' · '+label+' · '+timeText(s.at,s.zone);
+ const state=above===null?'unavailable':above?'above':'below';
+ if(firstSun.dataset.state!==state)firstSun.dataset.state=state;
+ if(firstSun.textContent!==text)firstSun.textContent=text;
+ showFirstSun(!!today.closest('.nr-route.active'));
+}
+function showFirstSun(show){
+ if(!firstSun)return;
+ if(firstSun.hidden===show)firstSun.hidden=!show;
+ const subtitle=document.getElementById('headerSub');
+ if(subtitle&&subtitle.hidden!==show)subtitle.hidden=show;
+}
 function renderToday(s){
  const loc=place(true), panel=today, svg=panel.querySelector('svg'), key=[s.start,s.end,s.zone,loc.lat,loc.lon,loc.elevation,language()].join('|');
  try{
@@ -194,6 +219,7 @@ function renderToday(s){
   const nowG=svg.querySelector('[data-time-nowtick]');if(nowG){const n=Date.now(),inDay=n>=s.start&&n<s.end;nowG.style.display=s.mode==='now'||!inDay?'none':'';
    if(inDay){const nx=X((n-s.start)/(s.end-s.start));nowG.setAttribute('transform','translate('+nx.toFixed(2)+' 0)');nowG.querySelector('text').textContent=t('nowTick')+' '+timeText(n,s.zone);}}
   panel.dataset.sun=alt>=0?'above':'below';
+  renderFirstSun(s,alt>=0);
   panel.dataset.clockMode=s.mode;
   svg.querySelector('[data-time-progress]').setAttribute('stroke-dasharray',Math.max(0,fraction).toFixed(4)+' 1');
   svg.setAttribute('aria-label',t(alt>=0?'sun':'below'));
@@ -203,6 +229,7 @@ function renderToday(s){
   for(const path of svg.querySelectorAll('path[data-time-orbit]'))path.removeAttribute('d');
   svg.querySelector('[data-time-sun]').style.visibility='hidden';
   panel.querySelector('[data-time-alt]').textContent=t('unavailable');
+  renderFirstSun(s,null);
   return;
  }
  svg.querySelector('[data-time-sun]').style.visibility='';
@@ -230,6 +257,7 @@ function mount(){
 function sync(){
  if(document.hidden||!['#today','#panch',''].includes(location.hash)||!allowed())stop();
  mount();
+ if(!today?.closest('.nr-route.active'))showFirstSun(false);
  if(!document.hidden)notify();
 }
 // FP569k: live() exported so other views (Лінія дня) can return the one shared clock to «now».

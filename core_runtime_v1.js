@@ -13361,9 +13361,14 @@ function resolveDecisionByG(g, kp) {
 // v87.56: removed _HORA_WIN_BONUS + _calcWindowScore + _getBestWindow (dead chain)
 
 function lunarTransitionDuration(ms){
-  const minutes=Math.ceil(ms/60000);
-  const hours=Math.floor(minutes/60);
-  return hours?hours+' год'+(minutes%60?' '+minutes%60+' хв':''):minutes+' хв';
+  const minutes=Math.ceil(ms/60000),hours=Math.floor(minutes/60),rest=minutes%60;
+  const parts=[];
+  function format(unit,value){
+    return new Intl.NumberFormat(window.NRLocale?.locale||'uk-UA',{style:'unit',unit,unitDisplay:'short'}).format(value);
+  }
+  if(hours)parts.push(format('hour',hours));
+  if(rest||!hours)parts.push(format('minute',rest));
+  return parts.join(' ');
 }
 
 // --- v70.3 ASTRO TOP LAYER ---
