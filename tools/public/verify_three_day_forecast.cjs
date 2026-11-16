@@ -100,28 +100,22 @@ async function setup(browser,base,{width=390,lang='uk',mode='fixture'}={}){
      window.dispatchEvent(new Event('engine-data-stale'));
      document.getElementById('swStaleBar').style.display='block';
      document.getElementById('offlineBanner').style.display='block';
-     window.scrollTo(0,0);
+     window.scrollTo({top:0,behavior:'instant'});
     });
-    const status=panel.locator('.sr-3d-head [role="status"]');
-    assert.match(await status.innerText(),/Отримано з NOAA.*Час оновлення NOAA/s);
-    const placement=await status.evaluate(el=>{
+    // A refresh replaces the status node. Resolve it and read the painted
+    // geometry in one browser task so a detached handle cannot report zero.
+    const placement=await p.evaluate(()=>{
+     const el=document.querySelector('#nrRoute-forecast.active [data-forecast-three-days]:not([hidden]) .sr-3d-head [role="status"]');
+     if(!el)return null;
      const r=el.getBoundingClientRect();
      const hit=document.elementFromPoint(r.left+3,r.top+r.height/2);
-     const live=document.querySelector('#nrRoute-forecast.active [data-forecast-three-days]:not([hidden]) .sr-3d-status');
-     const current=live?.getBoundingClientRect();
-     return {top:r.top,bottom:r.bottom,height:innerHeight,exposed:el.contains(hit),hit:hit?.outerHTML.slice(0,150),
-      connected:el.isConnected,same:live===el,route:location.hash,current:current&&[current.top,current.bottom],
-      active:document.querySelector('#nrRoute-forecast').classList.contains('active')};
+     return {text:el.innerText,top:r.top,bottom:r.bottom,width:r.width,height:r.height,
+      viewportHeight:innerHeight,exposed:el.contains(hit),hit:hit?.outerHTML.slice(0,150)};
     });
-    console.log('NATURAL_LAYOUT_320 '+JSON.stringify(placement));
-    const previous=await status.elementHandle();
-    await p.evaluate(()=>NRThreeDayForecast.mount(document.querySelector('#nrRoute-forecast [data-forecast-three-days]')));
-    const detached=await previous.evaluate(el=>({connected:el.isConnected,top:el.getBoundingClientRect().top,bottom:el.getBoundingClientRect().bottom}));
-    const current=await status.evaluate(el=>({connected:el.isConnected,top:el.getBoundingClientRect().top,bottom:el.getBoundingClientRect().bottom}));
-    console.log('LAYOUT_AFTER_REAL_REDRAW '+JSON.stringify({detached,current}));
-    await previous.dispose();
-    assert(placement.top>=0&&placement.bottom<=placement.height&&placement.exposed,
+    assert(placement&&placement.width>0&&placement.height>0&&placement.top>=0&&
+     placement.bottom<=placement.viewportHeight&&placement.exposed,
      'NOAA source and timestamp visible and unobstructed at 320 px: '+JSON.stringify(placement));
+    assert.match(placement.text,/Отримано з NOAA.*Час оновлення NOAA/s);
     for(const banner of ['#swStaleBar','#offlineBanner','#nrRuntimeState'])
      assert.equal(await p.locator(banner).isVisible(),false,banner);
     await p.locator(active+tabSelector+'"7"]').click();
