@@ -1,4 +1,4 @@
-name: B7 diagnostic
+name: FP572 forecast layout diagnostic
 on:
   workflow_dispatch:
 permissions:
@@ -7,30 +7,11 @@ jobs:
   probe:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
-    strategy:
-      fail-fast: false
-      matrix:
-        trigger: [message, button]
-        trial: [old, waiting]
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v4
         with: {node-version: '24'}
       - run: npm install --no-save --package-lock=false playwright@1.62.1
       - run: npx playwright install --with-deps chromium
-      - run: node tools/public/verify_day_cautions.cjs
-      - run: node tools/public/verify_noaa_missing.cjs
-      - run: node tools/public/verify_svg_missing.cjs
-      - run: node tools/public/verify_presentation.cjs
-      - run: node tools/public/verify_day_summary.cjs
-      - run: node tools/public/verify_journal_restore_time.cjs
-      - run: node tools/public/verify_journal_restore_adversarial.cjs
-      # FP545: raw production-worker run first (statistics only), then the traced/restart probe.
-      - run: node tools/public/verify_css_upgrade.cjs --${{ matrix.trigger }} --server-log
-        continue-on-error: true
-      - run: node tools/public/verify_css_upgrade.cjs --${{ matrix.trigger }} --restart=${{ matrix.trial }} --trace
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: b7-${{ matrix.trigger }}-${{ matrix.trial }}
-          path: /tmp/skyrhythm-css-upgrade-*/
+      - name: Run the 320 px probe against 7221dbe
+        run: node tools/public/verify_three_day_forecast.cjs

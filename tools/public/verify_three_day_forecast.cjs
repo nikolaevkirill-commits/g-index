@@ -107,8 +107,19 @@ async function setup(browser,base,{width=390,lang='uk',mode='fixture'}={}){
     const placement=await status.evaluate(el=>{
      const r=el.getBoundingClientRect();
      const hit=document.elementFromPoint(r.left+3,r.top+r.height/2);
-     return {top:r.top,bottom:r.bottom,height:innerHeight,exposed:el.contains(hit),hit:hit?.outerHTML.slice(0,150)};
+     const live=document.querySelector('#nrRoute-forecast.active [data-forecast-three-days]:not([hidden]) .sr-3d-status');
+     const current=live?.getBoundingClientRect();
+     return {top:r.top,bottom:r.bottom,height:innerHeight,exposed:el.contains(hit),hit:hit?.outerHTML.slice(0,150),
+      connected:el.isConnected,same:live===el,route:location.hash,current:current&&[current.top,current.bottom],
+      active:document.querySelector('#nrRoute-forecast').classList.contains('active')};
     });
+    console.log('NATURAL_LAYOUT_320 '+JSON.stringify(placement));
+    const previous=await status.elementHandle();
+    await p.evaluate(()=>NRThreeDayForecast.mount(document.querySelector('#nrRoute-forecast [data-forecast-three-days]')));
+    const detached=await previous.evaluate(el=>({connected:el.isConnected,top:el.getBoundingClientRect().top,bottom:el.getBoundingClientRect().bottom}));
+    const current=await status.evaluate(el=>({connected:el.isConnected,top:el.getBoundingClientRect().top,bottom:el.getBoundingClientRect().bottom}));
+    console.log('LAYOUT_AFTER_REAL_REDRAW '+JSON.stringify({detached,current}));
+    await previous.dispose();
     assert(placement.top>=0&&placement.bottom<=placement.height&&placement.exposed,
      'NOAA source and timestamp visible and unobstructed at 320 px: '+JSON.stringify(placement));
     for(const banner of ['#swStaleBar','#offlineBanner','#nrRuntimeState'])
