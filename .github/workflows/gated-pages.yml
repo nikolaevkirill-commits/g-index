@@ -1,26 +1,20 @@
 name: gated Pages
 on:
-  push:
-    branches: [deploy]
   workflow_dispatch:
     inputs:
-      failure_probe:
-        description: Deliberately fail a test to prove deployment is blocked
-        type: boolean
-        default: false
-  workflow_call:
-    inputs:
       release_sha:
-        type: string
+        description: Exact public candidate commit to validate
         required: true
-      watchdog_nonce:
         type: string
-        default: ''
+      failure_probe:
+        type: boolean
+        required: false
+        default: false
 permissions:
   contents: read
   actions: read
 concurrency:
-  group: pages-release
+  group: fp572-automation-gate-20261116
   cancel-in-progress: false
 jobs:
   checks:
@@ -242,38 +236,3 @@ jobs:
       - run: python tools/public/build_pages.py
       - uses: actions/upload-pages-artifact@v3
         with: {path: _site}
-  deploy:
-    needs: checks
-    if: github.ref == 'refs/heads/deploy'
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - uses: actions/checkout@v5
-        with: {ref: '${{ needs.checks.outputs.sha }}'}
-      - uses: actions/configure-pages@v5
-      - id: deployment
-        uses: actions/deploy-pages@v4
-      - uses: actions/setup-python@v5
-        with: {python-version: '3.12'}
-      - name: Verify published runtime and decisions
-        run: python tools/public/verify_release_publication.py
-      - name: Verify published feed
-        env:
-          PUBLIC_BASE_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
-          WATCHDOG_NONCE: ${{ inputs.watchdog_nonce }}
-        run: python tools/cloud/verify_publication.py
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: cloud-publication-evidence
-          path: |
-            cloud-publication.json
-            release-publication.json
-          retention-days: 14
