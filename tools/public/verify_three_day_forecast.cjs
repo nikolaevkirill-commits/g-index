@@ -95,6 +95,30 @@ async function setup(browser,base,{width=390,lang='uk',mode='fixture'}={}){
    const captions=await p.locator(active+'[data-p0-forecast-tabs] button').allTextContents();
    assert.deepEqual(captions,lang==='uk'?['День','3 дні','Тиждень','27 днів']:['Day','3 days','Week','27 days']);
    assert.equal(await panel.locator('.sr-3d-slots li').count(),8);
+   if(width===320){
+    await p.evaluate(()=>{
+     window.dispatchEvent(new Event('engine-data-stale'));
+     document.getElementById('swStaleBar').style.display='block';
+     document.getElementById('offlineBanner').style.display='block';
+     window.scrollTo(0,0);
+    });
+    const status=panel.locator('.sr-3d-head [role="status"]');
+    assert.match(await status.innerText(),/Отримано з NOAA.*Час оновлення NOAA/s);
+    const placement=await status.evaluate(el=>{
+     const r=el.getBoundingClientRect();
+     const hit=document.elementFromPoint(r.left+3,r.top+r.height/2);
+     return {top:r.top,bottom:r.bottom,height:innerHeight,exposed:el.contains(hit),hit:hit?.outerHTML.slice(0,150)};
+    });
+    assert(placement.top>=0&&placement.bottom<=placement.height&&placement.exposed,
+     'NOAA source and timestamp visible and unobstructed at 320 px: '+JSON.stringify(placement));
+    for(const banner of ['#swStaleBar','#offlineBanner','#nrRuntimeState'])
+     assert.equal(await p.locator(banner).isVisible(),false,banner);
+    await p.locator(active+tabSelector+'"7"]').click();
+    assert.equal(await p.locator('#swStaleBar').isVisible(),true);
+    assert.equal(await p.locator('#nrRuntimeState').isVisible(),true);
+    await p.locator(active+tabSelector+'"3"]').click();
+   }
+   if(lang==='uk')assert.match(await panel.locator('[data-extremes]').innerText(),/Найвищий Kp 3[,.]67 · .*23:00 → .*02:00\. Найнижчий Kp 2 · 02:00–05:00/s);
    assert.match(await panel.locator('.sr-3d-advice').innerText(),/09:49.*22:37/s);
    if(process.env.NR3D_EVIDENCE&&width===390&&lang==='uk')
     await p.screenshot({path:path.join(process.env.NR3D_EVIDENCE,'3days_16_390.png')});
@@ -143,6 +167,73 @@ async function setup(browser,base,{width=390,lang='uk',mode='fixture'}={}){
    assert.deepEqual(t.errors,[]);
    await t.context.close();
   }
+  const saved=await setup(browser,base);
+  const selector=active+panelSelector;
+  await saved.p.waitForFunction(s=>document.querySelector(s)?.textContent.includes('Отримано з NOAA'),selector);
+  // The copy shares the latest observation with every network response below
+  // but has a newer issue time and a revised forecast.
+  const revise=()=>saved.p.evaluate(()=>{
+   const key='skyrhythm_three_day_noaa_v1', snapshot=JSON.parse(localStorage.getItem(key));
+   snapshot.at+=30000;
+   snapshot.rows.find(row=>row.time_tag==='2026-11-16T21:00:00Z').kp=5;
+   localStorage.setItem(key,JSON.stringify(snapshot));
+  });
+  const reopen=async text=>{
+   await saved.p.reload({waitUntil:'load'});
+   await saved.p.locator(active+tabSelector+'"3"]').click();
+   await saved.p.waitForFunction(([s,text])=>document.querySelector(s)?.textContent.includes(text)&&
+    document.querySelector(s+' [data-control=refresh]')?.getAttribute('aria-disabled')==='false',[selector,text]);
+   return saved.panel.locator('.sr-3d-score strong').innerText();
+  };
+  // A direct NOAA response outranks the device copy at the same observation
+  // hour, so a damaged or altered local record cannot hide current data.
+  await revise();
+  assert.equal(await reopen('Отримано з NOAA'),'−1');
+  assert.equal(await saved.p.evaluate(()=>JSON.parse(localStorage.getItem('skyrhythm_three_day_noaa_v1')).rows
+   .find(row=>row.time_tag==='2026-11-16T21:00:00Z').kp),3.67);
+  // The older verified archive cannot replace a newer saved issue.
+  await revise();
+  const body=JSON.stringify(fixture), digest=createHash('sha256').update(body).digest('hex');
+  const noNoaa=route=>route.abort();
+  const receipt=route=>route.fulfill({json:{url:NOAA,body:'bodies/'+digest+'.json',sha256:digest,retrieved_at:new Date(at-3600e3).toISOString()}});
+  const archive=route=>route.fulfill({body,contentType:'application/json'});
+  await saved.context.route(url=>url.href===NOAA,noNoaa);
+  await saved.context.route(url=>url.pathname.endsWith('/noaa/receipts/cloud.json'),receipt);
+  await saved.context.route(url=>url.pathname.endsWith('/noaa/bodies/'+digest+'.json'),archive);
+  assert.equal(await reopen('Збережена копія NOAA'),'−3');
+  // Another tab that saves a fresher copy updates this one without a reload.
+  await saved.context.route(url=>url.pathname.endsWith('/noaa/receipts/cloud.json'),route=>route.abort());
+  const other=await saved.context.newPage();
+  await other.clock.setFixedTime(new Date(at));
+  await other.goto(base+'/index.html?channel=play#today',{waitUntil:'load'});
+  await other.evaluate(()=>{
+   const key='skyrhythm_three_day_noaa_v1', snapshot=JSON.parse(localStorage.getItem(key));
+   snapshot.at+=30000;
+   snapshot.rows.find(row=>row.time_tag==='2026-11-16T21:00:00Z').kp=4;
+   localStorage.setItem(key,JSON.stringify(snapshot));
+  });
+  await saved.p.waitForFunction(s=>document.querySelector(s+' .sr-3d-score strong')?.textContent==='−2',selector);
+  await other.close();
+  assert.equal(await reopen('Збережена копія NOAA'),'−2');
+  assert.equal(await saved.panel.getAttribute('data-valid-slots'),'8');
+  await saved.p.clock.setFixedTime(new Date(at+13*3600e3));
+  await saved.p.reload({waitUntil:'load'});
+  await saved.p.locator(active+tabSelector+'"3"]').click();
+  await saved.p.waitForFunction(s=>document.querySelector(s)?.textContent.includes('застаріли'),selector);
+  assert.equal(await saved.panel.getAttribute('data-valid-slots'),'0');
+  assert.equal(await saved.panel.locator('.sr-3d-score strong').innerText(),'—');
+  assert.deepEqual(saved.errors,[]);
+  await saved.context.close();
+  // A device clock far behind NOAA rejects every source; the status says why.
+  const behind=await setup(browser,base);
+  await behind.p.clock.setFixedTime(new Date(at-3600e3));
+  await behind.p.evaluate(()=>localStorage.removeItem('skyrhythm_three_day_noaa_v1'));
+  await behind.p.reload({waitUntil:'load'});
+  await behind.p.locator(active+tabSelector+'"3"]').click();
+  await behind.p.waitForFunction(s=>document.querySelector(s)?.textContent.includes('Перевірте дату й час'),selector);
+  assert.equal(await behind.panel.getAttribute('data-valid-slots'),'0');
+  assert.deepEqual(behind.errors,[]);
+  await behind.context.close();
   if(process.env.NR3D_LIVE==='1'){
    const t=await setup(browser,base,{mode:'live'});
    await t.p.waitForFunction(selector=>document.querySelector(selector)?.textContent.includes('Отримано з NOAA'),active+panelSelector);
@@ -150,6 +241,6 @@ async function setup(browser,base,{width=390,lang='uk',mode='fixture'}={}){
    console.log('PASS direct NOAA in Chromium');
    await t.context.close();
   }
-  console.log('PASS 3 days Kyiv 16–18, mobile/desktop, keyboard, New York, DST, direct/fallback/missing NOAA');
+  console.log('PASS 3 days Kyiv 16–18, mobile/desktop, keyboard, New York, DST, direct/fallback/missing NOAA, saved copy: live wins tie, archive loses tie, second tab, expiry, device clock, extremes');
  }finally{await browser?.close();server.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});
