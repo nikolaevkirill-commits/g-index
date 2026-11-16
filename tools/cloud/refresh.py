@@ -1,7 +1,10 @@
 """Refresh only the consumer source calculation; never promote a model or send alerts."""
 from pathlib import Path
 from datetime import datetime, timezone
-import argparse, copy, hashlib, json, sys
+from http.client import HTTPException, IncompleteRead
+import argparse, copy, hashlib, json, os, sys
+from tempfile import TemporaryDirectory
+from time import sleep
 from public_feed import public_feed
 from kp_source_guard import reject_downgrade, suppress_downgrades
 from urllib.request import Request, urlopen
@@ -16,24 +19,159 @@ def prepare(root):
         doc['source']=str(source.resolve());write(p,doc)
     sys.path.insert(0,str(root));sys.path.insert(0,str(root/'source_formula_candidate_20261001'))
 
+TRANSPORT_HEADERS = ('Content-Length', 'Content-Type', 'Content-Encoding', 'Transfer-Encoding', 'Date',
+                     'Last-Modified', 'ETag', 'Age', 'Cache-Control', 'Via', 'X-Cache', 'Server')
+LAST_RESPONSE = {}
+REJECTED_DIR_ENV = 'NR_NOAA_REJECTED_DIR'
+
+
+def validate_slots(raw):
+    """Shallow, whole-body check before the private protocol: one JSON list of distinct timestamped slots."""
+    rows = json.loads(raw.decode('utf-8-sig'))
+    if not isinstance(rows, list) or not rows or any(
+        not isinstance(row, dict) or not isinstance(row.get('time_tag'), str)
+        for row in rows
+    ):
+        raise ValueError('Expected a non-empty NOAA slot list with timestamp strings')
+    slots = set()
+    for row in rows:
+        tag = row['time_tag']
+        stamp = datetime.fromisoformat(tag.replace('Z', '+00:00'))
+        stamp = stamp.replace(tzinfo=stamp.tzinfo or timezone.utc).astimezone(timezone.utc)
+        if stamp in slots:
+            raise ValueError('Duplicate NOAA slot ' + tag + ' (' + stamp.isoformat() + ')')
+        slots.add(stamp)
+
+
+def keep_rejected(raw, digest, record):
+    """Keep a rejected body outside the publication tree, only when the runner asks for it."""
+    target = os.environ.get(REJECTED_DIR_ENV)
+    if not target or raw is None:
+        return None
+    folder = Path(target)
+    folder.mkdir(parents=True, exist_ok=True)
+    name = 'attempt%d-%s' % (record['attempt'], digest)
+    (folder / (name + '.body')).write_bytes(raw)
+    (folder / (name + '.json')).write_text(json.dumps(record, indent=1), encoding='utf-8')
+    return str(folder / (name + '.body'))
+
+
+def diagnostic(raw, error):
+    """Bytes around a JSON decode error, enough to tell a second document from truncation."""
+    if raw is None:
+        return None
+    bom_size = 3 if raw.startswith(b'\xef\xbb\xbf') else 0
+    if isinstance(error, json.JSONDecodeError):
+        position = bom_size + len(error.doc[:error.pos].encode('utf-8'))
+    elif isinstance(error, UnicodeDecodeError):
+        position = bom_size + error.start
+    else:
+        return None
+    start, end = max(0, position - 48), min(len(raw), position + 48)
+    return {'error_offset': position, 'excerpt_offset': start, 'excerpt_hex': raw[start:end].hex(),
+            'tail_hex': raw[-16:].hex()}
+
+
 def fetch(url):
-    with urlopen(Request(url,headers={'User-Agent':'NeboRhythm-cloud-source/1'}),timeout=35) as r:
-        raw=r.read(1_000_001)
-    if len(raw)>1_000_000:raise ValueError('Oversized source')
+    headers = {
+        'User-Agent': 'NeboRhythm-cloud-source/1',
+        'Accept': 'application/json',
+        'Cache-Control': 'no-cache',
+    }
+    with urlopen(Request(url, headers=headers), timeout=35) as response:
+        LAST_RESPONSE.clear()
+        LAST_RESPONSE.update({'status': getattr(response, 'status', None), 'headers': {
+            name: response.headers.get(name) for name in TRANSPORT_HEADERS if response.headers.get(name) is not None}})
+        raw = response.read(1_000_001)
+        declared = response.headers.get('Content-Length')
+        if declared and declared.isdecimal() and not response.headers.get('Transfer-Encoding'):
+            expected = int(declared)
+            if len(raw) < expected and len(raw) <= 1_000_000:
+                raise IncompleteRead(raw, expected - len(raw))
+    if len(raw) > 1_000_000:
+        raise ValueError('Oversized source')
     return raw
 
+
+def archive_slots(root, url, raw, retrieved_at, digest):
+    archive = root / 'outputs/kp_raw_archive'
+    body = 'bodies/' + digest + '.json'
+    receipt = 'receipts/cloud.json'
+    (archive / 'bodies').mkdir(parents=True, exist_ok=True)
+    (archive / body).write_bytes(raw)
+    write(archive / receipt, {
+        'url': url, 'retrieved_at': retrieved_at, 'body': body, 'sha256': digest,
+    })
+    write(root / 'future_kp.json', {'source_receipts': {
+        url: {'receipt': receipt, 'sha256': digest},
+    }})
+
+
+def refresh_short_range(root, url, load_slots, fetcher=fetch):
+    last = None
+    with TemporaryDirectory(prefix='skyrhythm-noaa-') as directory:
+        staging = Path(directory)
+        for attempt in range(1, 4):
+            raw = None
+            digest = None
+            detail = None
+            stage = 'transport'
+            LAST_RESPONSE.clear()
+            try:
+                raw = fetcher(url)
+                retrieved = datetime.now(timezone.utc)
+                digest = hashlib.sha256(raw).hexdigest()
+                # Reject a partial or concatenated response as a whole. The private
+                # protocol still verifies slot values, times, provenance and classes.
+                stage = 'shape'
+                validate_slots(raw)
+            except (OSError, HTTPException, ValueError) as error:
+                if isinstance(error, IncompleteRead):
+                    raw = error.partial
+                    digest = hashlib.sha256(raw).hexdigest()
+                last = type(error).__name__ + ': ' + str(error)
+                detail = diagnostic(raw, error)
+            else:
+                stamp = retrieved.isoformat()
+                stage = 'protocol'
+                archive_slots(staging, url, raw, stamp, digest)
+                try:
+                    context, error = load_slots(staging, retrieved)
+                except (KeyError, IndexError, TypeError, ValueError) as failure:
+                    # A protocol exception counts as a rejected attempt; it never publishes.
+                    context, error = None, type(failure).__name__ + ': ' + str(failure)
+                if context is not None:
+                    archive_slots(root, url, raw, stamp, digest)
+                    if attempt > 1:
+                        print(json.dumps({'source': 'NOAA_3day_slots', 'attempt': attempt, 'status': 'accepted',
+                                          'bytes': len(raw), 'sha256': digest}), file=sys.stderr)
+                    return
+                last = str(error)
+            record = {'source': 'NOAA_3day_slots', 'attempt': attempt, 'status': 'rejected', 'stage': stage,
+                      'bytes': len(raw) if raw is not None else None, 'sha256': digest, 'reason': last,
+                      'at': datetime.now(timezone.utc).isoformat()}
+            if LAST_RESPONSE:
+                record['transport'] = dict(LAST_RESPONSE)
+            if detail:
+                record['decode'] = detail
+            try:
+                kept = keep_rejected(raw, digest, record)
+            except OSError as failure:
+                kept = None
+                record['keep_error'] = type(failure).__name__ + ': ' + str(failure)
+            if kept:
+                record['kept'] = kept
+            print(json.dumps(record), file=sys.stderr)
+            if attempt < 3:
+                sleep(attempt)
+    raise ValueError('Rejected fresh NOAA slots after 3 attempts: ' + last)
+
+
 def calculate(root):
-    from kp_input_protocol import URL,load
+    from kp_input_protocol import URL, load
     from refresh_forecast import refresh
     from source_calculation_verifier import verify
-    # Preserve exact NOAA bytes and retrieval time; no timestamp-only refresh.
-    raw=fetch(URL);retrieved=datetime.now(timezone.utc).isoformat();digest=hashlib.sha256(raw).hexdigest()
-    archive=root/'outputs/kp_raw_archive';body='bodies/'+digest+'.json';receipt='receipts/cloud.json'
-    (archive/'bodies').mkdir(parents=True,exist_ok=True);(archive/body).write_bytes(raw)
-    write(archive/receipt,{'url':URL,'retrieved_at':retrieved,'body':body,'sha256':digest})
-    write(root/'future_kp.json',{'source_receipts':{URL:{'receipt':receipt,'sha256':digest}}})
-    context,error=load(root,datetime.now(timezone.utc))
-    if context is None:raise ValueError('Rejected fresh NOAA slots: '+str(error))
+    refresh_short_range(root, URL, load)
     doc=refresh(root)
     proof=verify(root,doc)
     if doc['source_error']:raise ValueError('No verified source calculation')
