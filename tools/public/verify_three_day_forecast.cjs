@@ -146,12 +146,25 @@ async function setup(browser,base,{width=390,lang='uk',mode='fixture'}={}){
   const saved=await setup(browser,base);
   const selector=active+panelSelector;
   await saved.p.waitForFunction(s=>document.querySelector(s)?.textContent.includes('Отримано з NOAA'),selector);
+  // Both snapshots use the same latest observation. The copy has a newer issue
+  // time and a revised forecast, so the older network response cannot replace it.
+  await saved.p.evaluate(()=>{
+   const key='skyrhythm_three_day_noaa_v1', snapshot=JSON.parse(localStorage.getItem(key));
+   snapshot.at+=30000;
+   snapshot.rows.find(row=>row.time_tag==='2026-11-16T21:00:00Z').kp=5;
+   localStorage.setItem(key,JSON.stringify(snapshot));
+  });
+  await saved.p.reload({waitUntil:'load'});
+  await saved.p.locator(active+tabSelector+'"3"]').click();
+  await saved.p.waitForFunction(s=>window.__threeDayNoaaRequests===1&&
+   document.querySelector(s+' [data-control=refresh]')?.getAttribute('aria-disabled')==='false',selector);
+  assert.equal(await saved.panel.locator('.sr-3d-score strong').innerText(),'−3');
   await saved.context.route(url=>url.href===NOAA||url.pathname.endsWith('/noaa/receipts/cloud.json'),route=>route.abort());
   await saved.p.reload({waitUntil:'load'});
   await saved.p.locator(active+tabSelector+'"3"]').click();
   await saved.p.waitForFunction(s=>document.querySelector(s)?.textContent.includes('Збережена копія NOAA'),selector);
   assert.equal(await saved.panel.getAttribute('data-valid-slots'),'8');
-  assert.equal(await saved.panel.locator('.sr-3d-score strong').innerText(),'−1');
+  assert.equal(await saved.panel.locator('.sr-3d-score strong').innerText(),'−3');
   await saved.p.clock.setFixedTime(new Date(at+13*3600e3));
   await saved.p.reload({waitUntil:'load'});
   await saved.p.locator(active+tabSelector+'"3"]').click();

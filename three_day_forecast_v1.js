@@ -72,10 +72,14 @@
    return snapshot(parse(rows),at,'cached');
   }catch{return null;}
  }
+ function atLeastAsFresh(next,current){
+  return !current||next.validThrough>current.validThrough||
+   (next.validThrough===current.validThrough&&next.at>=current.at);
+ }
  function storeSnapshot(snapshot){
   if(snapshot.validThrough<Date.now())return;
   try{
-   if((storedSnapshot()?.validThrough??-Infinity)>snapshot.validThrough)return;
+   if(!atLeastAsFresh(snapshot,storedSnapshot()))return;
    const rows=[...snapshot.slots.values()].map(({start,kp,state,scale})=>({
     time_tag:new Date(start).toISOString().replace('.000Z','Z'),kp,observed:state,noaa_scale:scale,
    }));
@@ -107,9 +111,9 @@
    let next=null;
    try{next=await direct();}catch{}
    if(!next||next.validThrough<Date.now()){
-    try{const cached=await archived();if(!next||cached.validThrough>next.validThrough)next=cached;}catch{}
+    try{const cached=await archived();if(atLeastAsFresh(cached,next))next=cached;}catch{}
    }
-   if(next&&(!reading||next.validThrough>=reading.validThrough)){
+   if(next&&atLeastAsFresh(next,reading)){
     reading=next;
     storeSnapshot(next);
    }
