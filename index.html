@@ -1873,7 +1873,7 @@ body.fp434-app #nrEclipseCopy{color:var(--nr-copy3)}
 </script>
 <!-- Formula sign convention: Expert Excel 2−Kp; dashboard raw тепер узгоджений з Excel: 2−Kp. -->
   <script src="./engine_tag_parser.js"></script>
-<style data-inline-source="p0_layout_v1.css" data-css-sha256="5262add7547a255b4cd6c2f81eaec29041898c809ac472bfa86dad83123c654b">
+<style data-inline-source="p0_layout_v1.css" data-css-sha256="2ab72c2e9f0cedc6066c23976aec5be42ec539b7c1dbf794a52c02b83a0e6cc0">
 /* Compact navy presentation; source calculations remain in expandable detail. */
 html body #nrRoute-today .sr-p0-today .nr-o-hero{display:flex!important;flex-direction:column;align-items:stretch;gap:12px;padding:20px!important;min-height:0!important}
 html body #nrRoute-today .sr-p0-accessible-heading{position:absolute!important;width:1px!important;height:1px!important;overflow:hidden!important;clip-path:inset(50%);margin:0!important}
@@ -1965,6 +1965,41 @@ html.sr-sky-motion.sr-decor-motion body #nrRoute-today .sr-p0-today .nr-o-hero::
 @media(prefers-reduced-motion:reduce){html body #nrRoute-today .sr-p0-today .nr-o-hero::before{animation:none!important}}
 @media(min-width:1024px){html body #nrRoute-today .sr-p0-today{grid-template-rows:auto auto auto auto auto 1fr auto;grid-template-areas:'head head' 'hero day' 'state day' 'journey day' 'signals day' '. day' 'details details'}}
 [data-overview="forecast"] .nr-o-horizon-list [data-day][hidden]{display:none!important}
+
+/* The three-day outlook has one daily score and a separate NOAA interval list. */
+[data-overview="forecast"][data-forecast-count="3"] :is([data-forecast-summary],[data-forecast-verdict],[data-forecast-chart],[data-forecast-end],[data-forecast-details],[data-expert-caution],[data-scoped-opinion],.nr-o-horizon-list){display:none!important}
+.sr-3d[hidden]{display:none!important}
+.sr-3d{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;margin:12px 0;min-width:0;overflow-wrap:anywhere}
+.sr-3d h3,.sr-3d p{margin:0}
+.sr-3d small,.sr-3d-status{font-size:.84rem;line-height:1.42}
+.sr-3d-head small,.sr-3d-status,.sr-3d-score small,.sr-3d-advice small{opacity:.86}
+.sr-3d-choices{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.sr-3d button{min-height:44px;color:inherit;cursor:pointer}
+.sr-3d button:focus-visible{outline:2px solid currentColor;outline-offset:2px}
+.sr-3d-choices button,.sr-3d-toolbar button{border:1px solid currentColor;border-radius:10px;background:transparent;font:inherit;padding:5px 8px}
+.sr-3d-choices button[aria-pressed="true"]{background:rgba(216,181,113,.16);box-shadow:inset 0 -3px #d4a658}
+.sr-3d-choices button span,.sr-3d-choices button b{display:block;font-size:.87rem;line-height:1.28}
+.sr-3d-score,.sr-3d-advice,.sr-3d-noaa{padding:10px 12px;border-radius:12px;border:1px solid rgba(143,157,190,.38);min-width:0}
+.sr-3d-score{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:2px 8px}
+.sr-3d h3{font-size:.96rem;line-height:1.32}
+.sr-3d-score strong{font-size:1.4rem;line-height:1}
+.sr-3d-score small{grid-column:1/-1}
+.sr-3d-advice{border-inline-start:3px solid #c89d57}
+.sr-3d-advice p{font-size:.9rem;margin-top:3px}
+.sr-3d-toolbar{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:4px 10px}
+.sr-3d-toolbar button{font-size:.84rem}
+.sr-3d-toolbar button[aria-disabled="true"]{opacity:.64;cursor:default}
+.sr-3d-status{margin-top:4px!important}
+.sr-3d-slots{list-style:none;padding:0;margin:6px 0 0}
+.sr-3d-slots li{display:grid;grid-template-columns:minmax(0,1fr) max-content;gap:2px 8px;border-top:1px solid rgba(143,157,190,.32);padding:7px 0;line-height:1.25;font-size:.86rem}
+.sr-3d-slots li small{grid-column:1/-1}
+.sr-3d-slots [data-storm]{border-inline-start:3px solid #cf9864;padding-inline-start:7px;background:rgba(211,137,76,.12)}
+@media(min-width:760px){
+ .sr-3d{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .sr-3d-head,.sr-3d-choices,.sr-3d-noaa{grid-column:1/-1}
+ .sr-3d-slots li{grid-template-columns:minmax(0,1.4fr) minmax(0,.65fr) minmax(0,1fr)}
+ .sr-3d-slots li small{grid-column:auto}
+}
 
 </style>
 <style data-inline-source="wow_reviewed_v1.css" data-css-sha256="60a2c27636d6f43e00a3fa73a23de2e8eb642928596049e936d0dc044705a44c">
@@ -2621,7 +2656,8 @@ html.wow body [data-kp-threshold-settings] > p{min-width:0;overflow-wrap:anywher
 </style>
 <script src="moon_phase_v1.js"></script>
 <script src="expert_start_advice_v1.js?v=1"></script>
-<script src="p0_layout_v1.js?v=fp572-layout"></script>
+<script src="three_day_forecast_v1.js"></script>
+<script src="p0_layout_v1.js?v=fp572-three-days"></script>
 <script src="score_semantics_v1.js"></script>
 <script src="consumer_authority_v1.js"></script>
 <script src="forecast_journal_v1.js"></script>
@@ -8072,7 +8108,7 @@ window.getEffectiveGForDate = getEffectiveGForDate;
     </svg>
     Небо
   </button>
-  <button class="mnav-btn" id="mnavForecast" onclick="fp434Go('forecast',true)" aria-label="Прогноз на день, 7 і 27 днів">
+  <button class="mnav-btn" id="mnavForecast" onclick="fp434Go('forecast',true)" aria-label="Прогноз">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
       <path d="M4 18l5-6 4 3 7-9"/><path d="M4 5v14h16"/>
     </svg>
