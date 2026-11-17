@@ -6849,6 +6849,11 @@ if ('serviceWorker' in navigator) {
         reg.addEventListener('updatefound', () => {
           checkWaiting(reg.installing);
         });
+        // An update that does not fit in storage leaves this release in place.
+        navigator.serviceWorker.addEventListener('message', event => {
+          if (event.data?.type === 'SW_INSTALL_FAILED' && event.data.reason === 'QuotaExceededError')
+            window.NRDiagnostics?.record('sw.update_low_storage', 'recoverable');
+        });
 
         // fp331: discover a new worker immediately, but keep activation manual.
         // This shows the visible update bar without a surprise reload/black screen.

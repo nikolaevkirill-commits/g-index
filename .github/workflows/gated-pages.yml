@@ -44,6 +44,9 @@ jobs:
         run: |
           last=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow gated-pages.yml --branch deploy --status success --limit 20 --json headSha,conclusion --jq '[.[]|select(.conclusion=="success")][0].headSha' 2>/dev/null || true)
           python tools/public/release_scope.py --baseline "${last:-}" --github-output "$GITHUB_OUTPUT"
+          if [[ "$last" =~ ^[a-fA-F0-9]{40}$ ]]; then
+            printf 'baseline=%s\n' "$last" >> "$GITHUB_OUTPUT"
+          fi
       - uses: actions/setup-python@v5
         with: {python-version: '3.12'}
       - run: python tools/public/verify_boundary.py
@@ -104,6 +107,11 @@ jobs:
         run: node tools/public/verify_sw_install_revalidate.cjs
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_offline_cache_budget.cjs
+      - if: steps.scope.outputs.mode != 'data'
+        run: node tools/public/verify_sw_cache_lifecycle.cjs
+      - env:
+          CACHE_PUBLISHED_BASELINE: ${{ steps.scope.outputs.baseline }}
+        run: python tools/public/verify_cache_version_bump.py --previous HEAD^1
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_b7_activation_race.cjs 1 index.html --multi --offline-reconnect
       - if: steps.scope.outputs.mode != 'data'

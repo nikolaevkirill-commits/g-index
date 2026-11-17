@@ -1,5 +1,6 @@
 import pathlib,subprocess,tempfile,unittest
 from release_scope import classify
+from verify_cache_version_bump import validate
 
 class ReleaseScope(unittest.TestCase):
     def setUp(self):
@@ -26,5 +27,41 @@ class ReleaseScope(unittest.TestCase):
     def test_nonancestor_requires_full(self):
         self.commit('unrelated','x');other=self.git('rev-parse','HEAD').strip();self.git('checkout','-q',self.base)
         self.commit('consumer_cloud/forecast.json','{}');self.assertEqual(classify(other,self.root),'full')
+
+    def fixture_worker(self, version='r1'):
+        worker = (
+            "importScripts('./imported.js?v=1');\n"
+            f"const CACHE_VERSION = '{version}';\n"
+            "const SHELL_ASSETS = ['./index.html', './bundle.js?v=1'];\n"
+            "const PACKED_SHELL_HASHES = Object.freeze({'./bundle.js': 'test'});\n"
+            "const ON_DEMAND_ASSETS = new Set(['backdrop.webp']);\n"
+        )
+        self.commit('sw.js', worker)
+        return self.git('rev-parse', 'HEAD').strip()
+
+    def test_cache_bump_published_baseline_detects_hidden_change(self):
+        published = self.fixture_worker()
+        self.commit('index.html', 'changed without bump')
+        self.commit('consumer_cloud/forecast.json', '{}')
+        self.assertEqual(validate(self.root, 'HEAD^1'), ('r1', 'r1', []))
+        with self.assertRaisesRegex(ValueError, 'index.html'):
+            validate(self.root, published)
+        self.fixture_worker('r2')
+        self.assertEqual(validate(self.root, published)[1], 'r2')
+
+    def test_cache_bump_covers_optional_packed_and_imported_assets(self):
+        published = self.fixture_worker()
+        for name in ('backdrop.webp', 'dayline_art/sample.webp', 'bundle.js.gz', 'imported.js'):
+            with self.subTest(name=name):
+                self.commit(name, 'changed')
+                with self.assertRaisesRegex(ValueError, name):
+                    validate(self.root, 'HEAD^1')
+        self.assertNotEqual(published, self.git('rev-parse', 'HEAD').strip())
+
+    def test_cache_bump_compares_committed_bytes(self):
+        published = self.fixture_worker()
+        # Windows checkout line endings are immaterial to the Git release.
+        (self.root / 'sw.js').write_bytes((self.root / 'sw.js').read_bytes().replace(b'\n', b'\r\n'))
+        self.assertEqual(validate(self.root, published), ('r1', 'r1', []))
 
 if __name__=='__main__':unittest.main(verbosity=2)

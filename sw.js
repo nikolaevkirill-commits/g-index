@@ -2,10 +2,13 @@ importScripts('./runtime_diagnostics_v1.js','./civil_time_v1.js?v=fp569f-global'
 // G-Index service worker. Navigations, HTML, JS and data (.json/.jsonl/.csv) are network-first with a
 // cached fallback. Versioned packed scripts and other static assets are cache-first.
 // Bump CACHE_VERSION whenever index.html or a cached shell asset changes.
-const CACHE_VERSION = 'fp572-packed-shell-20261116';
+const CACHE_VERSION = 'fp572-sw-state-20261117';
 const CACHE_PREFIX = 'gindex-'; // G-Index cache namespace; do not remove the prefix.
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${CACHE_VERSION}`;
 const DATA_CACHE = `${CACHE_PREFIX}data-${CACHE_VERSION}`;
+// Records which cache version is active. The name is outside CACHE_PREFIX so that
+// activation of an older worker cannot remove it.
+const STATE_CACHE = 'skyrhythm-sw-state';
 const ON_DEMAND_ASSETS = new Set(['city_directory_v1.json.gz?v=fp569q-audit','cosmos_ngc4449_v1.webp',
   'backdrop_ngc1672_v1.webp','backdrop_carina_v1.webp','backdrop_saturn_v1.webp','backdrop_paranal_v1.webp',
   'theme_panchanga.webp','theme_forecast.webp','theme_journal.webp']
@@ -343,12 +346,43 @@ async function packedScriptResponse(req, archive) {
   });
 }
 
+async function pruneWaitingVersions() {
+  try {
+    const marker = await caches.match('./active', {cacheName: STATE_CACHE});
+    const active = marker && await marker.text();
+    // An older worker or a lost marker leaves the active identity unknown.
+    const activeShell = CACHE_PREFIX + 'shell-' + active;
+    if (!active || !await caches.has(activeShell)) return;
+    const keep = new Set([SHELL_CACHE, DATA_CACHE, activeShell, CACHE_PREFIX + 'data-' + active]);
+    await Promise.all((await caches.keys())
+      .filter((key) => key.startsWith(CACHE_PREFIX) && !keep.has(key))
+      .map((key) => caches.delete(key)));
+  } catch (_e) {
+    globalThis.NRDiagnostics?.record('sw.waiting_cache_cleanup_failed', 'recoverable');
+  }
+}
+
+async function clearActiveMarker() {
+  try {
+    if (await caches.has(STATE_CACHE)) await (await caches.open(STATE_CACHE)).delete('./active');
+  } catch (_e) {
+    globalThis.NRDiagnostics?.record('sw.active_cache_marker_failed', 'recoverable');
+  }
+}
+
 self.addEventListener('install', (event) => {
   // fp312: remain waiting until the user presses the visible Update button.
   // Automatic skipWaiting + the 5-minute update probe caused surprise full-page
   // reloads (a black screen while the 1.4 MB dashboard initialized).
+  let createdCache = false;
   event.waitUntil(
-    caches.open(SHELL_CACHE)
+    // A cache with this name belongs to a worker already installed with the same
+    // CACHE_VERSION. Writing into it would change that worker's files, so refuse.
+    caches.has(SHELL_CACHE).then((exists) => {
+      if (exists) throw new Error(`Refusing install: ${SHELL_CACHE} already exists; bump CACHE_VERSION`);
+      createdCache = true;
+      return caches.open(SHELL_CACHE);
+    })
       // Install the required app shell atomically. Decorative previews are best-effort;
       // route backdrops, research data and the spreadsheet reader are cached on first use.
       // A required failure rejects the install and leaves the previous active worker intact.
@@ -362,10 +396,12 @@ self.addEventListener('install', (event) => {
         });
         await cache.addAll(required);
         await verifyPackedScripts(cache);
+        // Decorative previews are optional; with Save-Data they load only when shown.
+        const saveData = !!self.navigator?.connection?.saveData;
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), OPTIONAL_INSTALL_TIMEOUT_MS);
         try {
-          const results = await Promise.allSettled(SHELL_ASSETS.filter((u) => optional(u) && !lazy(u)).map(async (u) => {
+          const results = await Promise.allSettled(SHELL_ASSETS.filter((u) => optional(u) && !lazy(u) && !saveData).map(async (u) => {
             const response = await fetch(fresh(u), { signal: controller.signal });
             if (!response.ok || response.status === 206) throw new Error(`HTTP ${response.status} for ${u}`);
             await cache.put(u, response);
@@ -374,12 +410,23 @@ self.addEventListener('install', (event) => {
         } finally {
           clearTimeout(timer);
         }
+        // Pruning uses the recorded active version only after this shell passes integrity checks.
+        await pruneWaitingVersions();
       })
       .catch(async (error) => {globalThis.NRDiagnostics?.record('promise.catch.13','recoverable');
         // A partial/empty new cache must never be allowed to activate and
         // replace the last-known-good worker. addAll is atomic; remove the
         // empty cache and propagate the failure so this install is rejected.
-        await caches.delete(SHELL_CACHE);
+        // A cache that existed before this install belongs to another worker.
+        if (createdCache) {
+          try { await caches.delete(SHELL_CACHE); }
+          catch (_e) { globalThis.NRDiagnostics?.record('sw.failed_shell_cleanup_failed', 'recoverable'); }
+        }
+        // Pages record a full disk; this release stays in place.
+        try {
+          for (const client of await self.clients.matchAll({includeUncontrolled: true}))
+            client.postMessage({type: 'SW_INSTALL_FAILED', reason: error?.name || 'Error'});
+        } catch (_e) { globalThis.NRDiagnostics?.record('catch.install_notice', 'recoverable'); }
         throw error;
       })
   );
@@ -401,12 +448,19 @@ self.addEventListener('activate', (event) => {
     if (!manifest) {
       throw new Error(`Refusing activation: ${SHELL_CACHE} is not populated`);
     }
+    // Without a record, a later install keeps every cache.
+    await clearActiveMarker();
     const keys = await caches.keys();
     await Promise.all(
       keys
         .filter((k) => k.startsWith(CACHE_PREFIX) && k !== SHELL_CACHE && k !== DATA_CACHE)
         .map((k) => caches.delete(k))
     );
+    try {
+      await (await caches.open(STATE_CACHE)).put('./active', new Response(CACHE_VERSION));
+    } catch (_e) {
+      globalThis.NRDiagnostics?.record('sw.active_cache_marker_failed', 'recoverable');
+    }
     await self.clients.claim();
   })());
 });
