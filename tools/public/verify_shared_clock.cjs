@@ -41,11 +41,25 @@ const server=http.createServer(async(req,res)=>{
     return {top:r.top,bottom:r.bottom,limit,verdictAboveFold:!!tone&&tone.getBoundingClientRect().bottom<=limit,afterHero:!!card.previousElementSibling?.matches('.nr-o-hero,.sr-expert-caution')};
    });
    assert(visible.verdictAboveFold&&visible.afterHero,JSON.stringify(visible));
+   const summary=p.locator('[data-sun-first-screen]');
+   await summary.waitFor();
+   assert.equal(await summary.getAttribute('data-state'),'below');
+   assert.match(await summary.innerText(),/Сонце під горизонтом.*Київ.*17:29/);
+
    assert.equal(await p.evaluate(()=>Boolean(window.NRMoonGL)),false);
    const input=(host,value)=>host.locator('.sr-time-controls input').evaluate((el,v)=>{el.value=String(v);el.dispatchEvent(new Event('input',{bubbles:true}));},value);
    await input(today,475);
    const reference=await sun.evaluate(el=>({at:el.dataset.at,alt:+el.dataset.alt,transform:el.style.transform}));
    assert(reference.alt>0);
+   assert.equal(await summary.getAttribute('data-state'),'above');
+   assert.match(await summary.innerText(),/Сонце над горизонтом.*Київ/);
+   assert(await summary.evaluate(el=>{
+    const nav=document.getElementById('mobileNav');
+    const bottom=nav?.checkVisibility()?nav.getBoundingClientRect().top:innerHeight;
+    const box=el.getBoundingClientRect();
+    return box.top>=0&&box.bottom<=bottom&&el.scrollWidth<=el.clientWidth;
+   }),'local Sun summary remains on the first screen');
+
    await today.locator('[data-time-open]').click({noWaitAfter:true});
    const sky=p.locator('[data-sky-live]');
    await sky.waitFor();
@@ -166,6 +180,11 @@ const server=http.createServer(async(req,res)=>{
   assert(first.verdict&&first.score,'verdict and score must fit on a 320×694 first viewport');
   assert(first.afterHero&&first.sunStarts,'Sun clock follows the overview card and starts on the first viewport: '+JSON.stringify(first));
   assert(first.plotBottom<=first.nav,'solar plot must fit above the bottom navigation: '+JSON.stringify(first));
+  const localSun=p.locator('[data-sun-first-screen]');
+  await localSun.waitFor();
+  assert.match(await localSun.innerText(),/Сонце під горизонтом.*Київ · типове місце/);
+  assert.equal(await p.locator('#headerSub').isVisible(),false);
+
   await p.locator('[data-sky-clock] [data-time-open]').click({noWaitAfter:true});
   await p.locator('[data-sky-live] .nr-sl-body[data-body=Sun]').waitFor();
   assert.match(await p.locator('#nrSkyLiveHeading').textContent(),/Києвом/);

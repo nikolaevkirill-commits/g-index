@@ -2,6 +2,7 @@
 from pathlib import Path
 from urllib.request import Request,urlopen
 import hashlib,json,os,time,concurrent.futures,subprocess
+from sync_packed_shell import packed_scripts
 ROOT=Path(__file__).resolve().parents[2]
 CORE=['index.html','classic.html','design-v4.html','sw.js','consumer_authority_v1.js','consumer_cloud/final_score_decisions.json','notification_runtime_v1.js','consumer_overview_v1.js','preview-v4/consumer_overview_v1.js','product_shell_v1.js','preview-v4/product_shell_v1.js']
 # v130 audit: verify every offline shell asset of the released sw.js (140), not only the 10 core files above;
@@ -11,7 +12,8 @@ def shell_assets():
  sw=subprocess.check_output(['git','-C',str(ROOT),'show','HEAD:sw.js']).decode('utf-8')
  block=re.search(r'const SHELL_ASSETS = \[(.*?)\];',sw,re.S)
  if not block:raise SystemExit('FAIL: SHELL_ASSETS not found in sw.js')
- return [x.split('?',1)[0] for x in re.findall(r"'\./([^']+)'",block.group(1)) if x and not x.endswith('/')]
+ raw=[x.split('?',1)[0] for x in re.findall(r"'\./([^']+)'",block.group(1)) if x and not x.endswith('/')]
+ return raw+[name+'.gz' for name in packed_scripts(sw)]
 FILES=list(dict.fromkeys(CORE+shell_assets()))
 BASE=os.environ.get('PUBLIC_BASE_URL','https://nikolaevkirill-commits.github.io/g-index/')
 def check(n):

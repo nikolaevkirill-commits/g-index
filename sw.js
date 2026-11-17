@@ -1,8 +1,8 @@
 importScripts('./runtime_diagnostics_v1.js','./civil_time_v1.js?v=fp569f-global');
 // G-Index service worker. Navigations, HTML, JS and data (.json/.jsonl/.csv) are network-first with a
-// cached fallback; other same-origin assets (CSS, images, fonts) are cache-first.
+// cached fallback. Versioned packed scripts and other static assets are cache-first.
 // Bump CACHE_VERSION whenever index.html or a cached shell asset changes.
-const CACHE_VERSION = 'fp572-three-days-claude-fixes-20261116';
+const CACHE_VERSION = 'fp572-packed-shell-20261116';
 const CACHE_PREFIX = 'gindex-'; // G-Index cache namespace; do not remove the prefix.
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${CACHE_VERSION}`;
 const DATA_CACHE = `${CACHE_PREFIX}data-${CACHE_VERSION}`;
@@ -97,7 +97,7 @@ const SHELL_ASSETS = [
   './civil_time_v1.js?v=fp569f-global',
   './sw_update_coordination_v1.js?v=fp569n-handoff',
   './day_context_v1.js?v=mobile-clarity1',
-  './sky_time_v1.js?v=fp572-sky',
+  './sky_time_v1.js?v=fp572-first-sun',
   './sky_live_loader_v1.js?v=fp569r-cosmos',
   './sky_live_v1.js?v=fp569r-cosmos',
   './sky_ovation_v1.js?v=1',
@@ -119,7 +119,7 @@ const SHELL_ASSETS = [
   './personal_dayline_snapshot.js',
   './personal_dayline_ui.js',
   './meeus_core_v1.js',
-  './lunar_core_v1.js?v=fp572',
+  './lunar_core_v1.js?v=fp572-lunar-display',
   './dayline_view_v1.js?v=fp572-lunar',
   './dayline_view_v1.css',
   './dayline_i18n_v1.js',
@@ -150,7 +150,7 @@ const SHELL_ASSETS = [
   './preview-v4/desktop_v1.css?v=d1',
   './preview-v4/atlas_motion.css?v=v7-2',
   './preview-v4/consumer_overview_v1.js?v=fp569o-daily',
-  './preview-v4/core_runtime_v1.js?v=fp572-cache',
+  './preview-v4/core_runtime_v1.js?v=fp572-lunar-local',
   './preview-v4/design_candidate.css?v=v7-3',
   './preview-v4/design_candidate.js',
   './preview-v4/design_scale.js',
@@ -259,7 +259,7 @@ const SHELL_ASSETS = [
   './consumer_authority_v1.js',
   './forecast_journal_v1.js',
   './push_client_v1.js',
-  './core_runtime_v1.js?v=fp572-cache',
+  './core_runtime_v1.js?v=fp572-lunar-local',
   './mobile_navigation_v1.js',
   './product_shell_v1.js',
   './plan_calendar_v1.js',
@@ -302,6 +302,47 @@ const SHELL_ASSETS = [
   './OUTCOME_INTAKE_FORM_v1.html'
 ];
 
+// These scripts are immutable at their versioned request URLs. The build check
+// verifies their gzip bodies against the public JavaScript sources.
+const PACKED_SHELL_HASHES = Object.freeze({
+  './core_runtime_v1.js': '4f2be17a70923c2541f2adffc559ade27e131463d3de212c4ffde79eec480649',
+  './locale_overview_v1.js': '644aeca3397267548aad0dc4c92089033270d32061e41f6c9ceeac4b94d4c1c6',
+  './preview-v4/core_runtime_v1.js': 'a83e45db568565e521e0c71484887223fea79f70d2199de1497467f31fa825e1',
+  './preview-v4/locale_overview_v1.js': '689764e17095169a46adddb10a95753c10b9f2646569e81585c9589a0fb6e0b1',
+});
+const CAN_UNPACK_SHELL = typeof DecompressionStream === 'function';
+const packedShellScripts = new Map();
+if (CAN_UNPACK_SHELL) {
+  for (const asset of SHELL_ASSETS) {
+    const path = asset.split('?')[0];
+    const sha256 = PACKED_SHELL_HASHES[path];
+    if (!sha256) continue;
+    const original = new URL(asset, self.registration.scope);
+    const archive = new URL(original);
+    archive.pathname += '.gz';
+    packedShellScripts.set(original.href, {url: archive.href, sha256});
+  }
+}
+
+async function verifyPackedScripts(cache) {
+  for (const {url, sha256} of packedShellScripts.values()) {
+    const archived = await cache.match(url);
+    const digest = archived && await crypto.subtle.digest('SHA-256', await archived.arrayBuffer());
+    const hex = digest && Array.from(new Uint8Array(digest), n => n.toString(16).padStart(2, '0')).join('');
+    if (hex !== sha256) throw new Error('Invalid packed shell script: ' + url);
+  }
+}
+
+async function packedScriptResponse(req, archive) {
+  const cache = await caches.open(SHELL_CACHE);
+  const packed = await cache.match(archive.url);
+  if (!packed?.body) return fetchBoundedAsset(req);
+  const body = packed.body.pipeThrough(new DecompressionStream('gzip'));
+  return new Response(body, {
+    headers: {'Content-Type': 'application/javascript; charset=utf-8', 'x-gindex-delivery': 'cached'}
+  });
+}
+
 self.addEventListener('install', (event) => {
   // fp312: remain waiting until the user presses the visible Update button.
   // Automatic skipWaiting + the 5-minute update probe caused surprise full-page
@@ -315,7 +356,12 @@ self.addEventListener('install', (event) => {
         const optional = (u) => /^\.\/preview-(?:v4|b17)\/.*\.svg(?:\?|$)/.test(u);
         const lazy = (u) => u === './design-b17.html' || u.startsWith('./preview-b17/');
         const fresh = (u) => new Request(new URL(u,self.registration.scope),{cache:'reload'});
-        await cache.addAll(SHELL_ASSETS.filter((u) => !optional(u) && !lazy(u)).map(fresh));
+        const required = SHELL_ASSETS.filter((u) => !optional(u) && !lazy(u)).map((asset) => {
+          const original = new URL(asset, self.registration.scope).href;
+          return fresh(packedShellScripts.get(original)?.url || original);
+        });
+        await cache.addAll(required);
+        await verifyPackedScripts(cache);
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), OPTIONAL_INSTALL_TIMEOUT_MS);
         try {
@@ -380,6 +426,12 @@ self.addEventListener('fetch', (event) => {
   const isCrossOrigin = url.origin !== self.location.origin;
   let relative;try{relative=decodeURIComponent(url.pathname).split('/').filter(Boolean)}catch(e){relative=[]}
   if(!isCrossOrigin&&SITE_EXCLUDED.some(n=>('/'+relative.join('/')+'/').includes('/'+n+'/'))){event.respondWith(Promise.resolve(new Response('Not published',{status:404,headers:{'Cache-Control':'no-store'}})));return;}
+
+  const packed = packedShellScripts.get(url.href);
+  if (packed && !req.headers.has('range')) {
+    event.respondWith(packedScriptResponse(req, packed));
+    return;
+  }
 
   const isHtmlOrData =
     !isCrossOrigin && (

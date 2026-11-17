@@ -49,6 +49,40 @@ for(let y=1975;y<2030;y+=3)cases.push({date:y+'-06-15',time:'07:30',utcOff:3,utc
    assert.deepEqual(actual[i],{nak,sign,ambiguous:nak===null,group:nak===null?null:nak%9},c.date+' '+c.time);
    checks+=4;
   });
+  // The legacy block formerly took its phase from one timestamp and its tithi
+  // from the old ephemeris. At this minute the two ephemerides disagree.
+  const probe=Date.parse('2026-11-13T15:13:10Z');
+  const expectedTithi=Personal.tithi(probe).number;
+  const expectedNak=Personal.moon(probe).nak;
+  for(const entry of ['index.html','classic.html']){
+   const screen=await context.newPage();
+   screen.on('pageerror',error=>errors.push(error.message));
+   try{
+    await screen.clock.setFixedTime(probe);
+    await screen.goto('http://127.0.0.1:'+server.address().port+'/'+entry+'?channel=play#today',{waitUntil:'domcontentloaded',timeout:120000});
+    await screen.waitForFunction(()=>window.SkyRhythmLunar?.available()&&typeof renderMoonRetroTop==='function');
+    const labels=await screen.evaluate(expected=>{
+     // An unrelated moment in the shared dashboard global must not affect the lunar display.
+     window._lunarPhaseDeg=180;
+     const legacyTithi=computePanchanga(new Date()).tithi.num;
+     renderMoonRetroTop();
+     const ids=['moonPhaseNow','moonTithiNow','moonNakNow','moonNextShift','moonShiftHint'];
+     const values=ids.map(id=>document.getElementById(id).textContent);
+     const saved=window.SkyRhythmLunar;
+     window.SkyRhythmLunar=undefined;
+     renderMoonRetroTop();
+     const missing=ids.map(id=>document.getElementById(id).textContent);
+     window.SkyRhythmLunar=saved;
+     return {values,missing,legacyTithi,name:NAKSHATRA_NAMES[expected.nak],phase:phaseNameByAngle(saved.at(Date.now()).phase_deg)};
+    },{nak:expectedNak});
+    assert.notEqual(labels.legacyTithi,expectedTithi,'fixture must distinguish ephemerides');
+    assert.deepEqual(labels.values.slice(0,3),[labels.phase,'Panchami ('+expectedTithi+')',labels.name]);
+    assert.match(labels.values[3],/год|хв/);
+    assert.equal(labels.values[4],'Тітхі '+(expectedTithi+1));
+    assert.deepEqual(labels.missing,['—','—','—','—','—']);
+    checks+=5;
+   }finally{await screen.close();}
+  }
   assert.deepEqual(errors,[]);
   console.log(JSON.stringify({status:'PASS',checks,cases:cases.length,scope:'Chromium, index.html; «Для тебе» Janma vs personal_dayline_model for the same instant'}));
  }finally{await browser.close();server.close();}
