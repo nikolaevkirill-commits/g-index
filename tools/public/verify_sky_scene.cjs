@@ -59,19 +59,13 @@ try{for(const [locale,rm] of [['uk-UA','no-preference'],['en-GB','no-preference'
   assert.equal(await reference.locator('#nrPanchGuide').isVisible(),false);
   const scene=p.locator('[data-sky]'),slider=scene.locator('.nr-sky-controls input'),play=scene.locator('.nr-sky-play');
   const strip=scene.locator('.nr-sky-days');
-  const start=await slider.evaluate(e=>{
-    e.scrollIntoView({block:'center',behavior:'instant'});
+  const positions=await slider.evaluate(e=>{
     window.__skyRange=e;window.__skyDays=e.closest('[data-sky]').querySelector('.nr-sky-days');
-    return {x:e.clientWidth*.23,y:e.clientHeight/2};
+    const y=e.clientHeight/2;
+    return {sourcePosition:{x:e.clientWidth*.23,y},targetPosition:{x:e.clientWidth*.81,y}};
   });
-  // Hover waits for the slider to receive pointer events after the scroll settles.
-  await slider.hover({position:start});
-  const box=await slider.boundingBox();
-  assert.ok(await slider.evaluate(e=>{
-    const r=e.getBoundingClientRect();
-    return document.elementFromPoint(r.left+r.width*.81,r.top+r.height/2)===e;
-  }),'real drag endpoint must hit the visible slider');
-  await p.mouse.down();await p.mouse.move(box.x+box.width*.81,box.y+box.height/2,{steps:12});await p.mouse.up();
+  // Resolve the element's location for each end of the real drag after scrolling.
+  await slider.dragTo(slider,{...positions,steps:12});
   assert.ok(Number(await slider.inputValue())>=19,'real drag selects the final part of the range');
   assert.ok(await slider.evaluate(e=>e===window.__skyRange&&e===document.activeElement&&window.__skyDays.isConnected),'drag must keep the original input, focus and date strip');
   assert.match(await slider.getAttribute('aria-valuetext'),/День [0-9]+ з 27/);
