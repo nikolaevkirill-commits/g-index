@@ -2,7 +2,7 @@ importScripts('./runtime_diagnostics_v1.js','./civil_time_v1.js?v=fp569f-global'
 // G-Index service worker. Navigations, HTML, JS and data (.json/.jsonl/.csv) are network-first with a
 // cached fallback. Versioned packed scripts and other static assets are cache-first.
 // Bump CACHE_VERSION whenever index.html or a cached shell asset changes.
-const CACHE_VERSION = 'fp572-sw-state-20261117';
+const CACHE_VERSION = 'fp572-integrated-audit-20261118';
 const CACHE_PREFIX = 'gindex-'; // G-Index cache namespace; do not remove the prefix.
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${CACHE_VERSION}`;
 const DATA_CACHE = `${CACHE_PREFIX}data-${CACHE_VERSION}`;
@@ -308,10 +308,10 @@ const SHELL_ASSETS = [
 // These scripts are immutable at their versioned request URLs. The build check
 // verifies their gzip bodies against the public JavaScript sources.
 const PACKED_SHELL_HASHES = Object.freeze({
-  './core_runtime_v1.js': '4f2be17a70923c2541f2adffc559ade27e131463d3de212c4ffde79eec480649',
-  './locale_overview_v1.js': '644aeca3397267548aad0dc4c92089033270d32061e41f6c9ceeac4b94d4c1c6',
-  './preview-v4/core_runtime_v1.js': 'a83e45db568565e521e0c71484887223fea79f70d2199de1497467f31fa825e1',
-  './preview-v4/locale_overview_v1.js': '689764e17095169a46adddb10a95753c10b9f2646569e81585c9589a0fb6e0b1',
+  './core_runtime_v1.js': '9806db0b77e1f829fa63e9e4fe2a46cf1b7c019ccfb81d5faeddace91abebd62',
+  './locale_overview_v1.js': '71251a009ea76cd0c324ce33a8626d691a4aabf6f299a4ace2c20f6cc24f2640',
+  './preview-v4/core_runtime_v1.js': '8587d3e41c34d6f9b384b5aa1e54eafd76f3e0e48f442ce675d6e493dd0a931b',
+  './preview-v4/locale_overview_v1.js': '7ec93b5fd0fa1d78355a369957a0d8e7022c08115b6997fb6c30593729578d9b',
 });
 const CAN_UNPACK_SHELL = typeof DecompressionStream === 'function';
 const packedShellScripts = new Map();

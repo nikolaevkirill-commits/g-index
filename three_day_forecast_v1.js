@@ -258,7 +258,11 @@
   }
   forecast.append(header,list);
   panel.dataset.validSlots=String(rowCount);
-  panel.replaceChildren(intro,choices,summary,warning,forecast);
+  const dayTools=node('div','sr-3d-head');
+  dayTools.append(choices);
+  const lineAction=root.SRDayLineView?.forecastAction?.(selected);
+  if(lineAction){lineAction.dataset.control='dayline';dayTools.append(lineAction);}
+  panel.replaceChildren(intro,dayTools,summary,warning,forecast);
   if(focusKey)[...panel.querySelectorAll('[data-control]')].find(x=>x.dataset.control===focusKey)?.focus({preventScroll:true});
  }
  function visible(){return activePanel?.isConnected&&!activePanel.hidden&&!!activePanel.closest('.nr-route.active');}

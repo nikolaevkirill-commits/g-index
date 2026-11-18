@@ -163,6 +163,29 @@ const timeFormatter=new Intl.DateTimeFormat('uk-UA',{timeZone:'Europe/Kyiv',day:
 const today=()=>NRCivilTime.dayKey(Date.now());
 const dateLabel=ds=>{const locale=window.NRLocale?.locale||'uk-UA';let formatter=dateFormatters.get(locale);if(!formatter){formatter=new Intl.DateTimeFormat(locale,{timeZone:'Europe/Kyiv',day:'numeric',month:'long'});dateFormatters.set(locale,formatter)}return formatter.format(new Date(ds+'T12:00:00Z'))};
 const time=s=>Number.isFinite(Date.parse(s))?timeFormatter.format(new Date(s)):'не вказано';
+function todaySourceLabel(result,input){
+ if(result.state==='expert_conflict')return 'Експертні рішення суперечать одне одному';
+ if(result.state==='expert'){
+  const cached=!navigator.onLine||NRConsumerAuthority.registryStatus().status==='stale';
+  return 'Експертне рішення · '+(cached?'Збережена копія реєстру':'Перевірено для цієї дати');
+ }
+ if(result.state==='missing'||result.state==='invalid')return states[result.state];
+
+ const shortRange=result.kp_source==='NOAA_3day_slots';
+ const outlook=result.kp_source==='NOAA_27day_outlook';
+ const source=shortRange?'Формула · NOAA 3 дні':outlook?'Формула · NOAA 27 днів':'Формула джерела';
+ const timestamp=shortRange?result.source_retrieved_at:outlook?result.source_issued_at:result.generated_at;
+ const timestampLabel=shortRange?'отримано':outlook?'випуск':'розраховано';
+ const status=[source,states[result.state],Number.isFinite(Date.parse(timestamp))?timestampLabel+' '+time(timestamp)+' за Києвом':null].filter(Boolean).join(' · ');
+ const day=result.date.slice(8,10)+'.'+result.date.slice(5,7);
+ if(outlook&&input?.timezone==='UTC')return status+'\n'+day+' · добовий орієнтир Kp (UTC)';
+ if(shortRange&&input?.target_timezone==='Europe/Kyiv'){
+  const count=input.slot_count,expected=input.expected_slots;
+  const coverage=Number.isInteger(count)&&Number.isInteger(expected)&&expected>0&&count>=0&&count<=expected?' · '+count+' із '+expected+' інтервалів':' · покриття не підтверджено';
+  return status+'\n'+day+' · доба Києва'+coverage;
+ }
+ return status;
+}
 const stateLabel=(r,ds)=>r.state==='fresh'&&rows[ds]?.channels?.source_formula?.kp_source==='NOAA_27day_outlook'?'Орієнтир · outlook NOAA від '+String(rows[ds].channels.source_formula.kp_input?.issued_at||'').slice(0,10):states[r.state];
 const states={expert:'Оцінка експерта (має пріоритет над формулою)',fresh:'Дані актуальні',offline:'Офлайн · збережені дані',stale:'Дані застаріли',missing:'Недостатньо даних',invalid:'Час джерела не підтверджено'};
 const dayRange=()=>Array.from({length:27},(_,i)=>{const d=new Date(today()+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+i);return d.toISOString().slice(0,10)});
@@ -395,6 +418,21 @@ function render(root){
  root.querySelector('.nr-o-score').textContent=fmt(r.score);
  root.querySelector('.nr-o-label').textContent=r.available?(r.score>0?'Позитивна оцінка':r.score<0?'Негативна оцінка':'Нейтральна оцінка'):'Актуальну оцінку не показуємо';
  renderRouteTools(root,route,dates,ds);
+ if(route==='today'){
+  const label=root.querySelector('.nr-o-label');
+  let sourceStatus=label.parentElement.querySelector('[data-today-source]');
+  if(!sourceStatus){
+   const summary=document.createElement('div');
+   summary.style.minWidth='0';
+   label.before(summary);
+   sourceStatus=document.createElement('p');
+   sourceStatus.dataset.todaySource='';
+   sourceStatus.style.cssText='margin:3px 0 0;font-size:.8rem;font-weight:400;line-height:1.35;overflow-wrap:anywhere;white-space:pre-line';
+   summary.append(label,sourceStatus);
+  }
+  const text=transportText||todaySourceLabel(r,source?.kp_input);
+  if(sourceStatus.textContent!==text)sourceStatus.textContent=text;
+ }
  if(route==='today'||route==='forecast'){
  const heading=root.querySelector('.nr-o-heading');heading.setAttribute('translate','no');heading.querySelector('h1').textContent=route==='today'?dateLabel(ds):({uk:'Прогноз на обраний період',en:'Forecast for the selected period',es:'Pronóstico del período elegido',fr:'Prévisions pour la période choisie'})[window.NRLocale?.language||'uk'];heading.querySelector('span').textContent=({uk:'Київ',en:'Kyiv',es:'Kyiv',fr:'Kyiv'})[window.NRLocale?.language||'uk']+' · '+(window.NRLocale?.text('за київським часом')||'за київським часом');
  }

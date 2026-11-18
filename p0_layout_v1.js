@@ -274,7 +274,9 @@ function forecastOverview(root,ds){
  back.onclick=()=>list.querySelector('[aria-pressed=true]')?.focus();
  back.hidden=count===1||ds===dates[0];
  const hadBackFocus=document.activeElement===back;
- card.replaceChildren(...information,back);
+ const lineAction=window.SRDayLineView?.forecastAction?.(ds,card.querySelector('[data-forecast-dayline]'));
+ const hadLineFocus=lineAction&&document.activeElement===lineAction;
+ card.replaceChildren(...information,...(lineAction?[lineAction]:[]),back);
  // Keep the existing scoped opinion beside the visible forecast score.
  const scoped=root.querySelector('[data-scoped-opinion]:not([hidden])');
  if(scoped&&card.nextElementSibling!==scoped){
@@ -282,6 +284,7 @@ function forecastOverview(root,ds){
   card.after(scoped);
  }
  if(hadBackFocus)back.focus({preventScroll:true});
+ if(hadLineFocus)lineAction.focus({preventScroll:true});
 
  const currentNodes=[...list.children];
  const known=new Map(currentNodes.map(button=>[button.dataset.day,button]));
@@ -559,7 +562,7 @@ function renderTimeline(root,ds){
  let box=line.querySelector('[data-sky-events]');if(!box){box=make('details','sr-sky-events');box.open=false;box.dataset.skyEvents='';line.querySelector('.sr-dl-story').after(box);}
  const explore=line.querySelector('[data-p0-explore]');if(explore&&box.parentElement!==explore)explore.append(box);
  const snap=window.SRDayLineView?.snapshot();box.replaceChildren();
- if(snap?.date!==ds||snap.status!=='available'){box.hidden=true;return;}box.hidden=false;
+ if(snap?.status!=='available'||(!snap.selectedFromForecast&&snap.date!==ds)){box.hidden=true;return;}box.hidden=false;
  box.append(make('summary','','Хронологія неба'),make('p','sr-dl-muted',tr('Розраховані події')+' · '+({uk:'місцевий час',en:'local time',es:'hora local',fr:'heure locale'}[window.NRLocale?.language||'uk'])));const list=make('ol','');
  const fmt=new Intl.DateTimeFormat(window.NRLocale?.locale||'uk-UA',{timeZone:snap.zone,day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
  for(const e of snap.events){const li=make('li',''),time=make('time','',fmt.format(new Date(e.at)));time.dateTime=e.at;li.append(time);const label=make(Number.isInteger(e.index)?'button':'span','',e.label);if(label.tagName==='BUTTON'){label.type='button';label.onclick=()=>window.SRDayLineView.openEvent(e.index);}li.append(label);list.append(li);}box.append(list);
