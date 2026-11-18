@@ -1,21 +1,569 @@
-name: public boundary
-on: [pull_request, workflow_dispatch]
+name: SkyRhythm audit diagnostics only
+'on':
+  workflow_dispatch: {}
 permissions:
   contents: read
 jobs:
-  boundary:
+  checks:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+    - uses: actions/checkout@v5
+      with:
+        ref: ce58619bb2ff361c80d97474a28372a25399525f
+        fetch-depth: 0
+        persist-credentials: false
+    - id: revision
+      run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+    - id: scope
+      run: 'echo "mode=full" >> "$GITHUB_OUTPUT"
+
+        echo "baseline=4cf14bbdba403c190a41e8d4beff4ac8df5c4786" >> "$GITHUB_OUTPUT"'
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+    - run: python tools/public/verify_boundary.py
+      id: audit_001
+      name: Run python tools/public/verify_boundary.py
+      continue-on-error: true
+    - run: python tools/public/sync_inline_styles.py
+      id: audit_002
+      name: Run python tools/public/sync_inline_styles.py
+      continue-on-error: true
+    - run: python tools/cloud/test_publication_paths.py
+      id: audit_003
+      name: Run python tools/cloud/test_publication_paths.py
+      continue-on-error: true
+    - run: python tools/cloud/test_public_feed.py
+      id: audit_004
+      name: Run python tools/cloud/test_public_feed.py
+      continue-on-error: true
+    - run: python tools/cloud/test_noaa_refresh.py
+      id: audit_005
+      name: Run python tools/cloud/test_noaa_refresh.py
+      continue-on-error: true
+    - run: python -m pip install pyswisseph==2.10.3.2
+    - run: python tools/cloud/test_expert_model.py
+      id: audit_006
+      name: Run python tools/cloud/test_expert_model.py
+      continue-on-error: true
+    - run: python tools/cloud/test_calendar_components.py
+      id: audit_007
+      name: Run python tools/cloud/test_calendar_components.py
+      continue-on-error: true
+    - run: python tools/cloud/test_sunrise_conventions.py
+      id: audit_008
+      name: Run python tools/cloud/test_sunrise_conventions.py
+      continue-on-error: true
+    - run: python tools/cloud/test_transit_events.py
+      id: audit_009
+      name: Run python tools/cloud/test_transit_events.py
+      continue-on-error: true
+    - run: python tools/cloud/test_space_weather.py
+      id: audit_010
+      name: Run python tools/cloud/test_space_weather.py
+      continue-on-error: true
+    - run: python tools/cloud/test_reconciled_inputs.py
+      id: audit_011
+      name: Run python tools/cloud/test_reconciled_inputs.py
+      continue-on-error: true
+    - run: python tools/cloud/test_market_proxy.py
+      id: audit_012
+      name: Run python tools/cloud/test_market_proxy.py
+      continue-on-error: true
+    - run: python tools/public/test_release_publication.py
+      id: audit_013
+      name: Run python tools/public/test_release_publication.py
+      continue-on-error: true
+    - run: python tools/public/test_release_scope.py
+      id: audit_014
+      name: Run python tools/public/test_release_scope.py
+      continue-on-error: true
+    - uses: actions/setup-node@v4
+      with:
+        node-version: '24'
+    - run: npm install --no-save --package-lock=false playwright@1.62.1
+    - run: npx playwright install --with-deps chromium
+    - run: node tools/public/test_browser_readiness.cjs
+      id: audit_015
+      name: Run node tools/public/test_browser_readiness.cjs
+      continue-on-error: true
+    - run: node tools/public/verify_day_cautions.cjs
+      id: audit_016
+      name: Run node tools/public/verify_day_cautions.cjs
+      continue-on-error: true
+    - run: node tools/public/verify_noaa_missing.cjs
+      id: audit_017
+      name: Run node tools/public/verify_noaa_missing.cjs
+      continue-on-error: true
+    - run: node tools/public/verify_kp_source_provenance.cjs
+      id: audit_018
+      name: Run node tools/public/verify_kp_source_provenance.cjs
+      continue-on-error: true
+    - run: node tools/public/verify_svg_missing.cjs
+      id: audit_019
+      name: Run node tools/public/verify_svg_missing.cjs
+      continue-on-error: true
+    - run: node tools/public/verify_presentation.cjs
+      id: audit_020
+      name: Run node tools/public/verify_presentation.cjs
+      continue-on-error: true
+    - run: node tools/public/verify_day_summary.cjs
+      id: audit_021
+      name: Run node tools/public/verify_day_summary.cjs
+      continue-on-error: true
+    - run: node tools/public/verify_journal_restore_time.cjs
+      id: audit_022
+      name: Run node tools/public/verify_journal_restore_time.cjs
+      continue-on-error: true
+    - run: node tools/public/verify_journal_restore_adversarial.cjs
+      id: audit_023
+      name: Run node tools/public/verify_journal_restore_adversarial.cjs
+      continue-on-error: true
+    - run: node tools/public/test_sw_update_coordination.cjs
+      id: audit_024
+      name: Run node tools/public/test_sw_update_coordination.cjs
+      continue-on-error: true
+    - run: node tools/public/verify_css_upgrade.cjs --button
+      id: audit_025
+      name: Run node tools/public/verify_css_upgrade.cjs --button
+      continue-on-error: true
+    - run: node tools/public/verify_sw_asset_lifetime.cjs svgheaders --bounded
+      id: audit_026
+      name: Run node tools/public/verify_sw_asset_lifetime.cjs svgheaders --bounded
+      continue-on-error: true
+    - run: node tools/public/verify_sw_asset_lifetime.cjs artbody --bounded
+      id: audit_027
+      name: Run node tools/public/verify_sw_asset_lifetime.cjs artbody --bounded
+      continue-on-error: true
+    - run: node tools/public/verify_sw_asset_lifetime.cjs jsonbody --bounded
+      id: audit_028
+      name: Run node tools/public/verify_sw_asset_lifetime.cjs jsonbody --bounded
+      continue-on-error: true
+    - run: node tools/public/verify_sw_asset_deadline_scope.cjs
+      id: audit_029
+      name: Run node tools/public/verify_sw_asset_deadline_scope.cjs
+      continue-on-error: true
+    - run: node tools/public/verify_b7_install.cjs
+      id: audit_030
+      name: Run node tools/public/verify_b7_install.cjs
+      continue-on-error: true
+    - run: node tools/public/verify_sw_install_revalidate.cjs
+      id: audit_031
+      name: Run node tools/public/verify_sw_install_revalidate.cjs
+      continue-on-error: true
+    - run: node tools/public/verify_offline_cache_budget.cjs
+      id: audit_032
+      name: Run node tools/public/verify_offline_cache_budget.cjs
+      continue-on-error: true
+    - run: node tools/public/verify_sw_cache_lifecycle.cjs
+      id: audit_033
+      name: Run node tools/public/verify_sw_cache_lifecycle.cjs
+      continue-on-error: true
+    - env:
+        CACHE_PUBLISHED_BASELINE: ${{ steps.scope.outputs.baseline }}
+      run: python tools/public/verify_cache_version_bump.py --previous HEAD^1
+      id: audit_034
+      name: Run python tools/public/verify_cache_version_bump.py --previous HEAD^1
+      continue-on-error: true
+    - run: node tools/public/verify_b7_activation_race.cjs 1 index.html --multi --offline-reconnect
+      id: audit_035
+      name: Run node tools/public/verify_b7_activation_race.cjs 1 index.html --multi --offline-reconnect
+      continue-on-error: true
+    - run: node tools/public/verify_b7_activation_race.cjs 20 classic.html
+      id: audit_036
+      name: Run node tools/public/verify_b7_activation_race.cjs 20 classic.html
+      continue-on-error: true
+    - run: node tools/public/verify_b7_activation_race.cjs 20 index.html
+      id: audit_037
+      name: Run node tools/public/verify_b7_activation_race.cjs 20 index.html
+      continue-on-error: true
+    - run: node tools/public/verify_b7_activation_race.cjs 5 classic.html --multi
+      id: audit_038
+      name: Run node tools/public/verify_b7_activation_race.cjs 5 classic.html --multi
+      continue-on-error: true
+    - run: node tools/public/verify_b7_activation_race.cjs 5 index.html --multi
+      id: audit_039
+      name: Run node tools/public/verify_b7_activation_race.cjs 5 index.html --multi
+      continue-on-error: true
+    - run: node tools/public/verify_civil_time.cjs
+      id: audit_040
+      name: Run node tools/public/verify_civil_time.cjs
+      continue-on-error: true
+    - run: node tools/public/test_locale_fp542.cjs
+      id: audit_041
+      name: Run node tools/public/test_locale_fp542.cjs
+      continue-on-error: true
+    - run: node tools/public/test_authority_fp542.cjs
+      id: audit_042
+      name: Run node tools/public/test_authority_fp542.cjs
+      continue-on-error: true
+    - run: node tools/public/test_scoped_decisions.cjs
+      id: audit_043
+      name: Run node tools/public/test_scoped_decisions.cjs
+      continue-on-error: true
+    - run: node tools/public/test_expert_refresh_regression.cjs
+      id: audit_044
+      name: Run node tools/public/test_expert_refresh_regression.cjs
+      continue-on-error: true
+    - run: node tools/public/verify_authority_fp542.cjs
+      id: audit_045
+      name: Run node tools/public/verify_authority_fp542.cjs
+      continue-on-error: true
+    - run: node tools/public/verify_final_score.cjs
+      id: audit_046
+      name: Run node tools/public/verify_final_score.cjs
+      continue-on-error: true
+    - run: node tools/public/verify_expert_november.cjs
+      id: audit_047
+      name: Run node tools/public/verify_expert_november.cjs
+      continue-on-error: true
+    - run: node tools/public/test_notification_locale.cjs
+      id: audit_048
+      name: Run node tools/public/test_notification_locale.cjs
+      continue-on-error: true
+    - run: node tools/public/verify_entry_score_equivalence.cjs
+      id: audit_049
+      name: Run node tools/public/verify_entry_score_equivalence.cjs
+      continue-on-error: true
+    - run: node tools/public/verify_authority_boundary.cjs
+      id: audit_050
+      name: Run node tools/public/verify_authority_boundary.cjs
+      continue-on-error: true
+    - run: node tools/public/verify_fork_drift.cjs
+      id: audit_051
+      name: Run node tools/public/verify_fork_drift.cjs
+      continue-on-error: true
+    - run: node tools/public/verify_l10n_expanded.cjs
+      id: audit_052
+      name: Run node tools/public/verify_l10n_expanded.cjs
+      continue-on-error: true
+    - run: node tools/public/verify_sky_scene.cjs
+      id: audit_053
+      name: Run node tools/public/verify_sky_scene.cjs
+      continue-on-error: true
+    - run: node tools/public/verify_day_verdict.cjs
+      id: audit_054
+      name: Run node tools/public/verify_day_verdict.cjs
+      continue-on-error: true
+    - run: node tools/public/verify_day_match.cjs
+      id: audit_055
+      name: Run node tools/public/verify_day_match.cjs
+      continue-on-error: true
+    - run: node tools/public/verify_natal_sky.cjs --slow-render
+      id: audit_056
+      name: Run node tools/public/verify_natal_sky.cjs --slow-render
+      continue-on-error: true
+    - run: node tools/public/verify_natal_shared_moon.cjs
+      id: audit_057
+      name: Run node tools/public/verify_natal_shared_moon.cjs
+      continue-on-error: true
+    - run: node tools/public/verify_notification_navigation.cjs
+      id: audit_058
+      name: Run node tools/public/verify_notification_navigation.cjs
+      continue-on-error: true
+    - run: node tools/public/verify_panchanga_cache.cjs cache-regression
+      id: audit_059
+      name: Run node tools/public/verify_panchanga_cache.cjs cache-regression
+      continue-on-error: true
+    - run: node tools/public/verify_text_reflow.cjs
+      id: audit_060
+      name: Run node tools/public/verify_text_reflow.cjs
+      continue-on-error: true
+    - run: node tools/public/verify_all_routes_reflow.cjs
+      id: audit_061
+      name: Run node tools/public/verify_all_routes_reflow.cjs
+      continue-on-error: true
+    - run: node tools/public/verify_no_overlap.cjs
+      id: audit_062
+      name: Run node tools/public/verify_no_overlap.cjs
+      continue-on-error: true
+    - run: node tools/public/verify_calendar_selection.cjs
+      id: audit_063
+      name: Run node tools/public/verify_calendar_selection.cjs
+      continue-on-error: true
+    - run: node tools/public/verify_day_context.cjs
+      id: audit_064
+      name: Run node tools/public/verify_day_context.cjs
+      continue-on-error: true
+    - run: node tools/public/verify_day_context_guards.cjs
+      id: audit_065
+      name: Run node tools/public/verify_day_context_guards.cjs
+      continue-on-error: true
+    - run: node tools/public/verify_sky_live.cjs
+      id: audit_066
+      name: Run node tools/public/verify_sky_live.cjs
+      continue-on-error: true
+    - run: node tools/public/verify_sky_live_guards.cjs
+      id: audit_067
+      name: Run node tools/public/verify_sky_live_guards.cjs
+      continue-on-error: true
+    - run: node tools/public/verify_shared_clock.cjs
+      id: audit_068
+      name: Run node tools/public/verify_shared_clock.cjs
+      continue-on-error: true
+    - run: node tools/public/verify_moon_gl.cjs
+      id: audit_069
+      name: Run node tools/public/verify_moon_gl.cjs
+      continue-on-error: true
+    - run: node tools/public/verify_moon_gl_integration.cjs
+      id: audit_070
+      name: Run node tools/public/verify_moon_gl_integration.cjs
+      continue-on-error: true
+    - run: node tools/public/verify_motion_settings.cjs
+      id: audit_071
+      name: Run node tools/public/verify_motion_settings.cjs
+      continue-on-error: true
+    - run: node tools/public/verify_first_screen_order.cjs
+      id: audit_072
+      name: Run node tools/public/verify_first_screen_order.cjs
+      continue-on-error: true
+    - run: node tools/public/verify_week_ahead.cjs
+      id: audit_073
+      name: Run node tools/public/verify_week_ahead.cjs
+      continue-on-error: true
+    - name: Run node tools/public/verify_three_day_forecast.cjs
+      run: node tools/public/verify_three_day_forecast.cjs
+      id: audit_074
+      continue-on-error: true
+    - run: node tools/public/verify_personal_activity.cjs
+      id: audit_075
+      name: Run node tools/public/verify_personal_activity.cjs
+      continue-on-error: true
+    - run: node tools/public/verify_personal_audit_fixes.cjs
+      id: audit_076
+      name: Run node tools/public/verify_personal_audit_fixes.cjs
+      continue-on-error: true
+    - run: node tools/public/verify_personal_correlated.cjs
+      id: audit_077
+      name: Run node tools/public/verify_personal_correlated.cjs
+      continue-on-error: true
+    - run: node tools/public/verify_personal_dayline.cjs
+      id: audit_078
+      name: Run node tools/public/verify_personal_dayline.cjs
+      continue-on-error: true
+    - run: node tools/public/verify_personal_election.cjs
+      id: audit_079
+      name: Run node tools/public/verify_personal_election.cjs
+      continue-on-error: true
+    - run: node tools/public/verify_personal_factors.cjs
+      id: audit_080
+      name: Run node tools/public/verify_personal_factors.cjs
+      continue-on-error: true
+    - run: node tools/public/verify_personal_interval_chain.cjs
+      id: audit_081
+      name: Run node tools/public/verify_personal_interval_chain.cjs
+      continue-on-error: true
+    - run: node tools/public/verify_personal_moon_readings.cjs
+      id: audit_082
+      name: Run node tools/public/verify_personal_moon_readings.cjs
+      continue-on-error: true
+    - run: node tools/public/verify_personal_page_browser.cjs
+      id: audit_083
+      name: Run node tools/public/verify_personal_page_browser.cjs
+      continue-on-error: true
+    - run: node tools/public/verify_personal_phase_convention.cjs
+      id: audit_084
+      name: Run node tools/public/verify_personal_phase_convention.cjs
+      continue-on-error: true
+    - run: node tools/public/verify_personal_priority.cjs
+      id: audit_085
+      name: Run node tools/public/verify_personal_priority.cjs
+      continue-on-error: true
+    - run: node tools/public/verify_personal_sidereal_nutation.cjs
+      id: audit_086
+      name: Run node tools/public/verify_personal_sidereal_nutation.cjs
+      continue-on-error: true
+    - run: node tools/public/verify_lunar_core.cjs
+      id: audit_087
+      name: Run node tools/public/verify_lunar_core.cjs
+      continue-on-error: true
+    - run: node tools/public/verify_lunar_pages_browser.cjs
+      id: audit_088
+      name: Run node tools/public/verify_lunar_pages_browser.cjs
+      continue-on-error: true
+    - run: node tools/public/verify_ovation_light.cjs
+      id: audit_089
+      name: Run node tools/public/verify_ovation_light.cjs
+      continue-on-error: true
+    - run: node tools/public/verify_review_fp569d.cjs
+      id: audit_090
+      name: Run node tools/public/verify_review_fp569d.cjs
+      continue-on-error: true
+    - run: node tools/public/verify_moon_kp_fp569f.cjs
+      id: audit_091
+      name: Run node tools/public/verify_moon_kp_fp569f.cjs
+      continue-on-error: true
+    - run: node tools/public/verify_polish_fp569j.cjs
+      id: audit_092
+      name: Run node tools/public/verify_polish_fp569j.cjs
+      continue-on-error: true
+    - run: node tools/public/verify_mobile_polish_fp569k.cjs
+      id: audit_093
+      name: Run node tools/public/verify_mobile_polish_fp569k.cjs
+      continue-on-error: true
+    - run: node tools/public/verify_wow_fp569n.cjs
+      id: audit_094
+      name: Run node tools/public/verify_wow_fp569n.cjs
+      continue-on-error: true
+    - run: node tools/public/verify_plain_fp569o.cjs
+      id: audit_095
+      name: Run node tools/public/verify_plain_fp569o.cjs
+      continue-on-error: true
+    - run: node tools/public/check_final_score_v113.cjs . final-score-regression.json
+      id: audit_096
+      name: Run node tools/public/check_final_score_v113.cjs . final-score-regression.json
+      continue-on-error: true
+    - run: node tools/public/check_legacy_sync_v112.cjs . legacy-regression.json
+      id: audit_097
+      name: Run node tools/public/check_legacy_sync_v112.cjs . legacy-regression.json
+      continue-on-error: true
+    - run: node tools/public/check_product_brand_v123.cjs
+      id: audit_098
+      name: Run node tools/public/check_product_brand_v123.cjs
+      continue-on-error: true
+    - run: node tools/public/science_festival_engine.cjs festival-unit
+      id: audit_099
+      name: Run node tools/public/science_festival_engine.cjs festival-unit
+      continue-on-error: true
+    - run: node tools/public/science_festival_ui.cjs festival-ui
+      id: audit_100
+      name: Run node tools/public/science_festival_ui.cjs festival-ui
+      continue-on-error: true
+    - run: node tools/public/science_festival_offline.cjs festival-offline
+      id: audit_101
+      name: Run node tools/public/science_festival_offline.cjs festival-offline
+      continue-on-error: true
+    - run: node tools/public/science_festival_library.cjs
+      id: audit_102
+      name: Run node tools/public/science_festival_library.cjs
+      continue-on-error: true
+    - run: python tools/public/build_pages.py
+      id: audit_103
+      name: Run python tools/public/build_pages.py
+      continue-on-error: true
+    - name: Report exact outcomes
+      if: always()
+      env:
+        OUTCOME_001: ${{ steps.audit_001.outcome }}
+        OUTCOME_002: ${{ steps.audit_002.outcome }}
+        OUTCOME_003: ${{ steps.audit_003.outcome }}
+        OUTCOME_004: ${{ steps.audit_004.outcome }}
+        OUTCOME_005: ${{ steps.audit_005.outcome }}
+        OUTCOME_006: ${{ steps.audit_006.outcome }}
+        OUTCOME_007: ${{ steps.audit_007.outcome }}
+        OUTCOME_008: ${{ steps.audit_008.outcome }}
+        OUTCOME_009: ${{ steps.audit_009.outcome }}
+        OUTCOME_010: ${{ steps.audit_010.outcome }}
+        OUTCOME_011: ${{ steps.audit_011.outcome }}
+        OUTCOME_012: ${{ steps.audit_012.outcome }}
+        OUTCOME_013: ${{ steps.audit_013.outcome }}
+        OUTCOME_014: ${{ steps.audit_014.outcome }}
+        OUTCOME_015: ${{ steps.audit_015.outcome }}
+        OUTCOME_016: ${{ steps.audit_016.outcome }}
+        OUTCOME_017: ${{ steps.audit_017.outcome }}
+        OUTCOME_018: ${{ steps.audit_018.outcome }}
+        OUTCOME_019: ${{ steps.audit_019.outcome }}
+        OUTCOME_020: ${{ steps.audit_020.outcome }}
+        OUTCOME_021: ${{ steps.audit_021.outcome }}
+        OUTCOME_022: ${{ steps.audit_022.outcome }}
+        OUTCOME_023: ${{ steps.audit_023.outcome }}
+        OUTCOME_024: ${{ steps.audit_024.outcome }}
+        OUTCOME_025: ${{ steps.audit_025.outcome }}
+        OUTCOME_026: ${{ steps.audit_026.outcome }}
+        OUTCOME_027: ${{ steps.audit_027.outcome }}
+        OUTCOME_028: ${{ steps.audit_028.outcome }}
+        OUTCOME_029: ${{ steps.audit_029.outcome }}
+        OUTCOME_030: ${{ steps.audit_030.outcome }}
+        OUTCOME_031: ${{ steps.audit_031.outcome }}
+        OUTCOME_032: ${{ steps.audit_032.outcome }}
+        OUTCOME_033: ${{ steps.audit_033.outcome }}
+        OUTCOME_034: ${{ steps.audit_034.outcome }}
+        OUTCOME_035: ${{ steps.audit_035.outcome }}
+        OUTCOME_036: ${{ steps.audit_036.outcome }}
+        OUTCOME_037: ${{ steps.audit_037.outcome }}
+        OUTCOME_038: ${{ steps.audit_038.outcome }}
+        OUTCOME_039: ${{ steps.audit_039.outcome }}
+        OUTCOME_040: ${{ steps.audit_040.outcome }}
+        OUTCOME_041: ${{ steps.audit_041.outcome }}
+        OUTCOME_042: ${{ steps.audit_042.outcome }}
+        OUTCOME_043: ${{ steps.audit_043.outcome }}
+        OUTCOME_044: ${{ steps.audit_044.outcome }}
+        OUTCOME_045: ${{ steps.audit_045.outcome }}
+        OUTCOME_046: ${{ steps.audit_046.outcome }}
+        OUTCOME_047: ${{ steps.audit_047.outcome }}
+        OUTCOME_048: ${{ steps.audit_048.outcome }}
+        OUTCOME_049: ${{ steps.audit_049.outcome }}
+        OUTCOME_050: ${{ steps.audit_050.outcome }}
+        OUTCOME_051: ${{ steps.audit_051.outcome }}
+        OUTCOME_052: ${{ steps.audit_052.outcome }}
+        OUTCOME_053: ${{ steps.audit_053.outcome }}
+        OUTCOME_054: ${{ steps.audit_054.outcome }}
+        OUTCOME_055: ${{ steps.audit_055.outcome }}
+        OUTCOME_056: ${{ steps.audit_056.outcome }}
+        OUTCOME_057: ${{ steps.audit_057.outcome }}
+        OUTCOME_058: ${{ steps.audit_058.outcome }}
+        OUTCOME_059: ${{ steps.audit_059.outcome }}
+        OUTCOME_060: ${{ steps.audit_060.outcome }}
+        OUTCOME_061: ${{ steps.audit_061.outcome }}
+        OUTCOME_062: ${{ steps.audit_062.outcome }}
+        OUTCOME_063: ${{ steps.audit_063.outcome }}
+        OUTCOME_064: ${{ steps.audit_064.outcome }}
+        OUTCOME_065: ${{ steps.audit_065.outcome }}
+        OUTCOME_066: ${{ steps.audit_066.outcome }}
+        OUTCOME_067: ${{ steps.audit_067.outcome }}
+        OUTCOME_068: ${{ steps.audit_068.outcome }}
+        OUTCOME_069: ${{ steps.audit_069.outcome }}
+        OUTCOME_070: ${{ steps.audit_070.outcome }}
+        OUTCOME_071: ${{ steps.audit_071.outcome }}
+        OUTCOME_072: ${{ steps.audit_072.outcome }}
+        OUTCOME_073: ${{ steps.audit_073.outcome }}
+        OUTCOME_074: ${{ steps.audit_074.outcome }}
+        OUTCOME_075: ${{ steps.audit_075.outcome }}
+        OUTCOME_076: ${{ steps.audit_076.outcome }}
+        OUTCOME_077: ${{ steps.audit_077.outcome }}
+        OUTCOME_078: ${{ steps.audit_078.outcome }}
+        OUTCOME_079: ${{ steps.audit_079.outcome }}
+        OUTCOME_080: ${{ steps.audit_080.outcome }}
+        OUTCOME_081: ${{ steps.audit_081.outcome }}
+        OUTCOME_082: ${{ steps.audit_082.outcome }}
+        OUTCOME_083: ${{ steps.audit_083.outcome }}
+        OUTCOME_084: ${{ steps.audit_084.outcome }}
+        OUTCOME_085: ${{ steps.audit_085.outcome }}
+        OUTCOME_086: ${{ steps.audit_086.outcome }}
+        OUTCOME_087: ${{ steps.audit_087.outcome }}
+        OUTCOME_088: ${{ steps.audit_088.outcome }}
+        OUTCOME_089: ${{ steps.audit_089.outcome }}
+        OUTCOME_090: ${{ steps.audit_090.outcome }}
+        OUTCOME_091: ${{ steps.audit_091.outcome }}
+        OUTCOME_092: ${{ steps.audit_092.outcome }}
+        OUTCOME_093: ${{ steps.audit_093.outcome }}
+        OUTCOME_094: ${{ steps.audit_094.outcome }}
+        OUTCOME_095: ${{ steps.audit_095.outcome }}
+        OUTCOME_096: ${{ steps.audit_096.outcome }}
+        OUTCOME_097: ${{ steps.audit_097.outcome }}
+        OUTCOME_098: ${{ steps.audit_098.outcome }}
+        OUTCOME_099: ${{ steps.audit_099.outcome }}
+        OUTCOME_100: ${{ steps.audit_100.outcome }}
+        OUTCOME_101: ${{ steps.audit_101.outcome }}
+        OUTCOME_102: ${{ steps.audit_102.outcome }}
+        OUTCOME_103: ${{ steps.audit_103.outcome }}
+      run: 'node -e ''const rows = Array.from({length:103}, (_,i) => ({index:i+1,outcome:process.env["OUTCOME_"+String(i+1).padStart(3,"0")]})); console.log("SKYRHYTHM_AUDIT_OUTCOMES="+JSON.stringify(rows)); if(rows.some(row=>row.outcome!=="success"))process.exit(1);'' '
+  probe_failure:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-python@v5
-        with: {python-version: '3.12'}
-      - run: python tools/public/verify_boundary.py
-      - uses: actions/setup-node@v4
-        with: {node-version: '24'}
-      - run: npm install --no-save --package-lock=false playwright@1.62.1
-      - run: npx playwright install --with-deps chromium
-      - run: node tools/public/verify_day_cautions.cjs
-      - run: node tools/public/verify_noaa_missing.cjs
-      - run: node tools/public/verify_svg_missing.cjs
-      - run: node tools/public/verify_presentation.cjs
-      - run: node tools/public/verify_final_score.cjs
+    - run: echo "Intentional audit dependency failure"; exit 1
+  probe_success:
+    runs-on: ubuntu-24.04
+    steps:
+    - run: echo "Successful dependency control"
+  would_publish_after_failure:
+    runs-on: ubuntu-24.04
+    needs: probe_failure
+    steps:
+    - run: echo "Dependency success received; no publication action in diagnostic workflow"
+  would_publish_after_success:
+    runs-on: ubuntu-24.04
+    needs: probe_success
+    steps:
+    - run: echo "Dependency success received; no publication action in diagnostic workflow"
