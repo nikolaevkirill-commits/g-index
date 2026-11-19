@@ -20,7 +20,7 @@ permissions:
   contents: read
   actions: read
 concurrency:
-  group: pages-release
+  group: ${{ github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/deploy' && format('pages-audit-{0}', github.run_id) || 'pages-release' }}
   cancel-in-progress: false
 jobs:
   checks:
@@ -108,6 +108,8 @@ jobs:
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_offline_cache_budget.cjs
       - if: steps.scope.outputs.mode != 'data'
+        run: node tools/public/verify_sw_low_quota.cjs
+      - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_sw_cache_lifecycle.cjs
       - env:
           CACHE_PUBLISHED_BASELINE: ${{ steps.scope.outputs.baseline }}
@@ -148,6 +150,8 @@ jobs:
         run: node tools/public/verify_l10n_expanded.cjs
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_sky_scene.cjs
+      - if: steps.scope.outputs.mode != 'data'
+        run: node tools/public/verify_sky_scene_negative.cjs
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_day_verdict.cjs
       - if: steps.scope.outputs.mode != 'data'

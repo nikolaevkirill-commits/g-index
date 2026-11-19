@@ -153,12 +153,31 @@ const server=http.createServer(async(req,res)=>{
    results.push({entry,width,visible,reference,a,b,lengths,errors});
    await ctx.close();
   }
+  for(const inputState of ['complete','synthetic-history']){
   const c=await browser.newContext({viewport:{width:320,height:694},locale:'uk-UA',timezoneId:'Europe/Kyiv',serviceWorkers:'block'});
   await c.route(/^https?:\/\/(?!127\.0\.0\.1)/,r=>r.abort());
   await c.addInitScript(()=>{
    localStorage.setItem('gidx_onboard_done_v2','1');
    localStorage.setItem('srPrivacyNoticeDismissed','1');
   });
+  if(inputState==='synthetic-history'){
+   // Public historical fixture only: cloned days are synthetic, never forecasts.
+   // Reproduce the archival make_feed.py scenario without overwriting tracked feeds.
+   const fixture=JSON.parse(await fs.readFile(path.join(root,'tools/public/fixtures/score_regression.json'),'utf8'));
+   const original=structuredClone(fixture),keys=Object.keys(original.days).sort();let index=0;
+   const sky=JSON.parse(await fs.readFile(path.join(root,'consumer_cloud/sky.json'),'utf8'));
+   const end=new Date(Math.max(...sky.daily.map(x=>Date.parse(x.date)))+30*86400000);
+   for(let cursor=new Date(keys[0]);cursor<=end;cursor=new Date(+cursor+86400000)){
+    const day=cursor.toISOString().slice(0,10);if(fixture.days[day])continue;
+    const source=keys[index++%keys.length],delta=+cursor-Date.parse(source);
+    fixture.days[day]=JSON.parse(JSON.stringify(original.days[source]).replace(/\d{4}-\d{2}-\d{2}/g,date=>new Date(Date.parse(date)+delta).toISOString().slice(0,10)));
+   }
+   fixture.harness_note='synthetic cloned public historical fixture; not a forecast';
+   const body=JSON.stringify(fixture);
+   await c.route(/\/(?:consumer_cloud\/forecast|INDEPENDENT_FORECAST_FEED_v1)\.json(?:\?.*)?$/,r=>r.fulfill({contentType:'application/json',body}));
+   const decisions=await fs.readFile(path.join(root,'tools/public/fixtures/decisions_regression.json'),'utf8');
+   await c.route(/\/consumer_cloud\/final_score_decisions\.json(?:\?.*)?$/,r=>r.fulfill({contentType:'application/json',body:decisions}));
+  }
   const p=await c.newPage();
   await p.clock.setFixedTime(start);
   await p.goto(base+'/index.html?channel=play#panch',{waitUntil:'domcontentloaded'});
@@ -180,6 +199,32 @@ const server=http.createServer(async(req,res)=>{
   assert(first.verdict&&first.score,'verdict and score must fit on a 320×694 first viewport');
   assert(first.afterHero&&first.sunStarts,'Sun clock follows the overview card and starts on the first viewport: '+JSON.stringify(first));
   assert(first.plotBottom<=first.nav,'solar plot must fit above the bottom navigation: '+JSON.stringify(first));
+  const source=p.locator('#nrRoute-today [data-today-source]');
+  assert(await source.evaluate(el=>{const r=el.getBoundingClientRect();return !!el.textContent.trim()&&r.height>0&&r.bottom<=document.getElementById('mobileNav').getBoundingClientRect().top&&el.scrollWidth<=el.clientWidth;}),'full explicit source/freshness remains visible');
+  const status=p.locator('#nrRoute-today [data-p0-feed-state]');
+  await p.waitForFunction(()=>document.querySelector('#nrRoute-today [data-p0-feed-state]')?.previousElementSibling?.hasAttribute('data-sky-clock'));
+  if(inputState==='synthetic-history'){
+   assert.match(await p.locator('#nrRoute-today .nr-dv-avoid').innerText(),/За календарем краще відкласти:.*нові починання/s);
+   assert.equal(await status.getAttribute('data-state'),'stale');
+   assert(await status.isVisible(),'stale status is retained below Sun');
+  }
+  const statusText=await status.textContent(),sourceText=await source.textContent();
+  await p.setViewportSize({width:390,height:844});
+  await p.waitForFunction(()=>document.querySelector('#nrRoute-today [data-p0-feed-state]')?.parentElement?.matches('.nr-o-hero'));
+  await p.setViewportSize({width:320,height:694});
+  await p.waitForFunction(()=>document.querySelector('#nrRoute-today [data-p0-feed-state]')?.previousElementSibling?.hasAttribute('data-sky-clock'));
+  assert(await status.textContent()===statusText,'resize preserves status');
+  assert(await source.textContent()===sourceText,'resize preserves complete source');
+  const why=p.locator('#nrRoute-today [data-day-why]');
+  await why.locator('summary').click();
+  assert(await why.locator('ul').isVisible(),'full reasons remain accessible');
+  await why.locator('summary').click();
+  if(process.env.VERIFY_CLOCK_EVIDENCE_DIR){
+   const out=path.resolve(process.env.VERIFY_CLOCK_EVIDENCE_DIR);await fs.mkdir(out,{recursive:true});
+   // Geometry allowlist only. Screenshots mask score and source/feed content.
+   await fs.writeFile(path.join(out,inputState+'.json'),JSON.stringify({scenario:inputState,viewport:{width:320,height:694},...first,sourceVisible:true,statusRetained:true,resizePreserved:true},null,2));
+   if(inputState==='synthetic-history')await p.screenshot({path:path.join(out,'synthetic-masked.png'),mask:[p.locator('[data-score-tone]'),p.locator('[data-today-source]'),p.locator('[data-p0-feed-state]')],maskColor:'#273044'});
+  }
   const localSun=p.locator('[data-sun-first-screen]');
   await localSun.waitFor();
   assert.match(await localSun.innerText(),/Сонце під горизонтом.*Київ · типове місце/);
@@ -189,7 +234,15 @@ const server=http.createServer(async(req,res)=>{
   await p.locator('[data-sky-live] .nr-sl-body[data-body=Sun]').waitFor();
   assert.match(await p.locator('#nrSkyLiveHeading').textContent(),/Києвом/);
   await c.close();
+  }
   assert.equal(results.length,3);
-  console.log('PASS first viewport ×3, shared clock round trip ×3, Sun equality, seven bodies, WebGL identity and phase, playback/pause, reduced-motion scrubbing, Kyiv 23/25 h, explicit default');
+  // Output is an allowlist of test labels, never raw feeds, live scores or DOM text.
+  console.log('PASS 320×694 complete + synthetic historical inputs; first viewport ×3, shared clock round trip ×3, Sun equality, seven bodies, WebGL identity and phase, playback/pause, reduced-motion scrubbing, Kyiv 23/25 h, explicit default');
  }finally{await browser.close();server.close();}
-})().catch(e=>{console.error(e);server.close();process.exitCode=1;});
+})().catch(e=>{
+ // Assertion libraries may include raw actual/expected DOM or feed values.
+ // Print only the failure kind and this test's line/column, never their payload.
+ const location=String(e.stack||'').match(/verify_shared_clock\.cjs:\d+:\d+/)?.[0]||'shared-clock';
+ console.error('FAIL '+location+' ('+(['AssertionError','TimeoutError','Error'].includes(e.name)?e.name:'Error')+'); raw data suppressed');
+ server.close();process.exitCode=1;
+});

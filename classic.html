@@ -7842,7 +7842,7 @@ html body .sr-dl-dialog .sr-dl-place-primary label{display:grid;grid-template-co
 html .nr-sl-header>div{min-width:0;flex:1 1 auto}html .nr-sl-header button[data-live-place]{flex:0 0 auto;white-space:nowrap;word-break:keep-all;overflow-wrap:normal;hyphens:none}
 
 </style>
-<style data-inline-source="day_verdict_v1.css" data-css-sha256="4798cbe811a86aedff7e1a9712abdedf147c749d81728960a5ebee7e8d8485c5">
+<style data-inline-source="day_verdict_v1.css" data-css-sha256="3b9ce36d775ea201db23ce9b1d095560d4e18867888e336ed5b5099aee93eba2">
 /* SkyRhythm · вердикт дня: речення першим рядком, бал під ним, «чому» на вимогу. */
 .nr-day-verdict{grid-column:1/-1;margin:4px 0 10px;color:var(--nrs-ink,#F3EFF8)}
 .nr-day-verdict p{margin:0 0 6px;line-height:1.45;font-size:1rem}
@@ -7898,6 +7898,22 @@ html body #fp434Shell #nrRoute-today .nr-o-hero:has(>[data-day-verdict])>[data-d
 @media (max-width:359px){
  html body #fp434Shell #nrRoute-today .nr-overview[data-overview]>.nr-o-hero:has(>[data-day-verdict]){row-gap:4px!important;padding-block:8px!important}
  html body #fp434Shell #nrRoute-today .nr-overview>.sr-time-sun[data-sky-clock]{margin-block-start:6px!important}
+}
+/* Short phones keep every source and advice line; secondary actions share a row. */
+@media(max-width:360px) and (max-height:740px){
+ html.wow body #fp434Shell #nrRoute-today [data-app-today]>.nr-o-hero:has(>[data-day-verdict])>[data-day-verdict]{margin:0!important}
+ html body #fp434Shell #nrRoute-today .nr-o-hero .nr-dv-tone{font-size:20px!important;line-height:1.25!important}
+ html.wow body #fp434Shell #nrRoute-today [data-app-today]>.nr-o-hero:has(>[data-day-verdict])>.nr-o-verdict .nr-o-score[data-score-tone]{width:44px!important;height:44px!important;min-width:44px!important;font-size:30px!important}
+ html.wow body #fp434Shell #nrRoute-today [data-app-today]>.nr-o-hero:has(>[data-day-verdict])>.sr-p0-source{grid-area:4/1/5/2!important;min-height:44px!important;align-self:center}
+ html.wow body #fp434Shell #nrRoute-today [data-app-today]>.nr-o-hero:has(>[data-day-verdict])>[data-day-why]{grid-area:4/2/5/3!important;margin:0!important;padding-inline:8px}
+ html body #fp434Shell #nrRoute-today .nr-o-hero{column-gap:8px!important}
+ html.wow body #fp434Shell #nrRoute-today [data-app-today]>.nr-o-hero>.nr-o-verdict{padding-block:0!important;column-gap:8px!important;padding-inline:6px!important}
+}
+
+/* Keep R9's fresh-formula duplicate suppression after the short-phone reflow.
+   Stale/error/missing statuses and registry warnings always remain available. */
+@media(max-width:360px) and (max-height:740px){
+ .nr-overview:has(>.nr-o-hero [data-today-source]:not(:empty)):has(>.nr-o-hero [data-p0-authority="formula"])>[data-p0-feed-state][data-state="fresh"]:not(:has([data-registry])){display:none}
 }
 
 </style>

@@ -1,0 +1,56 @@
+{
+  "schema": "fp575-consumer-coverage-v1",
+  "exclusive_historical_cutoff": "2026-11-19",
+  "protected_policy": "Never replace tracked protected files; #13 and build_pages always use actual Git HEAD/index.",
+  "scenarios": [
+    {
+      "original_index": 18,
+      "command": "node tools/public/verify_kp_source_provenance.cjs",
+      "clock": "2026-11-08T13:24:00Z",
+      "positive": "NOAA observed and provisional/retry provenance; historical neutral verdict visible",
+      "negative": "unavailable/missing provenance must not appear observed; synthetic fallback feed missing historical authority is expected FAIL"
+    },
+    {
+      "original_index": 43,
+      "command": "node tools/public/test_scoped_decisions.cjs",
+      "dates": "2026-11-09 through 2026-11-22; scoped 15 and 16",
+      "positive": "general authority and separate new_starts scope; conflict/stale/recovery branches",
+      "negative": "missing historical registry row must FAIL",
+      "bounded_fixture_status": "INSUFFICIENT: immutable test explicitly checks post-cutoff dates"
+    },
+    {
+      "original_index": 47,
+      "command": "node tools/public/verify_expert_november.cjs",
+      "clock": "2026-11-09T10:00:00Z",
+      "dates": "2026-11-09 through 2026-11-22; cautions 13 and 14; scoped 15 and 16",
+      "positive": "authority parity, source/caution visibility and language across routes",
+      "negative": "missing scoped records must FAIL",
+      "bounded_fixture_status": "INSUFFICIENT: immutable test explicitly selects post-cutoff dates"
+    },
+    {
+      "original_index": 63,
+      "command": "node tools/public/verify_calendar_selection.cjs",
+      "clock": "2026-11-10T14:30:00Z at width 320",
+      "date": "2026-11-13",
+      "positive": "selected neutral label present, one word on one line and contrast >=4.5",
+      "negative": "absent historical state must FAIL; do not change timeout/assertions"
+    },
+    {
+      "original_index": 90,
+      "command": "node tools/public/verify_review_fp569d.cjs",
+      "clock": "forecast.generated_at + 1 hour",
+      "positive": "verified Drik event in seven-day forecast window; RFC5545 export; next-event countdown from real authority",
+      "negative": "no confirmed event in chosen window must FAIL at .ics presence",
+      "bounded_fixture_status": "UNVERIFIED for standalone bounded subset; canonical full feed required"
+    },
+    {
+      "original_index": 93,
+      "command": "node tools/public/verify_mobile_polish_fp569k.cjs",
+      "clock": "2026-11-09T08:51:00Z",
+      "event": "New Moon 2026-11-09 09:02 Europe/Kyiv; dayline transition 09:02",
+      "positive": "visible Day verdict equals Today; 7 compact rows and 27-day end; shared clock and event marker",
+      "negative": "missing verdict/feed must FAIL, not null/null parity"
+    }
+  ],
+  "coverage_claim": "Six original commands remain unchanged; historical inspection export is not a substitute full-gate fixture. Full test coverage requires exact tracked protected inputs with verified SHA256. Synthetic make_feed.py plus regression registry has known missing-state FAILs."
+}

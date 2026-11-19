@@ -253,6 +253,7 @@ function mount(){
  const caution=overview.querySelector(':scope > .sr-expert-caution');
  if(caution||hero)(caution||hero).after(today);else overview.prepend(today);
  renderToday(snapshot());
+ window.dispatchEvent(new Event('sr:sky-clock-mounted'));
 }
 function sync(){
  if(document.hidden||!['#today','#panch',''].includes(location.hash)||!allowed())stop();

@@ -499,10 +499,22 @@ const driverLabel=x=>x.factor==='Kp'?'Геомагнітна складова':x
  for(const selector of ['.sr-dl-actions','label','[data-moment]','figure:not([data-solar-profile])','[data-events]','[data-method]','[data-scope]']){const item=line.querySelector(':scope > '+selector);if(item)explore.append(item);}}
  const exp=root.querySelector('[data-p0-explore]>summary');if(exp)exp.textContent=tr('Усі події, час і традиційні образи');
  const journey=root.querySelector('.nr-o-journey');if(journey){(line||signals).after(journey);}if(root.lastElementChild!==details)root.append(details);
- renderSignals(root,ds,resolved);renderTimeline(root,ds);motionControl(document.querySelector('#nrRoute-more')||details);hero.append(root.querySelector('[data-p0-feed-state]'));
+ renderSignals(root,ds,resolved);renderTimeline(root,ds);motionControl(document.querySelector('#nrRoute-more')||details);
+ // On short phones keep the full status immediately after the Sun; the score's
+ // explicit source/freshness stays in the hero. No status text is removed.
+ placeFeedState(root);
  // Route-level disclosures retain their own keyboard and deep-link entry points.
 }
 
+const shortPhone=matchMedia('(max-width:360px) and (max-height:740px)');
+function placeFeedState(root){
+ const state=root.querySelector('[data-p0-feed-state]'),sun=root.querySelector(':scope > [data-sky-clock]'),hero=root.querySelector('.nr-o-hero');
+ if(!state||!hero)return;
+ if(sun&&shortPhone.matches&&hero.querySelector('[data-today-source]:not(:empty)')){state.dataset.placement='after-hero';sun.after(state);}
+ else hero.append(state);
+}
+shortPhone.addEventListener('change',()=>document.querySelectorAll('#nrRoute-today [data-overview]').forEach(placeFeedState));
+window.addEventListener('sr:sky-clock-mounted',()=>document.querySelectorAll('#nrRoute-today [data-overview]').forEach(placeFeedState));
 function dataState(result,load=window.__srConsumerLoadState,online=navigator.onLine){
  if(!online)return 'offline';if(load==='loading')return 'loading';if(load==='error')return 'error';
  const state=(result?.formula||result)?.state;return state==='fresh'?'fresh':state==='stale'?'stale':state==='offline'?'offline':state==='invalid'?'invalid':'missing';
