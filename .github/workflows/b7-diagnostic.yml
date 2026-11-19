@@ -1,36 +1,52 @@
-name: B7 diagnostic
-on:
-  workflow_dispatch:
+name: FP575 publication dependency control
+on: workflow_dispatch
 permissions:
   contents: read
 jobs:
-  probe:
+  accepted:
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    strategy:
-      fail-fast: false
-      matrix:
-        trigger: [message, button]
-        trial: [old, waiting]
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/setup-node@v4
-        with: {node-version: '24'}
-      - run: npm install --no-save --package-lock=false playwright@1.62.1
-      - run: npx playwright install --with-deps chromium
-      - run: node tools/public/verify_day_cautions.cjs
-      - run: node tools/public/verify_noaa_missing.cjs
-      - run: node tools/public/verify_svg_missing.cjs
-      - run: node tools/public/verify_presentation.cjs
-      - run: node tools/public/verify_day_summary.cjs
-      - run: node tools/public/verify_journal_restore_time.cjs
-      - run: node tools/public/verify_journal_restore_adversarial.cjs
-      # FP545: raw production-worker run first (statistics only), then the traced/restart probe.
-      - run: node tools/public/verify_css_upgrade.cjs --${{ matrix.trigger }} --server-log
-        continue-on-error: true
-      - run: node tools/public/verify_css_upgrade.cjs --${{ matrix.trigger }} --restart=${{ matrix.trial }} --trace
-      - uses: actions/upload-artifact@v4
-        if: always()
         with:
-          name: b7-${{ matrix.trigger }}-${{ matrix.trial }}
-          path: /tmp/skyrhythm-css-upgrade-*/
+          ref: 9740c32d7a7c0498df20409426e3ed3c19678366
+          persist-credentials: false
+      - name: Verify candidate and native dependency
+        run: |
+          test "$(git rev-parse HEAD)" = 9740c32d7a7c0498df20409426e3ed3c19678366
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          native = Path('.github/workflows/gated-pages.yml').read_text()
+          assert re.search(r'^  deploy:\n    needs: checks\n    if: github.ref ==',native,re.M)
+          assert native.index('name: Negative gate probe') < native.index('run: python tools/public/build_pages.py') < native.index('uses: actions/upload-pages-artifact')
+          PY
+  rejected:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: 9740c32d7a7c0498df20409426e3ed3c19678366
+          persist-credentials: false
+      - name: Run native negative assertion from candidate
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import subprocess, shlex
+          native = Path('.github/workflows/gated-pages.yml').read_text()
+          body = native.split('- name: Negative gate probe',1)[1].split('run: |',1)[1].strip().splitlines()[0]
+          args = shlex.split(body)
+          assert args[:2] == ['node','-e'] and 'Intentional gate probe' in args[2]
+          raise SystemExit(subprocess.run(args,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL).returncode)
+          PY
+      - name: Build marker after failure
+        run: echo build-was-reached
+  allowed_downstream:
+    needs: accepted
+    runs-on: ubuntu-24.04
+    steps:
+      - run: echo reached
+  blocked_downstream:
+    needs: rejected
+    runs-on: ubuntu-24.04
+    steps:
+      - run: echo reached
