@@ -2,7 +2,7 @@ importScripts('./runtime_diagnostics_v1.js','./civil_time_v1.js?v=fp569f-global'
 // G-Index service worker. Navigations, HTML, JS and data (.json/.jsonl/.csv) are network-first with a
 // cached fallback. Versioned packed scripts and other static assets are cache-first.
 // Bump CACHE_VERSION whenever index.html or a cached shell asset changes.
-const CACHE_VERSION = 'fp575-d1d8-20261119';
+const CACHE_VERSION = 'fp575-n1n5-20261119';
 const CACHE_PREFIX = 'gindex-'; // G-Index cache namespace; do not remove the prefix.
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${CACHE_VERSION}`;
 const DATA_CACHE = `${CACHE_PREFIX}data-${CACHE_VERSION}`;
@@ -106,7 +106,7 @@ const SHELL_ASSETS = [
   './sky_ovation_v1.js?v=1',
   './moon_gl_v1.js?v=fp569n-integrated',
   './sky_evening_v1.js?v=fp569o-horizon',
-  './share_card_v1.js?v=fp569r-design',
+  './share_card_v1.js?v=fp575-fold3',
   './glossary_v1.js?v=fp569r-l10n',
   './journal_stats_v1.js?v=fp569n',
   './day_summary.html',
@@ -191,7 +191,7 @@ const SHELL_ASSETS = [
   './preview-v4/sky_scene_v1.js?v=fp572-sky',
   './preview-v4/sky_scene_v1.css?v=fp569r-reaudit',
   './preview-v4/app_today_v1.js?v=fp575-fold2',
-  './preview-v4/app_today_v1.css?v=app1',
+  './preview-v4/app_today_v1.css?v=app2',
   './natal_sky_v1.js?v=fp572-natal',
   './day_verdict_v1.js?v=fp573-r8',
   './space_scene_gl_v1.js?v=fp569r-noaa-locales',
@@ -200,7 +200,7 @@ const SHELL_ASSETS = [
   './week_ahead_v1.js?v=fp575-a11y',
   './moon_month_v1.js?v=fp569h-p8',
   './kp_threshold_v1.js?v=fp569f-global',
-  './day_verdict_v1.css?v=dv5',
+  './day_verdict_v1.css?v=dv6',
   './shared_day_v1.js?v=sd1',
 
   './design-b17.html',
@@ -248,7 +248,7 @@ const SHELL_ASSETS = [
   './product_render_queue_v1.js',
   './moon_phase_v1.js',
   './expert_start_advice_v1.js?v=1',
-  './p0_layout_v1.js?v=fp575-fold2',
+  './p0_layout_v1.js?v=fp575-fold3',
   './three_day_forecast_v1.js?v=fp575-fold2',
   './p0_layout_v1.css',
   './wow_reviewed_v1.css',

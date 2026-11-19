@@ -81,7 +81,18 @@ function mount(){
  const b=box.querySelector('button');if(b.textContent!=='↗ '+t('btn'))b.textContent='↗ '+t('btn');
 }
 const STYLE='.sr-share-card{margin:10px 0 0;display:flex;align-items:center;gap:10px;flex-wrap:wrap}[data-sky-clock]>.sr-share-card{margin:4px 15px 16px}.sr-share-card button{min-height:44px;padding:0 16px;border-radius:14px;border:1px solid rgba(242,196,107,.6);background:rgba(242,196,107,.12);color:#F2C46B;font:600 15px/1 system-ui,sans-serif;cursor:pointer}.sr-share-card button:focus-visible{outline:3px solid #F2C46B;outline-offset:2px}.sr-share-card small{opacity:.8}';
-let pending=0;const soon=()=>{clearTimeout(pending);pending=setTimeout(()=>{if(!document.getElementById('srShareStyle')){const s=document.createElement('style');s.id='srShareStyle';s.textContent=STYLE;document.head.append(s)}try{mount()}catch(e){console.warn('share_card',e)}},250)};
+// Coalesce updates without postponing the first mount during continuous DOM refresh.
+let pending=null;
+function soon(){
+ if(pending!==null)return;
+ pending=setTimeout(()=>{
+  pending=null;
+  if(!document.getElementById('srShareStyle')){
+   const style=document.createElement('style');style.id='srShareStyle';style.textContent=STYLE;document.head.append(style);
+  }
+  try{mount()}catch(error){console.warn('share_card',error)}
+ },250);
+}
 phone.addEventListener('change',soon);
 for(const ev of ['sr:consumer-load','gindex:consumer-ready','nr:locale','hashchange'])window.addEventListener(ev,soon);
 function watch(){const r=document.getElementById('nrRoute-today');if(!r){setTimeout(watch,400);return}new MutationObserver(soon).observe(r,{childList:true,subtree:true});soon()}

@@ -14,23 +14,23 @@ const server=http.createServer(async(req,res)=>{
 });
 // The same stale feed can retry while the viewport is changing. Placement
 // alone does not tell us that the current feed has finished rendering.
-async function settledTodayFeed(page, compact){
- const handle=await page.waitForFunction(short=>{
+async function settledTodayFeed(page, compact, expectedState){
+ const handle=await page.waitForFunction(({compact,expectedState})=>{
   const root=document.querySelector('#nrRoute-today [data-overview]');
   const status=root?.querySelector('[data-p0-feed-state]');
   const source=root?.querySelector('[data-today-source]')?.textContent;
   const date=root?.querySelector('select')?.value;
   const load=window.__srConsumerLoadState;
   if(!status||!source?.trim()||!date||!['ready','error'].includes(load))return false;
-  const placed=short?status.previousElementSibling?.hasAttribute('data-sky-clock'):status.parentElement?.matches('.nr-o-hero');
+  const placed=compact?status.previousElementSibling?.hasAttribute('data-sky-clock'):status.parentElement?.matches('.nr-o-hero');
   if(!placed)return false;
   const consumer=window.fp469ConsumerForDate?.({ds:date})?.consumer;
   if(!consumer||!window.SRP0Layout?.dataState)return false;
   const state=window.SRP0Layout.dataState(consumer,load,navigator.onLine);
   // Require the rendered UI and resolver to agree in the same observation.
-  if(status.dataset.state!==state)return false;
+  if(status.dataset.state!==state||(expectedState&&state!==expectedState))return false;
   return {date,state,source};
- },compact,{polling:50,timeout:30000});
+ },{compact,expectedState},{polling:50,timeout:30000});
  try{return await handle.jsonValue();}
  finally{await handle.dispose();}
 }
@@ -177,8 +177,13 @@ async function settledTodayFeed(page, compact){
    await ctx.close();
   }
   const layouts=[];
-  for(const lang of ['uk','en','es','fr']) for(const inputState of ['complete','synthetic-history']){
-  const c=await browser.newContext({viewport:{width:320,height:694},locale:lang,timezoneId:'Europe/Kyiv',serviceWorkers:'block'});
+  const sizes=[[320,694,true],[361,700,true],[375,700,true],[360,640,false],[320,568,false],[375,667,false],[376,700,false]];
+  const cases=['uk','en','es','fr'].flatMap(lang=>['complete','synthetic-history'].flatMap(inputState=>
+   sizes.map(([width,height,mustFit])=>({lang,inputState,width,height,mustFit}))));
+  async function coldLayout({lang,inputState,width,height,mustFit}){
+  const compact=width<=375&&height<=740;
+  const c=await browser.newContext({viewport:{width,height},locale:lang,timezoneId:'Europe/Kyiv',serviceWorkers:'block'});
+  try{
   await c.route(/^https?:\/\/(?!127\.0\.0\.1)/,r=>r.abort());
   await c.addInitScript(language=>{
    localStorage.setItem('nr_locale_v1',language);
@@ -209,11 +214,7 @@ async function settledTodayFeed(page, compact){
   }
   const p=await c.newPage();
   await p.clock.setFixedTime(start);
-  await p.goto(base+'/index.html?channel=play#panch',{waitUntil:'domcontentloaded'});
-  // FP569k policy: with no saved place Sky shows Kyiv, labelled as the default place (not an empty card).
-  await p.locator('[data-sky-live] [data-sky-example]').waitFor();
-  assert.ok(await p.locator('[data-sky-live] .nr-sl-body').count()>=7);
-  await p.evaluate(()=>fp434Go('today',false));
+   await p.goto(base+'/index.html?channel=play#today',{waitUntil:'commit'});
   const compactSun=p.locator('[data-sky-clock] [data-time-sun]');
   await compactSun.waitFor();
   await p.waitForFunction(()=>!!document.querySelector('#nrRoute-today .nr-o-hero .nr-dv-tone')&&!!document.querySelector('#nrRoute-today .nr-o-hero .nr-o-verdict'),null,{timeout:30000});
@@ -223,7 +224,7 @@ async function settledTodayFeed(page, compact){
   await p.locator('[data-sky-clock] [data-share-card] button').waitFor();
   assert.equal(await p.evaluate(()=>window.NRLocale.language),lang);
   const status=p.locator('#nrRoute-today [data-p0-feed-state]');
-  await settledTodayFeed(p,true);
+  const initialFeed=await settledTodayFeed(p,compact,inputState==='synthetic-history'?'stale':undefined);
   const advice=p.locator('#nrRoute-today [data-day-verdict] p:not(.nr-dv-tone)');
   const actual=await advice.allTextContents();
   const expected=await p.evaluate(()=>window.NRDayVerdict.summary('2026-11-07').lines.map(line=>line.label+' '+line.text));
@@ -233,12 +234,9 @@ async function settledTodayFeed(page, compact){
    const historical={uk:'За календарем краще відкласти: нові починання',en:'The calendar advises postponing: new beginnings',
     es:'El calendario aconseja posponer: nuevos comienzos',fr:'Le calendrier conseille de reporter : nouveaux commencements'};
    assert.ok(actual.map(normalize).includes(historical[lang]),'complete known historical advice');
-   assert.equal((await settledTodayFeed(p,true)).state,'stale');
+   assert.equal(initialFeed.state,'stale');
    assert(await status.isVisible(),'stale status is retained below Sun');
   }
-  for(const [width,height] of [[320,694],[360,640],[320,568],[375,667]]){
-   await p.setViewportSize({width,height});
-   await p.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
    const geometry=await compactSun.evaluate(el=>{
     const nav=document.getElementById('mobileNav').getBoundingClientRect().top;
     const card=el.closest('[data-sky-clock]'),hero=document.querySelector('#nrRoute-today .nr-o-hero');
@@ -252,7 +250,10 @@ async function settledTodayFeed(page, compact){
     };
     const children=[...hero.querySelectorAll('[data-day-verdict] p:not(.nr-dv-tone)')];
     const source=hero.querySelector('[data-today-source]');
-    return {nav,plotBottom:el.closest('svg').getBoundingClientRect().bottom,
+    const plot=el.closest('svg').getBoundingClientRect();
+    return {nav,plotBottom:plot.bottom,plotTop:plot.top,plotLeft:plot.left,plotRight:plot.right,
+     compactCss:getComputedStyle(hero).getPropertyValue('--nr-today-compact').trim()==='1',
+     compactJs:hero.parentElement.querySelector('[data-p0-feed-state]')?.dataset.placement==='after-hero',
      sunTop:card.getBoundingClientRect().top,heroBottom:hero.getBoundingClientRect().bottom,
      afterHero:card.previousElementSibling?.matches('.nr-o-hero,.sr-expert-caution'),
      verdictBottom:hero.querySelector('.nr-dv-tone').getBoundingClientRect().bottom,
@@ -261,7 +262,7 @@ async function settledTodayFeed(page, compact){
      sourceVisible:unclipped(source)&&source.getBoundingClientRect().bottom<=nav,
      sourceBottom:source.getBoundingClientRect().bottom};
    });
-   const fit=geometry.plotBottom<=geometry.nav;
+   const fit=geometry.plotTop>=0&&geometry.plotBottom<=geometry.nav&&geometry.plotLeft>=0&&geometry.plotRight<=width;
    let scroll=null;
    if(!fit){
     scroll=await compactSun.evaluate(el=>{
@@ -274,16 +275,20 @@ async function settledTodayFeed(page, compact){
     });
     await p.evaluate(()=>window.scrollTo({top:0,behavior:'instant'}));
    }
-   layouts.push({lang,inputState,width,height,...geometry,fit,scroll});
-   console.log('LAYOUT '+JSON.stringify(layouts.at(-1)));
-  }
-  await p.setViewportSize({width:320,height:694});
-  if(process.env.VERIFY_CLOCK_EVIDENCE_DIR&&inputState==='synthetic-history'&&['es','fr'].includes(lang)){
-   const out=path.resolve(process.env.VERIFY_CLOCK_EVIDENCE_DIR);
-   await fs.mkdir(out,{recursive:true});
+  const row={lang,inputState,width,height,mustFit,compact,...geometry,fit,scroll};
+  console.log('LAYOUT '+JSON.stringify(row));
+  if(process.env.VERIFY_CLOCK_EVIDENCE_DIR&&inputState==='synthetic-history'&&width===375&&height===700&&['es','fr'].includes(lang)){
+   const out=path.resolve(process.env.VERIFY_CLOCK_EVIDENCE_DIR);await fs.mkdir(out,{recursive:true});
    await p.evaluate(()=>window.scrollTo({top:0,behavior:'instant'}));
-   await p.screenshot({path:path.join(out,lang+'-320x694.png'),mask:[p.locator('[data-score-tone]')],maskColor:'#273044'});
+   await p.screenshot({path:path.join(out,lang+'-375x700.png'),mask:[p.locator('[data-score-tone],.nr-o-score')],maskColor:'#273044'});
   }
+  // Keep the original resize regression on the 320×694 cases, separately
+  // from all cold geometry observations.
+  if(width!==320||height!==694)return row;
+   await p.goto(base+'/index.html?channel=play&resize-regression=1#panch',{waitUntil:'domcontentloaded'});
+  await p.locator('[data-sky-live] [data-sky-example]').waitFor();
+  assert.ok(await p.locator('[data-sky-live] .nr-sl-body').count()>=7);
+  await p.evaluate(()=>fp434Go('today',false));
   const beforeResize=await settledTodayFeed(p,true);
   await p.setViewportSize({width:390,height:844});
   const wide=await settledTodayFeed(p,false);
@@ -325,22 +330,29 @@ async function settledTodayFeed(page, compact){
   await p.locator('[data-sky-live] .nr-sl-body[data-body=Sun]').waitFor();
   assert.match(await p.locator('#nrSkyLiveHeading').textContent(),/Києвом/);
   }
-  await c.close();
+  return {...row,resizeRegression:true};
+  }finally{await c.close();}
+  }
+  for(let i=0;i<cases.length;i+=2){
+   layouts.push(...await Promise.all(cases.slice(i,i+2).map(coldLayout)));
   }
   if(process.env.VERIFY_CLOCK_EVIDENCE_DIR){
    const out=path.resolve(process.env.VERIFY_CLOCK_EVIDENCE_DIR);await fs.mkdir(out,{recursive:true});
    await fs.writeFile(path.join(out,'layout-matrix.json'),JSON.stringify(layouts,null,2));
   }
-  assert.equal(layouts.length,32);
+  assert.equal(layouts.length,56);
+  assert.equal(layouts.filter(row=>row.resizeRegression).length,8);
   for(const row of layouts){
+   assert.equal(row.compactCss,row.compact,'CSS compact boundary');
+   assert.equal(row.compactJs,row.compact,'JS compact boundary');
    assert(row.afterHero&&row.verdictBottom<=row.nav&&row.scoreBottom<=row.nav);
    assert(row.adviceVisible&&row.sourceVisible);
-   if(row.height===694)assert(row.fit);
-   else assert(row.fit||row.scroll?.full);
+   if(row.mustFit)assert(row.fit,'required first-fold SVG');
+   else assert(row.fit||row.scroll?.full,'full SVG accessible by scrolling');
   }
   assert.equal(results.length,layoutOnly?0:3);
   // Output is an allowlist of test labels, never raw feeds, live scores or DOM text.
-  console.log('PASS 32 mobile layout cases across four languages and two input states');
+  console.log('PASS 56 cold mobile layout cases and 8 resize regressions');
   if(!layoutOnly)console.log('PASS shared clock round trip ×3, Sun equality, seven bodies, WebGL identity and phase, playback/pause, reduced-motion scrubbing, Kyiv 23/25 h, explicit default');
  }finally{await browser.close();server.close();}
 })().catch(e=>{

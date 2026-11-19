@@ -1,5 +1,6 @@
 """Source-bound FP575 audit gate with private, locally authenticated resume evidence."""
 import argparse
+import base64
 import hashlib
 import hmac
 import importlib.metadata
@@ -28,6 +29,7 @@ CANONICAL_CONTRACT = 'db9bc7b763f7b7099e2423fcfb0bcfea47ba118ffb7fdd9e6223af7d67
 OVERRIDES = ('B7_', 'CHROME_PATH', 'CSS_UPGRADE_', 'DAYLINE_', 'DEPTH_LIMIT',
              'FP463_', 'FP569', 'NR', 'QA_OLD_NAV', 'SKY_', 'SW_', 'VERIFY_CLOCK_',
              'CACHE_PUBLISHED_BASELINE', 'NODE_OPTIONS', 'PYTHONPATH',
+             'PYTHONHOME', 'PYTHONUSERBASE', 'PYTHONSTARTUP', 'PYTHONOPTIMIZE',
              'PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH')
 
 
@@ -121,8 +123,11 @@ def generated_fingerprint(root, generated):
 
 def execution_env(root, release):
     env = dict(os.environ)
-    if release and any(value and key.upper().startswith(OVERRIDES) for key, value in env.items()):
-        raise ValueError('test-specific input/mutation overrides must be unset for the canonical gate')
+    forbidden = sorted(key for key in env if key.upper().startswith(OVERRIDES))
+    if release and forbidden:
+        raise ValueError('canonical environment: unset overrides: ' + ', '.join(forbidden))
+    if release and sys.flags.optimize:
+        raise ValueError('canonical environment: use Python without -O or -OO')
     # Prefer the pinned external dependency path over implicit checkout artifacts.
     if env.get('NODE_PATH'):
         paths = [pathlib.Path(name) for name in env['NODE_PATH'].split(os.pathsep)]
@@ -133,7 +138,7 @@ def execution_env(root, release):
     return env
 
 
-def environment(root, env, require_browser):
+def environment(root, env, require_browser, *, verify_record=False):
     def external_roots():
         paths = [parent / 'node_modules' for parent in [root, *root.parents]]
         paths += [pathlib.Path(name) for name in env.get('NODE_PATH', '').split(os.pathsep) if name]
@@ -141,6 +146,13 @@ def environment(root, env, require_browser):
 
     dependencies = {}
     if require_browser:
+        if verify_record:
+            try:
+                version = importlib.metadata.version('pyswisseph')
+            except importlib.metadata.PackageNotFoundError:
+                raise ValueError('canonical environment: install pyswisseph==2.10.3.2') from None
+            if version != '2.10.3.2':
+                raise ValueError('canonical environment: expected pyswisseph==2.10.3.2')
         for path in external_roots():
             if path.is_relative_to(root):
                 raise ValueError('Node dependencies must be installed outside the checkout')
@@ -148,12 +160,28 @@ def environment(root, env, require_browser):
         # Hash the installed bytes listed by each Python distribution, not only its version.
         packages = []
         for dist in importlib.metadata.distributions():
+            name = str(dist.metadata.get('Name') or '[unnamed]')
+            if verify_record and not dist.read_text('RECORD'):
+                raise ValueError(f'Python distribution {name} lacks RECORD; reinstall in a clean virtual environment')
             records = {}
             for entry in dist.files or ():
                 if str(entry).endswith(('.pyc', '.pyo')):
                     continue
                 path = dist.locate_file(entry)
-                records[str(entry)] = file_hash(path) if path.is_file() else None
+                actual = file_hash(path) if path.is_file() else None
+                if verify_record:
+                    if actual is None:
+                        raise ValueError(f'Python RECORD for {name} lists missing file: {entry}')
+                    if entry.size is not None and path.stat().st_size != entry.size:
+                        raise ValueError(f'Python RECORD size mismatch for {name}: {entry}')
+                    if entry.hash is not None:
+                        expected = entry.hash
+                        if expected.mode != 'sha256':
+                            raise ValueError(f'Unsupported Python RECORD hash for {name}: {expected.mode}')
+                        encoded = base64.urlsafe_b64encode(bytes.fromhex(actual)).decode('ascii').rstrip('=')
+                        if encoded != expected.value:
+                            raise ValueError(f'Python RECORD hash mismatch for {name}: {entry}')
+                records[str(entry)] = actual
             if not records:
                 raise ValueError('Python distribution lacks a file manifest: ' + str(dist.metadata.get('Name')))
             packages.append((dist.metadata.get('Name',''), dist.version, digest(canonical(records))))
@@ -162,6 +190,8 @@ def environment(root, env, require_browser):
     binaries = {}
     for name in (('node', 'git') if require_browser else ('git',)):
         path = shutil.which(name, path=env.get('PATH'))
+        if verify_record and not path:
+            raise ValueError(f'canonical environment: {name} executable not found on PATH')
         binaries[name] = file_hash(pathlib.Path(path)) if path else None
     browser = None
     if require_browser:
@@ -169,7 +199,7 @@ def environment(root, env, require_browser):
 (async()=>{const s=await p.chromium.launchServer();try{
 const f=s.process().spawnfile,b=await p.chromium.connect(s.wsEndpoint());
 console.log(JSON.stringify({module:require.resolve('playwright'),version:require('playwright/package.json').version,
-browser:b.version(),executable_sha256:crypto.createHash('sha256').update(fs.readFileSync(f)).digest('hex')}));
+node_version:process.version,browser:b.version(),executable_sha256:crypto.createHash('sha256').update(fs.readFileSync(f)).digest('hex')}));
 await b.close();}finally{await s.close()}})().catch(e=>{console.error(e.message);process.exitCode=1})"""
         with tempfile.TemporaryFile() as log:
             code, timeout = gate_process.run(['node', '-e', command], root, env, 45, log)
@@ -250,7 +280,7 @@ def mac(key, row):
     return hmac.digest(key, canonical(row), 'sha256').hex()
 
 
-def resume_records(out, key, binding, checks):
+def resume_records(out, key, binding, checks, *, history=None):
     previous = {}
     last = None
     previous_seal = None
@@ -272,6 +302,8 @@ def resume_records(out, key, binding, checks):
             raise ValueError('prior log changed/missing')
         if row['screenshots'] is not None and path_hashes(out/'screenshots'/path.stem) != row['screenshots']:
             raise ValueError('prior screenshots changed/missing')
+        if history is not None:
+            history.append((row, seal))
         previous[n] = last = row
     return previous, last, previous_seal
 
@@ -286,6 +318,8 @@ def run_gate(args, root, out, manifest):
     if args.seal:
         if not args.sealed_output:
             raise ValueError('--sealed-output required')
+        if release:
+            environment(root, env, spec['requires_browser'], verify_record=True)
         write_new(args.sealed_output, {'schema':SCHEMA, 'source':source, **spec, 'scope':scope})
         print('SEALED', len(checks), scope)
         return 0
@@ -293,7 +327,8 @@ def run_gate(args, root, out, manifest):
             or manifest.get('scope') != scope):
         raise ValueError('manifest/source mismatch; no prior PASS may be reused')
     identity = {'source':source, 'contract':spec, 'scope':scope, 'checkout':str(root),
-                'evidence_dir':str(out), 'environment':environment(root, env, spec['requires_browser']),
+                'evidence_dir':str(out), 'environment':environment(
+                    root, env, spec['requires_browser'], verify_record=release),
                 'runner_sha256':file_hash(pathlib.Path(__file__)),
                 'process_helper_sha256':file_hash(pathlib.Path(gate_process.__file__)),
                 'manifest_sha256':file_hash(args.manifest)}
@@ -327,10 +362,14 @@ def run_gate(args, root, out, manifest):
                 raise ValueError('generated state differs from last completed attempt')
         elif any((root / name).exists() for name in generated):
             raise ValueError('unsealed generated state; use a clean checkout and a fresh run')
+        prior_attempt_count = sequence
+        invocation_id = uuid.uuid4().hex
+        reused_attempt_ids = []
         results = []
         for check in checks:
             old = previous.get(check['index'])
             if old and old['status'] == 'PASS' and old['exit'] == 0:
+                reused_attempt_ids.append(old['attempt_id'])
                 results.append(old)
                 continue
             if snapshot(root, generated) != source:
@@ -338,7 +377,7 @@ def run_gate(args, root, out, manifest):
             sequence += 1
             aid = f'attempt-{sequence:08d}-{uuid.uuid4().hex}'
             row = {**check, 'binding':binding, 'attempt_id':aid, 'sequence':sequence,
-                   'previous_mac':previous_seal,
+                   'previous_mac':previous_seal, 'invocation_id':invocation_id,
                    **execute(check, root, out, env, aid, bool(spec['artifact_env']))}
             try:
                 if snapshot(root, generated) != source:
@@ -361,7 +400,15 @@ def run_gate(args, root, out, manifest):
         summary = {'binding':binding, 'scope':scope, 'expected_count':len(checks),
                    'observed_count':len(results), 'suite_passed':passed,
                    'complete':release and passed, 'attempt_head_mac':previous_seal, 'rows':results}
-        write_new(out/f'summary-{time.time_ns()}.json', {**summary,'mac':mac(key,summary)})
+        # Keep signed completion order even after a backward wall-clock adjustment.
+        latest = max((int(p.stem.removeprefix('summary-')) for p in out.glob('summary-*.json')),
+                     default=0)
+        summary_id = f'summary-{max(time.time_ns(), latest + 1)}'
+        summary['invocation'] = {'id':invocation_id, 'summary_id':summary_id,
+                                 'requested_resume':args.resume,
+                                 'prior_attempt_count':prior_attempt_count,
+                                 'reused_attempt_ids':reused_attempt_ids}
+        write_new(out/(summary_id+'.json'), {**summary,'mac':mac(key,summary)})
         return 0 if passed else 1
     finally:
         lock.unlink()

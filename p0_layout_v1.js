@@ -487,7 +487,7 @@ const driverLabel=x=>x.factor==='Kp'?'Геомагнітна складова':x
  const label=hero.querySelector(':scope > label');if(label){label.childNodes.forEach(n=>{if(n.nodeType===3)n.textContent=tr('Дата · Київ');});label.dataset.p0Date='';}
  // Keep the original accessible route heading, while removing duplicate visual chrome.
  const heading=root.querySelector('.nr-o-heading');if(heading&&heading.parentElement!==hero)hero.prepend(heading);
- for(const e of [...hero.children])if(!e.matches('[data-reference-title],[data-p0-date],[data-p0-moon],[data-p0-sentence],.nr-o-verdict,[data-p0-source],[data-today-forecast],[data-share-card],.sr-p0-accessible-heading,[data-placement="after-hero"]'))details.append(e);
+ for(const e of [...hero.children])if(!e.matches('[data-reference-title],[data-p0-date],[data-p0-moon],[data-p0-sentence],.nr-o-verdict,[data-p0-source],[data-today-forecast],[data-share-card],[data-p0-feed-state],.sr-p0-accessible-heading,[data-placement="after-hero"]'))details.append(e);
  sentence.textContent=tr(sentence.textContent);chip.textContent=tr(chip.textContent);
  details.querySelector(':scope > summary').textContent=tr('Детально: джерела, розрахунок і календар');
  signals.querySelectorAll('button').forEach((b,i)=>b.textContent=tr(['Астрономія й NOAA','Панчанга','Оцінка дня'][i]));
@@ -506,12 +506,12 @@ const driverLabel=x=>x.factor==='Kp'?'Геомагнітна складова':x
  // Route-level disclosures retain their own keyboard and deep-link entry points.
 }
 
-const shortPhone=matchMedia('(max-width:360px) and (max-height:740px)');
+const shortPhone=matchMedia('(max-width:375px) and (max-height:740px)');
 function placeFeedState(root){
  const state=root.querySelector('[data-p0-feed-state]'),sun=root.querySelector(':scope > [data-sky-clock]'),hero=root.querySelector('.nr-o-hero');
  if(!state||!hero)return;
  if(sun&&shortPhone.matches&&hero.querySelector('[data-today-source]:not(:empty)')){state.dataset.placement='after-hero';sun.after(state);}
- else hero.append(state);
+ else {delete state.dataset.placement;hero.append(state);}
 }
 shortPhone.addEventListener('change',()=>document.querySelectorAll('#nrRoute-today [data-overview]').forEach(placeFeedState));
 window.addEventListener('sr:sky-clock-mounted',()=>document.querySelectorAll('#nrRoute-today [data-overview]').forEach(placeFeedState));
