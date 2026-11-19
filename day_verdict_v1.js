@@ -91,7 +91,10 @@ function render(){
  const line=(k,xs,label=k)=>xs.length?`<p class="nr-dv-${k}"><b>${esc(t(label))}</b> ${esc(xs.join(' · '))}</p>`:'';
  box.innerHTML=`<p class="nr-dv-tone">${esc(t(v.tone))}</p>${line('good',v.good)}${line('avoid',v.avoid,v.avoidKey||'avoid')}${line('check',v.care)}`;
  let whyBox=hero.querySelector('[data-day-why]');
- if(!whyBox){whyBox=document.createElement('details');whyBox.className='nr-day-why';whyBox.dataset.dayWhy='';whyBox.setAttribute('translate','no')}
+ if(!whyBox){
+  whyBox=document.createElement('details');whyBox.className='nr-day-why';whyBox.dataset.dayWhy='';whyBox.setAttribute('translate','no');
+  whyBox.append(document.createElement('summary'),document.createElement('ul'));
+ }
  if(verdict.nextElementSibling!==whyBox)verdict.after(whyBox);
  // Keep optional personal tools below the public DayLine and weather.
  let youBox=r.querySelector(':scope > [data-day-you]');
@@ -103,7 +106,11 @@ function render(){
  const youHtml=(window.NRNatalSky?window.NRNatalSky.html(ds,sky):'')+(ds===today&&hour>=18?matchHtml(ds):'');
  if(youBox.dataset.html!==youHtml){const formOpen=youBox.querySelector('.nr-dv-you-form')?.open;youBox.innerHTML=youHtml;youBox.dataset.html=youHtml;if(formOpen)youBox.querySelector('.nr-dv-you-form')&&(youBox.querySelector('.nr-dv-you-form').open=true)}
  youBox.hidden=!youHtml;
- const open=whyBox.open;whyBox.innerHTML=`<summary>${esc(t('why'))}</summary><ul>${v.why.map(([k,val])=>`<li><span>${esc(k)}</span><strong>${esc(val)}</strong></li>`).join('')}</ul>`;whyBox.open=open;
+ // Keep the native disclosure and its click target intact during feed refresh.
+ const summary=whyBox.querySelector('summary'),list=whyBox.querySelector('ul');
+ if(summary.textContent!==t('why'))summary.textContent=t('why');
+ const reasons=v.why.map(([k,val])=>`<li><span>${esc(k)}</span><strong>${esc(val)}</strong></li>`).join('');
+ if(list.innerHTML!==reasons)list.innerHTML=reasons;
 }
 // «Сьогодні збіглось?» — лише ввечері (з 18:00) для сьогоднішнього дня, один дотик, лише на цьому пристрої.
 // Зберігає відповідь разом із балом, показаним на момент відповіді, — для майбутньої перевірки; на бал не впливає.
