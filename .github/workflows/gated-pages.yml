@@ -192,6 +192,15 @@ jobs:
         run: node tools/public/verify_sky_live_guards.cjs
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_shared_clock.cjs
+        env:
+          VERIFY_CLOCK_EVIDENCE_DIR: ${{ github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/deploy' && !inputs.failure_probe && format('{0}/layout-evidence', runner.temp) || '' }}
+      - uses: actions/upload-artifact@v4
+        if: github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/deploy' && !inputs.failure_probe
+        with:
+          name: f3-layout-matrix
+          path: ${{ runner.temp }}/layout-evidence/layout-matrix.json
+          if-no-files-found: error
+          retention-days: 30
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_moon_gl.cjs
       - if: steps.scope.outputs.mode != 'data'
@@ -336,17 +345,45 @@ jobs:
           echo "NODE_PATH=$node_modules" >> "$GITHUB_ENV"
       - name: Run fresh canonical portable gate
         run: |
-          test ! -e "$RUNNER_TEMP/portable-evidence"
-          python tools/audit/run_gate.py . "$RUNNER_TEMP/portable-evidence" tools/audit/commands-105.json --seal --sealed-output "$RUNNER_TEMP/portable-bound.json"
-          python tools/audit/run_gate.py . "$RUNNER_TEMP/portable-evidence" "$RUNNER_TEMP/portable-bound.json"
+          evidence="$RUNNER_TEMP/portable-evidence"
+          bound="$RUNNER_TEMP/portable-bound.json"
+          umask 077
+          mkdir "$RUNNER_TEMP/portable-secrets"
+          key="$RUNNER_TEMP/portable-secrets/run.key"
+          test ! -e "$evidence"
+          python tools/audit/run_gate.py . "$evidence" tools/audit/commands-105.json --seal --sealed-output "$bound"
+          status=0
+          python tools/audit/run_gate.py . "$evidence" "$bound" --key-file "$key" || status=$?
+          python tools/audit/portable_report.py "$evidence" "$RUNNER_TEMP/LOCAL_CLEAN_105.json" --key-file "$key"
+          test "$status" = 0
+          python tools/audit/run_gate.py . "$evidence" "$bound" --key-file "$key" --resume
       - name: Verify ordered results and write shareable evidence
         if: always()
-        run: python tools/audit/portable_report.py "$RUNNER_TEMP/portable-evidence" "$RUNNER_TEMP/LOCAL_CLEAN_105.json"
+        run: |
+          python tools/audit/portable_report.py "$RUNNER_TEMP/portable-evidence" "$RUNNER_TEMP/F1_RESUME_105.json" --verify-full-resume --key-file "$RUNNER_TEMP/portable-secrets/run.key"
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          root = Path(os.environ["RUNNER_TEMP"])
+          clean = json.loads((root / "LOCAL_CLEAN_105.json").read_text())
+          resumed = json.loads((root / "F1_RESUME_105.json").read_text())
+          keys = ("candidate_sha", "candidate_tree", "binding", "environment_sha256", "rows",
+                  "first_summary_sha256", "attempt_chain_sha256", "github_run_id", "github_run_attempt")
+          if not (clean["passed"] and resumed["passed"] and all(clean[k] == resumed[k] for k in keys)):
+              raise SystemExit("Clean and resumed attestations disagree")
+          PY
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: portable-clean-105
           path: ${{ runner.temp }}/LOCAL_CLEAN_105.json
+          if-no-files-found: error
+          retention-days: 30
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: portable-resume-105
+          path: ${{ runner.temp }}/F1_RESUME_105.json
           if-no-files-found: error
           retention-days: 30
       - name: Check portable runner isolation with disposable D5 fixtures

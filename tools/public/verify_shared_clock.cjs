@@ -179,14 +179,20 @@ async function settledTodayFeed(page, compact, expectedState){
    await ctx.close();
   }
   const layouts=[];
-  const bandSizes=[[320,741,true],[320,770,true],[320,800,true],[320,801,false],[321,800,false]];
+  // Fresh contexts at the four F3 corners and the intermediate sizes reported by the auditor.
+  const bandSizes=[
+   [320,741,true],[320,770,true],[320,800,true],[320,801,false],
+   [321,741,true],[321,800,true],[330,770,true],[340,760,true],[359,790,true],
+   [360,741,true],[360,780,true],[375,741,true],[375,770,true],[375,800,true],
+   [375,801,false],[376,741,false],[376,800,false],
+  ];
   const sizes=[[320,694,true],[361,700,true],[375,700,true],[360,640,false],[320,568,false],[375,667,false],[376,700,false],...bandSizes];
   const cases=['uk','en','es','fr'].flatMap(lang=>['complete','synthetic-history'].flatMap(inputState=>
    sizes.map(([width,height,mustFit])=>({lang,inputState,width,height,mustFit}))));
   const selectedCases=reasonsOnly?cases.filter(({width,height,lang,inputState})=>
    width===320&&height===694&&((lang==='uk'&&inputState==='complete')||(lang==='en'&&inputState==='synthetic-history'))):heightBandOnly?cases.filter(row=>row.height>=741):cases;
   async function coldLayout({lang,inputState,width,height,mustFit}){
-  const compact=(width<=375&&height<=740)||(width<=320&&height<=800);
+  const compact=width<=375&&height<=800;
   const c=await browser.newContext({viewport:{width,height},locale:lang,timezoneId:'Europe/Kyiv',serviceWorkers:'block'});
   try{
   await c.route(/^https?:\/\/(?!127\.0\.0\.1)/,r=>r.abort());
@@ -256,7 +262,7 @@ async function settledTodayFeed(page, compact, expectedState){
     const children=[...hero.querySelectorAll('[data-day-verdict] p:not(.nr-dv-tone)')];
     const source=hero.querySelector('[data-today-source]');
     const plot=el.closest('svg').getBoundingClientRect();
-    return {nav,plotBottom:plot.bottom,plotTop:plot.top,plotLeft:plot.left,plotRight:plot.right,
+    return {nav,scrollY:window.scrollY,pageWidth:document.documentElement.scrollWidth,plotBottom:plot.bottom,plotTop:plot.top,plotLeft:plot.left,plotRight:plot.right,
      compactCss:getComputedStyle(hero).getPropertyValue('--nr-today-compact').trim()==='1',
      compactJs:hero.parentElement.querySelector('[data-p0-feed-state]')?.dataset.placement==='after-hero',
      sunTop:card.getBoundingClientRect().top,heroBottom:hero.getBoundingClientRect().bottom,
@@ -270,6 +276,8 @@ async function settledTodayFeed(page, compact, expectedState){
    const geometry=await readGeometry();
    const fits=g=>g.plotTop>=0&&g.plotBottom<=g.nav&&g.plotLeft>=0&&g.plotRight<=width;
    const fit=fits(geometry);
+   assert.equal(geometry.scrollY,0,'cold load starts at top');
+   assert(geometry.pageWidth<=width,'no horizontal page overflow');
    let scroll=null;
    if(!fit){
     scroll=await compactSun.evaluate(el=>{
@@ -285,12 +293,12 @@ async function settledTodayFeed(page, compact, expectedState){
   const row={lang,inputState,width,height,mustFit,compact,...geometry,fit,scroll};
   console.log('LAYOUT '+JSON.stringify(row));
   if(process.env.VERIFY_CLOCK_EVIDENCE_DIR&&inputState==='synthetic-history'&&
-    ((width===375&&height===700&&['es','fr'].includes(lang))||(width===320&&((height===741&&lang==='es')||(height===800&&lang==='fr'))))){
+    ((width===375&&height===700&&['es','fr'].includes(lang))||([320,321,375].includes(width)&&((height===741&&lang==='es')||(height===800&&lang==='fr'))))){
    const out=path.resolve(process.env.VERIFY_CLOCK_EVIDENCE_DIR);await fs.mkdir(out,{recursive:true});
    await p.evaluate(()=>window.scrollTo({top:0,behavior:'instant'}));
    await p.screenshot({path:path.join(out,lang+'-'+width+'x'+height+'.png'),mask:[p.locator('[data-score-tone],.nr-o-score')],maskColor:'#273044'});
   }
-  if(width===320&&height===741){
+  if([320,375].includes(width)&&height===741){
    // Cold launches cover each anchor. The same loaded page then exercises
    // every integer height so the space between anchors is actually measured.
    const heights=[{height,...geometry,fit}];
@@ -301,7 +309,7 @@ async function settledTodayFeed(page, compact, expectedState){
     heights.push({height:h,...g,fit:fits(g)});
    }
    for(const item of heights){
-    if(!(item.fit&&item.compactCss&&item.compactJs&&item.adviceVisible&&item.sourceVisible&&
+    if(!(item.fit&&item.scrollY===0&&item.pageWidth<=width&&item.compactCss&&item.compactJs&&item.adviceVisible&&item.sourceVisible&&
          item.afterHero&&item.verdictBottom<=item.nav&&item.scoreBottom<=item.nav)){
      console.error('HEIGHT_BAND '+JSON.stringify({lang,inputState,width,...item}));
      assert.fail('height-band layout must fit at every integer viewport');
@@ -309,7 +317,24 @@ async function settledTodayFeed(page, compact, expectedState){
    }
    row.heightSweep=heights;
   }
-  if(width===320&&height===800){
+  if(width===321&&height===741){
+   // 741 is the shortest target height. Measure every integer width here,
+   // independently from the cold starts and height sweeps.
+   const widths=[];
+   for(let w=321;w<=375;w++){
+    if(w!==321){
+     await p.setViewportSize({width:w,height});
+     await p.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+    }
+    const g=await readGeometry();
+    const full=g.scrollY===0&&g.pageWidth<=w&&g.plotTop>=0&&g.plotBottom<=g.nav&&g.plotLeft>=0&&g.plotRight<=w;
+    assert(full&&g.compactCss&&g.compactJs&&g.adviceVisible&&g.sourceVisible&&
+     g.afterHero&&g.verdictBottom<=g.nav&&g.scoreBottom<=g.nav,'width-band geometry');
+    widths.push({width:w,...g,fit:full});
+   }
+   row.widthSweep=widths;
+  }
+  if([320,375].includes(width)&&height===800){
    const explanation=p.locator('#nrRoute-today [data-day-why]');
    const summary=explanation.locator('summary');
    const {date}=await settledTodayFeed(p,true);
@@ -413,10 +438,11 @@ async function settledTodayFeed(page, compact, expectedState){
    const out=path.resolve(process.env.VERIFY_CLOCK_EVIDENCE_DIR);await fs.mkdir(out,{recursive:true});
    await fs.writeFile(path.join(out,'layout-matrix.json'),JSON.stringify(layouts,null,2));
   }
-  assert.equal(layouts.length,reasonsOnly?2:heightBandOnly?40:96);
+  assert.equal(layouts.length,reasonsOnly?2:heightBandOnly?136:192);
   assert.equal(layouts.filter(row=>row.resizeRegression&&row.reasonsRegression).length,reasonsOnly?2:heightBandOnly?0:8);
-  assert.equal(layouts.reduce((count,row)=>count+(row.heightSweep?.length||0),0),reasonsOnly?0:480);
-  assert.equal(layouts.filter(row=>row.heightBoundaryFocus).length,reasonsOnly?0:8);
+  assert.equal(layouts.reduce((count,row)=>count+(row.heightSweep?.length||0),0),reasonsOnly?0:960);
+  assert.equal(layouts.reduce((count,row)=>count+(row.widthSweep?.length||0),0),reasonsOnly?0:440);
+  assert.equal(layouts.filter(row=>row.heightBoundaryFocus).length,reasonsOnly?0:16);
   for(const row of layouts){
    assert.equal(row.compactCss,row.compact,'CSS compact boundary');
    assert.equal(row.compactJs,row.compact,'JS compact boundary');
@@ -427,7 +453,7 @@ async function settledTodayFeed(page, compact, expectedState){
   }
   assert.equal(results.length,layoutOnly?0:3);
   // Output is an allowlist of test labels, never raw feeds, live scores or DOM text.
-  console.log(reasonsOnly?'PASS 2 reasons regressions with normal click and forced rerender':heightBandOnly?'PASS 40 cold openings, 480 height measurements and 8 focus checks':'PASS 96 cold openings, 480 height measurements, 8 focus checks and 8 resize/reasons regressions');
+  console.log(reasonsOnly?'PASS 2 reasons regressions with normal click and forced rerender':heightBandOnly?'PASS 136 cold openings, 960 height measurements, 440 width measurements and 16 focus checks':'PASS 192 cold openings, 960 height measurements, 440 width measurements, 16 focus checks and 8 resize/reasons regressions');
   if(!layoutOnly)console.log('PASS shared clock round trip ×3, Sun equality, seven bodies, WebGL identity and phase, playback/pause, reduced-motion scrubbing, Kyiv 23/25 h, explicit default');
  }finally{await browser.close();server.close();}
 })().catch(e=>{

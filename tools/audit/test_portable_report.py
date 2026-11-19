@@ -3,7 +3,6 @@ from types import SimpleNamespace
 from unittest.mock import patch
 import json
 from pathlib import Path
-import secrets
 import sys
 import tempfile
 import unittest
@@ -18,13 +17,14 @@ class PortableReportTest(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(prefix="fp575-n3-")
         self.addCleanup(self.temp.cleanup)
-        self.out = Path(self.temp.name)
+        self.out = Path(self.temp.name) / "evidence"
+        self.out.mkdir()
         self.root = Path(__file__).resolve().parents[2]
         self.head = git(self.root, "rev-parse", "HEAD")
         self.tree = git(self.root, "rev-parse", "HEAD^{tree}")
         self.spec = contract(json.loads(git(self.root, "show", self.head + ":tools/audit/commands-105.json")))
-        self.key = secrets.token_bytes(32)
-        (self.out / "resume.key").write_bytes(self.key)
+        self.key_file = Path(self.temp.name) / "run.key"
+        self.key = protocol.create_private_key(self.key_file)
         self.identity = {"source":{"head":self.head, "tree":self.tree, "index_tree":self.tree},
                          "contract":self.spec, "scope":"canonical_105", "environment":{}}
         self.binding = digest(canonical(self.identity))
@@ -71,12 +71,12 @@ class PortableReportTest(unittest.TestCase):
         return rows
 
     def local(self):
-        return collect(self.out, self.root, {})
+        return collect(self.out, self.root, {}, self.key_file)
 
-    def ci(self, **overrides):
+    def ci(self, *, full_resume=False, **overrides):
         env = {"GITHUB_ACTIONS":"true", "GITHUB_SHA":self.head,
                "GITHUB_RUN_ID":"123", "GITHUB_RUN_ATTEMPT":"1"}
-        return collect(self.out, self.root, {**env, **overrides})
+        return collect(self.out, self.root, {**env, **overrides}, self.key_file, full_resume=full_resume)
 
     def test_fresh_local_and_strict_ci(self):
         self.fresh()
@@ -95,6 +95,8 @@ class PortableReportTest(unittest.TestCase):
 
     def test_resume_after_complete_without_new_attempt(self):
         rows = self.fresh()
+        clean = self.ci()
+        self.assertFalse(self.ci(full_resume=True)["passed"])
         self.summary(10, rows, "b"*32, 105, [r["attempt_id"] for r in rows], True)
         report = self.local()
         self.assertTrue(report["passed"], report["issues"])
@@ -102,6 +104,14 @@ class PortableReportTest(unittest.TestCase):
         self.assertTrue(report["resume_requested"])
         self.assertEqual(report["attempt_count"], 105)
         self.assertFalse(self.ci()["passed"])
+        proof = self.ci(full_resume=True)
+        self.assertTrue(proof["passed"], proof["issues"])
+        self.assertEqual((proof["summary_count"], proof["reused_attempt_count"], proof["new_attempt_count"]), (2,105,0))
+        for name in ("rows", "binding", "attempt_chain_sha256", "first_summary_sha256"):
+            self.assertEqual(clean[name], proof[name])
+        self.assertNotEqual(proof["first_summary_sha256"], proof["latest_summary_sha256"])
+        self.summary(11, rows, "c"*32, 105, [r["attempt_id"] for r in rows], True)
+        self.assertFalse(self.ci(full_resume=True)["passed"])
 
     def test_runner_records_resume_after_all_105_without_running_commands(self):
         manifest = {"schema":protocol.SCHEMA, "source":self.identity["source"],
@@ -118,7 +128,7 @@ class PortableReportTest(unittest.TestCase):
         (self.out / "binding.json").write_text(json.dumps(self.identity))
         rows = self.fresh()
         protocol.write_resume_environment(self.out / 'binding-env.json', self.key, self.identity, {})
-        args = SimpleNamespace(seal=False, resume=True, manifest=bound)
+        args = SimpleNamespace(seal=False, resume=True, manifest=bound, key_file=self.key_file)
         with (patch.object(protocol, "snapshot", return_value=manifest["source"]),
               patch.object(protocol, "environment", return_value={}),
               patch.object(protocol, "execution_env", return_value={}),
@@ -187,8 +197,8 @@ class PortableReportTest(unittest.TestCase):
         self.fresh()
         self.attempt(1, "b"*32)
         self.assertIn("Newer authenticated attempts have no completed summary", self.local()["issues"])
-        (self.out / "resume.key").unlink()
-        self.assertIn("Local HMAC key missing or invalid", self.local()["issues"])
+        self.key_file.unlink()
+        self.assertIn("missing or invalid external resume key", self.local()["issues"])
 
     def test_modified_log_and_chain_gaps_refused(self):
         rows = self.fresh()

@@ -23,7 +23,8 @@ def main():
         base = Path(folder)
 
         def call(*args, env=None):
-            return subprocess.run([sys.executable,'-B', str(RUNNER), *map(str,args)],
+            key = Path(args[1]).with_suffix('.private-key')
+            return subprocess.run([sys.executable,'-B', str(RUNNER), *map(str,args),'--key-file',str(key)],
                                   env=env,capture_output=True,text=True,timeout=120)
 
         def expected(code, *args, env=None, message=None):

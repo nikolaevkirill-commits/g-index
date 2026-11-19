@@ -12,6 +12,7 @@ import platform
 import re
 import secrets
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -184,7 +185,7 @@ def environment(root, env, require_browser, *, verify_record=False):
                 records[str(entry)] = actual
             if not records:
                 raise ValueError('Python distribution lacks a file manifest: ' + str(dist.metadata.get('Name')))
-            packages.append((dist.metadata.get('Name',''), dist.version, digest(canonical(records))))
+            packages.append([dist.metadata.get('Name',''), dist.version, digest(canonical(records))])
     else:
         packages = []
     binaries = {}
@@ -283,6 +284,79 @@ def mac(key, row):
 
 def environment_key_macs(key, env):
     return {name:mac(key, ['fp575-env-key-v1', name, value]) for name, value in env.items()}
+
+
+def external_key_path(path, root, out):
+    if os.path.lexists(out / 'resume.key'):
+        raise ValueError('legacy evidence contains a signing key; create a fresh run')
+    if path is None:
+        raise ValueError('an external --key-file is required')
+    path = pathlib.Path(path).absolute()
+    if path != path.resolve() or path.is_relative_to(out.resolve()) or (
+            root is not None and path.is_relative_to(root.resolve())):
+        raise ValueError('key must be outside checkout and evidence, at an unlinked path')
+    return path
+
+
+def windows_private_key_acl(path, create):
+    # Set the DACL while the newly created file is empty. Validate the effective
+    # file ACL on reuse without exposing key bytes to a shell or child process.
+    script = """
+$ErrorActionPreference='Stop'
+$p=$env:FP575_PRIVATE_KEY_PATH
+$sid=[Security.Principal.WindowsIdentity]::GetCurrent().User
+$acl=[IO.File]::GetAccessControl($p)
+if ($env:FP575_CREATE_KEY -eq '1') {
+    $acl.SetAccessRuleProtection($true,$false)
+    $acl.SetAccessRule([Security.AccessControl.FileSystemAccessRule]::new($sid,'FullControl','Allow'))
+    [IO.File]::SetAccessControl($p,$acl)
+    $acl=[IO.File]::GetAccessControl($p)
+}
+if ($acl.GetOwner([Security.Principal.SecurityIdentifier]) -ne $sid) {exit 1}
+$rules=@($acl.GetAccessRules($true,$true,[Security.Principal.SecurityIdentifier]))
+if (!$acl.AreAccessRulesProtected -or !$rules.Count) {exit 1}
+foreach ($rule in $rules) {if ($rule.IdentityReference -ne $sid) {exit 1}}
+"""
+    proc = subprocess.run(['powershell.exe','-NoProfile','-NonInteractive','-Command',script],
+                          env={**os.environ,'FP575_PRIVATE_KEY_PATH':str(path),
+                               'FP575_CREATE_KEY':'1' if create else '0'},
+                          capture_output=True, timeout=30)
+    if proc.returncode:
+        raise ValueError('private key requires an owner-only Windows ACL')
+
+
+def read_private_key(path):
+    if path.is_symlink() or not path.is_file():
+        raise ValueError('missing or invalid external resume key')
+    with os.fdopen(os.open(path, os.O_RDONLY | getattr(os,'O_NOFOLLOW',0)
+                          | getattr(os,'O_BINARY',0)), 'rb') as stream:
+        info = os.fstat(stream.fileno())
+        if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
+            raise ValueError('invalid external resume key file')
+        if os.name == 'nt':
+            windows_private_key_acl(path, False)
+        elif info.st_uid != os.getuid() or info.st_mode & 0o077:
+            raise ValueError('private key requires owner-only permissions')
+        key = stream.read(33)
+    if len(key) != 32:
+        raise ValueError('invalid external resume key length')
+    return key
+
+
+def create_private_key(path):
+    fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY | getattr(os,'O_BINARY',0), 0o600)
+    try:
+        with os.fdopen(fd, 'wb') as stream:
+            if os.name == 'nt':
+                windows_private_key_acl(path, True)
+            key = secrets.token_bytes(32)
+            stream.write(key)
+            stream.flush()
+            os.fsync(stream.fileno())
+        return key
+    except BaseException:
+        path.unlink()
+        raise
 
 
 def write_resume_environment(path, key, identity, env):
@@ -394,7 +468,8 @@ def run_gate(args, root, out, manifest):
     with lock.open('x',encoding='ascii') as stream:
         stream.write(str(os.getpid()))
     try:
-        keyfile, bindfile = out / 'resume.key', out / 'binding.json'
+        keyfile = external_key_path(args.key_file, root, out)
+        bindfile = out / 'binding.json'
         envfile = out / 'binding-env.json'
         if not args.resume:
             if any(p != lock for p in out.iterdir()):
@@ -402,17 +477,9 @@ def run_gate(args, root, out, manifest):
             if any((root / name).exists() for name in generated):
                 raise ValueError('fresh run requires absent generated output paths')
             identity['environment'] = environment(root, env, spec['requires_browser'], verify_record=release)
-            fd = os.open(keyfile, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
-            with os.fdopen(fd, 'wb') as stream:
-                stream.write(secrets.token_bytes(32))
-                stream.flush()
-                os.fsync(stream.fileno())
-        if not keyfile.is_file() or keyfile.is_symlink():
-            raise ValueError('invalid or missing local resume key')
-        key = keyfile.read_bytes()
-        if len(key) != 32:
-            raise ValueError('invalid local resume key')
+            key = create_private_key(keyfile)
         if args.resume:
+            key = read_private_key(keyfile)
             prior_binding = read(bindfile)
             env_before = read_resume_environment(envfile, key, prior_binding)
             changes = environment_key_changes(env_before, environment_key_macs(key, env))
@@ -496,6 +563,8 @@ def main():
     parser.add_argument('--seal', action='store_true')
     parser.add_argument('--sealed-output', type=pathlib.Path)
     parser.add_argument('--resume', action='store_true')
+    parser.add_argument('--key-file', type=pathlib.Path,
+                        help='private external key file, created exclusively for a fresh run')
     args = parser.parse_args()
     root, out = args.repo.resolve(), args.out.resolve()
     if out.is_relative_to(root):

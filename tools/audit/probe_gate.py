@@ -8,7 +8,8 @@ def require(condition, message):
 
 
 def run(*args):
- p=subprocess.run([sys.executable,str(RUNNER),*map(str,args)],capture_output=True,text=True); return p.returncode
+ key = pathlib.Path(args[1]).with_suffix('.private-key')
+ p=subprocess.run([sys.executable,str(RUNNER),*map(str,args),'--key-file',str(key)],capture_output=True,text=True); return p.returncode
 
 def git(root,*args): return subprocess.run(['git','-C',str(root),*args],check=True,capture_output=True)
 def case(base,name,argv,timeout=5):

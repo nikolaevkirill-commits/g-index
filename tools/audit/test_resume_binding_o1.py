@@ -13,6 +13,25 @@ import run_gate as runner
 
 
 class ResumeDiagnostics(unittest.TestCase):
+    def test_external_key_lifecycle(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            keyfile = base/'run.key'
+            key = runner.create_private_key(keyfile)
+            self.assertTrue(key == runner.read_private_key(keyfile))
+            with self.assertRaises(FileExistsError):
+                runner.create_private_key(keyfile)
+            self.assertTrue(key == runner.read_private_key(keyfile))
+            alias = base/'alias'
+            os.link(keyfile,alias)
+            with self.assertRaisesRegex(ValueError,'invalid external resume key'):
+                runner.read_private_key(alias)
+            alias.unlink()
+            if os.name != 'nt':
+                keyfile.chmod(0o644)
+                with self.assertRaisesRegex(ValueError,'owner-only'):
+                    runner.read_private_key(keyfile)
+
     def test_actual_runner_reports_env_keys_without_values(self):
         with tempfile.TemporaryDirectory(prefix='fp575-o1-') as directory:
             base = Path(directory)
@@ -34,7 +53,9 @@ class ResumeDiagnostics(unittest.TestCase):
                         'CUSTOM_REMOVED':'fixture-custom-removed'}
             for name in ('CUSTOM_ADDED','O1_SECRET'):
                 original.pop(name,None)
-            args = [sys.executable, '-B', str(Path(runner.__file__).resolve()), str(repo), str(out)]
+            keyfile = base/'private.key'
+            args = [sys.executable, '-B', str(Path(runner.__file__).resolve()), str(repo), str(out),
+                    '--key-file',str(keyfile)]
 
             def run(tail, env=original):
                 return subprocess.run([*args,*map(str,tail)],env=env,capture_output=True,
@@ -47,6 +68,28 @@ class ResumeDiagnostics(unittest.TestCase):
             receipt = out/'binding-env.json'
             original_receipt = receipt.read_bytes()
             before = sorted(out.glob('attempt-*.json'))
+            self.assertFalse((out/'resume.key').exists())
+            self.assertEqual(keyfile.stat().st_size,32)
+            key_bytes = keyfile.read_bytes()
+            for evidence_file in out.iterdir():
+                if evidence_file.is_file():
+                    content = evidence_file.read_bytes()
+                    self.assertFalse(key_bytes in content or key_bytes.hex().encode() in content)
+            for location in (out/'inside.key',repo/'inside.key',base/'missing.key'):
+                rejected = run([sealed,'--resume','--key-file',location])
+                self.assertEqual(rejected.returncode,2)
+                self.assertFalse(location.exists())
+            wrong = base/'different.key'
+            runner.create_private_key(wrong)
+            rejected = run([sealed,'--resume','--key-file',wrong])
+            self.assertEqual(rejected.returncode,2)
+            self.assertIn('authentication',rejected.stderr)
+            legacy = out/'resume.key'
+            legacy.touch()
+            rejected = run([sealed,'--resume'])
+            self.assertEqual(rejected.returncode,2)
+            self.assertIn('legacy evidence',rejected.stderr)
+            legacy.unlink()
             result = run([sealed,'--resume'])
             self.assertEqual(result.returncode,0,result.stderr)
             self.assertEqual(before, sorted(out.glob('attempt-*.json')))

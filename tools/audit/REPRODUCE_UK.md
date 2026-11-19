@@ -23,15 +23,17 @@ clean npm install --prefix "$deps/node" --no-save --package-lock=false --no-bin-
 export PLAYWRIGHT_BROWSERS_PATH="$deps/browsers"
 clean node "$deps/node/node_modules/playwright/cli.js" install --with-deps chromium
 gate() { clean env NODE_PATH="$deps/node/node_modules" "$py" exact-repo/tools/audit/run_gate.py "$@"; }
+key_dir=$(mktemp -d)
 gate exact-repo private-evidence exact-repo/tools/audit/commands-105.json --seal --sealed-output bound.json
-gate exact-repo private-evidence bound.json
-clean env NODE_PATH="$deps/node/node_modules" "$py" exact-repo/tools/audit/portable_report.py private-evidence local-report.json --repo exact-repo
-# Для продовження того самого запуску за незмінних входів та середовища:
-# gate exact-repo private-evidence bound.json --resume
+gate exact-repo private-evidence bound.json --key-file "$key_dir/run.key"
+report() { clean env NODE_PATH="$deps/node/node_modules" "$py" exact-repo/tools/audit/portable_report.py private-evidence "$@" --repo exact-repo --key-file "$key_dir/run.key"; }
+report clean-report.json
+gate exact-repo private-evidence bound.json --key-file "$key_dir/run.key" --resume
+report resumed-report.json --verify-full-resume
 ```
 
 Використовуйте нове віртуальне середовище без системних пакетів. Кожен видимий Python-дистрибутив має містити `RECORD` установленого wheel. Гейт перевіряє наявність зазначених файлів і звіряє їхній розмір та SHA256 там, де `RECORD` містить ці значення. Використовуйте Python без `-O` і `-OO`. Несумісні змінні треба вилучити через `env -u`, навіть якщо вони порожні. Канонічний гейт при відмові не створює `bound.json`. Після виправлення середовища повторіть запечатування.
 
 Сирі журнали в `private-evidence` призначені для локального використання. Для нового ZIP використати цей файл як кореневий `REPRODUCE_UK.md`.
 
-Якщо `--resume` відмовив через зміну середовища, у `env_keys` наведено назви доданих, змінених і вилучених ключів, зокрема `SHLVL` або `OLDPWD`. Значення залишаються приватними. Для старого запуску без перевіреної квитанції почніть новий прогін в окремому каталозі. Файли `binding-env.json` та `resume.key` тримайте в приватному каталозі доказів.
+Якщо `--resume` відмовив через зміну середовища, у `env_keys` наведено назви доданих, змінених і вилучених ключів, зокрема `SHLVL` або `OLDPWD`. Значення залишаються приватними. Для старого запуску без перевіреної квитанції почніть новий прогін в окремому каталозі. Шлях до приватного каталогу ключа зберігається у `$key_dir`. Збережіть його для продовження й локального звіту. Ключ залишайте поза доказами, checkout і ZIP. Після завершення перевірки ключ можна видалити. Старі докази з вкладеним ключем відхиляються.

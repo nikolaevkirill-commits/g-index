@@ -9,7 +9,8 @@ import subprocess
 import sys
 
 sys.dont_write_bytecode = True
-from run_gate import CANONICAL_CONTRACT, canonical, contract, digest, mac, read, resume_records
+from run_gate import (CANONICAL_CONTRACT, canonical, contract, digest, external_key_path,
+                      file_hash, mac, read, read_private_key, resume_records)
 
 
 def git(root, *args):
@@ -88,12 +89,9 @@ def authentic_summary(path, key, binding, spec, history, positions):
     return summary, count, bool(reused), resumed, "authenticated_invocation"
 
 
-def verify(directory, spec, identity):
-    keyfile = directory / "resume.key"
+def verify(directory, spec, identity, keyfile, full_resume):
     require(not (directory / "ACTIVE.lock").exists(), "Gate is still active")
-    require(keyfile.is_file() and not keyfile.is_symlink(), "Local HMAC key missing or invalid")
-    key = keyfile.read_bytes()
-    require(len(key) == 32, "Local HMAC key missing or invalid")
+    key = read_private_key(keyfile)
     binding = digest(canonical(identity))
     history = []
     resume_records(directory, key, binding, spec["checks"], history=history)
@@ -103,17 +101,26 @@ def verify(directory, spec, identity):
     require(all(re.fullmatch(r"summary-\d+", p.stem) and not p.is_symlink() for p in candidates),
             "Invalid signed summary filename")
     last_count = 0
-    for path in sorted(candidates, key=lambda p: int(p.stem.removeprefix("summary-"))):
+    ordered = sorted(candidates, key=lambda p: int(p.stem.removeprefix("summary-")))
+    if full_resume:
+        require(len(ordered) == 2, "Full resume proof requires exactly two signed summaries")
+    for number, path in enumerate(ordered):
         summary, count, reused, resumed, provenance = authentic_summary(
             path, key, binding, spec, history, positions)
         require(count >= last_count, "Signed summary sequence went backwards")
+        if full_resume:
+            is_second = number == 1
+            require(provenance == "authenticated_invocation" and summary["complete"]
+                    and count == len(history) == 105 and reused is is_second and resumed is is_second
+                    and summary["invocation"]["prior_attempt_count"] == (105 if is_second else 0),
+                    "Full resume proof requires a fresh run followed by reuse of all 105 attempts")
         last_count = count
     require(count == len(history), "Newer authenticated attempts have no completed summary")
     require(not (directory / "ACTIVE.lock").exists(), "Gate became active during verification")
-    return summary, history, len(candidates), reused, resumed, provenance
+    return summary, history, ordered, reused, resumed, provenance
 
 
-def collect(directory, root, github):
+def collect(directory, root, github, key_file=None, *, full_resume=False):
     revision = git(root, "rev-parse", "HEAD")
     tree = git(root, "rev-parse", "HEAD^{tree}")
     ci = github.get("GITHUB_ACTIONS") == "true" or any(
@@ -143,7 +150,9 @@ def collect(directory, root, github):
                 and source.get("index_tree") == tree and identity.get("contract") == spec
                 and identity.get("scope") == "canonical_105",
                 "Candidate source or exact command binding differs")
-        summary, history, summary_count, reused, resumed, provenance = verify(directory, spec, identity)
+        keyfile = external_key_path(key_file, root, directory)
+        summary, history, summaries, reused, resumed, provenance = verify(
+            directory, spec, identity, keyfile, full_resume)
 
         rows = []
         for row in summary["rows"]:
@@ -163,11 +172,17 @@ def collect(directory, root, github):
                       attempt_count=len(history), used_resume=reused, resume_requested=resumed,
                       resume_provenance=provenance, rows=rows)
         require(summary["complete"], "Missing completed canonical summary")
-        if ci:
-            require(summary_count == 1 and len(history) == len(rows) == 105
+        if ci and not full_resume:
+            require(len(summaries) == 1 and len(history) == len(rows) == 105
                     and resumed is False and reused is False
                     and all(row["index"] == i for i, (row, _) in enumerate(history, 1)),
                     "CI requires one fresh ordered summary and exactly 105 original attempts")
+        fields.update(summary_count=len(summaries), first_summary_sha256=file_hash(summaries[0]),
+                      latest_summary_sha256=file_hash(summaries[-1]),
+                      attempt_chain_sha256=digest(canonical(history)))
+        if full_resume:
+            fields.update(reused_attempt_count=len(summary["invocation"]["reused_attempt_ids"]),
+                          new_attempt_count=len(history)-summary["invocation"]["prior_attempt_count"])
         fields["passed"] = True
     except ValueError as error:
         # Known validations have fixed messages; never echo JSON parser content or raw logs.
@@ -183,8 +198,12 @@ def main():
     parser.add_argument("output", type=Path)
     parser.add_argument("--repo", type=Path, default=Path(__file__).resolve().parents[2],
                         help="checkout already positioned at the candidate commit")
+    parser.add_argument("--key-file", type=Path, required=True, help="private external signing key")
+    parser.add_argument("--verify-full-resume", action="store_true",
+                        help="require a fresh canonical run followed by reuse of its 105 attempts")
     args = parser.parse_args()
-    report = collect(args.private_evidence.resolve(), args.repo.resolve(), os.environ)
+    report = collect(args.private_evidence.resolve(), args.repo.resolve(), os.environ, args.key_file,
+                     full_resume=args.verify_full_resume)
     with args.output.open("x", encoding="utf-8") as dest:
         json.dump(report, dest, indent=2)
         dest.write("\n")

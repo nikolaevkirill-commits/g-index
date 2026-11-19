@@ -506,7 +506,7 @@ const driverLabel=x=>x.factor==='Kp'?'Геомагнітна складова':x
  // Route-level disclosures retain their own keyboard and deep-link entry points.
 }
 
-const shortPhone=matchMedia('(max-width:375px) and (max-height:740px), (max-width:320px) and (max-height:800px)');
+const shortPhone=matchMedia('(max-width:375px) and (max-height:800px)');
 function placeFeedState(root){
  const state=root.querySelector('[data-p0-feed-state]'),sun=root.querySelector(':scope > [data-sky-clock]'),hero=root.querySelector('.nr-o-hero');
  if(!state||!hero)return;
