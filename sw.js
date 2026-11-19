@@ -2,7 +2,7 @@ importScripts('./runtime_diagnostics_v1.js','./civil_time_v1.js?v=fp569f-global'
 // G-Index service worker. Navigations, HTML, JS and data (.json/.jsonl/.csv) are network-first with a
 // cached fallback. Versioned packed scripts and other static assets are cache-first.
 // Bump CACHE_VERSION whenever index.html or a cached shell asset changes.
-const CACHE_VERSION = 'fp572-integrated-locale-20261118';
+const CACHE_VERSION = 'fp575-audit-20261119';
 const CACHE_PREFIX = 'gindex-'; // G-Index cache namespace; do not remove the prefix.
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${CACHE_VERSION}`;
 const DATA_CACHE = `${CACHE_PREFIX}data-${CACHE_VERSION}`;
@@ -123,7 +123,7 @@ const SHELL_ASSETS = [
   './personal_dayline_ui.js',
   './meeus_core_v1.js',
   './lunar_core_v1.js?v=fp572-lunar-display',
-  './dayline_view_v1.js?v=fp572-lunar',
+  './dayline_view_v1.js?v=fp574-a11y',
   './dayline_view_v1.css',
   './dayline_i18n_v1.js',
   './dayline_adapter_v1.js?v=fp572-lunar',
@@ -139,9 +139,9 @@ const SHELL_ASSETS = [
   './festival_evidence_v1.js',
 
   './observance_source_registry_v1.js',
-  './observances_tanita_v1.js',
+  './observances_tanita_v1.js?v=fp574-packed',
   './panchanga_civil_adapter.js',
-  './own_calendar_v1.js','./research_observances_v1.js','./research_observances_view.js?v=fp568-review-20261107',
+  './own_calendar_v1.js','./research_observances_v1.js?v=fp574-packed','./research_observances_view.js?v=fp568-review-20261107',
   './panchanga_app_bridge.js',
   './r9_shell.css',
   './panchanga_civil_view.css',
@@ -159,7 +159,7 @@ const SHELL_ASSETS = [
   './preview-v4/design_scale.js',
   './preview-v4/locale_bridge_v1.js?v=fp569r-release',
   './preview-v4/locale_overview_v1.js?v=fp569m',
-  './preview-v4/product_shell_v1.js',
+  './preview-v4/product_shell_v1.js?v=fp574-packed',
   './preview-v4/design_b/integration.css?v=v7-2',
   './preview-v4/design_b/palette/palette.css?v=v7-2',
   './preview-v4/design_b/palette/palette.js',
@@ -193,11 +193,11 @@ const SHELL_ASSETS = [
   './preview-v4/app_today_v1.js?v=fp569q-audit',
   './preview-v4/app_today_v1.css?v=app1',
   './natal_sky_v1.js?v=fp572-natal',
-  './day_verdict_v1.js?v=fp569r-fix',
+  './day_verdict_v1.js?v=fp573-r8',
   './space_scene_gl_v1.js?v=fp569r-noaa-locales',
   './space_scene_v1.js?v=fp569r-noaa-locales',
   './earth_bluemarble_v1.webp?v=fp569q',
-  './week_ahead_v1.js?v=fp569r-preaudit',
+  './week_ahead_v1.js?v=fp575-a11y',
   './moon_month_v1.js?v=fp569h-p8',
   './kp_threshold_v1.js?v=fp569f-global',
   './day_verdict_v1.css?v=dv5',
@@ -248,7 +248,7 @@ const SHELL_ASSETS = [
   './product_render_queue_v1.js',
   './moon_phase_v1.js',
   './expert_start_advice_v1.js?v=1',
-  './p0_layout_v1.js?v=fp572-three-days',
+  './p0_layout_v1.js?v=fp575-a11y',
   './three_day_forecast_v1.js?v=fp572-noaa-status',
   './p0_layout_v1.css',
   './wow_reviewed_v1.css',
@@ -264,7 +264,7 @@ const SHELL_ASSETS = [
   './push_client_v1.js',
   './core_runtime_v1.js?v=fp572-lunar-local',
   './mobile_navigation_v1.js',
-  './product_shell_v1.js',
+  './product_shell_v1.js?v=fp574-packed',
   './plan_calendar_v1.js',
   './native_reminder_v1.js',
   './native_reminder_ui_v1.js',
@@ -276,7 +276,7 @@ const SHELL_ASSETS = [
   './notification_runtime_v1.js',
   './transition_runtime_v1.js',
   './transition_client_v1.js',
-  './consumer_overview_v1.js?v=fp569o-daily',
+  './consumer_overview_v1.js?v=fp575-source',
   './calendar_context_v1.js',
   './consumer_overview_v1.css',
   './local_storage_v1.js',
@@ -312,6 +312,13 @@ const PACKED_SHELL_HASHES = Object.freeze({
   './locale_overview_v1.js': '71251a009ea76cd0c324ce33a8626d691a4aabf6f299a4ace2c20f6cc24f2640',
   './preview-v4/core_runtime_v1.js': '8587d3e41c34d6f9b384b5aa1e54eafd76f3e0e48f442ce675d6e493dd0a931b',
   './preview-v4/locale_overview_v1.js': '7ec93b5fd0fa1d78355a369957a0d8e7022c08115b6997fb6c30593729578d9b',
+  './dayline_view_v1.js': '0e2f8273071f201341242054dc29bd365ffe945f96d67d227e465d303aa9fce2',
+  './consumer_overview_v1.js': '8fb8cd96ec1f4a547c87781ed4847644070b23ed04920c050e23756c5d0a856c',
+  './preview-v4/consumer_overview_v1.js': 'f2679d1ac16d096190babe1ced544b3b81a6e7563fdd952b6514c048d9a3de4a',
+  './observances_tanita_v1.js': '22573bb343426e4a5056210f0a8498c44c7c3cea7615fb389ae12516102bdda3',
+  './research_observances_v1.js': 'd36ced989c11b994fd6c3f9dc847436af250188f47ca42c5e82c3864079c01cd',
+  './product_shell_v1.js': '1dbe497ec9ef59f8c84535eeae9ed6c44a4f4b2886b8ba08df67ba34a27cf889',
+  './preview-v4/product_shell_v1.js': 'ba408be45caf7f7396a73e184de692844ddc0746309c385084abc94e53a23647',
 });
 const CAN_UNPACK_SHELL = typeof DecompressionStream === 'function';
 const packedShellScripts = new Map();

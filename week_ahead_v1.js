@@ -105,7 +105,7 @@ async function exportIcs(ds,btn){
 function weekStrip(){
  const start=todayKey(),cells=[],reference=kyivReference();
  for(let i=0;i<DAYS;i++){const ds=addDays(start,i),s=score(ds),ev=reference?drik(ds).events.length:0;
-  cells.push(`<li data-week-day="${ds}" data-score-tone="${tone(s)}"><button type="button" data-week-go${i===0?' aria-current="date"':''} aria-label="${esc(full(ds)+': '+describe(s)+(ev?' · '+t('evMark'):''))}"><span class="sr-wk-wd" aria-hidden="true">${esc(wd(ds))}</span><span class="sr-wk-d" aria-hidden="true">${esc(dateOf(ds).getUTCDate())}</span><strong class="sr-wk-s" aria-hidden="true">${icon(s)} ${esc(fmt(s))}</strong><span class="sr-wk-ev" aria-hidden="true">${ev?'◆':''}</span></button></li>`)}
+  cells.push(`<li data-week-day="${ds}" data-score-tone="${tone(s)}"><button type="button" data-week-go aria-describedby="nrWkDesc-${ds}"${i===0?' aria-current="date"':''}><span class="sr-wk-wd">${esc(wd(ds))}</span> <span class="sr-wk-d">${esc(dateOf(ds).getUTCDate())}</span> <strong class="sr-wk-s"><span aria-hidden="true">${icon(s)} </span>${esc(fmt(s))}</strong><span class="sr-wk-ev" aria-hidden="true">${ev?'◆':''}</span></button><span id="nrWkDesc-${ds}" hidden>${esc(full(ds)+': '+describe(s)+(ev?' · '+t('evMark'):''))}</span></li>`)}
  return `<section class="sr-week" data-week-strip data-placement="after-hero" aria-labelledby="srWeekTitle"><div class="sr-week-head"><h2 id="srWeekTitle">${esc(t('week'))}</h2><button type="button" data-week-open>${esc(t('open'))}</button></div><ol>${cells.join('')}</ol>${nextLine()}<p class="sr-week-note">${esc(t('weekNote'))}</p></section>`}
 
 function weekEvents(){

@@ -13,6 +13,7 @@ const T={
  tone_none:['Оцінки на цей день немає.','No score for this day.','No hay puntuación para este día.','Pas de score pour ce jour.'],
  good:['Підходить:','Good for:','Adecuado para:','Propice à :'],
  avoid:['Краще відкласти:','Better to postpone:','Mejor posponer:','Mieux vaut reporter :'],
+ avoid_cal:['За календарем краще відкласти:','The calendar advises postponing:','El calendario aconseja posponer:','Le calendrier conseille de reporter :'],
  check:['Уважно:','Take care:','Con atención:','Attention :'],
  why:['Чому так','Why','Por qué','Pourquoi'],
  newStarts:['нові починання','new beginnings','nuevos comienzos','nouveaux commencements'],
@@ -73,7 +74,9 @@ function build(r,ds){
  if(ev)why.push([t('sky'),(ev.reading.text[L()]||ev.reading.text.en).replace(/:.*$/,'')+' ('+t('sky_note')+')']);
  // Tanita's new-starts card already states this advice with its source; keep it in «Чому так», drop the duplicate line.
  const shownAvoid=window.SRP0Layout?.hasNewStartAdvice?.(ds)?avoid.filter(x=>x!==t('newStarts')):avoid;
- return {tone,good,avoid:shownAvoid,care,why};
+ // R8: a calendar-only postponement is topical advice, not the day's overall tone; name its source.
+ const avoidKey=shownAvoid.length&&shownAvoid.every(x=>x===t('newStarts'))?'avoid_cal':'avoid';
+ return {tone,good,avoid:shownAvoid,avoidKey,care,why};
 }
 function render(){
  const r=root();if(!r)return;const hero=r.querySelector('.nr-o-hero'),verdict=hero?.querySelector('.nr-o-verdict');if(!hero||!verdict)return;
@@ -85,8 +88,8 @@ function render(){
  const ds=selected(r),v=build(r,ds);
  let today='';try{today=NRCivilTime.dayKey(Date.now(),'Europe/Kyiv')}catch{}
  const hour=Number(new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Kyiv',hour:'2-digit',hourCycle:'h23'}).format(new Date()));
- const line=(k,xs)=>xs.length?`<p class="nr-dv-${k}"><b>${esc(t(k))}</b> ${esc(xs.join(' · '))}</p>`:'';
- box.innerHTML=`<p class="nr-dv-tone">${esc(t(v.tone))}</p>${line('good',v.good)}${line('avoid',v.avoid)}${line('check',v.care)}`;
+ const line=(k,xs,label=k)=>xs.length?`<p class="nr-dv-${k}"><b>${esc(t(label))}</b> ${esc(xs.join(' · '))}</p>`:'';
+ box.innerHTML=`<p class="nr-dv-tone">${esc(t(v.tone))}</p>${line('good',v.good)}${line('avoid',v.avoid,v.avoidKey||'avoid')}${line('check',v.care)}`;
  let whyBox=hero.querySelector('[data-day-why]');
  if(!whyBox){whyBox=document.createElement('details');whyBox.className='nr-day-why';whyBox.dataset.dayWhy='';whyBox.setAttribute('translate','no')}
  if(verdict.nextElementSibling!==whyBox)verdict.after(whyBox);
@@ -127,7 +130,7 @@ window.NRDayVerdict={
  render,
  matches:matchAll,
  // FP569k: the same plain-language verdict for any date, reused by «Прогноз · День» (one sentence + good/avoid/check lines).
- summary:ds=>{const r=root();if(!r)return null;const v=build(r,ds);return {tone:t(v.tone),lines:[['good',v.good],['avoid',v.avoid],['check',v.care]].filter(([,xs])=>xs.length).map(([k,xs])=>({kind:k,label:t(k),text:xs.join(' · ')}))}},
+ summary:ds=>{const r=root();if(!r)return null;const v=build(r,ds);return {tone:t(v.tone),lines:[['good',v.good],['avoid',v.avoid],['check',v.care]].filter(([,xs])=>xs.length).map(([k,xs])=>({kind:k,label:t(k==='avoid'?(v.avoidKey||'avoid'):k),text:xs.join(' · ')}))}},
  hasMatch:ds=>MATCH_VALUES.includes(matchAll()[ds]?.v)
 };
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{watch();loadSky()});else{watch();loadSky()}

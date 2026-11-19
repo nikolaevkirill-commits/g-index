@@ -158,7 +158,8 @@ function renderCivil(){
  if(next){
   q('[data-dl-next-time]').textContent=civilCopy(1)+' · '+fmt(next.at);
   q('[data-dl-next-label]').textContent=shortKind(next.kind)+' · '+name(next.kind,next.to);
-  nextButton.setAttribute('aria-label',civilCopy(15)+' · '+fmt(next.at)+' · '+q('[data-dl-next-label]').textContent);
+  // A11Y (WCAG 2.5.3): the accessible name starts with the visible text.
+  nextButton.setAttribute('aria-label',nextButton.textContent.replace(/\s+/g,' ').trim()+' — '+civilCopy(15));
   nextButton.onclick=()=>civilEvent(next,nextButton);
  }
  periods.querySelector('summary').textContent=civilCopy(3);
