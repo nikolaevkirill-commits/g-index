@@ -2,7 +2,7 @@ importScripts('./runtime_diagnostics_v1.js','./civil_time_v1.js?v=fp569f-global'
 // G-Index service worker. Navigations, HTML, JS and data (.json/.jsonl/.csv) are network-first with a
 // cached fallback. Versioned packed scripts and other static assets are cache-first.
 // Bump CACHE_VERSION whenever index.html or a cached shell asset changes.
-const CACHE_VERSION = 'fp575-layout-20261119';
+const CACHE_VERSION = 'fp575-d1d8-20261119';
 const CACHE_PREFIX = 'gindex-'; // G-Index cache namespace; do not remove the prefix.
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${CACHE_VERSION}`;
 const DATA_CACHE = `${CACHE_PREFIX}data-${CACHE_VERSION}`;
@@ -100,7 +100,7 @@ const SHELL_ASSETS = [
   './civil_time_v1.js?v=fp569f-global',
   './sw_update_coordination_v1.js?v=fp569n-handoff',
   './day_context_v1.js?v=mobile-clarity1',
-  './sky_time_v1.js?v=fp572-first-sun',
+  './sky_time_v1.js?v=fp575-fold2',
   './sky_live_loader_v1.js?v=fp569r-cosmos',
   './sky_live_v1.js?v=fp569r-cosmos',
   './sky_ovation_v1.js?v=1',
@@ -152,7 +152,7 @@ const SHELL_ASSETS = [
   './classic.html',
   './preview-v4/desktop_v1.css?v=d1',
   './preview-v4/atlas_motion.css?v=v7-2',
-  './preview-v4/consumer_overview_v1.js?v=fp569o-daily',
+  './preview-v4/consumer_overview_v1.js?v=fp575-fold2',
   './preview-v4/core_runtime_v1.js?v=fp572-lunar-local',
   './preview-v4/design_candidate.css?v=v7-3',
   './preview-v4/design_candidate.js',
@@ -190,7 +190,7 @@ const SHELL_ASSETS = [
   './preview-v4/design_b/scenes/scenes.js?v=fp569c-scenes-provenance',
   './preview-v4/sky_scene_v1.js?v=fp572-sky',
   './preview-v4/sky_scene_v1.css?v=fp569r-reaudit',
-  './preview-v4/app_today_v1.js?v=fp569q-audit',
+  './preview-v4/app_today_v1.js?v=fp575-fold2',
   './preview-v4/app_today_v1.css?v=app1',
   './natal_sky_v1.js?v=fp572-natal',
   './day_verdict_v1.js?v=fp573-r8',
@@ -248,8 +248,8 @@ const SHELL_ASSETS = [
   './product_render_queue_v1.js',
   './moon_phase_v1.js',
   './expert_start_advice_v1.js?v=1',
-  './p0_layout_v1.js?v=fp575-a11y',
-  './three_day_forecast_v1.js?v=fp572-noaa-status',
+  './p0_layout_v1.js?v=fp575-fold2',
+  './three_day_forecast_v1.js?v=fp575-fold2',
   './p0_layout_v1.css',
   './wow_reviewed_v1.css',
   './sky_panorama_v1.webp',

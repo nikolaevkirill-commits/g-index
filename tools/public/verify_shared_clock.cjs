@@ -19,7 +19,8 @@ const server=http.createServer(async(req,res)=>{
  const results=[];
  const start=new Date('2026-11-07T15:29:00Z');
  try{
-  for(const [entry,width,height] of [['index.html',390,844],['classic.html',390,844],['index.html',1280,900]]){
+  const layoutOnly=process.argv.includes('--layout-only');
+  for(const [entry,width,height] of layoutOnly?[]:[['index.html',390,844],['classic.html',390,844],['index.html',1280,900]]){
    const ctx=await browser.newContext({viewport:{width,height},locale:'uk-UA',timezoneId:'Europe/Kyiv',serviceWorkers:'block',reducedMotion:'no-preference'});
    await ctx.route(/^https?:\/\/(?!127\.0\.0\.1)/,r=>r.abort());
    await ctx.addInitScript(()=>{
@@ -153,13 +154,15 @@ const server=http.createServer(async(req,res)=>{
    results.push({entry,width,visible,reference,a,b,lengths,errors});
    await ctx.close();
   }
-  for(const inputState of ['complete','synthetic-history']){
-  const c=await browser.newContext({viewport:{width:320,height:694},locale:'uk-UA',timezoneId:'Europe/Kyiv',serviceWorkers:'block'});
+  const layouts=[];
+  for(const lang of ['uk','en','es','fr']) for(const inputState of ['complete','synthetic-history']){
+  const c=await browser.newContext({viewport:{width:320,height:694},locale:lang,timezoneId:'Europe/Kyiv',serviceWorkers:'block'});
   await c.route(/^https?:\/\/(?!127\.0\.0\.1)/,r=>r.abort());
-  await c.addInitScript(()=>{
+  await c.addInitScript(language=>{
+   localStorage.setItem('nr_locale_v1',language);
    localStorage.setItem('gidx_onboard_done_v2','1');
    localStorage.setItem('srPrivacyNoticeDismissed','1');
-  });
+  },lang);
   if(inputState==='synthetic-history'){
    // Public historical fixture only: cloned days are synthetic, never forecasts.
    // Reproduce the archival make_feed.py scenario without overwriting tracked feeds.
@@ -193,38 +196,83 @@ const server=http.createServer(async(req,res)=>{
   await p.waitForFunction(()=>['ready','error'].includes(window.__srConsumerLoadState),null,{timeout:30000});
   // Wait for the asynchronously mounted share action before measuring the fold.
   await p.locator('[data-sky-clock] [data-share-card] button').waitFor();
-  const first=await compactSun.evaluate(el=>{const nav=document.getElementById('mobileNav').getBoundingClientRect().top,card=el.closest('[data-sky-clock]');
-   return {verdict:document.querySelector('#nrRoute-today .nr-o-hero .nr-dv-tone')?.getBoundingClientRect().bottom<nav,score:document.querySelector('#nrRoute-today .nr-o-hero .nr-o-verdict')?.getBoundingClientRect().bottom<nav,
-    afterHero:card.previousElementSibling?.matches('.nr-o-hero,.sr-expert-caution'),sunStarts:card.getBoundingClientRect().top<nav,plotBottom:el.closest('svg').getBoundingClientRect().bottom,sunTop:card.getBoundingClientRect().top,nav,previous:card.previousElementSibling?.className}});
-  assert(first.verdict&&first.score,'verdict and score must fit on a 320×694 first viewport');
-  assert(first.afterHero&&first.sunStarts,'Sun clock follows the overview card and starts on the first viewport: '+JSON.stringify(first));
-  assert(first.plotBottom<=first.nav,'solar plot must fit above the bottom navigation: '+JSON.stringify(first));
+  assert.equal(await p.evaluate(()=>window.NRLocale.language),lang);
   const source=p.locator('#nrRoute-today [data-today-source]');
-  assert(await source.evaluate(el=>{const r=el.getBoundingClientRect();return !!el.textContent.trim()&&r.height>0&&r.bottom<=document.getElementById('mobileNav').getBoundingClientRect().top&&el.scrollWidth<=el.clientWidth;}),'full explicit source/freshness remains visible');
   const status=p.locator('#nrRoute-today [data-p0-feed-state]');
   await p.waitForFunction(()=>document.querySelector('#nrRoute-today [data-p0-feed-state]')?.previousElementSibling?.hasAttribute('data-sky-clock'));
+  const advice=p.locator('#nrRoute-today [data-day-verdict] p:not(.nr-dv-tone)');
+  const actual=await advice.allTextContents();
+  const expected=await p.evaluate(()=>window.NRDayVerdict.summary('2026-11-07').lines.map(line=>line.label+' '+line.text));
+  const normalize=text=>text.trim().replace(/\s+/g,' ');
+  assert.deepEqual(actual.map(normalize),expected.map(normalize),'full advice matches the selected day');
   if(inputState==='synthetic-history'){
-   assert.match(await p.locator('#nrRoute-today .nr-dv-avoid').innerText(),/За календарем краще відкласти:.*нові починання/s);
+   const historical={uk:'За календарем краще відкласти: нові починання',en:'The calendar advises postponing: new beginnings',
+    es:'El calendario aconseja posponer: nuevos comienzos',fr:'Le calendrier conseille de reporter : nouveaux commencements'};
+   assert.ok(actual.map(normalize).includes(historical[lang]),'complete known historical advice');
    assert.equal(await status.getAttribute('data-state'),'stale');
    assert(await status.isVisible(),'stale status is retained below Sun');
   }
-  const statusText=await status.textContent(),sourceText=await source.textContent();
+  for(const [width,height] of [[320,694],[360,640],[320,568],[375,667]]){
+   await p.setViewportSize({width,height});
+   await p.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+   const geometry=await compactSun.evaluate(el=>{
+    const nav=document.getElementById('mobileNav').getBoundingClientRect().top;
+    const card=el.closest('[data-sky-clock]'),hero=document.querySelector('#nrRoute-today .nr-o-hero');
+    const unclipped=node=>{
+     if(!node?.textContent.trim())return false;
+     const box=node.getBoundingClientRect(),range=document.createRange();
+     range.selectNodeContents(node);
+     return box.width>0&&box.height>0&&box.left>=0&&box.right<=innerWidth&&
+      node.scrollWidth<=node.clientWidth+1&&node.scrollHeight<=node.clientHeight+1&&
+      [...range.getClientRects()].every(r=>r.left>=box.left-1&&r.right<=box.right+1&&r.top>=box.top-1&&r.bottom<=box.bottom+1);
+    };
+    const children=[...hero.querySelectorAll('[data-day-verdict] p:not(.nr-dv-tone)')];
+    const source=hero.querySelector('[data-today-source]');
+    return {nav,plotBottom:el.closest('svg').getBoundingClientRect().bottom,
+     sunTop:card.getBoundingClientRect().top,heroBottom:hero.getBoundingClientRect().bottom,
+     afterHero:card.previousElementSibling?.matches('.nr-o-hero,.sr-expert-caution'),
+     verdictBottom:hero.querySelector('.nr-dv-tone').getBoundingClientRect().bottom,
+     scoreBottom:hero.querySelector('.nr-o-verdict').getBoundingClientRect().bottom,
+     adviceVisible:children.every(node=>unclipped(node)&&node.getBoundingClientRect().bottom<=nav),
+     sourceVisible:unclipped(source)&&source.getBoundingClientRect().bottom<=nav,
+     sourceBottom:source.getBoundingClientRect().bottom};
+   });
+   const fit=geometry.plotBottom<=geometry.nav;
+   let scroll=null;
+   if(!fit){
+    scroll=await compactSun.evaluate(el=>{
+     const plot=el.closest('svg');
+     plot.scrollIntoView({block:'center',behavior:'instant'});
+     const r=plot.getBoundingClientRect();
+     const nav=document.getElementById('mobileNav').getBoundingClientRect().top;
+     const full=r.top>=0&&r.bottom<=nav&&r.left>=0&&r.right<=innerWidth;
+     return {full,top:r.top,bottom:r.bottom};
+    });
+    await p.evaluate(()=>window.scrollTo({top:0,behavior:'instant'}));
+   }
+   layouts.push({lang,inputState,width,height,...geometry,fit,scroll});
+   console.log('LAYOUT '+JSON.stringify(layouts.at(-1)));
+  }
+  await p.setViewportSize({width:320,height:694});
+  if(process.env.VERIFY_CLOCK_EVIDENCE_DIR&&inputState==='synthetic-history'&&['es','fr'].includes(lang)){
+   const out=path.resolve(process.env.VERIFY_CLOCK_EVIDENCE_DIR);
+   await fs.mkdir(out,{recursive:true});
+   await p.evaluate(()=>window.scrollTo({top:0,behavior:'instant'}));
+   await p.screenshot({path:path.join(out,lang+'-320x694.png'),mask:[p.locator('[data-score-tone]')],maskColor:'#273044'});
+  }
+  const stateBeforeResize=await status.getAttribute('data-state'),sourceText=await source.textContent();
   await p.setViewportSize({width:390,height:844});
   await p.waitForFunction(()=>document.querySelector('#nrRoute-today [data-p0-feed-state]')?.parentElement?.matches('.nr-o-hero'));
   await p.setViewportSize({width:320,height:694});
   await p.waitForFunction(()=>document.querySelector('#nrRoute-today [data-p0-feed-state]')?.previousElementSibling?.hasAttribute('data-sky-clock'));
-  assert(await status.textContent()===statusText,'resize preserves status');
+  assert.equal(await status.getAttribute('data-state'),stateBeforeResize,'resize preserves feed state');
+  if(inputState==='synthetic-history')assert(await status.isVisible(),'resize retains the stale notice');
   assert(await source.textContent()===sourceText,'resize preserves complete source');
   const why=p.locator('#nrRoute-today [data-day-why]');
   await why.locator('summary').click();
   assert(await why.locator('ul').isVisible(),'full reasons remain accessible');
   await why.locator('summary').click();
-  if(process.env.VERIFY_CLOCK_EVIDENCE_DIR){
-   const out=path.resolve(process.env.VERIFY_CLOCK_EVIDENCE_DIR);await fs.mkdir(out,{recursive:true});
-   // Geometry allowlist only. Screenshots mask score and source/feed content.
-   await fs.writeFile(path.join(out,inputState+'.json'),JSON.stringify({scenario:inputState,viewport:{width:320,height:694},...first,sourceVisible:true,statusRetained:true,resizePreserved:true},null,2));
-   if(inputState==='synthetic-history')await p.screenshot({path:path.join(out,'synthetic-masked.png'),mask:[p.locator('[data-score-tone]'),p.locator('[data-today-source]'),p.locator('[data-p0-feed-state]')],maskColor:'#273044'});
-  }
+  if(lang==='uk'){
   const localSun=p.locator('[data-sun-first-screen]');
   await localSun.waitFor();
   assert.match(await localSun.innerText(),/Сонце під горизонтом.*Київ · типове місце/);
@@ -233,11 +281,24 @@ const server=http.createServer(async(req,res)=>{
   await p.locator('[data-sky-clock] [data-time-open]').click({noWaitAfter:true});
   await p.locator('[data-sky-live] .nr-sl-body[data-body=Sun]').waitFor();
   assert.match(await p.locator('#nrSkyLiveHeading').textContent(),/Києвом/);
+  }
   await c.close();
   }
-  assert.equal(results.length,3);
+  if(process.env.VERIFY_CLOCK_EVIDENCE_DIR){
+   const out=path.resolve(process.env.VERIFY_CLOCK_EVIDENCE_DIR);await fs.mkdir(out,{recursive:true});
+   await fs.writeFile(path.join(out,'layout-matrix.json'),JSON.stringify(layouts,null,2));
+  }
+  assert.equal(layouts.length,32);
+  for(const row of layouts){
+   assert(row.afterHero&&row.verdictBottom<=row.nav&&row.scoreBottom<=row.nav);
+   assert(row.adviceVisible&&row.sourceVisible);
+   if(row.height===694)assert(row.fit);
+   else assert(row.fit||row.scroll?.full);
+  }
+  assert.equal(results.length,layoutOnly?0:3);
   // Output is an allowlist of test labels, never raw feeds, live scores or DOM text.
-  console.log('PASS 320×694 complete + synthetic historical inputs; first viewport ×3, shared clock round trip ×3, Sun equality, seven bodies, WebGL identity and phase, playback/pause, reduced-motion scrubbing, Kyiv 23/25 h, explicit default');
+  console.log('PASS 32 mobile layout cases across four languages and two input states');
+  if(!layoutOnly)console.log('PASS shared clock round trip ×3, Sun equality, seven bodies, WebGL identity and phase, playback/pause, reduced-motion scrubbing, Kyiv 23/25 h, explicit default');
  }finally{await browser.close();server.close();}
 })().catch(e=>{
  // Assertion libraries may include raw actual/expected DOM or feed values.
