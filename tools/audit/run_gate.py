@@ -1,139 +1,392 @@
-#!/usr/bin/env python3
-"""Fail-closed, source-bound gate. Logs are private; never package them unchecked."""
-import argparse, hashlib, importlib.metadata, json, os, pathlib, platform, shutil, signal, subprocess, sys, time, uuid
+"""Source-bound FP575 audit gate with private, locally authenticated resume evidence."""
+import argparse
+import hashlib
+import hmac
+import importlib.metadata
+import json
+import math
+import os
+import pathlib
+import platform
+import re
+import secrets
+import shutil
+import subprocess
+import sys
+import tempfile
+import time
+import uuid
 
-PROTECTED = ('consumer_cloud/forecast.json','consumer_cloud/final_score_decisions.json','INDEPENDENT_FORECAST_FEED_v1.json')
-SCHEMA = 'fp575-bound-gate-v2'
-def canonical(x): return json.dumps(x, sort_keys=True, separators=(',',':'), ensure_ascii=True).encode()
-def digest(b): return hashlib.sha256(b).hexdigest()
-def read(p): return json.loads(pathlib.Path(p).read_text(encoding='utf-8-sig'))
-def write_new(p, obj):
-    with pathlib.Path(p).open('x',encoding='utf-8') as f:
-        json.dump(obj,f,indent=2,ensure_ascii=True); f.write('\n'); f.flush(); os.fsync(f.fileno())
-def cmd(root, *args):
-    return subprocess.check_output(args,cwd=root,stderr=subprocess.PIPE).decode().strip()
-def snapshot(root, generated=()):
-    # HEAD and index must be the same real tree; worktree must be clean, including deletions.
-    head=cmd(root,'git','rev-parse','HEAD'); tree=cmd(root,'git','rev-parse','HEAD^{tree}')
-    index=cmd(root,'git','write-tree')
-    if tree!=index: raise ValueError('index differs from HEAD')
-    subprocess.run(['git','diff','--quiet','--'],cwd=root,check=True)
-    files=subprocess.check_output(['git','ls-files','-z'],cwd=root).decode().split('\0')[:-1]
-    hashes={}
-    for name in files:
-        p=root/name
-        if p.is_symlink() or not p.is_file(): raise ValueError('unsupported/missing tracked input: '+name)
-        hashes[name]=digest(p.read_bytes())
-    for p in PROTECTED:
-        if p not in hashes: raise ValueError('protected input not tracked: '+p)
-    # Untracked runtime inputs must not enter tests through disk/server/module lookup.
-    untracked=subprocess.check_output(['git','ls-files','--others','--exclude-standard','-z'],cwd=root)
-    unexpected=[p for p in untracked.decode().split('\0') if p and not any(p==g or p.startswith(g.rstrip('/')+'/') for g in generated)]
-    if unexpected: raise ValueError('unexpected untracked files present; use a clean dedicated checkout')
-    return {'head':head,'tree':tree,'index_tree':index,'files':hashes,'protected':{p:hashes[p] for p in PROTECTED}}
-def environment(root):
-    def version(args):
-        try: return cmd(root,*args)
-        except (OSError,subprocess.CalledProcessError): return '[unavailable]'
-    node=version(['node','--version'])
-    pw=version(['node','-e',"(async()=>{const fs=require('fs'),crypto=require('crypto'),p=require('playwright');const s=await p.chromium.launchServer();try{const f=s.process().spawnfile;const b=await p.chromium.connect(s.wsEndpoint());console.log(JSON.stringify({version:require('playwright/package.json').version,browser_version:b.version(),executable_sha256:crypto.createHash('sha256').update(fs.readFileSync(f)).digest('hex')}));await b.close();}finally{await s.close()}})().catch(e=>{console.error(e.message);process.exit(1)})"])
-    return {'python':sys.version,'python_packages':sorted([d.metadata.get('Name',''),d.version] for d in importlib.metadata.distributions()),'python_executable_sha256':digest(pathlib.Path(sys.executable).read_bytes()),'git':version(['git','--version']),'node':node,'playwright':pw,'platform':platform.platform(),'machine':platform.machine(),'environment_sha256':digest(canonical({k:v for k,v in os.environ.items() if k in ('PATH','NODE_PATH','NODE_OPTIONS','TZ','LANG','LC_ALL','PYTHONPATH','PYTHONUTF8','PYTHONHASHSEED','PLAYWRIGHT_BROWSERS_PATH','PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH','CI','HOME','USERPROFILE') or k.startswith('NR_')}))}
-def commands(doc):
-    rows=doc.get('checks')
-    if not isinstance(rows,list) or not rows: raise ValueError('empty command list')
-    out=[]
-    for n,row in enumerate(rows,1):
-        argv=row.get('argv'); timeout=row.get('timeout',1200)
-        if not isinstance(argv,list) or not argv or not all(isinstance(s,str) and s for s in argv): raise ValueError('checks require explicit argv arrays (no shell parsing)')
-        if not isinstance(timeout,(int,float)) or timeout<=0: raise ValueError('invalid timeout')
-        if row.get('index',n)!=n: raise ValueError('indices must be contiguous and ordered')
-        out.append({'index':n,'argv':argv,'timeout':timeout})
-    if doc.get('expected_count')!=len(out): raise ValueError('expected_count differs from command count')
-    return out
+sys.dont_write_bytecode = True
+import gate_process
 
-def execute(argv,root,timeout,log):
-    argv=[sys.executable if s=='{python}' else s for s in argv]
-    kwargs={'start_new_session':True} if os.name!='nt' else {'creationflags':subprocess.CREATE_NEW_PROCESS_GROUP}
-    started=time.monotonic()
-    with log.open('xb') as f:
+PROTECTED = ('consumer_cloud/forecast.json', 'consumer_cloud/final_score_decisions.json',
+             'INDEPENDENT_FORECAST_FEED_v1.json')
+SCHEMA = 'fp575-bound-gate-v3'
+# Review every command and output-policy change before updating this fingerprint.
+CANONICAL_CONTRACT = 'db9bc7b763f7b7099e2423fcfb0bcfea47ba118ffb7fdd9e6223af7d67b033c5'
+OVERRIDES = ('B7_', 'CHROME_PATH', 'CSS_UPGRADE_', 'DAYLINE_', 'DEPTH_LIMIT',
+             'FP463_', 'FP569', 'NR', 'QA_OLD_NAV', 'SKY_', 'SW_', 'VERIFY_CLOCK_',
+             'CACHE_PUBLISHED_BASELINE', 'NODE_OPTIONS', 'PYTHONPATH',
+             'PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH')
+
+
+def canonical(value):
+    return json.dumps(value, sort_keys=True, separators=(',', ':'), ensure_ascii=True).encode()
+
+
+def digest(data):
+    return hashlib.sha256(data).hexdigest()
+
+
+def file_hash(path):
+    with path.open('rb') as stream:
+        return hashlib.file_digest(stream, 'sha256').hexdigest()
+
+
+def read(path):
+    return json.loads(path.read_text(encoding='utf-8-sig'))
+
+
+def write_new(path, value):
+    with path.open('x', encoding='utf-8') as stream:
+        json.dump(value, stream, indent=2, ensure_ascii=True)
+        stream.write('\n')
+        stream.flush()
+        os.fsync(stream.fileno())
+
+
+def git(root, *args):
+    env = {**os.environ, 'GIT_OPTIONAL_LOCKS':'0'}
+    return subprocess.check_output(['git', *args], cwd=root, env=env, stderr=subprocess.PIPE)
+
+
+def snapshot(root, generated):
+    head = git(root, 'rev-parse', 'HEAD').decode().strip()
+    tree = git(root, 'rev-parse', 'HEAD^{tree}').decode().strip()
+    if git(root, 'diff', '--cached', '--name-only', 'HEAD', '--'):
+        raise ValueError('index differs from HEAD')
+    if git(root, 'diff', '--name-only', '--'):
+        raise ValueError('worktree differs from index')
+    tags = git(root, 'ls-files', '-v', '-z').decode().split('\0')[:-1]
+    if any(s[:2] != 'H ' for s in tags):
+        raise ValueError('unsupported index flags on tracked inputs')
+    hashes = {}
+    for tag in tags:
+        name = tag[2:]
+        path = root / name
+        if not path.is_file() or path.is_symlink():
+            raise ValueError('unsupported/missing tracked input: ' + name)
+        hashes[name] = file_hash(path)
+    for name in PROTECTED:
+        if name not in hashes:
+            raise ValueError('protected input not tracked: ' + name)
+    # Deliberately omit --exclude-standard: ignored files may be executable inputs too.
+    untracked = git(root, 'ls-files', '--others', '-z').decode().split('\0')[:-1]
+    if any(not any(name == g or name.startswith(g + '/') for g in generated)
+           for name in untracked):
+        raise ValueError('unexpected untracked or ignored files; use external dependencies and a clean checkout')
+    return {'head':head, 'tree':tree, 'index_tree':tree, 'files':hashes,
+            'protected':{name:hashes[name] for name in PROTECTED}}
+
+
+def path_hashes(path, *, internal_links=False):
+    if path.is_symlink() or getattr(path, 'is_junction', lambda: False)():
+        raise ValueError('linked dependency or generated output is unsupported: ' + str(path))
+    if path.is_file():
+        return {'':file_hash(path)}
+    if not path.is_dir():
+        return {}
+    result = {".":"directory"}
+    for folder, dirs, files in os.walk(path):
+        directory = pathlib.Path(folder)
+        for name in sorted(dirs + files):
+            item = directory / name
+            if item.is_symlink() or getattr(item, 'is_junction', lambda: False)():
+                target = item.resolve()
+                if not internal_links or not target.is_relative_to(path) or not target.exists():
+                    raise ValueError('unbound link in dependency or output: ' + str(item))
+                result[item.relative_to(path).as_posix()] = 'link:' + target.relative_to(path).as_posix()
+                if name in dirs:
+                    dirs.remove(name)
+                continue
+            if item.is_file():
+                result[item.relative_to(path).as_posix()] = file_hash(item)
+    return result
+
+
+def generated_fingerprint(root, generated):
+    return digest(canonical({name:path_hashes(root / name) for name in generated}))
+
+
+def execution_env(root, release):
+    env = dict(os.environ)
+    if release and any(value and key.upper().startswith(OVERRIDES) for key, value in env.items()):
+        raise ValueError('test-specific input/mutation overrides must be unset for the canonical gate')
+    # Prefer the pinned external dependency path over implicit checkout artifacts.
+    if env.get('NODE_PATH'):
+        paths = [pathlib.Path(name) for name in env['NODE_PATH'].split(os.pathsep)]
+        if any(not path.is_absolute() or not path.is_dir() or
+               path.resolve().is_relative_to(root) for path in paths):
+            raise ValueError('NODE_PATH entries must be existing absolute paths outside the checkout')
+    env['PYTHONDONTWRITEBYTECODE'] = '1'
+    return env
+
+
+def environment(root, env, require_browser):
+    def external_roots():
+        paths = [parent / 'node_modules' for parent in [root, *root.parents]]
+        paths += [pathlib.Path(name) for name in env.get('NODE_PATH', '').split(os.pathsep) if name]
+        return sorted({p.resolve() for p in paths if p.is_dir()}, key=str)
+
+    dependencies = {}
+    if require_browser:
+        for path in external_roots():
+            if path.is_relative_to(root):
+                raise ValueError('Node dependencies must be installed outside the checkout')
+            dependencies[str(path)] = digest(canonical(path_hashes(path, internal_links=True)))
+        # Hash the installed bytes listed by each Python distribution, not only its version.
+        packages = []
+        for dist in importlib.metadata.distributions():
+            records = {}
+            for entry in dist.files or ():
+                if str(entry).endswith(('.pyc', '.pyo')):
+                    continue
+                path = dist.locate_file(entry)
+                records[str(entry)] = file_hash(path) if path.is_file() else None
+            if not records:
+                raise ValueError('Python distribution lacks a file manifest: ' + str(dist.metadata.get('Name')))
+            packages.append((dist.metadata.get('Name',''), dist.version, digest(canonical(records))))
+    else:
+        packages = []
+    binaries = {}
+    for name in (('node', 'git') if require_browser else ('git',)):
+        path = shutil.which(name, path=env.get('PATH'))
+        binaries[name] = file_hash(pathlib.Path(path)) if path else None
+    browser = None
+    if require_browser:
+        command = """const fs=require('fs'),crypto=require('crypto'),p=require('playwright');
+(async()=>{const s=await p.chromium.launchServer();try{
+const f=s.process().spawnfile,b=await p.chromium.connect(s.wsEndpoint());
+console.log(JSON.stringify({module:require.resolve('playwright'),version:require('playwright/package.json').version,
+browser:b.version(),executable_sha256:crypto.createHash('sha256').update(fs.readFileSync(f)).digest('hex')}));
+await b.close();}finally{await s.close()}})().catch(e=>{console.error(e.message);process.exitCode=1})"""
+        with tempfile.TemporaryFile() as log:
+            code, timeout = gate_process.run(['node', '-e', command], root, env, 45, log)
+            if code or timeout:
+                raise ValueError('required Playwright/browser fingerprint unavailable')
+            log.seek(0)
+            browser = json.loads(log.read())
+        module = pathlib.Path(browser['module']).resolve()
+        if not any(module.is_relative_to(pathlib.Path(path)) for path in dependencies):
+            raise ValueError('resolved Playwright is outside fingerprinted Node dependencies')
+    return {'python':sys.version, 'python_sha256':file_hash(pathlib.Path(sys.executable)),
+            'python_packages':sorted(packages), 'binaries_sha256':binaries,
+            'node_dependencies_sha256':dependencies, 'browser':browser,
+            'platform':platform.platform(), 'machine':platform.machine(),
+            'environment_sha256':digest(canonical(env))}
+
+
+def contract(doc):
+    rows = doc.get('checks')
+    if not isinstance(rows, list) or not rows:
+        raise ValueError('empty command list')
+    checks = []
+    for n, row in enumerate(rows, 1):
+        argv, timeout = row.get('argv'), row.get('timeout', 1200)
+        if not isinstance(argv, list) or not argv or not all(isinstance(s, str) and s for s in argv):
+            raise ValueError('checks require explicit argv arrays')
+        if type(timeout) not in (int, float) or not math.isfinite(timeout) or timeout <= 0:
+            raise ValueError('invalid timeout')
+        if row.get('index', n) != n:
+            raise ValueError('indices must be contiguous and ordered')
+        checks.append({'index':n, 'argv':argv, 'timeout':timeout})
+    if doc.get('expected_count') != len(checks):
+        raise ValueError('expected_count differs from command count')
+    generated = doc.get('generated_outputs', [])
+    if not isinstance(generated, list) or not all(
+        isinstance(g, str) and re.fullmatch(r'[a-zA-Z0-9_-][a-zA-Z0-9_.-]*', g) for g in generated):
+        raise ValueError('generated outputs must be explicit top-level paths')
+    artifact_env = doc.get('artifact_env', [])
+    if artifact_env not in ([], ['SCREENSHOT_DIR']):
+        raise ValueError('unsupported external artifact destination')
+    browser = doc.get('requires_browser', False)
+    if type(browser) is not bool:
+        raise ValueError('requires_browser must be boolean')
+    return {'checks':checks, 'expected_count':len(checks), 'generated_outputs':generated,
+            'requires_browser':browser, 'artifact_env':artifact_env}
+
+
+def execute(check, root, out, env, attempt, external_artifacts):
+    argv = [sys.executable if arg == '{python}' else arg for arg in check['argv']]
+    # Resolve argv[0] before CreateProcess, which otherwise searches the current directory.
+    executable = shutil.which(argv[0], path=env.get('PATH'))
+    if executable:
+        argv[0] = os.path.abspath(executable)
+    child_env = env.copy()
+    if external_artifacts:
+        screenshots = out / 'screenshots' / attempt
+        screenshots.mkdir(parents=True)
+        child_env['SCREENSHOT_DIR'] = str(screenshots)
+    log = out / (attempt + '.log')
+    started = time.monotonic()
+    with log.open('xb') as stream:
         try:
-            p=subprocess.Popen(argv,cwd=root,stdout=f,stderr=subprocess.STDOUT,**kwargs)
-            try: code=p.wait(timeout=timeout); status='PASS' if code==0 else 'FAIL'
-            except subprocess.TimeoutExpired:
-                if os.name=='nt': subprocess.run(['taskkill','/PID',str(p.pid),'/T','/F'],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
-                else: os.killpg(p.pid,signal.SIGKILL)
-                p.wait(); code=124; status='TIMEOUT'
-        except OSError as e: f.write(str(e).encode()); code=127; status='FAIL'
-    return {'exit':code,'status':status,'seconds':round(time.monotonic()-started,3),'log_sha256':digest(log.read_bytes())}
-def main():
-    ap=argparse.ArgumentParser(description=__doc__)
-    ap.add_argument('repo',type=pathlib.Path); ap.add_argument('out',type=pathlib.Path); ap.add_argument('manifest',type=pathlib.Path)
-    ap.add_argument('--seal',action='store_true',help='create a bound manifest at --sealed-output from a reviewed command contract')
-    ap.add_argument('--sealed-output',type=pathlib.Path); ap.add_argument('--resume',action='store_true')
-    a=ap.parse_args(); root=a.repo.resolve(); out=a.out.resolve(); manifest=read(a.manifest)
-    if out==root or root in out.parents: raise ValueError('evidence must be outside checkout')
-    checks=commands(manifest); generated=manifest.get('generated_outputs',[])
-    if not isinstance(generated,list) or not all(isinstance(g,str) and g and not g.startswith(('/', '.')) and '..' not in pathlib.PurePosixPath(g).parts for g in generated): raise ValueError('invalid generated output paths')
-    source=snapshot(root,generated)
-    if a.seal:
-        if not a.sealed_output: raise ValueError('--sealed-output required')
-        write_new(a.sealed_output,{'schema':SCHEMA,'source':source,'checks':checks,'expected_count':len(checks),'coverage':manifest.get('coverage','UNVERIFIED'),'generated_outputs':generated,'requires_browser':manifest.get('requires_browser',False)})
-        print('SEALED',len(checks),'commands; no commands executed'); return 0
-    if manifest.get('schema')!=SCHEMA or manifest.get('source')!=source: raise ValueError('manifest/source mismatch; no prior PASS may be reused')
-    identity={'source':source,'checks':checks,'environment':environment(root),'runner_sha256':digest(pathlib.Path(__file__).read_bytes()),'manifest_sha256':digest(a.manifest.read_bytes())}
-    if manifest.get('requires_browser') and (identity['environment']['playwright']=='[unavailable]' or identity['environment']['node']=='[unavailable]'): raise ValueError('required Playwright/actual headless executable fingerprint unavailable')
-    key=digest(canonical(identity)); out.mkdir(parents=True,exist_ok=True)
-    lock=out/'ACTIVE.lock'
-    # Exclusive ownership. Never automatically delete a stale lock; inspect interrupted run first.
-    fd=os.open(lock,os.O_CREAT|os.O_EXCL|os.O_WRONLY); os.write(fd,str(os.getpid()).encode()); os.close(fd)
+            if not executable:
+                raise FileNotFoundError(argv[0])
+            code, timed_out = gate_process.run(argv, root, child_env, check['timeout'], stream)
+            status = 'TIMEOUT' if timed_out else 'PASS' if code == 0 else 'FAIL'
+        except (OSError, RuntimeError) as error:
+            stream.write(str(error).encode('utf-8', errors='replace'))
+            code, status = 125, 'EXECUTION_ERROR'
+        stream.flush()
+        os.fsync(stream.fileno())
+    return {'exit':code, 'status':status, 'seconds':round(time.monotonic()-started, 3),
+            'log':log.name, 'log_sha256':file_hash(log),
+            'screenshots':path_hashes(screenshots) if external_artifacts else None}
+
+
+def mac(key, row):
+    return hmac.digest(key, canonical(row), 'sha256').hex()
+
+
+def resume_records(out, key, binding, checks):
+    previous = {}
+    last = None
+    previous_seal = None
+    for sequence, path in enumerate(sorted(out.glob('attempt-*.json')), 1):
+        row = read(path)
+        seal = row.pop('mac', '')
+        if not isinstance(seal, str) or not hmac.compare_digest(seal, mac(key, row)):
+            raise ValueError('prior attempt authentication failed')
+        if row['sequence'] != sequence or row['previous_mac'] != previous_seal:
+            raise ValueError('prior attempt chain is incomplete or out of order')
+        previous_seal = seal
+        n = row['index']
+        if (row['binding'] != binding or not 1 <= n <= len(checks)
+                or any(row[k] != v for k, v in checks[n-1].items())
+                or row['attempt_id'] != path.stem or row['log'] != path.stem + '.log'):
+            raise ValueError('invalid prior attempt identity')
+        log = out / row['log']
+        if log.is_symlink() or file_hash(log) != row['log_sha256']:
+            raise ValueError('prior log changed/missing')
+        if row['screenshots'] is not None and path_hashes(out/'screenshots'/path.stem) != row['screenshots']:
+            raise ValueError('prior screenshots changed/missing')
+        previous[n] = last = row
+    return previous, last, previous_seal
+
+
+def run_gate(args, root, out, manifest):
+    spec = contract(manifest)
+    checks, generated = spec['checks'], spec['generated_outputs']
+    release = digest(canonical(spec)) == CANONICAL_CONTRACT
+    scope = 'canonical_105' if release else 'diagnostic_only'
+    env = execution_env(root, release)
+    source = snapshot(root, generated)
+    if args.seal:
+        if not args.sealed_output:
+            raise ValueError('--sealed-output required')
+        write_new(args.sealed_output, {'schema':SCHEMA, 'source':source, **spec, 'scope':scope})
+        print('SEALED', len(checks), scope)
+        return 0
+    if (manifest.get('schema') != SCHEMA or manifest.get('source') != source
+            or manifest.get('scope') != scope):
+        raise ValueError('manifest/source mismatch; no prior PASS may be reused')
+    identity = {'source':source, 'contract':spec, 'scope':scope, 'checkout':str(root),
+                'evidence_dir':str(out), 'environment':environment(root, env, spec['requires_browser']),
+                'runner_sha256':file_hash(pathlib.Path(__file__)),
+                'process_helper_sha256':file_hash(pathlib.Path(gate_process.__file__)),
+                'manifest_sha256':file_hash(args.manifest)}
+    binding = digest(canonical(identity))
+    out.mkdir(parents=True, exist_ok=True)
+    lock = out / 'ACTIVE.lock'
+    with lock.open('x',encoding='ascii') as stream:
+        stream.write(str(os.getpid()))
     try:
-        binding=out/'binding.json'
-        if binding.exists():
-            if not a.resume: raise ValueError('existing evidence requires --resume or a new output directory')
-            if read(binding)!=identity: raise ValueError('resume binding changed (tree/inputs/environment/runner/commands)')
-        else:
-            if a.resume: raise ValueError('no existing binding to resume')
-            if any(p.name!='ACTIVE.lock' for p in out.iterdir()): raise ValueError('nonempty unbound evidence directory')
-            write_new(binding,identity)
-        previous={}
-        for p in sorted(out.glob('attempt-*.json')):
-            row=read(p); n=row['index']
-            if row['binding']!=key or n<1 or n>len(checks) or row['argv']!=checks[n-1]['argv']: raise ValueError('invalid prior attempt')
-            log=out/row['log']
-            if log.parent!=out or digest(log.read_bytes())!=row['log_sha256']: raise ValueError('prior log changed/missing')
-            if row.get('attempt_id')!=p.stem: raise ValueError('prior attempt identity changed')
-            previous[n]=row
-        results=[]
+        keyfile, bindfile = out / 'resume.key', out / 'binding.json'
+        if not args.resume:
+            if any(p != lock for p in out.iterdir()):
+                raise ValueError('existing evidence requires --resume or a new output directory')
+            if any((root / name).exists() for name in generated):
+                raise ValueError('fresh run requires absent generated output paths')
+            fd = os.open(keyfile, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+            with os.fdopen(fd, 'wb') as stream:
+                stream.write(secrets.token_bytes(32))
+                stream.flush()
+                os.fsync(stream.fileno())
+            write_new(bindfile, identity)
+        elif read(bindfile) != identity:
+            raise ValueError('resume binding changed (tree/inputs/environment/dependencies/runner/commands)')
+        key = keyfile.read_bytes()
+        if len(key) != 32 or keyfile.is_symlink():
+            raise ValueError('invalid local resume key')
+        previous, last, previous_seal = resume_records(out, key, binding, checks)
+        sequence = last['sequence'] if last else 0
+        if last:
+            if generated_fingerprint(root, generated) != last['generated_sha256']:
+                raise ValueError('generated state differs from last completed attempt')
+        elif any((root / name).exists() for name in generated):
+            raise ValueError('unsealed generated state; use a clean checkout and a fresh run')
+        results = []
         for check in checks:
-            n=check['index']; old=previous.get(n)
-            if old and old['status']=='PASS' and old['exit']==0: results.append(old); continue
-            # Revalidate before each command: tests cannot silently mutate source for later tests.
-            if snapshot(root,generated)!=source: raise ValueError('source changed during gate')
-            aid='attempt-'+str(time.time_ns())+'-'+uuid.uuid4().hex
-            log=out/(aid+'.log')
-            row={**check,'binding':key,'attempt_id':aid,'log':log.name,**execute(check['argv'],root,check['timeout'],log)}
+            old = previous.get(check['index'])
+            if old and old['status'] == 'PASS' and old['exit'] == 0:
+                results.append(old)
+                continue
+            if snapshot(root, generated) != source:
+                raise ValueError('source changed during gate')
+            sequence += 1
+            aid = f'attempt-{sequence:08d}-{uuid.uuid4().hex}'
+            row = {**check, 'binding':binding, 'attempt_id':aid, 'sequence':sequence,
+                   'previous_mac':previous_seal,
+                   **execute(check, root, out, env, aid, bool(spec['artifact_env']))}
             try:
-                if snapshot(root,generated)!=source: row['status']='SOURCE_CHANGED'; row['exit']=125
-            except Exception as e:
-                row['status']='SOURCE_CHANGED'; row['exit']=125; row['source_error']=str(e)
-            write_new(out/(aid+'.json'),row); results.append(row)
-            print(str(n)+'/'+str(len(checks)),row['status'],flush=True)
-            if row['status']=='SOURCE_CHANGED': break
-        complete=len(results)==len(checks) and all(r['status']=='PASS' and r['exit']==0 for r in results)
-        write_new(out/('summary-'+str(time.time_ns())+'.json'),{'binding':key,'expected_count':len(checks),'observed_count':len(results),'complete':complete,'rows':results})
-        return 0 if complete else 1
-    except Exception as e:
-        write_new(out/('refusal-'+str(time.time_ns())+'.json'),{'binding':key,'status':'REFUSED','error':str(e)})
-        raise
-    finally: lock.unlink()
-if __name__=='__main__':
-    try: sys.exit(main())
-    except Exception as e:
-        try:
-            if len(sys.argv)>2:
-                evidence=pathlib.Path(sys.argv[2]).resolve(); repo=pathlib.Path(sys.argv[1]).resolve()
-                if evidence!=repo and repo not in evidence.parents:
-                    evidence.mkdir(parents=True,exist_ok=True)
-                    write_new(evidence/('preflight-refusal-'+str(time.time_ns())+'.json'),{'status':'REFUSED','error':str(e)})
-        except Exception: pass
-        print('GATE REFUSED:',str(e),file=sys.stderr); sys.exit(2)
+                if snapshot(root, generated) != source:
+                    raise ValueError('source differs from the bound input')
+                row['generated_sha256'] = generated_fingerprint(root, generated)
+            except (ValueError, OSError, subprocess.CalledProcessError) as error:
+                row.update(status='SOURCE_CHANGED', exit=125, source_error=str(error),
+                           generated_sha256=None)
+            previous_seal = mac(key,row)
+            write_new(out/(aid+'.json'), {**row, 'mac':previous_seal})
+            results.append(row)
+            print(f"{check['index']}/{len(checks)} {row['status']}", flush=True)
+            if row['status'] in ('SOURCE_CHANGED', 'EXECUTION_ERROR'):
+                break
+        passed = (len(results) == len(checks)
+                  and all(r['status'] == 'PASS' and r['exit'] == 0 for r in results))
+        if passed and (snapshot(root, generated) != source
+                       or environment(root, env, spec['requires_browser']) != identity['environment']):
+            raise ValueError('source or dependencies changed before completion')
+        summary = {'binding':binding, 'scope':scope, 'expected_count':len(checks),
+                   'observed_count':len(results), 'suite_passed':passed,
+                   'complete':release and passed, 'attempt_head_mac':previous_seal, 'rows':results}
+        write_new(out/f'summary-{time.time_ns()}.json', {**summary,'mac':mac(key,summary)})
+        return 0 if passed else 1
+    finally:
+        lock.unlink()
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('repo', type=pathlib.Path)
+    parser.add_argument('out', type=pathlib.Path)
+    parser.add_argument('manifest', type=pathlib.Path)
+    parser.add_argument('--seal', action='store_true')
+    parser.add_argument('--sealed-output', type=pathlib.Path)
+    parser.add_argument('--resume', action='store_true')
+    args = parser.parse_args()
+    root, out = args.repo.resolve(), args.out.resolve()
+    if out.is_relative_to(root):
+        raise ValueError('evidence must be outside checkout')
+    if args.seal and args.sealed_output and args.sealed_output.resolve().is_relative_to(root):
+        raise ValueError('sealed manifest must be outside checkout')
+    return run_gate(args, root, out, read(args.manifest))
+
+
+if __name__ == '__main__':
+    try:
+        sys.exit(main())
+    except Exception as error:
+        print('GATE REFUSED:', str(error), file=sys.stderr)
+        sys.exit(2)

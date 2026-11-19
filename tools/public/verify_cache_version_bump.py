@@ -1,9 +1,13 @@
 """Require a distinct cache version for changes to worker-managed release assets."""
 import argparse
+from collections import defaultdict
+from html.parser import HTMLParser
 import os
 from pathlib import Path
+import posixpath
 import re
 import subprocess
+from urllib.parse import parse_qs, urlsplit
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -30,6 +34,60 @@ def shell(worker):
     return version, paths
 
 
+class ScriptSources(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.urls = []
+
+    def handle_starttag(self, tag, attrs):
+        if tag == "script":
+            source = dict(attrs).get("src")
+            if source:
+                self.urls.append(source)
+
+
+def script_versions(root, ref, modified):
+    """Read browser entry points and the worker manifest from the same Git tree."""
+    versions = defaultdict(set)
+    pages = git(root, "ls-tree", "-r", "--name-only", "-z", ref, "--").decode().split("\0")
+    for page in pages:
+        if not page.endswith(".html") and page != "sw.js":
+            continue
+        text = git(root, "show", f"{ref}:{page}").decode()
+        if page == "sw.js":
+            shell_assets = re.search(r"const SHELL_ASSETS = \[(.*?)\];", text, re.S)[1]
+            imports = re.findall(r"importScripts\((.*?)\)", text, re.S)
+            urls = re.findall(r"""['"]([^'"]+)['"]""", "\n".join([shell_assets, *imports]))
+        else:
+            parser = ScriptSources()
+            parser.feed(text)
+            urls = parser.urls
+        for url in urls:
+            parts = urlsplit(url)
+            if parts.scheme or parts.netloc:
+                continue
+            path = posixpath.normpath(posixpath.join(posixpath.dirname(page), parts.path)).lstrip("/")
+            if path in modified:
+                versions[path].add(parse_qs(parts.query).get("v", [None])[0])
+    return versions
+
+
+def validate_script_versions(root, previous, candidate):
+    modified = set(git(root, "diff", "--no-renames", "--diff-filter=M", "--name-only", "-z",
+                       previous, candidate, "--", "*.js").decode().split("\0"))
+    modified.discard("")
+    modified.discard("sw.js")
+    if not modified:
+        return
+    before = script_versions(root, previous, modified)
+    after = script_versions(root, candidate, modified)
+    for path in sorted(modified):
+        previous_versions = before[path] - {None}
+        if previous_versions and (previous_versions & after[path] or None in after[path]):
+            raise ValueError(f"Versioned script {path} changed since {previous}, but a script URL "
+                             "retains a previous ?v= or omits the version")
+
+
 def inspect(root, previous, candidate="HEAD"):
     old = git(root, "rev-parse", "--verify", f"{previous}^{{commit}}").decode().strip()
     new = git(root, "rev-parse", "--verify", f"{candidate}^{{commit}}").decode().strip()
@@ -52,6 +110,7 @@ def validate(root, previous, candidate="HEAD"):
         if old == new and changed:
             raise ValueError(f"CACHE_VERSION {new} is unchanged since {previous}, but managed files changed: "
                              + ", ".join(changed[:10]))
+        validate_script_versions(root, previous, candidate)
     return result
 
 

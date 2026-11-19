@@ -67,7 +67,17 @@ jobs:
       - uses: actions/setup-node@v4
         with: {node-version: '24'}
       - run: npm install --no-save --package-lock=false playwright@1.62.1
-      - run: npx playwright install --with-deps chromium
+      - name: Install Chromium for release checks
+        if: github.event_name != 'workflow_dispatch' || github.ref == 'refs/heads/deploy'
+        run: npx playwright install --with-deps chromium
+      - name: Install and launch Chromium for the audit
+        if: github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/deploy'
+        run: |
+          npx playwright install chromium
+          if ! node -e "require('playwright').chromium.launch().then(b=>b.close()).catch(e=>{console.error(e.message);process.exitCode=1})"; then
+            npx playwright install-deps chromium
+            node -e "require('playwright').chromium.launch().then(b=>b.close()).catch(e=>{console.error(e.message);process.exitCode=1})"
+          fi
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/test_browser_readiness.cjs
       - if: steps.scope.outputs.mode != 'data'
@@ -293,3 +303,74 @@ jobs:
             cloud-publication.json
             release-publication.json
           retention-days: 14
+
+  portable_clean:
+    if: github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/deploy' && !inputs.failure_probe
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '24'}
+      - name: Install portable dependencies outside the checkout
+        run: |
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test -z "$(git status --porcelain --ignored)"
+          python -m venv --copies "$RUNNER_TEMP/portable-python"
+          "$RUNNER_TEMP/portable-python/bin/python" -m pip install pyswisseph==2.10.3.2
+          npm install --prefix "$RUNNER_TEMP/portable-node" --no-save --package-lock=false --no-bin-links playwright@1.62.1
+          node_modules="$RUNNER_TEMP/portable-node/node_modules"
+          node "$node_modules/playwright/cli.js" install chromium
+          if ! NODE_PATH="$node_modules" node -e "require('playwright').chromium.launch().then(b=>b.close()).catch(e=>{console.error(e.message);process.exitCode=1})"; then
+            node "$node_modules/playwright/cli.js" install-deps chromium
+          fi
+          echo "$RUNNER_TEMP/portable-python/bin" >> "$GITHUB_PATH"
+          echo "NODE_PATH=$node_modules" >> "$GITHUB_ENV"
+      - name: Run fresh canonical portable gate
+        run: |
+          test ! -e "$RUNNER_TEMP/portable-evidence"
+          python tools/audit/run_gate.py . "$RUNNER_TEMP/portable-evidence" tools/audit/commands-105.json --seal --sealed-output "$RUNNER_TEMP/portable-bound.json"
+          python tools/audit/run_gate.py . "$RUNNER_TEMP/portable-evidence" "$RUNNER_TEMP/portable-bound.json"
+      - name: Verify ordered results and write shareable evidence
+        if: always()
+        run: python tools/audit/portable_report.py "$RUNNER_TEMP/portable-evidence" "$RUNNER_TEMP/LOCAL_CLEAN_105.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: portable-clean-105
+          path: ${{ runner.temp }}/LOCAL_CLEAN_105.json
+          if-no-files-found: error
+          retention-days: 30
+      - name: Check portable runner isolation with disposable D5 fixtures
+        if: always()
+        run: |
+          python - <<'PY'
+          import json, os, pathlib, subprocess, sys
+          process = subprocess.run([sys.executable, "-B", "tools/audit/probe_gate_d5.py"],
+                                   capture_output=True, text=True)
+          data = json.loads(process.stdout) if process.returncode == 0 else {}
+          names = data.get("checks", [])
+          passed = (process.returncode == 0 and data.get("status") == "PASS"
+                    and data.get("platform") == "linux" and len(names) == len(set(names)) == 10)
+          receipt = {"candidate_sha":os.environ["GITHUB_SHA"], "github_run_id":os.environ["GITHUB_RUN_ID"],
+                     "github_run_attempt":os.environ["GITHUB_RUN_ATTEMPT"], "platform":sys.platform,
+                     "exit":process.returncode, "passed":passed, "checks":names if passed else []}
+          path = pathlib.Path(os.environ["RUNNER_TEMP"]) / "PORTABLE_D5.json"
+          path.write_text(json.dumps(receipt, indent=2) + "\n", encoding="utf-8")
+          sys.exit(0 if passed else 1)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: portable-d5
+          path: ${{ runner.temp }}/PORTABLE_D5.json
+          if-no-files-found: error
+          retention-days: 30

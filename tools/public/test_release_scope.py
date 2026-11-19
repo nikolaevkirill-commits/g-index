@@ -64,4 +64,24 @@ class ReleaseScope(unittest.TestCase):
         (self.root / 'sw.js').write_bytes((self.root / 'sw.js').read_bytes().replace(b'\n', b'\r\n'))
         self.assertEqual(validate(self.root, published), ('r1', 'r1', []))
 
+    def test_changed_versioned_script_updates_worker_and_every_page(self):
+        self.fixture_worker()
+        self.commit('bundle.js', 'first')
+        self.commit('nested/classic.html', '<script src="../bundle.js?v=1"></script>')
+        previous = self.git('rev-parse', 'HEAD').strip()
+        self.commit('bundle.js', 'second')
+        self.fixture_worker('r2')
+        worker = (self.root/'sw.js').read_text().replace('bundle.js?v=1', 'bundle.js?v=2')
+        self.commit('sw.js', worker)
+        with self.assertRaisesRegex(ValueError, 'Versioned script bundle.js'):
+            validate(self.root, previous)
+        self.commit('nested/classic.html', '<script src="../bundle.js"></script>')
+        with self.assertRaisesRegex(ValueError, 'Versioned script bundle.js'):
+            validate(self.root, previous)
+        self.commit('nested/classic.html', '<script src="../bundle.js?v=2"></script>')
+        validate(self.root, previous)
+        self.commit('sw.js', worker.replace('bundle.js?v=2', 'bundle.js?v=1'))
+        with self.assertRaisesRegex(ValueError, 'Versioned script bundle.js'):
+            validate(self.root, previous)
+
 if __name__=='__main__':unittest.main(verbosity=2)
