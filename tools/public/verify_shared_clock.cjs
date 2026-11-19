@@ -42,7 +42,8 @@ async function settledTodayFeed(page, compact, expectedState){
  const start=new Date('2026-11-07T15:29:00Z');
  try{
   const reasonsOnly=process.argv.includes('--reasons-only');
-  const layoutOnly=reasonsOnly||process.argv.includes('--layout-only');
+  const heightBandOnly=process.argv.includes('--height-band-only');
+  const layoutOnly=reasonsOnly||heightBandOnly||process.argv.includes('--layout-only');
   for(const [entry,width,height] of layoutOnly?[]:[['index.html',390,844],['classic.html',390,844],['index.html',1280,900]]){
    const ctx=await browser.newContext({viewport:{width,height},locale:'uk-UA',timezoneId:'Europe/Kyiv',serviceWorkers:'block',reducedMotion:'no-preference'});
    await ctx.route(/^https?:\/\/(?!127\.0\.0\.1)/,r=>r.abort());
@@ -178,13 +179,14 @@ async function settledTodayFeed(page, compact, expectedState){
    await ctx.close();
   }
   const layouts=[];
-  const sizes=[[320,694,true],[361,700,true],[375,700,true],[360,640,false],[320,568,false],[375,667,false],[376,700,false]];
+  const bandSizes=[[320,741,true],[320,770,true],[320,800,true],[320,801,false],[321,800,false]];
+  const sizes=[[320,694,true],[361,700,true],[375,700,true],[360,640,false],[320,568,false],[375,667,false],[376,700,false],...bandSizes];
   const cases=['uk','en','es','fr'].flatMap(lang=>['complete','synthetic-history'].flatMap(inputState=>
    sizes.map(([width,height,mustFit])=>({lang,inputState,width,height,mustFit}))));
   const selectedCases=reasonsOnly?cases.filter(({width,height,lang,inputState})=>
-   width===320&&height===694&&((lang==='uk'&&inputState==='complete')||(lang==='en'&&inputState==='synthetic-history'))):cases;
+   width===320&&height===694&&((lang==='uk'&&inputState==='complete')||(lang==='en'&&inputState==='synthetic-history'))):heightBandOnly?cases.filter(row=>row.height>=741):cases;
   async function coldLayout({lang,inputState,width,height,mustFit}){
-  const compact=width<=375&&height<=740;
+  const compact=(width<=375&&height<=740)||(width<=320&&height<=800);
   const c=await browser.newContext({viewport:{width,height},locale:lang,timezoneId:'Europe/Kyiv',serviceWorkers:'block'});
   try{
   await c.route(/^https?:\/\/(?!127\.0\.0\.1)/,r=>r.abort());
@@ -240,7 +242,7 @@ async function settledTodayFeed(page, compact, expectedState){
    assert.equal(initialFeed.state,'stale');
    assert(await status.isVisible(),'stale status is retained below Sun');
   }
-   const geometry=await compactSun.evaluate(el=>{
+   const readGeometry=()=>compactSun.evaluate(el=>{
     const nav=document.getElementById('mobileNav').getBoundingClientRect().top;
     const card=el.closest('[data-sky-clock]'),hero=document.querySelector('#nrRoute-today .nr-o-hero');
     const unclipped=node=>{
@@ -265,7 +267,9 @@ async function settledTodayFeed(page, compact, expectedState){
      sourceVisible:unclipped(source)&&source.getBoundingClientRect().bottom<=nav,
      sourceBottom:source.getBoundingClientRect().bottom};
    });
-   const fit=geometry.plotTop>=0&&geometry.plotBottom<=geometry.nav&&geometry.plotLeft>=0&&geometry.plotRight<=width;
+   const geometry=await readGeometry();
+   const fits=g=>g.plotTop>=0&&g.plotBottom<=g.nav&&g.plotLeft>=0&&g.plotRight<=width;
+   const fit=fits(geometry);
    let scroll=null;
    if(!fit){
     scroll=await compactSun.evaluate(el=>{
@@ -280,10 +284,55 @@ async function settledTodayFeed(page, compact, expectedState){
    }
   const row={lang,inputState,width,height,mustFit,compact,...geometry,fit,scroll};
   console.log('LAYOUT '+JSON.stringify(row));
-  if(process.env.VERIFY_CLOCK_EVIDENCE_DIR&&inputState==='synthetic-history'&&width===375&&height===700&&['es','fr'].includes(lang)){
+  if(process.env.VERIFY_CLOCK_EVIDENCE_DIR&&inputState==='synthetic-history'&&
+    ((width===375&&height===700&&['es','fr'].includes(lang))||(width===320&&((height===741&&lang==='es')||(height===800&&lang==='fr'))))){
    const out=path.resolve(process.env.VERIFY_CLOCK_EVIDENCE_DIR);await fs.mkdir(out,{recursive:true});
    await p.evaluate(()=>window.scrollTo({top:0,behavior:'instant'}));
-   await p.screenshot({path:path.join(out,lang+'-375x700.png'),mask:[p.locator('[data-score-tone],.nr-o-score')],maskColor:'#273044'});
+   await p.screenshot({path:path.join(out,lang+'-'+width+'x'+height+'.png'),mask:[p.locator('[data-score-tone],.nr-o-score')],maskColor:'#273044'});
+  }
+  if(width===320&&height===741){
+   // Cold launches cover each anchor. The same loaded page then exercises
+   // every integer height so the space between anchors is actually measured.
+   const heights=[{height,...geometry,fit}];
+   for(let h=742;h<=800;h++){
+    await p.setViewportSize({width,height:h});
+    await p.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+    const g=await readGeometry();
+    heights.push({height:h,...g,fit:fits(g)});
+   }
+   for(const item of heights){
+    if(!(item.fit&&item.compactCss&&item.compactJs&&item.adviceVisible&&item.sourceVisible&&
+         item.afterHero&&item.verdictBottom<=item.nav&&item.scoreBottom<=item.nav)){
+     console.error('HEIGHT_BAND '+JSON.stringify({lang,inputState,width,...item}));
+     assert.fail('height-band layout must fit at every integer viewport');
+    }
+   }
+   row.heightSweep=heights;
+  }
+  if(width===320&&height===800){
+   const explanation=p.locator('#nrRoute-today [data-day-why]');
+   const summary=explanation.locator('summary');
+   const {date}=await settledTodayFeed(p,true);
+   await summary.focus();
+   await p.keyboard.press('Enter');
+   await explanation.locator('ul').waitFor({state:'visible',timeout:5000});
+   async function assertFocused(phase){
+    const state=await summary.evaluate(el=>({focused:el===document.activeElement,open:el.parentElement.open,
+     activeTag:document.activeElement?.tagName}));
+    if(!state.focused||!state.open)console.error('HEIGHT_FOCUS '+JSON.stringify({lang,inputState,width,height,phase,...state}));
+    assert(state.focused&&state.open,'keyboard focus and open reasons persist');
+   }
+   await assertFocused('before-resize');
+   await p.setViewportSize({width,height:801});
+   const outside=await settledTodayFeed(p,false);
+   assert.equal(outside.date,date,'height boundary preserves selected date');
+   await assertFocused('outside-compact');
+   await p.setViewportSize({width,height:800});
+   assert.equal((await settledTodayFeed(p,true)).date,date,'returning to compact preserves selected date');
+   await assertFocused('back-in-compact');
+   await p.keyboard.press('Enter');
+   await explanation.locator('ul').waitFor({state:'hidden',timeout:5000});
+   row.heightBoundaryFocus=true;
   }
   // Keep the original resize regression on the 320×694 cases, separately
   // from all cold geometry observations.
@@ -364,8 +413,10 @@ async function settledTodayFeed(page, compact, expectedState){
    const out=path.resolve(process.env.VERIFY_CLOCK_EVIDENCE_DIR);await fs.mkdir(out,{recursive:true});
    await fs.writeFile(path.join(out,'layout-matrix.json'),JSON.stringify(layouts,null,2));
   }
-  assert.equal(layouts.length,reasonsOnly?2:56);
-  assert.equal(layouts.filter(row=>row.resizeRegression&&row.reasonsRegression).length,reasonsOnly?2:8);
+  assert.equal(layouts.length,reasonsOnly?2:heightBandOnly?40:96);
+  assert.equal(layouts.filter(row=>row.resizeRegression&&row.reasonsRegression).length,reasonsOnly?2:heightBandOnly?0:8);
+  assert.equal(layouts.reduce((count,row)=>count+(row.heightSweep?.length||0),0),reasonsOnly?0:480);
+  assert.equal(layouts.filter(row=>row.heightBoundaryFocus).length,reasonsOnly?0:8);
   for(const row of layouts){
    assert.equal(row.compactCss,row.compact,'CSS compact boundary');
    assert.equal(row.compactJs,row.compact,'JS compact boundary');
@@ -376,7 +427,7 @@ async function settledTodayFeed(page, compact, expectedState){
   }
   assert.equal(results.length,layoutOnly?0:3);
   // Output is an allowlist of test labels, never raw feeds, live scores or DOM text.
-  console.log(reasonsOnly?'PASS 2 reasons regressions with normal click and forced rerender':'PASS 56 cold mobile layout cases and 8 resize/reasons regressions');
+  console.log(reasonsOnly?'PASS 2 reasons regressions with normal click and forced rerender':heightBandOnly?'PASS 40 cold openings, 480 height measurements and 8 focus checks':'PASS 96 cold openings, 480 height measurements, 8 focus checks and 8 resize/reasons regressions');
   if(!layoutOnly)console.log('PASS shared clock round trip ×3, Sun equality, seven bodies, WebGL identity and phase, playback/pause, reduced-motion scrubbing, Kyiv 23/25 h, explicit default');
  }finally{await browser.close();server.close();}
 })().catch(e=>{

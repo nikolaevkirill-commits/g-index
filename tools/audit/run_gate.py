@@ -280,6 +280,64 @@ def mac(key, row):
     return hmac.digest(key, canonical(row), 'sha256').hex()
 
 
+
+def environment_key_macs(key, env):
+    return {name:mac(key, ['fp575-env-key-v1', name, value]) for name, value in env.items()}
+
+
+def write_resume_environment(path, key, identity, env):
+    receipt = {'schema':'fp575-resume-environment-v1', 'binding':digest(canonical(identity)),
+               'keys':environment_key_macs(key, env)}
+    write_new(path, {**receipt, 'mac':mac(key, receipt)})
+
+
+def read_resume_environment(path, key, previous):
+    if not path.is_file():
+        raise ValueError('resume binding changed: component=legacy_environment; '
+                         'exact env keys unavailable; create a fresh run')
+    try:
+        if path.is_symlink():
+            raise ValueError('linked receipt')
+        receipt = read(path)
+        seal = receipt.pop('mac')
+        keys = receipt['keys']
+        if (receipt.get('schema') != 'fp575-resume-environment-v1'
+                or not isinstance(seal, str) or not hmac.compare_digest(seal, mac(key, receipt))
+                or receipt.get('binding') != digest(canonical(previous))
+                or not isinstance(keys, dict)
+                or any(not isinstance(value, str) or not re.fullmatch(r'[0-9a-f]{64}', value)
+                       for value in keys.values())):
+            raise ValueError('invalid receipt')
+    except (ValueError, AttributeError, TypeError, OSError, KeyError):
+        raise ValueError('resume binding changed: component=binding_environment_authentication; '
+                         'exact env keys unavailable') from None
+    return keys
+
+
+def environment_key_changes(before, current):
+    shared = before.keys() & current.keys()
+    return {'changed':sorted(name for name in shared if before[name] != current[name]),
+            'added':sorted(current.keys()-before.keys()),
+            'removed':sorted(before.keys()-current.keys())}
+
+
+def describe_resume_difference(before, current, env_changes):
+    components = sorted(name for name in
+        ('source', 'contract', 'scope', 'checkout', 'evidence_dir', 'runner_sha256',
+         'process_helper_sha256', 'manifest_sha256') if before.get(name) != current.get(name))
+    old_environment, new_environment = before['environment'], current['environment']
+    if any(env_changes.values()) or old_environment.get('environment_sha256') != new_environment.get('environment_sha256'):
+        components.append('environment.env')
+    for name in sorted(old_environment.keys() | new_environment.keys()):
+        if name != 'environment_sha256' and old_environment.get(name) != new_environment.get(name):
+            # These fixed names are known fields of the fingerprint, never values or paths.
+            components.append('environment.' + name)
+    if not components:
+        components.append('binding_metadata')
+    diagnostic = {'components':components, 'env_keys':env_changes}
+    return 'resume binding changed: ' + json.dumps(diagnostic, ensure_ascii=True, sort_keys=True)
+
+
 def resume_records(out, key, binding, checks, *, history=None):
     previous = {}
     last = None
@@ -327,34 +385,50 @@ def run_gate(args, root, out, manifest):
             or manifest.get('scope') != scope):
         raise ValueError('manifest/source mismatch; no prior PASS may be reused')
     identity = {'source':source, 'contract':spec, 'scope':scope, 'checkout':str(root),
-                'evidence_dir':str(out), 'environment':environment(
-                    root, env, spec['requires_browser'], verify_record=release),
+                'evidence_dir':str(out),
                 'runner_sha256':file_hash(pathlib.Path(__file__)),
                 'process_helper_sha256':file_hash(pathlib.Path(gate_process.__file__)),
                 'manifest_sha256':file_hash(args.manifest)}
-    binding = digest(canonical(identity))
     out.mkdir(parents=True, exist_ok=True)
     lock = out / 'ACTIVE.lock'
     with lock.open('x',encoding='ascii') as stream:
         stream.write(str(os.getpid()))
     try:
         keyfile, bindfile = out / 'resume.key', out / 'binding.json'
+        envfile = out / 'binding-env.json'
         if not args.resume:
             if any(p != lock for p in out.iterdir()):
                 raise ValueError('existing evidence requires --resume or a new output directory')
             if any((root / name).exists() for name in generated):
                 raise ValueError('fresh run requires absent generated output paths')
+            identity['environment'] = environment(root, env, spec['requires_browser'], verify_record=release)
             fd = os.open(keyfile, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
             with os.fdopen(fd, 'wb') as stream:
                 stream.write(secrets.token_bytes(32))
                 stream.flush()
                 os.fsync(stream.fileno())
-            write_new(bindfile, identity)
-        elif read(bindfile) != identity:
-            raise ValueError('resume binding changed (tree/inputs/environment/dependencies/runner/commands)')
+        if not keyfile.is_file() or keyfile.is_symlink():
+            raise ValueError('invalid or missing local resume key')
         key = keyfile.read_bytes()
-        if len(key) != 32 or keyfile.is_symlink():
+        if len(key) != 32:
             raise ValueError('invalid local resume key')
+        if args.resume:
+            prior_binding = read(bindfile)
+            env_before = read_resume_environment(envfile, key, prior_binding)
+            changes = environment_key_changes(env_before, environment_key_macs(key, env))
+            if any(changes.values()):
+                # Changed variables can break interpreter/browser discovery; report their names
+                # before executing any environment probes under that changed environment.
+                identity['environment'] = {**prior_binding['environment'],
+                                           'environment_sha256':digest(canonical(env))}
+                raise ValueError(describe_resume_difference(prior_binding, identity, changes))
+            identity['environment'] = environment(root, env, spec['requires_browser'], verify_record=release)
+            if prior_binding != identity:
+                raise ValueError(describe_resume_difference(prior_binding, identity, changes))
+        else:
+            write_new(bindfile, identity)
+            write_resume_environment(envfile, key, identity, env)
+        binding = digest(canonical(identity))
         previous, last, previous_seal = resume_records(out, key, binding, checks)
         sequence = last['sequence'] if last else 0
         if last:

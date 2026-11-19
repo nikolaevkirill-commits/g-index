@@ -117,6 +117,7 @@ class PortableReportTest(unittest.TestCase):
         self.binding = digest(canonical(self.identity))
         (self.out / "binding.json").write_text(json.dumps(self.identity))
         rows = self.fresh()
+        protocol.write_resume_environment(self.out / 'binding-env.json', self.key, self.identity, {})
         args = SimpleNamespace(seal=False, resume=True, manifest=bound)
         with (patch.object(protocol, "snapshot", return_value=manifest["source"]),
               patch.object(protocol, "environment", return_value={}),

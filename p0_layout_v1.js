@@ -506,12 +506,20 @@ const driverLabel=x=>x.factor==='Kp'?'Геомагнітна складова':x
  // Route-level disclosures retain their own keyboard and deep-link entry points.
 }
 
-const shortPhone=matchMedia('(max-width:375px) and (max-height:740px)');
+const shortPhone=matchMedia('(max-width:375px) and (max-height:740px), (max-width:320px) and (max-height:800px)');
 function placeFeedState(root){
  const state=root.querySelector('[data-p0-feed-state]'),sun=root.querySelector(':scope > [data-sky-clock]'),hero=root.querySelector('.nr-o-hero');
  if(!state||!hero)return;
- if(sun&&shortPhone.matches&&hero.querySelector('[data-today-source]:not(:empty)')){state.dataset.placement='after-hero';sun.after(state);}
- else {delete state.dataset.placement;hero.append(state);}
+ const compact=sun&&shortPhone.matches&&hero.querySelector('[data-today-source]:not(:empty)');
+ const focused=state.contains(document.activeElement)?document.activeElement:null;
+ if(compact){
+  state.dataset.placement='after-hero';
+  if(sun.nextElementSibling!==state)sun.after(state);
+ }else{
+  delete state.dataset.placement;
+  if(state.parentElement!==hero)hero.append(state);
+ }
+ if(focused&&document.activeElement!==focused)focused.focus({preventScroll:true});
 }
 shortPhone.addEventListener('change',()=>document.querySelectorAll('#nrRoute-today [data-overview]').forEach(placeFeedState));
 window.addEventListener('sr:sky-clock-mounted',()=>document.querySelectorAll('#nrRoute-today [data-overview]').forEach(placeFeedState));

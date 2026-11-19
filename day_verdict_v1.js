@@ -95,7 +95,11 @@ function render(){
   whyBox=document.createElement('details');whyBox.className='nr-day-why';whyBox.dataset.dayWhy='';whyBox.setAttribute('translate','no');
   whyBox.append(document.createElement('summary'),document.createElement('ul'));
  }
- if(verdict.nextElementSibling!==whyBox)verdict.after(whyBox);
+ if(verdict.nextElementSibling!==whyBox){
+  const focused=whyBox.contains(document.activeElement)?document.activeElement:null;
+  verdict.after(whyBox);
+  focused?.focus({preventScroll:true});
+ }
  // Keep optional personal tools below the public DayLine and weather.
  let youBox=r.querySelector(':scope > [data-day-you]');
  if(!youBox){
