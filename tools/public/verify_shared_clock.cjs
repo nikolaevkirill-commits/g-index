@@ -45,9 +45,10 @@ async function settledTodayFeed(page, compact, expectedState){
   const heightBandOnly=process.argv.includes('--height-band-only');
   const scoredOnly=process.argv.includes('--scored-only');
   const dataScope=process.env.VERIFY_CLOCK_SCOPE==='data';
+  const wideOnly=process.argv.includes('--wide-only');
   const noaaOnly=process.argv.includes('--noaa-loss-only');
   const freshOnly=dataScope||process.argv.includes('--fresh-only');
-  const layoutOnly=noaaOnly||freshOnly||reasonsOnly||heightBandOnly||scoredOnly||process.argv.includes('--layout-only');
+  const layoutOnly=wideOnly||noaaOnly||freshOnly||reasonsOnly||heightBandOnly||scoredOnly||process.argv.includes('--layout-only');
   for(const [entry,width,height] of layoutOnly?[]:[['index.html',390,844],['classic.html',390,844],['index.html',1280,900]]){
    const ctx=await browser.newContext({viewport:{width,height},locale:'uk-UA',timezoneId:'Europe/Kyiv',serviceWorkers:'block',reducedMotion:'no-preference'});
    await ctx.route(/^https?:\/\/(?!127\.0\.0\.1)/,r=>r.abort());
@@ -203,7 +204,7 @@ async function settledTodayFeed(page, compact, expectedState){
    width===320&&height===694&&((lang==='uk'&&inputState==='shipped-feed')||(lang==='en'&&inputState==='synthetic-history'))):scoredOnly?cases.filter(row=>row.inputState==='scored-history'):heightBandOnly?cases.filter(row=>row.height>=741):cases;
   let noaaLossFeed, noaaLossRegistry;
   async function coldLayout({lang,inputState,width,height,mustFit}){
-  const compact=width<=430&&height<=932;
+  const compact=width>430||height<=932;
   const c=await browser.newContext({viewport:{width,height},locale:lang,timezoneId:'Europe/Kyiv',serviceWorkers:'block'});
   try{
   await c.route(/^https?:\/\/(?!127\.0\.0\.1)/,r=>r.abort());
@@ -283,7 +284,7 @@ async function settledTodayFeed(page, compact, expectedState){
   // FP569d (owner decision 01.11): verdict and score open Today; the Sun clock follows the overview card.
   await p.evaluate(()=>document.fonts.ready);
   // Wait for the asynchronously mounted share action before measuring the fold.
-  await p.locator('[data-sky-clock] [data-share-card] button').waitFor();
+  await p.locator('#nrRoute-today [data-share-card] button').first().waitFor({state:'attached'});
   assert.equal(await p.evaluate(()=>window.NRLocale.language),lang);
   const status=p.locator('#nrRoute-today [data-p0-feed-state]');
   const initialFeed=await settledTodayFeed(p,compact,noaaLoss?'missing':fresh?'fresh':inputState==='synthetic-history'?'stale':undefined);
@@ -303,7 +304,8 @@ async function settledTodayFeed(page, compact, expectedState){
    assert(await status.isVisible(),'stale status is retained below Sun');
   }
    const readGeometry=()=>compactSun.evaluate((el,{lang,day})=>{
-    const nav=document.getElementById('mobileNav').getBoundingClientRect().top;
+    const mobileNav=document.getElementById('mobileNav');
+    const nav=mobileNav?.checkVisibility()?Math.min(innerHeight,mobileNav.getBoundingClientRect().top):innerHeight;
     const card=el.closest('[data-sky-clock]'),hero=document.querySelector('#nrRoute-today .nr-o-hero');
     const unclipped=node=>{
      if(!node?.textContent.trim()||!node.checkVisibility({opacityProperty:true,visibilityProperty:true}))return false;
@@ -369,7 +371,8 @@ async function settledTodayFeed(page, compact, expectedState){
      const plot=el.closest('svg');
      plot.scrollIntoView({block:'center',behavior:'instant'});
      const r=plot.getBoundingClientRect();
-     const nav=document.getElementById('mobileNav').getBoundingClientRect().top;
+     const mobileNav=document.getElementById('mobileNav');
+    const nav=mobileNav?.checkVisibility()?Math.min(innerHeight,mobileNav.getBoundingClientRect().top):innerHeight;
      const full=r.top>=0&&r.bottom<=nav&&r.left>=0&&r.right<=innerWidth;
      return {full,top:r.top,bottom:r.bottom};
     });
@@ -394,7 +397,8 @@ async function settledTodayFeed(page, compact, expectedState){
    const full=p.locator('#nrRoute-today [data-space-scene=today]');
    const alert=await warning.evaluate(button=>{
     const card=document.querySelector('#nrRoute-today [data-space-scene=today]');
-    const rect=button.getBoundingClientRect(),nav=document.querySelector('#mobileNav').getBoundingClientRect().top;
+    const rect=button.getBoundingClientRect(),mobileNav=document.getElementById('mobileNav');
+    const nav=mobileNav?.checkVisibility()?Math.min(innerHeight,mobileNav.getBoundingClientRect().top):innerHeight;
     const range=document.createRange();range.selectNodeContents(button);
     const visible=button.checkVisibility()&&rect.top>=0&&rect.bottom<=nav&&
      [...range.getClientRects()].every(r=>r.left>=rect.left-1&&r.right<=rect.right+1&&r.top>=rect.top-1&&r.bottom<=rect.bottom+1);
@@ -408,6 +412,10 @@ async function settledTodayFeed(page, compact, expectedState){
    if(process.env.VERIFY_CLOCK_EVIDENCE_DIR&&width===321){
     const dir=path.join(process.env.VERIFY_CLOCK_EVIDENCE_DIR,syntheticStorm?'storm-shots':'fresh-shots');await fs.mkdir(dir,{recursive:true});
     await p.screenshot({path:path.join(dir,(syntheticStorm?'storm-':'fresh-')+lang+'-321x741.png'),mask:[p.locator('[data-score-tone],.nr-o-score')],maskColor:'#273044'});
+   }
+   if(process.env.VERIFY_CLOCK_EVIDENCE_DIR&&lang==='uk'&&!syntheticStorm&&[[440,780],[768,1024],[1280,800]].some(([w,h])=>w===width&&h===height)){
+    const out=path.join(process.env.VERIFY_CLOCK_EVIDENCE_DIR,'wide-shots');await fs.mkdir(out,{recursive:true});
+    await p.screenshot({path:path.join(out,'uk-'+width+'x'+height+'.png'),mask:[p.locator('[data-score-tone],.nr-o-score')],maskColor:'#273044'});
    }
    await warning.focus();await p.keyboard.press('Enter');
    assert(await full.locator('h3').evaluate(el=>el===document.activeElement),'keyboard opens the complete weather alert');
@@ -524,7 +532,7 @@ async function settledTodayFeed(page, compact, expectedState){
   assert.ok(await p.locator('[data-sky-live] .nr-sl-body').count()>=7);
   await p.evaluate(()=>fp434Go('today',false));
   const beforeResize=await settledTodayFeed(p,true);
-  await p.setViewportSize({width:431,height:932});
+  await p.setViewportSize({width:430,height:933});
   const wide=await settledTodayFeed(p,false);
   if(lang==='en'&&inputState==='synthetic-history'){
    // Reproduce the original boundary: resize back while a stale-feed refresh
@@ -668,6 +676,28 @@ async function settledTodayFeed(page, compact, expectedState){
     assert.equal(failed.length,0,'candidate feed reaches the selected day and visible final score');
     return {lang,inputState:'candidate-file',width:321,height:741,feedState:state.state,responseMatches:true,...rendered};
    }finally{await c.close();}
+  }
+  if(wideOnly||!layoutOnly){
+   const rows=[];
+   const phones=[[431,741],[440,780],[480,800],[500,741]];
+   const larger=[[600,741],[768,768],[768,1024],[1024,768],[1280,800],[1920,1080]];
+   for(const lang of ['uk','en','es','fr']){
+    for(const [width,height] of [...phones,...larger]){
+     const states=width<=500?['fresh-history','scored-history','shipped-feed','synthetic-history','missing-no-advice','synthetic-storm']:['fresh-history','synthetic-storm'];
+     for(const inputState of states){
+      const row=await coldLayout({lang,width,height,inputState,mustFit:true});
+      assert(row.fit&&row.afterHero&&row.sourceVisible&&row.compactCss&&row.compactJs,'visible wide first screen on cold opening');
+      rows.push(row);
+     }
+    }
+   }
+   assert.equal(rows.length,144);
+   if(process.env.VERIFY_CLOCK_EVIDENCE_DIR){
+    const dir=path.resolve(process.env.VERIFY_CLOCK_EVIDENCE_DIR);await fs.mkdir(dir,{recursive:true});
+    await fs.writeFile(path.join(dir,'wide-matrix.json'),JSON.stringify(rows,null,2));
+   }
+   console.log('PASS full chart on 144 wide cold openings');
+   if(wideOnly)return;
   }
   if(noaaOnly||!layoutOnly){
    const fixtures=path.join(root,'tools/public/fixtures');
