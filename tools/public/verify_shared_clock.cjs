@@ -527,11 +527,26 @@ async function settledTodayFeed(page, compact, expectedState){
    const feed=JSON.parse(candidate);
    assert.equal(feed.schema,'independent_forecast_feed_v1');
    assert.equal(feed.source_integrity?.status,'PASS');
-   const now=Date.parse(feed.generated_at)+60000;
+   // An issue just before Kyiv midnight still belongs to that civil day.
+   const now=Date.parse(feed.generated_at);
    assert(Number.isFinite(now),'valid candidate issue time');
    const date=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Kyiv',year:'numeric',month:'2-digit',day:'2-digit'}).format(now);
-   const row=feed.days?.[date]?.channels?.source_formula;
-   assert(row?.available===true&&Number.isInteger(row.value),'current candidate day has a formula result');
+   const day=feed.days?.[date],row=day?.channels?.source_formula;
+   assert(day?.date===date&&row,'candidate day is present for its Kyiv issue date');
+   assert.equal(row.generated_at,feed.generated_at,'formula belongs to this issue');
+   assert.equal(typeof row.available,'boolean');
+   if(row.available){
+    assert(Number.isInteger(row.value)&&Math.abs(row.value)<=3,'available formula has a valid value');
+   }else{
+    assert.equal(row.value,null,'unavailable formula has no substituted value');
+    if(row.kp_source_requirement==='NOAA_3day_slots'){
+     assert.equal(row.status,'missing_kp');
+     assert.equal(row.availability_reason,'short_range_coverage_lost');
+     assert.equal(row.raw,null);
+     assert.deepEqual(row.factors,[]);
+    }
+   }
+   assert.equal(day.source_formula_result?.score,row.value,'public formula projection agrees');
    const c=await browser.newContext({viewport:{width:321,height:741},locale:lang,timezoneId:'Europe/Kyiv',serviceWorkers:'block'});
    try{
     await c.route(/^https?:\/\/(?!127\.0\.0\.1)/,r=>r.abort());
@@ -545,16 +560,34 @@ async function settledTodayFeed(page, compact, expectedState){
     const response=await delivered;
     assert.equal(response.status(),200);
     assert((await response.body()).equals(candidate),'network bytes match the candidate feed');
-    const state=await settledTodayFeed(page,true,'fresh');
+    const state=await settledTodayFeed(page,true,row.available?undefined:'missing');
     assert.equal(state.date,date);
-    const rendered=await page.evaluate(({date,issued,value,lang})=>{
+    assert(row.available?['fresh','stale'].includes(state.state):state.state==='missing','valid formula freshness at issue time');
+    const rendered=await page.evaluate(({date,issued,value,available,feedState,lang})=>{
      const root=document.querySelector('#nrRoute-today');
      const raw=window.fp469ConsumerForDate({ds:date});
      const own=raw.feed?.channels?.source_formula,score=root.querySelector('.nr-o-hero .nr-o-score');
-     return {language:window.NRLocale.language===lang,loaded:own?.value===value&&own.generated_at===issued,
-      visible:score?.checkVisibility({visibilityProperty:true,opacityProperty:true})===true,
-      scoreMatches:raw.consumer.available===true&&score?.textContent.trim()===window.SkyScore.formatScore(raw.consumer.score)};
-    },{date,issued:row.generated_at,value:row.value,lang});
+     const api=window.NRConsumerAuthority,registry=api.registryStatus();
+     const conflict=registry.conflict_dates.includes(date),expert=api.expertFor(date);
+     const expected=conflict?null:expert?.score??(feedState==='fresh'?value:null);
+     const authority=(conflict||expert)?'expert_pdf':'source_formula';
+     const grade=expected===null?root.querySelector('.nr-o-hero .nr-dv-tone'):score;
+     const missingText={uk:'Оцінки на цей день немає.',en:'No score for this day.',
+      es:'No hay puntuación para este día.',fr:'Pas de score pour ce jour.'};
+     const box=grade.getBoundingClientRect(),nav=document.getElementById('mobileNav').getBoundingClientRect().top;
+     return {language:window.NRLocale.language===lang,
+      // selectFeeds registers the day model but excludes withheld formula rows.
+      loaded:window.__srConsumerLoadState==='ready'&&(available?
+       own?.available===true&&own.value===value&&own.generated_at===issued:
+       own===undefined&&window.__nrExpertModels?.[date]?.date===date),
+      visible:grade.checkVisibility({visibilityProperty:true,opacityProperty:true})&&
+       box.width>0&&box.height>0&&box.left>=0&&box.right<=innerWidth&&box.top>=0&&box.bottom<=nav&&
+       (expected!==null||grade.textContent.trim()===missingText[lang]),
+      scoreMatches:['ok','partial'].includes(registry.status)&&raw.consumer.authority===authority&&
+       raw.consumer.available===(expected!==null)&&raw.consumer.score===expected&&
+       score.textContent.trim()===window.SkyScore.formatScore(expected)&&
+       (score.dataset.ring==='missing')===(expected===null)};
+    },{date,issued:row.generated_at,value:row.value,available:row.available,feedState:state.state,lang});
     assert(Object.values(rendered).every(Boolean),'candidate feed reaches the selected day and visible final score');
     return {lang,inputState:'candidate-file',width:321,height:741,feedState:state.state,responseMatches:true,...rendered};
    }finally{await c.close();}
