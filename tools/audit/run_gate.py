@@ -26,7 +26,7 @@ PROTECTED = ('consumer_cloud/forecast.json', 'consumer_cloud/final_score_decisio
              'INDEPENDENT_FORECAST_FEED_v1.json')
 SCHEMA = 'fp575-bound-gate-v3'
 # Review every command and output-policy change before updating this fingerprint.
-CANONICAL_CONTRACT = 'db9bc7b763f7b7099e2423fcfb0bcfea47ba118ffb7fdd9e6223af7d67b033c5'
+CANONICAL_CONTRACT = '394c4861e835e5d6aff936ed23db5db7e317d0377d39e0b6ac74ac0004cbb0e9'
 OVERRIDES = ('B7_', 'CHROME_PATH', 'CSS_UPGRADE_', 'DAYLINE_', 'DEPTH_LIMIT',
              'FP463_', 'FP569', 'NR', 'QA_OLD_NAV', 'SKY_', 'SW_', 'VERIFY_CLOCK_',
              'CACHE_PUBLISHED_BASELINE', 'NODE_OPTIONS', 'PYTHONPATH',

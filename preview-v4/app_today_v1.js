@@ -8,7 +8,7 @@ const SUN_AND_STATUS=[':scope > .sr-time-sun',':scope > [data-p0-feed-state]'];
 const REST=[':scope > [data-space-scene=today]:not([data-tone=watch],[data-tone=storm])',':scope > .sr-dayline',':scope > [data-week-strip]',':scope > [data-p0-signals]',':scope > .nr-o-weather-brief','[data-sky-now]',':scope > .nr-o-journey',':scope > [data-day-you]',':scope > [data-p0-details]'];
 const ORDER=[...LEAD,ACTIVE,...SUN_AND_STATUS,...REST];
 const COMPACT_ORDER=[...LEAD,...SUN_AND_STATUS,ACTIVE,...REST];
-const compact=matchMedia('(max-width:430px) and (max-height:932px)');
+const compact=matchMedia('(min-width:431px), (max-height:932px)');
 function updateWeatherSummary(hero,scene){
  let button=hero.querySelector('[data-weather-summary]');
  if(!compact.matches||!scene){
