@@ -436,7 +436,15 @@ async function settledTodayFeed(page, compact, expectedState){
      noWeatherWarning:!route.querySelector('[data-weather-summary]')&&
       !route.querySelector('[data-space-scene=today]:is([data-tone=watch],[data-tone=storm])'),
     };
-   },{day,expert:noaaExpert,expected:noaaExpert?noaaLossRegistry.decision.score:null,copy},{polling:50,timeout:15000});
+   },{day,expert:noaaExpert,expected:noaaExpert?noaaLossRegistry.decision.score:null,copy},{polling:50,timeout:30000}).catch(async error=>{
+    const readiness=await p.evaluate(day=>({
+     load:window.__srConsumerLoadState,registry:window.NRConsumerAuthority.registryStatus().status,
+     dateMatches:document.querySelector('#nrRoute-today [data-overview] select')?.value===day,
+     feed:document.querySelector('#nrRoute-today [data-p0-feed-state]')?.dataset.state,
+    }),day);
+    console.error('NOAA loss readiness '+JSON.stringify({lang,inputState,width,height,...readiness}));
+    throw error;
+   });
    let checked;
    try{checked=await projection.jsonValue();}finally{await projection.dispose();}
    const failed=Object.keys(checked).filter(label=>!checked[label]);
@@ -684,7 +692,7 @@ async function settledTodayFeed(page, compact, expectedState){
    for(const lang of ['uk','en','es','fr']){
     for(const [width,height] of [[321,741],[347,760],[375,800],[430,932]]){
      const states=['noaa-loss-expert','noaa-loss-unavailable'];
-     rows.push(...await Promise.all(states.map(inputState=>coldLayout({lang,inputState,width,height,mustFit:true}))));
+     for(const inputState of states)rows.push(await coldLayout({lang,inputState,width,height,mustFit:true}));
     }
    }
    assert.equal(rows.length,32);
