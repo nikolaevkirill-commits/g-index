@@ -248,7 +248,7 @@ const SHELL_ASSETS = [
   './product_render_queue_v1.js',
   './moon_phase_v1.js',
   './expert_start_advice_v1.js?v=1',
-  './p0_layout_v1.js?v=fp575-d3',
+  './p0_layout_v1.js?v=fp575-fresh',
   './three_day_forecast_v1.js?v=fp575-fold2',
   './p0_layout_v1.css',
   './wow_reviewed_v1.css',
