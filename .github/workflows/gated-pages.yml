@@ -31,7 +31,8 @@ concurrency:
 jobs:
   checks:
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    # The expanded cold-open matrix took 42 minutes end to end on the audit runner.
+    timeout-minutes: ${{ github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/deploy' && 60 || 45 }}
     outputs:
       sha: ${{ steps.revision.outputs.sha }}
     steps:
