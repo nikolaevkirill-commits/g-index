@@ -45,8 +45,10 @@ async function settledTodayFeed(page, compact, expectedState){
   const heightBandOnly=process.argv.includes('--height-band-only');
   const scoredOnly=process.argv.includes('--scored-only');
   const dataScope=process.env.VERIFY_CLOCK_SCOPE==='data';
+  const wideOnly=process.argv.includes('--wide-only');
+  const noaaOnly=process.argv.includes('--noaa-loss-only');
   const freshOnly=dataScope||process.argv.includes('--fresh-only');
-  const layoutOnly=freshOnly||reasonsOnly||heightBandOnly||scoredOnly||process.argv.includes('--layout-only');
+  const layoutOnly=wideOnly||noaaOnly||freshOnly||reasonsOnly||heightBandOnly||scoredOnly||process.argv.includes('--layout-only');
   for(const [entry,width,height] of layoutOnly?[]:[['index.html',390,844],['classic.html',390,844],['index.html',1280,900]]){
    const ctx=await browser.newContext({viewport:{width,height},locale:'uk-UA',timezoneId:'Europe/Kyiv',serviceWorkers:'block',reducedMotion:'no-preference'});
    await ctx.route(/^https?:\/\/(?!127\.0\.0\.1)/,r=>r.abort());
@@ -200,8 +202,9 @@ async function settledTodayFeed(page, compact, expectedState){
    (inputState==='scored-history'?scoredSizes:inputState==='missing-no-advice'?[[321,741,true]]:sizes).map(([width,height,mustFit])=>({lang,inputState,width,height,mustFit}))));
   const selectedCases=freshOnly?[]:reasonsOnly?cases.filter(({width,height,lang,inputState})=>
    width===320&&height===694&&((lang==='uk'&&inputState==='shipped-feed')||(lang==='en'&&inputState==='synthetic-history'))):scoredOnly?cases.filter(row=>row.inputState==='scored-history'):heightBandOnly?cases.filter(row=>row.height>=741):cases;
+  let noaaLossFeed, noaaLossRegistry;
   async function coldLayout({lang,inputState,width,height,mustFit}){
-  const compact=width<=430&&height<=932;
+  const compact=width>430||height<=932;
   const c=await browser.newContext({viewport:{width,height},locale:lang,timezoneId:'Europe/Kyiv',serviceWorkers:'block'});
   try{
   await c.route(/^https?:\/\/(?!127\.0\.0\.1)/,r=>r.abort());
@@ -234,14 +237,21 @@ async function settledTodayFeed(page, compact, expectedState){
   }
   const syntheticStorm=inputState==='synthetic-storm';
   const fresh=inputState==='fresh-history'||syntheticStorm;
-  const scored=inputState==='scored-history'||fresh;
+  const noaaExpert=inputState==='noaa-loss-expert',noaaMissing=inputState==='noaa-loss-unavailable';
+  const noaaLoss=noaaExpert||noaaMissing;
+  const scored=inputState==='scored-history'||fresh||noaaExpert;
   if(inputState==='missing-no-advice'){
    // The shipped registry may contain an expert override without a formula row.
    // Replay the archived registry with no entry on 7 November to cover actual absence.
    await c.route(/\/consumer_cloud\/final_score_decisions\.json(?:\?.*)?$/,r=>
     r.fulfill({contentType:'application/json',path:path.join(root,'tools/public/fixtures/decisions_regression.json')}));
   }
-  if(scored){
+  if(noaaLoss){
+   await c.route(/\/(?:consumer_cloud\/forecast|INDEPENDENT_FORECAST_FEED_v1)\.json(?:\?.*)?$/,r=>
+    r.fulfill({contentType:'application/json',body:noaaLossFeed}));
+   await c.route(/\/consumer_cloud\/final_score_decisions\.json(?:\?.*)?$/,r=>
+    r.fulfill({json:noaaExpert?noaaLossRegistry.withExpert:noaaLossRegistry.withoutExpert}));
+  }else if(scored){
    // Replay both archived responses unchanged through the normal same-origin loaders.
    // The registry decision and the calendar factor refer to the same historical day.
    const fixture=name=>path.join(root,'tools/public/fixtures',name);
@@ -257,28 +267,36 @@ async function settledTodayFeed(page, compact, expectedState){
    await c.route(/\/consumer_cloud\/final_score_decisions\.json(?:\?.*)?$/,r=>
     r.fulfill({contentType:'application/json',path:fixture('decisions_regression.json')}));
   }
-  const instant=scored?new Date('2026-10-19T15:29:00Z'):start;
+  const instant=(scored||noaaLoss)?new Date('2026-10-19T15:29:00Z'):start;
   const day=instant.toISOString().slice(0,10);
   const p=await c.newPage();
+  // Cold Chromium startup can be slow on the audit host. Assertions still require a settled response.
+  if(noaaLoss)p.setDefaultTimeout(60000);
   await p.clock.setFixedTime(instant);
+  const deliveredLoss=noaaLoss?p.waitForResponse(r=>r.url()===base+'/consumer_cloud/forecast.json'):null;
    await p.goto(base+'/index.html?channel=play#today',{waitUntil:'commit'});
+  if(deliveredLoss){
+   const response=await deliveredLoss;
+   assert.equal(response.status(),200);
+   assert((await response.body()).equals(Buffer.from(noaaLossFeed)),'the browser received the exact withheld feed');
+  }
   const compactSun=p.locator('[data-sky-clock] [data-time-sun]');
   await compactSun.waitFor();
   await p.waitForFunction(()=>!!document.querySelector('#nrRoute-today .nr-o-hero .nr-dv-tone')&&!!document.querySelector('#nrRoute-today .nr-o-hero .nr-o-verdict'),null,{timeout:30000});
   // FP569d (owner decision 01.11): verdict and score open Today; the Sun clock follows the overview card.
   await p.evaluate(()=>document.fonts.ready);
   // Wait for the asynchronously mounted share action before measuring the fold.
-  await p.locator('[data-sky-clock] [data-share-card] button').waitFor();
+  await p.locator('#nrRoute-today [data-share-card] button').first().waitFor({state:'attached'});
   assert.equal(await p.evaluate(()=>window.NRLocale.language),lang);
   const status=p.locator('#nrRoute-today [data-p0-feed-state]');
-  const initialFeed=await settledTodayFeed(p,compact,fresh?'fresh':inputState==='synthetic-history'?'stale':undefined);
+  const initialFeed=await settledTodayFeed(p,compact,noaaLoss?'missing':fresh?'fresh':inputState==='synthetic-history'?'stale':undefined);
   const advice=p.locator('#nrRoute-today [data-day-verdict] p:not(.nr-dv-tone)');
   const actual=await advice.allTextContents();
   assert.equal(initialFeed.date,day,'selected date belongs to this fixture');
   const expected=await p.evaluate(ds=>window.NRDayVerdict.summary(ds).lines.map(line=>line.label+' '+line.text),day);
   const normalize=text=>text.trim().replace(/\s+/g,' ');
   assert.deepEqual(actual.map(normalize),expected.map(normalize),'full advice matches the selected day');
-  if(scored||inputState==='synthetic-history'){
+  if((scored&&!noaaLoss)||inputState==='synthetic-history'){
    const historical={uk:'За календарем краще відкласти: нові починання',en:'The calendar advises postponing: new beginnings',
     es:'El calendario aconseja posponer: nuevos comienzos',fr:'Le calendrier conseille de reporter : nouveaux commencements'};
    assert.ok(actual.map(normalize).includes(historical[lang]),'complete known historical advice');
@@ -288,7 +306,8 @@ async function settledTodayFeed(page, compact, expectedState){
    assert(await status.isVisible(),'stale status is retained below Sun');
   }
    const readGeometry=()=>compactSun.evaluate((el,{lang,day})=>{
-    const nav=document.getElementById('mobileNav').getBoundingClientRect().top;
+    const mobileNav=document.getElementById('mobileNav');
+    const nav=mobileNav?.checkVisibility()?Math.min(innerHeight,mobileNav.getBoundingClientRect().top):innerHeight;
     const card=el.closest('[data-sky-clock]'),hero=document.querySelector('#nrRoute-today .nr-o-hero');
     const unclipped=node=>{
      if(!node?.textContent.trim()||!node.checkVisibility({opacityProperty:true,visibilityProperty:true}))return false;
@@ -332,7 +351,8 @@ async function settledTodayFeed(page, compact, expectedState){
    const geometry=await readGeometry();
    const fits=g=>g.plotTop>=0&&g.plotBottom<=g.nav&&g.plotLeft>=0&&g.plotRight<=width;
    const fit=fits(geometry);
-   const hasAdvice=scored||inputState==='synthetic-history';
+   // Loss removes all formula factors. Neither registry variant adds a caution for this day.
+   const hasAdvice=!noaaLoss&&(scored||inputState==='synthetic-history');
    assert.equal(geometry.adviceLineCount,actual.length);
    assert.equal(geometry.adviceLineCount>0,hasAdvice,'expected presence of real advice');
    assert.equal(geometry.adviceVisible,hasAdvice,'each expected advice line is visible');
@@ -353,7 +373,8 @@ async function settledTodayFeed(page, compact, expectedState){
      const plot=el.closest('svg');
      plot.scrollIntoView({block:'center',behavior:'instant'});
      const r=plot.getBoundingClientRect();
-     const nav=document.getElementById('mobileNav').getBoundingClientRect().top;
+     const mobileNav=document.getElementById('mobileNav');
+    const nav=mobileNav?.checkVisibility()?Math.min(innerHeight,mobileNav.getBoundingClientRect().top):innerHeight;
      const full=r.top>=0&&r.bottom<=nav&&r.left>=0&&r.right<=innerWidth;
      return {full,top:r.top,bottom:r.bottom};
     });
@@ -367,7 +388,7 @@ async function settledTodayFeed(page, compact, expectedState){
    await p.evaluate(()=>window.scrollTo({top:0,behavior:'instant'}));
    await p.screenshot({path:path.join(out,lang+'-'+width+'x'+height+'.png'),mask:[p.locator('[data-score-tone],.nr-o-score')],maskColor:'#273044'});
   }
-  if(process.env.VERIFY_CLOCK_EVIDENCE_DIR&&scored&&!fresh&&
+  if(process.env.VERIFY_CLOCK_EVIDENCE_DIR&&scored&&!fresh&&!noaaLoss&&
     ((width===321&&height===741&&lang==='es')||(width===375&&height===800&&lang==='fr'))){
    const out=path.resolve(process.env.VERIFY_CLOCK_EVIDENCE_DIR);await fs.mkdir(out,{recursive:true});
    await p.screenshot({path:path.join(out,'scored-'+lang+'-'+width+'x'+height+'.png'),
@@ -378,7 +399,8 @@ async function settledTodayFeed(page, compact, expectedState){
    const full=p.locator('#nrRoute-today [data-space-scene=today]');
    const alert=await warning.evaluate(button=>{
     const card=document.querySelector('#nrRoute-today [data-space-scene=today]');
-    const rect=button.getBoundingClientRect(),nav=document.querySelector('#mobileNav').getBoundingClientRect().top;
+    const rect=button.getBoundingClientRect(),mobileNav=document.getElementById('mobileNav');
+    const nav=mobileNav?.checkVisibility()?Math.min(innerHeight,mobileNav.getBoundingClientRect().top):innerHeight;
     const range=document.createRange();range.selectNodeContents(button);
     const visible=button.checkVisibility()&&rect.top>=0&&rect.bottom<=nav&&
      [...range.getClientRects()].every(r=>r.left>=rect.left-1&&r.right<=rect.right+1&&r.top>=rect.top-1&&r.bottom<=rect.bottom+1);
@@ -393,9 +415,53 @@ async function settledTodayFeed(page, compact, expectedState){
     const dir=path.join(process.env.VERIFY_CLOCK_EVIDENCE_DIR,syntheticStorm?'storm-shots':'fresh-shots');await fs.mkdir(dir,{recursive:true});
     await p.screenshot({path:path.join(dir,(syntheticStorm?'storm-':'fresh-')+lang+'-321x741.png'),mask:[p.locator('[data-score-tone],.nr-o-score')],maskColor:'#273044'});
    }
+   if(process.env.VERIFY_CLOCK_EVIDENCE_DIR&&lang==='uk'&&!syntheticStorm&&[[440,780],[768,1024],[1280,800]].some(([w,h])=>w===width&&h===height)){
+    const out=path.join(process.env.VERIFY_CLOCK_EVIDENCE_DIR,'wide-shots');await fs.mkdir(out,{recursive:true});
+    await p.screenshot({path:path.join(out,'uk-'+width+'x'+height+'.png'),mask:[p.locator('[data-score-tone],.nr-o-score')],maskColor:'#273044'});
+   }
    await warning.focus();await p.keyboard.press('Enter');
    assert(await full.locator('h3').evaluate(el=>el===document.activeElement),'keyboard opens the complete weather alert');
    return {...row,weatherAlert:alert,keyboardOpensWeather:true};
+  }
+  if(noaaLoss){
+   const copy={
+    uk:['Недостатньо даних','Оцінки на цей день немає.'],
+    en:['Insufficient data','No score for this day.'],
+    es:['Datos insuficientes','No hay puntuación para este día.'],
+    fr:['Données insuffisantes','Pas de score pour ce jour.'],
+   }[lang];
+   const projection=await p.waitForFunction(({day,expert,expected,copy})=>{
+    const route=document.querySelector('#nrRoute-today'),hero=route?.querySelector('.nr-o-hero');
+    const registry=window.NRConsumerAuthority?.registryStatus(),decision=window.NRConsumerAuthority?.expertFor(day);
+    if(window.__srConsumerLoadState!=='ready'||!['ok','partial'].includes(registry?.status)||
+       route?.querySelector('[data-overview] select')?.value!==day||
+       route?.querySelector('[data-p0-feed-state]')?.dataset.state!=='missing')return false;
+    const result=window.fp469ConsumerForDate({ds:day}),tone=hero.querySelector('.nr-dv-tone');
+    return {
+     withheldDayLoaded:window.__nrFormulaFeedStamp>0&&!result.feed?.channels?.source_formula,
+     authorityMatches:result.consumer.authority===(expert?'expert_pdf':'source_formula')&&
+      (expert?decision?.score===expected:!decision)&&result.consumer.score===expected,
+     missingCopyMatches:expert||tone.textContent.trim()===copy[1],
+     missingSourceMatches:expert||hero.querySelector('[data-today-source]').textContent.trim()===copy[0],
+     noWeatherWarning:!route.querySelector('[data-weather-summary]')&&
+      !route.querySelector('[data-space-scene=today]:is([data-tone=watch],[data-tone=storm])'),
+    };
+   },{day,expert:noaaExpert,expected:noaaExpert?noaaLossRegistry.decision.score:null,copy},{polling:50,timeout:30000}).catch(async error=>{
+    const readiness=await p.evaluate(day=>({
+     load:window.__srConsumerLoadState,registry:window.NRConsumerAuthority.registryStatus().status,
+     dateMatches:document.querySelector('#nrRoute-today [data-overview] select')?.value===day,
+     feed:document.querySelector('#nrRoute-today [data-p0-feed-state]')?.dataset.state,
+    }),day);
+    console.error('NOAA loss readiness '+JSON.stringify({lang,inputState,width,height,...readiness}));
+    throw error;
+   });
+   let checked;
+   try{checked=await projection.jsonValue();}finally{await projection.dispose();}
+   const failed=Object.keys(checked).filter(label=>!checked[label]);
+   if(failed.length)console.error('NOAA loss '+lang+' '+inputState+': '+failed.join(', '));
+   assert.equal(failed.length,0,'NOAA loss UI matches the withheld source and selected authority');
+   assert(geometry.sourceVisible&&geometry.toneVisible&&fit,'NOAA loss source, verdict and complete chart on first screen');
+   return {...row,...checked,sourceMatchesAuthority:noaaExpert?geometry.sourceMatchesExpert:checked.missingSourceMatches,responseMatches:true};
   }
   if(scored||inputState==='missing-no-advice')return row;
   if([320,375].includes(width)&&height===741){
@@ -468,7 +534,7 @@ async function settledTodayFeed(page, compact, expectedState){
   assert.ok(await p.locator('[data-sky-live] .nr-sl-body').count()>=7);
   await p.evaluate(()=>fp434Go('today',false));
   const beforeResize=await settledTodayFeed(p,true);
-  await p.setViewportSize({width:431,height:932});
+  await p.setViewportSize({width:430,height:933});
   const wide=await settledTodayFeed(p,false);
   if(lang==='en'&&inputState==='synthetic-history'){
    // Reproduce the original boundary: resize back while a stale-feed refresh
@@ -612,6 +678,62 @@ async function settledTodayFeed(page, compact, expectedState){
     assert.equal(failed.length,0,'candidate feed reaches the selected day and visible final score');
     return {lang,inputState:'candidate-file',width:321,height:741,feedState:state.state,responseMatches:true,...rendered};
    }finally{await c.close();}
+  }
+  if(wideOnly||!layoutOnly){
+   const rows=[];
+   const phones=[[431,741],[440,780],[480,800],[500,741]];
+   const larger=[[600,741],[768,768],[768,1024],[1024,768],[1280,800],[1920,1080]];
+   for(const lang of ['uk','en','es','fr']){
+    for(const [width,height] of [...phones,...larger]){
+     const states=width<=500?['fresh-history','scored-history','shipped-feed','synthetic-history','missing-no-advice','synthetic-storm']:['fresh-history','synthetic-storm'];
+     for(const inputState of states){
+      const row=await coldLayout({lang,width,height,inputState,mustFit:true});
+      assert(row.fit&&row.afterHero&&row.sourceVisible&&row.compactCss&&row.compactJs,'visible wide first screen on cold opening');
+      rows.push(row);
+     }
+    }
+   }
+   assert.equal(rows.length,144);
+   if(process.env.VERIFY_CLOCK_EVIDENCE_DIR){
+    const dir=path.resolve(process.env.VERIFY_CLOCK_EVIDENCE_DIR);await fs.mkdir(dir,{recursive:true});
+    await fs.writeFile(path.join(dir,'wide-matrix.json'),JSON.stringify(rows,null,2));
+   }
+   console.log('PASS full chart on 144 wide cold openings');
+   if(wideOnly)return;
+  }
+  if(noaaOnly||!layoutOnly){
+   const fixtures=path.join(root,'tools/public/fixtures');
+   noaaLossFeed=require('node:child_process').execFileSync('python',['-B',path.join(root,'tools/public/noaa_loss_fixture.py')],{encoding:'utf8'}).trim();
+   const day='2026-10-19',projected=JSON.parse(noaaLossFeed),withheld=projected.days[day];
+   const formula=withheld.channels.source_formula;
+   assert.deepEqual(Object.keys(projected.days),[day]);
+   assert.deepEqual(projected.availability_projection.withheld_dates,[day]);
+   assert.equal(formula.status,'missing_kp');
+   assert.equal(formula.availability_reason,'short_range_coverage_lost');
+   assert.equal(formula.kp_source_requirement,'NOAA_3day_slots');
+   assert.equal(formula.available,false);
+   for(const key of ['value','raw','kp_input','kp_source','kp_daily_max','noaa_issued_at','noaa_retrieved_at'])assert.equal(formula[key],null);
+   assert.deepEqual(formula.factors,[]);
+   assert.equal(withheld.source_formula_result.score,null);
+   const withExpert=JSON.parse(await fs.readFile(path.join(fixtures,'decisions_regression.json'),'utf8'));
+   const decisions=withExpert.decisions.filter(d=>d.date===day);
+   assert.equal(decisions.length,1);
+   assert(Number.isInteger(decisions[0].score));
+   noaaLossRegistry={withExpert,decision:decisions[0],withoutExpert:{...withExpert,decisions:withExpert.decisions.filter(d=>d.date!==day)}};
+   const rows=[];
+   for(const lang of ['uk','en','es','fr']){
+    for(const [width,height] of [[321,741],[347,760],[375,800],[430,932]]){
+     const states=['noaa-loss-expert','noaa-loss-unavailable'];
+     for(const inputState of states)rows.push(await coldLayout({lang,inputState,width,height,mustFit:true}));
+    }
+   }
+   assert.equal(rows.length,32);
+   if(process.env.VERIFY_CLOCK_EVIDENCE_DIR){
+    const dir=path.resolve(process.env.VERIFY_CLOCK_EVIDENCE_DIR);await fs.mkdir(dir,{recursive:true});
+    await fs.writeFile(path.join(dir,'noaa-loss-matrix.json'),JSON.stringify(rows,null,2));
+   }
+   console.log('PASS NOAA short-range coverage loss: 32 historical cold openings with both registry states');
+   if(noaaOnly)return;
   }
   if(freshOnly||!layoutOnly){
    const fixtures=path.join(root,'tools/public/fixtures');
