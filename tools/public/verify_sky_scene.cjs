@@ -187,13 +187,21 @@ try{for(const [locale,rm] of [['uk-UA','no-preference'],['en-GB','no-preference'
  const layout=await watch.evaluate(e=>{
   const rect=selector=>e.querySelector(selector).getBoundingClientRect();
   const badge=rect('.sr-space-badge'),wind=rect('.sr-space-wind-label'),legend=rect('.sr-space-legend');
+  const hero=e.parentElement.querySelector('.nr-o-hero');
+  const warning=hero.querySelector('[data-weather-summary]');
+  const rectWarning=warning?.getBoundingClientRect(), nav=document.getElementById('mobileNav').getBoundingClientRect().top;
   const separate=badge.bottom<=wind.top||wind.bottom<=badge.top||badge.right<=wind.left||wind.right<=badge.left;
   return {separate,contained:[badge,wind].every(r=>r.left>=legend.left&&r.right<=legend.right&&r.top>=legend.top&&r.bottom<=legend.bottom),
    aboveStage:legend.bottom<=rect('.sr-space-stage').top,
-   nearHero:e.getBoundingClientRect().top-e.parentElement.querySelector('.nr-o-hero').getBoundingClientRect().bottom<=110,
+   nearHero:!!rectWarning&&rectWarning.top>=hero.getBoundingClientRect().top&&rectWarning.bottom<=hero.getBoundingClientRect().bottom+1,
+   warningVisible:!!rectWarning&&warning.checkVisibility()&&rectWarning.top>=0&&rectWarning.bottom<=nav,
+   sameWarning:!!warning?.textContent.trim()&&warning.textContent===e.querySelector('.sr-space-forecast').textContent&&warning.dataset.tone===e.dataset.tone,
    overflow:document.documentElement.scrollWidth>innerWidth};
  });
- assert.deepEqual(layout,{separate:true,contained:true,aboveStage:true,nearHero:true,overflow:false});
+ assert.deepEqual(layout,{separate:true,contained:true,aboveStage:true,nearHero:true,warningVisible:true,sameWarning:true,overflow:false});
+ const warningButton=p.locator('#nrRoute-today [data-weather-summary]');
+ await warningButton.focus();await p.keyboard.press('Enter');
+ assert(await watch.locator('h3').evaluate(el=>el===document.activeElement),'keyboard reaches the complete watch card');
  res.push({weather:'watch 320 px',...layout});
  assert.deepEqual(errors,[]);await c.close();}
 finally{await b.close();srv.close()}
