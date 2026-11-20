@@ -44,7 +44,9 @@ async function settledTodayFeed(page, compact, expectedState){
   const reasonsOnly=process.argv.includes('--reasons-only');
   const heightBandOnly=process.argv.includes('--height-band-only');
   const scoredOnly=process.argv.includes('--scored-only');
-  const layoutOnly=reasonsOnly||heightBandOnly||scoredOnly||process.argv.includes('--layout-only');
+  const dataScope=process.env.VERIFY_CLOCK_SCOPE==='data';
+  const freshOnly=dataScope||process.argv.includes('--fresh-only');
+  const layoutOnly=freshOnly||reasonsOnly||heightBandOnly||scoredOnly||process.argv.includes('--layout-only');
   for(const [entry,width,height] of layoutOnly?[]:[['index.html',390,844],['classic.html',390,844],['index.html',1280,900]]){
    const ctx=await browser.newContext({viewport:{width,height},locale:'uk-UA',timezoneId:'Europe/Kyiv',serviceWorkers:'block',reducedMotion:'no-preference'});
    await ctx.route(/^https?:\/\/(?!127\.0\.0\.1)/,r=>r.abort());
@@ -196,7 +198,7 @@ async function settledTodayFeed(page, compact, expectedState){
    (w>=321&&w<=430&&h>=741&&h<=932)||(w===431&&h===932)||(w===430&&h===933));
   const cases=['uk','en','es','fr'].flatMap(lang=>['scored-history','shipped-feed','synthetic-history','missing-no-advice'].flatMap(inputState=>
    (inputState==='scored-history'?scoredSizes:inputState==='missing-no-advice'?[[321,741,true]]:sizes).map(([width,height,mustFit])=>({lang,inputState,width,height,mustFit}))));
-  const selectedCases=reasonsOnly?cases.filter(({width,height,lang,inputState})=>
+  const selectedCases=freshOnly?[]:reasonsOnly?cases.filter(({width,height,lang,inputState})=>
    width===320&&height===694&&((lang==='uk'&&inputState==='shipped-feed')||(lang==='en'&&inputState==='synthetic-history'))):scoredOnly?cases.filter(row=>row.inputState==='scored-history'):heightBandOnly?cases.filter(row=>row.height>=741):cases;
   async function coldLayout({lang,inputState,width,height,mustFit}){
   const compact=width<=430&&height<=932;
@@ -230,7 +232,8 @@ async function settledTodayFeed(page, compact, expectedState){
    const decisions=await fs.readFile(path.join(root,'tools/public/fixtures/decisions_regression.json'),'utf8');
    await c.route(/\/consumer_cloud\/final_score_decisions\.json(?:\?.*)?$/,r=>r.fulfill({contentType:'application/json',body:decisions}));
   }
-  const scored=inputState==='scored-history';
+  const fresh=inputState==='fresh-history';
+  const scored=inputState==='scored-history'||fresh;
   if(inputState==='missing-no-advice'){
    // The shipped registry may contain an expert override without a formula row.
    // Replay the archived registry with no entry on 7 November to cover actual absence.
@@ -242,7 +245,7 @@ async function settledTodayFeed(page, compact, expectedState){
    // The registry decision and the calendar factor refer to the same historical day.
    const fixture=name=>path.join(root,'tools/public/fixtures',name);
    await c.route(/\/(?:consumer_cloud\/forecast|INDEPENDENT_FORECAST_FEED_v1)\.json(?:\?.*)?$/,r=>
-    r.fulfill({contentType:'application/json',path:fixture('score_regression.json')}));
+    r.fulfill({contentType:'application/json',path:fixture(fresh?'fresh_20261019.json':'score_regression.json')}));
    await c.route(/\/consumer_cloud\/final_score_decisions\.json(?:\?.*)?$/,r=>
     r.fulfill({contentType:'application/json',path:fixture('decisions_regression.json')}));
   }
@@ -260,7 +263,7 @@ async function settledTodayFeed(page, compact, expectedState){
   await p.locator('[data-sky-clock] [data-share-card] button').waitFor();
   assert.equal(await p.evaluate(()=>window.NRLocale.language),lang);
   const status=p.locator('#nrRoute-today [data-p0-feed-state]');
-  const initialFeed=await settledTodayFeed(p,compact,inputState==='synthetic-history'?'stale':undefined);
+  const initialFeed=await settledTodayFeed(p,compact,fresh?'fresh':inputState==='synthetic-history'?'stale':undefined);
   const advice=p.locator('#nrRoute-today [data-day-verdict] p:not(.nr-dv-tone)');
   const actual=await advice.allTextContents();
   assert.equal(initialFeed.date,day,'selected date belongs to this fixture');
@@ -314,6 +317,7 @@ async function settledTodayFeed(page, compact, expectedState){
      toneVisible:within(tone),sourceMatchesAuthority,sourceMatchesExpert,sourceVisible:within(source),
      sourceBottom:source.getBoundingClientRect().bottom};
    },{lang,day});
+   if(fresh)await p.locator('#nrRoute-today [data-weather-summary]').waitFor();
    const geometry=await readGeometry();
    const fits=g=>g.plotTop>=0&&g.plotBottom<=g.nav&&g.plotLeft>=0&&g.plotRight<=width;
    const fit=fits(geometry);
@@ -352,11 +356,34 @@ async function settledTodayFeed(page, compact, expectedState){
    await p.evaluate(()=>window.scrollTo({top:0,behavior:'instant'}));
    await p.screenshot({path:path.join(out,lang+'-'+width+'x'+height+'.png'),mask:[p.locator('[data-score-tone],.nr-o-score')],maskColor:'#273044'});
   }
-  if(process.env.VERIFY_CLOCK_EVIDENCE_DIR&&scored&&
+  if(process.env.VERIFY_CLOCK_EVIDENCE_DIR&&scored&&!fresh&&
     ((width===321&&height===741&&lang==='es')||(width===375&&height===800&&lang==='fr'))){
    const out=path.resolve(process.env.VERIFY_CLOCK_EVIDENCE_DIR);await fs.mkdir(out,{recursive:true});
    await p.screenshot({path:path.join(out,'scored-'+lang+'-'+width+'x'+height+'.png'),
     mask:[p.locator('[data-score-tone],.nr-o-score')],maskColor:'#273044'});
+  }
+  if(fresh){
+   const warning=p.locator('#nrRoute-today [data-weather-summary]');
+   const full=p.locator('#nrRoute-today [data-space-scene=today]');
+   const alert=await warning.evaluate(button=>{
+    const card=document.querySelector('#nrRoute-today [data-space-scene=today]');
+    const rect=button.getBoundingClientRect(),nav=document.querySelector('#mobileNav').getBoundingClientRect().top;
+    const range=document.createRange();range.selectNodeContents(button);
+    const visible=button.checkVisibility()&&rect.top>=0&&rect.bottom<=nav&&
+     [...range.getClientRects()].every(r=>r.left>=rect.left-1&&r.right<=rect.right+1&&r.top>=rect.top-1&&r.bottom<=rect.bottom+1);
+    return {visible,sameText:!!button.textContent.trim()&&button.textContent===card.querySelector('.sr-space-forecast').textContent,
+     tone:button.dataset.tone,matchesTone:button.dataset.tone===card.dataset.tone,afterSun:card.previousElementSibling?.matches('[data-p0-feed-state]')};
+   });
+   assert(geometry.afterHero&&fit,'fresh historical score, advice and full solar plot together');
+   assert(alert.visible&&alert.sameText&&alert.matchesTone&&alert.afterSun&&['watch','storm'].includes(alert.tone),
+    'visible complete alert and matching severity before the full weather card');
+   if(process.env.VERIFY_CLOCK_EVIDENCE_DIR&&width===321){
+    const dir=path.join(process.env.VERIFY_CLOCK_EVIDENCE_DIR,'fresh-shots');await fs.mkdir(dir,{recursive:true});
+    await p.screenshot({path:path.join(dir,'fresh-'+lang+'-321x741.png'),mask:[p.locator('[data-score-tone],.nr-o-score')],maskColor:'#273044'});
+   }
+   await warning.focus();await p.keyboard.press('Enter');
+   assert(await full.locator('h3').evaluate(el=>el===document.activeElement),'keyboard opens the complete weather alert');
+   return {...row,weatherAlert:alert,keyboardOpensWeather:true};
   }
   if(scored||inputState==='missing-no-advice')return row;
   if([320,375].includes(width)&&height===741){
@@ -492,6 +519,69 @@ async function settledTodayFeed(page, compact, expectedState){
   }
   return {...row,resizeRegression:true,reasonsRegression:true};
   }finally{await c.close();}
+  }
+  // The single-day fixture is an unchanged historical row from fc7150ca98f99a79f5f60cf3a805bfe647a070ba.
+  // It cannot drift with the current cloud feed or expose another date's inputs.
+  async function candidateFeed(lang){
+   const candidate=await fs.readFile(path.join(root,'consumer_cloud/forecast.json'));
+   const feed=JSON.parse(candidate);
+   assert.equal(feed.schema,'independent_forecast_feed_v1');
+   assert.equal(feed.source_integrity?.status,'PASS');
+   const now=Date.parse(feed.generated_at)+60000;
+   assert(Number.isFinite(now),'valid candidate issue time');
+   const date=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Kyiv',year:'numeric',month:'2-digit',day:'2-digit'}).format(now);
+   const row=feed.days?.[date]?.channels?.source_formula;
+   assert(row?.available===true&&Number.isInteger(row.value),'current candidate day has a formula result');
+   const c=await browser.newContext({viewport:{width:321,height:741},locale:lang,timezoneId:'Europe/Kyiv',serviceWorkers:'block'});
+   try{
+    await c.route(/^https?:\/\/(?!127\.0\.0\.1)/,r=>r.abort());
+    await c.addInitScript(language=>{
+     localStorage.setItem('nr_locale_v1',language);
+     localStorage.setItem('gidx_onboard_done_v2','1');localStorage.setItem('srPrivacyNoticeDismissed','1');
+    },lang);
+    const page=await c.newPage();await page.clock.setFixedTime(new Date(now));
+    const delivered=page.waitForResponse(r=>r.url()===base+'/consumer_cloud/forecast.json');
+    await page.goto(base+'/index.html?channel=play#today',{waitUntil:'commit'});
+    const response=await delivered;
+    assert.equal(response.status(),200);
+    assert((await response.body()).equals(candidate),'network bytes match the candidate feed');
+    const state=await settledTodayFeed(page,true,'fresh');
+    assert.equal(state.date,date);
+    const rendered=await page.evaluate(({date,issued,value,lang})=>{
+     const root=document.querySelector('#nrRoute-today');
+     const raw=window.fp469ConsumerForDate({ds:date});
+     const own=raw.feed?.channels?.source_formula,score=root.querySelector('.nr-o-hero .nr-o-score');
+     return {language:window.NRLocale.language===lang,loaded:own?.value===value&&own.generated_at===issued,
+      visible:score?.checkVisibility({visibilityProperty:true,opacityProperty:true})===true,
+      scoreMatches:raw.consumer.available===true&&score?.textContent.trim()===window.SkyScore.formatScore(raw.consumer.score)};
+    },{date,issued:row.generated_at,value:row.value,lang});
+    assert(Object.values(rendered).every(Boolean),'candidate feed reaches the selected day and visible final score');
+    return {lang,inputState:'candidate-file',width:321,height:741,feedState:state.state,responseMatches:true,...rendered};
+   }finally{await c.close();}
+  }
+  if(freshOnly||!layoutOnly){
+   const fixtures=path.join(root,'tools/public/fixtures');
+   const projectedText=(await fs.readFile(path.join(fixtures,'fresh_20261019.json'),'utf8')).replace(/\r\n/g,'\n');
+   // The original forecast Git blob is 185af564f004566f0518e9a5eb5845452461355a.
+   assert.equal(require('node:crypto').createHash('sha256').update(projectedText).digest('hex'),'1a96c7411c0c0191158fa4d8b5f528a8fc4dc9e707820ca53c0fb565bb522d33');
+   const projection=JSON.parse(projectedText);
+   assert.deepEqual(Object.keys(projection.days),['2026-10-19']);
+   const source=projection.days['2026-10-19'].channels.source_formula;
+   assert.equal(source.generated_at,'2026-10-19T13:11:05.189341+00:00');
+   assert.equal(source.noaa_retrieved_at,'2026-10-19T13:11:05.185605+00:00');
+   const replay=[];
+   for(const lang of ['uk','en','es','fr']){
+    for(const [width,height] of (dataScope?[[321,741]]:[[321,741],[375,800],[430,932]])){
+     replay.push(await coldLayout({lang,inputState:'fresh-history',width,height,mustFit:true}));
+    }
+    replay.push(await candidateFeed(lang));
+   }
+   if(process.env.VERIFY_CLOCK_EVIDENCE_DIR){
+    const dir=path.resolve(process.env.VERIFY_CLOCK_EVIDENCE_DIR);await fs.mkdir(dir,{recursive:true});
+    await fs.writeFile(path.join(dir,'fresh-matrix.json'),JSON.stringify(replay,null,2));
+   }
+   console.log(dataScope?'PASS data-scope shared clock: 8 cold openings':'PASS fresh-history and candidate feed: 16 cold openings');
+   if(freshOnly)return;
   }
   for(let i=0;i<selectedCases.length;i+=2){
    layouts.push(...await Promise.all(selectedCases.slice(i,i+2).map(coldLayout)));
