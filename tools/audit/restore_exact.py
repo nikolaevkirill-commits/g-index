@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Restore a new exact Git checkout; protected contents are never printed."""
-import argparse, hashlib, json, pathlib, shutil, subprocess
+import argparse, hashlib, json, os, pathlib, shutil, stat, subprocess
 
 def require(condition, message):
     if not condition:
@@ -48,6 +48,14 @@ def restore(dest,m):
     require(not git(dest,'status','--porcelain').strip(), "Restore verification failed: checkout is not clean")
 
 
+def retry_readonly_removal(operation, path, error):
+    # Git objects can be read-only on Windows even in a checkout we own.
+    if os.name != 'nt' or not isinstance(error[1], PermissionError) or operation not in (os.unlink, os.remove, os.rmdir):
+        raise error[1]
+    os.chmod(path, stat.S_IWRITE)
+    operation(path)
+
+
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('destination',type=pathlib.Path)
@@ -61,7 +69,7 @@ def main():
         restore(a.destination,m)
     except BaseException:
         # A refused or interrupted restore must not leave a usable checkout behind.
-        shutil.rmtree(a.destination,ignore_errors=True)
+        shutil.rmtree(a.destination, onerror=retry_readonly_removal)
         raise
     print(json.dumps({'status':'PASS','commit':m['commit'],'tree':m['tree'],'tracked_files':len(m['files']),'protected_files_restored':len(m['omitted']),'public_https_git_fetch':m['public_git_url'].startswith('https://'),'parent_history_available':True}))
 
