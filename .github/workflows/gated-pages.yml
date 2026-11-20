@@ -23,6 +23,8 @@ on:
 permissions:
   contents: read
   actions: read
+env:
+  GATE_PLAYWRIGHT_VERSION: '1.62.1'
 concurrency:
   group: ${{ github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/deploy' && format('pages-audit-{0}', github.run_id) || 'pages-release' }}
   cancel-in-progress: false
@@ -39,9 +41,8 @@ jobs:
           fetch-depth: 0
       - id: revision
         run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-      # REL-1: a feed-only refresh must not depend on browser UI gates (B7 flakiness), but it may
-      # skip them only when every file changed since the LAST SUCCESSFULLY GATED deploy is under
-      # forecast.json or NOAA receipts. Registry/runtime changes and unknown evidence run the full gate.
+      # A feed-only refresh runs the data-path first-screen check. The shorter scope is
+      # available only for forecast/NOAA updates since the last successful gated deploy.
       - id: scope
         env:
           GH_TOKEN: ${{ github.token }}
@@ -70,18 +71,9 @@ jobs:
       - run: python tools/public/test_release_scope.py
       - uses: actions/setup-node@v4
         with: {node-version: '24'}
-      - run: npm install --no-save --package-lock=false playwright@1.62.1
-      - name: Install Chromium for release checks
-        if: github.event_name != 'workflow_dispatch' || github.ref == 'refs/heads/deploy'
-        run: npx playwright install --with-deps chromium
-      - name: Install and launch Chromium for the audit
-        if: github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/deploy'
-        run: |
-          npx playwright install chromium
-          if ! node -e "require('playwright').chromium.launch().then(b=>b.close()).catch(e=>{console.error(e.message);process.exitCode=1})"; then
-            npx playwright install-deps chromium
-            node -e "require('playwright').chromium.launch().then(b=>b.close()).catch(e=>{console.error(e.message);process.exitCode=1})"
-          fi
+      - run: npm install --no-save --package-lock=false "playwright@$GATE_PLAYWRIGHT_VERSION"
+      - name: Install and verify Chromium
+        run: node ./tools/audit/install_gate_chromium.cjs
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/test_browser_readiness.cjs
       - if: steps.scope.outputs.mode != 'data'
@@ -194,15 +186,22 @@ jobs:
         run: node tools/public/verify_sky_live.cjs
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_sky_live_guards.cjs
-      - if: steps.scope.outputs.mode != 'data'
-        run: node tools/public/verify_shared_clock.cjs
+      - run: node tools/public/verify_shared_clock.cjs
         env:
+          VERIFY_CLOCK_SCOPE: ${{ steps.scope.outputs.mode }}
           VERIFY_CLOCK_EVIDENCE_DIR: ${{ github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/deploy' && !inputs.failure_probe && format('{0}/layout-evidence', runner.temp) || '' }}
       - uses: actions/upload-artifact@v4
-        if: github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/deploy' && !inputs.failure_probe
+        if: github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/deploy' && !inputs.failure_probe && steps.scope.outputs.mode != 'data'
         with:
           name: f3-layout-matrix
           path: ${{ runner.temp }}/layout-evidence/layout-matrix.json
+          if-no-files-found: error
+          retention-days: 30
+      - uses: actions/upload-artifact@v4
+        if: github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/deploy' && !inputs.failure_probe
+        with:
+          name: fresh-candidate-matrix
+          path: ${{ runner.temp }}/layout-evidence/fresh-matrix.json
           if-no-files-found: error
           retention-days: 30
       - if: steps.scope.outputs.mode != 'data'
@@ -354,12 +353,9 @@ jobs:
           test -z "$(git status --porcelain --ignored)"
           python -m venv --copies "$RUNNER_TEMP/portable-python"
           "$RUNNER_TEMP/portable-python/bin/python" -m pip install pyswisseph==2.10.3.2
-          npm install --prefix "$RUNNER_TEMP/portable-node" --no-save --package-lock=false --no-bin-links playwright@1.62.1
+          npm install --prefix "$RUNNER_TEMP/portable-node" --no-save --package-lock=false --no-bin-links "playwright@$GATE_PLAYWRIGHT_VERSION"
           node_modules="$RUNNER_TEMP/portable-node/node_modules"
-          node "$node_modules/playwright/cli.js" install chromium
-          if ! NODE_PATH="$node_modules" node -e "require('playwright').chromium.launch().then(b=>b.close()).catch(e=>{console.error(e.message);process.exitCode=1})"; then
-            node "$node_modules/playwright/cli.js" install-deps chromium
-          fi
+          NODE_PATH="$node_modules" node ./tools/audit/install_gate_chromium.cjs
           echo "$RUNNER_TEMP/portable-python/bin" >> "$GITHUB_PATH"
           echo "NODE_PATH=$node_modules" >> "$GITHUB_ENV"
       - name: Run fresh canonical portable gate
@@ -419,6 +415,17 @@ jobs:
         with:
           name: portable-resume-105-second
           path: ${{ runner.temp }}/D4_RESUME_105.json
+          if-no-files-found: error
+          retention-days: 30
+      - name: Exercise the data-only first screen without publishing
+        env:
+          VERIFY_CLOCK_SCOPE: data
+          VERIFY_CLOCK_EVIDENCE_DIR: ${{ runner.temp }}/data-screen-evidence
+        run: node tools/public/verify_shared_clock.cjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: data-first-screen
+          path: ${{ runner.temp }}/data-screen-evidence/fresh-matrix.json
           if-no-files-found: error
           retention-days: 30
       - name: Check portable runner isolation with disposable D5 fixtures
