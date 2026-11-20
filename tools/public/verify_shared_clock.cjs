@@ -190,10 +190,10 @@ async function settledTodayFeed(page, compact, expectedState){
   const sizes=[[320,694,true],[361,700,true],[375,700,true],[360,640,false],[320,568,false],[375,667,false],[376,700,false],...bandSizes];
   const scoredSizes=bandSizes.filter(([w,h])=>
    (w>=321&&w<=375&&h<=800)||(w===375&&h===801)||(w===376&&h===741)||(w===390&&h===844));
-  const cases=['uk','en','es','fr'].flatMap(lang=>['scored-history','missing-no-advice','synthetic-history'].flatMap(inputState=>
-   (inputState==='scored-history'?scoredSizes:sizes).map(([width,height,mustFit])=>({lang,inputState,width,height,mustFit}))));
+  const cases=['uk','en','es','fr'].flatMap(lang=>['scored-history','shipped-feed','synthetic-history','missing-no-advice'].flatMap(inputState=>
+   (inputState==='scored-history'?scoredSizes:inputState==='missing-no-advice'?[[321,741,true]]:sizes).map(([width,height,mustFit])=>({lang,inputState,width,height,mustFit}))));
   const selectedCases=reasonsOnly?cases.filter(({width,height,lang,inputState})=>
-   width===320&&height===694&&((lang==='uk'&&inputState==='missing-no-advice')||(lang==='en'&&inputState==='synthetic-history'))):scoredOnly?cases.filter(row=>row.inputState==='scored-history'):heightBandOnly?cases.filter(row=>row.height>=741):cases;
+   width===320&&height===694&&((lang==='uk'&&inputState==='shipped-feed')||(lang==='en'&&inputState==='synthetic-history'))):scoredOnly?cases.filter(row=>row.inputState==='scored-history'):heightBandOnly?cases.filter(row=>row.height>=741):cases;
   async function coldLayout({lang,inputState,width,height,mustFit}){
   const compact=width<=375&&height<=800;
   const c=await browser.newContext({viewport:{width,height},locale:lang,timezoneId:'Europe/Kyiv',serviceWorkers:'block'});
@@ -227,6 +227,12 @@ async function settledTodayFeed(page, compact, expectedState){
    await c.route(/\/consumer_cloud\/final_score_decisions\.json(?:\?.*)?$/,r=>r.fulfill({contentType:'application/json',body:decisions}));
   }
   const scored=inputState==='scored-history';
+  if(inputState==='missing-no-advice'){
+   // The shipped registry may contain an expert override without a formula row.
+   // Replay the archived registry with no entry on 7 November to cover actual absence.
+   await c.route(/\/consumer_cloud\/final_score_decisions\.json(?:\?.*)?$/,r=>
+    r.fulfill({contentType:'application/json',path:path.join(root,'tools/public/fixtures/decisions_regression.json')}));
+  }
   if(scored){
    // Replay both archived responses unchanged through the normal same-origin loaders.
    // The registry decision and the calendar factor refer to the same historical day.
@@ -286,6 +292,9 @@ async function settledTodayFeed(page, compact, expectedState){
     const within=node=>unclipped(node)&&node.getBoundingClientRect().top>=0&&node.getBoundingClientRect().bottom<=nav;
     const expertLabels={uk:'Експертне рішення',en:'Expert decision',es:'Decisión experta',fr:'Décision experte'};
     const sourceMatchesExpert=result.authority==='expert_pdf'&&source?.textContent.trim().startsWith(expertLabels[lang]);
+    const chip=hero.querySelector('[data-p0-authority]');
+    const sourceMatchesAuthority=result.available===true&&(result.authority==='expert_pdf'?sourceMatchesExpert:
+     chip?.dataset.p0Authority==='formula'&&source?.textContent.trim().length>0);
     const plot=el.closest('svg').getBoundingClientRect();
     return {nav,scrollY:window.scrollY,pageWidth:document.documentElement.scrollWidth,plotBottom:plot.bottom,plotTop:plot.top,plotLeft:plot.left,plotRight:plot.right,
      compactCss:getComputedStyle(hero).getPropertyValue('--nr-today-compact').trim()==='1',
@@ -295,19 +304,24 @@ async function settledTodayFeed(page, compact, expectedState){
      verdictBottom:hero.querySelector('.nr-dv-tone').getBoundingClientRect().bottom,
      scoreBottom:hero.querySelector('.nr-o-verdict').getBoundingClientRect().bottom,
      adviceLineCount:children.length,adviceVisible:children.length>0&&children.every(within),
+     scoreMissingUI:score.dataset.ring==='missing'&&!/[0-9]/.test(score.textContent),
      scoreAvailable:result.available===true,scoreVisible:result.available===true&&within(score),
      scoreMatchesResolver:result.available===true&&score.textContent.trim()===window.SkyScore.formatScore(result.score),
-     toneVisible:within(tone),sourceMatchesExpert,sourceVisible:within(source),
+     toneVisible:within(tone),sourceMatchesAuthority,sourceMatchesExpert,sourceVisible:within(source),
      sourceBottom:source.getBoundingClientRect().bottom};
    },{lang,day});
    const geometry=await readGeometry();
    const fits=g=>g.plotTop>=0&&g.plotBottom<=g.nav&&g.plotLeft>=0&&g.plotRight<=width;
    const fit=fits(geometry);
-   const hasAdvice=inputState!=='missing-no-advice';
+   const hasAdvice=scored||inputState==='synthetic-history';
    assert.equal(geometry.adviceLineCount,actual.length);
    assert.equal(geometry.adviceLineCount>0,hasAdvice,'expected presence of real advice');
    assert.equal(geometry.adviceVisible,hasAdvice,'each expected advice line is visible');
-   assert.equal(geometry.scoreAvailable,scored,'score must exist only in the scored fixture');
+   if(inputState!=='shipped-feed')assert.equal(geometry.scoreAvailable,scored,'expected score availability');
+   assert.equal(geometry.scoreMatchesResolver,geometry.scoreAvailable,'rendered score follows resolved availability');
+   assert.equal(geometry.scoreVisible,geometry.scoreAvailable,'resolved score visible on first screen');
+   assert.equal(geometry.scoreMissingUI,!geometry.scoreAvailable,'unavailable score has its explicit missing rendering');
+   if(geometry.scoreAvailable)assert(geometry.sourceMatchesAuthority,'source identifies the resolved authority');
    if(scored){
     assert(geometry.scoreMatchesResolver&&geometry.sourceMatchesExpert&&geometry.scoreVisible&&geometry.toneVisible,
      'visible score, source and tone from the registered historical decision');
@@ -340,7 +354,7 @@ async function settledTodayFeed(page, compact, expectedState){
    await p.screenshot({path:path.join(out,'scored-'+lang+'-'+width+'x'+height+'.png'),
     mask:[p.locator('[data-score-tone],.nr-o-score')],maskColor:'#273044'});
   }
-  if(scored)return row;
+  if(scored||inputState==='missing-no-advice')return row;
   if([320,375].includes(width)&&height===741){
    // Cold launches cover each anchor. The same loaded page then exercises
    // every integer height so the space between anchors is actually measured.
@@ -481,7 +495,7 @@ async function settledTodayFeed(page, compact, expectedState){
    const out=path.resolve(process.env.VERIFY_CLOCK_EVIDENCE_DIR);await fs.mkdir(out,{recursive:true});
    await fs.writeFile(path.join(out,'layout-matrix.json'),JSON.stringify(layouts,null,2));
   }
-  assert.equal(layouts.length,reasonsOnly?2:scoredOnly?52:heightBandOnly?196:252);
+  assert.equal(layouts.length,reasonsOnly?2:scoredOnly?52:heightBandOnly?200:256);
   assert.equal(layouts.filter(row=>row.inputState==='scored-history').length,reasonsOnly?0:52);
   assert.equal(layouts.filter(row=>row.resizeRegression&&row.reasonsRegression).length,reasonsOnly?2:(heightBandOnly||scoredOnly)?0:8);
   assert.equal(layouts.reduce((count,row)=>count+(row.heightSweep?.length||0),0),(reasonsOnly||scoredOnly)?0:960);
@@ -492,13 +506,13 @@ async function settledTodayFeed(page, compact, expectedState){
    assert.equal(row.compactJs,row.compact,'JS compact boundary');
    assert(row.afterHero&&row.verdictBottom<=row.nav&&row.scoreBottom<=row.nav);
    assert(row.sourceVisible);
-   assert.equal(row.adviceVisible,row.inputState!=='missing-no-advice');
+   assert.equal(row.adviceVisible,['scored-history','synthetic-history'].includes(row.inputState));
    if(row.mustFit)assert(row.fit,'required first-fold SVG');
    else assert(row.fit||row.scroll?.full,'full SVG accessible by scrolling');
   }
   assert.equal(results.length,layoutOnly?0:3);
   // Output is an allowlist of test labels, never raw feeds, live scores or DOM text.
-  console.log(reasonsOnly?'PASS 2 reasons regressions with normal click and forced rerender':scoredOnly?'PASS 52 cold openings with an authenticated historical score and calendar advice':heightBandOnly?'PASS 196 cold openings, 960 height measurements, 440 width measurements and 16 focus checks':'PASS 252 cold openings, 960 height measurements, 440 width measurements, 16 focus checks and 8 resize/reasons regressions');
+  console.log(reasonsOnly?'PASS 2 reasons regressions with normal click and forced rerender':scoredOnly?'PASS 52 cold openings with an authenticated historical score and calendar advice':heightBandOnly?'PASS 200 cold openings, 960 height measurements, 440 width measurements and 16 focus checks':'PASS 256 cold openings, 960 height measurements, 440 width measurements, 16 focus checks and 8 resize/reasons regressions');
   if(!layoutOnly)console.log('PASS shared clock round trip ×3, Sun equality, seven bodies, WebGL identity and phase, playback/pause, reduced-motion scrubbing, Kyiv 23/25 h, explicit default');
  }finally{await browser.close();server.close();}
 })().catch(e=>{
