@@ -575,9 +575,15 @@ async function settledTodayFeed(page, compact, expectedState){
     const state=await settledTodayFeed(page,true,row.available?undefined:'missing');
     assert.equal(state.date,date);
     assert(row.available?['fresh','stale'].includes(state.state):state.state==='missing','valid formula freshness at issue time');
-    const rendered=await page.evaluate(({date,issued,value,available,feedState,lang})=>{
+    // A withheld row can start a background refresh between two browser calls.
+    // Sample the completed load, selected date, formula state and DOM in one turn.
+    const handle=await page.waitForFunction(({date,issued,value,available,feedState,lang})=>{
+     if(window.__srConsumerLoadState!=='ready')return false;
      const root=document.querySelector('#nrRoute-today');
+     if(root.querySelector('[data-overview] select')?.value!==date)return false;
      const raw=window.fp469ConsumerForDate({ds:date});
+     const painted=root.querySelector('[data-p0-feed-state]')?.dataset.state;
+     if(painted!==feedState||window.SRP0Layout.dataState(raw.consumer,'ready',navigator.onLine)!==painted)return false;
      const own=raw.feed?.channels?.source_formula,score=root.querySelector('.nr-o-hero .nr-o-score');
      const api=window.NRConsumerAuthority,registry=api.registryStatus();
      const conflict=registry.conflict_dates.includes(date),expert=api.expertFor(date);
@@ -589,9 +595,8 @@ async function settledTodayFeed(page, compact, expectedState){
      const box=grade.getBoundingClientRect(),nav=document.getElementById('mobileNav').getBoundingClientRect().top;
      return {language:window.NRLocale.language===lang,
       // selectFeeds registers the day model but excludes withheld formula rows.
-      loaded:window.__srConsumerLoadState==='ready'&&(available?
-       own?.available===true&&own.value===value&&own.generated_at===issued:
-       own===undefined&&window.__nrExpertModels?.[date]?.date===date),
+      loaded:available?own?.available===true&&own.value===value&&own.generated_at===issued:
+       own===undefined&&window.__nrExpertModels?.[date]?.date===date,
       visible:grade.checkVisibility({visibilityProperty:true,opacityProperty:true})&&
        box.width>0&&box.height>0&&box.left>=0&&box.right<=innerWidth&&box.top>=0&&box.bottom<=nav&&
        (expected!==null||grade.textContent.trim()===missingText[lang]),
@@ -599,8 +604,12 @@ async function settledTodayFeed(page, compact, expectedState){
        raw.consumer.available===(expected!==null)&&raw.consumer.score===expected&&
        score.textContent.trim()===window.SkyScore.formatScore(expected)&&
        (score.dataset.ring==='missing')===(expected===null)};
-    },{date,issued:row.generated_at,value:row.value,available:row.available,feedState:state.state,lang});
-    assert(Object.values(rendered).every(Boolean),'candidate feed reaches the selected day and visible final score');
+    },{date,issued:row.generated_at,value:row.value,available:row.available,feedState:state.state,lang},{polling:50,timeout:10000});
+    let rendered;
+    try{rendered=await handle.jsonValue();}finally{await handle.dispose();}
+    const failed=Object.keys(rendered).filter(key=>rendered[key]!==true);
+    if(failed.length)console.error('Candidate UI assertions: '+failed.join(', '));
+    assert.equal(failed.length,0,'candidate feed reaches the selected day and visible final score');
     return {lang,inputState:'candidate-file',width:321,height:741,feedState:state.state,responseMatches:true,...rendered};
    }finally{await c.close();}
   }
