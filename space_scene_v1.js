@@ -274,7 +274,10 @@ const hosts={
    if(window.NRAppToday){anchor.after(box);window.NRAppToday.arrange();}
    else {
     const caution=anchor.parentElement.querySelector(':scope > .sr-expert-caution');
-    (clock||caution||anchor).after(box);
+    // Match NRAppToday's order on short phones: Sun, feed status, then calm space weather.
+    // Anchoring after the status keeps the order independent of which module mounts first.
+    const status=clock?.nextElementSibling?.matches('[data-p0-feed-state]')?clock.nextElementSibling:null;
+    (status||clock||caution||anchor).after(box);
    }
   }},
  sky:{route:'nrRoute-panch',anchor:route=>route.querySelector(':scope > section.nr-sky'),

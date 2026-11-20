@@ -13,6 +13,6 @@ try{for(const entry of ['classic.html','index.html']){const seen=new Set();
   await p.locator('#nrRoute-today [data-expert-caution][data-date="2026-10-30"]').waitFor({state:'visible',timeout:20000});
   await p.locator('#nrRoute-today [data-space-scene=today]').waitFor({state:'visible',timeout:20000});
   seen.add(await p.evaluate(()=>{const hero=document.querySelector('#nrRoute-today .nr-o-hero');const out=[];let n=hero;while((n=n.nextElementSibling)&&out.length<4){if(n.checkVisibility())out.push(n.tagName.toLowerCase()+'.'+String(n.className).split(' ')[0])}return out.join(' > ')}));await c.close();}
- report[entry]=[...seen];assert.match(report[entry][0],/^details\.sr-expert-caution > section\.sr-time-sun > section\.sr-space/,'caution, Sun and calm weather precede other cards');assert.equal(seen.size,1,entry+': first-screen order varies between loads: '+JSON.stringify([...seen]));}}
+ report[entry]=[...seen];assert.match(report[entry][0],/^details\.sr-expert-caution > section\.sr-time-sun > (?:div\.sr-p0-feed-state > )?section\.sr-space/,'caution, Sun (with the compact feed status) and calm weather precede other cards');assert.equal(seen.size,1,entry+': first-screen order varies between loads: '+JSON.stringify([...seen]));}}
 finally{await b.close();srv.close();}
 console.log(JSON.stringify(report));console.log('PASS first-screen order: deterministic across '+loads+' loads × 2 entries');})().catch(e=>{console.error(e.message);process.exit(1)});

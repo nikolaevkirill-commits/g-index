@@ -185,17 +185,21 @@ async function settledTodayFeed(page, compact, expectedState){
    [320,741,true],[320,770,true],[320,800,true],[320,801,false],
    [321,741,true],[321,800,true],[330,770,true],[340,760,true],[359,790,true],
    [360,741,true],[360,780,true],[375,741,true],[375,770,true],[375,800,true],
-   [375,801,false],[376,741,false],[376,800,false],[390,844,false],
+   [375,801,true],[376,741,true],[376,800,true],[390,844,true],
+   // Common portrait phones up to 430x932 now use the compact Today layout.
+   [393,852,true],[412,915,true],[414,896,true],[430,741,true],[430,932,true],
+   // Just outside the compact band the regular layout must still reach the chart by scrolling.
+   [431,932,false],[430,933,false],
   ];
   const sizes=[[320,694,true],[361,700,true],[375,700,true],[360,640,false],[320,568,false],[375,667,false],[376,700,false],...bandSizes];
   const scoredSizes=bandSizes.filter(([w,h])=>
-   (w>=321&&w<=375&&h<=800)||(w===375&&h===801)||(w===376&&h===741)||(w===390&&h===844));
+   (w>=321&&w<=430&&h>=741&&h<=932)||(w===431&&h===932)||(w===430&&h===933));
   const cases=['uk','en','es','fr'].flatMap(lang=>['scored-history','shipped-feed','synthetic-history','missing-no-advice'].flatMap(inputState=>
    (inputState==='scored-history'?scoredSizes:inputState==='missing-no-advice'?[[321,741,true]]:sizes).map(([width,height,mustFit])=>({lang,inputState,width,height,mustFit}))));
   const selectedCases=reasonsOnly?cases.filter(({width,height,lang,inputState})=>
    width===320&&height===694&&((lang==='uk'&&inputState==='shipped-feed')||(lang==='en'&&inputState==='synthetic-history'))):scoredOnly?cases.filter(row=>row.inputState==='scored-history'):heightBandOnly?cases.filter(row=>row.height>=741):cases;
   async function coldLayout({lang,inputState,width,height,mustFit}){
-  const compact=width<=375&&height<=800;
+  const compact=width<=430&&height<=932;
   const c=await browser.newContext({viewport:{width,height},locale:lang,timezoneId:'Europe/Kyiv',serviceWorkers:'block'});
   try{
   await c.route(/^https?:\/\/(?!127\.0\.0\.1)/,r=>r.abort());
@@ -405,11 +409,12 @@ async function settledTodayFeed(page, compact, expectedState){
     assert(state.focused&&state.open,'keyboard focus and open reasons persist');
    }
    await assertFocused('before-resize');
-   await p.setViewportSize({width,height:801});
+   // Cross the compact height boundary (932 -> 933) and return.
+   await p.setViewportSize({width,height:933});
    const outside=await settledTodayFeed(p,false);
    assert.equal(outside.date,date,'height boundary preserves selected date');
    await assertFocused('outside-compact');
-   await p.setViewportSize({width,height:800});
+   await p.setViewportSize({width,height});
    assert.equal((await settledTodayFeed(p,true)).date,date,'returning to compact preserves selected date');
    await assertFocused('back-in-compact');
    await p.keyboard.press('Enter');
@@ -424,7 +429,7 @@ async function settledTodayFeed(page, compact, expectedState){
   assert.ok(await p.locator('[data-sky-live] .nr-sl-body').count()>=7);
   await p.evaluate(()=>fp434Go('today',false));
   const beforeResize=await settledTodayFeed(p,true);
-  await p.setViewportSize({width:390,height:844});
+  await p.setViewportSize({width:431,height:932});
   const wide=await settledTodayFeed(p,false);
   if(lang==='en'&&inputState==='synthetic-history'){
    // Reproduce the original boundary: resize back while a stale-feed refresh
@@ -495,8 +500,8 @@ async function settledTodayFeed(page, compact, expectedState){
    const out=path.resolve(process.env.VERIFY_CLOCK_EVIDENCE_DIR);await fs.mkdir(out,{recursive:true});
    await fs.writeFile(path.join(out,'layout-matrix.json'),JSON.stringify(layouts,null,2));
   }
-  assert.equal(layouts.length,reasonsOnly?2:scoredOnly?52:heightBandOnly?200:256);
-  assert.equal(layouts.filter(row=>row.inputState==='scored-history').length,reasonsOnly?0:52);
+  assert.equal(layouts.length,reasonsOnly?2:scoredOnly?84:heightBandOnly?288:344);
+  assert.equal(layouts.filter(row=>row.inputState==='scored-history').length,reasonsOnly?0:84);
   assert.equal(layouts.filter(row=>row.resizeRegression&&row.reasonsRegression).length,reasonsOnly?2:(heightBandOnly||scoredOnly)?0:8);
   assert.equal(layouts.reduce((count,row)=>count+(row.heightSweep?.length||0),0),(reasonsOnly||scoredOnly)?0:960);
   assert.equal(layouts.reduce((count,row)=>count+(row.widthSweep?.length||0),0),(reasonsOnly||scoredOnly)?0:440);
@@ -512,7 +517,7 @@ async function settledTodayFeed(page, compact, expectedState){
   }
   assert.equal(results.length,layoutOnly?0:3);
   // Output is an allowlist of test labels, never raw feeds, live scores or DOM text.
-  console.log(reasonsOnly?'PASS 2 reasons regressions with normal click and forced rerender':scoredOnly?'PASS 52 cold openings with an authenticated historical score and calendar advice':heightBandOnly?'PASS 200 cold openings, 960 height measurements, 440 width measurements and 16 focus checks':'PASS 256 cold openings, 960 height measurements, 440 width measurements, 16 focus checks and 8 resize/reasons regressions');
+  console.log(reasonsOnly?'PASS 2 reasons regressions with normal click and forced rerender':scoredOnly?'PASS 84 cold openings with an authenticated historical score and calendar advice':heightBandOnly?'PASS 288 cold openings, 960 height measurements, 440 width measurements and 16 focus checks':'PASS 344 cold openings, 960 height measurements, 440 width measurements, 16 focus checks and 8 resize/reasons regressions');
   if(!layoutOnly)console.log('PASS shared clock round trip ×3, Sun equality, seven bodies, WebGL identity and phase, playback/pause, reduced-motion scrubbing, Kyiv 23/25 h, explicit default');
  }finally{await browser.close();server.close();}
 })().catch(e=>{
