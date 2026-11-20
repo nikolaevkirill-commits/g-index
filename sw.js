@@ -2,7 +2,7 @@ importScripts('./runtime_diagnostics_v1.js','./civil_time_v1.js?v=fp569f-global'
 // G-Index service worker. Navigations, HTML, JS and data (.json/.jsonl/.csv) are network-first with a
 // cached fallback. Versioned packed scripts and other static assets are cache-first.
 // Bump CACHE_VERSION whenever index.html or a cached shell asset changes.
-const CACHE_VERSION = 'fp575-fresh-20261120';
+const CACHE_VERSION = 'fp575-fresh-storm-20261120';
 const CACHE_PREFIX = 'gindex-'; // G-Index cache namespace; do not remove the prefix.
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${CACHE_VERSION}`;
 const DATA_CACHE = `${CACHE_PREFIX}data-${CACHE_VERSION}`;
@@ -200,7 +200,7 @@ const SHELL_ASSETS = [
   './week_ahead_v1.js?v=fp575-a11y',
   './moon_month_v1.js?v=fp569h-p8',
   './kp_threshold_v1.js?v=fp569f-global',
-  './day_verdict_v1.css?v=dv9',
+  './day_verdict_v1.css?v=fp575-storm',
   './shared_day_v1.js?v=sd1',
 
   './design-b17.html',

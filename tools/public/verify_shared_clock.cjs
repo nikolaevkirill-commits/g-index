@@ -232,7 +232,8 @@ async function settledTodayFeed(page, compact, expectedState){
    const decisions=await fs.readFile(path.join(root,'tools/public/fixtures/decisions_regression.json'),'utf8');
    await c.route(/\/consumer_cloud\/final_score_decisions\.json(?:\?.*)?$/,r=>r.fulfill({contentType:'application/json',body:decisions}));
   }
-  const fresh=inputState==='fresh-history';
+  const syntheticStorm=inputState==='synthetic-storm';
+  const fresh=inputState==='fresh-history'||syntheticStorm;
   const scored=inputState==='scored-history'||fresh;
   if(inputState==='missing-no-advice'){
    // The shipped registry may contain an expert override without a formula row.
@@ -244,8 +245,15 @@ async function settledTodayFeed(page, compact, expectedState){
    // Replay both archived responses unchanged through the normal same-origin loaders.
    // The registry decision and the calendar factor refer to the same historical day.
    const fixture=name=>path.join(root,'tools/public/fixtures',name);
+   const feedFixture=fixture(fresh?'fresh_20261019.json':'score_regression.json');
+   let synthetic;
+   if(syntheticStorm){
+    // Reuse the canonical #53 short-range Kp7/G3 stimulus, never a measured storm.
+    synthetic=JSON.parse(await fs.readFile(feedFixture,'utf8'));
+    synthetic.days['2026-10-19'].channels.source_formula.kp_input.kp=7;
+   }
    await c.route(/\/(?:consumer_cloud\/forecast|INDEPENDENT_FORECAST_FEED_v1)\.json(?:\?.*)?$/,r=>
-    r.fulfill({contentType:'application/json',path:fixture(fresh?'fresh_20261019.json':'score_regression.json')}));
+    r.fulfill(synthetic?{json:synthetic}:{contentType:'application/json',path:feedFixture}));
    await c.route(/\/consumer_cloud\/final_score_decisions\.json(?:\?.*)?$/,r=>
     r.fulfill({contentType:'application/json',path:fixture('decisions_regression.json')}));
   }
@@ -317,7 +325,10 @@ async function settledTodayFeed(page, compact, expectedState){
      toneVisible:within(tone),sourceMatchesAuthority,sourceMatchesExpert,sourceVisible:within(source),
      sourceBottom:source.getBoundingClientRect().bottom};
    },{lang,day});
-   if(fresh)await p.locator('#nrRoute-today [data-weather-summary]').waitFor();
+   if(fresh){
+    await p.locator('#nrRoute-today [data-space-scene=today][data-tone='+(syntheticStorm?'storm':'watch')+']').waitFor();
+    await p.locator('#nrRoute-today [data-weather-summary]').waitFor();
+   }
    const geometry=await readGeometry();
    const fits=g=>g.plotTop>=0&&g.plotBottom<=g.nav&&g.plotLeft>=0&&g.plotRight<=width;
    const fit=fits(geometry);
@@ -371,15 +382,16 @@ async function settledTodayFeed(page, compact, expectedState){
     const range=document.createRange();range.selectNodeContents(button);
     const visible=button.checkVisibility()&&rect.top>=0&&rect.bottom<=nav&&
      [...range.getClientRects()].every(r=>r.left>=rect.left-1&&r.right<=rect.right+1&&r.top>=rect.top-1&&r.bottom<=rect.bottom+1);
-    return {visible,sameText:!!button.textContent.trim()&&button.textContent===card.querySelector('.sr-space-forecast').textContent,
+    return {visible,touchHeight:rect.height,mentionsG3:button.textContent.includes('G3'),sameText:!!button.textContent.trim()&&button.textContent===card.querySelector('.sr-space-forecast').textContent,
      tone:button.dataset.tone,matchesTone:button.dataset.tone===card.dataset.tone,afterSun:card.previousElementSibling?.matches('[data-p0-feed-state]')};
    });
+   assert(alert.touchHeight>=44&&alert.tone===(syntheticStorm?'storm':'watch')&&(!syntheticStorm||alert.mentionsG3),'complete and accessible warning for the actual severity');
    assert(geometry.afterHero&&fit,'fresh historical score, advice and full solar plot together');
    assert(alert.visible&&alert.sameText&&alert.matchesTone&&alert.afterSun&&['watch','storm'].includes(alert.tone),
     'visible complete alert and matching severity before the full weather card');
    if(process.env.VERIFY_CLOCK_EVIDENCE_DIR&&width===321){
-    const dir=path.join(process.env.VERIFY_CLOCK_EVIDENCE_DIR,'fresh-shots');await fs.mkdir(dir,{recursive:true});
-    await p.screenshot({path:path.join(dir,'fresh-'+lang+'-321x741.png'),mask:[p.locator('[data-score-tone],.nr-o-score')],maskColor:'#273044'});
+    const dir=path.join(process.env.VERIFY_CLOCK_EVIDENCE_DIR,syntheticStorm?'storm-shots':'fresh-shots');await fs.mkdir(dir,{recursive:true});
+    await p.screenshot({path:path.join(dir,(syntheticStorm?'storm-':'fresh-')+lang+'-321x741.png'),mask:[p.locator('[data-score-tone],.nr-o-score')],maskColor:'#273044'});
    }
    await warning.focus();await p.keyboard.press('Enter');
    assert(await full.locator('h3').evaluate(el=>el===document.activeElement),'keyboard opens the complete weather alert');
@@ -614,6 +626,16 @@ async function settledTodayFeed(page, compact, expectedState){
     await fs.writeFile(path.join(dir,'fresh-matrix.json'),JSON.stringify(replay,null,2));
    }
    console.log(dataScope?'PASS data-scope shared clock: 8 cold openings':'PASS fresh-history and candidate feed: 16 cold openings');
+   if(!dataScope){
+    const storms=[];
+    for(const lang of ['uk','en','es','fr']){
+     storms.push(await coldLayout({lang,inputState:'synthetic-storm',width:321,height:741,mustFit:true}));
+    }
+    if(process.env.VERIFY_CLOCK_EVIDENCE_DIR){
+     await fs.writeFile(path.join(process.env.VERIFY_CLOCK_EVIDENCE_DIR,'storm-matrix.json'),JSON.stringify(storms,null,2));
+    }
+    console.log('PASS synthetic G3 compact alert and chart: 4 cold openings');
+   }
    if(freshOnly)return;
   }
   for(let i=0;i<selectedCases.length;i+=2){
