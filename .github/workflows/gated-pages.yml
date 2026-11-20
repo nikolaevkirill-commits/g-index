@@ -31,8 +31,8 @@ concurrency:
 jobs:
   checks:
     runs-on: ubuntu-24.04
-    # The expanded cold-open matrix took 42 minutes end to end on the audit runner.
-    timeout-minutes: ${{ github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/deploy' && 60 || 45 }}
+    # Full runs include the NOAA-loss and wide-screen cold-open matrices.
+    timeout-minutes: 90
     outputs:
       sha: ${{ steps.revision.outputs.sha }}
     steps:
@@ -203,6 +203,20 @@ jobs:
         with:
           name: storm-watch-matrix
           path: ${{ runner.temp }}/layout-evidence/storm-matrix.json
+          if-no-files-found: error
+          retention-days: 30
+      - uses: actions/upload-artifact@v4
+        if: github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/deploy' && !inputs.failure_probe && steps.scope.outputs.mode != 'data'
+        with:
+          name: noaa-loss-matrix
+          path: ${{ runner.temp }}/layout-evidence/noaa-loss-matrix.json
+          if-no-files-found: error
+          retention-days: 30
+      - uses: actions/upload-artifact@v4
+        if: github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/deploy' && !inputs.failure_probe && steps.scope.outputs.mode != 'data'
+        with:
+          name: wide-screen-matrix
+          path: ${{ runner.temp }}/layout-evidence/wide-matrix.json
           if-no-files-found: error
           retention-days: 30
       - uses: actions/upload-artifact@v4
