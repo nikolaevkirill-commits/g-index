@@ -506,11 +506,11 @@ const driverLabel=x=>x.factor==='Kp'?'Геомагнітна складова':x
  // Route-level disclosures retain their own keyboard and deep-link entry points.
 }
 
-const shortPhone=matchMedia('(max-width:430px) and (max-height:932px)');
+const firstScreenPlot=matchMedia('(min-width:431px), (max-height:932px)');
 function placeFeedState(root){
  const state=root.querySelector('[data-p0-feed-state]'),sun=root.querySelector(':scope > [data-sky-clock]'),hero=root.querySelector('.nr-o-hero');
  if(!state||!hero)return;
- const compact=sun&&shortPhone.matches&&hero.querySelector('[data-today-source]:not(:empty)');
+ const compact=sun&&firstScreenPlot.matches&&hero.querySelector('[data-today-source]:not(:empty)');
  const focused=state.contains(document.activeElement)?document.activeElement:null;
  if(compact){
   state.dataset.placement='after-hero';
@@ -521,7 +521,7 @@ function placeFeedState(root){
  }
  if(focused&&document.activeElement!==focused)focused.focus({preventScroll:true});
 }
-shortPhone.addEventListener('change',()=>document.querySelectorAll('#nrRoute-today [data-overview]').forEach(placeFeedState));
+firstScreenPlot.addEventListener('change',()=>document.querySelectorAll('#nrRoute-today [data-overview]').forEach(placeFeedState));
 window.addEventListener('sr:sky-clock-mounted',()=>document.querySelectorAll('#nrRoute-today [data-overview]').forEach(placeFeedState));
 function dataState(result,load=window.__srConsumerLoadState,online=navigator.onLine){
  if(!online)return 'offline';if(load==='loading')return 'loading';if(load==='error')return 'error';

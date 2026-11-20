@@ -49,7 +49,7 @@ html body #fp434Shell>#nrRoute-today.nr-route{padding-bottom:12px!important}
 [data-app-today] .nr-o-hero>[data-weather-summary]::after{content:' ↓'}
 
 /* Leave room for the solar plot above the bottom navigation on a short phone. */
-@media(max-width:430px) and (max-height:932px){
+@media(min-width:431px), (max-height:932px){
  html.wow body:has(#nrRoute-today.active)>header{height:80px;min-height:80px!important}
  html.wow body:has(#nrRoute-today.active) .wow-header-moon{top:5px;right:10px}
  html.wow body:has(#nrRoute-today.active) .wow-header-moon svg{width:62px;height:62px}
@@ -68,4 +68,20 @@ html body #fp434Shell>#nrRoute-today.nr-route{padding-bottom:12px!important}
  html.wow body #fp434Shell #nrRoute-today [data-app-today]>.nr-o-hero>.sr-p0-source{min-height:32px;padding-block:5px}
  html.wow body #fp434Shell #nrRoute-today [data-app-today]>.nr-o-hero>.nr-day-why,
  html.wow body #fp434Shell #nrRoute-today [data-app-today]>.nr-o-hero>.sr-share-card{margin:0}
+}
+
+/* The feed notice owns a named grid area. Reserving it keeps the overview and
+   solar chart in the two visible columns instead of creating an implicit one. */
+@media(min-width:1024px){
+ html.wow body #fp434Shell #nrRoute-today .nr-overview.sr-p0-today{
+  grid-template-rows:none!important;
+  grid-template-areas:"bar bar" "hero sun" "state state" "space day" "noaa day" "noaa week" "signals signals" "sky sky" "journey journey" "personal personal" "details details" "close close"!important}
+}
+@media(min-width:700px) and (max-width:1023px){
+ html.wow body #fp434Shell #nrRoute-today [data-app-today]{
+  display:grid!important;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr)!important;gap:12px;align-items:start}
+ html.wow body #fp434Shell #nrRoute-today [data-app-today]>*{grid-column:1/-1}
+ html.wow body #fp434Shell #nrRoute-today [data-app-today]>.nr-dc-bar{grid-row:1}
+ html.wow body #fp434Shell #nrRoute-today [data-app-today]>.nr-o-hero{grid-column:1;grid-row:2}
+ html.wow body #fp434Shell #nrRoute-today [data-app-today]>.sr-time-sun{grid-column:2;grid-row:2}
 }
