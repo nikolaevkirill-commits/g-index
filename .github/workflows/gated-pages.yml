@@ -8,6 +8,10 @@ on:
         description: Deliberately fail a test to prove deployment is blocked
         type: boolean
         default: false
+      audit_branch_ref:
+        description: Exact audit branch ref for the read-only publication control
+        type: string
+        default: ''
   workflow_call:
     inputs:
       release_sha:
@@ -313,6 +317,21 @@ jobs:
             release-publication.json
           retention-days: 14
 
+  audit_branch_eligible:
+    if: github.event_name == 'workflow_dispatch' && startsWith(github.ref, 'refs/heads/codex/') && github.ref == inputs.audit_branch_ref
+    runs-on: ubuntu-24.04
+    permissions: {}
+    steps:
+      - run: echo "Audit branch is eligible for the publication control"
+
+  audit_publication_marker:
+    needs: checks
+    if: github.event_name == 'workflow_dispatch' && startsWith(github.ref, 'refs/heads/codex/') && github.ref == inputs.audit_branch_ref
+    runs-on: ubuntu-24.04
+    permissions: {}
+    steps:
+      - run: echo "Native checks released the audit publication marker"
+
   portable_clean:
     if: github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/deploy' && !inputs.failure_probe
     runs-on: ubuntu-24.04
@@ -357,20 +376,29 @@ jobs:
           python tools/audit/portable_report.py "$evidence" "$RUNNER_TEMP/LOCAL_CLEAN_105.json" --key-file "$key"
           test "$status" = 0
           python tools/audit/run_gate.py . "$evidence" "$bound" --key-file "$key" --resume
+          python tools/audit/portable_report.py "$evidence" "$RUNNER_TEMP/F1_RESUME_105.json" --verify-full-resume --key-file "$key"
+          python tools/audit/run_gate.py . "$evidence" "$bound" --key-file "$key" --resume
       - name: Verify ordered results and write shareable evidence
         if: always()
         run: |
-          python tools/audit/portable_report.py "$RUNNER_TEMP/portable-evidence" "$RUNNER_TEMP/F1_RESUME_105.json" --verify-full-resume --key-file "$RUNNER_TEMP/portable-secrets/run.key"
+          python tools/audit/portable_report.py "$RUNNER_TEMP/portable-evidence" "$RUNNER_TEMP/D4_RESUME_105.json" --verify-full-resume --key-file "$RUNNER_TEMP/portable-secrets/run.key"
           python - <<'PY'
           import json, os
           from pathlib import Path
           root = Path(os.environ["RUNNER_TEMP"])
           clean = json.loads((root / "LOCAL_CLEAN_105.json").read_text())
           resumed = json.loads((root / "F1_RESUME_105.json").read_text())
+          second = json.loads((root / "D4_RESUME_105.json").read_text())
           keys = ("candidate_sha", "candidate_tree", "binding", "environment_sha256", "rows",
                   "first_summary_sha256", "attempt_chain_sha256", "github_run_id", "github_run_attempt")
-          if not (clean["passed"] and resumed["passed"] and all(clean[k] == resumed[k] for k in keys)):
-              raise SystemExit("Clean and resumed attestations disagree")
+          reports = [clean, resumed, second]
+          for i, report in enumerate(reports):
+              if not (report["passed"] and report["summary_count"] == i + 1
+                      and all(clean[k] == report[k] for k in keys)
+                      and report["summary_sha256"] == second["summary_sha256"][:i+1]):
+                  raise SystemExit("Clean and resumed attestations disagree")
+              if i and (report["reused_attempt_count"], report["new_attempt_count"]) != (105, 0):
+                  raise SystemExit("Resume did not reuse the original 105 attempts")
           PY
       - uses: actions/upload-artifact@v4
         if: always()
@@ -384,6 +412,13 @@ jobs:
         with:
           name: portable-resume-105
           path: ${{ runner.temp }}/F1_RESUME_105.json
+          if-no-files-found: error
+          retention-days: 30
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: portable-resume-105-second
+          path: ${{ runner.temp }}/D4_RESUME_105.json
           if-no-files-found: error
           retention-days: 30
       - name: Check portable runner isolation with disposable D5 fixtures

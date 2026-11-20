@@ -43,7 +43,8 @@ async function settledTodayFeed(page, compact, expectedState){
  try{
   const reasonsOnly=process.argv.includes('--reasons-only');
   const heightBandOnly=process.argv.includes('--height-band-only');
-  const layoutOnly=reasonsOnly||heightBandOnly||process.argv.includes('--layout-only');
+  const scoredOnly=process.argv.includes('--scored-only');
+  const layoutOnly=reasonsOnly||heightBandOnly||scoredOnly||process.argv.includes('--layout-only');
   for(const [entry,width,height] of layoutOnly?[]:[['index.html',390,844],['classic.html',390,844],['index.html',1280,900]]){
    const ctx=await browser.newContext({viewport:{width,height},locale:'uk-UA',timezoneId:'Europe/Kyiv',serviceWorkers:'block',reducedMotion:'no-preference'});
    await ctx.route(/^https?:\/\/(?!127\.0\.0\.1)/,r=>r.abort());
@@ -184,13 +185,15 @@ async function settledTodayFeed(page, compact, expectedState){
    [320,741,true],[320,770,true],[320,800,true],[320,801,false],
    [321,741,true],[321,800,true],[330,770,true],[340,760,true],[359,790,true],
    [360,741,true],[360,780,true],[375,741,true],[375,770,true],[375,800,true],
-   [375,801,false],[376,741,false],[376,800,false],
+   [375,801,false],[376,741,false],[376,800,false],[390,844,false],
   ];
   const sizes=[[320,694,true],[361,700,true],[375,700,true],[360,640,false],[320,568,false],[375,667,false],[376,700,false],...bandSizes];
-  const cases=['uk','en','es','fr'].flatMap(lang=>['complete','synthetic-history'].flatMap(inputState=>
-   sizes.map(([width,height,mustFit])=>({lang,inputState,width,height,mustFit}))));
+  const scoredSizes=bandSizes.filter(([w,h])=>
+   (w>=321&&w<=375&&h<=800)||(w===375&&h===801)||(w===376&&h===741)||(w===390&&h===844));
+  const cases=['uk','en','es','fr'].flatMap(lang=>['scored-history','missing-no-advice','synthetic-history'].flatMap(inputState=>
+   (inputState==='scored-history'?scoredSizes:sizes).map(([width,height,mustFit])=>({lang,inputState,width,height,mustFit}))));
   const selectedCases=reasonsOnly?cases.filter(({width,height,lang,inputState})=>
-   width===320&&height===694&&((lang==='uk'&&inputState==='complete')||(lang==='en'&&inputState==='synthetic-history'))):heightBandOnly?cases.filter(row=>row.height>=741):cases;
+   width===320&&height===694&&((lang==='uk'&&inputState==='missing-no-advice')||(lang==='en'&&inputState==='synthetic-history'))):scoredOnly?cases.filter(row=>row.inputState==='scored-history'):heightBandOnly?cases.filter(row=>row.height>=741):cases;
   async function coldLayout({lang,inputState,width,height,mustFit}){
   const compact=width<=375&&height<=800;
   const c=await browser.newContext({viewport:{width,height},locale:lang,timezoneId:'Europe/Kyiv',serviceWorkers:'block'});
@@ -223,8 +226,20 @@ async function settledTodayFeed(page, compact, expectedState){
    const decisions=await fs.readFile(path.join(root,'tools/public/fixtures/decisions_regression.json'),'utf8');
    await c.route(/\/consumer_cloud\/final_score_decisions\.json(?:\?.*)?$/,r=>r.fulfill({contentType:'application/json',body:decisions}));
   }
+  const scored=inputState==='scored-history';
+  if(scored){
+   // Replay both archived responses unchanged through the normal same-origin loaders.
+   // The registry decision and the calendar factor refer to the same historical day.
+   const fixture=name=>path.join(root,'tools/public/fixtures',name);
+   await c.route(/\/(?:consumer_cloud\/forecast|INDEPENDENT_FORECAST_FEED_v1)\.json(?:\?.*)?$/,r=>
+    r.fulfill({contentType:'application/json',path:fixture('score_regression.json')}));
+   await c.route(/\/consumer_cloud\/final_score_decisions\.json(?:\?.*)?$/,r=>
+    r.fulfill({contentType:'application/json',path:fixture('decisions_regression.json')}));
+  }
+  const instant=scored?new Date('2026-10-19T15:29:00Z'):start;
+  const day=instant.toISOString().slice(0,10);
   const p=await c.newPage();
-  await p.clock.setFixedTime(start);
+  await p.clock.setFixedTime(instant);
    await p.goto(base+'/index.html?channel=play#today',{waitUntil:'commit'});
   const compactSun=p.locator('[data-sky-clock] [data-time-sun]');
   await compactSun.waitFor();
@@ -238,29 +253,39 @@ async function settledTodayFeed(page, compact, expectedState){
   const initialFeed=await settledTodayFeed(p,compact,inputState==='synthetic-history'?'stale':undefined);
   const advice=p.locator('#nrRoute-today [data-day-verdict] p:not(.nr-dv-tone)');
   const actual=await advice.allTextContents();
-  const expected=await p.evaluate(()=>window.NRDayVerdict.summary('2026-11-07').lines.map(line=>line.label+' '+line.text));
+  assert.equal(initialFeed.date,day,'selected date belongs to this fixture');
+  const expected=await p.evaluate(ds=>window.NRDayVerdict.summary(ds).lines.map(line=>line.label+' '+line.text),day);
   const normalize=text=>text.trim().replace(/\s+/g,' ');
   assert.deepEqual(actual.map(normalize),expected.map(normalize),'full advice matches the selected day');
-  if(inputState==='synthetic-history'){
+  if(scored||inputState==='synthetic-history'){
    const historical={uk:'За календарем краще відкласти: нові починання',en:'The calendar advises postponing: new beginnings',
     es:'El calendario aconseja posponer: nuevos comienzos',fr:'Le calendrier conseille de reporter : nouveaux commencements'};
    assert.ok(actual.map(normalize).includes(historical[lang]),'complete known historical advice');
+  }
+  if(inputState==='synthetic-history'){
    assert.equal(initialFeed.state,'stale');
    assert(await status.isVisible(),'stale status is retained below Sun');
   }
-   const readGeometry=()=>compactSun.evaluate(el=>{
+   const readGeometry=()=>compactSun.evaluate((el,{lang,day})=>{
     const nav=document.getElementById('mobileNav').getBoundingClientRect().top;
     const card=el.closest('[data-sky-clock]'),hero=document.querySelector('#nrRoute-today .nr-o-hero');
     const unclipped=node=>{
-     if(!node?.textContent.trim())return false;
+     if(!node?.textContent.trim()||!node.checkVisibility({opacityProperty:true,visibilityProperty:true}))return false;
      const box=node.getBoundingClientRect(),range=document.createRange();
      range.selectNodeContents(node);
      return box.width>0&&box.height>0&&box.left>=0&&box.right<=innerWidth&&
-      node.scrollWidth<=node.clientWidth+1&&node.scrollHeight<=node.clientHeight+1&&
+      // The score ring's decorative pseudo-elements extend past its box.
+      // Check the whole numeral with the text range independently of its visual halo.
+      (node===score||(node.scrollWidth<=node.clientWidth+1&&node.scrollHeight<=node.clientHeight+1))&&
       [...range.getClientRects()].every(r=>r.left>=box.left-1&&r.right<=box.right+1&&r.top>=box.top-1&&r.bottom<=box.bottom+1);
     };
     const children=[...hero.querySelectorAll('[data-day-verdict] p:not(.nr-dv-tone)')];
     const source=hero.querySelector('[data-today-source]');
+    const score=hero.querySelector('.nr-o-score'),tone=hero.querySelector('.nr-dv-tone');
+    const result=window.fp469ConsumerForDate({ds:day}).consumer;
+    const within=node=>unclipped(node)&&node.getBoundingClientRect().top>=0&&node.getBoundingClientRect().bottom<=nav;
+    const expertLabels={uk:'Експертне рішення',en:'Expert decision',es:'Decisión experta',fr:'Décision experte'};
+    const sourceMatchesExpert=result.authority==='expert_pdf'&&source?.textContent.trim().startsWith(expertLabels[lang]);
     const plot=el.closest('svg').getBoundingClientRect();
     return {nav,scrollY:window.scrollY,pageWidth:document.documentElement.scrollWidth,plotBottom:plot.bottom,plotTop:plot.top,plotLeft:plot.left,plotRight:plot.right,
      compactCss:getComputedStyle(hero).getPropertyValue('--nr-today-compact').trim()==='1',
@@ -269,13 +294,24 @@ async function settledTodayFeed(page, compact, expectedState){
      afterHero:card.previousElementSibling?.matches('.nr-o-hero,.sr-expert-caution'),
      verdictBottom:hero.querySelector('.nr-dv-tone').getBoundingClientRect().bottom,
      scoreBottom:hero.querySelector('.nr-o-verdict').getBoundingClientRect().bottom,
-     adviceVisible:children.every(node=>unclipped(node)&&node.getBoundingClientRect().bottom<=nav),
-     sourceVisible:unclipped(source)&&source.getBoundingClientRect().bottom<=nav,
+     adviceLineCount:children.length,adviceVisible:children.length>0&&children.every(within),
+     scoreAvailable:result.available===true,scoreVisible:result.available===true&&within(score),
+     scoreMatchesResolver:result.available===true&&score.textContent.trim()===window.SkyScore.formatScore(result.score),
+     toneVisible:within(tone),sourceMatchesExpert,sourceVisible:within(source),
      sourceBottom:source.getBoundingClientRect().bottom};
-   });
+   },{lang,day});
    const geometry=await readGeometry();
    const fits=g=>g.plotTop>=0&&g.plotBottom<=g.nav&&g.plotLeft>=0&&g.plotRight<=width;
    const fit=fits(geometry);
+   const hasAdvice=inputState!=='missing-no-advice';
+   assert.equal(geometry.adviceLineCount,actual.length);
+   assert.equal(geometry.adviceLineCount>0,hasAdvice,'expected presence of real advice');
+   assert.equal(geometry.adviceVisible,hasAdvice,'each expected advice line is visible');
+   assert.equal(geometry.scoreAvailable,scored,'score must exist only in the scored fixture');
+   if(scored){
+    assert(geometry.scoreMatchesResolver&&geometry.sourceMatchesExpert&&geometry.scoreVisible&&geometry.toneVisible,
+     'visible score, source and tone from the registered historical decision');
+   }
    assert.equal(geometry.scrollY,0,'cold load starts at top');
    assert(geometry.pageWidth<=width,'no horizontal page overflow');
    let scroll=null;
@@ -290,7 +326,7 @@ async function settledTodayFeed(page, compact, expectedState){
     });
     await p.evaluate(()=>window.scrollTo({top:0,behavior:'instant'}));
    }
-  const row={lang,inputState,width,height,mustFit,compact,...geometry,fit,scroll};
+  const row={lang,inputState,date:day,feedState:initialFeed.state,width,height,mustFit,compact,...geometry,fit,scroll};
   console.log('LAYOUT '+JSON.stringify(row));
   if(process.env.VERIFY_CLOCK_EVIDENCE_DIR&&inputState==='synthetic-history'&&
     ((width===375&&height===700&&['es','fr'].includes(lang))||([320,321,375].includes(width)&&((height===741&&lang==='es')||(height===800&&lang==='fr'))))){
@@ -298,6 +334,13 @@ async function settledTodayFeed(page, compact, expectedState){
    await p.evaluate(()=>window.scrollTo({top:0,behavior:'instant'}));
    await p.screenshot({path:path.join(out,lang+'-'+width+'x'+height+'.png'),mask:[p.locator('[data-score-tone],.nr-o-score')],maskColor:'#273044'});
   }
+  if(process.env.VERIFY_CLOCK_EVIDENCE_DIR&&scored&&
+    ((width===321&&height===741&&lang==='es')||(width===375&&height===800&&lang==='fr'))){
+   const out=path.resolve(process.env.VERIFY_CLOCK_EVIDENCE_DIR);await fs.mkdir(out,{recursive:true});
+   await p.screenshot({path:path.join(out,'scored-'+lang+'-'+width+'x'+height+'.png'),
+    mask:[p.locator('[data-score-tone],.nr-o-score')],maskColor:'#273044'});
+  }
+  if(scored)return row;
   if([320,375].includes(width)&&height===741){
    // Cold launches cover each anchor. The same loaded page then exercises
    // every integer height so the space between anchors is actually measured.
@@ -309,7 +352,7 @@ async function settledTodayFeed(page, compact, expectedState){
     heights.push({height:h,...g,fit:fits(g)});
    }
    for(const item of heights){
-    if(!(item.fit&&item.scrollY===0&&item.pageWidth<=width&&item.compactCss&&item.compactJs&&item.adviceVisible&&item.sourceVisible&&
+    if(!(item.fit&&item.scrollY===0&&item.pageWidth<=width&&item.compactCss&&item.compactJs&&item.adviceVisible===hasAdvice&&item.sourceVisible&&
          item.afterHero&&item.verdictBottom<=item.nav&&item.scoreBottom<=item.nav)){
      console.error('HEIGHT_BAND '+JSON.stringify({lang,inputState,width,...item}));
      assert.fail('height-band layout must fit at every integer viewport');
@@ -328,7 +371,7 @@ async function settledTodayFeed(page, compact, expectedState){
     }
     const g=await readGeometry();
     const full=g.scrollY===0&&g.pageWidth<=w&&g.plotTop>=0&&g.plotBottom<=g.nav&&g.plotLeft>=0&&g.plotRight<=w;
-    assert(full&&g.compactCss&&g.compactJs&&g.adviceVisible&&g.sourceVisible&&
+    assert(full&&g.compactCss&&g.compactJs&&g.adviceVisible===hasAdvice&&g.sourceVisible&&
      g.afterHero&&g.verdictBottom<=g.nav&&g.scoreBottom<=g.nav,'width-band geometry');
     widths.push({width:w,...g,fit:full});
    }
@@ -438,22 +481,24 @@ async function settledTodayFeed(page, compact, expectedState){
    const out=path.resolve(process.env.VERIFY_CLOCK_EVIDENCE_DIR);await fs.mkdir(out,{recursive:true});
    await fs.writeFile(path.join(out,'layout-matrix.json'),JSON.stringify(layouts,null,2));
   }
-  assert.equal(layouts.length,reasonsOnly?2:heightBandOnly?136:192);
-  assert.equal(layouts.filter(row=>row.resizeRegression&&row.reasonsRegression).length,reasonsOnly?2:heightBandOnly?0:8);
-  assert.equal(layouts.reduce((count,row)=>count+(row.heightSweep?.length||0),0),reasonsOnly?0:960);
-  assert.equal(layouts.reduce((count,row)=>count+(row.widthSweep?.length||0),0),reasonsOnly?0:440);
-  assert.equal(layouts.filter(row=>row.heightBoundaryFocus).length,reasonsOnly?0:16);
+  assert.equal(layouts.length,reasonsOnly?2:scoredOnly?52:heightBandOnly?196:252);
+  assert.equal(layouts.filter(row=>row.inputState==='scored-history').length,reasonsOnly?0:52);
+  assert.equal(layouts.filter(row=>row.resizeRegression&&row.reasonsRegression).length,reasonsOnly?2:(heightBandOnly||scoredOnly)?0:8);
+  assert.equal(layouts.reduce((count,row)=>count+(row.heightSweep?.length||0),0),(reasonsOnly||scoredOnly)?0:960);
+  assert.equal(layouts.reduce((count,row)=>count+(row.widthSweep?.length||0),0),(reasonsOnly||scoredOnly)?0:440);
+  assert.equal(layouts.filter(row=>row.heightBoundaryFocus).length,(reasonsOnly||scoredOnly)?0:16);
   for(const row of layouts){
    assert.equal(row.compactCss,row.compact,'CSS compact boundary');
    assert.equal(row.compactJs,row.compact,'JS compact boundary');
    assert(row.afterHero&&row.verdictBottom<=row.nav&&row.scoreBottom<=row.nav);
-   assert(row.adviceVisible&&row.sourceVisible);
+   assert(row.sourceVisible);
+   assert.equal(row.adviceVisible,row.inputState!=='missing-no-advice');
    if(row.mustFit)assert(row.fit,'required first-fold SVG');
    else assert(row.fit||row.scroll?.full,'full SVG accessible by scrolling');
   }
   assert.equal(results.length,layoutOnly?0:3);
   // Output is an allowlist of test labels, never raw feeds, live scores or DOM text.
-  console.log(reasonsOnly?'PASS 2 reasons regressions with normal click and forced rerender':heightBandOnly?'PASS 136 cold openings, 960 height measurements, 440 width measurements and 16 focus checks':'PASS 192 cold openings, 960 height measurements, 440 width measurements, 16 focus checks and 8 resize/reasons regressions');
+  console.log(reasonsOnly?'PASS 2 reasons regressions with normal click and forced rerender':scoredOnly?'PASS 52 cold openings with an authenticated historical score and calendar advice':heightBandOnly?'PASS 196 cold openings, 960 height measurements, 440 width measurements and 16 focus checks':'PASS 252 cold openings, 960 height measurements, 440 width measurements, 16 focus checks and 8 resize/reasons regressions');
   if(!layoutOnly)console.log('PASS shared clock round trip ×3, Sun equality, seven bodies, WebGL identity and phase, playback/pause, reduced-motion scrubbing, Kyiv 23/25 h, explicit default');
  }finally{await browser.close();server.close();}
 })().catch(e=>{

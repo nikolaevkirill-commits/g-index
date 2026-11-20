@@ -111,7 +111,15 @@ class PortableReportTest(unittest.TestCase):
             self.assertEqual(clean[name], proof[name])
         self.assertNotEqual(proof["first_summary_sha256"], proof["latest_summary_sha256"])
         self.summary(11, rows, "c"*32, 105, [r["attempt_id"] for r in rows], True)
-        self.assertFalse(self.ci(full_resume=True)["passed"])
+        second = self.ci(full_resume=True)
+        self.assertTrue(second["passed"], second["issues"])
+        self.assertEqual(second["summary_sha256"][:-1], proof["summary_sha256"])
+        self.assertEqual(second["summary_count"], 3)
+        self.assertEqual(second["new_attempt_count"], 0)
+        self.assertEqual(second["reused_attempt_count"], 105)
+        self.assertFalse(self.ci()["passed"])
+        self.summary(12, rows, "c"*32, 105, [r["attempt_id"] for r in rows], True)
+        self.assertIn("Repeated signed invocation identifier", self.ci(full_resume=True)["issues"])
 
     def test_runner_records_resume_after_all_105_without_running_commands(self):
         manifest = {"schema":protocol.SCHEMA, "source":self.identity["source"],

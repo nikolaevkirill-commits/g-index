@@ -102,18 +102,22 @@ def verify(directory, spec, identity, keyfile, full_resume):
             "Invalid signed summary filename")
     last_count = 0
     ordered = sorted(candidates, key=lambda p: int(p.stem.removeprefix("summary-")))
+    invocations = set()
     if full_resume:
-        require(len(ordered) == 2, "Full resume proof requires exactly two signed summaries")
+        require(len(ordered) >= 2, "Full resume proof requires a signed fresh summary and at least one signed resume")
     for number, path in enumerate(ordered):
         summary, count, reused, resumed, provenance = authentic_summary(
             path, key, binding, spec, history, positions)
         require(count >= last_count, "Signed summary sequence went backwards")
         if full_resume:
-            is_second = number == 1
+            is_resume = number > 0
             require(provenance == "authenticated_invocation" and summary["complete"]
-                    and count == len(history) == 105 and reused is is_second and resumed is is_second
-                    and summary["invocation"]["prior_attempt_count"] == (105 if is_second else 0),
-                    "Full resume proof requires a fresh run followed by reuse of all 105 attempts")
+                    and count == len(history) == 105 and reused is is_resume and resumed is is_resume
+                    and summary["invocation"]["prior_attempt_count"] == (105 if is_resume else 0),
+                    "Full resume proof requires every invocation after the fresh run to reuse all 105 attempts")
+            invocation_id = summary["invocation"]["id"]
+            require(invocation_id not in invocations, "Repeated signed invocation identifier")
+            invocations.add(invocation_id)
         last_count = count
     require(count == len(history), "Newer authenticated attempts have no completed summary")
     require(not (directory / "ACTIVE.lock").exists(), "Gate became active during verification")
@@ -177,8 +181,9 @@ def collect(directory, root, github, key_file=None, *, full_resume=False):
                     and resumed is False and reused is False
                     and all(row["index"] == i for i, (row, _) in enumerate(history, 1)),
                     "CI requires one fresh ordered summary and exactly 105 original attempts")
-        fields.update(summary_count=len(summaries), first_summary_sha256=file_hash(summaries[0]),
-                      latest_summary_sha256=file_hash(summaries[-1]),
+        summary_hashes = [file_hash(path) for path in summaries]
+        fields.update(summary_count=len(summaries), summary_sha256=summary_hashes,
+                      first_summary_sha256=summary_hashes[0], latest_summary_sha256=summary_hashes[-1],
                       attempt_chain_sha256=digest(canonical(history)))
         if full_resume:
             fields.update(reused_attempt_count=len(summary["invocation"]["reused_attempt_ids"]),
