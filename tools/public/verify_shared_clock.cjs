@@ -270,6 +270,8 @@ async function settledTodayFeed(page, compact, expectedState){
   const instant=(scored||noaaLoss)?new Date('2026-10-19T15:29:00Z'):start;
   const day=instant.toISOString().slice(0,10);
   const p=await c.newPage();
+  // Cold Chromium startup can be slow on the audit host. Assertions still require a settled response.
+  if(noaaLoss)p.setDefaultTimeout(60000);
   await p.clock.setFixedTime(instant);
   const deliveredLoss=noaaLoss?p.waitForResponse(r=>r.url()===base+'/consumer_cloud/forecast.json'):null;
    await p.goto(base+'/index.html?channel=play#today',{waitUntil:'commit'});
