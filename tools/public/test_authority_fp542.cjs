@@ -105,6 +105,15 @@ const ok=(name,fn)=>{fn();n++;console.log('PASS',name)};
  assert.deepEqual(known,['сприятливий для подорожей','сприятливий для стрижки',mark]);
  assert.equal(api.resolveFinal(retained,sourceDay,stamp).available,false);
  assert.equal(api.calendarMarksFor(retained,sourceDay,stamp+8*3600000+1),null);
+ const boundary=stamp+8*3600000;
+ assert.equal(api.calendarExpiresAt(retained,sourceDay),boundary+1);
+ Date.now=()=>boundary;
+ assert.deepEqual(retained.calendar_marks,known);
+ Date.now=()=>boundary+1;
+ assert.equal(retained.calendar_marks,null);
+ assert.equal(api.calendarExpiresAt(retained,sourceDay),null);
+ assert.equal(api.resolveFinal(retained,sourceDay).available,false);
+ Date.now=()=>stamp;
  assert.equal(api.calendarMarksFor(retained,sourceDay,stamp-300001),null);
  for(const corrupt of [c=>delete c.symbols.hand,c=>{c.date='2000-01-01'},c=>{c.symbols.bolt.status='SEE_RIKTA_MODEL'},c=>{c.symbols.bolt.selected=!c.symbols.bolt.observed}]){
    assert.equal(await loadNative(corrupt),undefined);

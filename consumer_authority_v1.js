@@ -20,12 +20,18 @@ const calendarTopics={
 const calendarSymbols=('bolt books diwali dress ekadashi first_lunar_day full_moon hand heart masik_shivaratri medical_cross '+
  'megaphone navaratri new_moon pill pitru_paksha plane pradosh sankashti scissors solah_somvar '+
  'sun_transition_filled sun_transition_outline syringe target triangle vijaya_dashami vinayaka_chaturthi').split(' ');
+const CALENDAR_MAX_AGE_MS=8*3600000;
 function calendarCurrent(stamp,now){
- return Number.isFinite(stamp)&&stamp<=now+CLOCK_SKEW_MS&&now-stamp<=8*3600000;
+ return Number.isFinite(stamp)&&stamp<=now+CLOCK_SKEW_MS&&now-stamp<=CALENDAR_MAX_AGE_MS;
 }
 function calendarMarksFor(row,date,now=Date.now()){
  const record=calendarRows.get(row);
  return row?.date===date&&record&&calendarCurrent(record.stamp,now)?record.marks:null;
+}
+function calendarExpiresAt(row,date,now=Date.now()){
+ const record=calendarRows.get(row);
+ // The eight-hour boundary itself is valid. Return the first invalid instant.
+ return row?.date===date&&record&&calendarCurrent(record.stamp,now)?record.stamp+CALENDAR_MAX_AGE_MS+1:null;
 }
 function withheldCalendar(row,day,feed,now){
  const own=row.channels?.source_formula,stamp=Date.parse(own?.generated_at);
@@ -175,7 +181,7 @@ function selectFeeds(results,now=Date.now()){
    // row cannot be consumed as a formula score or carry cached weather data.
    const marks=withheldCalendar(row,ds,feed,now);
    if(marks&&results.length===1){
-     const calendarRow=freeze({date:ds,calendar_marks:marks,channels:{}});
+     const calendarRow=Object.freeze({date:ds,get calendar_marks(){return calendarMarksFor(this,ds)},channels:Object.freeze({})});
      calendarRows.set(calendarRow,{marks,stamp:Date.parse(candidate.generated_at)});
      days[ds]=calendarRow;
    }
@@ -230,6 +236,6 @@ async function loadFeeds(scope){
   await loadExpertDecisions(base);throw e}
  finally{clearTimeout(timer)}
 }
-const api=Object.freeze({resolve,resolveFinal,expertFor,scopedFor,registryStatus,present,selectFeeds,loadFeeds,calendarMarksFor,CLOCK_SKEW_MS});host.NRConsumerAuthority=api;
+const api=Object.freeze({resolve,resolveFinal,expertFor,scopedFor,registryStatus,present,selectFeeds,loadFeeds,calendarMarksFor,calendarExpiresAt,CLOCK_SKEW_MS});host.NRConsumerAuthority=api;
 if(typeof module!=='undefined')module.exports=api;
 })(typeof window!=='undefined'?window:globalThis);

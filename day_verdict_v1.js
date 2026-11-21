@@ -44,8 +44,8 @@ const GOOD=[['Книги','Навчання й нові знання'],['спр�
 let sky=null,skyTried=false;
 function root(){return document.querySelector('#nrRoute-today [data-overview="today"]')}
 function selected(r){return r?.querySelector('select')?.value||(()=>{try{return NRCivilTime.dayKey(Date.now(),'Europe/Kyiv')}catch{return new Date().toISOString().slice(0,10)}})()}
-function build(r,ds){
- const res=window.fp469ConsumerForDate?.({ds})||{},c=res.consumer||{},row=res.feed||null,ch=row?.channels?.source_formula||{};
+function build(r,ds,res=window.fp469ConsumerForDate?.({ds})||{}){
+ const c=res.consumer||{},row=res.feed||null,ch=row?.channels?.source_formula||{};
  const factors=(Array.isArray(ch.factors)?ch.factors:[]).filter(x=>typeof x.value==='number'&&Number.isFinite(x.value));
  const projected=window.NRConsumerAuthority?.calendarMarksFor?.(row,ds);
  const calendarKnown=projected!=null||factors.length>0;
@@ -85,6 +85,16 @@ function build(r,ds){
  const avoidKey=shownAvoid.length&&shownAvoid.every(x=>x===t('newStarts'))?'avoid_cal':'avoid';
  return {tone,good,avoid:shownAvoid,avoidKey,care,why};
 }
+let calendarTimer=null,calendarDeadline=null;
+function scheduleCalendarExpiry(deadline){
+ if(deadline===calendarDeadline)return;
+ clearTimeout(calendarTimer);
+ calendarDeadline=deadline;
+ if(deadline!==null)calendarTimer=setTimeout(()=>{
+  calendarDeadline=null;
+  render();
+ },Math.max(0,deadline-Date.now()));
+}
 function render(){
  const r=root();if(!r)return;const hero=r.querySelector('.nr-o-hero'),verdict=hero?.querySelector('.nr-o-verdict');if(!hero||!verdict)return;
  // Other modules may move unknown blocks out of a rebuilt hero (p0_layout → details): drop stale copies.
@@ -92,7 +102,9 @@ function render(){
  let box=hero.querySelector('[data-day-verdict]');
  if(!box){box=document.createElement('div');box.className='nr-day-verdict';box.dataset.dayVerdict='';box.setAttribute('translate','no');box.setAttribute('aria-live','polite')}
  if(box.nextElementSibling!==verdict)verdict.before(box);
- const ds=selected(r),v=build(r,ds);
+ const ds=selected(r),res=window.fp469ConsumerForDate?.({ds})||{};
+ scheduleCalendarExpiry(window.NRConsumerAuthority?.calendarExpiresAt?.(res.feed,ds)??null);
+ const v=build(r,ds,res);
  let today='';try{today=NRCivilTime.dayKey(Date.now(),'Europe/Kyiv')}catch{}
  const hour=Number(new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Kyiv',hour:'2-digit',hourCycle:'h23'}).format(new Date()));
  const line=(k,xs,label=k)=>xs.length?`<p class="nr-dv-${k}"><b>${esc(t(label))}</b> ${esc(xs.join(' · '))}</p>`:'';
@@ -153,6 +165,9 @@ window.NRDayVerdict={
 };
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{watch();loadSky()});else{watch();loadSky()}
 for(const e of ['sr:consumer-load','nr:locale','gindex:consumer-ready','nr:natal','online','offline'])window.addEventListener(e,soon);
+// Browsers may suspend background timers or restore a page from the back/forward cache.
+window.addEventListener('pageshow',soon);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)soon()});
 document.addEventListener('click',e=>{const b=e.target.closest?.('[data-day-match] button[data-match]');if(!b)return;const r=root();if(!r)return;
  let today='';try{today=NRCivilTime.dayKey(Date.now(),'Europe/Kyiv')}catch{}if(selected(r)!==today)return;
  matchSave(today,b.dataset.match);soon()});

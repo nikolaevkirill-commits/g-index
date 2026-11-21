@@ -46,9 +46,11 @@ async function settledTodayFeed(page, compact, expectedState){
   const scoredOnly=process.argv.includes('--scored-only');
   const dataScope=process.env.VERIFY_CLOCK_SCOPE==='data';
   const wideOnly=process.argv.includes('--wide-only');
+  const nativeOnly=process.argv.includes('--native-ttl-only');
+  const nativeSmoke=process.argv.includes('--native-ttl-smoke');
   const noaaOnly=process.argv.includes('--noaa-loss-only');
   const freshOnly=dataScope||process.argv.includes('--fresh-only');
-  const layoutOnly=wideOnly||noaaOnly||freshOnly||reasonsOnly||heightBandOnly||scoredOnly||process.argv.includes('--layout-only');
+  const layoutOnly=nativeOnly||nativeSmoke||wideOnly||noaaOnly||freshOnly||reasonsOnly||heightBandOnly||scoredOnly||process.argv.includes('--layout-only');
   for(const [entry,width,height] of layoutOnly?[]:[['index.html',390,844],['classic.html',390,844],['index.html',1280,900]]){
    const ctx=await browser.newContext({viewport:{width,height},locale:'uk-UA',timezoneId:'Europe/Kyiv',serviceWorkers:'block',reducedMotion:'no-preference'});
    await ctx.route(/^https?:\/\/(?!127\.0\.0\.1)/,r=>r.abort());
@@ -202,8 +204,8 @@ async function settledTodayFeed(page, compact, expectedState){
    (inputState==='scored-history'?scoredSizes:inputState==='missing-no-advice'?[[321,741,true]]:sizes).map(([width,height,mustFit])=>({lang,inputState,width,height,mustFit}))));
   const selectedCases=freshOnly?[]:reasonsOnly?cases.filter(({width,height,lang,inputState})=>
    width===320&&height===694&&((lang==='uk'&&inputState==='shipped-feed')||(lang==='en'&&inputState==='synthetic-history'))):scoredOnly?cases.filter(row=>row.inputState==='scored-history'):heightBandOnly?cases.filter(row=>row.height>=741):cases;
-  let noaaLossFeed, noaaLossRegistry;
-  async function coldLayout({lang,inputState,width,height,mustFit}){
+  let noaaLossFeed,nativeLossFeed,noaaLossRegistry;
+  async function coldLayout({lang,inputState,width,height,mustFit,checkExpiry=false}){
   const compact=width>430||height<=932;
   const c=await browser.newContext({viewport:{width,height},locale:lang,timezoneId:'Europe/Kyiv',serviceWorkers:'block'});
   try{
@@ -237,7 +239,16 @@ async function settledTodayFeed(page, compact, expectedState){
   }
   const syntheticStorm=inputState==='synthetic-storm';
   const fresh=inputState==='fresh-history'||syntheticStorm;
-  const noaaExpert=inputState==='noaa-loss-expert',noaaMissing=inputState==='noaa-loss-unavailable';
+  const nativeLoss=inputState.startsWith('native-loss-');
+  const noaaExpert=['noaa-loss-expert','native-loss-expert'].includes(inputState),noaaMissing=['noaa-loss-unavailable','native-loss-unavailable'].includes(inputState);
+  let withheldBody=nativeLoss?nativeLossFeed:noaaLossFeed;
+  if(checkExpiry){
+   // Isolate expiry from the independent Kyiv midnight transition. Both actual source
+   // timestamps are moved together; marks, the decision and the selected day are unchanged.
+   const timed=JSON.parse(withheldBody),issued='2026-10-19T09:11:05.189Z';
+   timed.generated_at=issued;timed.days['2026-10-19'].channels.source_formula.generated_at=issued;
+   withheldBody=JSON.stringify(timed);
+  }
   const noaaLoss=noaaExpert||noaaMissing;
   const scored=inputState==='scored-history'||fresh||noaaExpert;
   if(inputState==='missing-no-advice'){
@@ -248,7 +259,7 @@ async function settledTodayFeed(page, compact, expectedState){
   }
   if(noaaLoss){
    await c.route(/\/(?:consumer_cloud\/forecast|INDEPENDENT_FORECAST_FEED_v1)\.json(?:\?.*)?$/,r=>
-    r.fulfill({contentType:'application/json',body:noaaLossFeed}));
+    r.fulfill({contentType:'application/json',body:withheldBody}));
    await c.route(/\/consumer_cloud\/final_score_decisions\.json(?:\?.*)?$/,r=>
     r.fulfill({json:noaaExpert?noaaLossRegistry.withExpert:noaaLossRegistry.withoutExpert}));
   }else if(scored){
@@ -272,13 +283,14 @@ async function settledTodayFeed(page, compact, expectedState){
   const p=await c.newPage();
   // Cold Chromium startup can be slow on the audit host. Assertions still require a settled response.
   if(noaaLoss)p.setDefaultTimeout(60000);
-  await p.clock.setFixedTime(instant);
+  if(checkExpiry)await p.clock.install({time:instant});
+  else await p.clock.setFixedTime(instant);
   const deliveredLoss=noaaLoss?p.waitForResponse(r=>r.url()===base+'/consumer_cloud/forecast.json'):null;
    await p.goto(base+'/index.html?channel=play#today',{waitUntil:'commit'});
   if(deliveredLoss){
    const response=await deliveredLoss;
    assert.equal(response.status(),200);
-   assert((await response.body()).equals(Buffer.from(noaaLossFeed)),'the browser received the exact withheld feed');
+   assert((await response.body()).equals(Buffer.from(withheldBody)),'the browser received the exact withheld feed');
   }
   const compactSun=p.locator('[data-sky-clock] [data-time-sun]');
   await compactSun.waitFor();
@@ -498,7 +510,51 @@ async function settledTodayFeed(page, compact, expectedState){
    await chip.focus();await p.keyboard.press('Enter');
    const buttonOpensSource=closedBefore&&await details.evaluate(el=>el.open)&&await details.locator('[data-score-source]').isVisible();
    assert(buttonOpensSource,'NOAA loss authority button opens the source details by keyboard');
-   return {...row,...checked,calendarReasonMatches,buttonTextMatches,buttonAccessibleNameMatches,buttonAuthorityMatches,
+   if(nativeLoss){
+    const nativeMarks=await p.evaluate(day=>window.NRConsumerAuthority.calendarMarksFor(window.fp469ConsumerForDate({ds:day}).feed,day),day);
+    assert.deepEqual(nativeMarks,['сприятливий для подорожей','сприятливий для стрижки','День порожні руки, несприятливий']);
+    const good=hero.locator('[data-day-verdict] .nr-dv-good');
+    const expectedTopics=await p.evaluate(()=>['Подорожі','Стрижка й особистий догляд'].map(t=>window.NRLocale.text(t)));
+    const topics=(await good.textContent()).trim();
+    assert(expectedTopics.every(t=>topics.includes(t)),'native selected travel and haircut topics reach the visible verdict');
+    checked.nativeMarksMatch=true;checked.nativeTopicsMatch=true;checked.fixture='historical-replay-of-28-native-observations';
+   }
+   let expiry;
+   if(checkExpiry){
+    // The panel is opened before the deadline. No input, reload, or render call occurs between observations.
+    await whySummary.focus();await p.keyboard.press('Enter');
+    const retained=await p.evaluateHandle(ds=>({doc:document,row:window.fp469ConsumerForDate({ds}).feed}),day);
+    const deadline=Date.parse(JSON.parse(withheldBody).generated_at)+8*3600000;
+    expiry=[];
+    try{
+     for(const [stage,offsetMs] of [['before',-1],['at',0],['after',1]]){
+      if(stage==='before')await p.clock.pauseAt(new Date(deadline-1));
+      else await p.clock.runFor(1);
+      const observation=await retained.evaluate(({doc,row},{ds,wanted,expert,deadline,offsetMs})=>{
+       const model=window.fp469ConsumerForDate({ds}),root=document.querySelector('#nrRoute-today .nr-o-hero');
+       const tone=root.querySelector('.nr-dv-tone'),score=root.querySelector('.nr-o-score'),chip=root.querySelector('[data-p0-authority]');
+       const advice=[...root.querySelectorAll('[data-day-verdict] p:not(.nr-dv-tone)')];
+       const why=root.querySelector('[data-day-why]'),calendar=[...why.querySelectorAll('li')].find(x=>x.querySelector('span')?.textContent==='Календар джерела')?.querySelector('strong');
+       const decision=window.NRConsumerAuthority.expertFor(ds),live=offsetMs<=0;
+       const matches=marks=>live?JSON.stringify(marks)===JSON.stringify(wanted):marks===null;
+       return {timeMatches:Date.now()===deadline+offsetMs,sameDocument:document===doc,selectedDayMatches:document.querySelector('#nrRoute-today [data-overview] select')?.value===ds,
+        calendarReaderMatches:matches(window.NRConsumerAuthority.calendarMarksFor(row,ds)),retainedPropertyMatches:matches(row.calendar_marks),
+        currentPropertyMatches:matches(model.feed?.calendar_marks),noFormulaContribution:!model.feed?.channels?.source_formula,
+        authorityMatches:expert?model.consumer.authority==='expert_pdf'&&decision&&model.consumer.score===decision.score:
+         !decision&&model.consumer.available===false&&model.consumer.score===null,
+        scorePresentationMatches:expert?score.textContent.trim()===window.SkyScore.formatScore(decision?.score)&&chip?.dataset.p0Authority==='expert':
+         score.dataset.ring==='missing'&&!/\d/.test(score.textContent)&&tone.textContent==='Оцінки на цей день немає.'&&chip?.dataset.p0Authority==='none',
+        calendarAdviceMatches:live?advice.some(x=>x.textContent.includes('нові починання')):advice.length===0,
+        explanationMatches:!!calendar&&why.open&&calendar.checkVisibility()&&(live?calendar.textContent.includes('нові починання'):calendar.textContent==='Дані календаря недоступні')};
+      },{ds:day,expert:noaaExpert,wanted:nativeLoss?['сприятливий для подорожей','сприятливий для стрижки','День порожні руки, несприятливий']:['День порожні руки, несприятливий'],deadline,offsetMs});
+      const failed=Object.keys(observation).filter(k=>observation[k]!==true);
+      if(failed.length)console.error('Calendar expiry '+inputState+' '+stage+' '+failed.join(', '));
+      assert.equal(failed.length,0,'calendar expiry updates the already-open page at the source deadline');
+      expiry.push({inputState,form:nativeLoss?'native':'projected',lang,width,height,stage,offsetMs,issuedAt:new Date(deadline-8*3600000).toISOString(),boundaryAt:new Date(deadline).toISOString(),...observation});
+     }
+    }finally{await retained.dispose();}
+   }
+   return {...row,...checked,...(expiry?{expiry}:{}),calendarReasonMatches,buttonTextMatches,buttonAccessibleNameMatches,buttonAuthorityMatches,
     buttonInViewport,buttonOpensSource,sourceMatchesAuthority:noaaExpert?geometry.sourceMatchesExpert:checked.missingSourceMatches,responseMatches:true};
   }
   if(scored||inputState==='missing-no-advice')return row;
@@ -739,7 +795,7 @@ async function settledTodayFeed(page, compact, expectedState){
    console.log('PASS full chart on 144 wide cold openings');
    if(wideOnly)return;
   }
-  if(noaaOnly||!layoutOnly){
+  if(nativeSmoke||nativeOnly||noaaOnly||!layoutOnly){
    const fixtures=path.join(root,'tools/public/fixtures');
    noaaLossFeed=require('node:child_process').execFileSync('python',['-B',path.join(root,'tools/public/noaa_loss_fixture.py')],{encoding:'utf8'}).trim();
    const day='2026-10-19',projected=JSON.parse(noaaLossFeed),withheld=projected.days[day];
@@ -759,6 +815,7 @@ async function settledTodayFeed(page, compact, expectedState){
    assert.equal(decisions.length,1);
    assert(Number.isInteger(decisions[0].score));
    noaaLossRegistry={withExpert,decision:decisions[0],withoutExpert:{...withExpert,decisions:withExpert.decisions.filter(d=>d.date!==day)}};
+   if(!nativeOnly&&!nativeSmoke){
    const rows=[];
    for(const lang of ['uk','en','es','fr']){
     for(const [width,height] of [[321,741],[347,760],[375,800],[430,932]]){
@@ -772,6 +829,44 @@ async function settledTodayFeed(page, compact, expectedState){
     await fs.writeFile(path.join(dir,'noaa-loss-matrix.json'),JSON.stringify(rows,null,2));
    }
    console.log('PASS NOAA short-range coverage loss: 32 historical cold openings with both registry states');
+   }
+   // Rebase the 28 observed symbols from the 13 December native missing-Kp row
+   // shipped at f63dd13 to the historical 19 October feed and expert registry.
+   const native=structuredClone(projected),own=native.days[day].channels.source_formula;
+   delete native.availability_projection;delete own.calendar_marks;delete own.kp_source_requirement;delete own.availability_reason;
+   own.kp_input={};
+   const symbols={};
+   for(const symbol of ('bolt books diwali dress ekadashi first_lunar_day full_moon hand heart masik_shivaratri medical_cross megaphone '+
+    'navaratri new_moon pill pitru_paksha plane pradosh sankashti scissors solah_somvar sun_transition_filled sun_transition_outline '+
+    'syringe target triangle vijaya_dashami vinayaka_chaturthi').split(' ')){
+    const selected=['bolt','plane','scissors','pill'].includes(symbol);
+    symbols[symbol]={status:'SOURCE_OBSERVED',observed:selected,selected};
+   }
+   own.expert_model={version:'expert-factor-model-v2',date:day,calendar_components:{version:'calendar-components-v1',date:day,symbols}};
+   nativeLossFeed=JSON.stringify(native);
+   const nativeRows=[],expiryRows=[];
+   for(const lang of (nativeSmoke?['uk']:['uk','en','es','fr'])){
+    for(const [width,height] of (nativeSmoke?[[321,741]]:[[321,741],[347,760],[375,800],[430,932]])){
+     for(const state of ['expert','unavailable']){
+      const checkExpiry=lang==='uk'&&width===321;
+      const {expiry,...row}=await coldLayout({lang,width,height,inputState:'native-loss-'+state,mustFit:true,checkExpiry});
+      nativeRows.push(row);
+      if(checkExpiry){
+       expiryRows.push(...expiry);
+       const projectedRow=await coldLayout({lang,width,height,inputState:'noaa-loss-'+state,mustFit:true,checkExpiry:true});
+       expiryRows.push(...projectedRow.expiry);
+      }
+     }
+    }
+   }
+   assert.equal(nativeRows.length,nativeSmoke?2:32);assert.equal(expiryRows.length,12);
+   if(process.env.VERIFY_CLOCK_EVIDENCE_DIR){
+    const dir=path.resolve(process.env.VERIFY_CLOCK_EVIDENCE_DIR);await fs.mkdir(dir,{recursive:true});
+    await fs.writeFile(path.join(dir,'native-loss-matrix.json'),JSON.stringify(nativeRows,null,2));
+    await fs.writeFile(path.join(dir,'calendar-ttl-matrix.json'),JSON.stringify(expiryRows,null,2));
+   }
+   console.log('PASS '+nativeRows.length+' native cold openings and 12 open-tab calendar TTL observations');
+   if(nativeOnly||nativeSmoke)return;
    if(noaaOnly)return;
   }
   if(freshOnly||!layoutOnly){
