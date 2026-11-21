@@ -296,7 +296,7 @@ async function settledTodayFeed(page, compact, expectedState){
   const expected=await p.evaluate(ds=>window.NRDayVerdict.summary(ds).lines.map(line=>line.label+' '+line.text),day);
   const normalize=text=>text.trim().replace(/\s+/g,' ');
   assert.deepEqual(actual.map(normalize),expected.map(normalize),'full advice matches the selected day');
-  if((scored&&!noaaLoss)||inputState==='synthetic-history'){
+  if(scored||noaaLoss||inputState==='synthetic-history'){
    const historical={uk:'За календарем краще відкласти: нові починання',en:'The calendar advises postponing: new beginnings',
     es:'El calendario aconseja posponer: nuevos comienzos',fr:'Le calendrier conseille de reporter : nouveaux commencements'};
    assert.ok(actual.map(normalize).includes(historical[lang]),'complete known historical advice');
@@ -351,8 +351,7 @@ async function settledTodayFeed(page, compact, expectedState){
    const geometry=await readGeometry();
    const fits=g=>g.plotTop>=0&&g.plotBottom<=g.nav&&g.plotLeft>=0&&g.plotRight<=width;
    const fit=fits(geometry);
-   // Loss removes all formula factors. Neither registry variant adds a caution for this day.
-   const hasAdvice=!noaaLoss&&(scored||inputState==='synthetic-history');
+   const hasAdvice=scored||noaaLoss||inputState==='synthetic-history';
    assert.equal(geometry.adviceLineCount,actual.length);
    assert.equal(geometry.adviceLineCount>0,hasAdvice,'expected presence of real advice');
    assert.equal(geometry.adviceVisible,hasAdvice,'each expected advice line is visible');
@@ -430,6 +429,12 @@ async function settledTodayFeed(page, compact, expectedState){
     es:['Datos insuficientes','No hay puntuación para este día.'],
     fr:['Données insuffisantes','Pas de score pour ce jour.'],
    }[lang];
+   const [expertButton,missingButton,calendarLabel,calendarReason]={
+    uk:['Джерело: експертна оцінка','Оцінка недоступна','Календар джерела','нові починання'],
+    en:['Source: expert assessment','Score unavailable','Source calendar','new beginnings'],
+    es:['Fuente: valoración experta','Puntuación no disponible','Calendario de la fuente','nuevos comienzos'],
+    fr:['Source : évaluation experte','Note indisponible','Calendrier de la source','nouveaux commencements'],
+   }[lang];
    const projection=await p.waitForFunction(({day,expert,expected,copy})=>{
     const route=document.querySelector('#nrRoute-today'),hero=route?.querySelector('.nr-o-hero');
     const registry=window.NRConsumerAuthority?.registryStatus(),decision=window.NRConsumerAuthority?.expertFor(day);
@@ -438,6 +443,7 @@ async function settledTodayFeed(page, compact, expectedState){
        route?.querySelector('[data-p0-feed-state]')?.dataset.state!=='missing')return false;
     const result=window.fp469ConsumerForDate({ds:day}),tone=hero.querySelector('.nr-dv-tone');
     return {
+     registeredCalendarMarkMatches:window.NRConsumerAuthority.calendarMarksFor(result.feed,day)?.includes('День порожні руки, несприятливий')===true,
      withheldDayLoaded:window.__nrFormulaFeedStamp>0&&!result.feed?.channels?.source_formula,
      authorityMatches:result.consumer.authority===(expert?'expert_pdf':'source_formula')&&
       (expert?decision?.score===expected:!decision)&&result.consumer.score===expected,
@@ -461,7 +467,39 @@ async function settledTodayFeed(page, compact, expectedState){
    if(failed.length)console.error('NOAA loss '+lang+' '+inputState+': '+failed.join(', '));
    assert.equal(failed.length,0,'NOAA loss UI matches the withheld source and selected authority');
    assert(geometry.sourceVisible&&geometry.toneVisible&&fit,'NOAA loss source, verdict and complete chart on first screen');
-   return {...row,...checked,sourceMatchesAuthority:noaaExpert?geometry.sourceMatchesExpert:checked.missingSourceMatches,responseMatches:true};
+   const hero=p.locator('#nrRoute-today .nr-o-hero');
+   const chip=hero.locator('[data-p0-authority]');
+   const label=noaaExpert?expertButton:missingButton;
+   const buttonTextMatches=await chip.count()===1&&(await chip.innerText()).trim()===label;
+   assert(buttonTextMatches,'NOAA loss visible authority button text matches the selected source');
+   const buttonAccessibleNameMatches=await chip.and(hero.getByRole('button',{name:label,exact:true})).count()===1;
+   assert(buttonAccessibleNameMatches,'NOAA loss authority button has the matching accessible name');
+   const buttonAuthorityMatches=await chip.getAttribute('data-p0-authority')===(noaaExpert?'expert':'none');
+   assert(buttonAuthorityMatches,'NOAA loss authority button identifies the selected source');
+   const buttonInViewport=await chip.evaluate(el=>{
+    const r=el.getBoundingClientRect(),nav=document.querySelector('#mobileNav');
+    const bottom=nav?.checkVisibility()?Math.min(innerHeight,nav.getBoundingClientRect().top):innerHeight;
+    return el.checkVisibility()&&r.width>0&&r.height>0&&r.left>=0&&r.right<=innerWidth&&r.top>=0&&r.bottom<=bottom;
+   });
+   assert(buttonInViewport,'NOAA loss authority button is visible on opening');
+   if(process.env.VERIFY_CLOCK_EVIDENCE_DIR&&lang==='uk'&&width===321){
+    const dir=path.join(process.env.VERIFY_CLOCK_EVIDENCE_DIR,'noaa-loss-shots');await fs.mkdir(dir,{recursive:true});
+    await p.screenshot({path:path.join(dir,inputState+'-321x741.png'),mask:[p.locator('[data-score-tone],.nr-o-score')],maskColor:'#273044'});
+   }
+   const why=hero.locator('[data-day-why]');
+   const whySummary=why.locator('summary');
+   await whySummary.focus();await p.keyboard.press('Enter');
+   const reason=why.locator('li').filter({has:p.getByText(calendarLabel,{exact:true})}).locator('strong');
+   const calendarReasonMatches=await reason.count()===1&&await reason.isVisible()&&(await reason.textContent()).includes(calendarReason);
+   assert(calendarReasonMatches,'NOAA loss explains the verified calendar caution for this day');
+   await whySummary.focus();await p.keyboard.press('Enter');
+   const details=p.locator('#nrRoute-today details').filter({has:p.locator('[data-score-source]')});
+   const closedBefore=await details.count()===1&&!await details.evaluate(el=>el.open);
+   await chip.focus();await p.keyboard.press('Enter');
+   const buttonOpensSource=closedBefore&&await details.evaluate(el=>el.open)&&await details.locator('[data-score-source]').isVisible();
+   assert(buttonOpensSource,'NOAA loss authority button opens the source details by keyboard');
+   return {...row,...checked,calendarReasonMatches,buttonTextMatches,buttonAccessibleNameMatches,buttonAuthorityMatches,
+    buttonInViewport,buttonOpensSource,sourceMatchesAuthority:noaaExpert?geometry.sourceMatchesExpert:checked.missingSourceMatches,responseMatches:true};
   }
   if(scored||inputState==='missing-no-advice')return row;
   if([320,375].includes(width)&&height===741){
@@ -714,6 +752,7 @@ async function settledTodayFeed(page, compact, expectedState){
    assert.equal(formula.available,false);
    for(const key of ['value','raw','kp_input','kp_source','kp_daily_max','noaa_issued_at','noaa_retrieved_at'])assert.equal(formula[key],null);
    assert.deepEqual(formula.factors,[]);
+   assert.deepEqual(formula.calendar_marks,{date:day,source:'source_formula_calendar_factors',marks:['День порожні руки, несприятливий']});
    assert.equal(withheld.source_formula_result.score,null);
    const withExpert=JSON.parse(await fs.readFile(path.join(fixtures,'decisions_regression.json'),'utf8'));
    const decisions=withExpert.decisions.filter(d=>d.date===day);

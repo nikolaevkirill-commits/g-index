@@ -21,7 +21,8 @@ const T={
  score_exp:['Оцінка експерта','Expert score','Puntuación experta','Score de l’expert'],
  score_formula:['Оцінка за формулою','Formula score','Puntuación por fórmula','Score par formule'],
  calendar:['Календар джерела','Source calendar','Calendario de la fuente','Calendrier de la source'],
- calendar_none:['окремих позначок немає','no specific marks','sin marcas específicas','pas de marques particulières'],
+ calendar_unavailable:['Дані календаря недоступні','Calendar data unavailable','Datos del calendario no disponibles','Données du calendrier indisponibles'],
+ calendar_none:['Окремих рекомендацій немає','No specific advice','Sin recomendaciones específicas','Aucune recommandation particulière'],
  kp:['Космопогода NOAA','NOAA space weather','Clima espacial NOAA','Météo spatiale NOAA'],
  kp_quiet:['спокійно','quiet','tranquilo','calme'],kp_active:['збурено','unsettled','agitado','agité'],kp_storm:['буря','storm','tormenta','tempête'],
  kp_none:['актуальний прогноз недоступний','current forecast unavailable','pronóstico vigente no disponible','prévision actuelle indisponible'],
@@ -46,13 +47,16 @@ function selected(r){return r?.querySelector('select')?.value||(()=>{try{return 
 function build(r,ds){
  const res=window.fp469ConsumerForDate?.({ds})||{},c=res.consumer||{},row=res.feed||null,ch=row?.channels?.source_formula||{};
  const factors=(Array.isArray(ch.factors)?ch.factors:[]).filter(x=>typeof x.value==='number'&&Number.isFinite(x.value));
- const names=new Set(factors.map(x=>x.factor));
+ const projected=window.NRConsumerAuthority?.calendarMarksFor?.(row,ds);
+ const calendarKnown=projected!=null||factors.length>0;
+ const names=new Set(projected??factors.map(x=>x.factor));
  const tone=!c.available?'tone_none':c.score>0?'tone_pos':c.score<0?'tone_neg':'tone_zero';
  const good=[...new Set(GOOD.filter(([n])=>names.has(n)).map(([,label])=>tr(label)))];
  const avoid=[],care=[];
  if(names.has('День порожні руки, несприятливий'))avoid.push(t('newStarts'));
  const caution=r.querySelector('.sr-expert-caution:not([data-scope="new_starts"]) summary strong')?.textContent?.trim();if(caution)avoid.push(caution);
- if(names.has('Тричі  трикутник'))care.push(t('recheck'));
+ const calendarCare=names.has('Тричі  трикутник')?[t('recheck')]:[];
+ care.push(...calendarCare);
  const signal=window.SRP0Layout?.signalData(c,row);
  const short=signal?.source==='NOAA_3day_slots',outlook=signal?.source==='NOAA_27day_outlook';
  const kp=short||outlook?signal.kp:null;
@@ -67,7 +71,10 @@ function build(r,ds){
    why.push([t('conflict'),t('conflict_text').replace('{f}',formatScore(formula.score)).replace('{e}',formatScore(c.score))]);
   }
  }
- why.push([t('calendar'),good.length?good.join(', '):avoid.includes(t('newStarts'))?t('avoid').replace(/:$/,'').toLowerCase()+': '+t('newStarts'):t('calendar_none')]);
+ const calendarAdvice=[...good];
+ if(names.has('День порожні руки, несприятливий'))calendarAdvice.push(t('avoid')+' '+t('newStarts'));
+ calendarAdvice.push(...calendarCare);
+ why.push([t('calendar'),calendarAdvice.length?calendarAdvice.join(' · '):t(calendarKnown?'calendar_none':'calendar_unavailable')]);
  const kpText=kp===null?t('kp_none'):'Kp '+new Intl.NumberFormat(L(),{maximumFractionDigits:2}).format(kp)+' · '+(outlook?t('kp_outlook'):kp>=5?t('kp_storm'):kp>=4?t('kp_active'):t('kp_quiet'));
  why.push([short?t('kp_short'):t('kp'),kpText]);
  const ev=sky?[...sky.intervals,...sky.events].filter(x=>x.reading&&x.reading.intensity>=3&&(x.start||x.at).kyiv_date<=ds&&ds<=(x.end||x.at).kyiv_date)[0]:null;

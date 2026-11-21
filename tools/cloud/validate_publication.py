@@ -2,7 +2,7 @@
 from pathlib import Path
 from datetime import datetime,timezone,timedelta
 import hashlib,json,re,subprocess
-from kp_source_guard import reject_downgrade
+from kp_source_guard import reject_downgrade, valid_calendar_projection
 
 def validate_paths(root):
     root=Path(root)
@@ -43,6 +43,9 @@ def validate(root):
         if 'forecast_result' in row or row.get('source_formula_result',{}).get('score')!=(own.get('value') if own.get('available') else None):raise ValueError('Ambiguous or inconsistent formula result')
         if row['date']!=day or own.get('generated_at')!=feed['generated_at']:raise ValueError('Inconsistent calculation time/date')
         if own.get('available') and (type(own.get('value')) is not int or not -3<=own['value']<=3):raise ValueError('Invalid score')
+        if 'calendar_marks' in own and (own.get('kp_source_requirement') != 'NOAA_3day_slots'
+                or not valid_calendar_projection(day, own['calendar_marks'])):
+            raise ValueError('Invalid independent calendar marks on a withheld day')
         if own.get('kp_source_requirement')=='NOAA_3day_slots':
             if own.get('available') is not False or own.get('value') is not None or own.get('raw') is not None or own.get('factors')!=[] or row.get('source_formula_result',{}).get('score') is not None:
                 raise ValueError('Withheld Kp date exposes a score')
