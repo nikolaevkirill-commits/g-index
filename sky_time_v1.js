@@ -246,8 +246,10 @@ function mount(){
  today=document.createElement('section');today.className='sr-time-sun';today.dataset.skyClock='';today.dataset.placement='after-hero';
  today.setAttribute('translate','no');today.setAttribute('aria-labelledby','srTimeSunTitle');
  today.innerHTML='<div class="sr-time-stage"><div class="sr-time-title"><div><h2 id="srTimeSunTitle"></h2><small data-time-place></small></div><button type="button" data-time-open></button></div><svg viewBox="0 0 390 106" role="img"><defs><clipPath id="srTimeAbove"><rect width="390" height="51"/></clipPath><radialGradient id="srTimeGlow"><stop stop-color="#fff3bd" stop-opacity=".95"/><stop offset=".38" stop-color="#ffbd56" stop-opacity=".65"/><stop offset="1" stop-color="#ff8d36" stop-opacity="0"/></radialGradient><radialGradient id="srTimeDisc" cx="34%" cy="32%"><stop stop-color="#fffdf0"/><stop offset=".64" stop-color="#ffe691"/><stop offset="1" stop-color="#ffa840"/></radialGradient></defs><line x1="18" y1="51" x2="372" y2="51"/><path data-time-orbit class="sr-time-orbit-night"/><path data-time-orbit clip-path="url(#srTimeAbove)" class="sr-time-orbit-day"/><path data-time-orbit data-time-progress pathLength="1" clip-path="url(#srTimeAbove)" class="sr-time-orbit-progress"/><g data-time-nowtick style="display:none"><line y1="-4" y2="58" class="sr-time-now-line"/><text y="-8" text-anchor="middle" class="sr-time-now-label"></text></g><g data-time-sun><circle r="28" class="sr-time-halo" fill="url(#srTimeGlow)"/><circle r="11" class="sr-time-disc"/><circle r="4" class="sr-time-night-cursor"/></g></svg><p data-time-alt></p></div>';
- today.querySelector('[data-time-open]').onclick=()=>{if(!place())exampleChosen=true;window.fp434Go('panch',true);};
+ const liveSky=today.querySelector('[data-time-open]');
+ liveSky.onclick=()=>{if(!place())exampleChosen=true;window.fp434Go('panch',true);};
  updateControls=controls(today);
+ if(html.hasAttribute('data-sr-first-screen'))today.querySelector('.sr-time-controls > div').append(liveSky);
  // FP569d: verdict and score come first (owner decision 01.11); the Sun clock follows the day overview card.
  const hero=overview.querySelector(':scope > .nr-o-hero');
  const caution=overview.querySelector(':scope > .sr-expert-caution');

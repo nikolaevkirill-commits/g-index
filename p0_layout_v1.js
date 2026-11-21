@@ -468,7 +468,12 @@ const driverLabel=x=>x.factor==='Kp'?'Геомагнітна складова':x
  else if(resolved.available&&generic&&strongest.length)text='Найбільші внески у формульний розрахунок: '+list(strongest)+'.';
  if(resolved.available&&!text)text='Перегляньте календарні теми й підстави оцінки дня.';
  sentence.textContent=text;
- let chip=hero.querySelector('[data-p0-source]');if(!chip){chip=make('button','sr-p0-source');chip.dataset.p0Source='';chip.type='button';chip.onclick=()=>{details.open=true;root.querySelector('[data-score-source]')?.scrollIntoView({block:'center'});};hero.append(chip);}
+ let provenance=hero;
+ if(document.documentElement.hasAttribute('data-sr-first-screen')){
+  provenance=hero.querySelector('[data-p0-source-context]');
+  if(!provenance){provenance=make('div','sr-p0-source-context');provenance.dataset.p0SourceContext='';hero.append(provenance);}
+ }
+ let chip=provenance.querySelector('[data-p0-source]');if(!chip){chip=make('button','sr-p0-source');chip.dataset.p0Source='';chip.type='button';chip.onclick=()=>{details.open=true;root.querySelector('[data-score-source]')?.scrollIntoView({block:'center'});};if(provenance===hero)hero.append(chip);else provenance.prepend(chip);}
  let forecast=hero.querySelector('[data-today-forecast]');
  if(!forecast){
   forecast=make('button','sr-today-forecast');
@@ -480,15 +485,16 @@ const driverLabel=x=>x.factor==='Kp'?'Геомагнітна складова':x
    const chosen=hero.querySelector(':scope > label select')?.value;
    if(target&&chosen)pick(target,chosen);
   };
-  chip.after(forecast);
+  (provenance===hero?chip:provenance).after(forecast);
  }
  forecast.textContent=forecastWords()[15];
  chip.textContent=resolved.authority==='expert_pdf'?'Джерело: експертна оцінка':resolved.available?'Джерело: формула':'Оцінка недоступна';chip.dataset.p0Authority=resolved.authority==='expert_pdf'?'expert':resolved.available?'formula':'none';
  const label=hero.querySelector(':scope > label');if(label){label.childNodes.forEach(n=>{if(n.nodeType===3)n.textContent=tr('Дата · Київ');});label.dataset.p0Date='';}
  // Keep the original accessible route heading, while removing duplicate visual chrome.
  const heading=root.querySelector('.nr-o-heading');if(heading&&heading.parentElement!==hero)hero.prepend(heading);
- for(const e of [...hero.children])if(!e.matches('[data-reference-title],[data-p0-date],[data-p0-moon],[data-p0-sentence],.nr-o-verdict,[data-day-verdict],[data-day-why],[data-p0-source],[data-weather-summary],[data-today-forecast],[data-share-card],[data-p0-feed-state],.sr-p0-accessible-heading,[data-placement="after-hero"]'))details.append(e);
+ for(const e of [...hero.children])if(!e.matches('[data-reference-title],[data-p0-date],[data-p0-moon],[data-p0-sentence],.nr-o-verdict,[data-day-verdict],[data-day-why],[data-p0-source-context],[data-p0-source],[data-weather-summary],[data-today-forecast],[data-share-card],[data-p0-feed-state],.sr-p0-accessible-heading,[data-placement="after-hero"]'))details.append(e);
  sentence.textContent=tr(sentence.textContent);chip.textContent=tr(chip.textContent);
+ if(provenance!==hero)window.NRSpaceWeather?.refreshFirstScreen?.(root);
  details.querySelector(':scope > summary').textContent=tr('Детально: джерела, розрахунок і календар');
  signals.querySelectorAll('button').forEach((b,i)=>b.textContent=tr(['Астрономія й NOAA','Панчанга','Оцінка дня'][i]));
  const source=root.querySelector('[data-score-source]');if(source)details.prepend(source);

@@ -2,7 +2,7 @@ importScripts('./runtime_diagnostics_v1.js','./civil_time_v1.js?v=fp575-calendar
 // G-Index service worker. Navigations, HTML, JS and data (.json/.jsonl/.csv) are network-first with a
 // cached fallback. Versioned packed scripts and other static assets are cache-first.
 // Bump CACHE_VERSION whenever index.html or a cached shell asset changes.
-const CACHE_VERSION = 'fp575-calendar-pinned-date-20261121';
+const CACHE_VERSION = 'fp575-first-screen-20261121';
 const CACHE_PREFIX = 'gindex-'; // G-Index cache namespace; do not remove the prefix.
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${CACHE_VERSION}`;
 const DATA_CACHE = `${CACHE_PREFIX}data-${CACHE_VERSION}`;
@@ -100,7 +100,7 @@ const SHELL_ASSETS = [
   './civil_time_v1.js?v=fp575-calendar-lifecycle',
   './sw_update_coordination_v1.js?v=fp569n-handoff',
   './day_context_v1.js?v=mobile-clarity1',
-  './sky_time_v1.js?v=fp575-fold2',
+  './sky_time_v1.js?v=fp575-first-screen',
   './sky_live_loader_v1.js?v=fp569r-cosmos',
   './sky_live_v1.js?v=fp569r-cosmos',
   './sky_ovation_v1.js?v=1',
@@ -123,11 +123,11 @@ const SHELL_ASSETS = [
   './personal_dayline_ui.js',
   './meeus_core_v1.js',
   './lunar_core_v1.js?v=fp572-lunar-display',
-  './dayline_view_v1.js?v=fp574-a11y',
+  './dayline_view_v1.js?v=fp575-first-screen',
   './dayline_view_v1.css',
   './dayline_i18n_v1.js',
   './dayline_adapter_v1.js?v=fp572-lunar',
-  './dayline_async_v1.js?v=fp572-lunar',
+  './dayline_async_v1.js?v=fp575-first-screen',
   './dayline_worker_v1.js?v=fp572-lunar',
 
   './nocturne_v1.css',
@@ -152,7 +152,7 @@ const SHELL_ASSETS = [
   './classic.html',
   './preview-v4/desktop_v1.css?v=d1',
   './preview-v4/atlas_motion.css?v=v7-2',
-  './preview-v4/consumer_overview_v1.js?v=fp575-calendar-pinned-date',
+  './preview-v4/consumer_overview_v1.js?v=fp575-first-screen',
   './preview-v4/core_runtime_v1.js?v=fp572-lunar-local',
   './preview-v4/design_candidate.css?v=v7-3',
   './preview-v4/design_candidate.js',
@@ -248,7 +248,7 @@ const SHELL_ASSETS = [
   './product_render_queue_v1.js',
   './moon_phase_v1.js',
   './expert_start_advice_v1.js?v=1',
-  './p0_layout_v1.js?v=fp575-wide-j',
+  './p0_layout_v1.js?v=fp575-first-screen',
   './three_day_forecast_v1.js?v=fp575-fold2',
   './p0_layout_v1.css',
   './wow_reviewed_v1.css',
@@ -312,9 +312,9 @@ const PACKED_SHELL_HASHES = Object.freeze({
   './locale_overview_v1.js': '71251a009ea76cd0c324ce33a8626d691a4aabf6f299a4ace2c20f6cc24f2640',
   './preview-v4/core_runtime_v1.js': '8587d3e41c34d6f9b384b5aa1e54eafd76f3e0e48f442ce675d6e493dd0a931b',
   './preview-v4/locale_overview_v1.js': '7ec93b5fd0fa1d78355a369957a0d8e7022c08115b6997fb6c30593729578d9b',
-  './dayline_view_v1.js': '0e2f8273071f201341242054dc29bd365ffe945f96d67d227e465d303aa9fce2',
+  './dayline_view_v1.js': 'cf186bb6f9f3197861546f0bd3f8fa436bdf220ea9dc4b45042ceb0254608f56',
   './consumer_overview_v1.js': '0381bab825446bd280c6a33f10f29fed688200f2243c5a52107a6b5d193e7f15',
-  './preview-v4/consumer_overview_v1.js': 'b679fe8e105d4ec7e6b0e2fb5549bd82a866d2c4e9ccd325e307cc979837ad44',
+  './preview-v4/consumer_overview_v1.js': '083b89d0ab314565ba624845a8f203bac0c6a303ea8fd7653d86c5b576718c92',
   './observances_tanita_v1.js': '22573bb343426e4a5056210f0a8498c44c7c3cea7615fb389ae12516102bdda3',
   './research_observances_v1.js': 'd36ced989c11b994fd6c3f9dc847436af250188f47ca42c5e82c3864079c01cd',
   './product_shell_v1.js': '1dbe497ec9ef59f8c84535eeae9ed6c44a4f4b2886b8ba08df67ba34a27cf889',
