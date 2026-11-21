@@ -3,6 +3,12 @@ const assert=require('node:assert/strict'),fs=require('fs'),path=require('path')
 const root=path.resolve(__dirname,'../..'),civil=require('../../civil_time_v1.js');
 const fixtures=[['2026-10-29T21:59:59Z','2026-10-29','23:59:59'],['2026-10-29T22:00:00Z','2026-10-30','00:00:00'],['2026-03-29T00:59:59Z','2026-03-29','02:59:59'],['2026-03-29T01:00:00Z','2026-03-29','04:00:00'],['2026-10-25T00:59:59Z','2026-10-25','03:59:59'],['2026-10-25T01:00:00Z','2026-10-25','03:00:00']];
 for(const [t,d,c] of fixtures){assert.equal(civil.dayKey(t),d);assert.equal(civil.clockKey(t),c);assert.equal(civil.minuteKey(t),d+'T'+c.slice(0,5));}
+// These consecutive local midnights enclose the 23- and 25-hour Kyiv days.
+for(const [start,end] of [['2026-03-28T22:00Z','2026-03-29T21:00Z'],['2026-10-24T21:00Z','2026-10-25T22:00Z'],['2025-12-30T22:00Z','2025-12-31T22:00Z']]){
+ const midnight=Date.parse(end);
+ assert.equal(civil.nextKyivMidnight(Date.parse(start)),midnight);
+ assert.equal(civil.nextKyivMidnight(midnight-1),midnight);
+}
 assert.equal(civil.dayKey('0999-01-01T12:00:00Z','UTC'),'0999-01-01');
 assert.equal(civil.dayKey('2026-10-29T23:00:00Z','America/New_York'),'2026-10-29');
 for(const bad of [null,undefined,'',NaN,'invalid'])assert.throws(()=>civil.dayKey(bad),RangeError);

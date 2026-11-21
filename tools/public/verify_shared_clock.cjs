@@ -7,6 +7,7 @@ const {chromium}=require('playwright');
 const root=path.resolve(__dirname,'../..');
 const type={'.html':'text/html; charset=utf-8','.js':'application/javascript','.json':'application/json','.css':'text/css','.svg':'image/svg+xml','.webp':'image/webp','.png':'image/png','.woff2':'font/woff2'};
 const server=http.createServer(async(req,res)=>{
+ if(req.url==='/__clock_resume_away'){res.writeHead(200,{'Content-Type':'text/html'}).end('<!doctype html><title>History control</title>');return;}
  const f=path.resolve(root,'.'+decodeURIComponent(new URL(req.url,'http://local').pathname));
  if(!f.startsWith(root+path.sep)){res.writeHead(403).end();return;}
  try{const b=await fs.readFile(f);res.writeHead(200,{'Content-Type':type[path.extname(f)]||'application/octet-stream'}).end(b);}
@@ -47,10 +48,11 @@ async function settledTodayFeed(page, compact, expectedState){
   const dataScope=process.env.VERIFY_CLOCK_SCOPE==='data';
   const wideOnly=process.argv.includes('--wide-only');
   const nativeOnly=process.argv.includes('--native-ttl-only');
+  const edgeSmoke=process.argv.includes('--calendar-edge-smoke');
   const nativeSmoke=process.argv.includes('--native-ttl-smoke');
   const noaaOnly=process.argv.includes('--noaa-loss-only');
   const freshOnly=dataScope||process.argv.includes('--fresh-only');
-  const layoutOnly=nativeOnly||nativeSmoke||wideOnly||noaaOnly||freshOnly||reasonsOnly||heightBandOnly||scoredOnly||process.argv.includes('--layout-only');
+  const layoutOnly=edgeSmoke||nativeOnly||nativeSmoke||wideOnly||noaaOnly||freshOnly||reasonsOnly||heightBandOnly||scoredOnly||process.argv.includes('--layout-only');
   for(const [entry,width,height] of layoutOnly?[]:[['index.html',390,844],['classic.html',390,844],['index.html',1280,900]]){
    const ctx=await browser.newContext({viewport:{width,height},locale:'uk-UA',timezoneId:'Europe/Kyiv',serviceWorkers:'block',reducedMotion:'no-preference'});
    await ctx.route(/^https?:\/\/(?!127\.0\.0\.1)/,r=>r.abort());
@@ -205,9 +207,9 @@ async function settledTodayFeed(page, compact, expectedState){
   const selectedCases=freshOnly?[]:reasonsOnly?cases.filter(({width,height,lang,inputState})=>
    width===320&&height===694&&((lang==='uk'&&inputState==='shipped-feed')||(lang==='en'&&inputState==='synthetic-history'))):scoredOnly?cases.filter(row=>row.inputState==='scored-history'):heightBandOnly?cases.filter(row=>row.height>=741):cases;
   let noaaLossFeed,nativeLossFeed,noaaLossRegistry;
-  async function coldLayout({lang,inputState,width,height,mustFit,checkExpiry=false}){
+  async function coldLayout({lang,inputState,width,height,mustFit,checkExpiry=false,browserDriver=browser}){
   const compact=width>430||height<=932;
-  const c=await browser.newContext({viewport:{width,height},locale:lang,timezoneId:'Europe/Kyiv',serviceWorkers:'block'});
+  const c=await browserDriver.newContext({viewport:{width,height},locale:lang,timezoneId:'Europe/Kyiv',serviceWorkers:'block'});
   try{
   await c.route(/^https?:\/\/(?!127\.0\.0\.1)/,r=>r.abort());
   await c.addInitScript(language=>{
@@ -242,7 +244,7 @@ async function settledTodayFeed(page, compact, expectedState){
   const nativeLoss=inputState.startsWith('native-loss-');
   const noaaExpert=['noaa-loss-expert','native-loss-expert'].includes(inputState),noaaMissing=['noaa-loss-unavailable','native-loss-unavailable'].includes(inputState);
   let withheldBody=nativeLoss?nativeLossFeed:noaaLossFeed;
-  if(checkExpiry){
+  if(checkExpiry&&checkExpiry!=='midnight'){
    // Isolate expiry from the independent Kyiv midnight transition. Both actual source
    // timestamps are moved together; marks, the decision and the selected day are unchanged.
    const timed=JSON.parse(withheldBody),issued='2026-10-19T09:11:05.189Z';
@@ -261,7 +263,7 @@ async function settledTodayFeed(page, compact, expectedState){
    await c.route(/\/(?:consumer_cloud\/forecast|INDEPENDENT_FORECAST_FEED_v1)\.json(?:\?.*)?$/,r=>
     r.fulfill({contentType:'application/json',body:withheldBody}));
    await c.route(/\/consumer_cloud\/final_score_decisions\.json(?:\?.*)?$/,r=>
-    r.fulfill({json:noaaExpert?noaaLossRegistry.withExpert:noaaLossRegistry.withoutExpert}));
+    r.fulfill({json:noaaExpert?noaaLossRegistry.withExpert:checkExpiry==='midnight'?noaaLossRegistry.withoutEitherDay:noaaLossRegistry.withoutExpert}));
   }else if(scored){
    // Replay both archived responses unchanged through the normal same-origin loaders.
    // The registry decision and the calendar factor refer to the same historical day.
@@ -519,42 +521,111 @@ async function settledTodayFeed(page, compact, expectedState){
     assert(expectedTopics.every(t=>topics.includes(t)),'native selected travel and haircut topics reach the visible verdict');
     checked.nativeMarksMatch=true;checked.nativeTopicsMatch=true;checked.fixture='historical-replay-of-28-native-observations';
    }
-   let expiry;
+   let expiry,bfcache;
    if(checkExpiry){
-    // The panel is opened before the deadline. No input, reload, or render call occurs between observations.
     await whySummary.focus();await p.keyboard.press('Enter');
     const retained=await p.evaluateHandle(ds=>({doc:document,row:window.fp469ConsumerForDate({ds}).feed}),day);
-    const deadline=Date.parse(JSON.parse(withheldBody).generated_at)+8*3600000;
+    const form=nativeLoss?'native':'projected',mode=checkExpiry;
+    const issuedAt=JSON.parse(withheldBody).generated_at;
+    // 20 October 2026 starts at 21:00 UTC on the previous day in Europe/Kyiv.
+    const midnight=Date.parse('2026-10-19T21:00:00Z');
+    const boundary=mode==='midnight'?midnight:Date.parse(issuedAt)+8*3600000;
+    const wanted=nativeLoss?['сприятливий для подорожей','сприятливий для стрижки','День порожні руки, несприятливий']:['День порожні руки, несприятливий'];
+    const unavailable={uk:'Дані календаря недоступні',en:'Calendar data unavailable',es:'Datos del calendario no disponibles',fr:'Données du calendrier indisponibles'}[lang];
+    const sample=async(stage,offsetMs)=>{
+     const nextDay=mode==='midnight'&&offsetMs>=0;
+     const selected=nextDay?'2026-10-20':day,live=mode==='midnight'?!nextDay:offsetMs<=0;
+     const observed=await retained.evaluate(({doc,row},a)=>{
+      const {ds,selected,live,mustRetain,expert,deadline,offsetMs,calendarLabel,calendarReason,unavailable,missingText,wanted}=a;
+      const root=document.querySelector('#nrRoute-today .nr-o-hero'),model=window.fp469ConsumerForDate({ds:selected});
+      const why=root.querySelector('[data-day-why]'),tone=root.querySelector('.nr-dv-tone');
+      const calendar=[...why.querySelectorAll('li')].find(x=>x.querySelector('span')?.textContent===calendarLabel)?.querySelector('strong');
+      const advice=[...root.querySelectorAll('[data-day-verdict] p:not(.nr-dv-tone)')];
+      const score=root.querySelector('.nr-o-score'),chip=root.querySelector('[data-p0-authority]');
+      const decision=window.NRConsumerAuthority.expertFor(selected);
+      const marksMatch=(marks,known)=>known?JSON.stringify(marks)===JSON.stringify(wanted):marks===null;
+      // A consumer refresh can replace the retained record with an unregistered
+      // empty feed. In either case the current model must expose no usable marks.
+      const selectedMarksMatch=marks=>live?marksMatch(marks,true):
+       marks==null&&window.NRConsumerAuthority.calendarMarksFor(model.feed,selected)===null;
+      return {timeMatches:Date.now()===deadline+offsetMs,sameDocument:document===doc,
+       selectedDayMatches:document.querySelector('#nrRoute-today [data-overview] select')?.value===selected,
+       calendarReaderMatches:marksMatch(window.NRConsumerAuthority.calendarMarksFor(row,selected),live),
+       retainedPropertyMatches:marksMatch(row.calendar_marks,mustRetain||live),currentPropertyMatches:selectedMarksMatch(model.feed?.calendar_marks),
+       noFormulaContribution:!model.feed?.channels?.source_formula,authorityMatches:expert?model.consumer.authority==='expert_pdf'&&!!decision&&model.consumer.score===decision.score:
+        !decision&&model.consumer.available===false&&model.consumer.score===null,
+       scorePresentationMatches:expert?score.textContent.trim()===window.SkyScore.formatScore(decision?.score)&&chip?.dataset.p0Authority==='expert':
+        score.dataset.ring==='missing'&&!/\d/.test(score.textContent)&&tone.textContent===missingText&&chip?.dataset.p0Authority==='none',
+       calendarAdviceMatches:live?advice.some(x=>x.textContent.includes(calendarReason)):advice.length===0,
+       explanationMatches:!!calendar&&(live?calendar.textContent.includes(calendarReason):calendar.textContent===unavailable)};
+     },{ds:day,selected,live,mustRetain:mode==='midnight',expert:noaaExpert,deadline:boundary,offsetMs,calendarLabel,calendarReason,unavailable,missingText:copy[1],wanted});
+     if(mode!=='midnight')observed.explanationMatches=observed.explanationMatches&&await why.evaluate(x=>x.open&&x.querySelector('strong')?.checkVisibility());
+     const failed=Object.keys(observed).filter(k=>observed[k]!==true);
+     if(failed.length)console.error('Calendar '+(mode==='ttl'?'expiry':mode)+' '+inputState+' '+stage+' '+failed.join(', '));
+     assert.equal(failed.length,0,'calendar expiry updates the already-open page at the source deadline');
+     return {inputState,form,lang,width,height,mode,stage,offsetMs,selectedDay:selected,issuedAt,boundaryAt:new Date(boundary).toISOString(),...observed};
+    };
     expiry=[];
     try{
-     for(const [stage,offsetMs] of [['before',-1],['at',0],['after',1]]){
-      if(stage==='before')await p.clock.pauseAt(new Date(deadline-1));
-      else await p.clock.runFor(1);
-      const observation=await retained.evaluate(({doc,row},{ds,wanted,expert,deadline,offsetMs})=>{
-       const model=window.fp469ConsumerForDate({ds}),root=document.querySelector('#nrRoute-today .nr-o-hero');
-       const tone=root.querySelector('.nr-dv-tone'),score=root.querySelector('.nr-o-score'),chip=root.querySelector('[data-p0-authority]');
-       const advice=[...root.querySelectorAll('[data-day-verdict] p:not(.nr-dv-tone)')];
-       const why=root.querySelector('[data-day-why]'),calendar=[...why.querySelectorAll('li')].find(x=>x.querySelector('span')?.textContent==='Календар джерела')?.querySelector('strong');
-       const decision=window.NRConsumerAuthority.expertFor(ds),live=offsetMs<=0;
-       const matches=marks=>live?JSON.stringify(marks)===JSON.stringify(wanted):marks===null;
-       return {timeMatches:Date.now()===deadline+offsetMs,sameDocument:document===doc,selectedDayMatches:document.querySelector('#nrRoute-today [data-overview] select')?.value===ds,
-        calendarReaderMatches:matches(window.NRConsumerAuthority.calendarMarksFor(row,ds)),retainedPropertyMatches:matches(row.calendar_marks),
-        currentPropertyMatches:matches(model.feed?.calendar_marks),noFormulaContribution:!model.feed?.channels?.source_formula,
-        authorityMatches:expert?model.consumer.authority==='expert_pdf'&&decision&&model.consumer.score===decision.score:
-         !decision&&model.consumer.available===false&&model.consumer.score===null,
-        scorePresentationMatches:expert?score.textContent.trim()===window.SkyScore.formatScore(decision?.score)&&chip?.dataset.p0Authority==='expert':
-         score.dataset.ring==='missing'&&!/\d/.test(score.textContent)&&tone.textContent==='Оцінки на цей день немає.'&&chip?.dataset.p0Authority==='none',
-        calendarAdviceMatches:live?advice.some(x=>x.textContent.includes('нові починання')):advice.length===0,
-        explanationMatches:!!calendar&&why.open&&calendar.checkVisibility()&&(live?calendar.textContent.includes('нові починання'):calendar.textContent==='Дані календаря недоступні')};
-      },{ds:day,expert:noaaExpert,wanted:nativeLoss?['сприятливий для подорожей','сприятливий для стрижки','День порожні руки, несприятливий']:['День порожні руки, несприятливий'],deadline,offsetMs});
-      const failed=Object.keys(observation).filter(k=>observation[k]!==true);
-      if(failed.length)console.error('Calendar expiry '+inputState+' '+stage+' '+failed.join(', '));
-      assert.equal(failed.length,0,'calendar expiry updates the already-open page at the source deadline');
-      expiry.push({inputState,form:nativeLoss?'native':'projected',lang,width,height,stage,offsetMs,issuedAt:new Date(deadline-8*3600000).toISOString(),boundaryAt:new Date(deadline).toISOString(),...observation});
+     if(mode==='ttl'||mode==='midnight'){
+      for(const [stage,offsetMs] of [['before',-1],['at',0],['after',1]]){
+       if(stage==='before')await p.clock.pauseAt(new Date(boundary-1));
+       else await p.clock.runFor(1);
+       expiry.push(await sample(stage,offsetMs));
+      }
+     }else if(mode==='visibility-resume'||mode==='pageshow-persisted'){
+      // Simulated sleep skips scheduled timers. Frame processing after wake stays far
+      // short of the remaining monotonic minute before the original expiry callback.
+      await p.clock.pauseAt(new Date(boundary-60000));
+      // Drain already-queued rendering from the preceding keyboard checks while the
+      // calendar is still valid. The next deadline timer remains almost a minute away.
+      await p.clock.runFor(1000);
+      await p.clock.setSystemTime(new Date(boundary+1));
+      const stale=()=>p.locator('#nrRoute-today [data-day-verdict] p:not(.nr-dv-tone)').allTextContents();
+      const beforeEventStale=(await stale()).some(x=>x.includes(calendarReason));
+      assert(beforeEventStale,'sleep simulation preserves the stale DOM before its lifecycle event');
+      const resumed=await p.evaluate(mode=>{
+       if(mode==='visibility-resume'){
+        if(document.hidden)return false;
+        document.dispatchEvent(new Event('visibilitychange'));
+       }else window.dispatchEvent(new PageTransitionEvent('pageshow',{persisted:true}));
+       return true;
+      },mode);
+      assert(resumed,'resume event reaches the active document');
+      await p.clock.runFor(32);
+      expiry.push({...await sample('resumed',33),beforeEventStale,eventOffsetMs:1,eventSimulation:true});
+     }else if(mode==='bfcache'){
+      // Real navigation with Chromium's BFCache enabled. isTrusted and the window-held
+      // document reference exclude a synthetic pageshow and a reload on the return trip.
+      await p.clock.pauseAt(new Date(boundary-8000));
+      await p.clock.resume();
+      await p.evaluate(()=>{
+       window.__clockCache={doc:document,leftAt:Date.now()};
+       for(const kind of ['freeze','resume'])document.addEventListener(kind,e=>{window.__clockCache[kind]={trusted:e.isTrusted,at:Date.now()};},{once:true,capture:true});
+       window.addEventListener('pageshow',e=>Object.assign(window.__clockCache,{persisted:e.persisted,trusted:e.isTrusted}),{once:true});
+      });
+      const session=await c.newCDPSession(p);await session.send('Page.enable');
+      session.on('Page.backForwardCacheNotUsed',e=>console.error('BFCache CDP reasons '+JSON.stringify(e.notRestoredExplanations.map(x=>x.reason))));
+      await p.goto(base+'/__clock_resume_away',{waitUntil:'domcontentloaded'});
+      await new Promise(resolve=>setTimeout(resolve,8500));
+      await p.goBack({waitUntil:'commit'});
+      const diagnostic=await p.evaluate(()=>performance.getEntriesByType('navigation')[0]?.notRestoredReasons?.toJSON());
+      if(diagnostic)console.error('BFCache reasons '+JSON.stringify(diagnostic.reasons?.map(r=>r.reason)));
+      await p.waitForFunction(()=>window.__clockCache?.persisted===true,null,{timeout:8000});
+      const state=await p.evaluate(boundary=>({persisted:window.__clockCache?.persisted===true,trusted:window.__clockCache?.trusted===true,
+       sameDocument:window.__clockCache?.doc===document,historyFreezeTrusted:window.__clockCache?.freeze?.trusted===true,historyResumeTrusted:window.__clockCache?.resume?.trusted===true,
+       freezeBeforeExpiry:window.__clockCache?.freeze?.at<boundary,resumeAfterExpiry:window.__clockCache?.resume?.at>boundary,
+       freezeOffsetMs:window.__clockCache?.freeze?.at-boundary,resumeOffsetMs:window.__clockCache?.resume?.at-boundary,leftBeforeExpiry:window.__clockCache?.leftAt<boundary,
+       returnedAfterExpiry:Date.now()>boundary}),boundary);
+      assert(state.persisted&&state.trusted&&state.sameDocument&&state.historyFreezeTrusted&&state.historyResumeTrusted,'real Chromium history traversal restores the exact document from BFCache');
+      assert(state.leftBeforeExpiry&&state.freezeBeforeExpiry&&state.resumeAfterExpiry&&state.returnedAfterExpiry,'wall clock crossed source expiry during the real history traversal');
+      await p.waitForFunction(()=>!document.querySelector('#nrRoute-today [data-day-verdict] p:not(.nr-dv-tone)')&&
+       document.querySelector('#nrRoute-today [data-day-why]')?.textContent.includes('Дані календаря недоступні'),null,{timeout:4000});
+      bfcache={...state,calendarRemoved:true,clock:'running Playwright wall clock',mode:'real-browser-history',lang,width,height,inputState,form};
      }
     }finally{await retained.dispose();}
    }
-   return {...row,...checked,...(expiry?{expiry}:{}),calendarReasonMatches,buttonTextMatches,buttonAccessibleNameMatches,buttonAuthorityMatches,
+   return {...row,...checked,...(expiry?{expiry}:{}),...(bfcache?{bfcache}:{}),calendarReasonMatches,buttonTextMatches,buttonAccessibleNameMatches,buttonAuthorityMatches,
     buttonInViewport,buttonOpensSource,sourceMatchesAuthority:noaaExpert?geometry.sourceMatchesExpert:checked.missingSourceMatches,responseMatches:true};
   }
   if(scored||inputState==='missing-no-advice')return row;
@@ -795,7 +866,7 @@ async function settledTodayFeed(page, compact, expectedState){
    console.log('PASS full chart on 144 wide cold openings');
    if(wideOnly)return;
   }
-  if(nativeSmoke||nativeOnly||noaaOnly||!layoutOnly){
+  if(edgeSmoke||nativeSmoke||nativeOnly||noaaOnly||!layoutOnly){
    const fixtures=path.join(root,'tools/public/fixtures');
    noaaLossFeed=require('node:child_process').execFileSync('python',['-B',path.join(root,'tools/public/noaa_loss_fixture.py')],{encoding:'utf8'}).trim();
    const day='2026-10-19',projected=JSON.parse(noaaLossFeed),withheld=projected.days[day];
@@ -814,22 +885,8 @@ async function settledTodayFeed(page, compact, expectedState){
    const decisions=withExpert.decisions.filter(d=>d.date===day);
    assert.equal(decisions.length,1);
    assert(Number.isInteger(decisions[0].score));
-   noaaLossRegistry={withExpert,decision:decisions[0],withoutExpert:{...withExpert,decisions:withExpert.decisions.filter(d=>d.date!==day)}};
-   if(!nativeOnly&&!nativeSmoke){
-   const rows=[];
-   for(const lang of ['uk','en','es','fr']){
-    for(const [width,height] of [[321,741],[347,760],[375,800],[430,932]]){
-     const states=['noaa-loss-expert','noaa-loss-unavailable'];
-     for(const inputState of states)rows.push(await coldLayout({lang,inputState,width,height,mustFit:true}));
-    }
-   }
-   assert.equal(rows.length,32);
-   if(process.env.VERIFY_CLOCK_EVIDENCE_DIR){
-    const dir=path.resolve(process.env.VERIFY_CLOCK_EVIDENCE_DIR);await fs.mkdir(dir,{recursive:true});
-    await fs.writeFile(path.join(dir,'noaa-loss-matrix.json'),JSON.stringify(rows,null,2));
-   }
-   console.log('PASS NOAA short-range coverage loss: 32 historical cold openings with both registry states');
-   }
+   const without=(dates)=>({...withExpert,decisions:withExpert.decisions.filter(d=>!dates.includes(d.date))});
+   noaaLossRegistry={withExpert,decision:decisions[0],withoutExpert:without([day]),withoutEitherDay:without([day,'2026-10-20'])};
    // Rebase the 28 observed symbols from the 13 December native missing-Kp row
    // shipped at f63dd13 to the historical 19 October feed and expert registry.
    const native=structuredClone(projected),own=native.days[day].channels.source_formula;
@@ -844,29 +901,62 @@ async function settledTodayFeed(page, compact, expectedState){
    }
    own.expert_model={version:'expert-factor-model-v2',date:day,calendar_components:{version:'calendar-components-v1',date:day,symbols}};
    nativeLossFeed=JSON.stringify(native);
-   const nativeRows=[],expiryRows=[];
-   for(const lang of (nativeSmoke?['uk']:['uk','en','es','fr'])){
-    for(const [width,height] of (nativeSmoke?[[321,741]]:[[321,741],[347,760],[375,800],[430,932]])){
+   const languages=['uk','en','es','fr'],screens=[[321,741],[347,760],[375,800],[430,932]];
+   const modes=['ttl','midnight','visibility-resume','pageshow-persisted'];
+   if(edgeSmoke&&process.argv.includes('--events-only')){
+    for(const [mode,width,height] of [['midnight',347,760],['visibility-resume',375,800],['pageshow-persisted',430,932]]){
+     const {expiry}=await coldLayout({lang:'uk',width,height,inputState:'native-loss-expert',mustFit:true,checkExpiry:mode});
+     console.log('PASS limited '+mode+' '+expiry.length);
+    }
+    return;
+   }
+   async function realBrowserChecks(){
+    // The full Chromium distribution, installed by the same pinned Playwright CLI,
+    // implements history caching. Chromium headless shell does not exercise this path.
+    const fullBrowser=await chromium.launch({channel:'chromium',ignoreDefaultArgs:['--disable-back-forward-cache'],args:['--use-angle=swiftshader','--enable-unsafe-swiftshader']});
+    try{
+     const options={lang:'uk',width:321,height:741,inputState:'native-loss-expert',mustFit:true,browserDriver:fullBrowser};
+     const history=await coldLayout({...options,checkExpiry:'bfcache'});
+     return history.bfcache;
+    }finally{await fullBrowser.close();}
+   }
+   if(edgeSmoke&&process.argv.includes('--bfcache-only')){
+    console.log('PASS real lifecycle '+JSON.stringify(await realBrowserChecks()));return;
+   }
+   const projectedRows=[],nativeRows=[],lifecycle=[];
+   // A cyclic assignment reaches each language and each screen in each scenario.
+   // Both registry states and both feed forms use every assigned pair.
+   for(const [li,lang] of languages.entries()){
+    for(const [si,[width,height]] of screens.entries()){
+     if((nativeSmoke||edgeSmoke)&&li!==0||nativeSmoke&&si!==0)continue;
+     const mode=modes[(si-li+4)%4];
      for(const state of ['expert','unavailable']){
-      const checkExpiry=lang==='uk'&&width===321;
-      const {expiry,...row}=await coldLayout({lang,width,height,inputState:'native-loss-'+state,mustFit:true,checkExpiry});
-      nativeRows.push(row);
-      if(checkExpiry){
-       expiryRows.push(...expiry);
-       const projectedRow=await coldLayout({lang,width,height,inputState:'noaa-loss-'+state,mustFit:true,checkExpiry:true});
-       expiryRows.push(...projectedRow.expiry);
+      for(const form of ['native','projected']){
+       const inputState=(form==='native'?'native-loss-':'noaa-loss-')+state;
+       const {expiry,...row}=await coldLayout({lang,width,height,inputState,mustFit:true,checkExpiry:mode});
+       (form==='native'?nativeRows:projectedRows).push(row);
+       lifecycle.push(...expiry);
       }
      }
     }
    }
-   assert.equal(nativeRows.length,nativeSmoke?2:32);assert.equal(expiryRows.length,12);
+   const legacy=lifecycle.filter(r=>r.mode==='ttl'&&r.lang==='uk'&&r.width===321);
+   assert.equal(legacy.length,12);assert.equal(nativeRows.length,nativeSmoke?2:edgeSmoke?8:32);
+   assert.equal(projectedRows.length,nativeRows.length);assert.equal(lifecycle.length,nativeSmoke?12:edgeSmoke?32:128);
+   let cache;
+   if(!nativeSmoke){
+    cache=await realBrowserChecks();
+   }
    if(process.env.VERIFY_CLOCK_EVIDENCE_DIR){
     const dir=path.resolve(process.env.VERIFY_CLOCK_EVIDENCE_DIR);await fs.mkdir(dir,{recursive:true});
-    await fs.writeFile(path.join(dir,'native-loss-matrix.json'),JSON.stringify(nativeRows,null,2));
-    await fs.writeFile(path.join(dir,'calendar-ttl-matrix.json'),JSON.stringify(expiryRows,null,2));
+    for(const [file,data] of [['noaa-loss-matrix',projectedRows],['native-loss-matrix',nativeRows],['calendar-ttl-matrix',legacy],['calendar-lifecycle-matrix',lifecycle],['calendar-bfcache',cache]]){
+     if(data)await fs.writeFile(path.join(dir,file+'.json'),JSON.stringify(data,null,2));
+    }
    }
+   console.log('PASS NOAA short-range coverage loss: '+projectedRows.length+' historical cold openings with both registry states');
    console.log('PASS '+nativeRows.length+' native cold openings and 12 open-tab calendar TTL observations');
-   if(nativeOnly||nativeSmoke)return;
+   console.log('PASS '+nativeRows.length+' native and '+projectedRows.length+' projected openings, '+lifecycle.length+' lifecycle observations');
+   if(edgeSmoke||nativeOnly||nativeSmoke)return;
    if(noaaOnly)return;
   }
   if(freshOnly||!layoutOnly){
