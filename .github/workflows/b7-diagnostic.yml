@@ -1,36 +1,58 @@
-name: B7 diagnostic
+name: Calendar regression controls
 on:
   workflow_dispatch:
 permissions:
   contents: read
 jobs:
-  probe:
+  regression:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/codex/fp575-calendar-resume-audit-midnight-check'
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
-        trigger: [message, button]
-        trial: [old, waiting]
+        control: [midnight-timer]
+    name: control-${{ matrix.control }}
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v4
-        with: {node-version: '24'}
-      - run: npm install --no-save --package-lock=false playwright@1.62.1
-      - run: npx playwright install --with-deps chromium
-      - run: node tools/public/verify_day_cautions.cjs
-      - run: node tools/public/verify_noaa_missing.cjs
-      - run: node tools/public/verify_svg_missing.cjs
-      - run: node tools/public/verify_presentation.cjs
-      - run: node tools/public/verify_day_summary.cjs
-      - run: node tools/public/verify_journal_restore_time.cjs
-      - run: node tools/public/verify_journal_restore_adversarial.cjs
-      # FP545: raw production-worker run first (statistics only), then the traced/restart probe.
-      - run: node tools/public/verify_css_upgrade.cjs --${{ matrix.trigger }} --server-log
-        continue-on-error: true
-      - run: node tools/public/verify_css_upgrade.cjs --${{ matrix.trigger }} --restart=${{ matrix.trial }} --trace
-      - uses: actions/upload-artifact@v4
-        if: always()
+      - name: Load read-only control script at the workflow commit
+        uses: actions/checkout@v4
         with:
-          name: b7-${{ matrix.trigger }}-${{ matrix.trial }}
-          path: /tmp/skyrhythm-css-upgrade-*/
+          ref: ${{ github.sha }}
+          path: audit-controller
+          persist-credentials: false
+          sparse-checkout: |
+            tools/audit/lifecycle controls.py
+          sparse-checkout-cone-mode: false
+      - name: Load exact candidate
+        uses: actions/checkout@v4
+        with:
+          ref: d9dc064f03112953a81d273484d08840354f0a82
+          path: candidate
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Verify immutable refs and install browser
+        run: |
+          test "$GITHUB_REF" = refs/heads/codex/fp575-calendar-resume-audit-midnight-check
+          test "$(git -C candidate rev-parse HEAD)" = d9dc064f03112953a81d273484d08840354f0a82
+          test "$(git -C audit-controller rev-parse HEAD)" = "$GITHUB_SHA"
+          npm install --prefix "$RUNNER_TEMP/audit-deps" --no-save --package-lock=false playwright@1.62.1
+          node "$RUNNER_TEMP/audit-deps/node_modules/playwright/cli.js" install --with-deps chromium
+      - name: Require the specified assertion and exit code in an isolated tree
+        env:
+          CONTROL_NAME: ${{ matrix.control }}
+        run: |
+          export NODE_PATH="$RUNNER_TEMP/audit-deps/node_modules"
+          python -B "audit-controller/tools/audit/lifecycle controls.py" candidate d9dc064f03112953a81d273484d08840354f0a82 "$RUNNER_TEMP/$CONTROL_NAME.json" --case "$CONTROL_NAME"
+          test -z "$(git -C candidate status --porcelain)"
+      - name: Upload one score-free control receipt
+        uses: actions/upload-artifact@v4
+        with:
+          name: control-${{ matrix.control }}
+          path: ${{ runner.temp }}/${{ matrix.control }}.json
+          if-no-files-found: error
+          retention-days: 30
