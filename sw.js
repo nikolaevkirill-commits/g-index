@@ -1,8 +1,8 @@
-importScripts('./runtime_diagnostics_v1.js','./civil_time_v1.js?v=fp569f-global');
+importScripts('./runtime_diagnostics_v1.js','./civil_time_v1.js?v=fp575-calendar-lifecycle');
 // G-Index service worker. Navigations, HTML, JS and data (.json/.jsonl/.csv) are network-first with a
 // cached fallback. Versioned packed scripts and other static assets are cache-first.
 // Bump CACHE_VERSION whenever index.html or a cached shell asset changes.
-const CACHE_VERSION = 'fp575-calendar-expiry-20261121';
+const CACHE_VERSION = 'fp575-calendar-lifecycle-20261121';
 const CACHE_PREFIX = 'gindex-'; // G-Index cache namespace; do not remove the prefix.
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${CACHE_VERSION}`;
 const DATA_CACHE = `${CACHE_PREFIX}data-${CACHE_VERSION}`;
@@ -97,7 +97,7 @@ async function deliveryResponse(response,mode){
 }
 
 const SHELL_ASSETS = [
-  './civil_time_v1.js?v=fp569f-global',
+  './civil_time_v1.js?v=fp575-calendar-lifecycle',
   './sw_update_coordination_v1.js?v=fp569n-handoff',
   './day_context_v1.js?v=mobile-clarity1',
   './sky_time_v1.js?v=fp575-fold2',
@@ -152,7 +152,7 @@ const SHELL_ASSETS = [
   './classic.html',
   './preview-v4/desktop_v1.css?v=d1',
   './preview-v4/atlas_motion.css?v=v7-2',
-  './preview-v4/consumer_overview_v1.js?v=fp575-fold2',
+  './preview-v4/consumer_overview_v1.js?v=fp575-calendar-lifecycle',
   './preview-v4/core_runtime_v1.js?v=fp572-lunar-local',
   './preview-v4/design_candidate.css?v=v7-3',
   './preview-v4/design_candidate.js',
@@ -193,7 +193,7 @@ const SHELL_ASSETS = [
   './preview-v4/app_today_v1.js?v=fp575-wide-j',
   './preview-v4/app_today_v1.css?v=fp575-wide-j',
   './natal_sky_v1.js?v=fp572-natal',
-  './day_verdict_v1.js?v=fp575-calendar-expiry',
+  './day_verdict_v1.js?v=fp575-calendar-lifecycle',
   './space_scene_gl_v1.js?v=fp569r-noaa-locales',
   './space_scene_v1.js?v=fp575-d3',
   './earth_bluemarble_v1.webp?v=fp569q',
@@ -204,7 +204,7 @@ const SHELL_ASSETS = [
   './shared_day_v1.js?v=sd1',
 
   './design-b17.html',
-  './preview-b17/consumer_overview_v1.js?v=fp569o-daily',
+  './preview-b17/consumer_overview_v1.js?v=fp575-calendar-lifecycle',
   './preview-b17/design_candidate.css',
   './preview-b17/design_candidate.js',
   './preview-b17/design_scale.js',
@@ -276,7 +276,7 @@ const SHELL_ASSETS = [
   './notification_runtime_v1.js',
   './transition_runtime_v1.js',
   './transition_client_v1.js',
-  './consumer_overview_v1.js?v=fp575-source',
+  './consumer_overview_v1.js?v=fp575-calendar-lifecycle',
   './calendar_context_v1.js',
   './consumer_overview_v1.css',
   './local_storage_v1.js',
@@ -313,8 +313,8 @@ const PACKED_SHELL_HASHES = Object.freeze({
   './preview-v4/core_runtime_v1.js': '8587d3e41c34d6f9b384b5aa1e54eafd76f3e0e48f442ce675d6e493dd0a931b',
   './preview-v4/locale_overview_v1.js': '7ec93b5fd0fa1d78355a369957a0d8e7022c08115b6997fb6c30593729578d9b',
   './dayline_view_v1.js': '0e2f8273071f201341242054dc29bd365ffe945f96d67d227e465d303aa9fce2',
-  './consumer_overview_v1.js': '8fb8cd96ec1f4a547c87781ed4847644070b23ed04920c050e23756c5d0a856c',
-  './preview-v4/consumer_overview_v1.js': 'f2679d1ac16d096190babe1ced544b3b81a6e7563fdd952b6514c048d9a3de4a',
+  './consumer_overview_v1.js': 'c2ad1dad51898e658c3fa1191aab58fad413d905766a2bcc8d96c6cbc5d8d646',
+  './preview-v4/consumer_overview_v1.js': '38a9fc6a1788d842990f461ba46e21e9d25e575a32a7ba7562e0a8c6342caeba',
   './observances_tanita_v1.js': '22573bb343426e4a5056210f0a8498c44c7c3cea7615fb389ae12516102bdda3',
   './research_observances_v1.js': 'd36ced989c11b994fd6c3f9dc847436af250188f47ca42c5e82c3864079c01cd',
   './product_shell_v1.js': '1dbe497ec9ef59f8c84535eeae9ed6c44a4f4b2886b8ba08df67ba34a27cf889',

@@ -165,9 +165,7 @@ window.NRDayVerdict={
 };
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{watch();loadSky()});else{watch();loadSky()}
 for(const e of ['sr:consumer-load','nr:locale','gindex:consumer-ready','nr:natal','online','offline'])window.addEventListener(e,soon);
-// Browsers may suspend background timers or restore a page from the back/forward cache.
-window.addEventListener('pageshow',soon);
-document.addEventListener('visibilitychange',()=>{if(!document.hidden)soon()});
+// The overview emits nr:overview-rendered on resume and after Kyiv midnight.
 document.addEventListener('click',e=>{const b=e.target.closest?.('[data-day-match] button[data-match]');if(!b)return;const r=root();if(!r)return;
  let today='';try{today=NRCivilTime.dayKey(Date.now(),'Europe/Kyiv')}catch{}if(selected(r)!==today)return;
  matchSave(today,b.dataset.match);soon()});
