@@ -81,12 +81,10 @@ const DST_NOTE={
  fr:'Les décalages UTC sont indiqués en raison du changement d’heure. Le dernier créneau peut être plus court.'
 };
 const CIVIL_EVENT_ORDER=(a,b)=>a.at.localeCompare(b.at)||KIND_RANK.indexOf(a.kind)-KIND_RANK.indexOf(b.kind);
-function addSkyAction(d,event){
+function openSkyMoment(instant,beforeNavigation){
  if(!window.SRSkyTime?.selectMoment||typeof window.fp434Go!=='function')return;
- const openSky=button(timeCopy().sky,()=>{
-  if(!window.SRSkyTime.selectMoment(event.at))return;
-  returnFocus=null;
-  d.close();
+ if(!window.SRSkyTime.selectMoment(instant))return;
+ beforeNavigation?.();
   window.fp434Go('panch',false);
   window.scrollTo({top:0,behavior:'instant'});
   const route=document.getElementById('nrRoute-panch');
@@ -107,7 +105,10 @@ function addSkyAction(d,event){
   // The Sky renderer loads on first entry to this route.
   observer.observe(route,{attributes:true,attributeFilter:['class'],childList:true,subtree:true});
   focusSky();
- });
+}
+function addSkyAction(d,event){
+ if(!window.SRSkyTime?.selectMoment||typeof window.fp434Go!=='function')return;
+ const openSky=button(timeCopy().sky,()=>openSkyMoment(event.at,()=>{returnFocus=null;d.close();}));
  openSky.dataset.dlOpenSky='';
  d.append(openSky);
 }
@@ -128,6 +129,82 @@ function civilState(civil,time){
  }
  return current;
 }
+const FIRST_EVENT_COPY={
+ uk:{waiting:'Обчислюємо подію',missing:'Подія недоступна',sky:'Небо',local:'місцевий час',example:'типове місце'},
+ en:{waiting:'Calculating event',missing:'Event unavailable',sky:'Sky',local:'local time',example:'default location'},
+ es:{waiting:'Calculando el evento',missing:'Evento no disponible',sky:'Cielo',local:'hora local',example:'lugar predeterminado'},
+ fr:{waiting:'Calcul de l’événement',missing:'Événement indisponible',sky:'Ciel',local:'heure locale',example:'lieu par défaut'}
+};
+let firstEventJob=null,firstEventError=null;
+function cacheDay(key,value){
+ cache.set(key,value);
+ if(cache.size>32)cache.delete(cache.keys().next().value);
+}
+const dayCacheKey=({date,lat,lon,zone})=>[date,lat,lon,zone].join('|');
+function getEventDay(input,now){
+ const key=dayCacheKey(input);
+ if(cache.has(key))return cache.get(key)?.civil??false;
+ if(firstEventError?.key===key&&now-firstEventError.at<60000)return false;
+ if(firstEventJob?.key!==key){
+  const job={key};
+  firstEventJob=job;
+  SRDayLineAsync.buildUpcoming({...input,includeCivil:true}).then(value=>{
+   cacheDay(key,value);
+  },()=>{
+   if(firstEventJob===job)firstEventError={key,at:Date.now()};
+  }).finally(()=>{
+   if(firstEventJob===job){firstEventJob=null;renderFirstEvent();}
+  });
+ }
+ return null;
+}
+function renderFirstEvent(){
+ if(!document.documentElement.hasAttribute('data-sr-first-screen'))return;
+ const header=rootNode?.querySelector(':scope > [data-sky-clock] .sr-time-title');
+ const sky=window.SRSkyTime?.snapshot();
+ if(!header||!sky||!window.SRDayLineAsync?.buildUpcoming)return;
+ let control=header.querySelector('[data-p0-next-sky]');
+ if(!control){
+  control=button('',()=>{if(control.dataset.at)openSkyMoment(control.dataset.at);});
+  control.dataset.p0NextSky='';
+  control.setAttribute('translate','no');
+  control.append(create('strong'),create('span'),create('time'),create('i','','↗'));
+  control.lastElementChild.setAttribute('aria-hidden','true');
+  header.append(control);
+ }
+ const t=FIRST_EVENT_COPY[window.NRLocale?.language]||FIRST_EVENT_COPY.uk,now=Date.now();
+ const loc=sky.loc,date=NRCivilTime.dayKey(now,loc.zone);
+ const city=window.SRSkyTime.cityLabel({...loc,cityId:loc.cityId||(loc.example?'kyiv':undefined)})||place();
+ const nextIn=civil=>civil?.status==='available'
+  ?civil.events.filter(e=>Date.parse(e.at)>now).sort(CIVIL_EVENT_ORDER)[0]:null;
+ const current=getEventDay({...loc,date},now);
+ let next=nextIn(current),waiting=current===null;
+ if(!next&&current?.status==='available'){
+  const following=Date.parse(date+'T12:00:00Z')+86400000;
+  let nextDate=new Date(following).toISOString().slice(0,10);
+  if(NRCivilTime.localNoon(nextDate,loc.zone)===null)nextDate=new Date(following+86400000).toISOString().slice(0,10);
+  const tomorrow=getEventDay({...loc,date:nextDate},now);
+  next=nextIn(tomorrow);waiting=tomorrow===null;
+ }
+ const time=next?window.SRSkyTime.timeText(Date.parse(next.at),loc.zone):'';
+ const eventDay=next?NRCivilTime.dayKey(Date.parse(next.at),loc.zone):null;
+ const shortDate=next&&eventDay!==date?new Intl.DateTimeFormat(window.NRLocale?.locale||'uk-UA',{timeZone:loc.zone,day:'numeric',month:'short'}).format(new Date(next.at)):'';
+ const nextLabel=next?shortKind(next.kind):waiting?t.waiting:t.missing;
+ const [placeLabel,eventLabel,timeLabel]=control.children;
+ placeLabel.textContent=city;
+ eventLabel.textContent=nextLabel;
+ timeLabel.textContent=shortDate?shortDate+' · '+time:time;
+ if(next){
+  timeLabel.dateTime=next.at;
+  control.dataset.at=next.at;
+ }else{
+  timeLabel.removeAttribute('datetime');
+  delete control.dataset.at;
+ }
+ control.disabled=!next;
+ control.setAttribute('aria-label',[city,loc.example?t.example:'',nextLabel,timeLabel.textContent,next?t.local:'',next?t.sky:''].filter(Boolean).join(' · '));
+}
+
 function renderCivil(){
  const overview=q('[data-dl-civil]'),periods=q('[data-dl-periods]');
  const civil=data?.civil;
@@ -622,12 +699,12 @@ async function render(root,date){if(root.dataset.overview!=='today'||!window.Mee
  if(forecastDay)q('[data-place]').append(' · ',new Intl.DateTimeFormat(window.NRLocale?.locale||'uk-UA',{dateStyle:'long',timeZone:'UTC'}).format(new Date(date+'T12:00:00Z')));
  q('figure:not([data-solar-profile]) figcaption small').textContent=tr('artAlt');q('[data-scrub-label]').textContent=tr('tlMoment');q('[data-events] summary').textContent=tr('tlEvents');q('[data-method] summary').textContent=tr('pr.h1');
  q('[data-artnote]').textContent=tr('pr.p1');q('[data-source]').textContent=tr('pr.p2');q('[data-convention]').textContent=tr('pa.conv');root.querySelector('.sr-dl-close-day p').textContent=w(39);root.querySelector('.sr-dl-close-day button').textContent=w(20);
- try{const key=[date,pref.lat,pref.lon,pref.zone].join('|');if(!cache.has(key)){
+ try{const key=dayCacheKey({...pref,date});if(!cache.has(key)){
   data=null;followNow=true;previewAt=null;lastDate=date;q('[data-solar-profile]')?.setAttribute('hidden','');notify();q('[data-status]').textContent=({uk:'Обчислюємо лінію дня…',en:'Calculating the day line…',es:'Calculando la línea del día…',fr:'Calcul de la ligne du jour…'})[lang]||'Calculating…';
   q('input[type=range]').disabled=true;q('[data-share]').disabled=true;q('figure:not([data-solar-profile])').hidden=true;q('[data-events] ol').replaceChildren();q('[data-track]').replaceChildren();q('[data-axis]').replaceChildren();q('[data-moment]').textContent='';headline();q('[data-headline]').textContent=q('[data-status]').textContent;
   node.dataset.dlState='loading';renderCivil();
   const computed=await SRDayLineAsync.build({date,lat:pref.lat,lon:pref.lon,zone:pref.zone,includeCivil:true});if(sequence!==renderSequence)return;
-  cache.set(key,computed);if(cache.size>32)cache.delete(cache.keys().next().value);
+  cacheDay(key,computed);
  }if(sequence!==renderSequence)return;data=cache.get(key);sunset=null;node.dataset.dlState=data.civil?.status==='available'?'ready':'unavailable';q('[data-share]').disabled=false;
   if(data.status==='available'){try{const t=Astronomy.SearchRiseSet('Sun',new Astronomy.Observer(pref.lat,pref.lon,0),-1,new Date(data.start),1)?.date;sunset=t&&+t>Date.parse(data.start)&&+t<Date.parse(data.end)?+t:null;}catch(_){} }
   if(lastDate!==date){followNow=true;previewAt=null;minute=data.status==='available'?nowMinute():0;lastDate=date;}
@@ -635,6 +712,7 @@ async function render(root,date){if(root.dataset.overview!=='today'||!window.Mee
   q('[data-events] ol').replaceChildren();for(const [i,e]of data.events.entries()){const li=create('li');li.dataset.event=i;li.append(button(eventText(e),()=>explain(i)));q('[data-events] ol').append(li);}headline();moment();markers();renderSolar();notify();
   const link=new URL(location.href);if(link.searchParams.get('dlDate')===date){const n=data.events.findIndex(e=>e.at===link.searchParams.get('dlAt')&&e.kind===link.searchParams.get('dlKind'));if(n>=0&&link.searchParams.get('dlEvent')){explain(n);for(const k of ['dlDate','dlAt','dlKind','dlEvent'])link.searchParams.delete(k);history.replaceState(null,'',link);}}
  }catch(e){if(sequence!==renderSequence)return;data=null;node.dataset.dlState='unavailable';q('[data-solar-profile]')?.setAttribute('hidden','');notify();q('[data-status]').textContent=tr('tlCalcError')+e.message;q('figure:not([data-solar-profile])').hidden=true;q('input[type=range]').disabled=true;q('[data-events] ol').replaceChildren();q('[data-track]').replaceChildren();q('[data-axis]').replaceChildren();q('[data-moment]').textContent='';headline();}
+ renderFirstEvent();
  finishForecastLanding(root,date,sequence);
 }
 document.addEventListener('nr:location',()=>{
@@ -691,12 +769,13 @@ function updateSolarMoment(){
  const pos={uk:['Сонце над горизонтом','Сонце під горизонтом'],en:['Sun above the horizon','Sun below the horizon'],es:['Sol sobre el horizonte','Sol bajo el horizonte'],fr:['Soleil au-dessus de l’horizon','Soleil sous l’horizon']}[lang];label.textContent=titles[marker.dataset.mode==='live'?0:1]+' · '+fmt(t)+' · '+pos[alt<0?1:0]+', '+new Intl.NumberFormat(window.NRLocale?.locale||'uk-UA',{maximumFractionDigits:1}).format(alt)+'°';
  }catch(_){marker.setAttribute('hidden','');if(label)label.textContent='';}
 }
-function tick(){if(!node||document.hidden)return;headline();markers();if(data?.status==='available'&&followNow){minute=nowMinute();q('input[type=range]').value=minute;moment();}}
+function tick(){if(!node||document.hidden)return;renderFirstEvent();headline();markers();if(data?.status==='available'&&followNow){minute=nowMinute();q('input[type=range]').value=minute;moment();}}
 
 function notify(){window.dispatchEvent(new Event('sr:dayline-ready'));}
 // FP569k: one time per screen. «Переглянути момент» and «Шлях Сонця» share SRSkyTime: moving either moves both.
 let syncing=false;
 function shareClock(){if(syncing||!data||data.status!=='available'||!window.SRSkyTime?.selectMoment)return;syncing=true;try{SRSkyTime.selectMoment(new Date(at()).toISOString())}finally{syncing=false}}
+window.addEventListener('sr:sky-clock-mounted',renderFirstEvent);
 window.addEventListener('sr:sky-time',e=>{const s=e.detail;if(syncing||!node||!s||data?.status!=='available')return;
  const start=Date.parse(data.start),end=Date.parse(data.end);
  if(s.mode==='now'){if(!followNow){followNow=true;previewAt=null;minute=nowMinute();q('input[type=range]').value=minute;moment();}return;}

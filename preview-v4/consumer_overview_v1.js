@@ -6,7 +6,8 @@ let weatherData=null,weatherRequest=null,weatherAttempt=0,weatherError=false;
 const weatherBriefContent=new WeakMap();
 function weatherStatus(data,now=Date.now()){
  const current=data?.['0'],stamp=current?Date.parse(current.DateStamp+'T'+current.TimeStamp+'Z'):NaN;
- if(!Number.isFinite(stamp)||now<stamp||now-stamp>8*3600000)return {state:'unavailable'};
+ if(!Number.isFinite(stamp)||now<stamp)return {state:'unavailable'};
+ if(now-stamp>8*3600000)return {state:'unavailable',reason:'stale'};
  const level=v=>typeof v==='string'&&/^[0-5]$/.test(v)?Number(v):null;
  const currentLevels=Object.fromEntries(['G','S','R'].map(k=>[k,level(current[k]?.Scale)]));
  if(Object.values(currentLevels).some(v=>v===null))return {state:'unavailable'};
@@ -19,7 +20,11 @@ function weatherStatus(data,now=Date.now()){
  }
  return {state:'available',stamp,current:currentLevels,forecasts};
 }
-window.NRSpaceWeather={status:weatherStatus};
+window.NRSpaceWeather={status:weatherStatus,refreshFirstScreen(root){
+ const full=root.querySelector('.nr-o-spaceweather');
+ const slot=root.querySelector('[data-p0-source-context]');
+ if(full&&slot)renderFirstNoaa(slot,weatherError?{state:'unavailable'}:weatherStatus(weatherData),()=>openWeatherDetails(full));
+}};
 function weatherPanel(root){
  let box=root.querySelector('.nr-o-spaceweather');if(!box){box=document.createElement('section');box.className='nr-o-spaceweather nr-o-practical';box.setAttribute('aria-live','polite');root.querySelector('.nr-o-layers').before(box);}
  box.style.display='block';
@@ -69,11 +74,52 @@ async function renderPanchPreview(root,ds){
  }catch(e){if(box.dataset.date===ds)box.textContent='Для обраної дати повні складові недоступні. Значення іншого дня не підставляються.';}
 }
 
+const FIRST_NOAA_COPY={
+ uk:{pending:'перевіряємо',missing:'немає даних',stale:'застарілі',partial:'частковий прогноз',fresh:'свіжі',periodMissing:'Період невідомий',storm:'буря'},
+ en:{pending:'checking',missing:'no data',stale:'outdated',partial:'partial forecast',fresh:'current',periodMissing:'Period unavailable',storm:'storm'},
+ es:{pending:'comprobando',missing:'sin datos',stale:'desactualizada',partial:'pronóstico parcial',fresh:'actual',periodMissing:'Período no disponible',storm:'tormenta'},
+ fr:{pending:'vérification',missing:'sans données',stale:'périmée',partial:'prévision partielle',fresh:'à jour',periodMissing:'Période inconnue',storm:'orage'}
+};
+function renderFirstNoaa(hero,status,openDetails){
+ if(!hero)return;
+ let control=hero.querySelector('[data-p0-noaa]');
+ if(!control){
+  control=document.createElement('button');
+  control.type='button';control.dataset.p0Noaa='';control.setAttribute('translate','no');
+  control.append(document.createElement('strong'),document.createElement('span'));
+  hero.append(control);
+ }
+ control.onclick=openDetails;
+ const t=FIRST_NOAA_COPY[window.NRLocale?.language]||FIRST_NOAA_COPY.uk;
+ const days=[...new Set((status.forecasts||[]).map(item=>item.date))].sort();
+ const state=status.state==='available'?(days.length===3?'fresh':'partial'):weatherRequest?'pending':status.reason==='stale'?'stale':'missing';
+ const g=status.current?.G;
+ const severity=g>0?' G'+g:'';
+ const dateFormat=new Intl.DateTimeFormat(window.NRLocale?.locale||'uk-UA',{timeZone:'UTC',day:'numeric',month:'short'});
+ const values=days.map(day=>new Date(day+'T00:00:00Z'));
+ const consecutive=values.length>1&&(+values.at(-1)-+values[0])===(values.length-1)*86400000;
+ const dates=consecutive&&typeof dateFormat.formatRange==='function'?dateFormat.formatRange(values[0],values.at(-1)):values.map(date=>dateFormat.format(date)).join(', ');
+ const label='NOAA · '+(severity?t.storm+severity:t[state]);
+ const period=dates?(state==='partial'?days.length+'/3 · ':'')+dates+' UTC':t.periodMissing;
+ control.children[0].textContent=label;
+ control.children[1].textContent=period;
+ control.dataset.state=state;
+ control.dataset.days=days.join(',');
+ if(severity&&state==='partial')control.setAttribute('aria-label',label+' · '+t.partial+' · '+period);
+ else control.removeAttribute('aria-label');
+}
+
+function openWeatherDetails(full){
+ const disclosure=full.closest('details');if(disclosure)disclosure.open=true;
+ full.setAttribute('tabindex','-1');full.focus({preventScroll:true});full.scrollIntoView({block:'start'});
+}
 function renderWeatherBrief(root,status,full){
  if(!['today','forecast'].includes(root.dataset.overview))return;
  const hero=root.querySelector('.nr-o-hero'),tr=s=>window.NRLocale?.text(s)||s;
+ const openDetails=()=>openWeatherDetails(full);
+ if(root.dataset.overview==='today')renderFirstNoaa(hero?.querySelector('[data-p0-source-context]'),status,openDetails);
  let brief=root.querySelector('[data-weather-brief]');
- if(!brief){brief=document.createElement('button');brief.type='button';brief.dataset.weatherBrief='';brief.className='nr-o-brief nr-o-weather-brief';brief.setAttribute('translate','no');brief.dataset.placement='after-hero';hero.insertBefore(brief,hero.querySelector('[data-panch-countdown]'));brief.onclick=()=>{const disclosure=full.closest('details');if(disclosure)disclosure.open=true;full.setAttribute('tabindex','-1');full.focus({preventScroll:true});full.scrollIntoView({block:'start'});};}
+ if(!brief){brief=document.createElement('button');brief.type='button';brief.dataset.weatherBrief='';brief.className='nr-o-brief nr-o-weather-brief';brief.setAttribute('translate','no');brief.dataset.placement='after-hero';hero.insertBefore(brief,hero.querySelector('[data-panch-countdown]'));brief.onclick=openDetails;}
  let body,forecastSummary='';
  if(status.state!=='available')body='<span>'+esc(tr(weatherRequest?'Перевіряємо попередження…':'Свіжих попереджень NOAA зараз немає, тож про бурю не можемо сказати ні «так», ні «ні». Оновимо автоматично.'))+'</span>';
  else{
