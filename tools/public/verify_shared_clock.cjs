@@ -42,6 +42,75 @@ async function settledTodayFeed(page, compact, expectedState){
  const results=[];
  const start=new Date('2026-11-07T15:29:00Z');
  try{
+  const pinnedOnly=process.argv.includes('--pinned-dates-only');
+  const pinnedDates=[];
+  const pinStart=new Date('2026-10-19T20:55:00Z'),pinMidnight=Date.parse('2026-10-20T21:00:00Z');
+  async function pinnedMidnight(page,entry,weekDay,priorAutomaticDay){
+   const index=entry==='index.html',route=index?'forecast':'today',day=index?weekDay:'2026-10-16';
+   if(index){
+    const week=page.locator('#nrRoute-today [data-week-strip]');
+    const button=week.locator('[data-week-day="'+day+'"] button[data-week-go]');
+    await button.scrollIntoViewIfNeeded();assert(await button.isVisible()&&await button.isEnabled(),'historical replay offers the chosen day as an actionable week button');
+    await button.click();
+   }
+   const active=page.locator('#nrRoute-'+route+'.active [data-overview="'+route+'"]');
+   const heading=active.locator(index?'[data-forecast-verdict] h2':'.nr-dc-head strong');
+   await heading.waitFor({state:'visible'});
+   await page.waitForFunction(({route,day})=>{
+    const root=document.querySelector('#nrRoute-'+route+'.active [data-overview]');
+    return root?.querySelector('select')?.value===day&&root.querySelector('[data-day-context]')?.dataset.selectedDate===day;
+   },{route,day});
+   const retained=await page.evaluateHandle(()=>document),stages=[];
+   try{
+    for(const [stage,offsetMs] of [['before',-1],['at',0],['after',1]]){
+     if(stage==='before')await page.clock.pauseAt(new Date(pinMidnight-1));else await page.clock.runFor(1);
+     const state=await retained.evaluate((doc,{day,route,boundary,offsetMs})=>{
+      const root=document.querySelector('#nrRoute-'+route+'.active [data-overview="'+route+'"]');
+      const bar=root?.querySelector('[data-day-context]'),heading=route==='forecast'?root?.querySelector('[data-forecast-verdict] h2'):bar?.querySelector('.nr-dc-head strong');
+      const expectedLabel=new Intl.DateTimeFormat('uk-UA',{day:'numeric',month:'long',timeZone:'UTC'}).format(new Date(day+'T12:00:00Z'));
+      const currentKyivDay=window.NRCivilTime.dayKey(Date.now(),'Europe/Kyiv');
+      return {sameDocument:doc===document,timeMatches:Date.now()===boundary+offsetMs,kyivDayMatches:currentKyivDay===(offsetMs<0?'2026-10-20':'2026-10-21'),
+       routeActive:!!root,selectedDayMatches:root?.querySelector('select')?.value===day,contextDayMatches:bar?.dataset.selectedDate===day,
+       contextVisible:!!heading?.checkVisibility(),contextLabelMatches:!!heading?.textContent.includes(expectedLabel),
+       relativeContextMatches:route==='forecast'?heading?.id==='srForecastDay':bar?.dataset.state==='other'&&!!heading?.textContent.includes('не сьогодні')};
+     },{day,route,boundary:pinMidnight,offsetMs});
+     const failed=Object.keys(state).filter(key=>state[key]!==true);
+     if(failed.length)console.error('Pinned date '+entry+' '+day+' '+stage+' '+failed.join(', '));
+     assert.equal(failed.length,0,'chosen calendar date and visible route context survive Kyiv midnight');
+     stages.push({stage,offsetMs,...state});
+    }
+   }finally{await retained.dispose();}
+   return {entry,route,day,priorAutomaticDay,selection:index?'week-button':'dlDate',boundaryAt:new Date(pinMidnight).toISOString(),stages};
+  }
+  async function freshPinnedRoute(entry,weekDay='2026-10-22'){
+   const ctx=await browser.newContext({locale:'uk-UA',timezoneId:'America/Los_Angeles',serviceWorkers:'block',reducedMotion:'reduce'});
+   try{
+    await ctx.route(/^https?:\/\/(?!127\.0\.0\.1)/,r=>r.abort());
+    await ctx.addInitScript(()=>{localStorage.setItem('nr_locale_v1','uk');localStorage.setItem('gidx_onboard_done_v2','1');localStorage.setItem('srPrivacyNoticeDismissed','1');});
+    const page=await ctx.newPage();await page.clock.install({time:pinStart});
+    await page.goto(base+'/'+entry+'#today',{waitUntil:'domcontentloaded'});
+    const automatic=page.locator('#nrRoute-forecast [data-overview] select');
+    await automatic.waitFor({state:'attached'});await page.clock.pauseAt(new Date(pinMidnight-86400000-1));
+    const before=await automatic.inputValue();await page.clock.runFor(1);
+    const at=await automatic.inputValue();
+    assert(before==='2026-10-19'&&at==='2026-10-20','untouched forecast follows the first Kyiv midnight before manual selection');
+    await page.clock.resume();
+    return await pinnedMidnight(page,entry,weekDay,{route:'forecast',before,at});
+   }finally{await ctx.close();}
+  }
+  async function savePins(){
+   assert.equal(pinnedDates.length,3);
+   if(process.env.VERIFY_CLOCK_EVIDENCE_DIR){
+    const dir=path.resolve(process.env.VERIFY_CLOCK_EVIDENCE_DIR);await fs.mkdir(dir,{recursive:true});
+    await fs.writeFile(path.join(dir,'pinned-dates-matrix.json'),JSON.stringify(pinnedDates,null,2));
+   }
+   console.log('PASS 3 explicitly selected dates across Kyiv midnight in public forecast and Classic Today');
+  }
+  if(pinnedOnly){
+   pinnedDates.push(await freshPinnedRoute('index.html','2026-10-20'));
+   for(const entry of ['index.html','classic.html?dlDate=2026-10-16'])pinnedDates.push(await freshPinnedRoute(entry));
+   await savePins();return;
+  }
   const reasonsOnly=process.argv.includes('--reasons-only');
   const heightBandOnly=process.argv.includes('--height-band-only');
   const scoredOnly=process.argv.includes('--scored-only');
@@ -532,6 +601,7 @@ async function settledTodayFeed(page, compact, expectedState){
     const boundary=mode==='midnight'?midnight:Date.parse(issuedAt)+8*3600000;
     const wanted=nativeLoss?['сприятливий для подорожей','сприятливий для стрижки','День порожні руки, несприятливий']:['День порожні руки, несприятливий'];
     const unavailable={uk:'Дані календаря недоступні',en:'Calendar data unavailable',es:'Datos del calendario no disponibles',fr:'Données du calendrier indisponibles'}[lang];
+    const priorForecast={};
     const sample=async(stage,offsetMs)=>{
      const nextDay=mode==='midnight'&&offsetMs>=0;
      const selected=nextDay?'2026-10-20':day,live=mode==='midnight'?!nextDay:offsetMs<=0;
@@ -560,6 +630,11 @@ async function settledTodayFeed(page, compact, expectedState){
        explanationMatches:!!calendar&&(live?calendar.textContent.includes(calendarReason):calendar.textContent===unavailable)};
      },{ds:day,selected,live,mustRetain:mode==='midnight',expert:noaaExpert,deadline:boundary,offsetMs,calendarLabel,calendarReason,unavailable,missingText:copy[1],wanted});
      if(mode!=='midnight')observed.explanationMatches=observed.explanationMatches&&await why.evaluate(x=>x.open&&x.querySelector('strong')?.checkVisibility());
+     if(mode==='midnight'&&lang==='uk'&&nativeLoss){
+      const automaticForecastDay=await p.locator('#nrRoute-forecast [data-overview] select').inputValue();
+      priorForecast[stage]=automaticForecastDay;
+      assert.equal(automaticForecastDay,selected,'untouched forecast follows the first Kyiv midnight before manual selection');
+     }
      const failed=Object.keys(observed).filter(k=>observed[k]!==true);
      if(failed.length)console.error('Calendar '+(mode==='ttl'?'expiry':mode)+' '+inputState+' '+stage+' '+failed.join(', '));
      assert.equal(failed.length,0,'calendar expiry updates the already-open page at the source deadline');
@@ -624,6 +699,11 @@ async function settledTodayFeed(page, compact, expectedState){
       bfcache={...state,calendarRemoved:true,clock:'running Playwright wall clock',mode:'real-browser-history',lang,width,height,inputState,form};
      }
     }finally{await retained.dispose();}
+    // This existing historical tab just crossed into 20 October. Select an offered
+    // day and follow it across the next midnight without adding another index startup.
+    if(mode==='midnight'&&lang==='uk'&&nativeLoss){
+     await p.clock.resume();pinnedDates.push(await pinnedMidnight(p,'index.html',noaaExpert?'2026-10-20':'2026-10-22',{route:'forecast',before:priorForecast.before,at:priorForecast.at}));
+    }
    }
    return {...row,...checked,...(expiry?{expiry}:{}),...(bfcache?{bfcache}:{}),calendarReasonMatches,buttonTextMatches,buttonAccessibleNameMatches,buttonAuthorityMatches,
     buttonInViewport,buttonOpensSource,sourceMatchesAuthority:noaaExpert?geometry.sourceMatchesExpert:checked.missingSourceMatches,responseMatches:true};
@@ -946,6 +1026,7 @@ async function settledTodayFeed(page, compact, expectedState){
    let cache;
    if(!nativeSmoke){
     cache=await realBrowserChecks();
+    pinnedDates.push(await freshPinnedRoute('classic.html?dlDate=2026-10-16'));await savePins();
    }
    if(process.env.VERIFY_CLOCK_EVIDENCE_DIR){
     const dir=path.resolve(process.env.VERIFY_CLOCK_EVIDENCE_DIR);await fs.mkdir(dir,{recursive:true});

@@ -281,7 +281,7 @@ function mount(){
    root.querySelector('.nr-o-next').after(journey);journey.addEventListener('click',e=>{const step=e.target.closest('[data-step]')?.dataset.step;if(step==='outcome')openOutcome();else if(step)window.fp434Go(step,true)});
   }
   const practicalBody=root.querySelector('.nr-o-practical>p');const more=document.createElement('details');more.className='nr-o-topic-detail';more.innerHTML='<summary>Пояснення тем дня</summary>';practicalBody.before(more);more.append(practicalBody);
-  host.append(root,legacy);selected[route]=route==='today'?transitionDate():today();routeTools(root,route);
+  host.append(root,legacy);selected[route]=route==='today'?transitionDate():null;routeTools(root,route);
   root.querySelector('[data-outcome]').onclick=openOutcome;
   root.querySelector('[data-why]').onclick=()=>{const d=root.querySelector('.nr-o-factors');d.open=true;d.querySelector('summary').focus();d.scrollIntoView({block:'start'})};
   root.querySelector('[data-calendar]').onclick=()=>window.fp434Go(route==='calendar'?'forecast':'calendar',true);
@@ -368,10 +368,9 @@ function todaySourceLabel(result,input){
 function render(root){
  weatherPanel(root);
  const route=root.dataset.overview,dates=dayRange(),choice=selected[route];
- // A null Today choice follows the Kyiv day. An explicit selection stays on its date.
+ // An untouched route follows Kyiv today; retain an explicitly chosen day when the horizon advances.
  if(choice&&/^\d{4}-\d{2}-\d{2}$/.test(choice)&&!dates.includes(choice))dates.push(choice);
  const ds=dates.includes(choice)?choice:today();
- if(route!=='today')selected[route]=ds;
  renderPanchPreview(root,ds);
  renderFeedback(root,ds);
  const select=root.querySelector('select');if([...select.options].map(x=>x.value).join()!==dates.join())select.replaceChildren(...dates.map(d=>new Option(dateLabel(d),d)));select.value=ds;
