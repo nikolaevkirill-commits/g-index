@@ -520,8 +520,18 @@ function downloadEvent(e){const date=s=>new Date(s).toISOString().replace(/[-:]/
  const fold=s=>{let out='',part='',n=0;for(const c of s){const b=new TextEncoder().encode(c).length;if(n+b>70){out+=part+'\r\n ';part='';n=1;}part+=c;n+=b;}return out+part;};
  const url=URL.createObjectURL(new Blob([lines.map(fold).join('\r\n')+'\r\n'],{type:'text/calendar;charset=utf-8'}));const a=create('a');a.href=url;a.download='SkyRhythm-'+lastDate+'-'+e.kind+'.ics';a.click();setTimeout(()=>URL.revokeObjectURL(url),2000);
 }
-function shareText(){const s=forecastDay?null:window.NRConsumerOverview?.snapshot(scoreDate),v=s?.display,score=v?.available?String(v.score):w(36),source=v?.available?(v.authority==='expert_pdf'?w(37):w(38)):w(36);
- return ['SkyRhythm · '+lastDate,(pref.city==='custom'?w(23):place())+' · '+pref.zone,forecastDay?'':`${tr('scoreFor')}: ${score} · ${source}`,!forecastDay&&(pref.zone!=='Europe/Kyiv'||pref.lat!==50.454||pref.lon!==30.524)?w(18):'',...(data?.events||[]).slice(0,3).map(eventText),'MeeusCore / DayLine · physical_uncertainty_ms=null',w(19)].filter(Boolean).join('\n');}
+function shareText(){
+ const date=forecastDay||scoreDate;
+ const differs=pref.zone!=='Europe/Kyiv'||pref.lat!==50.454||pref.lon!==30.524;
+ const mayIncludeScore=date<=NRCivilTime.dayKey(Date.now(),'Europe/Kyiv');
+ const v=mayIncludeScore?window.NRConsumerOverview?.snapshot(date)?.display:null;
+ const source=v?.authority==='expert_pdf'?w(37):w(38);
+ const assessment=mayIncludeScore?(v?.available?String(v.score)+' · '+source:w(36)):'';
+ const basis=tr('scoreFor')+' '+date+(assessment?': '+assessment:'');
+ return ['SkyRhythm · '+lastDate,(pref.city==='custom'?w(23):place())+' · '+pref.zone,basis,
+  differs?w(18):'',...(data?.events||[]).slice(0,3).map(eventText),
+  'MeeusCore / DayLine · physical_uncertainty_ms=null',w(19)].filter(Boolean).join('\n');
+}
 function share(){const d=openDialog(w(2)),text=shareText(),area=create('textarea');area.value=text;area.readOnly=true;area.rows=10;area.setAttribute('aria-label',w(2));const status=create('p');status.setAttribute('role','status');d.append(area,button(w(15),async()=>{try{await navigator.clipboard.writeText(text);status.textContent=w(16);}catch(_){area.focus();area.select();status.textContent=w(17);}}),status);
  if(navigator.share)d.append(button(w(2),async()=>{try{await navigator.share({title:'SkyRhythm',text});}catch(e){if(e.name!=='AbortError'){area.focus();area.select();status.textContent=w(17);}}}));}
 function savePreferences(next){try{const old=localStorage.getItem(KEY);if(old!==null){localStorage.setItem(KEY+'.before',old);if(localStorage.getItem(KEY+'.before')!==old)throw Error('BACKUP');}const serialized=JSON.stringify(next);localStorage.setItem(KEY,serialized);if(localStorage.getItem(KEY)!==serialized)throw Error('SAVE');return true;}catch(_){return false;}}
