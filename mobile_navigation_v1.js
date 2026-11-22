@@ -4,15 +4,21 @@
 
 // ── Mobile Bottom Nav ─────────────────────────────────────
 const MNAV_COMPACT_LABELS = {
-  uk: {today:'День',sky:'Небо',forecast:'Далі',calendar:'Дати',more:'Ще'},
-  en: {today:'Day',sky:'Sky',forecast:'Next',calendar:'Dates',more:'More'},
-  es: {today:'Hoy',sky:'Cielo',forecast:'Luego',calendar:'Fechas',more:'Más'},
-  fr: {today:'Jour',sky:'Ciel',forecast:'Suite',calendar:'Dates',more:'Plus'},
+  uk: {today:'Сьог.',sky:'Небо',forecast:'Прогноз',calendar:'Календ.',more:'Ще'},
+  en: {today:'Today',sky:'Sky',forecast:'Forecast',calendar:'Calendar',more:'More'},
+  es: {today:'Hoy',sky:'Cielo',forecast:'Previsión',calendar:'Calend.',more:'Más'},
+  fr: {today:'Auj.',sky:'Ciel',forecast:'Prévisions',calendar:'Calend.',more:'Plus'},
 };
 function mnavCompactLabels() {
-  const copy = MNAV_COMPACT_LABELS[window.NRLocale?.language] || MNAV_COMPACT_LABELS.uk;
+  const locale = window.NRLocale;
+  const copy = MNAV_COMPACT_LABELS[locale?.language] || MNAV_COMPACT_LABELS.uk;
   document.querySelectorAll('#mobileNav [data-nav-compact]').forEach(label => {
-    label.textContent = copy[label.dataset.navCompact];
+    const short = copy[label.dataset.navCompact];
+    label.textContent = short;
+    const context = label.parentElement.querySelector('[data-nav-context]');
+    if (!context) return;
+    const full = locale?.text(context.dataset.navContext) || context.dataset.navContext;
+    context.textContent = short === full ? '' : full;
   });
 }
 window.addEventListener('nr:locale', mnavCompactLabels);
