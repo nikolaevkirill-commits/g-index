@@ -35,6 +35,128 @@ async function settledTodayFeed(page, compact, expectedState){
  try{return await handle.jsonValue();}
  finally{await handle.dispose();}
 }
+
+async function firstScreenCities(browser,base) {
+ const cities=[
+  {cityId:'kyiv',name:'Київ',lat:50.454,lon:30.524,zone:'Europe/Kyiv',time:'05:49'},
+  {cityId:'barcelona',name:'Барселона',lat:41.3874,lon:2.1686,zone:'Europe/Madrid',time:'04:49'}
+ ];
+ const instant='2026-11-09T22:30:00Z';
+ const nextAt='2026-11-10T03:49:30.640Z';
+ const statuses=['fresh','partial','stale','missing'];
+ const coverage={fresh:['2026-11-09','2026-11-10','2026-11-11'],partial:['2026-11-09'],stale:[],missing:[]};
+ const statusText={fresh:/свіжі.*UTC/,partial:/частковий.*1\/3.*UTC/,stale:/застарілі.*Період невідомий/,missing:/немає даних.*Період невідомий/};
+ const fixture=JSON.parse(await fs.readFile(path.join(root,'tools/public/fixtures/score_regression.json'),'utf8'));
+ const noScore={...fixture,days:{}};
+ const output=process.env.VERIFY_CLOCK_EVIDENCE_DIR;
+ if(output)await fs.mkdir(output,{recursive:true});
+ const jobs=cities.flatMap(city=>[
+  ...[100,200].flatMap(scale=>statuses.map(state=>({city,scale,state,workerAvailable:true}))),
+  ...['fresh','partial'].map(state=>({city,scale:200,state,workerAvailable:true,wide:true})),
+  {city,scale:200,state:'fresh',workerAvailable:false}
+ ]);
+
+ async function visit({city,scale,state,workerAvailable,wide=false}) {
+  const viewport=scale===200&&!wide?{width:320,height:741}:{width:390,height:844};
+  const context=await browser.newContext({viewport,isMobile:true,hasTouch:true,locale:'uk-UA',
+   timezoneId:city.zone,serviceWorkers:'block',reducedMotion:'reduce'});
+  try {
+   await context.addInitScript(place=>{
+    sessionStorage.setItem('nrs_launch','1');
+    localStorage.setItem('nr_locale_v1','uk');
+    localStorage.setItem('gidx_onboard_done_v2','1');
+    localStorage.setItem('srPrivacyNoticeDismissed','1');
+    localStorage.setItem('gindex_local_context_v1',JSON.stringify({...place,saved_at:'2026-11-08T09:00:00Z'}));
+   },{cityId:city.cityId,lat:city.lat,lon:city.lon,zone:city.zone});
+   let calls=0;
+   await context.route('**/*',route=>{
+    const url=new URL(route.request().url());
+    if(url.hostname==='services.swpc.noaa.gov'&&url.pathname==='/products/noaa-scales.json'){
+     calls++;
+     if(state==='missing')return route.fulfill({status:503,body:''});
+     const scales={'0':{DateStamp:'2026-11-09',TimeStamp:state==='stale'?'12:00:00':'22:05:00',
+      G:{Scale:'0'},R:{Scale:'0'},S:{Scale:'0'}}};
+     const dates=state==='partial'?coverage.partial:coverage.fresh;
+     dates.forEach((date,i)=>scales[i+1]={DateStamp:date,G:{Scale:'0'},R:{MinorProb:'0',MajorProb:'0'},S:{Prob:'0'}});
+     return route.fulfill({json:scales});
+    }
+    if(url.origin!==base)return route.abort();
+    if(!workerAvailable&&url.pathname==='/dayline_worker_v1.js')return route.fulfill({status:503,body:''});
+    if(/^\/(?:consumer_cloud\/forecast|INDEPENDENT_FORECAST_FEED_v1)\.json$/.test(url.pathname))return route.fulfill({json:noScore});
+    if(url.pathname==='/consumer_cloud/final_score_decisions.json')return route.fulfill({json:{schema:'consumer-final-decisions-v1',decisions:[]}});
+    return route.continue();
+   });
+   const page=await context.newPage();
+   await page.clock.setFixedTime(new Date(instant));
+   await page.goto(base+'/index.html?channel=play#today',{waitUntil:'commit',timeout:60000});
+   await page.addStyleTag({content:'html{-webkit-text-size-adjust:'+scale+'%!important;text-size-adjust:'+scale+'%!important}'});
+   await page.waitForFunction(({state,workerAvailable})=>{
+    const root=document.querySelector('#nrRoute-today [data-overview=today]');
+    const event=root?.querySelector('[data-p0-next-sky]');
+    return root?.querySelector('[data-p0-noaa]')?.dataset.state===state&&
+     (workerAvailable?Boolean(event?.dataset.at):event?.disabled&&event.textContent.includes('Подія недоступна'));
+   },{state,workerAvailable},{timeout:45000});
+   await page.evaluate(()=>document.fonts.ready);
+   const observed=await page.evaluate(()=>{
+    const root=document.querySelector('#nrRoute-today [data-overview=today]');
+    const nav=document.querySelector('#mobileNav').getBoundingClientRect(),fold=Math.min(innerHeight,nav.top);
+    const box=selector=>{
+     const e=root.querySelector(selector),r=e.getBoundingClientRect();
+     return {top:r.top,bottom:r.bottom,left:r.left,right:r.right,width:r.width,height:r.height,
+      inViewport:e.checkVisibility()&&r.top>=0&&r.bottom<=fold&&r.left>=0&&r.right<=innerWidth};
+    };
+    const event=root.querySelector('[data-p0-next-sky]'),noaa=root.querySelector('[data-p0-noaa]');
+    const children=[...event.children].filter(el=>el.checkVisibility()).map(el=>el.getBoundingClientRect());
+    const overlap=children.some((a,i)=>children.slice(i+1).some(b=>
+     Math.min(a.right,b.right)-Math.max(a.left,b.left)>2&&Math.min(a.bottom,b.bottom)-Math.max(a.top,b.top)>2));
+    const header=document.querySelector('body > header').getBoundingClientRect();
+    const phase=root.closest('body').querySelector('header .wow-header-moon')?.getBoundingClientRect();
+    const mastheadClear=header.bottom<=root.getBoundingClientRect().top+1&&(!phase||phase.bottom<=header.bottom+1&&phase.right<=innerWidth+1);
+    return {fold,scrollY,mastheadClear,textScale:getComputedStyle(document.documentElement).textSizeAdjust,
+     source:box('[data-p0-source]'),noaa:box('[data-p0-noaa]'),plot:box('.sr-time-sun svg'),
+     event:box('[data-p0-next-sky]'),noaaText:noaa.innerText.replace(/\s+/g,' '),
+     dates:noaa.dataset.days,localTime:event.querySelector('time').textContent,at:event.dataset.at||null,
+     city:event.querySelector('strong').textContent,day:root.querySelector('select').value,overlap,disabled:event.disabled};
+   });
+   const label=[city.cityId,viewport.width+'×'+viewport.height,scale+'%',state,workerAvailable?'available':'unavailable'].join(' ');
+   console.log('FIRST SCREEN '+label+' event='+Math.ceil(observed.event.bottom)+' plot='+Math.ceil(observed.plot.bottom)+' fold='+Math.floor(observed.fold));
+   assert(calls>0&&observed.scrollY===0&&observed.textScale===scale+'%',label+' should open with actual text autosizing and a NOAA request');
+   assert.equal(observed.dates,coverage[state].join(','),label+' NOAA coverage');
+   assert.match(observed.noaaText,statusText[state],label+' weather status');
+   assert.equal(observed.city,city.name,label+' place');
+   assert.equal(observed.day,'2026-11-10',label+' Kyiv day remains selected');
+   assert(observed.event.inViewport&&observed.plot.inViewport,label+' event and full chart should fit before navigation');
+   assert(!observed.overlap&&observed.event.height>=44&&observed.event.width>=44,label+' unobstructed event button');
+   if(scale===100)assert(observed.source.inViewport&&observed.noaa.inViewport,label+' source and NOAA fit');
+   else assert(observed.mastheadClear,label+' enlarged masthead does not cover the date or phase');
+   assert(Math.abs(observed.source.right-observed.noaa.left)<=16,label+' NOAA adjacent to authority');
+   if(output&&workerAvailable&&state==='fresh'&&!wide){
+    await page.screenshot({path:path.join(output,city.cityId+' first screen '+scale+'.png'),
+     mask:[page.locator('.nr-o-score,[data-score-tone]')],maskColor:'#102038'});
+   }
+   const result={...observed,city:city.cityId,zone:city.zone,scale,viewport,state,workerAvailable,activations:0};
+   if(!workerAvailable){
+    assert(observed.disabled&&!observed.at,label+' missing event has no action');
+    return result;
+   }
+   assert(!observed.disabled&&observed.at===nextAt&&observed.localTime.includes(city.time),label+' next event instant and local time');
+   if(city.cityId==='barcelona')assert.match(observed.localTime,/10 лист/,label+' next local date');
+   await page.locator('#nrRoute-today [data-p0-next-sky]').tap();
+   const sky=page.locator('#nrRoute-panch.active .nr-sl[data-state=ready][data-clock-mode=selected]');
+   await sky.waitFor({timeout:25000});
+   await page.waitForFunction(()=>document.activeElement?.id==='nrSkyLiveHeading');
+   assert.equal(await sky.getAttribute('data-time'),nextAt,label+' chart instant after one activation');
+   const actual=await page.evaluate(()=>{const s=SRSkyTime.snapshot();return [new Date(s.at).toISOString(),s.zone,s.loc.cityId];});
+   assert.deepEqual(actual,[nextAt,city.zone,city.cityId],label+' selected sky moment and city');
+   return {...result,activations:1,skyAt:actual[0]};
+  }finally{await context.close();}
+ }
+ const rows=[];
+ for(let i=0;i<jobs.length;i+=2)rows.push(...await Promise.all(jobs.slice(i,i+2).map(visit)));
+ if(output)await fs.writeFile(path.join(output,'First screen cities.json'),JSON.stringify(rows,null,2)+'\n');
+ console.log('PASS Kyiv and Barcelona first screen: 20 single-activation transitions and 2 unavailable controls at 100/200% text');
+}
+
 (async()=>{
  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
  const base='http://127.0.0.1:'+server.address().port;
@@ -111,6 +233,7 @@ async function settledTodayFeed(page, compact, expectedState){
    for(const entry of ['index.html','classic.html?dlDate=2026-10-16'])pinnedDates.push(await freshPinnedRoute(entry));
    await savePins();return;
   }
+  const firstScreenOnly=process.argv.includes('--first-screen-only');
   const reasonsOnly=process.argv.includes('--reasons-only');
   const heightBandOnly=process.argv.includes('--height-band-only');
   const scoredOnly=process.argv.includes('--scored-only');
@@ -122,6 +245,8 @@ async function settledTodayFeed(page, compact, expectedState){
   const noaaOnly=process.argv.includes('--noaa-loss-only');
   const freshOnly=dataScope||process.argv.includes('--fresh-only');
   const layoutOnly=edgeSmoke||nativeOnly||nativeSmoke||wideOnly||noaaOnly||freshOnly||reasonsOnly||heightBandOnly||scoredOnly||process.argv.includes('--layout-only');
+  if(firstScreenOnly||!layoutOnly)await firstScreenCities(browser,base);
+  if(firstScreenOnly)return;
   for(const [entry,width,height] of layoutOnly?[]:[['index.html',390,844],['classic.html',390,844],['index.html',1280,900]]){
    const ctx=await browser.newContext({viewport:{width,height},locale:'uk-UA',timezoneId:'Europe/Kyiv',serviceWorkers:'block',reducedMotion:'no-preference'});
    await ctx.route(/^https?:\/\/(?!127\.0\.0\.1)/,r=>r.abort());

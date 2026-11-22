@@ -8,6 +8,8 @@ const SUN_AND_STATUS=[':scope > .sr-time-sun',':scope > [data-p0-feed-state]'];
 const REST=[':scope > [data-space-scene=today]:not([data-tone=watch],[data-tone=storm])',':scope > .sr-dayline',':scope > [data-week-strip]',':scope > [data-p0-signals]',':scope > .nr-o-weather-brief','[data-sky-now]',':scope > .nr-o-journey',':scope > [data-day-you]',':scope > [data-p0-details]'];
 const ORDER=[...LEAD,ACTIVE,...SUN_AND_STATUS,...REST];
 const COMPACT_ORDER=[...LEAD,...SUN_AND_STATUS,ACTIVE,...REST];
+const LARGE_TEXT_ORDER=[...SUN_AND_STATUS,...LEAD,ACTIVE,...REST];
+const narrow=matchMedia('(max-width:600px)');
 const compact=matchMedia('(min-width:431px), (max-height:932px)');
 function updateWeatherSummary(hero,scene){
  let button=hero.querySelector('[data-weather-summary]');
@@ -33,21 +35,27 @@ function updateWeatherSummary(hero,scene){
 function arrange(root){
  const hero=root.querySelector(HERO),alert=root.querySelector(ACTIVE);
  if(hero)updateWeatherSummary(hero,alert);
- const selectors=compact.matches?COMPACT_ORDER:ORDER;
+ const html=document.documentElement,textStyle=getComputedStyle(html);
+ const largeText=html.hasAttribute('data-sr-first-screen')&&narrow.matches&&
+  (parseFloat(textStyle.textSizeAdjust||textStyle.webkitTextSizeAdjust)>=150||parseFloat(textStyle.fontSize)>=24);
+ root.toggleAttribute('data-sr-large-text',largeText);
+ const selectors=largeText?LARGE_TEXT_ORDER:compact.matches?COMPACT_ORDER:ORDER;
  const els=selectors.map(s=>root.querySelector(s)).filter(Boolean);if(els.length<2)return false;
  let moved=false,prev=els[0];
  for(const el of els.slice(1)){if(prev.nextElementSibling!==el){const focused=el.contains(document.activeElement)?document.activeElement:null;prev.after(el);focused?.focus?.({preventScroll:true});moved=true}prev=el}
  return moved;
 }
-let observed=null,observer;
+let observed=null,observer,layoutObserver;
 function watch(){
  const root=document.querySelector('#nrRoute-today [data-overview="today"]');if(!root){setTimeout(watch,250);return}
- if(observed===root){arrange(root);return}observer?.disconnect();observed=root;root.dataset.appToday='';
+ if(observed===root){arrange(root);return}observer?.disconnect();layoutObserver?.disconnect();observed=root;root.dataset.appToday='';
  arrange(root);
  observer=new MutationObserver(()=>arrange(root));observer.observe(root,{childList:true});
+ layoutObserver=new ResizeObserver(()=>arrange(root));layoutObserver.observe(root);
 }
 window.NRAppToday={arrange:()=>{const r=document.querySelector('#nrRoute-today [data-overview="today"]');return r?arrange(r):false},order:ORDER};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',watch);else watch();
 window.addEventListener('sr:consumer-load',watch);
 compact.addEventListener('change',watch);
+narrow.addEventListener('change',watch);
 })();

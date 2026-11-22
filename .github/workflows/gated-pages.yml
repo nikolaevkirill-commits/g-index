@@ -195,7 +195,9 @@ jobs:
         if: github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/deploy' && !inputs.failure_probe && steps.scope.outputs.mode != 'data'
         with:
           name: f3-layout-matrix
-          path: ${{ runner.temp }}/layout-evidence/layout-matrix.json
+          path: |
+            ${{ runner.temp }}/layout-evidence/layout-matrix.json
+            ${{ runner.temp }}/layout-evidence/First screen cities.json
           if-no-files-found: error
           retention-days: 30
       - uses: actions/upload-artifact@v4
