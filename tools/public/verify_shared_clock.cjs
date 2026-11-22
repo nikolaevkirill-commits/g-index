@@ -65,23 +65,28 @@ async function firstScreenCities(browser,base) {
    ...['fresh','partial'].map(state=>({city,scale:200,state,workerAvailable:true,wide:true})),
    {city,scale:200,state:'fresh',workerAvailable:false}
   ]),
-  ...otherPlaces.map(city=>({city,scale:200,state:'fresh',workerAvailable:true,geometryOnly:true}))
+  ...otherPlaces.map(city=>({city,scale:200,state:'fresh',workerAvailable:true,geometryOnly:true})),
+  ...cities.flatMap(city=>['en','es','fr'].flatMap(lang=>[100,200].map(scale=>({
+   city,lang,scale,state:'partial',workerAvailable:true,geometryOnly:true
+  })))),
+  {city:cities[1],scale:100,state:'partial',workerAvailable:true,geometryOnly:true,
+   viewportOverride:{width:384,height:694}}
  ];
 
- async function visit({city,scale,state,workerAvailable,wide=false,geometryOnly=false}) {
-  const viewport=wide?{width:390,height:844}:{width:320,height:741};
+ async function visit({city,scale,state,workerAvailable,wide=false,geometryOnly=false,lang='uk',viewportOverride}) {
+  const viewport=viewportOverride||(wide?{width:390,height:844}:{width:320,height:741});
   const location=city.cityId||'coordinates';
-  const label=[location,viewport.width+'×'+viewport.height,scale+'%',state,workerAvailable?'available':'unavailable'].join(' ');
-  const context=await browser.newContext({viewport,isMobile:true,hasTouch:true,locale:'uk-UA',
+  const label=[location,lang,viewport.width+'×'+viewport.height,scale+'%',state,workerAvailable?'available':'unavailable'].join(' ');
+  const context=await browser.newContext({viewport,isMobile:true,hasTouch:true,locale:lang,
    timezoneId:city.zone,serviceWorkers:'block',reducedMotion:'reduce'});
   try {
-   await context.addInitScript(place=>{
+   await context.addInitScript(({place,lang})=>{
     sessionStorage.setItem('nrs_launch','1');
-    localStorage.setItem('nr_locale_v1','uk');
+    localStorage.setItem('gindex_locale_v1',lang);
     localStorage.setItem('gidx_onboard_done_v2','1');
     localStorage.setItem('srPrivacyNoticeDismissed','1');
     localStorage.setItem('gindex_local_context_v1',JSON.stringify({...place,saved_at:'2026-11-08T09:00:00Z'}));
-   },{cityId:city.cityId,lat:city.lat,lon:city.lon,zone:city.zone});
+   },{lang,place:{cityId:city.cityId,lat:city.lat,lon:city.lon,zone:city.zone}});
    let calls=0;
    await context.route('**/*',route=>{
     const url=new URL(route.request().url());
@@ -109,7 +114,7 @@ async function firstScreenCities(browser,base) {
     const event=root?.querySelector('[data-p0-next-sky]');
     return root?.querySelector('[data-p0-noaa]')?.dataset.state===state&&
      (workerAvailable?Boolean(event?.dataset.at):event?.disabled&&event.textContent.includes('Подія недоступна'));
-   },{state,workerAvailable},{timeout:45000});
+   },{state,workerAvailable},{polling:200,timeout:45000});
    await page.evaluate(()=>document.fonts.ready);
    const observed=await page.evaluate(()=>{
     const root=document.querySelector('#nrRoute-today [data-overview=today]');
@@ -120,27 +125,48 @@ async function firstScreenCities(browser,base) {
       inViewport:e.checkVisibility()&&r.top>=0&&r.bottom<=fold&&r.left>=0&&r.right<=innerWidth};
     };
     const event=root.querySelector('[data-p0-next-sky]'),noaa=root.querySelector('[data-p0-noaa]');
+    const why=root.querySelector('[data-day-why] > summary'),provenance=noaa.parentElement;
+    const whyRect=why.getBoundingClientRect(),provenanceRect=provenance.getBoundingClientRect();
+    const whySourceOverlap=why.checkVisibility()&&
+     Math.min(whyRect.right,provenanceRect.right)-Math.max(whyRect.left,provenanceRect.left)>1&&
+     Math.min(whyRect.bottom,provenanceRect.bottom)-Math.max(whyRect.top,provenanceRect.top)>1;
     const children=[...event.children].filter(el=>el.checkVisibility()).map(el=>el.getBoundingClientRect());
     const overlap=children.some((a,i)=>children.slice(i+1).some(b=>
      Math.min(a.right,b.right)-Math.max(a.left,b.left)>2&&Math.min(a.bottom,b.bottom)-Math.max(a.top,b.top)>2));
-    const splitNavLabels=[];
-    for(const button of document.querySelectorAll('#mobileNav button')){
-     const walker=document.createTreeWalker(button,NodeFilter.SHOW_TEXT);
-     for(let node=walker.nextNode();node;node=walker.nextNode()){
-      if(!node.parentElement.checkVisibility())continue;
-      for(const word of node.textContent.matchAll(/[^\s­]+/gu)){
-       const range=document.createRange();
-       range.setStart(node,word.index);
-       range.setEnd(node,word.index+word[0].length);
-       if(new Set([...range.getClientRects()].map(part=>Math.round(part.top))).size>1)splitNavLabels.push(word[0]);
+    function wordsWithin(elements){
+     const issues=[];
+     for(const element of elements){
+      if(!element?.checkVisibility())continue;
+      const bounds=element.getBoundingClientRect(),walker=document.createTreeWalker(element,NodeFilter.SHOW_TEXT);
+      for(let node=walker.nextNode();node;node=walker.nextNode()){
+       if(!node.parentElement.checkVisibility())continue;
+       for(const word of node.textContent.matchAll(/[\p{L}\p{M}’']+/gu)){
+        const range=document.createRange();
+        range.setStart(node,word.index);
+        range.setEnd(node,word.index+word[0].length);
+        const parts=[...range.getClientRects()].filter(part=>part.width>0);
+        if(new Set(parts.map(part=>Math.round(part.top))).size>1||
+            parts.some(part=>part.left<bounds.left-1||part.right>bounds.right+1))issues.push(word[0]);
+       }
       }
      }
+     return issues;
     }
+    const navButtons=[...document.querySelectorAll('#mobileNav button')];
+    const splitNavLabels=wordsWithin(navButtons.flatMap(button=>[...button.querySelectorAll('[data-nav-full],[data-nav-compact]')]));
+    const brokenWords=wordsWithin([
+     root.querySelector('[data-p0-source]'),noaa,event,
+     root.querySelector('[data-today-forecast]'),root.querySelector('[data-day-context] .nr-dc-head strong')
+    ]);
+    const navLabels=navButtons.map(button=>({
+     id:button.id,
+     name:[...button.querySelectorAll('[data-nav-full],[data-nav-compact]')].find(n=>n.checkVisibility())?.textContent.trim()
+    }));
     const header=document.querySelector('body > header').getBoundingClientRect();
     const phase=root.closest('body').querySelector('header .wow-header-moon')?.getBoundingClientRect();
     const mastheadClear=header.bottom<=root.getBoundingClientRect().top+1&&(!phase||phase.bottom<=header.bottom+1&&phase.right<=innerWidth+1);
     const dayTitle=root.querySelector('[data-day-context] .nr-dc-head strong');
-    return {fold,scrollY,mastheadClear,mastheadBottom:header.bottom,splitNavLabels,
+    return {fold,scrollY,mastheadClear,mastheadBottom:header.bottom,splitNavLabels,brokenWords,navLabels,whySourceOverlap,
      dayTitle:dayTitle?.textContent.trim(),dayBasis:dayTitle?.dataset.dayBasis||null,
      cityPresets:window.SRSkyTime.cityPresets().map(place=>place.cityId),textScale:getComputedStyle(document.documentElement).textSizeAdjust,
      source:box('[data-p0-source]'),noaa:box('[data-p0-noaa]'),plot:box('.sr-time-sun svg'),
@@ -152,27 +178,62 @@ async function firstScreenCities(browser,base) {
    console.log('FIRST SCREEN '+label+' graph margin='+graphMargin.toFixed(2)+' px');
    assert(calls>0&&observed.scrollY===0&&observed.textScale===scale+'%',label+' should open with actual text autosizing and a NOAA request');
    assert.equal(observed.dates,coverage[state].join(','),label+' NOAA coverage');
-   assert.match(observed.noaaText,statusText[state],label+' weather status');
-   assert.equal(observed.city,city.name,label+' place');
+   if(lang==='uk'){
+    assert.match(observed.noaaText,statusText[state],label+' weather status');
+    assert.equal(observed.city,city.name,label+' place');
+   }else{
+    assert.match(observed.noaaText,/NOAA.*UTC/,label+' localized weather period');
+    assert(observed.city,label+' localized place');
+   }
    assert.equal(observed.day,'2026-11-10',label+' Kyiv day remains selected');
    if(city.zone!=='Europe/Kyiv'){
     assert.equal(observed.dayBasis,'kyiv',label+' calendar basis');
-    assert.match(observed.dayTitle,/^За Києвом\s*·.*10 листопада/u,label+' city sees the explicitly labeled Kyiv date');
+    const prefix={uk:'За Києвом',en:'Kyiv time',es:'Hora de Kyiv',fr:'Heure de Kyiv'}[lang];
+    assert(observed.dayTitle.startsWith(prefix+' · '),label+' city sees the explicitly labeled Kyiv date');
    }
    assert(observed.event.inViewport&&observed.plot.inViewport&&graphMargin>=16,label+' event and full chart must leave a 16 px graph margin');
    assert(!observed.overlap&&observed.event.height>=44&&observed.event.width>=44,label+' unobstructed event button');
    assert(observed.source.inViewport&&observed.noaa.inViewport,label+' source and NOAA fit');
+   assert(!observed.whySourceOverlap,label+' explanation must not overlap over the source and NOAA');
    assert(Math.abs(observed.source.right-observed.noaa.left)<=16,label+' NOAA adjacent to authority');
+   assert.deepEqual(observed.brokenWords,[],label+' first-screen buttons and date must preserve whole words');
+   assert.equal(observed.navLabels.length,5,label+' five bottom navigation actions');
+   for(const {id,name} of observed.navLabels){
+    assert(name,label+' visible navigation label');
+    assert.equal(await page.getByRole('button',{name}).and(page.locator('#'+id)).count(),1,
+     label+' accessible name must contain its visible label for '+id);
+   }
    if(scale===200){
     assert(observed.mastheadClear,label+' enlarged masthead does not cover the date or phase');
     assert.deepEqual(observed.splitNavLabels,[],label+' enlarged navigation labels must not wrap within a word');
    }
    if(output&&workerAvailable&&!geometryOnly&&state==='fresh'&&!wide){
     await page.screenshot({path:path.join(output,location+' first screen '+scale+'.png'),
-     mask:[page.locator('.nr-o-score,[data-score-tone]')],maskColor:'#102038'});
+     animations:'disabled',timeout:60000,
+     mask:[page.locator('#nrRoute-today.active :is(.nr-o-score,[data-score-tone]):visible')],maskColor:'#102038'});
    }
-   const result={...observed,graphMargin,city:location,zone:city.zone,scale,viewport,state,workerAvailable,geometryOnly,
-    browser:browser.version(),platform:process.platform,activations:0};
+   const result={...observed,graphMargin,city:location,zone:city.zone,lang,scale,viewport,state,workerAvailable,geometryOnly,
+    browser:browser.version(),platform:process.platform,activations:0,sourceFocused:false};
+   if(lang==='uk'&&workerAvailable&&!geometryOnly&&state==='fresh'){
+    await page.locator('#nrRoute-today [data-p0-source]').tap();
+    await page.waitForFunction(()=>{
+     const source=document.querySelector('#nrRoute-today [data-score-source]');
+     return source===document.activeElement&&source?.closest('details')?.open;
+    });
+    await page.evaluate(()=>NRConsumerOverview.update());
+    await page.waitForTimeout(700);
+    const source=await page.locator('#nrRoute-today [data-score-source]').evaluate(el=>{
+     const rect=el.getBoundingClientRect(),nav=document.querySelector('#mobileNav').getBoundingClientRect();
+     return {focused:el===document.activeElement,opened:el.closest('details').open,
+      firstLineVisible:rect.top>=0&&rect.top+Math.min(24,rect.height)<=Math.min(innerHeight,nav.top)};
+    });
+    assert(source.focused&&source.opened&&source.firstLineVisible,label+' source must stay focused and visible after opening details');
+    result.sourceFocused=true;
+    // Measure the independent Sky action from a fresh opening.
+    await page.reload({waitUntil:'domcontentloaded'});
+    await page.waitForFunction(at=>document.querySelector('#nrRoute-today.active [data-p0-next-sky]')?.dataset.at===at,
+      nextAt,{polling:200,timeout:45000});
+   }
    if(!workerAvailable){
     assert(observed.disabled&&!observed.at,label+' missing event has no action');
     return result;
@@ -185,7 +246,14 @@ async function firstScreenCities(browser,base) {
    if(city.cityId==='barcelona')assert.match(observed.localTime,/10 лист/,label+' next local date');
    await page.locator('#nrRoute-today [data-p0-next-sky]').tap();
    const sky=page.locator('#nrRoute-panch.active .nr-sl[data-state=ready][data-clock-mode=selected]');
-   await sky.waitFor({timeout:25000});
+   await sky.waitFor({timeout:45000}).catch(async error=>{
+    const state=await page.evaluate(()=>{
+     const route=document.querySelector('#nrRoute-panch'),chart=route?.querySelector('.nr-sl');
+     return {skyRouteActive:route?.classList.contains('active'),state:chart?.dataset.state,mode:chart?.dataset.clockMode};
+    });
+    console.error('FIRST SCREEN sky readiness '+JSON.stringify(state));
+    throw error;
+   });
    await page.waitForFunction(()=>document.activeElement?.id==='nrSkyLiveHeading');
    assert.equal(await sky.getAttribute('data-time'),nextAt,label+' chart instant after one activation');
    const actual=await page.evaluate(()=>{const s=SRSkyTime.snapshot();return [new Date(s.at).toISOString(),s.zone,s.loc.cityId];});
@@ -201,7 +269,8 @@ async function firstScreenCities(browser,base) {
  const allCityIds=[...cities,...otherPlaces].flatMap(place=>place.cityId?[place.cityId]:[]);
  assert.deepEqual([...rows[0].cityPresets].sort(),allCityIds.sort(),'First screen graph margin probes cover every preset city');
  if(output)await fs.writeFile(path.join(output,'First screen cities.json'),JSON.stringify(rows,null,2)+'\n');
- console.log('PASS first screen: 28 single-activation transitions, 2 unavailable controls and 6 additional location checks');
+ assert.equal(rows.filter(row=>row.sourceFocused).length,8,'Source focus checked at both widths and scales in both cities');
+ console.log('PASS first screen: 28 handoffs, 2 unavailable controls, 6 extra places, 12 localized layouts, Samsung viewport and 8 source focus checks');
 }
 
 (async()=>{

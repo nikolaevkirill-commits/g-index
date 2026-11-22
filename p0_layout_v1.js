@@ -447,6 +447,7 @@ function apply(root,ds,resolved){
  const titleBox=root.querySelector('.nr-o-heading');if(titleBox){titleBox.dataset.referenceTitle='';titleBox.classList.add('sr-reference-title');if(hero.firstElementChild!==titleBox)hero.prepend(titleBox);titleBox.querySelector('h1').textContent=({uk:'Огляд дня',en:'Day overview',es:'Resumen del día',fr:'Aperçu du jour'}[window.NRLocale?.language||'uk']);}
  let details=root.querySelector(':scope > [data-p0-details]');
  if(!details){details=make('details','sr-p0-details');details.dataset.p0Details='';details.append(make('summary','','Детально: джерела, розрахунок і календар'));root.append(details);}
+ const summary=details.querySelector(':scope > summary');
  let signals=root.querySelector(':scope > [data-p0-signals]');
  if(!signals){signals=make('nav','sr-p0-signals');signals.dataset.p0Signals='';signals.setAttribute('aria-label','Три складові дня');for(const [name,selector]of [['Астрономія й NOAA','.nr-o-spaceweather'],['Панчанга','.nr-o-panch-preview'],['Оцінка дня','.nr-o-reasons']]){const btn=make('button','',name);btn.type='button';btn.onclick=()=>{details.open=true;const target=root.querySelector(selector);target?.scrollIntoView({block:'start'});if(target){target.tabIndex=-1;target.focus({preventScroll:true});}};signals.append(btn);}
  const lead=root.querySelector(':scope > [data-space-scene=today]')||root.querySelector(':scope > [data-sky-clock]')||root.querySelector(':scope > .sr-expert-caution')||hero;
@@ -473,7 +474,21 @@ const driverLabel=x=>x.factor==='Kp'?'Геомагнітна складова':x
   provenance=root.querySelector('[data-p0-source-context]');
   if(!provenance){provenance=make('div','sr-p0-source-context');provenance.dataset.p0SourceContext='';hero.append(provenance);}
  }
- let chip=provenance.querySelector('[data-p0-source]');if(!chip){chip=make('button','sr-p0-source');chip.dataset.p0Source='';chip.type='button';chip.onclick=()=>{details.open=true;root.querySelector('[data-score-source]')?.scrollIntoView({block:'center'});};if(provenance===hero)hero.append(chip);else provenance.prepend(chip);}
+ let chip=provenance.querySelector('[data-p0-source]');
+ if(!chip){
+  chip=make('button','sr-p0-source');
+  chip.dataset.p0Source='';
+  chip.type='button';
+  chip.onclick=()=>{
+   details.open=true;
+   const source=details.querySelector('[data-score-source]');
+   const target=source||summary;
+   if(source)source.tabIndex=-1;
+   target.focus({preventScroll:true});
+   target.scrollIntoView({block:'center',behavior:'instant'});
+  };
+  if(provenance===hero)hero.append(chip);else provenance.prepend(chip);
+ }
  let forecast=hero.querySelector('[data-today-forecast]');
  if(!forecast){
   forecast=make('button','sr-today-forecast');
@@ -495,9 +510,10 @@ const driverLabel=x=>x.factor==='Kp'?'Геомагнітна складова':x
  for(const e of [...hero.children])if(!e.matches('[data-reference-title],[data-p0-date],[data-p0-moon],[data-p0-sentence],.nr-o-verdict,[data-day-verdict],[data-day-why],[data-p0-source-context],[data-p0-source],[data-weather-summary],[data-today-forecast],[data-share-card],[data-p0-feed-state],.sr-p0-accessible-heading,[data-placement="after-hero"]'))details.append(e);
  sentence.textContent=tr(sentence.textContent);chip.textContent=tr(chip.textContent);
  if(provenance!==hero)window.NRSpaceWeather?.refreshFirstScreen?.(root);
- details.querySelector(':scope > summary').textContent=tr('Детально: джерела, розрахунок і календар');
+ summary.textContent=tr('Детально: джерела, розрахунок і календар');
  signals.querySelectorAll('button').forEach((b,i)=>b.textContent=tr(['Астрономія й NOAA','Панчанга','Оцінка дня'][i]));
- const source=root.querySelector('[data-score-source]');if(source)details.prepend(source);
+ const source=root.querySelector('[data-score-source]');
+ if(source&&summary.nextElementSibling!==source)summary.after(source);
  for(const e of [...root.children])if(e!==hero&&e!==details&&e!==signals&&!e.matches('.sr-dayline,.nr-o-journey,.nr-o-heading,[data-p0-feed-state],[data-p0-source-context],[data-expert-caution],[data-placement="after-hero"]'))details.append(e);// DES-12: a block that declares its own placement (design-v4 NOAA brief) is not moved back and forth.
 
  // Hide duplicate weather summaries only by putting them in the existing details; no data are dropped.

@@ -5,6 +5,8 @@
 (()=>{'use strict';
 const I=['uk','en','es','fr'],L=()=>{const l=window.NRLocale?.language||'uk';return I.includes(l)?l:'en'},ix=()=>I.indexOf(L());
 const T={
+ scope_note:['Оцінка дня й окремі поради','The day and specific advice','El día y los consejos específicos','La journée et les conseils ciblés'],
+ scope_text:['Загальна оцінка стосується київської доби. Кожна календарна порада стосується підписаної справи.','The overall score refers to the Kyiv day. Each calendar suggestion applies to the activity it names.','La puntuación general corresponde al día de Kyiv. Cada consejo del calendario se aplica a la actividad que indica.','La note générale correspond à la journée de Kyiv. Chaque conseil du calendrier concerne l’activité indiquée.'],
  conflict:['Розбіжність джерел','Sources disagree','Fuentes discrepantes','Sources divergentes'],
  conflict_text:['Формула джерела дає {f}, експерт — {e}. Показано оцінку експерта.','The source formula gives {f} and the expert gives {e}. The expert score is shown.','La fórmula da {f} y el experto da {e}. Se muestra la puntuación del experto.','La formule donne {f} et l’expert {e}. Le score de l’expert est affiché.'],
  tone_pos:['Сприятливий день.','A favourable day.','Un día favorable.','Une journée favorable.'],
@@ -75,6 +77,7 @@ function build(r,ds,res=window.fp469ConsumerForDate?.({ds})||{}){
  if(names.has('День порожні руки, несприятливий'))calendarAdvice.push(t('avoid')+' '+t('newStarts'));
  calendarAdvice.push(...calendarCare);
  why.push([t('calendar'),calendarAdvice.length?calendarAdvice.join(' · '):t(calendarKnown?'calendar_none':'calendar_unavailable')]);
+ if((tone==='tone_pos'&&avoid.length)||(tone==='tone_neg'&&good.length))why.push([t('scope_note'),t('scope_text')]);
  const kpText=kp===null?t('kp_none'):'Kp '+new Intl.NumberFormat(L(),{maximumFractionDigits:2}).format(kp)+' · '+(outlook?t('kp_outlook'):kp>=5?t('kp_storm'):kp>=4?t('kp_active'):t('kp_quiet'));
  why.push([short?t('kp_short'):t('kp'),kpText]);
  const ev=sky?[...sky.intervals,...sky.events].filter(x=>x.reading&&x.reading.intensity>=3&&(x.start||x.at).kyiv_date<=ds&&ds<=(x.end||x.at).kyiv_date)[0]:null;
