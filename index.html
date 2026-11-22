@@ -1741,6 +1741,7 @@ body.simple-mode #nrRoute-forecast #scenarioCard{display:block!important}
 }
 .nr-score-orbit.nr-score-pending{opacity:.58;filter:saturate(.45)}
 @media(min-width:701px){body.fp434-app #mobileNav{display:none!important}}
+@media(701px <= width < 1024px){html body.fp434-app #nrTopNav{display:none!important}}
 .nr-calendar-week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;margin-bottom:12px}.nr-calendar-day{min-height:104px;padding:11px 9px;border:1px solid var(--nr-line);border-radius:15px;background:linear-gradient(155deg,rgba(17,31,41,.96),rgba(7,16,24,.98));color:var(--nr-copy);text-align:left;cursor:pointer;transition:transform .28s var(--nr-ease),border-color .28s ease}.nr-calendar-day:hover,.nr-calendar-day:focus-visible,.nr-calendar-day.active{transform:translateY(-3px);border-color:rgba(225,184,95,.6)}.nr-calendar-day small{display:block;color:var(--nr-copy2);font-size:9px;text-transform:uppercase}.nr-calendar-day b{display:block;margin:8px 0 5px;font:500 24px/1 var(--nr-display);color:var(--nr-gold2)}.nr-calendar-day span{display:block;font-size:9px;color:var(--nr-copy2)}.nr-calendar-detail{margin-bottom:12px}.nr-calendar-month{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:7px}.nr-calendar-cell{min-height:66px;padding:9px;border:1px solid rgba(255,255,255,.065);border-radius:12px;background:rgba(255,255,255,.025);color:var(--nr-copy2);font-size:10px}.nr-calendar-cell strong{display:block;color:var(--nr-copy);font-size:13px}.nr-calendar-cell.missing{opacity:.48;border-style:dashed}.nr-calendar-cell.positive{background:rgba(78,156,112,.08)}.nr-calendar-cell.negative{background:rgba(190,102,86,.08)}
 @media(max-width:700px){.nr-calendar-week{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:5px;scrollbar-width:none}.nr-calendar-week::-webkit-scrollbar{display:none}.nr-calendar-day{flex:0 0 96px;scroll-snap-align:start}.nr-calendar-month{grid-template-columns:repeat(4,minmax(0,1fr))}}
 .nr-functional-result{margin-top:12px;padding:15px;border:1px solid rgba(225,184,95,.24);border-radius:16px;background:linear-gradient(145deg,rgba(225,184,95,.07),rgba(8,17,25,.96))}.nr-functional-result h3{margin:0 0 8px}.nr-functional-result .nr-result-meta{color:var(--nr-copy2);font-size:10px;line-height:1.5}.nr-functional-result .nr-result-primary{margin:9px 0;color:var(--nr-copy);font-size:14px;line-height:1.55}.nr-progress{height:7px;margin:9px 0;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden}.nr-progress>i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--nr-gold),var(--nr-gold2));transition:width .5s var(--nr-ease)}
@@ -2662,7 +2663,7 @@ html.wow body [data-kp-threshold-settings] > p{min-width:0;overflow-wrap:anywher
 <script src="moon_phase_v1.js"></script>
 <script src="expert_start_advice_v1.js?v=1"></script>
 <script src="three_day_forecast_v1.js?v=fp575-fold2"></script>
-<script src="p0_layout_v1.js?v=fp575-first-screen-margin"></script>
+<script src="p0_layout_v1.js?v=fp575-audited-accessibility"></script>
 <script src="score_semantics_v1.js"></script>
 <script src="consumer_authority_v1.js"></script>
 <script src="forecast_journal_v1.js"></script>
@@ -2854,7 +2855,7 @@ html body :is(#nrRoute-today,#nrRoute-forecast,#nrRoute-calendar) .nr-o-verdict 
 <script src="preview-v4/design_b/scenes/locale_extra_v1.js" defer></script>
 <script src="preview-v4/consumer_overview_v1.js?v=fp575-first-screen-margin" defer></script>
 <script src="preview-v4/locale_bridge_v1.js?v=fp569r-release" defer></script>
-<link rel="preload" as="script" href="./mobile_navigation_v1.js?v=fp575-first-screen-margin">
+<link rel="preload" as="script" href="./mobile_navigation_v1.js?v=fp575-nav-reflow">
 <link rel="preload" as="script" href="preview-v4/product_shell_v1.js?v=fp574-packed">
 <link rel="preload" as="script" href="./onboarding_v1.js">
 <link rel="preload" as="script" href="./local_telemetry_v1.js">
@@ -3806,6 +3807,17 @@ html body #fp434Shell a.nr-card[data-classic-link]{text-decoration:none;color:in
 /* R12: visible active navigation state. Does not alter navigation logic. */
 #mobileNav [data-nav-compact]{display:none}
 html:has(#nrRoute-today [data-sr-large-text]) body.fp434-app #mobileNav [data-nav-full]{display:none}
+html:has(#nrRoute-today [data-sr-large-text]) body.fp434-app nav#mobileNav#mobileNav{
+  display:flex!important;
+  gap:0!important;
+  padding-inline:3px!important;
+}
+html:has(#nrRoute-today [data-sr-large-text]) body.fp434-app nav#mobileNav#mobileNav button.mnav-btn{
+  flex:1 0 max-content!important;
+  width:auto!important;
+  min-width:44px!important;
+  padding-inline:1px!important;
+}
 html:has(#nrRoute-today [data-sr-large-text]) body.fp434-app #mobileNav [data-nav-compact]{display:block;white-space:nowrap;font-size:.9em;line-height:1.25}
 body.fp434-app #mobileNav .mnav-btn.active {
   color:var(--nr-gold2)!important;
@@ -3825,8 +3837,10 @@ body.fp434-app #mobileNav .mnav-btn:focus-visible {
 html body #fp434Shell #nrRoute-today .nr-overview [data-p0-source-context]{
  grid-area:4/1/5/2!important;min-width:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.16fr);gap:4px;align-items:stretch;
 }
-html[data-sr-first-screen] body #fp434Shell #nrRoute-today .nr-overview[data-overview]>.nr-o-hero:has(>[data-p0-source-context]){
- grid-template-columns:minmax(0,2.35fr) minmax(0,1fr)!important;
+@media (width > 430px){
+ html[data-sr-first-screen] body #fp434Shell #nrRoute-today .nr-overview[data-overview]>.nr-o-hero:has(>[data-p0-source-context]){
+  grid-template-columns:minmax(0,2.35fr) minmax(0,1fr)!important;
+ }
 }
 html body #fp434Shell #nrRoute-today .nr-overview .sr-p0-source-context>button,
 html body #fp434Shell #nrRoute-today .sr-time-title>[data-p0-next-sky]{
@@ -3869,7 +3883,7 @@ html[data-sr-first-screen] body.fp434-app:has(#nrRoute-today.active [data-sr-lar
 html[data-sr-first-screen] body.fp434-app:has(#nrRoute-today.active [data-sr-large-text])>header .wow-header-moon>span small{display:none!important}
 html[data-sr-first-screen] body.fp434-app #fp434Shell:has(#nrRoute-today.active [data-sr-large-text]){margin-block-start:0}
 html[data-sr-first-screen] body #fp434Shell #nrRoute-today [data-sr-large-text]>[data-p0-source-context]{
- margin-block:0 4px;grid-template-columns:minmax(0,1fr) minmax(0,1.35fr)
+ margin-block:0 4px
 }
 html[data-sr-first-screen] body #fp434Shell #nrRoute-today [data-sr-large-text] .sr-time-title{
  display:grid;grid-template-columns:minmax(0,1fr);gap:4px;
@@ -3879,6 +3893,36 @@ html[data-sr-first-screen] body #fp434Shell #nrRoute-today [data-sr-large-text] 
 html[data-sr-first-screen] body #fp434Shell #nrRoute-today [data-sr-large-text] [data-p0-next-sky] time{grid-area:2/1/3/-1}
 html[data-sr-first-screen] body #fp434Shell #nrRoute-today [data-sr-large-text] [data-p0-next-sky] span{grid-area:3/1/4/3}
 html[data-sr-first-screen] body #fp434Shell #nrRoute-today [data-sr-large-text] [data-p0-next-sky] i{grid-area:3/3/4/4}
+
+/* Narrow first-screen labels remain whole at both normal and enlarged text sizes. */
+@media(max-width:430px){
+ html[data-sr-first-screen] body #fp434Shell #nrRoute-today [data-overview] :is([data-p0-source],[data-p0-noaa],[data-p0-next-sky],[data-today-forecast],.nr-dc-head,[data-day-why]>summary){
+  overflow-wrap:normal!important;word-break:normal!important;hyphens:none
+ }
+ html[data-sr-first-screen] body #fp434Shell #nrRoute-today .nr-overview[data-overview]>.nr-o-hero{
+  grid-template-columns:minmax(0,1fr) minmax(min-content,max-content)!important
+ }
+ html[data-sr-first-screen] body #fp434Shell #nrRoute-today [data-overview] [data-p0-source-context]{
+  grid-area:4/1/5/-1!important;grid-template-columns:minmax(min-content,1fr) minmax(min-content,1.2fr)
+ }
+ html[data-sr-first-screen] body #fp434Shell #nrRoute-today [data-app-today]>.nr-o-hero:has(>[data-p0-source-context]):has(>[data-day-why]){
+  grid-template-columns:minmax(0,1fr) minmax(0,max-content) fit-content(5rem)!important
+ }
+ html[data-sr-first-screen] body #fp434Shell #nrRoute-today [data-app-today]>.nr-o-hero:has(>[data-day-why])>[data-p0-source-context]{
+  grid-area:4/1/5/3!important
+ }
+ html[data-sr-first-screen] body #fp434Shell #nrRoute-today [data-app-today]>.nr-o-hero:has(>[data-p0-source-context])>[data-day-why]{
+  grid-area:4/3/5/4!important;min-width:min-content
+ }
+ html[data-sr-first-screen] body #fp434Shell #nrRoute-today [data-app-today]>.nr-o-hero:has(>[data-p0-source-context])>[data-day-why][open]{
+  grid-area:6/1/7/-1!important;min-width:0
+ }
+ html[data-sr-first-screen] body #fp434Shell #nrRoute-today .nr-o-hero .sr-today-forecast{grid-area:1/2/2/-1;align-self:center;justify-self:end}
+ html[data-sr-first-screen] body #fp434Shell #nrRoute-today [data-overview]:not([data-sr-large-text]) [data-p0-next-sky] strong{grid-area:1/1/2/-1}
+ html[data-sr-first-screen] body #fp434Shell #nrRoute-today [data-overview]:not([data-sr-large-text]) [data-p0-next-sky] time{grid-area:2/1/3/-1}
+ html[data-sr-first-screen] body #fp434Shell #nrRoute-today [data-overview]:not([data-sr-large-text]) [data-p0-next-sky] span{grid-area:3/1/4/3}
+ html[data-sr-first-screen] body #fp434Shell #nrRoute-today [data-overview]:not([data-sr-large-text]) [data-p0-next-sky] i{grid-area:3/3/4/4}
+}
 </style>
 </head>
 <body>
@@ -8224,37 +8268,37 @@ window.getEffectiveGForDate = getEffectiveGForDate;
 
 <!-- ═══ MOBILE BOTTOM NAV ═══════════════════════════════ -->
 <nav id="mobileNav" role="navigation" aria-label="Навігація">
-  <button class="mnav-btn active" id="mnavToday" onclick="fp434Go('today',true)" aria-label="Сьогодні">
+  <button class="mnav-btn active" id="mnavToday" onclick="fp434Go('today',true)" data-nav-label="Сьогодні" translate="no">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
       <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/>
     </svg>
-    <span data-nav-full>Сьогодні</span><span data-nav-compact="today" translate="no" aria-hidden="true">День</span>
+    <span data-nav-full>Сьогодні</span><span data-nav-compact="today">Сьог.</span>
   </button>
   <button class="mnav-btn" id="mnavPanch" onclick="fp434Go('panch',true)" aria-label="Небо: панчанга й планети">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
       <path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9z"/><path d="M17.5 5.5l.5 1.2 1.2.5-1.2.5-.5 1.2-.5-1.2-1.2-.5 1.2-.5z"/>
     </svg>
-    <span data-nav-full>Небо</span><span data-nav-compact="sky" translate="no" aria-hidden="true">Небо</span>
+    <span data-nav-full>Небо</span><span data-nav-compact="sky" translate="no">Небо</span>
   </button>
-  <button class="mnav-btn" id="mnavForecast" onclick="fp434Go('forecast',true)" aria-label="Прогноз">
+  <button class="mnav-btn" id="mnavForecast" onclick="fp434Go('forecast',true)">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
       <path d="M4 18l5-6 4 3 7-9"/><path d="M4 5v14h16"/>
     </svg>
-    <span data-nav-full>Прогноз</span><span data-nav-compact="forecast" translate="no" aria-hidden="true">Далі</span>
+    <span data-nav-full>Прогноз</span><span data-nav-compact="forecast" translate="no">Прогноз</span>
   </button>
-  <button class="mnav-btn" id="mnavCalendar" onclick="fp434Go('calendar',true)" aria-label="Календар">
+  <button class="mnav-btn" id="mnavCalendar" onclick="fp434Go('calendar',true)" data-nav-label="Календар" translate="no">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
       <rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/>
     </svg>
-    <span data-nav-full>Календар</span><span data-nav-compact="calendar" translate="no" aria-hidden="true">Дати</span>
+    <span data-nav-full>Календар</span><span data-nav-compact="calendar">Календ.</span>
   </button>
-  <button class="mnav-btn" id="mnavMore" onclick="fp434Go('more',true)" aria-label="Ще">
+  <button class="mnav-btn" id="mnavMore" onclick="fp434Go('more',true)">
     <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>
-    <span data-nav-full>Ще</span><span data-nav-compact="more" translate="no" aria-hidden="true">Ще</span>
+    <span data-nav-full>Ще</span><span data-nav-compact="more" translate="no">Ще</span>
   </button>
 </nav>
 
-<script src="./mobile_navigation_v1.js?v=fp575-first-screen-margin"></script>
+<script src="./mobile_navigation_v1.js?v=fp575-nav-reflow"></script>
 
 <style id="fp463CosmicConceptStyles">
 body.fp434-app #dashboardToolbar{display:none!important}
@@ -8808,7 +8852,7 @@ html .nr-sl-header>div{min-width:0;flex:1 1 auto}html .nr-sl-header button[data-
 <script src="lunar_core_v1.js?v=fp572-lunar-display"></script>
 <script src="dayline_adapter_v1.js?v=fp572-lunar"></script>
 <script src="dayline_async_v1.js?v=fp575-first-screen"></script>
-<script src="dayline_view_v1.js?v=fp575-first-screen"></script>
+<script src="dayline_view_v1.js?v=fp575-audited-accessibility"></script>
 <style data-inline-source="design_finish_v1.css" data-css-sha256="e1bb01e5a3ee748adede2cc6ace27dde4fd5918b077fb5f37364066a7bdb7481">
 /* SkyRhythm · доробка дизайну FP569. Лише оформлення й нові блоки week_ahead_v1.js; бал, дані й логіку не змінює. */
 :root{--srf-pos:#63e6ad;--srf-neu:#ffdc75;--srf-neg:#ff858d;--srf-miss:#bac5d1;--srf-ink:var(--nrs-ink,#F3EFF8);--srf-soft:var(--nrs-soft,rgba(243,239,248,.62));--srf-line:rgba(185,197,255,.22);--srf-card:rgba(13,22,48,.72);--srf-accent:var(--nrs-accent,#D9B777)}
@@ -9023,7 +9067,7 @@ html body .sr-g-cells i.is-forecast{outline:2px dashed #F2C46B;outline-offset:1p
 <script src="preview-v4/app_today_v1.js?v=fp575-first-screen-margin" defer></script>
 <script src="personal_dayline_model.js?v=fp572-natal" defer></script>
 <script src="natal_sky_v1.js?v=fp572-natal" defer></script>
-<script src="day_verdict_v1.js?v=fp575-calendar-lifecycle" defer></script>
+<script src="day_verdict_v1.js?v=fp575-audited-accessibility" defer></script>
 <script src="space_scene_gl_v1.js?v=fp569r-noaa-locales" defer></script>
 <script src="space_scene_v1.js?v=fp575-d3" defer></script>
 <script src="preview-v4/sky_scene_v1.js?v=fp572-sky" defer></script>

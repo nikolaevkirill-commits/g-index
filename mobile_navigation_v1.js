@@ -4,15 +4,26 @@
 
 // ── Mobile Bottom Nav ─────────────────────────────────────
 const MNAV_COMPACT_LABELS = {
-  uk: {today:'День',sky:'Небо',forecast:'Далі',calendar:'Дати',more:'Ще'},
-  en: {today:'Day',sky:'Sky',forecast:'Next',calendar:'Dates',more:'More'},
-  es: {today:'Hoy',sky:'Cielo',forecast:'Luego',calendar:'Fechas',more:'Más'},
-  fr: {today:'Jour',sky:'Ciel',forecast:'Suite',calendar:'Dates',more:'Plus'},
+  uk: {today:'Сьог.',sky:'Небо',forecast:'Прогноз',calendar:'Календ.',more:'Ще'},
+  en: {today:'Today',sky:'Sky',forecast:'Forecast',calendar:'Calendar',more:'More'},
+  es: {today:'Hoy',sky:'Cielo',forecast:'Previsión',calendar:'Calend.',more:'Más'},
+  fr: {today:'Auj.',sky:'Ciel',forecast:'Prévisions',calendar:'Calend.',more:'Plus'},
 };
 function mnavCompactLabels() {
-  const copy = MNAV_COMPACT_LABELS[window.NRLocale?.language] || MNAV_COMPACT_LABELS.uk;
+  const locale = window.NRLocale;
+  const copy = MNAV_COMPACT_LABELS[locale?.language] || MNAV_COMPACT_LABELS.uk;
+  const largeText = Boolean(document.querySelector('#nrRoute-today [data-sr-large-text]'));
   document.querySelectorAll('#mobileNav [data-nav-compact]').forEach(label => {
-    label.textContent = copy[label.dataset.navCompact];
+    const short = copy[label.dataset.navCompact];
+    if (label.textContent !== short) label.textContent = short;
+    const button = label.parentElement;
+    const source = button.dataset.navLabel;
+    if (!source) return;
+    const full = locale?.text(source) || source;
+    const fullLabel = button.querySelector('[data-nav-full]');
+    if (fullLabel.textContent !== full) fullLabel.textContent = full;
+    if (largeText && short !== full) button.setAttribute('aria-label', short + ' ' + full);
+    else button.removeAttribute('aria-label');
   });
 }
 window.addEventListener('nr:locale', mnavCompactLabels);
@@ -99,6 +110,12 @@ window.addEventListener('resize', () => {
 
 document.addEventListener('DOMContentLoaded', () => {
   mnavCompactLabels();
+  const main = document.getElementById('mainContent');
+  if (main) new MutationObserver(mnavCompactLabels).observe(main, {
+    subtree: true,
+    attributes: true,
+    attributeFilter: ['data-sr-large-text'],
+  });
   setTimeout(mnavInit, 100); // after dashboard renders
   // fp293: notification deep links must reveal the actual target, not merely
   // load the page with a hidden/closed section.
