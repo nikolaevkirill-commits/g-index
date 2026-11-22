@@ -8,7 +8,8 @@ const SUN_AND_STATUS=[':scope > .sr-time-sun',':scope > [data-p0-feed-state]'];
 const REST=[':scope > [data-space-scene=today]:not([data-tone=watch],[data-tone=storm])',':scope > .sr-dayline',':scope > [data-week-strip]',':scope > [data-p0-signals]',':scope > .nr-o-weather-brief','[data-sky-now]',':scope > .nr-o-journey',':scope > [data-day-you]',':scope > [data-p0-details]'];
 const ORDER=[...LEAD,ACTIVE,...SUN_AND_STATUS,...REST];
 const COMPACT_ORDER=[...LEAD,...SUN_AND_STATUS,ACTIVE,...REST];
-const LARGE_TEXT_ORDER=[...SUN_AND_STATUS,...LEAD,ACTIVE,...REST];
+const PROVENANCE='[data-p0-source-context]';
+const LARGE_TEXT_ORDER=[':scope > '+PROVENANCE,...SUN_AND_STATUS,...LEAD,ACTIVE,...REST];
 const narrow=matchMedia('(max-width:600px)');
 const compact=matchMedia('(min-width:431px), (max-height:932px)');
 function updateWeatherSummary(hero,scene){
@@ -39,6 +40,16 @@ function arrange(root){
  const largeText=html.hasAttribute('data-sr-first-screen')&&narrow.matches&&
   (parseFloat(textStyle.textSizeAdjust||textStyle.webkitTextSizeAdjust)>=150||parseFloat(textStyle.fontSize)>=24);
  root.toggleAttribute('data-sr-large-text',largeText);
+ const provenance=root.querySelector(PROVENANCE),sun=root.querySelector(':scope > [data-sky-clock]');
+ if(provenance&&hero){
+  const focused=provenance.contains(document.activeElement)?document.activeElement:null;
+  if(largeText&&sun&&provenance.parentElement!==root){sun.before(provenance);focused?.focus({preventScroll:true});}
+  else if(!largeText&&provenance.parentElement!==hero){
+   const forecast=hero.querySelector(':scope > [data-today-forecast]');
+   if(forecast)forecast.before(provenance);else hero.append(provenance);
+   focused?.focus({preventScroll:true});
+  }
+ }
  const selectors=largeText?LARGE_TEXT_ORDER:compact.matches?COMPACT_ORDER:ORDER;
  const els=selectors.map(s=>root.querySelector(s)).filter(Boolean);if(els.length<2)return false;
  let moved=false,prev=els[0];

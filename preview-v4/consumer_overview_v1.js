@@ -117,7 +117,7 @@ function renderWeatherBrief(root,status,full){
  if(!['today','forecast'].includes(root.dataset.overview))return;
  const hero=root.querySelector('.nr-o-hero'),tr=s=>window.NRLocale?.text(s)||s;
  const openDetails=()=>openWeatherDetails(full);
- if(root.dataset.overview==='today')renderFirstNoaa(hero?.querySelector('[data-p0-source-context]'),status,openDetails);
+ if(root.dataset.overview==='today')renderFirstNoaa(root.querySelector('[data-p0-source-context]'),status,openDetails);
  let brief=root.querySelector('[data-weather-brief]');
  if(!brief){brief=document.createElement('button');brief.type='button';brief.dataset.weatherBrief='';brief.className='nr-o-brief nr-o-weather-brief';brief.setAttribute('translate','no');brief.dataset.placement='after-hero';hero.insertBefore(brief,hero.querySelector('[data-panch-countdown]'));brief.onclick=openDetails;}
  let body,forecastSummary='';

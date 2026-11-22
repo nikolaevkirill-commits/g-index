@@ -2,7 +2,7 @@ importScripts('./runtime_diagnostics_v1.js','./civil_time_v1.js?v=fp575-calendar
 // G-Index service worker. Navigations, HTML, JS and data (.json/.jsonl/.csv) are network-first with a
 // cached fallback. Versioned packed scripts and other static assets are cache-first.
 // Bump CACHE_VERSION whenever index.html or a cached shell asset changes.
-const CACHE_VERSION = 'fp575-first-screen-text-20261122';
+const CACHE_VERSION = 'fp575-first-screen-margin-20261122';
 const CACHE_PREFIX = 'gindex-'; // G-Index cache namespace; do not remove the prefix.
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${CACHE_VERSION}`;
 const DATA_CACHE = `${CACHE_PREFIX}data-${CACHE_VERSION}`;
@@ -99,7 +99,7 @@ async function deliveryResponse(response,mode){
 const SHELL_ASSETS = [
   './civil_time_v1.js?v=fp575-calendar-lifecycle',
   './sw_update_coordination_v1.js?v=fp569n-handoff',
-  './day_context_v1.js?v=mobile-clarity1',
+  './day_context_v1.js?v=fp575-first-screen-margin',
   './sky_time_v1.js?v=fp575-first-screen',
   './sky_live_loader_v1.js?v=fp569r-cosmos',
   './sky_live_v1.js?v=fp569r-cosmos',
@@ -152,7 +152,7 @@ const SHELL_ASSETS = [
   './classic.html',
   './preview-v4/desktop_v1.css?v=d1',
   './preview-v4/atlas_motion.css?v=v7-2',
-  './preview-v4/consumer_overview_v1.js?v=fp575-first-screen',
+  './preview-v4/consumer_overview_v1.js?v=fp575-first-screen-margin',
   './preview-v4/core_runtime_v1.js?v=fp572-lunar-local',
   './preview-v4/design_candidate.css?v=v7-3',
   './preview-v4/design_candidate.js',
@@ -190,7 +190,7 @@ const SHELL_ASSETS = [
   './preview-v4/design_b/scenes/scenes.js?v=fp569c-scenes-provenance',
   './preview-v4/sky_scene_v1.js?v=fp572-sky',
   './preview-v4/sky_scene_v1.css?v=fp569r-reaudit',
-  './preview-v4/app_today_v1.js?v=fp575-first-screen-text',
+  './preview-v4/app_today_v1.js?v=fp575-first-screen-margin',
   './preview-v4/app_today_v1.css?v=fp575-wide-j',
   './natal_sky_v1.js?v=fp572-natal',
   './day_verdict_v1.js?v=fp575-calendar-lifecycle',
@@ -248,7 +248,7 @@ const SHELL_ASSETS = [
   './product_render_queue_v1.js',
   './moon_phase_v1.js',
   './expert_start_advice_v1.js?v=1',
-  './p0_layout_v1.js?v=fp575-first-screen',
+  './p0_layout_v1.js?v=fp575-first-screen-margin',
   './three_day_forecast_v1.js?v=fp575-fold2',
   './p0_layout_v1.css',
   './wow_reviewed_v1.css',
@@ -263,7 +263,7 @@ const SHELL_ASSETS = [
   './forecast_journal_v1.js',
   './push_client_v1.js',
   './core_runtime_v1.js?v=fp572-lunar-local',
-  './mobile_navigation_v1.js',
+  './mobile_navigation_v1.js?v=fp575-first-screen-margin',
   './product_shell_v1.js?v=fp574-packed',
   './plan_calendar_v1.js',
   './native_reminder_v1.js',
@@ -314,7 +314,7 @@ const PACKED_SHELL_HASHES = Object.freeze({
   './preview-v4/locale_overview_v1.js': '7ec93b5fd0fa1d78355a369957a0d8e7022c08115b6997fb6c30593729578d9b',
   './dayline_view_v1.js': 'cf186bb6f9f3197861546f0bd3f8fa436bdf220ea9dc4b45042ceb0254608f56',
   './consumer_overview_v1.js': '0381bab825446bd280c6a33f10f29fed688200f2243c5a52107a6b5d193e7f15',
-  './preview-v4/consumer_overview_v1.js': '083b89d0ab314565ba624845a8f203bac0c6a303ea8fd7653d86c5b576718c92',
+  './preview-v4/consumer_overview_v1.js': '17ad7c0734c6dd245815b9751c50271fc767925a8a497f049d40697240cca8be',
   './observances_tanita_v1.js': '22573bb343426e4a5056210f0a8498c44c7c3cea7615fb389ae12516102bdda3',
   './research_observances_v1.js': 'd36ced989c11b994fd6c3f9dc847436af250188f47ca42c5e82c3864079c01cd',
   './product_shell_v1.js': '1dbe497ec9ef59f8c84535eeae9ed6c44a4f4b2886b8ba08df67ba34a27cf889',

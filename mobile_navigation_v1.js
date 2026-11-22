@@ -3,6 +3,19 @@
 // ── Safe localStorage — canonical block is above (v83) ──
 
 // ── Mobile Bottom Nav ─────────────────────────────────────
+const MNAV_COMPACT_LABELS = {
+  uk: {today:'День',sky:'Небо',forecast:'Далі',calendar:'Дати',more:'Ще'},
+  en: {today:'Day',sky:'Sky',forecast:'Next',calendar:'Dates',more:'More'},
+  es: {today:'Hoy',sky:'Cielo',forecast:'Luego',calendar:'Fechas',more:'Más'},
+  fr: {today:'Jour',sky:'Ciel',forecast:'Suite',calendar:'Dates',more:'Plus'},
+};
+function mnavCompactLabels() {
+  const copy = MNAV_COMPACT_LABELS[window.NRLocale?.language] || MNAV_COMPACT_LABELS.uk;
+  document.querySelectorAll('#mobileNav [data-nav-compact]').forEach(label => {
+    label.textContent = copy[label.dataset.navCompact];
+  });
+}
+window.addEventListener('nr:locale', mnavCompactLabels);
 const MNAV_SECTIONS = {
   now:      ['heroCard','daySentenceCard','decisionStrip','decisionTiming','impactBlock','astroGrid','wf3SignalSummary','profileBar','profileRec','mainGrid','swipeHint3','threeCard'],
   panch:    ['heroCard','daySentenceCard','decisionStrip','wf3SignalSummary','mainGrid','panchCard','swipeHint3','threeCard'],
@@ -85,6 +98,7 @@ window.addEventListener('resize', () => {
 });
 
 document.addEventListener('DOMContentLoaded', () => {
+  mnavCompactLabels();
   setTimeout(mnavInit, 100); // after dashboard renders
   // fp293: notification deep links must reveal the actual target, not merely
   // load the page with a hidden/closed section.

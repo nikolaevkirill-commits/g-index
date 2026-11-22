@@ -470,7 +470,7 @@ const driverLabel=x=>x.factor==='Kp'?'Геомагнітна складова':x
  sentence.textContent=text;
  let provenance=hero;
  if(document.documentElement.hasAttribute('data-sr-first-screen')){
-  provenance=hero.querySelector('[data-p0-source-context]');
+  provenance=root.querySelector('[data-p0-source-context]');
   if(!provenance){provenance=make('div','sr-p0-source-context');provenance.dataset.p0SourceContext='';hero.append(provenance);}
  }
  let chip=provenance.querySelector('[data-p0-source]');if(!chip){chip=make('button','sr-p0-source');chip.dataset.p0Source='';chip.type='button';chip.onclick=()=>{details.open=true;root.querySelector('[data-score-source]')?.scrollIntoView({block:'center'});};if(provenance===hero)hero.append(chip);else provenance.prepend(chip);}
@@ -498,7 +498,7 @@ const driverLabel=x=>x.factor==='Kp'?'Геомагнітна складова':x
  details.querySelector(':scope > summary').textContent=tr('Детально: джерела, розрахунок і календар');
  signals.querySelectorAll('button').forEach((b,i)=>b.textContent=tr(['Астрономія й NOAA','Панчанга','Оцінка дня'][i]));
  const source=root.querySelector('[data-score-source]');if(source)details.prepend(source);
- for(const e of [...root.children])if(e!==hero&&e!==details&&e!==signals&&!e.matches('.sr-dayline,.nr-o-journey,.nr-o-heading,[data-p0-feed-state],[data-expert-caution],[data-placement="after-hero"]'))details.append(e);// DES-12: a block that declares its own placement (design-v4 NOAA brief) is not moved back and forth.
+ for(const e of [...root.children])if(e!==hero&&e!==details&&e!==signals&&!e.matches('.sr-dayline,.nr-o-journey,.nr-o-heading,[data-p0-feed-state],[data-p0-source-context],[data-expert-caution],[data-placement="after-hero"]'))details.append(e);// DES-12: a block that declares its own placement (design-v4 NOAA brief) is not moved back and forth.
 
  // Hide duplicate weather summaries only by putting them in the existing details; no data are dropped.
  const line=root.querySelector('.sr-dayline');if(line){signals.after(line);let explore=line.querySelector('[data-p0-explore]');if(!explore){explore=make('details','sr-p0-explore');explore.dataset.p0Explore='';explore.append(make('summary','','Усі події, час і традиційні образи'));line.append(explore);}
