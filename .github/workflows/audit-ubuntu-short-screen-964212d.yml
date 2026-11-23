@@ -1,0 +1,128 @@
+name: Audit short screen 964212d on Ubuntu
+
+on:
+  push:
+    branches: ['codex/audit-ubuntu-short-screen-964212d']
+
+permissions:
+  contents: read
+
+env:
+  CANDIDATE_SHA: 964212d07987ef246bc7da52858433ab2d54d9bc
+  AUDIT_SCRIPT_SHA256: 65a94a43f743840591fb10e543537b3fcbfd95fd3d07c5adac41a29ac3014ad6
+  GATE_PLAYWRIGHT_VERSION: '1.62.1'
+  GATE_CHROMIUM_VERSION: '151.0.7922.34'
+
+jobs:
+  browser-audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Check out the audit workflow and script
+        uses: actions/checkout@v5
+        with:
+          path: audit-driver
+          persist-credentials: false
+      - name: Check out the exact release candidate
+        uses: actions/checkout@v5
+        with:
+          ref: 964212d07987ef246bc7da52858433ab2d54d9bc
+          path: candidate
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Verify sources and prepare runtime
+        run: |
+          mkdir -p "$RUNNER_TEMP/first-screen-evidence"
+          test "$(git -C candidate rev-parse HEAD)" = "$CANDIDATE_SHA"
+          test "$(git -C audit-driver rev-parse HEAD)" = "$GITHUB_SHA"
+          test -z "$(git -C candidate status --porcelain --untracked-files=no)"
+          script="$GITHUB_WORKSPACE/audit-driver/audit/Відтворення короткого екрана.cjs"
+          printf '%s  %s\n' "$AUDIT_SCRIPT_SHA256" "$script" | sha256sum --check --strict
+          source /etc/os-release
+          test "$ID" = ubuntu
+          test "$VERSION_ID" = 24.04
+          printf 'AUDIT_SCRIPT=%s\n' "$script" >> "$GITHUB_ENV"
+          printf 'NODE_PATH=%s\n' "$RUNNER_TEMP/first-screen-deps/node_modules" >> "$GITHUB_ENV"
+          npm install --prefix "$RUNNER_TEMP/first-screen-deps" --no-save --package-lock=false --no-bin-links "playwright@$GATE_PLAYWRIGHT_VERSION"
+      - name: Install the gate Chromium
+        working-directory: candidate
+        run: node tools/audit/install_gate_chromium.cjs
+      - name: Run 32 cold openings and one-tap transitions
+        run: |
+          node "$AUDIT_SCRIPT" "$GITHUB_WORKSPACE/candidate" "$RUNNER_TEMP/first-screen-evidence"
+      - name: Bind the receipt to runner and source identity
+        run: |
+          node - <<'NODE'
+          const assert = require('node:assert/strict');
+          const {execFileSync} = require('node:child_process');
+          const {createHash} = require('node:crypto');
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const os = require('node:os');
+          const env = process.env;
+          const candidate = path.join(env.GITHUB_WORKSPACE, 'candidate');
+          const output = path.join(env.RUNNER_TEMP, 'first-screen-evidence');
+          const receiptName = 'Квитанція короткого екрана.json';
+          const receiptPath = path.join(output, receiptName);
+          const hash = file => createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+          const read = filename => execFileSync('git',['-C',candidate,...filename],{encoding:'utf8'}).trim();
+          const receipt = JSON.parse(fs.readFileSync(receiptPath,'utf8'));
+          assert.equal(process.platform,'linux');
+          assert.equal(read(['rev-parse','HEAD']),env.CANDIDATE_SHA);
+          assert.equal(read(['status','--porcelain','--untracked-files=no']),'');
+          assert.equal(receipt.commit,env.CANDIDATE_SHA);
+          assert.equal(receipt.browser,env.GATE_CHROMIUM_VERSION);
+          assert.equal(require('playwright/package.json').version,env.GATE_PLAYWRIGHT_VERSION);
+          assert.equal(hash(env.AUDIT_SCRIPT),env.AUDIT_SCRIPT_SHA256);
+          assert.equal(receipt.status,'PASS');
+          assert.equal(receipt.cases,32);
+          assert.equal(receipt.checked,32);
+          assert.equal(receipt.failures.length,0);
+          assert.equal(receipt.rows.length,32);
+          const keys = new Set(receipt.rows.map(row=>[row.city,row.lang,row.state].join('/')));
+          for(const city of ['kyiv','barcelona'])
+            for(const lang of ['uk','en','es','fr'])
+              for(const state of ['fresh','partial','stale','missing']) assert(keys.has([city,lang,state].join('/')));
+          assert(receipt.rows.every(row=>row.platform==='linux'&&row.scale===200&&row.viewport.width===384&&row.viewport.height===694&&
+            row.textScale==='200%'&&row.graphMargin>=16&&row.scrollY===0&&row.source.inViewport&&row.noaa.inViewport&&
+            row.event.inViewport&&row.plot.inViewport&&row.activations===1&&row.skyAt===row.at&&row.skyCity===row.city&&
+            row.skyZone===row.zone&&row.tapEvents.length===3&&row.tapEvents.every(event=>event.trusted&&event.scrollY===0)));
+          for(const [file,digest] of Object.entries(receipt.fileHashes))
+            assert.equal(hash(path.join(candidate,file)),digest);
+          const metadata = {
+            candidate:env.CANDIDATE_SHA,
+            auditWorkflowCommit:env.GITHUB_SHA,
+            auditRef:env.GITHUB_REF,
+            runId:env.GITHUB_RUN_ID,
+            runAttempt:env.GITHUB_RUN_ATTEMPT,
+            runnerImage:env.ImageOS||null,
+            runnerImageVersion:env.ImageVersion||null,
+            osRelease:fs.readFileSync('/etc/os-release','utf8').trim(),
+            platform:process.platform,
+            kernel:os.release(),
+            arch:process.arch,
+            node:process.version,
+            npm:execFileSync('npm',['--version'],{encoding:'utf8'}).trim(),
+            playwright:env.GATE_PLAYWRIGHT_VERSION,
+            chromium:receipt.browser,
+            scriptSha256:env.AUDIT_SCRIPT_SHA256,
+            workflowSha256:hash(path.join(env.GITHUB_WORKSPACE,'audit-driver',env.GITHUB_WORKFLOW_REF.split('@')[0].split('/').slice(2).join('/'))),
+            candidateFiles:receipt.fileHashes,
+            receipt:{name:receiptName,sha256:hash(receiptPath),rows:receipt.rows.length,minimumMarginPx:Math.min(...receipt.rows.map(row=>row.graphMargin))},
+            command:'node "$AUDIT_SCRIPT" "$GITHUB_WORKSPACE/candidate" "$RUNNER_TEMP/first-screen-evidence"',
+          };
+          fs.writeFileSync(path.join(output,'Походження квитанції.json'),JSON.stringify(metadata,null,2)+'\n');
+          fs.copyFileSync(env.AUDIT_SCRIPT,path.join(output,'Відтворення короткого екрана.cjs'));
+          NODE
+      - name: Upload the audit receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: short-screen-ubuntu-964212d
+          path: ${{ runner.temp }}/first-screen-evidence
+          if-no-files-found: warn
