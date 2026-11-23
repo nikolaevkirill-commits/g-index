@@ -62,7 +62,16 @@ function watch(){
  if(observed===root){arrange(root);return}observer?.disconnect();layoutObserver?.disconnect();observed=root;root.dataset.appToday='';
  arrange(root);
  observer=new MutationObserver(()=>arrange(root));observer.observe(root,{childList:true});
- layoutObserver=new ResizeObserver(()=>arrange(root));layoutObserver.observe(root);
+ // Перестановка блоків змінює розмір секції. Виконуємо її після поточного циклу ResizeObserver.
+ let layoutFrame=null;
+ layoutObserver=new ResizeObserver(()=>{
+  if(layoutFrame!==null)return;
+  layoutFrame=requestAnimationFrame(()=>{
+   layoutFrame=null;
+   if(observed===root&&root.isConnected)arrange(root);
+  });
+ });
+ layoutObserver.observe(root);
 }
 window.NRAppToday={arrange:()=>{const r=document.querySelector('#nrRoute-today [data-overview="today"]');return r?arrange(r):false},order:ORDER};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',watch);else watch();

@@ -2,7 +2,7 @@ importScripts('./runtime_diagnostics_v1.js','./civil_time_v1.js?v=fp575-calendar
 // G-Index service worker. Navigations, HTML, JS and data (.json/.jsonl/.csv) are network-first with a
 // cached fallback. Versioned packed scripts and other static assets are cache-first.
 // Bump CACHE_VERSION whenever index.html or a cached shell asset changes.
-const CACHE_VERSION = 'fp575-short-zoom-20261122';
+const CACHE_VERSION = 'fp575-audit-close-20261123';
 const CACHE_PREFIX = 'gindex-'; // G-Index cache namespace; do not remove the prefix.
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${CACHE_VERSION}`;
 const DATA_CACHE = `${CACHE_PREFIX}data-${CACHE_VERSION}`;
@@ -159,7 +159,7 @@ const SHELL_ASSETS = [
   './preview-v4/design_scale.js',
   './preview-v4/locale_bridge_v1.js?v=fp569r-release',
   './preview-v4/locale_overview_v1.js?v=fp569m',
-  './preview-v4/product_shell_v1.js?v=fp574-packed',
+  './preview-v4/product_shell_v1.js?v=fp575-audit-close-20261123',
   './preview-v4/design_b/integration.css?v=v7-2',
   './preview-v4/design_b/palette/palette.css?v=v7-2',
   './preview-v4/design_b/palette/palette.js',
@@ -190,7 +190,7 @@ const SHELL_ASSETS = [
   './preview-v4/design_b/scenes/scenes.js?v=fp569c-scenes-provenance',
   './preview-v4/sky_scene_v1.js?v=fp572-sky',
   './preview-v4/sky_scene_v1.css?v=fp569r-reaudit',
-  './preview-v4/app_today_v1.js?v=fp575-first-screen-margin',
+  './preview-v4/app_today_v1.js?v=fp575-audit-close-20261123',
   './preview-v4/app_today_v1.css?v=fp575-wide-j',
   './natal_sky_v1.js?v=fp572-natal',
   './day_verdict_v1.js?v=fp575-audited-accessibility',
@@ -264,7 +264,7 @@ const SHELL_ASSETS = [
   './push_client_v1.js',
   './core_runtime_v1.js?v=fp572-lunar-local',
   './mobile_navigation_v1.js?v=fp575-nav-reflow',
-  './product_shell_v1.js?v=fp574-packed',
+  './product_shell_v1.js?v=fp575-audit-close-20261123',
   './plan_calendar_v1.js',
   './native_reminder_v1.js',
   './native_reminder_ui_v1.js',
@@ -317,8 +317,8 @@ const PACKED_SHELL_HASHES = Object.freeze({
   './preview-v4/consumer_overview_v1.js': '17ad7c0734c6dd245815b9751c50271fc767925a8a497f049d40697240cca8be',
   './observances_tanita_v1.js': '22573bb343426e4a5056210f0a8498c44c7c3cea7615fb389ae12516102bdda3',
   './research_observances_v1.js': 'd36ced989c11b994fd6c3f9dc847436af250188f47ca42c5e82c3864079c01cd',
-  './product_shell_v1.js': '1dbe497ec9ef59f8c84535eeae9ed6c44a4f4b2886b8ba08df67ba34a27cf889',
-  './preview-v4/product_shell_v1.js': 'ba408be45caf7f7396a73e184de692844ddc0746309c385084abc94e53a23647',
+  './product_shell_v1.js': '226d72192e6c947812a628b5b6e9a41e912eb098fa7a5fa13e97feb98b85e95b',
+  './preview-v4/product_shell_v1.js': '627b98fe76718d62d596952c6664b8699dc01decc5481a5deb81ad53ef4e6d53',
 });
 const CAN_UNPACK_SHELL = typeof DecompressionStream === 'function';
 const packedShellScripts = new Map();
