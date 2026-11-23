@@ -8,6 +8,14 @@ for(const entry of ['classic.html','index.html'])for(const width of [320,390,430
 if(process.env.NR_REFLOW_CASE&&process.env.NR_REFLOW_CASE!==`${entry}:${width}:${scale}`)continue;
 const context=await browser.newContext({viewport:{width,height:844},isMobile:true,serviceWorkers:'block',timezoneId:'Europe/Kyiv'});const p=await context.newPage();
 await context.route(/^https?:\/\/(?!127\.0\.0\.1)/,r=>r.abort());
+// Use the archived verdict and decision at a fixed historical clock. A release
+// checkout is not a live feed and its data must not age out during this check.
+await p.clock.setFixedTime(new Date('2026-10-19T15:29:00Z'));
+const fixture=name=>path.join(root,'tools/public/fixtures',name);
+await context.route(/\/(?:consumer_cloud\/forecast|INDEPENDENT_FORECAST_FEED_v1)\.json(?:\?.*)?$/,route=>
+  route.fulfill({contentType:'application/json',path:fixture('score_regression.json')}));
+await context.route(/\/consumer_cloud\/final_score_decisions\.json(?:\?.*)?$/,route=>
+  route.fulfill({contentType:'application/json',path:fixture('decisions_regression.json')}));
 await p.goto('http://127.0.0.1:'+server.address().port+'/'+entry+'?channel=play#today',{waitUntil:'domcontentloaded',timeout:120000});
 await p.waitForFunction(()=>{const e=document.querySelector('[data-overview="today"] .nr-o-score');return e?.checkVisibility()&&e.getBoundingClientRect().width>0;},null,{polling:50,timeout:60000});
 await p.evaluate(()=>document.fonts.ready);
