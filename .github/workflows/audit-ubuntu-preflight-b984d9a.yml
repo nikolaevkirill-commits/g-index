@@ -1,0 +1,132 @@
+name: Audit reflow b984d9a on Ubuntu
+
+on:
+  push:
+    branches: ['codex/audit-ubuntu-preflight-b984d9a']
+
+permissions:
+  contents: read
+
+env:
+  CANDIDATE_SHA: b984d9a56989e65d866810d05177b4467e4a3709
+  BASELINE_SHA: 0c7000d00a31478631faf0a7c42a21ff5f23a7c7
+  GATE_PLAYWRIGHT_VERSION: '1.62.1'
+  GATE_CHROMIUM_VERSION: '151.0.7922.34'
+
+jobs:
+  reflow-audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Check out the exact candidate
+        uses: actions/checkout@v5
+        with:
+          ref: b984d9a56989e65d866810d05177b4467e4a3709
+          path: candidate
+          fetch-depth: 2
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Verify sources and prepare runtime
+        working-directory: candidate
+        run: |
+          test "$(git rev-parse HEAD)" = "$CANDIDATE_SHA"
+          test "$(git show -s --format=%P HEAD)" = "$BASELINE_SHA"
+          test -z "$(git status --porcelain --untracked-files=no)"
+          test "$(git diff --name-status "$BASELINE_SHA" "$CANDIDATE_SHA")" = "$(printf 'M\ttools/public/verify_text_reflow.cjs')"
+          source /etc/os-release
+          test "$ID" = ubuntu
+          test "$VERSION_ID" = 24.04
+          printf 'NODE_PATH=%s\n' "$RUNNER_TEMP/reflow-deps/node_modules" >> "$GITHUB_ENV"
+          npm install --prefix "$RUNNER_TEMP/reflow-deps" --no-save --package-lock=false --no-bin-links "playwright@$GATE_PLAYWRIGHT_VERSION"
+      - name: Install the gate Chromium
+        working-directory: candidate
+        run: node tools/audit/install_gate_chromium.cjs
+      - name: Run all 12 standard reflow cases
+        working-directory: candidate
+        run: |
+          mkdir -p "$RUNNER_TEMP/reflow-receipt"
+          work="$(mktemp -d "$RUNNER_TEMP/reflow-work.XXXXXXXX")"
+          cleanup() {
+            find "$work" -maxdepth 1 -type f -delete
+            rmdir "$work"
+          }
+          trap cleanup EXIT
+          node - <<'NODE'
+          const assert = require('node:assert/strict');
+          const {chromium} = require('playwright');
+          (async () => {
+            assert.equal(require('playwright/package.json').version, process.env.GATE_PLAYWRIGHT_VERSION);
+            const browser = await chromium.launch();
+            try { assert.equal(browser.version(), process.env.GATE_CHROMIUM_VERSION); }
+            finally { await browser.close(); }
+          })().catch(error => { console.error(error); process.exitCode = 1; });
+          NODE
+          env -u NR_REFLOW_CASE -u FP463_BROWSER NR_REFLOW_EVIDENCE="$work" node tools/public/verify_text_reflow.cjs
+          cp "$work/RESULTS.json" "$RUNNER_TEMP/reflow-receipt/RESULTS.json"
+      - name: Verify rows and bind receipt to exact sources
+        working-directory: candidate
+        run: |
+          node - <<'NODE'
+          const assert = require('node:assert/strict');
+          const {execFileSync} = require('node:child_process');
+          const {createHash} = require('node:crypto');
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const env = process.env;
+          const output = path.join(env.RUNNER_TEMP, 'reflow-receipt');
+          const resultPath = path.join(output, 'RESULTS.json');
+          const sha256 = name => createHash('sha256').update(fs.readFileSync(name)).digest('hex');
+          const git = (...args) => execFileSync('git', args, {encoding:'utf8'}).trim();
+          const rows = JSON.parse(fs.readFileSync(resultPath,'utf8'));
+          assert.equal(rows.length,12);
+          const keys = new Map(rows.map(row => [[row.entry,row.width,row.scale].join('/'),row]));
+          assert.equal(keys.size,12);
+          for (const entry of ['classic.html','index.html']) {
+            for (const width of [320,390,430]) {
+              const plain = keys.get([entry,width,100].join('/'));
+              const large = keys.get([entry,width,200].join('/'));
+              assert(plain && large);
+              assert(Math.abs(large.metrics.font-plain.metrics.font*2)<1);
+            }
+          }
+          assert(rows.every(row => row.lastNavigationReachable && row.metrics.documentWidth<=row.width+1 &&
+            row.metrics.locale.left>=-1 && row.metrics.locale.right<=row.width+1 &&
+            row.metrics.date.left>=-1 && row.metrics.date.right<=row.width+1));
+          assert.equal(git('rev-parse','HEAD'),env.CANDIDATE_SHA);
+          assert.equal(git('status','--porcelain','--untracked-files=no'),'');
+          const files = [
+            'tools/public/verify_text_reflow.cjs',
+            'tools/public/fixtures/score_regression.json',
+            'tools/public/fixtures/decisions_regression.json',
+            'index.html','classic.html'
+          ];
+          const metadata = {
+            candidate: env.CANDIDATE_SHA,
+            previousRuntime: env.BASELINE_SHA,
+            previousShortScreenRun: '45132864445',
+            previousShortScreenRows: 32,
+            candidateFilesChanged: git('diff','--name-only',env.BASELINE_SHA,env.CANDIDATE_SHA).split('\n'),
+            workflowCommit: env.GITHUB_SHA,
+            runId: env.GITHUB_RUN_ID,
+            runAttempt: env.GITHUB_RUN_ATTEMPT,
+            auditRef: env.GITHUB_REF,
+            osRelease: fs.readFileSync('/etc/os-release','utf8').trim(),
+            chromium: env.GATE_CHROMIUM_VERSION,
+            playwright: env.GATE_PLAYWRIGHT_VERSION,
+            historicalClockUtc: '2026-10-19T15:29:00.000Z',
+            fileHashes: Object.fromEntries(files.map(file => [file,sha256(file)])),
+            receipt: {name:'RESULTS.json',sha256:sha256(resultPath),rows:rows.length},
+          };
+          fs.writeFileSync(path.join(output,'Походження квитанції.json'),JSON.stringify(metadata,null,2)+'\n');
+          NODE
+      - name: Upload JSON only
+        uses: actions/upload-artifact@v4
+        with:
+          name: reflow-ubuntu-b984d9a
+          path: ${{ runner.temp }}/reflow-receipt/*.json
+          if-no-files-found: error
