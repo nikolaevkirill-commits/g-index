@@ -130,10 +130,10 @@ function civilState(civil,time){
  return current;
 }
 const FIRST_EVENT_COPY={
- uk:{waiting:'Обчислюємо подію',missing:'Подія недоступна',sky:'Небо',local:'місцевий час',example:'типове місце'},
- en:{waiting:'Calculating event',missing:'Event unavailable',sky:'Sky',local:'local time',example:'default location'},
- es:{waiting:'Calculando el evento',missing:'Evento no disponible',sky:'Cielo',local:'hora local',example:'lugar predeterminado'},
- fr:{waiting:'Calcul de l’événement',missing:'Événement indisponible',sky:'Ciel',local:'heure locale',example:'lieu par défaut'}
+ uk:{waiting:'Обчислюємо подію',missing:'Подія недоступна',moon:'Місяць',sector:'сектор Джйотіш',local:'місцевий час',example:'типове місце'},
+ en:{waiting:'Calculating event',missing:'Event unavailable',moon:'Moon',sector:'Jyotish lunar sector',local:'local time',example:'default location'},
+ es:{waiting:'Calculando el evento',missing:'Evento no disponible',moon:'Luna',sector:'sector lunar de Jyotish',local:'hora local',example:'lugar predeterminado'},
+ fr:{waiting:'Calcul de l’événement',missing:'Événement indisponible',moon:'Lune',sector:'secteur lunaire du Jyotish',local:'heure locale',example:'lieu par défaut'}
 };
 let firstEventJob=null,firstEventError=null;
 function cacheDay(key,value){
@@ -172,7 +172,8 @@ function renderFirstEvent(){
   control.lastElementChild.setAttribute('aria-hidden','true');
   header.append(control);
  }
- const t=FIRST_EVENT_COPY[window.NRLocale?.language]||FIRST_EVENT_COPY.uk,now=Date.now();
+ const locale=window.NRLocale?.language||'uk';
+ const t=FIRST_EVENT_COPY[locale]||FIRST_EVENT_COPY.uk,now=Date.now();
  const loc=sky.loc,date=NRCivilTime.dayKey(now,loc.zone);
  const city=window.SRSkyTime.cityLabel({...loc,cityId:loc.cityId||(loc.example?'kyiv':undefined)})||place();
  const nextIn=civil=>civil?.status==='available'
@@ -189,10 +190,21 @@ function renderFirstEvent(){
  const time=next?window.SRSkyTime.timeText(Date.parse(next.at),loc.zone):'';
  const eventDay=next?NRCivilTime.dayKey(Date.parse(next.at),loc.zone):null;
  const shortDate=next&&eventDay!==date?new Intl.DateTimeFormat(window.NRLocale?.locale||'uk-UA',{timeZone:loc.zone,day:'numeric',month:'short'}).format(new Date(next.at)):'';
- const nextLabel=next?shortKind(next.kind):waiting?t.waiting:t.missing;
+ const sector=next?.kind==='nakshatra'?SkyRhythmI18n.name(next.kind,next.to,locale):'';
+ const namedSector=sector&&sector!=='—';
+ const nextLabel=namedSector?t.moon+' → '+sector:next?shortKind(next.kind):waiting?t.waiting:t.missing;
  const [placeLabel,eventLabel,timeLabel]=control.children;
  placeLabel.textContent=city;
- eventLabel.textContent=nextLabel;
+ if(namedSector){
+  const moonWord=create('span','',t.moon);
+  moonWord.dataset.p0LunarWord='';
+  const moonSymbol=create('span','','☽');
+  moonSymbol.dataset.p0LunarSymbol='';
+  moonSymbol.setAttribute('aria-hidden','true');
+  const destination=create('span','',' → '+sector);
+  destination.dataset.p0LunarDestination='';
+  eventLabel.replaceChildren(moonWord,moonSymbol,destination);
+ }else eventLabel.textContent=nextLabel;
  timeLabel.textContent=shortDate?shortDate+' · '+time:time;
  if(next){
   timeLabel.dateTime=next.at;
@@ -202,7 +214,8 @@ function renderFirstEvent(){
   delete control.dataset.at;
  }
  control.disabled=!next;
- control.setAttribute('aria-label',[city,loc.example?t.example:'',nextLabel,timeLabel.textContent,next?t.local:'',next?t.sky:''].filter(Boolean).join(' · '));
+ const action=next?(TIME_COPY[locale]||TIME_COPY.uk).sky:'';
+ control.setAttribute('aria-label',[city,loc.example?t.example:'',nextLabel,namedSector?t.sector:'',timeLabel.textContent,next?t.local:'',action].filter(Boolean).join(' · '));
 }
 
 function renderCivil(){
