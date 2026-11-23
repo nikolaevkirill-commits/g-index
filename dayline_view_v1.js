@@ -130,10 +130,10 @@ function civilState(civil,time){
  return current;
 }
 const FIRST_EVENT_COPY={
- uk:{waiting:'Обчислюємо подію',missing:'Подія недоступна',moon:'Місяць',sector:'сектор Джйотіш',local:'місцевий час',example:'типове місце'},
- en:{waiting:'Calculating event',missing:'Event unavailable',moon:'Moon',sector:'Jyotish lunar sector',local:'local time',example:'default location'},
- es:{waiting:'Calculando el evento',missing:'Evento no disponible',moon:'Luna',sector:'sector lunar de Jyotish',local:'hora local',example:'lugar predeterminado'},
- fr:{waiting:'Calcul de l’événement',missing:'Événement indisponible',moon:'Lune',sector:'secteur lunaire du Jyotish',local:'heure locale',example:'lieu par défaut'}
+ uk:{waiting:'Обчислюємо подію',missing:'Подія недоступна',moon:'Місяць',sector:'сектор Джйотіш',sky:'Небо',local:'місцевий час',example:'типове місце'},
+ en:{waiting:'Calculating event',missing:'Event unavailable',moon:'Moon',sector:'Jyotish lunar sector',sky:'Sky',local:'local time',example:'default location'},
+ es:{waiting:'Calculando el evento',missing:'Evento no disponible',moon:'Luna',sector:'sector lunar de Jyotish',sky:'Cielo',local:'hora local',example:'lugar predeterminado'},
+ fr:{waiting:'Calcul de l’événement',missing:'Événement indisponible',moon:'Lune',sector:'secteur lunaire du Jyotish',sky:'Ciel',local:'heure locale',example:'lieu par défaut'}
 };
 let firstEventJob=null,firstEventError=null;
 function cacheDay(key,value){
@@ -168,7 +168,8 @@ function renderFirstEvent(){
   control=button('',()=>{if(control.dataset.at)openSkyMoment(control.dataset.at);});
   control.dataset.p0NextSky='';
   control.setAttribute('translate','no');
-  control.append(create('strong'),create('span'),create('time'),create('i','','↗'));
+  control.append(create('strong'),create('span'),create('time'),create('i'));
+  control.lastElementChild.dataset.p0EventAction='';
   control.lastElementChild.setAttribute('aria-hidden','true');
   header.append(control);
  }
@@ -193,7 +194,7 @@ function renderFirstEvent(){
  const sector=next?.kind==='nakshatra'?SkyRhythmI18n.name(next.kind,next.to,locale):'';
  const namedSector=sector&&sector!=='—';
  const nextLabel=namedSector?t.moon+' → '+sector:next?shortKind(next.kind):waiting?t.waiting:t.missing;
- const [placeLabel,eventLabel,timeLabel]=control.children;
+ const [placeLabel,eventLabel,timeLabel,actionLabel]=control.children;
  placeLabel.textContent=city;
  if(namedSector){
   const moonWord=create('span','',t.moon);
@@ -201,11 +202,14 @@ function renderFirstEvent(){
   const moonSymbol=create('span','','☽');
   moonSymbol.dataset.p0LunarSymbol='';
   moonSymbol.setAttribute('aria-hidden','true');
-  const destination=create('span','',' → '+sector);
+  const arrow=create('span','',' →');
+  arrow.dataset.p0LunarArrow='';
+  const destination=create('span','',' '+sector);
   destination.dataset.p0LunarDestination='';
-  eventLabel.replaceChildren(moonWord,moonSymbol,destination);
+  eventLabel.replaceChildren(moonWord,moonSymbol,arrow,destination);
  }else eventLabel.textContent=nextLabel;
  timeLabel.textContent=shortDate?shortDate+' · '+time:time;
+ actionLabel.textContent=next?t.sky:'';
  if(next){
   timeLabel.dateTime=next.at;
   control.dataset.at=next.at;
