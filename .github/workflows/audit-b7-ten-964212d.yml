@@ -1,0 +1,104 @@
+name: Audit ten B7 installs on 964212d
+
+on:
+  push:
+    branches: [codex/audit-b7-ten-964212d]
+
+permissions:
+  contents: read
+
+env:
+  CANDIDATE_SHA: 964212d07987ef246bc7da52858433ab2d54d9bc
+  GATE_PLAYWRIGHT_VERSION: '1.62.1'
+
+jobs:
+  b7-installs:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.CANDIDATE_SHA }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Set up pinned Chromium
+        shell: bash
+        run: |
+          test "$(git rev-parse HEAD)" = "$CANDIDATE_SHA"
+          test -z "$(git status --porcelain --ignored)"
+          npm install --prefix "$RUNNER_TEMP/b7-node" --no-save --package-lock=false --no-bin-links "playwright@$GATE_PLAYWRIGHT_VERSION"
+          export NODE_PATH="$RUNNER_TEMP/b7-node/node_modules"
+          echo "NODE_PATH=$NODE_PATH" >> "$GITHUB_ENV"
+          mkdir -p "$RUNNER_TEMP/b7-ten"
+          node tools/audit/install_gate_chromium.cjs | tee "$RUNNER_TEMP/b7-ten/browser.txt"
+          grep -Eq '^Gate browser: Playwright 1\.62\.1 / Chromium 151\.' "$RUNNER_TEMP/b7-ten/browser.txt"
+      - name: Run the unmodified B7 installer test ten times
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from datetime import datetime, timezone
+          from hashlib import sha256
+          import json
+          import os
+          import platform
+          from pathlib import Path
+          from subprocess import TimeoutExpired, check_output, run
+          from time import perf_counter
+
+          def git(*args):
+              return check_output(["git", *args], text=True).strip()
+
+          candidate = os.environ["CANDIDATE_SHA"]
+          assert git("rev-parse", "HEAD") == candidate
+          assert not git("status", "--porcelain", "--ignored")
+          output = Path(os.environ["RUNNER_TEMP"]) / "b7-ten"
+          command = ["node", "tools/public/verify_b7_install.cjs"]
+          rows = []
+          report = {
+              "candidate": candidate,
+              "candidate_tree": git("rev-parse", "HEAD^{tree}"),
+              "workflow_commit": os.environ["GITHUB_SHA"],
+              "github_run_id": os.environ["GITHUB_RUN_ID"],
+              "github_run_attempt": os.environ["GITHUB_RUN_ATTEMPT"],
+              "platform": platform.platform(),
+              "release": Path("/etc/os-release").read_text(),
+              "browser": (output / "browser.txt").read_text().splitlines()[-1],
+              "command": command,
+              "test_sha256": sha256(Path(command[1]).read_bytes()).hexdigest(),
+              "retries": 0,
+              "runs": rows,
+          }
+
+          for number in range(1, 11):
+              start = perf_counter()
+              started = datetime.now(timezone.utc).isoformat()
+              try:
+                  result = run(command, capture_output=True, timeout=60)
+                  status, stdout, stderr = result.returncode, result.stdout, result.stderr
+              except TimeoutExpired as error:
+                  status, stdout, stderr = 124, error.stdout or b"", error.stderr or b""
+              duration = perf_counter() - start
+              (output / f"B7 {number:02d} stdout.log").write_bytes(stdout)
+              (output / f"B7 {number:02d} stderr.log").write_bytes(stderr)
+              rows.append({
+                  "number": number, "started_at": started, "seconds": duration, "exit_code": status,
+                  "pass_marker": b"PASS B7: two tabs" in stdout,
+                  "stdout_sha256": sha256(stdout).hexdigest(),
+                  "stderr_sha256": sha256(stderr).hexdigest(),
+              })
+              print(f"B7 {number}/10 exit {status} in {duration:.2f}s", flush=True)
+              (output / "B7 install receipt.json").write_text(json.dumps(report, indent=2) + "\n")
+
+          report["clean_after"] = git("rev-parse", "HEAD") == candidate and not git("status", "--porcelain", "--ignored")
+          report["passed"] = report["clean_after"] and all(row["exit_code"] == 0 and row["pass_marker"] for row in rows)
+          (output / "B7 install receipt.json").write_text(json.dumps(report, indent=2) + "\n")
+          raise SystemExit(0 if report["passed"] else 1)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: B7-install-ten-964212d
+          path: ${{ runner.temp }}/b7-ten/
+          if-no-files-found: error
