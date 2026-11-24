@@ -2,7 +2,7 @@ importScripts('./runtime_diagnostics_v1.js','./civil_time_v1.js?v=fp569f-global'
 // G-Index service worker. Navigations, HTML, JS and data (.json/.jsonl/.csv) are network-first with a
 // cached fallback. Versioned packed scripts and other static assets are cache-first.
 // Bump CACHE_VERSION whenever index.html or a cached shell asset changes.
-const CACHE_VERSION = 'fp572-packed-shell-20261116';
+const CACHE_VERSION = 'fp572-empty-journal-20261124';
 const CACHE_PREFIX = 'gindex-'; // G-Index cache namespace; do not remove the prefix.
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${CACHE_VERSION}`;
 const DATA_CACHE = `${CACHE_PREFIX}data-${CACHE_VERSION}`;
@@ -156,7 +156,7 @@ const SHELL_ASSETS = [
   './preview-v4/design_scale.js',
   './preview-v4/locale_bridge_v1.js?v=fp569r-release',
   './preview-v4/locale_overview_v1.js?v=fp569m',
-  './preview-v4/product_shell_v1.js',
+  './preview-v4/product_shell_v1.js?v=fp572-empty-journal-20261124',
   './preview-v4/design_b/integration.css?v=v7-2',
   './preview-v4/design_b/palette/palette.css?v=v7-2',
   './preview-v4/design_b/palette/palette.js',
@@ -261,7 +261,7 @@ const SHELL_ASSETS = [
   './push_client_v1.js',
   './core_runtime_v1.js?v=fp572-lunar-local',
   './mobile_navigation_v1.js',
-  './product_shell_v1.js',
+  './product_shell_v1.js?v=fp572-empty-journal-20261124',
   './plan_calendar_v1.js',
   './native_reminder_v1.js',
   './native_reminder_ui_v1.js',
