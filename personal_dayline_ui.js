@@ -7,7 +7,7 @@
  const signNames=['Овен','Телець','Близнюки','Рак','Лев','Діва','Терези','Скорпіон','Стрілець','Козоріг','Водолій','Риби'];
  let model=null,mode='personal',selected=0,revision=0,activity='overview';
  function element(tag,cls,value){const e=document.createElement(tag);if(cls)e.className=cls;if(value!==undefined)e.textContent=value;return e;}
- function clock(t,offset=false){return new Intl.DateTimeFormat('uk-UA',{timeZone:model.place.zone,hour:'2-digit',minute:'2-digit',hourCycle:'h23',...(offset?{timeZoneName:'shortOffset'}:{})}).format(new Date(t));}
+ function clock(t,offset=model.day.durationMinutes>1440){return new Intl.DateTimeFormat('uk-UA',{timeZone:model.place.zone,hour:'2-digit',minute:'2-digit',hourCycle:'h23',...(offset?{timeZoneName:'shortOffset'}:{})}).format(new Date(t));}
  function range(a,b){const dst=model.day.durationMinutes!==1440;return clock(a,dst)+'–'+clock(b,dst)+(b===model.day.end?' · наступна північ':'');}
  function key(tara){return JSON.stringify([tara.interpretation,tara.common,tara.variants.map(v=>[v.natal,v.group,v.cycle,v.interpretation,v.cycle===2&&[3,5,7].includes(v.group)?v.pada:null])]);}
  function signal(tara,withDetails=true){

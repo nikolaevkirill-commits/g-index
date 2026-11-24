@@ -2,7 +2,7 @@ importScripts('./runtime_diagnostics_v1.js','./civil_time_v1.js?v=fp575-calendar
 // G-Index service worker. Navigations, HTML, JS and data (.json/.jsonl/.csv) are network-first with a
 // cached fallback. Versioned packed scripts and other static assets are cache-first.
 // Bump CACHE_VERSION whenever index.html or a cached shell asset changes.
-const CACHE_VERSION = 'fp575-travel-boundaries-20261124';
+const CACHE_VERSION = 'fp575-personal-time-fold-20261124';
 const CACHE_PREFIX = 'gindex-'; // G-Index cache namespace; do not remove the prefix.
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${CACHE_VERSION}`;
 const DATA_CACHE = `${CACHE_PREFIX}data-${CACHE_VERSION}`;
@@ -117,10 +117,10 @@ const SHELL_ASSETS = [
   './personal_dayline_model.js?v=fp572-natal',
   './personal_dayline_activity.js',
   './personal_dayline_factors.js',
-  './personal_dayline_scene.js',
+  './personal_dayline_scene.js?v=fp575-personal-time-fold',
   './personal_dayline_election.js',
   './personal_dayline_snapshot.js',
-  './personal_dayline_ui.js?v=fp575-travel-boundaries',
+  './personal_dayline_ui.js?v=fp575-personal-time-fold',
   './meeus_core_v1.js',
   './lunar_core_v1.js?v=fp572-lunar-display',
   './dayline_view_v1.js?v=fp575-event-action',
