@@ -33,6 +33,22 @@ const type=f=>f.endsWith('.js')?'application/javascript':f.endsWith('.css')?'tex
    // 5. Forget → key removed, CTA back
    await p.evaluate(()=>{document.querySelector('#setup').open=true;document.querySelector('#birth-panel').open=true;});await p.click('#forget-birth');await p.waitForTimeout(1200);
    ok(assert.equal(await p.evaluate(()=>localStorage.getItem('sr_personal_birth_v1')),null));ok(assert.equal(await p.locator('.birth-cta').count(),1));
+   // Travel uses sampled changes and exposes the uncertainty at the selected moment.
+   const boundaryNote=p.locator('#travel-boundary-note');
+   ok(assert.equal(await boundaryNote.count(),1));
+   ok(assert.equal(await boundaryNote.isVisible(),false));
+   await p.locator('#activity-picker > summary').click();
+   await p.locator('#activities [data-activity="travel"]').click();
+   ok(assert.equal(await boundaryNote.isVisible(),true));
+   ok(assert.match(await boundaryNote.innerText(),/Межі часу орієнтовні.*Коротка зміна між відліками/));
+   await p.evaluate(()=>PersonalDaylinePreview.select(PersonalDaylinePreview.getModel().day.start));
+   ok(assert.match(await p.locator('#next-change').innerText(),/^Розрахована зміна умов · \d\d:\d\d$/));
+   await p.evaluate(()=>PersonalDaylinePreview.select(PersonalDaylinePreview.getModel().day.end-1));
+   ok(assert.equal(await p.locator('#next-change').innerText(),'До кінця доби на перевірених відліках змін не виявлено.'));
+   await p.locator('#activities [data-activity="study"]').click();
+   ok(assert.equal(await boundaryNote.isVisible(),false));
+   await p.locator('#activities [data-activity="travel"]').click();
+   ok(assert.equal(await boundaryNote.isVisible(),true));
    // 6. Reflow, also at 200 % text
    ok(assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true));
    await p.addStyleTag({content:'html,body{font-size:200%!important}'});await p.waitForTimeout(300);
@@ -42,6 +58,7 @@ const type=f=>f.endsWith('.js')?'application/javascript':f.endsWith('.css')?'tex
      if(!e.checkVisibility())return false;const r=e.getBoundingClientRect();return r.right>vw+1||r.left<-1||e.scrollWidth>e.clientWidth+2&&e.clientWidth>0;
     }).slice(0,15).map(e=>[e.tagName,e.id,e.className?.baseVal||e.className,e.clientWidth,e.scrollWidth,Math.ceil(e.getBoundingClientRect().right)])};
    });
+   ok(assert.equal(await boundaryNote.isVisible(),true));
    ok(assert.ok(layout.doc<=layout.vw,'200% text overflow at '+width+': '+JSON.stringify(layout)));
    ok(assert.deepEqual(errs,[]));await c.close();}
  }finally{await b.close();server.close();}
