@@ -5602,12 +5602,16 @@ function pwaReload() {
       // A waiting worker can remain installed after the network comes back.
       // Retry the same worker with a fresh cross-tab drain on each attempt.
       for (let attempt = 0; attempt < 3 && canSend(); attempt++) {
+        let ready = false;
         try {
-          if (await coordinator.prepare()) requestActivation();
+          ready = await coordinator.prepare();
+          if (ready) requestActivation();
         } catch (error) {
           window.NRDiagnostics?.record('sw.activation_prepare', 'recoverable');
         }
-        if (attempt < 2 && canSend()) await new Promise(resolve => setTimeout(resolve, 1500));
+        // A failed drain must renew the pause before queued peer reads resume.
+        // Wait only after sending an activation message, to let it take effect.
+        if (ready && attempt < 2 && canSend()) await new Promise(resolve => setTimeout(resolve, 1500));
       }
     }
 
