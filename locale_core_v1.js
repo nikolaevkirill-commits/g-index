@@ -38,5 +38,13 @@ register([
  ['Оновити застосунок','Update app','Actualizar la aplicación','Mettre à jour l’application'],
  ['Застосовую оновлення SkyRhythm…','Updating SkyRhythm…','Actualizando SkyRhythm…','Mise à jour de SkyRhythm…'],
  ['Оновлення ще не активовано. Можна спробувати ще раз.','The update is not active yet. You can try again.','La actualización aún no está activa. Puedes reintentarlo.','La mise à jour n’est pas encore active. Vous pouvez réessayer.'],
+ ['Встановити SkyRhythm','Install SkyRhythm','Instalar SkyRhythm','Installer SkyRhythm'],
+ ['Встановити NeboRhythm','Install NeboRhythm','Instalar NeboRhythm','Installer NeboRhythm'],
+ ['Встановити','Install','Instalar','Installer'],
+ ['Закрити пропозицію встановлення','Dismiss install prompt','Cerrar el aviso de instalación','Fermer l’invite d’installation'],
+ ['SkyRhythm уже відкритий як встановлений застосунок.','SkyRhythm is already open as an installed app.','SkyRhythm ya está abierto como aplicación instalada.','L’application SkyRhythm est déjà ouverte.'],
+ ['NeboRhythm уже відкритий як встановлений застосунок.','NeboRhythm is already open as an installed app.','NeboRhythm ya está abierto como aplicación instalada.','L’application NeboRhythm est déjà ouverte.'],
+ ['У Safari на iPhone або iPad натисни «Поділитися», потім «На початковий екран». Якщо є параметр відкриття як вебзастосунку, увімкни його. Натисни «Додати».','In Safari on iPhone or iPad, tap Share, then Add to Home Screen. If you see Open as Web App, turn it on. Tap Add.','En Safari en un iPhone o iPad, toca Compartir y, después, Añadir a pantalla de inicio. Si aparece Abrir como app web, actívalo. Toca Añadir.','Dans Safari sur iPhone ou iPad, touchez Partager, puis Ajouter à l’écran d’accueil. Si l’option Ouvrir comme app web apparaît, activez-la. Touchez Ajouter.'],
+ ['Відкрий меню браузера й знайди встановлення застосунку або додавання на головний екран. Назва команди залежить від браузера.','Open the browser menu and look for an option to install the app or add it to your home screen. The wording varies by browser.','Abre el menú del navegador y busca la opción para instalar la aplicación o añadirla a la pantalla de inicio. El nombre varía según el navegador.','Ouvrez le menu du navigateur et cherchez l’option pour installer l’application ou l’ajouter à l’écran d’accueil. Le nom varie selon le navigateur.'],
 ]);
 })(window);

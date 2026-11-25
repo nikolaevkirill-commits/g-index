@@ -2,7 +2,7 @@ importScripts('./runtime_diagnostics_v1.js','./civil_time_v1.js?v=fp575-calendar
 // G-Index service worker. Navigations, HTML, JS and data (.json/.jsonl/.csv) are network-first with a
 // cached fallback. Versioned packed scripts and other static assets are cache-first.
 // Bump CACHE_VERSION whenever index.html or a cached shell asset changes.
-const CACHE_VERSION = 'fp575-update-locale-20261125';
+const CACHE_VERSION = 'fp575-app-prompts-20261125';
 const CACHE_PREFIX = 'gindex-'; // G-Index cache namespace; do not remove the prefix.
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${CACHE_VERSION}`;
 const DATA_CACHE = `${CACHE_PREFIX}data-${CACHE_VERSION}`;
@@ -157,7 +157,7 @@ const SHELL_ASSETS = [
   './preview-v4/design_candidate.css?v=v7-3',
   './preview-v4/design_candidate.js',
   './preview-v4/design_scale.js',
-  './preview-v4/locale_bridge_v1.js?v=fp575-update-locale-20261125',
+  './preview-v4/locale_bridge_v1.js?v=fp575-app-prompts-20261125',
   './preview-v4/locale_overview_v1.js?v=fp569m',
   './preview-v4/product_shell_v1.js?v=fp575-audit-close-20261123',
   './preview-v4/design_b/integration.css?v=v7-2',
@@ -208,7 +208,7 @@ const SHELL_ASSETS = [
   './preview-b17/design_candidate.css',
   './preview-b17/design_candidate.js',
   './preview-b17/design_scale.js',
-  './preview-b17/locale_bridge_v1.js?v=fp575-update-locale-20261125',
+  './preview-b17/locale_bridge_v1.js?v=fp575-app-prompts-20261125',
   './preview-b17/locale_overview_v1.js?v=fp569j',
   './preview-b17/product_shell_v1.js',
   './preview-b17/design_b/integration.css',
@@ -237,9 +237,9 @@ const SHELL_ASSETS = [
 
   './index.html',
   './theme_moon.webp',
-  './locale_core_v1.js?v=fp575-update-locale-20261125',
+  './locale_core_v1.js?v=fp575-app-prompts-20261125',
   './locale_overview_v1.js?v=fp569k',
-  './locale_bridge_v1.js?v=fp575-update-locale-20261125',
+  './locale_bridge_v1.js?v=fp575-app-prompts-20261125',
   './panchanga_reference_check_v1.json',
   './play_channel.js',
   './runtime_diagnostics_v1.js',

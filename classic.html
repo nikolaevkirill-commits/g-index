@@ -2833,10 +2833,10 @@ html body :is(#nrRoute-today,#nrRoute-forecast,#nrRoute-calendar) .nr-o-verdict 
 
 </style>
 <script src="calendar_context_v1.js"></script>
-<script src="locale_core_v1.js?v=fp575-update-locale-20261125" defer></script>
+<script src="locale_core_v1.js?v=fp575-app-prompts-20261125" defer></script>
 <script src="locale_overview_v1.js?v=fp569k" defer></script>
 <script src="consumer_overview_v1.js?v=fp575-calendar-pinned-date" defer></script>
-<script src="locale_bridge_v1.js?v=fp575-update-locale-20261125" defer></script>
+<script src="locale_bridge_v1.js?v=fp575-app-prompts-20261125" defer></script>
 <link rel="preload" as="script" href="./mobile_navigation_v1.js?v=fp575-nav-reflow">
 <link rel="preload" as="script" href="./product_shell_v1.js?v=fp575-audit-close-20261123">
 <link rel="preload" as="script" href="./onboarding_v1.js">
@@ -4756,8 +4756,9 @@ function pwaInstall() {
   _deferredInstall.userChoice.then(() => { _deferredInstall = null; pwaDismiss(); });
 }
 function pwaInstallOrHelp() {
+  const showHelp = message => alert(window.NRLocale?.text(message) ?? message);
   if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) {
-    alert('SkyRhythm уже відкритий як встановлений застосунок.');
+    showHelp('SkyRhythm уже відкритий як встановлений застосунок.');
     return;
   }
   if (_deferredInstall) {
@@ -4768,9 +4769,9 @@ function pwaInstallOrHelp() {
   const isIOS = /iPad|iPhone|iPod/.test(ua)
     || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   if (isIOS) {
-    alert('Щоб встановити SkyRhythm на iPhone/iPad: натисни «Поділитися» в Safari → «На початковий екран» → «Додати».');
+    showHelp('У Safari на iPhone або iPad натисни «Поділитися», потім «На початковий екран». Якщо є параметр відкриття як вебзастосунку, увімкни його. Натисни «Додати».');
   } else {
-    alert('Відкрий меню браузера (⋮ або …) і вибери «Встановити застосунок» / «Додати на головний екран». Якщо пункт відсутній — онови сторінку та спробуй ще раз.');
+    showHelp('Відкрий меню браузера й знайди встановлення застосунку або додавання на головний екран. Назва команди залежить від браузера.');
   }
 }
 function pwaDismiss() {
@@ -7263,7 +7264,7 @@ window.getEffectiveGForDate = getEffectiveGForDate;
 <!-- PWA disabled v59fix -->
 
 <div id="pwaInstallBar" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:var(--card);border-top:1px solid #2a3b61;padding:12px 16px;align-items:center;gap:12px;font-size:13px;color: var(--text);">
-  <span style="flex:1">📲 <strong>Встановити SkyRhythm</strong> як застосунок</span>
+  <span style="flex:1">📲 <strong>Встановити SkyRhythm</strong></span>
   <button onclick="pwaInstall()" style="background: var(--alt);color:#001026;padding:7px 14px;border-radius:8px;font-weight:700;border:none;cursor:pointer">Встановити</button>
   <button aria-label="Закрити пропозицію встановлення" onclick="pwaDismiss()" style="background:transparent;color: var(--muted);padding:7px 10px;border-radius:8px;border:1px solid #2a3b61;cursor:pointer">✕</button>
 </div>

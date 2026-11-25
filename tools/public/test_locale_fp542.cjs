@@ -67,6 +67,43 @@ console.log('PASS locale: whitespace-specific keys, language and registration in
     assert.equal(await updateButton.textContent(),action,entry+' action in '+lang);
    }
    assert.equal(await status.getAttribute('role'),'status',entry+' update announcements');
+   const installBar=entrySource.match(/<div id="pwaInstallBar"[^>]*>[\s\S]*?<\/div>/)[0];
+   const installStart=entrySource.indexOf('function pwaInstallOrHelp() {');
+   const installCode=entrySource.slice(installStart,entrySource.indexOf('\n}',installStart)+2);
+   await probe.evaluate(markup=>document.body.insertAdjacentHTML('beforeend',markup),installBar);
+   await probe.addScriptTag({content:"var _deferredInstall=null;"+installCode});
+   const installCopy=[
+    ['uk','Встановити','Закрити пропозицію встановлення','початковий екран','уже відкритий','меню браузера'],
+    ['en','Install','Dismiss install prompt','Home Screen','already open','browser menu'],
+    ['es','Instalar','Cerrar el aviso de instalación','pantalla de inicio','ya está abierto','menú del navegador'],
+    ['fr','Installer','Fermer l’invite d’installation','écran d’accueil','est déjà ouverte','menu du navigateur'],
+   ];
+   for(const [lang,action,dismiss,iosText,standaloneText,browserText] of installCopy){
+    await probe.evaluate(lang=>NRLocale.set(lang),lang);
+    assert.equal(await probe.locator('#pwaInstallBar strong').textContent(),action+' '+brand,entry+' install heading in '+lang);
+    assert.equal(await probe.locator('#pwaInstallBar button').first().textContent(),action,entry+' install action in '+lang);
+    assert.equal(await probe.locator('#pwaInstallBar button').last().getAttribute('aria-label'),dismiss,entry+' install dismissal in '+lang);
+    for(const [mode,fragment] of [['ios',iosText],['standalone',standaloneText],['browser',browserText]]){
+     const help=await probe.evaluate(mode=>{
+      let message='';
+      const before={matchMedia:window.matchMedia,alert:window.alert,agent:Object.getOwnPropertyDescriptor(navigator,'userAgent')};
+      try {
+       Object.defineProperty(navigator,'userAgent',{configurable:true,value:mode==='ios'?'iPhone':'Browser'});
+       window.matchMedia=()=>({matches:mode==='standalone'});
+       window.alert=text=>{message=text};
+       pwaInstallOrHelp();
+       return message;
+      } finally {
+       window.matchMedia=before.matchMedia;
+       window.alert=before.alert;
+       if(before.agent)Object.defineProperty(navigator,'userAgent',before.agent);
+       else delete navigator.userAgent;
+      }
+     },mode);
+     assert(help.includes(fragment),entry+' '+mode+' installation help in '+lang);
+     if(lang!=='uk')assert(!/[А-Яа-яІіЇїЄєҐґ]/u.test(help),entry+' '+mode+' help contains Ukrainian in '+lang);
+    }
+   }
    await probe.clock.install();
    await probe.evaluate(()=>pwaReload());
    for(const [lang,,,applying] of updateCopy){
@@ -92,6 +129,6 @@ console.log('PASS locale: whitespace-specific keys, language and registration in
    await probe.close();
   }
   console.log('PASS offline state localization: 3 entry dictionaries/bridges, 4 languages, dynamic age, language roundtrip, user draft untouched');
-  console.log('PASS update status localization: 3 entry pages, 4 languages, ready/applying/retry');
+  console.log('PASS app prompts: 3 entry pages, 4 languages, update and install help');
  }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1});
