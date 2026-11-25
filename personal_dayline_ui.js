@@ -159,7 +159,7 @@
   $('#current-factors').replaceChildren(factorCard(F.evaluate(factorSegment(s),activity,{direction:$('#travel-direction').value}),true));
   $('#current-hora').textContent=s.hora?s.hora.glyph+' '+s.hora.planet+' · сезонна планетна година до '+clock(s.hora.end):'Планетні години недоступні за місцевим сходом і заходом. Тара від цього не вимикається.';
   const future=model.windows.flatMap(w=>w.segments).find(t=>t.start>selected&&(scoped()?JSON.stringify(brief(t))!==JSON.stringify(brief(s)):key(t.tara)!==key(s.tara)));
-  $('#next-change').textContent=scoped()?(future?'Наступна зміна умов справи · '+clock(future.start):'До кінця доби підсумок цих умов не змінюється.'):mode==='personal'&&model.birth.candidates.length?(future?'Наступна зміна Тари · '+clock(future.start):'До кінця цієї доби трактування Тари не змінюється.'):(()=>{const n=model.windows.flatMap(blockChanges).find(c=>c.at>selected);return n?'Далі · '+clock(n.at)+' · '+n.text:'До кінця доби календарних переходів немає.';})();
+  $('#next-change').textContent=scoped()?(future?'Наступна зміна умов справи · '+clock(future.start):'До кінця доби розрахунок не виявив змін цих умов.'):mode==='personal'&&model.birth.candidates.length?(future?'Наступна зміна Тари · '+clock(future.start):'До кінця доби розрахунок не виявив змін Тари.'):(()=>{const n=model.windows.flatMap(blockChanges).find(c=>c.at>selected);return n?'Далі · '+clock(n.at)+' · '+n.text:'До кінця доби розрахунок не виявив календарних переходів.';})();
   const at=Astronomy.MakeTime(new Date(selected)),observer=new Astronomy.Observer(model.place.lat,model.place.lon,0),eq=Astronomy.Equator('Sun',at,observer,true,true),hor=Astronomy.Horizon(at,observer,eq.ra,eq.dec,'normal');
   $('#sun-glyph').dataset.night=String(hor.altitude<0);$('#sun-status').textContent=hor.altitude>=0?'Сонце над горизонтом':'Сонце під горизонтом';$('#sun-detail').textContent='Для цього ж моменту й місця · '+Math.abs(hor.altitude).toFixed(0)+'° '+(hor.altitude>=0?'над':'під')+' горизонтом';
   for(const row of $('#windows').children)row.dataset.selected=String(Number(row.dataset.start)<=selected&&selected<Number(row.dataset.end));
@@ -174,7 +174,7 @@
    const generalOnly=!scoped()&&(mode==='general'||!hasBirth()),ch=blockChanges(w);
    b.append(element('span','',clock(w.start)),element('strong','',generalOnly?'☾':tones.length>1?'⇄':d.symbol));
    const mark=element('small','block-change',ch.length?ch.map(c=>c.glyph+'\u202f'+clock(c.at)).join(' '):'·');b.append(mark);if(ch.length)b.dataset.changes=String(ch.length);
-   b.setAttribute('aria-label',range(w.start,w.end)+' · '+(generalOnly?'Календар':tones.length>1?'Умови змінюються всередині блоку':d.title)+(ch.length?' · '+ch.map(c=>c.text+' о '+clock(c.at)).join('; '):' · без календарних переходів'));
+   b.setAttribute('aria-label',range(w.start,w.end)+' · '+(generalOnly?'Календар':tones.length>1?'Умови змінюються всередині блоку':d.title)+(ch.length?' · '+ch.map(c=>c.text+' о '+clock(c.at)).join('; '):' · календарних переходів не виявлено'));
    b.onclick=()=>{PersonalDaylineScene.stop();selectMoment(w.start);};blocks.append(b);
   }
   if(scoped()){
@@ -196,7 +196,7 @@
  }
  function renderWindows(){
   const list=$('#windows');list.replaceChildren();$('#window-count').textContent=model.windows.length+' блоків';
-  $('#day-note').textContent='По 3 фактичні години від місцевої півночі. Деталі кожного блоку доступні за натисканням. Час переходів показано до хвилини.'+(model.day.durationMinutes!==1440?' Цього дня '+model.day.durationMinutes/60+' годин через переведення годинника; UTC-зсуви в підписах різні, останній блок коротший.':'');
+  $('#day-note').textContent='По 3 фактичні години від місцевої півночі. Деталі кожного блоку доступні за натисканням. Місячні й планетні переходи шукаємо з кроком 1 хвилина. Короткі зміни можуть відбутися між відліками.'+(model.day.durationMinutes!==1440?' Цього дня '+model.day.durationMinutes/60+' годин через переведення годинника; UTC-зсуви в підписах різні, останній блок коротший.':'');
   for(const w of model.windows){const row=element('li','window');row.dataset.start=w.start;row.dataset.end=w.end;
    const head=element('div','window-head'),title=element('div');title.append(element('h3','',range(w.start,w.end)),element('small','',Math.round((w.end-w.start)/60000)+' хвилин'));
    const choose=element('button','select-window','Переглянути');choose.type='button';choose.setAttribute('aria-label','Переглянути момент '+clock(w.start));choose.onclick=()=>{PersonalDaylineScene.stop();selected=w.start;showSelected();$('#selected').scrollIntoView({behavior:'instant',block:'start'});$('#selected').tabIndex=-1;$('#selected').focus({preventScroll:true});};head.append(title,choose);row.append(head);
@@ -235,7 +235,7 @@
  async function calculate(event){
   event?.preventDefault();if(!$('#controls').checkValidity()){$('#setup').open=true;$('#coordinates').open=true;$('#controls').reportValidity();return;}const token=++revision;
   PersonalDaylineScene.stop();
-  $('#calculate').disabled=true;$('#error').hidden=true;$('#progress').textContent='Рахую місцеві межі та всі переходи…';$('#result').hidden=true;
+  $('#calculate').disabled=true;$('#error').hidden=true;$('#progress').textContent='Рахую місцеві межі й шукаю переходи…';$('#result').hidden=true;
   await new Promise(r=>setTimeout(r,30));
   try{
    const place={lat:Number($('#lat').value),lon:Number($('#lon').value),zone:$('#zone').value.trim(),label:$('#place').value==='custom'?'Обране місце':$('#place').selectedOptions[0].textContent};

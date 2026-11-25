@@ -33,6 +33,15 @@ const type=f=>f.endsWith('.js')?'application/javascript':f.endsWith('.css')?'tex
    // 5. Forget → key removed, CTA back
    await p.evaluate(()=>{document.querySelector('#setup').open=true;document.querySelector('#birth-panel').open=true;});await p.click('#forget-birth');await p.waitForTimeout(1200);
    ok(assert.equal(await p.evaluate(()=>localStorage.getItem('sr_personal_birth_v1')),null));ok(assert.equal(await p.locator('.birth-cta').count(),1));
+   // A sampled model must not guarantee that the rest of the day has no changes.
+   ok(assert.match(await p.locator('#day-note').textContent(), /кроком 1 хвилина/));
+   await p.locator('#activity-label').click();
+   await p.locator('[data-activity="travel"]').click();
+   await p.evaluate(() => {
+    const preview = window.PersonalDaylinePreview;
+    preview.select(preview.getModel().day.end - 1);
+   });
+   ok(assert.equal(await p.locator('#next-change').innerText(), 'До кінця доби розрахунок не виявив змін цих умов.'));
    // 6. Reflow, also at 200 % text
    ok(assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true));
    await p.addStyleTag({content:'html,body{font-size:200%!important}'});await p.waitForTimeout(300);

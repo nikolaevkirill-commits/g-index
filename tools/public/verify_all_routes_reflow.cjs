@@ -8,7 +8,33 @@ const server=http.createServer((q,r)=>{const f=path.resolve(root,'.'+decodeURICo
 // Both timestamps are covered by the bundled sky.json. The second exercises day 2 of the rolling window.
 const sky=JSON.parse(fs.readFileSync(path.join(root,'consumer_cloud/sky.json'),'utf8'));
 const clocks=[sky.daily[0].date+'T18:00:00Z',sky.daily[1].date+'T10:00:00Z'];
-try{for(const at of clocks)for(const entry of ['classic.html','index.html'])for(const width of [320,390])for(const scale of [100,200]){
+async function verifyNavigationBreakpoints(browser, base) {
+ const assert = require('assert/strict');
+ const cases = [
+  [700, false, true], [701, false, true], [768, false, true], [1023, false, true], [1024, true, false]
+ ];
+ for (const entry of ['classic.html', 'index.html', 'design-b17.html']) {
+  const context = await browser.newContext({locale:'uk-UA', serviceWorkers:'block'});
+  try {
+   const page = await context.newPage();
+   await context.route(/^https?:\/\/(?!127\.0\.0\.1)/, route => route.abort());
+   await page.goto(base + '/' + entry + '#today', {waitUntil:'domcontentloaded'});
+   await page.locator('#nrRoute-today .nr-o-hero').waitFor({state:'visible',timeout:30000});
+   for (const [width, top, bottom] of cases) {
+    await page.setViewportSize({width,height:1024});
+    const visibility = await page.evaluate(() => ['nrTopNav','mobileNav'].map(id => {
+     const nav = document.getElementById(id);
+     return Boolean(nav?.getClientRects().length && getComputedStyle(nav).visibility !== 'hidden');
+    }));
+    assert.deepEqual(visibility, [top,bottom], entry + ' single navigation at ' + width + 'px');
+   }
+  } finally { await context.close(); }
+ }
+ console.log('PASS navigation breakpoints: three entries, 15 viewports');
+}
+try{
+ await verifyNavigationBreakpoints(b, 'http://127.0.0.1:' + server.address().port);
+ for(const at of clocks)for(const entry of ['classic.html','index.html'])for(const width of [320,390])for(const scale of [100,200]){
  const c=await b.newContext({viewport:{width,height:844},isMobile:true,hasTouch:true,locale:'uk-UA',serviceWorkers:'block',timezoneId:'Europe/Kyiv'});await c.addInitScript(()=>{sessionStorage.setItem('nrs_launch','1')});
  const p=await c.newPage();const errs=[];p.on('pageerror',e=>errs.push(e.message));
  await c.route(/^https?:\/\/(?!127\.0\.0\.1)/,r=>r.abort());
