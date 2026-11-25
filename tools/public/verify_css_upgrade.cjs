@@ -109,6 +109,36 @@ async function bounded(promise,ms=5000){
   try{return await Promise.race([promise,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('Diagnostic probe timed out')),ms);})]);}
   finally{clearTimeout(timer);}
 }
+// Keep the original click and navigation wait, but identify which step stalls.
+async function reloadFromUpdateBar(page, steps) {
+  const started = Date.now();
+  const stamp = () => Date.now() - started;
+  const markCommit = frame => {
+    if (frame === page.mainFrame()) steps.document_committed_ms ??= stamp();
+  };
+  const markLoad = () => { steps.load_event_ms ??= stamp(); };
+  function observe(name, promise) {
+    steps[name] = {state:'pending'};
+    return promise.then(value => {
+      steps[name] = {state:'completed', at_ms:stamp()};
+      return value;
+    }, error => {
+      steps[name] = {state:'failed', at_ms:stamp(), error:error.name};
+      throw error;
+    });
+  }
+  page.on('framenavigated', markCommit);
+  page.on('load', markLoad);
+  try {
+    await Promise.all([
+      observe('navigation', page.waitForNavigation({waitUntil:'load'})),
+      observe('click', page.locator('#pwaUpdateBar button').click())
+    ]);
+  } finally {
+    page.off('framenavigated', markCommit);
+    page.off('load', markLoad);
+  }
+}
 let base;
 (async()=>{
   await new Promise(r=>server.listen(0,'127.0.0.1',r));base='http://127.0.0.1:'+server.address().port+'/';
@@ -146,18 +176,19 @@ let base;
       assert(target,'worker selected for restart must exist');
       await cdp.send('ServiceWorker.stopWorker',{versionId:target.versionId});
     }
+    const reloadSteps = {};
     try {
-      if(trigger==='button')await Promise.all([page.waitForNavigation({waitUntil:'load'}),page.locator('#pwaUpdateBar button').click()]);
+      if(trigger==='button')await reloadFromUpdateBar(page,reloadSteps);
       else{
         // A worker activation from elsewhere must not itself reload this page.
         let navigations=0;const observe=frame=>{if(frame===page.mainFrame())navigations++};page.on('framenavigated',observe);
         await page.evaluate(async()=>{if(!await NRUpdateCoordinator.prepare())throw Error('Update preparation busy');const r=await navigator.serviceWorker.getRegistration();r.waiting.postMessage({type:'SKIP_WAITING'});});
         await waitForWaiting(page,false);
         assert.equal(navigations,0,'worker activation without a local user request must not reload');page.off('framenavigated',observe);
-        await Promise.all([page.waitForNavigation({waitUntil:'load'}),page.locator('#pwaUpdateBar button').click()]);
+        await reloadFromUpdateBar(page,reloadSteps);
       }
     } catch(error) {
-      const diagnostics={trigger,restart,lifecycle,registration:await bounded(page.evaluate(async()=>{const r=await navigator.serviceWorker.getRegistration();return {waiting:r.waiting?.state,active:r.active?.state,reloading:window._swReloading}})).catch(e=>({error:String(e)})),workers:[]};
+      const diagnostics={trigger,restart,lifecycle,reload_steps:reloadSteps,registration:await bounded(page.evaluate(async()=>{const r=await navigator.serviceWorker.getRegistration();return {waiting:r.waiting?.state,active:r.active?.state,reloading:window._swReloading}})).catch(e=>({error:String(e)})),workers:[]};
       for(const worker of ctx.serviceWorkers())try{diagnostics.workers.push(await bounded(worker.evaluate(()=>({version:typeof CACHE_VERSION==='undefined'?null:CACHE_VERSION,pending:[...(self.__upgradePending||[])],events:self.__upgradeEvents,skipWaiting:self.__upgradeSkipWaiting,now:Date.now()}))))}catch(e){diagnostics.workers.push({error:String(e)})}
       fs.writeFileSync(path.join(out,'FAILURE.json'),JSON.stringify(diagnostics,null,2));console.error('CSS_UPGRADE_DIAGNOSTICS',JSON.stringify(diagnostics));throw error;
     }
@@ -176,7 +207,7 @@ let base;
     await page.waitForFunction(()=>[...document.querySelectorAll('#nrRuntimeState,#swStaleBar')].every(el=>!/[А-Яа-яІіЇїЄєҐґ]/u.test(el.textContent)));
     assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
     await page.screenshot({path:path.join(out,'offline_updated_today.png'),fullPage:true});
-    fs.writeFileSync(path.join(out,'RESULT.json'),JSON.stringify({...preservedTabs,trigger,trace,cdp:cdpEnabled,restart:restart||null,oldVersion,activatedVersion,old_css_probe_reproduced:true,new_html_ignores_old_css:true,waiting_worker_offline:true,updated_worker_offline:true,inline_blocks:CLASSIC_STYLES+MAIN_STYLES+JOURNAL_STYLES,source_css_exact:true},null,2));
+    fs.writeFileSync(path.join(out,'RESULT.json'),JSON.stringify({...preservedTabs,trigger,reload_steps:reloadSteps,trace,cdp:cdpEnabled,restart:restart||null,oldVersion,activatedVersion,old_css_probe_reproduced:true,new_html_ignores_old_css:true,waiting_worker_offline:true,updated_worker_offline:true,inline_blocks:CLASSIC_STYLES+MAIN_STYLES+JOURNAL_STYLES,source_css_exact:true},null,2));
     console.log('PASS CSS upgrade ('+trigger+(trace?', trace':'')+(cdpEnabled?', cdp':'')+'): old cached styles reproduced; exact new styles online, waiting/offline and activated/offline. Evidence: '+out);
   }finally{fs.writeFileSync(path.join(out,'LIFECYCLE.json'),JSON.stringify(lifecycle,null,2));if(serverLog)fs.writeFileSync(path.join(out,'SERVER_REQUESTS.json'),JSON.stringify({worker_modified:trace,cdp:cdpEnabled,requests},null,2));await browser.close();server.close();}
 })().catch(e=>{console.error(e);server.close();process.exitCode=1});

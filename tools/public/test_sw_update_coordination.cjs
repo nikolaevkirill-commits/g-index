@@ -3,7 +3,65 @@ const vm=require('vm'),fs=require('fs'),path=require('path'),assert=require('ass
 const code=fs.readFileSync(path.resolve(__dirname,'../../sw_update_coordination_v1.js'),'utf8'),channels=new Map();
 class Channel{constructor(name){this.name=name;this.onmessage=null;if(!channels.has(name))channels.set(name,new Set());channels.get(name).add(this)}postMessage(data){for(const peer of channels.get(this.name))if(peer!==this)queueMicrotask(()=>peer.onmessage?.({data}))}}
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
-function page(scope,fetch){const w={location:{href:'https://test.invalid/'+scope+'/index.html',origin:'https://test.invalid'},fetch};const c={window:w,URL,Date,Math,Promise,Set,Map,DOMException,setTimeout,BroadcastChannel:Channel};vm.createContext(c);vm.runInContext(code,c);return w}
+function page(scope, fetch, clock={Date,setTimeout}) {
+  const window={location:{href:'https://test.invalid/'+scope+'/index.html',origin:'https://test.invalid'},fetch};
+  const context=vm.createContext({window,URL,Date:clock.Date,Math,Promise,Set,Map,DOMException,
+    setTimeout:clock.setTimeout,BroadcastChannel:Channel});
+  vm.runInContext(code,context);
+  return window;
+}
+
+async function assertUpdateKeepsPeerQuiet(entry) {
+  let now=0;
+  const timers=[];
+  const clock={
+    Date:{now:()=>now},
+    setTimeout:(callback,delay)=>timers.push({callback,at:now+delay})
+  };
+  const flush=async()=>{ for(let n=0;n<12;n++) await Promise.resolve(); };
+  const scope='retry-'+entry;
+  const requester=page(scope,async()=>({ok:true}),clock);
+  const readStarts=[];
+  const peer=page(scope,()=>{
+    readStarts.push(now);
+    return new Promise(resolve=>clock.setTimeout(()=>resolve({ok:true}),2300));
+  },clock);
+  const source=fs.readFileSync(path.resolve(__dirname,'../..',entry),'utf8').replace(/\r\n/g,'\n');
+  const start=source.indexOf('function pwaReload() {');
+  assert(start>=0);
+  const update=source.slice(start,source.indexOf('\n}',start)+2);
+  const sent=[];
+  const reg={waiting:{postMessage(message){
+    assert.equal(message.type,'SKIP_WAITING');
+    sent.push(now);
+    reg.waiting=null;
+  }}};
+  requester.navigator={serviceWorker:{controller:{}}};
+  const label={textContent:''};
+  const button={disabled:false};
+  const context=vm.createContext({window:requester,_swReg:reg,Date:clock.Date,Promise,
+    document:{getElementById:()=>({querySelector:s=>s==='span'?label:button})},
+    setTimeout:(fn,delay)=>clock.setTimeout(fn,delay<4000?delay+120:delay)
+  });
+
+  // One long read misses the first drain deadline. Later reads are already queued.
+  void peer.fetch('/initial');
+  for(let at=300;at<9000;at+=300) clock.setTimeout(()=>{void peer.fetch('/queued');},at);
+  vm.runInContext(update+'\npwaReload()',context);
+  await flush();
+  while(timers.length&&sent.length===0) {
+    timers.sort((a,b)=>a.at-b.at);
+    const next=timers.shift();
+    if(next.at>10000) break;
+    now=next.at;
+    next.callback();
+    await flush();
+  }
+  assert.equal(sent.length,1,entry+' must activate after the first read drains');
+  assert(sent[0]>=2300&&sent[0]<3500,entry+' must activate before paused reads restart');
+  assert.deepEqual(readStarts,[0],entry+' must not let queued reads start before activation');
+}
+
 (async()=>{
 const wind='https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json';
 const proxy='https://corsproxy.io/?url='+encodeURIComponent(wind);
@@ -19,5 +77,7 @@ const abort=new AbortController();const cancelled=b.fetch('/cancelled',{signal:a
 await wait(170);assert.equal(finished,false,'pending peer read must prevent early activation');finish({ok:true});await slow;assert.equal(await preparing,true);assert(Date.now()-started>=220);
 await Promise.all([queued,queuedProxy]);assert.equal(reads,1);assert.equal(noaa,2);assert(Date.now()-started<4500,'read gate must expire');
 const c=page('b',()=>new Promise(()=>{})),d=page('b',async()=>({ok:true}));c.fetch('/never');const rejected=await d.NRUpdateCoordinator.prepare();assert.equal(rejected,false,'busy peer must fail preparation rather than claim ready');
+for (const entry of ['classic.html','index.html','design-b17.html']) await assertUpdateKeepsPeerQuiet(entry);
+console.log('PASS update retries: three entries preserve the peer pause across a missed drain');
 console.log('PASS coordination: peer NOAA drain; local and NOAA proxy reads held; POST/unrelated external unaffected; abort; bounded release; busy peer refuses activation');
 })().catch(e=>{console.error(e);process.exitCode=1});
