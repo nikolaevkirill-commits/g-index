@@ -45,6 +45,41 @@ console.log('PASS locale: whitespace-specific keys, language and registration in
    const probe=await browser.newPage({locale:'en-GB'});
    await probe.setContent('<!doctype html><main></main><textarea id="draft">Моя нотатка</textarea>');
    for(const file of ['locale_core_v1.js',prefix+'locale_overview_v1.js',prefix+'locale_bridge_v1.js'])await probe.addScriptTag({path:path.join(__dirname,'../..',file)});
+   const entry=prefix==='preview-b17/'?'design-b17.html':prefix?'index.html':'classic.html';
+   const entrySource=fs.readFileSync(path.join(__dirname,'../..',entry),'utf8').replace(/\r\n/g,'\n');
+   const updateBar=entrySource.match(/<div id="pwaUpdateBar"[^>]*>[\s\S]*?<\/div>/)[0];
+   const updateStart=entrySource.indexOf('function pwaReload() {');
+   const updateCode=entrySource.slice(updateStart,entrySource.indexOf('\n}',updateStart)+2);
+   await probe.evaluate(markup=>document.body.insertAdjacentHTML('beforeend',markup),updateBar);
+   await probe.addScriptTag({content:"var _swReg={waiting:{postMessage(){}}};"+updateCode});
+   const status=probe.locator('#pwaUpdateBar span');
+   const updateButton=probe.locator('#pwaUpdateBar button');
+   const brand=entry==='design-b17.html'?'NeboRhythm':'SkyRhythm';
+   const updateCopy=[
+    ['uk','Доступне оновлення '+brand,'Оновити застосунок','Застосовую оновлення SkyRhythm…','Оновлення ще не активовано. Можна спробувати ще раз.'],
+    ['en','Update available for '+brand,'Update app','Updating SkyRhythm…','The update is not active yet. You can try again.'],
+    ['es','Actualización de '+brand+' disponible','Actualizar la aplicación','Actualizando SkyRhythm…','La actualización aún no está activa. Puedes reintentarlo.'],
+    ['fr','Mise à jour de '+brand+' disponible','Mettre à jour l’application','Mise à jour de SkyRhythm…','La mise à jour n’est pas encore active. Vous pouvez réessayer.'],
+   ];
+   for(const [lang,ready,action] of updateCopy){
+    await probe.evaluate(lang=>NRLocale.set(lang),lang);
+    assert.equal(await status.textContent(),'🔄 '+ready,entry+' ready in '+lang);
+    assert.equal(await updateButton.textContent(),action,entry+' action in '+lang);
+   }
+   assert.equal(await status.getAttribute('role'),'status',entry+' update announcements');
+   await probe.clock.install();
+   await probe.evaluate(()=>pwaReload());
+   for(const [lang,,,applying] of updateCopy){
+    await probe.evaluate(lang=>NRLocale.set(lang),lang);
+    assert.equal(await status.textContent(),'🔄 '+applying,entry+' applying in '+lang);
+    assert(await updateButton.isDisabled(),entry+' awaiting activation');
+   }
+   await probe.clock.fastForward(4000);
+   for(const [lang,,,,retry] of updateCopy){
+    await probe.evaluate(lang=>NRLocale.set(lang),lang);
+    assert.equal(await status.textContent(),retry,entry+' retry in '+lang);
+    assert(await updateButton.isEnabled(),entry+' retry available');
+   }
    await probe.evaluate(()=>{const node=document.createElement('div');node.id='nrRuntimeState';node.innerHTML='<strong>◷ ЗАСТАРІЛІ ДАНІ</strong><span>Частина джерел повернула кешовані дані. Доступність поточного рішення визначається його джерелами та строком чинності.</span>';document.body.append(node);const bar=document.createElement('div');bar.id='swStaleBar';bar.textContent="⚠ Дані з кешу (2 хв тому) — перевірте з'єднання";document.body.append(bar)});
    for(const [lang,header] of [['en','OUTDATED DATA'],['es','DATOS DESACTUALIZADOS'],['fr','DONNÉES PÉRIMÉES'],['uk','ЗАСТАРІЛІ ДАНІ'],['en','OUTDATED DATA']]){
     await probe.evaluate(lang=>NRLocale.set(lang),lang);
@@ -57,5 +92,6 @@ console.log('PASS locale: whitespace-specific keys, language and registration in
    await probe.close();
   }
   console.log('PASS offline state localization: 3 entry dictionaries/bridges, 4 languages, dynamic age, language roundtrip, user draft untouched');
+  console.log('PASS update status localization: 3 entry pages, 4 languages, ready/applying/retry');
  }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1});

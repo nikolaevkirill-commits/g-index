@@ -33,5 +33,10 @@ register([
  ['📵 Офлайн — дані від','📵 Offline · data from','📵 Sin conexión · datos del','📵 Hors ligne · données du'],
  ['· Показуються кешовані значення','· Showing cached data','· Se muestran datos guardados','· Données en cache'],
  ['невідомого часу','an unknown time','una hora desconocida','une heure inconnue'],
+ ['Доступне оновлення SkyRhythm','Update available for SkyRhythm','Actualización de SkyRhythm disponible','Mise à jour de SkyRhythm disponible'],
+ ['Доступне оновлення NeboRhythm','Update available for NeboRhythm','Actualización de NeboRhythm disponible','Mise à jour de NeboRhythm disponible'],
+ ['Оновити застосунок','Update app','Actualizar la aplicación','Mettre à jour l’application'],
+ ['Застосовую оновлення SkyRhythm…','Updating SkyRhythm…','Actualizando SkyRhythm…','Mise à jour de SkyRhythm…'],
+ ['Оновлення ще не активовано. Можна спробувати ще раз.','The update is not active yet. You can try again.','La actualización aún no está activa. Puedes reintentarlo.','La mise à jour n’est pas encore active. Vous pouvez réessayer.'],
 ]);
 })(window);
