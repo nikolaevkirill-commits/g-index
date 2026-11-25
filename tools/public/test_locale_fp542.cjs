@@ -52,6 +52,16 @@ console.log('PASS locale: whitespace-specific keys, language and registration in
    const updateCode=entrySource.slice(updateStart,entrySource.indexOf('\n}',updateStart)+2);
    await probe.evaluate(markup=>document.body.insertAdjacentHTML('beforeend',markup),updateBar);
    await probe.addScriptTag({content:"var _swReg={waiting:{postMessage(){}}};"+updateCode});
+   await probe.setViewportSize({width:320,height:741});
+   await probe.addStyleTag({content:'body{font-family:system-ui} :is(#pwaInstallBar,#pwaUpdateBar){display:flex!important} :is(#pwaInstallBar,#pwaUpdateBar), :is(#pwaInstallBar,#pwaUpdateBar) button{font:inherit;font-size:26px!important}'});
+   const assertBannerFits=async(id,label)=>{
+    const overflow=await probe.locator(id).evaluate(bar=>[bar,...bar.children].flatMap(node=>{
+     const bounds=node.getBoundingClientRect();
+     return bounds.left>=-.5&&bounds.right<=innerWidth+.5&&node.scrollWidth<=node.clientWidth+1
+      ? [] : [{element:node.tagName,right:bounds.right,overflow:node.scrollWidth-node.clientWidth}];
+    }));
+    assert.deepEqual(overflow,[],entry+' '+label+' fits at 320px with doubled text');
+   };
    const status=probe.locator('#pwaUpdateBar span');
    const updateButton=probe.locator('#pwaUpdateBar button');
    const brand=entry==='design-b17.html'?'NeboRhythm':'SkyRhythm';
@@ -65,6 +75,7 @@ console.log('PASS locale: whitespace-specific keys, language and registration in
     await probe.evaluate(lang=>NRLocale.set(lang),lang);
     assert.equal(await status.textContent(),'🔄 '+ready,entry+' ready in '+lang);
     assert.equal(await updateButton.textContent(),action,entry+' action in '+lang);
+    await assertBannerFits('#pwaUpdateBar','update ready in '+lang);
    }
    assert.equal(await status.getAttribute('role'),'status',entry+' update announcements');
    const installBar=entrySource.match(/<div id="pwaInstallBar"[^>]*>[\s\S]*?<\/div>/)[0];
@@ -83,6 +94,7 @@ console.log('PASS locale: whitespace-specific keys, language and registration in
     assert.equal(await probe.locator('#pwaInstallBar strong').textContent(),action+' '+brand,entry+' install heading in '+lang);
     assert.equal(await probe.locator('#pwaInstallBar button').first().textContent(),action,entry+' install action in '+lang);
     assert.equal(await probe.locator('#pwaInstallBar button').last().getAttribute('aria-label'),dismiss,entry+' install dismissal in '+lang);
+    await assertBannerFits('#pwaInstallBar','install in '+lang);
     for(const [mode,fragment] of [['ios',iosText],['standalone',standaloneText],['browser',browserText]]){
      const help=await probe.evaluate(mode=>{
       let message='';
@@ -110,12 +122,14 @@ console.log('PASS locale: whitespace-specific keys, language and registration in
     await probe.evaluate(lang=>NRLocale.set(lang),lang);
     assert.equal(await status.textContent(),'🔄 '+applying,entry+' applying in '+lang);
     assert(await updateButton.isDisabled(),entry+' awaiting activation');
+    await assertBannerFits('#pwaUpdateBar','updating in '+lang);
    }
    await probe.clock.fastForward(4000);
    for(const [lang,,,,retry] of updateCopy){
     await probe.evaluate(lang=>NRLocale.set(lang),lang);
     assert.equal(await status.textContent(),retry,entry+' retry in '+lang);
     assert(await updateButton.isEnabled(),entry+' retry available');
+    await assertBannerFits('#pwaUpdateBar','update retry in '+lang);
    }
    await probe.evaluate(()=>{const node=document.createElement('div');node.id='nrRuntimeState';node.innerHTML='<strong>◷ ЗАСТАРІЛІ ДАНІ</strong><span>Частина джерел повернула кешовані дані. Доступність поточного рішення визначається його джерелами та строком чинності.</span>';document.body.append(node);const bar=document.createElement('div');bar.id='swStaleBar';bar.textContent="⚠ Дані з кешу (2 хв тому) — перевірте з'єднання";document.body.append(bar)});
    for(const [lang,header] of [['en','OUTDATED DATA'],['es','DATOS DESACTUALIZADOS'],['fr','DONNÉES PÉRIMÉES'],['uk','ЗАСТАРІЛІ ДАНІ'],['en','OUTDATED DATA']]){
@@ -129,6 +143,6 @@ console.log('PASS locale: whitespace-specific keys, language and registration in
    await probe.close();
   }
   console.log('PASS offline state localization: 3 entry dictionaries/bridges, 4 languages, dynamic age, language roundtrip, user draft untouched');
-  console.log('PASS app prompts: 3 entry pages, 4 languages, update and install help');
+  console.log('PASS app prompts: 3 entry pages, 4 languages, update and install help, 320px at 200% text');
  }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1});
