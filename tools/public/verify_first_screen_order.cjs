@@ -3,6 +3,15 @@
 // Usage: node verify_first_screen_order.cjs [loads=6]
 const http=require('http'),fs=require('fs'),path=require('path'),assert=require('assert/strict');const {chromium}=require('playwright');
 const root=path.resolve(__dirname,'../..'),loads=+process.argv[2]||6;
+const pageSource = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+const chartPreloads = [...pageSource.matchAll(/<link rel="preload" as="script" href="([^"]+)" data-first-screen>/g)];
+assert.equal(chartPreloads.length, 8, 'preload the eight first-screen scripts');
+assert.equal(new Set(chartPreloads.map(tag => tag[1])).size, chartPreloads.length, 'preload each script once');
+for (const tag of chartPreloads) {
+  const scriptStart = pageSource.indexOf('src="' + tag[1] + '"');
+  assert.ok(scriptStart > tag.index, 'preload must match the executable script URL: ' + tag[1]);
+}
+console.log('PASS first-screen startup preloads: eight exact script URLs');
 const mime=f=>f.endsWith('.html')?'text/html; charset=utf-8':f.endsWith('.js')?'application/javascript':f.endsWith('.json')?'application/json':f.endsWith('.css')?'text/css':'application/octet-stream';
 const srv=http.createServer((q,s)=>{const f=decodeURIComponent(q.url.split('?')[0]).slice(1)||'classic.html';const p=path.resolve(root,f);if(!p.startsWith(root+path.sep)){s.writeHead(403);return s.end()}fs.readFile(p,(e,b)=>{if(e){s.writeHead(404);return s.end()}s.writeHead(200,{'content-type':mime(f)});s.end(b)})});
 (async()=>{await new Promise(r=>srv.listen(0,'127.0.0.1',r));const b=await chromium.launch();const report={};
