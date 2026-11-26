@@ -172,7 +172,7 @@ function renderFirstSun(s,above){
   firstSun.style.cssText='max-width:min(22rem,calc(100vw - 115px));margin-top:3px;font-size:.75rem;line-height:1.35;color:var(--nr-text,#eef3fb);overflow-wrap:anywhere';
   subtitle.after(firstSun);
  }
- const loc=s.loc, label=loc.example?t('example'):(cityLabel(loc)||t('yourPlace'));
+ const loc=s.loc, label=placeLabel(loc);
  const status=above===null?t('unavailable'):t(above?'sun':'below');
  const text=status+' · '+label+' · '+timeText(s.at,s.zone);
  const state=above===null?'unavailable':above?'above':'below';
@@ -235,7 +235,7 @@ function renderToday(s){
  svg.querySelector('[data-time-sun]').style.visibility='';
  panel.querySelector('h2').textContent=t('title');
  // FP569f (R-08): a saved place without a name is «Ваше місце», not an IANA identifier; the zone stays in the controls line.
- panel.querySelector('[data-time-place]').textContent=loc.example?t('example'):(cityLabel(loc)||t('yourPlace'));
+ panel.querySelector('[data-time-place]').textContent=placeLabel(loc);
  panel.querySelector('[data-time-open]').textContent=t('open');
  updateControls(s);
 }
@@ -261,12 +261,13 @@ function sync(){
  if(!document.hidden)notify();
 }
 // FP569k: live() exported so other views (Лінія дня) can return the one shared clock to «now».
-window.SRSkyTime=Object.freeze({live,snapshot,place,cityLabel,cityPresets:()=>cities.map(([cityId,names,lat,lon,zone])=>({cityId,label:names[Math.max(0,language())],aliases:[...names,...({kyiv:['Kiev'],izium:['Izyum'],tromso:['Тромсьо']}[cityId]||[])],lat,lon,zone})),controls,light,timeText,selectMoment});
+window.SRSkyTime=Object.freeze({live,snapshot,place,cityLabel,placeLabel,cityPresets:()=>cities.map(([cityId,names,lat,lon,zone])=>({cityId,label:names[Math.max(0,language())],aliases:[...names,...({kyiv:['Kiev'],izium:['Izyum'],tromso:['Тромсьо']}[cityId]||[])],lat,lon,zone})),controls,light,timeText,selectMoment});
 window.addEventListener('hashchange',sync);
 function cityLabel(loc){
  const city=cities.find(([id])=>id===loc?.cityId);
  return city?city[1][Math.max(0,language())]:loc?.cityId==='device'?['Моє місце','My location','Mi ubicación','Ma position'][Math.max(0,language())]:loc?.label;
 }
+function placeLabel(loc){return loc?.example?t('example'):(cityLabel(loc)||t('yourPlace'));}
 function mountCityPicker(){
  const box=document.getElementById('nrLocalContext');
  if(!box)return;

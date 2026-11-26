@@ -280,6 +280,7 @@ async function setup(browser,base,{width=390,height=width>900?920:844,lang='uk',
      });
      assert.equal(await timeline.locator('ol > li').count(),9);
      assert.equal(await timeline.locator('dt').count(),27);
+     assert.match(await timeline.locator('.sr-day-three-place').textContent(),/^Київ · типове місце · .+ · Europe\/Kyiv$/);
      assert.match(await timeline.innerText(),/Тітхі/);
      assert.match(await timeline.innerText(),/Схід Сонця/);
      const activeRows=await timeline.locator('[data-slot-noaa]').filter({hasText:/^Kp /}).count();

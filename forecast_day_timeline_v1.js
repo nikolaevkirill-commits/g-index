@@ -110,7 +110,7 @@
   const locale=window.NRLocale?.locale||'uk-UA';
   const clock=new Intl.DateTimeFormat(locale,{timeZone:loc.zone,hour:'2-digit',minute:'2-digit',hourCycle:'h23'});
   const formatDay=new Intl.DateTimeFormat(locale,{timeZone:'UTC',dateStyle:'long'});
-  const summary=el('p',window.SRSkyTime.cityLabel(loc)+' · '+formatDay.format(new Date(date+'T12:00:00Z'))+' · '+loc.zone);
+  const summary=el('p',window.SRSkyTime.placeLabel(loc)+' · '+formatDay.format(new Date(date+'T12:00:00Z'))+' · '+loc.zone);
   summary.className='sr-day-three-place';
   const hint=el('p',t('note'));
   hint.className='sr-day-three-note';
@@ -226,7 +226,7 @@
    }
    return;
   }
-  const key=[date,loc.lat,loc.lon,loc.zone,loc.elevation,window.SRSkyTime.cityLabel(loc),lang()].join('|');
+  const key=[date,loc.lat,loc.lon,loc.zone,loc.elevation,window.SRSkyTime.placeLabel(loc),lang()].join('|');
   if(current?.key===key&&current.panel===panel)return;
   const session={root,date,panel,loc,key};
   current=session;
