@@ -147,6 +147,16 @@ async function refuseCorruptUpdate(browser, base) {
 
 (async () => {
  const current = await readFile(path.join(root,'sw.js'),'utf8');
+ const shellBlock=current.match(/const SHELL_ASSETS = \[([\s\S]*?)\];/)[1];
+ const shellScripts=new Set([...shellBlock.matchAll(/'\.\/([^']+)'/g)].map(match=>match[1]));
+ const dayScripts=/^(?:p0_layout|three_day_forecast|forecast_day_timeline|sky_time)_v1\.js\?/;
+ for(const entry of ['index.html','classic.html','design-b17.html']){
+  const html=await readFile(path.join(root,entry),'utf8');
+  const refs=[...html.matchAll(/<script\s+src="([^"]+)"/g)].map(match=>match[1]).filter(ref=>dayScripts.test(ref));
+  assert(refs.length>=2,entry+' references the day scripts');
+  if(entry!=='design-b17.html')assert.equal(refs.length,4,entry+' uses all day scripts');
+  for(const ref of refs)assert(shellScripts.has(ref),entry+' script missing in offline shell: '+ref);
+ }
  worker = current;
  legacyWorker = current.replace(/const CACHE_VERSION = '[^']+';/, "const CACHE_VERSION = 'budget-test-legacy';")
   .replace("typeof DecompressionStream === 'function'", 'false');
