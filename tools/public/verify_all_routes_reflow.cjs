@@ -40,7 +40,19 @@ try{
  await c.route(/^https?:\/\/(?!127\.0\.0\.1)/,r=>r.abort());
  await p.clock.setFixedTime(new Date(at));
  await p.goto('http://127.0.0.1:'+server.address().port+'/'+entry+'?channel=play#today',{waitUntil:'domcontentloaded',timeout:120000});
- await p.waitForSelector('[data-overview="today"] .nr-o-score',{state:'visible',timeout:30000});await p.evaluate(()=>document.fonts.ready);
+ // Day 2 can legitimately have no score. Wait for the visible result of the resolver in either state.
+ await p.waitForFunction(()=>{
+  const view=document.querySelector('#nrRoute-today [data-overview="today"]');
+  const date=view?.querySelector('select')?.value;
+  if(!date||window.__srConsumerLoadState!=='ready')return false;
+  const consumer=window.fp469ConsumerForDate?.({ds:date})?.consumer;
+  const score=view.querySelector('.nr-o-score');
+  const verdict=view.querySelector('.nr-dv-tone');
+  if(!consumer||!score||!verdict)return false;
+  if(consumer.available)return score.checkVisibility()&&score.textContent.trim()===window.SkyScore.formatScore(consumer.score);
+  return verdict.checkVisibility()&&score.dataset.ring==='missing'&&verdict.textContent.trim()==='Оцінки на цей день немає.';
+ },null,{timeout:30000});
+ await p.evaluate(()=>document.fonts.ready);
  await p.addStyleTag({content:`html{-webkit-text-size-adjust:${scale}%!important;text-size-adjust:${scale}%!important}`});await p.waitForTimeout(300);
  const routes=await p.evaluate(()=>[...document.querySelectorAll('#mobileNav button')].map(x=>({label:x.textContent.trim(),route:x.dataset.route||x.getAttribute('data-nav')||x.getAttribute('aria-controls')||null})));
  for(let i=0;i<routes.length;i++){
