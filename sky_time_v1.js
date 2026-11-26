@@ -36,6 +36,14 @@ const copy={
  rise:['Схід','Sunrise','Amanecer','Lever'],
  set:['Захід','Sunset','Ocaso','Coucher'],
  noon:['Полудень','Noon','Mediodía','Midi'],
+ lens:['Сонце й найближча подія','Sun and next event','Sol y próximo evento','Soleil et prochain événement'],
+ upcoming:['Наступна подія','Next event','Próximo evento','Prochain événement'],
+ sunriseEvent:['Схід Сонця','Sunrise','Salida del Sol','Lever du Soleil'],
+ sunsetEvent:['Захід Сонця','Sunset','Puesta del Sol','Coucher du Soleil'],
+ moonriseEvent:['Схід Місяця','Moonrise','Salida de la Luna','Lever de la Lune'],
+ moonsetEvent:['Захід Місяця','Moonset','Puesta de la Luna','Coucher de la Lune'],
+ tithiEvent:['Новий місячний день','New lunar day','Nuevo día lunar','Nouveau jour lunaire'],
+ nakshatraEvent:['Накшатра Місяця','Moon’s nakshatra','Nakshatra lunar','Nakshatra lunaire'],
  unavailable:['Шлях Сонця недоступний','Sun path unavailable','Trayectoria solar no disponible','Trajectoire solaire indisponible']
 };
 const t=k=>copy[k][Math.max(0,language())];
@@ -186,6 +194,73 @@ function showFirstSun(show){
  const subtitle=document.getElementById('headerSub');
  if(subtitle&&subtitle.hidden!==show)subtitle.hidden=show;
 }
+let firstSky=null,nextSkyCache=null;
+function nextSkyEvent(loc,now){
+ const key=[loc.lat,loc.lon,loc.elevation].join('|');
+ if(nextSkyCache?.key===key&&nextSkyCache.time<=now&&nextSkyCache.until>now)return nextSkyCache.event;
+ const observer=new Astronomy.Observer(loc.lat,loc.lon,loc.elevation||0),start=new Date(now);
+ const candidates=[];
+ for(const [body,direction,kind] of [['Sun',1,'sunriseEvent'],['Sun',-1,'sunsetEvent'],['Moon',1,'moonriseEvent'],['Moon',-1,'moonsetEvent']]){
+  const match=Astronomy.SearchRiseSet(body,observer,direction,start,1.5);
+  if(match&&+match.date>now)candidates.push({at:+match.date,kind});
+ }
+ const lunar=window.SkyRhythmLunar;
+ if(lunar?.available()){
+  const state=lunar.at(now);
+  for(const kind of ['tithi','nakshatra']){
+   const next=lunar.nextTransition(now,kind,state[kind]);
+   if(next?.utcMs>now)candidates.push({at:next.utcMs,kind:kind+'Event',sector:kind==='nakshatra'?next.to:null});
+  }
+ }
+ const event=candidates.sort((a,b)=>a.at-b.at)[0]||null;
+ nextSkyCache={key,event,time:now,until:event?.at||now+60000};
+ return event;
+}
+
+function renderFirstSky(s,orbit,x,y){
+ const hero=today.closest('[data-overview="today"]')?.querySelector(':scope > .nr-o-hero');
+ if(!hero||!matchMedia('(max-width:600px)').matches){if(firstSky)firstSky.hidden=true;return;}
+ if(!firstSky?.isConnected){
+  firstSky=document.createElement('section');
+  firstSky.className='sr-p0-sky-preview';
+  firstSky.dataset.placement='after-hero';
+  firstSky.setAttribute('translate','no');
+  firstSky.innerHTML='<button type="button" data-p0-next-sky><span></span><time></time></button><svg viewBox="0 0 390 106" role="img"><line x1="18" y1="51" x2="372" y2="51"/><path/><circle r="8"/></svg>';
+  const button=firstSky.querySelector('button');
+  button.onclick=()=>{
+   if(button.dataset.at&&selectMoment(button.dataset.at))window.fp434Go?.('panch',true);
+  };
+ }
+ const style=getComputedStyle(document.documentElement);
+ const large=parseFloat(style.fontSize)>=24||parseFloat(style.textSizeAdjust||style.webkitTextSizeAdjust)>=150;
+ firstSky.toggleAttribute('data-large-text',large);
+ const anchor=hero.querySelector(large?'[data-reference-title]':'.nr-o-verdict')||hero.firstElementChild;
+ if(anchor&&anchor.nextElementSibling!==firstSky)anchor.after(firstSky);
+ firstSky.hidden=false;
+ const lang=window.NRLocale?.locale||'uk-UA';
+ const button=firstSky.querySelector('button'),time=button.querySelector('time');
+ const event=nextSkyEvent(s.loc,Date.now());
+ const preview=firstSky.querySelector('svg');
+ preview.setAttribute('aria-label',t('title'));
+ preview.querySelector('path').setAttribute('d',orbit);
+ preview.querySelector('circle').setAttribute('cx',x);
+ preview.querySelector('circle').setAttribute('cy',y);
+ firstSky.setAttribute('aria-label',t('lens'));
+ button.disabled=!event;
+ if(!event){
+  delete button.dataset.at;button.removeAttribute('aria-label');time.removeAttribute('datetime');time.textContent='';
+  button.firstElementChild.textContent=t('upcoming')+' · '+t('unavailable');return;
+ }
+ const name=event.sector&&window.SkyRhythmI18n?window.SkyRhythmI18n.name('nakshatra',event.sector,window.NRLocale?.language):null;
+ const moment=new Date(event.at),newDay=NRCivilTime.dayKey(event.at,s.zone)!==NRCivilTime.dayKey(Date.now(),s.zone);
+ const format=new Intl.DateTimeFormat(lang,{timeZone:s.zone,hour:'2-digit',minute:'2-digit',hourCycle:'h23',...(newDay?{month:'short',day:'numeric'}:{})});
+ button.dataset.at=moment.toISOString();
+ time.dateTime=button.dataset.at;
+ time.textContent=format.format(moment);
+ button.firstElementChild.textContent=(name?t(event.kind)+' → '+name:t(event.kind))+' · '+placeLabel(s.loc);
+ button.setAttribute('aria-label',button.firstElementChild.textContent+' · '+time.textContent+' · '+t('open'));
+}
+
 function renderToday(s){
  const loc=place(true), panel=today, svg=panel.querySelector('svg'), key=[s.start,s.end,s.zone,loc.lat,loc.lon,loc.elevation,language()].join('|');
  try{
@@ -218,6 +293,7 @@ function renderToday(s){
   // FP569k (K1): «зараз» is a dashed tick; the played/selected time is the Sun itself. They coincide in «now» mode.
   const nowG=svg.querySelector('[data-time-nowtick]');if(nowG){const n=Date.now(),inDay=n>=s.start&&n<s.end;nowG.style.display=s.mode==='now'||!inDay?'none':'';
    if(inDay){const nx=X((n-s.start)/(s.end-s.start));nowG.setAttribute('transform','translate('+nx.toFixed(2)+' 0)');nowG.querySelector('text').textContent=t('nowTick')+' '+timeText(n,s.zone);}}
+  try{renderFirstSky(s,svg.querySelector('path[data-time-orbit]').getAttribute('d'),x,y);}catch{if(firstSky)firstSky.hidden=true;}
   panel.dataset.sun=alt>=0?'above':'below';
   renderFirstSun(s,alt>=0);
   panel.dataset.clockMode=s.mode;
@@ -229,6 +305,7 @@ function renderToday(s){
   for(const path of svg.querySelectorAll('path[data-time-orbit]'))path.removeAttribute('d');
   svg.querySelector('[data-time-sun]').style.visibility='hidden';
   panel.querySelector('[data-time-alt]').textContent=t('unavailable');
+  if(firstSky)firstSky.hidden=true;
   renderFirstSun(s,null);
   return;
  }

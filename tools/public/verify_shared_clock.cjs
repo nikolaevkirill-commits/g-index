@@ -174,11 +174,16 @@ const server=http.createServer(async(req,res)=>{
   await p.waitForFunction(()=>['ready','error'].includes(window.__srConsumerLoadState),null,{timeout:30000});
   // Wait for the asynchronously mounted share action before measuring the fold.
   await p.locator('[data-sky-clock] [data-share-card] button').waitFor();
-  const first=await compactSun.evaluate(el=>{const nav=document.getElementById('mobileNav').getBoundingClientRect().top,card=el.closest('[data-sky-clock]');
+  const preview=p.locator('#nrRoute-today .sr-p0-sky-preview');
+  await preview.locator('[data-p0-next-sky][data-at]').waitFor();
+  const first=await preview.evaluate(el=>{
+   const nav=document.getElementById('mobileNav').getBoundingClientRect().top,svg=el.querySelector('svg'),card=document.querySelector('#nrRoute-today [data-sky-clock]');
    return {verdict:document.querySelector('#nrRoute-today .nr-o-hero .nr-dv-tone')?.getBoundingClientRect().bottom<nav,score:document.querySelector('#nrRoute-today .nr-o-hero .nr-o-verdict')?.getBoundingClientRect().bottom<nav,
-    afterHero:card.previousElementSibling?.matches('.nr-o-hero,.sr-expert-caution'),sunStarts:card.getBoundingClientRect().top<nav,plotBottom:el.closest('svg').getBoundingClientRect().bottom,sunTop:card.getBoundingClientRect().top,nav,previous:card.previousElementSibling?.className}});
+    sharedPath:svg.querySelector('path').getAttribute('d')===card.querySelector('path[data-time-orbit]').getAttribute('d'),
+    plotBottom:svg.getBoundingClientRect().bottom,nav};
+  });
   assert(first.verdict&&first.score,'verdict and score must fit on a 320×694 first viewport');
-  assert(first.afterHero&&first.sunStarts,'Sun clock follows the overview card and starts on the first viewport: '+JSON.stringify(first));
+  assert(first.sharedPath,'first-screen and detailed solar curves must match');
   const clearance=Math.min(p.viewportSize().height,first.nav)-first.plotBottom;
   assert(clearance>=16,'solar plot must clear the bottom navigation by at least 16 CSS pixels: '+JSON.stringify(first));
   console.log('PASS compact solar plot: bottom '+first.plotBottom+', navigation '+first.nav+', clearance '+clearance+' CSS px');
@@ -187,6 +192,12 @@ const server=http.createServer(async(req,res)=>{
   assert.match(await localSun.innerText(),/Сонце під горизонтом.*Київ · типове місце/);
   assert.equal(await p.locator('#headerSub').isVisible(),false);
 
+  const next=preview.locator('[data-p0-next-sky]');
+  const eventTime=await next.getAttribute('data-at');
+  assert.equal(await next.locator('time').getAttribute('datetime'),eventTime);
+  await next.click();
+  await p.waitForFunction(at=>location.hash==='#panch'&&SRSkyTime.snapshot().at===Date.parse(at),eventTime);
+  await p.evaluate(()=>fp434Go('today',false));
   await p.locator('[data-sky-clock] [data-time-open]').click({noWaitAfter:true});
   await p.locator('[data-sky-live] .nr-sl-body[data-body=Sun]').waitFor();
   assert.match(await p.locator('#nrSkyLiveHeading').textContent(),/Києвом/);
