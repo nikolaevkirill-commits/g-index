@@ -181,7 +181,6 @@ function forecastOverview(root,ds){
   button.textContent=n===3?window.NRThreeDayForecast.tab():words[[1,7,27].indexOf(n)];
   button.setAttribute('aria-pressed',String(count===n));
  }
- window.NRThreeDayForecast?.mountHourly(controls,root.querySelector('.nr-o-heading'),count===1&&ds===today,true);
  if(count!==1)window.NRForecastDayTimeline?.mount(root,ds,false);
  let three=root.querySelector('[data-forecast-three-days]');
  if(count===3&&window.NRThreeDayForecast){

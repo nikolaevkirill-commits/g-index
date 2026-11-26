@@ -266,7 +266,31 @@ async function setup(browser,base,{width=390,height=width>900?920:844,lang='uk',
      await p.touchscreen.tap(point.x,point.y);
     };
     await p.waitForFunction(([day,state])=>window.fp469ConsumerForDate?.({ds:day})?.consumer.state===state,[days[0],state]);
-    if(routeName==='forecast')await tapVisible(p.locator(active+tabSelector+'"1"]'));
+    if(routeName==='forecast'){
+     await tapVisible(p.locator(active+tabSelector+'"1"]'));
+     const jump=p.locator(route+'[data-day-three-jump]');
+     const timeline=p.locator(route+'[data-day-three]');
+     const status=timeline.locator('[data-day-three-noaa]');
+     await jump.waitFor({state:'visible'});
+     assert.equal(await p.locator(route+'[data-hourly-toggle]').count(),0);
+     await tapVisible(jump);
+     await p.waitForFunction(sel=>document.activeElement===document.querySelector(sel),route+'[data-day-three]');
+     await p.waitForFunction(({sel,text})=>document.querySelector(sel)?.textContent.includes(text),{
+      sel:route+'[data-day-three-noaa]',text:state==='stale'?'Квитанція NOAA застаріла':'NOAA, отримано'
+     });
+     assert.equal(await timeline.locator('ol > li').count(),9);
+     assert.equal(await timeline.locator('dt').count(),27);
+     assert.match(await timeline.innerText(),/Тітхі/);
+     assert.match(await timeline.innerText(),/Схід Сонця/);
+     const activeRows=await timeline.locator('[data-slot-noaa]').filter({hasText:/^Kp /}).count();
+     assert.equal(activeRows,state==='stale'?0:8);
+     assert(await status.isVisible());
+     await p.locator(active+tabSelector+'"7"]').click();
+     assert.equal(await jump.isVisible(),false);
+     assert.equal(await timeline.isVisible(),false);
+     assert.deepEqual(errors,[]);
+     continue;
+    }
     const button=p.locator(route+'[data-hourly-toggle]'),box=p.locator(route+'[data-hourly-noaa]');
     await button.waitFor({state:'visible'});
     assert.equal(await box.isVisible(),false);
@@ -280,7 +304,7 @@ async function setup(browser,base,{width=390,height=width>900?920:844,lang='uk',
      await waitContent('Отримано з NOAA');
      assert.equal(await box.locator('li').count(),5);
      assert.match(await box.innerText(),/Попередня оцінка/);
-     if(width===320&&routeName==='today'){
+     if(width===320){
       const bodyURL=url=>url.pathname.endsWith('/noaa/bodies/'+digest+'.json');
       await context.route(bodyURL,r=>r.fulfill({body:'[]',contentType:'application/json'}));
       await p.evaluate(()=>window.dispatchEvent(new Event('pageshow')));
@@ -292,11 +316,6 @@ async function setup(browser,base,{width=390,height=width>900?920:844,lang='uk',
       await p.evaluate(()=>loadKpHourlyAlert());
       assert.match(await p.locator('#kpHourlyBody').textContent(),/Отримано з NOAA/);
      }
-    }
-    if(routeName==='forecast'){
-     await p.locator(active+tabSelector+'"7"]').click();
-     assert.equal(await button.isVisible(),false);
-     assert.equal(await box.isVisible(),false);
     }
     assert.deepEqual(errors,[]);
    }finally{await context.close();}

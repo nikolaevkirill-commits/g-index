@@ -4,6 +4,7 @@
  const STEP=3*3600000;
  const LANG=['uk','en','es','fr'];
  const TEXT={
+  jump:['День по 3 години','Day in 3-hour blocks','Día en bloques de 3 horas','Journée par tranches de 3 heures'],
   title:['День по 3 години','Your day in 3-hour blocks','El día en bloques de 3 horas','La journée par tranches de 3 heures'],
   jyotish:['Джйотіш','Jyotish','Jyotish','Jyotish'],
   sky:['Небо','Sky','Cielo','Ciel'],
@@ -187,15 +188,36 @@
 
  function mount(root,date,active){
   let panel=root.querySelector('[data-day-three]');
-  if(!active){if(panel)panel.hidden=true;current=null;return;}
-  const verdict=root.querySelector('[data-forecast-verdict]');
-  if(!verdict)return;
+  let jump=root.querySelector('[data-day-three-jump]');
+  if(!active){
+   if(panel)panel.hidden=true;
+   if(jump)jump.hidden=true;
+   current=null;
+   return;
+  }
+  const verdict=root.querySelector('[data-forecast-verdict]'),heading=root.querySelector('.nr-o-heading');
+  if(!verdict||!heading)return;
   if(!panel){
    panel=el('section');panel.className='sr-day-three';panel.dataset.dayThree='';
+   panel.id='srDayThree';
+   panel.tabIndex=-1;
    panel.setAttribute('aria-labelledby','srDayThreeTitle');
    verdict.after(panel);
   }
+  if(!jump){
+   jump=el('button');
+   jump.type='button';
+   jump.dataset.dayThreeJump='';
+   jump.setAttribute('aria-controls',panel.id);
+   jump.onclick=()=>{
+    panel.scrollIntoView({block:'start',behavior:'instant'});
+    panel.focus({preventScroll:true});
+   };
+   heading.append(jump);
+  }
+  jump.textContent=t('jump');
   panel.hidden=false;
+  jump.hidden=false;
   const loc=window.SRSkyTime?.place(true);
   if(!loc||!window.SkyRhythmCivil||!window.Astronomy||!window.SkyRhythmI18n){
    if(document.readyState!=='complete'&&!panel.dataset.waiting){
