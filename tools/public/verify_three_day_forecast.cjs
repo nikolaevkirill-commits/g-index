@@ -45,11 +45,12 @@ const server=http.createServer((request,response)=>{
 const panelSelector='[data-forecast-three-days]';
 const tabSelector='[data-p0-forecast-tabs] [data-horizon=';
 const active='#nrRoute-forecast ';
-async function setup(browser,base,{width=390,lang='uk',mode='fixture'}={}){
- const context=await browser.newContext({viewport:{width,height:width>900?920:844},locale:lang==='uk'?'uk-UA':'en-GB',
+async function setup(browser,base,{width=390,height=width>900?920:844,lang='uk',mode='fixture',hourlyState=null,routeName='today'}={}){
+ const context=await browser.newContext({viewport:{width,height},hasTouch:!!hourlyState,isMobile:!!hourlyState,locale:lang==='uk'?'uk-UA':'en-GB',
   timezoneId:'Europe/Kyiv',serviceWorkers:'block',reducedMotion:'reduce'});
  await context.addInitScript(url=>{
   localStorage.setItem('gidx_onboard_done_v2','1');
+  localStorage.setItem('srPrivacyNoticeDismissed','1');
   const fetchOriginal=window.fetch;
   window.__threeDayNoaaRequests=0;
   window.fetch=function(input,...extra){
@@ -58,8 +59,19 @@ async function setup(browser,base,{width=390,lang='uk',mode='fixture'}={}){
   };
  },NOAA);
  const body=JSON.stringify(fixture), digest=createHash('sha256').update(body).digest('hex');
+ const receiptTime=new Date(at-(hourlyState==='stale'?9:1)*3600e3).toISOString();
+ let testFeed;
+ if(hourlyState){
+  testFeed=JSON.parse(fs.readFileSync(path.join(root,'consumer_cloud/forecast.json'),'utf8'));
+  const row=structuredClone(Object.values(testFeed.days)[0]);row.date=days[0];
+  Object.assign(row.channels.source_formula,{available:true,value:0,expert_override_used:false,kp_source:'NOAA_3day_slots',
+   generated_at:receiptTime,noaa_issued_at:receiptTime,noaa_retrieved_at:receiptTime});
+  testFeed.days={[days[0]]:row};
+ }
  await context.route('**/*',route=>{
   const url=route.request().url();
+  if(hourlyState&&url.includes('/consumer_cloud/forecast.json'))return route.fulfill({json:testFeed});
+  if(hourlyState&&url.includes('/consumer_cloud/final_score_decisions.json'))return route.fulfill({json:{schema:'consumer-final-decisions-v1',decisions:[]}});
   if(url===NOAA){
    if(mode==='live')return route.continue();
    if(mode==='fallback'||mode==='missing')return route.abort();
@@ -67,7 +79,7 @@ async function setup(browser,base,{width=390,lang='uk',mode='fixture'}={}){
    return route.fulfill({json:fixture,headers:{'Last-Modified':new Date(at-age).toUTCString()}});
   }
   if(mode==='fallback'&&url.includes('/noaa/receipts/cloud.json'))
-   return route.fulfill({json:{url:NOAA,body:'bodies/'+digest+'.json',sha256:digest,retrieved_at:new Date(at-3600e3).toISOString()}});
+   return route.fulfill({json:{url:NOAA,body:'bodies/'+digest+'.json',sha256:digest,retrieved_at:receiptTime}});
   if(mode==='fallback'&&url.endsWith('/noaa/bodies/'+digest+'.json'))
    return route.fulfill({body,contentType:'application/json'});
   if(['missing','stale'].includes(mode)&&url.includes('/noaa/receipts/cloud.json'))return route.abort();
@@ -76,8 +88,9 @@ async function setup(browser,base,{width=390,lang='uk',mode='fixture'}={}){
  const p=await context.newPage(),errors=[];
  p.on('pageerror',e=>errors.push(String(e)));
  await p.clock.setFixedTime(mode==='live'?new Date():new Date(at));
- await p.goto(base+'/index.html?channel=play#today',{waitUntil:'load'});
+ await p.goto(base+'/index.html?channel=play#'+routeName,{waitUntil:'load'});
  await p.waitForFunction(()=>typeof window.fp434Go==='function');
+ if(hourlyState)return {p,context,errors};
  await p.evaluate(()=>fp434Go('forecast',false));
  await p.locator(active+tabSelector+'"3"]').click();
  return {p,context,panel:p.locator(active+panelSelector),errors};
@@ -239,47 +252,56 @@ async function setup(browser,base,{width=390,lang='uk',mode='fixture'}={}){
   assert.equal(await behind.panel.getAttribute('data-valid-slots'),'0');
   assert.deepEqual(behind.errors,[]);
   await behind.context.close();
-  const hourly=await setup(browser,base,{mode:'fallback',width:320});
-  const hp=hourly.p, hc=hourly.context, box=hp.locator('#nrRoute-today [data-hourly-noaa]');
-  await hp.evaluate(()=>fp434Go('today',false));
-  assert.equal(await box.locator('summary').isVisible(),true);
-  await box.locator('summary').click();
-  assert.equal(await box.locator('a').getAttribute('href'),'personal_dayline.html');
-  await hp.waitForFunction(()=>document.querySelector('#nrRoute-today [data-hourly-noaa] li'));
-  assert.equal(await box.locator('li').count(),5);
-  assert.match(await box.innerText(),/Отримано з NOAA/);
-  assert.match(await box.innerText(),/Попередня оцінка/);
-  async function refreshHourly(){
-   await hp.evaluate(()=>window.dispatchEvent(new Event('pageshow')));
+  for(const [width,height] of [[320,741],[390,844]])for(const state of ['fresh','stale'])for(const routeName of ['today','forecast']){
+   const {p,context,errors}=await setup(browser,base,{width,height,mode:'fallback',hourlyState:state,routeName});
+   try{
+    const route='#nrRoute-'+routeName+' ';
+    const tapVisible=async locator=>{
+     const point=await locator.evaluate(e=>{
+      const r=e.getBoundingClientRect(),x=r.left+r.width/2,y=r.top+r.height/2;
+      return {x,y,top:r.top,bottom:r.bottom,width:r.width,height:r.height,viewport:innerHeight,scroll:scrollY,hit:e.contains(document.elementFromPoint(x,y))};
+     });
+     assert(point.scroll<2&&point.top>=0&&point.bottom<=point.viewport&&point.width>=44&&point.height>=44&&point.hit,
+      routeName+' '+state+' '+width+' × '+height+' before scrolling: '+JSON.stringify(point));
+     await p.touchscreen.tap(point.x,point.y);
+    };
+    await p.waitForFunction(([day,state])=>window.fp469ConsumerForDate?.({ds:day})?.consumer.state===state,[days[0],state]);
+    if(routeName==='forecast')await tapVisible(p.locator(active+tabSelector+'"1"]'));
+    const button=p.locator(route+'[data-hourly-toggle]'),box=p.locator(route+'[data-hourly-noaa]');
+    await button.waitFor({state:'visible'});
+    assert.equal(await box.isVisible(),false);
+    await tapVisible(button);
+    await p.waitForFunction(sel=>document.activeElement===document.querySelector(sel),route+'[data-hourly-noaa]');
+    assert.equal(await button.getAttribute('aria-expanded'),'true');
+    assert.equal(await box.locator('a').getAttribute('href'),'personal_dayline.html');
+    const waitContent=text=>p.waitForFunction(([sel,text])=>document.querySelector(sel).textContent.includes(text),[route+'[data-hourly-noaa]',text]);
+    if(state==='stale'){await waitContent('Квитанція NOAA застаріла');assert.equal(await box.locator('li').count(),0);}
+    else{
+     await waitContent('Отримано з NOAA');
+     assert.equal(await box.locator('li').count(),5);
+     assert.match(await box.innerText(),/Попередня оцінка/);
+     if(width===320&&routeName==='today'){
+      const bodyURL=url=>url.pathname.endsWith('/noaa/bodies/'+digest+'.json');
+      await context.route(bodyURL,r=>r.fulfill({body:'[]',contentType:'application/json'}));
+      await p.evaluate(()=>window.dispatchEvent(new Event('pageshow')));
+      await waitContent('Немає підтверджених');
+      assert.equal(await box.locator('li').count(),0);
+      await context.unroute(bodyURL);
+      await p.evaluate(()=>window.dispatchEvent(new Event('pageshow')));
+      await waitContent('Отримано з NOAA');
+      await p.evaluate(()=>loadKpHourlyAlert());
+      assert.match(await p.locator('#kpHourlyBody').textContent(),/Отримано з NOAA/);
+     }
+    }
+    if(routeName==='forecast'){
+     await p.locator(active+tabSelector+'"7"]').click();
+     assert.equal(await button.isVisible(),false);
+     assert.equal(await box.isVisible(),false);
+    }
+    assert.deepEqual(errors,[]);
+   }finally{await context.close();}
   }
-  // A corrupted body must replace the previous intervals, even on the same date.
-  const bodyURL=url=>url.pathname.endsWith('/noaa/bodies/'+digest+'.json');
-  await hc.route(bodyURL,route=>route.fulfill({body:'[]',contentType:'application/json'}));
-  await refreshHourly();
-  await hp.waitForFunction(()=>document.querySelector('#nrRoute-today [data-hourly-noaa]').textContent.includes('Немає підтверджених'));
-  assert.equal(await box.locator('li').count(),0);
-  await hc.unroute(bodyURL);
-  await hp.clock.setFixedTime(new Date(at+6*3600e3));
-  await refreshHourly();
-  await hp.waitForFunction(()=>document.querySelector('#nrRoute-today [data-hourly-noaa]').textContent.includes('Квитанція NOAA застаріла'));
-  assert.equal(await box.locator('li').count(),0);
-  await hp.clock.setFixedTime(new Date(at));
-  await refreshHourly();
-  await hp.waitForFunction(()=>document.querySelector('#nrRoute-today [data-hourly-noaa] li'));
-  // Legacy entry points also consume the verified receipt instead of the frozen file.
-  await hp.evaluate(()=>loadKpHourlyAlert());
-  assert.match(await hp.locator('#kpHourlyBody').textContent(),/Отримано з NOAA/);
-  await hp.locator('#mnavForecast').click();
-  await hp.locator(active+tabSelector+'"1"]').click();
-  const forecastHourly=hp.locator(active+'[data-hourly-noaa]');
-  await forecastHourly.locator('summary').click();
-  await hp.waitForFunction(()=>document.querySelector('#nrRoute-forecast [data-hourly-noaa] li'));
-  assert.equal(await forecastHourly.locator('li').count(),5);
-  await hp.locator(active+tabSelector+'"7"]').click();
-  assert.equal(await forecastHourly.isVisible(),false);
-  assert.deepEqual(hourly.errors,[]);
-  await hc.close();
-  console.log('PASS hourly NOAA: visible Today and Forecast Day at 320px, preserved day-line link, receipt digest, expiry, resume and legacy panel');
+  console.log('PASS hourly NOAA: 8 cold first-screen touch checks, Today and Forecast Day, fresh/stale, 320x741 and 390x844, verified receipt, no scroll before tap, corruption and resume');
   if(process.env.NR3D_LIVE==='1'){
    const t=await setup(browser,base,{mode:'live'});
    await t.p.waitForFunction(selector=>document.querySelector(selector)?.textContent.includes('Отримано з NOAA'),active+panelSelector);

@@ -140,7 +140,7 @@
  const hourlyHosts=new WeakMap();
  function hourlyCopy(){return hourlyWords[root.NRLocale?.language]||hourlyWords.uk;}
  async function updateHourly(hourlyPanel){
-  if(!hourlyPanel.open||document.hidden||!hourlyPanel.getClientRects().length)return;
+  if(hourlyPanel.hidden||document.hidden||!hourlyPanel.getClientRects().length)return;
   const request=Symbol();hourlyPanel.request=request;
   const body=hourlyPanel.querySelector('div'), words=hourlyCopy();
   body.textContent=words[7];
@@ -160,28 +160,50 @@
    body.replaceChildren(header,list);
   }catch(error){if(request===hourlyPanel.request)body.textContent=words[error.message==='stale'?5:6];}
  }
- function mountHourly(anchor,after=false){
-  let hourlyPanel=hourlyHosts.get(anchor);
-  if(!hourlyPanel){
-   hourlyPanel=document.createElement('details');
-   hourlyPanel.dataset.hourlyNoaa='';
-   hourlyPanel.className='sr-p0-explore';
-   hourlyPanel.style.gridColumn='1 / -1';
+ function mountHourly(anchor,heading,active=true,after=false){
+  if(!heading)return;
+  let widget=hourlyHosts.get(anchor);
+  if(!widget){
+   const panel=document.createElement('section'),button=document.createElement('button');
+   const route=anchor.closest('[data-overview]').dataset.overview;
+   panel.id='nrHourlyNoaa-'+route;
+   panel.setAttribute('aria-labelledby',panel.id+'-title');
+   panel.dataset.hourlyNoaa='';
+   panel.hidden=true;
+   panel.tabIndex=-1;
+   panel.style.gridColumn='1 / -1';
+   const title=document.createElement('h3');title.id=panel.id+'-title';
    const link=document.createElement('a');link.href='personal_dayline.html';
-   hourlyPanel.append(document.createElement('summary'),document.createElement('div'),link);
-   const update=()=>updateHourly(hourlyPanel);
-   hourlyPanel.addEventListener('toggle',update);
+   panel.append(title,document.createElement('div'),link);
+   button.type='button';button.dataset.hourlyToggle='';
+   button.setAttribute('aria-controls',panel.id);
+   button.setAttribute('aria-expanded','false');
+   button.style.cssText='min-height:44px;max-width:100%;padding:4px 8px;border:1px solid currentColor;border-radius:8px;background:transparent;color:inherit;font:600 14px/1.2 system-ui;cursor:pointer';
+   const update=()=>updateHourly(panel);
+   button.addEventListener('click',()=>{
+    panel.hidden=!panel.hidden;
+    button.setAttribute('aria-expanded',String(!panel.hidden));
+    if(!panel.hidden){
+     update();
+     panel.focus({preventScroll:true});
+     panel.scrollIntoView({block:'center',behavior:'instant'});
+    }
+   });
    document.addEventListener('visibilitychange',update);
    root.addEventListener('pageshow',update);
    root.addEventListener('online',update);
    root.addEventListener('nr:locale',update);
    root.setInterval(update,5*60000);
-   hourlyHosts.set(anchor,hourlyPanel);
-   if(after)anchor.after(hourlyPanel);else anchor.prepend(hourlyPanel);
+   widget={panel,button};hourlyHosts.set(anchor,widget);
+   if(after)anchor.after(panel);else anchor.prepend(panel);
   }
-  hourlyPanel.firstElementChild.textContent=hourlyCopy()[0];
-  hourlyPanel.lastElementChild.textContent=hourlyCopy()[8];
-  return hourlyPanel;
+  const {panel,button}=widget;
+  const words=hourlyCopy();
+  panel.firstElementChild.textContent=words[0];panel.lastElementChild.textContent=words[8];
+  button.textContent=words[0].split(' · ')[0];
+  button.hidden=!active;
+  if(!active){panel.hidden=true;button.setAttribute('aria-expanded','false');}
+  if(button.parentNode!==heading)heading.append(button);
  }
  async function refresh(force=false){
   if(!restored){restored=true;reading=storedSnapshot();}
