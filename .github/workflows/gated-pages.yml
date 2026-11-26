@@ -17,13 +17,13 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: 5b071c8d0869737fce8190a877003e80d36a2682
+          ref: a71e9b87d78ed7bcb324732496d2c2615e6dc629
           fetch-depth: 0
           persist-credentials: false
       - id: revision
         name: Verify exact application checkout
         run: |
-          test "$(git rev-parse HEAD)" = '5b071c8d0869737fce8190a877003e80d36a2682'
+          test "$(git rev-parse HEAD)" = 'a71e9b87d78ed7bcb324732496d2c2615e6dc629'
           test -z "$(git status --porcelain)"
           echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
           echo "Verified exact application SHA $(git rev-parse HEAD)"
@@ -229,5 +229,5 @@ jobs:
       - name: Verify checked code stayed untouched
         run: |
           git diff --quiet
-          test "$(git rev-parse HEAD)" = '5b071c8d0869737fce8190a877003e80d36a2682'
+          test "$(git rev-parse HEAD)" = 'a71e9b87d78ed7bcb324732496d2c2615e6dc629'
           echo "Full read-only checks passed on $(git rev-parse HEAD)"
