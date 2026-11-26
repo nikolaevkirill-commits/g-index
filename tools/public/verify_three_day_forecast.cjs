@@ -239,6 +239,47 @@ async function setup(browser,base,{width=390,lang='uk',mode='fixture'}={}){
   assert.equal(await behind.panel.getAttribute('data-valid-slots'),'0');
   assert.deepEqual(behind.errors,[]);
   await behind.context.close();
+  const hourly=await setup(browser,base,{mode:'fallback',width:320});
+  const hp=hourly.p, hc=hourly.context, box=hp.locator('#nrRoute-today [data-hourly-noaa]');
+  await hp.evaluate(()=>fp434Go('today',false));
+  assert.equal(await box.locator('summary').isVisible(),true);
+  await box.locator('summary').click();
+  assert.equal(await box.locator('a').getAttribute('href'),'personal_dayline.html');
+  await hp.waitForFunction(()=>document.querySelector('#nrRoute-today [data-hourly-noaa] li'));
+  assert.equal(await box.locator('li').count(),5);
+  assert.match(await box.innerText(),/Отримано з NOAA/);
+  assert.match(await box.innerText(),/Попередня оцінка/);
+  async function refreshHourly(){
+   await hp.evaluate(()=>window.dispatchEvent(new Event('pageshow')));
+  }
+  // A corrupted body must replace the previous intervals, even on the same date.
+  const bodyURL=url=>url.pathname.endsWith('/noaa/bodies/'+digest+'.json');
+  await hc.route(bodyURL,route=>route.fulfill({body:'[]',contentType:'application/json'}));
+  await refreshHourly();
+  await hp.waitForFunction(()=>document.querySelector('#nrRoute-today [data-hourly-noaa]').textContent.includes('Немає підтверджених'));
+  assert.equal(await box.locator('li').count(),0);
+  await hc.unroute(bodyURL);
+  await hp.clock.setFixedTime(new Date(at+6*3600e3));
+  await refreshHourly();
+  await hp.waitForFunction(()=>document.querySelector('#nrRoute-today [data-hourly-noaa]').textContent.includes('Квитанція NOAA застаріла'));
+  assert.equal(await box.locator('li').count(),0);
+  await hp.clock.setFixedTime(new Date(at));
+  await refreshHourly();
+  await hp.waitForFunction(()=>document.querySelector('#nrRoute-today [data-hourly-noaa] li'));
+  // Legacy entry points also consume the verified receipt instead of the frozen file.
+  await hp.evaluate(()=>loadKpHourlyAlert());
+  assert.match(await hp.locator('#kpHourlyBody').textContent(),/Отримано з NOAA/);
+  await hp.locator('#mnavForecast').click();
+  await hp.locator(active+tabSelector+'"1"]').click();
+  const forecastHourly=hp.locator(active+'[data-hourly-noaa]');
+  await forecastHourly.locator('summary').click();
+  await hp.waitForFunction(()=>document.querySelector('#nrRoute-forecast [data-hourly-noaa] li'));
+  assert.equal(await forecastHourly.locator('li').count(),5);
+  await hp.locator(active+tabSelector+'"7"]').click();
+  assert.equal(await forecastHourly.isVisible(),false);
+  assert.deepEqual(hourly.errors,[]);
+  await hc.close();
+  console.log('PASS hourly NOAA: visible Today and Forecast Day at 320px, preserved day-line link, receipt digest, expiry, resume and legacy panel');
   if(process.env.NR3D_LIVE==='1'){
    const t=await setup(browser,base,{mode:'live'});
    await t.p.waitForFunction(selector=>document.querySelector(selector)?.textContent.includes('Отримано з NOAA'),active+panelSelector);

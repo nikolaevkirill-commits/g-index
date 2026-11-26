@@ -2,7 +2,7 @@ importScripts('./runtime_diagnostics_v1.js','./civil_time_v1.js?v=fp569f-global'
 // G-Index service worker. Navigations, HTML, JS and data (.json/.jsonl/.csv) are network-first with a
 // cached fallback. Versioned packed scripts and other static assets are cache-first.
 // Bump CACHE_VERSION whenever index.html or a cached shell asset changes.
-const CACHE_VERSION = 'fp572-journal-update-retry-20261125';
+const CACHE_VERSION = 'fp572-hourly-receipt-20261126';
 const CACHE_PREFIX = 'gindex-'; // G-Index cache namespace; do not remove the prefix.
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${CACHE_VERSION}`;
 const DATA_CACHE = `${CACHE_PREFIX}data-${CACHE_VERSION}`;
@@ -150,7 +150,7 @@ const SHELL_ASSETS = [
   './preview-v4/desktop_v1.css?v=d1',
   './preview-v4/atlas_motion.css?v=v7-2',
   './preview-v4/consumer_overview_v1.js?v=fp569o-daily',
-  './preview-v4/core_runtime_v1.js?v=fp572-lunar-local',
+  './preview-v4/core_runtime_v1.js?v=fp572-hourly-receipt',
   './preview-v4/design_candidate.css?v=v7-3',
   './preview-v4/design_candidate.js',
   './preview-v4/design_scale.js',
@@ -245,8 +245,8 @@ const SHELL_ASSETS = [
   './product_render_queue_v1.js',
   './moon_phase_v1.js',
   './expert_start_advice_v1.js?v=1',
-  './p0_layout_v1.js?v=fp572-three-days',
-  './three_day_forecast_v1.js?v=fp572-noaa-status',
+  './p0_layout_v1.js?v=fp572-hourly-receipt',
+  './three_day_forecast_v1.js?v=fp572-hourly-receipt',
   './p0_layout_v1.css',
   './wow_reviewed_v1.css',
   './sky_panorama_v1.webp',
@@ -259,7 +259,7 @@ const SHELL_ASSETS = [
   './consumer_authority_v1.js',
   './forecast_journal_v1.js',
   './push_client_v1.js',
-  './core_runtime_v1.js?v=fp572-lunar-local',
+  './core_runtime_v1.js?v=fp572-hourly-receipt',
   './mobile_navigation_v1.js',
   './product_shell_v1.js?v=fp572-empty-journal-20261124',
   './plan_calendar_v1.js',
@@ -305,9 +305,9 @@ const SHELL_ASSETS = [
 // These scripts are immutable at their versioned request URLs. The build check
 // verifies their gzip bodies against the public JavaScript sources.
 const PACKED_SHELL_HASHES = Object.freeze({
-  './core_runtime_v1.js': '4f2be17a70923c2541f2adffc559ade27e131463d3de212c4ffde79eec480649',
+  './core_runtime_v1.js': '4c022c547ded9d8a2e5da93ada2d481abaebc1781ca4fb7b8562771e539721eb',
   './locale_overview_v1.js': '644aeca3397267548aad0dc4c92089033270d32061e41f6c9ceeac4b94d4c1c6',
-  './preview-v4/core_runtime_v1.js': 'a83e45db568565e521e0c71484887223fea79f70d2199de1497467f31fa825e1',
+  './preview-v4/core_runtime_v1.js': '68185facccf9186a2cecb448f1e21954904e7799fd960e11641fa68a40d2c78e',
   './preview-v4/locale_overview_v1.js': '689764e17095169a46adddb10a95753c10b9f2646569e81585c9589a0fb6e0b1',
 });
 const CAN_UNPACK_SHELL = typeof DecompressionStream === 'function';

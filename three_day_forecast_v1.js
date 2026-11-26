@@ -115,6 +115,74 @@
   if(digest!==receipt.sha256)throw Error('Invalid NOAA body digest');
   return snapshot(parse(JSON.parse(new TextDecoder().decode(bytes))),Date.parse(receipt.retrieved_at),'cached');
  }
+ // The short alert uses the verified publication, independently of the consumer score.
+ async function hourlyOutlook(){
+  const reading=await archived(), now=Date.now();
+  if(now-reading.at>6*3600000||reading.validThrough<now)throw Error('stale');
+  const end=now+12*3600000, slots=[];
+  let expected=0;
+  for(let start=Math.floor(now/SLOT)*SLOT;start<end;start+=SLOT){
+   expected++;
+   const row=reading.slots.get(start);
+   if(!row||row.state==='observed')continue;
+   slots.push({time_utc:new Date(start).toISOString(),kp:row.kp,source:row.state});
+  }
+  if(!slots.length)throw Error('missing');
+  return {generated_at:new Date(reading.at).toISOString(),lookahead_hours:12,slots,
+   forecast_coverage:{status:slots.length===expected?'complete':'partial'}};
+ }
+ const hourlyWords={
+  uk:['Kp кожні 3 години · найближчі 12 годин','Отримано з NOAA','Попередня оцінка','Прогноз','Часткове покриття','Квитанція NOAA застаріла','Немає підтверджених інтервалів NOAA','Оновлюємо NOAA…','Особиста лінія дня'],
+  en:['Kp every 3 hours · next 12 hours','Retrieved from NOAA','Preliminary estimate','Forecast','Partial coverage','NOAA receipt is out of date','No verified NOAA intervals','Updating NOAA…','Personal day line'],
+  es:['Kp cada 3 horas · próximas 12 horas','Datos recibidos de NOAA','Estimación preliminar','Pronóstico','Cobertura parcial','Los datos de NOAA están desactualizados','Sin intervalos verificados de NOAA','Actualizando NOAA…','Línea personal del día'],
+  fr:['Kp toutes les 3 heures · 12 prochaines heures','Données reçues de la NOAA','Estimation préliminaire','Prévision','Couverture partielle','Les données de la NOAA sont périmées','Aucun intervalle vérifié de la NOAA','Mise à jour NOAA…','Ligne personnelle du jour']
+ };
+ const hourlyHosts=new WeakMap();
+ function hourlyCopy(){return hourlyWords[root.NRLocale?.language]||hourlyWords.uk;}
+ async function updateHourly(hourlyPanel){
+  if(!hourlyPanel.open||document.hidden||!hourlyPanel.getClientRects().length)return;
+  const request=Symbol();hourlyPanel.request=request;
+  const body=hourlyPanel.querySelector('div'), words=hourlyCopy();
+  body.textContent=words[7];
+  try{
+   const data=await hourlyOutlook();
+   if(request!==hourlyPanel.request)return;
+   const clock=new Intl.DateTimeFormat(root.NRLocale?.locale||'uk-UA',{timeZone:'Europe/Kyiv',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'});
+   const header=document.createElement('p');
+   header.textContent=words[1]+' · '+clock.format(new Date(data.generated_at))+' (Europe/Kyiv)';
+   if(data.forecast_coverage.status!=='complete')header.textContent+=' · '+words[4];
+   const list=document.createElement('ul');
+   for(const slot of data.slots){
+    const item=document.createElement('li'), start=Date.parse(slot.time_utc);
+    item.textContent=clock.format(start)+' – '+clock.format(start+SLOT)+' · Kp '+new Intl.NumberFormat(root.NRLocale?.locale||'uk-UA').format(slot.kp)+' · '+words[slot.source==='estimated'?2:3];
+    list.append(item);
+   }
+   body.replaceChildren(header,list);
+  }catch(error){if(request===hourlyPanel.request)body.textContent=words[error.message==='stale'?5:6];}
+ }
+ function mountHourly(anchor,after=false){
+  let hourlyPanel=hourlyHosts.get(anchor);
+  if(!hourlyPanel){
+   hourlyPanel=document.createElement('details');
+   hourlyPanel.dataset.hourlyNoaa='';
+   hourlyPanel.className='sr-p0-explore';
+   hourlyPanel.style.gridColumn='1 / -1';
+   const link=document.createElement('a');link.href='personal_dayline.html';
+   hourlyPanel.append(document.createElement('summary'),document.createElement('div'),link);
+   const update=()=>updateHourly(hourlyPanel);
+   hourlyPanel.addEventListener('toggle',update);
+   document.addEventListener('visibilitychange',update);
+   root.addEventListener('pageshow',update);
+   root.addEventListener('online',update);
+   root.addEventListener('nr:locale',update);
+   root.setInterval(update,5*60000);
+   hourlyHosts.set(anchor,hourlyPanel);
+   if(after)anchor.after(hourlyPanel);else anchor.prepend(hourlyPanel);
+  }
+  hourlyPanel.firstElementChild.textContent=hourlyCopy()[0];
+  hourlyPanel.lastElementChild.textContent=hourlyCopy()[8];
+  return hourlyPanel;
+ }
  async function refresh(force=false){
   if(!restored){restored=true;reading=storedSnapshot();}
   if(pending||!navigator.onLine||Date.now()-lastAttempt<(force?5000:10*60000))return pending;
@@ -274,7 +342,7 @@
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)update();});
   root.setInterval(()=>{if(!document.hidden)update();},10*60000);
  }
- const api=Object.freeze({tab:()=>words().tab,mount,parse,daySlots,score});
+ const api=Object.freeze({tab:()=>words().tab,mount,parse,daySlots,score,hourlyOutlook,mountHourly});
  if(typeof module==='object'&&module.exports)module.exports=api;
  root.NRThreeDayForecast=api;
 })(globalThis);

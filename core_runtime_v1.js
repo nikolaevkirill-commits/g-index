@@ -753,9 +753,7 @@ async function loadKpHourlyAlert(){
   const body=document.getElementById('kpHourlyBody');
   if(!sum||!body) return;
   try{
-    const r=await fetch('KP_HOURLY_ALERT_v2.json',{cache:'no-store'});
-    if(!r.ok) throw new Error('HTTP '+r.status);
-    const p=await r.json();
+    const p=await NRThreeDayForecast.hourlyOutlook();
     const generatedMs=Date.parse(p.generated_at||'');
     const ageHours=Number.isFinite(generatedMs)?Math.max(0,(Date.now()-generatedMs)/3600000):Infinity;
     const maxAgeHours=6;
@@ -854,15 +852,23 @@ async function loadKpHourlyAlert(){
       '</div>'+volatilityHtml+revisionHtml+
       '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">'+
         '<thead><tr><th style="text-align:left;padding:5px">Час Київ</th><th style="text-align:left;padding:5px">Kp</th><th style="text-align:left;padding:5px">Тип даних</th></tr></thead><tbody>'+
-        slots.slice(0,12).map(x=>{const v=Number(x.kp),c=v>=5?'#ff7070':v>=4?'#ffd37a':'#9fd1ff';return '<tr style="border-top:1px solid var(--border)"><td style="padding:5px">'+new Date(x.time_utc).toLocaleString('uk-UA',{timeZone:'Europe/Kyiv',hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit',hour12:false})+'</td><td style="padding:5px;color:'+c+';font-weight:700">'+v.toFixed(1)+'</td><td style="padding:5px">'+(x.source==='observed'?'СПОСТЕРЕЖЕННЯ':'ПРОГНОЗ 3-ГОДИННОГО СЛОТА')+'</td></tr>'}).join('')+
+        slots.slice(0,12).map(x=>{const v=Number(x.kp),c=v>=5?'#ff7070':v>=4?'#ffd37a':'#9fd1ff';return '<tr style="border-top:1px solid var(--border)"><td style="padding:5px">'+new Date(x.time_utc).toLocaleString('uk-UA',{timeZone:'Europe/Kyiv',hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit',hour12:false})+'</td><td style="padding:5px;color:'+c+';font-weight:700">'+v.toFixed(1)+'</td><td style="padding:5px">'+(x.source==='estimated'?'ПОПЕРЕДНЯ ОЦІНКА NOAA':'ПРОГНОЗ NOAA НА 3 ГОДИНИ')+'</td></tr>'}).join('')+
         '</tbody></table></div>'+
-      '<div style="margin-top:7px;color:var(--dim)">Сформовано: '+generatedLabel+' · <span style="color:#9fd1ff">синій = Kp нижче 4, лише геомагнітний показник</span>; Kp≥4 — підвищена активність; Kp≥5 — поріг G1. Колір Kp не означає сприятливий день. Погодинний прогноз не переписує денний PDF-reference або оперативний стан; він може лише активувати окремий safety-veto після досягнення визначеного порога.</div>';
+      '<div style="margin-top:7px;color:var(--dim)">Отримано з NOAA: '+generatedLabel+' · <span style="color:#9fd1ff">синій = Kp нижче 4, лише геомагнітний показник</span>; Kp≥4 — підвищена активність; Kp≥5 — поріг G1. Колір Kp не означає сприятливий день. Погодинний прогноз не переписує денний PDF-reference або оперативний стан; він може лише активувати окремий safety-veto після досягнення визначеного порога.</div>';
     if(level>0){const panel=document.getElementById('kpHourlyPanel');if(panel)panel.open=true;}
   }catch(e){ globalThis.NRDiagnostics?.record('catch.46','recoverable');
     sum.textContent='🛰 Погодинний Kp тимчасово недоступний';
-    body.textContent=e.message;
+    body.textContent=e.message==='stale'?'Квитанція NOAA застаріла.':'Немає підтверджених інтервалів NOAA для цього періоду.';
   }
 }
+function refreshOpenKpHourlyAlert(){
+  if(!document.hidden&&document.getElementById('kpHourlyPanel')?.open)loadKpHourlyAlert();
+}
+document.getElementById('kpHourlyPanel')?.addEventListener('toggle',refreshOpenKpHourlyAlert);
+document.addEventListener('visibilitychange',refreshOpenKpHourlyAlert);
+window.addEventListener('pageshow',refreshOpenKpHourlyAlert);
+window.addEventListener('online',refreshOpenKpHourlyAlert);
+setInterval(refreshOpenKpHourlyAlert,5*60000);
 function updateSpaceWeatherDecisionGuard(){
   const el=document.getElementById('spaceWeatherDecisionGuard');
   if(!el) return;
