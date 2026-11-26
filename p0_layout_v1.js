@@ -448,7 +448,7 @@ function apply(root,ds,resolved){
  if(!signals){signals=make('nav','sr-p0-signals');signals.dataset.p0Signals='';signals.setAttribute('aria-label','Три складові дня');for(const [name,selector]of [['Астрономія й NOAA','.nr-o-spaceweather'],['Панчанга','.nr-o-panch-preview'],['Оцінка дня','.nr-o-reasons']]){const btn=make('button','',name);btn.type='button';btn.onclick=()=>{details.open=true;const target=root.querySelector(selector);target?.scrollIntoView({block:'start'});if(target){target.tabIndex=-1;target.focus({preventScroll:true});}};signals.append(btn);}
  const lead=root.querySelector(':scope > [data-space-scene=today]')||root.querySelector(':scope > [data-sky-clock]')||root.querySelector(':scope > .sr-expert-caution')||hero;
  lead.after(signals);}
- window.NRThreeDayForecast?.mountHourly(signals,titleBox);
+ window.NRThreeDayForecast?.mountHourly(signals,hero.querySelector('.nr-o-verdict'));
  let visual=hero.querySelector('[data-p0-moon]');if(!visual){visual=make('div','sr-p0-moon');visual.dataset.p0Moon='';hero.append(visual);}
  const now=new Date(),today=NRCivilTime.dayKey(now),at=ds===today?now:noonKyiv(ds);visual.innerHTML=tr(moon(at));atmosphere(at,ds);visual.dataset.source='astronomy';visual.title='Геоцентричний розрахунок освітленої частки · '+at.toISOString();
  let sentence=hero.querySelector('[data-p0-sentence]');if(!sentence){sentence=make('p','sr-p0-sentence');sentence.dataset.p0Sentence='';hero.append(sentence);}

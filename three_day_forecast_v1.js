@@ -160,8 +160,8 @@
    body.replaceChildren(header,list);
   }catch(error){if(request===hourlyPanel.request)body.textContent=words[error.message==='stale'?5:6];}
  }
- function mountHourly(anchor,heading,active=true,after=false){
-  if(!heading)return;
+ function mountHourly(anchor,triggerHost,active=true,after=false){
+  if(!triggerHost)return;
   let widget=hourlyHosts.get(anchor);
   if(!widget){
    const panel=document.createElement('section'),button=document.createElement('button');
@@ -179,6 +179,7 @@
    button.setAttribute('aria-controls',panel.id);
    button.setAttribute('aria-expanded','false');
    button.style.cssText='min-height:44px;max-width:100%;padding:4px 8px;border:1px solid currentColor;border-radius:8px;background:transparent;color:inherit;font:600 14px/1.2 system-ui;cursor:pointer';
+   if(!after)button.style.flex='0 0 76px';
    const update=()=>updateHourly(panel);
    button.addEventListener('click',()=>{
     panel.hidden=!panel.hidden;
@@ -203,7 +204,7 @@
   button.textContent=words[0].split(' · ')[0];
   button.hidden=!active;
   if(!active){panel.hidden=true;button.setAttribute('aria-expanded','false');}
-  if(button.parentNode!==heading)heading.append(button);
+  if(button.parentNode!==triggerHost)triggerHost.append(button);
  }
  async function refresh(force=false){
   if(!restored){restored=true;reading=storedSnapshot();}

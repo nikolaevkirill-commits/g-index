@@ -179,7 +179,9 @@ const server=http.createServer(async(req,res)=>{
     afterHero:card.previousElementSibling?.matches('.nr-o-hero,.sr-expert-caution'),sunStarts:card.getBoundingClientRect().top<nav,plotBottom:el.closest('svg').getBoundingClientRect().bottom,sunTop:card.getBoundingClientRect().top,nav,previous:card.previousElementSibling?.className}});
   assert(first.verdict&&first.score,'verdict and score must fit on a 320×694 first viewport');
   assert(first.afterHero&&first.sunStarts,'Sun clock follows the overview card and starts on the first viewport: '+JSON.stringify(first));
-  assert(first.plotBottom<=first.nav,'solar plot must fit above the bottom navigation: '+JSON.stringify(first));
+  const clearance=Math.min(p.viewportSize().height,first.nav)-first.plotBottom;
+  assert(clearance>=16,'solar plot must clear the bottom navigation by at least 16 CSS pixels: '+JSON.stringify(first));
+  console.log('PASS compact solar plot: bottom '+first.plotBottom+', navigation '+first.nav+', clearance '+clearance+' CSS px');
   const localSun=p.locator('[data-sun-first-screen]');
   await localSun.waitFor();
   assert.match(await localSun.innerText(),/Сонце під горизонтом.*Київ · типове місце/);
