@@ -126,14 +126,26 @@ try{for(const lang of ['uk','en']){
  for(const width of [390,320]){
   await p.setViewportSize({width,height:844});
   await p.waitForFunction(w=>innerWidth===w,width);
-  const groups=await marks.evaluateAll(nodes=>nodes.map(n=>{
-   const r=n.getBoundingClientRect(),parent=n.parentElement.getBoundingClientRect();
-   return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,parentLeft:parent.left,parentRight:parent.right,parentBottom:parent.bottom,count:+n.dataset.eventCount};
-  }));
-  assert.ok(groups.length&&groups.reduce((n,g)=>n+g.count,0)===allEvents.length);
+  // Resize redraws the track by replacing its children. Select and measure the
+  // current DOM in one synchronous page task; no element handles cross that boundary.
+  const {track,groups}=await p.evaluate(()=>{
+   const tracks=document.querySelectorAll('.sr-dayline [data-track]');
+   if(tracks.length!==1)throw Error('Expected exactly one day-line track');
+   const bar=tracks[0],track=bar.getBoundingClientRect().toJSON();
+   const groups=Array.from(document.querySelectorAll('.sr-dayline .sr-dl-marker'),marker=>{
+    if(marker.parentElement!==bar)throw Error('Marker must be a direct child of the day-line track');
+    return {rect:marker.getBoundingClientRect().toJSON(),count:Number(marker.dataset.eventCount),
+     times:marker.dataset.eventTimes.split(',').map(Number)};
+   });
+   return {track,groups};
+  });
+  assert.ok(track.width>0&&track.height>0&&groups.length,'visible track and markers at '+width+'px');
+  assert.deepEqual(groups.flatMap(g=>g.times),allEvents.map(Date.parse),'every measured transition in order');
   for(const [i,g] of groups.entries()){
-   assert.ok(g.left>=g.parentLeft&&g.right<=g.parentRight&&g.bottom<=g.parentBottom,'marker fits on '+width+'px');
-   assert.ok(i===0||groups[i-1].right<g.left,'no marker overlap');
+   const r=g.rect;
+   assert.ok(g.count>0&&g.count===g.times.length,'group size matches its transitions');
+   assert.ok(r.width>0&&r.height>0&&r.left>=track.left&&r.right<=track.right&&r.top>=track.top&&r.bottom<=track.bottom,'marker fits on '+width+'px');
+   assert.ok(i===0||groups[i-1].rect.right<r.left,'no marker overlap');
   }
   const explained=[];
   for(const marker of await marks.all()){
