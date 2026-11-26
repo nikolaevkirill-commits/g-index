@@ -2,7 +2,7 @@ importScripts('./runtime_diagnostics_v1.js','./civil_time_v1.js?v=fp569f-global'
 // G-Index service worker. Navigations, HTML, JS and data (.json/.jsonl/.csv) are network-first with a
 // cached fallback. Versioned packed scripts and other static assets are cache-first.
 // Bump CACHE_VERSION whenever index.html or a cached shell asset changes.
-const CACHE_VERSION = 'fp572-hourly-clearance-20261126';
+const CACHE_VERSION = 'fp572-integrated-day-20261126';
 const CACHE_PREFIX = 'gindex-'; // G-Index cache namespace; do not remove the prefix.
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${CACHE_VERSION}`;
 const DATA_CACHE = `${CACHE_PREFIX}data-${CACHE_VERSION}`;
@@ -245,8 +245,9 @@ const SHELL_ASSETS = [
   './product_render_queue_v1.js',
   './moon_phase_v1.js',
   './expert_start_advice_v1.js?v=1',
-  './p0_layout_v1.js?v=fp572-hourly-clearance',
-  './three_day_forecast_v1.js?v=fp572-hourly-clearance',
+  './p0_layout_v1.js?v=fp572-integrated-day',
+  './three_day_forecast_v1.js?v=fp572-integrated-day',
+  './forecast_day_timeline_v1.js?v=fp572-integrated-day',
   './p0_layout_v1.css',
   './wow_reviewed_v1.css',
   './sky_panorama_v1.webp',

@@ -182,6 +182,7 @@ function forecastOverview(root,ds){
   button.setAttribute('aria-pressed',String(count===n));
  }
  window.NRThreeDayForecast?.mountHourly(controls,root.querySelector('.nr-o-heading'),count===1&&ds===today,true);
+ if(count!==1)window.NRForecastDayTimeline?.mount(root,ds,false);
  let three=root.querySelector('[data-forecast-three-days]');
  if(count===3&&window.NRThreeDayForecast){
   if(!three){three=make('section','sr-3d');three.dataset.forecastThreeDays='';controls.after(three);}
@@ -276,6 +277,7 @@ function forecastOverview(root,ds){
  back.hidden=count===1||ds===dates[0];
  const hadBackFocus=document.activeElement===back;
  card.replaceChildren(...information,back);
+ if(count===1)window.NRForecastDayTimeline?.mount(root,ds,true);
  // Keep the existing scoped opinion beside the visible forecast score.
  const scoped=root.querySelector('[data-scoped-opinion]:not([hidden])');
  if(scoped&&card.nextElementSibling!==scoped){

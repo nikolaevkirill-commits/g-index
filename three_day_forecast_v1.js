@@ -116,9 +116,13 @@
   return snapshot(parse(JSON.parse(new TextDecoder().decode(bytes))),Date.parse(receipt.retrieved_at),'cached');
  }
  // The short alert uses the verified publication, independently of the consumer score.
- async function hourlyOutlook(){
+ async function archivedDayIntervals(){
   const reading=await archived(), now=Date.now();
   if(now-reading.at>6*3600000||reading.validThrough<now)throw Error('stale');
+  return reading;
+ }
+ async function hourlyOutlook(){
+  const reading=await archivedDayIntervals(), now=Date.now();
   const end=now+12*3600000, slots=[];
   let expected=0;
   for(let start=Math.floor(now/SLOT)*SLOT;start<end;start+=SLOT){
@@ -365,7 +369,7 @@
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)update();});
   root.setInterval(()=>{if(!document.hidden)update();},10*60000);
  }
- const api=Object.freeze({tab:()=>words().tab,mount,parse,daySlots,score,hourlyOutlook,mountHourly});
+ const api=Object.freeze({tab:()=>words().tab,mount,parse,daySlots,score,hourlyOutlook,archivedDayIntervals,mountHourly});
  if(typeof module==='object'&&module.exports)module.exports=api;
  root.NRThreeDayForecast=api;
 })(globalThis);
