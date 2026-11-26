@@ -61,6 +61,8 @@ const DC_STRINGS=([
  ['Оцінка','Score','Puntuación','Score'],
  ['не сьогодні','not today','no es hoy','pas aujourd’hui'],
  ['До сьогодні','Back to today','Volver a hoy',"Revenir à aujourd’hui"],
+ ['За Києвом','Kyiv time','Hora de Kyiv','Heure de Kyiv'],
+ ['До сьогодні за Києвом','Back to today in Kyiv','Volver a hoy en Kyiv',"Revenir à aujourd’hui à Kyiv"],
  ['Проти вчора','Versus yesterday','Frente a ayer','Par rapport à hier'],
  ['Проти попереднього дня','Versus previous day','Frente al día anterior','Par rapport à la veille'],
  ['як показувалось на цьому пристрої','as shown on this device','como se mostró en este dispositivo','tel qu’affiché sur cet appareil'],
@@ -119,10 +121,14 @@ function bar(root,ds,sel){
  let el=root.querySelector('[data-day-context]');
  if(!el){el=document.createElement('div');el.dataset.dayContext='';el.className='nr-dc-bar';el.setAttribute('translate','no');el.dataset.placement='after-hero';root.prepend(el);}
  const t=todayKey(),isToday=ds===t;
+ const zone=window.NRCivilTime?.localZone?.()||'Europe/Kyiv';
+ const showBasis=root.dataset.overview==='today'&&zone!=='Europe/Kyiv';
+ const basis=showBasis?tr('За Києвом')+' · ':'';
+ const heading=basis+(isToday?(showBasis?'':tr('Сьогодні')+' · ')+dayLabel(ds):dayLabel(ds)+' · '+tr('не сьогодні'));
  el.dataset.state=isToday?'today':'other';el.dataset.selectedDate=ds;
  const dt=deltaText(ds);
- const html='<span class="nr-dc-head"><strong>'+esc(isToday?tr('Сьогодні')+' · '+dayLabel(ds):dayLabel(ds)+' · '+tr('не сьогодні'))+'</strong>'+(dt?'<span class="nr-dc-delta" data-day-delta>'+esc(dt)+'</span>':'')+'</span>'+
-  (isToday||!sel?'':'<button type="button" class="nr-dc-today">'+esc(tr('До сьогодні'))+'</button>');
+ const html='<span class="nr-dc-head"><strong'+(showBasis?' data-day-basis="kyiv"':'')+'>'+esc(heading)+'</strong>'+(dt?'<span class="nr-dc-delta" data-day-delta>'+esc(dt)+'</span>':'')+'</span>'+
+  (isToday||!sel?'':'<button type="button" class="nr-dc-today">'+esc(tr(showBasis?'До сьогодні за Києвом':'До сьогодні'))+'</button>');
  // Idempotent: rewriting unchanged markup would re-trigger layout observers and drop focus elsewhere.
  if(el.dataset.html!==html){el.innerHTML=html;el.dataset.html=html;}
  const b=el.querySelector('.nr-dc-today');
@@ -223,6 +229,7 @@ window.NRDayContext={
 let pending=0;
 function schedule(){renderAll();clearTimeout(pending);pending=setTimeout(renderAll,80);} // second pass runs after other layout layers
 document.addEventListener('nr:overview-rendered',schedule);
+document.addEventListener('nr:location',schedule);
 window.addEventListener('hashchange',schedule);
 window.addEventListener('nr:locale',schedule);
 window.addEventListener('storage',e=>{if([SHOWN,RATED].includes(e.key)||e.key===null)schedule();});

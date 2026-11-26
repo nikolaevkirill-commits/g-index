@@ -33,15 +33,23 @@ const type=f=>f.endsWith('.js')?'application/javascript':f.endsWith('.css')?'tex
    // 5. Forget → key removed, CTA back
    await p.evaluate(()=>{document.querySelector('#setup').open=true;document.querySelector('#birth-panel').open=true;});await p.click('#forget-birth');await p.waitForTimeout(1200);
    ok(assert.equal(await p.evaluate(()=>localStorage.getItem('sr_personal_birth_v1')),null));ok(assert.equal(await p.locator('.birth-cta').count(),1));
-   // A sampled model must not guarantee that the rest of the day has no changes.
    ok(assert.match(await p.locator('#day-note').textContent(), /кроком 1 хвилина/));
-   await p.locator('#activity-label').click();
-   await p.locator('[data-activity="travel"]').click();
-   await p.evaluate(() => {
-    const preview = window.PersonalDaylinePreview;
-    preview.select(preview.getModel().day.end - 1);
-   });
-   ok(assert.equal(await p.locator('#next-change').innerText(), 'До кінця доби розрахунок не виявив змін цих умов.'));
+   // Travel uses sampled changes and exposes the uncertainty at the selected moment.
+   const boundaryNote=p.locator('#travel-boundary-note');
+   ok(assert.equal(await boundaryNote.count(),1));
+   ok(assert.equal(await boundaryNote.isVisible(),false));
+   await p.locator('#activity-picker > summary').click();
+   await p.locator('#activities [data-activity="travel"]').click();
+   ok(assert.equal(await boundaryNote.isVisible(),true));
+   ok(assert.match(await boundaryNote.innerText(),/Межі часу орієнтовні.*Коротка зміна між відліками/));
+   await p.evaluate(()=>PersonalDaylinePreview.select(PersonalDaylinePreview.getModel().day.start));
+   ok(assert.match(await p.locator('#next-change').innerText(),/^Розрахована зміна умов · \d\d:\d\d$/));
+   await p.evaluate(()=>PersonalDaylinePreview.select(PersonalDaylinePreview.getModel().day.end-1));
+   ok(assert.equal(await p.locator('#next-change').innerText(),'До кінця доби на перевірених відліках змін не виявлено.'));
+   await p.locator('#activities [data-activity="study"]').click();
+   ok(assert.equal(await boundaryNote.isVisible(),false));
+   await p.locator('#activities [data-activity="travel"]').click();
+   ok(assert.equal(await boundaryNote.isVisible(),true));
    // 6. Reflow, also at 200 % text
    ok(assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true));
    await p.addStyleTag({content:'html,body{font-size:200%!important}'});await p.waitForTimeout(300);
@@ -51,7 +59,37 @@ const type=f=>f.endsWith('.js')?'application/javascript':f.endsWith('.css')?'tex
      if(!e.checkVisibility())return false;const r=e.getBoundingClientRect();return r.right>vw+1||r.left<-1||e.scrollWidth>e.clientWidth+2&&e.clientWidth>0;
     }).slice(0,15).map(e=>[e.tagName,e.id,e.className?.baseVal||e.className,e.clientWidth,e.scrollWidth,Math.ceil(e.getBoundingClientRect().right)])};
    });
+   ok(assert.equal(await boundaryNote.isVisible(),true));
    ok(assert.ok(layout.doc<=layout.vw,'200% text overflow at '+width+': '+JSON.stringify(layout)));
+   for (const venue of [
+    { city:'kyiv', zone:'Europe/Kyiv', earlier:'03:59 GMT+3', later:'03:59 GMT+2', next:'03:53 GMT+2' },
+    { city:'barcelona', zone:'Europe/Madrid', earlier:'02:59 GMT+2', later:'02:59 GMT+1', next:'02:53 GMT+1' }
+   ]) {
+    await p.clock.setFixedTime(new Date('2018-10-28T12:00:00Z'));
+    await p.goto(base+'/personal_dayline.html');
+    await p.waitForSelector('#day-blocks button');
+    await p.evaluate(()=>{document.querySelector('#setup').open=true;});
+    await p.selectOption('#place',venue.city);
+    await p.click('#calculate');
+    await p.waitForFunction(zone=>window.PersonalDaylinePreview?.getModel()?.place.zone===zone,venue.zone);
+    await p.locator('#activity-picker > summary').click();
+    await p.locator('#activities [data-activity="travel"]').click();
+    const shown=()=>p.locator('#selected-clock').innerText().then(text=>text.split(' · ')[0]);
+    const select=iso=>p.evaluate(value=>PersonalDaylinePreview.select(Date.parse(value)),iso);
+    await select('2018-10-28T00:59:59.999Z');
+    ok(assert.deepEqual([await shown(),await p.locator('#next-change').innerText()],
+     [venue.earlier,'Розрахована зміна умов · '+venue.next],venue.city+' before the repeated hour'));
+    await p.locator('#personal-sky > summary').click();
+    const skyTime=iso=>p.locator('.sky-clock[data-instant="'+Date.parse(iso)+'"]').innerText()
+     .then(text=>text.split(' · ')[0]);
+    ok(assert.equal(await skyTime('2018-10-28T00:59:59.999Z'),venue.earlier,venue.city+' sky before the repeated hour'));
+    await select('2018-10-28T01:59:59.999Z');
+    ok(assert.equal(await shown(),venue.later,venue.city+' after the repeated hour'));
+    ok(assert.equal(await skyTime('2018-10-28T01:59:59.999Z'),venue.later,venue.city+' sky after the repeated hour'));
+    await p.addStyleTag({content:'html,body{font-size:200%!important}'});
+    ok(assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,
+     venue.city+' gives no horizontal scroll on a 25-hour day at 200%'));
+   }
    ok(assert.deepEqual(errs,[]));await c.close();}
  }finally{await b.close();server.close();}
  console.log(JSON.stringify({status:'PASS',checks,scope:'Chromium emulation 320/390; not a device test.'}));

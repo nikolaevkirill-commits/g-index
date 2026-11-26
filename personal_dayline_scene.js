@@ -23,7 +23,8 @@
   if(!model||!details.open||!window.NRSkyLive)return;
   const c=NRSkyLive.compute(new Date(instant),model.place);snapshot=c;host.dataset.instant=String(instant);
   for(const node of [stamp,map,moon,fallback,caption,above])node.dataset.instant=String(instant);
-  const fmt=new Intl.DateTimeFormat('uk-UA',{timeZone:model.place.zone,hour:'2-digit',minute:'2-digit',hourCycle:'h23'});
+  const fmt=new Intl.DateTimeFormat('uk-UA',{timeZone:model.place.zone,hour:'2-digit',minute:'2-digit',hourCycle:'h23',
+   ...(model.day.durationMinutes>1440?{timeZoneName:'shortOffset'}:{})});
   stamp.textContent=fmt.format(instant)+' · '+model.place.label;
   const ctx=map.getContext('2d'),w=660,h=320,horizon=210;ctx.clearRect(0,0,w,h);
   const daylight=c.hz.Sun.altitude>0,gradient=ctx.createLinearGradient(0,0,0,horizon);gradient.addColorStop(0,daylight?'#143867':'#0a102b');gradient.addColorStop(1,daylight?'#a47b57':'#302947');ctx.fillStyle=gradient;ctx.fillRect(0,0,w,horizon);ctx.fillStyle='#0d1827';ctx.fillRect(0,horizon,w,h-horizon);

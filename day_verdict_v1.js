@@ -5,6 +5,8 @@
 (()=>{'use strict';
 const I=['uk','en','es','fr'],L=()=>{const l=window.NRLocale?.language||'uk';return I.includes(l)?l:'en'},ix=()=>I.indexOf(L());
 const T={
+ scope_note:['Оцінка дня й окремі поради','The day and specific advice','El día y los consejos específicos','La journée et les conseils ciblés'],
+ scope_text:['Загальна оцінка стосується київської доби. Кожна календарна порада стосується підписаної справи.','The overall score refers to the Kyiv day. Each calendar suggestion applies to the activity it names.','La puntuación general corresponde al día de Kyiv. Cada consejo del calendario se aplica a la actividad que indica.','La note générale correspond à la journée de Kyiv. Chaque conseil du calendrier concerne l’activité indiquée.'],
  conflict:['Розбіжність джерел','Sources disagree','Fuentes discrepantes','Sources divergentes'],
  conflict_text:['Формула джерела дає {f}, експерт — {e}. Показано оцінку експерта.','The source formula gives {f} and the expert gives {e}. The expert score is shown.','La fórmula da {f} y el experto da {e}. Se muestra la puntuación del experto.','La formule donne {f} et l’expert {e}. Le score de l’expert est affiché.'],
  tone_pos:['Сприятливий день.','A favourable day.','Un día favorable.','Une journée favorable.'],
@@ -13,6 +15,7 @@ const T={
  tone_none:['Оцінки на цей день немає.','No score for this day.','No hay puntuación para este día.','Pas de score pour ce jour.'],
  good:['Підходить:','Good for:','Adecuado para:','Propice à :'],
  avoid:['Краще відкласти:','Better to postpone:','Mejor posponer:','Mieux vaut reporter :'],
+ avoid_cal:['За календарем краще відкласти:','The calendar advises postponing:','El calendario aconseja posponer:','Le calendrier conseille de reporter :'],
  check:['Уважно:','Take care:','Con atención:','Attention :'],
  why:['Чому так','Why','Por qué','Pourquoi'],
  newStarts:['нові починання','new beginnings','nuevos comienzos','nouveaux commencements'],
@@ -20,7 +23,8 @@ const T={
  score_exp:['Оцінка експерта','Expert score','Puntuación experta','Score de l’expert'],
  score_formula:['Оцінка за формулою','Formula score','Puntuación por fórmula','Score par formule'],
  calendar:['Календар джерела','Source calendar','Calendario de la fuente','Calendrier de la source'],
- calendar_none:['окремих позначок немає','no specific marks','sin marcas específicas','pas de marques particulières'],
+ calendar_unavailable:['Дані календаря недоступні','Calendar data unavailable','Datos del calendario no disponibles','Données du calendrier indisponibles'],
+ calendar_none:['Окремих рекомендацій немає','No specific advice','Sin recomendaciones específicas','Aucune recommandation particulière'],
  kp:['Космопогода NOAA','NOAA space weather','Clima espacial NOAA','Météo spatiale NOAA'],
  kp_quiet:['спокійно','quiet','tranquilo','calme'],kp_active:['збурено','unsettled','agitado','agité'],kp_storm:['буря','storm','tormenta','tempête'],
  kp_none:['актуальний прогноз недоступний','current forecast unavailable','pronóstico vigente no disponible','prévision actuelle indisponible'],
@@ -42,16 +46,19 @@ const GOOD=[['Книги','Навчання й нові знання'],['спр�
 let sky=null,skyTried=false;
 function root(){return document.querySelector('#nrRoute-today [data-overview="today"]')}
 function selected(r){return r?.querySelector('select')?.value||(()=>{try{return NRCivilTime.dayKey(Date.now(),'Europe/Kyiv')}catch{return new Date().toISOString().slice(0,10)}})()}
-function build(r,ds){
- const res=window.fp469ConsumerForDate?.({ds})||{},c=res.consumer||{},row=res.feed||null,ch=row?.channels?.source_formula||{};
+function build(r,ds,res=window.fp469ConsumerForDate?.({ds})||{}){
+ const c=res.consumer||{},row=res.feed||null,ch=row?.channels?.source_formula||{};
  const factors=(Array.isArray(ch.factors)?ch.factors:[]).filter(x=>typeof x.value==='number'&&Number.isFinite(x.value));
- const names=new Set(factors.map(x=>x.factor));
+ const projected=window.NRConsumerAuthority?.calendarMarksFor?.(row,ds);
+ const calendarKnown=projected!=null||factors.length>0;
+ const names=new Set(projected??factors.map(x=>x.factor));
  const tone=!c.available?'tone_none':c.score>0?'tone_pos':c.score<0?'tone_neg':'tone_zero';
  const good=[...new Set(GOOD.filter(([n])=>names.has(n)).map(([,label])=>tr(label)))];
  const avoid=[],care=[];
  if(names.has('День порожні руки, несприятливий'))avoid.push(t('newStarts'));
  const caution=r.querySelector('.sr-expert-caution:not([data-scope="new_starts"]) summary strong')?.textContent?.trim();if(caution)avoid.push(caution);
- if(names.has('Тричі  трикутник'))care.push(t('recheck'));
+ const calendarCare=names.has('Тричі  трикутник')?[t('recheck')]:[];
+ care.push(...calendarCare);
  const signal=window.SRP0Layout?.signalData(c,row);
  const short=signal?.source==='NOAA_3day_slots',outlook=signal?.source==='NOAA_27day_outlook';
  const kp=short||outlook?signal.kp:null;
@@ -66,14 +73,30 @@ function build(r,ds){
    why.push([t('conflict'),t('conflict_text').replace('{f}',formatScore(formula.score)).replace('{e}',formatScore(c.score))]);
   }
  }
- why.push([t('calendar'),good.length?good.join(', '):avoid.includes(t('newStarts'))?t('avoid').replace(/:$/,'').toLowerCase()+': '+t('newStarts'):t('calendar_none')]);
+ const calendarAdvice=[...good];
+ if(names.has('День порожні руки, несприятливий'))calendarAdvice.push(t('avoid')+' '+t('newStarts'));
+ calendarAdvice.push(...calendarCare);
+ why.push([t('calendar'),calendarAdvice.length?calendarAdvice.join(' · '):t(calendarKnown?'calendar_none':'calendar_unavailable')]);
+ if((tone==='tone_pos'&&avoid.length)||(tone==='tone_neg'&&good.length))why.push([t('scope_note'),t('scope_text')]);
  const kpText=kp===null?t('kp_none'):'Kp '+new Intl.NumberFormat(L(),{maximumFractionDigits:2}).format(kp)+' · '+(outlook?t('kp_outlook'):kp>=5?t('kp_storm'):kp>=4?t('kp_active'):t('kp_quiet'));
  why.push([short?t('kp_short'):t('kp'),kpText]);
  const ev=sky?[...sky.intervals,...sky.events].filter(x=>x.reading&&x.reading.intensity>=3&&(x.start||x.at).kyiv_date<=ds&&ds<=(x.end||x.at).kyiv_date)[0]:null;
  if(ev)why.push([t('sky'),(ev.reading.text[L()]||ev.reading.text.en).replace(/:.*$/,'')+' ('+t('sky_note')+')']);
  // Tanita's new-starts card already states this advice with its source; keep it in «Чому так», drop the duplicate line.
  const shownAvoid=window.SRP0Layout?.hasNewStartAdvice?.(ds)?avoid.filter(x=>x!==t('newStarts')):avoid;
- return {tone,good,avoid:shownAvoid,care,why};
+ // R8: a calendar-only postponement is topical advice, not the day's overall tone; name its source.
+ const avoidKey=shownAvoid.length&&shownAvoid.every(x=>x===t('newStarts'))?'avoid_cal':'avoid';
+ return {tone,good,avoid:shownAvoid,avoidKey,care,why};
+}
+let calendarTimer=null,calendarDeadline=null;
+function scheduleCalendarExpiry(deadline){
+ if(deadline===calendarDeadline)return;
+ clearTimeout(calendarTimer);
+ calendarDeadline=deadline;
+ if(deadline!==null)calendarTimer=setTimeout(()=>{
+  calendarDeadline=null;
+  render();
+ },Math.max(0,deadline-Date.now()));
 }
 function render(){
  const r=root();if(!r)return;const hero=r.querySelector('.nr-o-hero'),verdict=hero?.querySelector('.nr-o-verdict');if(!hero||!verdict)return;
@@ -82,14 +105,23 @@ function render(){
  let box=hero.querySelector('[data-day-verdict]');
  if(!box){box=document.createElement('div');box.className='nr-day-verdict';box.dataset.dayVerdict='';box.setAttribute('translate','no');box.setAttribute('aria-live','polite')}
  if(box.nextElementSibling!==verdict)verdict.before(box);
- const ds=selected(r),v=build(r,ds);
+ const ds=selected(r),res=window.fp469ConsumerForDate?.({ds})||{};
+ scheduleCalendarExpiry(window.NRConsumerAuthority?.calendarExpiresAt?.(res.feed,ds)??null);
+ const v=build(r,ds,res);
  let today='';try{today=NRCivilTime.dayKey(Date.now(),'Europe/Kyiv')}catch{}
  const hour=Number(new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Kyiv',hour:'2-digit',hourCycle:'h23'}).format(new Date()));
- const line=(k,xs)=>xs.length?`<p class="nr-dv-${k}"><b>${esc(t(k))}</b> ${esc(xs.join(' · '))}</p>`:'';
- box.innerHTML=`<p class="nr-dv-tone">${esc(t(v.tone))}</p>${line('good',v.good)}${line('avoid',v.avoid)}${line('check',v.care)}`;
+ const line=(k,xs,label=k)=>xs.length?`<p class="nr-dv-${k}"><b>${esc(t(label))}</b> ${esc(xs.join(' · '))}</p>`:'';
+ box.innerHTML=`<p class="nr-dv-tone">${esc(t(v.tone))}</p>${line('good',v.good)}${line('avoid',v.avoid,v.avoidKey||'avoid')}${line('check',v.care)}`;
  let whyBox=hero.querySelector('[data-day-why]');
- if(!whyBox){whyBox=document.createElement('details');whyBox.className='nr-day-why';whyBox.dataset.dayWhy='';whyBox.setAttribute('translate','no')}
- if(verdict.nextElementSibling!==whyBox)verdict.after(whyBox);
+ if(!whyBox){
+  whyBox=document.createElement('details');whyBox.className='nr-day-why';whyBox.dataset.dayWhy='';whyBox.setAttribute('translate','no');
+  whyBox.append(document.createElement('summary'),document.createElement('ul'));
+ }
+ if(verdict.nextElementSibling!==whyBox){
+  const focused=whyBox.contains(document.activeElement)?document.activeElement:null;
+  verdict.after(whyBox);
+  focused?.focus({preventScroll:true});
+ }
  // Keep optional personal tools below the public DayLine and weather.
  let youBox=r.querySelector(':scope > [data-day-you]');
  if(!youBox){
@@ -100,7 +132,11 @@ function render(){
  const youHtml=(window.NRNatalSky?window.NRNatalSky.html(ds,sky):'')+(ds===today&&hour>=18?matchHtml(ds):'');
  if(youBox.dataset.html!==youHtml){const formOpen=youBox.querySelector('.nr-dv-you-form')?.open;youBox.innerHTML=youHtml;youBox.dataset.html=youHtml;if(formOpen)youBox.querySelector('.nr-dv-you-form')&&(youBox.querySelector('.nr-dv-you-form').open=true)}
  youBox.hidden=!youHtml;
- const open=whyBox.open;whyBox.innerHTML=`<summary>${esc(t('why'))}</summary><ul>${v.why.map(([k,val])=>`<li><span>${esc(k)}</span><strong>${esc(val)}</strong></li>`).join('')}</ul>`;whyBox.open=open;
+ // Keep the native disclosure and its click target intact during feed refresh.
+ const summary=whyBox.querySelector('summary'),list=whyBox.querySelector('ul');
+ if(summary.textContent!==t('why'))summary.textContent=t('why');
+ const reasons=v.why.map(([k,val])=>`<li><span>${esc(k)}</span><strong>${esc(val)}</strong></li>`).join('');
+ if(list.innerHTML!==reasons)list.innerHTML=reasons;
 }
 // «Сьогодні збіглось?» — лише ввечері (з 18:00) для сьогоднішнього дня, один дотик, лише на цьому пристрої.
 // Зберігає відповідь разом із балом, показаним на момент відповіді, — для майбутньої перевірки; на бал не впливає.
@@ -127,11 +163,12 @@ window.NRDayVerdict={
  render,
  matches:matchAll,
  // FP569k: the same plain-language verdict for any date, reused by «Прогноз · День» (one sentence + good/avoid/check lines).
- summary:ds=>{const r=root();if(!r)return null;const v=build(r,ds);return {tone:t(v.tone),lines:[['good',v.good],['avoid',v.avoid],['check',v.care]].filter(([,xs])=>xs.length).map(([k,xs])=>({kind:k,label:t(k),text:xs.join(' · ')}))}},
+ summary:ds=>{const r=root();if(!r)return null;const v=build(r,ds);return {tone:t(v.tone),lines:[['good',v.good],['avoid',v.avoid],['check',v.care]].filter(([,xs])=>xs.length).map(([k,xs])=>({kind:k,label:t(k==='avoid'?(v.avoidKey||'avoid'):k),text:xs.join(' · ')}))}},
  hasMatch:ds=>MATCH_VALUES.includes(matchAll()[ds]?.v)
 };
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{watch();loadSky()});else{watch();loadSky()}
 for(const e of ['sr:consumer-load','nr:locale','gindex:consumer-ready','nr:natal','online','offline'])window.addEventListener(e,soon);
+// The overview emits nr:overview-rendered on resume and after Kyiv midnight.
 document.addEventListener('click',e=>{const b=e.target.closest?.('[data-day-match] button[data-match]');if(!b)return;const r=root();if(!r)return;
  let today='';try{today=NRCivilTime.dayKey(Date.now(),'Europe/Kyiv')}catch{}if(selected(r)!==today)return;
  matchSave(today,b.dataset.match);soon()});

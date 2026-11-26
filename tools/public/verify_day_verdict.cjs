@@ -18,7 +18,16 @@ try{for(const entry of ['classic.html','index.html'])for(const lang of ['uk','en
  await p.waitForFunction(()=>navigator.onLine&&window.__srConsumerLoadState==='ready',null,{timeout:60000});
  const dates=await p.evaluate(()=>[...document.querySelector('#nrRoute-today [data-overview="today"] select').options].map(o=>o.value).slice(0,10));
  for(const ds of dates){
-  const r=await p.evaluate(async ds=>{const sel=document.querySelector('#nrRoute-today [data-overview="today"] select');sel.value=ds;sel.dispatchEvent(new Event('change',{bubbles:true}));await new Promise(r=>setTimeout(r,350));
+  await p.evaluate(ds=>{const sel=document.querySelector('#nrRoute-today [data-overview="today"] select');sel.value=ds;sel.dispatchEvent(new Event('change',{bubbles:true}));},ds);
+  // The verdict follows the overview in an animation frame. Wait for the selected day to reach the visible verdict.
+  await p.waitForFunction(({ds,tones})=>{
+   const root=document.querySelector('#nrRoute-today [data-overview="today"]');
+   if(root?.querySelector('select')?.value!==ds)return false;
+   const c=fp469ConsumerForDate({ds}).consumer;
+   const expected=tones[!c.available?'none':c.score>0?'pos':c.score<0?'neg':'zero'];
+   return root.querySelector('[data-day-verdict] .nr-dv-tone')?.textContent===expected;
+  },{ds,tones:TONES[lang]},{timeout:5000});
+  const r=await p.evaluate(ds=>{
    const box=document.querySelector('#nrRoute-today [data-day-verdict]'),score=document.querySelector('#nrRoute-today .nr-o-hero .nr-o-score');const c=fp469ConsumerForDate({ds}).consumer;
    return {tone:box.querySelector('.nr-dv-tone').textContent,good:box.querySelector('.nr-dv-good')?.textContent||'',text:box.innerText+' '+(document.querySelector('#nrRoute-today [data-day-why]')?.innerText||''),
     above:box.getBoundingClientRect().bottom<=score.getBoundingClientRect().top+1,available:c.available,score:c.score,shown:score.textContent.trim()}},ds);
@@ -69,6 +78,28 @@ try{for(const entry of ['classic.html','index.html'])for(const lang of ['uk','en
  assert.match(explanation[0].conflict,/−2.*\+3/);
  assert.match(explanation[1].conflict,/0.*\+3/);
  assert.deepEqual(explanation.slice(2).map(r=>r.conflict),Array(8).fill(null));
+ // Calendar instructions apply to their named topic even when the overall day's tone points another way.
+ const scope=await p.evaluate(ds=>{
+  const read=window.fp469ConsumerForDate;
+  const labels=['Оцінка дня й окремі поради','The day and specific advice'];
+  const calendarLabels=['Календар джерела','Source calendar'],newBeginnings=['нові починання','new beginnings'];
+  const holiday='День порожні руки, несприятливий',books='Книги';
+  try{return [[1,holiday],[-1,books],[0,holiday],[0,books]].map(([score,factor])=>{
+   window.fp469ConsumerForDate=()=>({consumer:{available:true,score},feed:{channels:{source_formula:{factors:[{factor,value:1}]}}}});
+   NRDayVerdict.render();
+   const verdict=NRDayVerdict.build(ds);
+   const row=[...document.querySelectorAll('#nrRoute-today [data-day-why] li')].find(el=>labels.includes(el.querySelector('span').textContent));
+   const calendar=verdict.why.find(([key])=>calendarLabels.includes(key))?.[1]||'';
+   const hasAdvice=factor===books?verdict.good.length>0:newBeginnings.some(label=>calendar.includes(label));
+   return {tone:verdict.tone,hasAdvice,explanation:row?.querySelector('strong').textContent??null};
+  });}finally{window.fp469ConsumerForDate=read;NRDayVerdict.render();}
+ },dates[0]);
+ const scopeText=lang==='uk'
+  ?'Загальна оцінка стосується київської доби. Кожна календарна порада стосується підписаної справи.'
+  :'The overall score refers to the Kyiv day. Each calendar suggestion applies to the activity it names.';
+ assert.deepEqual(scope.map(r=>r.tone),['tone_pos','tone_neg','tone_zero','tone_zero']);
+ assert.ok(scope.every(r=>r.hasAdvice),entry+' '+lang+' scope scenario must preserve its calendar advice');
+ assert.deepEqual(scope.map(r=>r.explanation),[scopeText,scopeText,null,null],entry+' '+lang+' scope of calendar advice');
  const scoreTile=await p.evaluate(()=>{
   const tile=document.querySelector('[data-p0-signals]>button:last-child');
   return {score:tile.querySelector('strong').textContent,source:tile.querySelector('small')?.textContent,accessible:tile.getAttribute('aria-label')};

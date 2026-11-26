@@ -9,6 +9,56 @@ const deliveredResults=new WeakSet(),deliveredRows=new WeakSet();
 const CLOCK_SKEW_MS=5*60000;
 function freeze(value){if(value&&typeof value==='object'){for(const x of Object.values(value))freeze(x);Object.freeze(value);}return value;}
 
+// Only the controlled loader can associate a calendar projection with its exact day.
+const calendarRows=new WeakMap();
+const calendarTopics={
+ books:'Книги',plane:'сприятливий для подорожей',first_lunar_day:'1 місячний день',target:'Мішень',
+ scissors:'сприятливий для стрижки',dress:'Сукня',megaphone:'Гучномовець',
+ bolt:'День порожні руки, несприятливий',triangle:'Тричі  трикутник'
+};
+// All calendar-components-v1 author selections, not astronomical candidates.
+const calendarSymbols=('bolt books diwali dress ekadashi first_lunar_day full_moon hand heart masik_shivaratri medical_cross '+
+ 'megaphone navaratri new_moon pill pitru_paksha plane pradosh sankashti scissors solah_somvar '+
+ 'sun_transition_filled sun_transition_outline syringe target triangle vijaya_dashami vinayaka_chaturthi').split(' ');
+const CALENDAR_MAX_AGE_MS=8*3600000;
+function calendarCurrent(stamp,now){
+ return Number.isFinite(stamp)&&stamp<=now+CLOCK_SKEW_MS&&now-stamp<=CALENDAR_MAX_AGE_MS;
+}
+function calendarMarksFor(row,date,now=Date.now()){
+ const record=calendarRows.get(row);
+ return row?.date===date&&record&&calendarCurrent(record.stamp,now)?record.marks:null;
+}
+function calendarExpiresAt(row,date,now=Date.now()){
+ const record=calendarRows.get(row);
+ // The eight-hour boundary itself is valid. Return the first invalid instant.
+ return row?.date===date&&record&&calendarCurrent(record.stamp,now)?record.stamp+CALENDAR_MAX_AGE_MS+1:null;
+}
+function withheldCalendar(row,day,feed,now){
+ const own=row.channels?.source_formula,stamp=Date.parse(own?.generated_at);
+ if(!own||own.available!==false||own.status!=='missing_kp'||own.expert_override_used!==false||
+    own.value!==null||own.raw!==null||row.source_formula_result?.score!==null||
+    !Array.isArray(own.factors)||own.factors.length||!calendarCurrent(stamp,now)||own.generated_at!==feed.generated_at)return null;
+ if(own.expert_model!==undefined){
+   const model=own.expert_model,c=model?.calendar_components,states=c?.symbols;
+   if(model?.version!=='expert-factor-model-v2'||model.date!==day||c?.version!=='calendar-components-v1'||c.date!==day||
+      !states||Array.isArray(states)||Object.keys(states).length!==calendarSymbols.length)return null;
+   for(const name of calendarSymbols){
+     const s=states[name];
+     if(!s||s.status!=='SOURCE_OBSERVED'||typeof s.observed!=='boolean'||s.selected!==s.observed)return null;
+   }
+   return Object.freeze(Object.keys(calendarTopics).filter(k=>states[k].observed).map(k=>calendarTopics[k]));
+ }
+ const projection=own.calendar_marks;
+ if(!projection||own.availability_reason!=='short_range_coverage_lost'||own.kp_source_requirement!=='NOAA_3day_slots'||
+    own.kp_input!==null||feed.availability_projection?.policy!=='no_short_range_downgrade_v1'||
+    !Array.isArray(feed.availability_projection.withheld_dates)||!feed.availability_projection.withheld_dates.includes(day)||
+    Object.keys(projection).sort().join(',')!=='date,marks,source'||projection.date!==day||
+    projection.source!=='source_formula_calendar_factors'||!Array.isArray(projection.marks))return null;
+ const allowed=Object.values(calendarTopics).filter(mark=>projection.marks.includes(mark));
+ if(allowed.length!==projection.marks.length||allowed.some((mark,i)=>projection.marks[i]!==mark))return null;
+ return Object.freeze(allowed);
+}
+
 function resolve(row, date, now=Date.now(), offline=false){
   const own=row?.channels?.source_formula;
   const valid=x=>typeof x==='number'&&Number.isInteger(x)&&x>=-3&&x<=3;
@@ -127,6 +177,14 @@ function selectFeeds(results,now=Date.now()){
    const model=row?.channels?.source_formula?.expert_model;
    if(model?.version==='expert-factor-model-v2'&&model.date===ds)expertModels[ds]=freeze({...model});
    const candidate=row?.channels?.source_formula;
+   // loadFeeds admits exactly one controlled forecast endpoint. A calendar-only
+   // row cannot be consumed as a formula score or carry cached weather data.
+   const marks=withheldCalendar(row,ds,feed,now);
+   if(marks&&results.length===1){
+     const calendarRow=Object.freeze({date:ds,get calendar_marks(){return calendarMarksFor(this,ds)},channels:Object.freeze({})});
+     calendarRows.set(calendarRow,{marks,stamp:Date.parse(candidate.generated_at)});
+     days[ds]=calendarRow;
+   }
    if(candidate?.available!==true||typeof candidate.value!=='number'||!Number.isInteger(candidate.value)||candidate.value< -3||candidate.value>3||candidate.expert_override_used===true)continue;
    // Multiple verified deliveries may contain the same day. Never allow an older
    // snapshot to win merely because it appears later in the response array.
@@ -178,6 +236,6 @@ async function loadFeeds(scope){
   await loadExpertDecisions(base);throw e}
  finally{clearTimeout(timer)}
 }
-const api=Object.freeze({resolve,resolveFinal,expertFor,scopedFor,registryStatus,present,selectFeeds,loadFeeds,CLOCK_SKEW_MS});host.NRConsumerAuthority=api;
+const api=Object.freeze({resolve,resolveFinal,expertFor,scopedFor,registryStatus,present,selectFeeds,loadFeeds,calendarMarksFor,calendarExpiresAt,CLOCK_SKEW_MS});host.NRConsumerAuthority=api;
 if(typeof module!=='undefined')module.exports=api;
 })(typeof window!=='undefined'?window:globalThis);

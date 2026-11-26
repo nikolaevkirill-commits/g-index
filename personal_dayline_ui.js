@@ -7,7 +7,7 @@
  const signNames=['Овен','Телець','Близнюки','Рак','Лев','Діва','Терези','Скорпіон','Стрілець','Козоріг','Водолій','Риби'];
  let model=null,mode='personal',selected=0,revision=0,activity='overview';
  function element(tag,cls,value){const e=document.createElement(tag);if(cls)e.className=cls;if(value!==undefined)e.textContent=value;return e;}
- function clock(t,offset=false){return new Intl.DateTimeFormat('uk-UA',{timeZone:model.place.zone,hour:'2-digit',minute:'2-digit',hourCycle:'h23',...(offset?{timeZoneName:'shortOffset'}:{})}).format(new Date(t));}
+ function clock(t,offset=model.day.durationMinutes>1440){return new Intl.DateTimeFormat('uk-UA',{timeZone:model.place.zone,hour:'2-digit',minute:'2-digit',hourCycle:'h23',...(offset?{timeZoneName:'shortOffset'}:{})}).format(new Date(t));}
  function range(a,b){const dst=model.day.durationMinutes!==1440;return clock(a,dst)+'–'+clock(b,dst)+(b===model.day.end?' · наступна північ':'');}
  function key(tara){return JSON.stringify([tara.interpretation,tara.common,tara.variants.map(v=>[v.natal,v.group,v.cycle,v.interpretation,v.cycle===2&&[3,5,7].includes(v.group)?v.pada:null])]);}
  function signal(tara,withDetails=true){
@@ -149,6 +149,8 @@
   const shownDate=new Intl.DateTimeFormat('uk-UA',{timeZone:model.place.zone,day:'numeric',month:'long'}).format(selected);
   const shownCity=model.place.label||'Обране місце';
   $('#selected-title').textContent=live?'Зараз на лінії дня':'Обраний момент';$('#selected-clock').textContent=clock(selected)+' · '+shownDate+' · '+shownCity;
+  const travel=activity==='travel';
+  $('#travel-boundary-note').hidden=!travel;
   $('#current-tara').replaceChildren();
   if(scoped()){
    $('#current-tara').append(briefCard(brief(s)));
@@ -159,7 +161,9 @@
   $('#current-factors').replaceChildren(factorCard(F.evaluate(factorSegment(s),activity,{direction:$('#travel-direction').value}),true));
   $('#current-hora').textContent=s.hora?s.hora.glyph+' '+s.hora.planet+' · сезонна планетна година до '+clock(s.hora.end):'Планетні години недоступні за місцевим сходом і заходом. Тара від цього не вимикається.';
   const future=model.windows.flatMap(w=>w.segments).find(t=>t.start>selected&&(scoped()?JSON.stringify(brief(t))!==JSON.stringify(brief(s)):key(t.tara)!==key(s.tara)));
-  $('#next-change').textContent=scoped()?(future?'Наступна зміна умов справи · '+clock(future.start):'До кінця доби розрахунок не виявив змін цих умов.'):mode==='personal'&&model.birth.candidates.length?(future?'Наступна зміна Тари · '+clock(future.start):'До кінця доби розрахунок не виявив змін Тари.'):(()=>{const n=model.windows.flatMap(blockChanges).find(c=>c.at>selected);return n?'Далі · '+clock(n.at)+' · '+n.text:'До кінця доби розрахунок не виявив календарних переходів.';})();
+  if(travel){
+   $('#next-change').textContent=future?'Розрахована зміна умов · '+clock(future.start):'До кінця доби на перевірених відліках змін не виявлено.';
+  }else $('#next-change').textContent=scoped()?(future?'Наступна зміна умов справи · '+clock(future.start):'До кінця доби підсумок цих умов не змінюється.'):mode==='personal'&&model.birth.candidates.length?(future?'Наступна зміна Тари · '+clock(future.start):'До кінця цієї доби трактування Тари не змінюється.'):(()=>{const n=model.windows.flatMap(blockChanges).find(c=>c.at>selected);return n?'Далі · '+clock(n.at)+' · '+n.text:'До кінця доби календарних переходів немає.';})();
   const at=Astronomy.MakeTime(new Date(selected)),observer=new Astronomy.Observer(model.place.lat,model.place.lon,0),eq=Astronomy.Equator('Sun',at,observer,true,true),hor=Astronomy.Horizon(at,observer,eq.ra,eq.dec,'normal');
   $('#sun-glyph').dataset.night=String(hor.altitude<0);$('#sun-status').textContent=hor.altitude>=0?'Сонце над горизонтом':'Сонце під горизонтом';$('#sun-detail').textContent='Для цього ж моменту й місця · '+Math.abs(hor.altitude).toFixed(0)+'° '+(hor.altitude>=0?'над':'під')+' горизонтом';
   for(const row of $('#windows').children)row.dataset.selected=String(Number(row.dataset.start)<=selected&&selected<Number(row.dataset.end));

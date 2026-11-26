@@ -15,7 +15,7 @@ const srv=http.createServer((q,s)=>{const f=decodeURIComponent(q.url.split('?')[
 try{for(const [locale,rm] of [['uk-UA','no-preference'],['en-GB','no-preference'],['es-ES','no-preference'],['fr-FR','no-preference'],['uk-UA','reduce'],['uk-UA','missing']]){
  hideSky=rm==='missing';
  const c=await b.newContext({locale,serviceWorkers:'block',viewport:{width:390,height:844},timezoneId:'Europe/Kyiv',reducedMotion:rm==='reduce'?'reduce':'no-preference'});await c.route(/^https?:\/\/(?!127\.0\.0\.1)/,r=>r.abort());
- const p=await c.newPage();const errs=[];p.on('pageerror',e=>errs.push(e.message));await p.clock.setFixedTime(new Date(day+'T10:00:00Z'));
+ const p=await c.newPage();const errs=[];p.on('pageerror',e=>errs.push(e.message));await p.clock.setFixedTime(new Date(day+'T10:00:00Z'));if(process.env.SKY_MUTATION)await p.addInitScript(m=>{if(m==='inert')for(const t of ['mousedown','pointerdown'])window.addEventListener(t,e=>{if(e.target?.matches?.('.nr-sky-controls input'))e.preventDefault();},true);if(m==='handler')window.addEventListener('input',e=>{if(e.target?.matches?.('.nr-sky-controls input'))e.stopImmediatePropagation();},true);},process.env.SKY_MUTATION);
  await p.goto('http://127.0.0.1:'+srv.address().port+'/index.html?channel=play#panch',{waitUntil:'load',timeout:120000});
  await p.waitForFunction(()=>['ready','missing'].includes(window.NRSkyScene?.state()),null,{timeout:60000});
  // Data readiness precedes deferred DOM mounting. CI 42181172460 reached this state
@@ -59,12 +59,18 @@ try{for(const [locale,rm] of [['uk-UA','no-preference'],['en-GB','no-preference'
   assert.equal(await reference.locator('#nrPanchGuide').isVisible(),false);
   const scene=p.locator('[data-sky]'),slider=scene.locator('.nr-sky-controls input'),play=scene.locator('.nr-sky-play');
   const strip=scene.locator('.nr-sky-days');
-  await slider.scrollIntoViewIfNeeded();
-  await slider.evaluate(e=>{window.__skyRange=e;window.__skyDays=e.closest('[data-sky]').querySelector('.nr-sky-days');});
-  const box=await slider.boundingBox();
-  await p.mouse.move(box.x+box.width*.23,box.y+box.height/2);
-  await p.mouse.down();await p.mouse.move(box.x+box.width*.81,box.y+box.height/2,{steps:12});await p.mouse.up();
+  const positions=await slider.evaluate(e=>{
+    window.__skyRange=e;window.__skyDays=e.closest('[data-sky]').querySelector('.nr-sky-days');
+    const y=e.clientHeight/2;
+    return {sourcePosition:{x:e.clientWidth*.23,y},targetPosition:{x:e.clientWidth*.81,y}};
+  });
+  // Resolve the element's location for each end of the real drag after scrolling.
+  await slider.dragTo(slider,{...positions,steps:12});
   assert.ok(Number(await slider.inputValue())>=19,'real drag selects the final part of the range');
+  // R2: the drag must reach the scene state, not only the native input value.
+  const dragged=await slider.evaluate(e=>({value:Number(e.value),selected:NRSkyScene.selected()}));
+  const skyDates=sky.daily.map(d=>d.date);
+  assert.equal(dragged.selected,skyDates[dragged.value],'drag must select the day under the thumb');
   assert.ok(await slider.evaluate(e=>e===window.__skyRange&&e===document.activeElement&&window.__skyDays.isConnected),'drag must keep the original input, focus and date strip');
   assert.match(await slider.getAttribute('aria-valuetext'),/День [0-9]+ з 27/);
   await slider.press('Home');
@@ -181,13 +187,21 @@ try{for(const [locale,rm] of [['uk-UA','no-preference'],['en-GB','no-preference'
  const layout=await watch.evaluate(e=>{
   const rect=selector=>e.querySelector(selector).getBoundingClientRect();
   const badge=rect('.sr-space-badge'),wind=rect('.sr-space-wind-label'),legend=rect('.sr-space-legend');
+  const hero=e.parentElement.querySelector('.nr-o-hero');
+  const warning=hero.querySelector('[data-weather-summary]');
+  const rectWarning=warning?.getBoundingClientRect(), nav=document.getElementById('mobileNav').getBoundingClientRect().top;
   const separate=badge.bottom<=wind.top||wind.bottom<=badge.top||badge.right<=wind.left||wind.right<=badge.left;
   return {separate,contained:[badge,wind].every(r=>r.left>=legend.left&&r.right<=legend.right&&r.top>=legend.top&&r.bottom<=legend.bottom),
    aboveStage:legend.bottom<=rect('.sr-space-stage').top,
-   nearHero:e.getBoundingClientRect().top-e.parentElement.querySelector('.nr-o-hero').getBoundingClientRect().bottom<=110,
+   nearHero:!!rectWarning&&rectWarning.top>=hero.getBoundingClientRect().top&&rectWarning.bottom<=hero.getBoundingClientRect().bottom+1,
+   warningVisible:!!rectWarning&&warning.checkVisibility()&&rectWarning.top>=0&&rectWarning.bottom<=nav,
+   sameWarning:!!warning?.textContent.trim()&&warning.textContent===e.querySelector('.sr-space-forecast').textContent&&warning.dataset.tone===e.dataset.tone,
    overflow:document.documentElement.scrollWidth>innerWidth};
  });
- assert.deepEqual(layout,{separate:true,contained:true,aboveStage:true,nearHero:true,overflow:false});
+ assert.deepEqual(layout,{separate:true,contained:true,aboveStage:true,nearHero:true,warningVisible:true,sameWarning:true,overflow:false});
+ const warningButton=p.locator('#nrRoute-today [data-weather-summary]');
+ await warningButton.focus();await p.keyboard.press('Enter');
+ assert(await watch.locator('h3').evaluate(el=>el===document.activeElement),'keyboard reaches the complete watch card');
  res.push({weather:'watch 320 px',...layout});
  assert.deepEqual(errors,[]);await c.close();}
 finally{await b.close();srv.close()}

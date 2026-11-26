@@ -3,6 +3,30 @@
 // ── Safe localStorage — canonical block is above (v83) ──
 
 // ── Mobile Bottom Nav ─────────────────────────────────────
+const MNAV_COMPACT_LABELS = {
+  uk: {today:'Сьог.',sky:'Небо',forecast:'Прогноз',calendar:'Календ.',more:'Ще'},
+  en: {today:'Today',sky:'Sky',forecast:'Forecast',calendar:'Calendar',more:'More'},
+  es: {today:'Hoy',sky:'Cielo',forecast:'Previsión',calendar:'Calend.',more:'Más'},
+  fr: {today:'Auj.',sky:'Ciel',forecast:'Prévisions',calendar:'Calend.',more:'Plus'},
+};
+function mnavCompactLabels() {
+  const locale = window.NRLocale;
+  const copy = MNAV_COMPACT_LABELS[locale?.language] || MNAV_COMPACT_LABELS.uk;
+  const largeText = Boolean(document.querySelector('#nrRoute-today [data-sr-large-text]'));
+  document.querySelectorAll('#mobileNav [data-nav-compact]').forEach(label => {
+    const short = copy[label.dataset.navCompact];
+    if (label.textContent !== short) label.textContent = short;
+    const button = label.parentElement;
+    const source = button.dataset.navLabel;
+    if (!source) return;
+    const full = locale?.text(source) || source;
+    const fullLabel = button.querySelector('[data-nav-full]');
+    if (fullLabel.textContent !== full) fullLabel.textContent = full;
+    if (largeText && short !== full) button.setAttribute('aria-label', short + ' ' + full);
+    else button.removeAttribute('aria-label');
+  });
+}
+window.addEventListener('nr:locale', mnavCompactLabels);
 const MNAV_SECTIONS = {
   now:      ['heroCard','daySentenceCard','decisionStrip','decisionTiming','impactBlock','astroGrid','wf3SignalSummary','profileBar','profileRec','mainGrid','swipeHint3','threeCard'],
   panch:    ['heroCard','daySentenceCard','decisionStrip','wf3SignalSummary','mainGrid','panchCard','swipeHint3','threeCard'],
@@ -85,6 +109,13 @@ window.addEventListener('resize', () => {
 });
 
 document.addEventListener('DOMContentLoaded', () => {
+  mnavCompactLabels();
+  const main = document.getElementById('mainContent');
+  if (main) new MutationObserver(mnavCompactLabels).observe(main, {
+    subtree: true,
+    attributes: true,
+    attributeFilter: ['data-sr-large-text'],
+  });
   setTimeout(mnavInit, 100); // after dashboard renders
   // fp293: notification deep links must reveal the actual target, not merely
   // load the page with a hidden/closed section.

@@ -177,7 +177,7 @@ function routeTools(root,route){
  if(route==='forecast')panel.innerHTML='<p>Порівняйте оцінки та джерело фізичного прогнозу. Далекий орієнтир має інший горизонт, ніж короткий прогноз.</p><div class="nr-o-horizon-list" aria-label="Оцінки та горизонт прогнозу"></div>';
  else panel.innerHTML='<p>Знайдіть дати з потрібними позначками традиційного календаря. Це пошук тем, а не рейтинг найкращих днів.</p><div class="nr-o-topic-filters" role="group" aria-label="Тема календаря">'+[['all','Усі теми'],...TOPICS].map(t=>'<button type="button" data-topic="'+t[0]+'" aria-pressed="'+(t[0]===topicFilter)+'">'+t[1]+'</button>').join('')+'</div><p class="nr-o-topic-status" role="status"></p><div class="nr-o-topic-days" aria-label="Дати за темою"></div>';
  root.querySelector('.nr-o-hero').after(panel);
- panel.addEventListener('click',e=>{const b=e.target.closest('[data-topic]');if(!b)return;topicFilter=b.dataset.topic;const first=dayRange().find(d=>topicMatches(d,topicFilter));if(first&&!topicMatches(selected[route],topicFilter))selected[route]=first;render(root);});
+ panel.addEventListener('click',e=>{const b=e.target.closest('[data-topic]');if(!b)return;topicFilter=b.dataset.topic;const first=dayRange().find(d=>topicMatches(d,topicFilter));if(first&&!topicMatches(selected[route]||today(),topicFilter))selected[route]=first;render(root);});
 }
 function renderRouteTools(root,route,dates,ds){
  if(route==='forecast'&&!window.SRP0Layout){
@@ -281,7 +281,7 @@ function mount(){
    root.querySelector('.nr-o-next').after(journey);journey.addEventListener('click',e=>{const step=e.target.closest('[data-step]')?.dataset.step;if(step==='outcome')openOutcome();else if(step)window.fp434Go(step,true)});
   }
   const practicalBody=root.querySelector('.nr-o-practical>p');const more=document.createElement('details');more.className='nr-o-topic-detail';more.innerHTML='<summary>Пояснення тем дня</summary>';practicalBody.before(more);more.append(practicalBody);
-  host.append(root,legacy);selected[route]=route==='today'?(transitionDate()||today()):today();routeTools(root,route);
+  host.append(root,legacy);selected[route]=route==='today'?transitionDate():null;routeTools(root,route);
   root.querySelector('[data-outcome]').onclick=openOutcome;
   root.querySelector('[data-why]').onclick=()=>{const d=root.querySelector('.nr-o-factors');d.open=true;d.querySelector('summary').focus();d.scrollIntoView({block:'start'})};
   root.querySelector('[data-calendar]').onclick=()=>window.fp434Go(route==='calendar'?'forecast':'calendar',true);
@@ -312,9 +312,65 @@ function renderScopedOpinion(root,ds){
  note.textContent=(window.NRConsumerAuthority.registryStatus().status==='stale'?w[6]:'')+(opinion.state==='expert_conflict'?w[5]:w[0]+w[opinion.score<0?1:opinion.score===0?2:3]+w[4]);
  if(opinion.source_sha256){note.dataset.sourceSha=opinion.source_sha256;note.dataset.sourcePage=opinion.source_page;}
 }
+/* P1 (fp575): the same Today source line as the main design, so classic also shows NOAA type, time and coverage. */
+const todaySourceCopy={
+ en:{
+  conflict:'Conflicting expert decisions',expert:'Expert decision',cached:'Saved registry copy',verified:'Verified for this date',
+  missing:'Insufficient data',invalid:'Source time unverified',fresh:'Data current',offline:'Offline · saved data',stale:'Data outdated',
+  short:'Formula · NOAA 3 days',outlook:'Formula · NOAA 27 days',formula:'Source formula',retrieved:'retrieved',issued:'issued',calculated:'calculated',zone:'Kyiv time',
+  utc:'daily Kp outlook (UTC)',day:'Kyiv day',slots:(n,m)=>n+' of '+m+' intervals',unconfirmed:'coverage unverified'
+ },
+ es:{
+  conflict:'Decisiones expertas contradictorias',expert:'Decisión experta',cached:'Copia guardada del registro',verified:'Verificada para esta fecha',
+  missing:'Datos insuficientes',invalid:'Hora de la fuente sin verificar',fresh:'Datos actualizados',offline:'Sin conexión · datos guardados',stale:'Datos desactualizados',
+  short:'Fórmula · NOAA 3 días',outlook:'Fórmula · NOAA 27 días',formula:'Fórmula de la fuente',retrieved:'recibido',issued:'publicado',calculated:'calculado',zone:'hora de Kyiv',
+  utc:'perspectiva diaria de Kp (UTC)',day:'día de Kyiv',slots:(n,m)=>n+' de '+m+' intervalos',unconfirmed:'cobertura sin verificar'
+ },
+ fr:{
+  conflict:'Décisions expertes contradictoires',expert:'Décision experte',cached:'Copie enregistrée du registre',verified:'Vérifiée pour cette date',
+  missing:'Données insuffisantes',invalid:'Heure de la source non vérifiée',fresh:'Données à jour',offline:'Hors ligne · données enregistrées',stale:'Données obsolètes',
+  short:'Formule · NOAA 3 jours',outlook:'Formule · NOAA 27 jours',formula:'Formule de la source',retrieved:'reçu',issued:'publié',calculated:'calculé',zone:'heure de Kyiv',
+  utc:'tendance quotidienne du Kp (UTC)',day:'journée de Kyiv',slots:(n,m)=>n+' sur '+m+' intervalles',unconfirmed:'couverture non vérifiée'
+ },
+ uk:{
+  conflict:'Експертні рішення суперечать одне одному',expert:'Експертне рішення',cached:'Збережена копія реєстру',verified:'Перевірено для цієї дати',
+  missing:'Недостатньо даних',invalid:'Час джерела не підтверджено',fresh:'Дані актуальні',offline:'Офлайн · збережені дані',stale:'Дані застаріли',
+  short:'Формула · NOAA 3 дні',outlook:'Формула · NOAA 27 днів',formula:'Формула джерела',retrieved:'отримано',issued:'випуск',calculated:'розраховано',zone:'за Києвом',
+  utc:'добовий орієнтир Kp (UTC)',day:'доба Києва',slots:(n,m)=>n+' із '+m+' інтервалів',unconfirmed:'покриття не підтверджено'
+ }
+};
+function todaySourceLabel(result,input){
+ const locale=window.NRLocale?.language||'uk';
+ const copy=todaySourceCopy[locale]||todaySourceCopy.uk;
+ if(result.state==='expert_conflict')return copy.conflict;
+ if(result.state==='expert'){
+  const cached=!navigator.onLine||NRConsumerAuthority.registryStatus().status==='stale';
+  return copy.expert+' · '+(cached?copy.cached:copy.verified);
+ }
+ if(result.state==='missing'||result.state==='invalid')return copy[result.state];
+
+ const shortRange=result.kp_source==='NOAA_3day_slots';
+ const outlook=result.kp_source==='NOAA_27day_outlook';
+ const source=shortRange?copy.short:outlook?copy.outlook:copy.formula;
+ const timestamp=shortRange?result.source_retrieved_at:outlook?result.source_issued_at:result.generated_at;
+ const timestampLabel=shortRange?copy.retrieved:outlook?copy.issued:copy.calculated;
+ const formatted=Number.isFinite(Date.parse(timestamp))?new Intl.DateTimeFormat(window.NRLocale?.locale||'uk-UA',{timeZone:'Europe/Kyiv',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}).format(new Date(timestamp)):null;
+ const status=[source,copy[result.state],formatted?timestampLabel+' '+formatted+' '+copy.zone:null].filter(Boolean).join(' · ');
+ const day=result.date.slice(8,10)+'.'+result.date.slice(5,7);
+ if(outlook&&input?.timezone==='UTC')return status+'\n'+day+' · '+copy.utc;
+ if(shortRange&&input?.target_timezone==='Europe/Kyiv'){
+  const count=input.slot_count,expected=input.expected_slots;
+  const coverage=Number.isInteger(count)&&Number.isInteger(expected)&&expected>0&&count>=0&&count<=expected?copy.slots(count,expected):copy.unconfirmed;
+  return status+'\n'+day+' · '+copy.day+' · '+coverage;
+ }
+ return status;
+}
 function render(root){
  weatherPanel(root);
- const route=root.dataset.overview,dates=dayRange();if(selected[route]&&/^\d{4}-\d{2}-\d{2}$/.test(selected[route])&&!dates.includes(selected[route]))dates.push(selected[route]);const ds=dates.includes(selected[route])?selected[route]:today();selected[route]=ds;
+ const route=root.dataset.overview,dates=dayRange(),choice=selected[route];
+ // An untouched route follows Kyiv today; retain an explicitly chosen day when the horizon advances.
+ if(choice&&/^\d{4}-\d{2}-\d{2}$/.test(choice)&&!dates.includes(choice))dates.push(choice);
+ const ds=dates.includes(choice)?choice:today();
  renderPanchPreview(root,ds);
  renderFeedback(root,ds);
  const select=root.querySelector('select');if([...select.options].map(x=>x.value).join()!==dates.join())select.replaceChildren(...dates.map(d=>new Option(dateLabel(d),d)));select.value=ds;
@@ -330,6 +386,22 @@ function render(root){
  root.querySelector('.nr-o-score').textContent=fmt(r.score);
  root.querySelector('.nr-o-label').textContent=r.available?(r.score>0?'Позитивна оцінка':r.score<0?'Негативна оцінка':'Нейтральна оцінка'):'Актуальну оцінку не показуємо';
  renderRouteTools(root,route,dates,ds);
+ if(route==='today'){
+  const label=root.querySelector('.nr-o-label');
+  let sourceStatus=label.parentElement.querySelector('[data-today-source]');
+  if(!sourceStatus){
+   const summary=document.createElement('div');
+   summary.style.minWidth='0';
+   label.before(summary);
+   sourceStatus=document.createElement('p');
+   sourceStatus.dataset.todaySource='';
+   sourceStatus.setAttribute('translate','no');
+   sourceStatus.style.cssText='margin:3px 0 0;font-size:.8rem;font-weight:400;line-height:1.35;overflow-wrap:anywhere;white-space:pre-line';
+   summary.append(label,sourceStatus);
+  }
+  const text=todaySourceLabel(r,source?.kp_input);
+  if(sourceStatus.textContent!==text)sourceStatus.textContent=text;
+ }
  buttons(root.querySelector('.nr-o-next'),dates.slice(1,4),ds);buttons(root.querySelector('.nr-o-days'),dates.slice(0,14),ds);
  const factors=Array.isArray(own.factors)?own.factors:[],calendar=factors.filter(x=>x.factor!=='Kp'&&x.value!==0),kp=factors.find(x=>x.factor==='Kp');
  const strongest=factors.filter(x=>Number.isFinite(x.value)&&x.value!==0).sort((a,b)=>Math.abs(b.value)-Math.abs(a.value)).slice(0,3);
@@ -389,7 +461,7 @@ window.addEventListener('nr:locale',()=>update());
 window.addEventListener('nr:outcome',()=>update());
 window.addEventListener('storage',e=>{if([changeKey,'gindex_day_plan_v1','gindex_plan_outcomes_v1'].includes(e.key)||e.key===null)update();});
 window.addEventListener('online',()=>update());window.addEventListener('offline',()=>update());
-document.addEventListener('visibilitychange',()=>{if(!document.hidden)update();});
+NRCivilTime.watchKyivDay(()=>update());
 setInterval(()=>update(),60000);
 })();
 

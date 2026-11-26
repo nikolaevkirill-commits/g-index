@@ -30,5 +30,26 @@
   }
   return null;
  }
- return Object.freeze({localZone,localNoon,dayKey:(t,zone)=>day(parts(t,zone)),minuteKey:(t,zone)=>{const p=parts(t,zone);return day(p)+'T'+clock(p).slice(0,5);},clockKey:(t,zone)=>clock(parts(t,zone))});
+ // A Kyiv civil day can last 23 or 25 hours. Find its first different millisecond.
+ function nextKyivMidnight(now){
+  const key=day(parts(now));let lo=now,hi=now+36*3600000;
+  while(hi-lo>1){
+   const mid=Math.floor((hi+lo)/2);
+   if(day(parts(mid))===key)lo=mid;else hi=mid;
+  }
+  return hi;
+ }
+ function watchKyivDay(update){
+  let current=day(parts(Date.now())),timer;
+  function sync(force){
+   const now=Date.now(),key=day(parts(now)),changed=key!==current;
+   current=key;clearTimeout(timer);
+   timer=setTimeout(()=>sync(false),Math.max(0,nextKyivMidnight(now)-Date.now()));
+   if(changed||force)update();
+  }
+  sync(false);
+  window.addEventListener('pageshow',()=>sync(true));
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)sync(true)});
+ }
+ return Object.freeze({localZone,localNoon,nextKyivMidnight,watchKyivDay,dayKey:(t,zone)=>day(parts(t,zone)),minuteKey:(t,zone)=>{const p=parts(t,zone);return day(p)+'T'+clock(p).slice(0,5);},clockKey:(t,zone)=>clock(parts(t,zone))});
 });

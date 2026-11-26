@@ -171,7 +171,7 @@ function routeTools(root,route){
  if(route==='forecast')panel.innerHTML='<p>Порівняйте оцінки та джерело фізичного прогнозу. Далекий орієнтир має інший горизонт, ніж короткий прогноз.</p><div class="nr-o-horizon-list" aria-label="Оцінки та горизонт прогнозу"></div>';
  else panel.innerHTML='<p>Знайдіть дати з потрібними позначками традиційного календаря. Це пошук тем, а не рейтинг найкращих днів.</p><div class="nr-o-topic-filters" role="group" aria-label="Тема календаря">'+[['all','Усі теми'],...TOPICS].map(t=>'<button type="button" data-topic="'+t[0]+'" aria-pressed="'+(t[0]===topicFilter)+'">'+t[1]+'</button>').join('')+'</div><p class="nr-o-topic-status" role="status"></p><div class="nr-o-topic-days" aria-label="Дати за темою"></div>';
  root.querySelector('.nr-o-hero').after(panel);
- panel.addEventListener('click',e=>{const b=e.target.closest('[data-topic]');if(!b)return;topicFilter=b.dataset.topic;const first=dayRange().find(d=>topicMatches(d,topicFilter));if(first&&!topicMatches(selected[route],topicFilter))selected[route]=first;render(root);});
+ panel.addEventListener('click',e=>{const b=e.target.closest('[data-topic]');if(!b)return;topicFilter=b.dataset.topic;const first=dayRange().find(d=>topicMatches(d,topicFilter));if(first&&!topicMatches(selected[route]||today(),topicFilter))selected[route]=first;render(root);});
 }
 function renderRouteTools(root,route,dates,ds){
  if(route==='forecast'&&!window.SRP0Layout){
@@ -280,7 +280,7 @@ function mount(){
    hero.after(journey);const primary=journey.querySelector('[data-step=plan]');primary.classList.add('nr-b-primary');hero.querySelector('.nr-o-verdict').after(primary);primary.onclick=()=>window.fp434Go('plan',true);journey.addEventListener('click',e=>{const step=e.target.closest('[data-step]')?.dataset.step;if(step==='outcome')openOutcome();else if(step)window.fp434Go(step,true)});
   }
   const practicalBody=root.querySelector('.nr-o-practical>p');const more=document.createElement('details');more.className='nr-o-topic-detail';more.innerHTML='<summary>Пояснення тем дня</summary>';practicalBody.before(more);more.append(practicalBody);
-  host.append(root,legacy);selected[route]=today();routeTools(root,route);
+  host.append(root,legacy);selected[route]=null;routeTools(root,route);
   root.querySelector('[data-outcome]').onclick=openOutcome;
   root.querySelector('[data-why]').onclick=()=>{const d=root.querySelector('.nr-o-factors');d.open=true;d.querySelector('summary').focus();d.scrollIntoView({block:'start'})};
   root.querySelector('[data-calendar]').onclick=()=>window.fp434Go(route==='calendar'?'forecast':'calendar',true);
@@ -319,7 +319,10 @@ function renderScopedOpinion(root,ds){
 }
 function render(root){
  weatherPanel(root);
- const route=root.dataset.overview,dates=dayRange(),ds=dates.includes(selected[route])?selected[route]:today();selected[route]=ds;
+ const route=root.dataset.overview,dates=dayRange(),choice=selected[route];
+ // An untouched route follows Kyiv today; retain an explicitly chosen day when the horizon advances.
+ if(choice&&/^\d{4}-\d{2}-\d{2}$/.test(choice)&&!dates.includes(choice))dates.push(choice);
+ const ds=dates.includes(choice)?choice:today();
  renderPanchPreview(root,ds);
  renderFeedback(root,ds);
  const select=root.querySelector('select');if([...select.options].map(x=>x.value).join()!==dates.join())select.replaceChildren(...dates.map(d=>new Option(dateLabel(d),d)));select.value=ds;
@@ -399,7 +402,7 @@ window.addEventListener('nr:locale',()=>update());
 window.addEventListener('nr:outcome',()=>update());
 window.addEventListener('storage',e=>{if([changeKey,'gindex_day_plan_v1','gindex_plan_outcomes_v1'].includes(e.key)||e.key===null)update();});
 window.addEventListener('online',()=>update());window.addEventListener('offline',()=>update());
-document.addEventListener('visibilitychange',()=>{if(!document.hidden)update();});
+NRCivilTime.watchKyivDay(()=>update());
 setInterval(()=>update(),60000);
 })();
 

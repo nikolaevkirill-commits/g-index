@@ -45,6 +45,92 @@ console.log('PASS locale: whitespace-specific keys, language and registration in
    const probe=await browser.newPage({locale:'en-GB'});
    await probe.setContent('<!doctype html><main></main><textarea id="draft">Моя нотатка</textarea>');
    for(const file of ['locale_core_v1.js',prefix+'locale_overview_v1.js',prefix+'locale_bridge_v1.js'])await probe.addScriptTag({path:path.join(__dirname,'../..',file)});
+   const entry=prefix==='preview-b17/'?'design-b17.html':prefix?'index.html':'classic.html';
+   const entrySource=fs.readFileSync(path.join(__dirname,'../..',entry),'utf8').replace(/\r\n/g,'\n');
+   const updateBar=entrySource.match(/<div id="pwaUpdateBar"[^>]*>[\s\S]*?<\/div>/)[0];
+   const updateStart=entrySource.indexOf('function pwaReload() {');
+   const updateCode=entrySource.slice(updateStart,entrySource.indexOf('\n}',updateStart)+2);
+   await probe.evaluate(markup=>document.body.insertAdjacentHTML('beforeend',markup),updateBar);
+   await probe.addScriptTag({content:"var _swReg={waiting:{postMessage(){}}};"+updateCode});
+   await probe.setViewportSize({width:320,height:741});
+   await probe.addStyleTag({content:'body{font-family:system-ui} :is(#pwaInstallBar,#pwaUpdateBar){display:flex!important} :is(#pwaInstallBar,#pwaUpdateBar), :is(#pwaInstallBar,#pwaUpdateBar) button{font:inherit;font-size:26px!important}'});
+   const assertBannerFits=async(id,label)=>{
+    const overflow=await probe.locator(id).evaluate(bar=>[bar,...bar.children].flatMap(node=>{
+     const bounds=node.getBoundingClientRect();
+     return bounds.left>=-.5&&bounds.right<=innerWidth+.5&&node.scrollWidth<=node.clientWidth+1
+      ? [] : [{element:node.tagName,right:bounds.right,overflow:node.scrollWidth-node.clientWidth}];
+    }));
+    assert.deepEqual(overflow,[],entry+' '+label+' fits at 320px with doubled text');
+   };
+   const status=probe.locator('#pwaUpdateBar span');
+   const updateButton=probe.locator('#pwaUpdateBar button');
+   const brand=entry==='design-b17.html'?'NeboRhythm':'SkyRhythm';
+   const updateCopy=[
+    ['uk','Доступне оновлення '+brand,'Оновити застосунок','Застосовую оновлення SkyRhythm…','Оновлення ще не активовано. Можна спробувати ще раз.'],
+    ['en','Update available for '+brand,'Update app','Updating SkyRhythm…','The update is not active yet. You can try again.'],
+    ['es','Actualización de '+brand+' disponible','Actualizar la aplicación','Actualizando SkyRhythm…','La actualización aún no está activa. Puedes reintentarlo.'],
+    ['fr','Mise à jour de '+brand+' disponible','Mettre à jour l’application','Mise à jour de SkyRhythm…','La mise à jour n’est pas encore active. Vous pouvez réessayer.'],
+   ];
+   for(const [lang,ready,action] of updateCopy){
+    await probe.evaluate(lang=>NRLocale.set(lang),lang);
+    assert.equal(await status.textContent(),'🔄 '+ready,entry+' ready in '+lang);
+    assert.equal(await updateButton.textContent(),action,entry+' action in '+lang);
+    await assertBannerFits('#pwaUpdateBar','update ready in '+lang);
+   }
+   assert.equal(await status.getAttribute('role'),'status',entry+' update announcements');
+   const installBar=entrySource.match(/<div id="pwaInstallBar"[^>]*>[\s\S]*?<\/div>/)[0];
+   const installStart=entrySource.indexOf('function pwaInstallOrHelp() {');
+   const installCode=entrySource.slice(installStart,entrySource.indexOf('\n}',installStart)+2);
+   await probe.evaluate(markup=>document.body.insertAdjacentHTML('beforeend',markup),installBar);
+   await probe.addScriptTag({content:"var _deferredInstall=null;"+installCode});
+   const installCopy=[
+    ['uk','Встановити','Закрити пропозицію встановлення','початковий екран','уже відкритий','меню браузера'],
+    ['en','Install','Dismiss install prompt','Home Screen','already open','browser menu'],
+    ['es','Instalar','Cerrar el aviso de instalación','pantalla de inicio','ya está abierto','menú del navegador'],
+    ['fr','Installer','Fermer l’invite d’installation','écran d’accueil','est déjà ouverte','menu du navigateur'],
+   ];
+   for(const [lang,action,dismiss,iosText,standaloneText,browserText] of installCopy){
+    await probe.evaluate(lang=>NRLocale.set(lang),lang);
+    assert.equal(await probe.locator('#pwaInstallBar strong').textContent(),action+' '+brand,entry+' install heading in '+lang);
+    assert.equal(await probe.locator('#pwaInstallBar button').first().textContent(),action,entry+' install action in '+lang);
+    assert.equal(await probe.locator('#pwaInstallBar button').last().getAttribute('aria-label'),dismiss,entry+' install dismissal in '+lang);
+    await assertBannerFits('#pwaInstallBar','install in '+lang);
+    for(const [mode,fragment] of [['ios',iosText],['standalone',standaloneText],['browser',browserText]]){
+     const help=await probe.evaluate(mode=>{
+      let message='';
+      const before={matchMedia:window.matchMedia,alert:window.alert,agent:Object.getOwnPropertyDescriptor(navigator,'userAgent')};
+      try {
+       Object.defineProperty(navigator,'userAgent',{configurable:true,value:mode==='ios'?'iPhone':'Browser'});
+       window.matchMedia=()=>({matches:mode==='standalone'});
+       window.alert=text=>{message=text};
+       pwaInstallOrHelp();
+       return message;
+      } finally {
+       window.matchMedia=before.matchMedia;
+       window.alert=before.alert;
+       if(before.agent)Object.defineProperty(navigator,'userAgent',before.agent);
+       else delete navigator.userAgent;
+      }
+     },mode);
+     assert(help.includes(fragment),entry+' '+mode+' installation help in '+lang);
+     if(lang!=='uk')assert(!/[А-Яа-яІіЇїЄєҐґ]/u.test(help),entry+' '+mode+' help contains Ukrainian in '+lang);
+    }
+   }
+   await probe.clock.install();
+   await probe.evaluate(()=>pwaReload());
+   for(const [lang,,,applying] of updateCopy){
+    await probe.evaluate(lang=>NRLocale.set(lang),lang);
+    assert.equal(await status.textContent(),'🔄 '+applying,entry+' applying in '+lang);
+    assert(await updateButton.isDisabled(),entry+' awaiting activation');
+    await assertBannerFits('#pwaUpdateBar','updating in '+lang);
+   }
+   await probe.clock.fastForward(4000);
+   for(const [lang,,,,retry] of updateCopy){
+    await probe.evaluate(lang=>NRLocale.set(lang),lang);
+    assert.equal(await status.textContent(),retry,entry+' retry in '+lang);
+    assert(await updateButton.isEnabled(),entry+' retry available');
+    await assertBannerFits('#pwaUpdateBar','update retry in '+lang);
+   }
    await probe.evaluate(()=>{const node=document.createElement('div');node.id='nrRuntimeState';node.innerHTML='<strong>◷ ЗАСТАРІЛІ ДАНІ</strong><span>Частина джерел повернула кешовані дані. Доступність поточного рішення визначається його джерелами та строком чинності.</span>';document.body.append(node);const bar=document.createElement('div');bar.id='swStaleBar';bar.textContent="⚠ Дані з кешу (2 хв тому) — перевірте з'єднання";document.body.append(bar)});
    for(const [lang,header] of [['en','OUTDATED DATA'],['es','DATOS DESACTUALIZADOS'],['fr','DONNÉES PÉRIMÉES'],['uk','ЗАСТАРІЛІ ДАНІ'],['en','OUTDATED DATA']]){
     await probe.evaluate(lang=>NRLocale.set(lang),lang);
@@ -57,5 +143,6 @@ console.log('PASS locale: whitespace-specific keys, language and registration in
    await probe.close();
   }
   console.log('PASS offline state localization: 3 entry dictionaries/bridges, 4 languages, dynamic age, language roundtrip, user draft untouched');
+  console.log('PASS app prompts: 3 entry pages, 4 languages, update and install help, 320px at 200% text');
  }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1});

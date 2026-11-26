@@ -6,7 +6,8 @@ let weatherData=null,weatherRequest=null,weatherAttempt=0,weatherError=false;
 const weatherBriefContent=new WeakMap();
 function weatherStatus(data,now=Date.now()){
  const current=data?.['0'],stamp=current?Date.parse(current.DateStamp+'T'+current.TimeStamp+'Z'):NaN;
- if(!Number.isFinite(stamp)||now<stamp||now-stamp>8*3600000)return {state:'unavailable'};
+ if(!Number.isFinite(stamp)||now<stamp)return {state:'unavailable'};
+ if(now-stamp>8*3600000)return {state:'unavailable',reason:'stale'};
  const level=v=>typeof v==='string'&&/^[0-5]$/.test(v)?Number(v):null;
  const currentLevels=Object.fromEntries(['G','S','R'].map(k=>[k,level(current[k]?.Scale)]));
  if(Object.values(currentLevels).some(v=>v===null))return {state:'unavailable'};
@@ -19,7 +20,11 @@ function weatherStatus(data,now=Date.now()){
  }
  return {state:'available',stamp,current:currentLevels,forecasts};
 }
-window.NRSpaceWeather={status:weatherStatus};
+window.NRSpaceWeather={status:weatherStatus,refreshFirstScreen(root){
+ const full=root.querySelector('.nr-o-spaceweather');
+ const slot=root.querySelector('[data-p0-source-context]');
+ if(full&&slot)renderFirstNoaa(slot,weatherError?{state:'unavailable'}:weatherStatus(weatherData),()=>openWeatherDetails(full));
+}};
 function weatherPanel(root){
  let box=root.querySelector('.nr-o-spaceweather');if(!box){box=document.createElement('section');box.className='nr-o-spaceweather nr-o-practical';box.setAttribute('aria-live','polite');root.querySelector('.nr-o-layers').before(box);}
  box.style.display='block';
@@ -69,11 +74,52 @@ async function renderPanchPreview(root,ds){
  }catch(e){if(box.dataset.date===ds)box.textContent='Для обраної дати повні складові недоступні. Значення іншого дня не підставляються.';}
 }
 
+const FIRST_NOAA_COPY={
+ uk:{pending:'перевіряємо',missing:'немає даних',stale:'застарілі',partial:'частковий прогноз',fresh:'свіжі',periodMissing:'Період невідомий',storm:'буря'},
+ en:{pending:'checking',missing:'no data',stale:'outdated',partial:'partial forecast',fresh:'current',periodMissing:'Period unavailable',storm:'storm'},
+ es:{pending:'comprobando',missing:'sin datos',stale:'desactualizada',partial:'pronóstico parcial',fresh:'actual',periodMissing:'Período no disponible',storm:'tormenta'},
+ fr:{pending:'vérification',missing:'sans données',stale:'périmée',partial:'prévision partielle',fresh:'à jour',periodMissing:'Période inconnue',storm:'orage'}
+};
+function renderFirstNoaa(hero,status,openDetails){
+ if(!hero)return;
+ let control=hero.querySelector('[data-p0-noaa]');
+ if(!control){
+  control=document.createElement('button');
+  control.type='button';control.dataset.p0Noaa='';control.setAttribute('translate','no');
+  control.append(document.createElement('strong'),document.createElement('span'));
+  hero.append(control);
+ }
+ control.onclick=openDetails;
+ const t=FIRST_NOAA_COPY[window.NRLocale?.language]||FIRST_NOAA_COPY.uk;
+ const days=[...new Set((status.forecasts||[]).map(item=>item.date))].sort();
+ const state=status.state==='available'?(days.length===3?'fresh':'partial'):weatherRequest?'pending':status.reason==='stale'?'stale':'missing';
+ const g=status.current?.G;
+ const severity=g>0?' G'+g:'';
+ const dateFormat=new Intl.DateTimeFormat(window.NRLocale?.locale||'uk-UA',{timeZone:'UTC',day:'numeric',month:'short'});
+ const values=days.map(day=>new Date(day+'T00:00:00Z'));
+ const consecutive=values.length>1&&(+values.at(-1)-+values[0])===(values.length-1)*86400000;
+ const dates=consecutive&&typeof dateFormat.formatRange==='function'?dateFormat.formatRange(values[0],values.at(-1)):values.map(date=>dateFormat.format(date)).join(', ');
+ const label='NOAA · '+(severity?t.storm+severity:t[state]);
+ const period=dates?(state==='partial'?days.length+'/3 · ':'')+dates+' UTC':t.periodMissing;
+ control.children[0].textContent=label;
+ control.children[1].textContent=period;
+ control.dataset.state=state;
+ control.dataset.days=days.join(',');
+ if(severity&&state==='partial')control.setAttribute('aria-label',label+' · '+t.partial+' · '+period);
+ else control.removeAttribute('aria-label');
+}
+
+function openWeatherDetails(full){
+ const disclosure=full.closest('details');if(disclosure)disclosure.open=true;
+ full.setAttribute('tabindex','-1');full.focus({preventScroll:true});full.scrollIntoView({block:'start'});
+}
 function renderWeatherBrief(root,status,full){
  if(!['today','forecast'].includes(root.dataset.overview))return;
  const hero=root.querySelector('.nr-o-hero'),tr=s=>window.NRLocale?.text(s)||s;
+ const openDetails=()=>openWeatherDetails(full);
+ if(root.dataset.overview==='today')renderFirstNoaa(root.querySelector('[data-p0-source-context]'),status,openDetails);
  let brief=root.querySelector('[data-weather-brief]');
- if(!brief){brief=document.createElement('button');brief.type='button';brief.dataset.weatherBrief='';brief.className='nr-o-brief nr-o-weather-brief';brief.setAttribute('translate','no');brief.dataset.placement='after-hero';hero.insertBefore(brief,hero.querySelector('[data-panch-countdown]'));brief.onclick=()=>{const disclosure=full.closest('details');if(disclosure)disclosure.open=true;full.setAttribute('tabindex','-1');full.focus({preventScroll:true});full.scrollIntoView({block:'start'});};}
+ if(!brief){brief=document.createElement('button');brief.type='button';brief.dataset.weatherBrief='';brief.className='nr-o-brief nr-o-weather-brief';brief.setAttribute('translate','no');brief.dataset.placement='after-hero';hero.insertBefore(brief,hero.querySelector('[data-panch-countdown]'));brief.onclick=openDetails;}
  let body,forecastSummary='';
  if(status.state!=='available')body='<span>'+esc(tr(weatherRequest?'Перевіряємо попередження…':'Свіжих попереджень NOAA зараз немає, тож про бурю не можемо сказати ні «так», ні «ні». Оновимо автоматично.'))+'</span>';
  else{
@@ -163,6 +209,58 @@ const timeFormatter=new Intl.DateTimeFormat('uk-UA',{timeZone:'Europe/Kyiv',day:
 const today=()=>NRCivilTime.dayKey(Date.now());
 const dateLabel=ds=>{const locale=window.NRLocale?.locale||'uk-UA';let formatter=dateFormatters.get(locale);if(!formatter){formatter=new Intl.DateTimeFormat(locale,{timeZone:'Europe/Kyiv',day:'numeric',month:'long'});dateFormatters.set(locale,formatter)}return formatter.format(new Date(ds+'T12:00:00Z'))};
 const time=s=>Number.isFinite(Date.parse(s))?timeFormatter.format(new Date(s)):'не вказано';
+const todaySourceCopy={
+ en:{
+  conflict:'Conflicting expert decisions',expert:'Expert decision',cached:'Saved registry copy',verified:'Verified for this date',
+  missing:'Insufficient data',invalid:'Source time unverified',fresh:'Data current',offline:'Offline · saved data',stale:'Data outdated',
+  short:'Formula · NOAA 3 days',outlook:'Formula · NOAA 27 days',formula:'Source formula',retrieved:'retrieved',issued:'issued',calculated:'calculated',zone:'Kyiv time',
+  utc:'daily Kp outlook (UTC)',day:'Kyiv day',slots:(n,m)=>n+' of '+m+' intervals',unconfirmed:'coverage unverified'
+ },
+ es:{
+  conflict:'Decisiones expertas contradictorias',expert:'Decisión experta',cached:'Copia guardada del registro',verified:'Verificada para esta fecha',
+  missing:'Datos insuficientes',invalid:'Hora de la fuente sin verificar',fresh:'Datos actualizados',offline:'Sin conexión · datos guardados',stale:'Datos desactualizados',
+  short:'Fórmula · NOAA 3 días',outlook:'Fórmula · NOAA 27 días',formula:'Fórmula de la fuente',retrieved:'recibido',issued:'publicado',calculated:'calculado',zone:'hora de Kyiv',
+  utc:'perspectiva diaria de Kp (UTC)',day:'día de Kyiv',slots:(n,m)=>n+' de '+m+' intervalos',unconfirmed:'cobertura sin verificar'
+ },
+ fr:{
+  conflict:'Décisions expertes contradictoires',expert:'Décision experte',cached:'Copie enregistrée du registre',verified:'Vérifiée pour cette date',
+  missing:'Données insuffisantes',invalid:'Heure de la source non vérifiée',fresh:'Données à jour',offline:'Hors ligne · données enregistrées',stale:'Données obsolètes',
+  short:'Formule · NOAA 3 jours',outlook:'Formule · NOAA 27 jours',formula:'Formule de la source',retrieved:'reçu',issued:'publié',calculated:'calculé',zone:'heure de Kyiv',
+  utc:'tendance quotidienne du Kp (UTC)',day:'journée de Kyiv',slots:(n,m)=>n+' sur '+m+' intervalles',unconfirmed:'couverture non vérifiée'
+ },
+ uk:{
+  conflict:'Експертні рішення суперечать одне одному',expert:'Експертне рішення',cached:'Збережена копія реєстру',verified:'Перевірено для цієї дати',
+  missing:'Недостатньо даних',invalid:'Час джерела не підтверджено',fresh:'Дані актуальні',offline:'Офлайн · збережені дані',stale:'Дані застаріли',
+  short:'Формула · NOAA 3 дні',outlook:'Формула · NOAA 27 днів',formula:'Формула джерела',retrieved:'отримано',issued:'випуск',calculated:'розраховано',zone:'за Києвом',
+  utc:'добовий орієнтир Kp (UTC)',day:'доба Києва',slots:(n,m)=>n+' із '+m+' інтервалів',unconfirmed:'покриття не підтверджено'
+ }
+};
+function todaySourceLabel(result,input){
+ const locale=window.NRLocale?.language||'uk';
+ const copy=todaySourceCopy[locale]||todaySourceCopy.uk;
+ if(result.state==='expert_conflict')return copy.conflict;
+ if(result.state==='expert'){
+  const cached=!navigator.onLine||NRConsumerAuthority.registryStatus().status==='stale';
+  return copy.expert+' · '+(cached?copy.cached:copy.verified);
+ }
+ if(result.state==='missing'||result.state==='invalid')return copy[result.state];
+
+ const shortRange=result.kp_source==='NOAA_3day_slots';
+ const outlook=result.kp_source==='NOAA_27day_outlook';
+ const source=shortRange?copy.short:outlook?copy.outlook:copy.formula;
+ const timestamp=shortRange?result.source_retrieved_at:outlook?result.source_issued_at:result.generated_at;
+ const timestampLabel=shortRange?copy.retrieved:outlook?copy.issued:copy.calculated;
+ const formatted=Number.isFinite(Date.parse(timestamp))?new Intl.DateTimeFormat(window.NRLocale?.locale||'uk-UA',{timeZone:'Europe/Kyiv',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}).format(new Date(timestamp)):null;
+ const status=[source,copy[result.state],formatted?timestampLabel+' '+formatted+' '+copy.zone:null].filter(Boolean).join(' · ');
+ const day=result.date.slice(8,10)+'.'+result.date.slice(5,7);
+ if(outlook&&input?.timezone==='UTC')return status+'\n'+day+' · '+copy.utc;
+ if(shortRange&&input?.target_timezone==='Europe/Kyiv'){
+  const count=input.slot_count,expected=input.expected_slots;
+  const coverage=Number.isInteger(count)&&Number.isInteger(expected)&&expected>0&&count>=0&&count<=expected?copy.slots(count,expected):copy.unconfirmed;
+  return status+'\n'+day+' · '+copy.day+' · '+coverage;
+ }
+ return status;
+}
 const stateLabel=(r,ds)=>r.state==='fresh'&&rows[ds]?.channels?.source_formula?.kp_source==='NOAA_27day_outlook'?'Орієнтир · outlook NOAA від '+String(rows[ds].channels.source_formula.kp_input?.issued_at||'').slice(0,10):states[r.state];
 const states={expert:'Оцінка експерта (має пріоритет над формулою)',fresh:'Дані актуальні',offline:'Офлайн · збережені дані',stale:'Дані застаріли',missing:'Недостатньо даних',invalid:'Час джерела не підтверджено'};
 const dayRange=()=>Array.from({length:27},(_,i)=>{const d=new Date(today()+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+i);return d.toISOString().slice(0,10)});
@@ -221,7 +319,7 @@ function routeTools(root,route){
  if(route==='forecast')panel.innerHTML='<p>Порівняйте оцінки та джерело фізичного прогнозу. Далекий орієнтир має інший горизонт, ніж короткий прогноз.</p><div class="nr-o-horizon-list" aria-label="Оцінки та горизонт прогнозу"></div>';
  else panel.innerHTML='<p>Знайдіть дати з потрібними позначками традиційного календаря. Це пошук тем, а не рейтинг найкращих днів.</p><div class="nr-o-topic-filters" role="group" aria-label="Тема календаря">'+[['all','Усі теми'],...TOPICS].map(t=>'<button type="button" data-topic="'+t[0]+'" aria-pressed="'+(t[0]===topicFilter)+'">'+t[1]+'</button>').join('')+'</div><p class="nr-o-topic-status" role="status"></p><div class="nr-o-topic-days" aria-label="Дати за темою"></div>';
  root.querySelector('.nr-o-hero').after(panel);
- panel.addEventListener('click',e=>{const b=e.target.closest('[data-topic]');if(!b)return;topicFilter=b.dataset.topic;const first=dayRange().find(d=>topicMatches(d,topicFilter));if(first&&!topicMatches(selected[route],topicFilter))selected[route]=first;render(root);});
+ panel.addEventListener('click',e=>{const b=e.target.closest('[data-topic]');if(!b)return;topicFilter=b.dataset.topic;const first=dayRange().find(d=>topicMatches(d,topicFilter));if(first&&!topicMatches(selected[route]||today(),topicFilter))selected[route]=first;render(root);});
 }
 function renderRouteTools(root,route,dates,ds){
  if(route==='forecast'&&!window.SRP0Layout){
@@ -338,7 +436,7 @@ function mount(){
    hero.after(journey);const primary=journey.querySelector('[data-step=plan]');primary.classList.add('nr-b-primary');hero.querySelector('.nr-o-verdict').after(primary);for(const step of journey.querySelectorAll('[data-step]>span'))step.textContent=step.textContent.replace(/^\d+\s*·\s*/,'');primary.onclick=()=>window.fp434Go('plan',true);journey.addEventListener('click',e=>{const step=e.target.closest('[data-step]')?.dataset.step;if(step==='outcome')openOutcome();else if(step)window.fp434Go(step,true)});
   }
   const practicalBody=root.querySelector('.nr-o-practical>p');const more=document.createElement('details');more.className='nr-o-topic-detail';more.innerHTML='<summary>Пояснення тем дня</summary>';practicalBody.before(more);more.append(practicalBody);
-  host.append(root,legacy);selected[route]=today();routeTools(root,route);
+  host.append(root,legacy);selected[route]=null;routeTools(root,route);
   root.querySelector('[data-outcome]').onclick=openOutcome;
   root.querySelector('[data-why]').onclick=()=>{const d=root.querySelector('.nr-o-factors');d.open=true;d.querySelector('summary').focus();d.scrollIntoView({block:'start'})};
   root.querySelector('[data-calendar]').onclick=()=>window.fp434Go(route==='calendar'?'forecast':'calendar',true);
@@ -377,7 +475,10 @@ function renderScopedOpinion(root,ds){
 }
 function render(root){
  weatherPanel(root);
- const route=root.dataset.overview,dates=dayRange(),ds=dates.includes(selected[route])?selected[route]:today();selected[route]=ds;
+ const route=root.dataset.overview,dates=dayRange(),choice=selected[route];
+ // An untouched route follows Kyiv today; retain an explicitly chosen day when the horizon advances.
+ if(choice&&/^\d{4}-\d{2}-\d{2}$/.test(choice)&&!dates.includes(choice))dates.push(choice);
+ const ds=dates.includes(choice)?choice:today();
  renderPanchPreview(root,ds);
  renderFeedback(root,ds);
  const select=root.querySelector('select');if([...select.options].map(x=>x.value).join()!==dates.join())select.replaceChildren(...dates.map(d=>new Option(dateLabel(d),d)));select.value=ds;
@@ -395,6 +496,22 @@ function render(root){
  root.querySelector('.nr-o-score').textContent=fmt(r.score);
  root.querySelector('.nr-o-label').textContent=r.available?(r.score>0?'Позитивна оцінка':r.score<0?'Негативна оцінка':'Нейтральна оцінка'):'Актуальну оцінку не показуємо';
  renderRouteTools(root,route,dates,ds);
+ if(route==='today'){
+  const label=root.querySelector('.nr-o-label');
+  let sourceStatus=label.parentElement.querySelector('[data-today-source]');
+  if(!sourceStatus){
+   const summary=document.createElement('div');
+   summary.style.minWidth='0';
+   label.before(summary);
+   sourceStatus=document.createElement('p');
+   sourceStatus.dataset.todaySource='';
+   sourceStatus.setAttribute('translate','no');
+   sourceStatus.style.cssText='margin:3px 0 0;font-size:.8rem;font-weight:400;line-height:1.35;overflow-wrap:anywhere;white-space:pre-line';
+   summary.append(label,sourceStatus);
+  }
+  const text=transportText||todaySourceLabel(r,source?.kp_input);
+  if(sourceStatus.textContent!==text)sourceStatus.textContent=text;
+ }
  if(route==='today'||route==='forecast'){
  const heading=root.querySelector('.nr-o-heading');heading.setAttribute('translate','no');heading.querySelector('h1').textContent=route==='today'?dateLabel(ds):({uk:'Прогноз на обраний період',en:'Forecast for the selected period',es:'Pronóstico del período elegido',fr:'Prévisions pour la période choisie'})[window.NRLocale?.language||'uk'];heading.querySelector('span').textContent=({uk:'Київ',en:'Kyiv',es:'Kyiv',fr:'Kyiv'})[window.NRLocale?.language||'uk']+' · '+(window.NRLocale?.text('за київським часом')||'за київським часом');
  }
@@ -467,7 +584,7 @@ window.addEventListener('nr:locale',()=>update());
 window.addEventListener('nr:outcome',()=>update());
 window.addEventListener('storage',e=>{if([changeKey,'gindex_day_plan_v1','gindex_plan_outcomes_v1'].includes(e.key)||e.key===null)update();});
 window.addEventListener('online',()=>update());window.addEventListener('offline',()=>update());
-document.addEventListener('visibilitychange',()=>{if(!document.hidden)update();});
+NRCivilTime.watchKyivDay(()=>update());
 setInterval(()=>update(),60000);
 })();
 

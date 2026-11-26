@@ -1,6 +1,6 @@
 /* Presentation only. All scores remain owned by NRConsumerAuthority.resolveFinal. */
 (function(){'use strict';
-const COPY=[["Прогноз Kp", "Kp forecast", "Pronóstico Kp", "Prévision Kp"], ["На початок дня", "At the start of the day", "Al inicio del día", "Au début du jour"], ["Хронологія неба", "Sky timeline", "Cronología del cielo", "Chronologie du ciel"], ["Розраховані події", "Calculated events", "Eventos calculados", "Événements calculés"], ["Календарні дані відсутні", "Calendar data unavailable", "Datos de calendario no disponibles", "Données du calendrier indisponibles"], ["Рух тла", "Background motion", "Movimiento del fondo", "Animation du fond"],["День", "Day", "Día", "Jour"], ["Тиждень", "Week", "Semana", "Semaine"], ["27 днів", "27 days", "27 días", "27 jours"], ["Попередній місяць", "Previous month", "Mes anterior", "Mois précédent"], ["Наступний місяць", "Next month", "Mes siguiente", "Mois suivant"], ["Порівняти до трьох дат", "Compare up to three dates", "Comparar hasta tres fechas", "Comparer jusqu’à trois dates"], ["Додати обрану дату", "Add selected date", "Añadir fecha elegida", "Ajouter la date choisie"], ["Прибрати", "Remove", "Quitar", "Retirer"], ["Надані складові", "Provided components", "Componentes proporcionados", "Composantes fournies"], ["Детально: джерела, розрахунок і календар", "Details: sources, calculation and calendar", "Detalles: fuentes, cálculo y calendario", "Détails : sources, calcul et calendrier"], ["Усі події, час і традиційні образи", "All events, times and traditional imagery", "Eventos, horarios e imágenes tradicionales", "Événements, horaires et images traditionnelles"], ["Астрономія й NOAA", "Astronomy and NOAA", "Astronomía y NOAA", "Astronomie et NOAA"], ["Панчанга", "Panchanga", "Panchanga", "Panchanga"], ["Оцінка дня", "Day score", "Puntuación del día", "Note du jour"], ["Формульні дані актуальні", "Formula data are current", "Datos de la fórmula actualizados", "Données de formule à jour"], ["Формульні дані застаріли", "Formula data are stale", "Datos de la fórmula obsoletos", "Données de formule périmées"], ["Офлайн: перевірте час збережених даних", "Offline: check the saved data timestamp", "Sin conexión: compruebe la fecha de los datos guardados", "Hors ligne : vérifiez la date des données enregistrées"], ["Оновлюємо дані…", "Updating data…", "Actualizando datos…", "Mise à jour des données…"], ["Формульні дані відсутні", "Formula data are missing", "Faltan datos de la fórmula", "Données de formule absentes"], ["Не вдалося оновити дані", "Could not update data", "No se pudieron actualizar los datos", "Impossible de mettre à jour les données"], ["Спробувати ще", "Try again", "Reintentar", "Réessayer"], ["Дата · Київ", "Date · Kyiv", "Fecha · Kyiv", "Date · Kyiv"], ["Розрахована фаза Місяця", "Calculated Moon phase", "Fase lunar calculada", "Phase lunaire calculée"], ["зростає", "waxing", "creciente", "croissante"], ["росте", "waxing", "creciente", "croissante"], ["спадає", "waning", "menguante", "décroissante"], ["Місяць: освітлено", "Moon: illuminated", "Luna: iluminada", "Lune : éclairée"], ["Теми дня за календарем джерела:", "Day themes from the source calendar:", "Temas del día según el calendario fuente:", "Thèmes du jour selon le calendrier source :"], ["Перегляньте календарні теми й підстави оцінки дня.", "Explore calendar themes and the reasons for the day score.", "Consulte los temas del calendario y los motivos de la puntuación.", "Consultez les thèmes du calendrier et les raisons de la note."], ["Актуальної оцінки немає. Порожнє значення не означає нейтральний день.", "No current score. A missing value does not mean a neutral day.", "No hay puntuación actual. Un valor ausente no indica un día neutro.", "Aucune note actuelle. Une valeur absente ne signifie pas un jour neutre."], ["Джерело: експертна оцінка", "Source: expert assessment", "Fuente: valoración experta", "Source : évaluation experte"], ["Джерело: формула календаря", "Source: calendar formula", "Fuente: fórmula del calendario", "Source : formule du calendrier"], ["Оцінка недоступна", "Score unavailable", "Puntuación no disponible", "Note indisponible"], ["Експертна оцінка", "Expert assessment", "Valoración experta", "Évaluation experte"], ["Формула джерела", "Source formula", "Fórmula de la fuente", "Formule de la source"], ["▲ Позитивна · ● Нейтральна · ▼ Негативна · ○ Немає оцінки", "▲ Positive · ● Neutral · ▼ Negative · ○ No score", "▲ Positiva · ● Neutra · ▼ Negativa · ○ Sin puntuación", "▲ Positive · ● Neutre · ▼ Négative · ○ Sans note"], ["Три складові дня", "Three parts of the day", "Tres aspectos del día", "Trois aspects du jour"]];
+const COPY=[["Прогноз Kp", "Kp forecast", "Pronóstico Kp", "Prévision Kp"], ["На початок дня", "At the start of the day", "Al inicio del día", "Au début du jour"], ["Хронологія неба", "Sky timeline", "Cronología del cielo", "Chronologie du ciel"], ["Розраховані події", "Calculated events", "Eventos calculados", "Événements calculés"], ["Календарні дані відсутні", "Calendar data unavailable", "Datos de calendario no disponibles", "Données du calendrier indisponibles"], ["Рух тла", "Background motion", "Movimiento del fondo", "Animation du fond"],["День", "Day", "Día", "Jour"], ["Тиждень", "Week", "Semana", "Semaine"], ["27 днів", "27 days", "27 días", "27 jours"], ["Попередній місяць", "Previous month", "Mes anterior", "Mois précédent"], ["Наступний місяць", "Next month", "Mes siguiente", "Mois suivant"], ["Порівняти до трьох дат", "Compare up to three dates", "Comparar hasta tres fechas", "Comparer jusqu’à trois dates"], ["Додати обрану дату", "Add selected date", "Añadir fecha elegida", "Ajouter la date choisie"], ["Прибрати", "Remove", "Quitar", "Retirer"], ["Надані складові", "Provided components", "Componentes proporcionados", "Composantes fournies"], ["Детально: джерела, розрахунок і календар", "Details: sources, calculation and calendar", "Detalles: fuentes, cálculo y calendario", "Détails : sources, calcul et calendrier"], ["Усі події, час і традиційні образи", "All events, times and traditional imagery", "Eventos, horarios e imágenes tradicionales", "Événements, horaires et images traditionnelles"], ["Астрономія й NOAA", "Astronomy and NOAA", "Astronomía y NOAA", "Astronomie et NOAA"], ["Панчанга", "Panchanga", "Panchanga", "Panchanga"], ["Оцінка дня", "Day score", "Puntuación del día", "Note du jour"], ["Формульні дані актуальні", "Formula data are current", "Datos de la fórmula actualizados", "Données de formule à jour"], ["Формульні дані застаріли", "Formula data are stale", "Datos de la fórmula obsoletos", "Données de formule périmées"], ["Офлайн: перевірте час збережених даних", "Offline: check the saved data timestamp", "Sin conexión: compruebe la fecha de los datos guardados", "Hors ligne : vérifiez la date des données enregistrées"], ["Оновлюємо дані…", "Updating data…", "Actualizando datos…", "Mise à jour des données…"], ["Формульні дані відсутні", "Formula data are missing", "Faltan datos de la fórmula", "Données de formule absentes"], ["Не вдалося оновити дані", "Could not update data", "No se pudieron actualizar los datos", "Impossible de mettre à jour les données"], ["Спробувати ще", "Try again", "Reintentar", "Réessayer"], ["Дата · Київ", "Date · Kyiv", "Fecha · Kyiv", "Date · Kyiv"], ["Розрахована фаза Місяця", "Calculated Moon phase", "Fase lunar calculada", "Phase lunaire calculée"], ["зростає", "waxing", "creciente", "croissante"], ["росте", "waxing", "creciente", "croissante"], ["спадає", "waning", "menguante", "décroissante"], ["Місяць: освітлено", "Moon: illuminated", "Luna: iluminada", "Lune : éclairée"], ["Теми дня за календарем джерела:", "Day themes from the source calendar:", "Temas del día según el calendario fuente:", "Thèmes du jour selon le calendrier source :"], ["Перегляньте календарні теми й підстави оцінки дня.", "Explore calendar themes and the reasons for the day score.", "Consulte los temas del calendario y los motivos de la puntuación.", "Consultez les thèmes du calendrier et les raisons de la note."], ["Актуальної оцінки немає. Порожнє значення не означає нейтральний день.", "No current score. A missing value does not mean a neutral day.", "No hay puntuación actual. Un valor ausente no indica un día neutro.", "Aucune note actuelle. Une valeur absente ne signifie pas un jour neutre."], ["Джерело: експертна оцінка", "Source: expert assessment", "Fuente: valoración experta", "Source : évaluation experte"], ["Джерело: формула", "Source: formula", "Fuente: fórmula", "Source : formule"], ["Оцінка недоступна", "Score unavailable", "Puntuación no disponible", "Note indisponible"], ["Експертна оцінка", "Expert assessment", "Valoración experta", "Évaluation experte"], ["Формула джерела", "Source formula", "Fórmula de la fuente", "Formule de la source"], ["▲ Позитивна · ● Нейтральна · ▼ Негативна · ○ Немає оцінки", "▲ Positive · ● Neutral · ▼ Negative · ○ No score", "▲ Positiva · ● Neutra · ▼ Negativa · ○ Sin puntuación", "▲ Positive · ● Neutre · ▼ Négative · ○ Sans note"], ["Три складові дня", "Three parts of the day", "Tres aspectos del día", "Trois aspects du jour"]];
 // FP542 (F1): COPY is sorted once per size and results are memoised per language and locale registry version.
 let trSorted=null,trSize=-1;const trMemo=new Map();
 function tr(text){let value=String(text),lang=window.NRLocale?.language,idx={uk:0,en:1,es:2,fr:3}[lang]||0;if(!idx)return value;if(trSize!==COPY.length){trSorted=[...COPY].sort((a,b)=>b[0].length-a[0].length);trSize=COPY.length;trMemo.clear();}const key=lang+'\u0000'+(window.NRLocale?.version??0)+'\u0000'+value,hit=trMemo.get(key);if(hit!==undefined)return hit;for(const row of trSorted)value=value.split(row[0]).join(row[idx]);const out=window.NRLocale?.text(value)||value;if(trMemo.size>=4000)trMemo.clear();trMemo.set(key,out);return out;}
@@ -274,7 +274,9 @@ function forecastOverview(root,ds){
  back.onclick=()=>list.querySelector('[aria-pressed=true]')?.focus();
  back.hidden=count===1||ds===dates[0];
  const hadBackFocus=document.activeElement===back;
- card.replaceChildren(...information,back);
+ const lineAction=window.SRDayLineView?.forecastAction?.(ds,card.querySelector('[data-forecast-dayline]'));
+ const hadLineFocus=lineAction&&document.activeElement===lineAction;
+ card.replaceChildren(...information,...(lineAction?[lineAction]:[]),back);
  // Keep the existing scoped opinion beside the visible forecast score.
  const scoped=root.querySelector('[data-scoped-opinion]:not([hidden])');
  if(scoped&&card.nextElementSibling!==scoped){
@@ -282,6 +284,7 @@ function forecastOverview(root,ds){
   card.after(scoped);
  }
  if(hadBackFocus)back.focus({preventScroll:true});
+ if(hadLineFocus)lineAction.focus({preventScroll:true});
 
  const currentNodes=[...list.children];
  const known=new Map(currentNodes.map(button=>[button.dataset.day,button]));
@@ -335,6 +338,7 @@ function forecastOverview(root,ds){
  }
  const chart=root.querySelector('[data-forecast-chart]');
  if(chart)chart.hidden=!graph;
+ list.querySelectorAll('button[data-day]').forEach(visibleFirstName);
 }
 function extras(root,ds){
  const route=root.dataset.overview;
@@ -443,6 +447,7 @@ function apply(root,ds,resolved){
  const titleBox=root.querySelector('.nr-o-heading');if(titleBox){titleBox.dataset.referenceTitle='';titleBox.classList.add('sr-reference-title');if(hero.firstElementChild!==titleBox)hero.prepend(titleBox);titleBox.querySelector('h1').textContent=({uk:'Огляд дня',en:'Day overview',es:'Resumen del día',fr:'Aperçu du jour'}[window.NRLocale?.language||'uk']);}
  let details=root.querySelector(':scope > [data-p0-details]');
  if(!details){details=make('details','sr-p0-details');details.dataset.p0Details='';details.append(make('summary','','Детально: джерела, розрахунок і календар'));root.append(details);}
+ const summary=details.querySelector(':scope > summary');
  let signals=root.querySelector(':scope > [data-p0-signals]');
  if(!signals){signals=make('nav','sr-p0-signals');signals.dataset.p0Signals='';signals.setAttribute('aria-label','Три складові дня');for(const [name,selector]of [['Астрономія й NOAA','.nr-o-spaceweather'],['Панчанга','.nr-o-panch-preview'],['Оцінка дня','.nr-o-reasons']]){const btn=make('button','',name);btn.type='button';btn.onclick=()=>{details.open=true;const target=root.querySelector(selector);target?.scrollIntoView({block:'start'});if(target){target.tabIndex=-1;target.focus({preventScroll:true});}};signals.append(btn);}
  const lead=root.querySelector(':scope > [data-space-scene=today]')||root.querySelector(':scope > [data-sky-clock]')||root.querySelector(':scope > .sr-expert-caution')||hero;
@@ -464,7 +469,26 @@ const driverLabel=x=>x.factor==='Kp'?'Геомагнітна складова':x
  else if(resolved.available&&generic&&strongest.length)text='Найбільші внески у формульний розрахунок: '+list(strongest)+'.';
  if(resolved.available&&!text)text='Перегляньте календарні теми й підстави оцінки дня.';
  sentence.textContent=text;
- let chip=hero.querySelector('[data-p0-source]');if(!chip){chip=make('button','sr-p0-source');chip.dataset.p0Source='';chip.type='button';chip.onclick=()=>{details.open=true;root.querySelector('[data-score-source]')?.scrollIntoView({block:'center'});};hero.append(chip);}
+ let provenance=hero;
+ if(document.documentElement.hasAttribute('data-sr-first-screen')){
+  provenance=root.querySelector('[data-p0-source-context]');
+  if(!provenance){provenance=make('div','sr-p0-source-context');provenance.dataset.p0SourceContext='';hero.append(provenance);}
+ }
+ let chip=provenance.querySelector('[data-p0-source]');
+ if(!chip){
+  chip=make('button','sr-p0-source');
+  chip.dataset.p0Source='';
+  chip.type='button';
+  chip.onclick=()=>{
+   details.open=true;
+   const source=details.querySelector('[data-score-source]');
+   const target=source||summary;
+   if(source)source.tabIndex=-1;
+   target.focus({preventScroll:true});
+   target.scrollIntoView({block:'center',behavior:'instant'});
+  };
+  if(provenance===hero)hero.append(chip);else provenance.prepend(chip);
+ }
  let forecast=hero.querySelector('[data-today-forecast]');
  if(!forecast){
   forecast=make('button','sr-today-forecast');
@@ -476,34 +500,59 @@ const driverLabel=x=>x.factor==='Kp'?'Геомагнітна складова':x
    const chosen=hero.querySelector(':scope > label select')?.value;
    if(target&&chosen)pick(target,chosen);
   };
-  chip.after(forecast);
+  (provenance===hero?chip:provenance).after(forecast);
  }
  forecast.textContent=forecastWords()[15];
- chip.textContent=resolved.authority==='expert_pdf'?'Джерело: експертна оцінка':resolved.available?'Джерело: формула календаря':'Оцінка недоступна';
+ chip.textContent=resolved.authority==='expert_pdf'?'Джерело: експертна оцінка':resolved.available?'Джерело: формула':'Оцінка недоступна';chip.dataset.p0Authority=resolved.authority==='expert_pdf'?'expert':resolved.available?'formula':'none';
  const label=hero.querySelector(':scope > label');if(label){label.childNodes.forEach(n=>{if(n.nodeType===3)n.textContent=tr('Дата · Київ');});label.dataset.p0Date='';}
  // Keep the original accessible route heading, while removing duplicate visual chrome.
  const heading=root.querySelector('.nr-o-heading');if(heading&&heading.parentElement!==hero)hero.prepend(heading);
- for(const e of [...hero.children])if(!e.matches('[data-reference-title],[data-p0-date],[data-p0-moon],[data-p0-sentence],.nr-o-verdict,[data-p0-source],[data-today-forecast],[data-share-card],.sr-p0-accessible-heading,[data-placement="after-hero"]'))details.append(e);
+ for(const e of [...hero.children])if(!e.matches('[data-reference-title],[data-p0-date],[data-p0-moon],[data-p0-sentence],.nr-o-verdict,[data-day-verdict],[data-day-why],[data-p0-source-context],[data-p0-source],[data-weather-summary],[data-today-forecast],[data-share-card],[data-p0-feed-state],.sr-p0-accessible-heading,[data-placement="after-hero"]'))details.append(e);
  sentence.textContent=tr(sentence.textContent);chip.textContent=tr(chip.textContent);
- details.querySelector(':scope > summary').textContent=tr('Детально: джерела, розрахунок і календар');
+ if(provenance!==hero)window.NRSpaceWeather?.refreshFirstScreen?.(root);
+ summary.textContent=tr('Детально: джерела, розрахунок і календар');
  signals.querySelectorAll('button').forEach((b,i)=>b.textContent=tr(['Астрономія й NOAA','Панчанга','Оцінка дня'][i]));
- const source=root.querySelector('[data-score-source]');if(source)details.prepend(source);
- for(const e of [...root.children])if(e!==hero&&e!==details&&e!==signals&&!e.matches('.sr-dayline,.nr-o-journey,.nr-o-heading,[data-p0-feed-state],[data-expert-caution],[data-placement="after-hero"]'))details.append(e);// DES-12: a block that declares its own placement (design-v4 NOAA brief) is not moved back and forth.
+ const source=root.querySelector('[data-score-source]');
+ if(source&&summary.nextElementSibling!==source)summary.after(source);
+ for(const e of [...root.children])if(e!==hero&&e!==details&&e!==signals&&!e.matches('.sr-dayline,.nr-o-journey,.nr-o-heading,[data-p0-feed-state],[data-p0-source-context],[data-expert-caution],[data-placement="after-hero"]'))details.append(e);// DES-12: a block that declares its own placement (design-v4 NOAA brief) is not moved back and forth.
 
  // Hide duplicate weather summaries only by putting them in the existing details; no data are dropped.
  const line=root.querySelector('.sr-dayline');if(line){signals.after(line);let explore=line.querySelector('[data-p0-explore]');if(!explore){explore=make('details','sr-p0-explore');explore.dataset.p0Explore='';explore.append(make('summary','','Усі події, час і традиційні образи'));line.append(explore);}
  for(const selector of ['.sr-dl-actions','label','[data-moment]','figure:not([data-solar-profile])','[data-events]','[data-method]','[data-scope]']){const item=line.querySelector(':scope > '+selector);if(item)explore.append(item);}}
  const exp=root.querySelector('[data-p0-explore]>summary');if(exp)exp.textContent=tr('Усі події, час і традиційні образи');
  const journey=root.querySelector('.nr-o-journey');if(journey){(line||signals).after(journey);}if(root.lastElementChild!==details)root.append(details);
- renderSignals(root,ds,resolved);renderTimeline(root,ds);motionControl(document.querySelector('#nrRoute-more')||details);hero.append(root.querySelector('[data-p0-feed-state]'));
+ renderSignals(root,ds,resolved);renderTimeline(root,ds);motionControl(document.querySelector('#nrRoute-more')||details);
+ // On short phones keep the full status immediately after the Sun; the score's
+ // explicit source/freshness stays in the hero. No status text is removed.
+ placeFeedState(root);
  // Route-level disclosures retain their own keyboard and deep-link entry points.
 }
 
+const firstScreenPlot=matchMedia('(min-width:431px), (max-height:932px)');
+function placeFeedState(root){
+ const state=root.querySelector('[data-p0-feed-state]'),sun=root.querySelector(':scope > [data-sky-clock]'),hero=root.querySelector('.nr-o-hero');
+ if(!state||!hero)return;
+ const compact=sun&&firstScreenPlot.matches&&hero.querySelector('[data-today-source]:not(:empty)');
+ const focused=state.contains(document.activeElement)?document.activeElement:null;
+ if(compact){
+  state.dataset.placement='after-hero';
+  if(sun.nextElementSibling!==state)sun.after(state);
+ }else{
+  delete state.dataset.placement;
+  if(state.parentElement!==hero)hero.append(state);
+ }
+ if(focused&&document.activeElement!==focused)focused.focus({preventScroll:true});
+}
+firstScreenPlot.addEventListener('change',()=>document.querySelectorAll('#nrRoute-today [data-overview]').forEach(placeFeedState));
+window.addEventListener('sr:sky-clock-mounted',()=>document.querySelectorAll('#nrRoute-today [data-overview]').forEach(placeFeedState));
 function dataState(result,load=window.__srConsumerLoadState,online=navigator.onLine){
  if(!online)return 'offline';if(load==='loading')return 'loading';if(load==='error')return 'error';
  const state=(result?.formula||result)?.state;return state==='fresh'?'fresh':state==='stale'?'stale':state==='offline'?'offline':state==='invalid'?'invalid':'missing';
 }
+// A11Y: keep the verdict heading one level below the preceding heading (classic shows it straight after h1).
+function fixHeadingLevel(el){if(!el||!/^H[1-6]$/.test(el.tagName))return;const all=[...document.querySelectorAll('h1,h2,h3,h4,h5,h6,[role=heading]')].filter(h=>h.getClientRects().length);const k=all.indexOf(el);if(k<1)return;const lv=h=>Number(h.getAttribute('aria-level')||h.tagName.slice(1));const prev=lv(all[k-1]),own=Number(el.tagName.slice(1));if(own>prev+1){el.setAttribute('role','heading');el.setAttribute('aria-level',String(prev+1));}else if(el.getAttribute('role')==='heading'){el.removeAttribute('role');el.removeAttribute('aria-level');}}
 function feedStatus(root,ds,result){
+ fixHeadingLevel(root.querySelector('.nr-o-verdict .nr-o-label'));
  let box=root.querySelector('[data-p0-feed-state]');if(!box){box=make('div','sr-p0-feed-state');box.dataset.p0FeedState='';root.prepend(box);}
  const state=dataState(result);box.dataset.state=state;root.setAttribute('aria-busy',String(state==='loading'));box.setAttribute('role',state==='error'?'alert':'status');
  const texts={fresh:'Формульні дані актуальні',stale:'Формульні дані застаріли',offline:'Офлайн: перевірте час збережених даних',loading:'Оновлюємо дані…',missing:'Формульні дані відсутні',invalid:'Годинник пристрою розходиться з часом джерела',error:'Не вдалося оновити дані'};
@@ -529,6 +578,8 @@ function currentSignal(live,now=Date.now(),online=navigator.onLine){
  const valid=online&&live?.usable===true&&Number.isFinite(live.kp)&&live.kp>=0&&live.kp<=9&&Number.isFinite(live.expiresAt)&&now<=live.expiresAt;
  return {kp:valid?live.kp:null,provider:valid?live.provider:null,provisional:valid&&!!live.provisional,observedAt:valid?live.expiresAt-(live.provisional?.5:6)*3600000:null};
 }
+// A11Y (WCAG 2.5.3): an accessible name must start with the visible text so voice control can target it.
+function visibleFirstName(b){const vis=b.textContent.replace(/\s+/g,' ').trim(),a=(b.getAttribute('aria-label')||'').replace(/\s+/g,' ');if(vis&&a&&!a.toLowerCase().startsWith(vis.toLowerCase()))b.setAttribute('aria-label',vis+' — '+a);}
 function renderSignals(root,ds,result){
  const buttons=root.querySelectorAll('[data-p0-signals]>button');if(buttons.length!==3)return;
  const info=currentSignal(typeof currentKpAuthority==='function'?currentKpAuthority():null),dl=window.SRDayLineView?.snapshot();
@@ -553,13 +604,14 @@ function renderSignals(root,ds,result){
   if(i===1&&dl?.date===ds&&dl.status==='available')b.append(make('small','',tr('На початок дня')));
   if(i===2)b.append(make('small','',scoreSource));
  });
+ buttons.forEach(visibleFirstName);
 }
 function renderTimeline(root,ds){
  const line=root.querySelector('.sr-dayline');if(!line)return;
  let box=line.querySelector('[data-sky-events]');if(!box){box=make('details','sr-sky-events');box.open=false;box.dataset.skyEvents='';line.querySelector('.sr-dl-story').after(box);}
  const explore=line.querySelector('[data-p0-explore]');if(explore&&box.parentElement!==explore)explore.append(box);
  const snap=window.SRDayLineView?.snapshot();box.replaceChildren();
- if(snap?.date!==ds||snap.status!=='available'){box.hidden=true;return;}box.hidden=false;
+ if(snap?.status!=='available'||(!snap.selectedFromForecast&&snap.date!==ds)){box.hidden=true;return;}box.hidden=false;
  box.append(make('summary','','Хронологія неба'),make('p','sr-dl-muted',tr('Розраховані події')+' · '+({uk:'місцевий час',en:'local time',es:'hora local',fr:'heure locale'}[window.NRLocale?.language||'uk'])));const list=make('ol','');
  const fmt=new Intl.DateTimeFormat(window.NRLocale?.locale||'uk-UA',{timeZone:snap.zone,day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
  for(const e of snap.events){const li=make('li',''),time=make('time','',fmt.format(new Date(e.at)));time.dateTime=e.at;li.append(time);const label=make(Number.isInteger(e.index)?'button':'span','',e.label);if(label.tagName==='BUTTON'){label.type='button';label.onclick=()=>window.SRDayLineView.openEvent(e.index);}li.append(label);list.append(li);}box.append(list);
