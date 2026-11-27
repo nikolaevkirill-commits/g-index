@@ -226,7 +226,7 @@ let base;
       }
     } catch(error) {
       const tabs=Object.fromEntries(await Promise.all(observations.map(async(probe,index)=>[['requester','main','journal'][index],await probe()])));
-      const diagnostics={trigger,restart,lifecycle,reload_steps:reloadSteps,tabs,registration:await bounded(page.evaluate(async()=>{const r=await navigator.serviceWorker.getRegistration();return {waiting:r.waiting?.state,active:r.active?.state,requested:window.__nrUpdateRequested===true,coordinator:!!window.NRUpdateCoordinator,preparation:window.NRUpdateCoordinator?.diagnostics?.(),reloading:window._swReloading}})).catch(e=>({error:String(e)})),workers:[]};
+      const diagnostics={trigger,restart,lifecycle,reload_steps:reloadSteps,tabs,registration:await bounded(page.evaluate(async()=>{const r=await navigator.serviceWorker.getRegistration();return {waiting:r.waiting?.state,active:r.active?.state,requested:window.__nrUpdateRequested===true,activationMessages:window.__nrUpdateTicket?.sent,coordinator:!!window.NRUpdateCoordinator,preparation:window.NRUpdateCoordinator?.diagnostics?.(),reloading:window._swReloading}})).catch(e=>({error:String(e)})),workers:[]};
       for(const worker of ctx.serviceWorkers())try{diagnostics.workers.push(await bounded(worker.evaluate(()=>({version:typeof CACHE_VERSION==='undefined'?null:CACHE_VERSION,pending:[...(self.__upgradePending||[])],events:self.__upgradeEvents,skipWaiting:self.__upgradeSkipWaiting,now:Date.now()}))))}catch(e){diagnostics.workers.push({error:String(e)})}
       fs.writeFileSync(path.join(out,'FAILURE.json'),JSON.stringify(diagnostics,null,2));console.error('CSS_UPGRADE_DIAGNOSTICS',JSON.stringify(diagnostics));throw error;
     }

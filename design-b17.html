@@ -3699,6 +3699,8 @@ function pwaDismiss() {
 
 function pwaReload() {
   if (_swReg && _swReg.waiting) {
+    const ticket = {worker:_swReg.waiting, sent:0};
+    window.__nrUpdateTicket = ticket;
     window.__nrUpdateRequested = true;
     const bar = document.getElementById('pwaUpdateBar');
     if (bar) {
@@ -3718,18 +3720,21 @@ function pwaReload() {
     const waiting = _swReg.waiting;
     const controller = window.navigator?.serviceWorker?.controller;
     const coordinator = window.NRUpdateCoordinator;
-    const canSend = () => window.__nrUpdateRequested && _swReg?.waiting === waiting;
+    const canSend = () => window.__nrUpdateTicket === ticket && _swReg?.waiting === waiting;
 
     function requestActivation() {
       if (!canSend()) return;
-      try { waiting.postMessage({ type: 'SKIP_WAITING' }); }
+      try { waiting.postMessage({ type: 'SKIP_WAITING' }); ticket.sent++; }
       catch (error) { window.NRDiagnostics?.record('sw.activation_message', 'recoverable'); }
     }
 
     async function prepareAndActivate() {
       // A waiting worker can remain installed after the network comes back.
       // Retry the same worker with a fresh cross-tab drain on each attempt.
-      for (let attempt = 0; attempt < 3 && canSend(); attempt++) {
+      const started = Date.now();
+      // Renew peer quiescence throughout the bounded UI attempt. A preparation already
+      // in progress may complete later and still activate this exact waiting worker.
+      while (canSend() && Date.now()-started < 10000) {
         let ready = false;
         try {
           ready = await coordinator.prepare();
@@ -3739,7 +3744,7 @@ function pwaReload() {
         }
         // A failed drain must renew the pause before queued peer reads resume.
         // Wait only after sending an activation message, to let it take effect.
-        if (ready && attempt < 2 && canSend()) await new Promise(resolve => setTimeout(resolve, 1500));
+        if (ready && canSend()) await new Promise(resolve => setTimeout(resolve, 1500));
       }
     }
 
@@ -3749,8 +3754,9 @@ function pwaReload() {
     // Only controllerchange reloads the requesting tab. Leave the current
     // page and its cache available if the browser does not complete activation.
     setTimeout(() => {
-      if (!window.__nrUpdateRequested || window.navigator?.serviceWorker?.controller !== controller) return;
-      window.__nrUpdateRequested = false;
+      if (window.__nrUpdateTicket !== ticket || window.navigator?.serviceWorker?.controller !== controller) return;
+      // Re-enable retry without discarding consent to activate this worker. A timer
+      // cannot determine whether the browser will deliver controllerchange later.
       const label = bar?.querySelector('span'), button = bar?.querySelector('button');
       if (label) label.textContent = ({uk:'Оновлення ще не активовано. Можна спробувати ще раз.',en:'The update is not active yet. You can try again.',es:'La actualización aún no está activa. Puedes reintentarlo.',fr:'La mise à jour n’est pas encore active. Vous pouvez réessayer.'})[window.NRLocale?.language || 'uk'];
       if (button) button.disabled = false;
@@ -5005,7 +5011,7 @@ if ('serviceWorker' in navigator) {
             return;
           }
           // A different tab may activate the worker. Keep this tab and its unsaved inputs intact.
-          if (!window.__nrUpdateRequested) {
+          if (!window.__nrUpdateRequested || window.__nrUpdateTicket?.worker !== navigator.serviceWorker.controller) {
             const bar = document.getElementById('pwaUpdateBar');
             if (bar) { bar.style.display = 'flex'; const button = bar.querySelector('button'); if (button) button.disabled = false; }
             return;

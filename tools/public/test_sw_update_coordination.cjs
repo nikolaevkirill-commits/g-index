@@ -62,6 +62,53 @@ async function assertUpdateKeepsPeerQuiet(entry) {
   assert.deepEqual(readStarts,[0],entry+' must not let queued reads start before activation');
 }
 
+async function assertLateHandoff(entry) {
+  const html=fs.readFileSync(path.resolve(__dirname,'../..',entry),'utf8').replace(/\r\n/g,'\n');
+  const a=html.indexOf('function pwaReload() {');
+  const update=html.slice(a,html.indexOf('\n}',a)+2);
+  const b=html.indexOf("navigator.serviceWorker.addEventListener('controllerchange', () => {");
+  assert(b>=0);
+  const observe=html.slice(b,html.indexOf('\n        });',b)+12);
+  let now=0,resolvePreparation;
+  const timeouts=[];
+  function createTab(){
+    const button={disabled:false},label={textContent:''};
+    let reloads=0,activationMessages=0,onChange;
+    const oldWorker={};
+    const serviceWorker={controller:oldWorker,addEventListener:(name,fn)=>{onChange=fn}};
+    const waiting={postMessage(message){assert.equal(message.type,'SKIP_WAITING');activationMessages++}};
+    const reg={waiting};
+    const window={navigator:{serviceWorker},location:{reload(){reloads++}},
+      NRUpdateCoordinator:{prepare:()=>new Promise(resolve=>{resolvePreparation=resolve})}};
+    const bar={style:{},querySelector:s=>s==='button'?button:label};
+    const context=vm.createContext({window,navigator:window.navigator,_swReg:reg,_swControlledAtBoot:true,
+      document:{getElementById:()=>bar},Date:{now:()=>now},
+      setTimeout:(fn,delay)=>{timeouts.push({fn,delay});}});
+    vm.runInContext(observe,context);
+    vm.runInContext(update,context);
+    return {context,reg,button,waiting,oldWorker,serviceWorker,onChange:()=>onChange(),
+      reloads:()=>reloads,messages:()=>activationMessages};
+  }
+  const requester=createTab(),peer=createTab();
+  vm.runInContext('pwaReload()',requester.context);
+  now=10001;
+  timeouts.find(timer=>timer.delay===10000).fn();
+  assert.equal(requester.button.disabled,false,'retry must be available');
+  assert.equal(requester.reloads(),0,'elapsed time cannot confirm worker activation');
+  resolvePreparation(true);
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(requester.messages(),1,entry+' must send when preparation completes after the retry timer');
+  peer.serviceWorker.controller=requester.waiting;peer.onChange();
+  assert.equal(peer.reloads(),0,'unrelated tab must keep its draft');
+  requester.reg.waiting=null;requester.serviceWorker.controller=requester.waiting;requester.onChange();
+  assert.equal(requester.reloads(),1,'requesting tab must apply the selected worker even after the timer');
+  requester.onChange();
+  assert.equal(requester.reloads(),1,'duplicate change must not reload twice');
+  const superseded=createTab();vm.runInContext('pwaReload()',superseded.context);
+  superseded.serviceWorker.controller={};superseded.onChange();
+  assert.equal(superseded.reloads(),0,'an unrelated worker must not consume this request');
+}
+
 (async()=>{
 const wind='https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json';
 const proxy='https://corsproxy.io/?url='+encodeURIComponent(wind);
@@ -89,7 +136,7 @@ assert.equal(await updating.NRUpdateCoordinator.prepare(),true,'stalled NOAA rea
 assert.equal(attempts,1,'repeat read must wait for the hold to expire');
 assert.equal(await inFlight,'resumed NOAA read');
 assert.equal(attempts,2);
-for (const entry of ['classic.html','index.html','design-b17.html']) await assertUpdateKeepsPeerQuiet(entry);
+for (const entry of ['classic.html','index.html','design-b17.html']) {await assertUpdateKeepsPeerQuiet(entry);await assertLateHandoff(entry);}
 console.log('PASS update retries: three entries preserve the peer pause across a missed drain');
 console.log('PASS coordination: peer NOAA drain; local and NOAA proxy reads held; POST/unrelated external unaffected; abort; bounded release; busy peer refuses activation');
 })().catch(e=>{console.error(e);process.exitCode=1});
