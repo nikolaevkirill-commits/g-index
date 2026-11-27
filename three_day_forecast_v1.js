@@ -617,7 +617,8 @@
     else if(nakChange)headline=fill(p.toNak,{t:clock.format(nakChange.ms),n:label('nakshatra',nakChange.to)});
     else if(tithiChange)headline=fill(p.toTithi,{t:clock.format(tithiChange.ms),x:tithiText(tithiChange.to,p,lang)});
     else if(inside.length)headline=fill(p.at,{t:clock.format(inside[0].at),e:inside[0].label});
-    else{headline=p.field+': '+(row?p[kpClass(row.kp)]:kp&&kp.stale?p.staleShort:p.noField);item.dataset.fieldHeadline='';}
+    else if(row){headline=p.field+': '+p[kpClass(row.kp)];item.dataset.fieldHeadline='';}
+    else headline='';
     headline=headline.charAt(0).toUpperCase()+headline.slice(1);
     for(const e of changes)moonChanges.push(e);
     const head=node('p','sr-ds-time');
@@ -650,7 +651,9 @@
     const sLine=node('p','sr-ds-sky');sLine.append(node('b','',w.sky+': '));
     sLine.append(inside.length?inside.map(e=>clock.format(e.at)+' '+e.label).join(' · '):w.quiet);
     for(const note of skyNotes[index])sLine.append(node('span','sr-ds-change',note));
-    item.append(head,title,kpLine,mLine,sLine);
+    item.append(head);
+    if(headline)item.append(title);
+    item.append(kpLine,mLine,sLine);
     if(expert.childNodes.length)item.append(expert);
     if(isToday&&b.to<=now)past.push(item);else rows.push(item);
    });
@@ -676,13 +679,18 @@
    else if(peak&&peak.row.kp>=3)news=fill(p.headBusy,{d:dayWord,c:p[kpClass(peak.row.kp)],p:partOf(peak.b.from)});
    else if(peak&&!partial)news=fill(p.headCalm,{d:dayWord})+(firstNak?'; '+fill(p.headMoon,{t:clock.format(firstNak.ms),n:label('nakshatra',firstNak.to)}):'');
    else news=dayWord+(firstNak?': '+fill(p.headMoon,{t:clock.format(firstNak.ms),n:label('nakshatra',firstNak.to)}):'');
-   const fieldText=!kp?w.loadingKp:kp.stale?p.staleShort:!kpOk||!peak?p.noField:partial?p.partial+' · '+p[kpClass(peak.row.kp)]+' · '+p.knownPeak+' '+number.format(peak.row.kp):peak.row.kp<3?p.quietAll:(stormLevel(peak.row)?fill(p.stormHead,{n:p.stormName[stormLevel(peak.row)],g:'G'+stormLevel(peak.row)}):p[kpClass(peak.row.kp)])+', '+fill(p.peakAt,{v:number.format(peak.row.kp),t:clock.format(peak.b.slot)+'–'+clock.format(peak.b.slot+SLOT)});
+   const fieldText=!kpOk||!peak?null:partial?p.partial+' · '+p[kpClass(peak.row.kp)]+' · '+p.knownPeak+' '+number.format(peak.row.kp):peak.row.kp<3?p.quietAll:(stormLevel(peak.row)?fill(p.stormHead,{n:p.stormName[stormLevel(peak.row)],g:'G'+stormLevel(peak.row)}):p[kpClass(peak.row.kp)])+', '+fill(p.peakAt,{v:number.format(peak.row.kp),t:clock.format(peak.b.slot)+'–'+clock.format(peak.b.slot+SLOT)});
    const moonText=panch===null?w.loading:panch.error?w.noPanch:(moonChanges.filter(e=>e.kind!=='yoga').map(e=>e.kind==='nakshatra'?fill(p.toNak,{t:clock.format(e.ms),n:label('nakshatra',e.to)}):fill(p.toTithi,{t:clock.format(e.ms),x:tithiText(e.to,p,lang)})).join('; ')||(tithiText(panch.initial.tithi,p,lang)+', '+fill(p.inNakShort,{n:label('nakshatra',panch.initial.nakshatra)})));
    const rise=sky.find(e=>e.label===w.sunrise),set=sky.find(e=>e.label===w.sunset);
    const sunText=rise&&set?fill(p.sunDay,{a:clock.format(rise.at),b:clock.format(set.at)}):p.sunNone;
    const lines=node('ul','sr-ds-summary-lines');
-   for(const [k,v] of [[p.field,fieldText],[p.moon,moonText],[p.sun,sunText]]){const li=node('li');li.append(node('b','',k+': '),v);lines.append(li);}
+   for(const [k,v] of [[p.field,fieldText],[p.moon,moonText],[p.sun,sunText]]){
+    if(v===null)continue;
+    const li=node('li');li.append(node('b','',k+': '),v);lines.append(li);
+   }
    const parts=[node('h4','sr-ds-summary-title',p.summary),node('p','sr-ds-news',news.charAt(0).toUpperCase()+news.slice(1)),lines];
+   if(!fieldText)parts.splice(2,0,kpState);
+   else where.after(kpState);
    if(covered.length>1){
     const NS='http://www.w3.org/2000/svg',W=300,H=86,top=8,base=62,n=blocks.length,bw=W/n;
     const svg=document.createElementNS(NS,'svg');svg.setAttribute('viewBox','0 0 '+W+' '+H);svg.setAttribute('class','sr-ds-chart');svg.setAttribute('role','img');

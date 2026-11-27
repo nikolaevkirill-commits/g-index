@@ -296,6 +296,11 @@ async function setup(browser,base,{width=390,height=width>900?920:844,lang='uk',
      const activeRows=await timeline.locator('li[data-slot][data-kp]').count();
      assert.equal(activeRows,state==='stale'?0:8);
      assert(await status.isVisible());
+     if(state==='stale'){
+      assert.equal(await timeline.locator('.sr-ds-summary .sr-ds-kpstate').count(),1);
+      assert.equal(await timeline.locator('.sr-ds-block .sr-ds-kp').allTextContents().then(texts=>texts.filter(t=>!t.endsWith('—')).length),0);
+      assert.equal(await timeline.locator('.sr-ds-block .sr-ds-headline').filter({hasText:/NOAA|магнітне поле/i}).count(),0);
+     }
      await p.locator(active+tabSelector+'"7"]').click();
      assert.equal(await jump.isVisible(),false);
      assert.equal(await timeline.isVisible(),false);
