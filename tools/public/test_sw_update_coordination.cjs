@@ -4,7 +4,7 @@ const code=fs.readFileSync(path.resolve(__dirname,'../../sw_update_coordination_
 class Channel{constructor(name){this.name=name;this.onmessage=null;if(!channels.has(name))channels.set(name,new Set());channels.get(name).add(this)}postMessage(data){for(const peer of channels.get(this.name))if(peer!==this)queueMicrotask(()=>peer.onmessage?.({data}))}}
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
 function page(scope, fetch, clock={Date,setTimeout}) {
-  const window={location:{href:'https://test.invalid/'+scope+'/index.html',origin:'https://test.invalid'},fetch};
+  const window={AbortController,AbortSignal,location:{href:'https://test.invalid/'+scope+'/index.html',origin:'https://test.invalid'},fetch};
   const context=vm.createContext({window,URL,Date:clock.Date,Math,Promise,Set,Map,DOMException,
     setTimeout:clock.setTimeout,BroadcastChannel:Channel});
   vm.runInContext(code,context);
@@ -77,6 +77,18 @@ const abort=new AbortController();const cancelled=b.fetch('/cancelled',{signal:a
 await wait(170);assert.equal(finished,false,'pending peer read must prevent early activation');finish({ok:true});await slow;assert.equal(await preparing,true);assert(Date.now()-started>=220);
 await Promise.all([queued,queuedProxy]);assert.equal(reads,1);assert.equal(noaa,2);assert(Date.now()-started<4500,'read gate must expire');
 const c=page('b',()=>new Promise(()=>{})),d=page('b',async()=>({ok:true}));c.fetch('/never');const rejected=await d.NRUpdateCoordinator.prepare();assert.equal(rejected,false,'busy peer must fail preparation rather than claim ready');
+let attempts=0;
+const interrupted=page('stalled-noaa',async(input,init)=>{
+ attempts++;
+ if(attempts===1)await new Promise((_,reject)=>init.signal.addEventListener('abort',()=>reject(init.signal.reason),{once:true}));
+ return 'resumed NOAA read';
+});
+const updating=page('stalled-noaa',async()=>({ok:true}));
+const inFlight=interrupted.fetch(wind);
+assert.equal(await updating.NRUpdateCoordinator.prepare(),true,'stalled NOAA read must yield to activation');
+assert.equal(attempts,1,'repeat read must wait for the hold to expire');
+assert.equal(await inFlight,'resumed NOAA read');
+assert.equal(attempts,2);
 for (const entry of ['classic.html','index.html','design-b17.html']) await assertUpdateKeepsPeerQuiet(entry);
 console.log('PASS update retries: three entries preserve the peer pause across a missed drain');
 console.log('PASS coordination: peer NOAA drain; local and NOAA proxy reads held; POST/unrelated external unaffected; abort; bounded release; busy peer refuses activation');

@@ -3,8 +3,17 @@
 if(host.NRUpdateCoordinator)return;
 const HOLD_MS=3500,WAIT_MS=2000,active=new Set();
 const nativeFetch=host.fetch?.bind(host),scope=new URL('./',host.location.href).pathname;
-const sender=Math.random().toString(36).slice(2);let channel=null,until=0,current=null;
-const pause=()=>{until=Math.max(until,Date.now()+HOLD_MS)};
+const sender=Math.random().toString(36).slice(2);let channel=null,until=0,current=null,lastPreparation=null;
+const interruptibleReads=new Set();
+function pause(){
+ until=Math.max(until,Date.now()+HOLD_MS);
+ // A stalled NOAA GET can otherwise exhaust every drain attempt on a slow connection.
+ // Give it a grace period, then resume it after the update pause if the caller still needs it.
+ if(interruptibleReads.size) setTimeout(()=>{
+  if(Date.now()>=until)return;
+  for(const controller of interruptibleReads)controller.abort();
+ },1200);
+}
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const post=data=>{try{channel?.postMessage({...data,sender})}catch(_){}};
 const NOAA_ORIGINS=new Set([
@@ -31,9 +40,30 @@ function updateRead(input,init){
 if(nativeFetch)host.fetch=function(input,init){
  // Even a cross-origin GET can wake the controller before Chrome falls back to the network.
  if(!updateRead(input,init))return nativeFetch(input,init);
- const run=()=>{const p=nativeFetch(input,init);active.add(p);p.then(()=>active.delete(p),()=>active.delete(p));return p};
- if(Date.now()>=until)return run();
- return (async()=>{const signal=init?.signal||input?.signal;while(Date.now()<until){if(signal?.aborted)throw signal.reason||new DOMException('Aborted','AbortError');await sleep(Math.min(50,until-Date.now()));}if(signal?.aborted)throw signal.reason||new DOMException('Aborted','AbortError');return run()})();
+ const signal=init?.signal||input?.signal;
+ const url=new URL(typeof input==='string'||input instanceof URL?String(input):input.url,host.location.href);
+ const cancellable=url.origin!==host.location.origin&&host.AbortController&&host.AbortSignal?.any;
+ async function run(){
+  while(Date.now()<until){
+   if(signal?.aborted)throw signal.reason;
+   await sleep(Math.min(50,until-Date.now()));
+  }
+  if(signal?.aborted)throw signal.reason;
+  const controller=cancellable?new host.AbortController():null;
+  const options=controller?{...init,signal:signal?host.AbortSignal.any([controller.signal,signal]):controller.signal}:init;
+  const request=nativeFetch(input,options);
+  active.add(request);
+  if(controller)interruptibleReads.add(controller);
+  try{return await request;}
+  catch(error){
+   if(!controller?.signal.aborted||signal?.aborted)throw error;
+  }finally{
+   active.delete(request);
+   if(controller)interruptibleReads.delete(controller);
+  }
+  return run();
+ }
+ return run();
 };
 async function drain(){const end=Date.now()+WAIT_MS;while(active.size&&Date.now()<end)await sleep(20);return active.size===0}
 try{
@@ -60,7 +90,10 @@ async function prepare(){
   }
   return false;
  })().finally(()=>{if(current===job)current=null});
- return job.promise;
+ return job.promise.then(ready=>{
+  lastPreparation={ready,activeReads:active.size,busyPeers:[...job.peers.values()].filter(value=>!value).length};
+  return ready;
+ });
 }
-host.NRUpdateCoordinator=Object.freeze({prepare});
+host.NRUpdateCoordinator=Object.freeze({prepare,diagnostics:()=>lastPreparation});
 })(window);
