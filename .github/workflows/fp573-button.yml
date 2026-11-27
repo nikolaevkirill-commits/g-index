@@ -1,0 +1,27 @@
+name: FP573 button diagnostics
+on:
+  push:
+    branches: [codex/fp573-button-190b78f]
+permissions:
+  contents: read
+jobs:
+  button:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    strategy:
+      fail-fast: false
+      matrix:
+        repetition: [1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: 190b78fe84c9fe51036752aac313cbfffa0c44e8
+          persist-credentials: false
+      - run: test "$(git rev-parse HEAD)" = "190b78fe84c9fe51036752aac313cbfffa0c44e8"
+      - uses: actions/setup-node@v4
+        with: {node-version: '24'}
+      - run: npm install --no-save --package-lock=false playwright@1.62.1
+      - run: npx playwright install --with-deps chromium
+      - run: node tools/public/test_sw_update_coordination.cjs
+      - run: |
+          for trial in 1 2 3; do node tools/public/verify_css_upgrade.cjs --button || exit 1; done
