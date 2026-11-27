@@ -270,20 +270,21 @@ async function setup(browser,base,{width=390,height=width>900?920:844,lang='uk',
      await tapVisible(p.locator(active+tabSelector+'"1"]'));
      const jump=p.locator(route+'[data-day-three-jump]');
      const timeline=p.locator(route+'[data-day-three]');
-     const status=timeline.locator('[data-day-three-noaa]');
+     const status=timeline.locator('.sr-ds-kpstate');
      await jump.waitFor({state:'visible'});
      assert.equal(await p.locator(route+'[data-hourly-toggle]').count(),0);
      await tapVisible(jump);
      await p.waitForFunction(sel=>document.activeElement===document.querySelector(sel),route+'[data-day-three]');
      await p.waitForFunction(({sel,text})=>document.querySelector(sel)?.textContent.includes(text),{
-      sel:route+'[data-day-three-noaa]',text:state==='stale'?'Квитанція NOAA застаріла':'NOAA, отримано'
+      sel:route+'.sr-ds-kpstate',text:state==='stale'?'квитанція NOAA застаріла':'NOAA'
      });
-     assert.equal(await timeline.locator('ol > li').count(),9);
-     assert.equal(await timeline.locator('dt').count(),27);
-     assert.match(await timeline.locator('.sr-day-three-place').textContent(),/^Київ · типове місце · .+ · Europe\/Kyiv$/);
-     assert.match(await timeline.innerText(),/Тітхі/);
-     assert.match(await timeline.innerText(),/Схід Сонця/);
-     const activeRows=await timeline.locator('[data-slot-noaa]').filter({hasText:/^Kp /}).count();
+     await p.waitForFunction(sel=>document.querySelector(sel)?.dataset.stripState==='ready',route+'[data-day-three]');
+     assert.equal(await timeline.locator('li[data-slot]').count(),9);
+     assert.equal(await timeline.locator('li[data-slot] > :is(.sr-ds-kp,.sr-ds-jyotish,.sr-ds-sky)').count(),27);
+     assert.match(await timeline.locator('.sr-ds-place').textContent(),/Київ · типове місце · Europe\/Kyiv$/);
+     assert.match(await timeline.textContent(),/тітхі/i);
+     assert.match(await timeline.textContent(),/схід Сонця/i);
+     const activeRows=await timeline.locator('li[data-slot][data-kp]').count();
      assert.equal(activeRows,state==='stale'?0:8);
      assert(await status.isVisible());
      await p.locator(active+tabSelector+'"7"]').click();

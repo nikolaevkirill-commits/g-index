@@ -30,6 +30,12 @@ const copy={
  nowTick:['зараз','now','ahora','maintenant'],
  example:['Київ · типове місце','Kyiv · default location','Kyiv · lugar predeterminado','Kyiv · lieu par défaut'],
  open:['Небо →','Sky →','Cielo →','Ciel →'],
+ nextSky:['Найближча подія на небі','Next event in the sky','Próximo evento en el cielo','Prochain événement dans le ciel'],
+ evRise:['схід Сонця','sunrise','salida del Sol','lever du Soleil'],
+ evSet:['захід Сонця','sunset','puesta del Sol','coucher du Soleil'],
+ evNoon:['полудень','solar noon','mediodía solar','midi solaire'],
+ evMoonRise:['схід Місяця','moonrise','salida de la Luna','lever de la Lune'],
+ evMoonSet:['захід Місяця','moonset','puesta de la Luna','coucher de la Lune'],
  motion:['Для програвання ввімкніть анімації. Час можна обрати вручну.','Turn on motion for playback. You can still choose a time.','Activa las animaciones para reproducir. Puedes elegir la hora.','Activez les animations pour lire la journée. Vous pouvez choisir l’heure.'],
  chooseCity:['Обрати місто','Choose a city','Elegir una ciudad','Choisir une ville'],
  yourPlace:['Ваше місце','Your place','Tu ubicación','Votre lieu'],
@@ -204,6 +210,8 @@ function nextSkyEvent(loc,now){
   const match=Astronomy.SearchRiseSet(body,observer,direction,start,1.5);
   if(match&&+match.date>now)candidates.push({at:+match.date,kind});
  }
+ const noon=Astronomy.SearchHourAngle('Sun',observer,0,start)?.time;
+ if(noon&&+noon.date>now)candidates.push({at:+noon.date,kind:'evNoon'});
  const lunar=window.SkyRhythmLunar;
  if(lunar?.available()){
   const state=lunar.at(now);
@@ -261,6 +269,22 @@ function renderFirstSky(s,orbit,x,y){
  button.setAttribute('aria-label',button.firstElementChild.textContent+' · '+time.textContent+' · '+t('open'));
 }
 
+function paintNextSky(panel,s,loc){
+ const button=panel.querySelector('[data-time-open]');
+ // A moment chosen by the person stays authoritative: the nearest event is offered only in live mode.
+ const next=s.mode==='now'?nextSkyEvent(loc,Date.now()):null;
+ button.replaceChildren(document.createTextNode(t('open')));
+ if(!next){delete button.dataset.p0NextSky;delete button.dataset.at;button.removeAttribute('aria-label');return;}
+ const time=document.createElement('time');time.dateTime=new Date(next.at).toISOString();time.textContent=timeText(next.at,s.zone);
+ const glyph={sunriseEvent:'☀↑',sunsetEvent:'☀↓',evNoon:'☀▲',moonriseEvent:'☾↑',moonsetEvent:'☾↓'}[next.kind]||'';
+ const long=document.createElement('span');long.className='sr-time-next-long';long.textContent=' '+t(next.kind);
+ const short=document.createElement('span');short.className='sr-time-next-short';short.setAttribute('aria-hidden','true');short.textContent=glyph+' ';
+ const line=document.createElement('small');line.className='sr-time-next';line.append(short,time,long);
+ button.append(line);
+ button.toggleAttribute('data-p0-next-sky',!matchMedia('(max-width:600px)').matches);button.dataset.at=time.dateTime;
+ const city=placeLabel(loc);
+ button.setAttribute('aria-label',t('open').replace(' →','')+'. '+t('nextSky')+(language()===3?' : ':': ')+time.textContent+' '+t(next.kind)+' · '+city);
+}
 function renderToday(s){
  const loc=place(true), panel=today, svg=panel.querySelector('svg'), key=[s.start,s.end,s.zone,loc.lat,loc.lon,loc.elevation,language()].join('|');
  try{
@@ -313,7 +337,7 @@ function renderToday(s){
  panel.querySelector('h2').textContent=t('title');
  // FP569f (R-08): a saved place without a name is «Ваше місце», not an IANA identifier; the zone stays in the controls line.
  panel.querySelector('[data-time-place]').textContent=placeLabel(loc);
- panel.querySelector('[data-time-open]').textContent=t('open');
+ paintNextSky(panel,s,loc);
  updateControls(s);
 }
 function mount(){
@@ -323,7 +347,7 @@ function mount(){
  today=document.createElement('section');today.className='sr-time-sun';today.dataset.skyClock='';today.dataset.placement='after-hero';
  today.setAttribute('translate','no');today.setAttribute('aria-labelledby','srTimeSunTitle');
  today.innerHTML='<div class="sr-time-stage"><div class="sr-time-title"><div><h2 id="srTimeSunTitle"></h2><small data-time-place></small></div><button type="button" data-time-open></button></div><svg viewBox="0 0 390 106" role="img"><defs><clipPath id="srTimeAbove"><rect width="390" height="51"/></clipPath><radialGradient id="srTimeGlow"><stop stop-color="#fff3bd" stop-opacity=".95"/><stop offset=".38" stop-color="#ffbd56" stop-opacity=".65"/><stop offset="1" stop-color="#ff8d36" stop-opacity="0"/></radialGradient><radialGradient id="srTimeDisc" cx="34%" cy="32%"><stop stop-color="#fffdf0"/><stop offset=".64" stop-color="#ffe691"/><stop offset="1" stop-color="#ffa840"/></radialGradient></defs><line x1="18" y1="51" x2="372" y2="51"/><path data-time-orbit class="sr-time-orbit-night"/><path data-time-orbit clip-path="url(#srTimeAbove)" class="sr-time-orbit-day"/><path data-time-orbit data-time-progress pathLength="1" clip-path="url(#srTimeAbove)" class="sr-time-orbit-progress"/><g data-time-nowtick style="display:none"><line y1="-4" y2="58" class="sr-time-now-line"/><text y="-8" text-anchor="middle" class="sr-time-now-label"></text></g><g data-time-sun><circle r="28" class="sr-time-halo" fill="url(#srTimeGlow)"/><circle r="11" class="sr-time-disc"/><circle r="4" class="sr-time-night-cursor"/></g></svg><p data-time-alt></p></div>';
- today.querySelector('[data-time-open]').onclick=()=>{if(!place())exampleChosen=true;window.fp434Go('panch',true);};
+ today.querySelector('[data-time-open]').onclick=e=>{if(!place())exampleChosen=true;const at=e.currentTarget.dataset.at;if(at)selectMoment(at);window.fp434Go('panch',true);};
  updateControls=controls(today);
  // FP569d: verdict and score come first (owner decision 01.11); the Sun clock follows the day overview card.
  const hero=overview.querySelector(':scope > .nr-o-hero');

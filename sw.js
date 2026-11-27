@@ -2,7 +2,7 @@ importScripts('./runtime_diagnostics_v1.js','./civil_time_v1.js?v=fp569f-global'
 // G-Index service worker. Navigations, HTML, JS and data (.json/.jsonl/.csv) are network-first with a
 // cached fallback. Versioned packed scripts and other static assets are cache-first.
 // Bump CACHE_VERSION whenever index.html or a cached shell asset changes.
-const CACHE_VERSION = 'fp572-mobile-sun-preview-reflow-20261127';
+const CACHE_VERSION = 'fp573-day-strip-20261126';
 const CACHE_PREFIX = 'gindex-'; // G-Index cache namespace; do not remove the prefix.
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${CACHE_VERSION}`;
 const DATA_CACHE = `${CACHE_PREFIX}data-${CACHE_VERSION}`;
@@ -97,7 +97,7 @@ const SHELL_ASSETS = [
   './civil_time_v1.js?v=fp569f-global',
   './sw_update_coordination_v1.js?v=fp569n-handoff',
   './day_context_v1.js?v=mobile-clarity1',
-  './sky_time_v1.js?v=fp572-mobile-sun-preview',
+  './sky_time_v1.js?v=fp573-next-sky',
   './sky_live_loader_v1.js?v=fp569r-cosmos',
   './sky_live_v1.js?v=fp569r-cosmos',
   './sky_ovation_v1.js?v=1',
@@ -120,7 +120,7 @@ const SHELL_ASSETS = [
   './personal_dayline_ui.js',
   './meeus_core_v1.js',
   './lunar_core_v1.js?v=fp572-lunar-display',
-  './dayline_view_v1.js?v=fp572-lunar',
+  './dayline_view_v1.js?v=fp573-names',
   './dayline_view_v1.css',
   './dayline_i18n_v1.js',
   './dayline_adapter_v1.js?v=fp572-lunar',
@@ -149,13 +149,13 @@ const SHELL_ASSETS = [
   './classic.html',
   './preview-v4/desktop_v1.css?v=d1',
   './preview-v4/atlas_motion.css?v=v7-2',
-  './preview-v4/consumer_overview_v1.js?v=fp569o-daily',
+  './preview-v4/consumer_overview_v1.js?v=fp573-terms',
   './preview-v4/core_runtime_v1.js?v=fp572-hourly-receipt',
   './preview-v4/design_candidate.css?v=v7-3',
   './preview-v4/design_candidate.js',
   './preview-v4/design_scale.js',
   './preview-v4/locale_bridge_v1.js?v=fp569r-release',
-  './preview-v4/locale_overview_v1.js?v=fp569m',
+  './preview-v4/locale_overview_v1.js?v=fp573-terms',
   './preview-v4/product_shell_v1.js?v=fp572-empty-journal-20261124',
   './preview-v4/design_b/integration.css?v=v7-2',
   './preview-v4/design_b/palette/palette.css?v=v7-2',
@@ -187,12 +187,12 @@ const SHELL_ASSETS = [
   './preview-v4/design_b/scenes/scenes.js?v=fp569c-scenes-provenance',
   './preview-v4/sky_scene_v1.js?v=fp572-sky',
   './preview-v4/sky_scene_v1.css?v=fp569r-reaudit',
-  './preview-v4/app_today_v1.js?v=fp569q-audit',
+  './preview-v4/app_today_v1.js?v=fp573-compact',
   './preview-v4/app_today_v1.css?v=app1',
   './natal_sky_v1.js?v=fp572-natal',
   './day_verdict_v1.js?v=fp569r-fix',
   './space_scene_gl_v1.js?v=fp569r-noaa-locales',
-  './space_scene_v1.js?v=fp569r-noaa-locales',
+  './space_scene_v1.js?v=fp573-compact',
   './earth_bluemarble_v1.webp?v=fp569q',
   './week_ahead_v1.js?v=fp569r-preaudit',
   './moon_month_v1.js?v=fp569h-p8',
@@ -201,12 +201,12 @@ const SHELL_ASSETS = [
   './shared_day_v1.js?v=sd1',
 
   './design-b17.html',
-  './preview-b17/consumer_overview_v1.js?v=fp569o-daily',
+  './preview-b17/consumer_overview_v1.js?v=fp573-terms',
   './preview-b17/design_candidate.css',
   './preview-b17/design_candidate.js',
   './preview-b17/design_scale.js',
   './preview-b17/locale_bridge_v1.js?v=fp569r-release',
-  './preview-b17/locale_overview_v1.js?v=fp569j',
+  './preview-b17/locale_overview_v1.js?v=fp573-terms',
   './preview-b17/product_shell_v1.js',
   './preview-b17/design_b/integration.css',
   './preview-b17/design_b/assets/field-lines.svg',
@@ -235,7 +235,7 @@ const SHELL_ASSETS = [
   './index.html',
   './theme_moon.webp',
   './locale_core_v1.js?v=fp569r-release',
-  './locale_overview_v1.js?v=fp569k',
+  './locale_overview_v1.js?v=fp573-terms',
   './locale_bridge_v1.js?v=fp569r-release',
   './panchanga_reference_check_v1.json',
   './play_channel.js',
@@ -245,8 +245,8 @@ const SHELL_ASSETS = [
   './product_render_queue_v1.js',
   './moon_phase_v1.js',
   './expert_start_advice_v1.js?v=1',
-  './p0_layout_v1.js?v=fp572-integrated-day-offline',
-  './three_day_forecast_v1.js?v=fp572-integrated-day-offline',
+  './p0_layout_v1.js?v=fp573-day-strip',
+  './three_day_forecast_v1.js?v=fp573-day-strip',
   './forecast_day_timeline_v1.js?v=fp572-integrated-day-offline',
   './p0_layout_v1.css',
   './wow_reviewed_v1.css',
@@ -274,7 +274,7 @@ const SHELL_ASSETS = [
   './notification_runtime_v1.js',
   './transition_runtime_v1.js',
   './transition_client_v1.js',
-  './consumer_overview_v1.js?v=fp569o-daily',
+  './consumer_overview_v1.js?v=fp573-terms',
   './calendar_context_v1.js',
   './consumer_overview_v1.css',
   './local_storage_v1.js',
@@ -307,9 +307,9 @@ const SHELL_ASSETS = [
 // verifies their gzip bodies against the public JavaScript sources.
 const PACKED_SHELL_HASHES = Object.freeze({
   './core_runtime_v1.js': '4c022c547ded9d8a2e5da93ada2d481abaebc1781ca4fb7b8562771e539721eb',
-  './locale_overview_v1.js': '644aeca3397267548aad0dc4c92089033270d32061e41f6c9ceeac4b94d4c1c6',
+  './locale_overview_v1.js': '857f453be8e60f1a765f0f840c64e95383a108d42370ed7f2f6f8276e35534cd',
   './preview-v4/core_runtime_v1.js': '68185facccf9186a2cecb448f1e21954904e7799fd960e11641fa68a40d2c78e',
-  './preview-v4/locale_overview_v1.js': '689764e17095169a46adddb10a95753c10b9f2646569e81585c9589a0fb6e0b1',
+  './preview-v4/locale_overview_v1.js': '29e5777f1501f7d3030309a93d4c57bae7414c6d91cf07a872730f73d3daf36c',
 });
 const CAN_UNPACK_SHELL = typeof DecompressionStream === 'function';
 const packedShellScripts = new Map();

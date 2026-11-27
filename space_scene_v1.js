@@ -251,20 +251,23 @@ const STYLE=`.sr-space{margin:12px 0;padding:0;overflow:hidden;border-radius:20p
 .sr-space .sr-space-forecast{margin:4px 0 2px;font-size:1rem;font-weight:750;color:#8FE0BE}.sr-space[data-tone=storm] .sr-space-forecast{color:#FF9AA2}.sr-space[data-tone=watch] .sr-space-forecast{color:#F2C46B}.sr-space[data-tone=none] .sr-space-forecast{color:#D9DCF0}
 .sr-space .sr-space-period{margin:0 0 10px;color:#C9CDEA;font-size:.85rem}
 .sr-space small{display:block;margin-top:8px;color:#BCC3DF;line-height:1.4}.sr-space .sr-space-sources{display:flex;flex-wrap:wrap;gap:0 12px;margin:0;font-size:.8rem}.sr-space .sr-space-sources a{color:#c5dcff;display:inline-flex;align-items:center;min-height:44px;margin:0;padding:0}`;
-function cardHtml(m,h,id){
+function cardHtml(m,h,id,key){
  const cs=chips(m);
  const badge=m.level?tx('Прогноз G','Forecast G',"Pronóstico G","Prévision G")+m.level:m.unsettled?tx('Можливі збурення','Possible disturbance',"Posibles perturbaciones","Perturbations possibles"):m.max?tx('Спокійний прогноз','Calm outlook',"Se prevé calma","Calme prévu"):'';
  const illustration=cs.length?'<div class="sr-space-legend">'+
   (badge?'<span class="sr-space-badge" data-tone="'+h.tone+'">'+esc(badge)+'</span>':'')+
   '<span class="sr-space-wind-label">'+esc(tx('Сонячний вітер →','Solar wind →',"Viento solar →","Vent solaire →"))+'</span></div>'+
   '<div class="sr-space-stage" role="img" aria-label="'+esc(tx('Ілюстрація Сонця, сонячного вітру й магнітного поля Землі','Illustration of the Sun, solar wind and Earth’s magnetic field',"Ilustración del Sol, el viento solar y el campo magnético terrestre","Illustration du Soleil, du vent solaire et du champ magnétique terrestre"))+'"><canvas class="sr-space-gl"></canvas><canvas class="sr-space-ov"></canvas></div>' : '';
+ if(key==='forecast')return '<header class="sr-space-body"><h3 id="'+id+'">'+esc(h.title)+'</h3><p class="sr-space-forecast">'+esc(h.forecast)+'</p></header>'+illustration+'<p class="sr-space-body sr-space-note"><small>'+esc(tx('Ілюстрація: NOAA, NASA. Геометрія поля й сяйво ілюстративні.','Illustration: NOAA, NASA. Field geometry and aurora are illustrative.','Ilustración: NOAA, NASA. La forma del campo y la aurora son ilustrativas.','Illustration : NOAA, NASA. La forme du champ et l’aurore sont illustratives.'))+'</small></p>';
  const impact=tx('На землі магнітна буря зазвичай не відчувається. Залежно від сили бурі можливі збої радіозв’язку чи супутникової навігації.','People on the ground generally do not feel geomagnetic storms. Depending on the storm, radio or satellite navigation can be disrupted.',"En tierra, normalmente no se sienten las tormentas geomagnéticas. Según su intensidad, pueden afectar a las radiocomunicaciones o a la navegación por satélite.","Au sol, les tempêtes géomagnétiques passent généralement inaperçues. Selon leur intensité, elles peuvent perturber les communications radio ou la navigation par satellite.");
  return '<header class="sr-space-body"><h3 id="'+id+'">'+esc(h.title)+'</h3><p class="sr-space-forecast">'+esc(h.forecast)+'</p></header>'+illustration+
   '<div class="sr-space-body"><p class="sr-space-impact"><strong>'+esc(tx('Що відчують люди','What people may notice',"Qué se puede notar","Ce que l’on peut remarquer"))+'</strong><br>'+esc(impact)+'</p>'+
+  // FP573: on Today the five technical readings fold into one disclosure; the Sky route keeps them open.
+  (key==='today'?'<details class="sr-space-more"><summary>'+esc(tx('Подробиці: спалахи, сонячний вітер, поле Землі','Details: flares, solar wind, Earth’s field',"Detalles: erupciones, viento solar, campo terrestre","Détails : éruptions, vent solaire, champ terrestre"))+'</summary>':'')+
   (cs.length?'<ul>'+cs.map(c=>'<li data-tone="'+c.tone+'"><i aria-hidden="true">'+c.icon+'</i><div><b>'+esc(c.k)+'</b><span>'+esc(c.v)+'</span>'+
    (c.details?'<small class="sr-space-detail">'+esc(c.details)+'</small>':'')+(c.age?'<small class="sr-space-detail" data-observation-age="'+c.ageKey+'">'+esc(c.age)+'</small>':'')+'</div></li>').join('')+'</ul>':'')+
   '<small>'+(h.period?esc(h.period)+' ':'')+esc(tx('Спалахи, вітер і Kp — NOAA. Геометрія поля й сяйво ілюстративні.','Flares, solar wind and Kp from NOAA. Field geometry and aurora are illustrative.',"Erupciones, viento solar y Kp de NOAA. La forma del campo y la aurora son ilustrativas.","Éruptions, vent solaire et Kp fournis par la NOAA. La forme du champ et l’aurore sont illustratives."))+
-  '</small><p class="sr-space-sources"><a href="https://www.spaceweather.gov/noaa-scales-explanation" target="_blank" rel="noopener noreferrer">'+esc(tx('Шкала NOAA','NOAA scale',"Escala de NOAA","Échelle de la NOAA"))+'</a><a href="https://svs.gsfc.nasa.gov/2915" target="_blank" rel="noopener noreferrer">NASA/GSFC SVS · Blue Marble</a><a href="https://www.usgs.gov/faqs/does-earths-magnetic-field-affect-human-health" target="_blank" rel="noopener noreferrer">USGS</a></p></div>';
+  '</small><p class="sr-space-sources"><a href="https://www.spaceweather.gov/noaa-scales-explanation" target="_blank" rel="noopener noreferrer">'+esc(tx('Шкала NOAA','NOAA scale',"Escala de NOAA","Échelle de la NOAA"))+'</a><a href="https://svs.gsfc.nasa.gov/2915" target="_blank" rel="noopener noreferrer">NASA/GSFC SVS · Blue Marble</a><a href="https://www.usgs.gov/faqs/does-earths-magnetic-field-affect-human-health" target="_blank" rel="noopener noreferrer">USGS</a></p>'+(key==='today'?'</details>':'')+'</div>';
 }
 const hosts={
  today:{route:'nrRoute-today',anchor:route=>route.querySelector('[data-overview=today] > .nr-o-hero'),
@@ -278,6 +281,9 @@ const hosts={
    }
   }},
  sky:{route:'nrRoute-panch',anchor:route=>route.querySelector(':scope > section.nr-sky'),
+  place:(box,anchor)=>anchor.before(box)},
+ // FP573: compact header of «Прогноз» — title, forecast line and the live illustration; readings stay in Today/Sky.
+ forecast:{route:'nrRoute-forecast',anchor:route=>route.querySelector(':scope > section.nr-overview'),
   place:(box,anchor)=>anchor.before(box)}
 };
 const cleanups={};
@@ -307,7 +313,7 @@ async function render(){
    const age=observationAge(m[label.dataset.observationAge]);
    if(label.textContent!==age)label.textContent=age;
   }
-  if(key==='sky'&&current.nextElementSibling!==anchor)host.place(current,anchor);
+  if(key!=='today'&&current.nextElementSibling!==anchor)host.place(current,anchor);
   return;
  }
  cleanups[key]?.();
@@ -320,9 +326,9 @@ async function render(){
  if(key==='today')box.dataset.placement='after-hero';
  box.setAttribute('aria-labelledby',id);
  box.setAttribute('translate','no');
- box.innerHTML=cardHtml(m,h,id);
+ box.innerHTML=cardHtml(m,h,id,key);
  if(current)current.replaceWith(box);
- if(!current||(key==='sky'&&box.nextElementSibling!==anchor))host.place(box,anchor);
+ if(!current||(key!=='today'&&box.nextElementSibling!==anchor))host.place(box,anchor);
  const gl=box.querySelector('.sr-space-gl'),overlay=box.querySelector('.sr-space-ov');
  if(!gl){cleanups[key]=null;return;}
  let stop=null;
@@ -354,7 +360,7 @@ function watch(){
   if(!route)continue;
   new MutationObserver(()=>{
    const card=route.querySelector('[data-space-scene]');
-   if(!card||(key==='sky'&&card.nextElementSibling!==host.anchor(route)))schedule();
+   if(!card||(key!=='today'&&card.nextElementSibling!==host.anchor(route)))schedule();
   }).observe(route,{childList:true,subtree:key==='today'});
  }
  schedule();

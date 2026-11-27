@@ -182,9 +182,13 @@ try{for(const [locale,rm] of [['uk-UA','no-preference'],['en-GB','no-preference'
   const rect=selector=>e.querySelector(selector).getBoundingClientRect();
   const badge=rect('.sr-space-badge'),wind=rect('.sr-space-wind-label'),legend=rect('.sr-space-legend');
   const separate=badge.bottom<=wind.top||wind.bottom<=badge.top||badge.right<=wind.left||wind.right<=badge.left;
+  const hero=e.parentElement.querySelector(':scope > .nr-o-hero'),alert=hero?.querySelector(':scope > [data-space-alert]');
+  const line=alert?.getBoundingClientRect(),card=hero?.getBoundingClientRect();
+  const visible=alert?.checkVisibility({opacityProperty:true,visibilityProperty:true})&&Boolean(alert.textContent.trim())&&line.width>0&&line.height>0;
   return {separate,contained:[badge,wind].every(r=>r.left>=legend.left&&r.right<=legend.right&&r.top>=legend.top&&r.bottom<=legend.bottom),
    aboveStage:legend.bottom<=rect('.sr-space-stage').top,
-   nearHero:e.getBoundingClientRect().top-e.parentElement.querySelector('.nr-o-hero').getBoundingClientRect().bottom<=110,
+   // FP573 owner decision (variant В, 26.11): watch and G1–G2 show one alert line inside the day card; the full card follows the Sun clock.
+   nearHero:Boolean(visible&&line.left>=card.left-1&&line.right<=card.right+1&&line.top>=card.top-1&&line.bottom<=card.bottom+1)&&e.previousElementSibling?.matches('.sr-time-sun')===true,
    overflow:document.documentElement.scrollWidth>innerWidth};
  });
  assert.deepEqual(layout,{separate:true,contained:true,aboveStage:true,nearHero:true,overflow:false});

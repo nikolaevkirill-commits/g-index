@@ -52,29 +52,6 @@
  const el=(tag,words)=>{const node=document.createElement(tag);if(words)node.textContent=words;return node;};
  const instant=ms=>new Date(ms).toISOString();
 
- function lunarEvents(start,end){
-  const core=window.SkyRhythmLunar;
-  if(!core?.available())return [];
-  const initial=core.at(start), list=[];
-  for(const kind of ['tithi','nakshatra']){
-   let from=initial[kind], cursor=start;
-   for(let i=0;i<3;i++){
-    const next=core.nextTransition(cursor,kind,from);
-    if(!next||next.utcMs>=end)break;
-    list.push({kind,at:next.utcMs,value:next.to});
-    cursor=next.utcMs;from=next.to;
-   }
-  }
-  return list.sort((a,b)=>a.at-b.at);
- }
-
- function skyEvents(A,observer,start,end){
-  return [['Sun',1,'sunrise'],['Sun',-1,'sunset'],['Moon',1,'moonrise'],['Moon',-1,'moonset']].flatMap(([body,sign,kind])=>{
-   const event=A.SearchRiseSet(body,observer,sign,new Date(start),(end-start)/86400000);
-   return event&&+event.date>=start&&+event.date<end?[{kind,at:+event.date}]:[];
-  }).sort((a,b)=>a.at-b.at);
- }
-
  function skyAt(A,observer,at){
   const time=new Date(at);
   const horizon=(ra,dec)=>A.Horizon(time,observer,ra,dec,'normal').altitude;
@@ -93,97 +70,11 @@
   return {light:null,planets,stars};
  }
 
- function addEvents(line,events,clock,naming){
-  for(const event of events){
-   const paragraph=el('p'),time=el('time',clock.format(event.at));
-   time.dateTime=instant(event.at);
-   paragraph.append(time,document.createTextNode(' · '+t(event.kind)+(naming?' → '+naming(event.kind,event.value):'')));
-   line.append(paragraph);
-  }
- }
-
- function openSky(at){
-  if(window.SRSkyTime?.selectMoment(instant(at)))window.fp434Go?.('panch',true);
- }
-
- function renderSection(panel,date,loc){
-  const locale=window.NRLocale?.locale||'uk-UA';
-  const clock=new Intl.DateTimeFormat(locale,{timeZone:loc.zone,hour:'2-digit',minute:'2-digit',hourCycle:'h23'});
-  const formatDay=new Intl.DateTimeFormat(locale,{timeZone:'UTC',dateStyle:'long'});
-  const summary=el('p',window.SRSkyTime.placeLabel(loc)+' · '+formatDay.format(new Date(date+'T12:00:00Z'))+' · '+loc.zone);
-  summary.className='sr-day-three-place';
-  const hint=el('p',t('note'));
-  hint.className='sr-day-three-note';
-  const status=el('p',t('loading'));status.dataset.dayThreeNoaa='';
-  const heading=el('h2',t('title'));heading.id='srDayThreeTitle';
-  panel.replaceChildren(heading,summary,hint,status);
-  const civil=window.SkyRhythmCivil.dayIntervals(date,loc.zone);
-  if(civil.status!=='available')throw Error(civil.status);
-  const start=+civil.start,end=+civil.end,A=window.Astronomy;
-  const observer=new A.Observer(loc.lat,loc.lon,loc.elevation||0);
-  const skyChanges=skyEvents(A,observer,start,end), jyotishChanges=lunarEvents(start,end);
-  const name=(kind,value)=>window.SkyRhythmI18n.name(kind,value,LANG[lang()]);
-  const rows=el('ol');
-  const points=[];
-  for(let slot=Math.floor(start/STEP)*STEP;slot<end;slot+=STEP){
-   const left=Math.max(start,slot),right=Math.min(end,slot+STEP),middle=Math.floor((left+right)/2);
-   const row=el('li');
-   row.dataset.slot=instant(slot);
-   const header=el('div');header.className='sr-day-three-row-title';
-   const time=el('time',clock.format(left)+'–'+clock.format(right));
-   time.dateTime=instant(left);
-   if(right-left<STEP)row.dataset.clipped='';
-   const link=el('button',t('openSky')+' '+clock.format(middle));
-   link.type='button';link.dataset.skyAt=instant(middle);
-   link.onclick=()=>openSky(middle);
-   header.append(time,link);
-   const details=el('dl');
-   const noaa=el('dd',t('loading'));noaa.dataset.slotNoaa='';
-   const jt=el('dd');
-   const lunar=window.SkyRhythmLunar;
-   if(lunar?.available()){
-    const state=lunar.at(left);
-    jt.append(el('p',KINDS.slice(0,2).map(k=>t(k)+' '+name(k,state[k])).join(' · ')),
-     el('p',KINDS.slice(2).map(k=>t(k)+' '+name(k,state[k])).join(' · ')));
-    addEvents(jt,jyotishChanges.filter(v=>v.at>=left&&v.at<right),clock,name);
-   }else jt.append(el('p',t('unavailable')));
-   const sky=el('dd'),snapshot=skyAt(A,observer,middle);
-   if(snapshot.light)sky.append(el('p',t(snapshot.light)));
-   if(snapshot.planets.length)sky.append(el('p',t('planets')+' · '+snapshot.planets.join(', ')));
-   if(snapshot.stars.length)sky.append(el('p',t('stars')+' · '+snapshot.stars.join(', ')));
-   if(!snapshot.light&&!snapshot.planets.length&&!snapshot.stars.length)sky.append(el('p',t('none')));
-   addEvents(sky,skyChanges.filter(v=>v.at>=left&&v.at<right),clock);
-   details.append(el('dt','NOAA · Kp'),noaa,el('dt',t('jyotish')),jt,el('dt',t('sky')),sky);
-   row.append(header,details);
-   rows.append(row);
-   points.push({slot,noaa});
-  }
-  panel.append(rows);
-  return {status,points,locale};
- }
-
- async function refreshNoaa(session){
-  if(!session.view)return;
-  const request=Symbol();
-  session.request=request;
-  const {status,points,locale}=session.view;
-  const settle=state=>{
-   status.textContent=t(state);
-   for(const {noaa} of points)noaa.textContent=t('noSlot');
-  };
-  try{
-   const data=await window.NRThreeDayForecast.archivedDayIntervals();
-   if(current!==session||request!==session.request)return;
-   const number=new Intl.NumberFormat(locale,{maximumFractionDigits:2});
-   const form=new Intl.DateTimeFormat(locale,{timeZone:session.loc.zone,month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
-   for(const {slot,noaa} of points){
-    const row=data.slots.get(slot);
-    noaa.textContent=row?'Kp '+number.format(row.kp)+' · '+t(row.state):t('noSlot');
-   }
-   status.textContent=t('received')+' '+form.format(data.at);
-  }catch(error){
-   if(current===session&&request===session.request)settle(error.message==='stale'?'stale':'missing');
-  }
+ function skyNotes(loc,at){
+  const A=window.Astronomy;
+  if(!A)return [];
+  const view=skyAt(A,new A.Observer(loc.lat,loc.lon,loc.elevation||0),at);
+  return [view.planets.length?t('planets')+' · '+view.planets.join(', '):'',view.stars.length?t('stars')+' · '+view.stars.join(', '):''].filter(Boolean);
  }
 
  function mount(root,date,active){
@@ -198,7 +89,7 @@
   const verdict=root.querySelector('[data-forecast-verdict]'),heading=root.querySelector('.nr-o-heading');
   if(!verdict||!heading)return;
   if(!panel){
-   panel=el('section');panel.className='sr-day-three';panel.dataset.dayThree='';
+   panel=el('section');panel.className='sr-day-strip';panel.dataset.dayThree='';panel.dataset.dayStrip='';
    panel.id='srDayThree';
    panel.tabIndex=-1;
    panel.setAttribute('aria-labelledby','srDayThreeTitle');
@@ -218,30 +109,18 @@
   jump.textContent=t('jump');
   panel.hidden=false;
   jump.hidden=false;
-  const loc=window.SRSkyTime?.place(true);
-  if(!loc||!window.SkyRhythmCivil||!window.Astronomy||!window.SkyRhythmI18n){
-   if(document.readyState!=='complete'&&!panel.dataset.waiting){
-    panel.dataset.waiting='';
-    window.addEventListener('load',()=>{delete panel.dataset.waiting;if(!panel.hidden)mount(root,root.querySelector('select')?.value||date,true);},{once:true});
-   }
-   return;
-  }
-  const key=[date,loc.lat,loc.lon,loc.zone,loc.elevation,window.SRSkyTime.placeLabel(loc),lang()].join('|');
-  if(current?.key===key&&current.panel===panel)return;
-  const session={root,date,panel,loc,key};
-  current=session;
-  try{session.view=renderSection(panel,date,loc);}catch{
-   const heading=el('h2',t('title'));heading.id='srDayThreeTitle';
-   panel.replaceChildren(heading,el('p',t('unavailable')));
-  }
-  refreshNoaa(session);
+  current={root,date,panel};
+  window.NRThreeDayForecast.mountDayStrip(panel,date,true);
  }
 
- window.NRForecastDayTimeline=Object.freeze({mount});
- for(const event of ['pageshow','online'])window.addEventListener(event,()=>{if(current)refreshNoaa(current);});
- document.addEventListener('visibilitychange',()=>{if(!document.hidden&&current)refreshNoaa(current);});
- const refreshContext=()=>{if(current)mount(current.root,current.date,true);};
- document.addEventListener('nr:location',refreshContext);
- window.addEventListener('nr:locale',refreshContext);
- window.setInterval(()=>{if(!document.hidden&&current&&!current.panel.hidden)refreshNoaa(current);},300000);
+ function refresh(){
+  if(!current||document.hidden)return;
+  current.panel.dataset.stripAt='0';
+  mount(current.root,current.date,true);
+ }
+ window.NRForecastDayTimeline=Object.freeze({mount,skyNotes});
+ for(const event of ['pageshow','online','nr:locale'])window.addEventListener(event,refresh);
+ document.addEventListener('visibilitychange',refresh);
+ document.addEventListener('nr:location',refresh);
+ window.setInterval(refresh,300000);
 })();
