@@ -1,5 +1,5 @@
 (function(root){'use strict';
-const workerURL=new URL('dayline_worker_v1.js?v=fp572-lunar',document.currentScript.src);
+const workerURL=new URL('dayline_worker_v1.js?v=fp573-offline',document.currentScript.src);
 let worker=null,pending=null,sequence=0;
 function finish(error,result){if(!pending)return;const job=pending;pending=null;clearTimeout(job.timer);error?job.reject(error):job.resolve(result);}
 function reset(error){if(worker){worker.terminate();worker=null;}finish(error);}

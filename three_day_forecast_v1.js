@@ -460,7 +460,7 @@
   else promise=new Promise((resolve,reject)=>{
    try{
     if(!stripWorker){
-     stripWorker=new Worker(new URL('dayline_worker_v1.js?v=fp572-lunar',root.document.baseURI));
+     stripWorker=new Worker(new URL('dayline_worker_v1.js?v=fp573-offline',root.document.baseURI));
      stripWorker.onmessage=({data})=>{const job=stripJobs.get(data.id);if(!job)return;stripJobs.delete(data.id);clearTimeout(job.timer);data.error?job.reject(Error(data.error)):job.resolve(data.result);};
      stripWorker.onerror=e=>{e.preventDefault?.();for(const job of stripJobs.values()){clearTimeout(job.timer);job.reject(Error('STRIP_WORKER_FAILED'));}stripJobs.clear();stripWorker?.terminate();stripWorker=null;};
     }

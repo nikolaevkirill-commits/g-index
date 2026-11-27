@@ -2,7 +2,7 @@ importScripts('./runtime_diagnostics_v1.js','./civil_time_v1.js?v=fp569f-global'
 // G-Index service worker. Navigations, HTML, JS and data (.json/.jsonl/.csv) are network-first with a
 // cached fallback. Versioned packed scripts and other static assets are cache-first.
 // Bump CACHE_VERSION whenever index.html or a cached shell asset changes.
-const CACHE_VERSION = 'fp573-drain-20261127';
+const CACHE_VERSION = 'fp573-drain-offline-20261127';
 const CACHE_PREFIX = 'gindex-'; // G-Index cache namespace; do not remove the prefix.
 const SHELL_CACHE = `${CACHE_PREFIX}shell-${CACHE_VERSION}`;
 const DATA_CACHE = `${CACHE_PREFIX}data-${CACHE_VERSION}`;
@@ -124,8 +124,8 @@ const SHELL_ASSETS = [
   './dayline_view_v1.css',
   './dayline_i18n_v1.js',
   './dayline_adapter_v1.js?v=fp572-lunar',
-  './dayline_async_v1.js?v=fp572-lunar',
-  './dayline_worker_v1.js?v=fp572-lunar',
+  './dayline_async_v1.js?v=fp573-offline',
+  './dayline_worker_v1.js?v=fp573-offline',
 
   './nocturne_v1.css',
   './nocturne_v1.js',
@@ -246,7 +246,7 @@ const SHELL_ASSETS = [
   './moon_phase_v1.js',
   './expert_start_advice_v1.js?v=1',
   './p0_layout_v1.js?v=fp573-day-strip',
-  './three_day_forecast_v1.js?v=fp573-strip-status',
+  './three_day_forecast_v1.js?v=fp573-offline',
   './forecast_day_timeline_v1.js?v=fp573-day-strip',
   './p0_layout_v1.css',
   './wow_reviewed_v1.css',

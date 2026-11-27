@@ -98,6 +98,16 @@ async function coldStart(browser, base, packed) {
     const expected = packed ? Buffer.from(source.toString('utf8').replace(/\r\n/g,'\n')) : source;
     assert.deepEqual(result, {ok:true,delivery:'cached',digest:sha256(expected)}, asset);
    }
+   if (packed && entry === 'index.html') {
+    await page.evaluate(() => window.fp434Go('forecast', false));
+    await page.locator('#nrRoute-forecast [data-horizon="1"]').evaluate(button => button.click());
+    const strip = page.locator('#nrRoute-forecast [data-day-strip][data-strip-state="ready"]');
+    await strip.waitFor({state:'attached',timeout:60000});
+    const rows = await strip.locator('li.sr-ds-block').count();
+    assert(rows >= 7, 'Cold offline forecast has civil-day intervals');
+    assert.equal(await strip.locator('li .sr-ds-expert').count(), rows, 'Lunar calculations in every offline interval');
+    assert.equal(await strip.locator('li .sr-ds-sky').count(), rows, 'Sky information in every offline interval');
+   }
    assert.deepEqual(errors, []);
   }
   if (packed) {
