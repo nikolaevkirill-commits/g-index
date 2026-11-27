@@ -184,7 +184,8 @@ try{for(const [locale,rm] of [['uk-UA','no-preference'],['en-GB','no-preference'
   const separate=badge.bottom<=wind.top||wind.bottom<=badge.top||badge.right<=wind.left||wind.right<=badge.left;
   return {separate,contained:[badge,wind].every(r=>r.left>=legend.left&&r.right<=legend.right&&r.top>=legend.top&&r.bottom<=legend.bottom),
    aboveStage:legend.bottom<=rect('.sr-space-stage').top,
-   nearHero:e.getBoundingClientRect().top-e.parentElement.querySelector('.nr-o-hero').getBoundingClientRect().bottom<=110,
+   // FP573 owner decision (variant В, 26.11): watch and G1–G2 show one alert line inside the day card; the full card follows the Sun clock.
+   nearHero:!!e.parentElement.querySelector(':scope > .nr-o-hero > [data-space-alert]')&&e.previousElementSibling?.matches('.sr-time-sun')===true,
    overflow:document.documentElement.scrollWidth>innerWidth};
  });
  assert.deepEqual(layout,{separate:true,contained:true,aboveStage:true,nearHero:true,overflow:false});

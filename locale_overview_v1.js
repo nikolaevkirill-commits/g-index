@@ -286,7 +286,7 @@ NRLocale.register([
 ['Внесок прогнозного Kp','Forecast Kp contribution','Contribución del Kp previsto','Contribution du Kp prévu'],
 ['Добовий максимум: ','Daily maximum: ','Máximo diario: ','Maximum quotidien : '],
 [' · доба ',' · day in ',' · día en ',' · journée selon '],
-['Повне покриття трьохгодинними NOAA-слотами.','Complete coverage with three-hour NOAA slots.','Cobertura completa con intervalos de tres horas de NOAA.','Couverture complète par intervalles NOAA de trois heures.'],
+['Повне покриття тригодинними NOAA-слотами.','Complete coverage with three-hour NOAA slots.','Cobertura completa con intervalos de tres horas de NOAA.','Couverture complète par intervalles NOAA de trois heures.'],
 ['Резерв: 27-денний прогноз за добу UTC; це не максимум локальної доби.','Fallback: 27-day outlook for the UTC day; this is not the local-day maximum.','Alternativa: previsión a 27 días para el día UTC; no es el máximo del día local.','Solution de repli : prévisions à 27 jours selon le jour UTC ; ce n’est pas le maximum du jour local.'],
 ['Внесок у формулу: ','Contribution to the formula: ','Contribución a la fórmula: ','Contribution à la formule : '],
 ['Сума до перетворення: ','Sum before conversion: ','Suma antes de la conversión: ','Somme avant conversion : '],
