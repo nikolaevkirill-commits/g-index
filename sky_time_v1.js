@@ -247,7 +247,7 @@ function renderFirstSky(s,orbit,x,y){
  firstSky.hidden=false;
  const lang=window.NRLocale?.locale||'uk-UA';
  const button=firstSky.querySelector('button'),time=button.querySelector('time');
- const event=nextSkyEvent(s.loc,Date.now());
+ const event=s.mode==='now'?nextSkyEvent(s.loc,Date.now()):{at:s.at,kind:'selected'};
  const preview=firstSky.querySelector('svg');
  preview.setAttribute('aria-label',t('title'));
  preview.querySelector('path').setAttribute('d',orbit);
@@ -259,7 +259,7 @@ function renderFirstSky(s,orbit,x,y){
   delete button.dataset.at;button.removeAttribute('aria-label');time.removeAttribute('datetime');time.textContent='';
   button.firstElementChild.textContent=t('upcoming')+' · '+t('unavailable');return;
  }
- const name=event.sector&&window.SkyRhythmI18n?window.SkyRhythmI18n.name('nakshatra',event.sector,window.NRLocale?.language):null;
+ const name=event.sector&&typeof window.SkyRhythmI18n?.name==='function'?window.SkyRhythmI18n.name('nakshatra',event.sector,window.NRLocale?.language):null;
  const moment=new Date(event.at),newDay=NRCivilTime.dayKey(event.at,s.zone)!==NRCivilTime.dayKey(Date.now(),s.zone);
  const format=new Intl.DateTimeFormat(lang,{timeZone:s.zone,hour:'2-digit',minute:'2-digit',hourCycle:'h23',...(newDay?{month:'short',day:'numeric'}:{})});
  button.dataset.at=moment.toISOString();

@@ -198,6 +198,12 @@ const server=http.createServer(async(req,res)=>{
   await next.click();
   await p.waitForFunction(at=>location.hash==='#panch'&&SRSkyTime.snapshot().at===Date.parse(at),eventTime);
   await p.evaluate(()=>fp434Go('today',false));
+  const chosen=new Date(Date.parse(eventTime)-3600000).toISOString();
+  await p.evaluate(at=>SRSkyTime.selectMoment(at),chosen);
+  await p.waitForFunction(at=>document.querySelector('#nrRoute-today .sr-p0-sky-preview time')?.dateTime===at,chosen);
+  await next.click();
+  await p.waitForFunction(at=>location.hash==='#panch'&&SRSkyTime.snapshot().at===Date.parse(at),chosen);
+  await p.evaluate(()=>fp434Go('today',false));
   await p.locator('[data-sky-clock] [data-time-open]').click({noWaitAfter:true});
   await p.locator('[data-sky-live] .nr-sl-body[data-body=Sun]').waitFor();
   assert.match(await p.locator('#nrSkyLiveHeading').textContent(),/Києвом/);
