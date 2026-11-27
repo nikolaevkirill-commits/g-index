@@ -247,7 +247,7 @@ const SHELL_ASSETS = [
   './expert_start_advice_v1.js?v=1',
   './p0_layout_v1.js?v=fp573-day-strip',
   './three_day_forecast_v1.js?v=fp573-day-strip',
-  './forecast_day_timeline_v1.js?v=fp572-integrated-day-offline',
+  './forecast_day_timeline_v1.js?v=fp573-day-strip',
   './p0_layout_v1.css',
   './wow_reviewed_v1.css',
   './sky_panorama_v1.webp',

@@ -45,7 +45,7 @@ const server=http.createServer((request,response)=>{
 const panelSelector='[data-forecast-three-days]';
 const tabSelector='[data-p0-forecast-tabs] [data-horizon=';
 const active='#nrRoute-forecast ';
-async function setup(browser,base,{width=390,height=width>900?920:844,lang='uk',mode='fixture',hourlyState=null,routeName='today'}={}){
+async function setup(browser,base,{width=390,height=width>900?920:844,lang='uk',mode='fixture',hourlyState=null,routeName='today',receiptSlots=fixture}={}){
  const context=await browser.newContext({viewport:{width,height},hasTouch:!!hourlyState,isMobile:!!hourlyState,locale:lang==='uk'?'uk-UA':'en-GB',
   timezoneId:'Europe/Kyiv',serviceWorkers:'block',reducedMotion:'reduce'});
  await context.addInitScript(url=>{
@@ -58,7 +58,7 @@ async function setup(browser,base,{width=390,height=width>900?920:844,lang='uk',
    return fetchOriginal.call(this,input,...extra);
   };
  },NOAA);
- const body=JSON.stringify(fixture), digest=createHash('sha256').update(body).digest('hex');
+ const body=JSON.stringify(receiptSlots), digest=createHash('sha256').update(body).digest('hex');
  const receiptTime=new Date(at-(hourlyState==='stale'?9:1)*3600e3).toISOString();
  let testFeed;
  if(hourlyState){
@@ -101,6 +101,15 @@ async function setup(browser,base,{width=390,height=width>900?920:844,lang='uk',
  try{
   browser=await chromium.launch(process.env.FP463_BROWSER?{executablePath:process.env.FP463_BROWSER}:{});
   const base='http://127.0.0.1:'+server.address().port;
+  {
+   const {p,context}=await setup(browser,base,{width:320,mode:'fallback',hourlyState:'fresh',routeName:'forecast',receiptSlots:fixture.slice(0,2)});
+   await p.locator('#nrRoute-forecast [data-horizon="1"]').click();
+   const strip=p.locator('#nrRoute-forecast [data-day-strip]');
+   await p.waitForFunction(()=>document.querySelector('#nrRoute-forecast .sr-ds-summary-lines')?.textContent.includes('за доступними інтервалами'));
+   assert.equal(await strip.locator('li.sr-ds-block[data-kp]').count(),2);
+   assert(!/спокійне весь день/i.test(await strip.locator('.sr-ds-summary').innerText()));
+   await context.close();
+  }
   for(const [width,lang] of [[320,'uk'],[390,'uk'],[1280,'uk'],[390,'en']]){
    const t=await setup(browser,base,{width,lang}),{p,panel}=t;
    await p.waitForFunction(selector=>document.querySelector(selector)?.dataset.validSlots==='8',active+panelSelector);
