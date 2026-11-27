@@ -1,7 +1,7 @@
-name: Today first screen audit
+name: Today all commands audit
 on:
   push:
-    branches: [codex/today-first-sky-audit-a080f0a]
+    branches: [codex/today-first-sky-all-a080f0a]
 permissions:
   contents: read
   actions: read
@@ -40,194 +40,409 @@ jobs:
       - uses: actions/setup-python@v5
         with: {python-version: '3.12'}
       - run: python tools/public/verify_boundary.py
+        id: command_1
+        continue-on-error: true
       - run: python tools/public/sync_inline_styles.py
+        id: command_2
+        continue-on-error: true
       - run: python tools/cloud/test_publication_paths.py
+        id: command_3
+        continue-on-error: true
       - run: python tools/cloud/test_public_feed.py
+        id: command_4
+        continue-on-error: true
       - run: python tools/cloud/test_noaa_refresh.py
+        id: command_5
+        continue-on-error: true
       - run: python -m pip install pyswisseph==2.10.3.2
       - run: python tools/cloud/test_expert_model.py
+        id: command_6
+        continue-on-error: true
       - run: python tools/cloud/test_calendar_components.py
+        id: command_7
+        continue-on-error: true
       - run: python tools/cloud/test_sunrise_conventions.py
+        id: command_8
+        continue-on-error: true
       - run: python tools/cloud/test_transit_events.py
+        id: command_9
+        continue-on-error: true
       - run: python tools/cloud/test_space_weather.py
+        id: command_10
+        continue-on-error: true
       - run: python tools/cloud/test_reconciled_inputs.py
+        id: command_11
+        continue-on-error: true
       - run: python tools/cloud/test_market_proxy.py
+        id: command_12
+        continue-on-error: true
       - run: python tools/public/test_release_publication.py
+        id: command_13
+        continue-on-error: true
       - run: python tools/public/test_release_scope.py
+        id: command_14
+        continue-on-error: true
       - uses: actions/setup-node@v4
         with: {node-version: '24'}
       - run: npm install --no-save --package-lock=false playwright@1.62.1
       - run: npx playwright install --with-deps chromium
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/test_browser_readiness.cjs
+        id: command_15
+        continue-on-error: true
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_day_cautions.cjs
+        id: command_16
+        continue-on-error: true
       - run: node tools/public/verify_noaa_missing.cjs
+        id: command_17
+        continue-on-error: true
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_kp_source_provenance.cjs
+        id: command_18
+        continue-on-error: true
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_svg_missing.cjs
+        id: command_19
+        continue-on-error: true
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_presentation.cjs
+        id: command_20
+        continue-on-error: true
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_day_summary.cjs
+        id: command_21
+        continue-on-error: true
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_journal_restore_time.cjs
+        id: command_22
+        continue-on-error: true
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_journal_restore_adversarial.cjs
+        id: command_23
+        continue-on-error: true
       # The real update button is gated; trace/restart and direct-message probes remain diagnostics.
       # B7 (audit FP549): the release gate exercises the production update path (#pwaUpdateBar button ->
       # pwaReload). The direct postMessage trigger bypasses pwaReload and stays a diagnostic in b7-diagnostic.yml.
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/test_sw_update_coordination.cjs
+        id: command_24
+        continue-on-error: true
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_css_upgrade.cjs --button
+        id: command_25
+        continue-on-error: true
       # Isolated worker/network fault probes complement the real Update-button gate above.
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_sw_asset_lifetime.cjs svgheaders --bounded
+        id: command_26
+        continue-on-error: true
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_sw_asset_lifetime.cjs artbody --bounded
+        id: command_27
+        continue-on-error: true
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_sw_asset_lifetime.cjs jsonbody --bounded
+        id: command_28
+        continue-on-error: true
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_sw_asset_deadline_scope.cjs
+        id: command_29
+        continue-on-error: true
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_b7_install.cjs
+        id: command_30
+        continue-on-error: true
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_sw_install_revalidate.cjs
+        id: command_31
+        continue-on-error: true
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_offline_cache_budget.cjs
+        id: command_32
+        continue-on-error: true
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_b7_activation_race.cjs 1 index.html --multi --offline-reconnect
+        id: command_33
+        continue-on-error: true
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_b7_activation_race.cjs 20 classic.html
+        id: command_34
+        continue-on-error: true
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_b7_activation_race.cjs 20 index.html
+        id: command_35
+        continue-on-error: true
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_b7_activation_race.cjs 5 classic.html --multi
+        id: command_36
+        continue-on-error: true
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_b7_activation_race.cjs 5 index.html --multi
+        id: command_37
+        continue-on-error: true
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_civil_time.cjs
+        id: command_38
+        continue-on-error: true
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/test_locale_fp542.cjs
+        id: command_39
+        continue-on-error: true
       - run: node tools/public/test_authority_fp542.cjs
+        id: command_40
+        continue-on-error: true
       - run: node tools/public/test_scoped_decisions.cjs
+        id: command_41
+        continue-on-error: true
       - run: node tools/public/test_expert_refresh_regression.cjs
+        id: command_42
+        continue-on-error: true
       - run: node tools/public/verify_authority_fp542.cjs
+        id: command_43
+        continue-on-error: true
       - run: node tools/public/verify_final_score.cjs
+        id: command_44
+        continue-on-error: true
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_expert_november.cjs
+        id: command_45
+        continue-on-error: true
       - run: node tools/public/test_notification_locale.cjs
+        id: command_46
+        continue-on-error: true
       - run: node tools/public/verify_entry_score_equivalence.cjs
+        id: command_47
+        continue-on-error: true
       - run: node tools/public/verify_authority_boundary.cjs
+        id: command_48
+        continue-on-error: true
       - run: node tools/public/verify_fork_drift.cjs
+        id: command_49
+        continue-on-error: true
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_l10n_expanded.cjs
+        id: command_50
+        continue-on-error: true
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_sky_scene.cjs
+        id: command_51
+        continue-on-error: true
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_day_verdict.cjs
+        id: command_52
+        continue-on-error: true
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_day_match.cjs
+        id: command_53
+        continue-on-error: true
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_natal_sky.cjs --slow-render
+        id: command_54
+        continue-on-error: true
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_natal_shared_moon.cjs
+        id: command_55
+        continue-on-error: true
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_notification_navigation.cjs
+        id: command_56
+        continue-on-error: true
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_panchanga_cache.cjs cache-regression
+        id: command_57
+        continue-on-error: true
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_text_reflow.cjs
+        id: command_58
+        continue-on-error: true
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_all_routes_reflow.cjs
+        id: command_59
+        continue-on-error: true
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_no_overlap.cjs
+        id: command_60
+        continue-on-error: true
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_calendar_selection.cjs
+        id: command_61
+        continue-on-error: true
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_day_context.cjs
+        id: command_62
+        continue-on-error: true
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_day_context_guards.cjs
+        id: command_63
+        continue-on-error: true
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_sky_live.cjs
+        id: command_64
+        continue-on-error: true
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_sky_live_guards.cjs
+        id: command_65
+        continue-on-error: true
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_shared_clock.cjs
+        id: command_66
+        continue-on-error: true
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_moon_gl.cjs
+        id: command_67
+        continue-on-error: true
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_moon_gl_integration.cjs
+        id: command_68
+        continue-on-error: true
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_motion_settings.cjs
+        id: command_69
+        continue-on-error: true
 
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_first_screen_order.cjs
+        id: command_70
+        continue-on-error: true
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_week_ahead.cjs
+        id: command_71
+        continue-on-error: true
       - name: Verify three-day forecast and NOAA fallbacks
         run: node tools/public/verify_three_day_forecast.cjs
+        id: command_72
+        continue-on-error: true
       # FP571: published personal day line (calculation contracts, Swiss references, page in browser)
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_personal_activity.cjs
+        id: command_73
+        continue-on-error: true
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_personal_audit_fixes.cjs
+        id: command_74
+        continue-on-error: true
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_personal_correlated.cjs
+        id: command_75
+        continue-on-error: true
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_personal_dayline.cjs
+        id: command_76
+        continue-on-error: true
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_personal_election.cjs
+        id: command_77
+        continue-on-error: true
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_personal_factors.cjs
+        id: command_78
+        continue-on-error: true
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_personal_interval_chain.cjs
+        id: command_79
+        continue-on-error: true
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_personal_moon_readings.cjs
+        id: command_80
+        continue-on-error: true
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_personal_page_browser.cjs
+        id: command_81
+        continue-on-error: true
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_personal_phase_convention.cjs
+        id: command_82
+        continue-on-error: true
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_personal_priority.cjs
+        id: command_83
+        continue-on-error: true
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_personal_sidereal_nutation.cjs
+        id: command_84
+        continue-on-error: true
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_lunar_core.cjs
+        id: command_85
+        continue-on-error: true
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_lunar_pages_browser.cjs
+        id: command_86
+        continue-on-error: true
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_ovation_light.cjs
+        id: command_87
+        continue-on-error: true
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_review_fp569d.cjs
+        id: command_88
+        continue-on-error: true
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_moon_kp_fp569f.cjs
+        id: command_89
+        continue-on-error: true
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_polish_fp569j.cjs
+        id: command_90
+        continue-on-error: true
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_mobile_polish_fp569k.cjs
+        id: command_91
+        continue-on-error: true
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_wow_fp569n.cjs
+        id: command_92
+        continue-on-error: true
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/verify_plain_fp569o.cjs
+        id: command_93
+        continue-on-error: true
       - run: node tools/public/check_final_score_v113.cjs . final-score-regression.json
+        id: command_94
+        continue-on-error: true
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/check_legacy_sync_v112.cjs . legacy-regression.json
+        id: command_95
+        continue-on-error: true
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/check_product_brand_v123.cjs
+        id: command_96
+        continue-on-error: true
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/science_festival_engine.cjs festival-unit
+        id: command_97
+        continue-on-error: true
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/science_festival_ui.cjs festival-ui
+        id: command_98
+        continue-on-error: true
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/science_festival_offline.cjs festival-offline
+        id: command_99
+        continue-on-error: true
       - if: steps.scope.outputs.mode != 'data'
         run: node tools/public/science_festival_library.cjs
+        id: command_100
+        continue-on-error: true
       - run: python tools/public/build_pages.py
+        id: command_101
+        continue-on-error: true
       - name: Verify checked code stayed untouched
         run: |
           git diff --quiet
           test "$(git rev-parse HEAD)" = 'a080f0a3783e0ae0c60fcdcc28fc62eec05fc354'
           echo "Full read-only checks passed on $(git rev-parse HEAD)"
+
+      - name: Record all command outcomes and fail on any failure
+        if: always()
+        env:
+          AUDIT_STEP_OUTCOMES: ${{ toJSON(steps) }}
+        run: |
+          python - <<'PY'
+          import json, os
+          source=json.loads(os.environ["AUDIT_STEP_OUTCOMES"])
+          outcomes=[source.get(f"command_{i}",{}).get("outcome","unrecorded") for i in range(1,102)]
+          print("AUDIT-CHECKS-RESULT "+json.dumps(outcomes))
+          raise SystemExit(0 if all(x=="success" for x in outcomes) else 1)
+          PY
