@@ -1,0 +1,21 @@
+name: FP573 reflow diagnostics
+on:
+  push:
+    branches: [codex/fp573-reflow-a54dc84]
+permissions:
+  contents: read
+jobs:
+  reflow:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: a54dc8494059f2ab8b73c14fe196545aa98a3de7
+          persist-credentials: false
+      - run: test "$(git rev-parse HEAD)" = "a54dc8494059f2ab8b73c14fe196545aa98a3de7"
+      - uses: actions/setup-node@v4
+        with: {node-version: '24'}
+      - run: npm install --no-save --package-lock=false playwright@1.62.1
+      - run: npx playwright install --with-deps chromium
+      - run: node tools/public/verify_all_routes_reflow.cjs . "$RUNNER_TEMP/reflow.json"
