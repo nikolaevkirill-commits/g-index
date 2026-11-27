@@ -109,6 +109,40 @@ async function bounded(promise,ms=5000){
   try{return await Promise.race([promise,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('Diagnostic probe timed out')),ms);})]);}
   finally{clearTimeout(timer);}
 }
+// Observe the three real documents during handoff. No interception, worker messages,
+// CDP ServiceWorker calls, or synthetic peer acknowledgements are involved.
+function trackTabRequests(tab) {
+  const pending=new Map();
+  tab.on('request',request=>{
+    const url=new URL(request.url());
+    pending.set(request,{source:url.origin===new URL(base).origin?'app':url.host,
+      path:url.origin===new URL(base).origin?url.pathname:undefined,type:request.resourceType(),started:Date.now()});
+  });
+  for(const event of ['requestfailed','requestfinished'])tab.on(event,request=>pending.delete(request));
+  return pending;
+}
+async function observeTab(tab,pending) {
+  await tab.evaluate(async()=>{
+    const registration=await navigator.serviceWorker.getRegistration();
+    const events=[];
+    const mark=(type,detail)=>events.push({type,at:Date.now(),...detail});
+    const state=()=>({active:registration?.active?.state,waiting:registration?.waiting?.state,
+      requested:window.__nrUpdateRequested===true,reloading:window._swReloading===true});
+    const scope=new URL('./',location.href).pathname;
+    const peerChannel=new BroadcastChannel('skyrhythm-update-v1:'+scope);
+    peerChannel.onmessage=({data})=>{
+      if(['prepare','preparing','ready'].includes(data?.type))mark(data.type,{id:data.id,peer:data.sender,ready:data.ready});
+    };
+    navigator.serviceWorker.addEventListener('controllerchange',()=>mark('controllerchange',state()));
+    for(const worker of [registration?.active,registration?.waiting]){
+      if(worker)worker.addEventListener('statechange',()=>mark('worker-state',{state:worker.state}));
+    }
+    window.__cssUpgradeTabEvidence=()=>({events,state:state(),visibility:document.visibilityState,
+      preparation:window.NRUpdateCoordinator?.diagnostics?.()});
+  });
+  return async()=>({pending:[...pending.values()].slice(-24),...await bounded(tab.evaluate(()=>window.__cssUpgradeTabEvidence?.()))
+    .catch(error=>({error:String(error)}))});
+}
 // Keep the original click and navigation wait, but identify which step stalls.
 async function reloadFromUpdateBar(page, steps) {
   const started = Date.now();
@@ -146,6 +180,8 @@ let base;
   const lifecycle=[];
   try{
     const ctx=await browser.newContext({viewport:{width:390,height:844},serviceWorkers:'allow',locale:'en-GB'}),page=await ctx.newPage();
+    const requestsByTab=new Map([[page,trackTabRequests(page)]]);
+    ctx.on('page',tab=>requestsByTab.set(tab,trackTabRequests(tab)));
     let cdp=null;
     if(cdpEnabled){cdp=await ctx.newCDPSession(page);cdp.on('ServiceWorker.workerVersionUpdated',e=>lifecycle.push({at:Date.now(),...e}));await cdp.send('ServiceWorker.enable');}
     await page.goto(base+'classic.html?channel=play#today');
@@ -176,6 +212,7 @@ let base;
       assert(target,'worker selected for restart must exist');
       await cdp.send('ServiceWorker.stopWorker',{versionId:target.versionId});
     }
+    const observations=await Promise.all([page,main,journal].map(tab=>observeTab(tab,requestsByTab.get(tab))));
     const reloadSteps = {};
     try {
       if(trigger==='button')await reloadFromUpdateBar(page,reloadSteps);
@@ -188,7 +225,8 @@ let base;
         await reloadFromUpdateBar(page,reloadSteps);
       }
     } catch(error) {
-      const diagnostics={trigger,restart,lifecycle,reload_steps:reloadSteps,registration:await bounded(page.evaluate(async()=>{const r=await navigator.serviceWorker.getRegistration();return {waiting:r.waiting?.state,active:r.active?.state,requested:window.__nrUpdateRequested===true,coordinator:!!window.NRUpdateCoordinator,preparation:window.NRUpdateCoordinator?.diagnostics?.(),reloading:window._swReloading}})).catch(e=>({error:String(e)})),workers:[]};
+      const tabs=Object.fromEntries(await Promise.all(observations.map(async(probe,index)=>[['requester','main','journal'][index],await probe()])));
+      const diagnostics={trigger,restart,lifecycle,reload_steps:reloadSteps,tabs,registration:await bounded(page.evaluate(async()=>{const r=await navigator.serviceWorker.getRegistration();return {waiting:r.waiting?.state,active:r.active?.state,requested:window.__nrUpdateRequested===true,coordinator:!!window.NRUpdateCoordinator,preparation:window.NRUpdateCoordinator?.diagnostics?.(),reloading:window._swReloading}})).catch(e=>({error:String(e)})),workers:[]};
       for(const worker of ctx.serviceWorkers())try{diagnostics.workers.push(await bounded(worker.evaluate(()=>({version:typeof CACHE_VERSION==='undefined'?null:CACHE_VERSION,pending:[...(self.__upgradePending||[])],events:self.__upgradeEvents,skipWaiting:self.__upgradeSkipWaiting,now:Date.now()}))))}catch(e){diagnostics.workers.push({error:String(e)})}
       fs.writeFileSync(path.join(out,'FAILURE.json'),JSON.stringify(diagnostics,null,2));console.error('CSS_UPGRADE_DIAGNOSTICS',JSON.stringify(diagnostics));throw error;
     }
