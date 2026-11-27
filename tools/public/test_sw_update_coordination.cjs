@@ -109,7 +109,34 @@ async function assertLateHandoff(entry) {
   assert.equal(superseded.reloads(),0,'an unrelated worker must not consume this request');
 }
 
+async function assertHealthBodyReleased(file) {
+  const source=fs.readFileSync(path.resolve(__dirname,'../..',file),'utf8').replace(/\r\n/g,'\n');
+  const start=source.indexOf('  async function renderDataTruthGate');
+  const end=source.indexOf('  function renderUnifiedForecast',start);
+  assert(start>=0 && end>start);
+  const box={};
+  let reads=0,consumed=false,cancelled=false;
+  const window={NR_PUBLIC_BUILD:true,__nrSystemHealth:{status:'previously verified'}};
+  const context=vm.createContext({window,document:{getElementById:()=>box},escapeHtml:String,
+    loadFutureKp:async()=>({}),fetch:async name=>{
+      reads++;
+      if(name.startsWith('SYSTEM_HEALTH'))return {ok:true,json:async()=>{consumed=true;return {}}};
+      return {ok:false,status:404,body:{cancel:async()=>{cancelled=true}}};
+    }});
+  vm.runInContext(source.slice(start,end),context);
+  await vm.runInContext('renderDataTruthGate()',context);
+  assert.equal(reads,0,file+' public view must not start a health response for the unavailable research panel');
+  assert.match(box.innerHTML,/BLOCKED/);
+  assert.equal(window.__nrSystemHealth.status,'previously verified');
+  window.NR_PUBLIC_BUILD=false;
+  await vm.runInContext('renderDataTruthGate()',context);
+  assert.equal(consumed,true,file+' release successful health body despite missing research cross-check');
+  assert.equal(cancelled,true,file+' release failed research response');
+  assert.match(box.innerHTML,/404/);
+}
+
 (async()=>{
+for(const file of ['product_shell_v1.js','preview-v4/product_shell_v1.js','preview-b17/product_shell_v1.js'])await assertHealthBodyReleased(file);
 const wind='https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json';
 const proxy='https://corsproxy.io/?url='+encodeURIComponent(wind);
 let finish,reads=0,writes=0,external=0,noaa=0;

@@ -505,16 +505,20 @@
   async function renderDataTruthGate(){
     const box=document.getElementById('nrDataTruthBody');if(!box)return;
     try{
-      const [kpRes,healthRes,panchRes]=await Promise.all([
-        loadFutureKp().then(kp=>({ok:true,json:async()=>window.__nrFutureKp})),
-        fetch('SYSTEM_HEALTH_STATUS_v1.json',{cache:'no-store'}),
-        (window.NR_PUBLIC_BUILD?Promise.resolve(null):fetch('PANCHANGA_ASTRONOMY_ENGINE_CROSSCHECK_v1.json',{cache:'no-store'}))
+      if(window.NR_PUBLIC_BUILD)throw new Error('Дослідницьку звірку не опубліковано');
+      async function readJson(file,label){
+        const response=await fetch(file,{cache:'no-store'});
+        if(!response.ok){
+          await response.body?.cancel();
+          throw new Error(label+' HTTP '+response.status);
+        }
+        return response.json();
+      }
+      const [kp,health,panch]=await Promise.all([
+        loadFutureKp().then(()=>window.__nrFutureKp),
+        readJson('SYSTEM_HEALTH_STATUS_v1.json','system health'),
+        readJson('PANCHANGA_ASTRONOMY_ENGINE_CROSSCHECK_v1.json','Panchanga cross-check')
       ]);
-      if(!kpRes.ok)throw new Error('future_kp HTTP '+kpRes.status);
-      if(!healthRes.ok)throw new Error('system health HTTP '+healthRes.status);
-      if(!panchRes)throw new Error('Дослідницьку звірку не опубліковано');
-      if(!panchRes.ok)throw new Error('Panchanga cross-check HTTP '+panchRes.status);
-      const kp=await kpRes.json(),health=await healthRes.json(),panch=await panchRes.json();
       // Read the shared loader state; diagnostics never own forecast authority.
       const start=todayKey(),dates=[];for(let i=0;i<7;i++){const d=new Date(start+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+i);dates.push(d.toISOString().slice(0,10));}
       const rows=dates.map(ds=>({date:ds,...((kp.kp||{})[ds]||{})}));
