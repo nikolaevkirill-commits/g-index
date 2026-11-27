@@ -1,0 +1,260 @@
+name: FP573 full read-only audit
+on:
+  push:
+    branches: [codex/fp573-audit-0eca04c]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: cloud-repair-audit-${{ github.run_id }}
+  cancel-in-progress: false
+jobs:
+  checks:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    outputs:
+      sha: ${{ steps.revision.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: 0eca04cd32030d2a39f4f91573fcae3eaf239c33
+          fetch-depth: 0
+          persist-credentials: false
+      - id: revision
+        name: Verify exact application checkout
+        run: |
+          test "$(git rev-parse HEAD)" = '0eca04cd32030d2a39f4f91573fcae3eaf239c33'
+          test -z "$(git status --porcelain)"
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          echo "Verified exact application SHA $(git rev-parse HEAD)"
+      # REL-1: a feed-only refresh must not depend on browser UI gates (B7 flakiness), but it may
+      # skip them only when every file changed since the LAST SUCCESSFULLY GATED deploy is under
+      # forecast.json or NOAA receipts. Registry/runtime changes and unknown evidence run the full gate.
+      - id: scope
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          last=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow gated-pages.yml --branch deploy --status success --limit 20 --json headSha,conclusion --jq '[.[]|select(.conclusion=="success")][0].headSha' 2>/dev/null || true)
+          python tools/public/release_scope.py --baseline "${last:-}" --github-output "$GITHUB_OUTPUT"
+          grep -qx 'mode=full' "$GITHUB_OUTPUT"
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: python tools/public/verify_boundary.py
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: python tools/public/sync_inline_styles.py
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: python tools/cloud/test_publication_paths.py
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: python tools/cloud/test_public_feed.py
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: python tools/cloud/test_noaa_refresh.py
+      - run: python -m pip install pyswisseph==2.10.3.2
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: python tools/cloud/test_expert_model.py
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: python tools/cloud/test_calendar_components.py
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: python tools/cloud/test_sunrise_conventions.py
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: python tools/cloud/test_transit_events.py
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: python tools/cloud/test_space_weather.py
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: python tools/cloud/test_reconciled_inputs.py
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: python tools/cloud/test_market_proxy.py
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: python tools/public/test_release_publication.py
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: python tools/public/test_release_scope.py
+      - uses: actions/setup-node@v4
+        with: {node-version: '24'}
+      - run: npm install --no-save --package-lock=false playwright@1.62.1
+      - run: npx playwright install --with-deps chromium
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/test_browser_readiness.cjs
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_day_cautions.cjs
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_noaa_missing.cjs
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_kp_source_provenance.cjs
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_svg_missing.cjs
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_presentation.cjs
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_day_summary.cjs
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_journal_restore_time.cjs
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_journal_restore_adversarial.cjs
+      # The real update button is gated; trace/restart and direct-message probes remain diagnostics.
+      # B7 (audit FP549): the release gate exercises the production update path (#pwaUpdateBar button ->
+      # pwaReload). The direct postMessage trigger bypasses pwaReload and stays a diagnostic in b7-diagnostic.yml.
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/test_sw_update_coordination.cjs
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_css_upgrade.cjs --button
+      # Isolated worker/network fault probes complement the real Update-button gate above.
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_sw_asset_lifetime.cjs svgheaders --bounded
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_sw_asset_lifetime.cjs artbody --bounded
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_sw_asset_lifetime.cjs jsonbody --bounded
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_sw_asset_deadline_scope.cjs
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_b7_install.cjs
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_sw_install_revalidate.cjs
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_offline_cache_budget.cjs
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_b7_activation_race.cjs 1 index.html --multi --offline-reconnect
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_b7_activation_race.cjs 20 classic.html
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_b7_activation_race.cjs 20 index.html
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_b7_activation_race.cjs 5 classic.html --multi
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_b7_activation_race.cjs 5 index.html --multi
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_civil_time.cjs
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/test_locale_fp542.cjs
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/test_authority_fp542.cjs
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/test_scoped_decisions.cjs
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/test_expert_refresh_regression.cjs
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_authority_fp542.cjs
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_final_score.cjs
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_expert_november.cjs
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/test_notification_locale.cjs
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_entry_score_equivalence.cjs
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_authority_boundary.cjs
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_fork_drift.cjs
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_l10n_expanded.cjs
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_sky_scene.cjs
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_day_verdict.cjs
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_day_match.cjs
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_natal_sky.cjs --slow-render
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_natal_shared_moon.cjs
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_notification_navigation.cjs
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_panchanga_cache.cjs cache-regression
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_text_reflow.cjs
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_all_routes_reflow.cjs
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_no_overlap.cjs
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_calendar_selection.cjs
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_day_context.cjs
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_day_context_guards.cjs
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_sky_live.cjs
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_sky_live_guards.cjs
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_shared_clock.cjs
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_moon_gl.cjs
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_moon_gl_integration.cjs
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_motion_settings.cjs
+
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_first_screen_order.cjs
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_week_ahead.cjs
+      - name: Verify three-day forecast and NOAA fallbacks
+        if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_three_day_forecast.cjs
+      # FP571: published personal day line (calculation contracts, Swiss references, page in browser)
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_personal_activity.cjs
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_personal_audit_fixes.cjs
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_personal_correlated.cjs
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_personal_dayline.cjs
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_personal_election.cjs
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_personal_factors.cjs
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_personal_interval_chain.cjs
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_personal_moon_readings.cjs
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_personal_page_browser.cjs
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_personal_phase_convention.cjs
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_personal_priority.cjs
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_personal_sidereal_nutation.cjs
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_lunar_core.cjs
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_lunar_pages_browser.cjs
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_ovation_light.cjs
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_review_fp569d.cjs
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_moon_kp_fp569f.cjs
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_polish_fp569j.cjs
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_mobile_polish_fp569k.cjs
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_wow_fp569n.cjs
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/verify_plain_fp569o.cjs
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/check_final_score_v113.cjs . final-score-regression.json
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/check_legacy_sync_v112.cjs . legacy-regression.json
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/check_product_brand_v123.cjs
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/science_festival_engine.cjs festival-unit
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/science_festival_ui.cjs festival-ui
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/science_festival_offline.cjs festival-offline
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: node tools/public/science_festival_library.cjs
+      - if: ${{ !cancelled() && steps.scope.outputs.mode == 'full' }}
+        run: python tools/public/build_pages.py
+      - name: Verify checked code stayed untouched
+        run: |
+          git diff --quiet
+          test "$(git rev-parse HEAD)" = '0eca04cd32030d2a39f4f91573fcae3eaf239c33'
+          echo "Full read-only checks passed on $(git rev-parse HEAD)"
