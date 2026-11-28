@@ -8,6 +8,10 @@ const T={
  you:['Для тебе:','For you:','Para ti:','Pour vous :'],
  chandra:['Місяць у 8-му знаку від твого натального — традиційно день обережності','The Moon is in the 8th sign from your natal Moon — traditionally a day for caution','La Luna está en el 8.º signo desde tu Luna natal; tradicionalmente, día de cautela','La Lune est dans le 8e signe depuis votre Lune natale — traditionnellement un jour de prudence'],
  tara:['Тара Бала','Tara Bala','Tara Bala','Tara Bala'],
+ nowAt:['зараз ({t}, {c})','now ({t}, {c})','ahora ({t}, {c})','maintenant ({t}, {c})'],
+ noonAt:['опівдні за місцевим часом ({c})','at local noon ({c})','a mediodía local ({c})','à midi heure locale ({c})'],
+ until:['до {t}, далі {s} {n} · {l}','until {t}, then {s} {n} · {l}','hasta las {t}, luego {s} {n} · {l}','jusqu’à {t}, puis {s} {n} · {l}'],
+ noChange:['до кінця доби без змін','no change until the end of the day','sin cambios hasta el final del día','sans changement jusqu’à la fin de la journée'],
  sade:['Фаза {p} з 3: Сатурн у {h}-му знаку від натального Місяця','Phase {p} of 3: Saturn in the {h} sign from your natal Moon','Fase {p} de 3: Saturno en el signo {h} desde tu Luna natal','Phase {p} sur 3 : Saturne dans le signe {h} depuis votre Lune natale'],
  dhaiya:['Сатурн у {h}-му знаку від натального Місяця','Saturn in the {h} sign from your natal Moon','Saturno en el signo {h} desde tu Luna natal','Saturne dans le signe {h} depuis votre Lune natale'],
  jup:['Юпітер у {h}-му знаку від натального Місяця','Jupiter in the {h} sign from your natal Moon','Júpiter en el signo {h} desde tu Luna natal','Jupiter dans le signe {h} depuis votre Lune natale'],
@@ -89,14 +93,48 @@ function timelineTara(nakshatras){
   .filter(value=>Number.isInteger(value)&&value>=1&&value<=27)
   .map(value=>[value,tara(n.nak,value-1)]))};
 }
+function place(){
+ const loc=window.SRSkyTime?.place?.(true)||window.SRSkyTime?.snapshot?.()?.loc||null;
+ const zone=loc?.zone||'Europe/Kyiv';
+ let city='';try{city=window.SRSkyTime?.placeLabel?.(loc)||window.SRSkyTime?.cityLabel?.(loc)||loc?.label||''}catch{}
+ return {zone,city:city||zone};
+}
+function offsetMs(at,zone){const f=new Intl.DateTimeFormat('en-US',{timeZone:zone,hourCycle:'h23',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'}).formatToParts(new Date(at));const v=k=>Number(f.find(x=>x.type===k).value);return Date.UTC(v('year'),v('month')-1,v('day'),v('hour')%24,v('minute'),v('second'))-Math.floor(at/1000)*1000;}
+function localAt(ds,hour,zone){const [y,mo,d]=ds.split('-').map(Number),guess=Date.UTC(y,mo-1,d,hour);return guess-offsetMs(guess-offsetMs(guess,zone),zone);}
+function moment(ds){
+ const pl=place(),now=Date.now();let todayKyiv='';try{todayKyiv=NRCivilTime.dayKey(now,'Europe/Kyiv')}catch{}
+ const localToday=new Intl.DateTimeFormat('en-CA',{timeZone:pl.zone,year:'numeric',month:'2-digit',day:'2-digit'}).format(now);
+ const today=ds===todayKyiv||ds===localToday;
+ const dayKey=today?localToday:ds;
+ const clock=new Intl.DateTimeFormat(window.NRLocale?.locale||'uk-UA',{timeZone:pl.zone,hour:'2-digit',minute:'2-digit',hourCycle:'h23'});
+ return {today,at:today?now:localAt(ds,12,pl.zone),dayEnd:localAt(dayKey,24,pl.zone),city:pl.city,clock:x=>clock.format(x)};
+}
+function grahasAt(at){
+ const L=window.SkyRhythmLunar;if(!L?.bodyLongitude||!L?.at)return null;
+ try{const moon=L.bodyLongitude(at,'Moon'),sat=L.bodyLongitude(at,'Saturn'),jup=L.bodyLongitude(at,'Jupiter');
+  return {Moon:{sign:Math.floor(moon/30)%12,nakshatra:L.at(at).nakshatra-1},Saturn:{sign:Math.floor(sat/30)%12},Jupiter:{sign:Math.floor(jup/30)%12}};}catch{return null}
+}
 function lines(ds,sky){
  const d=slot();if(!d)return {missing:true};
  const n=natal(d);if(!n)return {invalid:true};
- const day=sky?.daily?.find(x=>x.date===ds);if(!day)return {missing:false,items:[],certain:n.certain,unavailable:true};
- const g=day.grahas,items=[];
+ // FP577 (owner: «перерахуй… а якщо я буду в Токіо чи Сан-Паулу?»): positions for the real moment, not 12:00 Kyiv.
+ // Today → now; another day → local noon in the chosen place. Times are shown in that place's zone.
+ const m=moment(ds),g=grahasAt(m.at)||sky?.daily?.find(x=>x.date===ds)?.grahas;
+ if(!g)return {missing:false,items:[],certain:n.certain,unavailable:true};
+ const items=[];
  if(n.nakCertain){
   const relation=tara(n.nak,g.Moon.nakshatra);
-  items.push({k:relation.tone,body:'lunar',symbol:'☾',more:'tara',text:relation.name+' · '+p('tara')});
+  let text=relation.name+' · '+(m.today?t('nowAt').replace('{t}',m.clock(m.at)).replace('{c}',m.city):t('noonAt').replace('{c}',m.city));
+  const L=window.SkyRhythmLunar;
+  if(m.today&&L?.nextTransition){
+   try{
+    const next=L.nextTransition(m.at,'nakshatra',g.Moon.nakshatra+1);
+    if(next&&next.utcMs<m.dayEnd){const r=tara(n.nak,next.to-1);text+='; '+t('until').replace('{t}',m.clock(next.utcMs)).replace('{s}',SHAPE[r.tone]).replace('{n}',r.name).replace('{l}',r.label.toLowerCase())+'.';}
+    else text+='; '+t('noChange')+'.';
+   }catch{}
+  }else text+='.';
+  text+=' '+p('tara');
+  items.push({k:relation.tone,body:'lunar',symbol:'☾',more:'tara',text});
  }
  if(n.certain){
   if(house(n.sign,g.Moon.sign)===8)items.push({k:'caution',body:'lunar',symbol:'☾',more:'chandra',text:t('chandra')});
@@ -158,4 +196,6 @@ document.addEventListener('submit',e=>{
  window.dispatchEvent(new Event('nr:natal'));
 });
 window.NRNatalSky={lines,html,timelineTara};
+for(const e of ['nr:location','sr:place-changed'])window.addEventListener(e,()=>window.dispatchEvent(new Event('nr:natal-tick')));
+setInterval(()=>{if(!document.hidden)window.dispatchEvent(new Event('nr:natal-tick'));},5*60000);
 })();

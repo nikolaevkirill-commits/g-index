@@ -131,7 +131,7 @@ window.NRDayVerdict={
  hasMatch:ds=>MATCH_VALUES.includes(matchAll()[ds]?.v)
 };
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{watch();loadSky()});else{watch();loadSky()}
-for(const e of ['sr:consumer-load','nr:locale','gindex:consumer-ready','nr:natal','online','offline'])window.addEventListener(e,soon);
+for(const e of ['sr:consumer-load','nr:locale','gindex:consumer-ready','nr:natal','nr:natal-tick','online','offline'])window.addEventListener(e,soon);
 document.addEventListener('click',e=>{const b=e.target.closest?.('[data-day-match] button[data-match]');if(!b)return;const r=root();if(!r)return;
  let today='';try{today=NRCivilTime.dayKey(Date.now(),'Europe/Kyiv')}catch{}if(selected(r)!==today)return;
  matchSave(today,b.dataset.match);soon()});

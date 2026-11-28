@@ -1,7 +1,7 @@
 /* No storage writes: this page has its own in-memory profile. */
 (()=>{'use strict';
  const M=PersonalDayline,$=s=>document.querySelector(s),H=3600000;
- const cities={kyiv:[50.454,30.524,'Europe/Kyiv'],barcelona:[41.387,2.17,'Europe/Madrid'],izium:[49.212,37.257,'Europe/Kyiv'],perpignan:[42.698,2.895,'Europe/Paris'],auckland:[-36.85,174.76,'Pacific/Auckland'],kathmandu:[27.717,85.324,'Asia/Kathmandu'],tromso:[69.65,18.96,'Europe/Oslo']};
+ const cities={kyiv:[50.454,30.524,'Europe/Kyiv'],barcelona:[41.387,2.17,'Europe/Madrid'],izium:[49.212,37.257,'Europe/Kyiv'],perpignan:[42.698,2.895,'Europe/Paris'],auckland:[-36.85,174.76,'Pacific/Auckland'],kathmandu:[27.717,85.324,'Asia/Kathmandu'],tromso:[69.65,18.96,'Europe/Oslo'],tokyo:[35.676,139.650,'Asia/Tokyo'],'sao-paulo':[-23.551,-46.633,'America/Sao_Paulo']};
  const text={caution:['△ Обережність за правилом Тари','Цей відрізок має застереження у вибраному традиційному профілі. Це не передбачення неприємності.'],support:['✧ Підтримка за традицією','Тара належить до підтримувальної групи. Це не гарантія результату й не дозвіл на будь-яку справу.'],released:['◇ Спеціальне застереження знято','Для цього циклу або чверті накшатри застереження 3/5/7 не діє. Інші правила цим не перевірені.'],context:['◎ Джанма: важливий контекст справи','Цей профіль не визначає загальну сприятливість Джанми без уточнення справи.'],ambiguous:['◈ Залежить від часу народження','Можливі натальні накшатри дають різні висновки. Переглянь варіанти нижче.'],missing:['○ Персональних даних недостатньо','Загальний календар і планетні години доступні. Для Тари додай дату й часовий пояс народження.'],unknown:['○ Потрібна чверть накшатри','Без неї правило другого циклу не визначене.']};
  const A=PersonalDaylineActivity,F=PersonalDaylineFactors;
  const signNames=['Овен','Телець','Близнюки','Рак','Лев','Діва','Терези','Скорпіон','Стрілець','Козоріг','Водолій','Риби'];
@@ -296,6 +296,14 @@
   calculate();
  };
  {const saved=storedBirth();if(saved){for(const k of BIRTH_FIELDS)if(saved[k]!=null&&$('#birth-'+k))$('#birth-'+k).value=saved[k];$('#remember-birth').checked=true;$('#forget-birth').hidden=false;$('#birth-mode').onchange?.();}}
+ // FP577: when this page holds no birth data of its own, reuse the natal data already saved in the main app on this device
+ // (slot personalData_0, «Для тебе»). Read-only: nothing is copied into this page's storage unless «remember» is ticked.
+ if(!storedBirth()){try{const app=JSON.parse(localStorage.getItem('personalData_0')||'null');
+  if(app&&/^\d{4}-\d{2}-\d{2}$/.test(app.date||'')){
+   const zone=typeof app.tz==='string'&&app.tz.trim()&&app.tz.trim()!=='manual'?app.tz.trim():'';
+   if(zone){$('#birth-date').value=app.date;$('#birth-zone').value=zone;$('#birth-mode').value=app.time?'known':'unknown';if(app.time)$('#birth-time').value=app.time;$('#birth-mode').onchange?.();
+    $('#remember-status').textContent='Дату народження взято із «Для тебе» в застосунку на цьому пристрої.';}
+  }}catch{}}
  // In-memory result for deterministic local QA, no persistence or outbound access.
  window.PersonalDaylinePreview=Object.freeze({getModel:()=>model,getSelected:()=>selected,select:t=>{if(!model||t<model.day.start||t>=model.day.end)throw Error('Outside day');PersonalDaylineScene.stop();selectMoment(t);}});
  calculate();

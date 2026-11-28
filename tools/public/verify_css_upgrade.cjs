@@ -63,7 +63,7 @@ const server=http.createServer((req,res)=>{
 });
 // Number of inlined CSS blocks in the current classic.html (kept in step with sync_inline_styles.py).
 const CLASSIC_STYLES=(fs.readFileSync(path.join(root,'classic.html'),'utf8').match(/<style data-inline-source="/g)||[]).length;
-const MAIN_STYLES=19,JOURNAL_STYLES=1;
+const MAIN_STYLES=20,JOURNAL_STYLES=1;
 async function checkPage(page,name,count){
   if(page.url()===base+name)await page.reload();else await page.goto(base+name);
   await page.waitForFunction(()=>document.querySelectorAll('style[data-inline-source]').length>0).catch(async e=>{fs.writeFileSync(path.join(out,'failed.html'),await page.content());throw e;});

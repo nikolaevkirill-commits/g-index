@@ -64,6 +64,8 @@ function moon(at){
  return `<svg viewBox="0 0 80 80" role="img" aria-label="Місяць: освітлено ${pct===0?'менше 1':pct}%, ${waxing?'росте':'спадає'}" data-moon-k="${k}" data-moon-waxing="${waxing}"><defs><radialGradient id="${id}lit" cx="62%" cy="38%" r="75%"><stop stop-color="#fff8e6"/><stop offset=".55" stop-color="#f3e9cf"/><stop offset="1" stop-color="#b8ab8c"/></radialGradient><radialGradient id="${id}dark"><stop stop-color="#2c3a66"/><stop offset="1" stop-color="#161f3d"/></radialGradient><radialGradient id="${id}halo"><stop offset=".7" stop-color="#e9e5c8" stop-opacity=".16"/><stop offset="1" stop-color="#cddafa" stop-opacity="0"/></radialGradient><radialGradient id="${id}edge" cx="42%" cy="38%" r="67%"><stop offset=".55" stop-color="#151e32" stop-opacity="0"/><stop offset="1" stop-color="#151e32" stop-opacity=".65"/></radialGradient><radialGradient id="${id}sea"><stop stop-color="#736d60" stop-opacity=".22"/><stop offset=".65" stop-color="#736d60" stop-opacity=".12"/><stop offset="1" stop-color="#736d60" stop-opacity="0"/></radialGradient><clipPath id="${id}clip"><path d="${d}"/></clipPath></defs><circle cx="40" cy="40" r="40" fill="url(#${id}halo)"/><circle cx="40" cy="40" r="35" fill="url(#${id}dark)"/><path d="${d}" fill="url(#${id}lit)"/><g clip-path="url(#${id}clip)" fill="url(#${id}sea)"><ellipse cx="31" cy="29" rx="14" ry="17"/><ellipse cx="54" cy="25" rx="10" ry="12"/><ellipse cx="51" cy="51" rx="13" ry="14"/><ellipse cx="28" cy="53" rx="9" ry="8"/></g><circle cx="40" cy="40" r="35" fill="url(#${id}edge)"/></svg><span>${pct===0?'<1':pct}% · ${waxing?'росте':'спадає'}<small>Розрахована фаза Місяця</small></span>`;
 }
 const BACKDROPS = {
+ // FP576: default «Liquid glass» — a calm navy field with slow liquid light; photo backdrops stay selectable.
+ glass: {names: ['Рідке скло','Liquid glass','Vidrio líquido','Verre liquide']},
  cosmos: {
   names: ['Космос · NGC 4449','Cosmos · NGC 4449','Cosmos · NGC 4449','Cosmos · NGC 4449'],
   credit: 'NASA, ESA, A. Aloisi (STScI/ESA), and The Hubble Heritage (STScI/AURA)-ESA/Hubble Collaboration',
@@ -570,13 +572,19 @@ function renderTimeline(root,ds){
 function paintRing(root,result){const el=root.querySelector('.nr-o-score');if(!el)return;const value=result?.available&&SkyScore.isValidFinal(result.score)?result.score:null;el.dataset.ring=value===null?'missing':value===0?'zero':'value';el.style.setProperty('--score-arc',(value===null?0:Math.abs(value)*120)+'deg');el.style.setProperty('--score-color',SkyScore.color(value));}
 window.addEventListener('sr:dayline-ready',()=>{const root=document.querySelector('[data-overview=today]'),ds=root?.querySelector('select')?.value;if(ds){renderTimeline(root,ds);renderSignals(root,ds,resolvedFor(ds).consumer);}});
 const APPEARANCE_KEY='srAppearanceV1';
-let appearance='cosmos',appearanceSaved=true;
+let appearance='glass',appearanceSaved=true;
 function readAppearance(){
  try{
   const value=localStorage.getItem(APPEARANCE_KEY);
-  appearance=Object.hasOwn(BACKDROPS,value)?value:'cosmos';
+  appearance=Object.hasOwn(BACKDROPS,value)?value:'glass';
  }catch(_){}
 }
+// FP576: the glass layer follows the dark look; for «auto» it follows the system scheme.
+const darkScheme=window.matchMedia?.('(prefers-color-scheme: dark)');
+function syncGlassScheme(){const root=document.documentElement;root.toggleAttribute('data-sr-glass',root.dataset.nrTheme==='auto'&&!!darkScheme?.matches);}
+darkScheme?.addEventListener?.('change',syncGlassScheme);
+new MutationObserver(syncGlassScheme).observe(document.documentElement,{attributes:true,attributeFilter:['data-nr-theme']});
+syncGlassScheme();
 function applyAppearance(){
  const root=document.documentElement;
  root.dataset.srAppearance=appearance;

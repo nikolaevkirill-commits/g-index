@@ -10,7 +10,9 @@ const cities=[
  ['perpignan',['Перпіньян','Perpignan','Perpiñán','Perpignan'],42.69764,2.89541,'Europe/Paris'],
  ['ny',['Нью-Йорк','New York','Nueva York','New York'],40.7128,-74.006,'America/New_York'],
  ['delhi',['Делі','Delhi','Delhi','Delhi'],28.6139,77.209,'Asia/Kolkata'],
- ['tromso',['Тромсе','Tromsø','Tromsø','Tromsø'],69.6492,18.9553,'Europe/Oslo']
+ ['tromso',['Тромсе','Tromsø','Tromsø','Tromsø'],69.6492,18.9553,'Europe/Oslo'],
+['tokyo',['Токіо','Tokyo','Tokio','Tokyo'],35.6762,139.6503,'Asia/Tokyo'],
+['sao-paulo',['Сан-Паулу','São Paulo','São Paulo','São Paulo'],-23.5505,-46.6333,'America/Sao_Paulo']
 ];
 const DAY=86400000, PLAY_MS=16000, STEP_MS=72;
 const reduced=matchMedia('(prefers-reduced-motion: reduce)');
@@ -462,4 +464,268 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
  document.addEventListener('focusout',e=>{if(e.target.closest?.('#nrRoute-panch'))soon();});
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
 })();
+})();
+
+// the Sun, Mars, Jupiter and Saturn on lanes in the classical (Chaldean) order; each at its sidereal longitude
+// (Swiss Lahiri, SkyRhythmLunar), so the sign on the ring equals the sign used by the panchanga. R marks apparent
+// retrograde motion. The camera tilt and slow turn are decorative; positions follow the shared sky clock.
+(function(){
+'use strict';
+const BODIES=['Moon','Mercury','Venus','Sun','Mars','Jupiter','Saturn'];
+const COLOR={Moon:'#e9e6dc',Mercury:'#b9b4a8',Venus:'#f4e3b5',Sun:'#ffd36b',Mars:'#e2775d',Jupiter:'#e8c79a',Saturn:'#d9c38a'};
+const SIZE={Moon:6,Mercury:4,Venus:5.5,Sun:9,Mars:4.5,Jupiter:7.5,Saturn:6.5};
+const W={
+ uk:{title:'Світила навколо Землі',lead:'Де Сонце, Місяць і планети зараз: напрямок із Землі та знак, у якому кожне стоїть. Знаки сидеричні (Лахірі), як у панчанзі. R — ретроградний рух: з Землі здається, що планета йде назад.',
+  names:{Moon:'Місяць',Mercury:'Меркурій',Venus:'Венера',Sun:'Сонце',Mars:'Марс',Jupiter:'Юпітер',Saturn:'Сатурн'},
+  signs:['Овен','Телець','Близнюки','Рак','Лев','Діва','Терези','Скорпіон','Стрілець','Козоріг','Водолій','Риби'],retro:'ретроградний',earth:'Земля',moment:'Момент',note:'Відстані не в масштабі: кожне світило на своїй доріжці за давнім порядком від Місяця до Сатурна.',chart:'Світила навколо Землі: '},
+ en:{title:'The sky around the Earth',lead:'Where the Sun, the Moon and the planets are now: the direction from the Earth and the sign each one is in. Signs are sidereal (Lahiri), as in the panchanga. R marks retrograde motion: seen from the Earth the planet appears to move backwards.',
+  names:{Moon:'Moon',Mercury:'Mercury',Venus:'Venus',Sun:'Sun',Mars:'Mars',Jupiter:'Jupiter',Saturn:'Saturn'},
+  signs:['Aries','Taurus','Gemini','Cancer','Leo','Virgo','Libra','Scorpio','Sagittarius','Capricorn','Aquarius','Pisces'],retro:'retrograde',earth:'Earth',moment:'Moment',note:'Distances are not to scale: each body has its own lane in the classical order from the Moon to Saturn.',chart:'Bodies around the Earth: '},
+ es:{title:'El cielo alrededor de la Tierra',lead:'Dónde están ahora el Sol, la Luna y los planetas: la dirección desde la Tierra y el signo de cada uno. Los signos son siderales (Lahiri), como en el panchanga. R indica movimiento retrógrado: desde la Tierra el planeta parece retroceder.',
+  names:{Moon:'Luna',Mercury:'Mercurio',Venus:'Venus',Sun:'Sol',Mars:'Marte',Jupiter:'Júpiter',Saturn:'Saturno'},
+  signs:['Aries','Tauro','Géminis','Cáncer','Leo','Virgo','Libra','Escorpio','Sagitario','Capricornio','Acuario','Piscis'],retro:'retrógrado',earth:'Tierra',moment:'Momento',note:'Las distancias no están a escala: cada astro tiene su carril en el orden clásico de la Luna a Saturno.',chart:'Astros alrededor de la Tierra: '},
+ fr:{title:'Le ciel autour de la Terre',lead:'Où se trouvent maintenant le Soleil, la Lune et les planètes : la direction depuis la Terre et le signe de chacun. Les signes sont sidéraux (Lahiri), comme dans le panchanga. R indique le mouvement rétrograde : vue de la Terre, la planète semble reculer.',
+  names:{Moon:'Lune',Mercury:'Mercure',Venus:'Vénus',Sun:'Soleil',Mars:'Mars',Jupiter:'Jupiter',Saturn:'Saturne'},
+  signs:['Bélier','Taureau','Gémeaux','Cancer','Lion','Vierge','Balance','Scorpion','Sagittaire','Capricorne','Verseau','Poissons'],retro:'rétrograde',earth:'Terre',moment:'Moment',note:'Les distances ne sont pas à l’échelle : chaque astre a son couloir dans l’ordre classique de la Lune à Saturne.',chart:'Astres autour de la Terre : '}
+};
+const words=()=>W[window.NRLocale?.language]||W.uk;
+const norm=x=>((x%360)+360)%360;
+function state(){
+ const L=window.SkyRhythmLunar,snap=window.SRSkyTime?.snapshot?.();if(!L?.bodyLongitude)return null;
+ const at=snap&&snap.mode!=='now'?snap.at:Date.now(),out=[];
+ for(const b of BODIES){try{const lon=norm(L.bodyLongitude(at,b));const later=norm(L.bodyLongitude(at+6*3600000,b));let d=later-lon;if(d>180)d-=360;if(d<-180)d+=360;out.push({body:b,lon,retro:b!=='Sun'&&b!=='Moon'&&d<0});}catch(_){return null;}}
+ return {at,bodies:out};
+}
+const view={yaw:-90,raf:0,last:0,state:null,host:null};
+function draw(canvas,s,t){
+ const r=canvas.getBoundingClientRect(),dpr=Math.min(2,devicePixelRatio||1),Wd=Math.max(1,Math.round(r.width)),H=Math.max(1,Math.round(r.height));
+ if(canvas.width!==Wd*dpr||canvas.height!==H*dpr){canvas.width=Wd*dpr;canvas.height=H*dpr;}
+ const g=canvas.getContext('2d');g.setTransform(dpr,0,0,dpr,0,0);g.clearRect(0,0,Wd,H);
+ const w=words(),cx=Wd/2,cy=H*0.5,R=Math.min(Wd*0.37,H*0.78),tilt=0.5;
+ const proj=(deg,rad)=>{const a=(deg+view.yaw)*Math.PI/180;return {x:cx+Math.cos(a)*rad,y:cy+Math.sin(a)*rad*tilt,z:Math.sin(a)};};
+ // background stars
+ let seed=11;const rnd=()=>(seed=(seed*16807)%2147483647)/2147483647;
+ for(let i=0;i<Math.round(Wd*H/1800);i++){g.globalAlpha=.25+.5*rnd();g.fillStyle='#fff';g.fillRect(rnd()*Wd,rnd()*H,1,1);}g.globalAlpha=1;
+ // zodiac ring: 12 sidereal signs (sign i spans i*30..i*30+30)
+ const rIn=R*0.93,rOut=R*1.04;
+ for(let i=0;i<12;i++){
+  g.beginPath();for(let d=0;d<=30;d+=3){const p=proj(i*30+d,rOut);d?g.lineTo(p.x,p.y):g.moveTo(p.x,p.y);}for(let d=30;d>=0;d-=3){const p=proj(i*30+d,rIn);g.lineTo(p.x,p.y);}g.closePath();
+  g.fillStyle=i%2?'rgba(120,140,220,.16)':'rgba(170,140,230,.22)';g.fill();
+  const m=proj(i*30+15,R*1.17);g.fillStyle='rgba(225,230,255,'+(m.z>0?.95:.6)+')';g.font=(m.z>0?'600 11px':'500 10px')+' system-ui';g.textAlign='center';const tw=g.measureText(w.signs[i]).width/2;g.fillText(w.signs[i],Math.min(Wd-tw-2,Math.max(tw+2,m.x)),m.y+4);
+ }
+ // lanes
+ BODIES.forEach((b,i)=>{const rad=R*(0.24+i*0.105);g.beginPath();for(let d=0;d<=360;d+=4){const p=proj(d,rad);d?g.lineTo(p.x,p.y):g.moveTo(p.x,p.y);}g.strokeStyle='rgba(160,180,240,.18)';g.lineWidth=1;g.stroke();});
+ // Earth
+ const eg=g.createRadialGradient(cx-3,cy-3,1,cx,cy,11);eg.addColorStop(0,'#9fd3ff');eg.addColorStop(.6,'#2d6fbf');eg.addColorStop(1,'#123a6b');g.fillStyle=eg;g.beginPath();g.arc(cx,cy,10,0,Math.PI*2);g.fill();
+ g.fillStyle='rgba(220,235,255,.9)';g.font='500 10px system-ui';g.textAlign='center';g.fillText(w.earth,cx,cy+24);
+ // bodies, far side first
+ const items=s.bodies.map(o=>{const i=BODIES.indexOf(o.body),rad=R*(0.24+i*0.105),p=proj(o.lon,rad);return {...o,p,rad};}).sort((a,b)=>a.p.z-b.p.z);
+ for(const o of items){
+  const {x,y,z}=o.p,size=SIZE[o.body]*(z>0?1.08:0.9);
+  g.strokeStyle='rgba(255,255,255,.12)';g.beginPath();g.moveTo(cx,cy);g.lineTo(x,y);g.stroke();
+  if(o.body==='Sun'){const glow=g.createRadialGradient(x,y,0,x,y,28);glow.addColorStop(0,'rgba(255,225,140,.9)');glow.addColorStop(1,'rgba(255,200,100,0)');g.fillStyle=glow;g.beginPath();g.arc(x,y,28,0,Math.PI*2);g.fill();}
+  const grad=g.createRadialGradient(x-size*.35,y-size*.35,size*.2,x,y,size);grad.addColorStop(0,'#fff');grad.addColorStop(.35,COLOR[o.body]);grad.addColorStop(1,'rgba(20,24,50,.95)');
+  g.fillStyle=grad;g.beginPath();g.arc(x,y,size,0,Math.PI*2);g.fill();
+  if(o.body==='Saturn'){g.strokeStyle='rgba(230,210,150,.8)';g.lineWidth=1.2;g.beginPath();g.ellipse(x,y,size*1.8,size*.55,-.3,0,Math.PI*2);g.stroke();}
+  o.size=size;
+ }
+ // labels: try above, below, right, left of each body; skip boxes already taken
+ g.font='600 11px system-ui';g.textAlign='left';const ew=g.measureText(w.earth).width;const boxes=[[cx-ew/2-2,cy+13,cx+ew/2+2,cy+27]];
+ for(const o of [...items].sort((a,b)=>b.p.z-a.p.z)){
+  const text=w.names[o.body]+(o.retro?' R':''),tw=g.measureText(text).width,{x,y}=o.p,s=o.size;
+  const tries=[[x-tw/2,y-s-16],[x-tw/2,y+s+4],[x+s+4,y-6],[x-s-4-tw,y-6],[x-tw/2,y-s-30],[x-tw/2,y+s+18]];
+  let pick=tries[0];for(const c of tries){const box=[c[0],c[1],c[0]+tw,c[1]+13];if(box[0]<0||box[2]>Wd||box[1]<0||box[3]>H)continue;if(!boxes.some(b=>box[0]<b[2]&&box[2]>b[0]&&box[1]<b[3]&&box[3]>b[1])){pick=c;break;}}
+  boxes.push([pick[0],pick[1],pick[0]+tw,pick[1]+13]);
+  g.fillStyle='rgba(6,10,28,.55)';g.fillRect(pick[0]-2,pick[1]-1,tw+4,15);g.fillStyle='#fff';g.fillText(text,pick[0],pick[1]+11);
+ }
+}
+function render(host){
+ const s=state(),w=words();if(!s){host.hidden=true;return;}host.hidden=false;view.state=s;
+ const canvas=host.querySelector('canvas'),list=host.querySelector('ul');
+ canvas.setAttribute('aria-label',w.chart+s.bodies.map(o=>w.names[o.body]+' — '+w.signs[Math.floor(o.lon/30)]+(o.retro?' ('+w.retro+')':'')).join('; '));
+ list.replaceChildren(...s.bodies.map(o=>{const li=document.createElement('li');const deg=Math.floor(o.lon%30);li.innerHTML='';const dot=document.createElement('span');dot.className='sr-or-dot';dot.style.background=COLOR[o.body];const b=document.createElement('b');b.textContent=w.names[o.body];li.append(dot,b,' '+w.signs[Math.floor(o.lon/30)]+' '+deg+'°'+(o.retro?' · R ('+w.retro+')':''));return li;}));
+ host.querySelector('h3').textContent=w.title;host.querySelector('.sr-or-lead').textContent=w.lead;host.querySelector('.sr-or-note').textContent=w.note;
+ animate(host);
+}
+function animate(host){
+ cancelAnimationFrame(view.raf);
+ const canvas=host.querySelector('canvas'),still=matchMedia('(prefers-reduced-motion: reduce)').matches||document.documentElement.classList.contains('nr-design-motion-off');
+ const frame=t=>{if(!host.isConnected||host.hidden||document.hidden)return;if(!view.last)view.last=t;const dt=t-view.last;
+  if(still||dt>=50){if(!still)view.yaw=(view.yaw+dt*0.004)%360;view.last=t;draw(canvas,view.state,t);}
+  if(!still&&document.querySelector('#nrRoute-panch.active'))view.raf=requestAnimationFrame(frame);};
+ view.last=0;frame(performance.now());
+}
+function mount(){
+ const route=document.getElementById('nrRoute-panch');if(!route)return;
+ const anchor=route.querySelector(':scope > section.nr-sky');if(!anchor)return;
+ let host=route.querySelector(':scope > [data-sky-orrery]');
+ if(!host){host=document.createElement('section');host.className='nr-card sr-orrery';host.dataset.skyOrrery='';host.setAttribute('aria-labelledby','srOrreryTitle');
+  host.innerHTML='<h3 id="srOrreryTitle"></h3><p class="sr-or-lead"></p><canvas role="img"></canvas><ul class="sr-or-list"></ul><p class="sr-or-note"></p>';}
+ if(!host.isConnected)anchor.after(host);
+ render(host);
+}
+let pending=0;const soon=()=>{if(pending)return;pending=requestAnimationFrame(()=>{pending=0;try{mount();}catch(_){}});};
+addEventListener('sr:sky-time',soon);addEventListener('hashchange',soon);document.addEventListener('nr:language',soon);(()=>{const r=()=>document.getElementById('nrRoute-panch');const o=new MutationObserver(()=>{if(r()?.classList.contains('active'))soon();});let n=0;const go=()=>{const el=r();if(el){o.observe(el,{attributes:true,attributeFilter:['class'],childList:true});soon();}else if(n++<60)setTimeout(go,250);};document.readyState==='loading'?document.addEventListener('DOMContentLoaded',go,{once:true}):go();})();addEventListener('resize',soon);
+document.addEventListener('visibilitychange',soon);setInterval(()=>{if(document.querySelector('#nrRoute-panch.active'))soon();},60000);
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',soon);else soon();
+})();
+
+// on first view the phase grows from the new Moon to the real phase (once, never with reduced motion).
+// Orientation is the northern-hemisphere convention (waxing lit on the right); the horizon view keeps the exact angle.
+(function(){
+'use strict';
+const T={uk:{title:'Місяць',lit:'освітлено',waxing:'росте',waning:'спадає',next:'Далі',q:['молодик','перша чверть','повня','остання чверть'],note:'Вигляд для північної півкулі: зростаючий Місяць освітлений праворуч.',noteS:'Вигляд для південної півкулі: зростаючий Місяць освітлений ліворуч.'},
+ en:{title:'The Moon',lit:'lit',waxing:'waxing',waning:'waning',next:'Next',q:['new Moon','first quarter','full Moon','last quarter'],note:'Northern-hemisphere view: the waxing Moon is lit on the right.',noteS:'Southern-hemisphere view: the waxing Moon is lit on the left.'},
+ es:{title:'La Luna',lit:'iluminada',waxing:'creciente',waning:'menguante',next:'Después',q:['luna nueva','cuarto creciente','luna llena','cuarto menguante'],note:'Vista del hemisferio norte: la Luna creciente se ilumina a la derecha.',noteS:'Vista del hemisferio sur: la Luna creciente se ilumina a la izquierda.'},
+ fr:{title:'La Lune',lit:'éclairée',waxing:'croissante',waning:'décroissante',next:'Ensuite',q:['nouvelle lune','premier quartier','pleine lune','dernier quartier'],note:'Vue de l’hémisphère nord : la Lune croissante est éclairée à droite.',noteS:'Vue de l’hémisphère sud : la Lune croissante est éclairée à gauche.'}};
+const words=()=>T[window.NRLocale?.language]||T.uk;
+let intro=false,raf=0;
+function mount(){
+ const route=document.getElementById('nrRoute-panch'),A=window.Astronomy;if(!route||!A||!window.NRMoonGL)return;
+ const anchor=route.querySelector(':scope > section.sr-mm');if(!anchor)return;
+ let host=route.querySelector(':scope > [data-moon-hero]');
+ if(!host){host=document.createElement('section');host.className='nr-card sr-moon-hero';host.dataset.moonHero='';host.setAttribute('aria-labelledby','srMoonHeroTitle');
+  host.innerHTML='<div class="sr-mh-art"><canvas role="img"></canvas></div><div class="sr-mh-text"><h3 id="srMoonHeroTitle"></h3><p class="sr-mh-big"></p><p class="sr-mh-next"></p><p class="sr-mh-note"></p></div>';}
+ if(!host.isConnected)anchor.before(host);
+ const w=words(),snap=window.SRSkyTime?.snapshot?.(),at=new Date(snap&&snap.mode!=='now'?snap.at:Date.now());
+ const ill=A.Illumination('Moon',at),phase=A.MoonPhase(at),waxing=phase<180,pct=Math.round(ill.phase_fraction*100);
+ const q=A.SearchMoonQuarter(at),zone=snap?.loc?.zone||'Europe/Kyiv',locale=window.NRLocale?.locale||'uk-UA';
+ const when=new Intl.DateTimeFormat(locale,{timeZone:zone,day:'numeric',month:'long',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(q.time.date);
+ host.querySelector('h3').textContent=w.title;
+ host.querySelector('.sr-mh-big').textContent=pct+' % '+w.lit+' · '+(waxing?w.waxing:w.waning);
+ host.querySelector('.sr-mh-next').textContent=w.next+': '+w.q[q.quarter]+' · '+when;
+ const south=Number(snap?.loc?.lat)<0;
+ host.querySelector('.sr-mh-note').textContent=south?w.noteS:w.note;
+ const canvas=host.querySelector('canvas');canvas.setAttribute('aria-label',w.title+': '+pct+' % '+w.lit+', '+(waxing?w.waxing:w.waning));
+ // limb = position angle of the bright limb (north through east, as in sky_live): 270° lit on the right, 90° on the left
+ const limb=waxing!==south?270:90,target=ill.phase_angle;
+ const still=matchMedia('(prefers-reduced-motion: reduce)').matches||document.documentElement.classList.contains('nr-design-motion-off');
+ cancelAnimationFrame(raf);
+ const paint=pa=>window.NRMoonGL.draw(canvas,{phaseAngle:pa,limb,size:220});
+ if(intro||still||!route.classList.contains('active')){paint(target);intro=intro||route.classList.contains('active');return;}
+ intro=true;const t0=performance.now(),D=1600;
+ const step=t=>{const k=Math.min(1,(t-t0)/D),e=1-Math.pow(1-k,3);paint(180-(180-target)*e);if(k<1)raf=requestAnimationFrame(step);};
+ raf=requestAnimationFrame(step);
+}
+let pending=0;const soon=()=>{if(pending)return;pending=requestAnimationFrame(()=>{pending=0;try{mount();}catch(_){}});};
+addEventListener('sr:sky-time',soon);addEventListener('hashchange',soon);document.addEventListener('nr:language',soon);(()=>{const r=()=>document.getElementById('nrRoute-panch');const o=new MutationObserver(()=>{if(r()?.classList.contains('active'))soon();});let n=0;const go=()=>{const el=r();if(el){o.observe(el,{attributes:true,attributeFilter:['class'],childList:true});soon();}else if(n++<60)setTimeout(go,250);};document.readyState==='loading'?document.addEventListener('DOMContentLoaded',go,{once:true}):go();})();
+setInterval(()=>{if(document.querySelector('#nrRoute-panch.active'))soon();},60000);
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',soon);else soon();
+})();
+
+(()=>{'use strict';
+const D2R=Math.PI/180,SLOT=3*3600000,POLE={lat:80.8,lon:-72.8};
+const T=(uk,en,es,fr)=>({uk,en,es,fr})[window.NRLocale?.language||'uk']??en;
+const boundary=kp=>66.5-2*kp;
+const tone=kp=>kp>=5?'storm':kp>=4?'active':kp>=3?'unsettled':'quiet';
+function magLat(lat,lon){const s=Math.sin(lat*D2R)*Math.sin(POLE.lat*D2R)+Math.cos(lat*D2R)*Math.cos(POLE.lat*D2R)*Math.cos((lon-POLE.lon)*D2R);return Math.asin(Math.max(-1,Math.min(1,s)))/D2R;}
+function fromPole(colat,bearing){
+ const p=POLE.lat*D2R,d=colat*D2R,b=bearing*D2R,la=Math.asin(Math.sin(p)*Math.cos(d)+Math.cos(p)*Math.sin(d)*Math.cos(b));
+ const lo=POLE.lon*D2R+Math.atan2(Math.sin(b)*Math.sin(d)*Math.cos(p),Math.cos(d)-Math.sin(p)*Math.sin(la));return [la/D2R,lo/D2R];}
+function sun(ms){const d=new Date(ms),doy=(ms-Date.UTC(d.getUTCFullYear(),0,1))/864e5,h=d.getUTCHours()+d.getUTCMinutes()/60;
+ return {dec:-23.44*Math.cos(2*Math.PI*(doy+10)/365),lon:(12-h)*15};}
+const elev=(lat,lon,s)=>Math.sin(lat*D2R)*Math.sin(s.dec*D2R)+Math.cos(lat*D2R)*Math.cos(s.dec*D2R)*Math.cos((lon-s.lon)*D2R);
+let state={reading:null,error:false,at:0,sel:null},raf=0,shown=null,grown=false,introAt=0,nightCache=null;
+function place(){const snap=window.SRSkyTime?.snapshot?.(),l=snap?.loc;const kyiv=T('Київ','Kyiv','Kiev','Kyiv');return l&&Number.isFinite(l.lat)?{lat:l.lat,lon:l.lon,zone:l.zone||'Europe/Kyiv',name:window.SRSkyTime?.placeLabel?.(l)||window.SRSkyTime?.cityLabel?.(l)||l.label||(Math.abs(l.lat-50.45)<.1&&Math.abs(l.lon-30.52)<.1?kyiv:T('Ваше місце','Your place','Su lugar','Votre lieu'))}:{lat:50.45,lon:30.52,zone:'Europe/Kyiv',name:T('Київ','Kyiv','Kiev','Kyiv')};}
+function load(){
+ const api=window.NRThreeDayForecast;if(!api?.archivedDayIntervals||Date.now()-state.at<10*60000)return;
+ state.at=Date.now();api.archivedDayIntervals().then(r=>{state.reading=r;state.error=false;soon();},()=>{state.reading=null;state.error=true;soon();});
+}
+function rows(){const now=Date.now(),cur=Math.floor(now/SLOT)*SLOT,out=[];for(let k=-2;k<6;k++){const s=cur+k*SLOT,r=state.reading?.slots.get(s);out.push({start:s,kp:r?r.kp:null,state:r?.state||null,now:k===0});}return out;}
+function draw(canvas,kpShown,t,loc){
+ const g=canvas.getContext('2d'),r=canvas.getBoundingClientRect(),dpr=Math.min(2,devicePixelRatio||1),W=Math.max(1,r.width),H=Math.max(1,r.height);
+ if(canvas.width!==Math.round(W*dpr)){canvas.width=Math.round(W*dpr);canvas.height=Math.round(H*dpr);}
+ g.setTransform(dpr,0,0,dpr,0,0);g.clearRect(0,0,W,H);
+ const cx=W/2,cy=H/2,R=Math.min(W,H)*.46,EDGE=35,P=(lat,lon)=>{const rr=(90-lat)/(90-EDGE)*R,a=lon*D2R;return [cx+rr*Math.sin(a),cy+rr*Math.cos(a)];};
+ // stars
+ for(let i=0;i<70;i++){const x=(i*97.3%W),y=(i*57.1%H),a=.25+.25*Math.sin(t*1.1+i);g.fillStyle='rgba(255,255,255,'+a+')';g.fillRect(x,y,1.2,1.2);}
+ // globe
+ const gl=g.createRadialGradient(cx,cy,R*.1,cx,cy,R);gl.addColorStop(0,'#3a86d6');gl.addColorStop(1,'#16508f');g.fillStyle=gl;g.beginPath();g.arc(cx,cy,R,0,7);g.fill();
+ // night side from the real Sun position (cached per minute on a small grid)
+ const s=sun(Date.now()),key=Math.floor(Date.now()/60000)+'|'+Math.round(R);
+ if(!nightCache||nightCache.key!==key){const N=140,c=document.createElement('canvas');c.width=c.height=N;const x=c.getContext('2d'),img=x.createImageData(N,N);
+  for(let j=0;j<N;j++)for(let i=0;i<N;i++){const dx=(i+.5)/N*2-1,dy=(j+.5)/N*2-1,rr=Math.hypot(dx,dy);if(rr>1)continue;const lat=90-rr*(90-EDGE),lon=Math.atan2(dx,dy)/D2R,e=elev(lat,lon,s),k=4*(j*N+i);
+   const a=e< -.1?.78:e<.05?.78*(.05-e)/.15:0;img.data[k]=3;img.data[k+1]=6;img.data[k+2]=24;img.data[k+3]=Math.round(a*255);}
+  x.putImageData(img,0,0);nightCache={key,c};}
+ g.drawImage(nightCache.c,cx-R,cy-R,R*2,R*2);
+ // graticule
+ g.strokeStyle='rgba(170,200,255,.18)';g.lineWidth=1;g.font='600 10px system-ui,sans-serif';g.fillStyle='rgba(190,210,255,.55)';g.textAlign='center';
+ for(const lat of [40,50,60,70,80]){const rr=(90-lat)/(90-EDGE)*R;g.beginPath();g.arc(cx,cy,rr,0,7);g.stroke();if(lat<=60)g.fillText(lat+'°',cx,cy-rr-3);}
+ for(let lon=0;lon<360;lon+=30){const [x,y]=P(EDGE,lon);g.beginPath();g.moveTo(cx,cy);g.lineTo(x,y);g.stroke();}
+ g.strokeStyle='rgba(170,200,255,.45)';g.beginPath();g.arc(cx,cy,R,0,7);g.stroke();
+ // aurora oval
+ if(kpShown!==null){
+  const B=boundary(kpShown),kq=Math.max(0,kpShown),width=4+kq*.9,power=.35+kq/9*.65;
+  g.save();g.beginPath();g.arc(cx,cy,R,0,7);g.clip();g.globalCompositeOperation='lighter';
+  for(let b=0;b<360;b+=2){
+   const [la,lo]=fromPole(90-B-width/2,b),[x,y]=P(la,lo),night=Math.max(0,Math.min(1,.5-elev(la,lo,s)*2.5));
+   const wave=.55+.45*Math.sin(b*D2R*7-t*1.7)*Math.sin(b*D2R*3+t*.9),a=power*(.25+.75*night)*wave;
+   const [la2,lo2]=fromPole(90-B,b),[x2,y2]=P(la2,lo2),[la3,lo3]=fromPole(90-B-width,b),[x3,y3]=P(la3,lo3);
+   const cg=g.createLinearGradient(x2,y2,x3,y3);cg.addColorStop(0,'rgba(90,255,160,'+a+')');cg.addColorStop(.55,'rgba(120,255,190,'+a*.6+')');cg.addColorStop(1,'rgba(200,90,255,'+a*.35+')');
+   g.strokeStyle=cg;g.lineWidth=Math.max(2,R*.035);g.lineCap='round';g.beginPath();g.moveTo(x2,y2);g.lineTo(x3,y3);g.stroke();
+   if(b%6===0){g.fillStyle='rgba(160,255,200,'+a*.5+')';g.beginPath();g.arc(x,y,Math.max(1.5,R*.012),0,7);g.fill();}
+  }
+  g.restore();
+ }
+ // your magnetic latitude and place
+ if(loc.lat<EDGE){g.textAlign='center';g.fillStyle='rgba(230,240,255,.85)';g.font='700 11px system-ui,sans-serif';g.fillText(T('Північний полюс','North Pole','Polo Norte','Pôle Nord'),cx,cy+15);return;}
+ const ml=magLat(loc.lat,loc.lon);g.setLineDash([4,4]);g.strokeStyle='rgba(255,220,140,.5)';g.beginPath();
+ for(let b=0;b<=360;b+=4){const [la,lo]=fromPole(90-ml,b),[x,y]=P(la,lo);b?g.lineTo(x,y):g.moveTo(x,y);}g.stroke();g.setLineDash([]);
+ const [px,py]=P(loc.lat,loc.lon),pulse=(t*.8)%1;
+ g.strokeStyle='rgba(255,220,140,'+(1-pulse)+')';g.lineWidth=2;g.beginPath();g.arc(px,py,4+pulse*12,0,7);g.stroke();
+ g.fillStyle='#ffdc8c';g.beginPath();g.arc(px,py,4,0,7);g.fill();
+ g.font='700 12px system-ui,sans-serif';g.textAlign=px>cx?'right':'left';g.fillStyle='#fff3d6';g.fillText(loc.name,px+(px>cx?-9:9),py-8);
+ g.textAlign='center';g.fillStyle='rgba(230,240,255,.85)';g.font='700 11px system-ui,sans-serif';g.fillText(T('Північний полюс','North Pole','Polo Norte','Pôle Nord'),cx,cy+15);g.beginPath();g.arc(cx,cy,2.5,0,7);g.fill();
+}
+function mount(){
+ const route=document.getElementById('nrRoute-panch'),sky=route?.querySelector(':scope > section.nr-sky'),anchor=route?.querySelector(':scope > [data-moon-hero]')||sky;
+ if(!route||!sky||!route.classList.contains('active'))return;
+ load();
+ let host=route.querySelector(':scope > [data-kp-pulse]');
+ if(!host){host=document.createElement('section');host.className='nr-card sr-pulse';host.dataset.kpPulse='';host.setAttribute('aria-labelledby','srPulseTitle');
+  host.innerHTML='<h3 id="srPulseTitle"></h3><p class="sr-pu-big" aria-live="polite"></p><div class="sr-pu-art"><canvas role="img"></canvas></div><p class="sr-pu-line"></p><p class="sr-pu-verdict"></p><p class="sr-pu-hint"></p><ol class="sr-pu-bars"></ol><p class="sr-pu-note"></p>';
+  host.addEventListener('click',e=>{const b=e.target.closest('button[data-slot]');if(!b)return;state.sel=Number(b.dataset.slot);introAt=performance.now();soon();});}
+ if(!host.isConnected)anchor.after(host);
+ const loc=place(),list=rows(),locale=window.NRLocale?.locale||'uk-UA',num=new Intl.NumberFormat(locale,{maximumFractionDigits:2});
+ const clock=new Intl.DateTimeFormat(locale,{timeZone:loc.zone,hour:'2-digit',minute:'2-digit',hourCycle:'h23'});
+ if(state.sel!==null&&!list.some(x=>x.start===state.sel))state.sel=null;
+ const cur=list.find(x=>x.now),pick=list.find(x=>x.start===state.sel)||cur,kp=pick?.kp??null;
+ const STATE={observed:T('спостереження','observed','observado','observé'),estimated:T('попередня оцінка','estimate','estimación','estimation'),predicted:T('прогноз','forecast','pronóstico','prévision')};
+ const WORD={quiet:T('спокійно','quiet','tranquilo','calme'),unsettled:T('неспокійно','unsettled','inestable','instable'),active:T('збурено','active','activo','actif'),storm:T('магнітна буря','geomagnetic storm','tormenta geomagnética','tempête géomagnétique')};
+ host.dataset.tone=kp===null?'none':tone(kp);
+ host.querySelector('h3').textContent=T('Пульс магнітосфери','Magnetosphere pulse','Pulso de la magnetosfera','Pouls de la magnétosphère');
+ const span=pick?clock.format(pick.start)+'–'+clock.format(pick.start+SLOT):'';
+ host.querySelector('.sr-pu-big').textContent=kp===null?T('Даних NOAA Kp недостатньо','Not enough NOAA Kp data','Datos Kp de NOAA insuficientes','Données Kp NOAA insuffisantes'):
+  (pick.now?T('Зараз','Now','Ahora','Maintenant'):span)+' · Kp '+num.format(kp)+' · '+WORD[tone(kp)]+' ('+STATE[pick.state]+')';
+ const ml0=magLat(loc.lat,loc.lon),south=ml0<0,ml=Math.abs(ml0),B=kp===null?null:boundary(kp);
+ host.querySelector('.sr-pu-line').textContent=B===null?'':T('Межа сяйва ≈ ','Aurora edge ≈ ','Borde de la aurora ≈ ','Limite de l’aurore ≈ ')+Math.round(B)+T('° магн. широти · ','° magnetic latitude · ','° de latitud magnética · ','° de latitude magnétique · ')+(loc.name||'')+' ≈ '+Math.round(ml)+'°'+(south?T(' (південна)',' (south)',' (sur)',' (sud)'):'');
+ host.querySelector('.sr-pu-verdict').textContent=B===null?'':ml>=B?T('Сяйво може бути над головою — якщо ніч і ясно.','Aurora may be overhead if it is dark and clear.','La aurora podría verse en lo alto si es de noche y está despejado.','L’aurore pourrait être au-dessus de vous s’il fait nuit et clair.'):
+  ml>=B-7?(south?T('Можливе низько над південним горизонтом — якщо ніч і ясно.','Possible low on the southern horizon if dark and clear.','Posible baja sobre el horizonte sur si es de noche y está despejado.','Possible bas sur l’horizon sud s’il fait nuit et clair.'):T('Можливе низько над північним горизонтом — якщо ніч і ясно.','Possible low on the northern horizon if dark and clear.','Posible baja sobre el horizonte norte si es de noche y está despejado.','Possible bas sur l’horizon nord s’il fait nuit et clair.')):
+  T('Тут сяйво малоймовірне: до межі ще ','Aurora is unlikely here: the edge is still ','Aquí la aurora es improbable: el borde está a ','Aurore peu probable ici : la limite est encore à ')+Math.round(B-ml)+(south?T('° на південь (південне сяйво). Карта показує північну півкулю, південний овал дзеркальний.','° to the south (aurora australis). The map shows the northern hemisphere; the southern oval mirrors it.','° al sur (aurora austral). El mapa muestra el hemisferio norte; el óvalo sur es simétrico.','° au sud (aurore australe). La carte montre l’hémisphère nord ; l’ovale sud est symétrique.'):T('° на північ.','° to the north.','° al norte.','° au nord.'));
+ host.querySelector('.sr-pu-hint').textContent=T('Натисніть стовпчик, щоб побачити овал сяйва в цей проміжок.','Tap a bar to see the aurora oval for that interval.','Toque una barra para ver el óvalo de la aurora en ese intervalo.','Touchez une barre pour voir l’ovale de l’aurore à ce moment.');
+ const ol=host.querySelector('.sr-pu-bars'),sig=JSON.stringify([list.map(x=>[x.start,x.kp,x.state]),state.sel,locale]);
+ if(ol.dataset.sig!==sig){ol.dataset.sig=sig;ol.replaceChildren(...list.map((x,i)=>{const li=document.createElement('li'),b=document.createElement('button');b.type='button';b.dataset.slot=String(x.start);
+  b.dataset.tone=x.kp===null?'none':tone(x.kp);if(x.state)b.dataset.state=x.state;b.setAttribute('aria-pressed',String(x.start===(pick?.start)));b.style.setProperty('--h',x.kp===null?'4%':Math.max(6,x.kp/9*100)+'%');b.style.setProperty('--i',String(i));
+  b.setAttribute('aria-label',clock.format(x.start)+'–'+clock.format(x.start+SLOT)+': '+(x.kp===null?T('немає даних','no data','sin datos','pas de données'):'Kp '+num.format(x.kp)+', '+STATE[x.state]));
+  b.innerHTML='<span class="sr-pu-col"><i></i></span><b>'+(x.kp===null?'—':num.format(x.kp))+'</b><small>'+(x.now?T('зараз','now','ahora','maint.'):clock.format(x.start))+'</small>';li.append(b);return li;}));}
+ host.querySelector('.sr-pu-note').textContent=T('Kp — NOAA SWPC, по 3 години; суцільний стовпчик — спостереження, прозорий — прогноз. Карта ілюстративна: межа овалу за орієнтовним правилом 66,5° − 2·Kp, полюс у дипольному наближенні; нічний бік — за положенням Сонця.','Kp from NOAA SWPC in 3-hour intervals; solid bars are observations, translucent ones forecasts. The map is illustrative: oval edge by the rough rule 66.5° − 2·Kp, dipole pole; night side from the Sun position.','Kp de NOAA SWPC cada 3 horas; barras sólidas: observaciones, translúcidas: pronósticos. Mapa ilustrativo: borde del óvalo según la regla aproximada 66,5° − 2·Kp, polo dipolar; lado nocturno según la posición del Sol.','Kp de la NOAA SWPC par intervalles de 3 h ; barres pleines : observations, translucides : prévisions. Carte illustrative : limite de l’ovale selon la règle approchée 66,5° − 2·Kp, pôle dipolaire ; côté nuit selon la position du Soleil.');
+ const canvas=host.querySelector('canvas');canvas.setAttribute('aria-label',host.querySelector('.sr-pu-big').textContent+'. '+host.querySelector('.sr-pu-line').textContent);
+ const still=matchMedia('(prefers-reduced-motion: reduce)').matches||document.documentElement.classList.contains('nr-design-motion-off');
+ const target=kp;if(!introAt)introAt=performance.now();
+ cancelAnimationFrame(raf);
+ if(!host.srSeen){host.srSeen=true;host.srVisible=false;new IntersectionObserver(e=>{host.srVisible=e[0].isIntersecting;if(host.srVisible)soon();}).observe(canvas);}
+ let lastPaint=0;
+ const frame=now=>{raf=0;if(!host.isConnected||!route.classList.contains('active')||document.hidden||!host.srVisible)return;
+  if(now-lastPaint<45){raf=requestAnimationFrame(frame);return;}lastPaint=now;
+  const k=still?1:Math.min(1,(now-introAt)/1400),e=1-Math.pow(1-k,3),from=shown??target,show=target===null?null:from+(target-from)*e;
+  draw(canvas,show,still?0:now/1000,loc);
+  if(k>=1)shown=target;
+  if(!still)raf=requestAnimationFrame(frame);};
+ if(!grown&&target!==null&&!still){shown=-6;grown=true;introAt=performance.now();}
+ raf=requestAnimationFrame(frame);
+}
+let pending=0;const soon=()=>{if(pending)return;pending=requestAnimationFrame(()=>{pending=0;try{mount();}catch(e){console.warn('Kp pulse:',e);}});};
+addEventListener('sr:sky-time',soon);addEventListener('hashchange',soon);document.addEventListener('nr:language',soon);(()=>{const r=()=>document.getElementById('nrRoute-panch');const o=new MutationObserver(()=>{if(r()?.classList.contains('active'))soon();});let n=0;const go=()=>{const el=r();if(el){o.observe(el,{attributes:true,attributeFilter:['class'],childList:true});soon();}else if(n++<60)setTimeout(go,250);};document.readyState==='loading'?document.addEventListener('DOMContentLoaded',go,{once:true}):go();})();document.addEventListener('visibilitychange',soon);
+setInterval(()=>{if(document.querySelector('#nrRoute-panch.active'))soon();},60000);
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',soon);else soon();
 })();

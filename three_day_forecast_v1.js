@@ -551,12 +551,15 @@
   const A=root.Astronomy;if(!A)return null;
   try{const obs=new A.Observer(loc.lat,loc.lon,loc.elevation||0),time=new Date(at),eq=A.Equator('Sun',time,obs,true,true),alt=A.Horizon(time,obs,eq.ra,eq.dec,'normal').altitude;return alt>0?'day':alt>-6?'twilight':'night';}catch(_){return null;}
  }
+ const NATAL_COPY={uk:{you:'Для тебе',tara:'Тара',from:'з {t}'},en:{you:'For you',tara:'Tara',from:'from {t}'},es:{you:'Para ti',tara:'Tara',from:'desde las {t}'},fr:{you:'Pour vous',tara:'Tara',from:'dès {t}'}};
+ let natalRev=0;
+ root.addEventListener?.('nr:natal',()=>{natalRev++;for(const h of root.document?.querySelectorAll('[data-strip-ds]')||[])if(!h.hidden&&h.isConnected)mountDayStrip(h,h.dataset.stripDs,true);});
  function mountDayStrip(host,ds,active=true){
   if(!host)return;
   host.hidden=!active;
   if(!active||!/^\d{4}-\d{2}-\d{2}$/.test(ds||''))return;
   const w=stripCopy(),loc=stripPlace(),lang=root.NRLocale?.language||'uk',locale=root.NRLocale?.locale||'uk-UA';
-  const key=[ds,loc.lat,loc.lon,loc.zone,lang].join('|');
+  const key=[ds,loc.lat,loc.lon,loc.zone,lang,natalRev].join('|');host.dataset.stripDs=ds;
   const age=Date.now()-Number(host.dataset.stripAt||0);
   if(host.dataset.stripKey===key&&((host.dataset.stripState==='ready'&&age<5*60000)||(host.dataset.stripState==='loading'&&age<30000)))return;
   host.dataset.stripKey=key;host.dataset.stripState='loading';host.dataset.stripAt=String(Date.now());
@@ -653,7 +656,19 @@
     for(const note of skyNotes[index])sLine.append(node('span','sr-ds-change',note));
     item.append(head);
     if(headline)item.append(title);
-    item.append(kpLine,mLine,sLine);
+    // FP577: personal layer in the same 3-hour block — Tara Bala from the natal Moon (only with saved birth data and a certain birth nakshatra).
+    let youLine=null;
+    if(state&&root.NRNatalSky?.timelineTara){
+     const naks=[state.nakshatra,...changes.filter(e=>e.kind==='nakshatra').map(e=>e.to)];
+     const t=root.NRNatalSky.timelineTara(naks);
+     if(t.status==='available'&&t.byNakshatra[state.nakshatra]){
+      const nc=NATAL_COPY[lang]||NATAL_COPY.en,sig=t.byNakshatra[state.nakshatra];
+      youLine=node('p','sr-ds-you');youLine.dataset.tone=sig.tone;
+      youLine.append(node('b','',nc.you+': '),node('span','sr-ds-you-shape',(sig.tone==='good'?'▲':'▼')+' '),nc.tara+' '+sig.name+' · '+sig.label);
+      for(const e of changes.filter(e=>e.kind==='nakshatra')){const n=t.byNakshatra[e.to];if(n)youLine.append(node('span','sr-ds-change',fill(nc.from,{t:clock.format(e.ms)})+' '+(n.tone==='good'?'▲':'▼')+' '+n.name+' · '+n.label));}
+     }
+    }
+    item.append(kpLine,mLine);if(youLine)item.append(youLine);item.append(sLine);
     if(expert.childNodes.length)item.append(expert);
     if(isToday&&b.to<=now)past.push(item);else rows.push(item);
    });
