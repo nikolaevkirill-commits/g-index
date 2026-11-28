@@ -62,30 +62,63 @@ try{for(const at of clocks)for(const entry of ['classic.html','index.html'])for(
   R.push({at,entry,width,scale,tab:routes[i].label,...m});
  }
  R.push({at,entry,width,scale,errors:errs});await c.close();}
- // The fixed tablet bar must leave the motion control reachable after browser scrolling.
+ // Verify actual touch delivery after the routed cards and web fonts have settled.
  const tablet=await b.newContext({viewport:{width:820,height:1180},isMobile:true,hasTouch:true,
   locale:'uk-UA',timezoneId:'Europe/Kyiv',reducedMotion:'no-preference',serviceWorkers:'block'});
  try{
-  const page=await tablet.newPage();
-  await page.route(/^https?:\/\/(?!127\.0\.0\.1)/,r=>r.abort());
-  await page.addInitScript(()=>{localStorage.setItem('gidx_onboard_done_v2','1');localStorage.setItem('srPrivacyNoticeDismissed','1');sessionStorage.setItem('nrs_launch','1');});
+  await tablet.route(/^https?:\/\/(?!127\.0\.0\.1)/,r=>r.abort());
+  await tablet.addInitScript(()=>{localStorage.setItem('gidx_onboard_done_v2','1');localStorage.setItem('srPrivacyNoticeDismissed','1');sessionStorage.setItem('nrs_launch','1');});
   for(const [route,selector] of [['more','[data-design-motion]'],['panch','.nr-sl-positions > summary']]){
-  await page.goto('http://127.0.0.1:'+server.address().port+'/index.html?channel=play#'+route,{waitUntil:'load'});
-  await page.locator('#nrRoute-'+route+'.active').waitFor();
-  await page.addStyleTag({content:'html{font-size:32px!important}'});
-  await page.evaluate(()=>document.fonts.ready);
-  const motion=page.locator('#nrRoute-'+route+' '+selector);
-  await motion.waitFor();
-  const point=await motion.evaluate(button=>{
-   button.scrollIntoView({block:'end',behavior:'instant'});
-   const b=button.getBoundingClientRect(),nav=document.getElementById('mobileNav').getBoundingClientRect(),x=b.left+b.width/2;
-   return {x,y:b.top+b.height/2,visible:b.top>=0&&b.bottom<=nav.top&&b.width>=44&&b.height>=44&&
-    [.1,.5,.9].every(f=>button.contains(document.elementFromPoint(x,b.top+f*b.height))),
-    initial:button.matches('summary')?button.parentElement.open:document.documentElement.classList.contains('nr-design-motion-off')};
-  });
-  require('assert/strict').ok(point.visible,'Tablet motion control must be above the navigation and receive touch');
-  await page.touchscreen.tap(point.x,point.y);
-  await page.waitForFunction(([selector,initial])=>{const el=document.querySelector(selector);return (el.matches('summary')?el.parentElement.open:document.documentElement.classList.contains('nr-design-motion-off'))!==initial;},[selector,point.initial]);
+   const page=await tablet.newPage();
+   const targetSelector='#nrRoute-'+route+'.active '+selector;
+   const point=()=>page.locator(targetSelector).evaluate(button=>{
+    const box=button.getBoundingClientRect(),bar=document.getElementById('mobileNav').getBoundingClientRect(),x=box.left+box.width/2;
+    return {x,y:box.top+box.height/2,top:box.top,bottom:box.bottom,width:box.width,height:box.height,barTop:bar.top,
+     hits:[.1,.5,.9].map(f=>button.contains(document.elementFromPoint(x,box.top+f*box.height))),
+     state:button.matches('summary')?button.parentElement.open:document.documentElement.classList.contains('nr-design-motion-off')};
+   });
+   try{
+    await page.goto('http://127.0.0.1:'+server.address().port+'/index.html?channel=play#'+route,{waitUntil:'load'});
+    const target=page.locator(targetSelector);
+    await target.waitFor();
+    await page.addStyleTag({content:'html{font-size:32px!important}'});
+    await page.evaluate(()=>document.fonts.ready);
+    const settle=()=>page.waitForFunction(sel=>{
+     const el=document.querySelector(sel);
+     if(!el)return false;
+     const r=el.getBoundingClientRect(),key=[scrollY,r.top,r.left,r.width,r.height,document.documentElement.scrollHeight].join('/');
+     if(window.__tabletRect?.key!==key)window.__tabletRect={key,since:performance.now()};
+     return performance.now()-window.__tabletRect.since>=1400;
+    },targetSelector,{polling:100,timeout:30000});
+    await settle();
+    await target.evaluate(el=>{el.scrollIntoView({block:'end',behavior:'instant'});delete window.__tabletRect;});
+    await settle();
+    const before=await point();
+    const assert=require('node:assert/strict');
+    assert.ok(before.top>=0&&before.bottom<=before.barTop&&before.width>=44&&before.height>=44&&before.hits.every(Boolean),
+     route+' tablet target is obscured: '+JSON.stringify(before));
+    await page.evaluate(sel=>{
+     window.__tabletEvents=[];
+     for(const type of ['pointerdown','click'])document.addEventListener(type,event=>{
+      const el=document.querySelector(sel);
+      window.__tabletEvents.push({type:event.type,trusted:event.isTrusted,hit:!!el?.contains(event.target),route:location.hash});
+     },{once:true,capture:true});
+    },targetSelector);
+    await page.touchscreen.tap(before.x,before.y);
+    try{
+     await page.waitForFunction(([sel,initial])=>{
+      const el=document.querySelector(sel);
+      if(!el)return false;
+      const state=el.matches('summary')?el.parentElement.open:document.documentElement.classList.contains('nr-design-motion-off');
+      return state!==initial&&['pointerdown','click'].every(type=>window.__tabletEvents.some(e=>e.type===type&&e.trusted&&e.hit));
+     },[targetSelector,before.state],{timeout:8000});
+    }catch(error){
+     const events=await page.evaluate(()=>window.__tabletEvents);
+     const after=await page.locator(targetSelector).count()?await point():null;
+     throw new Error(route+' tablet touch: '+JSON.stringify({before,after,events}),{cause:error});
+    }
+    console.log('PASS real tablet touch: '+route);
+   }finally{await page.close();}
   }
  }finally{await tablet.close();}
 }finally{await b.close();server.close()}
