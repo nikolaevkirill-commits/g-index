@@ -39,7 +39,19 @@ for(let y=1975;y<2030;y+=3)cases.push({date:y+'-06-15',time:'07:30',utcOff:3,utc
    const janma=Object.entries(r.byNakshatra||{}).find(([,v])=>v.name==='Джанма'||v.name==='Janma');
    return {nak:l.nak,sign:l.sign,ambiguous:r.status==='ambiguous',group:janma? (Number(janma[0])-1)%9:null};
   }),cases);
-  let checks=0;
+  await page.clock.setFixedTime(new Date('2026-11-28T17:00:00Z')); // Tokyo 02:00 on the 29th, Kyiv still on the 28th.
+  const tokyo=await page.evaluate(()=>{
+   const original=window.SRSkyTime;
+   try{
+    window.SRSkyTime={...original,place:()=>({zone:'Asia/Tokyo',label:'Tokyo'}),placeLabel:()=>'Tokyo'};
+    lsSet(getSlotKey(_activeSlot),JSON.stringify({date:'1990-06-15',time:'07:30',tz:'manual',utcOff:3}));
+    const taraFor=ds=>window.NRNatalSky.lines(ds).items.find(item=>item.more==='tara').text;
+    return [taraFor('2026-11-28'),taraFor('2026-11-29')];
+   }finally{window.SRSkyTime=original;}
+  });
+  assert.match(tokyo[0],/зараз \(02:00, Tokyo\)/);
+  assert.match(tokyo[1],/опівдні за місцевим часом \(Tokyo\)/);
+  let checks=2;
   cases.forEach((c,i)=>{
    // A supplied clock minute is an interval, so do not collapse a crossing to its first instant.
    const e=Personal.birthEvidence({date:c.date,time:c.time,mode:'known',offsetHours:c.utcOff});

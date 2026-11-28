@@ -67,7 +67,7 @@ async function coldStart(browser, base, packed) {
   assert.equal(info.keys.includes(scope + 'index.html'), true);
   if (packed) assert(info.installedBytes <= shellBudget);
 
-  for (const asset of ['core_runtime_v1.js','locale_overview_v1.js','preview-v4/core_runtime_v1.js','preview-v4/locale_overview_v1.js']) {
+  for (const asset of ['core_runtime_v1.js','locale_overview_v1.js','preview-v4/core_runtime_v1.js','preview-v4/locale_overview_v1.js','product_shell_v1.js','preview-v4/product_shell_v1.js']) {
    assert.equal(info.keys.includes(scope + asset), !packed, asset);
    assert.equal(info.keys.includes(scope + asset + '.gz'), packed, asset);
   }
@@ -84,8 +84,8 @@ async function coldStart(browser, base, packed) {
     typeof computePanchanga === 'function' && window.SRSkyTime && window.NRLocale &&
     document.querySelector('#nrRoute-today.active [data-day-verdict]'), null, {timeout:35000});
    const refs = await page.evaluate(() => Array.from(document.scripts, s => s.src)
-    .filter(src => /(^|\/)(core_runtime_v1|locale_overview_v1)\.js\?/.test(src)));
-   assert.equal(refs.length, 2, entry);
+    .filter(src => /(^|\/)(core_runtime_v1|locale_overview_v1|product_shell_v1)\.js\?/.test(src)));
+   assert.equal(refs.length, 3, entry);
    for (const request of refs) {
     const asset = new URL(request).pathname.slice(scope.length);
     const result = await page.evaluate(async url => {
@@ -114,7 +114,7 @@ async function coldStart(browser, base, packed) {
    const duplicateKeys = await first.evaluate(async () => {
     const names = (await caches.keys()).filter(name => name.startsWith('gindex-data-'));
     const keys = (await Promise.all(names.map(async name => (await caches.open(name)).keys()))).flat();
-    return keys.filter(request => /(?:core_runtime_v1|locale_overview_v1)\.js$/.test(new URL(request.url).pathname)).length;
+    return keys.filter(request => /(?:core_runtime_v1|locale_overview_v1|product_shell_v1)\.js$/.test(new URL(request.url).pathname)).length;
    });
    assert.equal(duplicateKeys, 0, 'Expanded scripts cannot inflate the dynamic cache');
   }
@@ -182,7 +182,7 @@ async function refuseCorruptUpdate(browser, base) {
   const fallbackBytes = await coldStart(browser,base,false);
   await refuseCorruptUpdate(browser,base);
   console.log(JSON.stringify({status:'PASS',packedBytes,fallbackBytes,budget:shellBudget,
-   coldEntries:['index.html','classic.html'],exactScripts:4,corruptUpdateRejected:true}));
+   coldEntries:['index.html','classic.html'],exactScripts:6,corruptUpdateRejected:true}));
  } finally {
   await browser.close();
   server.close();

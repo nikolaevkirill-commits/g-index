@@ -104,7 +104,8 @@ function localAt(ds,hour,zone){const [y,mo,d]=ds.split('-').map(Number),guess=Da
 function moment(ds){
  const pl=place(),now=Date.now();let todayKyiv='';try{todayKyiv=NRCivilTime.dayKey(now,'Europe/Kyiv')}catch{}
  const localToday=new Intl.DateTimeFormat('en-CA',{timeZone:pl.zone,year:'numeric',month:'2-digit',day:'2-digit'}).format(now);
- const today=ds===todayKyiv||ds===localToday;
+ // The date selector follows the Kyiv forecast day; location controls the clock and local noon.
+ const today=ds===todayKyiv;
  const dayKey=today?localToday:ds;
  const clock=new Intl.DateTimeFormat(window.NRLocale?.locale||'uk-UA',{timeZone:pl.zone,hour:'2-digit',minute:'2-digit',hourCycle:'h23'});
  return {today,at:today?now:localAt(ds,12,pl.zone),dayEnd:localAt(dayKey,24,pl.zone),city:pl.city,clock:x=>clock.format(x)};

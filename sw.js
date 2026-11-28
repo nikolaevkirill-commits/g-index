@@ -189,7 +189,7 @@ const SHELL_ASSETS = [
   './preview-v4/sky_scene_v1.css?v=fp569r-reaudit',
   './preview-v4/app_today_v1.js?v=fp573-compact',
   './preview-v4/app_today_v1.css?v=app1',
-  './natal_sky_v1.js?v=fp577-now',
+  './natal_sky_v1.js?v=fp577-selected-date',
   './day_verdict_v1.js?v=fp577-now',
   './space_scene_gl_v1.js?v=fp569r-noaa-locales',
   './space_scene_v1.js?v=fp573-compact',
@@ -306,6 +306,8 @@ const SHELL_ASSETS = [
 // These scripts are immutable at their versioned request URLs. The build check
 // verifies their gzip bodies against the public JavaScript sources.
 const PACKED_SHELL_HASHES = Object.freeze({
+  './preview-v4/product_shell_v1.js': '7abfd15b00d53e414fa20a7d3f4e251b88c228607715e46a1f1b31230a19013d',
+  './product_shell_v1.js': 'cf09d30e2879f9467357d70b0101a6744381272c5a099c3f18f1e05890251d3d',
   './core_runtime_v1.js': '4c022c547ded9d8a2e5da93ada2d481abaebc1781ca4fb7b8562771e539721eb',
   './locale_overview_v1.js': '857f453be8e60f1a765f0f840c64e95383a108d42370ed7f2f6f8276e35534cd',
   './preview-v4/core_runtime_v1.js': '68185facccf9186a2cecb448f1e21954904e7799fd960e11641fa68a40d2c78e',
