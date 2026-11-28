@@ -69,23 +69,24 @@ try{for(const at of clocks)for(const entry of ['classic.html','index.html'])for(
   const page=await tablet.newPage();
   await page.route(/^https?:\/\/(?!127\.0\.0\.1)/,r=>r.abort());
   await page.addInitScript(()=>{localStorage.setItem('gidx_onboard_done_v2','1');localStorage.setItem('srPrivacyNoticeDismissed','1');sessionStorage.setItem('nrs_launch','1');});
-  await page.goto('http://127.0.0.1:'+server.address().port+'/index.html?channel=play#more',{waitUntil:'load'});
-  await page.locator('#nrRoute-more.active').waitFor();
-  const originalSize=await page.evaluate(()=>parseFloat(getComputedStyle(document.documentElement).fontSize));
-  await page.addStyleTag({content:'html{font-size:'+2*originalSize+'px!important}'});
+  for(const [route,selector] of [['more','[data-design-motion]'],['panch','.nr-sl-positions > summary']]){
+  await page.goto('http://127.0.0.1:'+server.address().port+'/index.html?channel=play#'+route,{waitUntil:'load'});
+  await page.locator('#nrRoute-'+route+'.active').waitFor();
+  await page.addStyleTag({content:'html{font-size:32px!important}'});
   await page.evaluate(()=>document.fonts.ready);
-  const motion=page.locator('#nrRoute-more [data-design-motion]');
+  const motion=page.locator('#nrRoute-'+route+' '+selector);
   await motion.waitFor();
   const point=await motion.evaluate(button=>{
    button.scrollIntoView({block:'end',behavior:'instant'});
    const b=button.getBoundingClientRect(),nav=document.getElementById('mobileNav').getBoundingClientRect(),x=b.left+b.width/2;
    return {x,y:b.top+b.height/2,visible:b.top>=0&&b.bottom<=nav.top&&b.width>=44&&b.height>=44&&
     [.1,.5,.9].every(f=>button.contains(document.elementFromPoint(x,b.top+f*b.height))),
-    off:document.documentElement.classList.contains('nr-design-motion-off')};
+    initial:button.matches('summary')?button.parentElement.open:document.documentElement.classList.contains('nr-design-motion-off')};
   });
   require('assert/strict').ok(point.visible,'Tablet motion control must be above the navigation and receive touch');
   await page.touchscreen.tap(point.x,point.y);
-  await page.waitForFunction(off=>document.documentElement.classList.contains('nr-design-motion-off')!==off,point.off);
+  await page.waitForFunction(([selector,initial])=>{const el=document.querySelector(selector);return (el.matches('summary')?el.parentElement.open:document.documentElement.classList.contains('nr-design-motion-off'))!==initial;},[selector,point.initial]);
+  }
  }finally{await tablet.close();}
 }finally{await b.close();server.close()}
 if(OUT)fs.writeFileSync(OUT,JSON.stringify(R,null,1));
