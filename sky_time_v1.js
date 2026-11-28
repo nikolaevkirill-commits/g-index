@@ -619,9 +619,9 @@ const T=(uk,en,es,fr)=>({uk,en,es,fr})[window.NRLocale?.language||'uk']??en;
 const boundary=kp=>66.5-2*kp;
 const tone=kp=>kp>=5?'storm':kp>=4?'active':kp>=3?'unsettled':'quiet';
 function magLat(lat,lon){const s=Math.sin(lat*D2R)*Math.sin(POLE.lat*D2R)+Math.cos(lat*D2R)*Math.cos(POLE.lat*D2R)*Math.cos((lon-POLE.lon)*D2R);return Math.asin(Math.max(-1,Math.min(1,s)))/D2R;}
-function fromPole(colat,bearing){
- const p=POLE.lat*D2R,d=colat*D2R,b=bearing*D2R,la=Math.asin(Math.sin(p)*Math.cos(d)+Math.cos(p)*Math.sin(d)*Math.cos(b));
- const lo=POLE.lon*D2R+Math.atan2(Math.sin(b)*Math.sin(d)*Math.cos(p),Math.cos(d)-Math.sin(p)*Math.sin(la));return [la/D2R,lo/D2R];}
+function fromPole(colat,bearing,sign){
+ const p=sign*POLE.lat*D2R,d=colat*D2R,b=bearing*D2R,la=Math.asin(Math.sin(p)*Math.cos(d)+Math.cos(p)*Math.sin(d)*Math.cos(b));
+ const lo=(POLE.lon+(sign<0?180:0))*D2R+Math.atan2(Math.sin(b)*Math.sin(d)*Math.cos(p),Math.cos(d)-Math.sin(p)*Math.sin(la));return [la/D2R,lo/D2R];}
 function sun(ms){const d=new Date(ms),doy=(ms-Date.UTC(d.getUTCFullYear(),0,1))/864e5,h=d.getUTCHours()+d.getUTCMinutes()/60;
  return {dec:-23.44*Math.cos(2*Math.PI*(doy+10)/365),lon:(12-h)*15};}
 const elev=(lat,lon,s)=>Math.sin(lat*D2R)*Math.sin(s.dec*D2R)+Math.cos(lat*D2R)*Math.cos(s.dec*D2R)*Math.cos((lon-s.lon)*D2R);
@@ -631,36 +631,39 @@ function load(){
  const api=window.NRThreeDayForecast;if(!api?.archivedDayIntervals||Date.now()-state.at<10*60000)return;
  state.at=Date.now();api.archivedDayIntervals().then(r=>{state.reading=r;state.error=false;soon();},()=>{state.reading=null;state.error=true;soon();});
 }
-function rows(){const now=Date.now(),cur=Math.floor(now/SLOT)*SLOT,out=[];for(let k=-2;k<6;k++){const s=cur+k*SLOT,r=state.reading?.slots.get(s);out.push({start:s,kp:r?r.kp:null,state:r?.state||null,now:k===0});}return out;}
-function draw(canvas,kpShown,t,loc){
+function rows(){const now=Date.now(),cur=Math.floor(now/SLOT)*SLOT,out=[];for(let k=-2;k<6;k++){const s=cur+k*SLOT,r=state.reading&&now-state.reading.at<=6*3600000&&now<=state.reading.validThrough?state.reading.slots.get(s):null;out.push({start:s,kp:r?r.kp:null,state:r?.state||null,now:k===0});}return out;}
+function draw(canvas,kpShown,t,loc,ms){
  const g=canvas.getContext('2d'),r=canvas.getBoundingClientRect(),dpr=Math.min(2,devicePixelRatio||1),W=Math.max(1,r.width),H=Math.max(1,r.height);
- if(canvas.width!==Math.round(W*dpr)){canvas.width=Math.round(W*dpr);canvas.height=Math.round(H*dpr);}
+ if(canvas.width!==Math.round(W*dpr)||canvas.height!==Math.round(H*dpr)){canvas.width=Math.round(W*dpr);canvas.height=Math.round(H*dpr);}
  g.setTransform(dpr,0,0,dpr,0,0);g.clearRect(0,0,W,H);
- const cx=W/2,cy=H/2,R=Math.min(W,H)*.46,EDGE=35,P=(lat,lon)=>{const rr=(90-lat)/(90-EDGE)*R,a=lon*D2R;return [cx+rr*Math.sin(a),cy+rr*Math.cos(a)];};
+ const cx=W/2,cy=H/2,R=Math.min(W,H)*.46,sign=magLat(loc.lat,loc.lon)<0?-1:1;
+ const EDGE=Math.min(35,sign*loc.lat-4);
+ const pole=sign<0?T('Південний полюс','South Pole','Polo Sur','Pôle Sud'):T('Північний полюс','North Pole','Polo Norte','Pôle Nord');
+ const P=(lat,lon)=>{const rr=(90-sign*lat)/(90-EDGE)*R,a=sign*lon*D2R;return [cx+rr*Math.sin(a),cy+rr*Math.cos(a)];};
  // stars
  for(let i=0;i<70;i++){const x=(i*97.3%W),y=(i*57.1%H),a=.25+.25*Math.sin(t*1.1+i);g.fillStyle='rgba(255,255,255,'+a+')';g.fillRect(x,y,1.2,1.2);}
  // globe
  const gl=g.createRadialGradient(cx,cy,R*.1,cx,cy,R);gl.addColorStop(0,'#3a86d6');gl.addColorStop(1,'#16508f');g.fillStyle=gl;g.beginPath();g.arc(cx,cy,R,0,7);g.fill();
  // night side from the real Sun position (cached per minute on a small grid)
- const s=sun(Date.now()),key=Math.floor(Date.now()/60000)+'|'+Math.round(R);
+ const s=sun(ms),key=[Math.floor(ms/60000),sign,EDGE].join('|');
  if(!nightCache||nightCache.key!==key){const N=140,c=document.createElement('canvas');c.width=c.height=N;const x=c.getContext('2d'),img=x.createImageData(N,N);
-  for(let j=0;j<N;j++)for(let i=0;i<N;i++){const dx=(i+.5)/N*2-1,dy=(j+.5)/N*2-1,rr=Math.hypot(dx,dy);if(rr>1)continue;const lat=90-rr*(90-EDGE),lon=Math.atan2(dx,dy)/D2R,e=elev(lat,lon,s),k=4*(j*N+i);
+  for(let j=0;j<N;j++)for(let i=0;i<N;i++){const dx=(i+.5)/N*2-1,dy=(j+.5)/N*2-1,rr=Math.hypot(dx,dy);if(rr>1)continue;const lat=sign*(90-rr*(90-EDGE)),lon=sign*Math.atan2(dx,dy)/D2R,e=elev(lat,lon,s),k=4*(j*N+i);
    const a=e< -.1?.78:e<.05?.78*(.05-e)/.15:0;img.data[k]=3;img.data[k+1]=6;img.data[k+2]=24;img.data[k+3]=Math.round(a*255);}
   x.putImageData(img,0,0);nightCache={key,c};}
  g.drawImage(nightCache.c,cx-R,cy-R,R*2,R*2);
  // graticule
  g.strokeStyle='rgba(170,200,255,.18)';g.lineWidth=1;g.font='600 10px system-ui,sans-serif';g.fillStyle='rgba(190,210,255,.55)';g.textAlign='center';
- for(const lat of [40,50,60,70,80]){const rr=(90-lat)/(90-EDGE)*R;g.beginPath();g.arc(cx,cy,rr,0,7);g.stroke();if(lat<=60)g.fillText(lat+'°',cx,cy-rr-3);}
- for(let lon=0;lon<360;lon+=30){const [x,y]=P(EDGE,lon);g.beginPath();g.moveTo(cx,cy);g.lineTo(x,y);g.stroke();}
+ for(const lat of [40,50,60,70,80]){const rr=(90-lat)/(90-EDGE)*R;g.beginPath();g.arc(cx,cy,rr,0,7);g.stroke();if(lat<=60)g.fillText((sign*lat)+'°',cx,cy-rr-3);}
+ for(let lon=0;lon<360;lon+=30){const [x,y]=P(sign*EDGE,lon);g.beginPath();g.moveTo(cx,cy);g.lineTo(x,y);g.stroke();}
  g.strokeStyle='rgba(170,200,255,.45)';g.beginPath();g.arc(cx,cy,R,0,7);g.stroke();
  // aurora oval
  if(kpShown!==null){
   const B=boundary(kpShown),kq=Math.max(0,kpShown),width=4+kq*.9,power=.35+kq/9*.65;
   g.save();g.beginPath();g.arc(cx,cy,R,0,7);g.clip();g.globalCompositeOperation='lighter';
   for(let b=0;b<360;b+=2){
-   const [la,lo]=fromPole(90-B-width/2,b),[x,y]=P(la,lo),night=Math.max(0,Math.min(1,.5-elev(la,lo,s)*2.5));
+   const [la,lo]=fromPole(90-B-width/2,b,sign),[x,y]=P(la,lo),night=Math.max(0,Math.min(1,.5-elev(la,lo,s)*2.5));
    const wave=.55+.45*Math.sin(b*D2R*7-t*1.7)*Math.sin(b*D2R*3+t*.9),a=power*(.25+.75*night)*wave;
-   const [la2,lo2]=fromPole(90-B,b),[x2,y2]=P(la2,lo2),[la3,lo3]=fromPole(90-B-width,b),[x3,y3]=P(la3,lo3);
+   const [la2,lo2]=fromPole(90-B,b,sign),[x2,y2]=P(la2,lo2),[la3,lo3]=fromPole(90-B-width,b,sign),[x3,y3]=P(la3,lo3);
    const cg=g.createLinearGradient(x2,y2,x3,y3);cg.addColorStop(0,'rgba(90,255,160,'+a+')');cg.addColorStop(.55,'rgba(120,255,190,'+a*.6+')');cg.addColorStop(1,'rgba(200,90,255,'+a*.35+')');
    g.strokeStyle=cg;g.lineWidth=Math.max(2,R*.035);g.lineCap='round';g.beginPath();g.moveTo(x2,y2);g.lineTo(x3,y3);g.stroke();
    if(b%6===0){g.fillStyle='rgba(160,255,200,'+a*.5+')';g.beginPath();g.arc(x,y,Math.max(1.5,R*.012),0,7);g.fill();}
@@ -668,14 +671,13 @@ function draw(canvas,kpShown,t,loc){
   g.restore();
  }
  // your magnetic latitude and place
- if(loc.lat<EDGE){g.textAlign='center';g.fillStyle='rgba(230,240,255,.85)';g.font='700 11px system-ui,sans-serif';g.fillText(T('Північний полюс','North Pole','Polo Norte','Pôle Nord'),cx,cy+15);return;}
- const ml=magLat(loc.lat,loc.lon);g.setLineDash([4,4]);g.strokeStyle='rgba(255,220,140,.5)';g.beginPath();
- for(let b=0;b<=360;b+=4){const [la,lo]=fromPole(90-ml,b),[x,y]=P(la,lo);b?g.lineTo(x,y):g.moveTo(x,y);}g.stroke();g.setLineDash([]);
+ const ml=Math.abs(magLat(loc.lat,loc.lon));g.setLineDash([4,4]);g.strokeStyle='rgba(255,220,140,.5)';g.beginPath();
+ for(let b=0;b<=360;b+=4){const [la,lo]=fromPole(90-ml,b,sign),[x,y]=P(la,lo);b?g.lineTo(x,y):g.moveTo(x,y);}g.stroke();g.setLineDash([]);
  const [px,py]=P(loc.lat,loc.lon),pulse=(t*.8)%1;
  g.strokeStyle='rgba(255,220,140,'+(1-pulse)+')';g.lineWidth=2;g.beginPath();g.arc(px,py,4+pulse*12,0,7);g.stroke();
  g.fillStyle='#ffdc8c';g.beginPath();g.arc(px,py,4,0,7);g.fill();
  g.font='700 12px system-ui,sans-serif';g.textAlign=px>cx?'right':'left';g.fillStyle='#fff3d6';g.fillText(loc.name,px+(px>cx?-9:9),py-8);
- g.textAlign='center';g.fillStyle='rgba(230,240,255,.85)';g.font='700 11px system-ui,sans-serif';g.fillText(T('Північний полюс','North Pole','Polo Norte','Pôle Nord'),cx,cy+15);g.beginPath();g.arc(cx,cy,2.5,0,7);g.fill();
+ g.textAlign='center';g.fillStyle='rgba(230,240,255,.85)';g.font='700 11px system-ui,sans-serif';g.fillText(pole,cx,cy+15);g.beginPath();g.arc(cx,cy,2.5,0,7);g.fill();
 }
 function mount(){
  const route=document.getElementById('nrRoute-panch'),sky=route?.querySelector(':scope > section.nr-sky'),anchor=route?.querySelector(':scope > [data-moon-hero]')||sky;
@@ -701,16 +703,18 @@ function mount(){
  host.querySelector('.sr-pu-line').textContent=B===null?'':T('Межа сяйва ≈ ','Aurora edge ≈ ','Borde de la aurora ≈ ','Limite de l’aurore ≈ ')+Math.round(B)+T('° магн. широти · ','° magnetic latitude · ','° de latitud magnética · ','° de latitude magnétique · ')+(loc.name||'')+' ≈ '+Math.round(ml)+'°'+(south?T(' (південна)',' (south)',' (sur)',' (sud)'):'');
  host.querySelector('.sr-pu-verdict').textContent=B===null?'':ml>=B?T('Сяйво може бути над головою — якщо ніч і ясно.','Aurora may be overhead if it is dark and clear.','La aurora podría verse en lo alto si es de noche y está despejado.','L’aurore pourrait être au-dessus de vous s’il fait nuit et clair.'):
   ml>=B-7?(south?T('Можливе низько над південним горизонтом — якщо ніч і ясно.','Possible low on the southern horizon if dark and clear.','Posible baja sobre el horizonte sur si es de noche y está despejado.','Possible bas sur l’horizon sud s’il fait nuit et clair.'):T('Можливе низько над північним горизонтом — якщо ніч і ясно.','Possible low on the northern horizon if dark and clear.','Posible baja sobre el horizonte norte si es de noche y está despejado.','Possible bas sur l’horizon nord s’il fait nuit et clair.')):
-  T('Тут сяйво малоймовірне: до межі ще ','Aurora is unlikely here: the edge is still ','Aquí la aurora es improbable: el borde está a ','Aurore peu probable ici : la limite est encore à ')+Math.round(B-ml)+(south?T('° на південь (південне сяйво). Карта показує північну півкулю, південний овал дзеркальний.','° to the south (aurora australis). The map shows the northern hemisphere; the southern oval mirrors it.','° al sur (aurora austral). El mapa muestra el hemisferio norte; el óvalo sur es simétrico.','° au sud (aurore australe). La carte montre l’hémisphère nord ; l’ovale sud est symétrique.'):T('° на північ.','° to the north.','° al norte.','° au nord.'));
+  T('Тут сяйво малоймовірне: до межі ще ','Aurora is unlikely here: the edge is still ','Aquí la aurora es improbable: el borde está a ','Aurore peu probable ici : la limite est encore à ')+Math.round(B-ml)+(south?T('° на південь (південне сяйво).','° to the south (aurora australis).','° al sur (aurora austral).','° au sud (aurore australe).'):T('° на північ.','° to the north.','° al norte.','° au nord.'));
  host.querySelector('.sr-pu-hint').textContent=T('Натисніть стовпчик, щоб побачити овал сяйва в цей проміжок.','Tap a bar to see the aurora oval for that interval.','Toque una barra para ver el óvalo de la aurora en ese intervalo.','Touchez une barre pour voir l’ovale de l’aurore à ce moment.');
- const ol=host.querySelector('.sr-pu-bars'),sig=JSON.stringify([list.map(x=>[x.start,x.kp,x.state]),state.sel,locale]);
+ const ol=host.querySelector('.sr-pu-bars'),sig=JSON.stringify([list,loc.zone,locale]);
  if(ol.dataset.sig!==sig){ol.dataset.sig=sig;ol.replaceChildren(...list.map((x,i)=>{const li=document.createElement('li'),b=document.createElement('button');b.type='button';b.dataset.slot=String(x.start);
   b.dataset.tone=x.kp===null?'none':tone(x.kp);if(x.state)b.dataset.state=x.state;b.setAttribute('aria-pressed',String(x.start===(pick?.start)));b.style.setProperty('--h',x.kp===null?'4%':Math.max(6,x.kp/9*100)+'%');b.style.setProperty('--i',String(i));
   b.setAttribute('aria-label',clock.format(x.start)+'–'+clock.format(x.start+SLOT)+': '+(x.kp===null?T('немає даних','no data','sin datos','pas de données'):'Kp '+num.format(x.kp)+', '+STATE[x.state]));
   b.innerHTML='<span class="sr-pu-col"><i></i></span><b>'+(x.kp===null?'—':num.format(x.kp))+'</b><small>'+(x.now?T('зараз','now','ahora','maint.'):clock.format(x.start))+'</small>';li.append(b);return li;}));}
  host.querySelector('.sr-pu-note').textContent=T('Kp — NOAA SWPC, по 3 години; суцільний стовпчик — спостереження, прозорий — прогноз. Карта ілюстративна: межа овалу за орієнтовним правилом 66,5° − 2·Kp, полюс у дипольному наближенні; нічний бік — за положенням Сонця.','Kp from NOAA SWPC in 3-hour intervals; solid bars are observations, translucent ones forecasts. The map is illustrative: oval edge by the rough rule 66.5° − 2·Kp, dipole pole; night side from the Sun position.','Kp de NOAA SWPC cada 3 horas; barras sólidas: observaciones, translúcidas: pronósticos. Mapa ilustrativo: borde del óvalo según la regla aproximada 66,5° − 2·Kp, polo dipolar; lado nocturno según la posición del Sol.','Kp de la NOAA SWPC par intervalles de 3 h ; barres pleines : observations, translucides : prévisions. Carte illustrative : limite de l’ovale selon la règle approchée 66,5° − 2·Kp, pôle dipolaire ; côté nuit selon la position du Soleil.');
+ for(const b of ol.querySelectorAll('button'))b.setAttribute('aria-pressed',String(Number(b.dataset.slot)===pick.start));
  const canvas=host.querySelector('canvas');canvas.setAttribute('aria-label',host.querySelector('.sr-pu-big').textContent+'. '+host.querySelector('.sr-pu-line').textContent);
  const still=matchMedia('(prefers-reduced-motion: reduce)').matches||document.documentElement.classList.contains('nr-design-motion-off');
+ const mapTime=pick.now?Date.now():pick.start+SLOT/2;
  const target=kp;if(!introAt)introAt=performance.now();
  cancelAnimationFrame(raf);
  if(!host.srSeen){host.srSeen=true;host.srVisible=false;new IntersectionObserver(e=>{host.srVisible=e[0].isIntersecting;if(host.srVisible)soon();}).observe(canvas);}
@@ -718,7 +722,7 @@ function mount(){
  const frame=now=>{raf=0;if(!host.isConnected||!route.classList.contains('active')||document.hidden||!host.srVisible)return;
   if(now-lastPaint<45){raf=requestAnimationFrame(frame);return;}lastPaint=now;
   const k=still?1:Math.min(1,(now-introAt)/1400),e=1-Math.pow(1-k,3),from=shown??target,show=target===null?null:from+(target-from)*e;
-  draw(canvas,show,still?0:now/1000,loc);
+  draw(canvas,show,still?0:now/1000,loc,mapTime);
   if(k>=1)shown=target;
   if(!still)raf=requestAnimationFrame(frame);};
  if(!grown&&target!==null&&!still){shown=-6;grown=true;introAt=performance.now();}

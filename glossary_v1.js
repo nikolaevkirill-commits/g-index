@@ -38,7 +38,7 @@ const STYLE=`.sr-glossary{margin:16px 0;padding:16px 18px}.sr-glossary h2{margin
 .sr-gl-search input{width:100%;min-height:44px;padding:0 12px;border-radius:12px;border:1px solid rgba(185,163,227,.35);background:rgba(255,255,255,.05);color:inherit;font:inherit;box-sizing:border-box}
 .sr-gl-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 .sr-gl-list{margin-top:10px}.sr-gl-list details{border-top:1px solid rgba(185,163,227,.18)}
-.sr-gl-list summary{display:flex;justify-content:space-between;gap:10px;align-items:center;min-height:44px;cursor:pointer;font-weight:600}
+.sr-gl-list summary{scroll-margin-block-end:calc(var(--nr-nav-height,76px) + env(safe-area-inset-bottom,0px) + 12px);display:flex;justify-content:space-between;gap:10px;align-items:center;min-height:44px;cursor:pointer;font-weight:600}
 .sr-gl-list summary i{font-style:normal;opacity:.85}.sr-gl-list p{margin:0 0 12px;line-height:1.5;opacity:.92}`;
 function render(){
  if(!document.getElementById('srGlossStyle')){const s=document.createElement('style');s.id='srGlossStyle';s.textContent=STYLE;document.head.append(s)}

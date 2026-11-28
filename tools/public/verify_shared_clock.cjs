@@ -208,6 +208,7 @@ const server=http.createServer(async(req,res)=>{
   await p.locator('[data-sky-live] .nr-sl-body[data-body=Sun]').waitFor();
   assert.match(await p.locator('#nrSkyLiveHeading').textContent(),/Києвом/);
   await c.close();
+  await require('./Verify polar map.cjs')(browser,base);
   assert.equal(results.length,3);
   console.log('PASS first viewport ×3, shared clock round trip ×3, Sun equality, seven bodies, WebGL identity and phase, playback/pause, reduced-motion scrubbing, Kyiv 23/25 h, explicit default');
  }finally{await browser.close();server.close();}
