@@ -9,6 +9,7 @@ const T={
  chandra:['Місяць у 8-му знаку від твого натального — традиційно день обережності','The Moon is in the 8th sign from your natal Moon — traditionally a day for caution','La Luna está en el 8.º signo desde tu Luna natal; tradicionalmente, día de cautela','La Lune est dans le 8e signe depuis votre Lune natale — traditionnellement un jour de prudence'],
  tara:['Тара Бала','Tara Bala','Tara Bala','Tara Bala'],
  nowAt:['зараз ({t}, {c})','now ({t}, {c})','ahora ({t}, {c})','maintenant ({t}, {c})'],
+ dailySnapshot:['добовий знімок','daily snapshot','instantánea diaria','relevé quotidien'],
  noonAt:['опівдні за місцевим часом ({c})','at local noon ({c})','a mediodía local ({c})','à midi heure locale ({c})'],
  until:['до {t}, далі {s} {n} · {l}','until {t}, then {s} {n} · {l}','hasta las {t}, luego {s} {n} · {l}','jusqu’à {t}, puis {s} {n} · {l}'],
  noChange:['до кінця доби без змін','no change until the end of the day','sin cambios hasta el final del día','sans changement jusqu’à la fin de la journée'],
@@ -120,14 +121,16 @@ function lines(ds,sky){
  const n=natal(d);if(!n)return {invalid:true};
  // FP577 (owner: «перерахуй… а якщо я буду в Токіо чи Сан-Паулу?»): positions for the real moment, not 12:00 Kyiv.
  // Today → now; another day → local noon in the chosen place. Times are shown in that place's zone.
- const m=moment(ds),g=grahasAt(m.at)||sky?.daily?.find(x=>x.date===ds)?.grahas;
+ const m=moment(ds),atMoment=grahasAt(m.at);
+ const g=atMoment||sky?.daily?.find(x=>x.date===ds)?.grahas;
+ const snapshot=atMoment?'':[t('dailySnapshot'),ds,sky?.convention?.daily_positions_local_time].filter(Boolean).join(' · ');
  if(!g)return {missing:false,items:[],certain:n.certain,unavailable:true};
  const items=[];
  if(n.nakCertain){
   const relation=tara(n.nak,g.Moon.nakshatra);
-  let text=relation.name+' · '+(m.today?t('nowAt').replace('{t}',m.clock(m.at)).replace('{c}',m.city):t('noonAt').replace('{c}',m.city));
+  let text=relation.name+' · '+(snapshot||(m.today?t('nowAt').replace('{t}',m.clock(m.at)).replace('{c}',m.city):t('noonAt').replace('{c}',m.city)));
   const L=window.SkyRhythmLunar;
-  if(m.today&&L?.nextTransition){
+  if(atMoment&&m.today&&L?.nextTransition){
    try{
     const next=L.nextTransition(m.at,'nakshatra',g.Moon.nakshatra+1);
     if(next&&next.utcMs<m.dayEnd){const r=tara(n.nak,next.to-1);text+='; '+t('until').replace('{t}',m.clock(next.utcMs)).replace('{s}',SHAPE[r.tone]).replace('{n}',r.name).replace('{l}',r.label.toLowerCase())+'.';}
@@ -144,7 +147,7 @@ function lines(ds,sky){
   else if([4,8].includes(hs))items.push({k:'caution',body:'saturn',symbol:'♄',more:'dhaiya',text:t('dhaiya').replace('{h}',ord(hs))});
   const hj=house(n.sign,g.Jupiter.sign);items.push({k:[2,5,7,9,11].includes(hj)?'good':'info',body:'jupiter',symbol:'♃',more:'jup',text:t('jup').replace('{h}',ord(hj))+([2,5,7,9,11].includes(hj)?t('jup_good'):t('jup_info'))});
  }
- return {missing:false,items,...n};
+ return {missing:false,items,snapshot,...n};
 }
 // FP569l (owner: «розписати, і не тільки червоне чи зелене, а й знак»): plain «що це означає» for each line,
 // a shape next to the colour (▲ сприятливо · ▼ обережно · ● довідка) and a Moon-sign medallion.
@@ -182,7 +185,7 @@ function html(ds,sky){
  const nakOnly=!sign&&nakName?'<p class="nr-you-nak">'+esc(NAK_LABEL[ix()])+': <strong>'+esc(nakName)+'</strong></p>':'';
  const limits=[...(!r.certain?['uncertainSign']:[]),...(!r.nakCertain?['uncertainNak']:[])].map(k=>'<p class="nr-dv-you-warn">'+esc(t(k))+'</p>').join('');
  const rows=r.items.map(item=>`<li class="is-${item.k}" data-signal="${item.more}"><span class="nr-you-glyph" aria-hidden="true">${item.symbol}</span><div class="nr-you-signal-content"><div class="nr-you-signal-head"><strong>${esc(SIGNAL_TITLE[item.more][ix()])}</strong><small class="nr-you-tone"><span aria-hidden="true">${SHAPE[item.k]||'●'}</span> ${esc(p(item.k))}</small></div><p>${esc(item.text)}</p>${SIGNAL_CONTEXT[item.more]?'<p class="nr-you-context">'+esc(SIGNAL_CONTEXT[item.more][ix()])+'</p>':''}${MORE[item.more]?`<details class="nr-you-more"><summary>${esc(MORE_LABEL[ix()])}</summary><p>${esc(MORE[item.more][ix()])}</p></details>`:''}</div></li>`).join('');
- return `<div class="nr-dv-you"><p><b>${esc(t('you'))}</b> <small>(${esc(t('note'))})</small></p>${badge}${nakOnly}<p class="nr-you-basis">${esc(p('basis'))}</p>${rows?'<ul class="nr-you-items">'+rows+'</ul>':''}${limits}</div>`;
+ return `<div class="nr-dv-you"><p><b>${esc(t('you'))}</b> <small>(${esc(t('note'))})</small></p>${badge}${nakOnly}<p class="nr-you-basis">${esc(p('basis'))}${r.snapshot&&!r.nakCertain?' '+esc(r.snapshot):''}</p>${rows?'<ul class="nr-you-items">'+rows+'</ul>':''}${limits}</div>`;
 }
 document.addEventListener('input',e=>{const f=e.target.closest?.('[data-natal-form]');if(f)f.elements.tz.setCustomValidity('');});
 document.addEventListener('submit',e=>{

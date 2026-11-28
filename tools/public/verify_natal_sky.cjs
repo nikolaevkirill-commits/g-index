@@ -46,6 +46,19 @@ try{for(const entry of ['classic.html','index.html'])for(const lang of ['uk','en
   if(g.Jupiter.sign===4)assert.match(r.text,lang==='uk'?/Юпітер у 7-му.*сприятливо/:/Jupiter in the 7th sign.*favourable/);
   if(lang==='en')assert.equal(/[А-Яа-яІіЇїЄєҐґ]/.test(r.text),false,'Ukrainian in English: '+r.text);
   if(r.ref==='null')assert.equal(r.score.trim(),'—',day.date+': no score must show the explicit empty state');else assert.equal(r.score.replace(/[^\d+\-−]/g,'').replace('−','-').replace('+',''),r.ref.replace('+',''),'score changed');checks++;}
+ // A daily fallback has the timestamp of its source. It cannot predict the next transition at the live moment.
+ if(entry==='index.html'&&lang==='uk'){
+  const fallback=await p.evaluate(({sky,ds})=>{
+   const lunar=window.SkyRhythmLunar;
+   try{
+    window.SkyRhythmLunar={...lunar,bodyLongitude(){throw Error('time-specific positions unavailable');}};
+    const r=NRNatalSky.lines(ds,sky);
+    return {text:r.items?.find(item=>item.more==='tara')?.text,source:r.snapshot};
+   }finally{window.SkyRhythmLunar=lunar;}
+  },{sky,ds:sky.daily[0].date});
+  assert(fallback.source.includes(sky.convention.daily_positions_local_time));
+  assert(fallback.text.includes(fallback.source)&&!/зараз|за місцевим часом|до кінця доби|далі/.test(fallback.text),'The daily ephemeris fallback must not claim live or local-noon positions');
+ }
  // no profile → local form → lines
  await p.evaluate(()=>{sessionStorage.setItem('nofixture','1');localStorage.removeItem('personalData_0')});await p.reload({waitUntil:'load'});
  await p.waitForFunction(()=>document.querySelector('#nrRoute-today [data-natal-form]'),null,{timeout:60000});
